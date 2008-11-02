@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.54 2008/04/22 20:14:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.54.4.1 2008/11/02 13:30:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1815,7 +1815,13 @@
     (write-char (cond ((logbitp bit mask)
 		       (if (logbitp bit num) #\1 #\0))
 		      ((< bit show) #\x)
-		      (t #\space)))))
+		      (t #\space)))
+    (when (and (zerop (mod bit 8))
+	       (/= bit 0))
+      ;; Print a vertical bar separating octets to make reading
+      ;; easier.  But use a space if we haven't shown anything yet.
+      ;; (Preserves spacing.)
+      (write-char (if (< bit show) #\| #\space)))))
 
 (defun print-inst-bits (inst)
   (print-masked-binary (inst-id inst)
@@ -1828,12 +1834,12 @@
   (etypecase inst-space
     (null)
     (instruction
-     (format t "~vt[~a(~a)~45t" indent
+     (format t "~vt[~a(~a)~48t" indent
 	     (inst-name inst-space)
 	     (inst-format-name inst-space))
      (print-inst-bits inst-space)
      (dolist (inst (inst-specializers inst-space))
-       (format t "~%~vt:~a~45t" indent (inst-name inst))
+       (format t "~%~vt:~a~48t" indent (inst-name inst))
        (print-inst-bits inst))
      (write-char #\])
      (terpri))

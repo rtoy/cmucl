@@ -6,7 +6,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/env-access.lisp,v 1.4 2007/11/14 10:04:33 cshapiro Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/env-access.lisp,v 1.4.6.1 2008/11/02 13:30:00 rtoy Exp $")
 
 ;;;
 ;;; **********************************************************************
@@ -26,9 +26,16 @@
 (in-package "C")
 
 (defun variable-information (var &optional env)
-  "Return three values. The first indicates a binding kind of VAR; the
-second is True if there is a local binding of VAR; the third is an
-alist of declarations that apply to the apparent binding of VAR."
+  "Returns information about the symbol VAR in the lexical environment ENV.
+Three values are returned:
+  1) Type or binding of VAR.
+     NIL           No definition or binding
+     :special      VAR is special
+     :lexical      VAR is lexical
+     :symbol-macro VAR refers to a SYMBOL-MACROLET binding
+     :constant     VAR refers to a named constant or VAR is a keyword
+  2) non-NIL if there is a local binding
+  3) An a-list containing information about any declarations that apply."
   (let* ((*lexical-environment* (or env (make-null-environment)))
          (info (lexenv-find var variables)))
     (etypecase info
@@ -67,6 +74,16 @@ alist of declarations that apply to the apparent binding of VAR."
 			   (info variable type var)))))))))
 
 (defun declaration-information (declaration-name &optional env)
+  "Returns information about declarations named by the symbol DECLARATION-NAME.
+Supported DECLARATION-NAMES are
+  1) OPTIMIZE
+     A list whose entries are of the form (QUALITY VALUE) is returned,
+     where QUALITY and VALUE are standard optimization qualities and
+     values.
+  2) EXT:OPTIMIZE-INTERFACE
+     Like OPTIMIZE, but for the EXT:OPTIMIZE-INTERFACE declaration.
+  3) DECLARATION.
+     A list of the declaration names the have been proclaimed as valid."
   (let ((lexenv (or env (make-null-environment))))
     (case declaration-name
       (optimize
@@ -107,6 +124,11 @@ alist of declarations that apply to the apparent binding of VAR."
       (t (error "Unsupported declaration ~S." declaration-name)))))
 
 (defun parse-macro (name lambda-list body &optional env)
+  "Process a macro in the same way that DEFMACRO or MACROLET would.
+Three values are returned:
+  1) A lambda-expression that accepts two arguments
+  2) A form
+  3) An environment"
   (declare (ignore env))
   (let ((whole (gensym "WHOLE-"))
 	(environment (gensym "ENVIRONMENT-")))
@@ -119,6 +141,15 @@ alist of declarations that apply to the apparent binding of VAR."
          ,body))))
 
 (defun function-information (function &optional env)
+  "Returns information about the function name FUNCTION in the lexical environment ENV.
+Three values are returned:
+  1) Type of definition or binding:
+     NIL          No apparent definition
+    :function    FUNCTION refers to a function
+    :macro        FUNCTION refers to a macro
+    :special-form FUNCTION is a special form
+  2) non-NIL if definition is local
+  3) An a-list containing information about the declarations that apply."
   (flet ((inlinealist (i)
 	   (ecase i
 	     (:inline
@@ -186,6 +217,15 @@ alist of declarations that apply to the apparent binding of VAR."
   `(quote ,env))
 
 (defun augment-environment (env &key variable symbol-macro function macro declare)
+  "Return a new environment containing information in ENV that is augmented
+by the specified parameters:
+  :VARIABLE     a list of symbols visible as bound variables in the new
+                environemnt
+  :SYMBOL-MACRO a list of symbol macro definitions
+  :FUNCTION     a list of function names that will be visible as local
+                functions
+  :MACRO        a list of local macro definitions
+  :DECLARE      a list of declaration specifiers"
   (when (or macro symbol-macro)
     (setq env (copy-structure env)))
   (when macro

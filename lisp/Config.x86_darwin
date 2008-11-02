@@ -13,9 +13,19 @@ ifdef FEATURE_UNICODE
 UNICODE = -DUNICODE
 endif
 
-CPPFLAGS = -Di386 -DDARWIN -DGENCGC -DLINKAGE_TABLE $(UNICODE)
+ifdef FEATURE_LINKAGE_TABLE
+LINKAGE = -DLINKAGE_TABLE
+endif
+
+# Enable support for generational GC
+ifdef FEATURE_GENCGC
+GENCGC = -DGENCGC
+GC_SRC = gencgc.c
+endif
+
+CPPFLAGS = -Di386 -DDARWIN $(LINKAGE) $(GENCGC) $(UNICODE)
 CFLAGS = -Wstrict-prototypes -Wall -g3 $(CPPFLAGS) $(INCLUDES)
-ASFLAGS = -g3 -DGENCGC -DLINKAGE_TABLE $(INCLUDES)
+ASFLAGS = -g3 $(LINKAGE) $(GENCGC) $(INCLUDES)
 NM = nm -gp
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = x86-assem.S
@@ -23,7 +33,6 @@ ARCH_SRC = x86-arch.c
 OS_SRC = Darwin-os.c os-common.c e_rem_pio2.c k_rem_pio2.c
 # OS_LINK_FLAGS = -dynamic -export-dynamic
 OS_LIBS =
-GC_SRC = gencgc.c
 
 # This has aliasing problems, so turn off aliasing.
 e_rem_pio2.o : e_rem_pio2.c

@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.80.4.5 2008/05/23 16:02:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.80.4.5.2.1 2008/11/02 13:30:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -998,9 +998,7 @@
 	    (write-indexed fdefn vm:fdefn-function-slot *nil-descriptor*)
 	    (write-indexed fdefn vm:fdefn-raw-addr-slot
 			   (make-random-descriptor
-			    (lookup-foreign-symbol
-			     (vm::extern-alien-name "undefined_tramp")
-			     #+(or sparc ppc) :data))))
+			    (lookup-special-symbol "undefined_tramp"))))
 	  fdefn))))
   
 (defun cold-fset (name defn)
@@ -1018,9 +1016,7 @@
 			      (ash vm:function-code-offset vm:word-shift)))))
 		     (#.vm:closure-header-type
 		      (make-random-descriptor
-		       (lookup-foreign-symbol
-		        (vm::extern-alien-name "closure_tramp")
-			#+(or sparc ppc) :data)))))
+		       (lookup-special-symbol "closure_tramp")))))
     fdefn))
 
 (defun initialize-static-fns ()
@@ -2123,15 +2119,9 @@
 	((and #+linkage-table nil
 	      (c:backend-featurep :darwin)
 	      (lookup-sym (concatenate 'string "ldso_stub__" name))))
-	;; Non-linux case
-	(#-irix
-	 (lookup-sym name)
-	 #+irix
-	 (let ((value (lookup-sym name)))
-	   (when (and (numberp value) (zerop value))
-	     (warn "Not-really-defined foreign symbol: ~S" name))
-	   value)
-	 #+(and linkage-table (or sparc ppc))
+	((and (c::backend-featurep :linkage-table)
+	      (or (c::backend-featurep :sparc)
+		  (c::backend-featurep :ppc)))
 	 (let ((address (lookup-sym name)))
 	   ;; If the link-type is :data, need to lookup and return the
 	   ;; value, not the address of NAME in the linkage table.
@@ -2143,7 +2133,16 @@
 	   ;; routines.
 	   (if (eq link-type :code)
 	       address
-	     (sys:sap-ref-32 (sys:int-sap address) 0))))
+	       (sys:sap-ref-32 (sys:int-sap address) 0))))
+	;; Non-linux case
+	(#-irix
+	 (lookup-sym name)
+	 #+irix
+	 (let ((value (lookup-sym name)))
+	   (when (and (numberp value) (zerop value))
+	     (warn "Not-really-defined foreign symbol: ~S" name))
+	   value)
+	 )
 	;; Are those still necessary?
 	((and linux-p (lookup-sym (concatenate 'string "__libc_" name))))
 	((and linux-p (lookup-sym (concatenate 'string "__" name))))
@@ -2151,6 +2150,17 @@
 	(t
 	 (warn "Undefined foreign symbol: ~S" name)
 	 0)))))
+
+;; Need to handle special symbols specially on sparc and ppc.  The
+;; special symbols are undefined_tramp and closure_tramp.  We need to
+;; use the current C values of these and not the values in the current
+;; running lisp.  Why?  Because new C code may have moved these
+;; addresses so we need to use the right values.  We get worldbuild
+;; issues if we use the old values that don't match.
+(defun lookup-special-symbol (name)
+  (or (gethash name *cold-foreign-symbol-table* nil)
+      (lookup-foreign-symbol (vm::extern-alien-name name)
+			     #+(or sparc ppc) :data)))
 
 (defvar *cold-linkage-table* (make-array 8192 :adjustable t :fill-pointer 0))
 (defvar *cold-foreign-hash* (make-hash-table :test #'equal))
@@ -2516,6 +2526,15 @@
 	    (format t "#define ~A ~D~@[  /* ~A */~]~%"
 		    (first const) (third const) (fourth const))))))
 
+  ;; Write out the values of real-lra-slot and friend for breakpoint
+  ;; handling so we don't have to maintain it in the C code.
+
+  (format t "~%#define REAL_LRA_SLOT ~D~%"
+	  (- di::real-lra-slot vm::code-constants-offset))
+  (format t "#define KNOWN_RETURN_P_SLOT ~D~%"
+	  (- di::known-return-p-slot vm::code-constants-offset))
+  (format t "#define BOGUS_LRA_CONSTANTS ~D~%" di::bogus-lra-constants)
+
   ;; Write out internal error codes and error descriptions
   (terpri)
   (loop for (error-name . rest) across (c:backend-internal-errors c:*backend*)
@@ -2670,7 +2689,9 @@
 			  (header-name *genesis-c-header-name*))
   "Builds a kernel Lisp image from the .FASL files specified in the given
   File-List and writes it to a file named by Core-Name."
-  (unless (or #+linkage-table t symbol-table)
+  (unless (or #+(and linkage-table (not (or sparc ppc))) t symbol-table)
+    ;; We need the symbol table for sparc and ppc, even with
+    ;; linkage-tables.
     (error "Can't genesis without a symbol-table."))
   (format t "~&Building ~S for the ~A~%"
 	  core-name (c:backend-version c:*backend*))
@@ -2682,12 +2703,16 @@
 	(progn
 	  (clrhash *fdefn-objects*)
 	  (clrhash *cold-symbols*)
-	  #-linkage-table (init-foreign-symbol-table)
+	  (init-foreign-symbol-table)
 	  #+linkage-table (init-foreign-linkage)
 	  (let ((version #-linkage-table (load-foreign-symbol-table
 					  symbol-table)
 			 #+linkage-table (symbol-table-version
 					  symbol-table)))
+	    ;; Need to do this so we can find undefined_tramp and
+	    ;; closure_tramp with the NEW lisp.
+	    #+(and linkage-table (or sparc ppc))
+	    (load-foreign-symbol-table symbol-table)
 	    (initialize-spaces)
 	    (initialize-symbols)
 	    (initialize-layouts)

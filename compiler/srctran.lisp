@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.163 2007/09/25 15:17:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.163.6.1 2008/11/02 13:30:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2424,10 +2424,19 @@
 	  ;; X must be positive.
 	  (if (not y-neg)
 	      ;; The must both be positive.
-	      (cond ((or (null x-len) (null y-len))
+	      (cond ((and (null x-len) (null y-len))
+		     ;; Both are unbounded, so result is unbounded.
 		     (specifier-type 'unsigned-byte))
-		    ((or (zerop x-len) (zerop y-len))
+		    ((or (eql x-len 0)
+			 (eql y-len 0))
+		     ;; One has zero length, so the result has zero length.
 		     (specifier-type '(integer 0 0)))
+		    ((or (and x-len (null y-len))
+			 (and y-len (null x-len)))
+		     ;; One is bounded, so the result is bounded.
+		     ;; The computed length here is a bit loose.
+		     (specifier-type `(unsigned-byte ,(max (or x-len 0)
+							   (or y-len 0)))))
 		    ((and (<= x-len 32) (<= y-len 32))
 		     ;; If both args are unsigned 32-bit numbers, we
 		     ;; can compute better bounds, so we do.  But if
@@ -2853,9 +2862,21 @@
 		    (fixnum fixnum integer)
 		    (unsigned-byte #.vm:word-bits))
   "convert to inline logical ops"
-  `(logand (ash int (- posn))
-	   (ash ,(1- (ash 1 vm:word-bits))
-		(- size ,vm:word-bits))))
+  ;; Try to help out the compiler by precomputing things if SIZE or
+  ;; POSN are constants.  This helps out modular arithmetic in some
+  ;; cases.  (I think it's a deficiency in modular arithmetic that it
+  ;; can't figure some things out for itself.)
+  (let ((shift-form (if (constant-continuation-p posn)
+		       (if (zerop (continuation-value posn))
+			   'int
+			   `(ash int ,(- (continuation-value posn))))
+		       '(ash int (- posn))))
+	(mask-form (if (constant-continuation-p size)
+		       (ash (1- (ash 1 vm:word-bits))
+			    (- (continuation-value size) vm:word-bits))
+		       `(ash ,(1- (ash 1 vm:word-bits))
+			     (- size vm:word-bits)))))
+    `(logand ,shift-form ,mask-form)))
 
 (deftransform %mask-field ((size posn int)
 			   (fixnum fixnum integer)
@@ -2967,99 +2988,6 @@
     (if (minusp y)
 	`(- (ash x ,len))
 	`(ash x ,len))))
-
-;;; If both arguments and the result are (unsigned-byte 32), try to come up
-;;; with a ``better'' multiplication using multiplier recoding.  There are two
-;;; different ways the multiplier can be recoded.  The more obvious is to shift
-;;; X by the correct amount for each bit set in Y and to sum the results.  But
-;;; if there is a string of bits that are all set, you can add X shifted by
-;;; one more then the bit position of the first set bit and subtract X shifted
-;;; by the bit position of the last set bit.  We can't use this second method
-;;; when the high order bit is bit 31 because shifting by 32 doesn't work
-;;; too well.
-;;;
-
-;;; This is commented out because its uses of TRULY-THE for vop
-;;; selection lie to the compiler, leading to internal
-;;; inconsistencies, which in turn lead to incorrect code being
-;;; generated.  Example:
-;;;
-;;; (funcall (compile nil
-;;; 	'(lambda () (flet ((%f2 () 288213285))
-;;; 		      (+ (%f2) (* 13 (%f2)))))))
-;;;  => segmentation violation
-;;;
-;;;
-;;; Another useful test is
-;;;      (defun zot ()
-;;;	   (let ((v9 (labels ((%f13 () nil)) nil)))
-;;;	     (let ((v3 (logandc2 97 3)))
-;;;	       (* v3 (- 37391897 (logand v3 -66)))))
-;;;
-;;; The right fix for this is probably to port SBCL's modular
-;;; functions implementation.
-
-#+nil
-(deftransform * ((x y)
-		 ((unsigned-byte 32) (unsigned-byte 32))
-		 (unsigned-byte 32))
-  "recode as shift and add"
-  (unless (constant-continuation-p y)
-    (give-up))
-  (let ((y (continuation-value y))
-	(result nil)
-	(first-one nil)
-	(add-count 0)
-	(shift-count 0))
-    (labels ((tub32 (x) `(truly-the (unsigned-byte 32) ,x))
-	     (add (next-factor)
-	       (setf result
-		     (tub32
-		      (if result
-			  (progn
-			    (incf add-count)
-			    `(+ ,result ,(tub32 next-factor)))
-			  next-factor)))))
-      (declare (inline add))
-      (dotimes (bitpos 32)
-	(if first-one
-	    (when (not (logbitp bitpos y))
-	      (add (cond ((= (1+ first-one) bitpos)
-			  ;; There is only a single bit in the string.
-			  (incf shift-count)
-			  `(ash x ,first-one))
-			 (t
-			  ;; There are at least two.
-			  (incf add-count)
-			  (incf shift-count 2)
-			  `(- ,(tub32 `(ash x ,bitpos))
-			    ,(tub32 `(ash x ,first-one))))))
-	      (setf first-one nil))
-	    (when (logbitp bitpos y)
-	      (setf first-one bitpos))))
-      (when first-one
-	(cond ((= first-one 31))
-	      ((= first-one 30)
-	       (incf shift-count)
-	       (add '(ash x 30)))
-	      (t
-	       (incf shift-count 2)
-	       (add `(- ,(tub32 '(ash x 31)) ,(tub32 `(ash x ,first-one))))))
-	(add '(ash x 31)))
-      ;; See how many shifts and adds we had to do.  If there are too
-      ;; many, it's probably better to use the multiply instruction
-      ;; (for those architectures that have multiply instructions).
-      ;; Sparc-v7 doesn't have a mutiply instruction.
-      ;;
-      ;; Some simple tests on Solaris v9 indicates the about 9
-      ;; shift-adds is comparable to a multiply.  Use a threshold of
-      ;; 9.  Should this be architeucture specific?
-      #-sparc-v7
-      (when (> (+ add-count shift-count) 9)
-	(give-up))
-    
-      (or result 0))))
-
 
 ;;; If arg is a constant power of two, turn floor into a shift and
 ;;; mask. If ceiling, add in (1- (abs y)) and do floor, and correct
@@ -3986,8 +3914,20 @@
                    (numberp high)
                    (>= low 0))
           (let ((width (integer-length high)))
-            (when (some (lambda (x) (<= width x))
-                        *modular-funs-widths*)
+	    ;; If both arguments of LOGAND would fit in a fixnum, we
+	    ;; don't need to do anything.  This allows the any fixnum
+	    ;; vops to run.  However, if the result won't fit in a
+	    ;; fixnum, look to see if we can apply modular arithmetic.
+	    ;;
+	    ;; Is this right?
+            (when (and (not
+			(and (csubtypep (continuation-type x)
+					(specifier-type 'fixnum))
+			     (csubtypep (continuation-type y)
+					(specifier-type 'fixnum))))
+		       (some (lambda (x)
+			       (<= width x))
+			     *modular-funs-widths*))
               ;; FIXME: This should be (CUT-TO-WIDTH NODE WIDTH).
               (cut-to-width x width)
               (cut-to-width y width)

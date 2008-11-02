@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.54 2006/04/26 20:49:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.54.14.1 2008/11/02 13:30:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -845,7 +845,7 @@ environment passed to Lisp."
   (when (atom files)
     (when verbose
       (format t ";;; Opening as shared library ~A ...~%" files))
-    (multiple-value-bind (ok &optional error-string)
+    (multiple-value-bind (ok error-string)
 	(load-object-file files)
       (cond (ok
 	     (when verbose

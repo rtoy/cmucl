@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.18 2004/07/16 00:49:44 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.18.20.1 2008/11/02 13:30:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1496,6 +1496,13 @@
     (move r x)
     (inst not r)))
 
+(define-vop (lognot-mod32/signed=>unsigned lognot-mod32/unsigned=>unsigned)
+  (:translate lognot-mod32)
+  (:args (x :scs (signed-reg signed-stack)
+	    :load-if (not (and (sc-is x signed-stack)
+			       (sc-is r unsigned-stack)))))
+  (:arg-types signed-num))
+
 ;; Handle (ldb (byte 32 0) (- x)).  The (- x) gets converted to
 ;; (%negate x), so we build modular functions for %negate.
 
@@ -1523,13 +1530,46 @@
     (move res x)
     (inst neg res)))
 
-(c::define-modular-fun logxor-mod32 (x y) logxor 32)
-(define-vop (fast-logxor-mod32/unsigned=>unsigned
-             fast-logxor/unsigned=>unsigned)
-  (:translate logxor-mod32))
-(define-vop (fast-logxor-mod32-c/unsigned=>unsigned
-             fast-logxor-c/unsigned=>unsigned)
-  (:translate logxor-mod32))
+(macrolet
+    ((frob (op)
+       (let ((name (symbolicate "FAST-" op "/SIGNED=>UNSIGNED"))
+	     (vop (symbolicate "FAST-" op "/SIGNED=>SIGNED"))
+	     (trans (symbolicate op "-MOD32")))
+	 `(progn
+	    (defknown ,trans ((signed-byte 32) (signed-byte 32))
+	      (unsigned-byte 32)
+	      (movable foldable flushable))
+	    (define-vop (,name ,vop)
+	    (:translate ,trans)
+	    (:results (r :scs (unsigned-reg)))
+	    (:result-types unsigned-num))))))
+  (frob +)
+  (frob -)
+  (frob logxor)
+  (frob *))
+
+(defmacro define-modular-backend (fun &optional constantp derived)
+  (let ((mfun-name (symbolicate fun '-mod32))
+	(modvop (symbolicate 'fast- fun '-mod32/unsigned=>unsigned))
+	(modcvop (symbolicate 'fast- fun '-mod32-c/unsigned=>unsigned))
+	(vop (symbolicate 'fast- (or derived fun) '/unsigned=>unsigned))
+	(cvop (symbolicate 'fast- (or derived fun) '-c/unsigned=>unsigned))
+	(smodvop (symbolicate 'fast- (or derived fun) '-mod32/signed=>unsigned))
+	(svop (symbolicate 'fast- (or derived fun) '/signed=>unsigned)))
+    `(progn
+       (c::define-modular-fun ,mfun-name (x y) ,fun 32)
+       (define-vop (,modvop ,vop)
+	 (:translate ,mfun-name))
+       ,@(when constantp
+	       `((define-vop (,modcvop ,cvop)
+		   (:translate ,mfun-name))))
+       (define-vop (,smodvop ,svop)
+	 (:translate ,mfun-name)))))
+
+(define-modular-backend + t)
+(define-modular-backend - t)
+(define-modular-backend logxor t)
+(define-modular-backend *)
 
 (c::def-source-transform logeqv (&rest args)
   (if (oddp (length args))
@@ -1547,24 +1587,6 @@
   `(lognot (logior ,x ,y)))
 (c::def-source-transform lognand (x y)
   `(lognot (logand ,x ,y)))
-
-;;;; Modular functions
-
-(c::define-modular-fun +-mod32 (x y) + 32)
-(define-vop (fast-+-mod32/unsigned=>unsigned fast-+/unsigned=>unsigned)
-  (:translate +-mod32))
-(define-vop (fast-+-mod32-c/unsigned=>unsigned fast-+-c/unsigned=>unsigned)
-  (:translate +-mod32))
-(c::define-modular-fun --mod32 (x y) - 32)
-(define-vop (fast---mod32/unsigned=>unsigned fast--/unsigned=>unsigned)
-  (:translate --mod32))
-(define-vop (fast---mod32-c/unsigned=>unsigned fast---c/unsigned=>unsigned)
-  (:translate --mod32))
-
-(c::define-modular-fun *-mod32 (x y) * 32)
-(define-vop (fast-*-mod32/unsigned=>unsigned fast-*/unsigned=>unsigned)
-  (:translate *-mod32))
-;;; (no -C variant as x86 MUL instruction doesn't take an immediate)
 
 (defknown vm::ash-left-mod32 (integer (integer 0))
   (unsigned-byte 32)
@@ -1587,14 +1609,8 @@
   ;; will produce 0 in the lower 32 bits of the register, which is
   ;; what we want.)
   (when (and (<= width 32)
-	     (csubtypep (continuation-type count) (specifier-type '(unsigned-byte 5))))
+	     (csubtypep (continuation-type count)
+			(specifier-type '(unsigned-byte 5))))
     (cut-to-width integer width)
     'vm::ash-left-mod32))
-
-;; This should only get called when the ash modular function optimizer
-;; succeeds, which is for a count of 0-31, which is just right for
-;; %ashl.
-(defun vm::ash-left-mod32 (integer count)
-  (bignum::%ashl (ldb (byte 32 0) integer) count))
-
 )

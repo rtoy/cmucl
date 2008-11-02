@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.15.4.1 2008/06/27 17:24:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.15.4.1.2.1 2008/11/02 13:30:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -66,7 +66,7 @@
       (logand (get-universal-time) #xffffffff)))
 
 ;; New initializer proposed by Takuji Nishimura and Makota Matsumoto.
-;; (See http://www.math.keio.ac.jp/~matumoto/MT2002/emt19937ar.html)
+;; (See http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/MT2002/emt19937ar.html)
 ;;
 ;; This corrects a deficiency in the original initializer wherein the
 ;; MSB of the seed was not well represented in the state.
@@ -85,7 +85,7 @@
 ;;
 
 (defun int-init-random-state (&optional (seed 5489) state)
-  (declare (type (integer 1 #xffffffff) seed))
+  (declare (type (integer 0 #xffffffff) seed))
   (let ((state (or state (make-array 627 :element-type '(unsigned-byte 32)))))
     (declare (type (simple-array (unsigned-byte 32) (627)) state))
     (setf (aref state 0) 0)
@@ -208,7 +208,7 @@
     (cond ((not state) (copy-random-state *random-state*))
 	  ((random-state-p state) (copy-random-state state))
 	  ((eq state t)
-	   (make-random-object :state (init-random-state (generate-seed))))
+	   (make-random-object :state (init-random-state (generate-seed 627))))
 	  (t (error "Argument is not a RANDOM-STATE, T or NIL: ~S" state)))))
 
 (defun rand-mt19937-initializer ()

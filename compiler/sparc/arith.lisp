@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.44 2004/08/22 15:32:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.44.20.1 2008/11/02 13:30:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,7 +208,7 @@
   (:arg-types signed-num
 	      (:constant (or (and (unsigned-byte 12) (not (integer 0 0)))
 			     (integer #xfffff000 #xffffffff))))
-  (:generator 1				; Needs to be low to give this vop a chance.
+  (:generator 2				; Needs to be low to give this vop a chance.
     (cond ((= y #xffffffff)
 	   (move r x))
 	  ((typep y '(unsigned-byte 13))
@@ -2413,6 +2413,16 @@
   (:generator 1
     (inst not res x)))
 
+(define-vop (lognot-mod32/signed=>unsigned)
+  (:translate lognot-mod32)
+  (:args (x :scs (signed-reg)))
+  (:arg-types signed-num)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:policy :fast-safe)
+  (:generator 1
+    (inst not res x)))
+
 ;; Handle (ldb (byte 32 0) (- x)).  The (- x) gets converted to
 ;; (%negate x), so we build modular functions for %negate.
 
@@ -2436,19 +2446,47 @@
   (:generator 1
     (inst neg res x)))
 
+;; Define a bunch of vops for converting signed to unsigned.
+(macrolet
+    ((frob (op &optional trans)
+       (let ((name (symbolicate "FAST-" op "/SIGNED=>UNSIGNED"))
+	     (vop (symbolicate "FAST-" op "/SIGNED=>SIGNED"))
+	     (trans (symbolicate (or trans op) "-MOD32")))
+	 `(progn
+	    (defknown ,trans ((signed-byte 32) (signed-byte 32))
+	      (unsigned-byte 32)
+	      (movable foldable flushable))
+	    (define-vop (,name ,vop)
+	    (:translate ,trans)
+	    (:results (r :scs (unsigned-reg)))
+	    (:result-types unsigned-num))))))
+  (frob +)
+  (frob -)
+  (frob logxor)
+  (frob logeqv)
+  (frob logandc1)
+  (frob logandc2)
+  (frob logorc1)
+  (frob logorc2)
+  (frob v8-* *))
+
 (defmacro define-modular-backend (fun &optional constantp derived)
   (let ((mfun-name (symbolicate fun '-mod32))
 	(modvop (symbolicate 'fast- fun '-mod32/unsigned=>unsigned))
 	(modcvop (symbolicate 'fast- fun '-mod32-c/unsigned=>unsigned))
 	(vop (symbolicate 'fast- (or derived fun) '/unsigned=>unsigned))
-	(cvop (symbolicate 'fast- (or derived fun) '-c/unsigned=>unsigned)))
+	(cvop (symbolicate 'fast- (or derived fun) '-c/unsigned=>unsigned))
+	(smodvop (symbolicate 'fast- (or derived fun) '-mod32/signed=>unsigned))
+	(svop (symbolicate 'fast- (or derived fun) '/signed=>unsigned)))
     `(progn
        (c::define-modular-fun ,mfun-name (x y) ,fun 32)
        (define-vop (,modvop ,vop)
 	 (:translate ,mfun-name))
        ,@(when constantp
 	       `((define-vop (,modcvop ,cvop)
-		   (:translate ,mfun-name)))))))
+		   (:translate ,mfun-name))))
+       (define-vop (,smodvop ,svop)
+	 (:translate ,mfun-name)))))
 
 (define-modular-backend + t)
 (define-modular-backend - t)
@@ -2506,7 +2544,7 @@
 	     (cut-to-width integer width)
 	     'vm::ash-mod32)
 	    (t
-	     ;; Do nothing
+	     ;; Return NIL to say we can't do anything special.
 	     nil)))))
 
 ;;; If both arguments and the result are (unsigned-byte 32), try to come up

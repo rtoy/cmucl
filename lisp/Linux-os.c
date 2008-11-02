@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.37 2008/01/03 11:41:54 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.37.6.1 2008/11/02 13:30:03 rtoy Exp $
  *
  */
 
@@ -280,27 +280,13 @@ void
 sigsegv_handler(HANDLER_ARGS)
 {
     int fault_addr = context->uc_mcontext.cr2;
-    int page_index = find_page_index((void *) fault_addr);
 
 #ifdef RED_ZONE_HIT
     if (os_control_stack_overflow((void *) fault_addr, context))
 	return;
 #endif
-
-    /* check if the fault is within the dynamic space. */
-    if (page_index != -1) {
-	/* Un-protect the page */
-
-	/* The page should have been marked write protected */
-	if (!PAGE_WRITE_PROTECTED(page_index))
-	    fprintf(stderr,
-		    "*** Sigsegv in page not marked as write protected\n");
-	os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
-	page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
-	page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
-
+    if (gc_write_barrier(code->si_addr))
 	return;
-    }
 #if defined(__x86_64)
     DPRINTF(0, (stderr, "sigsegv: rip: %p\n", context->uc_mcontext.gregs[REG_RIP]));
 #else

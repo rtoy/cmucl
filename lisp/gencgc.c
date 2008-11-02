@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1 2008/05/14 16:12:06 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1.2.1 2008/11/02 13:30:03 rtoy Exp $
  *
  */
 
@@ -247,11 +247,7 @@ unsigned counters_verbose = 0;
  * To enable the use of page protection to help avoid the scavenging
  * of pages that don't have pointers to younger generations.
  */
-#if defined(DARWIN) && defined(__i386__)
-boolean enable_page_protection = FALSE;
-#else
 boolean enable_page_protection = TRUE;
-#endif
 
 /*
  * Hunt for pointers to old-space, when GCing generations >= verify_gen.
@@ -389,7 +385,7 @@ static char *heap_base = NULL;
 /*
  * Calculate the start address for the given page number.
  */
-inline char *
+static char *
 page_address(int page_num)
 {
     return heap_base + PAGE_SIZE * page_num;
@@ -399,7 +395,7 @@ page_address(int page_num)
  * Find the page index within the page_table for the given address.
  * Returns -1 on failure.
  */
-inline int
+int
 find_page_index(void *addr)
 {
     int index = (char *) addr - heap_base;
@@ -413,6 +409,38 @@ find_page_index(void *addr)
     return -1;
 }
 
+/*
+ * This routine implements a write barrier used to record stores into
+ * to boxed regions outside of generation 0.  When such a store occurs
+ * this routine will be automatically invoked by the page fault
+ * handler.  If passed an address outside of the dynamic space, this
+ * routine will return immediately with a value of 0.  Otherwise, the
+ * page belonging to the address is made writable, the protection
+ * change is recorded in the garbage collector page table, and a value
+ * of 1 is returned.
+ */
+int
+gc_write_barrier(void *addr)
+{
+    int page_index = find_page_index(addr);
+
+    /* Check if the fault is within the dynamic space. */
+    if (page_index == -1) {
+	 return 0;
+    }
+
+    /* The page should have been marked write protected */
+    if (!PAGE_WRITE_PROTECTED(page_index))
+	 fprintf(stderr,
+		 "*** Page fault in page not marked as write protected\n");
+
+    /* Un-protect the page */
+    os_protect(page_address(page_index), PAGE_SIZE, OS_VM_PROT_ALL);
+    page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
+    page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
+
+    return 1;
+}
 
 /*
  * A structure to hold the state of a generation.

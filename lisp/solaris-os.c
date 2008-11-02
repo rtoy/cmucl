@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.20 2008/03/19 09:17:13 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.20.4.1 2008/11/02 13:30:03 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -20,6 +20,8 @@
 #include <fcntl.h>
 #include <sys/file.h>
 
+#include <stropts.h>
+#include <termios.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/param.h>
@@ -211,32 +213,16 @@ void
 segv_handler(HANDLER_ARGS)
 {
     caddr_t addr = code->si_addr;
-    int page_index;
 
     SAVE_CONTEXT();
-
-    page_index = find_page_index((void *) addr);
 
 #ifdef RED_ZONE_HIT
     if (os_control_stack_overflow(addr, context))
 	return;
 #endif
 
-    /* check if the fault is within the dynamic space. */
-    if (page_index != -1) {
-	/* Un-protect the page */
-
-	/* The page should have been marked write protected */
-	if (!PAGE_WRITE_PROTECTED(page_index))
-	    fprintf(stderr,
-		    "*** Sigsegv in page not marked as write protected\n");
-	os_protect((os_vm_address_t) page_address(page_index), PAGE_SIZE,
-		   OS_VM_PROT_ALL);
-	page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
-	page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
-
-	return;
-    }
+    if (gc_write_barrier(code->si_addr))
+	 return;
 
     /*
      * Could be a C stack overflow.  Let's check
@@ -331,93 +317,6 @@ solaris_register_address(struct ucontext *context, int reg)
 
 /* For now we put in some porting functions */
 
-#ifndef SOLARIS25
-int
-getdtablesize(void)
-{
-    return sysconf(_SC_OPEN_MAX);
-}
-
-char *
-getwd(char *path)
-{
-    return getcwd(path, MAXPATHLEN);
-}
-
-int
-getpagesize(void)
-{
-    return sysconf(_SC_PAGESIZE);
-}
-
-
-#include <sys/procfs.h>
-/* Old rusage definition */
-struct rusage {
-    struct timeval ru_utime;	/* user time used */
-    struct timeval ru_stime;	/* system time used */
-    long ru_maxrss;
-#define ru_first        ru_ixrss
-    long ru_ixrss;		/* XXX: 0 */
-    long ru_idrss;		/* XXX: sum of rm_asrss */
-    long ru_isrss;		/* XXX: 0 */
-    long ru_minflt;		/* any page faults not requiring I/O */
-    long ru_majflt;		/* any page faults requiring I/O */
-    long ru_nswap;		/* swaps */
-    long ru_inblock;		/* block input operations */
-    long ru_oublock;		/* block output operations */
-    long ru_msgsnd;		/* messages sent */
-    long ru_msgrcv;		/* messages received */
-    long ru_nsignals;		/* signals received */
-    long ru_nvcsw;		/* voluntary context switches */
-    long ru_nivcsw;		/* involuntary " */
-#define ru_last         ru_nivcsw
-};
-
-
-int
-getrusage(int who, struct rusage *rp)
-{
-    memset(rp, 0, sizeof(struct rusage));
-
-    return 0;
-}
-
-int
-setreuid(void)
-{
-    fprintf(stderr, "setreuid unimplemented\n");
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-setregid(void)
-{
-    fprintf(stderr, "setregid unimplemented\n");
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-gethostid(void)
-{
-    fprintf(stderr, "gethostid unimplemented\n");
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-killpg(int pgrp, int sig)
-{
-    if (pgrp < 0) {
-	errno = ESRCH;
-	return -1;
-    }
-    return kill(-pgrp, sig);
-}
-#endif
-
 int
 sigblock(int mask)
 {
@@ -431,17 +330,6 @@ sigblock(int mask)
     return old.__sigbits[0];
 }
 
-#ifndef SOLARIS25
-int
-wait3(int *status, int options, struct rusage *rp)
-{
-    if (rp)
-	memset(rp, 0, sizeof(struct rusage));
-
-    return waitpid(-1, status, options);
-}
-#endif
-
 int
 sigsetmask(int mask)
 {
@@ -454,6 +342,45 @@ sigsetmask(int mask)
 
     return old.__sigbits[0];
 
+}
+
+int
+openpty(int *amaster, int *aslave, char *name, struct termios *termp,
+        struct winsize *winp)
+{
+    char *slavename;
+    int masterfd, slavefd;
+
+    if ((masterfd = open("/dev/ptmx", O_RDWR)) == -1)
+	return -1;
+    if (grantpt(masterfd) == -1) {
+	close(masterfd);
+	return -1;
+    }
+    if (unlockpt(masterfd) == -1) {
+	close(masterfd);
+	return -1;
+    }
+    if ((slavename = ptsname(masterfd)) == NULL) {
+	close(masterfd);
+	return -1;
+    }
+    if ((slavefd = open(slavename, O_RDWR | O_NOCTTY)) == -1) {
+	close(masterfd);
+	return -1;
+    }
+    *amaster = masterfd;
+    *aslave = slavefd;
+    ioctl(*aslave, I_PUSH, "ptem");
+    ioctl(*aslave, I_PUSH, "ldterm");
+    ioctl(*aslave, I_PUSH, "ttcompat");
+    if (name)
+	strcpy(name, slavename);
+    if (termp)
+	tcsetattr(slavefd, TCSAFLUSH, termp);
+    if (winp)
+	ioctl(slavefd, TIOCSWINSZ, (char *) winp);
+    return 0;
 }
 
 os_vm_address_t round_up_sparse_size(os_vm_address_t addr)

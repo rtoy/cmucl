@@ -21,7 +21,16 @@ New in this release:
 
   * Feature enhancements:
     - ~R supports many more cardinal names.
- 
+    - Updated network support:
+      o Added BIND-INET-SOCKET to bind a socket to a local address.
+      o Added OPEN-NETWORK-STREAM to create a stream connected to a given host.
+      o Added ACCEPT-NETWORK-STREAM to create a stream connected to
+        the new network connection
+      o Updated CONNECT-TO-INET-SOCKET to allow binding the newly
+        created socket to a local address
+    - Added UNIX:UNIX-OPENPTY, an interface to the openpty C library
+      function.
+
   * ANSI compliance fixes:
     - Fix bug in backquote printer.  If the variable is @foo, we want
       to print ", @foo" not ",@foo".  Similarly, for .foo, we want to
@@ -35,6 +44,8 @@ New in this release:
       merging the new-name with the truename of filespec.  Also, a
       logical pathname should be returned if new-name is a logical
       pathname. 
+    - Character names need to be a capital letter followed by lower
+      case.  Needed to match what ~:C does.  (Found via ansi-tests).
 
   * Bugfixes:
     - Compiler can now derive the rank of an array, even if the array
@@ -68,15 +79,51 @@ New in this release:
       before.  
     - The small bias in RANDOM for integer args up to 32 bits long
       should now be gone.
+    - Improved type derivation for LOGAND when one arg is bounded but
+      the other is not.
+    - Some issues with tracing on sparc and ppc have been fixed.  This
+      usually manifests itself with a segfault just after the function
+      result is printed.
+    - Fixed bug on sparc where C-c sometimes causes a segfault.  We
+      now handle the case where siginfo_t is NULL, which can also
+      happen on other architectures.
+    - The interpreter catches invalid EVAL-WHEN situations just like
+      the compiler, instead of silently ignoring them.
+    - FLOAT-PRECISION supports double-double floats.
 
   * Trac Tickets:
     - #16: Read-time hash-table issue
       Fixed.
+    - #17: LOOP NAMED NIL has no effect
+      Fixed.
+    - #18: Modular arith bug 1
+      Fixed
+    - #19: Modular arith bug 2
+      Fixed by not doing modular arith if the args are known to be
+      fixnums.
+    - #20: Modular arith bug?
+      Workaround applied.
+    - #24: Float contagion for expt
+      Float contagion is applied to the arguments before computing
+      expt.
 
   * Other changes:
     - IS1, IS2, IS3, and IS4 are recognized character names for the
       ASCII control codes US, RS, GS, FS, respectively.
     - Added OPEN-NETWORK-STREAM and ACCEPT-NETWORK-STREAM functions.
+    - When initializing a random state, try to read 627 words from
+      /dev/urandom to initialize the entire state vector with random
+      bits.  Previously, only one word was read.
+    - A seed of 0 is allowed in KERNEL:INIT-RANDOM-STATE.
+    - Updated User guide to include more examples of tracing.
+    - Enable gencgc page protection on x86/darwin.  This can speed up
+      GC a bit.  (Not measured.)
+    - Bignum truncate is significantly faster.  Some cl-bench
+      benchmarks are now almost twice as fast.
+    - The continuable error produced by raising an integer to a power
+      exceeding *intexp-maximum-exponent* is now a restart, giving the
+      user the option to continue and update the limit to the new
+      power.
 
   * Improvements to the PCL implementation of CLOS:
     - The compiler and interpreter should handle SLOT-VALUE the same

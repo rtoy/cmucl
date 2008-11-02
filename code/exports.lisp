@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.267.2.3.2.1 2008/07/02 01:22:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.267.2.3.2.2 2008/11/02 13:30:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -307,7 +307,8 @@
 	   #+(or svr4 bsd linux) "O_NDELAY"
 	   "CHECK"
 
-	   "UNIX-RECVFROM" "UNIX-SENDTO" "UNIX-SHUTDOWN")
+	   "UNIX-RECVFROM" "UNIX-SENDTO" "UNIX-SHUTDOWN"
+	   "UNIX-OPENPTY")
   #+(or svr4 linux)
   (:export "EADDRINUSE" "EADDRNOTAVAIL" "EADV" "EAFNOSUPPORT"
 	   "EALREADY" "EBADE" "EBADFD" "EBADMSG" "EBADR" "EBADRQC"
@@ -362,7 +363,8 @@
 	    "USER-INFO-SHELL" "USER-INFO-PASSWORD" "USER-INFO-UID"
 	    "GROUP-INFO-GID" "USER-INFO" "USER-INFO-NAME" "USER-INFO-GID"
 	    "GROUP-INFO-MEMBERS" "UNIX-GETGRGID" "USER-INFO-GECOS"
-	    "GROUP-INFO-NAME"))
+	    "GROUP-INFO-NAME"
+	    "UNIX-GETGRNAM"))
   
 (defpackage "FORMAT")
 
@@ -1280,6 +1282,7 @@
              "COMPACT-INFO-ENVIRONMENT" "COMPILE-FROM-STREAM" "COMPILEDP"
              "COMPLETE-FILE" "CONCAT-PNAMES" "CONNECT-TO-INET-SOCKET"
              "CONSTANT" "CONSTANT-ARGUMENT" "CONSTANT-FUNCTION"
+	     "BIND-INET-SOCKET"
              "CREATE-INET-LISTENER" "CREATE-INET-SOCKET" "CREATE-UNIX-LISTENER"
 	     "OPEN-NETWORK-STREAM" "DEF-SOURCE-CONTEXT"
              "DEFAULT-CLX-EVENT-HANDLER" "DEFAULT-DIRECTORY"
@@ -1409,7 +1412,10 @@
 
 	     "*TRUST-DYNAMIC-EXTENT-DECLARATIONS*"
 
+	     ;; From internet.lisp
+	     "ACCEPT-NETWORK-STREAM"
 	     "INET-RECVFROM" "INET-SENDTO" "INET-SHUTDOWN"
+	     "OPEN-NETWORK-STREAM"
 	     "SHUT-RD" "SHUT-WR" "SHUT-RDWR"
 
 	     "BINARY-TEXT-STREAM" "READ-VECTOR" "WRITE-VECTOR"
