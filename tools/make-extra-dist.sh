@@ -32,7 +32,7 @@ ARCH=$3
 OS=$4
 
 case $ARCH in
-	x86*)		FASL=x86f ;;
+	x86*)		FASL="x86f sse2f" ;;
 	sparc*)		FASL=sparcf ;;
 	alpha*)		FASL=axpf ;;
 	ppc*)		FASL=ppcf ;;
@@ -54,11 +54,19 @@ echo Cleaning $DESTDIR
 
 echo Installing extra components
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib
+
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/subsystems
-install ${GROUP} ${OWNER} -m 0644 $TARGET/clx/clx-library.$FASL \
-	$DESTDIR/lib/cmucl/lib/subsystems/
-install ${GROUP} ${OWNER} -m 0644 $TARGET/hemlock/hemlock-library.$FASL \
-	$DESTDIR/lib/cmucl/lib/subsystems/
+
+for ext in $FASL
+do
+  install ${GROUP} ${OWNER} -m 0644 $TARGET/clx/clx-library.$ext \
+      $DESTDIR/lib/cmucl/lib/subsystems/
+  install ${GROUP} ${OWNER} -m 0644 $TARGET/hemlock/hemlock-library.$ext \
+      $DESTDIR/lib/cmucl/lib/subsystems/
+  install ${GROUP} ${OWNER} -m 0644 $TARGET/interface/clm-library.$ext  \
+      $DESTDIR/lib/cmucl/lib/subsystems/
+done
+
 # install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/fonts/
 # install ${GROUP} ${OWNER} -m 0644 misc/8x13u.snf misc/fonts.dir \
 #	$DESTDIR/lib/cmucl/lib/fonts/
@@ -67,8 +75,6 @@ install ${GROUP} ${OWNER} -m 0644 src/hemlock/XKeysymDB \
 	$TARGET/hemlock/spell-dictionary.bin \
 	$DESTDIR/lib/cmucl/lib/
 install ${GROUP} ${OWNER} -m 0755 src/hemlock/mh-scan $DESTDIR/lib/cmucl/lib/
-install ${GROUP} ${OWNER} -m 0644 $TARGET/interface/clm-library.$FASL  \
-	$DESTDIR/lib/cmucl/lib/subsystems/
 install ${GROUP} ${OWNER} -m 0755 $TARGET/motif/server/motifd \
 	$DESTDIR/lib/cmucl/lib/
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.13 2008/04/21 23:59:12 cshapiro Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.14 2008/11/12 15:04:23 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -159,7 +159,7 @@
 
   ;; Some FP constants can be generated in the i387 silicon.
   (fp-constant immediate-constant)
-    
+  
   (immediate immediate-constant)
 
   ;; **** The stacks.
@@ -286,15 +286,15 @@
 		     :alternate-scs (double-double-stack))
   
   (complex-single-reg float-registers
-		      :locations (0 2 4 6)
-		      :element-size 2
+		      :locations #-sse2 (0 2 4 6) #+sse2 (0 1 2 3 4 5 6 7)
+		      :element-size #-sse2 2 #+sse2 1
 		      :constant-scs ()
 		      :save-p t
 		      :alternate-scs (complex-single-stack))
 
   (complex-double-reg float-registers
-		      :locations (0 2 4 6)
-		      :element-size 2
+		      :locations #-sse2 (0 2 4 6) #+sse2 (0 1 2 3 4 5 6 7)
+		      :element-size #-sse2 2 #+sse2 1
 		      :constant-scs ()
 		      :save-p t
 		      :alternate-scs (complex-double-stack))
@@ -381,10 +381,12 @@
      (when (static-symbol-p value)
        (sc-number-or-lose 'immediate *backend*)))
     (single-float
-     (when (or (eql value 0f0) (eql value 1f0))
+     (when (or (eql value 0f0)
+	       #-sse2 (eql value 1f0))
        (sc-number-or-lose 'fp-constant *backend*)))
     (double-float
-     (when (or (eql value 0d0) (eql value 1d0))
+     (when (or (eql value 0d0)
+	       #-sse2 (eql value 1d0))
        (sc-number-or-lose 'fp-constant *backend*)))
     #+long-float
     (long-float
@@ -451,7 +453,8 @@
 		  (< -1 offset (length name-vec))
 		  (svref name-vec offset))
 	     (format nil "<Unknown Reg: off=~D, sc=~A>" offset sc-name))))
-      (float-registers (format nil "FR~D" offset))
+      (float-registers (format nil #-sse2 "FR~D" #+sse2 "XMM~D"
+			       offset))
       (stack (format nil "S~D" offset))
       (constant (format nil "Const~D" offset))
       (immediate-constant "Immed")

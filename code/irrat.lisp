@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.57 2008/10/22 14:02:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.58 2008/11/12 15:04:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,13 +59,18 @@
 ;;; Please refer to the Unix man pages for details about these routines.
 
 ;;; Trigonometric.
-#-x86 (def-math-rtn "sin" 1)
-#-x86 (def-math-rtn "cos" 1)
-#-x86 (def-math-rtn "tan" 1)
+#-(and x86 (not sse2))
+(progn
+  ;; For x86 (without sse2), we can use x87 instructions to implement
+  ;; these.  With sse2, we don't currently support that, so these
+  ;; should be disabled.
+  (def-math-rtn "sin" 1)
+  (def-math-rtn "cos" 1)
+  (def-math-rtn "tan" 1)
+  (def-math-rtn "atan" 1)
+  (def-math-rtn "atan2" 2))
 (def-math-rtn "asin" 1)
 (def-math-rtn "acos" 1)
-#-x86 (def-math-rtn "atan" 1)
-#-x86 (def-math-rtn "atan2" 2)
 (def-math-rtn "sinh" 1)
 (def-math-rtn "cosh" 1)
 (def-math-rtn "tanh" 1)
@@ -74,15 +79,25 @@
 (def-math-rtn "atanh" 1)
 
 ;;; Exponential and Logarithmic.
-#-x86 (def-math-rtn "exp" 1)
-#-x86 (def-math-rtn "log" 1)
-#-x86 (def-math-rtn "log10" 1)
-(def-math-rtn "pow" 2)
-#-(or x86 sparc-v7 sparc-v8 sparc-v9) (def-math-rtn "sqrt" 1)
-(def-math-rtn "hypot" 2)
-#-(or hpux x86) (def-math-rtn "log1p" 1)
+#-(and x86 (not sse2))
+(progn
+  (def-math-rtn "exp" 1)
+  (def-math-rtn "log" 1)
+  (def-math-rtn "log10" 1))
 
-#+x86 ;; These are needed for use by byte-compiled files.
+(def-math-rtn "pow" 2)
+#-(or x86 sparc-v7 sparc-v8 sparc-v9)
+(def-math-rtn "sqrt" 1)
+(def-math-rtn "hypot" 2)
+
+;; Don't want log1p to use the x87 instruction.
+#-(or hpux (and x86 (not sse2)))
+(def-math-rtn "log1p" 1)
+
+;; These are needed for use by byte-compiled files.  But don't use
+;; these with sse2 since we don't support using the x87 instructions
+;; here.
+#+(and x86 (not sse2))
 (progn
   #+nil
   (defun %sin (x)
@@ -204,7 +219,7 @@
 
 )
 
-#+ppc
+#+(or ppc sse2)
 (progn
 (declaim (inline %%sin %%cos %%tan))
 (macrolet ((frob (alien-name lisp-name)
@@ -266,9 +281,10 @@
 		    (if (evenp n)
 			(,tan reduced)
 			(- (/ (,tan reduced)))))))))))
-  #+x86
+  ;; Don't want %sin-quick and friends with sse2.
+  #+(and x86 (not sse2))
   (frob %sin-quick %cos-quick %tan-quick)
-  #+ppc
+  #+(or ppc sse2)
   (frob %%sin %%cos %%tan))
 
 

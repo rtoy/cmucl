@@ -2,8 +2,13 @@
 
 usage() {
     echo "Usage: `basename $0` [-l] dir [dir1 dir2 ...]"
-    echo "  -h   This help"
-    echo "  -l   Clean out the C runtime as well"
+    echo "  -h       This help"
+    echo "  -l       Clean out the C runtime as well"
+    echo "  -K what  Specify what to keep:  lib, core, all"
+    echo "             lib keeps the module libraries"
+    echo "             core keeps all lisp core files"
+    echo "             all keeps the libs and cores"
+    echo "           (for build.sh)"
     echo ""
     echo "Cleans out all Lisp fasls from the given directories"
     echo "If -l is also given, the C runtime is cleared as well.  This includes"
@@ -12,10 +17,11 @@ usage() {
     exit 1
 }
 
-while getopts "h?l" arg
+while getopts "h?lK:" arg
 do
     case $arg in
 	l) CLEAN_C=1 ;;
+        K) KEEP=$OPTARG ;;
 	h | \?) usage; exit 1 ;;
     esac
 done
@@ -36,6 +42,19 @@ do
     TARGET="$TARGET $D"
 done
 
+# Default:  don't keep any libraries, and delete an lisp cores
+GREP="cat"
+CORE='-o -name "*.core"'
+
+if [ -n "$KEEP" ]; then
+    case $KEEP in
+      lib) GREP='grep -v \(gray-streams\|gray-compat\|simple-streams\|iodefs\|external-formats\|clx\|hemlock\|clm\)-library' ;;
+      core) CORE='"' ;;
+      all) GREP='grep -v \(gray-streams\|gray-compat\|simple-streams\|iodefs\|external-formats\|clx\|hemlock\|clm\)-library'
+	   CORE='' ;;
+    esac
+fi
+	  
 find $TARGET -name "*.bytef" -o -name "*.lbytef" -o -name "*.assem" -o \
 	-name "*.axpf" -o \
 	-name "*.hpf" -o \
@@ -44,7 +63,7 @@ find $TARGET -name "*.bytef" -o -name "*.lbytef" -o -name "*.assem" -o \
 	-name "*.ppcf" -o \
 	-name "*.sparcf" -o \
 	-name "*.x86f" -o \
-	-name "*.core" | xargs rm 2> /dev/null
+	-name "*.sse2f" $CORE | $GREP | xargs rm 2> /dev/null
 
 for d in $TARGET
 do

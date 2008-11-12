@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-arch.c,v 1.7 2008/03/19 09:17:10 cshapiro Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-arch.c,v 1.8 2008/11/12 15:04:24 rtoy Exp $ 
  *
  */
 
@@ -26,7 +26,7 @@
 unsigned long fast_random_state = 1;
 
 char *
-arch_init(void)
+arch_init(fpu_mode_t mode)
 {
     return "lisp.core";
 }

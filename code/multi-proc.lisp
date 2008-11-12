@@ -5,7 +5,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.43 2005/07/05 13:12:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.44 2008/11/12 15:04:23 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1305,7 +1305,7 @@
   "Allow other processes to run."
   (unless *inhibit-scheduling*
     ;; Catch any FP exceptions before entering the scheduler.
-    (kernel:float-wait)
+    #+x87 (kernel:float-wait)
     ;; Inhibit recursive entry of the scheduler.
     (setf *inhibit-scheduling* t)
     (assert (eq (first *remaining-processes*) *current-process*))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.29 2008/01/03 11:41:52 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.30 2008/11/12 15:04:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,6 +28,14 @@
 	  sigcontext-program-counter sigcontext-register
 	  sigcontext-float-register sigcontext-floating-point-modes
 	  extern-alien-name sanctify-for-execution))
+
+#+sse2
+(sys:register-lisp-runtime-feature :sse2)
+#+complex-fp-vops
+(sys:register-lisp-feature :complex-fp-vops)
+
+#+(or x87 (not :sse2))
+(sys:register-lisp-feature :x87)
 
 
 ;;;; The sigcontext structure.
@@ -269,6 +277,17 @@
 			  (function (integer 32)
 				    (* sigcontext)))))
     (alien-funcall fn scp)))
+
+(defun %set-sigcontext-floating-point-modes (scp new-mode)
+  (declare (type (alien (* sigcontext)) scp))
+  (let ((fn (extern-alien "os_set_sigcontext_fpu_modes"
+			  (function (integer 32)
+				    (* sigcontext)
+				    c-call:unsigned-int))))
+    (alien-funcall fn scp new-mode)
+    new-mode))
+
+(defsetf sigcontext-floating-point-modes %set-sigcontext-floating-point-modes)
 
 
 ;;; EXTERN-ALIEN-NAME -- interface.

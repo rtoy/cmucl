@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.29 2008/03/19 09:17:13 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.30 2008/11/12 15:04:24 rtoy Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -28,7 +28,7 @@
 #include "interr.h"
 
 char *
-arch_init(void)
+arch_init(fpu_mode_t mode)
 {
     return 0;
 }

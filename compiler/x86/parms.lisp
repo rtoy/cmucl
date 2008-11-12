@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.34 2007/11/14 10:04:35 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.35 2008/11/12 15:04:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,7 +39,8 @@
 
 (setf (backend-name *target-backend*) "X86")
 (setf (backend-version *target-backend*) "Intel x86")
-(setf (backend-fasl-file-type *target-backend*) "x86f")
+(setf (backend-fasl-file-type *target-backend*)
+      (if (backend-featurep :sse2) "sse2f" "x86f"))
 (setf (backend-fasl-file-implementation *target-backend*)
       x86-fasl-file-implementation)
 (setf (backend-fasl-file-version *target-backend*) byte-fasl-file-version)
@@ -162,11 +163,27 @@
 (defconstant float-round-to-positive 2)
 (defconstant float-round-to-zero     3)
 
+#-sse2
+(progn
 (defconstant float-rounding-mode   (byte 2 10))
 (defconstant float-sticky-bits     (byte 6 16))
 (defconstant float-traps-byte      (byte 6  0))
 (defconstant float-exceptions-byte (byte 6 16))
 (defconstant float-fast-bit 0) ; No fast mode on x86
+)
+
+#+sse2
+(progn
+;; These contants match the format of the MXCSR register
+(defconstant float-rounding-mode     (byte 2 13))
+(defconstant float-sticky-bits       (byte 6  0))
+(defconstant float-traps-byte        (byte 6  7))
+(defconstant float-exceptions-byte   (byte 6  0))
+;; SSE2 has a flush-to-zero flag, which we use as the fast bit.  Some
+;; versions of sse2 also have a denormals-are-zeros flag.  We don't
+;; currently use denormals-are-zeroes for anything.
+(defconstant float-fast-bit (ash 1 15))
+)
 ); eval-when
 
 

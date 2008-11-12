@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.10 2004/06/18 22:09:48 cwang Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.11 2008/11/12 15:04:24 rtoy Rel $ */
 
 #ifndef _LISP_H_
 #define _LISP_H_
@@ -47,5 +47,7 @@ typedef u32 lispobj;
 /* This only words for static symbols. */
 #define SymbolFunction(sym) \
     (((struct fdefn *)(SymbolValue(sym)-type_OtherPointer))->function)
+
+typedef enum {AUTO, X87, SSE2} fpu_mode_t;
 
 #endif /* _LISP_H_ */

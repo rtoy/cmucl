@@ -83,6 +83,7 @@ usage ()
     echo '    -C [l m]  Create the build directories.  The args are what'
     echo '               you would give to create-target.sh for the lisp'
     echo '               and motif variant.'
+    echo '    -f mode   FPU mode:  x87, sse2, or auto.  Default is auto'
     echo "    -?        This help message"
 
     exit 1
@@ -113,7 +114,7 @@ buildit ()
 
     if [ "$ENABLE" = "yes" ]; 
     then
-	$TOOLDIR/clean-target.sh $TARGET
+	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET
 	$TIMER $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT
 	(cd $TARGET/lisp; $MAKE)
 	if [ "$BUILD_WORLD2" = "yes" ];
@@ -121,14 +122,17 @@ buildit ()
 	    $TOOLDIR/build-world.sh $TARGET $OLDLISP
 	fi
 	$TOOLDIR/load-world.sh $TARGET "$VERSION"
-	if [ ! -f $TARGET/lisp/lisp.core ]; then
+	if ls $TARGET/lisp/lisp*.core 2>&1 >/dev/null; then
+	    true
+	else
 	    echo "Failed to build $TARGET!"
 	    exit 1
 	fi
     fi
 }
 
-while getopts "123o:b:v:uB:C:i:?" arg
+FPU_MODE=
+while getopts "123o:b:v:uB:C:i:f:?" arg
 do
     case $arg in
 	1) ENABLE2="no" ;;
@@ -142,6 +146,7 @@ do
 	   CREATE_DIRS=yes ;;
 	B) bootfiles="$bootfiles $OPTARG" ;;
         i) INTERACTIVE_BUILD="$OPTARG" ;;
+	f) FPU_MODE="-fpu $OPTARG" ;;
 	\?) usage
 	    ;;
     esac
@@ -167,7 +172,7 @@ buildit
 bootfiles=
 
 TARGET=$BASE-3
-OLDLISP="${BASE}-2/lisp/lisp -noinit -core ${BASE}-2/lisp/lisp.core"
+OLDLISP="${BASE}-2/lisp/lisp -noinit $FPU_MODE"
 ENABLE=$ENABLE3
 
 BUILD=2
@@ -177,7 +182,8 @@ BUILD_WORLD2=
 buildit
 
 TARGET=$BASE-4
-OLDLISP="${BASE}-3/lisp/lisp -noinit -core ${BASE}-3/lisp/lisp.core"
+CLEAN_FLAGS="-K all"
+OLDLISP="${BASE}-3/lisp/lisp -noinit $FPU_MODE"
 ENABLE=$ENABLE4
 
 BUILD=3
@@ -185,8 +191,8 @@ buildit
 
 if [ "$SKIPUTILS" = "no" ];
 then
-    OLDLISP="${BASE}-4/lisp/lisp -noinit -core ${BASE}-4/lisp/lisp.core"
-    $TIMER $TOOLDIR/build-utils.sh $TARGET
+    OLDLISP="${BASE}-4/lisp/lisp -noinit $FPU_MODE"
+    $TIMER $TOOLDIR/build-utils.sh $TARGET $FPU_MODE
 fi
 
 build_finished=`date`

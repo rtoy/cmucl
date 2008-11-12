@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.62 2008/03/18 09:22:55 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.63 2008/11/12 15:04:24 rtoy Exp $
  *
  */
 
@@ -36,7 +36,6 @@
 #include "elf.h"
 #endif
 
-
 
 /* SIGINT handler that invokes the monitor. */
 
@@ -395,6 +394,8 @@ prepend_core_path(char *lib, char *corefile)
 extern int builtin_image_flag;
 extern long initial_function_addr;
 
+fpu_mode_t fpu_mode = AUTO;
+
 /* And here be main. */
 
 int
@@ -405,7 +406,7 @@ main(int argc, char *argv[], char *envp[])
     char *default_core;
     char *lib = NULL;
     char *cmucllib = NULL;
-
+    fpu_mode_t fpu_type;
     boolean monitor;
     lispobj initial_function = 0;
 
@@ -500,10 +501,32 @@ main(int argc, char *argv[], char *envp[])
 	    monitor = TRUE;
 	} else if (strcmp(arg, "-debug-lisp-search") == 0) {
 	    debug_lisp_search = TRUE;
-	}
+        }
+#ifdef i386
+	else if (strcmp(arg, "-fpu") == 0) {
+	    char *str;
+
+	    str = *++argptr;
+            if (str == NULL) {
+                fprintf(stderr, "-fpu must be followed by the FPU type:  auto, x87, sse2\n");
+                exit(1);
+            }
+
+            if (strcmp(str, "auto") == 0) {
+                fpu_mode = AUTO;
+            } else if (strcmp(str, "x87") == 0) {
+                fpu_mode = X87;
+            } else if (strcmp(str, "sse2") == 0) {
+                fpu_mode = SSE2;
+            } else {
+                fprintf(stderr, "Unknown fpu type: `%s'.  Using auto\n", str);
+            }
+        }
+#endif
     }
 
-    default_core = arch_init();
+    default_core = arch_init(fpu_mode);
+
     if (default_core == NULL)
 	default_core = "lisp.core";
 
@@ -559,13 +582,13 @@ main(int argc, char *argv[], char *envp[])
 	libvar = getenv("CMUCLLIB");
 	if (libvar != NULL) {
 	    cmucllib = strdup(libvar);
-	} else 
+	} else
 #if defined FEATURE_EXECUTABLE
 	    /* The following doesn't make sense for executables.
 	       They need to use the saved library path from the
 	       lisp from which they were dumped. */
 	    if (builtin_image_flag == 0)
-#endif	    
+#endif
 	{
 	    char *newlib = NULL;
 
@@ -613,7 +636,7 @@ main(int argc, char *argv[], char *envp[])
 		/* Can't find it so print a message and exit */
 		fprintf(stderr, "Cannot find core file");
 		if (core != NULL) {
-		    fprintf(stderr, " %s", core);
+		    fprintf(stderr, ": `%s'", core);
 		}
 		fprintf(stderr, "\n");
 		fprintf(stderr, "Based on lisp binary path `%s'\n", argv[0]);
@@ -642,10 +665,17 @@ main(int argc, char *argv[], char *envp[])
 	current_dynamic_space_free_pointer = (lispobj *) allocation_pointer;
 #endif
     } else {
-	initial_function = load_core_file(core);
+	initial_function = load_core_file(core, &fpu_type);
     }
 #else
-    initial_function = load_core_file(core);
+    initial_function = load_core_file(core, &fpu_type);
+#endif
+
+#ifdef i386
+    if ((fpu_type == SSE2) && !arch_support_sse2()) {
+	fprintf(stderr, "Core uses SSE2, but CPU doesn't support SSE2.  Exiting\n");
+	exit(1);
+    }
 #endif
 
 #if defined LINKAGE_TABLE
@@ -724,7 +754,7 @@ main(int argc, char *argv[], char *envp[])
      * *lisp-environment-list*, *cmucl-lib*, and *cmucl-core-path*.
      */
     verify_gc();
-#endif    
+#endif
     if (monitor) {
 	while (1) {
 	    ldb_monitor();
