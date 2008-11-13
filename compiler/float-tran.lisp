@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.123 2008/11/13 16:13:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.124 2008/11/13 22:55:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1452,7 +1452,7 @@
 ;;; of complex operation VOPs.  Some architectures have vops, though.
 ;;;
 (macrolet
-    ((frob (type)
+    ((frob (type &optional (real-type type))
        ;; These are functions for which we normally would want to
        ;; write vops for.
        `(progn
@@ -1467,10 +1467,10 @@
 	    ;; Complex - complex
 	    '(complex (- (realpart w) (realpart z))
 	              (- (imagpart w) (imagpart z))))
-	  (deftransform + ((w z) ((complex ,type) real) *)
+	  (deftransform + ((w z) ((complex ,type) ,real-type) *)
 	    ;; Complex + real
 	    '(complex (+ (realpart w) z) (imagpart w)))
-	  (deftransform - ((w z) ((complex ,type) real) *)
+	  (deftransform - ((w z) ((complex ,type) ,real-type) *)
 	    ;; Complex - real
 	    '(complex (- (realpart w) z) (imagpart w)))
 	  (deftransform * ((x y) ((complex ,type) (complex ,type)) *)
@@ -1499,10 +1499,10 @@
 			 (dn (+ iy (* r ry))))
 		    (complex (/ (+ (* rx r) ix) dn)
 			     (/ (- (* ix r) rx) dn))))))
-	  (deftransform * ((w z) ((complex ,type) real) *)
+	  (deftransform * ((w z) ((complex ,type) ,real-type) *)
 	    ;; Complex*real
 	    '(complex (* (realpart w) z) (* (imagpart w) z)))
-	  (deftransform / ((w z) ((complex ,type) real) *)
+	  (deftransform / ((w z) ((complex ,type) ,real-type) *)
 	    ;; Complex/real
 	    '(complex (/ (realpart w) z) (/ (imagpart w) z)))
 	  )))
@@ -1512,31 +1512,34 @@
   #-complex-fp-vops
   (frob double-float)
   #+double-double
-  (frob double-double-float))
+  (frob double-double-float real))
 
 (macrolet
-    ((frob (type)
+    ((frob (type &optional (real-type type))
        ;; These are functions for which we probably wouldn't want to
        ;; write vops for.
        `(progn
 	 (deftransform conjugate ((z) ((complex ,type)) *)
 	   ;; Conjugate of complex number
 	   '(complex (realpart z) (- (imagpart z))))
-	 (deftransform + ((z w) (real (complex ,type)) *)
+	 #-complex-fp-vops
+	 (deftransform + ((z w) (,real-type (complex ,type)) *)
 	   ;; Real + complex:  convert to complex + real
 	   '(+ w z))
-	 (deftransform - ((z w) (real (complex ,type)) *)
+	 #-complex-fp-vops
+	 (deftransform - ((z w) (,real-type (complex ,type)) *)
 	   ;; Real - complex.  The 0 for the imaginary part is
 	   ;; needed so we get the correct signed zero.
 	   '(complex (- z (realpart w)) (- 0 (imagpart w))))
-	 (deftransform * ((z w) (real (complex ,type)) *)
+	 #-complex-fp-vops
+	 (deftransform * ((z w) (,real-type (complex ,type)) *)
 	   ;; Real*complex.
 	   '(complex (* z (realpart w))
 	             (* z (imagpart w))))
 	 (deftransform cis ((z) ((,type)) *)
 	   ;; Cis.
 	   '(complex (cos z) (sin z)))
-	 (deftransform / ((rx y) (real (complex ,type)) *)
+	 (deftransform / ((rx y) (,real-type (complex ,type)) *)
 	   ;; Real/complex
 	   '(let* ((ry (realpart y))
 		   (iy (imagpart y)))
@@ -1606,8 +1609,6 @@
 
 ;;;; Complex contagion:
 
-;; Not yet.  Buggy.
-#+nil
 (progn
 ;;; COMPLEX-CONTAGION-ARG1, ARG2
 ;;;
