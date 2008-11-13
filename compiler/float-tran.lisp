@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.122 2008/11/12 15:04:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.123 2008/11/13 16:13:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1462,11 +1462,11 @@
 	  (deftransform + ((w z) ((complex ,type) (complex ,type)) *)
 	    ;; Complex + complex
 	    '(complex (+ (realpart w) (realpart z))
-	      (+ (imagpart w) (imagpart z))))
+	              (+ (imagpart w) (imagpart z))))
 	  (deftransform - ((w z) ((complex ,type) (complex ,type)) *)
 	    ;; Complex - complex
 	    '(complex (- (realpart w) (realpart z))
-	      (- (imagpart w) (imagpart z))))
+	              (- (imagpart w) (imagpart z))))
 	  (deftransform + ((w z) ((complex ,type) real) *)
 	    ;; Complex + real
 	    '(complex (+ (realpart w) z) (imagpart w)))
@@ -1505,8 +1505,6 @@
 	  (deftransform / ((w z) ((complex ,type) real) *)
 	    ;; Complex/real
 	    '(complex (/ (realpart w) z) (/ (imagpart w) z)))
-
-
 	  )))
 
   #-complex-fp-vops
@@ -1532,8 +1530,9 @@
 	   ;; needed so we get the correct signed zero.
 	   '(complex (- z (realpart w)) (- 0 (imagpart w))))
 	 (deftransform * ((z w) (real (complex ,type)) *)
-	   ;; Real*complex.  Convert to complex*real
-	   '(* w z))
+	   ;; Real*complex.
+	   '(complex (* z (realpart w))
+	             (* z (imagpart w))))
 	 (deftransform cis ((z) ((,type)) *)
 	   ;; Cis.
 	   '(complex (cos z) (sin z)))
@@ -1607,14 +1606,19 @@
 
 ;;;; Complex contagion:
 
+;; Not yet.  Buggy.
+#+nil
+(progn
 ;;; COMPLEX-CONTAGION-ARG1, ARG2
 ;;;
 ;;;    Handles complex contagion of two complex numbers of different types.
 (deftransform complex-contagion-arg1 ((x y) * * :defun-only t :node node)
+  ;;(format t "complex-contagion arg1~%")
   `(,(continuation-function-name (basic-combination-fun node))
     (coerce x ',(type-specifier (continuation-type y))) y))
 ;;;
 (deftransform complex-contagion-arg2 ((x y) * * :defun-only t :node node)
+  ;;(format t "complex-contagion arg2~%")
   `(,(continuation-function-name (basic-combination-fun node))
     x (coerce y ',(type-specifier (continuation-type x)))))
 
@@ -1630,11 +1634,13 @@
 ;;; the real number doesn't cause complex number to increase in
 ;;; precision.
 (deftransform complex-real-contagion-arg1 ((x y) * * :defun-only t :node node)
+  ;;(format t "complex-real-contagion-arg1~%")
   `(,(continuation-function-name (basic-combination-fun node))
      (coerce x ',(numeric-type-format (continuation-type y)))
      y))
 ;;;
 (deftransform complex-real-contagion-arg2 ((x y) * * :defun-only t :node node)
+  ;;(format t "complex-real-contagion-arg2~%")
   `(,(continuation-function-name (basic-combination-fun node))
      x
      (coerce y ',(numeric-type-format (continuation-type x)))))
@@ -1656,11 +1662,15 @@
 ;;; the real number is more precise than the complex, so that the
 ;;; complex number needs to be coerced to a more precise complex.
 (deftransform upgraded-complex-real-contagion-arg1 ((x y) * * :defun-only t :node node)
+  ;;(format t "upgraded-complex-real-contagion-arg1~%")
   `(,(continuation-function-name (basic-combination-fun node))
      (coerce x '(complex ,(type-specifier (continuation-type y))))
      y))
 ;;;
 (deftransform upgraded-complex-real-contagion-arg2 ((x y) * * :defun-only t :node node)
+  #+nil
+  (format t "upgraded-complex-real-contagion-arg2: ~A ~A~%"
+	  (continuation-type x) (continuation-type y))
   `(,(continuation-function-name (basic-combination-fun node))
      x
      (coerce y '(complex ,(type-specifier (continuation-type x))))))
@@ -1673,7 +1683,7 @@
   (%deftransform x '(function (double-float
 			       (or (complex single-float) (complex rational))) *)
 		 #'upgraded-complex-real-contagion-arg2))
-
+)
 
 ;;; Here are simple optimizers for sin, cos, and tan.  They do not
 ;;; produce a minimal range for the result; the result is the widest
