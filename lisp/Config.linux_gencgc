@@ -18,9 +18,16 @@ GENCGC = -DGENCGC
 GC_SRC = gencgc.c
 endif
 
-# Enable support for SSE2
+# Enable support for SSE2.  If FEATURE_X87 is set, we want SSE2
+# support in the C code too so that the same binary is built in both
+# cases.  If neither is set, then we don't want any SSE2 support at
+# all.
+ifdef FEATURE_X87
+SSE2 = -DFEATURE_SSE2
+else
 ifdef FEATURE_SSE2
 SSE2 = -DFEATURE_SSE2
+endif
 endif
 
 RUNTIME = -Di386 $(GENCGC) $(LINKAGE) $(SSE2)
