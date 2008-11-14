@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.2 2008/11/12 15:04:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.3 2008/11/14 01:54:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1950,7 +1950,7 @@
 		 (inst movaps r x))	; r = xi|xr
 	       (inst ,fmul r t0)))))))
   (complex-*-float single mulps movlhps 4)
-  (complex-*-float double mulpd unpcklps 4))
+  (complex-*-float double mulpd unpcklpd 4))
 
 ;; Divide a complex by a real
 (macrolet
@@ -1991,6 +1991,11 @@
   (:temporary (:scs (complex-double-reg)) t1 t2)
   (:guard (backend-featurep :sse3))
   (:generator 1
+    ;; Basic algorithm from the paper "The Microarchitecture of the
+    ;; Intel Pentium 4 Processor on 90nm Technololgy"
+    ;;
+    ;; This requires SSSE3 instructions (addsubpd, movddup).
+    ;;
     ;; x = a + b*i.  In sse2 reg we have: b|a
     ;; y = c + d*i.  In sse2 reg we have: d|c
     (inst movddup t1 x)			; t1 = a|a
