@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.3 2008/11/14 01:54:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.4 2008/11/14 20:43:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1914,8 +1914,64 @@
   (complex-op-float double + addsd df 1)
   (complex-op-float double - subsd df 1))
 
-;; Multiply a complex by a float.  The case of float * complex is
-;; handled by a deftransform to convert it to the complex*float case.
+;; Add a float and a complex
+(macrolet
+    ((generate (movinst opinst)
+       `(cond
+	 ((location= x r)
+	  (inst ,opinst x y))
+	 ((not (location= r y))
+	  (inst ,movinst r x)
+	  (inst ,opinst r y))
+	 (t
+	  (inst ,movinst tmp x)
+	  (inst ,opinst tmp y)
+	  (inst ,movinst r tmp))))
+     (complex-op-float (size op fop base-ea cost)
+       (let ((vop-name (symbolicate size "-FLOAT-"
+				    op
+				    "-" "COMPLEX-" size "-FLOAT"))
+	     (complex-reg (symbolicate "COMPLEX-" size "-REG"))
+	     (real-reg (symbolicate size "-REG"))
+	     (c-type (symbolicate "COMPLEX-" size "-FLOAT"))
+	     (r-type (symbolicate size "-FLOAT"))
+	     (r-stack (symbolicate size "-STACK"))
+	     (ea-stack (symbolicate "EA-FOR-" base-ea "-STACK"))
+	     (ea-desc (symbolicate "EA-FOR-" base-ea "-DESC")))
+	 `(define-vop (,vop-name)
+	    (:args (y :scs (,real-reg ,r-stack descriptor-reg))
+	           (x :scs (,complex-reg)))
+	    (:results (r :scs (,complex-reg)))
+	    (:arg-types ,r-type ,c-type)
+	    (:result-types ,c-type)
+	    (:policy :fast-safe)
+	    (:note "inline complex float/float arithmetic")
+	    (:translate ,op)
+	    (:temporary (:sc ,complex-reg) tmp)
+	    (:generator ,cost
+	      (sc-case y
+		(,real-reg
+		 (generate movaps ,fop))
+		(,r-stack
+		 (let ((ea (,ea-stack y)))
+		   (cond
+		     ((location= x r)
+		      (inst ,fop x ea))
+		     (t
+		      (inst movaps r x)
+		      (inst ,fop r ea)))))
+		(descriptor-reg
+		 (let ((ea (,ea-desc y)))
+		   (cond
+		     ((location= x r)
+		      (inst ,fop x ea))
+		     (t
+		      (inst movaps r x)
+		      (inst ,fop r ea)))))))))))
+  (complex-op-float single + addss sf 1)
+  (complex-op-float double + addsd df 1))
+
+;; Multiply a complex by a float or a float by a complex.
 (macrolet
     ((complex-*-float (float-type fmul copy cost)
        (let* ((vop-name (symbolicate "COMPLEX-"
@@ -1948,6 +2004,22 @@
 	       (inst ,copy t0 t0)	; t0 = y|y
 	       (unless (location= x r)
 		 (inst movaps r x))	; r = xi|xr
+	       (inst ,fmul r t0)))
+	   (define-vop (,vop-name-r)
+	     (:args (x :scs (,real-sc-type))
+	            (y :scs (,complex-sc-type)))
+	     (:results (r :scs (,complex-sc-type)))
+	     (:arg-types ,r-type ,c-type)
+	     (:result-types ,c-type)
+	     (:policy :fast-safe)
+	     (:note "inline complex float arithmetic")
+	     (:translate *)
+	     (:temporary (:scs (,complex-sc-type)) t0)
+	     (:generator ,cost
+	       (inst movaps t0 x)	; t0 = x
+	       (inst ,copy t0 t0)	; t0 = x|x
+	       (unless (location= y r)
+		 (inst movaps r y))	; r = yi|yr
 	       (inst ,fmul r t0)))))))
   (complex-*-float single mulps movlhps 4)
   (complex-*-float double mulpd unpcklpd 4))
