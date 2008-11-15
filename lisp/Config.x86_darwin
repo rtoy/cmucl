@@ -18,6 +18,11 @@ GENCGC = -DGENCGC
 GC_SRC = gencgc.c
 endif
 
+# If either FEATURE_X7 or FEATURE_SSE2 is defined, compile the code
+# for SSE2 support.
+ifdef FEATURE_X87
+SSE2 = -DFEATURE_SSE2
+endif
 ifdef FEATURE_SSE2
 SSE2 = -DFEATURE_SSE2
 endif
