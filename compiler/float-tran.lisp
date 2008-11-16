@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.125 2008/11/14 20:43:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.126 2008/11/16 14:23:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1526,6 +1526,16 @@
 	   ;; Real - complex.  The 0 for the imaginary part is
 	   ;; needed so we get the correct signed zero.
 	   '(complex (- z (realpart w)) (- 0 (imagpart w))))
+	 #-complex-fp-vops
+	 (deftransform + ((z w) (,real-type (complex ,type)) *)
+	   ;; Real - complex.  The 0 for the imaginary part is
+	   ;; needed so we get the correct signed zero.
+	   '(complex (+ z (realpart w)) (+ 0 (imagpart w))))
+	 #-complex-fp-vops
+	 (deftransform * ((z w) (,real-type (complex ,type)) *)
+	   ;; Real - complex.  The 0 for the imaginary part is
+	   ;; needed so we get the correct signed zero.
+	   '(complex (* z (realpart w)) (* z (imagpart w))))
 	 (deftransform cis ((z) ((,type)) *)
 	   ;; Cis.
 	   '(complex (cos z) (sin z)))
