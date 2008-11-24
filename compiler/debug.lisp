@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.36 2008/05/22 13:44:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.37 2008/11/24 18:40:43 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -145,16 +145,16 @@
                         ;; its value. Just ignore them.
                         t)
                        ((leaf-p v)
-		 (unless (or (constant-p v)
-			     (and (global-var-p v)
-				  (member (global-var-kind v)
-					  '(:global :special :constant))))
+			(unless (or (constant-p v)
+				    (and (global-var-p v)
+					 (member (global-var-kind v)
+						 '(:global :special :constant))))
                           (barf "Strange *FREE-VARIABLES* entry: ~S." v))
-		 (dolist (n (leaf-refs v))
-		   (check-node-reached n))
-		 (when (basic-var-p v)
-		   (dolist (n (basic-var-sets v))
-		     (check-node-reached n))))
+			(dolist (n (leaf-refs v))
+			  (check-node-reached n))
+			(when (basic-var-p v)
+			  (dolist (n (basic-var-sets v))
+			    (check-node-reached n))))
                        (t
                         (barf "Member of *FREE-VARIABLES* is of unexpected type: ~S" v))))
 	     *free-variables*)
