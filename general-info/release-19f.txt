@@ -112,10 +112,15 @@ New in this release:
       Fixed by not doing modular arith if the args are known to be
       fixnums.
     - #20: Modular arith bug?
-      Workaround applied.
+      Fixed via the fix for Trac #21.  The original workaround has
+      been removed.
     - #24: Float contagion for expt
       Float contagion is applied to the arguments before computing
       expt.
+    - #21: Modular arith bug 3
+      Fixed by delaying the logand defoptimizer.
+    - #15: x86 double-float issue
+      Fixed when using SSE2 support.  We will not fix this for x87.
 
   * Other changes:
     - IS1, IS2, IS3, and IS4 are recognized character names for the
