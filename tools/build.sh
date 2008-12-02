@@ -176,9 +176,6 @@ OLDLISP="${BASE}-2/lisp/lisp -noinit $FPU_MODE"
 ENABLE=$ENABLE3
 
 BUILD=2
-# We shouldn't have to run build-world again because nothing should
-# have changed in the C code after the first build.
-BUILD_WORLD2=
 buildit
 
 TARGET=$BASE-4
