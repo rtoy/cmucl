@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.37 2008/11/12 15:04:25 rtoy Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.38 2008/12/07 02:33:55 agoncharov Exp $ 
  *
  */
 
@@ -19,8 +19,6 @@
 #include "interrupt.h"
 #include "interr.h"
 #include "breakpoint.h"
-
-#define DPRINTF(test, e) {if(test) fprintf e ;}
 
 #define BREAKPOINT_INST 0xcc	/* INT3 */
 

@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.21 2008/01/03 11:41:54 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.22 2008/12/07 02:33:55 agoncharov Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -9,6 +9,8 @@
 #define _OS_H_
 
 #include "lisp.h"
+
+#define DPRINTF(t,a) { if (t) fprintf a; }
 
 #ifdef DARWIN
 #include "Darwin-os.h"

@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.21 2008/11/12 15:04:23 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.22 2008/12/07 02:33:55 agoncharov Exp $
  *
  */
 
@@ -48,7 +48,6 @@
 #include "validate.h"
 vm_size_t os_vm_page_size;
 
-#define DPRINTF(t,a) {if (t) fprintf a;}
 
 
 /*
