@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.25 2008/12/07 03:14:21 agoncharov Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.26 2008/12/07 05:15:44 agoncharov Exp $
  *
  */
 
@@ -114,23 +114,36 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
 unsigned long
 os_sigcontext_fpu_modes(ucontext_t *scp)
 {
-    union savefpu *sv = (union savefpu *) scp->uc_mcontext.mc_fpstate;
     unsigned long modes;
+    
+    union savefpu *sv = (union savefpu *) scp->uc_mcontext.mc_fpstate;
     int fpformat = scp->uc_mcontext.mc_fpformat;
-    unsigned short cw, sw;
+    struct env87 *env_87 = &sv->sv_87.sv_env;
+    struct envxmm *env_xmm = &sv->sv_xmm.sv_env;
+    u_int16_t cw;
+    u_int16_t sw;
 
     if (fpformat == _MC_FPFMT_XMM) {
-	cw = sv->sv_xmm.sv_env.en_cw;
-	sw = sv->sv_xmm.sv_env.en_sw;
+	cw = env_xmm->en_cw;
+	sw = env_xmm->en_sw;
     } else if (fpformat == _MC_FPFMT_387) {
-	cw = sv->sv_87.sv_env.en_cw & 0xffff;
-	sw = sv->sv_87.sv_env.en_sw & 0xffff;
+	cw = env_87->en_cw & 0xffff;
+	sw = env_87->en_sw & 0xffff;
     } else {  /* _MC_FPFMT_NODEV */
 	cw = 0;
 	sw = 0x3f;
     }
-    modes = (sw & 0xff) << 16 | cw;
-    modes ^= 0x3f;
+
+    modes = ((cw & 0x3f) << 7) | (sw & 0x3f);
+
+#ifdef FEATURE_SSE2
+    if (arch_support_sse2()) {
+        u_int32_t mxcsr = env_xmm->en_mxcsr;
+        DPRINTF(0, (stderr, "SSE2 modes = %08x\n", (int) mxcsr));
+	modes |= mxcsr;
+    }
+#endif
+    modes ^= (0x3f << 7);
     return modes;
 }
 
@@ -308,14 +321,24 @@ restore_fpu(ucontext_t *scp)
 {
     union savefpu *sv = (union savefpu *) scp->uc_mcontext.mc_fpstate;
     int fpformat = scp->uc_mcontext.mc_fpformat;
-    unsigned short cw;
+    struct env87 *env_87 = &sv->sv_87.sv_env;
+    struct envxmm *env_xmm = &sv->sv_xmm.sv_env;
+    u_int16_t cw;
 
     if (fpformat == _MC_FPFMT_XMM) {
-	cw = sv->sv_xmm.sv_env.en_cw;
+	cw = env_xmm->en_cw;
     } else if (fpformat == _MC_FPFMT_387) {
-	cw = sv->sv_87.sv_env.en_cw & 0xffff;
+	cw = env_87->en_cw & 0xffff;
     } else {  /* _MC_FPFMT_NODEV */
 	return;
     }
+    DPRINTF(0, (stderr, "restore_fpu:  cw = %08x\n", (int) cw));
     __asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
+#ifdef FEATURE_SSE2
+    if (arch_support_sse2()) {
+        u_int32_t mxcsr = env_xmm->en_mxcsr;
+        DPRINTF(0, (stderr, "restore_fpu:  mxcsr (raw) = %04x\n", mxcsr));
+        __asm__ __volatile__ ("ldmxcsr %0" :: "m" (*&mxcsr));
+    }
+#endif
 }
