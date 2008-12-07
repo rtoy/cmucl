@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.24 2008/09/16 08:52:31 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.25 2008/12/07 03:14:21 agoncharov Exp $
  *
  */
 
@@ -48,31 +48,46 @@ os_init(void)
 unsigned long *
 os_sigcontext_reg(ucontext_t *scp, int index)
 {
+    __register_t *rv;
     switch (index) {
     case 0:
-	return (unsigned long *) &scp->uc_mcontext.mc_eax;
+        rv = &scp->uc_mcontext.mc_eax;
+        break;
     case 2:
-	return (unsigned long *) &scp->uc_mcontext.mc_ecx;
+        rv = &scp->uc_mcontext.mc_ecx;
+        break;
     case 4:
-	return (unsigned long *) &scp->uc_mcontext.mc_edx;
+        rv = &scp->uc_mcontext.mc_edx;
+        break;
     case 6:
-	return (unsigned long *) &scp->uc_mcontext.mc_ebx;
+        rv = &scp->uc_mcontext.mc_ebx;
+        break;
     case 8:
-	return (unsigned long *) &scp->uc_mcontext.mc_esp;
+        rv = &scp->uc_mcontext.mc_esp;
+        break;
     case 10:
-	return (unsigned long *) &scp->uc_mcontext.mc_ebp;
+        rv = &scp->uc_mcontext.mc_ebp;
+        break;
     case 12:
-	return (unsigned long *) &scp->uc_mcontext.mc_esi;
+        rv = &scp->uc_mcontext.mc_esi;
+        break;
     case 14:
-	return (unsigned long *) &scp->uc_mcontext.mc_edi;
+        rv = &scp->uc_mcontext.mc_edi;
+        break;
+    default:
+        rv = NULL;
     }
-    return NULL;
+    
+    /* Pre-cast to (void *), to avoid the compiler warning:
+     * FreeBSD-os.c:72: warning: dereferencing type-punned pointer will break strict-aliasing rules
+     */
+    return (unsigned long *) (void *) rv; 
 }
 
 unsigned long *
 os_sigcontext_pc(ucontext_t *scp)
 {
-    return (unsigned long *) &scp->uc_mcontext.mc_eip;
+    return (unsigned long *) (void *) &scp->uc_mcontext.mc_eip;
 }
 
 unsigned char *
