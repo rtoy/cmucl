@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.63 2008/11/12 15:04:24 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.64 2008/12/09 23:17:57 rtoy Exp $
  *
  */
 
@@ -406,7 +406,7 @@ main(int argc, char *argv[], char *envp[])
     char *default_core;
     char *lib = NULL;
     char *cmucllib = NULL;
-    fpu_mode_t fpu_type;
+    fpu_mode_t fpu_type = AUTO;
     boolean monitor;
     lispobj initial_function = 0;
 
