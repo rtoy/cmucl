@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.30 2008/11/12 15:04:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.31 2008/12/10 02:21:31 agoncharov Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,13 +29,15 @@
 	  sigcontext-float-register sigcontext-floating-point-modes
 	  extern-alien-name sanctify-for-execution))
 
-#+sse2
-(sys:register-lisp-runtime-feature :sse2)
 #+complex-fp-vops
 (sys:register-lisp-feature :complex-fp-vops)
 
 #+(or x87 (not :sse2))
 (sys:register-lisp-feature :x87)
+#+sse2
+(progn
+  (setf *features* (delete :x87 *features*))
+  (sys:register-lisp-runtime-feature :sse2))
 
 
 ;;;; The sigcontext structure.
