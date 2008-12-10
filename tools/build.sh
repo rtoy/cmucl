@@ -114,20 +114,17 @@ buildit ()
 
     if [ "$ENABLE" = "yes" ]; 
     then
-	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET
-	$TIMER $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT
-	(cd $TARGET/lisp; $MAKE)
+	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET || { echo "Failed: $TOOLDIR/clean-target.sh"; exit 1; }
+	$TIMER $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT || { echo "Failed: $TOOLDIR/build-world.sh"; exit 1; }
+	$MAKE -C $TARGET/lisp || { echo "Failed: $MAKE -C $TARGET/lisp"; exit 1; }
 	if [ "$BUILD_WORLD2" = "yes" ];
 	then
-	    $TOOLDIR/build-world.sh $TARGET $OLDLISP
+	    $TOOLDIR/build-world.sh $TARGET $OLDLISP || { echo "Failed: $TOOLDIR/build-world.sh"; exit 1; }
 	fi
-	$TOOLDIR/load-world.sh $TARGET "$VERSION"
-	if ls $TARGET/lisp/lisp*.core 2>&1 >/dev/null; then
-	    true
-	else
-	    echo "Failed to build $TARGET!"
-	    exit 1
-	fi
+	$TOOLDIR/load-world.sh $TARGET "$VERSION" || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
+
+	$TARGET/lisp/lisp -batch -noinit $FPU_MODE < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit $FPU_MODE"; exit 1; }
+	return 0;
     fi
 }
 
