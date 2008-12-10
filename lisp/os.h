@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.22 2008/12/07 02:33:55 agoncharov Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.23 2008/12/10 02:39:13 rtoy Rel $
  *
  * Common interface for os-dependent functions.
  *
@@ -113,6 +113,6 @@ extern int os_control_stack_overflow(void *, os_context_t *);
 unsigned long *os_sigcontext_reg(ucontext_t *, int);
 unsigned long *os_sigcontext_pc(ucontext_t *);
 unsigned char *os_sigcontext_fpu_reg(ucontext_t *, int);
-unsigned long os_sigcontext_fpu_modes(ucontext_t *);
+unsigned int os_sigcontext_fpu_modes(ucontext_t *);
 
 #endif /* _OS_H_ */
