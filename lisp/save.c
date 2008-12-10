@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.20 2008/11/12 15:04:24 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.21 2008/12/10 16:16:11 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -101,7 +101,7 @@ dump_region(struct alloc_region *alloc_region)
 #endif
 
 boolean
-save(char *filename, lispobj init_function)
+save(char *filename, lispobj init_function, int sse2_mode)
 {
     FILE *file;
 
@@ -148,18 +148,19 @@ save(char *filename, lispobj init_function)
     putw(CORE_MAGIC, file);
 
     putw(CORE_VERSION, file);
-#ifdef i386
+#if defined(i386) && defined(FEATURE_SSE2)
     putw(4, file);
 #else
     putw(3, file);
 #endif
     putw(version, file);
-#ifdef i386
-#ifdef FEATURE_SSE2
-    putw(SSE2, file);
-#else
-    putw(X87, file);
-#endif    
+
+#if defined(i386) && defined(FEATURE_SSE2)
+    if (sse2_mode) {
+        putw(SSE2, file);
+    } else {
+        putw(X87, file);
+    }
 #endif
     
     putw(CORE_NDIRECTORY, file);
