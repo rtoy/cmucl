@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.30 2008/11/12 15:04:25 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.31 2008/12/17 12:42:30 rtoy Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -273,7 +273,20 @@ ENDFUNC(closure_tramp)
  */
 FUNCDEF(function_end_breakpoint_guts)
 	/* Multiple Value return */
+#ifndef DARWIN
 	jmp	multiple_value_return
+#else
+	/* 
+	 * Darwin's assembler is too stupid to make the above
+	 * instruction a two-byte instruction and I (rtoy) am too
+	 * stupid to figure out how to get Darwin's assembler
+	 * to do it either.  Hence hardwire
+	 * the instruction explicitly.  This jmp instruction MUST be a two-byte
+	 * instruction for this to work correctly!
+	 */
+	.byte	0xeb
+	.byte	0x14
+#endif	
 	/* Single value return: The eventual return will now use the
 	   multiple values return convention but with a return values
 	   count of one. */
