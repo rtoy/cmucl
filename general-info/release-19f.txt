@@ -100,6 +100,9 @@ New in this release:
     - The interpreter catches invalid EVAL-WHEN situations just like
       the compiler, instead of silently ignoring them.
     - FLOAT-PRECISION supports double-double floats.
+    - Tracing should now be working on Darwin/x86.  Previously,
+      certain cases would cause Lisp to segfault in bad ways where you
+      could not return to the repl.
 
   * Trac Tickets:
     - #16: Read-time hash-table issue
@@ -121,6 +124,11 @@ New in this release:
       Fixed by delaying the logand defoptimizer.
     - #15: x86 double-float issue
       Fixed when using SSE2 support.  We will not fix this for x87.
+    - #25: Compiler bug
+      Fixed.
+    - #26: slot-value type check
+      Fixed for some cases.  When used in methods, slot-value may not
+      do the type check.if the object is not a argument to the method.
 
   * Other changes:
     - IS1, IS2, IS3, and IS4 are recognized character names for the
@@ -148,6 +156,9 @@ New in this release:
       slot-value-using-class have been fixed.
       Get-accessor-method-function was causing an error to be signaled
       incorrectly.
+    - (setf (slot-value <obj> <slot>) <new>) will now signal an error
+      in some situations when the new value is not of the correct
+      declared type for slot.
 
   * Changes to building procedure:
 
