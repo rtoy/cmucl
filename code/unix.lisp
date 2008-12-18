@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.119.2.5.2.2 2008/11/02 13:30:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.119.2.5.2.3 2008/12/18 18:00:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2991,14 +2991,26 @@
 
 ;; Datagram support
 
-(def-alien-routine ("recvfrom" unix-recvfrom) int
-  (fd int)
-  (buffer c-string)
-  (length int)
-  (flags int)
-  (sockaddr (* t))
-  (len int :in-out))
+(defun unix-recvfrom (fd buffer length flags sockaddr len)
+  (with-alien ((l c-call:int len))
+    (values
+     (alien-funcall (extern-alien "recvfrom"
+				  (function c-call:int
+					    c-call:int
+					    system-area-pointer
+					    c-call:int
+					    c-call:int
+					    (* t)
+					    (* c-call:int)))
+		    fd
+		    (system:vector-sap buffer)
+		    length
+		    flags
+		    sockaddr
+		    (addr l))
+     l)))
 
+#-unicode
 (def-alien-routine ("sendto" unix-sendto) int
   (fd int)
   (buffer c-string)
@@ -3006,6 +3018,22 @@
   (flags int)
   (sockaddr (* t))
   (len int))
+
+(defun unix-sendto (fd buffer length flags sockaddr len)
+  (alien-funcall (extern-alien "sendto"
+			       (function c-call:int
+					 c-call:int
+					 system-area-pointer
+					 c-call:int
+					 c-call:int
+					 (* t)
+					 c-call:int))
+		 fd
+		 (system:vector-sap buffer)
+		 length
+		 flags
+		 sockaddr
+		 len))
 
 (def-alien-routine ("shutdown" unix-shutdown) int
   (socket int)
