@@ -13,7 +13,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/OpenBSD-os.c,v 1.6.4.1 2008/11/01 22:40:36 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/OpenBSD-os.c,v 1.6.4.2 2008/12/18 21:50:19 rtoy Exp $
  *
  */
 
@@ -34,8 +34,6 @@
 #include <sys/proc.h>
 #include "validate.h"
 vm_size_t os_vm_page_size;
-
-#define DPRINTF(t,a) {if (t) fprintf a;}
 
 #if defined GENCGC
 #include "gencgc.h"

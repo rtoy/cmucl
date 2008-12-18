@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32 2008/01/03 11:41:51 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32.4.1 2008/12/18 21:50:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -54,9 +54,42 @@
 
 ;;; Interpreter stubs.
 ;;;
+#-sse2
+(progn
 (defun floating-point-modes () (floating-point-modes))
 (defun (setf floating-point-modes) (new) (setf (floating-point-modes) new))
+)
 
+#+sse2
+(progn
+  (defun floating-point-modes ()
+    ;; Combine the modes from the FPU and SSE2 units.  Since the sse
+    ;; mode contains all of the common information we want, we massage
+    ;; the x87-modes to match, and then OR the x87 and sse2 modes
+    ;; together.  Note: We ignore the rounding control bits from the
+    ;; FPU and only use the SSE2 rounding control bits.
+    (let* ((x87-modes (vm::x87-floating-point-modes))
+	   (sse-modes (vm::sse2-floating-point-modes))
+	   (final-mode (logior sse-modes
+			       (ash (logand #x3f x87-modes) 7) ; control
+			       (logand #x3f (ash x87-modes -16)))))
+
+      final-mode))
+  (defun (setf floating-point-modes) (new-mode)
+    (declare (type (unsigned-byte 24) new-mode))
+    ;; Set the floating point modes for both X87 and SSE2.  This
+    ;; include the rounding control bits.
+    (let* ((rc (ldb float-rounding-mode new-mode))
+	   (x87-modes
+	    (logior (ash (logand #x3f new-mode) 16)
+		    (ash rc 10)
+		    (logand #x3f (ash new-mode -7))
+		    ;; Set precision control to be 64-bit, always.
+		    (ash 3 8))))
+      (setf (vm::sse2-floating-point-modes) new-mode)
+      (setf (vm::x87-floating-point-modes) x87-modes))
+    new-mode)
+)
 
 ;;; SET-FLOATING-POINT-MODES  --  Public
 ;;;
@@ -188,6 +221,20 @@
       (setf (sigcontext-floating-point-modes
 	     (alien:sap-alien scp (* unix:sigcontext)))
 	    new-modes))
+    #+sse2
+    (let* ((new-modes modes)
+	   (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
+				     traps)))
+      ;; Clear out the status for any enabled traps.  With SSE2, if
+      ;; the current exception is enabled, the next FP instruction
+      ;; will cause the exception to be signaled again.  Hence, we
+      ;; need to clear out the exceptions that we are handling here.
+      (setf (ldb float-exceptions-byte new-modes) new-exceptions)
+      ;; XXX: This seems not right.  Shouldn't we be setting the modes
+      ;; in the sigcontext instead?  This however seems to do what we
+      ;; want.
+      (setf (vm:floating-point-modes) new-modes))
+    
     (multiple-value-bind (fop operands)
 	(let ((sym (find-symbol "GET-FP-OPERANDS" "VM")))
 	  (if (fboundp sym)
@@ -215,7 +262,6 @@
 		    :operands operands))
 	    (t
 	     (error "SIGFPE with no exceptions currently enabled?"))))))
-
 
 ;;; WITH-FLOAT-TRAPS-MASKED  --  Public
 ;;;

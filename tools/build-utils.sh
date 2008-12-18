@@ -13,9 +13,10 @@ then
 fi
 
 TARGET="`echo $1 | sed 's:/*$::'`"
+shift
 
-$TARGET/lisp/lisp -core $TARGET/lisp/lisp.core \
-	-noinit -nositeinit -batch <<EOF || exit 3
+$TARGET/lisp/lisp \
+	-noinit -nositeinit -batch "$@" <<EOF || exit 3
 (in-package :cl-user)
 
 (setf lisp::*enable-package-locked-errors* nil)

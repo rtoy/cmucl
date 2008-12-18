@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.21 2008/01/03 11:41:54 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.21.4.1 2008/12/18 21:50:19 rtoy Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -9,6 +9,8 @@
 #define _OS_H_
 
 #include "lisp.h"
+
+#define DPRINTF(t,a) { if (t) fprintf a; }
 
 #ifdef DARWIN
 #include "Darwin-os.h"
@@ -111,6 +113,6 @@ extern int os_control_stack_overflow(void *, os_context_t *);
 unsigned long *os_sigcontext_reg(ucontext_t *, int);
 unsigned long *os_sigcontext_pc(ucontext_t *);
 unsigned char *os_sigcontext_fpu_reg(ucontext_t *, int);
-unsigned long os_sigcontext_fpu_modes(ucontext_t *);
+unsigned int os_sigcontext_fpu_modes(ucontext_t *);
 
 #endif /* _OS_H_ */

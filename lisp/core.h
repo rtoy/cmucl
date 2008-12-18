@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/core.h,v 1.6 2005/09/15 18:26:51 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/core.h,v 1.6.14.1 2008/12/18 21:50:19 rtoy Exp $ */
 
 #ifndef _CORE_H_
 #define _CORE_H_
@@ -34,6 +34,6 @@ struct ndir_entry {
 #endif
 };
 
-extern lispobj load_core_file(char *file);
+extern lispobj load_core_file(char *file, fpu_mode_t *fpu_type);
 
 #endif /* _CORE_H_ */

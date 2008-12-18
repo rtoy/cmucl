@@ -18,12 +18,24 @@ GENCGC = -DGENCGC
 GC_SRC = gencgc.c
 endif
 
+# Enable support for SSE2.  If FEATURE_X87 is set, we want SSE2
+# support in the C code too so that the same binary is built in both
+# cases.  If neither is set, then we don't want any SSE2 support at
+# all.
+ifdef FEATURE_X87
+SSE2 = -DFEATURE_SSE2
+else
+ifdef FEATURE_SSE2
+SSE2 = -DFEATURE_SSE2
+endif
+endif
+
 # Enable support for Unicode
 ifdef FEATURE_UNICODE
 UNICODE = -DUNICODE
 endif
 
-RUNTIME = $(GENCGC) $(LINKAGE) $(UNICODE)
+RUNTIME = -Di386 $(GENCGC) $(LINKAGE) $(SSE2) $(UNICODE)
 # __NO_CTYPE so builds on glibc 2.3 will run on (some) older glibc's.
 ifneq (,$(filter 2% 3%, $(shell $(CC) -dumpversion)))
 CPPFLAGS = -D__NO_CTYPE -D_GNU_SOURCE -I. -I$(PATH1) -I- $(RUNTIME)
@@ -31,8 +43,8 @@ else
 CPPFLAGS = -D__NO_CTYPE -D_GNU_SOURCE -iquote. -iquote $(PATH1) $(RUNTIME)
 endif
 
-CFLAGS = -rdynamic -Wstrict-prototypes -Wall -g $(RUNTIME)
-ASFLAGS = -g $(GENCGC) $(LINKAGE_TABLE)
+CFLAGS = -rdynamic -Wstrict-prototypes -Wall -O2 -g $(RUNTIME)
+ASFLAGS = -g $(RUNTIME)
 NM = $(PATH1)/linux-nm
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = x86-assem.S linux-stubs.S

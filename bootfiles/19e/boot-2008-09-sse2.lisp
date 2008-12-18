@@ -1,5 +1,4 @@
-;;; Cross-compile script to add 16-bit strings for Unicode support.
-;;; Use as the cross-compile script for cross-build-world.sh.
+;; Bootstrap file for cross-compiling SSE2 support for x86.
 
 (in-package :cl-user)
 
@@ -9,38 +8,37 @@
 (setf (c:backend-name c:*native-backend*) "OLD-X86")
 
 (c::new-backend "X86"
-   ;; Features to add here
+   ;; Features to add here.  These are just examples.  You may not
+   ;; need to list anything here.  We list them here anyway as a
+   ;; record of typical features for all x86 ports.
    '(:x86 :i486 :pentium
-     :stack-checking
-     :heap-overflow-check
-     :relative-package-names
-     :mp
-     :gencgc
+     :stack-checking			; Catches stack overflow
+     :heap-overflow-check		; Catches heap overflows
+     :relative-package-names		; relative package names
+     :mp				; multiprocessing
+     :gencgc				; Generational GC
      :conservative-float-type
-     :hash-new :random-mt19937
-     :cmu :cmu19 :cmu19e
-     :double-double
-     :unicode
+     :hash-new
+     :random-mt19937
+     :cmu :cmu19 :cmu19e		; Version features
+     :double-double			; double-double float support
+     :sse2				; SSE2 support
+     :complex-fp-vops			; VOPs for complex arithmetic
      )
-   ;; Features to remove from current *features* here
-   '())
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Things needed to cross-compile unicode changes.
-
-(load "target:bootfiles/19e/boot-2008-05-cross-unicode-common.lisp")
-
-;; Kill the any deftransforms
-(in-package "C")
-(dolist (f '(concatenate subseq replace copy-seq))
-  (setf (c::function-info-transforms (c::function-info-or-lose f)) nil))
-
-;; End changes for unicode
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(in-package :cl-user)
+   ;; Features to remove from current *features* here.  Normally don't
+   ;; need to list anything here unless you are trying to remove a
+   ;; feature.
+   '(:x86-bootstrap
+     ;; :alpha :osf1 :mips
+     :propagate-fun-type :propagate-float-type :constrain-float-type
+     ;; :openbsd :freebsd :glibc2 :linux
+     :long-float :new-random :small))
 
 ;;; Compile the new backend.
 (pushnew :bootstrap *features*)
 (pushnew :building-cross-compiler *features*)
+(pushnew :sse2 *features*)
+(pushnew :complex-fp-vops *features*)
 (load "target:tools/comcom")
 
 ;;; Load the new backend.
@@ -52,6 +50,8 @@
       '("target:assembly/" "target:assembly/x86/"))
 
 ;; Load the backend of the compiler.
+
+;; Why do it explicitly this way?  Why not use loadbackend.lisp?
 
 (in-package "C")
 
@@ -92,7 +92,6 @@
 (load "vm:c-call")
 (when (target-featurep :sse2)
   (load "vm:sse2-c-call"))
-
 (load "vm:print")
 (load "vm:alloc")
 (load "vm:call")
@@ -131,39 +130,39 @@
 				       (find-symbol ,(symbol-name sym)
 						    :vm))))
 			       syms))))
-  (frob OLD-X86:BYTE-BITS OLD-X86:WORD-BITS
-	#+long-float OLD-X86:SIMPLE-ARRAY-LONG-FLOAT-TYPE 
-	OLD-X86:SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE 
-	OLD-X86:SIMPLE-ARRAY-SINGLE-FLOAT-TYPE
-	#+long-float OLD-X86:SIMPLE-ARRAY-COMPLEX-LONG-FLOAT-TYPE 
-	OLD-X86:SIMPLE-ARRAY-COMPLEX-DOUBLE-FLOAT-TYPE 
-	OLD-X86:SIMPLE-ARRAY-COMPLEX-SINGLE-FLOAT-TYPE
-	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-2-TYPE 
-	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-4-TYPE
-	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-8-TYPE 
-	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-16-TYPE 
-	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-32-TYPE 
-	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-8-TYPE 
-	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-16-TYPE
-	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-30-TYPE 
-	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-32-TYPE
-	OLD-X86:SIMPLE-BIT-VECTOR-TYPE
-	OLD-X86:SIMPLE-STRING-TYPE OLD-X86:SIMPLE-VECTOR-TYPE 
-	OLD-X86:SIMPLE-ARRAY-TYPE OLD-X86:VECTOR-DATA-OFFSET
-	OLD-X86:DOUBLE-FLOAT-EXPONENT-BYTE
-	OLD-X86:DOUBLE-FLOAT-NORMAL-EXPONENT-MAX 
-	OLD-X86:DOUBLE-FLOAT-SIGNIFICAND-BYTE
-	OLD-X86:SINGLE-FLOAT-EXPONENT-BYTE
-	OLD-X86:SINGLE-FLOAT-NORMAL-EXPONENT-MAX
-	OLD-X86:SINGLE-FLOAT-SIGNIFICAND-BYTE
+  (frob OLD-VM:BYTE-BITS OLD-VM:WORD-BITS
+	#+long-float OLD-VM:SIMPLE-ARRAY-LONG-FLOAT-TYPE 
+	OLD-VM:SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE 
+	OLD-VM:SIMPLE-ARRAY-SINGLE-FLOAT-TYPE
+	#+long-float OLD-VM:SIMPLE-ARRAY-COMPLEX-LONG-FLOAT-TYPE 
+	OLD-VM:SIMPLE-ARRAY-COMPLEX-DOUBLE-FLOAT-TYPE 
+	OLD-VM:SIMPLE-ARRAY-COMPLEX-SINGLE-FLOAT-TYPE
+	OLD-VM:SIMPLE-ARRAY-UNSIGNED-BYTE-2-TYPE 
+	OLD-VM:SIMPLE-ARRAY-UNSIGNED-BYTE-4-TYPE
+	OLD-VM:SIMPLE-ARRAY-UNSIGNED-BYTE-8-TYPE 
+	OLD-VM:SIMPLE-ARRAY-UNSIGNED-BYTE-16-TYPE 
+	OLD-VM:SIMPLE-ARRAY-UNSIGNED-BYTE-32-TYPE 
+	OLD-VM:SIMPLE-ARRAY-SIGNED-BYTE-8-TYPE 
+	OLD-VM:SIMPLE-ARRAY-SIGNED-BYTE-16-TYPE
+	OLD-VM:SIMPLE-ARRAY-SIGNED-BYTE-30-TYPE 
+	OLD-VM:SIMPLE-ARRAY-SIGNED-BYTE-32-TYPE
+	OLD-VM:SIMPLE-BIT-VECTOR-TYPE
+	OLD-VM:SIMPLE-STRING-TYPE OLD-VM:SIMPLE-VECTOR-TYPE 
+	OLD-VM:SIMPLE-ARRAY-TYPE OLD-VM:VECTOR-DATA-OFFSET
+	OLD-VM:DOUBLE-FLOAT-EXPONENT-BYTE
+	OLD-VM:DOUBLE-FLOAT-NORMAL-EXPONENT-MAX 
+	OLD-VM:DOUBLE-FLOAT-SIGNIFICAND-BYTE
+	OLD-VM:SINGLE-FLOAT-EXPONENT-BYTE
+	OLD-VM:SINGLE-FLOAT-NORMAL-EXPONENT-MAX
+	OLD-VM:SINGLE-FLOAT-SIGNIFICAND-BYTE
 	)
   #+double-double
-  (frob OLD-X86:SIMPLE-ARRAY-COMPLEX-DOUBLE-DOUBLE-FLOAT-TYPE
-	OLD-X86:SIMPLE-ARRAY-DOUBLE-DOUBLE-FLOAT-TYPE))
+  (frob OLD-VM:SIMPLE-ARRAY-COMPLEX-DOUBLE-DOUBLE-FLOAT-TYPE
+	OLD-VM:SIMPLE-ARRAY-DOUBLE-DOUBLE-FLOAT-TYPE))
 
 ;; Modular arith hacks
-(setf (fdefinition 'vm::ash-left-mod32) #'old-x86::ash-left-mod32)
-(setf (fdefinition 'vm::lognot-mod32) #'old-x86::lognot-mod32)
+(setf (fdefinition 'vm::ash-left-mod32) #'old-vm::ash-left-mod32)
+(setf (fdefinition 'vm::lognot-mod32) #'old-vm::lognot-mod32)
 ;; End arith hacks
 
 (let ((function (symbol-function 'kernel:error-number-or-lose)))
@@ -205,9 +204,9 @@
 
 (defparameter *load-stuff* nil)
 
-;; hack, hack, hack: Make old-x86::any-reg the same as
-;; x86::any-reg as an SC.  Do this by adding old-x86::any-reg
+;; hack, hack, hack: Make old-vm::any-reg the same as
+;; x86::any-reg as an SC.  Do this by adding old-vm::any-reg
 ;; to the hash table with the same value as x86::any-reg.
 (let ((ht (c::backend-sc-names c::*target-backend*)))
-  (setf (gethash 'old-x86::any-reg ht)
-	(gethash 'x86::any-reg ht)))
+  (setf (gethash 'old-vm::any-reg ht)
+	(gethash 'vm::any-reg ht)))

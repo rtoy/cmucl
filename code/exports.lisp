@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.267.2.5 2008/11/01 22:40:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.267.2.6 2008/12/18 21:50:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2223,7 +2223,11 @@
 	   "SIMPLE-UNDEFINED-FUNCTION" "SIMPLE-PARSE-ERROR" "SIMPLE-STREAM-ERROR"
 	   "BYTE-FUNCTION-TYPE" "SLOT-CLASS-PRINT-FUNCTION"
 	   "REDEFINE-LAYOUT-WARNING" "SLOT-CLASS" "INSURED-FIND-CLASS"
-	   "CONDITION-FUNCTION-NAME")
+	   "CONDITION-FUNCTION-NAME"
+
+	   "%COMPLEX-SINGLE-FLOAT"
+	   "%COMPLEX-DOUBLE-FLOAT"
+	   "%COMPLEX-DOUBLE-DOUBLE-FLOAT")
   #+heap-overflow-check
   (:export "DYNAMIC-SPACE-OVERFLOW-WARNING-HIT"
 	   "DYNAMIC-SPACE-OVERFLOW-ERROR-HIT"

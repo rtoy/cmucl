@@ -23,9 +23,19 @@ GENCGC = -DGENCGC
 GC_SRC = gencgc.c
 endif
 
-CPPFLAGS = -Di386 -DDARWIN $(LINKAGE) $(GENCGC) $(UNICODE)
+# If either FEATURE_X7 or FEATURE_SSE2 is defined, compile the code
+# for SSE2 support.
+ifdef FEATURE_X87
+SSE2 = -DFEATURE_SSE2
+endif
+ifdef FEATURE_SSE2
+SSE2 = -DFEATURE_SSE2
+endif
+
+RUNTIME = $(LINKAGE) $(GENCGC) $(SSE2) $(UNICODE)
+CPPFLAGS = -Di386 -DDARWIN $(RUNTIME)
 CFLAGS = -Wstrict-prototypes -Wall -g3 $(CPPFLAGS) $(INCLUDES)
-ASFLAGS = -g3 $(LINKAGE) $(GENCGC) $(INCLUDES)
+ASFLAGS = -g3 $(INCLUDES) $(RUNTIME)
 NM = nm -gp
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = x86-assem.S

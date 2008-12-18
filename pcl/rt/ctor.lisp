@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/ctor.lisp,v 1.8 2007/05/02 13:33:51 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/ctor.lisp,v 1.8.4.1 2008/12/18 21:50:19 rtoy Exp $")
 
 (in-package "PCL-TEST")
 
@@ -242,9 +242,10 @@
       (setf (pcl::ctor-class ctor) (find-class 'foo))
       (pcl::slot-init-forms ctor nil))
   (let ()
-    (declare (ignorable) (optimize (safety 3)))
-    (setf (svref pcl::.slots. 0) (the t a))
-    (setf (svref pcl::.slots. 1) (the t b))))
+      (declare (ignorable) (optimize (safety 3)))
+      (setf (svref pcl::.slots. 0) (the t a))
+      (setf (svref pcl::.slots. 1) (the t b)))
+   nil)
 
 (deftest slot-init-forms.1
     (let ((ctor (pcl::make-ctor
@@ -255,7 +256,8 @@
   (let ()
     (declare (ignorable) (optimize (safety 3)))
     (setf (svref pcl::.slots. 0) (the t a))
-    (setf (svref pcl::.slots. 1) (the t '2))))
+    (setf (svref pcl::.slots. 1) (the t '2)))
+  nil)
 
 (defclass foo5 ()
   ((a :initarg :a :initform 0)
@@ -270,7 +272,8 @@
   (let ()
     (declare (ignorable) (optimize (safety 3)))
     (setf (svref pcl::.slots. 0) (the t a))
-    (setf (svref pcl::.slots. 1) pcl::+slot-unbound+)))
+    (setf (svref pcl::.slots. 1) pcl::+slot-unbound+))
+  nil)
 
 (defclass foo5a ()
   ((a :initarg :a :initform 0)
@@ -285,7 +288,8 @@
   (let ()
     (declare (ignorable) (optimize (safety 3)))
     (setf (svref pcl::.slots. 0) (the t '0))
-    (setf (svref pcl::.slots. 1) (the t '0))))
+    (setf (svref pcl::.slots. 1) (the t '0)))
+  nil)
 
 (defclass foo6 ()
   ((a :initarg :a :initform 0 :allocation :class)
@@ -300,7 +304,8 @@
   (let ()
     (declare (ignorable) (optimize (safety 3)))
     (setf (svref pcl::.slots. 0) pcl::+slot-unbound+)
-    (setf (cdr '(a . 0)) (the t a))))
+    (setf (cdr '(a . 0)) (the t a)))
+  nil)
 
 (defun foo ()
   (error "should never be called"))
@@ -333,7 +338,8 @@
   (let ()
     (declare (ignorable) (optimize (safety 3)))
     (setf (svref pcl::.slots. 0) (the t '(foo)))
-    (setf (svref pcl::.slots. 1) (the t '2))))
+    (setf (svref pcl::.slots. 1) (the t '2)))
+  nil)
 
 (deftest slot-init-forms.6
     (let ((ctor (pcl::make-ctor
@@ -344,7 +350,8 @@
   (let ()
     (declare (ignorable) (optimize (safety 3)))
     (setf (svref pcl::.slots. 0) (the t 'x))
-    (setf (svref pcl::.slots. 1) (the t '2))))
+    (setf (svref pcl::.slots. 1) (the t '2)))
+  nil)
 
 (defmethod bar1 ((x integer))
   (* x 2))

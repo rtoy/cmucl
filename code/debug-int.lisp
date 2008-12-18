@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.133.4.1 2008/09/03 16:34:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.133.4.2 2008/12/18 21:50:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1421,23 +1421,8 @@ The result is a symbol or nil if the routine cannot be found."
     (alien:with-alien
 	((lisp-interrupt-contexts (array (* unix:sigcontext) nil) :extern))
       (let ((scp (alien:deref lisp-interrupt-contexts index)))
-	;; FIXME: The mcontext slot on Darwin was sometimes 0, which
-	;; causes an error if we try to look up the cfp-offset value.
-	;; This seems to gone now, but we leave this in for now to
-	;; catch this condition.  If this doesn't happen anymore, we
-	;; can remove this later.
-	#+ignore
-	(when (zerop (sys:sap-int (alien:alien-sap (alien:slot scp 'vm::sc-mcontext))))
-	  (cerror "Continue."
-		  "NULL mcontext found at index ~D, scp = ~S.  Please report this bug!"
-		  index
-		  (alien:alien-sap scp)))
-	(when (and
-	       #+ignore
-	       (not
-		(zerop (sys:sap-int (alien:alien-sap (alien:slot scp 'vm::sc-mcontext)))))
-	       (= (system:sap-int frame-pointer)
-		  (vm:sigcontext-register scp vm::cfp-offset)))
+	(when (= (system:sap-int frame-pointer)
+		 (vm:sigcontext-register scp vm::cfp-offset))
 	  (system:without-gcing
 	   (let* ((component-ptr
 		   (component-ptr-from-pc (vm:sigcontext-program-counter scp)))
@@ -1463,7 +1448,7 @@ The result is a symbol or nil if the routine cannot be found."
 		 (format t "** pc-offset ~s not in code obj ~s?~%"
 			 pc-offset code))
 	       (return
-		(values code pc-offset scp))))))))))
+		 (values code pc-offset scp))))))))))
 
 #-(or gengc x86 amd64)
 (defun find-pc-from-assembly-fun (code scp)

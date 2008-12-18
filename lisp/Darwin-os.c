@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.16.2.1 2008/11/01 22:40:36 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.16.2.2 2008/12/18 21:50:19 rtoy Exp $
  *
  */
 
@@ -48,7 +48,6 @@
 #include "validate.h"
 vm_size_t os_vm_page_size;
 
-#define DPRINTF(t,a) {if (t) fprintf a;}
 
 
 /*
@@ -252,15 +251,39 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
     return NULL;
 }
 
-unsigned long
+unsigned int
 os_sigcontext_fpu_modes(ucontext_t *scp)
 {
-    unsigned long modes;
+    unsigned int modes;
+    unsigned int mxcsr;
     unsigned short cw, sw;
+
+    /*
+     * Get the status word and the control word.  
+     */
     memcpy(&cw, &scp->uc_mcontext->__fs.__fpu_fcw, sizeof(cw));
     memcpy(&sw, &scp->uc_mcontext->__fs.__fpu_fsw, sizeof(sw));
-    modes = (sw & 0xff) << 16 | cw;
-    modes ^= 0x3f;
+
+    /*
+     * Put the cw in the upper bits and the status word in the lower 6
+     * bits, ignoring everything except the exception masks and the
+     * exception flags.
+     */
+    modes = ((cw & 0x3f) << 7) | (sw & 0x3f);
+    
+    DPRINTF(0, (stderr, "FPU modes = %08x (sw =  %4x, cw = %4x)\n",
+		modes, (unsigned int) sw, (unsigned int) cw));
+
+    mxcsr = scp->uc_mcontext->__fs.__fpu_mxcsr;
+    DPRINTF(0, (stderr, "SSE2 modes = %08x\n", mxcsr));
+
+    modes |= mxcsr;
+
+    DPRINTF(0, (stderr, "modes pre mask = %08x\n", modes));
+
+    /* Convert exception mask to exception enable */
+    modes ^= (0x3f << 7);
+    DPRINTF(0, (stderr, "Finale = %08x\n", modes));
     return modes;
 }
 
@@ -268,9 +291,16 @@ void
 restore_fpu(ucontext_t *scp)
 {
     unsigned short cw;
+    unsigned int mxcsr;
+
     memcpy(&cw, &scp->uc_mcontext->__fs.__fpu_fcw, sizeof(cw));
+    DPRINTF(0, (stderr, "restore_fpu: FPU cw = 0x%x\n", cw));
     __asm__ __volatile__ ("fclex");
     __asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
+            
+    mxcsr = scp->uc_mcontext->__fs.__fpu_mxcsr;
+    DPRINTF(0, (stderr, "restore_fpu:  mxcsr (raw) = %04x\n", mxcsr));
+    __asm__ __volatile__ ("ldmxcsr %0" :: "m" (*&mxcsr));
 }
 #endif
 

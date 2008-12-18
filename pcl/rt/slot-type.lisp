@@ -27,7 +27,7 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/slot-type.lisp,v 1.2 2003/03/22 16:15:14 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/slot-type.lisp,v 1.2.28.1 2008/12/18 21:50:19 rtoy Exp $")
  
 (in-package "PCL-TEST")
 
@@ -74,3 +74,9 @@
       (values r (typep c 'error)))
   nil t)
 
+(deftest slot-type.4
+    (multiple-value-bind (r c)
+	(ignore-errors
+	  (setf (slot-value (make-instance 'stype) 'a) "string"))
+      (values r (typep c 'error)))
+  nil t)

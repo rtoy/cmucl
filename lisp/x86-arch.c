@@ -1,10 +1,11 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.36 2008/03/19 09:17:13 cshapiro Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.36.2.1 2008/12/18 21:50:19 rtoy Exp $ 
  *
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "lisp.h"
 #include "globals.h"
@@ -19,16 +20,52 @@
 #include "interr.h"
 #include "breakpoint.h"
 
-#define DPRINTF(test, e) {if(test) fprintf e ;}
-
 #define BREAKPOINT_INST 0xcc	/* INT3 */
 
 unsigned long fast_random_state = 1;
 
-char *
-arch_init(void)
+#define __cpuid(level, a, b, c, d)			\
+  __asm__ ("xchgl\t%%ebx, %1\n\t"			\
+	   "cpuid\n\t"					\
+	   "xchgl\t%%ebx, %1\n\t"			\
+	   : "=a" (a), "=r" (b), "=c" (c), "=d" (d)	\
+	   : "0" (level))
+
+int
+arch_support_sse2(void)
 {
-    return "lisp.core";
+    unsigned int eax, ebx, ecx, edx;
+
+    __cpuid(1, eax, ebx, ecx, edx);
+
+    /* Return non-zero if SSE2 is supported */
+    return edx & 0x4000000;
+}
+
+char *
+arch_init(fpu_mode_t mode)
+{
+    int have_sse2;
+
+    have_sse2 = arch_support_sse2();
+    
+    switch (mode) {
+      case AUTO:
+          if (have_sse2) {
+              return "lisp-sse2.core";
+          } else {
+              return "lisp-x87.core";
+          }
+          break;
+      case X87:
+          return "lisp-x87.core";
+          break;
+      case SSE2:
+          return "lisp-sse2.core";
+          break;
+      default:
+          abort();
+    }
 }
 
 

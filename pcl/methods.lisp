@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.45 2008/03/25 15:05:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.45.2.1 2008/12/18 21:50:19 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -1522,6 +1522,15 @@
 
 (defun setf-slot-value-using-class-dfun (new-value class object slotd)
   (declare (ignore class))
+  ;; This is essentially CHECK-TYPE, but we can't use that since
+  ;; CHECK-TYPE doesn't evaluate the type argument.
+  (loop
+      (when (typep new-value (slot-type-or-t slotd))
+	(return nil))
+      (setf new-value (lisp::check-type-error 'new-value
+					      new-value
+					      (slot-type-or-t slotd)
+					      nil)))
   (function-funcall (slot-definition-writer-function slotd) new-value object))
 
 (defun slot-boundp-using-class-dfun (class object slotd)

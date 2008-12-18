@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.8.4.2 2008/11/01 22:40:36 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.8.4.3 2008/12/18 21:50:19 rtoy Exp $
  *
  */
 
@@ -38,8 +38,6 @@
 #include <dlfcn.h>
 #include "validate.h"
 size_t os_vm_page_size;
-
-#define DPRINTF(t,a) {if (t) fprintf a;}
 
 #if defined GENCGC
 #include "gencgc.h"
