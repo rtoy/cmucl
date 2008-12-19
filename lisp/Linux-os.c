@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.37.6.1 2008/11/02 13:30:03 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.37.6.2 2008/12/19 01:31:34 rtoy Exp $
  *
  */
 
@@ -47,13 +47,10 @@
 #include "validate.h"
 size_t os_vm_page_size;
 
-#define DPRINTF(t,a) {if (t) fprintf a;}
-
 #if defined GENCGC
 #include "gencgc.h"
 #endif
 
-
 void
 os_init(void)
 {
@@ -114,10 +111,10 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int offset)
     }
 }
 
-unsigned long
+unsigned int
 os_sigcontext_fpu_modes(ucontext_t *scp)
 {
-    unsigned long modes;
+    unsigned int modes;
     unsigned short cw, sw;
 
     if (scp->uc_mcontext.fpregs == NULL) {
@@ -127,8 +124,30 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
 	cw = scp->uc_mcontext.fpregs->cw & 0xffff;
 	sw = scp->uc_mcontext.fpregs->sw & 0xffff;
     }
-    modes = (sw & 0xff) << 16 | cw;
-    modes ^= 0x3f;
+
+    modes = ((cw & 0x3f) << 7) | (sw & 0x3f);
+
+#ifdef FEATURE_SSE2
+    /*
+     * Add in the SSE2 part
+     */
+    if (arch_support_sse2()) {
+        struct _fpstate *fpstate;
+	unsigned long mxcsr;
+
+        fpstate = (struct _fpstate*) scp->uc_mcontext.fpregs;
+        if (fpstate->magic == 0xffff) {
+            mxcsr = 0;
+        } else {
+            mxcsr = fpstate->mxcsr;
+            DPRINTF(0, (stderr, "SSE2 modes = %08lx\n", mxcsr));
+        }
+
+	modes |= mxcsr;
+    }
+#endif
+
+    modes ^= (0x3f << 7);
     return modes;
 }
 #endif
@@ -341,7 +360,7 @@ sigsegv_handler(HANDLER_ARGS)
 static void
 sigbus_handler(HANDLER_ARGS)
 {
-	DPRINTF(1, (stderr, "sigbus:\n"));	/* there is no sigbus in linux??? */
+    DPRINTF(1, (stderr, "sigbus:\n"));	/* there is no sigbus in linux??? */
     interrupt_handle_now(signal, code, context);
 }
 
@@ -408,6 +427,20 @@ restore_fpu(ucontext_t *context)
 {
     if (context->uc_mcontext.fpregs) {
 	short cw = context->uc_mcontext.fpregs->cw;
+        DPRINTF(0, (stderr, "restore_fpu:  cw = %08x\n", cw));
 	__asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
+#ifdef FEATURE_SSE2
+        if (arch_support_sse2()) {
+            struct _fpstate *fpstate;
+            unsigned int mxcsr;
+            
+            fpstate = (struct _fpstate*) context->uc_mcontext.fpregs;
+            if (fpstate->magic != 0xffff) {
+                mxcsr = fpstate->mxcsr;
+                DPRINTF(0, (stderr, "restore_fpu:  mxcsr (raw) = %04x\n", mxcsr));
+                __asm__ __volatile__ ("ldmxcsr %0" :: "m" (*&mxcsr));
+            }
+        }
+#endif        
     }
 }

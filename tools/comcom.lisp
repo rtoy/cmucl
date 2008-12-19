@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.57 2004/11/05 22:02:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.57.20.1 2008/12/19 01:31:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,8 +173,16 @@
 (when *load-stuff*
   (load (vmdir "target:assembly/support")))
 (comf (vmdir "target:compiler/move"))
-(comf (vmdir "target:compiler/float") :byte-compile *byte-compile*)
+(comf (if (c:target-featurep :sse2)
+	  (vmdir "target:compiler/float-sse2")
+	  (vmdir "target:compiler/float"))
+      :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/sap") :byte-compile *byte-compile*)
+(when (c:target-featurep :x86)
+  (comf (if (c:target-featurep :sse2)
+	    (vmdir "target:compiler/sse2-sap")
+	    (vmdir "target:compiler/x87-sap"))
+	:byte-compile *byte-compile*))
 (comf (vmdir "target:compiler/system") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/char") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/memory"))
@@ -184,13 +192,28 @@
 
 (comf (vmdir "target:compiler/debug") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/c-call") :byte-compile *byte-compile*)
+(when (c:target-featurep :x86)
+  (comf (if (c:target-featurep :sse2)
+	    (vmdir "target:compiler/sse2-c-call")
+	    (vmdir "target:compiler/x87-c-call"))
+	:byte-compile *byte-compile*))
 (comf (vmdir "target:compiler/cell"))
 (comf (vmdir "target:compiler/values") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/alloc"))
 (comf (vmdir "target:compiler/call"))
 (comf (vmdir "target:compiler/nlx") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/print") :byte-compile *byte-compile*)
+
+;; Must come before array.lisp because array.lisp wants to use some
+;; vops as templates.
+(when (c:target-featurep :x86)
+  (comf (vmdir (if (c:target-featurep :sse2)
+		   "target:compiler/sse2-array"
+		   "target:compiler/x87-array"))
+	:byte-compile *byte-compile*))
+
 (comf (vmdir "target:compiler/array") :byte-compile *byte-compile*)
+
 (comf (vmdir "target:compiler/pred"))
 (comf (vmdir "target:compiler/type-vops") :byte-compile *byte-compile*)
 

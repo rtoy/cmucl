@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.163.6.1 2008/11/02 13:30:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.163.6.2 2008/12/19 01:31:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3915,7 +3915,7 @@
                    (>= low 0))
           (let ((width (integer-length high)))
 	    ;; If both arguments of LOGAND would fit in a fixnum, we
-	    ;; don't need to do anything.  This allows the any fixnum
+	    ;; don't need to do anything.  This allows any fixnum
 	    ;; vops to run.  However, if the result won't fit in a
 	    ;; fixnum, look to see if we can apply modular arithmetic.
 	    ;;
@@ -3942,4 +3942,16 @@
 #+modular-arith
 (defoptimizer (logand optimizer) ((x y) node)
   (when *enable-modular-arithmetic*
-    (logand-defopt-helper x y node)))
+    ;; This is a KLUDGE.  We want to give type propagation and friends
+    ;; a chance to stabilize before we run the logand optimizer.  So,
+    ;; we pretend this is a delayed traansform and skip it until
+    ;; later.  DELAY-TRANSFORM throws to 'GIVE-UP if the operation
+    ;; should be delayed , so we need to catch that.  This appears to
+    ;; fix Trac bug 21.
+    (let ((result (catch 'give-up
+		    (delay-transform node :optimize)
+		    (logand-defopt-helper x y node))))
+      ;; Do we need to do this?  Can we just always return NIL?
+      (if (eq result :delayed)
+	  nil
+	  result))))

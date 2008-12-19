@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.29 2008/03/18 04:08:49 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.29.4.1 2008/12/19 01:31:34 rtoy Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -74,7 +74,6 @@ FUNCDEF(call_into_c)
 	fstp	%st(0)
 	fstp	%st(0)
 	fstp	%st(0)
-
 	call	*%eax		# normal callout using Lisp stack
 
 	movl	%eax,%ecx	# remember integer return value
@@ -96,7 +95,7 @@ FUNCDEF(call_into_c)
 	fldz
 	fldz
 	fldz
-
+no_fldz:	
 /* Restore the return value */
 	movl	%ecx,%eax	# maybe return value
 
@@ -157,7 +156,7 @@ FUNCDEF(call_into_lisp)
 	fldz
 	fldz
 	fldz
-	
+			
 /* Save C regs: ebx esi edi */
 	pushl	%ebx
 	pushl	%esi

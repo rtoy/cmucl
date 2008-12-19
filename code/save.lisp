@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.56.4.1 2008/06/19 21:08:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.56.4.1.2.1 2008/12/19 01:31:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -123,7 +123,8 @@
 
 (alien:def-alien-routine "save" (alien:boolean)
   (file c-call:c-string)
-  (initial-function (alien:unsigned #.vm:word-bits)))
+  (initial-function (alien:unsigned #.vm:word-bits))
+  (sse2-mode c-call:int))
 
 #+:executable
 (alien:def-alien-routine "save_executable" (alien:boolean)
@@ -292,9 +293,9 @@
 	  #+:executable
 	(if executable
 	    (save-executable core-name initial-function)
-	    (save core-name initial-function))
+	    (save core-name initial-function #+sse2 1 #-sse2 0))
 	#-:executable
-	(save core-name initial-function))))
+	(save core-name initial-function #+sse2 1 #-sse2 0))))
   nil)
 
 

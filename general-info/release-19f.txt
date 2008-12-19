@@ -30,6 +30,16 @@ New in this release:
         created socket to a local address
     - Added UNIX:UNIX-OPENPTY, an interface to the openpty C library
       function.
+    - SSE2 support added for x86.
+      o CMUCL automatically detects whether sse2 is supported or not
+        and loads up the appropriate core file.
+      o New -fpu switch allows the user to specify explicitly which
+        core should be used.
+      o Fasls compiled with sse2 support have the extension sse2f.
+        Otherwise, the normal x86f extension is used.  This allows the
+        user to do tests/experiments with both x87 and sse2 without
+        having to mess around with different directories and removing
+        fasls before building for a different FPU.
 
   * ANSI compliance fixes:
     - Fix bug in backquote printer.  If the variable is @foo, we want
@@ -102,10 +112,15 @@ New in this release:
       Fixed by not doing modular arith if the args are known to be
       fixnums.
     - #20: Modular arith bug?
-      Workaround applied.
+      Fixed via the fix for Trac #21.  The original workaround has
+      been removed.
     - #24: Float contagion for expt
       Float contagion is applied to the arguments before computing
       expt.
+    - #21: Modular arith bug 3
+      Fixed by delaying the logand defoptimizer.
+    - #15: x86 double-float issue
+      Fixed when using SSE2 support.  We will not fix this for x87.
 
   * Other changes:
     - IS1, IS2, IS3, and IS4 are recognized character names for the

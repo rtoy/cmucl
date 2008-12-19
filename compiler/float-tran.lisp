@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.119.2.1 2008/06/27 17:24:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.119.2.1.2.1 2008/12/19 01:31:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,6 +75,33 @@
      (kernel::float-ratio n 'double-double-float))))
 ); progn
 
+(defknown %complex-single-float (number) (complex single-float)
+  (movable foldable flushable))
+(defknown %complex-double-float (number) (complex double-float)
+  (movable foldable flushable))
+(defknown %complex-double-double-float (number) (complex double-float)
+  (movable foldable flushable))
+
+(macrolet
+    ((frob (type)
+       (let ((name (symbolicate "%COMPLEX-" type "-FLOAT"))
+	     (convert (symbolicate "%" type "-FLOAT")))
+	 `(progn
+	    (defun ,name (n)
+	      (typecase n
+		(real
+		 (complex (,convert n)))
+		(complex
+		 (complex (,convert (realpart n))
+			  (,convert (imagpart n))))))
+	    (deftransform ,name ((n) ((complex ,(symbolicate type "-FLOAT"))) * :when :both)
+	      'n)))))
+  (frob single)
+  (frob double)
+  #+double-double
+  (frob double-double))
+
+
 (deftransform coerce ((n type) (* *) * :when :both)
   (unless (constant-continuation-p type)
     (give-up))
@@ -87,6 +114,13 @@
 		  '(%double-float n))	
 		 ((csubtypep tspec (specifier-type 'float))
 		  '(%single-float n))
+		 #+double-double
+		 ((csubtypep tspec (specifier-type '(complex double-double-float)))
+		  '(%complex-double-double-float n))
+		 ((csubtypep tspec (specifier-type '(complex double-float)))
+		  '(%complex-double-float n))
+		 ((csubtypep tspec (specifier-type '(complex single-float)))
+		  '(%complex-single-float n))
 		 (t
 		  (give-up))))))
 
@@ -420,6 +454,7 @@
 
 (deftransform scale-float ((f ex) (single-float *) * :when :both)
   (if (and (backend-featurep :x86)
+	   (not (backend-featurep :sse2))
 	   (csubtypep (continuation-type ex)
 		      (specifier-type '(signed-byte 32)))
 	   (not (byte-compiling)))
@@ -428,6 +463,7 @@
 
 (deftransform scale-float ((f ex) (double-float *) * :when :both)
   (if (and (backend-featurep :x86)
+	   (not (backend-featurep :sse2))
 	   (csubtypep (continuation-type ex)
 		      (specifier-type '(signed-byte 32))))
       '(%scalbn f ex)
@@ -653,7 +689,8 @@
   (destructuring-bind (name prim prim-quick limit)
       stuff
     (deftransform name ((x) '(single-float) '* :eval-name t)
-      (if (backend-featurep :x86)
+      (if (and (backend-featurep :x86)
+	       (not (backend-featurep :sse2)))
 	  (cond ((csubtypep (continuation-type x)
 			    (specifier-type `(single-float
 					      (,(- (expt 2f0 limit)))
@@ -669,7 +706,8 @@
 		 `(coerce (,prim (coerce x 'double-float)) 'single-float)))
 	  `(coerce (,prim (coerce x 'double-float)) 'single-float)))
     (deftransform name ((x) '(double-float) '* :eval-name t :when :both)
-      (if (backend-featurep :x86)
+      (if (and (backend-featurep :x86)
+	       (not (backend-featurep :sse2)))
 	  (cond ((csubtypep (continuation-type x)
 			    (specifier-type `(double-float
 					      (,(- (expt 2d0 limit)))
@@ -1413,117 +1451,241 @@
 ;;; Define some transforms for complex operations.  We do this in lieu
 ;;; of complex operation VOPs.  Some architectures have vops, though.
 ;;;
-#-(and (not double-double) complex-fp-vops)
-(macrolet ((frob (type)
-	     `(progn
-	       ;; Negation
-	       (deftransform %negate ((z) ((complex ,type)) *)
-		 '(complex (%negate (realpart z)) (%negate (imagpart z))))
-	       ;; Complex addition and subtraction
-	       (deftransform + ((w z) ((complex ,type) (complex ,type)) *)
-		 '(complex (+ (realpart w) (realpart z))
-			   (+ (imagpart w) (imagpart z))))
-	       (deftransform - ((w z) ((complex ,type) (complex ,type)) *)
-		 '(complex (- (realpart w) (realpart z))
-			   (- (imagpart w) (imagpart z))))
-	       ;; Add and subtract a complex and a real
-	       (deftransform + ((w z) ((complex ,type) real) *)
-		 '(complex (+ (realpart w) z) (imagpart w)))
-	       (deftransform + ((z w) (real (complex ,type)) *)
-		 '(complex (+ (realpart w) z) (imagpart w)))
-	       ;; Add and subtract a real and a complex number
-	       (deftransform - ((w z) ((complex ,type) real) *)
-		 '(complex (- (realpart w) z) (imagpart w)))
-	       (deftransform - ((z w) (real (complex ,type)) *)
-		 ;; The 0 for the imaginary part is needed so we get
-		 ;; the correct signed zero.
-		 '(complex (- z (realpart w)) (- 0 (imagpart w))))
-	       ;; Multiply and divide two complex numbers
-	       (deftransform * ((x y) ((complex ,type) (complex ,type)) *)
-		 '(let* ((rx (realpart x))
-			 (ix (imagpart x))
-			 (ry (realpart y))
-			 (iy (imagpart y)))
-		    (complex (- (* rx ry) (* ix iy))
-			     (+ (* rx iy) (* ix ry)))))
-	       (deftransform / ((x y) ((complex ,type) (complex ,type)) *
-				:policy (> speed space))
-		 '(let* ((rx (realpart x))
-			 (ix (imagpart x))
-			 (ry (realpart y))
-			 (iy (imagpart y)))
-		    (if (> (abs ry) (abs iy))
-			(let* ((r (/ iy ry))
-			       (dn (+ ry (* r iy))))
-			  (complex (/ (+ rx (* ix r)) dn)
-				   (/ (- ix (* rx r)) dn)))
-			(let* ((r (/ ry iy))
-			       (dn (+ iy (* r ry))))
-			  (complex (/ (+ (* rx r) ix) dn)
-				   (/ (- (* ix r) rx) dn))))))
-	       ;; Multiply a complex by a real or vice versa
-	       (deftransform * ((w z) ((complex ,type) real) *)
-		 '(complex (* (realpart w) z) (* (imagpart w) z)))
-	       (deftransform * ((z w) (real (complex ,type)) *)
-		 '(complex (* (realpart w) z) (* (imagpart w) z)))
-	       ;; Divide a complex by a real
-	       (deftransform / ((w z) ((complex ,type) real) *)
-		 '(complex (/ (realpart w) z) (/ (imagpart w) z)))
-	       ;; Divide a real by a complex
-	       (deftransform / ((rx y) (real (complex ,type)) *)
-		 '(let* ((ry (realpart y))
-			 (iy (imagpart y)))
-		    (if (> (abs ry) (abs iy))
-			(let* ((r (/ iy ry))
-			       (dn (+ ry (* r iy))))
-			  (complex (/ rx dn)
-				   (/ (- (* rx r)) dn)))
-			(let* ((r (/ ry iy))
-			       (dn (+ iy (* r ry))))
-			  (complex (/ (* rx r) dn)
-				   (/ (- rx) dn))))))
-	       ;; Conjugate of complex number
-	       (deftransform conjugate ((z) ((complex ,type)) *)
-		 '(complex (realpart z) (- (imagpart z))))
-	       ;; Cis.
-	       (deftransform cis ((z) ((,type)) *)
-		 '(complex (cos z) (sin z)))
-	       ;; Comparison
-	       (deftransform = ((w z) ((complex ,type) (complex ,type)) *)
-		 '(and (= (realpart w) (realpart z))
-		       (= (imagpart w) (imagpart z))))
-	       (deftransform = ((w z) ((complex ,type) real) *)
-		 '(and (= (realpart w) z) (zerop (imagpart w))))
-	       (deftransform = ((w z) (real (complex ,type)) *)
-		 '(and (= (realpart z) w) (zerop (imagpart z))))
-	       )))
+(macrolet
+    ((frob (type &optional (real-type type))
+       ;; These are functions for which we normally would want to
+       ;; write vops for.
+       `(progn
+	  (deftransform %negate ((z) ((complex ,type)) *)
+	    ;; Negation
+	    '(complex (%negate (realpart z)) (%negate (imagpart z))))
+	  (deftransform + ((w z) ((complex ,type) (complex ,type)) *)
+	    ;; Complex + complex
+	    '(complex (+ (realpart w) (realpart z))
+	              (+ (imagpart w) (imagpart z))))
+	  (deftransform - ((w z) ((complex ,type) (complex ,type)) *)
+	    ;; Complex - complex
+	    '(complex (- (realpart w) (realpart z))
+	              (- (imagpart w) (imagpart z))))
+	  (deftransform + ((w z) ((complex ,type) ,real-type) *)
+	    ;; Complex + real
+	    '(complex (+ (realpart w) z) (imagpart w)))
+	  (deftransform - ((w z) ((complex ,type) ,real-type) *)
+	    ;; Complex - real
+	    '(complex (- (realpart w) z) (imagpart w)))
+	  (deftransform * ((x y) ((complex ,type) (complex ,type)) *)
+	    ;; Complex * complex
+	    '(let* ((rx (realpart x))
+		    (ix (imagpart x))
+		    (ry (realpart y))
+		    (iy (imagpart y)))
+	      (complex (- (* rx ry) (* ix iy))
+	       (+ (* rx iy) (* ix ry)))))
+	  ;; SSE2 can use a special transform
+	  #-(and sse2 complex-fp-vops)
+	  (deftransform / ((x y) ((complex ,type) (complex ,type)) *
+			   :policy (> speed space))
+	    ;; Complex / complex
+	    '(let* ((rx (realpart x))
+		    (ix (imagpart x))
+		    (ry (realpart y))
+		    (iy (imagpart y)))
+	      (if (> (abs ry) (abs iy))
+		  (let* ((r (/ iy ry))
+			 (dn (+ ry (* r iy))))
+		    (complex (/ (+ rx (* ix r)) dn)
+			     (/ (- ix (* rx r)) dn)))
+		  (let* ((r (/ ry iy))
+			 (dn (+ iy (* r ry))))
+		    (complex (/ (+ (* rx r) ix) dn)
+			     (/ (- (* ix r) rx) dn))))))
+	  (deftransform * ((w z) ((complex ,type) ,real-type) *)
+	    ;; Complex*real
+	    '(complex (* (realpart w) z) (* (imagpart w) z)))
+	  (deftransform / ((w z) ((complex ,type) ,real-type) *)
+	    ;; Complex/real
+	    '(complex (/ (realpart w) z) (/ (imagpart w) z)))
+	  )))
 
+  #-complex-fp-vops
+  (frob single-float)
+  #-complex-fp-vops
+  (frob double-float)
+  #+double-double
+  (frob double-double-float real))
+
+(macrolet
+    ((frob (type &optional (real-type type))
+       ;; These are functions for which we probably wouldn't want to
+       ;; write vops for.
+       `(progn
+	 (deftransform conjugate ((z) ((complex ,type)) *)
+	   ;; Conjugate of complex number
+	   '(complex (realpart z) (- (imagpart z))))
+	 (deftransform - ((z w) (,real-type (complex ,type)) *)
+	   ;; Real - complex.  The 0 for the imaginary part is
+	   ;; needed so we get the correct signed zero.
+	   '(complex (- z (realpart w)) (- 0 (imagpart w))))
+	 #-complex-fp-vops
+	 (deftransform + ((z w) (,real-type (complex ,type)) *)
+	   ;; Real - complex.  The 0 for the imaginary part is
+	   ;; needed so we get the correct signed zero.
+	   '(complex (+ z (realpart w)) (+ 0 (imagpart w))))
+	 #-complex-fp-vops
+	 (deftransform * ((z w) (,real-type (complex ,type)) *)
+	   ;; Real - complex.  The 0 for the imaginary part is
+	   ;; needed so we get the correct signed zero.
+	   '(complex (* z (realpart w)) (* z (imagpart w))))
+	 (deftransform cis ((z) ((,type)) *)
+	   ;; Cis.
+	   '(complex (cos z) (sin z)))
+	 (deftransform / ((rx y) (,real-type (complex ,type)) *)
+	   ;; Real/complex
+	   '(let* ((ry (realpart y))
+		   (iy (imagpart y)))
+	     (if (> (abs ry) (abs iy))
+		 (let* ((r (/ iy ry))
+			(dn (+ ry (* r iy))))
+		   (complex (/ rx dn)
+			    (/ (- (* rx r)) dn)))
+		 (let* ((r (/ ry iy))
+			(dn (+ iy (* r ry))))
+		   (complex (/ (* rx r) dn)
+			    (/ (- rx) dn))))))
+	 ;; Comparison
+	 (deftransform = ((w z) ((complex ,type) (complex ,type)) *)
+	   '(and (= (realpart w) (realpart z))
+	         (= (imagpart w) (imagpart z))))
+	 (deftransform = ((w z) ((complex ,type) ,type) *)
+	   '(and (= (realpart w) z) (zerop (imagpart w))))
+	 (deftransform = ((w z) (,type (complex ,type)) *)
+	   '(and (= (realpart z) w) (zerop (imagpart z))))
+	 )))
   (frob single-float)
   (frob double-float)
   #+double-double
   (frob double-double-float))
-
-#+(and (not double-double) complex-fp-vops)
+  
+#+(and sse2 complex-fp-vops)
 (macrolet
-    ((frob (type)
-       `(progn
-	 ;; Cis.
-	 (deftransform cis ((z) ((,type)) *)
-	   '(complex (cos z) (sin z)))
-	 ;; Comparison
-	 (deftransform = ((w z) ((complex ,type) real) *)
-	   '(and (= (realpart w) z) (zerop (imagpart w))))
-	 (deftransform = ((w z) (real (complex ,type)) *)
-	   '(and (= (realpart z) w) (zerop (imagpart z))))
-	 (deftransform - ((z w) (real (complex ,type)) *)
-	   ;; The 0 for the imaginary part is needed so we get
-	   ;; the correct signed zero.
-	   '(complex (- z (realpart w)) (- 0 (imagpart w))))
-	 )))
+    ((frob (type one)
+       `(deftransform / ((x y) (,type ,type) *
+			 :policy (> speed space))
+	  ;; Divide a complex by a complex
 
-  (frob single-float)
-  (frob double-float))
+	  ;; Here's how we do a complex division
+	  ;;
+	  ;; Compute (xr + i*xi)/(yr + i*yi)
+	  ;;
+	  ;; Assume |yi| < |yr|.  Then
+	  ;;
+	  ;; (xr + i*xi)      (xr + i*xi)
+	  ;; ----------- = -----------------
+	  ;; (yr + i*yi)   yr*(1 + i*(yi/yr))
+	  ;;
+	  ;;               (xr + i*xi)*(1 - i*(yi/yr))
+	  ;;             = ---------------------------
+	  ;;                   yr*(1 + (yi/yr)^2)
+	  ;;
+	  ;;               (xr + i*xi)*(1 - i*(yi/yr))
+	  ;;             = ---------------------------
+	  ;;                   yr + (yi/yr)*yi
+	  ;;
+	  ;; This allows us to use a fast complex multiply followed by
+	  ;; a real division.
+	  '(let* ((ry (realpart y))
+		  (iy (imagpart y)))
+	    (if (> (abs ry) (abs iy))
+		(let* ((r (/ iy ry))
+		       (dn (+ ry (* r iy))))
+		  (/ (* x (complex ,one r))
+		     dn))
+		(let* ((r (/ ry iy))
+		       (dn (+ iy (* r ry))))
+		  (/ (* x (complex r ,(- one)))
+		     dn)))))))
+  (frob (complex single-float) 1f0)
+  (frob (complex double-float) 1d0))
 
+;;;; Complex contagion:
+
+(progn
+;;; COMPLEX-CONTAGION-ARG1, ARG2
+;;;
+;;;    Handles complex contagion of two complex numbers of different types.
+(deftransform complex-contagion-arg1 ((x y) * * :defun-only t :node node)
+  ;;(format t "complex-contagion arg1~%")
+  `(,(continuation-function-name (basic-combination-fun node))
+    (coerce x ',(type-specifier (continuation-type y))) y))
+;;;
+(deftransform complex-contagion-arg2 ((x y) * * :defun-only t :node node)
+  ;;(format t "complex-contagion arg2~%")
+  `(,(continuation-function-name (basic-combination-fun node))
+    x (coerce y ',(type-specifier (continuation-type x)))))
+
+(dolist (x '(= + * / -))
+  (%deftransform x '(function ((complex single-float) (complex double-float)) *)
+		 #'complex-contagion-arg1)
+  (%deftransform x '(function ((complex double-float) (complex single-float)) *)
+		 #'complex-contagion-arg2))
+
+;;; COMPLEX-REAL-CONTAGION-ARG1, ARG2
+;;;
+;;;   Handles the case of mixed complex and real numbers.  We assume
+;;; the real number doesn't cause complex number to increase in
+;;; precision.
+(deftransform complex-real-contagion-arg1 ((x y) * * :defun-only t :node node)
+  ;;(format t "complex-real-contagion-arg1~%")
+  `(,(continuation-function-name (basic-combination-fun node))
+     (coerce x ',(numeric-type-format (continuation-type y)))
+     y))
+;;;
+(deftransform complex-real-contagion-arg2 ((x y) * * :defun-only t :node node)
+  ;;(format t "complex-real-contagion-arg2~%")
+  `(,(continuation-function-name (basic-combination-fun node))
+     x
+     (coerce y ',(numeric-type-format (continuation-type x)))))
+
+
+(dolist (x '(= + * / -))
+  (%deftransform x '(function ((or rational single-float) (complex double-float)) *)
+		 #'complex-real-contagion-arg1)
+  (%deftransform x '(function ((complex double-float) (or rational single-float)) *)
+		 #'complex-real-contagion-arg2)
+  (%deftransform x '(function (rational (complex single-float)) *)
+		 #'complex-real-contagion-arg1)
+  (%deftransform x '(function ((complex single-float) rational) *)
+		 #'complex-real-contagion-arg2))
+
+;;; UPGRADED-COMPLEX-REAL-CONTAGION-ARG1, ARG2
+;;;
+;;;   Handles the case of mixed complex and real numbers.  We assume
+;;; the real number is more precise than the complex, so that the
+;;; complex number needs to be coerced to a more precise complex.
+(deftransform upgraded-complex-real-contagion-arg1 ((x y) * * :defun-only t :node node)
+  ;;(format t "upgraded-complex-real-contagion-arg1~%")
+  `(,(continuation-function-name (basic-combination-fun node))
+     (coerce x '(complex ,(type-specifier (continuation-type y))))
+     y))
+;;;
+(deftransform upgraded-complex-real-contagion-arg2 ((x y) * * :defun-only t :node node)
+  #+nil
+  (format t "upgraded-complex-real-contagion-arg2: ~A ~A~%"
+	  (continuation-type x) (continuation-type y))
+  `(,(continuation-function-name (basic-combination-fun node))
+     x
+     (coerce y '(complex ,(type-specifier (continuation-type x))))))
+
+
+(dolist (x '(= + * / -))
+  (%deftransform x '(function ((or (complex single-float) (complex rational))
+			       double-float) *)
+		 #'upgraded-complex-real-contagion-arg1)
+  (%deftransform x '(function (double-float
+			       (or (complex single-float) (complex rational))) *)
+		 #'upgraded-complex-real-contagion-arg2))
+)
+
 ;;; Here are simple optimizers for sin, cos, and tan.  They do not
 ;;; produce a minimal range for the result; the result is the widest
 ;;; possible answer.  This gets around the problem of doing range

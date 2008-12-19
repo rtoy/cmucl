@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.86.2.2.2.1 2008/11/02 13:30:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.86.2.2.2.2 2008/12/19 01:31:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1412,7 +1412,6 @@
       (unless (zerop beyond)
 	(write-char #\space stream))
       (format-print-small-cardinal stream here)
-      (write-char #\space stream)
       (write-string (svref cardinal-periods period) stream))))
 
 (defun format-print-ordinal (stream n)

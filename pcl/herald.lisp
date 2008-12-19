@@ -2,7 +2,9 @@
 
 #+(or loadable-pcl bootable-pcl)
 (progn
-  (defvar *pcl-system-date* "$Date: 2003/05/04 13:11:21 $")
+  (defvar *pcl-system-date* "$Date: 2008/12/19 01:31:34 $")
   (setf (getf *herald-items* :pcl)
-	`("    CLOS based on Gerd's PCL " ,(subseq *pcl-system-date* 7 26))))
+	`("    CLOS based on Gerd's PCL " ,(if (>= (length *pcl-system-date*) 26)
+					       (subseq *pcl-system-date* 7 26)
+					       ""))))
 

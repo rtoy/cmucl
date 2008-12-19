@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-arch.c,v 1.7 2008/03/19 09:17:10 cshapiro Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-arch.c,v 1.7.4.1 2008/12/19 01:31:34 rtoy Exp $ 
  *
  */
 
@@ -19,14 +19,12 @@
 #include "interr.h"
 #include "breakpoint.h"
 
-#define DPRINTF(test, e) {if(test) fprintf e ;}
-
 #define BREAKPOINT_INST 0xcc	/* INT3 */
 
 unsigned long fast_random_state = 1;
 
 char *
-arch_init(void)
+arch_init(fpu_mode_t mode)
 {
     return "lisp.core";
 }

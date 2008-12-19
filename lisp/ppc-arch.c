@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.13 2008/03/19 09:17:13 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.13.4.1 2008/12/19 01:31:34 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -52,7 +52,7 @@
 #define TWLLEI_R0(code) ((3<<26) | (6 << 21) | code)
 
 char *
-arch_init(void)
+arch_init(fpu_mode_t mode)
 {
     return "lisp.core";
 }
