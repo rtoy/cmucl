@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.77 2008/05/23 03:51:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.78 2008/12/22 22:10:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2379,7 +2379,8 @@
 	       bound
 	       ;; Coerce to the widest float format available, to
 	       ;; avoid unnecessary loss of precision:
-	       (coerce bound 'long-float)))))
+	       (coerce bound #-double-double 'long-float
+		             #+double-double 'double-double-float)))))
 
 (defun coerced-real-bound (bound type)
   (coerce-bound bound type #'inner-coerce-real-bound))
