@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.64 2008/12/09 23:17:57 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.65 2008/12/22 02:59:59 rtoy Exp $
  *
  */
 
@@ -398,6 +398,37 @@ fpu_mode_t fpu_mode = AUTO;
 
 /* And here be main. */
 
+const char* locate_core(const char* cmucllib, const char* core, const char* default_core)
+{
+    if (core == NULL) {
+        if (getenv("CMUCLCORE") == NULL) {
+            core = search_core(cmucllib, default_core);
+        } else {
+            core = getenv("CMUCLCORE");
+        }
+    }
+    {
+        struct stat statbuf;
+
+        if (stat(core, &statbuf) != 0) {
+            core = NULL;
+        }
+    }
+    return core;
+}
+
+void core_failure(const char* core, const char** argv)
+{
+    
+    fprintf(stderr, "Cannot find core file");
+    if (core != NULL) {
+        fprintf(stderr, ": `%s'", core);
+    }
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Based on lisp binary path `%s'\n", argv[0]);
+    exit(1);
+}
+
 int
 main(int argc, char *argv[], char *envp[])
 {
@@ -620,29 +651,29 @@ main(int argc, char *argv[], char *envp[])
 	/*
 	 * If no core file specified, search for it in CMUCLLIB
 	 */
-	if (core == NULL) {
-	    if (getenv("CMUCLCORE") == NULL) {
-		core = search_core(cmucllib, default_core);
-	    } else {
-		core = getenv("CMUCLCORE");
-	    }
-	}
-
-	/* Die if the core file doesn't exist. */
-	{
-	    struct stat statbuf;
-
-	    if (stat(core, &statbuf) != 0) {
-		/* Can't find it so print a message and exit */
-		fprintf(stderr, "Cannot find core file");
-		if (core != NULL) {
-		    fprintf(stderr, ": `%s'", core);
-		}
-		fprintf(stderr, "\n");
-		fprintf(stderr, "Based on lisp binary path `%s'\n", argv[0]);
-		exit(1);
-	    }
-	}
+        {
+            char* found_core;
+            
+            found_core = locate_core(cmucllib, core, default_core);
+#ifdef FEATURE_SSE2
+            if ((found_core == NULL) && (fpu_mode == AUTO)) {
+                /*
+                 * If we support SSE2 but couldn't find the SSE2 core, try
+                 * to fall back to the x87 core.
+                 */
+                found_core = locate_core(cmucllib, core, "lisp-x87.core");
+                if (found_core == NULL) {
+                    core_failure(core, argv);
+                }
+                fprintf(stderr, "Warning:  Chip supports SSE2, but could not find SSE2 core.\n");
+                fprintf(stderr, "  Falling back to x87 core.\n");
+            }
+#endif
+            if (!found_core) {
+                core_failure(core, argv);
+            }
+            core = found_core;
+        }
 #if defined FEATURE_EXECUTABLE
     } else {
 	/* The "core file" is the executable.  We have to save the
