@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.42 2008/10/24 21:45:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.43 2008/12/22 23:24:28 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1006,6 +1006,25 @@
   (frob %long-float long-float)
   #+(and nil double-double)
   (frob %double-double-float double-double-float))
+
+
+;; Note: There might be bootstrap issues when adding double-double
+;; floats.  Use the above definition if that's the case.
+#+double-double
+(defun %double-double-float (n)
+  (typecase n
+    (fixnum
+     (%make-double-double-float (float n 1d0) 0d0))
+    (single-float
+     (%make-double-double-float (float n 1d0) 0d0))
+    (double-float
+     (%make-double-double-float (float n 1d0) 0d0))
+    (double-double-float
+     n)
+    (bignum
+     (bignum:bignum-to-float n 'double-double-float))
+    (ratio
+     (kernel::float-ratio n 'double-double-float))))
 
 ;; Convert rational to double-double-float.  The core algorithm is
 ;; from Richard Fateman.  It was slightly modified to handle rationals

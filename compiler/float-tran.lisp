@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.126 2008/11/16 14:23:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.127 2008/12/22 23:24:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,6 +59,9 @@
 (defun %double-double-float (n)
   (make-double-double-float (float n 1d0) 0d0))
 
+;; Moved to code/float.lisp, because we need this relatively early in
+;; the build process to handle float and real types.
+#+nil
 (defun %double-double-float (n)
   (typecase n
     (fixnum
