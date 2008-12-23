@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.78 2008/12/22 22:10:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.79 2008/12/23 00:44:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2410,6 +2410,8 @@
 				 ,(coerced-real-bound high 'rational)))))
 
 (def-type-translator float (&optional (low '*) (high '*))
+  (check-bound low float)
+  (check-bound high float)
   (specifier-type 
    `(or (single-float ,(coerced-float-bound  low 'single-float)
 		      ,(coerced-float-bound high 'single-float))
