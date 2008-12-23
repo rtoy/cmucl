@@ -107,6 +107,15 @@ New in this release:
     - Tracing should now be working on Darwin/x86.  Previously,
       certain cases would cause Lisp to segfault in bad ways where you
       could not return to the repl.
+    - The bounds for type (REAL lo hi) are computed better now.  The
+      REAL type is a union of SINGLE-FLOAT, DOUBLE-FLOAT, and
+      DOUBLE-DOUBLE-FLOAT.  The computed bounds for
+      DOUBLE-DOUBLE-FLOAT only had double-float accuracy if the bound
+      for REAL was a rational.
+    - The FLOAT type now requires that the bounds, if given, are
+      floats.  Previously, any real type would be accepted.  This
+      makes FLOAT behave like SINGLE-FLOAT and DOUBLE-FLOAT which
+      required the bounds to be a float of the appropriate type.
 
   * Trac Tickets:
     - #16: Read-time hash-table issue
