@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.79 2008/12/23 00:44:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.80 2008/12/23 14:36:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2420,10 +2420,8 @@
 	#+long-float ,(error "stub: no long float support yet")
 	#+double-double
 	(double-double-float
-	 ;; For some reason, the ppc/darwin port doesn't like this.  I
-	 ;; (rtoy) don't know why.
-	 #-ppc ,(coerced-float-bound  low 'double-double-float)
-	 #-ppc ,(coerced-float-bound high 'double-double-float)))))
+	 ,(coerced-float-bound  low 'double-double-float)
+	 ,(coerced-float-bound high 'double-double-float)))))
 
 (defmacro define-float-format (f)
   `(def-bounded-type ,f float ,f))
