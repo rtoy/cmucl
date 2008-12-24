@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.31 2008/12/17 12:42:30 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.32 2008/12/24 04:36:40 rtoy Rel $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -272,21 +272,10 @@ ENDFUNC(closure_tramp)
  * Function-end breakpoint magic.
  */
 FUNCDEF(function_end_breakpoint_guts)
-	/* Multiple Value return */
-#ifndef DARWIN
-	jmp	multiple_value_return
-#else
-	/* 
-	 * Darwin's assembler is too stupid to make the above
-	 * instruction a two-byte instruction and I (rtoy) am too
-	 * stupid to figure out how to get Darwin's assembler
-	 * to do it either.  Hence hardwire
-	 * the instruction explicitly.  This jmp instruction MUST be a two-byte
-	 * instruction for this to work correctly!
-	 */
-	.byte	0xeb
-	.byte	0x14
-#endif	
+	/* Multiple Value return
+	   This MUST be a two-byte instruction.  If it isn't tracing is 
+	   majorly broken. */
+	jmp	1f
 	/* Single value return: The eventual return will now use the
 	   multiple values return convention but with a return values
 	   count of one. */
@@ -296,6 +285,7 @@ FUNCDEF(function_end_breakpoint_guts)
 	movl	$NIL,%edi	# Default second value
 	movl	$NIL,%esi	# Default third value
 		
+1:	
 multiple_value_return:
 	
 	.globl GNAME(function_end_breakpoint_trap)
