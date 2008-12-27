@@ -9,25 +9,24 @@ LD = ld
 CPP = cpp
 
 ifdef FEATURE_LINKAGE_TABLE
-LINKAGE = -DLINKAGE_TABLE
+RUNTIME += -DLINKAGE_TABLE
 endif
 
 # Enable support for generational GC
 ifdef FEATURE_GENCGC
-GENCGC = -DGENCGC
+RUNTIME += -DGENCGC
 GC_SRC = gencgc.c
 endif
 
 # If either FEATURE_X7 or FEATURE_SSE2 is defined, compile the code
 # for SSE2 support.
 ifdef FEATURE_X87
-SSE2 = -DFEATURE_SSE2
+RUNTIME += -DFEATURE_SSE2
 endif
 ifdef FEATURE_SSE2
-SSE2 = -DFEATURE_SSE2
+RUNTIME += -DFEATURE_SSE2
 endif
 
-RUNTIME = $(LINKAGE) $(GENCGC) $(SSE2)
 CPPFLAGS = -Di386 -DDARWIN $(RUNTIME)
 CFLAGS = -Wstrict-prototypes -Wall -g3 $(CPPFLAGS) $(INCLUDES)
 ASFLAGS = -g3 $(INCLUDES) $(RUNTIME)
