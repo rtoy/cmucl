@@ -27,6 +27,10 @@ ifdef FEATURE_SSE2
 RUNTIME += -DFEATURE_SSE2
 endif
 
+# Compile code that will run on OSX 10.4 (Tiger)
+MIN_VER = -mmacosx-version-min=10.4
+RUNTIME += $(MIN_VER)
+
 CPPFLAGS = -Di386 -DDARWIN $(RUNTIME)
 CFLAGS = -Wstrict-prototypes -Wall -g3 $(CPPFLAGS) $(INCLUDES)
 ASFLAGS = -g3 $(INCLUDES) $(RUNTIME)
@@ -35,7 +39,7 @@ UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = x86-assem.S
 ARCH_SRC = x86-arch.c
 OS_SRC = Darwin-os.c os-common.c e_rem_pio2.c k_rem_pio2.c
-# OS_LINK_FLAGS = -dynamic -export-dynamic
+OS_LINK_FLAGS = $(MIN_VER)
 OS_LIBS =
 
 # This has aliasing problems, so turn off aliasing.

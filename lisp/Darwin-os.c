@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.23 2008/12/10 02:39:13 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.24 2008/12/29 14:40:34 rtoy Exp $
  *
  */
 
@@ -200,6 +200,33 @@ sc_reg(os_context_t * context, int offset)
 unsigned long *
 os_sigcontext_reg(ucontext_t *scp, int index)
 {
+#if __DARWIN_UNIX03
+  /* Nothing needed for 10.5 */
+#else
+  /* This is for 10.4 */
+#define __ss ss
+#define __eax eax
+#define __ecx ecx
+#define __edx edx
+#define __ebx ebx
+#define __esp esp
+#define __ebp ebp
+#define __esi esi
+#define __edi edi
+#define __eip eip  
+#define __fs fs
+#define __fpu_stmm0 fpu_stmm0
+#define __fpu_stmm1 fpu_stmm1
+#define __fpu_stmm2 fpu_stmm2
+#define __fpu_stmm3 fpu_stmm3
+#define __fpu_stmm4 fpu_stmm4
+#define __fpu_stmm5 fpu_stmm5
+#define __fpu_stmm6 fpu_stmm6
+#define __fpu_stmm7 fpu_stmm7
+#define __fpu_fcw   fpu_fcw
+#define __fpu_fsw   fpu_fsw
+#define __fpu_mxcsr fpu_mxcsr
+#endif
     switch (index) {
     case 0:
 	return (unsigned long *) &scp->uc_mcontext->__ss.__eax;

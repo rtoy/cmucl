@@ -1,5 +1,5 @@
 /* x86-lispregs.h -*- Mode: C; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.12 2008/01/03 11:41:54 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.13 2008/12/29 14:40:34 rtoy Rel $
  */
 
 #ifndef _X86_LISPREGS_H_
@@ -49,7 +49,13 @@
 #define SC_SP(scp) SC_REG(scp, reg_ESP)
 
 #if defined(DARWIN)
+#if __DARWIN_UNIX03
+/* For 10.5 */
 #define SC_EFLAGS(sc) ((sc)->uc_mcontext->__ss.__eflags)
+#else
+/* For 10.4 */
+#define SC_EFLAGS(sc) ((sc)->uc_mcontext->ss.eflags)
+#endif
 #elif defined(__linux__)
 #define SC_EFLAGS(sc) ((sc)->uc_mcontext.gregs[REG_EFL])
 #endif
