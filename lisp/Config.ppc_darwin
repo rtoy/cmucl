@@ -12,7 +12,8 @@ CPPFLAGS = -I. -I$(PATH1)
 # concatenate tokens which reguires the -traditional flag.
 
 # Build for OSX 10.2.8 or later.  (Is this what we want?)
-CC = gcc -mmacosx-version-min=10.2.8
+OSX_VERSION=-mmacosx-version-min=10.2
+CC = gcc
 LD = ld
 NM = $(PATH1)/darwin-nm
 CPP = cpp -no-cpp-precomp
@@ -27,8 +28,8 @@ GENCGC = -DGENCGC
 GC_SRC = gencgc.c
 endif
 
-CFLAGS = -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
-ASFLAGS = -traditional -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
+CFLAGS = $(OSX_VERSION) -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
+ASFLAGS = $(OSX_VERSION) -traditional -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = ppc-assem.S linux-stubs.S
@@ -41,6 +42,7 @@ OS_SRC = ppc-darwin-dlshim.c os-common.c Darwin-os.c e_rem_pio2.c k_rem_pio2.c
 # the C runtime code goes, I think.
 
 # OS_LINK_FLAGS = -g -dynamic -Wl,-sectcreate,CMUCLRO,core,/dev/null -Wl,-segaddr,CMUCLRO,0x01000000 -Wl,-seg1addr,0x1a000000
+OS_LINK_FLAGS = $(OSX_VERSION)
 OS_LIBS = -lSystem -lc -lm
 #all: adjustlisp
 #adjustlisp: lisp darwin-lispadjuster
