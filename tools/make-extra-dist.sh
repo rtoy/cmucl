@@ -1,10 +1,11 @@
 #!/bin/sh
 
-while getopts "G:O:bgh?" arg
+while getopts "G:O:I:bgh?" arg
 do
     case $arg in
 	G) GROUP="-g $OPTARG" ;;
 	O) OWNER="-o $OPTARG" ;;
+        I) INSTALL_DIR=$OPTARG ;;
 	b) ENABLE_BZIP=-b ;;
 	g) ENABLE_GZIP=-g  ;;
 	h | \?) usage; exit 1 ;;
@@ -25,7 +26,7 @@ then
 	exit 2
 fi
 
-DESTDIR=release
+DESTDIR=${INSTALL_DIR:-release}
 TARGET="`echo $1 | sed 's:/*$::'`"
 VERSION=$2
 ARCH=$3
@@ -49,8 +50,10 @@ then
 	PATH=/usr/ucb:$PATH
 fi
 
-echo Cleaning $DESTDIR
-[ -d $DESTDIR ] && rm -rf $DESTDIR
+if [ -z "$INSTALL_DIR" ]; then
+    echo Cleaning $DESTDIR
+    [ -d $DESTDIR ] && rm -rf $DESTDIR
+fi
 
 echo Installing extra components
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib
@@ -78,19 +81,21 @@ install ${GROUP} ${OWNER} -m 0755 src/hemlock/mh-scan $DESTDIR/lib/cmucl/lib/
 install ${GROUP} ${OWNER} -m 0755 $TARGET/motif/server/motifd \
 	$DESTDIR/lib/cmucl/lib/
 
-sync ; sleep 1 ; sync ; sleep 1 ; sync
-echo Tarring extra components
-if [ -n "$ENABLE_GZIP" ]; then
-    echo "  Compressing with gzip"
-    ( cd $DESTDIR >/dev/null ; tar cf - lib ) | \
-	gzip -c > cmucl-$VERSION-$ARCH-$OS.extra.tar.gz
-fi
-if [ -n "$ENABLE_BZIP" ]; then
-    echo "  Compressing with bzip"
-    ( cd $DESTDIR >/dev/null ; tar cf - lib ) | \
-	bzip2 > cmucl-$VERSION-$ARCH-$OS.extra.tar.bz2
-fi
+if [ -z "$INSTALL_DIR" ]; then
+    sync ; sleep 1 ; sync ; sleep 1 ; sync
+    echo Tarring extra components
+    if [ -n "$ENABLE_GZIP" ]; then
+	echo "  Compressing with gzip"
+	( cd $DESTDIR >/dev/null ; tar cf - lib ) | \
+	 gzip -c > cmucl-$VERSION-$ARCH-$OS.extra.tar.gz
+    fi
+    if [ -n "$ENABLE_BZIP" ]; then
+	echo "  Compressing with bzip"
+	( cd $DESTDIR >/dev/null ; tar cf - lib ) | \
+	 bzip2 > cmucl-$VERSION-$ARCH-$OS.extra.tar.bz2
+    fi
 
-echo Cleaning $DESTDIR
-[ -d $DESTDIR ] && rm -rf $DESTDIR
-echo Done
+    echo Cleaning $DESTDIR
+    [ -d $DESTDIR ] && rm -rf $DESTDIR
+    echo Done
+fi
