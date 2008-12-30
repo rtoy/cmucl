@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.127 2008/12/22 23:24:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.128 2008/12/30 16:23:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,7 +82,7 @@
   (movable foldable flushable))
 (defknown %complex-double-float (number) (complex double-float)
   (movable foldable flushable))
-(defknown %complex-double-double-float (number) (complex double-float)
+(defknown %complex-double-double-float (number) (complex double-double-float)
   (movable foldable flushable))
 
 (macrolet
@@ -91,7 +91,8 @@
 	     (convert (symbolicate "%" type "-FLOAT")))
 	 `(progn
 	    (defun ,name (n)
-	      (typecase n
+	      (declare (number n))
+	      (etypecase n
 		(real
 		 (complex (,convert n)))
 		(complex
