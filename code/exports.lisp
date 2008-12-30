@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.275 2008/12/30 15:34:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.276 2008/12/30 15:55:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1245,7 +1245,7 @@
 	     "*AUTOLOAD-TRANSLATIONS*"
 	     "*BACKUP-EXTENSION*" "*BEFORE-GC-HOOKS*"
              "*BEFORE-SAVE-INITIALIZATIONS*" "*BLOCK-COMPILE-DEFAULT*"
-             "*BYTES-CONSED-BETWEEN-GCS*" "*CHAR" "*CLX-FDS-TO-DISPLAYS*"
+             "*BYTES-CONSED-BETWEEN-GCS*"
              "*COMPATIBILITY-WARNINGS*"
              "*COMPILE-PROGRESS*" "*DERIVE-FUNCTION-TYPES*"
              "*DESCRIBE-IMPLEMENTATION-DETAILS*" "*DESCRIBE-INDENTATION*"
@@ -1328,7 +1328,7 @@
              "SET-SYMBOL-FUNCTION-CAREFULLY" "SHORT-FLOAT-NEGATIVE-INFINITY"
              "SHORT-FLOAT-POSITIVE-INFINITY" "SHORT-FLOATP"
              "SINGLE-FLOAT-NEGATIVE-INFINITY" "SINGLE-FLOAT-POSITIVE-INFINITY"
-             "SINGLE-FLOATP" "SOCKET-ERROR" "START-BLOCK" "STREAM-COMMAND"
+             "SINGLE-FLOATP" "START-BLOCK" "STREAM-COMMAND"
              "STREAM-COMMAND-ARGS" "STREAM-COMMAND-NAME" "STREAM-COMMAND-P"
 	     "INSTANCEP" "SYMBOLICATE"
              "TRULY-THE" "UNCOMPILE"
@@ -1400,7 +1400,7 @@
 	   "CLOSE-SOCKET" "IPPROTO-TCP" "IPPROTO-UDP" "INADDR-ANY" "ADD-OOB-HANDLER"
 	   "REMOVE-OOB-HANDLER" "REMOVE-ALL-OOB-HANDLERS"
 	   "SEND-CHARACTER-OUT-OF-BAND"
-
+	   "SOCKET-ERROR" 
 	   "INET-RECVFROM" "INET-SENDTO" "INET-SHUTDOWN"
 	   "SHUT-RD" "SHUT-WR" "SHUT-RDWR"
 
@@ -1411,7 +1411,10 @@
 	   "DISABLE-CLX-EVENT-HANDLING" "OBJECT-SET-EVENT-HANDLER"
 	   "DEFAULT-CLX-EVENT-HANDLER"
 	   "FLUSH-DISPLAY-EVENTS" "CAREFULLY-ADD-FONT-PATHS"
-
+	   ;; Not sure if this should be exported or not.  It's not
+	   ;; listed in clx-ext.lisp.
+	   "*CLX-FDS-TO-DISPLAYS*"
+	   
 	   "SERVE-KEY-PRESS" "SERVE-KEY-RELEASE" "SERVE-BUTTON-PRESS"
 	   "SERVE-BUTTON-RELEASE" "SERVE-MOTION-NOTIFY" "SERVE-ENTER-NOTIFY"
 	   "SERVE-LEAVE-NOTIFY" "SERVE-FOCUS-IN" "SERVE-FOCUS-OUT" 
