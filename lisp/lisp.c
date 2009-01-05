@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.65 2008/12/22 02:59:59 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.66 2009/01/05 22:26:27 rtoy Exp $
  *
  */
 
@@ -707,6 +707,7 @@ main(int argc, char *argv[], char *envp[])
 	fprintf(stderr, "Core uses SSE2, but CPU doesn't support SSE2.  Exiting\n");
 	exit(1);
     }
+    fpu_mode = fpu_type;
 #endif
 
 #if defined LINKAGE_TABLE
