@@ -44,6 +44,10 @@ New in this release:
       o If the chip supports sse2, but CMUCL can't find the sse2 core,
         CMUCL will try to fall back to the x87 core.  (This only
         happens if -fpu is auto.)
+    - Command line parsing now recognizes the option "--".  Everything
+      after "--" is not subject to CMUCL's command line parsing, and
+      everything after the "--" is placed in the new variable
+      EXT:*COMMAND-LINE-APPLICATION-ARGUMENTS*. 
 
   * ANSI compliance fixes:
     - Fix bug in backquote printer.  If the variable is @foo, we want
