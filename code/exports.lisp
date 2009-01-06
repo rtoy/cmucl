@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.279 2009/01/06 01:11:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.280 2009/01/06 02:28:14 agoncharov Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1385,7 +1385,7 @@
   (:export "*COMMAND-LINE-WORDS*" "*COMMAND-LINE-SWITCHES*"
 	   "*COMMAND-SWITCH-DEMONS*" "*COMMAND-LINE-UTILITY-NAME*"
 	   "*COMMAND-LINE-STRINGS*" "*BATCH-MODE*"
-	   "*COMMAND-LINE-APPLICATION-ARGUMENTS*
+	   "*COMMAND-LINE-APPLICATION-ARGUMENTS*"
 	   "CMD-SWITCH-STRING" "COMMAND-LINE-SWITCH-P"
 	   "CMD-SWITCH-NAME" "CMD-SWITCH-VALUE" "CMD-SWITCH-WORDS" "COMMAND-LINE-SWITCH"
 	   "DEFSWITCH" "CMD-SWITCH-ARG" "GET-COMMAND-LINE-SWITCH")

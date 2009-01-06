@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.27 2008/12/10 02:39:13 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.28 2009/01/06 02:28:14 agoncharov Exp $
  *
  */
 
@@ -137,7 +137,7 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
     modes = ((cw & 0x3f) << 7) | (sw & 0x3f);
 
 #ifdef FEATURE_SSE2
-    if (arch_support_sse2()) {
+    if (fpu_mode == SSE2) {
         u_int32_t mxcsr = env_xmm->en_mxcsr;
         DPRINTF(0, (stderr, "SSE2 modes = %08x\n", (int) mxcsr));
 	modes |= mxcsr;
