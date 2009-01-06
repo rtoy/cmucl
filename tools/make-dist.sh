@@ -69,7 +69,7 @@ shift `expr $OPTIND - 1`
 ARCH=
 OS=
 
-if [ -n ${INSTALL_DIR} ]; then
+if [ -n "${INSTALL_DIR}" ]; then
     # Doing direct installation
     if [ $# -lt 1 ]; then
 	usage
