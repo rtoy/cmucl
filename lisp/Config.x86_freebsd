@@ -1,0 +1,11 @@
+# -*- Mode: makefile -*-
+include Config.x86_common
+
+UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
+OS_SRC = FreeBSD-os.c os-common.c elf.c e_rem_pio2.c k_rem_pio2.c undefineds.c
+OS_LINK_FLAGS = -dynamic -export-dynamic
+OS_LIBS = -lutil
+
+# This has aliasing problems, so turn off aliasing.
+e_rem_pio2.o : e_rem_pio2.c
+	$(CC) -c -fno-strict-aliasing -ffloat-store $(CFLAGS)  $<
