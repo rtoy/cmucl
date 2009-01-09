@@ -123,9 +123,10 @@ if [ -z "$ENABLE_GZIP" -a -z "$ENABLE_BZIP" ]; then
 fi
 
 OPTIONS="${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}} ${INSTALL_DIR:+ -I ${INSTALL_DIR}} $ENABLE_GZIP $ENABLE_BZIP"
+MANDIR="${MANDIR:+ -M ${MANDIR}}"
 
 echo Creating distribution for $ARCH $OS
-$ROOT/make-main-dist.sh $OPTIONS ${MANDIR:+ -M ${MANDIR}} $TARGET $VERSION $ARCH $OS || exit 1
+$ROOT/make-main-dist.sh $OPTIONS ${MANDIR} $TARGET $VERSION $ARCH $OS || exit 1
 $ROOT/make-extra-dist.sh $OPTIONS $TARGET $VERSION $ARCH $OS || exit 2
 
 if [ X"$MAKE_SRC_DIST" = "Xyes" ]; then

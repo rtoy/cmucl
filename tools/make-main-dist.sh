@@ -138,12 +138,12 @@ if [ -z "$INSTALL_DIR" ]; then
     echo Tarring main components
     if [ -n "$ENABLE_GZIP" ]; then
 	echo "  Compressing with gzip"
-	( cd $DESTDIR >/dev/null ; tar cf - bin doc lib `dirname $MANDIR` ) | \
+	( cd $DESTDIR >/dev/null ; tar cf - . ) | \
 	  gzip -c > cmucl-$VERSION-$ARCH-$OS.tar.gz
     fi
     if [ -n "$ENABLE_BZIP" ]; then
 	echo "  Compressing with bzip"
-	( cd $DESTDIR >/dev/null ; tar cf - bin doc lib `dirname $MANDIR` ) | \
+	( cd $DESTDIR >/dev/null ; tar cvvvf - . ) | \
 	  bzip2 > cmucl-$VERSION-$ARCH-$OS.tar.bz2
     fi
 
