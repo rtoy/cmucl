@@ -164,6 +164,7 @@ New in this release:
       exceeding *intexp-maximum-exponent* is now a restart, giving the
       user the option to continue and update the limit to the new
       power.
+    - The Darwin/x86 port can run on Mac OS X 10.4 or later.
 
   * Improvements to the PCL implementation of CLOS:
     - The compiler and interpreter should handle SLOT-VALUE the same
@@ -178,6 +179,10 @@ New in this release:
       declared type for slot.
 
   * Changes to building procedure:
+    - For Linux, custom CFLAGS, CC, and LDFLAGS are supported.
+      Requested by Stelian Ionescu for Gentoo support.
+    - The FreeBSD config file is now named Config.x86_freebsd, which
+      is equivalent to Config.FreeBSD_gencgc.
 
 This release is not binary compatible with code compiled using CMUCL
 19e; you will need to recompile FASL files. 
