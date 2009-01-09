@@ -92,10 +92,10 @@ find src -name 'CVS' -prune -o -type d -print \
 
 # Link Makefile and Config files
  
-cd $TARGET/lisp
-ln -s ../../src/lisp/GNUmakefile ../../src/lisp/Config.$LISP_VARIANT ../../src/lisp/Config.*_common .
-ln -s Config.$LISP_VARIANT Config
-cd -
+(cd $TARGET/lisp
+ ln -s ../../src/lisp/GNUmakefile ../../src/lisp/Config.$LISP_VARIANT ../../src/lisp/Config.*_common .
+ ln -s Config.$LISP_VARIANT Config
+)
 
 # Create empty initial map file
 echo 'Map file for lisp version 0' > $TARGET/lisp/lisp.nm
