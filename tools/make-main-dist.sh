@@ -143,7 +143,7 @@ if [ -z "$INSTALL_DIR" ]; then
     fi
     if [ -n "$ENABLE_BZIP" ]; then
 	echo "  Compressing with bzip"
-	( cd $DESTDIR >/dev/null ; tar cvvvf - . ) | \
+	( cd $DESTDIR >/dev/null ; tar cf - . ) | \
 	  bzip2 > cmucl-$VERSION-$ARCH-$OS.tar.bz2
     fi
 
