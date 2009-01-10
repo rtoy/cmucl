@@ -29,7 +29,7 @@ then
 fi
 
 DESTDIR=${INSTALL_DIR:-release}
-MANDIR=${MANDIR:-man}
+MANDIR=${MANDIR:-man/man1}
 TARGET="`echo $1 | sed 's:/*$::'`"
 VERSION=$2
 ARCH=$3
