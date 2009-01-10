@@ -6,7 +6,7 @@
 .\" If you want to use this code or any part of CMU Common Lisp, please contact
 .\" Scott Fahlman or slisp-group@cs.cmu.edu.
 .\"
-.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.12 2009/01/10 03:08:31 rtoy Exp $
+.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.13 2009/01/10 03:16:54 rtoy Exp $
 .\"
 .\" **********************************************************************
 .\"
@@ -119,6 +119,12 @@ selected and used.  If not, the x87 core file is used.  With this
 option, the user can override the detection and select a core.  (Note
 that you cannot run the SSE2 core on a chip that doesn't not have
 SSE2.  But the x87 core can run on any machine.)
+.TP
+.BR \--
+If this option is given, CMUCL's argument processing is stopped, and
+anything after "--" is placed in
+EXT:*COMMAND-LINE-APPLICATION-ARGUMENTS*.  This allows the application
+to its own processing of any special options.
 .PP
 
 .SH ENVIRONMENT
