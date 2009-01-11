@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.31 2008/12/27 17:35:50 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.32 2009/01/11 17:52:44 rtoy Exp $
 
 all: lisp.nm
 
@@ -33,7 +33,7 @@ lisp.nm: lisp lisp.a
 version.o : version.c version
 	echo '1 + ' `cat version` | bc > ,version
 	mv ,version version
-	$(CC) ${CFLAGS} -DVERSION=`cat version` -c $<
+	$(CC) ${CFLAGS} $(CPPFLAGS) -DVERSION=`cat version` -c $<
 
 lisp: ${OBJS} version.o
 	$(CC) -g ${OS_LINK_FLAGS} -o ,lisp \
