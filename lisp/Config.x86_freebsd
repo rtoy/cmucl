@@ -2,6 +2,6 @@
 include Config.x86_common
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
-OS_SRC += FreeBSD-os.c undefineds.c
+OS_SRC += FreeBSD-os.c undefineds.c elf.c
 OS_LINK_FLAGS = -dynamic -export-dynamic
 OS_LIBS = -lutil
