@@ -28,9 +28,8 @@ ifneq ($(or $(FEATURE_X87),$(FEATURE_SSE2)),)
 CPP_DEFINE_OPTIONS += -DFEATURE_SSE2
 endif
 
-CC ?= gcc
+CC = gcc
 LD = ld
-CPP = cpp
 
 ifeq ($(filter 2% 3%, $(shell $(CC) -dumpversion)),)
 CPP_INCLUDE_OPTIONS := -iquote . -iquote $(PATH1)
@@ -47,6 +46,8 @@ ARCH_SRC = x86-arch.c
 OS_SRC = os-common.c e_rem_pio2.c k_rem_pio2.c 
 
 NM = nm -gp
+DEPEND = $(CC) -MM -E
+DEPEND_FLAGS = 
 
 # This has aliasing problems, so turn off aliasing and also turn on
 # float-store so x87 arithmetic behaves like double-precision

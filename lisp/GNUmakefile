@@ -1,18 +1,9 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.32 2009/01/11 17:52:44 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.33 2009/01/20 04:52:47 agoncharov Rel $
 
 all: lisp.nm
 
-DEPEND = $(CC) -MM -E
-DEPEND_FLAGS = 
-
 -include internals.inc
 include Config
-
-CC ?= gcc
-
-ifndef GC_SRC
-GC_SRC = gc.c
-endif
 
 SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	vars.c parse.c interrupt.c search.c validate.c globals.c \
