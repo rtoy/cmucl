@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.66 2009/01/05 22:26:27 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.67 2009/01/20 03:58:11 agoncharov Exp $
  *
  */
 
@@ -59,7 +59,7 @@ sigint_init(void)
 /* Noise to convert argv and envp into lists. */
 
 static lispobj
-alloc_str_list(char *list[])
+alloc_str_list(const char *list[])
 {
     lispobj result, newcons;
     struct cons *ptr;
@@ -105,10 +105,10 @@ static int debug_lisp_search = FALSE;
  * From the current location of the lisp executable, create a suitable
  * default for CMUCLLIB
  */
-char *
-default_cmucllib(char *argv0arg)
+static const char *
+default_cmucllib(const char *argv0arg)
 {
-    char *p;
+    char *p0;
     char *defpath;
     char *cwd;
     char *argv0_dir = strdup(argv0arg);
@@ -118,11 +118,11 @@ default_cmucllib(char *argv0arg)
      * executable name
      */
 
-    p = strrchr(argv0_dir, '/');
-    if (p == NULL) {
+    p0 = strrchr(argv0_dir, '/');
+    if (p0 == NULL) {
 	*argv0_dir = '\0';
-    } else if (p != argv0_dir) {
-	*p = '\0';
+    } else if (p0 != argv0_dir) {
+	*p0 = '\0';
     }
 
     /*
@@ -175,10 +175,7 @@ default_cmucllib(char *argv0arg)
 	cwd[0] = '\0';
 
 	if (path) {
-
-	    if (p == NULL) {
-		p = argv0arg;
-	    }
+            const char *ptr = (p0 != NULL) ? p0 : argv0arg;
 
 	    for (p1 = path; *p1 != '\0'; p1 = p2) {
 		p2 = strchr(p1, ':');
@@ -187,7 +184,7 @@ default_cmucllib(char *argv0arg)
 		strncpy(cwd, p1, p2 - p1);
 		cwd[p2 - p1] = '/';
 		cwd[p2 - p1 + 1] = '\0';
-		strcpy(cwd + (p2 - p1 + 1), p);
+		strcpy(cwd + (p2 - p1 + 1), ptr);
 
 		if (debug_lisp_search) {
 		    fprintf(stderr, "User's PATH, trying %s\n", cwd);
@@ -274,7 +271,7 @@ default_cmucllib(char *argv0arg)
     free(argv0_dir);
     free(cwd);
 
-    return defpath;
+    return (const char *) defpath;
 }
 
 /*
@@ -336,8 +333,8 @@ search_core(const char *lib, const char *default_core)
  *
  * Return the new lib path.
  */
-char *
-prepend_core_path(char *lib, char *corefile)
+static const char *
+prepend_core_path(const char *lib, const char *corefile)
 {
     char cwd[FILENAME_MAX];
     char *path;
@@ -372,9 +369,8 @@ prepend_core_path(char *lib, char *corefile)
     strcat(result, lib);
 
     free(path);
-    return result;
+    return (const char *) result; /* Don't let the caller modify the buffer we built */
 }
-
 
 /*
   The symbol builtin_image_flag is used globally as a flag to indicate
@@ -396,9 +392,8 @@ extern long initial_function_addr;
 
 fpu_mode_t fpu_mode = AUTO;
 
-/* And here be main. */
-
-const char* locate_core(const char* cmucllib, const char* core, const char* default_core)
+static const char*
+locate_core(const char* cmucllib, const char* core, const char* default_core)
 {
     if (core == NULL) {
         if (getenv("CMUCLCORE") == NULL) {
@@ -407,17 +402,16 @@ const char* locate_core(const char* cmucllib, const char* core, const char* defa
             core = getenv("CMUCLCORE");
         }
     }
-    {
-        struct stat statbuf;
 
-        if (stat(core, &statbuf) != 0) {
-            core = NULL;
-        }
+    if (access(core, R_OK) != 0) {
+      core = NULL;
     }
+    
     return core;
 }
 
-void core_failure(const char* core, const char** argv)
+static void
+core_failure(const char* core, const char* argv[])
 {
     
     fprintf(stderr, "Cannot find core file");
@@ -430,13 +424,14 @@ void core_failure(const char* core, const char** argv)
 }
 
 int
-main(int argc, char *argv[], char *envp[])
+main(int argc, const char *argv[], const char *envp[])
 {
-    char *arg, **argptr;
-    char *core = NULL;
-    char *default_core;
-    char *lib = NULL;
-    char *cmucllib = NULL;
+    const char *arg, **argptr;
+    const char *core = NULL;
+    const char *default_core;
+    const char *lib = NULL;
+    const char *cmucllib = NULL;
+    
     fpu_mode_t fpu_type = AUTO;
     boolean monitor;
     lispobj initial_function = 0;
@@ -486,7 +481,7 @@ main(int argc, char *argv[], char *envp[])
 		exit(1);
 	    }
 	} else if (strcmp(arg, "-dynamic-space-size") == 0) {
-	    char *str;
+	    const char *str;
 
 	    str = *++argptr;
 	    if (str == NULL) {
@@ -535,7 +530,7 @@ main(int argc, char *argv[], char *envp[])
         }
 #ifdef i386
 	else if (strcmp(arg, "-fpu") == 0) {
-	    char *str;
+	    const char *str;
 
 	    str = *++argptr;
             if (str == NULL) {
@@ -621,7 +616,7 @@ main(int argc, char *argv[], char *envp[])
 	    if (builtin_image_flag == 0)
 #endif
 	{
-	    char *newlib = NULL;
+	    const char *newlib = NULL;
 
 	    /*
 	     * We need to use our default search path.  If a core file
@@ -637,7 +632,7 @@ main(int argc, char *argv[], char *envp[])
 	    }
 
 	    if (newlib != NULL) {
-		free(cmucllib);
+                free((void *) cmucllib);
 		cmucllib = newlib;
 	    }
 	}
@@ -652,7 +647,7 @@ main(int argc, char *argv[], char *envp[])
 	 * If no core file specified, search for it in CMUCLLIB
 	 */
         {
-            char* found_core;
+            const char* found_core;
             
             found_core = locate_core(cmucllib, core, default_core);
 #ifdef FEATURE_SSE2

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.10 2005/09/15 18:26:50 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.11 2009/01/20 03:58:11 agoncharov Exp $ */
 
 #include <string.h>
 
@@ -114,7 +114,7 @@ alloc_number(long n)
 }
 
 lispobj
-alloc_string(char *str)
+alloc_string(const char *str)
 {
     int len = strlen(str);
     lispobj result = alloc_vector(type_SimpleString, len + 1, 8);
