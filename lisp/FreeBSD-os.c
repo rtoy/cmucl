@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.28 2009/01/06 02:28:14 agoncharov Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.29 2009/01/20 04:45:18 agoncharov Exp $
  *
  */
 
@@ -37,7 +37,6 @@
 #endif
 
 vm_size_t os_vm_page_size;
-
 
 void
 os_init(void)
@@ -49,39 +48,40 @@ unsigned long *
 os_sigcontext_reg(ucontext_t *scp, int index)
 {
     __register_t *rv;
+
     switch (index) {
-    case 0:
-        rv = &scp->uc_mcontext.mc_eax;
-        break;
-    case 2:
-        rv = &scp->uc_mcontext.mc_ecx;
-        break;
-    case 4:
-        rv = &scp->uc_mcontext.mc_edx;
-        break;
-    case 6:
-        rv = &scp->uc_mcontext.mc_ebx;
-        break;
-    case 8:
-        rv = &scp->uc_mcontext.mc_esp;
-        break;
-    case 10:
-        rv = &scp->uc_mcontext.mc_ebp;
-        break;
-    case 12:
-        rv = &scp->uc_mcontext.mc_esi;
-        break;
-    case 14:
-        rv = &scp->uc_mcontext.mc_edi;
-        break;
-    default:
-        rv = NULL;
+      case 0:
+	  rv = &scp->uc_mcontext.mc_eax;
+	  break;
+      case 2:
+	  rv = &scp->uc_mcontext.mc_ecx;
+	  break;
+      case 4:
+	  rv = &scp->uc_mcontext.mc_edx;
+	  break;
+      case 6:
+	  rv = &scp->uc_mcontext.mc_ebx;
+	  break;
+      case 8:
+	  rv = &scp->uc_mcontext.mc_esp;
+	  break;
+      case 10:
+	  rv = &scp->uc_mcontext.mc_ebp;
+	  break;
+      case 12:
+	  rv = &scp->uc_mcontext.mc_esi;
+	  break;
+      case 14:
+	  rv = &scp->uc_mcontext.mc_edi;
+	  break;
+      default:
+	  rv = NULL;
     }
-    
+
     /* Pre-cast to (void *), to avoid the compiler warning:
-     * FreeBSD-os.c:72: warning: dereferencing type-punned pointer will break strict-aliasing rules
+     * dereferencing type-punned pointer will break strict-aliasing rules
      */
-    return (unsigned long *) (void *) rv; 
+    return (unsigned long *) (void *) rv;
 }
 
 unsigned long *
@@ -98,15 +98,15 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
     unsigned char *reg = NULL;
 
     switch (fpformat) {
-    case _MC_FPFMT_XMM:
-	 reg = sv->sv_xmm.sv_fp[index].fp_acc.fp_bytes;
-	 break;
-    case _MC_FPFMT_387:
-	 reg = sv->sv_87.sv_ac[index].fp_bytes;
-	 break;
-    case _MC_FPFMT_NODEV:
-	 reg = NULL;
-	 break;
+      case _MC_FPFMT_XMM:
+	  reg = sv->sv_xmm.sv_fp[index].fp_acc.fp_bytes;
+	  break;
+      case _MC_FPFMT_387:
+	  reg = sv->sv_87.sv_ac[index].fp_bytes;
+	  break;
+      case _MC_FPFMT_NODEV:
+	  reg = NULL;
+	  break;
     }
     return reg;
 }
@@ -115,7 +115,7 @@ unsigned int
 os_sigcontext_fpu_modes(ucontext_t *scp)
 {
     unsigned int modes;
-    
+
     union savefpu *sv = (union savefpu *) scp->uc_mcontext.mc_fpstate;
     int fpformat = scp->uc_mcontext.mc_fpformat;
     struct env87 *env_87 = &sv->sv_87.sv_env;
@@ -129,7 +129,7 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
     } else if (fpformat == _MC_FPFMT_387) {
 	cw = env_87->en_cw & 0xffff;
 	sw = env_87->en_sw & 0xffff;
-    } else {  /* _MC_FPFMT_NODEV */
+    } else { /* _MC_FPFMT_NODEV */
 	cw = 0;
 	sw = 0x3f;
     }
@@ -138,8 +138,9 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
 
 #ifdef FEATURE_SSE2
     if (fpu_mode == SSE2) {
-        u_int32_t mxcsr = env_xmm->en_mxcsr;
-        DPRINTF(0, (stderr, "SSE2 modes = %08x\n", (int) mxcsr));
+	u_int32_t mxcsr = env_xmm->en_mxcsr;
+
+	DPRINTF(0, (stderr, "SSE2 modes = %08x\n", (int)mxcsr));
 	modes |= mxcsr;
     }
 #endif
@@ -147,7 +148,8 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
     return modes;
 }
 
-os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
+os_vm_address_t
+os_validate(os_vm_address_t addr, os_vm_size_t len)
 {
     int flags = MAP_PRIVATE | MAP_ANON;
 
@@ -207,7 +209,8 @@ in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
     return adr >= beg && adr < end;
 }
 
-boolean valid_addr(os_vm_address_t addr)
+boolean
+valid_addr(os_vm_address_t addr)
 {
     os_vm_address_t newaddr;
 
@@ -227,22 +230,22 @@ boolean valid_addr(os_vm_address_t addr)
 
 
 static void
-sigbus_handler(int signal, siginfo_t *info, ucontext_t *context)
+protection_violation_handler(HANDLER_ARGS)
 {
 #ifdef RED_ZONE_HIT
-    if (os_control_stack_overflow(info->si_addr, context))
+    if (os_control_stack_overflow(code->si_addr, context))
 	return;
 #endif
 
 #if defined GENCGC
-    if (info->si_code == PROTECTION_VIOLATION_CODE) {
-	if (gc_write_barrier(info->si_addr)) {
+    if (code->si_code == PROTECTION_VIOLATION_CODE) {
+	if (gc_write_barrier(code->si_addr)) {
 	    return;
 	}
     }
-#endif /* GENCGC */
+#endif
 
-    interrupt_handle_now(signal, info, context);
+    interrupt_handle_now(signal, code, context);
 }
 
 /*
@@ -253,46 +256,47 @@ sigbus_handler(int signal, siginfo_t *info, ucontext_t *context)
  * if the subcode is FPE_FLTUND.
  */
 static void
-sigfpe_handler(int signal, siginfo_t *info, ucontext_t *context)
+sigfpe_handler(HANDLER_ARGS)
 {
-     union savefpu *sv = (union savefpu *) context->uc_mcontext.mc_fpstate;
-     int fpformat = context->uc_mcontext.mc_fpformat;
-     int code = info->si_code;
-     unsigned char trap = 0;
+    ucontext_t *ucontext = (ucontext_t *) context;
+    union savefpu *sv = (union savefpu *) ucontext->uc_mcontext.mc_fpstate;
+    int fpformat = ucontext->uc_mcontext.mc_fpformat;
+    unsigned char trap = 0;
 
-     switch (code) {
-     case FPE_FLTDIV:  /* ZE */
+    switch (code->si_code) {
+      case FPE_FLTDIV:		/* ZE */
 	  trap = 0x04;
 	  break;
-     case FPE_FLTOVF:  /* OE */
+      case FPE_FLTOVF:		/* OE */
 	  trap = 0x08;
 	  break;
-     case FPE_FLTUND:  /* DE or UE */
+      case FPE_FLTUND:		/* DE or UE */
 	  trap = 0x10;
 	  break;
-     case FPE_FLTRES:  /* PE */
+      case FPE_FLTRES:		/* PE */
 	  trap = 0x20;
 	  break;
-     case FPE_FLTINV:  /* IE */
+      case FPE_FLTINV:		/* IE */
 	  trap = 0x01;
 	  break;
-     }
-     switch (fpformat) {
-     case _MC_FPFMT_XMM:
+    }
+
+    switch (fpformat) {
+      case _MC_FPFMT_XMM:
 	  sv->sv_xmm.sv_env.en_sw |= trap;
 	  break;
-     case _MC_FPFMT_387:
+      case _MC_FPFMT_387:
 	  sv->sv_87.sv_env.en_sw |= trap;
 	  break;
-     }
-     interrupt_handle_now(signal, info, context);
+    }
+    interrupt_handle_now(signal, code, context);
 }
 
 void
 os_install_interrupt_handlers(void)
 {
-    interrupt_install_low_level_handler
-	(PROTECTION_VIOLATION_SIGNAL, sigbus_handler);
+    interrupt_install_low_level_handler(PROTECTION_VIOLATION_SIGNAL,
+					protection_violation_handler);
     interrupt_install_low_level_handler(SIGFPE, sigfpe_handler);
 }
 
@@ -305,8 +309,8 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 	for (lib_list_head = lib_list;
 	     lib_list_head != NIL; lib_list_head = CONS(lib_list_head)->cdr) {
 	    struct cons *lib_cons = CONS(CONS(lib_list_head)->car);
-	    struct sap *dlhandle = (struct sap *) PTR(lib_cons->car);
-	    void *sym_addr = dlsym((void *) dlhandle->pointer, sym_name);
+	    struct sap *dlhandle = (struct sap *)PTR(lib_cons->car);
+	    void *sym_addr = dlsym((void *)dlhandle->pointer, sym_name);
 
 	    if (sym_addr)
 		return sym_addr;
@@ -329,16 +333,18 @@ restore_fpu(ucontext_t *scp)
 	cw = env_xmm->en_cw;
     } else if (fpformat == _MC_FPFMT_387) {
 	cw = env_87->en_cw & 0xffff;
-    } else {  /* _MC_FPFMT_NODEV */
+    } else { /* _MC_FPFMT_NODEV */
 	return;
     }
-    DPRINTF(0, (stderr, "restore_fpu:  cw = %08x\n", (int) cw));
-    __asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
+    DPRINTF(0, (stderr, "restore_fpu:  cw = %08x\n", (int)cw));
+    __asm__ __volatile__ ("fldcw %0"::"m"(*&cw));
+
 #ifdef FEATURE_SSE2
     if (arch_support_sse2()) {
-        u_int32_t mxcsr = env_xmm->en_mxcsr;
-        DPRINTF(0, (stderr, "restore_fpu:  mxcsr (raw) = %04x\n", mxcsr));
-        __asm__ __volatile__ ("ldmxcsr %0" :: "m" (*&mxcsr));
+	u_int32_t mxcsr = env_xmm->en_mxcsr;
+
+	DPRINTF(0, (stderr, "restore_fpu:  mxcsr (raw) = %04x\n", mxcsr));
+	__asm__ __volatile__ ("ldmxcsr %0"::"m"(*&mxcsr));
     }
 #endif
 }

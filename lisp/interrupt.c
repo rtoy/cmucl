@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.56 2008/09/11 17:07:21 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.57 2009/01/20 04:45:19 agoncharov Exp $ */
 
 /* Interrupt handling magic. */
 
@@ -148,6 +148,7 @@ undo_fake_foreign_function_call(os_context_t * context)
 void
 interrupt_internal_error(HANDLER_ARGS, boolean continuable)
 {
+    ucontext_t *ucontext = (ucontext_t *) context;
     lispobj context_sap = NIL;
 
     fake_foreign_function_call(context);
@@ -156,7 +157,7 @@ interrupt_internal_error(HANDLER_ARGS, boolean continuable)
     if (internal_errors_enabled)
 	context_sap = alloc_sap(context);
 
-    sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+    sigprocmask(SIG_SETMASK, &ucontext->uc_sigmask, 0);
 
     if (internal_errors_enabled)
 	funcall2(SymbolFunction(INTERNAL_ERROR), context_sap,
@@ -232,6 +233,7 @@ void
 interrupt_handle_now(HANDLER_ARGS)
 {
     int were_in_lisp;
+    ucontext_t *ucontext = (ucontext_t *) context;
     union interrupt_handler handler;
 
     handler = interrupt_handlers[signal];
@@ -259,7 +261,7 @@ interrupt_handle_now(HANDLER_ARGS)
 	lispobj context_sap = alloc_sap(context);
 
 	/* Allow signals again. */
-	sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+	sigprocmask(SIG_SETMASK, &ucontext->uc_sigmask, 0);
 
 #if 1
 	funcall3(handler.lisp, make_fixnum(signal), make_fixnum(CODE(code)),
@@ -270,7 +272,7 @@ interrupt_handle_now(HANDLER_ARGS)
 #endif
     } else {
 	/* Allow signals again. */
-	sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+	sigprocmask(SIG_SETMASK, &ucontext->uc_sigmask, 0);
 
 	(*handler.c) (signal, code, context);
     }
@@ -284,6 +286,7 @@ interrupt_handle_now(HANDLER_ARGS)
 static void
 setup_pending_signal(HANDLER_ARGS)
 {
+    ucontext_t *ucontext = (ucontext_t *) context;
     pending_signal = signal;
     /*
      * Note: We used to set pending_code = *code.  This doesn't work
@@ -297,8 +300,8 @@ setup_pending_signal(HANDLER_ARGS)
      *
      */
     pending_code.si_code = CODE(code);
-    pending_mask = context->uc_sigmask;
-    FILLBLOCKSET(&context->uc_sigmask);
+    pending_mask = ucontext->uc_sigmask;
+    FILLBLOCKSET(&ucontext->uc_sigmask);
 }
 
 static void
