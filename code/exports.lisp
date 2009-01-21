@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.280 2009/01/06 02:28:14 agoncharov Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.281 2009/01/21 19:06:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1464,7 +1464,8 @@
 (defpackage "STREAM"
   (:import-from "SYSTEM" "LISP-STREAM")
   (:import-from "EXTENSIONS" "FUNDAMENTAL-STREAM")
-  (:import-from "LISP" "LINE-LENGTH" "CHARPOS")
+  (:import-from "LISP" "LINE-LENGTH" "CHARPOS"
+		"BREF" "BUFFER-COPY" "BUFFER-SAP" "ENDIAN-SWAP-VALUE" "VECTOR-ELT-WIDTH")
   (:export ;; Stream classes
            "STREAM"
            "SIMPLE-STREAM"
