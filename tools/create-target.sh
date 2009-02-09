@@ -27,7 +27,7 @@ if [ $# = 1 ]; then
     TARGET_DIR="$1"
     case `uname -s` in
     SunOS) LISP_VARIANT=sun4_solaris_gcc ;;
-    Linux) LISP_VARIANT=linux_gencgc ;;
+    Linux) LISP_VARIANT=x86_linux ;;
     Darwin) case `uname -m` in
             ppc) LISP_VARIANT=ppc_darwin ;;
 	    i386) LISP_VARIANT=x86_darwin ;;
@@ -66,7 +66,7 @@ if [ "$MOTIF_VARIANT" = "" ]; then
     case $LISP_VARIANT in
       alpha_linux) MOTIF_VARIANT=alpha_linux ;;
       alpha_osf1) MOTIF_VARIANT=alpha_osf1 ;;
-      FreeBSD*|freebsd*) MOTIF_VARIANT=FreeBSD ;;
+      x86_freebsd|FreeBSD*|freebsd*) MOTIF_VARIANT=FreeBSD ;;
       NetBSD*) MOTIF_VARIANT=NetBSD ;;
       OpenBSD*) MOTIF_VARIANT=OpenBSD ;;
       *_darwin) MOTIF_VARIANT=Darwin ;;
@@ -75,7 +75,7 @@ if [ "$MOTIF_VARIANT" = "" ]; then
       hp700*) MOTIF_VARIANT=hpux_cc ;;
       pmax_mach) MOTIF_VARIANT=pmax_mach ;;
       sgi*) MOTIF_VARIANT=irix ;;
-      linux*) MOTIF_VARIANT=x86 ;;
+      x86_linux|linux*) MOTIF_VARIANT=x86 ;;
     esac
 elif [ ! -f src/motif/server/Config.$MOTIF_VARIANT ]; then
     echo "No such motif-variant could be found: Config.$MOTIF_VARIANT"
