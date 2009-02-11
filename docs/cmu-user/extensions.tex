@@ -1856,68 +1856,6 @@ language; however, the implementation of the generator is not
 specified.  Two random number generators are available in \cmucl{},
 depending on the version.
 
-\subsection{Original Generator}
-
-\cpsubindex{random number generation}{original generator}
-The default random number generator uses a lagged Fibonacci generator
-given by
-
-\begin{displaymath}
-  z[i] = z[i - 24] - z[i - 55] \bmod 536870908
-\end{displaymath}
-
-where $z[i]$ is the $i$'th random number.  This generator produces
-small integer-valued numbers.  For larger integer, the small random
-integers are concatenated to produce larger integers.  For
-floating-point numbers, the bits from this generator are used as the
-bits of the floating-point significand.
-
-\subsection{New Generator}
-\cpsubindex{random number generation}{new generator}
-
-In some versions of \cmucl{}, the original generator above has been
-replaced with a subtract-with-borrow generator
-combined with a Weyl generator.\footnote{The generator described here
-  is available if the feature \kwd{new-random} is available.}  The
-reason for the change was to use a documented generator which has
-passed tests for randomness. 
-
-The subtract-with-borrow generator is described by the following
-equation
-\begin{displaymath}
-  z[i] = z[i + 20] - z[i + 5] - b
-\end{displaymath}
-where $z[i]$ is the $i$'th random number, which is a
-\code{double-float}.  All of the indices in this equation are
-interpreted modulo 32.  The quantity $b$ is carried over from the
-previous iteration and is either 0 or \code{double-float-epsilon}.  If
-$z[i]$ is positive, $b$ is set to zero.  Otherwise, $b$ is set to
-\code{double-float-epsilon}.
-
-To increase the randomness of this generator, this generator is
-combined with a Weyl generator defined by
-\begin{displaymath}
-  x[i] = x[i - 1] - y \bmod 1,
-\end{displaymath}
-where $y = 7097293079245107 \times 2^{-53}$.  Thus, the resulting
-random number $r[i]$ is
-\begin{displaymath}
-  r[i] = (z[i] - x[i]) \bmod 1
-\end{displaymath}
-
-This generator has been tested by Peter VanEynde using Marsaglia's
-diehard test suite for random number generators;  this generator
-passes the test suite.
-
-This generator is designed for generating floating-point random
-numbers.  To obtain integers, the bits from the significand of the
-floating-point number are used as the bits of the integer.  As many
-floating-point numbers as needed are generated to obtain the desired
-number of bits in the random integer.
-
-For floating-point numbers, this generator can by significantly faster 
-than the original generator.
-
 \subsection{MT-19937 Generator}
 \cpsubindex{random number generation}{MT-19987 generator}
 On all platforms, this is the preferred generator as indicated by
@@ -1934,6 +1872,11 @@ their
 website at
 \href{http://www.math.keio.ac.jp/~matumoto/emt.html}{\texttt{http://www.math.keio.ac.jp/~matsumoto/emt.html}}.
 \fi
+
+When \cmucl{} starts up, \code{*random-state*} is initialized by
+reading 627 words from \code{/dev/urandom}, if \code{/dev/urandom} is
+available.  If \code{/dev/urandom} is not available, the universal
+time is used to initialize \code{*random-state*}.
 
 \section{Lisp Threads}
 \cindex{lisp threads}
