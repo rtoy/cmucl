@@ -588,6 +588,10 @@ Package nicknames are in parenthesis after the full name.
 
 \item[\code{stream}] The \code{stream} package exports the public
   interface to the simple-streams implementation (\pxlref{simple-streams}).
+
+\item[\code{xref}] The \code{xref} package exports the public
+  interface to the cross-referencing utility (\pxlref{xref}).
+
 \end{Lentry}
 
 
@@ -1853,12 +1857,11 @@ and printing time in various formats are available.
 
 \clisp{} includes a random number generator as a standard part of the
 language; however, the implementation of the generator is not
-specified.  Two random number generators are available in \cmucl{},
-depending on the version.
+specified.
 
 \subsection{MT-19937 Generator}
-\cpsubindex{random number generation}{MT-19987 generator}
-On all platforms, this is the preferred generator as indicated by
+\cpsubindex{random number generation}{MT-19937 generator}
+On all platforms, the random number is \code{MT-19937} generator as indicated by
 \kwd{rand-mt19937} being in \code{*features*}.  This is a Lisp
 implementation of the MT-19937 generator of Makoto Matsumoto and
 T. Nishimura.  We refer the reader to their paper\footnote{``Mersenne
@@ -1876,7 +1879,8 @@ website at
 When \cmucl{} starts up, \code{*random-state*} is initialized by
 reading 627 words from \code{/dev/urandom}, if \code{/dev/urandom} is
 available.  If \code{/dev/urandom} is not available, the universal
-time is used to initialize \code{*random-state*}.
+time is used to initialize \code{*random-state*}.  The initialization
+is done as given in Matsumoto's paper.
 
 \section{Lisp Threads}
 \cindex{lisp threads}
