@@ -49,6 +49,11 @@ analysis is independent of whether the compiler is generating native
 code or byte code, and of whether it is compiling from a file, from a
 stream, or is invoked interactively from the listener. 
 
+Alternatively, the \kwd{:xref} option to \code{compile-file} may be
+specified to populate the cross-reference database when compiling a
+file.  In this case, loading the generated fasl file in a fresh lisp
+will also populate the cross-reference database.
+
 \begin{defun}{xref:}{init-xref-database}{}
   Reinitializes the database of cross-references. This can be used to
   reclaim the space occupied by the database contents, or to discard
