@@ -1445,14 +1445,14 @@ defaults to \kwd{newest}.
 (defun parse (x)
   (values (pathname-name x) (pathname-type x) (pathname-version x)))
 
-(parse "foo") \result "foo", NIL, :NEWEST
-(parse "foo.bar") \result "foo", "bar", :NEWEST
-(parse ".foo") \result ".foo", NIL, :NEWEST
-(parse ".foo.bar") \result ".foo", "bar", :NEWEST
-(parse "..") \result ".", "", :NEWEST
-(parse "foo.") \result "foo", "", :NEWEST
-(parse "foo.bar.1") \result "foo", "bar", 1
-(parse "foo.bar.baz") \result "foo.bar", "baz", :NEWEST
+(parse "foo") \result "foo", NIL, NIL
+(parse "foo.bar") \result "foo", "bar", NIL
+(parse ".foo") \result ".foo", NIL, NIL
+(parse ".foo.bar") \result ".foo", "bar", NIL
+(parse "..") \result NIL, NIL, NIL
+(parse "foo.") \result "foo", "", NIL
+(parse "foo.bar.~1~") \result "foo", "bar", 1
+(parse "foo.bar.baz") \result "foo.bar", "baz", NIL
 \end{example}
 
 The directory of pathnames beginning with a slash (or a search-list,
@@ -1877,10 +1877,10 @@ website at
 \fi
 
 When \cmucl{} starts up, \code{*random-state*} is initialized by
-reading 627 words from \code{/dev/urandom}, if \code{/dev/urandom} is
-available.  If \code{/dev/urandom} is not available, the universal
-time is used to initialize \code{*random-state*}.  The initialization
-is done as given in Matsumoto's paper.
+reading 627 words from \code{/dev/urandom}, when available.  If
+\code{/dev/urandom} is not available, the universal time is used to
+initialize \code{*random-state*}.  The initialization is done as given
+in Matsumoto's paper.
 
 \section{Lisp Threads}
 \cindex{lisp threads}
