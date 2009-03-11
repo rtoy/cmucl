@@ -1,7 +1,5 @@
 ========================== C M U C L  19 f =============================
 
-[--- WORK IN PROGRESS ---]
-
 The CMUCL project is pleased to announce the release of CMUCL 19f.
 This is a major release which contains numerous enhancements and
 bugfixes from the 19e release.
@@ -110,7 +108,8 @@ New in this release:
     - FLOAT-PRECISION supports double-double floats.
     - Tracing should now be working on Darwin/x86.  Previously,
       certain cases would cause Lisp to segfault in bad ways where you
-      could not return to the repl.
+      could not return to the repl.  Do not need to do encapsulation
+      by default anymore.
     - The bounds for type (REAL lo hi) are computed better now.  The
       REAL type is a union of SINGLE-FLOAT, DOUBLE-FLOAT, and
       DOUBLE-DOUBLE-FLOAT.  The computed bounds for
@@ -187,6 +186,11 @@ New in this release:
       is equivalent to Config.FreeBSD_gencgc, which is deprecated.
     - The Linux config file is now named Config.x86_linux, which is
       the equivalent to Config.linux_gencgc, which is deprecated.
+
+  * Known issues:
+    - Executables (via save-lisp) on recent FreeBSD versions are
+      currently not working.  The executable is created, but the
+      resulting executable doesn't work correctly.
 
 This release is not binary compatible with code compiled using CMUCL
 19e; you will need to recompile FASL files. 
