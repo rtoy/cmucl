@@ -26,6 +26,9 @@ New in this release:
   * Bugfixes:
 
   * Trac Tickets:
+    #31: pathname bug with :case :common
+    Fixed.  The common case is applied to each part of the directory,
+    not to the directory as a whole.
 
   * Other changes:
 

@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.86 2008/04/04 15:11:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.87 2009/03/16 15:52:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -890,11 +890,20 @@ a host-structure or string."
   (declare (type path-designator pathname)
 	   (type (member :local :common) case))
   (with-pathname (pathname pathname)
-    (maybe-diddle-case (%pathname-directory pathname)
-		       (and (eq case :common)
-			    (eq (host-customary-case
-				 (%pathname-host pathname))
-				:lower)))))
+    ;; CLHS 19.2.2.1.2.2 says: "should receive and yield strings in
+    ;; component values"
+    ;;
+    ;; We take this to mean it applies to each component of the
+    ;; directory individually.  This also matches the example in the
+    ;; entry for PATHNAME-HOST.
+    (let ((diddle-p (and (eq case :common)
+			 (eq (host-customary-case
+			      (%pathname-host pathname))
+			     :lower))))
+      (mapcar #'(lambda (piece)
+		  (maybe-diddle-case piece diddle-p))
+	      (%pathname-directory pathname)))))
+
 ;;; PATHNAME-NAME -- Interface
 ;;;
 (defun pathname-name (pathname &key (case :local))
