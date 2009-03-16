@@ -1,18 +1,9 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.28.4.1 2008/11/01 22:40:36 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.28.4.2 2009/03/16 21:10:56 rtoy Exp $
 
 all: lisp.nm
 
-CC = gcc
-
-DEPEND = $(CC) -MM -E
-DEPEND_FLAGS = 
-
 -include internals.inc
 include Config
-
-ifndef GC_SRC
-GC_SRC = gc.c
-endif
 
 SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	vars.c parse.c interrupt.c search.c validate.c globals.c \
@@ -33,7 +24,7 @@ lisp.nm: lisp lisp.a
 version.o : version.c version
 	echo '1 + ' `cat version` | bc > ,version
 	mv ,version version
-	$(CC) ${CFLAGS} -DVERSION=`cat version` -c $<
+	$(CC) ${CFLAGS} $(CPPFLAGS) -DVERSION=`cat version` -c $<
 
 lisp: ${OBJS} version.o
 	$(CC) -g ${OS_LINK_FLAGS} -o ,lisp \

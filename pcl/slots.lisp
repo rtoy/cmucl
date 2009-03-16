@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.29 2008/03/25 15:05:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.29.2.1 2009/03/16 21:10:56 rtoy Exp $")
 ;;;
 
 (in-package :pcl)
@@ -99,6 +99,8 @@
 	(setf (slot-value-using-class class object slot-definition) 
 	      new-value))
     new-value))
+
+(defvar *allow-funny-slot-names* nil)
 
 ;; Return T if X is can be used as a legal slot name.  If X is not
 ;; legal, return two values: NIL and a string indicating why X is not

@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.17 2008/03/18 09:22:55 cshapiro Exp $
+ $Id: elf.c,v 1.17.2.1 2009/03/16 21:10:56 rtoy Exp $
 */
 
 #include <stdio.h>
@@ -399,7 +399,7 @@ read_section_header_entry(int fd, Elf_Shdr *shp)
   is not set until some time after this is done.
 */
 void
-map_core_sections(char *exec_name)
+map_core_sections(const char *exec_name)
 {
     int exec_fd;
     Elf_Shdr sh;		/* A section header entry. */

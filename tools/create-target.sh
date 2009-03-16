@@ -27,13 +27,13 @@ if [ $# = 1 ]; then
     TARGET_DIR="$1"
     case `uname -s` in
     SunOS) LISP_VARIANT=sun4_solaris_gcc ;;
-    Linux) LISP_VARIANT=linux_gencgc ;;
+    Linux) LISP_VARIANT=x86_linux ;;
     Darwin) case `uname -m` in
             ppc) LISP_VARIANT=ppc_darwin ;;
 	    i386) LISP_VARIANT=x86_darwin ;;
 	    esac
 	    ;;
-    FreeBSD) LISP_VARIANT=FreeBSD_gencgc ;;
+    FreeBSD|freebsd) LISP_VARIANT=x86_freebsd ;;
     # Please fill in some other common systems
     *) echo "Sorry, please specify the desired Lisp variant." 
        exit 1 ;;
@@ -66,7 +66,7 @@ if [ "$MOTIF_VARIANT" = "" ]; then
     case $LISP_VARIANT in
       alpha_linux) MOTIF_VARIANT=alpha_linux ;;
       alpha_osf1) MOTIF_VARIANT=alpha_osf1 ;;
-      FreeBSD*) MOTIF_VARIANT=FreeBSD ;;
+      x86_freebsd|FreeBSD*|freebsd*) MOTIF_VARIANT=FreeBSD ;;
       NetBSD*) MOTIF_VARIANT=NetBSD ;;
       OpenBSD*) MOTIF_VARIANT=OpenBSD ;;
       *_darwin) MOTIF_VARIANT=Darwin ;;
@@ -75,7 +75,7 @@ if [ "$MOTIF_VARIANT" = "" ]; then
       hp700*) MOTIF_VARIANT=hpux_cc ;;
       pmax_mach) MOTIF_VARIANT=pmax_mach ;;
       sgi*) MOTIF_VARIANT=irix ;;
-      linux*) MOTIF_VARIANT=x86 ;;
+      x86_linux|linux*) MOTIF_VARIANT=x86 ;;
     esac
 elif [ ! -f src/motif/server/Config.$MOTIF_VARIANT ]; then
     echo "No such motif-variant could be found: Config.$MOTIF_VARIANT"
@@ -91,8 +91,11 @@ find src -name 'CVS' -prune -o -type d -print \
 	| sed "s:^src:$TARGET:g" | xargs mkdir
 
 # Link Makefile and Config files
-( cd $TARGET/lisp ; ln -s ../../src/lisp/GNUmakefile ./Makefile )
-( cd $TARGET/lisp ; ln -s ../../src/lisp/Config.$LISP_VARIANT ./Config )
+ 
+(cd $TARGET/lisp
+ ln -s ../../src/lisp/GNUmakefile ../../src/lisp/Config.$LISP_VARIANT ../../src/lisp/Config.*_common .
+ ln -s Config.$LISP_VARIANT Config
+)
 
 # Create empty initial map file
 echo 'Map file for lisp version 0' > $TARGET/lisp/lisp.nm
@@ -121,12 +124,9 @@ case $LISP_VARIANT in
       esac
       sed "s;@@gcname@@;$gcname;" $SETENV/openbsd-features.lisp >> $TARGET/setenv.lisp
       ;;
-  *FreeBSD*)
-      case $LISP_VARIANT in
-        *_gencgc*) gcname=":gencgc" ;;
-	*) gcname=":cgc" ;;
-      esac
-      sed "s;@@gcname@@;$gcname;" $SETENV/freebsd-features.lisp >> $TARGET/setenv.lisp
+  *FreeBSD*|*freebsd*)
+	gcname=":gencgc"
+	sed "s;@@gcname@@;$gcname;" $SETENV/freebsd-features.lisp >> $TARGET/setenv.lisp
       ;;
   *solaris*)
       cat $SETENV/solaris-features.lisp >> $TARGET/setenv.lisp

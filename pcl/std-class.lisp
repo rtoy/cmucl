@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.82.4.1 2008/06/19 03:30:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.82.4.2 2009/03/16 21:10:56 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -1110,8 +1110,6 @@
   (let ((eslotds (call-next-method)))
     (mapc #'initialize-internal-slot-functions eslotds)
     eslotds))
-
-(defvar *allow-funny-slot-names* nil)
 
 (defmethod initialize-internal-slot-functions :around
     ((slotd structure-effective-slot-definition))

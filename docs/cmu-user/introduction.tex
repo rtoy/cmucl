@@ -129,8 +129,11 @@ switches:
 \item[\code{-init}] accepts an argument that should be the name of an
   init file to load during the normal start up sequence.  The default
   is to load \file{init.\var{object-type}} or, if that does not exist,
-  \file{init.lisp} from the user's home directory.  If the file is not
-  in the user's home directory, the full path must be specified.
+  \file{init.lisp} from the user's home directory.  If neither exists,
+  \cmucl tries \file{.cmucl-init.\var{object-type}} and then
+  \file{.cmucl-init.lisp}.  If the file is not
+  in the user's home directory, the full path must be specified.  If
+  the file does not exist, \cmucl silently ignores it.
   
 \item[\code{-noinit}] accepts no arguments and specifies that an init
   file should not be loaded during the normal start up sequence.
@@ -155,6 +158,20 @@ switches:
   \end{example}
   where \var{machine-name} is the internet host name for the machine
   and \var{socket} is the decimal number of the socket to connect to.
+
+\item[\code{-fpu}] specifies what fpu should be used for x87 machines.
+  The possible values are ``\code{x87}'', ``\code{sse2}'', or
+  ``\code{auto}'', which is the default.  By default, \cmucl will
+  detect if the chip supports the SSE2 instruction set or not.  If so
+  or if \code{-fpu sse2} is specified, the SSE2 core will be loaded
+  that uses SSE2 for floating-point arithmetic.  If SSE2 is not
+  available or if \code{-fpu x87} is given, the legacy x87 core is
+  loaded.
+
+\item[\code{--}] indicates that everything after ``\code{--}'' is not
+  subject to \cmucl's command line parsing.  Everything after
+  ``\code{--}'' is placed in the variable
+  \code{ext:*command-line-application-arguments*}.
 \end{Lentry}
 
 For more details on the use of the \code{-edit} and \code{-slave}
@@ -273,16 +290,20 @@ The project funding stopped in 1994, so support at Carnegie Mellon
 University has been discontinued. All code and documentation developed
 at CMU was released into the public domain. The project continues as a
 group of users and developers collaborating over the Internet. The
-currently active maintainers are:
+current and previous maintainers include:
 
 \begin{itemize}
 \item Marco Antoniotti
 \item Martin Cracauer
+\item Fred Gilham
+\item Alex Goncharov
 \item Rob MacLachlan
 \item Pierre Mai
 \item Eric Marsden
 \item Gerd Moellman
 \item Tim Moore
+\item Carl Shapiro  
+\item Robert Swindells
 \item Raymond Toy
 \item Peter Van Eynde
 \item Paul Werkowski
@@ -316,10 +337,13 @@ the development of \cmucl{} since 1981 are
 \item Dave McDonald
 \item Tim Moore
 \item Skef Wholey
+\item Paul Foley
+\item Helmut Eller
+\item Jan Rychter
 \end{itemize}
 
 Countless others have contributed to the project by sending in bug
-reports, bug fixes, new features.
+reports, bug fixes, and new features.
 
 This manual is based on CMU Technical Report CMU-CS-92-161, edited by
 Robert A. MacLachlan, dated July 1992. Other contributors include

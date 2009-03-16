@@ -39,7 +39,6 @@ ENABLE4="yes"
 version=19e
 SRCDIR=src
 TOOLDIR=$SRCDIR/tools
-TIMER="time"
 VERSION="CVS Head `date '+%Y-%m-%d %H:%M:%S'`"
 BASE=build
 OLDLISP="cmulisp -noinit"
@@ -115,7 +114,7 @@ buildit ()
     if [ "$ENABLE" = "yes" ]; 
     then
 	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET || { echo "Failed: $TOOLDIR/clean-target.sh"; exit 1; }
-	$TIMER $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT || { echo "Failed: $TOOLDIR/build-world.sh"; exit 1; }
+	time $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT || { echo "Failed: $TOOLDIR/build-world.sh"; exit 1; }
 	$MAKE -C $TARGET/lisp || { echo "Failed: $MAKE -C $TARGET/lisp"; exit 1; }
 	if [ "$BUILD_WORLD2" = "yes" ];
 	then
@@ -189,7 +188,7 @@ buildit
 if [ "$SKIPUTILS" = "no" ];
 then
     OLDLISP="${BASE}-4/lisp/lisp -noinit $FPU_MODE"
-    $TIMER $TOOLDIR/build-utils.sh $TARGET $FPU_MODE
+    time $TOOLDIR/build-utils.sh $TARGET $FPU_MODE
 fi
 
 build_finished=`date`

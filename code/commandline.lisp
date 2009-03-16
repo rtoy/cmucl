@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.15.18.1 2008/12/18 21:50:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.15.18.2 2009/03/16 21:10:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,12 +14,15 @@
 ;;;
 
 (in-package "EXTENSIONS")
-(export '(*command-line-words* *command-line-switches*
+(export '(*command-line-application-arguments* *command-line-words* *command-line-switches*
 	  *command-switch-demons* *command-line-utility-name*
 	  *command-line-strings* *batch-mode*
 	  cmd-switch-string command-line-switch-p
 	  cmd-switch-name cmd-switch-value cmd-switch-words command-line-switch
 	  defswitch cmd-switch-arg get-command-line-switch))
+
+(defvar *command-line-application-arguments* ()
+  "A list of all the command line arguments after --")
 
 (defvar *command-line-switches* ()
   "A list of cmd-switch's representing the arguments used to invoke
@@ -107,10 +110,16 @@
 	      (push (make-cmd-switch switch value (nreverse word-list))
 		    *command-line-switches*)
 	      (return nil))
+	    
 	    (unless (zerop (length (the simple-string str)))
 	      (when (char= #\- (schar str 0))
 		(push (make-cmd-switch switch value (nreverse word-list))
 		      *command-line-switches*)
+		(when (and (= (length str) 2)
+			   (char= #\- (schar str 1)))
+		  ;; Gather up everything after --, and exit.
+		  (setf *command-line-application-arguments* cmd-strings)
+		  (setf str nil))
 		(return nil))
 	      (push str word-list))
 	    (setq str (pop cmd-strings))))))))

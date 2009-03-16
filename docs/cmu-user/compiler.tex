@@ -66,7 +66,7 @@ Functions may be compiled using \code{compile}, \code{compile-file}, or
       \keys{\kwd{output-file} \kwd{error-file} \kwd{trace-file}}
       \morekeys{\kwd{error-output} \kwd{verbose} \kwd{print} \kwd{progress}}
       \yetmorekeys{\kwd{load} \kwd{block-compile} \kwd{entry-points}}
-      \yetmorekeys{\kwd{byte-compile}}}}
+      \yetmorekeys{\kwd{byte-compile} \kwd{xref}}}}
   
   The \cmucl{} \code{compile-file} is extended through the addition of
   several new keywords and an additional interpretation of
@@ -122,7 +122,7 @@ Functions may be compiled using \code{compile}, \code{compile-file}, or
     resolved, unless an \code{ext:block-start} declaration appears in
     the source file.  \xlref{compile-file-block}.
     
-  \item[\kwd{entry-points}] If non-null, then this is a list of the
+  \item[\kwd{entry-points}] If non-\nil, then this is a list of the
     names of all functions in the file that should have global
     definitions installed (because they are referenced in other
     files.)  \xlref{compile-file-block}.
@@ -130,7 +130,13 @@ Functions may be compiled using \code{compile}, \code{compile-file}, or
   \item[\kwd{byte-compile}] If \true{}, compiling to a compact
     interpreted byte code is enabled.  Possible values are \true{},
     \false{}, and \kwd{maybe} (the default.)  See
-    \varref{byte-compile-default} and \xlref{byte-compile}.
+    \varref{byte-compile-default} and \pxlref{byte-compile}.
+
+  \item[\kwd{xref}] If non-\nil, enable recording of cross-reference
+    information.  The default is the value of
+    \code{c:*record-xref-info*}.  \xlref{xref}.  Note that the
+    compiled fasl file will also contain cross-reference information
+    and loading the fasl later will populate the cross-reference database.
   \end{Lentry}
   
   The return values are as per the proposed X3J13 cleanup

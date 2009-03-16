@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.13 2003/03/23 21:23:41 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.13.28.1 2009/03/16 21:10:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -606,3 +606,62 @@
 #+pentium
 (defun read-cycle-counter ()
   (read-cycle-counter))
+
+(defknown cpuid ((unsigned-byte 32))
+  (values (unsigned-byte 32)
+	  (unsigned-byte 32)
+	  (unsigned-byte 32)
+	  (unsigned-byte 32))
+  ())
+
+(define-vop (cpuid)
+  (:policy :fast-safe)
+  (:translate cpuid)
+  (:args (level :scs (unsigned-reg) :to (:eval 0)))
+  (:arg-types unsigned-num)
+  (:results (a :scs (unsigned-reg))
+	    (b :scs (unsigned-reg))
+	    (c :scs (unsigned-reg))
+	    (d :scs (unsigned-reg)))
+  (:result-types unsigned-num unsigned-num unsigned-num unsigned-num)
+  ;; Not sure about these :from/:to values.
+  (:temporary (:sc unsigned-reg :offset eax-offset
+		   :from (:eval 0) :to (:result 0))
+	      eax)
+  (:temporary (:sc unsigned-reg :offset ebx-offset
+		   :from (:eval 0) :to (:result 1))
+	      ebx)
+  (:temporary (:sc unsigned-reg :offset ecx-offset
+		   :from (:eval 0) :to (:result 2))
+	      ecx)
+  (:temporary (:sc unsigned-reg :offset edx-offset
+		   :from (:eval 0) :to (:result 3))
+	      edx)
+  (:temporary (:sc unsigned-stack :from (:eval 0) :to (:result 0)) eax-stack)
+  (:temporary (:sc unsigned-stack :from (:eval 0) :to (:result 1)) ebx-stack)
+  (:temporary (:sc unsigned-stack :from (:eval 0) :to (:result 2)) ecx-stack)
+  (:temporary (:sc unsigned-stack :from (:eval 0) :to (:result 3)) edx-stack)
+  (:generator 10
+    (move eax level)
+    (inst cpuid)
+    ;; Don't know where a, b, c, d are, so we save the results of
+    ;; cpuid to the stack and then copy the stack values to the result
+    ;; registers.  But we can skip this if the result registers match
+    ;; the output registers of the cpuid instruction.
+    (unless (and (location= eax a)
+		 (location= ebx b)
+		 (location= ecx c)
+		 (location= edx d))
+      (move eax-stack eax)
+      (move ebx-stack ebx)
+      (move ecx-stack ecx)
+      (move edx-stack edx)
+      (move a eax-stack)
+      (move b ebx-stack)
+      (move c ecx-stack)
+      (move d edx-stack))))
+      
+	     
+(defun cpuid (level)
+  (declare (type (unsigned-byte 32) level))
+  (cpuid level))

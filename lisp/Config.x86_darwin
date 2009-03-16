@@ -1,49 +1,18 @@
 # -*- Mode: makefile -*-
-PATH1 = ../../src/lisp
-vpath %.h $(PATH1)
-vpath %.c $(PATH1)
-vpath %.S $(PATH1)
-INCLUDES = -iquote . -iquote $(PATH1) 
-CC = gcc
-LD = ld
-CPP = cpp
 
-# Enable support for Unicode
-ifdef FEATURE_UNICODE
-UNICODE = -DUNICODE
-endif
+include Config.x86_common
 
-ifdef FEATURE_LINKAGE_TABLE
-LINKAGE = -DLINKAGE_TABLE
-endif
+# Compile code that will run on OSX 10.4 (Tiger)
+MIN_VER = -mmacosx-version-min=10.4
 
-# Enable support for generational GC
-ifdef FEATURE_GENCGC
-GENCGC = -DGENCGC
-GC_SRC = gencgc.c
-endif
+CPPFLAGS += -DDARWIN $(MIN_VER)
+CFLAGS += -g3
+ASFLAGS += -g3 $(MIN_VER)
 
-# If either FEATURE_X7 or FEATURE_SSE2 is defined, compile the code
-# for SSE2 support.
-ifdef FEATURE_X87
-SSE2 = -DFEATURE_SSE2
-endif
-ifdef FEATURE_SSE2
-SSE2 = -DFEATURE_SSE2
-endif
 
-RUNTIME = $(LINKAGE) $(GENCGC) $(SSE2) $(UNICODE)
-CPPFLAGS = -Di386 -DDARWIN $(RUNTIME)
-CFLAGS = -Wstrict-prototypes -Wall -g3 $(CPPFLAGS) $(INCLUDES)
-ASFLAGS = -g3 $(INCLUDES) $(RUNTIME)
-NM = nm -gp
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
-ASSEM_SRC = x86-assem.S
-ARCH_SRC = x86-arch.c
-OS_SRC = Darwin-os.c os-common.c e_rem_pio2.c k_rem_pio2.c
-# OS_LINK_FLAGS = -dynamic -export-dynamic
+
+OS_SRC += Darwin-os.c 
+OS_LINK_FLAGS = $(MIN_VER)
 OS_LIBS =
 
-# This has aliasing problems, so turn off aliasing.
-e_rem_pio2.o : e_rem_pio2.c
-	$(CC) -c -fno-strict-aliasing -ffloat-store $(CFLAGS)  $<

@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.16.2.2 2008/12/18 21:50:19 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.16.2.3 2009/03/16 21:10:56 rtoy Exp $
  *
  */
 
@@ -197,6 +197,34 @@ sc_reg(os_context_t * context, int offset)
     return (int *) 0;
 }
 #elif defined(__i386__)
+#if __DARWIN_UNIX03
+  /* Nothing needed for 10.5 */
+#else
+  /* This is for 10.4 */
+#define __ss ss
+#define __eax eax
+#define __ecx ecx
+#define __edx edx
+#define __ebx ebx
+#define __esp esp
+#define __ebp ebp
+#define __esi esi
+#define __edi edi
+#define __eip eip  
+#define __fs fs
+#define __fpu_stmm0 fpu_stmm0
+#define __fpu_stmm1 fpu_stmm1
+#define __fpu_stmm2 fpu_stmm2
+#define __fpu_stmm3 fpu_stmm3
+#define __fpu_stmm4 fpu_stmm4
+#define __fpu_stmm5 fpu_stmm5
+#define __fpu_stmm6 fpu_stmm6
+#define __fpu_stmm7 fpu_stmm7
+#define __fpu_fcw   fpu_fcw
+#define __fpu_fsw   fpu_fsw
+#define __fpu_mxcsr fpu_mxcsr
+#endif
+
 unsigned long *
 os_sigcontext_reg(ucontext_t *scp, int index)
 {
@@ -274,11 +302,13 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
     DPRINTF(0, (stderr, "FPU modes = %08x (sw =  %4x, cw = %4x)\n",
 		modes, (unsigned int) sw, (unsigned int) cw));
 
-    mxcsr = scp->uc_mcontext->__fs.__fpu_mxcsr;
-    DPRINTF(0, (stderr, "SSE2 modes = %08x\n", mxcsr));
+    if (fpu_mode == SSE2) {
+      mxcsr = scp->uc_mcontext->__fs.__fpu_mxcsr;
+      DPRINTF(0, (stderr, "SSE2 modes = %08x\n", mxcsr));
 
-    modes |= mxcsr;
-
+      modes |= mxcsr;
+    }
+    
     DPRINTF(0, (stderr, "modes pre mask = %08x\n", modes));
 
     /* Convert exception mask to exception enable */

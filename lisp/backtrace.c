@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.15.2.2 2008/05/17 13:21:31 rtoy Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.15.2.3 2009/03/16 21:10:56 rtoy Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -248,7 +248,7 @@ backtrace(int nframes)
     } while (--nframes > 0 && previous_info(&info));
 }
 
-#else /* i386 */
+#else /* (defined(i386) || defined(__x86_64)) */
 
 #include "x86-validate.h"
 #include "gc.h"
@@ -497,7 +497,7 @@ backtrace(int nframes)
     unsigned long fp;
     int i;
 
-  asm("movl %%ebp,%0":"=g"(fp));
+    __asm__("movl %%ebp,%0":"=g"(fp));
 
     for (i = 0; i < nframes; ++i) {
 	lispobj *p;
@@ -528,4 +528,4 @@ backtrace(int nframes)
     }
 }
 
-#endif /* i386 */
+#endif /* (defined(i386) || defined(__x86_64)) */

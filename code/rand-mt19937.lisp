@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.15.4.2 2008/09/03 16:34:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.15.4.3 2009/03/16 21:10:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -460,6 +460,6 @@
      (%random-integer arg state))
     (t
      (error 'simple-type-error
-	    :expected-type '(or (integer 1) (float (0))) :datum arg
+	    :expected-type '(or (integer 1) (float (0.0))) :datum arg
 	    :format-control "Argument is not a positive integer or a positive float: ~S"
 	    :format-arguments (list arg)))))

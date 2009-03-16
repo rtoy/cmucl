@@ -3,18 +3,21 @@ PATH1 = ../../src/lisp
 vpath %.h $(PATH1)
 vpath %.c $(PATH1)
 vpath %.S $(PATH1)
-CC = gcc -m32
+CC ?= gcc
 LD = ld
 CPP = cpp
-# Enable support for :linkage-table feature.
 
+
+RUNTIME += -m32 -Di386
+
+# Enable support for :linkage-table feature.
 ifdef FEATURE_LINKAGE_TABLE
-LINKAGE = -DLINKAGE_TABLE
+RUNTIME += -DLINKAGE_TABLE
 endif
 
 # Enable support for generational GC
 ifdef FEATURE_GENCGC
-GENCGC = -DGENCGC
+RUNTIME += -DGENCGC
 GC_SRC = gencgc.c
 endif
 
@@ -23,19 +26,18 @@ endif
 # cases.  If neither is set, then we don't want any SSE2 support at
 # all.
 ifdef FEATURE_X87
-SSE2 = -DFEATURE_SSE2
+RUNTIME += -DFEATURE_SSE2
 else
 ifdef FEATURE_SSE2
-SSE2 = -DFEATURE_SSE2
+RUNTIME += -DFEATURE_SSE2
 endif
 endif
 
 # Enable support for Unicode
 ifdef FEATURE_UNICODE
-UNICODE = -DUNICODE
+RUNTIME += -DUNICODE
 endif
 
-RUNTIME = -Di386 $(GENCGC) $(LINKAGE) $(SSE2) $(UNICODE)
 # __NO_CTYPE so builds on glibc 2.3 will run on (some) older glibc's.
 ifneq (,$(filter 2% 3%, $(shell $(CC) -dumpversion)))
 CPPFLAGS = -D__NO_CTYPE -D_GNU_SOURCE -I. -I$(PATH1) -I- $(RUNTIME)
@@ -43,15 +45,15 @@ else
 CPPFLAGS = -D__NO_CTYPE -D_GNU_SOURCE -iquote. -iquote $(PATH1) $(RUNTIME)
 endif
 
-CFLAGS = -rdynamic -Wstrict-prototypes -Wall -O2 -g $(RUNTIME)
+CFLAGS += -rdynamic -Wstrict-prototypes -Wall -O2 -g $(RUNTIME)
 ASFLAGS = -g $(RUNTIME)
 NM = $(PATH1)/linux-nm
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = x86-assem.S linux-stubs.S
 ARCH_SRC = x86-arch.c
-OS_SRC = Linux-os.c os-common.c elf.c e_rem_pio2.c k_rem_pio2.c undefineds.c
-OS_LINK_FLAGS = -rdynamic -Xlinker --export-dynamic -Xlinker -Map -Xlinker foo
-OS_LIBS = -ldl -lutil
+OS_SRC = Linux-os.c os-common.c elf.c e_rem_pio2.c k_rem_pio2.c
+OS_LINK_FLAGS = -m32 -rdynamic -Xlinker --export-dynamic -Xlinker -Map -Xlinker foo
+OS_LIBS = -ldl
 #GC_SRC = gencgc.c
 
 # e_rem_pio2.c has strict aliasing issues.  Compile this with

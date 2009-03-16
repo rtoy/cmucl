@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32.4.1 2008/12/18 21:50:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32.4.2 2009/03/16 21:10:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -54,11 +54,31 @@
 
 ;;; Interpreter stubs.
 ;;;
-#-sse2
+#+(not x86)
 (progn
 (defun floating-point-modes () (floating-point-modes))
 (defun (setf floating-point-modes) (new) (setf (floating-point-modes) new))
 )
+
+#+(and x86 (not sse2))
+(progn
+  (defun floating-point-modes ()
+    (let ((x87-modes (vm::x87-floating-point-modes)))
+      ;; Massage the bits from x87-floating-point-modes into the order
+      ;; that the rest of the system wants them to be.  (Must match
+      ;; format in the SSE2 mxcsr register.)
+      (logior (ash (logand #x3f x87-modes) 7) ; control
+	      (logand #x3f (ash x87-modes -16)))))
+  (defun (setf floating-point-modes) (new)
+    (let* ((rc (ldb float-rounding-mode new))
+	   (x87-modes
+	    (logior (ash (logand #x3f new) 16)
+		    (ash rc 10)
+		    (logand #x3f (ash new -7))
+		    ;; Set precision control to be 64-bit, always.
+		    (ash 3 8))))
+    (setf (x87-floating-point-modes) x87-modes)))
+  )
 
 #+sse2
 (progn
@@ -221,6 +241,7 @@
       (setf (sigcontext-floating-point-modes
 	     (alien:sap-alien scp (* unix:sigcontext)))
 	    new-modes))
+
     #+sse2
     (let* ((new-modes modes)
 	   (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
