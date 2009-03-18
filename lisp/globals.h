@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.10 2005/09/15 18:26:51 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.10.16.1 2009/03/18 15:37:29 rtoy Exp $ */
 
 #ifndef _GLOBALS_H_
 #define _GLOBALS_H_
@@ -8,6 +8,8 @@
 #include "lisp.h"
 
 extern int foreign_function_call_active;
+
+extern fpu_mode_t fpu_mode;
 
 extern lispobj *current_control_stack_pointer;
 extern lispobj *current_control_frame_pointer;

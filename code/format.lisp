@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.86.2.2.2.2 2008/12/19 01:31:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.86.2.2.2.3 2009/03/18 15:37:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1739,8 +1739,6 @@
 	   (or (float-infinity-p number)
 	       (float-nan-p number)))
       (prin1 number stream)
-      ;;(multiple-value-bind (num expt)
-      ;;  (lisp::scale-exponent (abs number))
       (let* ((num-expt (accurate-scale-exponent (abs number)))
 	     (expt (if (zerop number)
 		       0

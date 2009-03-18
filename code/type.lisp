@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.76.2.1 2008/05/23 18:29:16 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.76.2.1.2.1 2009/03/18 15:37:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2379,7 +2379,8 @@
 	       bound
 	       ;; Coerce to the widest float format available, to
 	       ;; avoid unnecessary loss of precision:
-	       (coerce bound 'long-float)))))
+	       (coerce bound #-double-double 'long-float
+		             #+double-double 'double-double-float)))))
 
 (defun coerced-real-bound (bound type)
   (coerce-bound bound type #'inner-coerce-real-bound))
@@ -2409,6 +2410,8 @@
 				 ,(coerced-real-bound high 'rational)))))
 
 (def-type-translator float (&optional (low '*) (high '*))
+  (check-bound low float)
+  (check-bound high float)
   (specifier-type 
    `(or (single-float ,(coerced-float-bound  low 'single-float)
 		      ,(coerced-float-bound high 'single-float))
@@ -2417,10 +2420,8 @@
 	#+long-float ,(error "stub: no long float support yet")
 	#+double-double
 	(double-double-float
-	 ;; For some reason, the ppc/darwin port doesn't like this.  I
-	 ;; (rtoy) don't know why.
-	 #-ppc ,(coerced-float-bound  low 'double-double-float)
-	 #-ppc ,(coerced-float-bound high 'double-double-float)))))
+	 ,(coerced-float-bound  low 'double-double-float)
+	 ,(coerced-float-bound high 'double-double-float)))))
 
 (defmacro define-float-format (f)
   `(def-bounded-type ,f float ,f))

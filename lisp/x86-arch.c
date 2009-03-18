@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.36.4.1 2008/12/19 01:31:34 rtoy Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.36.4.2 2009/03/18 15:37:29 rtoy Exp $ 
  *
  */
 
@@ -31,12 +31,25 @@ unsigned long fast_random_state = 1;
 	   : "=a" (a), "=r" (b), "=c" (c), "=d" (d)	\
 	   : "0" (level))
 
+void cpuid(int level, unsigned int* a, unsigned int* b,
+           unsigned int* c, unsigned int* d)
+{
+    unsigned int eax, ebx, ecx, edx;
+    
+    __cpuid(level, eax, ebx, ecx, edx);
+
+    *a = eax;
+    *b = ebx;
+    *c = ecx;
+    *d = edx;
+}
+
 int
 arch_support_sse2(void)
 {
     unsigned int eax, ebx, ecx, edx;
 
-    __cpuid(1, eax, ebx, ecx, edx);
+    cpuid(1, &eax, &ebx, &ecx, &edx);
 
     /* Return non-zero if SSE2 is supported */
     return edx & 0x4000000;

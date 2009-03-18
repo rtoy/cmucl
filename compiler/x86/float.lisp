@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.56.6.1 2008/12/19 01:31:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.56.6.2 2009/03/18 15:37:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2394,14 +2394,14 @@
 ;;;; Float mode hackery:
 
 (deftype float-modes () '(unsigned-byte 24))
-(defknown floating-point-modes () float-modes (flushable))
-(defknown ((setf floating-point-modes)) (float-modes)
+(defknown x87-floating-point-modes () float-modes (flushable))
+(defknown ((setf x87-floating-point-modes)) (float-modes)
   float-modes)
 
-(define-vop (floating-point-modes)
+(define-vop (x87-floating-point-modes)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)
-  (:translate floating-point-modes)
+  (:translate x87-floating-point-modes)
   (:policy :fast-safe)
   (:temporary (:sc unsigned-stack) cw-stack)
   (:temporary (:sc unsigned-reg :offset eax-offset) sw-reg)
@@ -2415,12 +2415,12 @@
    (inst xor sw-reg #x3f)  ; invert exception mask
    (move res sw-reg)))
 
-(define-vop (set-floating-point-modes)
+(define-vop (set-x87-floating-point-modes)
   (:args (new :scs (unsigned-reg) :to :result :target res))
   (:results (res :scs (unsigned-reg)))
   (:arg-types unsigned-num)
   (:result-types unsigned-num)
-  (:translate (setf floating-point-modes))
+  (:translate (setf x87-floating-point-modes))
   (:policy :fast-safe)
   (:temporary (:sc unsigned-stack) cw-stack)
   (:temporary (:sc byte-reg :offset al-offset) sw-reg)

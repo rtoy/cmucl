@@ -1,12 +1,14 @@
 #!/bin/sh
 
 usage() {
-    echo "make-dist.sh: [-hbg] [-G group] [-O owner] dir version arch os"
+    echo "make-dist.sh: [-hbg] [-G group] [-O owner] [-I destdir] [-M mandir] dir version [arch os]"
     echo "  -h           This help"
     echo "  -b           Use bzip2 compression"
     echo "  -g           Use gzip compression"
     echo "  -G group     Group to use"
     echo "  -O owner     Owner to use"
+    echo "  -I destdir   Install directly to given directory instead of creating a tarball"
+    echo "  -M mandir    Install manpages in this subdirectory.  Default is man/man1"
     echo "  -S           Create a source distribution (requires GNU tar)"
     echo "                 The compressed tar file is named cmucl-src-<VERSION>.tar.<ext>"
     echo "   dir         Directory where the build is located"
@@ -14,10 +16,11 @@ usage() {
     echo "   arch        Architecture (x86, sparc, etc.)"
     echo "   os          OS (linux, solaris8, etc.)"
     echo ""
-    echo "Make a CMUCL distribution consisting of two tar files.  One holds"
-    echo "the main files including the C runtime, the lisp core, and PCL library."
-    echo "The second tar file contains extra libraries such as CLX, CLM, and"
-    echo "Hemlock."
+    echo "If the -I option is given, directly install all of the files to the"
+    echo "specified directory.  Otherwise, Make a CMUCL distribution consisting"
+    echo "of two tar files.  One holds the main files including the C runtime,"
+    echo "the lisp core, and PCL library. The second tar file contains extra"
+    echo "libraries such as CLX, CLM, and Hemlock."
     echo ""
     echo "The tar files have the form cmucl-<version>-<arch>-<os>.tar.<c>"
     echo "and cmucl-<version>-<arch>-<os>.extra.tar.<c> where <version>,"
@@ -26,28 +29,7 @@ usage() {
     exit 1
 }
 
-while getopts "G:O:bghS?" arg
-do
-    case $arg in
-	G) GROUP=$OPTARG ;;
-	O) OWNER=$OPTARG ;;
-	b) ENABLE_BZIP=-b ;;
-	g) ENABLE_GZIP=-g  ;;
-        S) MAKE_SRC_DIST=yes ;;
-	h | \?) usage; exit 1 ;;
-    esac
-done
-	
-shift `expr $OPTIND - 1`
-
-# Figure out the architecture and OS
-
-if [ $# -lt 2 ]; then
-    usage
-else
-    # Figure out the architecture and OS
-    ARCH=
-    OS=
+def_arch_os () {
     case `uname -s` in
       SunOS)
 	  ARCH=sparcv9
@@ -65,13 +47,46 @@ else
 	      *) ARCH=ppc ;;
 	  esac
       esac
+}
 
-      if [ $# -eq 3 ]; then
-	  ARCH=$3
-      elif [ $# -eq 4 ]; then
-	  ARCH=$3
-	  OS=$4
-      fi
+while getopts "G:O:I:M:bghS?" arg
+do
+    case $arg in
+	G) GROUP=$OPTARG ;;
+	O) OWNER=$OPTARG ;;
+        I) INSTALL_DIR=$OPTARG ;;
+        M) MANDIR=$OPTARG ;;
+	b) ENABLE_BZIP=-b ;;
+	g) ENABLE_GZIP=-g  ;;
+        S) MAKE_SRC_DIST=yes ;;
+	h | \?) usage; exit 1 ;;
+    esac
+done
+	
+shift `expr $OPTIND - 1`
+
+# Figure out the architecture and OS
+ARCH=
+OS=
+
+if [ -n "${INSTALL_DIR}" ]; then
+    # Doing direct installation
+    if [ $# -lt 1 ]; then
+	usage
+    else
+	def_arch_os
+    fi
+elif [ $# -lt 2 ]; then
+    usage
+else
+    # Figure out the architecture and OS
+    def_arch_os
+    if [ $# -eq 3 ]; then
+	ARCH=$3
+    elif [ $# -eq 4 ]; then
+	ARCH=$3
+	OS=$4
+    fi
 fi
 
 if [ ! -d "$1" ]
@@ -80,19 +95,25 @@ then
 	exit 2
 fi
 
-if [ -z "$ARCH" ]; then
-    echo "Unknown architecture.  Please specify one"
-    usage
-fi
+if [ -z "$INSTALL_DIR" ]; then
+    if [ -z "$ARCH" ]; then
+	echo "Unknown architecture.  Please specify one"
+	usage
+    fi
 
-if [ -z "$OS" ]; then
-    echo "Unknown OS.  Please specify one"
-    usage
-fi
-    
-  
+    if [ -z "$OS" ]; then
+	echo "Unknown OS.  Please specify one"
+	usage
+    fi
+fi   
+
 TARGET="`echo $1 | sed 's:/*$::'`"
-VERSION=$2
+
+if [ -z "$INSTALL_DIR" ]; then
+    VERSION=$2
+else
+    VERSION="today"
+fi
 
 ROOT=`dirname $0`
 
@@ -101,10 +122,11 @@ if [ -z "$ENABLE_GZIP" -a -z "$ENABLE_BZIP" ]; then
     ENABLE_BZIP="-b"
 fi
 
-OPTIONS="${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}} $ENABLE_GZIP $ENABLE_BZIP"
+OPTIONS="${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}} ${INSTALL_DIR:+ -I ${INSTALL_DIR}} $ENABLE_GZIP $ENABLE_BZIP"
+MANDIR="${MANDIR:+ -M ${MANDIR}}"
 
 echo Creating distribution for $ARCH $OS
-$ROOT/make-main-dist.sh $OPTIONS $TARGET $VERSION $ARCH $OS || exit 1
+$ROOT/make-main-dist.sh $OPTIONS ${MANDIR} $TARGET $VERSION $ARCH $OS || exit 1
 $ROOT/make-extra-dist.sh $OPTIONS $TARGET $VERSION $ARCH $OS || exit 2
 
 if [ X"$MAKE_SRC_DIST" = "Xyes" ]; then

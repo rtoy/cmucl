@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.85.14.1 2008/12/19 01:31:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.85.14.2 2009/03/18 15:37:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -554,6 +554,10 @@
 		    thing))
 	 (class (typecase thing
 		  (condition-class thing)
+		  (pcl::condition-class
+		   ;; Punt to CLOS
+		   (return-from make-condition
+		     (apply #'make-instance thing args)))
 		  (class
 		   (error 'simple-type-error
 			  :datum thing

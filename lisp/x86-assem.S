@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.29.4.1 2008/12/19 01:31:34 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.29.4.2 2009/03/18 15:37:29 rtoy Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -272,8 +272,10 @@ ENDFUNC(closure_tramp)
  * Function-end breakpoint magic.
  */
 FUNCDEF(function_end_breakpoint_guts)
-	/* Multiple Value return */
-	jmp	multiple_value_return
+	/* Multiple Value return
+	   This MUST be a two-byte instruction.  If it isn't tracing is 
+	   majorly broken. */
+	jmp	1f
 	/* Single value return: The eventual return will now use the
 	   multiple values return convention but with a return values
 	   count of one. */
@@ -283,6 +285,7 @@ FUNCDEF(function_end_breakpoint_guts)
 	movl	$NIL,%edi	# Default second value
 	movl	$NIL,%esi	# Default third value
 		
+1:	
 multiple_value_return:
 	
 	.globl GNAME(function_end_breakpoint_trap)

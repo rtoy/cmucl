@@ -1,11 +1,13 @@
 #!/bin/sh
 
 # set -x
-while getopts "G:O:bgh?" arg
+while getopts "G:O:I:M:bgh?" arg
 do
     case $arg in
 	G) GROUP="-g $OPTARG" ;;
 	O) OWNER="-o $OPTARG" ;;
+        I) INSTALL_DIR=$OPTARG ;;
+        M) MANDIR=$OPTARG ;;
 	b) ENABLE_BZIP=-b ;;
 	g) ENABLE_GZIP=-g  ;;
 	h | \?) usage; exit 1 ;;
@@ -26,7 +28,8 @@ then
 	exit 2
 fi
 
-DESTDIR=release
+DESTDIR=${INSTALL_DIR:-release}
+MANDIR=${MANDIR:-man/man1}
 TARGET="`echo $1 | sed 's:/*$::'`"
 VERSION=$2
 ARCH=$3
@@ -69,8 +72,11 @@ then
 	PATH=/usr/ucb:$PATH
 fi
 
-echo Cleaning $DESTDIR
-[ -d $DESTDIR ] && rm -rf $DESTDIR
+if [ -z "$INSTALL_DIR" ]; then
+    # Clean out DESTDIR, if we're not installing there.
+    echo Cleaning $DESTDIR
+    [ -d $DESTDIR ] && rm -rf $DESTDIR
+fi
 
 # set -x
 echo Installing main components
@@ -80,7 +86,7 @@ install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/subsystems
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/ext-formats
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/man/man1
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/${MANDIR}
 install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp $DESTDIR/bin/
 if [ "$EXECUTABLE" = "true" ]
 then
@@ -117,9 +123,9 @@ do
 done
 
 install ${GROUP} ${OWNER} -m 0644 src/general-info/cmucl.1 \
-	$DESTDIR/man/man1/
+	$DESTDIR/${MANDIR}/
 install ${GROUP} ${OWNER} -m 0644 src/general-info/lisp.1 \
-	$DESTDIR/man/man1/
+	$DESTDIR/${MANDIR}/
 install ${GROUP} ${OWNER} -m 0644 src/general-info/README $DESTDIR/doc/cmucl/
 if [ -f src/general-info/release-$VERSION.txt ] 
 then
@@ -127,19 +133,21 @@ then
 		$DESTDIR/doc/cmucl/
 fi
 
-sync ; sleep 1 ; sync ; sleep 1 ; sync
-echo Tarring main components
-if [ -n "$ENABLE_GZIP" ]; then
-    echo "  Compressing with gzip"
-    ( cd $DESTDIR >/dev/null ; tar cf - bin doc lib man ) | \
-	gzip -c > cmucl-$VERSION-$ARCH-$OS.tar.gz
-fi
-if [ -n "$ENABLE_BZIP" ]; then
-    echo "  Compressing with bzip"
-    ( cd $DESTDIR >/dev/null ; tar cf - bin doc lib man ) | \
-	bzip2 > cmucl-$VERSION-$ARCH-$OS.tar.bz2
-fi
+if [ -z "$INSTALL_DIR" ]; then
+    sync ; sleep 1 ; sync ; sleep 1 ; sync
+    echo Tarring main components
+    if [ -n "$ENABLE_GZIP" ]; then
+	echo "  Compressing with gzip"
+	( cd $DESTDIR >/dev/null ; tar cf - . ) | \
+	  gzip -c > cmucl-$VERSION-$ARCH-$OS.tar.gz
+    fi
+    if [ -n "$ENABLE_BZIP" ]; then
+	echo "  Compressing with bzip"
+	( cd $DESTDIR >/dev/null ; tar cf - . ) | \
+	  bzip2 > cmucl-$VERSION-$ARCH-$OS.tar.bz2
+    fi
 
-echo Cleaning $DESTDIR
-[ -d $DESTDIR ] && rm -rf $DESTDIR
-echo Done
+    echo Cleaning $DESTDIR
+    [ -d $DESTDIR ] && rm -rf $DESTDIR
+    echo Done
+fi

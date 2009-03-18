@@ -1,7 +1,5 @@
 ========================== C M U C L  19 f =============================
 
-[--- WORK IN PROGRESS ---]
-
 The CMUCL project is pleased to announce the release of CMUCL 19f.
 This is a major release which contains numerous enhancements and
 bugfixes from the 19e release.
@@ -34,12 +32,20 @@ New in this release:
       o CMUCL automatically detects whether sse2 is supported or not
         and loads up the appropriate core file.
       o New -fpu switch allows the user to specify explicitly which
-        core should be used.
+        core should be used.  The valid values are x87, sse2, or auto
+        (the default).
       o Fasls compiled with sse2 support have the extension sse2f.
         Otherwise, the normal x86f extension is used.  This allows the
         user to do tests/experiments with both x87 and sse2 without
         having to mess around with different directories and removing
         fasls before building for a different FPU.
+      o If the chip supports sse2, but CMUCL can't find the sse2 core,
+        CMUCL will try to fall back to the x87 core.  (This only
+        happens if -fpu is auto.)
+    - Command line parsing now recognizes the option "--".  Everything
+      after "--" is not subject to CMUCL's command line parsing, and
+      everything after the "--" is placed in the new variable
+      EXT:*COMMAND-LINE-APPLICATION-ARGUMENTS*. 
 
   * ANSI compliance fixes:
     - Fix bug in backquote printer.  If the variable is @foo, we want
@@ -100,6 +106,19 @@ New in this release:
     - The interpreter catches invalid EVAL-WHEN situations just like
       the compiler, instead of silently ignoring them.
     - FLOAT-PRECISION supports double-double floats.
+    - Tracing should now be working on Darwin/x86.  Previously,
+      certain cases would cause Lisp to segfault in bad ways where you
+      could not return to the repl.  Do not need to do encapsulation
+      by default anymore.
+    - The bounds for type (REAL lo hi) are computed better now.  The
+      REAL type is a union of SINGLE-FLOAT, DOUBLE-FLOAT, and
+      DOUBLE-DOUBLE-FLOAT.  The computed bounds for
+      DOUBLE-DOUBLE-FLOAT only had double-float accuracy if the bound
+      for REAL was a rational.
+    - The FLOAT type now requires that the bounds, if given, are
+      floats.  Previously, any real type would be accepted.  This
+      makes FLOAT behave like SINGLE-FLOAT and DOUBLE-FLOAT which
+      required the bounds to be a float of the appropriate type.
 
   * Trac Tickets:
     - #16: Read-time hash-table issue
@@ -121,6 +140,13 @@ New in this release:
       Fixed by delaying the logand defoptimizer.
     - #15: x86 double-float issue
       Fixed when using SSE2 support.  We will not fix this for x87.
+    - #25: Compiler bug
+      Fixed.
+    - #26: slot-value type check
+      Fixed for some cases.  When used in methods, slot-value may not
+      do the type check.if the object is not a argument to the method.
+    - #29: make-condition doesn't accept class objects
+      Fixed.
 
   * Other changes:
     - IS1, IS2, IS3, and IS4 are recognized character names for the
@@ -139,6 +165,7 @@ New in this release:
       exceeding *intexp-maximum-exponent* is now a restart, giving the
       user the option to continue and update the limit to the new
       power.
+    - The Darwin/x86 port can run on Mac OS X 10.4 or later.
 
   * Improvements to the PCL implementation of CLOS:
     - The compiler and interpreter should handle SLOT-VALUE the same
@@ -148,8 +175,22 @@ New in this release:
       slot-value-using-class have been fixed.
       Get-accessor-method-function was causing an error to be signaled
       incorrectly.
+    - (setf (slot-value <obj> <slot>) <new>) will now signal an error
+      in some situations when the new value is not of the correct
+      declared type for slot.
 
   * Changes to building procedure:
+    - For Linux, custom CFLAGS, CC, and LDFLAGS are supported.
+      Requested by Stelian Ionescu for Gentoo support.
+    - The FreeBSD config file is now named Config.x86_freebsd, which
+      is equivalent to Config.FreeBSD_gencgc, which is deprecated.
+    - The Linux config file is now named Config.x86_linux, which is
+      the equivalent to Config.linux_gencgc, which is deprecated.
+
+  * Known issues:
+    - Executables (via save-lisp) on recent FreeBSD versions are
+      currently not working.  The executable is created, but the
+      resulting executable doesn't work correctly.
 
 This release is not binary compatible with code compiled using CMUCL
 19e; you will need to recompile FASL files. 

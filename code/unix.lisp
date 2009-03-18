@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.119.2.5.2.3 2008/12/18 18:00:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.119.2.5.2.4 2009/03/18 15:37:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1195,6 +1195,9 @@
       writeoth          Write by others.
       execoth           Execute (search directory) by others.
   
+  Thus #o444 and (logior unix:readown unix:readgrp unix:readoth)
+  are equivalent for 'mode.  The octal-base is familar to Unix users.
+
   It returns T on successfully completion; NIL and an error number
   otherwise."
   (declare (type unix-pathname path)
@@ -1418,7 +1421,7 @@
 
 (defun unix-mkdir (name mode)
   "Unix-mkdir creates a new directory with the specified name and mode.
-   (Same as those for unix-fchmod.)  It returns T upon success, otherwise
+   (Same as those for unix-chmod.)  It returns T upon success, otherwise
    NIL and an error number."
   (declare (type unix-pathname name)
 	   (type unix-file-mode mode))

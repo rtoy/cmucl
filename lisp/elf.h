@@ -1,4 +1,4 @@
-/* $Id: elf.h,v 1.8.4.1 2008/06/19 03:30:44 rtoy Exp $ */
+/* $Id: elf.h,v 1.8.4.1.2.1 2009/03/18 15:37:29 rtoy Exp $ */
 
 /* This code was written by Fred Gilham and has been placed in the public domain.  It is
    provided "AS-IS" and without warranty of any kind.
@@ -31,7 +31,7 @@ int write_elf_object(const char *, int, os_vm_address_t, os_vm_address_t);
 void elf_cleanup(const char *);
 int elf_run_linker(long, char *);
 
-void map_core_sections(char *);
+void map_core_sections(const char *);
 
 #if defined(SOLARIS) || defined(linux) || defined(__NetBSD__)
 typedef Elf32_Ehdr Elf_Ehdr;

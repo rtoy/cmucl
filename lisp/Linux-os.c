@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.37.6.2 2008/12/19 01:31:34 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.37.6.3 2009/03/18 15:37:29 rtoy Exp $
  *
  */
 
@@ -129,9 +129,9 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
 
 #ifdef FEATURE_SSE2
     /*
-     * Add in the SSE2 part
+     * Add in the SSE2 part, if we're running the sse2 core.
      */
-    if (arch_support_sse2()) {
+    if (fpu_mode == SSE2) {
         struct _fpstate *fpstate;
 	unsigned long mxcsr;
 

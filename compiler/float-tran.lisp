@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.119.2.1.2.1 2008/12/19 01:31:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.119.2.1.2.2 2009/03/18 15:37:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,6 +59,9 @@
 (defun %double-double-float (n)
   (make-double-double-float (float n 1d0) 0d0))
 
+;; Moved to code/float.lisp, because we need this relatively early in
+;; the build process to handle float and real types.
+#+nil
 (defun %double-double-float (n)
   (typecase n
     (fixnum
@@ -79,7 +82,7 @@
   (movable foldable flushable))
 (defknown %complex-double-float (number) (complex double-float)
   (movable foldable flushable))
-(defknown %complex-double-double-float (number) (complex double-float)
+(defknown %complex-double-double-float (number) (complex double-double-float)
   (movable foldable flushable))
 
 (macrolet
@@ -88,7 +91,8 @@
 	     (convert (symbolicate "%" type "-FLOAT")))
 	 `(progn
 	    (defun ,name (n)
-	      (typecase n
+	      (declare (number n))
+	      (etypecase n
 		(real
 		 (complex (,convert n)))
 		(complex

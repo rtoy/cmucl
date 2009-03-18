@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.62.4.1 2008/12/19 01:31:34 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.62.4.2 2009/03/18 15:37:29 rtoy Exp $
  *
  */
 
@@ -59,7 +59,7 @@ sigint_init(void)
 /* Noise to convert argv and envp into lists. */
 
 static lispobj
-alloc_str_list(char *list[])
+alloc_str_list(const char *list[])
 {
     lispobj result, newcons;
     struct cons *ptr;
@@ -105,10 +105,10 @@ static int debug_lisp_search = FALSE;
  * From the current location of the lisp executable, create a suitable
  * default for CMUCLLIB
  */
-char *
-default_cmucllib(char *argv0arg)
+static const char *
+default_cmucllib(const char *argv0arg)
 {
-    char *p;
+    char *p0;
     char *defpath;
     char *cwd;
     char *argv0_dir = strdup(argv0arg);
@@ -118,11 +118,11 @@ default_cmucllib(char *argv0arg)
      * executable name
      */
 
-    p = strrchr(argv0_dir, '/');
-    if (p == NULL) {
+    p0 = strrchr(argv0_dir, '/');
+    if (p0 == NULL) {
 	*argv0_dir = '\0';
-    } else if (p != argv0_dir) {
-	*p = '\0';
+    } else if (p0 != argv0_dir) {
+	*p0 = '\0';
     }
 
     /*
@@ -175,10 +175,7 @@ default_cmucllib(char *argv0arg)
 	cwd[0] = '\0';
 
 	if (path) {
-
-	    if (p == NULL) {
-		p = argv0arg;
-	    }
+            const char *ptr = (p0 != NULL) ? p0 : argv0arg;
 
 	    for (p1 = path; *p1 != '\0'; p1 = p2) {
 		p2 = strchr(p1, ':');
@@ -187,7 +184,7 @@ default_cmucllib(char *argv0arg)
 		strncpy(cwd, p1, p2 - p1);
 		cwd[p2 - p1] = '/';
 		cwd[p2 - p1 + 1] = '\0';
-		strcpy(cwd + (p2 - p1 + 1), p);
+		strcpy(cwd + (p2 - p1 + 1), ptr);
 
 		if (debug_lisp_search) {
 		    fprintf(stderr, "User's PATH, trying %s\n", cwd);
@@ -274,7 +271,7 @@ default_cmucllib(char *argv0arg)
     free(argv0_dir);
     free(cwd);
 
-    return defpath;
+    return (const char *) defpath;
 }
 
 /*
@@ -336,8 +333,8 @@ search_core(const char *lib, const char *default_core)
  *
  * Return the new lib path.
  */
-char *
-prepend_core_path(char *lib, char *corefile)
+static const char *
+prepend_core_path(const char *lib, const char *corefile)
 {
     char cwd[FILENAME_MAX];
     char *path;
@@ -372,9 +369,8 @@ prepend_core_path(char *lib, char *corefile)
     strcat(result, lib);
 
     free(path);
-    return result;
+    return (const char *) result; /* Don't let the caller modify the buffer we built */
 }
-
 
 /*
   The symbol builtin_image_flag is used globally as a flag to indicate
@@ -396,16 +392,46 @@ extern long initial_function_addr;
 
 fpu_mode_t fpu_mode = AUTO;
 
-/* And here be main. */
+static const char*
+locate_core(const char* cmucllib, const char* core, const char* default_core)
+{
+    if (core == NULL) {
+        if (getenv("CMUCLCORE") == NULL) {
+            core = search_core(cmucllib, default_core);
+        } else {
+            core = getenv("CMUCLCORE");
+        }
+    }
+
+    if (access(core, R_OK) != 0) {
+      core = NULL;
+    }
+    
+    return core;
+}
+
+static void
+core_failure(const char* core, const char* argv[])
+{
+    
+    fprintf(stderr, "Cannot find core file");
+    if (core != NULL) {
+        fprintf(stderr, ": `%s'", core);
+    }
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Based on lisp binary path `%s'\n", argv[0]);
+    exit(1);
+}
 
 int
-main(int argc, char *argv[], char *envp[])
+main(int argc, const char *argv[], const char *envp[])
 {
-    char *arg, **argptr;
-    char *core = NULL;
-    char *default_core;
-    char *lib = NULL;
-    char *cmucllib = NULL;
+    const char *arg, **argptr;
+    const char *core = NULL;
+    const char *default_core;
+    const char *lib = NULL;
+    const char *cmucllib = NULL;
+    
     fpu_mode_t fpu_type = AUTO;
     boolean monitor;
     lispobj initial_function = 0;
@@ -455,7 +481,7 @@ main(int argc, char *argv[], char *envp[])
 		exit(1);
 	    }
 	} else if (strcmp(arg, "-dynamic-space-size") == 0) {
-	    char *str;
+	    const char *str;
 
 	    str = *++argptr;
 	    if (str == NULL) {
@@ -504,7 +530,7 @@ main(int argc, char *argv[], char *envp[])
         }
 #ifdef i386
 	else if (strcmp(arg, "-fpu") == 0) {
-	    char *str;
+	    const char *str;
 
 	    str = *++argptr;
             if (str == NULL) {
@@ -590,7 +616,7 @@ main(int argc, char *argv[], char *envp[])
 	    if (builtin_image_flag == 0)
 #endif
 	{
-	    char *newlib = NULL;
+	    const char *newlib = NULL;
 
 	    /*
 	     * We need to use our default search path.  If a core file
@@ -606,7 +632,7 @@ main(int argc, char *argv[], char *envp[])
 	    }
 
 	    if (newlib != NULL) {
-		free(cmucllib);
+                free((void *) cmucllib);
 		cmucllib = newlib;
 	    }
 	}
@@ -620,29 +646,29 @@ main(int argc, char *argv[], char *envp[])
 	/*
 	 * If no core file specified, search for it in CMUCLLIB
 	 */
-	if (core == NULL) {
-	    if (getenv("CMUCLCORE") == NULL) {
-		core = search_core(cmucllib, default_core);
-	    } else {
-		core = getenv("CMUCLCORE");
-	    }
-	}
-
-	/* Die if the core file doesn't exist. */
-	{
-	    struct stat statbuf;
-
-	    if (stat(core, &statbuf) != 0) {
-		/* Can't find it so print a message and exit */
-		fprintf(stderr, "Cannot find core file");
-		if (core != NULL) {
-		    fprintf(stderr, ": `%s'", core);
-		}
-		fprintf(stderr, "\n");
-		fprintf(stderr, "Based on lisp binary path `%s'\n", argv[0]);
-		exit(1);
-	    }
-	}
+        {
+            const char* found_core;
+            
+            found_core = locate_core(cmucllib, core, default_core);
+#ifdef FEATURE_SSE2
+            if ((found_core == NULL) && (fpu_mode == AUTO)) {
+                /*
+                 * If we support SSE2 but couldn't find the SSE2 core, try
+                 * to fall back to the x87 core.
+                 */
+                found_core = locate_core(cmucllib, core, "lisp-x87.core");
+                if (found_core == NULL) {
+                    core_failure(core, argv);
+                }
+                fprintf(stderr, "Warning:  Chip supports SSE2, but could not find SSE2 core.\n");
+                fprintf(stderr, "  Falling back to x87 core.\n");
+            }
+#endif
+            if (!found_core) {
+                core_failure(core, argv);
+            }
+            core = found_core;
+        }
 #if defined FEATURE_EXECUTABLE
     } else {
 	/* The "core file" is the executable.  We have to save the
@@ -676,6 +702,7 @@ main(int argc, char *argv[], char *envp[])
 	fprintf(stderr, "Core uses SSE2, but CPU doesn't support SSE2.  Exiting\n");
 	exit(1);
     }
+    fpu_mode = fpu_type;
 #endif
 
 #if defined LINKAGE_TABLE

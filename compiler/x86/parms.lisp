@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.34.4.2.2.1 2008/12/19 01:31:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.34.4.2.2.2 2009/03/18 15:37:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -170,22 +170,21 @@
 (defconstant float-round-to-positive 2)
 (defconstant float-round-to-zero     3)
 
+;; NOTE: These actually match the SSE2 MXCSR register definitions.  We
+;; need to do it this way because the interface assumes the modes are
+;; in the same order as the MXCSR register.
+(defconstant float-rounding-mode     (byte 2 13))
+(defconstant float-sticky-bits       (byte 6  0))
+(defconstant float-traps-byte        (byte 6  7))
+(defconstant float-exceptions-byte   (byte 6  0))
+
 #-sse2
 (progn
-(defconstant float-rounding-mode   (byte 2 10))
-(defconstant float-sticky-bits     (byte 6 16))
-(defconstant float-traps-byte      (byte 6  0))
-(defconstant float-exceptions-byte (byte 6 16))
 (defconstant float-fast-bit 0) ; No fast mode on x86
 )
 
 #+sse2
 (progn
-;; These contants match the format of the MXCSR register
-(defconstant float-rounding-mode     (byte 2 13))
-(defconstant float-sticky-bits       (byte 6  0))
-(defconstant float-traps-byte        (byte 6  7))
-(defconstant float-exceptions-byte   (byte 6  0))
 ;; SSE2 has a flush-to-zero flag, which we use as the fast bit.  Some
 ;; versions of sse2 also have a denormals-are-zeros flag.  We don't
 ;; currently use denormals-are-zeroes for anything.
