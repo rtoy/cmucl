@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.58 2008/11/12 15:04:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.59 2009/03/18 01:24:52 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -486,7 +486,6 @@
 				  (complex
 				   (coerce (* pow (%cos y*pi)) rtype)
 				   (coerce (* pow (%sin y*pi)) rtype)))))))))))))
-      (declare (inline real-expt))
       ;; This is really messy and should be cleaned up.  The easiest
       ;; way to see if we're doing what we should is the macroexpand
       ;; the number-dispatch and check each branch.
