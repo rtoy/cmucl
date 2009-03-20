@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.80 2008/12/23 14:36:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.81 2009/03/20 14:54:28 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1137,7 +1137,7 @@
 	  ((null (cdr simplified)) (car simplified))
 	  (t (make-union-type simplified)))))
 
-(defun simplify-big-integer-union (first rest)
+(defun simplify-big-union (type first rest)
   ;;
   (let ((lowest (numeric-type-low first))
 	(highest (numeric-type-high first)))
@@ -1151,7 +1151,7 @@
 	(if (and (numberp highest) (numberp type-hi))
 	    (setf highest (max highest type-hi))
 	    (setf highest nil))))
-    (list (specifier-type `(integer ,(or lowest '*) ,(or highest '*))))))
+    (list (specifier-type `(,type ,(or lowest '*) ,(or highest '*))))))
 	
 
 (defparameter *union-length-threshold* 50
@@ -1168,16 +1168,28 @@
 	    (values (car types) (cdr types)))
       (cond
 	((and (> (length rest) *union-length-threshold*)
+	      (csubtypep first (specifier-type 'integer))
 	      (every #'(lambda (x)
 			 (and (numeric-type-p x)
 			      (eq (numeric-type-class x) 'integer)))
 		     (cons first rest)))
 	 ;; FIXME: We sometimes spend huge amounts of time computing
-	 ;; the union of a bunch of disjoint integer types.  This is a
+	 ;; the union of a bunch of disjoint numeric types.  This is a
 	 ;; hack to shortcut that.  If the union is long enough and
-	 ;; they're all integer types, we give up and try to return an
-	 ;; interval that is a superset of each type.
-	 (simplify-big-integer-union first rest))
+	 ;; they're all of the same type, we give up and try to return
+	 ;; an interval that is a superset of each type.
+	 (simplify-big-union 'integer first rest))
+	((and (> (length rest) *union-length-threshold*)
+	      (csubtypep first (specifier-type 'float))
+	      (let ((class (numeric-type-class first))
+		    (format (numeric-type-format first)))
+		(every #'(lambda (x)
+			   (and (numeric-type-p x)
+				(eq (numeric-type-class x) class)
+				(eq (numeric-type-format x) format)))
+		       (cons first rest))))
+	 ;; Same as above, but for floats.
+	 (simplify-big-union (or (numeric-type-format first) 'float) first rest))
 	(t
 	 (let ((rest (simplify-unions rest)) u)
 	   (dolist (r rest (cons first rest))

@@ -24,6 +24,10 @@ New in this release:
   * ANSI compliance fixes:
 
   * Bugfixes:
+    - CMUCL sometimes gets "stuck" during compilation where it is
+      trying to simplify the union of a large number of disjoint
+      numeric types.  Previously, we handled the case of integer
+      types.  Extend this to handle floats as well.
 
   * Trac Tickets:
     #31: pathname bug with :case :common
