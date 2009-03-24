@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.31 2005/04/21 18:57:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.31.16.1 2009/03/24 11:44:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -569,6 +569,7 @@
 		    ,(if lessp
 			 `nil
 			 `index))
+		   #-unicode
 		   ((,(if lessp 'char< 'char>)
 		     (schar string1 index)
 		     (schar string2
@@ -577,7 +578,28 @@
 					  (truly-the fixnum
 						     (- start2 start1))))))
 		    index)
-		   (t nil))
+		   #-unicode
+		   (t nil)
+		   #+unicode
+		   (t
+		    (flet ((fixup (code)
+			     (if (>= code #xe000)
+				 (- code #x800)
+				 (+ code #x2000))))
+		      (declare (inline fixup))
+		      (let* ((c1 (char-code (schar string1 index)))
+			     (c2 (char-code (schar string2 (+ (the fixnum index) (- start2 start1))))))
+			(cond ((and (>= c1 #xd800)
+				    (>= c2 #xd800))
+			       (let ((fix-c1 (fixup c1))
+				     (fix-c2 (fixup c2)))
+				 (if (,(if lessp '< '>) fix-c1 fix-c2)
+				     (the fixnum index)
+				     nil)))
+			      (t
+			       (if (,(if lessp '< '>) c1 c2)
+				     (the fixnum index)
+				     nil)))))))
 	     ,(if equalp `end1 'nil))))))
 
 
