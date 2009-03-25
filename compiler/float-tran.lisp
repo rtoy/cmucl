@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.119.2.3 2009/03/16 21:10:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.119.2.4 2009/03/25 15:49:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1861,7 +1861,7 @@
 	(declare (optimize (inhibit-warnings 3)))
       (values s e))))
 
-(declaim (inline sub-dd))
+(declaim (maybe-inline sub-dd))
 (defun sub-dd (a0 a1 b0 b1)
   "Subtract the double-double B0,B1 from A0,A1"
   (declare (double-float a0 a1 b0 b1)
@@ -1886,7 +1886,7 @@
 		      0d0)
 	      (values r1 r2)))))))
 
-(declaim (inline sub-d-dd))
+(declaim (maybe-inline sub-d-dd))
 (defun sub-d-dd (a b0 b1)
   "Compute double-double = double - double-double"
   (declare (double-float a b0 b1)
@@ -1904,7 +1904,7 @@
 	(values (float-sign (- a b0) 0d0) 0d0)
 	(values r1 r2)))))
 
-(declaim (inline sub-dd-d))
+(declaim (maybe-inline sub-dd-d))
 (defun sub-dd-d (a0 a1 b)
   "Subtract the double B from the double-double A0,A1"
   (declare (double-float a0 a1 b)
@@ -1946,7 +1946,7 @@
      (truly-the ,(type-specifier (node-derived-type node))
 		(kernel:%make-double-double-float hi lo))))
 
-(declaim (inline split))
+(declaim (maybe-inline split))
 ;; This algorithm is the version given by Yozo Hida.  It has problems
 ;; with overflow because we multiply by 1+2^27.
 ;;

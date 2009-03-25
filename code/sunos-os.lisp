@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.11 2007/07/24 19:09:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.11.4.1 2009/03/25 15:49:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,14 +30,10 @@
   "Returns a string describing version of the supporting software."
   (unless *software-version*
     (setf *software-version*
-          (let ((version-line
-                 (with-output-to-string (stream)
-                   (run-program "/usr/bin/uname"
-                                '("-r" )
-                                :output stream
-                                :pty nil
-                                :error nil))))
-            (subseq version-line 0 (1- (length version-line))))))
+	  (multiple-value-bind (sysname nodename release version)
+	      (unix:unix-uname)
+	    (declare (ignore sysname nodename))
+	    (concatenate 'string release " " version))))
   *software-version*)
 
 

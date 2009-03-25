@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.17 2007/08/02 18:18:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.17.4.1 2009/03/25 15:49:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -67,6 +67,7 @@
   "Sqrt(1/2)")
 
 ;; Evaluate polynomial
+(declaim (maybe-inline poly-eval poly-eval-1))
 (defun poly-eval (x coef)
   (declare (type double-double-float x)
 	   (type (simple-array double-double-float (*)) coef)
