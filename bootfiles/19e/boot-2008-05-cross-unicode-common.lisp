@@ -41,6 +41,76 @@
     (t 0 32 old-vm:simple-vector-type)))
 )
 
+(handler-bind ((error #'(lambda (c)
+			  (declare (ignore c))
+			  (invoke-restart 'kernel::clobber-it))))
+(defstruct (fd-stream
+	    (:print-function %print-fd-stream)
+	    (:constructor %make-fd-stream)
+	    (:include file-stream
+		      (misc #'fd-stream-misc-routine)))
+
+  (name nil)		      ; The name of this stream
+  (file nil)		      ; The file this stream is for
+  ;;
+  ;; The backup file namestring for the old file, for :if-exists :rename or
+  ;; :rename-and-delete.
+  (original nil :type (or simple-string null))
+  (delete-original nil)	      ; for :if-exists :rename-and-delete
+  ;;
+  ;;; Number of bytes per element.
+  (element-size 1 :type index)
+  (element-type 'base-char)   ; The type of element being transfered.
+  (fd -1 :type fixnum)	      ; The file descriptor
+  ;;
+  ;; Controls when the output buffer is flushed.
+  (buffering :full :type (member :full :line :none))
+  ;;
+  ;; Character position if known.
+  (char-pos nil :type (or index null))
+  ;;
+  ;; T if input is waiting on FD.  :EOF if we hit EOF.
+  (listen nil :type (member nil t :eof))
+  ;;
+  ;; The input buffer.
+  (unread nil)
+  (ibuf-sap nil :type (or system-area-pointer null))
+  (ibuf-length nil :type (or index null))
+  (ibuf-head 0 :type index)
+  (ibuf-tail 0 :type index)
+
+  ;; The output buffer.
+  (obuf-sap nil :type (or system-area-pointer null))
+  (obuf-length nil :type (or index null))
+  (obuf-tail 0 :type index)
+
+  ;; Output flushed, but not written due to non-blocking io.
+  (output-later nil)
+  (handler nil)
+  ;;
+  ;; Timeout specified for this stream, or NIL if none.
+  (timeout nil :type (or index null))
+  ;;
+  ;; Pathname of the file this stream is opened to (returned by PATHNAME.)
+  (pathname nil :type (or pathname null))
+  ;;
+  ;; External formats
+  ;; @@ I want to use :default here, but keyword pkg isn't set up yet at boot
+  ;; so initialize to NIL and fix it in SET-ROUTINES
+  #+unicode
+  (external-format nil :type (or null keyword cons))
+  #+unicode
+  (oc-state nil)
+  #+unicode
+  (co-state nil)
+  #+unicode
+  (last-char-read-size 0 :type index)))
+
+(defun %print-fd-stream (fd-stream stream depth)
+  (declare (ignore depth) (stream stream))
+  (format stream "#<Stream for ~A>"
+	  (fd-stream-name fd-stream)))
+
 ;; Dump a character of a string to a fasl file in the byte correct
 ;; order.
 (defun dump-string-char (code file)
@@ -333,3 +403,41 @@
       (dump-unsigned-32 f-vers res))
     res))
 
+(in-package "LISP")
+
+(defvar *unicode-data* (make-hash-table :test 'equal :size 26674))
+(defvar *assigned-codepoints-bitmap* (make-array 65536 :element-type 'bit))
+(when (< (hash-table-count *unicode-data*) 20000)
+  (dolist (range '((#x0000 . #x001F) (#x007F . #x009F) (#x3400 . #x4DB5)
+                   (#x4E00 . #x9FBB) (#xAC00 . #xD7A3) (#xE000 . #xF8FF)
+                   (#xDB80 . #xDBFF)))
+    (loop for i from (car range) to (cdr range) do
+      (setf (aref *assigned-codepoints-bitmap* i) 1)))
+  (with-open-file (s "target:i18n/UnicodeData.txt")
+    (format t "~&;; Loading UnicodeData.txt~%")
+    (flet ((cat (x) (dpb (position (char x 0) "CLMNPSZ") (byte 3 4)
+                         (position (char x 1) "cdefiklmnopstu")))
+           (num (x) (if (string= x "") nil x))
+           (chr (x) (if (string= x "") nil
+                        (let ((n (parse-integer x :radix 16)))
+                          (and (< n char-code-limit) (code-char n))))))
+      (loop for line = (read-line s nil) while line do
+        (let* ((split (loop for i = 0 then (1+ j)
+                             as j = (position #\; line :start i)
+                         collect (subseq line i j) while j))
+               (code (parse-integer (first split) :radix 16)))
+            (unless (or (>= code char-code-limit)
+                        (char= (char (second split) 0) #\<))
+              (setf (aref *assigned-codepoints-bitmap* code) 1)
+              (let ((x (vector (code-char code)
+                               (nth 1 split)
+                               (cat (nth 2 split))
+                               (num (nth 6 split))
+                               (num (nth 7 split))
+                               (num (nth 8 split))
+                               (chr (nth 12 split))
+                               (chr (nth 13 split))
+                               (chr (nth 14 split)))))
+                (setf (gethash (code-char code) *unicode-data*) x)
+                (setf (gethash (second split) *unicode-data*) x))))))))
+(format t "*unicode-data* size = ~D~%" (hash-table-count *unicode-data*))

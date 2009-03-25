@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1 2008/05/14 16:12:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.2 2009/03/25 19:32:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -193,7 +193,20 @@
   (timeout nil :type (or index null))
   ;;
   ;; Pathname of the file this stream is opened to (returned by PATHNAME.)
-  (pathname nil :type (or pathname null)))
+  (pathname nil :type (or pathname null))
+  ;;
+  ;; External format support
+  ;;
+  ;; @@ I want to use :default here, but keyword pkg isn't set up yet at boot
+  ;; so initialize to NIL and fix it in SET-ROUTINES
+  #+unicode
+  (external-format nil :type (or null keyword cons))
+  #+unicode
+  (oc-state nil)
+  #+unicode
+  (co-state nil)
+  #+unicode
+  (last-char-read-size 0 :type index))
 
 (defun %print-fd-stream (fd-stream stream depth)
   (declare (ignore depth) (stream stream))
