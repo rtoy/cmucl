@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.1 2008/11/02 13:30:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.2 2009/03/25 21:51:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -98,6 +98,32 @@
 	 (#x20 ("Space" "SP" "SPC"))
 	 (#x7f ("Rubout" "Delete" "DEL")))))
 
+#+unicode
+(defstruct (unicode (:type vector))
+  character name category num1 num2 num3 upper lower title)
+
+;; Note: *unicode-data* is initializes with itself.  So how does it
+;; get initialized to begin with?  A bootstrap files needs to be run
+;; and rebuild-unicode-data will fill *unicode-data* with appropriate
+;; values.  Likewise for *assigned-codepoints-bitmap*.
+#+unicode
+(defvar *unicode-data* #.*unicode-data*)
+
+#+unicode
+(defun unicode-data (thing)
+  (gethash thing *unicode-data*))
+
+#+unicode
+(defvar *assigned-codepoints-bitmap* #.*assigned-codepoints-bitmap*)
+
+(defun codepoint-assigned-p (codepoint)
+  #-unicode (declare (ignore codepoint))
+  #-unicode t
+  #+unicode
+  (= 1 (aref (the (simple-bit-vector #.char-code-limit)
+	       *assigned-codepoints-bitmap*)
+	     codepoint)))
+
 
 ;;;; Accessor functions:
 
@@ -150,11 +176,12 @@
 	name
 	#-unicode nil
 	#+unicode
-	;; FIXME:
-	;; return the Unicode name of the character,
+	;; Return the Unicode name of the character,
 	;;   or U+xxxx if it doesn't have a name
-	(format nil "U+~4,'0X" (char-code char)))))
-
+	(let ((data (unicode-data char)))
+	  (if data
+	      (nstring-capitalize (substitute #\_ #\Space (unicode-name data)))
+	      (format nil "U+~4,'0X" (char-code char)))))))
 
 (defun name-char (name)
   "Given an argument acceptable to string, name-char returns a character
@@ -164,9 +191,12 @@
       (or (cdr (assoc (string name) char-name-alist :test #'string-equal))
 	  #-unicode nil
 	  #+unicode
-	  ;; FIXME:
 	  ;; See if it's a valid Unicode character name
-	  nil)))
+	  (let ((data (unicode-data
+		       (nsubstitute #\Space #\_ (string-upcase name)))))
+	    (if data
+		(unicode-character data)
+		nil)))))
 
 
 
@@ -194,35 +224,52 @@
   returns ()."
   (declare (character char))
   (and (typep char 'base-char)
+       #-(and unicode (not unicode-bootstrap))
        (< 31
 	  (char-code (the base-char char))
-	  127)))
+	  127)
+       #+(and unicode (not unicode-bootstrap))
+       (let ((data (unicode-data char)))
+	 (and data (> (unicode-category data) 16)))))
 
 
 (defun alpha-char-p (char)
   "The argument must be a character object.  Alpha-char-p returns T if the
    argument is an alphabetic character, A-Z or a-z; otherwise ()."
   (declare (character char))
+  #-(and unicode (not unicode-bootstrap))
   (let ((m (char-code char)))
-    (or (< 64 m 91) (< 96 m 123))))
+    (or (< 64 m 91) (< 96 m 123)))
+  #+(and unicode (not unicode-bootstrap))
+  (let ((data (unicode-data char)))
+    (and data (= (ldb (byte 3 4) (unicode-category data)) 1))))
 
 
 (defun upper-case-p (char)
   "The argument must be a character object; upper-case-p returns T if the
    argument is an upper-case character, () otherwise."
   (declare (character char))
+  #-(and unicode (not unicode-bootstrap))
   (< 64
      (char-code char)
-     91))
+     91)
+  #+(and unicode (not unicode-bootstrap))
+  (let ((data (unicode-data char)))
+    (and data (= (unicode-category data) #x1d))))
+  
 
 
 (defun lower-case-p (char)
   "The argument must be a character object; lower-case-p returns T if the 
    argument is a lower-case character, () otherwise."
   (declare (character char))
+  #-(and unicode (not unicode-bootstrap))
   (< 96
      (char-code char)
-     123))
+     123)
+  #+(and unicode (not unicode-bootstrap))
+  (let ((data (unicode-data char)))
+    (and data (= (unicode-category data) #x16))))
 
 
 (defun both-case-p (char)
@@ -230,8 +277,14 @@
   argument is an alphabetic character and if the character exists in
   both upper and lower case.  For ASCII, this is the same as Alpha-char-p."
   (declare (character char))
+  #-(and unicode (not unicode-bootstrap))
   (let ((m (char-code char)))
-    (or (< 64 m 91) (< 96 m 123))))
+    (or (< 64 m 91) (< 96 m 123)))
+  #+(and unicode (not unicode-bootstrap))
+  (let ((data (unicode-data char)))
+    (and data (or (= (unicode-category data) #x16)
+		  (= (unicode-category data) #x1d)))))
+  
 
 
 (defun digit-char-p (char &optional (radix 10.))
@@ -258,8 +311,14 @@
   "Given a character-object argument, alphanumericp returns T if the
    argument is either numeric or alphabetic."
   (declare (character char))
+  #-(and unicode (not unicode-bootstrap))
   (let ((m (char-code char)))
-    (or (< 47 m 58) (< 64 m 91) (< 96 m 123))))
+    (or (< 47 m 58) (< 64 m 91) (< 96 m 123)))
+  #+(and unicode (not unicode-bootstrap))
+  (or (< 47 (char-code char) 58)
+      (let ((data (unicode-data char)))
+	(and data (or (= (unicode-category data) #x16)
+		      (= (unicode-category data) #x1D))))))
 
 
 (defun char= (character &rest more-characters)
@@ -324,10 +383,16 @@
 ;;; Equal-Char-Code is used by the following functions as a version of char-int
 ;;; which loses case info.
 
+#-(and unicode (not unicode-bootstrap))
 (defmacro equal-char-code (character)
   `(let ((ch (char-code ,character)))
      (if (< 96 ch 123) (- ch 32) ch)))
 
+#+(and unicode (not unicode-bootstrap))
+(defmacro equal-char-code (character)
+  `(let* ((char ,character)
+	  (data (unicode-data char)))
+     (char-code (or (and data (unicode-upper data)) char))))
 
 
 (defun char-equal (character &rest more-characters)
@@ -405,16 +470,29 @@
 (defun char-upcase (char)
   "Returns CHAR converted to upper-case if that is possible."
   (declare (character char))
+  #-(and unicode (not unicode-bootstrap))
   (if (lower-case-p char)
       (code-char (- (char-code char) 32))
-      char))
+      char)
+  #+(and unicode (not unicode-bootstrap))
+  (let ((data (unicode-data char)))
+    (if data
+	(or (unicode-upper data) char)
+	char)))
+  
 
 (defun char-downcase (char)
   "Returns CHAR converted to lower-case if that is possible."
   (declare (character char))
+  #-(and unicode (not unicode-bootstrap))
   (if (upper-case-p char)
       (code-char (+ (char-code char) 32))
-      char))
+      char)
+  #+(and unicode (not unicode-bootstrap))
+  (let ((data (unicode-data char)))
+    (if data
+	(or (unicode-lower data) char)
+	char)))
 
 (defun digit-char (weight &optional (radix 10))
   "All arguments must be integers.  Returns a character object that
@@ -424,3 +502,40 @@
   (and (typep weight 'fixnum)
        (>= weight 0) (< weight radix) (< weight 36)
        (code-char (if (< weight 10) (+ 48 weight) (+ 55 weight)))))
+
+
+;; Rebuild *unicode-data* and *assigned-codepoints-bitmap*
+#+unicode
+(defun rebuild-unicode-data ()
+  (when (< (hash-table-count *unicode-data*) 20000)
+    (dolist (range '((#x0000 . #x001F) (#x007F . #x009F) (#x3400 . #x4DB5)
+		     (#x4E00 . #x9FBB) (#xAC00 . #xD7A3) (#xE000 . #xF8FF)
+		     (#xDB80 . #xDBFF)))
+      (loop for i from (car range) to (cdr range) do
+	    (setf (aref *assigned-codepoints-bitmap* i) 1)))
+    (with-open-file (s "target:i18n/UnicodeData.txt")
+      (flet ((cat (x) (dpb (position (char x 0) "CLMNPSZ") (byte 3 4)
+			   (position (char x 1) "cdefiklmnopstu")))
+	     (num (x) (if (string= x "") nil x))
+	     (chr (x) (if (string= x "") nil
+			  (let ((n (parse-integer x :radix 16)))
+			    (and (< n char-code-limit) (code-char n))))))
+	(loop for line = (read-line s nil) while line do
+	      (let* ((split (loop for i = 0 then (1+ j)
+				  as j = (position #\; line :start i)
+				  collect (subseq line i j) while j))
+		     (code (parse-integer (first split) :radix 16)))
+		(unless (or (>= code char-code-limit)
+			    (char= (char (second split) 0) #\<))
+		  (setf (aref *assigned-codepoints-bitmap* code) 1)
+		  (let ((x (vector (code-char code)
+				   (nth 1 split)
+				   (cat (nth 2 split))
+				   (num (nth 6 split))
+				   (num (nth 7 split))
+				   (num (nth 8 split))
+				   (chr (nth 12 split))
+				   (chr (nth 13 split))
+				   (chr (nth 14 split)))))
+		    (setf (gethash (code-char code) *unicode-data*) x)
+		    (setf (gethash (second split) *unicode-data*) x)))))))))

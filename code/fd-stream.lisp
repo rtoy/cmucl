@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.7 2008/07/14 20:53:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.8 2009/03/25 21:51:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -195,7 +195,8 @@
   ;; Pathname of the file this stream is opened to (returned by PATHNAME.)
   (pathname nil :type (or pathname null))
   ;;
-  ;; External formats
+  ;; External format support
+  ;;
   ;; @@ I want to use :default here, but keyword pkg isn't set up yet at boot
   ;; so initialize to NIL and fix it in SET-ROUTINES
   #+unicode

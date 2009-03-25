@@ -53,9 +53,7 @@ NM = nm -gp
 DEPEND = $(CC) -MM -E
 DEPEND_FLAGS = 
 
-# This has aliasing problems, so turn off aliasing and also turn on
-# float-store so x87 arithmetic behaves like double-precision
-# arithmetic.  And with SSE2 support, we don't want the C code to be
-# compiled differently.  Hence, we need -ffloat-store with SSE2.
+# This no longer has aliasing problems, so no need to use
+# -ffloat-store and -fno-strict-aliasing anymore.
 e_rem_pio2.o : e_rem_pio2.c
-	$(CC) -c -fno-strict-aliasing -ffloat-store $(CFLAGS) $(CPPFLAGS) $<
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $<

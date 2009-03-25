@@ -106,6 +106,11 @@
   #+unicode
   (last-char-read-size 0 :type index)))
 
+(defun %print-fd-stream (fd-stream stream depth)
+  (declare (ignore depth) (stream stream))
+  (format stream "#<Stream for ~A>"
+	  (fd-stream-name fd-stream)))
+
 ;; Dump a character of a string to a fasl file in the byte correct
 ;; order.
 (defun dump-string-char (code file)
@@ -398,3 +403,41 @@
       (dump-unsigned-32 f-vers res))
     res))
 
+(in-package "LISP")
+
+(defvar *unicode-data* (make-hash-table :test 'equal :size 26674))
+(defvar *assigned-codepoints-bitmap* (make-array 65536 :element-type 'bit))
+(when (< (hash-table-count *unicode-data*) 20000)
+  (dolist (range '((#x0000 . #x001F) (#x007F . #x009F) (#x3400 . #x4DB5)
+                   (#x4E00 . #x9FBB) (#xAC00 . #xD7A3) (#xE000 . #xF8FF)
+                   (#xDB80 . #xDBFF)))
+    (loop for i from (car range) to (cdr range) do
+      (setf (aref *assigned-codepoints-bitmap* i) 1)))
+  (with-open-file (s "target:i18n/UnicodeData.txt")
+    (format t "~&;; Loading UnicodeData.txt~%")
+    (flet ((cat (x) (dpb (position (char x 0) "CLMNPSZ") (byte 3 4)
+                         (position (char x 1) "cdefiklmnopstu")))
+           (num (x) (if (string= x "") nil x))
+           (chr (x) (if (string= x "") nil
+                        (let ((n (parse-integer x :radix 16)))
+                          (and (< n char-code-limit) (code-char n))))))
+      (loop for line = (read-line s nil) while line do
+        (let* ((split (loop for i = 0 then (1+ j)
+                             as j = (position #\; line :start i)
+                         collect (subseq line i j) while j))
+               (code (parse-integer (first split) :radix 16)))
+            (unless (or (>= code char-code-limit)
+                        (char= (char (second split) 0) #\<))
+              (setf (aref *assigned-codepoints-bitmap* code) 1)
+              (let ((x (vector (code-char code)
+                               (nth 1 split)
+                               (cat (nth 2 split))
+                               (num (nth 6 split))
+                               (num (nth 7 split))
+                               (num (nth 8 split))
+                               (chr (nth 12 split))
+                               (chr (nth 13 split))
+                               (chr (nth 14 split)))))
+                (setf (gethash (code-char code) *unicode-data*) x)
+                (setf (gethash (second split) *unicode-data*) x))))))))
+(format t "*unicode-data* size = ~D~%" (hash-table-count *unicode-data*))

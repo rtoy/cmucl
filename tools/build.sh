@@ -36,7 +36,7 @@ ENABLE2="yes"
 ENABLE3="yes"
 ENABLE4="yes"
 
-version=19e
+version=19f
 SRCDIR=src
 TOOLDIR=$SRCDIR/tools
 VERSION="CVS Head `date '+%Y-%m-%d %H:%M:%S'`"
