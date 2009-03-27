@@ -84,8 +84,10 @@
 (load "vm:subprim")
 (load "vm:debug")
 (load "vm:c-call")
-(when (target-featurep :sse2)
-  (load "vm:sse2-c-call"))
+(if (target-featurep :sse2)
+    (load "vm:sse2-c-call")
+    (load "vm:x87-c-call"))
+
 (load "vm:print")
 (load "vm:alloc")
 (load "vm:call")
