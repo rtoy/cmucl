@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.122.4.1 2009/03/18 15:37:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.122.4.2 2009/03/27 04:21:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -788,10 +788,19 @@
   (set-bit #\. dot-attribute)
   (set-bit #\/ slash-attribute)
 
-  ;; Make anything not explicitly allowed funny...
   (dotimes (i char-code-limit)
     (when (zerop (aref character-attributes i))
-      (setf (aref character-attributes i) funny-attribute))))
+      #-(and unicode (not unicode-bootstrap))
+      (setf (aref character-attributes i) funny-attribute)
+      #+(and unicode (not unicode-bootstrap))
+      (let* ((char (code-char i))
+	     (data (unicode-data char)))
+	(cond ((upper-case-p char)
+	       (set-bit char uppercase-attribute))
+	      ((lower-case-p char)
+	       (set-bit char lowercase-attribute))
+	      (t
+	       (setf (aref character-attributes i) funny-attribute)))))))
 
 ;;; For each character, the value of the corresponding element is the lowest
 ;;; base in which that character is a digit.
@@ -2150,3 +2159,54 @@ radix-R.  If you have a power-list then pass it in as PL."
 	    (write-string ", type=" stream)
 	    (let ((*print-base* 16) (*print-radix* t))
 	      (output-integer (get-type object) stream)))))))))
+
+
+;;; Function to initialize character-attributes.  (Do we need this?)
+(defun reinit-char-attributes ()
+  (flet ((set-bit (char bit)
+	   (let ((code (char-code char)))
+	     (setf (aref character-attributes code)
+		   (logior bit (aref character-attributes code))))))
+
+    (fill character-attributes 0)
+    (dolist (char '(#\! #\@ #\$ #\% #\& #\* #\= #\~ #\[ #\] #\{ #\}
+		    #\? #\< #\>))
+      (set-bit char other-attribute))
+
+    (dotimes (i 10)
+      (set-bit (digit-char i) number-attribute))
+
+    (do ((code (char-code #\A) (1+ code))
+	 (end (char-code #\Z)))
+	((> code end))
+      (declare (fixnum code end))
+      (set-bit (code-char code) uppercase-attribute)
+      (set-bit (char-downcase (code-char code)) lowercase-attribute))
+
+    (set-bit #\- sign-attribute)
+    (set-bit #\+ sign-attribute)
+    (set-bit #\^ extension-attribute)
+    (set-bit #\_ extension-attribute)
+    (set-bit #\. dot-attribute)
+    (set-bit #\/ slash-attribute)
+
+    ;; Make anything not explicitly allowed funny...
+    (dotimes (i char-code-limit)
+      (when (zerop (aref character-attributes i))
+	#-(and unicode (not unicode-bootstrap))
+	(setf (aref character-attributes i) funny-attribute)
+	#+(and unicode (not unicode-bootstrap))
+	(let* ((char (code-char i))
+	       (data (unicode-data char)))
+	  (cond ((upper-case-p char)
+		 (set-bit char uppercase-attribute))
+		((lower-case-p char)
+		 (set-bit char lowercase-attribute))
+		#+nil
+		((and data
+		      (= (logand (unicode-category data) #xf0)
+			 #x10))
+		 ;; Letter category.  Is this right?
+		 (set-bit char letter-attribute))
+		(t
+		 (setf (aref character-attributes i) funny-attribute))))))))
