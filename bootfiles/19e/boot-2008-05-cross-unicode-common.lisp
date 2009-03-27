@@ -405,7 +405,7 @@
 
 (in-package "LISP")
 
-(defvar *unicode-data* (make-hash-table :test 'equal :size 26674))
+(defvar *unicode-data* (make-hash-table :test 'eql :size 30000))
 (defvar *assigned-codepoints-bitmap* (make-array 65536 :element-type 'bit))
 (when (< (hash-table-count *unicode-data*) 20000)
   (dolist (range '((#x0000 . #x001F) (#x007F . #x009F) (#x3400 . #x4DB5)
