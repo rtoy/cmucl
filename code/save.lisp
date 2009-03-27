@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.56.4.1.2.1 2008/12/19 01:31:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.56.4.1.2.2 2009/03/27 04:23:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -115,7 +115,8 @@
   (setf (search-list "ld-library-path:")
 	(parse-unix-search-list :ld_library_path))
   (setf (search-list "ext-formats:")
-	'("library:ext-formats/")))
+	'("library:ext-formats/"
+	  "target:pcl/simple-streams/external-formats/")))
 
 
 
