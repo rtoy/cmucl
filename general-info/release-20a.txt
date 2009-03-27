@@ -28,6 +28,10 @@ New in this release:
       trying to simplify the union of a large number of disjoint
       numeric types.  Previously, we handled the case of integer
       types.  Extend this to handle floats as well.
+    - SXHASH was computing the same hash code for upper and lower case
+      characters by upcasing the character.  This isn't necessary
+      since the characters are not EQUAL, so make SXHASH return
+      different values for upper and lower case letter.
 
   * Trac Tickets:
     #31: pathname bug with :case :common

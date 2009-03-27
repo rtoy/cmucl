@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.3 2009/03/27 04:14:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.4 2009/03/27 16:24:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -513,9 +513,7 @@
 		   (#xDB80 . #xDBFF)))
     (loop for i from (car range) to (cdr range) do
 	 (setf (aref *assigned-codepoints-bitmap* i) 1)))
-  ;; Make the sure the hash table is an eql hash table.  This helps
-  ;; during build because we don't need to do equal on characters.
-  (setf *unicode-data* (make-hash-table :test 'eql :size 30000))
+  (setf *unicode-data* (make-hash-table :test 'equal :size 30000))
   (with-open-file (s unicode-data-file)
     (flet ((cat (x) (dpb (position (char x 0) "CLMNPSZ") (byte 3 4)
 			 (position (char x 1) "cdefiklmnopstu")))
