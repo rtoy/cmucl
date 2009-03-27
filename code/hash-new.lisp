@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.47 2008/04/29 13:07:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.48 2009/03/27 16:03:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -980,7 +980,7 @@
     ;; The pointers and immediate types.
     (cons (sxhash-list s-expr depth))
     (fixnum (ldb sxhash-bits-byte s-expr))
-    (character (char-code (char-upcase s-expr)))
+    (character (char-code s-expr))
     (pathname
      ;; Pathnames are EQUAL if all the components are EQUAL, so we
      ;; hash all of the components of a pathname together.
