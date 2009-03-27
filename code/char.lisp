@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.5 2009/03/25 19:32:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.6 2009/03/27 03:02:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,13 +102,15 @@
 (defstruct (unicode (:type vector))
   character name category num1 num2 num3 upper lower title)
 
-;; Note: *unicode-data* is initializes with itself.  So how does it
+;; Note: *unicode-data* is initialized with itself.  So how does it
 ;; get initialized to begin with?  A bootstrap files needs to be run
 ;; and rebuild-unicode-data will fill *unicode-data* with appropriate
 ;; values.  Likewise for *assigned-codepoints-bitmap*.
 #+unicode
 (defvar *unicode-data* #.*unicode-data*)
 
+#+unicoode
+(declaim (inline unicode-data))
 #+unicode
 (defun unicode-data (thing)
   (gethash thing *unicode-data*))
@@ -311,14 +313,13 @@
   "Given a character-object argument, alphanumericp returns T if the
    argument is either numeric or alphabetic."
   (declare (character char))
-  #-(and unicode (not unicode-bootstrap))
   (let ((m (char-code char)))
-    (or (< 47 m 58) (< 64 m 91) (< 96 m 123)))
-  #+(and unicode (not unicode-bootstrap))
-  (or (< 47 (char-code char) 58)
-      (let ((data (unicode-data char)))
-	(and data (or (= (unicode-category data) #x16)
-		      (= (unicode-category data) #x1D))))))
+    ;; Shortcut for ASCII digits and upper and lower case letters
+    (or (< 47 m 58) (< 64 m 91) (< 96 m 123)
+	#+(and unicode (not unicode-bootstrap))
+	(let ((data (unicode-data char)))
+	  (and data (or (= (unicode-category data) #x16)
+			(= (unicode-category data) #x1D)))))))
 
 
 (defun char= (character &rest more-characters)
@@ -506,36 +507,38 @@
 
 ;; Rebuild *unicode-data* and *assigned-codepoints-bitmap*
 #+unicode
-(defun rebuild-unicode-data ()
-  (when (< (hash-table-count *unicode-data*) 20000)
-    (dolist (range '((#x0000 . #x001F) (#x007F . #x009F) (#x3400 . #x4DB5)
-		     (#x4E00 . #x9FBB) (#xAC00 . #xD7A3) (#xE000 . #xF8FF)
-		     (#xDB80 . #xDBFF)))
-      (loop for i from (car range) to (cdr range) do
-	    (setf (aref *assigned-codepoints-bitmap* i) 1)))
-    (with-open-file (s "target:i18n/UnicodeData.txt")
-      (flet ((cat (x) (dpb (position (char x 0) "CLMNPSZ") (byte 3 4)
-			   (position (char x 1) "cdefiklmnopstu")))
-	     (num (x) (if (string= x "") nil x))
-	     (chr (x) (if (string= x "") nil
-			  (let ((n (parse-integer x :radix 16)))
-			    (and (< n char-code-limit) (code-char n))))))
-	(loop for line = (read-line s nil) while line do
-	      (let* ((split (loop for i = 0 then (1+ j)
-				  as j = (position #\; line :start i)
-				  collect (subseq line i j) while j))
-		     (code (parse-integer (first split) :radix 16)))
-		(unless (or (>= code char-code-limit)
-			    (char= (char (second split) 0) #\<))
-		  (setf (aref *assigned-codepoints-bitmap* code) 1)
-		  (let ((x (vector (code-char code)
-				   (nth 1 split)
-				   (cat (nth 2 split))
-				   (num (nth 6 split))
-				   (num (nth 7 split))
-				   (num (nth 8 split))
-				   (chr (nth 12 split))
-				   (chr (nth 13 split))
-				   (chr (nth 14 split)))))
-		    (setf (gethash (code-char code) *unicode-data*) x)
-		    (setf (gethash (second split) *unicode-data*) x)))))))))
+(defun rebuild-unicode-data (&optional (unicode-data-file "target:i18n/UnicodeData.txt"))
+  (dolist (range '((#x0000 . #x001F) (#x007F . #x009F) (#x3400 . #x4DB5)
+		   (#x4E00 . #x9FBB) (#xAC00 . #xD7A3) (#xE000 . #xF8FF)
+		   (#xDB80 . #xDBFF)))
+    (loop for i from (car range) to (cdr range) do
+	 (setf (aref *assigned-codepoints-bitmap* i) 1)))
+  ;; Make the sure the hash table is an eql hash table.  This helps
+  ;; during build because we don't need to do equal on characters.
+  (setf *unicode-data* (make-hash-table :test 'eql :size 30000))
+  (with-open-file (s unicode-data-file)
+    (flet ((cat (x) (dpb (position (char x 0) "CLMNPSZ") (byte 3 4)
+			 (position (char x 1) "cdefiklmnopstu")))
+	   (num (x) (if (string= x "") nil x))
+	   (chr (x) (if (string= x "") nil
+			(let ((n (parse-integer x :radix 16)))
+			  (and (< n char-code-limit) (code-char n))))))
+      (loop for line = (read-line s nil) while line do
+	   (let* ((split (loop for i = 0 then (1+ j)
+			    as j = (position #\; line :start i)
+			    collect (subseq line i j) while j))
+		  (code (parse-integer (first split) :radix 16)))
+	     (unless (or (>= code char-code-limit)
+			 (char= (char (second split) 0) #\<))
+	       (setf (aref *assigned-codepoints-bitmap* code) 1)
+	       (let ((x (vector (code-char code)
+				(nth 1 split)
+				(cat (nth 2 split))
+				(num (nth 6 split))
+				(num (nth 7 split))
+				(num (nth 8 split))
+				(chr (nth 12 split))
+				(chr (nth 13 split))
+				(chr (nth 14 split)))))
+		 (setf (gethash (code-char code) *unicode-data*) x)
+		 (setf (gethash (second split) *unicode-data*) x))))))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.163.4.2 2008/12/18 21:50:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.163.4.3 2009/03/27 03:02:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3259,29 +3259,61 @@
 
 (deftransform char-equal ((a b) (base-char base-char))
   "open code"
+  #-(and unicode (not unicode-bootstrap))
   '(let* ((ac (char-code a))
 	  (bc (char-code b))
 	  (sum (logxor ac bc)))
      (or (zerop sum)
 	 (when (eql sum #x20)
 	   (let ((sum (+ ac bc)))
-	     (and (> sum 161) (< sum 213)))))))
+	     (and (> sum 161) (< sum 213))))))
+  #+(and unicode (not unicode-bootstrap))
+  '(let* ((ac (char-code a))
+	  (bc (char-code b)))
+     (if (and (<= ac #x7f)
+	      (<= bc #x7f))
+	 ;; ASCII
+	 (let ((sum (logxor ac bc)))
+	   (or (zerop sum)
+	       (when (eql sum #x20)
+		 (let ((sum (+ ac bc)))
+		   (and (> sum 161) (< sum 213))))))
+	 ;; Unicode
+	 (= (lisp::equal-char-code a)
+	    (lisp::equal-char-code b)))))
 
 (deftransform char-upcase ((x) (base-char))
   "open code"
   '(let ((n-code (char-code x)))
-     (if (and (> n-code #o140)	; Octal 141 is #\a.
-	      (< n-code #o173))	; Octal 172 is #\z.
-	 (code-char (logxor #x20 n-code))
-	 x)))
+     (if (<= n-code #x7f)
+	 ;; ASCII
+	 (if (and (> n-code #o140)	; Octal 141 is #\a.
+		  (< n-code #o173))	; Octal 172 is #\z.
+	     (code-char (logxor #x20 n-code))
+	     x)
+	 ;; Unicode
+	 #-(and unicode (not unicode-bootstrap))
+	 x
+	 #+(and unicode (not unicode-bootstrap))
+	 (let ((data (lisp::unicode-data x)))
+	   (if data
+	       (or (lisp::unicode-upper data) x)
+	       x)))))
 
 (deftransform char-downcase ((x) (base-char))
   "open code"
   '(let ((n-code (char-code x)))
-     (if (and (> n-code 64)	; 65 is #\A.
-	      (< n-code 91))	; 90 is #\Z.
-	 (code-char (logxor #x20 n-code))
-	 x)))
+     (if (<= n-code #x7f)
+	 ;; ASCII
+	 (if (and (> n-code 64)		; 65 is #\A.
+		  (< n-code 91))	; 90 is #\Z.
+	     (code-char (logxor #x20 n-code))
+	     x)
+	 ;; Unicode
+	 (let ((data (lisp::unicode-data x)))
+	   (if data
+	       (or (lisp::unicode-lower data) x)
+	       x)))))
 
 
 ;;;; Equality predicate transforms:
