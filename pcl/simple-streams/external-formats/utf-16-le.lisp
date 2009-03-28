@@ -4,7 +4,9 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-le.lisp,v 1.1.2.1.2.1 2008/07/02 01:22:10 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-le.lisp,v 1.1.2.1.2.2 2009/03/28 13:40:41 rtoy Exp $")
+
+(in-package "STREAM")
 
 ;; make state an integer:
 ;;  or (or state 0) to cope with NIL case

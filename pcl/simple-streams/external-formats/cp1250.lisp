@@ -4,7 +4,9 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cp1250.lisp,v 1.1.2.1 2008/07/02 01:22:08 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cp1250.lisp,v 1.1.2.2 2009/03/28 13:40:40 rtoy Exp $")
+
+(in-package "STREAM")
 
 (defconstant +ms-cp1250+
   (make-array 128 :element-type '(unsigned-byte 16)

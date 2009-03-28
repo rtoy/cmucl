@@ -4,7 +4,9 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.2.4.1.2.4 2008/07/09 15:52:12 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.2.4.1.2.5 2009/03/28 13:40:41 rtoy Exp $")
+
+(in-package "STREAM")
 
 (define-external-format :utf-8 (:min 1 :max 6)
   ()
