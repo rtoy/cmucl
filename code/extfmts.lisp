@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.8 2008/07/14 14:01:56 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.9 2009/03/28 13:31:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -247,9 +247,10 @@
       (and (let ((*package* (find-package "STREAM"))
 		 (lisp::*enable-package-locked-errors* nil)
 		 (*default-external-format* :iso8859-1)
-		 (unix::*filename-encoding* :iso8859-1))
-             (load (format nil "ext-formats:~(~A~)" name)
-		   :if-does-not-exist nil))
+		 (unix::*filename-encoding* :iso8859-1)
+		 (s (open (format nil "ext-formats:~(~A~).lisp" name) :if-does-not-exist nil)))
+	     (when s
+	       (null (nth-value 1 (ext:compile-from-stream s)))))
            (gethash name *external-formats*))))
 
 (defun %composed-ef-name (a b)
