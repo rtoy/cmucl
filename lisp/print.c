@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.23 2008/03/19 09:17:13 cshapiro Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.24 2009/04/08 16:27:20 rtoy Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -434,6 +434,9 @@ static char *array_slots[] = { "fill-pointer:   ",
     NULL
 };
 
+static char *simple_array_slots[] = { "length:   ",
+    NULL
+};
 
 #if (defined(i386) || defined(__x86_64))
 static char *fn_slots[] =
@@ -657,6 +660,8 @@ print_otherptr(lispobj obj)
 #ifdef type_SimpleArrayComplexDoubleDoubleFloat
 	  case type_SimpleArrayComplexDoubleDoubleFloat:
 #endif
+	      print_slots(simple_array_slots, 1, ptr);
+	      break;
 	  case type_ComplexString:
 	  case type_ComplexBitVector:
 	  case type_ComplexVector:
