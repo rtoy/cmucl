@@ -39,6 +39,9 @@ New in this release:
     not to the directory as a whole.
 
   * Other changes:
+    - SOFTWARE-VERSION may return different results than previously.
+      UNIX:UNIX-UNAME is now used to obtain the software version on
+      Linux and Solaris.
 
   * Improvements to the PCL implementation of CLOS:
 
