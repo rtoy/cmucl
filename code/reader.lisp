@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62.4.2 2008/05/30 14:52:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62.4.2.2.1 2009/04/09 15:30:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -94,8 +94,14 @@
   "Standard lisp readtable. This is for recovery from broken
    read-tables, and should not normally be user-visible.")
 
+;; Max size of the attribute table before we switch from an array to a
+;; hash-table.
+(defconstant attribute-table-limit
+  #-unicode char-code-limit
+  #+unicode 256)
+
 (deftype attribute-table ()
-  '(simple-array (unsigned-byte 8) (#.char-code-limit)))
+  '(simple-array (unsigned-byte 8) (#.attribute-table-limit)))
 
 (defstruct (readtable
 	    (:conc-name nil)
@@ -108,7 +114,7 @@
 		 (prin1 'readtable stream)))))
   "Readtable is a data structure that maps characters into syntax
    types for the Common Lisp expression reader."
-  ;; The CHARACTER-ATTRIBUTE-TABLE is a vector of CHAR-CODE-LIMIT integers for
+  ;; The CHARACTER-ATTRIBUTE-TABLE is a vector of ATTRIBUTE-TABLE-LIMIT integers for
   ;; describing the character type.  Conceptually, there are 4 distinct
   ;; "primary" character attributes: WHITESPACE, TERMINATING-MACRO, ESCAPE, and
   ;; CONSTITUENT.  Non-terminating macros (such as the symbol reader) have the
@@ -118,24 +124,39 @@
   ;; stored in the character attribute table by having different varieties of
   ;; constituents.
   (character-attribute-table
-   (make-array char-code-limit :element-type '(unsigned-byte 8)
+   (make-array attribute-table-limit
+	       :element-type '(unsigned-byte 8)
 	       :initial-element constituent)
    :type attribute-table)
   ;;
-  ;; The CHARACTER-MACRO-TABLE is a vector of CHAR-CODE-LIMIT functions.  One
+  ;; The CHARACTER-MACRO-TABLE is a vector of ATTRIBUTE-TABLE-LIMIT functions.  One
   ;; of these functions called with appropriate arguments whenever any
   ;; non-WHITESPACE character is encountered inside READ-PRESERVING-WHITESPACE.
   ;; These functions are used to implement user-defined read-macros, system
   ;; read-macros, and the number-symbol reader.
   (character-macro-table 
-   (make-array char-code-limit :initial-element #'undefined-macro-char)
-   :type (simple-vector #.char-code-limit))
+   (make-array attribute-table-limit :initial-element #'undefined-macro-char)
+   :type (simple-vector #.attribute-table-limit))
   ;;
   ;; DISPATCH-TABLES entry, which is an alist from dispatch characters to
   ;; vectors of CHAR-CODE-LIMIT functions, for use in defining dispatching
   ;; macros (like #-macro).
   (dispatch-tables () :type list)
-  (readtable-case :upcase :type (member :upcase :downcase :preserve :invert)))
+  (readtable-case :upcase :type (member :upcase :downcase :preserve :invert))
+  ;;
+  ;; The CHARACTER-ATTRIBUTE-HASH-TABLE handles the case of char codes
+  ;; above ATTRIBUTE-TABLE-LIMIT, since we expect these to be
+  ;; relatively rare.
+  #+unicode
+  (character-attribute-hash-table (make-hash-table)
+				  :type (or null hash-table))
+  ;;
+  ;; The CHARACTER-MACRO-HASH-TABLE handles the case of char codes
+  ;; above ATTRIBUTE-TABLE-LIMIT, since we expect these to be
+  ;; relatively rare.
+  #+unicode
+  (character-macro-hash-table (make-hash-table)
+			      :type (or null hash-table)))
 
 
 ;;;; Constants for character attributes.  These are all as in the manual.
@@ -184,25 +205,76 @@
 
 ;;;; Macros and functions for character tables.
 
+#-unicode
 (defmacro get-cat-entry (char rt)
   ;;only give this side-effect-free args.
   `(elt (character-attribute-table ,rt)
-	(char-code ,char)))
+    (char-code ,char)))
 
+#+unicode
+(defmacro get-cat-entry (char rt)
+  ;;only give this side-effect-free args.
+  `(if (< (char-code ,char) attribute-table-limit)
+       (elt (character-attribute-table ,rt)
+	    (char-code ,char))
+       (gethash (char-code ,char)
+	        (character-attribute-hash-table ,rt)
+	        ;; Default is constituent, because the attribute table
+	        ;; is initialized to constituent
+	        constituent)))
+
+#-unicode
 (defun set-cat-entry (char newvalue &optional (rt *readtable*))
   (setf (elt (character-attribute-table rt)
 	     (char-code char))
 	newvalue))
 
+#+unicode
+(defun set-cat-entry (char newvalue &optional (rt *readtable*))
+  (let ((code (char-code char)))
+    (if (< code attribute-table-limit)
+	(setf (elt (character-attribute-table rt)
+		   code)
+	      newvalue)
+	(unless (= newvalue constituent)
+	  ;; The default value (in get-cat-entry) is constituent, so
+	  ;; don't enter it into the hash table.
+	  (setf (gethash code (character-attribute-hash-table rt))
+		newvalue)))))
+
+#-unicode
 (defmacro get-cmt-entry (char rt)
   `(the function
 	(elt (the simple-vector (character-macro-table ,rt))
 	     (char-code ,char))))
 
+#+unicode
+(defmacro get-cmt-entry (char rt)
+   `(if (< (char-code ,char) attribute-table-limit)
+       (the function
+	 (elt (the simple-vector (character-macro-table ,rt))
+	      (char-code ,char)))
+       (gethash (char-code ,char)
+	        (character-macro-hash-table ,rt)
+	        ;; This default value needs to be coordinated with
+	        ;; init-std-lisp-readtable.
+	        #'read-token)))
+
+#-unicode
 (defun set-cmt-entry (char newvalue &optional (rt *readtable*))
   (setf (elt (the simple-vector (character-macro-table rt))
 	     (char-code char))
 	(coerce newvalue 'function)))
+
+#+unicode
+(defun set-cmt-entry (char newvalue &optional (rt *readtable*))
+  (let ((code (char-code char)))
+    (if (< code attribute-table-limit)
+	(setf (elt (the simple-vector (character-macro-table rt))
+		   code)
+	      (coerce newvalue 'function))
+	(setf (gethash code (character-macro-hash-table rt))
+	      (coerce newvalue 'function)))))
 
 (defun undefined-macro-char (stream char)
   (unless *read-suppress*
@@ -254,7 +326,8 @@
 
 (defun init-secondary-attribute-table ()
   (setq secondary-attribute-table
-	(make-array char-code-limit :element-type '(unsigned-byte 8)
+	(make-array attribute-table-limit
+		    :element-type '(unsigned-byte 8)
 		    :initial-element #.constituent))
   (set-secondary-attribute #\: #.package-delimiter)
   ;;(set-secondary-attribute #\| #.multiple-escape)	; |) [For EMACS]
@@ -286,9 +359,17 @@
   (dolist (c '(#\backspace #\tab #\page #\return #\rubout))
     (set-secondary-attribute c #.constituent-invalid)))
 
+#-unicode
 (defmacro get-secondary-attribute (char)
   `(elt secondary-attribute-table
-	(char-code ,char)))
+    (char-code ,char)))
+
+#+unicode
+(defmacro get-secondary-attribute (char)
+  `(if (< (char-code ,char) attribute-table-limit)
+       (elt secondary-attribute-table
+	    (char-code ,char))
+       constituent))
 
 
 
@@ -298,18 +379,27 @@
   "A copy is made of from-readtable and place into to-readtable."
   (let ((from-readtable (or from-readtable std-lisp-readtable))
 	(to-readtable (or to-readtable (make-readtable))))
-    ;;physically clobber contents of internal tables.
-    (replace (character-attribute-table to-readtable)
-	     (character-attribute-table from-readtable))
-    (replace (character-macro-table to-readtable)
-	     (character-macro-table from-readtable))
-    (setf (dispatch-tables to-readtable)
-	  (mapcar #'(lambda (pair) (cons (car pair)
-					 (copy-seq (cdr pair))))
-		  (dispatch-tables from-readtable)))
-    (setf (readtable-case to-readtable)
-	  (readtable-case from-readtable))
-    to-readtable))
+    (flet ((copy-hash-table (to from)
+	     (clrhash to)
+	     (maphash #'(lambda (key val)
+			  (setf (gethash key to) val))
+		      from)))
+      ;;physically clobber contents of internal tables.
+      (replace (character-attribute-table to-readtable)
+	       (character-attribute-table from-readtable))
+      (replace (character-macro-table to-readtable)
+	       (character-macro-table from-readtable))
+      (copy-hash-table (character-attribute-hash-table to-readtable)
+		       (character-attribute-hash-table from-readtable))
+      (copy-hash-table (character-macro-hash-table to-readtable)
+		       (character-macro-hash-table from-readtable))
+      (setf (dispatch-tables to-readtable)
+	    (mapcar #'(lambda (pair) (cons (car pair)
+					   (copy-seq (cdr pair))))
+		    (dispatch-tables from-readtable)))
+      (setf (readtable-case to-readtable)
+	    (readtable-case from-readtable))
+      to-readtable)))
 
 (defun set-syntax-from-char (to-char from-char &optional
 				     (to-readtable *readtable*)
@@ -445,12 +535,24 @@
     ;;all constituents
     (do ((ichar 0 (1+ ichar))
 	 (len #+unicode-bootstrap #o200
-	      #-unicode-bootstrap (length (character-attribute-table std-lisp-readtable))))
+	      #-unicode-bootstrap char-code-limit))
 	((= ichar len))
       (let ((char (code-char ichar)))
+	#-unicode
 	(when (constituentp char std-lisp-readtable)
 	  (set-cat-entry char (get-secondary-attribute char))
-	  (set-cmt-entry char #'read-token))))))
+	  (set-cmt-entry char #'read-token))
+	#+unicode
+	(cond ((constituentp char std-lisp-readtable)
+	       (set-cat-entry char (get-secondary-attribute char))
+	       (when (< ichar attribute-table-limit)
+		 ;; The hashtable default in get-cmt-entry returns
+		 ;; #'read-token, so don't need to set it here.
+		 (set-cmt-entry char #'read-token)))
+	      ((>= ichar attribute-table-limit)
+	       ;; A non-constituent character that would be stored in
+	       ;; the hash table gets #'undefined-macro-char.
+	       (set-cmt-entry char #'undefined-macro-char)))))))
 
 
 
