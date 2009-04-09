@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.86.2.2.2.3 2009/03/18 15:37:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.86.2.2.2.4 2009/04/09 15:33:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -737,7 +737,7 @@
 (defun format-print-named-character (char stream)
   (let* ((name (char-name char)))
     (cond (name
-	   (write-string (string-capitalize name) stream))
+	   (write-string name stream))
 	  ((<= 0 (char-code char) 31)
 	   ;; Print control characters as "^"<char>
 	   (write-char #\^ stream)
