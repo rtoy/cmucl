@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62.4.2.2.1 2009/04/09 15:30:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62.4.2.2.2 2009/04/10 01:52:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -373,6 +373,83 @@
 
 
 
+;;; Character dispatch stuff
+
+;; For non-unicode stuff, a simple vector of 256 elements works fine.
+#-unicode
+(defun make-char-dispatch-table ()
+  (make-array attribute-table-limit :initial-element #'dispatch-char-error))
+
+#-unicode
+(declaim (inline copy-char-dispatch-table))
+#-unicode
+(defun copy-char-dispatch-table (dispatch)
+  (copy-seq dispatch))
+
+;; For unicode, we define a structure to hold a vector and a
+;; hash-table to conserve space instead of using a huge vector.  The
+;; vector handles the common case for 8-bit characters, and the hash
+;; table handles the rest.
+#+unicode
+(defstruct (char-dispatch-table
+	     (:copier nil)
+	     (:print-function
+	      (lambda (s stream d)
+		(declare (ignore d))
+		(print-unreadable-object (s stream :identity t :type t)
+		  ))))
+  ;; TABLE is a vector for quick access for 8-bit characters
+  (table (make-array attribute-table-limit :initial-element #'dispatch-char-error)
+	 :type (simple-vector #.attribute-table-limit))
+  ;; HASH-TABLE is for handling the (presumably) rare case of dispatch
+  ;; characters above attribute-table-limit.
+  (hash-table (make-hash-table)
+	      :type hash-table))
+
+#+unicode
+(defun copy-char-dispatch-table (dispatch)
+  ;; Make a new dispatch table and copy the contents to it
+  (let* ((new (make-char-dispatch-table))
+	 (h (char-dispatch-table-hash-table new)))
+    (replace (char-dispatch-table-table new)
+	     (char-dispatch-table-table dispatch))
+    (maphash #'(lambda (key val)
+		 (setf (gethash key h) val))
+	     (char-dispatch-table-hash-table dispatch))))
+    
+(declaim (inline get-dispatch-char set-dispatch-char))
+
+#-unicode
+(defun get-dispatch-char (char dispatch)
+  (elt (the simple-vector dispatch)
+       (char-code char)))
+
+#+unicode
+(defun get-dispatch-char (char dispatch)
+  (let ((code (char-code char)))
+    (if (< code attribute-table-limit)
+	(elt (the simple-vector (char-dispatch-table-table dispatch))
+	     code)
+	(gethash char (char-dispatch-table-hash-tablle dispatch)
+		 #'dispatch-char-error))))
+
+#-unicode
+(defun set-dispatch-char (char new-value dispatch)
+  (setf (elt (the simple-vector dispatch)
+	     (char-code char))
+	(coerce new-value 'function)))
+
+#+unicode
+(defun set-dispatch-char (char new-value dispatch)
+  (let ((code (char-code char)))
+    (if (< code attribute-table-limit)
+	(setf (elt (the simple-vector (char-dispatch-table-table dispatch))
+		   (char-code char))
+	      (coerce new-value 'function))
+	(setf (gethash char (char-dispatch-table-hash-tablle dispatch))
+	      (coerce new-value 'function)))))
+
+
 ;;;; Readtable operations.
 
 (defun copy-readtable (&optional (from-readtable *readtable*) to-readtable)
@@ -395,7 +472,7 @@
 		       (character-macro-hash-table from-readtable))
       (setf (dispatch-tables to-readtable)
 	    (mapcar #'(lambda (pair) (cons (car pair)
-					   (copy-seq (cdr pair))))
+					   (copy-char-dispatch-table (cdr pair))))
 		    (dispatch-tables from-readtable)))
       (setf (readtable-case to-readtable)
 	    (readtable-case from-readtable))
@@ -433,12 +510,12 @@
 	       ;; The to-readtable already has a dispatching table for
 	       ;; this character.  Replace it with a copy of the
 	       ;; dispatching table from from-readtable.
-	       (setf (cdr to-dpair) (copy-seq (cdr from-dpair))))
+	       (setf (cdr to-dpair) (copy-char-dispatch-table (cdr from-dpair))))
 	      (t
 	       ;; The to-readtable doesn't have such an entry.  Add a
 	       ;; copy of dispatch table from from-readtable to the
 	       ;; dispatch table of the to-readtable.
-	       (let ((pair (cons to-char (copy-seq (cdr from-dpair)))))
+	       (let ((pair (cons to-char (copy-char-dispatch-table (cdr from-dpair)))))
 		 (setf (dispatch-tables to-readtable)
 		       (push pair (dispatch-tables to-readtable)))))))))
   t)
@@ -1766,9 +1843,6 @@ the end of the stream."
 
 ;;;; dispatching macro cruft
 
-(defun make-char-dispatch-table ()
-  (make-array char-code-limit :initial-element #'dispatch-char-error))
-
 (defun dispatch-char-error (stream sub-char ignore)
   (declare (ignore ignore))
   (if *read-suppress*
@@ -1796,14 +1870,12 @@ the end of the stream."
   ;;get the dispatch char for macro (error if not there), diddle
   ;;entry for sub-char.
   (when (digit-char-p sub-char)
-    (simple-program-error "Sub-Char must not be a decimal digit: ~S" sub-char))
+    (simple-program-error "Dispatch Sub-Char must not be a decimal digit: ~S" sub-char))
   (let* ((sub-char (char-upcase sub-char))
 	 (dpair (find disp-char (dispatch-tables rt)
 		      :test #'char= :key #'car)))
     (if dpair
-	(setf (elt (the simple-vector (cdr dpair))
-		   (char-code sub-char))
-	      (coerce function 'function))
+	(set-dispatch-char sub-char function (cdr dpair))
 	(simple-program-error "~S is not a dispatch character." disp-char))))
 
 (defun get-dispatch-macro-character
@@ -1816,8 +1888,7 @@ the end of the stream."
 	   (dpair (find disp-char (dispatch-tables rt)
 			:test #'char= :key #'car)))
       (if dpair
-	  (elt (the simple-vector (cdr dpair))
-	       (char-code sub-char))
+	  (get-dispatch-char sub-char (cdr dpair))
 	  (simple-program-error "~S is not a dispatch character." disp-char)))))
 
 (defun read-dispatch-char (stream char)
@@ -1840,9 +1911,7 @@ the end of the stream."
     (let ((dpair (find char (dispatch-tables *readtable*)
 		       :test #'char= :key #'car)))
       (if dpair
-	  (funcall (the function
-			(elt (the simple-vector (cdr dpair))
-			     (char-code sub-char)))
+	  (funcall (the function (get-dispatch-char sub-char (cdr dpair)))
 		   stream sub-char (if numargp numarg nil))
 	  (%reader-error stream "No dispatch table for dispatch char.")))))
 
