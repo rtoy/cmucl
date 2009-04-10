@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62.4.2.2.3 2009/04/10 02:29:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62.4.2.2.4 2009/04/10 15:16:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -560,26 +560,20 @@
   (let ((stream (in-synonym-of stream)))
     (stream-dispatch stream
       ;; simple-stream
-      (do ((attribute-table (character-attribute-table *readtable*))
-	   (char (stream::%read-char stream t nil t t)
+      (do ((char (stream::%read-char stream t nil t t)
 		 (stream::%read-char stream t nil t t)))
-	  ((/= (the fixnum (aref attribute-table (char-code char)))
-	       #.whitespace)
+	  ((not (test-attribute char #.whitespace *readtable*))
 	   char))
       ;; lisp-stream
       (prepare-for-fast-read-char stream
-	(do ((attribute-table (character-attribute-table *readtable*))
-	     (char (fast-read-char t) (fast-read-char t)))
-	    ((/= (the fixnum (aref attribute-table (char-code char)))
-		 #.whitespace)
+	(do ((char (fast-read-char t) (fast-read-char t)))
+	    ((not (test-attribute char #.whitespace *readtable*))
 	     (done-with-fast-read-char)
 	     char)))
       ;; fundamental-stream
-      (do ((attribute-table (character-attribute-table *readtable*))
-	   (char (stream-read-char stream) (stream-read-char stream)))
+      (do ((char (stream-read-char stream) (stream-read-char stream)))
 	  ((or (eq char :eof)
-	       (/= (the fixnum (aref attribute-table (char-code char)))
-		   #.whitespace))
+	       (not (test-attribute char #.whitespace *readtable*)))
 	   (if (eq char :eof)
 	       (error 'end-of-file :stream stream)
 	       char))))))
@@ -1033,8 +1027,8 @@
 
 ;;; return the character class for a char
 ;;;
-(defmacro char-class (char attable)
-  `(let ((att (aref ,attable (char-code ,char))))
+(defmacro char-class (char readtable)
+  `(let ((att (get-cat-entry ,char ,readtable)))
      (declare (fixnum att))
      (cond ((<= att #.terminating-macro)
 	    #.delimiter)
@@ -1051,8 +1045,8 @@
 ;;; return the character class for a char which might be part of a rational
 ;;; number
 ;;;
-(defmacro char-class2 (char attable)
-  `(let ((att (aref ,attable (char-code ,char))))
+(defmacro char-class2 (char readtable)
+  `(let ((att (get-cat-entry ,char ,readtable)))
      (declare (fixnum att))
      (cond ((<= att #.terminating-macro)
 	    #.delimiter)
@@ -1073,8 +1067,8 @@
 ;;; return the character class for a char which might be part of a rational or
 ;;; floating number (assume that it is a digit if it could be)
 ;;;
-(defmacro char-class3 (char attable)
-  `(let ((att (aref ,attable (char-code ,char))))
+(defmacro char-class3 (char readtable)
+  `(let ((att (get-cat-entry ,char ,readtable)))
      (declare (fixnum att))
      (cond ((<= att #.terminating-macro)
 	    #.delimiter)
@@ -1171,8 +1165,7 @@
   (when *read-suppress*
     (internal-read-extended-token stream firstchar nil)
     (return-from read-token nil))
-  (let ((attribute-table (character-attribute-table *readtable*))
-	(package-designator nil)
+  (let ((package-designator nil)
 	(colons 0)
 	(possibly-rational t)
 	(seen-digit-or-expt nil)
@@ -1182,7 +1175,7 @@
 	(seen-multiple-escapes nil))
     (reset-read-buffer)
     (prog ((char firstchar))
-      (case (char-class3 char attribute-table)
+      (case (char-class3 char *readtable*)
 	(#.constituent-sign (go SIGN))
 	(#.constituent-digit (go LEFTDIGIT))
 	(#.constituent-digit-or-expt
@@ -1202,7 +1195,7 @@
       (unless char (go RETURN-SYMBOL))
       (setq possibly-rational t
 	    possibly-float t)
-      (case (char-class3 char attribute-table)
+      (case (char-class3 char *readtable*)
 	(#.constituent-digit (go LEFTDIGIT))
 	(#.constituent-digit-or-expt
 	 (setq seen-digit-or-expt t)
@@ -1219,7 +1212,7 @@
       (setq char (read-char stream nil nil))
       (unless char (return (make-integer)))
       (setq was-possibly-float possibly-float)
-      (case (char-class3 char attribute-table)
+      (case (char-class3 char *readtable*)
 	(#.constituent-digit (go LEFTDIGIT))
 	(#.constituent-decimal-digit (if possibly-float
 						     (go LEFTDECIMALDIGIT)
@@ -1248,7 +1241,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (return (make-integer)))
-      (case (char-class3 char attribute-table)
+      (case (char-class3 char *readtable*)
 	(#.constituent-digit (go LEFTDIGIT))
 	(#.constituent-decimal-digit (error "impossible!"))
 	(#.constituent-dot (go SYMBOL))
@@ -1269,7 +1262,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-digit (go LEFTDECIMALDIGIT))
 	(#.constituent-dot (go MIDDLEDOT))
 	(#.constituent-expt (go EXPONENT))
@@ -1286,7 +1279,7 @@
       (setq char (read-char stream nil nil))
       (unless char (return (let ((*read-base* 10))
 			     (make-integer))))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-digit (go RIGHTDIGIT))
 	(#.constituent-expt (go EXPONENT))
 	(#.delimiter
@@ -1301,7 +1294,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (return (make-float stream)))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-digit (go RIGHTDIGIT))
 	(#.constituent-expt (go EXPONENT))
 	(#.delimiter
@@ -1315,7 +1308,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-digit (go RIGHTDIGIT))
 	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
 	(#.escape (go ESCAPE))
@@ -1325,7 +1318,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (%reader-error stream "dot context error"))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-digit (go RIGHTDIGIT))
 	(#.constituent-dot (go DOTS))
 	(#.delimiter  (%reader-error stream "dot context error"))
@@ -1338,7 +1331,7 @@
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
       (setq possibly-float t)
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-sign (go EXPTSIGN))
 	(#.constituent-digit (go EXPTDIGIT))
 	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
@@ -1350,7 +1343,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-digit (go EXPTDIGIT))
 	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
 	(#.escape (go ESCAPE))
@@ -1361,7 +1354,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (return (make-float stream)))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-digit (go EXPTDIGIT))
 	(#.delimiter
 	 (unread-char char stream)
@@ -1374,7 +1367,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
-      (case (char-class2 char attribute-table)
+      (case (char-class2 char *readtable*)
 	(#.constituent-digit (go RATIODIGIT))
 	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
 	(#.escape (go ESCAPE))
@@ -1385,7 +1378,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (return (make-ratio stream)))
-      (case (char-class2 char attribute-table)
+      (case (char-class2 char *readtable*)
 	(#.constituent-digit (go RATIODIGIT))
 	(#.delimiter
 	 (unread-char char stream)
@@ -1398,7 +1391,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (%reader-error stream "too many dots"))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-dot (go DOTS))
 	(#.delimiter
 	 (unread-char char stream)
@@ -1416,7 +1409,7 @@
 	       (ouch-read-buffer char)
 	       (setq char (stream::%read-char stream nil nil t t))
 	       (unless char (go RETURN-SYMBOL))
-	       (case (char-class char attribute-table)
+	       (case (char-class char *readtable*)
 		 (#.escape (go ESCAPE))
 		 (#.delimiter (stream::%unread-char stream char)
 			      (go RETURN-SYMBOL))
@@ -1430,7 +1423,7 @@
 	       (ouch-read-buffer char)
 	       (setq char (fast-read-char nil nil))
 	       (unless char (go RETURN-SYMBOL))
-	       (case (char-class char attribute-table)
+	       (case (char-class char *readtable*)
 		 (#.escape (done-with-fast-read-char)
 				       (go ESCAPE))
 		 (#.delimiter (done-with-fast-read-char)
@@ -1447,7 +1440,7 @@
 	     (ouch-read-buffer char)
 	     (setq char (read-char stream nil :eof))
 	     (when (eq char :eof) (go RETURN-SYMBOL))
-	     (case (char-class char attribute-table)
+	     (case (char-class char *readtable*)
 	       (#.escape (go ESCAPE))
 	       (#.delimiter (unread-char char stream)
 			    (go RETURN-SYMBOL))
@@ -1464,7 +1457,7 @@
 	(ouch-read-buffer nextchar))
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
@@ -1479,7 +1472,7 @@
 	(ouch-read-buffer char))
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
@@ -1506,7 +1499,7 @@
       (setq escapes ())
       (setq char (read-char stream nil nil))
       (unless char (reader-eof-error stream "after reading a colon"))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.delimiter
 	 (unread-char char stream)
 	 (%reader-error stream
@@ -1521,7 +1514,7 @@
       (setq char (read-char stream nil nil))
       (unless char
 	(reader-eof-error stream "after reading a colon"))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.delimiter
 	 (unread-char char stream)
 	 (%reader-error stream
