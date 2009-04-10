@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62.4.2.2.2 2009/04/10 01:52:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62.4.2.2.3 2009/04/10 02:29:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -415,7 +415,8 @@
 	     (char-dispatch-table-table dispatch))
     (maphash #'(lambda (key val)
 		 (setf (gethash key h) val))
-	     (char-dispatch-table-hash-table dispatch))))
+	     (char-dispatch-table-hash-table dispatch))
+    new))
     
 (declaim (inline get-dispatch-char set-dispatch-char))
 
