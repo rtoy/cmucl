@@ -32,6 +32,10 @@ New in this release:
       characters by upcasing the character.  This isn't necessary
       since the characters are not EQUAL, so make SXHASH return
       different values for upper and lower case letter.
+    - WRITE-VECTOR was not writing out enough data when no
+      byte-swapping is needed and the end index was not given.
+      (Confusion about the length of the vector versus the index as an
+      octet count, not element count.)
 
   * Trac Tickets:
     #31: pathname bug with :case :common
