@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62.4.2.2.4 2009/04/10 15:16:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62.4.2.2.5 2009/04/10 20:13:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -431,7 +431,7 @@
     (if (< code attribute-table-limit)
 	(elt (the simple-vector (char-dispatch-table-table dispatch))
 	     code)
-	(gethash char (char-dispatch-table-hash-tablle dispatch)
+	(gethash char (char-dispatch-table-hash-table dispatch)
 		 #'dispatch-char-error))))
 
 #-unicode
@@ -447,7 +447,7 @@
 	(setf (elt (the simple-vector (char-dispatch-table-table dispatch))
 		   (char-code char))
 	      (coerce new-value 'function))
-	(setf (gethash char (char-dispatch-table-hash-tablle dispatch))
+	(setf (gethash char (char-dispatch-table-hash-table dispatch))
 	      (coerce new-value 'function)))))
 
 
