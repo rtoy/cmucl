@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.122.4.2 2009/03/27 04:21:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.122.4.3 2009/04/11 12:04:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -788,19 +788,11 @@
   (set-bit #\. dot-attribute)
   (set-bit #\/ slash-attribute)
 
-  (dotimes (i char-code-limit)
+  ;; We only initialize the things for 8-bit characters here.  The
+  ;; full set is initialized later by REINIT-CHAR-ATTRIBUTES, below
+  (dotimes (i 256)
     (when (zerop (aref character-attributes i))
-      #-(and unicode (not unicode-bootstrap))
-      (setf (aref character-attributes i) funny-attribute)
-      #+(and unicode (not unicode-bootstrap))
-      (let* ((char (code-char i))
-	     (data (unicode-data char)))
-	(cond ((upper-case-p char)
-	       (set-bit char uppercase-attribute))
-	      ((lower-case-p char)
-	       (set-bit char lowercase-attribute))
-	      (t
-	       (setf (aref character-attributes i) funny-attribute)))))))
+      (setf (aref character-attributes i) funny-attribute))))
 
 ;;; For each character, the value of the corresponding element is the lowest
 ;;; base in which that character is a digit.
@@ -2161,7 +2153,9 @@ radix-R.  If you have a power-list then pass it in as PL."
 	      (output-integer (get-type object) stream)))))))))
 
 
-;;; Function to initialize character-attributes.  (Do we need this?)
+;;; Function to initialize character-attributes.  The full utf-16 set
+;;; is initialized.
+#+unicode
 (defun reinit-char-attributes ()
   (flet ((set-bit (char bit)
 	   (let ((code (char-code char)))
@@ -2193,20 +2187,14 @@ radix-R.  If you have a power-list then pass it in as PL."
     ;; Make anything not explicitly allowed funny...
     (dotimes (i char-code-limit)
       (when (zerop (aref character-attributes i))
-	#-(and unicode (not unicode-bootstrap))
-	(setf (aref character-attributes i) funny-attribute)
-	#+(and unicode (not unicode-bootstrap))
-	(let* ((char (code-char i))
-	       (data (unicode-data char)))
+	(let* ((char (code-char i)))
+	  ;; What about surrogate pairs?  What should we do about them?
 	  (cond ((upper-case-p char)
 		 (set-bit char uppercase-attribute))
 		((lower-case-p char)
 		 (set-bit char lowercase-attribute))
-		#+nil
-		((and data
-		      (= (logand (unicode-category data) #xf0)
-			 #x10))
-		 ;; Letter category.  Is this right?
-		 (set-bit char letter-attribute))
 		(t
 		 (setf (aref character-attributes i) funny-attribute))))))))
+
+#+unicode
+(pushnew #'reinit-char-attributes ext:*after-save-initializations*)

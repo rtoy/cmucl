@@ -405,8 +405,11 @@
 
 (in-package "LISP")
 
+#-(and)
 (defvar *unicode-data* (make-hash-table :test 'equal :size 30000))
+#-(and)
 (defvar *assigned-codepoints-bitmap* (make-array 65536 :element-type 'bit))
+#-(and)
 (when (< (hash-table-count *unicode-data*) 20000)
   (dolist (range '((#x0000 . #x001F) (#x007F . #x009F) (#x3400 . #x4DB5)
                    (#x4E00 . #x9FBB) (#xAC00 . #xD7A3) (#xE000 . #xF8FF)
@@ -440,4 +443,5 @@
                                (chr (nth 14 split)))))
                 (setf (gethash (code-char code) *unicode-data*) x)
                 (setf (gethash (second split) *unicode-data*) x))))))))
+#-(and)
 (format t "*unicode-data* size = ~D~%" (hash-table-count *unicode-data*))
