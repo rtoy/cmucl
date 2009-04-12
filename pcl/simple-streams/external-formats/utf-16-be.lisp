@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-be.lisp,v 1.1.2.1.2.2 2009/03/28 13:40:41 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-be.lisp,v 1.1.2.1.2.3 2009/04/12 15:22:38 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -24,17 +24,20 @@
 (define-external-format :utf-16-be (:size 2)
   ()
 
-  (octets-to-code (state input unput c1 c2 code wd next)
+  (octets-to-code (state input unput c1 c2 code wd next st)
     `(block nil
        (when (null ,state) (setf ,state 0))
        (tagbody
 	:again
-	  (let* ((,c1 ,input)
+	  (let* ((,st ,state)
+		 (,c1 ,input)
 		 (,c2 ,input)
-		 (,code (if (oddp ,state)
+		 (,code (if (oddp ,st)
 			    (+ (* 256 ,c2) ,c1)
 			    (+ (* 256 ,c1) ,c2)))
 		 (,wd 2))
+	    (declare (type (integer 0 2) ,st)
+		     (type (integer 0 #xffff) ,code))
 	    ;; Note that if BOM is read, WD will be 2 but 4 octets have
 	    ;; actually been read: this is intentional - the returned
 	    ;; width tells how much to back up to unread a character, and
@@ -48,7 +51,7 @@
 		  ((<= #xD800 ,code #xDBFF)
 		   (let* ((,c1 ,input)
 			  (,c2 ,input)
-			  (,next (if (oddp ,state)
+			  (,next (if (oddp ,st)
 				     (+ (* 256 ,c2) ,c1)
 				     (+ (* 256 ,c1) ,c2))))
 		     (unless (<= #xDC00 ,next #xDFFF)
@@ -59,9 +62,9 @@
 			       in UTF-16 sequence." ,code ,next))
 		     (setq ,code (+ (ash (- ,code #xD800) 10) ,next #x2400)
 			   ,wd 4)))
-		  ((and (= ,code #xFFFE) (zerop ,state))
+		  ((and (= ,code #xFFFE) (zerop ,st))
 		   (setf ,state 1) (go :again))
-		  ((and (= ,code #xFEFF) (zerop ,state))
+		  ((and (= ,code #xFEFF) (zerop ,st))
 		   (setf ,state 2) (go :again))
 		  ((= ,code #xFFFE)
 		   ;; replace with REPLACEMENT CHARACTER ?
