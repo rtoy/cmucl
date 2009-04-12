@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.1 2009/04/11 12:04:26 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.2 2009/04/12 00:55:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -62,7 +62,7 @@
 
 
 (defun search-codeset (code codeset)
-  (declare #+nil(optimize (speed 3) (space 0) (debug 0) (safety 0))
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
 	   (type (integer 0 #x10FFFF) code) (type codeset codeset))
   (let* ((data (codeset-code codeset)) (min 0) (max (length data)))
     (declare (type lisp::index min max))
@@ -75,7 +75,7 @@
 	      (t (return n)))))))
 
 (defun search-rangeset (code rangeset)
-  (declare #+nil(optimize (speed 3) (space 0) (debug 0) (safety 0))
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
 	   (type (integer 0 #x10FFFF) code) (type rangeset rangeset))
   (let* ((hi (rangeset-min rangeset))
 	 (lo (rangeset-max rangeset))
@@ -187,9 +187,7 @@
 
 
 (defun unicode-name-to-codepoint (name)
-  (declare #+nil(optimize (speed 3) (space 0) (debug 0) (safety 0)
-		     (ext:inhibit-warnings 3))
-	   (type string name))
+  (declare (type string name))
   (unless (unidata-name+ *unicode-data*) (load-names))
   (let* ((names (unidata-name+ *unicode-data*))
 	 (codebook (nametrie-cdbk names))
@@ -225,8 +223,7 @@
 		    stack))))))))
 
 (defun unicode-name (code)
-  (declare #+nil(optimize (speed 3) (space 0) (debug 0) (safety 0)
-		     (ext:inhibit-warnings 3))
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
 	   (type (integer 0 #x10FFFF) code))
   (unless (unidata-name+ *unicode-data*) (load-names))
   (unless (unidata-name *unicode-data*) (load-name))
@@ -254,8 +251,7 @@
 	s))))
 
 (defun unicode-category (code)
-  (declare #+nil(optimize (speed 3) (space 0) (debug 0) (safety 0)
-		     (ext:inhibit-warnings 3))
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
 	   (type (integer 0 #x10FFFF) code))
   (unless (unidata-category *unicode-data*) (load-categories))
   (let* ((cat (unidata-category *unicode-data*))
@@ -265,8 +261,7 @@
 	#x08)))				; "Cn"
 
 (defun unicode-upper (code)
-  (declare #+nil(optimize (speed 3) (space 0) (debug 0) (safety 0)
-		     (ext:inhibit-warnings 3))
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
 	   (type (integer 0 #x10FFFF) code))
   (unless (unidata-scase *unicode-data*) (load-scase))
   (let* ((tbl (unidata-scase *unicode-data*))
@@ -276,8 +271,7 @@
 	(logand (aref (scase-ext tbl) i) #x1FFFFF))))
 
 (defun unicode-lower (code)
-  (declare #+nil(optimize (speed 3) (space 0) (debug 0) (safety 0)
-		     (ext:inhibit-warnings 3))
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
 	   (type (integer 0 #x10FFFF) code))
   (unless (unidata-scase *unicode-data*) (load-scase))
   (let* ((tbl (unidata-scase *unicode-data*))
@@ -287,8 +281,7 @@
 	code)))
 
 (defun unicode-title (code)
-  (declare #+nil(optimize (speed 3) (space 0) (debug 0) (safety 0)
-		     (ext:inhibit-warnings 3))
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
 	   (type (integer 0 #x10FFFF) code))
   (unless (unidata-scase *unicode-data*) (load-scase))
   (let* ((tbl (unidata-scase *unicode-data*))
