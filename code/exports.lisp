@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.281 2009/01/21 19:06:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.282 2009/04/13 13:50:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1853,7 +1853,6 @@
 (defpackage "ALIEN"
   (:import-from "LISP" "*" "ARRAY" "DOUBLE-FLOAT" "FUNCTION"
 		"BOOLEAN" "INTEGER" "LONG-FLOAT" "SINGLE-FLOAT" "UNION" "VALUES")
-  (:import-from "VM" "CALLBACK-ACCESSOR-FORM" "MAKE-CALLBACK-TRAMPOLINE")
   (:export "*" "ADDR" "ALIEN" "ALIEN-FUNCALL" "ALIEN-SAP"
 	   "ALIEN-SIZE" "ARRAY" "BOOLEAN" "CAST" "DEF-ALIEN-ROUTINE"
 	   "DEF-ALIEN-TYPE" "DEF-ALIEN-VARIABLE" "DEF-BUILTIN-ALIEN-TYPE"
