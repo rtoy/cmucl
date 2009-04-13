@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.64.18.3 2008/06/23 15:03:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.64.18.3.2.1 2009/04/13 16:38:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -732,7 +732,13 @@ See the CMU Common Lisp User's Manual for more information.
 	 ;; Rebind some printer control variables.
 	 (kernel:*current-level* 0)
 	 (*print-readably* nil)
-	 (*read-eval* t))
+	 (*read-eval* t)
+	 ;; XXX: Fixme: What external format do we really want to use
+	 ;; in the debugger?  This is problem if we have a badly
+	 ;; formed string that the current external format can't
+	 ;; handle.
+	 #+unicode
+	 (*default-external-format* :iso8859-1))
     (real-invoke-debugger condition)))
 
 ;;; SHOW-RESTARTS -- Internal.
