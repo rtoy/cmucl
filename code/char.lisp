@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.5 2009/04/11 12:04:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.6 2009/04/14 20:55:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -242,7 +242,7 @@
   (or (< 96 (char-code char) 123)
       #+(and unicode (not unicode-bootstrap))
       (and (> (char-code char) 127)
-	   (= (unicode-category (char-code char)) #x16))))
+	   (= (unicode-category (char-code char)) #x17))))
 
 
 (defun both-case-p (char)
@@ -255,7 +255,7 @@
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m 127)
 	     (let ((cat (unicode-category (char-code char))))
-	       (or (= cat #x16) (= cat #x1d)))))))
+	       (or (= cat #x17) (= cat #x1d)))))))
 
 
 (defun digit-char-p (char &optional (radix 10.))
@@ -288,7 +288,7 @@
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m 127)
 	     (let ((cat (unicode-category (char-code char))))
-	       (or (= cat #x16) (= cat #x1D)))))))
+	       (or (= cat #x17) (= cat #x1D)))))))
 
 
 (defun char= (character &rest more-characters)

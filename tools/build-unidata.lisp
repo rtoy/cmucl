@@ -4,11 +4,11 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.1 2009/04/11 12:04:27 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.2 2009/04/14 20:55:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; Build the Unicode data file.
+;;; Build the Unicode data file
 ;;;
 ;;; This can be run from an 8-bit build just fine.  The Unicode data
 ;;; file is read and written in portable way so it can be used on any
@@ -20,24 +20,24 @@
 ;;; This only needs to be run if the Unicode database changes and we
 ;;; need a new Unicode data file.
 
-
 (in-package "COMMON-LISP-USER")
 
 (defstruct unidata
   range
   name+
   name
-  name1+
-  name1
   category
   scase
+  decomp
+  name1+
+  name1
   )
 
 (defvar *unicode-data* (make-unidata))
 
 ;;; These need to be synched with code/unidata.lisp
 
-(defstruct nametrie
+(defstruct dictionary
   (cdbk (ext:required-argument) :read-only t :type simple-vector)
   (keyv (ext:required-argument) :read-only t
 	:type (simple-array (unsigned-byte 8) (*)))
@@ -50,25 +50,42 @@
   (namev (ext:required-argument) :read-only t
 	 :type (simple-array (unsigned-byte 32) (*))))
 
-(defstruct codeset
-  (code (ext:required-argument) :read-only t
+(defstruct range
+  (codes (ext:required-argument) :read-only t
+	 :type (simple-array (unsigned-byte 32) (*))))
+
+(defstruct ntrie
+  (split (ext:required-argument) :read-only t
+	 :type (unsigned-byte 8))
+  (hvec (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 16) (*)))
+  (mvec (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 16) (*))))
+
+(defstruct (ntrie4 (:include ntrie))
+  (lvec (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 4) (*))))
+
+(defstruct (ntrie8 (:include ntrie))
+  (lvec (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 8) (*))))
+
+(defstruct (ntrie16 (:include ntrie))
+  (lvec (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 16) (*))))
+
+(defstruct (ntrie32 (:include ntrie))
+  (lvec (ext:required-argument) :read-only t
 	:type (simple-array (unsigned-byte 32) (*))))
 
-(defstruct rangeset
-  (min (ext:required-argument) :read-only t
-       :type (simple-array (unsigned-byte 32) (*)))
-  (max (ext:required-argument) :read-only t
-       :type (simple-array (unsigned-byte 32) (*))))
 
-(defstruct (name (:include codeset))
-  (low (ext:required-argument) :read-only t
-       :type (simple-array (unsigned-byte 8) (*))))
+(defstruct (scase (:include ntrie32))
+  (svec (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 16) (*))))
 
-(defstruct (category (:include rangeset)))
-
-(defstruct (scase (:include codeset))
-  (ext (ext:required-argument) :read-only t
-       :type (simple-array (unsigned-byte 32) (*))))
+#+(or)
+(defstruct (decomp (:include codeset))
+  (ext (ext:required-argument) :read-only t :type simple-vector))
 
 
 ;; Codebooks for encoding names.  These are fairly arbitrary.  Order isn't
@@ -81,7 +98,7 @@
 ;; occurs in some other entry).
 ;;
 ;; *CODEBOOK* is for the modern character names, *CODEBOOK-1* is for
-;; the Unicode 1.0 names, and *CODEBOOK-E* is for HTML entity names.
+;; the Unicode 1.0 names.
 (defvar *codebook*
   #(" " "LETTER" "NA" "SMALL" "CAPITAL" "MATHEMATICAL" "RADICAL" "ARABIC"
     "HANGUL" "LATIN" "SYLLABLE" "-" "WITH" "RA" "YI" "CJK" "FORM" "LIGATURE"
@@ -143,8 +160,6 @@
     "H" "K" "DELETE" "D" "TATWEEL" "STROKE" "MARBUTAH" "SHIFT" "TIP" "FROM"
     "SHADOWED" "S" "THAA" "F" "M" "TRANSMISSION" "P" "TRANSFINITE" "T" "2"))
 
-;; *codebook-e* ??
-
 
 
 (defun encode-name (string codebook)
@@ -178,7 +193,7 @@
 		  (return-from name-lookup current)
 		  (return)))))))))	; from DOTIMES - do outer LOOP again
 
-(defun build-nametrie (codebook entries)
+(defun build-dictionary (codebook entries)
   (let ((khash (make-hash-table :test 'equalp))
 	(thash (make-hash-table))
 	(top 0)
@@ -249,7 +264,7 @@
 	      vec3 (make-array top :element-type '(unsigned-byte 32)))
 	(format t "~&Pass 2...~%")
 	(pass2 trie)
-	(format t "~&Finalizing...~%")
+	(format t "~&Finalizing~%")
 	(dotimes (i top)
 	  (let ((xxx (aref vec2 i)))
 	    (dotimes (j (aref keyl (ash xxx -18)))
@@ -258,49 +273,113 @@
 	  (let ((n (name-lookup name codebook keyv keyl vec2)))
 	    (unless n (error "Codepoint not found for ~S." name))
 	    (setf (ldb (byte 14 18) (aref vec3 n)) (length name))))))
-    (make-nametrie :cdbk codebook
+    (make-dictionary :cdbk codebook
 		   :keyv keyv :keyl keyl
 		   :codev vec1 :nextv vec2 :namev vec3)))
 
+(defun pack (ucd range fn default bits split)
+  (let* ((lbits (1+ (logand split 15)))
+	 (mbits (1+ (ash split -4)))
+	 (upos 0)
+	 (base 0)
+	 (len (ash 1 mbits))
+	 (posn len)
+	 (hvec (make-array (1+ (ash #x110000 (- (+ mbits lbits))))
+			   :element-type '(unsigned-byte 16)))
+	 (ttop (1+ (ash #x110000 (- lbits))))
+	 (tvec (make-array ttop :element-type '(unsigned-byte 16)))
+	 (lvec (make-array 0 :element-type (list 'unsigned-byte bits))))
+    ;; pass 1 - build lvec and temporary tvec
+    (loop
+      ;;(format t "~&Pass 1: ~6,'0X~%" (ash base lbits))
+      (let ((vec (make-array (ash 1 lbits) :initial-element default
+			     :element-type (list 'unsigned-byte bits)))
+	    (empty t))
+	(loop while (and (< upos (length ucd))
+			 (< (ucdent-code (aref ucd upos))
+			    (ash (1+ base) lbits)))
+	  do
+	    (let* ((min (ucdent-code (aref ucd upos)))
+		   (max (let ((x (position min (range-codes range))))
+			  (if (and x (evenp x))
+			      (aref (range-codes range) (1+ x))
+			      min)))
+		   (i (max (- min (ash base lbits)) 0))
+		   (j (min (- max (ash base lbits)) (1- (ash 1 lbits)))))
+	      (loop for i from i to j do
+	        (setf (aref vec i) (funcall fn (aref ucd upos)))
+		(unless (= (aref vec i) default)
+		  (setq empty nil)))
+	      (if (< max (ash (1+ base) lbits))
+		  (incf upos)
+		  (return))))
+	(if empty
+	    (setf (aref tvec base) #xFFFF)
+	    (let ((idx (search vec lvec)))
+	      (when (null idx)
+		(setq idx (length lvec))
+		(setf lvec (adjust-array lvec (+ idx (ash 1 lbits))))
+		(replace lvec vec :start1 idx))
+	      (setf (aref tvec base) idx))))
+      (incf base)
+      (when (> (ash base lbits) #x10FFFF)
+	(return)))
+    ;; pass 2 - build hvec and transform tvec into mvec
+    (setf base 1 (aref hvec 0) 0)
+    (loop
+      ;;(format t "~&Pass 2: ~6,'0X~%" (ash base (+ mbits lbits)))
+      (let ((empty t))
+	(loop for i from posn below (+ posn len)
+	  when (/= (aref tvec i) #xFFFF) do (setq empty nil)
+	  while empty)
+	(if empty
+	    (progn
+	      (setf (aref hvec base) #xFFFF)
+	      (replace tvec tvec :start1 posn :start2 (+ posn len))
+	      (decf ttop len))
+	    (let ((idx (search tvec tvec
+			       :start1 posn :end1 (+ posn len)
+			       :end2 ttop))
+		  (dl len) (ds posn) (pinc len))
+	      (when (< idx posn)
+		(when (> (+ idx len) posn)
+		  (setq dl (- posn idx) ds (+ idx len)))
+		(decf pinc dl)
+		(replace tvec tvec :start1 ds :start2 (+ ds dl))
+		(decf ttop dl))
+	      (incf posn pinc)
+	      (setf (aref hvec base) idx))))
+      (incf base)
+      (when (> (ash base (+ mbits lbits)) #x10FFFF)
+	(return)))
+    (values hvec (lisp::shrink-vector tvec ttop) lvec)))
+
 
 
-(defun build-names (data trie)		; (name . code)
-  (let ((cdbk (nametrie-cdbk trie))
-	(keyv (nametrie-keyv trie))
-	(keyl (nametrie-keyl trie))
-	(nextv (nametrie-nextv trie))
-	(vec1 (make-array (length data) :element-type '(unsigned-byte 32)))
-	(vec2 (make-array (length data) :element-type '(unsigned-byte 8)))
-	(indx 0))
-    (loop for (name . code) in data do
-      (let ((id (name-lookup name cdbk keyv keyl nextv)))
-	(when id
-	  (setf (aref vec1 indx) (logior code (ash (ash id -8) 21))
-		(aref vec2 indx) (logand id #xFF))
-	  (incf indx))))
-    (lisp::shrink-vector vec1 indx)
-    (lisp::shrink-vector vec2 indx)
-    (make-name :code vec1 :low vec2)))
+(defconstant +decomposition-type+
+  '(nil "<font>" "<noBreak>" "<initial>" "<medial>" "<final>" "<isolated>"
+    "<circle>" "<fraction>" "<super>" "<sub>" "<vertical>" "<wide>" "<narrow>"
+    "<small>" "<square>" "<compat>"))
 
-(defun build-categories (data)		; (category . (min . max))
+#+(or)
+(defun build-decomp (data)		; (code . (type . (code ...)))
   (let ((vec1 (make-array (length data) :element-type '(unsigned-byte 32)))
-	(vec2 (make-array (length data) :element-type '(unsigned-byte 32))))
-    (loop for (cat . (min . max)) in data as indx upfrom 0 do
-      (setf (aref vec1 indx) (logior (ash cat 21) min)
-	    (aref vec2 indx) max))
-    (make-category :min vec1 :max vec2)))
-
-(defun build-scase (data)		; (code upper lower title)
-  (let ((vec1 (make-array (length data) :element-type '(unsigned-byte 32)))
-	(vec2 (make-array (length data) :element-type '(unsigned-byte 32))))
-    (loop for (code upper lower title) in data as indx upfrom 0 do
-      (let ((flag (if (= code upper) #.(ash 1 31) 0))
-	    (case (if (= code upper) lower upper))
-	    (ttl1 (ash (logand title #x7FF) 21))
-	    (ttl2 (ash (logand title #x1FF800) 10)))
-	(setf (aref vec1 indx) (logior code ttl2 flag)
-	      (aref vec2 indx) (logior case ttl1))))
-    (make-scase :code vec1 :ext vec2)))
+	(vec2 (make-array (length data))))
+    (loop for (code type . decomp) in data as indx upfrom 0 do
+      (setf (aref vec1 indx)
+	  (logior code
+		  (ash (position type +decomposition-type+ :test 'equalp) 21)))
+      (let ((tmp '()))
+	(dolist (x decomp)
+	  (if (< x #x10000)
+	      (push x tmp)
+	      (let ((x (- x #x10000)))
+		(push (logior (ldb (byte 10 10) x) #xD800) tmp)
+		(push (logior (ldb (byte 10 0) x) #xDC00) tmp))))
+	(setf (aref vec2 indx)
+	    (make-array (length tmp) :element-type '(unsigned-byte 16)
+			:initial-contents (nreverse tmp)))))
+    (make-decomp :code vec1 :ext vec2)))
 
 
 
@@ -326,43 +405,56 @@
 	;; Range data
 	(let ((data (unidata-range *unicode-data*)))
 	  (vector-push (file-position stm) index)
-	  (write32 (length (rangeset-min data)) stm)
-	  (write-vector (rangeset-min data) stm :endian-swap :network-order)
-	  (write-vector (rangeset-max data) stm :endian-swap :network-order))
+	  (write32 (length (range-codes data)) stm)
+	  (write-vector (range-codes data) stm :endian-swap :network-order))
 	;; Character name data
 	(let ((data (unidata-name+ *unicode-data*)))
 	  (vector-push (file-position stm) index)
-	  (write-byte (1- (length (nametrie-cdbk data))) stm)
-	  (write16 (length (nametrie-keyv data)) stm)
-	  (write32 (length (nametrie-codev data)) stm)
-	  (let ((codebook (nametrie-cdbk data)))
+	  (write-byte (1- (length (dictionary-cdbk data))) stm)
+	  (write16 (length (dictionary-keyv data)) stm)
+	  (write32 (length (dictionary-codev data)) stm)
+	  (let ((codebook (dictionary-cdbk data)))
 	    (dotimes (i (length codebook))
 	      (write-byte (length (aref codebook i)) stm)
 	      (dotimes (j (length (aref codebook i)))
 		(write-byte (char-code (char (aref codebook i) j)) stm))))
-	  (write-vector (nametrie-keyv data) stm :endian-swap :network-order)
-	  (write-vector (nametrie-keyl data) stm :endian-swap :network-order)
-	  (write-vector (nametrie-codev data) stm :endian-swap :network-order)
-	  (write-vector (nametrie-nextv data) stm :endian-swap :network-order)
-	  (write-vector (nametrie-namev data) stm :endian-swap :network-order))
+	  (write-vector (dictionary-keyv data) stm :endian-swap :network-order)
+	  (write-vector (dictionary-keyl data) stm :endian-swap :network-order)
+	  (write-vector (dictionary-codev data) stm :endian-swap :network-order)
+	  (write-vector (dictionary-nextv data) stm :endian-swap :network-order)
+	  (write-vector (dictionary-namev data) stm :endian-swap :network-order))
 	;; Codepoint-to-name mapping
 	(let ((data (unidata-name *unicode-data*)))
 	  (vector-push (file-position stm) index)
-	  (write32 (length (name-code data)) stm)
-	  (write-vector (name-code data) stm :endian-swap :network-order)
-	  (write-vector (name-low data) stm :endian-swap :network-order))
+	  (write-byte (ntrie32-split data) stm)
+	  (write16 (length (ntrie32-hvec data)) stm)
+	  (write16 (length (ntrie32-mvec data)) stm)
+	  (write16 (length (ntrie32-lvec data)) stm)
+	  (write-vector (ntrie32-hvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie32-mvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie32-lvec data) stm :endian-swap :network-order))
 	;; Codepoint-to-category table
 	(let ((data (unidata-category *unicode-data*)))
 	  (vector-push (file-position stm) index)
-	  (write32 (length (category-min data)) stm)
-	  (write-vector (category-min data) stm :endian-swap :network-order)
-	  (write-vector (category-max data) stm :endian-swap :network-order))
+	  (write-byte (ntrie8-split data) stm)
+	  (write16 (length (ntrie8-hvec data)) stm)
+	  (write16 (length (ntrie8-mvec data)) stm)
+	  (write16 (length (ntrie8-lvec data)) stm)
+	  (write-vector (ntrie8-hvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie8-mvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie8-lvec data) stm :endian-swap :network-order))
 	;; Simple case mapping table
 	(let ((data (unidata-scase *unicode-data*)))
 	  (vector-push (file-position stm) index)
-	  (write32 (length (scase-code data)) stm)
-	  (write-vector (scase-code data) stm :endian-swap :network-order)
-	  (write-vector (scase-ext data) stm :endian-swap :network-order))
+	  (write-byte (scase-split data) stm)
+	  (write-byte (length (scase-svec data)) stm)
+	  (write16 (length (scase-hvec data)) stm)
+	  (write16 (length (scase-mvec data)) stm)
+	  (write16 (length (scase-lvec data)) stm)
+	  (write-vector (scase-hvec data) stm :endian-swap :network-order)
+	  (write-vector (scase-mvec data) stm :endian-swap :network-order)
+	  (write-vector (scase-lvec data) stm :endian-swap :network-order)
+	  (write-vector (scase-svec data) stm :endian-swap :network-order))
 	;; Patch up index
 	(file-position stm 8)
 	(dotimes (i (length index))
@@ -382,9 +474,9 @@
   ;; ...
   )
 
-(defun foreach-ucd (name fn &optional (defaults #p"target:unidata/"))
+(defun foreach-ucd (name fn)
   (with-open-file (s (make-pathname :name name :type "txt"
-				    :defaults defaults))
+				    :defaults #p"target:UNIDATA/"))
     (if (string= name "Unihan")
 	(loop for line = (read-line s nil) while line do
 	  (when (char= (char line 0) #\U)
@@ -424,52 +516,93 @@
 		      (t
 		       (apply fn lo hi (rest split))))))))))
 
-(defun read-data (&optional (defaults #p"target:unidata/"))
-  (let ((vec (make-array 50000 :fill-pointer 0))
+(defun parse-decomposition (string)
+  (let ((type nil) (n 0))
+    (when (char= (char string 0) #\<)
+      (setq n (1+ (position #\Space string)))
+      (setq type (subseq string 0 (1- n))))
+    (list* type
+	   (loop while (< n (length string))
+	     collect (multiple-value-bind (a b)
+			 (parse-integer string  :radix 16
+			      :start n :end (position #\Space string :start n))
+		       (setq n (1+ b))
+		       a)))))
+
+(declaim (ftype (function () (values simple-vector range)) read-data))
+(defun read-data ()
+  (let ((vec (make-array 50000))
 	(pos 0)
-	(rmin (make-array 50 :element-type '(unsigned-byte 32)))
-	(rmax (make-array 50 :element-type '(unsigned-byte 32)))
+	(range (make-array 50 :element-type '(unsigned-byte 32)))
 	(rpos 0))
     (flet ((cat (x) (dpb (position (char x 0) "CLMNPSZ") (byte 3 4)
-			 (position (char x 1) "cdefiklmnopstu")))
+			 (position (char x 1) "ncdefiklmopstu")))
 	   (num (x) (if (string= x "") nil (read-from-string x)))
 	   (chr (x) (if (string= x "") nil (parse-integer x :radix 16)))
-	   (bool (x) (string= x "Y")))
+	   (str (x) (if (string= x "") nil x))
+	   (bool (x) (string= x "Y"))
+	   (decomp (x) (if (string= x "") nil (parse-decomposition x))))
       (foreach-ucd "UnicodeData"
 	(lambda (min max name cat comb bidi decomp num1 num2 num3
 		 mirror name1 comment upper lower title)
 	  (when (> max min)
-	    (setf (aref rmin rpos) min (aref rmax rpos) max)
-	    (incf rpos))
+	    (setf (aref range rpos) min (aref range (1+ rpos)) max)
+	    (incf rpos 2))
 	  (when (position #\( name1)
 	    (setq name1 (subseq name1 0 (1- (position #\( name1)))))
-	  (vector-push (make-ucdent min name (cat cat) (num comb) bidi decomp
-				    (num num1) (num num2) (num num3) (bool mirror)
-				    name1 comment (chr upper) (chr lower) (chr title))
-		       vec)
-	  (incf pos))
-	defaults))
-    #+nil
-    (progn
-      (lisp::shrink-vector vec pos)
-      (lisp::shrink-vector rmin rpos)
-      (lisp::shrink-vector rmax rpos))
-    (values (map 'vector #'identity vec)
-	    (map '(simple-array (unsigned-byte 32) (*)) #'identity rmin)
-	    (map '(simple-array (unsigned-byte 32) (*)) #'identity rmax))))
+	  (setf (aref vec pos)
+	      (make-ucdent min name (cat cat) (num comb) (str bidi)
+			   (decomp decomp)
+			   (num num1) (num num2) (num num3)
+			   (bool mirror) (str name1) (str comment)
+			   (chr upper) (chr lower) (chr title)))
+	  (incf pos))))
+    (lisp::shrink-vector vec pos)
+    (lisp::shrink-vector range rpos)
+    (values vec (make-range :codes range))))
 
 
 
-(defun build-unidata (&optional (defaults #p"target:unidata/"))
+(defun pack-name (ucdent name1 dictionary)
+  (let* ((cdbk (dictionary-cdbk dictionary))
+	 (keyv (dictionary-keyv dictionary))
+	 (keyl (dictionary-keyl dictionary))
+	 (nextv (dictionary-nextv dictionary))
+	 (name (if name1 (ucdent-name1 ucdent) (ucdent-name ucdent))))
+    (or (and name (name-lookup name cdbk keyv keyl nextv)) 0)))
+
+(defun pack-case (ucdent svec)
+  (let* ((uo (if (ucdent-upper ucdent)
+		 (- (ucdent-code ucdent) (ucdent-upper ucdent))
+		 0))
+	 (lo (if (ucdent-lower ucdent)
+		 (- (ucdent-code ucdent) (ucdent-lower ucdent))
+		 0))
+	 (to (if (ucdent-title ucdent)
+		 (- (ucdent-code ucdent) (ucdent-title ucdent))
+		 0))
+	 pu pl pt)
+    (unless (setq pu (position (abs uo) svec))
+      (setq pu (fill-pointer svec))
+      (vector-push-extend (abs uo) svec))
+    (unless (setq pl (position (abs lo) svec))
+      (setq pl (fill-pointer svec))
+      (vector-push-extend (abs lo) svec))
+    (unless (setq pt (position (abs to) svec))
+      (setq pt (fill-pointer svec))
+      (vector-push-extend (abs to) svec))
+    (logior (ash (if (minusp to) (logior 128 pt) pt) 16)
+	    (ash (if (minusp lo) (logior 128 pl) pl) 8)
+	    (if (minusp uo) (logior 128 pu) pu))))
+
+(defun build-unidata ()
   (format t "~&Reading data~%")
-  (multiple-value-bind (ucd rmin rmax)
-      (read-data defaults)
+  (multiple-value-bind (ucd range) (read-data)
     (foreach-ucd "NameAliases"
       (lambda (min max alias)
 	(declare (ignore max))
-	(push alias (ucdent-aliases (find min ucd :key #'ucdent-code))))
-      defaults)
-    (setf (unidata-range *unicode-data*) (make-rangeset :min rmin :max rmax))
+	(push alias (ucdent-aliases (find min ucd :key #'ucdent-code)))))
+    (setf (unidata-range *unicode-data*) range)
     (format t "~&Building character name tables~%")
     (let* ((data (loop for ent across ucd
 		   when (char/= (char (ucdent-name ent) 0) #\<)
@@ -477,37 +610,35 @@
 		   when (ucdent-aliases ent)
 		     nconc (loop for name in (ucdent-aliases ent)
 			     collect (cons name (ucdent-code ent)))))
-	   (trie (build-nametrie *codebook* data)))
-      (setf (unidata-name+ *unicode-data*) trie)
-      (setf (unidata-name *unicode-data*) (build-names data trie)))
+	   (dict (build-dictionary *codebook* data)))
+      (setf (unidata-name+ *unicode-data*) dict)
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x) (pack-name x nil dict)) 0 32 #x54)
+	(setf (unidata-name *unicode-data*)
+	    (make-ntrie32 :split #x54 :hvec hvec :mvec mvec :lvec lvec))))
     (format t "~&Building Unicode 1.0 character name tables~%")
     (let* ((data (loop for ent across ucd
 		   when (plusp (length (ucdent-name1 ent)))
 		     collect (cons (ucdent-name1 ent) (ucdent-code ent))))
-	   (trie (build-nametrie *codebook-1* data)))
-      (setf (unidata-name1+ *unicode-data*) trie)
-      (setf (unidata-name1 *unicode-data*) (build-names data trie)))
-    (format t "~&Building category table~%")
-    (let ((data (loop with data = '() for ent across ucd
-		  do (unless (eql (ucdent-cat ent) (caar data))
-		       (push (cons (ucdent-cat ent)
-				   (cons (ucdent-code ent) (ucdent-code ent)))
-			     data))
-		     (let ((n (position (ucdent-code ent) rmin)))
-		       (setf (cddar data)
-			   (if n (aref rmax n) (ucdent-code ent))))
-		  finally (return (nreverse data)))))
-      (setf (unidata-category *unicode-data*) (build-categories data)))
+	   (dict (build-dictionary *codebook-1* data)))
+      (setf (unidata-name1+ *unicode-data*) dict)
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x) (pack-name x t dict)) 0 32 #x54)
+      (setf (unidata-name1 *unicode-data*)
+	  (make-ntrie32 :split #x72 :hvec hvec :mvec mvec :lvec lvec))))
+    (format t "~&Building general category table~%")
+    (multiple-value-bind (hvec mvec lvec)
+	(pack ucd range #'ucdent-cat 0 8 #x53)
+      (setf (unidata-category *unicode-data*)
+	  (make-ntrie8 :split #x53 :hvec hvec :mvec mvec :lvec lvec)))
     (format t "~&Building simple case-conversion table~%")
-    (let ((data (loop for ent across ucd
-		  when (or (ucdent-upper ent)
-			   (ucdent-lower ent)
-			   (ucdent-title ent))
-		    collect (list (ucdent-code ent)
-				  (or (ucdent-upper ent) (ucdent-code ent))
-				  (or (ucdent-lower ent) (ucdent-code ent))
-				  (or (ucdent-title ent) (ucdent-code ent))))))
-      (setf (unidata-scase *unicode-data*) (build-scase data)))
-    ;; ...
-    ))
-
+    (let ((svec (make-array 100 :element-type '(unsigned-byte 16)
+			    :fill-pointer 0 :adjustable t)))
+      (vector-push-extend 0 svec)
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x) (pack-case x svec))
+		0 32 #x62)
+	(setf (unidata-scase *unicode-data*)
+	    (make-scase :split #x62 :hvec hvec :mvec mvec :lvec lvec
+			:svec (copy-seq svec)))))
+    nil))
