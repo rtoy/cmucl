@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3 2007/11/05 15:25:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.1 2009/04/14 17:28:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -105,6 +105,10 @@
 
 ;;; READ-VECTOR --
 (defun read-vector (vector stream &key (start 0) end (endian-swap :byte-8))
+  "Read from Stream into Vector.  The Start and End indices of Vector
+  is in octets, and must be an multiple of the octets per element of
+  the vector element.  The keyword argument :Endian-Swap specifies any
+  endian swapping to be done. "
   (declare (type vector vector)
 	   (type stream stream)
 	   (type unsigned-byte start)	; a list does not have a limit
@@ -129,14 +133,18 @@
 ;;; WRITE VECTOR --
 ;;; returns the next octet-position in vector.
 (defun write-vector (vector stream &key (start 0) (end nil) (endian-swap :byte-8))
+  "Write Vector to Stream.  The Start and End indices of Vector is in
+  octets, and must be an multiple of the octets per element of the
+  vector element.  The keyword argument :Endian-Swap specifies any
+  endian swapping to be done. "
   (declare (type vector vector)
 	   (type stream stream)
 	   (type unsigned-byte start)	; a list does not have a limit
 	   (type (or null unsigned-byte) end)
 	   (values unsigned-byte))
 
-  (let* ((end (or end (length vector)))
-	 (octets-per-element (vector-elt-width vector))
+  (let* ((octets-per-element (vector-elt-width vector))
+	 (end (or end (* octets-per-element (length vector))))
 	 (swap-mask (endian-swap-value vector endian-swap))
 	 (next-index end))
     (declare (type fixnum swap-mask end octets-per-element next-index))
@@ -153,7 +161,9 @@
 		    stream))
 	   (endian-swap-vector vector start end swap-mask)
 	   (unwind-protect
-		(write-sequence vector stream :start start :end end)
+		(write-sequence vector stream
+				:start (floor start octets-per-element)
+				:end (floor end octets-per-element))
 	     (endian-swap-vector vector start end swap-mask))
 	   vector))
     (* next-index octets-per-element)))
