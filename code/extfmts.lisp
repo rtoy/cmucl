@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.10 2009/04/14 02:15:24 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.11 2009/04/14 21:10:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -481,19 +481,32 @@
 
 
 (def-ef-macro ef-string-to-octets (extfmt lisp::lisp +ef-max+ +ef-so+)
-  `(lambda (string start end buffer &aux (ptr 0) (state nil))
+  `(lambda (string start end buffer &aux (ptr 0) (state nil) (code 0))
      (declare #|(optimize (speed 3) (safety 0) (space 0) (debug 0))|#
 	      (type simple-string string)
 	      (type kernel:index start end ptr)
 	      (type (simple-array (unsigned-byte 8) (*)) buffer)
+              (type (integer 0 #x10ffff) code)
 	      (ignorable state))
-     (dotimes (i (- end start) (values buffer ptr))
-       (declare (type kernel:index i))
-       (char-to-octets ,extfmt (schar string (+ start i)) state
-		       (lambda (b)
-			 (when (= ptr (length buffer))
-			   (setq buffer (adjust-array buffer (* 2 ptr))))
-			 (setf (aref buffer (1- (incf ptr))) b))))))
+     (loop with i of-type kernel:index = 0
+	   while (< i (- end start))
+	   do
+	   (setf code (char-code (schar string (+ start i))))
+	   (incf i)
+	   (when (<= #xd800 code #xdbff)
+	     ;; High surrogate!  Grab the low surrogate and convert to a
+	     ;; codepoint before outputting it.  XXX: What do we do if
+	     ;; there is no low surrogate either because it's not there
+	     ;; or because we've reached the end of the string?
+	     (setf code (+ (ash (- code #xd800) 10)
+			   (char-code (schar string (+ start i)))
+			   #x2400))
+	     (incf i))
+	   (codepoint-to-octets ,extfmt code state
+				(lambda (b)
+				  (when (= ptr (length buffer))
+				    (setq buffer (adjust-array buffer (* 2 ptr))))
+				  (setf (aref buffer (1- (incf ptr))) b))))))
 
 (defun string-to-octets (string &key (start 0) end (external-format :default)
 				     (buffer nil bufferp))
@@ -510,20 +523,28 @@
       (values (if bufferp buffer (lisp::shrink-vector buffer ptr)) ptr))))
 
 (def-ef-macro ef-octets-to-string (extfmt lisp::lisp +ef-max+ +ef-os+)
-  `(lambda (octets ptr end string &aux (pos -1) (count 0) (state nil))
+  `(lambda (octets ptr end string &aux (pos -1) (count 0) (state nil) (code 0))
      (declare #|(optimize (speed 3) (safety 0) (space 0) (debug 0))|#
 	      (type (simple-array (unsigned-byte 8) (*)) octets)
 	      (type kernel:index end count)
 	      (type (integer -1 (#.array-dimension-limit)) ptr pos)
 	      (type simple-string string)
+              (type (integer 0 #x10ffff) code)
 	      (ignorable state))
      (loop until (>= ptr end)
 	do (when (= pos (length string))
 	     (setq string (adjust-array string (* 2 pos))))
-	   (setf (schar string (incf pos))
-	       (octets-to-char ,extfmt state count
+	   (setf code
+	       (octets-to-codepoint ,extfmt state count
 			       (aref octets (incf ptr)) ;;@@ EOF??
 			       (lambda (n) (decf ptr n))))
+           ;; Convert codepoint to UTF-16 surrogate pairs if needed
+	   (cond ((<= code #xffff)
+		  (setf (aref string (incf pos)) (code-char code)))
+		 (t
+		  (decf code #x10000)
+		  (setf (aref string (incf pos)) (code-char (+ (ldb (byte 10 10) code) #xd800)))
+		  (setf (aref string (incf pos)) (code-char (+ (ldb (byte 10 0) code) #xdc00)))))
 	finally (return (values string (1+ pos))))))
 
 (defun octets-to-string (octets &key (start 0) end (external-format :default)
