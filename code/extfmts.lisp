@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.9 2009/03/28 13:31:42 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.10 2009/04/14 02:15:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -112,11 +112,39 @@
 ;;;   Define an external format based on a previously-defined external
 ;;;   format, Base.  The slot names used in Slots must match those in Base.
 ;;;
-;;; Note: external-formats work on code-points, not characters, so that
-;;;   the entire 31 bit ISO-10646 range can be used internally regardless of
-;;;   the size of a character recognized by Lisp and external formats
-;;;   can be useful to people who want to process characters outside the
-;;;   Lisp range (see CODEPOINT-TO-OCTETS, OCTETS-TO-CODEPOINT)
+;;; octets-to-code (state input unput &rest vars)
+;;;   Defines a form to be used by the external format to convert
+;;;   octets to a code point.  State is a form that can be used by the
+;;;   body to access the state variable of the stream.  Input is a
+;;;   form that can be used to read one more octets from the input
+;;;   strema.  Similarly, Unput is a form to put back one octet to the
+;;;   input stream.  Vars is a list of vars that need to be defined
+;;;   for any symbols used within the form.
+;;;
+;;;   This should return two values: the code and the number of octets
+;;;   read to form the code.
+;;;
+;;; code-to-octets (code state output &rest vars)
+;;;   Defines a form to be used by the external format to convert a
+;;;   code point to octets for output.  Code is the code point to be
+;;;   converted.  State is a form to access the current value of the
+;;;   stream's state variable.  Output is a form that writes one octet
+;;;   to the output stream.
+;;;
+;;; Note: external-formats generally work on code-points, not
+;;;   characters, so that the entire 31 bit ISO-10646 range can be
+;;;   used internally regardless of the size of a character recognized
+;;;   by Lisp and external formats can be useful to people who want to
+;;;   process characters outside the Lisp range (see
+;;;   CODEPOINT-TO-OCTETS, OCTETS-TO-CODEPOINT)
+;;;
+;;;   However, this is not required.  External formats can also
+;;;   operate on code units (16-bit unsigned integers in CMUCL).  This
+;;;   is needed for an external format to support surrogate pairs in
+;;;   CMUCL's UTF-16 string format because the output of
+;;;   octets-to-code is stored into a string.  If you need to operate
+;;;   on code points, use an appropriate external format that actually
+;;;   returns code points and not code units.
 ;;;
 (defmacro define-external-format (name (&rest args) (&rest slots)
 				       &optional octets-to-code code-to-octets)
