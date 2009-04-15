@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.3 2009/04/14 20:55:12 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.4 2009/04/15 14:41:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,8 @@
   name
   category
   scase
+  numeric
+  decomp
   )
 
 (defvar *unicode-data* (make-unidata))
@@ -70,6 +72,10 @@
 
 (defstruct (scase (:include ntrie32))
   (svec (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 16) (*))))
+
+(defstruct (decomp (:include ntrie32))
+  (tabl (ext:required-argument) :read-only t
 	:type (simple-array (unsigned-byte 16) (*))))
 
 
@@ -127,7 +133,7 @@
 	       (when (= (setq min (+ n 2)) max) (return nil)))
 	      (t (return (ash n -1))))))))
 
-(declaim (inline qref))
+(declaim (inline qref qref4 qref8 qref16 qref32))
 (defun qref (ntrie code)
   (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
 	   (type ntrie ntrie) (type (integer 0 #x10FFFF) code))
@@ -281,6 +287,37 @@
     (setf (unidata-scase *unicode-data*)
 	(make-scase :split split :hvec hvec :mvec mvec :lvec lvec :svec svec))))
 
+(defloader load-numerics (stm 5)
+  (let* ((split (read-byte stm))
+	 (hlen (read16 stm))
+	 (mlen (read16 stm))
+	 (llen (read16 stm))
+	 (hvec (make-array hlen :element-type '(unsigned-byte 16)))
+	 (mvec (make-array mlen :element-type '(unsigned-byte 16)))
+	 (lvec (make-array llen :element-type '(unsigned-byte 32))))
+    (read-vector hvec stm :endian-swap :network-order)
+    (read-vector mvec stm :endian-swap :network-order)
+    (read-vector lvec stm :endian-swap :network-order)
+    (setf (unidata-numeric *unicode-data*)
+	(make-ntrie32 :split split :hvec hvec :mvec mvec :lvec lvec))))
+
+(defloader load-decomp (stm 6)
+  (let* ((split (read-byte stm))
+	 (hlen (read16 stm))
+	 (mlen (read16 stm))
+	 (llen (read16 stm))
+	 (tlen (read16 stm))
+	 (hvec (make-array hlen :element-type '(unsigned-byte 16)))
+	 (mvec (make-array mlen :element-type '(unsigned-byte 16)))
+	 (lvec (make-array llen :element-type '(unsigned-byte 32)))
+	 (tabl (make-array tlen :element-type '(unsigned-byte 16))))
+    (read-vector hvec stm :endian-swap :network-order)
+    (read-vector mvec stm :endian-swap :network-order)
+    (read-vector lvec stm :endian-swap :network-order)
+    (read-vector tabl stm :endian-swap :network-order)
+    (setf (unidata-decomp *unicode-data*)
+	(make-decomp :split split :hvec hvec :mvec mvec :lvec lvec :tabl tabl))))
+
 
 
 (defun unicode-name-to-codepoint (name)
@@ -379,3 +416,42 @@
 	code
 	(let ((m (aref (scase-svec scase) (logand n #x7F))))
 	  (if (logbitp 7 n) (+ code m) (- code m))))))
+
+(defun unicode-num1 (code)
+  (declare (type (integer 0 #x10FFFF) code))
+  (unless (unidata-numeric *unicode-data*) (load-numerics))
+  (let ((n (qref32 (unidata-numeric *unicode-data*) code)))
+    (if (logbitp 25 n) (logand (ash n -3) #xF) nil)))
+
+(defun unicode-num2 (code)
+  (declare (type (integer 0 #x10FFFF) code))
+  (unless (unidata-numeric *unicode-data*) (load-numerics))
+  (let ((n (qref32 (unidata-numeric *unicode-data*) code)))
+    (if (logbitp 24 n) (logand (ash n -3) #xF) nil)))
+
+(defun unicode-num3 (code)
+  (declare (type (integer 0 #x10FFFF) code))
+  (unless (unidata-numeric *unicode-data*) (load-numerics))
+  (let ((n (qref32 (unidata-numeric *unicode-data*) code)))
+    (if (logbitp 23 n)
+	(let ((num (/ (logand (ash n -3) #x1FFFF) (1+ (logand n 7)))))
+	  (if (logbitp 20 n) (- num) num))
+	nil)))
+
+(defun unicode-decomp (code &optional (kind :all))
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
+	   (type (integer 0 #x10FFFF) code))
+  (unless (unidata-decomp *unicode-data*) (load-decomp))
+  (let* ((decomp (unidata-decomp *unicode-data*))
+	 (n (qref32 decomp code))
+	 (type (ldb (byte 5 27) n)))
+    (if (= n 0)
+	nil
+	(if (or (= type 0)
+		(eq kind :any)
+		(and (= type 1) (eq kind :compatibility)))
+	    (let ((off (logand n #xFFFF))
+		  (len (ldb (byte 6 16) n)))
+	      (values (subseq (decomp-tabl decomp) off (+ off len))
+		      type))
+	    nil))))

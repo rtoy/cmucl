@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.1 2009/03/25 21:51:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.2 2009/04/15 14:41:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -483,7 +483,7 @@
 		 (setq newword t))
 		(newword
 		 ;;char is first case-modifiable after non-case-modifiable
-		 (setq char (char-upcase char))
+		 (setq char (char-titlecase char))
 		 (setq newword ()))
 		;;char is case-modifiable, but not first
 		(t (setq char (char-downcase char))))
@@ -538,7 +538,7 @@
 	       (setq newword t))
 	      (newword
 	       ;;char is first case-modifiable after non-case-modifiable
-	       (setf (schar string index) (char-upcase char))
+	       (setf (schar string index) (char-titlecase char))
 	       (setq newword ()))
 	      (t
 	       (setf (schar string index) (char-downcase char))))))

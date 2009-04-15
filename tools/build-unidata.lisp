@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.2 2009/04/14 20:55:12 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.3 2009/04/15 14:41:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,6 +28,7 @@
   name
   category
   scase
+  numeric
   decomp
   name1+
   name1
@@ -83,9 +84,9 @@
   (svec (ext:required-argument) :read-only t
 	:type (simple-array (unsigned-byte 16) (*))))
 
-#+(or)
-(defstruct (decomp (:include codeset))
-  (ext (ext:required-argument) :read-only t :type simple-vector))
+(defstruct (decomp (:include ntrie32))
+  (tabl (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 16) (*))))
 
 
 ;; Codebooks for encoding names.  These are fairly arbitrary.  Order isn't
@@ -356,33 +357,6 @@
 
 
 
-(defconstant +decomposition-type+
-  '(nil "<font>" "<noBreak>" "<initial>" "<medial>" "<final>" "<isolated>"
-    "<circle>" "<fraction>" "<super>" "<sub>" "<vertical>" "<wide>" "<narrow>"
-    "<small>" "<square>" "<compat>"))
-
-#+(or)
-(defun build-decomp (data)		; (code . (type . (code ...)))
-  (let ((vec1 (make-array (length data) :element-type '(unsigned-byte 32)))
-	(vec2 (make-array (length data))))
-    (loop for (code type . decomp) in data as indx upfrom 0 do
-      (setf (aref vec1 indx)
-	  (logior code
-		  (ash (position type +decomposition-type+ :test 'equalp) 21)))
-      (let ((tmp '()))
-	(dolist (x decomp)
-	  (if (< x #x10000)
-	      (push x tmp)
-	      (let ((x (- x #x10000)))
-		(push (logior (ldb (byte 10 10) x) #xD800) tmp)
-		(push (logior (ldb (byte 10 0) x) #xDC00) tmp))))
-	(setf (aref vec2 indx)
-	    (make-array (length tmp) :element-type '(unsigned-byte 16)
-			:initial-contents (nreverse tmp)))))
-    (make-decomp :code vec1 :ext vec2)))
-
-
-
 (defun write-unidata (path)
   (labels ((write16 (n stm)
 	     (write-byte (ldb (byte 8 8) n) stm)
@@ -392,7 +366,7 @@
 	     (write16 (ldb (byte 16 0) n) stm)))
     (with-open-file (stm path :direction :io :if-exists :rename-and-delete
 			 :element-type '(unsigned-byte 8))
-      (let ((index (make-array 5 :fill-pointer 0)))
+      (let ((index (make-array 7 :fill-pointer 0)))
 	;; File header
 	(write32 #x2A554344 stm)	; identification "magic"
 	(write-byte 0 stm)		; file format version
@@ -455,6 +429,28 @@
 	  (write-vector (scase-mvec data) stm :endian-swap :network-order)
 	  (write-vector (scase-lvec data) stm :endian-swap :network-order)
 	  (write-vector (scase-svec data) stm :endian-swap :network-order))
+	;; Numeric data
+	(let ((data (unidata-numeric *unicode-data*)))
+	  (vector-push (file-position stm) index)
+	  (write-byte (ntrie32-split data) stm)
+	  (write16 (length (ntrie32-hvec data)) stm)
+	  (write16 (length (ntrie32-mvec data)) stm)
+	  (write16 (length (ntrie32-lvec data)) stm)
+	  (write-vector (ntrie32-hvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie32-mvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie32-lvec data) stm :endian-swap :network-order))
+	;; Decomposition data
+	(let ((data (unidata-decomp *unicode-data*)))
+	  (vector-push (file-position stm) index)
+	  (write-byte (decomp-split data) stm)
+	  (write16 (length (decomp-hvec data)) stm)
+	  (write16 (length (decomp-mvec data)) stm)
+	  (write16 (length (decomp-lvec data)) stm)
+	  (write16 (length (decomp-tabl data)) stm)
+	  (write-vector (decomp-hvec data) stm :endian-swap :network-order)
+	  (write-vector (decomp-mvec data) stm :endian-swap :network-order)
+	  (write-vector (decomp-lvec data) stm :endian-swap :network-order)
+	  (write-vector (decomp-tabl data) stm :endian-swap :network-order))
 	;; Patch up index
 	(file-position stm 8)
 	(dotimes (i (length index))
@@ -476,7 +472,7 @@
 
 (defun foreach-ucd (name fn)
   (with-open-file (s (make-pathname :name name :type "txt"
-				    :defaults #p"target:UNIDATA/"))
+				    :defaults #p"ext-formats:"))
     (if (string= name "Unihan")
 	(loop for line = (read-line s nil) while line do
 	  (when (char= (char line 0) #\U)
@@ -595,6 +591,43 @@
 	    (ash (if (minusp lo) (logior 128 pl) pl) 8)
 	    (if (minusp uo) (logior 128 pu) pu))))
 
+(defun pack-numeric (ucdent)
+  (let* ((n3 (ucdent-num3 ucdent))
+	 (fl (cond ((ucdent-num1 ucdent) #x3800000)
+		   ((ucdent-num2 ucdent) #x1800000)
+		   (n3 #x800000)
+		   (t 0)))
+	 (neg (if (and n3 (minusp n3)) #x900000 0))
+	 (num (if n3 (ash (abs (numerator n3)) 3) 0))
+	 (den (if n3 (1- (denominator n3)) 0)))
+    (logior fl neg num den)))
+
+(defconstant +decomposition-type+
+  '(nil "<compat>" "<initial>" "<medial>" "<final>" "<isolated>"
+    "<super>" "<sub>" "<fraction>" "<font>" "<noBreak>"
+    "<vertical>" "<wide>" "<narrow>" "<small>" "<square>" "<circle>"))
+
+(defun pack-decomp (ucdent tabl)
+  (if (not (ucdent-decomp ucdent))
+      0
+      (let* ((d (loop for i in (rest (ucdent-decomp ucdent))
+		  if (<= i #xFFFF) collect i
+		  else collect (logior (ldb (byte 10 10) i) #xD800)
+		   and collect (logior (ldb (byte 10 0) i) #xDC00)))
+	     (l (length d))
+	     (n (search d tabl)))
+	(unless n
+	  (setq n (fill-pointer tabl))
+	  (dolist (x d) (vector-push-extend x tabl)))
+	;; high 5 bits: decomp type
+	;; next 5 bits: unused
+	;; next 6 bits: length, in code units
+	;; low 16 bits: index into tabl
+	(logior n (ash l 16)
+		(ash (position (first (ucdent-decomp ucdent))
+			       +decomposition-type+ :test #'equalp)
+		     27)))))
+
 (defun build-unidata ()
   (format t "~&Reading data~%")
   (multiple-value-bind (ucd range) (read-data)
@@ -641,4 +674,18 @@
 	(setf (unidata-scase *unicode-data*)
 	    (make-scase :split #x62 :hvec hvec :mvec mvec :lvec lvec
 			:svec (copy-seq svec)))))
+    (format t "~&Building numeric-values table~%")
+    (multiple-value-bind (hvec mvec lvec)
+	(pack ucd range #'pack-numeric 0 32 #x63)
+      (setf (unidata-numeric *unicode-data*)
+	  (make-ntrie32 :split #x63 :hvec hvec :mvec mvec :lvec lvec)))
+    (format t "~&Building decomposition table~%")
+    (let ((tabl (make-array 6000 :element-type '(unsigned-byte 16)
+			    :fill-pointer 0 :adjustable t)))
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x) (pack-decomp x tabl))
+		0 32 #x62)
+	(setf (unidata-decomp *unicode-data*)
+	    (make-decomp :split #x62 :hvec hvec :mvec mvec :lvec lvec
+			 :tabl (copy-seq tabl)))))
     nil))

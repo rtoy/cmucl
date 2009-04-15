@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.6 2009/04/14 20:55:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.7 2009/04/15 14:41:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,6 +29,7 @@
 	  alphanumericp char= char/= char< char> char<= char>= char-equal
 	  char-not-equal char-lessp char-greaterp char-not-greaterp
 	  char-not-lessp character char-code code-char char-upcase
+	  char-titlecase
 	  char-downcase digit-char char-int char-name name-char))
 
 
@@ -445,6 +446,19 @@
   #+(and unicode (not unicode-bootstrap))
   (let ((m (char-code char)))
     (cond ((> m 127) (code-char (unicode-upper m)))
+	  ((< 96 m 123) (code-char (- m 32)))
+	  (t char))))
+
+(defun char-titlecase (char)
+  "Returns CHAR converted to title-case if that is possible."
+  (declare (character char))
+  #-(and unicode (not unicode-bootstrap))
+  (if (lower-case-p char)
+      (code-char (- (char-code char) 32))
+      char)
+  #+(and unicode (not unicode-bootstrap))
+  (let ((m (char-code char)))
+    (cond ((> m 127) (code-char (unicode-title m)))
 	  ((< 96 m 123) (code-char (- m 32)))
 	  (t char))))
 
