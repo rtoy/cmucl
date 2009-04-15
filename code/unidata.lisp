@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.4 2009/04/15 14:41:55 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.5 2009/04/15 21:19:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,6 +22,10 @@
   scase
   numeric
   decomp
+  combining
+  bidi
+  name1+
+  name1
   )
 
 (defvar *unicode-data* (make-unidata))
@@ -77,6 +81,19 @@
 (defstruct (decomp (:include ntrie32))
   (tabl (ext:required-argument) :read-only t
 	:type (simple-array (unsigned-byte 16) (*))))
+
+(defstruct (bidi (:include ntrie16))
+  (tabl (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 16) (*))))
+
+(defconstant +decomposition-type+
+  '(nil "<compat>" "<initial>" "<medial>" "<final>" "<isolated>"
+    "<super>" "<sub>" "<fraction>" "<font>" "<noBreak>"
+    "<vertical>" "<wide>" "<narrow>" "<small>" "<square>" "<circle>"))
+
+(defconstant +bidi-class+
+  #("L" "LRE" "LRO" "R" "AL" "RLE" "RLO" "PDF" "EN" "ES" "ET" "AN" "CS"
+    "NSM" "BN" "B" "S" "WS" "ON"))
 
 
 
@@ -196,15 +213,30 @@
       (when (zerop (read32 stream))
 	(return-from unidata-locate nil)))
     (let ((n (read32 stream)))
-      (and n (file-position stream n)))))
+      (and (plusp n) (file-position stream n)))))
 
 (defmacro defloader (name (stm locn) &body body)
   `(defun ,name ()
      (labels ((read16 (stm)
 		(logior (ash (read-byte stm) 8) (read-byte stm)))
 	      (read32 (stm)
-		(logior (ash (read16 stm) 16) (read16 stm))))
-       (declare (ignorable #'read16 #'read32))
+		(logior (ash (read16 stm) 16) (read16 stm)))
+	      (read-ntrie (bits stm)
+		(let* ((split (read-byte stm))
+		       (hlen (read16 stm))
+		       (mlen (read16 stm))
+		       (llen (read16 stm))
+		       (hvec (make-array hlen
+				   :element-type '(unsigned-byte 16)))
+		       (mvec (make-array mlen
+				   :element-type '(unsigned-byte 16)))
+		       (lvec (make-array llen
+				   :element-type (list 'unsigned-byte bits))))
+		  (read-vector hvec stm :endian-swap :network-order)
+		  (read-vector mvec stm :endian-swap :network-order)
+		  (read-vector lvec stm :endian-swap :network-order)
+		  (values split hvec mvec lvec))))
+       (declare (ignorable #'read16 #'read32 #'read-ntrie))
        (with-open-file (,stm +unidata-path+ :direction :input
 			     :element-type '(unsigned-byte 8))
 	 (unless (unidata-locate ,stm ,locn)
@@ -243,82 +275,83 @@
 			 :codev codev :nextv nextv :namev namev))))
 
 (defloader load-name (stm 2)
-  (let* ((split (read-byte stm))
-	 (hlen (read16 stm))
-	 (mlen (read16 stm))
-	 (llen (read16 stm))
-	 (hvec (make-array hlen :element-type '(unsigned-byte 16)))
-	 (mvec (make-array mlen :element-type '(unsigned-byte 16)))
-	 (lvec (make-array llen :element-type '(unsigned-byte 32))))
-    (read-vector hvec stm :endian-swap :network-order)
-    (read-vector mvec stm :endian-swap :network-order)
-    (read-vector lvec stm :endian-swap :network-order)
+  (multiple-value-bind (split hvec mvec lvec) (read-ntrie 32 stm)
     (setf (unidata-name *unicode-data*)
 	(make-ntrie32 :split split :hvec hvec :mvec mvec :lvec lvec))))
 
 (defloader load-categories (stm 3)
-  (let* ((split (read-byte stm))
-	 (hlen (read16 stm))
-	 (mlen (read16 stm))
-	 (llen (read16 stm))
-	 (hvec (make-array hlen :element-type '(unsigned-byte 16)))
-	 (mvec (make-array mlen :element-type '(unsigned-byte 16)))
-	 (lvec (make-array llen :element-type '(unsigned-byte 8))))
-    (read-vector hvec stm :endian-swap :network-order)
-    (read-vector mvec stm :endian-swap :network-order)
-    (read-vector lvec stm :endian-swap :network-order)
+  (multiple-value-bind (split hvec mvec lvec) (read-ntrie 8 stm)
     (setf (unidata-category *unicode-data*)
 	(make-ntrie8 :split split :hvec hvec :mvec mvec :lvec lvec))))
 
 (defloader load-scase (stm 4)
-  (let* ((split (read-byte stm))
-	 (slen (read-byte stm))
-	 (hlen (read16 stm))
-	 (mlen (read16 stm))
-	 (llen (read16 stm))
-	 (hvec (make-array hlen :element-type '(unsigned-byte 16)))
-	 (mvec (make-array mlen :element-type '(unsigned-byte 16)))
-	 (lvec (make-array llen :element-type '(unsigned-byte 32)))
-	 (svec (make-array slen :element-type '(unsigned-byte 16))))
-    (read-vector hvec stm :endian-swap :network-order)
-    (read-vector mvec stm :endian-swap :network-order)
-    (read-vector lvec stm :endian-swap :network-order)
-    (read-vector svec stm :endian-swap :network-order)
-    (setf (unidata-scase *unicode-data*)
-	(make-scase :split split :hvec hvec :mvec mvec :lvec lvec :svec svec))))
+  (multiple-value-bind (split hvec mvec lvec) (read-ntrie 16 stm)
+    (let* ((slen (read-byte stm))
+	   (svec (make-array slen :element-type '(unsigned-byte 16))))
+      (read-vector svec stm :endian-swap :network-order)
+      (setf (unidata-scase *unicode-data*)
+	  (make-scase :split split :hvec hvec :mvec mvec :lvec lvec
+		      :svec svec)))))
 
 (defloader load-numerics (stm 5)
-  (let* ((split (read-byte stm))
-	 (hlen (read16 stm))
-	 (mlen (read16 stm))
-	 (llen (read16 stm))
-	 (hvec (make-array hlen :element-type '(unsigned-byte 16)))
-	 (mvec (make-array mlen :element-type '(unsigned-byte 16)))
-	 (lvec (make-array llen :element-type '(unsigned-byte 32))))
-    (read-vector hvec stm :endian-swap :network-order)
-    (read-vector mvec stm :endian-swap :network-order)
-    (read-vector lvec stm :endian-swap :network-order)
+  (multiple-value-bind (split hvec mvec lvec) (read-ntrie 32 stm)
     (setf (unidata-numeric *unicode-data*)
 	(make-ntrie32 :split split :hvec hvec :mvec mvec :lvec lvec))))
 
 (defloader load-decomp (stm 6)
-  (let* ((split (read-byte stm))
-	 (hlen (read16 stm))
-	 (mlen (read16 stm))
-	 (llen (read16 stm))
-	 (tlen (read16 stm))
-	 (hvec (make-array hlen :element-type '(unsigned-byte 16)))
-	 (mvec (make-array mlen :element-type '(unsigned-byte 16)))
-	 (lvec (make-array llen :element-type '(unsigned-byte 32)))
-	 (tabl (make-array tlen :element-type '(unsigned-byte 16))))
-    (read-vector hvec stm :endian-swap :network-order)
-    (read-vector mvec stm :endian-swap :network-order)
-    (read-vector lvec stm :endian-swap :network-order)
-    (read-vector tabl stm :endian-swap :network-order)
-    (setf (unidata-decomp *unicode-data*)
-	(make-decomp :split split :hvec hvec :mvec mvec :lvec lvec :tabl tabl))))
+  (multiple-value-bind (split hvec mvec lvec) (read-ntrie 32 stm)
+    (let* ((tlen (read16 stm))
+	   (tabl (make-array tlen :element-type '(unsigned-byte 16))))
+      (read-vector tabl stm :endian-swap :network-order)
+      (setf (unidata-decomp *unicode-data*)
+	  (make-decomp :split split :hvec hvec :mvec mvec :lvec lvec
+		       :tabl tabl)))))
+
+(defloader load-combining (stm 7)
+  (multiple-value-bind (split hvec mvec lvec) (read-ntrie 8 stm)
+    (setf (unidata-combining *unicode-data*)
+	(make-ntrie8 :split split :hvec hvec :mvec mvec :lvec lvec))))
+
+(defloader load-bidi (stm 8)
+  (multiple-value-bind (split hvec mvec lvec) (read-ntrie 16 stm)
+    (let* ((tlen (read-byte stm))
+	   (tabl (make-array tlen :element-type '(unsigned-byte 16))))
+      (read-vector tabl stm :endian-swap :network-order)
+      (setf (unidata-bidi *unicode-data*)
+	  (make-bidi :split split :hvec hvec :mvec mvec :lvec lvec
+		     :tabl tabl)))))
+
+(defloader load-1.0-names (stm 9)
+  (let* ((cb (1+ (read-byte stm)))
+	 (kv (read16 stm))
+	 (cv (read32 stm))
+	 (codebook (make-array cb))
+	 (keyv (make-array kv :element-type '(unsigned-byte 8)))
+	 (keyl (make-array kv :element-type '(unsigned-byte 8)))
+	 (codev (make-array cv :element-type '(signed-byte 32)))
+	 (nextv (make-array cv :element-type '(unsigned-byte 32)))
+	 (namev (make-array cv :element-type '(unsigned-byte 32))))
+    (dotimes (i cb)
+      (let* ((n (read-byte stm))
+	     (s (make-string n)))
+	(setf (aref codebook i) s)
+	(dotimes (i n) (setf (char s i) (code-char (read-byte stm))))))
+    (read-vector keyv stm :endian-swap :network-order)
+    (read-vector keyl stm :endian-swap :network-order)
+    (read-vector codev stm :endian-swap :network-order)
+    (read-vector nextv stm :endian-swap :network-order)
+    (read-vector namev stm :endian-swap :network-order)
+    (setf (unidata-name+ *unicode-data*)
+	(make-dictionary :cdbk codebook :keyv keyv :keyl keyl
+			 :codev codev :nextv nextv :namev namev))))
+
+(defloader load-1.0-name (stm 10)
+  (multiple-value-bind (split hvec mvec lvec) (read-ntrie 32 stm)
+    (setf (unidata-name *unicode-data*)
+	(make-ntrie32 :split split :hvec hvec :mvec mvec :lvec lvec))))
 
 
+;;; Accessor functions.
 
 (defun unicode-name-to-codepoint (name)
   (declare (type string name))
@@ -327,10 +360,9 @@
 	 (n (search-dictionary name names)))
     (when n (aref (dictionary-codev names) n))))
 
-#+(or)
-(defun unicode-name1-to-codepoint (name)
+(defun unicode-1.0-name-to-codepoint (name)
   (declare (type string name))
-  (unless (unidata-name+ *unicode-data*) (load-names))
+  (unless (unidata-name1+ *unicode-data*) (load-1.0-names))
   (let* ((names (unidata-name1+ *unicode-data*))
 	 (n (search-dictionary name names)))
     (when n (aref (dictionary-codev names) n))))
@@ -364,10 +396,9 @@
   (unicode-name+ code (unidata-name *unicode-data*)
 		 (unidata-name+ *unicode-data*)))
 
-#+(or)
-(defun unicode-name1 (code)
-  (unless (unidata-name1+ *unicode-data*) (load-names))
-  (unless (unidata-name1 *unicode-data*) (load-name))
+(defun unicode-1.0-name (code)
+  (unless (unidata-name1+ *unicode-data*) (load-1.0-names))
+  (unless (unidata-name1 *unicode-data*) (load-1.0-name))
   (unicode-name+ code (unidata-name1 *unicode-data*)
 		 (unidata-name1+ *unicode-data*)))
 
@@ -455,3 +486,36 @@
 	      (values (subseq (decomp-tabl decomp) off (+ off len))
 		      type))
 	    nil))))
+
+(defun unicode-combining-class (code)
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
+	   (type (integer 0 #x10FFFF) code))
+  (unless (unidata-combining *unicode-data*) (load-combining))
+  (qref8 (unidata-combining *unicode-data*) code))
+
+(defun unicode-bidi-class (code)
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
+	   (type (integer 0 #x10FFFF) code))
+  (unless (unidata-bidi *unicode-data*) (load-bidi))
+  (logand (qref16 (unidata-bidi *unicode-data*) code) #x1F))
+
+(defun unicode-bidi-class-string (code)
+  (aref +bidi-class+ (unicode-bidi-class code)))
+
+(defun unicode-bidi-mirror-p (code)
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
+	   (type (integer 0 #x10FFFF) code))
+  (unless (unidata-bidi *unicode-data*) (load-bidi))
+  (logbitp 5 (qref16 (unidata-bidi *unicode-data*) code)))
+
+(defun unicode-mirror-codepoint (code)
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
+	   (type (integer 0 #x10FFFF) code))
+  (unless (unidata-bidi *unicode-data*) (load-bidi))
+  (let* ((d (unidata-bidi *unicode-data*))
+	 (x (ash (qref16 d code) -6))
+	 (i (logand x #x0F))
+	 (n (if (logbitp 5 x) (aref (bidi-tabl d) i) i)))
+    (cond ((= x 0) nil)
+	  ((logbitp 4 x) (- code n))
+	  (t (+ code n)))))

@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.3 2009/04/15 14:41:56 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.4 2009/04/15 21:19:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,6 +30,8 @@
   scase
   numeric
   decomp
+  combining
+  bidi
   name1+
   name1
   )
@@ -87,6 +89,19 @@
 (defstruct (decomp (:include ntrie32))
   (tabl (ext:required-argument) :read-only t
 	:type (simple-array (unsigned-byte 16) (*))))
+
+(defstruct (bidi (:include ntrie16))
+  (tabl (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 16) (*))))
+
+(defconstant +decomposition-type+
+  '(nil "<compat>" "<initial>" "<medial>" "<final>" "<isolated>"
+    "<super>" "<sub>" "<fraction>" "<font>" "<noBreak>"
+    "<vertical>" "<wide>" "<narrow>" "<small>" "<square>" "<circle>"))
+
+(defconstant +bidi-class+
+  '("L" "LRE" "LRO" "R" "AL" "RLE" "RLO" "PDF" "EN" "ES" "ET" "AN" "CS"
+    "NSM" "BN" "B" "S" "WS" "ON"))
 
 
 ;; Codebooks for encoding names.  These are fairly arbitrary.  Order isn't
@@ -366,7 +381,7 @@
 	     (write16 (ldb (byte 16 0) n) stm)))
     (with-open-file (stm path :direction :io :if-exists :rename-and-delete
 			 :element-type '(unsigned-byte 8))
-      (let ((index (make-array 7 :fill-pointer 0)))
+      (let ((index (make-array 11 :fill-pointer 0)))
 	;; File header
 	(write32 #x2A554344 stm)	; identification "magic"
 	(write-byte 0 stm)		; file format version
@@ -421,13 +436,13 @@
 	(let ((data (unidata-scase *unicode-data*)))
 	  (vector-push (file-position stm) index)
 	  (write-byte (scase-split data) stm)
-	  (write-byte (length (scase-svec data)) stm)
 	  (write16 (length (scase-hvec data)) stm)
 	  (write16 (length (scase-mvec data)) stm)
 	  (write16 (length (scase-lvec data)) stm)
 	  (write-vector (scase-hvec data) stm :endian-swap :network-order)
 	  (write-vector (scase-mvec data) stm :endian-swap :network-order)
 	  (write-vector (scase-lvec data) stm :endian-swap :network-order)
+	  (write-byte (length (scase-svec data)) stm)
 	  (write-vector (scase-svec data) stm :endian-swap :network-order))
 	;; Numeric data
 	(let ((data (unidata-numeric *unicode-data*)))
@@ -446,11 +461,58 @@
 	  (write16 (length (decomp-hvec data)) stm)
 	  (write16 (length (decomp-mvec data)) stm)
 	  (write16 (length (decomp-lvec data)) stm)
-	  (write16 (length (decomp-tabl data)) stm)
 	  (write-vector (decomp-hvec data) stm :endian-swap :network-order)
 	  (write-vector (decomp-mvec data) stm :endian-swap :network-order)
 	  (write-vector (decomp-lvec data) stm :endian-swap :network-order)
+	  (write16 (length (decomp-tabl data)) stm)
 	  (write-vector (decomp-tabl data) stm :endian-swap :network-order))
+	;; Combining classes
+	(let ((data (unidata-combining *unicode-data*)))
+	  (vector-push (file-position stm) index)
+	  (write-byte (ntrie8-split data) stm)
+	  (write16 (length (ntrie8-hvec data)) stm)
+	  (write16 (length (ntrie8-mvec data)) stm)
+	  (write16 (length (ntrie8-lvec data)) stm)
+	  (write-vector (ntrie8-hvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie8-mvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie8-lvec data) stm :endian-swap :network-order))
+	;; Bidi data
+	(let ((data (unidata-bidi *unicode-data*)))
+	  (vector-push (file-position stm) index)
+	  (write-byte (bidi-split data) stm)
+	  (write16 (length (bidi-hvec data)) stm)
+	  (write16 (length (bidi-mvec data)) stm)
+	  (write16 (length (bidi-lvec data)) stm)
+	  (write-vector (bidi-hvec data) stm :endian-swap :network-order)
+	  (write-vector (bidi-mvec data) stm :endian-swap :network-order)
+	  (write-vector (bidi-lvec data) stm :endian-swap :network-order)
+	  (write-byte (length (bidi-tabl data)) stm)
+	  (write-vector (bidi-tabl data) stm :endian-swap :network-order))
+	;; Unicode 1.0 names
+	(let ((data (unidata-name1+ *unicode-data*)))
+	  (vector-push (file-position stm) index)
+	  (write-byte (1- (length (dictionary-cdbk data))) stm)
+	  (write16 (length (dictionary-keyv data)) stm)
+	  (write32 (length (dictionary-codev data)) stm)
+	  (let ((codebook (dictionary-cdbk data)))
+	    (dotimes (i (length codebook))
+	      (write-byte (length (aref codebook i)) stm)
+	      (dotimes (j (length (aref codebook i)))
+		(write-byte (char-code (char (aref codebook i) j)) stm))))
+	  (write-vector (dictionary-keyv data) stm :endian-swap :network-order)
+	  (write-vector (dictionary-keyl data) stm :endian-swap :network-order)
+	  (write-vector (dictionary-codev data) stm :endian-swap :network-order)
+	  (write-vector (dictionary-nextv data) stm :endian-swap :network-order)
+	  (write-vector (dictionary-namev data) stm :endian-swap :network-order))
+	(let ((data (unidata-name1 *unicode-data*)))
+	  (vector-push (file-position stm) index)
+	  (write-byte (ntrie32-split data) stm)
+	  (write16 (length (ntrie32-hvec data)) stm)
+	  (write16 (length (ntrie32-mvec data)) stm)
+	  (write16 (length (ntrie32-lvec data)) stm)
+	  (write-vector (ntrie32-hvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie32-mvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie32-lvec data) stm :endian-swap :network-order))
 	;; Patch up index
 	(file-position stm 8)
 	(dotimes (i (length index))
@@ -467,12 +529,13 @@
   code name cat comb bidi decomp num1 num2 num3 mirror name1 comment
   upper lower title
   aliases
+  mcode
   ;; ...
   )
 
 (defun foreach-ucd (name fn)
   (with-open-file (s (make-pathname :name name :type "txt"
-				    :defaults #p"ext-formats:"))
+				    :defaults #p"target:i18n/"))
     (if (string= name "Unihan")
 	(loop for line = (read-line s nil) while line do
 	  (when (char= (char line 0) #\U)
@@ -602,11 +665,6 @@
 	 (den (if n3 (1- (denominator n3)) 0)))
     (logior fl neg num den)))
 
-(defconstant +decomposition-type+
-  '(nil "<compat>" "<initial>" "<medial>" "<final>" "<isolated>"
-    "<super>" "<sub>" "<fraction>" "<font>" "<noBreak>"
-    "<vertical>" "<wide>" "<narrow>" "<small>" "<square>" "<circle>"))
-
 (defun pack-decomp (ucdent tabl)
   (if (not (ucdent-decomp ucdent))
       0
@@ -628,6 +686,22 @@
 			       +decomposition-type+ :test #'equalp)
 		     27)))))
 
+(defun pack-bidi (ucdent tabl)
+  (logior (position (ucdent-bidi ucdent) +bidi-class+ :test #'string=)
+	  (if (ucdent-mirror ucdent) #x20 #x00)
+	  (if (ucdent-mcode ucdent)
+	      (let* ((n (- (ucdent-mcode ucdent) (ucdent-code ucdent)))
+		     (x (abs n)))
+		(logior
+		 (ash (if (< x #x10)
+			  x
+			  (let ((k (position x tabl)))
+			    (if k k (prog1 (fill-pointer tabl) (vector-push-extend x tabl)))))
+		      6)
+		 (if (< x #x10) #x000 #x800)
+		 (if (minusp n) #x400 #x000)))
+	      0)))
+
 (defun build-unidata ()
   (format t "~&Reading data~%")
   (multiple-value-bind (ucd range) (read-data)
@@ -635,6 +709,16 @@
       (lambda (min max alias)
 	(declare (ignore max))
 	(push alias (ucdent-aliases (find min ucd :key #'ucdent-code)))))
+    (foreach-ucd "NormalizationCorrections"
+      (lambda (min max bad good &rest junk)
+	(declare (ignore max bad junk))
+	(setf (ucdent-decomp (find min ucd :key #'ucdent-code))
+	    (parse-decomposition good))))
+    (foreach-ucd "BidiMirroring"
+      (lambda (min max mirror)
+	(declare (ignore max))
+	(setf (ucdent-mcode (find min ucd :key #'ucdent-code))
+	    (parse-integer mirror :radix 16 :junk-allowed t))))
     (setf (unidata-range *unicode-data*) range)
     (format t "~&Building character name tables~%")
     (let* ((data (loop for ent across ucd
@@ -688,4 +772,18 @@
 	(setf (unidata-decomp *unicode-data*)
 	    (make-decomp :split #x62 :hvec hvec :mvec mvec :lvec lvec
 			 :tabl (copy-seq tabl)))))
+    (format t "~&Building combining-class table~%")
+    (multiple-value-bind (hvec mvec lvec)
+	(pack ucd range #'ucdent-comb 0 8 #x64)
+      (setf (unidata-combining *unicode-data*)
+	  (make-ntrie8 :split #x64 :hvec hvec :mvec mvec :lvec lvec)))
+    (format t "~&Building bidi information table~%")
+    (let ((tabl (make-array 10 :element-type '(unsigned-byte 16)
+			    :fill-pointer 0 :adjustable t)))
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x) (pack-bidi x tabl))
+		0 16 #x62)
+	(setf (unidata-bidi *unicode-data*)
+	    (make-bidi :split #x62 :hvec hvec :mvec mvec :lvec lvec
+		       :tabl (copy-seq tabl)))))
     nil))
