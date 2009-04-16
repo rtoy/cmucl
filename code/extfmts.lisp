@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.11 2009/04/14 21:10:02 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.12 2009/04/16 20:14:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -131,20 +131,12 @@
 ;;;   stream's state variable.  Output is a form that writes one octet
 ;;;   to the output stream.
 ;;;
-;;; Note: external-formats generally work on code-points, not
+;;; Note: external-formats work on code-points, not
 ;;;   characters, so that the entire 31 bit ISO-10646 range can be
 ;;;   used internally regardless of the size of a character recognized
 ;;;   by Lisp and external formats can be useful to people who want to
 ;;;   process characters outside the Lisp range (see
 ;;;   CODEPOINT-TO-OCTETS, OCTETS-TO-CODEPOINT)
-;;;
-;;;   However, this is not required.  External formats can also
-;;;   operate on code units (16-bit unsigned integers in CMUCL).  This
-;;;   is needed for an external format to support surrogate pairs in
-;;;   CMUCL's UTF-16 string format because the output of
-;;;   octets-to-code is stored into a string.  If you need to operate
-;;;   on code points, use an appropriate external format that actually
-;;;   returns code points and not code units.
 ;;;
 (defmacro define-external-format (name (&rest args) (&rest slots)
 				       &optional octets-to-code code-to-octets)
