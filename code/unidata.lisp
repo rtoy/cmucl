@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.5 2009/04/15 21:19:05 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.6 2009/04/16 14:13:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,6 +32,132 @@
 
 ;;; These need to be synched with tools/build-unidata.lisp
 
+;;; ==== DICTIONARY ====
+;;
+;; A Dictionary is a mapping from names to codepoints.
+;; 
+;; Imagine we have the following structure:
+;; 
+;;    node = (value . ((char1 . node1) (char2 . node2) ...))
+;; 
+;; To look up a string, we start at the root node (representing the
+;; empty string), and look up the first character in the alist that is
+;; (cdr node); assuming the character is found, repeat using the
+;; associated node and the next character of the string.  After the
+;; last character, if the current node's value is the value associated
+;; with that string (i.e., the codepoint).  If at any point the next
+;; character is not present in the node, or you reach the end and the
+;; value in the current node is NIL, the string is not in the
+;; dictionary.
+;; 
+;; As an example, let's have a dictionary containing three words:
+;;   "cat" = 1, "dog" = 2, "cow" = 3
+;; 
+;; then we have
+;; 
+;;   (nil . (#\c . (nil . (#\a . (nil . (#\t . (1 . nil))))
+;;                        (#\o . (nil . (#\w . (3 . nil))))))
+;;          (#\d . (nil . (#\o . (nil . (#\g . (2 . nil)))))))
+;; 
+;; or, broken down to make it easier to read,
+;; 
+;;    root = (nil . (#\c . node1) (#\d . node2))
+;;   node1 = (nil . (#\a . node3) (#\o . node4))
+;;   node2 = (nil . (#\o . node5))
+;;   node3 = (nil . (#\t . node6))
+;;   node4 = (nil . (#\w . node7))
+;;   node5 = (nil . (#\g . node8))
+;;   node6 = (1 . nil)
+;;   node7 = (3 . nil)
+;;   node8 = (2 . nil)
+;; 
+;; To look up "dog", start with the root node;
+;;   look for #\d in the alist at (cdr root)  - it maps to node2
+;;   look for #\o in the alist at (cdr node2) - it maps to node5
+;;   look for #\g in the alist at (cdr node5) - it maps to node8
+;;   no more characters, so return the value in node8, which is 2
+;; 
+;; A Dictionary is just a more compact version of that:
+;;
+;; There are two pairs of vectors: NEXTV and CODEV is one pair, KEYV
+;; and KEYL are the second (ignore NAMEV for now).
+;;
+;; The "current node" is represented by an index into the NEXTV/CODEV
+;; pair.  Given node i (initially 0, the root), NEXTV[i] is split into
+;; two numbers: x (14 bits) and y (18 bits).  n = KEYL[x], and
+;; KEYV[x:x+n] is the set of characters that occur in the alist of
+;; node i.  In the example above, when i=0, KEYL[x] will be 2 and
+;; KEYV[x:x+2] will be "cd".  If the character you're searching for
+;; occurs at x+m, then y+m is the index of the corresponding node.
+;; CODEV[i] is the value associated with each node (or -1 for none).
+;; 
+;; The above example could be rendered as:
+;; 
+;;   keyv = c  d  a  o  t  w  g
+;;   keyl = 2  0  2  1  1  1  1
+;; 
+;;   nextv = [0:1][2:3][3:5][4:6][5:7][6:8][1:0][1:0][1:0]
+;;   codev =   -1   -1   -1   -1   -1   -1   1    3    2
+;; 
+;; To look up "dog", start with i=0
+;;   nextv[i] = [0:1]   i.e., x=0, y=1
+;;   n = keyl[x] = 2
+;;   keyv[x:x+n] = "cd"
+;;   m = (position #\d "cd") = 1
+;;   i = y+m = 2
+;; 
+;;   nextv[i] = [3:5]   i.e., x=3, y=5
+;;   n = keyl[x] = 1
+;;   keyv[x:x+n] = "o"
+;;   m = (position #\o "o") = 0
+;;   i = y+m = 5
+;; 
+;;   nextv[i] = [6:8]   i.e., x=6, y=8
+;;   n = keyl[x] = 1
+;;   keyv[x:x+n] = "g"
+;;   m = (position #\g "g") = 0
+;;   i = y+m = 8
+;; 
+;;   codev[i] = 2
+;; 
+;; 
+;; But rather than using only the restricted set of characters that
+;; occur in Unicode character names, we encode the names using a
+;; codebook of up to 256 strings, turning, for example, "LATIN SMALL
+;; LETTER A" into "ABCBDBE" (where "A" encodes "LATIN", "B" encodes
+;; space, and so on), so we only have to go through 7 nodes to reach
+;; the end, instead of 20, reducing the size of the tables.
+;; 
+;; The NAMEV vector is used to walk backwards through the trie,
+;; reconstructing the string from the final node index.  Again, each
+;; entry consists of a 14 bit and an 18 bit number.  In the example
+;; above, we would have
+;; 
+;;   namev = [?:0][?:0][?:0][?:1][?:1][?:2][3:3][3:4][3:5]      ? = don't care
+;; 
+;; The high 14 bits give the length of the string; the low 18 bits
+;; give the previous index.  Having looked up "dog", the final node
+;; was 8:
+;; 
+;;   i = 8
+;;   namev[i] = [3:5]       -- the string is 3 characters long
+;;   nextv[5] = [6:8]   i.e., x=6, y=8
+;;   z = i-y = 0
+;;   keyv[x+z] = "g"        -- the string is "__g"
+;;   i = 5
+;; 
+;;   namev[i] = [?:2]
+;;   nextv[2] = [3:5]   i.e., x=3, y=5
+;;   z = i-y = 0
+;;   keyv[x+z] = "o"        -- the string is "_og"
+;;   i = 2
+;; 
+;;   namev[i] = [?:0]
+;;   nextv[0] = [0:1]   i.e., x=0, y=1
+;;   z = i-y = 1
+;;   keyv[x+z] = "d"        -- the string is "dog"
+;;   i = 0  (finished)
+
 (defstruct dictionary
   (cdbk (ext:required-argument) :read-only t :type simple-vector)
   (keyv (ext:required-argument) :read-only t
@@ -49,6 +175,21 @@
   (codes (ext:required-argument) :read-only t
 	 :type (simple-array (unsigned-byte 32) (*))))
 
+
+;;; ==== NTRIE ====
+;; 
+;; An NTrie is a mapping from codepoints to integers.
+;; 
+;; The codepoint is split into three pieces, x:y:z where x+y+z = 21
+;; bits The value of the SPLIT slot encodes y-1 in the upper 4 bits
+;; and z-1 in the lower 4 bits.  I.e., if SPLIT is #x63, the split is
+;; 10:7:4
+;; 
+;; p = HVEC[x] is either an index into MVEC or #xFFFF representing no
+;; value.  q = MVEC[y+p] is either an index into LVEC or #xFFFF
+;; representing no value.  LVEC[z+q] is the value associated with the
+;; codepoint.
+;; 
 (defstruct ntrie
   (split (ext:required-argument) :read-only t
 	 :type (unsigned-byte 8))
