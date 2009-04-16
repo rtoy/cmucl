@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.7 2009/04/15 14:41:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.8 2009/04/16 17:11:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -233,7 +233,7 @@
   (or (< 64 (char-code char) 91)
       #+(and unicode (not unicode-bootstrap))
       (and (> (char-code char) 127)
-	   (= (unicode-category (char-code char)) #x1d))))
+	   (= (unicode-category (char-code char)) +unicode-category-upper+))))
 
 
 (defun lower-case-p (char)
@@ -243,7 +243,7 @@
   (or (< 96 (char-code char) 123)
       #+(and unicode (not unicode-bootstrap))
       (and (> (char-code char) 127)
-	   (= (unicode-category (char-code char)) #x17))))
+	   (= (unicode-category (char-code char)) +unicode-category-lower+))))
 
 
 (defun both-case-p (char)
@@ -256,7 +256,8 @@
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m 127)
 	     (let ((cat (unicode-category (char-code char))))
-	       (or (= cat #x17) (= cat #x1d)))))))
+	       (or (= cat +unicode-category-lower+)
+		   (= cat +unicode-category-upper+)))))))
 
 
 (defun digit-char-p (char &optional (radix 10.))
@@ -284,12 +285,13 @@
    argument is either numeric or alphabetic."
   (declare (character char))
   (let ((m (char-code char)))
-    ;; Shortcut for ASCII digits and upper and lower case letters
+    ;; Shortcut for ASCII digits and upper and lower case ASCII letters
     (or (< 47 m 58) (< 64 m 91) (< 96 m 123)
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m 127)
 	     (let ((cat (unicode-category (char-code char))))
-	       (or (= cat #x17) (= cat #x1D)))))))
+	       (or (= cat +unicode-category-lower+)
+		   (= cat +unicode-category-upper+)))))))
 
 
 (defun char= (character &rest more-characters)
