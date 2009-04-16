@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.6 2009/04/16 14:13:55 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.7 2009/04/16 17:08:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -426,7 +426,7 @@
 	(make-ntrie8 :split split :hvec hvec :mvec mvec :lvec lvec))))
 
 (defloader load-scase (stm 4)
-  (multiple-value-bind (split hvec mvec lvec) (read-ntrie 16 stm)
+  (multiple-value-bind (split hvec mvec lvec) (read-ntrie 32 stm)
     (let* ((slen (read-byte stm))
 	   (svec (make-array slen :element-type '(unsigned-byte 16))))
       (read-vector svec stm :endian-swap :network-order)
@@ -555,6 +555,12 @@
     (setf (schar s 0) (schar "CLMNPSZ?????????" (ldb (byte 4 4) n))
 	  (schar s 1) (schar "ncdefiklmopstu??" (ldb (byte 4 0) n)))
     s))
+
+;; Categories for upper and lower case letters.  Look at
+;; unicode-category-string to see how we get these numbers.  We want
+;; Lu and Ll, respectively.
+(defconstant +unicode-category-upper+ #x1d)
+(defconstant +unicode-category-lower+ #x17)
 
 (defun unicode-upper (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
