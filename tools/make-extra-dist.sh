@@ -72,12 +72,12 @@ done
 
 # Not sure we really need these, but we'll install them in the
 # ext-formats directory.  (Should they go somewhere else?)
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/ext-formats
-for f in src/i18n/NameAliases.txt src/i18n/UnicodeData.txt
-do
-    echo $f
-    install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/ext-formats/
-done
+#install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/ext-formats
+#for f in src/i18n/NameAliases.txt src/i18n/UnicodeData.txt
+#do
+#    echo $f
+#    install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/ext-formats/
+#done
 
 # install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/fonts/
 # install ${GROUP} ${OWNER} -m 0644 misc/8x13u.snf misc/fonts.dir \
