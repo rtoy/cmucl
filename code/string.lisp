@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.2 2009/04/15 14:41:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.3 2009/04/18 12:27:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; ****************************************************************
 ;;;
 (in-package "LISP")
-(export '(char schar string
+(export '(char schar glyph sglyph string
 	  string= string-equal string< string> string<= string>= string/=
 	  string-lessp string-greaterp string-not-lessp string-not-greaterp
 	  string-not-equal
@@ -581,3 +581,43 @@
 			   (1+ index))
 			(declare (fixnum index)))))
       (subseq (the simple-string string) left-end right-end))))
+
+(defun glyph (string index)
+  "GLYPH returns the glyph at the indexed position in a string, and the
+   position of the next glyph (or NIL) as a second value.  A glyph is
+   a substring consisting of the character at INDEX followed by all
+   subsequent combining characters."
+  (declare (type simple-string string) (type kernel:index index))
+  #-unicode
+  (char string index)
+  #+unicode
+  (with-array-data ((string string) (start) (end))
+    (declare (ignore start end))
+    (sglyph string index)))
+
+(defun sglyph (string index)
+  "SGLYPH returns the glyph at the indexed position, the same as GLYPH,
+   except that the string must be a simple-string."
+  (declare (type simple-string string) (type kernel:index index))
+  #-unicode
+  (schar string index)
+  #+unicode
+  (flet ((xchar (string index)
+	   (let ((c (char-code (char string index))))
+	     (cond ((<= #xD800 c #xDBFF)
+		    (let ((c2 (char-code (char string (1+ index)))))
+		      (if (<= #xDC00 c2 #xDFFF)
+			  (+ (ash (- c #xD800) 10) c2 #x2400)
+			  (error "Naked high surrogate in string."))))
+		   ((<= #xDC00 c #xDFFF)
+		    (error "Naked low surrogate in string."))
+		   (t c)))))
+    (let* ((l (length string))
+	   (c (xchar string index))
+	   (n (+ index (if (> c #xFFFF) 2 1))))
+      (declare (type (integer 0 #x10FFFF) c) (type kernel:index n))
+      (loop while (< n l) do
+	(let ((c (xchar string n)))
+	  (when (zerop (lisp::unicode-combining-class c)) (return))
+	  (incf n (if (> c #xFFFF) 2 1))))
+      (values (subseq string index n) (and (< n l) n)))))

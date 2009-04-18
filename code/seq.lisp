@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.53 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.53.8.1 2009/04/18 12:27:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,10 +37,14 @@
 
 ;;; Seq-Dispatch does an efficient type-dispatch on the given Sequence.
 
-(defmacro seq-dispatch (sequence list-form array-form)
-  `(if (listp ,sequence)
-       ,list-form
-       ,array-form))
+(defmacro seq-dispatch (sequence list-form array-form &optional string-form)
+  (if string-form
+      `(cond ((listp ,sequence) ,list-form)
+	     ((stringp ,sequence) ,string-form)
+	     (t ,array-form))
+      `(if (listp ,sequence)
+	   ,list-form
+	   ,array-form)))
 
 (defmacro elt-slice (sequences n)
   "Returns a list of the Nth element of each of the sequences.  Used by MAP
@@ -552,7 +556,9 @@
   "Returns a new sequence containing the same elements but in reverse order."
   (seq-dispatch sequence
 		(list-reverse* sequence)
-		(vector-reverse* sequence)))
+		(vector-reverse* sequence)
+		#+unicode
+		(string-reverse* sequence)))
 
 ;;; Internal Frobs:
 
@@ -561,6 +567,40 @@
 
 (defun vector-reverse* (sequence)
   (vector-reverse sequence (type-of sequence)))
+
+#+unicode
+(defun string-reverse* (sequence)
+  (declare (type string sequence))
+  (do* ((length (length sequence))
+	(string (make-string length))
+	(lead nil)
+	(i 0 (1+ i))
+	(j length)
+	(head 0))
+       ((= i length)
+	(when lead
+	  (error "String ends in the middle of a surrogate pair."))
+	(replace string sequence :end1 (- i head) :start2 head)
+	string)
+    (declare (type (or null (integer #xD800 #xDBFF)) lead)
+	     (type kernel:index i j head))
+    (let ((code (char-code (schar sequence i))))
+      (declare (type (integer 0 #x10FFFF) code))
+      (cond (lead
+	     (unless (<= #xDC00 code #xDFFF)
+	       (error "Naked high surrogate in string."))
+	     (setq code (+ (ash (- lead #xD800) 10) code #x2400)
+		   lead nil))
+	    ((<= #xD800 code #xDBFF)
+	     (setq lead code))
+	    ((<= #xDC00 code #xDFFF)
+	     (error "Naked low surrogate in string.")))
+      (unless lead
+	(when (zerop (the (unsigned-byte 8) (unicode-combining-class code)))
+	  (decf j (- i head))
+	  (replace string sequence
+		   :start1 j :end1 (+ j (- i head)) :start2 head)
+	  (setq head i))))))
 
 
 ;;; Nreverse:
@@ -594,12 +634,19 @@
 (defun vector-nreverse* (sequence)
   (vector-nreverse sequence))
 
+#+unicode
+(defun string-nreverse* (sequence)
+  ;;@@ FIXME
+  (replace sequence (string-reverse* sequence)))
+
 (defun nreverse (sequence)
   "Returns a sequence of the same elements in reverse order; the argument
    is destroyed."
   (seq-dispatch sequence
 		(list-nreverse* sequence)
-		(vector-nreverse* sequence)))
+		(vector-nreverse* sequence)
+		#+unicode
+		(string-nreverse* sequence)))
 
 
 ;;; Concatenate:
