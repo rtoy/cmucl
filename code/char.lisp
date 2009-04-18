@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.8 2009/04/16 17:11:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.9 2009/04/18 04:07:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,7 @@
 	  alphanumericp char= char/= char< char> char<= char>= char-equal
 	  char-not-equal char-lessp char-greaterp char-not-greaterp
 	  char-not-lessp character char-code code-char char-upcase
-	  char-titlecase
+	  char-titlecase title-case-p
 	  char-downcase digit-char char-int char-name name-char))
 
 
@@ -99,20 +99,6 @@
 	 (#x20 ("Space" "SP" "SPC"))
 	 (#x7f ("Rubout" "Delete" "DEL")))))
 
-#-(and)
-(progn
-#+unicode
-(defvar *assigned-codepoints-bitmap* #.*assigned-codepoints-bitmap*)
-
-(defun codepoint-assigned-p (codepoint)
-  #-unicode (declare (ignore codepoint))
-  #-unicode t
-  #+unicode
-  (= 1 (aref (the (simple-bit-vector #.char-code-limit)
-	       *assigned-codepoints-bitmap*)
-	     codepoint)))
-)
-
 
 ;;;; Accessor functions:
 
@@ -174,7 +160,7 @@
 
 (defun name-char (name)
   "Given an argument acceptable to string, name-char returns a character
-  object whose name is that symbol, if one exists.  Otherwise, () is returned."
+  object whose name is that symbol, if one exists, otherwise NIL."
   (if (and (stringp name) (> (length name) 2) (string-equal name "U+" :end1 2))
       (code-char (parse-integer name :radix 16 :start 1))
       (or (cdr (assoc (string name) char-name-alist :test #'string-equal))
@@ -206,8 +192,7 @@
 
 (defun graphic-char-p (char)
   "The argument must be a character object.  Graphic-char-p returns T if the
-  argument is a printing character (space through ~ in ASCII), otherwise
-  returns ()."
+  argument is a printing character, otherwise returns NIL."
   (declare (character char))
   (and (typep char 'base-char)
        (or (< 31 (char-code (the base-char char)) 127)
@@ -218,7 +203,7 @@
 
 (defun alpha-char-p (char)
   "The argument must be a character object.  Alpha-char-p returns T if the
-   argument is an alphabetic character, A-Z or a-z; otherwise ()."
+  argument is an alphabetic character; otherwise NIL."
   (declare (character char))
   (let ((m (char-code char)))
     (or (< 64 m 91) (< 96 m 123)
@@ -228,7 +213,7 @@
 
 (defun upper-case-p (char)
   "The argument must be a character object; upper-case-p returns T if the
-   argument is an upper-case character, () otherwise."
+  argument is an upper-case character, NIL otherwise."
   (declare (character char))
   (or (< 64 (char-code char) 91)
       #+(and unicode (not unicode-bootstrap))
@@ -238,12 +223,21 @@
 
 (defun lower-case-p (char)
   "The argument must be a character object; lower-case-p returns T if the 
-   argument is a lower-case character, () otherwise."
+  argument is a lower-case character, NIL otherwise."
   (declare (character char))
   (or (< 96 (char-code char) 123)
       #+(and unicode (not unicode-bootstrap))
       (and (> (char-code char) 127)
 	   (= (unicode-category (char-code char)) +unicode-category-lower+))))
+
+(defun title-case-p (char)
+  "The argument must be a character object; title-case-p returns T if the
+  argument is a title-case character, NIL otherwise."
+  (declare (character char))
+  (or (< 64 (char-code char) 91)
+      #+(and unicode (not unicode-bootstrap))
+      (and (> (char-code char) 127)
+	   (= (unicode-category (char-code char)) #x1C))))
 
 
 (defun both-case-p (char)
@@ -257,7 +251,8 @@
 	(and (> m 127)
 	     (let ((cat (unicode-category (char-code char))))
 	       (or (= cat +unicode-category-lower+)
-		   (= cat +unicode-category-upper+)))))))
+		   (= cat +unicode-category-upper+)
+		   (= cat #x1C)))))))
 
 
 (defun digit-char-p (char &optional (radix 10.))
@@ -282,7 +277,7 @@
 
 (defun alphanumericp (char)
   "Given a character-object argument, alphanumericp returns T if the
-   argument is either numeric or alphabetic."
+  argument is either numeric or alphabetic."
   (declare (character char))
   (let ((m (char-code char)))
     ;; Shortcut for ASCII digits and upper and lower case ASCII letters
@@ -290,8 +285,7 @@
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m 127)
 	     (let ((cat (unicode-category (char-code char))))
-	       (or (= cat +unicode-category-lower+)
-		   (= cat +unicode-category-upper+)))))))
+	       (or (<= #x10 cat #x1F) #|(<= #x30 cat #x3F)|#))))))
 
 
 (defun char= (character &rest more-characters)
