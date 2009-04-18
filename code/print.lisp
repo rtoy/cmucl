@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.122.4.3 2009/04/11 12:04:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.122.4.4 2009/04/18 01:34:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -749,6 +749,7 @@
 (defconstant dot-attribute 		(ash 1 6)) ; .
 (defconstant slash-attribute		(ash 1 7)) ; /
 (defconstant funny-attribute		(ash 1 8)) ; Anything illegal.
+(defconstant othercase-attribute        (ash 1 9)) ; A letter that has no case.
 
 ;;; LETTER-ATTRIBUTE is a local of SYMBOL-QUOTEP.  It matches letters that
 ;;; don't need to be escaped (according to READTABLE-CASE.)
@@ -758,7 +759,8 @@
     (uppercase . uppercase-attribute) (letter . letter-attribute)
     (sign . sign-attribute) (extension . extension-attribute)
     (dot . dot-attribute) (slash . slash-attribute)
-    (other . other-attribute) (funny . funny-attribute)))
+    (other . other-attribute) (funny . funny-attribute)
+    (othercase . othercase-attribute)))
 
 ); Eval-When (compile load eval)
 
@@ -844,8 +846,8 @@
 	   (base *print-base*)
 	   (letter-attribute
 	    (case (readtable-case *readtable*)
-	      (:upcase uppercase-attribute)
-	      (:downcase lowercase-attribute)
+	      (:upcase (logior uppercase-attribute othercase-attribute))
+	      (:downcase (logior lowercase-attribute othercase-attribute))
 	      (t (logior lowercase-attribute uppercase-attribute))))
 	   (index 0)
 	   (bits 0)
@@ -859,6 +861,7 @@
 
      OTHER ; Not potential number, see if funny chars...
       (let ((mask (logxor (logior lowercase-attribute uppercase-attribute
+				  othercase-attribute
 				  funny-attribute)
 			  letter-attribute)))
 	(do ((i (1- index) (1+ i)))
@@ -2193,6 +2196,8 @@ radix-R.  If you have a power-list then pass it in as PL."
 		 (set-bit char uppercase-attribute))
 		((lower-case-p char)
 		 (set-bit char lowercase-attribute))
+		((= (unicode-category i) +unicode-category-other+)
+		 (set-bit char othercase-attribute))
 		(t
 		 (setf (aref character-attributes i) funny-attribute))))))))
 

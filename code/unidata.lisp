@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.7 2009/04/16 17:08:30 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.8 2009/04/18 01:34:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -561,6 +561,7 @@
 ;; Lu and Ll, respectively.
 (defconstant +unicode-category-upper+ #x1d)
 (defconstant +unicode-category-lower+ #x17)
+(defconstant +unicode-category-other+ #x19)
 
 (defun unicode-upper (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))

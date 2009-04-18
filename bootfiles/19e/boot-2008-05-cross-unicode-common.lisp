@@ -225,6 +225,17 @@
 
 (in-package "LISP")
 
+(handler-bind ((error #'(lambda (c)
+                          (declare (ignore c))
+                          (invoke-restart 'kernel::continue))))
+  (defconstant attribute-names
+    `((number . number-attribute) (lowercase . lowercase-attribute)
+      (uppercase . uppercase-attribute) (letter . letter-attribute)
+      (sign . sign-attribute) (extension . extension-attribute)
+      (dot . dot-attribute) (slash . slash-attribute)
+      (other . other-attribute) (funny . funny-attribute)
+      (othercase . othercase-attribute))))
+
 ;; Opposite of dump-string-char.
 (defmacro load-string-char ()
   (ecase (c::backend-byte-order c::*native-backend*)
