@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.8 2009/04/18 01:34:15 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.9 2009/04/18 03:54:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -499,14 +499,19 @@
   (unless (unidata-name+ *unicode-data*) (load-names))
   (let* ((names (unidata-name+ *unicode-data*))
 	 (n (search-dictionary name names)))
-    (when n (aref (dictionary-codev names) n))))
+    (when n
+      (let ((cp (aref (dictionary-codev names) n)))
+	(if (minusp cp) nil cp)))))
 
 (defun unicode-1.0-name-to-codepoint (name)
   (declare (type string name))
   (unless (unidata-name1+ *unicode-data*) (load-1.0-names))
   (let* ((names (unidata-name1+ *unicode-data*))
 	 (n (search-dictionary name names)))
-    (when n (aref (dictionary-codev names) n))))
+    (when n
+      (let ((cp (aref (dictionary-codev names) n)))
+	(if (minusp cp) nil cp)))))
+
 
 (defun unicode-name+ (code ntrie dict)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0)
