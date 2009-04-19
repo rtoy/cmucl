@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.1 2009/04/14 17:28:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.2 2009/04/19 04:09:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -159,12 +159,14 @@
 	   (unless (typep vector '(or string simple-numeric-vector))
 	     (error "Wrong vector type ~a for write-vector on stream ~a." (type-of vector)
 		    stream))
-	   (endian-swap-vector vector start end swap-mask)
-	   (unwind-protect
-		(write-sequence vector stream
-				:start (floor start octets-per-element)
-				:end (floor end octets-per-element))
-	     (endian-swap-vector vector start end swap-mask))
+	   (let ((start-idx (floor start octets-per-element))
+		 (end-idx (floor end octets-per-element)))
+	     (endian-swap-vector vector start-idx end-idx swap-mask)
+	     (unwind-protect
+		  (write-sequence vector stream
+				  :start start-idx
+				  :end end-idx)
+	       (endian-swap-vector vector start-idx end-idx swap-mask)))
 	   vector))
     (* next-index octets-per-element)))
 
