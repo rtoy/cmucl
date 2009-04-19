@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.9 2009/04/18 03:54:22 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.10 2009/04/19 04:15:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -557,16 +557,21 @@
 (defun unicode-category-string (code)
   (let ((n (unicode-category code))
 	(s (make-string 2)))
-    (setf (schar s 0) (schar "CLMNPSZ?????????" (ldb (byte 4 4) n))
-	  (schar s 1) (schar "ncdefiklmopstu??" (ldb (byte 4 0) n)))
+    (setf (schar s 0) (schar "CZMPNLS?????????" (ldb (byte 4 4) n))
+	  (schar s 1) (schar "nsifepkcdmulto??" (ldb (byte 4 0) n)))
     s))
 
-;; Categories for upper and lower case letters.  Look at
-;; unicode-category-string to see how we get these numbers.  We want
-;; Lu and Ll, respectively.
-(defconstant +unicode-category-upper+ #x1d)
-(defconstant +unicode-category-lower+ #x17)
-(defconstant +unicode-category-other+ #x19)
+;; Look at unicode-category-string to see how we get these numbers.
+;; +unicode-category-graphic+ is the first graphic character
+;; +unicode-category-letter+ is the first letter
+;; +unicode-category-upper+, +unicode-category-lower+, +unicode-category-title+
+;; are uppercase, lowercase, and titlecase letters respectively.
+(defconstant +unicode-category-graphic+ #x30)
+(defconstant +unicode-category-letter+ #x50)
+(defconstant +unicode-category-upper+ #x5a)
+(defconstant +unicode-category-lower+ #x5b)
+(defconstant +unicode-category-title+ #x5c)
+(defconstant +unicode-category-other+ #x5d)
 
 (defun unicode-upper (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
@@ -644,7 +649,7 @@
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
 	   (type (integer 0 #x10FFFF) code))
   (unless (unidata-combining *unicode-data*) (load-combining))
-  (qref8 (unidata-combining *unicode-data*) code))
+  (the (unsigned-byte 8) (qref8 (unidata-combining *unicode-data*) code)))
 
 (defun unicode-bidi-class (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))

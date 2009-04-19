@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.4 2009/04/15 21:19:06 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.5 2009/04/19 04:15:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -594,8 +594,8 @@
 	(pos 0)
 	(range (make-array 50 :element-type '(unsigned-byte 32)))
 	(rpos 0))
-    (flet ((cat (x) (dpb (position (char x 0) "CLMNPSZ") (byte 3 4)
-			 (position (char x 1) "ncdefiklmopstu")))
+    (flet ((cat (x) (dpb (position (char x 0) "CZMPNLS") (byte 3 4)
+			 (position (char x 1) "nsifepkcdmulto")))
 	   (num (x) (if (string= x "") nil (read-from-string x)))
 	   (chr (x) (if (string= x "") nil (parse-integer x :radix 16)))
 	   (str (x) (if (string= x "") nil x))

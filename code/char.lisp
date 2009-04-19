@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.9 2009/04/18 04:07:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.10 2009/04/19 04:15:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -153,10 +153,11 @@
 	#+unicode
 	;; Return the Unicode name of the character,
 	;;   or U+xxxx if it doesn't have a name
-	(let ((name (unicode-name (char-code char))))
+	(let* ((code (char-code char))
+	       (name (unicode-name code)))
 	  (if name
 	      (nstring-capitalize (nsubstitute #\_ #\Space name))
-	      (format nil "U+~4,'0X" (char-code char)))))))
+	      (format nil "U+~4,'0X" code))))))
 
 (defun name-char (name)
   "Given an argument acceptable to string, name-char returns a character
@@ -195,10 +196,11 @@
   argument is a printing character, otherwise returns NIL."
   (declare (character char))
   (and (typep char 'base-char)
-       (or (< 31 (char-code (the base-char char)) 127)
-	   #+(and unicode (not unicode-bootstrap))
-	   (and (> (char-code char) 127)
-		(> (unicode-category (char-code char)) 16)))))
+       (let ((m (char-code (the base-char char))))
+	 (or (< 31 m 127)
+	     #+(and unicode (not unicode-bootstrap))
+	     (and (> m 127)
+		  (>= (unicode-category m) +unicode-category-graphic+))))))
 
 
 (defun alpha-char-p (char)
@@ -208,36 +210,41 @@
   (let ((m (char-code char)))
     (or (< 64 m 91) (< 96 m 123)
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m 127) (= (ldb (byte 3 4) (unicode-category m)) 1)))))
+	(and (> m 127)
+	     (<= +unicode-category-letter+ (unicode-category m)
+		 (+ +unicode-category-letter+ #x0F))))))
 
 
 (defun upper-case-p (char)
   "The argument must be a character object; upper-case-p returns T if the
   argument is an upper-case character, NIL otherwise."
   (declare (character char))
-  (or (< 64 (char-code char) 91)
-      #+(and unicode (not unicode-bootstrap))
-      (and (> (char-code char) 127)
-	   (= (unicode-category (char-code char)) +unicode-category-upper+))))
+  (let ((m (char-code char)))
+    (or (< 64 m 91)
+	#+(and unicode (not unicode-bootstrap))
+	(and (> m 127)
+	     (= (unicode-category m) +unicode-category-upper+)))))
 
 
 (defun lower-case-p (char)
   "The argument must be a character object; lower-case-p returns T if the 
   argument is a lower-case character, NIL otherwise."
   (declare (character char))
-  (or (< 96 (char-code char) 123)
-      #+(and unicode (not unicode-bootstrap))
-      (and (> (char-code char) 127)
-	   (= (unicode-category (char-code char)) +unicode-category-lower+))))
+  (let ((m (char-code char)))
+    (or (< 96 m 123)
+	#+(and unicode (not unicode-bootstrap))
+	(and (> m 127)
+	     (= (unicode-category m) +unicode-category-lower+)))))
 
 (defun title-case-p (char)
   "The argument must be a character object; title-case-p returns T if the
   argument is a title-case character, NIL otherwise."
   (declare (character char))
-  (or (< 64 (char-code char) 91)
-      #+(and unicode (not unicode-bootstrap))
-      (and (> (char-code char) 127)
-	   (= (unicode-category (char-code char)) #x1C))))
+  (let ((m (char-code char)))
+    (or (< 64 m 91)
+	#+(and unicode (not unicode-bootstrap))
+	(and (> m 127)
+	     (= (unicode-category m) +unicode-category-title+)))))
 
 
 (defun both-case-p (char)
@@ -249,10 +256,9 @@
     (or (< 64 m 91) (< 96 m 123)
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m 127)
-	     (let ((cat (unicode-category (char-code char))))
-	       (or (= cat +unicode-category-lower+)
-		   (= cat +unicode-category-upper+)
-		   (= cat #x1C)))))))
+	     (<= +unicode-category-lower+
+		 (unicode-category m)
+		 +unicode-category-title+)))))
 
 
 (defun digit-char-p (char &optional (radix 10.))
@@ -284,8 +290,8 @@
     (or (< 47 m 58) (< 64 m 91) (< 96 m 123)
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m 127)
-	     (let ((cat (unicode-category (char-code char))))
-	       (or (<= #x10 cat #x1F) #|(<= #x30 cat #x3F)|#))))))
+	     (<= +unicode-category-letter+ (unicode-category m)
+		 (+ +unicode-category-letter+ #x0F))))))
 
 
 (defun char= (character &rest more-characters)
