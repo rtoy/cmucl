@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.267.2.3.2.7 2009/04/18 12:27:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.267.2.3.2.8 2009/04/20 14:27:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -868,7 +868,8 @@
    "METHOD-COMBINATION" 
    "MAKE-LOAD-FORM" "MAKE-LOAD-FORM-SAVING-SLOTS"
    "CHAR-TITLECASE" "TITLE-CASE-P"
-   "GLYPH" "SGLYPH"))
+   "GLYPH" "SGLYPH"
+   "STRING-TO-NFD" "STRING-TO-NFKC" "STRING-TO-NFC" "STRING-TO-NFKD"))
 
 (defpackage "EVAL"
   (:export "*EVAL-STACK-TRACE*" "*INTERNAL-APPLY-NODE-TRACE*"
