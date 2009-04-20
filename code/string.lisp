@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.4 2009/04/20 14:26:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.5 2009/04/20 19:46:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -539,17 +539,17 @@
 			    (char-code (schar string (incf index))))))
 	    (setq code (unicode-upper code))
 	    (if (< code #x10000)
-		(setf (schar newstring new-index) (code-char code))
+		(setf (schar string index) (code-char code))
 		(let* ((tmp (- code #x10000))
 		       (hi (logior (ldb (byte 10 10) tmp) #xD800))
 		       (lo (logior (ldb (byte 10 0) tmp) #xDC00)))
-		  (setf (schar newstring new-index) (code-char hi))
+		  (setf (schar newstring index) (code-char hi))
 		  ;;@@ WARNING: this may, in theory, need to extend newstring
 		  ;;      (which, obviously, we can't do here.  Unless
 		  ;;       STRING is adjustable, maybe)
 		  ;;  but that never actually occurs as of Unicode 5.1.0,
 		  ;;  so I'm just going to ignore it for now...
-		  (setf (schar newstring (incf new-index)) (code-char lo)))))))
+		  (setf (schar string (incf index)) (code-char lo)))))))
     save-header))
 
 (defun nstring-downcase (string &key (start 0) end)
@@ -567,17 +567,17 @@
 			    (char-code (schar string (incf index))))))
 	    (setq code (unicode-lower code))
 	    (if (< code #x10000)
-		(setf (schar newstring new-index) (code-char code))
+		(setf (schar string index) (code-char code))
 		(let* ((tmp (- code #x10000))
 		       (hi (logior (ldb (byte 10 10) tmp) #xD800))
 		       (lo (logior (ldb (byte 10 0) tmp) #xDC00)))
-		  (setf (schar newstring new-index) (code-char hi))
+		  (setf (schar string index) (code-char hi))
 		  ;;@@ WARNING: this may, in theory, need to extend newstring
 		  ;;      (which, obviously, we can't do here.  Unless
 		  ;;       STRING is adjustable, maybe)
 		  ;;  but that never actually occurs as of Unicode 5.1.0,
 		  ;;  so I'm just going to ignore it for now...
-		  (setf (schar newstring (incf new-index)) (code-char lo)))))))
+		  (setf (schar string (incf index)) (code-char lo)))))))
     save-header))
 
 (defun nstring-capitalize (string &key (start 0) end)
