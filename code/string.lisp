@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.3 2009/04/18 12:27:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.4 2009/04/20 14:26:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,7 @@
 	  string= string-equal string< string> string<= string>= string/=
 	  string-lessp string-greaterp string-not-lessp string-not-greaterp
 	  string-not-equal
+	  string-to-nfd string-to-nfkd string-to-nfc string-to-nfkc
 	  make-string
 	  string-trim string-left-trim string-right-trim
 	  string-upcase
@@ -415,8 +416,22 @@
 	     (new-index (- start offset) (1+ new-index)))
 	    ((= index (the fixnum end)))
 	  (declare (fixnum index new-index))
-	  (setf (schar newstring new-index)
-		(char-upcase (schar string index))))
+	  (let ((code (char-code (schar string index))))
+	    (when (and (<= #xD800 code #xDBFF) (< (1+ index) (the fixnum end)))
+	      (setq code (+ (ash (- code #xD800) 10) #x2400
+			    (char-code (schar string (incf index))))))
+	    (setq code (unicode-upper code))
+	    (if (< code #x10000)
+		(setf (schar newstring new-index) (code-char code))
+		(let* ((tmp (- code #x10000))
+		       (hi (logior (ldb (byte 10 10) tmp) #xD800))
+		       (lo (logior (ldb (byte 10 0) tmp) #xDC00)))
+		  (setf (schar newstring new-index) (code-char hi))
+		  ;;@@ WARNING: this may, in theory, need to extend newstring
+		  ;;  but that never actually occurs as of Unicode 5.1.0,
+		  ;;  so I'm just going to ignore it for now...
+		  (setf (schar newstring (incf new-index)) (code-char lo))))))
+	;;@@ WARNING: see above
 	(do ((index end (1+ index))
 	     (new-index (- (the fixnum end) offset) (1+ new-index)))
 	    ((= index offset-slen))
@@ -444,8 +459,22 @@
 	     (new-index (- start offset) (1+ new-index)))
 	    ((= index (the fixnum end)))
 	  (declare (fixnum index new-index))
-	  (setf (schar newstring new-index)
-		(char-downcase (schar string index))))
+	  (let ((code (char-code (schar string index))))
+	    (when (and (<= #xD800 code #xDBFF) (< (1+ index) (the fixnum end)))
+	      (setq code (+ (ash (- code #xD800) 10) #x2400
+			    (char-code (schar string (incf index))))))
+	    (setq code (unicode-lower code))
+	    (if (< code #x10000)
+		(setf (schar newstring new-index) (code-char code))
+		(let* ((tmp (- code #x10000))
+		       (hi (logior (ldb (byte 10 10) tmp) #xD800))
+		       (lo (logior (ldb (byte 10 0) tmp) #xDC00)))
+		  (setf (schar newstring new-index) (code-char hi))
+		  ;;@@ WARNING: this may, in theory, need to extend newstring
+		  ;;  but that never actually occurs as of Unicode 5.1.0,
+		  ;;  so I'm just going to ignore it for now...
+		  (setf (schar newstring (incf new-index)) (code-char lo))))))
+	;;@@ WARNING: see above
 	(do ((index end (1+ index))
 	     (new-index (- (the fixnum end) offset) (1+ new-index)))
 	    ((= index offset-slen))
@@ -504,7 +533,23 @@
       (do ((index start (1+ index)))
 	  ((= index (the fixnum end)))
 	(declare (fixnum index))
-	(setf (schar string index) (char-upcase (schar string index)))))
+	(let ((code (char-code (schar string index))))
+	    (when (and (<= #xD800 code #xDBFF) (< (1+ index) (the fixnum end)))
+	      (setq code (+ (ash (- code #xD800) 10) #x2400
+			    (char-code (schar string (incf index))))))
+	    (setq code (unicode-upper code))
+	    (if (< code #x10000)
+		(setf (schar newstring new-index) (code-char code))
+		(let* ((tmp (- code #x10000))
+		       (hi (logior (ldb (byte 10 10) tmp) #xD800))
+		       (lo (logior (ldb (byte 10 0) tmp) #xDC00)))
+		  (setf (schar newstring new-index) (code-char hi))
+		  ;;@@ WARNING: this may, in theory, need to extend newstring
+		  ;;      (which, obviously, we can't do here.  Unless
+		  ;;       STRING is adjustable, maybe)
+		  ;;  but that never actually occurs as of Unicode 5.1.0,
+		  ;;  so I'm just going to ignore it for now...
+		  (setf (schar newstring (incf new-index)) (code-char lo)))))))
     save-header))
 
 (defun nstring-downcase (string &key (start 0) end)
@@ -516,7 +561,23 @@
       (do ((index start (1+ index)))
 	  ((= index (the fixnum end)))
 	(declare (fixnum index))
-	(setf (schar string index) (char-downcase (schar string index)))))
+	(let ((code (char-code (schar string index))))
+	    (when (and (<= #xD800 code #xDBFF) (< (1+ index) (the fixnum end)))
+	      (setq code (+ (ash (- code #xD800) 10) #x2400
+			    (char-code (schar string (incf index))))))
+	    (setq code (unicode-lower code))
+	    (if (< code #x10000)
+		(setf (schar newstring new-index) (code-char code))
+		(let* ((tmp (- code #x10000))
+		       (hi (logior (ldb (byte 10 10) tmp) #xD800))
+		       (lo (logior (ldb (byte 10 0) tmp) #xDC00)))
+		  (setf (schar newstring new-index) (code-char hi))
+		  ;;@@ WARNING: this may, in theory, need to extend newstring
+		  ;;      (which, obviously, we can't do here.  Unless
+		  ;;       STRING is adjustable, maybe)
+		  ;;  but that never actually occurs as of Unicode 5.1.0,
+		  ;;  so I'm just going to ignore it for now...
+		  (setf (schar newstring (incf new-index)) (code-char lo)))))))
     save-header))
 
 (defun nstring-capitalize (string &key (start 0) end)
@@ -582,42 +643,103 @@
 			(declare (fixnum index)))))
       (subseq (the simple-string string) left-end right-end))))
 
-(defun glyph (string index)
+(declaim (inline %glyph-f %glyph-b))
+(defun %glyph-f (string index)
+  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
+	   (type simple-string string) (type kernel:index index))
+  (flet ((xchar (string index)
+	   (let ((c (char-code (schar string index))))
+	     (declare (type (integer 0 #x10FFFF) c))
+	     (cond ((<= #xD800 c #xDBFF)
+		    (if (= (1+ index) (length string))
+			(error "String ends with an unpaired surrogate.")
+			(let ((c2 (char-code (schar string (1+ index)))))
+			  (if (<= #xDC00 c2 #xDFFF)
+			      (+ (ash (- c #xD800) 10) c2 #x2400)
+			      (error "Naked high surrogate in string.")))))
+		   ((<= #xDC00 c #xDFFF)
+		    (error "Naked low surrogate in string."))
+		   (t c)))))
+    (let* ((prev 0)
+	   (l (length string))
+	   (c (xchar string index))
+	   (n (+ index (if (> c #xFFFF) 2 1))))
+      (declare (type (integer 0 #x10FFFF) c) (type kernel:index l n))
+      (loop while (< n l) do
+	(let* ((c (xchar string n))
+	       (d (the (unsigned-byte 8) (unicode-combining-class c))))
+	  (when (or (zerop d) (< d prev))
+	    (return))
+	  (setq prev d)
+	  (incf n (if (> c #xFFFF) 2 1))))
+      n)))
+
+(defun %glyph-b (string index)
+  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
+	   (type simple-string string) (type kernel:index index))
+  (flet ((xchar (string index)
+	   (let ((c (char-code (schar string index))))
+	     (declare (type (integer 0 #x10FFFF) c))
+	     (cond ((<= #xDC00 c #xDFFF)
+		    (let ((c2 (char-code (schar string (1- index)))))
+		      (if (<= #xD800 c2 #xDBFF)
+			  (+ (ash (- c2 #xD800) 10) c #x2400)
+			  (error "Naked low surrogate in string."))))
+		   ((<= #xD800 c #xDBFF)
+		    (error "Naked high surrogate in string."))
+		   (t c)))))
+    (let ((prev 255)
+	  (n (1- index)))
+      (declare (type kernel:index n))
+      (loop while (> n 0) do
+	(let* ((c (xchar string n))
+	       (d (the (unsigned-byte 8) (unicode-combining-class c))))
+	  (cond ((zerop d) (return))
+		((> d prev) (incf n (if (> c #xFFFF) 2 1)) (return)))
+	  (setq prev d)
+	  (decf n (if (> c #xFFFF) 2 1))))
+      n)))
+
+(defun glyph (string index &key (from-end nil))
   "GLYPH returns the glyph at the indexed position in a string, and the
-   position of the next glyph (or NIL) as a second value.  A glyph is
-   a substring consisting of the character at INDEX followed by all
-   subsequent combining characters."
+  position of the next glyph (or NIL) as a second value.  A glyph is
+  a substring consisting of the character at INDEX followed by all
+  subsequent combining characters."
   (declare (type simple-string string) (type kernel:index index))
   #-unicode
   (char string index)
   #+unicode
   (with-array-data ((string string) (start) (end))
     (declare (ignore start end))
-    (sglyph string index)))
+    (let ((n (if from-end (%glyph-b string index) (%glyph-f string index))))
+      (if from-end
+	  (values (subseq string n index) (and (> n 0) n))
+	  (values (subseq string index n) (and (< n (length string)) n))))))
 
-(defun sglyph (string index)
+(defun sglyph (string index &key (from-end nil))
   "SGLYPH returns the glyph at the indexed position, the same as GLYPH,
-   except that the string must be a simple-string."
+  except that the string must be a simple-string"
   (declare (type simple-string string) (type kernel:index index))
   #-unicode
   (schar string index)
   #+unicode
-  (flet ((xchar (string index)
-	   (let ((c (char-code (char string index))))
-	     (cond ((<= #xD800 c #xDBFF)
-		    (let ((c2 (char-code (char string (1+ index)))))
-		      (if (<= #xDC00 c2 #xDFFF)
-			  (+ (ash (- c #xD800) 10) c2 #x2400)
-			  (error "Naked high surrogate in string."))))
-		   ((<= #xDC00 c #xDFFF)
-		    (error "Naked low surrogate in string."))
-		   (t c)))))
-    (let* ((l (length string))
-	   (c (xchar string index))
-	   (n (+ index (if (> c #xFFFF) 2 1))))
-      (declare (type (integer 0 #x10FFFF) c) (type kernel:index n))
-      (loop while (< n l) do
-	(let ((c (xchar string n)))
-	  (when (zerop (lisp::unicode-combining-class c)) (return))
-	  (incf n (if (> c #xFFFF) 2 1))))
-      (values (subseq string index n) (and (< n l) n)))))
+  (let ((n (if from-end (%glyph-b string index) (%glyph-f string index))))
+    (if from-end
+	(values (subseq string n index) (and (> n 0) n))
+	(values (subseq string index n) (and (< n (length string)) n)))))
+
+(defun string-to-nfd (string)
+  ;;@@ Implement me
+  string)
+
+(defun string-to-nfkd (string)
+  ;;@@ Implement me
+  string)
+
+(defun string-to-nfc (string)
+  ;;@@ Implement me
+  string)
+
+(defun string-to-nfkc (string)
+  ;;@@ Implement me
+  string)

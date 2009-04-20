@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.53.8.1 2009/04/18 12:27:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.53.8.2 2009/04/20 14:26:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -570,37 +570,18 @@
 
 #+unicode
 (defun string-reverse* (sequence)
-  (declare (type string sequence))
-  (do* ((length (length sequence))
-	(string (make-string length))
-	(lead nil)
-	(i 0 (1+ i))
-	(j length)
-	(head 0))
-       ((= i length)
-	(when lead
-	  (error "String ends in the middle of a surrogate pair."))
-	(replace string sequence :end1 (- i head) :start2 head)
-	string)
-    (declare (type (or null (integer #xD800 #xDBFF)) lead)
-	     (type kernel:index i j head))
-    (let ((code (char-code (schar sequence i))))
-      (declare (type (integer 0 #x10FFFF) code))
-      (cond (lead
-	     (unless (<= #xDC00 code #xDFFF)
-	       (error "Naked high surrogate in string."))
-	     (setq code (+ (ash (- lead #xD800) 10) code #x2400)
-		   lead nil))
-	    ((<= #xD800 code #xDBFF)
-	     (setq lead code))
-	    ((<= #xDC00 code #xDFFF)
-	     (error "Naked low surrogate in string.")))
-      (unless lead
-	(when (zerop (the (unsigned-byte 8) (unicode-combining-class code)))
-	  (decf j (- i head))
-	  (replace string sequence
-		   :start1 j :end1 (+ j (- i head)) :start2 head)
-	  (setq head i))))))
+  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
+	   (type string sequence))
+  (with-array-data ((sequence sequence) (start) (end))
+    (declare (ignore start end))
+    (let* ((length (length sequence))
+	   (string (make-string length))
+	   (j length))
+      (declare (type kernel:index length j))
+      (loop for i = 0 then n as n = (%glyph-f sequence i) do
+	  (replace string sequence :start1 (decf j (- n i)) :start2 i :end2 n)
+	while (< n length))
+      string)))
 
 
 ;;; Nreverse:
@@ -636,8 +617,20 @@
 
 #+unicode
 (defun string-nreverse* (sequence)
-  ;;@@ FIXME
-  (replace sequence (string-reverse* sequence)))
+  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
+	   (type string sequence))
+  (with-array-data ((sequence sequence) (start) (end))
+    (declare (ignore start end))
+    (flet ((rev (start end)
+	     (do ((i start (1+ i))
+		  (j (1- end) (1- j)))
+		 ((>= i j) sequence)
+	       (declare (type kernel:index i j))
+	       (rotatef (schar sequence i) (schar sequence j)))))
+      (let ((len (length sequence)))
+	(loop for i = 0 then n as n = (%glyph-f sequence i) do
+	  (rev i n) while (< n len))
+	(rev 0 len)))))
 
 (defun nreverse (sequence)
   "Returns a sequence of the same elements in reverse order; the argument
