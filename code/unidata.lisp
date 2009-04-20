@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.10 2009/04/19 04:15:27 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.11 2009/04/20 14:06:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -518,23 +518,24 @@
 		     (ext:inhibit-warnings 3))
 	   (type (integer 0 #x10FFFF) code)
 	   (type ntrie32 ntrie) (type dictionary dict))
-  (let* ((codebook (dictionary-cdbk dict))
-	 (namev (dictionary-namev dict))
-	 (nextv (dictionary-nextv dict))
-	 (keyv (dictionary-keyv dict))
-	 (n (qref32 ntrie code))
-	 (p (ash (aref namev n) -18))
-	 (s (make-string p)))
-    (loop while (plusp n) do
-	(let* ((prev (logand (aref namev n) #x3FFFF))
-	       (temp (aref nextv prev))
-	       (base (logand temp #x3FFFF))
-	       (str (aref codebook
-			  (aref keyv (+ (ash temp -18) (- n base))))))
-	  (declare (type simple-base-string str))
-	  (setq p (- p (length str)) n prev)
-	  (replace s str :start1 p)))
-    (if n s nil)))
+  (let ((n (qref32 ntrie code)))
+    (when (plusp n)
+      (let* ((codebook (dictionary-cdbk dict))
+	     (namev (dictionary-namev dict))
+	     (nextv (dictionary-nextv dict))
+	     (keyv (dictionary-keyv dict))
+	     (p (ash (aref namev n) -18))
+	     (s (make-string p)))
+	(loop while (plusp n) do
+	  (let* ((prev (logand (aref namev n) #x3FFFF))
+		 (temp (aref nextv prev))
+		 (base (logand temp #x3FFFF))
+		 (str (aref codebook
+			    (aref keyv (+ (ash temp -18) (- n base))))))
+	    (declare (type simple-base-string str))
+	    (setq p (- p (length str)) n prev)
+	    (replace s str :start1 p)))
+	s))))
 
 (defun unicode-name (code)
   (unless (unidata-name+ *unicode-data*) (load-names))
