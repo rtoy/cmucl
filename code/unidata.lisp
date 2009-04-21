@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.13 2009/04/21 17:47:31 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.14 2009/04/21 18:11:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -220,8 +220,7 @@
 	:type (simple-array (unsigned-byte 16) (*))))
 
 (defstruct (decomp (:include ntrie32))
-  (tabl (ext:required-argument) :read-only t
-	:type (simple-array (unsigned-byte 16) (*))))
+  (tabl (ext:required-argument) :read-only t :type simple-string))
 
 (defstruct (bidi (:include ntrie16))
   (tabl (ext:required-argument) :read-only t
@@ -446,7 +445,7 @@
       (read-vector tabl stm :endian-swap :network-order)
       (setf (unidata-decomp *unicode-data*)
 	  (make-decomp :split split :hvec hvec :mvec mvec :lvec lvec
-		       :tabl tabl)))))
+		       :tabl (map 'simple-string #'code-char tabl))))))
 
 (defloader load-combining (stm 7)
   (multiple-value-bind (split hvec mvec lvec) (read-ntrie 8 stm)
