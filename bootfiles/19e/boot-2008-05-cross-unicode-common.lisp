@@ -225,6 +225,9 @@
 
 (in-package "LISP")
 
+;; See print.lisp.
+(defconstant othercase-attribute        (ash 1 9))
+
 (handler-bind ((error #'(lambda (c)
                           (declare (ignore c))
                           (invoke-restart 'kernel::continue))))
