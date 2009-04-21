@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.12 2009/04/20 19:44:08 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.13 2009/04/21 17:47:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -577,53 +577,35 @@
 (defun unicode-upper (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
 	   (type (integer 0 #x10FFFF) code))
-  (cond ((< code #x80)
-	 ;; Handle ASCII without unnecessarily loading the database
-	 (if (< 96 code 123)
-	     (- code 32)
-	     code))
-	(t
-	 (unless (unidata-scase *unicode-data*) (load-scase))
-	 (let* ((scase (unidata-scase *unicode-data*))
-		(n (logand (qref32 scase code) #xFF)))
-	   (if (zerop n)
-	       code
-	       (let* ((m (aref (scase-svec scase) (logand n #x7F))))
-		 (if (logbitp 7 n) (+ code m) (- code m))))))))
+  (unless (unidata-scase *unicode-data*) (load-scase))
+  (let* ((scase (unidata-scase *unicode-data*))
+	 (n (logand (qref32 scase code) #xFF)))
+    (if (zerop n)
+	code
+	(let* ((m (aref (scase-svec scase) (logand n #x7F))))
+	  (if (logbitp 7 n) (+ code m) (- code m))))))
 
 (defun unicode-lower (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
 	   (type (integer 0 #x10FFFF) code))
-  (cond ((< code #x80)
-	 ;; Handle ASCII without unnecessarily loading the database
-	 (if (< 64 code 91)
-	     (+ code 32)
-	     code))
-	(t
-	 (unless (unidata-scase *unicode-data*) (load-scase))
-	 (let* ((scase (unidata-scase *unicode-data*))
-		(n (logand (ash (qref32 scase code) -8) #xFF)))
-	   (if (zerop n)
-	       code
-	       (let ((m (aref (scase-svec scase) (logand n #x7F))))
-		 (if (logbitp 7 n) (+ code m) (- code m))))))))
+  (unless (unidata-scase *unicode-data*) (load-scase))
+  (let* ((scase (unidata-scase *unicode-data*))
+	 (n (logand (ash (qref32 scase code) -8) #xFF)))
+    (if (zerop n)
+	code
+	(let ((m (aref (scase-svec scase) (logand n #x7F))))
+	  (if (logbitp 7 n) (+ code m) (- code m))))))
 
 (defun unicode-title (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
 	   (type (integer 0 #x10FFFF) code))
-  (cond ((< code #x80)
-	 ;; Handle ASCII without unnecessarily loading the database
-	 (if (< 96 code 123)
-	     (- code 32)
-	     code))
-	(t
-	 (unless (unidata-scase *unicode-data*) (load-scase))
-	 (let* ((scase (unidata-scase *unicode-data*))
-		(n (logand (ash (qref32 scase code) -16) #xFF)))
-	   (if (zerop n)
-	       code
-	       (let ((m (aref (scase-svec scase) (logand n #x7F))))
-		 (if (logbitp 7 n) (+ code m) (- code m))))))))
+  (unless (unidata-scase *unicode-data*) (load-scase))
+  (let* ((scase (unidata-scase *unicode-data*))
+	 (n (logand (ash (qref32 scase code) -16) #xFF)))
+    (if (zerop n)
+	code
+	(let ((m (aref (scase-svec scase) (logand n #x7F))))
+	  (if (logbitp 7 n) (+ code m) (- code m))))))
 
 (defun unicode-num1 (code)
   (declare (type (integer 0 #x10FFFF) code))

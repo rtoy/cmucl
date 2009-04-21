@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.5 2009/04/20 19:46:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.6 2009/04/21 17:47:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,6 +26,40 @@
 	  string-upcase
 	  string-downcase string-capitalize nstring-upcase nstring-downcase
 	  nstring-capitalize))
+
+
+(declaim (inline codepoint surrogates))
+;; Return the codepoint from the given position in a string.  If the
+;; position is a surrogate, it is combined with either the previous or
+;; following character (when possible) to compute the codepoint.  The
+;; second value is NIL if the codepoint is not a surrogate pair.
+;; Otherwise +1 if position is the high surrogate and -1 if the
+;; position is the low surrogate.
+(defun codepoint (string i &optional (end (length string)))
+  (declare (type simple-string string) (type kernel:index i end))
+  (let ((code (char-code (schar string i))))
+    (cond ((and (<= #xD800 code #xDBFF) (< (1+ i) end))
+	   (let ((tmp (char-code (schar string (1+ i)))))
+	     (if (<= #xDC00 tmp #xDFFF)
+		 (values (+ (ash (- code #xD800) 10) tmp #x2400) +1)
+		 (values code nil))))
+	  ((and (<= #xDC00 code #xDFFF) (> i 0))
+	   (let ((tmp (char-code (schar string (1- i)))))
+	     (if (<= #xD800 tmp #xDBFF)
+		 (values (+ (ash (- tmp #xD800) 10) code #x2400) -1)
+		 (values code nil))))
+	  (t (values code nil)))))
+
+;; Return the high and low surrogate value for a codepoint outside the
+;; BMP.  If the codepoint is in the BMP, just return the codepoint.
+(defun surrogates (codepoint)
+  (declare (type (integer 0 #x10FFFF) codepoint))
+  (if (< codepoint #x10000)
+      (values codepoint nil)
+      (let* ((tmp (- codepoint #x10000))
+	     (hi (logior (ldb (byte 10 10) tmp) #xD800))
+	     (lo (logior (ldb (byte 10 0) tmp) #xDC00)))
+	(values hi lo))))
 
 
 (defun string (X)
@@ -416,21 +450,19 @@
 	     (new-index (- start offset) (1+ new-index)))
 	    ((= index (the fixnum end)))
 	  (declare (fixnum index new-index))
-	  (let ((code (char-code (schar string index))))
-	    (when (and (<= #xD800 code #xDBFF) (< (1+ index) (the fixnum end)))
-	      (setq code (+ (ash (- code #xD800) 10) #x2400
-			    (char-code (schar string (incf index))))))
-	    (setq code (unicode-upper code))
-	    (if (< code #x10000)
-		(setf (schar newstring new-index) (code-char code))
-		(let* ((tmp (- code #x10000))
-		       (hi (logior (ldb (byte 10 10) tmp) #xD800))
-		       (lo (logior (ldb (byte 10 0) tmp) #xDC00)))
-		  (setf (schar newstring new-index) (code-char hi))
-		  ;;@@ WARNING: this may, in theory, need to extend newstring
-		  ;;  but that never actually occurs as of Unicode 5.1.0,
-		  ;;  so I'm just going to ignore it for now...
-		  (setf (schar newstring (incf new-index)) (code-char lo))))))
+	  (multiple-value-bind (code wide) (codepoint string index)
+	    (when wide (incf index))
+	    ;; Handle ASCII specially because this is called early in
+	    ;; initialization, before unidata is available.
+	    (cond ((< 96 code 123) (decf code 32))
+		  ((> code 127) (setq code (unicode-upper code))))
+	    ;;@@ WARNING: this may, in theory, need to extend newstring
+	    ;;  but that never actually occurs as of Unicode 5.1.0,
+	    ;;  so I'm just going to ignore it for now...
+	    (multiple-value-bind (hi lo) (surrogates code)
+	      (setf (schar newstring new-index) (code-char hi))
+	      (when lo
+		(setf (schar newstring (incf new-index)) (code-char lo))))))
 	;;@@ WARNING: see above
 	(do ((index end (1+ index))
 	     (new-index (- (the fixnum end) offset) (1+ new-index)))
@@ -459,21 +491,19 @@
 	     (new-index (- start offset) (1+ new-index)))
 	    ((= index (the fixnum end)))
 	  (declare (fixnum index new-index))
-	  (let ((code (char-code (schar string index))))
-	    (when (and (<= #xD800 code #xDBFF) (< (1+ index) (the fixnum end)))
-	      (setq code (+ (ash (- code #xD800) 10) #x2400
-			    (char-code (schar string (incf index))))))
-	    (setq code (unicode-lower code))
-	    (if (< code #x10000)
-		(setf (schar newstring new-index) (code-char code))
-		(let* ((tmp (- code #x10000))
-		       (hi (logior (ldb (byte 10 10) tmp) #xD800))
-		       (lo (logior (ldb (byte 10 0) tmp) #xDC00)))
-		  (setf (schar newstring new-index) (code-char hi))
-		  ;;@@ WARNING: this may, in theory, need to extend newstring
-		  ;;  but that never actually occurs as of Unicode 5.1.0,
-		  ;;  so I'm just going to ignore it for now...
-		  (setf (schar newstring (incf new-index)) (code-char lo))))))
+	  (multiple-value-bind (code wide) (codepoint string index)
+	    (when wide (incf index))
+	    ;; Handle ASCII specially because this is called early in
+	    ;; initialization, before unidata is available.
+	    (cond ((< 64 code 91) (incf code 32))
+		  ((> code 127) (setq code (unicode-lower code))))
+	    ;;@@ WARNING: this may, in theory, need to extend newstring
+	    ;;  but that never actually occurs as of Unicode 5.1.0,
+	    ;;  so I'm just going to ignore it for now...
+	    (multiple-value-bind (hi lo) (surrogates code)
+	      (setf (schar newstring new-index) (code-char hi))
+	      (when lo
+		(setf (schar newstring (incf new-index)) (code-char lo))))))
 	;;@@ WARNING: see above
 	(do ((index end (1+ index))
 	     (new-index (- (the fixnum end) offset) (1+ new-index)))
@@ -533,23 +563,21 @@
       (do ((index start (1+ index)))
 	  ((= index (the fixnum end)))
 	(declare (fixnum index))
-	(let ((code (char-code (schar string index))))
-	    (when (and (<= #xD800 code #xDBFF) (< (1+ index) (the fixnum end)))
-	      (setq code (+ (ash (- code #xD800) 10) #x2400
-			    (char-code (schar string (incf index))))))
-	    (setq code (unicode-upper code))
-	    (if (< code #x10000)
-		(setf (schar string index) (code-char code))
-		(let* ((tmp (- code #x10000))
-		       (hi (logior (ldb (byte 10 10) tmp) #xD800))
-		       (lo (logior (ldb (byte 10 0) tmp) #xDC00)))
-		  (setf (schar newstring index) (code-char hi))
-		  ;;@@ WARNING: this may, in theory, need to extend newstring
-		  ;;      (which, obviously, we can't do here.  Unless
-		  ;;       STRING is adjustable, maybe)
-		  ;;  but that never actually occurs as of Unicode 5.1.0,
-		  ;;  so I'm just going to ignore it for now...
-		  (setf (schar string (incf index)) (code-char lo)))))))
+	(multiple-value-bind (code wide) (codepoint string index)
+	  (declare (ignore wide))
+	  ;; Handle ASCII specially because this is called early in
+	  ;; initialization, before unidata is available.
+	  (cond ((< 96 code 123) (decf code 32))
+		((> code 127) (setq code (unicode-upper code))))
+	  ;;@@ WARNING: this may, in theory, need to extend string
+	  ;;      (which, obviously, we can't do here.  Unless
+	  ;;       STRING is adjustable, maybe)
+	  ;;  but that never actually occurs as of Unicode 5.1.0,
+	  ;;  so I'm just going to ignore it for now...
+	  (multiple-value-bind (hi lo) (surrogates code)
+	    (setf (schar string index) (code-char hi))
+	    (when lo
+	      (setf (schar string (incf index)) (code-char lo)))))))
     save-header))
 
 (defun nstring-downcase (string &key (start 0) end)
@@ -561,23 +589,19 @@
       (do ((index start (1+ index)))
 	  ((= index (the fixnum end)))
 	(declare (fixnum index))
-	(let ((code (char-code (schar string index))))
-	    (when (and (<= #xD800 code #xDBFF) (< (1+ index) (the fixnum end)))
-	      (setq code (+ (ash (- code #xD800) 10) #x2400
-			    (char-code (schar string (incf index))))))
-	    (setq code (unicode-lower code))
-	    (if (< code #x10000)
-		(setf (schar string index) (code-char code))
-		(let* ((tmp (- code #x10000))
-		       (hi (logior (ldb (byte 10 10) tmp) #xD800))
-		       (lo (logior (ldb (byte 10 0) tmp) #xDC00)))
-		  (setf (schar string index) (code-char hi))
-		  ;;@@ WARNING: this may, in theory, need to extend newstring
-		  ;;      (which, obviously, we can't do here.  Unless
-		  ;;       STRING is adjustable, maybe)
-		  ;;  but that never actually occurs as of Unicode 5.1.0,
-		  ;;  so I'm just going to ignore it for now...
-		  (setf (schar string (incf index)) (code-char lo)))))))
+	(multiple-value-bind (code wide) (codepoint string index)
+	  (declare (ignore wide))
+	  (cond ((< 64 code 91) (incf code 32))
+		((> code 127) (setq code (unicode-lower code))))
+	  ;;@@ WARNING: this may, in theory, need to extend string
+	  ;;      (which, obviously, we can't do here.  Unless
+	  ;;       STRING is adjustable, maybe)
+	  ;;  but that never actually occurs as of Unicode 5.1.0,
+	  ;;  so I'm just going to ignore it for now...
+	  (multiple-value-bind (hi lo) (surrogates code)
+	    (setf (schar string index) (code-char hi))
+	    (when lo
+	      (setf (schar string (incf index)) (code-char lo)))))))
     save-header))
 
 (defun nstring-capitalize (string &key (start 0) end)
