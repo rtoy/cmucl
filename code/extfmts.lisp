@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.12 2009/04/16 20:14:14 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.13 2009/04/22 17:09:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -461,12 +461,39 @@
 ;;; Read and write one character through an external-format
 ;;;
 (defmacro octets-to-char (external-format state count input unput)
-  `(let ((code (octets-to-codepoint ,external-format
-				    ,state ,count ,input ,unput)))
-     (declare (type (unsigned-byte 31) code))
-     (if (< code char-code-limit) (code-char code)
-	 #-(and unicode (not unicode-bootstrap)) #\?
-	 #+(and unicode (not unicode-bootstrap)) #\U+FFFD)))
+  `(progn
+     ;; We need our own state variable.  Update the state variable to
+     ;; be a cons whose car is for this function and whose cdr is the
+     ;; state for the external format.
+     (unless (consp ,state)
+       ;; What should we do if state is not a cons and not nil?  Just
+       ;; stick the current state value in the cdr.
+       (setf ,state (cons nil ,state)))
+     (cond ((car ,state)
+	    ;; Return the trailing surrogate.  Be sure to set count to
+	    ;; 0 to tell stream code we didn't read anything this
+	    ;; time!
+	    (prog1 (code-char (car ,state))
+	      (setf (car ,state) nil)
+	      (setf ,count 0)))
+	   (t
+	    (let ((code (octets-to-codepoint ,external-format
+					     (cdr ,state) ,count ,input ,unput)))
+	      (declare (type (unsigned-byte 21) code))
+	      (cond ((< code #x10000)
+		     (setf (car ,state) nil)
+		     (code-char code))
+		    #-(and unicode (not unicode-bootstrap))
+		    (t #\?)
+		    #+(and unicode (not unicode-bootstrap))
+		    (t
+		     ;; Character outside the BMP.  Convert to a
+		     ;; surrogate pair and save the low surrogate for
+		     ;; later and return the high surrogate now.
+		     (multiple-value-bind (hi lo)
+			 (lisp::surrogates code)
+		       (setf (car ,state) lo)
+		       (code-char hi)))))))))
 
 (defmacro char-to-octets (external-format char state output)
   `(codepoint-to-octets ,external-format (char-code ,char) ,state ,output))
