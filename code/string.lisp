@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.6 2009/04/21 17:47:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.7 2009/04/22 17:05:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,31 +28,40 @@
 	  nstring-capitalize))
 
 
-(declaim (inline codepoint surrogates))
-;; Return the codepoint from the given position in a string.  If the
-;; position is a surrogate, it is combined with either the previous or
-;; following character (when possible) to compute the codepoint.  The
-;; second value is NIL if the codepoint is not a surrogate pair.
-;; Otherwise +1 if position is the high surrogate and -1 if the
-;; position is the low surrogate.
+(declaim (inline codepoint-from-surrogates codepoint surrogates))
+
+(defun codepoint-from-surrogates (high low)
+  "Return the codepoint given the high and low surrogate values"
+  (declare (type (integer #xD800 #xDBFF) high)
+	   (type (integer #xDC00 #xDFFF) low))
+  (+ (ash (- high #xD800) 10)
+     low
+     #x2400))
+
 (defun codepoint (string i &optional (end (length string)))
+  "Return the codepoint value from String at position I.  If that
+  position is a surrogate, it is combined with either the previous or
+  following character (when possible) to compute the codepoint.  The
+  second return value is NIL if the position is not a surrogate pair.
+  Otherwise +1 or -1 is returned if the position is the high or low
+  surrogate value, respectively."
   (declare (type simple-string string) (type kernel:index i end))
   (let ((code (char-code (schar string i))))
     (cond ((and (<= #xD800 code #xDBFF) (< (1+ i) end))
 	   (let ((tmp (char-code (schar string (1+ i)))))
 	     (if (<= #xDC00 tmp #xDFFF)
-		 (values (+ (ash (- code #xD800) 10) tmp #x2400) +1)
+		 (values (codepoint-from-surrogates code tmp) +1)
 		 (values code nil))))
 	  ((and (<= #xDC00 code #xDFFF) (> i 0))
 	   (let ((tmp (char-code (schar string (1- i)))))
 	     (if (<= #xD800 tmp #xDBFF)
-		 (values (+ (ash (- tmp #xD800) 10) code #x2400) -1)
+		 (values (codepoint-from-surrogates tmp code) -1)
 		 (values code nil))))
 	  (t (values code nil)))))
 
-;; Return the high and low surrogate value for a codepoint outside the
-;; BMP.  If the codepoint is in the BMP, just return the codepoint.
 (defun surrogates (codepoint)
+  "Return the high and low surrogate values for Codepoint.  If
+  Codepoint is in the BMP, just return the Codepoint itself"
   (declare (type (integer 0 #x10FFFF) codepoint))
   (if (< codepoint #x10000)
       (values codepoint nil)
