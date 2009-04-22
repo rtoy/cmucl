@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.2.4.1.2.8 2009/04/22 16:58:05 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.2.4.1.2.9 2009/04/22 20:45:41 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -13,7 +13,7 @@
 ;;
 ;; See Table 3-7, Ch 3.9 in the Unicode book.
 
-(define-external-format :utf-8-safe (:min 1 :max 4)
+(define-external-format :utf-8 (:min 1 :max 4)
   ()
   (octets-to-code (state input unput c i j n)
     `(labels ((utf8 (,c ,i)
