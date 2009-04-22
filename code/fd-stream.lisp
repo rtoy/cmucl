@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.8 2009/03/25 21:51:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.9 2009/04/22 00:30:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -582,16 +582,20 @@
 	    (len (fd-stream-obuf-length stream))
 	    (tail (fd-stream-obuf-tail stream)))
        (declare (type sys:system-area-pointer sap) (type index len tail))
-       (dotimes (i (- end start))
-	 (stream::char-to-octets ,extfmt
-				 (schar string (+ i start))
-				 (fd-stream-co-state stream)
-				 (lambda (byte)
-				   (when (= tail len)
-				     (do-output stream sap 0 tail t)
-				     (setq sap (fd-stream-obuf-sap stream)
-					   tail 0))
-				   (setf (bref sap (1- (incf tail))) byte))))
+       (do ((i start))
+	   ((>= i end))
+	 (multiple-value-bind (code step)
+	     (codepoint string i end)
+	   (stream::codepoint-to-octets ,extfmt
+					code
+					(fd-stream-co-state stream)
+					(lambda (byte)
+					  (when (= tail len)
+					    (do-output stream sap 0 tail t)
+					    (setq sap (fd-stream-obuf-sap stream)
+						  tail 0))
+					  (setf (bref sap (1- (incf tail))) byte)))
+	   (incf i (if step 2 1))))
        (setf (fd-stream-obuf-tail stream) tail))))
 
 
