@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.13 2009/04/22 17:09:43 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.14 2009/04/23 15:10:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -473,7 +473,7 @@
 	    ;; Return the trailing surrogate.  Be sure to set count to
 	    ;; 0 to tell stream code we didn't read anything this
 	    ;; time!
-	    (prog1 (code-char (car ,state))
+	    (prog1 (car ,state)
 	      (setf (car ,state) nil)
 	      (setf ,count 0)))
 	   (t
@@ -493,7 +493,7 @@
 		     (multiple-value-bind (hi lo)
 			 (lisp::surrogates code)
 		       (setf (car ,state) lo)
-		       (code-char hi)))))))))
+		       hi))))))))
 
 (defmacro char-to-octets (external-format char state output)
   `(codepoint-to-octets ,external-format (char-code ,char) ,state ,output))
@@ -507,25 +507,18 @@
 	      (type (simple-array (unsigned-byte 8) (*)) buffer)
               (type (integer 0 #x10ffff) code)
 	      (ignorable state))
-     (loop with i of-type kernel:index = 0
-	   while (< i (- end start))
-	   do
-	   (setf code (char-code (schar string (+ start i))))
-	   (incf i)
-	   (when (<= #xd800 code #xdbff)
-	     ;; High surrogate!  Grab the low surrogate and convert to a
-	     ;; codepoint before outputting it.  XXX: What do we do if
-	     ;; there is no low surrogate either because it's not there
-	     ;; or because we've reached the end of the string?
-	     (setf code (+ (ash (- code #xd800) 10)
-			   (char-code (schar string (+ start i)))
-			   #x2400))
-	     (incf i))
-	   (codepoint-to-octets ,extfmt code state
-				(lambda (b)
-				  (when (= ptr (length buffer))
-				    (setq buffer (adjust-array buffer (* 2 ptr))))
-				  (setf (aref buffer (1- (incf ptr))) b))))))
+    (loop with i of-type kernel_index = start
+	  while (< i end)
+	  do
+	  (multiple-value-bind (c step)
+	      (lisp::codepoint string i end)
+	    (setf code c)
+	    (incf i (if step 2 1))
+	    (codepoint-to-octets ,extfmt code state
+				 (lambda (b)
+				   (when (= ptr (length buffer))
+				     (setq buffer (adjust-array buffer (* 2 ptr))))
+				   (setf (aref buffer (1- (incf ptr))) b)))))))
 
 (defun string-to-octets (string &key (start 0) end (external-format :default)
 				     (buffer nil bufferp))
@@ -558,12 +551,11 @@
 			       (aref octets (incf ptr)) ;;@@ EOF??
 			       (lambda (n) (decf ptr n))))
            ;; Convert codepoint to UTF-16 surrogate pairs if needed
-	   (cond ((<= code #xffff)
-		  (setf (aref string (incf pos)) (code-char code)))
-		 (t
-		  (decf code #x10000)
-		  (setf (aref string (incf pos)) (code-char (+ (ldb (byte 10 10) code) #xd800)))
-		  (setf (aref string (incf pos)) (code-char (+ (ldb (byte 10 0) code) #xdc00)))))
+	   (multiple-value-bind (high low)
+	       (surrogates code)
+	     (setf (aref string (incf pos)) high)
+	     (when low
+	       (setf (aref string (incf pos)) low)))
 	finally (return (values string (1+ pos))))))
 
 (defun octets-to-string (octets &key (start 0) end (external-format :default)

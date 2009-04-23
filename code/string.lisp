@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.7 2009/04/22 17:05:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.8 2009/04/23 15:10:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,15 +28,14 @@
 	  nstring-capitalize))
 
 
-(declaim (inline codepoint-from-surrogates codepoint surrogates))
+(declaim (inline surrogates-to-codepoint codepoint surrogates))
 
-(defun codepoint-from-surrogates (high low)
-  "Return the codepoint given the high and low surrogate values"
-  (declare (type (integer #xD800 #xDBFF) high)
-	   (type (integer #xDC00 #xDFFF) low))
-  (+ (ash (- high #xD800) 10)
-     low
-     #x2400))
+(defun surrogates-to-codepoint (hi lo)
+  "Convert the given Hi and Lo surrogate characters to the
+  corresponding codepoint value"
+  (declare (type character hi lo))
+  (+ (ash (- (the (integer #xD800 #xDBFF) (char-code hi)) #xD800) 10)
+     (the (integer #xDC00 #xDFFF) (char-code lo)) #x2400))
 
 (defun codepoint (string i &optional (end (length string)))
   "Return the codepoint value from String at position I.  If that
@@ -50,25 +49,26 @@
     (cond ((and (<= #xD800 code #xDBFF) (< (1+ i) end))
 	   (let ((tmp (char-code (schar string (1+ i)))))
 	     (if (<= #xDC00 tmp #xDFFF)
-		 (values (codepoint-from-surrogates code tmp) +1)
+		 (values (surrogates-to-codepoint (code-char code) (code-char tmp)) +1)
 		 (values code nil))))
 	  ((and (<= #xDC00 code #xDFFF) (> i 0))
 	   (let ((tmp (char-code (schar string (1- i)))))
 	     (if (<= #xD800 tmp #xDBFF)
-		 (values (codepoint-from-surrogates tmp code) -1)
+		 (values (surrogates-to-codepoint (code-char tmp) (code-char code)) -1)
 		 (values code nil))))
 	  (t (values code nil)))))
 
 (defun surrogates (codepoint)
-  "Return the high and low surrogate values for Codepoint.  If
-  Codepoint is in the BMP, just return the Codepoint itself"
+  "Return the high and low surrogate characters for Codepoint.  If
+  Codepoint is in the BMP, the first return value is the corresponding
+  character and the second is NIL."
   (declare (type (integer 0 #x10FFFF) codepoint))
   (if (< codepoint #x10000)
-      (values codepoint nil)
+      (values (code-char codepoint) nil)
       (let* ((tmp (- codepoint #x10000))
 	     (hi (logior (ldb (byte 10 10) tmp) #xD800))
 	     (lo (logior (ldb (byte 10 0) tmp) #xDC00)))
-	(values hi lo))))
+	(values (code-char hi) (code-char lo)))))
 
 
 (defun string (X)
@@ -469,9 +469,9 @@
 	    ;;  but that never actually occurs as of Unicode 5.1.0,
 	    ;;  so I'm just going to ignore it for now...
 	    (multiple-value-bind (hi lo) (surrogates code)
-	      (setf (schar newstring new-index) (code-char hi))
+	      (setf (schar newstring new-index) hi)
 	      (when lo
-		(setf (schar newstring (incf new-index)) (code-char lo))))))
+		(setf (schar newstring (incf new-index)) lo)))))
 	;;@@ WARNING: see above
 	(do ((index end (1+ index))
 	     (new-index (- (the fixnum end) offset) (1+ new-index)))
@@ -510,9 +510,9 @@
 	    ;;  but that never actually occurs as of Unicode 5.1.0,
 	    ;;  so I'm just going to ignore it for now...
 	    (multiple-value-bind (hi lo) (surrogates code)
-	      (setf (schar newstring new-index) (code-char hi))
+	      (setf (schar newstring new-index) hi)
 	      (when lo
-		(setf (schar newstring (incf new-index)) (code-char lo))))))
+		(setf (schar newstring (incf new-index)) lo)))))
 	;;@@ WARNING: see above
 	(do ((index end (1+ index))
 	     (new-index (- (the fixnum end) offset) (1+ new-index)))
@@ -584,9 +584,9 @@
 	  ;;  but that never actually occurs as of Unicode 5.1.0,
 	  ;;  so I'm just going to ignore it for now...
 	  (multiple-value-bind (hi lo) (surrogates code)
-	    (setf (schar string index) (code-char hi))
+	    (setf (schar string index) hi)
 	    (when lo
-	      (setf (schar string (incf index)) (code-char lo)))))))
+	      (setf (schar string (incf index)) lo))))))
     save-header))
 
 (defun nstring-downcase (string &key (start 0) end)
@@ -608,9 +608,9 @@
 	  ;;  but that never actually occurs as of Unicode 5.1.0,
 	  ;;  so I'm just going to ignore it for now...
 	  (multiple-value-bind (hi lo) (surrogates code)
-	    (setf (schar string index) (code-char hi))
+	    (setf (schar string index) hi)
 	    (when lo
-	      (setf (schar string (incf index)) (code-char lo)))))))
+	      (setf (schar string (incf index)) lo))))))
     save-header))
 
 (defun nstring-capitalize (string &key (start 0) end)
