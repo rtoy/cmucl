@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.9 2009/04/22 00:30:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.10 2009/04/23 16:08:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -929,27 +929,29 @@
   `(lambda (stream)
      (declare (type fd-stream stream)
 	      (optimize (speed 3) (space 0) (debug 0) (safety 0)))
-    (catch 'eof-input-catcher
-      (let* ((head (fd-stream-ibuf-head stream))
-	     (ch (stream::octets-to-char ,extfmt
-					 (fd-stream-oc-state stream)
-					 (fd-stream-last-char-read-size stream)
-					 ;;@@ Note: need proper EOF handling...
-					 (progn
-					   (when (= head
-						    (fd-stream-ibuf-tail
-						     stream))
-					     (do-input stream)
-					     (setf head
-						 (fd-stream-ibuf-head stream)))
-					   (bref (fd-stream-ibuf-sap stream)
-						 (1- (incf head))))
-					 (lambda (n) (decf head n)))))
-	(declare (type index head))
-	(when ch
-	  (incf (fd-stream-ibuf-head stream)
-		(fd-stream-last-char-read-size stream))
-	  ch)))))
+     (catch 'eof-input-catcher
+       (let* ((head (fd-stream-ibuf-head stream))
+	      (ch (stream::octets-to-char ,extfmt
+					  (fd-stream-oc-state stream)
+					  (fd-stream-last-char-read-size stream)
+					  ;;@@ Note: need proper EOF handling...
+					  (progn
+					    (when (= head
+						     (fd-stream-ibuf-tail
+						      stream))
+					      (let ((sofar (- head (fd-stream-ibuf-head stream))))
+						(do-input stream)
+						(setf head
+						      (+ (fd-stream-ibuf-head stream)
+							 sofar))))
+					    (bref (fd-stream-ibuf-sap stream)
+						  (1- (incf head))))
+					  (lambda (n) (decf head n)))))
+	 (declare (type index head))
+	 (when ch
+	   (incf (fd-stream-ibuf-head stream)
+		 (fd-stream-last-char-read-size stream))
+	   ch)))))
 
 #+(or)
 (stream::def-ef-macro ef-sin (extfmt lisp stream::+ef-max+ stream::+ef-sin+)
