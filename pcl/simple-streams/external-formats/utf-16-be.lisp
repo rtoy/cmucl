@@ -4,9 +4,15 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-be.lisp,v 1.1.2.1.2.3 2009/04/12 15:22:38 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-be.lisp,v 1.1.2.1.2.4 2009/04/23 11:37:36 rtoy Exp $")
 
 (in-package "STREAM")
+
+;; From the Unicode BOM FAQ
+;; (http://www.unicode.org/faq/utf_bom.html#BOM), UTF-16BE and
+;; UTF-16LE should never output a BOM.  On input, since we selected
+;; UTF-16BE, the input stream shouldn't have a BOM.  But we allow for
+;; one here, anyway.  This should be compatible with the Unicode spec.
 
 ;; make state an integer:
 ;;  or (or state 0) to cope with NIL case
@@ -18,8 +24,7 @@
 ;; (evenp state) = big-endian
 ;; (zerop state) = #xFEFF/#xFFFE is BOM (to be skipped)
 ;;
-;; when writing: output BOM if (zerop state), if BOM-output selected
-;; but state doesn't choose between big-endian and little-endian output
+;; When writing, never output a BOM.
 
 (define-external-format :utf-16-be (:size 2)
   ()
@@ -46,36 +51,36 @@
 	    ;; the BOM being reread as a character
 	    (cond ((<= #xDC00 ,code #xDFFF)
 		   ;; replace with REPLACEMENT CHARACTER ?
+		   #+nil
 		   (error "Illegal character U+~4,'0X in UTF-16 sequence."
-			  ,code))
+			  ,code)
+		   (setf ,code #xFFFD))
 		  ((<= #xD800 ,code #xDBFF)
 		   (let* ((,c1 ,input)
 			  (,c2 ,input)
 			  (,next (if (oddp ,st)
 				     (+ (* 256 ,c2) ,c1)
 				     (+ (* 256 ,c1) ,c2))))
-		     (unless (<= #xDC00 ,next #xDFFF)
-		       ;; replace with REPLACEMENT CHARACTER ?
-		       ;; possibly unput 2 so it'll be read as
-		       ;; another character next time around?
-		       (error "Illegal surrogate pair U+~4,'0X U+~4,'0X ~
-			       in UTF-16 sequence." ,code ,next))
-		     (setq ,code (+ (ash (- ,code #xD800) 10) ,next #x2400)
-			   ,wd 4)))
+		     ;; If we don't have a high and low surrogate,
+		     ;; replace with REPLACEMENT CHARACTER.  Possibly
+		     ;; unput 2 so it'll be read as another character
+		     ;; next time around?
+		     (if (<= #xDC00 ,next #xDFFF)
+			 (setq ,code (+ (ash (- ,code #xD800) 10) ,next #x2400)
+			       ,wd 4)
+			 (setf ,code #xFFFD))))
 		  ((and (= ,code #xFFFE) (zerop ,st))
 		   (setf ,state 1) (go :again))
 		  ((and (= ,code #xFEFF) (zerop ,st))
 		   (setf ,state 2) (go :again))
 		  ((= ,code #xFFFE)
-		   ;; replace with REPLACEMENT CHARACTER ?
-		   (error "Illegal character U+FFFE in UTF-16 sequence.")))
+		   ;; Replace with REPLACEMENT CHARACTER.  
+		   (setf ,code #xFFFD)))
 	    (return (values ,code ,wd))))))
   (code-to-octets (code state output c c1 c2)
     `(flet ((output (code)
 	      (,output (ldb (byte 8 8) code))
 	      (,output (ldb (byte 8 0) code))))
-       (when (and (null ,state) #|BOM wanted|#t)
-	 (output #xFEFF) (setf ,state 2))
        (cond ((< ,code #x10000)
 	      (output ,code))
 	     ((< ,code #x110000)
