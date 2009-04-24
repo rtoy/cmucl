@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.10 2009/04/23 16:08:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.11 2009/04/24 11:28:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -584,7 +584,8 @@
        (declare (type sys:system-area-pointer sap) (type index len tail))
        (do ((i start))
 	   ((>= i end))
-	 (multiple-value-bind (code step)
+	 (declare (type index i))
+	 (multiple-value-bind (code widep)
 	     (codepoint string i end)
 	   (stream::codepoint-to-octets ,extfmt
 					code
@@ -595,7 +596,7 @@
 					    (setq sap (fd-stream-obuf-sap stream)
 						  tail 0))
 					  (setf (bref sap (1- (incf tail))) byte)))
-	   (incf i (if step 2 1))))
+	   (incf i (if widep 2 1))))
        (setf (fd-stream-obuf-tail stream) tail))))
 
 
