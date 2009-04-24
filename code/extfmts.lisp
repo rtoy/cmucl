@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.15 2009/04/23 18:04:36 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.16 2009/04/24 11:28:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -496,21 +496,21 @@
 
 
 (def-ef-macro ef-string-to-octets (extfmt lisp::lisp +ef-max+ +ef-so+)
-  `(lambda (string start end buffer &aux (ptr 0) (state nil) (code 0))
+  `(lambda (string start end buffer &aux (ptr 0) (state nil) (code 0) (c 0) widep)
      (declare #|(optimize (speed 3) (safety 0) (space 0) (debug 0))|#
 	      (type simple-string string)
 	      (type kernel:index start end ptr)
 	      (type (simple-array (unsigned-byte 8) (*)) buffer)
-              (type (integer 0 #x10ffff) code)
+              (type (integer 0 #x10ffff) code c)
+	      (type (or null fixnum) widep)
 	      (ignorable state))
-    (loop with i of-type kernel_index = start
+    (loop with i of-type kernel:index = start
 	  while (< i end)
 	  do
-	  (multiple-value-bind (c step)
+	  (multiple-value-bind (c widep)
 	      (lisp::codepoint string i end)
-	    (setf code c)
-	    (incf i (if step 2 1))
-	    (codepoint-to-octets ,extfmt code state
+	    (incf i (if widep 2 1))
+	    (codepoint-to-octets ,extfmt c state
 				 (lambda (b)
 				   (when (= ptr (length buffer))
 				     (setq buffer (adjust-array buffer (* 2 ptr))))
