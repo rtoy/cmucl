@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.16 2009/04/24 11:28:45 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.17 2009/04/24 19:18:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -461,7 +461,8 @@
 ;;; Read and write one character through an external-format
 ;;;
 (defmacro octets-to-char (external-format state count input unput)
-  (let ((s (gensym "STATE-")))
+  (let ((s (gensym "STATE-"))
+	(code (gensym "CODE-")))
     `(let ((,s ,state))
        (when (null ,s)
 	 ;; Need our own state variable to hold our state and the
@@ -473,20 +474,20 @@
 	   (prog1 (the character (car ,s))
 	     (setf (car ,s) nil)
 	     (setf ,count 0))
-	   (let ((code (octets-to-codepoint ,external-format
+	   (let ((,code (octets-to-codepoint ,external-format
 					    (cdr ,s) ,count ,input ,unput)))
-	     (declare (type (unsigned-byte 31) code))
-	     (cond ((or (<= #xD800 code #xDFFF)
-			(> code #x10FFFF))
+	     (declare (type (unsigned-byte 31) ,code))
+	     (cond ((or (<= #xD800 ,code #xDFFF)
+			(> ,code #x10FFFF))
 		    #-(and unicode (not unicode-bootstrap)) #\?
 		    #+(and unicode (not unicode-bootstrap)) #\U+FFFD)
 		   #+unicode
-		   ((> code #xFFFF)
+		   ((> ,code #xFFFF)
 		    (multiple-value-bind (hi lo)
-			(lisp::surrogates code)
+			(lisp::surrogates ,code)
 		      (setf (car ,state) lo)
 		      hi))
-		   (t (code-char code))))))))
+		   (t (code-char ,code))))))))
 
 ;; This doesn't handle surrogate code units correctly.  It just
 ;; outputs the surrogate value to the external format.  External
