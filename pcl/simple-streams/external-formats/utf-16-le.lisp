@@ -4,79 +4,40 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-le.lisp,v 1.1.2.1.2.4 2009/04/23 11:37:36 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-le.lisp,v 1.1.2.1.2.5 2009/04/24 17:18:30 rtoy Exp $")
 
 (in-package "STREAM")
 
-;; From the Unicode BOM FAQ
-;; (http://www.unicode.org/faq/utf_bom.html#BOM), UTF-16BE and
-;; UTF-16LE should never output a BOM.  On input, since we selected
-;; UTF-16BE, the input stream shouldn't have a BOM.  But we allow for
-;; one here, anyway.  This should be compatible with the Unicode spec.
-;;
-;; make state an integer:
-;;  or (or state 0) to cope with NIL case
-;;  0 = initial state, nothing has been read yet
-;;  1 = BOM has been read, little-endian
-;;  2 = BOM has been read, big-endian, or non-BOM char has been read
-;;
-;; (oddp state) = big-endian
-;; (evenp state) = little-endian
-;; (zerop state) = #xFFFE/#xFEFF is BOM (to be skipped)
-;;
-;; when writing, never output BOM.
-
+;; UTF-16LE.  BOM is not recognized, and is never output.
 (define-external-format :utf-16-le (:size 2)
   ()
 
-  (octets-to-code (state input unput c1 c2 code wd next st)
-    `(block nil
-       (when (null ,state) (setf ,state 0))
-       (tagbody
-	:again
-	  (let* ((,st ,state)
-		 (,c1 ,input)
-		 (,c2 ,input)
-		 (,code (if (oddp ,st)
-			    (+ (* 256 ,c1) ,c2)
-			    (+ (* 256 ,c2) ,c1)))
-		 (,wd 2))
-	    (declare (type (member 0 1 2) ,st)
-		     (type (integer 0 #xffff) ,code))
-	    ;; Note that if BOM is read, WD will be 2 but 4 octets have
-	    ;; actually been read: this is intentional - the returned
-	    ;; width tells how much to back up to unread a character, and
-	    ;; we don't want to back up past the BOM since the state now
-	    ;; indicates that BOM has been seen, so that would result in
-	    ;; the BOM being reread as a character
-	    (cond ((<= #xDC00 ,code #xDFFF)
-		   ;; Replace with REPLACEMENT CHARACTER.
-		   (setf ,code #xFFFD))
-		  ((<= #xD800 ,code #xDBFF)
-		   (let* ((,c1 ,input)
-			  (,c2 ,input)
-			  (,next (if (oddp ,st)
-				     (+ (* 256 ,c1) ,c2)
-				     (+ (* 256 ,c2) ,c1))))
-		     ;; Replace with REPLACEMENT CHARACTER.  Possibly
-		     ;; unput 2 so it'll be read as another character
-		     ;; next time around?
-		     (if (<= #xDC00 ,next #xDFFF)
-			 (setq ,code (+ (ash (- ,code #xD800) 10) ,next #x2400)
-			       ,wd 4)
-			 (setq ,code #xFFFD))))
-		  ((and (= ,code #xFFFE) (zerop ,st))
-		   (setf ,state 1) (go :again))
-		  ((and (= ,code #xFEFF) (zerop ,st))
-		   (setf ,state 2) (go :again))
-		  ((= ,code #xFFFE)
-		   ;; replace with REPLACEMENT CHARACTER ?
-		   (error "Illegal character U+FFFE in UTF-16 sequence.")))
-	    (return (values ,code ,wd))))))
+  (octets-to-code (state input unput c1 c2 code next)
+    `(let* ((,c1 ,input)
+	    (,c2 ,input)
+	    (,code (+ (* 256 ,c2) ,c1)))
+       (declare (type (integer 0 #xffff) ,code))
+       (cond ((<= #xDC00 ,code #xDFFF)
+	      ;; Replace with REPLACEMENT CHARACTER.
+	      (setf ,code #xFFFD))
+	     ((<= #xD800 ,code #xDBFF)
+	      (let* ((,c1 ,input)
+		     (,c2 ,input)
+		     (,next (+ (* 256 ,c2) ,c1)))
+		;; Replace with REPLACEMENT CHARACTER.  Possibly
+		;; unput 2 so it'll be read as another character
+		;; next time around?
+		(if (<= #xDC00 ,next #xDFFF)
+		    (setq ,code (+ (ash (- ,code #xD800) 10) ,next #x2400))
+		    (setq ,code #xFFFD))))
+	     ((= ,code #xFFFE)
+	      ;; replace with REPLACEMENT CHARACTER ?
+	      (error "Illegal character U+FFFE in UTF-16 sequence.")))
+      (values ,code 2)))
   (code-to-octets (code state output c c1 c2)
     `(flet ((output (code)
 	      (,output (ldb (byte 8 0) code))
-	      (,output (ldb (byte 8 8) code))))
+	     (,output (ldb (byte 8 8) code))))
        (cond ((< ,code #x10000)
 	      (output ,code))
 	     ((< ,code #x110000)

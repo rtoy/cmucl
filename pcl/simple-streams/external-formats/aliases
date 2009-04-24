@@ -44,9 +44,13 @@ iso-8859-15	iso8859-15
 utf		utf-8
 utf8		utf-8
 
-utf16		utf-16-be
-utf-16		utf-16-be
+utf16		utf-16
+utf-16be	utf-16-be
+utf16-be	utf-16-be
+utf-16le	utf-16-le
+utf16-le	utf-16-le
 
+utf32		utf-32
 utf32-be	utf-32-be
 utf-32be	utf-32-be
 utf32-le	utf-32-le
