@@ -1,3 +1,8 @@
+;; -*- Mode: Lisp -*-
+;;
+;; List of aliases for external formats.
+;; The first column is the alias; the second is the implementation name
+;;
 null		void
 
 latin1		iso8859-1
@@ -41,9 +46,14 @@ utf8		utf-8
 
 utf16		utf-16-be
 utf-16		utf-16-be
-utf32		ucs-4
-ucs2		ucs-2
-ucs4		ucs-4
+
+utf32-be	utf-32-be
+utf-32be	utf-32-be
+utf32-le	utf-32-le
+utf-32le	utf-32-le
+
+;;ucs2		ucs-2
+;;ucs4		ucs-4
 
 windows-1252	cp1252
 windows-cp1252	cp1252
