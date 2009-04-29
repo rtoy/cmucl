@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1.2.2 2009/04/29 20:21:58 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1.2.3 2009/04/29 21:28:04 rtoy Exp $
  *
  */
 
@@ -1781,8 +1781,12 @@ gc_alloc_unboxed(int nbytes)
      * If there is a bit of room left in the current region then
      * allocate a large object.
      */
+
+#if (defined(i386) || defined(__x86_64))
+    /* See gc_alloc for the reason for this */
     if (unboxed_region.end_addr - unboxed_region.free_pointer > 32)
 	return gc_alloc_large(nbytes, 1, &unboxed_region);
+#endif
 
     /* Else find a new region. */
 
