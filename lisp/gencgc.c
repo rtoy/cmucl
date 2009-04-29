@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1.2.1 2008/11/02 13:30:03 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1.2.2 2009/04/29 20:21:58 rtoy Exp $
  *
  */
 
@@ -1627,8 +1627,30 @@ gc_alloc(int nbytes)
      * If there is a bit of room left in the current region then
      * allocate a large object.
      */
+#if (defined(i386) || defined(__x86_64))
+    /*
+     * This has potentially very bad behavior on sparc if the current
+     * boxed region is too small for the allocation, but the free
+     * space is greater than 32.  The scenario is where we're always
+     * allocating something that won't fit in the boxed region and we
+     * keep calling gc_alloc_large.  Since gc_alloc_large doesn't
+     * change boxed_region, the next allocation will again be
+     * out-of-line and we hit a kernel trap again.  And so on, so we
+     * waste all of our time doing kernel traps to allocate small
+     * things.  So disable this test on sparc.  This should also be a
+     * problem on ppc, but I didn't test it.
+     *
+     * X86 seems not affected or affected as badly, perhaps because
+     * x86 doesn't do a kernel trap to handle allocation.  Didn't test
+     * this either, but we leave this in for x86.
+     *
+     * I don't know what the impact of this change will be except that
+     * regions may have wasted space in them when they could have had
+     * other thing allocated in the region.
+     */
     if (boxed_region.end_addr - boxed_region.free_pointer > 32)
 	return gc_alloc_large(nbytes, 0, &boxed_region);
+#endif
 
     /* Else find a new region. */
 
