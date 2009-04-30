@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-2.lisp,v 1.1.2.2 2009/03/28 13:40:41 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-2.lisp,v 1.1.2.3 2009/04/30 18:52:43 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -20,7 +20,8 @@
                          369 252 253 355 729)))
 
 (define-external-format :iso8859-2 (:size 1)
-  ((table +iso-8859-2+ :type (simple-array (unsigned-byte 16) (96))))
+  ((table +iso-8859-2+ :type (simple-array (unsigned-byte 16) (96)))
+   (itable (invert-table table) :type lisp::ntrie16))
 
   (octets-to-code (state input unput code)
     `(let ((,code ,input))
@@ -28,6 +29,5 @@
   (code-to-octets (code state output present)
     `(,output (if (< ,code 160)
 		  ,code
-		  (multiple-value-bind (,code ,present)
-		      (gethash ,code (invert-table ,table))
-		    (if ,present (+ ,code 160) #x3F))))))
+		  (let ((,code (get-inverse ,itable ,code)))
+		    (if ,code (+ (the (unsigned-byte 7) ,code) 160) #x3F))))))

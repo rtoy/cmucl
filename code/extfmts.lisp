@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.17 2009/04/24 19:18:12 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.18 2009/04/30 18:52:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -174,7 +174,7 @@
 		     (let (,@',slotb
 			   (,code ',code)
 			   ,@(loop for var in vars collect `(,var (gensym))))
-		       `(let ((,',code (the (unsigned-byte 31) ,,',tmp)))
+		       `(let ((,',code (the (unsigned-byte 21) ,,',tmp)))
 			  (declare (ignorable ,',code))
 			  ,,body)))))
        (%intern-ef (make-external-format ,name
@@ -186,7 +186,9 @@
 							  :initial-element nil)
 				    :min ,(min min max) :max ,(max min max)))
 		    nil
-		    (vector ,@(mapcar #'third slotd))
+		    (let* ,(loop for x in slotd
+				 collect (list (first x) (third x)))
+		      (vector ,@(mapcar #'first slotd)))
 		    ',slotd)))))
 
 ;;; DEFINE-COMPOSING-EXTERNAL-FORMAT  -- Public
@@ -206,7 +208,7 @@
 		  `(lambda (,state ,input ,unput)
 		     (declare (ignorable ,state ,input ,unput)
 			      (optimize (ext:inhibit-warnings 3)))
-		     (let ((,input `(the (values (or (unsigned-byte 31) null)
+		     (let ((,input `(the (values (or (unsigned-byte 21) null)
 						 kernel:index)
 					 ,,input))
 			   ,@(loop for var in vars collect `(,var (gensym))))
@@ -217,7 +219,7 @@
 			      (optimize (ext:inhibit-warnings 3)))
 		     (let ((,code ',code)
 			   ,@(loop for var in vars collect `(,var (gensym))))
-		       `(let ((,',code (the (unsigned-byte 31) ,,',tmp)))
+		       `(let ((,',code (the (unsigned-byte 21) ,,',tmp)))
 			  (declare (ignorable ,',code))
 			  ,,body)))))
        (%intern-ef (make-external-format ,name
@@ -340,29 +342,61 @@
 	   (optimize (speed 3) (space 0) (safety 0) (debug 0)
 		     (ext:inhibit-warnings 3)))
   (or (gethash table *.table-inverse.*)
-      (let* ((result (make-hash-table))
+      (let* ((mbits (if (= (array-total-size table) 128) 7 8))
+	     (lbits (cond ((> (array-total-size table) 256) 3)
+			  ((< (array-total-size table) 100) 6)
+			  (t 5)))
+	     (hvec (make-array (1+ (ash #x110000 (- 0 mbits lbits)))
+			       :element-type '(unsigned-byte 16)
+			       :initial-element #xFFFF))
+	     (mvec (make-array 0 :element-type '(unsigned-byte 16)))
+	     (lvec (make-array 0 :element-type '(unsigned-byte 16)))
 	     (width (array-dimension table 0))
 	     (power (1- (array-rank table)))
-	     (base (if (= width 94) 1 0)))
-	(assert (and (< power 3) (<= width 256)))
+	     (base (if (= width 94) 1 0))
+	     hx mx lx)
+	(assert (and (< power 2) (<= width 256)))
 	(dotimes (i (array-total-size table))
 	  (declare (type (integer 0 (#.array-dimension-limit)) i))
 	  (let ((tmp i) (val (row-major-aref table i)) (z 0))
 	    (declare (type (integer 0 (#.array-dimension-limit)) tmp)
-		     (type (unsigned-byte 32) z))
-	    (unless (or (= val #xFFFE) (gethash val result))
-	      (dotimes (j power)
-		;; j is only ever 0 in reality, since no n^3 tables are
-		;; defined; z was declared as 32-bit above, so that limits
-		;; us to 0 <= j <= 2   (see the ASSERT)
-		(declare (type (integer 0 2) j))
+		     (type (unsigned-byte 16) z))
+	    (unless (= val #xFFFE)
+	      (when (plusp power)
 		(multiple-value-bind (x y) (floor tmp width)
 		  (setq tmp x)
 		  (setq z (logior z (ash (the (integer 0 255) (+ y base))
 					 (the (integer 0 24)
-					   (* 8 (- power j))))))))
-	      (setf (gethash val result) (logior z (+ tmp base))))))
-	(setf (gethash table *.table-inverse.*) result))))
+					   (* 8 power)))))))
+	      (setq hx (ash val (- 0 mbits lbits)))
+	      (when (= (aref hvec hx) #xFFFF)
+		(setf (aref hvec hx) (length mvec))
+		(let ((tmp (make-array (+ (length mvec) (ash 1 mbits))
+				       :element-type '(unsigned-byte 16)
+				       :initial-element #xFFFF)))
+		  (replace tmp mvec)
+		  (setq mvec tmp)))
+	      (setq mx (logand (ash val (- lbits)) (lognot (ash -1 mbits))))
+	      (when (= (aref mvec (+ hx mx)) #xFFFF)
+		(setf (aref mvec (+ hx mx)) (length lvec))
+		(let ((tmp (make-array (+ (length lvec) (ash 1 lbits))
+				       :element-type '(unsigned-byte 16)
+				       :initial-element #xFFFF)))
+		  (replace tmp lvec)
+		  (setq lvec tmp)))
+	      (setq lx (logand val (lognot (ash -1 lbits))))
+	      (setf (aref lvec (+ (aref mvec (+ hx mx)) lx))
+		  (logior z (+ tmp base))))))
+	(setf (gethash table *.table-inverse.*)
+	    (lisp::make-ntrie16 :split (logior (ash (1- mbits) 4) (1- lbits))
+				:hvec hvec :mvec mvec :lvec lvec)))))
+
+(declaim (inline get-inverse))
+(defun get-inverse (ntrie code)
+  (declare (type lisp::ntrie16 ntrie) (type (integer 0 #x10FFFF) code))
+  (let ((n (lisp::qref ntrie code)))
+    (and n (let ((m (aref (lisp::ntrie16-lvec ntrie) n)))
+	     (if (= m #xFFFF) nil m)))))
 
 
 (define-condition void-external-format (error)
@@ -397,7 +431,7 @@
     `(multiple-value-bind (,tmp1 ,tmp2)
 	 ,(funcall (ef-octets-to-code ef) state input unput)
        (setf ,count (the kernel:index ,tmp2))
-       (the (or (unsigned-byte 31) null) ,tmp1))))
+       (the (or (unsigned-byte 21) null) ,tmp1))))
 
 (defmacro codepoint-to-octets (external-format code state output)
   (let ((ef (find-external-format external-format)))
@@ -434,7 +468,7 @@
 			(setf (aref (ef-cache ,tmp1) ,tmp2)
 			    (let ((*compile-print* nil)
 				  ;; Set default format when we compile so we
-				  ;; can see compiler messages.  if we don't,
+				  ;; can see compiler messages.  If we don't,
 				  ;; we run into a problem that we might be
 				  ;; changing the default format while we're
 				  ;; compiling, and we don't know how to output

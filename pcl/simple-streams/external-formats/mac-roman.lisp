@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/mac-roman.lisp,v 1.1.2.2 2009/03/28 13:40:41 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/mac-roman.lisp,v 1.1.2.3 2009/04/30 18:52:43 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -23,7 +23,8 @@
                          184 733 731 711)))
 
 (define-external-format :mac-roman (:size 1)
-  ((table +mac-roman+ :type (simple-array (unsigned-byte 16) (128))))
+  ((table +mac-roman+ :type (simple-array (unsigned-byte 16) (128)))
+   (itable (invert-table table) :type lisp::ntrie16))
 
   (octets-to-code (state input unput code)
     `(let ((,code ,input))
@@ -31,6 +32,5 @@
   (code-to-octets (code state output present)
     `(,output (if (< ,code 128)
 		  ,code
-		  (multiple-value-bind (,code ,present)
-		      (gethash ,code (invert-table ,table))
-		    (if ,present (+ ,code 128) #x3F))))))
+		  (let ((,code (get-inverse ,itable ,code)))
+		    (if ,code (+ (the (unsigned-byte 7) ,code) 128) #x3F))))))
