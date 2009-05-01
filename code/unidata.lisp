@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.14 2009/04/21 18:11:06 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.15 2009/05/01 11:42:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,7 +44,7 @@
 ;; empty string), and look up the first character in the alist that is
 ;; (cdr node); assuming the character is found, repeat using the
 ;; associated node and the next character of the string.  After the
-;; last character, if the current node's value is the value associated
+;; last character, the current node's value is the value associated
 ;; with that string (i.e., the codepoint).  If at any point the next
 ;; character is not present in the node, or you reach the end and the
 ;; value in the current node is NIL, the string is not in the
@@ -181,7 +181,7 @@
 ;; An NTrie is a mapping from codepoints to integers.
 ;; 
 ;; The codepoint is split into three pieces, x:y:z where x+y+z = 21
-;; bits The value of the SPLIT slot encodes y-1 in the upper 4 bits
+;; bits.  The value of the SPLIT slot encodes y-1 in the upper 4 bits
 ;; and z-1 in the lower 4 bits.  I.e., if SPLIT is #x63, the split is
 ;; 10:7:4
 ;; 
@@ -627,7 +627,7 @@
 	  (if (logbitp 20 n) (- num) num))
 	nil)))
 
-(defun unicode-decomp (code &optional (kind :all))
+(defun unicode-decomp (code &optional (compatibility t))
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
 	   (type (integer 0 #x10FFFF) code))
   (unless (unidata-decomp *unicode-data*) (load-decomp))
@@ -636,9 +636,7 @@
 	 (type (ldb (byte 5 27) n)))
     (if (= n 0)
 	nil
-	(if (or (= type 0)
-		(eq kind :any)
-		(and (= type 1) (eq kind :compatibility)))
+	(if (or compatibility (zerop type))
 	    (let ((off (logand n #xFFFF))
 		  (len (ldb (byte 6 16) n)))
 	      (values (subseq (decomp-tabl decomp) off (+ off len))
