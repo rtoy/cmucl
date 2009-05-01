@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.5 2009/04/19 04:15:27 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.6 2009/05/01 11:41:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,8 +14,7 @@
 ;;; file is read and written in portable way so it can be used on any
 ;;; platform.
 ;;;
-;;; What to do: Run (build-unidata "src/i18n/") then (write-unidata
-;;; #p"src/pcl/simple-streams/external-formats/unidata.bin")
+;;; What to do: Run (build-unidata) then (write-unidata <path>)
 ;;;
 ;;; This only needs to be run if the Unicode database changes and we
 ;;; need a new Unicode data file.
@@ -88,6 +87,8 @@
 
 (defstruct (decomp (:include ntrie32))
   (tabl (ext:required-argument) :read-only t
+	;; This has type simple-string in unidata.lisp, but we can treat
+	;; it as a vector of integers here
 	:type (simple-array (unsigned-byte 16) (*))))
 
 (defstruct (bidi (:include ntrie16))
@@ -548,11 +549,15 @@
 	(loop with save = 0
 	       for line = (read-line s nil) as end = (position #\# line)
 	  while line do
+	    (loop while (and end (plusp end)
+			     (char= (char line (1- end)) #\Space))
+	      do (decf end))
 	    (when (position #\; line :end end)
-	      (let* ((end (position #\# line))
-		     (split (loop for i = 0 then (1+ j)
+	      (let* ((split (loop for i = 0 then (1+ j)
 				   as j = (position #\; line :start i :end end)
-			       collect (subseq line i j) while j))
+			       collect (string-trim '(#\Space #\Tab)
+						    (subseq line i (or j end)))
+			       while j))
 		     (first (first split))
 		     (second (second split))
 		     (length (length second))
@@ -618,6 +623,20 @@
 	  (incf pos))))
     (lisp::shrink-vector vec pos)
     (lisp::shrink-vector range rpos)
+    (foreach-ucd "NameAliases"
+      (lambda (min max alias)
+	(declare (ignore max))
+	(push alias (ucdent-aliases (find min vec :key #'ucdent-code)))))
+    (foreach-ucd "NormalizationCorrections"
+      (lambda (min max bad good &rest junk)
+	(declare (ignore max bad junk))
+	(setf (ucdent-decomp (find min vec :key #'ucdent-code))
+	    (parse-decomposition good))))
+    (foreach-ucd "BidiMirroring"
+      (lambda (min max mirror)
+	(declare (ignore max))
+	(setf (ucdent-mcode (find min vec :key #'ucdent-code))
+	    (parse-integer mirror :radix 16 :junk-allowed t))))
     (values vec (make-range :codes range))))
 
 
@@ -670,8 +689,8 @@
       0
       (let* ((d (loop for i in (rest (ucdent-decomp ucdent))
 		  if (<= i #xFFFF) collect i
-		  else collect (logior (ldb (byte 10 10) i) #xD800)
-		   and collect (logior (ldb (byte 10 0) i) #xDC00)))
+		  else collect (logior (ldb (byte 10 10) (- i #x10000)) #xD800)
+		   and collect (logior (ldb (byte 10 0) (- i #x10000)) #xDC00)))
 	     (l (length d))
 	     (n (search d tabl)))
 	(unless n
@@ -705,20 +724,6 @@
 (defun build-unidata ()
   (format t "~&Reading data~%")
   (multiple-value-bind (ucd range) (read-data)
-    (foreach-ucd "NameAliases"
-      (lambda (min max alias)
-	(declare (ignore max))
-	(push alias (ucdent-aliases (find min ucd :key #'ucdent-code)))))
-    (foreach-ucd "NormalizationCorrections"
-      (lambda (min max bad good &rest junk)
-	(declare (ignore max bad junk))
-	(setf (ucdent-decomp (find min ucd :key #'ucdent-code))
-	    (parse-decomposition good))))
-    (foreach-ucd "BidiMirroring"
-      (lambda (min max mirror)
-	(declare (ignore max))
-	(setf (ucdent-mcode (find min ucd :key #'ucdent-code))
-	    (parse-integer mirror :radix 16 :junk-allowed t))))
     (setf (unidata-range *unicode-data*) range)
     (format t "~&Building character name tables~%")
     (let* ((data (loop for ent across ucd
