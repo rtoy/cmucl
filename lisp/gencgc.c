@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1.2.4 2009/05/01 16:09:10 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1.2.5 2009/05/02 01:53:00 rtoy Exp $
  *
  */
 
@@ -1594,7 +1594,8 @@ gc_alloc_large(int nbytes, int unboxed, struct alloc_region *alloc_region)
  * to a new region.
  */
 
-#define REGION_EMPTY_THRESHOLD  (PAGE_SIZE >> 6)
+int region_empty_threshold = 32;
+
 
 /*
  * How many consecutive large alloc we can do before we abandon the
@@ -1682,7 +1683,7 @@ gc_alloc(int nbytes)
      * gc allocation performance.
      *
      */
-    if ((boxed_region.end_addr - boxed_region.free_pointer > REGION_EMPTY_THRESHOLD)
+    if ((boxed_region.end_addr - boxed_region.free_pointer > region_empty_threshold)
         || (nbytes >= large_object_size)
         || (consecutive_large_alloc < consecutive_large_alloc_limit)) {
         ++consecutive_large_alloc;
@@ -1825,7 +1826,7 @@ gc_alloc_unboxed(int nbytes)
      */
 
     /* See gc_alloc for what we're doing here. */
-    if ((unboxed_region.end_addr - unboxed_region.free_pointer > REGION_EMPTY_THRESHOLD)
+    if ((unboxed_region.end_addr - unboxed_region.free_pointer > region_empty_threshold)
         || (nbytes >= large_object_size)
         || (consecutive_large_alloc < consecutive_large_alloc_limit)) {
         ++consecutive_large_alloc;
