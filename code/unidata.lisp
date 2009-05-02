@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.15 2009/05/01 11:42:49 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.16 2009/05/02 11:54:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -630,18 +630,35 @@
 (defun unicode-decomp (code &optional (compatibility t))
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
 	   (type (integer 0 #x10FFFF) code))
-  (unless (unidata-decomp *unicode-data*) (load-decomp))
-  (let* ((decomp (unidata-decomp *unicode-data*))
-	 (n (qref32 decomp code))
-	 (type (ldb (byte 5 27) n)))
-    (if (= n 0)
-	nil
-	(if (or compatibility (zerop type))
-	    (let ((off (logand n #xFFFF))
-		  (len (ldb (byte 6 16) n)))
-	      (values (subseq (decomp-tabl decomp) off (+ off len))
-		      type))
-	    nil))))
+  (if (<= #xAC00 code #xD7A3)
+      ;; Hangul syllables.  (See
+      ;; http://www.unicode.org/reports/tr15/#Hangul for the
+      ;; algorithm.)
+      (multiple-value-bind (q1 r1)
+	  (floor (- code #xAC00) 588)
+	(declare (type (integer 0 18) q1) (type (integer 0 587) r1))
+	(multiple-value-bind (q2 r2)
+	    (floor r1 28)
+	  (declare (type (integer 0 20) q2) (type (integer 0 27) r2))
+	  (let ((decomp (make-string (if (zerop r2) 2 3))))
+	    (setf (schar decomp 0) (code-char (+ #x1100 q1))
+		  (schar decomp 1) (code-char (+ #x1161 q2)))
+	    (unless (zerop r2)
+	      (setf (schar decomp 2) (code-char (+ #x11A7 r2))))
+	    decomp)))
+      (progn
+	(unless (unidata-decomp *unicode-data*) (load-decomp))
+	(let* ((decomp (unidata-decomp *unicode-data*))
+	       (n (qref32 decomp code))
+	       (type (ldb (byte 5 27) n)))
+	  (if (= n 0)
+	      nil
+	      (if (or compatibility (zerop type))
+		  (let ((off (logand n #xFFFF))
+			(len (ldb (byte 6 16) n)))
+		    (values (subseq (decomp-tabl decomp) off (+ off len))
+			    type))
+		  nil))))))
 
 (defun unicode-combining-class (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
