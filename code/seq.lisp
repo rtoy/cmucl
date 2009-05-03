@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.53.8.2 2009/04/20 14:26:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.53.8.3 2009/05/03 13:54:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1657,22 +1657,29 @@
       (setq jndex (1+ jndex)))
     (shrink-vector result jndex)))
 
+(defun string-remove-duplicates* (string test test-not start end key from-end
+					 &optional (length (length vector)))
+  (declare (string string) (fixnum start length))
+  ;;@@ FIXME: treat surrogate pairs as a single element
+  (vector-remove-duplicates* string test test-not start end key from-end
+			     length))
 
-(defun remove-duplicates (sequence &key (test #'eql) test-not (start 0) from-end
-				   end key)
+(defun remove-duplicates (sequence &key (test #'eql) test-not (start 0)
+					from-end end key)
   "The elements of Sequence are compared pairwise, and if any two match,
    the one occuring earlier is discarded, unless FROM-END is true, in
    which case the one later in the sequence is discarded.  The resulting
    sequence is returned.
 
-   The :TEST-NOT argument is depreciated."
+   The :TEST-NOT argument is deprecated."
   (declare (fixnum start))
   (seq-dispatch sequence
-		(if sequence
-		    (list-remove-duplicates* sequence test test-not
-					      start end key from-end))
-		(vector-remove-duplicates* sequence test test-not
-					    start end key from-end)))
+    (if sequence
+	(list-remove-duplicates* sequence test test-not
+				 start end key from-end))
+    (vector-remove-duplicates* sequence test test-not start end key from-end)
+    #+unicode
+    (string-remove-duplicates* sequence test test-not start end key from-end)))
 
 
 
@@ -1730,18 +1737,28 @@
 		      :end (if from-end jndex end) :test-not test-not)
       (setq jndex (1+ jndex)))))
 
+#+unicode
+(defun string-delete-duplicates* (string test test-not key from-end start end 
+					 &optional (length (length vector)))
+  (declare (string string) (fixnum start length))
+  ;;@@ FIXME: treat surrogate pairs as a single element
+  (vector-delete-duplicates* vector test test-not key from-end start end
+			     length))
+
 
-(defun delete-duplicates (sequence &key (test #'eql) test-not (start 0) from-end
-			    end key)
+(defun delete-duplicates (sequence &key (test #'eql) test-not (start 0)
+					from-end end key)
   "The elements of Sequence are examined, and if any two match, one is
    discarded.  The resulting sequence, which may be formed by destroying the
    given sequence, is returned.
 
-   The :TEST-NOT argument is depreciated."
+   The :TEST-NOT argument is deprecated."
   (seq-dispatch sequence
     (if sequence
 	(list-delete-duplicates* sequence test test-not key from-end start end))
-  (vector-delete-duplicates* sequence test test-not key from-end start end)))
+    (vector-delete-duplicates* sequence test test-not key from-end start end)
+    #+unicode
+    (string-delete-duplicates* sequence test test-not key from-end start end)))
 
 (defun list-substitute* (pred new list start end count key test test-not old)
   (declare (fixnum start end count))
