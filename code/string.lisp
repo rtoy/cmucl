@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.10 2009/05/03 12:37:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.11 2009/05/03 13:51:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -699,28 +699,17 @@
 (defun %glyph-b (string index)
   (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
 	   (type simple-string string) (type kernel:index index))
-  (flet ((xchar (string index)
-	   (let ((c (char-code (schar string index))))
-	     (declare (type (integer 0 #x10FFFF) c))
-	     (cond ((<= #xDC00 c #xDFFF)
-		    (let ((c2 (char-code (schar string (1- index)))))
-		      (if (<= #xD800 c2 #xDBFF)
-			  (+ (ash (- c2 #xD800) 10) c #x2400)
-			  (error "Naked low surrogate in string."))))
-		   ((<= #xD800 c #xDBFF)
-		    (error "Naked high surrogate in string."))
-		   (t c)))))
-    (let ((prev 255)
-	  (n (1- index)))
-      (declare (type kernel:index n))
-      (loop while (> n 0) do
-	(let* ((c (xchar string n))
-	       (d (the (unsigned-byte 8) (unicode-combining-class c))))
-	  (cond ((zerop d) (return))
-		((> d prev) (incf n (if (> c #xFFFF) 2 1)) (return)))
-	  (setq prev d)
-	  (decf n (if (> c #xFFFF) 2 1))))
-      n)))
+  (let* ((prev 255)
+	 (n (1- index)))
+    (declare (type kernel:index n))
+    (loop until (< n 0) do
+      (let* ((c (codepoint string n 0))
+	     (d (the (unsigned-byte 8) (unicode-combining-class c))))
+	(cond ((zerop d) (return))
+	      ((> d prev) (incf n (if (> c #xFFFF) 2 1)) (return)))
+	(setq prev d)
+	(decf n (if (> c #xFFFF) 2 1))))
+    n))
 
 (defun glyph (string index &key (from-end nil))
   "GLYPH returns the glyph at the indexed position in a string, and the
