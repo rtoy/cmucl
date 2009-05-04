@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.11 2009/05/03 13:51:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.12 2009/05/04 14:13:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -804,10 +804,16 @@
 (defun string-to-nfkd (string)
   (decompose string t))
 
+#+unicode
 (defun string-to-nfc (string)
   ;;@@ Implement me
-  string)
+  ;; must return a simple-string for the package machinery
+  (if (simple-string-p string) string (coerce string 'simple-string)))
+
+#-unicode  ;; Needed by package.lisp
+(defun string-to-nfc (string)
+  (if (simple-string-p string) string (coerce string 'simple-string)))
 
 (defun string-to-nfkc (string)
   ;;@@ Implement me
-  string)
+  (if (simple-string-p string) string (coerce string 'simple-string)))

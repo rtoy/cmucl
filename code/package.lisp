@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.75 2006/05/11 17:07:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.75.14.1 2009/05/04 14:13:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -225,8 +225,7 @@
 
 (defun stringify-name (name kind)
   (typecase name
-    (simple-string name)
-    (string (coerce name 'simple-string))
+    (string (string-to-nfc name))
     (symbol (symbol-name name))
     (base-char
      (let ((res (make-string 1)))
@@ -1275,7 +1274,7 @@
 ;;;
 (defun intern (name &optional package)
   "Returns a symbol having the specified name, creating it if necessary."
-  (let ((name (if (simple-string-p name) name (coerce name 'simple-string)))
+  (let ((name (string-to-nfc name))
         (package (if package (package-or-lose package) *package*)))
     (declare (type simple-string name))
     (intern* name (length name) package)))
@@ -1289,7 +1288,7 @@
   then the second value is :internal, :external or :inherited to indicate
   how the symbol is accessible.  If no symbol is found then both values
   are NIL."
-  (let ((name (if (simple-string-p name) name (coerce name 'simple-string))))
+  (let ((name (string-to-nfc name)))
     (declare (simple-string name))
     (find-symbol* name (length name)
 		  (if package (package-or-lose package) *package*))))
@@ -1876,7 +1875,7 @@
   If PACKAGE is supplied then only use symbols present in
   that package.  If EXTERNAL-ONLY is true then only use
   symbols exported from the specified package."
-  (let ((string (string-upcase string)))
+  (let ((string (nstring-upcase (string-to-nfc string))))
     (declare (simple-string string))
     (flet ((apropos-in-package (package)
              (if external-only
