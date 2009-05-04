@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1.2.5 2009/05/02 01:53:00 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1.2.6 2009/05/04 21:07:11 rtoy Exp $
  *
  */
 
@@ -1611,6 +1611,7 @@ int consecutive_large_alloc_limit = 10;
  */
 int abandon_boxed_region_count = 0;
 int abandon_unboxed_region_count = 0;
+int saved_and_boxed_region_differ = 0;
 
 
 /*
@@ -1623,7 +1624,7 @@ gc_alloc(int nbytes)
 {
     char *new_free_pointer;
     static int consecutive_large_alloc = 0;
-    
+    static struct alloc_region *saved_boxed = NULL;
 
 #if 0
     fprintf(stderr, "gc_alloc %d\n", nbytes);
@@ -1647,6 +1648,11 @@ gc_alloc(int nbytes)
 	}
 
         consecutive_large_alloc = 0;
+        if (saved_boxed) {
+            free(saved_boxed);
+            saved_boxed = NULL;
+        }
+        
 	return (void *) new_obj;
     }
 
@@ -1676,20 +1682,44 @@ gc_alloc(int nbytes)
      * the free space left in the region is too small.  This helps GC
      * so we don't have to copy this object again.
      *
-     * Heuristic: If
-     * we do too many consecutive large allocations because the
-     * current region has some space left, we give up and abandon the
-     * region. This will prevent the bad scenario above from killing
-     * gc allocation performance.
+     * Heuristic: If we do too many consecutive large allocations
+     * because the current region has some space left, we give up and
+     * abandon the region. This will prevent the bad scenario above
+     * from killing gc allocation performance.
      *
      */
-    if ((boxed_region.end_addr - boxed_region.free_pointer > region_empty_threshold)
-        || (nbytes >= large_object_size)
-        || (consecutive_large_alloc < consecutive_large_alloc_limit)) {
-        ++consecutive_large_alloc;
+    if (((boxed_region.end_addr - boxed_region.free_pointer > region_empty_threshold)
+         || (nbytes >= large_object_size))
+        && (consecutive_large_alloc < consecutive_large_alloc_limit)) {
+        if (nbytes < large_object_size) {
+            /* Large objects don't count */ 
+            if (saved_boxed) {
+                /* Is the saved region the same as the current region?
+                 * If so, update the counter.  If not, that means we
+                 * did some other allocation, so reset the counter and region
+                 */
+                if (memcmp(saved_boxed, &boxed_region, sizeof(*saved_boxed)) == 0) {
+                    ++consecutive_large_alloc;
+                } else {
+                    consecutive_large_alloc = 0;
+#if 0
+                    fprintf(stderr, "saved and current boxed regions are different!  Resetting!\n");
+#endif
+                    ++saved_and_boxed_region_differ;
+                    
+                    memcpy(saved_boxed, &boxed_region, sizeof(*saved_boxed));
+                }
+            } else {
+                /* No saved region, so copy it */
+                saved_boxed = (struct alloc_region *) malloc(sizeof(*saved_boxed));
+                memcpy(saved_boxed, &boxed_region, sizeof(*saved_boxed));
+                ++consecutive_large_alloc;
+            }
+        }
+        
 	return gc_alloc_large(nbytes, 0, &boxed_region);
     }
-    
+
     consecutive_large_alloc = 0;
     ++abandon_boxed_region_count;
 
@@ -1721,6 +1751,11 @@ gc_alloc(int nbytes)
 	    gc_alloc_new_region(32, 0, &boxed_region);
 	}
 
+        if (saved_boxed) {
+            free(saved_boxed);
+            saved_boxed = NULL;
+        }
+        
 	return (void *) new_obj;
     }
 
