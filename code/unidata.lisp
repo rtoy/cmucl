@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.16 2009/05/02 11:54:37 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.17 2009/05/04 14:10:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -234,6 +234,19 @@
 (defconstant +bidi-class+
   #("L" "LRE" "LRO" "R" "AL" "RLE" "RLO" "PDF" "EN" "ES" "ET" "AN" "CS"
     "NSM" "BN" "B" "S" "WS" "ON"))
+
+
+(defconstant +hangul-choseong+		; U+1100..U+1112
+  #("G" "GG" "N" "D" "DD" "R" "M" "B" "BB" "S" "SS" "" "J" "JJ" "C" "K" "T" "P"
+    "H"))
+
+(defconstant +hangul-jungseong+		; U+1161..U+1175
+  #("A" "AE" "YA" "YAE" "EO" "E" "YEO" "YE" "O" "WA" "WAE" "OE" "YO" "U" "WEO"
+    "WE" "WI" "YU" "EU" "YI" "I"))
+
+(defconstant +hangul-jongseong+		; U+11A8..U+11C2
+  #("G" "GG" "GS" "N" "NJ" "NH" "D" "L" "LG" "LM" "LB" "LS" "LT" "LP" "LH" "M"
+    "B" "BS" "S" "SS" "NG" "J" "C" "K" "T" "P" "H"))
 
 
 
@@ -493,14 +506,75 @@
 
 ;;; Accessor functions.
 
+(defvar *reverse-hangul-choseong*)
+(defvar *reverse-hangul-jungseong*)
+(defvar *reverse-hangul-jongseong*)
+
 (defun unicode-name-to-codepoint (name)
   (declare (type string name))
-  (unless (unidata-name+ *unicode-data*) (load-names))
-  (let* ((names (unidata-name+ *unicode-data*))
-	 (n (search-dictionary name names)))
-    (when n
-      (let ((cp (aref (dictionary-codev names) n)))
-	(if (minusp cp) nil cp)))))
+  (cond ((and (> (length name) 22)
+	      (or (string= name "CJK UNIFIED" :end1 11)
+		  (string= name "CJKUNIFIED" :end1 10)))
+	 (let* ((x (search "IDEOGRAPH" name))
+		(n (and x (position-if (lambda (x) (digit-char-p x 16)) name
+				       :start (+ x 9)))))
+	   (and n (values (parse-integer name :start n :radix 16)))))
+	((and (> (length name) 15)
+	      (or (string= name "HANGUL SYLLABLE" :end1 15)
+		  (string= name "HANGULSYLLABLE" :end1 14)))
+	 (let* ((x (search "SYLLABLE" name))
+		(n (position-if (lambda (x) (alpha-char-p x)) name
+				:start (+ x 8)))
+		(ll nil) (vv nil) (tt 0))
+	   (unless n (return-from unicode-name-to-codepoint nil))
+	   (unless (boundp '*reverse-hangul-choseong*)
+	     (setq *reverse-hangul-choseong*
+		   (sort (coerce (loop for x across +hangul-choseong+
+					as i upfrom 0 by 588
+				   collect (cons x i))
+				 'vector)
+			 #'> :key (lambda (x) (length (car x)))))
+	     (setq *reverse-hangul-jungseong*
+		   (sort (coerce (loop for x across +hangul-jungseong+
+					as i upfrom 0 by 28
+				   collect (cons x i))
+				 'vector)
+			 #'> :key (lambda (x) (length (car x)))))
+	     (setq *reverse-hangul-jongseong*
+		   (sort (coerce (loop for x across +hangul-jongseong+
+					as i upfrom 1
+				   collect (cons x i))
+				 'vector)
+			 #'> :key (lambda (x) (length (car x))))))
+	   (loop for (x . y) across *reverse-hangul-choseong*
+	     when (and (<= (+ n (length x)) (length name))
+		       (string= name x :start1 n :end1 (+ n (length x))))
+	      do (incf n (length x))
+		 (setq ll y)
+		 (return))
+	   (loop for (x . y) across *reverse-hangul-jungseong*
+	     when (and (<= (+ n (length x)) (length name))
+		       (string= name x :start1 n :end1 (+ n (length x))))
+	      do (incf n (length x))
+		 (setq vv y)
+		 (return))
+	   (when (< n (length name))
+	     (loop for (x . y) across *reverse-hangul-jongseong*
+	       when (and (<= (+ n (length x)) (length name))
+			 (string= name x :start1 n :end1 (+ n (length x))))
+		do (incf n (length x))
+		   (setq tt y)
+		   (return)))
+	   (if (and ll vv (= n (length name)))
+	       (+ ll vv tt #xAC00)
+	       nil)))
+	(t
+	 (unless (unidata-name+ *unicode-data*) (load-names))
+	 (let* ((names (unidata-name+ *unicode-data*))
+		(n (search-dictionary name names)))
+	   (when n
+	     (let ((cp (aref (dictionary-codev names) n)))
+	       (if (minusp cp) nil cp)))))))
 
 (defun unicode-1.0-name-to-codepoint (name)
   (declare (type string name))
@@ -537,10 +611,25 @@
 	s))))
 
 (defun unicode-name (code)
-  (unless (unidata-name+ *unicode-data*) (load-names))
-  (unless (unidata-name *unicode-data*) (load-name))
-  (unicode-name+ code (unidata-name *unicode-data*)
-		 (unidata-name+ *unicode-data*)))
+  (cond ((or (<= #x3400 code #x4DB5)	; CJK Ideograph Extension A
+	     (<= #x4E00 code #x9FC3)	; CJK Ideograph
+	     (<= #x20000 code #x2A6D6))	; CJK Ideograph Extension B
+	 (format nil "CJK UNIFIED IDEOGRAPH-~4,'0X" code))
+	((<= #xAC00 code #xD7A3)	; Hangul Syllable
+	 (apply #'concatenate 'string "HANGUL SYLLABLE "
+		(loop for ch across (unicode-decomp code)
+		       as code = (char-code ch)
+		  collect (cond ((<= #x1100 code #x1112)
+				 (aref +hangul-choseong+ (- code #x1100)))
+				((<= #x1161 code #x1175)
+				 (aref +hangul-jungseong+ (- code #x1161)))
+				((<= #x11A8 code #x11C2)
+				 (aref +hangul-jongseong+ (- code #x11A8)))))))
+	(t
+	 (unless (unidata-name+ *unicode-data*) (load-names))
+	 (unless (unidata-name *unicode-data*) (load-name))
+	 (unicode-name+ code (unidata-name *unicode-data*)
+			(unidata-name+ *unicode-data*)))))
 
 (defun unicode-1.0-name (code)
   (unless (unidata-name1+ *unicode-data*) (load-1.0-names))
