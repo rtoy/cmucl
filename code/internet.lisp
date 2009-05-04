@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.52.4.2.2.1 2008/11/02 13:30:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.52.4.2.2.2 2009/05/04 14:12:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -790,7 +790,8 @@ can of course be negative, to indicate faults."
 ;;; OPEN-NETWORK-STREAM -- public
 ;;;
 ;;;   Returns a stream connected to the specified Port on the given Host.
-(defun open-network-stream (host port &key (buffering :line) timeout)
+(defun open-network-stream (host port &key (buffering :line) timeout
+					   (external-format '(:latin-1 :crlf)))
   "Return a network stream.  HOST may be an address string or an integer
 IP address."
   (let (hostent hostaddr)
@@ -826,13 +827,15 @@ IP address."
 	socket))
     :input t :output t :buffering buffering :timeout timeout
     :name (format nil "network connection to ~A" hostaddr)
+    :external-format external-format
     :auto-close t)))
 
 ;;; ACCEPT-NETWORK-STREAM -- public
 ;;;
 ;;;   Accept a connection from the specified Socket and returns a
 ;;;   stream connected to that connection.
-(defun accept-network-stream (socket &key (buffering :line) timeout wait-max)
+(defun accept-network-stream (socket &key (buffering :line) timeout wait-max
+					  (external-format '(:latin-1 :crlf)))
   (declare (fixnum socket))
   (when #+MP (mp:process-wait-until-fd-usable socket :input wait-max)
         #-MP (sys:wait-until-fd-usable socket :input wait-max)
@@ -852,4 +855,5 @@ IP address."
 			(ldb (byte 8 8) host)
 			(ldb (byte 8 0) host)
 			port))
+	:external-format external-format
 	:auto-close t)))))
