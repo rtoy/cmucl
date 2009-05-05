@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1.2.6 2009/05/04 21:07:11 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1.2.7 2009/05/05 01:48:17 rtoy Exp $
  *
  */
 
@@ -1861,9 +1861,9 @@ gc_alloc_unboxed(int nbytes)
      */
 
     /* See gc_alloc for what we're doing here. */
-    if ((unboxed_region.end_addr - unboxed_region.free_pointer > region_empty_threshold)
-        || (nbytes >= large_object_size)
-        || (consecutive_large_alloc < consecutive_large_alloc_limit)) {
+    if (((unboxed_region.end_addr - unboxed_region.free_pointer > region_empty_threshold)
+         || (nbytes >= large_object_size))
+        && (consecutive_large_alloc < consecutive_large_alloc_limit)) {
         ++consecutive_large_alloc;
 	return gc_alloc_large(nbytes, 1, &unboxed_region);
     }
