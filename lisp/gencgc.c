@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1.2.7 2009/05/05 01:48:17 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1.2.8 2009/05/05 17:31:18 rtoy Exp $
  *
  */
 
@@ -1609,55 +1609,71 @@ int consecutive_large_alloc_limit = 10;
  * abandon the current region, because we done too many gc_alloc's in
  * the current region without changing the region.
  */
-int abandon_boxed_region_count = 0;
-int abandon_unboxed_region_count = 0;
-int saved_and_boxed_region_differ = 0;
+struct alloc_stats 
+{
+    int consecutive_alloc;
+    int abandon_region_count;
+    int regions_differ_count;
+    struct alloc_region saved_region;
+};
 
+struct alloc_stats boxed_stats =
+{0, 0, 0, 
+ {NULL, NULL, -1, -1, NULL}};
+     
+struct alloc_stats unboxed_stats =
+{0, 0, 0, 
+ {NULL, NULL, -1, -1, NULL}};
 
 /*
- * Allocate bytes from the boxed_region. It first checks if there is
- * room, if not then it calls gc_alloc_new_region to find a new region
- * with enough space. A pointer to the start of the region is returned.
+ * Allocate bytes from a boxed or unboxed region. It first checks if
+ * there is room, if not then it calls gc_alloc_new_region to find a
+ * new region with enough space. A pointer to the start of the region
+ * is returned.  The parameter "unboxed" should be 0 (boxed) or 1
+ * (unboxed).
  */
 static void *
-gc_alloc(int nbytes)
+gc_alloc_region(int nbytes, struct alloc_region *region, int unboxed, struct alloc_stats *stats)
 {
     char *new_free_pointer;
-    static int consecutive_large_alloc = 0;
-    static struct alloc_region *saved_boxed = NULL;
-
 #if 0
     fprintf(stderr, "gc_alloc %d\n", nbytes);
 #endif
 
     /* Check if there is room in the current alloc region. */
-    new_free_pointer = boxed_region.free_pointer + nbytes;
+    new_free_pointer = region->free_pointer + nbytes;
 
-    if (new_free_pointer <= boxed_region.end_addr) {
+    if (new_free_pointer <= region->end_addr) {
 	/* If so then allocate from the current alloc region. */
-	char *new_obj = boxed_region.free_pointer;
+	char *new_obj = region->free_pointer;
 
-	boxed_region.free_pointer = new_free_pointer;
+	region->free_pointer = new_free_pointer;
 
 	/* Check if the alloc region is almost empty. */
-	if (boxed_region.end_addr - boxed_region.free_pointer <= 32) {
+	if (region->end_addr - region->free_pointer <= 32) {
 	    /* If so finished with the current region. */
-	    gc_alloc_update_page_tables(0, &boxed_region);
+	    gc_alloc_update_page_tables(unboxed, region);
 	    /* Setup a new region. */
-	    gc_alloc_new_region(32, 0, &boxed_region);
+	    gc_alloc_new_region(32, unboxed, region);
 	}
 
-        consecutive_large_alloc = 0;
-        if (saved_boxed) {
-            free(saved_boxed);
-            saved_boxed = NULL;
-        }
+        stats->consecutive_alloc = 0;
+        memcpy(&stats->saved_region, region, sizeof(stats->saved_region));
         
 	return (void *) new_obj;
     }
 
     /* Else not enough free space in the current region. */
 
+    /*
+     * If the allocation is large enough, always do a large alloc This
+     * helps GC so we don't have to copy this object again.
+     */
+    
+    if (nbytes >= large_object_size) {
+	return gc_alloc_large(nbytes, unboxed, region);
+    }
+    
     /*
      * If there is a bit of room left in the current region then
      * allocate a large object.
@@ -1666,95 +1682,75 @@ gc_alloc(int nbytes)
     /*
      * This has potentially very bad behavior on sparc if the current
      * boxed region is too small for the allocation, but the free
-     * space is greater than 32.  The scenario is where we're always
-     * allocating something that won't fit in the boxed region and we
-     * keep calling gc_alloc_large.  Since gc_alloc_large doesn't
-     * change boxed_region, the next allocation will again be
-     * out-of-line and we hit a kernel trap again.  And so on, so we
-     * waste all of our time doing kernel traps to allocate small
-     * things.  This also affects ppc.
+     * space is greater than 32 (region_empty_threshold).  The
+     * scenario is where we're always allocating something that won't
+     * fit in the boxed region, and we keep calling gc_alloc_large.
+     * Since gc_alloc_large doesn't change the region, the next
+     * allocation will again be out-of-line and we hit a kernel trap
+     * again.  And so on, so we waste all of our time doing kernel
+     * traps to allocate small things.  This also affects ppc.
      *
      * X86 has the same issue, but the affect is less because the
      * out-of-line allocation is a just a function call, not a kernel
      * trap.
      *
-     * We should also do a large alloc if the object is large, even if
-     * the free space left in the region is too small.  This helps GC
-     * so we don't have to copy this object again.
-     *
      * Heuristic: If we do too many consecutive large allocations
      * because the current region has some space left, we give up and
      * abandon the region. This will prevent the bad scenario above
-     * from killing gc allocation performance.
+     * from killing allocation performance.
      *
      */
-    if (((boxed_region.end_addr - boxed_region.free_pointer > region_empty_threshold)
-         || (nbytes >= large_object_size))
-        && (consecutive_large_alloc < consecutive_large_alloc_limit)) {
-        if (nbytes < large_object_size) {
-            /* Large objects don't count */ 
-            if (saved_boxed) {
-                /* Is the saved region the same as the current region?
-                 * If so, update the counter.  If not, that means we
-                 * did some other allocation, so reset the counter and region
-                 */
-                if (memcmp(saved_boxed, &boxed_region, sizeof(*saved_boxed)) == 0) {
-                    ++consecutive_large_alloc;
-                } else {
-                    consecutive_large_alloc = 0;
-#if 0
-                    fprintf(stderr, "saved and current boxed regions are different!  Resetting!\n");
-#endif
-                    ++saved_and_boxed_region_differ;
-                    
-                    memcpy(saved_boxed, &boxed_region, sizeof(*saved_boxed));
-                }
-            } else {
-                /* No saved region, so copy it */
-                saved_boxed = (struct alloc_region *) malloc(sizeof(*saved_boxed));
-                memcpy(saved_boxed, &boxed_region, sizeof(*saved_boxed));
-                ++consecutive_large_alloc;
-            }
+
+    if ((region->end_addr - region->free_pointer > region_empty_threshold)
+        && (stats->consecutive_alloc < consecutive_large_alloc_limit)) {
+        /*
+         * Is the saved region the same as the current region?  If so,
+         * update the counter.  If not, that means we did some other
+         * (inline) allocation, so reset the counter and region
+         */
+        if (memcmp(&stats->saved_region, region, sizeof(stats->saved_region)) == 0) {
+            ++stats->consecutive_alloc;
+        } else {
+            stats->consecutive_alloc = 0;
+            ++stats->regions_differ_count;
+            memcpy(&stats->saved_region, region, sizeof(stats->saved_region));
         }
         
-	return gc_alloc_large(nbytes, 0, &boxed_region);
+	return gc_alloc_large(nbytes, unboxed, region);
     }
 
-    consecutive_large_alloc = 0;
-    ++abandon_boxed_region_count;
+    stats->consecutive_alloc = 0;
+    ++stats->abandon_region_count;
 
     /* Else find a new region. */
 
     /* Finished with the current region. */
-    gc_alloc_update_page_tables(0, &boxed_region);
+    gc_alloc_update_page_tables(unboxed, region);
 
     /* Setup a new region. */
-    gc_alloc_new_region(nbytes, 0, &boxed_region);
+    gc_alloc_new_region(nbytes, unboxed, region);
 
     /* Should now be enough room. */
 
     /* Check if there is room in the current region. */
-    new_free_pointer = boxed_region.free_pointer + nbytes;
+    new_free_pointer = region->free_pointer + nbytes;
 
-    if (new_free_pointer <= boxed_region.end_addr) {
+    if (new_free_pointer <= region->end_addr) {
 	/* If so then allocate from the current region. */
-	void *new_obj = boxed_region.free_pointer;
+	void *new_obj = region->free_pointer;
 
-	boxed_region.free_pointer = new_free_pointer;
+	region->free_pointer = new_free_pointer;
 
 	/* Check if the current region is almost empty. */
-	if (boxed_region.end_addr - boxed_region.free_pointer <= 32) {
+	if (region->end_addr - region->free_pointer <= 32) {
 	    /* If so find, finished with the current region. */
-	    gc_alloc_update_page_tables(0, &boxed_region);
+	    gc_alloc_update_page_tables(unboxed, region);
 
 	    /* Setup a new region. */
-	    gc_alloc_new_region(32, 0, &boxed_region);
+	    gc_alloc_new_region(32, unboxed, region);
 	}
 
-        if (saved_boxed) {
-            free(saved_boxed);
-            saved_boxed = NULL;
-        }
+        memcpy(&stats->saved_region, region, sizeof(stats->saved_region));
         
 	return (void *) new_obj;
     }
@@ -1762,6 +1758,21 @@ gc_alloc(int nbytes)
     /* Shouldn't happen? */
     gc_assert(0);
     return 0;
+}
+
+/*
+ * Allocate bytes from the boxed_region. It first checks if there is
+ * room, if not then it calls gc_alloc_new_region to find a new region
+ * with enough space. A pointer to the start of the region is returned.
+ */
+static inline void *
+gc_alloc(int nbytes)
+{
+    void* obj;
+
+    obj = gc_alloc_region(nbytes, &boxed_region, 0, &boxed_stats);
+
+    return obj;
 }
 
 /*
@@ -1818,93 +1829,14 @@ gc_quick_alloc_large(int nbytes)
     return gc_alloc(nbytes);
 }
 
-
-
-
-static void *
+static inline void *
 gc_alloc_unboxed(int nbytes)
 {
-    char *new_free_pointer;
-    static int consecutive_large_alloc = 0;
+    void *obj;
 
-#if 0
-    fprintf(stderr, "gc_alloc_unboxed %d\n", nbytes);
-#endif
+    obj = gc_alloc_region(nbytes, &unboxed_region, 1, &unboxed_stats);
 
-    /* Check if there is room in the current region. */
-    new_free_pointer = unboxed_region.free_pointer + nbytes;
-
-    if (new_free_pointer <= unboxed_region.end_addr) {
-	/* If so then allocate from the current region. */
-	void *new_obj = unboxed_region.free_pointer;
-
-	unboxed_region.free_pointer = new_free_pointer;
-
-	/* Check if the current region is almost empty. */
-	if ((unboxed_region.end_addr - unboxed_region.free_pointer) <= 32) {
-	    /* If so finished with the current region. */
-	    gc_alloc_update_page_tables(1, &unboxed_region);
-
-	    /* Setup a new region. */
-	    gc_alloc_new_region(32, 1, &unboxed_region);
-	}
-
-        consecutive_large_alloc = 0;
-	return (void *) new_obj;
-    }
-
-    /* Else not enough free space in the current region. */
-
-    /*
-     * If there is a bit of room left in the current region then
-     * allocate a large object.
-     */
-
-    /* See gc_alloc for what we're doing here. */
-    if (((unboxed_region.end_addr - unboxed_region.free_pointer > region_empty_threshold)
-         || (nbytes >= large_object_size))
-        && (consecutive_large_alloc < consecutive_large_alloc_limit)) {
-        ++consecutive_large_alloc;
-	return gc_alloc_large(nbytes, 1, &unboxed_region);
-    }
-
-    consecutive_large_alloc = 0;
-    ++abandon_unboxed_region_count;
-
-    /* Else find a new region. */
-
-    /* Finished with the current region. */
-    gc_alloc_update_page_tables(1, &unboxed_region);
-
-    /* Setup a new region. */
-    gc_alloc_new_region(nbytes, 1, &unboxed_region);
-
-    /* Should now be enough room. */
-
-    /* Check if there is room in the current region. */
-    new_free_pointer = unboxed_region.free_pointer + nbytes;
-
-    if (new_free_pointer <= unboxed_region.end_addr) {
-	/* If so then allocate from the current region. */
-	void *new_obj = unboxed_region.free_pointer;
-
-	unboxed_region.free_pointer = new_free_pointer;
-
-	/* Check if the current region is almost empty. */
-	if ((unboxed_region.end_addr - unboxed_region.free_pointer) <= 32) {
-	    /* If so find, finished with the current region. */
-	    gc_alloc_update_page_tables(1, &unboxed_region);
-
-	    /* Setup a new region. */
-	    gc_alloc_new_region(32, 1, &unboxed_region);
-	}
-
-	return (void *) new_obj;
-    }
-
-    /* Shouldn't happen? */
-    gc_assert(0);
-    return 0;
+    return obj;
 }
 
 static inline void *
