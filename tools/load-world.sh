@@ -2,14 +2,17 @@
 
 usage()
 {
-    echo "load-world.sh [-?p] target-directory version-string"
+    echo "load-world.sh [-?p] target-directory [version-string]"
     echo "   -p    Skip loading of PCL (Mostly for cross-compiling)"
     echo "   -?    This help"
+    echo " If the version-string is not given, the current date and time is used"
     exit 1
 }
 
 SKIP_PCL=
 NO_PCL_FEATURE=
+# Default version is the date.
+VERSION="CVS Head `date '+%Y-%m-%d %H:%M:%S'`"
 
 while getopts "p" arg
 do
@@ -19,10 +22,6 @@ do
       \?) usage ;;
   esac
 done
-
-if [ $# -ne 2 ]; then
-    usage
-fi
 
 if [ ! -d "$1" ]
 then
@@ -37,6 +36,11 @@ TARGET="`echo $1 | sed 's:/*$::'`"
 
 if [ -n "$SKIP_PCL" ]; then
     NO_PCL_FEATURE="(pushnew :no-pcl *features*)"
+fi
+
+# If version string give, use it, otherwise use the default.
+if [ -n "$2" ]; then
+    VERSION=$2
 fi
 
 $TARGET/lisp/lisp -core $TARGET/lisp/kernel.core <<EOF
