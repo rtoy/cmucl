@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.75.14.1 2009/05/04 14:13:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.75.14.2 2009/05/05 17:58:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1875,7 +1875,7 @@
   If PACKAGE is supplied then only use symbols present in
   that package.  If EXTERNAL-ONLY is true then only use
   symbols exported from the specified package."
-  (let ((string (nstring-upcase (string-to-nfc string))))
+  (let ((string (nstring-upcase (string-to-nfc (string string)))))
     (declare (simple-string string))
     (flet ((apropos-in-package (package)
              (if external-only
