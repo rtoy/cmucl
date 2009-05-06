@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.122.4.5 2009/04/18 02:16:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.122.4.6 2009/05/06 18:43:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -760,7 +760,7 @@
     (sign . sign-attribute) (extension . extension-attribute)
     (dot . dot-attribute) (slash . slash-attribute)
     (other . other-attribute) (funny . funny-attribute)
-    (othercase . othercase-attribute)))
+    #+unicode (othercase . othercase-attribute)))
 
 ); Eval-When (compile load eval)
 
@@ -846,8 +846,8 @@
 	   (base *print-base*)
 	   (letter-attribute
 	    (case (readtable-case *readtable*)
-	      (:upcase (logior uppercase-attribute othercase-attribute))
-	      (:downcase (logior lowercase-attribute othercase-attribute))
+	      (:upcase (logior uppercase-attribute #+unicode othercase-attribute))
+	      (:downcase (logior lowercase-attribute #+unicode othercase-attribute))
 	      (t (logior lowercase-attribute uppercase-attribute))))
 	   (index 0)
 	   (bits 0)
@@ -861,7 +861,7 @@
 
      OTHER ; Not potential number, see if funny chars...
       (let ((mask (logxor (logior lowercase-attribute uppercase-attribute
-				  othercase-attribute
+				  #+unicode othercase-attribute
 				  funny-attribute)
 			  letter-attribute)))
 	(do ((i (1- index) (1+ i)))
