@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.17 2009/05/04 14:10:31 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.18 2009/05/06 13:26:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -724,10 +724,10 @@
       ;; http://www.unicode.org/reports/tr15/#Hangul for the
       ;; algorithm.)
       (multiple-value-bind (q1 r1)
-	  (floor (- code #xAC00) 588)
+	  (truncate (- code #xAC00) 588)
 	(declare (type (integer 0 18) q1) (type (integer 0 587) r1))
 	(multiple-value-bind (q2 r2)
-	    (floor r1 28)
+	    (truncate r1 28)
 	  (declare (type (integer 0 20) q2) (type (integer 0 27) r2))
 	  (let ((decomp (make-string (if (zerop r2) 2 3))))
 	    (setf (schar decomp 0) (code-char (+ #x1100 q1))
