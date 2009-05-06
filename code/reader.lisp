@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62.4.2.2.5 2009/04/10 20:13:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62.4.2.2.6 2009/05/06 18:44:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -467,10 +467,12 @@
 	       (character-attribute-table from-readtable))
       (replace (character-macro-table to-readtable)
 	       (character-macro-table from-readtable))
-      (copy-hash-table (character-attribute-hash-table to-readtable)
-		       (character-attribute-hash-table from-readtable))
-      (copy-hash-table (character-macro-hash-table to-readtable)
-		       (character-macro-hash-table from-readtable))
+      #+unicode
+      (progn
+	(copy-hash-table (character-attribute-hash-table to-readtable)
+			 (character-attribute-hash-table from-readtable))
+	(copy-hash-table (character-macro-hash-table to-readtable)
+			 (character-macro-hash-table from-readtable)))
       (setf (dispatch-tables to-readtable)
 	    (mapcar #'(lambda (pair) (cons (car pair)
 					   (copy-char-dispatch-table (cdr pair))))
