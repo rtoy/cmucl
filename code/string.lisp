@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.12 2009/05/04 14:13:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.13 2009/05/06 13:05:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -799,9 +799,13 @@
       (shrink-vector result fillptr))))
 
 (defun string-to-nfd (string)
+  "Convert String to Unicode Normalization Form D (NFD) using the
+  canonical decomposition.  The NFD string is returned"
   (decompose string nil))
 
 (defun string-to-nfkd (string)
+  "Convert String to Unicode Normalization Form KD (NFKD) uisng the
+  compatible decomposition form.  The NFKD string is returned."
   (decompose string t))
 
 #+unicode
