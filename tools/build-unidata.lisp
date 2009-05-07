@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.6 2009/05/01 11:41:02 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.7 2009/05/07 03:24:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -384,7 +384,7 @@
 			 :element-type '(unsigned-byte 8))
       (let ((index (make-array 11 :fill-pointer 0)))
 	;; File header
-	(write32 #x2A554344 stm)	; identification "magic"
+	(write32 #x2A554344 stm)	; identification "magic" (the string "*UCD")
 	(write-byte 0 stm)		; file format version
 	(write-byte 5 stm)		; Unicode version major
 	(write-byte 1 stm)		; Unicode version minor
