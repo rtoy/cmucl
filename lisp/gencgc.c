@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1.2.8 2009/05/05 17:31:18 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1.2.9 2009/05/11 18:18:52 rtoy Exp $
  *
  */
 
@@ -1626,19 +1626,15 @@ struct alloc_stats unboxed_stats =
  {NULL, NULL, -1, -1, NULL}};
 
 /*
- * Allocate bytes from a boxed or unboxed region. It first checks if
- * there is room, if not then it calls gc_alloc_new_region to find a
- * new region with enough space. A pointer to the start of the region
- * is returned.  The parameter "unboxed" should be 0 (boxed) or 1
- * (unboxed).
+ * Try to allocate from the current region.  If it's possible, do the
+ * allocation and return the object.  If it's not possible, return
+ * (void*) -1.
  */
-static void *
-gc_alloc_region(int nbytes, struct alloc_region *region, int unboxed, struct alloc_stats *stats)
+static inline void *
+gc_alloc_try_current_region(int nbytes, struct alloc_region *region, int unboxed,
+                            struct alloc_stats *stats)
 {
     char *new_free_pointer;
-#if 0
-    fprintf(stderr, "gc_alloc %d\n", nbytes);
-#endif
 
     /* Check if there is room in the current alloc region. */
     new_free_pointer = region->free_pointer + nbytes;
@@ -1661,6 +1657,32 @@ gc_alloc_region(int nbytes, struct alloc_region *region, int unboxed, struct all
         memcpy(&stats->saved_region, region, sizeof(stats->saved_region));
         
 	return (void *) new_obj;
+    } else {
+        return (void *) -1;
+    }
+}
+
+/*
+ * Allocate bytes from a boxed or unboxed region. It first checks if
+ * there is room, if not then it calls gc_alloc_new_region to find a
+ * new region with enough space. A pointer to the start of the region
+ * is returned.  The parameter "unboxed" should be 0 (boxed) or 1
+ * (unboxed).
+ */
+static void *
+gc_alloc_region(int nbytes, struct alloc_region *region, int unboxed, struct alloc_stats *stats)
+{
+    void *new_obj;
+    
+#if 0
+    fprintf(stderr, "gc_alloc %d\n", nbytes);
+#endif
+
+    /* Check if there is room in the current alloc region. */
+
+    new_obj = gc_alloc_try_current_region(nbytes, region, unboxed, stats);
+    if (new_obj != (void *) -1) {
+        return new_obj;
     }
 
     /* Else not enough free space in the current region. */
@@ -1732,27 +1754,9 @@ gc_alloc_region(int nbytes, struct alloc_region *region, int unboxed, struct all
 
     /* Should now be enough room. */
 
-    /* Check if there is room in the current region. */
-    new_free_pointer = region->free_pointer + nbytes;
-
-    if (new_free_pointer <= region->end_addr) {
-	/* If so then allocate from the current region. */
-	void *new_obj = region->free_pointer;
-
-	region->free_pointer = new_free_pointer;
-
-	/* Check if the current region is almost empty. */
-	if (region->end_addr - region->free_pointer <= 32) {
-	    /* If so find, finished with the current region. */
-	    gc_alloc_update_page_tables(unboxed, region);
-
-	    /* Setup a new region. */
-	    gc_alloc_new_region(32, unboxed, region);
-	}
-
-        memcpy(&stats->saved_region, region, sizeof(stats->saved_region));
-        
-	return (void *) new_obj;
+    new_obj = gc_alloc_try_current_region(nbytes, region, unboxed, stats);
+    if (new_obj != (void *) -1) {
+        return new_obj;
     }
 
     /* Shouldn't happen? */
