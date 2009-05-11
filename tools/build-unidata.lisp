@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.7 2009/05/07 03:24:02 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.8 2009/05/11 16:44:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,6 +36,15 @@
   )
 
 (defvar *unicode-data* (make-unidata))
+
+;; The magic number for the unidata.bin file.  (It's "*UCD", in
+;; big-endian order.)
+(defconstant +unicode-magic-number+ #x2A554344)
+
+;; The expected Unicode version
+(defconstant +unicode-major-version+ 5)
+(defconstant +unicode-minor-version+ 1)
+(defconstant +unicode-update-version+ 0)
 
 ;;; These need to be synched with code/unidata.lisp
 
@@ -384,11 +393,13 @@
 			 :element-type '(unsigned-byte 8))
       (let ((index (make-array 11 :fill-pointer 0)))
 	;; File header
-	(write32 #x2A554344 stm)	; identification "magic" (the string "*UCD")
-	(write-byte 0 stm)		; file format version
-	(write-byte 5 stm)		; Unicode version major
-	(write-byte 1 stm)		; Unicode version minor
-	(write-byte 0 stm)		; Unicode version subminor
+	(write32 +unicode-magic-number+ stm)	; identification "magic"
+	;; File format version 
+	(write-byte 0 stm)
+	;; Unicode version
+	(write-byte +unicode-major-version+ stm)
+	(write-byte +unicode-minor-version+ stm)
+	(write-byte +unicode-update-version+  stm)
 	(dotimes (i (array-dimension index 0))
 	  (write32 0 stm))		; space for indices
 	(write32 0 stm)			; end marker
@@ -534,9 +545,11 @@
   ;; ...
   )
 
-(defun foreach-ucd (name fn)
+;; ucd-directory should be the directory where UnicodeData.txt is
+;; located.
+(defun foreach-ucd (name ucd-directory fn)
   (with-open-file (s (make-pathname :name name :type "txt"
-				    :defaults #p"target:i18n/"))
+				    :defaults ucd-directory))
     (if (string= name "Unihan")
 	(loop for line = (read-line s nil) while line do
 	  (when (char= (char line 0) #\U)
@@ -593,8 +606,8 @@
 		       (setq n (1+ b))
 		       a)))))
 
-(declaim (ftype (function () (values simple-vector range)) read-data))
-(defun read-data ()
+(declaim (ftype (function (&optional t) (values simple-vector range)) read-data))
+(defun read-data (&optional (ucd-directory #p"target:i18n/"))
   (let ((vec (make-array 50000))
 	(pos 0)
 	(range (make-array 50 :element-type '(unsigned-byte 32)))
@@ -606,7 +619,7 @@
 	   (str (x) (if (string= x "") nil x))
 	   (bool (x) (string= x "Y"))
 	   (decomp (x) (if (string= x "") nil (parse-decomposition x))))
-      (foreach-ucd "UnicodeData"
+      (foreach-ucd "UnicodeData" ucd-directory
 	(lambda (min max name cat comb bidi decomp num1 num2 num3
 		 mirror name1 comment upper lower title)
 	  (when (> max min)
@@ -624,15 +637,18 @@
     (lisp::shrink-vector vec pos)
     (lisp::shrink-vector range rpos)
     (foreach-ucd "NameAliases"
+		 ucd-directory
       (lambda (min max alias)
 	(declare (ignore max))
 	(push alias (ucdent-aliases (find min vec :key #'ucdent-code)))))
     (foreach-ucd "NormalizationCorrections"
+		 ucd-directory
       (lambda (min max bad good &rest junk)
 	(declare (ignore max bad junk))
 	(setf (ucdent-decomp (find min vec :key #'ucdent-code))
 	    (parse-decomposition good))))
     (foreach-ucd "BidiMirroring"
+		 ucd-directory
       (lambda (min max mirror)
 	(declare (ignore max))
 	(setf (ucdent-mcode (find min vec :key #'ucdent-code))
@@ -721,9 +737,11 @@
 		 (if (minusp n) #x400 #x000)))
 	      0)))
 
-(defun build-unidata ()
+;; ucd-directory should be the directory where UnicodeData.txt is
+;; located.
+(defun build-unidata (&optional (ucd-directory "target:i18n/"))
   (format t "~&Reading data~%")
-  (multiple-value-bind (ucd range) (read-data)
+  (multiple-value-bind (ucd range) (read-data ucd-directory)
     (setf (unidata-range *unicode-data*) range)
     (format t "~&Building character name tables~%")
     (let* ((data (loop for ent across ucd
