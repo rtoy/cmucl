@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.18 2009/05/06 13:26:18 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.19 2009/05/11 16:46:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,6 +29,16 @@
   )
 
 (defvar *unicode-data* (make-unidata))
+
+;; The magic number for the unidata.bin file.  (It's "*UCD", in
+;; big-endian order.)
+(defconstant +unicode-magic-number+ #x2A554344)
+
+;; The expected Unicode version.  This needs to be synced with
+;; build-unidata.lisp.
+(defconstant +unicode-major-version+ 5)
+(defconstant +unicode-minor-version+ 1)
+(defconstant +unicode-update-version+ 0)
 
 ;;; These need to be synched with tools/build-unidata.lisp
 
@@ -354,13 +364,15 @@
 	     (logior (ash (read-byte stm) 8) (read-byte stm)))
 	   (read32 (stm)
 	     (logior (ash (read16 stm) 16) (read16 stm))))
-    (unless (and (= (read32 stream) #x2A554344)
+    (unless (and (= (read32 stream) +unicode-magic-number+)
 		 (= (read-byte stream) 0))
       (error "The Unicode data file is broken."))
     (let ((a (read-byte stream))
 	  (b (read-byte stream))
 	  (c (read-byte stream)))
-      (unless (and (= a 5) (= b 1) (= c 0))
+      (unless (and (= a +unicode-major-version+)
+		   (= b +unicode-minor-version+)
+		   (= c +unicode-update-version+))
 	(warn "Unicode data file is for Unicode ~D.~D.~D" a b c)))
     (dotimes (i index)
       (when (zerop (read32 stream))
