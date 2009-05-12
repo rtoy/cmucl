@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.7 2008/04/01 07:25:08 cshapiro Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.7.4.1 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -55,7 +55,7 @@
 
   ;; Blit the values down the stack.  Note: there might be overlap, so we have
   ;; to be careful not to clobber values before we've read them.  Because the
-  ;; stack builds down, we are coping to a larger address.  Therefore, we need
+  ;; stack builds down, we are copying to a larger address.  Therefore, we need
   ;; to iterate from larger addresses to smaller addresses.
   ;; pfw-this says copy ecx words from esi to edi counting down.
   (inst shr ecx 2)			; fixnum to raw word count
@@ -114,11 +114,11 @@
 ;;;; tail-call-variable.
 
 ;;; For tail-call-variable, we have to copy the arguments from the end of our
-;;; stack frame (were args are produced) to the start of our stack frame
-;;; (were args are expected).
+;;; stack frame (where args are produced) to the start of our stack frame
+;;; (where args are expected).
 ;;;
 ;;; We take the function to call in EAX and a pointer to the arguments in
-;;; ESI.  EBP says the same over the jump, and the old frame pointer is
+;;; ESI.  EBP stays the same over the jump, and the old frame pointer is
 ;;; still saved in the first stack slot.  The return-pc is saved in
 ;;; the second stack slot, so we have to push it to make it look like
 ;;; we actually called.  We also have to compute ECX from the difference
@@ -140,18 +140,18 @@
   (move ecx esi)
   (inst sub ecx esp-tn)
 
-  ;; Check for all the args fitting the the registers.
+  ;; Check for all the args fitting in the registers.
   (inst cmp ecx (fixnumize 3))
   (inst jmp :le REGISTER-ARGS)
 
-  ;; Save the OLD-FP and RETURN-PC because the blit it going to trash
+  ;; Save the OLD-FP and RETURN-PC because the blit is going to trash
   ;; those stack locations.  Save the ECX, because the loop is going
   ;; to trash it.
   (pushw ebp-tn -1)
   (loadw ebx ebp-tn -2)
   (inst push ecx)
 
-  ;; Do the blit.  Because we are coping from smaller addresses to larger
+  ;; Do the blit.  Because we are copying from smaller addresses to larger
   ;; addresses, we have to start at the largest pair and work our way down.
   (inst shr ecx 2)			; fixnum to raw words
   (inst lea edi (make-ea :dword :base ebp-tn :disp (- word-bytes)))
@@ -179,10 +179,10 @@
   (inst push ebx)
 
   ;; And jump into the function.
-    (inst jmp 
-	  (make-ea :byte :base eax
-		   :disp (- (* closure-function-slot word-bytes)
-			    function-pointer-type)))
+  (inst jmp 
+	(make-ea :byte :base eax
+		 :disp (- (* closure-function-slot word-bytes)
+			  function-pointer-type)))
 
   ;; All the arguments fit in registers, so load them.
   REGISTER-ARGS
@@ -229,7 +229,7 @@
   
   EXIT
   
-  ;; Hear EAX points to catch block containing symbol pointed to by EDX.
+  ;; Here EAX points to catch block containing symbol pointed to by EDX.
   (inst jmp (make-fixup 'unwind :assembly-routine)))
 
 ;;;; Non-local exit noise.

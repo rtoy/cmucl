@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.27.20.1 2008/11/02 13:30:01 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.27.20.2 2009/05/12 16:31:48 rtoy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -1044,7 +1044,7 @@ collected result will be returned as the value of the LOOP."
 				    (*loop-destructuring-hooks* (first *loop-destructuring-hooks*))
 				    (t 'let))
 			     ,vars
-			      ,@(loop-build-destructuring-bindings crocks forms)))))))
+			     ,@(loop-build-destructuring-bindings crocks forms)))))))
       (if *loop-names*
 	  (dolist (name *loop-names* answer)
 	    (setq answer `(block ,name ,answer)))

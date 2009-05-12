@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.92.4.7.2.1 2008/07/02 01:22:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.92.4.7.2.2 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,7 +95,7 @@
 
 ;;; LOAD-FRESH-LINE -- internal.
 ;;;
-;;; Output the corrent number of semicolons after a fresh-line.
+;;; Output the current number of semicolons after a fresh-line.
 ;;; 
 (defconstant semicolons ";;;;;;;;;;;;;;;;")
 ;;;

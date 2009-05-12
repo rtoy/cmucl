@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83.6.4.2.1 2008/07/02 01:22:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83.6.4.2.2 2009/05/12 16:31:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -924,7 +924,7 @@
 	   (ignore arg2))
   (case operation
     (:listen
-     ;; Return true is input available, :eof for eof-of-file, otherwise Nil.
+     ;; Return true if input available, :eof for end-of-file, otherwise Nil.
      (let ((char (stream-read-char-no-hang stream)))
        (when (characterp char)
 	 (stream-unread-char stream char))
@@ -2131,7 +2131,7 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 		(read-into-list seq stream start end))
 	       (string
 		(with-array-data ((seq seq) (start start) (end end))
-		  (read-into-string seq stream start end)))
+		  (read-into-string seq stream start end partial-fill)))
 	       (vector
 		(with-array-data ((seq seq) (start start) (end end))
 		  (read-into-simple-array seq stream start end)))))))
@@ -2224,7 +2224,7 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 ;;; read-into-simple-string hacked to allow (unsigned-byte 8) stream-element-type
 ;;; For some reason applying this change to read-into-simple-string causes CMUCL to die.
 #-unicode
-(defun read-into-string (s stream start end)
+(defun read-into-string (s stream start end partial-fill)
   (declare (type simple-string s))
   (declare (type stream stream))
   (declare (type index start end))
@@ -2241,15 +2241,15 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
     ;; to keep trying.
     (loop while (plusp numbytes) do
       (let ((bytes-read (system:read-n-bytes stream s start numbytes nil)))
-	(when (zerop bytes-read)
-	  (return-from read-into-string start))
 	(incf total-bytes bytes-read)
 	(incf start bytes-read)
-	(decf numbytes bytes-read)))
+	(decf numbytes bytes-read)
+	(when (or partial-fill (zerop bytes-read))
+	  (return-from read-into-string start))))
     start))
 
 #+unicode
-(defun read-into-string (s stream start end)
+(defun read-into-string (s stream start end partial-fill)
   (declare (type string s))
   (declare (type stream stream))
   (declare (type index start end))

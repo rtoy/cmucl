@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dyncount.lisp,v 1.6 2003/06/10 16:52:36 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dyncount.lisp,v 1.6.30.1 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,7 +23,7 @@ VOP classification.
 
 (eval-when (compile)
   (when *collect-dynamic-statistics*
-    (error "Compiling this file with dynamic stat collection turn on would ~
+    (error "Compiling this file with dynamic stat collection turned on would ~
     be a very bad idea.")))
 
 ;;;; Hash utilities:
@@ -35,7 +35,8 @@ VOP classification.
 
 (defun hash-difference (table1 table2)
   "Return a hash-table containing only the entries in Table1 whose key is not
-   also a key in Table2." (declare (type hash-table table1 table2))
+   also a key in Table2."
+  (declare (type hash-table table1 table2))
   (let ((res (make-hash-table-like table1)))
     (do-hash (k v table1)
       (unless (nth-value 1 (gethash k table2))
@@ -53,7 +54,7 @@ VOP classification.
 
 ;;; READ-HASH-TABLE, WRITE-HASH-TABLE  --  Public
 ;;;
-;;;    Read (or write) a hashtable from (or to) a file.
+;;;    Read (or write) a hash table from (or to) a file.
 ;;;
 (defun read-hash-table (file)
   (with-open-file (s file :direction :input)
@@ -191,7 +192,7 @@ VOP classification.
 ;;; GET-VOP-COUNTS  --  Public
 ;;;
 ;;;    Call NOTE-DYNCOUNT-INFO on all DYNCOUNT-INFO structure allocated in the
-;;; specified spaces.  Return a hashtable describing the counts.  The initial
+;;; specified spaces.  Return a hash table describing the counts.  The initial
 ;;; loop must avoid calling any functions outside this file to prevent adding
 ;;; noise to the data, since other files may be compiled with profiling.
 ;;;
@@ -344,7 +345,7 @@ VOP classification.
 ;;;
 ;;;    Return true if Name patches a specified pattern.  Pattern is a string
 ;;; (or symbol) or a list of strings (or symbols).  If any specified string
-;;; appears as a substring of name, the pattern is matched.  #\$'s are wapped
+;;; appears as a substring of name, the pattern is matched.  #\$'s are wrapped
 ;;; around name, allowing the use of $ to force a match at the beginning or
 ;;; end.
 ;;;
@@ -418,7 +419,7 @@ VOP classification.
   
 ;;; COMPENSATE-COSTS  --  Internal
 ;;;
-;;;    Return a hashtable of DYNCOUNT-INFO structures, with cost adjustments
+;;;    Return a hash table of DYNCOUNT-INFO structures, with cost adjustments
 ;;; according to the Costs table.  Any VOPs in the list IGNORE are ignored.
 ;;;
 (defun compensate-costs (table costs &optional ignore)

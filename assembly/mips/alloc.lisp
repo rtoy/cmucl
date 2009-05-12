@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/alloc.lisp,v 1.9 2003/08/03 11:27:51 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/alloc.lisp,v 1.9.30.1 2009/05/12 16:31:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,7 +38,7 @@
   (inst beq ndescr large-alloc-entry)
   (inst nop)
 
-  ;; Round words up to a dual-word.  This is kinda sleezy, changing words like
+  ;; Round words up to a dual-word.  This is kinda sleazy, changing words like
   ;; this.  But we can because the vop thinks it is temporary.
   (inst addu words (+ (1- (ash 1 lowtag-bits))
 		      (* vector-data-offset word-bytes)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/linux-os.lisp,v 1.6.6.1 2009/03/25 21:51:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/linux-os.lisp,v 1.6.6.2 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,6 @@
       (unix:unix-uname)
     (declare (ignore sysname nodename))
     (concatenate 'string release " " version)))
-
 
 
 ;;; OS-Init initializes our operating-system interface.

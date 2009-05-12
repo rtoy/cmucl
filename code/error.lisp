@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.85.14.2 2009/03/18 15:37:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.85.14.3 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,7 @@
 (in-package "LISP")
 (export '(break error warn cerror
 	  ;;
-	  ;; The following are found in Macros.Lisp:
+	  ;; The following are found in macros.lisp:
 	  check-type assert etypecase ctypecase ecase ccase
 	  ;;
 	  ;; These are all the new things to export from "LISP" now that this

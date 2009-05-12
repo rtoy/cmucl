@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.27 2004/04/08 14:00:03 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.27.22.1 2009/05/12 16:31:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -387,7 +387,7 @@
 
 
 ;;; These macros are chunks of code from SUB-SERVE-EVENT.  They randomly
-;;; reference the READ-FDS and WRITE-FDS Alien variables (which wold be consed
+;;; reference the READ-FDS and WRITE-FDS Alien variables (which would be consed
 ;;; if passed as function arguments.)
 ;;;
 (eval-when (compile eval)
@@ -446,7 +446,7 @@
 
 ;;; When a *periodic-polling-function* is defined the server will not
 ;;; block for more than the maximum event timeout and will call the
-;;; polling function if it does times out. One important use of this
+;;; polling function if it does time out. One important use of this
 ;;; is to periodically call process-yield.
 ;;;
 (declaim (type (or null function) *periodic-polling-function*))

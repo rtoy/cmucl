@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.53.8.4 2009/05/08 14:59:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.53.8.5 2009/05/12 16:31:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1657,6 +1657,7 @@
       (setq jndex (1+ jndex)))
     (shrink-vector result jndex)))
 
+#+unicode
 (defun string-remove-duplicates* (string test test-not start end key from-end
 					 &optional (length (length string)))
   (declare (string string) (fixnum start length))

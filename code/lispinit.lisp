@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.78.4.2.2.3 2008/07/02 14:53:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.78.4.2.2.4 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -422,11 +422,10 @@
   (terpri)
   (princ "[You are in the LISP package.]")
   (terpri)
-  (let ((wot 
-	 (catch '%end-of-the-world
-	   (loop
-	     (%top-level)
-	     (write-line "You're certainly a clever child.")))))
+  (let ((wot (catch '%end-of-the-world
+	       (loop
+		 (%top-level)
+		 (write-line "You're certainly a clever child.")))))
     (unix:unix-exit wot)))
 
 #+gengc

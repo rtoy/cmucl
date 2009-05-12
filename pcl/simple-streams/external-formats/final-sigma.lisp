@@ -4,10 +4,11 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/final-sigma.lisp,v 1.1.2.1 2009/04/28 16:52:17 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/final-sigma.lisp,v 1.1.2.2 2009/05/12 16:31:50 rtoy Exp $")
 
 ;; This is a composing format that attempts to detect sigma in
-;; word-final position and change it from "~" to "~".
+;; word-final position and change it from "σ" (U+3C3) to "ς"
+;; (U+3C2).
 
 (define-composing-external-format :final-sigma (:size 1)
   (input (state input unput tmp1 tmp2 tmp3 tmp4)

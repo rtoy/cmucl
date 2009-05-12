@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.47.4.1 2009/03/27 16:24:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.47.4.2 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -54,7 +54,7 @@
   (hash-fun (required-argument) :type function :read-only t)
   ;;
   ;; How much to grow the hash table by when it fills up.  If an index, then
-  ;; add that amount.  If a floating point number, then multiple it by that.
+  ;; add that amount.  If a floating point number, then multiply it by that.
   (rehash-size (required-argument) :type (or index (single-float (1.0)))
 	       :read-only t)
   ;;
@@ -108,7 +108,7 @@
   ;; This table parallels the KV table, and can be used to store the
   ;; hash associated with the key, saving recalculation. Could be
   ;; useful for EQL, and EQUAL hash tables. This table is not needed
-  ;; for EQ hash tables (an is NIL in that case), and when present the
+  ;; for EQ hash tables (and is NIL in that case), and when present the
   ;; value of #x8000000 represents EQ-based hashing on the respective
   ;; Key.
   (hash-vector nil :type (or null (simple-array (unsigned-byte 32) (*))))
@@ -223,7 +223,7 @@
    CMUCL Extension:
      :WEAK-P -- Weak hash table.  Can only be used when the key is 'eq or 'eql.
                 An entry in the table is remains if the condition holds:
-                
+
                 :KEY            -- key is referenced elsewhere
                 :VALUE          -- value is referenced elsewhere
                 :KEY-AND-VALUE  -- key and value are referenced elsewhere

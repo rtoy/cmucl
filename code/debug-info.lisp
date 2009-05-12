@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.27.36.1.2.1 2008/07/04 14:32:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.27.36.1.2.2 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -352,7 +352,7 @@
 ;;;; Minimal debug function:
 
 ;;; The minimal debug info format compactly represents debug-info for some
-;;; cases where the other debug info (variables, blocks) is small enough so
+;;; cases where the other debug info (variables, blocks) is small enough
 ;;; that the per-function overhead becomes relatively large.  The minimal
 ;;; debug-info format can represent any function at level 0, and any fixed-arg
 ;;; function at level 1.
@@ -384,20 +384,20 @@
 ;;;        This field implicitly encodes start of this function's code in the
 ;;;        function map, as a delta from the previous function's code start.
 ;;;        If the first function in the component, then this is the delta from
-;;;        0 (i.e. the absolute offset.)
+;;;        0 (i.e. the absolute offset).
 ;;;    start-pc (as a var-length int)
 ;;;        This encodes the environment start PC as an offset from the
 ;;;        code-start PC.
 ;;;    elsewhere-pc
 ;;;        This encodes the elsewhere code start for this function, as a delta
 ;;;        from the previous function's elsewhere code start. (i.e. the
-;;;        encoding is the same as for code-start-pc.)
+;;;        encoding is the same as for code-start-pc).
 ;;;    
 ;;;    
 
 #|
 ### For functions with XEPs, name could be represented more simply and
-compactly as some sort of info about with how to find the function-entry that
+compactly as some sort of info about how to find the function-entry that
 this is a function for.  Actually, you really hardly need any info.  You can
 just chain through the functions in the component until you find the right one.
 Well, I guess you need to at least know which function is an XEP for the real
@@ -457,7 +457,7 @@ function (which would be useful info anyway).
   (compiled (required-argument) :type unsigned-byte)
   ;;
   ;; The source path root number of the first form read from this source (i.e.
-  ;; the total number of forms converted previously in this compilation.)
+  ;; the total number of forms converted previously in this compilation).
   (source-root 0 :type index)
   ;;
   ;; The file-positions of each truly top-level form read from this file (if

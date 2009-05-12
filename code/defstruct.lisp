@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.97 2006/12/22 17:39:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.97.6.1 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -214,16 +214,16 @@
   ;;
   ;; The arguments to the :ALTERNATE-METACLASS option (an extension used to
   ;; define structure-like objects with an arbitrary superclass and that may
-  ;; not have STRUCTURE-CLASS as the metaclass.)  Syntax is:
+  ;; not have STRUCTURE-CLASS as the metaclass).  Syntax is:
   ;;    (superclass-name metaclass-name metaclass-constructor)
   ;;
   (alternate-metaclass nil :type list)
   ;;
   ;; list of defstruct-slot-description objects for all slots (including
-  ;; included ones.)
+  ;; included ones).
   (slots () :type list)
   ;;
-  ;; Number of elements we've allocated (see also raw-length.)
+  ;; Number of elements we've allocated (see also raw-length).
   (length 0 :type index)
   ;;
   ;; General kind of implementation.
@@ -262,9 +262,9 @@
   ;; Value of the :PURE option, or :UNSPECIFIED.  Only meaningful if
   ;; CLASS-STRUCTURE-P = T.
   (pure :unspecified :type (member t nil :substructure :unspecified))
-   ;;
-   ;; a list of (NAME . INDEX) pairs for accessors of included structures
-   (inherited-accessor-alist () :type list))
+  ;;
+  ;; a list of (NAME . INDEX) pairs for accessors of included structures
+  (inherited-accessor-alist () :type list))
 
 (defun print-defstruct-description (structure stream depth)
   (declare (ignore depth))
@@ -865,7 +865,7 @@
 ;;; processed the arglist.  The correct variant (according to the DD-TYPE)
 ;;; should be called.  The function is defined with the specified name and
 ;;; arglist.  Vars and Types are used for argument type declarations.  Values
-;;; are the values for the slots (in order.)
+;;; are the values for the slots (in order).
 ;;;
 ;;; This is split four ways because:
 ;;; 1] list & vector structures need "name" symbols stuck in at various weird
@@ -1125,7 +1125,7 @@
 ;;;
 ;;;     Return info about how to read/write a slot in the value stored in
 ;;; Object.  This is also used by constructors (we can't use the accessor
-;;; function, since some slots are read-only.)  If supplied, Data is a variable
+;;; function, since some slots are read-only).  If supplied, Data is a variable
 ;;; holding the raw-data vector.
 ;;; 
 ;;; Values:
@@ -1228,8 +1228,7 @@
 (defun dd-lisp-type (defstruct)
   (ecase (dd-type defstruct)
     (list 'list)
-    (vector `(simple-array ,(dd-element-type defstruct)
-			   (*)))))
+    (vector `(simple-array ,(dd-element-type defstruct) (*)))))
 
 ;;; DEFINE-ACCESSORS  --  Internal
 ;;;
@@ -1295,9 +1294,9 @@
 		     (eq (aref object ,index) ',name)))))))))
 
 ;; A predicate to determine if the given list is a defstruct object of
-;; :type list.  This used to be done using (eq (nth index object)
-;; name), but that fails if the (nth index object) doesn't work
-;; because object is not a proper list.
+;; :type list.  This used to be done using (eq (nth index object) name),
+;; but that fails if the (nth index object) doesn't work because object
+;; is not a proper list.
 (defun defstruct-list-p (index list name)
   ;; Basically do (nth index list), but don't crash if the list is not
   ;; a proper list.
@@ -1314,7 +1313,7 @@
 
 ;;;; Load time support for default structures (%DEFSTRUCT)
 ;;;
-;;;    In the normal case of structures that have a real type (i.e. no :Type
+;;;    In the normal case of structures that have a real type (i.e., no :Type
 ;;; option was specified), we want to optimize things for space as well as
 ;;; speed, since there can be thousands of defined slot accessors.
 ;;;
@@ -1712,7 +1711,7 @@
 	      (%class-layout (find-class (or (first superclass-opt)
 					    'structure-object))))))
     (if (eq (dd-name info) 'lisp-stream)
-	;; Hack to added the stream class as a mixin for lisp-streams.
+	;; Hack to add the stream class as a mixin for lisp-streams.
 	(concatenate 'simple-vector (layout-inherits super)
 		     (vector super (%class-layout (find-class 'stream))))
 	(concatenate 'simple-vector (layout-inherits super) (vector super)))))
@@ -1864,7 +1863,7 @@
 	   ;; then the object is printed as ``#''."
 	   ;;
 	   ;; So, if it has no components, and we're at *PRINT-LEVEL*,
-	   ;; we print out #(S<name>).
+	   ;; we print out #S(<name>).
 	   (write-string "#S(" stream)
 	   (prin1 name stream)
 	   (write-char #\) stream))

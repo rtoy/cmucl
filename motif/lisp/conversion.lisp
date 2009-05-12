@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/conversion.lisp,v 1.5.34.1 2008/06/27 13:05:37 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/conversion.lisp,v 1.5.34.1.2.1 2009/05/12 16:31:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -157,7 +157,7 @@
 	(fill (packet-fill packet)))
     (dotimes (i length)
       (setf (lisp:bref head (1- (incf fill)))
-	    (logand #xFF (char-code (schar string (+ i start)))))))
+	  (logand #xFF (char-code (schar string (+ i start)))))))
   (incf (packet-fill packet) length)
   (incf (packet-length packet) length))
 

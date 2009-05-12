@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.13 2009/05/06 13:05:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.14 2009/05/12 16:31:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -73,9 +73,9 @@
 
 (defun string (X)
   "Coerces X into a string.  If X is a string, X is returned.  If X is a
-   symbol, X's pname is returned.  If X is a character then a one element
-   string containing that character is returned.  If X cannot be coerced
-   into a string, an error occurs."
+  symbol, X's pname is returned.  If X is a character then a one element
+  string containing that character is returned.  If X cannot be coerced
+  into a string, an error occurs."
   (cond ((stringp x) x)
 	((symbolp x) (symbol-name x))
 	((characterp x)
@@ -150,7 +150,7 @@
 
 (defun schar (string index)
   "SCHAR returns the character object at an indexed position in a string
-   just as CHAR does, except the string must be a simple-string."
+  just as CHAR does, except the string must be a simple-string."
   (declare (optimize (safety 1)))
   (schar string index))
 
@@ -430,7 +430,7 @@
 
 (defun make-string (count &key element-type ((:initial-element fill-char)))
   "Given a character count and an optional fill character, makes and returns
-   a new string Count long filled with the fill character."
+  a new string Count long filled with the fill character."
   (declare (type fixnum count))
   (assert (subtypep element-type 'character))
   (if fill-char

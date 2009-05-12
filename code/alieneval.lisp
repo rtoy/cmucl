@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.65 2007/11/09 19:24:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.65.6.1 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -390,7 +390,7 @@
 ;;; *record-type-already-unparsed* -- internal
 ;;;
 ;;; Holds the list of record types that have already been unparsed.  This is
-;;; used to keep from outputing the slots again if the same structure shows
+;;; used to keep from outputting the slots again if the same structure shows
 ;;; up twice.
 ;;; 
 (defvar *record-types-already-unparsed*)
@@ -406,7 +406,7 @@
 
 ;;; %UNPARSE-ALIEN-TYPE -- internal.
 ;;;
-;;; Does all the work of UNPARSE-ALIEN-TYPE.  It's seperate because we need
+;;; Does all the work of UNPARSE-ALIEN-TYPE.  It's separate because we need
 ;;; to recurse inside the binding of *record-types-already-unparsed*.
 ;;; 
 (defun %unparse-alien-type (type)
@@ -497,8 +497,8 @@
 
 (defun alien-subtype-p (type1 type2)
   "Return T iff the alien type TYPE1 is a subtype of TYPE2.  Currently, the
-   only supported subtype relationships are is that any pointer type is a
-   subtype of (* t), and any array type first dimension will match 
+   only supported subtype relationships are that any pointer type is a
+   subtype of (* t), and any array type's first dimension will match 
    (array <eltype> nil ...).  Otherwise, the two types have to be
    ALIEN-TYPE-=."
   (or (eq type1 type2)
@@ -759,7 +759,7 @@
 
 (defun parse-enum (name elements)
   (when (null elements)
-    (error "An anumeration must contain at least one element."))
+    (error "An enumeration must contain at least one element."))
   (let ((min nil)
 	(max nil)
 	(from-alist ())
@@ -1039,7 +1039,7 @@
 			      (rest dims))))
       (when loser
 	(error "Dimension is not a non-negative fixnum: ~S" loser))))
-	
+
   (let ((type (parse-alien-type ele-type)))
     (make-alien-array-type
      :element-type type
@@ -1124,7 +1124,7 @@
 ;;; PARSE-ALIEN-RECORD-FIELDS -- internal
 ;;;
 ;;; Used by parse-alien-type to parse the fields of struct and union
-;;; types.  RESULT holds the record type we are paring the fields of,
+;;; types.  RESULT holds the record type we are parsing the fields of,
 ;;; and FIELDS is the list of field specifications.
 ;;; 
 (defun parse-alien-record-fields (result fields)
@@ -1183,7 +1183,7 @@
 		(alien-record-type-fields type)))))
 
 
-;;; Test the record fields. Keep a hashtable table of already compared
+;;; Test the record fields. Keep a hash table of already compared
 ;;; types to detect cycles.
 
 (defun record-fields-match-p (field1 field2)
@@ -1197,7 +1197,7 @@
 		     (alien-record-field-type field2))))
 
 (defvar *match-history* nil
-  "A hashtable used to detect cycles while comparing record types.")
+  "A hash table used to detect cycles while comparing record types.")
 
 (defun in-match-history-or (type1 type2 alternative)
   "Test if TYPE1 and TYPE2 are in the *MATCH-HISTORY*.
@@ -1312,7 +1312,7 @@ If so return true; otherwise call ALTERNATIVE."
 ;;; LOCAL-ALIEN-INFO -- public defstruct.
 ;;;
 ;;; Information about local aliens.  The WITH-ALIEN macro builds one of these
-;;; structures and local-alien and friends comunicate information about how
+;;; structures and local-alien and friends communicate information about how
 ;;; that local alien is represented.
 ;;; 
 (defstruct (local-alien-info
@@ -1405,7 +1405,7 @@ If so return true; otherwise call ALTERNATIVE."
 ;;; 
 (defmacro extern-alien (name type)
   "Access the alien variable named NAME, assuming it is of type TYPE.  This
-   is setfable."
+   is SETFable."
   (let* ((alien-name (etypecase name
 		       (symbol (guess-alien-name-from-lisp-name name))
 		       (string name)))
@@ -1643,7 +1643,7 @@ If so return true; otherwise call ALTERNATIVE."
 
 ;;; %SET-SLOT -- public setf method
 ;;;
-;;; Deposite the value in the specified slot of the record alien.  If the
+;;; Deposit the value in the specified slot of the record alien.  If the
 ;;; alien is really a pointer, deref it first.  The compiler uses this
 ;;; when it can't figure out anything better.
 ;;; 
@@ -1689,7 +1689,7 @@ If so return true; otherwise call ALTERNATIVE."
 ;;; DEREF-GUTS -- internal.
 ;;;
 ;;; Does most of the work of the different DEREF methods.  Returns two values:
-;;; the type and the offset (in bits) of the refered to alien.
+;;; the type and the offset (in bits) of the referenced alien.
 ;;; 
 (defun deref-guts (alien indices)
   (declare (type alien-value alien)
@@ -1897,7 +1897,7 @@ If so return true; otherwise call ALTERNATIVE."
 ;;;; The CAST macro.
 
 (defmacro cast (alien type)
-  "Convert ALIEN to an Alien of the specified TYPE (not evaluated.)  Both types
+  "Convert ALIEN to an Alien of the specified TYPE (not evaluated).  Both types
    must be Alien array, pointer or function types."
   `(%cast ,alien ',(parse-alien-type type)))
 
@@ -1914,7 +1914,7 @@ If so return true; otherwise call ALTERNATIVE."
 		(alien-array-type-p alien-type)
 		(alien-function-type-p alien-type))
 	    (naturalize (alien-value-sap alien) target-type)
-	    (error "~S cannot be casted." alien)))
+	    (error "~S cannot be cast." alien)))
       (error "Cannot cast to alien type ~S" (unparse-alien-type target-type))))
 
 
@@ -2005,10 +2005,10 @@ If so return true; otherwise call ALTERNATIVE."
   Return-Type is the Alien type for the function return value.  VOID may be
   used to specify a function with no result.
 
-  The remaining forms specifiy individual arguments that are passed to the
+  The remaining forms specify individual arguments that are passed to the
   routine.  Arg-Name is a symbol that names the argument, primarily for
   documentation.  Arg-Type is the C-Type of the argument.  Style specifies the
-  say that the argument is passed.
+  way that the argument is passed.
 
   :IN
         An :In argument is simply passed by value.  The value to be passed is
@@ -2100,10 +2100,10 @@ If so return true; otherwise call ALTERNATIVE."
 ;;;
 ;;; When called, the trampoline passes a pointer to the arguments
 ;;; (essentially the stack pointer) together with an index to
-;;; CALL-CALLACK.  CALL-CALLBACK uses the index to find the
+;;; CALL-CALLBACK.  CALL-CALLBACK uses the index to find the
 ;;; corresponding lisp function and calls this function with the
 ;;; argument pointer.  The lisp function uses the pointer to copy the
-;;; arguments form the stack to local variables.  On return, the lisp
+;;; arguments from the stack to local variables.  On return, the lisp
 ;;; function stores the result into the location given by the argument
 ;;; pointer, and the trampoline code copies the return value from
 ;;; there into the right return register.
@@ -2153,11 +2153,11 @@ If so return true; otherwise call ALTERNATIVE."
 
 ||#
 
-(defstruct (callback 
+(defstruct (callback
 	     (:constructor make-callback (trampoline lisp-fn function-type)))
   "A callback consists of a piece assembly code -- the trampoline --
 and a lisp function.  We store the function type (including return
-type and arg types, so we can detect incompatible redefinitions."
+type and arg types), so we can detect incompatible redefinitions."
   (trampoline (required-argument) :type system-area-pointer)
   (lisp-fn (required-argument) :type (function (fixnum fixnum) (values)))
   (function-type (required-argument) :type alien::alien-function-type))

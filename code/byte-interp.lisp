@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.45 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.45.8.1 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -561,7 +561,7 @@
 ;;; The XOP routine can do whatever it wants, probably re-invoking the
 ;;; byte interpreter.
 
-;;; Fetch and 8/24 bit operand out of the code stream.
+;;; Fetch an 8/24 bit operand out of the code stream.
 ;;;
 (eval-when (compile eval)
   (defmacro with-extended-operand ((component pc operand new-pc)
@@ -852,7 +852,7 @@
 
 ;;; UNWIND-PROTECT -- XOP
 ;;;
-;;; Unwind-protects are handled significantly different in the byte compiler
+;;; Unwind-protects are handled significantly differently in the byte compiler
 ;;; and the native compiler.  Basically, we just use the native-compiler's
 ;;; unwind-protect, and let it worry about continuing the unwind.
 ;;; 
@@ -902,7 +902,7 @@
 ;;;; Type checking:
 
 ;;;
-;;; These two hashtables map between type specifiers and type predicate
+;;; These two hash tables map between type specifiers and type predicate
 ;;; functions that test those types.  They are initialized according to the
 ;;; standard type predicates of the target system.
 ;;;
@@ -922,7 +922,7 @@
 ;;; LOAD-TYPE-PREDICATE  --  Internal
 ;;;
 ;;;    Called by the loader to convert a type specifier into a type predicate
-;;; (as used by the TYPE-CHECK XOP.)  If it is a structure type with a
+;;; (as used by the TYPE-CHECK XOP).  If it is a structure type with a
 ;;; predicate or has a predefined predicate, then return the predicate
 ;;; function, otherwise return the CTYPE structure for the type.
 ;;;
@@ -1416,7 +1416,7 @@
 		     (with-debugger-info (old-component ret-pc old-fp)
 		       (simple-program-error "Odd number of keyword arguments.")))
 		   ;;
-		   ;; If there are keyword args, then we need to leave the
+		   ;; If there are keyword args we need to leave the
 		   ;; defaulted and supplied-p values where the more args
 		   ;; currently are.  There might be more or fewer.  And also,
 		   ;; we need to flatten the parsed args with the defaults
@@ -1538,4 +1538,3 @@
 	  (byte-interpret old-component (- old-pc) old-fp)))))
 
 (declaim (end-block byte-interpret byte-interpret-byte invoke-xep))
-

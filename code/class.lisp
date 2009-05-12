@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.61 2007/08/01 04:39:16 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.61.6.1 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -172,7 +172,7 @@
 ;;; INITIALIZE-LAYOUT-HASH  --  Interface
 ;;;
 ;;;    Set the layout-hash slots to non-zero random numbers between 1 and
-;;; layout-hash-max (inclusive.)  The layout is returned.
+;;; layout-hash-max (inclusive).  The layout is returned.
 ;;;
 (defun initialize-layout-hash (layout)
   (let ((seed *layout-hash-seed*))
@@ -320,7 +320,7 @@
 (defstruct (built-in-class (:include class))
   ;;
   ;; Type we translate to on parsing.  If NIL, then this class stands on its
-  ;; own.  Only :INITIALIZING during for a period during cold-load.  See below.
+  ;; own.  Only :INITIALIZING for a period during cold-load.  See below.
   (translation nil :type (or ctype (member nil :initializing))))
 
 ;;; Class with print function, but not necessarily a structure class.
@@ -578,7 +578,7 @@
 ;;;     the specified internal type representation, rather than being left as a
 ;;;     class.  This is used for types which we want to canonicalize to
 ;;;     some other kind of type object because in general we want to be able to
-;;;     include more information than just the class (e.g. for numeric types.)
+;;;     include more information than just the class (e.g. for numeric types).
 ;;;     Default none.
 ;;;
 ;;; :ENUMERABLE (default NIL)

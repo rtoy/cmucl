@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.80.4.5.2.1 2008/11/02 13:30:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.80.4.5.2.2 2009/05/12 16:31:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -422,7 +422,7 @@
 #+unicode
 (defun string-to-core (string &optional (space *dynamic*))
   "Copy string into the CORE and return a descriptor to it."
-  ;; Note: We allocate an extra byte and tweek the length back to make sure
+  ;; Note: We allocate an extra byte and tweak the length back to make sure
   ;; there will be a null at the end of the string to aid in call-out to
   ;; C.
   (let* ((len (length string))

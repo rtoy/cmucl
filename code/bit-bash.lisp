@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.24 2008/01/18 15:52:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.24.6.1 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -227,7 +227,7 @@
 	;; care.
 	(cond
 	 ((zerop length)
-	  ;; Actually, we arn't even writing one word.  This is real easy.
+	  ;; Actually, we aren't even writing one word.  This is real easy.
 	  )
 	 ((= length unit-bits)
 	  ;; dst-bit-offset must be equal to zero, or we would be writing
@@ -269,9 +269,9 @@
 			    (funcall src-ref-fn src src-word-offset)
 			    src-bit-shift)))
 		     ;; The dst starts further into the word than does the
-		     ;; source, so we know the source can not extend into
+		     ;; source, so we know the source can't extend into
 		     ;; a second word (or else the dst would too, and we
-		     ;; wouldn't be in this branch.
+		     ;; wouldn't be in this branch).
 		     (shift-towards-end
 		      (funcall src-ref-fn src src-word-offset)
 		      (- dst-bit-offset src-bit-offset)))))

@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.10.4.1.2.1 2009/03/18 15:37:29 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.10.4.1.2.2 2009/05/12 16:31:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -326,7 +326,7 @@
              (return-from read-char
                (lisp::eof-or-lose stream eof-error-p eof-value))))
       (let* ((char (funcall (%read-char-fn (sm external-format stream))
-					   stream #'refill))
+			    stream #'refill))
              (code (char-code char))
              (ctrl (sm control-in stream)))
         (when (and (< code 32) ctrl (svref ctrl code))

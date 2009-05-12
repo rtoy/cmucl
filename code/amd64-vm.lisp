@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/amd64-vm.lisp,v 1.2 2004/10/19 20:26:36 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/amd64-vm.lisp,v 1.2.20.1 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -466,7 +466,7 @@
 
 ;;; EXTERN-ALIEN-NAME -- interface.
 ;;;
-;;; The loader uses this to convert alien names to the form they occure in
+;;; The loader uses this to convert alien names to the form they occur in
 ;;; the symbol table (for example, prepending an underscore).
 ;;;
 (defun extern-alien-name (name)
@@ -507,7 +507,7 @@
  
 ;;; FLOAT-WAIT
 ;;;
-;;; This is used in error.lisp to insure floating-point  exceptions
+;;; This is used in error.lisp to ensure floating-point exceptions
 ;;; are properly trapped. The compiler translates this to a VOP.
 ;;;
 (defun float-wait()
@@ -517,7 +517,7 @@
 ;;;
 ;;; These are used by the FP move-from-{single|double} VOPs rather
 ;;; than the i387 load constant instructions to avoid consing in some
-;;; cases. Note these are initialise by genesis as they are needed
+;;; cases. Note these are initialised by genesis as they are needed
 ;;; early.
 ;;;
 (defvar *fp-constant-0s0*)
@@ -533,7 +533,7 @@
 (defvar *fp-constant-lg2*)
 (defvar *fp-constant-ln2*)
 
-;;; Enable/Disable scavenging of the read-only space.
+;;; Enable/disable scavenging of the read-only space.
 (defvar *scavenge-read-only-space* nil)
 
 ;;; The current alien stack pointer; saved/restored for non-local

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.64.18.3.2.1 2009/04/13 16:38:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.64.18.3.2.2 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -804,6 +804,8 @@ See the CMU Common Lisp User's Manual for more information.
   ;; Then close the display with the window manager or shutdown the
   ;; local computer. The remote lisp goes into infinite error loop.
   (labels ((real-stream (stream)
+	     ;; Using etypecase here causes an infloop in SLIME:
+	     ;; SLIME's slime-input-streams are not fd-streams
 	     (etypecase stream
 	       (system:fd-stream
 		(values stream (system:fd-stream-fd stream)))
@@ -815,7 +817,7 @@ See the CMU Common Lisp User's Manual for more information.
     (when (typep condition 'stream-error)
       (let* ((stream-with-error (stream-error-stream condition))
 	     (real-stream-with-error (real-stream stream-with-error))
-	     (real-debug-io  (real-stream *debug-io*)))
+	     (real-debug-io (real-stream *debug-io*)))
 	(when (and (eq real-stream-with-error real-debug-io)
 		   (not (unix:unix-isatty (system:fd-stream-fd real-debug-io))))
 	  ;; Probably running on a remote processor and lost the connection.

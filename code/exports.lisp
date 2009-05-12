@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.267.2.3.2.8 2009/04/20 14:27:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.267.2.3.2.9 2009/05/12 16:31:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1239,7 +1239,8 @@
   (:nicknames "EXTENSIONS")
   (:import-from "LISP" "GET-SETF-METHOD")
   (:import-from "KERNEL" "*ANSI-DEFSTRUCT-OPTIONS-P*")
-  (:import-from "SYSTEM" "MAKE-INDENTING-STREAM" "INDENTING-STREAM-P"  "BINARY-TEXT-STREAM")
+  (:import-from "SYSTEM" "MAKE-INDENTING-STREAM" "INDENTING-STREAM-P"
+		"BINARY-TEXT-STREAM")
   #+double-double
   (:import-from "KERNEL" "DOUBLE-DOUBLE-FLOAT" "DD-PI")
   (:export   "*AFTER-GC-HOOKS*" "*AFTER-SAVE-INITIALIZATIONS*"
@@ -1469,7 +1470,8 @@
   (:import-from "SYSTEM" "LISP-STREAM")
   (:import-from "EXTENSIONS" "FUNDAMENTAL-STREAM")
   (:import-from "LISP" "LINE-LENGTH" "CHARPOS"
-		"BREF" "BUFFER-COPY" "BUFFER-SAP" "ENDIAN-SWAP-VALUE" "VECTOR-ELT-WIDTH")
+		"BREF" "BUFFER-COPY" "BUFFER-SAP" "ENDIAN-SWAP-VALUE"
+		"VECTOR-ELT-WIDTH")
   (:export ;; Stream classes
            "STREAM"
            "SIMPLE-STREAM"

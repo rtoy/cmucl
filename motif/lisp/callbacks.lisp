@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/callbacks.lisp,v 1.5 2003/04/11 12:09:10 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/callbacks.lisp,v 1.5.30.1 2009/05/12 16:31:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -197,7 +197,7 @@
 ;;; When the server begins processing a callback, it will dump the callback
 ;;; data into the message in slot order.  The client will unpack the data
 ;;; and create a callback structure which will be passed to the Lisp
-;;; callback as the call-data.  It reason field, possibly together with the
+;;; callback as the call-data.  The reason field, possibly together with the
 ;;; widget class, will be enough to determine what callback structure is
 ;;; appropriate.  The event slot is the (XEvent *) received in C.  If the
 ;;; client wants access to the event, there will be some sort of macro such
