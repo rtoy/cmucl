@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.18 2009/04/30 18:52:43 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.19 2009/05/14 13:32:16 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -232,7 +232,7 @@
 (defun load-external-format-aliases ()
   (let ((*package* (find-package "KEYWORD"))
 	(unix::*filename-encoding* :iso8859-1))
-    (with-open-file (stm "ext-formats:aliases" :if-does-not-exist nil)
+    (with-open-file (stm "ext-formats:aliases" :if-does-not-exist nil :external-format :iso8859-1)
       (when stm
 	(do ((alias (read stm nil stm) (read stm nil stm))
 	     (value (read stm nil stm) (read stm nil stm)))
@@ -270,7 +270,8 @@
 		 (lisp::*enable-package-locked-errors* nil)
 		 (*default-external-format* :iso8859-1)
 		 (unix::*filename-encoding* :iso8859-1)
-		 (s (open (format nil "ext-formats:~(~A~).lisp" name) :if-does-not-exist nil)))
+		 (s (open (format nil "ext-formats:~(~A~).lisp" name) :if-does-not-exist nil
+			  :external-format :iso8859-1)))
 	     (when s
 	       (null (nth-value 1 (ext:compile-from-stream s)))))
            (gethash name *external-formats*))))
