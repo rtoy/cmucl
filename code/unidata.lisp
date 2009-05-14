@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.19 2009/05/11 16:46:47 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.20 2009/05/14 17:50:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -506,13 +506,13 @@
     (read-vector codev stm :endian-swap :network-order)
     (read-vector nextv stm :endian-swap :network-order)
     (read-vector namev stm :endian-swap :network-order)
-    (setf (unidata-name+ *unicode-data*)
+    (setf (unidata-name1+ *unicode-data*)
 	(make-dictionary :cdbk codebook :keyv keyv :keyl keyl
 			 :codev codev :nextv nextv :namev namev))))
 
 (defloader load-1.0-name (stm 10)
   (multiple-value-bind (split hvec mvec lvec) (read-ntrie 32 stm)
-    (setf (unidata-name *unicode-data*)
+    (setf (unidata-name1 *unicode-data*)
 	(make-ntrie32 :split split :hvec hvec :mvec mvec :lvec lvec))))
 
 
