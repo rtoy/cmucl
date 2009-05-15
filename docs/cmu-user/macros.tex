@@ -167,13 +167,13 @@
 
 %% Define a macro
 %%
-%% \begin{defmac}{pkg}{name}{params}
+%% \begin{defmac}[suffix]{pkg}{name}{params}
 %%   \defmacx[pkg]{name}{params}
 %%   description of macro
 %% \end{defmac}
-\newenvironment{defmac}[3]{%
-  \par\defunvspace\fnindexbold{#2}\label{FN:#2}%
-  \layout[#1]{#2}{#3}{Macro}}{}
+\newenvironment{defmac}[4][]{%
+  \par\defunvspace\fnindexbold{#3}\label{FN:#3#1}%
+  \layout[#2]{#3}{#4}{Macro}}{}
 \newcommand{\defmacx}[3][\mbox{}]{%
   \par\fnindexbold{#2}\label{FN:#2}%
   \layout[#1]{#2}{#3}{Function}}
@@ -234,6 +234,8 @@
 \newcommand{\false}{\code{nil}}
 \newcommand{\true}{\code{t}}
 \newcommand{\nil}{\false{}}
+%% Printed lisp character #\foo
+\newcommand{\lispchar}[1]{\code{\#\back{#1}}}
 
 \newcommand{\ampoptional}{\code{\&optional}}
 \newcommand{\amprest}{\code{\&rest}}
