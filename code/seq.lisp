@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.53.8.5 2009/05/12 16:31:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.53.8.6 2009/05/17 12:33:16 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1743,7 +1743,7 @@
 					 &optional (length (length vector)))
   (declare (string string) (fixnum start length))
   ;;@@ FIXME: treat surrogate pairs as a single element
-  (vector-delete-duplicates* vector test test-not key from-end start end
+  (vector-delete-duplicates* string test test-not key from-end start end
 			     length))
 
 
