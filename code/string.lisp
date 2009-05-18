@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.14 2009/05/12 16:31:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.15 2009/05/18 13:38:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -351,15 +351,24 @@
   (if lessp
       (if equalp
 	  ;; STRING-NOT-GREATERP
-	  (values '<= `(not (char-greaterp char1 char2)))
+	  (values '<=
+		  #-unicode `(not (char-greaterp char1 char2))
+		  #+unicode `(<= char1 char2))
 	  ;; STRING-LESSP
-	  (values '< `(char-lessp char1 char2)))
+	  (values '<
+		  #-unicode `(char-lessp char1 char2)
+		  #+unicode `(< char1 char2)))
       (if equalp
 	  ;; STRING-NOT-LESSP
-	  (values '>= `(not (char-lessp char1 char2)))
+	  (values '>=
+		  #-unicode `(not (char-lessp char1 char2))
+		  #+unicode `(>= char1 char2))
 	  ;; STRING-GREATERP
-	  (values '> `(char-greaterp char1 char2)))))
+	  (values '>
+		  #-unicode `(char-greaterp char1 char2)
+		  #+unicode `(> char1 char2)))))
 
+#-unicode
 (defmacro string-less-greater-equal (lessp equalp)
   (multiple-value-bind (length-test character-test)
 		       (string-less-greater-equal-tests lessp equalp)
@@ -383,6 +392,45 @@
 	       (if ,character-test
 		   (return (- index1 offset1))
 		   (return ()))))))))
+
+#+unicode
+(defmacro equal-char-codepoint (codepoint)
+  `(let ((ch ,codepoint))
+     (if (< 96 ch 123)
+	 (- ch 32)
+	 #-(and unicode (not unicode-bootstrap))
+	 ch
+	 #+(and unicode (not unicode-bootstrap))
+	 (if (> ch 127) (unicode-upper ch) ch))))
+
+#+unicode
+(defmacro string-less-greater-equal (lessp equalp)
+  (multiple-value-bind (length-test character-test)
+      (string-less-greater-equal-tests lessp equalp)
+    `(with-two-strings string1 string2 start1 end1 offset1 start2 end2
+       (let ((slen1 (- (the fixnum end1) start1))
+	     (slen2 (- (the fixnum end2) start2)))
+	 (declare (fixnum slen1 slen2))
+	 (if (or (minusp slen1) (minusp slen2))
+	     ;;prevent endless looping later.
+	     (error "Improper bounds for string comparison."))
+	 (do ((index1 start1 (1+ index1))
+	      (index2 start2 (1+ index2)))
+	     ((or (= index1 (the fixnum end1)) (= index2 (the fixnum end2)))
+	      (if (,length-test slen1 slen2) (- index1 offset1)))
+	   (declare (fixnum index1 index2))
+	   (multiple-value-bind (char1 wide1)
+	       (codepoint string1 index1)
+	     (multiple-value-bind (char2 wide2)
+		 (codepoint string2 index2)
+	       (if (= (equal-char-codepoint char1)
+		      (equal-char-codepoint char2))
+		   (progn
+		     (when wide1 (incf index1))
+		     (when wide2 (incf index2)))
+		   (if ,character-test
+		       (return (- index1 offset1))
+		       (return ()))))))))))
 
 ) ; eval-when
 
