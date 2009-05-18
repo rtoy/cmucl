@@ -78,9 +78,9 @@ from the value specified by \var{*default-external-format*}.  If
 expect input using the new format and will produce output using
 the new format.
 
-For files, \code{WITH-OPEN-FILE} takes the \kwd{external-format}
-parameter to specify the format.  The default external format is,
-naturally, specified by \var{*default-external-format*}.
+For files, \code{OPEN} takes the \kwd{external-format}
+parameter to specify the format.  The default external format is
+\kwd{default}. 
 
 \subsection{Available External Formats}
 
@@ -435,7 +435,7 @@ external format is defined using the macro
 
 \begin{defmac}[base]{stream:}{define-external-format}{\args \var{name}
     (\keys{\var{min} \var{max} \var{size}}) (\amprest{} \var{slots})
-    \morekeys{\ampoptional{} \var{octets-to-code} \var{code-to-octets}}}
+    \morekeys{\var{octets-to-code} \var{code-to-octets}}}
   \defmacx[stream:]{define-external-format}{\args \var{name}
     (\var{base}) (\amprest{} \var{slots})}
 
