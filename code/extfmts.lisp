@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.19 2009/05/14 13:32:16 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.20 2009/05/18 23:54:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -621,6 +621,10 @@
 			     (code-char b)))))))
 
 (defun string-encode (string external-format &optional (start 0) end)
+  "Encode the given String using External-Format and return a new
+  string.  The characters of the new string are the octets of the
+  encoded result, with each octet converted to a character via
+  code-char.  This is the inverse to String-Decode"
   (when (zerop (length string))
     (return-from string-encode string))
   (multiple-value-bind (result ptr)
@@ -650,6 +654,10 @@
 	finally (return (values result (1+ pos))))))
 
 (defun string-decode (string external-format &optional (start 0) end)
+  "Decode String using the given External-Format and return the new
+  string.  The input string is treated as if it were an array of
+  octets, where the char-code of each character is the octet.  This is
+  the inverse of String-Encode."
   (when (zerop (length string))
     (return-from string-decode string))
   (multiple-value-bind (result pos)

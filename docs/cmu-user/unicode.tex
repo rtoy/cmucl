@@ -422,6 +422,34 @@ utility functions are provided to make access easier.
   represented as a surrogate pair.
 \end{defun}
 
+\begin{defun}{stream:}{string-encode}{\args \var{string}
+    \var{external-format} \ampoptional{} (\var{start} 0) \var{end}}
+  \code{string-encode} encodes \var{string} using the format
+  \var{external-format}, producing an array of octest.  Each octet is
+  converted to a character via \code{code-char} and the resulting
+  string is returned.
+
+  The optional argument \var{start}, defaulting to 0, specifies the
+  starting index and \var{end}, defaulting to the length of the
+  string, is the end of the string.
+\end{defun}
+
+\begin{defun}{stream:}{string-decode}{\args \var{string}
+    \var{external-format} \ampoptional{} (\var{start} 0) \var{end}}
+  \code{string-decode} decodes \var{string} using the format
+  \var{external-format} and produces a new string.  Each character of
+  \var{string} is converted to octet (by \code{char-code}) and the
+  resulting array of octets is used by the external format to produce
+  a string.  This is the inverse of \code{string-encode}.
+
+  The optional argument \var{start}, defaulting to 0, specifies the
+  starting index and \var{end}, defaulting to the length of the
+  string, is the end of the string.
+
+  \var{string} must consist of characters whose \code{char-code} is
+  less than 256.
+\end{defun}
+
 \section{Writing External Formats}
 
 Users may write their own external formats.  It is probably easiest to
