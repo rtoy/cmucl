@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.15 2009/05/18 13:38:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.16 2009/05/19 20:24:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -70,6 +70,24 @@
 	     (lo (logior (ldb (byte 10 0) tmp) #xDC00)))
 	(values (code-char hi) (code-char lo)))))
 
+(defun utf16-string-p (string)
+  "Check if String is a valid UTF-16 string.  If the string is valid,
+  T is returned.  If the string is not valid, NIL is returned, and the
+  second value is the index into the string of the invalid character."
+  (do ((len (length string))
+       (index 0 (1+ index)))
+      ((>= index len)
+       t)
+    (multiple-value-bind (codepoint wide)
+	(codepoint string index)
+      ;; We stepping through the string in order.  If there are any
+      ;; surrogates, we must reach the lead surrogate first, which
+      ;; means WIDE is +1.  If we get any surrogate codepoint that
+      ;; is in the surrogate range, we have an invalid string.
+      (when (or (eq wide -1)
+		(<= #xD800 codepoint #xDFFF))
+	(return-from utf16-string-p (values nil index)))
+      (when wide (incf index)))))
 
 (defun string (X)
   "Coerces X into a string.  If X is a string, X is returned.  If X is a
