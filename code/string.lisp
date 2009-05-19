@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.16 2009/05/19 20:24:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.17 2009/05/19 20:36:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -80,10 +80,11 @@
        t)
     (multiple-value-bind (codepoint wide)
 	(codepoint string index)
-      ;; We stepping through the string in order.  If there are any
-      ;; surrogates, we must reach the lead surrogate first, which
-      ;; means WIDE is +1.  If we get any surrogate codepoint that
-      ;; is in the surrogate range, we have an invalid string.
+      ;; We step through the string in order.  If there are any
+      ;; surrogates pairs, we must reach the lead surrogate first,
+      ;; which means WIDE is +1.  Otherwise, we have an invalid
+      ;; surrogate pair.  If we get any codepoint that is in
+      ;; the surrogate range, we also have an invalid string.
       (when (or (eq wide -1)
 		(<= #xD800 codepoint #xDFFF))
 	(return-from utf16-string-p (values nil index)))
