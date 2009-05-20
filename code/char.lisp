@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.10 2009/04/19 04:15:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.11 2009/05/20 16:30:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -354,16 +354,17 @@
 
 
 ;;; Equal-Char-Code is used by the following functions as a version of char-int
-;;; which loses case info.
+;;; which loses case info.  We convert to lower case
 
 (defmacro equal-char-code (character)
   `(let ((ch (char-code ,character)))
-     (if (< 96 ch 123)
-	 (- ch 32)
+     ;; Handle ASCII separately for bootstrapping and for unidata missing.
+     (if (< 64 ch 91)
+	 (+ ch 32)
 	 #-(and unicode (not unicode-bootstrap))
 	 ch
 	 #+(and unicode (not unicode-bootstrap))
-	 (if (> ch 127) (unicode-upper ch) ch))))
+	 (if (> ch 127) (unicode-lower ch) ch))))
 
 
 (defun char-equal (character &rest more-characters)

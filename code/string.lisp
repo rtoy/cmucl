@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.17 2009/05/19 20:36:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.18 2009/05/20 16:30:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -412,15 +412,19 @@
 		   (return (- index1 offset1))
 		   (return ()))))))))
 
+;; Convert to lowercase for case folding, to match what Unicode
+;; CaseFolding.txt says.  An example where this matters: U+1E9E maps
+;; to U+00DF.  But the uppercase version of U+00DF is U+00DF.
 #+unicode
 (defmacro equal-char-codepoint (codepoint)
   `(let ((ch ,codepoint))
-     (if (< 96 ch 123)
-	 (- ch 32)
+     ;; Handle ASCII separately for bootstrapping and for unidata missing.
+     (if (< 64 ch 91)
+	 (+ ch 32)
 	 #-(and unicode (not unicode-bootstrap))
 	 ch
 	 #+(and unicode (not unicode-bootstrap))
-	 (if (> ch 127) (unicode-upper ch) ch))))
+	 (if (> ch 127) (unicode-lower ch) ch))))
 
 #+unicode
 (defmacro string-less-greater-equal (lessp equalp)
@@ -440,10 +444,13 @@
 	   (declare (fixnum index1 index2))
 	   (multiple-value-bind (char1 wide1)
 	       (codepoint string1 index1)
+	     (declare (type (integer 0 #x10ffff) char1))
 	     (multiple-value-bind (char2 wide2)
 		 (codepoint string2 index2)
-	       (if (= (equal-char-codepoint char1)
-		      (equal-char-codepoint char2))
+	       (declare (type (integer 0 #x10ffff) char2))
+	       (setf char1 (equal-char-codepoint char1))
+	       (setf char2 (equal-char-codepoint char2))
+	       (if (= char1 char2)
 		   (progn
 		     (when wide1 (incf index1))
 		     (when wide2 (incf index2)))
