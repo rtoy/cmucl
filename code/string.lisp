@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.18 2009/05/20 16:30:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.19 2009/05/20 21:47:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,28 @@
 	  nstring-capitalize))
 
 
-(declaim (inline surrogates-to-codepoint codepoint surrogates))
+(declaim (inline surrogatep surrogates-to-codepoint codepoint surrogates))
+
+(defun surrogatep (c &optional surrogate-type)
+  "Test if C is a surrogate.  C may be either an integer or a
+  character. Surrogate-type indicates what kind of surrogate to test
+  for.  :High means to test for the high (leading) surrogate; :Low
+  tests for the low (trailing surrogate).  A value of :Any or Nil
+  tests for any surrogate value (high or low)."
+  (declare (type (or character (integer 0 #x10ffff)) c))
+  (let ((code (if (characterp c)
+		  (char-code c)
+		  c)))
+    (ecase surrogate-type
+      ((:high :leading)
+       ;; Test for high surrogate
+       (<= #xD800 code #xDBFF))
+      ((:low :trailing)
+       ;; Test for low surrogate
+       (<= #xDC00 code #xDFFF))
+      ((:any nil)
+       ;; Test for any surrogate
+       (<= #xD800 code #xDFFF)))))
 
 (defun surrogates-to-codepoint (hi lo)
   "Convert the given Hi and Lo surrogate characters to the
@@ -46,14 +67,14 @@
   surrogate value, respectively."
   (declare (type simple-string string) (type kernel:index i end))
   (let ((code (char-code (schar string i))))
-    (cond ((and (<= #xD800 code #xDBFF) (< (1+ i) end))
+    (cond ((and (surrogatep code :high) (< (1+ i) end))
 	   (let ((tmp (char-code (schar string (1+ i)))))
-	     (if (<= #xDC00 tmp #xDFFF)
+	     (if (surrogatep tmp :low)
 		 (values (+ (ash (- code #xD800) 10) tmp #x2400) +1)
 		 (values code nil))))
-	  ((and (<= #xDC00 code #xDFFF) (> i 0))
+	  ((and (surrogatep code :low) (> i 0))
 	   (let ((tmp (char-code (schar string (1- i)))))
-	     (if (<= #xD800 tmp #xDBFF)
+	     (if (surrogatep tmp :high)
 		 (values (+ (ash (- tmp #xD800) 10) code #x2400) -1)
 		 (values code nil))))
 	  (t (values code nil)))))
@@ -86,7 +107,7 @@
       ;; surrogate pair.  If we get any codepoint that is in
       ;; the surrogate range, we also have an invalid string.
       (when (or (eq wide -1)
-		(<= #xD800 codepoint #xDFFF))
+		(surrogatep codepoint))
 	(return-from utf16-string-p (values nil index)))
       (when wide (incf index)))))
 

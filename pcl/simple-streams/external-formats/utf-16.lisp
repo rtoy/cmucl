@@ -1,7 +1,7 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: STREAM -*-
 ;;;
 ;;; **********************************************************************
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.1.2.2 2009/04/27 13:44:44 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.1.2.3 2009/05/20 21:47:37 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -46,10 +46,10 @@
 	    ;; we don't want to back up past the BOM since the state now
 	    ;; indicates that BOM has been seen, so that would result in
 	    ;; the BOM being reread as a character
-	    (cond ((<= #xDC00 ,code #xDFFF)
+	    (cond ((lisp::surrogatep ,code :low)
 		   ;; replace with REPLACEMENT CHARACTER ?
 		   (setf ,code #xFFFD))
-		  ((<= #xD800 ,code #xDBFF)
+		  ((lisp::surrogatep ,code :high)
 		   (let* ((,c1 ,input)
 			  (,c2 ,input)
 			  (,next (if (oddp ,st)
@@ -59,7 +59,7 @@
 		     ;; replace with REPLACEMENT CHARACTER.  Possibly
 		     ;; unput 2 so it'll be read as another character
 		     ;; next time around?
-		     (if (<= #xDC00 ,next #xDFFF)
+		     (if (lisp::surrogatep ,next :low)
 			 (setq ,code (+ (ash (- ,code #xD800) 10) ,next #x2400)
 			       ,wd 4)
 			 (setf ,code #xFFFD))))

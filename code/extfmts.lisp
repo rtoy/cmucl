@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.20 2009/05/18 23:54:37 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.21 2009/05/20 21:47:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -512,7 +512,7 @@
 	   (let ((,code (octets-to-codepoint ,external-format
 					    (cdr ,s) ,count ,input ,unput)))
 	     (declare (type (unsigned-byte 31) ,code))
-	     (cond ((or (<= #xD800 ,code #xDFFF)
+	     (cond ((or (lisp::surrogatep ,code)
 			(> ,code #x10FFFF))
 		    #-(and unicode (not unicode-bootstrap)) #\?
 		    #+(and unicode (not unicode-bootstrap)) #\U+FFFD)
