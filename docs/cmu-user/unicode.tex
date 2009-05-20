@@ -90,6 +90,10 @@ external format, and the second column gives a list of aliases that
 can be used for this format.  The set of aliases can be changed by
 changing the \file{aliases} file.
 
+For all of these formats, if an illegal sequence is encountered, no
+error or warning is signaled.  Instead, the offending sequence is
+silently replaced with the Unicode REPLACEMENT CHARACTER (U$+$FFFD).
+
 \begin{table}
   \centering
   \begin{tabular}{|l|l|p{3in}|}
@@ -245,7 +249,7 @@ full Unicode codepoint.)
    \defunx{char-greaterp}{\amprest{} \var{characters}}
    \defunx{char-not-greaterp}{\amprest{} \var{characters}}
    \defunx{char-not-lessp}{\amprest{} \var{characters}}
-   For the comparison, the characters are converted to uppercase and
+   For the comparison, the characters are converted to lowercase and
    the corresponding \code{char-code} are compared.
 \end{defun}
 
@@ -330,10 +334,9 @@ this encoding and handle the surrogate pairs correctly.
   \defunx{string-greaterp}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
   \defunx{string-not-greaterp}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
   \defunx{string-not-lessp}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
-  The individual characters of the strings are compared as appropriate
-  to determine the result.  Each codepoint in the string is converted
-  to uppercase and the appropriate comparison of the codepoint values
-  are done.  Unicode collation is not done.
+  Each codepoint in each string is converted to lowercase and the
+  appropriate comparison of the codepoint values is done.  Unicode
+  collation is not done.
 \end{defun}
 
 
