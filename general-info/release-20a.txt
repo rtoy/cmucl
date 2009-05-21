@@ -50,6 +50,8 @@ New in this release:
          codepoint order after doing a case-folding operation on each
          codepoint.  The case-folding operation converts each
          codepoint to the corresponding lowercase codepoint.
+       o UTF16-STRING-P checks to see if a string is a valid UTF-16
+         encoded string.
          
 
   * ANSI compliance fixes:
@@ -67,6 +69,7 @@ New in this release:
       byte-swapping is needed and the end index was not given.
       (Confusion about the length of the vector versus the index as an
       octet count, not element count.)
+    - Motif (CLM) should work with Unicode.
 
   * Trac Tickets:
     #31: pathname bug with :case :common
