@@ -43,12 +43,14 @@ New in this release:
         + Many external formats are supported.  The complete list is
           in aliases, but we support at least :ISO-8859-1, :UTF-8,
           :UTF-16, :UTF-32, :CRLF.
+       o CHAR-LESSP and friends perform case-folding by converting to
+         lowercase.  (The non-Unicode version converted to uppercase.)
        o STRING<, STRING>, and friends compare strings in codepoint order.
-       o STRING-LESSP, STRING-GREATERP, and friends compare strings
-         based on the results of the corresponding CHAR-LESSP,
-         CHAR-GREATERP, etc., functions applied to each character of
-         the string.  That is, Unicode collation of strings is not
-         supported. 
+       o STRING-LESSP, STRING-GREATERP, and friends compare strings in
+         codepoint order after doing a case-folding operation on each
+         codepoint.  The case-folding operation converts each
+         codepoint to the corresponding lowercase codepoint.
+         
 
   * ANSI compliance fixes:
 
