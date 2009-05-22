@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.19 2009/05/20 21:47:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.20 2009/05/22 11:31:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -859,7 +859,7 @@
 		   (outch lo))
 		 (let ((cc (unicode-combining-class code)))
 		   (unless (zerop cc)
-		     (order lo cc (- fillptr (if lo 2 1)))))))
+		     (order lo cc (- fillptr (if lo 3 2)))))))
 	     (outch (char)
 	       (when (= fillptr (length result))
 		 (let ((tmp (make-string (round (length result) 5/6))))
