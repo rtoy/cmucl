@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.20 2009/05/14 17:50:48 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.21 2009/05/25 20:08:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,13 +26,20 @@
   bidi
   name1+
   name1
+  qc-nfd
+  qc-nfkd
+  qc-nfc
+  qc-nfkc
   )
 
 (defvar *unicode-data* (make-unidata))
 
 ;; The magic number for the unidata.bin file.  (It's "*UCD", in
-;; big-endian order.)
+;; big-endian order).
 (defconstant +unicode-magic-number+ #x2A554344)
+
+;; The format version for the unidata.bin file.
+(defconstant +unicode-format-version+ 0)
 
 ;; The expected Unicode version.  This needs to be synced with
 ;; build-unidata.lisp.
@@ -208,6 +215,14 @@
   (mvec (ext:required-argument) :read-only t
 	:type (simple-array (unsigned-byte 16) (*))))
 
+(defstruct (ntrie1 (:include ntrie))
+  (lvec (ext:required-argument) :read-only t
+	:type (simple-array bit (*))))
+
+(defstruct (ntrie2 (:include ntrie))
+  (lvec (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 2) (*))))
+
 (defstruct (ntrie4 (:include ntrie))
   (lvec (ext:required-argument) :read-only t
 	:type (simple-array (unsigned-byte 4) (*))))
@@ -313,7 +328,7 @@
 	       (when (= (setq min (+ n 2)) max) (return nil)))
 	      (t (return (ash n -1))))))))
 
-(declaim (inline qref qref4 qref8 qref16 qref32))
+(declaim (inline qref qref1 qref2 qref4 qref8 qref16 qref32))
 (defun qref (ntrie code)
   (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
 	   (type ntrie ntrie) (type (integer 0 #x10FFFF) code))
@@ -331,6 +346,18 @@
 	  (if (= md #xFFFF)
 	      nil
 	      (+ md lo))))))
+
+(defun qref1 (ntrie code)
+  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
+	   (type ntrie1 ntrie) (type (integer 0 #x10FFFF) code))
+  (let ((n (qref ntrie code)))
+    (if n (aref (ntrie1-lvec ntrie) n) 0)))
+
+(defun qref2 (ntrie code)
+  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
+	   (type ntrie2 ntrie) (type (integer 0 #x10FFFF) code))
+  (let ((n (qref ntrie code)))
+    (if n (aref (ntrie2-lvec ntrie) n) 0)))
 
 (defun qref4 (ntrie code)
   (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
@@ -365,7 +392,7 @@
 	   (read32 (stm)
 	     (logior (ash (read16 stm) 16) (read16 stm))))
     (unless (and (= (read32 stream) +unicode-magic-number+)
-		 (= (read-byte stream) 0))
+		 (= (read-byte stream) +unicode-format-version+))
       (error "The Unicode data file is broken."))
     (let ((a (read-byte stream))
 	  (b (read-byte stream))
@@ -514,6 +541,20 @@
   (multiple-value-bind (split hvec mvec lvec) (read-ntrie 32 stm)
     (setf (unidata-name1 *unicode-data*)
 	(make-ntrie32 :split split :hvec hvec :mvec mvec :lvec lvec))))
+
+(defloader load-normalization-qc (stm 11)
+  (multiple-value-bind (split hvec mvec lvec) (read-ntrie 1 stm)
+    (setf (unidata-qc-nfd *unicode-data*)
+	(make-ntrie1 :split split :hvec hvec :mvec mvec :lvec lvec)))
+  (multiple-value-bind (split hvec mvec lvec) (read-ntrie 1 stm)
+    (setf (unidata-qc-nfkd *unicode-data*)
+	(make-ntrie1 :split split :hvec hvec :mvec mvec :lvec lvec)))
+  (multiple-value-bind (split hvec mvec lvec) (read-ntrie 2 stm)
+    (setf (unidata-qc-nfc *unicode-data*)
+	(make-ntrie2 :split split :hvec hvec :mvec mvec :lvec lvec)))
+  (multiple-value-bind (split hvec mvec lvec) (read-ntrie 2 stm)
+    (setf (unidata-qc-nfkc *unicode-data*)
+	(make-ntrie2 :split split :hvec hvec :mvec mvec :lvec lvec))))
 
 
 ;;; Accessor functions.
@@ -761,6 +802,8 @@
 			    type))
 		  nil))))))
 
+(declaim (ftype (function ((integer 0 #x10FFFF)) (unsigned-byte 8))
+		unicode-combining-class))
 (defun unicode-combining-class (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
 	   (type (integer 0 #x10FFFF) code))
@@ -793,3 +836,34 @@
     (cond ((= x 0) nil)
 	  ((logbitp 4 x) (- code n))
 	  (t (+ code n)))))
+
+(declaim (inline unicode-nfc-qc unicode-nfkc-qc
+		 unicode-nfd-qc unicode-nfkd-qc))
+
+(defun unicode-nfc-qc (code)
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
+	   (type (integer 0 #x10FFFF) code))
+  (unless (unidata-qc-nfc *unicode-data*) (load-normalization-qc))
+  (ecase (qref2 (unidata-qc-nfc *unicode-data*) code)
+    (0 :Y) (1 :M) (2 :N)))
+
+(defun unicode-nfkc-qc (code)
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
+	   (type (integer 0 #x10FFFF) code))
+  (unless (unidata-qc-nfkc *unicode-data*) (load-normalization-qc))
+  (ecase (qref2 (unidata-qc-nfkc *unicode-data*) code)
+    (0 :Y) (1 :M) (2 :N)))
+
+(defun unicode-nfd-qc (code)
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
+	   (type (integer 0 #x10FFFF) code))
+  (unless (unidata-qc-nfd *unicode-data*) (load-normalization-qc))
+  (ecase (qref1 (unidata-qc-nfd *unicode-data*) code)
+    (0 :Y) (1 :N)))
+
+(defun unicode-nfkd-qc (code)
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
+	   (type (integer 0 #x10FFFF) code))
+  (unless (unidata-qc-nfkd *unicode-data*) (load-normalization-qc))
+  (ecase (qref1 (unidata-qc-nfkd *unicode-data*) code)
+    (0 :Y) (1 :N)))

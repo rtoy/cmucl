@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.8 2009/05/11 16:44:01 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.9 2009/05/25 20:08:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,6 +33,10 @@
   bidi
   name1+
   name1
+  qc-nfd
+  qc-nfkd
+  qc-nfc
+  qc-nfkc
   )
 
 (defvar *unicode-data* (make-unidata))
@@ -72,6 +76,14 @@
 	:type (simple-array (unsigned-byte 16) (*)))
   (mvec (ext:required-argument) :read-only t
 	:type (simple-array (unsigned-byte 16) (*))))
+
+(defstruct (ntrie1 (:include ntrie))
+  (lvec (ext:required-argument) :read-only t
+	:type (simple-array bit (*))))
+
+(defstruct (ntrie2 (:include ntrie))
+  (lvec (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 2) (*))))
 
 (defstruct (ntrie4 (:include ntrie))
   (lvec (ext:required-argument) :read-only t
@@ -391,7 +403,7 @@
 	     (write16 (ldb (byte 16 0) n) stm)))
     (with-open-file (stm path :direction :io :if-exists :rename-and-delete
 			 :element-type '(unsigned-byte 8))
-      (let ((index (make-array 11 :fill-pointer 0)))
+      (let ((index (make-array 12 :fill-pointer 0)))
 	;; File header
 	(write32 +unicode-magic-number+ stm)	; identification "magic"
 	;; File format version 
@@ -525,6 +537,40 @@
 	  (write-vector (ntrie32-hvec data) stm :endian-swap :network-order)
 	  (write-vector (ntrie32-mvec data) stm :endian-swap :network-order)
 	  (write-vector (ntrie32-lvec data) stm :endian-swap :network-order))
+	;; Normalization quick-check data
+	(vector-push (file-position stm) index)
+	(let ((data (unidata-qc-nfd *unicode-data*)))
+	  (write-byte (ntrie1-split data) stm)
+	  (write16 (length (ntrie1-hvec data)) stm)
+	  (write16 (length (ntrie1-mvec data)) stm)
+	  (write16 (length (ntrie1-lvec data)) stm)
+	  (write-vector (ntrie1-hvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie1-mvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie1-lvec data) stm :endian-swap :network-order))
+	(let ((data (unidata-qc-nfkd *unicode-data*)))
+	  (write-byte (ntrie1-split data) stm)
+	  (write16 (length (ntrie1-hvec data)) stm)
+	  (write16 (length (ntrie1-mvec data)) stm)
+	  (write16 (length (ntrie1-lvec data)) stm)
+	  (write-vector (ntrie1-hvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie1-mvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie1-lvec data) stm :endian-swap :network-order))
+	(let ((data (unidata-qc-nfc *unicode-data*)))
+	  (write-byte (ntrie2-split data) stm)
+	  (write16 (length (ntrie2-hvec data)) stm)
+	  (write16 (length (ntrie2-mvec data)) stm)
+	  (write16 (length (ntrie2-lvec data)) stm)
+	  (write-vector (ntrie2-hvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie2-mvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie2-lvec data) stm :endian-swap :network-order))
+	(let ((data (unidata-qc-nfkc *unicode-data*)))
+	  (write-byte (ntrie2-split data) stm)
+	  (write16 (length (ntrie2-hvec data)) stm)
+	  (write16 (length (ntrie2-mvec data)) stm)
+	  (write16 (length (ntrie2-lvec data)) stm)
+	  (write-vector (ntrie2-hvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie2-mvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie2-lvec data) stm :endian-swap :network-order))
 	;; Patch up index
 	(file-position stm 8)
 	(dotimes (i (length index))
@@ -542,6 +588,7 @@
   upper lower title
   aliases
   mcode
+  norm-qc
   ;; ...
   )
 
@@ -653,6 +700,33 @@
 	(declare (ignore max))
 	(setf (ucdent-mcode (find min vec :key #'ucdent-code))
 	    (parse-integer mirror :radix 16 :junk-allowed t))))
+    (foreach-ucd "DerivedNormalizationProps"
+		ucd-directory
+      (lambda (min max prop &optional value)
+	(cond ((string= prop "NFD_QC")
+	       (loop for i from min to max
+		      as ent = (find i vec :key #'ucdent-code) do
+		    (when ent
+		      (setf (getf (ucdent-norm-qc ent) :nfd)
+			    (intern value "KEYWORD")))))
+	      ((string= prop "NFKD_QC")
+	       (loop for i from min to max
+		      as ent = (find i vec :key #'ucdent-code) do
+		    (when ent
+		      (setf (getf (ucdent-norm-qc ent) :nfkd)
+			    (intern value "KEYWORD")))))
+	      ((string= prop "NFC_QC")
+		(loop for i from min to max
+		      as ent = (find i vec :key #'ucdent-code) do
+		     (when ent
+		       (setf (getf (ucdent-norm-qc ent) :nfc)
+			     (intern value "KEYWORD")))))
+	      ((string= prop "NFKC_QC")
+		(loop for i from min to max
+		      as ent = (find i vec :key #'ucdent-code) do
+		     (when ent
+		       (setf (getf (ucdent-norm-qc ent) :nfkc)
+			     (intern value "KEYWORD"))))))))
     (values vec (make-range :codes range))))
 
 
@@ -809,4 +883,33 @@
 	(setf (unidata-bidi *unicode-data*)
 	    (make-bidi :split #x62 :hvec hvec :mvec mvec :lvec lvec
 		       :tabl (copy-seq tabl)))))
+    (format t "~&Building normalization quick-check tables~%")
+    (multiple-value-bind (hvec mvec lvec)
+	(pack ucd range (lambda (x)
+			  (ecase (getf (ucdent-norm-qc x) :nfd :y)
+			    (:y 0) (:n 1)))
+	      0 1 #x47)
+      (setf (unidata-qc-nfd *unicode-data*)
+	    (make-ntrie1 :split #x47 :hvec hvec :mvec mvec :lvec lvec)))
+    (multiple-value-bind (hvec mvec lvec)
+	(pack ucd range (lambda (x)
+			  (ecase (getf (ucdent-norm-qc x) :nfkd :y)
+			    (:y 0) (:n 1)))
+	      0 1 #x47)
+      (setf (unidata-qc-nfkd *unicode-data*)
+	    (make-ntrie1 :split #x47 :hvec hvec :mvec mvec :lvec lvec)))
+    (multiple-value-bind (hvec mvec lvec)
+	(pack ucd range (lambda (x)
+			  (ecase (getf (ucdent-norm-qc x) :nfc :y)
+			    (:y 0) (:m 1) (:n 2)))
+	      0 2 #x56)
+      (setf (unidata-qc-nfc *unicode-data*)
+	    (make-ntrie2 :split #x56 :hvec hvec :mvec mvec :lvec lvec)))
+    (multiple-value-bind (hvec mvec lvec)
+	(pack ucd range (lambda (x)
+			  (ecase (getf (ucdent-norm-qc x) :nfkc :y)
+			    (:y 0) (:m 1) (:n 2)))
+	      0 2 #x55)
+      (setf (unidata-qc-nfkc *unicode-data*)
+	    (make-ntrie2 :split #x55 :hvec hvec :mvec mvec :lvec lvec)))
     nil))

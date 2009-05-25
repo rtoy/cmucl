@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.2 2009/04/19 04:09:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.3 2009/05/25 20:08:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -83,7 +83,10 @@
 	  )))))
 
 (deftype simple-numeric-vector ()
-  `(or (simple-array (unsigned-byte 8) (*))
+  `(or (simple-array bit (*))
+       (simple-array (unsigned-byte 2) (*))
+       (simple-array (unsigned-byte 4) (*))
+       (simple-array (unsigned-byte 8) (*))
        (simple-array (signed-byte 8) (*))
        (simple-array (unsigned-byte 16) (*))
        (simple-array (signed-byte 16) (*))
