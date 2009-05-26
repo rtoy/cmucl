@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.20 2009/05/22 11:31:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.21 2009/05/26 02:15:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -893,6 +893,162 @@
 	(rec string))
       (shrink-vector result fillptr))))
 
+(declaim (inline normalized-codepoint-p))
+(defun normalized-codepoint-p (cp form)
+  (ecase form
+    (:nfc (unicode-nfc-qc cp))
+    (:nfkc (unicode-nfkc-qc cp))
+    (:nfd (unicode-nfd-qc cp))
+    (:nfkd (unicode-nfkd-qc cp))))
+
+;; Perform check to see if string is already normalized.  The Unicode
+;; example can return YES, NO, or MAYBE.  For our purposes, only YES
+;; is important, for which we return T.   For NO or MAYBE, we return NIL.
+(defun normalized-form-p (string &optional (form :nfc))
+  (declare (type string string)
+	   (type (member :nfc :nfkc :nfd :nfkd) form)
+	   (optimize (speed 3)))
+  (let ((last-class 0)
+	(len (length string)))
+    (declare (type (integer 0 256) last-class))
+    (do ((k 0 (1+ k)))
+	((>= k len))
+      (declare (type kernel:index k))
+      (multiple-value-bind (ch widep)
+	  (codepoint string k len)
+	(when widep (incf k))
+	;; Handle ASCII specially
+	(unless (< ch 128)
+	  (let ((class (unicode-combining-class ch)))
+	    (declare (type (unsigned-byte 8) class))
+	    (when (and (> last-class class) (not (zerop class)))
+	      ;; Definitely not normalized
+	      (return-from normalized-form-p nil))
+	    (let ((check (normalized-codepoint-p ch form)))
+	      (unless (eq check :y)
+		(return-from normalized-form-p nil)))
+	    (setf last-class class)))))
+    t))
+
+;; @@ FIXME: This should be read from unidata.bin, but it's not there
+;; yet.  This is CompositionExclusions.txt, with the four extra code
+;; points that could be derived from the decompositions.
+(defvar *composition-exclusion*
+  '(#x0958 #x0959 #x095A #x095B #x095C #x095D #x095E #x095F #x09DC #x09DD #x09DF
+    #x0A33 #x0A36 #x0A59 #x0A5A #x0A5B #x0A5E #x0B5C #x0B5D #x0F43 #x0F4D #x0F52
+    #x0F57 #x0F5C #x0F69 #x0F76 #x0F78 #x0F93 #x0F9D #x0FA2 #x0FA7 #x0FAC #x0FB9
+    #xFB1D #xFB1F #xFB2A #xFB2B #xFB2C #xFB2D #xFB2E #xFB2F #xFB30 #xFB31 #xFB32
+    #xFB33 #xFB34 #xFB35 #xFB36 #xFB38 #xFB39 #xFB3A #xFB3B #xFB3C #xFB3E #xFB40
+    #xFB41 #xFB43 #xFB44 #xFB46 #xFB47 #xFB48 #xFB49 #xFB4A #xFB4B #xFB4C #xFB4D
+    #xFB4E #x2ADC #x1D15E #x1D15F #x1D160 #x1D161 #x1D162 #x1D163 #x1D164 #x1D1BB
+    #x1D1BC #x1D1BD #x1D1BE #x1D1BF #x1D1C0
+    ;; Non-starters
+    #x0344 #x0F73 #x0F75 #x0F81))
+
+;; Build the composition pair table.
+;;
+;; @@ FIXME:: The composition table should probably be in unidata.bin,
+;; but it's not there yet.
+(defun build-composition-table ()
+  (let ((table (make-hash-table)))
+    (dotimes (cp #x10ffff)
+      ;; Ignore Hangul characters, which can be done algorithmically.
+      (unless (<= #xac00 cp #xd7a3)
+	(let ((decomp (unicode-decomp cp nil)))
+	  (when (and decomp (= (length decomp) 2))
+	    (let ((c1 (char-code (aref decomp 0)))
+		  (c2 (char-code (aref decomp 1))))
+	      (setf (gethash (logior (ash c1 16) c2) table) cp))))))
+    ;; Remove any in the exclusion list
+    (dolist (cp *composition-exclusion*)
+      (let ((decomp (unicode-decomp cp nil)))
+	  (when (and decomp (= (length decomp) 2))
+	    (let ((c1 (char-code (aref decomp 0)))
+		  (c2 (char-code (aref decomp 1))))
+	      (remhash (logior (ash c1 16) c2) table)))))
+    (values table)))
+
+(defvar *composition-pair-table* nil)
+
+(declaim (inline compose-hangul))
+(defun compose-hangul (c1 c2)
+  (declare (type (integer 0 #x10FFFF) c1 c2)
+	   (optimize (speed 3)))
+  (let ((index-l (- c1 #x1100)))
+    (cond ((and (<= 0 index-l)
+		(< index-l 19))
+	   (let ((index-v (- c2 #x1161)))
+	     (when (and (<= 0 index-v)
+			(< index-v 21))
+	       (+ #xac00 (* 28 (+ (* index-l 21) index-v))))))
+	  (t
+	   (let ((index-s (- c1 #xac00)))
+	     (when (and (<= 0 index-s)
+			(< index-s 11172)
+			(zerop (rem index-s 28)))
+	       (let ((index-t (- c2 #x11a7)))
+		 (when (and (plusp index-t)
+			    (< index-t 28))
+		   (+ c1 index-t)))))))))
+	     
+
+(defun get-pairwise-composition (c1 c2)
+  (declare (type (integer 0 #x10FFFF) c1 c2)
+	   (optimize (speed 3)))
+  (unless *composition-pair-table*
+    (setf *composition-pair-table* (build-composition-table)))
+  (cond ((compose-hangul c1 c2))
+	(t
+	 (if (and (< c1 #x10000) (< c2 #x10000))
+	     (gethash (logior (ash c1 16) c2) *composition-pair-table*)
+	     nil))))
+
+;; Compose a string in place.  The string must already be in decomposed form.
+(defun %compose (target)
+  (declare (type string target)
+	   (optimize (speed 3)))
+  (let ((len (length target))
+	(starter-pos 0))
+    (declare (type kernel:index starter-pos))
+    (multiple-value-bind (starter-ch wide)
+	(codepoint target 0 len)
+      (let ((comp-pos (if wide 2 1))
+	    (last-class (unicode-combining-class starter-ch)))
+	(declare (type (integer 0 256) last-class)
+		 (type kernel:index comp-pos))
+	(unless (zerop last-class)
+	  ;; Fix for strings starting with a combining character
+	  (setf last-class 256))
+	;; Loop on decomposed characters, combining where possible
+	(do ((decomp-pos comp-pos (1+ decomp-pos)))
+	    ((>= decomp-pos len))
+	  (declare (type kernel:index decomp-pos))
+	  (multiple-value-bind (ch wide)
+	      (codepoint target decomp-pos len)
+	    (when wide (incf decomp-pos))
+	    (let ((ch-class (unicode-combining-class ch))
+		  (composite (get-pairwise-composition starter-ch ch)))
+	      (declare (type (integer 0 256) ch-class))
+	      (cond ((and composite
+			  (or (< last-class ch-class) (zerop last-class)))
+		     ;; Don't have to worry about surrogate pairs here
+		     ;; because the composite is always in the BMP.
+		     (setf (aref target starter-pos) (code-char composite))
+		     (setf starter-ch composite))
+		    (t
+		     (when (zerop ch-class)
+		       (setf starter-pos comp-pos)
+		       (setf starter-ch ch))
+		     (setf last-class ch-class)
+		     (multiple-value-bind (hi lo)
+			 (surrogates ch)
+		       (setf (aref target comp-pos) hi)
+		       (when lo
+			 (incf comp-pos)
+			 (setf (aref target comp-pos) lo))
+		       (incf comp-pos)))))))
+	(shrink-vector target comp-pos)))))
+
 (defun string-to-nfd (string)
   "Convert String to Unicode Normalization Form D (NFD) using the
   canonical decomposition.  The NFD string is returned"
@@ -905,14 +1061,21 @@
 
 #+unicode
 (defun string-to-nfc (string)
-  ;;@@ Implement me
-  ;; must return a simple-string for the package machinery
-  (if (simple-string-p string) string (coerce string 'simple-string)))
+  (if (normalized-form-p string :nfc)
+      (if (simple-string-p string) string (coerce string 'simple-string))
+      (coerce (if (normalized-form-p string :nfd)
+		  (%compose (copy-seq string))
+		  (%compose (string-to-nfd string)))
+	      'simple-string)))
 
 #-unicode  ;; Needed by package.lisp
 (defun string-to-nfc (string)
   (if (simple-string-p string) string (coerce string 'simple-string)))
 
 (defun string-to-nfkc (string)
-  ;;@@ Implement me
-  (if (simple-string-p string) string (coerce string 'simple-string)))
+  (if (normalized-form-p string :nfkc)
+      (if (simple-string-p string) string (coerce string 'simple-string))
+      (coerce (if (normalized-form-p string :nfkd)
+		  (%compose (copy-seq string))
+		  (%compose (string-to-nfkd string)))
+	      'simple-string)))
