@@ -52,7 +52,12 @@ New in this release:
          codepoint to the corresponding lowercase codepoint.
        o UTF16-STRING-P checks to see if a string is a valid UTF-16
          encoded string.
-         
+       o Unicode normalization forms are supported via STRING-TO-NFC,
+         STRING-TO-NFKC, STRING-TO-NFD, and STRING-TO-NFKD.
+       o Symbols are always normalized to NFC form.
+
+    - WRITE-VECTOR and READ-VECTOR support vectors of with element
+      sizes of 1 bit, 2 bits and 4 bits.
 
   * ANSI compliance fixes:
 
