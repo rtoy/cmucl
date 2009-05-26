@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.21 2009/05/26 02:15:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.22 2009/05/26 16:25:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -90,6 +90,22 @@
 	     (hi (logior (ldb (byte 10 10) tmp) #xD800))
 	     (lo (logior (ldb (byte 10 0) tmp) #xDC00)))
 	(values (code-char hi) (code-char lo)))))
+
+(defun (setf codepoint) (codepoint string i)
+  "Set the codepoint at string position I to the Codepoint.  If the
+  codepoint requires a surrogate pair, the high (leading surrogate) is
+  stored at position I and the low (trailing) surrogate is stored at
+  I+1"
+  (declare (type (integer 0 #x10FFFF) codepoint)
+	   (type simple-string string))
+  (let ((widep nil))
+    (multiple-value-bind (hi lo)
+	(surrogates codepoint)
+      (setf (aref string i) hi)
+      (when lo
+	(setf (aref string (1+ i)) lo)
+	(setf widep t)))
+    (values codepoint widep)))
 
 (defun utf16-string-p (string)
   "Check if String is a valid UTF-16 string.  If the string is valid,
@@ -930,78 +946,6 @@
 	    (setf last-class class)))))
     t))
 
-;; @@ FIXME: This should be read from unidata.bin, but it's not there
-;; yet.  This is CompositionExclusions.txt, with the four extra code
-;; points that could be derived from the decompositions.
-(defvar *composition-exclusion*
-  '(#x0958 #x0959 #x095A #x095B #x095C #x095D #x095E #x095F #x09DC #x09DD #x09DF
-    #x0A33 #x0A36 #x0A59 #x0A5A #x0A5B #x0A5E #x0B5C #x0B5D #x0F43 #x0F4D #x0F52
-    #x0F57 #x0F5C #x0F69 #x0F76 #x0F78 #x0F93 #x0F9D #x0FA2 #x0FA7 #x0FAC #x0FB9
-    #xFB1D #xFB1F #xFB2A #xFB2B #xFB2C #xFB2D #xFB2E #xFB2F #xFB30 #xFB31 #xFB32
-    #xFB33 #xFB34 #xFB35 #xFB36 #xFB38 #xFB39 #xFB3A #xFB3B #xFB3C #xFB3E #xFB40
-    #xFB41 #xFB43 #xFB44 #xFB46 #xFB47 #xFB48 #xFB49 #xFB4A #xFB4B #xFB4C #xFB4D
-    #xFB4E #x2ADC #x1D15E #x1D15F #x1D160 #x1D161 #x1D162 #x1D163 #x1D164 #x1D1BB
-    #x1D1BC #x1D1BD #x1D1BE #x1D1BF #x1D1C0
-    ;; Non-starters
-    #x0344 #x0F73 #x0F75 #x0F81))
-
-;; Build the composition pair table.
-;;
-;; @@ FIXME:: The composition table should probably be in unidata.bin,
-;; but it's not there yet.
-(defun build-composition-table ()
-  (let ((table (make-hash-table)))
-    (dotimes (cp #x10ffff)
-      ;; Ignore Hangul characters, which can be done algorithmically.
-      (unless (<= #xac00 cp #xd7a3)
-	(let ((decomp (unicode-decomp cp nil)))
-	  (when (and decomp (= (length decomp) 2))
-	    (let ((c1 (char-code (aref decomp 0)))
-		  (c2 (char-code (aref decomp 1))))
-	      (setf (gethash (logior (ash c1 16) c2) table) cp))))))
-    ;; Remove any in the exclusion list
-    (dolist (cp *composition-exclusion*)
-      (let ((decomp (unicode-decomp cp nil)))
-	  (when (and decomp (= (length decomp) 2))
-	    (let ((c1 (char-code (aref decomp 0)))
-		  (c2 (char-code (aref decomp 1))))
-	      (remhash (logior (ash c1 16) c2) table)))))
-    (values table)))
-
-(defvar *composition-pair-table* nil)
-
-(declaim (inline compose-hangul))
-(defun compose-hangul (c1 c2)
-  (declare (type (integer 0 #x10FFFF) c1 c2)
-	   (optimize (speed 3)))
-  (let ((index-l (- c1 #x1100)))
-    (cond ((and (<= 0 index-l)
-		(< index-l 19))
-	   (let ((index-v (- c2 #x1161)))
-	     (when (and (<= 0 index-v)
-			(< index-v 21))
-	       (+ #xac00 (* 28 (+ (* index-l 21) index-v))))))
-	  (t
-	   (let ((index-s (- c1 #xac00)))
-	     (when (and (<= 0 index-s)
-			(< index-s 11172)
-			(zerop (rem index-s 28)))
-	       (let ((index-t (- c2 #x11a7)))
-		 (when (and (plusp index-t)
-			    (< index-t 28))
-		   (+ c1 index-t)))))))))
-	     
-
-(defun get-pairwise-composition (c1 c2)
-  (declare (type (integer 0 #x10FFFF) c1 c2)
-	   (optimize (speed 3)))
-  (unless *composition-pair-table*
-    (setf *composition-pair-table* (build-composition-table)))
-  (cond ((compose-hangul c1 c2))
-	(t
-	 (if (and (< c1 #x10000) (< c2 #x10000))
-	     (gethash (logior (ash c1 16) c2) *composition-pair-table*)
-	     nil))))
 
 ;; Compose a string in place.  The string must already be in decomposed form.
 (defun %compose (target)
@@ -1061,6 +1005,7 @@
 
 #+unicode
 (defun string-to-nfc (string)
+  "Convert String to Unicode Normalization Form C (NFC)."
   (if (normalized-form-p string :nfc)
       (if (simple-string-p string) string (coerce string 'simple-string))
       (coerce (if (normalized-form-p string :nfd)
@@ -1073,6 +1018,7 @@
   (if (simple-string-p string) string (coerce string 'simple-string)))
 
 (defun string-to-nfkc (string)
+  "Convert String to Unicode Normalization Form KC (NFKC)."
   (if (normalized-form-p string :nfkc)
       (if (simple-string-p string) string (coerce string 'simple-string))
       (coerce (if (normalized-form-p string :nfkd)
