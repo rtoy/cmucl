@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.22 2009/05/26 16:25:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.23 2009/05/27 01:06:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1006,12 +1006,13 @@
 #+unicode
 (defun string-to-nfc (string)
   "Convert String to Unicode Normalization Form C (NFC)."
-  (if (normalized-form-p string :nfc)
-      (if (simple-string-p string) string (coerce string 'simple-string))
-      (coerce (if (normalized-form-p string :nfd)
-		  (%compose (copy-seq string))
-		  (%compose (string-to-nfd string)))
-	      'simple-string)))
+  (let ((s (copy-seq string)))
+    (if (normalized-form-p s :nfc)
+	s
+	(coerce (if (normalized-form-p s :nfd)
+		    (%compose s)
+		    (%compose (string-to-nfd s)))
+		'simple-string))))
 
 #-unicode  ;; Needed by package.lisp
 (defun string-to-nfc (string)
@@ -1019,9 +1020,10 @@
 
 (defun string-to-nfkc (string)
   "Convert String to Unicode Normalization Form KC (NFKC)."
-  (if (normalized-form-p string :nfkc)
-      (if (simple-string-p string) string (coerce string 'simple-string))
-      (coerce (if (normalized-form-p string :nfkd)
-		  (%compose (copy-seq string))
-		  (%compose (string-to-nfkd string)))
-	      'simple-string)))
+  (let ((s (copy-seq string)))
+    (if (normalized-form-p s :nfkc)
+	s
+	(coerce (if (normalized-form-p s :nfkd)
+		    (%compose s)
+		    (%compose (string-to-nfkd s)))
+		'simple-string))))
