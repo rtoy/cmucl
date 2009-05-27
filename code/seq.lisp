@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.53.8.7 2009/05/21 12:53:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.53.8.8 2009/05/27 17:39:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -568,21 +568,6 @@
 (defun vector-reverse* (sequence)
   (vector-reverse sequence (type-of sequence)))
 
-#+unicode
-(defun string-reverse* (sequence)
-  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
-	   (type string sequence))
-  (with-array-data ((sequence sequence) (start) (end))
-    (declare (ignore start end))
-    (let* ((length (length sequence))
-	   (string (make-string length))
-	   (j length))
-      (declare (type kernel:index length j))
-      (loop for i = 0 then n as n = (%glyph-f sequence i) do
-	  (replace string sequence :start1 (decf j (- n i)) :start2 i :end2 n)
-	while (< n length))
-      string)))
-
 
 ;;; Nreverse:
 
@@ -614,23 +599,6 @@
 
 (defun vector-nreverse* (sequence)
   (vector-nreverse sequence))
-
-#+unicode
-(defun string-nreverse* (sequence)
-  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
-	   (type string sequence))
-  (with-array-data ((sequence sequence) (start) (end))
-    (declare (ignore start end))
-    (flet ((rev (start end)
-	     (do ((i start (1+ i))
-		  (j (1- end) (1- j)))
-		 ((>= i j) sequence)
-	       (declare (type kernel:index i j))
-	       (rotatef (schar sequence i) (schar sequence j)))))
-      (let ((len (length sequence)))
-	(loop for i = 0 then n as n = (%glyph-f sequence i) do
-	  (rev i n) while (< n len))
-	(rev 0 len)))))
 
 (defun nreverse (sequence)
   "Returns a sequence of the same elements in reverse order; the argument

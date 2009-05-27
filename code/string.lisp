@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.24 2009/05/27 11:31:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.25 2009/05/27 17:39:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -850,6 +850,40 @@
 	(values (subseq string n index) (and (> n 0) n))
 	(values (subseq string index n) (and (< n (length string)) n)))))
 
+#+unicode
+(defun string-reverse* (sequence)
+  (declare #+(or)(optimize (speed 3) (space 0) (safety 0) (debug 0))
+	   (type string sequence))
+  (with-string sequence
+    (let* ((length (- end start))
+	   (string (make-string length))
+	   (j length))
+      (declare (type kernel:index length j))
+      (loop for i = start then n as n = (%glyph-f sequence i) do
+	    (replace string sequence :start1 (decf j (- n i)) :start2 i :end2 n)
+	    while (< n end))
+      string)))
+
+#+unicode
+(defun string-nreverse* (sequence)
+  (declare #+(or)(optimize (speed 3) (space 0) (safety 0) (debug 0))
+	   (type string sequence))
+  (with-string sequence
+    (flet ((rev (start end)
+	     (do ((i start (1+ i))
+		  (j (1- end) (1- j)))
+		 ((>= i j))
+	       (declare (type kernel:index i j))
+	       (rotatef (schar sequence i) (schar sequence j)))))
+      (let ((len end))
+	(loop for i = start then n as n = (%glyph-f sequence i) do
+	  (rev i n) while (< n len))
+	(rev start end))))
+  sequence)
+
+
+
+
 (defun decompose (string &optional (compatibility t))
   (declare (type string string))
   (let ((result (make-string (cond ((< (length string) 40)
