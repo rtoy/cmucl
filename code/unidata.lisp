@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.22 2009/05/26 16:25:03 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.23 2009/05/27 20:34:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -314,7 +314,7 @@
 
 (defun search-range (code range)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
-	   (type (integer 0 #x10FFFF) code) (type range range))
+	   (type codepoint code) (type range range))
   (let* ((set (range-codes range))
 	 (min 0)
 	 (max (length set)))
@@ -331,7 +331,7 @@
 (declaim (inline qref qref1 qref2 qref4 qref8 qref16 qref32))
 (defun qref (ntrie code)
   (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
-	   (type ntrie ntrie) (type (integer 0 #x10FFFF) code))
+	   (type ntrie ntrie) (type codepoint code))
   (let* ((mbits (1+ (ash (ntrie-split ntrie) -4)))
 	 (lbits (1+ (logand (ntrie-split ntrie) 15)))
 	 (hvec (ntrie-hvec ntrie))
@@ -349,38 +349,38 @@
 
 (defun qref1 (ntrie code)
   (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
-	   (type ntrie1 ntrie) (type (integer 0 #x10FFFF) code))
+	   (type ntrie1 ntrie) (type codepoint code))
   (let ((n (qref ntrie code)))
     (if n (aref (ntrie1-lvec ntrie) n) 0)))
 
 (defun qref2 (ntrie code)
   (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
-	   (type ntrie2 ntrie) (type (integer 0 #x10FFFF) code))
+	   (type ntrie2 ntrie) (type codepoint code))
   (let ((n (qref ntrie code)))
     (if n (aref (ntrie2-lvec ntrie) n) 0)))
 
 (defun qref4 (ntrie code)
   (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
-	   (type ntrie4 ntrie) (type (integer 0 #x10FFFF) code))
+	   (type ntrie4 ntrie) (type codepoint code))
   (let ((n (qref ntrie code)))
     (if n (aref (ntrie4-lvec ntrie) n) 0)))
 
 (defun qref8 (ntrie code)
   (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
-	   (type ntrie8 ntrie) (type (integer 0 #x10FFFF) code))
+	   (type ntrie8 ntrie) (type codepoint code))
   (let ((n (qref ntrie code)))
     (if n (aref (ntrie8-lvec ntrie) n) 0)))
 
 (defun qref16 (ntrie code)
   (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
-	   (type ntrie16 ntrie) (type (integer 0 #x10FFFF) code))
+	   (type ntrie16 ntrie) (type codepoint code))
   (let ((n (qref ntrie code)))
     (if n (aref (ntrie16-lvec ntrie) n) 0)))
 
 (defun qref32 (ntrie code)
   (declare (optimize (speed 3) (space 0) (safety 0) (debug 0)
 		     (ext:inhibit-warnings 3)) ;; shut up about boxing return
-	   (type ntrie32 ntrie) (type (integer 0 #x10FFFF) code))
+	   (type ntrie32 ntrie) (type codepoint code))
   (let ((n (qref ntrie code)))
     (if n (aref (ntrie32-lvec ntrie) n) 0)))
 
@@ -642,7 +642,7 @@
 (defun unicode-name+ (code ntrie dict)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0)
 		     (ext:inhibit-warnings 3))
-	   (type (integer 0 #x10FFFF) code)
+	   (type codepoint code)
 	   (type ntrie32 ntrie) (type dictionary dict))
   (let ((n (qref32 ntrie code)))
     (when (plusp n)
@@ -692,7 +692,7 @@
 
 (declaim (inline unicode-category))
 (defun unicode-category (code)
-  (declare (type (integer 0 #x10FFFF) code))
+  (declare (type codepoint code))
   (unless (unidata-category *unicode-data*) (load-categories))
   (qref8 (the ntrie8 (unidata-category *unicode-data*)) code))
 
@@ -717,7 +717,7 @@
 
 (defun unicode-upper (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
-	   (type (integer 0 #x10FFFF) code))
+	   (type codepoint code))
   (unless (unidata-scase *unicode-data*) (load-scase))
   (let* ((scase (unidata-scase *unicode-data*))
 	 (n (logand (qref32 scase code) #xFF)))
@@ -728,7 +728,7 @@
 
 (defun unicode-lower (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
-	   (type (integer 0 #x10FFFF) code))
+	   (type codepoint code))
   (unless (unidata-scase *unicode-data*) (load-scase))
   (let* ((scase (unidata-scase *unicode-data*))
 	 (n (logand (ash (qref32 scase code) -8) #xFF)))
@@ -739,7 +739,7 @@
 
 (defun unicode-title (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
-	   (type (integer 0 #x10FFFF) code))
+	   (type codepoint code))
   (unless (unidata-scase *unicode-data*) (load-scase))
   (let* ((scase (unidata-scase *unicode-data*))
 	 (n (logand (ash (qref32 scase code) -16) #xFF)))
@@ -749,19 +749,19 @@
 	  (if (logbitp 7 n) (+ code m) (- code m))))))
 
 (defun unicode-num1 (code)
-  (declare (type (integer 0 #x10FFFF) code))
+  (declare (type codepoint code))
   (unless (unidata-numeric *unicode-data*) (load-numerics))
   (let ((n (qref32 (unidata-numeric *unicode-data*) code)))
     (if (logbitp 25 n) (logand (ash n -3) #xF) nil)))
 
 (defun unicode-num2 (code)
-  (declare (type (integer 0 #x10FFFF) code))
+  (declare (type codepoint code))
   (unless (unidata-numeric *unicode-data*) (load-numerics))
   (let ((n (qref32 (unidata-numeric *unicode-data*) code)))
     (if (logbitp 24 n) (logand (ash n -3) #xF) nil)))
 
 (defun unicode-num3 (code)
-  (declare (type (integer 0 #x10FFFF) code))
+  (declare (type codepoint code))
   (unless (unidata-numeric *unicode-data*) (load-numerics))
   (let ((n (qref32 (unidata-numeric *unicode-data*) code)))
     (if (logbitp 23 n)
@@ -771,7 +771,7 @@
 
 (defun unicode-decomp (code &optional (compatibility t))
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
-	   (type (integer 0 #x10FFFF) code))
+	   (type codepoint code))
   (if (<= #xAC00 code #xD7A3)
       ;; Hangul syllables.  (See
       ;; http://www.unicode.org/reports/tr15/#Hangul for the
@@ -802,17 +802,17 @@
 			    type))
 		  nil))))))
 
-(declaim (ftype (function ((integer 0 #x10FFFF)) (unsigned-byte 8))
+(declaim (ftype (function (codepoint) (unsigned-byte 8))
 		unicode-combining-class))
 (defun unicode-combining-class (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
-	   (type (integer 0 #x10FFFF) code))
+	   (type codepoint code))
   (unless (unidata-combining *unicode-data*) (load-combining))
   (the (unsigned-byte 8) (qref8 (unidata-combining *unicode-data*) code)))
 
 (defun unicode-bidi-class (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
-	   (type (integer 0 #x10FFFF) code))
+	   (type codepoint code))
   (unless (unidata-bidi *unicode-data*) (load-bidi))
   (logand (qref16 (unidata-bidi *unicode-data*) code) #x1F))
 
@@ -821,13 +821,13 @@
 
 (defun unicode-bidi-mirror-p (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
-	   (type (integer 0 #x10FFFF) code))
+	   (type codepoint code))
   (unless (unidata-bidi *unicode-data*) (load-bidi))
   (logbitp 5 (qref16 (unidata-bidi *unicode-data*) code)))
 
 (defun unicode-mirror-codepoint (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
-	   (type (integer 0 #x10FFFF) code))
+	   (type codepoint code))
   (unless (unidata-bidi *unicode-data*) (load-bidi))
   (let* ((d (unidata-bidi *unicode-data*))
 	 (x (ash (qref16 d code) -6))
@@ -842,28 +842,28 @@
 
 (defun unicode-nfc-qc (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
-	   (type (integer 0 #x10FFFF) code))
+	   (type codepoint code))
   (unless (unidata-qc-nfc *unicode-data*) (load-normalization-qc))
   (ecase (qref2 (unidata-qc-nfc *unicode-data*) code)
     (0 :Y) (1 :M) (2 :N)))
 
 (defun unicode-nfkc-qc (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
-	   (type (integer 0 #x10FFFF) code))
+	   (type codepoint code))
   (unless (unidata-qc-nfkc *unicode-data*) (load-normalization-qc))
   (ecase (qref2 (unidata-qc-nfkc *unicode-data*) code)
     (0 :Y) (1 :M) (2 :N)))
 
 (defun unicode-nfd-qc (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
-	   (type (integer 0 #x10FFFF) code))
+	   (type codepoint code))
   (unless (unidata-qc-nfd *unicode-data*) (load-normalization-qc))
   (ecase (qref1 (unidata-qc-nfd *unicode-data*) code)
     (0 :Y) (1 :N)))
 
 (defun unicode-nfkd-qc (code)
   (declare (optimize (speed 3) (space 0) (debug 0) (safety 0))
-	   (type (integer 0 #x10FFFF) code))
+	   (type codepoint code))
   (unless (unidata-qc-nfkd *unicode-data*) (load-normalization-qc))
   (ecase (qref1 (unidata-qc-nfkd *unicode-data*) code)
     (0 :Y) (1 :N)))
@@ -912,7 +912,7 @@
 
 (declaim (inline compose-hangul))
 (defun compose-hangul (c1 c2)
-  (declare (type (integer 0 #x10FFFF) c1 c2)
+  (declare (type codepoint c1 c2)
 	   (optimize (speed 3)))
   (let ((index-l (- c1 #x1100)))
     (cond ((and (<= 0 index-l)
@@ -933,7 +933,7 @@
 	     
 
 (defun get-pairwise-composition (c1 c2)
-  (declare (type (integer 0 #x10FFFF) c1 c2)
+  (declare (type codepoint c1 c2)
 	   (optimize (speed 3)))
   (unless *composition-pair-table*
     (setf *composition-pair-table* (build-composition-table)))

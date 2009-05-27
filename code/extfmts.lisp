@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.21 2009/05/20 21:47:36 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.22 2009/05/27 20:34:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -394,7 +394,7 @@
 
 (declaim (inline get-inverse))
 (defun get-inverse (ntrie code)
-  (declare (type lisp::ntrie16 ntrie) (type (integer 0 #x10FFFF) code))
+  (declare (type lisp::ntrie16 ntrie) (type codepoint code))
   (let ((n (lisp::qref ntrie code)))
     (and n (let ((m (aref (lisp::ntrie16-lvec ntrie) n)))
 	     (if (= m #xFFFF) nil m)))))
@@ -537,7 +537,7 @@
 	      (type simple-string string)
 	      (type kernel:index start end ptr)
 	      (type (simple-array (unsigned-byte 8) (*)) buffer)
-              (type (integer 0 #x10ffff) code c)
+              (type codepoint code c)
 	      (type (or null fixnum) widep)
 	      (ignorable state))
     (loop with i of-type kernel:index = start
@@ -573,7 +573,7 @@
 	      (type kernel:index end count)
 	      (type (integer -1 (#.array-dimension-limit)) ptr pos)
 	      (type simple-string string)
-              (type (integer 0 #x10ffff) code)
+              (type codepoint code)
 	      (ignorable state))
      (loop until (>= ptr end)
 	do (when (= pos (length string))

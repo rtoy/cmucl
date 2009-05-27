@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.11 2009/05/20 16:30:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.12 2009/05/27 20:34:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,7 +30,8 @@
 	  char-not-equal char-lessp char-greaterp char-not-greaterp
 	  char-not-lessp character char-code code-char char-upcase
 	  char-titlecase title-case-p
-	  char-downcase digit-char char-int char-name name-char))
+	  char-downcase digit-char char-int char-name name-char
+	  codepoint-limit codepoint))
 
 
 ;;; Compile some trivial character operations via inline expansion:
@@ -48,6 +49,14 @@
 
 (deftype char-code ()
   `(integer 0 (,char-code-limit)))
+
+(defconstant codepoint-limit
+  #x110000
+  "The upper exclusive bound on the value of a Unicode codepoint")
+
+;;; The range of a Unicode code point
+(deftype codepoint ()
+  `(integer 0 (,codepoint-limit)))
 
 
 (macrolet ((frob (char-names-list)

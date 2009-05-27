@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.2.4.1.2.11 2009/05/20 21:47:37 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.2.4.1.2.12 2009/05/27 20:34:19 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -35,7 +35,7 @@
 			   (,unput 1)
 			   (return (values #xFFFD (1+ ,j)))))))))
 	      (check (,n ,i)
-	       (declare (type (integer 0 #x10FFFF) ,n)
+	       (declare (type lisp:codepoint ,n)
 			(type (integer 1 5) ,i))
 	       ;; We check for overlong sequences (sequences that
 	       ;; encode to codepoints that don't need that long of a

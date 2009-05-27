@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.25 2009/05/27 17:39:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.26 2009/05/27 20:34:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,7 +36,7 @@
   for.  :High means to test for the high (leading) surrogate; :Low
   tests for the low (trailing surrogate).  A value of :Any or Nil
   tests for any surrogate value (high or low)."
-  (declare (type (or character (integer 0 #x10ffff)) c))
+  (declare (type (or character codepoint) c))
   (let ((code (if (characterp c)
 		  (char-code c)
 		  c)))
@@ -83,7 +83,7 @@
   "Return the high and low surrogate characters for Codepoint.  If
   Codepoint is in the BMP, the first return value is the corresponding
   character and the second is NIL."
-  (declare (type (integer 0 #x10FFFF) codepoint))
+  (declare (type codepoint codepoint))
   (if (< codepoint #x10000)
       (values (code-char codepoint) nil)
       (let* ((tmp (- codepoint #x10000))
@@ -96,7 +96,7 @@
   codepoint requires a surrogate pair, the high (leading surrogate) is
   stored at position I and the low (trailing) surrogate is stored at
   I+1"
-  (declare (type (integer 0 #x10FFFF) codepoint)
+  (declare (type codepoint codepoint)
 	   (type simple-string string))
   (let ((widep nil))
     (multiple-value-bind (hi lo)
@@ -481,10 +481,10 @@
 	   (declare (fixnum index1 index2))
 	   (multiple-value-bind (char1 wide1)
 	       (codepoint string1 index1)
-	     (declare (type (integer 0 #x10ffff) char1))
+	     (declare (type codepoint char1))
 	     (multiple-value-bind (char2 wide2)
 		 (codepoint string2 index2)
-	       (declare (type (integer 0 #x10ffff) char2))
+	       (declare (type codepoint char2))
 	       (setf char1 (equal-char-codepoint char1))
 	       (setf char2 (equal-char-codepoint char2))
 	       (if (= char1 char2)
@@ -797,7 +797,7 @@
 	 (l (length string))
 	 (c (codepoint string index l))
 	 (n (+ index (if (> c #xFFFF) 2 1))))
-    (declare (type (integer 0 #x10FFFF) c) (type kernel:index l n))
+    (declare (type codepoint c) (type kernel:index l n))
     (loop while (< n l) do
       (let* ((c (codepoint string n l))
 	     (d (the (unsigned-byte 8) (unicode-combining-class c))))
@@ -852,7 +852,7 @@
 
 #+unicode
 (defun string-reverse* (sequence)
-  (declare #+(or)(optimize (speed 3) (space 0) (safety 0) (debug 0))
+  (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type string sequence))
   (with-string sequence
     (let* ((length (- end start))
@@ -866,7 +866,7 @@
 
 #+unicode
 (defun string-nreverse* (sequence)
-  (declare #+(or)(optimize (speed 3) (space 0) (safety 0) (debug 0))
+  (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type string sequence))
   (with-string sequence
     (flet ((rev (start end)
