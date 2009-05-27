@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.23 2009/05/27 01:06:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.24 2009/05/27 11:31:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -921,30 +921,29 @@
 ;; example can return YES, NO, or MAYBE.  For our purposes, only YES
 ;; is important, for which we return T.   For NO or MAYBE, we return NIL.
 (defun normalized-form-p (string &optional (form :nfc))
-  (declare (type string string)
-	   (type (member :nfc :nfkc :nfd :nfkd) form)
+  (declare (type (member :nfc :nfkc :nfd :nfkd) form)
 	   (optimize (speed 3)))
-  (let ((last-class 0)
-	(len (length string)))
-    (declare (type (integer 0 256) last-class))
-    (do ((k 0 (1+ k)))
-	((>= k len))
-      (declare (type kernel:index k))
-      (multiple-value-bind (ch widep)
-	  (codepoint string k len)
-	(when widep (incf k))
-	;; Handle ASCII specially
-	(unless (< ch 128)
-	  (let ((class (unicode-combining-class ch)))
-	    (declare (type (unsigned-byte 8) class))
-	    (when (and (> last-class class) (not (zerop class)))
-	      ;; Definitely not normalized
-	      (return-from normalized-form-p nil))
-	    (let ((check (normalized-codepoint-p ch form)))
-	      (unless (eq check :y)
-		(return-from normalized-form-p nil)))
-	    (setf last-class class)))))
-    t))
+  (with-string string
+    (let ((last-class 0))
+      (declare (type (integer 0 256) last-class))
+      (do ((k start (1+ k)))
+	  ((>= k end))
+	(declare (type kernel:index k))
+	(multiple-value-bind (ch widep)
+	    (codepoint string k end)
+	  (when widep (incf k))
+	  ;; Handle ASCII specially
+	  (unless (< ch 128)
+	    (let ((class (unicode-combining-class ch)))
+	      (declare (type (unsigned-byte 8) class))
+	      (when (and (> last-class class) (not (zerop class)))
+		;; Definitely not normalized
+		(return-from normalized-form-p nil))
+	      (let ((check (normalized-codepoint-p ch form)))
+		(unless (eq check :y)
+		  (return-from normalized-form-p nil)))
+	      (setf last-class class)))))
+      t)))
 
 
 ;; Compose a string in place.  The string must already be in decomposed form.
@@ -1006,13 +1005,12 @@
 #+unicode
 (defun string-to-nfc (string)
   "Convert String to Unicode Normalization Form C (NFC)."
-  (let ((s (copy-seq string)))
-    (if (normalized-form-p s :nfc)
-	s
-	(coerce (if (normalized-form-p s :nfd)
-		    (%compose s)
-		    (%compose (string-to-nfd s)))
-		'simple-string))))
+  (if (normalized-form-p string :nfc)
+      (if (simple-string-p string) string (coerce string 'simple-string))
+      (coerce (if (normalized-form-p string :nfd)
+		  (%compose (copy-seq string))
+		  (%compose (string-to-nfd string)))
+	      'simple-string)))
 
 #-unicode  ;; Needed by package.lisp
 (defun string-to-nfc (string)
@@ -1020,10 +1018,9 @@
 
 (defun string-to-nfkc (string)
   "Convert String to Unicode Normalization Form KC (NFKC)."
-  (let ((s (copy-seq string)))
-    (if (normalized-form-p s :nfkc)
-	s
-	(coerce (if (normalized-form-p s :nfkd)
-		    (%compose s)
-		    (%compose (string-to-nfkd s)))
-		'simple-string))))
+  (if (normalized-form-p string :nfkc)
+      (if (simple-string-p string) string (coerce string 'simple-string))
+      (coerce (if (normalized-form-p string :nfkd)
+		  (%compose (copy-seq string))
+		  (%compose (string-to-nfkd string)))
+	      'simple-string)))
