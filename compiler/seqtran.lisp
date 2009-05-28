@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.31.18.1 2009/03/25 21:51:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.31.18.2 2009/05/28 20:36:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -661,3 +661,16 @@
   ;; The result type of MAKE-SEQUENCE is OUTPUT-SPEC, but check to see
   ;; if it makes sense.
   (output-spec-sequence output-spec))
+
+(defoptimizer (lisp::shrink-vector derive-type) ((vector new-size))
+  ;; The result of shrink-vector is another vector of the same type as
+  ;; the input.  If the size is a known constant, we use it, otherwise
+  ;; just make the dimension unknown.
+  (let* ((type (continuation-type vector))
+	 (dim (if (constant-continuation-p new-size)
+		  `(,(continuation-value new-size))
+		  '(*)))
+	 (new-type (kernel::copy-array-type type)))
+    (setf (kernel:array-type-dimensions new-type) dim)
+    new-type))
+  
