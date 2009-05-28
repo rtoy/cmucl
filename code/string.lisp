@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.26 2009/05/27 20:34:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.27 2009/05/28 16:17:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -893,15 +893,15 @@
 				   (t (round (length string) 5/6)))))
 	(fillptr 0))
     (declare (type kernel:index fillptr))
-    (labels ((rec (string)
+    (labels ((rec (string start end)
 	       (declare (type simple-string string))
-	       (do ((i 0 (1+ i)))
-		   ((= i (length string)))
+	       (do ((i start (1+ i)))
+		   ((= i end))
 		 (declare (type kernel:index i))
 		 (multiple-value-bind (code wide) (codepoint string i)
 		   (when wide (incf i))
 		   (let ((decomp (unicode-decomp code compatibility)))
-		     (if decomp (rec decomp) (out code))))))
+		     (if decomp (rec decomp 0 (length decomp)) (out code))))))
 	     (out (code)
 	       (multiple-value-bind (hi lo) (surrogates code)
 		 (outch hi)
@@ -938,9 +938,8 @@
 					  (schar result (1+ last)))))
 			    (decf last (if wide2 2 1)))
 			   (t (return))))))))
-      (with-array-data ((string string) (start) (end))
-	(declare (ignore start end))
-	(rec string))
+      (with-string string
+	(rec string start end))
       (shrink-vector result fillptr))))
 
 (declaim (inline normalized-codepoint-p))
