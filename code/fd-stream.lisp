@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.12 2009/05/12 16:31:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.13 2009/05/28 18:52:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -121,8 +121,22 @@
 
 (defun endian-swap-value (vector endian-swap)
   (case endian-swap
-    (:network-order #+big-endian 0
-		    #+little-endian (1- (vector-elt-width vector)))
+    (:network-order
+     #+big-endian 0
+     ;; This is needed because the little-endian (x86) architectures
+     ;; store the lowest indexed element in the least significant part
+     ;; of a byte.  On a big-endian machine (sparc, ppc), the lowest
+     ;; indexed element is at the most significant part of a byte.
+     #+little-endian
+     (typecase vector
+       ((array (unsigned-byte 4) (*))
+	-1)
+       ((array (unsigned-byte 2) (*))
+	-2)
+       ((array (unsigned-byte 1) (*))
+	-8)
+       (t
+	(1- (vector-elt-width vector)))))
     (:byte-8 0)
     (:byte-16 1)
     (:byte-32 3)
@@ -130,10 +144,30 @@
     (:byte-128 15)
     ;; additions by Lynn Quam
     (:machine-endian 0)
-    (:big-endian #+big-endian 0
-		 #+little-endian (1- (vector-elt-width vector)))
-    (:little-endian #+big-endian (1- (vector-elt-width vector))
-		    #+little-endian 0)
+    (:big-endian
+     #+big-endian 0
+     #+little-endian
+     (typecase vector
+       ((array (unsigned-byte 4) (*))
+	-1)
+       ((array (unsigned-byte 2) (*))
+	-2)
+       ((array (unsigned-byte 1) (*))
+	-8)
+       (t
+	(1- (vector-elt-width vector)))))
+    (:little-endian
+     #+big-endian
+     (typecase vector
+       ((array (unsigned-byte 4) (*))
+	-1)
+       ((array (unsigned-byte 2) (*))
+	-2)
+       ((array (unsigned-byte 1) (*))
+	-8)
+       (t
+	(1- (vector-elt-width vector))))
+     #+little-endian 0)
     (otherwise endian-swap)))
 
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.3 2009/05/25 20:08:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.4 2009/05/28 18:52:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,8 +52,7 @@
   (declare (type simple-array vector))
   (declare (fixnum start end endian-swap ))
   (unless (eql endian-swap 0)
-    (when (or (>= endian-swap (vector-elt-width vector))
-	      (< endian-swap 0))
+    (when (>= endian-swap (vector-elt-width vector))
       (error "endian-swap ~a is illegal for element-type of vector ~a"
 	     endian-swap vector))
     (lisp::with-array-data ((data vector) (offset-start start)
@@ -79,6 +78,37 @@
 	  ;; Not sure that swap-endians-456
 	  ((4 5 6) (swap-endians-456 data offset-start offset-end
 				     endian-swap))
+	  (-1
+	   ;; Swap nibbles
+	   (loop for i fixnum from start below end
+		 do
+		 (let ((x (bref data i)))
+		   (setf (bref data i) (logior (ash (logand x #x0f) 4)
+					       (ash (logand x #xf0) -4))))))
+	  (-2
+	   ;; Swap pairs
+	   (loop for i fixnum from start below end
+		 do
+		 (let ((x (bref data i)))
+		   (declare (type (unsigned-byte 8) x))
+		   (setf x (logior (ash (logand x #x33) 2)
+				   (ash (logand x #xcc) -2)))
+		   (setf x (logior (ash (logand x #x0f) 4)
+				   (ash (logand x #xf0) -4)))
+		   (setf (bref data i) x))))
+	  (-8
+	   ;; Swap bits
+	   (loop for i fixnum from start below end
+		 do
+		 (let ((x (bref data i)))
+		   (declare (type (unsigned-byte 8) x))
+		   (setf x (logior (ash (logand x #x55) 1)
+				   (ash (logand x #xaa) -1)))
+		   (setf x (logior (ash (logand x #x33) 2)
+				   (ash (logand x #xcc) -2)))
+		   (setf x (logior (ash (logand x #x0f) 4)
+				   (ash (logand x #xf0) -4)))
+		   (setf (bref data i) x))))
 	  ;;otherwise, do nothing ???
 	  )))))
 
