@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.4 2009/05/28 18:52:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.5 2009/05/29 16:52:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -201,7 +201,7 @@
 				  :end end-idx)
 	       (endian-swap-vector vector start-idx end-idx swap-mask)))
 	   vector))
-    (* next-index octets-per-element)))
+    next-index))
 
 
 (declaim (end-block)) ; READ-VECTOR WRITE-VECTOR block
