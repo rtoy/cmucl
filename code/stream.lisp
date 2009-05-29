@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83.6.4.2.3 2009/05/25 20:08:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83.6.4.2.4 2009/05/29 19:15:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2132,9 +2132,10 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 	       (string
 		(with-array-data ((seq seq) (start start) (end end))
 		  (read-into-string seq stream start end partial-fill)))
+	       (simple-array		; We also know that it is a 'vector'.
+		(read-into-simple-array seq stream start end))
 	       (vector
-		(with-array-data ((seq seq) (start start) (end end))
-		  (read-into-simple-array seq stream start end)))))))
+		(read-into-vector seq stream start end))))))
     ;; fundamental-stream
     (stream-read-sequence stream seq start end)))
 
@@ -2523,10 +2524,10 @@ SEQ:	a proper SEQUENCE
 					; produced by VECTOR has
 					; element-type T in CMUCL.
 		(write-vector-out seq stream start end))
+	       (simple-array		; We know it is also a vector!
+		(write-simple-array-out seq stream start end))
 	       (vector
-		(with-array-data ((seq seq) (start start) (end end))
-		  (write-simple-array-out seq stream start end))))
-	     )))
+		(write-vector-out seq stream start end))))))
     ;; fundamental-stream
     (stream-write-sequence stream seq start end))
   seq)
