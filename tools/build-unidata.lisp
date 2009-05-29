@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.9 2009/05/25 20:08:29 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.10 2009/05/29 16:12:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,6 +37,7 @@
   qc-nfkd
   qc-nfc
   qc-nfkc
+  comp-exclusions
   )
 
 (defvar *unicode-data* (make-unidata))
@@ -403,7 +404,7 @@
 	     (write16 (ldb (byte 16 0) n) stm)))
     (with-open-file (stm path :direction :io :if-exists :rename-and-delete
 			 :element-type '(unsigned-byte 8))
-      (let ((index (make-array 12 :fill-pointer 0)))
+      (let ((index (make-array 13 :fill-pointer 0)))
 	;; File header
 	(write32 +unicode-magic-number+ stm)	; identification "magic"
 	;; File format version 
@@ -571,6 +572,11 @@
 	  (write-vector (ntrie2-hvec data) stm :endian-swap :network-order)
 	  (write-vector (ntrie2-mvec data) stm :endian-swap :network-order)
 	  (write-vector (ntrie2-lvec data) stm :endian-swap :network-order))
+	;; Write composition exclusion table
+	(let ((data (unidata-comp-exclusions *unicode-data*)))
+	  (vector-push (file-position stm) index)
+	  (write16 (length data) stm)
+	  (write-vector data stm :endian-swap :network-order))
 	;; Patch up index
 	(file-position stm 8)
 	(dotimes (i (length index))
@@ -589,6 +595,7 @@
   aliases
   mcode
   norm-qc
+  comp-exclusion
   ;; ...
   )
 
@@ -597,48 +604,55 @@
 (defun foreach-ucd (name ucd-directory fn)
   (with-open-file (s (make-pathname :name name :type "txt"
 				    :defaults ucd-directory))
-    (if (string= name "Unihan")
-	(loop for line = (read-line s nil) while line do
-	  (when (char= (char line 0) #\U)
-	    (let* ((tab1 (position #\Tab line))
-		   (tab2 (position #\Tab line :start (1+ tab1))))
-	      (funcall fn
-		       (parse-integer line :radix 16 :start 2 :end tab1)
-		       (subseq line (1+ tab1) tab2)
-		       (subseq line (1+ tab2))))))
-	(loop with save = 0
-	       for line = (read-line s nil) as end = (position #\# line)
-	  while line do
-	    (loop while (and end (plusp end)
-			     (char= (char line (1- end)) #\Space))
-	      do (decf end))
-	    (when (position #\; line :end end)
-	      (let* ((split (loop for i = 0 then (1+ j)
+    (cond
+      ((string= name "Unihan")
+       (loop for line = (read-line s nil) while line do
+	     (when (char= (char line 0) #\U)
+	       (let* ((tab1 (position #\Tab line))
+		      (tab2 (position #\Tab line :start (1+ tab1))))
+		 (funcall fn
+			  (parse-integer line :radix 16 :start 2 :end tab1)
+			  (subseq line (1+ tab1) tab2)
+			  (subseq line (1+ tab2)))))))
+      ((string= name "CompositionExclusions")
+       (loop for line = (read-line s nil) while line do
+	     (let ((code (parse-integer line :radix 16 :junk-allowed t)))
+	       (when code
+		 (funcall fn code)))))
+      (t
+       (loop with save = 0
+	     for line = (read-line s nil) as end = (position #\# line)
+	     while line do
+	     (loop while (and end (plusp end)
+			      (char= (char line (1- end)) #\Space))
+	       do (decf end))
+	     (when (position #\; line :end end)
+	       (let* ((split (loop for i = 0 then (1+ j)
 				   as j = (position #\; line :start i :end end)
-			       collect (string-trim '(#\Space #\Tab)
-						    (subseq line i (or j end)))
-			       while j))
-		     (first (first split))
-		     (second (second split))
-		     (length (length second))
-		     (brk (search ".." first))
-		     hi lo)
-		(if brk
-		    (setq lo (parse-integer first :radix 16 :junk-allowed t)
-			  hi (parse-integer first :radix 16 :start (+ brk 2)))
-		    (setq lo (parse-integer first :radix 16)
-			  hi lo))
-		(cond ((and (> length 8)
-			    (string= second ", First>" :start1 (- length 8)))
-		       (setq save lo))
-		      ((and (> length 7)
-			    (string= second ", Last>" :start1 (- length 7)))
-		       (apply fn save hi
-			      (concatenate 'string
-					   (subseq second 0 (- length 7)) ">")
-			      (rest (rest split))))
-		      (t
-		       (apply fn lo hi (rest split))))))))))
+				   collect (string-trim '(#\Space #\Tab)
+							(subseq line i (or j end)))
+				   while j))
+		      (first (first split))
+		      (second (second split))
+		      (length (length second))
+		      (brk (search ".." first))
+		      hi lo)
+		 (if brk
+		     (setq lo (parse-integer first :radix 16 :junk-allowed t)
+			   hi (parse-integer first :radix 16 :start (+ brk 2)))
+		     (setq lo (parse-integer first :radix 16)
+			   hi lo))
+		 (cond ((and (> length 8)
+			     (string= second ", First>" :start1 (- length 8)))
+			(setq save lo))
+		       ((and (> length 7)
+			     (string= second ", Last>" :start1 (- length 7)))
+			(apply fn save hi
+			       (concatenate 'string
+					    (subseq second 0 (- length 7)) ">")
+			       (rest (rest split))))
+		       (t
+			(apply fn lo hi (rest split)))))))))))
 
 (defun parse-decomposition (string)
   (let ((type nil) (n 0))
@@ -727,6 +741,11 @@
 		     (when ent
 		       (setf (getf (ucdent-norm-qc ent) :nfkc)
 			     (intern value "KEYWORD"))))))))
+    (foreach-ucd "CompositionExclusions"
+		 ucd-directory
+      (lambda (min)		 
+	(let ((entry (find min vec :key #'ucdent-code)))
+	  (setf (ucdent-comp-exclusion entry) t))))
     (values vec (make-range :codes range))))
 
 
@@ -912,4 +931,12 @@
 	      0 2 #x55)
       (setf (unidata-qc-nfkc *unicode-data*)
 	    (make-ntrie2 :split #x55 :hvec hvec :mvec mvec :lvec lvec)))
+    (format t "~&Building composition exclusion table~%")
+    (let ((exclusions (make-array 1 :element-type '(unsigned-byte 32)
+				  :adjustable t
+				  :fill-pointer 0)))
+      (loop for ent across ucd do
+	   (when (ucdent-comp-exclusion ent)
+	     (vector-push-extend (ucdent-code ent) exclusions)))
+      (setf (unidata-comp-exclusions *unicode-data*) (copy-seq exclusions)))
     nil))

@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.24 2009/05/28 15:04:29 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.25 2009/05/29 16:12:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,6 +30,7 @@
   qc-nfkd
   qc-nfc
   qc-nfkc
+  comp-exclusions
   )
 
 (defvar *unicode-data* (make-unidata))
@@ -556,6 +557,12 @@
     (setf (unidata-qc-nfkc *unicode-data*)
 	(make-ntrie2 :split split :hvec hvec :mvec mvec :lvec lvec))))
 
+(defloader load-composition-exclusions (stm 12)
+  (let* ((len (read16 stm))
+	 (ex (make-array len :element-type '(unsigned-byte 32))))
+    (read-vector ex stm :endian-swap :network-order)
+    (setf (unidata-comp-exclusions *unicode-data*) ex)))
+
 
 ;;; Accessor functions.
 
@@ -868,22 +875,12 @@
   (ecase (qref1 (unidata-qc-nfkd *unicode-data*) code)
     (0 :Y) (1 :N)))
 
-;; @@ FIXME: This should be read from unidata.bin, but it's not there
-;; yet.  This is CompositionExclusions.txt
-(defvar *composition-exclusion*
-  '(#x0958 #x0959 #x095A #x095B #x095C #x095D #x095E #x095F #x09DC #x09DD #x09DF
-    #x0A33 #x0A36 #x0A59 #x0A5A #x0A5B #x0A5E #x0B5C #x0B5D #x0F43 #x0F4D #x0F52
-    #x0F57 #x0F5C #x0F69 #x0F76 #x0F78 #x0F93 #x0F9D #x0FA2 #x0FA7 #x0FAC #x0FB9
-    #xFB1D #xFB1F #xFB2A #xFB2B #xFB2C #xFB2D #xFB2E #xFB2F #xFB30 #xFB31 #xFB32
-    #xFB33 #xFB34 #xFB35 #xFB36 #xFB38 #xFB39 #xFB3A #xFB3B #xFB3C #xFB3E #xFB40
-    #xFB41 #xFB43 #xFB44 #xFB46 #xFB47 #xFB48 #xFB49 #xFB4A #xFB4B #xFB4C #xFB4D
-    #xFB4E #x2ADC #x1D15E #x1D15F #x1D160 #x1D161 #x1D162 #x1D163 #x1D164 #x1D1BB
-    #x1D1BC #x1D1BD #x1D1BE #x1D1BF #x1D1C0))
+(defun unicode-composition-exclusions ()
+  (unless (unidata-comp-exclusions *unicode-data*)
+    (load-composition-exclusions))
+  (unidata-comp-exclusions *unicode-data*))
 
 ;; Build the composition pair table.
-;;
-;; @@ FIXME:: The composition table should probably be in unidata.bin,
-;; but it's not there yet.
 (defun build-composition-table ()
   (let ((table (make-hash-table)))
     (dotimes (cp #x10ffff)
@@ -900,12 +897,13 @@
 		  (c2 (char-code (aref decomp 1))))
 	      (setf (gethash (logior (ash c1 16) c2) table) cp))))))
     ;; Remove any in the exclusion list
-    (dolist (cp *composition-exclusion*)
-      (let ((decomp (unicode-decomp cp nil)))
-	  (when (and decomp (= (length decomp) 2))
-	    (let ((c1 (char-code (aref decomp 0)))
-		  (c2 (char-code (aref decomp 1))))
-	      (remhash (logior (ash c1 16) c2) table)))))
+    (loop for cp across (unicode-composition-exclusions)
+       do
+       (let ((decomp (unicode-decomp cp nil)))
+	 (when (and decomp (= (length decomp) 2))
+	   (let ((c1 (char-code (aref decomp 0)))
+		 (c2 (char-code (aref decomp 1))))
+	     (remhash (logior (ash c1 16) c2) table)))))
     (values table)))
 
 (defvar *composition-pair-table* nil)
