@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.12 2009/05/27 20:34:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.13 2009/05/30 02:02:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -265,7 +265,7 @@
     (or (< 64 m 91) (< 96 m 123)
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m 127)
-	     (<= +unicode-category-lower+
+	     (<= +unicode-category-upper+
 		 (unicode-category m)
 		 +unicode-category-title+)))))
 
