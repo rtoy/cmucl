@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.5 2009/05/29 16:52:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.6 2009/06/02 18:26:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,6 +128,36 @@
        (simple-array double-float (*))	; not previously supported by read-sequence
        ))
 
+;; Read from stream into vector.  Start and End are byte offsets into
+;; the vector.
+(defun read-vector* (vector stream start end)
+  (labels ((get-n-bytes (stream data offset numbytes)
+	       ;; Handle case of read-n-bytes reading short.
+	       (let ((need numbytes))
+		 (loop
+		     (let ((n (read-n-bytes stream data offset need nil)))
+		       (decf need n)
+		       (cond ((or (zerop need) ; Complete
+				  (zerop n)) ; EOF
+			      (return (- numbytes need)))
+			     (t (incf offset n)))))))
+	     (read-n-x8-bytes (stream data offset-start offset-end byte-size)
+	       (let* ((x8-mult (truncate byte-size 8))
+		      (numbytes (* (- offset-end offset-start) x8-mult))
+		      (bytes-read (get-n-bytes
+				   stream
+				   data
+				   offset-start
+				   numbytes)))
+		 ;; A check should probably be made here in order to
+		 ;; be sure that we actually read the right amount
+		 ;; of bytes. (I.e. (truncate bytes-read x8-mult)
+		 ;; should return a 0 second value.
+		 (if (< bytes-read numbytes)
+		     (+ offset-start (truncate bytes-read x8-mult))
+		     offset-end))))
+    (read-n-x8-bytes stream vector start end 8)))
+
 ;;; New versions of READ-VECTOR and WRITE-VECTOR that deal with octet positions
 ;;; rather than element-positions, for compatibility with Allegro.
 
@@ -154,14 +184,27 @@
   (unless (typep vector '(or string simple-numeric-vector))
     (error "Wrong vector type ~a for read-vector on stream ~a." (type-of vector) stream))
   (let* ((octets-per-element (vector-elt-width vector))
-	 ;; read-sequence is parameterized by element position.
-	 (next-index (read-sequence vector stream
-				    :start (floor (or start 0) octets-per-element)
-				    :end (and end (floor end octets-per-element)))))
-    (declare (fixnum octets-per-element next-index))
-    (endian-swap-vector vector (or start 0) next-index
+	 (start-elt (truncate start octets-per-element))
+	 (end-octet (or end (truncate (* (length vector) octets-per-element))))
+	 (end-elt  (if end
+		       (truncate end octets-per-element)
+		       (length vector)))
+	 (next-index (read-vector* vector stream
+				   start
+				   end-octet)))
+    (endian-swap-vector vector start-elt end-elt
 			(endian-swap-value vector endian-swap))
-    (* next-index octets-per-element)))
+    next-index))
+
+;; Write vector into stream.  Start and End are byte offsets into the
+;; vector.
+(defun write-vector* (vector stream start end)
+  (flet ((write-n-x8-bytes (stream data start end byte-size)
+	   (let ((x8-mult (truncate byte-size 8)))
+	     (system:output-raw-bytes stream data
+				      (* x8-mult start)
+				      (* x8-mult end)))))
+    (write-n-x8-bytes stream vector start end 8)))
 
 ;;; WRITE VECTOR --
 ;;; returns the next octet-position in vector.
@@ -177,29 +220,26 @@
 	   (values unsigned-byte))
 
   (let* ((octets-per-element (vector-elt-width vector))
-	 (end (or end (* octets-per-element (length vector))))
+	 (start-elt (truncate start octets-per-element))
+	 (end-octet (or end (truncate (* (length vector) octets-per-element))))
+	 (end-elt (if end
+		      (truncate end octets-per-element)
+		      (length vector)))
 	 (swap-mask (endian-swap-value vector endian-swap))
-	 (next-index end))
-    (declare (type fixnum swap-mask end octets-per-element next-index))
+	 (next-index end-octet))
+    (declare (type fixnum swap-mask next-index))
     (cond ((= swap-mask 0)
-	   (write-sequence vector stream
-			   :start (floor start octets-per-element)
-			   :end (and end (floor end octets-per-element))))
-
+	   (write-vector* vector stream start end-octet))
 	  (t
 	   ;; In a multiprocessing situation, WITHOUT-INTERRUPTS might be required here
 	   ;; otherwise the vector could be seen by another process in the modified state.
 	   (unless (typep vector '(or string simple-numeric-vector))
 	     (error "Wrong vector type ~a for write-vector on stream ~a." (type-of vector)
 		    stream))
-	   (let ((start-idx (floor start octets-per-element))
-		 (end-idx (floor end octets-per-element)))
-	     (endian-swap-vector vector start-idx end-idx swap-mask)
-	     (unwind-protect
-		  (write-sequence vector stream
-				  :start start-idx
-				  :end end-idx)
-	       (endian-swap-vector vector start-idx end-idx swap-mask)))
+	   (endian-swap-vector vector start-elt end-elt swap-mask)
+	   (unwind-protect
+		(write-vector* vector stream start end-octet)
+	     (endian-swap-vector vector start-elt end-elt swap-mask))
 	   vector))
     next-index))
 

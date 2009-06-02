@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.13 2009/05/28 18:52:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.14 2009/06/02 18:26:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -97,9 +97,9 @@
   (etypecase vector
     ;; (simple-array fixnum (*)) not supported
     ;; (simple-array base-char (*)) treated specially; don't call this
-    ((simple-array bit (*)) 1)
-    ((simple-array (unsigned-byte 2) (*)) 1)
-    ((simple-array (unsigned-byte 4) (*)) 1)
+    ((simple-array bit (*)) 1/8)
+    ((simple-array (unsigned-byte 2) (*)) 1/4)
+    ((simple-array (unsigned-byte 4) (*)) 1/2)
     ((simple-array (signed-byte 8) (*)) 1)
     ((simple-array (unsigned-byte 8) (*)) 1)
     ((simple-array (signed-byte 16) (*)) 2)

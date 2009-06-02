@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83.6.4.2.4 2009/05/29 19:15:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83.6.4.2.5 2009/06/02 18:26:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2288,9 +2288,6 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 					; to support simple-stream
 					; semantics for read-vector
     character
-    bit
-    (unsigned-byte 2)
-    (unsigned-byte 4)
     (unsigned-byte 8)
     (unsigned-byte 16)
     (unsigned-byte 32)
@@ -2309,10 +2306,7 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
   ;; quite constrain the array element type.
   ;; (declare (type (simple-array (or unsigned-byte signed-byte) (*)) s))
   ;; (declare (type (simple-array * (*)) s))
-  (declare (type (or (simple-array bit (*))
-		     (simple-array (unsigned-byte 2) (*))
-		     (simple-array (unsigned-byte 4) (*))
-		     (simple-array (unsigned-byte 8) (*))
+  (declare (type (or (simple-array (unsigned-byte 8) (*))
 		     (simple-array (signed-byte 8) (*))
 		     (simple-array (unsigned-byte 16) (*))
 		     (simple-array (signed-byte 16) (*))
@@ -2391,24 +2385,6 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 	     ;; operation on a binary stream.
 	     (with-array-data ((data s) (offset-start start) (offset-end end))
 	       (etypecase data
-		 ((simple-array bit (*))
-		  (read-n-x8-bytes stream data
-				   (ceiling offset-start 8)
-				   (ceiling offset-end 8)
-				   8))
-
-		 ((simple-array (unsigned-byte 2) (*))
-		  (read-n-x8-bytes stream data
-				   (ceiling offset-start 4)
-				   (ceiling offset-end 4)
-				   8))
-
-		 ((simple-array (unsigned-byte 4) (*))
-		  (read-n-x8-bytes stream data
-				   (ceiling offset-start 2)
-				   (ceiling offset-end 2)
-				   8))
-
 		 ((simple-array (unsigned-byte 8) (*))
 		  (read-n-x8-bytes stream data offset-start offset-end 8))
 	    
@@ -2621,10 +2597,7 @@ SEQ:	a proper SEQUENCE
   ;; quite constrain the array element type.
   ;; (declare (type (simple-array (or unsigned-byte signed-byte) (*)) s))
   ;; (declare (type (simple-array * (*)) s))
-  (declare (type (or (simple-array bit (*))
-		     (simple-array (unsigned-byte 2) (*))
-		     (simple-array (unsigned-byte 4) (*))
-		     (simple-array (unsigned-byte 8) (*))
+  (declare (type (or (simple-array (unsigned-byte 8) (*))
 		     (simple-array (signed-byte 8) (*))
 		     (simple-array (unsigned-byte 16) (*))
 		     (simple-array (signed-byte 16) (*))
@@ -2636,7 +2609,7 @@ SEQ:	a proper SEQUENCE
 		     (simple-array double-float (*)))		 
 		    seq))
   (when (not (subtypep (stream-element-type stream) 'integer))
-    (error 'type-error
+    (error 'simple-type-error
 	   :datum (elt seq 0)
 	   :expected-type (stream-element-type stream)
 	   :format-control "Trying to output binary data to a text stream."))
@@ -2650,18 +2623,6 @@ SEQ:	a proper SEQUENCE
 			     (start start)
 			     (end   end))
 	     (etypecase data
-	       ((simple-array bit (*))
-		(write-n-x8-bytes stream data
-				  (ceiling start 8) (ceiling end 8) 8))
-
-	       ((simple-array (unsigned-byte 2) (*))
-		(write-n-x8-bytes stream data
-				  (ceiling start 4) (ceiling end 4) 8))
-
-	       ((simple-array (unsigned-byte 4) (*))
-		(write-n-x8-bytes stream data
-				  (ceiling start 2) (ceiling end 2) 8))
-
 	       ((simple-array (unsigned-byte 8) (*))
 		(write-n-x8-bytes stream data start end 8))
 
