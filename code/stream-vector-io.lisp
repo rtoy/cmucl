@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.6 2009/06/02 18:26:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.7 2009/06/03 15:50:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -80,35 +80,42 @@
 				     endian-swap))
 	  (-1
 	   ;; Swap nibbles
-	   (loop for i fixnum from start below end
-		 do
-		 (let ((x (bref data i)))
-		   (setf (bref data i) (logior (ash (logand x #x0f) 4)
-					       (ash (logand x #xf0) -4))))))
+	   ;; NOTE:  start and end are in terms of elements (4 bits)  but we want octets in this loop.
+	   (let ((start-octet (truncate start 2))
+		 (end-octet (truncate end 2)))
+	     (loop for i fixnum from start-octet below end-octet
+		   do
+		   (let ((x (bref data i)))
+		     (setf (bref data i) (logior (ash (logand x #x0f) 4)
+						 (ash (logand x #xf0) -4)))))))
 	  (-2
-	   ;; Swap pairs
-	   (loop for i fixnum from start below end
-		 do
-		 (let ((x (bref data i)))
-		   (declare (type (unsigned-byte 8) x))
-		   (setf x (logior (ash (logand x #x33) 2)
-				   (ash (logand x #xcc) -2)))
-		   (setf x (logior (ash (logand x #x0f) 4)
-				   (ash (logand x #xf0) -4)))
-		   (setf (bref data i) x))))
+	   ;; Swap pairs of bits.
+	   (let ((start-octet (truncate start 4))
+		 (end-octet (truncate end 4)))
+	     (loop for i fixnum from start-octet below end-octet
+		   do
+		   (let ((x (bref data i)))
+		     (declare (type (unsigned-byte 8) x))
+		     (setf x (logior (ash (logand x #x33) 2)
+				     (ash (logand x #xcc) -2)))
+		     (setf x (logior (ash (logand x #x0f) 4)
+				     (ash (logand x #xf0) -4)))
+		     (setf (bref data i) x)))))
 	  (-8
 	   ;; Swap bits
-	   (loop for i fixnum from start below end
-		 do
-		 (let ((x (bref data i)))
-		   (declare (type (unsigned-byte 8) x))
-		   (setf x (logior (ash (logand x #x55) 1)
-				   (ash (logand x #xaa) -1)))
-		   (setf x (logior (ash (logand x #x33) 2)
-				   (ash (logand x #xcc) -2)))
-		   (setf x (logior (ash (logand x #x0f) 4)
-				   (ash (logand x #xf0) -4)))
-		   (setf (bref data i) x))))
+	   (let ((start-octet (truncate start 8))
+		 (end-octet (truncate end 8)))
+	     (loop for i fixnum from start below end
+		   do
+		   (let ((x (bref data i)))
+		     (declare (type (unsigned-byte 8) x))
+		     (setf x (logior (ash (logand x #x55) 1)
+				     (ash (logand x #xaa) -1)))
+		     (setf x (logior (ash (logand x #x33) 2)
+				     (ash (logand x #xcc) -2)))
+		     (setf x (logior (ash (logand x #x0f) 4)
+				     (ash (logand x #xf0) -4)))
+		     (setf (bref data i) x)))))
 	  ;;otherwise, do nothing ???
 	  )))))
 
@@ -142,6 +149,7 @@
 			      (return (- numbytes need)))
 			     (t (incf offset n)))))))
 	     (read-n-x8-bytes (stream data offset-start offset-end byte-size)
+	       (format t "~&read-n-x8-bytes:  offset start, end = ~A ~A~%" offset-start offset-end)
 	       (let* ((x8-mult (truncate byte-size 8))
 		      (numbytes (* (- offset-end offset-start) x8-mult))
 		      (bytes-read (get-n-bytes
@@ -149,6 +157,7 @@
 				   data
 				   offset-start
 				   numbytes)))
+		 (format t "  numbytes = ~A~%" numbytes)
 		 ;; A check should probably be made here in order to
 		 ;; be sure that we actually read the right amount
 		 ;; of bytes. (I.e. (truncate bytes-read x8-mult)
@@ -185,13 +194,20 @@
     (error "Wrong vector type ~a for read-vector on stream ~a." (type-of vector) stream))
   (let* ((octets-per-element (vector-elt-width vector))
 	 (start-elt (truncate start octets-per-element))
-	 (end-octet (or end (truncate (* (length vector) octets-per-element))))
+	 (end-octet (or end (ceiling (* (length vector) octets-per-element))))
 	 (end-elt  (if end
 		       (truncate end octets-per-element)
 		       (length vector)))
 	 (next-index (read-vector* vector stream
 				   start
 				   end-octet)))
+    (format t "~&read-vector: ~%")
+    (format t "   end = ~A~%" end)
+    (format t "   len = ~A~%" (length vector))
+    (format t "   ope = ~A~%" octets-per-element)
+    (format t "   start-elt = ~A~%" start-elt)
+    (format t "   end-octet = ~A~%" end-octet)
+    (format t "   end-elt   = ~A~%" end-elt)
     (endian-swap-vector vector start-elt end-elt
 			(endian-swap-value vector endian-swap))
     next-index))
@@ -221,7 +237,7 @@
 
   (let* ((octets-per-element (vector-elt-width vector))
 	 (start-elt (truncate start octets-per-element))
-	 (end-octet (or end (truncate (* (length vector) octets-per-element))))
+	 (end-octet (or end (ceiling (* (length vector) octets-per-element))))
 	 (end-elt (if end
 		      (truncate end octets-per-element)
 		      (length vector)))
