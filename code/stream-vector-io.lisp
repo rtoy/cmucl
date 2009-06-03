@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.7 2009/06/03 15:50:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.8 2009/06/03 16:54:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -149,7 +149,6 @@
 			      (return (- numbytes need)))
 			     (t (incf offset n)))))))
 	     (read-n-x8-bytes (stream data offset-start offset-end byte-size)
-	       (format t "~&read-n-x8-bytes:  offset start, end = ~A ~A~%" offset-start offset-end)
 	       (let* ((x8-mult (truncate byte-size 8))
 		      (numbytes (* (- offset-end offset-start) x8-mult))
 		      (bytes-read (get-n-bytes
@@ -157,7 +156,6 @@
 				   data
 				   offset-start
 				   numbytes)))
-		 (format t "  numbytes = ~A~%" numbytes)
 		 ;; A check should probably be made here in order to
 		 ;; be sure that we actually read the right amount
 		 ;; of bytes. (I.e. (truncate bytes-read x8-mult)
@@ -201,13 +199,6 @@
 	 (next-index (read-vector* vector stream
 				   start
 				   end-octet)))
-    (format t "~&read-vector: ~%")
-    (format t "   end = ~A~%" end)
-    (format t "   len = ~A~%" (length vector))
-    (format t "   ope = ~A~%" octets-per-element)
-    (format t "   start-elt = ~A~%" start-elt)
-    (format t "   end-octet = ~A~%" end-octet)
-    (format t "   end-elt   = ~A~%" end-elt)
     (endian-swap-vector vector start-elt end-elt
 			(endian-swap-value vector endian-swap))
     next-index))
