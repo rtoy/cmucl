@@ -271,11 +271,30 @@ full Unicode codepoint.)
   Returns non-nil{} if the Unicode category is a graphic category.
 \end{defun}
 
+\begin{defun}{}{upper-case-p}{\args \var{character}}
+  \defunx{lower-case-p}{\args \var{character}}
+  Returns non-nil{} if the Unicode category is an uppercase
+  (lowercase) character.
+\end{defun}
+
+\begin{defun}{lisp:}{title-case-p}{\args \var{character}}
+  Returns non-nil{} if the Unicode category is a titlecase character.
+\end{defun}
+
+\begin{defun}{}{both-case-p}{\args \var{character}}
+  Returns non-nil{} if the Unicode category is an uppercase,
+  lowercase, or titlecase character.
+\end{defun}
+
 \begin{defun}{}{char-upcase}{\args \var{character}}
   \defunx{char-downcase}{\args \var{character}}
   The Unicode uppercase (lowercase) letter is returned.
 \end{defun}
 
+\begin{defun}{lisp:}{char-titlecase}{\args \var{character}}
+  \defunx{char-downcase}{\args \var{character}}
+  The Unicode titlecase letter is returned.
+\end{defun}
 
 \begin{defun}{}{char-name}{\args \var{char}}
    If possible the name of the character \var{char} is returned.  If
