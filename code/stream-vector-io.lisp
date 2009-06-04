@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.9 2009/06/04 12:50:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.10 2009/06/04 13:33:39 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -80,7 +80,9 @@
 				     endian-swap))
 	  (-1
 	   ;; Swap nibbles
-	   ;; NOTE:  start and end are in terms of elements (4 bits)  but we want octets in this loop.
+	   ;;
+	   ;; NOTE: start and end are in terms of elements (4 bits)
+	   ;; but we want octets in this loop.
 	   (let ((start-octet (truncate start 2))
 		 (end-octet (truncate end 2)))
 	     (loop for i fixnum from start-octet below end-octet
@@ -131,47 +133,44 @@
        (simple-array (signed-byte 32) (*))
        (simple-array (unsigned-byte *) (*))
        (simple-array (signed-byte *) (*))
-       (simple-array single-float (*))	; not previously supported by read-sequence
-       (simple-array double-float (*))	; not previously supported by read-sequence
-       ))
+       (simple-array single-float (*))
+       (simple-array double-float (*))))
 
 ;; Read from stream into vector.  Start and End are byte offsets into
 ;; the vector.
 (defun read-vector* (vector stream start end)
   (labels ((get-n-bytes (stream data offset numbytes)
-	       ;; Handle case of read-n-bytes reading short.
-	       (let ((need numbytes))
-		 (loop
-		     (let ((n (read-n-bytes stream data offset need nil)))
-		       (decf need n)
-		       (cond ((or (zerop need) ; Complete
-				  (zerop n)) ; EOF
-			      (return (- numbytes need)))
-			     (t (incf offset n)))))))
-	     (read-n-x8-bytes (stream data offset-start offset-end byte-size)
-	       (let* ((x8-mult (truncate byte-size 8))
-		      (numbytes (* (- offset-end offset-start) x8-mult))
-		      (bytes-read (get-n-bytes
-				   stream
-				   data
-				   offset-start
-				   numbytes)))
-		 ;; A check should probably be made here in order to
-		 ;; be sure that we actually read the right amount
-		 ;; of bytes. (I.e. (truncate bytes-read x8-mult)
-		 ;; should return a 0 second value.
-		 (if (< bytes-read numbytes)
-		     (+ offset-start (truncate bytes-read x8-mult))
-		     offset-end))))
-    (read-n-x8-bytes stream vector start end 8)))
+	     ;; Handle case of read-n-bytes reading short.
+	     (let ((need numbytes))
+	       (loop
+		   (let ((n (read-n-bytes stream data offset need nil)))
+		     (decf need n)
+		     (cond ((or (zerop need) ; Complete
+				(zerop n)) ; EOF
+			    (return (- numbytes need)))
+			   (t (incf offset n)))))))
+	   (read-n-x8-bytes (stream data offset-start offset-end)
+	     (let* ((numbytes (- offset-end offset-start))
+		    (bytes-read (get-n-bytes
+				 stream
+				 data
+				 offset-start
+				 numbytes)))
+	       (if (< bytes-read numbytes)
+		   (+ offset-start bytes-read)
+		   offset-end))))
+    (read-n-x8-bytes stream vector start end)))
 
 ;;; New versions of READ-VECTOR and WRITE-VECTOR that deal with octet positions
 ;;; rather than element-positions, for compatibility with Allegro.
 
 ;;; WARNING: START and END must be a multiple of octets-per-element.
-;;; (Should we enforce this constraint?)
-;;; WARNING: Element-types
-;;; smaller than 8-bits are not supported.
+;;; For element types smaller than 8 bits, START and END are octet
+;;; indices, so you cannot read into arbitrary positions of the
+;;; vector.
+;;;
+;;; (Should we enforce this constraint?)  
+;;;
 
 ;;; READ-VECTOR --
 (defun read-vector (vector stream &key (start 0) end (endian-swap :byte-8))
@@ -205,13 +204,9 @@
 
 ;; Write vector into stream.  Start and End are byte offsets into the
 ;; vector.
+(declaim (inline write-vector*))
 (defun write-vector* (vector stream start end)
-  (flet ((write-n-x8-bytes (stream data start end byte-size)
-	   (let ((x8-mult (truncate byte-size 8)))
-	     (system:output-raw-bytes stream data
-				      (* x8-mult start)
-				      (* x8-mult end)))))
-    (write-n-x8-bytes stream vector start end 8)))
+  (system:output-raw-bytes stream vector start end))
 
 ;;; WRITE VECTOR --
 ;;; returns the next octet-position in vector.
