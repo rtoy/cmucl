@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.13 2009/05/30 02:02:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3.2.14 2009/06/04 18:47:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -177,7 +177,8 @@
 	  #-unicode nil
 	  #+unicode
 	  (let ((code (unicode-name-to-codepoint
-		       (nsubstitute #\Space #\_ (string-upcase name)))))
+		       (nsubstitute #\Space #\-
+				    (nsubstitute #\Space #\_ (string-upcase name))))))
 	    (if code
 		(code-char code)
 		nil)))))
