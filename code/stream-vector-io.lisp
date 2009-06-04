@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.8 2009/06/03 16:54:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.3.6.9 2009/06/04 12:50:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -105,7 +105,7 @@
 	   ;; Swap bits
 	   (let ((start-octet (truncate start 8))
 		 (end-octet (truncate end 8)))
-	     (loop for i fixnum from start below end
+	     (loop for i fixnum from start-octet below end-octet
 		   do
 		   (let ((x (bref data i)))
 		     (declare (type (unsigned-byte 8) x))
