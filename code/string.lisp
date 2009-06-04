@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.27 2009/05/28 16:17:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.28 2009/06/04 15:47:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -110,7 +110,8 @@
 (defun utf16-string-p (string)
   "Check if String is a valid UTF-16 string.  If the string is valid,
   T is returned.  If the string is not valid, NIL is returned, and the
-  second value is the index into the string of the invalid character."
+  second value is the index into the string of the invalid character.
+  A string is also invalid if it contains any unassigned codepoints."
   (do ((len (length string))
        (index 0 (1+ index)))
       ((>= index len)
@@ -120,10 +121,12 @@
       ;; We step through the string in order.  If there are any
       ;; surrogates pairs, we must reach the lead surrogate first,
       ;; which means WIDE is +1.  Otherwise, we have an invalid
-      ;; surrogate pair.  If we get any codepoint that is in
-      ;; the surrogate range, we also have an invalid string.
+      ;; surrogate pair.  If we get any codepoint that is in the
+      ;; surrogate range, we also have an invalid string.  An
+      ;; unassigned codepoint is also considered invalid.
       (when (or (eq wide -1)
-		(surrogatep codepoint))
+		(surrogatep codepoint)
+		(lisp::unicode-assigned-codepoint-p codepoint))
 	(return-from utf16-string-p (values nil index)))
       (when wide (incf index)))))
 

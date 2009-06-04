@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.25 2009/05/29 16:12:40 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.26 2009/06/04 15:47:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -709,6 +709,10 @@
     (setf (schar s 0) (schar "CZMPNLS?????????" (ldb (byte 4 4) n))
 	  (schar s 1) (schar "nsifepkcdmulto??" (ldb (byte 4 0) n)))
     s))
+
+(declaim (inline unicode-assigned-codepoint-p))
+(defun unicode-assigned-codepoint-p (code)
+  (not (zerop (unicode-category code))))
 
 ;; Look at unicode-category-string to see how we get these numbers.
 ;; +unicode-category-graphic+ is the first graphic character
