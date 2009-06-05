@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.26 2009/06/04 15:47:40 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.27 2009/06/05 16:22:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,6 +31,9 @@
   qc-nfc
   qc-nfkc
   comp-exclusions
+  full-case-lower
+  full-case-title
+  full-case-upper
   )
 
 (defvar *unicode-data* (make-unidata))
@@ -246,6 +249,9 @@
 	:type (simple-array (unsigned-byte 16) (*))))
 
 (defstruct (decomp (:include ntrie32))
+  (tabl (ext:required-argument) :read-only t :type simple-string))
+
+(defstruct (full-case (:include ntrie32))
   (tabl (ext:required-argument) :read-only t :type simple-string))
 
 (defstruct (bidi (:include ntrie16))
@@ -562,6 +568,36 @@
 	 (ex (make-array len :element-type '(unsigned-byte 32))))
     (read-vector ex stm :endian-swap :network-order)
     (setf (unidata-comp-exclusions *unicode-data*) ex)))
+
+(defloader load-full-case-lower (stm 13)
+  (multiple-value-bind (split hvec mvec lvec)
+      (read-ntrie 32 stm)
+    (let* ((tlen (read16 stm))
+	   (tabl (make-array tlen :element-type '(unsigned-byte 16))))
+      (read-vector tabl stm :endian-swap :network-order)
+      (setf (unidata-full-case-lower *unicode-data*)
+	    (make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
+			    :tabl (map 'simple-string #'code-char tabl))))))
+
+(defloader load-full-case-title (stm 14)
+  (multiple-value-bind (split hvec mvec lvec)
+      (read-ntrie 32 stm)
+    (let* ((tlen (read16 stm))
+	   (tabl (make-array tlen :element-type '(unsigned-byte 16))))
+      (read-vector tabl stm :endian-swap :network-order)
+      (setf (unidata-full-case-title *unicode-data*)
+	    (make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
+			    :tabl (map 'simple-string #'code-char tabl))))))
+
+(defloader load-full-case-upper (stm 15)
+  (multiple-value-bind (split hvec mvec lvec)
+      (read-ntrie 32 stm)
+    (let* ((tlen (read16 stm))
+	   (tabl (make-array tlen :element-type '(unsigned-byte 16))))
+      (read-vector tabl stm :endian-swap :network-order)
+      (setf (unidata-full-case-upper *unicode-data*)
+	    (make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
+			    :tabl (map 'simple-string #'code-char tabl))))))
 
 
 ;;; Accessor functions.
@@ -884,6 +920,35 @@
     (load-composition-exclusions))
   (unidata-comp-exclusions *unicode-data*))
 
+(defun %unicode-full-case (code data default)
+  (let* ((n (qref32 data code)))
+    (if (= n 0)
+	(let ((s (make-string 2)))
+	  (multiple-value-bind (hi lo)
+	      (surrogates code)
+	    (setf (schar s 0) hi)
+	    (if lo
+		(setf (schar s 1) lo)
+		(shrink-vector s 1))))
+	(let ((off (logand n #xffff))
+	      (len (ldb (byte 6 16) n)))
+	  (subseq (full-case-tabl data) off (+ off len))))))
+
+(defun unicode-full-case-lower (code)
+  (unless (unidata-full-case-lower *unicode-data*)
+    (load-full-case-lower))
+  (%unicode-full-case code (unidata-full-case-lower *unicode-data*) #'unicode-lower))
+
+(defun unicode-full-case-title (code)
+  (unless (unidata-full-case-title *unicode-data*)
+    (load-full-case-title))
+  (%unicode-full-case code (unidata-full-case-title *unicode-data*) #'unicode-title))
+  
+(defun unicode-full-case-upper (code)
+  (unless (unidata-full-case-upper *unicode-data*)
+    (load-full-case-upper))
+  (%unicode-full-case code (unidata-full-case-upper *unicode-data*) #'unicode-upper))
+	 
 ;; Build the composition pair table.
 (defun build-composition-table ()
   (let ((table (make-hash-table)))

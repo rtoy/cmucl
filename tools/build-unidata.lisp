@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.10 2009/05/29 16:12:40 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.11 2009/06/05 16:22:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,6 +38,9 @@
   qc-nfc
   qc-nfkc
   comp-exclusions
+  full-case-lower
+  full-case-title
+  full-case-upper
   )
 
 (defvar *unicode-data* (make-unidata))
@@ -111,6 +114,10 @@
   (tabl (ext:required-argument) :read-only t
 	;; This has type simple-string in unidata.lisp, but we can treat
 	;; it as a vector of integers here
+	:type (simple-array (unsigned-byte 16) (*))))
+
+(defstruct (full-case (:include ntrie32))
+  (tabl (ext:required-argument) :read-only t
 	:type (simple-array (unsigned-byte 16) (*))))
 
 (defstruct (bidi (:include ntrie16))
@@ -266,12 +273,12 @@
 						  18)
 					     (cdr x))))
 	       (mapc (lambda (x) (pass2 (cdr x))) (rest trie))))
-      (format t "~&Initializing...~%")
+      (format t "~&  Initializing...~%")
       (let ((trie (cons nil nil)))
 	(loop for (name . code) in entries do (add-to-trie trie name code))
-	(format t "~&Pass 1...~%")
+	(format t "~&  Pass 1...~%")
 	(pass1 trie 0)
-	(format t "~&Sorting...~%")
+	(format t "~&  Sorting...~%")
 	(dolist (key (sort (loop for k being the hash-keys of khash
 			      collect k)
 			   #'> :key #'length))
@@ -301,9 +308,9 @@
 	(setq vec1 (make-array top :element-type '(signed-byte 32))
 	      vec2 (make-array top :element-type '(unsigned-byte 32))
 	      vec3 (make-array top :element-type '(unsigned-byte 32)))
-	(format t "~&Pass 2...~%")
+	(format t "~&  Pass 2...~%")
 	(pass2 trie)
-	(format t "~&Finalizing~%")
+	(format t "~&  Finalizing~%")
 	(dotimes (i top)
 	  (let ((xxx (aref vec2 i)))
 	    (dotimes (j (aref keyl (ash xxx -18)))
@@ -401,10 +408,14 @@
 	     (write-byte (ldb (byte 8 0) n) stm))
 	   (write32 (n stm)
 	     (write16 (ldb (byte 16 16) n) stm)
-	     (write16 (ldb (byte 16 0) n) stm)))
+	     (write16 (ldb (byte 16 0) n) stm))
+	   (update-index (val array)
+	     (let ((result (vector-push val array)))
+	       (unless result
+		 (error "Index array too short for the data being written")))))
     (with-open-file (stm path :direction :io :if-exists :rename-and-delete
 			 :element-type '(unsigned-byte 8))
-      (let ((index (make-array 13 :fill-pointer 0)))
+      (let ((index (make-array 16 :fill-pointer 0)))
 	;; File header
 	(write32 +unicode-magic-number+ stm)	; identification "magic"
 	;; File format version 
@@ -418,12 +429,12 @@
 	(write32 0 stm)			; end marker
 	;; Range data
 	(let ((data (unidata-range *unicode-data*)))
-	  (vector-push (file-position stm) index)
+	  (update-index (file-position stm) index)
 	  (write32 (length (range-codes data)) stm)
 	  (write-vector (range-codes data) stm :endian-swap :network-order))
 	;; Character name data
 	(let ((data (unidata-name+ *unicode-data*)))
-	  (vector-push (file-position stm) index)
+	  (update-index (file-position stm) index)
 	  (write-byte (1- (length (dictionary-cdbk data))) stm)
 	  (write16 (length (dictionary-keyv data)) stm)
 	  (write32 (length (dictionary-codev data)) stm)
@@ -439,7 +450,7 @@
 	  (write-vector (dictionary-namev data) stm :endian-swap :network-order))
 	;; Codepoint-to-name mapping
 	(let ((data (unidata-name *unicode-data*)))
-	  (vector-push (file-position stm) index)
+	  (update-index (file-position stm) index)
 	  (write-byte (ntrie32-split data) stm)
 	  (write16 (length (ntrie32-hvec data)) stm)
 	  (write16 (length (ntrie32-mvec data)) stm)
@@ -449,7 +460,7 @@
 	  (write-vector (ntrie32-lvec data) stm :endian-swap :network-order))
 	;; Codepoint-to-category table
 	(let ((data (unidata-category *unicode-data*)))
-	  (vector-push (file-position stm) index)
+	  (update-index (file-position stm) index)
 	  (write-byte (ntrie8-split data) stm)
 	  (write16 (length (ntrie8-hvec data)) stm)
 	  (write16 (length (ntrie8-mvec data)) stm)
@@ -459,7 +470,7 @@
 	  (write-vector (ntrie8-lvec data) stm :endian-swap :network-order))
 	;; Simple case mapping table
 	(let ((data (unidata-scase *unicode-data*)))
-	  (vector-push (file-position stm) index)
+	  (update-index (file-position stm) index)
 	  (write-byte (scase-split data) stm)
 	  (write16 (length (scase-hvec data)) stm)
 	  (write16 (length (scase-mvec data)) stm)
@@ -471,7 +482,7 @@
 	  (write-vector (scase-svec data) stm :endian-swap :network-order))
 	;; Numeric data
 	(let ((data (unidata-numeric *unicode-data*)))
-	  (vector-push (file-position stm) index)
+	  (update-index (file-position stm) index)
 	  (write-byte (ntrie32-split data) stm)
 	  (write16 (length (ntrie32-hvec data)) stm)
 	  (write16 (length (ntrie32-mvec data)) stm)
@@ -481,7 +492,7 @@
 	  (write-vector (ntrie32-lvec data) stm :endian-swap :network-order))
 	;; Decomposition data
 	(let ((data (unidata-decomp *unicode-data*)))
-	  (vector-push (file-position stm) index)
+	  (update-index (file-position stm) index)
 	  (write-byte (decomp-split data) stm)
 	  (write16 (length (decomp-hvec data)) stm)
 	  (write16 (length (decomp-mvec data)) stm)
@@ -493,7 +504,7 @@
 	  (write-vector (decomp-tabl data) stm :endian-swap :network-order))
 	;; Combining classes
 	(let ((data (unidata-combining *unicode-data*)))
-	  (vector-push (file-position stm) index)
+	  (update-index (file-position stm) index)
 	  (write-byte (ntrie8-split data) stm)
 	  (write16 (length (ntrie8-hvec data)) stm)
 	  (write16 (length (ntrie8-mvec data)) stm)
@@ -503,7 +514,7 @@
 	  (write-vector (ntrie8-lvec data) stm :endian-swap :network-order))
 	;; Bidi data
 	(let ((data (unidata-bidi *unicode-data*)))
-	  (vector-push (file-position stm) index)
+	  (update-index (file-position stm) index)
 	  (write-byte (bidi-split data) stm)
 	  (write16 (length (bidi-hvec data)) stm)
 	  (write16 (length (bidi-mvec data)) stm)
@@ -515,7 +526,7 @@
 	  (write-vector (bidi-tabl data) stm :endian-swap :network-order))
 	;; Unicode 1.0 names
 	(let ((data (unidata-name1+ *unicode-data*)))
-	  (vector-push (file-position stm) index)
+	  (update-index (file-position stm) index)
 	  (write-byte (1- (length (dictionary-cdbk data))) stm)
 	  (write16 (length (dictionary-keyv data)) stm)
 	  (write32 (length (dictionary-codev data)) stm)
@@ -530,7 +541,7 @@
 	  (write-vector (dictionary-nextv data) stm :endian-swap :network-order)
 	  (write-vector (dictionary-namev data) stm :endian-swap :network-order))
 	(let ((data (unidata-name1 *unicode-data*)))
-	  (vector-push (file-position stm) index)
+	  (update-index (file-position stm) index)
 	  (write-byte (ntrie32-split data) stm)
 	  (write16 (length (ntrie32-hvec data)) stm)
 	  (write16 (length (ntrie32-mvec data)) stm)
@@ -539,7 +550,7 @@
 	  (write-vector (ntrie32-mvec data) stm :endian-swap :network-order)
 	  (write-vector (ntrie32-lvec data) stm :endian-swap :network-order))
 	;; Normalization quick-check data
-	(vector-push (file-position stm) index)
+	(update-index (file-position stm) index)
 	(let ((data (unidata-qc-nfd *unicode-data*)))
 	  (write-byte (ntrie1-split data) stm)
 	  (write16 (length (ntrie1-hvec data)) stm)
@@ -574,9 +585,24 @@
 	  (write-vector (ntrie2-lvec data) stm :endian-swap :network-order))
 	;; Write composition exclusion table
 	(let ((data (unidata-comp-exclusions *unicode-data*)))
-	  (vector-push (file-position stm) index)
+	  (update-index (file-position stm) index)
 	  (write16 (length data) stm)
 	  (write-vector data stm :endian-swap :network-order))
+	;; Write full-case lower data
+	(flet ((dump-full-case (data)
+		 (update-index (file-position stm) index)
+		 (write-byte (full-case-split data) stm)
+		 (write16 (length (full-case-hvec data)) stm)
+		 (write16 (length (full-case-mvec data)) stm)
+		 (write16 (length (full-case-lvec data)) stm)
+		 (write-vector (full-case-hvec data) stm :endian-swap :network-order)
+		 (write-vector (full-case-mvec data) stm :endian-swap :network-order)
+		 (write-vector (full-case-lvec data) stm :endian-swap :network-order)
+		 (write16 (length (full-case-tabl data)) stm)
+		 (write-vector (full-case-tabl data) stm :endian-swap :network-order))) 
+	  (dump-full-case (unidata-full-case-lower *unicode-data*))
+	  (dump-full-case (unidata-full-case-title *unicode-data*))
+	  (dump-full-case (unidata-full-case-upper *unicode-data*)))
 	;; Patch up index
 	(file-position stm 8)
 	(dotimes (i (length index))
@@ -596,12 +622,16 @@
   mcode
   norm-qc
   comp-exclusion
+  full-case-lower
+  full-case-title
+  full-case-upper
   ;; ...
   )
 
 ;; ucd-directory should be the directory where UnicodeData.txt is
 ;; located.
 (defun foreach-ucd (name ucd-directory fn)
+   (format t "~&  ~A~%" name)
   (with-open-file (s (make-pathname :name name :type "txt"
 				    :defaults ucd-directory))
     (cond
@@ -746,6 +776,18 @@
       (lambda (min)		 
 	(let ((entry (find min vec :key #'ucdent-code)))
 	  (setf (ucdent-comp-exclusion entry) t))))
+
+    (foreach-ucd "SpecialCasing"
+		 ucd-directory
+      (lambda (min max lower title upper &rest condition)
+	(declare (ignore max))
+	(when (string= (car condition) "")
+	  (flet ((parse-casing (string)
+		   (rest (parse-decomposition string))))
+	    (let ((ent (find min vec :key #'ucdent-code)))
+	      (setf (ucdent-full-case-lower ent) (parse-casing lower))
+	      (setf (ucdent-full-case-title ent) (parse-casing title))
+	      (setf (ucdent-full-case-upper ent) (parse-casing upper)))))))
     (values vec (make-range :codes range))))
 
 
@@ -813,6 +855,22 @@
 		(ash (position (first (ucdent-decomp ucdent))
 			       +decomposition-type+ :test #'equalp)
 		     27)))))
+
+(defun pack-full-case (ucdent tabl entry)
+  (if (not (funcall entry ucdent))
+      0
+      (let* ((d (loop for i in (funcall entry ucdent)
+		  if (<= i #xFFFF) collect i
+		  else collect (logior (ldb (byte 10 10) (- i #x10000)) #xD800)
+		   and collect (logior (ldb (byte 10 0) (- i #x10000)) #xDC00)))
+	     (l (length d))
+	     (n (search d tabl)))
+	(unless n
+	  (setq n (fill-pointer tabl))
+	  (dolist (x d) (vector-push-extend x tabl)))
+	;; next 6 bits: length, in code units
+	;; low 16 bits: index into tabl
+	(logior n (ash l 16)))))
 
 (defun pack-bidi (ucdent tabl)
   (logior (position (ucdent-bidi ucdent) +bidi-class+ :test #'string=)
@@ -939,4 +997,36 @@
 	   (when (ucdent-comp-exclusion ent)
 	     (vector-push-extend (ucdent-code ent) exclusions)))
       (setf (unidata-comp-exclusions *unicode-data*) (copy-seq exclusions)))
+    (format t "~&Building full case mapping tables~%")
+    (format t "~&  Lower...~%")
+    (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
+			    :fill-pointer 0 :adjustable t))
+	  (split #x65))
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x) (pack-full-case x tabl #'ucdent-full-case-lower))
+		0 32 split)
+	(setf (unidata-full-case-lower *unicode-data*)
+	      (make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
+			      :tabl (copy-seq tabl)))))
+    (format t "~&  Title...~%")
+    (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
+			    :fill-pointer 0 :adjustable t))
+	  (split #x65))
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x) (pack-full-case x tabl #'ucdent-full-case-title))
+		0 32 split)
+	(setf (unidata-full-case-title *unicode-data*)
+	      (make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
+			      :tabl (copy-seq tabl)))))
+    (format t "~&  Upper...~%")
+    (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
+			    :fill-pointer 0 :adjustable t))
+	  (split #x65))
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x) (pack-full-case x tabl #'ucdent-full-case-upper))
+		0 32 split)
+	(setf (unidata-full-case-upper *unicode-data*)
+	      (make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
+			      :tabl (copy-seq tabl)))))
     nil))
+
