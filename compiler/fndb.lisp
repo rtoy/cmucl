@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.136.4.1.2.1 2009/05/28 20:36:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.136.4.1.2.2 2009/06/05 19:17:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -837,7 +837,7 @@
   (sequence stringable) simple-string (flushable))
 
 (defknown (string-upcase string-downcase string-capitalize)
-  (stringable &key (:start index) (:end sequence-end))
+  (stringable &key (:start index) (:end sequence-end) #+unicode (:casing t))
   simple-string (flushable))
 
 (defknown (nstring-upcase nstring-downcase nstring-capitalize)

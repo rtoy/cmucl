@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.28 2009/06/04 15:47:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.29 2009/06/05 19:17:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -555,9 +555,7 @@
 	(setf (schar string i) fill-char))
       (make-string count)))
 
-(defun string-upcase (string &key (start 0) end)
-  "Given a string, returns a new string that is a copy of it with
-  all lower case alphabetic characters converted to uppercase."
+(defun string-upcase-simple (string &key (start 0) end)
   (declare (fixnum start))
   (let* ((string (if (stringp string) string (string string)))
 	 (slen (length string)))
@@ -596,9 +594,49 @@
 	  (setf (schar newstring new-index) (schar string index)))
 	newstring))))
 
-(defun string-downcase (string &key (start 0) end)
-  "Given a string, returns a new string that is a copy of it with
-  all upper case alphabetic characters converted to lowercase."
+(defun string-upcase-full (string &key (start 0) end)
+  (declare (fixnum start))
+  (let* ((string (if (stringp string) string (string string)))
+	 (slen (length string)))
+    (declare (fixnum slen))
+    (with-output-to-string (s)
+      (with-one-string string start end offset
+        (let ((offset-slen (+ slen offset)))
+	  (declare (fixnum offset-slen))
+	  (write-string string s :start offset :end start)
+	  (do ((index start (1+ index)))
+	      ((= index (the fixnum end)))
+	    (declare (fixnum index))
+	    (multiple-value-bind (code wide)
+		(codepoint string index)
+	      (when wide (incf index))
+	      ;; Handle ASCII specially because this is called early in
+	      ;; initialization, before unidata is available.
+	      (cond ((< 96 code 123)
+		     (write-char (code-char (decf code 32)) s))
+		    ((> code 127)
+		     (write-string (unicode-full-case-upper code) s))
+		    (t
+		     (multiple-value-bind (hi lo)
+			 (surrogates code)
+		       (write-char hi s)
+		       (when lo
+			 (write-char lo s)))))))
+	  (write-string string s :start end :end offset-slen))))))
+
+(defun string-upcase (string &key (start 0) end #+unicode (casing :simple))
+  "Given a string, returns a new string that is a copy of it with all
+  lower case alphabetic characters converted to uppercase.  If Casing
+  is :full, then Unicode full-casing operation is done."
+  (declare (fixnum start))
+  #-unicode
+  (string-upcase-simple string :start start :end end)
+  #+unicode
+  (if (eq casing :simple)
+      (string-upcase-simple string :start start :end end)
+      (string-upcase-full string :start start :end end)))
+
+(defun string-downcase-simple (string &key (start 0) end)
   (declare (fixnum start))
   (let* ((string (if (stringp string) string (string string)))
 	 (slen (length string)))
@@ -637,12 +675,49 @@
 	  (setf (schar newstring new-index) (schar string index)))
 	newstring))))
 
-(defun string-capitalize (string &key (start 0) end)
-  "Given a string, returns a copy of the string with the first
-  character of each ``word'' converted to upper-case, and remaining
-  chars in the word converted to lower case. A ``word'' is defined
-  to be a string of case-modifiable characters delimited by
-  non-case-modifiable chars."
+(defun string-downcase-full (string &key (start 0) end)
+  (declare (fixnum start))
+  (let* ((string (if (stringp string) string (string string)))
+	 (slen (length string)))
+    (declare (fixnum slen))
+    (with-output-to-string (s)
+      (with-one-string string start end offset
+        (let ((offset-slen (+ slen offset)))
+	  (declare (fixnum offset-slen))
+	  (write-string string s :start offset :end start)
+	  (do ((index start (1+ index)))
+	      ((= index (the fixnum end)))
+	    (declare (fixnum index))
+	    (multiple-value-bind (code wide)
+		(codepoint string index)
+	      (when wide (incf index))
+	      ;; Handle ASCII specially because this is called early in
+	      ;; initialization, before unidata is available.
+	      (cond ((< 64 code 91)
+		     (write-char (code-char (incf code 32)) s))
+		    ((> code 127)
+		     (write-string (unicode-full-case-lower code) s))
+		    (t
+		     (multiple-value-bind (hi lo)
+			 (surrogates code)
+		       (write-char hi s)
+		       (when lo
+			 (write-char lo s)))))))
+	  (write-string string s :start end :end offset-slen))))))
+
+(defun string-downcase (string &key (start 0) end #+unicode (casing :simple))
+  "Given a string, returns a new string that is a copy of it with all
+  upper case alphabetic characters converted to lowercase.  If Casing
+  is :full, then Unicode full-casing is done"
+  (declare (fixnum start))
+  #-unicode
+  (string-downcase-simple string :start start :end end)
+  #+unicode
+  (if (eq casing :simple)
+      (string-downcase-simple string :start start :end end)
+      (string-downcase-full string :start start :end end)))
+
+(defun string-capitalize-simple (string &key (start 0) end)
   (declare (fixnum start))
   (let* ((string (if (stringp string) string (string string)))
 	 (slen (length string)))
@@ -678,6 +753,58 @@
 	  (declare (fixnum index new-index))
 	  (setf (schar newstring new-index) (schar string index)))
 	newstring))))
+
+(defun string-capitalize-full (string &key (start 0) end)
+  (declare (fixnum start))
+  (let* ((string (if (stringp string) string (string string)))
+	 (slen (length string)))
+    (declare (fixnum slen))
+    (with-output-to-string (s)
+      (with-one-string string start end offset
+        (let ((offset-slen (+ slen offset)))
+	  (declare (fixnum offset-slen))
+	  (write-string string s :start offset :end start)
+	  (flet ((alphanump (m)
+		   (or (< 47 m 58) (< 64 m 91) (< 96 m 123)
+		       #+(and unicode (not unicode-bootstrap))
+		       (and (> m 127)
+			    (<= +unicode-category-letter+ (unicode-category m)
+				(+ +unicode-category-letter+ #x0F))))))
+	    (do ((index start (1+ index))
+		 (newword t))
+		((= index (the fixnum end)))
+	      (declare (fixnum index))
+	      (multiple-value-bind (code wide)
+		  (codepoint string index)
+		(when wide (incf index))
+		(cond ((not (alphanump code))
+		       (multiple-value-bind (hi lo)
+			   (surrogates code)
+			 (write-char hi s)
+			 (when lo (write-char lo s)))
+		       (setq newword t))
+		      (newword
+		       ;;char is first case-modifiable after non-case-modifiable
+		       (write-string (unicode-full-case-title code) s)
+		       (setq newword ()))
+		      ;;char is case-modifiable, but not first
+		      (t
+		       (write-string (unicode-full-case-lower code) s))))))
+	  (write-string string s :start end :end offset-slen))))))
+
+(defun string-capitalize (string &key (start 0) end #+unicode (casing :simple))
+  "Given a string, returns a copy of the string with the first
+  character of each ``word'' converted to upper-case, and remaining
+  chars in the word converted to lower case. A ``word'' is defined
+  to be a string of case-modifiable characters delimited by
+  non-case-modifiable chars."
+  (declare (fixnum start))
+  #-unicode
+  (string-capitalize-simple string :start start :end end)
+  #+unicode
+  (if (eq casing :simple)
+      (string-capitalize-simple string :start start :end end)
+      (string-capitalize-full string :start start :end end)))
 
 (defun nstring-upcase (string &key (start 0) end)
   "Given a string, returns that string with all lower case alphabetic
