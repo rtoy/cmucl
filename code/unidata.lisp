@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.27 2009/06/05 16:22:09 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.28 2009/06/05 18:46:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -925,11 +925,12 @@
     (if (= n 0)
 	(let ((s (make-string 2)))
 	  (multiple-value-bind (hi lo)
-	      (surrogates code)
+	      (surrogates (funcall default code))
 	    (setf (schar s 0) hi)
 	    (if lo
 		(setf (schar s 1) lo)
-		(shrink-vector s 1))))
+		(shrink-vector s 1)))
+	  s)
 	(let ((off (logand n #xffff))
 	      (len (ldb (byte 6 16) n)))
 	  (subseq (full-case-tabl data) off (+ off len))))))
