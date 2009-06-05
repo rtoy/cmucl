@@ -388,6 +388,12 @@ Recall, however, that characters in \cmucl{} are only 16 bits long so
 many Unicode characters cannot be represented.  However, strings can
 represent all Unicode characters.
 
+When symbols are read, the symbol name is converted to Unicode NFC
+form before interning the symbol into the package.  Hence,
+\code{symbol-name (intern ``string'')} may produce a string that is
+not \code{string=} to ``string''.  However, after conversion to NFC
+form, the strings will be identical.
+
 \subsection{Printer}
 
 When printing characters, if the character is a graphic character, the
