@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.29 2009/06/05 19:17:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.30 2009/06/06 20:53:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -881,6 +881,117 @@
 	       (setf (schar string index) (char-downcase char))))))
     save-header))
 
+
+#+unicode
+(progn
+;; Like string-left-trim, but return the index 
+(defun string-left-trim-index (char-bag string)
+  (with-string string
+    (if (stringp char-bag)
+	;; When char-bag is a string, we try to do the right thing.
+	;; Convert char-bag to a list of codepoints and compare the
+	;; codepoints in the string with this.  
+	(let ((code-bag (with-string char-bag
+			  (do ((index start (1+ index))
+			       (result nil))
+			      ((= index end)
+			       (nreverse result))
+			    (multiple-value-bind (c widep)
+				(codepoint char-bag index)
+			      (push c result)
+			      (when widep (incf index)))))))
+	  (do ((index start (1+ index)))
+	      ((= index (the fixnum end))
+	       end)
+	    (declare (fixnum index))
+	    (multiple-value-bind (c widep)
+		(codepoint string index)
+	      (unless (find c code-bag)
+		(return-from string-left-trim-index index))
+	      (when widep (incf index)))))
+	;; When char-bag is a list, we just look at each codepoint of
+	;; STRING to see if it's in char-bag.  If char-bag contains a
+	;; surrogate, we could accidentally trim off a surrogate,
+	;; leaving an invalid UTF16 string.
+	(do ((index start (1+ index)))
+	    ((= index (the fixnum end))
+	     end)
+	  (declare (fixnum index))
+	  (multiple-value-bind (c widep)
+	      (codepoint string index)
+	    (unless (find c char-bag :key #'char-code)
+	      (return-from string-left-trim-index index))
+	    (when widep (incf index)))))))
+
+(defun string-left-trim (char-bag string)
+  "Given a set of characters (a list or string) and a string, returns
+  a copy of the string with the characters in the set removed from the
+  left end.  If the set of characters is a string, surrogates will be
+  properly handled."
+  (let ((begin (string-left-trim-index char-bag string)))
+    (with-string string
+      (subseq string begin end))))
+
+(defun string-right-trim-index (char-bag string)
+  (with-string string
+    (if (stringp char-bag)
+	;; When char-bag is a string, we try to do the right thing
+	;; with surrogates.  Convert char-bag to a list of codepoints
+	;; and compare the codepoints in the string with this.
+	(let ((code-bag (with-string char-bag
+			  (do ((index start (1+ index))
+			       (result nil))
+			      ((= index end)
+			       result)
+			    (multiple-value-bind (c widep)
+				(codepoint char-bag index)
+			      (push c result)
+			      (when widep (incf index)))))))
+	  (do ((index (1- end) (1- index)))
+	      ((< index start)
+	       start)
+	    (declare (fixnum index))
+	    (multiple-value-bind (c widep)
+		(codepoint string index)
+	      (unless (find c code-bag)
+		(return-from string-right-trim-index (1+ index)))
+	      (when widep (decf index)))))
+	;; When char-bag is a list, we just look at each codepoint of
+	;; STRING to see if it's in char-bag.  If char-bag contains a
+	;; surrogate, we could accidentally trim off a surrogate,
+	;; leaving an invalid UTF16 string.
+	(do ((index (1- end) (1- index)))
+	    ((< index start)
+	     start)
+	  (declare (fixnum index))
+	  (multiple-value-bind (c widep)
+	      (codepoint string index)
+	    (unless (find c char-bag :key #'char-code)
+	      (return-from string-right-trim-index (1+ index)))
+	    (when widep (decf index)))))))
+
+(defun string-right-trim (char-bag string)
+  "Given a set of characters (a list or string) and a string, returns
+  a copy of the string with the characters in the set removed from the
+  right end.  If the set of characters is a string, surrogates will be
+  properly handled."
+  (let ((stop (string-right-trim-index char-bag string)))
+    (with-string string
+      (subseq string start stop))))
+
+(defun string-trim (char-bag string)
+  "Given a set of characters (a list or string) and a string, returns a
+  copy of the string with the characters in the set removed from both
+  ends.  If the set of characters is a string, surrogates will be
+  properly handled."
+  (let ((left-end (string-left-trim-index char-bag string))
+	(right-end (string-right-trim-index char-bag string)))
+    (with-string string
+      (subseq (the simple-string string) left-end right-end))))
+) ; end unicode version
+
+#-unicode
+(progn
 (defun string-left-trim (char-bag string)
   "Given a set of characters (a list or string) and a string, returns
   a copy of the string with the characters in the set removed from the
@@ -918,6 +1029,7 @@
 			   (1+ index))
 			(declare (fixnum index)))))
       (subseq (the simple-string string) left-end right-end))))
+) ; non-unicode version
 
 (declaim (inline %glyph-f %glyph-b))
 (defun %glyph-f (string index)
@@ -1167,7 +1279,9 @@
 
 #+unicode
 (defun string-to-nfc (string)
-  "Convert String to Unicode Normalization Form C (NFC)."
+  "Convert String to Unicode Normalization Form C (NFC).  If the
+  string a simple string and is already normalized, the original
+  string is returned."
   (if (normalized-form-p string :nfc)
       (if (simple-string-p string) string (coerce string 'simple-string))
       (coerce (if (normalized-form-p string :nfd)
@@ -1180,7 +1294,9 @@
   (if (simple-string-p string) string (coerce string 'simple-string)))
 
 (defun string-to-nfkc (string)
-  "Convert String to Unicode Normalization Form KC (NFKC)."
+  "Convert String to Unicode Normalization Form KC (NFKC).  If the
+  string is a simple string and is already normalized, the original
+  string is returned."
   (if (normalized-form-p string :nfkc)
       (if (simple-string-p string) string (coerce string 'simple-string))
       (coerce (if (normalized-form-p string :nfkd)
