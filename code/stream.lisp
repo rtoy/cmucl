@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83.6.4.2.5 2009/06/02 18:26:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83.6.4.2.6 2009/06/07 19:13:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1522,7 +1522,9 @@ output to Output-stream"
     (:listen (or (/= (the fixnum (string-input-stream-current stream))
 		     (the fixnum (string-input-stream-end stream)))
 		 :eof))
-    (:element-type 'base-char)))
+    (:element-type 'base-char)
+    (:close
+     (set-closed-flame stream))))
   
 (defun make-string-input-stream (string &optional
 					(start 0) (end (length string)))
