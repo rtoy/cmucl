@@ -322,16 +322,28 @@ this encoding and handle the surrogate pairs correctly.
 
 
 \begin{defun}{}{string-upcase}{\args \var{string} \keys{\kwd{start}
-      \kwd{end}}}
-  \defunx{string-downcase}{\args \var{string} \keys{\kwd{start} \kwd{end}}}
-  \defunx{string-capitalize}{\args \var{string} \keys{\kwd{start} \kwd{end}}}
-  \defunx{nstring-upcase}{\args \var{string} \keys{\kwd{start} \kwd{end}}}
+      \kwd{end} \kwd{casing}}}
+  \defunx{string-downcase}{\args \var{string} \keys{\kwd{start}
+      \kwd{end} \kwd{casing}}}
+  \defunx{string-capitalize}{\args \var{string} \keys{\kwd{start}
+      \kwd{end} \kwd{casing}}}
+  The case of the \var{string} is changed appropriately.  Surrogate
+  pairs are handled correctly.  The conversion to the appropriate case
+  is done based on the Unicode conversion.  The additional argument
+  \kwd{casing} controls how case conversion is done.  The default
+  value is \kwd{:simple}, which uses simple Unicode case conversion.
+  If \kwd{casing} is \kwd{:full}, then full Unicode case conversion is
+  done where the string may actually increase in length.
+\end{defun}
+
+\begin{defun}{}{nstring-upcase}{\args \var{string} \keys{\kwd{start} \kwd{end}}}
   \defunx{nstring-downcase}{\args \var{string} \keys{\kwd{start} \kwd{end}}}
   \defunx{nstring-capitalize}{\args \var{string} \keys{\kwd{start}
       \kwd{end}}}
   The case of the \var{string} is changed appropriately.  Surrogate
   pairs are handled correctly.  The conversion to the appropriate case
-  is done based on the Unicode conversion.
+  is done based on the Unicode conversion.  (Full casing is not
+  available because the string length cannot be increased when needed.)
 \end{defun}
 
 \begin{defun}{}{string=}{\args \var{s1} \var{s2} \keys{\kwd{start1}
@@ -358,11 +370,23 @@ this encoding and handle the surrogate pairs correctly.
   collation is not done.
 \end{defun}
 
+\begin{defun}{}{string-left-trim}{\args \var{bag} \var{string}}
+  \defunx{string-right-trim}{\args \var{bag} \var{string}}
+  \defunx{string-trim}{\args \var{bag} \var{string}}
+  Removes any characters in \code{bag} from the left, right, or both
+  ends of the string \code{string}, respectively.  This has potential
+  problems if you want to remove a surrogate character from the
+  string, since a single character cannot represent a surrogate.  As
+  an extension, if \code{bag} is a string, we properly handle
+  surrogate characters in the \code{bag}.
+\end{defun}
 
 \subsection{Sequences}
 
 Since strings are also sequences, the sequence functions can be used
-on strings.  We note here some issues with these functions.
+on strings.  We note here some issues with these functions.  Most
+issues are due to the fact that strings are UTF-16 strings and
+characters are UTF-16 code units, not Unicode codepoints.
 
 \begin{defun}{}{remove-duplicates}{\args \var{sequence}
     \keys{\kwd{from-end} \kwd{test} \kwd{test-not} \kwd{start}
