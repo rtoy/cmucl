@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.31 2009/06/09 14:53:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.32 2009/06/09 18:16:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -363,11 +363,15 @@
 
 #+unicode
 (defmacro handle-case-fold-equal (f &body body)
-  `(if (eq casing :simple)
-       ,@body
-       (let* ((s1 (case-fold string1 start1 end1))
-	      (s2 (case-fold string1 start2 end2)))
-	 (,f s1 s2))))
+  `(ecase casing
+     (:simple
+      ,@body)
+     (:full
+      ;; We should probably do this in a different way with less
+      ;; consing, but this is easy.
+      (let* ((s1 (case-fold string1 start1 end1))
+	     (s2 (case-fold string1 start2 end2)))
+	(,f s1 s2)))))
 
 #-unicode
 (defmacro handle-case-fold-equal (f &body body)
@@ -389,9 +393,15 @@
 	  (write-string (unicode-case-fold-full code) s))))))
 
 (defun string-equal (string1 string2 &key (start1 0) end1 (start2 0) end2 #+unicode (casing :simple))
+  #-unicode
   "Given two strings (string1 and string2), and optional integers start1,
   start2, end1 and end2, compares characters in string1 to characters in
   string2 (using char-equal)."
+  #+unicode
+  "Given two strings (string1 and string2), and optional integers
+  start1, start2, end1 and end2, compares characters in string1 to
+  characters in string2. Casing is :simple or :full for simple or full
+  case folding, respectively."
   (declare (fixnum start1 start2))
   (handle-case-fold-equal string-equal
     (with-two-strings string1 string2 start1 end1 offset1 start2 end2
@@ -406,9 +416,15 @@
 	     (string-not-equal-loop 1 t nil))))))
 
 (defun string-not-equal (string1 string2 &key (start1 0) end1 (start2 0) end2 #+unicode (casing :simple))
+  #-unicode
   "Given two strings, if the first string is not lexicographically equal
   to the second string, returns the longest common prefix (using char-equal)
   of the two strings. Otherwise, returns ()."
+  #-unicode
+  "Given two strings, if the first string is not lexicographically
+  equal to the second string, returns the longest common prefix of the
+  two strings. Otherwise, returns ().  Casing is :simple or :full for
+  simple or full case folding."
   (handle-case-fold-equal string-not-equal
     (with-two-strings string1 string2 start1 end1 offset1 start2 end2
       (let ((slen1 (- end1 start1))
@@ -548,13 +564,15 @@
   
 #+unicode
 (defmacro handle-case-folding (f)
-  `(if (eq casing :simple)
-      (,f string1 string2 start1 end1 start2 end2)
+  `(ecase casing
+     (:simple
+      (,f string1 string2 start1 end1 start2 end2))
+     (:full
       (let* ((s1 (case-fold string1 start1 end1))
 	     (s2 (case-fold string2 start2 end2))
 	     (result (,f s1 s2 0 (length s1) 0 (length s2))))
 	(when result
-	  (+ result start1)))))
+	  (+ result start1))))))
 
 #-unicode
 (defmacro handle-case-folding (f)
@@ -563,28 +581,53 @@
 ) ; compile
 
 (defun string-lessp (string1 string2 &key (start1 0) end1 (start2 0) end2 #+unicode (casing :simple))
+  #-unicode
   "Given two strings, if the first string is lexicographically less than
   the second string, returns the longest common prefix (using char-equal)
   of the two strings. Otherwise, returns ()."
+  #+unicode
+  "Given two strings, if the first string is lexicographically less
+  than the second string, returns the longest common prefix of the two
+  strings. Otherwise, returns ().  Casing is :simple or :full for
+  simple or full case folding, respectively."
+  
   (handle-case-folding string-lessp*))
 
 (defun string-greaterp (string1 string2 &key (start1 0) end1 (start2 0) end2 #+unicode (casing :simple))
+  #-unicode
   "Given two strings, if the first string is lexicographically greater than
   the second string, returns the longest common prefix (using char-equal)
   of the two strings. Otherwise, returns ()."
+  #+unicode
+  "Given two strings, if the first string is lexicographically greater
+  than the second string, returns the longest common prefix of the two
+  strings. Otherwise, returns ().  Casing is :simple or :full for
+  simple or full case folding, respectively."
   (handle-case-folding string-greaterp*))
 
 (defun string-not-lessp (string1 string2 &key (start1 0) end1 (start2 0) end2 #+unicode (casing :simple))
+  #-unicode
   "Given two strings, if the first string is lexicographically greater
   than or equal to the second string, returns the longest common prefix
   (using char-equal) of the two strings. Otherwise, returns ()."
+  #+unicode
+  "Given two strings, if the first string is lexicographically greater
+  than or equal to the second string, returns the longest common
+  prefix of the two strings. Otherwise, returns ().  Casing is :simple
+  or :full for simple or full case folding, respectively."
   (handle-case-folding string-not-lessp*))
 
 (defun string-not-greaterp (string1 string2 &key (start1 0) end1 (start2 0)
 				    end2 #+unicode (casing :simple))
+  #-unicode
   "Given two strings, if the first string is lexicographically less than
   or equal to the second string, returns the longest common prefix
   (using char-equal) of the two strings. Otherwise, returns ()."
+  #+unicode
+  "Given two strings, if the first string is lexicographically less
+  than or equal to the second string, returns the longest common
+  prefix of the two strings. Otherwise, returns ().  Casing is :simple
+  or :full for simple or full case folding, respectively."
   (handle-case-folding string-not-greaterp*))
 
 
@@ -671,9 +714,13 @@
 	  (write-string string s :start end :end offset-slen))))))
 
 (defun string-upcase (string &key (start 0) end #+unicode (casing :simple))
+  #-unicode
   "Given a string, returns a new string that is a copy of it with all
-  lower case alphabetic characters converted to uppercase.  If Casing
-  is :full, then Unicode full-casing operation is done."
+  lower case alphabetic characters converted to uppercase."
+  #+unicode
+  "Given a string, returns a new string that is a copy of it with all
+  lower case alphabetic characters converted to uppercase.  Casing is
+  :simple or :full for simple or full case conversion, respectively."
   (declare (fixnum start))
   #-unicode
   (string-upcase-simple string :start start :end end)
@@ -752,9 +799,13 @@
 	  (write-string string s :start end :end offset-slen))))))
 
 (defun string-downcase (string &key (start 0) end #+unicode (casing :simple))
+  #-unicode
   "Given a string, returns a new string that is a copy of it with all
-  upper case alphabetic characters converted to lowercase.  If Casing
-  is :full, then Unicode full-casing is done"
+  upper case alphabetic characters converted to lowercase."
+  #+unicode
+  "Given a string, returns a new string that is a copy of it with all
+  upper case alphabetic characters converted to lowercase.  Casing is
+  :simple or :full for simple or full case conversion, respectively."
   (declare (fixnum start))
   #-unicode
   (string-downcase-simple string :start start :end end)
@@ -839,11 +890,20 @@
 	  (write-string string s :start end :end offset-slen))))))
 
 (defun string-capitalize (string &key (start 0) end #+unicode (casing :simple))
+  #-unicode
   "Given a string, returns a copy of the string with the first
   character of each ``word'' converted to upper-case, and remaining
   chars in the word converted to lower case. A ``word'' is defined
   to be a string of case-modifiable characters delimited by
   non-case-modifiable chars."
+  #+unicode
+  "Given a string, returns a copy of the string with the first
+  character of each ``word'' converted to upper-case, and remaining
+  chars in the word converted to lower case. A ``word'' is defined
+  to be a string of case-modifiable characters delimited by
+  non-case-modifiable chars.  Casing is :simple or :full for
+  simple or full case conversion, respectively."
+  
   (declare (fixnum start))
   #-unicode
   (string-capitalize-simple string :start start :end end)
