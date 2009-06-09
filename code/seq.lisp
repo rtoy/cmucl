@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.53.8.8 2009/05/27 17:39:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.53.8.9 2009/06/09 17:42:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1629,7 +1629,9 @@
 (defun string-remove-duplicates* (string test test-not start end key from-end
 					 &optional (length (length string)))
   (declare (string string) (fixnum start length))
-  ;;@@ FIXME: treat surrogate pairs as a single element
+  ;;@@ FIXME: treat surrogate pairs as a single element.  But that's
+  ;;not really possible with test, test-not, and key parameters which
+  ;;expect characters, not code points.
   (vector-remove-duplicates* string test test-not start end key from-end
 			     length))
 
