@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.11 2009/06/05 16:22:09 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.1.2.12 2009/06/09 13:07:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,6 +41,8 @@
   full-case-lower
   full-case-title
   full-case-upper
+  case-fold-full
+  case-fold-simple
   )
 
 (defvar *unicode-data* (make-unidata))
@@ -117,6 +119,10 @@
 	:type (simple-array (unsigned-byte 16) (*))))
 
 (defstruct (full-case (:include ntrie32))
+  (tabl (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 16) (*))))
+
+(defstruct (case-folding (:include ntrie32))
   (tabl (ext:required-argument) :read-only t
 	:type (simple-array (unsigned-byte 16) (*))))
 
@@ -415,7 +421,7 @@
 		 (error "Index array too short for the data being written")))))
     (with-open-file (stm path :direction :io :if-exists :rename-and-delete
 			 :element-type '(unsigned-byte 8))
-      (let ((index (make-array 16 :fill-pointer 0)))
+      (let ((index (make-array 18 :fill-pointer 0)))
 	;; File header
 	(write32 +unicode-magic-number+ stm)	; identification "magic"
 	;; File format version 
@@ -603,6 +609,30 @@
 	  (dump-full-case (unidata-full-case-lower *unicode-data*))
 	  (dump-full-case (unidata-full-case-title *unicode-data*))
 	  (dump-full-case (unidata-full-case-upper *unicode-data*)))
+	;; Write case folding data
+	(let ((data (unidata-case-fold-simple *unicode-data*)))
+	  (update-index (file-position stm) index)
+	  (write-byte (ntrie32-split data) stm)
+	  (write16 (length (ntrie32-hvec data)) stm)
+	  (write16 (length (ntrie32-mvec data)) stm)
+	  (write16 (length (ntrie32-lvec data)) stm)
+	  (write-vector (ntrie32-hvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie32-mvec data) stm :endian-swap :network-order)
+	  (write-vector (ntrie32-lvec data) stm :endian-swap :network-order)
+	  )
+	;; case-folding full
+	(let ((data (unidata-case-fold-full *unicode-data*)))
+	  (update-index (file-position stm) index)
+	  (write-byte (case-folding-split data) stm)
+	  (write16 (length (case-folding-hvec data)) stm)
+	  (write16 (length (case-folding-mvec data)) stm)
+	  (write16 (length (case-folding-lvec data)) stm)
+	  (write-vector (case-folding-hvec data) stm :endian-swap :network-order)
+	  (write-vector (case-folding-mvec data) stm :endian-swap :network-order)
+	  (write-vector (case-folding-lvec data) stm :endian-swap :network-order)
+	  (write16 (length (case-folding-tabl data)) stm)
+	  (write-vector (case-folding-tabl data) stm :endian-swap :network-order))
+
 	;; Patch up index
 	(file-position stm 8)
 	(dotimes (i (length index))
@@ -625,6 +655,8 @@
   full-case-lower
   full-case-title
   full-case-upper
+  case-fold-full
+  case-fold-simple
   ;; ...
   )
 
@@ -700,6 +732,7 @@
 (declaim (ftype (function (&optional t) (values simple-vector range)) read-data))
 (defun read-data (&optional (ucd-directory #p"target:i18n/"))
   (let ((vec (make-array 50000))
+	(vec-hash (make-hash-table :size 15000))
 	(pos 0)
 	(range (make-array 50 :element-type '(unsigned-byte 32)))
 	(rpos 0))
@@ -727,68 +760,98 @@
 	  (incf pos))))
     (lisp::shrink-vector vec pos)
     (lisp::shrink-vector range rpos)
-    (foreach-ucd "NameAliases"
-		 ucd-directory
-      (lambda (min max alias)
-	(declare (ignore max))
-	(push alias (ucdent-aliases (find min vec :key #'ucdent-code)))))
-    (foreach-ucd "NormalizationCorrections"
-		 ucd-directory
-      (lambda (min max bad good &rest junk)
-	(declare (ignore max bad junk))
-	(setf (ucdent-decomp (find min vec :key #'ucdent-code))
-	    (parse-decomposition good))))
-    (foreach-ucd "BidiMirroring"
-		 ucd-directory
-      (lambda (min max mirror)
-	(declare (ignore max))
-	(setf (ucdent-mcode (find min vec :key #'ucdent-code))
-	    (parse-integer mirror :radix 16 :junk-allowed t))))
-    (foreach-ucd "DerivedNormalizationProps"
-		ucd-directory
-      (lambda (min max prop &optional value)
-	(cond ((string= prop "NFD_QC")
-	       (loop for i from min to max
-		      as ent = (find i vec :key #'ucdent-code) do
+    (flet ((find-ucd (key)
+	     (let ((index (gethash key vec-hash)))
+	       (if index
+		   (aref vec index)
+		   nil))))
+      ;; Using FIND is rather slow, especially for the derived
+      ;; normalization props.  We create a hash table that maps a
+      ;; codepoint to the index to VEC that contains the desired entry.
+      ;; This is much faster.  We do it this way to keep the structure
+      ;; as close as possible to the original.
+      (loop for k from 0 below pos
+	 do (setf (gethash (ucdent-code (aref vec k)) vec-hash) k))
+    
+      (foreach-ucd "NameAliases"
+	  ucd-directory
+	(lambda (min max alias)
+	  (declare (ignore max))
+	  (push alias (ucdent-aliases (find-ucd min)))))
+      (foreach-ucd "NormalizationCorrections"
+	  ucd-directory
+	(lambda (min max bad good &rest junk)
+	  (declare (ignore max bad junk))
+	  (setf (ucdent-decomp (find-ucd min))
+		(parse-decomposition good))))
+      (foreach-ucd "BidiMirroring"
+	  ucd-directory
+	(lambda (min max mirror)
+	  (declare (ignore max))
+	  (setf (ucdent-mcode (find-ucd min))
+		(parse-integer mirror :radix 16 :junk-allowed t))))
+      (foreach-ucd "DerivedNormalizationProps"
+	  ucd-directory
+	(lambda (min max prop &optional value)
+	  (cond ((string= prop "NFD_QC")
+		 (loop for i from min to max
+		    as ent = (find-ucd i) do
 		    (when ent
 		      (setf (getf (ucdent-norm-qc ent) :nfd)
 			    (intern value "KEYWORD")))))
-	      ((string= prop "NFKD_QC")
-	       (loop for i from min to max
-		      as ent = (find i vec :key #'ucdent-code) do
+		((string= prop "NFKD_QC")
+		 (loop for i from min to max
+		    as ent = (find-ucd i) do
 		    (when ent
 		      (setf (getf (ucdent-norm-qc ent) :nfkd)
 			    (intern value "KEYWORD")))))
-	      ((string= prop "NFC_QC")
-		(loop for i from min to max
-		      as ent = (find i vec :key #'ucdent-code) do
-		     (when ent
-		       (setf (getf (ucdent-norm-qc ent) :nfc)
-			     (intern value "KEYWORD")))))
-	      ((string= prop "NFKC_QC")
-		(loop for i from min to max
-		      as ent = (find i vec :key #'ucdent-code) do
-		     (when ent
-		       (setf (getf (ucdent-norm-qc ent) :nfkc)
-			     (intern value "KEYWORD"))))))))
-    (foreach-ucd "CompositionExclusions"
-		 ucd-directory
-      (lambda (min)		 
-	(let ((entry (find min vec :key #'ucdent-code)))
-	  (setf (ucdent-comp-exclusion entry) t))))
+		((string= prop "NFC_QC")
+		 (loop for i from min to max
+		    as ent = (find-ucd i) do
+		    (when ent
+		      (setf (getf (ucdent-norm-qc ent) :nfc)
+			    (intern value "KEYWORD")))))
+		((string= prop "NFKC_QC")
+		 (loop for i from min to max
+		    as ent = (find-ucd i) do
+		    (when ent
+		      (setf (getf (ucdent-norm-qc ent) :nfkc)
+			    (intern value "KEYWORD"))))))))
+      (foreach-ucd "CompositionExclusions"
+	  ucd-directory
+	(lambda (min)		 
+	  (let ((entry (find-ucd min)))
+	    (setf (ucdent-comp-exclusion entry) t))))
 
-    (foreach-ucd "SpecialCasing"
-		 ucd-directory
-      (lambda (min max lower title upper &rest condition)
-	(declare (ignore max))
-	(when (string= (car condition) "")
-	  (flet ((parse-casing (string)
+      (foreach-ucd "SpecialCasing"
+	  ucd-directory
+	(lambda (min max lower title upper &rest condition)
+	  (declare (ignore max))
+	  (when (string= (car condition) "")
+	    (flet ((parse-casing (string)
+		     (rest (parse-decomposition string))))
+	      (let ((ent (find-ucd min)))
+		(setf (ucdent-full-case-lower ent) (parse-casing lower))
+		(setf (ucdent-full-case-title ent) (parse-casing title))
+		(setf (ucdent-full-case-upper ent) (parse-casing upper)))))))
+
+      (foreach-ucd "CaseFolding"
+	  ucd-directory
+	(lambda (min max mode expansion &rest info)
+	  (declare (ignore max info))
+	  (flet ((parse-folding (string)
 		   (rest (parse-decomposition string))))
-	    (let ((ent (find min vec :key #'ucdent-code)))
-	      (setf (ucdent-full-case-lower ent) (parse-casing lower))
-	      (setf (ucdent-full-case-title ent) (parse-casing title))
-	      (setf (ucdent-full-case-upper ent) (parse-casing upper)))))))
-    (values vec (make-range :codes range))))
+	    (let ((ent (find-ucd min)))
+	      (cond ((string= mode "T")
+		     ;; We ignore these language-specific foldings.
+		     )
+		    ((string= mode "F")
+		     ;; Full case folding
+		     (setf (ucdent-case-fold-full ent) (parse-folding expansion)))
+		    (t
+		     ;; Simple case folding (C or S)
+		     (setf (ucdent-case-fold-simple ent) (car (parse-folding expansion)))))))))
+      (values vec (make-range :codes range)))))
 
 
 
@@ -887,6 +950,26 @@
 		 (if (< x #x10) #x000 #x800)
 		 (if (minusp n) #x400 #x000)))
 	      0)))
+
+(defun pack-case-folding-simple (ucdent)
+  (or (ucdent-case-fold-simple ucdent)
+      0))
+
+(defun pack-case-folding-full (entry tabl)
+  (if (not (ucdent-case-fold-full entry))
+      0
+      (let* ((d (loop for i in (ucdent-case-fold-full entry)
+		  if (<= i #xFFFF) collect i
+		  else collect (logior (ldb (byte 10 10) (- i #x10000)) #xD800)
+		   and collect (logior (ldb (byte 10 0) (- i #x10000)) #xDC00)))
+	     (l (length d))
+	     (n (search d tabl)))
+	(unless n
+	  (setq n (fill-pointer tabl))
+	  (dolist (x d) (vector-push-extend x tabl)))
+	;; next 6 bits: length, in code units
+	;; low 16 bits: index into tabl
+	(logior n (ash l 16)))))
 
 ;; ucd-directory should be the directory where UnicodeData.txt is
 ;; located.
@@ -1028,5 +1111,24 @@
 	(setf (unidata-full-case-upper *unicode-data*)
 	      (make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
 			      :tabl (copy-seq tabl)))))
+
+    (format t "~&Building case-folding tables~%")
+    (format t "~&  Simple...~%")
+    (let ((split #x54))
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x) (pack-case-folding-simple x))
+		0 32 split)
+	(setf (unidata-case-fold-simple *unicode-data*)
+	      (make-ntrie32 :split split :hvec hvec :mvec mvec :lvec lvec))))
+    (format t "~&  Full...~%")
+    (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
+			    :fill-pointer 0 :adjustable t))
+	  (split #x65))
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x) (pack-case-folding-full x tabl))
+		0 32 split)
+	(setf (unidata-case-fold-full *unicode-data*)
+	      (make-case-folding :split split :hvec hvec :mvec mvec :lvec lvec
+				 :tabl (copy-seq tabl)))))
     nil))
 

@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.28 2009/06/05 18:46:17 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.29 2009/06/09 13:07:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,6 +34,8 @@
   full-case-lower
   full-case-title
   full-case-upper
+  case-fold-simple
+  case-fold-full
   )
 
 (defvar *unicode-data* (make-unidata))
@@ -253,6 +255,8 @@
 
 (defstruct (full-case (:include ntrie32))
   (tabl (ext:required-argument) :read-only t :type simple-string))
+
+(defstruct (case-fold-full (:include decomp)))
 
 (defstruct (bidi (:include ntrie16))
   (tabl (ext:required-argument) :read-only t
@@ -599,6 +603,21 @@
 	    (make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
 			    :tabl (map 'simple-string #'code-char tabl))))))
 
+(defloader load-case-fold-simple (stm 16)
+  (multiple-value-bind (split hvec mvec lvec)
+      (read-ntrie 32 stm)
+    (setf (unidata-case-fold-simple *unicode-data*)
+	  (make-ntrie32 :split split :hvec hvec :mvec mvec :lvec lvec))))
+
+(defloader load-case-fold-full (stm 17)
+  (multiple-value-bind (split hvec mvec lvec)
+      (read-ntrie 32 stm)
+    (let* ((tlen (read16 stm))
+	   (tabl (make-array tlen :element-type '(unsigned-byte 16))))
+      (read-vector tabl stm :endian-swap :network-order)
+      (setf (unidata-case-fold-full *unicode-data*)
+	    (make-case-fold-full :split split :hvec hvec :mvec mvec :lvec lvec
+				 :tabl (map 'simple-string #'code-char tabl))))))
 
 ;;; Accessor functions.
 
@@ -949,7 +968,28 @@
   (unless (unidata-full-case-upper *unicode-data*)
     (load-full-case-upper))
   (%unicode-full-case code (unidata-full-case-upper *unicode-data*) #'unicode-upper))
-	 
+
+(defun unicode-case-fold-simple (code)
+  (unless (unidata-case-fold-simple *unicode-data*)
+    (load-case-fold-simple))
+  (let* ((data (unidata-case-fold-simple *unicode-data*))
+	 (n (qref32 data code)))
+    (if (= n 0)
+	code
+	n)))
+
+(defun unicode-case-fold-full (code)
+  (unless (unidata-case-fold-full *unicode-data*)
+    (load-case-fold-full))
+  (let* ((data (unidata-case-fold-full *unicode-data*))
+	 (n (qref32 data code)))
+    (if (= n 0)
+	(string (code-char (unicode-case-fold-simple code)))
+	(let ((off (logand n #xffff))
+	      (len (ldb (byte 6 16) n)))
+	  (subseq (case-fold-full-tabl data) off (+ off len))))))
+  
+
 ;; Build the composition pair table.
 (defun build-composition-table ()
   (let ((table (make-hash-table)))
