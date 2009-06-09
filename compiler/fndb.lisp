@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.136.4.1.2.3 2009/06/09 14:53:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.136.4.1.2.4 2009/06/09 18:17:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -815,29 +815,37 @@
 
 (deftype stringable () '(or character string symbol))
 
+;; Case folding mode (in case we want language-specific converssions)
+#+unicode
+(deftype case-folding-type ()
+  `(member :simple :full))
+
+;; Case conversion mode (in case we ever want language-specific conversions)
+#+unicode
+(deftype case-conversion-type ()
+  `(member :simple :full))
+
 (defknown (string=)
   (stringable stringable &key (:start1 index) (:end1 sequence-end)
 	      (:start2 index) (:end2 sequence-end))
   boolean
   (foldable flushable))
 
-(defknown (string-equal)
+(defknown (string-equal string-not-equal)
   (stringable stringable &key (:start1 index) (:end1 sequence-end)
-	      (:start2 index) (:end2 sequence-end) #+unicode (:casing t))
+	      (:start2 index) (:end2 sequence-end) #+unicode (:casing case-folding-type))
   boolean
   (foldable flushable))
 
-(defknown (string< string> string<= string>= string/=
-		   string-not-greaterp
-		   string-not-equal)
+(defknown (string< string> string<= string>= string/=)
   (stringable stringable &key (:start1 index) (:end1 sequence-end)
 	      (:start2 index) (:end2 sequence-end))
   (or index null)
   (foldable flushable))
 
-(defknown (string-lessp string-greaterp string-not-lessp)
+(defknown (string-lessp string-greaterp string-not-lessp string-not-greaterp)
   (stringable stringable &key (:start1 index) (:end1 sequence-end)
-	      (:start2 index) (:end2 sequence-end) #+unicode (:casing t))
+	      (:start2 index) (:end2 sequence-end) #+unicode (:casing case-folding-type))
   (or index null)
   (foldable flushable))
 
@@ -849,7 +857,7 @@
   (sequence stringable) simple-string (flushable))
 
 (defknown (string-upcase string-downcase string-capitalize)
-  (stringable &key (:start index) (:end sequence-end) #+unicode (:casing t))
+  (stringable &key (:start index) (:end sequence-end) #+unicode (:casing case-conversion-type))
   simple-string (flushable))
 
 (defknown (nstring-upcase nstring-downcase nstring-capitalize)
