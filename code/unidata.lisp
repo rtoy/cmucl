@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.29 2009/06/09 13:07:50 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.1.2.30 2009/06/10 00:45:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1018,6 +1018,8 @@
 
 (defvar *composition-pair-table* nil)
 
+;; Based on the sample code from
+;; http://www.unicode.org/reports/tr15/#Hangul
 (declaim (inline compose-hangul))
 (defun compose-hangul (c1 c2)
   (declare (type codepoint c1 c2)
