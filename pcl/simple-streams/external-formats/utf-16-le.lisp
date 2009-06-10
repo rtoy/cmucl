@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-le.lisp,v 1.1.2.1.2.6 2009/05/20 21:47:37 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-le.lisp,v 1.1.2.1.2.7 2009/06/10 16:38:50 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -19,7 +19,7 @@
        (declare (type (integer 0 #xffff) ,code))
        (cond ((lisp::surrogatep ,code :low)
 	      ;; Replace with REPLACEMENT CHARACTER.
-	      (setf ,code #xFFFD))
+	      (setf ,code +replacement-character-code+))
 	     ((lisp::surrogatep ,code :high)
 	      (let* ((,c1 ,input)
 		     (,c2 ,input)
@@ -29,7 +29,7 @@
 		;; next time around?
 		(if (lisp::surrogatep ,next :low)
 		    (setq ,code (+ (ash (- ,code #xD800) 10) ,next #x2400))
-		    (setq ,code #xFFFD))))
+		    (setq ,code +replacement-character-code+))))
 	     ((= ,code #xFFFE)
 	      ;; replace with REPLACEMENT CHARACTER ?
 	      (error "Illegal character U+FFFE in UTF-16 sequence.")))
@@ -47,4 +47,4 @@
 		(output (logior ,c1 #xD800))
 		(output (logior ,c2 #xDC00))))
 	     (t
-	      (output #xFFFD))))))
+	      (output +replacement-character-code+))))))

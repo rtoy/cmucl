@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.23 2009/05/28 16:06:39 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.24 2009/06/10 16:38:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,6 +30,9 @@
 (defconstant +ef-en+ 8)
 (defconstant +ef-de+ 9)
 (defconstant +ef-max+ 10)
+
+;; Unicode replacement character U+FFFD
+(defconstant +replacement-character-code+ #xFFFD)
 
 (define-condition external-format-not-implemented (error)
   ()

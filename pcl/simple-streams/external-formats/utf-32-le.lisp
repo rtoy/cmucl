@@ -4,7 +4,7 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-le.lisp,v 1.1.2.3 2009/05/27 20:36:36 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-le.lisp,v 1.1.2.4 2009/06/10 16:38:50 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -25,7 +25,7 @@
        (cond ((or (> ,c #x10ffff)
 		  (lisp::surrogatep ,c))
 	      ;; Surrogates are illegal.  Use replacement character.
-	      (values #xfffd 4))
+	      (values +replacement-character-code+ 4))
 	     (t
 	      (values ,c 4)))))
 

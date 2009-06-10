@@ -1,7 +1,7 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: STREAM -*-
 ;;;
 ;;; **********************************************************************
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.1.2.3 2009/05/20 21:47:37 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.1.2.4 2009/06/10 16:38:50 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -48,7 +48,7 @@
 	    ;; the BOM being reread as a character
 	    (cond ((lisp::surrogatep ,code :low)
 		   ;; replace with REPLACEMENT CHARACTER ?
-		   (setf ,code #xFFFD))
+		   (setf ,code +replacement-character-code+))
 		  ((lisp::surrogatep ,code :high)
 		   (let* ((,c1 ,input)
 			  (,c2 ,input)
@@ -62,14 +62,14 @@
 		     (if (lisp::surrogatep ,next :low)
 			 (setq ,code (+ (ash (- ,code #xD800) 10) ,next #x2400)
 			       ,wd 4)
-			 (setf ,code #xFFFD))))
+			 (setf ,code +replacement-character-code+))))
 		  ((and (= ,code #xFFFE) (zerop ,st))
 		   (setf ,state 1) (go :again))
 		  ((and (= ,code #xFEFF) (zerop ,st))
 		   (setf ,state 2) (go :again))
 		  ((= ,code #xFFFE)
 		   ;; Replace with REPLACEMENT CHARACTER.  
-		   (setf ,code #xFFFD)))
+		   (setf ,code +replacement-character-code+)))
 	    (return (values ,code ,wd))))))
   (code-to-octets (code state output c c1 c2)
     `(flet ((output (code)
@@ -88,4 +88,4 @@
 		(output (logior ,c1 #xD800))
 		(output (logior ,c2 #xDC00))))
 	     (t
-	      (output #xFFFD))))))
+	      (output +replacement-character-code+))))))
