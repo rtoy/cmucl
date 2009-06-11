@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.33 2009/06/11 13:30:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.34 2009/06/11 14:32:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -379,11 +379,10 @@
 	   (multiple-value-bind (code widep)
 	       (codepoint string index)
 	     (when widep (incf index))
-	     (let ((new (,f code)))
-	       (multiple-value-bind (hi lo)
-		   (surrogates (,f code))
-		 (write-char hi s)
-		 (when lo (write-char lo s)))))))))
+	     (multiple-value-bind (hi lo)
+		 (surrogates (unicode-case-fold-simple code))
+	       (write-char hi s)
+	       (when lo (write-char lo s))))))))
     (:full
      (with-output-to-string (s)
        (with-one-string string start end offset
@@ -392,7 +391,7 @@
 	   (multiple-value-bind (code widep)
 	       (codepoint string index)
 	     (when widep (incf index))
-	     (write-string (,f code) s))))))))
+	     (write-string (unicode-case-fold-full code) s))))))))
 
 (defun string-equal (string1 string2 &key (start1 0) end1 (start2 0) end2)
   "Given two strings (string1 and string2), and optional integers start1,
