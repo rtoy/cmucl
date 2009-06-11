@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.92 2007/05/25 18:21:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.93 2009/06/11 16:03:58 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,7 +95,7 @@
 
 ;;; LOAD-FRESH-LINE -- internal.
 ;;;
-;;; Output the corrent number of semicolons after a fresh-line.
+;;; Output the current number of semicolons after a fresh-line.
 ;;; 
 (defconstant semicolons ";;;;;;;;;;;;;;;;")
 ;;;
@@ -316,6 +316,7 @@
 	 (prog1
 	  (fast-read-u-integer ,n)
 	  (done-with-fast-read-byte)))))
+
 
 ;;; Fasload:
 
@@ -526,8 +527,7 @@
    keyword affects nested loads.  The variables EXT:*LOAD-SOURCE-TYPES*,
    EXT:*LOAD-OBJECT-TYPES*, and EXT:*LOAD-LP-OBJECT-TYPES* determine the file
    types that we use for defaulting when none is specified."
-  (declare (type (or null (member :source :binary)) contents)
-	   (ignore external-format))
+  (declare (type (or null (member :source :binary)) contents))
   (collect ((vars)
 	    (vals))
     (macrolet ((frob (wot)
@@ -547,7 +547,7 @@
 	    (*readtable* *readtable*)
             (*enable-package-locked-errors* *enable-package-locked-errors*)
 	    (*load-depth* (1+ *load-depth*)))
-	(values 
+	(values
 	 (with-simple-restart (continue "Return NIL from load of ~S." filename)
 	   (if (streamp filename)
 	       (if (or (eq contents :binary)
@@ -560,19 +560,22 @@
 					  *default-pathname-defaults* nil)))
 		 (if (wild-pathname-p pn)
 		     (dolist (file (directory pn) t)
-		       (internal-load pn file if-does-not-exist contents))
+		       (internal-load pn file if-does-not-exist contents
+				      external-format))
 		     (let ((tn (probe-file pn)))
 		       (if (or tn (pathname-type pn) contents)
-			   (internal-load pn tn if-does-not-exist contents)
+			   (internal-load pn tn if-does-not-exist contents
+					  external-format)
 			   (internal-load-default-type
-			    pn if-does-not-exist))))))))))))
+			    pn if-does-not-exist external-format))))))))))))
 
 
 ;;; INTERNAL-LOAD  --  Internal
 ;;;
 ;;;    Load the stuff in a file when we have got the name.
 ;;;
-(defun internal-load (pathname truename if-does-not-exist contents)
+(defun internal-load (pathname truename if-does-not-exist contents
+		      external-format)
   (unless truename
     (return-from
      internal-load
@@ -594,7 +597,7 @@
 	(*load-pathname* pathname))
     (case contents
       (:source
-       (with-open-file (file truename
+       (with-open-file (file truename :external-format external-format
 			     :direction :input
 			     :if-does-not-exist if-does-not-exist)
 	 (sloload file)))
@@ -605,13 +608,14 @@
 			     :element-type '(unsigned-byte 8))
 	 (fasload file)))
       (t
-       (let ((first-line (with-open-file (file truename :direction :input)
+       (let ((first-line (with-open-file (file truename :direction :input
+					       :external-format :iso8859-1)
 			   (read-line file nil))))
 	 (cond
 	  ((and first-line
 		(>= (length (the simple-string first-line)) 9)
 		(string= first-line "FASL FILE" :end1 9))
-	   (internal-load pathname truename if-does-not-exist :binary))
+	   (internal-load pathname truename if-does-not-exist :binary :void))
 	  (t
 	   (when (member (pathname-type truename) *load-object-types*
 			 :test #'string=)
@@ -619,7 +623,8 @@
 	      "Load it as a source file."
 	      "File has a fasl file type, but no fasl file header:~%  ~S"
 	      (namestring truename)))
-	   (internal-load pathname truename if-does-not-exist :source))))))))
+	   (internal-load pathname truename if-does-not-exist :source
+			  external-format))))))))
 
 
 ;;; TRY-DEFAULT-TYPES  --  Internal
@@ -641,12 +646,10 @@
 ;;;
 ;;;    Handle the case of INTERNAL-LOAD where the file does not exist.
 ;;;
-(defun internal-load-default-type (pathname if-does-not-exist)
-  (multiple-value-bind
-      (src-pn src-tn)
+(defun internal-load-default-type (pathname if-does-not-exist external-format)
+  (multiple-value-bind (src-pn src-tn)
       (try-default-types pathname *load-source-types* '("LISP"))
-    (multiple-value-bind
-	(obj-pn obj-tn)
+    (multiple-value-bind (obj-pn obj-tn)
 	(try-default-types pathname *load-object-types* *load-lp-object-types*)
       (cond
        ((and obj-tn src-tn
@@ -656,32 +659,36 @@
 	   (warn "Loading object file ~A,~@
 		  which is older than the presumed source:~%  ~A."
 		 (namestring obj-tn) (namestring src-tn))
-	   (internal-load obj-pn obj-tn if-does-not-exist :binary))
+	   (internal-load obj-pn obj-tn if-does-not-exist :binary :void))
 	  (:load-source
 	   (warn "Loading source file ~A,~@
 		  which is newer than the presumed object file:~%  ~A."
 		 (namestring src-tn) (namestring obj-tn))
-	   (internal-load src-pn src-tn if-does-not-exist :source))
+	   (internal-load src-pn src-tn if-does-not-exist :source
+			  external-format))
 	  (:compile
 	   (let ((obj-tn (compile-file src-pn)))
 	     (unless obj-tn
 	       (error "Compile of source failed, cannot load object."))
-	     (internal-load src-pn obj-tn :error :binary)))
+	     (internal-load src-pn obj-tn :error :binary :void)))
 	  (:query
 	   (restart-case
 	       (error "Object file ~A is~@
 		       older than the presumed source:~%  ~A."
 		      (namestring obj-tn) (namestring src-tn))
 	     (continue () :report "load source file"
-	       (internal-load src-pn src-tn if-does-not-exist :source))
+	       (internal-load src-pn src-tn if-does-not-exist :source
+			      external-format))
 	     (load-object () :report "load object file"
-	       (internal-load src-pn obj-tn if-does-not-exist :binary))))))
+	       (internal-load src-pn obj-tn if-does-not-exist :binary
+			      :void))))))
        (obj-tn
-	(internal-load obj-pn obj-tn if-does-not-exist :binary))
+	(internal-load obj-pn obj-tn if-does-not-exist :binary :void))
        (src-pn
-	(internal-load src-pn src-tn if-does-not-exist :source))
+	(internal-load src-pn src-tn if-does-not-exist :source
+		       external-format))
        (t
-	(internal-load pathname nil if-does-not-exist nil))))))
+	(internal-load pathname nil if-does-not-exist nil external-format))))))
 
 
 ;;;; Actual FOP definitions:
@@ -697,10 +704,19 @@
 (define-fop (fop-misc-trap 66)
 	    (%primitive make-other-immediate-type 0 vm:unbound-marker-type))
 
+;; Not used?
 (define-fop (fop-character 68)
   (code-char (read-arg 3)))
+
+#-unicode
 (define-fop (fop-short-character 69)
   (code-char (read-arg 1)))
+
+#+unicode
+(define-fop (fop-short-character 69)
+  ;; Characters are always little-endian
+  (code-char (+ (read-arg 1)
+		(ash (read-arg 1) 8))))
 
 (clone-fop (fop-struct 48)
 	   (fop-small-struct 49)
@@ -746,9 +762,10 @@
 (declaim (type index *load-symbol-buffer-size*))
    
 (macrolet ((frob (name code name-size package)
-	     (let ((n-package (gensym))
-		   (n-size (gensym))
-		   (n-buffer (gensym)))
+	     (let ((n-package (gensym "PACKAGE-"))
+		   (n-size (gensym "SIZE-"))
+		   (n-buffer (gensym "BUFFER-"))
+		   (k (gensym "IDX-")))
 	       `(define-fop (,name ,code)
 		  (prepare-for-fast-read-byte *fasl-file*
 		    (let ((,n-package ,package)
@@ -759,7 +776,8 @@
 						 (* ,n-size 2)))))
 		      (done-with-fast-read-byte)
 		      (let ((,n-buffer *load-symbol-buffer*))
-			(read-n-bytes *fasl-file* ,n-buffer 0 ,n-size)
+			(read-n-bytes *fasl-file* ,n-buffer 0
+				      (* vm:char-bytes ,n-size))
 			(push-table (intern* ,n-buffer ,n-size ,n-package)))))))))
   (frob fop-symbol-save 6 4 *package*)
   (frob fop-small-symbol-save 7 1 *package*)
@@ -781,7 +799,8 @@
 	   (fop-uninterned-small-symbol-save 13)
   (let* ((arg (clone-arg))
 	 (res (make-string arg)))
-    (read-n-bytes *fasl-file* res 0 arg)
+    (read-n-bytes *fasl-file* res 0
+		  (* vm:char-bytes arg))
     (push-table (make-symbol res))))
 
 (define-fop (fop-package 14)
@@ -966,7 +985,8 @@
 	   (fop-small-string 38)
   (let* ((arg (clone-arg))
 	 (res (make-string arg)))
-    (read-n-bytes *fasl-file* res 0 arg)
+    (read-n-bytes *fasl-file* res 0
+		  (* vm:char-bytes arg))
     res))
 
 (clone-fop (fop-vector 39)
@@ -1432,7 +1452,9 @@
 	 (code-object (pop-stack))
 	 (len (read-arg 1))
 	 (sym (make-string len)))
-    (read-n-bytes *fasl-file* sym 0 len)
+    (read-n-bytes *fasl-file* sym 0
+		  (* vm:char-bytes len))
+
     (vm:fixup-code-object code-object (read-arg 4)
 			  (foreign-symbol-address-aux sym :code)
 			  kind)
@@ -1443,7 +1465,9 @@
 	 (code-object (pop-stack))
 	 (len (read-arg 1))
 	 (sym (make-string len)))
-    (read-n-bytes *fasl-file* sym 0 len)
+    (read-n-bytes *fasl-file* sym 0
+		  (* vm:char-bytes len))
+
     (vm:fixup-code-object code-object (read-arg 4)
 			  (foreign-symbol-address-aux sym :data)
 			  kind)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.18 2008/09/10 13:46:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.19 2009/06/11 16:04:00 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,7 +44,8 @@
 
 ;;;; Machine Architecture parameters:
 
-(export '(word-bits byte-bits word-shift word-bytes float-sign-shift
+(export '(word-bits byte-bits char-bits word-shift word-bytes char-bytes
+	  float-sign-shift
 
 	  single-float-bias single-float-exponent-byte
 	  single-float-significand-byte single-float-normal-exponent-min
@@ -74,6 +75,12 @@
 
 (defconstant byte-bits 8
   "Number of bits per byte where a byte is the smallest addressable object.")
+
+(defconstant char-bits #-unicode 8 #+unicode 16
+  "Number of bits needed to represent a character")
+
+(defconstant char-bytes (truncate char-bits byte-bits)
+  "Number of bytes needed to represent a character")
 
 (defconstant word-shift (1- (integer-length (/ word-bits byte-bits)))
   "Number of bits to shift between word addresses and byte addresses.")

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.121 2009/01/23 13:38:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.122 2009/06/11 16:03:59 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,13 @@
 (use-package "C-CALL")
 (use-package "SYSTEM")
 (use-package "EXT")
+
+;; Check the G_BROKEN_FILENAMES environment variable; if set the encoding
+;; is locale-dependent...else use :utf-8 on Unicode Lisps.  On 8 bit Lisps
+;; it must be set to :iso8859-1 (or left as NIL), making files with
+;; non-Latin-1 characters "mojibake", but otherwise they'll be inaccessible.
+;; Must be set to NIL initially to enable building Lisp!
+(defvar *filename-encoding* nil)
 
 (export '(daddr-t caddr-t ino-t swblk-t size-t time-t dev-t off-t uid-t gid-t
 	  timeval tv-sec tv-usec timezone tz-minuteswest tz-dsttime
@@ -180,6 +187,16 @@
 	  unix-uname))
 
 (pushnew :unix *features*)
+
+(eval-when (:compile-toplevel)
+  (defmacro %name->file (string)
+    `(if *filename-encoding*
+	 (string-encode ,string *filename-encoding*)
+	 ,string))
+  (defmacro %file->name (string)
+    `(if *filename-encoding*
+	 (string-decode ,string *filename-encoding*)
+	 ,string)))
 
 
 ;;;; Common machine independent structures.
@@ -1134,7 +1151,7 @@
 	f_ok     Presence of file."
   (declare (type unix-pathname path)
 	   (type (mod 8) mode))
-  (void-syscall ("access" c-string int) path mode))
+  (void-syscall ("access" c-string int) (%name->file path) mode))
 
 ;;; Unix-chdir accepts a directory name and makes that the
 ;;; current working directory.
@@ -1143,7 +1160,7 @@
   "Given a file path string, unix-chdir changes the current working 
    directory to the one specified."
   (declare (type unix-pathname path))
-  (void-syscall ("chdir" c-string) path))
+  (void-syscall ("chdir" c-string) (%name->file path)))
 
 ;;; Unix-chmod accepts a path and a mode and changes the mode to the new mode.
 
@@ -1185,7 +1202,7 @@
   otherwise."
   (declare (type unix-pathname path)
 	   (type unix-file-mode mode))
-  (void-syscall ("chmod" c-string int) path mode))
+  (void-syscall ("chmod" c-string int) (%name->file path) mode))
 
 ;;; Unix-fchmod accepts a file descriptor ("fd") and a file protection mode
 ;;; ("mode") and changes the protection of the file described by "fd" to 
@@ -1209,7 +1226,7 @@
   (declare (type unix-pathname path)
 	   (type (or unix-uid (integer -1 -1)) uid)
 	   (type (or unix-gid (integer -1 -1)) gid))
-  (void-syscall ("chown" c-string int int) path uid gid))
+  (void-syscall ("chown" c-string int int) (%name->file path) uid gid))
 
 ;;; Unix-fchown is exactly the same as unix-chown except that the file
 ;;; is specified by a file-descriptor ("fd") instead of a pathname.
@@ -1254,7 +1271,8 @@
   
   (declare (type unix-pathname name)
 	   (type unix-file-mode mode))
-  (int-syscall (#+solaris "creat64" #-solaris "creat" c-string int) name mode))
+  (int-syscall (#+solaris "creat64" #-solaris "creat" c-string int)
+	       (%name->file name) mode))
 
 ;;; Unix-dup returns a duplicate copy of the existing file-descriptor
 ;;; passed as an argument.
@@ -1355,7 +1373,8 @@
   "Unix-link creates a hard link from the file with name1 to the
    file with name2."
   (declare (type unix-pathname name1 name2))
-  (void-syscall ("link" c-string c-string) name1 name2))
+  (void-syscall ("link" c-string c-string)
+		(%name->file name1) (%name->file name2)))
 
 ;;; Unix-lseek accepts a file descriptor, an offset, and whence value.
 
@@ -1406,7 +1425,7 @@
    NIL and an error number."
   (declare (type unix-pathname name)
 	   (type unix-file-mode mode))
-  (void-syscall ("mkdir" c-string int) name mode))
+  (void-syscall ("mkdir" c-string int) (%name->file name) mode))
 
 ;;; Unix-open accepts a pathname (a simple string), flags, and mode and
 ;;; attempts to open file with name pathname.
@@ -1457,7 +1476,8 @@
   (declare (type unix-pathname path)
 	   (type fixnum flags)
 	   (type unix-file-mode mode))
-  (int-syscall (#+solaris "open64" #-solaris "open" c-string int int) path flags mode))
+  (int-syscall (#+solaris "open64" #-solaris "open" c-string int int)
+	       (%name->file path) flags mode))
 
 (defun unix-pipe ()
   "Unix-pipe sets up a unix-piping mechanism consisting of
@@ -1526,12 +1546,18 @@
   (with-alien ((buf (array char 1024)))
     (syscall ("readlink" c-string (* char) int)
 	     (let ((string (make-string result)))
+	       #-unicode
 	       (kernel:copy-from-system-area
 		(alien-sap buf) 0
 		string (* vm:vector-data-offset vm:word-bits)
 		(* result vm:byte-bits))
-	       string)
-	     path (cast buf (* char)) 1024)))
+	       #+unicode
+	       (let ((sap (alien-sap buf)))
+		 (dotimes (k result)
+		   (setf (aref string k)
+			 (code-char (sap-ref-8 sap k)))))
+	       (%file->name string))
+	     (%name->file path) (cast buf (* char)) 1024)))
 
 ;;; Unix-rename accepts two files names and renames the first to the second.
 
@@ -1539,7 +1565,8 @@
   "Unix-rename renames the file with string name1 to the string
    name2.  NIL and an error code is returned if an error occured."
   (declare (type unix-pathname name1 name2))
-  (void-syscall ("rename" c-string c-string) name1 name2))
+  (void-syscall ("rename" c-string c-string)
+		(%name->file name1) (%name->file name2)))
 
 ;;; Unix-rmdir accepts a name and removes the associated directory.
 
@@ -1547,7 +1574,7 @@
   "Unix-rmdir attempts to remove the directory name.  NIL and
    an error number is returned if an error occured."
   (declare (type unix-pathname name))
-  (void-syscall ("rmdir" c-string) name))
+  (void-syscall ("rmdir" c-string) (%name->file name)))
 
 
 ;;; UNIX-FAST-SELECT -- public.
@@ -1674,7 +1701,8 @@
    named name1.  NIL and an error number is returned if the call
    is unsuccessful."
   (declare (type unix-pathname name1 name2))
-  (void-syscall ("symlink" c-string c-string) name1 name2))
+  (void-syscall ("symlink" c-string c-string)
+		(%name->file name1) (%name->file name2)))
 
 ;;; Unix-unlink accepts a name and deletes the directory entry for that
 ;;; name and the file if this is the last link.
@@ -1683,7 +1711,7 @@
   "Unix-unlink removes the directory entry for the named file.
    NIL and an error code is returned if the call fails."
   (declare (type unix-pathname name))
-  (void-syscall ("unlink" c-string) name))
+  (void-syscall ("unlink" c-string) (%name->file name)))
 
 ;;; Unix-write accepts a file descriptor, a buffer, an offset, and the
 ;;; length to write.  It attempts to write len bytes to the device
@@ -2123,7 +2151,7 @@
   (with-alien ((buf (struct stat)))
     (syscall ("stat" c-string (* (struct stat)))
 	     (extract-stat-results buf)
-	     name (addr buf))))
+	     (%name->file name) (addr buf))))
 
 (defun unix-lstat (name)
   "Unix-lstat is similar to unix-stat except the specified
@@ -2132,7 +2160,7 @@
   (with-alien ((buf (struct stat)))
     (syscall ("lstat" c-string (* (struct stat)))
 	     (extract-stat-results buf)
-	     name (addr buf))))
+	     (%name->file name) (addr buf))))
 
 (defun unix-fstat (fd)
   "Unix-fstat is similar to unix-stat except the file is specified
@@ -2159,7 +2187,7 @@
   (with-alien ((buf (struct stat64)))
     (syscall ("stat64" c-string (* (struct stat64)))
 	     (extract-stat-results buf)
-	     name (addr buf))))
+	     (%name->file name) (addr buf))))
 
 (defun unix-lstat (name)
   "Unix-lstat is similar to unix-stat except the specified
@@ -2168,7 +2196,7 @@
   (with-alien ((buf (struct stat64)))
     (syscall ("lstat64" c-string (* (struct stat64)))
 	     (extract-stat-results buf)
-	     name (addr buf))))
+	     (%name->file name) (addr buf))))
 
 (defun unix-fstat (fd)
   "Unix-fstat is similar to unix-stat except the file is specified
@@ -2449,7 +2477,7 @@
 	      (alien-funcall (extern-alien "opendir"
 					   (function system-area-pointer
 						     c-string))
-			     pathname)))
+			     (%name->file pathname))))
 	 (if (zerop (sap-int dir-struct))
 	     (values nil (unix-errno))
 	     (make-directory :name pathname :dir-struct dir-struct))))
@@ -2474,13 +2502,19 @@
 		(ino (slot direct 'd-ino)))
 	    (declare (type (unsigned-byte 16) nlen))
 	    (let ((string (make-string nlen)))
+	      #-unicode
 	      (kernel:copy-from-system-area
 	       (alien-sap (addr (slot direct 'd-name))) 0
 	       string (* vm:vector-data-offset vm:word-bits)
 	       (* nlen vm:byte-bits))
-	      (values string ino)))
+	      #+unicode
+	      (let ((sap (alien-sap (addr (slot direct 'd-name)))))
+		(dotimes (k nlen)
+		  (setf (aref string k)
+			(code-char (sap-ref-8 sap k)))))
+	      (values (%file->name string) ino)))
 	  #+(or linux svr4)
-	  (values (cast (slot direct 'd-name) c-string)
+	  (values (%file->name (cast (slot direct 'd-name) c-string))
 		  (slot direct 'd-ino))))))
 
 ;;; 64-bit readdir for Solaris
@@ -2500,13 +2534,19 @@
 		(ino (slot direct 'd-ino)))
 	    (declare (type (unsigned-byte 16) nlen))
 	    (let ((string (make-string nlen)))
+	      #-unicode
 	      (kernel:copy-from-system-area
 	       (alien-sap (addr (slot direct 'd-name))) 0
 	       string (* vm:vector-data-offset vm:word-bits)
 	       (* nlen vm:byte-bits))
-	      (values string ino)))
+	      #+unicode
+	      (let ((sap (alien-sap (addr (slot direct 'd-name)))))
+		(dotimes (k nlen)
+		  (setf (aref string k)
+			(code-char (sap-ref-8 sap k)))))
+	      (values (%file->name string) ino)))
 	  #+(or linux svr4)
-	  (values (cast (slot direct 'd-name) c-string)
+	  (values (%file->name (cast (slot direct 'd-name) c-string))
 		  (slot direct 'd-ino))))))
 
 #+(and bsd (not solaris))
@@ -2525,11 +2565,17 @@
 	    (declare (type (unsigned-byte 8) nlen)
 		     (type (unsigned-byte 32) fino))
 	    (let ((string (make-string nlen)))
+	      #-unicode
 	      (kernel:copy-from-system-area
 	       (alien-sap (addr (slot direct 'd-name))) 0
 	       string (* vm:vector-data-offset vm:word-bits)
 	       (* nlen vm:byte-bits))
-	      (values string fino)))))))
+	      #+unicode
+	      (let ((sap (alien-sap (addr (slot direct 'd-name)))))
+		(dotimes (k nlen)
+		  (setf (aref string k)
+			(code-char (sap-ref-8 sap k)))))
+	      (values (%file->name string) fino)))))))
 
 
 (defun close-dir (dir)
@@ -2556,7 +2602,7 @@
 	
       (values (not (zerop
 		    (sap-int (alien-sap result))))
-	      (cast buf c-call:c-string)))))
+	      (%file->name (cast buf c-call:c-string))))))
 
 
 
@@ -2790,7 +2836,7 @@
 				(car cons))
 			    envlist))
 		    envlist)))
-    (sub-unix-execve program arg-list env-list)))
+    (sub-unix-execve (%name->file program) arg-list env-list)))
 
 
 (defmacro round-bytes-to-words (n)
@@ -2829,10 +2875,20 @@
 	(let ((n (length s)))
 	  ;; 
 	  ;; Blast the string into place
+	  #-unicode
 	  (kernel:copy-to-system-area (the simple-string s)
 				      (* vm:vector-data-offset vm:word-bits)
 				      string-sap 0
 				      (* (1+ n) vm:byte-bits))
+	  #+unicode
+	  (progn
+	    ;; FIXME: Do we need to apply some kind of transformation
+	    ;; to convert Lisp unicode strings to C strings?  Utf-8?
+	    (dotimes (k n)
+	      (setf (sap-ref-8 string-sap k)
+		    (logand #xff (char-code (aref s k)))))
+	    (setf (sap-ref-8 string-sap n) 0))
+	  
 	  ;; 
 	  ;; Blast the pointer to the string into place
 	  (setf (sap-ref-sap vec-sap i) string-sap)
@@ -2938,14 +2994,26 @@
 
 ;; Datagram support
 
-(def-alien-routine ("recvfrom" unix-recvfrom) int
-  (fd int)
-  (buffer c-string)
-  (length int)
-  (flags int)
-  (sockaddr (* t))
-  (len int :in-out))
+(defun unix-recvfrom (fd buffer length flags sockaddr len)
+  (with-alien ((l c-call:int len))
+    (values
+     (alien-funcall (extern-alien "recvfrom"
+				  (function c-call:int
+					    c-call:int
+					    system-area-pointer
+					    c-call:int
+					    c-call:int
+					    (* t)
+					    (* c-call:int)))
+		    fd
+		    (system:vector-sap buffer)
+		    length
+		    flags
+		    sockaddr
+		    (addr l))
+     l)))
 
+#-unicode
 (def-alien-routine ("sendto" unix-sendto) int
   (fd int)
   (buffer c-string)
@@ -2953,6 +3021,22 @@
   (flags int)
   (sockaddr (* t))
   (len int))
+
+(defun unix-sendto (fd buffer length flags sockaddr len)
+  (alien-funcall (extern-alien "sendto"
+			       (function c-call:int
+					 c-call:int
+					 system-area-pointer
+					 c-call:int
+					 c-call:int
+					 (* t)
+					 c-call:int))
+		 fd
+		 (system:vector-sap buffer)
+		 length
+		 flags
+		 sockaddr
+		 len))
 
 (def-alien-routine ("shutdown" unix-shutdown) int
   (socket int)

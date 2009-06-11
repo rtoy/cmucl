@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.44 2008/09/23 16:39:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.45 2009/06/11 16:03:57 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -114,7 +114,7 @@
   ;; being removed.)
   (definition nil :type (or c::clambda null))
   ;;
-  ;; The number of consequtive GCs that this function has been unused.  This is
+  ;; The number of consecutive GCs that this function has been unused.  This is
   ;; used to control cache replacement.
   (gcs 0 :type c::index)
   ;;
@@ -143,7 +143,7 @@
      :WARN  -- Print a warning, but declare the variable special (the default.)
       T     -- Quietly declare the variable special.
       NIL   -- Never declare the variable, giving warnings on each use.")
-  
+
 
 ;;; EVAL  --  Public
 ;;;

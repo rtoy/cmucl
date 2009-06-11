@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.282 2009/04/13 13:50:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.283 2009/06/11 16:03:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -866,7 +866,11 @@
    "PRINT-NOT-READABLE-OBJECT"
    "DEFINE-SETF-EXPANDER" "PRINT-NOT-READABLE" "METHOD"
    "METHOD-COMBINATION" 
-   "MAKE-LOAD-FORM" "MAKE-LOAD-FORM-SAVING-SLOTS"))
+   "MAKE-LOAD-FORM" "MAKE-LOAD-FORM-SAVING-SLOTS"
+   "CHAR-TITLECASE" "TITLE-CASE-P"
+   "GLYPH" "SGLYPH"
+   "STRING-TO-NFD" "STRING-TO-NFKC" "STRING-TO-NFC" "STRING-TO-NFKD"
+   "CODEPOINT-LIMIT" "CODEPOINT"))
 
 (defpackage "EVAL"
   (:export "*EVAL-STACK-TRACE*" "*INTERNAL-APPLY-NODE-TRACE*"
@@ -1086,6 +1090,7 @@
 	   "CALLBACK-ACCESSOR-FORM" "MAKE-CALLBACK-TRAMPOLINE"
 	   "FIXNUMIZE"
 	   "WEAK-POINTER-MARK-BIT-SLOT"
+	   "CHAR-BITS" "CHAR-BYTES"
 	   )
   #+x86
   (:export "COMPATIBLE-FUNCTION-TYPES-P")
@@ -1235,7 +1240,8 @@
   (:nicknames "EXTENSIONS")
   (:import-from "LISP" "GET-SETF-METHOD")
   (:import-from "KERNEL" "*ANSI-DEFSTRUCT-OPTIONS-P*")
-  (:import-from "SYSTEM" "MAKE-INDENTING-STREAM" "INDENTING-STREAM-P"  "BINARY-TEXT-STREAM")
+  (:import-from "SYSTEM" "MAKE-INDENTING-STREAM" "INDENTING-STREAM-P"
+		"BINARY-TEXT-STREAM")
   #+double-double
   (:import-from "KERNEL" "DOUBLE-DOUBLE-FLOAT" "DD-PI")
   (:export   "*AFTER-GC-HOOKS*" "*AFTER-SAVE-INITIALIZATIONS*"
@@ -1465,7 +1471,8 @@
   (:import-from "SYSTEM" "LISP-STREAM")
   (:import-from "EXTENSIONS" "FUNDAMENTAL-STREAM")
   (:import-from "LISP" "LINE-LENGTH" "CHARPOS"
-		"BREF" "BUFFER-COPY" "BUFFER-SAP" "ENDIAN-SWAP-VALUE" "VECTOR-ELT-WIDTH")
+		"BREF" "BUFFER-COPY" "BUFFER-SAP" "ENDIAN-SWAP-VALUE"
+		"VECTOR-ELT-WIDTH")
   (:export ;; Stream classes
            "STREAM"
            "SIMPLE-STREAM"

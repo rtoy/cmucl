@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.123 2008/12/21 15:41:16 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.124 2009/06/11 16:03:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -749,6 +749,7 @@
 (defconstant dot-attribute 		(ash 1 6)) ; .
 (defconstant slash-attribute		(ash 1 7)) ; /
 (defconstant funny-attribute		(ash 1 8)) ; Anything illegal.
+(defconstant othercase-attribute        (ash 1 9)) ; A letter that has no case.
 
 ;;; LETTER-ATTRIBUTE is a local of SYMBOL-QUOTEP.  It matches letters that
 ;;; don't need to be escaped (according to READTABLE-CASE.)
@@ -758,7 +759,8 @@
     (uppercase . uppercase-attribute) (letter . letter-attribute)
     (sign . sign-attribute) (extension . extension-attribute)
     (dot . dot-attribute) (slash . slash-attribute)
-    (other . other-attribute) (funny . funny-attribute)))
+    (other . other-attribute) (funny . funny-attribute)
+    #+unicode (othercase . othercase-attribute)))
 
 ); Eval-When (compile load eval)
 
@@ -788,8 +790,9 @@
   (set-bit #\. dot-attribute)
   (set-bit #\/ slash-attribute)
 
-  ;; Make anything not explicitly allowed funny...
-  (dotimes (i char-code-limit)
+  ;; We only initialize the things for 8-bit characters here.  The
+  ;; full set is initialized later by REINIT-CHAR-ATTRIBUTES, below
+  (dotimes (i 256)
     (when (zerop (aref character-attributes i))
       (setf (aref character-attributes i) funny-attribute))))
 
@@ -843,8 +846,8 @@
 	   (base *print-base*)
 	   (letter-attribute
 	    (case (readtable-case *readtable*)
-	      (:upcase uppercase-attribute)
-	      (:downcase lowercase-attribute)
+	      (:upcase (logior uppercase-attribute #+unicode othercase-attribute))
+	      (:downcase (logior lowercase-attribute #+unicode othercase-attribute))
 	      (t (logior lowercase-attribute uppercase-attribute))))
 	   (index 0)
 	   (bits 0)
@@ -858,6 +861,7 @@
 
      OTHER ; Not potential number, see if funny chars...
       (let ((mask (logxor (logior lowercase-attribute uppercase-attribute
+				  #+unicode othercase-attribute
 				  funny-attribute)
 			  letter-attribute)))
 	(do ((i (1- index) (1+ i)))
@@ -2150,3 +2154,56 @@ radix-R.  If you have a power-list then pass it in as PL."
 	    (write-string ", type=" stream)
 	    (let ((*print-base* 16) (*print-radix* t))
 	      (output-integer (get-type object) stream)))))))))
+
+
+;;; Function to initialize character-attributes.  The full utf-16 set
+;;; is initialized.
+#+unicode
+(defun reinit-char-attributes ()
+  (unless (probe-file +unidata-path+)
+    (cerror "Continue anyway" "Cannot find ~S, so unicode support is not available"
+	    +unidata-path+)
+    (return-from reinit-char-attributes nil))
+  (flet ((set-bit (char bit)
+	   (let ((code (char-code char)))
+	     (setf (aref character-attributes code)
+		   (logior bit (aref character-attributes code))))))
+
+    (fill character-attributes 0)
+    (dolist (char '(#\! #\@ #\$ #\% #\& #\* #\= #\~ #\[ #\] #\{ #\}
+		    #\? #\< #\>))
+      (set-bit char other-attribute))
+
+    (dotimes (i 10)
+      (set-bit (digit-char i) number-attribute))
+
+    (do ((code (char-code #\A) (1+ code))
+	 (end (char-code #\Z)))
+	((> code end))
+      (declare (fixnum code end))
+      (set-bit (code-char code) uppercase-attribute)
+      (set-bit (char-downcase (code-char code)) lowercase-attribute))
+
+    (set-bit #\- sign-attribute)
+    (set-bit #\+ sign-attribute)
+    (set-bit #\^ extension-attribute)
+    (set-bit #\_ extension-attribute)
+    (set-bit #\. dot-attribute)
+    (set-bit #\/ slash-attribute)
+
+    ;; Make anything not explicitly allowed funny...
+    (dotimes (i char-code-limit)
+      (when (zerop (aref character-attributes i))
+	(let* ((char (code-char i)))
+	  ;; What about surrogate pairs?  What should we do about them?
+	  (cond ((upper-case-p char)
+		 (set-bit char uppercase-attribute))
+		((lower-case-p char)
+		 (set-bit char lowercase-attribute))
+		((= (unicode-category i) +unicode-category-other+)
+		 (set-bit char othercase-attribute))
+		(t
+		 (setf (aref character-attributes i) funny-attribute))))))))
+
+#+unicode
+(pushnew #'reinit-char-attributes ext:*after-save-initializations*)

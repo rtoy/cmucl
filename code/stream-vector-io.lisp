@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.5 2009/04/20 20:53:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.6 2009/06/11 16:03:59 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,8 +52,7 @@
   (declare (type simple-array vector))
   (declare (fixnum start end endian-swap ))
   (unless (eql endian-swap 0)
-    (when (or (>= endian-swap (vector-elt-width vector))
-	      (< endian-swap 0))
+    (when (>= endian-swap (vector-elt-width vector))
       (error "endian-swap ~a is illegal for element-type of vector ~a"
 	     endian-swap vector))
     (lisp::with-array-data ((data vector) (offset-start start)
@@ -79,11 +78,54 @@
 	  ;; Not sure that swap-endians-456
 	  ((4 5 6) (swap-endians-456 data offset-start offset-end
 				     endian-swap))
+	  (-1
+	   ;; Swap nibbles
+	   ;;
+	   ;; NOTE: start and end are in terms of elements (4 bits)
+	   ;; but we want octets in this loop.
+	   (let ((start-octet (truncate start 2))
+		 (end-octet (truncate end 2)))
+	     (loop for i fixnum from start-octet below end-octet
+		   do
+		   (let ((x (bref data i)))
+		     (setf (bref data i) (logior (ash (logand x #x0f) 4)
+						 (ash (logand x #xf0) -4)))))))
+	  (-2
+	   ;; Swap pairs of bits.
+	   (let ((start-octet (truncate start 4))
+		 (end-octet (truncate end 4)))
+	     (loop for i fixnum from start-octet below end-octet
+		   do
+		   (let ((x (bref data i)))
+		     (declare (type (unsigned-byte 8) x))
+		     (setf x (logior (ash (logand x #x33) 2)
+				     (ash (logand x #xcc) -2)))
+		     (setf x (logior (ash (logand x #x0f) 4)
+				     (ash (logand x #xf0) -4)))
+		     (setf (bref data i) x)))))
+	  (-8
+	   ;; Swap bits
+	   (let ((start-octet (truncate start 8))
+		 (end-octet (truncate end 8)))
+	     (loop for i fixnum from start-octet below end-octet
+		   do
+		   (let ((x (bref data i)))
+		     (declare (type (unsigned-byte 8) x))
+		     (setf x (logior (ash (logand x #x55) 1)
+				     (ash (logand x #xaa) -1)))
+		     (setf x (logior (ash (logand x #x33) 2)
+				     (ash (logand x #xcc) -2)))
+		     (setf x (logior (ash (logand x #x0f) 4)
+				     (ash (logand x #xf0) -4)))
+		     (setf (bref data i) x)))))
 	  ;;otherwise, do nothing ???
 	  )))))
 
 (deftype simple-numeric-vector ()
-  `(or (simple-array (unsigned-byte 8) (*))
+  `(or (simple-array bit (*))
+       (simple-array (unsigned-byte 2) (*))
+       (simple-array (unsigned-byte 4) (*))
+       (simple-array (unsigned-byte 8) (*))
        (simple-array (signed-byte 8) (*))
        (simple-array (unsigned-byte 16) (*))
        (simple-array (signed-byte 16) (*))
@@ -91,17 +133,44 @@
        (simple-array (signed-byte 32) (*))
        (simple-array (unsigned-byte *) (*))
        (simple-array (signed-byte *) (*))
-       (simple-array single-float (*))	; not previously supported by read-sequence
-       (simple-array double-float (*))	; not previously supported by read-sequence
-       ))
+       (simple-array single-float (*))
+       (simple-array double-float (*))))
+
+;; Read from stream into vector.  Start and End are byte offsets into
+;; the vector.
+(defun read-vector* (vector stream start end)
+  (labels ((get-n-bytes (stream data offset numbytes)
+	     ;; Handle case of read-n-bytes reading short.
+	     (let ((need numbytes))
+	       (loop
+		   (let ((n (read-n-bytes stream data offset need nil)))
+		     (decf need n)
+		     (cond ((or (zerop need) ; Complete
+				(zerop n)) ; EOF
+			    (return (- numbytes need)))
+			   (t (incf offset n)))))))
+	   (read-n-x8-bytes (stream data offset-start offset-end)
+	     (let* ((numbytes (- offset-end offset-start))
+		    (bytes-read (get-n-bytes
+				 stream
+				 data
+				 offset-start
+				 numbytes)))
+	       (if (< bytes-read numbytes)
+		   (+ offset-start bytes-read)
+		   offset-end))))
+    (read-n-x8-bytes stream vector start end)))
 
 ;;; New versions of READ-VECTOR and WRITE-VECTOR that deal with octet positions
 ;;; rather than element-positions, for compatibility with Allegro.
 
 ;;; WARNING: START and END must be a multiple of octets-per-element.
-;;; (Should we enforce this constraint?)
-;;; WARNING: Element-types
-;;; smaller than 8-bits are not supported.
+;;; For element types smaller than 8 bits, START and END are octet
+;;; indices, so you cannot read into arbitrary positions of the
+;;; vector.
+;;;
+;;; (Should we enforce this constraint?)  
+;;;
 
 ;;; READ-VECTOR --
 (defun read-vector (vector stream &key (start 0) end (endian-swap :byte-8))
@@ -121,14 +190,23 @@
   (unless (typep vector '(or string simple-numeric-vector))
     (error "Wrong vector type ~a for read-vector on stream ~a." (type-of vector) stream))
   (let* ((octets-per-element (vector-elt-width vector))
-	 ;; read-sequence is parameterized by element position.
-	 (next-index (read-sequence vector stream
-				    :start (floor (or start 0) octets-per-element)
-				    :end (and end (floor end octets-per-element)))))
-    (declare (fixnum octets-per-element next-index))
-    (endian-swap-vector vector (or start 0) next-index
+	 (start-elt (truncate start octets-per-element))
+	 (end-octet (or end (ceiling (* (length vector) octets-per-element))))
+	 (end-elt  (if end
+		       (truncate end octets-per-element)
+		       (length vector)))
+	 (next-index (read-vector* vector stream
+				   start
+				   end-octet)))
+    (endian-swap-vector vector start-elt end-elt
 			(endian-swap-value vector endian-swap))
-    (* next-index octets-per-element)))
+    next-index))
+
+;; Write vector into stream.  Start and End are byte offsets into the
+;; vector.
+(declaim (inline write-vector*))
+(defun write-vector* (vector stream start end)
+  (system:output-raw-bytes stream vector start end))
 
 ;;; WRITE VECTOR --
 ;;; returns the next octet-position in vector.
@@ -144,31 +222,28 @@
 	   (values unsigned-byte))
 
   (let* ((octets-per-element (vector-elt-width vector))
-	 (end (or end (* octets-per-element (length vector))))
+	 (start-elt (truncate start octets-per-element))
+	 (end-octet (or end (ceiling (* (length vector) octets-per-element))))
+	 (end-elt (if end
+		      (truncate end octets-per-element)
+		      (length vector)))
 	 (swap-mask (endian-swap-value vector endian-swap))
-	 (next-index end))
-    (declare (type fixnum swap-mask end octets-per-element next-index))
+	 (next-index end-octet))
+    (declare (type fixnum swap-mask next-index))
     (cond ((= swap-mask 0)
-	   (write-sequence vector stream
-			   :start (floor start octets-per-element)
-			   :end (and end (floor end octets-per-element))))
-
+	   (write-vector* vector stream start end-octet))
 	  (t
 	   ;; In a multiprocessing situation, WITHOUT-INTERRUPTS might be required here
 	   ;; otherwise the vector could be seen by another process in the modified state.
 	   (unless (typep vector '(or string simple-numeric-vector))
 	     (error "Wrong vector type ~a for write-vector on stream ~a." (type-of vector)
 		    stream))
-	   (let ((start-idx (floor start octets-per-element))
-		 (end-idx (floor end octets-per-element)))
-	     (endian-swap-vector vector start-idx end-idx swap-mask)
-	     (unwind-protect
-		  (write-sequence vector stream
-				  :start start-idx
-				  :end end-idx)
-	       (endian-swap-vector vector start-idx end-idx swap-mask)))
+	   (endian-swap-vector vector start-elt end-elt swap-mask)
+	   (unwind-protect
+		(write-vector* vector stream start end-octet)
+	     (endian-swap-vector vector start-elt end-elt swap-mask))
 	   vector))
-    (* next-index octets-per-element)))
+    next-index))
 
 
 (declaim (end-block)) ; READ-VECTOR WRITE-VECTOR block

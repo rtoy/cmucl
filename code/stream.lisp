@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83 2006/08/21 15:12:16 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.84 2009/06/11 16:03:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -289,9 +289,35 @@
     ;; simple-stream
     (stream::%stream-external-format stream)
     ;; lisp-stream
-    :default
+    (typecase stream
+      (fd-stream (fd-stream-external-format stream))
+      (synonym-stream (stream-external-format
+		       (symbol-value (synonym-stream-symbol stream))))
+      (t :default))
     ;; fundamental-stream
     :default))
+
+(defun (setf stream-external-format) (extfmt stream)
+  (declare (type stream stream))
+  (stream-dispatch stream
+    ;; simple-stream
+    (error "Loading simple-streams should redefine this")
+    ;; lisp-stream
+    (typecase stream
+      (fd-stream (setf (fd-stream-external-format stream)
+		     (if (eq extfmt :default)
+			 :default
+			 (stream::ef-name
+			  (stream::find-external-format extfmt)))
+		       (fd-stream-oc-state stream) nil
+		       (fd-stream-co-state stream) nil)
+		 extfmt)
+      (synonym-stream (setf (stream-external-format
+			     (symbol-value (synonym-stream-symbol stream)))
+			  extfmt))
+      (t (error "Don't know how to set external-format for ~S." stream)))
+    ;; fundamental-stream
+    (error "Setting external-format on Gray streams not supported.")))
 
 (defun close (stream &key abort)
   "Closes the given Stream.  No more I/O may be performed, but inquiries
@@ -655,7 +681,7 @@
 ;;;
 ;;;    This function is called by the fast-read-char expansion to refill the
 ;;; in-buffer for text streams.  There is definitely an in-buffer, and hence
-;;; myst be an n-bin method.
+;;; must be an n-bin method.
 ;;;
 (defun fast-read-char-refill (stream eof-errorp eof-value)
   (let* ((ibuf (lisp-stream-in-buffer stream))
@@ -898,7 +924,7 @@
 	   (ignore arg2))
   (case operation
     (:listen
-     ;; Return true is input available, :eof for eof-of-file, otherwise Nil.
+     ;; Return true if input available, :eof for end-of-file, otherwise Nil.
      (let ((char (stream-read-char-no-hang stream)))
        (when (characterp char)
 	 (stream-unread-char stream char))
@@ -1496,7 +1522,9 @@ output to Output-stream"
     (:listen (or (/= (the fixnum (string-input-stream-current stream))
 		     (the fixnum (string-input-stream-end stream)))
 		 :eof))
-    (:element-type 'base-char)))
+    (:element-type 'base-char)
+    (:close
+     (set-closed-flame stream))))
   
 (defun make-string-input-stream (string &optional
 					(start 0) (end (length string)))
@@ -1635,7 +1663,8 @@ output to Output-stream"
 	    (let* ((new-length (if (zerop current) 1 (* current 2)))
 		   (new-workspace (make-string new-length)))
 	      (declare (simple-string new-workspace))
-	      (%primitive byte-blt workspace start new-workspace 0 current)
+	      (%primitive byte-blt workspace (* vm:char-bytes start)
+			  new-workspace 0 (* vm:char-bytes current))
 	      (setf workspace new-workspace)
 	      (setf offset-current current)
 	      (set-array-header buffer workspace new-length
@@ -1661,15 +1690,17 @@ output to Output-stream"
 	    (let* ((new-length (+ (the fixnum (* current 2)) string-len))
 		   (new-workspace (make-string new-length)))
 	      (declare (simple-string new-workspace))
-	      (%primitive byte-blt workspace dst-start new-workspace 0 current)
+	      (%primitive byte-blt workspace (* vm:char-bytes dst-start)
+			  new-workspace 0 (* vm:char-bytes current))
 	      (setf workspace new-workspace)
 	      (setf offset-current current)
 	      (setf offset-dst-end dst-end)
 	      (set-array-header buffer workspace new-length
 				dst-end 0 new-length nil))
 	    (setf (fill-pointer buffer) dst-end))
-	(%primitive byte-blt string start
-		    workspace offset-current offset-dst-end)))
+	(%primitive byte-blt string (* vm:char-bytes start)
+		    workspace (* vm:char-bytes offset-current)
+		    (* vm:char-bytes offset-dst-end))))
     dst-end))
 
 
@@ -2051,9 +2082,6 @@ output to Output-stream"
 
 
 ;;; READ-SEQUENCE --
-;;; Note:  the multi-byte operation SYSTEM:READ-N-BYTES operates on
-;;; subtypes of SIMPLE-ARRAY.  Hence the distinction between simple
-;;; and non simple input functions.
 
 (defun read-sequence (seq stream &key (start 0) (end nil) partial-fill)
   "Destructively modify SEQ by reading elements from STREAM.
@@ -2103,10 +2131,9 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 	     (etypecase seq
 	       (list
 		(read-into-list seq stream start end))
-	       (simple-string
-		(read-into-simple-string seq stream start end))
 	       (string
-		(read-into-string seq stream start end))
+		(with-array-data ((seq seq) (start start) (end end))
+		  (read-into-string seq stream start end partial-fill)))
 	       (simple-array		; We also know that it is a 'vector'.
 		(read-into-simple-array seq stream start end))
 	       (vector
@@ -2131,16 +2158,15 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 			   #'read-byte)))
     (read-into-list-1 (nthcdr start l) start end stream read-function)))
 
-#+:recursive
+#+recursive
 (defun read-into-list-1 (l start end stream read-function)
   (declare (type list l))
   (declare (type stream stream))
   (declare (type (integer 0 *) start end))
   (if (or (endp l) (= start end))
       start
-      (let* ((eof-marker (load-time-value (list 'eof-marker)))
-             (el (funcall read-function stream nil eof-marker)))
-	(cond ((eq el eof-marker) start)
+      (let* ((el (funcall read-function stream nil stream)))
+	(cond ((eq el stream) start)
 	      (t (setf (first l) el)
 		 (read-into-list-1 (rest l)
 				   (1+ start)
@@ -2150,7 +2176,7 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
       ))
 
 
-#-:iterative
+#-recursive
 (defun read-into-list-1 (l start end stream read-function)
   (declare (type list l))
   (declare (type stream stream))
@@ -2165,9 +2191,8 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
        i)
     (declare (type list lis))
     (declare (type index i))
-    (let* ((eof-marker (load-time-value (list 'eof-marker)))
-           (el (funcall read-function stream nil eof-marker)))
-      (when (eq el eof-marker)
+    (let* ((el (funcall read-function stream nil stream)))
+      (when (eq el stream)
 	(return i))
       (setf (first lis) el))))
 
@@ -2201,7 +2226,8 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 
 ;;; read-into-simple-string hacked to allow (unsigned-byte 8) stream-element-type
 ;;; For some reason applying this change to read-into-simple-string causes CMUCL to die.
-(defun read-into-simple-string (s stream start end)
+#-unicode
+(defun read-into-string (s stream start end partial-fill)
   (declare (type simple-string s))
   (declare (type stream stream))
   (declare (type index start end))
@@ -2218,14 +2244,15 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
     ;; to keep trying.
     (loop while (plusp numbytes) do
       (let ((bytes-read (system:read-n-bytes stream s start numbytes nil)))
-	(when (zerop bytes-read)
-	  (return-from read-into-simple-string start))
 	(incf total-bytes bytes-read)
 	(incf start bytes-read)
-	(decf numbytes bytes-read)))
+	(decf numbytes bytes-read)
+	(when (or partial-fill (zerop bytes-read))
+	  (return-from read-into-string start))))
     start))
 
-(defun read-into-string (s stream start end)
+#+unicode
+(defun read-into-string (s stream start end partial-fill)
   (declare (type string s))
   (declare (type stream stream))
   (declare (type index start end))
@@ -2240,13 +2267,11 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 	   (>= i end))
        i)
     (declare (type index i s-len))
-    (let* ((eof-marker (load-time-value (list 'eof-marker)))
-	   (el (read-char stream nil eof-marker)))
+    (let* ((el (read-char stream nil stream)))
       (declare (type (or character stream) el))
-      (when (eq el eof-marker)
+      (when (eq el stream)
 	(return i))
       (setf (char s i) (the character el)))))
-
 
 ;;; READ-INTO-SIMPLE-ARRAY --
 ;;; We definitively know that we are really reading into a vector.
@@ -2396,7 +2421,6 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 		 ((simple-array (signed-byte *) (*))
 		  (read-into-vector s stream start end)))))))))
 
-
 ;;; READ-INTO-VECTOR --
 
 (defun read-into-vector (v stream start end)
@@ -2412,9 +2436,8 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 	((or (>= i a-len) (>= i end))
 	 i)
       (declare (type index i a-len))
-      (let* ((eof-marker (load-time-value (list 'eof-marker)))
-	     (el (funcall read-function stream nil eof-marker)))
-	(when (eq el eof-marker)
+      (let* ((el (funcall read-function stream nil stream)))
+	(when (eq el stream)
 	  (return i))
 	(setf (aref v i) el)))))
 
@@ -2470,10 +2493,9 @@ SEQ:	a proper SEQUENCE
 	     (etypecase seq
 	       (list
 		(write-list-out seq stream start end))
-	       (simple-string
-		(write-simple-string-out seq stream start end))
 	       (string
-		(write-string-out seq stream start end))
+		(with-array-data ((seq seq) (start start) (end end))
+		  (write-string-out seq stream start end)))
 	       (simple-vector		; This is necessary because of
 					; the underlying behavior of
 					; OUTPUT-RAW-BYTES.  A vector
@@ -2483,8 +2505,7 @@ SEQ:	a proper SEQUENCE
 	       (simple-array		; We know it is also a vector!
 		(write-simple-array-out seq stream start end))
 	       (vector
-		(write-vector-out seq stream start end)))
-	     )))
+		(write-vector-out seq stream start end))))))
     ;; fundamental-stream
     (stream-write-sequence stream seq start end))
   seq)
@@ -2547,26 +2568,10 @@ SEQ:	a proper SEQUENCE
     ))
 
 
-;;; WRITE-SIMPLE-STRING-OUT, WRITE-STRING-OUT
-;;; These functions are really the same, since they rely on
-;;; WRITE-STRING (which should be pretty efficient by itself.)  The
-;;; only difference is in the declaration. Maybe the duplication is an
-;;; overkill, but it makes things a little more logical.
-
-(defun write-simple-string-out (seq stream start end)
-  (declare (type simple-string seq))
-  (when (and (not (subtypep (stream-element-type stream) 'character))
-	     (not (equal (stream-element-type stream) '(unsigned-byte 8))))
-    (error 'type-error
-	   :datum seq
-	   :expected-type (stream-element-type stream)
-	   :format-control "Trying to output a string to a binary stream."))
-  (write-string seq stream :start start :end end)
-  seq)
-
+;;; WRITE-STRING-OUT
 
 (defun write-string-out (seq stream start end)
-  (declare (type string seq))
+  (declare (type simple-string seq))
   (when (and (not (subtypep (stream-element-type stream) 'character))
 	     (not (equal (stream-element-type stream) '(unsigned-byte 8))))
     (error 'type-error
@@ -2606,7 +2611,7 @@ SEQ:	a proper SEQUENCE
 		     (simple-array double-float (*)))		 
 		    seq))
   (when (not (subtypep (stream-element-type stream) 'integer))
-    (error 'type-error
+    (error 'simple-type-error
 	   :datum (elt seq 0)
 	   :expected-type (stream-element-type stream)
 	   :format-control "Trying to output binary data to a text stream."))

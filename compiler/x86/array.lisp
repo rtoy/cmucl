@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.24 2008/11/12 15:04:23 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.25 2009/06/11 16:04:00 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -142,7 +142,11 @@
 
 (def-full-data-vector-frobs simple-vector * descriptor-reg any-reg)
 
+#-unicode
 (def-partial-data-vector-frobs simple-string base-char :byte nil
+  base-char-reg)
+#+unicode
+(def-partial-data-vector-frobs simple-string base-char :word nil
   base-char-reg)
 
 (def-partial-data-vector-frobs simple-array-unsigned-byte-8 positive-fixnum

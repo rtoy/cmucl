@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/classes.lisp,v 1.6 2007/11/05 15:25:04 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/classes.lisp,v 1.7 2009/06/11 16:04:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,6 +102,25 @@
 
 
 ;;;; Generic function definitions
+
+(fmakunbound '(setf stream-external-format))
+
+(defmethod (setf stream-external-format) (extfmt (stream sys:fd-stream))
+  (setf (lisp::fd-stream-external-format stream)
+	   (if (eq extfmt :default)
+	       :default
+	       (ef-name (find-external-format extfmt)))
+	(lisp::fd-stream-oc-state stream) nil
+	(lisp::fd-stream-co-state stream) nil)
+  extfmt)
+
+(defmethod (setf stream-external-format) (extfmt (stream synonym-stream))
+  (setf (stream-external-format (symbol-value (synonym-stream-symbol stream)))
+      extfmt))
+
+(defmethod (setf stream-external-format) (extfmt (stream sys:lisp-stream))
+  (error "Don't know how to set external-format for ~S." stream))
+
 
 (defgeneric device-open (stream options)
   (:documentation "Write me"))

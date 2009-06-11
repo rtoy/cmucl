@@ -28,6 +28,10 @@ ifneq ($(or $(FEATURE_X87),$(FEATURE_SSE2)),)
 CPP_DEFINE_OPTIONS += -DFEATURE_SSE2
 endif
 
+ifdef FEATURE_UNICODE
+CPP_DEFINE_OPTIONS += -DUNICODE
+endif
+
 CC = gcc
 LD = ld
 

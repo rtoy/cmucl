@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.9 2003/08/03 11:27:51 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.10 2009/06/11 16:03:55 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -77,12 +77,12 @@
   ;; Move abs(divident) into quo.
   (inst move dividend quo :>=)
   (inst sub zero-tn quo quo)
-  ;; Do one divive-step with -divisor to prime V  (use rem as a temp)
+  ;; Do one divide-step with -divisor to prime V  (use rem as a temp)
   (inst sub zero-tn divisor rem)
   (inst ds zero-tn rem zero-tn)
-  ;; Shift the divident/quotient one bit, setting the carry flag.
+  ;; Shift the dividend/quotient one bit, setting the carry flag.
   (inst add quo quo quo)
-  ;; The first real divive-step.
+  ;; The first real divide-step.
   (inst ds zero-tn divisor rem)
   (inst addc quo quo quo)
   ;; And 31 more of them.

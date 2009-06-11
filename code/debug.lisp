@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.65 2008/05/23 00:01:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.66 2009/06/11 16:03:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -732,7 +732,13 @@ See the CMU Common Lisp User's Manual for more information.
 	 ;; Rebind some printer control variables.
 	 (kernel:*current-level* 0)
 	 (*print-readably* nil)
-	 (*read-eval* t))
+	 (*read-eval* t)
+	 ;; XXX: Fixme: What external format do we really want to use
+	 ;; in the debugger?  This is problem if we have a badly
+	 ;; formed string that the current external format can't
+	 ;; handle.
+	 #+unicode
+	 (*default-external-format* :iso8859-1))
     (real-invoke-debugger condition)))
 
 ;;; SHOW-RESTARTS -- Internal.
@@ -798,6 +804,8 @@ See the CMU Common Lisp User's Manual for more information.
   ;; Then close the display with the window manager or shutdown the
   ;; local computer. The remote lisp goes into infinite error loop.
   (labels ((real-stream (stream)
+	     ;; Using etypecase here causes an infloop in SLIME:
+	     ;; SLIME's slime-input-streams are not fd-streams
 	     (etypecase stream
 	       (system:fd-stream
 		(values stream (system:fd-stream-fd stream)))
@@ -809,7 +817,7 @@ See the CMU Common Lisp User's Manual for more information.
     (when (typep condition 'stream-error)
       (let* ((stream-with-error (stream-error-stream condition))
 	     (real-stream-with-error (real-stream stream-with-error))
-	     (real-debug-io  (real-stream *debug-io*)))
+	     (real-debug-io (real-stream *debug-io*)))
 	(when (and (eq real-stream-with-error real-debug-io)
 		   (not (unix:unix-isatty (system:fd-stream-fd real-debug-io))))
 	  ;; Probably running on a remote processor and lost the connection.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/interface-glue.lisp,v 1.5 1998/01/07 12:18:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/interface-glue.lisp,v 1.6 2009/06/11 16:04:01 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -212,7 +212,7 @@
        (progn ,@forms)
      (xlib:display-force-output *x-display*)))
 
-;;; This is the functions which listens for input from the server and calls
+;;; This is the function which listens for input from the server and calls
 ;;; the dispatcher when it detects incoming data.
 (defun toolkit-handler (connection)
   (unless (motif-connection-terminated connection)

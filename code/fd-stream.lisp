@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85 2007/11/05 15:25:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.86 2009/06/11 16:03:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -97,9 +97,9 @@
   (etypecase vector
     ;; (simple-array fixnum (*)) not supported
     ;; (simple-array base-char (*)) treated specially; don't call this
-    ((simple-array bit (*)) 1)
-    ((simple-array (unsigned-byte 2) (*)) 1)
-    ((simple-array (unsigned-byte 4) (*)) 1)
+    ((simple-array bit (*)) 1/8)
+    ((simple-array (unsigned-byte 2) (*)) 1/4)
+    ((simple-array (unsigned-byte 4) (*)) 1/2)
     ((simple-array (signed-byte 8) (*)) 1)
     ((simple-array (unsigned-byte 8) (*)) 1)
     ((simple-array (signed-byte 16) (*)) 2)
@@ -121,8 +121,22 @@
 
 (defun endian-swap-value (vector endian-swap)
   (case endian-swap
-    (:network-order #+big-endian 0
-		    #+little-endian (1- (vector-elt-width vector)))
+    (:network-order
+     #+big-endian 0
+     ;; This is needed because the little-endian (x86) architectures
+     ;; store the lowest indexed element in the least significant part
+     ;; of a byte.  On a big-endian machine (sparc, ppc), the lowest
+     ;; indexed element is at the most significant part of a byte.
+     #+little-endian
+     (typecase vector
+       ((array (unsigned-byte 4) (*))
+	-1)
+       ((array (unsigned-byte 2) (*))
+	-2)
+       ((array (unsigned-byte 1) (*))
+	-8)
+       (t
+	(1- (vector-elt-width vector)))))
     (:byte-8 0)
     (:byte-16 1)
     (:byte-32 3)
@@ -130,10 +144,30 @@
     (:byte-128 15)
     ;; additions by Lynn Quam
     (:machine-endian 0)
-    (:big-endian #+big-endian 0
-		 #+little-endian (1- (vector-elt-width vector)))
-    (:little-endian #+big-endian (1- (vector-elt-width vector))
-		    #+little-endian 0)
+    (:big-endian
+     #+big-endian 0
+     #+little-endian
+     (typecase vector
+       ((array (unsigned-byte 4) (*))
+	-1)
+       ((array (unsigned-byte 2) (*))
+	-2)
+       ((array (unsigned-byte 1) (*))
+	-8)
+       (t
+	(1- (vector-elt-width vector)))))
+    (:little-endian
+     #+big-endian
+     (typecase vector
+       ((array (unsigned-byte 4) (*))
+	-1)
+       ((array (unsigned-byte 2) (*))
+	-2)
+       ((array (unsigned-byte 1) (*))
+	-8)
+       (t
+	(1- (vector-elt-width vector))))
+     #+little-endian 0)
     (otherwise endian-swap)))
 
 
@@ -193,7 +227,20 @@
   (timeout nil :type (or index null))
   ;;
   ;; Pathname of the file this stream is opened to (returned by PATHNAME.)
-  (pathname nil :type (or pathname null)))
+  (pathname nil :type (or pathname null))
+  ;;
+  ;; External format support
+  ;;
+  ;; @@ I want to use :default here, but keyword pkg isn't set up yet at boot
+  ;; so initialize to NIL and fix it in SET-ROUTINES
+  #+unicode
+  (external-format nil :type (or null keyword cons))
+  #+unicode
+  (oc-state nil)
+  #+unicode
+  (co-state nil)
+  #+unicode
+  (last-char-read-size 0 :type index))
 
 (defun %print-fd-stream (fd-stream stream depth)
   (declare (ignore depth) (stream stream))
@@ -363,7 +410,7 @@
 			  (:none
 			   `(flush-output-buffer stream))
 			  (:line
-			   `(when (eq (char-code byte) (char-code #\Newline))
+			   `(when (eql (char-code byte) (char-code #\Newline))
 			      (flush-output-buffer stream)))
 			  (:full
 			   ))
@@ -379,6 +426,7 @@
 				      (cdr buffering)))))))
 	  bufferings)))
 
+#-unicode
 (def-output-routines ("OUTPUT-CHAR-~A-BUFFERED"
 		      1
 		      (:none character)
@@ -389,6 +437,19 @@
       (incf (fd-stream-char-pos stream)))
   (setf (sap-ref-8 (fd-stream-obuf-sap stream) (fd-stream-obuf-tail stream))
 	(char-code byte)))
+
+#+unicode
+(def-output-routines ("OUTPUT-CHAR-~A-BUFFERED"
+		      1
+		      (:none character)
+		      (:line character)
+		      (:full character))
+  (if (char= byte #\Newline)
+      (setf (fd-stream-char-pos stream) 0)
+      (incf (fd-stream-char-pos stream)))
+  ;; FIXME!  We only use the low 8 bits of a character!
+  (setf (sap-ref-8 (fd-stream-obuf-sap stream) (fd-stream-obuf-tail stream))
+	(logand #xff (char-code byte))))
 
 (def-output-routines ("OUTPUT-UNSIGNED-BYTE-~A-BUFFERED"
 		      1
@@ -434,6 +495,32 @@
   (setf (signed-sap-ref-32 (fd-stream-obuf-sap stream)
 			   (fd-stream-obuf-tail stream))
 	byte))
+
+(stream::def-ef-macro ef-cout (extfmt lisp stream::+ef-max+ stream::+ef-cout+)
+  `(lambda (stream char)
+     (declare (type fd-stream stream)
+	      (type character char)
+	      (optimize (speed 3) (space 0) (debug 0) (safety 0)))
+     ;; If there is any input read from UNIX but not
+     ;; supplied to the user of the stream, reposition
+     ;; to the real file position as seen from Lisp.
+     (when (> (fd-stream-ibuf-tail stream)
+	      (fd-stream-ibuf-head stream))
+       (file-position stream (file-position stream)))
+     (let* ((sap (fd-stream-obuf-sap stream))
+	    (len (fd-stream-obuf-length stream))
+	    (tail (fd-stream-obuf-tail stream)))
+       (declare (type sys:system-area-pointer sap) (type index len tail))
+       (stream::char-to-octets ,extfmt
+			       char
+			       (fd-stream-co-state stream)
+			       (lambda (byte)
+				 (when (= tail len)
+				   (do-output stream sap 0 tail t)
+				   (setq sap (fd-stream-obuf-sap stream)
+					 tail 0))
+				 (setf (bref sap (1- (incf tail))) byte)))
+       (setf (fd-stream-obuf-tail stream) tail))))
 
 
 ;;; OUTPUT-RAW-BYTES -- public
@@ -510,7 +597,44 @@
 ;;;   Note: some bozos (the FASL dumper) call write-string with things other
 ;;; than strings. Therefore, we must make sure we have a string before calling
 ;;; position on it.
-;;; 
+;;;
+
+(stream::def-ef-macro ef-sout (extfmt lisp stream::+ef-max+ stream::+ef-sout+)
+  `(lambda (stream string start end)
+     (declare (type fd-stream stream)
+	      (type simple-string string)
+	      (type index start end)
+	      (optimize (speed 3) (space 0) (safety 0) (debug 0)))
+     ;; If there is any input read from UNIX but not
+     ;; supplied to the user of the stream, reposition
+     ;; to the real file position as seen from Lisp.
+     ;; (maybe the caller should do this?)
+     (when (> (fd-stream-ibuf-tail stream)
+	      (fd-stream-ibuf-head stream))
+       (file-position stream (file-position stream)))
+     (let* ((sap (fd-stream-obuf-sap stream))
+	    (len (fd-stream-obuf-length stream))
+	    (tail (fd-stream-obuf-tail stream)))
+       (declare (type sys:system-area-pointer sap) (type index len tail))
+       (do ((i start))
+	   ((>= i end))
+	 (declare (type index i))
+	 (multiple-value-bind (code widep)
+	     (codepoint string i end)
+	   (stream::codepoint-to-octets ,extfmt
+					code
+					(fd-stream-co-state stream)
+					(lambda (byte)
+					  (when (= tail len)
+					    (do-output stream sap 0 tail t)
+					    (setq sap (fd-stream-obuf-sap stream)
+						  tail 0))
+					  (setf (bref sap (1- (incf tail))) byte)))
+	   (incf i (if widep 2 1))))
+       (setf (fd-stream-obuf-tail stream) tail))))
+
+
+#-unicode
 (defun fd-sout (stream thing start end)
   (let ((start (or start 0))
 	(end (or end (length (the vector thing)))))
@@ -541,6 +665,19 @@
 	   (output-raw-bytes stream thing start end))
 	  (:none
 	   (do-output stream thing start end nil))))))
+
+#+unicode
+(defun fd-sout (stream thing start end)
+  (declare (type string thing))
+  (let ((start (or start 0))
+	(end (or end (length (the vector thing)))))
+    (declare (type index start end))
+    (cond 
+      ((stringp thing)			; FIXME - remove this test
+       (let ((out (fd-stream-out stream)))
+	 (do ((index start (+ index 1)))
+	     ((>= index end))
+	   (funcall out stream (elt thing index))))))))
 
 (defmacro output-wrapper ((stream size buffering) &body body)
   (let ((stream-var (gensym)))
@@ -645,20 +782,22 @@
 	(ibuf-sap (fd-stream-ibuf-sap stream))
 	(buflen (fd-stream-ibuf-length stream))
 	(head (fd-stream-ibuf-head stream))
+	(lcrs #-unicode 0
+	      #+unicode (fd-stream-last-char-read-size stream))
 	(tail (fd-stream-ibuf-tail stream)))
-    (declare (type index head tail))
+    (declare (type index head lcrs tail))
     (unless (zerop head)
       (cond ((eql head tail)
-	     (setf head 0)
-	     (setf tail 0)
-	     (setf (fd-stream-ibuf-head stream) 0)
-	     (setf (fd-stream-ibuf-tail stream) 0))
+	     (setf head lcrs)
+	     (setf tail lcrs)
+	     (setf (fd-stream-ibuf-head stream) lcrs)
+	     (setf (fd-stream-ibuf-tail stream) lcrs))
 	    (t
-	     (decf tail head)
-	     (system-area-copy ibuf-sap (* head vm:byte-bits)
+	     (decf tail (- head lcrs))
+	     (system-area-copy ibuf-sap (* (- head lcrs) vm:byte-bits)
 			       ibuf-sap 0 (* tail vm:byte-bits))
-	     (setf head 0)
-	     (setf (fd-stream-ibuf-head stream) 0)
+	     (setf head lcrs)
+	     (setf (fd-stream-ibuf-head stream) lcrs)
 	     (setf (fd-stream-ibuf-tail stream) tail))))
     (setf (fd-stream-listen stream) nil)
     (multiple-value-bind
@@ -704,7 +843,7 @@
 	     (throw 'eof-input-catcher nil))
 	    (t
 	     (incf (fd-stream-ibuf-tail stream) count))))))
-			
+
 ;;; INPUT-AT-LEAST -- internal
 ;;;
 ;;;   Makes sure there are at least ``bytes'' number of bytes in the input
@@ -722,7 +861,7 @@
 	   (return))
 	 (do-input ,stream-var)))))
 
-;;; INPUT-WRAPPER -- intenal
+;;; INPUT-WRAPPER -- internal
 ;;;
 ;;;   Macro to wrap around all input routines to handle eof-error noise.
 ;;;
@@ -730,7 +869,7 @@
   (let ((stream-var (gensym))
 	(element-var (gensym)))
     `(let ((,stream-var ,stream))
-       (if (fd-stream-unread ,stream-var)
+       (if (fd-stream-unread ,stream-var) ;;@@
 	   (prog1
 	       ,(if (eq type 'character) 
 		    `(fd-stream-unread ,stream-var)
@@ -819,6 +958,78 @@
 (def-input-routine input-signed-32bit-byte
 		   ((signed-byte 32) 4 sap head)
   (signed-sap-ref-32 sap head))
+
+(stream::def-ef-macro ef-cin (extfmt lisp stream::+ef-max+ stream::+ef-cin+)
+  `(lambda (stream)
+     (declare (type fd-stream stream)
+	      (optimize (speed 3) (space 0) (debug 0) (safety 0)))
+     (catch 'eof-input-catcher
+       (let* ((head (fd-stream-ibuf-head stream))
+	      (ch (stream::octets-to-char ,extfmt
+					  (fd-stream-oc-state stream)
+					  (fd-stream-last-char-read-size stream)
+					  ;;@@ Note: need proper EOF handling...
+					  (progn
+					    (when (= head
+						     (fd-stream-ibuf-tail
+						      stream))
+					      (let ((sofar (- head (fd-stream-ibuf-head stream))))
+						(do-input stream)
+						(setf head
+						      (+ (fd-stream-ibuf-head stream)
+							 sofar))))
+					    (bref (fd-stream-ibuf-sap stream)
+						  (1- (incf head))))
+					  (lambda (n) (decf head n)))))
+	 (declare (type index head))
+	 (when ch
+	   (incf (fd-stream-ibuf-head stream)
+		 (fd-stream-last-char-read-size stream))
+	   ch)))))
+
+#+(or)
+(stream::def-ef-macro ef-sin (extfmt lisp stream::+ef-max+ stream::+ef-sin+)
+  `(lambda (stream string char start end)
+     (declare (type fd-stream stream)
+	      (type simple-string string)
+	      (type (or character null) char)
+	      (type index start end)
+	      (optimize (speed 3) (space 0) (debug 0) (safety 0)))
+     (let ((sap (fd-stream-ibuf-sap stream))
+	   (head (fd-stream-ibuf-head stream))
+	   (tail (fd-stream-ibuf-tail stream))
+	   (curr start))
+       (declare (type sys:system-area-pointer sap)
+		(type index head tail curr))
+       (loop
+	 ;;@@ Fix EOF handling
+	 (let* ((sz 0)
+		(ch (catch 'eof-input-catcher
+		      (stream::octets-to-char ,extfmt
+					      (fd-stream-oc-state stream)
+					      sz
+					      (progn
+						(when (= head tail)
+						  (do-input stream)
+						  (setq head
+							(fd-stream-ibuf-head
+							 stream)
+							tail
+							(fd-stream-ibuf-tail
+							 stream)))
+						(bref sap (1- (incf head))))
+					      (lambda (n) (decf head n))))))
+	   (declare (type index sz)
+		    (type (or null character) ch))
+	   (when (null ch)
+	     (return (values (- curr start) :eof)))
+	   (setf (fd-stream-last-char-read-size stream) sz)
+	   (incf (fd-stream-ibuf-head stream) sz)
+	   (when (and char (char= ch char))
+	     (return (values (- curr start) t)))
+	   (setf (schar string (1- (incf curr))) ch)
+	   (when (= curr end)
+	     (return (values (- curr start) nil))))))))
 
 ;;; PICK-INPUT-ROUTINE -- internal
 ;;;
@@ -930,7 +1141,7 @@
 ;;; FD-STREAM-READ-N-BYTES -- internal
 ;;;
 ;;;    The N-Bin method for FD-STREAMs.  This doesn't use the SERVER; it blocks
-;;; in UNIX-READ.  This allows the method to be used to implementing reading
+;;; in UNIX-READ.  This allows the method to be used to implement reading
 ;;; for CLX.  It is generally used where there is a definite amount of reading
 ;;; to be done, so blocking isn't too problematical.
 ;;;
@@ -957,7 +1168,7 @@
     ;;
     ;; If something has been unread, put that at buffer + start,
     ;; and read the rest to start + 1.
-    (when (fd-stream-unread stream)
+    (when (fd-stream-unread stream) ;;@@
       (etypecase buffer
 	(system-area-pointer
 	 (assert (= 1 (fd-stream-element-size stream)))
@@ -1087,6 +1298,10 @@
     (when (fd-stream-ibuf-sap stream)
       (push (fd-stream-ibuf-sap stream) *available-buffers*)
       (setf (fd-stream-ibuf-sap stream) nil))
+
+    #+unicode
+    (when (null (fd-stream-external-format stream))
+      (setf (fd-stream-external-format stream) :default))
     
     (when input-p
       (multiple-value-bind
@@ -1144,13 +1359,18 @@
 		    #'ill-out)
 		(fd-stream-bout stream) routine))
 	(setf (fd-stream-sout stream)
-	      (if (eql size 1) #'fd-sout #'ill-out))
+	      ;;#-unicode
+	      (if (eql size 1) #'fd-sout #'ill-out)
+	      #|#+unicode
+	      (if (eql size 1)
+		  #'fd-sout-each-character
+		  #'ill-out)|#)
 	(setf (fd-stream-char-pos stream) 0)
 	(setf output-size size)
 	(setf output-type type)))
 
     (when (and input-size output-size
-	       (not (eq input-size output-size)))
+	       (not (eql input-size output-size)))
       (error "Element sizes for input (~S:~S) and output (~S:~S) differ?"
 	     input-type input-size
 	     output-type output-size))
@@ -1223,7 +1443,24 @@
 					     0 0))
 		    1))))
     (:unread
+     #-unicode
      (setf (fd-stream-unread stream) arg1)
+     #+unicode
+     (if (zerop (fd-stream-last-char-read-size stream))
+	 (setf (fd-stream-unread stream) arg1)
+	 (decf (fd-stream-ibuf-head stream)
+	       (fd-stream-last-char-read-size stream)))
+     ;; Paul says:
+     ;; 
+     ;; Not needed for unicode when unreading is implemented by backing up in
+     ;; the buffer (e.g., with last-char-read-size...)
+     ;;
+     ;; (AFAICS there's nothing wrong with setting it there, but it
+     ;; screws up read-interactive in my toplevel command thing -
+     ;; leaves it expecting to read arguments when it shouldn't,
+     ;; because LISTEN returns T when there's no input pending, but I
+     ;; don't understand why...)
+     #-unicode
      (setf (fd-stream-listen stream) t))
     (:close
      (cond (arg1
@@ -1250,7 +1487,8 @@
        (setf (fd-stream-ibuf-sap stream) nil))
      (lisp::set-closed-flame stream))
     (:clear-input
-     (setf (fd-stream-unread stream) nil)
+     (setf (fd-stream-unread stream) nil) ;;@@
+     #+unicode (setf (fd-stream-last-char-read-size stream) 0)
      (setf (fd-stream-ibuf-head stream) 0)
      (setf (fd-stream-ibuf-tail stream) 0)
      (catch 'eof-input-catcher
@@ -1337,7 +1575,7 @@
 		 ;; unread stuff is still available.
 		 (decf posn (- (fd-stream-ibuf-tail stream)
 			       (fd-stream-ibuf-head stream)))
-		 (when (fd-stream-unread stream)
+		 (when (fd-stream-unread stream) ;;@@
 		   (decf posn))
 		 ;; Divide bytes by element size.
 		 (truncate posn (fd-stream-element-size stream)))
@@ -1360,7 +1598,8 @@
 	  (system:serve-all-events))
 	;; Clear out any pending input to force the next read to go to the
 	;; disk.
-	(setf (fd-stream-unread stream) nil)
+	(setf (fd-stream-unread stream) nil) ;;@@
+	#+unicode (setf (fd-stream-last-char-read-size stream) 0)
 	(setf (fd-stream-ibuf-head stream) 0)
 	(setf (fd-stream-ibuf-tail stream) 0)
 	;; Trash cached value for listen, so that we check next time.
@@ -1413,6 +1652,7 @@
 				 (format nil "file ~S" file)
 				 (format nil "descriptor ~D" fd)))
 		       auto-close
+		       (external-format :default)
 		       binary-stream-p)
   (declare (type index fd) (type (or index null) timeout)
 	   (type (member :none :line :full) buffering))
@@ -1449,6 +1689,9 @@
 				     :timeout timeout))))
     (set-routines stream element-type input output input-buffer-p
 		  :binary-stream-p binary-stream-p)
+    ;;#-unicode-bootstrap ; fails in stream-reinit otherwise
+    #+(and unicode (not unicode-bootstrap))
+    (setf (stream-external-format stream) external-format)
     (when (and auto-close (fboundp 'finalize))
       (finalize stream
 		#'(lambda ()
@@ -1721,8 +1964,7 @@
            (type (member :input :output :io :probe) direction)
            (type (member :error :new-version :rename :rename-and-delete
                          :overwrite :append :supersede nil) if-exists)
-           (type (member :error :create nil) if-does-not-exist)
-           (ignore external-format))
+           (type (member :error :create nil) if-does-not-exist))
   (multiple-value-bind (fd namestring original delete-original)
       (fd-open pathname direction if-exists if-exists-given
 	       if-does-not-exist if-does-not-exist-given)
@@ -1741,6 +1983,7 @@
 			 :pathname pathname
 			 :input-buffer-p t
 			 :auto-close t
+			 :external-format external-format
 			 :binary-stream-p class))
 	(:probe
 	 (let ((stream (%make-fd-stream :name namestring :fd fd
@@ -1772,9 +2015,9 @@
    :if-exists - one of :error, :new-version, :rename, :rename-and-delete,
                        :overwrite, :append, :supersede or nil
    :if-does-not-exist - one of :error, :create or nil
-   :external-format - :default
+   :external-format - an external format name
   See the manual for details."
-  (declare (ignore external-format input-handle output-handle))
+  (declare (ignore element-type external-format input-handle output-handle))
 
   ;; OPEN signals a file-error if the filename is wild.
   (when (wild-pathname-p filename)

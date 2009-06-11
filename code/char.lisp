@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.17 2008/08/15 19:10:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.18 2009/06/11 16:03:57 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,9 @@
 	  alphanumericp char= char/= char< char> char<= char>= char-equal
 	  char-not-equal char-lessp char-greaterp char-not-greaterp
 	  char-not-lessp character char-code code-char char-upcase
-	  char-downcase digit-char char-int char-name name-char))
+	  char-titlecase title-case-p
+	  char-downcase digit-char char-int char-name name-char
+	  codepoint-limit codepoint))
 
 
 ;;; Compile some trivial character operations via inline expansion:
@@ -40,11 +42,21 @@
 
 (declaim (maybe-inline digit-char-p digit-weight))
 
-(defconstant char-code-limit 256
+(defconstant char-code-limit
+  #-unicode 256
+  #+unicode 65536
   "The upper exclusive bound on values produced by CHAR-CODE.")
 
 (deftype char-code ()
   `(integer 0 (,char-code-limit)))
+
+(defconstant codepoint-limit
+  #x110000
+  "The upper exclusive bound on the value of a Unicode codepoint")
+
+;;; The range of a Unicode code point
+(deftype codepoint ()
+  `(integer 0 (,codepoint-limit)))
 
 
 (macrolet ((frob (char-names-list)
@@ -143,15 +155,32 @@
 (defun char-name (char)
   "Given a character object, char-name returns the name for that
   object (a symbol)."
-  (car (rassoc char char-name-alist)))
-
+  (let ((name (car (rassoc char char-name-alist))))
+    (if name
+	name
+	#-unicode nil
+	#+unicode
+	;; Return the Unicode name of the character,
+	;;   or U+xxxx if it doesn't have a name
+	(let* ((code (char-code char))
+	       (name (unicode-name code)))
+	  (if name
+	      (nstring-capitalize (nsubstitute #\_ #\Space name))
+	      (format nil "U+~4,'0X" code))))))
 
 (defun name-char (name)
   "Given an argument acceptable to string, name-char returns a character
-  object whose name is that symbol, if one exists.  Otherwise, () is returned."
-  (cdr (assoc (string name) char-name-alist :test #'string-equal)))
-
-
+  object whose name is that symbol, if one exists, otherwise NIL."
+  (if (and (stringp name) (> (length name) 2) (string-equal name "U+" :end1 2))
+      (code-char (parse-integer name :radix 16 :start 1))
+      (or (cdr (assoc (string name) char-name-alist :test #'string-equal))
+	  #-unicode nil
+	  #+unicode
+	  (let ((code (unicode-name-to-codepoint
+		       (nsubstitute #\Space #\_ (string-upcase name)))))
+	    (if code
+		(code-char code)
+		nil)))))
 
 
 ;;;; Predicates:
@@ -173,39 +202,58 @@
 
 (defun graphic-char-p (char)
   "The argument must be a character object.  Graphic-char-p returns T if the
-  argument is a printing character (space through ~ in ASCII), otherwise
-  returns ()."
+  argument is a printing character, otherwise returns NIL."
   (declare (character char))
   (and (typep char 'base-char)
-       (< 31
-	  (char-code (the base-char char))
-	  127)))
+       (let ((m (char-code (the base-char char))))
+	 (or (< 31 m 127)
+	     #+(and unicode (not unicode-bootstrap))
+	     (and (> m 127)
+		  (>= (unicode-category m) +unicode-category-graphic+))))))
 
 
 (defun alpha-char-p (char)
   "The argument must be a character object.  Alpha-char-p returns T if the
-   argument is an alphabetic character, A-Z or a-z; otherwise ()."
+  argument is an alphabetic character; otherwise NIL."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 64 m 91) (< 96 m 123))))
+    (or (< 64 m 91) (< 96 m 123)
+	#+(and unicode (not unicode-bootstrap))
+	(and (> m 127)
+	     (<= +unicode-category-letter+ (unicode-category m)
+		 (+ +unicode-category-letter+ #x0F))))))
 
 
 (defun upper-case-p (char)
   "The argument must be a character object; upper-case-p returns T if the
-   argument is an upper-case character, () otherwise."
+  argument is an upper-case character, NIL otherwise."
   (declare (character char))
-  (< 64
-     (char-code char)
-     91))
+  (let ((m (char-code char)))
+    (or (< 64 m 91)
+	#+(and unicode (not unicode-bootstrap))
+	(and (> m 127)
+	     (= (unicode-category m) +unicode-category-upper+)))))
 
 
 (defun lower-case-p (char)
   "The argument must be a character object; lower-case-p returns T if the 
-   argument is a lower-case character, () otherwise."
+  argument is a lower-case character, NIL otherwise."
   (declare (character char))
-  (< 96
-     (char-code char)
-     123))
+  (let ((m (char-code char)))
+    (or (< 96 m 123)
+	#+(and unicode (not unicode-bootstrap))
+	(and (> m 127)
+	     (= (unicode-category m) +unicode-category-lower+)))))
+
+(defun title-case-p (char)
+  "The argument must be a character object; title-case-p returns T if the
+  argument is a title-case character, NIL otherwise."
+  (declare (character char))
+  (let ((m (char-code char)))
+    (or (< 64 m 91)
+	#+(and unicode (not unicode-bootstrap))
+	(and (> m 127)
+	     (= (unicode-category m) +unicode-category-title+)))))
 
 
 (defun both-case-p (char)
@@ -214,7 +262,12 @@
   both upper and lower case.  For ASCII, this is the same as Alpha-char-p."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 64 m 91) (< 96 m 123))))
+    (or (< 64 m 91) (< 96 m 123)
+	#+(and unicode (not unicode-bootstrap))
+	(and (> m 127)
+	     (<= +unicode-category-upper+
+		 (unicode-category m)
+		 +unicode-category-title+)))))
 
 
 (defun digit-char-p (char &optional (radix 10.))
@@ -239,10 +292,15 @@
 
 (defun alphanumericp (char)
   "Given a character-object argument, alphanumericp returns T if the
-   argument is either numeric or alphabetic."
+  argument is either numeric or alphabetic."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 47 m 58) (< 64 m 91) (< 96 m 123))))
+    ;; Shortcut for ASCII digits and upper and lower case ASCII letters
+    (or (< 47 m 58) (< 64 m 91) (< 96 m 123)
+	#+(and unicode (not unicode-bootstrap))
+	(and (> m 127)
+	     (<= +unicode-category-letter+ (unicode-category m)
+		 (+ +unicode-category-letter+ #x0F))))))
 
 
 (defun char= (character &rest more-characters)
@@ -305,12 +363,17 @@
 
 
 ;;; Equal-Char-Code is used by the following functions as a version of char-int
-;;; which loses case info.
+;;; which loses case info.  We convert to lower case
 
 (defmacro equal-char-code (character)
   `(let ((ch (char-code ,character)))
-     (if (< 96 ch 123) (- ch 32) ch)))
-
+     ;; Handle ASCII separately for bootstrapping and for unidata missing.
+     (if (< 64 ch 91)
+	 (+ ch 32)
+	 #-(and unicode (not unicode-bootstrap))
+	 ch
+	 #+(and unicode (not unicode-bootstrap))
+	 (if (> ch 127) (unicode-lower ch) ch))))
 
 
 (defun char-equal (character &rest more-characters)
@@ -388,16 +451,41 @@
 (defun char-upcase (char)
   "Returns CHAR converted to upper-case if that is possible."
   (declare (character char))
+  #-(and unicode (not unicode-bootstrap))
   (if (lower-case-p char)
       (code-char (- (char-code char) 32))
-      char))
+      char)
+  #+(and unicode (not unicode-bootstrap))
+  (let ((m (char-code char)))
+    (cond ((> m 127) (code-char (unicode-upper m)))
+	  ((< 96 m 123) (code-char (- m 32)))
+	  (t char))))
+
+(defun char-titlecase (char)
+  "Returns CHAR converted to title-case if that is possible."
+  (declare (character char))
+  #-(and unicode (not unicode-bootstrap))
+  (if (lower-case-p char)
+      (code-char (- (char-code char) 32))
+      char)
+  #+(and unicode (not unicode-bootstrap))
+  (let ((m (char-code char)))
+    (cond ((> m 127) (code-char (unicode-title m)))
+	  ((< 96 m 123) (code-char (- m 32)))
+	  (t char))))
 
 (defun char-downcase (char)
   "Returns CHAR converted to lower-case if that is possible."
   (declare (character char))
+  #-(and unicode (not unicode-bootstrap))
   (if (upper-case-p char)
       (code-char (+ (char-code char) 32))
-      char))
+      char)
+  #+(and unicode (not unicode-bootstrap))
+  (let ((m (char-code char)))
+    (cond ((> m 127) (code-char (unicode-lower m)))
+	  ((< 64 m 91) (code-char (+ m 32)))
+	  (t char))))
 
 (defun digit-char (weight &optional (radix 10))
   "All arguments must be integers.  Returns a character object that

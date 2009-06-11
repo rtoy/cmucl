@@ -33,6 +33,11 @@ RUNTIME += -DFEATURE_SSE2
 endif
 endif
 
+# Enable support for Unicode
+ifdef FEATURE_UNICODE
+RUNTIME += -DUNICODE
+endif
+
 # __NO_CTYPE so builds on glibc 2.3 will run on (some) older glibc's.
 ifneq (,$(filter 2% 3%, $(shell $(CC) -dumpversion)))
 CPPFLAGS = -D__NO_CTYPE -D_GNU_SOURCE -I. -I$(PATH1) -I- $(RUNTIME)

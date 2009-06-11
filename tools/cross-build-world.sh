@@ -1,9 +1,28 @@
 #!/bin/sh
 
+usage() {
+    echo "cross-build-world.sh [-crl] target-dir cross-dir cross-compiler-script [build-binary [flags]]"
+    echo "  -c     Clean target and cross directories before compiling"
+    echo "  -r     Recompile lisp runtime"
+    echo "  -l     Load cross-compiled kernel to make a new lisp kernel"
+}
+
+while getopts "crl" arg
+do
+    case $arg in
+      c) CLEAN_DIR=yes ;;
+      r) BUILD_RUNTIME=yes ;;
+      l) LOAD_KERNEL=yes ;;
+      h | \?) usage; exit 1 ;;
+    esac
+done
+
+shift `expr $OPTIND - 1`
+
 if [ "$1" = "" -o "$2" = "" ]
 then
-        echo "Usage: $0 target-directory cross-directory cross-compiler-script [build-binary] [build-flags...]"
-        exit 1
+    usage
+    exit 1
 fi
 
 if [ ! -d "$1" ]
@@ -27,11 +46,17 @@ TARGET="`echo $1 | sed 's:/*$::'`"
 CROSS="`echo $2 | sed 's:/*$::'`"
 SCRIPT="$3"
 LISP="${4:-lisp}"
+
 if [ $# -ge 4 ]
 then
 	shift 4
 else
 	shift 3
+fi
+
+if [ "$CLEAN_DIR" = "yes" ]; then
+    echo "Cleaning directories:  $TARGET $CROSS"
+    src/tools/clean-target.sh $TARGET $CROSS
 fi
 
 if [ ! -d "$CROSS" ]
@@ -86,3 +111,13 @@ $LISP "$@" -noinit -nositeinit <<EOF
 (load "target:tools/worldbuild")
 (ext:quit)
 EOF
+
+if [ "$BUILD_RUNTIME" = "yes" ]; then
+    echo Building runtime
+    (cd $TARGET/lisp; make)
+fi
+
+if [ "$LOAD_KERNEL" = "yes" ]; then
+    echo Load kernel.core
+    src/tools/load-world.sh -p $TARGET cross-compiled
+fi

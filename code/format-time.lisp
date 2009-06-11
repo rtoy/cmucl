@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format-time.lisp,v 1.8 2001/12/06 23:39:35 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format-time.lisp,v 1.9 2009/06/11 16:03:57 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 
@@ -251,5 +251,3 @@
    :timezone timezone :style style :date-first date-first
    :print-seconds print-seconds :print-meridian print-meridian
    :print-timezone print-timezone :print-weekday print-weekday))
-
-

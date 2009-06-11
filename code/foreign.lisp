@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.55 2008/09/07 00:46:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.56 2009/06/11 16:03:57 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -837,8 +837,8 @@ the starting place for defined symbols. The default is the C start up
 code for Lisp. The ENV argument is the Unix environment variable
 definitions for the invocation of the linker. The default is the
 environment passed to Lisp."
-  ;; Note: dlopen remembers the name of an object, when dlopenin
-  ;; the same name twice, the old objects is reused.
+  ;; Note: dlopen remembers the name of an object, when dlopen()ing
+  ;; the same name twice, the old object is reused.
   (declare (ignore base-file))
   ;; if passed a single shared object that can be loaded directly via
   ;; dlopen(), do that instead of using the linker
@@ -900,11 +900,12 @@ environment passed to Lisp."
 			   "--no-whole-archive"
 			   #+solaris "-z" #+solaris "defaultextract")
 			  libraries))
-		 ;; on Linux/AMD64, we need to tell the platform linker to use the 32-bit
-		 ;; linking mode instead of the default 64-bit mode. This can be done either
-		 ;; via the LDEMULATION environment variable, or via the "-m" command-line
-		 ;; option. Here we assume that LDEMULATION will be ignored by the platform
-		 ;; linker on Linux/i386 platforms. 
+		 ;; on Linux/AMD64, we need to tell the platform linker to use
+		 ;; the 32-bit linking mode instead of the default 64-bit mode.
+		 ;; This can be done either via the LDEMULATION environment
+		 ;; variable, or via the "-m" command-line option. Here we
+		 ;; assume that LDEMULATION will be ignored by the platform
+		 ;; linker on Linux/i386 platforms.
 		 :env `(#+(and x86 linux) (:ldemulation . "elf_i386") ,@env)
 		 :input nil
 		 :output error-output

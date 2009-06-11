@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.4 2003/03/06 14:13:07 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.5 2009/06/11 16:03:57 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.4 2003/03/06 14:13:07 pmai Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.5 2009/06/11 16:03:57 rtoy Rel $
 ;;;
 ;;; This file contains the Alpha specific runtime stuff.
 ;;;
@@ -202,7 +202,7 @@
 
 ;;; EXTERN-ALIEN-NAME -- interface.
 ;;;
-;;; The loader uses this to convert alien names to the form they occure in
+;;; The loader uses this to convert alien names to the form they occur in
 ;;; the symbol table (for example, prepending an underscore).  On the MIPS,
 ;;; we don't do anything.
 ;;; 

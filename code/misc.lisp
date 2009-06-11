@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.36 2007/08/03 14:29:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.37 2009/06/11 16:03:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -135,6 +135,9 @@
 
 #+complex-fp-vops
 (sys:register-lisp-feature :complex-fp-vops)
+
+#+unicode
+(sys:register-lisp-runtime-feature :unicode)
 
 (defun featurep (x)
   "If X is an atom, see if it is present in *FEATURES*.  Also

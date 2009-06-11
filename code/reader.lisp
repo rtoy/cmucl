@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62 2007/06/22 21:45:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.63 2009/06/11 16:03:59 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -94,8 +94,14 @@
   "Standard lisp readtable. This is for recovery from broken
    read-tables, and should not normally be user-visible.")
 
+;; Max size of the attribute table before we switch from an array to a
+;; hash-table.
+(defconstant attribute-table-limit
+  #-unicode char-code-limit
+  #+unicode 256)
+
 (deftype attribute-table ()
-  '(simple-array (unsigned-byte 8) (#.char-code-limit)))
+  '(simple-array (unsigned-byte 8) (#.attribute-table-limit)))
 
 (defstruct (readtable
 	    (:conc-name nil)
@@ -108,7 +114,7 @@
 		 (prin1 'readtable stream)))))
   "Readtable is a data structure that maps characters into syntax
    types for the Common Lisp expression reader."
-  ;; The CHARACTER-ATTRIBUTE-TABLE is a vector of CHAR-CODE-LIMIT integers for
+  ;; The CHARACTER-ATTRIBUTE-TABLE is a vector of ATTRIBUTE-TABLE-LIMIT integers for
   ;; describing the character type.  Conceptually, there are 4 distinct
   ;; "primary" character attributes: WHITESPACE, TERMINATING-MACRO, ESCAPE, and
   ;; CONSTITUENT.  Non-terminating macros (such as the symbol reader) have the
@@ -118,24 +124,39 @@
   ;; stored in the character attribute table by having different varieties of
   ;; constituents.
   (character-attribute-table
-   (make-array char-code-limit :element-type '(unsigned-byte 8)
+   (make-array attribute-table-limit
+	       :element-type '(unsigned-byte 8)
 	       :initial-element constituent)
    :type attribute-table)
   ;;
-  ;; The CHARACTER-MACRO-TABLE is a vector of CHAR-CODE-LIMIT functions.  One
+  ;; The CHARACTER-MACRO-TABLE is a vector of ATTRIBUTE-TABLE-LIMIT functions.  One
   ;; of these functions called with appropriate arguments whenever any
   ;; non-WHITESPACE character is encountered inside READ-PRESERVING-WHITESPACE.
   ;; These functions are used to implement user-defined read-macros, system
   ;; read-macros, and the number-symbol reader.
   (character-macro-table 
-   (make-array char-code-limit :initial-element #'undefined-macro-char)
-   :type (simple-vector #.char-code-limit))
+   (make-array attribute-table-limit :initial-element #'undefined-macro-char)
+   :type (simple-vector #.attribute-table-limit))
   ;;
   ;; DISPATCH-TABLES entry, which is an alist from dispatch characters to
   ;; vectors of CHAR-CODE-LIMIT functions, for use in defining dispatching
   ;; macros (like #-macro).
   (dispatch-tables () :type list)
-  (readtable-case :upcase :type (member :upcase :downcase :preserve :invert)))
+  (readtable-case :upcase :type (member :upcase :downcase :preserve :invert))
+  ;;
+  ;; The CHARACTER-ATTRIBUTE-HASH-TABLE handles the case of char codes
+  ;; above ATTRIBUTE-TABLE-LIMIT, since we expect these to be
+  ;; relatively rare.
+  #+unicode
+  (character-attribute-hash-table (make-hash-table)
+				  :type (or null hash-table))
+  ;;
+  ;; The CHARACTER-MACRO-HASH-TABLE handles the case of char codes
+  ;; above ATTRIBUTE-TABLE-LIMIT, since we expect these to be
+  ;; relatively rare.
+  #+unicode
+  (character-macro-hash-table (make-hash-table)
+			      :type (or null hash-table)))
 
 
 ;;;; Constants for character attributes.  These are all as in the manual.
@@ -184,25 +205,76 @@
 
 ;;;; Macros and functions for character tables.
 
+#-unicode
 (defmacro get-cat-entry (char rt)
   ;;only give this side-effect-free args.
   `(elt (character-attribute-table ,rt)
-	(char-code ,char)))
+    (char-code ,char)))
 
+#+unicode
+(defmacro get-cat-entry (char rt)
+  ;;only give this side-effect-free args.
+  `(if (< (char-code ,char) attribute-table-limit)
+       (elt (character-attribute-table ,rt)
+	    (char-code ,char))
+       (gethash (char-code ,char)
+	        (character-attribute-hash-table ,rt)
+	        ;; Default is constituent, because the attribute table
+	        ;; is initialized to constituent
+	        constituent)))
+
+#-unicode
 (defun set-cat-entry (char newvalue &optional (rt *readtable*))
   (setf (elt (character-attribute-table rt)
 	     (char-code char))
 	newvalue))
 
+#+unicode
+(defun set-cat-entry (char newvalue &optional (rt *readtable*))
+  (let ((code (char-code char)))
+    (if (< code attribute-table-limit)
+	(setf (elt (character-attribute-table rt)
+		   code)
+	      newvalue)
+	(unless (= newvalue constituent)
+	  ;; The default value (in get-cat-entry) is constituent, so
+	  ;; don't enter it into the hash table.
+	  (setf (gethash code (character-attribute-hash-table rt))
+		newvalue)))))
+
+#-unicode
 (defmacro get-cmt-entry (char rt)
   `(the function
 	(elt (the simple-vector (character-macro-table ,rt))
 	     (char-code ,char))))
 
+#+unicode
+(defmacro get-cmt-entry (char rt)
+   `(if (< (char-code ,char) attribute-table-limit)
+       (the function
+	 (elt (the simple-vector (character-macro-table ,rt))
+	      (char-code ,char)))
+       (gethash (char-code ,char)
+	        (character-macro-hash-table ,rt)
+	        ;; This default value needs to be coordinated with
+	        ;; init-std-lisp-readtable.
+	        #'read-token)))
+
+#-unicode
 (defun set-cmt-entry (char newvalue &optional (rt *readtable*))
   (setf (elt (the simple-vector (character-macro-table rt))
 	     (char-code char))
 	(coerce newvalue 'function)))
+
+#+unicode
+(defun set-cmt-entry (char newvalue &optional (rt *readtable*))
+  (let ((code (char-code char)))
+    (if (< code attribute-table-limit)
+	(setf (elt (the simple-vector (character-macro-table rt))
+		   code)
+	      (coerce newvalue 'function))
+	(setf (gethash code (character-macro-hash-table rt))
+	      (coerce newvalue 'function)))))
 
 (defun undefined-macro-char (stream char)
   (unless *read-suppress*
@@ -254,7 +326,8 @@
 
 (defun init-secondary-attribute-table ()
   (setq secondary-attribute-table
-	(make-array char-code-limit :element-type '(unsigned-byte 8)
+	(make-array attribute-table-limit
+		    :element-type '(unsigned-byte 8)
 		    :initial-element #.constituent))
   (set-secondary-attribute #\: #.package-delimiter)
   ;;(set-secondary-attribute #\| #.multiple-escape)	; |) [For EMACS]
@@ -286,10 +359,96 @@
   (dolist (c '(#\backspace #\tab #\page #\return #\rubout))
     (set-secondary-attribute c #.constituent-invalid)))
 
+#-unicode
 (defmacro get-secondary-attribute (char)
   `(elt secondary-attribute-table
-	(char-code ,char)))
+    (char-code ,char)))
 
+#+unicode
+(defmacro get-secondary-attribute (char)
+  `(if (< (char-code ,char) attribute-table-limit)
+       (elt secondary-attribute-table
+	    (char-code ,char))
+       constituent))
+
+
+
+;;; Character dispatch stuff
+
+;; For non-unicode stuff, a simple vector of 256 elements works fine.
+#-unicode
+(defun make-char-dispatch-table ()
+  (make-array attribute-table-limit :initial-element #'dispatch-char-error))
+
+#-unicode
+(declaim (inline copy-char-dispatch-table))
+#-unicode
+(defun copy-char-dispatch-table (dispatch)
+  (copy-seq dispatch))
+
+;; For unicode, we define a structure to hold a vector and a
+;; hash-table to conserve space instead of using a huge vector.  The
+;; vector handles the common case for 8-bit characters, and the hash
+;; table handles the rest.
+#+unicode
+(defstruct (char-dispatch-table
+	     (:copier nil)
+	     (:print-function
+	      (lambda (s stream d)
+		(declare (ignore d))
+		(print-unreadable-object (s stream :identity t :type t)
+		  ))))
+  ;; TABLE is a vector for quick access for 8-bit characters
+  (table (make-array attribute-table-limit :initial-element #'dispatch-char-error)
+	 :type (simple-vector #.attribute-table-limit))
+  ;; HASH-TABLE is for handling the (presumably) rare case of dispatch
+  ;; characters above attribute-table-limit.
+  (hash-table (make-hash-table)
+	      :type hash-table))
+
+#+unicode
+(defun copy-char-dispatch-table (dispatch)
+  ;; Make a new dispatch table and copy the contents to it
+  (let* ((new (make-char-dispatch-table))
+	 (h (char-dispatch-table-hash-table new)))
+    (replace (char-dispatch-table-table new)
+	     (char-dispatch-table-table dispatch))
+    (maphash #'(lambda (key val)
+		 (setf (gethash key h) val))
+	     (char-dispatch-table-hash-table dispatch))
+    new))
+    
+(declaim (inline get-dispatch-char set-dispatch-char))
+
+#-unicode
+(defun get-dispatch-char (char dispatch)
+  (elt (the simple-vector dispatch)
+       (char-code char)))
+
+#+unicode
+(defun get-dispatch-char (char dispatch)
+  (let ((code (char-code char)))
+    (if (< code attribute-table-limit)
+	(elt (the simple-vector (char-dispatch-table-table dispatch))
+	     code)
+	(gethash char (char-dispatch-table-hash-table dispatch)
+		 #'dispatch-char-error))))
+
+#-unicode
+(defun set-dispatch-char (char new-value dispatch)
+  (setf (elt (the simple-vector dispatch)
+	     (char-code char))
+	(coerce new-value 'function)))
+
+#+unicode
+(defun set-dispatch-char (char new-value dispatch)
+  (let ((code (char-code char)))
+    (if (< code attribute-table-limit)
+	(setf (elt (the simple-vector (char-dispatch-table-table dispatch))
+		   (char-code char))
+	      (coerce new-value 'function))
+	(setf (gethash char (char-dispatch-table-hash-table dispatch))
+	      (coerce new-value 'function)))))
 
 
 ;;;; Readtable operations.
@@ -298,18 +457,29 @@
   "A copy is made of from-readtable and place into to-readtable."
   (let ((from-readtable (or from-readtable std-lisp-readtable))
 	(to-readtable (or to-readtable (make-readtable))))
-    ;;physically clobber contents of internal tables.
-    (replace (character-attribute-table to-readtable)
-	     (character-attribute-table from-readtable))
-    (replace (character-macro-table to-readtable)
-	     (character-macro-table from-readtable))
-    (setf (dispatch-tables to-readtable)
-	  (mapcar #'(lambda (pair) (cons (car pair)
-					 (copy-seq (cdr pair))))
-		  (dispatch-tables from-readtable)))
-    (setf (readtable-case to-readtable)
-	  (readtable-case from-readtable))
-    to-readtable))
+    (flet ((copy-hash-table (to from)
+	     (clrhash to)
+	     (maphash #'(lambda (key val)
+			  (setf (gethash key to) val))
+		      from)))
+      ;;physically clobber contents of internal tables.
+      (replace (character-attribute-table to-readtable)
+	       (character-attribute-table from-readtable))
+      (replace (character-macro-table to-readtable)
+	       (character-macro-table from-readtable))
+      #+unicode
+      (progn
+	(copy-hash-table (character-attribute-hash-table to-readtable)
+			 (character-attribute-hash-table from-readtable))
+	(copy-hash-table (character-macro-hash-table to-readtable)
+			 (character-macro-hash-table from-readtable)))
+      (setf (dispatch-tables to-readtable)
+	    (mapcar #'(lambda (pair) (cons (car pair)
+					   (copy-char-dispatch-table (cdr pair))))
+		    (dispatch-tables from-readtable)))
+      (setf (readtable-case to-readtable)
+	    (readtable-case from-readtable))
+      to-readtable)))
 
 (defun set-syntax-from-char (to-char from-char &optional
 				     (to-readtable *readtable*)
@@ -343,12 +513,12 @@
 	       ;; The to-readtable already has a dispatching table for
 	       ;; this character.  Replace it with a copy of the
 	       ;; dispatching table from from-readtable.
-	       (setf (cdr to-dpair) (copy-seq (cdr from-dpair))))
+	       (setf (cdr to-dpair) (copy-char-dispatch-table (cdr from-dpair))))
 	      (t
 	       ;; The to-readtable doesn't have such an entry.  Add a
 	       ;; copy of dispatch table from from-readtable to the
 	       ;; dispatch table of the to-readtable.
-	       (let ((pair (cons to-char (copy-seq (cdr from-dpair)))))
+	       (let ((pair (cons to-char (copy-char-dispatch-table (cdr from-dpair)))))
 		 (setf (dispatch-tables to-readtable)
 		       (push pair (dispatch-tables to-readtable)))))))))
   t)
@@ -392,26 +562,20 @@
   (let ((stream (in-synonym-of stream)))
     (stream-dispatch stream
       ;; simple-stream
-      (do ((attribute-table (character-attribute-table *readtable*))
-	   (char (stream::%read-char stream t nil t t)
+      (do ((char (stream::%read-char stream t nil t t)
 		 (stream::%read-char stream t nil t t)))
-	  ((/= (the fixnum (aref attribute-table (char-code char)))
-	       #.whitespace)
+	  ((not (test-attribute char #.whitespace *readtable*))
 	   char))
       ;; lisp-stream
       (prepare-for-fast-read-char stream
-	(do ((attribute-table (character-attribute-table *readtable*))
-	     (char (fast-read-char t) (fast-read-char t)))
-	    ((/= (the fixnum (aref attribute-table (char-code char)))
-		 #.whitespace)
+	(do ((char (fast-read-char t) (fast-read-char t)))
+	    ((not (test-attribute char #.whitespace *readtable*))
 	     (done-with-fast-read-char)
 	     char)))
       ;; fundamental-stream
-      (do ((attribute-table (character-attribute-table *readtable*))
-	   (char (stream-read-char stream) (stream-read-char stream)))
+      (do ((char (stream-read-char stream) (stream-read-char stream)))
 	  ((or (eq char :eof)
-	       (/= (the fixnum (aref attribute-table (char-code char)))
-		   #.whitespace))
+	       (not (test-attribute char #.whitespace *readtable*)))
 	   (if (eq char :eof)
 	       (error 'end-of-file :stream stream)
 	       char))))))
@@ -444,12 +608,25 @@
     ;;* backquote
     ;;all constituents
     (do ((ichar 0 (1+ ichar))
-	 (char))
-	((= ichar #O200))
-      (setq char (code-char ichar))
-      (when (constituentp char std-lisp-readtable)
-	    (set-cat-entry char (get-secondary-attribute char))
-	    (set-cmt-entry char #'read-token)))))
+	 (len #+unicode-bootstrap #o200
+	      #-unicode-bootstrap char-code-limit))
+	((= ichar len))
+      (let ((char (code-char ichar)))
+	#-unicode
+	(when (constituentp char std-lisp-readtable)
+	  (set-cat-entry char (get-secondary-attribute char))
+	  (set-cmt-entry char #'read-token))
+	#+unicode
+	(cond ((constituentp char std-lisp-readtable)
+	       (set-cat-entry char (get-secondary-attribute char))
+	       (when (< ichar attribute-table-limit)
+		 ;; The hashtable default in get-cmt-entry returns
+		 ;; #'read-token, so don't need to set it here.
+		 (set-cmt-entry char #'read-token)))
+	      ((>= ichar attribute-table-limit)
+	       ;; A non-constituent character that would be stored in
+	       ;; the hash table gets #'undefined-macro-char.
+	       (set-cmt-entry char #'undefined-macro-char)))))))
 
 
 
@@ -852,8 +1029,8 @@
 
 ;;; return the character class for a char
 ;;;
-(defmacro char-class (char attable)
-  `(let ((att (aref ,attable (char-code ,char))))
+(defmacro char-class (char readtable)
+  `(let ((att (get-cat-entry ,char ,readtable)))
      (declare (fixnum att))
      (cond ((<= att #.terminating-macro)
 	    #.delimiter)
@@ -870,8 +1047,8 @@
 ;;; return the character class for a char which might be part of a rational
 ;;; number
 ;;;
-(defmacro char-class2 (char attable)
-  `(let ((att (aref ,attable (char-code ,char))))
+(defmacro char-class2 (char readtable)
+  `(let ((att (get-cat-entry ,char ,readtable)))
      (declare (fixnum att))
      (cond ((<= att #.terminating-macro)
 	    #.delimiter)
@@ -892,8 +1069,8 @@
 ;;; return the character class for a char which might be part of a rational or
 ;;; floating number (assume that it is a digit if it could be)
 ;;;
-(defmacro char-class3 (char attable)
-  `(let ((att (aref ,attable (char-code ,char))))
+(defmacro char-class3 (char readtable)
+  `(let ((att (get-cat-entry ,char ,readtable)))
      (declare (fixnum att))
      (cond ((<= att #.terminating-macro)
 	    #.delimiter)
@@ -990,8 +1167,7 @@
   (when *read-suppress*
     (internal-read-extended-token stream firstchar nil)
     (return-from read-token nil))
-  (let ((attribute-table (character-attribute-table *readtable*))
-	(package-designator nil)
+  (let ((package-designator nil)
 	(colons 0)
 	(possibly-rational t)
 	(seen-digit-or-expt nil)
@@ -1001,7 +1177,7 @@
 	(seen-multiple-escapes nil))
     (reset-read-buffer)
     (prog ((char firstchar))
-      (case (char-class3 char attribute-table)
+      (case (char-class3 char *readtable*)
 	(#.constituent-sign (go SIGN))
 	(#.constituent-digit (go LEFTDIGIT))
 	(#.constituent-digit-or-expt
@@ -1021,7 +1197,7 @@
       (unless char (go RETURN-SYMBOL))
       (setq possibly-rational t
 	    possibly-float t)
-      (case (char-class3 char attribute-table)
+      (case (char-class3 char *readtable*)
 	(#.constituent-digit (go LEFTDIGIT))
 	(#.constituent-digit-or-expt
 	 (setq seen-digit-or-expt t)
@@ -1038,7 +1214,7 @@
       (setq char (read-char stream nil nil))
       (unless char (return (make-integer)))
       (setq was-possibly-float possibly-float)
-      (case (char-class3 char attribute-table)
+      (case (char-class3 char *readtable*)
 	(#.constituent-digit (go LEFTDIGIT))
 	(#.constituent-decimal-digit (if possibly-float
 						     (go LEFTDECIMALDIGIT)
@@ -1067,7 +1243,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (return (make-integer)))
-      (case (char-class3 char attribute-table)
+      (case (char-class3 char *readtable*)
 	(#.constituent-digit (go LEFTDIGIT))
 	(#.constituent-decimal-digit (error "impossible!"))
 	(#.constituent-dot (go SYMBOL))
@@ -1088,7 +1264,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-digit (go LEFTDECIMALDIGIT))
 	(#.constituent-dot (go MIDDLEDOT))
 	(#.constituent-expt (go EXPONENT))
@@ -1105,7 +1281,7 @@
       (setq char (read-char stream nil nil))
       (unless char (return (let ((*read-base* 10))
 			     (make-integer))))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-digit (go RIGHTDIGIT))
 	(#.constituent-expt (go EXPONENT))
 	(#.delimiter
@@ -1120,7 +1296,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (return (make-float stream)))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-digit (go RIGHTDIGIT))
 	(#.constituent-expt (go EXPONENT))
 	(#.delimiter
@@ -1134,7 +1310,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-digit (go RIGHTDIGIT))
 	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
 	(#.escape (go ESCAPE))
@@ -1144,7 +1320,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (%reader-error stream "dot context error"))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-digit (go RIGHTDIGIT))
 	(#.constituent-dot (go DOTS))
 	(#.delimiter  (%reader-error stream "dot context error"))
@@ -1157,7 +1333,7 @@
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
       (setq possibly-float t)
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-sign (go EXPTSIGN))
 	(#.constituent-digit (go EXPTDIGIT))
 	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
@@ -1169,7 +1345,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-digit (go EXPTDIGIT))
 	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
 	(#.escape (go ESCAPE))
@@ -1180,7 +1356,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (return (make-float stream)))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-digit (go EXPTDIGIT))
 	(#.delimiter
 	 (unread-char char stream)
@@ -1193,7 +1369,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
-      (case (char-class2 char attribute-table)
+      (case (char-class2 char *readtable*)
 	(#.constituent-digit (go RATIODIGIT))
 	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
 	(#.escape (go ESCAPE))
@@ -1204,7 +1380,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (return (make-ratio stream)))
-      (case (char-class2 char attribute-table)
+      (case (char-class2 char *readtable*)
 	(#.constituent-digit (go RATIODIGIT))
 	(#.delimiter
 	 (unread-char char stream)
@@ -1217,7 +1393,7 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (%reader-error stream "too many dots"))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.constituent-dot (go DOTS))
 	(#.delimiter
 	 (unread-char char stream)
@@ -1235,7 +1411,7 @@
 	       (ouch-read-buffer char)
 	       (setq char (stream::%read-char stream nil nil t t))
 	       (unless char (go RETURN-SYMBOL))
-	       (case (char-class char attribute-table)
+	       (case (char-class char *readtable*)
 		 (#.escape (go ESCAPE))
 		 (#.delimiter (stream::%unread-char stream char)
 			      (go RETURN-SYMBOL))
@@ -1249,7 +1425,7 @@
 	       (ouch-read-buffer char)
 	       (setq char (fast-read-char nil nil))
 	       (unless char (go RETURN-SYMBOL))
-	       (case (char-class char attribute-table)
+	       (case (char-class char *readtable*)
 		 (#.escape (done-with-fast-read-char)
 				       (go ESCAPE))
 		 (#.delimiter (done-with-fast-read-char)
@@ -1266,7 +1442,7 @@
 	     (ouch-read-buffer char)
 	     (setq char (read-char stream nil :eof))
 	     (when (eq char :eof) (go RETURN-SYMBOL))
-	     (case (char-class char attribute-table)
+	     (case (char-class char *readtable*)
 	       (#.escape (go ESCAPE))
 	       (#.delimiter (unread-char char stream)
 			    (go RETURN-SYMBOL))
@@ -1283,7 +1459,7 @@
 	(ouch-read-buffer nextchar))
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
@@ -1298,7 +1474,7 @@
 	(ouch-read-buffer char))
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
@@ -1325,7 +1501,7 @@
       (setq escapes ())
       (setq char (read-char stream nil nil))
       (unless char (reader-eof-error stream "after reading a colon"))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.delimiter
 	 (unread-char char stream)
 	 (%reader-error stream
@@ -1340,7 +1516,7 @@
       (setq char (read-char stream nil nil))
       (unless char
 	(reader-eof-error stream "after reading a colon"))
-      (case (char-class char attribute-table)
+      (case (char-class char *readtable*)
 	(#.delimiter
 	 (unread-char char stream)
 	 (%reader-error stream
@@ -1663,9 +1839,6 @@ the end of the stream."
 
 ;;;; dispatching macro cruft
 
-(defun make-char-dispatch-table ()
-  (make-array char-code-limit :initial-element #'dispatch-char-error))
-
 (defun dispatch-char-error (stream sub-char ignore)
   (declare (ignore ignore))
   (if *read-suppress*
@@ -1693,14 +1866,12 @@ the end of the stream."
   ;;get the dispatch char for macro (error if not there), diddle
   ;;entry for sub-char.
   (when (digit-char-p sub-char)
-    (simple-program-error "Sub-Char must not be a decimal digit: ~S" sub-char))
+    (simple-program-error "Dispatch Sub-Char must not be a decimal digit: ~S" sub-char))
   (let* ((sub-char (char-upcase sub-char))
 	 (dpair (find disp-char (dispatch-tables rt)
 		      :test #'char= :key #'car)))
     (if dpair
-	(setf (elt (the simple-vector (cdr dpair))
-		   (char-code sub-char))
-	      (coerce function 'function))
+	(set-dispatch-char sub-char function (cdr dpair))
 	(simple-program-error "~S is not a dispatch character." disp-char))))
 
 (defun get-dispatch-macro-character
@@ -1713,8 +1884,7 @@ the end of the stream."
 	   (dpair (find disp-char (dispatch-tables rt)
 			:test #'char= :key #'car)))
       (if dpair
-	  (elt (the simple-vector (cdr dpair))
-	       (char-code sub-char))
+	  (get-dispatch-char sub-char (cdr dpair))
 	  (simple-program-error "~S is not a dispatch character." disp-char)))))
 
 (defun read-dispatch-char (stream char)
@@ -1737,9 +1907,7 @@ the end of the stream."
     (let ((dpair (find char (dispatch-tables *readtable*)
 		       :test #'char= :key #'car)))
       (if dpair
-	  (funcall (the function
-			(elt (the simple-vector (cdr dpair))
-			     (char-code sub-char)))
+	  (funcall (the function (get-dispatch-char sub-char (cdr dpair)))
 		   stream sub-char (if numargp numarg nil))
 	  (%reader-error stream "No dispatch table for dispatch char.")))))
 

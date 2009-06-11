@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.35 2008/08/21 14:40:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.36 2009/06/11 16:04:00 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,8 +138,13 @@
        (:results (result :scs ,scs))
        (:result-types ,element-type))))
 
+#-unicode
 (def-data-vector-frobs simple-string byte-index
   base-char base-char-reg)
+#+unicode
+(def-data-vector-frobs simple-string halfword-index
+  base-char base-char-reg)
+
 (def-data-vector-frobs simple-vector word-index
   * descriptor-reg any-reg)
 

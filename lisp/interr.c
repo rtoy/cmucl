@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.9 2008/03/15 15:00:06 agoncharov Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.10 2009/06/11 16:04:01 rtoy Rel $
  *
  * Stuff to handle internal errors.
  *
@@ -161,10 +161,46 @@ internal_error(os_context_t * context)
 /* Utility routines used by random pieces of code. */
 
 lispobj
-debug_print(lispobj string)
+debug_print(lispobj object)
 {
-    printf("%s\n", (char *) (((struct vector *) PTR(string))->data));
+    
+#ifndef UNICODE
+    printf("%s\n", (char *) (((struct vector *) PTR(object))->data));
     fflush(stdout);
+#else    
+    if (Pointerp(object)) {
+        struct vector *lisp_string = (struct vector*) PTR(object);
+        
+        if ((unsigned long) lisp_string->header == type_SimpleString) {
+            unsigned short int* lisp_chars;
+            int len;
+            int k;
 
+            len = lisp_string->length >> 2;
+            lisp_chars = (unsigned short int*) lisp_string->data;
+    
+            for (k = 0; k < len; ++k) {
+		/*
+		 * Do we really want to dump out 4 bytes?  Should we
+		 * just print out the low 8 bits of each Lisp
+		 * character? 
+		 */
+                putw(*lisp_chars, stdout);
+                ++lisp_chars;
+            }
+            putchar('\n');
+    
+            fflush(stdout);
+        } else {
+            print(object);
+        }
+    } else {
+#if 1
+	printf("obj @0x%lx: ", (unsigned long) object);
+#endif
+        print(object);
+    }
+#endif            
     return NIL;
 }
+

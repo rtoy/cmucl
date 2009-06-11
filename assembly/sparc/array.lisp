@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.10 2004/04/07 02:47:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.11 2009/06/11 16:03:56 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.10 2004/04/07 02:47:53 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.11 2009/06/11 16:03:56 rtoy Rel $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -124,6 +124,9 @@ ub4 one_at_a_time(char *key, ub4 len)
 			  (:temp offset non-descriptor-reg nl3-offset))
   (emit-label sxhash-simple-substring-entry)
 
+  #+unicode
+  (inst sll length 1)		  ; Number of bytes = twice the length
+  
   (inst li offset (- (* vector-data-offset word-bytes) other-pointer-type))
   (inst b test)
   (move accum zero-tn)

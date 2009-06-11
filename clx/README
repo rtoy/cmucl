@@ -1,4 +1,4 @@
-$Id: README,v 1.4 2007/08/21 15:49:27 fgilham Exp $
+$Id: README,v 1.5 2009/06/11 16:03:56 rtoy Exp $
 This directory contains CLX, an X11 client library for Common
 Lisp. The code was originally taken from a CMUCL distribution, was
 modified somewhat in order to make it compile and run under SBCL, then
@@ -38,7 +38,7 @@ your bug has been fixed already.
 
 darcs get http://verisons.telent.net/clx # version from which releases are made
           http://common-lisp.net/~crhodes/clx # patches merged by Christophe
-          http://monday-monkey.com/repos/clx/ # OpenMCL tree by bryan o'connor?
+          http://monday-monkey.com/repos/clx/ # OpenMCL tree by Bryan O'Connor?
 
 = Building using asdf-install
 

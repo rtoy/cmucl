@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.53 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.54 2009/06/11 16:03:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,10 +37,14 @@
 
 ;;; Seq-Dispatch does an efficient type-dispatch on the given Sequence.
 
-(defmacro seq-dispatch (sequence list-form array-form)
-  `(if (listp ,sequence)
-       ,list-form
-       ,array-form))
+(defmacro seq-dispatch (sequence list-form array-form &optional string-form)
+  (if string-form
+      `(cond ((listp ,sequence) ,list-form)
+	     ((stringp ,sequence) ,string-form)
+	     (t ,array-form))
+      `(if (listp ,sequence)
+	   ,list-form
+	   ,array-form)))
 
 (defmacro elt-slice (sequences n)
   "Returns a list of the Nth element of each of the sequences.  Used by MAP
@@ -552,7 +556,9 @@
   "Returns a new sequence containing the same elements but in reverse order."
   (seq-dispatch sequence
 		(list-reverse* sequence)
-		(vector-reverse* sequence)))
+		(vector-reverse* sequence)
+		#+unicode
+		(string-reverse* sequence)))
 
 ;;; Internal Frobs:
 
@@ -599,7 +605,9 @@
    is destroyed."
   (seq-dispatch sequence
 		(list-nreverse* sequence)
-		(vector-nreverse* sequence)))
+		(vector-nreverse* sequence)
+		#+unicode
+		(string-nreverse* sequence)))
 
 
 ;;; Concatenate:
@@ -1617,22 +1625,32 @@
       (setq jndex (1+ jndex)))
     (shrink-vector result jndex)))
 
+#+unicode
+(defun string-remove-duplicates* (string test test-not start end key from-end
+					 &optional (length (length string)))
+  (declare (string string) (fixnum start length))
+  ;;@@ FIXME: treat surrogate pairs as a single element.  But that's
+  ;;not really possible with test, test-not, and key parameters which
+  ;;expect characters, not code points.
+  (vector-remove-duplicates* string test test-not start end key from-end
+			     length))
 
-(defun remove-duplicates (sequence &key (test #'eql) test-not (start 0) from-end
-				   end key)
+(defun remove-duplicates (sequence &key (test #'eql) test-not (start 0)
+					from-end end key)
   "The elements of Sequence are compared pairwise, and if any two match,
    the one occuring earlier is discarded, unless FROM-END is true, in
    which case the one later in the sequence is discarded.  The resulting
    sequence is returned.
 
-   The :TEST-NOT argument is depreciated."
+   The :TEST-NOT argument is deprecated."
   (declare (fixnum start))
   (seq-dispatch sequence
-		(if sequence
-		    (list-remove-duplicates* sequence test test-not
-					      start end key from-end))
-		(vector-remove-duplicates* sequence test test-not
-					    start end key from-end)))
+    (if sequence
+	(list-remove-duplicates* sequence test test-not
+				 start end key from-end))
+    (vector-remove-duplicates* sequence test test-not start end key from-end)
+    #+unicode
+    (string-remove-duplicates* sequence test test-not start end key from-end)))
 
 
 
@@ -1690,18 +1708,28 @@
 		      :end (if from-end jndex end) :test-not test-not)
       (setq jndex (1+ jndex)))))
 
+#+unicode
+(defun string-delete-duplicates* (string test test-not key from-end start end 
+					 &optional (length (length string)))
+  (declare (string string) (fixnum start length))
+  ;;@@ FIXME: treat surrogate pairs as a single element
+  (vector-delete-duplicates* string test test-not key from-end start end
+			     length))
+
 
-(defun delete-duplicates (sequence &key (test #'eql) test-not (start 0) from-end
-			    end key)
+(defun delete-duplicates (sequence &key (test #'eql) test-not (start 0)
+					from-end end key)
   "The elements of Sequence are examined, and if any two match, one is
    discarded.  The resulting sequence, which may be formed by destroying the
    given sequence, is returned.
 
-   The :TEST-NOT argument is depreciated."
+   The :TEST-NOT argument is deprecated."
   (seq-dispatch sequence
     (if sequence
 	(list-delete-duplicates* sequence test test-not key from-end start end))
-  (vector-delete-duplicates* sequence test test-not key from-end start end)))
+    (vector-delete-duplicates* sequence test test-not key from-end start end)
+    #+unicode
+    (string-delete-duplicates* sequence test test-not key from-end start end)))
 
 (defun list-substitute* (pred new list start end count key test test-not old)
   (declare (fixnum start end count))

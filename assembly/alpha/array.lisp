@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/alpha/array.lisp,v 1.3 2003/08/03 11:27:52 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/alpha/array.lisp,v 1.4 2009/06/11 16:03:55 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,7 @@
 			  (:res result descriptor-reg a0-offset)
 
 			  (:temp ndescr non-descriptor-reg nl0-offset))
-  ;; This is kinda sleezy, changing words like this.  But we can because
+  ;; This is kinda sleazy, changing words like this.  But we can because
   ;; the vop thinks it is temporary.
   (inst addq words (+ (1- (ash 1 lowtag-bits))
 		      (* vector-data-offset word-bytes))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/amd64/assem-rtns.lisp,v 1.3 2004/07/27 23:28:41 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/amd64/assem-rtns.lisp,v 1.4 2009/06/11 16:03:55 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -113,8 +113,8 @@
 ;;;; tail-call-variable.
 
 ;;; For tail-call-variable, we have to copy the arguments from the end of our
-;;; stack frame (were args are produced) to the start of our stack frame
-;;; (were args are expected).
+;;; stack frame (where args are produced) to the start of our stack frame
+;;; (where args are expected).
 ;;;
 ;;; We take the function to call in rAX and a pointer to the arguments in
 ;;; rSI.  rBP says the same over the jump, and the old frame pointer is
@@ -144,14 +144,14 @@
   (inst cmp rcx (fixnumize 3))
   (inst jmp :le REGISTER-ARGS)
 
-  ;; Save the OLD-FP and RETURN-PC because the blit it going to trash
+  ;; Save the OLD-FP and RETURN-PC because the blit is going to trash
   ;; those stack locations.  Save the rCX, because the loop is going
   ;; to trash it.
   (pushw rbp-tn -1)
   (loadw rbx rbp-tn -2)
   (inst push rcx)
 
-  ;; Do the blit.  Because we are coping from smaller addresses to larger
+  ;; Do the blit.  Because we are copying from smaller addresses to larger
   ;; addresses, we have to start at the largest pair and work our way down.
   (inst shr rcx 2)			; fixnum to raw words
   (inst std)				; count down
@@ -178,10 +178,10 @@
   (inst push rbx)
 
   ;; And jump into the function.
-    (inst jmp 
-	  (make-ea :byte :base rax
-		   :disp (- (* closure-function-slot word-bytes)
-			    function-pointer-type)))
+  (inst jmp 
+	(make-ea :byte :base rax
+		 :disp (- (* closure-function-slot word-bytes)
+			  function-pointer-type)))
 
   ;; All the arguments fit in registers, so load them.
   REGISTER-ARGS

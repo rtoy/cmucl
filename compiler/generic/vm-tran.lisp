@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.59 2006/12/24 01:41:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.60 2009/06/11 16:04:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -218,13 +218,12 @@
      (declare (optimize (safety 0)))
      (bit-bash-copy string
 		    (the index
-			 (+ (the index (* start vm:byte-bits))
+			 (+ (the index (* start vm:char-bits))
 			    vector-data-bit-offset))
 		    result
 		    vector-data-bit-offset
-		    (the index (* size vm:byte-bits)))
-     result))
-
+		    (the index (* size vm:char-bits)))
+    result))
 
 (deftransform copy-seq ((seq) (simple-string))
   '(let* ((len (length seq))
@@ -234,9 +233,8 @@
 		    vector-data-bit-offset
 		    res
 		    vector-data-bit-offset
-		    (the index (* len vm:byte-bits)))
-     res))
-
+		    (the index (* len vm:char-bits)))
+    res))
 
 (deftransform replace ((string1 string2 &key (start1 0) (start2 0)
 				end1 end2)
@@ -244,19 +242,19 @@
   '(locally (declare (optimize (safety 0)))
      (bit-bash-copy string2
 		    (the index
-			 (+ (the index (* start2 vm:byte-bits))
+			 (+ (the index (* start2 vm:char-bits))
 			    vector-data-bit-offset))
 		    string1
 		    (the index
-			 (+ (the index (* start1 vm:byte-bits))
+			 (+ (the index (* start1 vm:char-bits))
 			    vector-data-bit-offset))
 		    (the index
 			 (* (min (the index (- (or end1 (length string1))
 					       start1))
 				 (the index (- (or end2 (length string2))
 					       start2)))
-			    vm:byte-bits)))
-     string1))
+			    vm:char-bits)))
+    string1))
 
 ;; The original version of this deftransform seemed to cause the
 ;; compiler to spend huge amounts of time deriving the type of the
@@ -277,7 +275,7 @@
       (let ((n-seq (gensym))
 	    (n-length (gensym)))
 	(args n-seq)
-	(lets `(,n-length (the index (* (length ,n-seq) vm:byte-bits))))
+	(lets `(,n-length (the index (* (length ,n-seq) vm:char-bits))))
 	(all-lengths n-length)
 	(forms `((bit-bash-copy ,n-seq vector-data-bit-offset
 		  res start
@@ -298,13 +296,12 @@
 	       (declare (ignore rtype))
 	       (let* (,@(lets)
 			(res (make-string (truncate (the index (+ ,@(all-lengths)))
-						    vm:byte-bits))))
+						    vm:char-bits))))
 		 (declare (type index ,@(all-lengths)))
 		 (let ((start vector-data-bit-offset))
 		   ,@(nestify (forms)))
 		 res))))
 	result))))
-
 
 
 ;;;; Bit vector hackery:

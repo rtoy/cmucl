@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.29 2009/01/20 04:45:18 agoncharov Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.30 2009/06/11 16:04:01 rtoy Rel $
  *
  */
 
@@ -51,33 +51,33 @@ os_sigcontext_reg(ucontext_t *scp, int index)
 
     switch (index) {
       case 0:
-	  rv = &scp->uc_mcontext.mc_eax;
-	  break;
+        rv = &scp->uc_mcontext.mc_eax;
+        break;
       case 2:
-	  rv = &scp->uc_mcontext.mc_ecx;
-	  break;
+        rv = &scp->uc_mcontext.mc_ecx;
+        break;
       case 4:
-	  rv = &scp->uc_mcontext.mc_edx;
-	  break;
+        rv = &scp->uc_mcontext.mc_edx;
+        break;
       case 6:
-	  rv = &scp->uc_mcontext.mc_ebx;
-	  break;
+        rv = &scp->uc_mcontext.mc_ebx;
+        break;
       case 8:
-	  rv = &scp->uc_mcontext.mc_esp;
-	  break;
+        rv = &scp->uc_mcontext.mc_esp;
+        break;
       case 10:
-	  rv = &scp->uc_mcontext.mc_ebp;
-	  break;
+        rv = &scp->uc_mcontext.mc_ebp;
+        break;
       case 12:
-	  rv = &scp->uc_mcontext.mc_esi;
-	  break;
+        rv = &scp->uc_mcontext.mc_esi;
+        break;
       case 14:
-	  rv = &scp->uc_mcontext.mc_edi;
-	  break;
+        rv = &scp->uc_mcontext.mc_edi;
+        break;
       default:
-	  rv = NULL;
+        rv = NULL;
     }
-
+    
     /* Pre-cast to (void *), to avoid the compiler warning:
      * dereferencing type-punned pointer will break strict-aliasing rules
      */

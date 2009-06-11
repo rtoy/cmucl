@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.78 2007/11/14 10:04:33 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.79 2009/06/11 16:03:58 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,10 +68,11 @@
 	   #+x86 *pseudo-atomic-interrupted*
 	   unix::*interrupts-enabled*
 	   unix::*interrupt-pending*
-	   *type-system-initialized*)
+	   *type-system-initialized*
+	   unix::*filename-encoding*)
   #+gengc
   (special *gc-verbose* *before-gc-hooks* *after-gc-hooks*
-	   *type-system-initialized*))
+	   *type-system-initialized* unix::*filename-encoding*))
 
 
 ;;;; Random magic specials.
@@ -336,6 +337,7 @@
   #-gengc (setf unix::*interrupt-pending* nil)
   (setf *type-system-initialized* nil)
   (setf *break-on-signals* nil)
+  (setf unix::*filename-encoding* nil)
   #+gengc (setf conditions::*handler-clusters* nil)
 
   ;; Many top-level forms call INFO, (SETF INFO).
@@ -351,7 +353,9 @@
 
   (let ((funs (nreverse *lisp-initialization-functions*)))
     (%primitive print "Calling top-level forms.")
-    (dolist (fun funs) #+nil (%primitive print (hexstr fun))
+    #+nil (%primitive print (length funs))
+    (dolist (fun funs)
+      #+nil (%primitive print fun)
       (typecase fun
 	(function
 	 (funcall fun))
@@ -418,11 +422,10 @@
   (terpri)
   (princ "[You are in the LISP package.]")
   (terpri)
-  (let ((wot 
-	 (catch '%end-of-the-world
-	   (loop
-	     (%top-level)
-	     (write-line "You're certainly a clever child.")))))
+  (let ((wot (catch '%end-of-the-world
+	       (loop
+		 (%top-level)
+		 (write-line "You're certainly a clever child.")))))
     (unix:unix-exit wot)))
 
 #+gengc

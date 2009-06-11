@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.49 2007/08/17 14:02:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.50 2009/06/11 16:03:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -125,7 +125,7 @@
 
 ;;;; Implementation properties.
 
-;;; This supresses random garbage that users probably don't want to see.
+;;; This suppresses random garbage that users probably don't want to see.
 ;;;
 (defparameter *implementation-properties*
   '(%loaded-address CONDITIONS::MAKE-FUNCTION CONDITIONS::REPORT-FUNCTION
@@ -467,4 +467,3 @@
   (let ((locn (info :source-location :defvar x)))
     (when locn
       (format t "~&It is defined in:~&~A" (c::file-source-location-pathname locn)))))
-

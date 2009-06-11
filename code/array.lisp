@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.43 2007/06/20 17:33:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.44 2009/06/11 16:03:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -121,7 +121,7 @@
 
 (defun %vector-type-code (type)
   (pick-type type
-    (base-char (values #.vm:simple-string-type #.vm:byte-bits))
+    (base-char (values #.vm:simple-string-type #.vm:char-bits))
     (bit (values #.vm:simple-bit-vector-type 1))
     ((unsigned-byte 2) (values #.vm:simple-array-unsigned-byte-2-type 2))
     ((unsigned-byte 4) (values #.vm:simple-array-unsigned-byte-4-type 4))

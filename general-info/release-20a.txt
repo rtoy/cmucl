@@ -4,7 +4,7 @@
 
 The CMUCL project is pleased to announce the release of CMUCL 20a.
 This is a major release which contains numerous enhancements and
-bugfixes from the 19e release.
+bugfixes from the 19f release.
 
 CMUCL is a free, high performance implementation of the Common Lisp
 programming language which runs on most major Unix platforms. It
@@ -20,6 +20,44 @@ New in this release:
 
 
   * Feature enhancements:
+    - Support for Unicode has been added.  You have Unicode support if
+      *FEATURES* includes :UNICODE.
+      o CHAR-CODE-LIMIT is 65536.  
+      o There is only one character type;  CHARACTER and BASE-CHAR are
+        the same types.
+      o There is only one string type; STRING and BASE-STRING are the
+        same type. All strings are UTF-16 strings and therefore
+        contain UTF-16 surrogate pairs.  While most string functions
+        correctly handle surrogate pairs, not all do.  It is up to the
+        user to handle this.  In particular, processing of strings on
+        a character-by-character basis will need to handle surrogate
+        pairs. 
+      o External formats are supported.  Functions that need to know
+        the external format take an :EXTERNAL-FORMAT keyword argument
+        to specify the format.
+        + The special variable STREAM:*DEFAULT-EXTERNAL-FORMAT*
+          specifies the default format to be used for all streams.
+          Setting this to a new value will change the external format
+          for all streams to use the new format.  This includes
+          *STANDARD-INPUT* and friends.
+        + Many external formats are supported.  The complete list is
+          in aliases, but we support at least :ISO-8859-1, :UTF-8,
+          :UTF-16, :UTF-32, :CRLF.
+       o CHAR-LESSP and friends perform case-folding by converting to
+         lowercase.  (The non-Unicode version converted to uppercase.)
+       o STRING<, STRING>, and friends compare strings in codepoint order.
+       o STRING-LESSP, STRING-GREATERP, and friends compare strings in
+         codepoint order after doing a case-folding operation on each
+         codepoint.  The case-folding operation converts each
+         codepoint to the corresponding lowercase codepoint.
+       o UTF16-STRING-P checks to see if a string is a valid UTF-16
+         encoded string.
+       o Unicode normalization forms are supported via STRING-TO-NFC,
+         STRING-TO-NFKC, STRING-TO-NFD, and STRING-TO-NFKD.
+       o Symbols are always normalized to NFC form.
+
+    - WRITE-VECTOR and READ-VECTOR support vectors of with element
+      sizes of 1 bit, 2 bits and 4 bits.
 
   * ANSI compliance fixes:
 
@@ -36,6 +74,7 @@ New in this release:
       byte-swapping is needed and the end index was not given.
       (Confusion about the length of the vector versus the index as an
       octet count, not element count.)
+    - Motif (CLM) should work with Unicode.
 
   * Trac Tickets:
     #31: pathname bug with :case :common

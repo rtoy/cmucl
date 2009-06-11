@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.10 2008/04/01 07:09:28 cshapiro Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.11 2009/06/11 16:03:56 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -79,6 +79,9 @@
   (inst lea esi	(make-ea :byte :base string
 			 :disp (- (* vector-data-offset word-bytes)
 				  other-pointer-type)))
+  #+unicode
+  (inst shl length 1)		  ; Number of bytes = twice the length
+	  
   ;; Initialize the result.
   (inst xor result result)
   ;; Get the count.  If it's zero, blow out.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.135 2008/12/02 04:30:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.136 2009/06/11 16:03:57 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -313,7 +313,7 @@
 ;;; Frames
 ;;;
 
-;;; These represents call-frames on the stack.
+;;; These represent call-frames on the stack.
 ;;;
 (defstruct (frame (:constructor nil))
   ;;

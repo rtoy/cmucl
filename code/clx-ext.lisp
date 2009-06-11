@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.20 2007/08/21 15:54:59 fgilham Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.21 2009/06/11 16:03:57 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,7 +39,7 @@
 
 
 ;;; New version to interface with "telent-clx".
-#+ (and)
+#+(and)
 (defun open-clx-display (&optional display-name)
   "Open a connection to DISPLAY-NAME if supplied, or to the appropriate
 default display as given by GET-DEFAULT-DISPLAY otherwise."
@@ -51,7 +51,7 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 		    (nth screen (xlib:display-roots display)))))))
 
 
-#- (and)
+#-(and)
 (defun open-clx-display (&optional (string (cdr (assoc :display
 						       *environment-list*
 						       :test #'eq))))

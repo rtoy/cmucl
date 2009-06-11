@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.169 2008/11/26 17:17:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.170 2009/06/11 16:03:59 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2862,9 +2862,21 @@
 		    (fixnum fixnum integer)
 		    (unsigned-byte #.vm:word-bits))
   "convert to inline logical ops"
-  `(logand (ash int (- posn))
-	   (ash ,(1- (ash 1 vm:word-bits))
-		(- size ,vm:word-bits))))
+  ;; Try to help out the compiler by precomputing things if SIZE or
+  ;; POSN are constants.  This helps out modular arithmetic in some
+  ;; cases.  (I think it's a deficiency in modular arithmetic that it
+  ;; can't figure some things out for itself.)
+  (let ((shift-form (if (constant-continuation-p posn)
+		       (if (zerop (continuation-value posn))
+			   'int
+			   `(ash int ,(- (continuation-value posn))))
+		       '(ash int (- posn))))
+	(mask-form (if (constant-continuation-p size)
+		       (ash (1- (ash 1 vm:word-bits))
+			    (- (continuation-value size) vm:word-bits))
+		       `(ash ,(1- (ash 1 vm:word-bits))
+			     (- size vm:word-bits)))))
+    `(logand ,shift-form ,mask-form)))
 
 (deftransform %mask-field ((size posn int)
 			   (fixnum fixnum integer)
@@ -3247,29 +3259,52 @@
 
 (deftransform char-equal ((a b) (base-char base-char))
   "open code"
+  #-(and unicode (not unicode-bootstrap))
   '(let* ((ac (char-code a))
 	  (bc (char-code b))
 	  (sum (logxor ac bc)))
      (or (zerop sum)
 	 (when (eql sum #x20)
 	   (let ((sum (+ ac bc)))
-	     (and (> sum 161) (< sum 213)))))))
+	     (and (> sum 161) (< sum 213))))))
+  #+(and unicode (not unicode-bootstrap))
+  '(let* ((ac (char-code a))
+	  (bc (char-code b)))
+     (if (and (<= ac #x7f)
+	      (<= bc #x7f))
+	 ;; ASCII
+	 (let ((sum (logxor ac bc)))
+	   (or (zerop sum)
+	       (when (eql sum #x20)
+		 (let ((sum (+ ac bc)))
+		   (and (> sum 161) (< sum 213))))))
+	 ;; Unicode
+	 (= (lisp::equal-char-code a)
+	    (lisp::equal-char-code b)))))
 
 (deftransform char-upcase ((x) (base-char))
   "open code"
-  '(let ((n-code (char-code x)))
-     (if (and (> n-code #o140)	; Octal 141 is #\a.
-	      (< n-code #o173))	; Octal 172 is #\z.
-	 (code-char (logxor #x20 n-code))
-	 x)))
+  #-(and unicode (not unicode-bootstrap))
+  '(if (lower-case-p x)
+       (code-char (- (char-code x) 32))
+       x)
+  #+(and unicode (not unicode-bootstrap))
+  '(let ((m (char-code x)))
+     (cond ((> m 127) (code-char (lisp::unicode-upper m)))
+	   ((< 96 m 123) (code-char (- m 32)))
+	   (t x))))
 
 (deftransform char-downcase ((x) (base-char))
   "open code"
-  '(let ((n-code (char-code x)))
-     (if (and (> n-code 64)	; 65 is #\A.
-	      (< n-code 91))	; 90 is #\Z.
-	 (code-char (logxor #x20 n-code))
-	 x)))
+  #-(and unicode (not unicode-bootstrap))
+  '(if (upper-case-p x)
+       (code-char (+ (char-code x) 32))
+       x)
+  #+(and unicode (not unicode-bootstrap))
+  '(let ((m (char-code x)))
+     (cond ((> m 127) (code-char (lisp::unicode-lower m)))
+	   ((< 64 m 91) (code-char (+ m 32)))
+	   (t x))))
 
 
 ;;;; Equality predicate transforms:

@@ -1,11 +1,11 @@
 -*- Text -*-
-$Id: NEWS,v 1.1 2007/08/21 15:49:27 fgilham Exp $
+$Id: NEWS,v 1.2 2009/06/11 16:03:56 rtoy Exp $
 -- Changes in telent CLX 0.7.3, Tue Mar 28 2006 ---
 
 Support for Allegro CL (6.2 and later) (Mikel Evins)
 Latin 1 keysyms (Christophe Rhodes)
 Some protocol fixes (Douglas Crosher)
-Define a RENDER-OP typ (Douglas Crosher)
+Define a RENDER-OP type (Douglas Crosher)
 
 ---  Changes in SBCL CLX 0.7.2, Tue Jan 10 2006 ---
 
@@ -56,7 +56,7 @@ has been included in demo/clipboard.lisp
 
 Bug fix: change the sizes of certain fields in a WM-SIZE-HINT to be 32
 bits wide, as per the ICCCM specifications. Fixes a problem seen with
-the MacOS X11 window manger, that uses very large hint values.
+the MacOS X11 window manager, that uses very large hint values.
 (Patch from Eric Marsden)
 
 Bug fix: +POINTER-EVENT-MASK-VECTOR+ is supposed to be a vector of
@@ -69,7 +69,7 @@ Bug fix: xrender now compiles properly when *DEF-CLX-CLASS-USE-DEFCLASS*
 
 A change in the implementation of PROCESS-BLOCK and PROCESS-WAKEUP
 under multithreaded SBCL.  Previous versions used queues and condition
-variables, but this seems to have undesireable performance
+variables, but this seems to have undesirable performance
 characteristics; the newer version uses a polling loop calling
 sched_yield() inside, which greatly improves responsiveness, but is
 more CPU-hungry (as perceived by top(1), at least; in theory it
@@ -150,7 +150,7 @@ Implement CLX MP dependencies for SBCL: HOLDING-LOCK, PROCESS-BLOCK, etc
 
 Many bug fixes
 
- * asking for text extents on unchached fonts could potentially deadlock
+ * asking for text extents on uncached fonts could potentially deadlock
    http://article.gmane.org/gmane.lisp.clx.devel/16
 
  * lots of compiler warnings, style-warnings, notes cleared up
@@ -160,6 +160,5 @@ Style and ANSI cleanups
 
  * Much renaming of constants from *foo* to +foo+
 
- *  Change old-style COMPILE LOAD EVAL to new-style :COMPILE-TOPLEVEL
-     :LOAD-TOPLEVEL :EXECUTE in EVAL-WHENs.
-
+ * Change old-style COMPILE LOAD EVAL to new-style :COMPILE-TOPLEVEL
+   :LOAD-TOPLEVEL :EXECUTE in EVAL-WHENs.

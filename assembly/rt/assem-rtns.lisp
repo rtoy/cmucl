@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.7 2003/08/03 11:27:50 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.8 2009/06/11 16:03:55 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.7 2003/08/03 11:27:50 gerd Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.8 2009/06/11 16:03:55 rtoy Rel $
 ;;;
 
 (in-package "RT")
@@ -198,7 +198,7 @@
 			  (:temp temp any-reg ocfp-offset))
   ;; First, save count/src (the NFP) on the number stack.  We need to do this
   ;; instead of with the other saves, because we need to use this register to
-  ;; figure out where to save the others.  We can't same them all there,
+  ;; figure out where to save the others.  We can't save them all there,
   ;; because some of the others hold descriptor values.
   (storew count/src nsp-tn -1)
   ;; How many more args are there to copy to the stack?

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.56 2008/07/31 17:12:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.57 2009/06/11 16:03:58 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -275,11 +275,20 @@ struct in_addr {
   (let ((socket (create-unix-socket kind)))
     (with-alien ((sockaddr unix-sockaddr))
       (setf (slot sockaddr 'family) af-unix)
+      #-unicode
       (kernel:copy-to-system-area path
 				  (* vm:vector-data-offset vm:word-bits)
 				  (alien-sap (slot sockaddr 'path))
 				  0
 				  (* (1+ (length path)) vm:byte-bits))
+      #+unicode
+      (let ((sap (alien-sap (slot sockaddr 'path)))
+	    (len (length path)))
+	;; FIXME:  What should we do about this for unicode?
+	(dotimes (k len)
+	  (setf (sap-ref-8 sap k) (logand #xff (char-code (aref path k)))))
+	(setf (sap-ref-8 sap len) 0))
+
       (when (minusp (unix:unix-connect socket
 				       (alien-sap sockaddr)
 				       (alien-size unix-sockaddr :bytes)))
@@ -296,11 +305,20 @@ struct in_addr {
   (let ((socket (create-unix-socket kind)))
     (with-alien ((sockaddr unix-sockaddr)) ;; I'm here (MSM)
       (setf (slot sockaddr 'family) af-unix)
+      #-unicode
       (kernel:copy-to-system-area path
 				  (* vm:vector-data-offset vm:word-bits)
 				  (alien-sap (slot sockaddr 'path))
 				  0
 				  (* (1+ (length path)) vm:byte-bits))
+      #+unicode
+      (let ((sap (alien-sap (slot sockaddr 'path)))
+	    (len (length path)))
+	;; FIXME:  What should we do about this for unicode?
+	(dotimes (k len)
+	  (setf (sap-ref-8 sap k) (logand #xff (char-code (aref path k)))))
+	(setf (sap-ref-8 sap len) 0))
+      
       (when (minusp (unix:unix-bind socket
 				    (alien-sap sockaddr)
 				    (+ (alien-size inet-sockaddr :bytes)
@@ -772,7 +790,8 @@ can of course be negative, to indicate faults."
 ;;; OPEN-NETWORK-STREAM -- public
 ;;;
 ;;;   Returns a stream connected to the specified Port on the given Host.
-(defun open-network-stream (host port &key (buffering :line) timeout)
+(defun open-network-stream (host port &key (buffering :line) timeout
+					   (external-format '(:latin-1 :crlf)))
   "Return a network stream.  HOST may be an address string or an integer
 IP address."
   (let (hostent hostaddr)
@@ -808,13 +827,15 @@ IP address."
 	socket))
     :input t :output t :buffering buffering :timeout timeout
     :name (format nil "network connection to ~A" hostaddr)
+    :external-format external-format
     :auto-close t)))
 
 ;;; ACCEPT-NETWORK-STREAM -- public
 ;;;
 ;;;   Accept a connection from the specified Socket and returns a
 ;;;   stream connected to that connection.
-(defun accept-network-stream (socket &key (buffering :line) timeout wait-max)
+(defun accept-network-stream (socket &key (buffering :line) timeout wait-max
+					  (external-format '(:latin-1 :crlf)))
   (declare (fixnum socket))
   (when #+MP (mp:process-wait-until-fd-usable socket :input wait-max)
         #-MP (sys:wait-until-fd-usable socket :input wait-max)
@@ -834,4 +855,5 @@ IP address."
 			(ldb (byte 8 8) host)
 			(ldb (byte 8 0) host)
 			port))
+	:external-format external-format
 	:auto-close t)))))

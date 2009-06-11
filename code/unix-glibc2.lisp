@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.46 2009/01/23 13:38:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.47 2009/06/11 16:03:59 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,6 +58,13 @@
 (use-package "C-CALL")
 (use-package "SYSTEM")
 (use-package "EXT")
+
+;; Check the G_BROKEN_FILENAMES environment variable; if set the encoding
+;; is locale-dependent...else use :utf-8 on Unicode Lisps.  On 8 bit Lisps
+;; it must be set to :iso8859-1 (or left as NIL), making files with
+;; non-Latin-1 characters "mojibake", but otherwise they'll be inaccessible.
+;; Must be set to NIL initially to enable building Lisp!
+(defvar *filename-encoding* nil)
 
 (export '(
 	  daddr-t caddr-t ino-t swblk-t size-t time-t dev-t off-t uid-t gid-t
@@ -196,6 +203,17 @@
 
 (pushnew :unix *features*)
 (pushnew :glibc2 *features*)
+
+;; needed for bootstrap
+(eval-when (:compile-toplevel)
+  (defmacro %name->file (string)
+    `(if *filename-encoding*
+	 (string-encode ,string *filename-encoding*)
+	 ,string))
+  (defmacro %file->name (string)
+    `(if *filename-encoding*
+	 (string-decode ,string *filename-encoding*)
+	 ,string)))
 
 ;;;; Common machine independent structures.
 
@@ -381,7 +399,8 @@
   "Unix-rename renames the file with string name1 to the string
    name2.  NIL and an error code is returned if an error occured."
   (declare (type unix-pathname name1 name2))
-  (void-syscall ("rename" c-string c-string) name1 name2))
+  (void-syscall ("rename" c-string c-string)
+		(%name->file name1) (%name->file name2)))
 
 ;;; From sys/types.h
 ;;;         and
@@ -482,7 +501,7 @@
 	      (alien-funcall (extern-alien "opendir"
 					   (function system-area-pointer
 						     c-string))
-			     pathname)))
+			     (%name->file pathname))))
 	 (if (zerop (sap-int dir-struct))
 	     (values nil (unix-errno))
 	     (make-directory :name pathname :dir-struct dir-struct))))
@@ -501,7 +520,7 @@
     (if (zerop (sap-int daddr))
 	nil
 	(with-alien ((dirent (* (struct dirent)) daddr))
-	  (values (cast (slot dirent 'd-name) c-string)
+	  (values (%file->name (cast (slot dirent 'd-name) c-string))
 		  (slot dirent 'd-ino))))))
 
 (defun close-dir (dir)
@@ -571,7 +590,7 @@
   (declare (type unix-pathname path)
 	   (type fixnum flags)
 	   (type unix-file-mode mode))
-  (int-syscall ("open64" c-string int int) path flags mode))
+  (int-syscall ("open64" c-string int int) (%name->file path) flags mode))
 
 (defun unix-getdtablesize ()
   "Unix-getdtablesize returns the maximum size of the file descriptor
@@ -602,7 +621,7 @@
   
   (declare (type unix-pathname name)
 	   (type unix-file-mode mode))
-  (int-syscall ("creat64" c-string int) name mode))
+  (int-syscall ("creat64" c-string int) (%name->file name) mode))
 
 ;;; fcntlbits.h
 
@@ -1825,7 +1844,7 @@ length LEN and type TYPE."
 				(car cons))
 			    envlist))
 		    envlist)))
-    (sub-unix-execve program arg-list env-list)))
+    (sub-unix-execve (%name->file program) arg-list env-list)))
 
 
 (defmacro round-bytes-to-words (n)
@@ -1850,7 +1869,7 @@ length LEN and type TYPE."
 	f_ok     Presence of file."
   (declare (type unix-pathname path)
 	   (type (mod 8) mode))
-  (void-syscall ("access" c-string int) path mode))
+  (void-syscall ("access" c-string int) (%name->file path) mode))
 
 (defconstant l_set 0 "set the file pointer")
 (defconstant l_incr 1 "increment the file pointer")
@@ -1957,7 +1976,7 @@ length LEN and type TYPE."
   (declare (type unix-pathname path)
 	   (type (or unix-uid (integer -1 -1)) uid)
 	   (type (or unix-gid (integer -1 -1)) gid))
-  (void-syscall ("chown" c-string int int) path uid gid))
+  (void-syscall ("chown" c-string int int) (%name->file path) uid gid))
 
 ;;; Unix-fchown is exactly the same as unix-chown except that the file
 ;;; is specified by a file-descriptor ("fd") instead of a pathname.
@@ -1977,7 +1996,7 @@ length LEN and type TYPE."
   "Given a file path string, unix-chdir changes the current working 
    directory to the one specified."
   (declare (type unix-pathname path))
-  (void-syscall ("chdir" c-string) path))
+  (void-syscall ("chdir" c-string) (%name->file path)))
 
 (defun unix-current-directory ()
   "Put the absolute pathname of the current working directory in BUF.
@@ -1993,7 +2012,7 @@ length LEN and type TYPE."
 		    5120)))
       
       (values (not (zerop (sap-int (alien-sap result))))
-	      (cast buf c-call:c-string)))))
+	      (%file->name (cast buf c-call:c-string))))))
 
 
 ;;; Unix-dup returns a duplicate copy of the existing file-descriptor
@@ -2032,12 +2051,12 @@ length LEN and type TYPE."
 #+(or)
 (defun unix-pathconf (path name)
   "Get file-specific configuration information about PATH."
-  (int-syscall ("pathconf" c-string int) path name))
+  (int-syscall ("pathconf" c-string int) (%name->file path) name))
 
 #+(or)
 (defun unix-sysconf (name)
   "Get the value of the system variable NAME."
-  (int-syscall ("sysconf" c-string) name))
+  (int-syscall ("sysconf" int) name))
 
 #+(or)
 (defun unix-confstr (name)
@@ -2177,14 +2196,16 @@ length LEN and type TYPE."
   "Unix-link creates a hard link from the file with name1 to the
    file with name2."
   (declare (type unix-pathname name1 name2))
-  (void-syscall ("link" c-string c-string) name1 name2))
+  (void-syscall ("link" c-string c-string)
+		(%name->file name1) (%name->file name2)))
 
 (defun unix-symlink (name1 name2)
   "Unix-symlink creates a symbolic link named name2 to the file
    named name1.  NIL and an error number is returned if the call
    is unsuccessful."
   (declare (type unix-pathname name1 name2))
-  (void-syscall ("symlink" c-string c-string) name1 name2))
+  (void-syscall ("symlink" c-string c-string)
+		(%name->file name1) (%name->file name2)))
 
 (defun unix-readlink (path)
   "Unix-readlink invokes the readlink system call on the file name
@@ -2195,12 +2216,17 @@ length LEN and type TYPE."
   (with-alien ((buf (array char 1024)))
     (syscall ("readlink" c-string (* char) int)
 	     (let ((string (make-string result)))
+	       #-unicode
 	       (kernel:copy-from-system-area
 		(alien-sap buf) 0
 		string (* vm:vector-data-offset vm:word-bits)
 		(* result vm:byte-bits))
-	       string)
-	     path (cast buf (* char)) 1024)))
+	       #+unicode
+	       (let ((sap (alien-sap buf)))
+		 (dotimes (k result)
+		   (setf (aref string k) (code-char (sap-ref-8 sap k)))))
+	       (%file->name string))
+	     (%name->file path) (cast buf (* char)) 1024)))
 
 ;;; Unix-unlink accepts a name and deletes the directory entry for that
 ;;; name and the file if this is the last link.
@@ -2209,7 +2235,7 @@ length LEN and type TYPE."
   "Unix-unlink removes the directory entry for the named file.
    NIL and an error code is returned if the call fails."
   (declare (type unix-pathname name))
-  (void-syscall ("unlink" c-string) name))
+  (void-syscall ("unlink" c-string) (%name->file name)))
 
 ;;; Unix-rmdir accepts a name and removes the associated directory.
 
@@ -2217,7 +2243,7 @@ length LEN and type TYPE."
   "Unix-rmdir attempts to remove the directory name.  NIL and
    an error number is returned if an error occured."
   (declare (type unix-pathname name))
-  (void-syscall ("rmdir" c-string) name))
+  (void-syscall ("rmdir" c-string) (%name->file name)))
 
 (defun tcgetpgrp (fd)
   "Get the tty-process-group for the unix file-descriptor FD."
@@ -2352,14 +2378,14 @@ length LEN and type TYPE."
 #+(or)
 (defun unix-revoke (file)
  "Revoke the access of all descriptors currently open on FILE."
- (int-syscall ("revoke" c-string) file))
+ (int-syscall ("revoke" c-string) (%name->file file)))
 
 
 #+(or)
 (defun unix-chroot (path)
  "Make PATH be the root directory (the starting point for absolute paths).
    This call is restricted to the super-user."
- (int-syscall ("chroot" c-string) path))
+ (int-syscall ("chroot" c-string) (%name->file path)))
 
 (def-alien-routine ("gethostid" unix-gethostid) unsigned-long
   "Unix-gethostid returns a 32-bit integer which provides unique
@@ -2389,7 +2415,7 @@ length LEN and type TYPE."
    if the call is unsuccessful."
   (declare (type unix-pathname name)
 	   (type (unsigned-byte 64) length))
-  (void-syscall ("truncate64" c-string off-t) name length))
+  (void-syscall ("truncate64" c-string off-t) (%name->file name) length))
 
 (defun unix-ftruncate (fd length)
   "Unix-ftruncate is similar to unix-truncate except that the first
@@ -2831,7 +2857,7 @@ in at a time in poll.")
   (with-alien ((buf (struct stat)))
     (syscall ("stat64" c-string (* (struct stat)))
 	     (extract-stat-results buf)
-	     name (addr buf))))
+	     (%name->file name) (addr buf))))
 
 (defun unix-fstat (fd)
   "UNIX-FSTAT is similar to UNIX-STAT except the file is specified
@@ -2849,7 +2875,7 @@ in at a time in poll.")
   (with-alien ((buf (struct stat)))
     (syscall ("lstat64" c-string (* (struct stat)))
 	     (extract-stat-results buf)
-	     name (addr buf))))
+	     (%name->file name) (addr buf))))
 
 ;;; Unix-chmod accepts a path and a mode and changes the mode to the new mode.
 
@@ -2878,7 +2904,7 @@ in at a time in poll.")
   otherwise."
   (declare (type unix-pathname path)
 	   (type unix-file-mode mode))
-  (void-syscall ("chmod" c-string int) path mode))
+  (void-syscall ("chmod" c-string int) (%name->file path) mode))
 
 ;;; Unix-fchmod accepts a file descriptor ("fd") and a file protection mode
 ;;; ("mode") and changes the protection of the file described by "fd" to 
@@ -2908,7 +2934,7 @@ in at a time in poll.")
    NIL and an error number."
   (declare (type unix-pathname name)
 	   (type unix-file-mode mode))
-  (void-syscall ("mkdir" c-string int) name mode))
+  (void-syscall ("mkdir" c-string int) (%name->file name) mode))
 
 #+(or)
 (defun unix-makedev (path mode dev)
@@ -2917,7 +2943,7 @@ in at a time in poll.")
   device numbers with the `makedev' macro above)."
   (declare (type unix-pathname path)
 	   (type unix-file-mode mode))
-  (void-syscall ("makedev" c-string mode-t dev-t) name mode dev))
+  (void-syscall ("makedev" c-string mode-t dev-t) (%name->file name) mode dev))
 
 
 #+(or)
@@ -2925,7 +2951,7 @@ in at a time in poll.")
   "Create a new FIFO named PATH, with permission bits MODE."
   (declare (type unix-pathname name)
 	   (type unix-file-mode mode))
-  (void-syscall ("mkfifo" c-string int) name mode))
+  (void-syscall ("mkfifo" c-string int) (%name->file name) mode))
 
 ;;; sys/statfs.h
 
@@ -2933,7 +2959,7 @@ in at a time in poll.")
 (defun unix-statfs (file buf)
   "Return information about the filesystem on which FILE resides."
   (int-syscall ("statfs64" c-string (* (struct statfs)))
-	       file buf))
+	       (%name->file file) buf))
 
 ;;; sys/swap.h
 
@@ -2941,13 +2967,13 @@ in at a time in poll.")
 (defun unix-swapon (path flags)
  "Make the block special device PATH available to the system for swapping.
   This call is restricted to the super-user."
- (int-syscall ("swapon" c-string int) path flags))
+ (int-syscall ("swapon" c-string int) (%name->file path) flags))
 
 #+(or)
 (defun unix-swapoff (path)
- "Make the block special device PATH available to the system for swapping.
+ "Make the block special device PATH unavailable to the system for swapping.
   This call is restricted to the super-user."
- (int-syscall ("swapon" c-string) path))
+ (int-syscall ("swapoff" c-string) (%name->file path)))
 
 ;;; sys/sysctl.h
 
@@ -3073,7 +3099,7 @@ in at a time in poll.")
 (defconstant ITIMER-VIRTUAL 1)
 (defconstant ITIMER-PROF 2)
 
-(defun unix-getitimer(which)
+(defun unix-getitimer (which)
   "Unix-getitimer returns the INTERVAL and VALUE slots of one of
    three system timers (:real :virtual or :profile). On success,
    unix-getitimer returns 5 values,
@@ -3627,10 +3653,19 @@ in at a time in poll.")
 	(let ((n (length s)))
 	  ;; 
 	  ;; Blast the string into place
+	  #-unicode
 	  (kernel:copy-to-system-area (the simple-string s)
 				      (* vm:vector-data-offset vm:word-bits)
 				      string-sap 0
 				      (* (1+ n) vm:byte-bits))
+	  #+unicode
+	  (progn
+	    ;; FIXME: Do we need to apply some kind of transformation
+	    ;; to convert Lisp unicode strings to C strings?  Utf-8?
+	    (dotimes (k n)
+	      (setf (sap-ref-8 string-sap k)
+		    (logand #xff (char-code (aref s k)))))
+	    (setf (sap-ref-8 string-sap n) 0))
 	  ;; 
 	  ;; Blast the pointer to the string into place
 	  (setf (sap-ref-sap vec-sap i) string-sap)

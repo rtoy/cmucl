@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.17 2005/11/13 19:27:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.18 2009/06/11 16:03:57 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -64,6 +64,7 @@
        nil
        (%naturalize-c-string ,alien)))
 
+#-unicode
 (def-alien-type-method (c-string :deport-gen) (type value)
   (declare (ignore type))
   `(etypecase ,value
@@ -71,6 +72,27 @@
      ((alien (* char)) (alien-sap ,value))
      (simple-base-string (vector-sap ,value))))
 
+#+unicode
+(def-alien-type-method (c-string :deport-gen) (type value)
+  (declare (ignore type))
+  (let ((s (gensym "C-STRING-"))
+	(len (gensym "LEN-"))
+	(k (gensym "IDX-")))
+    `(etypecase ,value
+       (null (int-sap 0))
+       ((alien (* char)) (alien-sap ,value))
+       (simple-base-string
+	;; FIXME: What should we do here?  For now, we just create an
+	;; 8-bit array and copy our characters (the low 8-bits of each
+	;; character!) to the 8-bit array.
+	(let* ((,len (length ,value))
+	       (,s (make-array (1+ ,len) :element-type '(unsigned-byte 8))))
+	  (dotimes (,k ,len)
+	    (setf (aref ,s ,k) (logand #xff (char-code (aref ,value ,k)))))
+	  (setf (aref ,s ,len) 0)
+	  (vector-sap ,s))))))
+
+#-unicode
 (defun %naturalize-c-string (sap)
   (declare (type system-area-pointer sap))
   (locally
@@ -85,3 +107,19 @@
 						vm:word-bits)
 				      (* length vm:byte-bits))
 	result))))
+
+;; FIXME: What should we do?  For now, just take the 8-bit strings
+;; returned from C and create a new Lisp string containing those
+;; characters.
+#+unicode
+(defun %naturalize-c-string (sap)
+  (declare (type system-area-pointer sap))
+  (let ((length (loop
+		   for offset of-type fixnum upfrom 0
+		   until (zerop (sap-ref-8 sap offset))
+		   finally (return offset))))
+    
+    (let ((result (make-string length)))
+      (dotimes (k length)
+	(setf (aref result k) (code-char (sap-ref-8 sap k))))
+      result)))

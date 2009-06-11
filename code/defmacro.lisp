@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.36 2005/11/07 00:58:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.37 2009/06/11 16:03:57 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -391,7 +391,7 @@
 (defun push-optional-binding (value-var init-form supplied-var condition path
 					name error-kind error-fun)
   (unless supplied-var
-    (setf supplied-var (gensym "SUPLIEDP-")))
+    (setf supplied-var (gensym "SUPPLIEDP-")))
   (push-let-binding supplied-var condition t)
   (cond ((consp value-var)
 	 (let ((whole-thing (gensym "OPTIONAL-SUBLIST-")))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.99 2007/10/25 15:17:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.100 2009/06/11 16:04:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,6 +208,8 @@
 
 (comf "target:compiler/proclaim")
 
+#+unicode
+(comf "target:code/unidata")
 (comf "target:code/char")
 (comf "target:code/misc")
 (comf "target:code/extensions" :byte-compile t)
@@ -239,7 +241,11 @@
 (comf "target:code/backq" :byte-compile *byte-compile*)
 
 (comf "target:code/serve-event")
+
+(comf "target:code/extfmts")
+
 (comf "target:code/fd-stream")
+(comf "target:code/fd-stream-extfmt")
 (comf "target:code/pathname")
 #-no-runtime (comf "target:code/pathname" :byte-compile t)
 (comf "target:code/filesys")
@@ -291,8 +297,6 @@
 (comf "target:code/wire")
 (comf "target:code/remote")
 (comf "target:code/cmu-site")
-
-(comf "target:code/extfmts")
 
 (when (c:backend-featurep :mp)
   (comf "target:code/multi-proc"))

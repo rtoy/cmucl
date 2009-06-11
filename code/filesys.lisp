@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.106 2008/06/19 21:28:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.107 2009/06/11 16:03:57 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -405,6 +405,10 @@
   ;; this host designator needs to be recognized as a physical host in
   ;; PARSE-NAMESTRING. Until sbcl-0.7.3.x, we had "Unix" here, but
   ;; that's a valid Logical Hostname, so that's a bad choice. -- CSR,
+  ;; 
+  ;; No it isn't - in fact, I'm pretty sure "" is illegal here (and if
+  ;; it isn't, it should be - it ought to mean "the default host", from
+  ;; *default-pathname-defaults*)  -- P. Foley
   "")
 
 (defun unparse-unix-piece (thing)
@@ -1374,20 +1378,18 @@ optionally keeping some of the most recent old versions."
 
 ;;; Default-Directory  --  Public
 ;;;
-#+ (and)
 (defun default-directory ()
   "Returns the pathname for the default directory.  This is the place where
   a file will be written if no directory is specified.  This may be changed
   with setf."
   (multiple-value-bind (gr dir-or-error)
-                       (unix:unix-current-directory)
+      (unix:unix-current-directory)
     (if gr
         (let ((*ignore-wildcards* t))
           (values
            (parse-namestring (concatenate 'simple-string dir-or-error "/")
                              *unix-host*)))
         (error dir-or-error))))
-
 ;;;
 ;;; XXXX This code was modified by me (fmg) to avoid calling
 ;;; concatenate.  The reason for this is that there have been

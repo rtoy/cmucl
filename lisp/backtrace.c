@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.16 2009/01/20 03:20:55 agoncharov Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.17 2009/06/11 16:04:01 rtoy Rel $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -214,9 +214,16 @@ backtrace(int nframes)
 		    }
 		    if (TypeOf(*object) == type_SimpleString) {
 			struct vector *string;
-
+#ifdef UNICODE
+                        char c_string[1000];
+#endif                        
 			string = (struct vector *) object;
-			printf("%s, ", (char *) string->data);
+#ifdef UNICODE
+                        convert_lisp_string(c_string, string->data, string->length >> 2);
+			printf("%s, ", c_string);
+#else
+                        printf("%s, ", (char *) string->data);
+#endif
 		    } else
 			printf("(Not simple string??\?), ");
 		} else
@@ -288,22 +295,42 @@ print_entry_name(lispobj name)
 	if (TypeOf(*object) == type_SymbolHeader) {
 	    struct symbol *symbol = (struct symbol *) object;
 	    struct vector *string;
+#ifdef UNICODE
+	    char c_string[1000];
+#endif
 
 	    if (symbol->package != NIL) {
 		struct instance *pkg = (struct instance *) PTR(symbol->package);
 		lispobj pkg_name = pkg->slots[2];
 
 		string = (struct vector *) PTR(pkg_name);
+#ifndef UNICODE
 		printf("%s::", (char *) string->data);
+#else
+		convert_lisp_string(c_string, string->data, string->length >> 2);
+		printf("%s:;", c_string);
+#endif
 	    }
 
 	    object = (lispobj *) PTR(symbol->name);
 	    string = (struct vector *) object;
+#ifndef UNICODE
 	    printf("%s", (char *) string->data);
+#else
+	    convert_lisp_string(c_string, string->data, string->length >> 2);
+	    printf("%s:;", c_string);
+#endif
 	} else if (TypeOf(*object) == type_SimpleString) {
 	    struct vector *string = (struct vector *) object;
-
+#ifdef UNICODE
+	    char c_string[1000];
+#endif
+#ifndef UNICODE
 	    printf("\"%s\"", (char *) string->data);
+#else
+	    convert_lisp_string(c_string, string->data, string->length >> 2);
+	    printf("\"%s\"", c_string);
+#endif
 	} else
 	    printf("<??? type %d>", (int) TypeOf(*object));
     } else

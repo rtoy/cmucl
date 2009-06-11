@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.46 2008/10/22 02:45:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.47 2009/06/11 16:03:57 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -324,7 +324,7 @@
 ;;; This returns 0 or "-1" depending on whether the bignum is positive.  This
 ;;; is suitable for infinite sign extension to complete additions,
 ;;; subtractions, negations, etc.  This cannot return a -1 represented as
-;;; a negative fixnum since it would then have to low zeros.
+;;; a negative fixnum since it would then have two low zeros.
 ;;;
 (declaim (inline %sign-digit))
 (defun %sign-digit (bignum len)
@@ -488,7 +488,7 @@
 ;;; References:  Knuth, Seminumerical Algorithms.
 ;;;
 
-;;; Based on an implementation by Raymond Toy, who's explanation follows:
+;;; Based on an implementation by Raymond Toy, whose explanation follows:
 ;;;
 ;;; Let U = (b^n)*U1 + U0 and V = (b^n)*V1 + V0 be two positive
 ;;; integers consisting of b^(2n) base-b digits.  Typically, we use
@@ -1561,7 +1561,7 @@ down to individual words.")
 
 ;;; NEGATE-BIGNUM -- Public.
 ;;;
-;;; Fully-normalize is an internal optional.  It cause this to always return
+;;; Fully-normalize is an internal optional.  It causes this to always return
 ;;; a bignum, without any extraneous digits, and it never returns a fixnum.
 ;;;
 (defun negate-bignum (x &optional (fully-normalize t))
@@ -1613,7 +1613,7 @@ down to individual words.")
 ;;; body.  When result is supplied, it is the variable to which this binds a
 ;;; newly allocated bignum.
 ;;;
-;;; Given start-pos, 1-31 inclusively, of shift, we form the j'th resulting
+;;; Given start-pos (1-31 inclusive) of shift, we form the j'th resulting
 ;;; digit from high bits of the i'th source digit and the start-pos number of
 ;;; bits from the i+1'th source digit.
 ;;;
@@ -1647,7 +1647,7 @@ down to individual words.")
 ;;; than the length of the bignum, then the result is either 0 or -1.  If we
 ;;; shift on a digit boundary (that is, n-bits is zero), then we just copy
 ;;; digits.  The last branch handles the general case which uses a macro that a
-;;; couple other routines use.  The fifth argument to the macro references
+;;; couple of other routines use.  The fifth argument to the macro references
 ;;; locals established by the macro.
 ;;;
 (defun bignum-ashift-right (bignum x)
@@ -1751,7 +1751,7 @@ down to individual words.")
 ;;; BIGNUM-ASHIFT-LEFT-UNALIGNED -- Internal.
 ;;;
 ;;; BIGNUM-TRUNCATE uses this to store into a bignum buffer by supplying res.
-;;; When res comes in non-nil, then this foregoes allocating a result, and it
+;;; When res comes in non-nil this foregoes allocating a result, and it
 ;;; normalizes the buffer instead of the would-be allocated result.
 ;;;
 ;;; We start storing into one digit higher than digits, storing a whole result
@@ -1905,7 +1905,7 @@ down to individual words.")
 		 (+ 106 (- len 53 part-len))))
 	      (t
 	       default-length)))))
-	   
+
 
 ;;; BIGNUM-TO-FLOAT   --  Interface
 ;;;

@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.42 2008/03/21 09:36:42 cshapiro Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.43 2009/06/11 16:04:01 rtoy Rel $ 
 
    */
 #include <stdio.h>
@@ -1089,8 +1089,11 @@ ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
 	  return ptrans_boxed(thing, header, FALSE);
 
       case type_SimpleString:
+#ifndef UNICODE
 	  return ptrans_vector(thing, 8, 1, FALSE, constant);
-
+#else
+	  return ptrans_vector(thing, 16, 1, FALSE, constant);
+#endif
       case type_SimpleBitVector:
 	  return ptrans_vector(thing, 1, 0, FALSE, constant);
 
@@ -1361,8 +1364,13 @@ pscav(lispobj * addr, int nwords, boolean constant)
 			      2);
 #else
 		  count =
+#ifndef UNICODE
 		      CEILING(NWORDS(fixnum_value(vector->length) + 1, 4) + 2,
 			      2);
+#else
+		      CEILING(NWORDS(fixnum_value(vector->length) + 1, 2) + 2,
+			      2);
+#endif
 #endif
 		  break;
 

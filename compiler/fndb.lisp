@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.136 2007/03/28 15:56:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.137 2009/06/11 16:03:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -815,6 +815,16 @@
 
 (deftype stringable () '(or character string symbol))
 
+;; Case folding mode (in case we want language-specific converssions)
+#+unicode
+(deftype case-folding-type ()
+  `(member :simple :full))
+
+;; Case conversion mode (in case we ever want language-specific conversions)
+#+unicode
+(deftype case-conversion-type ()
+  `(member :simple :full))
+
 (defknown (string= string-equal)
   (stringable stringable &key (:start1 index) (:end1 sequence-end)
 	      (:start2 index) (:end2 sequence-end))
@@ -837,7 +847,7 @@
   (sequence stringable) simple-string (flushable))
 
 (defknown (string-upcase string-downcase string-capitalize)
-  (stringable &key (:start index) (:end sequence-end))
+  (stringable &key (:start index) (:end sequence-end) #+unicode (:casing case-conversion-type))
   simple-string (flushable))
 
 (defknown (nstring-upcase nstring-downcase nstring-capitalize)
@@ -1073,7 +1083,7 @@
 					   :rename-and-delete :overwrite
 					   :append :supersede nil))
 		       (:if-does-not-exist (member :error :create nil))
-		       (:external-format (member :default))
+		       (:external-format symbol)
 		       (:class (or symbol class))
 		       (:mapped boolean)
 		       (:input-handle (or null fixnum stream))
@@ -1131,7 +1141,7 @@
    (:block-compile (member t nil :specified))
    (:entry-points list)
    (:byte-compile (member t nil :maybe))
-   (:external-format (member :default))
+   (:external-format symbol)
    (:xref t))
   (values (or pathname null) boolean boolean))
 
@@ -1241,6 +1251,7 @@
   (foldable flushable))
 (defknown %set-symbol-package (symbol t) t (unsafe))
 (defknown %coerce-to-function (t) function (flushable))
+(defknown lisp::shrink-vector (vector fixnum) vector (unsafe))
 
 ;;; Structure slot accessors or setters are magically "known" to be these
 ;;; functions, although the var remains the Slot-Accessor describing the actual

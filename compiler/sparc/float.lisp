@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.59 2008/11/12 15:04:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.60 2009/06/11 16:04:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1096,6 +1096,40 @@
   (frob %double-float/signed %%double-float fitod double-reg double-float)
   #+long-float
   (frob %long-float/signed %long-float fitoq long-reg long-float))
+
+;; Sparc doesn't have an instruction to convert a 32-bit unsigned
+;; integer to a float, but does have one for a 32-bit signed integer.
+;; What we do here is break up the 32-bit number into 2 smaller
+;; pieces.  Each of these are converted to a float, and the higher
+;; order piece is scaled appropriately, and finally everything is
+;; summed together.  The pieces are done in a way such that no
+;; roundoff occurs.  The scaling should not produce any roundoff
+;; either, since the scale factor is an exact power of two.  The final
+;; sum will produce the correct rounded result.  (I think,)
+;;
+;; But need to be careful because we still want to call the VOP for
+;; the small pieces, so we need the transform to give up if it's known
+;; that the argument is smaller than a 32-bit unsigned integer.
+(macrolet ((frob (name limit unit)
+	     `(deftransform ,name ((n) ((unsigned-byte 32)))
+		;; Should this be extended to a (unsigned-byte 53)?  We could.  Just
+		;; take the low 31 bits, and the rest, and float them and combine
+		;; them as before.
+		(when (csubtypep (c::continuation-type n)
+				 (c::specifier-type '(unsigned-byte 31)))
+		  ;; We want to give-up if we know the number can't have the
+		  ;; MSB set.  The signed 32-bit vop can handle that.
+		  (c::give-up))
+		`(+ (,',name (ldb (byte ,',limit 0) n))
+		    (* (,',name (ldb (byte ,',(- 32 limit) ,',limit) n))
+		       (scale-float ,',unit ,',limit))))))
+  ;; If we break up the numbers into the low 12 bits and the high 20
+  ;; bits, we can use a single AND instruction to get the low 12 bits.
+  ;; This is a microoptimization for Sparc.  Otherwise, the only
+  ;; constraint is that the pieces must be small enough to fit in the
+  ;; desired float format without rounding.
+  (frob %single-float 12 1f0)
+  (frob %double-float 12 1f0))
 
 (macrolet ((frob (name translate inst from-sc from-type to-sc to-type)
 	     `(define-vop (,name)
