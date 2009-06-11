@@ -249,9 +249,8 @@ full Unicode codepoint.)
    \defunx{char-greaterp}{\amprest{} \var{characters}}
    \defunx{char-not-greaterp}{\amprest{} \var{characters}}
    \defunx{char-not-lessp}{\amprest{} \var{characters}}
-   For the comparison, the each character has its case folded
-   according to the Unicode simple case folding table and the
-   characters are compared based on the character code value.
+   For the comparison, the characters are converted to lowercase and
+   the corresponding \code{char-code} are compared.
 \end{defun}
 
 \begin{defun}{}{alpha-char-p}{\args \var{character}}
@@ -309,7 +308,7 @@ full Unicode codepoint.)
 \begin{defun}{}{name-char}{\args \var{name}}
   The inverse to \code{char-name}.  If no character has the name
   \var{name}, then \nil{} is returned.  Unicode names are not
-  case-sensitive, and spaces or underscores are optional.
+  case-sensitive, and spaces and underscores are optional.
 \end{defun}
 \subsection{Strings}
 
@@ -360,25 +359,15 @@ this encoding and handle the surrogate pairs correctly.
 \end{defun}
 
 \begin{defun}{}{string-equal}{\args \var{s1} \var{s2} \keys{\kwd{start1}
-      \kwd{end1} \kwd{start2} \kwd{end2} \kwd{casing}}}
-  \defunx{string-not-equal}{\args \var{s1} \var{s2} \keys{\kwd{start1}
-      \kwd{end1} \kwd{start2} \kwd{end2} \kwd{casing}}}
-  \defunx{string-lessp}{\args \var{s1} \var{s2} \keys{\kwd{start1}
-      \kwd{end1} \kwd{start2} \kwd{end2} \kwd{casing}}}
-  \defunx{string-greaterp}{\args \var{s1} \var{s2} \keys{\kwd{start1}
-      \kwd{end1} \kwd{start2} \kwd{end2} \kwd{casing}}}
-  \defunx{string-not-greaterp}{\args \var{s1} \var{s2}
-    \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2} \kwd{casing}}}
+      \kwd{end1} \kwd{start2} \kwd{end2}}}
+  \defunx{string-not-equal}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
+  \defunx{string-lessp}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
+  \defunx{string-greaterp}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
+  \defunx{string-not-greaterp}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
   \defunx{string-not-lessp}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
-  These functions perform case-insenstive comparisons.  How the
-  comparison is done depends on the value of \code{casing}.  The case
-  of each codepoint is folded according to the Unicode case folding
-  table.  When \code{casing} is \kwd{simple}, simple case folding is
-  done, where each codepoint is replaced by a single codepoint.
-  Otherwise, full case folding is performed where a codepoint may be
-  converted to several codepoints.
-
-  Unicode collation is not performed.
+  Each codepoint in each string is converted to lowercase and the
+  appropriate comparison of the codepoint values is done.  Unicode
+  collation is not done.
 \end{defun}
 
 \begin{defun}{}{string-left-trim}{\args \var{bag} \var{string}}
