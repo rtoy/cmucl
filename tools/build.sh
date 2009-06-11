@@ -178,7 +178,7 @@ BUILD_WORLD2=
 buildit
 
 TARGET=$BASE-4
-CLEAN_FLAGS="-K all"
+#CLEAN_FLAGS="-K all"
 OLDLISP="${BASE}-3/lisp/lisp -noinit $FPU_MODE"
 ENABLE=$ENABLE4
 
