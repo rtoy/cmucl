@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.136.4.1.2.4 2009/06/09 18:17:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.136.4.1.2.5 2009/06/11 13:30:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -825,27 +825,17 @@
 (deftype case-conversion-type ()
   `(member :simple :full))
 
-(defknown (string=)
+(defknown (string= string-equal)
   (stringable stringable &key (:start1 index) (:end1 sequence-end)
 	      (:start2 index) (:end2 sequence-end))
   boolean
   (foldable flushable))
 
-(defknown (string-equal string-not-equal)
-  (stringable stringable &key (:start1 index) (:end1 sequence-end)
-	      (:start2 index) (:end2 sequence-end) #+unicode (:casing case-folding-type))
-  boolean
-  (foldable flushable))
-
-(defknown (string< string> string<= string>= string/=)
+(defknown (string< string> string<= string>= string/= string-lessp
+		   string-greaterp string-not-lessp string-not-greaterp
+		   string-not-equal)
   (stringable stringable &key (:start1 index) (:end1 sequence-end)
 	      (:start2 index) (:end2 sequence-end))
-  (or index null)
-  (foldable flushable))
-
-(defknown (string-lessp string-greaterp string-not-lessp string-not-greaterp)
-  (stringable stringable &key (:start1 index) (:end1 sequence-end)
-	      (:start2 index) (:end2 sequence-end) #+unicode (:casing case-folding-type))
   (or index null)
   (foldable flushable))
 

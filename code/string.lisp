@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.32 2009/06/09 18:16:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12.30.33 2009/06/11 13:30:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -360,87 +360,75 @@
 	     `((if (not (char-equal (schar string1 index1)
 				    (schar string2 index2)))
 		   (return ,abort-value)))))))
-
-#+unicode
-(defmacro handle-case-fold-equal (f &body body)
-  `(ecase casing
-     (:simple
-      ,@body)
-     (:full
-      ;; We should probably do this in a different way with less
-      ;; consing, but this is easy.
-      (let* ((s1 (case-fold string1 start1 end1))
-	     (s2 (case-fold string1 start2 end2)))
-	(,f s1 s2)))))
-
-#-unicode
-(defmacro handle-case-fold-equal (f &body body)
-  (declare (ignore f))
-  `(progn ,@body))
-  
 ) ; eval-when
 
 #+unicode
-(defun case-fold (string start end)
-  ;; Create a new string performing full case folding of String
-  (with-output-to-string (s)
-    (with-one-string string start end offset
-      (do ((index offset (1+ index)))
-	  ((>= index end))
-	(multiple-value-bind (code widep)
-	    (codepoint string index)
-	  (when widep (incf index))
-	  (write-string (unicode-case-fold-full code) s))))))
+(defun string-case-fold (string &key (start 0) end (casing :simple))
+  "Return a new string with the case folded according to Casing as follows:
 
-(defun string-equal (string1 string2 &key (start1 0) end1 (start2 0) end2 #+unicode (casing :simple))
-  #-unicode
+  :SIMPLE  Unicode simple case folding (preserving length)
+  :FULL    Unicode full case folding (possibly changing length)
+
+  Default Casing is :SIMPLE."
+  (ecase casing
+    (:simple
+     (with-output-to-string (s)
+       (with-one-string string start end offset
+	 (do ((index offset (1+ index)))
+	     ((>= index end))
+	   (multiple-value-bind (code widep)
+	       (codepoint string index)
+	     (when widep (incf index))
+	     (let ((new (,f code)))
+	       (multiple-value-bind (hi lo)
+		   (surrogates (,f code))
+		 (write-char hi s)
+		 (when lo (write-char lo s)))))))))
+    (:full
+     (with-output-to-string (s)
+       (with-one-string string start end offset
+	 (do ((index offset (1+ index)))
+	     ((>= index end))
+	   (multiple-value-bind (code widep)
+	       (codepoint string index)
+	     (when widep (incf index))
+	     (write-string (,f code) s))))))))
+
+(defun string-equal (string1 string2 &key (start1 0) end1 (start2 0) end2)
   "Given two strings (string1 and string2), and optional integers start1,
   start2, end1 and end2, compares characters in string1 to characters in
   string2 (using char-equal)."
-  #+unicode
-  "Given two strings (string1 and string2), and optional integers
-  start1, start2, end1 and end2, compares characters in string1 to
-  characters in string2. Casing is :simple or :full for simple or full
-  case folding, respectively."
   (declare (fixnum start1 start2))
-  (handle-case-fold-equal string-equal
-    (with-two-strings string1 string2 start1 end1 offset1 start2 end2
-       (let ((slen1 (- (the fixnum end1) start1))
-	     (slen2 (- (the fixnum end2) start2)))
-	 (declare (fixnum slen1 slen2))
-	 (if (or (minusp slen1) (minusp slen2))
-	     ;;prevent endless looping later.
-	     (error "Improper bounds for string comparison."))
-	 (if (= slen1 slen2)
-	     ;;return () immediately if lengths aren't equal.
-	     (string-not-equal-loop 1 t nil))))))
+  (with-two-strings string1 string2 start1 end1 offset1 start2 end2
+    (let ((slen1 (- (the fixnum end1) start1))
+	  (slen2 (- (the fixnum end2) start2)))
+      (declare (fixnum slen1 slen2))
+      (if (or (minusp slen1) (minusp slen2))
+	  ;;prevent endless looping later.
+	  (error "Improper bounds for string comparison."))
+      (if (= slen1 slen2)
+	  ;;return () immediately if lengths aren't equal.
+	  (string-not-equal-loop 1 t nil)))))
 
-(defun string-not-equal (string1 string2 &key (start1 0) end1 (start2 0) end2 #+unicode (casing :simple))
-  #-unicode
+(defun string-not-equal (string1 string2 &key (start1 0) end1 (start2 0) end2)
   "Given two strings, if the first string is not lexicographically equal
   to the second string, returns the longest common prefix (using char-equal)
   of the two strings. Otherwise, returns ()."
-  #-unicode
-  "Given two strings, if the first string is not lexicographically
-  equal to the second string, returns the longest common prefix of the
-  two strings. Otherwise, returns ().  Casing is :simple or :full for
-  simple or full case folding."
-  (handle-case-fold-equal string-not-equal
-    (with-two-strings string1 string2 start1 end1 offset1 start2 end2
-      (let ((slen1 (- end1 start1))
-	    (slen2 (- end2 start2)))
-	(declare (fixnum slen1 slen2))
-	(if (or (minusp slen1) (minusp slen2))
-	    ;;prevent endless looping later.
-	    (error "Improper bounds for string comparison."))
-	(cond ((or (minusp slen1) (or (minusp slen2)))
-	       (error "Improper substring for comparison."))
-	      ((= slen1 slen2)
-	       (string-not-equal-loop 1 nil (- index1 offset1)))
-	      ((< slen1 slen2)
-	       (string-not-equal-loop 1 (- index1 offset1)))
-	      (t
-	       (string-not-equal-loop 2 (- index1 offset1))))))))
+  (with-two-strings string1 string2 start1 end1 offset1 start2 end2
+    (let ((slen1 (- end1 start1))
+	  (slen2 (- end2 start2)))
+      (declare (fixnum slen1 slen2))
+      (if (or (minusp slen1) (minusp slen2))
+	  ;;prevent endless looping later.
+	  (error "Improper bounds for string comparison."))
+      (cond ((or (minusp slen1) (or (minusp slen2)))
+	     (error "Improper substring for comparison."))
+	    ((= slen1 slen2)
+	     (string-not-equal-loop 1 nil (- index1 offset1)))
+	    ((< slen1 slen2)
+	     (string-not-equal-loop 1 (- index1 offset1)))
+	    (t
+	     (string-not-equal-loop 2 (- index1 offset1)))))))
  
 
 
@@ -507,7 +495,7 @@
 	 #-(and unicode (not unicode-bootstrap))
 	 ch
 	 #+(and unicode (not unicode-bootstrap))
-	 (if (> ch 127) (unicode-case-fold-simple ch) ch))))
+	 (if (> ch 127) (unicode-lower ch) ch))))
 
 #+unicode
 (defmacro string-less-greater-equal (lessp equalp)
@@ -559,76 +547,30 @@
   (declare (fixnum start1 start2))
   (string-less-greater-equal t t))
 
-
-(eval-when (compile)
-  
-#+unicode
-(defmacro handle-case-folding (f)
-  `(ecase casing
-     (:simple
-      (,f string1 string2 start1 end1 start2 end2))
-     (:full
-      (let* ((s1 (case-fold string1 start1 end1))
-	     (s2 (case-fold string2 start2 end2))
-	     (result (,f s1 s2 0 (length s1) 0 (length s2))))
-	(when result
-	  (+ result start1))))))
-
-#-unicode
-(defmacro handle-case-folding (f)
-  `(,f string1 string2 start1 end1 start2 end2))
-
-) ; compile
-
-(defun string-lessp (string1 string2 &key (start1 0) end1 (start2 0) end2 #+unicode (casing :simple))
-  #-unicode
+(defun string-lessp (string1 string2 &key (start1 0) end1 (start2 0) end2)
   "Given two strings, if the first string is lexicographically less than
   the second string, returns the longest common prefix (using char-equal)
   of the two strings. Otherwise, returns ()."
-  #+unicode
-  "Given two strings, if the first string is lexicographically less
-  than the second string, returns the longest common prefix of the two
-  strings. Otherwise, returns ().  Casing is :simple or :full for
-  simple or full case folding, respectively."
-  
-  (handle-case-folding string-lessp*))
+  (string-lessp* string1 string2 start1 end1 start2 end2))
 
-(defun string-greaterp (string1 string2 &key (start1 0) end1 (start2 0) end2 #+unicode (casing :simple))
-  #-unicode
+(defun string-greaterp (string1 string2 &key (start1 0) end1 (start2 0) end2)
   "Given two strings, if the first string is lexicographically greater than
   the second string, returns the longest common prefix (using char-equal)
   of the two strings. Otherwise, returns ()."
-  #+unicode
-  "Given two strings, if the first string is lexicographically greater
-  than the second string, returns the longest common prefix of the two
-  strings. Otherwise, returns ().  Casing is :simple or :full for
-  simple or full case folding, respectively."
-  (handle-case-folding string-greaterp*))
+  (string-greaterp* string1 string2 start1 end1 start2 end2))
 
-(defun string-not-lessp (string1 string2 &key (start1 0) end1 (start2 0) end2 #+unicode (casing :simple))
-  #-unicode
+(defun string-not-lessp (string1 string2 &key (start1 0) end1 (start2 0) end2)
   "Given two strings, if the first string is lexicographically greater
   than or equal to the second string, returns the longest common prefix
   (using char-equal) of the two strings. Otherwise, returns ()."
-  #+unicode
-  "Given two strings, if the first string is lexicographically greater
-  than or equal to the second string, returns the longest common
-  prefix of the two strings. Otherwise, returns ().  Casing is :simple
-  or :full for simple or full case folding, respectively."
-  (handle-case-folding string-not-lessp*))
+  (string-not-lessp* string1 string2 start1 end1 start2 end2))
 
 (defun string-not-greaterp (string1 string2 &key (start1 0) end1 (start2 0)
-				    end2 #+unicode (casing :simple))
-  #-unicode
+				    end2)
   "Given two strings, if the first string is lexicographically less than
   or equal to the second string, returns the longest common prefix
   (using char-equal) of the two strings. Otherwise, returns ()."
-  #+unicode
-  "Given two strings, if the first string is lexicographically less
-  than or equal to the second string, returns the longest common
-  prefix of the two strings. Otherwise, returns ().  Casing is :simple
-  or :full for simple or full case folding, respectively."
-  (handle-case-folding string-not-greaterp*))
+  (string-not-greaterp* string1 string2 start1 end1 start2 end2))
 
 
 (defun make-string (count &key element-type ((:initial-element fill-char)))
