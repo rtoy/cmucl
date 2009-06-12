@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.60 2009/06/11 16:04:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.61 2009/06/12 12:43:49 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -499,13 +499,13 @@
 
 
 (deftransform sxhash ((s-expr) (single-float))
-  '(let ((bits (single-float-bits s-expr)))
+  '(let ((bits (single-float-bits (+ 0f0 s-expr))))
      (ldb sxhash-bits-byte
 	  (logxor (ash bits (- sxmash-rotate-bits)) bits))))
 
 (deftransform sxhash ((s-expr) (double-float))
-  '(let* ((lo (double-float-low-bits s-expr))
-	  (hi (double-float-high-bits s-expr)))
+  '(let* ((lo (double-float-low-bits (+ 0d0 s-expr)))
+	  (hi (double-float-high-bits (+ 0d0 s-expr))))
      (ldb sxhash-bits-byte
 	  (logxor (ash lo (- sxmash-rotate-bits)) lo
 		  (ldb sxhash-bits-byte
