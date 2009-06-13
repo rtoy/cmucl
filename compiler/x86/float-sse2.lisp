@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.4 2008/11/14 20:43:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.5 2009/06/13 03:39:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2025,32 +2025,41 @@
   (complex-*-float double mulpd unpcklpd 4))
 
 ;; Divide a complex by a real
-(macrolet
-    ((complex-/-float (float-type fdiv copy cost)
-       (let* ((vop-name (symbolicate "COMPLEX-" float-type "-FLOAT-/-"
-				     float-type "-FLOAT"))
-	      (complex-sc-type (symbolicate "COMPLEX-" float-type "-REG"))
-	      (real-sc-type (symbolicate float-type "-REG"))
-	      (c-type (symbolicate "COMPLEX-" float-type "-FLOAT"))
-	      (r-type (symbolicate float-type "-FLOAT")))
-	 `(define-vop (,vop-name)
-	   (:args (x :scs (,complex-sc-type)) (y :scs (,real-sc-type)))
-	   (:results (r :scs (,complex-sc-type)))
-	   (:arg-types ,c-type ,r-type)
-	   (:result-types ,c-type)
-	   (:policy :fast-safe)
-	   (:note "inline complex float arithmetic")
-	   (:translate /)
-	   (:temporary (:sc ,complex-sc-type) t0)
-	   (:generator ,cost
-	     (inst movaps t0 y)		; t0 = u|y or u|u|u|y
-	     ,copy			; t0 = y|y or y|y|y|y
-	     (unless (location= x r)
-	       (inst movaps r x))
-	     (inst ,fdiv r t0))))))
-  (complex-/-float single divps (inst shufps t0 t0 0) 4)
-  (complex-/-float double divpd (inst unpcklpd t0 t0) 4))
+(define-vop (complex-double-float-/-double-float)
+  (:args (x :scs (complex-double-reg)) (y :scs (double-reg)))
+  (:results (r :scs (complex-double-reg)))
+  (:arg-types complex-double-float double-float)
+  (:result-types complex-double-float)
+  (:policy :fast-safe)
+  (:note "inline complex float arithmetic")
+  (:translate /)
+  (:temporary (:sc complex-double-reg) t0)
+  (:generator 4
+    (inst movaps t0 y)			; t0 = u|y
+    (inst unpcklpd t0 t0)		; t0 = y|y
+    (unless (location= x r)
+      (inst movaps r x))		; r = xi|xr
+    (inst divpd r t0)))
 
+(define-vop (complex-single-float-/-single-float)
+  (:args (x :scs (complex-single-reg)) (y :scs (single-reg)))
+  (:results (r :scs (complex-single-reg)))
+  (:arg-types complex-single-float single-float)
+  (:result-types complex-single-float)
+  (:policy :fast-safe)
+  (:note "inline complex float arithmetic")
+  (:translate /)
+  (:temporary (:sc complex-single-reg) t0 t1)
+  (:generator 5
+    ;; The upper parts of x may contain junk and dividing that by y
+    ;; may cause spurious signals.  Thus, copy the complex number to
+    ;; the high part.
+    (inst movaps t0 y)			; t0 = u|u|u|y
+    (inst shufps t0 t0 0)		; t0 = y|y|y|y
+    (inst movaps t1 x)			; t1 = u|u|xi|xr
+    (inst movlhps t1 t1)		; t1 = xi|xr|xi|xr
+    (inst divps t1 t0)
+    (inst movaps r t1)))
 
 (define-vop (sse3-*/complex-double-float)
   (:translate *)
@@ -2128,10 +2137,10 @@
     ;; x = a+b*i = b|a
     ;; y = c+d*i = d|c
     ;; r = a*c-b*d + i*(a*d+b*c)
-    (inst movaps t1 y)			; t1 = d|c
-    (inst movaps t2 y)			; t2 = d|c
-    (inst shufps t1 t1 #b0000)		; t1 = c|c
-    (inst shufps t2 t2 #b0101)		; t2 = d|d
+    (inst movaps t1 y)			; t1 = u|u|d|c
+    (inst movaps t2 y)			; t2 = u|u|d|c
+    (inst shufps t1 t1 #b00000000)	; t1 = c|c|c|c
+    (inst shufps t2 t2 #b01010101)	; t2 = d|d|d|d
     (inst mulps t1 x)			; t1 = b*c|a*c
     (inst mulps t2 x)			; t2 = b*d|a*d
     (inst shufps t2 t2 1)		; t2 = a*d|b*d
