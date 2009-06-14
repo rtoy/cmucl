@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.5 2009/06/13 03:39:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.6 2009/06/14 14:19:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1312,8 +1312,9 @@
     (sc-case r
       (complex-single-reg
        ;; x = a + b*i = b|a
-       (inst movss temp real)		; temp = ?|a
-       (inst unpcklps temp imag)	; temp = b|a
+       (inst xorps temp temp)		; temp = 0|0|0|0
+       (inst movss temp real)		; temp = 0|0|0|a
+       (inst unpcklps temp imag)	; temp = 0|0|b|a
        (inst movaps r temp))
       (complex-single-stack
        (inst movss (ea-for-csf-real-stack r) real)
@@ -1347,12 +1348,14 @@
   (:arg-types complex-single-float)
   (:results (r :scs (single-reg)))
   (:result-types single-float)
+  (:temporary (:sc complex-single-reg) temp)
   (:policy :fast-safe)
   (:note "complex float realpart")
   (:generator 3
     (sc-case x
       (complex-single-reg
-       (inst movss r x))
+       (inst xorps temp temp)		; temp = 0|0|0|0
+       (inst movss r x))		; r = 0|0|0|x
       (complex-single-stack
        (inst movss r (ea-for-csf-real-stack x)))
       (descriptor-reg
@@ -1364,12 +1367,14 @@
   (:arg-types complex-double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
+  (:temporary (:sc complex-double-reg) temp)
   (:policy :fast-safe)
   (:note "complex float realpart")
   (:generator 3
     (sc-case x
       (complex-double-reg
-       (inst movsd r x))
+       (inst xorpd temp temp)		; temp = 0|0
+       (inst movsd r x))		; r = 0|x
       (complex-double-stack
        (inst movsd r (ea-for-cdf-real-stack x)))
       (descriptor-reg
@@ -1388,10 +1393,12 @@
     (sc-case x
       (complex-single-reg
        ;; x = a+b*i = b|a
-       (inst movaps r x)
-       ;; Get the imag part to the low part of r.  We don't care about
+       ;; Get the imag part to the low part of temp.  We don't care about
        ;; the other parts of r.
-       (inst shufps r r #b01))
+       (inst shufps temp x #b01)	; temp = a|a|a|b
+       (inst xorps r r)			; r = 0|0|0|0
+       (inst movss r temp)		; r = 0|0|0|b
+       )
       (complex-single-stack
        (inst movss r (ea-for-csf-imag-stack x)))
       (descriptor-reg
@@ -1409,7 +1416,8 @@
   (:generator 3
     (sc-case x
       (complex-double-reg
-       (inst movhlps r x))
+       (inst xorpd r r)			; r = 0|0
+       (inst movhlps r x))		; r = 0|b
       (complex-double-stack
        (inst movsd r (ea-for-cdf-imag-stack x)))
       (descriptor-reg
@@ -2016,10 +2024,10 @@
 	     (:translate *)
 	     (:temporary (:scs (,complex-sc-type)) t0)
 	     (:generator ,cost
-	       (inst movaps t0 x)	; t0 = x
-	       (inst ,copy t0 t0)	; t0 = x|x
+	       (inst movaps t0 x)	; t0 = 0|x or 0|0|0|x
+	       (inst ,copy t0 t0)	; t0 = x|x or 0|0|x|x
 	       (unless (location= y r)
-		 (inst movaps r y))	; r = yi|yr
+		 (inst movaps r y))	; r = yi|yr or 0|0|yi|yr
 	       (inst ,fmul r t0)))))))
   (complex-*-float single mulps movlhps 4)
   (complex-*-float double mulpd unpcklpd 4))
@@ -2059,7 +2067,9 @@
     (inst movaps t1 x)			; t1 = u|u|xi|xr
     (inst movlhps t1 t1)		; t1 = xi|xr|xi|xr
     (inst divps t1 t0)
-    (inst movaps r t1)))
+    (inst xorps t0 t0)			; t0 = 0|0|0|0
+    (inst movaps r t1)
+    (inst movlhps r t0)))
 
 (define-vop (sse3-*/complex-double-float)
   (:translate *)
@@ -2148,4 +2158,6 @@
     (inst movd t0 tmp)			; t0 = 0|0|0|#x80000000
     (inst xorps t2 t0)			; t2 = a*d|-b*d
     (inst addps t2 t1)			; t2 = a*d+b*c | a*c-b*d
-    (inst movaps r t2)))
+    (inst xorps t1 t1)			; t1 = 0|0|0|0
+    (inst movaps r t2)
+    (inst movlhps r t1)))
