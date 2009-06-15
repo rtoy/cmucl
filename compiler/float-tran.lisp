@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.129 2009/03/18 01:24:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.130 2009/06/15 16:58:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1473,18 +1473,18 @@
 	              (- (imagpart w) (imagpart z))))
 	  (deftransform + ((w z) ((complex ,type) ,real-type) *)
 	    ;; Complex + real
-	    '(complex (+ (realpart w) z) (imagpart w)))
+	    '(complex (+ (realpart w) z) (+ 0 (imagpart w))))
 	  (deftransform - ((w z) ((complex ,type) ,real-type) *)
 	    ;; Complex - real
-	    '(complex (- (realpart w) z) (imagpart w)))
+	    '(complex (- (realpart w) z) (- (imagpart w) 0)))
 	  (deftransform * ((x y) ((complex ,type) (complex ,type)) *)
 	    ;; Complex * complex
 	    '(let* ((rx (realpart x))
 		    (ix (imagpart x))
 		    (ry (realpart y))
 		    (iy (imagpart y)))
-	      (complex (- (* rx ry) (* ix iy))
-	       (+ (* rx iy) (* ix ry)))))
+	       (complex (- (* rx ry) (* ix iy))
+			(+ (* rx iy) (* ix ry)))))
 	  ;; SSE2 can use a special transform
 	  #-(and sse2 complex-fp-vops)
 	  (deftransform / ((x y) ((complex ,type) (complex ,type)) *
@@ -1529,16 +1529,15 @@
 	 (deftransform - ((z w) (,real-type (complex ,type)) *)
 	   ;; Real - complex.  The 0 for the imaginary part is
 	   ;; needed so we get the correct signed zero.
-	   '(complex (- z (realpart w)) (- 0 (imagpart w))))
+	   '(- (complex z (coerce 0 ',real-type)) w))
 	 #-complex-fp-vops
 	 (deftransform + ((z w) (,real-type (complex ,type)) *)
-	   ;; Real - complex.  The 0 for the imaginary part is
+	   ;; Real + complex.  The 0 for the imaginary part is
 	   ;; needed so we get the correct signed zero.
-	   '(complex (+ z (realpart w)) (+ 0 (imagpart w))))
+	   '(+ (complex z (coerce 0 ',real-type)) w))
 	 #-complex-fp-vops
 	 (deftransform * ((z w) (,real-type (complex ,type)) *)
-	   ;; Real - complex.  The 0 for the imaginary part is
-	   ;; needed so we get the correct signed zero.
+	   ;; Real * complex
 	   '(complex (* z (realpart w)) (* z (imagpart w))))
 	 (deftransform cis ((z) ((,type)) *)
 	   ;; Cis.
