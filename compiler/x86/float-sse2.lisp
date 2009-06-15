@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.6 2009/06/14 14:19:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.7 2009/06/15 01:13:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1868,13 +1868,13 @@
     ((generate (movinst opinst)
        `(cond
 	 ((location= x r)
-	  (inst ,opinst x y))
-	 ((not (location= r y))
+	  (inst ,opinst x rtmp))
+	 ((not (location= r rtmp))
 	  (inst ,movinst r x)
-	  (inst ,opinst r y))
+	  (inst ,opinst r rtmp))
 	 (t
 	  (inst ,movinst tmp x)
-	  (inst ,opinst tmp y)
+	  (inst ,opinst tmp rtmp)
 	  (inst ,movinst r tmp))))
      (complex-op-float (size op fop base-ea cost)
        (let ((vop-name (symbolicate "COMPLEX-" size "-FLOAT-"
@@ -1886,7 +1886,10 @@
 	     (r-type (symbolicate size "-FLOAT"))
 	     (r-stack (symbolicate size "-STACK"))
 	     (ea-stack (symbolicate "EA-FOR-" base-ea "-STACK"))
-	     (ea-desc (symbolicate "EA-FOR-" base-ea "-DESC")))
+	     (ea-desc (symbolicate "EA-FOR-" base-ea "-DESC"))
+	     (loadinst (ecase size
+			 (single 'movss)
+			 (double 'movsd))))
 	 `(define-vop (,vop-name)
 	    (:args (x :scs (,complex-reg))
 	           (y :scs (,real-reg ,r-stack descriptor-reg)))
@@ -1897,43 +1900,38 @@
 	    (:note "inline complex float/float arithmetic")
 	    (:translate ,op)
 	    (:temporary (:sc ,complex-reg) tmp)
+	    (:temporary (:sc ,real-reg) rtmp)
 	    (:generator ,cost
 	      (sc-case y
 		(,real-reg
+		 (inst xorpd rtmp rtmp)
+		 (inst movaps rtmp y)
 		 (generate movaps ,fop))
 		(,r-stack
 		 (let ((ea (,ea-stack y)))
-		   (cond
-		     ((location= x r)
-		      (inst ,fop x ea))
-		     (t
-		      (inst movaps r x)
-		      (inst ,fop r ea)))))
+		   (inst ,loadinst rtmp ea)
+		   (generate movaps ,fop)))
 		(descriptor-reg
 		 (let ((ea (,ea-desc y)))
-		   (cond
-		     ((location= x r)
-		      (inst ,fop x ea))
-		     (t
-		      (inst movaps r x)
-		      (inst ,fop r ea)))))))))))
-  (complex-op-float single + addss sf 1)
-  (complex-op-float single - subss sf 1)
-  (complex-op-float double + addsd df 1)
-  (complex-op-float double - subsd df 1))
+		   (inst ,loadinst rtmp ea)
+		   (generate movaps ,fop)))))))))
+  (complex-op-float single + addps sf 1)
+  (complex-op-float single - subps sf 1)
+  (complex-op-float double + addpd df 1)
+  (complex-op-float double - subpd df 1))
 
 ;; Add a float and a complex
 (macrolet
     ((generate (movinst opinst)
        `(cond
 	 ((location= x r)
-	  (inst ,opinst x y))
+	  (inst ,opinst x rtmp))
 	 ((not (location= r y))
 	  (inst ,movinst r x)
-	  (inst ,opinst r y))
+	  (inst ,opinst r rtmp))
 	 (t
 	  (inst ,movinst tmp x)
-	  (inst ,opinst tmp y)
+	  (inst ,opinst tmp rtmp)
 	  (inst ,movinst r tmp))))
      (complex-op-float (size op fop base-ea cost)
        (let ((vop-name (symbolicate size "-FLOAT-"
@@ -1945,7 +1943,10 @@
 	     (r-type (symbolicate size "-FLOAT"))
 	     (r-stack (symbolicate size "-STACK"))
 	     (ea-stack (symbolicate "EA-FOR-" base-ea "-STACK"))
-	     (ea-desc (symbolicate "EA-FOR-" base-ea "-DESC")))
+	     (ea-desc (symbolicate "EA-FOR-" base-ea "-DESC"))
+	     (loadinst (ecase size
+			 (single 'movss)
+			 (double 'movsd))))
 	 `(define-vop (,vop-name)
 	    (:args (y :scs (,real-reg ,r-stack descriptor-reg))
 	           (x :scs (,complex-reg)))
@@ -1956,28 +1957,23 @@
 	    (:note "inline complex float/float arithmetic")
 	    (:translate ,op)
 	    (:temporary (:sc ,complex-reg) tmp)
+	    (:temporary (:sc ,real-reg) rtmp)
 	    (:generator ,cost
 	      (sc-case y
 		(,real-reg
+		 (inst xorpd rtmp rtmp)
+		 (inst movaps rtmp y)
 		 (generate movaps ,fop))
 		(,r-stack
 		 (let ((ea (,ea-stack y)))
-		   (cond
-		     ((location= x r)
-		      (inst ,fop x ea))
-		     (t
-		      (inst movaps r x)
-		      (inst ,fop r ea)))))
+		   (inst ,loadinst rtmp ea)
+		   (generate movaps ,fop)))
 		(descriptor-reg
 		 (let ((ea (,ea-desc y)))
-		   (cond
-		     ((location= x r)
-		      (inst ,fop x ea))
-		     (t
-		      (inst movaps r x)
-		      (inst ,fop r ea)))))))))))
-  (complex-op-float single + addss sf 1)
-  (complex-op-float double + addsd df 1))
+		   (inst ,loadinst rtmp ea)
+		   (generate movaps ,fop)))))))))
+  (complex-op-float single + addps sf 1)
+  (complex-op-float double + addpd df 1))
 
 ;; Multiply a complex by a float or a float by a complex.
 (macrolet
