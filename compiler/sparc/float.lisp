@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.61 2009/06/15 16:56:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.62 2009/06/15 18:03:25 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2089,79 +2089,49 @@
 
 ;; Subtract a complex from a float.
 ;;
-;; This doesn't work right because (- 0 #c(0d0 0d0)) should be #c(0d0
-;; 0d0) but we get #c(0d0 -0d0) because of the negation of the
-;; imaginary part.  For this to work, we need to get compute 0 -
-;; imaginary part, but there's no floating-point zero we can use.
-#+nil
 (macrolet
-    ((frob (size fop fneg cost)
+    ((frob (size fop cost)
        (let ((vop-name (symbolicate size "-FLOAT---COMPLEX-" size "-FLOAT"))
 	     (complex-reg (symbolicate "COMPLEX-" size "-REG"))
 	     (real-reg (symbolicate size "-REG"))
 	     (c-type (symbolicate "COMPLEX-" size "-FLOAT"))
 	     (r-type (symbolicate size "-FLOAT"))
 	     (real-part (symbolicate "COMPLEX-" size "-REG-REAL-TN"))
-	     (imag-part (symbolicate "COMPLEX-" size "-REG-IMAG-TN")))
+	     (imag-part (symbolicate "COMPLEX-" size "-REG-IMAG-TN"))
+	     (load (ecase size
+		     (single 'ldf)
+		     (double 'lddf)))
+	     (zero-sym (ecase size
+			 (single '*fp-constant-0f0*)
+			 (double '*fp-constant-0d0*)))
+	     (slot (ecase size
+		     (single vm:single-float-value-slot)
+		     (double vm:double-float-value-slot))))
 	 `(define-vop (,vop-name)
 	      (:args (x :scs (,real-reg)) (y :scs (,complex-reg)))
 	    (:results (r :scs (,complex-reg)))
 	    (:arg-types ,r-type ,c-type)
 	    (:result-types ,c-type)
+	    (:temporary (:scs (,real-reg)) zero)
+	    (:temporary (:scs (descriptor-reg)) zero-val)
 	    (:policy :fast-safe)
 	    (:note "inline complex float/float arithmetic")
 	    (:translate -)
 	    (:generator ,cost
-	       (let ((yr (,real-part y))
-		     (yi (,imag-part y))
-		     (rr (,real-part r))
-		     (ri (,imag-part r)))
-		 (inst ,fop rr x yr)
-		 (,@fneg ri yi)))))))
-
-  (frob single fsubs (inst fnegs) 2)
-  (frob double fsubd (negate-double-reg) 2))
-
-;; Multiply two complex numbers
-
-#+nil
-(macrolet
-    ((frob (size fmul fadd fsub cost)
-       (let ((vop-name (symbolicate "*/COMPLEX-" size "-FLOAT"))
-	     (complex-reg (symbolicate "COMPLEX-" size "-REG"))
-	     (real-reg (symbolicate size "-REG"))
-	     (c-type (symbolicate "COMPLEX-" size "-FLOAT"))
-	     (real-part (symbolicate "COMPLEX-" size "-REG-REAL-TN"))
-	     (imag-part (symbolicate "COMPLEX-" size "-REG-IMAG-TN")))
-	 `(define-vop (,vop-name)
-	    (:args (x :scs (,complex-reg))
-	           (y :scs (,complex-reg)))
-	    (:results (r :scs (,complex-reg)))
-	    (:arg-types ,c-type ,c-type)
-	    (:result-types ,c-type)
-	    (:policy :fast-safe)
-	    (:note "inline complex float multiplication")
-	    (:translate *)
-	    (:temporary (:scs (,real-reg)) prod-1 prod-2 prod-3 prod-4)
-	    (:generator ,cost
-	      (let ((xr (,real-part x))
-		    (xi (,imag-part x))
-		    (yr (,real-part y))
+	      (let ((yr (,real-part y))
 		    (yi (,imag-part y))
 		    (rr (,real-part r))
 		    (ri (,imag-part r)))
-		;; All of the temps are needed in case the result TN happens to
-		;; be the same as one of the arg TN's
-		(inst ,fmul prod-1 xr yr)
-		(inst ,fmul prod-2 xi yi)
-		(inst ,fmul prod-3 xr yi)
-		(inst ,fmul prod-4 xi yr)
-		(inst ,fsub rr prod-1 prod-2)
-		(inst ,fadd ri prod-3 prod-4)))))))
+		(load-symbol-value zero-val ,zero-sym)
+		(inst ,load zero zero-val (- (* ,slot vm:word-bytes)
+					     vm:other-pointer-type))
+		(inst ,fop rr x yr)
+		(inst ,fop ri zero yi)))))))
 
-  (frob single fmuls fadds fsubs 6)
-  (frob double fmuld faddd fsubd 6))
+  (frob single fsubs 2)
+  (frob double fsubd 2))
 
+;; Multiply two complex numbers
 (macrolet
     ((frob (size fmul fadd fsub cost)
        (let ((vop-name (symbolicate "*/COMPLEX-" size "-FLOAT"))
@@ -2318,82 +2288,6 @@
 ;;             = ---------------------------------------
 ;;                       yi + (yr/yi)*yr
 ;;
-
-#+nil
-(macrolet
-    ((frob (float-type fcmp fadd fsub fmul fdiv fabs fmov cost)
-       (let ((vop-name (symbolicate "//COMPLEX-" float-type "-FLOAT"))
-	     (complex-reg (symbolicate "COMPLEX-" float-type "-REG"))
-	     (real-reg (symbolicate float-type "-REG"))
-	     (c-type (symbolicate "COMPLEX-" float-type "-FLOAT"))
-	     (real-part (symbolicate "COMPLEX-" float-type "-REG-REAL-TN"))
-	     (imag-part (symbolicate "COMPLEX-" float-type "-REG-IMAG-TN")))
-	 `(define-vop (,vop-name)
-	    (:args (x :scs (,complex-reg))
-		   (y :scs (,complex-reg)))
-	    (:results (r :scs (,complex-reg)))
-	    (:arg-types ,c-type ,c-type)
-	    (:result-types ,c-type)
-	    (:policy :fast-safe)
-	    (:note "inline complex float division")
-	    (:translate /)
-	    (:temporary (:sc ,real-reg) ratio)
-	    (:temporary (:sc ,real-reg) den)
-	    (:temporary (:sc ,real-reg) temp-r)
-	    (:temporary (:sc ,real-reg) temp-i)
-	    (:generator ,cost
-	      (let ((xr (,real-part x))
-		    (xi (,imag-part x))
-		    (yr (,real-part y))
-		    (yi (,imag-part y))
-		    (rr (,real-part r))
-		    (ri (,imag-part r))
-		    (bigger (gen-label))
-		    (done (gen-label)))
-		(,@fabs ratio yr)
-		(,@fabs den yi)
-		(inst ,fcmp den ratio)
-		(unless (backend-featurep :sparc-v9)
-		  (inst nop))
-		(inst fb :ge bigger)
-		(inst nop)
-		;; The case of |yi| <= |yr|
-		(inst ,fdiv ratio yi yr) ; ratio = yi/yr
-		(inst ,fmul den ratio yi)
-		(inst ,fadd den den yr) ; den = yr + (yi/yr)*yi
-
-		(inst ,fmul temp-r ratio xi)
-		(inst ,fadd temp-r temp-r xr) ; temp-r = xr + (yi/yr)*xi
-		(inst ,fdiv temp-r temp-r den)
-
-		(inst ,fmul temp-i ratio xr)
-		(inst ,fsub temp-i xi temp-i) ; temp-i = xi - (yi/yr)*xr
-		(inst b done)
-		(inst ,fdiv temp-i temp-i den)
-
-		(emit-label bigger)
-		;; The case of |yi| > |yr|
-		(inst ,fdiv ratio yr yi) ; ratio = yr/yi
-		(inst ,fmul den ratio yr)
-		(inst ,fadd den den yi) ; den = yi + (yr/yi)*yr
-
-		(inst ,fmul temp-r ratio xr)
-		(inst ,fadd temp-r temp-r xi) ; temp-r = xi + xr*(yr/yi)
-		(inst ,fdiv temp-r temp-r den)
-
-		(inst ,fmul temp-i ratio xi)
-		(inst ,fsub temp-i temp-i xr) ; temp-i = xi*(yr/yi) - xr
-		(inst ,fdiv temp-i temp-i den)
-
-		(emit-label done)
-		(unless (location= temp-r rr)
-		  (,@fmov rr temp-r))
-		(unless (location= temp-i ri)
-		  (,@fmov ri temp-i))
-		))))))
-
-  (frob single fcmps fadds fsubs fmuls fdivs (inst fabss) (inst fmovs) 15)
-  (frob double fcmpd faddd fsubd fmuld fdivd (abs-double-reg) (move-double-reg) 15))
 
 (macrolet
     ((frob (float-type fcmp fadd fsub fmul fdiv fabs cost)
