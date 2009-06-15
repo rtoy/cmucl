@@ -111,10 +111,7 @@ cat $SETENV/base-features.lisp > $TARGET/setenv.lisp
 # Put in some platform specific items
 case $LISP_VARIANT in
   *linux*)
-      case $$LISP_VARIANT in
-        *_gencgc*) gcname=":gencgc" ;;
-	*) gcname=":cgc" ;;
-      esac
+      gcname=":gencgc"
       sed "s;@@gcname@@;$gcname;" $SETENV/linux-features.lisp >> $TARGET/setenv.lisp
       ;;
   *OpenBSD*)
@@ -125,8 +122,8 @@ case $LISP_VARIANT in
       sed "s;@@gcname@@;$gcname;" $SETENV/openbsd-features.lisp >> $TARGET/setenv.lisp
       ;;
   *FreeBSD*|*freebsd*)
-	gcname=":gencgc"
-	sed "s;@@gcname@@;$gcname;" $SETENV/freebsd-features.lisp >> $TARGET/setenv.lisp
+      gcname=":gencgc"
+      sed "s;@@gcname@@;$gcname;" $SETENV/freebsd-features.lisp >> $TARGET/setenv.lisp
       ;;
   *solaris*)
       cat $SETENV/solaris-features.lisp >> $TARGET/setenv.lisp
