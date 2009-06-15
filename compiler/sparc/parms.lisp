@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.57 2009/06/11 16:04:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.58 2009/06/15 16:56:09 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -334,12 +334,14 @@
     :value
     :key-and-value
     :key-or-value
+
+    ;; FP constants
+    *fp-constant-0d0*
+    *fp-constant-0f0*
     
     ;; Some spare static symbols.  Useful for adding another static
     ;; symbol without having to do a cross-compile.  Just rename one
     ;; of these to the desired name.
-    sparc-9
-    spare-8
     spare-7
     spare-6
     spare-5

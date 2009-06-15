@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.12 2008/11/12 15:04:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.13 2009/06/15 16:56:08 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -485,3 +485,10 @@
     (let ((fs1 (and fop rs1 (sigcontext-float-register scp rs1 format)))
 	  (fs2 (and fop rs2 (sigcontext-float-register scp rs2 format))))
       (values fop (remove nil (list fs1 fs2))))))
+
+;;; FLOAT CONSTANTS
+;;;
+;;; These are filled in by genesis.  These values are used in some
+;;; vops to allow vops an easy way to get floating-poing zeroes.
+(defvar *fp-constant-0f0*)
+(defvar *fp-constant-0d0*)

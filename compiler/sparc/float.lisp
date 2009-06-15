@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.60 2009/06/11 16:04:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.61 2009/06/15 16:56:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1992,7 +1992,7 @@
 ;; Add and subtract a complex and a float
 
 (macrolet
-    ((frob (size op fop fmov cost)
+    ((frob (size op fop cost)
        (let ((vop-name (symbolicate "COMPLEX-" size "-FLOAT-"
 				    op
 				    "-" size "-FLOAT"))
@@ -2001,7 +2001,16 @@
 	     (c-type (symbolicate "COMPLEX-" size "-FLOAT"))
 	     (r-type (symbolicate size "-FLOAT"))
 	     (real-part (symbolicate "COMPLEX-" size "-REG-REAL-TN"))
-	     (imag-part (symbolicate "COMPLEX-" size "-REG-IMAG-TN")))
+	     (imag-part (symbolicate "COMPLEX-" size "-REG-IMAG-TN"))
+	     (load (ecase size
+		     (single 'ldf)
+		     (double 'lddf)))
+	     (zero-sym (ecase size
+			 (single '*fp-constant-0f0*)
+			 (double '*fp-constant-0d0*)))
+	     (slot (ecase size
+		     (single vm:single-float-value-slot)
+		     (double vm:double-float-value-slot))))
 	 `(define-vop (,vop-name)
 	      (:args (x :scs (,complex-reg))
 	             (y :scs (,real-reg)))
@@ -2009,6 +2018,8 @@
 	    (:arg-types ,c-type ,r-type)
 	    (:result-types ,c-type)
 	    (:policy :fast-safe)
+	    (:temporary (:scs (,real-reg)) zero)
+	    (:temporary (:scs (descriptor-reg)) zero-val)
 	    (:note "inline complex float/float arithmetic")
 	    (:translate ,op)
 	    (:generator ,cost
@@ -2016,18 +2027,25 @@
 		    (xi (,imag-part x))
 		    (rr (,real-part r))
 		    (ri (,imag-part r)))
+		;; Load up the necessary floating-point zero that we
+		;; need.  It would be nice if we could do something
+		;; like xr-xr to get a floating-point zero, but that
+		;; can cause spurious signals if xr is an infinity or
+		;; NaN.
+		(load-symbol-value zero-val ,zero-sym)
+		(inst ,load zero zero-val (- (* ,slot vm:word-bytes)
+					     vm:other-pointer-type))
 		(inst ,fop rr xr y)
-		(unless (location= ri xi)
-		  (,@fmov ri xi))))))))
+		(inst ,fop ri xi zero)))))))
   
-  (frob single + fadds (inst fmovs) 2)
-  (frob single - fsubs (inst fmovs) 2)
-  (frob double + faddd (move-double-reg) 4)
-  (frob double - fsubd (move-double-reg) 4))
+  (frob single + fadds 2)
+  (frob single - fsubs 2)
+  (frob double + faddd 4)
+  (frob double - fsubd 4))
 
 ;; Add a float and a complex
 (macrolet
-    ((frob (size fop fmov cost)
+    ((frob (size fop cost)
        (let ((vop-name
 	      (symbolicate size "-FLOAT-+-COMPLEX-" size "-FLOAT"))
 	     (complex-reg (symbolicate "COMPLEX-" size "-REG"))
@@ -2035,13 +2053,24 @@
 	     (c-type (symbolicate "COMPLEX-" size "-FLOAT"))
 	     (r-type (symbolicate size "-FLOAT"))
 	     (real-part (symbolicate "COMPLEX-" size "-REG-REAL-TN"))
-	     (imag-part (symbolicate "COMPLEX-" size "-REG-IMAG-TN")))
+	     (imag-part (symbolicate "COMPLEX-" size "-REG-IMAG-TN"))
+	     (load (ecase size
+		     (single 'ldf)
+		     (double 'lddf)))
+	     (zero-sym (ecase size
+			 (single '*fp-constant-0f0*)
+			 (double '*fp-constant-0d0*)))
+	     (slot (ecase size
+		     (single vm:single-float-value-slot)
+		     (double vm:double-float-value-slot))))
 	 `(define-vop (,vop-name)
 	      (:args (y :scs (,real-reg))
 	             (x :scs (,complex-reg)))
 	    (:results (r :scs (,complex-reg)))
 	    (:arg-types ,r-type ,c-type)
 	    (:result-types ,c-type)
+	    (:temporary (:scs (,real-reg)) zero)
+	    (:temporary (:scs (descriptor-reg)) zero-val)
 	    (:policy :fast-safe)
 	    (:note "inline complex float/float arithmetic")
 	    (:translate +)
@@ -2050,11 +2079,13 @@
 		    (xi (,imag-part x))
 		    (rr (,real-part r))
 		    (ri (,imag-part r)))
+		(load-symbol-value zero-val ,zero-sym)
+		(inst ,load zero zero-val (- (* ,slot vm:word-bytes)
+					     vm:other-pointer-type))
 		(inst ,fop rr xr y)
-		(unless (location= ri xi)
-		  (,@fmov ri xi))))))))
-  (frob single fadds (inst fmovs) 1)
-  (frob double faddd (move-double-reg) 2))
+		(inst ,fop rr xr zero)))))))
+  (frob single fadds 1)
+  (frob double faddd 2))
 
 ;; Subtract a complex from a float.
 ;;

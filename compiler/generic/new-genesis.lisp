@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.86 2009/06/11 16:04:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.87 2009/06/15 16:56:08 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -925,6 +925,13 @@
 		 (log 2l0 2.718281828459045235360287471352662L0))))
 	(when (c:backend-featurep :gencgc)
 	  (frob "*SCAVENGE-READ-ONLY-SPACE*" "X86" (cold-intern nil)))))
+
+    (when (c::backend-featurep :sparc)
+      (macrolet ((frob (name pkg value)
+		   `(cold-setq (cold-intern (intern ,name ,pkg)) ,value)))
+	(frob "*FP-CONSTANT-0D0*" "SPARC" (number-to-core 0d0))
+	(frob "*FP-CONSTANT-0F0*" "SPARC" (number-to-core 0f0))))
+      
 
     ;; Nothing should be allocated after this.
     ;;
