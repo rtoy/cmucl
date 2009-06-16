@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.131 2009/06/15 18:03:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.132 2009/06/16 02:53:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1523,7 +1523,7 @@
        ;; These are functions for which we probably wouldn't want to
        ;; write vops for.
        `(progn
-	 #-(and complex-fp-vops sparc)
+	 #-complex-fp-vops
 	 (deftransform conjugate ((z) ((complex ,type)) *)
 	   ;; Conjugate of complex number
 	   '(complex (realpart z) (- (imagpart z))))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.7 2009/06/15 01:13:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.8 2009/06/16 02:53:07 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2157,3 +2157,37 @@
     (inst xorps t1 t1)			; t1 = 0|0|0|0
     (inst movaps r t2)
     (inst movlhps r t1)))
+
+;; Conjugate
+(define-vop (conjugate/complex-double-float)
+  (:translate conjugate)
+  (:args (z :scs (complex-double-reg)))
+  (:arg-types complex-double-float)
+  (:results (r :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:policy :fast-safe)
+  (:temporary (:scs (complex-double-reg)) ztmp)
+  (:temporary (:scs (unsigned-reg)) tmp)
+  (:generator 2
+    (inst mov tmp #x80000000)
+    (inst movd ztmp tmp)
+    (inst psllq ztmp 32)		; ztmp = 0|#x80000000,00000000
+    (inst shufpd ztmp ztmp 1)		; ztmp = #x80000000,00000000|0
+    (inst xorpd ztmp z)			; ztmp = -xi|xi
+    (inst movapd r ztmp)))
+
+(define-vop (conjugate/complex-single-float)
+  (:translate conjugate)
+  (:args (z :scs (complex-single-reg)))
+  (:arg-types complex-single-float)
+  (:results (r :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:policy :fast-safe)
+  (:temporary (:scs (complex-single-reg)) ztmp)
+  (:temporary (:scs (unsigned-reg)) tmp)
+  (:generator 2
+    (inst mov tmp #x80000000)
+    (inst movd ztmp tmp)
+    (inst psllq ztmp 32)		; ztmp = #x80000000|0
+    (inst xorps ztmp z)			; ztmp = -xi|xr
+    (inst movaps r ztmp)))
