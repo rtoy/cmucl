@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.14 2009/06/16 17:23:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.15 2009/06/16 21:25:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -109,6 +109,7 @@
 	(setf widep t)))
     (values codepoint widep)))
 
+#+unicode
 (defun utf16-string-p (string)
   "Check if String is a valid UTF-16 string.  If the string is valid,
   T is returned.  If the string is not valid, NIL is returned, and the
@@ -610,6 +611,7 @@
 	    ;; Handle ASCII specially because this is called early in
 	    ;; initialization, before unidata is available.
 	    (cond ((< 96 code 123) (decf code 32))
+		  #+unicode
 		  ((> code 127) (setq code (unicode-upper code))))
 	    ;;@@ WARNING: this may, in theory, need to extend newstring
 	    ;;  but that never actually occurs as of Unicode 5.1.0,
@@ -626,6 +628,7 @@
 	  (setf (schar newstring new-index) (schar string index)))
 	newstring))))
 
+#+unicode
 (defun string-upcase-full (string &key (start 0) end)
   (declare (fixnum start))
   (let* ((string (if (stringp string) string (string string)))
@@ -711,6 +714,7 @@
 	  (setf (schar newstring new-index) (schar string index)))
 	newstring))))
 
+#+unicode
 (defun string-downcase-full (string &key (start 0) end)
   (declare (fixnum start))
   (let* ((string (if (stringp string) string (string string)))
@@ -794,6 +798,7 @@
 	  (setf (schar newstring new-index) (schar string index)))
 	newstring))))
 
+#+unicode
 (defun string-capitalize-full (string &key (start 0) end)
   (declare (fixnum start))
   (let* ((string (if (stringp string) string (string string)))
@@ -869,6 +874,7 @@
 	  ;; Handle ASCII specially because this is called early in
 	  ;; initialization, before unidata is available.
 	  (cond ((< 96 code 123) (decf code 32))
+		#+unicode
 		((> code 127) (setq code (unicode-upper code))))
 	  ;;@@ WARNING: this may, in theory, need to extend string
 	  ;;      (which, obviously, we can't do here.  Unless
@@ -893,6 +899,7 @@
 	(multiple-value-bind (code wide) (codepoint string index)
 	  (declare (ignore wide))
 	  (cond ((< 64 code 91) (incf code 32))
+		#+unicode
 		((> code 127) (setq code (unicode-lower code))))
 	  ;;@@ WARNING: this may, in theory, need to extend string
 	  ;;      (which, obviously, we can't do here.  Unless
@@ -1080,6 +1087,8 @@
       (subseq (the simple-string string) left-end right-end))))
 ) ; non-unicode version
 
+#+unicode
+(progn
 (declaim (inline %glyph-f %glyph-b))
 (defun %glyph-f (string index)
   (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
@@ -1112,6 +1121,7 @@
 	(setq prev d)
 	(decf n (if (> c #xFFFF) 2 1))))
     n))
+) ; unicode
 
 (defun glyph (string index &key (from-end nil))
   "GLYPH returns the glyph at the indexed position in a string, and the
