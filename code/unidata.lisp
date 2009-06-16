@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.2 2009/06/11 16:03:59 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.3 2009/06/16 17:23:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1042,7 +1042,7 @@
 		   (+ c1 index-t)))))))))
 	     
 
-(defun get-pairwise-composition (c1 c2)
+(defun unicode-pairwise-composition (c1 c2)
   (declare (type codepoint c1 c2)
 	   (optimize (speed 3)))
   (unless *composition-pair-table*

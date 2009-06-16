@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.13 2009/06/11 16:03:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.14 2009/06/16 17:23:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,13 +20,15 @@
 	  string= string-equal string< string> string<= string>= string/=
 	  string-lessp string-greaterp string-not-lessp string-not-greaterp
 	  string-not-equal
-	  string-to-nfd string-to-nfkd string-to-nfc string-to-nfkc
+	  string-to-nfc
 	  make-string
 	  string-trim string-left-trim string-right-trim
 	  string-upcase
 	  string-downcase string-capitalize nstring-upcase nstring-downcase
 	  nstring-capitalize))
 
+#+unicode
+(export '(string-to-nfd string-to-nfkd string-to-nfkc))
 
 (declaim (inline surrogatep surrogates-to-codepoint codepoint surrogates))
 
@@ -1173,6 +1175,8 @@
 
 
 
+#+unicode
+(progn
 (defun decompose (string &optional (compatibility t))
   (declare (type string string))
   (let ((result (make-string (cond ((< (length string) 40)
@@ -1292,7 +1296,7 @@
 	      (codepoint target decomp-pos len)
 	    (when wide (incf decomp-pos))
 	    (let ((ch-class (unicode-combining-class ch))
-		  (composite (get-pairwise-composition starter-ch ch)))
+		  (composite (unicode-pairwise-composition starter-ch ch)))
 	      (declare (type (integer 0 256) ch-class))
 	      (cond ((and composite
 			  (or (< last-class ch-class) (zerop last-class)))
@@ -1324,7 +1328,6 @@
   compatible decomposition form.  The NFKD string is returned."
   (decompose string t))
 
-#+unicode
 (defun string-to-nfc (string)
   "Convert String to Unicode Normalization Form C (NFC).  If the
   string a simple string and is already normalized, the original
@@ -1336,10 +1339,6 @@
 		  (%compose (string-to-nfd string)))
 	      'simple-string)))
 
-#-unicode  ;; Needed by package.lisp
-(defun string-to-nfc (string)
-  (if (simple-string-p string) string (coerce string 'simple-string)))
-
 (defun string-to-nfkc (string)
   "Convert String to Unicode Normalization Form KC (NFKC).  If the
   string is a simple string and is already normalized, the original
@@ -1350,3 +1349,9 @@
 		  (%compose (copy-seq string))
 		  (%compose (string-to-nfkd string)))
 	      'simple-string)))
+) ; end unicode
+
+#-unicode  ;; Needed by package.lisp
+(defun string-to-nfc (string)
+  (if (simple-string-p string) string (coerce string 'simple-string)))
+
