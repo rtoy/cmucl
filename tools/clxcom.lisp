@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clxcom.lisp,v 1.30 2007/08/21 15:56:37 fgilham Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clxcom.lisp,v 1.31 2009/06/17 18:29:23 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -74,7 +74,10 @@
       (comf "target:clx/xrender" :load t)
       (comf "target:clx/glx" :load t)
       (comf "target:clx/gl" :load t)
-      (comf "target:clx/dpms" :load t))
+      (comf "target:clx/dpms" :load t)
+      (comf "target:clx/screensaver" :load t)
+      (comf "target:clx/xinerama" :load t)
+      (comf "target:clx/xtest" :load t))
     (comf "target:code/clx-ext")
     (comf "target:hemlock/charmacs" :load t)
     (comf "target:hemlock/key-event" :load t)
@@ -113,6 +116,9 @@
  "target:clx/glx"
  "target:clx/gl"
  "target:clx/dpms"
+ "target:clx/screensaver"
+ "target:clx/xinerama"
+ "target:clx/xtest"
  "target:code/clx-ext"
  "target:hemlock/charmacs"
  "target:hemlock/key-event"
