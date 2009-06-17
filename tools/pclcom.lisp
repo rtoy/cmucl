@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.33 2007/10/25 15:17:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.34 2009/06/17 21:08:21 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -131,9 +131,6 @@
  "pcl:simple-streams/socket";)
  "pcl:simple-streams/iodefs"
  "pcl:simple-streams/gray-compat")
-
-(cat-if-anything-changed
- "pcl:external-formats-library")
 
 (cat-if-anything-changed
  "pcl:iodefs-library"

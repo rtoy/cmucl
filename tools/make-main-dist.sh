@@ -108,7 +108,7 @@ install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/lisp.nm $TARGET/lisp/lisp.map \
 	$TARGET/lisp/internals.h $TARGET/lisp/internals.inc $DESTDIR/lib/cmucl/
 install ${GROUP} ${OWNER} -m 0755 src/tools/sample-wrapper $DESTDIR/lib/cmucl/
 
-for f in gray-streams gray-compat simple-streams iodefs external-formats
+for f in gray-streams gray-compat simple-streams iodefs
 do
     install ${GROUP} ${OWNER} -m 0644 $TARGET/pcl/$f-library.$FASL $DESTDIR/lib/cmucl/lib/subsystems/
     if [ "$FASL" = "x86f" ]; then
