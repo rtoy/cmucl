@@ -19,7 +19,7 @@
 ;;;
 
 #+cmu
-(ext:file-comment "$Id: dependent.lisp,v 1.17 2007/08/21 15:49:28 fgilham Exp $")
+(ext:file-comment "$Id: dependent.lisp,v 1.18 2009/06/17 18:28:11 rtoy Rel $")
 
 (in-package :xlib)
 
@@ -1544,7 +1544,6 @@
 						  (cdr (host-address host)))
 			  :foreign-port (+ *x-tcp-port* display)))
 
-
 #+CMU
 (defun open-x-stream (host display protocol)
   (let ((stream-fd
@@ -1562,10 +1561,11 @@
                        :reason (format nil "Cannot connect to internet socket: ~S"
                                        (unix:get-unix-error-msg))))
               fd))
-           ;; establish a connection to the X11 server over a Unix socket
-           ((:unix :local)
-            (let ((path (make-pathname :directory '(:absolute "tmp" ".X11-unix")
-                                       :name (format nil "X~D" display))))
+           ;; establish a connection to the X11 server over a Unix
+           ;; socket.  (:|| comes from Darwin's weird DISPLAY
+           ;; environment variable)
+           ((:unix :local :||)
+            (let ((path (unix-socket-path-from-host host display)))
               (unless (probe-file path)
                 (error 'connection-failure
                        :major-version *protocol-major-version*
@@ -1585,21 +1585,15 @@
                 fd))))))
     (system:make-fd-stream stream-fd :input t :output t :element-type '(unsigned-byte 8))))
 
-
-
-#+(or sbcl ecl)
-(defconstant +X-unix-socket-path+
-  "/tmp/.X11-unix/X"
-  "The location of the X socket")
-
 #+sbcl
 (defun open-x-stream (host display protocol)  
   (declare (ignore protocol)
            (type (integer 0) display))
+  (let ((local-socket-path (unix-socket-path-from-host host display)))
   (socket-make-stream 
-   (if (or (string= host "") (string= host "unix")) ; AF_LOCAL domain socket
+     (if local-socket-path
        (let ((s (make-instance 'local-socket :type :stream)))
-	 (socket-connect s (format nil "~A~D" +X-unix-socket-path+ display))
+	   (socket-connect s local-socket-path)
 	 s)
        (let ((host (car (host-ent-addresses (get-host-by-name host)))))
 	 (when host
@@ -1607,7 +1601,7 @@
 	     (socket-connect s host (+ 6000 display))
 	     s))))
    :element-type '(unsigned-byte 8)
-   :input t :output t :buffering :none))
+     :input t :output t :buffering :none)))
 
 #+ecl
 (defun open-x-stream (host display protocol)
@@ -1835,25 +1829,13 @@
   (system:output-raw-bytes (display-output-stream display) vector start end)
   nil)
 
-#+sbcl
+#+(or sbcl ecl clisp)
 (defun buffer-write-default (vector display start end)
   (declare (type buffer-bytes vector)
 	   (type display display)
 	   (type array-index start end))
   #.(declare-buffun)
-  (sb-impl::output-raw-bytes (display-output-stream display) vector start end)
-  nil)
-
-#+(or ecl clisp)
-(defun buffer-write-default (vector display start end)
-  (declare (type buffer-bytes vector)
-	   (type display display)
-	   (type array-index start end))
-  #.(declare-buffun)
-  (write-sequence vector
-                  (display-output-stream display)
-                  :start start
-                  :end end)
+  (write-sequence vector (display-output-stream display) :start start :end end)
   nil)
 
 ;;; WARNING:
@@ -2756,9 +2738,6 @@
 			(si:memref-int addr 3 0 :unsigned-byte))))))
 	(ff:free-cstruct hostent)))))
 
-;#+sbcl
-;(require :sockets)
-
 #+CMU
 (defun host-address (host &optional (family :internet))
   ;; Return a list whose car is the family keyword (:internet :DECnet :Chaos)
@@ -2783,6 +2762,11 @@
 			      (ldb (byte 8 16) addr)
 			      (ldb (byte 8  8) addr)
 			      (ldb (byte 8  0) addr)))))))))
+
+;#+sbcl
+;(require :sockets)
+
+
 
 #+sbcl
 (defun host-address (host &optional (family :internet))
@@ -3606,12 +3590,12 @@ Returns a list of (host display-number screen protocol)."
   (declare (type array-index source-width sx sy dest-width dx dy height width))
   #.(declare-buffun)
   (lisp::with-array-data ((sdata source)
-                          (sstart)
-                          (send))
+				 (sstart)
+				 (send))
     (declare (ignore send))
     (lisp::with-array-data ((ddata dest)
-                            (dstart)
-                            (dend))
+				   (dstart)
+				   (dend))
       (declare (ignore dend))
       (assert (and (zerop sstart) (zerop dstart)))
       (do ((src-idx (index+ (* vm:vector-data-offset #+cmu vm:word-bits #+sbcl sb-vm:n-word-bits)
