@@ -35,9 +35,6 @@
 ;;; constructed as well as to indentify any obsolete/wrong 
 ;;; functions I made.
 
-#+cmu
-(ext:file-comment "$Id: xvidmode.lisp,v 1.1 2007/08/21 15:49:28 fgilham Exp $")
-
 (in-package :xlib)
 
 (export '(mode-info
@@ -439,7 +436,7 @@ invalid."
 (defun xfree86-vidmode-set-gamma (dpy scr &key (red 1.0) (green 1.0) (blue 1.0))
   (declare (type display dpy)
 	   (type screen scr)
-	   (type (single-float 0.100 10.000) red green blue))
+	   (type (single-float 0.100f0 10.000f0) red green blue))
   (with-buffer-request (dpy (vidmode-opcode dpy))
     (data +set-gamma+)
     (card16 (screen-position scr dpy))

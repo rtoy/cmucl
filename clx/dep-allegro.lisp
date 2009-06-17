@@ -18,9 +18,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: dep-allegro.lisp,v 1.1 2007/08/21 15:49:28 fgilham Exp $")
-
 (in-package :xlib)
 
 (proclaim '(declaration array-register))

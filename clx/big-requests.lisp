@@ -12,9 +12,6 @@
 ;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-#+cmu
-(ext:file-comment "$Id: big-requests.lisp,v 1.1 2007/08/21 15:49:27 fgilham Exp $")
-
 (in-package "XLIB")
 
 ;;; No new events or errors are defined by this extension.  (Big

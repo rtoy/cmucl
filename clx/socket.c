@@ -6,8 +6,6 @@
  * This code was cribbed from lib/X/XConnDis.c.
  * Compile using   
  *                    % cc -c socket.c -DUNIXCONN
- *
- * $Id: socket.c,v 1.4 2007/08/21 15:49:28 fgilham Exp $
  */
 
 #include <stdio.h>

@@ -16,9 +16,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: fonts.lisp,v 1.6 2007/08/21 15:49:28 fgilham Exp $")
-
 (in-package :xlib)
 
 ;; The char-info stuff is here instead of CLX because of uses of int16->card16.

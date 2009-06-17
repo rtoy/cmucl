@@ -59,9 +59,6 @@
 ;;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 ;;; DEALINGS IN THE SOFTWARE.
 
-#+cmu
-(ext:file-comment "$Id: clipboard.lisp,v 1.1 2007/08/21 15:49:29 fgilham Exp $")
-
 (defpackage "CLIPBOARD"
   (:use "CL" "XLIB")
   (:export "MAIN"))

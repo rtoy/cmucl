@@ -42,9 +42,6 @@
 ;;;	because they don't run in a multi-processing shared-address space
 ;;;	environment.
 
-#+cmu
-(ext:file-comment "$Id: gcontext.lisp,v 1.8 2007/08/21 15:49:28 fgilham Exp $")
-
 (in-package :xlib)
 
 ;; GContext state accessors

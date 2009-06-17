@@ -18,9 +18,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: keysyms.lisp,v 1.5 2007/08/21 15:49:28 fgilham Exp $")
-
 (in-package :xlib)
 
 (define-keysym-set :latin-1	(keysym 0 0) (keysym 0 255))

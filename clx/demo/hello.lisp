@@ -1,8 +1,5 @@
 ;;; -*- Mode:Lisp; Syntax: Common-lisp; Package:XLIB; Base:10; Lowercase: Yes -*-
 
-#+cmu
-(ext:file-comment "$Id: hello.lisp,v 1.2 2007/08/21 15:49:29 fgilham Exp $")
-
 (in-package :xlib)
 
 (defun hello-world (host &rest args &key (string "Hello World") (font "fixed"))

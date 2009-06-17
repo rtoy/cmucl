@@ -16,9 +16,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: translate.lisp,v 1.5 2007/08/21 15:49:28 fgilham Exp $")
-
 (in-package :xlib)
 
 (defvar *keysym-sets* nil) ;; Alist of (name first-keysym last-keysym)

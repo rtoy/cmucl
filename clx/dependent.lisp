@@ -18,9 +18,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: dependent.lisp,v 1.17 2007/08/21 15:49:28 fgilham Exp $")
-
 (in-package :xlib)
 
 (proclaim '(declaration array-register))
@@ -1544,62 +1541,15 @@
 						  (cdr (host-address host)))
 			  :foreign-port (+ *x-tcp-port* display)))
 
-
-#+CMU
-(defun open-x-stream (host display protocol)
-  (let ((stream-fd
-         (ecase protocol
-           ;; establish a TCP connection to the X11 server, which is
-           ;; listening on port 6000 + display-number
-           ((:internet :tcp nil)
-            (let ((fd (ext:connect-to-inet-socket host (+ *x-tcp-port* display))))
-              (unless (plusp fd)
-                (error 'connection-failure
-                       :major-version *protocol-major-version*
-                       :minor-version *protocol-minor-version*
-                       :host host
-                       :display display
-                       :reason (format nil "Cannot connect to internet socket: ~S"
-                                       (unix:get-unix-error-msg))))
-              fd))
-           ;; establish a connection to the X11 server over a Unix socket
-           ((:unix :local)
-            (let ((path (make-pathname :directory '(:absolute "tmp" ".X11-unix")
-                                       :name (format nil "X~D" display))))
-              (unless (probe-file path)
-                (error 'connection-failure
-                       :major-version *protocol-major-version*
-                       :minor-version *protocol-minor-version*
-                       :host host
-                       :display display
-                       :reason (format nil "Unix socket ~s does not exist" path)))
-              (let ((fd (ext:connect-to-unix-socket (namestring path))))
-                (unless (plusp fd)
-                  (error 'connection-failure
-                         :major-version *protocol-major-version*
-                         :minor-version *protocol-minor-version*
-                         :host host
-                         :display display
-                         :reason (format nil "Can't connect to unix socket: ~S"
-                                         (unix:get-unix-error-msg))))
-                fd))))))
-    (system:make-fd-stream stream-fd :input t :output t :element-type '(unsigned-byte 8))))
-
-
-
-#+(or sbcl ecl)
-(defconstant +X-unix-socket-path+
-  "/tmp/.X11-unix/X"
-  "The location of the X socket")
-
 #+sbcl
 (defun open-x-stream (host display protocol)  
   (declare (ignore protocol)
            (type (integer 0) display))
+  (let ((local-socket-path (unix-socket-path-from-host host display)))
   (socket-make-stream 
-   (if (or (string= host "") (string= host "unix")) ; AF_LOCAL domain socket
+     (if local-socket-path
        (let ((s (make-instance 'local-socket :type :stream)))
-	 (socket-connect s (format nil "~A~D" +X-unix-socket-path+ display))
+	   (socket-connect s local-socket-path)
 	 s)
        (let ((host (car (host-ent-addresses (get-host-by-name host)))))
 	 (when host
@@ -1607,7 +1557,7 @@
 	     (socket-connect s host (+ 6000 display))
 	     s))))
    :element-type '(unsigned-byte 8)
-   :input t :output t :buffering :none))
+     :input t :output t :buffering :none)))
 
 #+ecl
 (defun open-x-stream (host display protocol)
@@ -1835,25 +1785,13 @@
   (system:output-raw-bytes (display-output-stream display) vector start end)
   nil)
 
-#+sbcl
+#+(or sbcl ecl clisp)
 (defun buffer-write-default (vector display start end)
   (declare (type buffer-bytes vector)
 	   (type display display)
 	   (type array-index start end))
   #.(declare-buffun)
-  (sb-impl::output-raw-bytes (display-output-stream display) vector start end)
-  nil)
-
-#+(or ecl clisp)
-(defun buffer-write-default (vector display start end)
-  (declare (type buffer-bytes vector)
-	   (type display display)
-	   (type array-index start end))
-  #.(declare-buffun)
-  (write-sequence vector
-                  (display-output-stream display)
-                  :start start
-                  :end end)
+  (write-sequence vector (display-output-stream display) :start start :end end)
   nil)
 
 ;;; WARNING:
@@ -2770,19 +2708,39 @@
 	     (error "Unknown host ~S" host))
 	   (no-address-error ()
 	     (error "Host ~S has no ~S address" host family)))
-    (let ((hostent (ext:lookup-host-entry (string host))))
+    (let ((hostent #+rwi-sockets(ext:lookup-host-entry (string host))
+		   #+mna-sockets(net.sbcl.sockets:look-up-host-entry
+				 (string host)) 
+		   #+db-sockets(sockets:get-host-by-name (string host))))
       (when (not hostent)
 	(no-host-error))
       (ecase family
 	((:internet nil 0)
-	 (unless (= (ext::host-entry-addr-type hostent) 2)
+	 #+rwi-sockets(unless (= (ext::host-entry-addr-type hostent) 2)
+			(no-address-error))
+	 #+mna-sockets(unless (= (net.sbcl.sockets::host-entry-addr-type hostent) 2)
+			(no-address-error))
+	 ;; the following form is for use with SBCL and Daniel
+	 ;; Barlow's socket package
+	 #+db-sockets(unless (sockets:host-ent-address hostent)
 	   (no-address-error))
 	 (append (list :internet)
+		 #+rwi-sockets
 		 (let ((addr (first (ext::host-entry-addr-list hostent))))
 			(list (ldb (byte 8 24) addr)
 			      (ldb (byte 8 16) addr)
 			      (ldb (byte 8  8) addr)
-			      (ldb (byte 8  0) addr)))))))))
+			      (ldb (byte 8  0) addr)))
+		 #+mna-sockets
+		 (let ((addr (first (net.sbcl.sockets::host-entry-addr-list hostent))))
+				(list (ldb (byte 8 24) addr)
+				      (ldb (byte 8 16) addr)
+				      (ldb (byte 8  8) addr)
+				      (ldb (byte 8  0) addr)))
+		 ;; the following form is for use with SBCL and Daniel
+		 ;; Barlow's socket package
+		 #+db-sockets(coerce (sockets:host-ent-address hostent)
+				     'list)))))))
 
 #+sbcl
 (defun host-address (host &optional (family :internet))
@@ -3192,7 +3150,7 @@ Returns a list of (host display-number screen protocol)."
 (defmacro with-underlying-simple-vector 
     ((variable element-type pixarray) &body body)
   (declare (ignore element-type))
-  `(#+cmu lisp::with-array-data #+sbcl sb-kernel:with-array-data
+  `(#+cmu kernel::with-array-data #+sbcl sb-kernel:with-array-data
     ((,variable ,pixarray) (start) (end))
     (declare (ignore start end))
     ,@body))
@@ -3605,13 +3563,13 @@ Returns a list of (host display-number screen protocol)."
 			     height width)
   (declare (type array-index source-width sx sy dest-width dx dy height width))
   #.(declare-buffun)
-  (lisp::with-array-data ((sdata source)
-                          (sstart)
-                          (send))
+  (kernel::with-array-data ((sdata source)
+				 (sstart)
+				 (send))
     (declare (ignore send))
-    (lisp::with-array-data ((ddata dest)
-                            (dstart)
-                            (dend))
+    (kernel::with-array-data ((ddata dest)
+				   (dstart)
+				   (dend))
       (declare (ignore dend))
       (assert (and (zerop sstart) (zerop dstart)))
       (do ((src-idx (index+ (* vm:vector-data-offset #+cmu vm:word-bits #+sbcl sb-vm:n-word-bits)

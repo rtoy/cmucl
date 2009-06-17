@@ -16,9 +16,6 @@
 ;;; express or implied warranty.  
 ;;;
 
-#+cmu
-(ext:file-comment "$Id")
-
 (in-package :xlib)
 
 
@@ -306,7 +303,7 @@
 	 (parent-width 400)
 	 (parent-height 400)
 	 (parent    (CREATE-WINDOW :parent (SCREEN-ROOT screen)
-;;				   :override-redirect :on
+				   :override-redirect :on
 				   :x 100 :y 100
 				   :width parent-width :height parent-height
 				   :background bg-color

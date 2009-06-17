@@ -1,6 +1,3 @@
-#+cmu
-(ext:file-comment "$Id: mandel.lisp,v 1.1 2007/08/21 15:49:29 fgilham Exp $")
-
 (defpackage "XMANDEL"
   (:use "CL")
   (:export "NEW-WINDOW" "EVENT-LOOP"))

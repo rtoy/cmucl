@@ -33,9 +33,6 @@
 ;;;   CMU
 ;;;   sbcl
 
-#+cmu
-(ext:file-comment "$Id: defsystem.lisp,v 1.8 2007/08/21 15:49:28 fgilham Exp $")
-
 #+(or Genera Minima sbcl ecl)
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (common-lisp:pushnew :clx-ansi-common-lisp common-lisp:*features*))

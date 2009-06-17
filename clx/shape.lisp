@@ -20,9 +20,6 @@
 ;;; Use xc/doc/hardcopy/Xext/shape.PS.gz obtainable from e.g.
 ;;  ftp://ftp.xfree86.org/pub/XFree86/current/untarred/xc/hardcopy/Xext/shape.PS.gz
 
-#+cmu
-(ext:file-comment "$Id: shape.lisp,v 1.2 2007/08/22 03:59:24 fgilham Exp $")
-
 (in-package :xlib)
 
 (export '(shape-query-version

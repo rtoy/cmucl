@@ -18,9 +18,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: resource.lisp,v 1.11 2007/08/21 15:49:28 fgilham Exp $")
-
 (in-package :xlib)
 
 ;; The C version of this uses a 64 entry hash table at each entry.

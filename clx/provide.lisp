@@ -14,15 +14,6 @@
 ;;;			(require :clx <pathname-of-this-file>)
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: provide.lisp,v 1.4 2007/08/21 15:49:28 fgilham Exp $")
-
-#+cmu
-(cl:provide "CLX")
-
-#-cmu
-(progn
-
 #-clx-ansi-common-lisp 
 (in-package :user)
 
@@ -63,5 +54,3 @@
 (if *compile-clx*
     (compile-clx *clx-source-pathname* *clx-binary-pathname*)
   (load-clx *clx-binary-pathname*))
-
-)

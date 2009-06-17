@@ -25,9 +25,6 @@
 ;;; -------------------------------------------------------------------------------------
 ;;; 12/10/87	LGO	Created
 
-#+cmu
-(ext:file-comment "$Id: input.lisp,v 1.11 2007/08/21 15:49:28 fgilham Exp $")
-
 (in-package :xlib)
 
 ;; Event Resource
@@ -1779,6 +1776,13 @@
     (lambda (condition stream)
       (format stream "inconsistent-parameters:~{ ~s~}"
 	      (inconsistent-parameters-parameters condition)))))
+
+(define-condition resource-ids-exhausted (x-error)
+  ()
+  (:report
+    (lambda (condition stream)
+      (declare (ignore condition))
+      (format stream "All X resource IDs are in use."))))
 
 (defun get-error-key (display error-code)
   (declare (type display display)

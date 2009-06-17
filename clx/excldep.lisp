@@ -13,9 +13,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: excldep.lisp,v 1.4 2007/08/21 15:49:28 fgilham Exp $")
-
 (in-package :xlib)
 
 (eval-when (compile load eval)

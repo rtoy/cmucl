@@ -1,6 +1,3 @@
-#+cmu
-(ext:file-comment "$Id: clclock.lisp,v 1.1 2007/08/21 15:49:29 fgilham Exp $")
-
 (defpackage "XCLCLOCK"
   (:use "CL")
   (:export "CLOCK"))

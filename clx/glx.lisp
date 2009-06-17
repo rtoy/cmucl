@@ -1,6 +1,3 @@
-#+cmu
-(ext:file-comment "$Id: glx.lisp,v 1.1 2007/08/21 15:49:28 fgilham Exp $")
-
 (defpackage :glx
   (:use :common-lisp :xlib)
   (:import-from :xlib

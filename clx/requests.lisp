@@ -16,9 +16,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: requests.lisp,v 1.8 2007/08/21 15:49:28 fgilham Exp $")
-
 (in-package :xlib)
 
 (defun create-window (&key

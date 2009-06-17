@@ -20,9 +20,6 @@
 
 ;;; Created 07/15/87 by LaMott G. OREN
 
-#cmu
-(ext:file-comment "$Id: describe.lisp,v 1.2 2007/08/21 15:49:29 fgilham Exp $")
-
 (in-package :xlib)
 
 (defparameter *request-parameters* (make-array (length *request-names*)))
@@ -79,7 +76,7 @@
 		(string8
 		 (format t " Bytes:~%~v@t" margin)
 		 (dotimes (k (- length (- j start)))
-		   (format t "~a" (code-char (card8-get j)))
+		   (format t "~a" (int-char (card8-get j)))
 		   (incf j)))
 		(otherwise
 		 (format t " Bytes:~%~v@t" margin)
