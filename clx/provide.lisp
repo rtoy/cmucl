@@ -15,7 +15,7 @@
 ;;;
 
 #+cmu
-(ext:file-comment "$Id: provide.lisp,v 1.4 2007/08/21 15:49:28 fgilham Exp $")
+(ext:file-comment "$Id: provide.lisp,v 1.5 2009/06/17 18:22:46 rtoy Rel $")
 
 #+cmu
 (cl:provide "CLX")
@@ -63,5 +63,4 @@
 (if *compile-clx*
     (compile-clx *clx-source-pathname* *clx-binary-pathname*)
   (load-clx *clx-binary-pathname*))
-
 )

@@ -12,7 +12,7 @@
 ;;; written prior permission.
 
 #+cmu
-(ext:file-comment "$Id: package.lisp,v 1.8 2007/11/09 20:34:23 rtoy Exp $")
+(ext:file-comment "$Id: package.lisp,v 1.9 2009/06/17 18:22:46 rtoy Rel $")
 
 ;;; The CLtL way
 

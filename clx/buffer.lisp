@@ -50,7 +50,7 @@
 ;;     request won't be left after aborts (e.g. control-abort on a lispm).
 
 #+cmu
-(ext:file-comment "$Id: buffer.lisp,v 1.9 2007/08/21 15:49:27 fgilham Exp $")
+(ext:file-comment "$Id: buffer.lisp,v 1.10 2009/06/17 18:22:45 rtoy Rel $")
 
 (in-package :xlib)
 

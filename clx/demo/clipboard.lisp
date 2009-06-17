@@ -60,7 +60,7 @@
 ;;; DEALINGS IN THE SOFTWARE.
 
 #+cmu
-(ext:file-comment "$Id: clipboard.lisp,v 1.1 2007/08/21 15:49:29 fgilham Exp $")
+(ext:file-comment "$Id: clipboard.lisp,v 1.2 2009/06/17 18:22:46 rtoy Rel $")
 
 (defpackage "CLIPBOARD"
   (:use "CL" "XLIB")

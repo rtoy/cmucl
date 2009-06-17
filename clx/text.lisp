@@ -19,7 +19,7 @@
 ;;;
 
 #+cmu
-(ext:file-comment "$Id: text.lisp,v 1.8 2007/08/21 15:49:28 fgilham Exp $")
+(ext:file-comment "$Id: text.lisp,v 1.9 2009/06/17 18:22:46 rtoy Rel $")
 
 (in-package :xlib)
 
@@ -73,8 +73,8 @@
 	   (inline graphic-char-p))
   (declare (clx-values integer (or null integer font) (or null integer)))
 
-  (let ((min-char-index (xlib:font-min-char font))
-        (max-char-index (xlib:font-max-char font)))
+  (let ((min-char-index (and font (xlib:font-min-char font)))
+        (max-char-index (and font (xlib:font-max-char font))))
     (if (stringp src)
 	(do ((i src-start (index+ i 1))
 	     (j dst-start (index+ j 1))
@@ -83,7 +83,7 @@
 	     i)
 	  (declare (type array-index i j))
 	  (setf char (char->card8 (char src i)))
-	  (if (or (< char min-char-index) (> char max-char-index))
+	  (if (and font (or (< char min-char-index) (> char max-char-index)))
 	      (return i)
 	      (setf (aref dst j) char)))
 	(do ((i src-start (index+ i 1))
@@ -95,8 +95,9 @@
 	  (setq elt (elt src i))
 	  (when (characterp elt) (setq elt (char->card8 elt)))
 	  (if (or (not (integerp elt))
-		  (< elt min-char-index)
-		  (> elt max-char-index))
+                  (and font
+                       (< elt min-char-index)
+                       (> elt max-char-index)))
 	      (return i)
 	      (setf (aref dst j) elt))))))
 
@@ -481,7 +482,7 @@
       (setf (aref vector 0) elt)
       (multiple-value-bind (new-start new-font translate-width)
 	  (funcall (or translate #'translate-default)
-		   vector 0 1 (gcontext-font gcontext t) vector 1)
+		   vector 0 1 (gcontext-font gcontext nil) vector 1)
 	;; Allow translate to set a new font
 	(when (type? new-font 'font) 
 	  (setf (gcontext-font gcontext) new-font)
@@ -552,8 +553,7 @@
 	 (length (index- src-end src-start))
 	 (request-length (* length 2))		; Leave lots of room for font shifts.
 	 (display (gcontext-display gcontext))
-	 ;; Should metrics-p be T?  Don't want to pass a NIL font into translate...
-	 (font (gcontext-font gcontext t)))
+	 (font (gcontext-font gcontext nil)))
     (declare (type array-index src-start src-end length)
 	     (type (or null array-index) next-start)
 	     (type display display))
@@ -655,8 +655,7 @@
 	 (length (index- src-end src-start))
 	 (request-length (* length 3))		; Leave lots of room for font shifts.
 	 (display (gcontext-display gcontext))
-	 ;; Should metrics-p be T?  Don't want to pass a NIL font into translate...
-	 (font (gcontext-font gcontext t))
+	 (font (gcontext-font gcontext nil))
 	 (buffer (display-tbuf16 display)))
     (declare (type array-index src-start src-end length)
 	     (type (or null array-index) next-start)
@@ -762,7 +761,7 @@
       (setf (aref vector 0) elt)
       (multiple-value-bind (new-start new-font translate-width)
 	  (funcall (or translate #'translate-default)
-		   vector 0 1 (gcontext-font gcontext t) vector 1)
+		   vector 0 1 (gcontext-font gcontext nil) vector 1)
 	;; Allow translate to set a new font
 	(when (type? new-font 'font) 
 	  (setf (gcontext-font gcontext) new-font)
@@ -839,8 +838,7 @@
   (declare (clx-values (or null array-index) (or null int32)))
   (do* ((display (gcontext-display gcontext))
 	(length (index- end start))
-	;; Should metrics-p be T?  Don't want to pass a NIL font into translate...
-	(font (gcontext-font gcontext t))
+	(font (gcontext-font gcontext nil))
 	(font-change nil)
 	(new-start) (translated-width) (chunk))
        (nil) ;; forever
@@ -905,8 +903,7 @@
   (declare (clx-values (or null array-index) (or null int32)))
   (do* ((display (gcontext-display gcontext))
 	(length (index- end start))
-	;; Should metrics-p be T?  Don't want to pass a NIL font into translate...
-	(font (gcontext-font gcontext t)) 
+	(font (gcontext-font gcontext nil)) 
 	(font-change nil)
 	(new-start) (translated-width) (chunk)
 	(buffer (buffer-tbuf16 display)))

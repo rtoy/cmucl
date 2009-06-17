@@ -17,7 +17,7 @@
 ;;;
 
 #+cmu
-(ext:file-comment "$Id: translate.lisp,v 1.5 2007/08/21 15:49:28 fgilham Exp $")
+(ext:file-comment "$Id: translate.lisp,v 1.6 2009/06/17 18:22:46 rtoy Rel $")
 
 (in-package :xlib)
 

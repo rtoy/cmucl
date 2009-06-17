@@ -1,5 +1,5 @@
 #+cmu
-(ext:file-comment "$Id: gl-test.lisp,v 1.1 2007/08/21 15:49:29 fgilham Exp $")
+(ext:file-comment "$Id: gl-test.lisp,v 1.2 2009/06/17 18:22:46 rtoy Rel $")
 
 (defpackage :gl-test
   (:use :common-lisp :xlib)
@@ -8,7 +8,7 @@
 (in-package :gl-test)
 
 
-(defun test (function &key (host "") (display 0) (width 200) (height 200))
+(defun test (function &key (host "localhost") (display 1) (width 200) (height 200))
   (let* ((display (open-display host :display display))
          (screen (display-default-screen display))
          (root (screen-root screen))

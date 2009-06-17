@@ -41,7 +41,7 @@
 ;;;	the new drawable.  The caches are initialized to NIL and allocated as needed.
 
 #+cmu
-(ext:file-comment "$Id: attributes.lisp,v 1.7 2007/08/21 15:49:27 fgilham Exp $")
+(ext:file-comment "$Id: attributes.lisp,v 1.8 2009/06/17 18:22:45 rtoy Rel $")
 
 (in-package :xlib)
 
@@ -69,14 +69,14 @@
 (defmacro state-geometry-changes (state) `(fifth ,state))
  
 (defmacro drawable-equal-function ()
-  (if (member 'drawable +clx-cached-types+)
-      ''eq ;; Allows the compiler to use the microcoded ASSQ primitive on LISPM's
-    ''drawable-equal))
+  ;; Since drawables are not always cached, we must use drawable-equal
+  ;; to determine equality.
+  ''drawable-equal)
 
 (defmacro window-equal-function ()
-  (if (member 'window +clx-cached-types+)
-      ''eq
-    ''drawable-equal))
+  ;; Since windows are not always cached, we must use window-equal
+  ;; to determine equality.
+  ''window-equal)
 
 (defmacro with-state ((drawable) &body body)
   ;; Allows a consistent view to be obtained of data returned by GetWindowAttributes
@@ -498,8 +498,13 @@
   (declare (clx-values (or null colormap)))
   (with-attributes (window :sizes 32)
     (let ((id (resource-id-get 28)))
-      (if (zerop id) nil
-	(lookup-colormap (window-display window) id)))))
+      (if (zerop id)
+	  nil
+	  (let ((colormap (lookup-colormap (window-display window) id)))
+	    (unless (colormap-visual-info colormap)
+	      (setf (colormap-visual-info colormap)
+		    (visual-info (window-display window) (resource-id-get 8))))
+	    colormap)))))
 
 (defun set-window-colormap (window colormap)
   (change-window-attribute

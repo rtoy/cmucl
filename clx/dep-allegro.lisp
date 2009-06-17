@@ -19,7 +19,7 @@
 ;;;
 
 #+cmu
-(ext:file-comment "$Id: dep-allegro.lisp,v 1.1 2007/08/21 15:49:28 fgilham Exp $")
+(ext:file-comment "$Id: dep-allegro.lisp,v 1.2 2009/06/17 18:22:45 rtoy Rel $")
 
 (in-package :xlib)
 

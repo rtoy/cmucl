@@ -19,7 +19,7 @@
 ;;;
 
 #+cmu
-(ext:file-comment "$Id: display.lisp,v 1.13 2007/08/21 15:49:28 fgilham Exp $")
+(ext:file-comment "$Id: display.lisp,v 1.14 2009/06/17 18:22:46 rtoy Exp $")
 
 (in-package :xlib)
 
@@ -133,6 +133,24 @@
 		(values best-name best-data)))))))
     (values "" "")))
 
+(defmacro with-display ((display &key timeout inline)
+			&body body)
+  ;; This macro is for use in a multi-process environment.  It
+  ;; provides exclusive access to the local display object for
+  ;; multiple request generation.  It need not provide immediate
+  ;; exclusive access for replies; that is, if another process is
+  ;; waiting for a reply (while not in a with-display), then
+  ;; synchronization need not (but can) occur immediately.  Except
+  ;; where noted, all routines effectively contain an implicit
+  ;; with-display where needed, so that correct synchronization is
+  ;; always provided at the interface level on a per-call basis.
+  ;; Nested uses of this macro will work correctly.  This macro does
+  ;; not prevent concurrent event processing; see with-event-queue.
+  `(with-buffer (,display
+		 ,@(and timeout `(:timeout ,timeout))
+		 ,@(and inline `(:inline ,inline)))
+     ,@body))
+
 ;;
 ;; Resource id management
 ;;
@@ -149,40 +167,59 @@
 		 (type mask32 mask))))))
 
 (defun resourcealloc (display)
-  ;; Allocate a resource-id for in DISPLAY
+  ;; Allocate a resource-id for use in DISPLAY
   (declare (type display display))
   (declare (clx-values resource-id))
-  (dpb (incf (display-resource-id-count display))
-       (display-resource-id-byte display)
-       (display-resource-id-base display)))
+  (loop for next-count upfrom (1+ (display-resource-id-count display))
+        repeat (1+ (display-resource-id-mask display))
+        as id = (dpb next-count
+                     (display-resource-id-byte display)
+                     (display-resource-id-base display))
+        unless (nth-value 1 (gethash id (display-resource-id-map display)))
+        do (setf (display-resource-id-count display) next-count)
+           (setf (gethash id (display-resource-id-map display)) t)
+           (return-from resourcealloc id))
+  ;; internal consistency check
+  (assert (= (hash-table-count (display-resource-id-map display))
+             (1+ (display-resource-id-mask display))))
+  ;; tell the user what's gone wrong
+  (error 'resource-ids-exhausted))
 
 (defmacro allocate-resource-id (display object type)
   ;; Allocate a resource-id for OBJECT in DISPLAY
-  (if (member (eval type) +clx-cached-types+)
-      `(let ((id (funcall (display-xid ,display) ,display)))
-	 (save-id ,display id ,object)
-	 id)
-    `(funcall (display-xid ,display) ,display)))
+  `(with-display (,display)
+     ,(if (member (eval type) +clx-cached-types+)
+          `(let ((id (funcall (display-xid ,display) ,display)))
+             (save-id ,display id ,object)
+             id)
+          `(funcall (display-xid ,display) ,display))))
 
 (defmacro deallocate-resource-id (display id type)
+  (declare (ignore type))
   ;; Deallocate a resource-id for OBJECT in DISPLAY
-  (when (member (eval type) +clx-cached-types+)
-    `(deallocate-resource-id-internal ,display ,id)))
+  `(deallocate-resource-id-internal ,display ,id))
 
 (defun deallocate-resource-id-internal (display id)
-  (remhash id (display-resource-id-map display)))
+  (with-display (display)
+    (remhash id (display-resource-id-map display))))
 
 (defun lookup-resource-id (display id)
   ;; Find the object associated with resource ID
   (gethash id (display-resource-id-map display)))
 
 (defun save-id (display id object)
-  ;; Register a resource-id from another display.
+  ;; cache the object associated with ID for this display.
   (declare (type display display)
 	   (type integer id)
 	   (type t object))
   (declare (clx-values object))
-  (setf (gethash id (display-resource-id-map display)) object))
+  ;; we can't cache objects from other clients, because they may
+  ;; become invalid without us being told about that.
+  (let ((base (display-resource-id-base display))
+        (mask (display-resource-id-mask display)))
+    (when (= (logandc2 id mask) base)
+      (setf (gethash id (display-resource-id-map display)) object))
+    object))
 
 ;; Define functions to find the CLX data types given a display and resource-id
 ;; If the data type is being cached, look there first.
@@ -279,24 +316,6 @@
 ;;
 ;; Display functions
 ;;
-(defmacro with-display ((display &key timeout inline)
-			&body body)
-  ;; This macro is for use in a multi-process environment.  It
-  ;; provides exclusive access to the local display object for
-  ;; multiple request generation.  It need not provide immediate
-  ;; exclusive access for replies; that is, if another process is
-  ;; waiting for a reply (while not in a with-display), then
-  ;; synchronization need not (but can) occur immediately.  Except
-  ;; where noted, all routines effectively contain an implicit
-  ;; with-display where needed, so that correct synchronization is
-  ;; always provided at the interface level on a per-call basis.
-  ;; Nested uses of this macro will work correctly.  This macro does
-  ;; not prevent concurrent event processing; see with-event-queue.
-  `(with-buffer (,display
-		 ,@(and timeout `(:timeout ,timeout))
-		 ,@(and inline `(:inline ,inline)))
-     ,@body))
-
 (defmacro with-event-queue ((display &key timeout inline)
 			    &body body &environment env)
   ;; exclusive access to event queue
@@ -369,41 +388,38 @@ gethostname(3) - is used instead."
   ;; if any, is assumed to come from the environment somehow.
   (declare (type integer display))
   (declare (clx-values display))
-
-  (let ((protocol
-	 (if (member host '("" "unix") :test #'equal)
-	     :local
-	     protocol)))
-    ;; Get the authorization mechanism from the environment.  Handle the
-    ;; special case of a host name of "" and "unix" which means the
-    ;; protocol is :local
-    (when (null authorization-name)
-      (multiple-value-setq (authorization-name authorization-data)
-	(get-best-authorization host display protocol)))
-    ;; PROTOCOL is the network protocol (something like :TCP :DNA or :CHAOS). See OPEN-X-STREAM.
-    (let* ((stream (open-x-stream host display protocol))
-	   (disp (make-buffer *output-buffer-size* #'make-display-internal
-			      :host host :display display
-			      :output-stream stream :input-stream stream))
-	   (ok-p nil))
-      (unwind-protect
-	   (progn
-	     (display-connect disp
-			      :authorization-name authorization-name
-			      :authorization-data authorization-data)
-	     (setf (display-authorization-name disp) authorization-name)
-	     (setf (display-authorization-data disp) authorization-data)
-	     (initialize-resource-allocator disp)
-	     (initialize-predefined-atoms disp)
-	     (initialize-extensions disp)
-	     (when (assoc "BIG-REQUESTS" (display-extension-alist disp)
-			  :test #'string=)
-	       (enable-big-requests disp))
-	     (setq ok-p t))
-	(unless ok-p (close-display disp :abort t)))
-      disp))
-  )
-
+  ;; Get the authorization mechanism from the environment.  Handle the
+  ;; special case of a host name of "" and "unix" which means the
+  ;; protocol is :local
+  (when (null authorization-name)
+    (multiple-value-setq (authorization-name authorization-data)
+      (get-best-authorization host
+			      display
+			      (if (member host '("" "unix") :test #'equal)
+				  :local
+				  protocol))))
+  ;; PROTOCOL is the network protocol (something like :TCP :DNA or :CHAOS). See OPEN-X-STREAM.
+  (let* ((stream (open-x-stream host display protocol))
+	 (disp (make-buffer *output-buffer-size* #'make-display-internal
+			    :host host :display display
+			    :output-stream stream :input-stream stream))
+	 (ok-p nil))
+    (unwind-protect
+	(progn
+	  (display-connect disp
+			   :authorization-name authorization-name
+			   :authorization-data authorization-data)
+	  (setf (display-authorization-name disp) authorization-name)
+	  (setf (display-authorization-data disp) authorization-data)
+	  (initialize-resource-allocator disp)
+	  (initialize-predefined-atoms disp)
+	  (initialize-extensions disp)
+	  (when (assoc "BIG-REQUESTS" (display-extension-alist disp)
+		       :test #'string=)
+	    (enable-big-requests disp))
+	  (setq ok-p t))
+      (unless ok-p (close-display disp :abort t)))
+    disp))
 
 (defun display-force-output (display)
   ; Output is normally buffered, this forces any buffered output to the server.
@@ -419,10 +435,10 @@ gethostname(3) - is used instead."
 (defun display-connect (display &key authorization-name authorization-data)
   (with-buffer-output (display :sizes (8 16))
     (card8-put
-     0
-     (ecase (display-byte-order display)
-       (:lsbfirst #x6c)	   ;; Ascii lowercase l - Least Significant Byte First
-       (:msbfirst #x42)))  ;; Ascii uppercase B -  Most Significant Byte First
+      0
+      (ecase (display-byte-order display)
+	(:lsbfirst #x6c)   ;; Ascii lowercase l - Least Significant Byte First
+	(:msbfirst #x42))) ;; Ascii uppercase B -  Most Significant Byte First
     (card16-put 2 *protocol-major-version*)
     (card16-put 4 *protocol-minor-version*)
     (card16-put 6 (length authorization-name))
@@ -437,112 +453,112 @@ gethostname(3) - is used instead."
   (let ((reply-buffer nil))
     (declare (type (or null reply-buffer) reply-buffer))
     (unwind-protect
-	 (progn
-	   (setq reply-buffer (allocate-reply-buffer #x1000))
-	   (with-buffer-input (reply-buffer :sizes (8 16 32))
-	     (buffer-input display buffer-bbuf 0 8)
-	     (let ((success (boolean-get 0))
-		   (reason-length (card8-get 1))
-		   (major-version (card16-get 2))
-		   (minor-version (card16-get 4))
-		   (total-length (card16-get 6))
-		   vendor-length
-		   num-roots
-		   num-formats)
-	       (declare (ignore total-length))
-	       (unless success
-		 (x-error 'connection-failure
-			  :major-version major-version
-			  :minor-version minor-version
-			  :host (display-host display)
-			  :display (display-display display)
-			  :reason
-			  (progn (buffer-input display buffer-bbuf 0 reason-length)
-				 (string-get reason-length 0 :reply-buffer reply-buffer))))
-	       (buffer-input display buffer-bbuf 0 32)
-	       (setf (display-protocol-major-version display) major-version)
-	       (setf (display-protocol-minor-version display) minor-version)
-	       (setf (display-release-number display) (card32-get 0))
-	       (setf (display-resource-id-base display) (card32-get 4))
-	       (setf (display-resource-id-mask display) (card32-get 8))
-	       (setf (display-motion-buffer-size display) (card32-get 12))
-	       (setq vendor-length (card16-get 16))
-	       (setf (display-max-request-length display) (card16-get 18))
-	       (setq num-roots (card8-get 20))
-	       (setq num-formats (card8-get 21))
-	       ;; Get the image-info
-	       (setf (display-image-lsb-first-p display) (zerop (card8-get 22)))
-	       (let ((format (display-bitmap-format display)))
-		 (declare (type bitmap-format format))
-		 (setf (bitmap-format-lsb-first-p format) (zerop (card8-get 23)))
-		 (setf (bitmap-format-unit format) (card8-get 24))
-		 (setf (bitmap-format-pad format) (card8-get 25)))
-	       (setf (display-min-keycode display) (card8-get 26))
-	       (setf (display-max-keycode display) (card8-get 27))
-	       ;; 4 bytes unused
-	       ;; Get the vendor string
-	       (buffer-input display buffer-bbuf 0 (lround vendor-length))
-	       (setf (display-vendor-name display)
-		     (string-get vendor-length 0 :reply-buffer reply-buffer))
-	       ;; Initialize the pixmap formats
-	       (dotimes (i num-formats) ;; loop gathering pixmap formats
-		 (declare (ignorable i))
-		 (buffer-input display buffer-bbuf 0 8)
-		 (push (make-pixmap-format :depth (card8-get 0)
-					   :bits-per-pixel (card8-get 1)
-					   :scanline-pad (card8-get 2))
-					; 5 unused bytes
-		       (display-pixmap-formats display)))
-	       (setf (display-pixmap-formats display)
-		     (nreverse (display-pixmap-formats display)))
-	       ;; Initialize the screens
-	       (dotimes (i num-roots)
-		 (declare (ignorable i))
-		 (buffer-input display buffer-bbuf 0 40)
-		 (let* ((root-id (card32-get 0))
-			(root (make-window :id root-id :display display))
-			(root-visual (card32-get 32))
-			(default-colormap-id (card32-get 4))
-			(default-colormap
+	(progn
+	  (setq reply-buffer (allocate-reply-buffer #x1000))
+	  (with-buffer-input (reply-buffer :sizes (8 16 32))
+	    (buffer-input display buffer-bbuf 0 8)
+	    (let ((success (boolean-get 0))
+		  (reason-length (card8-get 1))
+		  (major-version (card16-get 2))
+		  (minor-version (card16-get 4))
+		  (total-length (card16-get 6))
+		  vendor-length
+		  num-roots
+		  num-formats)
+	      (declare (ignore total-length))
+	      (unless success
+		(x-error 'connection-failure
+			 :major-version major-version
+			 :minor-version minor-version
+			 :host (display-host display)
+			 :display (display-display display)
+			 :reason
+			 (progn (buffer-input display buffer-bbuf 0 reason-length)
+				(string-get reason-length 0 :reply-buffer reply-buffer))))
+	      (buffer-input display buffer-bbuf 0 32)
+	      (setf (display-protocol-major-version display) major-version)
+	      (setf (display-protocol-minor-version display) minor-version)
+	      (setf (display-release-number display) (card32-get 0))
+	      (setf (display-resource-id-base display) (card32-get 4))
+	      (setf (display-resource-id-mask display) (card32-get 8))
+	      (setf (display-motion-buffer-size display) (card32-get 12))
+	      (setq vendor-length (card16-get 16))
+	      (setf (display-max-request-length display) (card16-get 18))
+	      (setq num-roots (card8-get 20))
+	      (setq num-formats (card8-get 21))
+	      ;; Get the image-info
+	      (setf (display-image-lsb-first-p display) (zerop (card8-get 22)))
+	      (let ((format (display-bitmap-format display)))
+		(declare (type bitmap-format format))
+		(setf (bitmap-format-lsb-first-p format) (zerop (card8-get 23)))
+		(setf (bitmap-format-unit format) (card8-get 24))
+		(setf (bitmap-format-pad format) (card8-get 25)))
+	      (setf (display-min-keycode display) (card8-get 26))
+	      (setf (display-max-keycode display) (card8-get 27))
+	      ;; 4 bytes unused
+	      ;; Get the vendor string
+	      (buffer-input display buffer-bbuf 0 (lround vendor-length))
+	      (setf (display-vendor-name display)
+		    (string-get vendor-length 0 :reply-buffer reply-buffer))
+	      ;; Initialize the pixmap formats
+	      (dotimes (i num-formats) ;; loop gathering pixmap formats
+		(declare (ignorable i))
+		(buffer-input display buffer-bbuf 0 8)
+		(push (make-pixmap-format :depth (card8-get 0)
+					  :bits-per-pixel (card8-get 1)
+					  :scanline-pad (card8-get 2))
+						; 5 unused bytes
+		      (display-pixmap-formats display)))
+	      (setf (display-pixmap-formats display)
+		    (nreverse (display-pixmap-formats display)))
+	      ;; Initialize the screens
+	      (dotimes (i num-roots)
+		(declare (ignorable i))
+		(buffer-input display buffer-bbuf 0 40)
+		(let* ((root-id (card32-get 0))
+		       (root (make-window :id root-id :display display))
+		       (root-visual (card32-get 32))
+		       (default-colormap-id (card32-get 4))
+		       (default-colormap
 			 (make-colormap :id default-colormap-id :display display))
-			(screen
+		       (screen
 			 (make-screen
-			  :root root
-			  :default-colormap default-colormap
-			  :white-pixel (card32-get 8)
-			  :black-pixel (card32-get 12)
-			  :event-mask-at-open (card32-get 16)
-			  :width  (card16-get 20)
-			  :height (card16-get 22)
-			  :width-in-millimeters  (card16-get 24)
-			  :height-in-millimeters (card16-get 26)
-			  :min-installed-maps (card16-get 28)
-			  :max-installed-maps (card16-get 30)
-			  :backing-stores (member8-get 36 :never :when-mapped :always)
-			  :save-unders-p (boolean-get 37)
-			  :root-depth (card8-get 38)))
-			(num-depths (card8-get 39))
-			(depths nil))
-		   ;; Save root window for event reporting
-		   (save-id display root-id root)
-		   (save-id display default-colormap-id default-colormap)
-		   ;; Create the depth AList for a screen, (depth . visual-infos)
-		   (dotimes (j num-depths)
-		     (declare (ignorable j))
-		     (buffer-input display buffer-bbuf 0 8)
-		     (let ((depth (card8-get 0))
-			   (num-visuals (card16-get 2))
-			   (visuals nil)) ;; 4 bytes unused
-		       (dotimes (k num-visuals)
-			 (declare (ignorable k))
-			 (buffer-input display buffer-bbuf 0 24)
-			 (let* ((visual (card32-get 0))
-				(visual-info (make-visual-info
+			   :root root
+			   :default-colormap default-colormap
+			   :white-pixel (card32-get 8)
+			   :black-pixel (card32-get 12)
+			   :event-mask-at-open (card32-get 16)
+			   :width  (card16-get 20)
+			   :height (card16-get 22)
+			   :width-in-millimeters  (card16-get 24)
+			   :height-in-millimeters (card16-get 26)
+			   :min-installed-maps (card16-get 28)
+			   :max-installed-maps (card16-get 30)
+			   :backing-stores (member8-get 36 :never :when-mapped :always)
+			   :save-unders-p (boolean-get 37)
+			   :root-depth (card8-get 38)))
+		       (num-depths (card8-get 39))
+		       (depths nil))
+		  ;; Save root window for event reporting
+		  (save-id display root-id root)
+		  (save-id display default-colormap-id default-colormap)
+		  ;; Create the depth AList for a screen, (depth . visual-infos)
+		  (dotimes (j num-depths)
+		    (declare (ignorable j))
+		    (buffer-input display buffer-bbuf 0 8)
+		    (let ((depth (card8-get 0))
+			  (num-visuals (card16-get 2))
+			  (visuals nil)) ;; 4 bytes unused
+		      (dotimes (k num-visuals)
+			(declare (ignorable k))
+			(buffer-input display buffer-bbuf 0 24)
+			(let* ((visual (card32-get 0))
+			       (visual-info (make-visual-info
 					      :id visual
 					      :display display
 					      :class (member8-get 4 :static-gray :gray-scale
-										 :static-color :pseudo-color
-										 :true-color :direct-color)
+								  :static-color :pseudo-color
+								  :true-color :direct-color)
 					      :bits-per-rgb (card8-get 5)
 					      :colormap-entries (card16-get 6)
 					      :red-mask (card32-get 8)
@@ -550,16 +566,16 @@ gethostname(3) - is used instead."
 					      :blue-mask (card32-get 16)
 					      ;; 4 bytes unused
 					      )))
-			   (push visual-info visuals)
-			   (when (funcall (resource-id-map-test) root-visual visual)
-			     (setf (screen-root-visual-info screen)
-				   (setf (colormap-visual-info default-colormap)
-					 visual-info)))))
-		       (push (cons depth (nreverse visuals)) depths)))
-		   (setf (screen-depths screen) (nreverse depths))
-		   (push screen (display-roots display))))
-	       (setf (display-roots display) (nreverse (display-roots display)))
-	       (setf (display-default-screen display) (first (display-roots display))))))
+			  (push visual-info visuals)
+			  (when (funcall (resource-id-map-test) root-visual visual)
+			    (setf (screen-root-visual-info screen)
+				  (setf (colormap-visual-info default-colormap)
+					visual-info)))))
+		      (push (cons depth (nreverse visuals)) depths)))
+		  (setf (screen-depths screen) (nreverse depths))
+		  (push screen (display-roots display))))
+	      (setf (display-roots display) (nreverse (display-roots display)))
+	      (setf (display-default-screen display) (first (display-roots display))))))
       (when reply-buffer
 	(deallocate-reply-buffer reply-buffer))))
   display)

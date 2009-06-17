@@ -7,7 +7,7 @@
 ;;;
 
 #+cmu
-(ext:file-comment "$Id: clx-demos.lisp,v 1.1 2007/08/21 15:49:29 fgilham Exp $")
+(ext:file-comment "$Id: clx-demos.lisp,v 1.2 2009/06/17 18:22:46 rtoy Rel $")
 
 (defpackage :demos (:use :common-lisp)
   (:export do-all-demos demo))
@@ -32,17 +32,14 @@
 (defvar *white-pixel* nil)
 (defvar *window* nil)
 
-(defvar *delay* .01) ; This is necessary on current hardware to make the demos run slow enough
-		     ; to actually see something.
-
 (defmacro defdemo (fun-name demo-name args x y width height doc &rest forms)
   `(progn
      (defun ,fun-name ,args
        ,doc
        (unless *display*
-;;	 #+:cmu
-;;	 (multiple-value-setq (*display* *screen*) (ext:open-clx-display))
-	 #+(or cmu sbcl allegro)
+	 #+:cmu
+	 (multiple-value-setq (*display* *screen*) (ext:open-clx-display))
+	 #+(or sbcl allegro clisp)
 	 (progn
 	   (setf *display* (xlib::open-default-display))
 	   (setf *screen* (xlib:display-default-screen *display*)))
@@ -174,8 +171,7 @@
 			       (+ 4 (random (truncate width 3)))
 			       (+ 4 (random (truncate height 3)))
 			       t))
-	(xlib:display-force-output *display*)
-	(sleep *delay*)))
+	(xlib:display-force-output *display*)))
     (xlib:free-gcontext gcontext)
     (xlib:free-pixmap pixmap)))
 
@@ -306,8 +302,7 @@
 	  (setf (svref next-line 1) (+ y1 dy1))
 	  (setf (svref next-line 2) (+ x2 dx2))
 	  (setf (svref next-line 3) (+ y2 dy2))
-	  (xlib:display-force-output *display*)
-	  (sleep *delay*))))))
+	  (xlib:display-force-output *display*))))))
 
 
 (defdemo qix-demo "Qix" (&optional (lengths '(30 30)) (duration 2000))
@@ -519,9 +514,7 @@
 			,x ,y ,width ,height t))
 
 (defmacro update-screen ()
-  `(progn
-     (xlib:display-force-output *display*)
-     (sleep *delay*)))
+  `(xlib:display-force-output *display*))
 
 
 ;;;; Moving disks up and down
@@ -767,7 +760,7 @@
 ;;; velocity since the loop terminates as a function of the y velocity.
 ;;; 
 (defun bounce-window (window &optional
-		      (x-velocity 0) (elasticity 0.85) (gravity 2))
+			     (x-velocity 0) (elasticity 0.85) (gravity 2))
   (unless (< 0 elasticity 1)
     (error "Elasticity must be between 0 and 1."))
   (unless (plusp gravity)
@@ -782,43 +775,41 @@
 	(declare (fixnum top-of-window-at-bottom left-of-window-at-right
 			 y-velocity))
 	(loop
-	   (when (= prev-neg-velocity 0) (return t))
-	   (let ((negative-velocity (minusp y-velocity)))
-	     (loop
-		(let ((next-y (+ y y-velocity))
-		      (next-y-velocity (+ y-velocity gravity)))
-		  (declare (fixnum next-y next-y-velocity))
-		  (when (> next-y top-of-window-at-bottom)
-		    (cond
-		      (number-problems
-		       (setf y-velocity (incf prev-neg-velocity)))
-		      (t
-		       (setq y-velocity
-			     (- (truncate (* elasticity y-velocity))))
-		       (when (= y-velocity prev-neg-velocity)
-			 (incf y-velocity)
-			 (setf number-problems t))
-		       (setf prev-neg-velocity y-velocity)))
-		    (setf y top-of-window-at-bottom)
-		    (setf (xlib:drawable-x window) x
-			  (xlib:drawable-y window) y)
-		    (xlib:display-force-output *display*)
-		    (sleep *delay*)
-		    (return))
-		  (setq y-velocity next-y-velocity)
-		  (setq y next-y))
-		(when (and negative-velocity (>= y-velocity 0))
-		  (setf negative-velocity nil))
-		(let ((next-x (+ x x-velocity)))
-		  (declare (fixnum next-x))
-		  (when (or (> next-x left-of-window-at-right)
-			    (< next-x 0))
-		    (setq x-velocity (- (truncate (* elasticity x-velocity)))))
-		  (setq x next-x))
-		(setf (xlib:drawable-x window) x
-		      (xlib:drawable-y window) y)
-		(xlib:display-force-output *display*)
-		(sleep *delay*))))))))
+	  (when (= prev-neg-velocity 0) (return t))
+	  (let ((negative-velocity (minusp y-velocity)))
+	    (loop
+	      (let ((next-y (+ y y-velocity))
+		    (next-y-velocity (+ y-velocity gravity)))
+		(declare (fixnum next-y next-y-velocity))
+		(when (> next-y top-of-window-at-bottom)
+		  (cond
+		   (number-problems
+		    (setf y-velocity (incf prev-neg-velocity)))
+		   (t
+		    (setq y-velocity
+			  (- (truncate (* elasticity y-velocity))))
+		    (when (= y-velocity prev-neg-velocity)
+		      (incf y-velocity)
+		      (setf number-problems t))
+		    (setf prev-neg-velocity y-velocity)))
+		  (setf y top-of-window-at-bottom)
+		  (setf (xlib:drawable-x window) x
+			(xlib:drawable-y window) y)
+		  (xlib:display-force-output *display*)
+		  (return))
+		(setq y-velocity next-y-velocity)
+		(setq y next-y))
+	      (when (and negative-velocity (>= y-velocity 0))
+		(setf negative-velocity nil))
+	      (let ((next-x (+ x x-velocity)))
+		(declare (fixnum next-x))
+		(when (or (> next-x left-of-window-at-right)
+			  (< next-x 0))
+		  (setq x-velocity (- (truncate (* elasticity x-velocity)))))
+		(setq x next-x))
+	      (setf (xlib:drawable-x window) x
+		    (xlib:drawable-y window) y)
+	      (xlib:display-force-output *display*))))))))
 
 ;;; Change the name of this when DEMO is not so stupid.
 ;;; 
@@ -932,7 +923,6 @@
 	      (decf y-off (ash y-dir 1))
 	      (setf y-dir (- y-dir))))
 	  (xlib:draw-rectangles window gcontext rectangles t)
-	  (sleep *delay*)
 	  (xlib:display-force-output display))))
     (xlib:free-gcontext gcontext)))
 
@@ -1053,8 +1043,7 @@
       (dotimes (i duration)
 	(dolist (ball balls)
 	  (bounce-1-ball bounce-pixmap window gcontext ball))
-	(xlib:display-force-output display)
-	(sleep *delay*))
+	(xlib:display-force-output display))
       (xlib:free-pixmap bounce-pixmap)
       (xlib:free-gcontext gcontext))))
 

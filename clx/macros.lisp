@@ -26,7 +26,7 @@
 ;;; This is built on top of BUFFER
 
 #+cmu
-(ext:file-comment "$Id: macros.lisp,v 1.7 2007/08/21 15:49:28 fgilham Exp $")
+(ext:file-comment "$Id: macros.lisp,v 1.8 2009/06/17 18:22:46 rtoy Rel $")
 
 (in-package :xlib)
 
@@ -334,6 +334,10 @@
   ((index value) (declare (ignore index value))  nil))
 
 (define-accessor pad16 (16)
+  ((index) (declare (ignore index)) nil)
+  ((index value) (declare (ignore index value)) nil))
+
+(define-accessor pad32 (32)
   ((index) (declare (ignore index)) nil)
   ((index value) (declare (ignore index value)) nil))
 

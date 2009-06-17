@@ -19,7 +19,7 @@
 ;;;
 
 #+cmu
-(ext:file-comment "$Id: beziertest.lisp,v 1.2 2007/08/21 15:49:29 fgilham Exp $")
+(ext:file-comment "$Id: beziertest.lisp,v 1.3 2009/06/17 18:22:46 rtoy Rel $")
 
 (in-package :xlib)
 
@@ -60,11 +60,11 @@
     ;; we don't need to worry about overflows.
     (let ((factor (ash (min width height) 5)))
       (dotimes (i (length lines))
-	(setf (svref lines i)
-	      (ash (* (svref lines i) factor) -16)))
+	(setf (aref lines i)
+	      (ash (* (aref lines i) factor) -16)))
       (dotimes (i (length curves))
-	(setf (svref curves i)
-	      (ash (* (svref curves i) factor) -16))))
+	(setf (aref curves i)
+	      (ash (* (aref curves i) factor) -16))))
     
     (map-window win)				; Map the window
     ;; Handle events

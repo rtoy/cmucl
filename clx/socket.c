@@ -7,7 +7,7 @@
  * Compile using   
  *                    % cc -c socket.c -DUNIXCONN
  *
- * $Id: socket.c,v 1.4 2007/08/21 15:49:28 fgilham Exp $
+ * $Id: socket.c,v 1.5 2009/06/17 18:22:46 rtoy Rel $
  */
 
 #include <stdio.h>

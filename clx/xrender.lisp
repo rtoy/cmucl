@@ -4,7 +4,7 @@
 ;;;   Created: 2002-08-03
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 #+cmu
-(ext:file-comment "$Id: xrender.lisp,v 1.1 2007/08/21 15:49:28 fgilham Exp $")
+(ext:file-comment "$Id: xrender.lisp,v 1.2 2009/06/17 18:22:46 rtoy Rel $")
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; (c) copyright 2002, 2003 by Gilbert Baumann
@@ -28,14 +28,14 @@
 
 ;; - some request are still to be implemented at all.
 ;;   + Can they not wait? Xrender seems to be in flux as the specification
-;;     isn't even conforming to the actual protocol. However backwards
-;;     wierd that sounds. --noss
+;;     isn't even conforming to the acctual protocol. However backwards
+;;     wierd that sound. --noss
 
 ;; - we need to invent something for the color values of e.g. 
 ;;   fill-rectangles; I would prefer some generic functions, so that
 ;;   we later can map CLIM design directly to colors.
 
-;; - we want some convenience function to turn graphics contexts into
+;; - we want some conviencene function to turn graphics contexts into
 ;;   render pictures. --GB 2002-08-21
 
 ;; - also: uniform-alpha-picture display alpha-value
@@ -134,11 +134,7 @@
           render-composite-glyphs
           render-add-glyph
           render-add-glyph-from-picture
-          render-free-glyphs
-          
-          
-	  render-combine
-	  ))
+          render-free-glyphs))
 
 (pushnew :clx-ext-render *features*)
 
@@ -214,7 +210,7 @@
 
 (defun ensure-render-initialized (display)
   "Ensures that the RENDER extension is initialized. Should be called
-by every function that attempts to generate RENDER requests."
+by every function, which attempts to generate RENDER requests."
   ;; xxx locking?
   (unless (display-render-info display)
     (let ((q (make-render-info)))
@@ -269,9 +265,8 @@ by every function that attempts to generate RENDER requests."
     res))
 
 (defun find-window-picture-format (window)
-  "Find the picture format that matches the given window."
-  (let* ((cm (window-colormap window))
-         (vi (colormap-visual-info cm))
+  "Find the picture format which matches the given window."
+  (let* ((vi (window-visual-info window))
          (display (window-display window)))
     (ensure-render-initialized display)
     (case (visual-info-class vi)
@@ -342,13 +337,43 @@ by every function that attempts to generate RENDER requests."
   (define-accessor render-op (8)
     ((index) `(member8-get ,index
                :clear :src :dst :over :over-reverse :in :in-reverse
-               :out :out-reverse :atop :atop-reverse :xor :add :saturate :maximum))
+               :out :out-reverse :atop :atop-reverse :xor :add :saturate
+               '#:undefined-pict-op-Eh '#:undefined-pict-op-Fh
+               :disjoint-clear :disjoint-src :disjoint-dst :disjoint-over
+               :disjoint-over-reverse :disjoint-in :disjoint-in-reverse
+               :disjoint-out :disjoint-out-reverse :disjoint-atop
+               :disjoint-atop-reverse :disjoint-xor
+               '#:undefined-pict-op-1Ch '#:undefined-pict-op-1Dh
+               '#:undefined-pict-op-1Eh '#:undefined-pict-op-1Fh
+               :conjoint-clear :conjoint-src :conjoint-dst :conjoint-over
+               :conjoint-over-reverse :conjoint-in :conjoint-in-reverse
+               :conjoint-out :conjoint-out-reverse :conjoint-atop
+               :conjoint-atop-reverse :conjoint-xor))
     ((index thing) `(member8-put ,index ,thing
                      :clear :src :dst :over :over-reverse :in :in-reverse
-                     :out :out-reverse :atop :atop-reverse :xor :add :saturate :maximum)))
+                     :out :out-reverse :atop :atop-reverse :xor :add :saturate
+                     '#:undefined-pict-op-Eh '#:undefined-pict-op-Fh
+                     :disjoint-clear :disjoint-src :disjoint-dst :disjoint-over
+                     :disjoint-over-reverse :disjoint-in :disjoint-in-reverse
+                     :disjoint-out :disjoint-out-reverse :disjoint-atop
+                     :disjoint-atop-reverse :disjoint-xor
+                     '#:undefined-pict-op-1Ch '#:undefined-pict-op-1Dh
+                     '#:undefined-pict-op-1Eh '#:undefined-pict-op-1Fh
+                     :conjoint-clear :conjoint-src :conjoint-dst :conjoint-over
+                     :conjoint-over-reverse :conjoint-in :conjoint-in-reverse
+                     :conjoint-out :conjoint-out-reverse :conjoint-atop
+                     :conjoint-atop-reverse :conjoint-xor)))
   (deftype render-op ()
     '(member :clear :src :dst :over :over-reverse :in :in-reverse
-      :out :out-reverse :atop :atop-reverse :xor :add :saturate :maximum)))
+      :out :out-reverse :atop :atop-reverse :xor :add :saturate
+      :disjoint-clear :disjoint-src :disjoint-dst :disjoint-over
+      :disjoint-over-reverse :disjoint-in :disjoint-in-reverse
+      :disjoint-out :disjoint-out-reverse :disjoint-atop
+      :disjoint-atop-reverse :disjoint-xor
+      :conjoint-clear :conjoint-src :conjoint-dst :conjoint-over
+      :conjoint-over-reverse :conjoint-in :conjoint-in-reverse
+      :conjoint-out :conjoint-out-reverse :conjoint-atop
+      :conjoint-atop-reverse :conjoint-xor)))
 
 ;; Now these pictures objects are like graphics contexts. I was about
 ;; to introduce a synchronous mode, realizing that the RENDER protocol
@@ -421,9 +446,9 @@ by every function that attempts to generate RENDER requests."
                                     ,index))
                            (%render-change-picture-clip-rectangles
                             picture (aref (picture-%values picture) ,index))
-                           (setf (aref (picture-%values picture) ,index)
-                            (aref (picture-%server-values picture)
-                             ,index))))
+                           (setf (aref (picture-%server-values picture) ,index)
+                                 (aref (picture-%values picture) ,index))))
+
                    (setf (picture-%changed-p picture) nil)))
 
                (defun render-create-picture
@@ -680,7 +705,7 @@ by every function that attempts to generate RENDER requests."
   )
 ||#
 
-(defun render-trapezoids-1 (picture op source src-x src-y format coord-sequence)
+(defun render-trapezoids-1 (picture op source src-x src-y mask-format coord-sequence)
   ;; coord-sequence is  top bottom
   ;;                    line-1-x1 line-1-y1 line-1-x2 line-1-y2
   ;;                    line-2-x1 line-2-y1 line-2-x2 line-2-y2 ...
@@ -695,7 +720,7 @@ by every function that attempts to generate RENDER requests."
       (card16 0)                        ;pad
       (resource-id (picture-id source))
       (resource-id (picture-id picture))
-      (picture-format format)
+      ((or (member :none) picture-format) mask-format)
       (int16 src-x)
       (int16 src-y)
       ((sequence :format int32) coord-sequence) )))
@@ -1040,17 +1065,17 @@ by every function that attempts to generate RENDER requests."
            (render-fill-rectangle px.pic :src
                                   (list #x8000 #x0000 #x8000 #xFFFF)
                                   0 0 256 256)
-           ;; render-combine simply does not work
-           (render-combine :src pic pic px.pic
-                           350 350 350 350 0 0 256 256)
+
+           (render-composite :src pic pic px.pic
+                             350 350 350 350 0 0 256 256)
            ;;
            (render-fill-rectangle px.pic :over
                                   (list #x8000 #x8000 #x8000 #x8000)
                                   0 0 100 100)
-           (render-combine :src
-                           px.pic px.pic pic
-                           0 0 0 0 350 350
-                           256 256)
+           (render-composite :src
+                             px.pic px.pic pic
+                             0 0 0 0 350 350
+                             256 256)
            (render-fill-rectangle pic op (list #x0 #x0 #x0 #x8000) 200 200 800 800)
            (display-finish-output dpy))
       (close-display dpy))))
@@ -1079,23 +1104,22 @@ by every function that attempts to generate RENDER requests."
                (xlib:draw-point px px.gc x y)
                ))
            (xlib:clear-area win)
-           (let ((q(render-create-picture px
-                                          :format
-                                          (first (find-matching-picture-formats
-                                                  dpy
-                                                  :depth 32
-                                                  :alpha 8 :red 8 :green 8 :blue 8))
-                                          :component-alpha :on
-                                          :repeat :off
-                                          )))
-             (render-combine op
-                             q
-                             q 
-                             pic
-                             0 0
-                             0 0
-                             100 100
-                             400 400))
+           (let ((q (render-create-picture px
+                                           :format
+                                           (first (find-matching-picture-formats
+                                                   dpy
+                                                   :depth 32
+                                                   :alpha 8 :red 8 :green 8 :blue 8))
+                                           :component-alpha :on
+                                           :repeat :off)))
+             (render-composite op
+                               q
+                               q 
+                               pic
+                               0 0
+                               0 0
+                               100 100
+                               400 400))
            (let ()
              ;;(render-fill-rectangle pic op (list 255 255 255 255) 100 100 200 200)
              (display-finish-output dpy)))

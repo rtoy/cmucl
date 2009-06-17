@@ -19,7 +19,7 @@
 ;;;
 
 #+cmu
-(ext:file-comment "$Id: manager.lisp,v 1.9 2007/08/21 15:49:28 fgilham Exp $")
+(ext:file-comment "$Id: manager.lisp,v 1.10 2009/06/17 18:22:46 rtoy Rel $")
 
 (in-package :xlib)
 
@@ -64,7 +64,10 @@
     (when value
       (let* ((name-len (position 0 (the (vector card8) value)))
 	     (name (subseq (the (vector card8) value) 0 name-len))
-	     (class (subseq (the (vector card8) value) (1+ name-len) (1- (length value)))))
+	     (class
+              (when name-len
+                (subseq (the (vector card8) value) (1+ name-len)
+                        (position 0 (the (vector card8) value) :start (1+ name-len))))))
 	(values (and (plusp (length name)) (map 'string #'card8->char name))
 		(and (plusp (length class)) (map 'string #'card8->char class)))))))
 

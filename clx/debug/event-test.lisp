@@ -3,7 +3,7 @@
 ;;; This code was intended for CLUE.  --FMG
 
 #+cmu
-(ext:file-comment "$Id: event-test.lisp,v 1.2 2007/08/21 15:49:29 fgilham Exp $")
+(ext:file-comment "$Id: event-test.lisp,v 1.3 2009/06/17 18:22:46 rtoy Rel $")
 
 (defpackage "XTEST"
   (:use :xlib :common-lisp)

@@ -34,7 +34,7 @@
 ;;;   sbcl
 
 #+cmu
-(ext:file-comment "$Id: defsystem.lisp,v 1.8 2007/08/21 15:49:28 fgilham Exp $")
+(ext:file-comment "$Id: defsystem.lisp,v 1.9 2009/06/17 18:22:45 rtoy Rel $")
 
 #+(or Genera Minima sbcl ecl)
 (eval-when (:compile-toplevel :load-toplevel :execute)

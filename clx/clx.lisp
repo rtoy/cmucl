@@ -77,7 +77,7 @@
 ;;; progress.  Bug reports should be addressed to bug-clx@expo.lcs.mit.edu.
 
 #+cmu
-(ext:file-comment "$Id: clx.lisp,v 1.15 2007/08/21 15:49:27 fgilham Exp $")
+(ext:file-comment "$Id: clx.lisp,v 1.16 2009/06/17 18:22:45 rtoy Rel $")
 
 ;; Note: all of the following is in the package XLIB.
 
@@ -829,19 +829,18 @@
   (getf (font-properties font) name))
 
 (macrolet ((make-mumble-equal (type)
-	     ;; When cached, EQ works fine, otherwise test resource id's and displays
+	     ;; Since caching is only done for objects created by the
+	     ;; client, we must always compare ID and display for
+	     ;; non-identical mumbles.
 	     (let ((predicate (xintern type '-equal))
 		   (id (xintern type '-id))
 		   (dpy (xintern type '-display)))
-	       (if (member type +clx-cached-types+)
-		   `(within-definition (,type make-mumble-equal)
-		      (declaim (inline ,predicate))
-		      (defun ,predicate (a b) (eq a b)))
-		   `(within-definition (,type make-mumble-equal)
-		      (defun ,predicate (a b)
-			(declare (type ,type a b))
-			(and (= (,id a) (,id b))
-			     (eq (,dpy a) (,dpy b)))))))))
+		`(within-definition (,type make-mumble-equal)
+		   (defun ,predicate (a b)
+		     (declare (type ,type a b))
+		     (or (eql a b)
+			 (and (= (,id a) (,id b))
+			      (eq (,dpy a) (,dpy b)))))))))
   (make-mumble-equal window)
   (make-mumble-equal pixmap)
   (make-mumble-equal cursor)

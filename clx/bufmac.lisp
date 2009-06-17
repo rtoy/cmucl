@@ -20,7 +20,7 @@
 ;;;
 
 #+cmu
-(ext:file-comment "$Id: bufmac.lisp,v 1.5 2007/08/21 15:49:27 fgilham Exp $")
+(ext:file-comment "$Id: bufmac.lisp,v 1.6 2009/06/17 18:22:45 rtoy Rel $")
 
 (in-package :xlib)
 
