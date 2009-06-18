@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.101 2009/06/16 21:25:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.102 2009/06/18 17:39:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,8 +208,7 @@
 
 (comf "target:compiler/proclaim")
 
-(when (c:backend-featurep :unicode)
-  (comf "target:code/unidata"))
+(comf "target:code/unidata")
 (comf "target:code/char")
 (comf "target:code/misc")
 (comf "target:code/extensions" :byte-compile t)
