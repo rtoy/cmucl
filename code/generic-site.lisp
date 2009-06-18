@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.16 2005/05/03 18:02:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.17 2009/06/18 01:53:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,6 +32,26 @@
 ;;; and change it to point to the source location.  This will allow the Hemlock
 ;;; "Edit Definition" command and the debugger to find sources for functions in
 ;;; the core.
+;;;
+;;; The definition below assumes the default tree structure in a CMUCL
+;;; distribution:
+;;;
+;;; top
+;;;   bin/
+;;;   lib/
+;;;   man/
+;;;   src/
+;;;
+;;; If your sources are located somewhere else, change this
+;;; accordingly.
 #|
-(setf (search-list "target:") "<the source tree root>/")
+(setf (search-list "target:")
+      (list
+       (namestring
+	(make-pathname
+	 :directory (pathname-directory
+		     (merge-pathnames (make-pathname
+				       :directory '(:relative :back :back
+						    :back :back :back :back "src"))
+				      (pathname lisp::*cmucl-core-path*)))))))
 |#
