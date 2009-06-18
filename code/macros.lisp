@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.112 2008/06/19 22:20:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.113 2009/06/18 17:34:58 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1405,8 +1405,9 @@
 
 (defmacro case (keyform &body cases)
   "CASE Keyform {({(Key*) | Key} Form*)}*
-  Evaluates the Forms in the first clause with a Key EQL to the value of
-  Keyform.  If a singleton key is T then the clause is a default clause."
+  Evaluates the Forms in the first clause with a Key EQL to the value
+  of Keyform.  If a singleton key is T or Otherwise then the clause is
+  a default clause."
   (case-body 'case keyform cases t 'eql nil nil))
 
 (defmacro ccase (keyform &body cases)
@@ -1424,8 +1425,9 @@
 
 (defmacro typecase (keyform &body cases)
   "TYPECASE Keyform {(Type Form*)}*
-  Evaluates the Forms in the first clause for which TYPEP of Keyform and Type
-  is true."
+  Evaluates the Forms in the first clause for which TYPEP of Keyform
+  and Type is true.  If a singleton key is T or Otherwise then the
+  clause is a default clause."
   (case-body 'typecase keyform cases nil 'typep nil nil))
 
 (defmacro ctypecase (keyform &body cases)
