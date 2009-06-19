@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.47 2008/12/07 14:51:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.48 2009/06/19 12:38:02 rtoy Rel $")
 
 (in-package :pcl)
 
@@ -1522,15 +1522,26 @@
 
 (defun setf-slot-value-using-class-dfun (new-value class object slotd)
   (declare (ignore class))
-  ;; This is essentially CHECK-TYPE, but we can't use that since
-  ;; CHECK-TYPE doesn't evaluate the type argument.
-  (loop
-      (when (typep new-value (slot-type-or-t slotd))
-	(return nil))
-      (setf new-value (lisp::check-type-error 'new-value
-					      new-value
-					      (slot-type-or-t slotd)
-					      nil)))
+  (labels ((checkable-type (type)
+	     ;; Convert Type to something that typep will like.  In
+	     ;; particular, hairy function types just become function.
+	     (let ((type (c::type-expand type)))
+	       (if (atom type)
+		   type
+		   (case (first type)
+		     ((and or) (list* (first type) (mapcar #'checkable-type (rest type))))
+		     (function 'function)
+		     (otherwise type))))))
+    (let ((simplified-type (checkable-type (slot-type-or-t slotd))))
+      ;; This is essentially CHECK-TYPE, but we can't use that since
+      ;; CHECK-TYPE doesn't evaluate the type argument.
+      (loop
+	  (when (typep new-value simplified-type)
+	    (return nil))
+	  (setf new-value (lisp::check-type-error 'new-value
+						  new-value
+						  (slot-type-or-t slotd)
+						  nil)))))
   (function-funcall (slot-definition-writer-function slotd) new-value object))
 
 (defun slot-boundp-using-class-dfun (class object slotd)
