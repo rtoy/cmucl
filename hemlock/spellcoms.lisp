@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spellcoms.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spellcoms.lisp,v 1.5 2009/06/19 13:27:30 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -364,7 +364,7 @@
 ;;;; Buffer Correction
 
 (defvar *spell-word-characters*
-  (make-array char-code-limit :element-type 'bit  :initial-element 0)
+  (make-array #-unicode char-code-limit #+unicode 256 :element-type 'bit  :initial-element 0)
   "Characters that are legal in a word for spelling checking purposes.")
 
 (do-alpha-chars (c :both)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/scribe.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/scribe.lisp,v 1.5 2009/06/19 13:27:30 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,7 +40,7 @@
 (defhvar "Scribe Bracket Table"
   "This table maps a Scribe brackets, open and close, to their opposing
    brackets."
-  :value (make-array char-code-limit))
+  :value (make-array #-unicode char-code-limit #+unicode 256))
 ;;;
 (mapc #'(lambda (x y)
 	  (setf (svref (value scribe-bracket-table) (char-code x)) y)

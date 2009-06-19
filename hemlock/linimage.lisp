@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/linimage.lisp,v 1.4 2001/03/13 15:49:54 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/linimage.lisp,v 1.5 2009/06/19 13:27:30 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,7 +61,8 @@
 (defconstant winning-char #b01 "Bit for a char that prints normally")
 (defconstant losing-char #b10 "Bit for char with funny representation.")
 (defvar *losing-character-mask*
-  (make-array char-code-limit :element-type '(mod 256)
+  (make-array #-unicode char-code-limit #+unicode 256
+	      :element-type '(mod 256)
 	      :initial-element winning-char)
   "This is a character set used by redisplay to find funny chars.")
 (defvar *print-representation-vector* nil
@@ -93,14 +94,19 @@
     on the screen.  If the value is a string this string is literally
     displayed.  If it is a function, then that function is called with
     the current X position to get the string to display.")
+
+  ;; @@FIXME: Hack to let hemlock work on a unicode build.  We don't
+  ;; try to make a print-presentation-vector handle the entire unicode
+  ;; space, just the basic 256 characters.  I (rtoy) suspect hemlock
+  ;; wouldn't work very well with unicode strings anyway
   (setq *print-representation-vector*
-	(make-array char-code-limit :initial-element nil))
+	(make-array #-unicode char-code-limit #+unicode 256 :initial-element nil))
   (setf (attribute-descriptor-vector
 	 (gethash :print-representation *character-attributes*))
 	*print-representation-vector*)
   (do ((code 128 (1+ code))
        (str (make-string 4) (make-string 4)))
-      ((= code char-code-limit))
+      ((= code #-unicode char-code-limit #+unicode 256))
     (setf (aref *losing-character-mask* code) losing-char)
     (setf (aref *print-representation-vector* code) str)
     (setf (schar str 0) #\<)

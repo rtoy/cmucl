@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.5 2001/03/13 15:49:53 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.6 2009/06/19 13:27:30 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -296,7 +296,7 @@
 ;;; This maps Common Lisp CHAR-CODE's to character classes for parsing #k
 ;;; syntax.
 ;;;
-(defvar *key-character-classes* (make-array char-code-limit
+(defvar *key-character-classes* (make-array #-unicode char-code-limit #+unicode 256
 					    :initial-element :other))
 
 ;;; These characters are special:
@@ -740,7 +740,7 @@
   (setf *keysym-high-bytes* (make-array 256 :initial-element nil))
   (setf *key-event-characters* (make-hash-table))
   (setf *character-key-events*
-	(make-array char-code-limit :initial-element nil))
+	(make-array #-unicode char-code-limit #+unicode 256 :initial-element nil))
   
   (define-key-event-modifier "Hyper" "H")
   (define-key-event-modifier "Super" "S")
