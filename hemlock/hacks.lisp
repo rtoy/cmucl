@@ -1,7 +1,13 @@
 (in-package "HI")
 
 (defun %sp-byte-blt (src start dest dstart end)
-  (%primitive byte-blt src start dest dstart end))
+  #-unicode
+  (%primitive byte-blt src start dest dstart end)
+  #+unicode
+  (loop for di of-type fixnum from dstart below end
+        for si of-type fixnum from start
+        do 
+        (setf (aref dest di) (aref src si))))
 
 (defun lisp::sap-to-fixnum (x) (sap-int x))
 (defun lisp::fixnum-to-sap (x) (int-sap x))
