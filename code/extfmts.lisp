@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.6 2009/06/11 16:03:57 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.7 2009/06/21 13:53:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -381,15 +381,15 @@
 		  (replace tmp mvec)
 		  (setq mvec tmp)))
 	      (setq mx (logand (ash val (- lbits)) (lognot (ash -1 mbits))))
-	      (when (= (aref mvec (+ hx mx)) #xFFFF)
-		(setf (aref mvec (+ hx mx)) (length lvec))
+	      (when (= (aref mvec (+ (aref hvec hx) mx)) #xFFFF)
+		(setf (aref mvec (+ (aref hvec hx) mx)) (length lvec))
 		(let ((tmp (make-array (+ (length lvec) (ash 1 lbits))
 				       :element-type '(unsigned-byte 16)
 				       :initial-element #xFFFF)))
 		  (replace tmp lvec)
 		  (setq lvec tmp)))
 	      (setq lx (logand val (lognot (ash -1 lbits))))
-	      (setf (aref lvec (+ (aref mvec (+ hx mx)) lx))
+	      (setf (aref lvec (+ (aref mvec (+ (aref hvec hx) mx)) lx))
 		  (logior z (+ tmp base))))))
 	(setf (gethash table *.table-inverse.*)
 	    (lisp::make-ntrie16 :split (logior (ash (1- mbits) 4) (1- lbits))
