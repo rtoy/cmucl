@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.86 2009/06/11 16:03:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.87 2009/06/24 16:46:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2171,6 +2171,34 @@
 
 ;;;; Degenerate international character support:
 
+#+unicode
+(stream::def-ef-macro ef-strlen (extfmt lisp stream::+ef-max+ stream::+ef-str+)
+  (if (= (stream::ef-min-octets (stream::find-external-format extfmt))
+	 (stream::ef-max-octets (stream::find-external-format extfmt)))
+      `(lambda (stream object)
+	 (declare (ignore stream)
+		  (type (or character string) object)
+		  (optimize (speed 3) (space 0) (safety 0)))
+	 (etypecase object
+	   (character ,(stream::ef-min-octets (stream::find-external-format extfmt)))
+	   (string (* ,(stream::ef-min-octets (stream::find-external-format extfmt))
+		      (length object)))))
+      `(lambda (stream object &aux (count 0))
+	 (declare (type fd-stream stream)
+		  (type (or character string) object)
+		  #|(optimize (speed 3) (space 0) (safety 0))|#)
+	    `(labels ((eflen (char)
+		       (stream::char-to-octets ,extfmt char
+					       (fd-stream-co-state stream)
+					       (lambda (byte)
+						 (declare (ignore byte))
+						 (incf count)))))
+	       (etypecase object
+		 (character (eflen object))
+		 (string (dovector (ch object) (eflen ch))))
+	       count))))
+
+ 
 (defun file-string-length (stream object)
   (declare (type (or string character) object)
 	   (type (or file-stream broadcast-stream stream:simple-stream) stream))
@@ -2182,7 +2210,10 @@
     (broadcast-stream
      ;; CLHS says we must return 1 in this case
      1)
-    (t
-     (etypecase object
-       (character 1)
-       (string (length object))))))
+    #+unicode
+    (t (funcall (ef-strlen (fd-stream-external-format stream))
+		stream object))
+    #-unicode
+    (t (etypecase object
+	 (character 1)
+	 (string (length object))))))

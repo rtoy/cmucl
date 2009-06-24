@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.7 2009/06/21 13:53:59 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.8 2009/06/24 16:46:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,6 +21,7 @@
 (defvar *external-formats* (make-hash-table :test 'equal))
 (defvar *external-format-aliases* (make-hash-table))
 
+(defconstant +ef-str+ 1)
 (defconstant +ef-cin+ 2)
 (defconstant +ef-cout+ 3)
 (defconstant +ef-sin+ 4)
