@@ -57,7 +57,9 @@ New in this release:
        o Symbols are always normalized to NFC form.
 
     - WRITE-VECTOR and READ-VECTOR support vectors of with element
-      sizes of 1 bit, 2 bits and 4 bits.
+      sizes of 1 bit, 2 bits and 4 bits.  For :NETWORK-ORDER, the
+      bytes are written such that the lowest indexed element is
+      written to the most significant part of a byte.
 
   * ANSI compliance fixes:
 
@@ -75,6 +77,24 @@ New in this release:
       (Confusion about the length of the vector versus the index as an
       octet count, not element count.)
     - Motif (CLM) should work with Unicode.
+    - The stream created by WITH-INPUT-FROM-STREAM was not properly
+      closed.
+    - SXHASH was returning different values for -0f0 and -0d0 for
+      compiled and interpreted code.  The both return the same value
+      now.
+    - Some issues with potential spurious floating-point exceptions
+      with complex arithmetic on x86 with SSE2 have been fixed.
+      (Random junk in unused parts of an sse2 register could cause
+      spurious FP exceptions.)
+    - Numeric contagion for complex + real and complex - real was not
+      done correctly in compiled code.  Proper contagion is now done
+      by converting the real to a complex before performing the
+      operation. 
+    - CMUCL can now handle the X11 local Unix display connection on
+      Mac OS X.
+    - SETF-SLOT-VALUE-USING-CLASS-DFUN no longer signals errors when
+      checking the new value against the declared slot type when the
+      declared slot type was too hairy for TYPEP.
 
   * Trac Tickets:
     #31: pathname bug with :case :common
@@ -85,6 +105,11 @@ New in this release:
     - SOFTWARE-VERSION may return different results than previously.
       UNIX:UNIX-UNAME is now used to obtain the software version on
       Linux and Solaris.
+    - User's manual updated with a section on internalization
+      (unicode).
+    - DESCRIBE on characters includes the character's code and name.
+    - CLX updated to the portable clx version from Christophe Rhodes
+      darcs repository of 2009-06-16.
 
   * Improvements to the PCL implementation of CLOS:
 
