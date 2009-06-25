@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.8 2009/06/24 16:46:18 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.9 2009/06/25 02:18:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -615,14 +615,18 @@
 	      (type kernel:index start end ptr)
 	      (type simple-base-string result)
 	      (ignorable state))
-     (dotimes (i (- end start) (values result ptr))
-       (declare (type kernel:index i))
-       (char-to-octets ,extfmt (schar string (+ start i)) state
-		       (lambda (b)
-			 (when (= ptr (length result))
-			   (setq result (adjust-array result (* 2 ptr))))
-			 (setf (aref result (1- (incf ptr)))
-			     (code-char b)))))))
+     (do ((k start (1+ k)))
+	 ((>= k end)
+	  (values result ptr))
+       (multiple-value-bind (code widep)
+	   (lisp::codepoint string k end)
+	 (when widep (incf k))
+	 (codepoint-to-octets ,extfmt code state
+			(lambda (b)
+			  (when (= ptr (length result))
+			    (setq result (adjust-array result (* 2 ptr))))
+			  (setf (aref result (1- (incf ptr)))
+				(code-char b))))))))
 
 (defun string-encode (string external-format &optional (start 0) end)
   "Encode the given String using External-Format and return a new
@@ -648,13 +652,17 @@
      (loop until (>= ptr end)
 	;; increasing size of result shouldn't ever be necessary, unless
 	;; someone implements an encoding smaller than the source string...
-	do (setf (schar result (incf pos))
-	       (octets-to-char ,extfmt state count
-			       ;; note the need to return NIL for EOF
-			       (if (= (1+ ptr) (length string))
-				   nil
-				   (char-code (char string (incf ptr))))
-			       (lambda (n) (decf ptr n))))
+	do (let ((code (octets-to-codepoint ,extfmt state count
+					    ;; note the need to return NIL for EOF
+					    (if (= (1+ ptr) (length string))
+						nil
+						(char-code (char string (incf ptr))))
+					    (lambda (n) (decf ptr n)))))
+	     (multiple-value-bind (hi lo)
+		 (lisp::surrogates code)
+	       (setf (schar result (incf pos)) hi)
+	       (when lo
+		 (setf (schar result (incf pos)) lo))))
 	finally (return (values result (1+ pos))))))
 
 (defun string-decode (string external-format &optional (start 0) end)
