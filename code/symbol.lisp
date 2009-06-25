@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.40 2005/05/09 16:02:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.41 2009/06/25 13:29:06 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -261,12 +261,12 @@
 (defun gentemp (&optional (prefix "T") (package *package*))
   "Creates a new symbol interned in package Package with the given Prefix."
   (loop
-    (let ((*print-base* 10)
-	  (*print-radix* nil)
-	  (*print-pretty* nil)
-	  (new-pname (format nil "~A~D"
-			     prefix (incf *gentemp-counter*))))
+    (let* ((*print-base* 10)
+	   (*print-radix* nil)
+	   (*print-pretty* nil)
+	   (new-pname (format nil "~A~D"
+			      prefix (incf *gentemp-counter*))))
       (multiple-value-bind (symbol existsp)
-			   (find-symbol new-pname package)
+	  (find-symbol new-pname package)
 	(declare (ignore symbol))
 	(unless existsp (return (values (intern new-pname package))))))))
