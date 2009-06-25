@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.87 2009/06/24 16:46:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.88 2009/06/25 01:48:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2187,16 +2187,25 @@
 	 (declare (type fd-stream stream)
 		  (type (or character string) object)
 		  #|(optimize (speed 3) (space 0) (safety 0))|#)
-	    `(labels ((eflen (char)
-		       (stream::char-to-octets ,extfmt char
-					       (fd-stream-co-state stream)
-					       (lambda (byte)
-						 (declare (ignore byte))
-						 (incf count)))))
-	       (etypecase object
-		 (character (eflen object))
-		 (string (dovector (ch object) (eflen ch))))
-	       count))))
+	 (labels ((eflen (code)
+		    (stream::codepoint-to-octets ,extfmt code
+					    (fd-stream-co-state stream)
+					    (lambda (byte)
+					      (declare (ignore byte))
+					      (incf count)))))
+	   (etypecase object
+	     (character (eflen (char-code object)))
+	     (string
+	      (do ((k 0)
+		   (end (length object)))
+		  ((>= k end))
+		(multiple-value-bind (code widep)
+		    (codepoint object k end)
+		  (eflen code)
+		  (if widep
+		      (incf k 2)
+		      (incf k))))))
+	   count))))
 
  
 (defun file-string-length (stream object)
