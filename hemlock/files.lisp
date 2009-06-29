@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/files.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/files.lisp,v 1.5 2009/06/29 21:10:48 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,7 +48,7 @@
       (multiple-value-bind (fd err) (unix:unix-open name unix:o_rdonly 0)
 	(when fd
 	  (multiple-value-bind (res dev ino mode nlnk uid gid rdev len)
-			       (unix:unix-fstat fd)
+	      (unix:unix-fstat fd)
 	    (declare (ignore ino mode nlnk uid gid rdev))
 	    (cond ((null res)
 		   (setq err dev))
@@ -56,7 +56,7 @@
 		   (setf sap (system:allocate-system-memory len))
 		   (setf size len)
 		   (multiple-value-bind
-		       (bytes err3)
+			 (bytes err3)
 		       (unix:unix-read fd sap len)
 		     (if (or (null bytes) (not (= len bytes)))
 			 (setq err err3)
@@ -74,7 +74,7 @@
 	  (modifying-buffer buffer)
 	  (let* ((len (or index size))
 		 (chars (make-string len)))
-	    (%primitive byte-blt sap 0 chars 0 len)
+	    (%sp-byte-blt sap 0 chars 0 len)
 	    (insert-string mark chars))
 	  (when index
 	    (insert-character mark #\newline)
@@ -89,7 +89,7 @@
 			 (chars (make-string length))
 			 (line (mark-line mark)))
 		    (declare (fixnum length))
-		    (%primitive byte-blt sap old-index chars 0 length)
+		    (%sp-byte-blt sap old-index chars 0 length)
 		    (insert-string mark chars)
 		    (setf (line-next previous) line)
 		    (setf (line-previous line) previous)
@@ -115,7 +115,7 @@
 (defun read-buffered-line (line)
   (let* ((len (line-buffered-p line))
   	 (chars (make-string len)))
-    (%primitive byte-blt (line-%chars line) 0 chars 0 len)
+    (%sp-byte-blt (line-%chars line) 0 chars 0 len)
     (setf (line-buffered-p line) nil)
     (setf (line-chars line) chars)))
 
@@ -178,10 +178,9 @@
 	      (macrolet ((chars (line)
 				`(if (line-buffered-p ,line)
 				     (line-%chars ,line)
-				     (line-chars ,line))))
-		(system:%primitive byte-blt
-				   (chars start-line) start-charpos
-				   sap 0 first-length)
+				  (line-chars ,line))))
+		(system:%sp-byte-blt (chars start-line) start-charpos
+				     sap 0 first-length)
 		(setf (system:sap-ref-8 sap first-length)
 		      (char-code #\newline))
 		(let ((offset (1+ first-length)))
@@ -189,17 +188,15 @@
 			     (line-next line)))
 		      ((eq line end-line))
 		    (let ((end (+ offset (line-length line))))
-		      (system:%primitive byte-blt
-					 (chars line) 0
-					 sap offset end)
+		      (system:%sp-byte-blt (chars line) 0
+					   sap offset end)
 		      (setf (system:sap-ref-8 sap end)
 			    (char-code #\newline))
 		      (setf offset (1+ end))))
 		  (unless (zerop end-charpos)
-		    (system:%primitive byte-blt
-				       (chars end-line) 0
-				       sap offset
-				       (+ offset end-charpos))))
+		    (system:%sp-byte-blt (chars end-line) 0
+					 sap offset
+					 (+ offset end-charpos))))
 		(multiple-value-bind
 		    (okay errno)
 		    (unix:unix-write (system:fd-stream-fd file)
