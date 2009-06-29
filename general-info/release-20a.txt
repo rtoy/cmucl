@@ -95,6 +95,8 @@ New in this release:
     - SETF-SLOT-VALUE-USING-CLASS-DFUN no longer signals errors when
       checking the new value against the declared slot type when the
       declared slot type was too hairy for TYPEP.
+    - GENTEMP no longer generates the wrong symbol if the
+      pretty-printer is used.
 
   * Trac Tickets:
     #31: pathname bug with :case :common
