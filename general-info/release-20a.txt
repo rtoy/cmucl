@@ -97,6 +97,13 @@ New in this release:
       declared slot type was too hairy for TYPEP.
     - GENTEMP no longer generates the wrong symbol if the
       pretty-printer is used.
+    - Some issues with slow allocation with gencgc have been worked
+      around.  Certain allocation sequences were causing all
+      allocations to be done out-of-line into an almost full
+      allocation region.  This was especially evident on sparc and ppc
+      when running the ansi test suite from gcl on a unicode build.
+      CMUCL will attempt to detect this and abandon the region,
+      allowing inline allocation to be done again.
 
   * Trac Tickets:
     #31: pathname bug with :case :common
@@ -107,7 +114,7 @@ New in this release:
     - SOFTWARE-VERSION may return different results than previously.
       UNIX:UNIX-UNAME is now used to obtain the software version on
       Linux and Solaris.
-    - User's manual updated with a section on internalization
+    - User's manual updated with a section on internationalization
       (unicode).
     - DESCRIBE on characters includes the character's code and name.
     - CLX updated to the portable clx version from Christophe Rhodes
