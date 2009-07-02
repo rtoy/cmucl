@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.32 2009/06/11 16:03:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.33 2009/07/02 21:00:48 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -666,11 +666,17 @@
   ;; The result of shrink-vector is another vector of the same type as
   ;; the input.  If the size is a known constant, we use it, otherwise
   ;; just make the dimension unknown.
-  (let* ((type (continuation-type vector))
-	 (dim (if (constant-continuation-p new-size)
+  (let* ((dim (if (constant-continuation-p new-size)
 		  `(,(continuation-value new-size))
 		  '(*)))
-	 (new-type (kernel::copy-array-type type)))
-    (setf (kernel:array-type-dimensions new-type) dim)
-    new-type))
-  
+	 (vector-type (continuation-type vector))
+	 (results (mapcar #'(lambda (type)
+			      (let* ((new-type (kernel::copy-array-type type)))
+				(setf (kernel:array-type-dimensions new-type) dim)
+				new-type))
+			  (if (typep vector-type 'union-type)
+			      (union-type-types vector-type)
+			      (list vector-type)))))
+    (if (rest results)
+	(make-union-type results)
+	(first results))))

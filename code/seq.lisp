@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.54 2009/06/11 16:03:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.55 2009/07/02 21:00:48 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1698,8 +1698,7 @@
        (do ((index index (1+ index))		; copy the rest of the vector
 	    (jndex jndex (1+ jndex)))
 	   ((= index length)
-	    (shrink-vector vector jndex)
-	    vector)
+	    (shrink-vector vector jndex))
 	 (setf (aref vector jndex) (aref vector index))))
     (declare (fixnum index jndex))
     (setf (aref vector jndex) (aref vector index))

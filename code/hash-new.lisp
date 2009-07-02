@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.49 2009/06/11 16:03:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.50 2009/07/02 21:00:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -439,11 +439,11 @@
     (setf (hash-table-next-vector table) new-next-vector)
     (setf (hash-table-hash-vector table) new-hash-vector)
     ;; Shrink the old vectors to 0 size to help the conservative GC.
-    (shrink-vector old-kv-vector 0)
-    (shrink-vector old-index-vector 0)
-    (shrink-vector old-next-vector 0)
+    (setf old-kv-vector (shrink-vector old-kv-vector 0))
+    (setf old-index-vector (shrink-vector old-index-vector 0))
+    (setf old-next-vector (shrink-vector old-next-vector 0))
     (when old-hash-vector
-      (shrink-vector old-hash-vector 0))
+      (setf old-hash-vector (shrink-vector old-hash-vector 0)))
     (setf (hash-table-rehash-trigger table) new-size))
   (undefined-value))
 
@@ -824,11 +824,11 @@
     (setf (hash-table-next-vector hash-table) new-next-vector)
     (setf (hash-table-hash-vector hash-table) new-hash-vector)
     ;; Shrink the old vectors to 0 size to help the conservative GC.
-    (shrink-vector old-kv-vector 0)
-    (shrink-vector old-index-vector 0)
-    (shrink-vector old-next-vector 0)
+    (setf old-kv-vector (shrink-vector old-kv-vector 0))
+    (setf old-index-vector (shrink-vector old-index-vector 0))
+    (setf old-next-vector (shrink-vector old-next-vector 0))
     (when old-hash-vector
-      (shrink-vector old-hash-vector 0)))
+      (setf old-hash-vector (shrink-vector old-hash-vector 0))))
   hash-table)
 
 

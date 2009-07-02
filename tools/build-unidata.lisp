@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.2 2009/06/11 16:04:02 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.3 2009/07/02 21:00:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -455,7 +455,7 @@
 	     (write-vector (ntrie1-hvec data) stm :endian-swap :network-order)
 	     (write-vector (ntrie1-mvec data) stm :endian-swap :network-order)
 	     (write-vector (ntrie1-lvec data) stm :endian-swap :network-order))
-	   (updavte-index (val array)
+	   (update-index (val array)
 	     (let ((result (vector-push val array)))
 	       (unless result
 		 (error "Index array too short for the data being written")))))
@@ -707,8 +707,8 @@
 			   (bool mirror) (str name1) (str comment)
 			   (chr upper) (chr lower) (chr title)))
 	  (incf pos))))
-    (lisp::shrink-vector vec pos)
-    (lisp::shrink-vector range rpos)
+    (setf vec (lisp::shrink-vector vec pos))
+    (setf range (lisp::shrink-vector range rpos))
     (flet ((find-ucd (key)
 	     (let ((index (gethash key vec-hash)))
 	       (if index

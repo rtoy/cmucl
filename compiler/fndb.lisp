@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.137 2009/06/11 16:03:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.138 2009/07/02 21:00:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1251,7 +1251,9 @@
   (foldable flushable))
 (defknown %set-symbol-package (symbol t) t (unsafe))
 (defknown %coerce-to-function (t) function (flushable))
-(defknown lisp::shrink-vector (vector fixnum) vector (unsafe))
+(defknown lisp::shrink-vector (vector fixnum) vector
+  (unsafe)
+  :result-not-used #'function-result-not-used-p)
 
 ;;; Structure slot accessors or setters are magically "known" to be these
 ;;; functions, although the var remains the Slot-Accessor describing the actual
