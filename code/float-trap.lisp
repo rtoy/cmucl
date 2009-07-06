@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.34 2009/01/05 22:26:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.35 2009/07/06 13:29:57 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,8 +75,11 @@
 	    (logior (ash (logand #x3f new) 16)
 		    (ash rc 10)
 		    (logand #x3f (ash new -7))
-		    ;; Set precision control to be 64-bit, always.
-		    (ash 3 8))))
+		    ;; Set precision control to be 53-bit, always.
+		    ;; (The compiler takes care of handling
+		    ;; single-float precision, and we don't support
+		    ;; long-floats.)
+		    (ash 2 8))))
     (setf (x87-floating-point-modes) x87-modes)))
   )
 
@@ -104,7 +107,10 @@
 	    (logior (ash (logand #x3f new-mode) 16)
 		    (ash rc 10)
 		    (logand #x3f (ash new-mode -7))
-		    ;; Set precision control to be 64-bit, always.
+		    ;; Set precision control to be 64-bit, always.  We
+		    ;; don't use the x87 registers with sse2, so this
+		    ;; is ok and would be the correct setting if we
+		    ;; ever support long-floats.
 		    (ash 3 8))))
       (setf (vm::sse2-floating-point-modes) new-mode)
       (setf (vm::x87-floating-point-modes) x87-modes))
