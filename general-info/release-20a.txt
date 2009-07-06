@@ -104,6 +104,9 @@ New in this release:
       when running the ansi test suite from gcl on a unicode build.
       CMUCL will attempt to detect this and abandon the region,
       allowing inline allocation to be done again.
+    - For x86 builds, the floating-point precision was incorrectly set
+      to 64 bits (long-float) instead of 53 bits (double-float).  This
+      is fixed now.
 
   * Trac Tickets:
     #31: pathname bug with :case :common
