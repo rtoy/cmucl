@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.124 2009/06/11 16:03:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.125 2009/07/06 15:42:34 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2200,7 +2200,9 @@ radix-R.  If you have a power-list then pass it in as PL."
 		 (set-bit char uppercase-attribute))
 		((lower-case-p char)
 		 (set-bit char lowercase-attribute))
-		((= (unicode-category i) +unicode-category-other+)
+		((or (= (unicode-category i) +unicode-category-other+)
+		     (= (ash (unicode-category i) -4) 6))
+		 ;; Includes characters without case and all Unicode symbols
 		 (set-bit char othercase-attribute))
 		(t
 		 (setf (aref character-attributes i) funny-attribute))))))))
