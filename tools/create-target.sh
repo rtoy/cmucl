@@ -26,7 +26,7 @@ if [ $# = 1 ]; then
     # Only target directory given.  Try to deduce the lisp-variant
     TARGET_DIR="$1"
     case `uname -s` in
-    SunOS) LISP_VARIANT=sun4_solaris_gcc ;;
+    SunOS) LISP_VARIANT=sparc_gcc ;;
     Linux) LISP_VARIANT=x86_linux ;;
     Darwin) case `uname -m` in
             ppc) LISP_VARIANT=ppc_darwin ;;
@@ -70,7 +70,7 @@ if [ "$MOTIF_VARIANT" = "" ]; then
       NetBSD*) MOTIF_VARIANT=NetBSD ;;
       OpenBSD*) MOTIF_VARIANT=OpenBSD ;;
       *_darwin) MOTIF_VARIANT=Darwin ;;
-      sun4_solaris*) MOTIF_VARIANT=solaris ;;
+      sun4_solaris*|sparc*) MOTIF_VARIANT=solaris ;;
       sun4c*) MOTIF_VARIANT=sun4c_411 ;;
       hp700*) MOTIF_VARIANT=hpux_cc ;;
       pmax_mach) MOTIF_VARIANT=pmax_mach ;;
