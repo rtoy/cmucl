@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.98 2009/06/11 16:04:01 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.99 2009/07/07 17:09:17 rtoy Rel $
  *
  */
 
@@ -435,7 +435,7 @@ gc_write_barrier(void *addr)
 		 "*** Page fault in page not marked as write protected\n");
 
     /* Un-protect the page */
-    os_protect(page_address(page_index), PAGE_SIZE, OS_VM_PROT_ALL);
+    os_protect((os_vm_address_t) page_address(page_index), PAGE_SIZE, OS_VM_PROT_ALL);
     page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
     page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
 
@@ -1599,30 +1599,42 @@ int region_empty_threshold = 32;
 
 /*
  * How many consecutive large alloc we can do before we abandon the
- * current region
+ * current region.
  */
 int consecutive_large_alloc_limit = 10;
 
 
 /*
- * This is for debugging.  It gets incremented every time we have to
- * abandon the current region, because we done too many gc_alloc's in
- * the current region without changing the region.
+ * Statistics for the current region
  */
 struct alloc_stats 
 {
+    /*
+     * How many consecutive allocations we have tried with the current
+     * region (in saved_region)
+     */
     int consecutive_alloc;
+    /*
+     * How many times we tried to allocate to this region but didn't
+     * because we didn't have enough room and did a large alloc in a
+     * different region.
+     */
     int abandon_region_count;
-    int regions_differ_count;
+
+    /*
+     * A copy of the current allocation region which we use to compare
+     * against.
+     */
     struct alloc_region saved_region;
 };
 
+/* Statistics for boxed and unboxed regions */
 struct alloc_stats boxed_stats =
-{0, 0, 0, 
+{0, 0, 
  {NULL, NULL, -1, -1, NULL}};
      
 struct alloc_stats unboxed_stats =
-{0, 0, 0, 
+{0, 0, 
  {NULL, NULL, -1, -1, NULL}};
 
 /*
@@ -1646,14 +1658,15 @@ gc_alloc_try_current_region(int nbytes, struct alloc_region *region, int unboxed
 	region->free_pointer = new_free_pointer;
 
 	/* Check if the alloc region is almost empty. */
-	if (region->end_addr - region->free_pointer <= 32) {
+	if (region->end_addr - region->free_pointer <= region_empty_threshold) {
 	    /* If so finished with the current region. */
 	    gc_alloc_update_page_tables(unboxed, region);
 	    /* Setup a new region. */
-	    gc_alloc_new_region(32, unboxed, region);
+	    gc_alloc_new_region(region_empty_threshold, unboxed, region);
 	}
 
         stats->consecutive_alloc = 0;
+        stats->abandon_region_count = 0;
         memcpy(&stats->saved_region, region, sizeof(stats->saved_region));
         
 	return (void *) new_obj;
@@ -1728,23 +1741,26 @@ gc_alloc_region(int nbytes, struct alloc_region *region, int unboxed, struct all
         /*
          * Is the saved region the same as the current region?  If so,
          * update the counter.  If not, that means we did some other
-         * (inline) allocation, so reset the counter and region
+         * (inline) allocation, so reset the counters and region to
+         * the current region.
          */
         if (memcmp(&stats->saved_region, region, sizeof(stats->saved_region)) == 0) {
             ++stats->consecutive_alloc;
         } else {
             stats->consecutive_alloc = 0;
-            ++stats->regions_differ_count;
+            stats->abandon_region_count = 0;
             memcpy(&stats->saved_region, region, sizeof(stats->saved_region));
         }
         
 	return gc_alloc_large(nbytes, unboxed, region);
     }
 
+    /*
+     * We given up on the current region because the
+     * consecutive_large_alloc_limit has been reached.
+     */
     stats->consecutive_alloc = 0;
     ++stats->abandon_region_count;
-
-    /* Else find a new region. */
 
     /* Finished with the current region. */
     gc_alloc_update_page_tables(unboxed, region);
