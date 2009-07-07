@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.57 2009/01/20 04:45:19 agoncharov Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.58 2009/07/07 17:06:54 rtoy Rel $ */
 
 /* Interrupt handling magic. */
 
@@ -503,7 +503,7 @@ interrupt_handle_space_overflow(lispobj error, os_context_t * context)
      * Restore important Lisp regs.  Are there others we need to
      * restore?
      */
-    SC_REG(context, reg_ALLOC) = current_dynamic_space_free_pointer;
+    SC_REG(context, reg_ALLOC) = (long) current_dynamic_space_free_pointer;
     SC_REG(context, reg_NIL) = NIL;
 #else
 #error interrupt_handle_space_overflow not implemented for this system
