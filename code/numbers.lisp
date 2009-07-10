@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.66 2009/06/15 01:13:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.67 2009/07/10 14:22:24 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -604,11 +604,11 @@
 	    (iy (imagpart y)))
        (if (> (abs ry) (abs iy))
 	   (let* ((r (/ iy ry))
-		  (dn (* ry (+ 1 (* r r)))))
+		  (dn (+ ry (* r iy))))
 	     (canonical-complex (/ (+ rx (* ix r)) dn)
 				(/ (- ix (* rx r)) dn)))
 	   (let* ((r (/ ry iy))
-		  (dn (* iy (+ 1 (* r r)))))
+		  (dn (+ iy (* r ry))))
 	     (canonical-complex (/ (+ (* rx r) ix) dn)
 				(/ (- (* ix r) rx) dn))))))
     (((foreach integer ratio single-float double-float) complex)
