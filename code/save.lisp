@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.60 2009/07/10 04:17:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.61 2009/07/10 13:22:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -350,8 +350,8 @@
 		  (>= (length lisp::*unidata-version*) 11))
 	     (subseq lisp::*unidata-version* 11
 		     (1- (length lisp::*unidata-version*)))
-	     "")
-	" with Unicode version "
+	     " ")
+	"with Unicode version "
 	,#'(lambda (stream)
 	     (princ lisp::+unicode-major-version+ stream)
 	     (write-char #\. stream)
