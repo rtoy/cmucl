@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.4 2009/07/02 21:00:48 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.5 2009/07/10 04:17:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,6 +13,8 @@
 (in-package "LISP")
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
+
+(defvar *unidata-version* "$Revision: 1.5 $")
 
 (defstruct unidata
   range

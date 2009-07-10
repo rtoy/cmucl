@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.59 2009/06/11 16:03:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.60 2009/07/10 04:17:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -342,6 +342,23 @@
       '("See <http://www.cons.org/cmucl/> for support information."
 	terpri
 	"Loaded subsystems:"))
+
+#+unicode
+(setf (getf *herald-items* :unicode)
+      `("    Unicode "
+	,(if (and (boundp 'lisp::*unidata-version*)
+		  (>= (length lisp::*unidata-version*) 11))
+	     (subseq lisp::*unidata-version* 11
+		     (1- (length lisp::*unidata-version*)))
+	     "")
+	" with Unicode version "
+	,#'(lambda (stream)
+	     (princ lisp::+unicode-major-version+ stream)
+	     (write-char #\. stream)
+	     (princ lisp::+unicode-minor-version+ stream)
+	     (write-char #\. stream)
+	     (princ lisp::+unicode-update-version+ stream))
+	terpri))
 
 ;;; PRINT-HERALD  --  Public
 ;;;
