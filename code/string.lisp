@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.15 2009/06/16 21:25:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.16 2009/07/13 14:01:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -986,6 +986,7 @@
   properly handled."
   (let ((begin (string-left-trim-index char-bag string)))
     (with-string string
+      (declare (ignore start))
       (subseq string begin end))))
 
 (defun string-right-trim-index (char-bag string)
@@ -1033,6 +1034,7 @@
   properly handled."
   (let ((stop (string-right-trim-index char-bag string)))
     (with-string string
+      (declare (ignore end))
       (subseq string start stop))))
 
 (defun string-trim (char-bag string)
@@ -1043,6 +1045,7 @@
   (let ((left-end (string-left-trim-index char-bag string))
 	(right-end (string-right-trim-index char-bag string)))
     (with-string string
+      (declare (ignore start end))
       (subseq (the simple-string string) left-end right-end))))
 ) ; end unicode version
 
