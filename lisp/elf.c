@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.18 2009/01/20 03:58:11 agoncharov Exp $
+ $Id: elf.c,v 1.19 2009/07/13 19:41:54 rtoy Rel $
 */
 
 #include <stdio.h>
@@ -331,19 +331,45 @@ elf_run_linker(long init_func_address, char *file)
 
     lispobj libstring = SymbolValue(CMUCL_LIB);     /* Get library: */
     struct vector *vec = (struct vector *)PTR(libstring);
-    char *paths = strdup((char *)vec->data);
+    char *paths;
     char command[FILENAME_MAX + 1];
     char command_line[FILENAME_MAX + FILENAME_MAX + 10];
     char *strptr;
     struct stat st;
     int ret;
-
+    extern int debug_lisp_search;
+#ifndef UNICODE
+    paths = strdup((char *)vec->data);
+#else
+    /*
+     * What should we do here with 16-bit characters?  For now we just
+     * take the low 8-bits.
+     */
+    paths = malloc(vec->length);
+    {
+        int k;
+        unsigned short *data;
+        data = (unsigned short*) vec->data;
+        
+        for (k = 0; k < vec->length; ++k) {
+            paths[k] = data[k] & 0xff;
+        }
+    }
+#endif
     strptr = strtok(paths, ":");
 
-    while(strptr != NULL) {
+    if (debug_lisp_search) {
+        printf("Searching for linker.sh script\n");
+    }
 
+    while(strptr != NULL) {
+        
 	sprintf(command, "%s/%s", strptr, LINKER_SCRIPT);
 
+        if (debug_lisp_search) {
+            printf("  %s\n", command);
+        }
+        
 	if(stat(command, &st) == 0) {
 	    free(paths);
 	    printf("\t[%s: linking %s... \n", command, file);

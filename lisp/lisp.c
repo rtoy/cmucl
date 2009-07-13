@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.67 2009/01/20 03:58:11 agoncharov Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.68 2009/07/13 19:41:54 rtoy Rel $
  *
  */
 
@@ -91,7 +91,7 @@ static char *cmucllib_search_list[] = {
 
 
 /* Set this to see how we're doing our search */
-static int debug_lisp_search = FALSE;
+int debug_lisp_search = FALSE;
 
 /*
  * Define this to get some debugging printfs for searching for the
