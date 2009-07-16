@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.29 2009/07/16 12:55:02 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.30 2009/07/16 13:02:16 rtoy Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -130,6 +130,12 @@ os_get_h_errno(void)
 
 #ifdef LINKAGE_TABLE
 
+typedef enum {
+    LINKAGE_CODE_TYPE = 1,
+    LINKAGE_DATA_TYPE = 2
+} linkage_type_t;
+
+    
 /* These declarations are lies.  They actually take args, but are
    never called by C.  Only by Lisp */
 extern void resolve_linkage_tramp(void);
@@ -192,7 +198,7 @@ os_foreign_linkage_init(void)
 #endif                            
 	if (i == 0) {
 #if defined(sparc)
-	    if (type != 1 || strcmp(c_symbol_name, "call_into_c")) {
+	    if (type != LINKAGE_CODE_TYPE || strcmp(c_symbol_name, "call_into_c")) {
 		fprintf(stderr, "linkage_data is %s but expected call_into_c\n",
 			(char *) symbol_name->data);
 		lose("First element of linkage_data is bogus.\n");
@@ -206,8 +212,8 @@ os_foreign_linkage_init(void)
 	    }
 	    arch_make_linkage_entry(i, &call_into_c, 1);
 #else
-	    if (type != 1 || strcmp(c_symbol_name,
-				    "resolve_linkage_tramp")) {
+	    if (type != LINKAGE_CODE_TYPE || strcmp(c_symbol_name,
+                                                    "resolve_linkage_tramp")) {
 		fprintf(stderr,
 			"linkage_data is %s but expected resolve_linkage_tramp\n",
 			(char *) c_symbol_name);
@@ -217,7 +223,7 @@ os_foreign_linkage_init(void)
 #endif
 	    continue;
 	}
-	if (type == 2 && lib_list == NIL) {
+	if (type == LINKAGE_DATA_TYPE && lib_list == NIL) {
 	    void *target_addr = os_dlsym(c_symbol_name, NIL);
 
 	    if (!target_addr) {
@@ -262,7 +268,7 @@ os_resolve_data_linkage(void)
 #else
 #define c_symbol_name ((char*) symbol_name->data)
 #endif
-	if (type == 2 && lib_list != NIL) {
+	if (type == LINKAGE_DATA_TYPE && lib_list != NIL) {
 	    void *target_addr = os_dlsym(c_symbol_name, lib_list);
 
 	    if (!target_addr) {
@@ -316,7 +322,7 @@ os_link_one_symbol(long entry)
 			   data_vector->data[table_index + 2]);
 #if 0
     fprintf(stderr, "Looked up %s symbol %s at %lx\n",
-	    type == 1 ? "code" : "data",
+	    type == LINKAGE_CODE_TYPE ? "code" : "data",
 	    c_symbol_name, (unsigned long) target_addr);
 #endif
     if (!target_addr) {
