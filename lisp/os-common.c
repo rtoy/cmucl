@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.28 2009/06/11 16:04:01 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.29 2009/07/16 12:55:02 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -259,6 +259,8 @@ os_resolve_data_linkage(void)
         char c_symbol_name[1000];
 
         convert_lisp_string(c_symbol_name, symbol_name->data, (symbol_name->length >> 2));
+#else
+#define c_symbol_name ((char*) symbol_name->data)
 #endif
 	if (type == 2 && lib_list != NIL) {
 	    void *target_addr = os_dlsym(c_symbol_name, lib_list);
@@ -306,6 +308,8 @@ os_link_one_symbol(long entry)
 
 #ifdef UNICODE
     convert_lisp_string(c_symbol_name, symbol_name->data, (symbol_name->length >> 2));
+#else
+#define c_symbol_name ((char*) symbol_name->data)
 #endif
     
     target_addr = os_dlsym(c_symbol_name,
