@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.85 2009/06/16 21:25:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.86 2009/07/17 15:25:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2087,23 +2087,24 @@ output to Output-stream"
 
 (defun read-sequence (seq stream &key (start 0) (end nil) partial-fill)
   "Destructively modify SEQ by reading elements from STREAM.
-SEQ is bounded by START and END. SEQ is destructively modified by
-copying successive elements into it from STREAM. If the end of file
-for STREAM is reached before copying all elements of the subsequence,
-then the extra elements near the end of sequence are not updated.
 
-Argument(s):
-SEQ:	a proper SEQUENCE
-STREAM:	an input STREAM
-START:	a bounding index designator of type '(INTEGER 0 *)' (default 0)
-END:	a bounding index designator which be NIL or an INTEGER of
-	type '(INTEGER 0 *)' (default NIL)
+  Seq is bounded by Start and End. Seq is destructively modified by
+  copying successive elements into it from Stream. If the end of file
+  for Stream is reached before copying all elements of the subsequence,
+  then the extra elements near the end of sequence are not updated.
 
-Value(s):
-POSITION: an INTEGER greater than or equal to zero, and less than or
-          equal to the length of the SEQ. POSITION is the index of
-          the first element of SEQ that was not updated, which might be
-          less than END because the end of file was reached."
+  Argument(s):
+  SEQ:	    a proper SEQUENCE
+  STREAM:   an input STREAM
+  START:    a bounding index designator of type '(INTEGER 0 *)' (default 0)
+  END:      a bounding index designator which be NIL or an INTEGER of
+	    type '(INTEGER 0 *)' (default NIL)
+
+  Value(s):
+  POSITION: an INTEGER greater than or equal to zero, and less than or
+	    equal to the length of the SEQ. POSITION is the index of
+	    the first element of SEQ that was not updated, which might be
+	    less than END because the end of file was reached."
 
   (declare (type (or list vector) seq))	; could be (type sequence seq)
   (declare (type stream stream))
@@ -2453,16 +2454,17 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 ;;; will always puzzle me.
 
 (defun write-sequence (seq stream &key (start 0) (end nil))
-  "Writes the elements of the of SEQ bounded by START and END to STREAM.
-Argument(s):
-SEQ:	a proper SEQUENCE
-STREAM:	an output STREAM
-START:	a bounding index designator of type '(INTEGER 0 *)' (default 0)
-END:	a bounding index designator which be NIL or an INTEGER of
-	type '(INTEGER 0 *)' (default NIL)
+  "Writes the elements of the Seq bounded by Start and End to Stream.
 
-Value(s):
-SEQ:	a proper SEQUENCE
+  Argument(s):
+  SEQ:     a proper SEQUENCE
+  STREAM:  an output STREAM
+  START:   a bounding index designator of type '(INTEGER 0 *)' (default 0)
+  END:     a bounding index designator which be NIL or an INTEGER of
+           type '(INTEGER 0 *)' (default NIL)
+
+  Value(s):
+  SEQ:	a proper SEQUENCE
 "
   (declare (type (or list vector) seq))
   (declare (type stream stream))
