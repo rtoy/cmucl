@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.36 2009/07/17 02:15:04 agoncharov Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.37 2009/07/17 14:27:10 agoncharov Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -256,15 +256,15 @@
 ;;; using splice which cdr's down the end of the new list
 
 (defun append (&rest args)
-  "Usually, but not always, returns a new list that is the
-  concatenation of Args. Each Arg in Args must be a proper list except
-  the last one, which may be any object.  The function is not
-  destructive: for all but the last Arg, its list structure is copied.
-  The last argument is not copied; it becomes the cdr of the final
-  dotted pair of the concatenation of the preceding lists, or is
-  returned directly if there are no preceding non-empty lists.  In the
-  latter case, if the last Arg is not a list, the returned value is
-  not a list either."
+  "Typically, returns a new list that is the concatenation of Args.
+
+  Each Arg in Args must be a proper list except the last one, which
+  may be any object.  The function is not destructive: for all but the
+  last Arg, its list structure is copied.  The last argument is not
+  copied; it becomes the cdr of the final dotted pair of the
+  concatenation of the preceding lists, or is returned directly if
+  there are no preceding non-empty lists.  In the latter case, if the
+  last Arg is not a list, the returned value is not a list either."
 
   (do ((top args (cdr top)))	 ;;Cdr to first non-null list.
       ((atom top) '())
