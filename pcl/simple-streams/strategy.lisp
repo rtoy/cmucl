@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.15 2009/07/23 01:58:52 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.16 2009/07/23 04:26:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -202,28 +202,34 @@
 	    (count 0 (1+ count)))
 	   ((>= posn end) (values count nil))
 	 (declare (type lisp::index posn count))
-	 (let* ((char (octets-to-char ,ef
-				      (sm oc-state stream)
-				      (sm last-char-read-size stream)
-				      (prog2
-					  (when (>= (sm buffpos stream) max)
-					    (setq max (funcall refill count)))
-					  (bref (sm buffer stream)
-						(sm buffpos stream))
-					(incf (sm buffpos stream)))
-				      (lambda (n)
-					(decf (sm buffpos stream) n))))
-		(code (char-code char))
-		(ctrl (sm control-in stream)))
-	   (when (and (< code 32) ctrl (svref ctrl code))
-	     (setq char (funcall (the (or symbol function) (svref ctrl code))
-				 stream char)))
-	   (cond ((null char)
-		  (return (values count :eof)))
-		 ((and search (char= char search))
-		  (return (values count t)))
-		 (t
-		  (setf (char string posn) char))))))))
+	 (flet ((output (char code ctrl)
+		  (when (and (< code 32) ctrl (svref ctrl code))
+		    (setq char (funcall (the (or symbol function) (svref ctrl code))
+					stream char)))
+		  (cond ((null char)
+			 (return (values count :eof)))
+			((and search (char= char search))
+			 (return (values count t)))
+			(t
+			 (setf (char string posn) char)))))
+	   (let ((code (octets-to-codepoint ,ef
+					    (sm oc-state stream)
+					    (sm last-char-read-size stream)
+					    (prog2
+						(when (>= (sm buffpos stream) max)
+						  (setq max (funcall refill count)))
+						(bref (sm buffer stream)
+						      (sm buffpos stream))
+					      (incf (sm buffpos stream)))
+					    (lambda (n)
+					      (decf (sm buffpos stream) n)))))
+	     (multiple-value-bind (hi lo)
+		 (lisp::surrogates code)
+	       (output hi (char-code hi) (sm control-in stream))
+	       (when lo
+		 (incf posn)
+		 (incf count)
+		 (output lo (char-code lo) (sm control-in stream))))))))))
 
 (def-ef-macro %sc-write-char-fn (ef simple-streams +ss-ef-max+ +ss-ef-wchar+)
   `(lambda (character stream)

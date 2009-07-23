@@ -444,3 +444,61 @@
 	     (posn2 (file-position st1)))
 	(list posn1 posn2)))
   (0 1))
+
+;;; Some specific tests for full unicode support.
+#+unicode
+(deftest unicode-read-1
+    ;; Tests if reading unicode surrogates works
+    (let ((string (map 'string #'code-char '(#xd800 #xdc00))))
+      (with-open-file (s *test-file*
+			 :direction :output
+			 :if-exists :supersede
+			 :if-does-not-exist :create
+			 :external-format :utf8)
+	(write-string string s))
+      (with-open-file (s *test-file* :class 'file-simple-stream
+			 :direction :input
+			 :if-does-not-exist :error
+			 :external-format :utf8)
+	(let ((seq (read-line s)))
+	  (string= string seq))))
+  t)
+
+#+unicode
+(deftest unicode-read-large-1
+    ;; Tests if reading unicode surrogates works
+    (let ((string (concatenate 'string
+			       (map 'string #'code-char '(#xd800 #xdc00))
+			       (make-string 5000 :initial-element #\X))))
+      (with-open-file (s *test-file*
+			 :direction :output
+			 :if-exists :supersede
+			 :if-does-not-exist :create
+			 :external-format :utf8)
+	(write-string string s))
+      (with-open-file (s *test-file* :class 'file-simple-stream
+			 :direction :input
+			 :if-does-not-exist :error
+			 :external-format :utf8)
+	(let ((seq (read-line s)))
+	  (string= string seq))))
+  t)
+
+#+unicode
+(deftest unicode-write-1
+    ;; Tests if writing unicode surrogates work
+    (let ((string (map 'string #'code-char '(#xd800 #xdc00))))
+      (with-open-file (s *test-file*
+			 :class 'file-simple-stream
+			 :direction :output
+			 :if-exists :supersede
+			 :if-does-not-exist :create
+			 :external-format :utf8)
+	(write-string string s))
+      (with-open-file (s *test-file*
+			 :direction :input
+			 :if-does-not-exist :error
+			 :external-format :utf8)
+	(let ((seq (read-line s)))
+	  (string= string seq))))
+  t)
