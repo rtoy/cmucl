@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.14 2009/07/23 01:32:23 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.15 2009/07/23 01:58:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -150,6 +150,7 @@
       (setf ,state ,tmp3 ,count ,tmp2)
       ,tmp1)))
 
+#+(or)
 (defun ef-obs-co-fn (extfmt)
   (or (aref (ef-cache extfmt) +ef-obs-co+)
       (setf (aref (ef-cache extfmt) +ef-obs-co+)
@@ -159,6 +160,7 @@
 			      (lambda (x) (funcall output x)))
              state)))))
 
+#+(or)
 (defmacro %char-to-octets (ef char state output)
   `(progn
      (setf ,state (funcall (ef-obs-co-fn ,ef) ,char ,state ,output))
