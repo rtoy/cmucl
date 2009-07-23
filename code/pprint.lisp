@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.65 2008/04/02 13:24:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.66 2009/07/23 01:23:43 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1942,7 +1942,8 @@ When annotations are present, invoke them at the right positions."
     (vm::pseudo-atomic pprint-with-like)
     (new-assem:without-scheduling pprint-with-like)
     (vm::with-fixed-allocation pprint-with-like)
-    (kernel::number-dispatch pprint-with-like)))
+    (kernel::number-dispatch pprint-with-like)
+    (stream::with-stream-class pprint-with-like)))
 
 (defun pprint-init ()
   (setf *initial-pprint-dispatch* (make-pprint-dispatch-table))
