@@ -512,3 +512,24 @@
 	(let ((seq (read-line s)))
 	  (string= string seq))))
   t)
+
+#+unicode
+(deftest unicode-write-large-1
+    ;; Tests if writing unicode surrogates work
+    (let ((string (concatenate 'string
+			       (map 'string #'code-char '(#xd800 #xdc00))
+			       (make-string 5000 :initial-element #\X))))
+      (with-open-file (s *test-file*
+			 :class 'file-simple-stream
+			 :direction :output
+			 :if-exists :supersede
+			 :if-does-not-exist :create
+			 :external-format :utf8)
+	(write-string string s))
+      (with-open-file (s *test-file*
+			 :direction :input
+			 :if-does-not-exist :error
+			 :external-format :utf8)
+	(let ((seq (read-line s)))
+	  (string= string seq))))
+  t)

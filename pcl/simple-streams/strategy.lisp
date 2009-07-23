@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.16 2009/07/23 04:26:58 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.17 2009/07/23 15:47:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,7 +128,9 @@
       (bref (sm buffer stream) ptr))))
 
 ;;;;
+#+(or)
 (defconstant +ef-obs-oc+ 0)
+#+(or)
 (defconstant +ef-obs-co+ 1)
 
 #+(or)
@@ -174,6 +176,7 @@
 (defconstant +ss-ef-wchars+ 3)
 (defconstant +ss-ef-max+ 4)
 
+;; Read one character from a simple-stream.
 (def-ef-macro %read-char-fn (ef simple-streams +ss-ef-max+ +ss-ef-rchar+)
   `(lambda (stream max refill)
      (declare (type simple-stream stream)
@@ -189,6 +192,7 @@
 			 (incf (sm buffpos stream)))
 		       (lambda (n) (decf (sm buffpos stream) n))))))
 
+;; Read many characters from a simple-stream and place them in a string.
 (def-ef-macro %read-chars-fn (ef simple-streams +ss-ef-max+ +ss-ef-rchars+)
   `(lambda (stream string search start end max refill)
      (declare (type simple-stream stream)
@@ -226,6 +230,8 @@
 	     (multiple-value-bind (hi lo)
 		 (lisp::surrogates code)
 	       (output hi (char-code hi) (sm control-in stream))
+	       ;; What do we do if the low (trailing surrogate) wants
+	       ;; to be placed after the specified end of the string?
 	       (when lo
 		 (incf posn)
 		 (incf count)
@@ -254,6 +260,42 @@
 	       (incf (sm charpos stream)))))))
      character))
 
+(def-ef-macro %sc-write-chars-fn (ef simple-streams +ss-ef-max+ +ss-ef-wchars+)
+  `(lambda (string stream start end)
+     (declare (string string)
+	      (type simple-stream stream))
+     (with-stream-class (simple-stream stream)
+       (do ((ef (sm external-format stream))
+	    (len (length string))
+	    (ctrl (sm control-out stream))
+	    (posn start (1+ posn))
+	    (count 0 (1+ count)))
+	   ((>= posn end)
+	    count)
+	 (declare (type fixnum posn count))
+	 (flet ((output (code)
+		  (unless (and (< code 32) ctrl (svref ctrl code)
+			       (funcall (the (or symbol function) (svref ctrl code))
+					stream (code-char code)))
+		    (codepoint-to-octets ,ef
+					 code
+					 (sm oc-state stream)
+					 (lambda (byte)
+					   (when (>= (sm buffpos stream) (sm buffer-ptr stream))
+					     (setf (sm buffpos stream) (flush-buffer stream t)))
+					   (setf (bref (sm buffer stream) (sm buffpos stream)) byte)
+					   (incf (sm buffpos stream)))))
+		  (sc-set-dirty stream)
+		  (when (sm charpos stream)
+		    (incf (sm charpos stream)))))
+	   (multiple-value-bind (code widep)
+	       (lisp::codepoint string posn len)
+	     (output code)
+	     (when widep
+	       (incf posn)
+	       (incf count))))))))
+
+
 (def-ef-macro %dc-write-char-fn (ef simple-streams +ss-ef-max+ +ss-ef-wchar+)
   `(lambda (character stream)
      (declare (type simple-stream stream))
@@ -275,6 +317,40 @@
 	     (when (sm charpos stream)
 	       (incf (sm charpos stream)))))))
      character))
+
+(def-ef-macro %dc-write-chars-fn (ef simple-streams +ss-ef-max+ +ss-ef-wchars+)
+  `(lambda (string stream start end)
+     (declare (string string)
+	      (type simple-stream stream))
+     (with-stream-class (simple-stream stream)
+       (do ((ef (sm external-format stream))
+	    (len (length string))
+	    (ctrl (sm control-out stream))
+	    (posn start (1+ posn))
+	    (count 0 (1+ count)))
+	   ((>= posn end)
+	    count)
+	 (declare (type fixnum posn count))
+	 (flet ((output (code)
+		  (unless (and (< code 32) ctrl (svref ctrl code)
+			       (funcall (the (or symbol function) (svref ctrl code))
+					stream (code-char code)))
+		    (codepoint-to-octets ,ef
+					 code
+					 (sm oc-state stream)
+					 (lambda (byte)
+					   (when (>= (sm buffpos stream) (sm max-out-pos stream))
+					     (setf (sm outpos stream) (flush-buffer stream t)))
+					   (setf (bref (sm out-buffer stream) (sm outpos stream)) byte)
+					   (incf (sm outpos stream)))))
+		  (when (sm charpos stream)
+		    (incf (sm charpos stream)))))
+	   (multiple-value-bind (code widep)
+	       (lisp::codepoint string posn len)
+	     (output code)
+	     (when widep
+	       (incf posn)
+	       (incf count))))))))
 
 ;;;; Single-Channel-Simple-Stream strategy functions
 
@@ -515,20 +591,8 @@
 (declaim (ftype j-write-chars-fn (sc write-chars :ef)))
 (defun (sc write-chars :ef) (string stream start end)
   (with-stream-class (simple-stream stream)
-    (do ((ef (sm external-format stream))
-         (ctrl (sm control-out stream))
-         (posn start (1+ posn))
-         (count 0 (1+ count)))
-        ((>= posn end)
-	 count)
-      (declare (type fixnum posn count))
-      (let* ((char (char string posn))
-             (code (char-code char)))
-        (unless (and (< code 32) ctrl (svref ctrl code)
-                     (funcall (the (or symbol function) (svref ctrl code))
-                              stream char))
-	  (funcall (%sc-write-char-fn ef)
-		   char stream))))))
+    (funcall (%sc-write-chars-fn (sm external-format stream))
+	     string stream start end)))
 
 
 ;;;; Dual-Channel-Simple-Stream strategy functions
@@ -544,19 +608,8 @@
 (declaim (ftype j-write-chars-fn (dc write-chars :ef)))
 (defun (dc write-chars :ef) (string stream start end)
   (with-stream-class (dual-channel-simple-stream stream)
-    (do ((ctrl (sm control-out stream))
-         (posn start (1+ posn))
-         (count 0 (1+ count)))
-        ((>= posn end)
-	 count)
-      (declare (type fixnum posn count))
-      (let* ((char (char string posn))
-             (code (char-code char)))
-        (unless (and (< code 32) ctrl (svref ctrl code)
-                     (funcall (the (or symbol function) (svref ctrl code))
-                              stream char))
-	  (funcall (%dc-write-char-fn (sm external-format stream))
-		   char stream))))))
+    (funcall (%dc-write-chars-fn (sm external-format stream))
+	     string stream start end)))
 
 
 ;;;; String-Simple-Stream strategy functions
