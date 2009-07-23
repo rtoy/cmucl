@@ -126,6 +126,11 @@ New in this release:
   * Improvements to the PCL implementation of CLOS:
 
   * Changes to building procedure:
+    - The sparc config fils are now named sparc_gcc and sparc_sunc,
+      which use gcc and Sun C, respectively, for the C compiler.  Only
+      Solaris is supported.  The old sun4_solaris_gcc and
+      sun4_solaris_sunc configs are deprecated.
+
 
 This release is not binary compatible with code compiled using CMUCL
 19f; you will need to recompile FASL files. 
