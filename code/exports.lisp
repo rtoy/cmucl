@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.284 2009/06/16 17:23:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.285 2009/07/23 16:17:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1209,19 +1209,18 @@
 	   ))
 (dolist
     (name
-     '("*MAX-TRACE-INDENTATION*" "*TRACE-PRINT-LENGTH*" "*TRACE-PRINT-LEVEL*"
+     '("*MAX-TRACE-INDENTATION*"
        "*TRACED-FUNCTION-LIST*"))
   (intern name "EXTENSIONS"))
 (defpackage "DEBUG"
   (:import-from "EXTENSIONS" "*MAX-TRACE-INDENTATION*"
-		"*TRACE-PRINT-LENGTH*" "*TRACE-PRINT-LEVEL*"
 		"*TRACED-FUNCTION-LIST*")
   (:export "*AUTO-EVAL-IN-FRAME*" "*DEBUG-PRINT-LENGTH*"
 	   "*DEBUG-PRINT-LEVEL*" "*DEBUG-PROMPT*"
 	   "*DEBUG-READTABLE*" "*FLUSH-DEBUG-ERRORS*"
 	   "*HELP-LINE-SCROLL-COUNT*" "*IN-THE-DEBUGGER*"
-	   "*MAX-TRACE-INDENTATION*" "*TRACE-FRAME*" "*TRACE-PRINT-LENGTH*"
-	   "*TRACE-PRINT-LEVEL*" "*TRACED-FUNCTION-LIST*" "ARG" "BACKTRACE"
+	   "*MAX-TRACE-INDENTATION*" "*TRACE-FRAME*"
+	   "*TRACED-FUNCTION-LIST*" "ARG" "BACKTRACE"
 	   "INTERNAL-DEBUG" "VAR" "*PRINT-LOCATION-KIND*"
 	   "*ONLY-BLOCK-START-LOCATIONS*" "*STACK-TOP-HINT*"
 	   "*TRACE-VALUES*" "DO-DEBUG-COMMAND"
