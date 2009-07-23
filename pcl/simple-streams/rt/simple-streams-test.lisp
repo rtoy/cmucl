@@ -1,5 +1,7 @@
 ;;;; -*- lisp -*-
 
+(require :simple-streams)
+
 (defpackage simple-streams-test
   (:use #:common-lisp #:stream #:rt))
 
@@ -150,7 +152,8 @@
   (let* ((stream (make-instance 'file-simple-stream
                                 :filename *test-file* :direction :output
                                 :if-exists :overwrite
-                                :if-does-not-exist :create))
+                                :if-does-not-exist :create
+				:external-format :iso8859-1))
          (length (1+ (* 3 (device-buffer-length stream))))
          (content (make-string length)))
     (dotimes (i (length content))
@@ -158,7 +161,8 @@
     (with-open-stream (s stream)
       (write-string content s))
     (with-test-file (s *test-file* :class 'file-simple-stream
-                       :direction :input :if-does-not-exist :error)
+                       :direction :input :if-does-not-exist :error
+		       :external-format :iso8859-1)
       (let ((seq (make-string length)))
         #+nil (read-sequence seq s)
         #-nil (dotimes (i length)
@@ -170,7 +174,8 @@
   (let* ((stream (make-instance 'file-simple-stream
                                 :filename *test-file* :direction :output
                                 :if-exists :overwrite
-                                :if-does-not-exist :create))
+                                :if-does-not-exist :create
+				:external-format :iso8859-1))
          (length (1+ (* 3 (device-buffer-length stream))))
          (content (make-string length)))
     (dotimes (i (length content))
@@ -178,7 +183,8 @@
     (with-open-stream (s stream)
       (write-string content s))
     (with-test-file (s *test-file* :class 'file-simple-stream
-                       :direction :input :if-does-not-exist :error)
+                       :direction :input :if-does-not-exist :error
+		       :external-format :iso8859-1)
       (let ((seq (make-string length)))
         (read-sequence seq s)
         (string= content seq))))
@@ -188,7 +194,8 @@
   (let* ((stream (make-instance 'file-simple-stream
                                 :filename *test-file* :direction :output
                                 :if-exists :overwrite
-                                :if-does-not-exist :create))
+                                :if-does-not-exist :create
+				:external-format :iso8859-1))
          (length (1+ (* 3 (device-buffer-length stream))))
          (content (make-array length :element-type '(unsigned-byte 8))))
     (dotimes (i (length content))
@@ -196,7 +203,8 @@
     (with-open-stream (s stream)
       (write-sequence content s))
     (with-test-file (s *test-file* :class 'file-simple-stream
-                       :direction :input :if-does-not-exist :error)
+                       :direction :input :if-does-not-exist :error
+		       :external-format :iso8859-1)
       (let ((seq (make-array length :element-type '(unsigned-byte 8))))
         #+nil (read-sequence seq s)
         #-nil (dotimes (i length)
@@ -208,7 +216,8 @@
   (let* ((stream (make-instance 'file-simple-stream
                                 :filename *test-file* :direction :output
                                 :if-exists :overwrite
-                                :if-does-not-exist :create))
+                                :if-does-not-exist :create
+				:external-format :iso8859-1))
          (length (1+ (* 3 (device-buffer-length stream))))
          (content (make-array length :element-type '(unsigned-byte 8))))
     (dotimes (i (length content))
@@ -216,7 +225,8 @@
     (with-open-stream (s stream)
       (write-sequence content s))
     (with-test-file (s *test-file* :class 'file-simple-stream
-                       :direction :input :if-does-not-exist :error)
+                       :direction :input :if-does-not-exist :error
+		       :external-format :iso8859-1)
       (let ((seq (make-array length :element-type '(unsigned-byte 8))))
         (read-sequence seq s)
         (equalp content seq))))
