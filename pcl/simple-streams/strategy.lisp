@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.17 2009/07/23 15:47:21 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.18 2009/07/23 21:37:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -170,14 +170,16 @@
 
 
 
+#+(or)
+(progn
 (defconstant +ss-ef-rchar+ 0)
 (defconstant +ss-ef-rchars+ 1)
 (defconstant +ss-ef-wchar+ 2)
 (defconstant +ss-ef-wchars+ 3)
-(defconstant +ss-ef-max+ 4)
+(defconstant +ss-ef-max+ 4))
 
 ;; Read one character from a simple-stream.
-(def-ef-macro %read-char-fn (ef simple-streams +ss-ef-max+ +ss-ef-rchar+)
+(def-ef-macro %read-char-fn (ef simple-streams +ef-max+ +ss-ef-rchar+)
   `(lambda (stream max refill)
      (declare (type simple-stream stream)
               (type function refill))
@@ -193,7 +195,7 @@
 		       (lambda (n) (decf (sm buffpos stream) n))))))
 
 ;; Read many characters from a simple-stream and place them in a string.
-(def-ef-macro %read-chars-fn (ef simple-streams +ss-ef-max+ +ss-ef-rchars+)
+(def-ef-macro %read-chars-fn (ef simple-streams +ef-max+ +ss-ef-rchars+)
   `(lambda (stream string search start end max refill)
      (declare (type simple-stream stream)
               (type string string)
@@ -237,7 +239,7 @@
 		 (incf count)
 		 (output lo (char-code lo) (sm control-in stream))))))))))
 
-(def-ef-macro %sc-write-char-fn (ef simple-streams +ss-ef-max+ +ss-ef-wchar+)
+(def-ef-macro %sc-write-char-fn (ef simple-streams +ef-max+ +ss-ef-wchar+)
   `(lambda (character stream)
      (declare (type simple-stream stream))
      (when character
@@ -260,7 +262,7 @@
 	       (incf (sm charpos stream)))))))
      character))
 
-(def-ef-macro %sc-write-chars-fn (ef simple-streams +ss-ef-max+ +ss-ef-wchars+)
+(def-ef-macro %sc-write-chars-fn (ef simple-streams +ef-max+ +ss-ef-wchars+)
   `(lambda (string stream start end)
      (declare (string string)
 	      (type simple-stream stream))
@@ -296,7 +298,7 @@
 	       (incf count))))))))
 
 
-(def-ef-macro %dc-write-char-fn (ef simple-streams +ss-ef-max+ +ss-ef-wchar+)
+(def-ef-macro %dc-write-char-fn (ef simple-streams +ef-max+ +ss-ef-wchar+)
   `(lambda (character stream)
      (declare (type simple-stream stream))
      (when character
@@ -318,7 +320,7 @@
 	       (incf (sm charpos stream)))))))
      character))
 
-(def-ef-macro %dc-write-chars-fn (ef simple-streams +ss-ef-max+ +ss-ef-wchars+)
+(def-ef-macro %dc-write-chars-fn (ef simple-streams +ef-max+ +ss-ef-wchars+)
   `(lambda (string stream start end)
      (declare (string string)
 	      (type simple-stream stream))
@@ -335,12 +337,12 @@
 		  (unless (and (< code 32) ctrl (svref ctrl code)
 			       (funcall (the (or symbol function) (svref ctrl code))
 					stream (code-char code)))
-		    (codepoint-to-octets ,ef
+		    (codepoint-to-octets ef
 					 code
 					 (sm oc-state stream)
 					 (lambda (byte)
 					   (when (>= (sm buffpos stream) (sm max-out-pos stream))
-					     (setf (sm outpos stream) (flush-buffer stream t)))
+					     (setf (sm outpos stream) (flush-out-buffer stream t)))
 					   (setf (bref (sm out-buffer stream) (sm outpos stream)) byte)
 					   (incf (sm outpos stream)))))
 		  (when (sm charpos stream)
@@ -608,6 +610,7 @@
 (declaim (ftype j-write-chars-fn (dc write-chars :ef)))
 (defun (dc write-chars :ef) (string stream start end)
   (with-stream-class (dual-channel-simple-stream stream)
+    (format t "dc write-chars ~%")
     (funcall (%dc-write-chars-fn (sm external-format stream))
 	     string stream start end)))
 

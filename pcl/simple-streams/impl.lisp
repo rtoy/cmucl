@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.10 2009/07/23 15:49:35 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.11 2009/07/23 21:37:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -171,7 +171,7 @@
 
 ;; Stolen from ef-strlen in fd-stream.lisp.  Just modified it to work
 ;; with simple-streams.
-(def-ef-macro simple-stream-strlen (extfmt lisp +ef-max+ +ef-str+)
+(def-ef-macro simple-stream-strlen (extfmt lisp +ef-max+ +ss-ef-str+)
   (if (= (ef-min-octets (find-external-format extfmt))
 	 (ef-max-octets (find-external-format extfmt)))
       `(lambda (stream object)

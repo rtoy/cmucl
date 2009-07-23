@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.9 2009/06/25 02:18:02 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.10 2009/07/23 21:36:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,7 +30,13 @@
 (defconstant +ef-so+ 7)
 (defconstant +ef-en+ 8)
 (defconstant +ef-de+ 9)
-(defconstant +ef-max+ 10)
+;; For simple-streams support
+(defconstant +ss-ef-str+ 10)
+(defconstant +ss-ef-rchar+ 11)
+(defconstant +ss-ef-rchars+ 12)
+(defconstant +ss-ef-wchar+ 13)
+(defconstant +ss-ef-wchars+ 14)
+(defconstant +ef-max+ 15)
 
 ;; Unicode replacement character U+FFFD
 (defconstant +replacement-character-code+ #xFFFD)
