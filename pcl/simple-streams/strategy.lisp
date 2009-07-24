@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.18 2009/07/23 21:37:00 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.19 2009/07/24 01:08:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -610,7 +610,6 @@
 (declaim (ftype j-write-chars-fn (dc write-chars :ef)))
 (defun (dc write-chars :ef) (string stream start end)
   (with-stream-class (dual-channel-simple-stream stream)
-    (format t "dc write-chars ~%")
     (funcall (%dc-write-chars-fn (sm external-format stream))
 	     string stream start end)))
 
