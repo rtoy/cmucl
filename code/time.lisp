@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.29 2007/08/03 14:30:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.30 2009/08/09 03:54:42 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -99,7 +99,7 @@
 ;;; CURRENT-TIMEZONE -- internal.
 ;;;
 ;;; Returns two values:
-;;;  - the minuteswest of GMT.
+;;;  - the minutes west of GMT.
 ;;;  - T if daylight savings is in effect, NIL if not.
 ;;;
 (alien:def-alien-routine get-timezone c-call:void

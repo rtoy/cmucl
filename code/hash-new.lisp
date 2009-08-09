@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.50 2009/07/02 21:00:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.51 2009/08/09 03:54:42 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -862,7 +862,7 @@
 (defmacro with-hash-table-iterator ((function hash-table) &body body)
   "WITH-HASH-TABLE-ITERATOR ((function hash-table) &body body)
    provides a method of manually looping over the elements of a hash-table.
-   FUNCTION is bound to a generator-macro that, withing the scope of the
+   FUNCTION is bound to a generator-macro that, within the scope of the
    invocation, returns one or three values. The first value tells whether
    any objects remain in the hash table. When the first value is non-NIL, 
    the second and third values are the key and the value of the next object."

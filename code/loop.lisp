@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.30 2008/07/15 15:44:33 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.31 2009/08/09 03:54:42 rtoy Rel $")
 
 ;;;; LOOP Iteration Macro
 
@@ -2132,7 +2132,7 @@ collected result will be returned as the value of the LOOP."
   (cond ((and prep-phrases (cdr prep-phrases))
 	 (loop-error "Too many prepositions!"))
 	((and prep-phrases (not (member (caar prep-phrases) '(:in :of))))
-	 (loop-error "Unknow preposition ~S" (caar prep-phrases))))
+	 (loop-error "Unknown preposition ~S" (caar prep-phrases))))
   (unless (symbolp variable)
     (loop-error "Destructuring is not valid for package symbol iteration."))
   (let ((pkg-var (loop-gentemp 'loop-pkgsym-))

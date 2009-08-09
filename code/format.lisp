@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.92 2009/06/11 16:03:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.93 2009/08/09 03:54:41 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3145,8 +3145,8 @@
 	     :complaint "Malformed ~~/ directive."))
     (let* ((name (string-upcase (let ((foo string))
 				  ;; Hack alert: This is to keep the compiler
-				  ;; quit about deleting code inside the subseq
-				  ;; expansion.
+				  ;; quiet about deleting code inside the
+				  ;; subseq expansion.
 				  (subseq foo (1+ slash) (1- end)))))
 	   (first-colon (position #\: name))
 	   (second-colon (if first-colon (position #\: name :start (1+ first-colon))))

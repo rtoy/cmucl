@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.76 2009/06/11 16:03:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.77 2009/08/09 03:54:42 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -445,7 +445,7 @@
 ;;; allowing collisions and misses to be detected without paging in the
 ;;; symbol and pname for an entry.  If the hash for an entry doesn't
 ;;; match that for the symbol that we are looking for, then we can
-;;; go on without touching the symbol, pname, or even hastable vector.
+;;; go on without touching the symbol, pname, or even hashtable vector.
 ;;;    It turns out that, contrary to my expectations, paging is a very
 ;;; important consideration the design of the package representation.
 ;;; Using a similar scheme without the entry hash, the fasloader was
