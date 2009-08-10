@@ -73,14 +73,20 @@ external formats to convert to and from the external world to
 \cmucl{}'s string format.  The external format is specified in several
 ways.  The standard streams \var{*standard-input*},
 \var{*standard-output*}, and \var{*standard-error*} take the format
-from the value specified by \var{*default-external-format*}.  If
-\var{*default-external-format*} is changed, these streams will now
-expect input using the new format and will produce output using
-the new format.
+from the value specified by \var{*default-external-format*}.  The
+default value of \var{*default-external-format*} is \kwd{iso8859-1}.
 
 For files, \code{OPEN} takes the \kwd{external-format}
 parameter to specify the format.  The default external format is
 \kwd{default}. 
+
+\begin{defun}{stream}{set-system-external-format}{\var{terminal} \ampoptional \var{filenames}}
+  This function changes the external format used for
+  \var{*standard-input*}, \var{*standard-output*}, and
+  \var{*standard-error*} to the external format specified by
+  \var{terminal}.  Additionally, the Unix file name encoding can be
+  set to the value specified by \var{filenames} if non-\nil.
+\end{defun}
 
 \subsection{Available External Formats}
 
