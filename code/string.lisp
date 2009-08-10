@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.16 2009/07/13 14:01:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.17 2009/08/10 21:22:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -129,7 +129,7 @@
       ;; unassigned codepoint is also considered invalid.
       (when (or (eq wide -1)
 		(surrogatep codepoint)
-		(lisp::unicode-assigned-codepoint-p codepoint))
+		(not (unicode-assigned-codepoint-p codepoint)))
 	(return-from utf16-string-p (values nil index)))
       (when wide (incf index)))))
 
