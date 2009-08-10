@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/classes.lisp,v 1.7 2009/06/11 16:04:01 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/classes.lisp,v 1.8 2009/08/10 16:47:41 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -106,13 +106,7 @@
 (fmakunbound '(setf stream-external-format))
 
 (defmethod (setf stream-external-format) (extfmt (stream sys:fd-stream))
-  (setf (lisp::fd-stream-external-format stream)
-	   (if (eq extfmt :default)
-	       :default
-	       (ef-name (find-external-format extfmt)))
-	(lisp::fd-stream-oc-state stream) nil
-	(lisp::fd-stream-co-state stream) nil)
-  extfmt)
+  (lisp::%set-fd-stream-external-format stream extfmt))
 
 (defmethod (setf stream-external-format) (extfmt (stream synonym-stream))
   (setf (stream-external-format (symbol-value (synonym-stream-symbol stream)))

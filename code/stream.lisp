@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.86 2009/07/17 15:25:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.87 2009/08/10 16:47:41 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -298,28 +298,25 @@
     ;; fundamental-stream
     :default))
 
-#+unicode
+(defun %set-fd-stream-external-format (stream extfmt)
+  (declare (type fd-stream stream))
+  (setf (fd-stream-external-format stream)
+      (stream::ef-name (stream::find-external-format extfmt))
+	(fd-stream-oc-state stream) nil
+	(fd-stream-co-state stream) nil)
+  (when (fd-stream-ibuf-sap stream) ; input stream
+    (setf (fd-stream-in stream) (ef-cin extfmt)))
+  (when (fd-stream-obuf-sap stream) ; output stream
+    (setf (fd-stream-out stream) (ef-cout extfmt)
+	  ;;@@ (fd-stream-sout stream) (ef-sout extfmt)
+	  ))
+  extfmt)
+
+;; This is only used while building; it's reimplemented in
+;; fd-stream-extfmt.lisp
 (defun (setf stream-external-format) (extfmt stream)
-  (declare (type stream stream))
-  (stream-dispatch stream
-    ;; simple-stream
-    (error "Loading simple-streams should redefine this")
-    ;; lisp-stream
-    (typecase stream
-      (fd-stream (setf (fd-stream-external-format stream)
-		     (if (eq extfmt :default)
-			 :default
-			 (stream::ef-name
-			  (stream::find-external-format extfmt)))
-		       (fd-stream-oc-state stream) nil
-		       (fd-stream-co-state stream) nil)
-		 extfmt)
-      (synonym-stream (setf (stream-external-format
-			     (symbol-value (synonym-stream-symbol stream)))
-			  extfmt))
-      (t (error "Don't know how to set external-format for ~S." stream)))
-    ;; fundamental-stream
-    (error "Setting external-format on Gray streams not supported.")))
+  (declare (ignore stream))
+  extfmt)
 
 (defun close (stream &key abort)
   "Closes the given Stream.  No more I/O may be performed, but inquiries

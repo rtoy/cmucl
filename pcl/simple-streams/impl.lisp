@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.11 2009/07/23 21:37:00 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.12 2009/08/10 16:47:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (defun %check (stream kind)
   (declare (type simple-stream stream)
-	   (optimize (speed 3) (space 1) (safety 0)))
+	   (optimize (speed 3) (space 1) (debug 0) (safety 0)))
   (with-stream-class (simple-stream stream)
     (cond ((not (any-stream-instance-flags stream :simple))
 	   (%uninitialized stream))
@@ -169,52 +169,12 @@
 	t)
       nil))
 
-;; Stolen from ef-strlen in fd-stream.lisp.  Just modified it to work
-;; with simple-streams.
-(def-ef-macro simple-stream-strlen (extfmt lisp +ef-max+ +ss-ef-str+)
-  (if (= (ef-min-octets (find-external-format extfmt))
-	 (ef-max-octets (find-external-format extfmt)))
-      `(lambda (stream object)
-	 (declare (ignore stream)
-		  (type (or character string) object)
-		  (optimize (speed 3) (space 0) (safety 0)))
-	 (etypecase object
-	   (character ,(ef-min-octets (find-external-format extfmt)))
-	   (string (* ,(ef-min-octets (find-external-format extfmt))
-		      (length object)))))
-      `(lambda (stream object &aux (count 0))
-	 (declare (type simple-stream stream)
-		  (type (or character string) object)
-		  #|(optimize (speed 3) (space 0) (safety 0))|#)
-	 (with-stream-class (simple-stream stream)
-	   (labels ((eflen (code)
-		      (codepoint-to-octets ,extfmt code
-					   (sm co-state stream)
-					   (lambda (byte)
-					     (declare (ignore byte))
-					     (incf count)))))
-	     (etypecase object
-	       (character (eflen (char-code object)))
-	       (string
-		(do ((k 0)
-		     (end (length object)))
-		    ((>= k end))
-		  (multiple-value-bind (code widep)
-		      (codepoint object k end)
-		    (eflen code)
-		    (if widep
-			(incf k 2)
-			(incf k))))))
-	     count)))))
-
 (defun %file-string-length (stream object)
   (declare (type simple-stream stream))
   (with-stream-class (simple-stream stream)
     (%check stream :output)
-    ;; FIXME: need to account for compositions on the stream...
-    (with-stream-class (simple-stream stream)
-      (funcall (simple-stream-strlen (sm external-format stream))
-	       stream object))))
+    (funcall (ef-strlen (sm external-format stream))
+	     stream object)))
 
 (defun %read-line (stream eof-error-p eof-value recursive-p)
   (declare (optimize (speed 3) (space 1) (safety 0))

@@ -20,6 +20,8 @@
 (defparameter *test-file*
   (merge-pathnames #p"test-data.tmp" *test-path*))
 
+(defparameter *echo-server* "127.0.0.1")
+
 (eval-when (:load-toplevel)
   (ensure-directories-exist *test-path* :verbose t))
 
@@ -33,6 +35,7 @@
 
 (defun create-test-file (&key (filename *test-file*) (content *dumb-string*))
   (with-open-file (s filename :direction :output
+		     :external-format :latin-1
                      :if-does-not-exist :create
                      :if-exists :supersede)
     (write-sequence content s)))
@@ -51,15 +54,18 @@
       (let ((create-file-stream (gensym)))
         `(progn
            (with-open-file (,create-file-stream ,file :direction :output
+						:external-format :latin-1
                                                 :if-exists :supersede
                                                 :if-does-not-exist :create)
              (write-sequence ,initial-content ,create-file-stream))
            (unwind-protect
-                (with-open-file (,stream ,file ,@open-arguments)
+                (with-open-file (,stream ,file ,@open-arguments
+					 :external-format :latin-1)
                   (progn ,@body))
              ,(when delete-afterwards `(ignore-errors (delete-file ,file))))))
       `(unwind-protect
-            (with-open-file (,stream ,file ,@open-arguments)
+            (with-open-file (,stream ,file ,@open-arguments
+				     :external-format :latin-1)
               (progn ,@body))
          ,(when delete-afterwards `(ignore-errors (delete-file ,file))))))
 
@@ -69,6 +75,7 @@
         (with-open-stream (s (make-instance 'file-simple-stream
                                             :filename *test-file*
                                             :direction :output
+					    :external-format :latin-1
                                             :if-exists :overwrite
                                             :if-does-not-exist :create))
           (string= (write-string *dumb-string* s) *dumb-string*))
@@ -123,7 +130,7 @@
     ;; get it echoed back.  Obviously fails if the echo service isn't
     ;; enabled.
     (with-open-stream (s (make-instance 'socket-simple-stream
-					:remote-host "127.0.0.1"
+					:remote-host *echo-server*
 					:remote-port 7
 					:direction :io))
       (string= (prog1
@@ -137,6 +144,7 @@
   ;; (single-channel simple-stream)
   (let* ((stream (make-instance 'file-simple-stream
                                 :filename *test-file* :direction :output
+				:external-format :latin-1
                                 :if-exists :overwrite
                                 :if-does-not-exist :create))
          (content (make-string (1+ (device-buffer-length stream))
@@ -151,9 +159,9 @@
 (deftest write-read-large-sc-2
   (let* ((stream (make-instance 'file-simple-stream
                                 :filename *test-file* :direction :output
+				:external-format :latin-1
                                 :if-exists :overwrite
-                                :if-does-not-exist :create
-				:external-format :iso8859-1))
+                                :if-does-not-exist :create))
          (length (1+ (* 3 (device-buffer-length stream))))
          (content (make-string length)))
     (dotimes (i (length content))
@@ -161,8 +169,7 @@
     (with-open-stream (s stream)
       (write-string content s))
     (with-test-file (s *test-file* :class 'file-simple-stream
-                       :direction :input :if-does-not-exist :error
-		       :external-format :iso8859-1)
+                       :direction :input :if-does-not-exist :error)
       (let ((seq (make-string length)))
         #+nil (read-sequence seq s)
         #-nil (dotimes (i length)
@@ -173,9 +180,9 @@
 (deftest write-read-large-sc-read-seq-2
   (let* ((stream (make-instance 'file-simple-stream
                                 :filename *test-file* :direction :output
+				:external-format :latin-1
                                 :if-exists :overwrite
-                                :if-does-not-exist :create
-				:external-format :iso8859-1))
+                                :if-does-not-exist :create))
          (length (1+ (* 3 (device-buffer-length stream))))
          (content (make-string length)))
     (dotimes (i (length content))
@@ -183,8 +190,7 @@
     (with-open-stream (s stream)
       (write-string content s))
     (with-test-file (s *test-file* :class 'file-simple-stream
-                       :direction :input :if-does-not-exist :error
-		       :external-format :iso8859-1)
+                       :direction :input :if-does-not-exist :error)
       (let ((seq (make-string length)))
         (read-sequence seq s)
         (string= content seq))))
@@ -193,9 +199,9 @@
 (deftest write-read-large-sc-3
   (let* ((stream (make-instance 'file-simple-stream
                                 :filename *test-file* :direction :output
+				:external-format :latin-1
                                 :if-exists :overwrite
-                                :if-does-not-exist :create
-				:external-format :iso8859-1))
+                                :if-does-not-exist :create))
          (length (1+ (* 3 (device-buffer-length stream))))
          (content (make-array length :element-type '(unsigned-byte 8))))
     (dotimes (i (length content))
@@ -203,8 +209,7 @@
     (with-open-stream (s stream)
       (write-sequence content s))
     (with-test-file (s *test-file* :class 'file-simple-stream
-                       :direction :input :if-does-not-exist :error
-		       :external-format :iso8859-1)
+                       :direction :input :if-does-not-exist :error)
       (let ((seq (make-array length :element-type '(unsigned-byte 8))))
         #+nil (read-sequence seq s)
         #-nil (dotimes (i length)
@@ -215,9 +220,9 @@
 (deftest write-read-large-sc-read-seq-3
   (let* ((stream (make-instance 'file-simple-stream
                                 :filename *test-file* :direction :output
+				:external-format :latin-1
                                 :if-exists :overwrite
-                                :if-does-not-exist :create
-				:external-format :iso8859-1))
+                                :if-does-not-exist :create))
          (length (1+ (* 3 (device-buffer-length stream))))
          (content (make-array length :element-type '(unsigned-byte 8))))
     (dotimes (i (length content))
@@ -225,8 +230,7 @@
     (with-open-stream (s stream)
       (write-sequence content s))
     (with-test-file (s *test-file* :class 'file-simple-stream
-                       :direction :input :if-does-not-exist :error
-		       :external-format :iso8859-1)
+                       :direction :input :if-does-not-exist :error)
       (let ((seq (make-array length :element-type '(unsigned-byte 8))))
         (read-sequence seq s)
         (equalp content seq))))
@@ -236,7 +240,7 @@
   ;; Do write and read with more data than the buffer will hold
   ;; (dual-channel simple-stream; we only have socket streams atm)
    (let* ((stream (make-instance 'socket-simple-stream
-                                 :remote-host "127.0.0.1"
+                                 :remote-host *echo-server*
                                  :remote-port 7
                                  :direction :io))
           (content (make-string (1+ (device-buffer-length stream))

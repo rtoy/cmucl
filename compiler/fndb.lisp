@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.138 2009/07/02 21:00:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.139 2009/08/10 16:47:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1083,7 +1083,7 @@
 					   :rename-and-delete :overwrite
 					   :append :supersede nil))
 		       (:if-does-not-exist (member :error :create nil))
-		       (:external-format symbol)
+		       (:external-format (or symbol list))
 		       (:class (or symbol class))
 		       (:mapped boolean)
 		       (:input-handle (or null fixnum stream))

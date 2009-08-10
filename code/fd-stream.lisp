@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.88 2009/06/25 01:48:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.89 2009/08/10 16:47:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -520,7 +520,15 @@
 				   (setq sap (fd-stream-obuf-sap stream)
 					 tail 0))
 				 (setf (bref sap (1- (incf tail))) byte)))
-       (setf (fd-stream-obuf-tail stream) tail))))
+       (setf (fd-stream-obuf-tail stream) tail))
+    (if (char= char #\Newline)
+	(setf (fd-stream-char-pos stream) 0)
+	(incf (fd-stream-char-pos stream)))
+    (ecase (fd-stream-buffering stream)
+      (:none (flush-output-buffer stream))
+      (:line (when (char= char #\Newline) (flush-output-buffer stream)))
+      (:full #| do nothing |#))
+    (values)))
 
 
 ;;; OUTPUT-RAW-BYTES -- public
@@ -616,21 +624,16 @@
 	    (len (fd-stream-obuf-length stream))
 	    (tail (fd-stream-obuf-tail stream)))
        (declare (type sys:system-area-pointer sap) (type index len tail))
-       (do ((i start))
-	   ((>= i end))
-	 (declare (type index i))
-	 (multiple-value-bind (code widep)
-	     (codepoint string i end)
-	   (stream::codepoint-to-octets ,extfmt
-					code
-					(fd-stream-co-state stream)
-					(lambda (byte)
-					  (when (= tail len)
-					    (do-output stream sap 0 tail t)
-					    (setq sap (fd-stream-obuf-sap stream)
-						  tail 0))
-					  (setf (bref sap (1- (incf tail))) byte)))
-	   (incf i (if widep 2 1))))
+       (dotimes (i (- end start))
+	 (stream::char-to-octets ,extfmt
+				 (schar string (+ i start))
+				 (fd-stream-co-state stream)
+				 (lambda (byte)
+				   (when (= tail len)
+				     (do-output stream sap 0 tail t)
+				     (setq sap (fd-stream-obuf-sap stream)
+					   tail 0))
+				   (setf (bref sap (1- (incf tail))) byte))))
        (setf (fd-stream-obuf-tail stream) tail))))
 
 
@@ -667,6 +670,7 @@
 	   (do-output stream thing start end nil))))))
 
 #+unicode
+;; Temporary.  The final version is defined in fd-stream-extfmt.lisp
 (defun fd-sout (stream thing start end)
   (declare (type string thing))
   (let ((start (or start 0))
@@ -960,32 +964,31 @@
   (signed-sap-ref-32 sap head))
 
 (stream::def-ef-macro ef-cin (extfmt lisp stream::+ef-max+ stream::+ef-cin+)
-  `(lambda (stream)
+  `(lambda (stream eof-error-p eof-value)
      (declare (type fd-stream stream)
-	      (optimize (speed 3) (space 0) (debug 0) (safety 0)))
-     (catch 'eof-input-catcher
-       (let* ((head (fd-stream-ibuf-head stream))
-	      (ch (stream::octets-to-char ,extfmt
-					  (fd-stream-oc-state stream)
-					  (fd-stream-last-char-read-size stream)
-					  ;;@@ Note: need proper EOF handling...
-					  (progn
-					    (when (= head
-						     (fd-stream-ibuf-tail
-						      stream))
-					      (let ((sofar (- head (fd-stream-ibuf-head stream))))
-						(do-input stream)
-						(setf head
-						      (+ (fd-stream-ibuf-head stream)
-							 sofar))))
-					    (bref (fd-stream-ibuf-sap stream)
-						  (1- (incf head))))
-					  (lambda (n) (decf head n)))))
-	 (declare (type index head))
-	 (when ch
-	   (incf (fd-stream-ibuf-head stream)
-		 (fd-stream-last-char-read-size stream))
-	   ch)))))
+	      #|(optimize (speed 3) (space 0) (debug 0) (safety 0))|#)
+     (let* ((head (fd-stream-ibuf-head stream))
+	    (ch (catch 'eof-input-catcher
+		  (stream::octets-to-char ,extfmt
+			      (fd-stream-oc-state stream)
+			      (fd-stream-last-char-read-size stream)
+			      ;;@@ Note: need proper EOF handling...
+			      (progn
+				(when (= head (fd-stream-ibuf-tail stream))
+				  (let ((sofar (- head (fd-stream-ibuf-head
+							stream))))
+				    (do-input stream)
+				    (setf head (+ (fd-stream-ibuf-head stream)
+						  sofar))))
+				(bref (fd-stream-ibuf-sap stream)
+				      (1- (incf head))))
+			      (lambda (n) (decf head n))))))
+       (declare (type index head))
+       (if ch
+	   (progn
+	     (setf (fd-stream-ibuf-head stream) head)
+	     ch)
+	   (eof-or-lose stream eof-error-p eof-value)))))
 
 #+(or)
 (stream::def-ef-macro ef-sin (extfmt lisp stream::+ef-max+ stream::+ef-sin+)
@@ -1006,19 +1009,23 @@
 	 (let* ((sz 0)
 		(ch (catch 'eof-input-catcher
 		      (stream::octets-to-char ,extfmt
-					      (fd-stream-oc-state stream)
-					      sz
-					      (progn
-						(when (= head tail)
-						  (do-input stream)
-						  (setq head
-							(fd-stream-ibuf-head
-							 stream)
-							tail
-							(fd-stream-ibuf-tail
-							 stream)))
-						(bref sap (1- (incf head))))
-					      (lambda (n) (decf head n))))))
+				  (fd-stream-oc-state stream)
+				  sz
+				  (progn
+				    (when (= head tail)
+				      (let ((sofar (- head
+						      (fd-stream-ibuf-head
+						       stream))))
+					(do-input stream)
+					(setq head
+					      (+ (fd-stream-ibuf-head
+						  stream)
+						 sofar)
+					    tail
+					    (fd-stream-ibuf-tail
+					     stream))))
+				    (bref sap (1- (incf head))))
+				  (lambda (n) (decf head n))))))
 	   (declare (type index sz)
 		    (type (or null character) ch))
 	   (when (null ch)
@@ -2120,17 +2127,21 @@
 (defun stream-reinit ()
   (setf *available-buffers* nil)
   (setf *stdin*
-	(make-fd-stream 0 :name "Standard Input" :input t :buffering :line))
+	(make-fd-stream 0 :name "Standard Input" :input t :buffering :line
+			:external-format :iso8859-1))
   (setf *stdout*
-	(make-fd-stream 1 :name "Standard Output" :output t :buffering :line))
+	(make-fd-stream 1 :name "Standard Output" :output t :buffering :line
+			:external-format :iso8859-1))
   (setf *stderr*
-	(make-fd-stream 2 :name "Standard Error" :output t :buffering :line))
+	(make-fd-stream 2 :name "Standard Error" :output t :buffering :line
+			:external-format :iso8859-1))
   (let ((tty (and (not *batch-mode*)
 		  (unix:unix-open "/dev/tty" unix:o_rdwr #o666))))
     (setf *tty*
 	  (if tty
 	      (make-fd-stream tty :name "the Terminal" :input t :output t
-			      :buffering :line :auto-close t)
+			      :buffering :line :auto-close t
+			      :external-format :iso8859-1)
 	      (make-two-way-stream *stdin* *stdout*))))
   nil)
 
@@ -2169,7 +2180,6 @@
 	    (fd-stream-pathname stream))))))
 
 
-;;;; Degenerate international character support:
 
 #+unicode
 (stream::def-ef-macro ef-strlen (extfmt lisp stream::+ef-max+ stream::+ef-str+)
@@ -2186,28 +2196,20 @@
       `(lambda (stream object &aux (count 0))
 	 (declare (type fd-stream stream)
 		  (type (or character string) object)
-		  #|(optimize (speed 3) (space 0) (safety 0))|#)
-	 (labels ((eflen (code)
-		    (stream::codepoint-to-octets ,extfmt code
-					    (fd-stream-co-state stream)
-					    (lambda (byte)
-					      (declare (ignore byte))
-					      (incf count)))))
-	   (etypecase object
-	     (character (eflen (char-code object)))
-	     (string
-	      (do ((k 0)
-		   (end (length object)))
-		  ((>= k end))
-		(multiple-value-bind (code widep)
-		    (codepoint object k end)
-		  (eflen code)
-		  (if widep
-		      (incf k 2)
-		      (incf k))))))
-	   count))))
+		  #|(optimize (speed 3) (space 0) (debug 0) (safety 0))|#)
+	    `(labels ((eflen (char)
+		       (stream::char-to-octets ,extfmt char
+					       ;;@@ FIXME: don't alter state!
+					       (fd-stream-co-state stream)
+					       (lambda (byte)
+						 (declare (ignore byte))
+						 (incf count)))))
+	       (etypecase object
+		 (character (eflen object))
+		 (string (dovector (ch object) (eflen ch))))
+	       count))))
 
- 
+
 (defun file-string-length (stream object)
   (declare (type (or string character) object)
 	   (type (or file-stream broadcast-stream stream:simple-stream) stream))

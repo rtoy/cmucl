@@ -1,6 +1,8 @@
 ;;; Common part for cross-compiling 16-bit strings for Unicode.
 ;;; This part is independent of the architecture.
 
+(load "target:bootfiles/19f/boot-2009-07")
+
 (pushnew :unicode *features*)
 (pushnew :unicode-bootstrap *features*)
 (in-package "C")
