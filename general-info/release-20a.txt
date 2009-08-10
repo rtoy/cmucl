@@ -37,9 +37,14 @@ New in this release:
         to specify the format.
         + The special variable STREAM:*DEFAULT-EXTERNAL-FORMAT*
           specifies the default format to be used for all streams.
-          Setting this to a new value will change the external format
-          for all streams to use the new format.  This includes
-          *STANDARD-INPUT* and friends.
+          The default value is :iso8859-1. 
+        + The standard streams, *standard-input*, *standard-output*,
+          and *standard-error* all default to
+          *default-external-format*.  You can change the encoding used
+          for these streams by calling
+          STREAM:SET-SYSTEM-EXTERNAL-FORMAT to set the encoding for
+          all three streams.  Alternatively, you can use (setf
+          external-format) to change the format for each stream.
         + Many external formats are supported.  The complete list is
           in aliases, but we support at least :ISO-8859-1, :UTF-8,
           :UTF-16, :UTF-32, :CRLF.
