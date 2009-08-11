@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.12 2009/08/10 16:47:41 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.13 2009/08/11 03:32:25 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (defun %check (stream kind)
   (declare (type simple-stream stream)
-	   (optimize (speed 3) (space 1) (debug 0) (safety 0)))
+	   (optimize (speed 3) (space 1) #+(or)(debug 0) (safety 0)))
   (with-stream-class (simple-stream stream)
     (cond ((not (any-stream-instance-flags stream :simple))
 	   (%uninitialized stream))

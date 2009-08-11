@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/internal.lisp,v 1.9 2009/08/10 16:47:41 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/internal.lisp,v 1.10 2009/08/11 03:32:25 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -78,7 +78,7 @@
 	   (type (or null kernel:simple-stream-buffer) buffer)
 	   (type fixnum start)
 	   (type (or null fixnum) end)
-	   (optimize (speed 3) (space 2) (safety 0) (debug 0)))
+	   (optimize (speed 3) (space 2) (safety 0) #+(or)(debug 0)))
   (with-stream-class (simple-stream stream)
     (let ((fd (sm input-handle stream))
 	  (end (or end (sm buf-len stream)))
