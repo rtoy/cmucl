@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.132 2009/06/16 02:53:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.133 2009/08/11 18:32:55 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -610,11 +610,11 @@
 
 ;;;; Irrational transforms:
 
-(defknown (%tan %sinh %asinh %atanh %log %logb %log10 %tan-quick)
+(defknown (%tan %sinh %asinh %atanh %log %logb %log10 #+x87 %tan-quick)
 	  (double-float) double-float
   (movable foldable flushable))
 
-(defknown (%sin %cos %tanh %sin-quick %cos-quick)
+(defknown (%sin %cos %tanh #+x87 %sin-quick #+x87 %cos-quick)
     (double-float) (double-float -1.0d0 1.0d0)
     (movable foldable flushable))
 
@@ -687,6 +687,7 @@
 ;;; Simple tests show that sin/cos produce numbers greater than 1 when
 ;;; the arg >= 2^63.  tan produces floating-point invalid exceptions
 ;;; for arg >= 2^62.  So limit these to that range.
+#+x87
 (dolist (stuff '((sin %sin %sin-quick 63)
 		 (cos %cos %cos-quick 63)
 		 (tan %tan %tan-quick 62)))

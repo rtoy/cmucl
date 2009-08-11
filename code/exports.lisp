@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.287 2009/08/10 21:48:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.288 2009/08/11 18:32:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1234,7 +1234,7 @@
 (dolist
     (name
      '("STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
-       "STRING-ENCODE" "STRING-DECODE"))
+       "STRING-ENCODE" "STRING-DECODE" "SET-SYSTEM-EXTERNAL-FORMAT"))
   (intern name "STREAM"))
 
 (defpackage "EXTENSIONS"
@@ -1464,9 +1464,11 @@
   
   (:import-from "STREAM"
 		"STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
-		"STRING-ENCODE" "STRING-DECODE")
+		"STRING-ENCODE" "STRING-DECODE"
+		"SET-SYSTEM-EXTERNAL-FORMAT")
   (:export "STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
-	   "STRING-ENCODE" "STRING-DECODE"))
+	   "STRING-ENCODE" "STRING-DECODE"
+	   "SET-SYSTEM-EXTERNAL-FORMAT"))
 
 (defpackage "STREAM"
   (:import-from "SYSTEM" "LISP-STREAM")
@@ -2017,7 +2019,7 @@
 	   "%ARRAY-DISPLACEMENT" "%ARRAY-FILL-POINTER"
 	   "%ARRAY-FILL-POINTER-P" "%ASIN" "%ASINH" "%ATAN" "%ATAN2" "%ATANH"
 	   "%CALLER-FRAME-AND-PC" "%CHECK-BOUND" "%CLOSURE-FUNCTION"
-	   "%CLOSURE-INDEX-REF" "%COS" "%COS-QUICK" "%COSH" "%DEPOSIT-FIELD"
+	   "%CLOSURE-INDEX-REF" "%COS" "%COSH" "%DEPOSIT-FIELD"
 	   "%DOUBLE-FLOAT" "%DPB" "%EXP" "%EXPM1" "%HYPOT" "%LDB"
 	   "%LOG" "%LOGB" "%LOG10" "%LOG1P" "%LONG-FLOAT"
 	   "%MAKE-COMPLEX" "%MAKE-FUNCALLABLE-INSTANCE" "%MAKE-RATIO"
@@ -2034,10 +2036,9 @@
 	   "%SET-SAP-REF-SAP" "%SET-SAP-REF-SINGLE"
 	   "%SET-SIGNED-SAP-REF-16" "%SET-SIGNED-SAP-REF-32"
 	   "%SET-SIGNED-SAP-REF-64" "%SET-SIGNED-SAP-REF-8" 
-	   "%SET-STACK-REF" "%SIN" "%SET-SYMBOL-HASH" "%SIN-QUICK"
+	   "%SET-STACK-REF" "%SIN" "%SET-SYMBOL-HASH"
 	   "%SINGLE-FLOAT" "%SINH" "%SP-SET-DEFINITION" "%SP-SET-PLIST"
 	   "%SQRT" "%SXHASH-SIMPLE-STRING" "%SXHASH-SIMPLE-SUBSTRING" "%TAN"
-	   "%TAN-QUICK"
 	   "%TANH" "%UNARY-ROUND" "%UNARY-TRUNCATE" "%UNARY-FTRUNCATE"
 	   "%UNARY-FTRUNCATE/SINGLE-FLOAT" "%UNARY-FTRUNCATE/DOUBLE-FLOAT"
 	   "%WITH-ARRAY-DATA"
@@ -2280,6 +2281,8 @@
            "ATOMIC-POP-SYMBOL-VALUE"
            "ATOMIC-PUSHA"
            "ATOMIC-PUSHD")
+  #+x87
+  (:export "%COS-QUICK" "%SIN-QUICK" "%TAN-QUICK")
   ;;#+double-double
   (:export "DOUBLE-DOUBLE-FLOAT"
 	   "DOUBLE-DOUBLE-FLOAT-P"
