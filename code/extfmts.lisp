@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.12 2009/08/10 22:14:26 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.13 2009/08/11 03:30:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -516,6 +516,8 @@
     `(let ((,nstate ,state))
        (when (null ,nstate) (setq ,nstate (setf ,state (cons nil nil))))
        (if (car ,nstate)
+	   ;; Return the trailing surrgate.  Must set count to 0 to
+	   ;; tell the stream code we didn't consume any octets!
 	   (prog1 (the character (car ,nstate))
 	     (setf (car ,nstate) nil ,count 0))
 	   (let ((code (octets-to-codepoint ,external-format
@@ -523,7 +525,10 @@
 	     (declare (type (unsigned-byte 21) code))
 	     ;;@@ on non-Unicode builds, limit to 8-bit chars
 	     ;;@@ if unicode-bootstrap, can't use #\u+fffd
-	     (cond ((or (<= #xD800 code #xDFFF) (> code #x10FFFF)) #\U+FFFD)
+	     (cond ((or (<= #xD800 code #xDFFF) (> code #x10FFFF))
+		    #-(and unicode (not unicode-bootstrap)) #\?
+		    #+(and unicode (not unicode-bootstrap)) #\U+FFFD)
+		   #+unicode
 		   ((> code #xFFFF)
 		    (multiple-value-bind (hi lo) (surrogates code)
 		      (setf (car ,nstate) lo)
