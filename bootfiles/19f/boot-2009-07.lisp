@@ -3,7 +3,7 @@
 
 (in-package "C")
 
-(without-package-locks
+(ext:without-package-locks
 
 ;; Just in case the compiling lisp doesn't known about lisp::shrink-vector.
 (defknown lisp::shrink-vector (vector fixnum) vector
@@ -29,3 +29,11 @@
 	(make-union-type results)
 	(first results))))
 )
+
+(in-package "STREAM")
+
+;; We want to use LISP::SURROGATES in the STREAM package.
+(ext:without-package-locks
+  (unintern 'stream::surrogates)
+  (import 'lisp::surrogates)
+  )
