@@ -4,6 +4,12 @@
 (in-package "C")
 
 (without-package-locks
+
+;; Just in case the compiling lisp doesn't known about lisp::shrink-vector.
+(defknown lisp::shrink-vector (vector fixnum) vector
+  (unsafe)
+  :result-not-used #'function-result-not-used-p)
+
 (defoptimizer (lisp::shrink-vector derive-type) ((vector new-size))
   ;; The result of shrink-vector is another vector of the same type as
   ;; the input.  If the size is a known constant, we use it, otherwise
