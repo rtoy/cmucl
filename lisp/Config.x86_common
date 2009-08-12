@@ -24,8 +24,16 @@ GC_SRC := cgc.c
 CPP_DEFINE_OPTIONS += -DWANT_CGC
 endif
 
-ifneq ($(or $(FEATURE_X87),$(FEATURE_SSE2)),)
+# Enable support for SSE2.  If FEATURE_X87 is set, we want SSE2
+# support in the C code too so that the same binary is built in both
+# cases.  If neither is set, then we don't want any SSE2 support at
+# all.
+ifdef FEATURE_X87
 CPP_DEFINE_OPTIONS += -DFEATURE_SSE2
+else
+ifdef FEATURE_SSE2
+CPP_DEFINE_OPTIONS += -DFEATURE_SSE2
+endif
 endif
 
 ifdef FEATURE_UNICODE
