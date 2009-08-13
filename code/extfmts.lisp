@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.13 2009/08/11 03:30:27 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.14 2009/08/13 13:55:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -543,16 +543,25 @@
     `(let ((,nchar ,char)
 	   (,nstate ,state))
        (when (null ,nstate) (setq ,nstate (setf ,state (cons nil nil))))
-       (if (<= #xD800 (char-code ,nchar) #xDBFF)
+       (if (lisp::surrogatep (char-code ,nchar) :high)
 	   (setf (car ,nstate) ,nchar)
 	   (flet ((,wryte (,ch)
 		    (codepoint-to-octets ,external-format ,ch (cdr ,nstate)
 					 ,output)))
 	     (declare (dynamic-extent #',wryte))
 	     (if (car ,nstate)
-		 (prog1 (,wryte (surrogates-to-codepoint (car ,nstate) ,nchar))
+		 (prog1
+		     ;; Invalid surrogate sequences get replaced with
+		     ;; the replacement character.
+		     (,wryte (if (lisp::surrogatep (char-code ,nchar) :low)
+				 (surrogates-to-codepoint (car ,nstate) ,nchar)
+				 +replacement-character-code+))
 		   (setf (car ,nstate) nil))
-		 (,wryte (char-code ,nchar))))))))
+		 ;; A lone trailing (low) surrogate gets replaced with
+		 ;; the replacement character.
+		 (,wryte (if (lisp::surrogatep (char-code ,nchar) :low)
+			     +replacement-character-code+
+			     (char-code ,nchar)))))))))
 
 (def-ef-macro ef-string-to-octets (extfmt lisp::lisp +ef-max+ +ef-so+)
   `(lambda (string start end buffer &aux (ptr 0) (state nil))
