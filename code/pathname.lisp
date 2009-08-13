@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.87 2009/03/16 15:52:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.88 2009/08/13 19:23:42 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -270,7 +270,7 @@
 				(upcasify name)
 				(upcasify type)
 				(upcasify version)))
-      (%make-pathname         host device      directory name type version)))
+      (%make-pathname host device directory name type version)))
 
 ;;; *LOGICAL-HOSTS* --internal.
 ;;;
@@ -615,7 +615,7 @@
       (let ((results nil))
 	(flet ((add (dir)
 		 (if (and (eq dir :back)
-			  results
+			  (cdr results)
 			  (not (eq (car results) :back)))
 		     (pop results)
 		     (push dir results))))
@@ -645,25 +645,25 @@
 	      (and default-host pathname-host
 		   (not (eq (host-customary-case default-host)
 			    (host-customary-case pathname-host))))))
-	(%make-pathname-object
-	 (or pathname-host default-host)
-	 (or (%pathname-device pathname)
-	     (maybe-diddle-case (%pathname-device defaults)
-				diddle-case))
-	 (merge-directories (%pathname-directory pathname)
-			    (%pathname-directory defaults)
-			    diddle-case)
-	 (or (%pathname-name pathname)
-	     (maybe-diddle-case (%pathname-name defaults)
-				diddle-case))
-	 (or (%pathname-type pathname)
-	     (maybe-diddle-case (%pathname-type defaults)
-				diddle-case))
-	 (or (if (null (%pathname-name pathname))
-		 (or (%pathname-version pathname)
-		     (%pathname-version defaults))
-		 (%pathname-version pathname))
-	     default-version))))))
+	(make-pathname
+	 :host (or pathname-host default-host)
+	 :device (or (%pathname-device pathname)
+		     (maybe-diddle-case (%pathname-device defaults)
+					diddle-case))
+	 :directory (merge-directories (%pathname-directory pathname)
+				       (%pathname-directory defaults)
+				       diddle-case)
+	 :name (or (%pathname-name pathname)
+		   (maybe-diddle-case (%pathname-name defaults)
+				      diddle-case))
+	 :type (or (%pathname-type pathname)
+		   (maybe-diddle-case (%pathname-type defaults)
+				      diddle-case))
+	 :version (or (if (null (%pathname-name pathname))
+			  (or (%pathname-version pathname)
+			      (%pathname-version defaults))
+			  (%pathname-version pathname))
+		      default-version))))))
 
 ;;; IMPORT-DIRECTORY -- Internal
 ;;;
