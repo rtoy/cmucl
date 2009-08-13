@@ -26,6 +26,10 @@ usage() {
     echo "and cmucl-<version>-<arch>-<os>.extra.tar.<c> where <version>,"
     echo "<arch>, and <os> are given values, and <c> is gz or bz2 depending"
     echo "on the selected compression method."
+    echo ""
+    echo "Creating a source distribution requires GNU tar.  If 'tar' is not GNU"
+    echo "tar, use the environment variable 'GTAR' to specify GNU tar.  You can"
+    echo "use 'GTAR=gtar make-dist.sh -S ...' in this case."
     exit 1
 }
 
