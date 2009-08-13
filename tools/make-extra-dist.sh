@@ -26,7 +26,7 @@ then
 	exit 2
 fi
 
-DESTDIR=${INSTALL_DIR:-release}
+DESTDIR=${INSTALL_DIR:-release-$$}
 TARGET="`echo $1 | sed 's:/*$::'`"
 VERSION=$2
 ARCH=$3
