@@ -1,11 +1,12 @@
 #!/bin/sh
 
-while getopts "bgh?t:" arg
+while getopts "bgh?t:I:" arg
 do
     case $arg in
 	b) ENABLE_BZIP=-b ;;
 	g) ENABLE_GZIP=-g  ;;
         t) GTAR=$OPTARG ;;
+        I) INSTALL_DIR=$OPTARG ;;
 	h | \?) usage; exit 1 ;;
     esac
 done
@@ -24,5 +25,10 @@ if [ -n "$ENABLE_BZIP" ]; then
     ZIPEXT="bz2"
 fi
 
-echo "  Compressing with $ZIP"
-${GTAR:-tar} --exclude=CVS -cf - src | ${ZIP} > cmucl-src-$VERSION.tar.$ZIPEXT
+if [ -z "$INSTALL_DIR" ]; then
+    echo "  Compressing with $ZIP"
+    ${GTAR:-tar} --exclude=CVS -cf - src | ${ZIP} > cmucl-src-$VERSION.tar.$ZIPEXT
+else
+    # Install in the specified directory
+    ${GTAR:-tar} --exclude=CVS -cf - src | (cd $INSTALL_DIR; ${GTAR:-tar} xf -)
+fi
