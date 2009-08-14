@@ -67,6 +67,10 @@ New in this release:
       written to the most significant part of a byte.
 
   * ANSI compliance fixes:
+    - MERGE-PATHNAMES no longer generates pathnames whose directory
+      component doesn't start with either :ABSOLUTE or :RELATIVE.
+      MERGE-PATHNAMES also signals errors if the generated pathname
+      directory is invalid (such as :ABSOLUTE followed by :BACK).
 
   * Bugfixes:
     - CMUCL sometimes gets "stuck" during compilation where it is
@@ -127,6 +131,8 @@ New in this release:
     - DESCRIBE on characters includes the character's code and name.
     - CLX updated to the portable clx version from Christophe Rhodes
       darcs repository of 2009-06-16.
+    - make-dist.sh will also install the source code in the specified
+      directory if -I and -S are given.
 
   * Improvements to the PCL implementation of CLOS:
 
