@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.17 2009/06/18 01:53:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.18 2009/08/14 12:36:42 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -51,7 +51,7 @@
 	(make-pathname
 	 :directory (pathname-directory
 		     (merge-pathnames (make-pathname
-				       :directory '(:relative :back :back
-						    :back :back :back :back "src"))
+				       :directory '(:relative :up :up
+						    :up "src"))
 				      (pathname lisp::*cmucl-core-path*)))))))
 |#
