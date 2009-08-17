@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.17 2009/08/10 21:22:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.18 2009/08/17 14:02:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,16 +32,16 @@
 
 (declaim (inline surrogatep surrogates-to-codepoint codepoint surrogates))
 
-(defun surrogatep (c &optional surrogate-type)
+(defun surrogatep (char-or-code &optional surrogate-type)
   "Test if C is a surrogate.  C may be either an integer or a
   character. Surrogate-type indicates what kind of surrogate to test
   for.  :High means to test for the high (leading) surrogate; :Low
   tests for the low (trailing surrogate).  A value of :Any or Nil
   tests for any surrogate value (high or low)."
-  (declare (type (or character codepoint) c))
-  (let ((code (if (characterp c)
-		  (char-code c)
-		  c)))
+  (declare (type (or character codepoint) char-or-code))
+  (let ((code (if (characterp char-or-code)
+		  (char-code char-or-code)
+		  char-or-code)))
     (ecase surrogate-type
       ((:high :leading)
        ;; Test for high surrogate
@@ -53,12 +53,12 @@
        ;; Test for any surrogate
        (<= #xD800 code #xDFFF)))))
 
-(defun surrogates-to-codepoint (hi lo)
+(defun surrogates-to-codepoint (hi-surrogate-char lo-surrogate-char)
   "Convert the given Hi and Lo surrogate characters to the
   corresponding codepoint value"
-  (declare (type character hi lo))
-  (+ (ash (- (the (integer #xD800 #xDBFF) (char-code hi)) #xD800) 10)
-     (the (integer #xDC00 #xDFFF) (char-code lo)) #x2400))
+  (declare (type character hi-surrogate-char lo-surrogate-char))
+  (+ (ash (- (the (integer #xD800 #xDBFF) (char-code hi-surrogate-char)) #xD800) 10)
+     (the (integer #xDC00 #xDFFF) (char-code lo-surrogate-char)) #x2400))
 
 (defun codepoint (string i &optional (end (length string)))
   "Return the codepoint value from String at position I.  If that
