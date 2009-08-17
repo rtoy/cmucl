@@ -1,10 +1,10 @@
-XB*CVS*;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: STREAM -*-
+;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: STREAM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cp1252.lisp,v 1.3 2009/06/21 15:12:24 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cp1252.lisp,v 1.4 2009/08/17 17:47:13 rtoy Rel $")
 
 (in-package "STREAM")
 
