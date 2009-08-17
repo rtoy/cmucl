@@ -3,6 +3,9 @@
 ;; List of aliases for external formats.
 ;; The first column is the alias; the second is the implementation name
 ;;
+;; The alias can also be a list, so, for example, windows-western can
+;; be aliased to (cp1252 crlf)
+
 null		void
 
 latin1		iso8859-1
