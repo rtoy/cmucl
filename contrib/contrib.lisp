@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/contrib/contrib.lisp,v 1.2 2009/08/18 13:51:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/contrib/contrib.lisp,v 1.3 2009/08/18 15:20:21 rtoy Exp $")
 
 ;;; Define the various contrib modules.  We use defmodule for now
 ;;; because it's easy for the contribs.
@@ -35,3 +35,7 @@
 
 (defmodule "contrib-embedded-c"
     "modules:embedded-c/embedded-c")
+
+;; Sprof really needs to be compiled, so make this module compile sprof. 
+(defmodule "contrib-sprof"
+    "modules:sprof/compile-sprof")

@@ -307,3 +307,43 @@ Instructions:
 
    The above example creates two functions callable from Lisp: HELLO
    and EXITEDP.
+
+Package Name:
+   SPROF
+
+Description:
+   Statistical profiler.
+
+Author:
+   Gerd Moellmann
+
+Address:
+
+Net Address:
+   gerd.moellmann@t-online.de
+
+Copyright Status:
+   BSD-like
+
+Files:
+   sprof.lisp, sprof.catalog
+
+How to Get:
+   This version is a possibly updated version of the code that was
+   sent to cmucl-imp mailing list on 2003/10/28.
+
+Portability:
+   Depends CMUCL-specific features.
+
+Instructions:
+   See sprof.lisp for details.
+
+   (sprof:start-profiling) starts profiling until stopped
+   (sprof:stop-profiling) stops profiling
+
+   (sprof:reset) resets any gathered statistics
+   (sprof:report) reporst the results.
+
+   (sprof:with-profiling) is a macro that enables statistical
+   profiling for the body of the macro, and optionally produces a
+   report.
