@@ -60,6 +60,8 @@ install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib
 
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/subsystems
 
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/contrib
+
 for ext in $FASL
 do
   install ${GROUP} ${OWNER} -m 0644 $TARGET/clx/clx-library.$ext \
@@ -89,6 +91,20 @@ install ${GROUP} ${OWNER} -m 0644 src/hemlock/XKeysymDB \
 install ${GROUP} ${OWNER} -m 0755 src/hemlock/mh-scan $DESTDIR/lib/cmucl/lib/
 install ${GROUP} ${OWNER} -m 0755 $TARGET/motif/server/motifd \
 	$DESTDIR/lib/cmucl/lib/
+
+# Install the contrib stuff.  Create the directories and then copy the files.
+
+for d in `(cd src; find contrib -type d -print | grep -v CVS)`
+do
+    install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/$d
+done
+
+for f in `(cd src/contrib; find . -type f -print | grep -v CVS)`
+do
+    FILE=`basename $f`
+    DIR=`dirname $f`
+    install ${GROUP} ${OWNER} -m 0644 src/contrib/$f $DESTDIR/lib/cmucl/lib/contrib/$DIR
+done
 
 if [ -z "$INSTALL_DIR" ]; then
     sync ; sleep 1 ; sync ; sleep 1 ; sync

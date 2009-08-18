@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.10 2005/03/04 17:09:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.11 2009/08/18 13:12:41 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 
@@ -132,3 +132,7 @@ each, separately, converted from :case :common to :case :local."
 				 (pathname-name module-pathname :case :local)
 				 (pathname-name library-pathname :case :local))
                     :case :local))))
+
+;; Meta contrib that loads up definitions for all other contribs
+(defmodule "cmu-contribs"
+    "modules:contrib.lisp")
