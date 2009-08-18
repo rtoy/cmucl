@@ -387,17 +387,19 @@
 ;;; Element-Size array slots, and that the slot Key-Offset contains
 ;;; the sort key.
 ;;;
-(defun qsort (vec &key (test #'<) (element-size 1) (key-offset 0)
+(defun qsort (vec &key (element-size 1) (key-offset 0)
 	      (from 0) (to (- (length vec) element-size)))
-  (declare (fixnum to from element-size)
-	   (function test))
+  (declare (fixnum to from element-size key-offset)
+	   (type (simple-array (unsigned-byte 32) (*)) vec))
   (labels ((rotate (i j)
+	     (declare (fixnum i j))
 	     (loop repeat element-size
 		   for i from i and j from j do
 		     (rotatef (aref vec i) (aref vec j))))
 	   (key (i)
 	     (aref vec (+ i key-offset)))
-	   (sort (from to)
+	   (rec-sort (from to)
+	     (declare (fixnum to from))
 	     (when (> to from) 
 	       (let* ((mid (* element-size
 			      (round (+ (/ from element-size)
@@ -406,21 +408,21 @@
 		      (i from)
 		      (j (+ to element-size))
 		      (p (key mid)))
-		 (declare (fixnum i j))
+		 (declare (fixnum mid i j))
 		 (rotate mid from)
 		 (loop
 		    (loop do (incf i element-size)
 			  until (or (> i to)
-				    (funcall test p (key i))))
+				    (> p (key i))))
 		    (loop do (decf j element-size)
 			  until (or (<= j from)
-				    (funcall test (key j) p)))
+				    (> (key j) p)))
 		    (when (< j i) (return))
 		    (rotate i j))
 		 (rotate from j)
-		 (sort from (- j element-size))
-		 (sort i to)))))
-    (sort from to)
+		 (rec-sort from (- j element-size))
+		 (rec-sort i to)))))
+    (rec-sort from to)
     vec))
 
 
@@ -588,7 +590,7 @@
   `(let ((*sampling* ,on))
      ,@body))
 
-(defun sort-samples (&key test (key :pc))
+(defun sort-samples (&key (key :pc))
   "Sort *Samples* using comparison Test.  Key must be one of
    :Pc or :Return-Pc for sorting by pc or return pc."
   (declare (type (member :pc :return-pc) key))
@@ -596,7 +598,6 @@
     (qsort *samples*
 	   :from 0
 	   :to (- *samples-index* +sample-size+)
-	   :test test
 	   :element-size +sample-size+
 	   :key-offset (if (eq key :pc) 0 1))))
 
@@ -604,6 +605,22 @@
   (declare (type address pc))
   (setf (aref *samples* *samples-index*) pc)
   (incf *samples-index*))
+
+(in-package :di)
+#+(and sparc gencgc)
+(ext:without-package-locks
+(alien:def-alien-routine component-ptr-from-pc (system:system-area-pointer)
+  (pc system:system-area-pointer)))
+#+(and sparc gencgc)
+(ext:without-package-locks
+(defun component-from-component-ptr (component-ptr)
+  (declare (type system:system-area-pointer component-ptr))
+  (kernel:make-lisp-obj
+   (logior (system:sap-int component-ptr)
+	   vm:other-pointer-type))))
+
+(in-package :sprof)
+
 
 ;;;
 ;;; SIGPROF handler.  Record current PC and return address in
@@ -617,14 +634,28 @@
     (with-alien ((scp (* sigcontext) :local scp))
       (locally (declare (optimize (inhibit-warnings 2)))
 	(let* ((pc-ptr (vm:sigcontext-program-counter scp))
-	       (fp (vm:sigcontext-register scp #.vm::ebp-offset)))
+	       (fp (vm:sigcontext-register scp #.vm::cfp-offset)))
 	  (multiple-value-bind (ra-ptr up-fp-ptr)
 	      (di::x86-call-context (int-sap fp))
 	    (declare (ignore up-fp-ptr))
 	    (record (sap-int pc-ptr))
 	    (record (if ra-ptr (sap-int ra-ptr) +unknown-address+))))))))
 
-#-x86
+#+sparc
+(defun sigprof-handler (signal code scp)
+  (declare (ignore signal code) (type system-area-pointer scp))
+  (when (and *sampling*
+	     (< *samples-index* (length *samples*)))
+    (with-alien ((scp (* sigcontext) :local scp))
+      (locally (declare (optimize (inhibit-warnings 2)))
+	(let* ((pc-ptr (vm:sigcontext-program-counter scp))
+	       (fp (int-sap (vm:sigcontext-register scp #.vm::cfp-offset)))
+	       (return-pc (sap-ref-32 fp (- (* (1+ vm::lra-save-offset)
+					       vm::word-bytes)))))
+	    (record (sap-int pc-ptr))
+	    (record return-pc))))))
+
+#-(or x86 sparc)
 (defun sigprof-handler (signal code scp)
   (declare (ignore signal code scp))
   (error "Implement me."))
@@ -675,7 +706,7 @@
 ;;;
 (defun adjust-samples (key)
   (declare (type (member :pc :return-pc) key))
-  (sort-samples :test #'> :key key)
+  (sort-samples :key key)
   (let ((sidx 0)
 	(offset (if (eq key :pc) 0 1)))
     (declare (type kernel:index sidx))
@@ -1199,6 +1230,25 @@
       ((nil)))
     graph))
 
+;;;; Hook the profiler to the disassembler to provide annotations
+;;;; showing how often each instruction was sampled.
+(defun add-disassembly-profile-note (chunk stream dstate)
+  (declare (ignore chunk stream))
+  (unless (zerop *samples-index*)
+    (let* ((location
+	    (+ (disassem::seg-virtual-location
+		(disassem:dstate-segment dstate))
+	       (disassem::dstate-cur-offs dstate)))
+	   (samples (loop for x from 0 below *samples-index* by +sample-size+
+		       summing (if (= (aref *samples* x) location)
+				   1
+				   0))))
+      (unless (zerop samples)
+	(disassem::note (format nil "~A/~A samples"
+				samples (/ *samples-index* +sample-size+))
+			dstate)))))
+
+
 ;;;; Silly Examples
 
 (defun test-0 (n &optional (depth 0))
@@ -1209,14 +1259,15 @@
       (test-0 n (1+ depth)))))
 
 (defun test ()
-  (with-profiling (:reset t :max-samples 1000 :report :graph)
+  (sprof:with-profiling (:reset t :max-samples 1000 :report :graph)
     (test-0 7)))
 
 (defun test2 ()
   (reset)
   (let ((*gc-verbose* nil))
     (with-profiling (:show-progress t)
-      (compile-file "ext:sprof" :verbose nil
+      (compile-file "sprof" :output-file "/tmp/foo.fasl"
+		    :verbose nil
 		    :print nil :progress nil))))
 
 ;;; End of file.
