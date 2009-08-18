@@ -32,13 +32,21 @@
 
 (defpackage #:embedded-c
   (:use #:cl)
-  (:export #:define-c-code #:defstub #:#))
+  (:export #:define-c-code #:defstub #:#
+	   #:*c-compiler* #:c-compiler-flags*))
 (in-package #:embedded-c)
 
+(defvar *c-compiler* "gcc"
+  "C compiler to be used")
+
+(defvar *c-compiler-flags*
+  #-solaris '("-Wall" "-Werror" "-shared" "-rdynamic")
+  #+solaris '("-Wall" "-Werror" "-G")
+  "List of flags to be passed to the C compiler")
+  
 (defmacro define-c-code ((name &key 
-			       (cc "gcc")
-			       (cflags '("-Wall" "-Werror"
-					 "-shared" "-rdynamic")))
+			       (cc *c-compiler*)
+			       (cflags *c-compiler-flags*))
 			 &body body &environment env)
   (multiple-value-bind (c-string lisp) (parse-c-body body env)
     `(progn
@@ -129,7 +137,20 @@
     (:float "double")
     (:string "char*")))
 
+#-solaris
 (alien:def-alien-routine mkdtemp c-call:c-string (template c-call:c-string))
+
+#+solaris
+(alien:def-alien-routine tempnam c-call:c-string
+  (dir c-call:c-string)
+  (pfx c-call:c-string))
+
+#+solaris
+(defun mkdtemp (template)
+  ;; This doesn't handle errors if the directory already exists.
+  (let ((name (tempnam "/tmp" template)))
+    (unix:unix-mkdir name #o700)
+    name))
 
 (defun with-tmpdir (template fun)
   (let ((dir (mkdtemp (copy-seq (or template "/tmp/cmucl-embedXXXXXX")))))
