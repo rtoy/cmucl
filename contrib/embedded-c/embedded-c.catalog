@@ -1,0 +1,54 @@
+Package Name:
+   EMBEDDED-C
+
+Description:
+   This package provides a macro to embed compiled C code in a Lisp
+   fasl file.  It's inspired by the GForth FFI.  
+
+Author:
+   Helmut Eller
+
+Address:
+
+Net Address:
+
+
+Copyright Status:
+   Public Domain.
+
+Files:
+   embedded-c.lisp, embedded-c.catalog
+
+How to Get:
+   This version is a possibly updated version of the code that was
+   sent to cmucl-imp mailing list on 2008/12/13.
+
+Portability:
+   Somewhat portable, but depends on CMUCL-specific features.
+
+Instructions:
+   Here is an example:
+
+     (define-c-code (*example*)
+      "#include <stdio.h>"
+
+      (defstub hello ((msg :string))
+	"printf(\"Hello, World!\\n%s\", msg);"
+	"fflush(0);")
+
+      "#include <sys/types.h>"
+      "#include <sys/wait.h>"
+      (defstub exitedp ((status :int) => :int)
+	"return WIFEXITED(status);"))
+
+   HELLO and EXITEDP are the names for lisp functions which call the
+   corresponding C code.  It's quite convenient to access C macros in
+   this manner.
+
+   DEFINE-C-CODE invokes the C compiler on the body and embeds the
+   object code as a byte vector in the Lisp code.  At load time, the
+   byte vector is passed to dlopen and callout functions to the C
+   functions are initialized.
+
+   The above example creates two functions callable from Lisp: HELLO
+   and EXITEDP.

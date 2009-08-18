@@ -191,43 +191,6 @@ Bugs:
 exported.  You must run in the ops package.
 
 
-Package Name:
-   PROFILE
-
-Description:
-   Provides macros to do simple code profiling things.
-
-Author:
-   Skef Wholey
-   Rob MacLachlan
-
-Address:
-   Carnegie-Mellon University
-   Computer Science Department
-   Pittsburgh, PA 15213
-
-Net Address:
-   ram@cs.cmu.edu
-
-Copyright Status:
-   Public Domain
-
-Files:
-   profile.lisp, profile.fasl, profile.doc, profile.catalog
-
-How to Get:
-   The following unix command will copy the pertinent files into directory
-<spec>:
-   cp /afs/cs.cmu.edu/project/slisp/library/profile/* <spec>
-
-Portability:
-   Should run in any Common Lisp.  Someone porting this may want to change a
-few things mentioned in profile.lisp to tune it to another implementation.
-
-Instructions:
-   See the file profile.doc for details.
-
-
 Name:
    PSgrapher
 
@@ -289,3 +252,58 @@ Examples:
 					  :direction :output
 					  :if-exists :supersede)
 	 (psgraph:psgraph s #'psg-children #'psg-info shrink insert #'eq))))
+
+Package Name:
+   EMBEDDED-C
+
+Description:
+   This package provides a macro to embed compiled C code in a Lisp
+   fasl file.  It's inspired by the GForth FFI.  
+
+Author:
+   Helmut Eller
+
+Address:
+
+Net Address:
+
+
+Copyright Status:
+   Public Domain.
+
+Files:
+   embedded-c.lisp, embedded-c.catalog
+
+How to Get:
+   This version is a possibly updated version of the code that was
+   sent to cmucl-imp mailing list on 2008/12/13.
+
+Portability:
+   Somewhat portable, but depends on CMUCL-specific features.
+
+Instructions:
+   Here is an example:
+
+     (define-c-code (*example*)
+      "#include <stdio.h>"
+
+      (defstub hello ((msg :string))
+	"printf(\"Hello, World!\\n%s\", msg);"
+	"fflush(0);")
+
+      "#include <sys/types.h>"
+      "#include <sys/wait.h>"
+      (defstub exitedp ((status :int) => :int)
+	"return WIFEXITED(status);"))
+
+   HELLO and EXITEDP are the names for lisp functions which call the
+   corresponding C code.  It's quite convenient to access C macros in
+   this manner.
+
+   DEFINE-C-CODE invokes the C compiler on the body and embeds the
+   object code as a byte vector in the Lisp code.  At load time, the
+   byte vector is passed to dlopen and callout functions to the C
+   functions are initialized.
+
+   The above example creates two functions callable from Lisp: HELLO
+   and EXITEDP.
