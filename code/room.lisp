@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.36 2006/07/20 16:19:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.37 2009/08/19 16:51:36 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,8 +102,11 @@
     (setf (svref *meta-room-info* (symbol-value name))
 	  (make-room-info :name name  :kind :vector  :length size))))
 
+;; For unicode, there are 2 bytes per character, not 1. 
 (setf (svref *meta-room-info* simple-string-type)
-      (make-room-info :name 'simple-string-type :kind :string :length 0))
+      (make-room-info :name 'simple-string-type :kind :string
+		      ;; Assumes char-bytes is a power of two!
+		      :length (1- (integer-length vm:char-bytes))))
 
 (setf (svref *meta-room-info* code-header-type)
       (make-room-info :name 'code  :kind :code))
