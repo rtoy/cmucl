@@ -18,7 +18,6 @@ over the Internet, and is mostly in the public domain.
 
 New in this release:
 
-
   * Feature enhancements:
     - Support for Unicode has been added.  You have Unicode support if
       *FEATURES* includes :UNICODE.
@@ -40,11 +39,12 @@ New in this release:
           The default value is :iso8859-1. 
         + The standard streams, *standard-input*, *standard-output*,
           and *standard-error* all default to
-          *default-external-format*.  You can change the encoding used
-          for these streams by calling
-          STREAM:SET-SYSTEM-EXTERNAL-FORMAT to set the encoding for
-          all three streams.  Alternatively, you can use (setf
-          external-format) to change the format for each stream.
+          *default-external-format* (which itself defaults to
+          :iso8859-1).  You can change the encoding used for these
+          streams by calling STREAM:SET-SYSTEM-EXTERNAL-FORMAT to set
+          the encoding for all three streams.  Alternatively, you can
+          use (setf external-format) to change the format for each
+          stream.
         + Many external formats are supported.  The complete list is
           in aliases, but we support at least :ISO-8859-1, :UTF-8,
           :UTF-16, :UTF-32, :CRLF.
@@ -133,6 +133,15 @@ New in this release:
       darcs repository of 2009-06-16.
     - make-dist.sh will also install the source code in the specified
       directory if -I and -S are given.
+    - CMUCL contribs (in the src/contribs directory) are now
+      distributed as part of extras package.  The contribs can be
+      loaded by first using (require "cmu-contribs").  Then the
+      individual contribs can be loaded with require.  The available
+      contribs are, "contrib-demos", "contrib-follow-mouse",
+      "contrib-games-feebs", "contrib-hist", "contrib-psgraph",
+      "contrib-ops", "contrib-embedded-c", "contrib-sprof".  The names
+      must be given as lower case strings.  These are not officially
+      supported as part of CMUCL, but users may find them useful.
 
   * Improvements to the PCL implementation of CLOS:
 
@@ -142,6 +151,9 @@ New in this release:
       Solaris is supported.  The old sun4_solaris_gcc and
       sun4_solaris_sunc configs are deprecated.
 
+  * Known issues:
+    - The :executable feature, while enabled for FreeBSD and Linux,
+      may not be working.
 
 This release is not binary compatible with code compiled using CMUCL
 19f; you will need to recompile FASL files. 
