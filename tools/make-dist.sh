@@ -136,5 +136,6 @@ $ROOT/make-extra-dist.sh $OPTIONS $TARGET $VERSION $ARCH $OS || exit 2
 if [ X"$MAKE_SRC_DIST" = "Xyes" ]; then
     # If tar is not GNU tar, set the environment variable GTAR to
     # point to GNU tar.
-    $ROOT/make-src-dist.sh ${INSTALL_DIR:+ -I ${INSTALL_DIR}} $ENABLE_GZIP $ENABLE_BZIP -t ${GTAR:-tar} $VERSION
+    OPTIONS="${INSTALL_DIR:+ -I ${INSTALL_DIR}} $ENABLE_GZIP $ENABLE_BZIP"
+    $ROOT/make-src-dist.sh $OPTIONS -t ${GTAR:-tar} $VERSION
 fi
