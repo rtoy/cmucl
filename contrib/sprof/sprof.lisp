@@ -817,7 +817,8 @@
       (setq *sampling* sampling)
       (pushnew 'turn-off-sampling *before-gc-hooks*)
       (pushnew 'adjust-samples-for-address-changes *after-gc-hooks*)
-      (record-dyninfo)
+      (sys:without-gcing 
+       (record-dyninfo))
       (enable-interrupt :sigprof #'sigprof-handler)
       (unix-setitimer :profile secs usecs secs usecs)
       (setq *profiling* t)))
@@ -1248,9 +1249,80 @@
 				samples (/ *samples-index* +sample-size+))
 			dstate)))))
 
+
+(in-package :disassem)
 
+;; This hooks the profiler results into the disassembler.  This is a
+;; copy of map-segment-instructions from disassem.lisp.
+(ext:without-package-locks
+  (defun map-segment-instructions (function segment dstate &optional stream)
+  "Iterate through the instructions in SEGMENT, calling FUNCTION
+  for each instruction, with arguments of CHUNK, STREAM, and DSTATE."
+  (declare (type function function)
+	   (type segment segment)
+	   (type disassem-state dstate)
+	   (type (or null stream) stream))
+  
+  (let ((ispace (get-inst-space (dstate-params dstate)))
+	(prefix-p nil))	; just processed a prefix inst
+
+    (rewind-current-segment dstate segment)
+
+    (loop
+      (when (>= (dstate-cur-offs dstate)
+		(seg-length (dstate-segment dstate)))
+	;; done!
+	(return))
+
+      (setf (dstate-next-offs dstate) (dstate-cur-offs dstate))
+
+      (do-offs-hooks t stream dstate)
+      (unless (or prefix-p (null stream))
+	(print-current-address stream dstate))
+      (do-offs-hooks nil stream dstate)
+
+      (unless (> (dstate-next-offs dstate) (dstate-cur-offs dstate))
+	(system:without-gcing
+	 (setf (dstate-segment-sap dstate) (funcall (seg-sap-maker segment)))
+
+	 (let ((chunk
+		(sap-ref-dchunk (dstate-segment-sap dstate)
+				(dstate-cur-offs dstate)
+				(dstate-byte-order dstate))))
+	   
+	   (let ((fun-prefix-p (do-fun-hooks chunk stream dstate)))
+	     (if (> (dstate-next-offs dstate) (dstate-cur-offs dstate))
+		 (setf prefix-p fun-prefix-p)
+		 (let ((inst (find-inst chunk ispace)))
+		   (sprof::add-disassembly-profile-note chunk stream dstate)
+		   (cond ((null inst)
+			  (handle-bogus-instruction stream dstate))
+			 (t
+			  (setf (dstate-next-offs dstate)
+				(+ (dstate-cur-offs dstate)
+				   (inst-length inst)))
+
+			  (let ((prefilter (inst-prefilter inst))
+				(control (inst-control inst)))
+			    (when prefilter
+			      (funcall prefilter chunk dstate))
+
+			    (funcall function chunk inst)
+
+			    (setf prefix-p (null (inst-printer inst)))
+
+			    (when control
+			      (funcall control chunk inst stream dstate)))))))))))
+
+      (setf (dstate-cur-offs dstate) (dstate-next-offs dstate))
+
+      (unless (null stream)
+	(unless prefix-p
+	  (print-notes-and-newline stream dstate))
+	(setf (dstate-output-state dstate) nil))))))
 ;;;; Silly Examples
 
+(in-package "SPROF")
 (defun test-0 (n &optional (depth 0))
   (declare (optimize (debug 3)))
   (when (< depth n)
@@ -1258,9 +1330,9 @@
       (test-0 n (1+ depth))
       (test-0 n (1+ depth)))))
 
-(defun test ()
+(defun test (n)
   (sprof:with-profiling (:reset t :max-samples 1000 :report :graph)
-    (test-0 7)))
+    (test-0 n)))
 
 (defun test2 ()
   (reset)
