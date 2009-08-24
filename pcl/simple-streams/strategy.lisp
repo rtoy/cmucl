@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.20 2009/08/10 16:47:41 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.21 2009/08/24 16:04:26 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -597,6 +597,7 @@
 (defun install-string-output-character-strategy (stream)
   #| implement me |#)
 
+#+(or)
 (defun install-composing-format-character-strategy (stream composing-format)
   (let ((format composing-format))
     (with-stream-class (simple-stream stream)
