@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.90 2009/08/26 16:25:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.90.2.1 2009/08/26 17:32:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2230,31 +2230,26 @@
 
 #+unicode
 (stream::def-ef-macro ef-strlen (extfmt lisp stream::+ef-max+ stream::+ef-str+)
-  (if (= (stream::ef-min-octets (stream::find-external-format extfmt))
-	 (stream::ef-max-octets (stream::find-external-format extfmt)))
-      `(lambda (stream object)
-	 (declare (ignore stream)
-		  (type (or character string) object)
-		  (optimize (speed 3) (space 0) (safety 0)))
-	 (etypecase object
-	   (character ,(stream::ef-min-octets (stream::find-external-format extfmt)))
-	   (string (* ,(stream::ef-min-octets (stream::find-external-format extfmt))
-		      (length object)))))
-      `(lambda (stream object &aux (count 0))
-	 (declare (type fd-stream stream)
-		  (type (or character string) object)
-		  #|(optimize (speed 3) (space 0) (debug 0) (safety 0))|#)
-	    `(labels ((eflen (char)
-		       (stream::char-to-octets ,extfmt char
-					       ;;@@ FIXME: don't alter state!
-					       (fd-stream-co-state stream)
-					       (lambda (byte)
-						 (declare (ignore byte))
-						 (incf count)))))
-	       (etypecase object
-		 (character (eflen object))
-		 (string (dovector (ch object) (eflen ch))))
-	       count))))
+  ;; While it would be nice not to have to call CHAR-TO-OCTETS to
+  ;; figure out the length when the external format has fixed size
+  ;; outputs, we can't.  For example, utf16 will output a BOM, which
+  ;; wouldn't be reflected in the count if we don't call
+  ;; CHAR-TO-OCTETS.
+  `(lambda (stream object &aux (count 0))
+     (declare (type fd-stream stream)
+	      (type (or character string) object)
+	      #|(optimize (speed 3) (space 0) (debug 0) (safety 0))|#)
+     (labels ((eflen (char)
+		(stream::char-to-octets ,extfmt char
+					;;@@ FIXME: don't alter state!
+					(fd-stream-co-state stream)
+					(lambda (byte)
+					  (declare (ignore byte))
+					  (incf count)))))
+       (etypecase object
+	 (character (eflen object))
+	 (string (dovector (ch object) (eflen ch))))
+       count)))
 
 
 (defun file-string-length (stream object)
