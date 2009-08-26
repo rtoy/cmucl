@@ -1,7 +1,5 @@
 ========================== C M U C L  20 a =============================
 
-[--- WORK IN PROGRESS ---]
-
 The CMUCL project is pleased to announce the release of CMUCL 20a.
 This is a major release which contains numerous enhancements and
 bugfixes from the 19f release.
@@ -17,6 +15,13 @@ Common Lisp. CMUCL is maintained by a team of volunteers collaborating
 over the Internet, and is mostly in the public domain.
 
 New in this release:
+
+  * Known issues:
+    - On Linux and FreeBSD, it may not be possible call SAVE-LISP and
+      create executables.  This seems to be broken on FreeBSD.  On
+      Linux, it seems to depend on what version of Linux is used to
+      create the executable.  Redhat Enterprise Linux appears to be
+      ok, but Open SuSE 10.x is not.
 
   * Feature enhancements:
     - Support for Unicode has been added.  You have Unicode support if
@@ -89,7 +94,7 @@ New in this release:
     - The stream created by WITH-INPUT-FROM-STREAM was not properly
       closed.
     - SXHASH was returning different values for -0f0 and -0d0 for
-      compiled and interpreted code.  The both return the same value
+      compiled and interpreted code.  They both return the same value
       now.
     - Some issues with potential spurious floating-point exceptions
       with complex arithmetic on x86 with SSE2 have been fixed.
