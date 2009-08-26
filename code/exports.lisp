@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.288 2009/08/11 18:32:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.289 2009/08/26 15:40:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1816,7 +1816,7 @@
 	   "BYTES" "C-PROCEDURE" "CHECK<=" "CHECK=" "COMPILER-VERSION"
 	   "CT-A-VAL" "CT-A-VAL-OFFSET" "CT-A-VAL-P" "CT-A-VAL-SAP"
 	   "CT-A-VAL-SIZE" "CT-A-VAL-TYPE" "DEALLOCATE-SYSTEM-MEMORY"
-	   "DEFAULT-INTERRUPT" "DEFENUMERATION" "DEFOPERATOR" "DEFRECORD"
+	   "DEFAULT-INTERRUPT"
 	   "DEPORT-BOOLEAN" "DEPORT-INTEGER" "DOUBLE-FLOAT-RADIX"
 	   "ENABLE-INTERRUPT" "ENUMERATION" "FD-STREAM" "FD-STREAM-FD"
 	   "FD-STREAM-P" "FIND-IF-IN-CLOSURE" "FOREIGN-SYMBOL-ADDRESS"
