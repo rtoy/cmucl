@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.14 2009/08/13 13:55:13 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.15 2009/08/26 16:25:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,23 +14,26 @@
 (in-package "STREAM")
 
 (export '(string-to-octets octets-to-string *default-external-format*
-	  string-encode string-decode set-system-external-format))
+	  string-encode string-decode set-system-external-format
+	  +replacement-character-code+))
 
 (defvar *default-external-format* :iso8859-1)
 
 (defvar *external-formats* (make-hash-table :test 'equal))
 (defvar *external-format-aliases* (make-hash-table))
 
-(defconstant +ef-str+ 1)
-(defconstant +ef-cin+ 2)
-(defconstant +ef-cout+ 3)
-(defconstant +ef-sin+ 4)
-(defconstant +ef-sout+ 5)
-(defconstant +ef-os+ 6)
-(defconstant +ef-so+ 7)
-(defconstant +ef-en+ 8)
-(defconstant +ef-de+ 9)
-(defconstant +ef-max+ 10)
+(vm::defenum (:prefix "+EF-" :suffix "+" :start 1)
+  str					; string length
+  cin					; input a character
+  cout					; output a character
+  sin					; input string
+  sout					; output string
+  os					; octets to string
+  so					; string to octets
+  en					; encode
+  de					; decode
+  flush					; flush state
+  max)
 
 ;; Unicode replacement character U+FFFD
 (defconstant +replacement-character-code+ #xFFFD)
@@ -47,10 +50,25 @@
   (error 'external-format-not-implemented))
 
 (defstruct efx
+  ;;
+  ;; Function to read a sequence of octets from a stream and convert
+  ;; them a code point.
   (octets-to-code #'%efni :type function :read-only t)
+  ;;
+  ;; Function to convert a codepoint to a sequence of octets and write
+  ;; them to an output stream.
   (code-to-octets #'%efni :type function :read-only t)
+  ;;
+  ;; Function (or NIL) to force any state in the external format to be
+  ;; flushed to the output stream.  A NIL value means the external
+  ;; format does not need to do anything special.
+  (flush-state nil :type (or null function) :read-only t)
   (cache nil :type (or null simple-vector))
+  ;;
+  ;; Minimum number of octets needed to form a codepoint
   (min 1 :type kernel:index :read-only t)
+  ;;
+  ;; Maximum number of octest needed to form a codepoint.
   (max 1 :type kernel:index :read-only t))
 
 (defstruct (external-format
@@ -72,14 +90,17 @@
 (defun %intern-ef (ef)
   (setf (gethash (ef-name ef) *external-formats*) ef))
 
-(declaim (inline ef-octets-to-code ef-code-to-octets ef-cache
-		 ef-min-octets ef-max-octets))
+(declaim (inline ef-octets-to-code ef-code-to-octets ef-flush-state
+		 ef-cache ef-min-octets ef-max-octets))
 
 (defun ef-octets-to-code (ef)
   (efx-octets-to-code (ef-efx ef)))
 
 (defun ef-code-to-octets (ef)
   (efx-code-to-octets (ef-efx ef)))
+
+(defun ef-flush-state (ef)
+  (efx-flush-state (ef-efx ef)))
 
 (defun ef-cache (ef)
   (efx-cache (ef-efx ef)))
@@ -106,7 +127,7 @@
 
 ;;; DEFINE-EXTERNAL-FORMAT  -- Public
 ;;;
-;;; name (&key min max size) (&rest slots) octets-to-code code-to-octets
+;;; name (&key min max size) (&rest slots) octets-to-code code-to-octets flush-state
 ;;;   Define a new external format.  Min/Max/Size are the minimum and
 ;;;   maximum number of octets that make up a character (:size N is just
 ;;;   shorthand for :min N :max N).  Slots is a list of slot descriptions
@@ -135,6 +156,11 @@
 ;;;   stream's state variable.  Output is a form that writes one octet
 ;;;   to the output stream.
 ;;;
+;;; flush-state (state output &rest vars)
+;;;   Defines a form to be used by the external format to flush out
+;;;   any state when an output stream is closed.  Similar to
+;;;   CODE-TO-OCTETS, but there is no code.
+;;;
 ;;; Note: external-formats work on code-points, not
 ;;;   characters, so that the entire 31 bit ISO-10646 range can be
 ;;;   used internally regardless of the size of a character recognized
@@ -143,7 +169,7 @@
 ;;;   CODEPOINT-TO-OCTETS, OCTETS-TO-CODEPOINT)
 ;;;
 (defmacro define-external-format (name (&rest args) (&rest slots)
-				       &optional octets-to-code code-to-octets)
+				       &optional octets-to-code code-to-octets flush-state)
   (when (and (oddp (length args)) (not (= (length args) 1)))
     (warn "Nonsensical argument (~S) to DEFINE-EXTERNAL-FORMAT." args))
   (let* ((tmp (gensym))
@@ -180,12 +206,19 @@
 			   ,@(loop for var in vars collect `(,var (gensym))))
 		       `(let ((,',code (the (unsigned-byte 21) ,,',tmp)))
 			  (declare (ignorable ,',code))
-			  ,,body)))))
+			  ,,body))))
+		(flush-state ((state output &rest vars) body)
+		  `(lambda (,state ,output)
+		     (declare (ignorable ,state ,output))
+		     (let (,@',slotb
+			   ,@(loop for var in vars collect `(,var (gensym))))
+		       ,body))))
        (%intern-ef (make-external-format ,name
 		    ,(if base
 			 `(ef-efx (find-external-format ,(ef-name base)))
 			 `(make-efx :octets-to-code ,octets-to-code
 				    :code-to-octets ,code-to-octets
+				    :flush-state ,flush-state	    
 				    :cache (make-array +ef-max+
 							  :initial-element nil)
 				    :min ,(min min max) :max ,(max min max)))
@@ -562,6 +595,12 @@
 		 (,wryte (if (lisp::surrogatep (char-code ,nchar) :low)
 			     +replacement-character-code+
 			     (char-code ,nchar)))))))))
+
+(defmacro flush-state (external-format state output)
+  (let* ((ef (find-external-format external-format))
+	 (f (ef-flush-state ef)))
+    (when f
+      (funcall f state output))))
 
 (def-ef-macro ef-string-to-octets (extfmt lisp::lisp +ef-max+ +ef-so+)
   `(lambda (string start end buffer &aux (ptr 0) (state nil))

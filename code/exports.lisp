@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.289 2009/08/26 15:40:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.290 2009/08/26 16:25:41 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1532,7 +1532,8 @@
 	   
 	   "STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
 	   "STRING-ENCODE" "STRING-DECODE"
-	   "SET-SYSTEM-EXTERNAL-FORMAT"))
+	   "SET-SYSTEM-EXTERNAL-FORMAT"
+	   "+REPLACEMENT-CHARACTER-CODE+"))
 
 (defpackage "LOOP")
 (dolist

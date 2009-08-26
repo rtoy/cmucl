@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.89 2009/08/10 16:47:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.90 2009/08/26 16:25:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -235,8 +235,18 @@
   ;; so initialize to NIL and fix it in SET-ROUTINES
   #+unicode
   (external-format nil :type (or null keyword cons))
+  ;;
+  ;; State for octets-to-char (for reading from a stream).  The
+  ;; contents of the state can be anything and is defined by the
+  ;; external format.
   #+unicode
   (oc-state nil)
+  ;;
+  ;; State for char-to-octets (for writing to a stream).  The contents
+  ;; of the state can be anything and is defined by the external
+  ;; format.  If not NIL, then the CAR is used by char-to-octets to
+  ;; hold some state information, and the CDR is available to the
+  ;; external format to hold whatever state information is needed.
   #+unicode
   (co-state nil)
   #+unicode
@@ -365,7 +375,36 @@
 		 (output-later stream base (the index (+ start count))
 			       end reuse-sap)))))))
 
-
+#+unicode
+(stream::def-ef-macro ef-flush (extfmt lisp stream::+ef-max+ stream::+ef-flush+)
+  `(lambda (stream)
+     (declare (type fd-stream stream))
+     (let* ((tail (fd-stream-obuf-tail stream)))
+       (declare (type index tail))
+       (cond
+	 ((stream::ef-flush-state (stream::find-external-format ,extfmt))
+	  (stream::flush-state ,extfmt
+			       (fd-stream-co-state stream)
+			       (lambda (byte)
+				 (when (= tail len)
+				   (do-output stream sap 0 tail t)
+				   (setq sap (fd-stream-obuf-sap stream)
+					 tail 0))
+				 (setf (bref sap (1- (incf tail))) byte)))
+	  (setf (fd-stream-obuf-tail stream) tail))
+	 (t
+	  ;; No flush-state function, so just output a replacement
+	  ;; character.  We hack the co-state to what we need for this
+	  ;; to work.  This should be ok because we're closing the
+	  ;; file anyway.
+	  (let ((state (fd-stream-co-state stream)))
+	    (when (and state (car state))
+	      (setf (fd-stream-co-state stream)
+		    (cons nil (cdr state)))
+	      (funcall (ef-cout (fd-stream-external-format stream))
+		       stream (code-char stream::+replacement-character-code+))))))
+       (values))))
+  
 ;;; FLUSH-OUTPUT-BUFFER -- internal
 ;;;
 ;;;   Flush any data in the output buffer.
@@ -1479,6 +1518,14 @@
 	      (revert-file (fd-stream-file stream)
 			   (fd-stream-original stream))))
 	   (t
+	    #+(and unicode (not unicode-bootstrap))
+	    (when (and (output-stream-p stream)
+		       (eq (stream-element-type stream) 'character))
+	      ;; For output character streams, we need to flush out
+	      ;; any state that the external format might have.
+	      #+nil (format *debug-io* "state = ~S~%" (fd-stream-co-state stream))
+	      (funcall (ef-flush (fd-stream-external-format stream))
+		       stream))
 	    (fd-stream-misc-routine stream :finish-output)
 	    (when (fd-stream-delete-original stream)
 	      (delete-original (fd-stream-file stream)
