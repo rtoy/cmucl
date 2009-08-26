@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.15 2009/08/26 16:25:41 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.15.2.1 2009/08/26 20:41:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,6 +63,10 @@
   ;; flushed to the output stream.  A NIL value means the external
   ;; format does not need to do anything special.
   (flush-state nil :type (or null function) :read-only t)
+  ;;
+  ;; Function to copy the state of the external-format.  If NIL, then
+  ;; there is no state to be copied.
+  (copy-state nil :type (or null function) :read-only t)
   (cache nil :type (or null simple-vector))
   ;;
   ;; Minimum number of octets needed to form a codepoint
@@ -90,7 +94,7 @@
 (defun %intern-ef (ef)
   (setf (gethash (ef-name ef) *external-formats*) ef))
 
-(declaim (inline ef-octets-to-code ef-code-to-octets ef-flush-state
+(declaim (inline ef-octets-to-code ef-code-to-octets ef-flush-state ef-copy-state
 		 ef-cache ef-min-octets ef-max-octets))
 
 (defun ef-octets-to-code (ef)
@@ -101,6 +105,9 @@
 
 (defun ef-flush-state (ef)
   (efx-flush-state (ef-efx ef)))
+
+(defun ef-copy-state (ef)
+  (efx-copy-state (ef-efx ef)))
 
 (defun ef-cache (ef)
   (efx-cache (ef-efx ef)))
@@ -169,7 +176,8 @@
 ;;;   CODEPOINT-TO-OCTETS, OCTETS-TO-CODEPOINT)
 ;;;
 (defmacro define-external-format (name (&rest args) (&rest slots)
-				       &optional octets-to-code code-to-octets flush-state)
+				       &optional octets-to-code code-to-octets
+				       flush-state copy-state)
   (when (and (oddp (length args)) (not (= (length args) 1)))
     (warn "Nonsensical argument (~S) to DEFINE-EXTERNAL-FORMAT." args))
   (let* ((tmp (gensym))
@@ -212,13 +220,20 @@
 		     (declare (ignorable ,state ,output))
 		     (let (,@',slotb
 			   ,@(loop for var in vars collect `(,var (gensym))))
+		       ,body)))
+		(copy-state ((state &rest vars) body)
+		  `(lambda (,state)
+		     (declare (ignorable ,state))
+		     (let (,@',slotb
+			   ,@(loop for var in vars collect `(,var (gensym))))
 		       ,body))))
        (%intern-ef (make-external-format ,name
 		    ,(if base
 			 `(ef-efx (find-external-format ,(ef-name base)))
 			 `(make-efx :octets-to-code ,octets-to-code
 				    :code-to-octets ,code-to-octets
-				    :flush-state ,flush-state	    
+				    :flush-state ,flush-state
+			            :copy-state ,copy-state
 				    :cache (make-array +ef-max+
 							  :initial-element nil)
 				    :min ,(min min max) :max ,(max min max)))
@@ -601,6 +616,12 @@
 	 (f (ef-flush-state ef)))
     (when f
       (funcall f state output))))
+
+(defmacro copy-state (external-format state)
+  (let* ((ef (find-external-format external-format))
+	 (f (ef-copy-state ef)))
+    (when f
+      (funcall f state))))
 
 (def-ef-macro ef-string-to-octets (extfmt lisp::lisp +ef-max+ +ef-so+)
   `(lambda (string start end buffer &aux (ptr 0) (state nil))

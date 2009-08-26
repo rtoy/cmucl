@@ -4,7 +4,7 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32.lisp,v 1.2 2009/06/11 16:04:02 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32.lisp,v 1.2.4.1 2009/08/26 20:41:13 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -70,11 +70,15 @@
 
   (code-to-octets (code state output i c)
     `(flet ((out (,c)
-	     ;; Big-endian output
-	     (dotimes (,i 4)
-	       (,output (ldb (byte 8 (* 8 (- 3 ,i))) ,c)))))
+	      ;; Big-endian output
+	      (dotimes (,i 4)
+		(,output (ldb (byte 8 (* 8 (- 3 ,i))) ,c)))))
        ;; Write BOM
        (unless ,state
 	 (out #xFEFF)
 	 (setf ,state t))
-       (out code))))
+       (out code)))
+  nil
+  (copy-state (state)
+    ;; The state is either NIL or T, so we can just return that.
+    state))

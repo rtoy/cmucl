@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.90.2.1 2009/08/26 17:32:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.90.2.2 2009/08/26 20:41:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2238,18 +2238,25 @@
   `(lambda (stream object &aux (count 0))
      (declare (type fd-stream stream)
 	      (type (or character string) object)
+              (type (and fixnum unsigned-byte) count)
 	      #|(optimize (speed 3) (space 0) (debug 0) (safety 0))|#)
-     (labels ((eflen (char)
+     (labels ((efstate (state)
+		(stream::copy-state ,extfmt state))
+	      (eflen (char)
 		(stream::char-to-octets ,extfmt char
-					;;@@ FIXME: don't alter state!
 					(fd-stream-co-state stream)
 					(lambda (byte)
 					  (declare (ignore byte))
 					  (incf count)))))
-       (etypecase object
-	 (character (eflen object))
-	 (string (dovector (ch object) (eflen ch))))
-       count)))
+       (let* ((co-state (fd-stream-co-state stream))
+	      (old-ef-state (efstate (cdr (fd-stream-co-state stream))))
+	      (old-state (cons (car co-state) old-ef-state)))
+	 (etypecase object
+	   (character (eflen object))
+	   (string (dovector (ch object) (eflen ch))))
+	 ;; Restore state
+	 (setf (fd-stream-co-state stream) old-state)
+	 count))))
 
 
 (defun file-string-length (stream object)

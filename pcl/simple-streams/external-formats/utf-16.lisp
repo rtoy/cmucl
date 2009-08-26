@@ -1,7 +1,7 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: STREAM -*-
 ;;;
 ;;; **********************************************************************
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.2 2009/06/11 16:04:02 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.2.4.1 2009/08/26 20:41:13 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -88,4 +88,8 @@
 		(output (logior ,c1 #xD800))
 		(output (logior ,c2 #xDC00))))
 	     (t
-	      (output +replacement-character-code+))))))
+	      (output +replacement-character-code+)))))
+  nil
+  (copy-state (state)
+    ;; The state is either NIL or T, so we can just return that.
+    state))
