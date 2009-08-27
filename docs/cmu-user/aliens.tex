@@ -253,6 +253,19 @@ exports these types:
   string when accessed.  If the pointer is C \code{NULL} (or 0), then
   accessing gives Lisp \false.
   
+  With Unicode, a Lisp string is not the same as a C string since a
+  Lisp string uses two bytes for each character.  In this case, a
+  C string is converted to a Lisp string by taking each byte of the
+  C-string and applying \code{code-char} to create each character of
+  the Lisp string.
+
+  Similarly, a Lisp string is converted to a C string by taking the
+  low 8 bits of the \code{char-code} of each character and assigning
+  that to each byte of the C string.
+
+  In either case, \code{string-encode} and \code{string-decode} may be
+  useful to convert Unicode Lisp strings to or from C strings.
+
   Assigning a Lisp string to a \code{c-string} structure field or
   variable stores the contents of the string to the memory already
   pointed to by that variable.  When an Alien of type \code{(* char)}
@@ -263,9 +276,11 @@ exports these types:
 \begin{lisp}
   (def-alien-type nil (struct foo (str c-string)))
   
-  (defun make-foo (str) (let ((my-foo (make-alien (struct foo))))
-  (setf (slot my-foo 'str) (make-alien char (length str))) (setf (slot
-  my-foo 'str) str) my-foo))
+  (defun make-foo (str)
+    (let ((my-foo (make-alien (struct foo))))
+      (setf (slot my-foo 'str) (make-alien char (length str)))
+      (setf (slot my-foo 'str) str)
+      my-foo))
 \end{lisp}
 
 Storing Lisp \false{} writes C \code{NULL} to the \code{c-string}
