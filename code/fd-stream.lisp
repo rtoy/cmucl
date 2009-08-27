@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.90.2.2 2009/08/26 20:41:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.90.2.3 2009/08/27 15:41:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2059,6 +2059,7 @@
 			   class mapped input-handle output-handle
 		      &allow-other-keys
 		      &aux ; Squelch assignment warning.
+		      (options options)
 		      (direction direction)
 		      (if-does-not-exist if-does-not-exist)
 		      (if-exists if-exists))
