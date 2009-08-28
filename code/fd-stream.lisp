@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.90.2.3 2009/08/27 15:41:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.90.2.4 2009/08/28 02:26:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1372,10 +1372,19 @@
 	  ;; Support for n-byte operations on 8-, 16-, and 32-bit streams
 	  (setf (fd-stream-n-bin stream) #'fd-stream-read-n-bytes)
 	  (when (and buffer-p (eql size 1)
-		     (or (eq type 'unsigned-byte)
-			 (eq type :default)))
+		     (or
+		      ;; FIXME: Do this better.  We want to check for
+		      ;; (unsigned-byte 8).  The 8 is unnecessary
+		      ;; since we already have size = 1.
+		      (or (eq 'unsigned-byte (and (consp type) (car type)))
+			  (eq type :default))
+		      ;; Character streams with :iso8859-1
+		      (and (eq type 'character)
+			   #+unicode
+			   (eql :iso8859-1 (fd-stream-external-format stream)))))
 	    ;; We only create this buffer for streams of type
-	    ;; (unsigned-byte 8).  Because there's no buffer, the
+	    ;; (unsigned-byte 8) or character streams with an external
+	    ;; format of :iso8859-1.  Because there's no buffer, the
 	    ;; other element-types will dispatch to the appropriate
 	    ;; input (output) routine in fast-read-byte.
 	    (setf (lisp-stream-in-buffer stream)
@@ -1405,12 +1414,7 @@
 		    #'ill-out)
 		(fd-stream-bout stream) routine))
 	(setf (fd-stream-sout stream)
-	      ;;#-unicode
-	      (if (eql size 1) #'fd-sout #'ill-out)
-	      #|#+unicode
-	      (if (eql size 1)
-		  #'fd-sout-each-character
-		  #'ill-out)|#)
+	      (if (eql size 1) #'fd-sout #'ill-out))
 	(setf (fd-stream-char-pos stream) 0)
 	(setf output-size size)
 	(setf output-type type)))
@@ -1741,11 +1745,11 @@
 				     :pathname pathname
 				     :buffering buffering
 				     :timeout timeout))))
-    (set-routines stream element-type input output input-buffer-p
-		  :binary-stream-p binary-stream-p)
     ;;#-unicode-bootstrap ; fails in stream-reinit otherwise
     #+(and unicode (not unicode-bootstrap))
     (setf (stream-external-format stream) external-format)
+    (set-routines stream element-type input output input-buffer-p
+		  :binary-stream-p binary-stream-p)
     (when (and auto-close (fboundp 'finalize))
       (finalize stream
 		#'(lambda ()
