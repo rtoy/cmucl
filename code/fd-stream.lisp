@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.90.2.4 2009/08/28 02:26:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.90.2.5 2009/08/28 14:28:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1386,7 +1386,7 @@
 	    ;; (unsigned-byte 8) or character streams with an external
 	    ;; format of :iso8859-1.  Because there's no buffer, the
 	    ;; other element-types will dispatch to the appropriate
-	    ;; input (output) routine in fast-read-byte.
+	    ;; input (output) routine in fast-read-byte/fast-read-char.
 	    (setf (lisp-stream-in-buffer stream)
 		  (make-array in-buffer-length
 			      :element-type '(unsigned-byte 8)))))
@@ -1745,11 +1745,19 @@
 				     :pathname pathname
 				     :buffering buffering
 				     :timeout timeout))))
+    ;; FIXME: setting the external format here should be better
+    ;; integrated into set-routines.  We do it before so that
+    ;; set-routines can create an in-buffer if appropriate.  But we
+    ;; need to do it after to put the correct input routines for the
+    ;; external format.
+    ;;
     ;;#-unicode-bootstrap ; fails in stream-reinit otherwise
     #+(and unicode (not unicode-bootstrap))
     (setf (stream-external-format stream) external-format)
     (set-routines stream element-type input output input-buffer-p
 		  :binary-stream-p binary-stream-p)
+    #+(and unicode (not unicode-bootstrap))
+    (setf (stream-external-format stream) external-format)
     (when (and auto-close (fboundp 'finalize))
       (finalize stream
 		#'(lambda ()
