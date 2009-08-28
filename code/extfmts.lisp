@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.15.2.1 2009/08/26 20:41:12 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.15.2.2 2009/08/28 21:20:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -134,7 +134,9 @@
 
 ;;; DEFINE-EXTERNAL-FORMAT  -- Public
 ;;;
-;;; name (&key min max size) (&rest slots) octets-to-code code-to-octets flush-state
+;;; name (&key min max size) (&rest slots) octets-to-code code-to-octets
+;;;       flush-state copy-state
+;;;
 ;;;   Define a new external format.  Min/Max/Size are the minimum and
 ;;;   maximum number of octets that make up a character (:size N is just
 ;;;   shorthand for :min N :max N).  Slots is a list of slot descriptions
@@ -147,11 +149,11 @@
 ;;; octets-to-code (state input unput &rest vars)
 ;;;   Defines a form to be used by the external format to convert
 ;;;   octets to a code point.  State is a form that can be used by the
-;;;   body to access the state variable of the stream.  Input is a
-;;;   form that can be used to read one more octets from the input
-;;;   strema.  Similarly, Unput is a form to put back one octet to the
-;;;   input stream.  Vars is a list of vars that need to be defined
-;;;   for any symbols used within the form.
+;;;   body to access the state of the stream.  Input is a form that
+;;;   can be used to read one octet from the input stream.  (It can be
+;;;   called as many times as needed.)  Similarly, Unput is a form to
+;;;   put back one octet to the input stream.  Vars is a list of vars
+;;;   that need to be defined for any symbols used within the form.
 ;;;
 ;;;   This should return two values: the code and the number of octets
 ;;;   read to form the code.
@@ -167,6 +169,11 @@
 ;;;   Defines a form to be used by the external format to flush out
 ;;;   any state when an output stream is closed.  Similar to
 ;;;   CODE-TO-OCTETS, but there is no code.
+;;;
+;;; copy-state (state &rest vars)
+;;;   Defines a form to copy any state needed by the external format.
+;;;   This should probably be a deep copy so that if the original
+;;;   state is modified, the copy is not.
 ;;;
 ;;; Note: external-formats work on code-points, not
 ;;;   characters, so that the entire 31 bit ISO-10646 range can be
@@ -251,6 +258,36 @@
 ;;; octets.  They have to be composed with a non-composing external-format
 ;;; to be of any use.
 ;;;
+;;;
+;;; name (&key min max size) input output
+;;;   Defines a new composing external format.  The parameters Min,
+;;;   Max, and Size are the same as for defining an external format.
+;;;   The parameters input and output are forms to handle input and
+;;;   output.
+;;;
+;;; input (state input unput &rest vars)
+;;;   Defines a form to be used by the composing external format when
+;;;   reading input to transform a codepoint (or sequence of
+;;;   codepoints) to another.  State is a form that can be used by the
+;;;   body to access the state of the external format.  Input is a
+;;;   form that can be used to read one code point from the input
+;;;   stream.  (Input returns two values, the codepoint and the number
+;;;   of octets read.)  It may be called as many times as needed.
+;;;   This returns two values: the codepoint of the character (or NIL)
+;;;   and the number of octets read.  Similarly, Unput is a form to
+;;;   put back one octet to the input stream.  Vars is a list of vars
+;;;   that need to be defined for any symbols used within the form.
+;;;
+;;;   This should return two values: the code and the number of octets
+;;;   read to form the code.
+;;;
+;;; output (code state output &rest vars)
+;;;   Defines a form to be used by the composing external format to
+;;;   convert a code point to octets for output.  Code is the code
+;;;   point to be converted.  State is a form to access the current
+;;;   value of the stream's state variable.  Output is a form that
+;;;   writes one octet to the output stream.
+
 (defmacro define-composing-external-format (name (&key min max size)
 						 input output)
   (let ((tmp (gensym))
