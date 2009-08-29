@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.15.2.2 2009/08/28 21:20:36 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.15.2.3 2009/08/29 01:41:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -219,7 +219,7 @@
 		     (let (,@',slotb
 			   (,code ',code)
 			   ,@(loop for var in vars collect `(,var (gensym))))
-		       `(let ((,',code (the (unsigned-byte 21) ,,',tmp)))
+		       `(let ((,',code (the lisp:codepoint ,,',tmp)))
 			  (declare (ignorable ,',code))
 			  ,,body))))
 		(flush-state ((state output &rest vars) body)
@@ -297,7 +297,7 @@
 		  `(lambda (,state ,input ,unput)
 		     (declare (ignorable ,state ,input ,unput)
 			      (optimize (ext:inhibit-warnings 3)))
-		     (let ((,input `(the (values (or (unsigned-byte 21) null)
+		     (let ((,input `(the (values (or lisp:codepoint null)
 						 kernel:index)
 					 ,,input))
 			   ,@(loop for var in vars collect `(,var (gensym))))
@@ -308,7 +308,7 @@
 			      (optimize (ext:inhibit-warnings 3)))
 		     (let ((,code ',code)
 			   ,@(loop for var in vars collect `(,var (gensym))))
-		       `(let ((,',code (the (unsigned-byte 21) ,,',tmp)))
+		       `(let ((,',code (the lisp:codepoint ,,',tmp)))
 			  (declare (ignorable ,',code))
 			  ,,body)))))
        (%intern-ef (make-external-format ,name
@@ -531,7 +531,7 @@
     `(multiple-value-bind (,tmp1 ,tmp2)
 	 ,(funcall (ef-octets-to-code ef) state input unput)
        (setf ,count (the kernel:index ,tmp2))
-       (the (or (unsigned-byte 21) null) ,tmp1))))
+       (the (or lisp:codepoint null) ,tmp1))))
 
 (defmacro codepoint-to-octets (external-format code state output)
   (let ((ef (find-external-format external-format)))
@@ -607,10 +607,10 @@
 	     (setf (car ,nstate) nil ,count 0))
 	   (let ((code (octets-to-codepoint ,external-format
 					  (cdr ,nstate) ,count ,input ,unput)))
-	     (declare (type (unsigned-byte 21) code))
+	     (declare (type lisp:codepoint code))
 	     ;;@@ on non-Unicode builds, limit to 8-bit chars
 	     ;;@@ if unicode-bootstrap, can't use #\u+fffd
-	     (cond ((or (<= #xD800 code #xDFFF) (> code #x10FFFF))
+	     (cond ((or (lisp::surrogatep code) (> code #x10FFFF))
 		    #-(and unicode (not unicode-bootstrap)) #\?
 		    #+(and unicode (not unicode-bootstrap)) #\U+FFFD)
 		   #+unicode
@@ -677,6 +677,10 @@
 
 (defun string-to-octets (string &key (start 0) end (external-format :default)
 				     (buffer nil bufferp))
+  "Convert String to octets using the specified External-format.  The
+   string is bounded by Start (defaulting to 0) and End (defaulting to
+   the end of the string.  If Buffer is given, the octets are stored
+   there.  If not, a new buffer is created."
   (declare (type string string)
 	   (type kernel:index start)
 	   (type (or kernel:index null) end)
@@ -708,6 +712,11 @@
 
 (defun octets-to-string (octets &key (start 0) end (external-format :default)
 				     (string nil stringp))
+  "Octets-to-string converts an array of octets in Octets to a string
+  according to the specified External-format.  The array of octets is
+  bounded by Start (defaulting ot 0) and End (defaulting to the end of
+  the array.  If String is given, the string is stored there;
+  otherwise a new string is created."
   (declare (type (simple-array (unsigned-byte 8) (*)) octets)
 	   (type kernel:index start)
 	   (type (or kernel:index null) end)
