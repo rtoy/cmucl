@@ -2,17 +2,19 @@
 
 usage() {
     echo "cross-build-world.sh [-crl] target-dir cross-dir cross-compiler-script [build-binary [flags]]"
-    echo "  -c     Clean target and cross directories before compiling"
-    echo "  -r     Recompile lisp runtime"
-    echo "  -l     Load cross-compiled kernel to make a new lisp kernel"
+    echo "  -c      Clean target and cross directories before compiling"
+    echo "  -r      Recompile lisp runtime"
+    echo "  -l      Load cross-compiled kernel to make a new lisp kernel"
+    echo "  -B file Use this as the cross bootstrap file." 
 }
 
-while getopts "crl" arg
+while getopts "crlB:" arg
 do
     case $arg in
       c) CLEAN_DIR=yes ;;
       r) BUILD_RUNTIME=yes ;;
       l) LOAD_KERNEL=yes ;;
+      B) BOOTSTRAP=$OPTARG ;;
       h | \?) usage; exit 1 ;;
     esac
 done
@@ -47,6 +49,12 @@ CROSS="`echo $2 | sed 's:/*$::'`"
 SCRIPT="$3"
 LISP="${4:-lisp}"
 
+if [ -z "$BOOTSTRAP" ]; then
+    CROSSBOOT="$TARGET/cross-boootstrap.lisp"
+else
+    CROSSBOOT=$BOOTSTRAP
+fi
+
 if [ $# -ge 4 ]
 then
 	shift 4
@@ -66,6 +74,7 @@ then
 		sed "s:^src:$CROSS:g" | xargs mkdir
 fi
 
+echo cross boot = $CROSSBOOT
 $LISP "$@" -noinit -nositeinit <<EOF
 (in-package :cl-user)
 
@@ -74,8 +83,8 @@ $LISP "$@" -noinit -nositeinit <<EOF
 (setf (ext:search-list "target:")
       '("$CROSS/" "src/"))
 
-(when (probe-file "$TARGET/cross-bootstrap.lisp")
-  (load "$TARGET/cross-bootstrap.lisp"))
+(print "$CROSSBOOT")
+(load "$CROSSBOOT" :if-does-not-exist nil)
 
 (load "target:code/exports")
 (load "target:tools/setup" :if-source-newer :load-source)
