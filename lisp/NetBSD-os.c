@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.11 2008/12/07 02:33:55 agoncharov Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.12 2009/08/30 19:17:55 rswindells Rel $
  *
  */
 
@@ -82,6 +82,61 @@ os_sigcontext_pc(ucontext_t *scp)
 #ifdef i386
     return (unsigned long *) &scp->uc_mcontext.__gregs[_REG_EIP];
 #endif
+}
+
+unsigned char *
+os_sigcontext_fpu_reg(ucontext_t *scp, int index)
+{
+    unsigned char *reg = NULL;
+
+    if (scp->uc_flags & _UC_FPU) {
+	if (scp->uc_flags & _UC_FXSAVE) {
+	    reg = scp->uc_mcontext.__fpregs.__fp_reg_set.__fp_xmm_state.__fp_xmm[index];
+	} else {
+	    reg = scp->uc_mcontext.__fpregs.__fp_reg_set.__fpchip_state.__fp_state[index];
+	}
+    } else {
+	reg = NULL;
+    }
+    return reg;
+}
+
+unsigned int
+os_sigcontext_fpu_modes(ucontext_t *scp)
+{
+    unsigned int modes;
+
+    union savefpu *sv = (union savefpu *) &scp->uc_mcontext.__fpregs.__fp_reg_set;
+    struct env87 *env_87 = (struct env87 *) &sv->sv_87.sv_env;
+    struct envxmm *env_xmm = (struct envxmm *) &sv->sv_xmm.sv_env;
+    u_int16_t cw;
+    u_int16_t sw;
+
+    if (scp->uc_flags & _UC_FPU) {
+	if (scp->uc_flags & _UC_FXSAVE) {
+	    cw = env_xmm->en_cw;
+	    sw = env_xmm->en_sw;
+	} else {
+	    cw = env_87->en_cw & 0xffff;
+	    sw = env_87->en_sw & 0xffff;
+	}
+    } else {
+	cw = 0;
+	sw = 0x3f;
+    }
+
+    modes = ((cw & 0x3f) << 7) | (sw & 0x3f);
+
+#ifdef FEATURE_SSE2
+    if (fpu_mode == SSE2) {
+	u_int32_t mxcsr = env_xmm->en_mxcsr;
+
+	DPRINTF(0, (stderr, "SSE2 modes = %08x\n", (int)mxcsr));
+	modes |= mxcsr;
+    }
+#endif
+    modes ^= (0x3f << 7);
+    return modes;
 }
 
 os_vm_address_t
@@ -236,11 +291,52 @@ sigbus_handler(HANDLER_ARGS)
     interrupt_handle_now(signal, code, context);
 }
 
+/*
+ * Restore the exception flags cleared by the kernel.  These bits must
+ * be set for Lisp to determine which exception caused the signal.  At
+ * present, there is no way to distinguish underflow exceptions from
+ * denormalized operand exceptions.  An underflow exception is assumed
+ * if the subcode is FPE_FLTUND.
+ */
+static void
+sigfpe_handler(HANDLER_ARGS)
+{
+    ucontext_t *ucontext = (ucontext_t *) context;
+    union savefpu *sv = (union savefpu *) &ucontext->uc_mcontext.__fpregs.__fp_reg_set;
+    unsigned char trap = 0;
+
+    switch (code->si_code) {
+      case FPE_FLTDIV:		/* ZE */
+	  trap = 0x04;
+	  break;
+      case FPE_FLTOVF:		/* OE */
+	  trap = 0x08;
+	  break;
+      case FPE_FLTUND:		/* DE or UE */
+	  trap = 0x10;
+	  break;
+      case FPE_FLTRES:		/* PE */
+	  trap = 0x20;
+	  break;
+      case FPE_FLTINV:		/* IE */
+	  trap = 0x01;
+	  break;
+    }
+
+    if (ucontext->uc_flags & _UC_FXSAVE) {
+	sv->sv_xmm.sv_env.en_sw |= trap;
+    } else {
+	sv->sv_87.sv_env.en_sw |= trap;
+    }
+    interrupt_handle_now(signal, code, context);
+}
+
 void
 os_install_interrupt_handlers(void)
 {
     interrupt_install_low_level_handler(SIGSEGV, sigsegv_handler);
     interrupt_install_low_level_handler(SIGBUS, sigbus_handler);
+    interrupt_install_low_level_handler(SIGFPE, sigfpe_handler);
 }
 
 void *
@@ -261,4 +357,32 @@ os_dlsym(const char *sym_name, lispobj lib_list)
     }
 
     return dlsym(RTLD_DEFAULT, sym_name);
+}
+
+void
+restore_fpu(ucontext_t *scp)
+{
+    union savefpu *sv = (union savefpu *) &scp->uc_mcontext.__fpregs.__fp_reg_set;
+    struct env87 *env_87 = &sv->sv_87.sv_env;
+    struct envxmm *env_xmm = &sv->sv_xmm.sv_env;
+    u_int16_t cw;
+
+    if (scp->uc_flags & _UC_FPU) {
+	if (scp->uc_flags & _UC_FXSAVE) {
+	    cw = env_xmm->en_cw;
+	} else {
+	    cw = env_87->en_cw & 0xffff;
+	}
+    } else {
+	return;
+    }
+    DPRINTF(0, (stderr, "restore_fpu:  cw = %08x\n", (int)cw));
+    __asm__ __volatile__ ("fldcw %0"::"m"(*&cw));
+
+    if (arch_support_sse2()) {
+	u_int32_t mxcsr = env_xmm->en_mxcsr;
+
+	DPRINTF(0, (stderr, "restore_fpu:  mxcsr (raw) = %04x\n", mxcsr));
+	__asm__ __volatile__ ("ldmxcsr %0"::"m"(*&mxcsr));
+    }
 }

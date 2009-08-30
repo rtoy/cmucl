@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.h,v 1.8 2008/05/16 13:30:22 rswindells Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.h,v 1.9 2009/08/30 19:17:55 rswindells Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -36,6 +36,9 @@ typedef int os_vm_prot_t;
 
 #define HANDLER_ARGS int signal, siginfo_t *code, ucontext_t *context
 #define CODE(code)  ((code) ? code->si_code : 0)
+#define RESTORE_FPU(context) restore_fpu(context)
+
+void restore_fpu(ucontext_t *);
 
 #define PROTECTION_VIOLATION_SIGNAL SIGSEGV
 
