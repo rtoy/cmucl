@@ -508,8 +508,32 @@ utility functions are provided to make access easier.
   less than 256.
 \end{defun}
 
+\begin{defun}{}{string-to-octets}{\args \var{string} \keys{\kwd{start}
+      \kwd{end} \kwd{external-format} \kwd{buffer}}}
+  \code{string-to-octets} converts \var{string} to a sequence of
+  octets according to the external format specified by
+  \var{external-format}.  The string to be converted is bounded by
+  \var{start}, which defaults to 0, and \var{end}, which defaults to
+  the length of the string.  If \var{buffer} is specified, the octets
+  are placed in \var{buffer}.  If \var{buffer} is not specified, a new
+  array is allocated to hold the octets.  In all cases the buffer is
+  returned.
+\end{defun}
+
+\begin{defun}{}{octets-to-string}{\args \var{octets} \keys{\kwd{start}
+      \kwd{end} \kwd{external-format} \kwd{buffer}}}
+  \code{octets-to-string} converts the sequence of octets in
+  \var{octets} is converted to a string.   \var{octets} must be a
+  \code{(simple-array (unsigned-byte 8) (*))}.  The octets to be
+  converted are bounded by \var{start} and \var{end}, which default to
+  0 and the length of the array, respectively.  The conversion is
+  performed according to the external format specified by
+  \var{external-format}. 
+\end{defun}
+
 \section{Writing External Formats}
 
+\subsection{External Formats}
 Users may write their own external formats.  It is probably easiest to
 look at existing external formats to see how do this.
 
@@ -521,7 +545,8 @@ external format is defined using the macro
 
 \begin{defmac}[base]{stream:}{define-external-format}{\args \var{name}
     (\keys{\var{min} \var{max} \var{size}}) (\amprest{} \var{slots})
-    \morekeys{\var{octets-to-code} \var{code-to-octets}}}
+    \morekeys{\var{octets-to-code} \var{code-to-octets}
+              \var{flush-state} \var{copy-state}}}
   \defmacx[stream:]{define-external-format}{\args \var{name}
     (\var{base}) (\amprest{} \var{slots})}
 
@@ -547,7 +572,7 @@ external format is defined using the macro
 
 \end{defmac}
 
-\begin{defmac}{stream:}{octets-to-code}{\args \var{state} \var{input}
+\begin{defmac}{}{octets-to-code}{\args \var{state} \var{input}
     \var{unput} \amprest{} \var{args}}
   This defines a form to be used by an external format to convert
   octets to a code point.  \var{state} is a form that can be used by
@@ -559,7 +584,7 @@ external format is defined using the macro
   body of the macro.
 \end{defmac}
 
-\begin{defmac}{stream:}{code-to-octets}{\args \var{code} \var{state}
+\begin{defmac}{}{code-to-octets}{\args \var{code} \var{state}
     \var{output} \amprest{} \var{args}}
   Defines a form to be used by the external format to convert a code
   point to octets for output.  \var{code} is the code point to be
@@ -567,6 +592,30 @@ external format is defined using the macro
   stream's state variable.  \var{output} is a form that writes one
   octet to the output stream.
 \end{defmac}
+
+\begin{defmac}{}{flush-state}{\args \var{state}
+    \var{output} \amprest{} \var{args}}
+  Defines a form to be used by the external format to flush out
+  any state when an output stream is closed.  Similar to
+  \code{code-to-octets}, but there is no code point to be output.
+
+  If \false, then nothing special is needed to flush the state to the
+  output.
+
+  This is called only when an output character stream is being closed.
+\end{defmac}
+
+\begin{defmac}{}{copy-state}{\args \var{state} \amprest{} \var{args}}
+  Defines a form to copy any state needed by the external format.
+  This should probably be a deep copy so that if the original
+  state is modified, the copy is not.
+
+  If not given, then nothing special is needed to copy the state
+  either because there is no state for the external format or that no
+  special copier is needed.
+\end{defmac}
+
+\subsection{Composing External Formats}
 
 \begin{defmac}{stream:}{define-composing-external-format}{\args \var{name}
     (\keys{\var{min} \var{max} \var{size}}) \var{input}
