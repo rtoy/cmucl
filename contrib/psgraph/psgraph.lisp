@@ -567,3 +567,5 @@
 			   (psnode-children (aref *narray* x)))))
 	   (setf (gethash (list x y) *ancestor-cache*) (list cached-value))
 	   cached-value))))
+
+(provide "contrib-psgraph")

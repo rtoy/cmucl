@@ -10,3 +10,5 @@
    "library:contrib/ops/ops-io.lisp"
    "library:contrib/ops/ops.lisp")
  :output-file "library:contrib/ops/ops.fasl")
+
+(provide "contrib-ops")

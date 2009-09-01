@@ -16,7 +16,7 @@
 ;;;
 ;;; To see a demo, compile and load feebs.lisp then type (feebs:feebs).
 ;;;
-;;; $Id: feebs.lisp,v 1.6 2007/08/14 16:49:44 fgilham Exp $
+;;; $Id: feebs.lisp,v 1.6.16.1 2009/09/01 17:49:25 rtoy Exp $
 ;;;
 
 (cl:in-package "COMMON-LISP")
@@ -1981,3 +1981,5 @@
 	   :turn-right)
 	  (t
 	   :turn-around))))
+
+(provide "contrib-games-feebs")
