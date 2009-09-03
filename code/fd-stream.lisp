@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.90.2.5 2009/08/28 14:28:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.90.2.6 2009/09/03 16:57:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -382,7 +382,7 @@
      (let* ((tail (fd-stream-obuf-tail stream)))
        (declare (type index tail))
        (cond
-	 ((stream::ef-flush-state (stream::find-external-format ,extfmt))
+	 ((stream::ef-flush-state ,(stream::find-external-format extfmt))
 	  (stream::flush-state ,extfmt
 			       (fd-stream-co-state stream)
 			       (lambda (byte)
