@@ -1,10 +1,10 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: STREAM -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written by Paul Foley and has been placed in the public
+;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cr.lisp,v 1.1.2.2 2009/09/03 20:36:27 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cr.lisp,v 1.1.2.3 2009/09/03 21:03:20 rtoy Exp $")
 
 (in-package "STREAM")
 
