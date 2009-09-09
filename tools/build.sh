@@ -118,7 +118,7 @@ buildit ()
 	$MAKE -C $TARGET/lisp || { echo "Failed: $MAKE -C $TARGET/lisp"; exit 1; }
 	if [ "$BUILD_WORLD2" = "yes" ];
 	then
-	    $TOOLDIR/build-world.sh $TARGET $OLDLISP || { echo "Failed: $TOOLDIR/build-world.sh"; exit 1; }
+	    $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT || { echo "Failed: $TOOLDIR/build-world.sh"; exit 1; }
 	fi
 	$TOOLDIR/load-world.sh $TARGET "$VERSION" || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
 

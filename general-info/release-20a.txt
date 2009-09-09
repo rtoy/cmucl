@@ -1,22 +1,27 @@
 ========================== C M U C L  20 a =============================
 
-[--- WORK IN PROGRESS ---]
-
 The CMUCL project is pleased to announce the release of CMUCL 20a.
 This is a major release which contains numerous enhancements and
-bugfixes from the 19f release.
+bug fixes from the 19f release.
 
 CMUCL is a free, high performance implementation of the Common Lisp
 programming language which runs on most major Unix platforms. It
 mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
 sophisticated native code compiler; a powerful foreign function
 interface; an implementation of CLOS, the Common Lisp Object System,
-which includes multimethods and a metaobject protocol; a source-level
+which includes multi-methods and a meta-object protocol; a source-level
 debugger and code profiler; and an Emacs-like editor implemented in
 Common Lisp. CMUCL is maintained by a team of volunteers collaborating
 over the Internet, and is mostly in the public domain.
 
 New in this release:
+
+  * Known issues:
+    - On Linux and FreeBSD, it may not be possible call SAVE-LISP and
+      create executables.  This seems to be broken on FreeBSD.  On
+      Linux, it seems to depend on what version of Linux is used to
+      create the executable.  Redhat Enterprise Linux appears to be
+      ok, but Open SuSE 10.x is not.
 
   * Feature enhancements:
     - Support for Unicode has been added.  You have Unicode support if
@@ -36,18 +41,18 @@ New in this release:
         to specify the format.
         + The special variable STREAM:*DEFAULT-EXTERNAL-FORMAT*
           specifies the default format to be used for all streams.
-          The default value is :iso8859-1. 
-        + The standard streams, *standard-input*, *standard-output*,
-          and *standard-error* all default to
-          *default-external-format* (which itself defaults to
-          :iso8859-1).  You can change the encoding used for these
+          The default value is :ISO8859-1. 
+        + The standard streams, *STANDARD-INPUT*, *STANDARD-OUTPUT*,
+          and *STANDARD-ERROR* all default to
+          *DEFAULT-EXTERNAL-FORMAT* (which itself defaults to
+          :ISO8859-1).  You can change the encoding used for these
           streams by calling STREAM:SET-SYSTEM-EXTERNAL-FORMAT to set
           the encoding for all three streams.  Alternatively, you can
-          use (setf external-format) to change the format for each
+          use (SETF EXTERNAL-FORMAT) to change the format for each
           stream.
         + Many external formats are supported.  The complete list is
           in aliases, but we support at least :ISO-8859-1, :UTF-8,
-          :UTF-16, :UTF-32, :CRLF.
+          :UTF-16, :UTF-32, and the composing external format :CRLF.
        o CHAR-LESSP and friends perform case-folding by converting to
          lowercase.  (The non-Unicode version converted to uppercase.)
        o STRING<, STRING>, and friends compare strings in codepoint order.
@@ -55,10 +60,11 @@ New in this release:
          codepoint order after doing a case-folding operation on each
          codepoint.  The case-folding operation converts each
          codepoint to the corresponding lowercase codepoint.
-       o UTF16-STRING-P checks to see if a string is a valid UTF-16
-         encoded string.
-       o Unicode normalization forms are supported via STRING-TO-NFC,
-         STRING-TO-NFKC, STRING-TO-NFD, and STRING-TO-NFKD.
+       o LISP:UTF16-STRING-P checks to see if a string is a valid
+         UTF-16 encoded string.
+       o Unicode normalization forms are supported via
+         LISP:STRING-TO-NFC, LISP:STRING-TO-NFKC, LISP:STRING-TO-NFD,
+         and LISP:STRING-TO-NFKD.
        o Symbols are always normalized to NFC form.
 
     - WRITE-VECTOR and READ-VECTOR support vectors of with element
@@ -78,7 +84,7 @@ New in this release:
       numeric types.  Previously, we handled the case of integer
       types.  Extend this to handle floats as well.
     - SXHASH was computing the same hash code for upper and lower case
-      characters by upcasing the character.  This isn't necessary
+      characters by up-casing the character.  This isn't necessary
       since the characters are not EQUAL, so make SXHASH return
       different values for upper and lower case letter.
     - WRITE-VECTOR was not writing out enough data when no
@@ -89,7 +95,7 @@ New in this release:
     - The stream created by WITH-INPUT-FROM-STREAM was not properly
       closed.
     - SXHASH was returning different values for -0f0 and -0d0 for
-      compiled and interpreted code.  The both return the same value
+      compiled and interpreted code.  They both return the same value
       now.
     - Some issues with potential spurious floating-point exceptions
       with complex arithmetic on x86 with SSE2 have been fixed.
@@ -146,14 +152,14 @@ New in this release:
   * Improvements to the PCL implementation of CLOS:
 
   * Changes to building procedure:
-    - The sparc config fils are now named sparc_gcc and sparc_sunc,
+    - The sparc config files are now named sparc_gcc and sparc_sunc,
       which use gcc and Sun C, respectively, for the C compiler.  Only
       Solaris is supported.  The old sun4_solaris_gcc and
       sun4_solaris_sunc configs are deprecated.
-
-  * Known issues:
-    - The :executable feature, while enabled for FreeBSD and Linux,
-      may not be working.
+    - The Linux config file is x86_linux, which supports gencgc.  The
+      old cgc config is no longer supported.
+    - The FreeBSD config file is x86_freebsd, which supports gencgc.  The
+      old cgc config is no longer supported.
 
 This release is not binary compatible with code compiled using CMUCL
 19f; you will need to recompile FASL files. 

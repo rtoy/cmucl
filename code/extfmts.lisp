@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.15 2009/08/26 16:25:41 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.16 2009/09/09 15:51:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,6 +63,10 @@
   ;; flushed to the output stream.  A NIL value means the external
   ;; format does not need to do anything special.
   (flush-state nil :type (or null function) :read-only t)
+  ;;
+  ;; Function to copy the state of the external-format.  If NIL, then
+  ;; there is no state to be copied.
+  (copy-state nil :type (or null function) :read-only t)
   (cache nil :type (or null simple-vector))
   ;;
   ;; Minimum number of octets needed to form a codepoint
@@ -90,7 +94,7 @@
 (defun %intern-ef (ef)
   (setf (gethash (ef-name ef) *external-formats*) ef))
 
-(declaim (inline ef-octets-to-code ef-code-to-octets ef-flush-state
+(declaim (inline ef-octets-to-code ef-code-to-octets ef-flush-state ef-copy-state
 		 ef-cache ef-min-octets ef-max-octets))
 
 (defun ef-octets-to-code (ef)
@@ -101,6 +105,9 @@
 
 (defun ef-flush-state (ef)
   (efx-flush-state (ef-efx ef)))
+
+(defun ef-copy-state (ef)
+  (efx-copy-state (ef-efx ef)))
 
 (defun ef-cache (ef)
   (efx-cache (ef-efx ef)))
@@ -127,7 +134,9 @@
 
 ;;; DEFINE-EXTERNAL-FORMAT  -- Public
 ;;;
-;;; name (&key min max size) (&rest slots) octets-to-code code-to-octets flush-state
+;;; name (&key min max size) (&rest slots) octets-to-code code-to-octets
+;;;       flush-state copy-state
+;;;
 ;;;   Define a new external format.  Min/Max/Size are the minimum and
 ;;;   maximum number of octets that make up a character (:size N is just
 ;;;   shorthand for :min N :max N).  Slots is a list of slot descriptions
@@ -140,11 +149,11 @@
 ;;; octets-to-code (state input unput &rest vars)
 ;;;   Defines a form to be used by the external format to convert
 ;;;   octets to a code point.  State is a form that can be used by the
-;;;   body to access the state variable of the stream.  Input is a
-;;;   form that can be used to read one more octets from the input
-;;;   strema.  Similarly, Unput is a form to put back one octet to the
-;;;   input stream.  Vars is a list of vars that need to be defined
-;;;   for any symbols used within the form.
+;;;   body to access the state of the stream.  Input is a form that
+;;;   can be used to read one octet from the input stream.  (It can be
+;;;   called as many times as needed.)  Similarly, Unput is a form to
+;;;   put back one octet to the input stream.  Vars is a list of vars
+;;;   that need to be defined for any symbols used within the form.
 ;;;
 ;;;   This should return two values: the code and the number of octets
 ;;;   read to form the code.
@@ -161,6 +170,11 @@
 ;;;   any state when an output stream is closed.  Similar to
 ;;;   CODE-TO-OCTETS, but there is no code.
 ;;;
+;;; copy-state (state &rest vars)
+;;;   Defines a form to copy any state needed by the external format.
+;;;   This should probably be a deep copy so that if the original
+;;;   state is modified, the copy is not.
+;;;
 ;;; Note: external-formats work on code-points, not
 ;;;   characters, so that the entire 31 bit ISO-10646 range can be
 ;;;   used internally regardless of the size of a character recognized
@@ -169,7 +183,8 @@
 ;;;   CODEPOINT-TO-OCTETS, OCTETS-TO-CODEPOINT)
 ;;;
 (defmacro define-external-format (name (&rest args) (&rest slots)
-				       &optional octets-to-code code-to-octets flush-state)
+				       &optional octets-to-code code-to-octets
+				       flush-state copy-state)
   (when (and (oddp (length args)) (not (= (length args) 1)))
     (warn "Nonsensical argument (~S) to DEFINE-EXTERNAL-FORMAT." args))
   (let* ((tmp (gensym))
@@ -204,12 +219,18 @@
 		     (let (,@',slotb
 			   (,code ',code)
 			   ,@(loop for var in vars collect `(,var (gensym))))
-		       `(let ((,',code (the (unsigned-byte 21) ,,',tmp)))
+		       `(let ((,',code (the lisp:codepoint ,,',tmp)))
 			  (declare (ignorable ,',code))
 			  ,,body))))
 		(flush-state ((state output &rest vars) body)
 		  `(lambda (,state ,output)
 		     (declare (ignorable ,state ,output))
+		     (let (,@',slotb
+			   ,@(loop for var in vars collect `(,var (gensym))))
+		       ,body)))
+		(copy-state ((state &rest vars) body)
+		  `(lambda (,state)
+		     (declare (ignorable ,state))
 		     (let (,@',slotb
 			   ,@(loop for var in vars collect `(,var (gensym))))
 		       ,body))))
@@ -218,7 +239,8 @@
 			 `(ef-efx (find-external-format ,(ef-name base)))
 			 `(make-efx :octets-to-code ,octets-to-code
 				    :code-to-octets ,code-to-octets
-				    :flush-state ,flush-state	    
+				    :flush-state ,flush-state
+			            :copy-state ,copy-state
 				    :cache (make-array +ef-max+
 							  :initial-element nil)
 				    :min ,(min min max) :max ,(max min max)))
@@ -236,6 +258,36 @@
 ;;; octets.  They have to be composed with a non-composing external-format
 ;;; to be of any use.
 ;;;
+;;;
+;;; name (&key min max size) input output
+;;;   Defines a new composing external format.  The parameters Min,
+;;;   Max, and Size are the same as for defining an external format.
+;;;   The parameters input and output are forms to handle input and
+;;;   output.
+;;;
+;;; input (state input unput &rest vars)
+;;;   Defines a form to be used by the composing external format when
+;;;   reading input to transform a codepoint (or sequence of
+;;;   codepoints) to another.  State is a form that can be used by the
+;;;   body to access the state of the external format.  Input is a
+;;;   form that can be used to read one code point from the input
+;;;   stream.  (Input returns two values, the codepoint and the number
+;;;   of octets read.)  It may be called as many times as needed.
+;;;   This returns two values: the codepoint of the character (or NIL)
+;;;   and the number of octets read.  Similarly, Unput is a form to
+;;;   put back one octet to the input stream.  Vars is a list of vars
+;;;   that need to be defined for any symbols used within the form.
+;;;
+;;;   This should return two values: the code and the number of octets
+;;;   read to form the code.
+;;;
+;;; output (code state output &rest vars)
+;;;   Defines a form to be used by the composing external format to
+;;;   convert a code point to octets for output.  Code is the code
+;;;   point to be converted.  State is a form to access the current
+;;;   value of the stream's state variable.  Output is a form that
+;;;   writes one octet to the output stream.
+
 (defmacro define-composing-external-format (name (&key min max size)
 						 input output)
   (let ((tmp (gensym))
@@ -245,7 +297,7 @@
 		  `(lambda (,state ,input ,unput)
 		     (declare (ignorable ,state ,input ,unput)
 			      (optimize (ext:inhibit-warnings 3)))
-		     (let ((,input `(the (values (or (unsigned-byte 21) null)
+		     (let ((,input `(the (values (or lisp:codepoint null)
 						 kernel:index)
 					 ,,input))
 			   ,@(loop for var in vars collect `(,var (gensym))))
@@ -256,7 +308,7 @@
 			      (optimize (ext:inhibit-warnings 3)))
 		     (let ((,code ',code)
 			   ,@(loop for var in vars collect `(,var (gensym))))
-		       `(let ((,',code (the (unsigned-byte 21) ,,',tmp)))
+		       `(let ((,',code (the lisp:codepoint ,,',tmp)))
 			  (declare (ignorable ,',code))
 			  ,,body)))))
        (%intern-ef (make-external-format ,name
@@ -479,7 +531,7 @@
     `(multiple-value-bind (,tmp1 ,tmp2)
 	 ,(funcall (ef-octets-to-code ef) state input unput)
        (setf ,count (the kernel:index ,tmp2))
-       (the (or (unsigned-byte 21) null) ,tmp1))))
+       (the (or lisp:codepoint null) ,tmp1))))
 
 (defmacro codepoint-to-octets (external-format code state output)
   (let ((ef (find-external-format external-format)))
@@ -555,10 +607,10 @@
 	     (setf (car ,nstate) nil ,count 0))
 	   (let ((code (octets-to-codepoint ,external-format
 					  (cdr ,nstate) ,count ,input ,unput)))
-	     (declare (type (unsigned-byte 21) code))
+	     (declare (type lisp:codepoint code))
 	     ;;@@ on non-Unicode builds, limit to 8-bit chars
 	     ;;@@ if unicode-bootstrap, can't use #\u+fffd
-	     (cond ((or (<= #xD800 code #xDFFF) (> code #x10FFFF))
+	     (cond ((or (lisp::surrogatep code) (> code #x10FFFF))
 		    #-(and unicode (not unicode-bootstrap)) #\?
 		    #+(and unicode (not unicode-bootstrap)) #\U+FFFD)
 		   #+unicode
@@ -602,6 +654,12 @@
     (when f
       (funcall f state output))))
 
+(defmacro copy-state (external-format state)
+  (let* ((ef (find-external-format external-format))
+	 (f (ef-copy-state ef)))
+    (when f
+      (funcall f state))))
+
 (def-ef-macro ef-string-to-octets (extfmt lisp::lisp +ef-max+ +ef-so+)
   `(lambda (string start end buffer &aux (ptr 0) (state nil))
      (declare #|(optimize (speed 3) (safety 0) (space 0) (debug 0))|#
@@ -619,6 +677,10 @@
 
 (defun string-to-octets (string &key (start 0) end (external-format :default)
 				     (buffer nil bufferp))
+  "Convert String to octets using the specified External-format.  The
+   string is bounded by Start (defaulting to 0) and End (defaulting to
+   the end of the string.  If Buffer is given, the octets are stored
+   there.  If not, a new buffer is created."
   (declare (type string string)
 	   (type kernel:index start)
 	   (type (or kernel:index null) end)
@@ -650,6 +712,11 @@
 
 (defun octets-to-string (octets &key (start 0) end (external-format :default)
 				     (string nil stringp))
+  "Octets-to-string converts an array of octets in Octets to a string
+  according to the specified External-format.  The array of octets is
+  bounded by Start (defaulting ot 0) and End (defaulting to the end of
+  the array.  If String is given, the string is stored there;
+  otherwise a new string is created."
   (declare (type (simple-array (unsigned-byte 8) (*)) octets)
 	   (type kernel:index start)
 	   (type (or kernel:index null) end)

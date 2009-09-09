@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.90 2009/08/26 16:25:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.91 2009/09/09 15:51:27 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -382,7 +382,7 @@
      (let* ((tail (fd-stream-obuf-tail stream)))
        (declare (type index tail))
        (cond
-	 ((stream::ef-flush-state (stream::find-external-format ,extfmt))
+	 ((stream::ef-flush-state ,(stream::find-external-format extfmt))
 	  (stream::flush-state ,extfmt
 			       (fd-stream-co-state stream)
 			       (lambda (byte)
@@ -1372,12 +1372,21 @@
 	  ;; Support for n-byte operations on 8-, 16-, and 32-bit streams
 	  (setf (fd-stream-n-bin stream) #'fd-stream-read-n-bytes)
 	  (when (and buffer-p (eql size 1)
-		     (or (eq type 'unsigned-byte)
-			 (eq type :default)))
+		     (or
+		      ;; FIXME: Do this better.  We want to check for
+		      ;; (unsigned-byte 8).  The 8 is unnecessary
+		      ;; since we already have size = 1.
+		      (or (eq 'unsigned-byte (and (consp type) (car type)))
+			  (eq type :default))
+		      ;; Character streams with :iso8859-1
+		      (and (eq type 'character)
+			   #+unicode
+			   (eql :iso8859-1 (fd-stream-external-format stream)))))
 	    ;; We only create this buffer for streams of type
-	    ;; (unsigned-byte 8).  Because there's no buffer, the
+	    ;; (unsigned-byte 8) or character streams with an external
+	    ;; format of :iso8859-1.  Because there's no buffer, the
 	    ;; other element-types will dispatch to the appropriate
-	    ;; input (output) routine in fast-read-byte.
+	    ;; input (output) routine in fast-read-byte/fast-read-char.
 	    (setf (lisp-stream-in-buffer stream)
 		  (make-array in-buffer-length
 			      :element-type '(unsigned-byte 8)))))
@@ -1405,12 +1414,7 @@
 		    #'ill-out)
 		(fd-stream-bout stream) routine))
 	(setf (fd-stream-sout stream)
-	      ;;#-unicode
-	      (if (eql size 1) #'fd-sout #'ill-out)
-	      #|#+unicode
-	      (if (eql size 1)
-		  #'fd-sout-each-character
-		  #'ill-out)|#)
+	      (if (eql size 1) #'fd-sout #'ill-out))
 	(setf (fd-stream-char-pos stream) 0)
 	(setf output-size size)
 	(setf output-type type)))
@@ -1741,9 +1745,17 @@
 				     :pathname pathname
 				     :buffering buffering
 				     :timeout timeout))))
+    ;; FIXME: setting the external format here should be better
+    ;; integrated into set-routines.  We do it before so that
+    ;; set-routines can create an in-buffer if appropriate.  But we
+    ;; need to do it after to put the correct input routines for the
+    ;; external format.
+    ;;
+    ;;#-unicode-bootstrap ; fails in stream-reinit otherwise
+    #+(and unicode (not unicode-bootstrap))
+    (setf (stream-external-format stream) external-format)
     (set-routines stream element-type input output input-buffer-p
 		  :binary-stream-p binary-stream-p)
-    ;;#-unicode-bootstrap ; fails in stream-reinit otherwise
     #+(and unicode (not unicode-bootstrap))
     (setf (stream-external-format stream) external-format)
     (when (and auto-close (fboundp 'finalize))
@@ -2059,6 +2071,7 @@
 			   class mapped input-handle output-handle
 		      &allow-other-keys
 		      &aux ; Squelch assignment warning.
+		      (options options)
 		      (direction direction)
 		      (if-does-not-exist if-does-not-exist)
 		      (if-exists if-exists))
@@ -2230,31 +2243,33 @@
 
 #+unicode
 (stream::def-ef-macro ef-strlen (extfmt lisp stream::+ef-max+ stream::+ef-str+)
-  (if (= (stream::ef-min-octets (stream::find-external-format extfmt))
-	 (stream::ef-max-octets (stream::find-external-format extfmt)))
-      `(lambda (stream object)
-	 (declare (ignore stream)
-		  (type (or character string) object)
-		  (optimize (speed 3) (space 0) (safety 0)))
+  ;; While it would be nice not to have to call CHAR-TO-OCTETS to
+  ;; figure out the length when the external format has fixed size
+  ;; outputs, we can't.  For example, utf16 will output a BOM, which
+  ;; wouldn't be reflected in the count if we don't call
+  ;; CHAR-TO-OCTETS.
+  `(lambda (stream object &aux (count 0))
+     (declare (type fd-stream stream)
+	      (type (or character string) object)
+              (type (and fixnum unsigned-byte) count)
+	      #|(optimize (speed 3) (space 0) (debug 0) (safety 0))|#)
+     (labels ((efstate (state)
+		(stream::copy-state ,extfmt state))
+	      (eflen (char)
+		(stream::char-to-octets ,extfmt char
+					(fd-stream-co-state stream)
+					(lambda (byte)
+					  (declare (ignore byte))
+					  (incf count)))))
+       (let* ((co-state (fd-stream-co-state stream))
+	      (old-ef-state (efstate (cdr (fd-stream-co-state stream))))
+	      (old-state (cons (car co-state) old-ef-state)))
 	 (etypecase object
-	   (character ,(stream::ef-min-octets (stream::find-external-format extfmt)))
-	   (string (* ,(stream::ef-min-octets (stream::find-external-format extfmt))
-		      (length object)))))
-      `(lambda (stream object &aux (count 0))
-	 (declare (type fd-stream stream)
-		  (type (or character string) object)
-		  #|(optimize (speed 3) (space 0) (debug 0) (safety 0))|#)
-	    `(labels ((eflen (char)
-		       (stream::char-to-octets ,extfmt char
-					       ;;@@ FIXME: don't alter state!
-					       (fd-stream-co-state stream)
-					       (lambda (byte)
-						 (declare (ignore byte))
-						 (incf count)))))
-	       (etypecase object
-		 (character (eflen object))
-		 (string (dovector (ch object) (eflen ch))))
-	       count))))
+	   (character (eflen object))
+	   (string (dovector (ch object) (eflen ch))))
+	 ;; Restore state
+	 (setf (fd-stream-co-state stream) old-state)
+	 count))))
 
 
 (defun file-string-length (stream object)
