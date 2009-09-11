@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.4 2009/06/11 16:04:02 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.4.4.1 2009/09/11 17:01:32 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -35,12 +35,15 @@
 			   (,unput 1)
 			   (return (values +replacement-character-code+ (1+ ,j)))))))))
 	      (check (,n ,i)
-	       (declare (type lisp:codepoint ,n)
+	       (declare (type (unsigned-byte 31) ,n)
 			(type (integer 1 5) ,i))
 	       ;; We check for overlong sequences (sequences that
 	       ;; encode to codepoints that don't need that long of a
-	       ;; sequence) and any surrogate values.
-	       (if (or (<= ,n (the (member 127 1023 32767) (svref #(127 1023 32767) (1- ,i)))) ; overlong
+	       ;; sequence) and any surrogate values and any code
+	       ;; outside the 21-bit Unicode range.
+	       (if (or (> ,n #x10ffff)
+		       (<= ,n (the (member 127 1023 32767)
+				(svref #(127 1023 32767) (1- ,i)))) ; overlong
 		       (lisp::surrogatep ,n)) ; surrogate
 		   (progn
 		     (,unput ,i)
