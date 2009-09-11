@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.3 2009/07/02 21:00:48 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.4 2009/09/11 16:22:35 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,6 +43,7 @@
   full-case-upper
   case-fold-full
   case-fold-simple
+  word-break
   )
 
 (defvar *unicode-data* (make-unidata))
@@ -415,53 +416,57 @@
 	   (write32 (n stm)
 	     (write16 (ldb (byte 16 16) n) stm)
 	     (write16 (ldb (byte 16 0) n) stm))
+	   (write-ntrie (split hvec mvec lvec stm)
+	     (write-byte split stm)
+	     (write16 (length hvec) stm)
+	     (write16 (length mvec) stm)
+	     (write16 (length lvec) stm)
+	     (write-vector hvec stm :endian-swap :network-order)
+	     (write-vector mvec stm :endian-swap :network-order)
+	     (write-vector lvec stm :endian-swap :network-order))
 	   (write-ntrie32 (data stm)
-	     (write-byte (ntrie32-split data) stm)
-	     (write16 (length (ntrie32-hvec data)) stm)
-	     (write16 (length (ntrie32-mvec data)) stm)
-	     (write16 (length (ntrie32-lvec data)) stm)
-	     (write-vector (ntrie32-hvec data) stm :endian-swap :network-order)
-	     (write-vector (ntrie32-mvec data) stm :endian-swap :network-order)
-	     (write-vector (ntrie32-lvec data) stm :endian-swap :network-order))
+	     (write-ntrie (ntrie32-split data)
+			  (ntrie32-hvec data)
+			  (ntrie32-mvec data)
+			  (ntrie32-lvec data)
+			  stm))
 	   (write-ntrie16 (data stm)
-	     (write-byte (bidi-split data) stm)
-	     (write16 (length (bidi-hvec data)) stm)
-	     (write16 (length (bidi-mvec data)) stm)
-	     (write16 (length (bidi-lvec data)) stm)
-	     (write-vector (bidi-hvec data) stm :endian-swap :network-order)
-	     (write-vector (bidi-mvec data) stm :endian-swap :network-order)
-	     (write-vector (bidi-lvec data) stm :endian-swap :network-order))
+	     (write-ntrie (bidi-split data)
+			  (bidi-hvec data)
+			  (bidi-mvec data)
+			  (bidi-lvec data)
+			  stm))
 	   (write-ntrie8 (data stm)
-	     (write-byte (ntrie8-split data) stm)
-	     (write16 (length (ntrie8-hvec data)) stm)
-	     (write16 (length (ntrie8-mvec data)) stm)
-	     (write16 (length (ntrie8-lvec data)) stm)
-	     (write-vector (ntrie8-hvec data) stm :endian-swap :network-order)
-	     (write-vector (ntrie8-mvec data) stm :endian-swap :network-order)
-	     (write-vector (ntrie8-lvec data) stm :endian-swap :network-order))
+	     (write-ntrie (ntrie8-split data)
+			  (ntrie8-hvec data)
+			  (ntrie8-mvec data)
+			  (ntrie8-lvec data)
+			  stm))
+	   (write-ntrie4 (data stm)
+	     (write-ntrie (ntrie4-split data)
+			  (ntrie4-hvec data)
+			  (ntrie4-mvec data)
+			  (ntrie4-lvec data)
+			  stm))
 	   (write-ntrie2 (data stm)
-	     (write-byte (ntrie2-split data) stm)
-	     (write16 (length (ntrie2-hvec data)) stm)
-	     (write16 (length (ntrie2-mvec data)) stm)
-	     (write16 (length (ntrie2-lvec data)) stm)
-	     (write-vector (ntrie2-hvec data) stm :endian-swap :network-order)
-	     (write-vector (ntrie2-mvec data) stm :endian-swap :network-order)
-	     (write-vector (ntrie2-lvec data) stm :endian-swap :network-order))
+	     (write-ntrie (ntrie2-split data)
+			  (ntrie2-hvec data)
+			  (ntrie2-mvec data)
+			  (ntrie2-lvec data)
+			  stm))
 	   (write-ntrie1 (data stm)
-	     (write-byte (ntrie1-split data) stm)
-	     (write16 (length (ntrie1-hvec data)) stm)
-	     (write16 (length (ntrie1-mvec data)) stm)
-	     (write16 (length (ntrie1-lvec data)) stm)
-	     (write-vector (ntrie1-hvec data) stm :endian-swap :network-order)
-	     (write-vector (ntrie1-mvec data) stm :endian-swap :network-order)
-	     (write-vector (ntrie1-lvec data) stm :endian-swap :network-order))
+	     (write-ntrie (ntrie1-split data)
+			  (ntrie1-hvec data)
+			  (ntrie1-mvec data)
+			  (ntrie1-lvec data)
+			  stm))
 	   (update-index (val array)
 	     (let ((result (vector-push val array)))
 	       (unless result
 		 (error "Index array too short for the data being written")))))
     (with-open-file (stm path :direction :io :if-exists :rename-and-delete
 			 :element-type '(unsigned-byte 8))
-      (let ((index (make-array 18 :fill-pointer 0)))
+      (let ((index (make-array 19 :fill-pointer 0)))
 	;; File header
 	(write32 +unicode-magic-number+ stm)	; identification "magic"
 	;; File format version 
@@ -581,7 +586,10 @@
 	  (write-ntrie32 data stm)
 	  (write16 (length (case-folding-tabl data)) stm)
 	  (write-vector (case-folding-tabl data) stm :endian-swap :network-order))
-
+	;; Word-break
+	(let ((data (unidata-word-break *unicode-data*)))
+	  (update-index (file-position stm) index)
+	  (write-ntrie4 data stm))
 	;; Patch up index
 	(file-position stm 8)
 	(dotimes (i (length index))
@@ -606,6 +614,7 @@
   full-case-upper
   case-fold-full
   case-fold-simple
+  word-break
   ;; ...
   )
 
@@ -727,18 +736,21 @@
 	(lambda (min max alias)
 	  (declare (ignore max))
 	  (push alias (ucdent-aliases (find-ucd min)))))
+
       (foreach-ucd "NormalizationCorrections"
 	  ucd-directory
 	(lambda (min max bad good &rest junk)
 	  (declare (ignore max bad junk))
 	  (setf (ucdent-decomp (find-ucd min))
 		(parse-decomposition good))))
+
       (foreach-ucd "BidiMirroring"
 	  ucd-directory
 	(lambda (min max mirror)
 	  (declare (ignore max))
 	  (setf (ucdent-mcode (find-ucd min))
 		(parse-integer mirror :radix 16 :junk-allowed t))))
+
       (foreach-ucd "DerivedNormalizationProps"
 	  ucd-directory
 	(lambda (min max prop &optional value)
@@ -766,6 +778,7 @@
 		    (when ent
 		      (setf (getf (ucdent-norm-qc ent) :nfkc)
 			    (intern value "KEYWORD"))))))))
+
       (foreach-ucd "CompositionExclusions"
 	  ucd-directory
 	(lambda (min)		 
@@ -800,6 +813,15 @@
 		    (t
 		     ;; Simple case folding (C or S)
 		     (setf (ucdent-case-fold-simple ent) (car (parse-folding expansion)))))))))
+
+      (foreach-ucd "WordBreakProperty"
+	  ucd-directory
+	(lambda (min max prop)
+	  (let ((code (intern (string-upcase prop) "KEYWORD")))
+	    (loop for i from min to max
+		  as ent = (find-ucd i) do
+		  (when ent
+		    (setf (ucdent-word-break ent) code))))))
       (values vec (make-range :codes range)))))
 
 
@@ -920,6 +942,15 @@
 	;; low 16 bits: index into tabl
 	(logior n (ash l 16)))))
 
+(defun pack-word-break (ucdent)
+  ;; The code is the index in the list.  :OTHER is a dummy value and
+  ;; used to represent the default case.
+  (or (position (ucdent-word-break ucdent)
+		'(:other :cr :lf :newline :extend :format
+		  :katakana :aletter :midnumlet :midletter :midnum
+		  :numeric :extendnumlet))
+      0))
+
 ;; ucd-directory should be the directory where UnicodeData.txt is
 ;; located.
 (defun build-unidata (&optional (ucd-directory "target:i18n/"))
@@ -939,6 +970,7 @@
 	  (pack ucd range (lambda (x) (pack-name x nil dict)) 0 32 #x54)
 	(setf (unidata-name *unicode-data*)
 	    (make-ntrie32 :split #x54 :hvec hvec :mvec mvec :lvec lvec))))
+
     (format t "~&Building Unicode 1.0 character name tables~%")
     (let* ((data (loop for ent across ucd
 		   when (plusp (length (ucdent-name1 ent)))
@@ -949,11 +981,13 @@
 	  (pack ucd range (lambda (x) (pack-name x t dict)) 0 32 #x54)
       (setf (unidata-name1 *unicode-data*)
 	  (make-ntrie32 :split #x72 :hvec hvec :mvec mvec :lvec lvec))))
+
     (format t "~&Building general category table~%")
     (multiple-value-bind (hvec mvec lvec)
 	(pack ucd range #'ucdent-cat 0 8 #x53)
       (setf (unidata-category *unicode-data*)
 	  (make-ntrie8 :split #x53 :hvec hvec :mvec mvec :lvec lvec)))
+
     (format t "~&Building simple case-conversion table~%")
     (let ((svec (make-array 100 :element-type '(unsigned-byte 16)
 			    :fill-pointer 0 :adjustable t)))
@@ -964,11 +998,13 @@
 	(setf (unidata-scase *unicode-data*)
 	    (make-scase :split #x62 :hvec hvec :mvec mvec :lvec lvec
 			:svec (copy-seq svec)))))
+
     (format t "~&Building numeric-values table~%")
     (multiple-value-bind (hvec mvec lvec)
 	(pack ucd range #'pack-numeric 0 32 #x63)
       (setf (unidata-numeric *unicode-data*)
 	  (make-ntrie32 :split #x63 :hvec hvec :mvec mvec :lvec lvec)))
+
     (format t "~&Building decomposition table~%")
     (let ((tabl (make-array 6000 :element-type '(unsigned-byte 16)
 			    :fill-pointer 0 :adjustable t)))
@@ -978,11 +1014,13 @@
 	(setf (unidata-decomp *unicode-data*)
 	    (make-decomp :split #x62 :hvec hvec :mvec mvec :lvec lvec
 			 :tabl (copy-seq tabl)))))
+
     (format t "~&Building combining-class table~%")
     (multiple-value-bind (hvec mvec lvec)
 	(pack ucd range #'ucdent-comb 0 8 #x64)
       (setf (unidata-combining *unicode-data*)
 	  (make-ntrie8 :split #x64 :hvec hvec :mvec mvec :lvec lvec)))
+
     (format t "~&Building bidi information table~%")
     (let ((tabl (make-array 10 :element-type '(unsigned-byte 16)
 			    :fill-pointer 0 :adjustable t)))
@@ -992,35 +1030,38 @@
 	(setf (unidata-bidi *unicode-data*)
 	    (make-bidi :split #x62 :hvec hvec :mvec mvec :lvec lvec
 		       :tabl (copy-seq tabl)))))
+
     (format t "~&Building normalization quick-check tables~%")
-    (multiple-value-bind (hvec mvec lvec)
-	(pack ucd range (lambda (x)
-			  (ecase (getf (ucdent-norm-qc x) :nfd :y)
-			    (:y 0) (:n 1)))
-	      0 1 #x47)
-      (setf (unidata-qc-nfd *unicode-data*)
-	    (make-ntrie1 :split #x47 :hvec hvec :mvec mvec :lvec lvec)))
-    (multiple-value-bind (hvec mvec lvec)
-	(pack ucd range (lambda (x)
-			  (ecase (getf (ucdent-norm-qc x) :nfkd :y)
-			    (:y 0) (:n 1)))
-	      0 1 #x47)
-      (setf (unidata-qc-nfkd *unicode-data*)
-	    (make-ntrie1 :split #x47 :hvec hvec :mvec mvec :lvec lvec)))
-    (multiple-value-bind (hvec mvec lvec)
-	(pack ucd range (lambda (x)
-			  (ecase (getf (ucdent-norm-qc x) :nfc :y)
-			    (:y 0) (:m 1) (:n 2)))
-	      0 2 #x56)
-      (setf (unidata-qc-nfc *unicode-data*)
-	    (make-ntrie2 :split #x56 :hvec hvec :mvec mvec :lvec lvec)))
-    (multiple-value-bind (hvec mvec lvec)
-	(pack ucd range (lambda (x)
-			  (ecase (getf (ucdent-norm-qc x) :nfkc :y)
-			    (:y 0) (:m 1) (:n 2)))
-	      0 2 #x55)
-      (setf (unidata-qc-nfkc *unicode-data*)
-	    (make-ntrie2 :split #x55 :hvec hvec :mvec mvec :lvec lvec)))
+    (progn
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x)
+			    (ecase (getf (ucdent-norm-qc x) :nfd :y)
+			      (:y 0) (:n 1)))
+		0 1 #x47)
+	(setf (unidata-qc-nfd *unicode-data*)
+	      (make-ntrie1 :split #x47 :hvec hvec :mvec mvec :lvec lvec)))
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x)
+			    (ecase (getf (ucdent-norm-qc x) :nfkd :y)
+			      (:y 0) (:n 1)))
+		0 1 #x47)
+	(setf (unidata-qc-nfkd *unicode-data*)
+	      (make-ntrie1 :split #x47 :hvec hvec :mvec mvec :lvec lvec)))
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x)
+			    (ecase (getf (ucdent-norm-qc x) :nfc :y)
+			      (:y 0) (:m 1) (:n 2)))
+		0 2 #x56)
+	(setf (unidata-qc-nfc *unicode-data*)
+	      (make-ntrie2 :split #x56 :hvec hvec :mvec mvec :lvec lvec)))
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x)
+			    (ecase (getf (ucdent-norm-qc x) :nfkc :y)
+			      (:y 0) (:m 1) (:n 2)))
+		0 2 #x55)
+	(setf (unidata-qc-nfkc *unicode-data*)
+	      (make-ntrie2 :split #x55 :hvec hvec :mvec mvec :lvec lvec))))
+
     (format t "~&Building composition exclusion table~%")
     (let ((exclusions (make-array 1 :element-type '(unsigned-byte 32)
 				  :adjustable t
@@ -1029,55 +1070,65 @@
 	   (when (ucdent-comp-exclusion ent)
 	     (vector-push-extend (ucdent-code ent) exclusions)))
       (setf (unidata-comp-exclusions *unicode-data*) (copy-seq exclusions)))
+
     (format t "~&Building full case mapping tables~%")
-    (format t "~&  Lower...~%")
-    (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
-			    :fill-pointer 0 :adjustable t))
-	  (split #x65))
-      (multiple-value-bind (hvec mvec lvec)
-	  (pack ucd range (lambda (x) (pack-full-case x tabl #'ucdent-full-case-lower))
-		0 32 split)
-	(setf (unidata-full-case-lower *unicode-data*)
-	      (make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
-			      :tabl (copy-seq tabl)))))
-    (format t "~&  Title...~%")
-    (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
-			    :fill-pointer 0 :adjustable t))
-	  (split #x65))
-      (multiple-value-bind (hvec mvec lvec)
-	  (pack ucd range (lambda (x) (pack-full-case x tabl #'ucdent-full-case-title))
-		0 32 split)
-	(setf (unidata-full-case-title *unicode-data*)
-	      (make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
-			      :tabl (copy-seq tabl)))))
-    (format t "~&  Upper...~%")
-    (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
-			    :fill-pointer 0 :adjustable t))
-	  (split #x65))
-      (multiple-value-bind (hvec mvec lvec)
-	  (pack ucd range (lambda (x) (pack-full-case x tabl #'ucdent-full-case-upper))
-		0 32 split)
-	(setf (unidata-full-case-upper *unicode-data*)
-	      (make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
-			      :tabl (copy-seq tabl)))))
+    (progn
+      (format t "~&  Lower...~%")
+      (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
+			      :fill-pointer 0 :adjustable t))
+	    (split #x65))
+	(multiple-value-bind (hvec mvec lvec)
+	    (pack ucd range (lambda (x) (pack-full-case x tabl #'ucdent-full-case-lower))
+		  0 32 split)
+	  (setf (unidata-full-case-lower *unicode-data*)
+		(make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
+				:tabl (copy-seq tabl)))))
+      (format t "~&  Title...~%")
+      (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
+			      :fill-pointer 0 :adjustable t))
+	    (split #x65))
+	(multiple-value-bind (hvec mvec lvec)
+	    (pack ucd range (lambda (x) (pack-full-case x tabl #'ucdent-full-case-title))
+		  0 32 split)
+	  (setf (unidata-full-case-title *unicode-data*)
+		(make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
+				:tabl (copy-seq tabl)))))
+      (format t "~&  Upper...~%")
+      (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
+			      :fill-pointer 0 :adjustable t))
+	    (split #x65))
+	(multiple-value-bind (hvec mvec lvec)
+	    (pack ucd range (lambda (x) (pack-full-case x tabl #'ucdent-full-case-upper))
+		  0 32 split)
+	  (setf (unidata-full-case-upper *unicode-data*)
+		(make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
+				:tabl (copy-seq tabl))))))
 
     (format t "~&Building case-folding tables~%")
-    (format t "~&  Simple...~%")
-    (let ((split #x54))
-      (multiple-value-bind (hvec mvec lvec)
-	  (pack ucd range (lambda (x) (pack-case-folding-simple x))
-		0 32 split)
-	(setf (unidata-case-fold-simple *unicode-data*)
-	      (make-ntrie32 :split split :hvec hvec :mvec mvec :lvec lvec))))
-    (format t "~&  Full...~%")
-    (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
-			    :fill-pointer 0 :adjustable t))
-	  (split #x65))
-      (multiple-value-bind (hvec mvec lvec)
-	  (pack ucd range (lambda (x) (pack-case-folding-full x tabl))
-		0 32 split)
-	(setf (unidata-case-fold-full *unicode-data*)
-	      (make-case-folding :split split :hvec hvec :mvec mvec :lvec lvec
-				 :tabl (copy-seq tabl)))))
-    nil))
+    (progn
+      (format t "~&  Simple...~%")
+      (let ((split #x54))
+	(multiple-value-bind (hvec mvec lvec)
+	    (pack ucd range (lambda (x) (pack-case-folding-simple x))
+		  0 32 split)
+	  (setf (unidata-case-fold-simple *unicode-data*)
+		(make-ntrie32 :split split :hvec hvec :mvec mvec :lvec lvec))))
+      (format t "~&  Full...~%")
+      (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
+			      :fill-pointer 0 :adjustable t))
+	    (split #x65))
+	(multiple-value-bind (hvec mvec lvec)
+	    (pack ucd range (lambda (x) (pack-case-folding-full x tabl))
+		  0 32 split)
+	  (setf (unidata-case-fold-full *unicode-data*)
+		(make-case-folding :split split :hvec hvec :mvec mvec :lvec lvec
+				   :tabl (copy-seq tabl))))))
 
+    (format t "~&Building word-break table~%")
+    (let ((split #x66))
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x) (pack-word-break x))
+		0 4 split)
+	(setf (unidata-word-break *unicode-data*)
+	      (make-ntrie4 :split split :hvec hvec :mvec mvec :lvec lvec))))
+    nil))

@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.5 2009/07/10 04:17:49 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.6 2009/09/11 16:22:35 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,7 +14,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.5 $")
+(defvar *unidata-version* "$Revision: 1.6 $")
 
 (defstruct unidata
   range
@@ -38,6 +38,7 @@
   full-case-upper
   case-fold-simple
   case-fold-full
+  word-break
   )
 
 (defvar *unicode-data* (make-unidata))
@@ -620,6 +621,12 @@
       (setf (unidata-case-fold-full *unicode-data*)
 	    (make-case-fold-full :split split :hvec hvec :mvec mvec :lvec lvec
 				 :tabl (map 'simple-string #'code-char tabl))))))
+
+(defloader load-word-break (stm 18)
+  (multiple-value-bind (split hvec mvec lvec)
+      (read-ntrie 4 stm)
+    (setf (unidata-word-break *unicode-data*)
+	  (make-ntrie4 :split split :hvec hvec :mvec mvec :lvec lvec))))
 
 ;;; Accessor functions.
 
@@ -1053,3 +1060,18 @@
 	 (if (and (< c1 #x10000) (< c2 #x10000))
 	     (gethash (logior (ash c1 16) c2) *composition-pair-table*)
 	     nil))))
+
+(defun unicode-word-break-code (code)
+  (unless (unidata-word-break *unicode-data*)
+    (load-word-break))
+  (let* ((data (unidata-word-break *unicode-data*))
+	 (n (qref4 data code)))
+    n))
+
+(defun unicode-word-break (code)
+  ;; The order of the array here MUST match the order used in
+  ;; pack-word-break in tools/build-unidata.lisp!
+  (aref #(:other :cr :lf :newline :extend :format
+	  :katakana :aletter :midnumlet :midletter :midnum
+	  :numeric :extendnumlet)
+	(unicode-word-break-code code)))
