@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.66 2009/06/11 16:03:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.67 2009/09/15 15:47:10 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,6 +128,13 @@ Actions on frames:
   DEBUG-RETURN expression
     returns expression's values from the current frame, exiting the debugger.
     Abbreviations: R
+
+Variables:
+  (DEBUG:VAR name [id])   Returns variable's value if possible.  If multiple
+                          variables with the same name exist, use id to select
+                          one
+  (DEBUG:ARG n)           Returns the n'th argument's value if possible.
+                          Argument zero is the first argument.
 
 See the CMU Common Lisp User's Manual for more information.
 ")
