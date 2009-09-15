@@ -62,6 +62,7 @@
 (defun run-word-break-test (&optional (file *word-break-test*))
   (let ((count 0)
 	(failed 0))
+    (format t "Run WordBreakTest~%")
     (with-open-file (s file :direction :input :external-format :utf8)
       (loop for line = (read-line s nil nil)
 	    while line
@@ -73,4 +74,13 @@
 		  (incf count)
 		  (incf failed (if (do-test s b) 0 1)))))))
     (format t "~D out of ~D tests failed.  (~,2F% success)~%"
-	    failed count (* 100.0 (- 1 (/ failed count))))))
+	    failed count (* 100.0 (- 1 (/ failed count))))
+    ;; Here is one additional test to see if we are properly handling
+    ;; surrogate pairs.  The string is "A?B cd4", where ? is the
+    ;; codepoint U+1000B: "LINEAR B SYLLABLE B046 JE".  This has word
+    ;; break property Aletter, so string-capitalize should not put a
+    ;; break there.  The result should be "A?b Cd4".
+    (let ((s (map 'string #'code-char
+		  '(97 #xd800 #xdc0b 66 32 99 100 52))))
+      (assert (string= (string-capitalize s :unicode-word-break t)
+		       (map 'string #'code-char '(65 55296 56331 98 32 67 100 52)))))))
