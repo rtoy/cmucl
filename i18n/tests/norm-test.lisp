@@ -2,7 +2,7 @@
 ;; and run the individual tests mentioned therein.
 
 (in-package "CL-USER")
-(defvar *testfile* "target:i18n/tests/NormalizationTest.txt")
+(defvar *normalization-test* "target:i18n/tests/NormalizationTest.txt")
 
 (defun parse-line (line)
   (declare (string line))
@@ -39,7 +39,7 @@
 		     (read-values line (1+ p4) p5)))))))
 		   
 	 
-(defun run-nfd-test (&optional (file *testfile*))
+(defun run-nfd-test (&optional (file *normalization-test*))
   (format t "~&NFD test~%")
   (with-open-file (testfile file :direction :input :external-format :iso8859-1)
     (let ((total 0)
@@ -72,7 +72,7 @@
       (format t "~A failures from ~A tests (~A%)~%" failures total
 	      (* 100.0 (/ failures total))))))
 
-(defun run-nfkd-test (&optional (file *testfile*))
+(defun run-nfkd-test (&optional (file *normalization-test*))
   (format t "~&NFKD test~%")
   (with-open-file (testfile file :direction :input :external-format :utf-8)
     (let ((total 0)
@@ -104,7 +104,7 @@
       (format t "~A failures from ~A tests (~A%)~%" failures total
 	      (* 100.0 (/ failures total))))))
 
-(defun run-nfc-test (&optional (file *testfile*))
+(defun run-nfc-test (&optional (file *normalization-test*))
   (format t "~&NFC test~%")
   (with-open-file (testfile file :direction :input :external-format :utf-8)
     (let ((total 0)
@@ -137,7 +137,7 @@
       (format t "~A failures from ~A tests (~A%)~%" failures total
 	      (* 100.0 (/ failures total))))))
 
-(defun run-nfkc-test (&optional (file *testfile*))
+(defun run-nfkc-test (&optional (file *normalization-test*))
   (format t "~&NFKC test~%")
   (with-open-file (testfile file :direction :input :external-format :utf-8)
     (let ((total 0)
@@ -169,7 +169,7 @@
       (format t "~A failures from ~A tests (~A%)~%" failures total
 	      (* 100.0 (/ failures total))))))
 
-(defun run-normalization-tests (&optional (file *testfile*))
+(defun run-normalization-tests (&optional (file *normalization-test*))
   (run-nfd-test file)
   (run-nfkd-test file)
   (run-nfc-test file)
