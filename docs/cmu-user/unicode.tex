@@ -521,14 +521,21 @@ utility functions are provided to make access easier.
 \end{defun}
 
 \begin{defun}{}{octets-to-string}{\args \var{octets} \keys{\kwd{start}
-      \kwd{end} \kwd{external-format} \kwd{buffer}}}
+      \kwd{end} \kwd{external-format} \kwd{string}}}
   \code{octets-to-string} converts the sequence of octets in
-  \var{octets} is converted to a string.   \var{octets} must be a
+  \var{octets} to a string.   \var{octets} must be a
   \code{(simple-array (unsigned-byte 8) (*))}.  The octets to be
   converted are bounded by \var{start} and \var{end}, which default to
   0 and the length of the array, respectively.  The conversion is
   performed according to the external format specified by
-  \var{external-format}. 
+  \var{external-format}.  If \var{string} is specified, the octets are
+  converted and stored in \var{string}.  \var{string} must be
+  \code{simple-string}.  Otherwise, a new string is
+  created.  
+
+  Three values are returned: the string, the number of characters
+  written to the string, and the number of octets consumed to produce
+  the characters.
 \end{defun}
 
 \section{Writing External Formats}
