@@ -22,7 +22,7 @@
      :conservative-float-type
      :hash-new
      :random-mt19937
-     :cmu :cmu19 :cmu19e		; Version features
+     :cmu :cmu20 :cmu20a		; Version features
      :double-double			; double-double float support
      )
    ;; Features to remove from current *features* here.  Normally don't
@@ -71,9 +71,13 @@
 (load "vm:primtype")
 (load "vm:move")
 (load "vm:sap")
+(when (target-featurep :sse2)
+  (load "vm:sse2-sap"))
 (load "vm:system")
 (load "vm:char")
-(load "vm:float")
+(if (target-featurep :sse2)
+    (load "vm:float-sse2")
+    (load "vm:float"))
 
 (load "vm:memory")
 (load "vm:static-fn")
@@ -82,11 +86,17 @@
 (load "vm:subprim")
 (load "vm:debug")
 (load "vm:c-call")
+(if (target-featurep :sse2)
+  (load "vm:sse2-c-call")
+  (load "vm:x87-c-call"))
 (load "vm:print")
 (load "vm:alloc")
 (load "vm:call")
 (load "vm:nlx")
 (load "vm:values")
+(load (if (target-featurep :sse2)
+	  "vm:sse2-array"
+	  "vm:x87-array"))
 (load "vm:array")
 (load "vm:pred")
 (load "vm:type-vops")
@@ -116,6 +126,7 @@
 						    :vm))))
 			       syms))))
   (frob OLD-VM:BYTE-BITS OLD-VM:WORD-BITS
+	OLD-VM:CHAR-BITS
 	#+long-float OLD-VM:SIMPLE-ARRAY-LONG-FLOAT-TYPE 
 	OLD-VM:SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE 
 	OLD-VM:SIMPLE-ARRAY-SINGLE-FLOAT-TYPE
