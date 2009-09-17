@@ -21,7 +21,7 @@
      :conservative-float-type
      :hash-new
      :random-mt19937
-     :cmu :cmu19 :cmu19e		; Version features
+     :cmu :cmu20 :cmu20a		; Version features
      :double-double			; double-double float support
      )
    ;; Features to remove from current *features* here.  Normally don't
@@ -127,6 +127,7 @@
 						    :vm))))
 			       syms))))
   (frob OLD-VM:BYTE-BITS OLD-VM:WORD-BITS
+	OLD-VM:CHAR-BITS
 	#+long-float OLD-VM:SIMPLE-ARRAY-LONG-FLOAT-TYPE 
 	OLD-VM:SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE 
 	OLD-VM:SIMPLE-ARRAY-SINGLE-FLOAT-TYPE

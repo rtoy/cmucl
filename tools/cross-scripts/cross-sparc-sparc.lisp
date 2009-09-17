@@ -20,7 +20,7 @@
      :hash-new
      :random-mt19937			; MT-19937 generator
      :cmu				; Announce this is CMUCL
-     :cmu19 :cmu19e			; Current version identifier
+     :cmu20 :cmu20a			; Current version identifier
      :modular-arith			; Modular arithmetic
      :double-double			; Double-double float support
      )
@@ -144,6 +144,7 @@
 						    :vm))))
 			       syms))))
   (frob OLD-VM:BYTE-BITS OLD-VM:WORD-BITS
+	OLD-VM:CHAR-BITS
 	OLD-VM:LOWTAG-BITS
 	#+long-float OLD-VM:SIMPLE-ARRAY-LONG-FLOAT-TYPE 
 	OLD-VM:SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE 
