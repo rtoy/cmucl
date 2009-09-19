@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.91 2009/09/09 15:51:27 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.91.2.1 2009/09/19 14:44:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1387,6 +1387,7 @@
 	    ;; format of :iso8859-1.  Because there's no buffer, the
 	    ;; other element-types will dispatch to the appropriate
 	    ;; input (output) routine in fast-read-byte/fast-read-char.
+	    #+nil
 	    (setf (lisp-stream-in-buffer stream)
 		  (make-array in-buffer-length
 			      :element-type '(unsigned-byte 8)))))
