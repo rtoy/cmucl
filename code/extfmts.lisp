@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.17 2009/09/17 16:15:34 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.18 2009/09/19 14:12:22 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -694,43 +694,45 @@
       (values (if bufferp buffer (lisp::shrink-vector buffer ptr)) ptr))))
 
 (def-ef-macro ef-octets-to-string (extfmt lisp::lisp +ef-max+ +ef-os+)
-  `(lambda (octets ptr end string &aux (pos -1) (count 0) (state nil) (last-octet 0))
+  `(lambda (octets ptr end string &aux (pos 0) (count 0) (state nil) (last-octet 0))
      (declare (optimize (speed 3) #|(safety 0) (space 0) (debug 0)|#)
 	      (type (simple-array (unsigned-byte 8) (*)) octets)
-	      (type kernel:index end count last-octet)
-	      (type (integer -1 (#.array-dimension-limit)) ptr pos)
+	      (type kernel:index pos end count last-octet)
+	      (type (integer -1 (#.array-dimension-limit)) ptr)
 	      (type simple-string string)
 	      (ignorable state))
-     (loop until (>= ptr end)
-	do (when (= pos (length string))
-	     (setq string (adjust-array string (* 2 pos))))
-	   (setf (schar string (incf pos))
-		 (octets-to-char ,extfmt state count
-				 (if (>= ptr end)
-				     (throw 'eof-input-catcher
-				       (values string pos last-octet))
-				     (aref octets (incf ptr)))
-				 (lambda (n) (decf ptr n))))
-	   (incf last-octet count)
-	finally (return (values string (1+ pos) last-octet)))))
+     (catch 'end-of-octets
+       (loop
+	  (when (= pos (length string))
+	    (setq string (adjust-array string (* 2 pos))))
+	  (setf (schar string pos)
+		(octets-to-char ,extfmt state count
+				(if (>= ptr end)
+				    (throw 'end-of-octets nil)
+				    (aref octets (incf ptr)))
+				(lambda (n) (decf ptr n))))
+	  (incf pos)
+	  (incf last-octet count)))
+     (values string pos last-octet)))
 
 (defun octets-to-string (octets &key (start 0) end (external-format :default)
 				     (string nil stringp))
   "Octets-to-string converts an array of octets in Octets to a string
   according to the specified External-format.  The array of octets is
   bounded by Start (defaulting ot 0) and End (defaulting to the end of
-  the array.  If String is given, the string is stored there;
-  otherwise a new string is created.  Three values are returned:  the string,
-  the number of characters read, and the number of octets consumed."
+  the array.  If String is given, the string is stored there.  If
+  String is too short to hold all of the characters, it will be
+  adjusted (via adjust-array).  If String is not given, a new string
+  is created.  Three values are returned: the string, the number of
+  characters read, and the number of octets consumed."
   (declare (type (simple-array (unsigned-byte 8) (*)) octets)
 	   (type kernel:index start)
 	   (type (or kernel:index null) end)
 	   (type (or simple-string null) string))
   (multiple-value-bind (string pos last-octet)
-      (catch 'eof-input-catcher
-	(funcall (ef-octets-to-string external-format)
-		 octets (1- start) (1- (or end (length octets)))
-		 (or string (make-string (length octets)))))
+      (funcall (ef-octets-to-string external-format)
+	       octets (1- start) (1- (or end (length octets)))
+	       (or string (make-string (length octets))))
     (values (if stringp string (lisp::shrink-vector string pos)) pos last-octet)))
 
 
