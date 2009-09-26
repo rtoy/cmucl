@@ -4,7 +4,7 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-le.lisp,v 1.2 2009/06/11 16:04:02 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-le.lisp,v 1.2.4.1 2009/09/26 13:43:37 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -20,7 +20,7 @@
 		   (ash ,c2 8)
 		   (ash ,c3 16)
 		   (ash ,c4 24))))
-       (declaim (type (unsigned-byte 8) ,c1 ,c2 ,c3 ,c4)
+       (declare (type (unsigned-byte 8) ,c1 ,c2 ,c3 ,c4)
 		(optimize (speed 3)))
        (cond ((or (> ,c #x10ffff)
 		  (lisp::surrogatep ,c))
