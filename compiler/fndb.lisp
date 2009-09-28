@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.140 2009/09/15 15:51:25 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.141 2009/09/28 18:42:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -931,7 +931,7 @@
   (unsafe))
 (defknown get-dispatch-macro-character
   (character character &optional (or readtable null)) callable
-  (flushable))
+  ())
 
 ;;; May return any type due to eof-value...
 (defknown (read read-preserving-whitespace read-char-no-hang read-char)
