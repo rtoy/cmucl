@@ -1,6 +1,6 @@
 #!/bin/sh -x
 
-# $Id: linker.sh,v 1.7 2007/08/14 15:57:48 rtoy Exp $
+# $Id: linker.sh,v 1.7.16.1 2009/09/28 13:02:52 rtoy Exp $
 
 # This file was written by Fred Gilham and is placed in the public domain.
 # It comes without warranty of any kind.
@@ -51,6 +51,9 @@ VER=''
 
 # Default values
 OUTPUT="-o $2"
+OUTDIR=`dirname $2`
+CURDIR=`pwd`
+
 LINKER=/usr/bin/ld
 CMUCLLIB=`dirname $0`
 OBJS="--whole-archive $CMUCLLIB/lisp.a --no-whole-archive"
@@ -128,6 +131,8 @@ case "$OPSYS" in
 	;;
 esac
 
+cd $OUTDIR
 $LINKER $SCRIPT $DLINKER $OUTPUT $STARTCRT $FLAGS $BIFLAG $IFADDR $OBJS $LIBS $ENDCRT
+cd $CURDIR
 
 exit 0

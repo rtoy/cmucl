@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.21 2008/12/10 16:16:11 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.21.6.1 2009/09/28 13:02:52 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -247,6 +247,7 @@ save(char *filename, lispobj init_function, int sse2_mode)
 boolean
 save_executable(char *filename, lispobj init_function)
 {
+    char *dir_name;
 
 #if defined WANT_CGC
     volatile lispobj *func_ptr = &init_function;
@@ -269,6 +270,8 @@ save_executable(char *filename, lispobj init_function)
     if(SymbolValue(X86_CGC_ACTIVE_P) != NIL)
         SetSymbolValue(ALLOCATION_POINTER, DYNAMIC_0_SPACE_START);
 #endif
+    dir_name = dirname(strdup(filename));
+
     printf("[Undoing binding stack... ");
     fflush(stdout);
     unbind_to_here((lispobj *)BINDING_STACK_START);
@@ -285,11 +288,11 @@ save_executable(char *filename, lispobj init_function)
     fflush(stdout);
     printf("read-only... ");
     fflush(stdout);
-    write_elf_object(dirname(filename), READ_ONLY_SPACE_ID, (os_vm_address_t)read_only_space,
+    write_elf_object(dir_name, READ_ONLY_SPACE_ID, (os_vm_address_t)read_only_space,
 		     (os_vm_address_t)SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
     printf("static... ");
     fflush(stdout);
-    write_elf_object(dirname(filename), STATIC_SPACE_ID, (os_vm_address_t)static_space,
+    write_elf_object(dir_name, STATIC_SPACE_ID, (os_vm_address_t)static_space,
 		     (os_vm_address_t)SymbolValue(STATIC_SPACE_FREE_POINTER));
 #ifdef GENCGC
     /* Flush the current_region updating the tables. */
@@ -345,10 +348,10 @@ save_executable(char *filename, lispobj init_function)
     printf("dynamic... ");
     fflush(stdout);
 #ifdef reg_ALLOC
-    write_elf_object(dirname(filename), DYNAMIC_SPACE_ID, (os_vm_address_t)current_dynamic_space,
+    write_elf_object(dir_name, DYNAMIC_SPACE_ID, (os_vm_address_t)current_dynamic_space,
 		     (os_vm_address_t)current_dynamic_space_free_pointer);
 #else
-    write_elf_object(dirname(filename), DYNAMIC_SPACE_ID, (os_vm_address_t)current_dynamic_space,
+    write_elf_object(dir_name, DYNAMIC_SPACE_ID, (os_vm_address_t)current_dynamic_space,
 		     (os_vm_address_t)SymbolValue(ALLOCATION_POINTER));
 #endif
 
@@ -358,7 +361,7 @@ save_executable(char *filename, lispobj init_function)
     printf("Linking executable...\n");
     fflush(stdout);
     elf_run_linker(init_function, filename);
-    elf_cleanup(dirname(filename));
+    elf_cleanup(dir_name);
 
     printf("done.\n");
     exit(0);
