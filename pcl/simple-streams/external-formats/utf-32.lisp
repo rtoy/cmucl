@@ -4,7 +4,7 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32.lisp,v 1.3 2009/09/09 15:51:28 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32.lisp,v 1.4 2009/09/28 18:12:59 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -51,12 +51,14 @@
 			       (ash ,c3  8)
 			       ,c4)))
 		 (,wd 4))
-	    (declaim (type (integer 0 2) ,st)
+	    (declare (type (integer 0 2) ,st)
 		     (type (unsigned-byte 8) ,c1 ,c2 ,c3 ,c4)
-		     (type lisp:codepoint ,code)
 		     (optimize (speed 3)))
-	    (cond ((lisp::surrogatep ,code)
-		   ;; Surrogates are illegal.  Use replacement character.
+	    (cond ((or (> ,code #x10fff)
+		       (lisp::surrogatep ,code))
+		   ;; Surrogates are illegal and codepoints outside
+		   ;; the Unicode range are illegal.  Use replacement
+		   ;; character.
 		   (setf ,code +replacement-character-code+))
 		  ((and  (zerop ,st) (= ,code #xFFFE0000))
 		   ;; BOM for little-endian
