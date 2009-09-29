@@ -67,6 +67,8 @@ utf-16be	utf-16-be
 utf16-be	utf-16-be
 utf-16le	utf-16-le
 utf16-le	utf-16-le
+utf16be		utf-16-be
+utf16le		utf-16-le
 
 ;; Like UTF-16, UTF-32 recognizes the BOM and outputs the BOM.  UTF-32
 ;; output is always big-endian.  UTF-32BE and UTF-32LE neither
@@ -76,6 +78,8 @@ utf32-be	utf-32-be
 utf-32be	utf-32-be
 utf32-le	utf-32-le
 utf-32le	utf-32-le
+utf32be		utf-32-be
+utf32le		utf-32-le
 
 ;;ucs2		ucs-2
 ;;ucs4		ucs-4
