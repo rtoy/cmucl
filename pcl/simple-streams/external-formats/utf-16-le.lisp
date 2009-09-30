@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-le.lisp,v 1.2 2009/06/11 16:04:02 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-le.lisp,v 1.3 2009/09/30 16:12:41 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -16,7 +16,7 @@
     `(let* ((,c1 ,input)
 	    (,c2 ,input)
 	    (,code (+ (* 256 ,c2) ,c1)))
-       (declare (type (integer 0 #xffff) ,code))
+       (declare (type lisp:codepoint ,code))
        (cond ((lisp::surrogatep ,code :low)
 	      ;; Replace with REPLACEMENT CHARACTER.
 	      (setf ,code +replacement-character-code+))

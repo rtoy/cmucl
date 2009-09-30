@@ -1,7 +1,7 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: STREAM -*-
 ;;;
 ;;; **********************************************************************
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.3 2009/09/09 15:51:28 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.4 2009/09/30 16:12:41 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -39,7 +39,7 @@
 			    (+ (* 256 ,c1) ,c2)))
 		 (,wd 2))
 	    (declare (type (integer 0 2) ,st)
-		     (type (integer 0 #xffff) ,code))
+		     (type lisp:codepoint ,code))
 	    ;; Note that if BOM is read, WD will be 2 but 4 octets have
 	    ;; actually been read: this is intentional - the returned
 	    ;; width tells how much to back up to unread a character, and
