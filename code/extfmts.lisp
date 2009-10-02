@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.18 2009/09/19 14:12:22 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.19 2009/10/02 20:15:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -801,6 +801,13 @@
 
 
 (defun set-system-external-format (terminal &optional filenames)
+  "Change the external format of the standard streams to Terminal.
+  The standard streams are sys::*stdin*, sys::*stdout*, and
+  sys::*stderr*, which are normally the input and/or output streams
+  for *standard-input* and *standard-output*.  Also sets sys::*tty*
+  (normally *terminal-io* to the given external format.  If the
+  optional argument Filenames is gvien, then the filename encoding is
+  set to the specified format."
   (unless (find-external-format terminal)
     (error "Can't find external-format ~S." terminal))
   (setf (stream-external-format sys:*stdin*) terminal
