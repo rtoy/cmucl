@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.125 2009/07/06 15:42:34 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.126 2009/10/02 13:34:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2190,8 +2190,11 @@ radix-R.  If you have a power-list then pass it in as PL."
     (set-bit #\_ extension-attribute)
     (set-bit #\. dot-attribute)
     (set-bit #\/ slash-attribute)
+    (set-bit #\` funny-attribute)
+    (set-bit #\| funny-attribute)
 
-    ;; Make anything not explicitly allowed funny...
+    ;; For everything else, derive the attribute from the Unicode
+    ;; properties of the character.
     (dotimes (i char-code-limit)
       (when (zerop (aref character-attributes i))
 	(let* ((char (code-char i)))
