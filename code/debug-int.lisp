@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.136 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.137 2009/10/10 03:00:03 agoncharov Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -954,11 +954,11 @@
 		      (when (zerop depth)
 			(format t "Debug: Both still valid ~s ~s ~s ~s~%"
 				lisp-ocfp lisp-ra c-ocfp c-ra))
-		      #+(or darwin FreeBSD4)
+		      #+(or darwin freebsd)
 		      (if (sap> lisp-ocfp c-ocfp)
 			  (values lisp-ra lisp-ocfp)
 			  (values c-ra c-ocfp))
-		      #-(or darwin FreeBSD4)
+		      #-(or darwin freebsd)
 		      (values lisp-ra lisp-ocfp))
 		     (lisp-path-fp
 		      ;; The lisp convention is looking good.

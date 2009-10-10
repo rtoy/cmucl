@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bsd-os.lisp,v 1.12 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bsd-os.lisp,v 1.13 2009/10/10 03:00:03 agoncharov Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,12 +27,10 @@
 
 (register-lisp-feature #+OpenBSD :OpenBSD
                        #+NetBSD :NetBSD
-		       #+FreeBSD :FreeBSD
+		       #+freebsd :freebsd
 		       #+Darwin :Darwin
-		       #-(or FreeBSD NetBSD OpenBSD Darwin) :bsd)
+		       #-(or freebsd NetBSD OpenBSD Darwin) :bsd)
 
-#+freebsd4
-(register-lisp-feature :freebsd4)
 #+elf
 (register-lisp-feature :elf)
 #+mach-o
@@ -43,9 +41,9 @@
 
 (setq *software-type* #+OpenBSD "OpenBSD"
                       #+NetBSD "NetBSD"
-                      #+FreeBSD "FreeBSD"
+                      #+freebsd "FreeBSD"
 		      #+Darwin "Darwin"
-		      #-(or FreeBSD NetBSD OpenBSD Darwin) "BSD")
+		      #-(or freebsd NetBSD OpenBSD Darwin) "BSD")
 
 (defvar *software-version* nil "Version string for supporting software")
 

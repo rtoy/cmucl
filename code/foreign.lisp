@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.56 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.57 2009/10/10 03:00:03 agoncharov Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -873,13 +873,13 @@ environment passed to Lisp."
     (let ((proc (ext:run-program
 		 *dso-linker*
 		 (list*
-		  #+(or solaris linux FreeBSD4) "-G"
-		  #+(or OpenBSD NetBSD irix) "-shared"
+		  #+(or solaris linux) "-G"
+		  #+(or freebsd OpenBSD NetBSD irix) "-shared"
 		  #+darwin "-dylib"
 		  "-o"
 		  output-file
 		  ;; Cause all specified libs to be loaded in full
-		  #+(or OpenBSD linux FreeBSD4 NetBSD) "--whole-archive"
+		  #+(or freebsd OpenBSD linux NetBSD) "--whole-archive"
 		  #+solaris "-z" #+solaris "allextract"
 		  #+darwin "-all_load"
 		  (append (mapcar
@@ -896,7 +896,7 @@ environment passed to Lisp."
 			       files))
 			  ;; Return to default ld behaviour for libs
 			  (list
-			   #+(or OpenBSD linux FreeBSD4 NetBSD)
+			   #+(or freebsd OpenBSD linux NetBSD)
 			   "--no-whole-archive"
 			   #+solaris "-z" #+solaris "defaultextract")
 			  libraries))

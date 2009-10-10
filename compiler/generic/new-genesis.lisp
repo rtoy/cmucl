@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.87 2009/06/15 16:56:08 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.88 2009/10/10 03:00:04 agoncharov Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2116,12 +2116,12 @@
 			    (eq (c:backend-fasl-file-implementation c:*backend*)
 				#.c:alpha-fasl-file-implementation))
 			(c:backend-featurep :linux)))
-	  (freebsd4-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
+	  (freebsd-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
 			       #.c:x86-fasl-file-implementation)
-			   (c:backend-featurep :freebsd4))))
+			   (c:backend-featurep :freebsd))))
       (cond
 	((and #+linkage-table nil
-	      (or linux-p freebsd4-p)
+	      (or linux-p freebsd-p)
 	      (lookup-sym (concatenate 'string "PVE_stub_" name))))
 	((and #+linkage-table nil
 	      (c:backend-featurep :darwin)

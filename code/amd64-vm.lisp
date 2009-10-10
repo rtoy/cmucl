@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/amd64-vm.lisp,v 1.3 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/amd64-vm.lisp,v 1.4 2009/10/10 03:00:03 agoncharov Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -55,30 +55,7 @@
         (fpreg (array (struct fpreg) 8))
         (status unsigned-long)))
 
-;;; for FreeBSD
-#+(and freebsd (not freebsd4))
-(def-alien-type sigcontext
-    (struct nil
-	(sc-onstack unsigned-int)
-	(sc-mask    unsigned-int)
-	(sc-sp      unsigned-int)
-	(sc-fp	    unsigned-int)
-	(sc-isp	    unsigned-int)
-	(sc-pc	    unsigned-int)
-	(sc-efl     unsigned-int)		; sc_ps
-	(sc-es	    unsigned-int)
-	(sc-ds	    unsigned-int)
-	(sc-cs	    unsigned-int)
-	(sc-ss	    unsigned-int)
-	(sc-edi	    unsigned-int)
-	(sc-esi	    unsigned-int)
-	(sc-ebx	    unsigned-int)
-	(sc-edx	    unsigned-int)
-	(sc-ecx	    unsigned-int)
-	(sc-eax	    unsigned-int)))
-
-;;; FreeBSD 4.0 has a sigcontext that looks more like Linux.
-#+freebsd4
+#+freebsd
 (def-alien-type sigcontext
     (struct nil
 	(sc-mask    (array unsigned-int 4))
