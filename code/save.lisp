@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.64 2009/10/11 03:18:29 agoncharov Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.65 2009/10/14 03:42:21 agoncharov Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,7 @@
 (in-package "LISP")
 
 (in-package "EXTENSIONS")
-(export '(print-herald getenv *herald-items* save-lisp *before-save-initializations*
+(export '(print-herald *herald-items* save-lisp *before-save-initializations*
 	  *after-save-initializations* *environment-list* *editor-lisp-p*))
 (in-package "LISP")
 
@@ -118,11 +118,6 @@
 	'("library:ext-formats/"
 	  "target:i18n/"
 	  "target:pcl/simple-streams/external-formats/")))
-
-(defun getenv (name)
-  "Return the value of the environment variable Name; nil if Name is unset."
-  (let ((symbol (find-symbol name *keyword-package*)))
-    (if symbol (cdr (assoc symbol *environment-list*)) nil)))
 
 
 ;;;; SAVE-LISP itself.

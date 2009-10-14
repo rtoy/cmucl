@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.47 2009/06/11 16:03:59 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.48 2009/10/14 03:42:21 agoncharov Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -189,6 +189,7 @@
 	  unix-getpid unix-getppid
 	  unix-getgid unix-getegid unix-getpgrp unix-setpgrp unix-getuid
 	  unix-getpagesize unix-gethostname unix-gethostid unix-fork
+	  unix-getenv unix-setenv unix-putenv unix-unsetenv
 	  unix-current-directory unix-isatty unix-ttyname unix-execve
 	  unix-socket unix-connect unix-bind unix-listen unix-accept
 	  unix-recv unix-send unix-getpeername unix-getsockname
@@ -2181,6 +2182,21 @@ length LEN and type TYPE."
    of the child in the parent if it works, or NIL and an error number if it
    doesn't work."
   (int-syscall ("fork")))
+
+;; Environment maninpulation; man getenv(3)
+(alien:def-alien-routine ("getenv" unix-getenv) c-call:c-string
+  (name c-call:c-string))
+
+(alien:def-alien-routine ("setenv" unix-setenv) c-call:int
+  (name c-call:c-string)
+  (value c-call:c-string)
+  (overwrite c-call:int))
+
+(alien:def-alien-routine ("putenv" unix-putenv) c-call:int
+			 (name c-call:c-string))
+
+(alien:def-alien-routine ("unsetenv" unix-unsetenv) c-call:int
+			 (name c-call:c-string))
 
 (def-alien-routine ("ttyname" unix-ttyname) c-string
   (fd int))
