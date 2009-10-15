@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.48 2009/10/14 03:42:21 agoncharov Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.49 2009/10/15 14:07:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2184,19 +2184,29 @@ length LEN and type TYPE."
   (int-syscall ("fork")))
 
 ;; Environment maninpulation; man getenv(3)
-(alien:def-alien-routine ("getenv" unix-getenv) c-call:c-string
-  (name c-call:c-string))
+(def-alien-routine ("getenv" unix-getenv) c-call:c-string
+  (name c-call:c-string) 
+  "Get the value of the environment variable named Name.  If no such
+  variable exists, Nil is returned.")
 
-(alien:def-alien-routine ("setenv" unix-setenv) c-call:int
+(def-alien-routine ("setenv" unix-setenv) c-call:int
   (name c-call:c-string)
   (value c-call:c-string)
-  (overwrite c-call:int))
+  (overwrite c-call:int)
+  "Adds the environment variable named Name to the environment with
+  the given Value if Name does not already exist. If Name does exist,
+  the value is changed to Value if Overwrite is non-zero.  Otherwise,
+  the value is not changed.")
 
-(alien:def-alien-routine ("putenv" unix-putenv) c-call:int
-			 (name c-call:c-string))
+(def-alien-routine ("putenv" unix-putenv) c-call:int
+  (name c-call:c-string)
+  "Adds or changes the environment.  Name-value must be a string of
+  the form \"name=value\".  If the name does not exist, it is added.
+  If name does exist, the value is updated to the given value.")
 
-(alien:def-alien-routine ("unsetenv" unix-unsetenv) c-call:int
-			 (name c-call:c-string))
+(def-alien-routine ("unsetenv" unix-unsetenv) c-call:int
+  (name c-call:c-string)
+  "Removes the variable Name from the environment")
 
 (def-alien-routine ("ttyname" unix-ttyname) c-string
   (fd int))

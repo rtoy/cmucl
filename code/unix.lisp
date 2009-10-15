@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.123 2009/10/14 03:42:21 agoncharov Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.124 2009/10/15 14:07:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2451,19 +2451,32 @@
   (int-syscall ("fork")))
 
 ;; Environment maninpulation; man getenv(3)
-(alien:def-alien-routine ("getenv" unix-getenv) c-call:c-string
-  (name c-call:c-string))
+(def-alien-routine ("getenv" unix-getenv) c-call:c-string
+  (name c-call:c-string) 
+  "Get the value of the environment variable named Name.  If no such
+  variable exists, Nil is returned.")
 
-(alien:def-alien-routine ("setenv" unix-setenv) c-call:int
+;; This doesn't exist in Solaris 8 but does exist in Solaris 10.
+(def-alien-routine ("setenv" unix-setenv) c-call:int
   (name c-call:c-string)
   (value c-call:c-string)
-  (overwrite c-call:int))
+  (overwrite c-call:int)
+  "Adds the environment variable named Name to the environment with
+  the given Value if Name does not already exist. If Name does exist,
+  the value is changed to Value if Overwrite is non-zero.  Otherwise,
+  the value is not changed.")
 
-(alien:def-alien-routine ("putenv" unix-putenv) c-call:int
-			 (name c-call:c-string))
 
-(alien:def-alien-routine ("unsetenv" unix-unsetenv) c-call:int
-			 (name c-call:c-string))
+(def-alien-routine ("putenv" unix-putenv) c-call:int
+  (name-value c-call:c-string)
+  "Adds or changes the environment.  Name-value must be a string of
+  the form \"name=value\".  If the name does not exist, it is added.
+  If name does exist, the value is updated to the given value.")
+
+;; This doesn't exist in Solaris 8 but does exist in Solaris 10.
+(def-alien-routine ("unsetenv" unix-unsetenv) c-call:int
+  (name c-call:c-string)
+  "Removes the variable Name from the environment")
 
 
 ;;; Operations on Unix Directories.
