@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.124 2009/10/15 14:07:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.125 2009/10/15 19:36:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3408,11 +3408,6 @@
 
 #+(and solaris svr4)
 (progn
-(def-alien-routine sysinfo long
-  (command int)
-  (buf c-string)
-  (count long))
-
 ;; From sys/systeminfo.h.  We don't list the set values here.
 (def-enum + 1
   si-sysname si-hostname si-release si-version si-machine
@@ -3421,12 +3416,21 @@
 (def-enum + 513
   si-platform si-isalist si-dhcp-cache)
 
-(defun unix-sysinfo (command)
-  (let* ((count 2048)			; Hope this is long enough!
-	 (buf (make-string count))
-	 (result (sysinfo command buf count)))
-    (when (>= result 0)
-      (subseq buf 0 (1- result)))))
-)
 
+(defun unix-sysinfo (command)
+  ;; Hope a buffer of length 2048 is long enough.
+  (with-alien ((buf (array c-call:unsigned-char 2048)))
+    (let ((result
+	   (alien-funcall
+	    (extern-alien "sysinfo"
+			  (function c-call:int
+				    c-call:int
+				    c-call:c-string
+				    c-call:int))
+	    command
+	    (cast buf (* c-call:char))
+	    2048)))
+      (when (>= result 0)
+	(cast buf c-call:c-string)))))
+)
 ;; EOF
