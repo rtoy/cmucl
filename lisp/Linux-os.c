@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.43 2009/01/06 02:28:14 agoncharov Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.44 2009/10/15 15:05:51 rtoy Exp $
  *
  */
 
@@ -430,7 +430,7 @@ restore_fpu(ucontext_t *context)
         DPRINTF(0, (stderr, "restore_fpu:  cw = %08x\n", cw));
 	__asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
 #ifdef FEATURE_SSE2
-        if (arch_support_sse2()) {
+        if (fpu_mode == SSE2) {
             struct _fpstate *fpstate;
             unsigned int mxcsr;
             

@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.30 2009/06/11 16:04:01 rtoy Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.31 2009/10/15 15:05:51 rtoy Exp $
  *
  */
 
@@ -340,7 +340,7 @@ restore_fpu(ucontext_t *scp)
     __asm__ __volatile__ ("fldcw %0"::"m"(*&cw));
 
 #ifdef FEATURE_SSE2
-    if (arch_support_sse2()) {
+    if (fpu_mode == SSE2) {
 	u_int32_t mxcsr = env_xmm->en_mxcsr;
 
 	DPRINTF(0, (stderr, "restore_fpu:  mxcsr (raw) = %04x\n", mxcsr));
