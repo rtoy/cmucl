@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.12 2009/08/30 19:17:55 rswindells Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.13 2009/10/16 13:38:02 rswindells Exp $
  *
  */
 
@@ -379,7 +379,7 @@ restore_fpu(ucontext_t *scp)
     DPRINTF(0, (stderr, "restore_fpu:  cw = %08x\n", (int)cw));
     __asm__ __volatile__ ("fldcw %0"::"m"(*&cw));
 
-    if (arch_support_sse2()) {
+    if (fpu_mode == SSE2) {
 	u_int32_t mxcsr = env_xmm->en_mxcsr;
 
 	DPRINTF(0, (stderr, "restore_fpu:  mxcsr (raw) = %04x\n", mxcsr));
