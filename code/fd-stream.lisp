@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.91 2009/09/09 15:51:27 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.92 2009/10/18 14:21:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,6 +40,8 @@
 (defvar *available-buffers* ()
   "List of available buffers.  Each buffer is an sap pointing to
   bytes-per-buffer of memory.")
+
+(defvar lisp::*enable-stream-buffer-p* nil)
 
 (defconstant bytes-per-buffer (* 4 1024)
   "Number of bytes per buffer.")
@@ -250,7 +252,17 @@
   #+unicode
   (co-state nil)
   #+unicode
-  (last-char-read-size 0 :type index))
+  (last-char-read-size 0 :type index)
+  ;; Saved state needed for (setf stream-external-format) when the
+  ;; fast string-buffer is used.
+  #+unicode
+  (saved-oc-state nil)
+  ;;
+  ;; The number of octets in in-buffer.  Normally equal to
+  ;; in-buffer-length, but could be less if we reached the
+  ;; end-of-file.
+  #+unicode
+  (in-length 0 :type index))
 
 (defun %print-fd-stream (fd-stream stream depth)
   (declare (ignore depth) (stream stream))
@@ -1378,18 +1390,32 @@
 		      ;; since we already have size = 1.
 		      (or (eq 'unsigned-byte (and (consp type) (car type)))
 			  (eq type :default))
-		      ;; Character streams with :iso8859-1
-		      (and (eq type 'character)
-			   #+unicode
-			   (eql :iso8859-1 (fd-stream-external-format stream)))))
+		      (eq type 'character)))
 	    ;; We only create this buffer for streams of type
 	    ;; (unsigned-byte 8) or character streams with an external
 	    ;; format of :iso8859-1.  Because there's no buffer, the
 	    ;; other element-types will dispatch to the appropriate
 	    ;; input (output) routine in fast-read-byte/fast-read-char.
-	    (setf (lisp-stream-in-buffer stream)
-		  (make-array in-buffer-length
-			      :element-type '(unsigned-byte 8)))))
+	    (when *enable-stream-buffer-p*
+	      (setf (lisp-stream-in-buffer stream)
+		    (make-array in-buffer-length
+				:element-type '(unsigned-byte 8)))
+	      #+unicode
+	      (when (and (eq type 'character)
+			 (not (eq :iso8859-1 (fd-stream-external-format stream))))
+		;; For character streams, we create the string-buffer so
+		;; we can convert all available octets at once instead
+		;; of for each character.  The string is one element
+		;; longer than in-buffer-length to leave room for
+		;; unreading.
+		;;
+		;; For ISO8859-1, we don't want this because it's very
+		;; easy and quick to convert octets to iso8859-1.  (See
+		;; FAST-READ-CHAR.)
+		(setf (lisp-stream-string-buffer stream)
+		      (make-string (1+ in-buffer-length)))
+		(setf (lisp-stream-string-buffer-len stream) 0)
+		(setf (lisp-stream-string-index stream) 0)))))
 	(setf input-size size)
 	(setf input-type type)))
 
@@ -1496,10 +1522,15 @@
      #-unicode
      (setf (fd-stream-unread stream) arg1)
      #+unicode
-     (if (zerop (fd-stream-last-char-read-size stream))
-	 (setf (fd-stream-unread stream) arg1)
-	 (decf (fd-stream-ibuf-head stream)
-	       (fd-stream-last-char-read-size stream)))
+     (cond ((lisp-stream-string-buffer stream)
+	    (if (zerop (lisp-stream-string-index stream))
+		(setf (fd-stream-unread stream) arg1)
+		(decf (lisp-stream-string-index stream))))
+	   (t
+	    (if (zerop (fd-stream-last-char-read-size stream))
+		(setf (fd-stream-unread stream) arg1)
+		(decf (fd-stream-ibuf-head stream)
+		      (fd-stream-last-char-read-size stream)))))
      ;; Paul says:
      ;; 
      ;; Not needed for unicode when unreading is implemented by backing up in
@@ -1753,11 +1784,13 @@
     ;;
     ;;#-unicode-bootstrap ; fails in stream-reinit otherwise
     #+(and unicode (not unicode-bootstrap))
-    (setf (stream-external-format stream) external-format)
+    (when lisp::*enable-stream-buffer-p*
+      (%set-fd-stream-external-format stream external-format nil))
     (set-routines stream element-type input output input-buffer-p
 		  :binary-stream-p binary-stream-p)
     #+(and unicode (not unicode-bootstrap))
-    (setf (stream-external-format stream) external-format)
+    (when lisp::*enable-stream-buffer-p*
+      (%set-fd-stream-external-format stream external-format nil))
     (when (and auto-close (fboundp 'finalize))
       (finalize stream
 		#'(lambda ()
@@ -2290,3 +2323,10 @@
     (t (etypecase object
 	 (character 1)
 	 (string (length object))))))
+
+#+unicode
+(stream::def-ef-macro ef-copy-state (extfmt lisp stream::+ef-max+ stream::+ef-copy-state+)
+  ;; Return a copy of the state of an external format.
+  `(lambda (state)
+     (declare (ignorable state))
+     (stream::copy-state ,extfmt state)))

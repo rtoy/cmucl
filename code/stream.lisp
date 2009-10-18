@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.87 2009/08/10 16:47:41 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.88 2009/10/18 14:21:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -298,19 +298,59 @@
     ;; fundamental-stream
     :default))
 
-(defun %set-fd-stream-external-format (stream extfmt)
+#+unicode
+(defun %set-fd-stream-external-format (stream extfmt &optional (updatep t))
   (declare (type fd-stream stream))
-  (setf (fd-stream-external-format stream)
-      (stream::ef-name (stream::find-external-format extfmt))
-	(fd-stream-oc-state stream) nil
-	(fd-stream-co-state stream) nil)
-  (when (fd-stream-ibuf-sap stream) ; input stream
-    (setf (fd-stream-in stream) (ef-cin extfmt)))
-  (when (fd-stream-obuf-sap stream) ; output stream
-    (setf (fd-stream-out stream) (ef-cout extfmt)
-	  ;;@@ (fd-stream-sout stream) (ef-sout extfmt)
-	  ))
-  extfmt)
+  (let ((old-format (fd-stream-external-format stream)))
+    (setf (fd-stream-external-format stream)
+	  (stream::ef-name (stream::find-external-format extfmt))
+	  (fd-stream-oc-state stream) nil
+	  (fd-stream-co-state stream) nil)
+    (when (fd-stream-ibuf-sap stream)	; input stream
+      (setf (fd-stream-in stream) (ef-cin extfmt)))
+    (when (fd-stream-obuf-sap stream)	; output stream
+      (setf (fd-stream-out stream) (ef-cout extfmt)
+	    ;;@@ (fd-stream-sout stream) (ef-sout extfmt)
+	    ))
+    (when (and lisp::*enable-stream-buffer-p* updatep
+	       (lisp-stream-string-buffer stream))
+      ;; We want to reconvert any octets that haven't been converted
+      ;; yet.  So, we need to figure out which octet to start with.
+      ;; This is done by converting (the previously converted) octets
+      ;; until we've converted the right number of characters.
+      (let ((ibuf (lisp-stream-in-buffer stream))
+	    (sindex (1- (lisp-stream-string-index stream)))
+	    (index 0)
+	    (state (fd-stream-saved-oc-state stream)))
+	;; Reconvert all the octets we've already converted and read.
+	;; We don't know how many octets that is, but do know how many
+	;; characters there are.
+	(multiple-value-bind (s pos count new-state)
+	    (octets-to-string ibuf
+			      :start 0
+			      :external-format old-format
+			      :string (make-string sindex)
+			      :state state)
+	  (declare (ignore s pos))
+	  (setf state new-state)
+	  (setf index count))
+	
+	;; We now know the last octet that was used.  Now convert the
+	;; rest of the octets using the new format.
+	(multiple-value-bind (s pos count new-state)
+	    (octets-to-string ibuf
+			      :start index
+			      :end (fd-stream-in-length stream)
+			      :external-format (fd-stream-external-format stream)
+			      :string (lisp-stream-string-buffer stream)
+			      :s-start 1
+			      :state state)
+	  (declare (ignore s))
+	  (setf (lisp-stream-string-index stream) 1)
+	  (setf (lisp-stream-string-buffer-len stream) pos)
+	  (setf (lisp-stream-in-index stream) (+ index count))
+	  (setf (fd-stream-oc-state stream) new-state))))
+    extfmt))
 
 ;; This is only used while building; it's reimplemented in
 ;; fd-stream-extfmt.lisp
@@ -459,6 +499,7 @@
       ;; simple-stream
       (stream::%unread-char stream character)
       ;; lisp-stream
+      #-unicode
       (let ((index (1- (lisp-stream-in-index stream)))
 	    (buffer (lisp-stream-in-buffer stream)))
 	(declare (fixnum index))
@@ -466,6 +507,25 @@
 	(cond (buffer
 	       (setf (aref buffer index) (char-code character))
 	       (setf (lisp-stream-in-index stream) index))
+	      (t
+	       (funcall (lisp-stream-misc stream) stream 
+			:unread character))))
+      #+unicode
+      (let ((sbuf (lisp-stream-string-buffer stream))
+	    (ibuf (lisp-stream-in-buffer stream)))
+	(cond (sbuf
+	       (let ((index (1- (lisp-stream-string-index stream))))
+		 (when (minusp index)
+		   (error "Nothing to unread."))
+		 (setf (aref sbuf index) character)
+		 (setf (lisp-stream-string-index stream) index)))
+	      (ibuf
+	       (let ((index (1- (lisp-stream-in-index stream))))
+		 (when (minusp index)
+		   (error "Nothing to unread."))
+		 ;; This only works for iso8859-1!
+		 (setf (aref ibuf index) (char-code character))
+		 (setf (lisp-stream-in-index stream) index)))
 	      (t
 	       (funcall (lisp-stream-misc stream) stream 
 			:unread character))))
@@ -703,6 +763,76 @@
 	   (setf (lisp-stream-in-index stream) (1+ start))
 	   (code-char (aref ibuf start))))))
 
+#+unicode
+(defun fast-read-char-string-refill (stream eof-errorp eof-value)
+  ;; Like fast-read-char-refill, but we don't need or want the
+  ;; in-buffer-extra.
+  (let* ((ibuf (lisp-stream-in-buffer stream))
+	 (index (lisp-stream-in-index stream)))
+    (declare (type (integer 0 #.in-buffer-length) index))
+
+    ;; Copy the stuff we haven't read from in-buffer to the beginning
+    ;; of the buffer.
+    (replace ibuf ibuf
+	     :start1 0
+	     :start2 index :end2 in-buffer-length)
+    
+    (let ((count (funcall (lisp-stream-n-bin stream) stream
+			  ibuf (- in-buffer-length index)
+			  index
+			  nil)))
+      (declare (type (integer 0 #.in-buffer-length) count))
+
+      (cond ((zerop count)
+	     ;; Nothing left in the stream, so update our pointers to
+	     ;; indicate we've read everything and call the stream-in
+	     ;; function so that we do the right thing for eof.
+	     (setf (lisp-stream-in-index stream) in-buffer-length)
+	     (setf (lisp-stream-string-index stream)
+		   (lisp-stream-string-buffer-len stream))
+	     (funcall (lisp-stream-in stream) stream eof-errorp eof-value))
+	    (t
+	     (let ((sbuf (lisp-stream-string-buffer stream))
+		   (slen (lisp-stream-string-buffer-len stream)))
+	       (declare (simple-string sbuf)
+			(type (integer 0 #.(1+ in-buffer-length)) slen)
+			(optimize (speed 3)))
+
+	       ;; Update in-length and saved-oc-state.  These are
+	       ;; needed if we change the external-format of the
+	       ;; stream because we need to know how many octets are
+	       ;; valid (in case end-of-file was reached), and what
+	       ;; the state was when originally converting the octets
+	       ;; to characters.
+	       (setf (fd-stream-in-length stream) (+ count (- in-buffer-length index)))
+	       (let ((state (fd-stream-oc-state stream)))
+		 (setf (fd-stream-saved-oc-state stream)
+		       (cons (car state)
+			     (funcall (ef-copy-state (fd-stream-external-format stream))
+				      (cdr state)))))
+
+	       ;; Copy the last read character to the beginning of the
+	       ;; buffer to support unreading.
+	       (when (plusp slen)
+		 (setf (schar sbuf 0) (schar sbuf (1- slen))))
+
+
+	       ;; Convert all the octets, including the ones that we
+	       ;; haven't processed yet and the ones we just read in.
+	       (multiple-value-bind (s char-count octet-count new-state)
+		   (octets-to-string ibuf
+				     :start 0
+				     :end (+ count (- in-buffer-length index))
+				     :state (fd-stream-oc-state stream)
+				     :string sbuf
+				     :s-start 1
+				     :external-format (fd-stream-external-format stream))
+		 (declare (ignore s))
+		 (setf (fd-stream-oc-state stream) new-state)
+		 (setf (lisp-stream-string-buffer-len stream) char-count)
+		 (setf (lisp-stream-string-index stream) 2)
+		 (setf (lisp-stream-in-index stream) octet-count)
+		 (schar sbuf 1))))))))
 
 ;;; FAST-READ-BYTE-REFILL  --  Interface
 ;;;

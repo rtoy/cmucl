@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-be.lisp,v 1.3 2009/09/30 16:12:41 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-be.lisp,v 1.4 2009/10/18 14:21:24 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -19,11 +19,23 @@
 	    (,code (+ (* 256 ,c1) ,c2)))
        (declare (type lisp:codepoint ,code))
        (cond ((lisp::surrogatep ,code :low)
-	      (setf ,code +replacement-character-code+))
+	      ;; Got low surrogate.  Combine with the state (high
+	      ;; surrogate), if we have it.  Otherwise, use the
+	      ;; replacement code.
+	      (if ,state
+		  (setf ,code (+ (ash (- (the (integer #xd800 #xdbff) ,state) #xD800) 10)
+				 ,code #x2400)
+			,state nil)
+		  (setf ,code +replacement-character-code+)))
 	     ((lisp::surrogatep ,code :high)
+	      ;; Remember the high surrogate in case we bail out
+	      ;; reading the low surrogate (for octets-to-string.)
+	      (setf ,state ,code)
 	      (let* ((,c1 ,input)
 		     (,c2 ,input)
 		     (,next (+ (* 256 ,c1) ,c2)))
+		;; We read the trailing code, so clear the state.
+		(setf ,state nil)
 		;; If we don't have a high and low surrogate,
 		;; replace with REPLACEMENT CHARACTER.  Possibly
 		;; unput 2 so it'll be read as another character
@@ -33,7 +45,8 @@
 		    (setf ,code +replacement-character-code+))))
 	     ((= ,code #xFFFE)
 	      ;; Replace with REPLACEMENT CHARACTER.  
-	      (setf ,code +replacement-character-code+)))
+	      (setf ,code +replacement-character-code+))
+	     (t (setf ,state nil)))
        (values ,code 2)))
   (code-to-octets (code state output c c1 c2)
     `(flet ((output (code)
@@ -48,4 +61,9 @@
 		(output (logior ,c1 #xD800))
 		(output (logior ,c2 #xDC00))))
 	     (t
-	      (output +replacement-character-code+))))))
+	      (output +replacement-character-code+)))))
+  nil
+  (copy-state (state)
+    ;; The state is either NIL or a codepoint, so nothing really
+    ;; special is needed to copy it.
+    `(progn ,state)))

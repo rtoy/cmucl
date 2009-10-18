@@ -1,7 +1,7 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: STREAM -*-
 ;;;
 ;;; **********************************************************************
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.4 2009/09/30 16:12:41 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.5 2009/10/18 14:21:24 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -11,15 +11,14 @@
 ;; UTF-16BE, the input stream shouldn't have a BOM.  But we allow for
 ;; one here, anyway.  This should be compatible with the Unicode spec.
 
-;; make state an integer:
-;;  or (or state 0) to cope with NIL case
+;; The state is a cons.  The car is an integer:
 ;;  0 = initial state, nothing has been read yet
 ;;  1 = BOM has been read, little-endian
 ;;  2 = BOM has been read, big-endian, or non-BOM char has been read
 ;;
-;; (oddp state) = little-endian
-;; (evenp state) = big-endian
-;; (zerop state) = #xFEFF/#xFFFE is BOM (to be skipped)
+;; The cdr is either NIL or a codepoint which is used for converting
+;; surrogate pairs into codepoints.  If the cdr is non-NIL, then it is
+;; the leading (high) surrogate of a surrogate pair.
 ;;
 ;; When writing, never output a BOM.
 
@@ -28,10 +27,10 @@
 
   (octets-to-code (state input unput c1 c2 code wd next st)
     `(block nil
-       (when (null ,state) (setf ,state 0))
+       (when (null ,state) (setf ,state (cons 0 nil)))
        (tagbody
 	:again
-	  (let* ((,st ,state)
+	  (let* ((,st (car ,state))
 		 (,c1 ,input)
 		 (,c2 ,input)
 		 (,code (if (oddp ,st)
@@ -47,14 +46,29 @@
 	    ;; indicates that BOM has been seen, so that would result in
 	    ;; the BOM being reread as a character
 	    (cond ((lisp::surrogatep ,code :low)
-		   ;; replace with REPLACEMENT CHARACTER ?
-		   (setf ,code +replacement-character-code+))
+		   ;; If possible combine this low surrogate with the
+		   ;; high surrogate in the state.  Otherwise, we have
+		   ;; a bare low surrogate so return the replacement
+		   ;; character.
+		   (if (cdr ,state)
+		       (setf ,code (+ (ash (- (the (integer #xd800 #xdbff) (cdr ,state)) #xD800)
+					   10)
+				      ,code #x2400)
+			     ,state nil)
+		       (setf ,code +replacement-character-code+)))
 		  ((lisp::surrogatep ,code :high)
+		   ;; Save the high (leading) code in the state, in
+		   ;; case we fail to read the low (trailing)
+		   ;; surrogate.  (This should only happen when we're
+		   ;; doing octets-to-string.)
+		   (setf (cdr ,state) ,code)
 		   (let* ((,c1 ,input)
 			  (,c2 ,input)
 			  (,next (if (oddp ,st)
 				     (+ (* 256 ,c2) ,c1)
 				     (+ (* 256 ,c1) ,c2))))
+		     ;; We read the trailing surrogate, so clear the state.
+		     (setf (cdr ,state) nil)
 		     ;; If we don't have a high and low surrogate,
 		     ;; replace with REPLACEMENT CHARACTER.  Possibly
 		     ;; unput 2 so it'll be read as another character
@@ -91,5 +105,5 @@
 	      (output +replacement-character-code+)))))
   nil
   (copy-state (state)
-    ;; The state is either NIL or T, so we can just return that.
-    state))
+    ;; The state is list. Copy it
+    `(copy-list ,state)))

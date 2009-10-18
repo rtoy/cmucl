@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.19 2009/10/02 20:15:04 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.20 2009/10/18 14:21:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,6 +33,7 @@
   en					; encode
   de					; decode
   flush					; flush state
+  copy-state				; copy state
   max)
 
 ;; Unicode replacement character U+FFFD
@@ -567,18 +568,18 @@
 			    `(+ (ensure-cache ,tmp1 ',id ,reqd) ,idx))))
 	   (funcall (or (aref (ef-cache ,tmp1) ,tmp2)
 			(setf (aref (ef-cache ,tmp1) ,tmp2)
-			    (let ((*compile-print* nil)
-				  ;; Set default format when we compile so we
-				  ;; can see compiler messages.  If we don't,
-				  ;; we run into a problem that we might be
-				  ;; changing the default format while we're
-				  ;; compiling, and we don't know how to output
-				  ;; the compiler messages.
-				  #|(*default-external-format* :iso8859-1)|#)
-			      (compile nil `(lambda (%slots%)
-					      (declare (ignorable %slots%))
-					      (block ,',blknm
-						,,body))))))
+			      (let ((*compile-print* nil)
+				    ;; Set default format when we compile so we
+				    ;; can see compiler messages.  If we don't,
+				    ;; we run into a problem that we might be
+				    ;; changing the default format while we're
+				    ;; compiling, and we don't know how to output
+				    ;; the compiler messages.
+				    #|(*default-external-format* :iso8859-1)|#)
+				(compile nil `(lambda (%slots%)
+					       (declare (ignorable %slots%))
+					       (block ,',blknm
+						 ,,body))))))
 		    (ef-slots ,tmp1))))
        (declaim (inline ,name))
        (defun ,name (,tmp1)
@@ -694,46 +695,59 @@
       (values (if bufferp buffer (lisp::shrink-vector buffer ptr)) ptr))))
 
 (def-ef-macro ef-octets-to-string (extfmt lisp::lisp +ef-max+ +ef-os+)
-  `(lambda (octets ptr end string &aux (pos 0) (count 0) (state nil) (last-octet 0))
-     (declare (optimize (speed 3) #|(safety 0) (space 0) (debug 0)|#)
+  `(lambda (octets ptr end state string s-start s-end &aux (pos s-start) (count 0) (last-octet 0))
+     (declare (optimize (speed 3) (safety 0) #|(space 0) (debug 0)|#)
 	      (type (simple-array (unsigned-byte 8) (*)) octets)
-	      (type kernel:index pos end count last-octet)
+	      (type kernel:index pos end count last-octet s-start s-end)
 	      (type (integer -1 (#.array-dimension-limit)) ptr)
 	      (type simple-string string)
 	      (ignorable state))
      (catch 'end-of-octets
-       (loop
-	  (when (= pos (length string))
-	    (setq string (adjust-array string (* 2 pos))))
-	  (setf (schar string pos)
-		(octets-to-char ,extfmt state count
-				(if (>= ptr end)
-				    (throw 'end-of-octets nil)
-				    (aref octets (incf ptr)))
-				(lambda (n) (decf ptr n))))
+       (loop while (< pos s-end)
+	  do (setf (schar string pos)
+		   (octets-to-char ,extfmt state count
+				   (if (>= ptr end)
+				       (throw 'end-of-octets nil)
+				       (aref octets (incf ptr)))
+				   (lambda (n) (decf ptr n))))
 	  (incf pos)
 	  (incf last-octet count)))
-     (values string pos last-octet)))
+     (values string pos last-octet state)))
 
 (defun octets-to-string (octets &key (start 0) end (external-format :default)
-				     (string nil stringp))
+				     (string nil stringp)
+			             (s-start 0) (s-end nil s-end-p)
+			             (state nil))
   "Octets-to-string converts an array of octets in Octets to a string
   according to the specified External-format.  The array of octets is
   bounded by Start (defaulting ot 0) and End (defaulting to the end of
-  the array.  If String is given, the string is stored there.  If
-  String is too short to hold all of the characters, it will be
-  adjusted (via adjust-array).  If String is not given, a new string
-  is created.  Three values are returned: the string, the number of
-  characters read, and the number of octets consumed."
+  the array.  If String is not given, a new string is created.  If
+  String is given, the converted octets are stored in String, starting
+  at S-Start (defaulting to the 0) and ending at S-End (defaulting to
+  the length of String).  If the string is not large enough to hold
+  all of characters, then some octets will not be converted.  A State
+  may also be specified; this is used as the state of the external
+  format.
+
+  Four values are returned: the string, the number of characters read,
+  the number of octets actually consumed and the new state of the
+  external format."
   (declare (type (simple-array (unsigned-byte 8) (*)) octets)
-	   (type kernel:index start)
+	   (type kernel:index start s-start)
 	   (type (or kernel:index null) end)
 	   (type (or simple-string null) string))
-  (multiple-value-bind (string pos last-octet)
-      (funcall (ef-octets-to-string external-format)
-	       octets (1- start) (1- (or end (length octets)))
-	       (or string (make-string (length octets))))
-    (values (if stringp string (lisp::shrink-vector string pos)) pos last-octet)))
+  (let ((s-end (if s-end-p
+		   s-end
+		   (if stringp
+		       (length string)
+		       (length octets)))))
+    (multiple-value-bind (string pos last-octet new-state)
+	(funcall (ef-octets-to-string external-format)
+		 octets (1- start) (1- (or end (length octets)))
+		 state
+		 (or string (make-string (length octets)))
+		 s-start s-end)
+      (values (if stringp string (lisp::shrink-vector string pos)) pos last-octet new-state))))
 
 
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.20 2009/09/15 15:52:43 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.21 2009/10/18 14:21:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,14 +44,14 @@
 		  char-or-code)))
     (ecase surrogate-type
       ((:high :leading)
-       ;; Test for high surrogate
-       (<= #xD800 code #xDBFF))
+       ;; Test for high surrogate (#xD800 to #xDBFF)
+       (= #b110110 (ash code -10)))
       ((:low :trailing)
-       ;; Test for low surrogate
-       (<= #xDC00 code #xDFFF))
+       ;; Test for low surrogate (#xDC00 to #xDFFF)
+       (= #b110111 (ash code -10)))
       ((:any nil)
-       ;; Test for any surrogate
-       (<= #xD800 code #xDFFF)))))
+       ;; Test for any surrogate (#xD800 to #xDFFF)
+       (= #b11011 (ash code -11))))))
 
 (defun surrogates-to-codepoint (hi-surrogate-char lo-surrogate-char)
   "Convert the given Hi and Lo surrogate characters to the

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.21 2002/02/04 17:22:15 toy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.22 2009/10/18 14:21:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,7 +37,22 @@
   (out #'ill-out :type function)		; Write-Char function
   (bout #'ill-bout :type function)		; Byte output function
   (sout #'ill-out :type function)		; String output function
-  (misc #'do-nothing :type function))		; Less used methods
+  (misc #'do-nothing :type function)		; Less used methods
+  ;;
+  ;; A string to hold characters that have been converted from
+  ;; in-buffer.
+  #+unicode
+  (string-buffer nil :type (or null simple-string))
+  ;;
+  ;; Index into string-buffer where the next character should be read from
+  #+unicode
+  (string-index 0 :type index)
+  ;;
+  ;; Number of characters in string-buffer.  (This isn't the length of
+  ;; string-buffer, but the number of characters in the buffer, since
+  ;; many octets may be consumed to produce one character.)
+  #+unicode
+  (string-buffer-len 0 :type index))
 
 (declaim (inline streamp))
 (defun streamp (stream)

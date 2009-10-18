@@ -4,7 +4,7 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32.lisp,v 1.4 2009/09/28 18:12:59 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32.lisp,v 1.5 2009/10/18 14:21:24 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -83,4 +83,4 @@
   nil
   (copy-state (state)
     ;; The state is either NIL or T, so we can just return that.
-    state))
+    `(progn ,state)))

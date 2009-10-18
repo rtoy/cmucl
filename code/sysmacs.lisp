@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.30 2006/02/03 13:51:28 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.31 2009/10/18 14:21:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -150,8 +150,17 @@ and also the CMUCL C runtime."
   `(let* ((%frc-stream% ,stream)
 	  (%frc-method% (lisp-stream-in %frc-stream%))
 	  (%frc-buffer% (lisp-stream-in-buffer %frc-stream%))
-	  (%frc-index% (lisp-stream-in-index %frc-stream%)))
-     (declare (type index %frc-index%)
+	  (%frc-index% (lisp-stream-in-index %frc-stream%))
+	  #+unicode
+	  (%frc-string-buffer% (lisp-stream-string-buffer %frc-stream%))
+	  #+unicode
+	  (%frc-string-index% (lisp-stream-string-index %frc-stream%))
+	  #+unicode
+	  (%frc-string-length% (lisp-stream-string-buffer-len %frc-stream%)))
+     (declare #+unicode
+	      (type index %frc-string-index% %frc-string-length%)
+	      #+unicode
+	      (type (or null simple-string) %frc-string-buffer%)
 	      (type lisp-stream %frc-stream%))
      ,@forms))
 
@@ -161,7 +170,10 @@ and also the CMUCL C runtime."
 ;;; inside it's scope to decache the lisp-stream-in-index.
 ;;;
 (defmacro done-with-fast-read-char ()
-  `(setf (lisp-stream-in-index %frc-stream%) %frc-index%))
+  `(progn
+     (setf (lisp-stream-in-index %frc-stream%) %frc-index%)
+     #+unicode
+     (setf (lisp-stream-string-index %frc-stream%) %frc-string-index%)))
 
 ;;; Fast-Read-Char  --  Internal
 ;;;
@@ -170,14 +182,25 @@ and also the CMUCL C runtime."
 ;;;
 (defmacro fast-read-char (&optional (eof-errorp t) (eof-value ()))
   `(cond
-    ((not %frc-buffer%)
-     (funcall %frc-method% %frc-stream% ,eof-errorp ,eof-value))
-    ((= %frc-index% in-buffer-length)
-     (prog1 (fast-read-char-refill %frc-stream% ,eof-errorp ,eof-value)
-	    (setq %frc-index% (lisp-stream-in-index %frc-stream%))))
-    (t
-     (prog1 (code-char (aref %frc-buffer% %frc-index%))
-	    (incf %frc-index%)))))
+     #+unicode
+     (%frc-string-buffer%
+      (cond ((>= %frc-string-index% %frc-string-length%)
+	     (prog1 (fast-read-char-string-refill %frc-stream% ,eof-errorp ,eof-value)
+	       (setf %frc-string-index% (lisp-stream-string-index %frc-stream%))
+	       (setf %frc-string-length% (lisp-stream-string-buffer-len %frc-stream%))))
+	    (t
+	     (prog1 (aref %frc-string-buffer% %frc-string-index%)
+	       (incf %frc-string-index%)))))
+     (%frc-buffer%
+      (cond ((= %frc-index% in-buffer-length)
+	     (prog1 (fast-read-char-refill %frc-stream% ,eof-errorp ,eof-value)
+	       (setq %frc-index% (lisp-stream-in-index %frc-stream%))))
+	    (t
+	     ;; This only works correctly for :iso8859-1!
+	     (prog1 (code-char (aref %frc-buffer% %frc-index%))
+	       (incf %frc-index%)))))
+     (t
+      (funcall %frc-method% %frc-stream% ,eof-errorp ,eof-value))))
 
 ;;;; And these for the fasloader...
 
@@ -215,4 +238,5 @@ and also the CMUCL C runtime."
 	(incf %frc-index%))))))
 ;;;
 (defmacro done-with-fast-read-byte ()
-  `(done-with-fast-read-char))
+  `(progn
+     (setf (lisp-stream-in-index %frc-stream%) %frc-index%)))

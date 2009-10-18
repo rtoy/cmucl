@@ -21,12 +21,19 @@ New in this release:
   * Known issues:
 
   * Feature enhancements:
+    - Read operations using an external format of utf8 are now much
+      faster.  Some simple tests on Linux shows that read-line now
+      only takes 40% as much time.  Sparc shows 60% as much time.
 
   * ANSI compliance fixes:
 
   * Bugfixes:
-
+    - On Unicode builds, printing of '|\|| and '|`| was incorrect
+      because no escapes were printed.  This is fixed now.
   * Trac Tickets:
+    #33: get-dispatch-macro-character doesn't signal errors in
+      compiled code
+      Fixed.
 
   * Other changes:
 
