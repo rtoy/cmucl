@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.8 2009/06/16 02:53:07 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.9 2009/10/28 17:15:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -942,9 +942,11 @@
                     (signed-reg
                      (inst mov temp x)
                      (note-this-location vop :internal-error)
+		     (inst xorpd y y)
                      (inst ,inst y temp))
                     (signed-stack
                      (note-this-location vop :internal-error)
+		     (inst xorpd y y)
                      (inst ,inst y x)))))))
   (frob %single-float/signed %single-float cvtsi2ss single-reg single-float)
   (frob %double-float/signed %double-float cvtsi2sd double-reg double-float))
@@ -1902,9 +1904,9 @@
 	    (:temporary (:sc ,complex-reg) tmp)
 	    (:temporary (:sc ,real-reg) rtmp)
 	    (:generator ,cost
+	      (inst xorpd rtmp rtmp)
 	      (sc-case y
 		(,real-reg
-		 (inst xorpd rtmp rtmp)
 		 (inst movaps rtmp y)
 		 (generate movaps ,fop))
 		(,r-stack
