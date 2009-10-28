@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.9 2009/10/28 17:15:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.10 2009/10/28 22:48:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -942,11 +942,9 @@
                     (signed-reg
                      (inst mov temp x)
                      (note-this-location vop :internal-error)
-		     (inst xorpd y y)
                      (inst ,inst y temp))
                     (signed-stack
                      (note-this-location vop :internal-error)
-		     (inst xorpd y y)
                      (inst ,inst y x)))))))
   (frob %single-float/signed %single-float cvtsi2ss single-reg single-float)
   (frob %double-float/signed %double-float cvtsi2sd double-reg double-float))
@@ -1891,7 +1889,10 @@
 	     (ea-desc (symbolicate "EA-FOR-" base-ea "-DESC"))
 	     (loadinst (ecase size
 			 (single 'movss)
-			 (double 'movsd))))
+			 (double 'movsd)))
+	     (movinst (ecase size
+			(single 'movaps)
+			(double 'movapd))))
 	 `(define-vop (,vop-name)
 	    (:args (x :scs (,complex-reg))
 	           (y :scs (,real-reg ,r-stack descriptor-reg)))
@@ -1904,19 +1905,21 @@
 	    (:temporary (:sc ,complex-reg) tmp)
 	    (:temporary (:sc ,real-reg) rtmp)
 	    (:generator ,cost
+	      ;; Clear out high and low parts of temp, which will
+	      ;; eventually hold y.
 	      (inst xorpd rtmp rtmp)
 	      (sc-case y
 		(,real-reg
-		 (inst movaps rtmp y)
-		 (generate movaps ,fop))
+		 (inst ,loadinst rtmp y)
+		 (generate ,movinst ,fop))
 		(,r-stack
 		 (let ((ea (,ea-stack y)))
 		   (inst ,loadinst rtmp ea)
-		   (generate movaps ,fop)))
+		   (generate ,movinst ,fop)))
 		(descriptor-reg
 		 (let ((ea (,ea-desc y)))
 		   (inst ,loadinst rtmp ea)
-		   (generate movaps ,fop)))))))))
+		   (generate ,movinst ,fop)))))))))
   (complex-op-float single + addps sf 1)
   (complex-op-float single - subps sf 1)
   (complex-op-float double + addpd df 1)
@@ -1948,7 +1951,10 @@
 	     (ea-desc (symbolicate "EA-FOR-" base-ea "-DESC"))
 	     (loadinst (ecase size
 			 (single 'movss)
-			 (double 'movsd))))
+			 (double 'movsd)))
+	     (movinst (ecase size
+			(single 'movaps)
+			(double 'movapd))))
 	 `(define-vop (,vop-name)
 	    (:args (y :scs (,real-reg ,r-stack descriptor-reg))
 	           (x :scs (,complex-reg)))
@@ -1961,19 +1967,19 @@
 	    (:temporary (:sc ,complex-reg) tmp)
 	    (:temporary (:sc ,real-reg) rtmp)
 	    (:generator ,cost
+	      (inst xorpd rtmp rtmp)
 	      (sc-case y
 		(,real-reg
-		 (inst xorpd rtmp rtmp)
-		 (inst movaps rtmp y)
-		 (generate movaps ,fop))
+		 (inst ,loadinst rtmp y)
+		 (generate ,movinst ,fop))
 		(,r-stack
 		 (let ((ea (,ea-stack y)))
 		   (inst ,loadinst rtmp ea)
-		   (generate movaps ,fop)))
+		   (generate ,movinst ,fop)))
 		(descriptor-reg
 		 (let ((ea (,ea-desc y)))
 		   (inst ,loadinst rtmp ea)
-		   (generate movaps ,fop)))))))))
+		   (generate ,movinst ,fop)))))))))
   (complex-op-float single + addps sf 1)
   (complex-op-float double + addpd df 1))
 
