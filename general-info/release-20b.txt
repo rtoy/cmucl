@@ -30,12 +30,25 @@ New in this release:
   * Bugfixes:
     - On Unicode builds, printing of '|\|| and '|`| was incorrect
       because no escapes were printed.  This is fixed now.
+    - Fixed issue with SSE2 support.  The vops for complex +/- float
+      would add random junk the to imaginary part of the result.
+    - UNIX-SYSINFO was broken for Unicode builds, which affected
+      MACHINE-TYPE and MACHINE-VERSION.
+
   * Trac Tickets:
     #33: get-dispatch-macro-character doesn't signal errors in
       compiled code
       Fixed.
 
   * Other changes:
+    - :freebsd4 is no longer a *feature*
+    - Added UNIX-GETENV, UNIX-SETENV, UNIX-PUTENV, and UNIX-UNSETENV,
+      in the UNIX package to allow access to these C functions.
+    - OCTETS-TO-STRING has changed.
+      o The output string is no longer automatically extended.
+      o Parameters can be given to specify the start and end of the
+        octet array and for the start and end of the string.
+        (These all default to the beginning and end of the arrays.)
 
   * Improvements to the PCL implementation of CLOS:
 
