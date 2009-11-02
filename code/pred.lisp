@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.60 2006/06/30 18:41:22 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.61 2009/11/02 02:51:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -126,6 +126,39 @@
 			   (,pred object)))
 		    primitive-predicates))))
   (frob))
+
+;;; FIXME: The next four functions are for bootstrapping double-double
+;;; for AMD64.  This works around the recursive known function problem
+;;; when compiling the predicate functions for double-double.  This
+;;; should be eventually removed when double-double float support for
+;;; the compiler is working.
+(defun double-double-float-p (x)
+  (let* ((addr (kernel:get-lisp-obj-address x))
+	 (ptr (logandc2 addr #x7)))
+    (when (= 1 (logand addr 1))
+      (= 26 (ldb (byte 8 0)
+		 (sys:sap-ref-32 (sys:int-sap ptr) 0))))))
+
+(defun complex-double-double-float-p (x)
+  (let* ((addr (kernel:get-lisp-obj-address x))
+	 (ptr (logandc2 addr #x7)))
+    (when (= 1 (logand addr 1))
+      (= 42 (ldb (byte 8 0)
+		 (sys:sap-ref-32 (sys:int-sap ptr) 0))))))
+
+(defun simple-array-double-double-float-p (x)
+  (let* ((addr (kernel:get-lisp-obj-address x))
+	 (ptr (logandc2 addr #x7)))
+    (when (= 1 (logand addr 1))
+      (= 106 (ldb (byte 8 0)
+		  (sys:sap-ref-32 (sys:int-sap ptr) 0))))))
+
+(defun simple-array-complex-double-double-float-p (x)
+  (let* ((addr (kernel:get-lisp-obj-address x))
+	 (ptr (logandc2 addr #x7)))
+    (when (= 1 (logand addr 1))
+      (= 118 (ldb (byte 8 0)
+		  (sys:sap-ref-32 (sys:int-sap ptr) 0))))))
 
 
 ;;;; TYPE-OF -- public.

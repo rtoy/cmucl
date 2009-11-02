@@ -1,5 +1,5 @@
 /* x86-lispregs.h -*- Mode: C; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-lispregs.h,v 1.4 2006/11/07 11:24:12 cshapiro Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-lispregs.h,v 1.5 2009/11/02 02:51:58 rtoy Exp $
  */
 
 /* These register names and offsets correspond to definitions
@@ -52,7 +52,9 @@
  * xxx-os.c handle it.
  */
 
-#define SC_REG(sc, n) (*sc_reg(sc,n))
-#define SC_PC(sc) ((sc)->sc_pc)
+#define SC_REG(sc, n) (*os_sigcontext_reg(sc,n))
+#define SC_PC(sc) (*os_sigcontext_pc(sc))
+#define SC_EFLAGS(sc) ((sc)->uc_mcontext.gregs[REG_EFL])
+#define SC_SP(scp) SC_REG(scp, reg_RSP)
 
 #endif /* _AMD64_LISPREGS_H_ */

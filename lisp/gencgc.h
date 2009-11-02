@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.14 2008/09/16 08:52:32 cshapiro Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.15 2009/11/02 02:51:58 rtoy Exp $
  *
  */
 
@@ -123,7 +123,7 @@ struct page {
  * write protected.
  */
 
-#if defined(i386)
+#if defined(i386) || defined(__x86_64)
 #define PAGE_SIZE 4096
 #elif defined(sparc)
 /*

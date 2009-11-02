@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.11 2009/01/05 22:26:27 rtoy Rel $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.12 2009/11/02 02:51:58 rtoy Exp $ */
 
 #ifndef _GLOBALS_H_
 #define _GLOBALS_H_
@@ -31,7 +31,7 @@ extern lispobj *control_stack_end;
 #endif
 extern lispobj *current_dynamic_space;
 
-#if !defined(ibmrt) && !defined(i386)
+#if !defined(ibmrt) && !defined(i386) && !defined(__x86_64)
 extern lispobj *current_dynamic_space_free_pointer;
 extern lispobj *current_auto_gc_trigger;
 #endif

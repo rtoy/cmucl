@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.19 2008/01/03 11:41:52 cshapiro Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.20 2009/11/02 02:51:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -77,9 +77,15 @@
   (declare (type system-area-pointer sap))
   (sap-int sap))
 
+#-amd64
 (defun int-sap (int)
   "Converts an integer into a System Area Pointer."
   (declare (type (unsigned-byte #-alpha #.vm:word-bits #+alpha 64) int))
+  (int-sap int))
+#+amd64
+(defun int-sap (int)
+  "Converts an integer into a System Area Pointer."
+  (declare (type (unsigned-byte 64) int))
   (int-sap int))
 
 (defun sap-ref-8 (sap offset)

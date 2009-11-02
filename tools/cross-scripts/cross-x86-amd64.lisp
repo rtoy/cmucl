@@ -102,7 +102,7 @@
 
 ;;; Rename the X86 package and backend so that new-backend does the
 ;;; right thing.
-(rename-package "X86" "OLD-X86")
+(rename-package "X86" "OLD-X86" '("OLD-VM"))
 (setf (c:backend-name c:*native-backend*) "OLD-X86")
 
 (c::new-backend "AMD64"
@@ -118,11 +118,24 @@
    '(:x86 :i486 :pentium :x86-bootstrap :alpha :osf1 :mips
      :propagate-fun-type :propagate-float-type :constrain-float-type
      :openbsd :freebsd :glibc2 :linux :mp :heap-overflow-check
-     :long-float :new-random :small))
+     :long-float :new-random :small
+     ))
 
 ;;; Compile the new backend.
 (pushnew :bootstrap *features*)
 (pushnew :building-cross-compiler *features*)
+
+(in-package "VM")
+(defconstant byte-bits 8
+  "Number of bits per byte where a byte is the smallest addressable object.")
+
+(defconstant char-bits #-unicode 8 #+unicode 16
+  "Number of bits needed to represent a character")
+
+(defconstant char-bytes (truncate char-bits byte-bits)
+  "Number of bytes needed to represent a character")
+
+(export '(byte-bits char-bits char-bytes) "VM")
 
 (in-package :cl-user)
 
@@ -204,30 +217,41 @@
 (macrolet ((frob (&rest syms)
 	     `(progn ,@(mapcar #'(lambda (sym)
 				   `(defconstant ,sym
-				      (symbol-value
-				       (find-symbol ,(symbol-name sym)
-						    :vm))))
+				     (symbol-value
+				      (find-symbol ,(symbol-name sym)
+				       :vm))))
 			       syms))))
-  (frob OLD-X86:BYTE-BITS
-	#+long-float OLD-X86:SIMPLE-ARRAY-LONG-FLOAT-TYPE 
-	OLD-X86:SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE 
-	OLD-X86:SIMPLE-ARRAY-SINGLE-FLOAT-TYPE
-	#+long-float OLD-X86:SIMPLE-ARRAY-COMPLEX-LONG-FLOAT-TYPE 
-	OLD-X86:SIMPLE-ARRAY-COMPLEX-DOUBLE-FLOAT-TYPE 
-	OLD-X86:SIMPLE-ARRAY-COMPLEX-SINGLE-FLOAT-TYPE
-	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-2-TYPE 
-	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-4-TYPE
-	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-8-TYPE 
-	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-16-TYPE 
-	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-32-TYPE 
-	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-8-TYPE 
-	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-16-TYPE
-	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-30-TYPE 
-	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-32-TYPE
-	OLD-X86:SIMPLE-BIT-VECTOR-TYPE
-	OLD-X86:SIMPLE-STRING-TYPE OLD-X86:SIMPLE-VECTOR-TYPE 
-	OLD-X86:SIMPLE-ARRAY-TYPE OLD-X86:VECTOR-DATA-OFFSET
-	))
+  (frob OLD-VM:BYTE-BITS OLD-VM:WORD-BITS
+	OLD-VM:CHAR-BITS
+	#+long-float OLD-VM:SIMPLE-ARRAY-LONG-FLOAT-TYPE 
+	OLD-VM:SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE 
+	OLD-VM:SIMPLE-ARRAY-SINGLE-FLOAT-TYPE
+	#+long-float OLD-VM:SIMPLE-ARRAY-COMPLEX-LONG-FLOAT-TYPE 
+	OLD-VM:SIMPLE-ARRAY-COMPLEX-DOUBLE-FLOAT-TYPE 
+	OLD-VM:SIMPLE-ARRAY-COMPLEX-SINGLE-FLOAT-TYPE
+	OLD-VM:SIMPLE-ARRAY-UNSIGNED-BYTE-2-TYPE 
+	OLD-VM:SIMPLE-ARRAY-UNSIGNED-BYTE-4-TYPE
+	OLD-VM:SIMPLE-ARRAY-UNSIGNED-BYTE-8-TYPE 
+	OLD-VM:SIMPLE-ARRAY-UNSIGNED-BYTE-16-TYPE 
+	OLD-VM:SIMPLE-ARRAY-UNSIGNED-BYTE-32-TYPE 
+	OLD-VM:SIMPLE-ARRAY-SIGNED-BYTE-8-TYPE 
+	OLD-VM:SIMPLE-ARRAY-SIGNED-BYTE-16-TYPE
+	OLD-VM:SIMPLE-ARRAY-SIGNED-BYTE-30-TYPE 
+	OLD-VM:SIMPLE-ARRAY-SIGNED-BYTE-32-TYPE
+	OLD-VM:SIMPLE-BIT-VECTOR-TYPE
+	OLD-VM:SIMPLE-STRING-TYPE OLD-VM:SIMPLE-VECTOR-TYPE 
+	OLD-VM:SIMPLE-ARRAY-TYPE OLD-VM:VECTOR-DATA-OFFSET
+	OLD-VM:DOUBLE-FLOAT-EXPONENT-BYTE
+	OLD-VM:DOUBLE-FLOAT-NORMAL-EXPONENT-MAX 
+	OLD-VM:DOUBLE-FLOAT-SIGNIFICAND-BYTE
+	OLD-VM:SINGLE-FLOAT-EXPONENT-BYTE
+	OLD-VM:SINGLE-FLOAT-NORMAL-EXPONENT-MAX
+	OLD-VM:SINGLE-FLOAT-SIGNIFICAND-BYTE
+	)
+  #+double-double
+  (frob OLD-VM:SIMPLE-ARRAY-COMPLEX-DOUBLE-DOUBLE-FLOAT-TYPE
+	OLD-VM:SIMPLE-ARRAY-DOUBLE-DOUBLE-FLOAT-TYPE
+	OLD-VM:DOUBLE-DOUBLE-FLOAT-DIGITS))
 
 (let ((function (symbol-function 'kernel:error-number-or-lose)))
   (let ((*info-environment* (c:backend-info-environment c:*target-backend*)))
@@ -277,3 +301,4 @@
 (let ((ht (c::backend-sc-names c::*target-backend*)))
   (setf (gethash 'old-x86::any-reg ht)
 	(gethash 'amd64::any-reg ht)))
+

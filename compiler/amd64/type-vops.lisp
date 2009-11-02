@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/type-vops.lisp,v 1.1 2004/05/24 22:35:00 cwang Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/type-vops.lisp,v 1.2 2009/11/02 02:51:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -32,7 +32,7 @@
 
 
 (defparameter function-header-types
-  (list funcallable-instance-header-type dylan-function-header-type
+  (list funcallable-instance-header-type 
 	byte-code-function-type byte-code-closure-type
 	function-header-type closure-function-header-type
 	closure-header-type))

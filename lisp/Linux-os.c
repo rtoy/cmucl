@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.44 2009/10/15 15:05:51 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.45 2009/11/02 02:51:58 rtoy Exp $
  *
  */
 
@@ -153,45 +153,52 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
 #endif
 
 #ifdef __x86_64
-int *
-sc_reg(ucontext_t *c, int offset)
+unsigned long *
+os_sigcontext_reg(ucontext_t *c, int offset)
 {
     switch (offset) {
       case 0:
-	  return &c->uc_mcontext.gregs[REG_RAX];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_RAX];
       case 2:
-	  return &c->uc_mcontext.gregs[REG_RCX];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_RCX];
       case 4:
-	  return &c->uc_mcontext.gregs[REG_RDX];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_RDX];
       case 6:
-	  return &c->uc_mcontext.gregs[REG_RBX];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_RBX];
       case 8:
-	  return &c->uc_mcontext.gregs[REG_RSP];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_RSP];
       case 10:
-	  return &c->uc_mcontext.gregs[REG_RBP];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_RBP];
       case 12:
-	  return &c->uc_mcontext.gregs[REG_RSI];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_RSI];
       case 14:
-	  return &c->uc_mcontext.gregs[REG_RDI];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_RDI];
       case 16:
-	  return &c->uc_mcontext.gregs[REG_R8];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_R8];
       case 18:
-	  return &c->uc_mcontext.gregs[REG_R9];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_R9];
       case 20:
-	  return &c->uc_mcontext.gregs[REG_R10];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_R10];
       case 22:
-	  return &c->uc_mcontext.gregs[REG_R11];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_R11];
       case 24:
-	  return &c->uc_mcontext.gregs[REG_R12];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_R12];
       case 26:
-	  return &c->uc_mcontext.gregs[REG_R13];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_R13];
       case 28:
-	  return &c->uc_mcontext.gregs[REG_R14];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_R14];
       case 30:
-	  return &c->uc_mcontext.gregs[REG_R15];
+	  return (unsigned long *)&c->uc_mcontext.gregs[REG_R15];
     }
-    return (int *) 0;
+    return (unsigned long *) 0;
 }
+
+unsigned long *
+os_sigcontext_pc(ucontext_t *scp)
+{
+    return (unsigned long *) &scp->uc_mcontext.gregs[REG_RIP];
+}
+
 #endif
 
 os_vm_address_t
@@ -298,7 +305,12 @@ sigsegv_handler_tramp(void)
 void
 sigsegv_handler(HANDLER_ARGS)
 {
-    int fault_addr = context->uc_mcontext.cr2;
+    long fault_addr = 
+#ifdef i386
+      context->uc_mcontext.cr2;
+#else
+      context->uc_mcontext.gregs[REG_CR2];
+#endif    
 
 #ifdef RED_ZONE_HIT
     if (os_control_stack_overflow((void *) fault_addr, context))
@@ -422,6 +434,7 @@ os_dlsym(const char *sym_name, lispobj lib_list)
     }
 }
 
+#ifdef i386
 void
 restore_fpu(ucontext_t *context)
 {
@@ -444,3 +457,27 @@ restore_fpu(ucontext_t *context)
 #endif        
     }
 }
+#else
+void
+restore_fpu(ucontext_t *context)
+{
+    if (context->uc_mcontext.fpregs) {
+	short cw = context->uc_mcontext.fpregs->cwd;
+        DPRINTF(0, (stderr, "restore_fpu:  cw = %08x\n", cw));
+	__asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
+#ifdef FEATURE_SSE2
+        if (fpu_mode == SSE2) {
+            struct _fpstate *fpstate;
+            unsigned int mxcsr;
+            
+            fpstate = (struct _fpstate*) context->uc_mcontext.fpregs;
+            if (fpstate->magic != 0xffff) {
+                mxcsr = fpstate->mxcsr;
+                DPRINTF(0, (stderr, "restore_fpu:  mxcsr (raw) = %04x\n", mxcsr));
+                __asm__ __volatile__ ("ldmxcsr %0" :: "m" (*&mxcsr));
+            }
+        }
+#endif        
+    }
+}
+#endif

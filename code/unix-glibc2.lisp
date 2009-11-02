@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.49 2009/10/15 14:07:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.50 2009/11/02 02:51:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -265,7 +265,7 @@
 (defconstant ms_invalidate 2)
 
 ;; The return value from mmap that means mmap failed.
-(defconstant map_failed (int-sap (1- (ash 1 vm:word-bits))))
+(defconstant map_failed (int-sap #+amd64 0 #-amd64 (1- (ash 1 vm:word-bits))))
 
 (defun unix-mmap (addr length prot flags fd offset)
   (declare (type (or null system-area-pointer) addr)

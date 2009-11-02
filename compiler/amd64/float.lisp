@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/float.lisp,v 1.2 2004/07/14 20:57:31 cwang Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/float.lisp,v 1.3 2009/11/02 02:51:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,7 +61,20 @@
     (ea-for-xf-desc tn vm:complex-long-float-real-slot))
   #+long-float
   (defun ea-for-clf-imag-desc (tn)
-    (ea-for-xf-desc tn vm:complex-long-float-imag-slot)))
+    (ea-for-xf-desc tn vm:complex-long-float-imag-slot))
+  #+double-double
+  (defun ea-for-cddf-real-hi-desc (tn)
+    (ea-for-xf-desc tn vm:complex-double-double-float-real-hi-slot))
+  #+double-double
+  (defun ea-for-cddf-real-lo-desc (tn)
+    (ea-for-xf-desc tn vm:complex-double-double-float-real-lo-slot))
+  #+double-double
+  (defun ea-for-cddf-imag-hi-desc (tn)
+    (ea-for-xf-desc tn vm:complex-double-double-float-imag-hi-slot))
+  #+double-double
+  (defun ea-for-cddf-imag-lo-desc (tn)
+    (ea-for-xf-desc tn vm:complex-double-double-float-imag-lo-slot))
+  )
 
 (macrolet ((ea-for-xf-stack (tn kind)
 	     `(make-ea
@@ -86,7 +99,13 @@
 				   (:single 1)
 				   (:double 2)
 				   (:long 3))
-				 (ecase ,slot (:real 1) (:imag 2))))
+				 (ecase ,slot
+				   (:real 1)
+				   (:imag 2)
+				   (:real-hi 1)
+				   (:real-lo 2)
+				   (:imag-hi 3)
+				   (:imag-lo 4))))
 			 vm:word-bytes)))))
   (defun ea-for-csf-real-stack (tn &optional (base rbp-tn))
     (ea-for-cxf-stack tn :single :real base))
@@ -103,7 +122,21 @@
     (ea-for-cxf-stack tn :long :real base))
   #+long-float
   (defun ea-for-clf-imag-stack (tn &optional (base rbp-tn))
-    (ea-for-cxf-stack tn :long :imag base)))
+    (ea-for-cxf-stack tn :long :imag base))
+
+  #+double-double
+  (defun ea-for-cddf-real-hi-stack (tn &optional (base rbp-tn))
+    (ea-for-cxf-stack tn :double :real-hi base))
+  #+double-double
+  (defun ea-for-cddf-real-lo-stack (tn &optional (base rbp-tn))
+    (ea-for-cxf-stack tn :double :real-lo base))
+  #+double-double
+  (defun ea-for-cddf-imag-hi-stack (tn &optional (base rbp-tn))
+    (ea-for-cxf-stack tn :double :imag-hi base))
+  #+double-double
+  (defun ea-for-cddf-imag-lo-stack (tn &optional (base rbp-tn))
+    (ea-for-cxf-stack tn :double :imag-lo base))
+  )
 
 ;;; Abstract out the copying of a FP register to the FP stack top, and
 ;;; provide two alternatives for its implementation. Note: it's not
@@ -236,6 +269,21 @@
   (make-random-tn :kind :normal :sc (sc-or-lose 'long-reg *backend*)
 		  :offset (1+ (tn-offset x))))
 
+#+double-double
+(progn
+(defun complex-double-double-reg-real-hi-tn (x)
+  (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
+		  :offset (tn-offset x)))
+(defun complex-double-double-reg-real-lo-tn (x)
+  (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
+		  :offset (+ 1 (tn-offset x))))
+(defun complex-double-double-reg-imag-hi-tn (x)
+  (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
+		  :offset (+ 2 (tn-offset x))))
+(defun complex-double-double-reg-imag-lo-tn (x)
+  (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
+		  :offset (+ 3 (tn-offset x))))
+)
 ;;; x is source, y is destination
 (define-move-function (load-complex-single 2) (vop x y)
   ((complex-single-stack) (complex-single-reg))
@@ -308,6 +356,49 @@
     (store-long-float (ea-for-clf-imag-stack y))
     (inst fxch imag-tn)))
 
+#+double-double
+(progn
+(define-move-function (load-complex-double-double 4) (vop x y)
+  ((complex-double-double-stack) (complex-double-double-reg))
+  (let ((real-tn (complex-double-double-reg-real-hi-tn y)))
+    (with-empty-tn@fp-top(real-tn)
+      (inst fldd (ea-for-cddf-real-hi-stack x))))
+  (let ((real-tn (complex-double-double-reg-real-lo-tn y)))
+    (with-empty-tn@fp-top(real-tn)
+      (inst fldd (ea-for-cddf-real-lo-stack x))))
+  (let ((imag-tn (complex-double-double-reg-imag-hi-tn y)))
+    (with-empty-tn@fp-top(imag-tn)
+      (inst fldd (ea-for-cddf-imag-hi-stack x))))
+  (let ((imag-tn (complex-double-double-reg-imag-lo-tn y)))
+    (with-empty-tn@fp-top(imag-tn)
+      (inst fldd (ea-for-cddf-imag-lo-stack x)))))
+
+(define-move-function (store-complex-double-double 4) (vop x y)
+  ((complex-double-double-reg) (complex-double-double-stack))
+  ;; FIXME: These may not be right!!!!
+  (let ((real-tn (complex-double-double-reg-real-hi-tn x)))
+    (cond ((zerop (tn-offset real-tn))
+	   (inst fstd (ea-for-cddf-real-hi-stack y)))
+	  (t
+	   (inst fxch real-tn)
+	   (inst fstd (ea-for-cddf-real-hi-stack y))
+	   (inst fxch real-tn))))
+  (let ((real-tn (complex-double-double-reg-real-lo-tn x)))
+    (cond ((zerop (tn-offset real-tn))
+	   (inst fstd (ea-for-cddf-real-lo-stack y)))
+	  (t
+	   (inst fxch real-tn)
+	   (inst fstd (ea-for-cddf-real-lo-stack y))
+	   (inst fxch real-tn))))
+  (let ((imag-tn (complex-double-double-reg-imag-hi-tn x)))
+    (inst fxch imag-tn)
+    (inst fstd (ea-for-cddf-imag-hi-stack y))
+    (inst fxch imag-tn))
+  (let ((imag-tn (complex-double-double-reg-imag-lo-tn x)))
+    (inst fxch imag-tn)
+    (inst fstd (ea-for-cddf-imag-lo-stack y))
+    (inst fxch imag-tn)))
+)
 
 ;;;; Move VOPs:
 
@@ -546,11 +637,12 @@
 (define-vop (move-from-complex-long)
   (:args (x :scs (complex-long-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
+  (:temporary (:sc any-reg :offset r11-offset) temp)
   (:node-var node)
   (:note "complex float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:complex-long-float-type
-			       vm:complex-long-float-size node)
+			       vm:complex-long-float-size temp node)
        (let ((real-tn (complex-long-reg-real-tn x)))
 	 (with-tn@fp-top(real-tn)
 	   (store-long-float (ea-for-clf-real-desc y))))
@@ -561,6 +653,32 @@
 (define-move-vop move-from-complex-long :move
   (complex-long-reg) (descriptor-reg))
 
+#+double-double
+(define-vop (move-from-complex-double-double)
+  (:args (x :scs (complex-double-double-reg) :to :save))
+  (:results (y :scs (descriptor-reg)))
+  (:temporary (:sc any-reg :offset r11-offset) temp)
+  (:node-var node)
+  (:note "complex double-double float to pointer coercion")
+  (:generator 13
+     (with-fixed-allocation (y vm::complex-double-double-float-type
+			       vm::complex-double-double-float-size temp node)
+       (let ((real-tn (complex-double-double-reg-real-hi-tn x)))
+	 (with-tn@fp-top(real-tn)
+	   (inst fstd (ea-for-cddf-real-hi-desc y))))
+       (let ((real-tn (complex-double-double-reg-real-lo-tn x)))
+	 (with-tn@fp-top(real-tn)
+	   (inst fstd (ea-for-cddf-real-lo-desc y))))
+       (let ((imag-tn (complex-double-double-reg-imag-hi-tn x)))
+	 (with-tn@fp-top(imag-tn)
+	   (inst fstd (ea-for-cddf-imag-hi-desc y))))
+       (let ((imag-tn (complex-double-double-reg-imag-lo-tn x)))
+	 (with-tn@fp-top(imag-tn)
+	   (inst fstd (ea-for-cddf-imag-lo-desc y)))))))
+;;;
+#+double-double
+(define-move-vop move-from-complex-double-double :move
+  (complex-double-double-reg) (descriptor-reg))
 ;;;
 ;;; Move from a descriptor to a complex float register
 ;;;
@@ -728,13 +846,92 @@
   (frob move-complex-long-float-argument
 	complex-long-reg complex-long-stack :long))
 
+#+double-double
+(define-vop (move-complex-double-double-float-argument)
+  (:args (x :scs (complex-double-double-reg) :target y)
+	 (fp :scs (any-reg) :load-if (not (sc-is y complex-double-double-reg))))
+  (:results (y))
+  (:note "complex double-double-float argument move")
+  (:generator 2
+    (sc-case y
+      (complex-double-double-reg
+       (unless (location= x y)
+	 (let ((x-real (complex-double-double-reg-real-hi-tn x))
+	       (y-real (complex-double-double-reg-real-hi-tn y)))
+	   (cond ((zerop (tn-offset y-real))
+		  (copy-fp-reg-to-fr0 x-real))
+		 ((zerop (tn-offset x-real))
+		  (inst fstd y-real))
+		 (t
+		  (inst fxch x-real)
+		  (inst fstd y-real)
+		  (inst fxch x-real))))
+	 (let ((x-real (complex-double-double-reg-real-lo-tn x))
+	       (y-real (complex-double-double-reg-real-lo-tn y)))
+	   (cond ((zerop (tn-offset y-real))
+		  (copy-fp-reg-to-fr0 x-real))
+		 ((zerop (tn-offset x-real))
+		  (inst fstd y-real))
+		 (t
+		  (inst fxch x-real)
+		  (inst fstd y-real)
+		  (inst fxch x-real))))
+	 (let ((x-imag (complex-double-double-reg-imag-hi-tn x))
+	       (y-imag (complex-double-double-reg-imag-hi-tn y)))
+	   (inst fxch x-imag)
+	   (inst fstd y-imag)
+	   (inst fxch x-imag))
+	 (let ((x-imag (complex-double-double-reg-imag-lo-tn x))
+	       (y-imag (complex-double-double-reg-imag-lo-tn y)))
+	   (inst fxch x-imag)
+	   (inst fstd y-imag)
+	   (inst fxch x-imag))))
+      (complex-double-double-stack
+       (let ((real-tn (complex-double-double-reg-real-hi-tn x)))
+	 (cond ((zerop (tn-offset real-tn))
+		(inst fstd (ea-for-cddf-real-hi-stack y fp)))
+	       (t
+		(inst fxch real-tn)
+		(inst fstd (ea-for-cddf-real-hi-stack y fp))
+		(inst fxch real-tn))))
+       (let ((real-tn (complex-double-double-reg-real-lo-tn x)))
+	 (cond ((zerop (tn-offset real-tn))
+		(inst fstd (ea-for-cddf-real-lo-stack y fp)))
+	       (t
+		(inst fxch real-tn)
+		(inst fstd (ea-for-cddf-real-lo-stack y fp))
+		(inst fxch real-tn))))
+       (let ((imag-tn (complex-double-double-reg-imag-hi-tn x)))
+	 (inst fxch imag-tn)
+	 (inst fstd (ea-for-cddf-imag-hi-stack y fp))
+	 (inst fxch imag-tn))
+       (let ((imag-tn (complex-double-double-reg-imag-lo-tn x)))
+	 (inst fxch imag-tn)
+	 (inst fstd (ea-for-cddf-imag-lo-stack y fp))
+	 (inst fxch imag-tn))))
+    ))
+
+#+double-double
+(define-move-vop move-complex-double-double-float-argument :move-argument
+  (complex-double-double-reg descriptor-reg) (complex-double-double-reg))
+
 (define-move-vop move-argument :move-argument
   (single-reg double-reg #+long-float long-reg
-   complex-single-reg complex-double-reg #+long-float complex-long-reg)
+   #+double-double double-double-reg
+   complex-single-reg complex-double-reg #+long-float complex-long-reg
+   #+double-double complex-double-double-reg)
   (descriptor-reg))
 
 
 ;;;; Arithmetic VOPs:
+
+
+;; Save the top-of-stack to memory and reload it.  This ensures that
+;; the stack top has the desired precision.
+(defmacro save-and-reload-tos (tmp)
+  `(progn
+     (inst fstp ,tmp)
+     (inst fld ,tmp)))
 
 ;;; dtc: The floating point arithmetic vops.
 ;;; 
@@ -1210,6 +1407,12 @@
 	(= (long-float-high-bits x) (long-float-high-bits y))
 	(= (long-float-exp-bits x) (long-float-exp-bits y))))
 
+#+double-double
+(deftransform eql ((x y) (double-double-float double-double-float))
+  '(and (eql (double-double-hi x) (double-double-hi y))
+	(eql (double-double-lo x) (double-double-lo y))))
+
+
 (define-vop (=/float)
   (:args (x) (y))
   (:temporary (:sc word-reg :offset rax-offset :from :eval) temp)
@@ -1507,6 +1710,7 @@
   (:save-p :compute-only)
   (:note "inline float comparison")
   (:ignore temp y)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 2
      (note-this-location vop :internal-error)
      (cond
@@ -1532,12 +1736,14 @@
 		  (:translate ,translate)
 		  (:args (x :scs (single-reg)))
 		  (:arg-types single-float (:constant (single-float 0f0 0f0)))
+		  (:guard (not (backend-featurep :sse2)))
 		  (:variant ,test))
 		(define-vop (,(symbolicate translate "0/DOUBLE-FLOAT")
 			      float-test)
 		  (:translate ,translate)
 		  (:args (x :scs (double-reg)))
 		  (:arg-types double-float (:constant (double-float 0d0 0d0)))
+		  (:guard (not (backend-featurep :sse2)))
 		  (:variant ,test))
 		#+long-float
 		(define-vop (,(symbolicate translate "0/LONG-FLOAT")
@@ -1669,11 +1875,41 @@
 		     (with-empty-tn@fp-top(y)
 		       (note-this-location vop :internal-error)
 		       (inst fild x))))))))
+  #+(or)
   (frob %single-float/signed %single-float single-reg single-float)
   (frob %double-float/signed %double-float double-reg double-float)
   #+long-float
   (frob %long-float/signed %long-float long-reg long-float))
 
+(define-vop (%single-float/signed)
+  (:args (x :scs (signed-stack signed-reg) :target temp))
+  (:temporary (:sc signed-stack) temp)
+  (:temporary (:sc single-stack) sf-temp)
+  (:results (y :scs (single-reg)))
+  (:arg-types signed-num)
+  (:result-types single-float)
+  (:policy :fast-safe)
+  (:note "inline float coercion")
+  (:translate %single-float)
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:generator 5
+    (sc-case x
+      (signed-reg
+       (inst mov temp x)
+       (with-empty-tn@fp-top(y)
+	 (note-this-location vop :internal-error)
+	 (inst fild temp)
+	 (inst fstp sf-temp)
+	 (inst fld sf-temp)))
+      (signed-stack
+       (with-empty-tn@fp-top(y)
+	 (note-this-location vop :internal-error)
+	 (inst fild x)
+	 (inst fstp sf-temp)
+	 (inst fld sf-temp))))))
+
+#-sse2
 (macrolet ((frob (name translate to-sc to-type)
 	     `(define-vop (,name)
 		(:args (x :scs (unsigned-reg)))
@@ -1696,6 +1932,27 @@
   (frob %double-float/unsigned %double-float double-reg double-float)
   #+long-float
   (frob %long-float/unsigned %long-float long-reg long-float))
+
+;;#+(or)
+(define-vop (%single-float/unsigned)
+  (:args (x :scs (unsigned-reg)))
+  (:results (y :scs (single-reg)))
+  (:arg-types unsigned-num)
+  (:result-types single-float)
+  (:policy :fast-safe)
+  (:note "inline float coercion")
+  (:translate %single-float)
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:generator 6
+    (inst push 0)
+    (inst push x)
+    (with-empty-tn@fp-top(y)
+      (note-this-location vop :internal-error)
+      (inst fildl (make-ea :dword :base rsp-tn))
+      (inst fstp (make-ea :dword :base rsp-tn))
+      (inst fld (make-ea :dword :base rsp-tn)))
+    (inst add rsp-tn 8)))
 
 ;;; These should be no-ops but the compiler might want to move
 ;;; some things around
@@ -1727,6 +1984,7 @@
 		    (inst fst  y)
 		    (inst fxch x))))))))
   
+  #+(or)
   (frob %single-float/double-float %single-float double-reg
 	double-float single-reg single-float)
   #+long-float
@@ -1744,7 +2002,54 @@
   (frob %long-float/double-float %long-float double-reg double-float
 	long-reg long-float))
 
+(define-vop (%single-float/double-float)
+  (:args (x :scs (double-reg) :target y))
+  (:results (y :scs (single-reg)))
+  (:arg-types double-float)
+  (:result-types single-float)
+  (:policy :fast-safe)
+  (:note "inline float coercion")
+  (:translate %single-float)
+  (:temporary (:sc single-stack) sf-temp)
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:generator 2
+    (note-this-location vop :internal-error)
+    (cond
+      ((zerop (tn-offset x))
+       (cond
+	 ((zerop (tn-offset y))
+	  ;; x is in ST0, y is also in ST0
+	  (inst fstp sf-temp)
+	  (inst fld sf-temp))
+	 (t
+	  ;; x is in ST0, y is in another reg. not ST0
+	  ;; Save st0 (x) to memory, swap, reload, then swap back.
+	  (inst fst sf-temp)
+	  (inst fxch y)
+	  (fp-pop)
+	  (inst fld sf-temp)
+	  (inst fxch y))))
+      ((zerop (tn-offset y))
+       ;; y is in ST0, x is in another reg. not ST0
+       ;; Swap, save x to memory, reload, swap back
+       (inst fxch x)
+       (inst fstp sf-temp)
+       (inst fld sf-temp)
+       (inst fxch x))
+      (t
+       ;; Neither x or y are in ST0, and they are not in
+       ;; the same reg.
 
+       ;; Get x to st0.  Store it away.  Swap back.  Get y to st0,
+       ;; load.  Swap back.
+       (inst fxch x)
+       (inst fst sf-temp)
+       (inst fxch x)
+       (inst fxch y)
+       (fp-pop)
+       (inst fld sf-temp)
+       (inst fxch y)))))
 
 (macrolet ((frob (trans from-sc from-type round-p)
 	     `(define-vop (,(symbolicate trans "/" from-type))
@@ -1809,6 +2114,7 @@
 	       (:note "inline float truncate")
 	       (:vop-var vop)
 	       (:save-p :compute-only)
+	       (:guard (not (backend-featurep :sse2)))
 	       (:generator 5
 		,@(unless round-p
 		   '((note-this-location vop :internal-error)
@@ -2078,55 +2384,53 @@
 
 ;;;; Float mode hackery:
 
-(deftype float-modes () '(unsigned-byte 32)) ; really only 16
-(defknown floating-point-modes () float-modes (flushable))
-(defknown ((setf floating-point-modes)) (float-modes)
+(deftype float-modes () '(unsigned-byte 24))
+(defknown x87-floating-point-modes () float-modes (flushable))
+(defknown ((setf x87-floating-point-modes)) (float-modes)
   float-modes)
 
-(defconstant npx-env-size (* 7 vm:word-bytes))
-(defconstant npx-cw-offset 0)
-(defconstant npx-sw-offset 4)
-
-(define-vop (floating-point-modes)
+(define-vop (x87-floating-point-modes)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)
-  (:translate floating-point-modes)
+  (:translate x87-floating-point-modes)
   (:policy :fast-safe)
-  (:temporary (:sc unsigned-reg :offset rax-offset :target res
-		   :to :result) rax)
+  (:temporary (:sc unsigned-stack) cw-stack)
+  (:temporary (:sc unsigned-reg :offset eax-offset) sw-reg)
   (:generator 8
-   (inst sub rsp-tn npx-env-size)	; make space on stack
-   (inst wait)                          ; Catch any pending FPE exceptions
-   (inst fstenv (make-ea :qword :base rsp-tn)) ; masks all exceptions
-   (inst fldenv (make-ea :qword :base rsp-tn)) ; restore previous state
-   ;; Current status to high word
-   (inst mov rax (make-ea :qword :base rsp-tn :disp (- npx-sw-offset 2)))
-   ;; Exception mask to low word
-   (inst mov ax-tn (make-ea :word :base rsp-tn :disp npx-cw-offset))
-   (inst add rsp-tn npx-env-size)	; Pop stack
-   (inst xor rax #x3f)	; Flip exception mask to trap enable bits
-   (move res rax)))
+   (inst fnstsw)
+   (inst fnstcw cw-stack)
+   (inst and sw-reg #xff)  ; mask exception flags
+   (inst shl sw-reg 16)
+   (inst byte #x66)  ; operand size prefix
+   (inst or sw-reg cw-stack)
+   (inst xor sw-reg #x3f)  ; invert exception mask
+   (move res sw-reg)))
 
-(define-vop (set-floating-point-modes)
+(define-vop (set-x87-floating-point-modes)
   (:args (new :scs (unsigned-reg) :to :result :target res))
   (:results (res :scs (unsigned-reg)))
   (:arg-types unsigned-num)
   (:result-types unsigned-num)
-  (:translate (setf floating-point-modes))
+  (:translate (setf x87-floating-point-modes))
   (:policy :fast-safe)
-  (:temporary (:sc unsigned-reg :offset rax-offset
-		   :from :eval :to :result) rax)
-  (:generator 3
-   (inst sub rsp-tn npx-env-size)	; make space on stack
-   (inst wait)                          ; Catch any pending FPE exceptions
-   (inst fstenv (make-ea :qword :base rsp-tn))
-   (inst mov rax new)
-   (inst xor rax #x3f)	    ; turn trap enable bits into exception mask
-   (inst mov (make-ea :word :base rsp-tn :disp npx-cw-offset) ax-tn)
-   (inst shr rax 16)			; position status word
-   (inst mov (make-ea :word :base rsp-tn :disp npx-sw-offset) ax-tn)
-   (inst fldenv (make-ea :qword :base rsp-tn))
-   (inst add rsp-tn npx-env-size)	; Pop stack
+  (:temporary (:sc unsigned-stack) cw-stack)
+  (:temporary (:sc byte-reg :offset al-offset) sw-reg)
+  (:temporary (:sc unsigned-reg :offset ecx-offset) old)
+  (:generator 6
+   (inst mov cw-stack new)
+   (inst xor cw-stack #x3f)  ; invert exception mask
+   (inst fnstsw)
+   (inst fldcw cw-stack)  ; always update the control word
+   (inst mov old new)
+   (inst shr old 16)
+   (inst cmp cl-tn sw-reg)  ; compare exception flags
+   (inst jmp :z DONE)  ; skip updating the status word
+   (inst sub rsp-tn 28)
+   (inst fstenv (make-ea :dword :base rsp-tn))
+   (inst mov (make-ea :byte :base rsp-tn :disp 4) cl-tn)
+   (inst fldenv (make-ea :dword :base rsp-tn))
+   (inst add rsp-tn 28)
+   DONE
    (move res new)))
 
 
@@ -2169,7 +2473,9 @@
 
   ;; Quick versions of fsin and fcos that require the argument to be
   ;; within range 2^63.
+  #-sse2
   (frob fsin-quick %sin-quick fsin)
+  #-sse2
   (frob fcos-quick %cos-quick fcos)
   ;;
   (frob fsqrt %sqrt fsqrt))
@@ -2191,6 +2497,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore fr0)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
     (note-this-location vop :internal-error)
     (case (tn-offset x)
@@ -2476,6 +2783,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore temp)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      (unless (zerop (tn-offset x))
@@ -2532,6 +2840,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore temp fr0)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      (unless (zerop (tn-offset x))
@@ -2587,6 +2896,7 @@
   (:note "inline log function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      (sc-case x
@@ -2638,6 +2948,7 @@
   (:note "inline log10 function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      (sc-case x
@@ -2692,6 +3003,7 @@
   (:note "inline pow function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      ;; Setup x in fr0 and y in fr1
@@ -2806,6 +3118,7 @@
   (:policy :fast-safe)
   (:note "inline scalbn function")
   (:ignore fr0)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      ;; Setup x in fr0 and y in fr1
      (sc-case x
@@ -2873,6 +3186,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore fr0)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      ;; Setup x in fr0 and y in fr1
@@ -2974,7 +3288,8 @@
   (:arg-types double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:guard (not (backend-featurep :pentium)))
+  (:guard (or (not (backend-featurep :pentium))
+	      (not (backend-featurep :sse2))))
   (:note "inline log1p function")
   (:ignore temp)
   (:generator 5
@@ -3028,7 +3343,8 @@
   (:arg-types double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:guard (backend-featurep :pentium))
+  (:guard (and (backend-featurep :pentium)
+	       (not (backend-featurep :sse2))))
   (:note "inline log1p with limited x range function")
   (:vop-var vop)
   (:save-p :compute-only)
@@ -3083,6 +3399,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore fr0)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      (sc-case x
@@ -3129,6 +3446,7 @@
   (:note "inline atan function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      ;; Setup x in fr1 and 1.0 in fr0
@@ -3176,6 +3494,7 @@
   (:note "inline atan2 function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      ;; Setup x in fr1 and y in fr0
@@ -4645,3 +4964,424 @@
   (:note "inline dummy FP register bias")
   (:ignore x)
   (:generator 0))
+
+;;; Support for double-double floats
+
+#+double-double
+(progn
+
+(defun double-double-reg-hi-tn (x)
+  (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
+		  :offset (tn-offset x)))
+
+(defun double-double-reg-lo-tn (x)
+  (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
+		  :offset (1+ (tn-offset x))))
+
+(define-move-function (load-double-double 4) (vop x y)
+  ((double-double-stack) (double-double-reg))
+  (let ((real-tn (double-double-reg-hi-tn y)))
+    (with-empty-tn@fp-top(real-tn)
+      (inst fldd (ea-for-cdf-real-stack x))))
+  (let ((imag-tn (double-double-reg-lo-tn y)))
+    (with-empty-tn@fp-top(imag-tn)
+      (inst fldd (ea-for-cdf-imag-stack x)))))
+
+(define-move-function (store-double-double 4) (vop x y)
+  ((double-double-reg) (double-double-stack))
+  (let ((real-tn (double-double-reg-hi-tn x)))
+    (cond ((zerop (tn-offset real-tn))
+	   (inst fstd (ea-for-cdf-real-stack y)))
+	  (t
+	   (inst fxch real-tn)
+	   (inst fstd (ea-for-cdf-real-stack y))
+	   (inst fxch real-tn))))
+  (let ((imag-tn (double-double-reg-lo-tn x)))
+    (inst fxch imag-tn)
+    (inst fstd (ea-for-cdf-imag-stack y))
+    (inst fxch imag-tn)))
+
+;;; Double-double float register to register moves
+
+(define-vop (double-double-move)
+  (:args (x :scs (double-double-reg)
+	    :target y :load-if (not (location= x y))))
+  (:results (y :scs (double-double-reg) :load-if (not (location= x y))))
+  (:note "double-double float move")
+  (:generator 0
+     (unless (location= x y)
+       ;; Note the double-float-regs are aligned to every second
+       ;; float register so there is not need to worry about overlap.
+       (let ((x-hi (double-double-reg-hi-tn x))
+	     (y-hi (double-double-reg-hi-tn y)))
+	 (cond ((zerop (tn-offset y-hi))
+		(copy-fp-reg-to-fr0 x-hi))
+	       ((zerop (tn-offset x-hi))
+		(inst fstd y-hi))
+	       (t
+		(inst fxch x-hi)
+		(inst fstd y-hi)
+		(inst fxch x-hi))))
+       (let ((x-lo (double-double-reg-lo-tn x))
+	     (y-lo (double-double-reg-lo-tn y)))
+	 (inst fxch x-lo)
+	 (inst fstd y-lo)
+	 (inst fxch x-lo)))))
+;;;
+(define-move-vop double-double-move :move
+  (double-double-reg) (double-double-reg))
+
+;;; Move from a complex float to a descriptor register allocating a
+;;; new complex float object in the process.
+
+(define-vop (move-from-double-double)
+  (:args (x :scs (double-double-reg) :to :save))
+  (:results (y :scs (descriptor-reg)))
+  (:temporary (:sc any-reg :offset r11-offset) temp)
+  (:node-var node)
+  (:note "double double float to pointer coercion")
+  (:generator 13
+     (with-fixed-allocation (y vm:double-double-float-type
+			       vm:double-double-float-size temp node)
+       (let ((real-tn (double-double-reg-hi-tn x)))
+	 (with-tn@fp-top(real-tn)
+	   (inst fstd (ea-for-cdf-real-desc y))))
+       (let ((imag-tn (double-double-reg-lo-tn x)))
+	 (with-tn@fp-top(imag-tn)
+	   (inst fstd (ea-for-cdf-imag-desc y)))))))
+;;;
+(define-move-vop move-from-double-double :move
+  (double-double-reg) (descriptor-reg))
+
+;;; Move from a descriptor to a double-double float register
+
+(define-vop (move-to-double-double)
+  (:args (x :scs (descriptor-reg)))
+  (:results (y :scs (double-double-reg)))
+  (:note "pointer to double-double-float coercion")
+  (:generator 2
+    (let ((real-tn (double-double-reg-hi-tn y)))
+      (with-empty-tn@fp-top(real-tn)
+	(inst fldd (ea-for-cdf-real-desc x))))
+    (let ((imag-tn (double-double-reg-lo-tn y)))
+      (with-empty-tn@fp-top(imag-tn)
+	(inst fldd (ea-for-cdf-imag-desc x))))))
+
+(define-move-vop move-to-double-double :move
+  (descriptor-reg) (double-double-reg))
+
+;;; double-double float move-argument vop
+
+(define-vop (move-double-double-float-argument)
+  (:args (x :scs (double-double-reg) :target y)
+	 (fp :scs (any-reg) :load-if (not (sc-is y double-double-reg))))
+  (:results (y))
+  (:note "double double-float argument move")
+  (:generator 2
+    (sc-case y
+      (double-double-reg
+       (unless (location= x y)
+	 (let ((x-real (double-double-reg-hi-tn x))
+	       (y-real (double-double-reg-hi-tn y)))
+	   (cond ((zerop (tn-offset y-real))
+		  (copy-fp-reg-to-fr0 x-real))
+		 ((zerop (tn-offset x-real))
+		  (inst fstd y-real))
+		 (t
+		  (inst fxch x-real)
+		  (inst fstd y-real)
+		  (inst fxch x-real))))
+	 (let ((x-imag (double-double-reg-lo-tn x))
+	       (y-imag (double-double-reg-lo-tn y)))
+	   (inst fxch x-imag)
+	   (inst fstd y-imag)
+	   (inst fxch x-imag))))
+      (double-double-stack
+       (let ((hi-tn (double-double-reg-hi-tn x)))
+	 (cond ((zerop (tn-offset hi-tn))
+		(inst fstd (ea-for-cdf-real-stack y fp)))
+	       (t
+		(inst fxch hi-tn)
+		(inst fstd (ea-for-cdf-real-stack y fp))
+		(inst fxch hi-tn))))
+       (let ((lo-tn (double-double-reg-lo-tn x)))
+	 (inst fxch lo-tn)
+	 (inst fstd (ea-for-cdf-imag-stack y fp))
+	 (inst fxch lo-tn))))))
+
+(define-move-vop move-double-double-float-argument :move-argument
+  (double-double-reg descriptor-reg) (double-double-reg))
+
+
+(define-vop (move-to-complex-double-double)
+  (:args (x :scs (descriptor-reg)))
+  (:results (y :scs (complex-double-double-reg)))
+  (:note "pointer to complex float coercion")
+  (:generator 2
+    (let ((real-tn (complex-double-double-reg-real-hi-tn y)))
+      (with-empty-tn@fp-top(real-tn)
+	(inst fldd (ea-for-cddf-real-hi-desc x))))
+    (let ((real-tn (complex-double-double-reg-real-lo-tn y)))
+      (with-empty-tn@fp-top(real-tn)
+	(inst fldd (ea-for-cddf-real-lo-desc x))))
+    (let ((imag-tn (complex-double-double-reg-imag-hi-tn y)))
+      (with-empty-tn@fp-top(imag-tn)
+	(inst fldd (ea-for-cddf-imag-hi-desc x))))
+    (let ((imag-tn (complex-double-double-reg-imag-lo-tn y)))
+      (with-empty-tn@fp-top(imag-tn)
+	(inst fldd (ea-for-cddf-imag-lo-desc x))))))
+
+(define-move-vop move-to-complex-double-double :move
+  (descriptor-reg) (complex-double-double-reg))
+
+
+(define-vop (make/double-double-float)
+  (:args (hi :scs (double-reg) :target r
+	     :load-if (not (location= hi r)))
+	 (lo :scs (double-reg) :to :save))
+  (:results (r :scs (double-double-reg) :from (:argument 0)
+	       :load-if (not (sc-is r double-double-stack))))
+  (:arg-types double-float double-float)
+  (:result-types double-double-float)
+  (:translate kernel::%make-double-double-float)
+  (:note "inline double-double-float creation")
+  (:policy :fast-safe)
+  (:vop-var vop)
+  (:generator 5
+    (sc-case r
+      (double-double-reg
+       (let ((r-real (double-double-reg-hi-tn r)))
+	 (unless (location= hi r-real)
+	   (cond ((zerop (tn-offset r-real))
+		  (copy-fp-reg-to-fr0 hi))
+		 ((zerop (tn-offset hi))
+		  (inst fstd r-real))
+		 (t
+		  (inst fxch hi)
+		  (inst fstd r-real)
+		  (inst fxch hi)))))
+       (let ((r-imag (double-double-reg-lo-tn r)))
+	 (unless (location= lo r-imag)
+	   (cond ((zerop (tn-offset lo))
+		  (inst fstd r-imag))
+		 (t
+		  (inst fxch lo)
+		  (inst fstd r-imag)
+		  (inst fxch lo))))))
+      (double-double-stack
+       (unless (location= hi r)
+	 (cond ((zerop (tn-offset hi))
+		(inst fstd (ea-for-cdf-real-stack r)))
+	       (t
+		(inst fxch hi)
+		(inst fstd (ea-for-cdf-real-stack r))
+		(inst fxch hi))))
+       (inst fxch lo)
+       (inst fstd (ea-for-cdf-imag-stack r))
+       (inst fxch lo)))))
+
+(define-vop (double-double-value)
+  (:args (x :target r))
+  (:results (r))
+  (:variant-vars offset)
+  (:policy :fast-safe)
+  (:generator 3
+    (cond ((sc-is x double-double-reg)
+	   (let ((value-tn
+		  (make-random-tn :kind :normal
+				  :sc (sc-or-lose 'double-reg *backend*)
+				  :offset (+ offset (tn-offset x)))))
+	     (unless (location= value-tn r)
+	       (cond ((zerop (tn-offset r))
+		      (copy-fp-reg-to-fr0 value-tn))
+		     ((zerop (tn-offset value-tn))
+		      (inst fstd r))
+		     (t
+		      (inst fxch value-tn)
+		      (inst fstd r)
+		      (inst fxch value-tn))))))
+	  ((sc-is r double-reg)
+	   (let ((ea (sc-case x
+		       (double-double-stack
+			(ecase offset
+			  (0 (ea-for-cdf-real-stack x))
+			  (1 (ea-for-cdf-imag-stack x))))
+		       (descriptor-reg
+			(ecase offset
+			  (0 (ea-for-cdf-real-desc x))
+			  (1 (ea-for-cdf-imag-desc x)))))))
+	     (with-empty-tn@fp-top(r)
+	       (inst fldd ea))))
+	  (t (error "double-double-value VOP failure")))))
+
+
+(define-vop (hi/double-double-value double-double-value)
+  (:translate kernel::double-double-hi)
+  (:args (x :scs (double-double-reg double-double-stack descriptor-reg)
+	    :target r))
+  (:arg-types double-double-float)
+  (:results (r :scs (double-reg)))
+  (:result-types double-float)
+  (:note "double-double high part")
+  (:variant 0))
+
+(define-vop (lo/double-double-value double-double-value)
+  (:translate kernel::double-double-lo)
+  (:args (x :scs (double-double-reg double-double-stack descriptor-reg)
+	    :target r))
+  (:arg-types double-double-float)
+  (:results (r :scs (double-reg)))
+  (:result-types double-float)
+  (:note "double-double low part")
+  (:variant 1))
+
+(define-vop (make-complex-double-double-float)
+  (:translate complex)
+  (:args (real :scs (double-double-reg) :target r
+	       :load-if (not (location= real r))
+	       )
+	 (imag :scs (double-double-reg) :to :save))
+  (:arg-types double-double-float double-double-float)
+  (:results (r :scs (complex-double-double-reg) :from (:argument 0)
+	       :load-if (not (sc-is r complex-double-double-stack))))
+  (:result-types complex-double-double-float)
+  (:note "inline complex double-double-float creation")
+  (:policy :fast-safe)
+  (:generator 5
+    (sc-case r
+      (complex-double-double-reg
+       (let ((r-real (complex-double-double-reg-real-hi-tn r))
+	     (a-real (double-double-reg-hi-tn real)))
+	 (unless (location= a-real r-real)
+	   (cond ((zerop (tn-offset r-real))
+		  (copy-fp-reg-to-fr0 a-real))
+		 ((zerop (tn-offset a-real))
+		  (inst fstd r-real))
+		 (t
+		  (inst fxch a-real)
+		  (inst fstd r-real)
+		  (inst fxch a-real)))))
+       (let ((r-real (complex-double-double-reg-real-lo-tn r))
+	     (a-real (double-double-reg-lo-tn real)))
+	 (unless (location= a-real r-real)
+	   (cond ((zerop (tn-offset r-real))
+		  (copy-fp-reg-to-fr0 a-real))
+		 ((zerop (tn-offset a-real))
+		  (inst fstd r-real))
+		 (t
+		  (inst fxch a-real)
+		  (inst fstd r-real)
+		  (inst fxch a-real)))))
+       (let ((r-imag (complex-double-double-reg-imag-hi-tn r))
+	     (a-imag (double-double-reg-hi-tn imag)))
+	 (unless (location= a-imag r-imag)
+	   (cond ((zerop (tn-offset a-imag))
+		  (inst fstd r-imag))
+		 (t
+		  (inst fxch a-imag)
+		  (inst fstd r-imag)
+		  (inst fxch a-imag)))))
+       (let ((r-imag (complex-double-double-reg-imag-lo-tn r))
+	     (a-imag (double-double-reg-lo-tn imag)))
+	 (unless (location= a-imag r-imag)
+	   (cond ((zerop (tn-offset a-imag))
+		  (inst fstd r-imag))
+		 (t
+		  (inst fxch a-imag)
+		  (inst fstd r-imag)
+		  (inst fxch a-imag))))))
+      (complex-double-double-stack
+       (unless (location= real r)
+	 (cond ((zerop (tn-offset real))
+		(inst fstd (ea-for-cddf-real-hi-stack r)))
+	       (t
+		(inst fxch real)
+		(inst fstd (ea-for-cddf-real-hi-stack r))
+		(inst fxch real))))
+       (let ((real-lo (double-double-reg-lo-tn real)))
+	 (cond ((zerop (tn-offset real-lo))
+		(inst fstd (ea-for-cddf-real-lo-stack r)))
+	       (t
+		(inst fxch real-lo)
+		(inst fstd (ea-for-cddf-real-lo-stack r))
+		(inst fxch real-lo))))
+       (let ((imag-val (double-double-reg-hi-tn imag)))
+	 (inst fxch imag-val)
+	 (inst fstd (ea-for-cddf-imag-hi-stack r))
+	 (inst fxch imag-val))
+       (let ((imag-val (double-double-reg-lo-tn imag)))
+	 (inst fxch imag-val)
+	 (inst fstd (ea-for-cddf-imag-lo-stack r))
+	 (inst fxch imag-val))))))
+
+(define-vop (complex-double-double-float-value)
+  (:args (x :scs (complex-double-double-reg descriptor-reg) :target r
+	    :load-if (not (sc-is x complex-double-double-stack))))
+  (:arg-types complex-double-double-float)
+  (:results (r :scs (double-double-reg)))
+  (:result-types double-double-float)
+  (:variant-vars slot)
+  (:policy :fast-safe)
+  (:generator 3
+    (sc-case x
+      (complex-double-double-reg
+       (let ((value-tn (ecase slot
+			 (:real (complex-double-double-reg-real-hi-tn x))
+			 (:imag (complex-double-double-reg-imag-hi-tn x))))
+	     (r-hi (double-double-reg-hi-tn r)))
+	 (unless (location= value-tn r-hi)
+	   (cond ((zerop (tn-offset r-hi))
+		  (copy-fp-reg-to-fr0 value-tn))
+		 ((zerop (tn-offset value-tn))
+		  (inst fstd r-hi))
+		 (t
+		  (inst fxch value-tn)
+		  (inst fstd r-hi)
+		  (inst fxch value-tn)))))
+       (let ((value-tn (ecase slot
+			 (:real (complex-double-double-reg-real-lo-tn x))
+			 (:imag (complex-double-double-reg-imag-lo-tn x))))
+	     (r-lo (double-double-reg-lo-tn r)))
+	 (unless (location= value-tn r-lo)
+	   (cond ((zerop (tn-offset r-lo))
+		  (copy-fp-reg-to-fr0 value-tn))
+		 ((zerop (tn-offset value-tn))
+		  (inst fstd r-lo))
+		 (t
+		  (inst fxch value-tn)
+		  (inst fstd r-lo)
+		  (inst fxch value-tn))))))
+      (complex-double-double-stack
+       (let ((r-hi (double-double-reg-hi-tn r)))
+	 (with-empty-tn@fp-top (r-hi)
+	   (inst fldd (ecase slot
+		       (:real (ea-for-cddf-real-hi-stack x))
+		       (:imag (ea-for-cddf-imag-hi-stack x))))))
+       (let ((r-lo (double-double-reg-lo-tn r)))
+	 (with-empty-tn@fp-top (r-lo)
+	   (inst fldd (ecase slot
+		       (:real (ea-for-cddf-real-lo-stack x))
+		       (:imag (ea-for-cddf-imag-lo-stack x)))))))
+      (descriptor-reg
+       (let ((r-hi (double-double-reg-hi-tn r)))
+	 (with-empty-tn@fp-top (r-hi)
+	   (inst fldd (ecase slot
+		       (:real (ea-for-cddf-real-hi-desc x))
+		       (:imag (ea-for-cddf-imag-hi-desc x))))))
+       (let ((r-lo (double-double-reg-lo-tn r)))
+	 (with-empty-tn@fp-top (r-lo)
+	   (inst fldd (ecase slot
+		       (:real (ea-for-cddf-real-lo-desc x))
+		       (:imag (ea-for-cddf-imag-lo-desc x))))))))))
+
+(define-vop (realpart/complex-double-double-float complex-double-double-float-value)
+  (:translate realpart)
+  (:note "complex float realpart")
+  (:variant :real))
+
+(define-vop (imagpart/complex-double-double-float complex-double-double-float-value)
+  (:translate imagpart)
+  (:note "complex float imagpart")
+  (:variant :imag))
+
+); progn
