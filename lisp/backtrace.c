@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.18 2009/11/02 02:51:58 rtoy Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.19 2009/11/02 03:07:01 rtoy Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -498,8 +498,9 @@ backtrace(int nframes)
     int i;
 
 #ifdef __x86_64
+    __asm__("movq %%rbp,%0":"=g"(fp));
 #else
-    __asm__("movl %%ebp,%0":"=g"(fp));
+    __asm__("movl %%rbp,%0":"=g"(fp));
 #endif
     
     for (i = 0; i < nframes; ++i) {
