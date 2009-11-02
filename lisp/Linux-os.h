@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.29 2009/11/02 02:51:58 rtoy Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.30 2009/11/02 15:05:07 rtoy Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -25,9 +25,6 @@
 #include <sys/syscall.h>
 #include <asm/unistd.h>
 #include <errno.h>
-
-#define __USE_GNU
-#include <sys/ucontext.h>
 
 typedef caddr_t os_vm_address_t;	/* like hpux */
 typedef size_t os_vm_size_t;	/* like hpux */

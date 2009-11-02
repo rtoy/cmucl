@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-arch.c,v 1.10 2009/11/02 02:51:58 rtoy Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-arch.c,v 1.11 2009/11/02 15:05:07 rtoy Rel $ 
  *
  */
 
@@ -12,7 +12,6 @@
 #include "os.h"
 #include "internals.h"
 #include "arch.h"
-#define __USE_GNU
 #include "lispregs.h"
 #include "signal.h"
 #include "alloc.h"
@@ -40,22 +39,22 @@ arch_init(fpu_mode_t mode)
  */
 
 void
-arch_skip_instruction(os_context_t *context)
+arch_skip_instruction(struct sigcontext *context)
 {
     int vlen, code;
 
-    DPRINTF(0, (stderr, "[arch_skip_inst at %x>]\n", SC_PC(context)));
+    DPRINTF(0, (stderr, "[arch_skip_inst at %x>]\n", context->sc_pc));
 
     /* Get and skip the lisp error code. */
-    code = *(char *) SC_PC(context)++;
+    code = *(char *) context->sc_pc++;
     switch (code) {
       case trap_Error:
       case trap_Cerror:
 	  /* Lisp error arg vector length */
-	  vlen = *(char *) SC_PC(context)++;
+	  vlen = *(char *) context->sc_pc++;
 	  /* Skip lisp error arg data bytes */
 	  while (vlen-- > 0)
-	      SC_PC(context)++;
+	      ((char *) context->sc_pc)++;
 	  break;
 
       case trap_Breakpoint:
@@ -72,23 +71,23 @@ arch_skip_instruction(os_context_t *context)
 	  break;
     }
 
-    DPRINTF(0, (stderr, "[arch_skip_inst resuming at %x>]\n", SC_PC(context)));
+    DPRINTF(0, (stderr, "[arch_skip_inst resuming at %x>]\n", context->sc_pc));
 }
 
 unsigned char *
-arch_internal_error_arguments(os_context_t *context)
+arch_internal_error_arguments(struct sigcontext *context)
 {
-    return (unsigned char *) (SC_PC(context) + 1);
+    return (unsigned char *) (context->sc_pc + 1);
 }
 
 boolean
-arch_pseudo_atomic_atomic(os_context_t *context)
+arch_pseudo_atomic_atomic(struct sigcontext *context)
 {
     return SymbolValue(PSEUDO_ATOMIC_ATOMIC);
 }
 
 void
-arch_set_pseudo_atomic_interrupted(os_context_t *context)
+arch_set_pseudo_atomic_interrupted(struct sigcontext *context)
 {
     SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, make_fixnum(1));
 }
@@ -129,9 +128,9 @@ unsigned int single_step_save3;
 #endif
 
 void
-arch_do_displaced_inst(os_context_t *context, unsigned long orig_inst)
+arch_do_displaced_inst(struct sigcontext *context, unsigned long orig_inst)
 {
-    unsigned int *pc = (unsigned int *) SC_PC(context);
+    unsigned int *pc = (unsigned int *) context->sc_pc;
 
     /*
      * Put the original instruction back.
@@ -140,8 +139,8 @@ arch_do_displaced_inst(os_context_t *context, unsigned long orig_inst)
     *((char *) pc) = orig_inst & 0xff;
     *((char *) pc + 1) = (orig_inst & 0xff00) >> 8;
 
-#ifdef SC_EFLAGS
-    SC_EFLAGS(context) |= 0x100;
+#ifdef __linux__
+    context->eflags |= 0x100;
 #else
 
     /*
@@ -160,7 +159,7 @@ arch_do_displaced_inst(os_context_t *context, unsigned long orig_inst)
     single_stepping = (unsigned int *) pc;
 
 #ifndef __linux__
-    (unsigned int *) SC_PC(context) = (char *) pc - 9;
+    (unsigned int *) context->sc_pc = (char *) pc - 9;
 #endif
 }
 
@@ -170,9 +169,12 @@ sigtrap_handler(HANDLER_ARGS)
 {
     unsigned int trap;
 
+#ifdef __linux__
+    GET_CONTEXT
+#endif
 #if 0
 	fprintf(stderr, "x86sigtrap: %8x %x\n",
-		SC_PC(context), *(unsigned char *) (SC_PC(context) - 1));
+		context->sc_pc, *(unsigned char *) (context->sc_pc - 1));
     fprintf(stderr, "sigtrap(%d %d %x)\n", signal, code, context);
 #endif
 
@@ -181,21 +183,20 @@ sigtrap_handler(HANDLER_ARGS)
 	fprintf(stderr, "* Single step trap %x\n", single_stepping);
 #endif
 
-#ifdef SC_EFLAGS
-	/* Disable single-stepping */
-	SC_EFLAGS(context) ^= 0x100;
-#else
+#ifndef __linux__
 	/* Un-install single step helper instructions. */
 	*(single_stepping - 3) = single_step_save1;
 	*(single_stepping - 2) = single_step_save2;
 	*(single_stepping - 1) = single_step_save3;
+#else
+	context->eflags ^= 0x100;
 #endif
 
 	/*
 	 * Re-install the breakpoint if possible.
 	 */
 
-	if ((int) SC_PC(context) == (int) single_stepping + 1)
+	if ((int) context->sc_pc == (int) single_stepping + 1)
 	    fprintf(stderr, "* Breakpoint not re-install\n");
 	else {
 	    char *ptr = (char *) single_stepping;
@@ -209,9 +210,21 @@ sigtrap_handler(HANDLER_ARGS)
     }
 
     /* This is just for info in case monitor wants to print an approx */
-    current_control_stack_pointer = (unsigned long *) SC_SP(context);
+    current_control_stack_pointer = (unsigned long *) context->sc_sp;
 
-    RESTORE_FPU(context);
+#if defined(__linux__) && (defined(i386) || defined(__x86_64))
+    /*
+     * Restore the FPU control word, setting the rounding mode to nearest.
+     */
+
+    if (contextstruct.fpstate)
+#if defined(__x86_64)
+	setfpucw(contextstruct.fpstate->cwd & ~0xc00);
+#else
+	setfpucw(contextstruct.fpstate->cw & ~0xc00);
+#endif
+#endif
+
     /*
      * On entry %eip points just after the INT3 byte and aims at the
      * 'kind' value (eg trap_Cerror). For error-trap and Cerror-trap a
@@ -219,7 +232,7 @@ sigtrap_handler(HANDLER_ARGS)
      * arguments to follow.
      */
 
-    trap = *(unsigned char *) (SC_PC(context));
+    trap = *(unsigned char *) (context->sc_pc);
 
     switch (trap) {
       case trap_PendingInterrupt:
@@ -248,23 +261,27 @@ sigtrap_handler(HANDLER_ARGS)
       case trap_Error:
       case trap_Cerror:
 	  DPRINTF(0, (stderr, "<trap Error %d>\n", code));
-	  interrupt_internal_error(signal, code, context, CODE(code) == trap_Cerror);
+#ifdef __linux__
+	  interrupt_internal_error(signal, contextstruct, code == trap_Cerror);
+#else
+	  interrupt_internal_error(signal, code, context, code == trap_Cerror);
+#endif
 	  break;
 
       case trap_Breakpoint:
 #if 0
 	  fprintf(stderr, "*C break\n");
 #endif
-	  SC_PC(context) -= 1;
-	  handle_breakpoint(signal, CODE(code), context);
+	  (char *) context->sc_pc -= 1;
+	  handle_breakpoint(signal, code, context);
 #if 0
 	  fprintf(stderr, "*C break return\n");
 #endif
 	  break;
 
       case trap_FunctionEndBreakpoint:
-	  SC_PC(context) -= 1;
-	  SC_PC(context) =
+	  (char *) context->sc_pc -= 1;
+	  context->sc_pc =
 	      (int) handle_function_end_breakpoint(signal, code, context);
 	  break;
 
@@ -286,7 +303,11 @@ sigtrap_handler(HANDLER_ARGS)
 	  DPRINTF(0,
 		  (stderr, "[C--trap default %d %d %x]\n", signal, code,
 		   context));
+#ifdef __linux__
+	  interrupt_handle_now(signal, contextstruct);
+#else
 	  interrupt_handle_now(signal, code, context);
+#endif
 	  break;
     }
 }

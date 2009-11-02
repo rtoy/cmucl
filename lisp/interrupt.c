@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.59 2009/11/02 02:51:58 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.60 2009/11/02 15:05:07 rtoy Rel $ */
 
 /* Interrupt handling magic. */
 
@@ -21,8 +21,6 @@
 #include "alloc.h"
 #include "dynbind.h"
 #include "interr.h"
-
-#include "bits/xopen_lim.h"
 
 boolean internal_errors_enabled = 0;
 

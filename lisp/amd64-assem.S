@@ -1,6 +1,6 @@
 ### amd64-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.11 2009/11/02 02:51:58 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.12 2009/11/02 15:05:07 rtoy Rel $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -119,7 +119,7 @@ Lfp_rtn_value:
 
 	movl	$0,GNAME(foreign_function_call_active)
 /* Return */	
-	jmp	*%rbx
+	jmp	*%ebx
 
 	.size	GNAME(call_into_c), . - GNAME(call_into_c)
 

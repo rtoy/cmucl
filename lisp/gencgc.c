@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.100 2009/11/02 02:51:58 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.101 2009/11/02 15:05:07 rtoy Exp $
  *
  */
 
@@ -3990,7 +3990,6 @@ scav_hash_entries(struct hash_table *hash_table, lispobj weak, int removep)
         boolean eq_hash_p = eq_based_hash_vector(hash_vector, i);
         unsigned int index_value = index_vector[old_index];
 
-#ifdef KEY
 	if (((weak == KEY)
              && removable_weak_key(old_key, index_value,
                                    eq_hash_p))
@@ -4003,9 +4002,7 @@ scav_hash_entries(struct hash_table *hash_table, lispobj weak, int removep)
             if (removep) {
                 free_hash_entry(hash_table, old_index, i);
             }
-        } else
-#endif
-          {
+        } else {
 	    /* If the key is EQ-hashed and moves, schedule it for rehashing. */
 	    scavenge(&kv_vector[2 * i], 2);
 #if 0
@@ -4072,7 +4069,6 @@ scav_weak_entries(struct hash_table *hash_table)
 	boolean value_survives = weak_value_survives(value);
 
 
-#ifdef KEY
 	if ((hash_table->weak_p == KEY)
 	    && key_survives
             && !survives_gc(value)) {
@@ -4115,7 +4111,6 @@ scav_weak_entries(struct hash_table *hash_table)
                 scavenged = 1;
             }
 	}
-#endif
     }
 
     return scavenged;

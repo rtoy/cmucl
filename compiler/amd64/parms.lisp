@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/parms.lisp,v 1.4 2009/11/02 02:51:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/parms.lisp,v 1.5 2009/11/02 15:05:06 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -55,8 +55,7 @@
 
 ;;;; Machine Architecture parameters:
 
-(export '(word-bits byte-bits char-bits word-shift word-bytes char-bytes
-	  float-sign-shift
+(export '(word-bits byte-bits word-shift word-bytes float-sign-shift
 
 	  single-float-bias single-float-exponent-byte
 	  single-float-significand-byte single-float-normal-exponent-min
@@ -77,8 +76,6 @@
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit))
 
-#+double-double
-(export '(double-double-float-digits))
 	  
 
 (eval-when (compile load eval)
@@ -88,12 +85,6 @@
 
 (defconstant byte-bits 8
   "Number of bits per byte where a byte is the smallest addressable object.")
-
-(defconstant char-bits #-unicode 8 #+unicode 16
-  "Number of bits needed to represent a character")
-
-(defconstant char-bytes (truncate char-bits byte-bits)
-  "Number of bytes needed to represent a character")
 
 (defconstant word-shift (1- (integer-length (/ word-bits byte-bits)))
   "Number of bits to shift between word addresses and byte addresses.")
@@ -143,10 +134,6 @@
 (defconstant long-float-digits
   (+ (byte-size long-float-significand-byte) 32 1))
 
-#+double-double
-(defconstant double-double-float-digits
-  (* 2 double-float-digits))
-
 ;;; pfw -- from i486 microprocessor programmers reference manual
 (defconstant float-invalid-trap-bit        (ash 1 0))
 (defconstant float-denormal-trap-bit       (ash 1 1))
@@ -160,26 +147,16 @@
 (defconstant float-round-to-positive 2)
 (defconstant float-round-to-zero     3)
 
-;; NOTE: These actually match the SSE2 MXCSR register definitions.  We
-;; need to do it this way because the interface assumes the modes are
-;; in the same order as the MXCSR register.
-(defconstant float-rounding-mode     (byte 2 13))
-(defconstant float-sticky-bits       (byte 6  0))
-(defconstant float-traps-byte        (byte 6  7))
-(defconstant float-exceptions-byte   (byte 6  0))
+(defconstant float-precision-24-bit  0)
+(defconstant float-precision-53-bit  2)
+(defconstant float-precision-64-bit  3)
 
-#-sse2
-(progn
+(defconstant float-rounding-mode   (byte 2 10))
+(defconstant float-sticky-bits     (byte 6 16))
+(defconstant float-traps-byte      (byte 6  0))
+(defconstant float-exceptions-byte (byte 6 16))
+(defconstant float-precision-control (byte 2 8))
 (defconstant float-fast-bit 0) ; No fast mode on x86
-)
-
-#+sse2
-(progn
-;; SSE2 has a flush-to-zero flag, which we use as the fast bit.  Some
-;; versions of sse2 also have a denormals-are-zeros flag.  We don't
-;; currently use denormals-are-zeroes for anything.
-(defconstant float-fast-bit (ash 1 15))
-)
 ); eval-when
 
 
@@ -194,15 +171,9 @@
 ;;; Where to put the different spaces.
 ;;; 
 (defconstant target-read-only-space-start #x10000000)
-(defconstant target-static-space-start
-  #+FreeBSD #x28F00000
-  #-FreeBSD #x28000000)
-(defconstant target-dynamic-space-start
-  #+linux #x58100000
-  #-linux #x48000000)
-(defconstant target-foreign-linkage-space-start
-  #+linux #x58000000
-  #-linux #xB0000000)
+(defconstant target-static-space-start    #x28000000)
+(defconstant target-dynamic-space-start   #x48000000)
+(defconstant target-foreign-linkage-space-start #xB0000000)
 (defconstant target-foreign-linkage-entry-size 16) ;In bytes.  Duh.
 
 ;;; Given that NIL is the first thing allocated in static space, we
@@ -334,20 +305,6 @@
       lisp::*cmucl-lib*
       lisp::*cmucl-core-path*
       
-      ;; Weak hash table support
-      :key
-      :value
-      :key-and-value
-      :key-or-value
-
-      ;; Used by CGC.
-      *x86-cgc-active-p*
-      ;; Foreign linkage stuff
-      lisp::*linkage-table-data*
-      system::*global-table*
-      *current-region-free-pointer*
-      *current-region-end-addr*
-
       ;; Spare symbols.  Rename these when you need to add some static
       ;; symbols and don't want to do a cross-compile.
       spare-8
@@ -359,6 +316,13 @@
       spare-2
       spare-1
       
+      ;; Used by CGC.
+      *x86-cgc-active-p*
+      ;; Foreign linkage stuff
+      lisp::*linkage-table-data*
+      system::*global-table*
+      *current-region-free-pointer*
+      *current-region-end-addr*
       *static-blue-bag*		; Must be last or change C code
 
       
