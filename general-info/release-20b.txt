@@ -24,6 +24,7 @@ New in this release:
     - Read operations using an external format of utf8 are now much
       faster.  Some simple tests on Linux shows that read-line now
       only takes 40% as much time.  Sparc shows 60% as much time.
+    - ASCII external format added.
 
   * ANSI compliance fixes:
 
@@ -31,9 +32,11 @@ New in this release:
     - On Unicode builds, printing of '|\|| and '|`| was incorrect
       because no escapes were printed.  This is fixed now.
     - Fixed issue with SSE2 support.  The vops for complex +/- float
-      would add random junk the to imaginary part of the result.
+      would add random junk to the imaginary part of the result.
     - UNIX-SYSINFO was broken for Unicode builds, which affected
       MACHINE-TYPE and MACHINE-VERSION.
+    - Type predicates for double-double float and complex
+      double-double float arrays are now done inline.
 
   * Trac Tickets:
     #33: get-dispatch-macro-character doesn't signal errors in
