@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/final.lisp,v 1.2 1994/10/31 04:11:27 ram Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/final.lisp,v 1.3 2009/11/21 12:58:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,8 +20,8 @@
 (defvar *objects-pending-finalization* nil)
 
 (defun finalize (object function)
-  "Arrage for FUNCTION to be called when there are no more references to
-   OBJECT."
+  "Arrange for FUNCTION to be called when there are no more references to
+   OBJECT.  FUNCTION takes no arguments."
   (declare (type function function))
   (system:without-gcing
    (push (cons (make-weak-pointer object) function)
