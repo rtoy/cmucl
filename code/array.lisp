@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.46 2009/11/30 14:52:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.47 2009/11/30 15:47:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -165,7 +165,30 @@
                               adjustable fill-pointer
 			      displaced-to displaced-index-offset
 		              allocation)
-  "Creates an array of the specified Dimensions.  See manual for details."
+  "Creates an array of the specified Dimensions and properties.  See the
+  manual for details.
+
+  :Element-type
+      The type of objects that the array can hold 
+  :Initial-element
+      Each element of the array is initialized to this value, if supplied.
+      If not supplied, 0 of the appropriate type is used.
+  :Initial-contents
+      The contents of the array are initialized to this.
+  :Adjustable
+      If non-Nil, make an expressly adjustable array.
+  :Fill-pointer
+      For one-dimensional array, set the fill-pointer to the given value.
+      If T, use the actual length of the array.
+  :Displaced-to
+      Create an array that is displaced to the target array specified
+      by :displaced-to.
+  :Displaced-index-offset
+      Index offset to the displaced array.  That is, index 0 of this array is
+      actually index displaced-index-offset of the target displaced array. 
+  :Allocation
+      How to allocate the array.  If :STATIC, a static, nonmovable array is
+      created."
   (let* ((dimensions (if (listp dimensions) dimensions (list dimensions)))
 	 (array-rank (length (the list dimensions)))
 	 (simple (and (null fill-pointer)
