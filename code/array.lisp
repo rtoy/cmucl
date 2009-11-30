@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.45 2009/09/09 15:51:27 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.46 2009/11/30 14:52:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -163,16 +163,22 @@
 			      (initial-element nil initial-element-p)
 			      (initial-contents nil initial-contents-p)
                               adjustable fill-pointer
-			      displaced-to displaced-index-offset)
+			      displaced-to displaced-index-offset
+		              allocation)
   "Creates an array of the specified Dimensions.  See manual for details."
   (let* ((dimensions (if (listp dimensions) dimensions (list dimensions)))
 	 (array-rank (length (the list dimensions)))
 	 (simple (and (null fill-pointer)
 		      (not adjustable)
-		      (null displaced-to))))
+		      (null displaced-to)
+		      (not (eq allocation :static)))))
     (declare (fixnum array-rank))
     (when (and displaced-index-offset (null displaced-to))
       (error "Can't specify :displaced-index-offset without :displaced-to"))
+    (when (and adjustable (eq allocation :static))
+      (error "Cannot make an adjustable static array"))
+    (when (and displaced-to (eq allocation :static))
+      (error "Cannot make a displaced array static"))
     (if (and simple (= array-rank 1))
 	;; Its a (simple-array * (*))
 	(multiple-value-bind (type bits)
@@ -208,7 +214,8 @@
 			 (data-vector-from-inits
 			  dimensions total-size element-type
 			  initial-contents initial-contents-p
-                          initial-element initial-element-p)))
+                          initial-element initial-element-p
+			  allocation)))
 	       (array (make-array-header
 		       (cond ((= array-rank 1)
 			      (%complex-vector-type-code element-type))
@@ -236,6 +243,17 @@
 		 (setf (%array-fill-pointer-p array) nil)))
 	  (setf (%array-available-elements array) total-size)
 	  (setf (%array-data-vector array) data)
+	  (when (eq allocation :static)
+	    ;; Add finalizer to the static array to GC it when the array header is GCed.
+	    (finalize array #'(lambda ()
+				(let ((addr (logandc1 vm:lowtag-mask (kernel:get-lisp-obj-address data))))
+				  (format t "~&Freeing foreign vector at #x~X~%"
+					  addr)
+				  (alien:alien-funcall
+				   (alien:extern-alien "free"
+						       (function c-call:void
+								 sys:system-area-pointer))
+				   (sys:int-sap addr))))))
 	  (cond (displaced-to
 		 (when (or initial-element-p initial-contents-p)
 		   (error "Neither :initial-element nor :initial-contents ~
@@ -264,25 +282,81 @@
 	      (setf (%array-dimension array axis) dim)
 	      (incf axis)))
 	  array))))
-	
+
+(defun make-static-vector (length element-type)
+  (multiple-value-bind (type bits)
+      (lisp::%vector-type-code element-type)
+    ;; What types of static arrays do we really want to allow?
+    ;; Whatever we choose, we definitely cannot allow arrays with the
+    ;; following element types: T, (signed-byte 30)
+    (unless (member type
+		    '(#.vm:simple-string-type
+		      #.vm:simple-array-unsigned-byte-8-type
+		      #.vm:simple-array-unsigned-byte-16-type
+		      #.vm:simple-array-unsigned-byte-32-type
+		      #.vm:simple-array-signed-byte-8-type
+		      #.vm:simple-array-signed-byte-16-type
+		      #.vm:simple-array-signed-byte-32-type
+		      #.vm:simple-array-single-float-type
+		      #.vm:simple-array-double-float-type
+		      #.vm:simple-array-complex-single-float-type
+		      #.vm:simple-array-complex-double-float-type))
+      (error "Cannot make a static array of element type ~S" element-type))
+    ;; Malloc space for the vector.  We need enough space for the data
+    ;; itself, and then 2 words for the vector header (header word and
+    ;; length).  Use calloc to make sure the area is initialized to
+    ;; zeros, like normal Lisp arrays are.
+    (let* ((data-bytes (ceiling (* length bits) 8))
+	   (total-bytes (+ data-bytes (* 2 vm:word-bytes)))
+	   (pointer (alien:alien-funcall (alien:extern-alien "calloc"
+							     (function sys::system-area-pointer
+								       unix::size-t
+								       unix::size-t))
+					 total-bytes
+					 1)))
+      ;; Malloc should return double-word (8 byte) alignment.
+      (assert (zerop (logand 7 (sys:sap-int pointer))))
+      (when (zerop (sys:sap-int pointer))
+	(error "Failed to allocate space for static array of length ~S of type ~S"
+	       length element-type))
+
+      ;; Fill in the vector header word and length word.  Set the data
+      ;; portion of the header word (normally 0) to 1 so we know this
+      ;; is a static vector.
+      (setf (sys:sap-ref-32 pointer 0) (+ type (ash 1 vm:type-bits)))
+      (setf (sys:sap-ref-32 pointer vm:word-bytes) (ash length 2))
+      ;; Convert the sap to a lisp object and initialize the array
+      (kernel:make-lisp-obj (+ vm:other-pointer-type (sys:sap-int pointer))))))
+
+(defun static-array-p (array)
+  (with-array-data ((v array) (start) (end))
+    (declare (ignore start end))
+    (and (typep v '(kernel:simple-unboxed-array (*)))
+	 (let ((header (sys:sap-ref-32 (sys:vector-sap v)
+				       (- (* 2 vm:word-bytes)))))
+	   (logbitp vm:type-bits header)))))
+
 ;;; DATA-VECTOR-FROM-INITS returns a simple vector that has the specified array
 ;;; characteristics.  Dimensions is only used to pass to FILL-DATA-VECTOR
 ;;; for error checking on the structure of initial-contents.
 ;;;
 (defun data-vector-from-inits (dimensions total-size element-type
 			       initial-contents initial-contents-p
-			       initial-element initial-element-p)
+			       initial-element initial-element-p
+			       &optional allocation)
   (when (and initial-contents-p initial-element-p)
     (error "Cannot supply both :initial-contents and :initial-element to
             either make-array or adjust-array."))
-  (let ((data (if initial-element-p
-		  (make-array total-size
-			      :element-type element-type
-			      :initial-element initial-element)
-		  (make-array total-size
-			      :element-type element-type))))
+  (let ((data (if (eq allocation :static)
+		  (make-static-vector total-size element-type)
+		  (if initial-element-p
+		      (make-array total-size
+				  :element-type element-type
+				  :initial-element initial-element)
+		      (make-array total-size
+				  :element-type element-type)))))
     (cond (initial-element-p
-	   (unless (simple-vector-p data)
+	   (unless (and (simple-vector-p data) (eq allocation :static))
 	     (unless (typep initial-element element-type)
 	       (error "~S cannot be used to initialize an array of type ~S."
 		      initial-element element-type))
@@ -710,7 +784,9 @@
 	   (simple-program-error "Number of dimensions not equal to rank of array."))
 	  ((not (subtypep element-type (array-element-type array)))
 	   (simple-program-error "New element type, ~S, is incompatible with old."
-		  element-type)))
+				 element-type))
+	  ((static-array-p array)
+	   (simple-program-error "Static arrays are not adjustable.")))
     (let ((array-rank (length (the list dimensions))))
       (declare (fixnum array-rank))
       (when (and fill-pointer (> array-rank 1))
