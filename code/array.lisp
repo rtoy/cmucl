@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.47 2009/11/30 15:47:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.48 2009/12/01 14:14:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -187,20 +187,21 @@
       Index offset to the displaced array.  That is, index 0 of this array is
       actually index displaced-index-offset of the target displaced array. 
   :Allocation
-      How to allocate the array.  If :STATIC, a static, nonmovable array is
-      created."
+      How to allocate the array.  If :MALLOC, a static, nonmovable array is
+      created.  This array is created by calling malloc."
   (let* ((dimensions (if (listp dimensions) dimensions (list dimensions)))
 	 (array-rank (length (the list dimensions)))
+	 (static-array-p (eq allocation :malloc))
 	 (simple (and (null fill-pointer)
 		      (not adjustable)
 		      (null displaced-to)
-		      (not (eq allocation :static)))))
+		      (not static-array-p))))
     (declare (fixnum array-rank))
     (when (and displaced-index-offset (null displaced-to))
       (error "Can't specify :displaced-index-offset without :displaced-to"))
-    (when (and adjustable (eq allocation :static))
+    (when (and adjustable static-array-p)
       (error "Cannot make an adjustable static array"))
-    (when (and displaced-to (eq allocation :static))
+    (when (and displaced-to static-array-p)
       (error "Cannot make a displaced array static"))
     (if (and simple (= array-rank 1))
 	;; Its a (simple-array * (*))
@@ -238,7 +239,7 @@
 			  dimensions total-size element-type
 			  initial-contents initial-contents-p
                           initial-element initial-element-p
-			  allocation)))
+			  static-array-p)))
 	       (array (make-array-header
 		       (cond ((= array-rank 1)
 			      (%complex-vector-type-code element-type))
@@ -266,7 +267,7 @@
 		 (setf (%array-fill-pointer-p array) nil)))
 	  (setf (%array-available-elements array) total-size)
 	  (setf (%array-data-vector array) data)
-	  (when (eq allocation :static)
+	  (when static-array-p
 	    ;; Add finalizer to the static array to GC it when the array header is GCed.
 	    (finalize array #'(lambda ()
 				(let ((addr (logandc1 vm:lowtag-mask (kernel:get-lisp-obj-address data))))
@@ -366,11 +367,11 @@
 (defun data-vector-from-inits (dimensions total-size element-type
 			       initial-contents initial-contents-p
 			       initial-element initial-element-p
-			       &optional allocation)
+			       &optional static-array-p)
   (when (and initial-contents-p initial-element-p)
     (error "Cannot supply both :initial-contents and :initial-element to
             either make-array or adjust-array."))
-  (let ((data (if (eq allocation :static)
+  (let ((data (if static-array-p
 		  (make-static-vector total-size element-type)
 		  (if initial-element-p
 		      (make-array total-size
@@ -379,7 +380,7 @@
 		      (make-array total-size
 				  :element-type element-type)))))
     (cond (initial-element-p
-	   (unless (and (simple-vector-p data) (eq allocation :static))
+	   (unless (and (simple-vector-p data) static-array-p)
 	     (unless (typep initial-element element-type)
 	       (error "~S cannot be used to initialize an array of type ~S."
 		      initial-element element-type))
