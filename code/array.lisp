@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.48 2009/12/01 14:14:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.49 2009/12/05 03:20:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -158,6 +158,9 @@
     (bit #.vm:complex-bit-vector-type)
     (t #.vm:complex-vector-type)))
 
+(defvar *static-vectors* nil
+  "List of weak-pointers to static vectors.  Needed for GCing static vectors")
+
 (defun make-array (dimensions &key
 			      (element-type t)
 			      (initial-element nil initial-element-p)
@@ -194,8 +197,7 @@
 	 (static-array-p (eq allocation :malloc))
 	 (simple (and (null fill-pointer)
 		      (not adjustable)
-		      (null displaced-to)
-		      (not static-array-p))))
+		      (null displaced-to))))
     (declare (fixnum array-rank))
     (when (and displaced-index-offset (null displaced-to))
       (error "Can't specify :displaced-index-offset without :displaced-to"))
@@ -210,14 +212,19 @@
 	  (declare (type (unsigned-byte 8) type)
 		   (type (integer 1 256) bits))
 	  (let* ((length (car dimensions))
-		 (array (allocate-vector
-			 type
-			 length
-			 (ceiling (* (if (= type vm:simple-string-type)
-					 (1+ length)
-					 length)
-				     bits)
-				  vm:word-bits))))
+		 (array (if static-array-p
+			    (let ((v (make-static-vector length element-type)))
+			      (system::without-gcing
+			       (push (make-weak-pointer v) *static-vectors*))
+			      v)
+			    (allocate-vector
+			     type
+			     length
+			     (ceiling (* (if (= type vm:simple-string-type)
+					     (1+ length)
+					     length)
+					 bits)
+				      vm:word-bits)))))
 	    (declare (type index length))
 	    (when initial-element-p
 	      (fill array initial-element))
@@ -268,16 +275,9 @@
 	  (setf (%array-available-elements array) total-size)
 	  (setf (%array-data-vector array) data)
 	  (when static-array-p
-	    ;; Add finalizer to the static array to GC it when the array header is GCed.
-	    (finalize array #'(lambda ()
-				(let ((addr (logandc1 vm:lowtag-mask (kernel:get-lisp-obj-address data))))
-				  (format t "~&Freeing foreign vector at #x~X~%"
-					  addr)
-				  (alien:alien-funcall
-				   (alien:extern-alien "free"
-						       (function c-call:void
-								 sys:system-area-pointer))
-				   (sys:int-sap addr))))))
+	    ;; Add weak-pointer to static vector for GC support.
+	    (system:without-gcing
+	     (push (make-weak-pointer data) *static-vectors*)))
 	  (cond (displaced-to
 		 (when (or initial-element-p initial-contents-p)
 		   (error "Neither :initial-element nor :initial-contents ~
@@ -359,6 +359,54 @@
 	 (let ((header (sys:sap-ref-32 (sys:vector-sap v)
 				       (- (* 2 vm:word-bytes)))))
 	   (logbitp vm:type-bits header)))))
+
+(defun free-static-vector (vector)
+  (let ((addr (logandc1 vm:lowtag-mask (kernel:get-lisp-obj-address vector))))
+    (format t "~&Freeing foreign vector at #x~X~%"
+	    addr)
+    (alien:alien-funcall
+     (alien:extern-alien "free"
+			 (function c-call:void
+				   sys:system-area-pointer))
+     (sys:int-sap addr))))
+
+(defun finalize-static-vectors ()
+  ;; Run down the list of weak-pointers to static vectors.  Look at
+  ;; the static vector and see if vector is marked.  If so, clear the
+  ;; mark, and do nothing.  If the mark is not set, then the vector is
+  ;; free, so free it, and remove this weak-pointer from the list.
+  ;; The mark bit the MSB of the header word.  Look at scavenge in
+  ;; gencgc.c.
+  (when *static-vectors*
+    (let ((*print-array* nil))
+      (format t "Finalizing static vectors ~S~%" *static-vectors*))
+    (setf *static-vectors*
+	  (delete-if
+	   #'(lambda (wp)
+	       (let ((vector (weak-pointer-value wp)))
+		 (when vector
+		   (let* ((sap (sys:vector-sap vector))
+			  (header (sys:sap-ref-32 sap (* -2 vm:word-bytes))))
+		     (format t "static vector ~A.  header = ~X~%"
+			     vector header)
+		     (cond ((logbitp 31 header)
+			    ;; Clear mark
+			    (setf (sys:sap-ref-32 sap (* -2 vm:word-bytes))
+				  (logand header #x7fffffff))
+			    (let ((*print-array* nil))
+			      (format t "static vector ~A in use~%" vector))
+			    nil)
+			   (t
+			    ;; Mark was clear so free the vector
+			    (setf (weak-pointer-value wp) nil)
+			    (let ((*print-array* nil))
+			      (format t "Free static vector ~A~%" vector))
+			    (free-static-vector vector)
+			    t))))))
+	   *static-vectors*))))
+
+(pushnew 'finalize-static-vectors *after-gc-hooks*)
+
 
 ;;; DATA-VECTOR-FROM-INITS returns a simple vector that has the specified array
 ;;; characteristics.  Dimensions is only used to pass to FILL-DATA-VECTOR

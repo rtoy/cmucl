@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.101 2009/11/02 15:05:07 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.102 2009/12/05 03:20:37 rtoy Exp $
  *
  */
 
@@ -1950,6 +1950,58 @@ new_space_p(lispobj obj)
 	    (unsigned int) page_index / PAGE_SIZE) < dynamic_space_pages
 	&& PAGE_GENERATION(page_index) == new_space;
 }
+
+static inline boolean
+dynamic_space_p(lispobj obj)
+{
+    lispobj end = DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE;
+
+    return (obj >= DYNAMIC_0_SPACE_START) && (obj < end);
+}
+
+static inline boolean
+static_space_p(lispobj obj)
+{
+    lispobj end = SymbolValue(STATIC_SPACE_FREE_POINTER);
+
+    return (obj >= STATIC_SPACE_START) && (obj < end);
+}
+
+static inline boolean
+read_only_space_p(lispobj obj)
+{
+    lispobj end = SymbolValue(READ_ONLY_SPACE_FREE_POINTER);
+
+    return (obj >= READ_ONLY_SPACE_START) && (obj < end);
+}
+
+static inline boolean
+control_stack_space_p(lispobj obj)
+{
+    lispobj end = CONTROL_STACK_START + CONTROL_STACK_SIZE;
+
+    return (obj >= CONTROL_STACK_START) && (obj < end);
+}
+
+static inline boolean
+binding_stack_space_p(lispobj obj)
+{
+    lispobj end = BINDING_STACK_START + BINDING_STACK_SIZE;
+
+    return (obj >= BINDING_STACK_START) && (obj < end);
+}
+    
+static inline boolean
+signal_space_p(lispobj obj)
+{
+#ifdef SIGNAL_STACK_START
+    lispobj end = SIGNAL_STACK_START + SIGSTKSZ;
+
+    return (obj >= SIGNAL_STACK_START) && (obj < end);
+#else
+    return FALSE;
+#endif    
+}
 
 
 /* Copying Objects */
@@ -2357,10 +2409,73 @@ scavenge(void *start_obj, long nwords)
 		if (first_word == 0x01) {
 		    *start = ptr[1];
 		    words_scavenged = 1;
-		} else
+		} else {
 		    words_scavenged = scavtab[TypeOf(object)] (start, object);
-	    } else
-		words_scavenged = 1;
+                }
+            } else if (dynamic_space_p(object) || new_space_p(object) || static_space_p(object)
+                       || read_only_space_p(object) || control_stack_space_p(object)
+                       || binding_stack_space_p(object) || signal_space_p(object)) {
+                words_scavenged = 1;
+            } else {
+                lispobj *ptr = (lispobj *) PTR(object);
+                words_scavenged = 1;
+                    fprintf(stderr, "Not in Lisp spaces:  object = %p, ptr = %p\n", (void*)object, ptr);
+                if (object < 0xf0000000) {
+                    lispobj header = *ptr;
+                    fprintf(stderr, "  Header value = 0x%x\n", header);
+                    switch (TypeOf(header)) {
+                        /*
+                         * This needs to be coordinated to the set of allowed
+                         * static vectors in make-array.
+                         */
+                      case type_SimpleString:
+                      case type_SimpleArrayUnsignedByte8:
+                      case type_SimpleArrayUnsignedByte16:
+                      case type_SimpleArrayUnsignedByte32:
+#ifdef type_SimpleArraySignedByte8
+                      case type_SimpleArraySignedByte8:
+#endif
+#ifdef type_SimpleArraySignedByte16
+                      case type_SimpleArraySignedByte16:
+#endif
+#ifdef type_SimpleArraySignedByte32
+                      case type_SimpleArraySignedByte32:
+#endif
+                      case type_SimpleArraySingleFloat:
+                      case type_SimpleArrayDoubleFloat:
+#ifdef type_SimpleArrayLongFloat
+                      case type_SimpleArrayLongFloat:
+#endif
+#ifdef type_SimpleArrayComplexSingleFloat
+                      case type_SimpleArrayComplexSingleFloat:
+#endif
+#ifdef type_SimpleArrayComplexDoubleFloat
+                      case type_SimpleArrayComplexDoubleFloat:
+#endif
+#ifdef type_SimpleArrayComplexLongFloat
+                      case type_SimpleArrayComplexLongFloat:
+#endif
+                      {
+                          int static_p;
+
+                          fprintf(stderr, "Possible static vector at %p.  header = 0x%x\n",
+                                  ptr, header);
+                      
+                          static_p = (HeaderValue(header) & 1) == 1;
+                          if (static_p) {
+                              /*
+                               * We have a static vector.  Mark it as
+                               * reachable by setting the MSB of the header.
+                               */
+                              *ptr = header | 0x80000000;
+                              fprintf(stderr, "Scavenged static vector @%p, header = 0x%x\n",
+                                      ptr, header);
+                      
+                          }
+                      }
+                    }
+                }
+            }
 	} else if ((object & 3) == 0)
 	    words_scavenged = 1;
 	else
