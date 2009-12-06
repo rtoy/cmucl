@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.49 2009/12/05 03:20:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.50 2009/12/06 19:08:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -161,6 +161,55 @@
 (defvar *static-vectors* nil
   "List of weak-pointers to static vectors.  Needed for GCing static vectors")
 
+(defun make-static-vector (length element-type)
+  (multiple-value-bind (type bits)
+      (lisp::%vector-type-code element-type)
+    ;; What types of static arrays do we really want to allow?
+    ;; Whatever we choose, we definitely cannot allow arrays with the
+    ;; following element types: T, (signed-byte 30)
+    (unless (member type
+		    '(#.vm:simple-string-type
+		      #.vm:simple-array-unsigned-byte-8-type
+		      #.vm:simple-array-unsigned-byte-16-type
+		      #.vm:simple-array-unsigned-byte-32-type
+		      #.vm:simple-array-signed-byte-8-type
+		      #.vm:simple-array-signed-byte-16-type
+		      #.vm:simple-array-signed-byte-32-type
+		      #.vm:simple-array-single-float-type
+		      #.vm:simple-array-double-float-type
+		      #.vm:simple-array-complex-single-float-type
+		      #.vm:simple-array-complex-double-float-type))
+      (error "Cannot make a static array of element type ~S" element-type))
+    ;; Malloc space for the vector.  We need enough space for the data
+    ;; itself, and then 2 words for the vector header (header word and
+    ;; length).  Use calloc to make sure the area is initialized to
+    ;; zeros, like normal Lisp arrays are.
+    (let* ((data-bytes (ceiling (* length bits) 8))
+	   (total-bytes (+ data-bytes (* 2 vm:word-bytes))))
+      (sys:without-gcing
+       (let ((pointer (alien:alien-funcall (alien:extern-alien "calloc"
+							       (function sys::system-area-pointer
+									 unix::size-t
+									 unix::size-t))
+					   total-bytes
+					   1)))
+	 ;; Malloc should return double-word (8 byte) alignment.
+	 (assert (zerop (logand 7 (sys:sap-int pointer))))
+	 (when (zerop (sys:sap-int pointer))
+	   (error "Failed to allocate space for static array of length ~S of type ~S"
+		  length element-type))
+
+	 ;; Fill in the vector header word and length word.  Set the data
+	 ;; portion of the header word (normally 0) to 1 so we know this
+	 ;; is a static vector.
+	 (setf (sys:sap-ref-32 pointer 0) (+ type (ash 1 vm:type-bits)))
+	 (setf (sys:sap-ref-32 pointer vm:word-bytes) (ash length 2))
+	 ;; Convert the sap to a lisp object and initialize the array
+	 (let ((vector
+		(kernel:make-lisp-obj (+ vm:other-pointer-type (sys:sap-int pointer)))))
+	   (push (make-weak-pointer vector) *static-vectors*)
+	   vector))))))
+
 (defun make-array (dimensions &key
 			      (element-type t)
 			      (initial-element nil initial-element-p)
@@ -206,17 +255,14 @@
     (when (and displaced-to static-array-p)
       (error "Cannot make a displaced array static"))
     (if (and simple (= array-rank 1))
-	;; Its a (simple-array * (*))
+	;; It's a (simple-array * (*))
 	(multiple-value-bind (type bits)
 			     (%vector-type-code element-type)
 	  (declare (type (unsigned-byte 8) type)
 		   (type (integer 1 256) bits))
 	  (let* ((length (car dimensions))
 		 (array (if static-array-p
-			    (let ((v (make-static-vector length element-type)))
-			      (system::without-gcing
-			       (push (make-weak-pointer v) *static-vectors*))
-			      v)
+			    (make-static-vector length element-type)
 			    (allocate-vector
 			     type
 			     length
@@ -274,10 +320,6 @@
 		 (setf (%array-fill-pointer-p array) nil)))
 	  (setf (%array-available-elements array) total-size)
 	  (setf (%array-data-vector array) data)
-	  (when static-array-p
-	    ;; Add weak-pointer to static vector for GC support.
-	    (system:without-gcing
-	     (push (make-weak-pointer data) *static-vectors*)))
 	  (cond (displaced-to
 		 (when (or initial-element-p initial-contents-p)
 		   (error "Neither :initial-element nor :initial-contents ~
@@ -307,51 +349,6 @@
 	      (incf axis)))
 	  array))))
 
-(defun make-static-vector (length element-type)
-  (multiple-value-bind (type bits)
-      (lisp::%vector-type-code element-type)
-    ;; What types of static arrays do we really want to allow?
-    ;; Whatever we choose, we definitely cannot allow arrays with the
-    ;; following element types: T, (signed-byte 30)
-    (unless (member type
-		    '(#.vm:simple-string-type
-		      #.vm:simple-array-unsigned-byte-8-type
-		      #.vm:simple-array-unsigned-byte-16-type
-		      #.vm:simple-array-unsigned-byte-32-type
-		      #.vm:simple-array-signed-byte-8-type
-		      #.vm:simple-array-signed-byte-16-type
-		      #.vm:simple-array-signed-byte-32-type
-		      #.vm:simple-array-single-float-type
-		      #.vm:simple-array-double-float-type
-		      #.vm:simple-array-complex-single-float-type
-		      #.vm:simple-array-complex-double-float-type))
-      (error "Cannot make a static array of element type ~S" element-type))
-    ;; Malloc space for the vector.  We need enough space for the data
-    ;; itself, and then 2 words for the vector header (header word and
-    ;; length).  Use calloc to make sure the area is initialized to
-    ;; zeros, like normal Lisp arrays are.
-    (let* ((data-bytes (ceiling (* length bits) 8))
-	   (total-bytes (+ data-bytes (* 2 vm:word-bytes)))
-	   (pointer (alien:alien-funcall (alien:extern-alien "calloc"
-							     (function sys::system-area-pointer
-								       unix::size-t
-								       unix::size-t))
-					 total-bytes
-					 1)))
-      ;; Malloc should return double-word (8 byte) alignment.
-      (assert (zerop (logand 7 (sys:sap-int pointer))))
-      (when (zerop (sys:sap-int pointer))
-	(error "Failed to allocate space for static array of length ~S of type ~S"
-	       length element-type))
-
-      ;; Fill in the vector header word and length word.  Set the data
-      ;; portion of the header word (normally 0) to 1 so we know this
-      ;; is a static vector.
-      (setf (sys:sap-ref-32 pointer 0) (+ type (ash 1 vm:type-bits)))
-      (setf (sys:sap-ref-32 pointer vm:word-bytes) (ash length 2))
-      ;; Convert the sap to a lisp object and initialize the array
-      (kernel:make-lisp-obj (+ vm:other-pointer-type (sys:sap-int pointer))))))
-
 (defun static-array-p (array)
   (with-array-data ((v array) (start) (end))
     (declare (ignore start end))
@@ -361,14 +358,15 @@
 	   (logbitp vm:type-bits header)))))
 
 (defun free-static-vector (vector)
-  (let ((addr (logandc1 vm:lowtag-mask (kernel:get-lisp-obj-address vector))))
-    (format t "~&Freeing foreign vector at #x~X~%"
-	    addr)
-    (alien:alien-funcall
-     (alien:extern-alien "free"
-			 (function c-call:void
-				   sys:system-area-pointer))
-     (sys:int-sap addr))))
+  (format t "~&Freeing foreign vector at #x~X~%"
+	  addr)
+  (sys:without-gcing
+   (let ((addr (logandc1 vm:lowtag-mask (kernel:get-lisp-obj-address vector))))
+     (alien:alien-funcall
+      (alien:extern-alien "free"
+			  (function c-call:void
+				    sys:system-area-pointer))
+      (sys:int-sap addr)))))
 
 (defun finalize-static-vectors ()
   ;; Run down the list of weak-pointers to static vectors.  Look at
@@ -394,17 +392,19 @@
 			    (setf (sys:sap-ref-32 sap (* -2 vm:word-bytes))
 				  (logand header #x7fffffff))
 			    (let ((*print-array* nil))
-			      (format t "static vector ~A in use~%" vector))
+			      (format t "  static vector ~A in use~%" vector))
 			    nil)
 			   (t
 			    ;; Mark was clear so free the vector
-			    (setf (weak-pointer-value wp) nil)
 			    (let ((*print-array* nil))
-			      (format t "Free static vector ~A~%" vector))
-			    (free-static-vector vector)
+			      (format t "  Free static vector ~A~%" vector))
+			    (sys:without-interrupts
+			      (setf (weak-pointer-value wp) nil)
+			      (free-static-vector vector))
 			    t))))))
 	   *static-vectors*))))
 
+;; Clean up any unreferenced static vectors after GC has run.
 (pushnew 'finalize-static-vectors *after-gc-hooks*)
 
 
