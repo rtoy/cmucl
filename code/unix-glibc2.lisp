@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.51 2009/11/02 15:05:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.52 2009/12/07 01:48:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1815,8 +1815,8 @@ length LEN and type TYPE."
 	  (multiple-value-setq
 	      (result error-code)
 	    (int-syscall ("execve"
-			  (* char) system-area-pointer system-area-pointer)
-			 (vector-sap program) argv envp)))
+			  c-string system-area-pointer system-area-pointer)
+			 program argv envp)))
       ;; 
       ;; Deallocate memory
       (when argv
