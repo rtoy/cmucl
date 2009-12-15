@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream-extfmt.lisp,v 1.4 2009/10/18 14:21:24 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream-extfmt.lisp,v 1.5 2009/12/15 17:22:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -67,9 +67,5 @@
 (stream::precompile-ef-slot :iso8859-1 #.stream::+ef-cout+)
 (stream::precompile-ef-slot :iso8859-1 #.stream::+ef-sout+)
 (stream::precompile-ef-slot :iso8859-1 #.stream::+ef-os+)
-
-
-
-;(set-terminal-coding-system :iso8859-1)
 
 (setf lisp::*enable-stream-buffer-p* t)
