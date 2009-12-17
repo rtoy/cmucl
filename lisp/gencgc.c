@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.102 2009/12/05 03:20:37 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.103 2009/12/17 13:45:14 rtoy Exp $
  *
  */
 
@@ -2002,6 +2002,56 @@ signal_space_p(lispobj obj)
     return FALSE;
 #endif    
 }
+
+#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
+/*
+ * The assembly code defines these as functions, so we make them
+ * functions.  We only care about their addresses anyway.
+ */
+extern char closure_tramp();
+extern char undefined_tramp();
+#else
+extern int undefined_tramp;
+#endif
+
+/*
+ * Other random places that can't be in malloc space.  Return TRUE if
+ * obj is in some other known space
+ */
+static inline boolean
+other_space_p(lispobj obj)
+{
+    boolean in_space = FALSE;
+    
+#if defined(sparc)
+    extern char _end;
+    
+    /*
+     * Skip over any objects in the C runtime which includes the
+     * closure_tramp and undefined_tramp objects.  There appears to be
+     * one other object that points to somewhere in call_into_c, but I
+     * don't know what that is.  I think that's probably all for
+     * sparc.
+     */
+    if ((char*) obj <= &_end) {
+        in_space = TRUE;
+    }
+#elif defined(DARWIN) && defined(i386)
+    /*
+     * For Darwin/x86, we see some object at 0xffffffe9.  I (rtoy) am
+     * not sure that that is, but it clearly can't be in malloc space
+     * so we want to skip that (by returning TRUE).
+     *
+     * Is there anything else?
+     */
+    if (obj == (lispobj) 0xffffffe9) {
+        in_space = TRUE;
+    }
+#endif  
+
+    return in_space;
+}
+
 
 
 /* Copying Objects */
@@ -2362,6 +2412,51 @@ copy_large_unboxed_object(lispobj object, int nwords)
 	return (lispobj) new | tag;
     }
 }
+
+static inline boolean
+maybe_static_array_p(lispobj header)
+{
+    boolean result;
+    
+    switch (TypeOf(header)) {
+        /*
+         * This needs to be coordinated to the set of allowed
+         * static vectors in make-array.
+         */
+      case type_SimpleString:
+      case type_SimpleArrayUnsignedByte8:
+      case type_SimpleArrayUnsignedByte16:
+      case type_SimpleArrayUnsignedByte32:
+#ifdef type_SimpleArraySignedByte8
+      case type_SimpleArraySignedByte8:
+#endif
+#ifdef type_SimpleArraySignedByte16
+      case type_SimpleArraySignedByte16:
+#endif
+#ifdef type_SimpleArraySignedByte32
+      case type_SimpleArraySignedByte32:
+#endif
+      case type_SimpleArraySingleFloat:
+      case type_SimpleArrayDoubleFloat:
+#ifdef type_SimpleArrayLongFloat
+      case type_SimpleArrayLongFloat:
+#endif
+#ifdef type_SimpleArrayComplexSingleFloat
+      case type_SimpleArrayComplexSingleFloat:
+#endif
+#ifdef type_SimpleArrayComplexDoubleFloat
+      case type_SimpleArrayComplexDoubleFloat:
+#endif
+#ifdef type_SimpleArrayComplexLongFloat
+      case type_SimpleArrayComplexLongFloat:
+#endif
+          result = TRUE;
+      default:
+          result = FALSE;
+    }
+    return result;
+}
+
 
 
 /* Scavenging */
@@ -2414,65 +2509,33 @@ scavenge(void *start_obj, long nwords)
                 }
             } else if (dynamic_space_p(object) || new_space_p(object) || static_space_p(object)
                        || read_only_space_p(object) || control_stack_space_p(object)
-                       || binding_stack_space_p(object) || signal_space_p(object)) {
+                       || binding_stack_space_p(object) || signal_space_p(object)
+                       || other_space_p(object)) {
                 words_scavenged = 1;
             } else {
                 lispobj *ptr = (lispobj *) PTR(object);
                 words_scavenged = 1;
-                    fprintf(stderr, "Not in Lisp spaces:  object = %p, ptr = %p\n", (void*)object, ptr);
+                fprintf(stderr, "Not in Lisp spaces:  object = %p, ptr = %p\n", (void*)object, ptr);
                 if (object < 0xf0000000) {
                     lispobj header = *ptr;
                     fprintf(stderr, "  Header value = 0x%x\n", header);
-                    switch (TypeOf(header)) {
-                        /*
-                         * This needs to be coordinated to the set of allowed
-                         * static vectors in make-array.
-                         */
-                      case type_SimpleString:
-                      case type_SimpleArrayUnsignedByte8:
-                      case type_SimpleArrayUnsignedByte16:
-                      case type_SimpleArrayUnsignedByte32:
-#ifdef type_SimpleArraySignedByte8
-                      case type_SimpleArraySignedByte8:
-#endif
-#ifdef type_SimpleArraySignedByte16
-                      case type_SimpleArraySignedByte16:
-#endif
-#ifdef type_SimpleArraySignedByte32
-                      case type_SimpleArraySignedByte32:
-#endif
-                      case type_SimpleArraySingleFloat:
-                      case type_SimpleArrayDoubleFloat:
-#ifdef type_SimpleArrayLongFloat
-                      case type_SimpleArrayLongFloat:
-#endif
-#ifdef type_SimpleArrayComplexSingleFloat
-                      case type_SimpleArrayComplexSingleFloat:
-#endif
-#ifdef type_SimpleArrayComplexDoubleFloat
-                      case type_SimpleArrayComplexDoubleFloat:
-#endif
-#ifdef type_SimpleArrayComplexLongFloat
-                      case type_SimpleArrayComplexLongFloat:
-#endif
-                      {
-                          int static_p;
+                    if (maybe_static_array_p(header)) {
+                        int static_p;
 
-                          fprintf(stderr, "Possible static vector at %p.  header = 0x%x\n",
-                                  ptr, header);
+                        fprintf(stderr, "Possible static vector at %p.  header = 0x%x\n",
+                                ptr, header);
                       
-                          static_p = (HeaderValue(header) & 1) == 1;
-                          if (static_p) {
-                              /*
-                               * We have a static vector.  Mark it as
-                               * reachable by setting the MSB of the header.
-                               */
-                              *ptr = header | 0x80000000;
-                              fprintf(stderr, "Scavenged static vector @%p, header = 0x%x\n",
-                                      ptr, header);
+                        static_p = (HeaderValue(header) & 1) == 1;
+                        if (static_p) {
+                            /*
+                             * We have a static vector.  Mark it as
+                             * reachable by setting the MSB of the header.
+                             */
+                            *ptr = header | 0x80000000;
+                            fprintf(stderr, "Scavenged static vector @%p, header = 0x%x\n",
+                                    ptr, header);
                       
-                          }
-                      }
+                        }
                     }
                 }
             }
@@ -6688,17 +6751,6 @@ print_ptr(lispobj * addr)
 	    *(addr - 3), *(addr - 2), *(addr - 1), *(addr - 0), *(addr + 1),
 	    *(addr + 2), *(addr + 3), *(addr + 4));
 }
-
-#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
-/*
- * The assembly code defines these as functions, so we make them
- * functions.  We only care about their addresses anyway.
- */
-extern char closure_tramp();
-extern char undefined_tramp();
-#else
-extern int undefined_tramp;
-#endif
 
 void
 verify_space(lispobj * start, size_t words)
