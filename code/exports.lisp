@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.291 2009/10/14 03:42:21 agoncharov Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.292 2009/12/17 13:52:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -357,7 +357,11 @@
   (:export "UNIX-SYSINFO"
 	   "SI-SYSNAME" "SI-HOSTNAME" "SI-RELEASE" "SI-VERSION" "SI-MACHINE"
 	   "SI-ARCHITECTURE" "SI-HW-SERIAL" "SI-HW-PROVIDER" "SI-SRPC-DOMAIN"
-	   "SI-PLATFORM" "SI-ISALIST" "SI-DHCP-CACHE")
+	   "SI-PLATFORM" "SI-ISALIST" "SI-DHCP-CACHE"
+
+	   "UNIX-GETRLIMIT"
+	    "RLIMIT_CPU" "RLIMIT_FSIZE" "RLIMIT_DATA" "RLIMIT_STACK" "RLIMIT_CORE"
+	    "RLIMIT_AS" "RLIMIT_VMEM" "RLIMIT_NOFILE")
   ;; Should this be conditionalized on glibc2?  These come from
   ;; unix-glibc2.lisp.
   #+(and darwin x86)
@@ -366,7 +370,11 @@
 	    "GROUP-INFO-GID" "USER-INFO" "USER-INFO-NAME" "USER-INFO-GID"
 	    "GROUP-INFO-MEMBERS" "UNIX-GETGRGID" "USER-INFO-GECOS"
 	    "GROUP-INFO-NAME"
-	    "UNIX-GETGRNAM"))
+	    "UNIX-GETGRNAM"
+	    
+	    "UNIX-GETRLIMIT"
+	    "RLIMIT_CPU" "RLIMIT_FSIZE" "RLIMIT_DATA" "RLIMIT_STACK" "RLIMIT_CORE"
+	    "RLIMIT_AS" "RLIMIT_RSS" "RLIMIT_MEMLOCK" "RLIMIT_NPROC" "RLIMIT_NOFILE"))
   
 (defpackage "FORMAT")
 

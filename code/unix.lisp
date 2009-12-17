@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.126 2009/12/07 01:48:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.127 2009/12/17 13:52:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3433,4 +3433,71 @@
       (when (>= result 0)
 	(cast buf c-call:c-string)))))
 )
+
+#+solaris
+(export '(rlimit_cpu rlimit_fsize rlimit_data rlimit_stack rlimit_core rlimit_nofile
+	  rlimit_vmem rlimit_as))
+
+#+solaris
+(progn
+(defconstant rlimit_cpu 0
+  "CPU time per process (in milliseconds)")
+(defconstant rlimit_fsize 1
+  "Maximum file size")
+(defconstant rlimit_data 2
+  "Data segment size")
+(defconstant rlimit_stack 3
+  "Stack size")
+(defconstant rlimit_core 4
+  "Core file size")
+(defconstant rlimit_nofile 5
+  "Number of open files")
+(defconstant rlimit_vmem 6
+  "Maximum mapped memory")
+(defconstant rlimit_as rlimit_vmem)
+)
+
+#+(and darwin x86)
+(export '(rlimit_cpu rlimit_fsize rlimit_data rlimit_stack rlimit_core
+	  rlimit_as rlimit_rss rlimit_memlock rlimit_nproc rlimit_nofile))
+
+#+(and darwin x86)
+(progn
+(defconstant rlimit_cpu 0
+  "CPU time per process")
+(defconstant rlimit_fsize 1
+  "File size")
+(defconstant rlimit_data 2
+  "Data segment size")
+(defconstant rlimit_stack 3
+  "Stack size")
+(defconstant rlimit_core 4
+  "Core file size")
+(defconstant rlimit_as 5
+  "Addess space (resident set size)")
+(defconstant rlimit_rss rlimit_as)
+(defconstant rlimit_memlock 6
+  "Locked-in-memory address space")
+(defconstant rlimit_nproc 7
+  "Number of processes")
+(defconstant rlimit_nofile 8
+  "Number of open files")
+)
+
+
+#+(or solaris (and darwin x86))
+(export '(unix-getrlimit))
+
+#+(or solaris (and darwin x86))
+(defun unix-getrlimit (resource)
+  "Get the limits on the consumption of system resouce specified by
+  Resource.  If successful, return three values: T, the current (soft)
+  limit, and the maximum (hard) limit."
+  
+  (with-alien ((rlimit (struct rlimit)))
+    (syscall ("getrlimit" c-call:int (* (struct rlimit)))
+	     (values t
+		     (slot rlimit 'rlim-cur)
+		     (slot rlimit 'rlim-max))
+	     resource (addr rlimit))))
 ;; EOF
