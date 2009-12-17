@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.103 2009/12/17 13:45:14 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.104 2009/12/17 15:53:45 rtoy Exp $
  *
  */
 
@@ -2036,17 +2036,19 @@ other_space_p(lispobj obj)
     if ((char*) obj <= &_end) {
         in_space = TRUE;
     }
-#elif defined(DARWIN) && defined(i386)
+#elif defined(i386)
+#if defined(DARWIN) || defined(__linux__)
     /*
-     * For Darwin/x86, we see some object at 0xffffffe9.  I (rtoy) am
-     * not sure that that is, but it clearly can't be in malloc space
-     * so we want to skip that (by returning TRUE).
+     * For x86, we see some object at 0xffffffe9.  I (rtoy) am not
+     * sure that is, but it clearly can't be in malloc space so we
+     * want to skip that (by returning TRUE).
      *
      * Is there anything else?
      */
     if (obj == (lispobj) 0xffffffe9) {
         in_space = TRUE;
     }
+#endif
 #endif  
 
     return in_space;
@@ -2516,7 +2518,7 @@ scavenge(void *start_obj, long nwords)
                 lispobj *ptr = (lispobj *) PTR(object);
                 words_scavenged = 1;
                 fprintf(stderr, "Not in Lisp spaces:  object = %p, ptr = %p\n", (void*)object, ptr);
-                if (object < 0xf0000000) {
+                if (1) {
                     lispobj header = *ptr;
                     fprintf(stderr, "  Header value = 0x%x\n", header);
                     if (maybe_static_array_p(header)) {
