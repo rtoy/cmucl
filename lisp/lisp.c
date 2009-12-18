@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.68 2009/07/13 19:41:54 rtoy Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.69 2009/12/18 04:03:24 agoncharov Exp $
  *
  */
 
@@ -519,8 +519,8 @@ main(int argc, const char *argv[], const char *envp[])
 #endif
 	    if (dynamic_space_size > DYNAMIC_SPACE_SIZE) {
 		fprintf(stderr,
-			"-dynamic-space-size must be no greater than %d MBytes.\n",
-			DYNAMIC_SPACE_SIZE / (1024 * 1024));
+			"-dynamic-space-size must be no greater than %lu MBytes.\n",
+			DYNAMIC_SPACE_SIZE / (1024 * 1024UL));
 		exit(1);
 	    }
 	} else if (strcmp(arg, "-monitor") == 0) {

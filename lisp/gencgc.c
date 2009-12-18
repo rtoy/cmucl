@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.104 2009/12/17 15:53:45 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.105 2009/12/18 04:03:24 agoncharov Exp $
  *
  */
 
@@ -2037,7 +2037,7 @@ other_space_p(lispobj obj)
         in_space = TRUE;
     }
 #elif defined(i386)
-#if defined(DARWIN) || defined(__linux__)
+#if defined(DARWIN) || defined(__linux__) || defined(__FreeBSD__)
     /*
      * For x86, we see some object at 0xffffffe9.  I (rtoy) am not
      * sure that is, but it clearly can't be in malloc space so we
@@ -2520,12 +2520,12 @@ scavenge(void *start_obj, long nwords)
                 fprintf(stderr, "Not in Lisp spaces:  object = %p, ptr = %p\n", (void*)object, ptr);
                 if (1) {
                     lispobj header = *ptr;
-                    fprintf(stderr, "  Header value = 0x%x\n", header);
+                    fprintf(stderr, "  Header value = 0x%lx\n", (unsigned long) header);
                     if (maybe_static_array_p(header)) {
                         int static_p;
 
-                        fprintf(stderr, "Possible static vector at %p.  header = 0x%x\n",
-                                ptr, header);
+                        fprintf(stderr, "Possible static vector at %p.  header = 0x%lx\n",
+                                ptr, (unsigned long) header);
                       
                         static_p = (HeaderValue(header) & 1) == 1;
                         if (static_p) {
@@ -2534,8 +2534,8 @@ scavenge(void *start_obj, long nwords)
                              * reachable by setting the MSB of the header.
                              */
                             *ptr = header | 0x80000000;
-                            fprintf(stderr, "Scavenged static vector @%p, header = 0x%x\n",
-                                    ptr, header);
+                            fprintf(stderr, "Scavenged static vector @%p, header = 0x%lx\n",
+                                    ptr, (unsigned long) header);
                       
                         }
                     }

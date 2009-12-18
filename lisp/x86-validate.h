@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.28 2007/07/06 08:04:39 cshapiro Rel $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.29 2009/12/18 04:03:24 agoncharov Exp $
  *
  */
 
@@ -82,16 +82,16 @@
 #define SIGNAL_STACK_START	0x47fd8000
 #define SIGNAL_STACK_SIZE	SIGSTKSZ
 
-#define DYNAMIC_0_SPACE_START	(0x48000000)
+#define DYNAMIC_0_SPACE_START	(0x48000000UL)
 #ifdef GENCGC
-#define DYNAMIC_SPACE_SIZE	(0x78000000)	/* May be up to 1.7 GB */
+#define DYNAMIC_SPACE_SIZE	(0x78000000UL)	/* May be up to 1.7 GB */
 #else
-#define DYNAMIC_SPACE_SIZE	(0x04000000)	/* 64MB */
+#define DYNAMIC_SPACE_SIZE	(0x04000000UL)	/* 64MB */
 #endif
-#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000)	/* 512MB */
+#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000UL)	/* 512MB */
 #ifdef LINKAGE_TABLE
 #define FOREIGN_LINKAGE_SPACE_START ((unsigned long) LinkageSpaceStart)
-#define FOREIGN_LINKAGE_SPACE_SIZE (0x100000)	/* 1MB */
+#define FOREIGN_LINKAGE_SPACE_SIZE (0x100000UL)	/* 1MB */
 #endif
 #endif /* __FreeBSD__ */
 
