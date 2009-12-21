@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.105 2009/12/18 04:03:24 agoncharov Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.106 2009/12/21 11:36:43 rswindells Exp $
  *
  */
 
@@ -2037,7 +2037,7 @@ other_space_p(lispobj obj)
         in_space = TRUE;
     }
 #elif defined(i386)
-#if defined(DARWIN) || defined(__linux__) || defined(__FreeBSD__)
+#if defined(DARWIN) || defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
     /*
      * For x86, we see some object at 0xffffffe9.  I (rtoy) am not
      * sure that is, but it clearly can't be in malloc space so we
