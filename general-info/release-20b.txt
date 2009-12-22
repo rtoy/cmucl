@@ -25,6 +25,13 @@ New in this release:
       faster.  Some simple tests on Linux shows that read-line now
       only takes 40% as much time.  Sparc shows 60% as much time.
     - ASCII external format added.
+    - Support for static arrays added.  These are allocated in foreign
+      space and are never moved by GC.  When the arrays are no longer
+      referenced, they are properly freed.  To create an array, use
+      new the :ALLOCATION :MALLOC parameter to MAKE-ARRAY.  Currently,
+      only arrays of character; 8, 16, and 32-bit integers (signed and unsigned);
+      single and double floats; and complex single and double floats
+      are supported.
 
   * ANSI compliance fixes:
 
@@ -37,6 +44,12 @@ New in this release:
       MACHINE-TYPE and MACHINE-VERSION.
     - Type predicates for double-double float and complex
       double-double float arrays are now done inline.
+    - UNIX:UNIX-EXECVE was not converting Lisp strings to C strings on
+      Unicode builds.
+    - When continuing from the INTEXP-LIMIT-ERROR condition (for
+      raising an integer to a large integer power) and setting a new
+      limit, the limit was set to the power.  We really wanted the
+      absolute valie of the power to used as the new limit.
 
   * Trac Tickets:
     #33: get-dispatch-macro-character doesn't signal errors in
@@ -52,6 +65,7 @@ New in this release:
       o Parameters can be given to specify the start and end of the
         octet array and for the start and end of the string.
         (These all default to the beginning and end of the arrays.)
+    - UNIX-GETRLIMIT added for solaris and darwin/x86.
 
   * Improvements to the PCL implementation of CLOS:
 
