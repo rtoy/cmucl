@@ -1168,7 +1168,9 @@ It is possible to run programs from Lisp by using the following function.
     \kwd{wait} is \nil{} since two processes may write to the terminal
     at the same time.  If specified as \kwd{stream}, then the
     \code{process-output} slot contains an input stream from which you
-    can read the program's output.
+    can read the program's output.  \kwd{output} can also be a stream
+    in which case all output from the process is written to this
+    stream. 
     
   \item[\kwd{if-output-exists}] This specifies what to do if the
     output file already exists.  The following values are valid:
