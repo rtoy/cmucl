@@ -50,6 +50,18 @@ New in this release:
       raising an integer to a large integer power) and setting a new
       limit, the limit was set to the power.  We really wanted the
       absolute valie of the power to used as the new limit.
+    - FILE-POSITION was returning incorrect values for file streams on
+      unicode builds.  This is fixed now.
+    - The error-output and trace-file files for COMPILE-FILE are now
+      opened using the same external format as specified in
+      COMPILE-FILE.  Previously, they were opened using the default
+      external format.  This meant that these files could lose
+      information if the default format could not represent the
+      characters in the source file.
+    - Handling of source files in the debugger is better now.  The
+      source files are opened using the same format as used to compile
+      them.  Previously, the default format was used, which would be
+      wrong if the file is in a different format.
 
   * Trac Tickets:
     #33: get-dispatch-macro-character doesn't signal errors in
