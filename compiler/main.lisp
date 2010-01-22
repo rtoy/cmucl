@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.147 2009/06/11 16:03:59 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.148 2010/01/22 06:17:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1828,13 +1828,15 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	      (setq *compiler-trace-output*
 		    (open (frob trace-file "trace")
 			  :if-exists :supersede
-			  :direction :output)))
+			  :direction :output
+			  :external-format external-format)))
 	    
 	    (when error-file
 	      (setq error-file-stream
 		    (open (frob error-file "err")
 			  :if-exists :supersede
-			  :direction :output))))
+			  :direction :output
+			  :external-format external-format))))
 	  
 	  (setq *compiler-error-output*
 		(apply #'make-broadcast-stream
