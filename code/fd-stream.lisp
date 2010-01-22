@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.92 2009/10/18 14:21:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.93 2010/01/22 06:14:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1662,8 +1662,15 @@
 		 ;; the user of the stream, the *real* file position will
 		 ;; smaller than reported, because we want to look like the
 		 ;; unread stuff is still available.
+		 #-unicode
 		 (decf posn (- (fd-stream-ibuf-tail stream)
 			       (fd-stream-ibuf-head stream)))
+		 #+unicode
+		 (if (fd-stream-string-buffer stream)
+		     (decf posn (- (fd-stream-string-buffer-len stream)
+				   (fd-stream-string-index stream)))
+		     (decf posn (- (fd-stream-ibuf-tail stream)
+			       (fd-stream-ibuf-head stream))))
 		 (when (fd-stream-unread stream) ;;@@
 		   (decf posn))
 		 ;; Divide bytes by element size.
@@ -1688,7 +1695,11 @@
 	;; Clear out any pending input to force the next read to go to the
 	;; disk.
 	(setf (fd-stream-unread stream) nil) ;;@@
-	#+unicode (setf (fd-stream-last-char-read-size stream) 0)
+	#+unicode
+	(progn
+	  (setf (fd-stream-last-char-read-size stream) 0)
+	  (setf (fd-stream-string-index stream)
+		(fd-stream-string-buffer-len stream)))
 	(setf (fd-stream-ibuf-head stream) 0)
 	(setf (fd-stream-ibuf-tail stream) 0)
 	;; Trash cached value for listen, so that we check next time.
