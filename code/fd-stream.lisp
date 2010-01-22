@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.93 2010/01/22 06:14:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.94 2010/01/22 13:28:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1667,10 +1667,18 @@
 			       (fd-stream-ibuf-head stream)))
 		 #+unicode
 		 (if (fd-stream-string-buffer stream)
-		     (decf posn (- (fd-stream-string-buffer-len stream)
-				   (fd-stream-string-index stream)))
+		     ;; The string buffer contains Lisp characters,
+		     ;; not octets!  To figure out how many octets
+		     ;; have not been already supplied, we need to
+		     ;; convert them back to the encoded format and
+		     ;; count the number of octets.
+		     (decf posn (length
+				 (string-encode (subseq (fd-stream-string-buffer stream)
+							(fd-stream-string-index stream)
+							(fd-stream-string-buffer-len stream))
+						(fd-stream-external-format stream))))
 		     (decf posn (- (fd-stream-ibuf-tail stream)
-			       (fd-stream-ibuf-head stream))))
+				   (fd-stream-ibuf-head stream))))
 		 (when (fd-stream-unread stream) ;;@@
 		   (decf posn))
 		 ;; Divide bytes by element size.
