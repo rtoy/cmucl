@@ -1,7 +1,7 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: STREAM -*-
 ;;;
 ;;; **********************************************************************
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.5 2009/10/18 14:21:24 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.6 2010/01/22 23:57:29 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -78,9 +78,9 @@
 			       ,wd 4)
 			 (setf ,code +replacement-character-code+))))
 		  ((and (= ,code #xFFFE) (zerop ,st))
-		   (setf ,state 1) (go :again))
+		   (setf (car ,state) 1) (go :again))
 		  ((and (= ,code #xFEFF) (zerop ,st))
-		   (setf ,state 2) (go :again))
+		   (setf (car ,state) 2) (go :again))
 		  ((= ,code #xFFFE)
 		   ;; Replace with REPLACEMENT CHARACTER.  
 		   (setf ,code +replacement-character-code+)))
