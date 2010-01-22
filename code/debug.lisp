@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.67 2009/09/15 15:47:10 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.68 2010/01/22 13:36:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1479,7 +1479,9 @@ See the CMU Common Lisp User's Manual for more information.
 			  (pathname name)))
 	(setq *cached-readtable* nil)
 	(when *cached-source-stream* (close *cached-source-stream*))
-	(setq *cached-source-stream* (open name :if-does-not-exist nil))
+	(setq *cached-source-stream*
+	      (open name :if-does-not-exist nil
+		    :external-format (or (c::debug-source-info d-source) :default)))
 	(unless *cached-source-stream*
 	  (error "Source file no longer exists:~%  ~A." (namestring name)))
 	(format t "~%; File: ~A~%" (namestring name)))

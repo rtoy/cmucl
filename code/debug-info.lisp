@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.28 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.29 2010/01/22 13:36:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -468,6 +468,8 @@ function (which would be useful info anyway).
   ;; If from :LISP, this is the function whose source is form 0.
   ;; If from :STREAM, this is whatever was the :SOURCE-INFO argument to
   ;; COMPILE-FROM-STREAM.
+  ;; If from :FILE, this is the external format used to read from the
+  ;; file while compiling
   (info nil))
 
 
