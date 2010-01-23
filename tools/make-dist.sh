@@ -40,7 +40,7 @@ def_arch_os () {
 	  uname_r=`uname -r`
 	  case $uname_r in
 	      5.*) rel=`echo $uname_r | sed 's/5\.//'`;;
-	      *) rel=$uname;;
+	      *) rel=$uname_r;;
 	  esac
 	  OS=solaris$rel
 	  ;;
