@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.31 2008/12/10 02:21:31 agoncharov Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.32 2010/01/23 15:24:16 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,7 +37,7 @@
 #+sse2
 (progn
   (setf *features* (delete :x87 *features*))
-  (sys:register-lisp-runtime-feature :sse2))
+  (sys:register-lisp-feature :sse2))
 
 
 ;;;; The sigcontext structure.
