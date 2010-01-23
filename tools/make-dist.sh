@@ -37,7 +37,11 @@ def_arch_os () {
     case `uname -s` in
       SunOS)
 	  ARCH=sparcv9
-	  OS=solaris8
+	  case `uname -r` in
+	    5.10) OS=solaris10 ;;
+	    5.9) OS=solaris9 ;;
+	    5.8) OS=solaris8 ;;
+	  esac
 	  ;;
       Linux)
 	  ARCH=x86
