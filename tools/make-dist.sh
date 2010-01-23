@@ -37,11 +37,12 @@ def_arch_os () {
     case `uname -s` in
       SunOS)
 	  ARCH=sparcv9
-	  case `uname -r` in
-	    5.10) OS=solaris10 ;;
-	    5.9) OS=solaris9 ;;
-	    5.8) OS=solaris8 ;;
+	  uname_r=`uname -r`
+	  case $uname_r in
+	      5.*) rel=`echo $uname_r | sed 's/5\.//'`;;
+	      *) rel=$uname;;
 	  esac
+	  OS=solaris$rel
 	  ;;
       Linux)
 	  ARCH=x86
