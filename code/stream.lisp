@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.88 2009/10/18 14:21:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.89 2010/01/23 18:02:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -298,59 +298,12 @@
     ;; fundamental-stream
     :default))
 
+;; This is only used while building; it's reimplemented in
+;; fd-stream-extfmt.lisp
 #+unicode
 (defun %set-fd-stream-external-format (stream extfmt &optional (updatep t))
-  (declare (type fd-stream stream))
-  (let ((old-format (fd-stream-external-format stream)))
-    (setf (fd-stream-external-format stream)
-	  (stream::ef-name (stream::find-external-format extfmt))
-	  (fd-stream-oc-state stream) nil
-	  (fd-stream-co-state stream) nil)
-    (when (fd-stream-ibuf-sap stream)	; input stream
-      (setf (fd-stream-in stream) (ef-cin extfmt)))
-    (when (fd-stream-obuf-sap stream)	; output stream
-      (setf (fd-stream-out stream) (ef-cout extfmt)
-	    ;;@@ (fd-stream-sout stream) (ef-sout extfmt)
-	    ))
-    (when (and lisp::*enable-stream-buffer-p* updatep
-	       (lisp-stream-string-buffer stream))
-      ;; We want to reconvert any octets that haven't been converted
-      ;; yet.  So, we need to figure out which octet to start with.
-      ;; This is done by converting (the previously converted) octets
-      ;; until we've converted the right number of characters.
-      (let ((ibuf (lisp-stream-in-buffer stream))
-	    (sindex (1- (lisp-stream-string-index stream)))
-	    (index 0)
-	    (state (fd-stream-saved-oc-state stream)))
-	;; Reconvert all the octets we've already converted and read.
-	;; We don't know how many octets that is, but do know how many
-	;; characters there are.
-	(multiple-value-bind (s pos count new-state)
-	    (octets-to-string ibuf
-			      :start 0
-			      :external-format old-format
-			      :string (make-string sindex)
-			      :state state)
-	  (declare (ignore s pos))
-	  (setf state new-state)
-	  (setf index count))
-	
-	;; We now know the last octet that was used.  Now convert the
-	;; rest of the octets using the new format.
-	(multiple-value-bind (s pos count new-state)
-	    (octets-to-string ibuf
-			      :start index
-			      :end (fd-stream-in-length stream)
-			      :external-format (fd-stream-external-format stream)
-			      :string (lisp-stream-string-buffer stream)
-			      :s-start 1
-			      :state state)
-	  (declare (ignore s))
-	  (setf (lisp-stream-string-index stream) 1)
-	  (setf (lisp-stream-string-buffer-len stream) pos)
-	  (setf (lisp-stream-in-index stream) (+ index count))
-	  (setf (fd-stream-oc-state stream) new-state))))
-    extfmt))
+  extfmt)
+
 
 ;; This is only used while building; it's reimplemented in
 ;; fd-stream-extfmt.lisp

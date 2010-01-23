@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.95 2010/01/23 03:00:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.96 2010/01/23 18:02:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1803,8 +1803,7 @@
     ;;
     ;;#-unicode-bootstrap ; fails in stream-reinit otherwise
     #+(and unicode (not unicode-bootstrap))
-    (when lisp::*enable-stream-buffer-p*
-      (%set-fd-stream-external-format stream external-format nil))
+    (%set-fd-stream-external-format stream external-format nil)
     (set-routines stream element-type input output input-buffer-p
 		  :binary-stream-p binary-stream-p)
     #+(and unicode (not unicode-bootstrap))
