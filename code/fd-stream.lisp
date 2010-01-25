@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.96 2010/01/23 18:02:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.97 2010/01/25 13:58:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1672,11 +1672,11 @@
 		     ;; have not been already supplied, we need to
 		     ;; convert them back to the encoded format and
 		     ;; count the number of octets.
-		     (decf posn (length
-				 (string-encode (subseq (fd-stream-string-buffer stream)
-							(fd-stream-string-index stream)
-							(fd-stream-string-buffer-len stream))
-						(fd-stream-external-format stream))))
+		     (decf posn
+			   (length (string-encode (fd-stream-string-buffer stream)
+						  (fd-stream-external-format stream)
+						  (fd-stream-string-index stream)
+						  (fd-stream-string-buffer-len stream))))
 		     (decf posn (- (fd-stream-ibuf-tail stream)
 				   (fd-stream-ibuf-head stream))))
 		 (when (fd-stream-unread stream) ;;@@
