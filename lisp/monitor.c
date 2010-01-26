@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.21 2008/03/19 09:17:13 cshapiro Rel $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.22 2010/01/26 18:54:18 rtoy Rel $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -470,7 +470,7 @@ sub_monitor(void)
 		continue;
 	    } else {
 		fprintf(stderr, "\nEOF on something other than a tty.\n");
-		exit(0);
+		exit(1);
 	    }
 	}
 	ptr = line;
