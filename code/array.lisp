@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.50 2009/12/06 19:08:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.51 2010/01/28 15:02:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -358,10 +358,9 @@
 	   (logbitp vm:type-bits header)))))
 
 (defun free-static-vector (vector)
-  (format t "~&Freeing foreign vector at #x~X~%"
-	  addr)
   (sys:without-gcing
    (let ((addr (logandc1 vm:lowtag-mask (kernel:get-lisp-obj-address vector))))
+     (format t "~&Freeing foreign vector at #x~X~%" addr)
      (alien:alien-funcall
       (alien:extern-alien "free"
 			  (function c-call:void
