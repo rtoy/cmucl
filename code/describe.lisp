@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.53 2009/11/30 14:52:39 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.54 2010/01/30 23:36:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -169,9 +169,8 @@
 		       (fill-pointer x))
 	       (format t "~&It has no fill pointer.")))
 	  (t
-	   (format t "~&~S is " x)
-	   (write-string (if (%array-displaced-p x) "a displaced" "an"))
-	   (format t " array of rank ~A." rank)
+	   (format t "~&~S is ~:[an~;a displaced~] array of rank ~A"
+		   x (%array-displaced-p x) rank)
 	   (format t "~%Its dimensions are ~S." (array-dimensions x))))
     (unless (eq t element-type)
       (format t "~&Its element type is specialized to ~S." element-type))
