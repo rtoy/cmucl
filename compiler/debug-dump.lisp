@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.48 2010/01/22 13:36:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.49 2010/01/31 19:26:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -311,7 +311,9 @@ otherwise the truename."
 			  (unless (eq *byte-compile* 't)
 			    (coerce-to-smallest-eltype
 			     (file-info-positions x)))
-			  :info (source-info-external-format info)))
+			  :info
+			  #+unicode (source-info-external-format info)
+			  #-unicode nil))
 		    (name (file-info-name x)))
 		(etypecase name
 		  ((member :stream :lisp)
