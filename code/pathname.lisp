@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.88 2009/08/13 19:23:42 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.89 2010/01/31 16:10:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1406,8 +1406,7 @@ a host-structure or string."
 ;;;    Called by TRANSLATE-PATHNAME on the directory components of its argument
 ;;; pathanames to produce the result directory component.  If any leaves the
 ;;; directory NIL, we return the source directory.  The :RELATIVE or :ABSOLUTE
-;;; is taken from the source directory, except if TO is :ABSOLUTE, in which
-;;; case the result will be :ABSOLUTE.
+;;; is taken from the TO directory.
 ;;;
 (defun translate-directories (source from to diddle-case)
   (if (not (and source to from))
@@ -1434,9 +1433,7 @@ a host-structure or string."
 			 (res to-part)))))
 	      (res))))
       (collect ((res))
-	(res (if (eq (first to) :absolute)
-		 :absolute
-		 (first source)))
+	(res (first to))
 	(let ((subs-left (compute-directory-substitutions (rest source)
 							  (rest from))))
 	  (dolist (to-part (rest to))
