@@ -19,6 +19,10 @@ over the Internet, and is mostly in the public domain.
 New in this release:
 
   * Known issues:
+    - CMUCL cannot create working executable images anymore.
+    - FILE-POSITION is sometimes off by 2 (4) for input files for
+      UTF-16 (UTF-32) encodings.  This is caused by the BOM
+      (byte-order mark) which is essentially never seen by Lisp.
 
   * Feature enhancements:
     - Read operations using an external format of utf8 are now much
@@ -29,9 +33,9 @@ New in this release:
       space and are never moved by GC.  When the arrays are no longer
       referenced, they are properly freed.  To create an array, use
       new the :ALLOCATION :MALLOC parameter to MAKE-ARRAY.  Currently,
-      only arrays of character; 8, 16, and 32-bit integers (signed and unsigned);
-      single and double floats; and complex single and double floats
-      are supported.
+      only arrays of character; 8, 16, and 32-bit integers (signed and
+      unsigned); single and double floats; and complex single and
+      double floats are supported.
 
   * ANSI compliance fixes:
 
@@ -51,7 +55,8 @@ New in this release:
       limit, the limit was set to the power.  We really wanted the
       absolute valie of the power to used as the new limit.
     - FILE-POSITION was returning incorrect values for file streams on
-      unicode builds.  This is fixed now.
+      unicode builds.  This is fixed now.  But also see the known
+      issue listed above.
     - The error-output and trace-file files for COMPILE-FILE are now
       opened using the same external format as specified in
       COMPILE-FILE.  Previously, they were opened using the default
