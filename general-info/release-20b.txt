@@ -78,6 +78,11 @@ New in this release:
         octet array and for the start and end of the string.
         (These all default to the beginning and end of the arrays.)
     - UNIX-GETRLIMIT added for solaris and darwin/x86.
+    - TRANSLATE-PATHNAMES now creates the resulting path to be an
+      absolute or relative path according to whether the TO pathname
+      is abslute or relative.  Previously, the result was take from
+      the SOURCE pathname, except if TO were absolute, in which case
+      the result was absolute.
 
   * Improvements to the PCL implementation of CLOS:
 
