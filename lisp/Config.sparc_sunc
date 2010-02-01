@@ -14,8 +14,10 @@ include Config.sparc_common
 # instructions, even if we don't use the 64-bit registers.
 
 ifdef FEATURE_SPARC_V9
-CC_V8PLUS = -xarch=v8plus
-AS_V8PLUS = -xarch=v8plus
+# For SunStudio 11, use -xarch=v8plus.  For SunStudio 12, that is
+# deprecated; use -m32 -xarch=sparc.
+CC_V8PLUS = -m32 -xarch=sparc
+AS_V8PLUS = -m32 -xarch=sparc
 endif
 
 CC = cc -xlibmieee -O
