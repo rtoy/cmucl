@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.25 2010/02/01 16:04:43 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.26 2010/02/01 17:38:48 rtoy Rel $
  *
  * Common interface for os-dependent functions.
  *
@@ -114,5 +114,7 @@ unsigned long *os_sigcontext_reg(ucontext_t *, int);
 unsigned long *os_sigcontext_pc(ucontext_t *);
 unsigned char *os_sigcontext_fpu_reg(ucontext_t *, int);
 unsigned int os_sigcontext_fpu_modes(ucontext_t *);
+
+char* convert_lisp_string(char* c_string, void* lisp_string, int len);
 
 #endif /* _OS_H_ */
