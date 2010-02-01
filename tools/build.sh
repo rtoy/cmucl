@@ -31,6 +31,9 @@
 # do that by hand.
 #
 # For more information see src/BUILDING.
+#
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.28 2010/02/01 15:04:51 rtoy Exp $
+#
 
 ENABLE2="yes"
 ENABLE3="yes"

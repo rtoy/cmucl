@@ -1,5 +1,16 @@
 #!/bin/sh
 
+# Build a binary distribution of CMUCL.  This script takes the result
+# from build.sh and packages up everything into two tarballs.  One
+# contains the core of cmucl; the other contains extras like clx, clm,
+# and hemlock.  Optionally a source distrubition is also created.
+#
+# Alternatively, you can install everything into a directory, as if
+# you extracted the two tarballs and the source distribution into that
+# directory.
+#
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/make-dist.sh,v 1.16 2010/02/01 15:04:51 rtoy Rel $
+
 usage() {
     echo "make-dist.sh: [-hbg] [-G group] [-O owner] [-I destdir] [-M mandir] dir version [arch os]"
     echo "  -h           This help"
