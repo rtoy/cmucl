@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.29 2009/12/18 04:03:24 agoncharov Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.30 2010/02/01 16:12:04 rtoy Exp $
  *
  */
 
@@ -122,10 +122,10 @@
 #endif
 
 #if defined(__NetBSD__) || defined(DARWIN)
-#define READ_ONLY_SPACE_START   (0x10000000)
+#define READ_ONLY_SPACE_START   (SpaceStart_TargetReadOnly)
 #define READ_ONLY_SPACE_SIZE    (0x0ffff000)	/* 256MB - 1 page */
 
-#define STATIC_SPACE_START	(0x28000000)
+#define STATIC_SPACE_START	(SpaceStart_TargetStatic)
 #define STATIC_SPACE_SIZE	(0x0ffff000)	/* 256MB - 1 page */
 
 #define BINDING_STACK_START	(0x38000000)
@@ -137,15 +137,15 @@
 #define SIGNAL_STACK_START	(0x47fd8000)
 #define SIGNAL_STACK_SIZE	SIGSTKSZ
 
-#define DYNAMIC_0_SPACE_START	(0x48000000)
+#define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)
 #ifdef GENCGC
-#define DYNAMIC_SPACE_SIZE	(0x67800000)	/* 1.656GB */
+#define DYNAMIC_SPACE_SIZE	(0x67800000U)	/* 1.656GB */
 #else
-#define DYNAMIC_SPACE_SIZE	(0x04000000)	/* 64MB */
+#define DYNAMIC_SPACE_SIZE	(0x04000000U)	/* 64MB */
 #endif
-#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000)	/* 512MB */
+#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000U)	/* 512MB */
 #ifdef LINKAGE_TABLE
-#define FOREIGN_LINKAGE_SPACE_START (0xb0000000)
+#define FOREIGN_LINKAGE_SPACE_START (LinkageSpaceStart)
 #define FOREIGN_LINKAGE_SPACE_SIZE (0x100000)	/* 1MB */
 #endif
 #endif /* __NetBSD__ || DARWIN */
