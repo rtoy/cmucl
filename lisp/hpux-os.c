@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.c,v 1.8 2008/03/19 09:17:10 cshapiro Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.c,v 1.9 2010/02/01 15:16:09 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -53,7 +53,7 @@ static struct segment {
 } segments[MAX_SEGMENTS];
 
 void
-os_init(void)
+os_init(char *argv[], char *envp[])
 {
     int i;
 

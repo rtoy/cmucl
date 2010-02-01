@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.c,v 1.10 2008/09/07 07:07:49 cshapiro Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.c,v 1.11 2010/02/01 15:16:09 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -81,7 +81,7 @@ os_init_bailout(arg)
 }
 
 void
-os_init(void)
+os_init(char *argv[], char *envp[])
 {
     char *empty_file = getenv("CMUCL_EMPTYFILE");
 

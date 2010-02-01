@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.13 2009/10/16 13:38:02 rswindells Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.14 2010/02/01 15:16:09 rtoy Exp $
  *
  */
 
@@ -45,7 +45,7 @@ size_t os_vm_page_size;
 
 
 void
-os_init(void)
+os_init(char *argv[], char *envp[])
 {
     os_vm_page_size = OS_VM_DEFAULT_PAGESIZE;
 }

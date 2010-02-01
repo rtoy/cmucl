@@ -13,7 +13,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/OpenBSD-os.c,v 1.8 2008/12/07 02:33:55 agoncharov Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/OpenBSD-os.c,v 1.9 2010/02/01 15:16:09 rtoy Exp $
  *
  */
 
@@ -41,7 +41,7 @@ vm_size_t os_vm_page_size;
 
 
 void
-os_init(void)
+os_init(char *argv[], char *envp[])
 {
     os_vm_page_size = OS_VM_DEFAULT_PAGESIZE;
 }

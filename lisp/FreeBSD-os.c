@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.31 2009/10/15 15:05:51 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.32 2010/02/01 15:16:08 rtoy Exp $
  *
  */
 
@@ -39,7 +39,7 @@
 vm_size_t os_vm_page_size;
 
 void
-os_init(void)
+os_init(char *argv[], char *envp[])
 {
     os_vm_page_size = getpagesize();
 }

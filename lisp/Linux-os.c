@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.46 2009/11/02 15:05:07 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.47 2010/02/01 15:16:09 rtoy Exp $
  *
  */
 
@@ -51,8 +51,88 @@ size_t os_vm_page_size;
 #include "gencgc.h"
 #endif
 
+
+#if defined(__i386) || defined(__x86_64)
+/* Prototype for personality(2). Done inline here since the header file
+ * for this isn't available on old versions of glibc. */
+int personality (unsigned long);
+
+#if !defined(ADDR_NO_RANDOMIZE)
+#define ADDR_NO_RANDOMIZE 0x40000
+#endif
+/* From personality(2) */
+#define CURRENT_PERSONALITY 0xffffffffUL
+#endif
+
 void
-os_init(void)
+check_personality(struct utsname *name, char *argv[], char *envp[])
+{
+    /* KLUDGE: Disable memory randomization on new Linux kernels
+     * by setting a personality flag and re-executing. (We need
+     * to re-execute, since the memory maps that can conflict with
+     * the CMUCL spaces have already been done at this point).
+     *
+     * Since randomization is currently implemented only on x86 kernels,
+     * don't do this trick on other platforms.
+     */
+#if defined(__i386) || defined(__x86_64)
+    int major_version, minor_version, patch_version;
+    char *p;
+    p=name->release;
+    major_version=atoi(p);
+    p=strchr(p,'.')+1;
+    minor_version=atoi(p);
+    p=strchr(p,'.')+1;
+    patch_version=atoi(p);
+
+    if ((major_version == 2
+         /* Some old kernels will apparently lose unsupported personality flags
+          * on exec() */
+         && ((minor_version == 6 && patch_version >= 11)
+             || (minor_version > 6)
+             /* This is what RHEL 3 reports */
+             || (minor_version == 4 && patch_version > 20)))
+        || major_version >= 3)
+    {
+        int pers = personality(CURRENT_PERSONALITY);
+        if (!(pers & ADDR_NO_RANDOMIZE)) {
+            int retval = personality(pers | ADDR_NO_RANDOMIZE);
+            /* Allegedly some Linux kernels (the reported case was
+             * "hardened Linux 2.6.7") won't set the new personality,
+             * but nor will they return -1 for an error. So as a
+             * workaround query the new personality...
+             */
+            int newpers = personality(CURRENT_PERSONALITY);
+            /* ... and don't re-execute if either the setting resulted
+             * in an error or if the value didn't change. Otherwise
+             * this might result in an infinite loop.
+             */
+            if (retval != -1 && newpers != pers) {
+                /* Use /proc/self/exe instead of trying to figure out
+                 * the executable path from PATH and argv[0], since
+                 * that's unreliable. We follow the symlink instead of
+                 * executing the file directly in order to prevent top
+                 * from displaying the name of the process as "exe". */
+                char runtime[PATH_MAX+1];
+                int i = readlink("/proc/self/exe", runtime, PATH_MAX);
+                if (i != -1) {
+                    runtime[i] = '\0';
+                    execve(runtime, argv, envp);
+                }
+            }
+            /* Either changing the personality or execve() failed. Either
+             * way we might as well continue, and hope that the random
+             * memory maps are ok this time around.
+             */
+            fprintf(stderr, "WARNING: Couldn't re-execute CMUCL with the proper personality flags"
+                            "(maybe /proc isn't mounted?). Trying to continue anyway.\n");
+        }
+    }
+#endif
+}
+
+void
+os_init(char *argv[], char *envp[])
 {
     struct utsname name;
 
@@ -66,6 +146,8 @@ os_init(void)
     }
 
     os_vm_page_size = getpagesize();
+
+    check_personality(&name, argv, envp);
 }
 
 #ifdef __i386

@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.23 2008/09/24 09:42:33 cshapiro Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.24 2010/02/01 15:16:09 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -71,7 +71,7 @@ os_init_bailout(char *arg)
 }
 
 void
-os_init(void)
+os_init(char *argv[], char *envp[])
 {
     zero_fd = open(ZEROFILE, O_RDONLY);
     if (zero_fd < 0)
