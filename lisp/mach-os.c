@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mach-os.c,v 1.7 2010/02/01 15:16:09 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mach-os.c,v 1.8 2010/02/01 16:04:43 rtoy Rel $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -38,7 +38,7 @@ task_self(void)
 #endif
 
 void
-os_init(char *argv[], char *envp[])
+os_init(const char *argv[], const char *envp[])
 {
     os_vm_page_size = vm_page_size;
 }
