@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.30 2009/07/16 13:02:16 rtoy Rel $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.31 2010/02/01 19:27:07 rtoy Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -145,15 +145,16 @@ extern void call_into_c(void);
 #define LINKAGE_DATA_ENTRY_SIZE 3
 #endif
 
-#ifdef UNICODE
-/*
- * FIXME:
- * Unicode hack to convert Lisp 16-bit string to 8-bit string by lopping off the high bits.
- */
 
 char*
 convert_lisp_string(char* c_string, void* lisp_string, int len)
 {
+#ifdef UNICODE    
+   /*
+    * FIXME: Unicode hack to convert Lisp 16-bit string to 8-bit string
+    * by lopping off the high bits.
+    */
+
     int k;
     unsigned short int* wide_string = (unsigned short int*) lisp_string;
 
@@ -161,10 +162,12 @@ convert_lisp_string(char* c_string, void* lisp_string, int len)
         c_string[k] = (wide_string[k]) & 0xff;
     }
     c_string[k] = 0;
-    
+#else
+    strcpy(c_string, lisp_string);
+#endif
+
     return c_string;
 }
-#endif
 
 void
 os_foreign_linkage_init(void)
@@ -184,7 +187,6 @@ os_foreign_linkage_init(void)
 	    = (struct vector *) PTR(data_vector->data[i]);
 	long type = fixnum_value(data_vector->data[i + 1]);
 	lispobj lib_list = data_vector->data[i + 2];
-#ifdef UNICODE
         /* FIXME:  1000 may not be long enough.  Add checks to make sure it's ok!!!!*/
         char c_symbol_name[1000];
 	/*
@@ -193,9 +195,6 @@ os_foreign_linkage_init(void)
 	 */
 
         convert_lisp_string(c_symbol_name, symbol_name->data, (symbol_name->length >> 2));
-#else
-#define c_symbol_name ((char*) symbol_name->data)
-#endif                            
 	if (i == 0) {
 #if defined(sparc)
 	    if (type != LINKAGE_CODE_TYPE || strcmp(c_symbol_name, "call_into_c")) {
@@ -261,13 +260,10 @@ os_resolve_data_linkage(void)
 	    = (struct vector *) PTR(data_vector->data[i]);
 	long type = fixnum_value(data_vector->data[i + 1]);
 	lispobj lib_list = data_vector->data[i + 2];
-#ifdef UNICODE
         char c_symbol_name[1000];
 
         convert_lisp_string(c_symbol_name, symbol_name->data, (symbol_name->length >> 2));
-#else
-#define c_symbol_name ((char*) symbol_name->data)
-#endif
+
 	if (type == LINKAGE_DATA_TYPE && lib_list != NIL) {
 	    void *target_addr = os_dlsym(c_symbol_name, lib_list);
 
@@ -299,9 +295,7 @@ os_link_one_symbol(long entry)
     long type;
     void *target_addr;
     long table_index = entry * LINKAGE_DATA_ENTRY_SIZE;
-#ifdef UNICODE
     char c_symbol_name[1000];
-#endif    
 
     linkage_data = (struct array *) PTR(linkage_data_obj);
     table_size = fixnum_value(linkage_data->fill_pointer);
@@ -312,11 +306,7 @@ os_link_one_symbol(long entry)
     symbol_name = (struct vector *) PTR(data_vector->data[table_index]);
     type = fixnum_value(data_vector->data[table_index + 1]);
 
-#ifdef UNICODE
     convert_lisp_string(c_symbol_name, symbol_name->data, (symbol_name->length >> 2));
-#else
-#define c_symbol_name ((char*) symbol_name->data)
-#endif
     
     target_addr = os_dlsym(c_symbol_name,
 			   data_vector->data[table_index + 2]);
