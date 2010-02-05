@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.44 2010/02/05 18:10:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.45 2010/02/05 23:57:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1295,11 +1295,13 @@ rounding modes & do ieee round-to-integer.
 ;; %UNARY-FTRUNCATE/SINGLE-FLOAT
 ;;
 ;; Basically the same as ftruncate, but specialized to handle only
-;; single-floats and to only return the first value.  We diddle the
-;; bits directly to truncate the number to reduce consing.
+;; single-floats and to only return the first value. 
 (defun %unary-ftruncate/single-float (x)
   (declare (single-float x)
 	   (optimize (speed 3) (safety 0)))
+  ;; We diddle the bits directly to truncate the number to reduce
+  ;; consing.
+  #+x87
   (let* ((bits (kernel:single-float-bits x))
 	 (exp (ldb vm:single-float-exponent-byte bits))
 	 (biased (truly-the kernel:single-float-exponent
@@ -1340,7 +1342,16 @@ rounding modes & do ieee round-to-integer.
 	   ;; represent the fraction part.
 	   (let ((frac-bits (- (float-digits x) biased)))
 	     (setf bits (logandc2 bits (- (ash 1 frac-bits) 1)))
-	     (kernel:make-single-float bits))))))
+	     (kernel:make-single-float bits)))))
+  ;; We have a fast fround, so use that and fix up the result to
+  ;; truncate.
+  #-x87
+  (let ((r (%unary-fround/single-float x)))
+    (if (> (abs r) (abs x))
+	(if (> r 0)
+	    (- r 1)
+	    (+ r 1))
+	r)))
 
 ;; %UNARY-FTRUNCATE/DOUBLE-FLOAT
 ;;
@@ -1349,6 +1360,7 @@ rounding modes & do ieee round-to-integer.
 (defun %unary-ftruncate/double-float (x)
   (declare (double-float x)
 	   (optimize (speed 3) (safety 0)))
+  #+x87
   (let* ((hi (kernel:double-float-high-bits x))
 	 (lo (kernel:double-float-low-bits x))
 	 (exp (ldb vm:double-float-exponent-byte hi))
@@ -1381,7 +1393,16 @@ rounding modes & do ieee round-to-integer.
 		   (t
 		    (setf lo 0)
 		    (setf hi (logandc2 hi (- (ash 1 (- frac-bits 32)) 1)))))
-	     (kernel:make-double-float hi lo))))))
+	     (kernel:make-double-float hi lo)))))
+  ;; We have a fast fround, so use that and fix up the result to
+  ;; truncate.
+  #-x87
+  (let ((r (%unary-fround/double-float x)))
+    (if (> (abs r) (abs x))
+	(if (> r 0)
+	    (- r 1)
+	    (+ r 1))
+	r)))
 
 #+double-double
 (defun %unary-ftruncate/double-double-float (x)
@@ -1431,9 +1452,12 @@ rounding modes & do ieee round-to-integer.
 (defun %unary-fround/double-float (x)
   (declare (double-float x))
   (let ((const (scale-float 1d0 53)))
-    (if (>= x 0)
-	(+ (- x const) const)
-	(- (+ x const) const))))
+    (cond ((> x 0)
+	   (+ (- x const) const))
+	  ((< x 0)
+	   (- (+ x const) const))
+	  (t
+	   x))))
 
 
 ;; %UNARY-FROUND/SINLGE-FLOAT
@@ -1442,9 +1466,12 @@ rounding modes & do ieee round-to-integer.
 (defun %unary-fround/single-float (x)
   (declare (single-float x))
   (let ((const (scale-float 1f0 24)))
-    (if (>= x 0)
-	(+ (- x const) const)
-	(- (+ x const) const))))
+    (cond ((> x 0)
+	   (+ (- x const) const))
+	  ((< x 0)
+	   (- (+ x const) const))
+	  (t
+	   x))))
 
 ;;; %UNARY-FROUND  --  Interface
 ;;;
