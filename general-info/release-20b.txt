@@ -36,6 +36,9 @@ New in this release:
       only arrays of character; 8, 16, and 32-bit integers (signed and
       unsigned); single and double floats; and complex single and
       double floats are supported.
+    - FROUND is much faster for single and double float numbers.  This
+      is not currently available for x87 (due to potential roundoff
+      errors), but is available everywhere else.
 
   * ANSI compliance fixes:
 
@@ -63,15 +66,25 @@ New in this release:
       external format.  This meant that these files could lose
       information if the default format could not represent the
       characters in the source file.
-    - Handling of source files in the debugger is better now.  The
-      source files are opened using the same format as used to compile
-      them.  Previously, the default format was used, which would be
-      wrong if the file is in a different format.
+    - Handling of source files in the debugger is better now for
+      unicode builds.  The source files are opened using the same
+      format as used to compile them.  Previously, the default format
+      was used, which would be wrong if the file is in a different
+      format.
+    - CMUCL no longer segfaults on Linux when running on a kernel
+      without COMPAT_BRK.  CMUCL will set the personality
+      appropriately and re-exec itself.
+    - GET-MACRO-CHARACTER would return the wrong second value because
+      *READTABLE* was always being used instead of the specified
+      readtable. 
 
   * Trac Tickets:
     #33: get-dispatch-macro-character doesn't signal errors in
       compiled code
       Fixed.
+    #22: sun4_solaris_sunc config uses gcc to build motif
+      This is fixed.  If Sun C is used to build lisp, it is also used
+      to build motifd.
 
   * Other changes:
     - :freebsd4 is no longer a *feature*
