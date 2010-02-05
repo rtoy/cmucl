@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.135 2009/11/02 15:05:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.136 2010/02/05 18:10:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -234,6 +234,32 @@
 		     '(,func x))))))
   (frob single-float %unary-ftruncate/single-float)
   (frob double-float %unary-ftruncate/double-float))
+
+;;; FROUND
+#-x87
+(progn
+(deftransform fround ((x &optional (y 1))
+		      ((or single-float double-float)
+		       &optional (or single-float double-float integer)))
+  '(let ((res (%unary-fround (/ x y))))
+    (values res (- x (* y res)))))
+
+(defknown %unary-fround (real) float
+  (movable foldable flushable))
+
+(defknown %unary-fround/single-float (single-float) single-float
+  (movable foldable flushable))
+
+(defknown %unary-fround/double-float (double-float) double-float
+  (movable foldable flushable))
+
+(deftransform %unary-fround ((x) (single-float))
+  '(%unary-fround/single-float x))
+
+(deftransform %unary-fround ((x) (double-float))
+  '(%unary-fround/double-float x))
+
+); not x87
 
 ;;; Random:
 ;;;

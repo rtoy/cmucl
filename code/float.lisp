@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.43 2008/12/22 23:24:28 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.44 2010/02/05 18:10:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,9 @@
 (in-package "KERNEL")
 (export '(%unary-truncate %unary-round %unary-ftruncate
 	  %unary-ftruncate/single-float %unary-ftruncate/double-float))
+
+#-x87
+(export '(%unary-fround/single-float %unary-fround/double-float))
 
 (in-package "LISP")
 (export '(least-positive-normalized-short-float
@@ -1412,8 +1415,55 @@ rounding modes & do ieee round-to-integer.
     #+double-double
     ((double-double-float)
      (%unary-ftruncate/double-double-float number))))
-	     
 
+
+;; %UNARY-FROUND not implemented for x87.  I think there are potential
+;; roundoff problems due to the 80-bit FPU registers.
+#-x87
+(progn
+(declaim (inline %unary-fround/single-float %unary-fround/double-float))
+
+;; %UNARY-FROUND/DOUBLE-FLOAT
+;;
+;; Basically the same as fround, but specialized to handle only
+;; double-floats and to return the first value.  This is the algorithm
+;; given by Anton Ertl in comp.arch.arithmetic, Oct 26, 2002.
+(defun %unary-fround/double-float (x)
+  (declare (double-float x))
+  (let ((const (scale-float 1d0 53)))
+    (if (>= x 0)
+	(+ (- x const) const)
+	(- (+ x const) const))))
+
+
+;; %UNARY-FROUND/SINLGE-FLOAT
+;;
+;; Same as %UNARY-FROUND/DOUBLE-FLOAT, except specialized for single-float.
+(defun %unary-fround/single-float (x)
+  (declare (single-float x))
+  (let ((const (scale-float 1f0 24)))
+    (if (>= x 0)
+	(+ (- x const) const)
+	(- (+ x const) const))))
+
+;;; %UNARY-FROUND  --  Interface
+;;;
+;;; This function is called when we are doing an fround without any
+;;; funky divisor.  Note that we do *not* return the second value of
+;;; round, so it must be computed by the caller if needed.
+;;;
+(defun %unary-fround (number)
+  (number-dispatch ((number real))
+    ((integer)
+     (float number))
+    ((ratio)
+     (float (round (numerator number) (denominator number))))
+    ((single-float)
+     (%unary-fround/single-float number))
+    ((double-float)
+     (%unary-fround/double-float number))))
+
+) ; not x87
 
 (defun rational (x)
   "RATIONAL produces a rational number for any real numeric argument.  This is
