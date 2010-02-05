@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.63 2009/06/11 16:03:59 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.64 2010/02/05 18:14:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -543,9 +543,9 @@
   (let ((rt (or rt std-lisp-readtable)))
     ;; Check macro syntax, return associated function if it's there.
     ;; Returns a value for all constituents.
-    (cond ((constituentp char)
+    (cond ((constituentp char rt)
 	   (values (get-cmt-entry char rt) t))
-	  ((terminating-macrop char)
+	  ((terminating-macrop char rt)
 	   (values (get-cmt-entry char rt) nil))
 	  (t nil))))
 
