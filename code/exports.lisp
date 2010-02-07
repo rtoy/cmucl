@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.292 2009/12/17 13:52:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.293 2010/02/07 04:28:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2050,7 +2050,9 @@
 	   "%SET-STACK-REF" "%SIN" "%SET-SYMBOL-HASH"
 	   "%SINGLE-FLOAT" "%SINH" "%SP-SET-DEFINITION" "%SP-SET-PLIST"
 	   "%SQRT" "%SXHASH-SIMPLE-STRING" "%SXHASH-SIMPLE-SUBSTRING" "%TAN"
-	   "%TANH" "%UNARY-ROUND" "%UNARY-TRUNCATE" "%UNARY-FTRUNCATE"
+	   "%TANH" "%UNARY-ROUND"
+	   "%UNARY-FROUND/SINGLE-FLOAT" "%UNARY-FROUND/DOUBLE-FLOAT"
+	   "%UNARY-TRUNCATE" "%UNARY-FTRUNCATE"
 	   "%UNARY-FTRUNCATE/SINGLE-FLOAT" "%UNARY-FTRUNCATE/DOUBLE-FLOAT"
 	   "%WITH-ARRAY-DATA"
 	   "*CURRENT-LEVEL*" "*EMPTY-TYPE*" "*EVAL-STACK-TOP*" "*NULL-TYPE*"
