@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.38 2009/09/09 15:51:27 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.38.8.1 2010/02/08 16:41:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;; Scott Fahlman, Dan Aronson, and Steve Handerson did stuff here, too.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export '(documentation *features* variable room
 	  lisp-implementation-type lisp-implementation-version machine-type
 	  machine-version machine-instance software-type software-version
@@ -95,14 +97,32 @@
 (defun (setf documentation) (string name doc-type)
   #-no-docstrings
   (case doc-type
-    (variable (setf (info variable documentation name) string))
-    (function (setf (info function documentation name) string))
+    (variable
+     (when intl::*default-domain*
+       (%primitive print "Set variable text domain")
+       (%primitive print (symbol-name name))
+       (%primitive print intl::*default-domain*))
+     (setf (info variable textdomain name) intl::*default-domain*)
+     (setf (info variable documentation name) string))
+    (function
+     #+nil
+     (when intl::*default-domain*
+       (%primitive print "Set function text domain")
+       (%primitive print (symbol-name name))
+       (%primitive print intl::*default-domain*))
+     (setf (info function textdomain name) intl::*default-domain*)
+     (setf (info function documentation name) string))
     (structure
      (unless (eq (info type kind name) :instance)
        (error "~S is not the name of a structure type." name))
+     (setf (info type textdomain name) intl::*default-domain*)
      (setf (info type documentation name) string))
-    (type (setf (info type documentation name) string))
-    (setf (setf (info setf documentation name) string))
+    (type
+     (setf (info type textdomain name) intl::*default-domain*)
+     (setf (info type documentation name) string))
+    (setf
+     (setf (info setf textdomain name) intl::*default-domain*)
+     (setf (info setf documentation name) string))
     (t
      (let ((pair (assoc doc-type (info random-documentation stuff name))))
        (if pair
