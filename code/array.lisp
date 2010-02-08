@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.51 2010/01/28 15:02:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.51.2.1 2010/02/08 17:15:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,8 @@
 ;;; Worked over for the MIPS port by William Lott.
 ;;;
 (in-package "LISP")
+
+(intl:textdomain "cmucl")
 
 (export '(array-rank-limit array-dimension-limit array-total-size-limit
 	  make-array vector aref array-element-type array-rank

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fsc.lisp,v 1.13 2003/05/04 13:11:21 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fsc.lisp,v 1.13.48.1 2010/02/08 17:15:53 rtoy Exp $")
 ;;;
 ;;; This file contains the definition of the FUNCALLABLE-STANDARD-CLASS
 ;;; metaclass.  Much of the implementation of this metaclass is actually
@@ -42,6 +42,7 @@
 ;;; 
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 (defmethod wrapper-fetcher ((class funcallable-standard-class))
   'fsc-instance-wrapper)

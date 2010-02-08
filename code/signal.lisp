@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.36 2004/07/25 19:32:38 pmai Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.36.38.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,8 @@
 
 (in-package "UNIX")
 (use-package "KERNEL")
+(intl:textdomain "cmucl")
+
 (export '(unix-signal-name unix-signal-description unix-signal-number
 	  sigmask unix-sigblock unix-sigpause unix-sigsetmask unix-kill
 	  unix-killpg))

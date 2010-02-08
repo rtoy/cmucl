@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.77 2009/08/09 03:54:42 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.77.10.1 2010/02/08 17:15:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,8 @@
 ;;; Defpackage and do-mumble-symbols macros re-written by William Lott.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export '(package packagep *package* make-package in-package find-package
 	  package-name package-nicknames rename-package delete-package
 	  package-use-list package-used-by-list package-shadowing-symbols

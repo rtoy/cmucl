@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.43 2009/06/11 16:03:59 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.43.12.1 2010/02/08 17:15:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,7 @@
 ;;; Extracted from srctran and extended by William Lott.
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 
 ;;;; Derive-Type Optimizers

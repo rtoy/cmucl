@@ -26,13 +26,14 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.24 2003/05/25 14:33:49 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.24.48.1 2010/02/08 17:15:53 rtoy Exp $")
 
 ;;;
 ;;; This file defines the initialization and related protocols.
 ;;; 
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 (defmethod make-instance ((class symbol) &rest initargs &key)
   (apply #'make-instance (find-class class) initargs))

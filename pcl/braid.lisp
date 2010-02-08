@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.51 2008/05/24 14:41:39 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.51.18.1 2010/02/08 17:15:52 rtoy Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -39,6 +39,7 @@
 ;;; 
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 (defun allocate-standard-instance (wrapper &optional (slots-init nil slots-init-p))
   (declare #.*optImize-speed*)

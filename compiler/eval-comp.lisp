@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.36 2003/10/26 17:31:25 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.36.42.1 2010/02/08 17:15:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;;
 
 (in-package "C")
+(intl:textdomain "cmucl")
 
 (declaim (special *constants* *free-variables* *compile-component*
 		  *code-vector* *next-location* *result-fixups*

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.28 2009/06/11 16:03:59 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.28.12.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,7 @@
 ;;;
 
 (in-package "EXTENSIONS")
+(intl:textdomain "cmucl")
 
 (export '(run-program process-status process-exit-code process-core-dumped
 	  process-wait process-kill process-input process-output process-plist

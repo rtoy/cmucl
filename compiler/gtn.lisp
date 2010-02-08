@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/gtn.lisp,v 1.17 1997/09/22 19:17:44 dtc Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/gtn.lisp,v 1.17.54.1 2010/02/08 17:15:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 
 ;;; GTN-Analyze  --  Interface

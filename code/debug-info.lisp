@@ -5,13 +5,15 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.29 2010/01/22 13:36:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.29.2.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    This file contains structures used for recording debugger information.
 ;;;
 (in-package "C")
+
+(intl:textdomain "cmucl")
 
 (export '(make-sc-offset sc-offset-scn sc-offset-offset
 	  read-var-integer write-var-integer

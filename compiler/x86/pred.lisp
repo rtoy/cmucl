@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/pred.lisp,v 1.4 2003/08/03 11:27:45 gerd Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/pred.lisp,v 1.4.48.1 2010/02/08 17:15:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,7 @@
 ;;; 
 
 (in-package :x86)
+(intl:textdomain "cmucl")
 
 
 ;;;; The Branch VOP.

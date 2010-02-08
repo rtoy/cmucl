@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.88 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.88.12.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,8 @@
 (in-package "CONDITIONS")
 (use-package "EXTENSIONS")
 (use-package "KERNEL")
+
+(intl:textdomain "cmucl")
 
 (in-package "KERNEL")
 (export '(layout-invalid condition-function-name simple-control-error

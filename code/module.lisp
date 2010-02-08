@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.11 2009/08/18 13:12:41 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.11.10.1 2010/02/08 17:15:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -17,6 +17,7 @@
 ;;; addition of modules to the X3J13 ANSI standard.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
 
 (export '(*modules* provide require))
 

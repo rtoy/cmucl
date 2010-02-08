@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.148.2.1 2010/02/08 02:53:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.148.2.2 2010/02/08 17:15:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;;
 (in-package "C")
 (in-package "EXTENSIONS")
+(intl:textdomain "cmucl")
+
 (export '(*compile-progress* compile-from-stream *block-compile-default*
 			     start-block end-block
 			     *byte-compile-default*

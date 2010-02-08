@@ -25,13 +25,14 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.35 2005/06/20 13:03:21 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.35.34.1 2010/02/08 17:15:52 rtoy Exp $")
 
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
 ;;;
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;;
 ;;; The caching algorithm implemented:

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.8 2003/08/03 11:27:45 gerd Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.8.48.1 2010/02/08 17:15:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,7 @@
 ;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;;
 (in-package :x86)
+(intl:textdomain "cmucl")
 
 (define-move-function (load-immediate 1) (vop x y)
   ((immediate)

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.22 2003/05/07 17:14:24 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.22.48.1 2010/02/08 17:15:53 rtoy Exp $")
 ;;;
 
   ;;   
@@ -70,6 +70,7 @@ explicitly marked saying who wrote it.
 |#
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;;
 ;;; The first part of the file contains the implementation dependent code to

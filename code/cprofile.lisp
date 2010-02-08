@@ -5,13 +5,15 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/cprofile.lisp,v 1.2 1994/10/31 04:11:27 ram Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/cprofile.lisp,v 1.2.56.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file contains run-time support for collecting dynamic profiling
 ;;; information from code instrumented by the compiler.
 ;;; 
+(intl:textdomain "cmucl")
+
 (defpackage "CPROFILE"
   (:use "C" "DI" "KERNEL" "EXTENSIONS" "LISP" "SYSTEM"))
 (in-package "C")

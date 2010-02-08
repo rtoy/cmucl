@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.11 2008/11/12 15:04:23 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.11.14.1 2010/02/08 17:15:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,7 @@
 ;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998,1999.
 ;;;
 (in-package :x86)
+(intl:textdomain "cmucl")
 
 
 ;;;; Moves and coercions:

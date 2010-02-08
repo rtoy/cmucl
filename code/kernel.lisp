@@ -5,12 +5,14 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.16 2006/06/30 18:41:22 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.16.26.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    
 (in-package "KERNEL")
+
+(intl:textdomain "cmucl")
 
 (export '(allocate-vector make-array-header function-subtype))
 

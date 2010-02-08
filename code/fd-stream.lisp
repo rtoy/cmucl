@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.97 2010/01/25 13:58:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.97.2.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,8 @@
 
 
 (in-package "SYSTEM")
+
+(intl:textdomain "cmucl")
 
 (export '(fd-stream fd-stream-p fd-stream-fd make-fd-stream
           io-timeout beep *beep-function* output-raw-bytes

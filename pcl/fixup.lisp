@@ -25,6 +25,7 @@
 ;;; *************************************************************************
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 #-loadable-pcl
 (progn

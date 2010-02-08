@@ -6,7 +6,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/env-access.lisp,v 1.5 2008/07/21 21:04:17 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/env-access.lisp,v 1.5.18.1 2010/02/08 17:15:47 rtoy Exp $")
 
 ;;;
 ;;; **********************************************************************
@@ -16,6 +16,8 @@
 ;;;
 
 (in-package "EXT")
+
+(intl:textdomain "cmucl")
 
 (export '(variable-information
 	  function-information

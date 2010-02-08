@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.22 2009/10/18 14:21:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.22.4.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,6 +13,7 @@
 ;;; for bootstrapping reasons.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
 
 ;;;; The stream structure:
 

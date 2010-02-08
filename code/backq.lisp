@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.14 2008/03/03 15:54:12 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.14.22.1 2010/02/08 17:15:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,6 +13,8 @@
 ;;;   		  (unparsing by Miles Bader)
 ;;;
 (in-package "LISP")
+
+(intl:textdomain "cmucl")
 
 
 ;;; The flags passed back by BACKQUOTIFY can be interpreted as follows:

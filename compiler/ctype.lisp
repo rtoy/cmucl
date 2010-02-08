@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.35 2003/02/03 15:24:44 toy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.35.52.1 2010/02/08 17:15:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 ;;; These are the functions that are to be called when a problem is detected.
 ;;; They are passed format arguments.  If null, we don't do anything.  The

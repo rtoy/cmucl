@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.9 2003/08/03 11:27:45 gerd Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.9.48.1 2010/02/08 17:15:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,6 +21,7 @@
 ;;; 
 
 (in-package :x86)
+(intl:textdomain "cmucl")
 
 ;;; Cell-Ref and Cell-Set are used to define VOPs like CAR, where the offset to
 ;;; be read or written is a property of the VOP used.  Cell-Setf is similar to

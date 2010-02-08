@@ -5,13 +5,14 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.21 2009/11/02 15:05:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.21.2.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file holds the support for System Area Pointers (saps).
 ;;;
 (in-package "SYSTEM")
+(intl:textdomain "cmucl")
 
 (export '(system-area-pointer sap-ref-8 sap-ref-16 sap-ref-32 sap-ref-sap
 	  signed-sap-ref-8 signed-sap-ref-16 signed-sap-ref-32

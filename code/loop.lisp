@@ -49,11 +49,12 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.31 2009/08/09 03:54:42 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.31.10.1 2010/02/08 17:15:48 rtoy Exp $")
 
 ;;;; LOOP Iteration Macro
 
 (in-package :ansi-loop)
+(intl:textdomain "cmucl")
 
 (provide :loop)
 

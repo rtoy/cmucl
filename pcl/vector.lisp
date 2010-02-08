@@ -26,9 +26,10 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.29 2003/05/07 17:14:24 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.29.48.1 2010/02/08 17:15:53 rtoy Exp $")
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;;
 ;;; Return the index of the slot named SLOT-NAME in the slot vector of

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.173 2006/05/23 20:35:01 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.173.32.1 2010/02/08 17:15:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 (export '(*compile-time-define-macros* *converting-for-interpreter*
 	  *suppress-values-declaration*))

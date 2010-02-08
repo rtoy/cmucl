@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.10 2009/10/28 22:48:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.10.4.1 2010/02/08 17:15:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;;
 
 (in-package :x86)
+(intl:textdomain "cmucl")
 
 ;;; Popping the FP stack.
 ;;;

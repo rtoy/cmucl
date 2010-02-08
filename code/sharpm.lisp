@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.27 2007/06/22 21:45:25 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.27.24.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;; This uses the special std-lisp-readtable, which is internal to READER.LISP
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export '(*read-eval*))
 
 

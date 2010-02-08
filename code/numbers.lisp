@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.67 2009/07/10 14:22:24 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.67.10.1 2010/02/08 17:15:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,7 @@
 ;;; Long-float support by Douglas Crosher, 1998.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
 
 (export '(zerop plusp minusp oddp evenp = /= < > <= >= max min + - * / 1+ 1- 
 	  conjugate abs phase signum float floor ceiling truncate cis round mod

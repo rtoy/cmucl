@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.26 2005/05/11 12:15:05 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.26.36.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,8 @@
 ;;;
 
 (in-package "EXTENSIONS")
+
+(intl:textdomain "cmucl")
 
 (export '(encapsulate unencapsulate encapsulated-p
 	  basic-definition argument-list *setf-fdefinition-hook*

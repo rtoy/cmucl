@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.20 2008/11/12 15:04:23 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.20.14.1 2010/02/08 17:15:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,6 +23,7 @@
 (in-package :x86)
 (use-package :alien)
 (use-package :alien-internals)
+(intl:textdomain "cmucl")
 
 ;; The move-argument vop is going to store args on the stack for
 ;; call-out. These tn's will be used for that. move-arg is normally

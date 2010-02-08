@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.18 2007/10/01 13:51:33 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.18.24.1 2010/02/08 17:15:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -17,6 +17,7 @@
 ;;; **********************************************************************
 
 (in-package "EXTENSIONS")
+(intl:textdomain "cmucl")
 
 (export 'parse-time)
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/x87-array.lisp,v 1.2 2008/11/12 15:04:23 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/x87-array.lisp,v 1.2.18.1 2010/02/08 17:15:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,7 @@
 ;;; 
 
 (in-package :x86)
+(intl:textdomain "cmucl")
 
 (define-vop (data-vector-ref/simple-array-single-float)
   (:note "inline array access")

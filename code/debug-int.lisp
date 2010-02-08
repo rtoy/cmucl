@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.137 2009/10/10 03:00:03 agoncharov Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.137.4.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,7 @@
 
 (in-package "DEBUG-INTERNALS")
 
+(intl:textdomain "cmucl")
 
 ;;; The compiler's debug-source structure is almost exactly what we want, so
 ;;; just get these symbols and export them.

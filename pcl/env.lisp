@@ -26,12 +26,13 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.26 2003/06/18 09:23:09 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.26.48.1 2010/02/08 17:15:53 rtoy Exp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;;
 ;;;

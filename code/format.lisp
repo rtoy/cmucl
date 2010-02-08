@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.93 2009/08/09 03:54:41 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.93.10.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,8 @@
 (in-package "FORMAT")
 (use-package "EXT")
 (use-package "KERNEL")
+
+(intl:textdomain "cmucl")
 
 (in-package "LISP")
 (export '(format formatter))

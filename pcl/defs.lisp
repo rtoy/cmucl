@@ -25,6 +25,7 @@
 ;;; *************************************************************************
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 #-(or loadable-pcl bootable-pcl)
 (eval-when (:compile-toplevel :load-toplevel :execute)

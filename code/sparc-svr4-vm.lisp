@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.13 2009/06/15 16:56:08 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.13.12.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,8 @@
 (in-package "SPARC")
 (use-package "SYSTEM")
 (use-package "UNIX")
+
+(intl:textdomain "cmucl")
 
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register

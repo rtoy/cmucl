@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.10 2002/11/19 14:41:14 toy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.10.52.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,7 @@
 ;;; *******************************************************************
 
 (in-package "LISP")
+(intl:textdomain "cmucl")
 
 (export '(sort stable-sort merge))
 

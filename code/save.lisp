@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.65 2009/10/14 03:42:21 agoncharov Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.65.4.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,8 @@
 (in-package "LISP")
 
 (in-package "EXTENSIONS")
+(intl:textdomain "cmucl")
+
 (export '(print-herald *herald-items* save-lisp *before-save-initializations*
 	  *after-save-initializations* *environment-list* *editor-lisp-p*))
 (in-package "LISP")

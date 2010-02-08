@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.29 2003/06/18 09:23:09 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.29.48.1 2010/02/08 17:15:53 rtoy Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -36,6 +36,7 @@
 ;;;
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 (declaim (declaration class variable-rebinding method-name
 		      method-lambda-list))

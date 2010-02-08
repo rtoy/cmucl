@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.113 2009/06/18 17:34:58 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.113.10.1 2010/02/08 17:15:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 ;;; Modified by Bill Chiles to adhere to the wall.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export '(defvar defparameter defconstant when unless setf
 	  defsetf psetf shiftf rotatef push pushnew pop
 	  incf decf remf case typecase with-open-file

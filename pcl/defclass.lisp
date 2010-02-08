@@ -25,10 +25,12 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.30 2004/04/06 20:44:03 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.30.40.1 2010/02/08 17:15:52 rtoy Exp $")
 ;;;
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
+
 
 ;;;
 ;;; MAKE-TOP-LEVEL-FORM is used by all PCL macros that appear `at top-level'.

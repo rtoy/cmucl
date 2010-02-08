@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.81 2009/03/20 14:54:28 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.81.12.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,8 @@
 ;;;
 (in-package "KERNEL")
 (use-package "ALIEN-INTERNALS")
+
+(intl:textdomain "cmucl")
 
 (export '(function-type-nargs code-component code-component-p lra lra-p))
 (export '(make-alien-type-type alien-type-type

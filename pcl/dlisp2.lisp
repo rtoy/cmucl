@@ -25,10 +25,11 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp2.lisp,v 1.12 2003/05/04 13:11:21 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp2.lisp,v 1.12.48.1 2010/02/08 17:15:53 rtoy Exp $")
 ;;;
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 (defun emit-reader/writer-function (reader/writer 1-or-2-class class-slot-p)
   (values

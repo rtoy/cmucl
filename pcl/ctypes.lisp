@@ -25,6 +25,7 @@
 ;;; *************************************************************************
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;;
 ;;; The built-in method combination types as taken from page 1-31 of 88-002R.

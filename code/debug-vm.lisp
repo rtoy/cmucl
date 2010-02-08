@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-vm.lisp,v 1.2 1994/10/31 04:11:27 ram Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-vm.lisp,v 1.2.56.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 ;;;
 
 (in-package "VM")
+
+(intl:textdomain "cmucl")
 
 (export '(make-bogus-lra))
 

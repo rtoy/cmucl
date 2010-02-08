@@ -26,9 +26,10 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.48 2009/06/19 12:38:02 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.48.10.1 2010/02/08 17:15:53 rtoy Exp $")
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;;; *********************
 ;;;; PRINT-OBJECT  *******

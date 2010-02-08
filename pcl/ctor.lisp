@@ -46,9 +46,10 @@
 ;;; is called.
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.18 2007/05/02 13:33:46 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.18.24.1 2010/02/08 17:15:52 rtoy Exp $")
 
 (in-package "PCL")
+(intl:textdomain "cmucl")
 
 ;;; ******************
 ;;; Utilities  *******

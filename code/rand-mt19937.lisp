@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.20 2009/01/19 22:38:49 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.20.14.1 2010/02/08 17:15:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,8 @@
 ;;; 1997, to appear.
 
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export '(random-state random-state-p random *random-state*
 	  make-random-state))
 

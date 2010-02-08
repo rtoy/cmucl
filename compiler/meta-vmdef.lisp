@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.9 2003/04/11 15:28:11 emarsden Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.9.48.1 2010/02/08 17:15:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,8 @@
 ;;; Seperated from vmdef.lisp by William Lott
 ;;;
 (in-package :c)
+
+(intl:textdomain "cmucl")
 
 (export '(define-storage-base define-storage-class define-move-function
 	  define-move-function define-move-vop 

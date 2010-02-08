@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gengc.lisp,v 1.5 1994/10/31 04:11:27 ram Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gengc.lisp,v 1.5.56.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;; 
 
 (in-package "EXTENSIONS")
+(intl:textdomain "cmucl")
+
 (export '(*before-gc-hooks* *after-gc-hooks* gc purify
 	  *gc-verbose* *gc-notify-before* *gc-notify-after*))
 

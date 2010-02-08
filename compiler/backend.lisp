@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.32 1998/03/04 14:53:22 dtc Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.32.54.1 2010/02/08 17:15:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; Written by William Lott.
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 (export '(*backend* *target-backend* *native-backend* backend
 	  backend-name backend-version backend-fasl-file-type

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.31 2009/10/18 14:21:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.31.4.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,8 @@
 (in-package "LISP")
 
 (in-package "SYSTEM")
+(intl:textdomain "cmucl")
+
 (export '(without-gcing without-hemlock
 	  register-lisp-feature register-lisp-runtime-feature))
 

@@ -4,17 +4,18 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.6 2009/09/11 16:22:35 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.6.8.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Unicode Database access
 
 (in-package "LISP")
+(intl:textdomain "cmucl")
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.6 $")
+(defvar *unidata-version* "$Revision: 1.6.8.1 $")
 
 (defstruct unidata
   range

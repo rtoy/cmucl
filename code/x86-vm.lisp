@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.32 2010/01/23 15:24:16 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.32.2.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,6 +23,8 @@
 (use-package "C-CALL")
 (use-package "UNIX")
 (use-package "KERNEL")
+
+(intl:textdomain "cmucl")
 
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register

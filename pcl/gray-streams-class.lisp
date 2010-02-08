@@ -5,7 +5,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams-class.lisp,v 1.5 2003/05/04 13:11:21 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams-class.lisp,v 1.5.48.1 2010/02/08 17:15:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,7 @@
 ;;;
 
 (in-package "LISP")
+(intl:textdomain "cmucl")
 
 
 

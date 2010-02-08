@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.9 2008/05/23 18:15:30 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.9.18.1 2010/02/08 17:15:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 (in-package "PPC")
 (use-package "SYSTEM")
 (use-package "UNIX")
+
+(intl:textdomain "cmucl")
 
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register

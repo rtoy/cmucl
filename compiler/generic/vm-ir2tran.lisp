@@ -5,13 +5,14 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-ir2tran.lisp,v 1.10 2003/08/25 20:50:59 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-ir2tran.lisp,v 1.10.44.1 2010/02/08 17:15:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file
 ;;; 
 (in-package :c)
+(intl:textdomain "cmucl")
 
 (export '(slot set-slot make-unbound-marker fixed-alloc var-alloc
 	  %set-function-self large-alloc))

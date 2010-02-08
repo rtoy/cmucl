@@ -5,11 +5,13 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.57 2009/10/10 03:00:03 agoncharov Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.57.4.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 (in-package "SYSTEM")
+
+(intl:textdomain "cmucl")
 
 (in-package "ALIEN")
 (export '(load-foreign))

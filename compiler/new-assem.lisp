@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.34 2004/08/02 16:04:42 cwang Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.34.38.1 2010/02/08 17:15:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 (in-package :new-assem)
 
 (in-package :c)
+(intl:textdomain "cmucl")
+
 (import '(branch flushable) :new-assem)
 (import '(sset-element sset make-sset do-elements
 	  sset-adjoin sset-delete sset-empty)

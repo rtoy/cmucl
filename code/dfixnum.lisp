@@ -5,7 +5,7 @@
 ;;; and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dfixnum.lisp,v 1.3 2003/02/12 18:35:29 cracauer Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dfixnum.lisp,v 1.3.52.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,6 +22,8 @@
 ;;; Author: Martin Cracauer
 ;;;
 ;;; Compatibility: Runs in any valid Common Lisp.
+
+(intl:textdomain "cmucl")
 
 (defpackage "DFIXNUM"
   (:export

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.18 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.18.12.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,6 +23,8 @@
 ;;; Font support flushed and type hackery rewritten by Rob MacLachlan.
 ;;;
 (in-package "LISP")
+
+(intl:textdomain "cmucl")
 
 (export '(char-code-limit standard-char-p graphic-char-p 
 	  alpha-char-p upper-case-p lower-case-p both-case-p digit-char-p

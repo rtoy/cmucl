@@ -5,13 +5,15 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.37 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.37.12.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Written by Blaine Burks.
 ;;;
 (in-package "LISP")
+
+(intl:textdomain "cmucl")
 
 
 ;;;; Some variable definitions.

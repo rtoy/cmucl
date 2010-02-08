@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.19 2006/01/17 22:32:08 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.19.32.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,8 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 
 (declaim (special *keyword-package* *lisp-package* *package* *query-io*
 		  *terminal-io* *error-output* *trace-output* *debug-io*

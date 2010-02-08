@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.6 2003/06/18 14:29:24 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.6.48.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.6 2003/06/18 14:29:24 gerd Rel $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.6.48.1 2010/02/08 17:15:49 rtoy Exp $
 ;;;
 ;;; Weak Pointer Support.
 ;;;
@@ -17,6 +17,8 @@
 ;;; 
 
 (in-package "EXTENSIONS")
+
+(intl:textdomain "cmucl")
 
 (export '(weak-pointer weak-pointer-p make-weak-pointer weak-pointer-value))
 

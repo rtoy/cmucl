@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.47 2007/08/17 14:02:12 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.47.24.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 ;;;
 
 (in-package "KERNEL")
+
+(intl:textdomain "cmucl")
 
 (export '(infinite-error-protect find-caller-name *maximum-error-depth*
 	  #+stack-checking red-zone-hit #+stack-checking yellow-zone-hit

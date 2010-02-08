@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.24 2005/12/06 15:06:28 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.24.32.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 
 ;;;
 (in-package "INSPECT")
+(intl:textdomain "cmucl")
 
 ;;; The Tty inspector views LISP objects as being composed of parts.  A list,
 ;;; for example, would be divided into it's members, and a instance into its

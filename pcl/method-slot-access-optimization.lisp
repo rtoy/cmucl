@@ -52,9 +52,10 @@
 ;;;
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.7 2005/06/14 12:34:59 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.7.34.1 2010/02/08 17:15:53 rtoy Exp $")
  
 (in-package "PCL")
+(intl:textdomain "cmucl")
 
 (defvar *optimize-inline-slot-access-p* t
   "Set to true to activate the inline slot access optimization.")

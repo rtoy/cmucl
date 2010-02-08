@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.21 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.21.12.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;;
 
 (in-package "EXTENSIONS")
+
+(intl:textdomain "cmucl")
 
 (export '(open-clx-display with-clx-event-handling enable-clx-event-handling
 	  disable-clx-event-handling object-set-event-handler

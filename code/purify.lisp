@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.19 1997/11/04 16:00:16 dtc Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.19.54.1 2010/02/08 17:15:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;; Rewritten in C by William Lott.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export 'ext::purify "EXT")
 
 (alien:def-alien-routine ("purify" %purify) c-call:void

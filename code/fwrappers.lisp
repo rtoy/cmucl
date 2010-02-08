@@ -27,9 +27,11 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fwrappers.lisp,v 1.5 2004/01/09 04:34:17 toy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fwrappers.lisp,v 1.5.42.1 2010/02/08 17:15:47 rtoy Exp $")
 
 (in-package :fwrappers)
+
+(intl:textdomain "cmucl")
 
 (defstruct (fwrapper
 	     (:alternate-metaclass kernel:funcallable-instance

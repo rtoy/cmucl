@@ -5,11 +5,14 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.45 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.45.12.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 (in-package "LISP")
+
+(intl:textdomain "cmucl")
+
 (export '(eval constantp quote proclaim
 	  eval-when progn prog1 prog2 let let*
 	  do do* dotimes dolist progv and or cond if the

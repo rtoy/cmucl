@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/osf1-os.lisp,v 1.6 2002/10/07 14:31:04 toy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/osf1-os.lisp,v 1.6.52.1 2010/02/08 17:15:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 ;;;
 (in-package "SYSTEM")
 (use-package "EXTENSIONS")
+(intl:textdomain "cmucl")
+
 (export '(get-system-info get-page-size os-init))
 
 (pushnew :osf1 *features*)

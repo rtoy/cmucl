@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-c-call.lisp,v 1.2 2008/11/12 15:04:23 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-c-call.lisp,v 1.2.18.1 2010/02/08 17:15:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,7 @@
 (in-package :x86)
 (use-package :alien)
 (use-package :alien-internals)
+(intl:textdomain "cmucl")
 
 ;; Note: other parts of the compiler depend on vops having exactly
 ;; these names.  Don't change them, unless you also change the other

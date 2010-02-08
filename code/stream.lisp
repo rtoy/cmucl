@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.89 2010/01/23 18:02:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.89.2.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,8 @@
 ;;; This file contains the OS-independent stream functions.
 ;;;
 (in-package "LISP")
+
+(intl:textdomain "cmucl")
 
 (export '(broadcast-stream make-broadcast-stream broadcast-stream-streams 
 	  synonym-stream make-synonym-stream synonym-stream-symbol

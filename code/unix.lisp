@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.127 2009/12/17 13:52:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.127.2.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 (use-package "C-CALL")
 (use-package "SYSTEM")
 (use-package "EXT")
+(intl:textdomain "cmucl")
 
 ;; Check the G_BROKEN_FILENAMES environment variable; if set the encoding
 ;; is locale-dependent...else use :utf-8 on Unicode Lisps.  On 8 bit Lisps

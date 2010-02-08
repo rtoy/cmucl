@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.55 2009/07/02 21:00:48 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.55.10.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,8 @@
 ;;; how the end argument is handled in other operations with transforms.
 
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export '(elt subseq copy-seq coerce
 	  length reverse nreverse make-sequence concatenate map some every
 	  notany notevery reduce fill replace remove remove-if remove-if-not

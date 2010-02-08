@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.37 2009/08/19 16:51:36 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.37.10.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,6 +13,8 @@
 ;;; 
 (in-package "VM")
 (use-package "SYSTEM")
+(intl:textdomain "cmucl")
+
 (export '(memory-usage count-no-ops descriptor-vs-non-descriptor-storage
 		       instance-usage find-holes print-allocated-objects
 		       code-breakdown uninterned-symbol-count

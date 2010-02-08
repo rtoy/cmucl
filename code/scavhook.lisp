@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/scavhook.lisp,v 1.4 1997/11/04 15:05:37 dtc Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/scavhook.lisp,v 1.4.54.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;;
 
 (in-package "EXT")
+(intl:textdomain "cmucl")
 
 (export '(scavenger-hook scavenger-hook-p make-scavenger-hook
 	  scavenger-hook-value scavenger-hook-function))

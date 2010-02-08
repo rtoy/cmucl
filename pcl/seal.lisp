@@ -27,9 +27,10 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/seal.lisp,v 1.3 2003/05/04 13:11:21 gerd Rel $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/seal.lisp,v 1.3.48.1 2010/02/08 17:15:53 rtoy Exp $")
 
 (in-package "PCL")
+(intl:textdomain "cmucl")
 
 (define-condition sealed-error (simple-program-error)
   ()

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.41 2009/06/25 13:29:06 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.41.10.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,8 @@
 ;;; open-coded by the compiler.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export '(get remprop symbol-plist getf get-properties symbol-name
 	  make-symbol copy-symbol gensym gentemp *gensym-counter*
 	  symbol-package keywordp makunbound symbol-value symbol-function

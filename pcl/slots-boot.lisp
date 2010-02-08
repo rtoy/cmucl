@@ -26,10 +26,11 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.26 2005/01/27 14:45:58 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.26.38.1 2010/02/08 17:15:53 rtoy Exp $")
 ;;;
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;;
 ;;; Called via LOAD-TIME-VALUE to make sure that the slot accessor

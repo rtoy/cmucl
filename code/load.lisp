@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.93.12.1 2010/02/08 02:52:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.93.12.2 2010/02/08 17:15:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,6 +13,8 @@
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export '(load *load-verbose* *load-print* *load-truename* *load-pathname*))
 
 (in-package "EXTENSIONS")

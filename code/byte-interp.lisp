@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.46 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.46.12.1 2010/02/08 17:15:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,9 @@
 (in-package "C")
 
 (in-package "KERNEL")
+
+(intl:textdomain "cmucl")
+
 (export '(byte-function byte-function-name initialize-byte-compiled-function
 			byte-closure byte-closure-function
 			byte-closure-data byte-function-or-closure

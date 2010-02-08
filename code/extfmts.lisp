@@ -5,13 +5,15 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.20 2009/10/18 14:21:23 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.20.4.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Implementation of external-formats
 
 (in-package "STREAM")
+
+(intl:textdomain "cmucl")
 
 (export '(string-to-octets octets-to-string *default-external-format*
 	  string-encode string-decode set-system-external-format

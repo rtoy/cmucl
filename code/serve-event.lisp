@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.28 2009/06/11 16:03:59 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.28.12.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 ;;; **********************************************************************
 
 (in-package "SYSTEM")
+
+(intl:textdomain "cmucl")
 
 (export '(with-fd-handler add-fd-handler remove-fd-handler invalidate-descriptor
 	  serve-event serve-all-events wait-until-fd-usable

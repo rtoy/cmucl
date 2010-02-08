@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.17 2009/01/06 01:11:23 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.17.14.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,9 @@
 ;;;
 
 (in-package "EXTENSIONS")
+
+(intl:textdomain "cmucl")
+
 (export '(*command-line-application-arguments* *command-line-words* *command-line-switches*
 	  *command-switch-demons* *command-line-utility-name*
 	  *command-line-strings* *batch-mode*

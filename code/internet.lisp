@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.57 2009/06/11 16:03:58 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.57.12.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,8 @@
 
 (use-package "ALIEN")
 (use-package "C-CALL")
+
+(intl:textdomain "cmucl")
 
 (export '(htonl ntohl htons ntohs lookup-host-entry host-entry
 	  host-entry-name host-entry-aliases host-entry-addr-list

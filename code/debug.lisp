@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.68 2010/01/22 13:36:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.68.2.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,8 @@
 ;;;
 
 (in-package "DEBUG")
+
+(intl:textdomain "cmucl")
 
 (export '(internal-debug *in-the-debugger* backtrace *flush-debug-errors*
 	  *debug-print-level* *debug-print-length* *debug-prompt*

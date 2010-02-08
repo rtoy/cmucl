@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.28 2003/10/05 11:41:22 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.28.42.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;;
 ;;; **********************************************************************
 (in-package "EXTENSIONS")
+
+(intl:textdomain "cmucl")
 
 (export '(letf* letf dovector deletef indenting-further file-comment
 		read-char-no-edit listen-skip-whitespace concat-pnames

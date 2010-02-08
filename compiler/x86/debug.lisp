@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/debug.lisp,v 1.4 1998/02/19 19:34:54 dtc Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/debug.lisp,v 1.4.54.1 2010/02/08 17:15:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,7 @@
 ;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;; 
 (in-package :x86)
+(intl:textdomain "cmucl")
 
 (define-vop (debug-cur-sp)
   (:translate current-sp)

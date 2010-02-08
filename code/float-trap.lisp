@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.35 2009/07/06 13:29:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.35.10.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 ;;; Author: Rob MacLachlan
 ;;; 
 (in-package "VM")
+(intl:textdomain "cmucl")
+
 (export '(current-float-trap floating-point-modes sigfpe-handler))
 (in-package "EXTENSIONS")
 (export '(set-floating-point-modes get-floating-point-modes

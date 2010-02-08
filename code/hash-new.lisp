@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.51 2009/08/09 03:54:42 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.51.10.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 ;;; Equalp hashing by William Newman, Cadabra Inc, and Douglas Crosher, 2000.
 ;;;
 (in-package :lisp)
+
+(intl:textdomain "cmucl")
 
 (export '(hash-table hash-table-p make-hash-table
 	  gethash remhash maphash clrhash

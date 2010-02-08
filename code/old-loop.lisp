@@ -5,13 +5,14 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.10 1994/10/31 04:11:27 ram Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.10.56.1 2010/02/08 17:15:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Loop facility, written by William Lott.
 ;;; 
 (in-package "LOOP")
+(intl:textdomain "cmucl")
 
 (in-package "LISP")
 (export '(loop loop-finish))

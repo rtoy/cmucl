@@ -25,9 +25,10 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fngen.lisp,v 1.13 2003/06/03 10:28:23 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fngen.lisp,v 1.13.48.1 2010/02/08 17:15:53 rtoy Exp $")
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;;
 ;;; GET-FUNCTION is the main user interface to this code. It is like

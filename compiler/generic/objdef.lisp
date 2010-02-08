@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.61 2008/02/06 19:45:26 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.61.24.1 2010/02/08 17:15:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; Written by William Lott.
 ;;;
 (in-package "VM")
+(intl:textdomain "cmucl")
 
 (export '(lowtag-bits lowtag-mask lowtag-limit type-bits type-mask
 	  target-most-positive-fixnum target-most-negative-fixnum

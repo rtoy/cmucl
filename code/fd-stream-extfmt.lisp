@@ -5,13 +5,15 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream-extfmt.lisp,v 1.6 2010/01/23 18:02:04 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream-extfmt.lisp,v 1.6.2.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Implementation of external-formats for fd-streams
 
 (in-package "LISP")
+
+(intl:textdomain "cmucl")
 
 ;; an fd-sout that works with external-formats; needs slots in fd-stream
 (defun fd-sout (stream thing start end)

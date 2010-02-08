@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.126 2009/10/02 13:34:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.126.4.1 2010/02/08 17:15:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;;
 
 (in-package "LISP")
+(intl:textdomain "cmucl")
 
 (export '(*print-readably* *print-escape* *print-pretty* *print-circle*
 	  *print-base* *print-radix* *print-case* *print-gensym* *print-level*

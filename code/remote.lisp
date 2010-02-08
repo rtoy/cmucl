@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.9 2003/07/20 13:49:43 emarsden Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.9.48.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;;
 
 (in-package "WIRE")
+(intl:textdomain "cmucl")
 
 (export '(remote remote-value remote-value-bind create-request-server
 	  destroy-request-server connect-to-remote-server))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.41 2005/05/26 19:09:15 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.41.34.1 2010/02/08 17:15:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,6 +30,8 @@
 ;;; will result in use of an erroneously small timing overhead factor.  In CMU
 ;;; CL, this cache is invalidated when a core is saved.
 ;;;
+
+(intl:textdomain "cmucl")
 
 (defpackage "PROFILE"
   (:use :common-lisp :ext :fwrappers)

@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.26 2003/05/04 13:11:20 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.26.48.1 2010/02/08 17:15:53 rtoy Exp $")
 ;;;
 ;;; A simple code walker, based IN PART on: (roll the credits)
 ;;;   Larry Masinter's Masterscope
@@ -56,6 +56,7 @@
 ;;; 
 
 (in-package :walker)
+(intl:textdomain "cmucl")
 
 ;;;
 ;;; The user entry points are walk-form and nested-walked-form.  In addition,

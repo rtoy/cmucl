@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.45 2010/02/05 23:57:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.45.2.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,8 @@
 ;;; Long-float support by Douglas Crosher, 1998.
 ;;; 
 (in-package "KERNEL")
+(intl:textdomain "cmucl")
+
 (export '(%unary-truncate %unary-round %unary-ftruncate
 	  %unary-ftruncate/single-float %unary-ftruncate/double-float))
 

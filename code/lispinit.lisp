@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.79.12.1 2010/02/08 02:52:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.79.12.2 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;;
 (in-package :lisp)
+(intl:textdomain "cmucl")
 
 (export '(most-positive-fixnum most-negative-fixnum sleep
 	  ++ +++ ** *** // ///))
@@ -339,6 +340,7 @@
   (setf *break-on-signals* nil)
   (setf unix::*filename-encoding* nil)
   #+gengc (setf conditions::*handler-clusters* nil)
+  (setq intl::*default-domain* "cmucl")
 
   ;; Many top-level forms call INFO, (SETF INFO).
   (print-and-call c::globaldb-init)
@@ -349,6 +351,7 @@
   ;; Some of the random top-level forms call Make-Array, which calls Subtypep
   (print-and-call typedef-init)
   (print-and-call class-init)
+
   (print-and-call type-init)
 
   (let ((funs (nreverse *lisp-initialization-functions*)))
@@ -406,14 +409,13 @@
 
   (set-floating-point-modes :traps '(:overflow :invalid :divide-by-zero))
 
-  (setq intl::*default-domain* nil)
-  
   ;; This is necessary because some of the initial top level forms might
   ;; have changed the compilation policy in strange ways.
   (print-and-call c::proclaim-init)
 
   (print-and-call kernel::class-finalize)
 
+  (setq intl::*default-domain* nil)
   (%primitive print "Done initializing.")
 
   #-gengc (setf *already-maybe-gcing* nil)

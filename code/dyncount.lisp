@@ -5,13 +5,15 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dyncount.lisp,v 1.7 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dyncount.lisp,v 1.7.12.1 2010/02/08 17:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Runtime support for dynamic VOP statistics collection.
 ;;; 
 (in-package "C")
+
+(intl:textdomain "cmucl")
 
 #|
 Put *count-adjustments* back into VOP costs, and verify them.

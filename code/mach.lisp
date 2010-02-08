@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach.lisp,v 1.5 2003/04/19 20:52:43 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach.lisp,v 1.5.48.1 2010/02/08 17:15:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,7 @@
 (use-package "ALIEN")
 (use-package "C-CALL")
 (use-package "SYSTEM")
+(intl:textdomain "cmucl")
 
 (export '(port mach-task_self mach-task_data mach-task_notify
 	  kern-success get-mach-error-msg

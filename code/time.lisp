@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.30 2009/08/09 03:54:42 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.30.10.1 2010/02/08 17:15:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 ;;;    Written by Rob MacLachlan.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export '(internal-time-units-per-second get-internal-real-time
 	  get-internal-run-time get-universal-time
 	  get-decoded-time encode-universal-time decode-universal-time))

@@ -26,10 +26,11 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.30 2009/01/06 18:17:50 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.30.14.1 2010/02/08 17:15:53 rtoy Exp $")
 ;;;
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;; ANSI CL condition for unbound slots.
 

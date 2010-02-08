@@ -5,13 +5,14 @@
 ;;; domain.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-compat.lisp,v 1.1 2003/06/06 16:27:05 toy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-compat.lisp,v 1.1.48.1 2010/02/08 17:15:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Gray streams compatibility functions for simple-streams
 
 (in-package "STREAM")
+(intl:textdomain "cmucl")
 
 (defvar *enable-gray-compat-warnings* nil)
 

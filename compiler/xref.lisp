@@ -3,7 +3,7 @@
 ;;; Author: Eric Marsden <emarsden@laas.fr>
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/xref.lisp,v 1.6 2005/06/13 14:29:26 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/xref.lisp,v 1.6.34.1 2010/02/08 17:15:51 rtoy Exp $")
 ;;
 ;; This code was written as part of the CMUCL project and has been
 ;; placed in the public domain.
@@ -43,6 +43,7 @@
 
 
 (in-package :xref)
+(intl:textdomain "cmucl")
 
 (export '(init-xref-database
           register-xref

@@ -25,9 +25,10 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.27 2005/05/16 13:12:59 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.27.36.1 2010/02/08 17:15:52 rtoy Exp $")
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;;
 ;;; DEFINE-METHOD-COMBINATION

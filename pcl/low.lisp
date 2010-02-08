@@ -26,13 +26,14 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.35 2007/10/08 15:35:37 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.35.24.1 2010/02/08 17:15:53 rtoy Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
 ;;; 
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defvar *optimize-speed* '(optimize (speed 3) (safety 0)

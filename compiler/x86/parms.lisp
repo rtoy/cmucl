@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.38 2009/11/25 00:03:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.38.2.1 2010/02/08 17:15:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,6 +23,7 @@
 
 (in-package :x86)
 (use-package :c)
+(intl:textdomain "cmucl")
 
 ;;; ### Note: we simultaneously use ``word'' to mean a 32 bit quantity and
 ;;; a 16 bit quantity depending on context.  This is because Intel insists

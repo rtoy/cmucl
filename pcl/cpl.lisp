@@ -26,10 +26,11 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cpl.lisp,v 1.13 2003/05/04 13:11:22 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cpl.lisp,v 1.13.48.1 2010/02/08 17:15:52 rtoy Exp $")
 ;;;
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;;
 ;;; compute-class-precedence-list

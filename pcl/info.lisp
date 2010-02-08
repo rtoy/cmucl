@@ -36,9 +36,10 @@
 ;;; GF is actually non-accessor GF.  Clean this up.
 ;;; (setf symbol-value) should be handled like (setf fdefinition)
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.11 2005/06/14 12:34:59 rtoy Rel $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.11.34.1 2010/02/08 17:15:53 rtoy Exp $")
 
 (in-package "PCL")
+(intl:textdomain "cmucl")
 
 (defstruct class-info
   ;;
