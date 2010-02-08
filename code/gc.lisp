@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.42.38.1 2010/02/08 17:15:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.42.38.2 2010/02/08 20:21:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -105,7 +105,7 @@
 	  ((= start (dynamic-1-space-start))
 	   1)
 	  (t
-	   (error "Oh no.  The current dynamic space is missing!")))))
+	   (error _"Oh no.  The current dynamic space is missing!")))))
 
 
 ;;;; Room.
@@ -114,18 +114,18 @@
   (flet ((megabytes (bytes)
 	   ;; Convert bytes to nearest megabyte
 	   (ceiling bytes (* 1024 1024))))
-    (format t "Dynamic Space Usage:    ~13:D bytes (out of ~4:D MB).~%"
+    (format t _"Dynamic Space Usage:    ~13:D bytes (out of ~4:D MB).~%"
 	    (dynamic-usage) (megabytes (dynamic-space-size)))
-    (format t "Read-Only Space Usage:  ~13:D bytes (out of ~4:D MB).~%"
+    (format t _"Read-Only Space Usage:  ~13:D bytes (out of ~4:D MB).~%"
 	    (read-only-space-usage) (megabytes (read-only-space-size)))
-    (format t "Static Space Usage:     ~13:D bytes (out of ~4:D MB).~%"
+    (format t _"Static Space Usage:     ~13:D bytes (out of ~4:D MB).~%"
 	    (static-space-usage) (megabytes (static-space-size)))
-    (format t "Control Stack Usage:    ~13:D bytes (out of ~4:D MB).~%"
+    (format t _"Control Stack Usage:    ~13:D bytes (out of ~4:D MB).~%"
 	    (control-stack-usage) (megabytes (control-stack-size)))
-    (format t "Binding Stack Usage:    ~13:D bytes (out of ~4:D MB).~%"
+    (format t _"Binding Stack Usage:    ~13:D bytes (out of ~4:D MB).~%"
 	    (binding-stack-usage) (megabytes (binding-stack-size)))
-    (format t "The current dynamic space is ~D.~%" (current-dynamic-space))
-    (format t "Garbage collection is currently ~:[enabled~;DISABLED~].~%"
+    (format t _"The current dynamic space is ~D.~%" (current-dynamic-space))
+    (format t _"Garbage collection is currently ~:[enabled~;DISABLED~].~%"
 	    *gc-inhibit*)))
 
 (defun room-intermediate-info ()
@@ -143,7 +143,7 @@
 
 
 (defun room (&optional (verbosity :default))
-  "Prints to *STANDARD-OUTPUT* information about the state of internal
+  _N"Prints to *STANDARD-OUTPUT* information about the state of internal
   storage and its management.  The optional argument controls the
   verbosity of ROOM.  If it is T, ROOM prints out a maximal amount of
   information.  If it is NIL, ROOM prints out a minimal amount of
@@ -160,7 +160,7 @@
 	(:default
 	 (room-intermediate-info))
 	(t
-	 (error "No way man!  The optional argument to ROOM must be T, NIL, ~
+	 (error _"No way man!  The optional argument to ROOM must be T, NIL, ~
 		 or :DEFAULT.~%What do you think you are doing?")))
       (room-minimal-info))
   (values))
@@ -185,7 +185,7 @@
   (cond ((null *last-bytes-in-use*)
 	 (pushnew
 	  #'(lambda ()
-	      (print "resetting GC counters")
+	      (print _"resetting GC counters")
 	      (force-output)
 	      (setf *last-bytes-in-use* nil)
 	      (setf *total-bytes-consed* (dfixnum:make-dfixnum)))
@@ -209,7 +209,7 @@
 
 #-(or cgc gencgc)
 (defun get-bytes-consed-dfixnum ()
-  "Returns the number of bytes consed since the first time this function
+  _N"Returns the number of bytes consed since the first time this function
   was called.  The first time it is called, it returns zero."
   (declare (optimize (speed 3) (safety 0)(inhibit-warnings 3)))
   (cond ((null *last-bytes-in-use*)
@@ -223,7 +223,7 @@
   *total-bytes-consed*)
 
 (defun get-bytes-consed ()
-  "Returns the number of bytes consed since the first time this function
+  _N"Returns the number of bytes consed since the first time this function
   was called.  The first time it is called, it returns zero."
   (dfixnum:dfixnum-integer (get-bytes-consed-dfixnum)))
     
@@ -239,14 +239,14 @@
 ;;; will be triggered.
 ;;; 
 (defparameter *bytes-consed-between-gcs* default-bytes-consed-between-gcs
-  "This number specifies the minimum number of bytes of dynamic space
+  _N"This number specifies the minimum number of bytes of dynamic space
    that must be consed before the next gc will occur.")
 ;;;
 (declaim (type index *bytes-consed-between-gcs*))
 
 ;;; Public
 (defvar *gc-run-time* 0
-  "The total CPU time spend doing garbage collection (as reported by
+  _N"The total CPU time spend doing garbage collection (as reported by
    GET-INTERNAL-RUN-TIME.)")
 
 (declaim (type index *gc-run-time*))
@@ -304,11 +304,11 @@
 ;;; after garbage collection occurs.
 ;;;
 (defvar *before-gc-hooks* nil
-  "A list of functions that are called before garbage collection occurs.
+  _N"A list of functions that are called before garbage collection occurs.
   The functions should take no arguments.")
 ;;; 
 (defvar *after-gc-hooks* nil
-  "A list of functions that are called after garbage collection occurs.
+  _N"A list of functions that are called after garbage collection occurs.
   The functions should take no arguments.")
 
 ;;;
@@ -321,7 +321,7 @@
 ;;; Presumably someone will call GC-ON later to collect the garbage.
 ;;;
 (defvar *gc-inhibit-hook* nil
-  "Should be bound to a function or NIL.  If it is a function, this
+  _N"Should be bound to a function or NIL.  If it is a function, this
   function should take one argument, the current amount of dynamic
   usage.  The function should return NIL if garbage collection should
   continue and non-NIL if it should be inhibited.  Use with caution.")
@@ -332,7 +332,7 @@
 ;;; *GC-VERBOSE*
 ;;;
 (defvar *gc-verbose* t
-  "When non-NIL, causes the functions bound to *GC-NOTIFY-BEFORE* and
+  _N"When non-NIL, causes the functions bound to *GC-NOTIFY-BEFORE* and
   *GC-NOTIFY-AFTER* to be called before and after a garbage collection
   occurs respectively.  If :BEEP, causes the default notify functions to beep
   annoyingly.")
@@ -341,26 +341,26 @@
 (defun default-gc-notify-before (bytes-in-use)
   (when (eq *gc-verbose* :beep)
     (system:beep *standard-output*))
-  (format t "~&; [GC threshold exceeded with ~:D bytes in use.  ~
+  (format t _"~&; [GC threshold exceeded with ~:D bytes in use.  ~
              Commencing GC.]~%" bytes-in-use)
   (finish-output))
 ;;;
 (defparameter *gc-notify-before* #'default-gc-notify-before
-  "This function bound to this variable is invoked before GC'ing (unless
+  _N"This function bound to this variable is invoked before GC'ing (unless
   *GC-VERBOSE* is NIL) with the current amount of dynamic usage (in
   bytes).  It should notify the user that the system is going to GC.")
 
 (defun default-gc-notify-after (bytes-retained bytes-freed new-trigger)
-  (format t "~&; [GC completed with ~:D bytes retained and ~:D bytes freed.]~%"
+  (format t _"~&; [GC completed with ~:D bytes retained and ~:D bytes freed.]~%"
 	  bytes-retained bytes-freed)
-  (format t "~&; [GC will next occur when at least ~:D bytes are in use.]~%"
+  (format t _"~&; [GC will next occur when at least ~:D bytes are in use.]~%"
 	  new-trigger)
   (when (eq *gc-verbose* :beep)
     (system:beep *standard-output*))
   (finish-output))
 ;;;
 (defparameter *gc-notify-after* #'default-gc-notify-after
-  "The function bound to this variable is invoked after GC'ing (unless
+  _N"The function bound to this variable is invoked after GC'ing (unless
   *GC-VERBOSE* is NIL) with the amount of dynamic usage (in bytes) now
   free, the number of bytes freed by the GC, and the new GC trigger
   threshold.  The function should notify the user that the system has
@@ -381,7 +381,7 @@
   (let ((words (ash (+ (current-dynamic-space-start) bytes) -2)))
     (unless (and (fixnump words) (plusp words))
       (clear-auto-gc-trigger)
-      (warn "Attempt to set GC trigger to something bogus: ~S" bytes))
+      (warn _"Attempt to set GC trigger to something bogus: ~S" bytes))
     (setf rt::*internal-gc-trigger* words)))
 
 #-ibmrt
@@ -411,7 +411,7 @@
 (defmacro carefully-funcall (function &rest args)
   `(handler-case (funcall ,function ,@args)
      (error (cond)
-       (warn "(FUNCALL ~S~{ ~S~}) lost:~%~A" ',function ',args cond)
+       (warn _"(FUNCALL ~S~{ ~S~}) lost:~%~A" ',function ',args cond)
        nil)))
 
 ;;;
@@ -433,7 +433,7 @@
 	;; The noise w/ symbol-value above is to keep the compiler from
 	;; optimizing the test away because of the type declaim for
 	;; *bytes-consed-between-gcs*.
-	(warn "The value of *BYTES-CONSED-BETWEEN-GCS*, ~S, is not an ~
+	(warn _"The value of *BYTES-CONSED-BETWEEN-GCS*, ~S, is not an ~
 	       integer.  Resetting it to ~D." *bytes-consed-between-gcs*
 	       default-bytes-consed-between-gcs)
 	(setf *bytes-consed-between-gcs* default-bytes-consed-between-gcs))
@@ -509,14 +509,14 @@
 ;;; 
 #-gencgc
 (defun gc (&optional (verbose-p *gc-verbose*))
-  "Initiates a garbage collection.  The optional argument, VERBOSE-P,
+  _N"Initiates a garbage collection.  The optional argument, VERBOSE-P,
   which defaults to the value of the variable *GC-VERBOSE* controls
   whether or not GC statistics are printed."
   (sub-gc :verbose-p verbose-p :force-p t))
 ;;;
 #+gencgc
 (defun gc (&key (verbose *gc-verbose*) (gen 0) (full nil))
-  "Initiates a garbage collection.  The keyword :VERBOSE, which
+  _N"Initiates a garbage collection.  The keyword :VERBOSE, which
    defaults to the value of the variable *GC-VERBOSE* controls whether or
    not GC statistics are printed. The keyword :GEN defaults to 0, and
    controls the number of generations to garbage collect."
@@ -526,7 +526,7 @@
 ;;;; Auxiliary Functions.
 
 (defun bytes-consed-between-gcs ()
-  "Return the amount of memory that will be allocated before the next garbage
+  _N"Return the amount of memory that will be allocated before the next garbage
    collection is initiated.  This can be set with SETF."
   *bytes-consed-between-gcs*)
 ;;;
@@ -548,14 +548,14 @@
 
 
 (defun gc-on ()
-  "Enables the garbage collector."
+  _N"Enables the garbage collector."
   (setq *gc-inhibit* nil)
   (when *need-to-collect-garbage*
     (sub-gc))
   nil)
 
 (defun gc-off ()
-  "Disables the garbage collector."
+  _N"Disables the garbage collector."
   (setq *gc-inhibit* t)
   nil)
 
@@ -584,7 +584,7 @@
     (min-av-mem-age c-call:double)))
 
 (defun gencgc-stats (generation)
-  "Return some GC statistics for the specified GENERATION.  The
+  _N"Return some GC statistics for the specified GENERATION.  The
   statistics are the number of bytes allocated in this generation; the
   gc-trigger; the number of bytes consed between GCs; the number of
   GCs that have occurred; the trigger age; the cumulative number of
