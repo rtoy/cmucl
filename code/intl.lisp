@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.1.2.3 $
+;;; $Revision: 1.1.2.4 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,7 +23,7 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.3 2010/02/08 23:43:17 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.4 2010/02/08 23:52:34 rtoy Exp $")
 
 (in-package "INTL")
 
@@ -681,10 +681,12 @@
 		    (format t "~&msgid_plural ") (str (cdr key) 13 0)
 		    (format t "~&msgstr[0] \"\"~2%"))
 		   (t
-		    (unless key
-		      (format *debug-io* "*** WHOA!  key is NIL~%"))
-		    (format t "~&msgid ") (str key 6 0)
-		    (format t "~&msgstr \"\"~2%"))))
+		    (cond
+		      (key
+		       (format t "~&msgid ") (str key 6 0)
+		       (format t "~&msgstr \"\"~2%"))
+		      (t
+		       (format *error-output* "Skipping NIL key~%"))))))
 	   (str (string col start)
 	     (when (and (plusp col) (> (length string) (- 76 col)))
 	       (format t "\"\"~%"))
