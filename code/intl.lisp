@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.1.2.1 $
+;;; $Revision: 1.1.2.2 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,12 +23,12 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-#+CMU (ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.1 2010/02/08 02:49:49 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.2 2010/02/08 18:36:20 rtoy Exp $")
 
 (in-package "INTL")
 
 (eval-when (:compile-toplevel :execute)
-  (defparameter intl::*default-domain* "libintl")
+  (defparameter intl::*default-domain* "cmucl")
   (unless (and (fboundp 'intl:read-translatable-string)
 	       (eq (get-macro-character #\_)
 		   (fdefinition 'intl:read-translatable-string)))
@@ -587,6 +587,9 @@
        (let ((fn (get-macro-character #\_ nil)))
 	 (if fn (funcall fn stream #\_) '_)))))
 
+;; Process comments as usual, but look for lines that begin with
+;; "TRANSLATORS: ".  These lines are saved and written out as a
+;; translator comment for the next translatable string.
 #-runtime
 (defun read-comment (stream char)
   (declare (optimize (speed 0) (space 3) #-gcl (debug 0))
@@ -659,8 +662,10 @@
   t)
 
 
+;; Dump the translatable strings.  The output is written to a file in
+;; the directory OUTPUT-DIRECTORY and its name is the domain.
 #-runtime
-(defun dump-pot-files (&key copyright)
+(defun dump-pot-files (&key copyright output-directory)
   (declare (optimize (speed 0) (space 3) #-gcl (debug 1)))
   (labels ((b (key data)
 	     (format t "~@[~{~&#. ~A~}~%~]" (delete nil (car data)))
@@ -741,20 +746,27 @@
 		 (when i (write-char #\\ nil) (write-char (char string i) nil))
 		 (setq start (if i (1+ i) end)))))
 	   (a (domain hash)
-	     (format t "~&#@ ~A~2%" domain)
-	     (format t "~&# SOME DESCRIPTIVE TITLE~%")
-	     (format t "~@[~&# Copyright (C) YEAR ~A~%~]" copyright)
-	     (format t "~&# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR~%")
-	     (format t "~&#~%#, fuzzy~%msgid \"\"~%msgstr \"\"~%")
-	     (format t "~&\"Project-Id-Version: PACKAGE VERSION\\n\"~%")
-	     (format t "~&\"Report-Msgid-Bugs-To: \\n\"~%")
-	     (format t "~&\"PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\\n\"~%")
-	     (format t "~&\"Last-Translator: FULL NAME <EMAIL@ADDRESS>\\n\"~%")
-	     (format t "~&\"Language-Team: LANGUAGE <LL@li.org>\\n\"~%")
-	     (format t "~&\"MIME-Version: 1.0\\n\"~%")
-	     (format t "~&\"Content-Type: text/plain; charset=UTF-8\\n\"~%")
-	     (format t "~&\"Content-Transfer-Encoding: 8bit\\n\"~2%")
-	     (maphash #'b hash)))
+	     (with-open-file (*standard-output*
+			      (merge-pathnames (make-pathname :name domain
+							      :type "pot")
+					       output-directory)
+			      :direction :output
+			      :if-exists :new-version
+			      :external-format :utf8)
+	       (format t "~&#@ ~A~2%" domain)
+	       (format t "~&# SOME DESCRIPTIVE TITLE~%")
+	       (format t "~@[~&# Copyright (C) YEAR ~A~%~]" copyright)
+	       (format t "~&# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR~%")
+	       (format t "~&#~%#, fuzzy~%msgid \"\"~%msgstr \"\"~%")
+	       (format t "~&\"Project-Id-Version: PACKAGE VERSION\\n\"~%")
+	       (format t "~&\"Report-Msgid-Bugs-To: \\n\"~%")
+	       (format t "~&\"PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\\n\"~%")
+	       (format t "~&\"Last-Translator: FULL NAME <EMAIL@ADDRESS>\\n\"~%")
+	       (format t "~&\"Language-Team: LANGUAGE <LL@li.org>\\n\"~%")
+	       (format t "~&\"MIME-Version: 1.0\\n\"~%")
+	       (format t "~&\"Content-Type: text/plain; charset=UTF-8\\n\"~%")
+	       (format t "~&\"Content-Transfer-Encoding: 8bit\\n\"~2%")
+	       (maphash #'b hash))))
     (maphash #'a *translations*)
     #+(or)
     (clrhash *translations*))
