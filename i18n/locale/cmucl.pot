@@ -1,0 +1,918 @@
+#@ cmucl
+
+# SOME DESCRIPTIVE TITLE
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: target:code/intl.lisp
+msgid ""
+"The message-lookup domain used by INTL:GETTEXT and INTL:NGETTEXT.\n"
+"  Use (INTL:TEXTDOMAIN \"whatever\") in each source file to set this."
+msgstr ""
+
+#: target:code/intl.lisp
+msgid "Encountered illegal token: ="
+msgstr ""
+
+#: target:code/intl.lisp
+msgid "Encountered illegal token: ~C"
+msgstr ""
+
+#: target:code/intl.lisp
+msgid "Expected : in ?: construct"
+msgstr ""
+
+#: target:code/intl.lisp
+msgid "Expected close-paren."
+msgstr ""
+
+#: target:code/intl.lisp
+msgid "Unexpected token: ~S."
+msgstr ""
+
+#: target:code/intl.lisp
+msgid "Expecting end of expression.  ~S."
+msgstr ""
+
+#: target:code/intl.lisp
+msgid "Bad magic number in \"~A.mo\"."
+msgstr ""
+
+#: target:code/intl.lisp
+msgid ""
+"Look up STRING in the current message domain and return its translation."
+msgstr ""
+
+#: target:code/intl.lisp
+msgid ""
+"Look up the singular or plural form of a message in the current domain."
+msgstr ""
+
+#: target:code/intl.lisp
+msgid ""
+"Look up STRING in the specified message domain and return its translation."
+msgstr ""
+
+#: target:code/intl.lisp
+msgid ""
+"Look up the singular or plural form of a message in the specified domain."
+msgstr ""
+
+#: target:code/intl.lisp
+msgid "_@ is a reserved reader macro prefix."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "The exclusive upper bound on the rank of an array."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "The exclusive upper bound any given dimension of an array."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "The exclusive upper bound on the total number of elements in an array."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Start ~D is greater than end ~D."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "End ~D is greater than total size ~D."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"List of weak-pointers to static vectors.  Needed for GCing static vectors"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Cannot make a static array of element type ~S"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Failed to allocate space for static array of length ~S of type ~S"
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Creates an array of the specified Dimensions and properties.  See the\n"
+"  manual for details.\n"
+"\n"
+"  :Element-type\n"
+"      The type of objects that the array can hold \n"
+"  :Initial-element\n"
+"      Each element of the array is initialized to this value, if supplied.\n"
+"      If not supplied, 0 of the appropriate type is used.\n"
+"  :Initial-contents\n"
+"      The contents of the array are initialized to this.\n"
+"  :Adjustable\n"
+"      If non-Nil, make an expressly adjustable array.\n"
+"  :Fill-pointer\n"
+"      For one-dimensional array, set the fill-pointer to the given value.\n"
+"      If T, use the actual length of the array.\n"
+"  :Displaced-to\n"
+"      Create an array that is displaced to the target array specified\n"
+"      by :displaced-to.\n"
+"  :Displaced-index-offset\n"
+"      Index offset to the displaced array.  That is, index 0 of this array "
+"is\n"
+"      actually index displaced-index-offset of the target displaced array. \n"
+"  :Allocation\n"
+"      How to allocate the array.  If :MALLOC, a static, nonmovable array is\n"
+"      created.  This array is created by calling malloc."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Can't specify :displaced-index-offset without :displaced-to"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Cannot make an adjustable static array"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Cannot make a displaced array static"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Cannot specify both :initial-element and ~\n"
+"		:initial-contents"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "~D elements in the initial-contents, but the ~\n"
+"		vector length is ~D."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Only vectors can have fill pointers."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Invalid fill-pointer ~D"
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Neither :initial-element nor :initial-contents ~\n"
+"		   can be specified along with :displaced-to"
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"One can't displace an array of type ~S into ~\n"
+"                           another of type ~S."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "~S doesn't have enough elements."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "~&Freeing foreign vector at #x~X~%"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Finalizing static vectors ~S~%"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "static vector ~A.  header = ~X~%"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "  static vector ~A in use~%"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "  Free static vector ~A~%"
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Cannot supply both :initial-contents and :initial-element to\n"
+"            either make-array or adjust-array."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "~S cannot be used to initialize an array of type ~S."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Malformed :initial-contents.  ~S is not a ~\n"
+"			        sequence, but ~D more layer~:P needed."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Malformed :initial-contents.  Dimension of ~\n"
+"			        axis ~D is ~D, but ~S is ~D long."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Constructs a simple-vector from the given objects."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Wrong number of subscripts, ~D, for array of rank ~D"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Invalid index ~D~[~;~:; on axis ~:*~D~] in ~S"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Invalid index ~D in ~S"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Returns T if the Subscipts are in bounds for the Array, Nil otherwise."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Returns the element of the Array specified by the Subscripts."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Returns the element of array corressponding to the row-major index.  This "
+"is\n"
+"   SETF'able."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Returns the Index'th element of the given Simple-Vector."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Returns the bit from the Bit-Array at the specified Subscripts."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Returns the bit from the Simple-Bit-Array at the specified Subscripts."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Returns the type of the elements of the array"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Returns the number of dimensions of the Array."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Returns length of dimension Axis-Number of the Array."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Vector axis is not zero: ~S"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "~D is too big; ~S only has ~D dimension~:P"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Returns a list whose elements are the dimensions of the array"
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Returns the total number of elements in the Array."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Returns values of :displaced-to and :displaced-index-offset options to\n"
+"   make-array, or the defaults nil and 0 if not a displaced array."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Returns T if (adjust-array array...) would return an array identical\n"
+"   to the argument, this happens for complex arrays."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Returns T if the given Array has a fill pointer, or Nil otherwise."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Returns the Fill-Pointer of the given Vector."
+msgstr ""
+
+#: target:pcl/simple-streams/string.lisp target:compiler/tn.lisp
+#: target:compiler/main.lisp target:code/describe.lisp
+#: target:code/debug-int.lisp target:code/debug-info.lisp
+#: target:code/foreign-linkage.lisp target:code/reader.lisp
+#: target:code/stream.lisp target:code/hash-new.lisp target:code/array.lisp
+msgid "~S is not an array with a fill-pointer."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "New fill pointer, ~S, is larger than the length of the vector."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Attempts to set the element of Array designated by the fill pointer\n"
+"   to New-El and increment fill pointer by one.  If the fill pointer is\n"
+"   too large, Nil is returned, otherwise the index of the pushed element is "
+"\n"
+"   returned."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Like Vector-Push except that if the fill pointer gets too large, the\n"
+"   Array is extended rather than Nil being returned."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Attempts to decrease the fill-pointer by 1 and return the element\n"
+"   pointer to by the new fill pointer.  If the original value of the fill\n"
+"   pointer is 0, an error occurs."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Nothing left to pop."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Adjusts the Array's dimensions to the given Dimensions and stuff."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Number of dimensions not equal to rank of array."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "New element type, ~S, is incompatible with old."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Static arrays are not adjustable."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Multidimensional arrays can't have fill pointers."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Initial contents may not be specified with ~\n"
+"		 the :initial-element or :displaced-to option."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"The :initial-element option may not be specified ~\n"
+"	       with :displaced-to."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"One can't displace an array of type ~S into another of ~\n"
+"	               type ~S."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "The :displaced-to array is too small."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Cannot adjust-array an array (~S) to a size (~S) that is ~\n"
+"	            smaller than it's fill pointer (~S)."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Cannot supply a non-NIL value (~S) for :fill-pointer ~\n"
+"	   in adjust-array unless the array (~S) was originally ~\n"
+" 	   created with a fill pointer."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Cannot supply a value for :fill-pointer (~S) that is larger ~\n"
+"	     than the new length of the vector (~S)."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Bogus value for :fill-pointer in adjust-array: ~S"
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Destructively alters the Vector, changing its length to New-Size, which\n"
+"   must be less than or equal to its current size."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "Fills in array header with provided information.  Returns array."
+msgstr ""
+
+#: target:code/array.lisp
+msgid "~S and ~S do not have the same dimensions."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Performs a bit-wise logical NOT on the elements of BIT-ARRAY,\n"
+"  putting the results in RESULT-BIT-ARRAY.  If RESULT-BIT-ARRAY is T,\n"
+"  BIT-ARRAY is used.  If RESULT-BIT-ARRAY is NIL or omitted, a new array is\n"
+"  created.  Both arrays must have the same rank and dimensions."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "Oh no.  The current dynamic space is missing!"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "Dynamic Space Usage:    ~13:D bytes (out of ~4:D MB).~%"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "Read-Only Space Usage:  ~13:D bytes (out of ~4:D MB).~%"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "Static Space Usage:     ~13:D bytes (out of ~4:D MB).~%"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "Control Stack Usage:    ~13:D bytes (out of ~4:D MB).~%"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "Binding Stack Usage:    ~13:D bytes (out of ~4:D MB).~%"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "The current dynamic space is ~D.~%"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "Garbage collection is currently ~:[enabled~;DISABLED~].~%"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"Prints to *STANDARD-OUTPUT* information about the state of internal\n"
+"  storage and its management.  The optional argument controls the\n"
+"  verbosity of ROOM.  If it is T, ROOM prints out a maximal amount of\n"
+"  information.  If it is NIL, ROOM prints out a minimal amount of\n"
+"  information.  If it is :DEFAULT or it is not supplied, ROOM prints out\n"
+"  an intermediate amount of information.  See also VM:MEMORY-USAGE and\n"
+"  VM:INSTANCE-USAGE for finer report control."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"No way man!  The optional argument to ROOM must be T, NIL, ~\n"
+"		 or :DEFAULT.~%What do you think you are doing?"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "resetting GC counters"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"Returns the number of bytes consed since the first time this function\n"
+"  was called.  The first time it is called, it returns zero."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"This number specifies the minimum number of bytes of dynamic space\n"
+"   that must be consed before the next gc will occur."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"The total CPU time spend doing garbage collection (as reported by\n"
+"   GET-INTERNAL-RUN-TIME.)"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"A list of functions that are called before garbage collection occurs.\n"
+"  The functions should take no arguments."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"A list of functions that are called after garbage collection occurs.\n"
+"  The functions should take no arguments."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"Should be bound to a function or NIL.  If it is a function, this\n"
+"  function should take one argument, the current amount of dynamic\n"
+"  usage.  The function should return NIL if garbage collection should\n"
+"  continue and non-NIL if it should be inhibited.  Use with caution."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"When non-NIL, causes the functions bound to *GC-NOTIFY-BEFORE* and\n"
+"  *GC-NOTIFY-AFTER* to be called before and after a garbage collection\n"
+"  occurs respectively.  If :BEEP, causes the default notify functions to "
+"beep\n"
+"  annoyingly."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"~&; [GC threshold exceeded with ~:D bytes in use.  ~\n"
+"             Commencing GC.]~%"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"This function bound to this variable is invoked before GC'ing (unless\n"
+"  *GC-VERBOSE* is NIL) with the current amount of dynamic usage (in\n"
+"  bytes).  It should notify the user that the system is going to GC."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "~&; [GC completed with ~:D bytes retained and ~:D bytes freed.]~%"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "~&; [GC will next occur when at least ~:D bytes are in use.]~%"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"The function bound to this variable is invoked after GC'ing (unless\n"
+"  *GC-VERBOSE* is NIL) with the amount of dynamic usage (in bytes) now\n"
+"  free, the number of bytes freed by the GC, and the new GC trigger\n"
+"  threshold.  The function should notify the user that the system has\n"
+"  finished GC'ing."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"The value of *BYTES-CONSED-BETWEEN-GCS*, ~S, is not an ~\n"
+"	       integer.  Resetting it to ~D."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "(FUNCALL ~S~{ ~S~}) lost:~%~A"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"Initiates a garbage collection.  The keyword :VERBOSE, which\n"
+"   defaults to the value of the variable *GC-VERBOSE* controls whether or\n"
+"   not GC statistics are printed. The keyword :GEN defaults to 0, and\n"
+"   controls the number of generations to garbage collect."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"Return the amount of memory that will be allocated before the next garbage\n"
+"   collection is initiated.  This can be set with SETF."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "Enables the garbage collector."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "Disables the garbage collector."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"Return some GC statistics for the specified GENERATION.  The\n"
+"  statistics are the number of bytes allocated in this generation; the\n"
+"  gc-trigger; the number of bytes consed between GCs; the number of\n"
+"  GCs that have occurred; the trigger age; the cumulative number of\n"
+"  bytes allocated in this generation; and the average age of this\n"
+"  generation.  See the gencgc source code for more info."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "Depth of recursive descriptions allowed."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid ""
+"If non-nil, descriptions may provide interpretations of information and\n"
+"  pointers to additional information.  Normally nil."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid ""
+"*print-level* gets bound to this inside describe.  If null, use\n"
+"  *print-level*"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid ""
+"*print-length* gets bound to this inside describe.  If null, use\n"
+"  *print-length*."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "Number of spaces that sets off each line of a recursive description."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "Used to tell whether we are doing a recursive describe."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "Used to implement recursive description cutoff.  Don't touch."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "An output stream used by Describe for indenting and stuff."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid ""
+"List of all objects describe within the current top-level call to describe."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "The last object passed to describe."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "Prints a description of the object X."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "*describe-level* should be a nonnegative integer - ~A."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&~S is a ~S."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&Its code is #x~4,'0x."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&Its name is ~A."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It is a ~:[high (leading)~;low (trailing)~] surrogate character."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&~S is a ~(~A~) of type ~A."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&~S is a ~:[~;displaced ~]vector of length ~D."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It has a fill pointer, currently ~d"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It has no fill pointer."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&~S is ~:[an~;a displaced~] array of rank ~A"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~%Its dimensions are ~S."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&Its element type is specialized to ~S."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It is adjustable."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It is static."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It is a prime number."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It is a composite number."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&Its components are ~S and ~S."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&~S is an ~A hash table."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&Its size is ~D buckets."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&Its rehash-size is ~S."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&Its rehash-threshold is ~S."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It currently holds ~d entries."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It is weak ~A table."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&~d symbols total: ~d internal and ~d external."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&~@(~A documentation:~)~&  ~A"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&Its ~(~A~) argument types are:~%  ~S"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&Its result type is:~%  ~S"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid ""
+"~&It is currently declared ~(~A~);~\n"
+"		 ~:[no~;~] expansion is available."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&~@(~@[~A ~]arguments:~%~)"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "  There are no arguments."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&Its closure environment is:"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&Its definition is:~%  ~S"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&On ~A it was compiled from:"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&~A~%  Created: "
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&  Comment: ~A"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "  There is no argument information available."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "Macro-function: ~S"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "Function: ~S"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~S is a function."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It is an unknown type of function."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&~A is an ~A symbol in the ~A package."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&~A is an uninterned symbol."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&~@<It is an alien at #x~8,'0X of type ~3I~:_~S.~:>~%"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~@<Its current value is ~3I~:_~S.~:>"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It is a ~A with expansion: ~S."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It is a ~A; its value is ~S."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It is a ~A; no current value."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&Its declared type is ~S."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "special variable"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "constant"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "undefined variable"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "symbol macro"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "Special form"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "Structure"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "Type"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "Setf macro"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&Documentation on the ~(~A~):~%~A"
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It names a class ~A."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It names a PCL class ~A."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It names a type specifier."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&Its ~S property is ~S."
+msgstr ""
+
+#: target:code/describe.lisp
+msgid "~&It is defined in:~&~A"
+msgstr ""
+
