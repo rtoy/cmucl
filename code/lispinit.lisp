@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.79 2009/06/11 16:03:58 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.79.12.1 2010/02/08 02:52:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -405,6 +405,9 @@
   (setf (alien:extern-alien "internal_errors_enabled" boolean) t)
 
   (set-floating-point-modes :traps '(:overflow :invalid :divide-by-zero))
+
+  (setq intl::*default-domain* nil)
+  
   ;; This is necessary because some of the initial top level forms might
   ;; have changed the compilation policy in strange ways.
   (print-and-call c::proclaim-init)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.148 2010/01/22 06:17:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.148.2.1 2010/02/08 02:53:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1677,7 +1677,8 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
         If true, then may compile to interpreted byte code."
   (declare (type (member :lisp) language))
   (let ((info (make-stream-source-info stream language))
-	(*backend* *native-backend*))
+	(*backend* *native-backend*)
+	(intl::*default-domain* intl::*default-domain*))
     (unwind-protect
 	(let* ((*compile-object* (make-core-object))
 	       (won (sub-compile-file info source-info)))
@@ -1967,7 +1968,8 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	     (*last-message-count* 0)
 	     (*compile-object* (make-core-object))
 	     (*gensym-counter* 0)
-	     (*current-function-names* (list name)))
+	     (*current-function-names* (list name))
+	     (intl::*default-domain* intl::*default-domain*))
 	(with-debug-counters
 	  (clear-stuff)
 	  (find-source-paths form 0)

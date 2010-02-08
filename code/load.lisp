@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.93 2009/06/11 16:03:58 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.93.12.1 2010/02/08 02:52:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -546,7 +546,8 @@
       (let ((*package* *package*)
 	    (*readtable* *readtable*)
             (*enable-package-locked-errors* *enable-package-locked-errors*)
-	    (*load-depth* (1+ *load-depth*)))
+	    (*load-depth* (1+ *load-depth*))
+	    (intl::*default-domain* intl::*default-domain*))
 	(values
 	 (with-simple-restart (continue "Return NIL from load of ~S." filename)
 	   (if (streamp filename)
