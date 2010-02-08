@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.16.32.1 2010/02/08 16:41:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.16.32.2 2010/02/08 22:18:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,32 +46,40 @@
     (simple-program-error "Invalid function name ~s" x))
   (if (eq 'setf (cadr x))
       (progn
-	(format t "Setting function ~S domain to ~A~%"
-		(cadr x) intl::*default-domain*)
+	(when new-value
+	  (format t "Setting function ~S domain to ~A~%"
+		(cadr x) intl::*default-domain*))
 	(setf (info setf textdomain (cadr x)) intl::*default-domain*)
 	(setf (info setf documentation (cadr x)) new-value))
       (progn
+	(when new-value
+	  (format t "Setting function ~S domain to ~A~%"
+		(cadr x) intl::*default-domain*))
 	(setf (info function textdomain x) intl::*default-domain*)
 	(setf (info function documentation x) new-value)))
   new-value)
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'function)))
-  (format t "Setting function ~S domain to ~A~%" x intl::*default-domain*)
+  (when new-value
+    (format t "Setting function ~S domain to ~A~%" x intl::*default-domain*))
   (setf (info function textdomain x) intl::*default-domain*)
   (setf (info function documentation x) new-value))
 
 (defmethod (setf documentation) (new-value (x function) (doc-type (eql 'function)))
-  (format t "Setting function ~S domain to ~A~%" x intl::*default-domain*)
+  (when new-value
+    (format t "Setting function ~S domain to ~A~%" x intl::*default-domain*))
   (setf (info function textdomain x) intl::*default-domain*)
   (setf (info function documentation x) new-value))
 
 (defmethod (setf documentation) (new-value (x function) (doc-type (eql 't)))
-  (format t "Setting function ~S domain to ~A~%" x intl::*default-domain*)
+  (when new-value
+    (format t "Setting function ~S domain to ~A~%" x intl::*default-domain*))
   (setf (info function textdomain x) intl::*default-domain*)
   (setf (info function documentation x) new-value))
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'setf)))
-  (format t "Setting setf function ~S domain to ~A~%" x intl::*default-domain*)
+  (when new-value
+    (format t "Setting setf function ~S domain to ~A~%" x intl::*default-domain*))
   (setf (info setf textdomain x) intl::*default-domain*)
   (setf (info setf documentation x) new-value))
 
