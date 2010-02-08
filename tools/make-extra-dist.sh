@@ -106,6 +106,20 @@ do
     install ${GROUP} ${OWNER} -m 0644 src/contrib/$f $DESTDIR/lib/cmucl/lib/contrib/$DIR
 done
 
+# Install all the locale data.
+#set -x
+for d in `(cd src/i18n/; find locale -type d -print | grep -v CVS)`
+do
+    install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/$d
+done
+
+for f in `(cd src/i18n; find locale -type f -print | grep -v 'CVS\|~.*~\|.*~')`
+do
+    FILE=`basename $f`
+    DIR=`dirname $f`
+    install ${GROUP} ${OWNER} -m 0644 src/i18n/$f $DESTDIR/lib/cmucl/lib/$DIR
+done
+
 if [ -z "$INSTALL_DIR" ]; then
     sync ; sleep 1 ; sync ; sleep 1 ; sync
     echo Tarring extra components
