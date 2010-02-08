@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.1.2.2 $
+;;; $Revision: 1.1.2.3 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,7 +23,7 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.2 2010/02/08 18:36:20 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.3 2010/02/08 23:43:17 rtoy Exp $")
 
 (in-package "INTL")
 
@@ -554,6 +554,11 @@
 	   (val (or (gethash key hash) (cons nil nil))))
       (pushnew *translator-comment* (car val) :test #'equal)
       (pushnew *compile-file-pathname* (cdr val) :test #'equal)
+      ;; FIXME: How does this happen?  Need to figure this out and get
+      ;; rid of this!
+      (unless key
+	(warn "Translate error with null key.  domain = ~S string = ~S~%"
+	       domain string))
       (setf (gethash key hash) val)))
   (setq *translator-comment* nil))
 
@@ -676,6 +681,8 @@
 		    (format t "~&msgid_plural ") (str (cdr key) 13 0)
 		    (format t "~&msgstr[0] \"\"~2%"))
 		   (t
+		    (unless key
+		      (format *debug-io* "*** WHOA!  key is NIL~%"))
 		    (format t "~&msgid ") (str key 6 0)
 		    (format t "~&msgstr \"\"~2%"))))
 	   (str (string col start)
@@ -738,6 +745,7 @@
 			(write-char #\") (terpri)
 			(str string 0 end))))))
 	   (wstr (string start end)
+	     (format *debug-io* "wstr = ~S (~D to ~D)~%" string start end)
 	     (loop while (< start end) do
 	       (let ((i (position-if (lambda (x)
 				       (or (char= x #\") (char= x #\\)))
