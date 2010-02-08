@@ -21,6 +21,10 @@ else
 	shift
 fi
 
+if [ -n "$MAKE_POT" ]; then
+    SAVEPOT='(intl::dump-pot-files :output-directory "target:i18n/locale/")'
+fi
+
 $LISP "$@" -noinit -nositeinit <<EOF
 (in-package :cl-user)
 
@@ -56,5 +60,6 @@ $LISP "$@" -noinit -nositeinit <<EOF
 (setq *gc-verbose* t *interactive* t)
 
 (load "target:tools/worldbuild")
+$SAVEPOT
 (ext:quit)
 EOF
