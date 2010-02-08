@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.53 2008/02/27 17:08:33 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.53.22.1 2010/02/08 16:28:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,6 +30,7 @@
 (in-package "C")
 (use-package "EXTENSIONS")
 (use-package "SYSTEM")
+(intl:textdomain "cmucl")
 
 (in-package "EXTENSIONS")
 (export '(info clear-info define-info-class define-info-type
@@ -1171,7 +1172,14 @@
 ;;;
 (define-info-class source-location)
 (define-info-type source-location defvar (or form-numbers null) nil)
-		   
+
+;; The textdomain for the documentation
+(define-info-type function textdomain (or string null) nil)
+(define-info-type variable textdomain (or string null) nil)
+(define-info-type type textdomain (or string null) nil)
+(define-info-type typed-structure textdomain (or string null) nil)
+(define-info-type setf textdomain (or string null) nil)
+
 ); defun other-info-init
 
 (declaim (freeze-type info-env))
