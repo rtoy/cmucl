@@ -2752,6 +2752,161 @@ msgstr ""
 msgid "The external-format for encoding filenames is already set."
 msgstr ""
 
+#: target:code/fd-stream.lisp
+msgid ""
+"List of available buffers.  Each buffer is an sap pointing to\n"
+"  bytes-per-buffer of memory."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Number of bytes per buffer."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "The maximum supported byte size for a stream element-type."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid ""
+"List of all available output routines. Each element is a list of the\n"
+"  element-type output, the kind of buffering, the function name, and the "
+"number\n"
+"  of bytes per element."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Write would have blocked, but SERVER told us to go."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "While writing ~S: ~A"
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid ""
+"Output THING to stream.  THING can be any kind of vector or a sap.  If "
+"THING\n"
+"  is a SAP, END must be supplied (as length won't work)."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid ""
+"List of all available input routines. Each element is a list of the\n"
+"  element-type input, the function name, and the number of bytes per element."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Error reading ~S: ~A"
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Could not find any input routine for ~S"
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Could not find any output routine for ~S buffered ~S."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Element sizes for input (~S:~S) and output (~S:~S) differ?"
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Input type (~S) and output type (~S) are unrelated?"
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Error lseek'ing ~S: ~A"
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Invalid position given to file-position: ~S"
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid ""
+"Create a stream for the given unix file descriptor.\n"
+"  If input is non-nil, allow input operations.\n"
+"  If output is non-nil, allow output operations.\n"
+"  If neither input nor output are specified, default to allowing input.\n"
+"  Element-type indicates the element type to use (as for open).\n"
+"  Buffering indicates the kind of buffering to use.\n"
+"  Timeout (if true) is the number of seconds to wait for input.  If NIL "
+"(the\n"
+"    default), then wait forever.  When we time out, we signal IO-TIMEOUT.\n"
+"  File is the name of the file (will be returned by PATHNAME).\n"
+"  Name is used to identify the stream when printed."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "File descriptor must be opened either for input or output."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid ""
+"This is a string that OPEN tacks on the end of a file namestring to produce\n"
+"   a name for the :if-exists :rename-and-delete and :rename options.  Also,\n"
+"   this can be a function that takes a namestring and returns a complete\n"
+"   namestring."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid ""
+"Return a stream which reads from or writes to Filename.\n"
+"  Defined keywords:\n"
+"   :direction - one of :input, :output, :io, or :probe\n"
+"   :element-type - Type of object to read or write, default BASE-CHAR\n"
+"   :if-exists - one of :error, :new-version, :rename, :rename-and-delete,\n"
+"                       :overwrite, :append, :supersede or nil\n"
+"   :if-does-not-exist - one of :error, :create or nil\n"
+"   :external-format - an external format name\n"
+"  See the manual for details."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Unable to open streams of class ~S."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid ""
+"The stream connected to the controlling terminal or NIL if there is none."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "The stream connected to the standard input (file descriptor 0)."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "The stream connected to the standard output (file descriptor 1)."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "The stream connected to the standard error output (file descriptor 2)."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "This is called in BEEP to feep the user.  It takes a stream."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid ""
+"Return the delta in Stream's FILE-POSITION that would be caused by writing\n"
+"   Object to Stream.  Non-trivial only in implementations that support\n"
+"   international character sets."
+msgstr ""
+
+#: target:code/fd-stream-extfmt.lisp
+msgid "Don't know how to set external-format for ~S."
+msgstr ""
+
+#: target:code/fd-stream-extfmt.lisp
+msgid "Loading simple-streams should redefine this"
+msgstr ""
+
+#: target:code/fd-stream-extfmt.lisp
+msgid "Setting external-format on Gray streams not supported."
+msgstr ""
+
 #: target:code/filesys.lisp
 msgid ""
 "Remove any occurrences of \\ from the string because we've already\n"
