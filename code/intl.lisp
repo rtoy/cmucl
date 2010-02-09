@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.1.2.5 $
+;;; $Revision: 1.1.2.6 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,7 +23,7 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.5 2010/02/09 04:13:21 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.6 2010/02/09 13:22:58 rtoy Exp $")
 
 (in-package "INTL")
 
@@ -578,12 +578,12 @@
 (defun read-translatable-string (stream char)
   (declare (ignore char))
     (case (peek-char nil stream nil nil t)
-      (#\" (let ((*read-suppress* nil)
-		 (string (read stream t nil t)))
+      (#\" (let* ((*read-suppress* nil)
+		  (string (read stream t nil t)))
 	     `(gettext ,string)))
       (#\N (read-char stream t nil t)
-	   (let ((*read-suppress* nil)
-		 (string (read stream t nil t)))
+	   (let* ((*read-suppress* nil)
+		  (string (read stream t nil t)))
 	     #-runtime
 	     (note-translatable *default-domain* string)
 	     string))
