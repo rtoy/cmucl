@@ -1,6 +1,6 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.33 2009/01/20 04:52:47 agoncharov Rel $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.33.14.1 2010/02/09 02:48:05 rtoy Exp $
 
-all: lisp.nm
+all: lisp.nm translations
 
 -include internals.inc
 include Config
@@ -59,3 +59,12 @@ Depends: ${SRCS}
 	mv ,depends Depends
 
 -include Depends
+
+translations: ../../src/i18n/locale/ko/LC_MESSAGES/cmucl.mo
+
+%.mo : %.po
+	-msgfmt -f $^ -o $@
+
+../../src/i18n/locale/ko/LC_MESSAGES/cmucl.po : cmucl.pot
+	msgmerge $@ $^ -o $@
+
