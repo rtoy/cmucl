@@ -22,7 +22,7 @@ else
 fi
 
 if [ -n "$MAKE_POT" ]; then
-    SAVEPOT='(intl::dump-pot-files :output-directory "target:i18n/locale/")'
+    SAVEPOT='(intl::dump-pot-files :output-directory "default:src/i18n/locale/")'
 fi
 
 $LISP "$@" -noinit -nositeinit <<EOF
