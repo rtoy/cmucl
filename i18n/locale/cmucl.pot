@@ -73,6 +73,319 @@ msgstr ""
 msgid "_@ is a reserved reader macro prefix."
 msgstr ""
 
+#: target:code/error.lisp
+msgid "&rest keyword is ~:[missing~;misplaced~]."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"Return a list of all the currently active restarts ordered from most\n"
+"   recently established to less recently established.  If Condition is\n"
+"   specified, then only restarts associated with Condition (or with no\n"
+"   condition) will be returned."
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Returns the name of the given restart object."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"WITH-CONDITION-RESTARTS Condition-Form Restarts-Form Form*\n"
+"   Evaluates the Forms in a dynamic environment where the restarts in the "
+"list\n"
+"   Restarts-Form are associated with the condition returned by Condition-For"
+"m.\n"
+"   This allows FIND-RESTART, etc., to recognize restarts that are not "
+"related\n"
+"   to the error currently being debugged.  See also RESTART-CASE."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"Executes forms in a dynamic context where the given restart bindings are\n"
+"   in effect.  Users probably want to use RESTART-CASE.  When clauses "
+"contain\n"
+"   the same restart name, FIND-RESTART will find the first such clause."
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Unnamed restart does not have a ~\n"
+"					report function -- ~S"
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"Returns the first restart named name.  If name is a restart, it is returned\n"
+"   if it is currently active.  If no such restart is found, nil is "
+"returned.\n"
+"   It is an error to supply nil as a name.  If Condition is specified and "
+"not\n"
+"   NIL, then only restarts associated with that condition (or with no\n"
+"   condition) will be returned."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"Calls the function associated with the given restart, passing any given\n"
+"   arguments.  If the argument restart is not a restart or a currently "
+"active\n"
+"   non-nil restart name, then a control-error is signalled."
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Restart ~S is not active."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"Calls the function associated with the given restart, prompting for any\n"
+"   necessary arguments.  If the argument restart is not a restart or a\n"
+"   currently active non-nil restart name, then a control-error is "
+"signalled."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"(RESTART-CASE form\n"
+"   {(case-name arg-list {keyword value}* body)}*)\n"
+"   The form is evaluated in a dynamic context where the clauses have "
+"special\n"
+"   meanings as points to which control may be transferred (see INVOKE-RESTAR"
+"T).\n"
+"   When clauses contain the same case-name, FIND-RESTART will find the "
+"first\n"
+"   such clause.  If Expression is a call to SIGNAL, ERROR, CERROR or WARN "
+"(or\n"
+"   macroexpands into such) then the signalled condition will be associated "
+"with\n"
+"   the new restarts."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"(WITH-SIMPLE-RESTART (restart-name format-string format-arguments)\n"
+"   body)\n"
+"   If restart-name is not invoked, then all values returned by forms are\n"
+"   returned.  If control is transferred to this restart, it immediately\n"
+"   returns the values nil and t."
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Condition ~S was signalled."
+msgstr ""
+
+#: target:code/error.lisp
+msgid "No REPORT?  Shouldn't happen!"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Condition slot is not bound: ~S"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Slot ~S of ~S missing."
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Make an instance of a condition object using the specified initargs."
+msgstr ""
+
+#: target:code/error.lisp
+msgid "~S is not a condition class."
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Bad thing for class arg:~%  ~S"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Condition already names a declaration: ~S."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"DEFINE-CONDITION Name (Parent-Type*) (Slot-Spec*) Option*\n"
+"   Define NAME as a condition type.  This new type inherits slots and its\n"
+"   report function from the specified PARENT-TYPEs.  A slot spec is either\n"
+"   a symbol denoting the name of the slot, or a list of the form:\n"
+"\n"
+"     (slot-name {slot-option value}*)\n"
+"\n"
+"   where slot-option is one of :READER, :WRITER, :ACCESSOR, :ALLOCATION,\n"
+"   :INITARG, :INITFORM, :DOCUMENTATION, and :TYPE.\n"
+"\n"
+"   Each overall option is of the form\n"
+"\n"
+"     (option-name {value}*)\n"
+"\n"
+"   where option-name is one of :DEFAULT-INITARGS, :DOCUMENTATION,\n"
+"   and :REPORT.\n"
+"\n"
+"   The :REPORT option is peculiar to DEFINE-CONDITION.  Its argument is "
+"either\n"
+"   a string or a two-argument lambda or function name.  If a function, the\n"
+"   function is called with the condition and stream to report the "
+"condition.\n"
+"   If a string, the string is printed.\n"
+"\n"
+"   Condition types are classes, but (as allowed by ANSI and not as described"
+" in\n"
+"   CLtL2) are neither STANDARD-OBJECTs nor STRUCTURE-OBJECTs.  WITH-SLOTS "
+"and\n"
+"   SLOT-VALUE may not be used on condition objects."
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Keyword slot name indicates probable syntax error:~%  ~S"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Malformed condition slot spec:~%  ~S."
+msgstr ""
+
+#: target:code/error.lisp
+msgid "More than one :INITFORM in:~%  ~S"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "More than one slot :DOCUMENTATION in~%  ~s"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Slot :DOCUMENTATION is not a string in~%  ~s"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Unknown slot option:~%  ~S"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Bad option:~%  ~S"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Unknown option: ~S"
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"(HANDLER-BIND ( {(type handler)}* )  body)\n"
+"   Executes body in a dynamic context where the given handler bindings are\n"
+"   in effect.  Each handler must take the condition being signalled as an\n"
+"   argument.  The bindings are searched first to last in the event of a\n"
+"   signalled condition."
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Ill-formed handler bindings."
+msgstr ""
+
+#: target:code/error.lisp
+msgid "~&~@<Error in function ~S:  ~3i~:_~?~:>"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Control stack overflow"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Heap (dynamic space) overflow"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "~@<Type-error in ~S:  ~3i~:_~S is not of type ~S~:>"
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"Layout-invalid error in ~S:~@\n"
+"		     Type test of class ~S was passed obsolete instance:~%  ~S"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "~@<~S fell through ~S expression.  ~:_Wanted one of ~:S.~:>"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "End-of-File on ~S"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "~&~@<File-error in function ~S:  ~3i~:_~?~:>"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Error in ~S:  the variable ~S is unbound."
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Error in ~S:  the function ~S is undefined."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"~@<Destructive function ~S called on ~\n"
+"                         constant data.~@:>"
+msgstr ""
+
+#: target:code/error.lisp
+msgid "Arithmetic error ~S signalled."
+msgstr ""
+
+#: target:code/error.lisp
+msgid "~%Operation was ~S, operands ~S."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"(HANDLER-CASE form\n"
+"   { (type ([var]) body) }* )\n"
+"   Executes form in a context with handlers established for the condition\n"
+"   types.  A peculiar property allows type to be :no-error.  If such a "
+"clause\n"
+"   occurs, and form returns normally, all its values are passed to this "
+"clause\n"
+"   as if by MULTIPLE-VALUE-CALL.  The :no-error clause accepts more than "
+"one\n"
+"   var specification."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"Executes forms after establishing a handler for all error conditions that\n"
+"   returns from this form nil and the condition signalled."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"Transfers control to a restart named abort, signalling a control-error if\n"
+"   none exists."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"Transfers control to a restart named muffle-warning, signalling a\n"
+"   control-error if none exists."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"Transfer control to a restart named continue, returning nil if none exists."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"Transfer control and value to a restart named store-value, returning nil if\n"
+"   none exists."
+msgstr ""
+
+#: target:code/error.lisp
+msgid ""
+"Transfer control and value to a restart named use-value, returning nil if\n"
+"   none exists."
+msgstr ""
+
 #: target:code/class.lisp
 msgid "Layout for ~S~@[, Invalid=~S~]"
 msgstr ""
@@ -1342,6 +1655,238 @@ msgid ""
 "  NIL if no such character exists."
 msgstr ""
 
+#: target:code/extensions.lisp
+msgid ""
+"This function can be used as the default value for keyword arguments that\n"
+"  must be always be supplied.  Since it is known by the compiler to never\n"
+"  return, it will avoid any compile-time type warnings that would result "
+"from a\n"
+"  default value inconsistent with the declared type.  When this function is\n"
+"  called, it signals an error indicating that a required keyword argument "
+"was\n"
+"  not supplied.  This function is also useful for DEFSTRUCT slot defaults\n"
+"  corresponding to required arguments."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid "A required keyword argument was not supplied."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid ""
+"FILE-COMMENT String\n"
+"  When COMPILE-FILE sees this form at top-level, it places the constant "
+"string\n"
+"  in the run-time source location information.  DESCRIBE will print the "
+"file\n"
+"  comment for the file that a function was defined in.  The string is also\n"
+"  textually present in the FASL, so the RCS \"ident\" command can find it,\n"
+"  etc."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid "See listen.  Any whitespace in the input stream will be flushed."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid ""
+"Does what one might expect, saving the old values and setting the generalize"
+"d\n"
+"  variables to the new values in sequence.  Unwind-protects and get-setf-met"
+"hod\n"
+"  are used to preserve the semantics one might expect in analogy to let*,\n"
+"  and the once-only evaluation of subforms."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid ""
+"Like letf*, but evaluates all the implicit subforms and new values of all\n"
+"  the implied setfs before altering any values.  However, the store forms\n"
+"  (see get-setf-method) must still be evaluated in sequence.  Uses unwind-\n"
+"  protects to protect the environment."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid ""
+"Causes the output of the indenting Stream to indent More spaces.  More is\n"
+"  evaluated twice."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid "Just like dolist, but with one-dimensional arrays."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid ""
+"Iterate Name ({(Var Initial-Value)}*) Declaration* Form*\n"
+"  This is syntactic sugar for Labels.  It creates a local function Name "
+"with\n"
+"  the specified Vars as its arguments and the Declarations and Forms as its\n"
+"  body.  This function is then called with the Initial-Values, and the "
+"result\n"
+"  of the call is return from the macro."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid "Malformed iterate variable spec: ~S."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid ""
+"Collect ({(Name [Initial-Value] [Function])}*) {Form}*\n"
+"  Collect some values somehow.  Each of the collections specifies a bunch "
+"of\n"
+"  things which collected during the evaluation of the body of the form.  "
+"The\n"
+"  name of the collection is used to define a local macro, a la MACROLET.\n"
+"  Within the body, this macro will evaluate each of its arguments and "
+"collect\n"
+"  the result, returning the current value after the collection is done.  "
+"The\n"
+"  body is evaluated as a PROGN; to get the final values when you are done, "
+"just\n"
+"  call the collection macro with no arguments.\n"
+"\n"
+"  Initial-Value is the value that the collection starts out with, which\n"
+"  defaults to NIL.  Function is the function which does the collection.  It "
+"is\n"
+"  a function which will accept two arguments: the value to be collected and "
+"the\n"
+"  current collection.  The result of the function is made the new value for "
+"the\n"
+"  collection.  As a totally magical special-case, the Function may be "
+"Collect,\n"
+"  which tells us to build a list in forward order; this is the default.  If "
+"an\n"
+"  Initial-Value is supplied for Collect, the stuff will be rplacd'd onto "
+"the\n"
+"  end.  Note that Function may be anything that can appear in the functional"
+"\n"
+"  position, including macros and lambdas."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid "Malformed collection specifier: ~S."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid ""
+"Once-Only ({(Var Value-Expression)}*) Form*\n"
+"  Create a Let* which evaluates each Value-Expression, binding a temporary\n"
+"  variable to the result, and wrapping the Let* around the result of the\n"
+"  evaluation of Body.  Within the body, each Var is bound to the correspondi"
+"ng\n"
+"  temporary variable."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid "Malformed Once-Only binding spec: ~S."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid "Ill-formed ~S -- possibly illegal old style DO?"
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid "~S step variable is not a symbol: ~S"
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid "~S is an illegal form for a ~S varlist."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid ""
+"DO-ANONYMOUS ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*\n"
+"  Like DO, but has no implicit NIL block.  Each Var is initialized in "
+"parallel\n"
+"  to the value of the specified Init form.  On subsequent iterations, the "
+"Vars\n"
+"  are assigned the value of the Step form (if any) in paralell.  The Test "
+"is\n"
+"  evaluated before each evaluation of the body Forms.  When the Test is "
+"true,\n"
+"  the Exit-Forms are evaluated as a PROGN, with the result being the value\n"
+"  of the DO."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid ""
+"DO-HASH (Key-Var Value-Var Table [Result]) Declaration* Form*\n"
+"   Iterate over the entries in a hash-table."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid ""
+"DEFINE-HASH-CACHE Name ({(Arg-Name Test-Function)}*) {Key Value}*\n"
+"  Define a hash cache that associates some number of argument values to a\n"
+"  result value.  The Test-Function paired with each Arg-Name is used to "
+"compare\n"
+"  the value for that arg in a cache entry with a supplied arg.  The\n"
+"  Test-Function must not error when passed NIL as its first arg, but need "
+"not\n"
+"  return any particular value.  Test-Function may be any thing that can be\n"
+"  place in CAR position.\n"
+"\n"
+"  Name is used to define functions these functions:\n"
+"\n"
+"  <name>-CACHE-LOOKUP Arg*\n"
+"      See if there is an entry for the specified Args in the cache.  The if "
+"not\n"
+"      present, the :DEFAULT keyword (default NIL) determines the result(s).\n"
+"\n"
+"  <name>-CACHE-ENTER Arg* Value*\n"
+"      Encache the association of the specified args with Value.\n"
+"\n"
+"  <name>-CACHE-FLUSH-<arg-name> Arg\n"
+"      Flush all entries from the cache that have the value Arg for the "
+"named\n"
+"      arg.\n"
+"\n"
+"  <name>-CACHE-CLEAR\n"
+"      Reinitialize the cache, invalidating all entries and allowing the\n"
+"      arguments and result values to be GC'd.\n"
+"\n"
+"  These other keywords are defined:\n"
+"\n"
+"  :HASH-BITS <n>\n"
+"      The size of the cache as a power of 2.\n"
+"\n"
+"  :HASH-FUNCTION function\n"
+"      Some thing that can be placed in CAR position which will compute a "
+"value\n"
+"      between 0 and (1- (expt 2 <hash-bits>)).\n"
+"\n"
+"  :VALUES <n>\n"
+"      The number of values cached.\n"
+"\n"
+"   :INIT-FORM <name>\n"
+"      The DEFVAR for creating the cache is enclosed in a form with the\n"
+"      specified name.  Default PROGN."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid "Number of default values ~S differs from :VALUES ~D."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid "Bad arg spec: ~S."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid ""
+"DEFUN-CACHED (Name {Key Value}*) ({(Arg-Name Test-Function)}*) Form*\n"
+"  Some syntactic sugar for defining a function whose values are cached by\n"
+"  DEFINE-HASH-CACHE."
+msgstr ""
+
+#: target:code/extensions.lisp
+msgid ""
+"Return an EQ hash of X.  The value of this hash for any given object can "
+"(of\n"
+"  course) change at arbitary times."
+msgstr ""
+
 #: target:code/commandline.lisp
 msgid "A list of all the command line arguments after --"
 msgstr ""
@@ -1409,6 +1954,75 @@ msgstr ""
 
 #: target:code/commandline.lisp
 msgid "a symbol or function"
+msgstr ""
+
+#: target:code/env-access.lisp
+msgid ""
+"Returns information about the symbol VAR in the lexical environment ENV.\n"
+"Three values are returned:\n"
+"  1) Type or binding of VAR.\n"
+"     NIL           No definition or binding\n"
+"     :special      VAR is special\n"
+"     :lexical      VAR is lexical\n"
+"     :symbol-macro VAR refers to a SYMBOL-MACROLET binding\n"
+"     :constant     VAR refers to a named constant or VAR is a keyword\n"
+"  2) non-NIL if there is a local binding\n"
+"  3) An a-list containing information about any declarations that apply."
+msgstr ""
+
+#: target:code/env-access.lisp
+msgid ""
+"Returns information about declarations named by the symbol DECLARATION-NAME"
+".\n"
+"Supported DECLARATION-NAMES are\n"
+"  1) OPTIMIZE\n"
+"     A list whose entries are of the form (QUALITY VALUE) is returned,\n"
+"     where QUALITY and VALUE are standard optimization qualities and\n"
+"     values.\n"
+"  2) EXT:OPTIMIZE-INTERFACE\n"
+"     Like OPTIMIZE, but for the EXT:OPTIMIZE-INTERFACE declaration.\n"
+"  3) DECLARATION.\n"
+"     A list of the declaration names the have been proclaimed as valid."
+msgstr ""
+
+#: target:code/env-access.lisp
+msgid "Unsupported declaration ~S."
+msgstr ""
+
+#: target:code/env-access.lisp
+msgid ""
+"Process a macro in the same way that DEFMACRO or MACROLET would.\n"
+"Three values are returned:\n"
+"  1) A lambda-expression that accepts two arguments\n"
+"  2) A form\n"
+"  3) An environment"
+msgstr ""
+
+#: target:code/env-access.lisp
+msgid ""
+"Returns information about the function name FUNCTION in the lexical environm"
+"ent ENV.\n"
+"Three values are returned:\n"
+"  1) Type of definition or binding:\n"
+"     NIL          No apparent definition\n"
+"    :function    FUNCTION refers to a function\n"
+"    :macro        FUNCTION refers to a macro\n"
+"    :special-form FUNCTION is a special form\n"
+"  2) non-NIL if definition is local\n"
+"  3) An a-list containing information about the declarations that apply."
+msgstr ""
+
+#: target:code/env-access.lisp
+msgid ""
+"Return a new environment containing information in ENV that is augmented\n"
+"by the specified parameters:\n"
+"  :VARIABLE     a list of symbols visible as bound variables in the new\n"
+"                environemnt\n"
+"  :SYMBOL-MACRO a list of symbol macro definitions\n"
+"  :FUNCTION     a list of function names that will be visible as local\n"
+"                functions\n"
+"  :MACRO        a list of local macro definitions\n"
+"  :DECLARE      a list of declaration specifiers"
 msgstr ""
 
 #: target:code/dfixnum.lisp
@@ -1668,6 +2282,313 @@ msgstr ""
 
 #: target:code/backq.lisp
 msgid "### illegal dotted backquote form ###"
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid "Attempting unimplemented external-format I/O."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid "Nonsensical argument (~S) to DEFINE-EXTERNAL-FORMAT."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid "Bad entry in external-format aliases file: ~S => ~S."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid "External-format aliases file ends early."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid "External-format aliasing depth exceeded."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid "~S is a Composing-External-Format."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid "~S is not a Composing-External-Format."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid "~S is not a valid external format name."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid "External format ~S not found."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid "Attempting I/O through void external-format."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid ""
+"Convert String to octets using the specified External-format.  The\n"
+"   string is bounded by Start (defaulting to 0) and End (defaulting to\n"
+"   the end of the string.  If Buffer is given, the octets are stored\n"
+"   there.  If not, a new buffer is created."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid ""
+"Octets-to-string converts an array of octets in Octets to a string\n"
+"  according to the specified External-format.  The array of octets is\n"
+"  bounded by Start (defaulting ot 0) and End (defaulting to the end of\n"
+"  the array.  If String is not given, a new string is created.  If\n"
+"  String is given, the converted octets are stored in String, starting\n"
+"  at S-Start (defaulting to the 0) and ending at S-End (defaulting to\n"
+"  the length of String).  If the string is not large enough to hold\n"
+"  all of characters, then some octets will not be converted.  A State\n"
+"  may also be specified; this is used as the state of the external\n"
+"  format.\n"
+"\n"
+"  Four values are returned: the string, the number of characters read,\n"
+"  the number of octets actually consumed and the new state of the\n"
+"  external format."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid ""
+"Encode the given String using External-Format and return a new\n"
+"  string.  The characters of the new string are the octets of the\n"
+"  encoded result, with each octet converted to a character via\n"
+"  code-char.  This is the inverse to String-Decode"
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid ""
+"Decode String using the given External-Format and return the new\n"
+"  string.  The input string is treated as if it were an array of\n"
+"  octets, where the char-code of each character is the octet.  This is\n"
+"  the inverse of String-Encode."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid ""
+"Change the external format of the standard streams to Terminal.\n"
+"  The standard streams are sys::*stdin*, sys::*stdout*, and\n"
+"  sys::*stderr*, which are normally the input and/or output streams\n"
+"  for *standard-input* and *standard-output*.  Also sets sys::*tty*\n"
+"  (normally *terminal-io* to the given external format.  If the\n"
+"  optional argument Filenames is gvien, then the filename encoding is\n"
+"  set to the specified format."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid "Can't find external-format ~S."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid "Change it anyway."
+msgstr ""
+
+#: target:code/extfmts.lisp
+msgid "The external-format for encoding filenames is already set."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"Keywords that you can put in a lambda-list, supposing you should want\n"
+"  to do such a thing."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"The exclusive upper bound on the number of arguments which may be passed\n"
+"  to a function, including rest args."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"The exclusive upper bound on the number of parameters which may be specifed\n"
+"  in a given lambda list.  This is actually the limit on required and "
+"optional\n"
+"  parameters.  With &key and &aux you can get more."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"The exclusive upper bound on the number of multiple-values that you can\n"
+"  have."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"This variable controls whether assignments to unknown variables at top-level"
+"\n"
+"   (or in any other call to EVAL of SETQ) will implicitly declare the "
+"variable\n"
+"   SPECIAL.  These values are meaningful:\n"
+"     :WARN  -- Print a warning, but declare the variable special (the "
+"default.)\n"
+"      T     -- Quietly declare the variable special.\n"
+"      NIL   -- Never declare the variable, giving warnings on each use."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"Evaluates its single arg in a null lexical environment, returns the\n"
+"  result or results."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid "Wrong number of args to FUNCTION:~% ~S."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid "~S is a macro."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid "~S is a special operator."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid "Wrong number of args to QUOTE:~% ~S."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid "Odd number of args to SETQ:~% ~S."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid "Declaring ~S special."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid "Bad Eval-When situation list: ~S."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"Attempt to evaluation a complex expression:~%     ~S~@\n"
+"	  This expression must be compiled, but the compiler is not loaded."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"EVAL called on #'(lambda (x) ...) when the compiler isn't loaded:~\n"
+"	  ~%     ~S~%"
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"Given a function, return three values:\n"
+"   1] A lambda expression that could be used to define the function, or NIL "
+"if\n"
+"      the definition isn't available.\n"
+"   2] NIL if the function was definitely defined in a null lexical environme"
+"nt,\n"
+"      and T otherwise.\n"
+"   3] Some object that \"names\" the function.  Although this is allowed to "
+"be\n"
+"      any object, CMU CL always returns a valid function name or a string."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid "If the symbol globally names a special form, returns T, otherwise NIL."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"The value of this variable must be a function that can take three\n"
+"  arguments, a macro expander function, the macro form to be expanded,\n"
+"  and the lexical environment to expand in.  The function should\n"
+"  return the expanded form.  This function is called by MACROEXPAND-1\n"
+"  whenever a runtime expansion is needed.  Initially this is set to\n"
+"  FUNCALL."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"Invoke *MACROEXPAND-HOOK* on FUN, FORM, and ENV after coercing it to\n"
+"   a function."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"If SYMBOL names a macro in ENV, returns the expansion function,\n"
+"   else returns NIL.  If ENV is unspecified or NIL, use the global\n"
+"   environment only."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid "~S names a special form."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid "Cannot funcall macro functions."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"If form is a macro (or symbol macro), expands it once.  Returns two values,\n"
+"   the expanded form and a T-or-NIL flag indicating whether the form was, "
+"in\n"
+"   fact, a macro.  Env is the lexical environment to expand in, which "
+"defaults\n"
+"   to the null environment."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"Repetitively call MACROEXPAND-1 until the form can no longer be expanded.\n"
+"   Returns the final resultant form, and T if it was expanded.  ENV is the\n"
+"   lexical environment to expand in, or NIL (the default) for the null\n"
+"   environment."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"If NAME names a compiler-macro, returns the expansion function,\n"
+"   else returns NIL.  Note: if the name is shadowed in ENV by a local\n"
+"   definition, or declared NOTINLINE, NIL is returned.  Can be\n"
+"   set with SETF."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"If FORM is a function call for which a compiler-macro has been defined,\n"
+"   invoke the expander function using *macroexpand-hook* and return the\n"
+"   results and T.  Otherwise, return the original form and NIL."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"Repetitively call COMPILER-MACROEXPAND-1 until the form can no longer be\n"
+"   expanded.  ENV is the lexical environment to expand in, or NIL (the\n"
+"   default) for the null environment."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"True of any Lisp object that has a constant value: types that eval to\n"
+"  themselves, keywords, constants, and list whose car is QUOTE."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid ""
+"Applies FUNCTION to a list of arguments produced by evaluating ARGS in\n"
+"  the manner of LIST*.  That is, a list is made of the values of all but "
+"the\n"
+"  last argument, appended to the value of the last argument, which must be "
+"a\n"
+"  list."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid "Calls Function with the given Arguments."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid "Returns all of its arguments, in order, as values."
+msgstr ""
+
+#: target:code/eval.lisp
+msgid "Returns all of the elements of List, in order, as values."
 msgstr ""
 
 #: target:code/debug-int.lisp
