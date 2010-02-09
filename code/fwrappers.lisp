@@ -27,7 +27,7 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fwrappers.lisp,v 1.5.42.1 2010/02/08 17:15:47 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fwrappers.lisp,v 1.5.42.2 2010/02/09 18:41:59 rtoy Exp $")
 
 (in-package :fwrappers)
 
@@ -40,7 +40,7 @@
 	     (:type kernel:funcallable-structure)
 	     (:constructor make-fwrapper (constructor type user-data))
 	     (:print-function print-fwrapper))
-  "A funcallable instance used to implement fwrappers.
+  _N"A funcallable instance used to implement fwrappers.
    The CONSTRUCTOR slot is a function defined with DEFINE-FWRAPPER.
    This function returns an instance closure closing over an 
    fwrapper object, which is installed as the funcallable-instance
@@ -51,14 +51,14 @@
   (user-data	nil		:type t))
 
 (defun print-fwrapper (fwrapper stream depth)
-  "Print-function for struct FWRAPPER."
+  _N"Print-function for struct FWRAPPER."
   (declare (ignore depth))
   (print-unreadable-object (fwrapper stream :type t :identity t)
     (format stream "~s" (fwrapper-type fwrapper))))
 
 (declaim (inline fwrapper-or-nil))
 (defun fwrapper-or-nil (fun)
-  "Return FUN if it is an fwrapper or nil if it isn't."
+  _N"Return FUN if it is an fwrapper or nil if it isn't."
   (and (functionp fun)
        ;; Necessary for cold-load reasons.
        (= (get-type fun) vm:funcallable-instance-header-type)
@@ -66,7 +66,7 @@
        fun))
 
 (defmacro do-fwrappers ((var fdefn &optional result) &body body)
-  "Evaluate BODY with VAR bound to consecutive fwrappers of
+  _N"Evaluate BODY with VAR bound to consecutive fwrappers of
    FDEFN.  Return RESULT at the end."
   `(loop for ,var = (fwrapper-or-nil (fdefn-function ,fdefn))
 	 then (fwrapper-or-nil (fwrapper-next ,var))
@@ -75,13 +75,13 @@
 
 (declaim (inline last-fwrapper))
 (defun last-fwrapper (fdefn)
-  "Return tha last encapsulation of FDEFN or NIL if none."
+  _N"Return tha last encapsulation of FDEFN or NIL if none."
   (do-fwrappers (f fdefn)
     (when (null (fwrapper-or-nil (fwrapper-next f)))
       (return f))))
 
 (defun push-fwrapper (f function-name)
-  "Prepend encapsulation F to the definition of FUNCTION-NAME.
+  _N"Prepend encapsulation F to the definition of FUNCTION-NAME.
    Signal an error if FUNCTION-NAME is an undefined function."
   (declare (type fwrapper f))
   (let ((fdefn (fdefn-or-lose function-name)))
@@ -89,19 +89,19 @@
     (setf (fdefn-function fdefn) f)))
 
 (defun delete-fwrapper (f function-name)
-  "Remove fwrapper F from the definition of FUNCTION-NAME."
+  _N"Remove fwrapper F from the definition of FUNCTION-NAME."
   (set-fwrappers function-name
 		 (delete f (list-fwrappers function-name))))
 
 (defun list-fwrappers (function-name)
-  "Return a list of all fwrappers of FUNCTION-NAME, ordered
+  _N"Return a list of all fwrappers of FUNCTION-NAME, ordered
    from outermost to innermost."
   (collect ((result))
     (do-fwrappers (f (fdefn-or-lose function-name) (result))
       (result f))))
 
 (defun set-fwrappers (function-name fwrappers)
-  "Set FUNCTION-NAMES's fwrappers to elements of the list
+  _N"Set FUNCTION-NAMES's fwrappers to elements of the list
    FWRAPPERS, which is assumed to be ordered from outermost to
    innermost.  FWRAPPERS null means remove all fwrappers."
   (let ((fdefn (fdefn-or-lose function-name))
@@ -111,7 +111,7 @@
       (push-fwrapper f function-name))))
 
 (defun fwrap (function-name constructor &key type user-data)
-  "Wrap the function named FUNCTION-NAME in an fwrapper of type TYPE,
+  _N"Wrap the function named FUNCTION-NAME in an fwrapper of type TYPE,
    created by calling CONSTRUCTOR.  CONSTRUCTOR is a function
    defined with DEFINE-FWRAPPER, or the name of such a function.
    Return the fwrapper created.  USER-DATA is arbitrary data to be
@@ -123,7 +123,7 @@
     (push-fwrapper f function-name)))
 
 (defun funwrap (function-name &key (type nil type-p) test)
-  "Remove fwrappers from the function named FUNCTION-NAME.
+  _N"Remove fwrappers from the function named FUNCTION-NAME.
    If TYPE is supplied, remove fwrappers whose type is equal to TYPE.
    If TEST is supplied, remove fwrappers satisfying TEST.
    If both are not specified, remove all fwrappers."
@@ -136,13 +136,13 @@
       (set-fwrappers function-name (new)))))
 
 (defun update-fwrapper (f)
-  "Update the funcallable instance function of fwrapper F from its
+  _N"Update the funcallable instance function of fwrapper F from its
    constructor."
   (setf (kernel:funcallable-instance-function f)
 	(funcall (fwrapper-constructor f) f)))
 
 (defun update-fwrappers (function-name &key (type nil type-p) test)
-  "Update fwrapper function definitions of FUNCTION-NAME.
+  _N"Update fwrapper function definitions of FUNCTION-NAME.
    If TYPE is supplied, update fwrappers whose type is equal to TYPE.
    If TEST is supplied, update fwrappers satisfying TEST."
   (do-fwrappers (f (fdefn-or-lose function-name))
@@ -151,7 +151,7 @@
 	(update-fwrapper f)))))
 
 (defun find-fwrapper (function-name &key (type nil type-p) test)
-  "Find an fwrapper of FUNCTION-NAME.
+  _N"Find an fwrapper of FUNCTION-NAME.
    If TYPE is supplied, find an fwrapper whose type is equal to TYPE.
    If TEST is supplied, find an fwrapper satisfying TEST."
   (do-fwrappers (f (fdefn-or-lose function-name))
@@ -160,7 +160,7 @@
 	(return f)))))
 
 (defmacro define-fwrapper (name lambda-list &body body &environment env)
-  "Like DEFUN, but define a function wrapper.
+  _N"Like DEFUN, but define a function wrapper.
    In BODY, the symbol FWRAPPERS:FWRAPPERS refers to the currently
    executing fwrapper.  FWRAPPERS:CALL-NEXT-FUNCTION can be used
    in BODY to call the next fwrapper or the primary function.  When
@@ -171,12 +171,12 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun expand-define-fwrapper (name lambda-list body env)
-    "Return the expansion of a DEFINE-FWRAPPER."
+    _N"Return the expansion of a DEFINE-FWRAPPER."
     (multiple-value-bind (required optional restp rest keyp keys allowp
 				   aux morep)
 	(kernel:parse-lambda-list lambda-list)
       (when morep
-	(error "&MORE not supported in fwrapper lambda lists"))
+	(error _"&MORE not supported in fwrapper lambda lists"))
       (multiple-value-bind (body declarations documentation)
 	  (system:parse-body body env t)
 	(multiple-value-bind (lambda-list call-next)
@@ -217,7 +217,7 @@
 		     ,@body))))))))
 
   (defun uses-vars-p (body optionals keys rest env)
-    "First value is true if BODY refers to any of the variables in
+    _N"First value is true if BODY refers to any of the variables in
      OPTIONALS, KEYS or REST, which are what KERNEL:PARSE-LAMBDA-LIST
      returns.  Second value is true if BODY refers to REST."
     (collect ((vars))
@@ -251,22 +251,22 @@
 ;;;
 
 (define-fwrapper encapsulation-fwrapper (&rest args)
-  "Fwrapper for old-style encapsulations."
+  _N"Fwrapper for old-style encapsulations."
   (let ((basic-definition (fwrapper-next fwrapper))
 	(argument-list args))
     (declare (special basic-definition argument-list))
     (eval (fwrapper-user-data fwrapper))))
 
 (defun encapsulate (name type body)
-  "This function is deprecated; use fwrappers instead."
+  _N"This function is deprecated; use fwrappers instead."
   (fwrap name #'encapsulation-fwrapper :type type :user-data body))
 
 (defun unencapsulate (name type)
-  "This function is deprecated; use fwrappers instead."
+  _N"This function is deprecated; use fwrappers instead."
   (funwrap name :type type))
 
 (defun encapsulated-p (name type)
-  "This function is deprecated; use fwrappers instead."
+  _N"This function is deprecated; use fwrappers instead."
   (not (null (find-fwrapper name :type type))))
 
 ;;; end of file

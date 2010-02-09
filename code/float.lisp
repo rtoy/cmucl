@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.45.2.1 2010/02/08 17:15:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.45.2.2 2010/02/09 18:41:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -246,7 +246,7 @@
 ;;; FLOAT-DENORMALIZED-P  --  Public
 ;;;
 (defun float-denormalized-p (x)
-  "Return true if the float X is denormalized."
+  _N"Return true if the float X is denormalized."
   (number-dispatch ((x float))
     ((single-float)
      (and (zerop (ldb vm:single-float-exponent-byte (single-float-bits x)))
@@ -331,7 +331,7 @@
 ;;;
 (declaim (maybe-inline float-precision))
 (defun float-precision (f)
-  "Returns a non-negative number of significant digits in it's float argument.
+  _N"Returns a non-negative number of significant digits in it's float argument.
   Will be less than FLOAT-DIGITS if denormalized or zero."
   (macrolet ((frob (digits bias decode)
 	       `(cond ((zerop f) 0)
@@ -382,7 +382,7 @@
 
 #+nil
 (defun float-sign (float1 &optional (float2 (float 1 float1)))
-  "Returns a floating-point number that has the same sign as
+  _N"Returns a floating-point number that has the same sign as
    float1 and, if float2 is given, has the same absolute value
    as float2."
   (declare (float float1 float2))
@@ -398,7 +398,7 @@
      (abs float2)))
 
 (defun float-sign (float1 &optional float2)
-  "Returns a floating-point number that has the same sign as
+  _N"Returns a floating-point number that has the same sign as
    float1 and, if float2 is given, has the same absolute value
    as float2."
   (declare (float float1)
@@ -433,7 +433,7 @@
 (declaim (inline float-digits float-radix))
 
 (defun float-digits (f)
-  "Returns a non-negative number of radix-b digits used in the
+  _N"Returns a non-negative number of radix-b digits used in the
    representation of it's argument.  See Common Lisp: The Language
    by Guy Steele for more details."
   (number-dispatch ((f float))
@@ -445,7 +445,7 @@
     ((double-double-float) vm:double-double-float-digits)))
 
 (defun float-radix (f)
-  "Returns (as an integer) the radix b of its floating-point
+  _N"Returns (as an integer) the radix b of its floating-point
    argument."
   (number-dispatch ((f float))
     ((float) 2)))
@@ -492,7 +492,7 @@
 	 (biased (- exp vm:single-float-bias vm:single-float-digits)))
     (declare (fixnum biased))
     (unless (<= exp vm:single-float-normal-exponent-max)
-      (error "Can't decode NAN or infinity: ~S." x))
+      (error _"Can't decode NAN or infinity: ~S." x))
     (cond ((and (zerop exp) (zerop sig))
 	   (values 0 biased sign))
 	  ((< exp vm:single-float-normal-exponent-min)
@@ -552,7 +552,7 @@
 	 (biased (- exp vm:double-float-bias vm:double-float-digits)))
     (declare (fixnum biased))
     (unless (<= exp vm:double-float-normal-exponent-max)
-      (error "Can't decode NAN or infinity: ~S." x))
+      (error _"Can't decode NAN or infinity: ~S." x))
     (cond ((and (zerop exp) (zerop sig) (zerop lo))
 	   (values 0 biased sign))
 	  ((< exp vm:double-float-normal-exponent-min)
@@ -633,7 +633,7 @@
 	 (biased (- exp vm:long-float-bias vm:long-float-digits)))
     (declare (fixnum biased))
     (unless (<= exp vm:long-float-normal-exponent-max)
-      (error "Can't decode NAN or infinity: ~S." x))
+      (error _"Can't decode NAN or infinity: ~S." x))
     (cond ((and (zerop exp) (zerop hi) (zerop lo))
 	   (values 0 biased sign))
 	  ((< exp vm:long-float-normal-exponent-min)
@@ -647,7 +647,7 @@
 ;;;    Dispatch to the correct type-specific i-d-f function.
 ;;;
 (defun integer-decode-float (x)
-  "Returns three values:
+  _N"Returns three values:
    1) an integer representation of the significand.
    2) the exponent for the power of 2 that the significand must be multiplied
       by to get the actual value.  This differs from the DECODE-FLOAT exponent
@@ -698,7 +698,7 @@
 	 (biased (truly-the single-float-exponent
 			    (- exp vm:single-float-bias))))
     (unless (<= exp vm:single-float-normal-exponent-max) 
-      (error "Can't decode NAN or infinity: ~S." x))
+      (error _"Can't decode NAN or infinity: ~S." x))
     (cond ((zerop x)
 	   (values 0.0f0 biased sign))
 	  ((< exp vm:single-float-normal-exponent-min)
@@ -742,7 +742,7 @@
 	 (biased (truly-the double-float-exponent
 			    (- exp vm:double-float-bias))))
     (unless (<= exp vm:double-float-normal-exponent-max)
-      (error "Can't decode NAN or infinity: ~S." x))
+      (error _"Can't decode NAN or infinity: ~S." x))
     (cond ((zerop x)
 	   (values 0.0d0 biased sign))
 	  ((< exp vm:double-float-normal-exponent-min)
@@ -779,7 +779,7 @@
 	 (sign (if (minusp exp-bits) -1l0 1l0))
 	 (biased (truly-the long-float-exponent (- exp vm:long-float-bias))))
     (unless (<= exp vm:long-float-normal-exponent-max)
-      (error "Can't decode NAN or infinity: ~S." x))
+      (error _"Can't decode NAN or infinity: ~S." x))
     (cond ((zerop x)
 	   (values 0.0l0 biased sign))
 	  ((< exp vm:long-float-normal-exponent-min)
@@ -808,7 +808,7 @@
 ;;;    Dispatch to the appropriate type-specific function.
 ;;;
 (defun decode-float (f)
-  "Returns three values:
+  _N"Returns three values:
    1) a floating-point number representing the significand.  This is always
       between 0.5 (inclusive) and 1.0 (exclusive).
    2) an integer representing the exponent.
@@ -960,7 +960,7 @@
 ;;;    Dispatch to the correct type-specific scale-float function.
 ;;;
 (defun scale-float (f ex)
-  "Returns the value (* f (expt (float 2 f) ex)), but with no unnecessary loss
+  _N"Returns the value (* f (expt (float 2 f) ex)), but with no unnecessary loss
   of precision or overflow."
   (number-dispatch ((f float))
     ((single-float)
@@ -978,7 +978,7 @@
 ;;;; Converting to/from floats:
 
 (defun float (number &optional (other () otherp))
-  "Converts any REAL to a float.  If OTHER is not provided, it returns a
+  _N"Converts any REAL to a float.  If OTHER is not provided, it returns a
   SINGLE-FLOAT if NUMBER is not already a FLOAT.  If OTHER is provided, the
   result is the same float format as OTHER."
   (if otherp
@@ -1495,7 +1495,7 @@ rounding modes & do ieee round-to-integer.
 ) ; not x87
 
 (defun rational (x)
-  "RATIONAL produces a rational number for any real numeric argument.  This is
+  _N"RATIONAL produces a rational number for any real numeric argument.  This is
   more efficient than RATIONALIZE, but it assumes that floating-point is
   completely accurate, giving a result that isn't as pretty."
   (number-dispatch ((x real))
@@ -1516,7 +1516,7 @@ rounding modes & do ieee round-to-integer.
 
 #+nil
 (defun rationalize (x)
-  "Converts any REAL to a RATIONAL.  Floats are converted to a simple rational
+  _N"Converts any REAL to a RATIONAL.  Floats are converted to a simple rational
   representation exploiting the assumption that floats are only accurate to
   their precision.  RATIONALIZE (and also RATIONAL) preserve the invariant:
       (= x (float (rationalize x) x))"
@@ -1615,7 +1615,7 @@ rounding modes & do ieee round-to-integer.
 ;;;   p[i]*q[i-1]-p[i-1]*q[i] = (-1)^i.
 ;;;
 (defun rationalize (x)
-  "Converts any REAL to a RATIONAL.  Floats are converted to a simple rational
+  _N"Converts any REAL to a RATIONAL.  Floats are converted to a simple rational
   representation exploiting the assumption that floats are only accurate to
   their precision.  RATIONALIZE (and also RATIONAL) preserve the invariant:
       (= x (float (rationalize x) x))"

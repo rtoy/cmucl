@@ -73,6 +73,196 @@ msgstr ""
 msgid "_@ is a reserved reader macro prefix."
 msgstr ""
 
+#: target:code/fwrappers.lisp
+msgid ""
+"A funcallable instance used to implement fwrappers.\n"
+"   The CONSTRUCTOR slot is a function defined with DEFINE-FWRAPPER.\n"
+"   This function returns an instance closure closing over an \n"
+"   fwrapper object, which is installed as the funcallable-instance\n"
+"   function of the fwrapper object."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid "Print-function for struct FWRAPPER."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid "Return FUN if it is an fwrapper or nil if it isn't."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid ""
+"Evaluate BODY with VAR bound to consecutive fwrappers of\n"
+"   FDEFN.  Return RESULT at the end."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid "Return tha last encapsulation of FDEFN or NIL if none."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid ""
+"Prepend encapsulation F to the definition of FUNCTION-NAME.\n"
+"   Signal an error if FUNCTION-NAME is an undefined function."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid "Remove fwrapper F from the definition of FUNCTION-NAME."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid ""
+"Return a list of all fwrappers of FUNCTION-NAME, ordered\n"
+"   from outermost to innermost."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid ""
+"Set FUNCTION-NAMES's fwrappers to elements of the list\n"
+"   FWRAPPERS, which is assumed to be ordered from outermost to\n"
+"   innermost.  FWRAPPERS null means remove all fwrappers."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid ""
+"Wrap the function named FUNCTION-NAME in an fwrapper of type TYPE,\n"
+"   created by calling CONSTRUCTOR.  CONSTRUCTOR is a function\n"
+"   defined with DEFINE-FWRAPPER, or the name of such a function.\n"
+"   Return the fwrapper created.  USER-DATA is arbitrary data to be\n"
+"   associated with the fwrapper.  It is accessible in wrapper\n"
+"   functions defined with DEFINE-FWRAPPER as (FWRAPPER-USER-DATA\n"
+"   FWRAPPER)."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid ""
+"Remove fwrappers from the function named FUNCTION-NAME.\n"
+"   If TYPE is supplied, remove fwrappers whose type is equal to TYPE.\n"
+"   If TEST is supplied, remove fwrappers satisfying TEST.\n"
+"   If both are not specified, remove all fwrappers."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid ""
+"Update the funcallable instance function of fwrapper F from its\n"
+"   constructor."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid ""
+"Update fwrapper function definitions of FUNCTION-NAME.\n"
+"   If TYPE is supplied, update fwrappers whose type is equal to TYPE.\n"
+"   If TEST is supplied, update fwrappers satisfying TEST."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid ""
+"Find an fwrapper of FUNCTION-NAME.\n"
+"   If TYPE is supplied, find an fwrapper whose type is equal to TYPE.\n"
+"   If TEST is supplied, find an fwrapper satisfying TEST."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid ""
+"Like DEFUN, but define a function wrapper.\n"
+"   In BODY, the symbol FWRAPPERS:FWRAPPERS refers to the currently\n"
+"   executing fwrapper.  FWRAPPERS:CALL-NEXT-FUNCTION can be used\n"
+"   in BODY to call the next fwrapper or the primary function.  When\n"
+"   called with no arguments, CALL-NEXT-FUNCTION invokes the next\n"
+"   function with the original args to the fwrapper, otherwise it\n"
+"   invokes the next function with the supplied args."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid "Return the expansion of a DEFINE-FWRAPPER."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid ""
+"First value is true if BODY refers to any of the variables in\n"
+"     OPTIONALS, KEYS or REST, which are what KERNEL:PARSE-LAMBDA-LIST\n"
+"     returns.  Second value is true if BODY refers to REST."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid "&MORE not supported in fwrapper lambda lists"
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid "Fwrapper for old-style encapsulations."
+msgstr ""
+
+#: target:code/fwrappers.lisp
+msgid "This function is deprecated; use fwrappers instead."
+msgstr ""
+
+#: target:code/fdefinition.lisp
+msgid ""
+"Define (NAME ...) to be a valid function name whose syntax is checked\n"
+"  by BODY.  In BODY, VAR is bound to an actual function name of the\n"
+"  form (NAME ...) to check.  BODY should return two values.\n"
+"  First value true means the function name is valid.  Second value\n"
+"  is the name, a symbol, of the function for use in the BLOCK of DEFUNs\n"
+"  and in similar situations."
+msgstr ""
+
+#: target:code/fdefinition.lisp
+msgid ""
+"First value is true if NAME has valid function name syntax.\n"
+"  Second value is the name, a symbol, to use as a block name in DEFUNs\n"
+"  and in similar situations."
+msgstr ""
+
+#: target:code/fdefinition.lisp
+msgid ""
+"Return the fdefn object for NAME.  If it doesn't already exist and CREATE\n"
+"   is non-NIL, create a new (unbound) one."
+msgstr ""
+
+#: target:code/fdefinition.lisp
+msgid "Invalid function name: ~S"
+msgstr ""
+
+#: target:code/fdefinition.lisp
+msgid ""
+"Return the FDEFN of NAME.  Signal an error if there is none\n"
+"   or if it's function is null."
+msgstr ""
+
+#: target:code/fdefinition.lisp
+msgid ""
+"Returns the definition for name, including any encapsulations.  Settable\n"
+"   with SETF."
+msgstr ""
+
+#: target:code/fdefinition.lisp
+msgid ""
+"Return FUNCTION-NAME's global function definition.\n"
+"   If FUNCTION-NAME is fwrapped, return the primary function definition\n"
+"   stored in the innermost fwrapper."
+msgstr ""
+
+#: target:code/fdefinition.lisp
+msgid ""
+"This holds functions that (SETF FDEFINITION) invokes before storing the\n"
+"   new value.  These functions take the function name and the new value."
+msgstr ""
+
+#: target:code/fdefinition.lisp
+msgid ""
+"Set FUNCTION-NAME's global function definition to NEW-VALUE.\n"
+"   If FUNCTION-NAME is fwrapped, set the primary function stored\n"
+"   in the innermost fwrapper."
+msgstr ""
+
+#: target:code/fdefinition.lisp
+msgid "Return true if name has a global function definition."
+msgstr ""
+
+#: target:code/fdefinition.lisp
+msgid "Make Name have no global function definition."
+msgstr ""
+
 #: target:code/error.lisp
 msgid "&rest keyword is ~:[missing~;misplaced~]."
 msgstr ""
@@ -1449,6 +1639,164 @@ msgstr ""
 msgid "Too large to be represented as a ~S:~%  ~S"
 msgstr ""
 
+#: target:code/float-trap.lisp
+msgid "Unknown float trap kind: ~S."
+msgstr ""
+
+#: target:code/float-trap.lisp
+msgid ""
+"This function sets options controlling the floating-point hardware.  If a\n"
+"  keyword is not supplied, then the current value is preserved.  Possible\n"
+"  keywords:\n"
+"\n"
+"   :TRAPS\n"
+"       A list of the exception conditions that should cause traps.  Possible"
+"\n"
+"       exceptions are :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID,\n"
+"       :DIVIDE-BY-ZERO, and on the X86 :DENORMALIZED-OPERAND. Initially\n"
+"       all traps except :INEXACT are enabled.\n"
+"\n"
+"   :ROUNDING-MODE\n"
+"       The rounding mode to use when the result is not exact.  Possible "
+"values\n"
+"       are :NEAREST, :POSITIVE-INFINITY, :NEGATIVE-INFINITY and :ZERO.\n"
+"       Initially, the rounding mode is :NEAREST.\n"
+"\n"
+"   :CURRENT-EXCEPTIONS\n"
+"   :ACCRUED-EXCEPTIONS\n"
+"       These arguments allow setting of the exception flags.  The main use "
+"is\n"
+"       setting the accrued exceptions to NIL to clear them.\n"
+"\n"
+"   :FAST-MODE\n"
+"       Set the hardware's \"fast mode\" flag, if any.  When set, IEEE\n"
+"       conformance or debuggability may be impaired.  Some machines may not\n"
+"       have this feature, in which case the value is always NIL.\n"
+"\n"
+"   GET-FLOATING-POINT-MODES may be used to find the floating point modes\n"
+"   currently in effect."
+msgstr ""
+
+#: target:code/float-trap.lisp
+msgid "Unknown rounding mode: ~S."
+msgstr ""
+
+#: target:code/float-trap.lisp
+msgid ""
+"This function returns a list representing the state of the floating point\n"
+"  modes.  The list is in the same format as the keyword arguments to\n"
+"  SET-FLOATING-POINT-MODES, i.e. \n"
+"      (apply #'set-floating-point-modes (get-floating-point-modes))\n"
+"\n"
+"  sets the floating point modes to their current values (and thus is a "
+"no-op)."
+msgstr ""
+
+#: target:code/float-trap.lisp
+msgid ""
+"Current-Float-Trap Trap-Name*\n"
+"  Return true if any of the named traps are currently trapped, false\n"
+"  otherwise."
+msgstr ""
+
+#: target:code/float-trap.lisp
+msgid "SIGFPE with no exceptions currently enabled?"
+msgstr ""
+
+#: target:code/float-trap.lisp
+msgid ""
+"Execute BODY with the floating point exceptions listed in TRAPS\n"
+"  masked (disabled).  TRAPS should be a list of possible exceptions\n"
+"  which includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and\n"
+"  :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective\n"
+"  accrued exceptions are cleared at the start of the body to support\n"
+"  their testing within, and restored on exit."
+msgstr ""
+
+#: target:code/float.lisp
+msgid "Return true if the float X is denormalized."
+msgstr ""
+
+#: target:code/float.lisp
+msgid ""
+"Returns a non-negative number of significant digits in it's float argument.\n"
+"  Will be less than FLOAT-DIGITS if denormalized or zero."
+msgstr ""
+
+#: target:code/float.lisp
+msgid ""
+"Returns a floating-point number that has the same sign as\n"
+"   float1 and, if float2 is given, has the same absolute value\n"
+"   as float2."
+msgstr ""
+
+#: target:code/float.lisp
+msgid ""
+"Returns a non-negative number of radix-b digits used in the\n"
+"   representation of it's argument.  See Common Lisp: The Language\n"
+"   by Guy Steele for more details."
+msgstr ""
+
+#: target:code/float.lisp
+msgid "Returns (as an integer) the radix b of its floating-point\n"
+"   argument."
+msgstr ""
+
+#: target:code/irrat.lisp target:code/float.lisp
+msgid "Can't decode NAN or infinity: ~S."
+msgstr ""
+
+#: target:code/float.lisp
+msgid ""
+"Returns three values:\n"
+"   1) an integer representation of the significand.\n"
+"   2) the exponent for the power of 2 that the significand must be multiplie"
+"d\n"
+"      by to get the actual value.  This differs from the DECODE-FLOAT "
+"exponent\n"
+"      by FLOAT-DIGITS, since the significand has been scaled to have all "
+"its\n"
+"      digits before the radix point.\n"
+"   3) -1 or 1 (i.e. the sign of the argument.)"
+msgstr ""
+
+#: target:code/float.lisp
+msgid ""
+"Returns three values:\n"
+"   1) a floating-point number representing the significand.  This is always\n"
+"      between 0.5 (inclusive) and 1.0 (exclusive).\n"
+"   2) an integer representing the exponent.\n"
+"   3) -1.0 or 1.0 (i.e. the sign of the argument.)"
+msgstr ""
+
+#: target:code/float.lisp
+msgid ""
+"Returns the value (* f (expt (float 2 f) ex)), but with no unnecessary loss\n"
+"  of precision or overflow."
+msgstr ""
+
+#: target:code/float.lisp
+msgid ""
+"Converts any REAL to a float.  If OTHER is not provided, it returns a\n"
+"  SINGLE-FLOAT if NUMBER is not already a FLOAT.  If OTHER is provided, the\n"
+"  result is the same float format as OTHER."
+msgstr ""
+
+#: target:code/float.lisp
+msgid ""
+"RATIONAL produces a rational number for any real numeric argument.  This is\n"
+"  more efficient than RATIONALIZE, but it assumes that floating-point is\n"
+"  completely accurate, giving a result that isn't as pretty."
+msgstr ""
+
+#: target:code/float.lisp
+msgid ""
+"Converts any REAL to a RATIONAL.  Floats are converted to a simple rational\n"
+"  representation exploiting the assumption that floats are only accurate to\n"
+"  their precision.  RATIONALIZE (and also RATIONAL) preserve the invariant:\n"
+"      (= x (float (rationalize x) x))"
+msgstr ""
+
 #: target:code/char.lisp
 msgid "The upper exclusive bound on values produced by CHAR-CODE."
 msgstr ""
@@ -2389,6 +2737,238 @@ msgstr ""
 msgid "The external-format for encoding filenames is already set."
 msgstr ""
 
+#: target:code/filesys.lisp
+msgid ""
+"Remove any occurrences of \\ from the string because we've already\n"
+"   checked for whatever may have been backslashed."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Backslash in bad place."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ""
+"If non-NIL, Unix shell-style wildcards are ignored when parsing\n"
+"  pathname namestrings.  They are also ignored when computing\n"
+"  namestrings for pathname objects.  Thus, *, ?, etc. are not\n"
+"  wildcards when parsing a namestring, and are not escaped when\n"
+"  printing pathnames."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "``['' with no corresponding ``]''"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "~A already names a logical host"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Invalid pattern piece: ~S"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ":BACK cannot be represented in namestrings."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Invalid directory component: ~S"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Cannot specify a directory separator in a pathname name: ~S"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Cannot specify a dot in a pathname name without a pathname type: ~S"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Invalid value for a pathname name: ~S"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Cannot specify the type without a file: ~S"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Cannot specify a directory separator in a pathname type: ~S"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Cannot specify a dot in a pathname type: ~S"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Cannot specify a version without a file: ~S"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "~S cannot be represented relative to ~S"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Cannot supply a type without a name:~%  ~S"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ""
+"Convert PATHNAME into a string that can be used with UNIX system calls.\n"
+"   Search-lists and wild-cards are expanded. If optional argument\n"
+"   FOR-INPUT is true and PATHNAME doesn't exist, NIL is returned.\n"
+"   If optional argument EXECUTABLE-ONLY is true, NIL is returned\n"
+"   unless an executable version of PATHNAME exists."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "~S is ambiguous:~{~%  ~A~}"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ""
+"Return the pathname for the actual file described by the pathname\n"
+"  An error of type file-error is signalled if no such file exists,\n"
+"  or the pathname is wild."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Bad place for a wild pathname."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "The file ~S does not exist."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ""
+"Return a pathname which is the truename of the file if it exists, NIL\n"
+"  otherwise. An error of type file-error is signalled if pathname is wild."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ""
+"Rename File to have the specified New-Name.  If file is a stream open to a\n"
+"  file, then the associated file is renamed."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "~S can't be created."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Failed to rename ~A to ~A: ~A"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Delete the specified file."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "~S doesn't exist."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Could not delete ~A: ~A."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ""
+"Delete old versions of files matching the given Pathname,\n"
+"optionally keeping some of the most recent old versions."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ""
+"Returns the home directory of the logged in user as a pathname.\n"
+"  This is obtained from the logical name \"home:\"."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ""
+"Return file's creation date, or NIL if it doesn't exist.\n"
+" An error of type file-error is signalled if file is a wild pathname"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ""
+"Returns the file author as a string, or nil if the author cannot be\n"
+" determined.  Signals an error of type file-error if file doesn't exist,\n"
+" or file is a wild pathname."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ""
+"Returns a list of pathnames, one for each file that matches the given\n"
+"   pathname.  Supplying :ALL as nil causes this to ignore Unix dot files.  "
+"This\n"
+"   never includes Unix dot and dot-dot in the result.  If :TRUENAMEP is NIL,"
+"\n"
+"   then symbolic links in the result are not expanded, which is not the\n"
+"   default because TRUENAME does follow links and the result pathnames are\n"
+"   defined to be the TRUENAME of the pathname (the truename of a link may "
+"well\n"
+"   be in another directory).  If FOLLOW-LINKS is NIL then symbolic links "
+"are\n"
+"   not followed."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ""
+"Like Directory, but prints a terse, multi-column directory listing\n"
+"   instead of returning a list of pathnames.  When :all is supplied and\n"
+"   non-nil, then Unix dot files are included too (as ls -a).  When :verbose\n"
+"   is supplied and non-nil, then a long listing of miscellaneous\n"
+"   information is output one file per line."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Directory of ~A:~%"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Couldn't stat ~A -- ~A.~%"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ""
+"Return a list of all files which are possible completions of Pathname.\n"
+"   We look in the directory specified by Defaults as well as looking down\n"
+"   the search list."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ""
+"File-writable accepts a pathname and returns T if the current\n"
+"  process can write it, and NIL otherwise."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ""
+"Returns the pathname for the default directory.  This is the place where\n"
+"  a file will be written if no directory is specified.  This may be changed\n"
+"  with setf."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid ""
+"Tests whether the directories containing the specified file\n"
+"  actually exist, and attempts to create them if they do not.\n"
+"  Portable programs should avoid using the :MODE keyword argument."
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "~&Creating directory: ~A~%"
+msgstr ""
+
+#: target:code/filesys.lisp
+msgid "Can't create directory ~A."
+msgstr ""
+
+#: target:code/foreign-linkage.lisp
+msgid "~A is not defined as a foreign symbol"
+msgstr ""
+
 #: target:code/eval.lisp
 msgid ""
 "Keywords that you can put in a lambda-list, supposing you should want\n"
@@ -3296,6 +3876,16 @@ msgstr ""
 msgid "dfixnum became too big ~a/~a + ~a/~a"
 msgstr ""
 
+#: target:code/final.lisp
+msgid ""
+"Arrange for FUNCTION to be called when there are no more references to\n"
+"   OBJECT.  FUNCTION takes no arguments."
+msgstr ""
+
+#: target:code/final.lisp
+msgid "Cancel any finalization registers for OBJECT."
+msgstr ""
+
 #: target:code/describe.lisp
 msgid "Depth of recursive descriptions allowed."
 msgstr ""
@@ -3595,6 +4185,211 @@ msgstr ""
 
 #: target:code/describe.lisp
 msgid "~&It is defined in:~&~A"
+msgstr ""
+
+#: target:code/format-time.lisp
+msgid ""
+"Format-Universal-Time formats a string containing the time and date\n"
+"   given by universal-time in a common manner.  The destination is any\n"
+"   destination which can be accepted by the Format function.  The\n"
+"   timezone keyword is an integer specifying hours west of Greenwich.\n"
+"   The style keyword can be :short (numeric date), :long (months and\n"
+"   weekdays expressed as words), :abbreviated (like :long but words\n"
+"   are abbreviated), :rfc1123 (conforming to RFC 1123), :government\n"
+"   (of the form \"XX Mon XX XX:XX:XX\"), or :iso8601 (conforming to\n"
+"   ISO 8601), which is the recommended way of printing date and time.\n"
+"   The keyword date-first, if nil, will print the time first instead of\n"
+"   the date (the default).  The print- keywords, if nil, inhibit the\n"
+"   printing of the obvious part of the time/date."
+msgstr ""
+
+#: target:code/format-time.lisp
+msgid "~A: Not a valid format destination."
+msgstr ""
+
+#: target:code/format-time.lisp
+msgid "~A: Universal-Time should be an integer."
+msgstr ""
+
+#: target:code/format-time.lisp
+msgid "~A: Timezone should be a rational between -24 and 24."
+msgstr ""
+
+#: target:code/format-time.lisp
+msgid "~A: Timezone is not a second (1/3600) multiple."
+msgstr ""
+
+#: target:code/format-time.lisp
+msgid "~A: Unrecognized :style keyword value."
+msgstr ""
+
+#: target:code/format-time.lisp
+msgid ""
+"Format-Decoded-Time formats a string containing decoded-time\n"
+"   expressed in a humanly-readable manner.  The destination is any\n"
+"   destination which can be accepted by the Format function.  The\n"
+"   timezone keyword is an integer specifying hours west of Greenwich.\n"
+"   The style keyword can be :short (numeric date), :long (months and\n"
+"   weekdays expressed as words), or :abbreviated (like :long but words are\n"
+"   abbreviated).  The keyword date-first, if nil, will cause the time\n"
+"   to be printed first instead of the date (the default).  The print-\n"
+"   keywords, if nil, inhibit the printing of certain semi-obvious\n"
+"   parts of the string."
+msgstr ""
+
+#: target:code/format-time.lisp
+msgid "~A: Seconds should be an integer between 0 and 59."
+msgstr ""
+
+#: target:code/format-time.lisp
+msgid "~A: Minutes should be an integer between 0 and 59."
+msgstr ""
+
+#: target:code/format-time.lisp
+msgid "~A: Hours should be an integer between 0 and 23."
+msgstr ""
+
+#: target:code/format-time.lisp
+msgid "~A: Day should be an integer between 1 and 31."
+msgstr ""
+
+#: target:code/format-time.lisp
+msgid "~A: Month should be an integer between 1 and 12."
+msgstr ""
+
+#: target:code/format-time.lisp
+msgid "~A: Hours should be an non-negative integer."
+msgstr ""
+
+#: target:code/format-time.lisp
+msgid "~A: Timezone should be an integer between 0 and 32."
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Could not create temporary file ~S: ~A"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Make sure the header starts with the ELF magic value."
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Return the `osabi' field in the padding of the ELF file."
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Given a file type number, determine whether the file is executable."
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Make sure the header starts with the mach-o magic value."
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid ""
+"Parse symbol table file created by load-foreign script.  Modified\n"
+"to skip undefined symbols which don't have an address."
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid ""
+"Load-foreign loads a list of C object files into a running Lisp.  The files\n"
+"  argument should be a single file or a list of files.  The files may be\n"
+"  specified as namestrings or as pathnames.  The libraries argument should "
+"be a\n"
+"  list of library files as would be specified to ld.  They will be searched "
+"in\n"
+"  the order given.  The default is just \"-lc\", i.e., the C library.  The\n"
+"  base-file argument is used to specify a file to use as the starting place "
+"for\n"
+"  defined symbols.  The default is the C start up code for Lisp.  The env\n"
+"  argument is the Unix environment variable definitions for the invocation "
+"of\n"
+"  the linker.  The default is the environment passed to Lisp."
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Lazy function call binding"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Immediate function call binding"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Mask of binding time value"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid ""
+"If set the symbols of the loaded object and its dependencies are\n"
+"   made visible as if the object were linked directly into the program"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid ""
+"Load C object files into the running Lisp. The FILES argument\n"
+"should be a single file or a list of files. The files may be specified\n"
+"as namestrings or as pathnames. The LIBRARIES argument should be a\n"
+"list of library files as would be specified to ld. They will be\n"
+"searched in the order given. The default is just \"-lc\", i.e., the C\n"
+"library. The BASE-FILE argument is used to specify a file to use as\n"
+"the starting place for defined symbols. The default is the C start up\n"
+"code for Lisp. The ENV argument is the Unix environment variable\n"
+"definitions for the invocation of the linker. The default is the\n"
+"environment passed to Lisp."
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Can't open global symbol table: ~S"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Can't open object ~S: ~S"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "LOAD-OBJECT-FILE: Unresolved symbols in file ~S: ~S"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Couldn't open library ~S: ~S"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Reloaded library ~S~%"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Enter new library path: "
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid ";;; Opening as shared library ~A ...~%"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid ";;; Done.~%"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid ";;; Trying as object file ~A...~%"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid ";;; Running ~A...~%"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Could not run ~A"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "~A failed:~%~A"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "File does not exist: ~A."
 msgstr ""
 
 #: target:code/defstruct.lisp

@@ -54,7 +54,7 @@
 							  c-call:long))
 					 entry-num)))
 	(when (zerop result)
-	  (error "~A is not defined as a foreign symbol"
+	  (error _"~A is not defined as a foreign symbol"
 		 symbol-name))))
     (setf (gethash symbol-name linkage-hash) entry-num)
     entry-num))

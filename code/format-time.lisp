@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format-time.lisp,v 1.9.12.1 2010/02/08 17:15:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format-time.lisp,v 1.9.12.2 2010/02/09 18:41:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -65,7 +65,7 @@
 					  (print-meridian t)
 					  (print-timezone t)
 					  (print-weekday t))
-  "Format-Universal-Time formats a string containing the time and date
+  _N"Format-Universal-Time formats a string containing the time and date
    given by universal-time in a common manner.  The destination is any
    destination which can be accepted by the Format function.  The
    timezone keyword is an integer specifying hours west of Greenwich.
@@ -78,14 +78,14 @@
    the date (the default).  The print- keywords, if nil, inhibit the
    printing of the obvious part of the time/date."
   (unless (valid-destination-p destination)
-    (error "~A: Not a valid format destination." destination))
+    (error _"~A: Not a valid format destination." destination))
   (unless (integerp universal-time)
-    (error "~A: Universal-Time should be an integer." universal-time))
+    (error _"~A: Universal-Time should be an integer." universal-time))
   (when timezone
     (unless (and (rationalp timezone) (<= -24 timezone 24))
-      (error "~A: Timezone should be a rational between -24 and 24." timezone))
+      (error _"~A: Timezone should be a rational between -24 and 24." timezone))
     (unless (zerop (rem timezone 1/3600))
-      (error "~A: Timezone is not a second (1/3600) multiple." timezone)))
+      (error _"~A: Timezone is not a second (1/3600) multiple." timezone)))
 
   (multiple-value-bind (secs mins hours day month year dow dst tz)
 		       (if timezone
@@ -101,7 +101,7 @@
 	     (:government "~2,'0D ~:@(~A~) ~2,'0D")	;;  DD MON YY
 	     (:iso8601 "~4,'0D-~2,'0D-~2,'0D")          ;;  YYYY-MM-DD
 	     (t
-	      (error "~A: Unrecognized :style keyword value." style))))
+	      (error _"~A: Unrecognized :style keyword value." style))))
 	  (time-args
 	   (case style
 	     ((:rfc1123 :iso8601) (list mins hours))
@@ -220,7 +220,7 @@
 					  (print-meridian t)
 					  (print-timezone t)
 					  (print-weekday t))
-  "Format-Decoded-Time formats a string containing decoded-time
+  _N"Format-Decoded-Time formats a string containing decoded-time
    expressed in a humanly-readable manner.  The destination is any
    destination which can be accepted by the Format function.  The
    timezone keyword is an integer specifying hours west of Greenwich.
@@ -231,22 +231,22 @@
    keywords, if nil, inhibit the printing of certain semi-obvious
    parts of the string."
   (unless (valid-destination-p destination)
-    (error "~A: Not a valid format destination." destination))
+    (error _"~A: Not a valid format destination." destination))
   (unless (and (integerp seconds) (<= 0 seconds 59))
-    (error "~A: Seconds should be an integer between 0 and 59." seconds))
+    (error _"~A: Seconds should be an integer between 0 and 59." seconds))
   (unless (and (integerp minutes) (<= 0 minutes 59))
-    (error "~A: Minutes should be an integer between 0 and 59." minutes))
+    (error _"~A: Minutes should be an integer between 0 and 59." minutes))
   (unless (and (integerp hours) (<= 0 hours 23))
-    (error "~A: Hours should be an integer between 0 and 23." hours))
+    (error _"~A: Hours should be an integer between 0 and 23." hours))
   (unless (and (integerp day) (<= 1 day 31))
-    (error "~A: Day should be an integer between 1 and 31." day))
+    (error _"~A: Day should be an integer between 1 and 31." day))
   (unless (and (integerp month) (<= 1 month 12))
-    (error "~A: Month should be an integer between 1 and 12." month))
+    (error _"~A: Month should be an integer between 1 and 12." month))
   (unless (and (integerp year) (plusp year))
-    (error "~A: Hours should be an non-negative integer." year))
+    (error _"~A: Hours should be an non-negative integer." year))
   (when timezone
     (unless (and (integerp timezone) (<= 0 timezone 32))
-      (error "~A: Timezone should be an integer between 0 and 32."
+      (error _"~A: Timezone should be an integer between 0 and 32."
 	     timezone)))
   (format-universal-time destination
    (encode-universal-time seconds minutes hours day month year)
