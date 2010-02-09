@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.102.10.1 2010/02/08 02:49:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.102.10.2 2010/02/09 14:53:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,6 +318,7 @@
   (comf "target:code/macros")
   #-no-runtime (comf "target:code/macros" :byte-compile t))
 
+(comf "target:code/intl-tramp")
 (comf "target:code/intl")
 
 ); let *byte-compile-top-level*
