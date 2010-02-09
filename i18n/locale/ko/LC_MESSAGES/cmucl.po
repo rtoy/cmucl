@@ -1850,6 +1850,73 @@ msgstr ""
 msgid "Computes a hash code for S-EXPR and returns it as an integer."
 msgstr ""
 
+#: target:code/mipsstrops.lisp
+msgid ""
+"Compares the substrings specified by String1 and String2 and returns\n"
+"NIL if the strings are String=, or the lowest index of String1 in\n"
+"which the two differ. If one string is longer than the other and the\n"
+"shorter is a prefix of the longer, the length of the shorter + start1 is\n"
+"returned. This would be done on the Vax with CMPC3. The arguments must\n"
+"be simple strings."
+msgstr ""
+
+#: target:code/mipsstrops.lisp
+msgid "Like %sp-string-compare, only backwards."
+msgstr ""
+
+#: target:code/mipsstrops.lisp
+msgid ""
+"%SP-Find-Character-With-Attribute  String, Start, End, Table, Mask\n"
+"  The codes of the characters of String from Start to End are used as "
+"indices\n"
+"  into the Table, which is a U-Vector of 8-bit bytes. When the number "
+"picked\n"
+"  up from the table bitwise ANDed with Mask is non-zero, the current\n"
+"  index into the String is returned. The corresponds to SCANC on the Vax."
+msgstr ""
+
+#: target:code/mipsstrops.lisp
+msgid "Like %SP-Find-Character-With-Attribute, only sdrawkcaB."
+msgstr ""
+
+#: target:code/mipsstrops.lisp
+msgid ""
+"%SP-Find-Character  String, Start, End, Character\n"
+"  Searches String for the Character from Start to End.  If the character is\n"
+"  found, the corresponding index into String is returned, otherwise NIL is\n"
+"  returned."
+msgstr ""
+
+#: target:code/mipsstrops.lisp
+msgid ""
+"%SP-Reverse-Find-Character  String, Start, End, Character\n"
+"  Searches String for Character from End to Start.  If the character is\n"
+"  found, the corresponding index into String is returned, otherwise NIL is\n"
+"  returned."
+msgstr ""
+
+#: target:code/mipsstrops.lisp
+msgid ""
+"%SP-Skip-Character  String, Start, End, Character\n"
+"  Returns the index of the first character between Start and End which\n"
+"  is not Char=  to Character, or NIL if there is no such character."
+msgstr ""
+
+#: target:code/mipsstrops.lisp
+msgid ""
+"%SP-Skip-Character  String, Start, End, Character\n"
+"  Returns the index of the last character between Start and End which\n"
+"  is not Char=  to Character, or NIL if there is no such character."
+msgstr ""
+
+#: target:code/mipsstrops.lisp
+msgid ""
+"%SP-String-Search  String1, Start1, End1, String2, Start2, End2\n"
+"   Searches for the substring of String1 specified in String2.\n"
+"   Returns an index into String2 or NIL if the substring wasn't\n"
+"   found."
+msgstr ""
+
 #: target:code/bsd-os.lisp
 msgid "Unix system call getrusage failed: ~A."
 msgstr ""
@@ -2483,6 +2550,92 @@ msgid ""
 "All arguments must be integers.  Returns a character object that\n"
 "  represents a digit of the given weight in the specified radix.  Returns\n"
 "  NIL if no such character exists."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid ""
+"Returns the documentation string of Doc-Type for X, or NIL if\n"
+"  none exists.  System doc-types are VARIABLE, FUNCTION, STRUCTURE, TYPE,\n"
+"  SETF, and T."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid "~S is not the name of a structure type."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid ""
+"If X is an atom, see if it is present in *FEATURES*.  Also\n"
+"  handle arbitrary combinations of atoms using NOT, AND, OR."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid "Unknown operator in feature expression: ~S."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid "Returns a string describing the implementation type."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid "Returns a string describing the implementation version."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid " Unicode"
+msgstr ""
+
+#: target:code/misc.lisp
+msgid "Returns a string giving the name of the local machine."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid "The value of SOFTWARE-TYPE.  Set in FOO-os.lisp."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid "Returns a string describing the supporting software."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid "Unknown"
+msgstr ""
+
+#: target:code/misc.lisp
+msgid "Returns a string with the abbreviated site name."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid "The value of LONG-SITE-NAME.  Set in library:site-init.lisp."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid "Site name not initialized"
+msgstr ""
+
+#: target:code/misc.lisp
+msgid "Returns a string with the long form of the site name."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid ""
+"With a file name as an argument, dribble opens the file and\n"
+"   sends a record of further I/O to that file.  Without an\n"
+"   argument, it closes the dribble file, and quits logging."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid "Not currently dribbling."
+msgstr ""
+
+#: target:code/misc.lisp
+msgid ""
+"Default implementation of ed.  This does nothing.  If hemlock is\n"
+"  loaded, ed can be used to edit a file"
 msgstr ""
 
 #: target:code/extensions.lisp
@@ -3382,6 +3535,11 @@ msgid ""
 "  See the manual for details."
 msgstr ""
 
+#: target:pcl/std-class.lisp target:pcl/boot.lisp target:pcl/defs.lisp
+#: target:pcl/defclass.lisp target:code/fd-stream.lisp
+msgid "Odd-length property list in REMF."
+msgstr ""
+
 #: target:code/fd-stream.lisp
 msgid "Unable to open streams of class ~S."
 msgstr ""
@@ -3656,6 +3814,77 @@ msgstr ""
 
 #: target:code/foreign-linkage.lisp
 msgid "~A is not defined as a foreign symbol"
+msgstr ""
+
+#: target:code/module.lisp
+msgid ""
+"This is a list of module names that have been loaded into Lisp so far.\n"
+"   It is used by PROVIDE and REQUIRE."
+msgstr ""
+
+#: target:code/module.lisp
+msgid "*load-verbose* is bound to this before loading files."
+msgstr ""
+
+#: target:code/module.lisp
+msgid "See function documentation for REQUIRE"
+msgstr ""
+
+#: target:code/module.lisp
+msgid ""
+"Defines a module by registering the files that need to be loaded when\n"
+"   the module is required.  If name is a symbol, its print name is used\n"
+"   after downcasing it."
+msgstr ""
+
+#: target:code/module.lisp
+msgid ""
+"Adds a new module name to *modules* indicating that it has been loaded.\n"
+"   Module-name may be any valid string designator.  All comparisons are\n"
+"   done using string=, i.e. module names are case-sensitive."
+msgstr ""
+
+#: target:code/module.lisp
+msgid ""
+"Loads a module when it has not been already.  Pathname, if supplied,\n"
+"   is a single pathname or list of pathnames to be loaded if the module\n"
+"   needs to be.  If pathname is not supplied, then functions from the list\n"
+"   *MODULE-PROVIDER-FUNCTIONS* are called in order with the stringified\n"
+"   MODULE-NAME as the argument, until one of them returns non-NIL.  By\n"
+"   default the functions MODULE-PROVIDE-CMUCL-DEFMODULE and MODULE-PROVIDE-\n"
+"   CMUCL-LIBRARY are on this list of functions, in that order.  The first\n"
+"   of those looks for a list of files that was registered by a EXT:"
+"DEFMODULE\n"
+"   form.  If the module has not been defined, then the second function\n"
+"   causes a file to be loaded whose name is formed by merging \"modules:\"\n"
+"   and the concatenation of module-name with the suffix \"-LIBRARY\".\n"
+"   Note that both the module-name and the suffix are each, separately,\n"
+"   converted from :case :common to :case :local.  This merged name will be\n"
+"   probed with both a .lisp and .fasl extensions, calling LOAD if it "
+"exists.\n"
+"\n"
+"   Note that in all cases covered above, user code is responsible for\n"
+"   calling PROVIDE to indicate a successful load of the module.\n"
+"\n"
+"   While loading any files, *load-verbose* is bound to *require-verbose*\n"
+"   which defaults to t."
+msgstr ""
+
+#: target:code/module.lisp
+msgid "Don't know how to load ~A"
+msgstr ""
+
+#: target:code/module.lisp
+msgid "Coerce a string designator to a module name."
+msgstr ""
+
+#: target:code/module.lisp
+msgid ""
+"Derive a default pathname to try to load for an undefined module\n"
+"named module-name.  The default pathname is constructed from the\n"
+"module-name by appending the suffix \"-LIBRARY\" to it, and merging\n"
+"with \"modules:\".  Note that both the module-name and the suffix are\n"
+"each, separately, converted from :case :common to :case :local."
 msgstr ""
 
 #: target:code/eval.lisp
@@ -5296,6 +5525,243 @@ msgstr ""
 msgid "network connection from ~D.~D.~D.~D:~D"
 msgstr ""
 
+#: target:code/multi-proc.lisp
+msgid "Return the real time in seconds."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Return the run time in seconds"
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Return the process state which is either Run, Killed, or a wait reason."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Returns the current process."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "A list of all alive processes."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Return a list of all the live processes."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Execute the body the scheduling disabled."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Increaments the reference by delta in a single atomic operation"
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Decrements the reference by delta in a single atomic operation"
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Atomically push object onto place."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Atomically pop place."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Make a process which will run FUNCTION when it starts up.  By\n"
+"  default the process is created in a runnable (active) state.\n"
+"  If FUNCTION is NIL, the process is started in a killed state; it may\n"
+"  be restarted later with process-preset.\n"
+"\n"
+"  :NAME\n"
+"\tA name for the process displayed in process listings.\n"
+"\n"
+"  :RUN-REASONS\n"
+"\tInitial value for process-run-reasons; defaults to (:ENABLE).  A\n"
+"\tprocess needs a at least one run reason to be runnable.  Together with\n"
+"\tarrest reasons, run reasons provide an alternative to process-wait for\n"
+"\tcontroling whether or not a process is runnable.  To get the default\n"
+"\tbehavior of MAKE-PROCESS in Allegro Common Lisp, which is to create a\n"
+"\tprocess which is active but not runnable, initialize RUN-REASONS to\n"
+"\tNIL.\n"
+"\n"
+"  :ARREST-REASONS\n"
+"\tInitial value for process-arrest-reasons; defaults to NIL.  A\n"
+"\tprocess must have no arrest reasons in order to be runnable.\n"
+"\n"
+"  :INITIAL-BINDINGS\n"
+"\tAn alist of initial special bindings for the process.  At\n"
+"\tstartup the new process has a fresh set of special bindings\n"
+"\twith a default binding of *package* setup to the CL-USER\n"
+"\tpackage.  INITIAL-BINDINGS specifies additional bindings for\n"
+"\tthe process.  The cdr of each alist element is evaluated in\n"
+"\tthe fresh dynamic environment and then bound to the car of the\n"
+"\telement."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Interrupt process and cause it to evaluate function."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Destroy a process. The process is sent a interrupt which throws to\n"
+"  the end of the process allowing it to unwind gracefully."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Restart process by unwinding it to its initial state and calling its\n"
+"  initial function."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Restart process, unwinding it to its initial state and calls\n"
+"  function with args."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Disable process from being runnable until enabled."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Allow process to become runnable again after it has been disabled."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Causes the process to wait until predicate returns True. Processes\n"
+"  can only call process-wait when scheduling is enabled, and the predicate\n"
+"  can not call process-wait. Since the predicate may be evaluated may\n"
+"  times by the scheduler it should be relative fast native compiled code.\n"
+"  The single True predicate value is returned."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Causes the process to wait until predicate returns True, or the\n"
+"  number of seconds specified by timeout has elapsed. The timeout may\n"
+"  be a fixnum or a float in seconds.  The single True predicate value is\n"
+"  returned, or NIL if the timeout was reached."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Try to gracefully destroy all the processes giving them some\n"
+"  chance to unwinding, before shutting down multi-processing. This is\n"
+"  currently necessary before a purify and is performed before a save-lisp.\n"
+"  Multi-processing can be restarted by calling init-multi-processing."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"An idle loop to be run by the initial process. The select based event\n"
+"  server is called with a timeout calculated from the minimum of the\n"
+"  *idle-loop-timeout* and the time to the next process wait timeout.\n"
+"  To avoid this delay when there are runnable processes the *idle-process*\n"
+"  should be setup to the *initial-process*. If one of the processes quits\n"
+"  by throwing to %end-of-the-world then *quitting-lisp* will have been\n"
+"  set to the exit value which is noted by the idle loop which tries to\n"
+"  exit gracefully destroying all the processes and giving them a chance\n"
+"  to unwind."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Allow other processes to run."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Return the accrued real time elapsed while the given process was\n"
+"  scheduled. The returned time is a double-float in seconds."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Return the accrued run time elapsed for the given process. The returned\n"
+"  time is a double-float in seconds."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Return the real time elapsed since the given process was last\n"
+"  descheduled. The returned time is a double-float in seconds."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Start a regular SIGALRM interrupt which calls process-yield. An optional\n"
+"  time in seconds and micro seconds may be provided. Note that CMUCL code\n"
+"  base is not too interrupt safe so this may cause problems."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Wait until FD is usable for DIRECTION and return True. DIRECTION should be\n"
+"  either :INPUT or :OUTPUT. TIMEOUT, if supplied, is the number of seconds "
+"to\n"
+"  wait before giving up and returing NIL."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"This function causes execution to be suspended for N seconds.  N may\n"
+"  be any non-negative, non-complex number."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Executes body and returns the values of the last form in body. However, if\n"
+"  the execution takes longer than timeout seconds, abort it and evaluate\n"
+"  timeout-forms, returning the values of last form."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Show the all the processes, their whostate, and state. If the optional\n"
+"  verbose argument is true then the run, real, and idle times are also\n"
+"  shown."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Top-level READ-EVAL-PRINT loop for processes."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Enter the idle loop, starting a new process to run the top level loop.\n"
+"  The awaking of sleeping processes is timed better with the idle loop "
+"process\n"
+"  running, and starting a new process for the top level loop supports a\n"
+"  simultaneous interactive session. Such an initialisation will likely be "
+"the\n"
+"  default when there is better MP debug support etc."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Create a Lisp connection listener, listening on a TCP port for new\n"
+"  connections and starting a new top-level loop for each. If a password\n"
+"  is not given then one will be generated and reported.  A search is\n"
+"  performed for the first free port starting at the given port which\n"
+"  defaults to 1025."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Execute the body with the lock held. If the lock is held by another\n"
+"  process then the current process waits until the lock is released or\n"
+"  an optional timeout is reached. The optional wait timeout is a time in\n"
+"  seconds acceptable to process-wait-with-timeout.  The results of the\n"
+"  body are return upon success and NIL is return if the timeout is\n"
+"  reached. When the wait key is NIL and the lock is held by another\n"
+"  process then NIL is return immediately without processing the body."
+msgstr ""
+
 #: target:code/defstruct.lisp
 msgid ""
 "Controls compiling DEFSTRUCT :print-function and :print-method\n"
@@ -5599,6 +6065,582 @@ msgstr ""
 
 #: target:code/defmacro.lisp
 msgid ", but got ~D."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"This function is to parse the declarations and doc-string out of the body "
+"of\n"
+"  a defun-like form.  Body is the list of stuff which is to be parsed.\n"
+"  Environment is ignored.  If Doc-String-Allowed is true, then a doc string\n"
+"  will be parsed out of the body and returned.  If it is false then a "
+"string\n"
+"  will terminate the search for declarations.  Three values are returned: "
+"the\n"
+"  tail of Body after the declarations and doc strings, a list of declare "
+"forms,\n"
+"  and the doc-string, or NIL if none."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "defining macro ~A"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Define a compiler-macro for NAME."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Symbol macro name is not a symbol: ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Symbol macro name already declared special: ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Symbol macro name already declared constant: ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Syntax like DEFMACRO, but defines a new type."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "~S -- Type name not a symbol."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "defining type ~A"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Deftype already names a declaration: ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Illegal to redefine standard type: ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Redefining class ~S to be a DEFTYPE."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Setf expander for ~S cannot be called with ~S args."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"Syntax like DEFMACRO, but creates a Setf-Expansion generator.  The body\n"
+"  must be a form that returns the five magical values."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "~S -- Access-function name not a symbol in DEFINE-SETF-EXPANDER."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Obsolete, use define-setf-expander."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"Defining setf macro for destruct slot accessor; redefining as ~\n"
+"\t        a normal function:~%  ~S"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Defining setf macro for ~S, but ~S is fbound."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Bind the variables in LAMBDA-LIST to the contents of ARG-LIST."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"For defining global constants at top level.  The DEFCONSTANT says that the\n"
+"  value is constant and may be compiled into code.  If the variable already "
+"has\n"
+"  a value, and this is not equal to the init, an error is signalled.  The "
+"third\n"
+"  argument is an optional documentation string for the variable."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Go ahead and change the value."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Constant ~S being redefined."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"For defining global variables at top level.  Declares the variable\n"
+"  SPECIAL and, optionally, initializes it.  If the variable already has a\n"
+"  value, the old value is not clobbered.  The third argument is an optional\n"
+"  documentation string for the variable."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"Defines a parameter that is not normally changed by the program,\n"
+"  but that may be changed without causing an error.  Declares the\n"
+"  variable special and sets its value to VAL.  The third argument is\n"
+"  an optional documentation string for the parameter."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"First arg is a predicate.  If it is non-null, the rest of the forms are\n"
+"  evaluated as a PROGN."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"First arg is a predicate.  If it is null, the rest of the forms are\n"
+"  evaluated as a PROGN."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Cond clause is not a list: ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Varlist is not a list of symbols: ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"Evaluates FORM and returns the Nth value (zero based).  This involves no\n"
+"  consing when N is a trivial constant integer."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"Returns five values needed by the SETF machinery: a list of temporary\n"
+"   variables, a list of values with which to fill them, a list of "
+"temporaries\n"
+"   for the new values, the setting function, and the accessing function."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Obsolete: use GET-SETF-EXPANSION."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Obsolete: use GET-SETF-EXPANSION and handle multiple store values."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"GET-SETF-METHOD used for a form with multiple store ~\n"
+"\t      variables:~%  ~S"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"Associates a SETF update function or macro with the specified access\n"
+"  function or macro.  The format is complex.  See the manual for\n"
+"  details."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Ill-formed DEFSETF for ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"Takes pairs of arguments like SETQ.  The first is a place and the second\n"
+"  is the value that is supposed to go into that place.  Returns the last\n"
+"  value.  The place argument may be any of the access forms for which SETF\n"
+"  knows a corresponding setting form."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Odd number of args to SETF."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"This is to SETF as PSETQ is to SETQ.  Args are alternating place\n"
+"  expressions and values to go into those places.  All of the subforms and\n"
+"  values are determined, left to right, and only then are the locations\n"
+"  updated.  Returns NIL."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Odd number of args to PSETF."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"One or more SETF-style place expressions, followed by a single\n"
+"   value expression.  Evaluates all of the expressions in turn, then\n"
+"   assigns the value of each expression to the place on its left,\n"
+"   returning the value of the leftmost."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"Takes any number of SETF-style place expressions.  Evaluates all of the\n"
+"   expressions in turn, then assigns to each place the value of the form to\n"
+"   its right.  The rightmost form gets the value of the leftmost.\n"
+"   Returns NIL."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Creates a new read-modify-write macro like PUSH or INCF."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Non-symbol &rest arg in definition of ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Illegal stuff after &rest arg in Define-Modify-Macro."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "~S not allowed in Define-Modify-Macro lambda list."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Illegal stuff in lambda list of Define-Modify-Macro."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"Takes an object and a location holding a list.  Conses the object onto\n"
+"  the list, returning the modified list.  OBJ is evaluated before PLACE."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"Takes an object and a location holding a list.  If the object is already\n"
+"  in the list, does nothing.  Else, conses the object onto the list.  "
+"Returns\n"
+"  NIL.  If there is a :TEST keyword, this is used for the comparison."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"The argument is a location holding a list.  Pops one item off the front\n"
+"  of the list and returns it."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"The first argument is some location holding a number. This number is\n"
+"  incremented by the second argument, DELTA, which defaults to 1."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"The first argument is some location holding a number. This number is\n"
+"  decremented by the second argument, DELTA, which defaults to 1."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"Place may be any place expression acceptable to SETF, and is expected\n"
+"  to hold a property list or ().  This list is destructively altered to\n"
+"  remove the property specified by the indicator.  Returns T if such a\n"
+"  property was present, NIL if not."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Setf of Apply is only defined for function args like #'symbol."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"The first argument is a byte specifier.  The second is any place form\n"
+"  acceptable to SETF.  Replaces the specified byte of the number in this\n"
+"  place with bits from the low-order end of the new value."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"The first argument is a byte specifier.  The second is any place form\n"
+"  acceptable to SETF.  Replaces the specified byte of the number in this "
+"place\n"
+"  with bits from the corresponding position in the new value."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "~S -- Bad clause in ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "No default clause allowed in ~S: ~S"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "T and OTHERWISE may not be used as key designators for ~A"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Bad style to use T or OTHERWISE in ECASE or CCASE"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Supply a new value for ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"CASE Keyform {({(Key*) | Key} Form*)}*\n"
+"  Evaluates the Forms in the first clause with a Key EQL to the value\n"
+"  of Keyform.  If a singleton key is T or Otherwise then the clause is\n"
+"  a default clause."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"CCASE Keyform {({(Key*) | Key} Form*)}*\n"
+"  Evaluates the Forms in the first clause with a Key EQL to the value of\n"
+"  Keyform.  If none of the keys matches then a correctable error is\n"
+"  signalled."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"ECASE Keyform {({(Key*) | Key} Form*)}*\n"
+"  Evaluates the Forms in the first clause with a Key EQL to the value of\n"
+"  Keyform.  If none of the keys matches then an error is signalled."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"TYPECASE Keyform {(Type Form*)}*\n"
+"  Evaluates the Forms in the first clause for which TYPEP of Keyform\n"
+"  and Type is true.  If a singleton key is T or Otherwise then the\n"
+"  clause is a default clause."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"CTYPECASE Keyform {(Type Form*)}*\n"
+"  Evaluates the Forms in the first clause for which TYPEP of Keyform and "
+"Type\n"
+"  is true.  If no form is satisfied then a correctable error is signalled."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"ETYPECASE Keyform {(Type Form*)}*\n"
+"  Evaluates the Forms in the first clause for which TYPEP of Keyform and "
+"Type\n"
+"  is true.  If no form is satisfied then an error is signalled."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"Signals an error if the value of test-form is nil.  Continuing from this\n"
+"   error using the CONTINUE restart will allow the user to alter the value "
+"of\n"
+"   some locations known to SETF, starting over with test-form.  Returns nil."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "The assertion ~S failed."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Retry assertion"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid " with new value~P for ~{~S~^, ~}."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"The old value of ~S is ~S.~\n"
+"\t\t  ~%Do you want to supply a new value? "
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "~&Type a form to be evaluated:~%"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"Signals an error of type type-error if the contents of place are not of the\n"
+"   specified type.  If an error is signaled, this can only return if\n"
+"   STORE-VALUE is invoked.  It will store into place and start over."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Supply a new value of ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "The value of ~S is ~S, which is not ~A."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "The value of ~S is ~S, which is not of type ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"The file whose name is Filespec is opened using the Open-args and\n"
+"  bound to the variable Var. If the call to open is unsuccessful, the\n"
+"  forms are not evaluated.  The Forms are executed, and when they\n"
+"  terminate, normally or otherwise, the file is closed."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"The form stream should evaluate to a stream.  VAR is bound\n"
+"   to the stream and the forms are evaluated as an implicit\n"
+"   progn.  The stream is closed upon exit."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"Binds the Var to an input stream that returns characters from String and\n"
+"  executes the body.  See manual for details."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"If STRING is specified, it must be a string with a fill pointer;\n"
+"   the output is incrementally appended to the string (as if by use of\n"
+"   VECTOR-PUSH-EXTEND)."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"DO ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*\n"
+"  Iteration construct.  Each Var is initialized in parallel to the value of "
+"the\n"
+"  specified Init form.  On subsequent iterations, the Vars are assigned the\n"
+"  value of the Step form (if any) in paralell.  The Test is evaluated "
+"before\n"
+"  each evaluation of the body Forms.  When the Test is true, the Exit-Forms\n"
+"  are evaluated as a PROGN, with the result being the value of the DO.  A "
+"block\n"
+"  named NIL is established around the entire expansion, allowing RETURN to "
+"be\n"
+"  used as an laternate exit mechanism."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"DO* ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*\n"
+"  Iteration construct.  Each Var is initialized sequentially (like LET*) to "
+"the\n"
+"  value of the specified Init form.  On subsequent iterations, the Vars are\n"
+"  sequentially assigned the value of the Step form (if any).  The Test is\n"
+"  evaluated before each evaluation of the body Forms.  When the Test is "
+"true,\n"
+"  the Exit-Forms are evaluated as a PROGN, with the result being the value\n"
+"  of the DO.  A block named NIL is established around the entire expansion,\n"
+"  allowing RETURN to be used as an laternate exit mechanism."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"PSETQ {var value}*\n"
+"   Set the variables to the values, like SETQ, except that assignments\n"
+"   happen in parallel, i.e. no assignments take place until all the\n"
+"   forms have been evaluated."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "variable ~S in PSETQ is not a SYMBOL"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Unknown declaration context: ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"Context declaration spec should have context and at ~\n"
+"\t  least one DECLARE form:~%  ~S"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid ""
+"WITH-COMPILATION-UNIT ({Key Value}*) Form*\n"
+"  This form affects compilations that take place within its dynamic extent.  "
+"It\n"
+"  is intended to be wrapped around the compilation of all files in the same\n"
+"  system.  These keywords are defined:\n"
+"    :OVERRIDE Boolean-Form\n"
+"        One of the effects of this form is to delay undefined warnings \n"
+"        until the end of the form, instead of giving them at the end of "
+"each\n"
+"        compilation.  If OVERRIDE is NIL (the default), then the outermost\n"
+"        WITH-COMPILATION-UNIT form grabs the undefined warnings.  "
+"Specifying\n"
+"        OVERRIDE true causes that form to grab any enclosed warnings, even "
+"if\n"
+"        it is enclosed by another WITH-COMPILATION-UNIT.\n"
+"    :OPTIMIZE Decl-Form\n"
+"        Decl-Form should evaluate to an OPTIMIZE declaration specifier.  "
+"This\n"
+"        declaration changes the `global' policy for compilations within the\n"
+"        body.\n"
+"    :OPTIMIZE-INTERFACE Decl-Form\n"
+"        Like OPTIMIZE, except that it specifies the value of the CMU "
+"extension\n"
+"        OPTIMIZE-INTERFACE policy (which controls argument type and syntax\n"
+"        checking.)\n"
+"    :CONTEXT-DECLARATIONS List-of-Context-Decls-Form\n"
+"        This is a CMU extension which allows compilation to be controlled\n"
+"        by pattern matching on the context in which a definition appears.  "
+"The\n"
+"        argument should evaluate to a list of lists of the form:\n"
+"            (Context-Spec Declare-Form+)\n"
+"        In the indicated context, the specified declare forms are inserted "
+"at\n"
+"        the head of each definition.  The declare forms for all contexts "
+"that\n"
+"\tmatch are appended together, with earlier declarations getting\n"
+"\tpredecence over later ones.  A simple example:\n"
+"            :context-declarations\n"
+"            '((:external (declare (optimize (safety 2)))))\n"
+"        This will cause all functions that are named by external symbols to "
+"be\n"
+"        compiled with SAFETY 2.  The full syntax of context specs is:\n"
+"\t:INTERNAL, :EXTERNAL\n"
+"\t    True if the symbols is internal (external) in its home package.\n"
+"\t:UNINTERNED\n"
+"\t    True if the symbol has no home package.\n"
+"\t:ANONYMOUS\n"
+"\t    True if the function doesn't have any interesting name (not\n"
+"\t    DEFMACRO, DEFUN, LABELS or FLET).\n"
+"\t:MACRO, :FUNCTION\n"
+"\t    :MACRO is a global (DEFMACRO) macro.  :FUNCTION is anything else.\n"
+"\t:LOCAL, :GLOBAL\n"
+"\t    :LOCAL is a LABELS or FLET.  :GLOBAL is anything else.\n"
+"\t(:OR Context-Spec*)\n"
+"\t    True in any specified context.\n"
+"\t(:AND Context-Spec*)\n"
+"\t    True only when all specs are true.\n"
+"\t(:NOT Context-Spec)\n"
+"\t    True when the spec is false.\n"
+"        (:MEMBER Name*)\n"
+"\t    True when the name is one of these names (EQUAL test.)\n"
+"\t(:MATCH Pattern*)\n"
+"\t    True when any of the patterns is a substring of the name.  The name\n"
+"\t    is wrapped with $'s, so $FOO matches names beginning with FOO,\n"
+"\t    etc."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Odd number of key/value pairs: ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Ignoring unknown option: ~S."
 msgstr ""
 
 #~ msgid "Read-Only Space Usage:  ~13:D 바이트 (~4:D 메가바이트의) 아웃.~%"
