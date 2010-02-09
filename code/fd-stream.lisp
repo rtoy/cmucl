@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.97.2.1 2010/02/08 17:15:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.97.2.2 2010/02/09 19:54:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,17 +40,17 @@
 ;;;; Buffer manipulation routines.
 
 (defvar *available-buffers* ()
-  "List of available buffers.  Each buffer is an sap pointing to
+  _N"List of available buffers.  Each buffer is an sap pointing to
   bytes-per-buffer of memory.")
 
 (defvar lisp::*enable-stream-buffer-p* nil)
 
 (defconstant bytes-per-buffer (* 4 1024)
-  "Number of bytes per buffer.")
+  _N"Number of bytes per buffer.")
 
 ;; This limit is rather arbitrary
 (defconstant max-stream-element-size 1024
-  "The maximum supported byte size for a stream element-type.")
+  _N"The maximum supported byte size for a stream element-type.")
 
 ;;; NEXT-AVAILABLE-BUFFER -- Internal.
 ;;;
@@ -296,7 +296,7 @@
 ;;;; Output routines and related noise.
 
 (defvar *output-routines* ()
-  "List of all available output routines. Each element is a list of the
+  _N"List of all available output routines. Each element is a list of the
   element-type output, the kind of buffering, the function name, and the number
   of bytes per element.")
 
@@ -322,8 +322,8 @@
 			 length)
       (cond ((not count)
 	     (if (= errno unix:ewouldblock)
-		 (error "Write would have blocked, but SERVER told us to go.")
-		 (error "While writing ~S: ~A"
+		 (error _"Write would have blocked, but SERVER told us to go.")
+		 (error _"While writing ~S: ~A"
 			stream (unix:get-unix-error-msg errno))))
 	    ((eql count length) ; Hot damn, it worked.
 	     (when reuse-sap
@@ -593,7 +593,7 @@
 ;;; send it directly (after flushing the buffer, of course).
 ;;;
 (defun output-raw-bytes (stream thing &optional start end)
-  "Output THING to stream.  THING can be any kind of vector or a sap.  If THING
+  _N"Output THING to stream.  THING can be any kind of vector or a sap.  If THING
   is a SAP, END must be supplied (as length won't work)."
   (let ((start (or start 0))
 	(end (or end (length (the (simple-array * (*)) thing)))))
@@ -825,7 +825,7 @@
 ;;;; Input routines and related noise.
 
 (defvar *input-routines* ()
-  "List of all available input routines. Each element is a list of the
+  _N"List of all available input routines. Each element is a list of the
   element-type input, the function name, and the number of bytes per element.")
 
 ;;; DO-INPUT -- internal
@@ -892,7 +892,7 @@
 			   :format-arguments (list (unix:get-unix-error-msg errno))
 			   :errno errno))
 		   (t
-		    (error "Error reading ~S: ~A"
+		    (error _"Error reading ~S: ~A"
 			   stream
 			   (unix:get-unix-error-msg errno)))))
 	    ((zerop count)
@@ -1282,7 +1282,7 @@
 				  now-needed)
 		(declare (type (or index null) count))
 		(unless count
-		  (error "Error reading ~S: ~A" stream
+		  (error _"Error reading ~S: ~A" stream
 			 (unix:get-unix-error-msg err)))
 		(decf now-needed count)
 		(if eof-error-p
@@ -1302,7 +1302,7 @@
 		(unix:unix-read (fd-stream-fd stream) sap len)
 	      (declare (type (or index null) count))
 	      (unless count
-		(error "Error reading ~S: ~A" stream
+		(error _"Error reading ~S: ~A" stream
 		       (unix:get-unix-error-msg err)))
 	      (when (and eof-error-p (zerop count))
 		(error 'end-of-file :stream stream))
@@ -1368,7 +1368,7 @@
 	  (routine type size)
 	  (pick-input-routine target-type)
 	(unless routine
-	  (error "Could not find any input routine for ~S" target-type))
+	  (error _"Could not find any input routine for ~S" target-type))
 	(setf (fd-stream-ibuf-sap stream) (next-available-buffer))
 	(setf (fd-stream-ibuf-length stream) bytes-per-buffer)
 	(setf (fd-stream-ibuf-tail stream) 0)
@@ -1426,7 +1426,7 @@
 	  (routine type size)
 	  (pick-output-routine target-type (fd-stream-buffering stream))
 	(unless routine
-	  (error "Could not find any output routine for ~S buffered ~S."
+	  (error _"Could not find any output routine for ~S buffered ~S."
 		 (fd-stream-buffering stream)
 		 target-type))
 	(setf (fd-stream-obuf-sap stream) (next-available-buffer))
@@ -1449,7 +1449,7 @@
 
     (when (and input-size output-size
 	       (not (eql input-size output-size)))
-      (error "Element sizes for input (~S:~S) and output (~S:~S) differ?"
+      (error _"Element sizes for input (~S:~S) and output (~S:~S) differ?"
 	     input-type input-size
 	     output-type output-size))
     (setf (fd-stream-element-size stream)
@@ -1467,7 +1467,7 @@
 		((subtypep output-type input-type)
 		 output-type)
 		(t
-		 (error "Input type (~S) and output type (~S) are unrelated?"
+		 (error _"Input type (~S) and output type (~S) are unrelated?"
 			input-type
 			output-type))))))
 
@@ -1689,7 +1689,7 @@
 		 nil)
 		(t
 		 (system:with-interrupts
-		   (error "Error lseek'ing ~S: ~A"
+		   (error _"Error lseek'ing ~S: ~A"
 			  stream
 			  (unix:get-unix-error-msg errno)))))))
       (let ((offset 0)
@@ -1725,7 +1725,7 @@
 	       (setf offset (* newpos (fd-stream-element-size stream))
 		     origin unix:l_set))
 	      (t
-	       (error "Invalid position given to file-position: ~S" newpos)))
+	       (error _"Invalid position given to file-position: ~S" newpos)))
 	(multiple-value-bind
 	    (posn errno)
 	    (unix:unix-lseek (fd-stream-fd stream) offset origin)
@@ -1734,7 +1734,7 @@
 		((eq errno unix:espipe)
 		 nil)
 		(t
-		 (error "Error lseek'ing ~S: ~A"
+		 (error _"Error lseek'ing ~S: ~A"
 			stream
 			(unix:get-unix-error-msg errno))))))))
 
@@ -1766,7 +1766,7 @@
 		       binary-stream-p)
   (declare (type index fd) (type (or index null) timeout)
 	   (type (member :none :line :full) buffering))
-  "Create a stream for the given unix file descriptor.
+  _N"Create a stream for the given unix file descriptor.
   If input is non-nil, allow input operations.
   If output is non-nil, allow output operations.
   If neither input nor output are specified, default to allowing input.
@@ -1779,7 +1779,7 @@
   (cond ((not (or input-p output-p))
 	 (setf input t))
 	((not (or input output))
-	 (error "File descriptor must be opened either for input or output.")))
+	 (error _"File descriptor must be opened either for input or output.")))
   (let ((stream (if binary-stream-p
 		    (%make-binary-text-stream :fd fd
 					      :name name
@@ -1825,7 +1825,7 @@
 ;;; Pick a name to use for the backup file.
 ;;;
 (defvar *backup-extension* ".BAK"
-  "This is a string that OPEN tacks on the end of a file namestring to produce
+  _N"This is a string that OPEN tacks on the end of a file namestring to produce
    a name for the :if-exists :rename-and-delete and :rename options.  Also,
    this can be a function that takes a namestring and returns a complete
    namestring.")
@@ -2127,7 +2127,7 @@
 		      (direction direction)
 		      (if-does-not-exist if-does-not-exist)
 		      (if-exists if-exists))
-  "Return a stream which reads from or writes to Filename.
+  _N"Return a stream which reads from or writes to Filename.
   Defined keywords:
    :direction - one of :input, :output, :io, or :probe
    :element-type - Type of object to read or write, default BASE-CHAR
@@ -2202,18 +2202,18 @@
 	     (when stream
 	       (make-instance class :lisp-stream stream))))
 	  (t
-	   (error "Unable to open streams of class ~S." class)))))
+	   (error _"Unable to open streams of class ~S." class)))))
 
 ;;;; Initialization.
 
 (defvar *tty* nil
-  "The stream connected to the controlling terminal or NIL if there is none.")
+  _N"The stream connected to the controlling terminal or NIL if there is none.")
 (defvar *stdin* nil
-  "The stream connected to the standard input (file descriptor 0).")
+  _N"The stream connected to the standard input (file descriptor 0).")
 (defvar *stdout* nil
-  "The stream connected to the standard output (file descriptor 1).")
+  _N"The stream connected to the standard output (file descriptor 1).")
 (defvar *stderr* nil
-  "The stream connected to the standard error output (file descriptor 2).")
+  _N"The stream connected to the standard error output (file descriptor 2).")
 
 ;;; STREAM-INIT -- internal interface
 ;;;
@@ -2265,7 +2265,7 @@
   (finish-output stream))
 
 (defvar *beep-function* #'default-beep-function
-  "This is called in BEEP to feep the user.  It takes a stream.")
+  _N"This is called in BEEP to feep the user.  It takes a stream.")
 
 (defun beep (&optional (stream *terminal-io*))
   (funcall *beep-function* stream))
@@ -2327,7 +2327,7 @@
 (defun file-string-length (stream object)
   (declare (type (or string character) object)
 	   (type (or file-stream broadcast-stream stream:simple-stream) stream))
-  "Return the delta in Stream's FILE-POSITION that would be caused by writing
+  _N"Return the delta in Stream's FILE-POSITION that would be caused by writing
    Object to Stream.  Non-trivial only in implementations that support
    international character sets."
   (typecase stream
