@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.38.8.1 2010/02/08 16:41:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.38.8.2 2010/02/09 02:41:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -98,7 +98,8 @@
   #-no-docstrings
   (case doc-type
     (variable
-     (when intl::*default-domain*
+     #+nil
+     (when string
        (%primitive print "Set variable text domain")
        (%primitive print (symbol-name name))
        (%primitive print intl::*default-domain*))
