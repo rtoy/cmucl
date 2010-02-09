@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.54.2.2 2010/02/08 20:21:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.54.2.3 2010/02/09 02:43:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -225,10 +225,22 @@
 ;;;
 (defun desc-doc (name kind kind-doc)
   (when (and name (typep name '(or symbol cons)))
-    (let ((doc (documentation name kind)))
+    (let ((doc (documentation name kind))
+	  (domain (case kind
+		    (variable
+		     (info variable textdomain name))
+		    (function
+		     (info function textdomain name))
+		    (structure
+		     (info typed-structure textdomain name))
+		    (type
+		     (info type textdomain name))
+		    (setf
+		     (info setf textdomain name)))))
       (when doc
 	(format t _"~&~@(~A documentation:~)~&  ~A"
-		(or kind-doc kind) doc)))))
+		(or kind-doc kind)
+		(dgettext domain doc))))))
 
 
 ;;; DESCRIBE-FUNCTION-NAME  --  Internal
