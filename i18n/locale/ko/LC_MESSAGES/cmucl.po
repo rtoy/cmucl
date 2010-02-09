@@ -72,6 +72,125 @@ msgstr ""
 msgid "_@ is a reserved reader macro prefix."
 msgstr ""
 
+#: target:code/kernel.lisp
+msgid ""
+"Return the 24 bits of data in the header of object X, which must be an\n"
+"  other-pointer object."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid ""
+"Sets the 24 bits of data in the header of object X (which must be an\n"
+"  other-pointer object) to VAL."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid ""
+"Returns the length of the closure X.  This is one more than the number\n"
+"  of variables closed over."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid "Returns the three-bit lowtag for the object X."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid "Returns the 8-bit header type for the object X."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid ""
+"Return a System-Area-Pointer pointing to the data for the vector X, which\n"
+"  must be simple."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid "Return a System-Area-Pointer pointing to the end of the binding stack."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid ""
+"Returns a System-Area-Pointer pointing to the next free work of the current\n"
+"  dynamic space."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid "Return a System-Area-Pointer pointing to the end of the control stack."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid "Return the header typecode for FUNCTION.  Can be set with SETF."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid "Extracts the arglist from the function header FUNC."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid "Extracts the name from the function header FUNC."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid "Extracts the type from the function header FUNC."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid "Extracts the function from CLOSURE."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid ""
+"Return the length of VECTOR.  There is no reason to use this, 'cause\n"
+"  (length (the vector foo)) is the same."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid "Return the SXHASH for the simple-string STRING."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid ""
+"Return the SXHASH for the first LENGTH characters of the simple-string\n"
+"  STRING."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid "Extract the INDEXth slot from CLOSURE."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid ""
+"Allocate a unboxed, simple vector with type code TYPE, length LENGTH, and\n"
+"  WORDS words long.  Note: it is your responsibility to assure that the\n"
+"  relation between LENGTH and WORDS is correct."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid "Allocate an array header with type code TYPE and rank RANK."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid "Return a SAP pointing to the instructions part of CODE-OBJ."
+msgstr ""
+
+#: target:code/kernel.lisp
+msgid ""
+"Extract the INDEXth element from the header of CODE-OBJ.  Can be set with\n"
+"  setf."
+msgstr ""
+
+#: target:pcl/dfun.lisp target:code/interr.lisp target:code/lispinit.lisp
+msgid "Help! "
+msgstr ""
+
+#: target:pcl/dfun.lisp target:code/interr.lisp target:code/lispinit.lisp
+msgid " nested errors.  "
+msgstr ""
+
+#: target:pcl/dfun.lisp target:code/interr.lisp target:code/lispinit.lisp
+msgid "KERNEL:*MAXIMUM-ERROR-DEPTH* exceeded."
+msgstr ""
+
 #: target:code/fwrappers.lisp
 msgid ""
 "A funcallable instance used to implement fwrappers.\n"
@@ -1233,11 +1352,11 @@ msgstr ""
 msgid "Too many arguments."
 msgstr ""
 
-#: target:code/byte-interp.lisp
+#: target:code/interr.lisp target:code/byte-interp.lisp
 msgid "Odd number of keyword arguments."
 msgstr ""
 
-#: target:code/byte-interp.lisp
+#: target:code/interr.lisp target:code/byte-interp.lisp
 msgid "Unknown keyword: ~S"
 msgstr ""
 
@@ -1605,6 +1724,132 @@ msgid ""
 "  created.  Both arrays must have the same rank and dimensions."
 msgstr ""
 
+#: target:code/hash-new.lisp
+msgid "Structure used to implement hash tables."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid ""
+"Almost-Primify returns an almost prime number greater than or equal\n"
+"   to NUM."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid "Define a new kind of hash table test."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid ""
+"Creates and returns a new hash table.  The keywords are as follows:\n"
+"     :TEST -- Indicates what kind of test to use.  Only EQ, EQL, EQUAL,\n"
+"       and EQUALP are currently supported.\n"
+"     :SIZE -- A hint as to how many elements will be put in this hash\n"
+"       table.\n"
+"     :REHASH-SIZE -- Indicates how to expand the table when it fills up.\n"
+"       If an integer, add space for that many elements.  If a floating\n"
+"       point number (which must be greater than 1.0), multiple the size\n"
+"       by that amount.\n"
+"     :REHASH-THRESHOLD -- Indicates how dense the table can become before\n"
+"       forcing a rehash.  Can be any positive number <= to 1, with density\n"
+"       approaching zero as the threshold approaches 0.  Density 1 means an\n"
+"       average of one entry per bucket.\n"
+"   CMUCL Extension:\n"
+"     :WEAK-P -- Weak hash table.  Can only be used when the key is 'eq or "
+"'eql.\n"
+"                An entry in the table is remains if the condition holds:\n"
+"\n"
+"                :KEY            -- key is referenced elsewhere\n"
+"                :VALUE          -- value is referenced elsewhere\n"
+"                :KEY-AND-VALUE  -- key and value are referenced elsewhere\n"
+"                :KEY-OR-VALUE   -- key or value is referenced elsewhere\n"
+"\n"
+"                If the condition does not hold, the entry is removed.  For\n"
+"                backward compatibility, a value of T is the same as :KEY."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid "Unknown :TEST for MAKE-HASH-TABLE: ~S"
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid "Returns the number of entries in the given HASH-TABLE."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid "Return the rehash-size HASH-TABLE was created with."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid "Return the rehash-threshold HASH-TABLE was created with."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid ""
+"Return a size that can be used with MAKE-HASH-TABLE to create a hash\n"
+"   table that can hold however many entries HASH-TABLE can hold without\n"
+"   having to be grown."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid "Return the test HASH-TABLE was created with."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid ""
+"Return T if HASH-TABLE will not keep entries for keys that would\n"
+"   otherwise be garbage, and NIL if it will."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid ""
+"Finds the entry in HASH-TABLE whose key is KEY and returns the associated\n"
+"   value and T as multiple values, or returns DEFAULT and NIL if there is "
+"no\n"
+"   such entry.  Entries can be added using SETF."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid ""
+"Remove the entry in HASH-TABLE associated with KEY.  Returns T if there\n"
+"   was such an entry, and NIL if not."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid ""
+"This removes all the entries from HASH-TABLE and returns the hash table\n"
+"   itself."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid ""
+"This removes all the entries from HASH-TABLE and returns the hash table\n"
+"   itself, shrinking the size to free memory."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid ""
+"For each entry in HASH-TABLE, calls MAP-FUNCTION on the key and value\n"
+"   of the entry; returns NIL."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid ""
+"WITH-HASH-TABLE-ITERATOR ((function hash-table) &body body)\n"
+"   provides a method of manually looping over the elements of a hash-table.\n"
+"   FUNCTION is bound to a generator-macro that, within the scope of the\n"
+"   invocation, returns one or three values. The first value tells whether\n"
+"   any objects remain in the hash table. When the first value is non-NIL, \n"
+"   the second and third values are the key and the value of the next object."
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid "What kind of instance is this?"
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid "Computes a hash code for S-EXPR and returns it as an integer."
+msgstr ""
+
 #: target:code/bsd-os.lisp
 msgid "Unix system call getrusage failed: ~A."
 msgstr ""
@@ -1797,6 +2042,243 @@ msgid ""
 "  representation exploiting the assumption that floats are only accurate to\n"
 "  their precision.  RATIONALIZE (and also RATIONAL) preserve the invariant:\n"
 "      (= x (float (rationalize x) x))"
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return e raised to the power NUMBER."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "The absolute value of ~S exceeds limit ~S."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Returns BASE raised to the POWER."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return the logarithm of NUMBER in the base BASE, which defaults to e."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return the square root of NUMBER."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Returns the absolute value of the number."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid ""
+"Returns the angle part of the polar representation of a complex number.\n"
+"  For complex numbers, this is (atan (imagpart number) (realpart number)).\n"
+"  For non-complex positive numbers, this is 0.  For non-complex negative\n"
+"  numbers this is PI."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return the sine of NUMBER."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return the cosine of NUMBER."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return the tangent of NUMBER."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return cos(Theta) + i sin(Theta), AKA exp(i Theta)."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Argument to CIS is complex: ~S"
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return the arc sine of NUMBER."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return the arc cosine of NUMBER."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return the arc tangent of Y if X is omitted or Y/X if X is supplied."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return the hyperbolic sine of NUMBER."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return the hyperbolic cosine of NUMBER."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return the hyperbolic tangent of NUMBER."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return the hyperbolic arc sine of NUMBER."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return the hyperbolic arc cosine of NUMBER."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Return the hyperbolic arc tangent of NUMBER."
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid ""
+"Compute 2^N * X without compute 2^N first (use properties of the\n"
+"underlying floating-point format"
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid ""
+"Same as logb but X is not infinity and non-zero and not a NaN, so\n"
+"that we can always return an integer"
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid ""
+"Compute an integer N such that 1 <= |2^(-N) * x| < 2.\n"
+"For the special cases, the following values are used:\n"
+"\n"
+"    x             logb\n"
+"   NaN            NaN\n"
+"   +/- infinity   +infinity\n"
+"   0              -infinity\n"
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid ""
+"Create complex number with real part X and imaginary part Y such that\n"
+"it has the same type as Z.  If Z has type (complex rational), the X\n"
+"and Y are coerced to single-float."
+msgstr ""
+
+#: target:code/irrat-dd.lisp target:code/irrat.lisp
+msgid ""
+"Principle square root of Z\n"
+"\n"
+"Z may be any number, but the result is always a complex."
+msgstr ""
+
+#: target:code/irrat-dd.lisp target:code/irrat.lisp
+msgid ""
+"Compute log(2^j*z).\n"
+"\n"
+"This is for use with J /= 0 only when |z| is huge."
+msgstr ""
+
+#: target:code/irrat-dd.lisp target:code/irrat.lisp
+msgid ""
+"Log of Z = log |Z| + i * arg Z\n"
+"\n"
+"Z may be any number, but the result is always a complex."
+msgstr ""
+
+#: target:code/irrat-dd.lisp target:code/irrat.lisp
+msgid "Compute atanh z = (log(1+z) - log(1-z))/2"
+msgstr ""
+
+#: target:code/irrat-dd.lisp target:code/irrat.lisp
+msgid "Compute tanh z = sinh z / cosh z"
+msgstr ""
+
+#: target:code/irrat-dd.lisp target:code/irrat.lisp
+msgid ""
+"Compute acos z = pi/2 - asin z\n"
+"\n"
+"Z may be any number, but the result is always a complex."
+msgstr ""
+
+#: target:code/irrat-dd.lisp target:code/irrat.lisp
+msgid ""
+"Compute acosh z = 2 * log(sqrt((z+1)/2) + sqrt((z-1)/2))\n"
+"\n"
+"Z may be any number, but the result is always a complex."
+msgstr ""
+
+#: target:code/irrat-dd.lisp target:code/irrat.lisp
+msgid ""
+"Compute asin z = asinh(i*z)/i\n"
+"\n"
+"Z may be any number, but the result is always a complex."
+msgstr ""
+
+#: target:code/irrat-dd.lisp target:code/irrat.lisp
+msgid ""
+"Compute asinh z = log(z + sqrt(1 + z*z))\n"
+"\n"
+"Z may be any number, but the result is always a complex."
+msgstr ""
+
+#: target:code/irrat-dd.lisp target:code/irrat.lisp
+msgid ""
+"Compute atan z = atanh (i*z) / i\n"
+"\n"
+"Z may be any number, but the result is always a complex."
+msgstr ""
+
+#: target:code/irrat-dd.lisp target:code/irrat.lisp
+msgid ""
+"Compute tan z = -i * tanh(i * z)\n"
+"\n"
+"Z may be any number, but the result is always a complex."
+msgstr ""
+
+#: target:code/irrat-dd.lisp
+msgid "log(most-positive-double-double-float)"
+msgstr ""
+
+#: target:code/irrat-dd.lisp
+msgid "log(least-positive-double-double-float"
+msgstr ""
+
+#: target:code/irrat-dd.lisp
+msgid "log(2)"
+msgstr ""
+
+#: target:code/irrat-dd.lisp
+msgid "Log base 2 of e"
+msgstr ""
+
+#: target:code/irrat-dd.lisp
+msgid "log2(e)-1"
+msgstr ""
+
+#: target:code/irrat-dd.lisp
+msgid "Pi"
+msgstr ""
+
+#: target:code/irrat-dd.lisp
+msgid "Pi/2"
+msgstr ""
+
+#: target:code/irrat-dd.lisp
+msgid "Pi/4"
+msgstr ""
+
+#: target:code/irrat-dd.lisp
+msgid "Sqrt(1/2)"
+msgstr ""
+
+#: target:code/irrat-dd.lisp
+msgid "exp(x) - 1"
+msgstr ""
+
+#: target:code/irrat-dd.lisp
+msgid "396 (hex) digits of 2/pi"
+msgstr ""
+
+#: target:code/irrat-dd.lisp
+msgid "Overflow"
 msgstr ""
 
 #: target:code/char.lisp
@@ -2606,6 +3088,43 @@ msgid ""
 "  generation.  See the gencgc source code for more info."
 msgstr ""
 
+#: target:code/format.lisp
+msgid ""
+"Provides various facilities for formatting output.\n"
+"  CONTROL-STRING contains a string to be output, possibly with embedded\n"
+"  directives, which are flagged with the escape character \"~\".  "
+"Directives\n"
+"  generally expand into additional text to be output, usually consuming one\n"
+"  or more of the FORMAT-ARGUMENTS in the process.  A few useful directives\n"
+"  are:\n"
+"        ~A or ~nA     Prints one argument as if by PRINC\n"
+"        ~S or ~nS     Prints one argument as if by PRIN1\n"
+"        ~D or ~nD     Prints one argument as a decimal integer\n"
+"        ~%            Does a TERPRI\n"
+"        ~&            Does a FRESH-LINE\n"
+"\n"
+"         where n is the width of the field in which the object is printed.\n"
+"  \n"
+"  DESTINATION controls where the result will go.  If DESTINATION is T, then\n"
+"  the output is sent to the standard output stream.  If it is NIL, then the\n"
+"  output is returned in a string as the value of the call.  Otherwise,\n"
+"  DESTINATION must be a stream to which the output will be sent.\n"
+"\n"
+"  Example:   (FORMAT NIL \"The answer is ~D.\" 10) => \"The answer is 10.\"\n"
+"\n"
+"  FORMAT has many additional capabilities not described here.  Consult\n"
+"  Section 22.3 (Formatted Output) of the ANSI Common Lisp standard for\n"
+"  details."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Table of ordinal ones-place digits in English"
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Table of ordinal tens-place digits in English"
+msgstr ""
+
 #: target:code/backq.lisp
 msgid "How deep we are into backquotes"
 msgstr ""
@@ -3339,6 +3858,64 @@ msgstr ""
 
 #: target:code/eval.lisp
 msgid "Returns all of the elements of List, in order, as values."
+msgstr ""
+
+#: target:code/interr.lisp
+msgid "Attempt to RETURN-FROM a block or GO to a tag that no longer exists"
+msgstr ""
+
+#: target:code/interr.lisp
+msgid "Attempt to THROW to a tag that does not exist: ~S"
+msgstr ""
+
+#: target:code/interr.lisp
+msgid "Function with declared result type NIL returned:~%  ~S"
+msgstr ""
+
+#: target:code/interr.lisp
+msgid "Undefined foreign symbol: ~S"
+msgstr ""
+
+#: target:code/interr.lisp
+msgid ""
+"The maximum number of nested errors allowed.  Internal errors are\n"
+"   double-counted."
+msgstr ""
+
+#: target:code/interr.lisp
+msgid "The current number of nested errors."
+msgstr ""
+
+#: target:code/interr.lisp
+msgid "Unknown internal error, ~D?  args=~S"
+msgstr ""
+
+#: target:code/interr.lisp
+msgid "Internal error ~D: ~A.  args=~S"
+msgstr ""
+
+#: target:code/interr.lisp
+msgid ""
+"~2&~@<A control stack overflow has occurred: ~\n"
+"            the program has entered the yellow control stack guard zone.  ~\n"
+"            Please note that you will be returned to the Top-Level if you ~\n"
+"            enter the red control stack guard zone while debugging.~@:>~2%"
+msgstr ""
+
+#: target:code/interr.lisp
+msgid ""
+"~2&~@<Fatal control stack overflow.  You have entered~%~\n"
+"           the red control stack guard zone while debugging.~%~\n"
+"           Returning to Top-Level.~@:>~2%"
+msgstr ""
+
+#: target:code/interr.lisp
+msgid ""
+"~2&~@<Imminent dynamic space overflow has occurred:~%~\n"
+"            Only a small amount of dynamic space is available now.~%~\n"
+"            Please note that you will be returned to the Top-Level without~%"
+"~\n"
+"            warning if you run out of space while debugging.~@:>~%"
 msgstr ""
 
 #: target:code/debug-int.lisp
@@ -4560,6 +5137,163 @@ msgstr ""
 
 #: target:code/foreign.lisp
 msgid "File does not exist: ~A."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "AList of socket kinds and protocol values."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Internet protocol :DATA-GRAM is deprecated. Using :DATAGRAM"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Invalid kind (~S) for internet domain sockets."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid ""
+"Return a host-entry for the given host. The host may be an address\n"
+"  string or an IP address in host order."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Error creating socket: ~A"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Error connecting socket to [~A]: ~A"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Error binding socket to path ~a: ~a"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Error listening to socket: ~A"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Error accepting a connection: ~A"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "bind Socket to (local) Host and Port"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Error binding socket to port ~A: ~A"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Unknown host: ~S."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "The host may be an address string or an IP address in host order."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Error connecting socket to [~A:~A]: ~A"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Get an integer value socket option."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Set an integer value socket option."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Error ~S setting socket option on socket ~D."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Error closing socket: ~A"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Return the peer host address and port in host order."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Error ~s getting peer host and port on FD ~d."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Error ~s getting socket host and port on FD ~d."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Ignore it"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Error recving oob data on ~A: ~A"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "No oob handler defined for ~S on ~A"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Got a SIGURG, but couldn't find any out-of-band data."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Arrange to funcall HANDLER when CHAR shows up out-of-band on FD."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Remove any handlers for CHAR on FD."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Remove all handlers for FD."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Error sending ~S OOB to across ~A: ~A"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid ""
+"A packaging of the unix recvfrom call.  Returns three values:\n"
+"bytecount, source address as integer, and source port.  bytecount\n"
+"can of course be negative, to indicate faults."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "A packaging of the unix sendto call.  Return value like sendto"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid ""
+"A packaging of the unix shutdown call.  An error is signaled if shutdown "
+"fails."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Error on shutdown of socket: ~A"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid ""
+"Return a network stream.  HOST may be an address string or an integer\n"
+"IP address."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "Unknown host format: ~S."
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "network connection to ~A"
+msgstr ""
+
+#: target:code/internet.lisp
+msgid "network connection from ~D.~D.~D.~D:~D"
 msgstr ""
 
 #: target:code/defstruct.lisp

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.60.2.1 2010/02/08 17:15:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.60.2.2 2010/02/09 20:23:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -293,7 +293,7 @@
 ;;;; Power functions.
 
 (defun exp (number)
-  "Return e raised to the power NUMBER."
+  _N"Return e raised to the power NUMBER."
   (number-dispatch ((number number))
     (handle-reals %exp number)
     ((complex)
@@ -308,7 +308,7 @@
   ((base :initarg :base :reader intexp-base)
    (power :initarg :power :reader intexp-power))
   (:report (lambda (condition stream)
-	     (format stream "The absolute value of ~S exceeds limit ~S."
+	     (format stream _"The absolute value of ~S exceeds limit ~S."
 		     (intexp-power condition)
 		     *intexp-maximum-exponent*))))
 
@@ -332,9 +332,9 @@
 	       :base base
 	       :power power)
       (continue ()
-	:report "Continue with calculation")
+	:report _"Continue with calculation")
       (new-limit ()
-	:report "Continue with calculation, update limit"
+	:report _"Continue with calculation, update limit"
 	(setq *intexp-maximum-exponent* (abs power)))))
   (cond ((minusp power)
 	 (/ (intexp base (- power))))
@@ -358,7 +358,7 @@
 ;;; the complex-real and real-complex cases from the general complex case.
 ;;;
 (defun expt (base power)
-  "Returns BASE raised to the POWER."
+  _N"Returns BASE raised to the POWER."
   (if (zerop power)
       ;; CLHS says that if the power is 0, the result is 1, subject to
       ;; numeric contagion.  But what happens if base is infinity or
@@ -674,7 +674,7 @@
 	 (+ n frac))))))
 
 (defun log (number &optional (base nil base-p))
-  "Return the logarithm of NUMBER in the base BASE, which defaults to e."
+  _N"Return the logarithm of NUMBER in the base BASE, which defaults to e."
   (if base-p
       (cond ((zerop base)
 	     ;; ANSI spec
@@ -802,7 +802,7 @@
 	 (complex-log number)))))
 
 (defun sqrt (number)
-  "Return the square root of NUMBER."
+  _N"Return the square root of NUMBER."
   (number-dispatch ((number number))
     (((foreach fixnum bignum ratio))
      (if (minusp number)
@@ -827,7 +827,7 @@
 ;;;; Trigonometic and Related Functions
 
 (defun abs (number)
-  "Returns the absolute value of the number."
+  _N"Returns the absolute value of the number."
   (number-dispatch ((number number))
     (((foreach single-float double-float fixnum rational
 	       #+double-double double-double-float))
@@ -851,7 +851,7 @@
 	    (scale-float (sqrt abs^2) scale))))))))
 
 (defun phase (number)
-  "Returns the angle part of the polar representation of a complex number.
+  _N"Returns the angle part of the polar representation of a complex number.
   For complex numbers, this is (atan (imagpart number) (realpart number)).
   For non-complex positive numbers, this is 0.  For non-complex negative
   numbers this is PI."
@@ -878,7 +878,7 @@
 
 
 (defun sin (number)  
-  "Return the sine of NUMBER."
+  _N"Return the sine of NUMBER."
   (number-dispatch ((number number))
     (handle-reals %sin number)
     ((complex)
@@ -888,7 +888,7 @@
 		(* (cos x) (sinh y)))))))
 
 (defun cos (number)
-  "Return the cosine of NUMBER."
+  _N"Return the cosine of NUMBER."
   (number-dispatch ((number number))
     (handle-reals %cos number)
     ((complex)
@@ -898,20 +898,20 @@
 		(- (* (sin x) (sinh y))))))))
 
 (defun tan (number)
-  "Return the tangent of NUMBER."
+  _N"Return the tangent of NUMBER."
   (number-dispatch ((number number))
     (handle-reals %tan number)
     ((complex)
      (complex-tan number))))
 
 (defun cis (theta)
-  "Return cos(Theta) + i sin(Theta), AKA exp(i Theta)."
+  _N"Return cos(Theta) + i sin(Theta), AKA exp(i Theta)."
   (if (complexp theta)
-      (error "Argument to CIS is complex: ~S" theta)
+      (error _"Argument to CIS is complex: ~S" theta)
       (complex (cos theta) (sin theta))))
 
 (defun asin (number)
-  "Return the arc sine of NUMBER."
+  _N"Return the arc sine of NUMBER."
   (number-dispatch ((number number))
     ((rational)
      (if (or (> number 1) (< number -1))
@@ -935,7 +935,7 @@
      (complex-asin number))))
 
 (defun acos (number)
-  "Return the arc cosine of NUMBER."
+  _N"Return the arc cosine of NUMBER."
   (number-dispatch ((number number))
     ((rational)
      (if (or (> number 1) (< number -1))
@@ -960,7 +960,7 @@
 
 
 (defun atan (y &optional (x nil xp))
-  "Return the arc tangent of Y if X is omitted or Y/X if X is supplied."
+  _N"Return the arc tangent of Y if X is omitted or Y/X if X is supplied."
   (if xp
       (flet ((atan2 (y x)
 	       (declare (type double-float y x)
@@ -998,7 +998,7 @@
 	 (complex-atan y)))))
 
 (defun sinh (number)
-  "Return the hyperbolic sine of NUMBER."
+  _N"Return the hyperbolic sine of NUMBER."
   (number-dispatch ((number number))
     (handle-reals %sinh number)
     ((complex)
@@ -1008,7 +1008,7 @@
 		(* (cosh x) (sin y)))))))
 
 (defun cosh (number)
-  "Return the hyperbolic cosine of NUMBER."
+  _N"Return the hyperbolic cosine of NUMBER."
   (number-dispatch ((number number))
     (handle-reals %cosh number)
     ((complex)
@@ -1018,21 +1018,21 @@
 		(* (sinh x) (sin y)))))))
 
 (defun tanh (number)
-  "Return the hyperbolic tangent of NUMBER."
+  _N"Return the hyperbolic tangent of NUMBER."
   (number-dispatch ((number number))
     (handle-reals %tanh number)
     ((complex)
      (complex-tanh number))))
 
 (defun asinh (number)
-  "Return the hyperbolic arc sine of NUMBER."
+  _N"Return the hyperbolic arc sine of NUMBER."
   (number-dispatch ((number number))
     (handle-reals %asinh number)
     ((complex)
      (complex-asinh number))))
 
 (defun acosh (number)
-  "Return the hyperbolic arc cosine of NUMBER."
+  _N"Return the hyperbolic arc cosine of NUMBER."
   (number-dispatch ((number number))
     ((rational)
      ;; acosh is complex if number < 1
@@ -1053,7 +1053,7 @@
      (complex-acosh number))))
 
 (defun atanh (number)
-  "Return the hyperbolic arc tangent of NUMBER."
+  _N"Return the hyperbolic arc tangent of NUMBER."
   (number-dispatch ((number number))
     ((rational)
      ;; atanh is complex if |number| > 1
@@ -1150,7 +1150,7 @@
 
 (declaim (inline scalb))
 (defun scalb (x n)
-  "Compute 2^N * X without compute 2^N first (use properties of the
+  _N"Compute 2^N * X without compute 2^N first (use properties of the
 underlying floating-point format"
   (declare (type float x)
 	   (type double-float-exponent n))
@@ -1158,7 +1158,7 @@ underlying floating-point format"
 
 (declaim (inline logb-finite))
 (defun logb-finite (x)
-  "Same as logb but X is not infinity and non-zero and not a NaN, so
+  _N"Same as logb but X is not infinity and non-zero and not a NaN, so
 that we can always return an integer"
   (declare (type float x))
   (multiple-value-bind (signif expon sign)
@@ -1169,7 +1169,7 @@ that we can always return an integer"
     (1- expon)))
       
 (defun logb (x)
-  "Compute an integer N such that 1 <= |2^(-N) * x| < 2.
+  _N"Compute an integer N such that 1 <= |2^(-N) * x| < 2.
 For the special cases, the following values are used:
 
     x             logb
@@ -1197,7 +1197,7 @@ For the special cases, the following values are used:
 
 (declaim (inline coerce-to-complex-type))
 (defun coerce-to-complex-type (x y z)
-  "Create complex number with real part X and imaginary part Y such that
+  _N"Create complex number with real part X and imaginary part Y such that
 it has the same type as Z.  If Z has type (complex rational), the X
 and Y are coerced to single-float."
   (declare (double-float x y)
@@ -1248,7 +1248,7 @@ and Y are coerced to single-float."
 	       (values rho 0)))))))
 
 (defun complex-sqrt (z)
-  "Principle square root of Z
+  _N"Principle square root of Z
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1293,7 +1293,7 @@ Z may be any number, but the result is always a complex."
 	(coerce-to-complex-type eta nu z)))))
 
 (defun complex-log-scaled (z j)
-  "Compute log(2^j*z).
+  _N"Compute log(2^j*z).
 
 This is for use with J /= 0 only when |z| is huge."
   (declare (number z)
@@ -1328,7 +1328,7 @@ This is for use with J /= 0 only when |z| is huge."
 				z)))))
 
 (defun complex-log (z)
-  "Log of Z = log |Z| + i * arg Z
+  _N"Log of Z = log |Z| + i * arg Z
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1343,7 +1343,7 @@ Z may be any number, but the result is always a complex."
 ;; never 0 since we have positive and negative zeroes.
 
 (defun complex-atanh (z)
-  "Compute atanh z = (log(1+z) - log(1-z))/2"
+  _N"Compute atanh z = (log(1+z) - log(1-z))/2"
   (declare (number z))
   #+double-double
   (when (typep z '(or double-double-float (complex double-double-float)))
@@ -1407,7 +1407,7 @@ Z may be any number, but the result is always a complex."
 				  z)))))
 
 (defun complex-tanh (z)
-  "Compute tanh z = sinh z / cosh z"
+  _N"Compute tanh z = sinh z / cosh z"
   (declare (number z))
   #+double-double
   (when (typep z '(or double-double-float (complex double-double-float)))
@@ -1492,7 +1492,7 @@ Z may be any number, but the result is always a complex."
   (complex (+ (realpart z) 1) (imagpart z)))
 
 (defun complex-acos (z)
-  "Compute acos z = pi/2 - asin z
+  _N"Compute acos z = pi/2 - asin z
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1511,7 +1511,7 @@ Z may be any number, but the result is always a complex."
 				       sqrt-1-z))))))))
 
 (defun complex-acosh (z)
-  "Compute acosh z = 2 * log(sqrt((z+1)/2) + sqrt((z-1)/2))
+  _N"Compute acosh z = 2 * log(sqrt((z+1)/2) + sqrt((z-1)/2))
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1525,7 +1525,7 @@ Z may be any number, but the result is always a complex."
 
 
 (defun complex-asin (z)
-  "Compute asin z = asinh(i*z)/i
+  _N"Compute asin z = asinh(i*z)/i
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1544,7 +1544,7 @@ Z may be any number, but the result is always a complex."
 				       sqrt-1+z))))))))
 
 (defun complex-asinh (z)
-  "Compute asinh z = log(z + sqrt(1 + z*z))
+  _N"Compute asinh z = log(z + sqrt(1 + z*z))
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1558,7 +1558,7 @@ Z may be any number, but the result is always a complex."
 	     (- (realpart result)))))
 	 
 (defun complex-atan (z)
-  "Compute atan z = atanh (i*z) / i
+  _N"Compute atan z = atanh (i*z) / i
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1572,7 +1572,7 @@ Z may be any number, but the result is always a complex."
 	     (- (realpart result)))))
 
 (defun complex-tan (z)
-  "Compute tan z = -i * tanh(i * z)
+  _N"Compute tan z = -i * tanh(i * z)
 
 Z may be any number, but the result is always a complex."
   (declare (number z))

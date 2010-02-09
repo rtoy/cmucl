@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.57.12.1 2010/02/08 17:15:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.57.12.2 2010/02/09 20:23:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -86,15 +86,15 @@
 (defvar *internet-protocols*
   '((:stream    6 #.sock-stream)
     (:datagram 17 #.sock-dgram))
-  "AList of socket kinds and protocol values.")
+  _N"AList of socket kinds and protocol values.")
 
 (defun internet-protocol (kind)
   (when (eq kind :data-gram) ; Sep-2000. Remove someday.
-    (warn "Internet protocol :DATA-GRAM is deprecated. Using :DATAGRAM")
+    (warn _"Internet protocol :DATA-GRAM is deprecated. Using :DATAGRAM")
     (setq kind :datagram))
   (let ((entry (assoc kind *internet-protocols*)))
     (unless entry
-      (error "Invalid kind (~S) for internet domain sockets." kind))
+      (error _"Invalid kind (~S) for internet domain sockets." kind))
     (values (cadr entry)
 	    (caddr entry))))
 
@@ -207,7 +207,7 @@ struct in_addr {
 (def-alien-routine ("os_get_h_errno" get-h-errno) int)
 
 (defun lookup-host-entry (host)
-  "Return a host-entry for the given host. The host may be an address
+  _N"Return a host-entry for the given host. The host may be an address
   string or an IP address in host order."
   (declare (type (or host-entry string (unsigned-byte 32)) host)
 	   (optimize (inhibit-warnings 3)))
@@ -267,7 +267,7 @@ struct in_addr {
     (let ((socket (unix:unix-socket af-unix type 0)))
       (when (minusp socket)
 	(error 'socket-error
-	       :format-control "Error creating socket: ~A"
+	       :format-control _"Error creating socket: ~A"
 	       :format-arguments (list (unix:get-unix-error-msg))
 	       :errno (unix:unix-errno)))
       socket)))
@@ -296,7 +296,7 @@ struct in_addr {
 				       (alien-size unix-sockaddr :bytes)))
 	(unix:unix-close socket)
 	(error 'socket-error
-	       :format-control "Error connecting socket to [~A]: ~A"
+	       :format-control _"Error connecting socket to [~A]: ~A"
 	       :format-arguments (list path (unix:get-unix-error-msg))
 	       :errno (unix:unix-errno)))
       socket)))
@@ -326,13 +326,13 @@ struct in_addr {
 				    (+ (alien-size inet-sockaddr :bytes)
 				       (length path))))
 	(unix:unix-close socket)
-	(error "Error binding socket to path ~a: ~a"
+	(error _"Error binding socket to path ~a: ~a"
 	       path
 	       (unix:get-unix-error-msg))))
     (when (eq kind :stream)
       (when (minusp (unix:unix-listen socket backlog))
 	(unix:unix-close socket)
-	(error "Error listening to socket: ~A" (unix:get-unix-error-msg))))
+	(error _"Error listening to socket: ~A" (unix:get-unix-error-msg))))
     socket))
 
 (defun accept-unix-connection (unconnected)
@@ -343,14 +343,14 @@ struct in_addr {
 				       (alien-sap sockaddr)
 				       (alien-size unix-sockaddr :bytes))))
       (when (minusp connected)
-	(error "Error accepting a connection: ~A" (unix:get-unix-error-msg)))
+	(error _"Error accepting a connection: ~A" (unix:get-unix-error-msg)))
       (values connected (slot sockaddr 'path)))))
 
 (defun bind-inet-socket (socket host port)
-  "bind Socket to (local) Host and Port"
+  _N"bind Socket to (local) Host and Port"
   (let ((addr (if (stringp host)
 		  (host-entry-addr (or (lookup-host-entry host)
-				       (error "Unknown host: ~S." host)))
+				       (error _"Unknown host: ~S." host)))
 		  host)))
     (with-alien ((sockaddr inet-sockaddr))
       (setf (slot sockaddr 'family) af-inet)
@@ -362,7 +362,7 @@ struct in_addr {
 	(let ((errno (unix:unix-errno)))
 	  (unix:unix-close socket)
 	  (error 'socket-error
-		 :format-control "Error binding socket to port ~A: ~A"
+		 :format-control _"Error binding socket to port ~A: ~A"
 		 :format-arguments (list port
 					 (unix:get-unix-error-msg))
 		 :errno errno))))))
@@ -380,10 +380,10 @@ struct in_addr {
 
 (defun connect-to-inet-socket (host port &optional (kind :stream)
 			       &key local-host local-port)
-  "The host may be an address string or an IP address in host order."
+  _N"The host may be an address string or an IP address in host order."
   (let* ((addr (if (stringp host)
 		   (host-entry-addr (or (lookup-host-entry host)
-					(error "Unknown host: ~S." host)))
+					(error _"Unknown host: ~S." host)))
 		   host))
 	 (socket (create-inet-socket kind)))
     ;; bind to local-host/local-port if given
@@ -401,7 +401,7 @@ struct in_addr {
               (errmsg (unix:get-unix-error-msg)))
           (unix:unix-close socket)
           (error 'socket-error
-                 :format-control "Error connecting socket to [~A:~A]: ~A"
+                 :format-control _"Error connecting socket to [~A:~A]: ~A"
                  :format-arguments (list (if (stringp host)
                                              host
 					     (ip-string addr))
@@ -442,10 +442,10 @@ struct in_addr {
 ;; cause errno set to the real reason for the failure.
 
 (defun connect-to-inet-socket/non-blocking (host port &optional (kind :stream))
-   "The host may be an address string or an IP address in host order."
+  _N"The host may be an address string or an IP address in host order."
    (let ((addr (if (stringp host)
                  (host-entry-addr (or (lookup-host-entry host)
-                                      (error "Unknown host: ~S." host)))
+                                      (error _"Unknown host: ~S." host)))
                  host))
          (socket (create-inet-socket kind)))
      (labels ((set-blocking (socket)
@@ -465,7 +465,7 @@ struct in_addr {
                           (ldb (byte 8 24) naddr))))
               (connect-error (addr reason errno)
                 (error 'socket-error
-                       :format-control "Error connecting socket to [~A:~A]: ~A"
+                       :format-control _"Error connecting socket to [~A:~A]: ~A"
                        :format-arguments (list addr port reason)
                        :errno errno)))
        (set-blocking socket)
@@ -511,7 +511,7 @@ struct in_addr {
 (defconstant so-reuseaddr #+linux 2 #+(or solaris bsd hpux irix) 4)
 
 (defun get-socket-option (socket level optname)
-  "Get an integer value socket option."
+  _N"Get an integer value socket option."
   (declare (type unix:unix-fd socket)
 	   (type (signed-byte 32) level optname))
   (with-alien ((optval signed))
@@ -521,7 +521,7 @@ struct in_addr {
 	(values optval 0))))
 
 (defun set-socket-option (socket level optname optval)
-  "Set an integer value socket option."
+  _N"Set an integer value socket option."
   (declare (type unix:unix-fd socket)
 	   (type (signed-byte 32) level optname optval))
   (with-alien ((optval signed optval))
@@ -540,7 +540,7 @@ struct in_addr {
         (addr (if (stringp host)
 		  (host-entry-addr (or (lookup-host-entry host)
 				       (error 'socket-error
-					      :format-control "Unknown host: ~S."
+					      :format-control _"Unknown host: ~S."
 					      :format-arguments (list host)
                                               :errno (unix:unix-errno))))
 		  host)))
@@ -548,7 +548,7 @@ struct in_addr {
       (multiple-value-bind (optval errno)
 	  (set-socket-option socket sol-socket so-reuseaddr 1)
 	(or optval (error 'socket-error
-			  :format-control "Error ~S setting socket option on socket ~D."
+			  :format-control _"Error ~S setting socket option on socket ~D."
 			  :format-arguments (list (unix:get-unix-error-msg errno)
 						  socket)
 			  :errno errno))))
@@ -562,7 +562,7 @@ struct in_addr {
 	(let ((errno (unix:unix-errno)))
 	  (unix:unix-close socket)
 	  (error 'socket-error
-		 :format-control "Error binding socket to port ~A: ~A"
+		 :format-control _"Error binding socket to port ~A: ~A"
 		 :format-arguments (list port
 					 (unix:get-unix-error-msg))
 		 :errno errno))))
@@ -571,7 +571,7 @@ struct in_addr {
 	(let ((errno (unix:unix-errno)))
 	  (unix:unix-close socket)
 	  (error 'socket-error
-		 :format-control "Error listening to socket: ~A"
+		 :format-control _"Error listening to socket: ~A"
 		 :format-arguments (list (unix:get-unix-error-msg))
 		 :errno errno))))
     socket))
@@ -586,7 +586,7 @@ struct in_addr {
       (let ((errno (unix:unix-errno)))
 	(when (minusp connected)
 	  (error 'socket-error
-		 :format-control "Error accepting a connection: ~A"
+		 :format-control _"Error accepting a connection: ~A"
 		 :format-arguments (list (unix:get-unix-error-msg))
 		 :errno errno))
 	(values connected (ntohl (slot sockaddr 'addr)))))))
@@ -596,19 +596,19 @@ struct in_addr {
 		       (unix:unix-close socket)
     (unless ok
       (error 'socket-error
-	     :format-control "Error closing socket: ~A"
+	     :format-control _"Error closing socket: ~A"
 	     :format-arguments (list (unix:get-unix-error-msg err))
 	     :errno (unix:unix-errno))))
   (undefined-value))
 
 (defun get-peer-host-and-port (fd)
-  "Return the peer host address and port in host order."
+  _N"Return the peer host address and port in host order."
   (with-alien ((sockaddr inet-sockaddr)
 	       (length (alien:array unsigned 1)))
     (setf (deref length 0) (alien-size inet-sockaddr :bytes))
     (when (minusp (unix:unix-getpeername fd (alien-sap sockaddr)
 					 (alien-sap length)))
-      (error "Error ~s getting peer host and port on FD ~d."
+      (error _"Error ~s getting peer host and port on FD ~d."
 	     (unix:get-unix-error-msg (unix:unix-errno)) fd))
     (values (ext:ntohl (slot sockaddr 'addr))
 	    (ext:ntohs (slot sockaddr 'port)))))
@@ -619,7 +619,7 @@ struct in_addr {
     (setf (deref length 0) (alien-size inet-sockaddr :bytes))
     (when (minusp (unix:unix-getsockname fd (alien-sap sockaddr)
 					 (alien-sap length)))
-      (error "Error ~s getting socket host and port on FD ~d."
+      (error _"Error ~s getting socket host and port on FD ~d."
 	     (unix:get-unix-error-msg (unix:unix-errno)) fd))
     (values (ext:ntohl (slot sockaddr 'addr))
 	    (ext:ntohs (slot sockaddr 'port)))))
@@ -646,8 +646,8 @@ struct in_addr {
     (dolist (handlers *oob-handlers*)
       (declare (list handlers))
       (cond ((minusp (unix:unix-recv (car handlers) buffer 1 msg-oob))
-	     (cerror "Ignore it"
-		     "Error recving oob data on ~A: ~A"
+	     (cerror _"Ignore it"
+		     _"Error recving oob data on ~A: ~A"
 		     (car handlers)
 		     (unix:get-unix-error-msg)))
 	    (t
@@ -661,13 +661,13 @@ struct in_addr {
 		   (funcall (cdr handler))
 		   (setf handled t)))
 	       (unless handled
-		 (cerror "Ignore it"
-			 "No oob handler defined for ~S on ~A"
+		 (cerror _"Ignore it"
+			 _"No oob handler defined for ~S on ~A"
 			 char
 			 (car handlers)))))))
     (unless handled
-      (cerror "Ignore it"
-	      "Got a SIGURG, but couldn't find any out-of-band data.")))
+      (cerror _"Ignore it"
+	      _"Got a SIGURG, but couldn't find any out-of-band data.")))
   (undefined-value))
 
 ;;; ADD-OOB-HANDLER -- public
@@ -679,7 +679,7 @@ struct in_addr {
 ;;; will be delivered.)
 
 (defun add-oob-handler (fd char handler)
-  "Arrange to funcall HANDLER when CHAR shows up out-of-band on FD."
+  _N"Arrange to funcall HANDLER when CHAR shows up out-of-band on FD."
   (declare (integer fd)
 	   (base-char char))
   (let ((handlers (assoc fd *oob-handlers*)))
@@ -706,7 +706,7 @@ struct in_addr {
 ;;; descriptor.
 
 (defun remove-oob-handler (fd char)
-  "Remove any handlers for CHAR on FD."
+  _N"Remove any handlers for CHAR on FD."
   (declare (integer fd)
 	   (base-char char))
   (let ((handlers (assoc fd *oob-handlers*)))
@@ -729,7 +729,7 @@ struct in_addr {
 ;;;   Delete the entry for the given file descriptor.
 
 (defun remove-all-oob-handlers (fd)
-  "Remove all handlers for FD."
+  _N"Remove all handlers for FD."
   (declare (integer fd))
   (setf *oob-handlers*
 	(delete fd *oob-handlers*
@@ -747,13 +747,13 @@ struct in_addr {
   (let ((buffer (make-string 1 :initial-element char)))
     (declare (simple-string buffer))
     (when (minusp (unix:unix-send fd buffer 1 msg-oob))
-      (error "Error sending ~S OOB to across ~A: ~A"
+      (error _"Error sending ~S OOB to across ~A: ~A"
 	     char
 	     fd
 	     (unix:get-unix-error-msg)))))
 
 (defun inet-recvfrom (fd buffer size &key (flags 0))
-  "A packaging of the unix recvfrom call.  Returns three values:
+  _N"A packaging of the unix recvfrom call.  Returns three values:
 bytecount, source address as integer, and source port.  bytecount
 can of course be negative, to indicate faults."
   #+mp (mp:process-wait-until-fd-usable fd :input)
@@ -764,7 +764,7 @@ can of course be negative, to indicate faults."
       (values bytecount (ntohl (slot sockaddr 'addr)) (ntohs (slot sockaddr 'port))))))
 
 (defun inet-sendto (fd buffer size addr port &key (flags 0))
-  "A packaging of the unix sendto call.  Return value like sendto"
+  _N"A packaging of the unix sendto call.  Return value like sendto"
     (with-alien ((sockaddr inet-sockaddr))
       (setf (slot sockaddr 'family) af-inet)
       (setf (slot sockaddr 'port) (htons port))
@@ -781,10 +781,10 @@ can of course be negative, to indicate faults."
 (defconstant shut-rdwr 2)
 
 (defun inet-shutdown (fd level)
-  "A packaging of the unix shutdown call.  An error is signaled if shutdown fails." 
+  _N"A packaging of the unix shutdown call.  An error is signaled if shutdown fails." 
   (when (minusp (unix:unix-shutdown fd level))
     (error 'socket-error
-	   :format-control "Error on shutdown of socket: ~A"
+	   :format-control _"Error on shutdown of socket: ~A"
 	   :format-arguments (list (unix:get-unix-error-msg))
 	   :errno (unix:unix-errno))))
 
@@ -794,12 +794,12 @@ can of course be negative, to indicate faults."
 ;;;   Returns a stream connected to the specified Port on the given Host.
 (defun open-network-stream (host port &key (buffering :line) timeout
 					   (external-format '(:latin-1 :crlf)))
-  "Return a network stream.  HOST may be an address string or an integer
+  _N"Return a network stream.  HOST may be an address string or an integer
 IP address."
   (let (hostent hostaddr)
     (cond ((stringp host)
            (setf hostent (or (lookup-host-entry host)
-                             (error "Unknown host: ~S." host)))
+                             (error _"Unknown host: ~S." host)))
            (setf host (host-entry-addr hostent))
            (setf hostaddr (format nil "~A:~D"
                                   (host-entry-name hostent)
@@ -811,7 +811,7 @@ IP address."
                                   (ldb (byte 8 8) host)
                                   (ldb (byte 8 0) host)
                                   port)))
-          (t (error "Unknown host format: ~S." host)))
+          (t (error _"Unknown host format: ~S." host)))
    (sys:make-fd-stream
     (let ((socket (create-inet-socket :stream)))
       (alien:with-alien ((sockaddr inet-sockaddr))
@@ -823,12 +823,12 @@ IP address."
 					 (alien:alien-size inet-sockaddr
 							   :bytes)))
 	  (unix:unix-close socket)
-	  (error "Error connecting socket to [~A]: ~A"
+	  (error _"Error connecting socket to [~A]: ~A"
 		 hostaddr
 		 (unix:get-unix-error-msg)))
 	socket))
     :input t :output t :buffering buffering :timeout timeout
-    :name (format nil "network connection to ~A" hostaddr)
+    :name (format nil _"network connection to ~A" hostaddr)
     :external-format external-format
     :auto-close t)))
 
@@ -846,12 +846,12 @@ IP address."
                                       (alien-sap sockaddr)
                                       (alien-size inet-sockaddr :bytes))))
         (when (minusp socket)
-          (error "Error accepting a connection: ~A" (unix:get-unix-error-msg)))
+          (error _"Error accepting a connection: ~A" (unix:get-unix-error-msg)))
        (sys:make-fd-stream
 	socket :input t :output t :buffering buffering :timeout timeout
 	:name (let ((host (ntohl (slot sockaddr 'addr)))
 		    (port (ntohs (slot sockaddr 'port))))
-		(format nil "network connection from ~D.~D.~D.~D:~D"
+		(format nil _"network connection from ~D.~D.~D.~D:~D"
 			(ldb (byte 8 24) host)
 			(ldb (byte 8 16) host)
 			(ldb (byte 8 8) host)
