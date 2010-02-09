@@ -73,6 +73,15 @@ msgstr ""
 msgid "_@ is a reserved reader macro prefix."
 msgstr ""
 
+#: target:pcl/simple-streams/string.lisp target:compiler/tn.lisp
+#: target:compiler/main.lisp target:code/describe.lisp
+#: target:code/debug-int.lisp target:code/debug-info.lisp
+#: target:code/foreign-linkage.lisp target:code/reader.lisp
+#: target:code/stream.lisp target:code/hash-new.lisp target:code/array.lisp
+#: target:code/alieneval.lisp
+msgid "~S is not an array with a fill-pointer."
+msgstr ""
+
 #: target:code/array.lisp
 msgid "The exclusive upper bound on the rank of an array."
 msgstr ""
@@ -314,14 +323,6 @@ msgstr ""
 msgid "Returns the Fill-Pointer of the given Vector."
 msgstr ""
 
-#: target:pcl/simple-streams/string.lisp target:compiler/tn.lisp
-#: target:compiler/main.lisp target:code/describe.lisp
-#: target:code/debug-int.lisp target:code/debug-info.lisp
-#: target:code/foreign-linkage.lisp target:code/reader.lisp
-#: target:code/stream.lisp target:code/hash-new.lisp target:code/array.lisp
-msgid "~S is not an array with a fill-pointer."
-msgstr ""
-
 #: target:code/array.lisp
 msgid "New fill pointer, ~S, is larger than the length of the vector."
 msgstr ""
@@ -490,10 +491,6 @@ msgstr ""
 
 #: target:code/gc.lisp
 msgid "resetting GC counters"
-msgstr ""
-
-#: target:code/gc.lisp
-msgid ""
 msgstr ""
 
 #: target:code/gc.lisp
