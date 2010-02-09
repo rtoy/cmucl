@@ -180,6 +180,12 @@ msgid ""
 "  setf."
 msgstr ""
 
+#: target:code/format.lisp target:code/print.lisp target:code/irrat-dd.lisp
+#: target:code/irrat.lisp target:code/float.lisp target:code/numbers.lisp
+#: target:code/kernel.lisp
+msgid "Argument ~A is not a ~S: ~S."
+msgstr ""
+
 #: target:pcl/dfun.lisp target:code/interr.lisp target:code/lispinit.lisp
 msgid "Help! "
 msgstr ""
@@ -1952,6 +1958,449 @@ msgstr ""
 msgid "Too large to be represented as a ~S:~%  ~S"
 msgstr ""
 
+#: target:code/numbers.lisp
+msgid "More types than vars."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Duplicate case: ~S."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "More vars than types."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"NUMBER-DISPATCH ({(Var Type)}*) {((Type*) Form*) | (Symbol Arg*)}*\n"
+"  A vaguely case-like macro that does number cross-product dispatches.  The\n"
+"  Vars are the variables we are dispatching off of.  The Type paired with "
+"each\n"
+"  Var is used in the error message when no case matches.  Each case specifie"
+"s a\n"
+"  Type for each var, and is executed when that signature holds.  A type may "
+"be\n"
+"  a list (FOREACH Each-Type*), causing that case to be repeatedly instantiat"
+"ed\n"
+"  for every Each-Type.  In the body of each case, any list of the form\n"
+"  (DISPATCH-TYPE Var-Name) is substituted with the type of that var in that\n"
+"  instance of the case.\n"
+"\n"
+"  As an alternate to a case spec, there may be a form whose CAR is a "
+"symbol.\n"
+"  In this case, we apply the CAR of the form to the CDR and treat the "
+"result of\n"
+"  the call as a list of cases.  This process is not applied recursively."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns the element type of the most specialized COMPLEX number type that\n"
+"   can hold parts of type Spec."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Assume this is a subtype of REAL anyway."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Cannot determine if ~S is a subtype of REAL."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Complex numbers cannot have components of type ~S."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Builds a complex number from the specified components."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Extracts the real part of a number."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Extracts the imaginary part of a number."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns the complex conjugate of NUMBER.  For non-complex numbers, this is\n"
+"  an identity."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "If NUMBER is zero, return NUMBER, else return (/ NUMBER (ABS NUMBER))."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Return the numerator of NUMBER, which must be rational."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Return the denominator of NUMBER, which must be rational."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns the sum of its arguments.  With no args, returns 0."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns the product of its arguments.  With no args, returns 1."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Subtracts the second and all subsequent arguments from the first.\n"
+"  With one arg, negates it."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Divides the first arg by each of the following arguments, in turn.\n"
+"  With one arg, returns reciprocal."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns NUMBER + 1."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns NUMBER - 1."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns number (or number/divisor) as an integer, rounded toward 0.\n"
+"  The second returned value is the remainder."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns the greatest integer not greater than number, or number/divisor.\n"
+"  The second returned value is (mod number divisor)."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns the smallest integer not less than number, or number/divisor.\n"
+"  The second returned value is the remainder."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Rounds number (or number/divisor) to nearest integer.\n"
+"  The second returned value is the remainder."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns second result of TRUNCATE."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns second result of FLOOR."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Same as TRUNCATE, but returns first value as a float."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Same as FLOOR, but returns first value as a float."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Same as CEILING, but returns first value as a float."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Same as ROUND, but returns first value as a float."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns T if all of its arguments are numerically equal, NIL otherwise."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns T if no two of its arguments are numerically equal, NIL otherwise."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns T if its arguments are in strictly increasing order, NIL otherwise."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns T if its arguments are in strictly decreasing order, NIL otherwise."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns T if arguments are in strictly non-decreasing order, NIL otherwise."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns T if arguments are in strictly non-increasing order, NIL otherwise."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns the greatest of its arguments."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns the least of its arguments."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Return T if OBJ1 and OBJ2 represent the same object, otherwise NIL."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns the bit-wise or of its arguments.  Args must be integers."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns the bit-wise exclusive or of its arguments.  Args must be integers."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns the bit-wise and of its arguments.  Args must be integers."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns the bit-wise equivalence of its arguments.  Args must be integers."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns the complement of the logical AND of integer1 and integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns the complement of the logical OR of integer1 and integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns the logical AND of (LOGNOT integer1) and integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns the logical AND of integer1 and (LOGNOT integer2)."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns the logical OR of (LOGNOT integer1) and integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns the logical OR of integer1 and (LOGNOT integer2)."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns the bit-wise logical not of integer."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Count the number of 1 bits if INTEGER is positive, and the number of 0 bits\n"
+"  if INTEGER is negative."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Predicate which returns T if logand of integer1 and integer2 is not zero."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Predicate returns T if bit index of integer is a 1.  The least\n"
+"significant bit of INTEGER is bit 0."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Shifts integer left by count places preserving sign.  - count shifts right."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns the number of significant bits in the absolute value of integer."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns a byte specifier which may be used by other byte functions."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns the size part of the byte specifier bytespec."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns the position part of the byte specifier bytespec."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Extract the specified byte from integer, and right justify result."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns T if any of the specified bits in integer are 1's."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Extract the specified byte from integer,  but do not right justify result."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns new integer with newbyte in specified position, newbyte is right "
+"justified."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns new integer with newbyte in specified position, newbyte is not "
+"right justified."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Boole function op, makes BOOLE return 0."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Boole function op, makes BOOLE return -1."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Boole function op, makes BOOLE return integer1."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Boole function op, makes BOOLE return integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Boole function op, makes BOOLE return complement of integer1."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Boole function op, makes BOOLE return complement of integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Boole function op, makes BOOLE return logand of integer1 and integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Boole function op, makes BOOLE return logior of integer1 and integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Boole function op, makes BOOLE return logxor of integer1 and integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Boole function op, makes BOOLE return logeqv of integer1 and integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Boole function op, makes BOOLE return log nand of integer1 and integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Boole function op, makes BOOLE return lognor of integer1 and integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Boole function op, makes BOOLE return logandc1 of integer1 and integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Boole function op, makes BOOLE return logandc2 of integer1 and integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Boole function op, makes BOOLE return logorc1 of integer1 and integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Boole function op, makes BOOLE return logorc2 of integer1 and integer2."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Bit-wise boolean function on two integers.  Function chosen by OP:\n"
+"	0	BOOLE-CLR\n"
+"	1	BOOLE-SET\n"
+"	2	BOOLE-1\n"
+"  	3	BOOLE-2\n"
+"	4	BOOLE-C1\n"
+"	5	BOOLE-C2\n"
+"	6	BOOLE-AND\n"
+"	7	BOOLE-IOR\n"
+" 	8	BOOLE-XOR\n"
+"	9	BOOLE-EQV\n"
+"	10	BOOLE-NAND\n"
+"	11	BOOLE-NOR\n"
+"	12	BOOLE-ANDC1\n"
+"	13	BOOLE-ANDC2\n"
+"	14	BOOLE-ORC1\n"
+"	15	BOOLE-ORC2"
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns the greatest common divisor of the arguments, which must be\n"
+"  integers.  Gcd with no arguments is defined to be 0."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns the least common multiple of one or more integers.  LCM of no\n"
+"  arguments is defined to be 1."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns T iff X is a positive prime integer."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid ""
+"Returns the root of the nearest integer less than n which is a perfect\n"
+"   square."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns T if number = 0, NIL otherwise."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns T if number > 0, NIL otherwise."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns T if number < 0, NIL otherwise."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns T if number is odd, NIL otherwise."
+msgstr ""
+
+#: target:code/numbers.lisp
+msgid "Returns T if number is even, NIL otherwise."
+msgstr ""
+
 #: target:code/float-trap.lisp
 msgid "Unknown float trap kind: ~S."
 msgstr ""
@@ -3262,6 +3711,465 @@ msgstr ""
 
 #: target:code/format.lisp
 msgid "Table of ordinal tens-place digits in English"
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"The list of packages to use by default of no :USE argument is supplied\n"
+"   to MAKE-PACKAGE or other package creation forms."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Standard structure for the description of a package.  Consists of \n"
+"   a list of all hash tables, the name of the package, the nicknames of\n"
+"   the package, the use-list for the package, the used-by- list, hash-\n"
+"   tables for the internal and external symbols, and a list of the\n"
+"   shadowing symbols."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "The ~A package, ~D/~D internal, ~D/~D external"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "The ~A package"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "deleted package"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "The current package."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "~&~@<Attempt to modify the locked package ~A, by ~3i~:_~?~:>"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "redefining function ~A"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Bogus ~A name: ~S"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Can't do anything to a deleted package: ~S"
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Given PACKAGE-SPECIFIER, a package, symbol or string, return the\n"
+"  parent package.  If there is not a parent, signal an error."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "The parent of ~a does not exist."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "There is no parent of ~a."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Given PACKAGE-SPECIFIER, a package, symbol or string, return all the\n"
+"  packages which are in the hierarchy 'under' the given package.  If\n"
+"  :recurse is nil, then only return the immediate children of the package."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Find the package having the specified name."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Make this package."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "#<Package-Hashtable: Size = ~D, Free = ~D, Deleted = ~D>"
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"DO-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECLARATION}* {TAG | FORM}*\n"
+"   Executes the FORMs at least once for each symbol accessible in the given\n"
+"   PACKAGE with VAR bound to the current symbol."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"DO-EXTERNAL-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECL}* {TAG | FORM}*\n"
+"   Executes the FORMs once for each external symbol in the given PACKAGE "
+"with\n"
+"   VAR bound to the current symbol."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"DO-ALL-SYMBOLS (VAR [RESULT-FORM]) {DECLARATION}* {TAG | FORM}*\n"
+"   Executes the FORMs once for each symbol in every package with VAR bound\n"
+"   to the current symbol."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Within the lexical scope of the body forms, MNAME is defined via macrolet\n"
+"   such that successive invocations of (mname) will return the symbols,\n"
+"   one by one, from the packages in PACKAGE-LIST. SYMBOL-TYPES may be\n"
+"   any of :inherited :external :internal."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Must supply at least one of :internal, ~\n"
+"	                             :external, or :inherited."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"~S is not one of :internal, :external, ~\n"
+"		                       or :inherited."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Defines a new package called PACKAGE.  Each of OPTIONS should be one of the\n"
+"   following:\n"
+"     (:NICKNAMES {package-name}*)\n"
+"     (:SIZE <integer>)\n"
+"     (:SHADOW {symbol-name}*)\n"
+"     (:SHADOWING-IMPORT-FROM <package-name> {symbol-name}*)\n"
+"     (:USE {package-name}*)\n"
+"     (:IMPORT-FROM <package-name> {symbol-name}*)\n"
+"     (:INTERN {symbol-name}*)\n"
+"     (:EXPORT {symbol-name}*)\n"
+"     (:DOCUMENTATION doc-string)\n"
+"   All options except :SIZE and :DOCUMENTATION can be used multiple times."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Bogus DEFPACKAGE option: ~S"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Can't specify :SIZE twice."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Bogus :SIZE, must be a positive integer: ~S"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Can't specify :DOCUMENTATION twice."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Parameters ~S and ~S must be disjoint ~\n"
+"	                             but have common elements ~%   ~S"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "~A is a nick-name for the package ~A"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "~A also shadows the following symbols:~%  ~S"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "~A previously used the following packages:~%  ~S"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "~A also exports the following symbols:~%  ~S"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "~A does not contain a symbol ~A"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "~S is a package name, so it cannot be a nickname for ~S."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Ignore this nickname."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "~S is already a nickname for ~S."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Redefine this nickname."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Makes a new package having the specified Name and Nicknames.  The\n"
+"  package will inherit all external symbols from each package in\n"
+"  the use list.  :Internal-Symbols and :External-Symbols are\n"
+"  estimates for the number of internal and external symbols which\n"
+"  will ultimately be present in the package."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Leave existing package alone."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "A package named ~S already exists"
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Sets *PACKAGE* to package with given NAME, creating the package if\n"
+"   it does not exist.  If the package already exists then it is modified\n"
+"   to agree with the :USE and :NICKNAMES arguments.  Any new nicknames\n"
+"   are added without removing any old ones not specified.  If any package\n"
+"   in the :Use list is not currently used, then it is added to the use\n"
+"   list."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Old-style IN-PACKAGE."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "The package named ~S doesn't exist."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Changes the name and nicknames for a package."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "A package named ~S already exists."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Delete the PACKAGE-OR-NAME from the package system data structures."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "No package of name ~S."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Return NIL"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Remove dependency in other packages."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Returns a list of all existing packages."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Returns a symbol having the specified name, creating it if necessary."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Returns the symbol NAME in PACKAGE.  If such a symbol is found\n"
+"  then the second value is :internal, :external or :inherited to indicate\n"
+"  how the symbol is accessible.  If no symbol is found then both values\n"
+"  are NIL."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Makes SYMBOL no longer present in PACKAGE.  If SYMBOL was present\n"
+"  then T is returned, otherwise NIL.  If PACKAGE is SYMBOL's home\n"
+"  package, then it is made uninterned."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "uninterning symbol ~A"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "prompt for a symbol to shadowing-import."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Uninterning symbol ~S causes name conflict among these symbols:~%~S"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Symbol to shadowing-import: "
+msgstr ""
+
+#: target:code/package.lisp
+msgid "~S is not a symbol."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "~S is not one of the conflicting symbols."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "~S is neither a symbol nor a list of symbols."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Exports SYMBOLS from PACKAGE, checking that no name conflicts result."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Exporting these symbols from the ~A package:~%~S~%~\n"
+"	      results in name conflicts with these packages:~%~{~A ~}"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "These symbols are not accessible in the ~A package:~%~S"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Import these symbols into the ~A package."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Makes SYMBOLS no longer exported from PACKAGE."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "unexporting symbols ~A"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "~S is not accessible in the ~A package."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Make SYMBOLS accessible as internal symbols in PACKAGE.  If a symbol\n"
+"  is already accessible then it has no effect.  If a name conflict\n"
+"  would result from the importation, then a correctable error is signalled."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Importing these symbols into the ~A package ~\n"
+"		causes a name conflict:~%~S"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Import these symbols with Shadowing-Import."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Import SYMBOLS into PACKAGE, disregarding any name conflict.  If\n"
+"  a symbol of the same name is present, then it is uninterned.\n"
+"  The symbols are added to the Package-Shadowing-Symbols."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Make an internal symbol in PACKAGE with the same name as each of the\n"
+"  specified SYMBOLS, adding the new symbols to the Package-Shadowing-Symbols"
+".\n"
+"  If a symbol with the given name is already present in PACKAGE, then\n"
+"  the existing symbol is placed in the shadowing symbols list if it is\n"
+"  not already present."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Add all the PACKAGES-TO-USE to the use list for PACKAGE so that\n"
+"  the external symbols of the used packages are accessible as internal\n"
+"  symbols in PACKAGE."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Unintern the conflicting symbols in the ~2*~A package."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Use'ing package ~A results in name conflicts for these symbols:~%~S"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Remove PACKAGES-TO-UNUSE from the use list for PACKAGE."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Return a list of all symbols in the system having the specified name."
+msgstr ""
+
+#: target:code/describe.lisp target:code/package.lisp
+msgid "special variable"
+msgstr ""
+
+#: target:code/describe.lisp target:code/package.lisp
+msgid "constant"
+msgstr ""
+
+#: target:code/describe.lisp target:code/package.lisp
+msgid "undefined variable"
+msgstr ""
+
+#: target:code/describe.lisp target:code/package.lisp
+msgid "symbol macro"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "alien variable"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "value: "
+msgstr ""
+
+#: target:code/package.lisp
+msgid "macro"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "special operator"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "function"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "class"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "type"
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Call FUN with each symbol that contains STRING.\n"
+"  If PACKAGE is supplied then only use symbols present in\n"
+"  that package.  If EXTERNAL-ONLY is true then only use\n"
+"  symbols exported from the specified package."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Briefly describe all symbols which contain the specified STRING.\n"
+"  If PACKAGE is supplied then only describe symbols present in\n"
+"  that package.  If EXTERNAL-ONLY is non-NIL then only describe\n"
+"  external symbols in the specified package."
+msgstr ""
+
+#: target:code/package.lisp
+msgid ""
+"Identical to APROPOS, except that it returns a list of the symbols\n"
+"  found instead of describing them."
 msgstr ""
 
 #: target:code/backq.lisp
@@ -4831,6 +5739,178 @@ msgstr ""
 msgid "~S code location at ~D"
 msgstr ""
 
+#: target:code/ntrace.lisp
+msgid ""
+"This is bound to the returned values when evaluating :BREAK-AFTER and\n"
+"   :PRINT-AFTER forms."
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid ""
+"If the trace indentation exceeds this value, then indentation restarts at\n"
+"   0."
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid "The default value for the :ENCAPSULATE option to trace."
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid ""
+"List of package names.  Encapsulate functions from these packages\n"
+"   by default.  This should at least include the packages of functions\n"
+"   used by TRACE, directly or indirectly."
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid "Can't trace special form ~S."
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid "Breaking ~A traced call to ~S:"
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid "~S returned"
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid "Function ~S already TRACE'd, retracing it."
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid "~S name is not a defined global function: ~S"
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid "Can't use encapsulation to trace anonymous function ~S."
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid "Can't use encapsulation to trace local flet/labels function ~S."
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid "Tracing shared code for ~S:~%  ~S"
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid "Missing argument to ~S TRACE option."
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid "Unknown TRACE option: ~S"
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid ""
+"TRACE {Option Global-Value}* {Name {Option Value}*}*\n"
+"   TRACE is a debugging tool that prints information when specified function"
+"s\n"
+"   are called.  In its simplest form:\n"
+"       (trace Name-1 Name-2 ...)\n"
+"\n"
+"   CLOS methods can be traced by specifying a name of the form\n"
+"   (METHOD {Qualifier}* ({Specializer}*)).\n"
+"\n"
+"   Labels and Flet functions can be traced by specifying a name of the form\n"
+"   (LABELS <lfun> <fun>) or (FLET <lfun> <fun>) where <lfun> is the Labels/F"
+"let\n"
+"   function in <fun>.\n"
+"\n"
+"   TRACE causes a printout on *TRACE-OUTPUT* each time that one of the "
+"named\n"
+"   functions is entered or returns (the Names are not evaluated.)  The "
+"output\n"
+"   is indented according to the number of pending traced calls, and this "
+"trace\n"
+"   depth is printed at the beginning of each line of output.\n"
+"\n"
+"   Options allow modification of the default behavior.  Each option is a "
+"pair\n"
+"   of an option keyword and a value form.  Options may be interspersed with\n"
+"   function names.  Options only affect tracing of the function whose name "
+"they\n"
+"   appear immediately after.  Global options are specified before the first\n"
+"   name, and affect all functions traced by a given use of TRACE.\n"
+"\n"
+"   The following options are defined:\n"
+"\n"
+"   :CONDITION Form\n"
+"   :CONDITION-AFTER Form\n"
+"   :CONDITION-ALL Form\n"
+"       If :CONDITION is specified, then TRACE does nothing unless Form\n"
+"       evaluates to true at the time of the call.  :CONDITION-AFTER is\n"
+"       similar, but suppresses the initial printout, and is tested when the\n"
+"       function returns.  :CONDITION-ALL tries both before and after.\n"
+"\n"
+"   :WHEREIN Names\n"
+"       If specified, Names is a function name or list of names.  TRACE does\n"
+"       nothing unless a call to one of those functions encloses the call to\n"
+"       this function (i.e. it would appear in a backtrace.)  Anonymous\n"
+"       functions have string names like \"DEFUN FOO\".\n"
+"   :WHEREIN-ONLY Names\n"
+"       Like :WHEREIN, but only if the immediate caller is one of Names,\n"
+"       instead of being any where in a backtrace.\n"
+"\n"
+"   :BREAK Form\n"
+"   :BREAK-AFTER Form\n"
+"   :BREAK-ALL Form\n"
+"       If specified, and Form evaluates to true, then the debugger is "
+"invoked\n"
+"       at the start of the function, at the end of the function, or both,\n"
+"       according to the respective option.\n"
+"\n"
+"   :PRINT Form\n"
+"   :PRINT-AFTER Form\n"
+"   :PRINT-ALL Form\n"
+"       In addition to the usual printout, the result of evaluating FORM is\n"
+"       printed at the start of the function, at the end of the function, or\n"
+"       both, according to the respective option.  Multiple print options "
+"cause\n"
+"       multiple values to be printed.\n"
+"\n"
+"   :FUNCTION Function-Form\n"
+"       This is a not really an option, but rather another way of specifying\n"
+"       what function to trace.  The Function-Form is evaluated immediately,\n"
+"       and the resulting function is traced.\n"
+"\n"
+"   :METHODS Function-Form\n"
+"       This is a not really an option, but rather a way of specifying\n"
+"       that all methods of a generic functions should be traced.  The\n"
+"       Function-Form is evaluated immediately, and the methods of the "
+"resulting\n"
+"       generic function are traced.\n"
+"\n"
+"   :ENCAPSULATE {:DEFAULT | T | NIL}\n"
+"       If T, the tracing is done via encapsulation (redefining the function\n"
+"       name) rather than by modifying the function.  :DEFAULT is the "
+"default,\n"
+"       and means to use encapsulation for interpreted functions and funcalla"
+"ble\n"
+"       instances, breakpoints otherwise.  When encapsulation is used, forms "
+"are\n"
+"       *not* evaluated in the function's lexical environment, but DEBUG:ARG "
+"can\n"
+"       still be used.\n"
+"\n"
+"   :CONDITION, :BREAK and :PRINT forms are evaluated in the lexical environm"
+"ent\n"
+"   of the called function; DEBUG:VAR and DEBUG:ARG can be used.  The -AFTER "
+"and\n"
+"   -ALL forms are evaluated in the null environment."
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid "Function is not TRACE'd -- ~S."
+msgstr ""
+
+#: target:code/ntrace.lisp
+msgid ""
+"Removes tracing from the specified functions.  With no args, untraces all\n"
+"   functions."
+msgstr ""
+
 #: target:code/profile.lisp
 msgid "dfixnum became negative ~a/~a - ~a/~a(~a/~a)"
 msgstr ""
@@ -5092,22 +6172,6 @@ msgstr ""
 
 #: target:code/describe.lisp
 msgid "~&Its declared type is ~S."
-msgstr ""
-
-#: target:code/describe.lisp
-msgid "special variable"
-msgstr ""
-
-#: target:code/describe.lisp
-msgid "constant"
-msgstr ""
-
-#: target:code/describe.lisp
-msgid "undefined variable"
-msgstr ""
-
-#: target:code/describe.lisp
-msgid "symbol macro"
 msgstr ""
 
 #: target:code/describe.lisp
