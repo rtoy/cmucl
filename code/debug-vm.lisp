@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-vm.lisp,v 1.2.56.1 2010/02/08 17:15:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-vm.lisp,v 1.2.56.2 2010/02/09 14:56:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,7 @@
 ;;; MAKE-BOGUS-LRA -- Interface.
 ;;;
 (defun make-bogus-lra (real-lra &optional known-return-p)
-  "Make a bogus LRA object that signals a breakpoint trap when returned to.  If
+  _N"Make a bogus LRA object that signals a breakpoint trap when returned to.  If
    the breakpoint trap handler returns to the fake component, the fake code
    template returns to real-lra.  This returns three values: the bogus LRA
    object, the code component it points to, and the pc-offset for the trap

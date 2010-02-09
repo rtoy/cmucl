@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.98.12.1 2010/02/08 17:15:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.98.12.2 2010/02/09 14:56:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,27 +38,27 @@
 
 
 (defparameter *ANSI-defstruct-options-p* nil
-  "Controls compiling DEFSTRUCT :print-function and :print-method
+  _N"Controls compiling DEFSTRUCT :print-function and :print-method
    options according to ANSI spec. MUST be NIL to compile CMUCL & PCL")
 
 ;;;; Structure frobbing primitives.
 
 (defun %make-instance (length)
-  "Allocate a new instance with LENGTH data slots."
+  _N"Allocate a new instance with LENGTH data slots."
   (declare (type index length))
   (%make-instance length))
 
 (defun %instance-length (instance)
-  "Given an instance, return its length."
+  _N"Given an instance, return its length."
   (declare (type instance instance))
   (%instance-length instance))
 
 (defun %instance-ref (instance index)
-  "Return the value from the INDEXth slot of INSTANCE.  This is SETFable."
+  _N"Return the value from the INDEXth slot of INSTANCE.  This is SETFable."
   (%instance-ref instance index))
 
 (defun %instance-set (instance index new-value)
-  "Set the INDEXth slot of INSTANCE to NEW-VALUE."
+  _N"Set the INDEXth slot of INSTANCE to NEW-VALUE."
   (setf (%instance-ref instance index) new-value))
 
 (defun %raw-ref-single (vec index)
@@ -322,9 +322,9 @@
 (defun compiler-layout-or-lose (name)
   (let ((res (info type compiler-layout name)))
     (cond ((not res)
-	   (error "Class not yet defined or was undefined: ~S" name))
+	   (error _"Class not yet defined or was undefined: ~S" name))
 	  ((not (typep (layout-info res) 'defstruct-description))
-	   (error "Class is not a structure class: ~S" name))
+	   (error _"Class is not a structure class: ~S" name))
 	  (t res))))
 
 (defun dd-maybe-make-print-method (defstruct)
@@ -418,7 +418,7 @@
 ;;; DEFSTRUCT  --  Public
 ;;;
 (defmacro defstruct (name-and-options &rest slot-descriptions)
-  "DEFSTRUCT {Name | (Name Option*)} {Slot | (Slot [Default] {Key Value}*)}
+  _N"DEFSTRUCT {Name | (Name Option*)} {Slot | (Slot [Default] {Key Value}*)}
    Define the structure type Name.  Instances are created by MAKE-<name>, which
    takes keyword arguments allowing initial slot values to the specified.
    A SETF'able function <name>-<slot> is defined for each slot to read&write
@@ -458,7 +458,7 @@
       (restart-case
 	  (error 'lisp::package-locked-error
 		 :package pkg
-		 :format-control "defining structure ~A"
+		 :format-control _"defining structure ~A"
 		 :format-arguments (list name))
 	(continue ()
 	  :report "Ignore the lock and continue")
@@ -469,7 +469,7 @@
           :report "Unlock all packages, then continue"
           (lisp::unlock-all-packages))))
     (when (info declaration recognized name)
-      (error "Defstruct already names a declaration: ~S." name))
+      (error _"Defstruct already names a declaration: ~S." name))
     (when (stringp (car slot-descriptions))
       (setf (dd-doc defstruct) (pop slot-descriptions)))
     (dolist (slot slot-descriptions)
@@ -527,7 +527,7 @@
 	 (setf (dd-predicate defstruct) pred)))
       (:include
        (when (dd-include defstruct)
-	 (error "Can't have more than one :INCLUDE option."))
+	 (error _"Can't have more than one :INCLUDE option."))
        (setf (dd-include defstruct) args))
       (:alternate-metaclass
        (setf (dd-alternate-metaclass defstruct) args))
@@ -550,9 +550,9 @@
 		  (setf (dd-element-type defstruct) vtype)
 		  (setf (dd-type defstruct) 'vector)))
 	       (t
-		(error "~S is a bad :TYPE for Defstruct." type)))))
+		(error _"~S is a bad :TYPE for Defstruct." type)))))
       (:named
-       (error "The Defstruct option :NAMED takes no arguments."))
+       (error _"The Defstruct option :NAMED takes no arguments."))
       (:initial-offset
        (destructuring-bind (offset) args
 	 (setf (dd-offset defstruct) offset)))
@@ -562,7 +562,7 @@
       (:pure
        (destructuring-bind (fun) args
 	 (setf (dd-pure defstruct) fun)))
-      (t (error "Unknown DEFSTRUCT option~%  ~S" option)))))
+      (t (error _"Unknown DEFSTRUCT option~%  ~S" option)))))
 
 #+ORIGINAL
 (defun parse-1-option (option defstruct)
@@ -590,7 +590,7 @@
 	 (setf (dd-predicate defstruct) pred)))
       (:include
        (when (dd-include defstruct)
-	 (error "Can't have more than one :INCLUDE option."))
+	 (error _"Can't have more than one :INCLUDE option."))
        (setf (dd-include defstruct) args))
       (:alternate-metaclass
        (setf (dd-alternate-metaclass defstruct) args))
@@ -610,9 +610,9 @@
 		  (setf (dd-element-type defstruct) vtype)
 		  (setf (dd-type defstruct) 'vector)))
 	       (t
-		(error "~S is a bad :TYPE for Defstruct." type)))))
+		(error _"~S is a bad :TYPE for Defstruct." type)))))
       (:named
-       (error "The Defstruct option :NAMED takes no arguments."))
+       (error _"The Defstruct option :NAMED takes no arguments."))
       (:initial-offset
        (destructuring-bind (offset) args
 	 (setf (dd-offset defstruct) offset)))
@@ -622,7 +622,7 @@
       (:pure
        (destructuring-bind (fun) args
 	 (setf (dd-pure defstruct) fun)))
-      (t (error "Unknown DEFSTRUCT option~%  ~S" option)))))
+      (t (error _"Unknown DEFSTRUCT option~%  ~S" option)))))
 
 
 ;;; PARSE-NAME-AND-OPTIONS  --  Internal
@@ -641,20 +641,20 @@
 				:conc-name))
 	       (parse-1-option (list option) defstruct))
 	      (t
-	       (error "Unrecognized DEFSTRUCT option: ~S" option))))
+	       (error _"Unrecognized DEFSTRUCT option: ~S" option))))
 
       (case (dd-type defstruct)
 	(structure
 	 (when (dd-offset defstruct)
-	   (error "Can't specify :OFFSET unless :TYPE is specified."))
+	   (error _"Can't specify :OFFSET unless :TYPE is specified."))
 	 (unless (dd-include defstruct)
 	   (incf (dd-length defstruct))))
 	(funcallable-structure)
 	(t
 	 (when (dd-print-function defstruct)
-	   (warn "Silly to specify :PRINT-FUNCTION with :TYPE."))
+	   (warn _"Silly to specify :PRINT-FUNCTION with :TYPE."))
 	 (when (dd-make-load-form-fun defstruct)
-	   (warn "Silly to specify :MAKE-LOAD-FORM-FUN with :TYPE."))
+	   (warn _"Silly to specify :MAKE-LOAD-FORM-FUN with :TYPE."))
 	 (when (dd-named defstruct) (incf (dd-length defstruct)))
 	 (let ((offset (dd-offset defstruct)))
 	   (when offset (incf (dd-length defstruct) offset)))))
@@ -685,13 +685,13 @@
 	       (values name default default-p type type-p read-only ro-p)))
 	    (t
 	     (when (keywordp spec)
-	       (warn "Keyword slot name indicates probable syntax ~
+	       (warn _"Keyword slot name indicates probable syntax ~
 		      error in DEFSTRUCT -- ~S."
 		     spec))
 	     spec))
     (when (find name (dd-slots defstruct) :test #'string= :key #'dsd-%name)
       (error 'simple-program-error
-	     :format-control "Duplicate slot name ~S."
+	     :format-control _"Duplicate slot name ~S."
 	     :format-arguments (list name)))
     (setf (dsd-name islot) name)
     (setf (dd-slots defstruct) (nconc (dd-slots defstruct) (list islot)))
@@ -707,7 +707,7 @@
       (if read-only
 	  (setf (dsd-read-only islot) t)
 	  (when (dsd-read-only islot)
-	    (error "Slot ~S must be read-only in subtype ~S." name
+	    (error _"Slot ~S must be read-only in subtype ~S." name
 		   (dsd-name islot)))))
     islot))
 
@@ -777,7 +777,7 @@
       (unless (and (eq type (dd-type included-structure))
 		   (type= (specifier-type (dd-element-type included-structure))
 			  (specifier-type (dd-element-type defstruct))))
-	(error ":TYPE option mismatch between structures ~S and ~S."
+	(error _":TYPE option mismatch between structures ~S and ~S."
 	       (dd-name defstruct) included-name))
       
       (incf (dd-length defstruct) (dd-length included-structure))
@@ -827,7 +827,7 @@
 
 (defun typed-structure-info-or-lose (name)
   (or (info typed-structure info name)
-      (error ":TYPE'd defstruct ~S not found for inclusion." name)))
+      (error _":TYPE'd defstruct ~S not found for inclusion." name)))
 
 ;;; %GET-COMPILER-LAYOUT  --  Internal
 ;;;
@@ -1102,7 +1102,7 @@
 
     (when no-constructors
       (when (or defaults boas)
-	(error "(:CONSTRUCTOR NIL) combined with other :CONSTRUCTORs."))
+	(error _"(:CONSTRUCTOR NIL) combined with other :CONSTRUCTORs."))
       (return-from define-constructors ()))
 
     (unless (or defaults boas)
@@ -1262,7 +1262,7 @@
 		((not (= (cdr inherited) index))
 		 (warn 'simple-style-warning
 		       :format-control
-		       "~@<Non-overwritten accessor ~S does not access ~
+		       _"~@<Non-overwritten accessor ~S does not access ~
                         slot with name ~S (accessing an inherited slot ~
                         instead).~:@>"
 		       :format-arguments (list aname (dsd-%name slot))))))
@@ -1334,7 +1334,7 @@
 (defun typep-to-layout (obj layout &optional no-error)
   (declare (type layout layout) (optimize (speed 3) (safety 0)))
   (when (layout-invalid layout)
-    (error "Obsolete structure accessor function called."))
+    (error _"Obsolete structure accessor function called."))
   (and (%instancep obj)
        (let ((depth (layout-inheritance-depth layout))
 	     (obj-layout (%instance-layout obj)))
@@ -1366,7 +1366,7 @@
 	      (error 'simple-type-error
 		     :datum structure
 		     :expected-type class
-		     :format-control "Structure for accessor ~S is not a ~S:~% ~S"
+		     :format-control _"Structure for accessor ~S is not a ~S:~% ~S"
 		     :format-arguments (list (dsd-accessor dsd)
 					     (%class-name class)
 					     structure)))
@@ -1377,7 +1377,7 @@
 	      (error 'simple-type-error
 		     :datum structure
 		     :expected-type class
-		     :format-control "Structure for accessor ~S is not a ~S:~% ~S"
+		     :format-control _"Structure for accessor ~S is not a ~S:~% ~S"
 		     :format-arguments (list (dsd-accessor dsd) class
 					     structure)))
 	    (%instance-ref structure (dsd-index dsd))))))
@@ -1391,7 +1391,7 @@
 	      (error 'simple-type-error
 		     :datum structure
 		     :expected-type class
-		     :format-control "Structure for setter ~S is not a ~S:~% ~S"
+		     :format-control _"Structure for setter ~S is not a ~S:~% ~S"
 		     :format-arguments (list `(setf ,(dsd-accessor dsd))
 					     (%class-name class)
 					     structure)))
@@ -1399,7 +1399,7 @@
 	      (error 'simple-type-error
 		     :datum new-value
 		     :expected-type (dsd-type dsd)
-		     :format-control "New-Value for setter ~S is not a ~S:~% ~S."
+		     :format-control _"New-Value for setter ~S is not a ~S:~% ~S."
 		     :format-arguments (list `(setf ,(dsd-accessor dsd))
 					     (dsd-type dsd)
 					     new-value)))
@@ -1410,7 +1410,7 @@
 	      (error 'simple-type-error
 		     :datum structure
 		     :expected-type class
-		     :format-control "Structure for setter ~S is not a ~S:~% ~S"
+		     :format-control _"Structure for setter ~S is not a ~S:~% ~S"
 		     :format-arguments (list `(setf ,(dsd-accessor dsd))
 					     (%class-name class)
 					     structure)))
@@ -1418,7 +1418,7 @@
 	      (error 'simple-type-error
 		     :datum new-value
 		     :expected-type (dsd-type dsd)
-		     :format-control "New-Value for setter ~S is not a ~S:~% ~S."
+		     :format-control _"New-Value for setter ~S is not a ~S:~% ~S."
 		     :format-arguments (list `(setf ,(dsd-accessor dsd))
 					     (dsd-type dsd)
 					     new-value)))
@@ -1488,7 +1488,7 @@
 		    (error 'simple-type-error
 			   :datum structure
 			   :expected-type class
-			   :format-control "Structure for copier is not a ~S:~% ~S"
+			   :format-control _"Structure for copier is not a ~S:~% ~S"
 			   :format-arguments (list class structure)))
 		  (copy-structure structure))))
 
@@ -1559,7 +1559,7 @@
 	     (setf (layout-info old-layout) info)
 	     (values class old-layout nil))
 	    (t
-	     (warn "Shouldn't happen!  Some strange thing in LAYOUT-INFO:~
+	     (warn _"Shouldn't happen!  Some strange thing in LAYOUT-INFO:~
 		    ~%  ~S"
 		   old-layout)
 	     (values class new-layout old-layout)))))))))
@@ -1606,7 +1606,7 @@
 			 (compare-slots old new)
       (when (or moved retyped deleted)
 	(warn 
-	 "Incompatibly redefining slots of structure class ~S~@
+	 _"Incompatibly redefining slots of structure class ~S~@
 	  Make sure any uses of affected accessors are recompiled:~@
 	  ~@[  These slots were moved to new positions:~%    ~S~%~]~
 	  ~@[  These slots have new incompatible types:~%    ~S~%~]~
@@ -1632,16 +1632,16 @@
   (declare (type class class) (type layout old-layout new-layout))
   (let ((name (class-proper-name class)))
     (restart-case
-	(error "Redefining class ~S incompatibly with the current ~
+	(error _"Redefining class ~S incompatibly with the current ~
 		definition."
 	       name)
       (continue ()
 	:report "Invalidate already loaded code and instances, use new definition."
-	(warn "Previously loaded ~S accessors will no longer work." name)
+	(warn _"Previously loaded ~S accessors will no longer work." name)
 	(register-layout new-layout))
       (clobber-it ()
 	:report "Assume redefinition is compatible, allow old code and instances."
-	(warn "Any old ~S instances will be in a bad way.~@
+	(warn _"Any old ~S instances will be in a bad way.~@
 	       I hope you know what you're doing..."
 	      name)
 	(register-layout new-layout :invalidate nil
@@ -1752,7 +1752,7 @@
 	    (undefine-structure class)
 	    (subs (class-proper-name class)))
 	  (when (subs)
-	    (warn "Removing old subclasses of ~S:~%  ~S"
+	    (warn _"Removing old subclasses of ~S:~%  ~S"
 		  (%class-name class) (subs))))))
      (t
       (unless (eq (%class-layout class) layout)
@@ -1796,7 +1796,7 @@
 	       (unless (= (cdr inherited) (dsd-index slot))
 		 (warn 'simple-style-warning
 		       :format-control
-		       "~@<Non-overwritten accessor ~S does not access ~
+		       _"~@<Non-overwritten accessor ~S does not access ~
                         slot with name ~S (accessing an inherited slot ~
                         instead).~:@>"
 		       :format-arguments (list aname (dsd-%name slot)))))
@@ -1821,14 +1821,14 @@
 ;;;    Copy any old kind of structure.
 ;;;
 (defun copy-structure (structure)
-  "Return a copy of Structure with the same (EQL) slot values."
+  _N"Return a copy of Structure with the same (EQL) slot values."
   (declare (type structure-object structure) (optimize (speed 3) (safety 0)))
   (let* ((len (%instance-length structure))
 	 (res (%make-instance len))
 	 (layout (%instance-layout structure)))
     (declare (type index len))
     (when (layout-invalid layout)
-      (error "Copying an obsolete structure:~%  ~S" structure))
+      (error _"Copying an obsolete structure:~%  ~S" structure))
     
     (dotimes (i len)
       (declare (type index i))
@@ -1921,7 +1921,7 @@
       ((member :just-dump-it-normally :ignore-it)
        fun)
       (null
-       (error "Structures of type ~S cannot be dumped as constants."
+       (error _"Structures of type ~S cannot be dumped as constants."
 	      (%class-name class)))
       (function
        (funcall fun structure))

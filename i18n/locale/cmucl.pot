@@ -73,6 +73,122 @@ msgstr ""
 msgid "_@ is a reserved reader macro prefix."
 msgstr ""
 
+#: target:code/class.lisp
+msgid "Layout for ~S~@[, Invalid=~S~]"
+msgstr ""
+
+#: target:code/class.lisp
+msgid "The inclusive upper bound on LAYOUT-HASH values."
+msgstr ""
+
+#: target:code/class.lisp
+msgid "Layout depth conflict: ~S~%  ~\n"
+"		        (~S collides at ~S with ~S)~%"
+msgstr ""
+
+#: target:code/class.lisp
+msgid "Can't use anonymous or undefined class as constant:~%  ~S"
+msgstr ""
+
+#: target:code/class.lisp
+msgid "~:[<anonymous>~;~:*~S~]~@[ (~(~A~))~]"
+msgstr ""
+
+#: target:code/class.lisp
+msgid ""
+"Return the class with the specified Name.  If ERRORP is false, then NIL is\n"
+"   returned when no such class exists."
+msgstr ""
+
+#: target:code/class.lisp
+msgid "Class not yet defined:~%  ~S"
+msgstr ""
+
+#: target:code/class.lisp
+msgid "Illegal to redefine standard type ~S."
+msgstr ""
+
+#: target:code/class.lisp
+msgid "Changing meta-class of ~S from ~S to ~S."
+msgstr ""
+
+#: target:code/class.lisp
+msgid "Redefining DEFTYPE type to be a class: ~S."
+msgstr ""
+
+#: target:code/class.lisp
+msgid ""
+"Return the class of the supplied object, which may be any Lisp object, not\n"
+"   just a CLOS STANDARD-OBJECT."
+msgstr ""
+
+#: target:code/class.lisp
+msgid "Modifing ~(~A~) class ~S; making it writable."
+msgstr ""
+
+#: target:code/class.lisp
+msgid "Subclassing sealed class ~S; unsealing it."
+msgstr ""
+
+#: target:code/class.lisp
+msgid ""
+"Change in the inheritance structure of class ~S~%  ~\n"
+"		 between the ~A definition and the ~A definition."
+msgstr ""
+
+#: target:code/class.lisp
+msgid ""
+"Change in instance length of class ~S:~%  ~\n"
+"		   ~A length: ~D~%  ~\n"
+"		   ~A length: ~D"
+msgstr ""
+
+#: target:code/class.lisp
+msgid ""
+"In class ~S:~%  ~\n"
+"		    ~:(~A~) definition of superclass ~S incompatible with~%  ~\n"
+"		    ~A definition."
+msgstr ""
+
+#: target:code/class.lisp
+msgid ""
+"Change in superclasses of class ~S:~%  ~\n"
+"		  ~A superclasses: ~S~%  ~\n"
+"		  ~A superclasses: ~S"
+msgstr ""
+
+#: target:code/class.lisp
+msgid ""
+"Loading a reference to class ~S when the compile~\n"
+"		       ~%  time definition was incompatible with the current ~\n"
+"		       one."
+msgstr ""
+
+#: target:code/class.lisp
+msgid "New definition of ~S must be loaded eventually."
+msgstr ""
+
+#: target:code/class.lisp
+msgid ""
+"Any old ~S instances will be in a bad way.~@\n"
+"		      I hope you know what you're doing..."
+msgstr ""
+
+#: target:code/class.lisp
+msgid ""
+"Assuming the current definition of ~S is correct, and~@\n"
+"		      that the loaded code doesn't care about the ~\n"
+"		      incompatibility."
+msgstr ""
+
+#: target:code/class.lisp
+msgid "Topological sort failed due to constraint on ~S."
+msgstr ""
+
+#: target:code/class.lisp
+msgid "Something strange with forward layout for ~S:~%  ~S"
+msgstr ""
+
 #: target:code/alieneval.lisp
 msgid "No alien type class ~S"
 msgstr ""
@@ -1226,6 +1342,121 @@ msgid ""
 "  NIL if no such character exists."
 msgstr ""
 
+#: target:code/commandline.lisp
+msgid "A list of all the command line arguments after --"
+msgstr ""
+
+#: target:code/commandline.lisp
+msgid ""
+"A list of cmd-switch's representing the arguments used to invoke\n"
+"  this process."
+msgstr ""
+
+#: target:code/commandline.lisp
+msgid "The string name that was used to invoke this process."
+msgstr ""
+
+#: target:code/commandline.lisp
+msgid "A list of words between the utility name and the first switch."
+msgstr ""
+
+#: target:code/commandline.lisp
+msgid ""
+"A list of strings obtained from the command line that invoked this process."
+msgstr ""
+
+#: target:code/commandline.lisp
+msgid "An Alist of (\"argument-name\" . demon-function)"
+msgstr ""
+
+#: target:code/commandline.lisp
+msgid ""
+"When True runs lisp with its input coming from standard-input.\n"
+"   If an error is detected returns error code 1, otherwise 0."
+msgstr ""
+
+#: target:code/commandline.lisp
+msgid ""
+"Accepts the name of a switch as a string and returns the value of the\n"
+"   switch.  If no value was specified, then any following words are returned"
+".\n"
+"   If there are no following words, then t is returned.  If the switch was "
+"not\n"
+"   specified, then nil is returned."
+msgstr ""
+
+#: target:code/commandline.lisp
+msgid ""
+"When set, invoking switch demons complains about illegal switches that have\n"
+"   not been defined with DEFSWITCH."
+msgstr ""
+
+#: target:code/commandline.lisp
+msgid "~S is an illegal switch"
+msgstr ""
+
+#: target:code/commandline.lisp
+msgid ""
+"Associates function with the switch name in *command-switch-demons*.  Name\n"
+"   is a simple-string that does not begin with a hyphen, unless the switch "
+"name\n"
+"   really does begin with one.  Function is optional, but defining the "
+"switch\n"
+"   is necessary to keep invoking switch demons from complaining about "
+"illegal\n"
+"   switches.  This can be inhibited with *complain-about-illegal-switches*."
+msgstr ""
+
+#: target:code/commandline.lisp
+msgid "a symbol or function"
+msgstr ""
+
+#: target:code/dfixnum.lisp
+msgid "increments dfixnum v by dfixnum i"
+msgstr ""
+
+#: target:code/dfixnum.lisp
+msgid "dfixnum became too big ~a + ~a"
+msgstr ""
+
+#: target:code/dfixnum.lisp
+msgid "increments dfixnum v by i (max half fixnum)"
+msgstr ""
+
+#: target:code/dfixnum.lisp
+msgid "not a half-fixnum: ~a"
+msgstr ""
+
+#: target:code/dfixnum.lisp
+msgid "decrement dfixnum v by dfixnum i"
+msgstr ""
+
+#: target:code/dfixnum.lisp
+msgid "dfixnum became negative ~a - ~a (~a/~a)"
+msgstr ""
+
+#: target:code/dfixnum.lisp
+msgid "decrement dfixnum v by half-fixnum i"
+msgstr ""
+
+#: target:code/dfixnum.lisp
+msgid ""
+"increments dfixnum by an interger which may be bigger than fixnum.\n"
+"   May cons"
+msgstr ""
+
+#: target:code/dfixnum.lisp
+msgid "returns a new dfixnum from number i"
+msgstr ""
+
+#: target:code/dfixnum.lisp
+msgid "increments a pair of halffixnums by another pair"
+msgstr ""
+
+#: target:code/dfixnum.lisp
+msgid "decrement dfixnum pair by another pair"
+msgstr ""
+
 #: target:code/gc.lisp
 msgid "Oh no.  The current dynamic space is missing!"
 msgstr ""
@@ -1437,6 +1668,711 @@ msgstr ""
 
 #: target:code/backq.lisp
 msgid "### illegal dotted backquote form ###"
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"All debug-conditions inherit from this type.  These are serious conditions\n"
+"    that must be handled, but they are not programmer errors."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "There is absolutely no debugging information available."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "No debugging information available."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"The system could not return values from a frame with debug-function since\n"
+"    it lacked information about returning values."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"~&Cannot return values from ~:[frame~;~:*~S~] since ~\n"
+"			the debug information lacks details about returning ~\n"
+"			values here."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "The debug-function has no debug-block information."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "~&~S has no debug-block information."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "The debug-function has no debug-variable information."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "~&~S has no debug-variable information."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"The debug-function has no lambda-list since argument debug-variables are\n"
+"    unavailable."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "~&~S has no lambda-list information available."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "~&~S has :invalid or :unknown value in ~S."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "~&~S names more than one valid variable in ~S."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"All programmer errors from using the interface for building debugging\n"
+"    tools inherit from this type."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "~&Unhandled debug-condition:~%~A"
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "~&Invalid use of an unknown code-location -- ~S."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "~&~S not in ~S."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Invalid control stack pointer."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "~&Form was preprocessed for ~S,~% but called on ~S:~%  ~S"
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the name of the debug-variable.  The name is the name of the symbol\n"
+"   used as an identifier when writing the code."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the package name of the debug-variable.  This is the package name "
+"of\n"
+"   the symbol used as an identifier when writing the code."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the integer that makes debug-variable's name and package name "
+"unique\n"
+"   with respect to other debug-variable's in the same function."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the frame immediately above frame on the stack.  When frame is\n"
+"   the top of the stack, this returns nil."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the debug-function for the function whose call frame represents."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the code-location where the frame's debug-function will continue\n"
+"   running when program execution returns to this frame.  If someone\n"
+"   interrupted this frame, the result could be an unknown code-location."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "#<Compiled-Frame ~S~:[~;, interrupted~]>"
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "#<~A-Debug-Function ~S>"
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the list of possible code-locations where execution may continue\n"
+"   when the basic-block represented by debug-block completes its execution."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Returns whether debug-block represents elsewhere code."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the breakpoint's function the system calls when execution encounters"
+"\n"
+"   the breakpoint, and it is active.  This is SETF'able."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Returns the breakpoint's what specification."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Returns the breakpoint's kind specification."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the debug-function representing information about the function\n"
+"   corresponding to the code-location."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the number of top-level forms processed by the compiler before\n"
+"   compiling this source.  If this source is uncompiled, this is zero.  "
+"This\n"
+"   may be zero even if the source is compiled since the first form in the "
+"first\n"
+"   file compiled in one compilation, for example, must have a root number "
+"of\n"
+"   zero -- the compiler saw no other top-level forms before it."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns an indication of the type of source.  The following are the possible"
+"\n"
+"   values:\n"
+"      :file    from a file (obtained by COMPILE-FILE if compiled).\n"
+"      :lisp    from Lisp (obtained by COMPILE if compiled).\n"
+"      :stream  from a non-file stream."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the actual source in some sense represented by debug-source, which\n"
+"   is related to DEBUG-SOURCE-FROM:\n"
+"      :file    the pathname of the file.\n"
+"      :lisp    a lambda-expression.\n"
+"      :stream  some descriptive string that's otherwise useless."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the universal time someone created the source.  This may be nil if\n"
+"   it is unavailable."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the time someone compiled the source.  This is nil if the source\n"
+"   is uncompiled."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"This function returns the file position of each top-level form as an array\n"
+"   if debug-source is from a :file.  If DEBUG-SOURCE-FROM is :lisp or "
+":stream,\n"
+"   this returns nil."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Returns whether object is a debug-source."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the top frame of the control stack as it was before calling this\n"
+"   function."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Flush all of the frames above FRAME, and renumber all the frames below\n"
+"   FRAME."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the frame immediately below frame on the stack.  When frame is\n"
+"   the bottom of the stack, this returns nil."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"When set, the debugger foregoes making interpreted-frames, so you can\n"
+"   debug the functions that manifest the interpreter."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Zero or more than one ~A variable in ~\n"
+"			   EVAL::INTERNAL-APPLY-LOOP?"
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Return a string describing the foreign function near ADDRESS"
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Foreign function call land"
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Return t if COMPONENT contains code from assembly routines."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Return the name of the assembly routine at offset PC in COMPONENT.\n"
+"The result is a symbol or nil if the routine cannot be found."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "find the PC"
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns an a-list mapping catch tags to code-locations.  These are\n"
+"   code-locations at which execution would continue with frame as the top\n"
+"   frame if someone threw to the corresponding tag."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Executes the forms in a context with block-var bound to each debug-block in\n"
+"   debug-function successively.  Result is an optional form to execute for\n"
+"   return values, and DO-DEBUG-FUNCTION-BLOCKS returns nil if there is no\n"
+"   result form.  This signals a no-debug-blocks condition when the\n"
+"   debug-function lacks debug-block information."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Executes body in a context with var bound to each debug-variable in\n"
+"   debug-function.  This returns the value of executing result (defaults to\n"
+"   nil).  This may iterate over only some of debug-function's variables or "
+"none\n"
+"   depending on debug policy; for example, possibly the compilation only\n"
+"   preserved argument information."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the Common Lisp function associated with the debug-function.  This\n"
+"   returns nil if the function is unavailable or is non-existent as a user\n"
+"   callable function object."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the name of the function represented by debug-function.  This may\n"
+"   be a string or a cons; do not assume it is a symbol."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns a debug-function that represents debug information for function."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the kind of the function which is one of :optional, :external,\n"
+"   :top-level, :cleanup, nil."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Returns whether there is any variable information for debug-function."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns a list of debug-variables in debug-function having the same name\n"
+"   and package as symbol.  If symbol is uninterned, then this returns a "
+"list of\n"
+"   debug-variables without package names and with the same name as symbol.  "
+"The\n"
+"   result of this function is limited to the availability of variable\n"
+"   information in debug-function; for example, possibly debug-function only\n"
+"   knows about its arguments."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns a list of debug-variables in debug-function whose names contain\n"
+"    name-prefix-string as an intial substring.  The result of this function "
+"is\n"
+"    limited to the availability of variable information in debug-function; "
+"for\n"
+"    example, possibly debug-function only knows about its arguments."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns a list representing the lambda-list for debug-function.  The list\n"
+"   has the following structure:\n"
+"      (required-var1 required-var2\n"
+"       ...\n"
+"       (:optional var3 suppliedp-var4)\n"
+"       (:optional var5)\n"
+"       ...\n"
+"       (:rest var6) (:rest var7)\n"
+"       ...\n"
+"       (:keyword keyword-symbol var8 suppliedp-var9)\n"
+"       (:keyword keyword-symbol var10)\n"
+"       ...\n"
+"      )\n"
+"   Each VARi is a debug-variable; however it may be the symbol :deleted it\n"
+"   is unreferenced in debug-function.  This signals a lambda-list-unavaliabl"
+"e\n"
+"   condition when there is no argument list information."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Malformed arguments description."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns whether basic-code-location is unknown.  It returns nil when the\n"
+"   code-location is known."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the debug-block containing code-location if it is available.  Some\n"
+"   debug policies inhibit debug-block information, and if none is available,"
+"\n"
+"   then this signals a no-debug-blocks condition."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Returns the code-location's debug-source."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the number of top-level forms before the one containing\n"
+"   code-location as seen by the compiler in some compilation unit.  A\n"
+"   compilation unit is not necessarily a single file, see the section on\n"
+"   debug-sources."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Unknown code location?  It should be known."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the number of the form corresponding to code-location.  The form\n"
+"   number is derived by a walking the subforms of a top-level form in\n"
+"   depth-first order."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Return the kind of CODE-LOCATION, one of:\n"
+"     :interpreted, :unknown-return, :known-return, :internal-error,\n"
+"     :non-local-exit, :block-start, :call-site, :single-value-return,\n"
+"     :non-local-entry"
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Returns whether obj1 and obj2 are the same place in the code."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Executes forms in a context with code-var bound to each code-location in\n"
+"   debug-block.  This returns the value of executing result (defaults to "
+"nil)."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "??? Can't get name of debug-block's function."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the symbol from interning DEBUG-VARIABLE-NAME in the package named\n"
+"   by DEBUG-VARIABLE-PACKAGE."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the value stored for debug-variable in frame.  If the value is not\n"
+"   :valid, then this signals an invalid-value error."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns the value stored for debug-variable in frame.  The value may be\n"
+"   invalid.  This is SETF'able."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Returns three values reflecting the validity of debug-variable's value\n"
+"   at basic-code-location:\n"
+"      :valid    The value is known to be available.\n"
+"      :invalid  The value is known to be unavailable.\n"
+"      :unknown  The value's availability is unknown."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"This returns a table mapping form numbers to source-paths.  A source-path\n"
+"   indicates a descent into the top-level-form form, going directly to the\n"
+"   subform corressponding to the form number."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Form is a top-level form, and path is a source-path into it.  This returns\n"
+"   the form indicated by the source-path.  Context is the number of enclosin"
+"g\n"
+"   forms to return instead of directly returning the source-path form.  "
+"When\n"
+"   context is non-zero, the form returned contains a marker, #:****HERE****,"
+"\n"
+"   immediately before the form indicated by path."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Return a function of one argument that evaluates form in the lexical\n"
+"   context of the basic-code-location loc.  PREPROCESS-FOR-EVAL signals a\n"
+"   no-debug-variables condition when the loc's debug-function has no\n"
+"   debug-variable information available.  The returned function takes the "
+"frame\n"
+"   to get values from as its argument, and it returns the values of form.\n"
+"   The returned function signals the following conditions: invalid-value,\n"
+"   ambiguous-variable-name, and frame-function-mismatch"
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Evaluate Form in the lexical context of Frame's current code location,\n"
+"   returning the results of the evaluation."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Find and return the debug catch tag for a given frame, if it exists."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Evaluate Form in the lexical context of Frame's current code location,\n"
+"   returning from the current frame the results of the evaluation."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"This creates and returns a breakpoint.  When program execution encounters\n"
+"   the breakpoint, the system calls hook-function.  Hook-function takes the\n"
+"   current frame for the function in which the program is running and the\n"
+"   breakpoint object.\n"
+"      What and kind determine where in a function the system invokes\n"
+"   hook-function.  What is either a code-location or a debug-function.  "
+"Kind is\n"
+"   one of :code-location, :function-start, or :function-end.  Since the "
+"starts\n"
+"   and ends of functions may not have code-locations representing them,\n"
+"   designate these places by supplying what as a debug-function and kind\n"
+"   indicating the :function-start or :function-end.  When what is a\n"
+"   debug-function and kind is :function-end, then hook-function must take "
+"two\n"
+"   additional arguments, a list of values returned by the function and a\n"
+"   function-end-cookie.\n"
+"      Info is information supplied by and used by the user.\n"
+"      Function-end-cookie is a function.  To implement :function-end "
+"breakpoints,\n"
+"   the system uses starter breakpoints to establish the :function-end "
+"breakpoint\n"
+"   for each invocation of the function.  Upon each entry, the system "
+"creates a\n"
+"   unique cookie to identify the invocation, and when the user supplies a\n"
+"   function for this argument, the system invokes it on the frame and the\n"
+"   cookie.  The system later invokes the :function-end breakpoint hook on "
+"the\n"
+"   same cookie.  The user may save the cookie for comparison in the hook\n"
+"   function.\n"
+"      This signals an error if what is an unknown code-location."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Cannot make a breakpoint at an unknown code location -- ~S."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Breakpoints in interpreted code are currently unsupported."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+":FUNCTION-END breakpoints are currently unsupported ~\n"
+"		       for the known return convention."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+":function-end breakpoints are currently unsupported ~\n"
+"	     for interpreted-debug-functions."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"This takes a function-end-cookie and a frame, and it returns whether the\n"
+"   cookie is still valid.  A cookie becomes invalid when the frame that\n"
+"   established the cookie has exited.  Sometimes cookie holders are unaware\n"
+"   of cookie invalidation because their :function-end breakpoint hooks didn'"
+"t\n"
+"   run due to THROW'ing.  This takes a frame as an efficiency hack since "
+"the\n"
+"   user probably has a frame object in hand when using this routine, and it\n"
+"   saves repeated parsing of the stack and consing when asking whether a\n"
+"   series of cookies is valid."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"This causes the system to invoke the breakpoint's hook-function until the\n"
+"   next call to DEACTIVATE-BREAKPOINT or DELETE-BREAKPOINT.  The system "
+"invokes\n"
+"   breakpoint hook functions in the opposite order that you activate them."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Cannot activate a deleted breakpoint -- ~S."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "I don't know how you made this, but they're unsupported -- ~S"
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "This stops the system from invoking the breakpoint's hook-function."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"This returns the user maintained info associated with breakpoint.  This\n"
+"   is SETF'able."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "This returns whether breakpoint is currently active."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"This frees system storage and removes computational overhead associated "
+"with\n"
+"   breakpoint.  After calling this, breakpoint is completely impotent and "
+"can\n"
+"   never become active again."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Unknown breakpoint in ~S at offset ~S."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Breakpoint that nobody wants?"
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Make a bogus LRA object that signals a breakpoint trap when returned to.  "
+"If\n"
+"   the breakpoint trap handler returns, REAL-LRA is returned to.  Three "
+"values\n"
+"   are returned: the bogus LRA object, the code component it is part of, "
+"and\n"
+"   the PC offset for the trap instruction."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"The editor calls this remotely in the slave to set breakpoints.  Package is\n"
+"   the string name of a package or nil, and name-str is a string representin"
+"g a\n"
+"   function name (for example, \"foo\" or \"(setf foo)\").  After finding\n"
+"   package, this READs name-str with *package* bound appropriately.  Path "
+"is\n"
+"   either a modified source-path or a symbol (:function-start or\n"
+"   :function-end).  If it is a modified source-path, it has no top-level-for"
+"m\n"
+"   offset or form-number component, and it is in descent order from the "
+"root of\n"
+"   the top-level form."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Editor installed breakpoint."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "We don't currently support breakpoints in interpreted code."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"~%Cannot set breakpoints for editor when source file no ~\n"
+"		    longer exists:~%  ~A."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"~%While setting a breakpoint for the editor, noticed ~\n"
+"			source file has been modified since compilation:~%  ~A~@\n"
+"			Using form offset instead of character position.~%"
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"Cannot set breakpoints for editor when ~\n"
+"				   there is no start positions map."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"The editor calls this in the slave with a remote-object representing a\n"
+"   code-location to set a breakpoint."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "The editor calls this remotely in the slave to delete a breakpoint."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid ""
+"This returns a code-location before the body of a function and after all\n"
+"   the arguments are in place.  If this cannot determine that location due "
+"to\n"
+"   a lack of debug information, it returns nil."
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "~S code location at ~D"
+msgstr ""
+
+#: target:code/profile.lisp
+msgid "dfixnum became negative ~a/~a - ~a/~a(~a/~a)"
+msgstr ""
+
+#: target:code/profile.lisp
+msgid "dfixnum became too big ~a/~a + ~a/~a"
 msgstr ""
 
 #: target:code/describe.lisp
@@ -1738,5 +2674,308 @@ msgstr ""
 
 #: target:code/describe.lisp
 msgid "~&It is defined in:~&~A"
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid ""
+"Controls compiling DEFSTRUCT :print-function and :print-method\n"
+"   options according to ANSI spec. MUST be NIL to compile CMUCL & PCL"
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Allocate a new instance with LENGTH data slots."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Given an instance, return its length."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Return the value from the INDEXth slot of INSTANCE.  This is SETFable."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Set the INDEXth slot of INSTANCE to NEW-VALUE."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Class not yet defined or was undefined: ~S"
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Class is not a structure class: ~S"
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid ""
+"DEFSTRUCT {Name | (Name Option*)} {Slot | (Slot [Default] {Key Value}*)}\n"
+"   Define the structure type Name.  Instances are created by MAKE-<name>, "
+"which\n"
+"   takes keyword arguments allowing initial slot values to the specified.\n"
+"   A SETF'able function <name>-<slot> is defined for each slot to read&write"
+"\n"
+"   slot values.  <name>-p is a type predicate.\n"
+"\n"
+"   Popular DEFSTRUCT options (see manual for others):\n"
+"\n"
+"   (:CONSTRUCTOR Name)\n"
+"   (:PREDICATE Name)\n"
+"       Specify an alternate name for the constructor or predicate.\n"
+"\n"
+"   (:CONSTRUCTOR Name Lambda-List)\n"
+"       Explicitly specify the name and arguments to create a BOA constructor"
+"\n"
+"       (which is more efficient when keyword syntax isn't necessary.)\n"
+"\n"
+"   (:INCLUDE Supertype Slot-Spec*)\n"
+"       Make this type a subtype of the structure type Supertype.  The "
+"optional\n"
+"       Slot-Specs override inherited slot options.\n"
+"\n"
+"   Slot options:\n"
+"\n"
+"   :TYPE Type-Spec\n"
+"       Asserts that the value of this slot is always of the specified type.\n"
+"\n"
+"   :READ-ONLY {T | NIL}\n"
+"       If true, no setter function is defined for this slot."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "defining structure ~A"
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Defstruct already names a declaration: ~S."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Can't have more than one :INCLUDE option."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "~S is a bad :TYPE for Defstruct."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "The Defstruct option :NAMED takes no arguments."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Unknown DEFSTRUCT option~%  ~S"
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Unrecognized DEFSTRUCT option: ~S"
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Can't specify :OFFSET unless :TYPE is specified."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Silly to specify :PRINT-FUNCTION with :TYPE."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Silly to specify :MAKE-LOAD-FORM-FUN with :TYPE."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Duplicate slot name ~S."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Slot ~S must be read-only in subtype ~S."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid ""
+"Keyword slot name indicates probable syntax ~\n"
+"		      error in DEFSTRUCT -- ~S."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid ":TYPE option mismatch between structures ~S and ~S."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid ":TYPE'd defstruct ~S not found for inclusion."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "(:CONSTRUCTOR NIL) combined with other :CONSTRUCTORs."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid ""
+"~@<Non-overwritten accessor ~S does not access ~\n"
+"                        slot with name ~S (accessing an inherited slot ~\n"
+"                        instead).~:@>"
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Obsolete structure accessor function called."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Structure for accessor ~S is not a ~S:~% ~S"
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Structure for setter ~S is not a ~S:~% ~S"
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "New-Value for setter ~S is not a ~S:~% ~S."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Structure for copier is not a ~S:~% ~S"
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Shouldn't happen!  Some strange thing in LAYOUT-INFO:~\n"
+"		    ~%  ~S"
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid ""
+"Incompatibly redefining slots of structure class ~S~@\n"
+"	  Make sure any uses of affected accessors are recompiled:~@\n"
+"	  ~@[  These slots were moved to new positions:~%    ~S~%~]~\n"
+"	  ~@[  These slots have new incompatible types:~%    ~S~%~]~\n"
+"	  ~@[  These slots were deleted:~%    ~S~%~]"
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Redefining class ~S incompatibly with the current ~\n"
+"		definition."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Previously loaded ~S accessors will no longer work."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid ""
+"Any old ~S instances will be in a bad way.~@\n"
+"	       I hope you know what you're doing..."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Removing old subclasses of ~S:~%  ~S"
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Return a copy of Structure with the same (EQL) slot values."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Copying an obsolete structure:~%  ~S"
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Structures of type ~S cannot be dumped as constants."
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "A list of tests that do argument counting at expansion time."
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "Let bindings that are done to make lambda-list parsing possible."
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "Let bindings that the user has explicitly supplied."
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "Unsupplied optional and keyword arguments get this value defaultly."
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid ""
+"Returns as multiple-values a parsed body, any local-declarations that\n"
+"   should be made where this body is inserted, and a doc-string if there is\n"
+"   one."
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "&Whole must appear first in ~S lambda-list."
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "&environment not valid with ~S."
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "&environment only valid at top level of lambda-list."
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "Invalid ~a"
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "Ignore extra noise."
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid ""
+"More than variable, initform, and suppliedp ~\n"
+"			    in &optional binding - ~S"
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "Non-symbol in lambda-list - ~S."
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "Illegal optional variable name: ~S"
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid ""
+"Takes a non-keyword symbol, symbol, and returns the corresponding keyword."
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "Illegal or ill-formed ~A argument in ~A~@[ ~S~]."
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "Error while parsing arguments to ~A in ~S:~%"
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "Error while parsing arguments to ~A ~S:~%"
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "Bogus sublist:~%  ~S~%to satisfy lambda-list:~%  ~:S~%"
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid ""
+"Invalid number of elements in:~%  ~:S~%~\n"
+"	     to satisfy lambda-list:~%  ~:S~%"
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "Expected at least ~D"
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "Expected exactly ~D"
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid "Expected between ~D and ~D"
+msgstr ""
+
+#: target:code/defmacro.lisp
+msgid ", but got ~D."
 msgstr ""
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/cprofile.lisp,v 1.2.56.1 2010/02/08 17:15:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/cprofile.lisp,v 1.2.56.2 2010/02/09 14:56:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 
 (eval-when (compile)
   (when *collect-dynamic-statistics*
-    (error "You don't want to compile this file with profiling.")))
+    (error _"You don't want to compile this file with profiling.")))
 
 
 ;;; Represents a single high-cost code object we've pulled out of memory.
@@ -63,7 +63,7 @@
 	     (lambda (s stream d)
 	       (declare (ignore d))
 	       (print-unreadable-object (s stream :type t :identity t)
-		 (format stream "~A, top ~D, cost ~S" (selection-name s)
+		 (format stream _"~A, top ~D, cost ~S" (selection-name s)
 			 (length (selection-elements s))
 			 (selection-total-cost s))))))
   ;;
@@ -78,7 +78,7 @@
 
 
 (defconstant count-me-cost-fudge 3d0
-  "Our guess is to how many cycles in each block are really due to
+  _N"Our guess is to how many cycles in each block are really due to
    profiling.")
 
 ;;; SAVE-SELECT-RESULT  --  Internal
@@ -133,7 +133,7 @@
 ;;; CLEAR-PROFILE-INFO  --  Public
 ;;;
 (defun clear-profile-info (&optional (spaces '(:dynamic)))
-  "Clear all profiling counts.  Call this before running your test."
+  _N"Clear all profiling counts.  Call this before running your test."
   (declare (inline vm::map-allocated-objects)
 	   (optimize (speed 3) (safety 0)))
   (without-gcing
@@ -200,7 +200,7 @@
 
     (loop
       (unless res
-	(error "No profilable code objects found."))
+	(error _"No profilable code objects found."))
       (unless (minusp (selection-elt-cost (first res))) (return))
       (pop res))
 
@@ -227,8 +227,8 @@
 	    repeat top-n do
 	(format t "~,2E: ~S~%" cost name)
 	(incf total cost))
-      (format t "~,2E: Total~%" total)
-      (format t "~,2E: Other~%" (- (selection-total-cost selection) total))))
+      (format t _"~,2E: Total~%" total)
+      (format t _"~,2E: Other~%" (- (selection-total-cost selection) total))))
 
   (values))
 
@@ -281,7 +281,7 @@
 ;;;
 (defun function-cycles (name selection &key (top-n 15) (combine t))
   (declare (type selection selection))
-  "Print detailed information about the costs associated with a particular
+  _N"Print detailed information about the costs associated with a particular
    function in a SELECTION of dynamic statistics.  All functions with names
    EQUAL to the specified name are reported.  If Combine is true, then
    all blocks with the same source location are combined into a single entry in
@@ -323,7 +323,7 @@
 
     (let ((locs (stable-sort (locs) #'>= :key #'second)))
       (dolist (loc (subseq locs 0 (min (length locs) top-n)))
-	(format t "~%~,2E cycles, ~[not run, ~;~:; ~:*~D repeats, ~]~
+	(format t _"~%~,2E cycles, ~[not run, ~;~:; ~:*~D repeats, ~]~
 		   ~S:~%    "
 		(second loc)
 		(truncate (third loc))
@@ -400,16 +400,16 @@
       (unless (string= package-name (second e))
 	(setf package-name (second e))
 	(when (> other cost)
-	  (format t " ~10:D: Other~&" other))
+	  (format t _" ~10:D: Other~&" other))
 	(setf i 0)
 	(setf other 0)
 	(when (> (third e) cost)
-	  (format t "Package: ~A~&" package-name)))
+	  (format t _"Package: ~A~&" package-name)))
       (cond ((< i top-n)
 	     (when (> (third e) cost)
-	       (format t " ~10:D: ~S~&" (third e) (first e))))
+	       (format t _" ~10:D: ~S~&" (third e) (first e))))
 	    (t
 	     (incf other (third e))))
       (incf i))
     (when (> other cost)
-      (format t " ~10:D: Other~&" other))))
+      (format t _" ~10:D: Other~&" other))))

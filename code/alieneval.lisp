@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.66.12.2 2010/02/09 03:43:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.66.12.3 2010/02/09 14:56:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1331,7 +1331,7 @@ If so return true; otherwise call ALTERNATIVE."
 (defun %print-local-alien-info (info stream depth)
   (declare (ignore depth))
   (print-unreadable-object (info stream :type t)
-    (funcall (formatter _"~:[~;(forced to stack) ~]~S")
+    (funcall (formatter "~:[~;(forced to stack) ~]~S")
 	     stream
 	     (local-alien-info-force-to-memory-p info)
 	     (unparse-alien-type (local-alien-info-type info)))))
@@ -1515,7 +1515,7 @@ If so return true; otherwise call ALTERNATIVE."
 (defun %print-alien-value (value stream depth)
   (declare (ignore depth))
   (print-unreadable-object (value stream)
-    (funcall (formatter _"Alien ~S at #x~8,'0X")
+    (funcall (formatter "Alien ~S at #x~8,'0X")
 	     stream 
 	     (unparse-alien-type (alien-value-type value))
 	     (sap-int (alien-value-sap value)))))

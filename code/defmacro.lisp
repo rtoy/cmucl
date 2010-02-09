@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.37.12.1 2010/02/08 17:15:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.37.12.2 2010/02/09 14:56:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,16 +22,16 @@
 ;;; in DEFMACRO are the reason this isn't as easy as it sounds.
 ;;;
 (defvar *arg-tests* ()
-  "A list of tests that do argument counting at expansion time.")
+  _N"A list of tests that do argument counting at expansion time.")
 
 (defvar *system-lets* ()
-  "Let bindings that are done to make lambda-list parsing possible.")
+  _N"Let bindings that are done to make lambda-list parsing possible.")
 
 (defvar *user-lets* ()
-  "Let bindings that the user has explicitly supplied.")
+  _N"Let bindings that the user has explicitly supplied.")
 
 (defvar *default-default* nil
-  "Unsupplied optional and keyword arguments get this value defaultly.")
+  _N"Unsupplied optional and keyword arguments get this value defaultly.")
 
 ;; Temps that we introduce and might not reference.
 (defvar *ignorable-vars*)
@@ -50,7 +50,7 @@
 				   ((:environment env-arg-name))
 				   ((:default-default *default-default*))
 				   (error-fun 'error))
-  "Returns as multiple-values a parsed body, any local-declarations that
+  _N"Returns as multiple-values a parsed body, any local-declarations that
    should be made where this body is inserted, and a doc-string if there is
    one."
   (multiple-value-bind (body declarations documentation)
@@ -127,7 +127,7 @@
 	rest-name restp allow-other-keys-p env-arg-used)
     (when (and (member '&whole lambda-list)
 	       (not (eq (car lambda-list) '&whole)))
-      (simple-program-error "&Whole must appear first in ~S lambda-list."
+      (simple-program-error _"&Whole must appear first in ~S lambda-list."
                             error-kind))
     (do ((rest-of-args lambda-list (cdr rest-of-args)))
 	((null rest-of-args))
@@ -166,11 +166,11 @@
 		      (defmacro-error "&WHOLE" error-kind name))))
 	      ((eq var '&environment)
 	       (cond (env-illegal
-		      (simple-program-error "&environment not valid with ~S."
+		      (simple-program-error _"&environment not valid with ~S."
                                             error-kind))
 		     ((not top-level)
 		      (simple-program-error
-		       "&environment only valid at top level of lambda-list.")))
+		       _"&environment only valid at top level of lambda-list.")))
 	       (cond ((and (cdr rest-of-args) (symbolp (cadr rest-of-args)))
 		      (setf rest-of-args (cdr rest-of-args))
 		      (append-let-binding (car rest-of-args) env-arg-name nil)
@@ -187,7 +187,7 @@
 	       (unless (and (cdr rest-of-args)
 			    (consp (cadr rest-of-args))
 			    (symbolp (caadr rest-of-args)))
-		 (simple-program-error "Invalid ~a" '&parse-body))
+		 (simple-program-error _"Invalid ~a" '&parse-body))
 		(setf rest-of-args (cdr rest-of-args))
 		(setf restp t)
 		(let ((body-name (caar rest-of-args))
@@ -256,8 +256,8 @@
 		  (incf maximum))
 		 (:optionals
 		  (when (> (length var) 3)
-		    (cerror "Ignore extra noise."
-			    "More than variable, initform, and suppliedp ~
+		    (cerror _"Ignore extra noise."
+			    _"More than variable, initform, and suppliedp ~
 			    in &optional binding - ~S"
 			    var))
 		  (push-optional-binding (car var) (cadr var) (caddr var)
@@ -307,7 +307,7 @@
 		 (:auxs
 		  (push-let-binding var nil nil))))
 	      (t
-	       (simple-program-error "Non-symbol in lambda-list - ~S." var)))))
+	       (simple-program-error _"Non-symbol in lambda-list - ~S." var)))))
     (push `(unless (list-length-bounded-p (the list ,(if top-level
 							 `(cdr ,arg-list-name)
 							 arg-list-name))
@@ -405,15 +405,15 @@
 	((symbolp value-var)
 	 (push-let-binding value-var path nil supplied-var init-form))
 	(t
-	 (simple-program-error "Illegal optional variable name: ~S"
+	 (simple-program-error _"Illegal optional variable name: ~S"
 	                       value-var))))
 
 (defun make-keyword (symbol)
-  "Takes a non-keyword symbol, symbol, and returns the corresponding keyword."
+  _N"Takes a non-keyword symbol, symbol, and returns the corresponding keyword."
   (intern (symbol-name symbol) *keyword-package*))
 
 (defun defmacro-error (problem kind name)
-  (simple-program-error "Illegal or ill-formed ~A argument in ~A~@[ ~S~]."
+  (simple-program-error _"Illegal or ill-formed ~A argument in ~A~@[ ~S~]."
                         problem kind name))
 
 
@@ -430,11 +430,11 @@
 (defun print-defmacro-ll-bind-error-intro (condition stream)
   (if (null (defmacro-lambda-list-bind-error-name condition))
       (format stream
-	      "Error while parsing arguments to ~A in ~S:~%"
+	      _"Error while parsing arguments to ~A in ~S:~%"
 	      (defmacro-lambda-list-bind-error-kind condition)
 	      (condition-function-name condition))
       (format stream
-	      "Error while parsing arguments to ~A ~S:~%"
+	      _"Error while parsing arguments to ~A ~S:~%"
 	      (defmacro-lambda-list-bind-error-kind condition)
 	      (defmacro-lambda-list-bind-error-name condition))))
 
@@ -447,7 +447,7 @@
    (lambda (condition stream)
      (print-defmacro-ll-bind-error-intro condition stream)
      (format stream
-	     "Bogus sublist:~%  ~S~%to satisfy lambda-list:~%  ~:S~%"
+	     _"Bogus sublist:~%  ~S~%to satisfy lambda-list:~%  ~:S~%"
 	     (defmacro-bogus-sublist-error-object condition)
 	     (defmacro-bogus-sublist-error-lambda-list condition)))))
 
@@ -461,22 +461,22 @@
    (lambda (condition stream)
      (print-defmacro-ll-bind-error-intro condition stream)
      (format stream
-	     "Invalid number of elements in:~%  ~:S~%~
+	     _"Invalid number of elements in:~%  ~:S~%~
 	     to satisfy lambda-list:~%  ~:S~%"
 	     (defmacro-ll-arg-count-error-argument condition)
 	     (defmacro-ll-arg-count-error-lambda-list condition))
      (cond ((null (defmacro-ll-arg-count-error-maximum condition))
-	    (format stream "Expected at least ~D"
+	    (format stream _"Expected at least ~D"
 		    (defmacro-ll-arg-count-error-minimum condition)))
 	   ((= (defmacro-ll-arg-count-error-minimum condition)
 	       (defmacro-ll-arg-count-error-maximum condition))
-	    (format stream "Expected exactly ~D"
+	    (format stream _"Expected exactly ~D"
 		    (defmacro-ll-arg-count-error-minimum condition)))
 	   (t
-	    (format stream "Expected between ~D and ~D"
+	    (format stream _"Expected between ~D and ~D"
 		    (defmacro-ll-arg-count-error-minimum condition)
 		    (defmacro-ll-arg-count-error-maximum condition))))
-     (format stream ", but got ~D."
+     (format stream _", but got ~D."
 	     (length (defmacro-ll-arg-count-error-argument condition))))))
 
 
