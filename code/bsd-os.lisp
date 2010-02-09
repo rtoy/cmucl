@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bsd-os.lisp,v 1.13.4.1 2010/02/08 17:15:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bsd-os.lisp,v 1.13.4.2 2010/02/09 03:43:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -79,7 +79,7 @@
 		       (unix:unix-getrusage unix:rusage_self)
     (declare (ignore maxrss ixrss idrss isrss minflt))
     (unless err?
-      (error "Unix system call getrusage failed: ~A."
+      (error _"Unix system call getrusage failed: ~A."
 	     (unix:get-unix-error-msg utime)))
     
     (values utime stime majflt)))
@@ -93,5 +93,5 @@
   (multiple-value-bind (val err)
       (unix:unix-getpagesize)
     (unless val
-      (error "Getpagesize failed: ~A" (unix:get-unix-error-msg err)))
+      (error _"Getpagesize failed: ~A" (unix:get-unix-error-msg err)))
     val))

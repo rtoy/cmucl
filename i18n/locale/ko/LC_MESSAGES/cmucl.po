@@ -72,6 +72,405 @@ msgstr ""
 msgid "_@ is a reserved reader macro prefix."
 msgstr ""
 
+#: target:code/alieneval.lisp
+msgid "No alien type class ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "No method ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Parse the list structure TYPE as an alien type specifier and return\n"
+"   the resultant alien-type structure."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Unknown alien type: ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "No translator for primitive alien type ~S?"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Definition missing for alien type ~S?"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Attempt to multiple define ~A ~S."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Attempt to shadow definition of ~A ~S."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Convert the alien-type structure TYPE back into a list specification of\n"
+"   the type."
+msgstr ""
+
+#: target:compiler/x86/c-call.lisp target:code/alieneval.lisp
+msgid "Method ~S not defined for ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Define the alien type NAME to be equivalent to TYPE.  Name may be NIL for\n"
+"   STRUCT and UNION types, in which case the name is taken from the type\n"
+"   specifier."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Redefining ~A ~S to be:~%  ~S,~%was:~%  ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "~S is a built-in alien type."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Redefining ~S to be:~%  ~S,~%was~%  ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Return T iff TYPE1 and TYPE2 describe equivalent alien types."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Return T iff the alien type TYPE1 is a subtype of TYPE2.  Currently, the\n"
+"   only supported subtype relationships are that any pointer type is a\n"
+"   subtype of (* t), and any array type's first dimension will match \n"
+"   (array <eltype> nil ...).  Otherwise, the two types have to be\n"
+"   ALIEN-TYPE-=."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Return T iff OBJECT is an alien of type TYPE."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Cannot represent ~S typed aliens."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Cannot pass aliens of type ~S as arguments to call-out"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Cannot return aliens of type ~S from call-out"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Cannot extract ~D bit integers."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Redefining alien enum ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Unknown enum type: ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Empty enum type: ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "An enumeration must contain at least one element."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Enumeration element ~S is not a keyword."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Element value ~S is not an integer."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Element value ~S used more than once."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Enumeration element ~S used more than once."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Can't represent enums needing more than 32 bits."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Cannot deposit aliens of type ~S (unknown size)."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "First dimension is not a non-negative fixnum or NIL: ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Dimension is not a non-negative fixnum: ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Unknown size: ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Unknown alignment: ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "A hash table used to detect cycles while comparing record types."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Test if TYPE1 and TYPE2 are in the *MATCH-HISTORY*.\n"
+"If so return true; otherwise call ALTERNATIVE."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Cannot use values types here."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Badly formed alien name."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Define NAME as an external alien variable of type TYPE.  NAME should be\n"
+"   a list of a string holding the alien name and a symbol to use as the "
+"Lisp\n"
+"   name.  If NAME is just a symbol or string, then the other name is "
+"guessed\n"
+"   from the one supplied."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Access the alien variable named NAME, assuming it is of type TYPE.  This\n"
+"   is SETFable."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Establish some local alien variables.  Each BINDING is of the form:\n"
+"     VAR TYPE [ ALLOCATION ] [ INITIAL-VALUE | EXTERNAL-NAME ]\n"
+"   ALLOCATION should be one of:\n"
+"     :LOCAL (the default)\n"
+"       The alien is allocated on the stack, and has dynamic extent.\n"
+"     :STATIC\n"
+"       The alien is allocated on the heap, and has infinate extent.  The "
+"alien\n"
+"       is allocated at load time, so the same piece of memory is used each "
+"time\n"
+"       this form executes.\n"
+"     :EXTERN\n"
+"       No alien is allocated, but VAR is established as a local name for\n"
+"       the external alien given by EXTERNAL-NAME."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Return true if X (which must be an Alien pointer) is null, false otherwise."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Convert the System-Area-Pointer SAP to an Alien of the specified Type (not\n"
+"   evaluated.)  Type must be pointer-like."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Cannot make aliens of type ~S out of SAPs"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Return a System-Area-Pointer pointing to Alien's data."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Allocate an alien of type TYPE and return an alien pointer to it.  If SIZE\n"
+"   is supplied, how it is interpreted depends on TYPE.  If TYPE is an array\n"
+"   type, SIZE is used as the first dimension for the allocated array.  If "
+"TYPE\n"
+"   is not an array, then SIZE is the number of elements to allocate.  The\n"
+"   memory is allocated using ``malloc'', so it can be passed to foreign\n"
+"   functions which use ``free''."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Size of ~S unknown."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Alignment of ~S unknown."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Cannot override the size of zero-dimensional arrays."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Dispose of the storage pointed to by ALIEN.  ALIEN must have been allocated\n"
+"   by MAKE-ALIEN or ``malloc''."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "No slot named ~S in ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Extract SLOT from the Alien STRUCT or UNION ALIEN.  May be set with SETF."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Incorrect number of indices when derefing ~S: ~D"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"De-reference an Alien pointer or array.  If an array, the indices are used\n"
+"   as the indices of the array element to access.  If a pointer, one index "
+"can\n"
+"   optionally be specified, giving the equivalent of C pointer arithmetic."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Something is wrong; local-alien-info not found: ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "~S isn't forced to memory.  Something went wrong."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Return an Alien pointer to the data addressed by Expr, which must be a call\n"
+"   to SLOT or DEREF, or a reference to an Alien variable."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "~S is not a valid L-value"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Something is wrong, local-alien-info not found: ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Convert ALIEN to an Alien of the specified TYPE (not evaluated).  Both "
+"types\n"
+"   must be Alien array, pointer or function types."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "~S cannot be cast."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Cannot cast to alien type ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Return the size of the alien type TYPE.  UNITS specifies the units to\n"
+"   use and can be either :BITS, :BYTES, or :WORDS."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Unknown size for alien type ~S."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Call the foreign function ALIEN with the specified arguments.  ALIEN's\n"
+"   type specifies the argument and result types."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Wrong number of arguments for ~S~%Expected ~D, got ~D."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "~S is not an alien function."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"Def-Alien-Routine Name Result-Type\n"
+"                    {(Arg-Name Arg-Type [Style])}*\n"
+"\n"
+"  Define a foreign interface function for the routine with the specified "
+"Name,\n"
+"  which may be either a string, symbol or list of the form (string symbol).\n"
+"  Return-Type is the Alien type for the function return value.  VOID may be\n"
+"  used to specify a function with no result.\n"
+"\n"
+"  The remaining forms specify individual arguments that are passed to the\n"
+"  routine.  Arg-Name is a symbol that names the argument, primarily for\n"
+"  documentation.  Arg-Type is the C-Type of the argument.  Style specifies "
+"the\n"
+"  way that the argument is passed.\n"
+"\n"
+"  :IN\n"
+"        An :In argument is simply passed by value.  The value to be passed "
+"is\n"
+"        obtained from argument(s) to the interface function.  No values are\n"
+"        returned for :In arguments.  This is the default mode.\n"
+"\n"
+"  :OUT\n"
+"        The specified argument type must be a pointer to a fixed sized "
+"object.\n"
+"        A pointer to a preallocated object is passed to the routine, and "
+"the\n"
+"        the object is accessed on return, with the value being returned "
+"from\n"
+"        the interface function.  :OUT and :IN-OUT cannot be used with "
+"pointers\n"
+"        to arrays, records or functions.\n"
+"\n"
+"  :COPY\n"
+"        Similar to :IN, except that the argument values are stored in on\n"
+"        the stack, and a pointer to the object is passed instead of\n"
+"        the values themselves.\n"
+"\n"
+"  :IN-OUT\n"
+"        A combination of :OUT and :COPY.  A pointer to the argument is "
+"passed,\n"
+"        with the object being initialized from the supplied argument and\n"
+"        the return value being determined by accessing the object on return."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Bogus argument style ~S in ~S."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Can't use :out or :in-out on pointer-like type:~%  ~S"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"A callback consists of a piece assembly code -- the trampoline --\n"
+"and a lisp function.  We store the function type (including return\n"
+"type and arg types), so we can detect incompatible redefinitions."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Vector of all callbacks."
+msgstr ""
+
 #: target:pcl/simple-streams/string.lisp target:compiler/tn.lisp
 #: target:compiler/main.lisp target:code/describe.lisp
 #: target:code/debug-int.lisp target:code/debug-info.lisp
@@ -79,6 +478,151 @@ msgstr ""
 #: target:code/stream.lisp target:code/hash-new.lisp target:code/array.lisp
 #: target:code/alieneval.lisp
 msgid "~S is not an array with a fill-pointer."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Unable to mprotect ~S bytes (~S) at ~S (~S).  Callbacks may not work."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Return the trampoline pointer for the callback NAME."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"~\n"
+"Attempt to redefine callback with incompatible return type.\n"
+"   Old type was: ~A \n"
+"    New type is: ~A"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"~\n"
+"Create new trampoline (old trampoline calls old lisp function)."
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Unsupported argument type: ~A"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid "Unsupported return type: ~A"
+msgstr ""
+
+#: target:code/alieneval.lisp
+msgid ""
+"(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*)\n"
+"     {doc-string} {decls}* {FORM}*)\n"
+"\n"
+"Define a function which can be called by foreign code.  The pointer\n"
+"returned by (callback NAME), when called by foreign code, invokes the\n"
+"lisp function.  The lisp function expects alien arguments of the\n"
+"specified ARG-TYPEs and returns an alien of type RETURN-TYPE.\n"
+"\n"
+"If (callback NAME) is already a callback function pointer, its value\n"
+"is not changed (though it's arranged that an updated version of the\n"
+"lisp callback function will be called).  This feature allows for\n"
+"incremental redefinition of callback functions."
+msgstr ""
+
+#: target:code/bit-bash.lisp
+msgid "The number of bits to process at a time."
+msgstr ""
+
+#: target:code/bit-bash.lisp
+msgid "The maximum number of bits that can be dealt with during a single call."
+msgstr ""
+
+#: target:code/bit-bash.lisp
+msgid ""
+"Shift NUMBER by COUNT bits, adding zero bits at the ``end'' and removing\n"
+"  bits from the ``start.''  On big-endian machines this is a left-shift and\n"
+"  on little-endian machines this is a right-shift.  Note: only the low 5/6 "
+"bits\n"
+"  of count are significant."
+msgstr ""
+
+#: target:code/bit-bash.lisp
+msgid ""
+"Shift NUMBER by COUNT bits, adding zero bits at the ``start'' and removing\n"
+"  bits from the ``end.''  On big-endian machines this is a right-shift and\n"
+"  on little-endian machines this is a left-shift."
+msgstr ""
+
+#: target:code/bit-bash.lisp
+msgid ""
+"Produce a mask that contains 1's for the COUNT ``start'' bits and 0's for\n"
+"  the remaining ``end'' bits.  Only the lower 5 bits of COUNT are "
+"significant."
+msgstr ""
+
+#: target:code/bit-bash.lisp
+msgid ""
+"Produce a mask that contains 1's for the COUNT ``end'' bits and 0's for\n"
+"  the remaining ``start'' bits.  Only the lower 5 bits of COUNT are\n"
+"  significant."
+msgstr ""
+
+#: target:code/bit-bash.lisp
+msgid "Align the SAP to a word boundry, and update the offset accordingly."
+msgstr ""
+
+#: target:code/bit-bash.lisp
+msgid ""
+"Fill DST with VALUE starting at DST-OFFSET and continuing for LENGTH bits."
+msgstr ""
+
+#: target:code/byte-interp.lisp
+msgid "This is the interpreter's evaluation stack."
+msgstr ""
+
+#: target:code/byte-interp.lisp
+msgid "This is the next free element of the interpreter's evaluation stack."
+msgstr ""
+
+#: target:code/byte-interp.lisp
+msgid "Undefined XOP."
+msgstr ""
+
+#: target:code/byte-interp.lisp
+msgid "Unbound variable: ~S"
+msgstr ""
+
+#: target:code/byte-interp.lisp
+msgid "Non-list argument to CAR: ~S"
+msgstr ""
+
+#: target:code/byte-interp.lisp
+msgid "Non-list argument to CDR: ~S"
+msgstr ""
+
+#: target:code/byte-interp.lisp
+msgid "Unknown inline function, id=~D"
+msgstr ""
+
+#: target:code/byte-interp.lisp
+msgid "Wrong number of arguments."
+msgstr ""
+
+#: target:code/byte-interp.lisp
+msgid "Not enough arguments."
+msgstr ""
+
+#: target:code/byte-interp.lisp
+msgid "Too many arguments."
+msgstr ""
+
+#: target:code/byte-interp.lisp
+msgid "Odd number of keyword arguments."
+msgstr ""
+
+#: target:code/byte-interp.lisp
+msgid "Unknown keyword: ~S"
+msgstr ""
+
+#: target:code/byte-interp.lisp
+msgid "function-end breakpoints not supported."
 msgstr ""
 
 #: target:code/array.lisp
@@ -441,6 +985,245 @@ msgid ""
 "  created.  Both arrays must have the same rank and dimensions."
 msgstr ""
 
+#: target:code/bsd-os.lisp
+msgid "Unix system call getrusage failed: ~A."
+msgstr ""
+
+#: target:code/bsd-os.lisp
+msgid "Getpagesize failed: ~A"
+msgstr ""
+
+#: target:code/bignum.lisp
+msgid ""
+"When the bignum pieces are smaller than this many words, we use the\n"
+"classical multiplication algorithm instead of recursing all the way\n"
+"down to individual words."
+msgstr ""
+
+#: target:code/bignum.lisp
+msgid "Use Karatsuba if the bignums have at least this many bits"
+msgstr ""
+
+#: target:code/bignum.lisp
+msgid "WITH-BIGNUM-BUFFERS ({(var size [init])}*) Form*"
+msgstr ""
+
+#: target:code/bignum.lisp
+msgid "Unexpected zero bignums?"
+msgstr ""
+
+#: target:code/bignum.lisp
+msgid "Can't represent result of left shift."
+msgstr ""
+
+#: target:code/bignum.lisp
+msgid "Too large to be represented as a ~S:~%  ~S"
+msgstr ""
+
+#: target:code/char.lisp
+msgid "The upper exclusive bound on values produced by CHAR-CODE."
+msgstr ""
+
+#: target:code/char.lisp
+msgid "The upper exclusive bound on the value of a Unicode codepoint"
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"This is the alist of (character-name . character) for characters with\n"
+"  long names.  The first name in this list for a given character is used\n"
+"  on typeout and is the preferred form for input."
+msgstr ""
+
+#: target:code/char.lisp
+msgid "Returns the integer code of CHAR."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"Returns the integer code of CHAR.  This is the same as char-code, as\n"
+"   CMU Common Lisp does not implement character bits or fonts."
+msgstr ""
+
+#: target:code/char.lisp
+msgid "Returns the character with the code CODE."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"Coerces its argument into a character object if possible.  Accepts\n"
+"  characters, strings and symbols of length 1."
+msgstr ""
+
+#: target:code/char.lisp
+msgid "String is not of length one: ~S"
+msgstr ""
+
+#: target:code/char.lisp
+msgid "Symbol name is not of length one: ~S"
+msgstr ""
+
+#: target:code/char.lisp
+msgid "~S cannot be coerced to a character."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"Given a character object, char-name returns the name for that\n"
+"  object (a symbol)."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"Given an argument acceptable to string, name-char returns a character\n"
+"  object whose name is that symbol, if one exists, otherwise NIL."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"The argument must be a character object.  Standard-char-p returns T if the\n"
+"   argument is a standard character -- one of the 95 ASCII printing "
+"characters\n"
+"   or <return>."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"Return T if and only if THING is a standard-char.  Differs from\n"
+"  standard-char-p in that THING doesn't have to be a character."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"The argument must be a character object.  Graphic-char-p returns T if the\n"
+"  argument is a printing character, otherwise returns NIL."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"The argument must be a character object.  Alpha-char-p returns T if the\n"
+"  argument is an alphabetic character; otherwise NIL."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"The argument must be a character object; upper-case-p returns T if the\n"
+"  argument is an upper-case character, NIL otherwise."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"The argument must be a character object; lower-case-p returns T if the \n"
+"  argument is a lower-case character, NIL otherwise."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"The argument must be a character object; title-case-p returns T if the\n"
+"  argument is a title-case character, NIL otherwise."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"The argument must be a character object.  Both-case-p returns T if the\n"
+"  argument is an alphabetic character and if the character exists in\n"
+"  both upper and lower case.  For ASCII, this is the same as Alpha-char-p."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"If char is a digit in the specified radix, returns the fixnum for\n"
+"  which that digit stands, else returns NIL.  Radix defaults to 10\n"
+"  (decimal)."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"Given a character-object argument, alphanumericp returns T if the\n"
+"  argument is either numeric or alphabetic."
+msgstr ""
+
+#: target:code/char.lisp
+msgid "Returns T if all of its arguments are the same character."
+msgstr ""
+
+#: target:code/char.lisp
+msgid "Returns T if no two of its arguments are the same character."
+msgstr ""
+
+#: target:code/char.lisp
+msgid "Returns T if its arguments are in strictly increasing alphabetic order."
+msgstr ""
+
+#: target:code/char.lisp
+msgid "Returns T if its arguments are in strictly decreasing alphabetic order."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"Returns T if its arguments are in strictly non-decreasing alphabetic order."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"Returns T if its arguments are in strictly non-increasing alphabetic order."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"Returns T if all of its arguments are the same character.\n"
+"   Case is ignored."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"Returns T if no two of its arguments are the same character.\n"
+"   Case is ignored."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"Returns T if its arguments are in strictly increasing alphabetic order.\n"
+"   Case is ignored."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"Returns T if its arguments are in strictly decreasing alphabetic order.\n"
+"   Case is ignored."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"Returns T if its arguments are in strictly non-decreasing alphabetic order.\n"
+"   Case is ignored."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"Returns T if its arguments are in strictly non-increasing alphabetic order.\n"
+"   Case is ignored."
+msgstr ""
+
+#: target:code/char.lisp
+msgid "Returns CHAR converted to upper-case if that is possible."
+msgstr ""
+
+#: target:code/char.lisp
+msgid "Returns CHAR converted to title-case if that is possible."
+msgstr ""
+
+#: target:code/char.lisp
+msgid "Returns CHAR converted to lower-case if that is possible."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"All arguments must be integers.  Returns a character object that\n"
+"  represents a digit of the given weight in the specified radix.  Returns\n"
+"  NIL if no such character exists."
+msgstr ""
+
 #: target:code/gc.lisp
 #, fuzzy
 msgid "Oh no.  The current dynamic space is missing!"
@@ -626,6 +1409,47 @@ msgid ""
 "  GCs that have occurred; the trigger age; the cumulative number of\n"
 "  bytes allocated in this generation; and the average age of this\n"
 "  generation.  See the gencgc source code for more info."
+msgstr ""
+
+#: target:code/backq.lisp
+msgid "How deep we are into backquotes"
+msgstr ""
+
+#: target:code/backq.lisp
+msgid ",@ after backquote in ~S"
+msgstr ""
+
+#: target:code/backq.lisp
+msgid ",. after backquote in ~S"
+msgstr ""
+
+#: target:code/backq.lisp
+msgid "Comma not inside a backquote."
+msgstr ""
+
+#: target:code/backq.lisp
+msgid ",@ after dot in ~S"
+msgstr ""
+
+#: target:code/backq.lisp
+msgid ",. after dot in ~S"
+msgstr ""
+
+#: target:code/backq.lisp
+msgid ""
+"Given a lisp form containing the magic functions BACKQ-LIST, BACKQ-LIST*,\n"
+"  BACKQ-APPEND, etc. produced by the backquote reader macro, will return a\n"
+"  corresponding backquote input form.  In this form, `,' `,@' and `,.' are\n"
+"  represented by lists whose cars are BACKQ-COMMA, BACKQ-COMMA-AT, and\n"
+"  BACKQ-COMMA-DOT respectively, and whose cadrs are the form after the "
+"comma.\n"
+"  SPLICING indicates whether a comma-escape return should be modified for\n"
+"  splicing with other forms: a value of T or :NCONC meaning that an extra\n"
+"  level of parentheses should be added."
+msgstr ""
+
+#: target:code/backq.lisp
+msgid "### illegal dotted backquote form ###"
 msgstr ""
 
 #: target:code/describe.lisp
