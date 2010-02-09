@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.1.2.4 $
+;;; $Revision: 1.1.2.5 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,7 +23,7 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.4 2010/02/08 23:52:34 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.5 2010/02/09 04:13:21 rtoy Exp $")
 
 (in-package "INTL")
 
@@ -747,7 +747,6 @@
 			(write-char #\") (terpri)
 			(str string 0 end))))))
 	   (wstr (string start end)
-	     (format *debug-io* "wstr = ~S (~D to ~D)~%" string start end)
 	     (loop while (< start end) do
 	       (let ((i (position-if (lambda (x)
 				       (or (char= x #\") (char= x #\\)))
