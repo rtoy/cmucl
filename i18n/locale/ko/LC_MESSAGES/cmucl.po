@@ -72,6 +72,15 @@ msgstr ""
 msgid "_@ is a reserved reader macro prefix."
 msgstr ""
 
+#: target:pcl/simple-streams/string.lisp target:compiler/tn.lisp
+#: target:compiler/main.lisp target:code/describe.lisp
+#: target:code/debug-int.lisp target:code/debug-info.lisp
+#: target:code/foreign-linkage.lisp target:code/reader.lisp
+#: target:code/stream.lisp target:code/hash-new.lisp target:code/array.lisp
+#: target:code/alieneval.lisp
+msgid "~S is not an array with a fill-pointer."
+msgstr ""
+
 #: target:code/array.lisp
 msgid "The exclusive upper bound on the rank of an array."
 msgstr ""
@@ -315,14 +324,6 @@ msgstr ""
 msgid "Returns the Fill-Pointer of the given Vector."
 msgstr ""
 
-#: target:pcl/simple-streams/string.lisp target:compiler/tn.lisp
-#: target:compiler/main.lisp target:code/describe.lisp
-#: target:code/debug-int.lisp target:code/debug-info.lisp
-#: target:code/foreign-linkage.lisp target:code/reader.lisp
-#: target:code/stream.lisp target:code/hash-new.lisp target:code/array.lisp
-msgid "~S is not an array with a fill-pointer."
-msgstr ""
-
 #: target:code/array.lisp
 msgid "New fill pointer, ~S, is larger than the length of the vector."
 msgstr ""
@@ -438,6 +439,193 @@ msgid ""
 "  putting the results in RESULT-BIT-ARRAY.  If RESULT-BIT-ARRAY is T,\n"
 "  BIT-ARRAY is used.  If RESULT-BIT-ARRAY is NIL or omitted, a new array is\n"
 "  created.  Both arrays must have the same rank and dimensions."
+msgstr ""
+
+#: target:code/gc.lisp
+#, fuzzy
+msgid "Oh no.  The current dynamic space is missing!"
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:code/gc.lisp
+msgid "Dynamic Space Usage:    ~13:D bytes (out of ~4:D MB).~%"
+msgstr "동적 공간 사용량 :    ~13:D 바이트 (~4:D 메가바이트의) 아웃.~%"
+
+#: target:code/gc.lisp
+msgid "Read-Only Space Usage:  ~13:D bytes (out of ~4:D MB).~%"
+msgstr "동적 공간 사용량 :    ~13:D 바이트 (~4:D 메가바이트의) 아웃.~%"
+
+#: target:code/gc.lisp
+msgid "Static Space Usage:     ~13:D bytes (out of ~4:D MB).~%"
+msgstr "동적 공간 사용량 :    ~13:D 바이트 (~4:D 메가바이트의) 아웃.~%"
+
+#: target:code/gc.lisp
+msgid "Control Stack Usage:    ~13:D bytes (out of ~4:D MB).~%"
+msgstr "컨트롤 스택 사용:     ~13:D 바이트 (~4:D 메가바이트의) 아웃.~%"
+
+#: target:code/gc.lisp
+msgid "Binding Stack Usage:    ~13:D bytes (out of ~4:D MB).~%"
+msgstr "바인딩 스택 사용:    ~13:D 바이트 (~4:D 메가바이트의) 아웃.~%"
+
+#: target:code/gc.lisp
+msgid "The current dynamic space is ~D.~%"
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:code/gc.lisp
+msgid "Garbage collection is currently ~:[enabled~;DISABLED~].~%"
+msgstr "가비지 컬렉션은 현재 ~:[활성화~;비활성화~]되어있습니다.~%"
+
+#: target:code/gc.lisp
+msgid ""
+"Prints to *STANDARD-OUTPUT* information about the state of internal\n"
+"  storage and its management.  The optional argument controls the\n"
+"  verbosity of ROOM.  If it is T, ROOM prints out a maximal amount of\n"
+"  information.  If it is NIL, ROOM prints out a minimal amount of\n"
+"  information.  If it is :DEFAULT or it is not supplied, ROOM prints out\n"
+"  an intermediate amount of information.  See also VM:MEMORY-USAGE and\n"
+"  VM:INSTANCE-USAGE for finer report control."
+msgstr ""
+"의 상태에 대한 정보를 인쇄 *STANDARD-OUTPUT* 내부 스토리지 및\n"
+"  관리. 선택적 인수 컨트롤 ROOM의 다변. 경우 T입니다 최대한의 금액을\n"
+"  인쇄 ROOM 정보. 만약 NIL입니다 최소한의 금액을 인쇄 ROOM 정보. 만약\n"
+"  사실이라면 :DEFAULT 또는 제공하지 않으면 인쇄 ROOM 정 보의 중간\n"
+"  금액입니다. 또한 VM:MEMORY-USAGE 및보기 양질의 보고서를 제어\n"
+"  VM:INSTANCE-USAGE."
+
+#: target:code/gc.lisp
+msgid ""
+"No way man!  The optional argument to ROOM must be T, NIL, ~\n"
+"\t\t or :DEFAULT.~%What do you think you are doing?"
+msgstr ""
+"말도 안돼 남자! ROOM에 선택적 인수 T, NIL,되어야합니다 ~\n"
+"\t\t또는 :DEFAULT.~% 왜 당신이 뭘 생각하는거야?"
+
+#: target:code/gc.lisp
+msgid "resetting GC counters"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"Returns the number of bytes consed since the first time this function\n"
+"  was called.  The first time it is called, it returns zero."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"This number specifies the minimum number of bytes of dynamic space\n"
+"   that must be consed before the next gc will occur."
+msgstr ""
+"바이트 처음부터이 기능을 consed의 수를 반환\n"
+"  라고했다. 그것이라고 처음으로, 0을 반환합니다."
+
+#: target:code/gc.lisp
+msgid ""
+"The total CPU time spend doing garbage collection (as reported by\n"
+"   GET-INTERNAL-RUN-TIME.)"
+msgstr ""
+"총 CPU 시간 (로에 의해보고되는 쓰레기를 수거하고 지출\n"
+"   GET-INTERNAL-RUN-TIME.)"
+
+#: target:code/gc.lisp
+msgid ""
+"A list of functions that are called before garbage collection occurs.\n"
+"  The functions should take no arguments."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"A list of functions that are called after garbage collection occurs.\n"
+"  The functions should take no arguments."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"Should be bound to a function or NIL.  If it is a function, this\n"
+"  function should take one argument, the current amount of dynamic\n"
+"  usage.  The function should return NIL if garbage collection should\n"
+"  continue and non-NIL if it should be inhibited.  Use with caution."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"When non-NIL, causes the functions bound to *GC-NOTIFY-BEFORE* and\n"
+"  *GC-NOTIFY-AFTER* to be called before and after a garbage collection\n"
+"  occurs respectively.  If :BEEP, causes the default notify functions to "
+"beep\n"
+"  annoyingly."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"~&; [GC threshold exceeded with ~:D bytes in use.  ~\n"
+"             Commencing GC.]~%"
+msgstr ""
+"~&; [GC 문턱은 ~:D 바이트로 사용중인 초과했다.  ~\n"
+"             시작 GC.]~%"
+
+#: target:code/gc.lisp
+msgid ""
+"This function bound to this variable is invoked before GC'ing (unless\n"
+"  *GC-VERBOSE* is NIL) with the current amount of dynamic usage (in\n"
+"  bytes).  It should notify the user that the system is going to GC."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "~&; [GC completed with ~:D bytes retained and ~:D bytes freed.]~%"
+msgstr "~&; [유지되는 ~:D의 바이트 및 해방되는 ~:D의 바이트로 완료되는 GC.]~%"
+
+#: target:code/gc.lisp
+msgid "~&; [GC will next occur when at least ~:D bytes are in use.]~%"
+msgstr "~&; [GC는 다음 적어도 ~:D의 바이트가 사용중인 일 때 일어날 것이다.]~%"
+
+#: target:code/gc.lisp
+msgid ""
+"The function bound to this variable is invoked after GC'ing (unless\n"
+"  *GC-VERBOSE* is NIL) with the amount of dynamic usage (in bytes) now\n"
+"  free, the number of bytes freed by the GC, and the new GC trigger\n"
+"  threshold.  The function should notify the user that the system has\n"
+"  finished GC'ing."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"The value of *BYTES-CONSED-BETWEEN-GCS*, ~S, is not an ~\n"
+"\t       integer.  Resetting it to ~D."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "(FUNCALL ~S~{ ~S~}) lost:~%~A"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"Initiates a garbage collection.  The keyword :VERBOSE, which\n"
+"   defaults to the value of the variable *GC-VERBOSE* controls whether or\n"
+"   not GC statistics are printed. The keyword :GEN defaults to 0, and\n"
+"   controls the number of generations to garbage collect."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"Return the amount of memory that will be allocated before the next garbage\n"
+"   collection is initiated.  This can be set with SETF."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "Enables the garbage collector."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid "Disables the garbage collector."
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"Return some GC statistics for the specified GENERATION.  The\n"
+"  statistics are the number of bytes allocated in this generation; the\n"
+"  gc-trigger; the number of bytes consed between GCs; the number of\n"
+"  GCs that have occurred; the trigger age; the cumulative number of\n"
+"  bytes allocated in this generation; and the average age of this\n"
+"  generation.  See the gencgc source code for more info."
 msgstr ""
 
 #: target:code/describe.lisp
@@ -740,3 +928,9 @@ msgstr ""
 #: target:code/describe.lisp
 msgid "~&It is defined in:~&~A"
 msgstr ""
+
+#~ msgid "Read-Only Space Usage:  ~13:D 바이트 (~4:D 메가바이트의) 아웃.~%"
+#~ msgstr "읽기 전용 공간 사용:  ~13:D 바이트 (~4:D 메가바이트의) 아웃.~%"
+
+#~ msgid "Static Space Usage:     ~13:D 바이트 (~4:D 메가바이트의) 아웃.~%"
+#~ msgstr "정적 공간을 사용:     ~13:D 바이트 (~4:D 메가바이트의) 아웃.~%"
