@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.1.2.6 $
+;;; $Revision: 1.1.2.7 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,7 +23,7 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.6 2010/02/09 13:22:58 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.7 2010/02/09 23:40:35 rtoy Exp $")
 
 (in-package "INTL")
 
@@ -80,22 +80,28 @@
      (the (unsigned-byte 8) (read-byte stream))))
 
 (defun locate-domain-file (domain locale locale-dir)
-  (flet ((path (locale base)
-	   (merge-pathnames (make-pathname :directory (list :relative locale
-							    "LC_MESSAGES")
-					   :name domain :type "mo")
-			    base)))
-    (let ((locale (or (gethash locale *locale-aliases*) locale)))
-      (dolist (base (if (listp locale-dir) locale-dir (list locale-dir)))
-	(let ((probe
-	       (or (probe-file (path locale base))
-		   (let ((dot (position #\. locale)))
-		     (and dot (probe-file (path (subseq locale 0 dot) base))))
-		   (let ((at (position #\@ locale)))
-		     (and at (probe-file (path (subseq locale 0 at) base))))
-		   (let ((us (position #\_ locale)))
-		     (and us (probe-file (path (subseq locale 0 us) base)))))))
-	  (when probe (return probe)))))))
+  ;; The default locale-dir includes search lists.  If we get called
+  ;; before the search lists are initialized, we lose.  The search
+  ;; lists are initialized in environment-init, which sets
+  ;; *environment-list-initialized*.  This way, we return NIL to
+  ;; indicate there's no domain file to use.
+  (when lisp::*environment-list-initialized*
+    (flet ((path (locale base)
+	     (merge-pathnames (make-pathname :directory (list :relative locale
+							      "LC_MESSAGES")
+					     :name domain :type "mo")
+			      base)))
+      (let ((locale (or (gethash locale *locale-aliases*) locale)))
+	(dolist (base (if (listp locale-dir) locale-dir (list locale-dir)))
+	  (let ((probe
+		 (or (probe-file (path locale base))
+		     (let ((dot (position #\. locale)))
+		       (and dot (probe-file (path (subseq locale 0 dot) base))))
+		     (let ((at (position #\@ locale)))
+		       (and at (probe-file (path (subseq locale 0 at) base))))
+		     (let ((us (position #\_ locale)))
+		       (and us (probe-file (path (subseq locale 0 us) base)))))))
+	    (when probe (return probe))))))))
 
 (defun find-encoding (domain)
   (when (null (domain-entry-encoding domain))

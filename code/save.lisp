@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.65.4.1 2010/02/08 17:15:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.65.4.2 2010/02/09 23:40:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,6 +37,9 @@
 
 (defvar *environment-list* nil
   "An alist mapping environment variables (as keywords) to either values")
+
+(defvar *environment-list-initialized* nil
+  "Non-NIL if environment-init has been called")
 
 (defvar *editor-lisp-p* nil
   "This is true if and only if the lisp was started with the -edit switch.")
@@ -119,7 +122,8 @@
   (setf (search-list "ext-formats:")
 	'("library:ext-formats/"
 	  "target:i18n/"
-	  "target:pcl/simple-streams/external-formats/")))
+	  "target:pcl/simple-streams/external-formats/"))
+  (setq *environment-list-initialized* t))
 
 
 ;;;; SAVE-LISP itself.

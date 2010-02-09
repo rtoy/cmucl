@@ -19,3 +19,4 @@
 (define-info-type typed-structure textdomain (or string null) nil)
 (define-info-type setf textdomain (or string null) nil)
 
+(defvar lisp::*environment-list-initialized* nil)
