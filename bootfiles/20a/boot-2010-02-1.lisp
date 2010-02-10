@@ -1,4 +1,7 @@
 ;; Bootstrap file for adding support for localization.
+
+(defvar lisp::*environment-list-initialized* nil)
+
 (defpackage "INTL"
   (:use "COMMON-LISP")
   (:export "SETLOCALE" "TEXTDOMAIN" "GETTEXT" "DGETTEXT" "NGETTEXT" "DNGETTEXT"
@@ -19,4 +22,3 @@
 (define-info-type typed-structure textdomain (or string null) nil)
 (define-info-type setf textdomain (or string null) nil)
 
-(defvar lisp::*environment-list-initialized* nil)
