@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/setf-funs.lisp,v 1.6.54.1 2010/02/08 17:15:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/setf-funs.lisp,v 1.6.54.2 2010/02/10 02:42:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,7 @@
 			    (cons res args)))
 	 (setf (,name ,@(rest arglist)) ,(first arglist))))
      (t
-      (warn "Hairy setf expander for function ~S." name)
+      (warn _"Hairy setf expander for function ~S." name)
       nil))))
        
 

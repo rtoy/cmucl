@@ -2015,6 +2015,340 @@ msgstr ""
 msgid "Computes a hash code for S-EXPR and returns it as an integer."
 msgstr ""
 
+#: target:code/seq.lisp
+msgid ""
+"Returns a list of the Nth element of each of the sequences.  Used by MAP\n"
+"   and friends."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "Returns a sequence of the same type as SEQUENCE and the given LENGTH."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "Returns the broad class of which TYPE is a specific subclass."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "NIL output type invalid for this sequence function."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "~S is too hairy for sequence functions."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "~S is a bad type specifier for sequence functions."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "Error in ~S: ~S: Index too large."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "Returns a sequence of the given TYPE and LENGTH."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "Returns the element of SEQUENCE specified by INDEX."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "Store NEWVAL as the component of SEQUENCE specified by INDEX."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "Returns an integer that is the length of SEQUENCE."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "~S is a bad type specifier for sequences"
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "Shouldn't happen!  Weird type"
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"The length of ~S does not match the specified ~\n"
+"                          length of ~S."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a sequence of the given Type and Length, with elements initialized\n"
+"  to :Initial-Element."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"The length of ~S does not match the specified ~\n"
+"                           length  of ~S."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "~S is a bad type specifier for sequences."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a copy of a subsequence of SEQUENCE starting with element number \n"
+"   START and continuing to the end of SEQUENCE or the optional END."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "Returns a copy of SEQUENCE which is EQUAL to SEQUENCE but not EQ."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "Replace the specified elements of SEQUENCE with ITEM."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"The target sequence is destructively modified by copying successive\n"
+"   elements into it from the source sequence."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a new sequence containing the same elements but in reverse order."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a sequence of the same elements in reverse order; the argument\n"
+"   is destroyed."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a new sequence of all the argument sequences concatenated together\n"
+"  which shares no structure with the original argument sequences of the\n"
+"  specified OUTPUT-TYPE-SPEC."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"FUNCTION must take as many arguments as there are sequences provided.  The \n"
+"   result is a sequence such that element i is the result of applying "
+"FUNCTION\n"
+"   to element i of each of the argument sequences."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"PREDICATE is applied to the elements with index 0 of the sequences, then \n"
+"   possibly to those with index 1, and so on.  SOME returns the first \n"
+"   non-() value encountered, or () if the end of a sequence is reached."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"PREDICATE is applied to the elements with index 0 of the sequences, then\n"
+"   possibly to those with index 1, and so on.  EVERY returns () as soon\n"
+"   as any invocation of PREDICATE returns (), or T if every invocation\n"
+"   is non-()."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"PREDICATE is applied to the elements with index 0 of the sequences, then \n"
+"   possibly to those with index 1, and so on.  NOTANY returns () as soon\n"
+"   as any invocation of PREDICATE returns a non-() value, or T if the end\n"
+"   of a sequence is reached."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"PREDICATE is applied to the elements with index 0 of the sequences, then\n"
+"   possibly to those with index 1, and so on.  NOTEVERY returns T as soon\n"
+"   as any invocation of PREDICATE returns (), or () if every invocation\n"
+"   is non-()."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"The specified Sequence is ``reduced'' using the given Function.\n"
+"  See manual for details."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "Coerces the Object to an object of type Output-Type-Spec."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "~S can't be converted to type ~S."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a sequence formed by destructively removing the specified Item from\n"
+"  the given Sequence."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a sequence formed by destructively removing the elements satisfying\n"
+"  the specified Predicate from the given Sequence."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a sequence formed by destructively removing the elements not\n"
+"  satisfying the specified Predicate from the given Sequence."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a copy of SEQUENCE with elements satisfying the test (default is\n"
+"   EQL) with ITEM removed."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a copy of sequence with elements such that predicate(element)\n"
+"   is non-null are removed"
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a copy of sequence with elements such that predicate(element)\n"
+"   is null are removed"
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"The elements of Sequence are compared pairwise, and if any two match,\n"
+"   the one occuring earlier is discarded, unless FROM-END is true, in\n"
+"   which case the one later in the sequence is discarded.  The resulting\n"
+"   sequence is returned.\n"
+"\n"
+"   The :TEST-NOT argument is deprecated."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"The elements of Sequence are examined, and if any two match, one is\n"
+"   discarded.  The resulting sequence, which may be formed by destroying "
+"the\n"
+"   given sequence, is returned.\n"
+"\n"
+"   The :TEST-NOT argument is deprecated."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a sequence of the same kind as Sequence with the same elements\n"
+"  except that all elements equal to Old are replaced with New.  See manual\n"
+"  for details."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a sequence of the same kind as Sequence with the same elements\n"
+"  except that all elements satisfying the Test are replaced with New.  See\n"
+"  manual for details."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a sequence of the same kind as Sequence with the same elements\n"
+"  except that all elements not satisfying the Test are replaced with New.\n"
+"  See manual for details."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a sequence of the same kind as Sequence with the same elements\n"
+"  except that all elements equal to Old are replaced with New.  The "
+"Sequence\n"
+"  may be destroyed.  See manual for details."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a sequence of the same kind as Sequence with the same elements\n"
+"   except that all elements satisfying the Test are replaced with New.  The\n"
+"   Sequence may be destroyed.  See manual for details."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns a sequence of the same kind as Sequence with the same elements\n"
+"   except that all elements not satisfying the Test are replaced with New.\n"
+"   The Sequence may be destroyed.  See manual for details."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns the zero-origin index of the first element in SEQUENCE\n"
+"   satisfying the test (default is EQL) with the given ITEM"
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "Returns the zero-origin index of the first element satisfying test(el)"
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns the zero-origin index of the first element not satisfying test(el)"
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns the first element in SEQUENCE satisfying the test (default\n"
+"   is EQL) with the given ITEM"
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "Returns the first element in SEQUENCE satisfying the test."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "Returns the first element in SEQUENCE not satisfying the test."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns the number of elements in SEQUENCE satisfying a test with ITEM,\n"
+"   which defaults to EQL."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ":TEST and :TEST-NOT are both present."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid "Returns the number of elements in SEQUENCE satisfying TEST(el)."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"The specified subsequences of Sequence1 and Sequence2 are compared\n"
+"   element-wise.  If they are of equal length and match in every element, "
+"the\n"
+"   result is NIL.  Otherwise, the result is a non-negative integer, the "
+"index\n"
+"   within Sequence1 of the leftmost position at which they fail to match; "
+"or,\n"
+"   if one is shorter than and a matching prefix of the other, the index "
+"within\n"
+"   Sequence1 beyond the last position tested is returned.  If a non-Nil\n"
+"   :From-End keyword argument is given, then one plus the index of the\n"
+"   rightmost position in which the sequences differ is returned."
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"A search is conducted using EQL for the first subsequence of sequence2 \n"
+"   which element-wise matches sequence1.  If there is such a subsequence "
+"in \n"
+"   sequence2, the index of the its leftmost element is returned; \n"
+"   otherwise () is returned."
+msgstr ""
+
 #: target:code/mipsstrops.lisp
 msgid ""
 "Compares the substrings specified by String1 and String2 and returns\n"
@@ -5553,6 +5887,116 @@ msgstr ""
 msgid "There's junk in this string: ~S."
 msgstr ""
 
+#: target:code/sharpm.lisp
+msgid "Numeric argument ignored in #~D~A."
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Unrecognized character name: ~S"
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Ill-formed vector: #~S"
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Vector longer than specified length: #~S~S"
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Escape character appeared after #*"
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "You have to give a little bit for non-zero #* bit-vectors."
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Illegal element given for bit-vector: ~S"
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Bit vector is longer than specified length #~A*~A"
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Symbol following #: contains a package marker: ~S"
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "If false, then the #. read macro is disabled."
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Attempt to read #. while *READ-EVAL* is bound to NIL."
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Radix missing in #R."
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Illegal radix for #R: ~D."
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "#~A (base ~D) value is not a rational: ~S."
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid ""
+"#~DA axis ~D is empty, but axis ~\n"
+"\t\t\t\t          ~D is non-empty."
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Non-list following #S"
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Non-list following #S: ~S"
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Structure type is not a symbol: ~S"
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "~S is not a defined structure type."
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "The ~S structure does not have a default constructor."
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Missing label for #=."
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Multiply defined label: #~D="
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Have to tag something more than just #~D#."
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Missing label for ##."
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "reference to undefined label #~D#"
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Illegal complex number format: #C~S"
+msgstr ""
+
+#: target:code/sharpm.lisp
+msgid "Illegal sharp character ~S"
+msgstr ""
+
 #: target:code/backq.lisp
 msgid "How deep we are into backquotes"
 msgstr ""
@@ -5592,6 +6036,105 @@ msgstr ""
 
 #: target:code/backq.lisp
 msgid "### illegal dotted backquote form ###"
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid ""
+"Make an object set for use by a RPC/xevent server.  Name is for\n"
+"      descriptive purposes only."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid "You lose, object: ~S"
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid ""
+"Return the handler function in Object-Set for the operation specified by\n"
+"   Message-ID, if none, NIL is returned."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid "Sets the handler function for an object set operation."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid "#<Handler for ~A on ~:[~;BOGUS ~]descriptor ~D: ~S>"
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid "List of all the currently active handlers for file descriptors"
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid ""
+"Arange to call FUNCTION whenever FD is usable. DIRECTION should be\n"
+"  either :INPUT or :OUTPUT. The value returned should be passed to\n"
+"  SYSTEM:REMOVE-FD-HANDLER when it is no longer needed."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid "Invalid direction ~S, must be either :INPUT or :OUTPUT"
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid "Removes HANDLER from the list of active handlers."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid ""
+"Remove any handers refering to FD. This should only be used when attempting\n"
+"  to recover from a detected inconsistency."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid ""
+"Establish a handler with SYSTEM:ADD-FD-HANDLER for the duration of BODY.\n"
+"   DIRECTION should be either :INPUT or :OUTPUT, FD is the file descriptor "
+"to\n"
+"   use, and FUNCTION is the function to call whenever FD is usable."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid "Timeout is not a real number or NIL: ~S"
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid ""
+"Wait until FD is usable for DIRECTION. DIRECTION should be either :INPUT or\n"
+"  :OUTPUT. TIMEOUT, if supplied, is the number of seconds to wait before "
+"giving\n"
+"  up."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid ""
+"This is an alist mapping displays to user functions to be called when\n"
+"   SYSTEM:SERVE-EVENT notices input on a display connection.  Do not modify\n"
+"   this directly; use EXT:ENABLE-CLX-EVENT-HANDLING.  A given display\n"
+"   should be represented here only once."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid ""
+"SERVE-ALL-EVENTS calls SERVE-EVENT with the specified timeout.  If\n"
+"  SERVE-EVENT does something (returns T) it loops over SERVE-EVENT with "
+"timeout\n"
+"  0 until all events have been served.  SERVE-ALL-EVENTS returns T if\n"
+"  SERVE-EVENT did something and NIL if not."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid ""
+"Receive on all ports and Xevents and dispatch to the appropriate handler\n"
+"  function.  If timeout is specified, server will wait the specified time "
+"(in\n"
+"  seconds) and then return, otherwise it will wait until something happens.\n"
+"  Server returns T if something happened and NIL otherwise."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid "Event-listen was true, but handler didn't handle: ~%~S"
 msgstr ""
 
 #: target:code/extfmts.lisp
@@ -6720,6 +7263,93 @@ msgstr ""
 msgid "Returns all of the elements of List, in order, as values."
 msgstr ""
 
+#: target:code/signal.lisp
+msgid "A list of unix signal structures."
+msgstr ""
+
+#: target:code/signal.lisp
+msgid "~S is not a valid signal name or number."
+msgstr ""
+
+#: target:code/signal.lisp
+msgid ""
+"Return the name of the signal as a string.  Signal should be a valid\n"
+"  signal number or a keyword of the standard UNIX signal name."
+msgstr ""
+
+#: target:code/signal.lisp
+msgid ""
+"Return a string describing signal.  Signal should be a valid signal\n"
+"  number or a keyword of the standard UNIX signal name."
+msgstr ""
+
+#: target:code/signal.lisp
+msgid ""
+"Return the number of the given signal.  Signal should be a valid\n"
+"  signal number or a keyword of the standard UNIX signal name."
+msgstr ""
+
+#: target:code/signal.lisp
+msgid "Returns a mask given a set of signals."
+msgstr ""
+
+#: target:code/signal.lisp
+msgid ""
+"Unix-kill sends the signal signal to the process with process \n"
+"   id pid.  Signal should be a valid signal number or a keyword of the\n"
+"   standard UNIX signal name."
+msgstr ""
+
+#: target:code/signal.lisp
+msgid ""
+"Unix-killpg sends the signal signal to the all the process in process\n"
+"  group PGRP.  Signal should be a valid signal number or a keyword of\n"
+"  the standard UNIX signal name."
+msgstr ""
+
+#: target:code/signal.lisp
+msgid ""
+"Unix-sigblock cause the signals specified in mask to be\n"
+"   added to the set of signals currently being blocked from\n"
+"   delivery.  The macro sigmask is provided to create masks."
+msgstr ""
+
+#: target:code/signal.lisp
+msgid ""
+"Unix-sigpause sets the set of masked signals to its argument\n"
+"   and then waits for a signal to arrive, restoring the previous\n"
+"   mask upon its return."
+msgstr ""
+
+#: target:code/signal.lisp
+msgid ""
+"Unix-sigsetmask sets the current set of masked signals (those\n"
+"   being blocked from delivery) to the argument.  The macro sigmask\n"
+"   can be used to create the mask.  The previous value of the signal\n"
+"   mask is returned."
+msgstr ""
+
+#: target:code/signal.lisp
+msgid "Enable all the default signals that Lisp knows how to deal with."
+msgstr ""
+
+#: target:code/signal.lisp
+msgid "Execute BODY in a context impervious to interrupts."
+msgstr ""
+
+#: target:code/signal.lisp
+msgid ""
+"Allow interrupts while executing BODY.  As interrupts are normally allowed,\n"
+"  this is only useful inside a WITHOUT-INTERRUPTS."
+msgstr ""
+
+#: target:code/signal.lisp
+msgid ""
+"With-enabled-interrupts ({(interrupt function)}*) {form}*\n"
+"   Establish function as a handler for the Unix signal interrupt which\n"
+"   should be a number between 1 and 31 inclusive."
+msgstr ""
+
 #: target:code/interr.lisp
 msgid "Attempt to RETURN-FROM a block or GO to a tag that no longer exists"
 msgstr ""
@@ -7712,6 +8342,22 @@ msgstr ""
 msgid ""
 "Removes tracing from the specified functions.  With no args, untraces all\n"
 "   functions."
+msgstr ""
+
+#: target:code/sort.lisp
+msgid ""
+"Destructively sorts sequence.  Predicate should returns non-Nil if\n"
+"   Arg1 is to precede Arg2."
+msgstr ""
+
+#: target:code/sort.lisp
+msgid "~S is not a sequence."
+msgstr ""
+
+#: target:code/sort.lisp
+msgid ""
+"The sequences Sequence1 and Sequence2 are destructively merged into\n"
+"   a sequence of type Result-Type using the Predicate to order the elements."
 msgstr ""
 
 #: target:code/final.lisp
@@ -8945,6 +9591,10 @@ msgid ""
 "  body are return upon success and NIL is return if the timeout is\n"
 "  reached. When the wait key is NIL and the lock is held by another\n"
 "  process then NIL is return immediately without processing the body."
+msgstr ""
+
+#: target:code/setf-funs.lisp
+msgid "Hairy setf expander for function ~S."
 msgstr ""
 
 #: target:code/defstruct.lisp
