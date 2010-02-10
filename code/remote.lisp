@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.9.48.1 2010/02/08 17:15:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.9.48.2 2010/02/10 02:04:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,7 @@
   finished)
 
 (defvar *pending-returns* nil
-  "AList of wire . remote-wait structs")
+  _N"AList of wire . remote-wait structs")
 
 
 ;;; MAYBE-NUKE-REMOTE-WAIT -- internal
@@ -52,7 +52,7 @@
 ;;; environment of the macro call. No values are returned.
 ;;;
 (defmacro remote (wire-form &body forms)
-  "Evaluates the given forms remotly. No values are returned, as the remote
+  _N"Evaluates the given forms remotly. No values are returned, as the remote
 evaluation is asyncronus."
   (let ((wire (gensym)))
     `(let ((,wire ,wire-form))
@@ -72,7 +72,7 @@ evaluation is asyncronus."
 ;;; return, cause we can kind of guess at what the currect results would be.
 ;;;
 (defmacro remote-value-bind (wire-form vars form &rest body)
-  "Bind VARS to the multiple values of FORM (which is executed remotely). The
+  _N"Bind VARS to the multiple values of FORM (which is executed remotely). The
 forms in BODY are only executed if the remote function returned (as apposed
 to aborting due to a throw)."
   (cond
@@ -142,8 +142,8 @@ to aborting due to a throw)."
 ;;;
 (defmacro remote-value (wire-form form &optional
 				  (on-server-unwind
-				   `(error "Remote server unwound")))
-  "Execute the single form remotly. The value of the form is returned.
+				   `(error _"Remote server unwound")))
+  _N"Execute the single form remotly. The value of the form is returned.
   The optional form on-server-unwind is only evaluated if the server unwinds
   instead of returning."
   (let ((remote (gensym))
@@ -323,7 +323,7 @@ to aborting due to a throw)."
 ;;; it, call NEW-CONNECTION to do the connecting.
 ;;;
 (defun create-request-server (port &optional on-connect &key reuse-address)
-  "Create a request server on the given port.  Whenever anyone connects to it,
+  _N"Create a request server on the given port.  Whenever anyone connects to it,
    call the given function with the newly created wire and the address of the
    connector.  If the function returns NIL, the connection is destroyed;
    otherwise, it is accepted.  This returns a manifestation of the server that
@@ -345,7 +345,7 @@ to aborting due to a throw)."
 ;;; closes the socket behind it.
 ;;;
 (defun destroy-request-server (server)
-  "Quit accepting connections to the given request server."
+  _N"Quit accepting connections to the given request server."
   (system:remove-fd-handler (request-server-handler server))
   (ext:close-socket (request-server-socket server))
   nil)
@@ -356,7 +356,7 @@ to aborting due to a throw)."
 ;;; installed to handle return values, etc.
 ;;; 
 (defun connect-to-remote-server (hostname port &optional on-death)
-  "Connect to a remote request server addressed with the given host and port
+  _N"Connect to a remote request server addressed with the given host and port
    pair.  This returns the created wire."
   (let* ((socket (ext:connect-to-inet-socket hostname port))
 	 (wire (make-wire socket)))

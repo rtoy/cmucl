@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/query.lisp,v 1.5.56.1 2010/02/08 17:15:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/query.lisp,v 1.5.56.2 2010/02/10 02:04:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,7 @@
 ;;; Y-OR-N-P  --  Public.
 ;;;
 (defun y-or-n-p (&optional format-string &rest arguments)
-  "Y-OR-N-P prints the message, if any, and reads characters from *QUERY-IO*
+  _N"Y-OR-N-P prints the message, if any, and reads characters from *QUERY-IO*
    until the user enters y or Y as an affirmative, or either n or N as a
    negative answer.  It ignores preceding whitespace and asks again if you
    enter any other characters."
@@ -49,7 +49,7 @@
 	  ((#\y #\Y) (return t))
 	  ((#\n #\N) (return nil))
 	  (t
-	   (write-line "Type \"y\" for yes or \"n\" for no. " *query-io*)
+	   (write-line _"Type \"y\" for yes or \"n\" for no. " *query-io*)
 	   (when format-string
 	     (apply #'format *query-io* format-string arguments))
 	   (force-output *query-io*)))))))
@@ -60,7 +60,7 @@
 ;;; uses READ-LINE to get "YES" or "NO".
 ;;;
 (defun yes-or-no-p (&optional format-string &rest arguments)
-  "YES-OR-NO-P is similar to Y-OR-N-P, except that it clears the 
+  _N"YES-OR-NO-P is similar to Y-OR-N-P, except that it clears the 
    input buffer, beeps, and uses READ-LINE to get the strings 
    YES or NO."
   (clear-input *query-io*)
@@ -73,6 +73,6 @@
     (cond ((string-equal ans "YES") (return t))
 	  ((string-equal ans "NO") (return nil))
 	  (t
-	   (write-line "Type \"yes\" for yes or \"no\" for no. " *query-io*)
+	   (write-line _"Type \"yes\" for yes or \"no\" for no. " *query-io*)
 	   (when format-string
 	     (apply #'format *query-io* format-string arguments))))))
