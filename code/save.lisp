@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.65.4.2 2010/02/09 23:40:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.65.4.3 2010/02/10 02:22:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,23 +26,23 @@
 (in-package "LISP")
 
 (defvar *before-save-initializations* nil
-  "This is a list of functions which are called before creating a saved core
+  _N"This is a list of functions which are called before creating a saved core
   image.  These functions are executed in the child process which has no ports,
   so they cannot do anything that tries to talk to the outside world.")
 
 (defvar *after-save-initializations* nil
-  "This is a list of functions which are called when a saved core image starts
+  _N"This is a list of functions which are called when a saved core image starts
   up.  The system itself should be initialized at this point, but applications
   might not be.")
 
 (defvar *environment-list* nil
-  "An alist mapping environment variables (as keywords) to either values")
+  _N"An alist mapping environment variables (as keywords) to either values")
 
 (defvar *environment-list-initialized* nil
-  "Non-NIL if environment-init has been called")
+  _N"Non-NIL if environment-init has been called")
 
 (defvar *editor-lisp-p* nil
-  "This is true if and only if the lisp was started with the -edit switch.")
+  _N"This is true if and only if the lisp was started with the -edit switch.")
 
 
 
@@ -150,7 +150,7 @@
 		                  #+:executable
 		                 (executable nil)
 				 (batch-mode nil))
-  "Saves a CMU Common Lisp core image in the file of the specified name.  The
+  _N"Saves a CMU Common Lisp core image in the file of the specified name.  The
   following keywords are defined:
   
   :purify
@@ -202,7 +202,7 @@
 
   (unless (probe-file (directory-namestring core-file-name))
     (error 'simple-file-error
-           :format-control "Directory ~S does not exist"
+           :format-control _"Directory ~S does not exist"
            :format-arguments (list (directory-namestring core-file-name))))
   
   #+mp (mp::shutdown-multi-processing)
@@ -229,7 +229,7 @@
   (setq ext:*batch-mode* (if batch-mode t nil))
   (labels
       ((%restart-lisp ()
-	 (with-simple-restart (abort "Skip remaining initializations.")
+	 (with-simple-restart (abort _"Skip remaining initializations.")
 	   (catch 'top-level-catcher
 	     (reinit)
 	     (environment-init)
@@ -284,7 +284,7 @@
 		    (handler-case
 			(%restart-lisp)
 		      (error (cond)
-			(format *error-output* "Error in batch processing:~%~A~%"
+			(format *error-output* _"Error in batch processing:~%~A~%"
 				cond)
 			(throw '%end-of-the-world 1)))
 		    (%restart-lisp))
@@ -310,7 +310,7 @@
 ;;;; PRINT-HERALD support.
 
 (defvar *herald-items* ()
-  "Determines what PRINT-HERALD prints (the system startup banner.)  This is a
+  _N"Determines what PRINT-HERALD prints (the system startup banner.)  This is a
    database which can be augmented by each loaded system.  The format is a
    property list which maps from subsystem names to the banner information for
    that system.  This list can be manipulated with GETF -- entries are printed
@@ -323,7 +323,8 @@
       `("CMU Common Lisp "
 	,#'(lambda (stream)
 	     (write-string (lisp-implementation-version) stream))
-	", running on "
+	,#'(lambda (stream)
+	     (write-string _", running on " stream))
 	,#'(lambda (stream) (write-string (machine-instance) stream))
 	terpri
 	,#'(lambda (stream)
@@ -334,29 +335,33 @@
 		                  *cmucl-core-dump-time*
 				  nil)))
 	       (when core
-		 (write-string "With core: " stream)
+		 (write-string _"With core: " stream)
 		 (write-line (namestring core) stream))
 	       (when dump-time
-		 (write-string "Dumped on: " stream)
+		 (write-string _"Dumped on: " stream)
 		 (ext:format-universal-time stream dump-time :style :iso8601)
-		 (write-string " on " stream)
+		 (write-string _" on " stream)
 		 (write-line *cmucl-core-dump-host* stream))))
 	))
 
 (setf (getf *herald-items* :bugs)
-      '("See <http://www.cons.org/cmucl/> for support information."
+      `(,#'(lambda (stream)
+	     (write-string _"See <http://www.cons.org/cmucl/> for support information." stream))
 	terpri
-	"Loaded subsystems:"))
+	,#'(lambda (stream)
+	     (write-string _"Loaded subsystems:" stream))))
 
 #+unicode
 (setf (getf *herald-items* :unicode)
-      `("    Unicode "
+      `(,#'(lambda (stream)
+	     (write-string _"    Unicode " stream))
 	,(if (and (boundp 'lisp::*unidata-version*)
 		  (>= (length lisp::*unidata-version*) 11))
 	     (subseq lisp::*unidata-version* 11
 		     (1- (length lisp::*unidata-version*)))
 	     " ")
-	"with Unicode version "
+	,#'(lambda (stream)
+	     (write-string _"with Unicode version " stream))
 	,#'(lambda (stream)
 	     (princ lisp::+unicode-major-version+ stream)
 	     (write-char #\. stream)
@@ -368,7 +373,7 @@
 ;;; PRINT-HERALD  --  Public
 ;;;
 (defun print-herald (&optional (stream *standard-output*))
-  "Print some descriptive information about the Lisp system version and
+  _N"Print some descriptive information about the Lisp system version and
    configuration."
   (let ((res ()))
     (do ((item *herald-items* (cddr item)))
@@ -385,7 +390,7 @@
 	  ((or symbol cons)
 	   (funcall (fdefinition thing) stream))
 	  (t
-	   (error "Unrecognized *HERALD-ITEMS* entry: ~S." thing))))
+	   (error _"Unrecognized *HERALD-ITEMS* entry: ~S." thing))))
       (fresh-line stream)))
 
   (values))
@@ -395,7 +400,7 @@
 
 (defun assert-user-package ()
   (unless (eq *package* (find-package "CL-USER"))
-    (error "Change *PACKAGE* to the USER package and try again.")))
+    (error _"Change *PACKAGE* to the USER package and try again.")))
 
 ;;; MAYBE-BYTE-LOAD  --  Interface
 ;;;

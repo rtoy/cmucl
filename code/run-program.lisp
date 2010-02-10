@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.28.12.1 2010/02/08 17:15:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.28.12.2 2010/02/10 02:22:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,7 +40,7 @@
   (defconstant wait-wstopped #-svr4 #o177 #+svr4 wait-wuntraced))
 
 (defun wait3 (&optional do-not-hang check-for-stopped)
-  "Return any available status information on child processed. "
+  _N"Return any available status information on child processed. "
   (multiple-value-bind (pid status)
 		       (c-wait3 (logior (if do-not-hang
 					  wait-wnohang
@@ -78,7 +78,7 @@
 ;;;; Process control stuff.
 
 (defvar *active-processes* nil
-  "List of process structures for all active processes.")
+  _N"List of process structures for all active processes.")
 
 (defstruct (process (:print-function %print-process))
   pid			    ; PID of child process.
@@ -103,7 +103,7 @@
 ;;; PROCESS-STATUS -- Public.
 ;;;
 (defun process-status (proc)
-  "Return the current status of process.  The result is one of :running,
+  _N"Return the current status of process.  The result is one of :running,
    :stopped, :exited, :signaled."
   (declare (type process proc))
   (get-processes-status-changes)
@@ -113,7 +113,7 @@
 ;;; PROCESS-WAIT -- Public.
 ;;;
 (defun process-wait (proc &optional check-for-stopped)
-  "Wait for PROC to quit running for some reason.  Returns PROC."
+  _N"Wait for PROC to quit running for some reason.  Returns PROC."
   (declare (type process proc))
   (loop
     (case (process-status proc)
@@ -141,7 +141,7 @@
 			 unix:TIOCGPGRP
 			 (alien:alien-sap (alien:addr result)))
       (unless wonp
-	(error "TIOCPGRP ioctl failed: ~S"
+	(error _"TIOCPGRP ioctl failed: ~S"
 	       (unix:get-unix-error-msg error)))
       result))
   (process-pid proc))
@@ -152,7 +152,7 @@
 ;;; Hand a process a signal.
 ;;;
 (defun process-kill (proc signal &optional (whom :pid))
-  "Hand SIGNAL to PROC.  If whom is :pid, use the kill Unix system call.  If
+  _N"Hand SIGNAL to PROC.  If whom is :pid, use the kill Unix system call.  If
    whom is :process-group, use the killpg Unix system call.  If whom is
    :pty-process-group deliver the signal to whichever process group is currently
    in the foreground."
@@ -194,7 +194,7 @@
 ;;; Returns T if the process is still alive, NIL otherwise.
 ;;; 
 (defun process-alive-p (proc)
-  "Returns T if the process is still alive, NIL otherwise."
+  _N"Returns T if the process is still alive, NIL otherwise."
   (declare (type process proc))
   (let ((status (process-status proc)))
     (if (or (eq status :running)
@@ -207,7 +207,7 @@
 ;;; Close all the streams held open by PROC.
 ;;; 
 (defun process-close (proc)
-  "Close all streams connected to PROC and stop maintaining the status slot."
+  _N"Close all streams connected to PROC and stop maintaining the status slot."
   (declare (type process proc))
   (macrolet ((frob (stream abort)
 	       `(when ,stream (close ,stream :abort ,abort))))
@@ -253,11 +253,11 @@
 ;;;; RUN-PROGRAM and close friends.
 
 (defvar *close-on-error* nil
-  "List of file descriptors to close when RUN-PROGRAM exits due to an error.")
+  _N"List of file descriptors to close when RUN-PROGRAM exits due to an error.")
 (defvar *close-in-parent* nil
-  "List of file descriptors to close when RUN-PROGRAM returns in the parent.")
+  _N"List of file descriptors to close when RUN-PROGRAM returns in the parent.")
 (defvar *handlers-installed* nil
-  "List of handlers installed by RUN-PROGRAM.")
+  _N"List of handlers installed by RUN-PROGRAM.")
 
 
 ;;; FIND-A-PTY -- internal
@@ -268,7 +268,7 @@
 ;;; 
 #-irix
 (defun find-a-pty ()
-  "Returns the master fd, the slave fd, and the name of the tty"
+  _N"Returns the master fd, the slave fd, and the name of the tty"
   (multiple-value-bind (error master-fd slave-fd)
       (unix:unix-openpty nil nil nil)
     (when (zerop error)
@@ -287,7 +287,7 @@
 		   (values master-fd
 			   slave-fd
 			   (unix:unix-ttyname slave-fd))))
-    (error "Could not find a pty.")))
+    (error _"Could not find a pty.")))
 
 #+irix
 (alien:def-alien-routine ("_getpty" c-getpty) c-call:c-string
@@ -298,7 +298,7 @@
 
 #+irix
 (defun find-a-pty ()
-  "Returns the master fd, the slave fd, and the name of the tty"
+  _N"Returns the master fd, the slave fd, and the name of the tty"
   (multiple-value-bind (line master-fd)
     (c-getpty (logior unix:o_rdwr unix:o_ndelay) #o600 0)
     (let* ((slave-name line)
@@ -321,7 +321,7 @@
 			     slave-fd
 			     slave-name))))
     (unix:unix-close master-fd))
-  (error "Could not find a pty."))
+  (error _"Could not find a pty."))
 
 ;;; OPEN-PTY -- internal
 ;;;
@@ -335,7 +335,7 @@
       (when (streamp pty)
 	(multiple-value-bind (new-fd errno) (unix:unix-dup master)
 	  (unless new-fd
-	    (error "Could not UNIX:UNIX-DUP ~D: ~A"
+	    (error _"Could not UNIX:UNIX-DUP ~D: ~A"
 		   master (unix:get-unix-error-msg errno)))
 	  (push new-fd *close-on-error*)
 	  (copy-descriptor-to-stream new-fd pty cookie)))
@@ -455,7 +455,7 @@
 		    &key (env *environment-list*) (wait t) pty input
 		    if-input-does-not-exist output (if-output-exists :error)
 		    (error :output) (if-error-exists :error) status-hook)
-  "RUN-PROGRAM creates a new process and runs the unix program in the
+  _N"RUN-PROGRAM creates a new process and runs the unix program in the
    file specified by the simple-string PROGRAM.  ARGS are the standard
    arguments that can be passed to a Unix program, for no arguments
    use NIL (which means just the name of the program is passed as arg 0).
@@ -512,7 +512,7 @@
   (system:enable-interrupt unix:sigchld #'sigchld-handler)
   ;; Make sure all the args are okay.
   (unless (every #'simple-string-p args)
-    (error "All args to program must be simple strings -- ~S." args))
+    (error _"All args to program must be simple strings -- ~S." args))
   ;; Pre-pend the program to the argument list.
   (push (namestring program) args)
   ;; Clear random specials used by GET-DESCRIPTOR-FOR to communicate cleanup
@@ -522,7 +522,7 @@
 	(let ((pfile (unix-namestring (merge-pathnames program "path:") t t))
 	      (cookie (list 0)))
 	  (unless pfile
-	    (error "No such program: ~S" program))
+	    (error _"No such program: ~S" program))
 	  (multiple-value-bind
 	      (stdin input-stream)
 	      (get-descriptor-for input cookie :direction :input
@@ -558,7 +558,7 @@
 				(spawn pfile argv envp pty-name
 				       stdin stdout stderr))))
 			  (when (< child-pid 0)
-			    (error "Could not fork child process: ~A"
+			    (error _"Could not fork child process: ~A"
 				   (unix:get-unix-error-msg)))
 			  (setf proc (make-process :pid child-pid
 						   :%status :running
@@ -601,7 +601,7 @@
 		      (unix:unix-select (1+ descriptor) (ash 1 descriptor)
 					0 0 0)
 		    (cond ((null result)
-			   (error "Could not select on sub-process: ~A"
+			   (error _"Could not select on sub-process: ~A"
 				  (unix:get-unix-error-msg readable/errno)))
 			  ((zerop result)
 			   (return))))
@@ -621,7 +621,7 @@
 			     (system:remove-fd-handler handler)
 			     (setf handler nil)
 			     (decf (car cookie))
-			     (error "Could not read input from sub-process: ~A"
+			     (error _"Could not read input from sub-process: ~A"
 				    (unix:get-unix-error-msg errno)))
 			    (t
 			     #-unicode
@@ -659,7 +659,7 @@
 			       (t unix:o_rdwr))
 			     #o666)
 	   (unless fd
-	     (error "Could not open \"/dev/null\": ~A"
+	     (error _"Could not open \"/dev/null\": ~A"
 		    (unix:get-unix-error-msg errno)))
 	   (push fd *close-in-parent*)
 	   (values fd nil)))
@@ -668,7 +668,7 @@
 	     (read-fd write-fd)
 	     (unix:unix-pipe)
 	   (unless read-fd
-	     (error "Could not create pipe: ~A"
+	     (error _"Could not create pipe: ~A"
 		    (unix:get-unix-error-msg write-fd)))
 	   (case direction
 	     (:input
@@ -684,7 +684,7 @@
 	     (t
 	      (unix:unix-close read-fd)
 	      (unix:unix-close write-fd)
-	      (error "Direction must be either :INPUT or :OUTPUT, not ~S"
+	      (error _"Direction must be either :INPUT or :OUTPUT, not ~S"
 		     direction)))))
 	((or (pathnamep object) (stringp object))
 	 (with-open-stream (file (apply #'open object keys))
@@ -695,7 +695,7 @@
 		    (push fd *close-in-parent*)
 		    (values fd nil))
 		   (t
-		    (error "Could not duplicate file descriptor: ~A"
+		    (error _"Could not duplicate file descriptor: ~A"
 			   (unix:get-unix-error-msg errno)))))))
 	((system:fd-stream-p object)
 	 (values (system:fd-stream-fd object) nil))
@@ -704,7 +704,7 @@
 	   (:input
 	    (dotimes (count
 		      256
-		      (error "Could not open a temporary file in /tmp"))
+		      (error _"Could not open a temporary file in /tmp"))
 	      (let* ((name (format nil "/tmp/.run-program-~D" count))
 		     (fd (unix:unix-open name
 					 (logior unix:o_rdwr
@@ -731,12 +731,12 @@
 	    (multiple-value-bind (read-fd write-fd)
 				 (unix:unix-pipe)
 	      (unless read-fd
-		(error "Cound not create pipe: ~A"
+		(error _"Cound not create pipe: ~A"
 		       (unix:get-unix-error-msg write-fd)))
 	      (copy-descriptor-to-stream read-fd object cookie)
 	      (push read-fd *close-on-error*)
 	      (push write-fd *close-in-parent*)
 	      (values write-fd nil)))))
 	(t
-	 (error "Invalid option to run-program: ~S" object))))
+	 (error _"Invalid option to run-program: ~S" object))))
 

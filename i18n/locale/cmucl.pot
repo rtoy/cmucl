@@ -1342,6 +1342,94 @@ msgid ""
 "incremental redefinition of callback functions."
 msgstr ""
 
+#: target:code/sap.lisp
+msgid "Return T iff the SAP X points to a smaller address then the SAP Y."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid ""
+"Return T iff the SAP X points to a smaller or the same address as\n"
+"   the SAP Y."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Return T iff the SAP X points to the same address as the SAP Y."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid ""
+"Return T iff the SAP X points to a larger or the same address as\n"
+"   the SAP Y."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Return T iff the SAP X points to a larger address then the SAP Y."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Return a new sap OFFSET bytes from SAP."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Return the byte offset between SAP1 and SAP2."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Converts a System Area Pointer into an integer."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Converts an integer into a System Area Pointer."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Returns the 8-bit byte at OFFSET bytes from SAP."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Returns the 16-bit word at OFFSET bytes from SAP."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Returns the 32-bit dualword at OFFSET bytes from SAP."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Returns the 64-bit quadword at OFFSET bytes from SAP."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Returns the 32-bit system-area-pointer at OFFSET bytes from SAP."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Returns the 32-bit single-float at OFFSET bytes from SAP."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Returns the 64-bit double-float at OFFSET bytes from SAP."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Returns the long-float at OFFSET bytes from SAP."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Returns the signed 8-bit byte at OFFSET bytes from SAP."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Returns the signed 16-bit word at OFFSET bytes from SAP."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Returns the signed 32-bit dualword at OFFSET bytes from SAP."
+msgstr ""
+
+#: target:code/sap.lisp
+msgid "Returns the signed 64-bit quadword at OFFSET bytes from SAP."
+msgstr ""
+
 #: target:code/bit-bash.lisp
 msgid "The number of bits to process at a time."
 msgstr ""
@@ -3584,6 +3672,146 @@ msgstr ""
 msgid "dfixnum became negative ~a/~a - ~a/~a(~a/~a)"
 msgstr ""
 
+#: target:code/room.lisp
+msgid "~2&Summary of spaces: ~(~{~A ~}~)~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "~%~A:~%    ~:D bytes, ~:D object~:P"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "~%Summary total:~%    ~:D bytes, ~:D objects.~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "~2&Breakdown for ~(~A~) space:~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "  ~13:D bytes for ~9:D other object~2:*~P.~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "  ~13:D bytes for ~9:D ~(~A~) object~2:*~P.~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "  ~13:D bytes for ~9:D ~(~A~) object~2:*~P (space total.)~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid ""
+"Print out information about the heap memory in use.  :Print-Spaces is a "
+"list\n"
+"  of the spaces to print detailed information for.  :Count-Spaces is a list "
+"of\n"
+"  the spaces to scan.  For either one, T means all spaces (:Static, :Dyanmic"
+"\n"
+"  and :Read-Only.)  If :Print-Summary is true, then summary information "
+"will be\n"
+"  printed.  The defaults print only summary information for dynamic space.\n"
+"  If true, Cutoff is a fraction of the usage in a report below which types "
+"will\n"
+"  be combined as OTHER."
+msgstr ""
+
+#: target:code/room.lisp
+msgid "Print info about how much code and no-ops there are in Space."
+msgstr ""
+
+#: target:code/room.lisp
+msgid "~:D code-object bytes, ~:D code words, with ~:D no-ops (~D%).~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "Bogus type: ~D"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "~:D words allocated for descriptor objects.~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "~:D bytes data/~:D words header for non-descriptor objects.~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid ""
+"Print a breakdown by instance type of all the instances allocated in\n"
+"  Space.  If TOP-N is true, print only information for the the TOP-N types "
+"with\n"
+"  largest usage."
+msgstr ""
+
+#: target:code/room.lisp
+msgid "~2&~@[Top ~D ~]~(~A~) instance types:~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "  ~32A: ~7:D bytes, ~5D object~:P.~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "  Other types: ~:D bytes, ~D: object~:P.~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "  ~:(~A~) instance total: ~:D bytes, ~:D object~:P.~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "In ~A space:~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "~D bytes at #x~X~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "No source for ~S"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "~%Package ~A: ~32T~9:D bytes, ~9:D object~:P.~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "~30@A: ~9:D bytes, ~9:D object~:P.~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid ""
+"Given a hashtable, print a histogram of the contents.  Function should give\n"
+"  the value to plot when applied to the hashtable values."
+msgstr ""
+
+#: target:code/room.lisp
+msgid ""
+"Report the Top-N entries in the hashtable Table, when sorted by Function\n"
+"  applied to the hash value.  If Top-N is NIL, report all entries."
+msgstr ""
+
+#: target:code/room.lisp
+msgid "~8:D: Other~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid "~8:D: Total~%"
+msgstr ""
+
+#: target:code/room.lisp
+msgid ""
+"Return a hashtable mapping each function in for which a call appears in\n"
+"  Space to the number of times such a call appears."
+msgstr ""
+
+#: target:code/room.lisp
+msgid ""
+"Return a hashtable translating code objects to function constant counts for\n"
+"  all code objects in Space with more than Above function constants."
+msgstr ""
+
 #: target:code/gc.lisp
 msgid "Oh no.  The current dynamic space is missing!"
 msgstr ""
@@ -3785,6 +4013,28 @@ msgstr ""
 
 #: target:code/purify.lisp
 msgid "Done.]"
+msgstr ""
+
+#: target:code/scavhook.lisp
+msgid "Returns T if OBJECT is a scavenger-hook, and NIL if not."
+msgstr ""
+
+#: target:code/scavhook.lisp
+msgid ""
+"Create a new scavenger-hook with the specified VALUE and FUNCTION.  For\n"
+"   as long as the scavenger-hook is alive, the scavenger in the garbage\n"
+"   collector will note whenever VALUE is moved, and arrange for FUNCTION\n"
+"   to be funcalled."
+msgstr ""
+
+#: target:code/scavhook.lisp
+msgid "Returns the VALUE being monitored by SCAVHOOK.  Can be setf."
+msgstr ""
+
+#: target:code/scavhook.lisp
+msgid ""
+"Returns the FUNCTION invoked when the monitored value is moved.  Can be\n"
+"   setf."
 msgstr ""
 
 #: target:code/save.lisp
@@ -4990,6 +5240,304 @@ msgstr ""
 msgid ""
 "Identical to APROPOS, except that it returns a list of the symbols\n"
 "  found instead of describing them."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Float format for 1.0E1"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Variable bound to current readtable."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Reader error ~@[at ~D ~]on ~S:~%~?"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Unexpected EOF on ~S ~A."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"Standard lisp readtable. This is for recovery from broken\n"
+"   read-tables, and should not normally be user-visible."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"Readtable is a data structure that maps characters into syntax\n"
+"   types for the Common Lisp expression reader."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Value of *package* at the start of the last read or Nil."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Undefined read-macro character ~S"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "A copy is made of from-readtable and place into to-readtable."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"Causes the syntax of to-char to be the same as from-char in the \n"
+"  optional readtable (defaults to the current readtable).  The\n"
+"  from-table defaults the standard lisp readtable by being nil."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"Causes char to be a macro character which invokes function when\n"
+"   seen by the reader.  The non-terminatingp flag can be used to\n"
+"   make the macro character non-terminating.  The optional readtable\n"
+"   argument defaults to the current readtable.  Set-macro-character\n"
+"   returns T."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"Returns the function associated with the specified char which is a macro\n"
+"  character.  The optional readtable argument defaults to the current\n"
+"  readtable."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Bind *read-buffer* to a fresh buffer and execute Body."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"If true, only warn when there is an extra close paren, otherwise error."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"Reads from stream and returns the object read, preserving the whitespace\n"
+"   that followed the object."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"Reads in the next object in the stream, which defaults to\n"
+"   *standard-input*. For details see the I/O chapter of\n"
+"   the manual."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"Reads objects from input-stream until the next character after an\n"
+"   object's representation is endchar.  A list of those objects read\n"
+"   is returned."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Nothing appears before . in list."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Nothing appears after . in list."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "More than one object follows . in list."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Ignoring unmatched close parenthesis~\n"
+"		  ~@[ at file position ~D~]."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Unmatched close parenthesis."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "after escape character"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "inside extended token"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "invalid constituent"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Suppresses most interpreting of the reader when T"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "The radix that Lisp reads numbers in."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "This function is just an fsm that recognizes numbers and symbols."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "impossible!"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "dot context error"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "too many dots"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "too many colons in ~S"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "after reading a colon"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "package ~S not found"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Use symbol anyway."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "The symbol ~S is not external in the ~A package."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Symbol ~S not found in the ~A package."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"For semi-external use: returns 3 values: the string for the token,\n"
+"   a flag for whether there was an escape char, and the position of any\n"
+"   package delimiter."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"For semi-external use: read an extended token with the first character\n"
+"  escaped.  Returns the string for the token."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "after escape"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"Holds the mapping of base to 'safe' number of digits to read for a fixnum."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Holds the largest fixnum power of the base for make-integer."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"Minimizes bignum-fixnum multiplies by reading a 'safe' number of digits, \n"
+"  then multiplying by a power of the base and adding."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"Fast bignum-reading interface.  Reads from stream S an integer in radix\n"
+"R.  If we find some kind of error (bad characters, EOF), then NIL is\n"
+"returned; otherwise the number.  Reads at least one digit, but may not get "
+"to\n"
+"the end of the stream."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Internal error in floating point reader."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Underflow"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Floating-point number not representable"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Invalid ratio: ~S/~S"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "No dispatch function defined for ~S."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"Causes char to become a dispatching macro character in readtable\n"
+"   (which defaults to the current readtable).  If the non-terminating-p\n"
+"   flag is set to T, the char will be non-terminating.  Make-dispatch-\n"
+"   macro-character returns T."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"Causes function to be called whenever the reader reads\n"
+"   disp-char followed by sub-char. Set-dispatch-macro-character\n"
+"   returns T."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "Dispatch Sub-Char must not be a decimal digit: ~S"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "~S is not a dispatch character."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"Returns the macro character function for sub-char under disp-char\n"
+"   or nil if there is no associated function."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "inside dispatch character"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "No dispatch table for dispatch char."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "A resource of string streams for Read-From-String."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"The characters of string are successively given to the lisp reader\n"
+"   and the lisp object built by the reader is returned.  Macro chars\n"
+"   will take effect."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid ""
+"Examine the substring of string delimited by start and end\n"
+"  (default to the beginning and end of the string)  It skips over\n"
+"  whitespace characters and then tries to parse an integer.  The\n"
+"  radix parameter must be between 2 and 36."
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "There are no digits in this string: ~S"
+msgstr ""
+
+#: target:code/reader.lisp
+msgid "There's junk in this string: ~S."
 msgstr ""
 
 #: target:code/backq.lisp
@@ -6927,6 +7475,57 @@ msgstr ""
 msgid "~S code location at ~D"
 msgstr ""
 
+#: target:code/query.lisp
+msgid ""
+"Y-OR-N-P prints the message, if any, and reads characters from *QUERY-IO*\n"
+"   until the user enters y or Y as an affirmative, or either n or N as a\n"
+"   negative answer.  It ignores preceding whitespace and asks again if you\n"
+"   enter any other characters."
+msgstr ""
+
+#: target:code/query.lisp
+msgid "Type \"y\" for yes or \"n\" for no. "
+msgstr ""
+
+#: target:code/query.lisp
+msgid ""
+"YES-OR-NO-P is similar to Y-OR-N-P, except that it clears the \n"
+"   input buffer, beeps, and uses READ-LINE to get the strings \n"
+"   YES or NO."
+msgstr ""
+
+#: target:code/query.lisp
+msgid "Type \"yes\" for yes or \"no\" for no. "
+msgstr ""
+
+#: target:code/rand-mt19937.lisp
+msgid ""
+"Generate an random state vector from the given SEED.  The seed can be\n"
+"  either an integer or a vector of (unsigned-byte 32)"
+msgstr ""
+
+#: target:code/rand-mt19937.lisp
+msgid ""
+"Make a random state object.  If STATE is not supplied, return a copy\n"
+"  of the default random state.  If STATE is a random state, then return a\n"
+"  copy of it.  If STATE is T then return a random state generated from\n"
+"  the universal time or /dev/urandom if available."
+msgstr ""
+
+#: target:code/rand-mt19937.lisp
+msgid "Argument is not a RANDOM-STATE, T or NIL: ~S"
+msgstr ""
+
+#: target:code/rand-mt19937.lisp
+msgid ""
+"Generate a uniformly distributed pseudo-random number between zero\n"
+"  and Arg.  State, if supplied, is the random state to use."
+msgstr ""
+
+#: target:code/rand-mt19937.lisp
+msgid "Argument is not a positive integer or a positive float: ~S"
+msgstr ""
+
 #: target:code/ntrace.lisp
 msgid ""
 "This is bound to the returned values when evaluating :BREAK-AFTER and\n"
@@ -7533,6 +8132,181 @@ msgstr ""
 msgid "\"~A\" is not a recognized time/date format."
 msgstr ""
 
+#: target:code/run-program.lisp
+msgid "Return any available status information on child processed. "
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "List of process structures for all active processes."
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid ""
+"Return the current status of process.  The result is one of :running,\n"
+"   :stopped, :exited, :signaled."
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "Wait for PROC to quit running for some reason.  Returns PROC."
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "TIOCPGRP ioctl failed: ~S"
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid ""
+"Hand SIGNAL to PROC.  If whom is :pid, use the kill Unix system call.  If\n"
+"   whom is :process-group, use the killpg Unix system call.  If whom is\n"
+"   :pty-process-group deliver the signal to whichever process group is "
+"currently\n"
+"   in the foreground."
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "Returns T if the process is still alive, NIL otherwise."
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid ""
+"Close all streams connected to PROC and stop maintaining the status slot."
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid ""
+"List of file descriptors to close when RUN-PROGRAM exits due to an error."
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid ""
+"List of file descriptors to close when RUN-PROGRAM returns in the parent."
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "List of handlers installed by RUN-PROGRAM."
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "Returns the master fd, the slave fd, and the name of the tty"
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "Could not find a pty."
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "Could not UNIX:UNIX-DUP ~D: ~A"
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid ""
+"RUN-PROGRAM creates a new process and runs the unix program in the\n"
+"   file specified by the simple-string PROGRAM.  ARGS are the standard\n"
+"   arguments that can be passed to a Unix program, for no arguments\n"
+"   use NIL (which means just the name of the program is passed as arg 0).\n"
+"\n"
+"   RUN-PROGRAM will either return NIL or a PROCESS structure.  See the CMU\n"
+"   Common Lisp Users Manual for details about the PROCESS structure.\n"
+"\n"
+"   The keyword arguments have the following meanings:\n"
+"     :env -\n"
+"        An A-LIST mapping keyword environment variables to simple-string\n"
+"	values.\n"
+"     :wait -\n"
+"        If non-NIL (default), wait until the created process finishes.  If\n"
+"        NIL, continue running Lisp until the program finishes.\n"
+"     :pty -\n"
+"        Either T, NIL, or a stream.  Unless NIL, the subprocess is establish"
+"ed\n"
+"	under a PTY.  If :pty is a stream, all output to this pty is sent to\n"
+"	this stream, otherwise the PROCESS-PTY slot is filled in with a stream\n"
+"	connected to pty that can read output and write input.\n"
+"     :input -\n"
+"        Either T, NIL, a pathname, a stream, or :STREAM.  If T, the standard"
+"\n"
+"	input for the current process is inherited.  If NIL, /dev/null\n"
+"	is used.  If a pathname, the file so specified is used.  If a stream,\n"
+"	all the input is read from that stream and send to the subprocess.  If\n"
+"	:STREAM, the PROCESS-INPUT slot is filled in with a stream that sends \n"
+"	its output to the process. Defaults to NIL.\n"
+"     :if-input-does-not-exist (when :input is the name of a file) -\n"
+"        can be one of:\n"
+"           :error - generate an error.\n"
+"           :create - create an empty file.\n"
+"           nil (default) - return nil from run-program.\n"
+"     :output -\n"
+"        Either T, NIL, a pathname, a stream, or :STREAM.  If T, the standard"
+"\n"
+"	output for the current process is inherited.  If NIL, /dev/null\n"
+"	is used.  If a pathname, the file so specified is used.  If a stream,\n"
+"	all the output from the process is written to this stream. If\n"
+"	:STREAM, the PROCESS-OUTPUT slot is filled in with a stream that can\n"
+"	be read to get the output. Defaults to NIL.\n"
+"     :if-output-exists (when :output is the name of a file) -\n"
+"        can be one of:\n"
+"           :error (default) - generates an error if the file already "
+"exists.\n"
+"           :supersede - output from the program supersedes the file.\n"
+"           :append - output from the program is appended to the file.\n"
+"           nil - run-program returns nil without doing anything.\n"
+"     :error and :if-error-exists - \n"
+"        Same as :output and :if-output-exists, except that :error can also "
+"be\n"
+"	specified as :output in which case all error output is routed to the\n"
+"	same place as normal output.\n"
+"     :status-hook -\n"
+"        This is a function the system calls whenever the status of the\n"
+"        process changes.  The function takes the process as an argument."
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "All args to program must be simple strings -- ~S."
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "No such program: ~S"
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "Could not fork child process: ~A"
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "Could not select on sub-process: ~A"
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "Could not read input from sub-process: ~A"
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "Could not open \"/dev/null\": ~A"
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "Could not create pipe: ~A"
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "Direction must be either :INPUT or :OUTPUT, not ~S"
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "Could not duplicate file descriptor: ~A"
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "Could not open a temporary file in /tmp"
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "Cound not create pipe: ~A"
+msgstr ""
+
+#: target:code/run-program.lisp
+msgid "Invalid option to run-program: ~S"
+msgstr ""
+
 #: target:code/foreign.lisp
 msgid "Could not create temporary file ~S: ~A"
 msgstr ""
@@ -7865,6 +8639,56 @@ msgstr ""
 
 #: target:code/internet.lisp
 msgid "network connection from ~D.~D.~D.~D:~D"
+msgstr ""
+
+#: target:code/remote.lisp
+msgid "AList of wire . remote-wait structs"
+msgstr ""
+
+#: target:code/remote.lisp
+msgid ""
+"Evaluates the given forms remotly. No values are returned, as the remote\n"
+"evaluation is asyncronus."
+msgstr ""
+
+#: target:code/remote.lisp
+msgid ""
+"Bind VARS to the multiple values of FORM (which is executed remotely). The\n"
+"forms in BODY are only executed if the remote function returned (as apposed\n"
+"to aborting due to a throw)."
+msgstr ""
+
+#: target:code/remote.lisp
+msgid "Remote server unwound"
+msgstr ""
+
+#: target:code/remote.lisp
+msgid ""
+"Execute the single form remotly. The value of the form is returned.\n"
+"  The optional form on-server-unwind is only evaluated if the server "
+"unwinds\n"
+"  instead of returning."
+msgstr ""
+
+#: target:code/remote.lisp
+msgid ""
+"Create a request server on the given port.  Whenever anyone connects to it,\n"
+"   call the given function with the newly created wire and the address of "
+"the\n"
+"   connector.  If the function returns NIL, the connection is destroyed;\n"
+"   otherwise, it is accepted.  This returns a manifestation of the server "
+"that\n"
+"   DESTROY-REQUEST-SERVER accepts to kill the request server."
+msgstr ""
+
+#: target:code/remote.lisp
+msgid "Quit accepting connections to the given request server."
+msgstr ""
+
+#: target:code/remote.lisp
+msgid ""
+"Connect to a remote request server addressed with the given host and port\n"
+"   pair.  This returns the created wire."
 msgstr ""
 
 #: target:code/multi-proc.lisp
