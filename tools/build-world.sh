@@ -57,9 +57,10 @@ $LISP "$@" -noinit -nositeinit <<EOF
 #+(or no-compiler runtime) (comf "target:compiler/generic/new-genesis")
 #-(or no-pcl runtime) (load "target:tools/pclcom")
 
+$SAVEPOT
+
 (setq *gc-verbose* t *interactive* t)
 
 (load "target:tools/worldbuild")
-$SAVEPOT
 (ext:quit)
 EOF
