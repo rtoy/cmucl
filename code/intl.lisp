@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.1.2.7 $
+;;; $Revision: 1.1.2.8 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,7 +23,7 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.7 2010/02/09 23:40:35 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.8 2010/02/10 01:52:28 rtoy Exp $")
 
 (in-package "INTL")
 
@@ -586,6 +586,8 @@
     (case (peek-char nil stream nil nil t)
       (#\" (let* ((*read-suppress* nil)
 		  (string (read stream t nil t)))
+	     #-runtime
+	     (note-translatable *default-domain* string)
 	     `(gettext ,string)))
       (#\N (read-char stream t nil t)
 	   (let* ((*read-suppress* nil)
