@@ -13898,6 +13898,18 @@ msgid ""
 "	              array-has-fill-pointer-p at runtime."
 msgstr ""
 
+#: target:compiler/constraint.lisp
+msgid "*** Unreachable code in constraint ~\n"
+"			  propagation...  Bug?"
+msgstr ""
+
+#: target:compiler/debug-dump.lisp
+msgid ""
+"Extract the namestring from FILE-INFO for the DEBUG-SOURCE.  \n"
+"Return FILE-INFO's untruename (e.g., target:foo) if it is absolute;\n"
+"otherwise the truename."
+msgstr ""
+
 #: target:compiler/aliencomp.lisp
 msgid "Slot is not constant, so cannot open code access."
 msgstr ""
@@ -13982,6 +13994,54 @@ msgstr ""
 
 #: target:compiler/aliencomp.lisp
 msgid "No unique move-arg-vop for moves in SC ~S."
+msgstr ""
+
+#: target:compiler/codegen.lisp
+msgid "Returns the number of bytes used by the code object header."
+msgstr ""
+
+#: target:compiler/codegen.lisp
+msgid ""
+"The size of the Name'd SB in the currently compiled component.  Useful\n"
+"  mainly for finding the size for allocating stack frames."
+msgstr ""
+
+#: target:compiler/codegen.lisp
+msgid ""
+"Return the TN that is used to hold the number stack frame-pointer in VOP's\n"
+"  function.  Returns NIL if no number stack frame was allocated."
+msgstr ""
+
+#: target:compiler/codegen.lisp
+msgid ""
+"Return the TN that is used to hold the number stack frame-pointer in the\n"
+"  function designated by 2env.  Returns NIL if no number stack frame was\n"
+"  allocated."
+msgstr ""
+
+#: target:compiler/codegen.lisp
+msgid ""
+"Return the TN used for passing the return PC in a local call to the function"
+"\n"
+"  designated by 2env."
+msgstr ""
+
+#: target:compiler/codegen.lisp
+msgid ""
+"Set to NIL to inhibit assembly-level optimization.  For compiler debugging,\n"
+"  rather than policy control."
+msgstr ""
+
+#: target:compiler/codegen.lisp
+msgid "In the ~A segment:~%"
+msgstr ""
+
+#: target:compiler/codegen.lisp
+msgid "~|~%Assembly code for ~S~2%"
+msgstr ""
+
+#: target:compiler/codegen.lisp
+msgid "Missing generator for ~S.~%"
 msgstr ""
 
 #: target:compiler/byte-comp.lisp

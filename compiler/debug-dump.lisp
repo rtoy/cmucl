@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.49.2.1 2010/02/08 17:15:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.49.2.2 2010/02/10 21:50:39 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -282,7 +282,7 @@
 
 
 (defun namestring-for-debug-source (file-info)
-  "Extract the namestring from FILE-INFO for the DEBUG-SOURCE.  
+  _N"Extract the namestring from FILE-INFO for the DEBUG-SOURCE.  
 Return FILE-INFO's untruename (e.g., target:foo) if it is absolute;
 otherwise the truename."
   (let* ((untruename (file-info-untruename file-info))
