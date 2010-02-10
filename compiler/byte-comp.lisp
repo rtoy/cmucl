@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.49.8.1 2010/02/08 17:15:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.49.8.2 2010/02/10 17:38:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -233,7 +233,7 @@
 
 (defun xop-index-or-lose (name)
   (or (position name *xop-names* :test #'eq)
-      (error "Unknown XOP ~S" name)))
+      (error _"Unknown XOP ~S" name)))
 
 
 (defstruct inline-function-info
@@ -298,7 +298,7 @@
   (let ((info (gethash function *inline-function-table*)))
     (if info
 	(inline-function-info-number info)
-	(error "Unknown inline function: ~S" function))))
+	(error _"Unknown inline function: ~S" function))))
 
 
 ;;;; Byte-code specific transforms:
@@ -1055,7 +1055,7 @@
 
 (defun closure-position (var env)
   (or (position var (environment-closure env))
-      (error "Can't find ~S" var)))
+      (error _"Can't find ~S" var)))
 
 (defun output-ref-lambda-var (segment var env
 				     &optional (indirect-value-cells t))
@@ -2142,8 +2142,8 @@
 ;;;    Generate trace-file output for the byte compiler back-end.
 ;;;
 (defun describe-byte-component (component xeps segment *standard-output*)
-  (format t "~|~%;;;; Byte component ~S~2%" (component-name component))
-  (format t ";;; Functions:~%")
+  (format t _"~|~%;;;; Byte component ~S~2%" (component-name component))
+  (format t _";;; Functions:~%")
   (dolist (fun (component-lambdas component))
     (when (leaf-name fun)
       (let ((info (leaf-info fun)))
@@ -2152,7 +2152,7 @@
 		  (new-assem:label-position (byte-lambda-info-label info))
 		  (leaf-name fun))))))
 
-  (format t "~%;;;Disassembly:~2%")
+  (format t _"~%;;;Disassembly:~2%")
   (collect ((eps)
 	    (chunks))
     (dolist (x xeps)
@@ -2276,7 +2276,7 @@
 	     (get-constant (index)
 	       (if (< -1 index (length constants))
 		   (aref constants index)
-		   "<bogus index>")))
+		   _"<bogus index>")))
       (loop
 	(unless (< index bytes)
 	  (return))
@@ -2291,7 +2291,7 @@
 		       (logior (ash (next-byte) 16)
 			       (ash (next-byte) 8)
 			       (next-byte))))))
-	    (note "Entry point, frame-size=~D~%" frame-size)))
+	    (note _"Entry point, frame-size=~D~%" frame-size)))
 
 	(newline)
 	(let ((byte (next-byte)))
@@ -2304,81 +2304,81 @@
 	    (dispatch
 	     ((#b11110000 #b00000000)
 	      (let ((op (extract-4-bit-op byte)))
-		(note "push-local ~D" op)))
+		(note _"push-local ~D" op)))
 	     ((#b11110000 #b00010000)
 	      (let ((op (extract-4-bit-op byte)))
-		(note "push-arg ~D" op)))
+		(note _"push-arg ~D" op)))
 	     ((#b11110000 #b00100000)
 	      (let ((*print-level* 3)
 		    (*print-lines* 2))
-		(note "push-const ~S" (get-constant (extract-4-bit-op byte)))))
+		(note _"push-const ~S" (get-constant (extract-4-bit-op byte)))))
 	     ((#b11110000 #b00110000)
 	      (let ((op (extract-4-bit-op byte))
 		    (*print-level* 3)
 		    (*print-lines* 2))
-		(note "push-sys-const ~S"
+		(note _"push-sys-const ~S"
 		      (svref system-constants op))))
 	     ((#b11110000 #b01000000)
 	      (let ((op (extract-4-bit-op byte)))
-		(note "push-int ~D" op)))
+		(note _"push-int ~D" op)))
 	     ((#b11110000 #b01010000)
 	      (let ((op (extract-4-bit-op byte)))
-		(note "push-neg-int ~D" (- (1+ op)))))
+		(note _"push-neg-int ~D" (- (1+ op)))))
 	     ((#b11110000 #b01100000)
 	      (let ((op (extract-4-bit-op byte)))
-		(note "pop-local ~D" op)))
+		(note _"pop-local ~D" op)))
 	     ((#b11110000 #b01110000)
 	      (let ((op (extract-4-bit-op byte)))
-		(note "pop-n ~D" op)))
+		(note _"pop-n ~D" op)))
 	     ((#b11110000 #b10000000)
 	      (let ((op (extract-3-bit-op byte)))
-		(note "~:[~;named-~]call, ~D args"
+		(note _"~:[~;named-~]call, ~D args"
 		      (logbitp 3 byte) op)))
 	     ((#b11110000 #b10010000)
 	      (let ((op (extract-3-bit-op byte)))
-		(note "~:[~;named-~]tail-call, ~D args"
+		(note _"~:[~;named-~]tail-call, ~D args"
 		      (logbitp 3 byte) op)))
 	     ((#b11110000 #b10100000)
 	      (let ((op (extract-3-bit-op byte)))
-		(note "~:[~;named-~]multiple-call, ~D args"
+		(note _"~:[~;named-~]multiple-call, ~D args"
 		      (logbitp 3 byte) op)))
 	     ((#b11111000 #b10110000)
 	      ;; local call
 	      (let ((op (extract-3-bit-op byte))
 		    (target (extract-24-bits)))
-		(note "local call ~D, ~D args" target op)))
+		(note _"local call ~D, ~D args" target op)))
 	     ((#b11111000 #b10111000)
 	      ;; local tail-call
 	      (let ((op (extract-3-bit-op byte))
 		    (target (extract-24-bits)))
-		(note "local tail-call ~D, ~D args" target op)))
+		(note _"local tail-call ~D, ~D args" target op)))
 	     ((#b11111000 #b11000000)
 	      ;; local-multiple-call
 	      (let ((op (extract-3-bit-op byte))
 		    (target (extract-24-bits)))
-		(note "local multiple-call ~D, ~D args" target op)))
+		(note _"local multiple-call ~D, ~D args" target op)))
 	     ((#b11111000 #b11001000)
 	      ;; return
 	      (let ((op (extract-3-bit-op byte)))
-		(note "return, ~D vals" op)))
+		(note _"return, ~D vals" op)))
 	     ((#b11111110 #b11010000)
 	      ;; branch
-	      (note "branch ~D" (extract-branch-target byte)))
+	      (note _"branch ~D" (extract-branch-target byte)))
 	     ((#b11111110 #b11010010)
 	      ;; if-true
-	      (note "if-true ~D" (extract-branch-target byte)))
+	      (note _"if-true ~D" (extract-branch-target byte)))
 	     ((#b11111110 #b11010100)
 	      ;; if-false
-	      (note "if-false ~D" (extract-branch-target byte)))
+	      (note _"if-false ~D" (extract-branch-target byte)))
 	     ((#b11111110 #b11010110)
 	      ;; if-eq
-	      (note "if-eq ~D" (extract-branch-target byte)))
+	      (note _"if-eq ~D" (extract-branch-target byte)))
 	     ((#b11111000 #b11011000)
 	      ;; XOP
 	      (let* ((low-3-bits (extract-3-bit-op byte))
 		     (xop (nth (if (eq low-3-bits :var) (next-byte) low-3-bits)
 			       *xop-names*)))
-		(note "xop ~A~@[ ~D~]"
+		(note _"xop ~A~@[ ~D~]"
 		      xop
 		      (case xop
 			((catch go unwind-protect)
@@ -2388,6 +2388,6 @@
 			 
 	     ((#b11100000 #b11100000)
 	      ;; inline
-	      (note "inline ~A"
+	      (note _"inline ~A"
 		    (inline-function-info-function
 		     (svref *inline-functions* (ldb (byte 5 0) byte))))))))))))

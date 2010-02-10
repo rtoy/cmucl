@@ -73,6 +73,10 @@ msgstr ""
 msgid "_@ is a reserved reader macro prefix."
 msgstr ""
 
+#: target:code/intl.lisp
+msgid "~&Dumping ~D messages for domain ~S~%"
+msgstr ""
+
 #: target:code/struct.lisp
 msgid "The size of a stream in-buffer."
 msgstr ""
@@ -1226,7 +1230,7 @@ msgstr ""
 msgid "Dimension is not a non-negative fixnum: ~S"
 msgstr ""
 
-#: target:code/alieneval.lisp
+#: target:compiler/aliencomp.lisp target:code/alieneval.lisp
 msgid "Unknown size: ~S"
 msgstr ""
 
@@ -1388,7 +1392,7 @@ msgstr ""
 msgid "~S cannot be cast."
 msgstr ""
 
-#: target:code/alieneval.lisp
+#: target:compiler/aliencomp.lisp target:code/alieneval.lisp
 msgid "Cannot cast to alien type ~S"
 msgstr ""
 
@@ -13780,5 +13784,319 @@ msgstr ""
 
 #: target:code/macros.lisp
 msgid "Ignoring unknown option: ~S."
+msgstr ""
+
+#: target:compiler/backend.lisp
+msgid "Machine specific support routine ~S ~\n"
+"				  undefined for ~S"
+msgstr ""
+
+#: target:compiler/backend.lisp
+msgid "Unknown VM support routine: ~A"
+msgstr ""
+
+#: target:compiler/backend.lisp
+msgid "The backend for the machine we are running on. Do not change this."
+msgstr ""
+
+#: target:compiler/backend.lisp
+msgid "The backend we are attempting to compile."
+msgstr ""
+
+#: target:compiler/backend.lisp
+msgid "The backend we are using to compile with."
+msgstr ""
+
+#: target:compiler/backend.lisp
+msgid "Compute the *FEATURES* list to use with BACKEND."
+msgstr ""
+
+#: target:compiler/backend.lisp
+msgid ""
+"Same as EXT:FEATUREP, except use the features found in *TARGET-BACKEND*."
+msgstr ""
+
+#: target:compiler/backend.lisp
+msgid "Same as EXT:FEATUREP, except use the features found in *BACKEND*."
+msgstr ""
+
+#: target:compiler/backend.lisp
+msgid ""
+"Same as EXT:FEATUREP, except use the features found in *NATIVE-BACKEND*."
+msgstr ""
+
+#: target:compiler/bit-util.lisp
+msgid "local-tn-limit not a vm:word-bits multiple."
+msgstr ""
+
+#: target:compiler/alloc.lisp
+msgid ""
+"defallocators {((name lambda-list [real-lambda-list]) thread-slot\n"
+"                   (deinit-form*)\n"
+"		   (reinit-form*))}*"
+msgstr ""
+
+#: target:compiler/alloc.lisp
+msgid "~S already deallocated!"
+msgstr ""
+
+#: target:compiler/array-tran.lisp
+msgid "Element-Type is not constant."
+msgstr ""
+
+#: target:compiler/array-tran.lisp
+msgid "Cannot open-code creation of ~S"
+msgstr ""
+
+#: target:compiler/array-tran.lisp
+msgid "Default initial element ~s is not a ~s."
+msgstr ""
+
+#: target:compiler/array-tran.lisp
+msgid "Element-type not constant; cannot open code array creation"
+msgstr ""
+
+#: target:compiler/array-tran.lisp
+msgid "Dimension list not constant; cannot open code array creation"
+msgstr ""
+
+#: target:compiler/array-tran.lisp
+msgid "Dimension list contains something other than an integer: ~S"
+msgstr ""
+
+#: target:compiler/array-tran.lisp
+msgid "Array rank not known at compile time: ~S"
+msgstr ""
+
+#: target:compiler/array-tran.lisp
+msgid "Axis not constant."
+msgstr ""
+
+#: target:compiler/array-tran.lisp
+msgid "Array dimensions unknown, must call array-dimension at runtime."
+msgstr ""
+
+#: target:compiler/array-tran.lisp
+msgid "Array has dimensions ~S, ~D is too large."
+msgstr ""
+
+#: target:compiler/array-tran.lisp
+msgid "Can't tell if array is simple."
+msgstr ""
+
+#: target:compiler/array-tran.lisp
+msgid "Vector length unknown, must call length at runtime."
+msgstr ""
+
+#: target:compiler/array-tran.lisp
+msgid "Can't tell the rank at compile time."
+msgstr ""
+
+#: target:compiler/array-tran.lisp
+msgid ""
+"Array type ambiguous; must call ~\n"
+"	              array-has-fill-pointer-p at runtime."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "Slot is not constant, so cannot open code access."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "~S doesn't have a slot named ~S"
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "Too many indices for pointer deref: ~D"
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "Unknown element size."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "Unknown element alignment."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "Incorrect number of indices."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "Element size unknown."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "Element alignment unknown."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "~S not either a pointer or array type."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "Info not constant; can't open code."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "Local Alien Info isn't constant?"
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "Aliens of type ~S cannot be represented immediately."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "This should be dead-code eleminated."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "This shouldn't happen."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "Alien type not constant; cannot open code."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid ""
+"Could not optimize away %SAP-ALIEN: forced to do runtime ~@\n"
+"	    allocation of alien-value structure."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "Type not constant at compile time; can't open code."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "Can't tell function type at compile time."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "Wrong number of arguments.  Expected ~D, got ~D."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "Something is broken."
+msgstr ""
+
+#: target:compiler/aliencomp.lisp
+msgid "No unique move-arg-vop for moves in SC ~S."
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "Unknown XOP ~S"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "Unknown inline function: ~S"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "Can't find ~S"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "~|~%;;;; Byte component ~S~2%"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid ";;; Functions:~%"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "~%;;;Disassembly:~2%"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "<bogus index>"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "Entry point, frame-size=~D~%"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "push-local ~D"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "push-arg ~D"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "push-const ~S"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "push-sys-const ~S"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "push-int ~D"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "push-neg-int ~D"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "pop-local ~D"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "pop-n ~D"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "~:[~;named-~]call, ~D args"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "~:[~;named-~]tail-call, ~D args"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "~:[~;named-~]multiple-call, ~D args"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "local call ~D, ~D args"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "local tail-call ~D, ~D args"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "local multiple-call ~D, ~D args"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "return, ~D vals"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "branch ~D"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "if-true ~D"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "if-false ~D"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "if-eq ~D"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "xop ~A~@[ ~D~]"
+msgstr ""
+
+#: target:compiler/byte-comp.lisp
+msgid "inline ~A"
 msgstr ""
 

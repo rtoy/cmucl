@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alloc.lisp,v 1.14.46.1 2010/02/08 17:15:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alloc.lisp,v 1.14.46.2 2010/02/10 17:38:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,7 +45,7 @@
 ;;;
 #-gencgc
 (defmacro defallocators (&rest specs)
-  "defallocators {((name lambda-list [real-lambda-list]) thread-slot
+  _N"defallocators {((name lambda-list [real-lambda-list]) thread-slot
                    (deinit-form*)
 		   (reinit-form*))}*"
   (collect ((hook-forms)
@@ -77,7 +77,7 @@
 		  ,@(third spec)
 		  #+nil
 		  (when (find-in #',slot structure ,var-name)
-		    (error "~S already deallocated!" structure))
+		    (error _"~S already deallocated!" structure))
 		  (setf (,slot structure) ,var-name)
 		  (setq ,var-name structure)))
 
@@ -96,7 +96,7 @@
 
 #+gencgc
 (defmacro defallocators (&rest specs)
-  "defallocators {((name lambda-list [real-lambda-list]) thread-slot
+  _N"defallocators {((name lambda-list [real-lambda-list]) thread-slot
                    (deinit-form*)
 		   (reinit-form*))}*"
   (collect ((forms))
