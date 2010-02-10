@@ -10128,7 +10128,7 @@ msgstr ""
 msgid "~A was compiled for a ~A, but this is a ~A"
 msgstr ""
 
-#: target:code/load.lisp
+#: target:compiler/dfo.lisp target:code/load.lisp
 msgid "Top-Level Form"
 msgstr ""
 
@@ -14118,6 +14118,776 @@ msgstr ""
 msgid "local-tn-limit not a vm:word-bits multiple."
 msgstr ""
 
+#: target:compiler/disassem.lisp
+msgid ""
+"The width of the column in which instruction-names are printed.\n"
+"  NIL means use the default.  A value of zero gives the effect of not\n"
+"  aligning the arguments at all."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "The column in which end-of-line comments for notes are started."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Specify global disassembler params for C:*TARGET-BACKEND*.\n"
+"  Keyword arguments include:\n"
+"      \n"
+"  :INSTRUCTION-ALIGNMENT number\n"
+"      Minimum alignment of instructions, in bits.\n"
+"      \n"
+"  :ADDRESS-SIZE number\n"
+"      Size of a machine address, in bits.\n"
+"      \n"
+"  :OPCODE-COLUMN-WIDTH\n"
+"      Width of the column used for printing the opcode portion of the\n"
+"      instruction, or NIL to use the default."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"DEFINE-ARGUMENT-TYPE Name {Key Value}*\n"
+"  Define a disassembler argument type NAME (which can then be referenced in\n"
+"  another argument definition using the :TYPE keyword argument).  Keyword\n"
+"  arguments are:\n"
+"\n"
+"  :SIGN-EXTEND boolean\n"
+"      If non-NIL, the raw value of this argument is sign-extended.\n"
+"\n"
+"  :TYPE arg-type-name\n"
+"      Inherit any properties of given argument-type.\n"
+"\n"
+"  :PREFILTER function\n"
+"      A function which is called (along with all other prefilters, in the\n"
+"      order that their arguments appear in the instruction- format) before\n"
+"      any printing is done, to filter the raw value.  Any uses of READ-"
+"SUFFIX\n"
+"      must be done inside a prefilter.\n"
+"      \n"
+"  :PRINTER function-string-or-vector\n"
+"      A function, string, or vector which is used to print an argument of\n"
+"      this type.\n"
+"      \n"
+"  :USE-LABEL \n"
+"      If non-NIL, the value of an argument of this type is used as an\n"
+"      address, and if that address occurs inside the disassembled code, it "
+"is\n"
+"      replaced by a label.  If this is a function, it is called to filter "
+"the\n"
+"      value."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"DEFINE-INSTRUCTION-FORMAT (Name Length {Format-Key Value}*) Arg-Def*\n"
+"  Define an instruction format NAME for the disassembler's use.  LENGTH is\n"
+"  the length of the format in bits.\n"
+"  Possible FORMAT-KEYs:\n"
+"\n"
+"  :INCLUDE other-format-name\n"
+"      Inherit all arguments and properties of the given format.  Any\n"
+"      arguments defined in the current format definition will either modify\n"
+"      the copy of an existing argument (keeping in the same order with\n"
+"      respect to when pre-filter's are called), if it has the same name as\n"
+"      one, or be added to the end.\n"
+"  :DEFAULT-PRINTER printer-list\n"
+"      Use the given PRINTER-LIST as a format to print any instructions of\n"
+"      this format when they don't specify something else.\n"
+"\n"
+"  Each ARG-DEF defines one argument in the format, and is of the form\n"
+"    (Arg-Name {Arg-Key Value}*)\n"
+"\n"
+"  Possible ARG-KEYs (the values are evaulated unless otherwise specified):\n"
+"  \n"
+"  :FIELDS byte-spec-list\n"
+"      The argument takes values from these fields in the instruction.  If\n"
+"      the list is of length one, then the corresponding value is supplied "
+"by\n"
+"      itself; otherwise it is a list of the values.  The list may be NIL.\n"
+"  :FIELD byte-spec\n"
+"      The same as :FIELDS (list byte-spec).\n"
+"\n"
+"  :VALUE value\n"
+"      If the argument only has one field, this is the value it should have,\n"
+"      otherwise it's a list of the values of the individual fields.  This "
+"can\n"
+"      be overridden in an instruction-definition or a format definition\n"
+"      including this one by specifying another, or NIL to indicate that "
+"it's\n"
+"      variable.\n"
+"\n"
+"  :SIGN-EXTEND boolean\n"
+"      If non-NIL, the raw value of this argument is sign-extended,\n"
+"      immediately after being extracted from the instruction (before any\n"
+"      prefilters are run, for instance).  If the argument has multiple\n"
+"      fields, they are all sign-extended.\n"
+"\n"
+"  :TYPE arg-type-name\n"
+"      Inherit any properties of the given argument-type.\n"
+"\n"
+"  :PREFILTER function\n"
+"      A function which is called (along with all other prefilters, in the\n"
+"      order that their arguments appear in the instruction-format) before\n"
+"      any printing is done, to filter the raw value.  Any uses of READ-"
+"SUFFIX\n"
+"      must be done inside a prefilter.\n"
+"\n"
+"  :PRINTER function-string-or-vector\n"
+"      A function, string, or vector which is used to print this argument.\n"
+"      \n"
+"  :USE-LABEL \n"
+"      If non-NIL, the value of this argument is used as an address, and if\n"
+"      that address occurs inside the disassembled code, it is replaced by a\n"
+"      label.  If this is a function, it is called to filter the value."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "~d bits is not a byte-multiple"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Returns non-NIL if ADDRESS is aligned on a SIZE byte boundary."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Return ADDRESS aligned *upward* to a SIZE byte boundary."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"If CAR is eq to the car of OLD-CONS and CDR is eq to the CDR, return\n"
+"  OLD-CONS, otherwise return (cons CAR CDR)."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"A simple (one list arg) mapcar that avoids consing up a new list\n"
+"  as long as the results of calling FUN on the elements of LIST are\n"
+"  eq to the original."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Can't dump functions, so function ref form must be quoted: ~s"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+#, fuzzy
+msgid "Unknown argument ~s"
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/disassem.lisp
+msgid "~s must not have multiple values"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Unknown arg-form kind ~s"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Cannot label a multiple-field argument ~\n"
+"\t\t\t      unless using a function: ~s"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Bogus!  Can't use the :printed value of an arg!"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"number of constants doesn't match number of fields ~\n"
+"\t\t\t  in: (~s :constant~{ ~s~})"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Can't compare differently sized fields: ~\n"
+"\t\t          (~s :same-as ~s)"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Bogus test-form: ~s"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Returns the first non-keyword symbol in a depth-first search of TREE."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Illegal printer: ~s"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Unknown printer element: ~s"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "First arg to :USING must be a string or #'function"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "No suitable choice found in ~s"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Returns a version of the disassembly-template PRINTER with compile-time\n"
+"  tests (e.g. :constant without a value), and any :CHOOSE operators "
+"resolved\n"
+"  properly for the args ARGS.  (:CHOOSE Sub*) simply returns the first Sub "
+"in\n"
+"  which every field reference refers to a valid arg."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "~&; Using cached function ~s~%"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "~&; Making new function ~s~%"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Unknown argument type: ~s"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"~@<In arg ~s:  ~3i~:_~\n"
+"          Can't specify fields except using DEFINE-INSTRUCTION-FORMAT.~:>"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"~@<In arg ~s:  ~3i~:_~\n"
+"\t\t\t\t     Field ~s doesn't fit in an ~\n"
+"\t\t\t\t     instruction-format ~d bits wide.~:>"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Generate a form to specify global disassembler params.  See the\n"
+"  documentation for SET-DISASSEM-PARAMS for more info."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Generate a form to define a disassembler argument type.  See\n"
+"  DEFINE-ARGUMENT-TYPE for more info."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Generate a form to define an instruction format.  See\n"
+"  DEFINE-INSTRUCTION-FORMAT for more info."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Field ~s in arg ~s overlaps some other field"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Unknown instruction format ~s"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Returns non-NIL if the instruction SPECIAL is a more specific version of\n"
+"  GENERAL (i.e., the same instruction, but with more constraints)."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+#, fuzzy
+msgid ""
+"Returns an integer corresponding to the specifivity of the instruction INST."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Order the list of instructions INSTS with more specific (more constant\n"
+"  bits, or same-as argument constains) ones first.  Returns the ordered list."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Instructions either aren't related or conflict in some way:~% ~s"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Given a list of instructions INSTS, Sees if one of these instructions is a\n"
+"  more general form of all the others, in which case they are put into its\n"
+"  specializers list, and it is returned.  Otherwise an error is signaled."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Multiple specializing masters: ~s"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Returns non-NIL if all constant-bits in INST match CHUNK."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Given an instruction object, INST, and a bit-pattern, CHUNK, picks the\n"
+"  most specific instruction on INST's specializer list who's constraints "
+"are\n"
+"  met by CHUNK.  If none do, then INST is returned."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Returns the instruction object within INST-SPACE corresponding to the\n"
+"  bit-pattern CHUNK, or NIL if there isn't one."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Returns an instruction-space object corresponding to the list of\n"
+"  instructions INSTS.  If the optional parameter INITIAL-MASK is supplied, "
+"only\n"
+"  bits it has set are used."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Prints a nicely formatted version of INST-SPACE."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+#, fuzzy
+msgid "Print the inst space for the specified backend"
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/disassem.lisp
+msgid "Converts a word-offset NUM to a byte-offset."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Converts a byte-offset NUM to a word-offset."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Get the value of the property called NAME in DSTATE.  Also setf'able."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+#, fuzzy
+msgid "Returns the absolute address of the current instruction in DSTATE."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/disassem.lisp
+#, fuzzy
+msgid "Returns the absolute address of the next instruction in DSTATE."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Offset of FUNCTION from the start of its code-component's instruction area."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Offset of FUNCTION from the start of its code-component."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Returns the length of the instruction area in CODE-COMPONENT."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Returns the address of the instruction area in CODE-COMPONENT."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Returns the first function in CODE-COMPONENT."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Possible ~A header word"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Print the function-header (entry-point) pseudo-instruction at the current\n"
+"  location in DSTATE to STREAM."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Iterate through the instructions in SEGMENT, calling FUNCTION\n"
+"  for each instruction, with arguments of CHUNK, STREAM, and DSTATE."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Make an initial non-printing disassembly pass through DSTATE, noting any\n"
+"  addresses that are referenced by instructions in this segment."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"If any labels in DSTATE have been added since the last call to this\n"
+"  function, give them label-numbers, enter them in the hash-table, and make\n"
+"  sure the label list is in sorted order."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+#, fuzzy
+msgid "Get the instruction-space from PARAMS, creating it if necessary."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Print the current address in DSTATE to STREAM, plus any labels that\n"
+"  correspond to it, and leave the cursor in the instruction column."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Print a newline to STREAM, inserting any pending notes in DSTATE as\n"
+"  end-of-line comments.  If there is more than one note, a separate line\n"
+"  will be used for each one."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Disassemble NUM bytes to STREAM as simple `BYTE' instructions"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Disassemble NUM machine-words to STREAM as simple `WORD' instructions"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Make a disassembler-state object."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Return a memory segment located at the system-area-pointer returned by\n"
+"  SAP-MAKER and LENGTH bytes long in the disassem-state object DSTATE.\n"
+"  Optional keyword arguments include :VIRTUAL-LOCATION (by default the same "
+"as\n"
+"  the address), :DEBUG-FUNCTION, :SOURCE-FORM-CACHE (a source-form-cache\n"
+"  object), and :HOOKS (a list of offs-hook objects)."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Code-header ~s: size: ~s, trace-table-offset: ~s~%"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Fun-header ~s at offset ~d (words): ~s~a => ~s~%"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "The source file ~s no longer seems to exist"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "No start positions map"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Source file ~s has been modified; ~@\n"
+"\t\t\t\t\t Using form offset instead of file index"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Bogus form-number in form!  The source file has probably ~@\n"
+"\t\t  been changed too much to cope with"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Return the vector of debug-variables currently associated with DSTATE."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Given the OFFSET of a location within the location-group called LG-NAME,\n"
+"  see if there's a current mapping to a source variable in DSTATE, and if "
+"so,\n"
+"  return the offset of that variable in the current debug-variable vector."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Return a new vector which has the same contents as the old one VEC, plus\n"
+"  new cells (for a total size of NEW-LEN).  The additional elements are\n"
+"  initailized to INITIAL-ELEMENT."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Returns a STORAGE-INFO struction describing the object-to-source\n"
+"  variable mappings from DEBUG-FUNCTION."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ";;; At offset ~d: ~s~%"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ";;; SET: ~s[~d]~%"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Add hooks to track to track the source code in SEGMENT during\n"
+"  disassembly.  SFCACHE can be either NIL or it can be a SOURCE-FORM-CACHE\n"
+"  structure, in which case it is used to cache forms from files."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "No-arg-parsing entry point"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "~s entry point"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Return the PC of FUNCTION's header."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "If non-NIL, disassemble flets/labels too"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Returns a list of the segments of memory containing machine code\n"
+"  instructions for FUNCTION."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Returns a list of the segments of memory containing machine code\n"
+"  instructions for the code-component CODE.  If START-OFFS and/or LENGTH is\n"
+"  supplied, only that part of the code-segment is used (but these are\n"
+"  constrained to lie within the code-segment)."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Return the address of the instructions for function and its length.\n"
+"  The length is computed using a heuristic, and so may not be accurate."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Returns two values:  the amount by which the last instruction in the\n"
+"  segment goes past the end of the segment, and the offset of the end of "
+"the\n"
+"  segment from the beginning of that instruction.  If all instructions fit\n"
+"  perfectly, this will return 0 and 0."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Computes labels for all the memory segments in SEGLIST and adds them to\n"
+"  DSTATE.  It's important to call this function with all the segments "
+"you're\n"
+"  interested in, so it can find references from one to another."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Disassemble the machine code instructions in SEGMENT to STREAM."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Disassemble the machine code instructions in each memory segment in\n"
+"  SEGMENTS in turn to STREAM."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Disassemble the machine code instructions for FUNCTION."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Cannot compile a lexical closure"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Can't make a compiled function from ~S"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Disassemble the machine code associated with OBJECT, which can be a\n"
+"  function, a lambda expression, or a symbol with a function definition.  "
+"If\n"
+"  it is not already compiled, the compiler is called to produce something "
+"to\n"
+"  disassemble."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Disassembles the given area of memory starting at ADDRESS and LENGTH long.\n"
+"  Note that if CODE-COMPONENT is NIL and this memory could move during a "
+"GC,\n"
+"  you'd better disable it around the call to this function."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid " Address ~x not in the code component ~s."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Disassemble the machine code instructions associated with\n"
+"  CODE-COMPONENT (this may include multiple entry points)."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Disassemble the machine code instructions associated with\n"
+"  ASSEM-SEGMENT (of type new-assem:segment)."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"An alist of (SYMBOL-SLOT-OFFSET . ACCESS-FUNCTION-NAME) for slots in a\n"
+"symbol object that we know about."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Given ADDRESS, try and figure out if which slot of which symbol is being\n"
+"  refered to.  Of course we can just give up, so it's not a big deal...\n"
+"  Returns two values, the symbol and the name of the access function of the\n"
+"  slot."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Given a BYTE-OFFSET from NIL, try and figure out if which slot of which\n"
+"  symbol is being refered to.  Of course we can just give up, so it's not a "
+"big\n"
+"  deal...  Returns two values, the symbol and the access function."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+#, fuzzy
+msgid "Returns the lisp object located BYTE-OFFSET from NIL."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Returns two values; the lisp-object located at BYTE-OFFSET in the constant\n"
+"  area of the code-object in the current segment and T, or NIL and NIL if\n"
+"  there is no code-object in the current segment."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid "Build an address-name hash-table from the name-address hash"
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Returns the name of the primitive lisp assembler routine or foreign\n"
+"  symbol located at ADDRESS, or NIL if there isn't one."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Store NOTE (which can be either a string or a function with a single\n"
+"  stream argument) to be printed as an end-of-line comment after the "
+"current\n"
+"  instruction is disassembled."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Store a note about the lisp constant located BYTE-OFFSET bytes from the\n"
+"  current code-component, to be printed as an end-of-line comment after the\n"
+"  current instruction is disassembled."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"Store a note about the lisp constant located at ADDR in the\n"
+"  current code-component, to be printed as an end-of-line comment after the\n"
+"  current instruction is disassembled."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"If the memory address located NIL-BYTE-OFFSET bytes from the constant NIL\n"
+"  is a valid slot in a symbol, store a note describing which symbol and "
+"slot,\n"
+"  to be printed as an end-of-line comment after the current instruction is\n"
+"  disassembled.  Returns non-NIL iff a note was recorded."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"If the memory address located NIL-BYTE-OFFSET bytes from the constant NIL\n"
+"  is a valid lisp object, store a note describing which symbol and slot, to\n"
+"  be printed as an end-of-line comment after the current instruction is\n"
+"  disassembled.  Returns non-NIL iff a note was recorded."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"If ADDRESS is the address of a primitive assembler routine or\n"
+"  foreign symbol, store a note describing which one, to be printed as\n"
+"  an end-of-line comment after the current instruction is disassembled.\n"
+"  Returns non-NIL iff a note was recorded.  If NOTE-ADDRESS-P is non-NIL, a\n"
+"  note of the address is also made."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"If NIL-BYTE-OFFSET is the offset of static function, store a note\n"
+"  describing which one, to be printed as an end-of-line comment after\n"
+"  the current instruction is disassembled.  Returns non-NIL iff a note\n"
+"  was recorded."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"If there's a valid mapping from OFFSET in the storage class SC-NAME to a\n"
+"  source variable, make a note of the source-variable name, to be printed "
+"as\n"
+"  an end-of-line comment after the current instruction is disassembled.\n"
+"  Returns non-NIL iff a note was recorded."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"If there's a valid mapping from OFFSET in the storage-base called SB-NAME\n"
+"  to a source variable, make a note equating ASSOC-WITH with the\n"
+"  source-variable name, to be printed as an end-of-line comment after the\n"
+"  current instruction is disassembled.  Returns non-NIL iff a note was\n"
+"  recorded."
+msgstr ""
+
+#: target:compiler/disassem.lisp
+msgid ""
+"When called from an error break instruction's :DISASSEM-CONTROL (or\n"
+"  :DISASSEM-PRINTER) function, will correctly deal with printing the\n"
+"  arguments to the break.\n"
+"\n"
+"  ERROR-PARSE-FUN should be a function that accepts:\n"
+"    1) a SYSTEM-AREA-POINTER\n"
+"    2) a BYTE-OFFSET from the SAP to begin at\n"
+"    3) optionally, LENGTH-ONLY, which if non-NIL, means to only return\n"
+"       the byte length of the arguments (to avoid unnecessary consing)\n"
+"  It should read information from the SAP starting at BYTE-OFFSET, and "
+"return\n"
+"  four values:\n"
+"    1) the error number\n"
+"    2) the total length, in bytes, of the information\n"
+"    3) a list of SC-OFFSETs of the locations of the error parameters\n"
+"    4) a list of the length (as read from the SAP), in bytes, of each of "
+"the\n"
+"       return-values."
+msgstr ""
+
 #: target:compiler/alloc.lisp
 msgid ""
 "defallocators {((name lambda-list [real-lambda-list]) thread-slot\n"
@@ -14335,6 +15105,141 @@ msgstr ""
 
 #: target:compiler/codegen.lisp
 msgid "Missing generator for ~S.~%"
+msgstr ""
+
+#: target:compiler/debug.lisp
+msgid ""
+"This variable is bound to the format arguments when an error is signalled\n"
+"  by Barf or Burp."
+msgstr ""
+
+#: target:compiler/debug.lisp
+msgid ""
+"Action taken by the Burp function when a possible compiler bug is detected.\n"
+"  One of :Warn, :Error or :None."
+msgstr ""
+
+#: target:compiler/debug.lisp
+msgid ""
+"Return a list of a the TNs that conflict with TN.  Sort of, kind of.  For\n"
+"  debugging use only.  Probably doesn't work on :COMPONENT TNs."
+msgstr ""
+
+#: target:compiler/debug.lisp
+msgid "Return the Nth VOP in the IR2-Block pointed to by Thing."
+msgstr ""
+
+#: target:compiler/dump.lisp
+msgid "Compiler bug: ~S not a legal fasload operator."
+msgstr ""
+
+#: target:compiler/dump.lisp
+msgid "Tried to output ~D bytes, but only ~D made it."
+msgstr ""
+
+#: target:compiler/dump.lisp
+msgid "This object cannot be dumped into a fasl file:~% ~S"
+msgstr ""
+
+#: target:compiler/dump.lisp
+msgid "~S already dumped?"
+msgstr ""
+
+#: target:compiler/dump.lisp
+msgid "Warning: dumping ~s as 0l0~%"
+msgstr ""
+
+#: target:compiler/dump.lisp
+msgid "Unable to dump long-float"
+msgstr ""
+
+#: target:compiler/dump.lisp
+msgid "Attempt to dump invalid structure:~%  ~S~%How did this happen?"
+msgstr ""
+
+#: target:compiler/dump.lisp
+msgid "Dumping reference to obsolete class: ~S"
+msgstr ""
+
+#: target:compiler/eval-comp.lisp
+msgid "Fatal error, aborting evaluation."
+msgstr ""
+
+#: target:compiler/eval-comp.lisp
+#, fuzzy
+msgid "Wrong argument count, wanted ~D and got ~D."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/eval-comp.lisp
+#, fuzzy
+msgid "Wrong number of arguments passed -- ~S."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/eval-comp.lisp
+#, fuzzy
+msgid "Function called with odd number of keyword arguments."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/eval-comp.lisp
+#, fuzzy
+msgid "Unknown keyword argument -- ~S."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/eval.lisp
+msgid "[PUSH: growing stack.]~%"
+msgstr ""
+
+#: target:compiler/eval.lisp
+msgid "pushing ~D.~%"
+msgstr ""
+
+#: target:compiler/eval.lisp
+msgid "Attempt to pop empty eval stack."
+msgstr ""
+
+#: target:compiler/eval.lisp
+msgid "popping ~D --> ~S.~%"
+msgstr ""
+
+#: target:compiler/eval.lisp
+msgid "[EXTEND: growing stack.]~%"
+msgstr ""
+
+#: target:compiler/eval.lisp
+msgid "extending to ~D.~%"
+msgstr ""
+
+#: target:compiler/eval.lisp
+msgid "shrinking to ~D.~%"
+msgstr ""
+
+#: target:compiler/eval.lisp
+msgid "setting top to ~D.~%"
+msgstr ""
+
+#: target:compiler/eval.lisp
+msgid ""
+"If the interpreted function cache has more functions than this come GC "
+"time,\n"
+"  then attempt to prune it according to\n"
+"  *INTERPRETED-FUNCTION-CACHE-THRESHOLD*."
+msgstr ""
+
+#: target:compiler/eval.lisp
+msgid ""
+"If an interpreted function goes uncalled for more than this many GCs, then\n"
+"  it is eligible for flushing from the cache."
+msgstr ""
+
+#: target:compiler/eval.lisp
+msgid ""
+"Clear all entries in the eval function cache.  This allows the internal\n"
+"  representation of the functions to be reclaimed, and also lazily forces\n"
+"  macroexpansions to be recomputed."
+msgstr ""
+
+#: target:compiler/eval.lisp
+msgid "C::%UNKNOWN-VALUES should never be in interpreter's IR1."
 msgstr ""
 
 #: target:compiler/byte-comp.lisp
