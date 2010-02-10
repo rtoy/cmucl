@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.18.24.1 2010/02/08 17:15:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.18.24.2 2010/02/10 01:53:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -27,7 +27,7 @@
 (defconstant date-time-dividers '(#\T #\t))
 
 (defvar *error-on-mismatch* nil
-  "If t, an error will be signalled if parse-time is unable
+  _N"If t, an error will be signalled if parse-time is unable
    to determine the time/date format of the string.")
 
 ;;; Set up hash tables for month, weekday, zone, and special strings.
@@ -442,7 +442,7 @@
 	(let ((test-value (special-string-p substring)))
 	  (if test-value  (cons 'special test-value)))
 	(if *error-on-mismatch*
-	    (error "\"~A\" is not a recognized word or abbreviation."
+	    (error _"\"~A\" is not a recognized word or abbreviation."
 		   substring)
 	    (return-from match-substring nil)))))
 
@@ -520,7 +520,7 @@
 	     (if *error-on-mismatch*
 		 (error
 		  'simple-error
-		  :format-control "Can't parse time/date string.~%>>> ~A~
+		  :format-control _"Can't parse time/date string.~%>>> ~A~
 				   ~%~VT^-- Bogus character encountered here."
 		  :format-arguments (list string (+ string-index 4)))
 		 (return-from decompose-string nil)))))))
@@ -578,7 +578,7 @@
 	 (setf (decoded-time-hour parsed-values) 12))
 	((eq form-value 'midn)
 	 (setf (decoded-time-hour parsed-values) 0))
-	(t (error "Unrecognized symbol: ~A" form-value)))
+	(t (error _"Unrecognized symbol: ~A" form-value)))
   (setf (decoded-time-minute parsed-values) 0)
   (setf (decoded-time-second parsed-values) 0))
 
@@ -593,12 +593,12 @@
 		  (setf (decoded-time-hour parsed-values) 0))
 		 ((not (<= 0 hour 12))
 		  (if *error-on-mismatch*
-		      (error "~D is not an AM hour, dummy." hour)))))
+		      (error _"~D is not an AM hour, dummy." hour)))))
 	  ((eq form-value 'pm)
 	   (if (<= 0 hour 11)
 	       (setf (decoded-time-hour parsed-values)
 		     (mod (+ hour 12) 24))))
-	  (t (error "~A isn't AM/PM - this shouldn't happen."
+	  (t (error _"~A isn't AM/PM - this shouldn't happen."
 		    form-value)))))
 
 ;;; Internet numerical time zone, e.g. RFC1123, in hours and minutes.
@@ -629,7 +629,7 @@
 	       (t
 		t))))
     (unless ok
-      (error "Invalid number of days (~D) for month ~D in ~D"
+      (error _"Invalid number of days (~D) for month ~D in ~D"
 	     (decoded-time-day parsed-values)
 	     (decoded-time-month parsed-values)
 	     (decoded-time-year parsed-values)))))      
@@ -671,8 +671,8 @@
       (if (< (decoded-time-dotw parsed-values) 0)
 	  (setf (decoded-time-dotw parsed-values) dotw)
 	  (unless (= dotw (decoded-time-dotw parsed-values))
-	    (cerror "Ignore."
-		    "Specified day (~@(~A~)) doesn't match actual day (~@(~A~))"
+	    (cerror _"Ignore."
+		    _"Specified day (~@(~A~)) doesn't match actual day (~@(~A~))"
 		    (lookup-name (decoded-time-dotw parsed-values))
 		    (lookup-name dotw)))))))
 
@@ -700,7 +700,7 @@
 	(noon-midn (deal-with-noon-midn form-value parsed-values))
 	(date-time-divider 0)
 	(special (funcall form-value parsed-values))
-	(t (error "Unrecognized symbol in form list: ~A." form-type)))))
+	(t (error _"Unrecognized symbol in form list: ~A." form-type)))))
   ;; Some simple sanity checks, like does the given month have that
   ;; many days?  Is it a leap year?
   (check-days-per-month parsed-values)
@@ -714,7 +714,7 @@
 			       (default-hours nil) (default-day nil)
 			       (default-month nil) (default-year nil)
 			       (default-zone nil) (default-weekday -1))
-  "Tries very hard to make sense out of the argument time-string and
+  _N"Tries very hard to make sense out of the argument time-string and
    returns a single integer representing the universal time if
    successful.  If not, it returns nil.  If the :error-on-mismatch
    keyword is true, parse-time will signal an error instead of
@@ -739,7 +739,7 @@
 	  (set-time-values string-form parsed-values)
 	  (convert-to-unitime parsed-values))
 	(if *error-on-mismatch*
-	  (error "\"~A\" is not a recognized time/date format." time-string)
+	  (error _"\"~A\" is not a recognized time/date format." time-string)
 	  nil))))
 
 

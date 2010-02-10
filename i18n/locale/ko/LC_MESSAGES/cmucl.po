@@ -302,14 +302,14 @@ msgid "Return the expansion of a DEFINE-FWRAPPER."
 msgstr ""
 
 #: target:code/fwrappers.lisp
+msgid "&MORE not supported in fwrapper lambda lists"
+msgstr ""
+
+#: target:code/fwrappers.lisp
 msgid ""
 "First value is true if BODY refers to any of the variables in\n"
 "     OPTIONALS, KEYS or REST, which are what KERNEL:PARSE-LAMBDA-LIST\n"
 "     returns.  Second value is true if BODY refers to REST."
-msgstr ""
-
-#: target:code/fwrappers.lisp
-msgid "&MORE not supported in fwrapper lambda lists"
 msgstr ""
 
 #: target:code/fwrappers.lisp
@@ -760,15 +760,9 @@ msgstr ""
 
 #: target:code/class.lisp
 msgid ""
-"Change in the inheritance structure of class ~S~%  ~\n"
-"\t\t between the ~A definition and the ~A definition."
-msgstr ""
-
-#: target:code/class.lisp
-msgid ""
-"Change in instance length of class ~S:~%  ~\n"
-"\t\t   ~A length: ~D~%  ~\n"
-"\t\t   ~A length: ~D"
+"Change in superclasses of class ~S:~%  ~\n"
+"\t\t  ~A superclasses: ~S~%  ~\n"
+"\t\t  ~A superclasses: ~S"
 msgstr ""
 
 #: target:code/class.lisp
@@ -780,9 +774,15 @@ msgstr ""
 
 #: target:code/class.lisp
 msgid ""
-"Change in superclasses of class ~S:~%  ~\n"
-"\t\t  ~A superclasses: ~S~%  ~\n"
-"\t\t  ~A superclasses: ~S"
+"Change in instance length of class ~S:~%  ~\n"
+"\t\t   ~A length: ~D~%  ~\n"
+"\t\t   ~A length: ~D"
+msgstr ""
+
+#: target:code/class.lisp
+msgid ""
+"Change in the inheritance structure of class ~S~%  ~\n"
+"\t\t between the ~A definition and the ~A definition."
 msgstr ""
 
 #: target:code/class.lisp
@@ -817,12 +817,87 @@ msgstr ""
 msgid "Something strange with forward layout for ~S:~%  ~S"
 msgstr ""
 
+#: target:code/pred.lisp
+msgid "Return the type of OBJECT."
+msgstr ""
+
+#: target:code/pred.lisp
+msgid ""
+"Return the element type that will actually be used to implement an array\n"
+"   with the specifier :ELEMENT-TYPE Spec."
+msgstr ""
+
+#: target:code/pred.lisp
+msgid ""
+"Return two values indicating the relationship between type1 and type2:\n"
+"  T and T: type1 definitely is a subtype of type2.\n"
+"  NIL and T: type1 definitely is not a subtype of type2.\n"
+"  NIL and NIL: who knows?"
+msgstr ""
+
+#: target:code/pred.lisp
+msgid "Return T iff OBJECT is of type TYPE."
+msgstr ""
+
+#: target:code/pred.lisp
+msgid "~@<unknown element type in array type: ~2I~_~S~:>"
+msgstr ""
+
+#: target:code/pred.lisp
+msgid "Unknown type specifier: ~S"
+msgstr ""
+
+#: target:code/pred.lisp
+msgid "Invalid type specifier: ~S"
+msgstr ""
+
+#: target:code/pred.lisp
+msgid "Function types are not a legal argument to TYPEP:~%  ~S"
+msgstr ""
+
+#: target:code/pred.lisp
+msgid "Class has not yet been defined: ~S"
+msgstr ""
+
+#: target:code/pred.lisp
+msgid "TYPEP on obsolete object (was class ~S)."
+msgstr ""
+
+#: target:code/pred.lisp
+msgid "Class is currently invalid: ~S"
+msgstr ""
+
+#: target:code/pred.lisp
+msgid "Return T if OBJ1 and OBJ2 are the same object, otherwise NIL."
+msgstr ""
+
+#: target:code/pred.lisp
+msgid ""
+"Returns T if X and Y are EQL or if they are structured components\n"
+"  whose elements are EQUAL.  Strings and bit-vectors are EQUAL if they\n"
+"  are the same length and have indentical components.  Other arrays must be\n"
+"  EQ to be EQUAL."
+msgstr ""
+
+#: target:code/pred.lisp
+msgid ""
+"Just like EQUAL, but more liberal in several respects.\n"
+"  Numbers may be of different types, as long as the values are identical\n"
+"  after coercion.  Characters may differ in alphabetic case.  Vectors and\n"
+"  arrays must have identical dimensions and EQUALP elements, but may differ\n"
+"  in their type restriction."
+msgstr ""
+
 #: target:code/alieneval.lisp
 msgid "No alien type class ~S"
 msgstr ""
 
 #: target:code/alieneval.lisp
 msgid "No method ~S"
+msgstr ""
+
+#: target:compiler/x86/c-call.lisp target:code/alieneval.lisp
+msgid "Method ~S not defined for ~S"
 msgstr ""
 
 #: target:code/alieneval.lisp
@@ -855,10 +930,6 @@ msgstr ""
 msgid ""
 "Convert the alien-type structure TYPE back into a list specification of\n"
 "   the type."
-msgstr ""
-
-#: target:compiler/x86/c-call.lisp target:code/alieneval.lisp
-msgid "Method ~S not defined for ~S"
 msgstr ""
 
 #: target:code/alieneval.lisp
@@ -1052,15 +1123,15 @@ msgid ""
 msgstr ""
 
 #: target:code/alieneval.lisp
+msgid "Cannot override the size of zero-dimensional arrays."
+msgstr ""
+
+#: target:code/alieneval.lisp
 msgid "Size of ~S unknown."
 msgstr ""
 
 #: target:code/alieneval.lisp
 msgid "Alignment of ~S unknown."
-msgstr ""
-
-#: target:code/alieneval.lisp
-msgid "Cannot override the size of zero-dimensional arrays."
 msgstr ""
 
 #: target:code/alieneval.lisp
@@ -1105,11 +1176,11 @@ msgid ""
 msgstr ""
 
 #: target:code/alieneval.lisp
-msgid "~S is not a valid L-value"
+msgid "Something is wrong, local-alien-info not found: ~S"
 msgstr ""
 
 #: target:code/alieneval.lisp
-msgid "Something is wrong, local-alien-info not found: ~S"
+msgid "~S is not a valid L-value"
 msgstr ""
 
 #: target:code/alieneval.lisp
@@ -1327,7 +1398,7 @@ msgid "This is the next free element of the interpreter's evaluation stack."
 msgstr ""
 
 #: target:code/byte-interp.lisp
-msgid "Undefined XOP."
+msgid "Unknown inline function, id=~D"
 msgstr ""
 
 #: target:code/byte-interp.lisp
@@ -1343,7 +1414,7 @@ msgid "Non-list argument to CDR: ~S"
 msgstr ""
 
 #: target:code/byte-interp.lisp
-msgid "Unknown inline function, id=~D"
+msgid "Undefined XOP."
 msgstr ""
 
 #: target:code/byte-interp.lisp
@@ -1383,11 +1454,11 @@ msgid "The exclusive upper bound on the total number of elements in an array."
 msgstr ""
 
 #: target:code/array.lisp
-msgid "Start ~D is greater than end ~D."
+msgid "End ~D is greater than total size ~D."
 msgstr ""
 
 #: target:code/array.lisp
-msgid "End ~D is greater than total size ~D."
+msgid "Start ~D is greater than end ~D."
 msgstr ""
 
 #: target:code/array.lisp
@@ -3044,11 +3115,11 @@ msgid "Returns a string describing the supporting software."
 msgstr ""
 
 #: target:code/misc.lisp
-msgid "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp."
+msgid "Unknown"
 msgstr ""
 
 #: target:code/misc.lisp
-msgid "Unknown"
+msgid "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp."
 msgstr ""
 
 #: target:code/misc.lisp
@@ -3056,11 +3127,11 @@ msgid "Returns a string with the abbreviated site name."
 msgstr ""
 
 #: target:code/misc.lisp
-msgid "The value of LONG-SITE-NAME.  Set in library:site-init.lisp."
+msgid "Site name not initialized"
 msgstr ""
 
 #: target:code/misc.lisp
-msgid "Site name not initialized"
+msgid "The value of LONG-SITE-NAME.  Set in library:site-init.lisp."
 msgstr ""
 
 #: target:code/misc.lisp
@@ -3496,8 +3567,16 @@ msgstr ""
 msgid "increments a pair of halffixnums by another pair"
 msgstr ""
 
+#: target:code/profile.lisp target:code/dfixnum.lisp
+msgid "dfixnum became too big ~a/~a + ~a/~a"
+msgstr ""
+
 #: target:code/dfixnum.lisp
 msgid "decrement dfixnum pair by another pair"
+msgstr ""
+
+#: target:code/profile.lisp target:code/dfixnum.lisp
+msgid "dfixnum became negative ~a/~a - ~a/~a(~a/~a)"
 msgstr ""
 
 #: target:code/gc.lisp
@@ -3646,13 +3725,17 @@ msgid ""
 msgstr ""
 
 #: target:code/gc.lisp
-msgid ""
-"The value of *BYTES-CONSED-BETWEEN-GCS*, ~S, is not an ~\n"
-"\t       integer.  Resetting it to ~D."
+msgid "Attempt to set GC trigger to something bogus: ~S"
 msgstr ""
 
 #: target:code/gc.lisp
 msgid "(FUNCALL ~S~{ ~S~}) lost:~%~A"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"The value of *BYTES-CONSED-BETWEEN-GCS*, ~S, is not an ~\n"
+"\t       integer.  Resetting it to ~D."
 msgstr ""
 
 #: target:code/gc.lisp
@@ -3685,6 +3768,733 @@ msgid ""
 "  GCs that have occurred; the trigger age; the cumulative number of\n"
 "  bytes allocated in this generation; and the average age of this\n"
 "  generation.  See the gencgc source code for more info."
+msgstr ""
+
+#: target:code/purify.lisp
+msgid ""
+"This function optimizes garbage collection by moving all currently live\n"
+"   objects into non-collected storage.  ROOT-STRUCTURES is an optional list "
+"of\n"
+"   objects which should be copied first to maximize locality.\n"
+"\n"
+"   DEFSTRUCT structures defined with the (:PURE T) option are moved into\n"
+"   read-only storage, further reducing GC cost.  List and vector slots of "
+"pure\n"
+"   structures are also moved into read-only storage.\n"
+"\n"
+"   ENVIRONMENT-NAME is gratuitous documentation for compacted version of "
+"the\n"
+"   current global environment (as seen in C::*INFO-ENVIRONMENT*.)  If NIL "
+"is\n"
+"   supplied, then environment compaction is inhibited."
+msgstr ""
+
+#: target:code/purify.lisp
+msgid "[Doing purification: "
+msgstr ""
+
+#: target:code/purify.lisp
+msgid "Done.]"
+msgstr ""
+
+#: target:code/save.lisp
+msgid ""
+"This is a list of functions which are called before creating a saved core\n"
+"  image.  These functions are executed in the child process which has no "
+"ports,\n"
+"  so they cannot do anything that tries to talk to the outside world."
+msgstr ""
+
+#: target:code/save.lisp
+msgid ""
+"This is a list of functions which are called when a saved core image starts\n"
+"  up.  The system itself should be initialized at this point, but "
+"applications\n"
+"  might not be."
+msgstr ""
+
+#: target:code/save.lisp
+msgid "An alist mapping environment variables (as keywords) to either values"
+msgstr ""
+
+#: target:code/save.lisp
+msgid "Non-NIL if environment-init has been called"
+msgstr ""
+
+#: target:code/save.lisp
+msgid "This is true if and only if the lisp was started with the -edit switch."
+msgstr ""
+
+#: target:code/save.lisp
+msgid ""
+"Saves a CMU Common Lisp core image in the file of the specified name.  The\n"
+"  following keywords are defined:\n"
+"  \n"
+"  :purify\n"
+"      If true (the default), do a purifying GC which moves all dynamically\n"
+"  allocated objects into static space so that they stay pure.  This takes\n"
+"  somewhat longer than the normal GC which is otherwise done, but GC's will\n"
+"  be done less often and take less time in the resulting core file.  See\n"
+"  EXT:PURIFY.\n"
+"\n"
+"  :root-structures\n"
+"      This should be a list of the main entry points in any newly loaded\n"
+"  systems.  This need not be supplied, but locality and/or GC performance\n"
+"  will be better if they are.  Meaningless if :purify is NIL.  See EXT:"
+"PURIFY.\n"
+"\n"
+"  :environment-name\n"
+"      Also passed to EXT:PURIFY when :PURIFY is T.  Rarely used.\n"
+"  \n"
+"  :init-function\n"
+"      This is the function that starts running when the created core file "
+"is\n"
+"  resumed.  The default function simply invokes the top level\n"
+"  read-eval-print loop.  If the function returns the lisp will exit.\n"
+"  \n"
+"  :load-init-file\n"
+"      If true, then look for an init.lisp or init.fasl file when the core\n"
+"  file is resumed.\n"
+"\n"
+"  :site-init\n"
+"      If true, then the name of the site init file to load.  The default is\n"
+"      library:site-init.  No error if this does not exist.\n"
+"\n"
+"  :print-herald\n"
+"      If true (the default), print out the lisp system herald when "
+"starting.\n"
+"\n"
+"  :process-command-line\n"
+"      If true (the default), process command-line switches via the normal\n"
+"  mechanisms, otherwise ignore all switches (except those processed by the\n"
+"  C startup code).\n"
+"\n"
+"  :executable\n"
+"      If nil (the default), save-lisp will save using the traditional\n"
+"   core-file format.  If true, save-lisp will create an executable\n"
+"   file that contains the lisp image built in. \n"
+"   (Not all architectures support this yet.)\n"
+"\n"
+"  :batch-mode\n"
+"      If nil (the default), then the presence of the -batch command-line\n"
+"  switch will invoke batch-mode processing.  If true, the produced core\n"
+"  will always be in batch-mode, regardless of any command-line switches."
+msgstr ""
+
+#: target:code/save.lisp
+msgid "Directory ~S does not exist"
+msgstr ""
+
+#: target:code/save.lisp
+msgid "Skip remaining initializations."
+msgstr ""
+
+#: target:code/save.lisp
+msgid "Error in batch processing:~%~A~%"
+msgstr ""
+
+#: target:code/save.lisp
+msgid ""
+"Determines what PRINT-HERALD prints (the system startup banner.)  This is a\n"
+"   database which can be augmented by each loaded system.  The format is a\n"
+"   property list which maps from subsystem names to the banner information "
+"for\n"
+"   that system.  This list can be manipulated with GETF -- entries are "
+"printed\n"
+"   in, reverse order, so the newest entry is printed last.  Usually the "
+"system\n"
+"   feature keyword is used as the system name.  A given banner is a list of\n"
+"   strings and functions (or function names).  Strings are printed, and\n"
+"   functions are called with an output stream argument."
+msgstr ""
+
+#: target:code/save.lisp
+msgid ", running on "
+msgstr ""
+
+#: target:code/save.lisp
+msgid "With core: "
+msgstr ""
+
+#: target:code/save.lisp
+msgid "Dumped on: "
+msgstr ""
+
+#: target:code/save.lisp
+msgid " on "
+msgstr ""
+
+#: target:code/save.lisp
+msgid "See <http://www.cons.org/cmucl/> for support information."
+msgstr ""
+
+#: target:code/save.lisp
+msgid "Loaded subsystems:"
+msgstr ""
+
+#: target:code/save.lisp
+msgid "    Unicode "
+msgstr ""
+
+#: target:code/save.lisp
+msgid "with Unicode version "
+msgstr ""
+
+#: target:code/save.lisp
+msgid ""
+"Print some descriptive information about the Lisp system version and\n"
+"   configuration."
+msgstr ""
+
+#: target:code/save.lisp
+msgid "Unrecognized *HERALD-ITEMS* entry: ~S."
+msgstr ""
+
+#: target:code/save.lisp
+msgid "Change *PACKAGE* to the USER package and try again."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"If true, all objects will printed readably.  If readably printing is\n"
+"  impossible, an error will be signalled.  This overrides the value of\n"
+"  *PRINT-ESCAPE*."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Flag which indicates that slashification is on.  See the manual"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Flag which indicates that pretty printing is to be used"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "The output base for integers and rationals."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "This flag requests to verify base when printing rationals."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "How many levels deep to print.  Unlimited if null."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "How many elements to print on each level.  Unlimited if null."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Whether to worry about circular list structures. See the manual."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "What kind of case the printer should use by default"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Whether the array should print it's guts out"
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"If true, symbols with no home package are printed with a #: prefix.\n"
+"  If false, no prefix is printed."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "The maximum number of lines to print.  If NIL, unlimited."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"The position of the right margin in ems.  If NIL, try to determine this\n"
+"   from the stream in use."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"If the remaining space between the current column and the right margin\n"
+"   is less than this, then print using ``miser-style'' output.  Miser\n"
+"   style conditional newlines are turned on, and all indentations are\n"
+"   turned off.  If NIL, never use miser mode."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"The pprint-dispatch-table that controls how to pretty print objects.  See\n"
+"   COPY-PPRINT-DISPATH, PPRINT-DISPATCH, and SET-PPRINT-DISPATCH."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Bind the reader and printer control variables to values that enable READ\n"
+"   to reliably read the results of PRINT.  These values are:\n"
+"       *PACKAGE*\t\t\tThe COMMON-LISP-USER package\n"
+"       *PRINT-ARRAY*\t\t\tT\n"
+"       *PRINT-BASE*\t\t\t10\n"
+"       *PRINT-CASE*\t\t\t:UPCASE\n"
+"       *PRINT-CIRCLE*\t\t\tNIL\n"
+"       *PRINT-ESCAPE*\t\t\tT\n"
+"       *PRINT-GENSYM*\t\t\tT\n"
+"       *PRINT-LENGTH*\t\t\tNIL\n"
+"       *PRINT-LEVEL*\t\t\tNIL\n"
+"       *PRINT-LINES*\t\t\tNIL\n"
+"       *PRINT-MISER-WIDTH*\t\tNIL\n"
+"       *PRINT-PRETTY*\t\t\tNIL\n"
+"       *PRINT-RADIX*\t\t\tNIL\n"
+"       *PRINT-READABLY*\t\t\tT\n"
+"       *PRINT-RIGHT-MARGIN*\t\tNIL\n"
+"       *READ-BASE*\t\t\t10\n"
+"       *READ-DEFAULT-FLOAT-FORMAT* \tSINGLE-FLOAT\n"
+"       *READ-EVAL*\t\t\tT\n"
+"       *READ-SUPPRESS*\t\t\tNIL\n"
+"       *READTABLE*\t\t\tthe standard readtable."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Outputs OBJECT to the specified stream, defaulting to *standard-output*"
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Outputs a mostly READable printed representation of OBJECT on the specified\n"
+"  stream."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Outputs an asthetic but not READable printed representation of OBJECT on "
+"the\n"
+"  specified stream."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Outputs a terpri, the mostly READable printed represenation of OBJECT, and \n"
+"  space to the stream."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Prettily outputs the Object preceded by a newline."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Returns the printed representation of OBJECT as a string."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Returns the printed representation of OBJECT as a string with \n"
+"   slashification on."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Returns the printed representation of OBJECT as a string with\n"
+"  slashification off."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "~S cannot be printed readably."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Determines whether or not the character is considered whitespace."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Check to see if OBJECT is a circular reference, and return something non-"
+"NIL\n"
+"   if it is.  If ASSIGN is T, then the number to use in the #n= and #n# "
+"noise\n"
+"   is assigned at this time.  Note: CHECK-FOR-CIRCULARITY must be called\n"
+"   *EXACTLY* once with ASSIGN T, or the circularity detection noise will "
+"get\n"
+"   confused about when to use #n= and when to use #n#.  If this returns\n"
+"   non-NIL when ASSIGN is T, then you must call HANDLE-CIRCULARITY on it."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Handle the results of CHECK-FOR-CIRCULARITY.  If this returns T then\n"
+"   you should go ahead and print the object.  If it returns NIL, then\n"
+"   you should blow it off."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Attempt to use CHECK-FOR-CIRCULARITY when circularity ~\n"
+"\t       checking has not been initiated."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"The current level we are printing at, to be compared against *PRINT-LEVEL*.\n"
+"   See the macro DESCEND-INTO for a handy interface to depth abbreviation."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Automatically handle *print-level* abbreviation.  If we are too deep, then\n"
+"   a # is printed to STREAM and BODY is ignored."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Punt if INDEX is equal or larger then *PRINT-LENGTH* (and *PRINT-READABLY*\n"
+"   is NIL) by outputting \"...\" and returning from the block named NIL."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"The current pretty printer.  Should be either a function that takes two\n"
+"   arguments (the object and the stream) or NIL to indicate that there is\n"
+"   no pretty printer installed."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Output OBJECT to STREAM observing all printer control variables."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Output OBJECT to STREAM observing all printer control variables except\n"
+"   for *PRINT-PRETTY*.  Note: if *PRINT-PRETTY* is non-NIL, then the pretty\n"
+"   printer will be used for any components of OBJECT, just not for OBJECT\n"
+"   itself."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Invalid *PRINT-CASE* value: ~S"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Invalid READTABLE-CASE value: ~S"
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Outputs the printed representation of any array in either the #< or #A\n"
+"   form."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Obsolete Instance"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Unprintable Instance"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "~A is not a reasonable value for *Print-Base*."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Compute a list of pairs (2^i . r^{2^i}), stopping with the largest r^{2^i}\n"
+"greater than n."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Convert digit into a character representation.  We use 0..9, a..z for\n"
+"10..35, and A..Z for 36..52."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "overflow in digit-to-char"
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Print a fixnum N to stream S, maybe with leading zeros.  This isn't\n"
+"ever-so efficient, but we probably don't need to care."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Use the power list (see power-list) PL to split N roughly in half; then\n"
+"print the left and right halves using (cdr PL).  Make sure we count the\n"
+"leading zeroes correctly."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Primary fast bignum-printing interface.  Prints integer N to stream S in\n"
+"radix-R.  If you have a power-list then pass it in as PL."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Minimum power of 10 that allows the float printer to use free format,\n"
+"   instead of exponential format.  See section 22.1.3.1.3: Printing Floats\n"
+"   in the ANSI CL standard."
+msgstr ""
+
+#: target:code/print.lisp
+msgid ""
+"Maximum power of 10 that allows the float printer to use free format,\n"
+"   instead of exponential format.  See section 22.1.3.1.3: Printing Floats\n"
+"   in the ANSI CL standard."
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Convert a DD number to a lisp rational"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Print out a double-double to a string"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Weak Pointer: "
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Broken Weak Pointer"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Bogus Code Object"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Code Object"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Return PC Object"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "FDEFINITION object for "
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Function "
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Interpreted Function ~S"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Byte Compiled Function"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Byte Compiled Closure"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Closure Over "
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Unknown Function"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Value Cell "
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Unknown Pointer Object, type="
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Unbound Marker"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Unknown Immediate Object, lowtag="
+msgstr ""
+
+#: target:code/print.lisp
+msgid ", type="
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Continue anyway"
+msgstr ""
+
+#: target:code/print.lisp
+msgid "Cannot find ~S, so unicode support is not available"
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid ""
+"Insert an annotation into the pretty-printing stream STREAM.\n"
+"HANDLER is a function, and RECORD is an arbitrary datum.  The\n"
+"pretty-printing stream conceptionally queues annotations in sequence\n"
+"with the characters that are printed to the stream, until the stream\n"
+"has decided on the concrete layout.  When the characters are forwarded\n"
+"to the target stream, annotations are invoked at the right position.\n"
+"An annotation is invoked by calling the function HANDLER with the\n"
+"three arguments RECORD, TARGET-STREAM, and TRUNCATEP.  The argument\n"
+"TRUNCATEP is true if the text surrounding the annotation is suppressed\n"
+"due to line abbreviation (see *PRINT-LINES*).\n"
+"If STREAM is not a pretty-printing stream, simply call HANDLER\n"
+"with the arguments RECORD, STREAM and nil."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid "Insert ANNOTATION into the queue of annotations in STREAM."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid ""
+"Insert all annotations in STREAM from the queue of pending\n"
+"operations into the queue of annotations.  When END is non-nil, \n"
+"stop before reaching the queued-op END."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid ""
+"Dequeue the next annotation from the queue of annotations of STREAM\n"
+"and return it.  Return nil if there are no more annotations.  When\n"
+":END-POSN is given and the next annotation has a posn greater than\n"
+"this, also return nil."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid ""
+"Output the buffer of STREAM up to (excluding) the buffer index END.\n"
+"When annotations are present, invoke them at the right positions."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid ""
+"Invoke all annotations in STREAM up to (including) the buffer index END."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid "Output-partial-line called when nothing can be output."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid ""
+"Group some output into a logical block.  STREAM-SYMBOL should be either a\n"
+"   stream, T (for *TERMINAL-IO*), or NIL (for *STANDARD-OUTPUT*).  The "
+"printer\n"
+"   control variable *PRINT-LEVEL* is automatically handled."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid "Cannot specify both a prefix and a per-line-prefix."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid ""
+"Cause the closest enclosing use of PPRINT-LOGICAL-BLOCK to return\n"
+"   if it's list argument is exhausted.  Can only be used inside\n"
+"   PPRINT-LOGICAL-BLOCK, and only when the LIST argument to\n"
+"   PPRINT-LOGICAL-BLOCK is supplied."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid ""
+"PPRINT-EXIT-IF-LIST-EXHAUSTED must be lexically inside ~\n"
+"\t  PPRINT-LOGICAL-BLOCK."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid ""
+"Return the next element from LIST argument to the closest enclosing\n"
+"   use of PPRINT-LOGICAL-BLOCK, automatically handling *PRINT-LENGTH*\n"
+"   and *PRINT-CIRCLE*.  Can only be used inside PPRINT-LOGICAL-BLOCK.\n"
+"   If the LIST argument to PPRINT-LOGICAL-BLOCK was NIL, then nothing\n"
+"   is poped, but the *PRINT-LENGTH* testing still happens."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid "PPRINT-POP must be lexically inside PPRINT-LOGICAL-BLOCK."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid ""
+"Output a conditional newline to STREAM (which defaults to\n"
+"   *STANDARD-OUTPUT*) if it is a pretty-printing stream, and do\n"
+"   nothing if not.  KIND can be one of:\n"
+"     :LINEAR - A line break is inserted if and only if the immediatly\n"
+"        containing section cannot be printed on one line.\n"
+"     :MISER - Same as LINEAR, but only if ``miser-style'' is in effect.\n"
+"        (See *PRINT-MISER-WIDTH*.)\n"
+"     :FILL - A line break is inserted if and only if either:\n"
+"       (a) the following section cannot be printed on the end of the\n"
+"           current line,\n"
+"       (b) the preceding section was not printed on a single line, or\n"
+"       (c) the immediately containing section cannot be printed on one\n"
+"           line and miser-style is in effect.\n"
+"     :MANDATORY - A line break is always inserted.\n"
+"   When a line break is inserted by any type of conditional newline, any\n"
+"   blanks that immediately precede the conditional newline are ommitted\n"
+"   from the output and indentation is introduced at the beginning of the\n"
+"   next line.  (See PPRINT-INDENT.)"
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid ""
+"Specify the indentation to use in the current logical block if STREAM\n"
+"   (which defaults to *STANDARD-OUTPUT*) is a pretty-printing stream\n"
+"   and do nothing if not.  (See PPRINT-LOGICAL-BLOCK.)  N is the indention\n"
+"   to use (in ems, the width of an ``m'') and RELATIVE-TO can be either:\n"
+"     :BLOCK - Indent relative to the column the current logical block\n"
+"        started on.\n"
+"     :CURRENT - Indent relative to the current column.\n"
+"   The new indention value does not take effect until the following line\n"
+"   break.  The indention value is silently truncated to an integer."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid ""
+"If STREAM (which defaults to *STANDARD-OUTPUT*) is a pretty-printing\n"
+"   stream, perform tabbing based on KIND, otherwise do nothing.  KIND can\n"
+"   be one of:\n"
+"     :LINE - Tab to column COLNUM.  If already past COLNUM tab to the next\n"
+"       multiple of COLINC.\n"
+"     :SECTION - Same as :LINE, but count from the start of the current\n"
+"       section, not the start of the line.\n"
+"     :LINE-RELATIVE - Output COLNUM spaces, then tab to the next multiple "
+"of\n"
+"       COLINC.\n"
+"     :SECTION-RELATIVE - Same as :LINE-RELATIVE, but count from the start\n"
+"       of the current section, not the start of the line."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid ""
+"Output LIST to STREAM putting :FILL conditional newlines between each\n"
+"   element.  If COLON? is NIL (defaults to T), then no parens are printed\n"
+"   around the output.  ATSIGN? is ignored (but allowed so that PPRINT-FILL\n"
+"   can be used with the ~/.../ format directive."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid ""
+"Output LIST to STREAM putting :LINEAR conditional newlines between each\n"
+"   element.  If COLON? is NIL (defaults to T), then no parens are printed\n"
+"   around the output.  ATSIGN? is ignored (but allowed so that PPRINT-"
+"LINEAR\n"
+"   can be used with the ~/.../ format directive."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid ""
+"Output LIST to STREAM tabbing to the next column that is an even multiple\n"
+"   of TABSIZE (which defaults to 16) between each element.  :FILL style\n"
+"   conditional newlines are also output between each element.  If COLON? is\n"
+"   NIL (defaults to T), then no parens are printed around the output.\n"
+"   ATSIGN? is ignored (but allowed so that PPRINT-TABULAR can be used with\n"
+"   the ~/.../ format directive."
+msgstr ""
+
+#: target:code/pprint.lisp
+msgid "CONS PPRINT dispatch ignored w/o compiler loaded:~%  ~S"
 msgstr ""
 
 #: target:code/format.lisp
@@ -3744,12 +4554,14 @@ msgid "The ~A package, ~D/~D internal, ~D/~D external"
 msgstr ""
 
 #: target:code/package.lisp
+#, fuzzy
 msgid "The ~A package"
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/package.lisp
+#, fuzzy
 msgid "deleted package"
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/package.lisp
 #, fuzzy
@@ -3798,8 +4610,9 @@ msgid "Find the package having the specified name."
 msgstr ""
 
 #: target:code/package.lisp
+#, fuzzy
 msgid "Make this package."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/package.lisp
 msgid "#<Package-Hashtable: Size = ~D, Free = ~D, Deleted = ~D>"
@@ -3833,6 +4646,10 @@ msgid ""
 "   such that successive invocations of (mname) will return the symbols,\n"
 "   one by one, from the packages in PACKAGE-LIST. SYMBOL-TYPES may be\n"
 "   any of :inherited :external :internal."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "~@<~S does not name a package ~:>"
 msgstr ""
 
 #: target:code/package.lisp
@@ -3906,19 +4723,19 @@ msgid "~A does not contain a symbol ~A"
 msgstr ""
 
 #: target:code/package.lisp
-msgid "~S is a package name, so it cannot be a nickname for ~S."
-msgstr ""
-
-#: target:code/package.lisp
 msgid "Ignore this nickname."
 msgstr ""
 
 #: target:code/package.lisp
-msgid "~S is already a nickname for ~S."
+msgid "~S is a package name, so it cannot be a nickname for ~S."
 msgstr ""
 
 #: target:code/package.lisp
 msgid "Redefine this nickname."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "~S is already a nickname for ~S."
 msgstr ""
 
 #: target:code/package.lisp
@@ -3969,11 +4786,11 @@ msgid "Delete the PACKAGE-OR-NAME from the package system data structures."
 msgstr ""
 
 #: target:code/package.lisp
-msgid "No package of name ~S."
+msgid "Return NIL"
 msgstr ""
 
 #: target:code/package.lisp
-msgid "Return NIL"
+msgid "No package of name ~S."
 msgstr ""
 
 #: target:code/package.lisp
@@ -3994,6 +4811,10 @@ msgid ""
 "  then the second value is :internal, :external or :inherited to indicate\n"
 "  how the symbol is accessible.  If no symbol is found then both values\n"
 "  are NIL."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "interning symbol ~A"
 msgstr ""
 
 #: target:code/package.lisp
@@ -4042,11 +4863,11 @@ msgid ""
 msgstr ""
 
 #: target:code/package.lisp
-msgid "These symbols are not accessible in the ~A package:~%~S"
+msgid "Import these symbols into the ~A package."
 msgstr ""
 
 #: target:code/package.lisp
-msgid "Import these symbols into the ~A package."
+msgid "These symbols are not accessible in the ~A package:~%~S"
 msgstr ""
 
 #: target:code/package.lisp
@@ -4069,13 +4890,13 @@ msgid ""
 msgstr ""
 
 #: target:code/package.lisp
-msgid ""
-"Importing these symbols into the ~A package ~\n"
-"\t\tcauses a name conflict:~%~S"
+msgid "Import these symbols with Shadowing-Import."
 msgstr ""
 
 #: target:code/package.lisp
-msgid "Import these symbols with Shadowing-Import."
+msgid ""
+"Importing these symbols into the ~A package ~\n"
+"\t\tcauses a name conflict:~%~S"
 msgstr ""
 
 #: target:code/package.lisp
@@ -4234,11 +5055,11 @@ msgid "Nonsensical argument (~S) to DEFINE-EXTERNAL-FORMAT."
 msgstr ""
 
 #: target:code/extfmts.lisp
-msgid "Bad entry in external-format aliases file: ~S => ~S."
+msgid "External-format aliases file ends early."
 msgstr ""
 
 #: target:code/extfmts.lisp
-msgid "External-format aliases file ends early."
+msgid "Bad entry in external-format aliases file: ~S => ~S."
 msgstr ""
 
 #: target:code/extfmts.lisp
@@ -4441,13 +5262,13 @@ msgid ""
 "  See the manual for details."
 msgstr ""
 
-#: target:pcl/std-class.lisp target:pcl/boot.lisp target:pcl/defs.lisp
-#: target:pcl/defclass.lisp target:code/fd-stream.lisp
-msgid "Odd-length property list in REMF."
-msgstr ""
-
 #: target:code/fd-stream.lisp
 msgid "Unable to open streams of class ~S."
+msgstr ""
+
+#: target:pcl/std-class.lisp target:pcl/boot.lisp target:pcl/defs.lisp
+#: target:pcl/defclass.lisp target:code/macros.lisp target:code/fd-stream.lisp
+msgid "Odd-length property list in REMF."
 msgstr ""
 
 #: target:code/fd-stream.lisp
@@ -4479,15 +5300,375 @@ msgid ""
 msgstr ""
 
 #: target:code/fd-stream-extfmt.lisp
-msgid "Don't know how to set external-format for ~S."
-msgstr ""
-
-#: target:code/fd-stream-extfmt.lisp
 msgid "Loading simple-streams should redefine this"
 msgstr ""
 
 #: target:code/fd-stream-extfmt.lisp
+msgid "Don't know how to set external-format for ~S."
+msgstr ""
+
+#: target:code/fd-stream-extfmt.lisp
 msgid "Setting external-format on Gray streams not supported."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"When non-nil, attempt to load \"library:<host>.translations\" to resolve\n"
+"   an otherwise undefined logical host."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "A path specification, either a string, file-stream or pathname."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Convert thing (a pathname, string or stream) into a pathname."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Construct a filled in pathname by completing the unspecified components\n"
+"   from the defaults."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "~S is not allowed as a directory component."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Makes a new pathname from the component arguments.  Note that host is\n"
+"a host-structure or string."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Silly argument for a unix ~A: ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Silly argument for a unix PATHNAME-NAME: ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Illegal pathname: ~\n"
+"                                Directory with ~S immediately followed by ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Accessor for the pathname's host."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Accessor for pathname's device."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Accessor for the pathname's directory list."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Accessor for the pathname's name."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Accessor for the pathname's version."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Parse error in namestring: ~?~%  ~A~%  ~V@T^"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"When Host arg is not supplied, Defaults arg must ~\n"
+"\t\t  have a non-null PATHNAME-HOST."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Host in namestring: ~S~@\n"
+"\t\t    does not match explicit host argument: ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Converts pathname, a pathname designator, into a pathname structure,\n"
+"   for a physical pathname, returns the printed representation. Host may be\n"
+"   a physical host structure or host namestring."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"A LIST representing a pathname host is not ~\n"
+"                              supported in this implementation:~%  ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Hosts do not match: ~S and ~S."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Can't figure out the file associated with stream:~%  ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Construct the full (name)string form of the pathname."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Cannot determine the namestring for pathnames with no ~\n"
+"\t\t  host:~%  ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Returns a string representation of the name of the host in the pathname."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Cannot determine the namestring for pathnames with no host:~%  ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Returns a string representation of the directories used in the pathname."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Returns a string representation of the name used in the pathname."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Returns an abbreviated pathname sufficent to identify the pathname relative\n"
+"   to the defaults."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Predicate for determining whether pathname contains any wildcards."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Pathname matches the wildname template?"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Not enough wildcards in FROM pattern to match ~\n"
+"\t\t       TO pattern:~%  ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Can't substitute this into the middle of a word:~\n"
+"\t\t\t  ~%  ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Pathname components from Source and From args to TRANSLATE-PATHNAME~@\n"
+"\t  did not match:~%  ~S ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+":WILD-INFERIORS not paired in from and to ~\n"
+"\t\t\t   patterns:~%  ~S ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Use the source pathname to translate the from-wildname's wild and\n"
+"   unspecified elements into a completed to-pathname based on the to-"
+"wildname."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "~S doesn't match ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Search-list ~a not defined."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Clear the current definition for the search-list NAME.  Returns T if such\n"
+"   a definition existed, and NIL if not."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Clear the definition for all search-lists.  Only use this if you know\n"
+"   what you are doing."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "~S doesn't start with a search-list."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Return the expansions for the search-list starting PATHNAME.  If PATHNAME\n"
+"   does not start with a search-list, then an error is signaled.  If\n"
+"   the search-list has not been defined yet, then an error is signaled.\n"
+"   The expansion for a search-list can be set with SETF."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Search list ~S has not been defined yet."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Returns T if the search-list starting PATHNAME is currently defined, and\n"
+"   NIL otherwise.  An error is signaled if PATHNAME does not start with a\n"
+"   search-list."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"That would result in a circularity:~%  ~\n"
+"\t\t     ~A~{ -> ~A~} -> ~A"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Search-lists cannot expand into pathnames that have ~\n"
+"\t\t       a name, type, or ~%version specified:~%  ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Execute BODY with VAR bound to each successive possible expansion for\n"
+"   PATHNAME and then return RESULT.  Note: if PATHNAME does not contain a\n"
+"   search-list, then BODY is executed exactly once.  Everything is wrapped\n"
+"   in a block named NIL, so RETURN can be used to terminate early.  Note:\n"
+"   VAR is *not* bound inside of RESULT."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Undefined search list: ~A"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Logical namestring character ~\n"
+"\t\t\t     is not alphanumeric or hyphen:~%  ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Logical host not yet defined: ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Double asterisk inside of logical ~\n"
+"\t\t\t\t     word: ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Illegal character for logical pathname:~%  ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Expecting ~A, got ~:[nothing~;~:*~S~]."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "a host name"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "a directory name"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "a file name"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Expecting a dot, got ~S."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "a file type"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "a positive integer, * or NEWEST"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Expected a positive integer, ~\n"
+"\t\t\t\t\t    got ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Extra stuff after end of file name."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Converts the pathspec argument to a logical-pathname and returns it."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Logical namestring does not specify a host:~%  ~S"
+msgstr ""
+
+#: target:code/filesys.lisp target:code/pathname.lisp
+msgid "Invalid directory component: ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Invalid keyword: ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Logical pathname translation is not a two-list:~%  ~S"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Return the (logical) host object argument's list of translations."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Set the translations list for the logical host argument.\n"
+"   Return translations."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Clobber search-list host with logical pathname host"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "~S names a CMUCL search-list"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ""
+"Search for a logical pathname named host, if not already defined. If "
+"already\n"
+"   defined no attempt to find or load a definition is attempted and NIL is\n"
+"   returned. If host is not already defined, but definition is found and "
+"loaded\n"
+"   successfully, T is returned, else error."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid ";; Loading pathname translations from ~A~%"
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "Translates pathname to a physical pathname, which is returned."
+msgstr ""
+
+#: target:code/pathname.lisp
+msgid "No translation for ~S"
 msgstr ""
 
 #: target:code/filesys.lisp
@@ -4523,10 +5704,6 @@ msgstr ""
 
 #: target:code/filesys.lisp
 msgid ":BACK cannot be represented in namestrings."
-msgstr ""
-
-#: target:code/filesys.lisp
-msgid "Invalid directory component: ~S"
 msgstr ""
 
 #: target:code/filesys.lisp
@@ -5321,6 +6498,10 @@ msgid ""
 msgstr ""
 
 #: target:code/debug-int.lisp
+msgid "no debug info: ~A:~A"
+msgstr ""
+
+#: target:code/debug-int.lisp
 msgid "find the PC"
 msgstr ""
 
@@ -5504,6 +6685,14 @@ msgid ""
 msgstr ""
 
 #: target:code/debug-int.lisp
+msgid "Local non-descriptor register access?"
+msgstr ""
+
+#: target:code/debug-int.lisp
+msgid "Local interior register access?"
+msgstr ""
+
+#: target:code/debug-int.lisp
 msgid ""
 "Returns three values reflecting the validity of debug-variable's value\n"
 "   at basic-code-location:\n"
@@ -5675,6 +6864,10 @@ msgid "Breakpoint that nobody wants?"
 msgstr ""
 
 #: target:code/debug-int.lisp
+msgid "BREAKPOINT-DO-DISPLACED-INST returned?"
+msgstr ""
+
+#: target:code/debug-int.lisp
 msgid ""
 "Make a bogus LRA object that signals a breakpoint trap when returned to.  "
 "If\n"
@@ -5717,15 +6910,15 @@ msgstr ""
 
 #: target:code/debug-int.lisp
 msgid ""
-"~%While setting a breakpoint for the editor, noticed ~\n"
-"\t\t\tsource file has been modified since compilation:~%  ~A~@\n"
-"\t\t\tUsing form offset instead of character position.~%"
+"Cannot set breakpoints for editor when ~\n"
+"\t\t\t\t   there is no start positions map."
 msgstr ""
 
 #: target:code/debug-int.lisp
 msgid ""
-"Cannot set breakpoints for editor when ~\n"
-"\t\t\t\t   there is no start positions map."
+"~%While setting a breakpoint for the editor, noticed ~\n"
+"\t\t\tsource file has been modified since compilation:~%  ~A~@\n"
+"\t\t\tUsing form offset instead of character position.~%"
 msgstr ""
 
 #: target:code/debug-int.lisp
@@ -5790,6 +6983,10 @@ msgid "Function ~S already TRACE'd, retracing it."
 msgstr ""
 
 #: target:code/ntrace.lisp
+msgid "Tracing shared code for ~S:~%  ~S"
+msgstr ""
+
+#: target:code/ntrace.lisp
 msgid "~S name is not a defined global function: ~S"
 msgstr ""
 
@@ -5799,10 +6996,6 @@ msgstr ""
 
 #: target:code/ntrace.lisp
 msgid "Can't use encapsulation to trace local flet/labels function ~S."
-msgstr ""
-
-#: target:code/ntrace.lisp
-msgid "Tracing shared code for ~S:~%  ~S"
 msgstr ""
 
 #: target:code/ntrace.lisp
@@ -5920,14 +7113,6 @@ msgstr ""
 msgid ""
 "Removes tracing from the specified functions.  With no args, untraces all\n"
 "   functions."
-msgstr ""
-
-#: target:code/profile.lisp
-msgid "dfixnum became negative ~a/~a - ~a/~a(~a/~a)"
-msgstr ""
-
-#: target:code/profile.lisp
-msgid "dfixnum became too big ~a/~a + ~a/~a"
 msgstr ""
 
 #: target:code/final.lisp
@@ -6303,8 +7488,73 @@ msgstr ""
 msgid "~A: Timezone should be an integer between 0 and 32."
 msgstr ""
 
+#: target:code/parse-time.lisp
+msgid ""
+"If t, an error will be signalled if parse-time is unable\n"
+"   to determine the time/date format of the string."
+msgstr ""
+
+#: target:code/parse-time.lisp
+msgid "\"~A\" is not a recognized word or abbreviation."
+msgstr ""
+
+#: target:code/parse-time.lisp
+msgid ""
+"Can't parse time/date string.~%>>> ~A~\n"
+"\t\t\t\t   ~%~VT^-- Bogus character encountered here."
+msgstr ""
+
+#: target:code/parse-time.lisp
+msgid "Unrecognized symbol: ~A"
+msgstr ""
+
+#: target:code/parse-time.lisp
+msgid "~D is not an AM hour, dummy."
+msgstr ""
+
+#: target:code/parse-time.lisp
+msgid "~A isn't AM/PM - this shouldn't happen."
+msgstr ""
+
+#: target:code/parse-time.lisp
+msgid "Invalid number of days (~D) for month ~D in ~D"
+msgstr ""
+
+#: target:code/parse-time.lisp
+msgid "Ignore."
+msgstr ""
+
+#: target:code/parse-time.lisp
+msgid "Specified day (~@(~A~)) doesn't match actual day (~@(~A~))"
+msgstr ""
+
+#: target:code/parse-time.lisp
+msgid "Unrecognized symbol in form list: ~A."
+msgstr ""
+
+#: target:code/parse-time.lisp
+msgid ""
+"Tries very hard to make sense out of the argument time-string and\n"
+"   returns a single integer representing the universal time if\n"
+"   successful.  If not, it returns nil.  If the :error-on-mismatch\n"
+"   keyword is true, parse-time will signal an error instead of\n"
+"   returning nil.  Default values for each part of the time/date\n"
+"   can be specified by the appropriate :default- keyword.  These\n"
+"   keywords can be given a numeric value or the keyword :current\n"
+"   to set them to the current value.  The default-default values\n"
+"   are 00:00:00 on the current date, current time-zone."
+msgstr ""
+
+#: target:code/parse-time.lisp
+msgid "\"~A\" is not a recognized time/date format."
+msgstr ""
+
 #: target:code/foreign.lisp
 msgid "Could not create temporary file ~S: ~A"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Not enough memory left."
 msgstr ""
 
 #: target:code/foreign.lisp
@@ -6324,9 +7574,33 @@ msgid "Make sure the header starts with the mach-o magic value."
 msgstr ""
 
 #: target:code/foreign.lisp
+msgid ";;; Loading object file...~%"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Could not open ~S: ~A"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "~A is not an ELF file."
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "~A is not a ~A executable, it's a ~A executable."
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "~A is not executable."
+msgstr ""
+
+#: target:code/foreign.lisp
 msgid ""
 "Parse symbol table file created by load-foreign script.  Modified\n"
 "to skip undefined symbols which don't have an address."
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid ";;; Parsing symbol table...~%"
 msgstr ""
 
 #: target:code/foreign.lisp
@@ -6347,6 +7621,34 @@ msgid ""
 msgstr ""
 
 #: target:code/foreign.lisp
+msgid ";;; Running library:load-foreign.csh...~%"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid ""
+"Object file is wrong format, so can't load-foreign:~\n"
+"\t\t  ~%  ~S"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid ""
+"Object file is not relocatable, so can't load-foreign:~\n"
+"\t\t  ~%  ~S"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Could not run library:load-foreign.csh"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "library:load-foreign.csh failed:~%~A"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid ";;; Done.~%"
+msgstr ""
+
+#: target:code/foreign.lisp
 msgid "Lazy function call binding"
 msgstr ""
 
@@ -6362,20 +7664,6 @@ msgstr ""
 msgid ""
 "If set the symbols of the loaded object and its dependencies are\n"
 "   made visible as if the object were linked directly into the program"
-msgstr ""
-
-#: target:code/foreign.lisp
-msgid ""
-"Load C object files into the running Lisp. The FILES argument\n"
-"should be a single file or a list of files. The files may be specified\n"
-"as namestrings or as pathnames. The LIBRARIES argument should be a\n"
-"list of library files as would be specified to ld. They will be\n"
-"searched in the order given. The default is just \"-lc\", i.e., the C\n"
-"library. The BASE-FILE argument is used to specify a file to use as\n"
-"the starting place for defined symbols. The default is the C start up\n"
-"code for Lisp. The ENV argument is the Unix environment variable\n"
-"definitions for the invocation of the linker. The default is the\n"
-"environment passed to Lisp."
 msgstr ""
 
 #: target:code/foreign.lisp
@@ -6403,11 +7691,21 @@ msgid "Enter new library path: "
 msgstr ""
 
 #: target:code/foreign.lisp
-msgid ";;; Opening as shared library ~A ...~%"
+msgid ""
+"Load C object files into the running Lisp. The FILES argument\n"
+"should be a single file or a list of files. The files may be specified\n"
+"as namestrings or as pathnames. The LIBRARIES argument should be a\n"
+"list of library files as would be specified to ld. They will be\n"
+"searched in the order given. The default is just \"-lc\", i.e., the C\n"
+"library. The BASE-FILE argument is used to specify a file to use as\n"
+"the starting place for defined symbols. The default is the C start up\n"
+"code for Lisp. The ENV argument is the Unix environment variable\n"
+"definitions for the invocation of the linker. The default is the\n"
+"environment passed to Lisp."
 msgstr ""
 
 #: target:code/foreign.lisp
-msgid ";;; Done.~%"
+msgid ";;; Opening as shared library ~A ...~%"
 msgstr ""
 
 #: target:code/foreign.lisp
@@ -6419,15 +7717,15 @@ msgid ";;; Running ~A...~%"
 msgstr ""
 
 #: target:code/foreign.lisp
+msgid "File does not exist: ~A."
+msgstr ""
+
+#: target:code/foreign.lisp
 msgid "Could not run ~A"
 msgstr ""
 
 #: target:code/foreign.lisp
 msgid "~A failed:~%~A"
-msgstr ""
-
-#: target:code/foreign.lisp
-msgid "File does not exist: ~A."
 msgstr ""
 
 #: target:code/internet.lisp
@@ -6473,11 +7771,11 @@ msgid "bind Socket to (local) Host and Port"
 msgstr ""
 
 #: target:code/internet.lisp
-msgid "Error binding socket to port ~A: ~A"
+msgid "Unknown host: ~S."
 msgstr ""
 
 #: target:code/internet.lisp
-msgid "Unknown host: ~S."
+msgid "Error binding socket to port ~A: ~A"
 msgstr ""
 
 #: target:code/internet.lisp
@@ -6600,8 +7898,9 @@ msgid "Return the process state which is either Run, Killed, or a wait reason."
 msgstr ""
 
 #: target:code/multi-proc.lisp
+#, fuzzy
 msgid "Returns the current process."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/multi-proc.lisp
 msgid "A list of all alive processes."
@@ -6930,17 +8229,17 @@ msgid "Silly to specify :MAKE-LOAD-FORM-FUN with :TYPE."
 msgstr ""
 
 #: target:code/defstruct.lisp
+msgid ""
+"Keyword slot name indicates probable syntax ~\n"
+"\t\t      error in DEFSTRUCT -- ~S."
+msgstr ""
+
+#: target:code/defstruct.lisp
 msgid "Duplicate slot name ~S."
 msgstr ""
 
 #: target:code/defstruct.lisp
 msgid "Slot ~S must be read-only in subtype ~S."
-msgstr ""
-
-#: target:code/defstruct.lisp
-msgid ""
-"Keyword slot name indicates probable syntax ~\n"
-"\t\t      error in DEFSTRUCT -- ~S."
 msgstr ""
 
 #: target:code/defstruct.lisp
@@ -7146,6 +8445,18 @@ msgstr ""
 
 #: target:code/macros.lisp
 msgid "defining macro ~A"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Ignore the lock and continue"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Disable the package's definition-lock then continue"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Unlock all packages, then continue"
 msgstr ""
 
 #: target:code/macros.lisp
@@ -7537,15 +8848,15 @@ msgid ""
 msgstr ""
 
 #: target:code/macros.lisp
-msgid "Supply a new value of ~S."
-msgstr ""
-
-#: target:code/macros.lisp
 msgid "The value of ~S is ~S, which is not ~A."
 msgstr ""
 
 #: target:code/macros.lisp
 msgid "The value of ~S is ~S, which is not of type ~S."
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Supply a new value of ~S."
 msgstr ""
 
 #: target:code/macros.lisp

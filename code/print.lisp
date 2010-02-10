@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.126.4.1 2010/02/08 17:15:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.126.4.2 2010/02/10 01:53:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,46 +39,46 @@
 ;;;; Exported printer control variables.
 
 (defvar *print-readably* nil
-  "If true, all objects will printed readably.  If readably printing is
+  _N"If true, all objects will printed readably.  If readably printing is
   impossible, an error will be signalled.  This overrides the value of
   *PRINT-ESCAPE*.")
 (defvar *print-escape* T
-  "Flag which indicates that slashification is on.  See the manual")
+  _N"Flag which indicates that slashification is on.  See the manual")
 (defvar *print-pretty* nil
-  "Flag which indicates that pretty printing is to be used")
+  _N"Flag which indicates that pretty printing is to be used")
 (defvar *print-base* 10.
-  "The output base for integers and rationals.")
+  _N"The output base for integers and rationals.")
 (defvar *print-radix* nil
-  "This flag requests to verify base when printing rationals.")
+  _N"This flag requests to verify base when printing rationals.")
 (defvar *print-level* nil
-  "How many levels deep to print.  Unlimited if null.")
+  _N"How many levels deep to print.  Unlimited if null.")
 (defvar *print-length* nil
-  "How many elements to print on each level.  Unlimited if null.")
+  _N"How many elements to print on each level.  Unlimited if null.")
 (defvar *print-circle* nil
-  "Whether to worry about circular list structures. See the manual.")
+  _N"Whether to worry about circular list structures. See the manual.")
 (defvar *print-case* :upcase
-  "What kind of case the printer should use by default")
+  _N"What kind of case the printer should use by default")
 (defvar *print-array* t
-  "Whether the array should print it's guts out")
+  _N"Whether the array should print it's guts out")
 (defvar *print-gensym* t
-  "If true, symbols with no home package are printed with a #: prefix.
+  _N"If true, symbols with no home package are printed with a #: prefix.
   If false, no prefix is printed.")
 (defvar *print-lines* nil
-  "The maximum number of lines to print.  If NIL, unlimited.")
+  _N"The maximum number of lines to print.  If NIL, unlimited.")
 (defvar *print-right-margin* nil
-  "The position of the right margin in ems.  If NIL, try to determine this
+  _N"The position of the right margin in ems.  If NIL, try to determine this
    from the stream in use.")
 (defvar *print-miser-width* nil
-  "If the remaining space between the current column and the right margin
+  _N"If the remaining space between the current column and the right margin
    is less than this, then print using ``miser-style'' output.  Miser
    style conditional newlines are turned on, and all indentations are
    turned off.  If NIL, never use miser mode.")
 (defvar *print-pprint-dispatch* nil
-  "The pprint-dispatch-table that controls how to pretty print objects.  See
+  _N"The pprint-dispatch-table that controls how to pretty print objects.  See
    COPY-PPRINT-DISPATH, PPRINT-DISPATCH, and SET-PPRINT-DISPATCH.")
 
 (defmacro with-standard-io-syntax (&body body)
-  "Bind the reader and printer control variables to values that enable READ
+  _N"Bind the reader and printer control variables to values that enable READ
    to reliably read the results of PRINT.  These values are:
        *PACKAGE*			The COMMON-LISP-USER package
        *PRINT-ARRAY*			T
@@ -148,19 +148,19 @@
 		     ((:lines *print-lines*) *print-lines*)
 		     ((:pprint-dispatch *print-pprint-dispatch*)
 		      *print-pprint-dispatch*))
-  "Outputs OBJECT to the specified stream, defaulting to *standard-output*"
+  _N"Outputs OBJECT to the specified stream, defaulting to *standard-output*"
   (output-object object (out-synonym-of stream))
   object)
 
 (defun prin1 (object &optional stream)
-  "Outputs a mostly READable printed representation of OBJECT on the specified
+  _N"Outputs a mostly READable printed representation of OBJECT on the specified
   stream."
   (let ((*print-escape* T))
     (output-object object (out-synonym-of stream)))
   object)
 
 (defun princ (object &optional stream)
-  "Outputs an asthetic but not READable printed representation of OBJECT on the
+  _N"Outputs an asthetic but not READable printed representation of OBJECT on the
   specified stream."
   (let ((*print-escape* NIL)
 	(*print-readably* NIL))
@@ -168,7 +168,7 @@
   object)
 
 (defun print (object &optional stream)
-  "Outputs a terpri, the mostly READable printed represenation of OBJECT, and 
+  _N"Outputs a terpri, the mostly READable printed represenation of OBJECT, and 
   space to the stream."
   (let ((stream (out-synonym-of stream)))
     (terpri stream)
@@ -177,7 +177,7 @@
     object))
 
 (defun pprint (object &optional stream)
-  "Prettily outputs the Object preceded by a newline."
+  _N"Prettily outputs the Object preceded by a newline."
   (let ((*print-pretty* t)
 	(*print-escape* t)
 	(stream (out-synonym-of stream)))
@@ -204,16 +204,16 @@
 	       ((:lines *print-lines*) *print-lines*)
 	       ((:pprint-dispatch *print-pprint-dispatch*)
 		*print-pprint-dispatch*))
-  "Returns the printed representation of OBJECT as a string."
+  _N"Returns the printed representation of OBJECT as a string."
   (stringify-object object))
 
 (defun prin1-to-string (object)
-  "Returns the printed representation of OBJECT as a string with 
+  _N"Returns the printed representation of OBJECT as a string with 
    slashification on."
   (stringify-object object t))
 
 (defun princ-to-string (object)
-  "Returns the printed representation of OBJECT as a string with
+  _N"Returns the printed representation of OBJECT as a string with
   slashification off."
   (stringify-object object nil))
 
@@ -251,7 +251,7 @@
    (lambda (condition stream)
      (let ((obj (print-not-readable-object condition))
 	   (*print-array* nil))
-       (format stream "~S cannot be printed readably." obj)))))
+       (format stream _"~S cannot be printed readably." obj)))))
 
 ;;; Guts of print-unreadable-object.
 ;;;
@@ -297,7 +297,7 @@
 ;;; This is used in other files, but is defined in this one for some reason.
 
 (defun whitespace-char-p (char)
-  "Determines whether or not the character is considered whitespace."
+  _N"Determines whether or not the character is considered whitespace."
   (or (char= char #\space)
       (char= char #\tab)
       (char= char #\return)
@@ -329,7 +329,7 @@
 ;;; CHECK-FOR-CIRCULARITY -- interface.
 ;;;
 (defun check-for-circularity (object &optional assign (mode t))
-  "Check to see if OBJECT is a circular reference, and return something non-NIL
+  _N"Check to see if OBJECT is a circular reference, and return something non-NIL
    if it is.  If ASSIGN is T, then the number to use in the #n= and #n# noise
    is assigned at this time.  Note: CHECK-FOR-CIRCULARITY must be called
    *EXACTLY* once with ASSIGN T, or the circularity detection noise will get
@@ -416,14 +416,14 @@
 ;;; HANDLE-CIRCULARITY -- interface.
 ;;; 
 (defun handle-circularity (marker stream)
-  "Handle the results of CHECK-FOR-CIRCULARITY.  If this returns T then
+  _N"Handle the results of CHECK-FOR-CIRCULARITY.  If this returns T then
    you should go ahead and print the object.  If it returns NIL, then
    you should blow it off."
   (case marker
     (:initiate
      ;; Someone forgot to initiate circularity detection.
      (let ((*print-circle* nil))
-       (error "Attempt to use CHECK-FOR-CIRCULARITY when circularity ~
+       (error _"Attempt to use CHECK-FOR-CIRCULARITY when circularity ~
 	       checking has not been initiated.")))
     ((t :logical-block)
      ;; It's a second (or later) reference to the object while we are
@@ -469,13 +469,13 @@
 ;;; *CURRENT-LEVEL* -- interface.
 ;;; 
 (defvar *current-level* 0
-  "The current level we are printing at, to be compared against *PRINT-LEVEL*.
+  _N"The current level we are printing at, to be compared against *PRINT-LEVEL*.
    See the macro DESCEND-INTO for a handy interface to depth abbreviation.")
 
 ;;; DESCEND-INTO -- interface.
 ;;; 
 (defmacro descend-into ((stream) &body body)
-  "Automatically handle *print-level* abbreviation.  If we are too deep, then
+  _N"Automatically handle *print-level* abbreviation.  If we are too deep, then
    a # is printed to STREAM and BODY is ignored."
   (let ((flet-name (gensym)))
     `(flet ((,flet-name ()
@@ -491,7 +491,7 @@
 ;;; PUNT-IF-TOO-LONG -- interface.
 ;;; 
 (defmacro punt-if-too-long (index stream)
-  "Punt if INDEX is equal or larger then *PRINT-LENGTH* (and *PRINT-READABLY*
+  _N"Punt if INDEX is equal or larger then *PRINT-LENGTH* (and *PRINT-READABLY*
    is NIL) by outputting \"...\" and returning from the block named NIL."
   `(when (and (not *print-readably*)
 	      *print-length*
@@ -505,14 +505,14 @@
 ;;; *PRETTY-PRINTER* -- public.
 ;;; 
 (defvar *pretty-printer* nil
-  "The current pretty printer.  Should be either a function that takes two
+  _N"The current pretty printer.  Should be either a function that takes two
    arguments (the object and the stream) or NIL to indicate that there is
    no pretty printer installed.")
 
 ;;; OUTPUT-OBJECT -- interface.
 ;;; 
 (defun output-object (object stream)
-  "Output OBJECT to STREAM observing all printer control variables."
+  _N"Output OBJECT to STREAM observing all printer control variables."
   (labels ((print-it (stream)
 	     (if *print-pretty*
 		 (if *pretty-printer*
@@ -557,7 +557,7 @@
 ;;; OUTPUT-UGLY-OBJECT -- interface.
 ;;; 
 (defun output-ugly-object (object stream)
-  "Output OBJECT to STREAM observing all printer control variables except
+  _N"Output OBJECT to STREAM observing all printer control variables except
    for *PRINT-PRETTY*.  Note: if *PRINT-PRETTY* is non-NIL, then the pretty
    printer will be used for any components of OBJECT, just not for OBJECT
    itself."
@@ -636,11 +636,11 @@
     (setq *previous-readtable-case* (readtable-case *readtable*))
     (unless (member *print-case* '(:upcase :downcase :capitalize))
       (setq *print-case* :upcase)
-      (error "Invalid *PRINT-CASE* value: ~S" *previous-case*))
+      (error _"Invalid *PRINT-CASE* value: ~S" *previous-case*))
     (unless (member *previous-readtable-case*
 		    '(:upcase :downcase :invert :preserve))
       (setf (readtable-case *readtable*) :upcase)
-      (error "Invalid READTABLE-CASE value: ~S" *previous-readtable-case*))
+      (error _"Invalid READTABLE-CASE value: ~S" *previous-readtable-case*))
 
     (setq *internal-symbol-output-function*
 	  (case *previous-readtable-case*
@@ -1146,7 +1146,7 @@
 	  (write-char char stream))))))
 
 (defun output-array (array stream)
-  "Outputs the printed representation of any array in either the #< or #A
+  _N"Outputs the printed representation of any array in either the #< or #A
    form."
   (if (or *print-array* *print-readably*)
       (output-array-guts array stream)
@@ -1214,7 +1214,7 @@
 	    (if (layout-invalid layout)
 		(print-unreadable-object
 		    (instance stream :identity t :type t)
-		  (write-string "Obsolete Instance" stream))
+		  (write-string _"Obsolete Instance" stream))
 		(cond (;; non-CLOS :print-function option
 		       (slot-class-print-function class)
 		       (funcall (slot-class-print-function class)
@@ -1229,9 +1229,9 @@
 	    (print-object instance stream))
 	   (t
 	    (print-unreadable-object (instance stream :identity t)
-	      (write-string "Unprintable Instance" stream)))))
+	      (write-string _"Unprintable Instance" stream)))))
 	(print-unreadable-object (instance stream :identity t)
-	  (write-string "Unprintable Instance" stream)))))
+	  (write-string _"Unprintable Instance" stream)))))
 
 #+ORIGINAL
 (defun output-instance (instance stream)
@@ -1246,7 +1246,7 @@
 		 (if (layout-invalid layout)
 		     (print-unreadable-object (instance stream :identity t
 							:type t)
-		       (write-string "Obsolete Instance" stream))
+		       (write-string _"Obsolete Instance" stream))
 		     (funcall (or (slot-class-print-function class)
 				  #'default-structure-print)
 			      instance stream *current-level*)))
@@ -1254,9 +1254,9 @@
 		 (print-object instance stream))
 		(t
 		 (print-unreadable-object (instance stream :identity t)
-		   (write-string "Unprintable Instance" stream)))))
+		   (write-string _"Unprintable Instance" stream)))))
 	(print-unreadable-object (instance stream :identity t)
-	  (write-string "Unprintable Instance" stream)))))
+	  (write-string _"Unprintable Instance" stream)))))
 
 
 ;;;; Integer, ratio, and complex printing.  (i.e. everything but floats)
@@ -1266,7 +1266,7 @@
 	       (< 1 *print-base* 37))
     (let ((obase *print-base*))
       (setq *print-base* 10.)
-      (error "~A is not a reasonable value for *Print-Base*." obase)))
+      (error _"~A is not a reasonable value for *Print-Base*." obase)))
   (when (and (not (= *print-base* 10.))
 	     *print-radix*)
     ;; First print leading base information, if any.
@@ -1330,7 +1330,7 @@
   big)
 
 (defun power-list (n r)
-  "Compute a list of pairs (2^i . r^{2^i}), stopping with the largest r^{2^i}
+  _N"Compute a list of pairs (2^i . r^{2^i}), stopping with the largest r^{2^i}
 greater than n."
   (declare (integer n) (fixnum r))
   (do ((l nil (acons i r l))
@@ -1340,16 +1340,16 @@ greater than n."
 
 (declaim (inline digit-to-char))
 (defun digit-to-char (d)
-  "Convert digit into a character representation.  We use 0..9, a..z for
+  _N"Convert digit into a character representation.  We use 0..9, a..z for
 10..35, and A..Z for 36..52."
   (declare (fixnum d))
   (labels ((offset (d b) (code-char (+ d (char-code b)))))
     (cond ((< d 10) (offset d #\0))
 	  ((< d 36) (offset (- d 10) #\A))
-	  (t (error "overflow in digit-to-char")))))
+	  (t (error _"overflow in digit-to-char")))))
 
 (defun print-fixnum-sub (n r z s)
-  "Print a fixnum N to stream S, maybe with leading zeros.  This isn't
+  _N"Print a fixnum N to stream S, maybe with leading zeros.  This isn't
 ever-so efficient, but we probably don't need to care."
   (declare (fixnum n r z)
 	   (stream s))
@@ -1368,7 +1368,7 @@ ever-so efficient, but we probably don't need to care."
     (gen-digits n nil z)))
 
 (defun print-bignum-fast-sub (n r z s pl)
-  "Use the power list (see power-list) PL to split N roughly in half; then
+  _N"Use the power list (see power-list) PL to split N roughly in half; then
 print the left and right halves using (cdr PL).  Make sure we count the
 leading zeroes correctly."
   (declare (integer n)
@@ -1398,7 +1398,7 @@ leading zeroes correctly."
     pl))
 
 (defun print-bignum-fast (n s)
-  "Primary fast bignum-printing interface.  Prints integer N to stream S in
+  _N"Primary fast bignum-printing interface.  Prints integer N to stream S in
 radix-R.  If you have a power-list then pass it in as PL."
   (when (minusp n)
     (write-char #\- s)
@@ -1729,11 +1729,11 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 
 (defconstant output-float-free-format-exponent-min -3
-  "Minimum power of 10 that allows the float printer to use free format,
+  _N"Minimum power of 10 that allows the float printer to use free format,
    instead of exponential format.  See section 22.1.3.1.3: Printing Floats
    in the ANSI CL standard.")
 (defconstant output-float-free-format-exponent-max 8
-  "Maximum power of 10 that allows the float printer to use free format,
+  _N"Maximum power of 10 that allows the float printer to use free format,
    instead of exponential format.  See section 22.1.3.1.3: Printing Floats
    in the ANSI CL standard.")
 
@@ -1784,7 +1784,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 #+double-double
 (defun dd->lisp (a0 a1)
-  "Convert a DD number to a lisp rational"
+  _N"Convert a DD number to a lisp rational"
   (declare (double-float a0 a1))
   (+ (rational a0) (rational a1)))
 
@@ -1805,7 +1805,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 #+double-double
 (defun dd->string (x0 x1 stream)
-  "Print out a double-double to a string"
+  _N"Print out a double-double to a string"
   (cond ((and (zerop x0) (zerop x1))
 	 (format stream "0.dd0"))
 	(t
@@ -2050,29 +2050,29 @@ radix-R.  If you have a power-list then pass it in as PL."
 	(value validp)
 	(weak-pointer-value weak-pointer)
       (cond (validp
-	     (write-string "Weak Pointer: " stream)
+	     (write-string _"Weak Pointer: " stream)
 	     (write value :stream stream))
 	    (t
-	     (write-string "Broken Weak Pointer" stream))))))
+	     (write-string _"Broken Weak Pointer" stream))))))
 
 (defun output-code-component (component stream)
   (print-unreadable-object (component stream :identity t)
     (let ((dinfo (%code-debug-info component)))
       (cond ((eq dinfo :bogus-lra)
-	     (write-string "Bogus Code Object" stream))
+	     (write-string _"Bogus Code Object" stream))
 	    (t
-	     (write-string "Code Object" stream)
+	     (write-string _"Code Object" stream)
 	     (when dinfo
 	       (write-char #\space stream)
 	       (output-object (c::debug-info-name dinfo) stream)))))))
 
 (defun output-lra (lra stream)
   (print-unreadable-object (lra stream :identity t)
-    (write-string "Return PC Object" stream)))
+    (write-string _"Return PC Object" stream)))
 
 (defun output-fdefn (fdefn stream)
   (print-unreadable-object (fdefn stream)
-    (write-string "FDEFINITION object for " stream)
+    (write-string _"FDEFINITION object for " stream)
     (output-object (fdefn-name fdefn) stream)))
 
 #+gencgc
@@ -2088,7 +2088,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 ;;; below.
 
 (defun output-function-object (subr stream)
-  (write-string "Function " stream)
+  (write-string _"Function " stream)
   (prin1 (%function-name subr) stream))
 
 
@@ -2102,7 +2102,7 @@ radix-R.  If you have a power-list then pass it in as PL."
       (eval:interpreted-function-lambda-expression subr)
     (declare (ignore ignore))
     (let ((*print-level* 3))
-      (format stream "Interpreted Function ~S" (or name def)))))
+      (format stream _"Interpreted Function ~S" (or name def)))))
 
 (defun output-function (function stream)
   (print-unreadable-object (function stream :identity t)
@@ -2110,18 +2110,18 @@ radix-R.  If you have a power-list then pass it in as PL."
       ((#.vm:function-header-type #.vm:closure-function-header-type)
        (output-function-object function stream))
       (#.vm:byte-code-function-type
-       (write-string "Byte Compiled Function" stream))
+       (write-string _"Byte Compiled Function" stream))
       (#.vm:byte-code-closure-type
-       (write-string "Byte Compiled Closure" stream))
+       (write-string _"Byte Compiled Closure" stream))
       (#.vm:closure-header-type
        (cond
 	((eval:interpreted-function-p function)
 	 (output-interpreted-function function stream))
 	(t
-	 (write-string "Closure Over " stream)
+	 (write-string _"Closure Over " stream)
 	 (output-function-object (%closure-function function) stream))))
       (t
-       (write-string "Unknown Function" stream)))))
+       (write-string _"Unknown Function" stream)))))
 
 
 ;;;; Catch-all for unknown things.
@@ -2134,25 +2134,25 @@ radix-R.  If you have a power-list then pass it in as PL."
 	  (let ((type (get-type object)))
 	    (case type
 	      (#.vm:value-cell-header-type
-	       (write-string "Value Cell " stream)
+	       (write-string _"Value Cell " stream)
 	       (output-object (c:value-cell-ref object) stream))
 	      (t
-	       (write-string "Unknown Pointer Object, type=" stream)
+	       (write-string _"Unknown Pointer Object, type=" stream)
 	       (let ((*print-base* 16) (*print-radix* t))
 		 (output-integer type stream))))))
 	((#.vm:function-pointer-type
 	  #.vm:instance-pointer-type
 	  #.vm:list-pointer-type)
-	 (write-string "Unknown Pointer Object, type=" stream))
+	 (write-string _"Unknown Pointer Object, type=" stream))
 	(t
 	 (case (get-type object)
 	   (#.vm:unbound-marker-type
-	    (write-string "Unbound Marker" stream))
+	    (write-string _"Unbound Marker" stream))
 	   (t
-	    (write-string "Unknown Immediate Object, lowtag=" stream)
+	    (write-string _"Unknown Immediate Object, lowtag=" stream)
 	    (let ((*print-base* 2) (*print-radix* t))
 	      (output-integer lowtag stream))
-	    (write-string ", type=" stream)
+	    (write-string _", type=" stream)
 	    (let ((*print-base* 16) (*print-radix* t))
 	      (output-integer (get-type object) stream)))))))))
 
@@ -2162,7 +2162,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 #+unicode
 (defun reinit-char-attributes ()
   (unless (probe-file +unidata-path+)
-    (cerror "Continue anyway" "Cannot find ~S, so unicode support is not available"
+    (cerror _"Continue anyway" _"Cannot find ~S, so unicode support is not available"
 	    +unidata-path+)
     (return-from reinit-char-attributes nil))
   (flet ((set-bit (char bit)

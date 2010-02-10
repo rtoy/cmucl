@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.19.54.1 2010/02/08 17:15:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.19.54.2 2010/02/10 01:53:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,7 +46,7 @@
 
 
 (defun purify (&key root-structures (environment-name "Auxiliary"))
-  "This function optimizes garbage collection by moving all currently live
+  _N"This function optimizes garbage collection by moving all currently live
    objects into non-collected storage.  ROOT-STRUCTURES is an optional list of
    objects which should be copied first to maximize locality.
 
@@ -63,7 +63,7 @@
   (let ((*gc-notify-before*
 	 #'(lambda (bytes-in-use)
 	     (declare (ignore bytes-in-use))
-	     (write-string "[Doing purification: ")
+	     (write-string _"[Doing purification: ")
 	     (force-output)))
 	(*internal-gc*
 	 #'(lambda ()
@@ -72,7 +72,7 @@
 	(*gc-notify-after*
 	 #'(lambda (&rest ignore)
 	     (declare (ignore ignore))
-	     (write-line "Done.]"))))
+	     (write-line _"Done.]"))))
     #-gencgc (gc t)
     #+gencgc (gc :verbose t))
   nil)
