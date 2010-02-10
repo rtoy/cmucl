@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.113.10.4 2010/02/10 03:57:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.113.10.5 2010/02/10 14:07:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -90,12 +90,18 @@
                        :format-control _"defining macro ~A"
                        :format-arguments (list name))
               (continue ()
-                :report "Ignore the lock and continue")
+                :report (lambda (condition stream)
+			  (declare (ignore condition))
+			  (write-string _"Ignore the lock and continue" stream)))
               (unlock-package ()
-                :report "Disable the package's definition-lock then continue"
+                :report (lambda (condition stream)
+			  (declare (ignore condition))
+			  (write-string _"Disable the package's definition-lock then continue" stream))
                 (setf (ext:package-definition-lock package) nil))
               (unlock-all ()
-                :report "Unlock all packages, then continue"
+                :report (lambda (condition stream)
+			  (declare (ignore condition))
+			  (write-string _"Unlock all packages, then continue" stream))
                 (lisp::unlock-all-packages))))))))
   (let ((whole (gensym "WHOLE-"))
 	(environment (gensym "ENV-")))
@@ -218,12 +224,18 @@
                   :format-control _"defining type ~A"
                   :format-arguments (list name))
          (continue ()
-           :report "Ignore the lock and continue")
+           :report (lambda (condition stream)
+		     (declare (ignore condition))
+		     (write-string _"Ignore the lock and continue" stream)))
          (unlock-package ()
-           :report "Disable package's definition-lock then continue"
+           :report (lambda (condition stream)
+		     (declare (ignore condition))
+		     (write-string _"Disable package's definition-lock then continue" stream))
            (setf (ext:package-definition-lock (symbol-package name)) nil))
          (unlock-all ()
-           :report "Unlock all packages, then continue"
+           :report (lambda (condition stream)
+		     (declare (ignore condition))
+		     (write-string _"Unlock all packages, then continue" stream))
            (lisp::unlock-all-packages))))
   (let ((whole (gensym "WHOLE-")))
     (multiple-value-bind (body local-decs doc)

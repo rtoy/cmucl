@@ -229,6 +229,14 @@ msgstr ""
 msgid "KERNEL:*MAXIMUM-ERROR-DEPTH* exceeded."
 msgstr ""
 
+#: target:code/lispinit.lisp
+msgid "Return from BREAK."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "~&~@<Warning:  ~3i~:_~A~:>~%"
+msgstr ""
+
 #: target:code/fwrappers.lisp
 msgid ""
 "A funcallable instance used to implement fwrappers.\n"
@@ -432,8 +440,9 @@ msgid ""
 msgstr ""
 
 #: target:code/error.lisp
+#, fuzzy
 msgid "Returns the name of the given restart object."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/error.lisp
 msgid ""
@@ -704,6 +713,10 @@ msgid ""
 msgstr ""
 
 #: target:code/error.lisp
+msgid "Found an \"abort\" restart that failed to transfer control dynamically."
+msgstr ""
+
+#: target:code/error.lisp
 msgid ""
 "Transfers control to a restart named abort, signalling a control-error if\n"
 "   none exists."
@@ -841,13 +854,25 @@ msgid ""
 msgstr ""
 
 #: target:code/class.lisp
+msgid "Invalidate current definition."
+msgstr ""
+
+#: target:code/class.lisp
 msgid "New definition of ~S must be loaded eventually."
+msgstr ""
+
+#: target:code/class.lisp
+msgid "Smash current layout, preserving old code."
 msgstr ""
 
 #: target:code/class.lisp
 msgid ""
 "Any old ~S instances will be in a bad way.~@\n"
 "\t\t      I hope you know what you're doing..."
+msgstr ""
+
+#: target:code/class.lisp
+msgid "Ignore the incompatibility, leave class alone."
 msgstr ""
 
 #: target:code/class.lisp
@@ -1895,8 +1920,9 @@ msgid "Returns the bit from the Simple-Bit-Array at the specified Subscripts."
 msgstr ""
 
 #: target:code/array.lisp
+#, fuzzy
 msgid "Returns the type of the elements of the array"
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/array.lisp
 msgid "Returns the number of dimensions of the Array."
@@ -1939,8 +1965,9 @@ msgid "Returns T if the given Array has a fill pointer, or Nil otherwise."
 msgstr ""
 
 #: target:code/array.lisp
+#, fuzzy
 msgid "Returns the Fill-Pointer of the given Vector."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/array.lisp
 msgid "New fill pointer, ~S, is larger than the length of the vector."
@@ -4233,9 +4260,10 @@ msgid "Unix-getpid returns the process-id of the current process."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/unix.lisp
+#, fuzzy
 msgid ""
 "Unix-getppid returns the process-id of the parent of the current process."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/unix.lisp
 #, fuzzy
@@ -4243,12 +4271,14 @@ msgid "Unix-getgid returns the real group-id of the current process."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/unix.lisp
+#, fuzzy
 msgid "Unix-getegid returns the effective group-id of the current process."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/unix.lisp
+#, fuzzy
 msgid "Unix-getpgrp returns the group-id of the calling process."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/unix.lisp
 msgid ""
@@ -4264,14 +4294,16 @@ msgid ""
 msgstr ""
 
 #: target:code/unix.lisp
+#, fuzzy
 msgid ""
 "Unix-getuid returns the real user-id associated with the\n"
 "   current process."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/unix.lisp
+#, fuzzy
 msgid "Unix-getpagesize returns the number of bytes in a system page."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/unix.lisp
 msgid "Unix-gethostname returns the name of the host machine as a string."
@@ -4766,12 +4798,14 @@ msgid "Return the denominator of NUMBER, which must be rational."
 msgstr ""
 
 #: target:code/numbers.lisp
+#, fuzzy
 msgid "Returns the sum of its arguments.  With no args, returns 0."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
+#, fuzzy
 msgid "Returns the product of its arguments.  With no args, returns 1."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
 msgid ""
@@ -4885,8 +4919,9 @@ msgid "Return T if OBJ1 and OBJ2 represent the same object, otherwise NIL."
 msgstr ""
 
 #: target:code/numbers.lisp
+#, fuzzy
 msgid "Returns the bit-wise or of its arguments.  Args must be integers."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
 msgid ""
@@ -4894,8 +4929,9 @@ msgid ""
 msgstr ""
 
 #: target:code/numbers.lisp
+#, fuzzy
 msgid "Returns the bit-wise and of its arguments.  Args must be integers."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
 msgid ""
@@ -4927,8 +4963,9 @@ msgid "Returns the logical OR of integer1 and (LOGNOT integer2)."
 msgstr ""
 
 #: target:code/numbers.lisp
+#, fuzzy
 msgid "Returns the bit-wise logical not of integer."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
 msgid ""
@@ -5292,6 +5329,14 @@ msgid "The absolute value of ~S exceeds limit ~S."
 msgstr ""
 
 #: target:code/irrat.lisp
+msgid "Continue with calculation"
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Continue with calculation, update limit"
+msgstr ""
+
+#: target:code/irrat.lisp
 msgid "Returns BASE raised to the POWER."
 msgstr ""
 
@@ -5304,8 +5349,9 @@ msgid "Return the square root of NUMBER."
 msgstr ""
 
 #: target:code/irrat.lisp
+#, fuzzy
 msgid "Returns the absolute value of the number."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/irrat.lisp
 msgid ""
@@ -5558,8 +5604,9 @@ msgid ""
 msgstr ""
 
 #: target:code/char.lisp
+#, fuzzy
 msgid "Returns the character with the code CODE."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/char.lisp
 msgid ""
@@ -5656,8 +5703,9 @@ msgid ""
 msgstr ""
 
 #: target:code/char.lisp
+#, fuzzy
 msgid "Returns T if all of its arguments are the same character."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/char.lisp
 msgid "Returns T if no two of its arguments are the same character."
@@ -6858,8 +6906,9 @@ msgid "Returns non-nil if the given Stream can perform output operations."
 msgstr ""
 
 #: target:code/stream.lisp
+#, fuzzy
 msgid "Return true if Stream is not closed."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/stream.lisp
 msgid "Returns a type specifier for the kind of object returned by the Stream."
@@ -6942,8 +6991,9 @@ msgid "Clears any buffered input associated with the Stream."
 msgstr ""
 
 #: target:code/stream.lisp
+#, fuzzy
 msgid "Returns the next byte of the Stream."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/stream.lisp
 msgid ""
@@ -7791,6 +7841,18 @@ msgstr ""
 msgid "redefining function ~A"
 msgstr ""
 
+#: target:code/macros.lisp target:code/defstruct.lisp target:code/package.lisp
+msgid "Ignore the lock and continue"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Disable package's definition-lock, then continue"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Disable all package locks, then continue"
+msgstr ""
+
 #: target:code/package.lisp
 msgid "Bogus ~A name: ~S"
 msgstr ""
@@ -7947,8 +8009,9 @@ msgid "~S is a package name, so it cannot be a nickname for ~S."
 msgstr ""
 
 #: target:code/package.lisp
+#, fuzzy
 msgid "Redefine this nickname."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/package.lisp
 msgid "~S is already a nickname for ~S."
@@ -8014,8 +8077,9 @@ msgid "Remove dependency in other packages."
 msgstr ""
 
 #: target:code/package.lisp
+#, fuzzy
 msgid "Returns a list of all existing packages."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/package.lisp
 msgid "Returns a symbol having the specified name, creating it if necessary."
@@ -8042,6 +8106,14 @@ msgstr ""
 
 #: target:code/package.lisp
 msgid "uninterning symbol ~A"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Disable package's lock then continue"
+msgstr ""
+
+#: target:code/macros.lisp target:code/defstruct.lisp target:code/package.lisp
+msgid "Unlock all packages, then continue"
 msgstr ""
 
 #: target:code/package.lisp
@@ -8076,6 +8148,14 @@ msgstr ""
 msgid ""
 "Exporting these symbols from the ~A package:~%~S~%~\n"
 "\t      results in name conflicts with these packages:~%~{~A ~}"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Unintern conflicting symbols."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Skip exporting conflicting symbols."
 msgstr ""
 
 #: target:code/package.lisp
@@ -8152,8 +8232,9 @@ msgid "Remove PACKAGES-TO-UNUSE from the use list for PACKAGE."
 msgstr ""
 
 #: target:code/package.lisp
+#, fuzzy
 msgid "Return a list of all symbols in the system having the specified name."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/describe.lisp target:code/package.lisp
 msgid "special variable"
@@ -8725,6 +8806,18 @@ msgid ""
 "   DIRECTION should be either :INPUT or :OUTPUT, FD is the file descriptor "
 "to\n"
 "   use, and FUNCTION is the function to call whenever FD is usable."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid "Remove bogus handlers."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid "Retry bogus handlers."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid "Go on, leaving handlers marked as bogus."
 msgstr ""
 
 #: target:code/serve-event.lisp
@@ -9618,6 +9711,240 @@ msgstr ""
 msgid "Can't create directory ~A."
 msgstr ""
 
+#: target:code/load.lisp
+msgid "The default for the :IF-SOURCE-NEWER argument to load."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "The source file types which LOAD recognizes."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "A list of the object file types recognized by LOAD."
+msgstr ""
+
+#: target:code/load.lisp
+msgid ""
+"A list of the object file types recognized by LOAD for logical pathnames."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "The default for the :VERBOSE argument to Load."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "The default for the :PRINT argument to Load."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "The TRUENAME of the file that LOAD is currently loading."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "The defaulted pathname that LOAD is currently loading."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Count of the number of recursive loads."
+msgstr ""
+
+#: target:code/load.lisp
+msgid ""
+"~A was compiled for fasl-file version ~X, ~\n"
+"                     but this is version ~X"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "List of free fop tables for the fasloader."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "The fop stack (we only need one!)."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Vector indexed by a FaslOP that yields the FOP's name."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Losing FOP!"
+msgstr ""
+
+#: target:code/load.lisp
+msgid ""
+"Vector indexed by a FaslOP that yields a function of 0 arguments which\n"
+"  will perform the operation."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Loading ~S.~%"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Loading stuff from ~S.~%"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Attempt to load an empty FASL FILE:~%  ~S"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Bad FASL file format."
+msgstr ""
+
+#: target:code/load.lisp
+msgid ""
+"Loads the file named by Filename into the Lisp environment.  The file type\n"
+"   (a.k.a extension) is defaulted if missing.  These options are defined:\n"
+"\n"
+"   :IF-SOURCE-NEWER <keyword>\n"
+"\tIf the file type is not specified, and both source and object files\n"
+"        exist, then this argument controls which is loaded:\n"
+"\t    :LOAD-OBJECT - load object file (default),\n"
+"\t    :LOAD-SOURCE - load the source file,\n"
+"\t    :COMPILE - compile the source and then load the object file, or\n"
+"\t    :QUERY - ask the user which to load.\n"
+"\n"
+"   :IF-DOES-NOT-EXIST {:ERROR | NIL}\n"
+"       If :ERROR (the default), signal an error if the file can't be "
+"located.\n"
+"       If NIL, simply return NIL (LOAD normally returns T.)\n"
+"\n"
+"   :VERBOSE {T | NIL}\n"
+"       If true (the default), print a line describing each file loaded.\n"
+"\n"
+"   :PRINT {T | NIL}\n"
+"       If true, print information about loaded values.  When loading the\n"
+"       source, the result of evaluating each top-level form is printed.\n"
+"\n"
+"   :CONTENTS {NIL | :SOURCE | :BINARY}\n"
+"       Forces the input to be interpreted as a source or object file, "
+"instead\n"
+"       of guessing based on the file type.  This also inhibits file type\n"
+"       defaulting.  Probably only necessary if you have source files with a\n"
+"       \"fasl\" type. \n"
+"\n"
+"   The variables *LOAD-VERBOSE*, *LOAD-PRINT* and EXT:*LOAD-IF-SOURCE-"
+"NEWER*\n"
+"   determine the defaults for the corresponding keyword arguments.  These\n"
+"   variables are also bound to the specified argument values, so specifying "
+"a\n"
+"   keyword affects nested loads.  The variables EXT:*LOAD-SOURCE-TYPES*,\n"
+"   EXT:*LOAD-OBJECT-TYPES*, and EXT:*LOAD-LP-OBJECT-TYPES* determine the "
+"file\n"
+"   types that we use for defaulting when none is specified."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Return NIL from load of ~S."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "~S does not exist."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "See if it exists now."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Prompt for a new name."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "New name: "
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Load it as a source file."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "File has a fasl file type, but no fasl file header:~%  ~S"
+msgstr ""
+
+#: target:code/load.lisp
+msgid ""
+"Loading object file ~A,~@\n"
+"\t\t  which is older than the presumed source:~%  ~A."
+msgstr ""
+
+#: target:code/load.lisp
+msgid ""
+"Loading source file ~A,~@\n"
+"\t\t  which is newer than the presumed object file:~%  ~A."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Compile of source failed, cannot load object."
+msgstr ""
+
+#: target:code/load.lisp
+msgid ""
+"Object file ~A is~@\n"
+"\t\t       older than the presumed source:~%  ~A."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "load source file"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "load object file"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Fop-End-Header was executed???"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Fasl table of improper size.  Bug!"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Fasl stack not empty.  Bug!"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "The package ~S does not exist."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Losing i-vector element size: ~S"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Load ~A anyway"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "~A was compiled for a ~A, but this is a ~A"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Top-Level Form"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Unaligned function object, offset = #x~X."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "~S defined~%"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Unknown foreign symbol: ~S"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Cannot load assembler code."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Undefined assembler routine: ~S"
+msgstr ""
+
 #: target:code/foreign-linkage.lisp
 msgid "~A is not defined as a foreign symbol"
 msgstr ""
@@ -9888,12 +10215,14 @@ msgid "Calls Function with the given Arguments."
 msgstr ""
 
 #: target:code/eval.lisp
+#, fuzzy
 msgid "Returns all of its arguments, in order, as values."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/eval.lisp
+#, fuzzy
 msgid "Returns all of the elements of List, in order, as values."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/signal.lisp
 msgid "A list of unix signal structures."
@@ -9922,8 +10251,9 @@ msgid ""
 msgstr ""
 
 #: target:code/signal.lisp
+#, fuzzy
 msgid "Returns a mask given a set of signals."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/signal.lisp
 msgid ""
@@ -10191,12 +10521,14 @@ msgid ""
 msgstr ""
 
 #: target:code/debug-int.lisp
+#, fuzzy
 msgid "Returns the breakpoint's what specification."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/debug-int.lisp
+#, fuzzy
 msgid "Returns the breakpoint's kind specification."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/debug-int.lisp
 msgid ""
@@ -10256,8 +10588,9 @@ msgid ""
 msgstr ""
 
 #: target:code/debug-int.lisp
+#, fuzzy
 msgid "Returns whether object is a debug-source."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/debug-int.lisp
 msgid ""
@@ -11236,8 +11569,9 @@ msgid "~&~@(~@[~A ~]arguments:~%~)"
 msgstr ""
 
 #: target:code/describe.lisp
+#, fuzzy
 msgid "  There are no arguments."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/describe.lisp
 msgid "~&Its closure environment is:"
@@ -12233,8 +12567,9 @@ msgid "reading"
 msgstr ""
 
 #: target:code/wire.lisp
+#, fuzzy
 msgid "Return the next byte from the wire."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/wire.lisp
 msgid ""
@@ -12368,8 +12703,9 @@ msgid "Return the real time in seconds."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/multi-proc.lisp
+#, fuzzy
 msgid "Return the run time in seconds"
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/multi-proc.lisp
 msgid "Return the process state which is either Run, Killed, or a wait reason."
@@ -12381,8 +12717,9 @@ msgid "Returns the current process."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/multi-proc.lisp
+#, fuzzy
 msgid "A list of all alive processes."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/multi-proc.lisp
 #, fuzzy
@@ -12676,6 +13013,10 @@ msgid "defining structure ~A"
 msgstr ""
 
 #: target:code/defstruct.lisp
+msgid "Disable package's definition lock then continue"
+msgstr ""
+
+#: target:code/defstruct.lisp
 msgid "Defstruct already names a declaration: ~S."
 msgstr ""
 
@@ -12851,8 +13192,9 @@ msgid "Invalid ~a"
 msgstr ""
 
 #: target:code/defmacro.lisp
+#, fuzzy
 msgid "Ignore extra noise."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/defmacro.lisp
 msgid ""
@@ -12931,6 +13273,10 @@ msgid "defining macro ~A"
 msgstr ""
 
 #: target:code/macros.lisp
+msgid "Disable the package's definition-lock then continue"
+msgstr ""
+
+#: target:code/macros.lisp
 msgid "Define a compiler-macro for NAME."
 msgstr ""
 
@@ -12956,6 +13302,10 @@ msgstr ""
 
 #: target:code/macros.lisp
 msgid "defining type ~A"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Disable package's definition-lock then continue"
 msgstr ""
 
 #: target:code/macros.lisp

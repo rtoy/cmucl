@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.28.12.2 2010/02/10 02:42:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.28.12.3 2010/02/10 14:07:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -240,13 +240,22 @@
 	(push handler bogus-handlers)))
     (restart-case (error "~S ~[have~;has a~:;have~] bad file descriptor~:P."
 			 bogus-handlers (length bogus-handlers))
-      (remove-them () :report "Remove bogus handlers."
+      (remove-them ()
+	:report (lambda (condition stream)
+		  (declare (ignore condition))
+		  (write-string _"Remove bogus handlers." stream))
        (setf *descriptor-handlers*
 	     (delete-if #'handler-bogus *descriptor-handlers*)))
-      (retry-them () :report "Retry bogus handlers."
+      (retry-them ()
+	:report (lambda (condition stream)
+		  (declare (ignore condition))
+		  (write-string _"Retry bogus handlers." stream))
        (dolist (handler bogus-handlers)
 	 (setf (handler-bogus handler) nil)))
-      (continue () :report "Go on, leaving handlers marked as bogus."))))
+      (continue ()
+	:report (lambda (condition stream)
+		  (declare (ignore condition))
+		  (write-string _"Go on, leaving handlers marked as bogus." stream))))))
 
 
 

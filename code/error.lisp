@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.88.12.3 2010/02/10 04:00:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.88.12.4 2010/02/10 14:07:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1205,8 +1205,10 @@
 ;;;; Restart definitions.
 
 (define-condition abort-failure (control-error) ()
-  (:report
-   "Found an \"abort\" restart that failed to transfer control dynamically."))
+  (:report (lambda (condition stream)
+	     (declare (ignore condition))
+	     (write-string _"Found an \"abort\" restart that failed to transfer control dynamically."
+			   stream))))
 
 ;;; ABORT signals an error in case there was a restart named abort that did
 ;;; not tranfer control dynamically.  This could happen with RESTART-BIND.

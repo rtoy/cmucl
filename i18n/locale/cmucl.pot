@@ -230,6 +230,14 @@ msgstr ""
 msgid "KERNEL:*MAXIMUM-ERROR-DEPTH* exceeded."
 msgstr ""
 
+#: target:code/lispinit.lisp
+msgid "Return from BREAK."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "~&~@<Warning:  ~3i~:_~A~:>~%"
+msgstr ""
+
 #: target:code/fwrappers.lisp
 msgid ""
 "A funcallable instance used to implement fwrappers.\n"
@@ -705,6 +713,10 @@ msgid ""
 msgstr ""
 
 #: target:code/error.lisp
+msgid "Found an \"abort\" restart that failed to transfer control dynamically."
+msgstr ""
+
+#: target:code/error.lisp
 msgid ""
 "Transfers control to a restart named abort, signalling a control-error if\n"
 "   none exists."
@@ -841,13 +853,25 @@ msgid ""
 msgstr ""
 
 #: target:code/class.lisp
+msgid "Invalidate current definition."
+msgstr ""
+
+#: target:code/class.lisp
 msgid "New definition of ~S must be loaded eventually."
+msgstr ""
+
+#: target:code/class.lisp
+msgid "Smash current layout, preserving old code."
 msgstr ""
 
 #: target:code/class.lisp
 msgid ""
 "Any old ~S instances will be in a bad way.~@\n"
 "		      I hope you know what you're doing..."
+msgstr ""
+
+#: target:code/class.lisp
+msgid "Ignore the incompatibility, leave class alone."
 msgstr ""
 
 #: target:code/class.lisp
@@ -5292,6 +5316,14 @@ msgid "The absolute value of ~S exceeds limit ~S."
 msgstr ""
 
 #: target:code/irrat.lisp
+msgid "Continue with calculation"
+msgstr ""
+
+#: target:code/irrat.lisp
+msgid "Continue with calculation, update limit"
+msgstr ""
+
+#: target:code/irrat.lisp
 msgid "Returns BASE raised to the POWER."
 msgstr ""
 
@@ -7780,6 +7812,18 @@ msgstr ""
 msgid "redefining function ~A"
 msgstr ""
 
+#: target:code/macros.lisp target:code/defstruct.lisp target:code/package.lisp
+msgid "Ignore the lock and continue"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Disable package's definition-lock, then continue"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Disable all package locks, then continue"
+msgstr ""
+
 #: target:code/package.lisp
 msgid "Bogus ~A name: ~S"
 msgstr ""
@@ -8032,6 +8076,14 @@ msgid "uninterning symbol ~A"
 msgstr ""
 
 #: target:code/package.lisp
+msgid "Disable package's lock then continue"
+msgstr ""
+
+#: target:code/macros.lisp target:code/defstruct.lisp target:code/package.lisp
+msgid "Unlock all packages, then continue"
+msgstr ""
+
+#: target:code/package.lisp
 msgid "prompt for a symbol to shadowing-import."
 msgstr ""
 
@@ -8063,6 +8115,14 @@ msgstr ""
 msgid ""
 "Exporting these symbols from the ~A package:~%~S~%~\n"
 "	      results in name conflicts with these packages:~%~{~A ~}"
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Unintern conflicting symbols."
+msgstr ""
+
+#: target:code/package.lisp
+msgid "Skip exporting conflicting symbols."
 msgstr ""
 
 #: target:code/package.lisp
@@ -8711,6 +8771,18 @@ msgid ""
 "   DIRECTION should be either :INPUT or :OUTPUT, FD is the file descriptor "
 "to\n"
 "   use, and FUNCTION is the function to call whenever FD is usable."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid "Remove bogus handlers."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid "Retry bogus handlers."
+msgstr ""
+
+#: target:code/serve-event.lisp
+msgid "Go on, leaving handlers marked as bogus."
 msgstr ""
 
 #: target:code/serve-event.lisp
@@ -9599,6 +9671,239 @@ msgstr ""
 
 #: target:code/filesys.lisp
 msgid "Can't create directory ~A."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "The default for the :IF-SOURCE-NEWER argument to load."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "The source file types which LOAD recognizes."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "A list of the object file types recognized by LOAD."
+msgstr ""
+
+#: target:code/load.lisp
+msgid ""
+"A list of the object file types recognized by LOAD for logical pathnames."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "The default for the :VERBOSE argument to Load."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "The default for the :PRINT argument to Load."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "The TRUENAME of the file that LOAD is currently loading."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "The defaulted pathname that LOAD is currently loading."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Count of the number of recursive loads."
+msgstr ""
+
+#: target:code/load.lisp
+msgid ""
+"~A was compiled for fasl-file version ~X, ~\n"
+"                     but this is version ~X"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "List of free fop tables for the fasloader."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "The fop stack (we only need one!)."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Vector indexed by a FaslOP that yields the FOP's name."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Losing FOP!"
+msgstr ""
+
+#: target:code/load.lisp
+msgid ""
+"Vector indexed by a FaslOP that yields a function of 0 arguments which\n"
+"  will perform the operation."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Loading ~S.~%"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Loading stuff from ~S.~%"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Attempt to load an empty FASL FILE:~%  ~S"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Bad FASL file format."
+msgstr ""
+
+#: target:code/load.lisp
+msgid ""
+"Loads the file named by Filename into the Lisp environment.  The file type\n"
+"   (a.k.a extension) is defaulted if missing.  These options are defined:\n"
+"\n"
+"   :IF-SOURCE-NEWER <keyword>\n"
+"	If the file type is not specified, and both source and object files\n"
+"        exist, then this argument controls which is loaded:\n"
+"	    :LOAD-OBJECT - load object file (default),\n"
+"	    :LOAD-SOURCE - load the source file,\n"
+"	    :COMPILE - compile the source and then load the object file, or\n"
+"	    :QUERY - ask the user which to load.\n"
+"\n"
+"   :IF-DOES-NOT-EXIST {:ERROR | NIL}\n"
+"       If :ERROR (the default), signal an error if the file can't be "
+"located.\n"
+"       If NIL, simply return NIL (LOAD normally returns T.)\n"
+"\n"
+"   :VERBOSE {T | NIL}\n"
+"       If true (the default), print a line describing each file loaded.\n"
+"\n"
+"   :PRINT {T | NIL}\n"
+"       If true, print information about loaded values.  When loading the\n"
+"       source, the result of evaluating each top-level form is printed.\n"
+"\n"
+"   :CONTENTS {NIL | :SOURCE | :BINARY}\n"
+"       Forces the input to be interpreted as a source or object file, "
+"instead\n"
+"       of guessing based on the file type.  This also inhibits file type\n"
+"       defaulting.  Probably only necessary if you have source files with a\n"
+"       \"fasl\" type. \n"
+"\n"
+"   The variables *LOAD-VERBOSE*, *LOAD-PRINT* and EXT:*LOAD-IF-SOURCE-NEWER"
+"*\n"
+"   determine the defaults for the corresponding keyword arguments.  These\n"
+"   variables are also bound to the specified argument values, so specifying "
+"a\n"
+"   keyword affects nested loads.  The variables EXT:*LOAD-SOURCE-TYPES*,\n"
+"   EXT:*LOAD-OBJECT-TYPES*, and EXT:*LOAD-LP-OBJECT-TYPES* determine the "
+"file\n"
+"   types that we use for defaulting when none is specified."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Return NIL from load of ~S."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "~S does not exist."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "See if it exists now."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Prompt for a new name."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "New name: "
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Load it as a source file."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "File has a fasl file type, but no fasl file header:~%  ~S"
+msgstr ""
+
+#: target:code/load.lisp
+msgid ""
+"Loading object file ~A,~@\n"
+"		  which is older than the presumed source:~%  ~A."
+msgstr ""
+
+#: target:code/load.lisp
+msgid ""
+"Loading source file ~A,~@\n"
+"		  which is newer than the presumed object file:~%  ~A."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Compile of source failed, cannot load object."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Object file ~A is~@\n"
+"		       older than the presumed source:~%  ~A."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "load source file"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "load object file"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Fop-End-Header was executed???"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Fasl table of improper size.  Bug!"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Fasl stack not empty.  Bug!"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "The package ~S does not exist."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Losing i-vector element size: ~S"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Load ~A anyway"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "~A was compiled for a ~A, but this is a ~A"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Top-Level Form"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Unaligned function object, offset = #x~X."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "~S defined~%"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Unknown foreign symbol: ~S"
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Cannot load assembler code."
+msgstr ""
+
+#: target:code/load.lisp
+msgid "Undefined assembler routine: ~S"
 msgstr ""
 
 #: target:code/foreign-linkage.lisp
@@ -12656,6 +12961,10 @@ msgid "defining structure ~A"
 msgstr ""
 
 #: target:code/defstruct.lisp
+msgid "Disable package's definition lock then continue"
+msgstr ""
+
+#: target:code/defstruct.lisp
 msgid "Defstruct already names a declaration: ~S."
 msgstr ""
 
@@ -12909,6 +13218,10 @@ msgid "defining macro ~A"
 msgstr ""
 
 #: target:code/macros.lisp
+msgid "Disable the package's definition-lock then continue"
+msgstr ""
+
+#: target:code/macros.lisp
 msgid "Define a compiler-macro for NAME."
 msgstr ""
 
@@ -12934,6 +13247,10 @@ msgstr ""
 
 #: target:code/macros.lisp
 msgid "defining type ~A"
+msgstr ""
+
+#: target:code/macros.lisp
+msgid "Disable package's definition-lock then continue"
 msgstr ""
 
 #: target:code/macros.lisp

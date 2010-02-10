@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.79.12.2 2010/02/08 17:15:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.79.12.3 2010/02/10 14:07:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -244,7 +244,7 @@
   "Prints a message and invokes the debugger without allowing any possibility
    of condition handling occurring."
   (kernel:infinite-error-protect
-    (with-simple-restart (continue "Return from BREAK.")
+    (with-simple-restart (continue _"Return from BREAK.")
       (let ((debug:*stack-top-hint*
 	     (or debug:*stack-top-hint*
 		 (nth-value 1 (kernel:find-caller-name)))))
@@ -264,7 +264,7 @@
 	(muffle-warning ()
 	  :report "Skip warning."
 	  (return-from warn nil)))
-      (format *error-output* "~&~@<Warning:  ~3i~:_~A~:>~%" condition)))
+      (format *error-output* _"~&~@<Warning:  ~3i~:_~A~:>~%" condition)))
   nil)
 
 ;;; Utility functions

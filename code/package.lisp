@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.77.10.2 2010/02/09 23:42:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.77.10.3 2010/02/10 14:07:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -209,12 +209,18 @@
                        :format-control _"redefining function ~A"
                        :format-arguments (list function))
               (continue ()
-                :report "Ignore the lock and continue")
+                :report (lambda (condition stream)
+			  (declare (ignore condition))
+			  (write-string _"Ignore the lock and continue" stream)))
               (unlock-package ()
-                :report "Disable package's definition-lock, then continue"
+                :report (lambda (condition stream)
+			  (declare (ignore condition))
+			  (write-string _"Disable package's definition-lock, then continue" stream))
                 (setf (ext:package-definition-lock package) nil))
               (unlock-all ()
-                :report "Disable all package locks, then continue"
+                :report (lambda (condition stream)
+			  (declare (ignore condition))
+			  (write-string _"Disable all package locks, then continue" stream))
                 (unlock-all-packages)))))))))
 
 
@@ -1398,12 +1404,18 @@
                    :format-control _"uninterning symbol ~A"
                    :format-arguments (list name))
           (continue ()
-            :report "Ignore the lock and continue")
+            :report (lambda (condition stream)
+		      (declare (ignore condition))
+		      (write-string _"Ignore the lock and continue" stream)))
           (unlock-package ()
-            :report "Disable package's lock then continue"
+            :report (lambda (condition stream)
+		      (declare (ignore condition))
+		      (write-string _"Disable package's lock then continue" stream))
             (setf (ext:package-lock package) nil))
           (unlock-all ()
-            :report "Unlock all packages, then continue"
+            :report (lambda (condition stream)
+		      (declare (ignore condition))
+		      (write-string _"Unlock all packages, then continue" stream))
             (unlock-all-packages)))))
     ;;
     ;; If a name conflict is revealed, give use a chance to shadowing-import
@@ -1522,12 +1534,16 @@
 	     (list (package-%name package) cset
 		   (mapcar #'package-%name cpackages)))
 	  (unintern-conflicting-symbols ()
-	   :report "Unintern conflicting symbols."
+	   :report (lambda (condition stream)
+		     (declare (ignore condition))
+		     (write-string _"Unintern conflicting symbols." stream))
 	   (dolist (p cpackages)
 	     (dolist (sym cset)
 	       (moby-unintern sym p))))
 	  (skip-exporting-these-symbols ()
-	   :report "Skip exporting conflicting symbols."
+	   :report (lambda (condition stream)
+		     (declare (ignore condition))
+		     (write-string _"Skip exporting conflicting symbols." stream))
 	   (setq syms (nset-difference syms cset))))))
     ;;
     ;; Check that all symbols are accessible.  If not, ask to import them.
@@ -1575,12 +1591,18 @@
                    :format-control _"unexporting symbols ~A"
                    :format-arguments (list symbols))
           (continue ()
-            :report "Ignore the lock and continue")
+            :report (lambda (condition stream)
+		      (declare (ignore condition))
+		      (write-string _"Ignore the lock and continue" stream)))
           (unlock-package ()
-            :report "Disable package's lock then continue"
+            :report (lambda (condition stream)
+		      (declare (ignore condition))
+		      (write-string _"Disable package's lock then continue" stream))
             (setf (ext:package-lock package) nil))
           (unlock-all ()
-            :report "Unlock all packages, then continue"
+            :report (lambda (condition stream)
+		      (declare (ignore condition))
+		      (write-string _"Unlock all packages, then continue" stream))
             (unlock-all-packages)))))
     (dolist (sym (symbol-listify symbols))
       (multiple-value-bind (s w) (find-symbol (symbol-name sym) package)

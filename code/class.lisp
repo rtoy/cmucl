@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.62.12.2 2010/02/09 14:56:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.62.12.3 2010/02/10 14:07:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1211,12 +1211,16 @@
 		       one."
 		      name)
 	     (continue ()
-	       :report "Invalidate current definition."
+	       :report (lambda (condition stream)
+			 (declare (ignore condition))
+			 (write-string _"Invalidate current definition." stream))
 	       (warn _"New definition of ~S must be loaded eventually." name)
 	       (invalidate-layout old)
 	       (setf (gethash name *forward-referenced-layouts*) res))
 	     (clobber-it ()
-	       :report "Smash current layout, preserving old code."
+	       :report (lambda (condition stream)
+			 (declare (ignore condition))
+			 (write-string _"Smash current layout, preserving old code." stream))
 	       (warn _"Any old ~S instances will be in a bad way.~@
 		      I hope you know what you're doing..."
 		     name)
@@ -1225,7 +1229,9 @@
 	       (setf (layout-length old) length)
 	       old)
 	     (use-current ()
-	       :report "Ignore the incompatibility, leave class alone."
+	       :report (lambda (condition stream)
+			 (declare (ignore condition))
+			 (write-string _"Ignore the incompatibility, leave class alone." stream))
 	       (warn _"Assuming the current definition of ~S is correct, and~@
 		      that the loaded code doesn't care about the ~
 		      incompatibility."

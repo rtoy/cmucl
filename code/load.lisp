@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.93.12.2 2010/02/08 17:15:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.93.12.3 2010/02/10 14:08:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,39 +32,39 @@
 ;;; Public:
 
 (defvar *load-if-source-newer* :load-object
-  "The default for the :IF-SOURCE-NEWER argument to load.")
+  _N"The default for the :IF-SOURCE-NEWER argument to load.")
 
 (declaim (type (member :load-object :load-source :query :compile)
 	       *load-if-source-newer*))
 
 (defvar *load-source-types* '("lisp" "l" "cl" "lsp")
-  "The source file types which LOAD recognizes.")
+  _N"The source file types which LOAD recognizes.")
 
 (defvar *load-object-types*
   '(#.(c:backend-fasl-file-type c:*backend*)
     #.(c:backend-byte-fasl-file-type c:*backend*)
     "fasl")
-  "A list of the object file types recognized by LOAD.")
+  _N"A list of the object file types recognized by LOAD.")
 
 (defvar *load-lp-object-types*
   '(#.(string-upcase (c:backend-fasl-file-type c:*backend*))
     #.(string-upcase (c:backend-byte-fasl-file-type c:*backend*))
     "FASL")
-  "A list of the object file types recognized by LOAD for logical pathnames.")
+  _N"A list of the object file types recognized by LOAD for logical pathnames.")
 
 (declaim (list *load-source-types* *load-object-types* *load-lp-object-types*))
 
 (defvar *load-verbose* t
-  "The default for the :VERBOSE argument to Load.")
+  _N"The default for the :VERBOSE argument to Load.")
 
 (defvar *load-print* ()
-  "The default for the :PRINT argument to Load.")
+  _N"The default for the :PRINT argument to Load.")
 
 (defvar *load-truename* nil
-  "The TRUENAME of the file that LOAD is currently loading.")
+  _N"The TRUENAME of the file that LOAD is currently loading.")
 
 (defvar *load-pathname* nil
-  "The defaulted pathname that LOAD is currently loading.")
+  _N"The defaulted pathname that LOAD is currently loading.")
 
 (declaim (type (or pathname null) *load-truename* *load-pathname*)) 
 
@@ -72,7 +72,7 @@
 ;;; Internal state variables:
 
 (defvar *load-depth* 0
-  "Count of the number of recursive loads.")
+  _N"Count of the number of recursive loads.")
 (declaim (type index *load-depth*))
 (defvar *fasl-file*)
 (declaim (type lisp-stream *fasl-file*))
@@ -89,7 +89,7 @@
    (expected-version :reader invalid-fasl-expected-version :initarg :expected-version))
   (:report
    (lambda (condition stream)
-     (format stream "~A was compiled for fasl-file version ~X, ~
+     (format stream _"~A was compiled for fasl-file version ~X, ~
                      but this is version ~X"
 	     (invalid-fasl-pathname condition)
 	     (invalid-fasl-version condition)
@@ -118,7 +118,7 @@
 ;;; offset.  We may need to have several, since load can be called recursively.
 
 (defvar *free-fop-tables* (list (make-array 1000))
-  "List of free fop tables for the fasloader.")
+  _N"List of free fop tables for the fasloader.")
 
 ;;; The current fop table.
 (defvar *current-fop-table*)
@@ -155,7 +155,7 @@
 ;;; cheaper to test for overflow that way.
 ;;;
 (defvar *fop-stack* (make-array 100)
-  "The fop stack (we only need one!).")
+  _N"The fop stack (we only need one!).")
 (declaim (simple-vector *fop-stack*))
 
 ;;; The index of the most recently pushed item on the fop-stack.
@@ -217,11 +217,11 @@
 ;;; FOP database:
 
 (defvar fop-codes (make-array 256)
-  "Vector indexed by a FaslOP that yields the FOP's name.")
+  _N"Vector indexed by a FaslOP that yields the FOP's name.")
 
 (defvar fop-functions
-  (make-array 256 :initial-element #'(lambda () (error "Losing FOP!")))
-  "Vector indexed by a FaslOP that yields a function of 0 arguments which
+  (make-array 256 :initial-element #'(lambda () (error _"Losing FOP!")))
+  _N"Vector indexed by a FaslOP that yields a function of 0 arguments which
   will perform the operation.")
 
 (declaim (simple-vector fop-codes fop-functions))
@@ -327,12 +327,12 @@
     (load-fresh-line)
     (let ((name (file-name stream)))
       (if name
-	  (format t "Loading ~S.~%" name)
-	  (format t "Loading stuff from ~S.~%" stream)))))
+	  (format t _"Loading ~S.~%" name)
+	  (format t _"Loading stuff from ~S.~%" stream)))))
 
 (defun fasload (stream)
   (when (zerop (file-length stream))
-    (error "Attempt to load an empty FASL FILE:~%  ~S" (namestring stream)))
+    (error _"Attempt to load an empty FASL FILE:~%  ~S" (namestring stream)))
   (do-load-verbose stream)
   (let* ((*fasl-file* stream)
 	 (*current-fop-table* (or (pop *free-fop-tables*) (make-array 1000)))
@@ -443,8 +443,8 @@
 	     (declare (fixnum byte count))
 	     (if (and (< count 9)
 		      (not (eql byte (char-code (schar "FASL FILE" count)))))
-		 (error "Bad FASL file format."))))
-	  (t (error "Bad FASL file format.")))))
+		 (error _"Bad FASL file format."))))
+	  (t (error _"Bad FASL file format.")))))
 
 
 ;;; Load-S-Integer loads a signed integer Length bytes long from the File.
@@ -495,7 +495,7 @@
 		      (if-source-newer nil if-source-newer-p)
 		      (if-does-not-exist :error) contents
 		      (external-format :default))
-  "Loads the file named by Filename into the Lisp environment.  The file type
+  _N"Loads the file named by Filename into the Lisp environment.  The file type
    (a.k.a extension) is defaulted if missing.  These options are defined:
 
    :IF-SOURCE-NEWER <keyword>
@@ -551,7 +551,7 @@
 	    (*load-depth* (1+ *load-depth*))
 	    (intl::*default-domain* intl::*default-domain*))
 	(values
-	 (with-simple-restart (continue "Return NIL from load of ~S." filename)
+	 (with-simple-restart (continue _"Return NIL from load of ~S." filename)
 	   (if (streamp filename)
 	       (if (or (eq contents :binary)
 		       (and (null contents)
@@ -586,12 +586,18 @@
        (:error
 	(restart-case (error 'simple-file-error
 			     :pathname pathname
-			     :format-control "~S does not exist."
+			     :format-control _"~S does not exist."
 			     :format-arguments (list (namestring pathname)))
-	  (check-again () :report "See if it exists now."
+	  (check-again ()
+	    :report (lambda (condition stream)
+		      (declare (ignore condition))
+		      (write-string _"See if it exists now." stream))
 	    (load pathname))
-	  (use-value () :report "Prompt for a new name."
-	    (write-string "New name: " *query-io*)
+	  (use-value ()
+	    :report (lambda (condition stream)
+		      (declare (ignore condition))
+		      (write-string _"Prompt for a new name."))
+	    (write-string _"New name: " *query-io*)
 	    (force-output *query-io*)
 	    (load (read-line *query-io*)))))
        ((nil) nil))))
@@ -623,8 +629,8 @@
 	   (when (member (pathname-type truename) *load-object-types*
 			 :test #'string=)
 	     (cerror
-	      "Load it as a source file."
-	      "File has a fasl file type, but no fasl file header:~%  ~S"
+	      _"Load it as a source file."
+	      _"File has a fasl file type, but no fasl file header:~%  ~S"
 	      (namestring truename)))
 	   (internal-load pathname truename if-does-not-exist :source
 			  external-format))))))))
@@ -659,12 +665,12 @@
 	     (> (file-write-date src-tn) (file-write-date obj-tn)))
 	(ecase *load-if-source-newer*
 	  (:load-object
-	   (warn "Loading object file ~A,~@
+	   (warn _"Loading object file ~A,~@
 		  which is older than the presumed source:~%  ~A."
 		 (namestring obj-tn) (namestring src-tn))
 	   (internal-load obj-pn obj-tn if-does-not-exist :binary :void))
 	  (:load-source
-	   (warn "Loading source file ~A,~@
+	   (warn _"Loading source file ~A,~@
 		  which is newer than the presumed object file:~%  ~A."
 		 (namestring src-tn) (namestring obj-tn))
 	   (internal-load src-pn src-tn if-does-not-exist :source
@@ -672,17 +678,23 @@
 	  (:compile
 	   (let ((obj-tn (compile-file src-pn)))
 	     (unless obj-tn
-	       (error "Compile of source failed, cannot load object."))
+	       (error _"Compile of source failed, cannot load object."))
 	     (internal-load src-pn obj-tn :error :binary :void)))
 	  (:query
 	   (restart-case
-	       (error "Object file ~A is~@
+	       (error _"Object file ~A is~@
 		       older than the presumed source:~%  ~A."
 		      (namestring obj-tn) (namestring src-tn))
-	     (continue () :report "load source file"
+	     (continue ()
+	       :report (lambda (condition stream)
+			 (declare (ignore condition))
+			 (write-string _"load source file" stream))
 	       (internal-load src-pn src-tn if-does-not-exist :source
 			      external-format))
-	     (load-object () :report "load object file"
+	     (load-object ()
+	       :report (lambda (condition stream)
+			 (declare (ignore condition))
+			 (write-string _"load object file" stream))
 	       (internal-load src-pn obj-tn if-does-not-exist :binary
 			      :void))))))
        (obj-tn
@@ -741,7 +753,7 @@
 
 (define-fop (fop-end-group 64 :nope) (throw 'group-end t))
 (define-fop (fop-end-header 255)
-  (error "Fop-End-Header was executed???"))
+  (error _"Fop-End-Header was executed???"))
 
 ;;; In the normal loader, we just ignore these.  Genesis overwrites
 ;;; fop-maybe-cold-load with something that knows when to revert to
@@ -752,10 +764,10 @@
 
 (define-fop (fop-verify-table-size 62 :nope)
   (if (/= *current-fop-table-index* (read-arg 4))
-      (error "Fasl table of improper size.  Bug!")))
+      (error _"Fasl table of improper size.  Bug!")))
 (define-fop (fop-verify-empty-stack 63 :nope)
   (if (/= *fop-stack-pointer* *fop-stack-pointer-on-entry*)
-      (error "Fasl stack not empty.  Bug!")))
+      (error _"Fasl stack not empty.  Bug!")))
 
 ;;;; Loading symbols:
 
@@ -809,7 +821,7 @@
 (define-fop (fop-package 14)
   (let ((name (pop-stack)))
     (or (find-package name)
-	(error "The package ~S does not exist." name))))
+	(error _"The package ~S does not exist." name))))
 
 ;;;; Loading numbers:
 
@@ -1079,7 +1091,7 @@
 		  (8 (make-array len :element-type '(unsigned-byte 8)))
 		  (16 (make-array len :element-type '(unsigned-byte 16)))
 		  (32 (make-array len :element-type '(unsigned-byte 32)))
-		  (t (error "Losing i-vector element size: ~S" size)))))
+		  (t (error _"Losing i-vector element size: ~S" size)))))
       (declare (type index len))
       (done-with-fast-read-byte)
       (read-n-bytes *fasl-file* res 0
@@ -1109,7 +1121,7 @@
  		  (16 (make-array len :element-type '(signed-byte 16)))
  		  (30 (make-array len :element-type '(signed-byte 30)))
  		  (32 (make-array len :element-type '(signed-byte 32)))
- 		  (t (error "Losing i-vector element size: ~S" size)))))
+ 		  (t (error _"Losing i-vector element size: ~S" size)))))
       (declare (type index len))
       (done-with-fast-read-byte)
       (read-n-bytes *fasl-file* res 0
@@ -1204,7 +1216,7 @@
     (flet ((check-version (imp vers)
 	     (when (eql imp implementation)
 	       (unless (eql version vers)
-		 (cerror "Load ~A anyway"
+		 (cerror _"Load ~A anyway"
                          'invalid-fasl :file *fasl-file*
 			 :fasl-version version :expected-version vers))
 	       t))
@@ -1220,8 +1232,8 @@
 		(check-version #.(c:backend-byte-fasl-file-implementation
 				  c:*backend*)
 			       c:byte-fasl-file-version))
-      (cerror "Load ~A anyway"
-              "~A was compiled for a ~A, but this is a ~A"
+      (cerror _"Load ~A anyway"
+              _"~A was compiled for a ~A, but this is a ~A"
               *Fasl-file*
               (imp-name implementation)
               (imp-name
@@ -1297,7 +1309,7 @@
 	       (and *load-x86-tlf-to-dynamic-space*
 		    (c::compiled-debug-info-p dbi)
 		    (string= (c::compiled-debug-info-name dbi)
-			     "Top-Level Form")))) )
+			     _"Top-Level Form")))) )
 
 	(setq stuff (nreverse stuff))
 
@@ -1374,7 +1386,7 @@
 	(offset (read-arg 4)))
     (declare (type index offset))
     (unless (zerop (logand offset vm:lowtag-mask))
-      (error "Unaligned function object, offset = #x~X." offset))
+      (error _"Unaligned function object, offset = #x~X." offset))
     (let ((fun (%primitive compute-function code-object offset)))
       (setf (%function-self fun) fun)
       (setf (%function-next fun) (%code-entry-points code-object))
@@ -1384,7 +1396,7 @@
       (setf (%function-type fun) type)
       (when *load-print*
 	(load-fresh-line)
-	(format t "~S defined~%" fun))
+	(format t _"~S defined~%" fun))
       fun)))
 
 (define-fop (fop-make-byte-compiled-function 143)
@@ -1399,7 +1411,7 @@
     (initialize-byte-compiled-function res)
     (when *load-print*
       (load-fresh-line)
-      (format t "~S defined~%" res))
+      (format t _"~S defined~%" res))
     res))
 
 
@@ -1439,7 +1451,7 @@
 	value
 	(let ((value (system:alternate-get-global-address symbol)))
 	  (when (zerop value)
-	    (error "Unknown foreign symbol: ~S" symbol))
+	    (error _"Unknown foreign symbol: ~S" symbol))
 	  value))))
 
 (defun foreign-symbol-address (symbol &key (flavor :code))
@@ -1477,10 +1489,10 @@
     code-object))
 
 (define-fop (fop-assembler-code 144)
-  (error "Cannot load assembler code."))
+  (error _"Cannot load assembler code."))
 
 (define-fop (fop-assembler-routine 145)
-  (error "Cannot load assembler code."))
+  (error _"Cannot load assembler code."))
 
 (define-fop (fop-assembler-fixup 148)
   (let ((routine (pop-stack))
@@ -1490,7 +1502,7 @@
 	(value found)
 	(gethash routine *assembler-routines*)
       (unless found
-	(error "Undefined assembler routine: ~S" routine))
+	(error _"Undefined assembler routine: ~S" routine))
       (vm:fixup-code-object code-object (read-arg 4) value kind))
     code-object))
 
