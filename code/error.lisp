@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.88.12.2 2010/02/09 15:18:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.88.12.3 2010/02/10 04:00:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -136,7 +136,7 @@
   (test-function #'(lambda (cond) (declare (ignore cond)) t)))
 
 (setf (documentation 'restart-name 'function)
-      _"Returns the name of the given restart object.")
+      _N"Returns the name of the given restart object.")
 
 (defun restart-report (restart stream)
   (funcall (or (restart-report-function restart)

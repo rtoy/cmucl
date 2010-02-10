@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.51.10.2 2010/02/09 20:23:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.51.10.3 2010/02/10 04:00:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -326,10 +326,10 @@
   (hash-table-number-entries hash-table))
 
 (setf (documentation 'hash-table-rehash-size 'function)
-      _"Return the rehash-size HASH-TABLE was created with.")
+      _N"Return the rehash-size HASH-TABLE was created with.")
 
 (setf (documentation 'hash-table-rehash-threshold 'function)
-      _"Return the rehash-threshold HASH-TABLE was created with.")
+      _N"Return the rehash-threshold HASH-TABLE was created with.")
 
 (declaim (inline hash-table-size))
 (defun hash-table-size (hash-table)
@@ -339,10 +339,10 @@
   (hash-table-rehash-trigger hash-table))
 
 (setf (documentation 'hash-table-test 'function)
-      _"Return the test HASH-TABLE was created with.")
+      _N"Return the test HASH-TABLE was created with.")
 
 (setf (documentation 'hash-table-weak-p 'function)
-      _"Return T if HASH-TABLE will not keep entries for keys that would
+      _N"Return T if HASH-TABLE will not keep entries for keys that would
    otherwise be garbage, and NIL if it will.")
 
 
