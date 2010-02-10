@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.1.2.8 $
+;;; $Revision: 1.1.2.9 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,7 +23,7 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.8 2010/02/10 01:52:28 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.9 2010/02/10 17:26:43 rtoy Exp $")
 
 (in-package "INTL")
 
@@ -679,7 +679,7 @@
 ;; the directory OUTPUT-DIRECTORY and its name is the domain.
 #-runtime
 (defun dump-pot-files (&key copyright output-directory)
-  (declare (optimize (speed 0) (space 3) #-gcl (debug 1)))
+  ;;(declare (optimize (speed 0) (space 3) #-gcl (debug 1)))
   (labels ((b (key data)
 	     (format t "~@[~{~&#. ~A~}~%~]" (delete nil (car data)))
 	     (format t "~@[~&~<#: ~@;~@{~A~^ ~}~:@>~%~]"
@@ -763,13 +763,17 @@
 		 (when i (write-char #\\ nil) (write-char (char string i) nil))
 		 (setq start (if i (1+ i) end)))))
 	   (a (domain hash)
+	     (format t _"~&Dumping ~D messages for domain ~S~%"
+		     (hash-table-count hash) domain)
 	     (with-open-file (*standard-output*
 			      (merge-pathnames (make-pathname :name domain
 							      :type "pot")
 					       output-directory)
 			      :direction :output
 			      :if-exists :new-version
-			      :external-format :utf8)
+			      ;;:external-format :utf8
+			      :external-format :iso8859-1
+			      )
 	       (format t "~&#@ ~A~2%" domain)
 	       (format t "~&# SOME DESCRIPTIVE TITLE~%")
 	       (format t "~@[~&# Copyright (C) YEAR ~A~%~]" copyright)
