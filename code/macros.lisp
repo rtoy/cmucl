@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.113.10.3 2010/02/09 21:33:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.113.10.4 2010/02/10 03:57:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -90,12 +90,12 @@
                        :format-control _"defining macro ~A"
                        :format-arguments (list name))
               (continue ()
-                :report _"Ignore the lock and continue")
+                :report "Ignore the lock and continue")
               (unlock-package ()
-                :report _"Disable the package's definition-lock then continue"
+                :report "Disable the package's definition-lock then continue"
                 (setf (ext:package-definition-lock package) nil))
               (unlock-all ()
-                :report _"Unlock all packages, then continue"
+                :report "Unlock all packages, then continue"
                 (lisp::unlock-all-packages))))))))
   (let ((whole (gensym "WHOLE-"))
 	(environment (gensym "ENV-")))
