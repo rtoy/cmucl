@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.60.2.2 2010/02/09 20:23:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.60.2.3 2010/02/10 01:28:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -332,9 +332,9 @@
 	       :base base
 	       :power power)
       (continue ()
-	:report _"Continue with calculation")
+	:report "Continue with calculation")
       (new-limit ()
-	:report _"Continue with calculation, update limit"
+	:report "Continue with calculation, update limit"
 	(setq *intexp-maximum-exponent* (abs power)))))
   (cond ((minusp power)
 	 (/ (intexp base (- power))))
