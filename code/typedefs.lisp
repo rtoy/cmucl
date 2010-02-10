@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.14.26.1 2010/02/08 17:15:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.14.26.2 2010/02/10 04:01:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,7 +61,7 @@
 (eval-when (compile load eval)
 
 (defparameter cold-type-init-forms nil
-  "Forms that must happen before top level forms are run.")
+  _N"Forms that must happen before top level forms are run.")
 
 (defmacro with-cold-load-init-forms ()
   '(eval-when (compile eval)
@@ -72,7 +72,7 @@
       (let ((when (cadar forms))
 	    (eval-when-forms (cddar forms)))
 	(unless (= (length forms) 1)
-	  (warn "Can't cold-load-init other forms along with an eval-when."))
+	  (warn _"Can't cold-load-init other forms along with an eval-when."))
 	(when (member 'load when)
 	  (setf cold-type-init-forms
 		(nconc cold-type-init-forms (copy-list eval-when-forms))))
@@ -234,7 +234,7 @@
 ;;;
 (defmacro define-type-method ((class method &rest more-methods)
 			      lambda-list &body body)
-  "DEFINE-TYPE-METHOD (Class-Name Method-Name+) Lambda-List Form*"
+  _N"DEFINE-TYPE-METHOD (Class-Name Method-Name+) Lambda-List Form*"
   (let ((name (symbolicate CLASS "-" method "-TYPE-METHOD")))
     `(progn
        (defun ,name ,lambda-list ,@body)
@@ -250,7 +250,7 @@
 ;;; DEFINE-TYPE-CLASS  --  Interface
 ;;;
 (defmacro define-type-class (name &optional inherits)
-  "DEFINE-TYPE-CLASS Name [Inherits]"
+  _N"DEFINE-TYPE-CLASS Name [Inherits]"
   `(cold-load-init
      ,(once-only ((n-class (if inherits
 			       `(copy-type-class (type-class-or-lose ',inherits))

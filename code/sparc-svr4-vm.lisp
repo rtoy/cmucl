@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.13.12.1 2010/02/08 17:15:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.13.12.2 2010/02/10 04:01:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -137,7 +137,7 @@
 ;;;; MACHINE-TYPE and MACHINE-VERSION
 
 (defun machine-type ()
-  "Returns a string describing the type of the local machine."
+  _N"Returns a string describing the type of the local machine."
   ;; Helps cross-compile from a different system that might not have
   ;; unix:unix-sysinfo.
   (if (fboundp (find-symbol "UNIX-SYSINFO" "UNIX"))
@@ -146,7 +146,7 @@
       "sun4"))
 
 (defun machine-version ()
-  "Returns a string describing the version of the local machine."
+  _N"Returns a string describing the version of the local machine."
   (if (fboundp (find-symbol "UNIX-SYSINFO" "UNIX"))
       (funcall (find-symbol "UNIX-SYSINFO" "UNIX")
 	       (symbol-value (find-symbol "SI-PLATFORM" "UNIX")))
@@ -334,7 +334,7 @@
 		;; constant is the C string "xrs", in big-endian
 		;; order, of course.)
 		(unless (= (slot scp 'xrs-id) +xrs-id-valid+)
-		  (error "XRS ID invalid but attempting to accessing double-float register ~d!" (ash index 1)))
+		  (error _"XRS ID invalid but attempting to access double-float register ~d!" (ash index 1)))
 		(let* ((xrs-ptr (slot scp 'xrs-ptr))
 		       (fp-sap (alien-sap (slot (slot (deref xrs-ptr 0) 'pr-xfr) 'pr-regs))))
 		  (system:sap-ref-double fp-sap (* (- index 32) vm:word-bytes))))))))))
@@ -351,7 +351,7 @@
 		(setf (sap-ref-double sap (* index vm:word-bytes)) new-value))
 	       (t
 		(unless (= (slot scp 'xrs-id) +xrs-id-valid+)
-		  (error "XRS ID invalid but attempting to accessing double-float register ~d!" (ash index 1)))
+		  (error _"XRS ID invalid but attempting to access double-float register ~d!" (ash index 1)))
 		(let* ((xrs-ptr (slot scp 'xrs-ptr))
 		       (fp-sap (alien-sap (slot (slot (deref xrs-ptr 0) 'pr-xfr) 'pr-regs))))
 		  (setf (system:sap-ref-double fp-sap (* (- index 32) vm:word-bytes)) new-value)))))))))

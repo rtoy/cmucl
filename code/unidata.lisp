@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.6.8.1 2010/02/08 17:15:49 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.6.8.2 2010/02/10 04:01:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.6.8.1 $")
+(defvar *unidata-version* "$Revision: 1.6.8.2 $")
 
 (defstruct unidata
   range
@@ -408,14 +408,14 @@
 	     (logior (ash (read16 stm) 16) (read16 stm))))
     (unless (and (= (read32 stream) +unicode-magic-number+)
 		 (= (read-byte stream) +unicode-format-version+))
-      (error "The Unicode data file is broken."))
+      (error _"The Unicode data file is broken."))
     (let ((a (read-byte stream))
 	  (b (read-byte stream))
 	  (c (read-byte stream)))
       (unless (and (= a +unicode-major-version+)
 		   (= b +unicode-minor-version+)
 		   (= c +unicode-update-version+))
-	(warn "Unicode data file is for Unicode ~D.~D.~D" a b c)))
+	(warn _"Unicode data file is for Unicode ~D.~D.~D" a b c)))
     (dotimes (i index)
       (when (zerop (read32 stream))
 	(return-from unidata-locate nil)))
@@ -447,7 +447,7 @@
        (with-open-file (,stm +unidata-path+ :direction :input
 			     :element-type '(unsigned-byte 8))
 	 (unless (unidata-locate ,stm ,locn)
-	   (error "No data in file."))
+	   (error _"No data in file."))
 	 ,@body))))
 
 (defloader load-range (stm 0)

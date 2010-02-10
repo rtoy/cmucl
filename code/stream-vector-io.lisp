@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.6.12.1 2010/02/08 17:15:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.6.12.2 2010/02/10 04:01:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -55,7 +55,7 @@
   (declare (fixnum start end endian-swap ))
   (unless (eql endian-swap 0)
     (when (>= endian-swap (vector-elt-width vector))
-      (error "endian-swap ~a is illegal for element-type of vector ~a"
+      (error _"endian-swap ~a is illegal for element-type of vector ~a"
 	     endian-swap vector))
     (lisp::with-array-data ((data vector) (offset-start start)
 			    (offset-end end))
@@ -176,7 +176,7 @@
 
 ;;; READ-VECTOR --
 (defun read-vector (vector stream &key (start 0) end (endian-swap :byte-8))
-  "Read from Stream into Vector.  The Start and End indices of Vector
+  _N"Read from Stream into Vector.  The Start and End indices of Vector
   is in octets, and must be an multiple of the octets per element of
   the vector element.  The keyword argument :Endian-Swap specifies any
   endian swapping to be done. "
@@ -190,7 +190,7 @@
   ;; Return value is index of next octet to be read into (i.e., start+count)
 
   (unless (typep vector '(or string simple-numeric-vector))
-    (error "Wrong vector type ~a for read-vector on stream ~a." (type-of vector) stream))
+    (error _"Wrong vector type ~a for read-vector on stream ~a." (type-of vector) stream))
   (let* ((octets-per-element (vector-elt-width vector))
 	 (start-elt (truncate start octets-per-element))
 	 (end-octet (or end (ceiling (* (length vector) octets-per-element))))
@@ -213,7 +213,7 @@
 ;;; WRITE VECTOR --
 ;;; returns the next octet-position in vector.
 (defun write-vector (vector stream &key (start 0) (end nil) (endian-swap :byte-8))
-  "Write Vector to Stream.  The Start and End indices of Vector is in
+  _N"Write Vector to Stream.  The Start and End indices of Vector is in
   octets, and must be an multiple of the octets per element of the
   vector element.  The keyword argument :Endian-Swap specifies any
   endian swapping to be done. "

@@ -72,6 +72,38 @@ msgstr ""
 msgid "_@ is a reserved reader macro prefix."
 msgstr ""
 
+#: target:code/struct.lisp
+msgid "The size of a stream in-buffer."
+msgstr ""
+
+#: target:code/sysmacs.lisp
+msgid "Register the feature as having influenced the CMUCL build process."
+msgstr ""
+
+#: target:code/sysmacs.lisp
+msgid ""
+"Register the feature as having influenced the CMUCL build process,\n"
+"and also the CMUCL C runtime."
+msgstr ""
+
+#: target:code/sysmacs.lisp
+msgid ""
+"Given any Array, binds Data-Var to the array's data vector and Start-Var "
+"and\n"
+"  End-Var to the start and end of the designated portion of the data "
+"vector.\n"
+"  Svalue and Evalue are any start and end specified to the original "
+"operation,\n"
+"  and are factored into the bindings of Start-Var and End-Var.  Offset-Var "
+"is\n"
+"  the cumulative offset of all displacements encountered, and does not\n"
+"  include Svalue."
+msgstr ""
+
+#: target:code/sysmacs.lisp
+msgid "Executes the forms in the body without doing a garbage collection."
+msgstr ""
+
 #: target:code/kernel.lisp
 msgid ""
 "Return the 24 bits of data in the header of object X, which must be an\n"
@@ -700,6 +732,22 @@ msgid ""
 "   none exists."
 msgstr ""
 
+#: target:code/typedefs.lisp
+msgid "Forms that must happen before top level forms are run."
+msgstr ""
+
+#: target:code/typedefs.lisp
+msgid "Can't cold-load-init other forms along with an eval-when."
+msgstr ""
+
+#: target:code/typedefs.lisp
+msgid "DEFINE-TYPE-METHOD (Class-Name Method-Name+) Lambda-List Form*"
+msgstr ""
+
+#: target:code/typedefs.lisp
+msgid "DEFINE-TYPE-CLASS Name [Inherits]"
+msgstr ""
+
 #: target:code/class.lisp
 msgid "Layout for ~S~@[, Invalid=~S~]"
 msgstr ""
@@ -815,6 +863,128 @@ msgstr ""
 
 #: target:code/class.lisp
 msgid "Something strange with forward layout for ~S:~%  ~S"
+msgstr ""
+
+#: target:code/type.lisp
+msgid ""
+"*Use-Implementation-Types* is a semi-public flag which determines how\n"
+"   restrictive we are in determining type membership.  If two types are the\n"
+"   same in the implementation, then we will consider them them the same "
+"when\n"
+"   this switch is on.  When it is off, we try to be as restrictive as the\n"
+"   language allows, allowing us to detect more errors.  Currently, this "
+"only\n"
+"   affects array types."
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Subtypep is illegal on this type:~%  ~S"
+msgstr ""
+
+#: target:code/type.lisp
+msgid "&Aux in a FUNCTION or VALUES type: ~S."
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Keyword type description is not a two-list: ~S."
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Repeated keyword ~S in lambda list: ~S."
+msgstr ""
+
+#: target:code/type.lisp
+msgid "&KEY or &ALLOW-OTHER-KEYS in values type: ~s"
+msgstr ""
+
+#: target:code/type.lisp
+msgid ""
+"The maximum length of a union of integer types before we take a\n"
+"  short cut and return a simpler union."
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Bad thing to be a type specifier: ~S."
+msgstr ""
+
+#: target:code/type.lisp
+msgid "VALUES type illegal in this context:~%  ~S"
+msgstr ""
+
+#: target:code/type.lisp
+msgid "The SATISFIES predicate name is not a symbol: ~S"
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Weird CONS type ~S"
+msgstr ""
+
+#: target:code/type.lisp
+msgid "The component type for COMPLEX is not numeric: ~S"
+msgstr ""
+
+#: target:code/type.lisp
+msgid "The component type for COMPLEX is not real: ~S"
+msgstr ""
+
+#: target:code/type.lisp
+msgid ""
+"The component type for COMPLEX (EQL X) ~\n"
+"                                    is complex: ~S"
+msgstr ""
+
+#: target:code/type.lisp
+msgid ""
+"~@<(known bug #145): The type ~S is too hairy to be \n"
+"                         used for a COMPLEX component.~:@>"
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Bound is not *, a ~A or a list of a ~A: ~S"
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Bad N specified for MOD type specifier: ~S."
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Bad size specified for SIGNED-BYTE type specifier: ~S."
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Bad size specified for UNSIGNED-BYTE type specifier: ~S."
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Bad float format: ~S."
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Arrays can't have a negative number of dimensions: ~D."
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Array type has too many dimensions: ~S."
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Bad dimension in array type: ~S."
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Array dimensions is not a list, integer or *:~%  ~S"
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Type of characters that aren't base-char's.  None in CMU CL."
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Type corresponding to the charaters required by the standard."
+msgstr ""
+
+#: target:code/type.lisp
+msgid "Type for any keyword symbol."
 msgstr ""
 
 #: target:code/pred.lisp
@@ -2349,6 +2519,339 @@ msgid ""
 "   otherwise () is returned."
 msgstr ""
 
+#: target:code/string.lisp
+msgid ""
+"Test if C is a surrogate.  C may be either an integer or a\n"
+"  character. Surrogate-type indicates what kind of surrogate to test\n"
+"  for.  :High means to test for the high (leading) surrogate; :Low\n"
+"  tests for the low (trailing surrogate).  A value of :Any or Nil\n"
+"  tests for any surrogate value (high or low)."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Convert the given Hi and Lo surrogate characters to the\n"
+"  corresponding codepoint value"
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Return the codepoint value from String at position I.  If that\n"
+"  position is a surrogate, it is combined with either the previous or\n"
+"  following character (when possible) to compute the codepoint.  The\n"
+"  second return value is NIL if the position is not a surrogate pair.\n"
+"  Otherwise +1 or -1 is returned if the position is the high or low\n"
+"  surrogate value, respectively."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Return the high and low surrogate characters for Codepoint.  If\n"
+"  Codepoint is in the BMP, the first return value is the corresponding\n"
+"  character and the second is NIL."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Set the codepoint at string position I to the Codepoint.  If the\n"
+"  codepoint requires a surrogate pair, the high (leading surrogate) is\n"
+"  stored at position I and the low (trailing) surrogate is stored at\n"
+"  I+1"
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Check if String is a valid UTF-16 string.  If the string is valid,\n"
+"  T is returned.  If the string is not valid, NIL is returned, and the\n"
+"  second value is the index into the string of the invalid character.\n"
+"  A string is also invalid if it contains any unassigned codepoints."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Coerces X into a string.  If X is a string, X is returned.  If X is a\n"
+"  symbol, X's pname is returned.  If X is a character then a one element\n"
+"  string containing that character is returned.  If X cannot be coerced\n"
+"  into a string, an error occurs."
+msgstr ""
+
+#: target:code/string.lisp
+msgid "~S cannot be coerced to a string."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a string and a non-negative integer index less than the length of\n"
+"  the string, returns the character object representing the character at\n"
+"  that position in the string."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"SCHAR returns the character object at an indexed position in a string\n"
+"  just as CHAR does, except the string must be a simple-string."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given two strings, if the first string is lexicographically less than\n"
+"  the second string, returns the longest common prefix (using char=)\n"
+"  of the two strings. Otherwise, returns ()."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given two strings, if the first string is lexicographically greater than\n"
+"  the second string, returns the longest common prefix (using char=)\n"
+"  of the two strings. Otherwise, returns ()."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given two strings, if the first string is lexicographically less than\n"
+"  or equal to the second string, returns the longest common prefix\n"
+"  (using char=) of the two strings. Otherwise, returns ()."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given two strings, if the first string is lexicographically greater\n"
+"  than or equal to the second string, returns the longest common prefix\n"
+"  (using char=) of the two strings. Otherwise, returns ()."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given two strings (string1 and string2), and optional integers start1,\n"
+"  start2, end1 and end2, compares characters in string1 to characters in\n"
+"  string2 (using char=)."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given two strings, if the first string is not lexicographically equal\n"
+"  to the second string, returns the longest common prefix (using char=)\n"
+"  of the two strings. Otherwise, returns ()."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Return a new string with the case folded according to Casing as follows:\n"
+"\n"
+"  :SIMPLE  Unicode simple case folding (preserving length)\n"
+"  :FULL    Unicode full case folding (possibly changing length)\n"
+"\n"
+"  Default Casing is :SIMPLE."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given two strings (string1 and string2), and optional integers start1,\n"
+"  start2, end1 and end2, compares characters in string1 to characters in\n"
+"  string2 (using char-equal)."
+msgstr ""
+
+#: target:code/string.lisp
+msgid "Improper bounds for string comparison."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given two strings, if the first string is not lexicographically equal\n"
+"  to the second string, returns the longest common prefix (using char-"
+"equal)\n"
+"  of the two strings. Otherwise, returns ()."
+msgstr ""
+
+#: target:code/string.lisp
+msgid "Improper substring for comparison."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given two strings, if the first string is lexicographically less than\n"
+"  the second string, returns the longest common prefix (using char-equal)\n"
+"  of the two strings. Otherwise, returns ()."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given two strings, if the first string is lexicographically greater than\n"
+"  the second string, returns the longest common prefix (using char-equal)\n"
+"  of the two strings. Otherwise, returns ()."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given two strings, if the first string is lexicographically greater\n"
+"  than or equal to the second string, returns the longest common prefix\n"
+"  (using char-equal) of the two strings. Otherwise, returns ()."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given two strings, if the first string is lexicographically less than\n"
+"  or equal to the second string, returns the longest common prefix\n"
+"  (using char-equal) of the two strings. Otherwise, returns ()."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a character count and an optional fill character, makes and returns\n"
+"  a new string Count long filled with the fill character."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with all\n"
+"  lower case alphabetic characters converted to uppercase."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with all\n"
+"  lower case alphabetic characters converted to uppercase.  Casing is\n"
+"  :simple or :full for simple or full case conversion, respectively."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with all\n"
+"  upper case alphabetic characters converted to lowercase."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with all\n"
+"  upper case alphabetic characters converted to lowercase.  Casing is\n"
+"  :simple or :full for simple or full case conversion, respectively."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a string, returns a copy of the string with the first\n"
+"  character of each ``word'' converted to upper-case, and remaining\n"
+"  chars in the word converted to lower case. A ``word'' is defined\n"
+"  to be a string of case-modifiable characters delimited by\n"
+"  non-case-modifiable chars."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a string, returns a copy of the string with the first\n"
+"  character of each ``word'' converted to upper-case, and remaining\n"
+"  chars in the word converted to lower case. A ``word'' is defined\n"
+"  to be a string of case-modifiable characters delimited by\n"
+"  non-case-modifiable chars.  Casing is :simple or :full for\n"
+"  simple or full case conversion, respectively."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a string, returns that string with all lower case alphabetic\n"
+"  characters converted to uppercase."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a string, returns that string with all upper case alphabetic\n"
+"  characters converted to lowercase."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a string, returns that string with the first\n"
+"  character of each ``word'' converted to upper-case, and remaining\n"
+"  chars in the word converted to lower case. A ``word'' is defined\n"
+"  to be a string of case-modifiable characters delimited by\n"
+"  non-case-modifiable chars."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a set of characters (a list or string) and a string, returns\n"
+"  a copy of the string with the characters in the set removed from the\n"
+"  left end.  If the set of characters is a string, surrogates will be\n"
+"  properly handled."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a set of characters (a list or string) and a string, returns\n"
+"  a copy of the string with the characters in the set removed from the\n"
+"  right end.  If the set of characters is a string, surrogates will be\n"
+"  properly handled."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a set of characters (a list or string) and a string, returns a\n"
+"  copy of the string with the characters in the set removed from both\n"
+"  ends.  If the set of characters is a string, surrogates will be\n"
+"  properly handled."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a set of characters (a list or string) and a string, returns\n"
+"  a copy of the string with the characters in the set removed from the\n"
+"  left end."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a set of characters (a list or string) and a string, returns\n"
+"  a copy of the string with the characters in the set removed from the\n"
+"  right end."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Given a set of characters (a list or string) and a string, returns a\n"
+"  copy of the string with the characters in the set removed from both\n"
+"  ends."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"GLYPH returns the glyph at the indexed position in a string, and the\n"
+"  position of the next glyph (or NIL) as a second value.  A glyph is\n"
+"  a substring consisting of the character at INDEX followed by all\n"
+"  subsequent combining characters."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"SGLYPH returns the glyph at the indexed position, the same as GLYPH,\n"
+"  except that the string must be a simple-string"
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Convert String to Unicode Normalization Form D (NFD) using the\n"
+"  canonical decomposition.  The NFD string is returned"
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Convert String to Unicode Normalization Form KD (NFKD) uisng the\n"
+"  compatible decomposition form.  The NFKD string is returned."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Convert String to Unicode Normalization Form C (NFC).  If the\n"
+"  string a simple string and is already normalized, the original\n"
+"  string is returned."
+msgstr ""
+
+#: target:code/string.lisp
+msgid ""
+"Convert String to Unicode Normalization Form KC (NFKC).  If the\n"
+"  string is a simple string and is already normalized, the original\n"
+"  string is returned."
+msgstr ""
+
 #: target:code/mipsstrops.lisp
 msgid ""
 "Compares the substrings specified by String1 and String2 and returns\n"
@@ -2416,12 +2919,1740 @@ msgid ""
 "   found."
 msgstr ""
 
+#: target:code/unix.lisp
+msgid "Size of control character vector."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Successful"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Operation not permitted"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "No such file or directory"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "No such process"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Interrupted system call"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "I/O error"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Device not configured"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Arg list too long"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Exec format error"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Bad file descriptor"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "No child process"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Resource deadlock avoided"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "No more processes"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Try again"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Out of memory"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Permission denied"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Bad address"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Block device required"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Device or resource busy"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "File exists"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Cross-device link"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "No such device"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Not a director"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Is a directory"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Invalid argument"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "File table overflow"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Too many open files"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Inappropriate ioctl for device"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Text file busy"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "File too large"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "No space left on device"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Illegal seek"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Read-only file system"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Too many links"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Broken pipe"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Numerical argument out of domain"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Result too large"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Math result not representable"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Operation would block"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Resource temporarily unavailable"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Operation now in progress"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Operation already in progress"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Socket operation on non-socket"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Destination address required"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Message too long"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Protocol wrong type for socket"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Protocol not available"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Protocol not supported"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Socket type not supported"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Operation not supported on socket"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Protocol family not supported"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Address family not supported by protocol family"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Address already in use"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Can't assign requested address"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Network is down"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Network is unreachable"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Network dropped connection on reset"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Software caused connection abort"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Connection reset by peer"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "No buffer space available"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Socket is already connected"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Socket is not connected"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Can't send after socket shutdown"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Too many references: can't splice"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Connection timed out"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Connection refused"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Too many levels of symbolic links"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "File name too long"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Host is down"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "No route to host"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Directory not empty"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Too many processes"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Too many users"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Disc quota exceeded"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "namei should continue locally"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "namei was handled remotely"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Remote file system error _N"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "syscall was handled by Vice"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "No message of desired type"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Identifier removed"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Channel number out of range"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Level 2 not synchronized"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Level 3 halted"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Level 3 reset"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Link number out of range"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Protocol driver not attached"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "No CSI structure available"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Level 2 halted"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Deadlock situation detected/avoided"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "No record locks available"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Error 47"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Error 48"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Bad exchange descriptor"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Bad request descriptor"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Message tables full"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Anode table overflow"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Bad request code"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Invalid slot"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "File locking deadlock"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Bad font file format"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Not a stream device"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "No data available"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Timer expired"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Out of stream resources"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Machine is not on the network"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Package not installed"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Object is remote"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Link has been severed"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Advertise error"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Srmount error"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Communication error on send"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Protocol error"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Multihop attempted"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Not a data message"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Value too large for defined data type"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Name not unique on network"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "File descriptor in bad state"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Remote address changed"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Can not access a needed shared library"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Accessing a corrupted shared library"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ".lib section in a.out corrupted"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Attempting to link in more shared libraries than system limit"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Can not exec a shared library directly"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Error 88"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Operation not applicable"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Number of symbolic links encountered during path name traversal exceeds "
+"MAXSYMLINKS"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Error 91"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Error 92"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Option not supported by protocol"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Operation not supported on transport endpoint"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Cannot assign requested address"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Network dropped connection because of reset"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Transport endpoint is already connected"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Transport endpoint is not connected"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Cannot send after socket shutdown"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Too many references: cannot splice"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Stale NFS file handle"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Resource deadlock would occur"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Function not implemented"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Too many symbolic links encountered"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Invalid exchange"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Invalid request descriptor"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Exchange full"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "No anode"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Invalid request code"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "File locking deadlock error"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Device not a stream"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Out of streams resources"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "RFS specific error"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Attempting to link in too many shared libraries"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Cannot exec a shared library directly"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Illegal byte sequence"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Interrupted system call should be restarted _N"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Streams pipe error"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Address family not supported by protocol"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Cannot send after transport endpoint shutdown"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Structure needs cleaning"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Not a XENIX named type file"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "No XENIX semaphores available"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Is a named type file"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Remote I/O error"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Quota exceeded"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Returns a string describing the error number which was returned by a\n"
+"  UNIX system call."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Unknown error [~d]"
+msgstr ""
+
+#: target:code/multi-proc.lisp target:code/time.lisp
+#: target:code/serve-event.lisp target:code/unix.lisp
+msgid "Syscall ~A failed: ~A"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Set the user ID of the calling process to UID.\n"
+"   If the calling process is the super-user, set the real\n"
+"   and effective user IDs, and the saved set-user-ID to UID;\n"
+"   if not, the effective user ID is set to UID."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Set the group ID of the calling process to GID.\n"
+"   If the calling process is the super-user, set the real\n"
+"   and effective group IDs, and the saved set-group-ID to GID;\n"
+"   if not, the effective group ID is set to GID."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Test for read permission"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Test for write permission"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Test for execute permission"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Test for presence of file"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Given a file path (a string) and one of four constant modes,\n"
+"   unix-access returns T if the file is accessible with that\n"
+"   mode and NIL if not.  It also returns an errno value with\n"
+"   NIL which determines why the file was not accessible.\n"
+"\n"
+"   The access modes are:\n"
+"\tr_ok     Read permission.\n"
+"\tw_ok     Write permission.\n"
+"\tx_ok     Execute permission.\n"
+"\tf_ok     Presence of file."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Given a file path string, unix-chdir changes the current working \n"
+"   directory to the one specified."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Set user ID on execution"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Set group ID on execution"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Save text image after execution"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Read by owner"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Write by owner"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Execute (search directory) by owner"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Read by group"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Write by group"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Execute (search directory) by group"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Read by others"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Write by others"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Execute (search directory) by others"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Given a file path string and a constant mode, unix-chmod changes the\n"
+"   permission mode for that file to the one specified. The new mode\n"
+"   can be created by logically OR'ing the following:\n"
+"\n"
+"      setuidexec        Set user ID on execution.\n"
+"      setgidexec        Set group ID on execution.\n"
+"      savetext          Save text image after execution.\n"
+"      readown           Read by owner.\n"
+"      writeown          Write by owner.\n"
+"      execown           Execute (search directory) by owner.\n"
+"      readgrp           Read by group.\n"
+"      writegrp          Write by group.\n"
+"      execgrp           Execute (search directory) by group.\n"
+"      readoth           Read by others.\n"
+"      writeoth          Write by others.\n"
+"      execoth           Execute (search directory) by others.\n"
+"  \n"
+"  Thus #o444 and (logior unix:readown unix:readgrp unix:readoth)\n"
+"  are equivalent for 'mode.  The octal-base is familar to Unix users.\n"
+"\n"
+"  It returns T on successfully completion; NIL and an error number\n"
+"  otherwise."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Given an integer file descriptor and a mode (the same as those\n"
+"   used for unix-chmod), unix-fchmod changes the permission mode\n"
+"   for that file to the one specified. T is returned if the call\n"
+"   was successful."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Given a file path, an integer user-id, and an integer group-id,\n"
+"   unix-chown changes the owner of the file and the group of the\n"
+"   file to those specified.  Either the owner or the group may be\n"
+"   left unchanged by specifying them as -1.  Note: Permission will\n"
+"   fail if the caller is not the superuser."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-fchown is like unix-chown, except that it accepts an integer\n"
+"   file descriptor instead of a file path name."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-getdtablesize returns the maximum size of the file descriptor\n"
+"   table. (i.e. the maximum number of descriptors that can exist at\n"
+"   one time.)"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-close takes an integer file descriptor as an argument and\n"
+"   closes the file associated with it.  T is returned upon successful\n"
+"   completion, otherwise NIL and an error number."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-creat accepts a file name and a mode (same as those for\n"
+"   unix-chmod) and creates a file by that name with the specified\n"
+"   permission mode.  It returns a file descriptor on success,\n"
+"   or NIL and an error  number otherwise.\n"
+"\n"
+"   This interface is made obsolete by UNIX-OPEN."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-dup duplicates an existing file descriptor (given as the\n"
+"   argument) and return it.  If FD is not a valid file descriptor, NIL\n"
+"   and an error number are returned."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-dup2 duplicates an existing file descriptor just as unix-dup\n"
+"   does only the new value of the duplicate descriptor may be requested\n"
+"   through the second argument.  If a file already exists with the\n"
+"   requested descriptor number, it will be closed and the number\n"
+"   assigned to the duplicate."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Duplicate a file descriptor"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Get file desc. flags"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Set file desc. flags"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Get file flags"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Set file flags"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Get owner"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Get lock"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Set owner"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Set lock"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Set lock, wait for release"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Non-blocking reads"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Append on each write"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Signal pgrp when data ready"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Create if nonexistant"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Truncate to zero length"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Error if already created"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-fcntl manipulates file descriptors according to the\n"
+"   argument CMD which can be one of the following:\n"
+"\n"
+"   F-DUPFD         Duplicate a file descriptor.\n"
+"   F-GETFD         Get file descriptor flags.\n"
+"   F-SETFD         Set file descriptor flags.\n"
+"   F-GETFL         Get file flags.\n"
+"   F-SETFL         Set file flags.\n"
+"   F-GETOWN        Get owner.\n"
+"   F-SETOWN        Set owner.\n"
+"\n"
+"   The flags that can be specified for F-SETFL are:\n"
+"\n"
+"   FNDELAY         Non-blocking reads.\n"
+"   FAPPEND         Append on each write.\n"
+"   FASYNC          Signal pgrp when data ready.\n"
+"   FCREAT          Create if nonexistant.\n"
+"   FTRUNC          Truncate to zero length.\n"
+"   FEXCL           Error if already created.\n"
+"   "
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-link creates a hard link from the file with name1 to the\n"
+"   file with name2."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "set the file pointer"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "increment the file pointer"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "extend the file size"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-lseek accepts a file descriptor and moves the file pointer ahead\n"
+"   a certain offset for that file.  Whence can be any of the following:\n"
+"\n"
+"   l_set        Set the file pointer.\n"
+"   l_incr       Increment the file pointer.\n"
+"   l_xtnd       Extend the file size.\n"
+"  _N"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-mkdir creates a new directory with the specified name and mode.\n"
+"   (Same as those for unix-chmod.)  It returns T upon success, otherwise\n"
+"   NIL and an error number."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Read-only flag."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Write-only flag."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Read-write flag."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Non-blocking I/O"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Append flag."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Create if nonexistant flag."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Truncate flag."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Error if already exists."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Don't assign controlling tty"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Non-blocking mode"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Synchronous writes (on ext2)"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-open opens the file whose pathname is specified by path\n"
+"   for reading and/or writing as specified by the flags argument.\n"
+"   The flags argument can be:\n"
+"\n"
+"     o_rdonly        Read-only flag.\n"
+"     o_wronly        Write-only flag.\n"
+"     o_rdwr          Read-and-write flag.\n"
+"     o_append        Append flag.\n"
+"     o_creat         Create-if-nonexistant flag.\n"
+"     o_trunc         Truncate-to-size-0 flag.\n"
+"\n"
+"   If the o_creat flag is specified, then the file is created with\n"
+"   a permission of argument mode if the file doesn't exist.  An\n"
+"   integer file descriptor is returned by unix-open."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-pipe sets up a unix-piping mechanism consisting of\n"
+"  an input pipe and an output pipe.  Unix-Pipe returns two\n"
+"  values: if no error occurred the first value is the pipe\n"
+"  to be read from and the second is can be written to.  If\n"
+"  an error occurred the first value is NIL and the second\n"
+"  the unix error code."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-read attempts to read from the file described by fd into\n"
+"   the buffer buf until it is full.  Len is the length of the buffer.\n"
+"   The number of bytes actually read is returned or NIL and an error\n"
+"   number if an error occured."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-readlink invokes the readlink system call on the file name\n"
+"  specified by the simple string path.  It returns up to two values:\n"
+"  the contents of the symbolic link if the call is successful, or\n"
+"  NIL and the Unix error number."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-rename renames the file with string name1 to the string\n"
+"   name2.  NIL and an error code is returned if an error occured."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-rmdir attempts to remove the directory name.  NIL and\n"
+"   an error number is returned if an error occured."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Perform the UNIX select(2) system call.\n"
+"  (declare (type (integer 0 #.FD-SETSIZE) num-descriptors)\n"
+"\t   (type (or (alien (* (struct fd-set))) null)\n"
+"\t\t read-fds write-fds exception-fds)\n"
+"\t   (type (or null (unsigned-byte 31)) timeout-secs)\n"
+"\t   (type (unsigned-byte 31) timeout-usecs)\n"
+"\t   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-select examines the sets of descriptors passed as arguments\n"
+"   to see if they are ready for reading and writing.  See the UNIX\n"
+"   Programmers Manual for more information."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-sync writes all information in core memory which has been\n"
+"   modified to disk.  It returns NIL and an error code if an error\n"
+"   occured."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-fsync writes the core image of the file described by\n"
+"   fd to disk."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-truncate truncates the named file to the length (in\n"
+"   bytes) specified by len.  NIL and an error number is returned\n"
+"   if the call is unsuccessful."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-ftruncate is similar to unix-truncate except that the first\n"
+"   argument is a file descriptor rather than a file name."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-symlink creates a symbolic link named name2 to the file\n"
+"   named name1.  NIL and an error number is returned if the call\n"
+"   is unsuccessful."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-unlink removes the directory entry for the named file.\n"
+"   NIL and an error code is returned if the call fails."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-write attempts to write a character buffer (buf) of length\n"
+"   len to the file described by the file descriptor fd.  NIL and an\n"
+"   error is returned if the call is unsuccessful."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-ioctl performs a variety of operations on open i/o\n"
+"   descriptors.  See the UNIX Programmer's Manual for more\n"
+"   information."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Get terminal attributes."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Set terminal attributes."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Get terminal output speed."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Set terminal output speed."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Bogus baud rate ~S"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Get terminal input speed."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Set terminal input speed."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Send break"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Wait for output for finish"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "See tcflush(3)"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Flow control"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Set the tty-process-group for the unix file-descriptor FD to PGRP."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Get the tty-process-group for the unix file-descriptor FD."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Get the tty-process-group for the unix file-descriptor FD.  If not "
+"supplied,\n"
+"  FD defaults to /dev/tty."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Set the tty-process-group for the unix file-descriptor FD to PGRP.  If not\n"
+"  supplied, FD defaults to /dev/tty."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Set the socket process-group for the unix file-descriptor FD to PGRP."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-exit terminates the current process with an optional\n"
+"   error code.  If successful, the call doesn't return.  If\n"
+"   unsuccessful, the call returns NIL and an error number."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-stat retrieves information about the specified\n"
+"   file returning them in the form of multiple values.\n"
+"   See the UNIX Programmer's Manual for a description\n"
+"   of the values returned.  If the call fails, then NIL\n"
+"   and an error number is returned instead."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-lstat is similar to unix-stat except the specified\n"
+"   file must be a symbolic link."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-fstat is similar to unix-stat except the file is specified\n"
+"   by the file descriptor fd."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "The calling process."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Terminated child processes."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Like call getrusage, but return only the system and user time, and returns\n"
+"   the seconds and microseconds as separate values."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-getrusage returns information about the resource usage\n"
+"   of the process specified by who.  Who can be either the\n"
+"   current process (rusage_self) or all of the terminated\n"
+"   child processes (rusage_children).  NIL and an error number\n"
+"   is returned if the call fails."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-times returns information about the cpu time usage of the process\n"
+"   and its children."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"If it works, unix-gettimeofday returns 5 values: T, the seconds and\n"
+"   microseconds of the current time of day, the timezone (in minutes west\n"
+"   of Greenwich), and a daylight-savings flag.  If it doesn't work, it\n"
+"   returns NIL and the errno."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-utimes sets the 'last-accessed' and 'last-updated'\n"
+"   times on a specified file.  NIL and an error number is\n"
+"   returned if the call is unsuccessful."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-setreuid sets the real and effective user-id's of the current\n"
+"   process to the specified ones.  NIL and an error number is returned\n"
+"   if the call fails."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-setregid sets the real and effective group-id's of the current\n"
+"   process process to the specified ones.  NIL and an error number is\n"
+"   returned if the call fails."
+msgstr ""
+
+#: target:code/unix.lisp
+#, fuzzy
+msgid "Unix-getpid returns the process-id of the current process."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-getppid returns the process-id of the parent of the current process."
+msgstr ""
+
+#: target:code/unix.lisp
+#, fuzzy
+msgid "Unix-getgid returns the real group-id of the current process."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:code/unix.lisp
+msgid "Unix-getegid returns the effective group-id of the current process."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Unix-getpgrp returns the group-id of the calling process."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-setpgrp sets the process group on the process pid to\n"
+"   pgrp.  NIL and an error number are returned upon failure."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-setpgid sets the process group of the process pid to\n"
+"   pgrp. If pgid is equal to pid, the process becomes a process\n"
+"   group leader. NIL and an error number are returned upon failure."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-getuid returns the real user-id associated with the\n"
+"   current process."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Unix-getpagesize returns the number of bytes in a system page."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Unix-gethostname returns the name of the host machine as a string."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-gethostid returns a 32-bit integer which provides unique\n"
+"   identification for the host machine."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Executes the unix fork system call.  Returns 0 in the child and the pid\n"
+"   of the child in the parent if it works, or NIL and an error number if it\n"
+"   doesn't work."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Get the value of the environment variable named Name.  If no such\n"
+"  variable exists, Nil is returned."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Adds the environment variable named Name to the environment with\n"
+"  the given Value if Name does not already exist. If Name does exist,\n"
+"  the value is changed to Value if Overwrite is non-zero.  Otherwise,\n"
+"  the value is not changed."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Adds or changes the environment.  Name-value must be a string of\n"
+"  the form \"name=value\".  If the name does not exist, it is added.\n"
+"  If name does exist, the value is updated to the given value."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Removes the variable Name from the environment"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Returns either :file, :directory, :link, :special, or NIL."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Returns the pathname with all symbolic links resolved."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Error reading link ~S: ~S"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Accepts a Unix file descriptor and returns T if the device\n"
+"  associated with it is a terminal."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Executes the Unix execve system call.  If the system call suceeds, lisp\n"
+"   will no longer be running in this process.  If the system call fails "
+"this\n"
+"   function returns two values: NIL and an error code.  Arg-list should be "
+"a\n"
+"   list of simple-strings which are passed as arguments to the exec'ed "
+"program.\n"
+"   Environment should be an a-list mapping symbols to simple-strings which "
+"this\n"
+"   function bashes together to form the environment for the exec'ed program."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Unix-getitimer returns the INTERVAL and VALUE slots of one of\n"
+"   three system timers (:real :virtual or :profile). On success,\n"
+"   unix-getitimer returns 5 values,\n"
+"   T, it-interval-secs, it-interval-usec, it-value-secs, it-value-usec."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+" Unix-setitimer sets the INTERVAL and VALUE slots of one of\n"
+"   three system timers (:real :virtual or :profile). A SIGALRM signal\n"
+"   will be delivered VALUE <seconds+microseconds> from now. INTERVAL,\n"
+"   when non-zero, is <seconds+microseconds> to be loaded each time\n"
+"   the timer expires. Setting INTERVAL and VALUE to zero disables\n"
+"   the timer. See the Unix man page for more details. On success,\n"
+"   unix-setitimer returns the old contents of the INTERVAL and VALUE\n"
+"   slots as in unix-getitimer."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Return a USER-INFO structure for the user identified by LOGIN, or NIL if not "
+"found."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Return a USER-INFO structure for the user identified by UID, or NIL if not "
+"found."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "The maximum size of the group entry buffer"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Return a GROUP-INFO structure for the group identified by NAME, or NIL if "
+"not found."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Return a GROUP-INFO structure for the group identified by GID, or NIL if not "
+"found."
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "CPU time per process (in milliseconds)"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Maximum file size"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Data segment size"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Stack size"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Core file size"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Number of open files"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Maximum mapped memory"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "CPU time per process"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "File size"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Addess space (resident set size)"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Locked-in-memory address space"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid "Number of processes"
+msgstr ""
+
+#: target:code/unix.lisp
+msgid ""
+"Get the limits on the consumption of system resouce specified by\n"
+"  Resource.  If successful, return three values: T, the current (soft)\n"
+"  limit, and the maximum (hard) limit."
+msgstr ""
+
 #: target:code/bsd-os.lisp
 msgid "Unix system call getrusage failed: ~A."
 msgstr ""
 
 #: target:code/bsd-os.lisp
 msgid "Getpagesize failed: ~A"
+msgstr ""
+
+#: target:code/x86-vm.lisp
+msgid "Returns a string describing the type of the local machine."
+msgstr ""
+
+#: target:code/x86-vm.lisp
+msgid "Returns a string describing the version of the local machine."
+msgstr ""
+
+#: target:code/x86-vm.lisp
+msgid ""
+"Atomically compare object's slot value to test-value and if EQ store\n"
+"   new-value in the slot. The original value of the slot is returned."
+msgstr ""
+
+#: target:code/x86-vm.lisp
+msgid ""
+"Atomically compare symbol's value to test-value and if EQ store\n"
+"  new-value in symbol's value slot and return the original value."
+msgstr ""
+
+#: target:code/x86-vm.lisp
+msgid ""
+"Atomically compare the car of CONS to test-value and if EQ store\n"
+"  new-value its car and return the original value."
+msgstr ""
+
+#: target:code/x86-vm.lisp
+msgid ""
+"Atomically compare the cdr of CONS to test-value and if EQ store\n"
+"  new-value its cdr and return the original value."
+msgstr ""
+
+#: target:code/x86-vm.lisp
+msgid ""
+"Atomically compare an element of vector to test-value and if EQ store\n"
+"  new-value the element and return the original value."
+msgstr ""
+
+#: target:code/x86-vm.lisp
+msgid "Thread safe push of val onto the list in the symbol global value."
+msgstr ""
+
+#: target:code/x86-vm.lisp
+msgid "Thread safe pop from the list in the symbol global value."
+msgstr ""
+
+#: target:code/x86-vm.lisp
+msgid "Thread safe push of val onto the list in the car of cons."
+msgstr ""
+
+#: target:code/x86-vm.lisp
+msgid "Thread safe push of val onto the list in the cdr of cons."
+msgstr ""
+
+#: target:code/x86-vm.lisp
+msgid "Thread safe push of val onto the list in the vector element."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid ""
+"VARIABLE must evaluate to a symbol.  This symbol's current special\n"
+"  value is returned."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid ""
+"VARIABLE must evaluate to a symbol.  Return NIL if this symbol is\n"
+"  unbound, T if it has a value."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid ""
+"VARIABLE must evaluate to a symbol.  This symbol's special value cell is\n"
+"  set to the specified new value."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid "Nihil ex nihil, can't set NIL."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid "Veritas aeterna, can't set T."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid "Can't set keywords."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid ""
+"VARIABLE must evaluate to a symbol.  This symbol is made unbound,\n"
+"  removing any value it may currently have."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid ""
+"VARIABLE must evaluate to a symbol.  This symbol's current definition\n"
+"   is returned.  Settable with SETF."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid "VARIABLE must evaluate to a symbol.  Return its property list."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid "VARIABLE must evaluate to a symbol.  Return its print name."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid "VARIABLE must evaluate to a symbol.  Return its package."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid "Make and return a new symbol with the STRING as its print name."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid "Return the hash value for symbol."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid ""
+"Look on the property list of SYMBOL for the specified INDICATOR.  If this\n"
+"  is found, return the associated value, else return DEFAULT."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid "~S has an odd number of items in its property list."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid ""
+"The VALUE is added as a property of SYMBOL under the specified INDICATOR.\n"
+"  Returns VALUE."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid ""
+"Look on property list of SYMBOL for property with specified\n"
+"  INDICATOR.  If found, splice this indicator and its value out of\n"
+"  the plist, and return the tail of the original list starting with\n"
+"  INDICATOR.  If not found, return () with no side effects.\n"
+"\n"
+"  NOTE: The ANSI specification requires REMPROP to return true (not false)\n"
+"  or false (the symbol NIL). Portable code should not rely on any other "
+"value."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid ""
+"Searches the property list stored in Place for an indicator EQ to "
+"Indicator.\n"
+"  If one is found, the corresponding value is returned, else the Default is\n"
+"  returned."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid "Malformed property list: ~S"
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid ""
+"Like GETF, except that Indicator-List is a list of indicators which will\n"
+"  be looked for in the property list stored in Place.  Three values are\n"
+"  returned, see manual for details."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid ""
+"Make and return a new uninterned symbol with the same print name\n"
+"  as SYMBOL.  If COPY-PROPS is false, the new symbol is neither bound\n"
+"  nor fbound and has no properties, else it has a copy of SYMBOL's\n"
+"  function, value and property list."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid "Returns true if Object is a symbol in the keyword package."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid "Counter for generating unique GENSYM symbols."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid ""
+"Creates a new uninterned symbol whose name is a prefix string (defaults\n"
+"   to \"G\"), followed by a decimal number.  Thing, when supplied, will\n"
+"   alter the prefix if it is a string, or be used for the decimal number\n"
+"   if it is a number, of this symbol. The default value of the number is\n"
+"   the current value of *gensym-counter* which is incremented each time\n"
+"   it is used."
+msgstr ""
+
+#: target:code/symbol.lisp
+msgid "Creates a new symbol interned in package Package with the given Prefix."
 msgstr ""
 
 #: target:code/bignum.lisp
@@ -2640,12 +4871,14 @@ msgid ""
 msgstr ""
 
 #: target:code/numbers.lisp
+#, fuzzy
 msgid "Returns the greatest of its arguments."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
+#, fuzzy
 msgid "Returns the least of its arguments."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
 msgid "Return T if OBJ1 and OBJ2 represent the same object, otherwise NIL."
@@ -3285,6 +5518,18 @@ msgstr ""
 
 #: target:code/irrat-dd.lisp
 msgid "Overflow"
+msgstr ""
+
+#: target:code/unidata.lisp
+msgid "The Unicode data file is broken."
+msgstr ""
+
+#: target:code/unidata.lisp
+msgid "Unicode data file is for Unicode ~D.~D.~D"
+msgstr ""
+
+#: target:code/unidata.lisp
+msgid "No data in file."
 msgstr ""
 
 #: target:code/char.lisp
@@ -4538,6 +6783,392 @@ msgstr ""
 msgid "Change *PACKAGE* to the USER package and try again."
 msgstr ""
 
+#: target:code/stream.lisp
+msgid "Terminal I/O stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Default input stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Default output stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Error output stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Query I/O stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Trace output stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Interactive debugging stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "~S is not an input stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "~S is not an output stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "~S is not a character input stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "~S is not a character output stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "~S is not a binary input stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"~S is not a binary input stream ~\n"
+"                          or does not support multi-byte read operations."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "~S is not a binary output stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "~S is closed."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "~S is an unsupported Gray stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Returns non-nil if the given Stream can perform input operations."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Returns non-nil if the given Stream can perform output operations."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Return true if Stream is not closed."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Returns a type specifier for the kind of object returned by the Stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Return true if Stream does I/O on a terminal or other interactive device."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Can't set interactive flag on ~S."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Returns the external format used by the given Stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Closes the given Stream.  No more I/O may be performed, but inquiries\n"
+"  may still be made.  If :Abort is non-nil, an attempt is made to clean\n"
+"  up the side effects of having created the stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"With one argument returns the current position within the file\n"
+"   File-Stream is open to.  If the second argument is supplied, then\n"
+"   this becomes the new file position.  The second argument may also\n"
+"   be :start or :end for the start and end of the file, respectively."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"This function returns the length of the file that File-Stream is open to."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Returns a line of text read from the Stream as a string, discarding the\n"
+"  newline character."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Inputs a character from Stream and returns it."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Puts the Character back on the front of the input Stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Nothing to unread."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Impossible case reached in PEEK-CHAR"
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Peeks at the next character in the input Stream.  See manual for details."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "~@<bad PEEK-TYPE=~S, ~_expected ~S~:>"
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Returns T if a character is available on the given Stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Returns the next character from the Stream if one is available, or nil."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Clears any buffered input associated with the Stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Returns the next byte of the Stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Reads Numbytes bytes into the Buffer starting at Start, returning the "
+"number\n"
+"   of bytes read.\n"
+"   -- If EOF-ERROR-P is true, an END-OF-FILE condition is signalled if\n"
+"      end-of-file is encountered before Count bytes have been read.\n"
+"   -- If EOF-ERROR-P is false, READ-N-BYTES reads as much data as is "
+"currently\n"
+"      available (up to count bytes).  On pipes or similar devices, this\n"
+"      function returns as soon as any data is available, even if the amount\n"
+"      read is less than Count and eof has not been hit."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Outputs the Character to the Stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Outputs a new line to the Stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Outputs a new line to the Stream if it is not positioned at the beginning "
+"of\n"
+"   a line.  Returns T if it output a new line, nil otherwise."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Outputs the String to the given Stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Outputs the String to the given Stream, followed by a newline character."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Returns the number of characters on the current line of output of the given\n"
+"  Stream, or Nil if that information is not availible."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Returns the number of characters that will fit on a line of output on the\n"
+"  given Stream, or Nil if that information is not available."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Attempts to ensure that all output sent to the Stream has reached its\n"
+"   destination, and only then returns."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Attempts to force any buffered output to be sent."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Clears the given output Stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Outputs the Integer to the binary Stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Returns an output stream which sends its output to all of the given\n"
+"streams."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Returns a stream which performs its operations on the stream which is the\n"
+"   value of the dynamic variable named by Symbol."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Returns a bidirectional stream which gets its input from Input-Stream and\n"
+"   sends its output to Output-Stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Returns a stream which takes its input from each of the Streams in turn,\n"
+"   going on to the next at EOF."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Returns an echo stream that takes input from Input-stream and sends\n"
+"output to Output-stream"
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Returns a bidirectional stream which gets its input from Input-Stream and\n"
+"   sends its output to Output-Stream.  In addition, all input is echoed to\n"
+"   the output stream"
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Returns an input stream which will supply the characters of String between\n"
+"  Start and End in order."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Returns an Output stream which will accumulate all output given to it for\n"
+"   the benefit of the function Get-Output-Stream-String."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Returns a string of all the characters sent to a stream made by\n"
+"   Make-String-Output-Stream since the last call to this function."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Dumps the characters buffer up in the In-Stream to the Out-Stream as\n"
+"  Get-Output-Stream-String would return them."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Returns an output stream which indents its output by some amount."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Returns a stream that sends all output to the stream TARGET, but modifies\n"
+"   the case of letters, depending on KIND, which should be one of:\n"
+"     :upcase - convert to upper case.\n"
+"     :downcase - convert to lower case.\n"
+"     :capitalize - convert the first letter of words to upper case and the\n"
+"        rest of the word to lower case.\n"
+"     :capitalize-first - convert the first letter of the first word to "
+"upper\n"
+"        case and everything else to lower case."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"This takes a stream and waits for text or a command to appear on it.  If\n"
+"   text appears before a command, this returns nil, and otherwise it "
+"returns\n"
+"   a command."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Destructively modify SEQ by reading elements from STREAM.\n"
+"\n"
+"  Seq is bounded by Start and End. Seq is destructively modified by\n"
+"  copying successive elements into it from Stream. If the end of file\n"
+"  for Stream is reached before copying all elements of the subsequence,\n"
+"  then the extra elements near the end of sequence are not updated.\n"
+"\n"
+"  Argument(s):\n"
+"  SEQ:\t    a proper SEQUENCE\n"
+"  STREAM:   an input STREAM\n"
+"  START:    a bounding index designator of type '(INTEGER 0 *)' (default 0)\n"
+"  END:      a bounding index designator which be NIL or an INTEGER of\n"
+"\t    type '(INTEGER 0 *)' (default NIL)\n"
+"\n"
+"  Value(s):\n"
+"  POSITION: an INTEGER greater than or equal to zero, and less than or\n"
+"\t    equal to the length of the SEQ. POSITION is the index of\n"
+"\t    the first element of SEQ that was not updated, which might be\n"
+"\t    less than END because the end of file was reached."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "The stream is not open."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "The stream is not open for input."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Trying to read characters from a binary stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Trying to read binary data from a text stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid ""
+"Writes the elements of the Seq bounded by Start and End to Stream.\n"
+"\n"
+"  Argument(s):\n"
+"  SEQ:     a proper SEQUENCE\n"
+"  STREAM:  an output STREAM\n"
+"  START:   a bounding index designator of type '(INTEGER 0 *)' (default 0)\n"
+"  END:     a bounding index designator which be NIL or an INTEGER of\n"
+"           type '(INTEGER 0 *)' (default NIL)\n"
+"\n"
+"  Value(s):\n"
+"  SEQ:\ta proper SEQUENCE\n"
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "The stream is not open for output."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Trying to output an element of unproper type to a stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Trying to output a string to a binary stream."
+msgstr ""
+
+#: target:code/stream.lisp
+msgid "Trying to output binary data to a text stream."
+msgstr ""
+
 #: target:code/print.lisp
 msgid ""
 "If true, all objects will printed readably.  If readably printing is\n"
@@ -5307,8 +7938,9 @@ msgid "~A does not contain a symbol ~A"
 msgstr ""
 
 #: target:code/package.lisp
+#, fuzzy
 msgid "Ignore this nickname."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/package.lisp
 msgid "~S is a package name, so it cannot be a nickname for ~S."
@@ -8360,6 +10992,70 @@ msgid ""
 "   a sequence of type Result-Type using the Predicate to order the elements."
 msgstr ""
 
+#: target:code/time.lisp
+msgid ""
+"The number of internal time units that fit into a second.  See\n"
+"  Get-Internal-Real-Time and Get-Internal-Run-Time."
+msgstr ""
+
+#: target:code/time.lisp
+msgid ""
+"Return the real time in the internal time format.  This is useful for\n"
+"  finding elapsed time.  See Internal-Time-Units-Per-Second."
+msgstr ""
+
+#: target:code/time.lisp
+msgid ""
+"Return the run time in the internal time format.  This is useful for\n"
+"  finding CPU usage."
+msgstr ""
+
+#: target:code/time.lisp
+msgid ""
+"Returns a single integer for the current time of\n"
+"   day in universal time format."
+msgstr ""
+
+#: target:code/time.lisp
+msgid ""
+"Returns nine values specifying the current time as follows:\n"
+"   second, minute, hour, date, month, year, day of week (0 = Monday), T\n"
+"   (daylight savings times) or NIL (standard time), and timezone."
+msgstr ""
+
+#: target:code/time.lisp
+msgid ""
+"Converts a universal-time to decoded time format returning the following\n"
+"   nine values: second, minute, hour, date, month, year, day of week (0 =\n"
+"   Monday), T (daylight savings time) or NIL (standard time), and timezone.\n"
+"   Completely ignores daylight-savings-time when time-zone is supplied."
+msgstr ""
+
+#: target:code/time.lisp
+msgid ""
+"The time values specified in decoded format are converted to \n"
+"   universal time, which is returned."
+msgstr ""
+
+#: target:code/time.lisp
+msgid "Evaluates the Form and prints timing information on *Trace-Output*."
+msgstr ""
+
+#: target:code/weak.lisp
+msgid "Allocates and returns a weak pointer which points to OBJECT."
+msgstr ""
+
+#: target:code/weak.lisp
+msgid ""
+"If WEAK-POINTER is valid, returns the value of WEAK-POINTER and T.\n"
+"   If the referent of WEAK-POINTER has been garbage collected, returns\n"
+"   the values NIL and NIL."
+msgstr ""
+
+#: target:code/weak.lisp
+msgid "Updates WEAK-POINTER to point to a new object."
+msgstr ""
+
 #: target:code/final.lisp
 msgid ""
 "Arrange for FUNCTION to be called when there are no more references to\n"
@@ -8653,6 +11349,116 @@ msgstr ""
 
 #: target:code/describe.lisp
 msgid "~&It is defined in:~&~A"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "~%That slot is unbound.~%"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "~%This object contains nothing to inspect.~%~%"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "~%Enter a VALID number (~:[0-~D~;0~]).~%~%"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "~%Bottom of Stack.~%"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "~%Returning to INSPECTOR.~%"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "TTY-Inspector Help:"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "  R           -  recompute current object."
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "  D           -  redisplay current object."
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "  U           -  Move upward through the object stack."
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "  <number>    -  Inspect this slot."
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "  Q, E        -  Quit TTY-INSPECTOR."
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "  ?, H, Help  -  Show this help."
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "Unbound"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "~s is a symbol.~%"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "Value"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "Function"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "Plist"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "Package"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "~s is an instance of ~s.~%"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "- (slot is unbound)"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "~s is a ~(~A~).~%"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "Function ~s.~@[~%Argument List: ~a~]."
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "Object is a ~:[~;displaced ~]vector of length ~d.~%"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "Object is a LIST of length ~d.~%"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "Object is a CONS.~%"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid ""
+"Object is ~:[a displaced~;an~] array of ~a.~%~\n"
+"                       Its dimensions are ~s.~%"
+msgstr ""
+
+#: target:code/tty-inspect.lisp
+msgid "Object is an atom.~%"
 msgstr ""
 
 #: target:code/format-time.lisp
@@ -8967,6 +11773,30 @@ msgstr ""
 
 #: target:code/run-program.lisp
 msgid "Invalid option to run-program: ~S"
+msgstr ""
+
+#: target:code/stream-vector-io.lisp
+msgid "endian-swap ~a is illegal for element-type of vector ~a"
+msgstr ""
+
+#: target:code/stream-vector-io.lisp
+msgid ""
+"Read from Stream into Vector.  The Start and End indices of Vector\n"
+"  is in octets, and must be an multiple of the octets per element of\n"
+"  the vector element.  The keyword argument :Endian-Swap specifies any\n"
+"  endian swapping to be done. "
+msgstr ""
+
+#: target:code/stream-vector-io.lisp
+msgid "Wrong vector type ~a for read-vector on stream ~a."
+msgstr ""
+
+#: target:code/stream-vector-io.lisp
+msgid ""
+"Write Vector to Stream.  The Start and End indices of Vector is in\n"
+"  octets, and must be an multiple of the octets per element of the\n"
+"  vector element.  The keyword argument :Endian-Swap specifies any\n"
+"  endian swapping to be done. "
 msgstr ""
 
 #: target:code/foreign.lisp
@@ -9305,6 +12135,183 @@ msgstr ""
 msgid "network connection from ~D.~D.~D.~D:~D"
 msgstr ""
 
+#: target:code/wire.lisp
+msgid "The wire the form we are currently evaluating came across."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Unique identifier for this host."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Unique identifier for this process."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Hash table mapping local objects to the corresponding remote id."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Hash table mapping remote id's to the curresponding local object."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Next available id for remote objects."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "There is a problem with ~A."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Received EOF on ~A."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Error ~A ~A: ~A."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Returns T iff the given remote object is defined locally."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid ""
+"Returns T iff the two objects refer to the same (eq) object in the same\n"
+"  process."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid ""
+"Return the associated value for the given remote object. It is an error if\n"
+"  the remote object was not created in this process or if\n"
+"  FORGET-REMOTE-TRANSLATION has been called on this remote object."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "~S is defined is a different process."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Use the value of NIL"
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "No value for ~S -- FORGET-REMOTE-TRANSLATION was called to early."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Convert the given local object to a remote object."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid ""
+"Forget the translation from the given local to the corresponding remote\n"
+"object. Passing that remote object to remote-object-value will new return "
+"NIL."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid ""
+"Return T iff anything is in the input buffer or available on the socket."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "listening to"
+msgstr ""
+
+#: target:code/wire.lisp
+msgid ""
+"Read data off the socket, filling the input buffer. The buffer is cleared\n"
+"first. If fill-input-buffer returns, it is guarenteed that there will be at\n"
+"least one byte in the input buffer. If EOF was reached, as wire-eof error\n"
+"is signaled."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "reading"
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Return the next byte from the wire."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid ""
+"Read a number off the wire. Numbers are 4 bytes in network order.\n"
+"The optional argument controls weather or not the number should be "
+"considered\n"
+"signed (defaults to T)."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid ""
+"Reads an arbitrary integer sent by WIRE-OUTPUT-BIGNUM from the wire and\n"
+"   return it."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Reads a string from the wire. The first four bytes spec the size."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Reads the next object from the wire and returns it."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid ""
+"Attempt to read symbol, ~A, of wire into non-existent ~\n"
+"\t\t       package, ~A."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "writing"
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Not everything wrote."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid ""
+"Send any info still in the output buffer down the wire and clear it. "
+"Nothing\n"
+"harmfull will happen if called when the output buffer is empty."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Output the given (8-bit) byte on the wire."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Output the given (32-bit) number on the wire."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid ""
+"Outputs an arbitrary integer, but less effeciently than WIRE-OUTPUT-NUMBER."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid ""
+"Output the given string. First output the length using WIRE-OUTPUT-NUMBER,\n"
+"then output the bytes."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid ""
+"Output the given object on the given wire. If cache-it is T, enter this\n"
+"object in the cache for future reference."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Error: Cannot output objects of type ~s across a wire."
+msgstr ""
+
+#: target:code/wire.lisp
+msgid "Send the function and args down the wire as a funcall."
+msgstr ""
+
 #: target:code/remote.lisp
 msgid "AList of wire . remote-wait structs"
 msgstr ""
@@ -9356,8 +12363,9 @@ msgid ""
 msgstr ""
 
 #: target:code/multi-proc.lisp
+#, fuzzy
 msgid "Return the real time in seconds."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/multi-proc.lisp
 msgid "Return the run time in seconds"
@@ -9377,8 +12385,9 @@ msgid "A list of all alive processes."
 msgstr ""
 
 #: target:code/multi-proc.lisp
+#, fuzzy
 msgid "Return a list of all the live processes."
-msgstr ""
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/multi-proc.lisp
 msgid "Execute the body the scheduling disabled."
@@ -9919,18 +12928,6 @@ msgstr ""
 
 #: target:code/macros.lisp
 msgid "defining macro ~A"
-msgstr ""
-
-#: target:code/macros.lisp
-msgid "Ignore the lock and continue"
-msgstr ""
-
-#: target:code/macros.lisp
-msgid "Disable the package's definition-lock then continue"
-msgstr ""
-
-#: target:code/macros.lisp
-msgid "Unlock all packages, then continue"
 msgstr ""
 
 #: target:code/macros.lisp
