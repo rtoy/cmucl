@@ -628,7 +628,7 @@ msgstr ""
 msgid "Bad option:~%  ~S"
 msgstr ""
 
-#: target:code/error.lisp
+#: target:compiler/new-assem.lisp target:code/error.lisp
 msgid "Unknown option: ~S"
 msgstr ""
 
@@ -5704,6 +5704,142 @@ msgstr ""
 msgid "Overflow"
 msgstr ""
 
+#: target:compiler/proclaim.lisp
+msgid ""
+"~S uses lambda-list keyword naming convention, but is not a recognized "
+"lambda-list keyword."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Misplaced &optional in lambda-list: ~S."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Misplaced &rest in lambda-list: ~S."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Misplaced &more in lambda-list: ~S."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Misplaced &key in lambda-list: ~S."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Misplaced &allow-other-keys in lambda-list: ~S."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Misplaced &aux in lambda-list: ~S."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Found garbage in lambda-list when expecting a keyword: ~S."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "&rest not followed by required variable."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Illegal function name: ~S."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Special form is an illegal function name: ~S."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid ""
+"Defining as a SETF function a name that already has a SETF macro:~\n"
+"       ~%  ~S"
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid ""
+"Undefining structure type:~%  ~S~@\n"
+"\t   so that this slot accessor can be redefined:~%  ~S"
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "~S previously defined as a macro."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Unknown optimization quality ~S in ~S."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Malformed optimization quality specifier ~S in ~S."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid ""
+"DECLAIM Declaration*\n"
+"  Do a declaration for the global environment."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp target:compiler/proclaim.lisp
+msgid "Malformed PROCLAIM spec: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp target:compiler/proclaim.lisp
+msgid "Variable name is not a symbol: ~S."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Nihil ex nihil, can't declare ~S special."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Veritas aeterna, can't declare ~S special."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Can't declare ~S special, it is a keyword."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Proceed anyway."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Trying to declare ~S special, which is ~A."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "a constant"
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "an alien variable"
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "a symbol macro"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp target:compiler/proclaim.lisp
+msgid "Declared functional type is not a function type: ~S."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Ignoring FTYPE declaration for slot accesor:~%  ~S"
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Declaration to be RECOGNIZED is not a symbol: ~S."
+msgstr ""
+
+#: target:compiler/proclaim.lisp
+msgid "Declaration already names a type: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp target:compiler/proclaim.lisp
+msgid "Unrecognized proclamation: ~S."
+msgstr ""
+
 #: target:code/unidata.lisp
 msgid "The Unicode data file is broken."
 msgstr ""
@@ -7553,6 +7689,11 @@ msgid ""
 "  slashification off."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
+#: target:compiler/byte-comp.lisp target:compiler/dyncount.lisp
+#: target:compiler/knownfun.lisp target:compiler/new-assem.lisp
+#: target:compiler/meta-vmdef.lisp target:compiler/vop.lisp
+#: target:compiler/node.lisp target:compiler/sset.lisp
+#: target:compiler/backend.lisp target:compiler/macros.lisp
 #: target:code/print.lisp
 msgid "~S cannot be printed readably."
 msgstr ""
@@ -14178,6 +14319,530 @@ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 msgid "Ignoring unknown option: ~S."
 msgstr ""
 
+#: target:compiler/macros.lisp
+msgid ""
+"Policy Node Condition*\n"
+"  Test whether some conditions apply to the current compiler policy for "
+"Node.\n"
+"  Each condition is a predicate form which accesses the policy values by\n"
+"  referring to them as the variables SPEED, SPACE, SAFETY, CSPEED, BREVITY "
+"and\n"
+"  DEBUG.  The results of all the conditions are combined with AND and "
+"returned\n"
+"  as the result.\n"
+"\n"
+"  Node is a form which is evaluated to obtain the node which the policy is "
+"for.\n"
+"  If Node is NIL, then we use the current policy as defined by *default-"
+"cookie*\n"
+"  and *current-cookie*.  This option is only well defined during IR1\n"
+"  conversion."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid "Can't funcall the SYMBOL-FUNCTION of special forms."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Def-IR1-Translator Name (Lambda-List Start-Var Cont-Var {Key Value}*)\n"
+"                      [Doc-String] Form*\n"
+"  Define a function that converts a Special-Form or other magical thing "
+"into\n"
+"  IR1.  Lambda-List is a defmacro style lambda list.  Start-Var and Cont-"
+"Var\n"
+"  are bound to the start and result continuations for the resulting IR1.\n"
+"  This keyword is defined:\n"
+"      Kind\n"
+"          The function kind to associate with Name (default :special-form)."
+msgstr ""
+
+#: target:compiler/ir2tran.lisp target:compiler/ltv.lisp
+#: target:compiler/ir1tran.lisp target:compiler/macros.lisp
+msgid "Can't funcall the SYMBOL-FUNCTION of the special form ~A."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Def-Source-Transform Name Lambda-List Form*\n"
+"  Define a macro-like source-to-source transformation for the function "
+"Name.\n"
+"  A source transform may \"pass\" by returning a non-nil second value.  If "
+"the\n"
+"  transform passes, then the form is converted as a normal function call.  "
+"If\n"
+"  the supplied arguments are not compatible with the specified lambda-list,\n"
+"  then the transform automatically passes.\n"
+"  \n"
+"  Source-Transforms may only be defined for functions.  Source "
+"transformation\n"
+"  is not attempted if the function is declared Notinline.  Source "
+"transforms\n"
+"  should not examine their arguments.  If it matters how the function is "
+"used,\n"
+"  then Deftransform should be used to define an IR1 transformation.\n"
+"  \n"
+"  If the desirability of the transformation depends on the current Optimize\n"
+"  parameters, then the Policy macro should be used to determine when to pass."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Def-Primitive-Translator Name Lambda-List Form*\n"
+"  Define a function that converts a use of (%PRIMITIVE Name ...) into Lisp\n"
+"  code.  Lambda-List is a defmacro style lambda list."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Deftransform Name (Lambda-List [Arg-Types] [Result-Type] {Key Value}*)\n"
+"               Declaration* [Doc-String] Form*\n"
+"  Define an IR1 transformation for Name.  An IR1 transformation computes a\n"
+"  lambda that replaces the function variable reference for the call.  A\n"
+"  transform may pass (decide not to transform the call) by calling the Give-"
+"Up\n"
+"  function.  Lambda-List both determines how the current call is parsed and\n"
+"  specifies the Lambda-List for the resulting lambda.\n"
+"\n"
+"  We parse the call and bind each of the lambda-list variables to the\n"
+"  continuation which represents the value of the argument.  When parsing "
+"the\n"
+"  call, we ignore the defaults, and always bind the variables for "
+"unsupplied\n"
+"  arguments to NIL.  If a required argument is missing, an unknown keyword "
+"is\n"
+"  supplied, or an argument keyword is not a constant, then the transform\n"
+"  automatically passes.  The Declarations apply to the bindings made by\n"
+"  Deftransform at transformation time, rather than to the variables of the\n"
+"  resulting lambda.  Bound-but-not-referenced warnings are suppressed for "
+"the\n"
+"  lambda-list variables.  The Doc-String is used when printing efficiency "
+"notes\n"
+"  about the defined transform.\n"
+"\n"
+"  Normally, the body evaluates to a form which becomes the body of an\n"
+"  automatically constructed lambda.  We make Lambda-List the lambda-list "
+"for\n"
+"  the lambda, and automatically insert declarations of the argument and "
+"result\n"
+"  types.  If the second value of the body is non-null, then it is a list of\n"
+"  declarations which are to be inserted at the head of the lambda.  "
+"Automatic\n"
+"  lambda generation may be inhibited by explicitly returning a lambda from "
+"the\n"
+"  body.\n"
+"\n"
+"  The Arg-Types and Result-Type are used to create a function type which "
+"the\n"
+"  call must satisfy before transformation is attempted.  The function type\n"
+"  specifier is constructed by wrapping (FUNCTION ...) around these values, "
+"so\n"
+"  the lack of a restriction may be specified by omitting the argument or\n"
+"  supplying *.  The argument syntax specified in the Arg-Types need not be "
+"the\n"
+"  same as that in the Lambda-List, but the transform will never happen if\n"
+"  the syntaxes can't be satisfied simultaneously.  If there is an existing\n"
+"  transform for the same function that has the same type, then it is "
+"replaced\n"
+"  with the new definition.\n"
+"\n"
+"  These are the legal keyword options:\n"
+"    :Result - A variable which is bound to the result continuation.\n"
+"    :Node   - A variable which is bound to the combination node for the "
+"call.\n"
+"    :Policy - A form which is supplied to the Policy macro to determine "
+"whether\n"
+"              this transformation is appropriate.  If the result is false, "
+"then\n"
+"              the transform automatically passes.\n"
+"    :Eval-Name\n"
+"    \t    - The name and argument/result types are actually forms to be\n"
+"              evaluated.  Useful for getting closures that transform "
+"similar\n"
+"              functions.\n"
+"    :Defun-Only\n"
+"            - Don't actually instantiate a transform, instead just DEFUN\n"
+"              Name with the specified transform definition function.  This "
+"may\n"
+"              be later instantiated with %Deftransform.\n"
+"    :Important\n"
+"            - If supplied and non-NIL, note this transform as "
+"``important,''\n"
+"              which means effeciency notes will be generated when this\n"
+"              transform fails even if brevity=speed (but not if "
+"brevity>speed)\n"
+"    :When {:Native | :Byte | :Both}\n"
+"            - Indicates whether this transform applies to native code,\n"
+"              byte-code or both (default :native.)"
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid "Can't specify both DEFUN-ONLY and EVAL-NAME."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Defknown Name Arg-Types Result-Type [Attributes] {Key Value}* \n"
+"  Declare the function Name to be a known function.  We construct a type\n"
+"  specifier for the function by wrapping (FUNCTION ...) around the Arg-"
+"Types\n"
+"  and Result-Type.  Attributes is a an unevaluated list of the boolean\n"
+"  attributes that the function has.  These attributes are meaningful here:\n"
+"      call\n"
+"         May call functions that are passed as arguments.  In order to "
+"determine\n"
+"         what other effects are present, we must find the effects of all "
+"arguments\n"
+"         that may be functions.\n"
+"        \n"
+"      unsafe\n"
+"         May incorporate arguments in the result or somehow pass them "
+"upward.\n"
+"        \n"
+"      unwind\n"
+"         May fail to return during correct execution.  Errors are O.K.\n"
+"        \n"
+"      any\n"
+"         The (default) worst case.  Includes all the other bad things, plus "
+"any\n"
+"         other possible bad thing.\n"
+"        \n"
+"      foldable\n"
+"         May be constant-folded.  The function has no side effects, but may "
+"be\n"
+"         affected by side effects on the arguments.  e.g. SVREF, MAPC.\n"
+"        \n"
+"      flushable\n"
+"         May be eliminated if value is unused.  The function has no side "
+"effects\n"
+"         except possibly CONS.  If a function is defined to signal errors, "
+"then\n"
+"         it is not flushable even if it is movable or foldable.\n"
+"        \n"
+"      movable\n"
+"         May be moved with impunity.  Has no side effects except possibly "
+"CONS,\n"
+"         and is affected only by its arguments.\n"
+"\n"
+"      predicate\n"
+"          A true predicate likely to be open-coded.  This is a hint to IR1\n"
+"\t  conversion that it should ensure calls always appear as an IF test.\n"
+"\t  Not usually specified to Defknown, since this is implementation\n"
+"\t  dependent, and is usually automatically set by the Define-VOP\n"
+"\t  :Conditional option.\n"
+"\n"
+"  Name may also be a list of names, in which case the same information is "
+"given\n"
+"  to all the names.  The keywords specify the initial values for various\n"
+"  optimizers that the function might have."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid "Function cannot have both good and bad attributes: ~S"
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Defoptimizer (Function Kind) (Lambda-List [Node-Var] Var*)\n"
+"                Declaration* Form*\n"
+"  Define some Kind of optimizer for the named Function.  Function must be a\n"
+"  known function.  Lambda-List is used to parse the arguments to the\n"
+"  combination as in Deftransform.  If the argument syntax is invalid or "
+"there\n"
+"  are non-constant keys, then we simply return NIL.\n"
+"\n"
+"  The function is DEFUN'ed as Function-Kind-OPTIMIZER.  Possible kinds are\n"
+"  DERIVE-TYPE, OPTIMIZER, LTN-ANNOTATE and IR2-CONVERT.  If a symbol is\n"
+"  specified instead of a (Function Kind) list, then we just do a DEFUN with "
+"the\n"
+"  symbol as its name, and don't do anything with the definition.  This is\n"
+"  useful for creating optimizers to be passed by name to DEFKNOWN.\n"
+"\n"
+"  If supplied, Node-Var is bound to the combination node being optimized.  "
+"If\n"
+"  additional Vars are supplied, then they are used as the rest of the "
+"optimizer\n"
+"  function's lambda-list.  LTN-ANNOTATE methods are passed an additional "
+"POLICY\n"
+"  argument, and IR2-CONVERT methods are passed an additional IR2-BLOCK\n"
+"  argument."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Do-Blocks (Block-Var Component [Ends] [Result-Form]) {Declaration}* {Form}*\n"
+"  Iterate over the blocks in a component, binding Block-Var to each block "
+"in\n"
+"  turn.  The value of Ends determines whether to iterate over dummy head "
+"and\n"
+"  tail blocks:\n"
+"    NIL   -- Skip Head and Tail (the default)\n"
+"    :Head -- Do head but skip tail\n"
+"    :Tail -- Do tail but skip head\n"
+"    :Both -- Do both head and tail\n"
+"\n"
+"  If supplied, Result-Form is the value to return."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid "Losing Ends value: ~S."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Do-Blocks-Backwards (Block-Var Component [Ends] [Result-Form]) {Declaration}"
+"* {Form}*\n"
+"  Like Do-Blocks, only iterate over the blocks in reverse order."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Do-Uses (Node-Var Continuation [Result]) {Declaration}* {Form}*\n"
+"  Iterate over the uses of Continuation, binding Node to each one "
+"succesively."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Do-Nodes (Node-Var Cont-Var Block {Key Value}*) {Declaration}* {Form}*\n"
+"  Iterate over the nodes in Block, binding Node-Var to the each node and\n"
+"  Cont-Var to the node's Cont.  The only keyword option is Restart-P, which\n"
+"  causes iteration to be restarted when a node is deleted out from under us "
+"(if\n"
+"  not supplied, this is an error.)"
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Do-Nodes-Backwards (Node-Var Cont-Var Block) {Declaration}* {Form}*\n"
+"  Like Do-Nodes, only iterates in reverse order."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"With-IR1-Environment Node Form*\n"
+"  Bind the IR1 context variables so that IR1 conversion can be done after "
+"the\n"
+"  main conversion pass has finished."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"LEXENV-FIND Name Slot {Key Value}*\n"
+"  Look up Name in the lexical environment namespace designated by Slot,\n"
+"  returning the <value, T>, or <NIL, NIL> if no entry.  The :TEST keyword\n"
+"  may be used to determine the name equality predicate."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid "If true, defprinter print functions print each slot on a separate line."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Defprinter Name Slot-Desc*\n"
+"  Define some kind of reasonable defstruct structure-print function.  Name\n"
+"  is the name of the structure.  We define a function %PRINT-name which\n"
+"  prints the slots in the structure in the way described by the Slot-Descs.\n"
+"  Each Slot-Desc can be a slot name, indicating that the slot should simply\n"
+"  be printed.  A Slot-Desc may also be a list of a slot name and other "
+"stuff.\n"
+"  The other stuff is composed of keywords followed by expressions.  The\n"
+"  expressions are evaluated with the variable which is the slot name bound\n"
+"  to the value of the slot.  These keywords are defined:\n"
+"  \n"
+"  :PRIN1    Print the value of the expression instead of the slot value.\n"
+"  :PRINC    Like :PRIN1, only princ the value\n"
+"  :TEST     Only print something if the test is true.\n"
+"  \n"
+"  If no printing thing is specified then the slot value is printed as "
+"PRIN1.\n"
+"  \n"
+"  The structure being printed is bound to Structure and the stream is bound "
+"to\n"
+"  Stream."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid "Losing Defprinter option: ~S."
+msgstr ""
+
+#: target:compiler/macros.lisp
+#, fuzzy
+msgid "Unknown attribute name: ~S."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/macros.lisp
+msgid ""
+"Def-Boolean-Attribute Name Attribute-Name*\n"
+"  Define a new class of boolean attributes, with the attributes havin the\n"
+"  specified Attribute-Names.  Name is the name of the class, which is used "
+"to\n"
+"  generate some macros to manipulate sets of the attributes: \n"
+"\n"
+"    NAME-attributep attributes attribute-name*\n"
+"      Return true if one of the named attributes is present, false "
+"otherwise.\n"
+"      When set with SETF, updates the place Attributes setting or clearing "
+"the\n"
+"      specified attributes.\n"
+"\n"
+"    NAME-attributes attribute-name*\n"
+"      Return a set of the named attributes."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Automagically generated boolean attribute test function.  See\n"
+"\t    Def-Boolean-Attribute."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Automagically generated boolean attribute setter.  See\n"
+"\t    Def-Boolean-Attribute."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Automagically generated boolean attribute creation function.  See\n"
+"\t    Def-Boolean-Attribute."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Returns the union of all the sets of boolean attributes which are its\n"
+"  arguments."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Returns the intersection of all the sets of boolean attributes which are "
+"its\n"
+"  arguments."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Returns true if the attributes present in Attr1 are indentical to those in\n"
+"  Attr2."
+msgstr ""
+
+#: target:compiler/macros.lisp
+#, fuzzy
+msgid "~S is not the name of an event."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/macros.lisp
+#, fuzzy
+msgid "Return the number of times that Event has happened."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/macros.lisp
+msgid ""
+"Return the function that is called when Event happens.  If this is null,\n"
+"  there is no action.  The function is passed the node to which the event\n"
+"  happened, or NIL if there is no relevant node.  This may be set with SETF."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Return the non-negative integer which represents the level of significance\n"
+"  of the event Name.  This is used to determine whether to print a message "
+"when\n"
+"  the event happens.  This may be set with SETF."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Defevent Name Description\n"
+"  Define a new kind of event.  Name is a symbol which names the event and\n"
+"  Description is a string which describes the event.  Level (default 0) is "
+"the\n"
+"  level of significance associated with this event; it is used to determine\n"
+"  whether to print a Note when the event happens."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"This variable is a non-negative integer specifying the lowest level of\n"
+"  event that will print a Note when it occurs."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Event Name Node\n"
+"  Note that the event with the specified Name has happened.  Node is "
+"evaluated\n"
+"  to determine the node to which the event happened."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Print a listing of events and their counts, sorted by the count.  Events\n"
+"  that happened fewer than Min-Count times will not be printed.  Stream is "
+"the\n"
+"  stream to write to."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Find Element in a null-terminated List linked by the accessor function\n"
+"  Next.  Key, Test and Test-Not are the same as for generic sequence\n"
+"  functions."
+msgstr ""
+
+#: target:compiler/debug.lisp target:compiler/pack.lisp
+#: target:compiler/represent.lisp target:compiler/copyprop.lisp
+#: target:compiler/life.lisp target:compiler/macros.lisp
+msgid "Silly to supply both :Test and :Test-Not."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Return the position of Element (or NIL if absent) in a null-terminated List\n"
+"  linked by the accessor function Next.  Key, Test and Test-Not are the same "
+"as\n"
+"  for generic sequence functions."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Map Function over the elements in a null-terminated List linked by the\n"
+"  accessor function Next, returning a list of the results."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Deletef-In Next Place Item\n"
+"  Delete Item from a null-terminated list linked by the accessor function "
+"Next\n"
+"  that is stored in Place.  Item must appear exactly once in the list."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Push Item onto a list linked by the accessor function Next that is stored "
+"in\n"
+"  Place."
+msgstr ""
+
+#: target:compiler/debug-dump.lisp target:compiler/checkgen.lisp
+#: target:compiler/ir1util.lisp target:compiler/meta-vmdef.lisp
+#: target:compiler/macros.lisp
+msgid "Shouldn't happen?"
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid "Redefining modular version ~S of ~S for width ~S."
+msgstr ""
+
+#: target:compiler/macros.lisp
+msgid ""
+"Lambda list keyword ~S is not supported for ~\n"
+"              modular function lambda lists."
+msgstr ""
+
 #: target:compiler/backend.lisp
 msgid ""
 "Machine specific support routine ~S ~\n"
@@ -14220,6 +14885,675 @@ msgstr ""
 
 #: target:compiler/bit-util.lisp
 msgid "local-tn-limit not a vm:word-bits multiple."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"Define-Storage-Base Name Kind {Key Value}*\n"
+"  Define a storage base having the specified Name.  Kind may be :Finite,\n"
+"  :Unbounded or :Non-Packed.  The following keywords are legal:\n"
+"\n"
+"  :Size <Size>\n"
+"      Specify the number of locations in a :Finite SB or the initial size of "
+"a\n"
+"      :Unbounded SB."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Size specification meaningless in a ~S SB."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Size not specified in a ~S SB."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"Define-Storage-Class Name Number Storage-Base {Key Value}*\n"
+"  Define a storage class Name that uses the named Storage-Base.  Number is "
+"a\n"
+"  small, non-negative integer that is used as an alias.  The following\n"
+"  keywords are defined:\n"
+"\n"
+"  :Element-Size Size\n"
+"      The size of objects in this SC in whatever units the SB uses.  This\n"
+"      defaults to 1.\n"
+"\n"
+"  :Alignment Size\n"
+"      The alignment restrictions for this SC.  TNs will only be allocated "
+"at\n"
+"      offsets that are an even multiple of this number.  Defaults to 1.\n"
+"\n"
+"  :Locations (Location*)\n"
+"      If the SB is :Finite, then this is a list of the offsets within the "
+"SB\n"
+"      that are in this SC.\n"
+"\n"
+"  :Reserve-Locations (Location*)\n"
+"      A subset of the Locations that the register allocator should try to\n"
+"      reserve for operand loading (instead of to hold variable values.)\n"
+"\n"
+"  :Save-P {T | NIL}\n"
+"      If T, then values stored in this SC must be saved in one of the\n"
+"      non-save-p :Alternate-SCs across calls.\n"
+"\n"
+"  :Alternate-SCs (SC*)\n"
+"      Indicates other SCs that can be used to hold values from this SC "
+"across\n"
+"      calls or when storage in this SC is exhausted.  The SCs should be\n"
+"      specified in order of decreasing \"goodness\".  There must be at "
+"least\n"
+"      one SC in an unbounded SB, unless this SC is only used for restricted "
+"or\n"
+"      wired TNs.\n"
+"\n"
+"  :Constant-SCs (SC*)\n"
+"      A list of the names of all the constant SCs that can be loaded into "
+"this\n"
+"      SC by a move function."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Alignment is not a power of two: ~S"
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "SC element ~D out of bounds for ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ":Locations is meaningless in a ~S SB."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Reserve-Locations not a subset of Locations."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Meaningless to specify alternate or constant SCs in a ~S SB."
+msgstr ""
+
+#: target:compiler/x86/vm.lisp target:compiler/meta-vmdef.lisp
+msgid "Redefining SC number ~D from ~S to ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"Define-Move-Function (Name Cost) lambda-list ({(From-SC*) (To-SC*)}*) form*\n"
+"  Define the function Name and note it as the function used for moving "
+"operands\n"
+"  from the From-SCs to the To-SCs.  Cost is the cost of this move "
+"operation.\n"
+"  The function is called with three arguments: the VOP (for context), and "
+"the\n"
+"  source and destination TNs.  An ASSEMBLE form is wrapped around the body.\n"
+"  All uses of DEFINE-MOVE-FUNCTION should be compiled before any uses of\n"
+"  DEFINE-VOP."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Malformed SCs spec: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"Define-Move-VOP Name {:Move | :Move-Argument} {(From-SC*) (To-SC*)}*\n"
+"  Make Name be the VOP used to move values in the specified From-SCs to the\n"
+"  representation of the To-SCs.  If kind is :Move-Argument, then the VOP "
+"takes\n"
+"  an extra argument, which is the frame pointer of the frame to move into."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+#, fuzzy
+msgid "Unknown kind ~S."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/meta-vmdef.lisp
+#, fuzzy
+msgid "~S is not a defined primitive type."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"Def-Primitive-Type Name (SC*) {Key Value}*\n"
+"   Define a primitive type Name.  Each SC specifies a Storage Class that "
+"values\n"
+"   of this type may be allocated in.  The following keyword options are\n"
+"   defined:\n"
+"  \n"
+"  :Type\n"
+"      The type descriptor for the Lisp type that is equivalent to this type\n"
+"      (defaults to Name.)"
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"DEF-PRIMITIVE-TYPE-ALIAS Name Result\n"
+"  Define name to be an alias for Result in VOP operand type restrictions."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"Primitive-Type-VOP Vop (Kind*) Type*\n"
+"  Annotate all the specified primitive Types with the named VOP under each "
+"of\n"
+"  the specified kinds:\n"
+"\n"
+"  :Check\n"
+"      A one argument one result VOP that moves the argument to the result,\n"
+"      checking that the value is of this type in the process."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+#, fuzzy
+msgid "Unknown kind: ~S."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Operand ~S isn't one of these kinds: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+#, fuzzy
+msgid "~S is not an operand to ~S."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/meta-vmdef.lisp
+#, fuzzy
+msgid "~S is not the name of a defined VOP."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/meta-vmdef.lisp
+msgid "~:R argument missing: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Extra junk at end of ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "~:R argument is not a ~S: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Malformed time specifier: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+#, fuzzy
+msgid "Unknown phase in time specifier: ~S."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Cannot target a ~S operand: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"No move function defined to ~:[save~;load~] SC ~S~\n"
+"\t\t\t  ~:[to~;from~] from SC ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"Can't tell whether to ~:[save~;load~] with ~S~@\n"
+"\t\t\t\t or ~S when operand is in SC ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"SC ~S has no alternate~:[~; or constant~] SCs, yet it is~@\n"
+"\t          mentioned in the restriction for operand ~S."
+msgstr ""
+
+#: target:compiler/x86/nlx.lisp target:compiler/x86/call.lisp
+#: target:compiler/x86/debug.lisp target:compiler/x86/char.lisp
+#: target:compiler/x86/float-sse2.lisp target:compiler/x86/move.lisp
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"Load TN allocated, but no move function?~@\n"
+"\t           VM definition inconsistent, recompile and try again."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Malformed operand specifier: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "More operand isn't last: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Can only specify :FROM in a result: ~S"
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Can only specify :TO in an argument: ~S"
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+#, fuzzy
+msgid "Unknown keyword in operand specifier: ~S."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Cannot specify :TARGET in a :MORE operand."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Cannot specify :LOAD-IF in a :MORE operand."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Malformed temporary spec: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Malformed options list: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+#, fuzzy
+msgid "Odd number of arguments in keyword options: ~S."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Temporary spec allocates no temps:~%  ~S"
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Bad temporary name: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Must specify exactly one SC for a temporary."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+#, fuzzy
+msgid "Unknown temporary option: ~S."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Temporary lifetime doesn't begin before it ends: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Must specifiy :SC for all temporaries: ~S"
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Malformed option specification: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+#, fuzzy
+msgid "Unknown option specifier: ~S."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"No move function defined to move ~:[from~;to~] SC ~\n"
+"\t              ~S~%~:[to~;from~] alternate or constant SC ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Bad thing to be a operand type: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Bad PRIMITIVE-TYPE name in ~S: ~S"
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"Can't include primitive-type ~\n"
+"\t\t\t\t             alias ~S in a :OR restriction: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Can't :CONSTANT for a result."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Bad :CONSTANT argument type spec: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"In the ~A ~:[result~;argument~] to VOP ~S,~@\n"
+"\t            none of the SCs allowed by the operand type ~S can ~\n"
+"\t\t    directly be loaded~@\n"
+"\t\t    into any of the restriction's SCs:~%  ~S~:[~;~@\n"
+"\t\t    [* type operand must allow T's SCs.]~]"
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"~:[Result~;Argument~] ~A to VOP ~S~@\n"
+"\t         has SC restriction ~S which is ~\n"
+"\t\t not allowed by the operand type:~%  ~S"
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Expected ~D ~:[result~;argument~] type~P: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Can't use :CONSTANT on VOP more args."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Expected ~D variant values: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"Define-VOP (Name [Inherits]) Spec*\n"
+"  Define the symbol Name to be a Virtual OPeration in the compiler.  If\n"
+"  specified, Inherits is the name of a VOP that we default unspecified\n"
+"  information from.  Each Spec is a list beginning with a keyword "
+"indicating\n"
+"  the interpretation of the other forms in the Spec:\n"
+"  \n"
+"  :Args {(Name {Key Value}*)}*\n"
+"  :Results {(Name {Key Value}*)}*\n"
+"      The Args and Results are specifications of the operand TNs passed to "
+"the\n"
+"      VOP.  If there is an inherited VOP, any unspecified options are "
+"defaulted\n"
+"      from the inherited argument (or result) of the same name.  The "
+"following\n"
+"      operand options are defined: \n"
+"\n"
+"      :SCs (SC*)\n"
+"\t  :SCs specifies good SCs for this operand.  Other SCs will be\n"
+"\t  penalized according to move costs.  A load TN will be allocated if\n"
+"\t  necessary, guaranteeing that the operand is always one of the\n"
+"\t  specified SCs.\n"
+"\n"
+"      :Load-TN Load-Name\n"
+"          Load-Name is bound to the load TN allocated for this operand, or "
+"to\n"
+"\t  NIL if no load TN was allocated.\n"
+"\n"
+"      :Load-If Expression\n"
+"          Controls whether automatic operand loading is done.  Expression "
+"is\n"
+"\t  evaluated with the fixed operand TNs bound.  If Expression is true,\n"
+"\t  then loading is done and the variable is bound to the load TN in\n"
+"\t  the generator body.  Otherwise, loading is not done, and the variable\n"
+"\t  is bound to the actual operand.\n"
+"\n"
+"      :More T-or-NIL\n"
+"\t  If specified, Name is bound to the TN-Ref for the first argument or\n"
+"\t  result following the fixed arguments or results.  A more operand must\n"
+"\t  appear last, and cannot be targeted or restricted.\n"
+"\n"
+"      :Target Operand\n"
+"\t  This operand is targeted to the named operand, indicating a desire to\n"
+"\t  pack in the same location.  Not legal for results.\n"
+"\n"
+"      :From Time-Spec\n"
+"      :To Time-Spec\n"
+"\t  Specify the beginning or end of the operand's lifetime.  :From can\n"
+"\t  only be used with results, and :To only with arguments.  The default\n"
+"\t  for the N'th argument/result is (:ARGUMENT N)/(:RESULT N).  These\n"
+"\t  options are necessary primarily when operands are read or written out\n"
+"\t  of order.\n"
+"   \n"
+"  :Conditional\n"
+"      This is used in place of :RESULTS with conditional branch VOPs.  "
+"There\n"
+"      are no result values: the result is a transfer of control.  The "
+"target\n"
+"      label is passed as the first :INFO arg.  The second :INFO arg is true "
+"if\n"
+"      the sense of the test should be negated.  A side-effect is to set the\n"
+"      PREDICATE attribute for functions in the :TRANSLATE option.\n"
+"  \n"
+"  :Temporary ({Key Value}*) Name*\n"
+"      Allocate a temporary TN for each Name, binding that variable to the "
+"TN\n"
+"      within the body of the generators.  In addition to :Target (which is \n"
+"      is the same as for operands), the following options are\n"
+"      defined:\n"
+"\n"
+"      :SC SC-Name\n"
+"      :Offset SB-Offset\n"
+"\t  Force the temporary to be allocated in the specified SC with the\n"
+"\t  specified offset.  Offset is evaluated at macroexpand time.  If\n"
+"\t  Offset is emitted, the register allocator chooses a free location in\n"
+"\t  SC.  If both SC and Offset are omitted, then the temporary is packed\n"
+"\t  according to its primitive type.\n"
+"\n"
+"      :From Time-Spec\n"
+"      :To Time-Spec\n"
+"\t  Similar to the argument/result option, this specifies the start and\n"
+"\t  end of the temporarys' lives.  The defaults are :Load and :Save, i.e.\n"
+"\t  the duration of the VOP.  The other intervening phases are :Argument,\n"
+"\t  :Eval and :Result.  Non-zero sub-phases can be specified by a list,\n"
+"\t  e.g. by default the second argument's life ends at (:Argument 1).\n"
+" \n"
+"  :Generator Cost Form*\n"
+"      Specifies the translation into assembly code. Cost is the estimated "
+"cost\n"
+"      of the code emitted by this generator. The body is arbitrary Lisp "
+"code\n"
+"      that emits the assembly language translation of the VOP.  An Assemble\n"
+"      form is wrapped around the body, so code may be emitted by using the\n"
+"      local Inst macro.  During the evaluation of the body, the names of "
+"the\n"
+"      operands and temporaries are bound to the actual TNs.\n"
+"  \n"
+"  :Effects Effect*\n"
+"  :Affected Effect*\n"
+"      Specifies the side effects that this VOP has and the side effects "
+"that\n"
+"      effect its execution.  If unspecified, these default to the worst "
+"case.\n"
+"  \n"
+"  :Info Name*\n"
+"      Define some magic arguments that are passed directly to the code\n"
+"      generator.  The corresponding trailing arguments to VOP or %Primitive "
+"are\n"
+"      stored in the VOP structure.  Within the body of the generators, the\n"
+"      named variables are bound to these values.  Except in the case of\n"
+"      :Conditional VOPs, :Info arguments cannot be specified for VOPS that "
+"are\n"
+"      the direct translation for a function (specified by :Translate).\n"
+"\n"
+"  :Ignore Name*\n"
+"      Causes the named variables to be declared IGNORE in the generator "
+"body.\n"
+"\n"
+"  :Variant Thing*\n"
+"  :Variant-Vars Name*\n"
+"      These options provide a way to parameterize families of VOPs that "
+"differ\n"
+"      only trivially.  :Variant makes the specified evaluated Things be the\n"
+"      \"variant\" associated with this VOP.  :Variant-Vars causes the named\n"
+"      variables to be bound to the corresponding Things within the body of "
+"the\n"
+"      generator.\n"
+"\n"
+"  :Variant-Cost Cost\n"
+"      Specifies the cost of this VOP, overriding the cost of any inherited\n"
+"      generator.\n"
+"\n"
+"  :Note {String | NIL}\n"
+"      A short noun-like phrase describing what this VOP \"does\", i.e. the\n"
+"      implementation strategy.  If supplied, efficency notes will be "
+"generated\n"
+"      when type uncertainty prevents :TRANSLATE from working.  NIL inhibits "
+"any\n"
+"      efficency note.\n"
+"\n"
+"  :Arg-Types    {* | PType | (:OR PType*) | (:CONSTANT Type)}*\n"
+"  :Result-Types {* | PType | (:OR PType*)}*\n"
+"      Specify the template type restrictions used for automatic "
+"translation.\n"
+"      If there is a :More operand, the last type is the more type.  :"
+"CONSTANT\n"
+"      specifies that the argument must be a compile-time constant of the\n"
+"      specified Lisp type.  The constant values of :CONSTANT arguments are\n"
+"      passed as additional :INFO arguments rather than as :ARGS.\n"
+"  \n"
+"  :Translate Name*\n"
+"      This option causes the VOP template to be entered as an IR2 "
+"translation\n"
+"      for the named functions.\n"
+"\n"
+"  :Policy {:Small | :Fast | :Safe | :Fast-Safe}\n"
+"      Specifies the policy under which this VOP is the best translation.\n"
+"\n"
+"  :Guard Form\n"
+"      Specifies a Form that is evaluated in the global environment.  If\n"
+"      form returns NIL, then emission of this VOP is prohibited even when\n"
+"      all other restrictions are met.\n"
+"\n"
+"  :VOP-Var Name\n"
+"  :Node-Var Name\n"
+"      In the generator, bind the specified variable to the VOP or the Node "
+"that\n"
+"      generated this VOP.\n"
+"\n"
+"  :Save-P {NIL | T | :Compute-Only | :Force-To-Stack}\n"
+"      Indicates how a VOP wants live registers saved.\n"
+"\n"
+"  :Move-Args {NIL | :Full-Call | :Local-Call | :Known-Return}\n"
+"      Indicates if and how the more args should be moved into a different\n"
+"      frame."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"Emit-Template Node Block Template Args Results [Info]\n"
+"  Call the emit function for Template, linking the result in at the end of\n"
+"  Block."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"VOP Name Node Block Arg* Info* Result*\n"
+"  Emit the VOP (or other template) Name at the end of the IR2-Block Block,\n"
+"  using Node for the source context.  The interpretation of the remaining\n"
+"  arguments depends on the number of operands of various kinds that are\n"
+"  declared in the template definition.  VOP cannot be used for templates "
+"that\n"
+"  have more-args or more-results, since the number of arguments and results "
+"is\n"
+"  indeterminate for these templates.  Use VOP* instead.\n"
+"  \n"
+"  Args and Results are the TNs that are to be referenced by the template\n"
+"  as arguments and results.  If the template has codegen-info arguments, "
+"then\n"
+"  the appropriate number of Info forms following the Arguments are used for\n"
+"  codegen info."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Cannot use VOP with variable operand count templates."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Called with ~D operands, but was expecting ~D."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"VOP* Name Node Block (Arg* More-Args) (Result* More-Results) Info*\n"
+"  Like VOP, but allows for emission of templates with arbitrary numbers of\n"
+"  arguments, and for emission of templates using already-created TN-Ref "
+"lists.\n"
+"\n"
+"  The Arguments and Results are TNs to be referenced as the first arguments\n"
+"  and results to the template.  More-Args and More-Results are heads of TN-"
+"Ref\n"
+"  lists that are added onto the end of the TN-Refs for the explicitly "
+"supplied\n"
+"  operand TNs.  The TN-Refs for the more operands must have the TN and Write-"
+"P\n"
+"  slots correctly initialized.\n"
+"\n"
+"  As with VOP, the Info forms are evaluated and passed as codegen info\n"
+"  arguments."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+#, fuzzy
+msgid "Too many fixed arguments."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/meta-vmdef.lisp
+#, fuzzy
+msgid "Too many fixed results."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Expected ~D info args."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"SC-Case TN {({(SC-Name*) | SC-Name | T} Form*)}*\n"
+"  Case off of TN's SC.  The first clause containing TN's SC is evaulated,\n"
+"  returning the values of the last form.  A clause beginning with T "
+"specifies a\n"
+"  default.  If it appears, it must be last.  If no default is specified, and "
+"no\n"
+"  clause matches, then an error is signalled."
+msgstr ""
+
+#: target:assembly/x86/arith.lisp target:assembly/x86/array.lisp
+#: target:assembly/x86/assem-rtns.lisp target:compiler/x86/type-vops.lisp
+#: target:compiler/x86/pred.lisp target:compiler/x86/array.lisp
+#: target:compiler/x86/sse2-array.lisp target:compiler/x86/print.lisp
+#: target:compiler/x86/nlx.lisp target:compiler/x86/call.lisp
+#: target:compiler/x86/alloc.lisp target:compiler/x86/values.lisp
+#: target:compiler/x86/cell.lisp target:compiler/x86/sse2-c-call.lisp
+#: target:compiler/x86/debug.lisp target:compiler/x86/subprim.lisp
+#: target:compiler/x86/arith.lisp target:compiler/x86/static-fn.lisp
+#: target:compiler/x86/memory.lisp target:compiler/x86/char.lisp
+#: target:compiler/x86/system.lisp target:compiler/x86/sse2-sap.lisp
+#: target:compiler/x86/sap.lisp target:compiler/x86/float-sse2.lisp
+#: target:compiler/x86/move.lisp target:compiler/meta-vmdef.lisp
+msgid "Unknown SC to SC-Case for ~S:~%  ~S"
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "Illegal SC-Case clause: ~S."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid "T case is not last in SC-Case."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"SC-Is TN SC*\n"
+"  Returns true if TNs SC is any of the named SCs, false otherwise."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"Do-IR2-Blocks (Block-Var Component [Result]) Form*\n"
+"  Iterate over the IR2 blocks in component, in emission order."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"DO-LIVE-TNS (TN-Var Live Block [Result]) Form*\n"
+"  Iterate over all the TNs live at some point, with the live set represented "
+"by\n"
+"  a local conflicts bit-vector and the IR2-Block containing the location."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp
+msgid ""
+"DO-ENVIRONMENT-IR2-BLOCKS (Block-Var Env [Result]) Form*\n"
+"  Iterate over all the IR2 blocks in the environment Env, in emit order."
 msgstr ""
 
 #: target:compiler/disassem.lisp
@@ -14992,6 +16326,226 @@ msgid ""
 "       return-values."
 msgstr ""
 
+#: target:compiler/new-assem.lisp
+msgid "Set up the assembler."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid ""
+"Execute BODY (as a progn) without scheduling any of the instructions\n"
+"   generated inside it.  DO NOT throw or return-from out of it."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "~&~S reads ~S[~D for ~D]~%"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "~&~S writes ~S[~D for ~D]~%"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "~&Queuing ~S~%"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "  reads ~S~%  writes ~S~%"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "~&Scheduling pending instructions...~%"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Flushing ~S~%"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Queued branches: ~S~%"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Initially emittable: ~S~%"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Initially delayed: ~S~%"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Filling branch delay slot with ~S~%"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Emitting ~S~%"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Emitting a NOP.~%"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Now emittable: ~S~%"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Emit BYTE to SEGMENT."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Output AMOUNT zeros (in bytes) to SEGMENT."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Attempt to emit ~S for the second time."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid ""
+"Note that the instruction stream has to be back-patched when label "
+"positions\n"
+"   are finally known.  SIZE bytes are reserved in SEGMENT, and function "
+"will\n"
+"   be called with two arguments: the segment and the position.  The "
+"function\n"
+"   should look at the position and the position of any labels it wants to\n"
+"   and emit the correct sequence.  (And it better be the same size as "
+"SIZE).\n"
+"   SIZE can be zero, which is useful if you just want to find out where "
+"things\n"
+"   ended up."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid ""
+"Note that the instruction stream here depends on the actual positions of\n"
+"   various labels, so can't be output until label positions are known.  "
+"Space\n"
+"   is made in SEGMENT for at least SIZE bytes.  When all output has been\n"
+"   generated, the MAYBE-SHRINK functions for all choosers are called with\n"
+"   three arguments: the segment, the position, and a magic value.  The "
+"MAYBE-\n"
+"   SHRINK decides if it can use a shorter sequence, and if so, emits that\n"
+"   sequence to the segment and returns T.  If it can't do better than the\n"
+"   worst case, it should return NIL (without emitting anything).  When "
+"calling\n"
+"   LABEL-POSITION, it should pass it the position and the magic-value it "
+"was\n"
+"   passed so that LABEL-POSITION can return the correct result.  If the "
+"chooser\n"
+"   never decides to use a shorter sequence, the WORST-CASE-FUN will be "
+"called,\n"
+"   just like a BACK-PATCH.  (See EMIT-BACK-PATCH.)"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "~S emitted ~D bytes, but claimed it's max was ~D"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid ""
+"~S shrunk by ~D bytes, but claimed that it ~\n"
+"\t\t\t    preserve ~D bits of alignment."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Chooser ~S passed, but not before emitting ~D bytes."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid ""
+"Alignment ~S needs more space now?  It was ~D, ~\n"
+"\t\t\t    and is ~D now."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "~S emitted ~D bytes, but claimed it's was ~D"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Execute BODY (as a progn) with SEGMENT as the current segment."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Duplicate nested labels: ~S"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Emit the specified instruction to the current segment."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+#, fuzzy
+msgid "Unknown instruction: ~S"
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/new-assem.lisp
+msgid "Emit LABEL at this location in the current segment."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Emit an alignment restriction to the current segment."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid ""
+"Return the current position for LABEL.  Chooser maybe-shrink functions\n"
+"   should supply IF-AFTER and DELTA to assure correct results."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid ""
+"Append OTHER-SEGMENT to the end of SEGMENT.  Don't use OTHER-SEGMENT\n"
+"   for anything after this."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid ""
+"Does any final processing of SEGMENT and returns the total number of bytes\n"
+"   covered by this segment."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid ""
+"Call FUNCTION on all the output accumulated in SEGMENT.  FUNCTION is called\n"
+"   zero or more times with two arguments: a SAP and a number of bytes."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Releases any output buffers held on to by segment."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "~D isn't an even multiple of ~D"
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid ""
+"Byte spec ~S either overlaps another byte spec, or ~\n"
+"\t\t    extends past the end."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+#, fuzzy
+msgid "There are holes."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/new-assem.lisp
+msgid "Can only specify one emitter per instruction."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Can only specify delay once per instruction."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "Can only specify :vop-var once."
+msgstr ""
+
+#: target:compiler/new-assem.lisp
+msgid "You can't use INST without an ASSEMBLE inside emitters."
+msgstr ""
+
 #: target:compiler/alloc.lisp
 msgid ""
 "defallocators {((name lambda-list [real-lambda-list]) thread-slot\n"
@@ -15011,6 +16565,339 @@ msgstr ""
 #, fuzzy
 msgid "~S is not a known function."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/main.lisp
+msgid "The default value for the :Block-Compile argument to COMPILE-FILE."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "The default value for the :Byte-Compile argument to COMPILE-FILE."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid ""
+"Similar to *BYTE-COMPILE-DEFAULT*, but controls the compilation of top-"
+"level\n"
+"   forms (evaluated at load-time) when the :BYTE-COMPILE argument is :MAYBE\n"
+"   (the default.)  When true, we decide to byte-compile."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Whether loop analysis should be done or not."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Whether the compiler should record cross-reference information."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "The default for the :VERBOSE argument to COMPILE-FILE."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "The default for the :PRINT argument to COMPILE-FILE."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "The default for the :PROGRESS argument to COMPILE-FILE."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid ""
+"The defaulted pathname of the file currently being compiled, or NIL if not\n"
+"  compiling."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid ""
+"The TRUENAME of the file currently being compiled, or NIL if not\n"
+"  compiling."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid ""
+"The user supplied source-info for the current compilation.  \n"
+"This is the :source-info argument to COMPILE-FROM-STREAM and will be\n"
+"stored in the INFO slot of the DEBUG-SOURCE in code components and \n"
+"in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid ""
+"The upper limit on the number of times that we will consecutively do IR1\n"
+"  optimization that doesn't introduce any new code.  A finite limit is\n"
+"  necessary, since type inference may take arbitrarily long to converge."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "*REOPTIMIZE-AFTER-TYPE-CHECK-MAX* exceeded."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "~|~%Disassembly of code for ~S~2%"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "~:[~;Byte ~]Compiling ~A: "
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Undefined ~(~A~) ~S~@[ ~A~]"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "~D more use~:P of undefined ~(~A~) ~S."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid ""
+"~:[This ~(~A~) is~;These ~(~A~)s are~] undefined:~\n"
+"\t\t~%  ~{~<~%  ~1:;~S~>~^ ~}"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid ""
+"~2&; Compilation unit ~:[finished~;aborted~].~\n"
+"      ~[~:;~:*~&;   ~D fatal error~:P~]~\n"
+"      ~[~:;~:*~&;   ~D error~:P~]~\n"
+"      ~[~:;~:*~&;   ~D warning~:P~]~\n"
+"      ~[~:;~:*~&;   ~D note~:P~]~2%"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "~|~%;;;; Component: ~S~2%"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "~%~|~%;;;; IR2 component: ~S~2%"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Entries:~%"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "~4TL~D: ~S~:[~; [Closure]~]~%"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Read error at ~D:~% \"~A/\\~A\"~%~A"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Unable to recover from read error."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Read error in form starting at ~D:~%~@[ \"~A\"~%~]~A"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Skip this form."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Attempt to load a file having a compile-time read error."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp target:compiler/main.lisp
+msgid "(during macroexpansion)~%~A"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Bad FILE-COMMENT form: ~S."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Ignoring extra file comment:~%  ~S."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "~&; Comment: ~A~2&"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp target:compiler/main.lisp
+msgid "Execution of a form compiled with errors:~% ~S"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "EVAL-WHEN form is too short: ~S."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "MACROLET form is too short: ~S."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Load Time Value of ~S"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "(while making load form for ~S)~%~A"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Creation Form for ~A"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Circular references in creation form for ~S"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Init Form~:[~;s~] for ~{~A~^, ~}"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "~2&Fatal error, aborting compilation...~%"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Can't compile with no source files."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid ""
+"Similar to COMPILE-FILE, but compiles text from Stream into the current "
+"lisp\n"
+"  environment.  Stream is closed when compilation is complete.  These "
+"keywords\n"
+"  are supported:\n"
+"\n"
+"  :Error-Stream\n"
+"      The stream to write compiler error output to (default *ERROR-"
+"OUTPUT*.)\n"
+"  :Trace-Stream\n"
+"      The stream that we write compiler trace output to, or NIL (the "
+"default)\n"
+"      to inhibit trace output.\n"
+"  :Block-Compile {T, NIL, :SPECIFIED}\n"
+"        If true, then function names may be resolved at compile time.\n"
+"  :Source-Info\n"
+"        Some object to be placed in the DEBUG-SOURCE-INFO.\n"
+"  :Byte-Compile {T, NIL, :MAYBE}\n"
+"        If true, then may compile to interpreted byte code."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "~2&; Python version ~A, VM version ~A on ~A.~%"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "; Compiling: ~A ~A~%"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "~&; Compilation ~:[aborted after~;finished in~] ~A.~&"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid ""
+"Compiles Source, producing a corresponding .FASL file.  Source may be a "
+"list\n"
+"   of files, in which case the files are compiled as a unit, producing a "
+"single\n"
+"   .FASL file.  The output file names are defaulted from the first (or "
+"only)\n"
+"   input file name.  Other options available via keywords:\n"
+"   :Output-File\n"
+"      The name of the fasl to output, NIL for none, T for the default.\n"
+"   :Error-File\n"
+"      The name of the error listing file, NIL for none (the default), T for\n"
+"      .err.\n"
+"   :Trace-File\n"
+"      If specified, internal data structures are dumped to this file.  T "
+"for\n"
+"      the .trace default.\n"
+"   :Error-Output\n"
+"      If a stream, then error output is sent there as well as to the "
+"listing\n"
+"      file.  NIL suppresses this additional error output.  The default is "
+"T,\n"
+"      which means use *ERROR-OUTPUT*.\n"
+"   :Block-Compile {NIL | :SPECIFIED | T}\n"
+"      Determines whether multiple functions are compiled together as a "
+"unit,\n"
+"      resolving function references at compile time.  NIL means that global\n"
+"      function names are never resolved at compilation time.  :SPECIFIED "
+"means\n"
+"      that names are resolved at compile-time when convenient (as in a\n"
+"      self-recursive call), but the compiler doesn't combine top-level "
+"DEFUNs.\n"
+"      With :SPECIFIED, an explicit START-BLOCK declaration will enable "
+"block\n"
+"      compilation.  A value of T indicates that all forms in the file(s) "
+"should\n"
+"      be compiled as a unit.  The default is the value of\n"
+"      EXT:*BLOCK-COMPILE-DEFAULT*, which is initially :SPECIFIED.\n"
+"   :Entry-Points\n"
+"      This specifies a list of function names for functions in the file(s) "
+"that\n"
+"      must be given global definitions.  This only applies to block\n"
+"      compilation, and is useful mainly when :BLOCK-COMPILE T is specified "
+"on a\n"
+"      file that lacks START-BLOCK declarations.  If the value is NIL (the\n"
+"      default) then all functions will be globally defined.\n"
+"   :Byte-Compile {T | NIL | :MAYBE}\n"
+"      Determines whether to compile into interpreted byte code instead of\n"
+"      machine instructions.  Byte code is several times smaller, but much\n"
+"      slower.  If :MAYBE, then only byte-compile when SPEED is 0 and\n"
+"      DEBUG <= 1.  The default is the value of EXT:*BYTE-COMPILE-DEFAULT*,\n"
+"      which is initially :MAYBE.\n"
+"   :Xref\n"
+"      If non-NIL, enable recording of cross-reference information.  The "
+"default\n"
+"      is the value of C:*RECORD-XREF-INFO*\n"
+"   :External-Format\n"
+"      The external format to use when opening the source file"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "~2&; ~A written.~%"
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Can't :LOAD with no output file."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "~S was defined in a non-null environment."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "Can't find a definition for ~S."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid ""
+"Compiles the function whose name is NAME.  If DEFINITION is supplied,\n"
+"  it should be a lambda expression that is compiled and then placed in the\n"
+"  function cell of NAME.  If NAME is Nil, the compiled code object is\n"
+"  returned."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid ""
+"Attempt to replace Name's definition with an interpreted version of that\n"
+"  definition.  If no interpreted definition is to be found, then signal an\n"
+"  error."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid "~S is already interpreted."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid ""
+"Return a pathname describing what file COMPILE-FILE would write to given\n"
+"   these arguments."
+msgstr ""
+
+#: target:compiler/main.lisp
+msgid ""
+"The ~A parameter is a ~S, which is an invalid value ~@\n"
+"            to COMPILE-FILE-PATHNAME."
+msgstr ""
 
 #: target:compiler/ir1tran.lisp
 msgid ""
@@ -15048,15 +16935,7 @@ msgid "Found special-form name ~S ~A."
 msgstr ""
 
 #: target:compiler/ir1tran.lisp
-msgid "Variable name is not a symbol: ~S."
-msgstr ""
-
-#: target:compiler/ir1tran.lisp
 msgid "Cannot dump objects of type ~S into fasl files."
-msgstr ""
-
-#: target:compiler/ir1tran.lisp
-msgid "Execution of a form compiled with errors:~% ~S"
 msgstr ""
 
 #: target:compiler/ir1tran.lisp
@@ -15085,10 +16964,6 @@ msgstr ""
 
 #: target:compiler/ir1tran.lisp
 msgid "Reading an ignored variable: ~S."
-msgstr ""
-
-#: target:compiler/ir1tran.lisp
-msgid "(during macroexpansion)~%~A"
 msgstr ""
 
 #: target:compiler/ir1tran.lisp
@@ -15407,14 +17282,6 @@ msgid "New proclaimed type ~S for ~S conflicts with old type ~S."
 msgstr ""
 
 #: target:compiler/ir1tran.lisp
-msgid "Declared functional type is not a function type: ~S."
-msgstr ""
-
-#: target:compiler/ir1tran.lisp
-msgid "Malformed PROCLAIM spec: ~S."
-msgstr ""
-
-#: target:compiler/ir1tran.lisp
 msgid "Attempt to proclaim constant ~S to be special."
 msgstr ""
 
@@ -15428,10 +17295,6 @@ msgstr ""
 
 #: target:compiler/ir1tran.lisp
 msgid "Malformed FTYPE proclamation: ~S."
-msgstr ""
-
-#: target:compiler/ir1tran.lisp
-msgid "Unrecognized proclamation: ~S."
 msgstr ""
 
 #: target:compiler/ir1tran.lisp

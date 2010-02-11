@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.9.48.1 2010/02/08 17:15:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.9.48.2 2010/02/11 02:19:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,7 +38,7 @@
 ;;; missing slots at load time.
 ;;;
 (defmacro define-storage-base (name kind &key size)
-  "Define-Storage-Base Name Kind {Key Value}*
+  _N"Define-Storage-Base Name Kind {Key Value}*
   Define a storage base having the specified Name.  Kind may be :Finite,
   :Unbounded or :Non-Packed.  The following keywords are legal:
 
@@ -50,9 +50,9 @@
   (ecase kind
     (:non-packed
      (when size
-       (error "Size specification meaningless in a ~S SB." kind)))
+       (error _"Size specification meaningless in a ~S SB." kind)))
     ((:finite :unbounded)
-     (unless size (error "Size not specified in a ~S SB." kind))
+     (unless size (error _"Size not specified in a ~S SB." kind))
      (check-type size unsigned-byte)))
     
   (let ((res (if (eq kind :non-packed)
@@ -88,7 +88,7 @@
 (defmacro define-storage-class (name number sb-name &key (element-size '1)
 				     (alignment '1) locations reserve-locations
 				     save-p alternate-scs constant-scs)
-  "Define-Storage-Class Name Number Storage-Base {Key Value}*
+  _N"Define-Storage-Class Name Number Storage-Base {Key Value}*
   Define a storage class Name that uses the named Storage-Base.  Number is a
   small, non-negative integer that is used as an alias.  The following
   keywords are defined:
@@ -133,7 +133,7 @@
   (check-type alternate-scs list)
   (check-type constant-scs list)
   (unless (= (logcount alignment) 1)
-    (error "Alignment is not a power of two: ~S" alignment))
+    (error _"Alignment is not a power of two: ~S" alignment))
 
   (let ((sb (meta-sb-or-lose sb-name)))
     (if (eq (sb-kind sb) :finite)
@@ -143,16 +143,16 @@
 	  (dolist (el locations)
 	    (check-type el unsigned-byte)
 	    (unless (<= 1 (+ el element-size) size)
-	      (error "SC element ~D out of bounds for ~S." el sb))))
+	      (error _"SC element ~D out of bounds for ~S." el sb))))
 	(when locations
-	  (error ":Locations is meaningless in a ~S SB." (sb-kind sb))))
+	  (error _":Locations is meaningless in a ~S SB." (sb-kind sb))))
 
     (unless (subsetp reserve-locations locations)
-      (error "Reserve-Locations not a subset of Locations."))
+      (error _"Reserve-Locations not a subset of Locations."))
 
     (when (and (or alternate-scs constant-scs)
 	       (eq (sb-kind sb) :non-packed))
-      (error "Meaningless to specify alternate or constant SCs in a ~S SB."
+      (error _"Meaningless to specify alternate or constant SCs in a ~S SB."
 	     (sb-kind sb))))
 
   (let ((nstack-p
@@ -183,7 +183,7 @@
 
        (let ((old (svref (backend-sc-numbers *target-backend*) ',number)))
 	 (when (and old (not (eq (sc-name old) ',name)))
-	   (warn "Redefining SC number ~D from ~S to ~S." ',number
+	   (warn _"Redefining SC number ~D from ~S to ~S." ',number
 		 (sc-name old) ',name)))
        
        (setf (svref (backend-sc-numbers *target-backend*) ',number)
@@ -215,7 +215,7 @@
 ;;; DEFINE-MOVE-FUNCTION  --  Public
 ;;;
 (defmacro define-move-function ((name cost) lambda-list scs &body body)
-  "Define-Move-Function (Name Cost) lambda-list ({(From-SC*) (To-SC*)}*) form*
+  _N"Define-Move-Function (Name Cost) lambda-list ({(From-SC*) (To-SC*)}*) form*
   Define the function Name and note it as the function used for moving operands
   from the From-SCs to the To-SCs.  Cost is the cost of this move operation.
   The function is called with three arguments: the VOP (for context), and the
@@ -223,7 +223,7 @@
   All uses of DEFINE-MOVE-FUNCTION should be compiled before any uses of
   DEFINE-VOP."
   (when (or (oddp (length scs)) (null scs))
-    (error "Malformed SCs spec: ~S." scs))
+    (error _"Malformed SCs spec: ~S." scs))
   (check-type cost index)
   `(progn
      (eval-when (compile load eval)
@@ -247,14 +247,14 @@
 ;;; (including implicit loading).
 ;;;
 (defmacro define-move-vop (name kind &rest scs)
-  "Define-Move-VOP Name {:Move | :Move-Argument} {(From-SC*) (To-SC*)}*
+  _N"Define-Move-VOP Name {:Move | :Move-Argument} {(From-SC*) (To-SC*)}*
   Make Name be the VOP used to move values in the specified From-SCs to the
   representation of the To-SCs.  If kind is :Move-Argument, then the VOP takes
   an extra argument, which is the frame pointer of the frame to move into." 
   (when (or (oddp (length scs)) (null scs))
-    (error "Malformed SCs spec: ~S." scs))
+    (error _"Malformed SCs spec: ~S." scs))
   (let ((accessor (or (cdr (assoc kind sc-vop-slots))
-		      (error "Unknown kind ~S." kind))))
+		      (error _"Unknown kind ~S." kind))))
     `(progn
        ,@(when (eq kind :move)
 	   `((eval-when (compile load eval)
@@ -284,7 +284,7 @@
 (defun meta-primitive-type-or-lose (name)
   (the primitive-type
        (or (gethash name (backend-meta-primitive-type-names *target-backend*))
-	   (error "~S is not a defined primitive type." name))))
+	   (error _"~S is not a defined primitive type." name))))
 
 ;;; Def-Primitive-Type  --  Public
 ;;;
@@ -294,7 +294,7 @@
 ;;; break the running compiler.
 ;;;
 (defmacro def-primitive-type (name scs &key (type name))
-  "Def-Primitive-Type Name (SC*) {Key Value}*
+  _N"Def-Primitive-Type Name (SC*) {Key Value}*
    Define a primitive type Name.  Each SC specifies a Storage Class that values
    of this type may be allocated in.  The following keyword options are
    defined:
@@ -333,7 +333,7 @@
 ;;; Just record the translation.
 ;;; 
 (defmacro def-primitive-type-alias (name result)
-  "DEF-PRIMITIVE-TYPE-ALIAS Name Result
+  _N"DEF-PRIMITIVE-TYPE-ALIAS Name Result
   Define name to be an alias for Result in VOP operand type restrictions."
   `(eval-when (compile load eval)
      (setf (gethash ',name (backend-primitive-type-aliases *target-backend*))
@@ -346,7 +346,7 @@
 ;;; Primitive-Type-Vop  --  Public
 ;;;
 (defmacro primitive-type-vop (vop kinds &rest types)
-  "Primitive-Type-VOP Vop (Kind*) Type*
+  _N"Primitive-Type-VOP Vop (Kind*) Type*
   Annotate all the specified primitive Types with the named VOP under each of
   the specified kinds:
 
@@ -363,7 +363,7 @@
 		    #'(lambda (kind)
 			(let ((slot (or (cdr (assoc kind
 						    primitive-type-slot-alist))
-					(error "Unknown kind: ~S." kind))))
+					(error _"Unknown kind: ~S." kind))))
 			  `(setf (,slot ,n-type) ,n-vop)))
 		    kinds)))
 	  types)
@@ -579,9 +579,9 @@
 		     :key #'operand-parse-name)))
     (if found
 	(unless (member (operand-parse-kind found) kinds)
-	  (error "Operand ~S isn't one of these kinds: ~S." name kinds))
+	  (error _"Operand ~S isn't one of these kinds: ~S." name kinds))
 	(when error-p
-	  (error "~S is not an operand to ~S." name (vop-parse-name parse))))
+	  (error _"~S is not an operand to ~S." name (vop-parse-name parse))))
     found))
 
 
@@ -594,7 +594,7 @@
 (defun vop-parse-or-lose (name &optional (backend *target-backend*))
   (the vop-parse
        (or (gethash name (backend-parsed-vops backend))
-	   (error "~S is not the name of a defined VOP." name))))
+	   (error _"~S is not the name of a defined VOP." name))))
 
 
 ;;; Access-Operands  --  Internal
@@ -636,12 +636,12 @@
 (defun vop-spec-arg (spec type &optional (n 1) (last t))
   (let ((len (length spec)))
     (when (<= len n)
-      (error "~:R argument missing: ~S." n spec))
+      (error _"~:R argument missing: ~S." n spec))
     (when (and last (> len (1+ n)))
-      (error "Extra junk at end of ~S." spec))
+      (error _"Extra junk at end of ~S." spec))
     (let ((thing (elt spec n)))
       (unless (typep thing type)
-	(error "~:R argument is not a ~S: ~S." n type spec))
+	(error _"~:R argument is not a ~S: ~S." n type spec))
       thing)))
 
 
@@ -658,7 +658,7 @@
   (let ((dspec (if (atom spec) (list spec 0) spec)))
     (unless (and (= (length dspec) 2)
 		 (typep (second dspec) 'unsigned-byte))
-      (error "Malformed time specifier: ~S." spec))
+      (error _"Malformed time specifier: ~S." spec))
 
     (cons (case (first dspec)
 	    (:load 0)
@@ -667,7 +667,7 @@
 	    (:result 3)
 	    (:save 4)
 	    (t
-	     (error "Unknown phase in time specifier: ~S." spec)))
+	     (error _"Unknown phase in time specifier: ~S." spec)))
 	  (second dspec))))
 
 
@@ -713,7 +713,7 @@
       (dolist (op (vop-parse-operands parse))
 	(when (operand-parse-target op)
 	  (unless (member (operand-parse-kind op) '(:argument :temporary))
-	    (error "Cannot target a ~S operand: ~S." (operand-parse-kind op)
+	    (error _"Cannot target a ~S operand: ~S." (operand-parse-kind op)
 		   (operand-parse-name op)))
 	  (let ((target (find-operand (operand-parse-target op) parse
 				      '(:temporary :result))))
@@ -802,13 +802,13 @@
 		     (found (or (assoc alt (funs) :test #'member)
 				(rassoc name (funs)))))
 		(unless name
-		  (error "No move function defined to ~:[save~;load~] SC ~S~
+		  (error _"No move function defined to ~:[save~;load~] SC ~S~
 			  ~:[to~;from~] from SC ~S."
 			 load-p sc-name load-p (sc-name alt)))
 		
 		(cond (found
 		       (unless (eq (cdr found) name)
-			 (error "Can't tell whether to ~:[save~;load~] with ~S~@
+			 (error _"Can't tell whether to ~:[save~;load~] with ~S~@
 				 or ~S when operand is in SC ~S."
 				load-p name (cdr found) (sc-name alt)))
 		       (pushnew alt (car found)))
@@ -816,7 +816,7 @@
 		       (funs (cons (list alt) name))))))))
 	 ((member (sb-kind (sc-sb sc)) '(:non-packed :unbounded)))
 	 (t
-	  (error "SC ~S has no alternate~:[~; or constant~] SCs, yet it is~@
+	  (error _"SC ~S has no alternate~:[~; or constant~] SCs, yet it is~@
 	          mentioned in the restriction for operand ~S."
 		 sc-name load-p (operand-parse-name op))))))
     (funs)))
@@ -855,7 +855,7 @@
 	      `(when (eq ,load-tn ,(operand-parse-name op))
 		 ,form)))
 	`(when ,load-tn
-	   (error "Load TN allocated, but no move function?~@
+	   (error _"Load TN allocated, but no move function?~@
 	           VM definition inconsistent, recompile and try again.")))))
 
 ;;; DECIDE-TO-LOAD  --  Internal
@@ -957,9 +957,9 @@
     (collect ((operands))
       (dolist (spec specs)
 	(unless (and (consp spec) (symbolp (first spec)) (oddp (length spec)))
-	  (error "Malformed operand specifier: ~S." spec))
+	  (error _"Malformed operand specifier: ~S." spec))
 	(when more
-	  (error "More operand isn't last: ~S." specs)) 
+	  (error _"More operand isn't last: ~S." specs)) 
 	(let* ((name (first spec))
 	       (old (if (vop-parse-inherits parse)
 			(find-operand name
@@ -1012,21 +1012,21 @@
 		 (setf (operand-parse-target res) value))
 		(:from
 		 (unless (eq kind :result)
-		   (error "Can only specify :FROM in a result: ~S" spec))
+		   (error _"Can only specify :FROM in a result: ~S" spec))
 		 (setf (operand-parse-born res) (parse-time-spec value)))
 		(:to
 		 (unless (eq kind :argument)
-		   (error "Can only specify :TO in an argument: ~S" spec))
+		   (error _"Can only specify :TO in an argument: ~S" spec))
 		 (setf (operand-parse-dies res) (parse-time-spec value)))
 		(t
-		 (error "Unknown keyword in operand specifier: ~S." spec)))))
+		 (error _"Unknown keyword in operand specifier: ~S." spec)))))
 
 	  (cond ((not more)
 		 (operands res))
 		((operand-parse-target more)
-		 (error "Cannot specify :TARGET in a :MORE operand."))
+		 (error _"Cannot specify :TARGET in a :MORE operand."))
 		((operand-parse-load more)
-		 (error "Cannot specify :LOAD-IF in a :MORE operand.")))))
+		 (error _"Cannot specify :LOAD-IF in a :MORE operand.")))))
       (values (the list (operands)) more))))
 
 
@@ -1040,16 +1040,16 @@
 	   (type vop-parse parse))
   (let ((len (length spec)))
     (unless (>= len 2)
-      (error "Malformed temporary spec: ~S." spec))
+      (error _"Malformed temporary spec: ~S." spec))
     (unless (listp (second spec))
-      (error "Malformed options list: ~S." (second spec)))
+      (error _"Malformed options list: ~S." (second spec)))
     (unless (evenp (length (second spec)))
-      (error "Odd number of arguments in keyword options: ~S." spec))
+      (error _"Odd number of arguments in keyword options: ~S." spec))
     (unless (consp (cddr spec))
-      (warn "Temporary spec allocates no temps:~%  ~S" spec))
+      (warn _"Temporary spec allocates no temps:~%  ~S" spec))
     (dolist (name (cddr spec))
       (unless (symbolp name)
-	(error "Bad temporary name: ~S." name))
+	(error _"Bad temporary name: ~S." name))
       (let ((res (make-operand-parse :name name  :kind :temporary
 				     :temp-temp (gensym)
 				     :born (parse-time-spec :load)
@@ -1076,20 +1076,20 @@
 	    (:scs
 	     (let ((scs (vop-spec-arg opt 'list 1 nil)))
 	       (unless (= (length scs) 1)
-		 (error "Must specify exactly one SC for a temporary."))
+		 (error _"Must specify exactly one SC for a temporary."))
 	       (setf (operand-parse-sc res) (first scs))))
 	    (:type)
 	    (t
-	     (error "Unknown temporary option: ~S." opt))))
+	     (error _"Unknown temporary option: ~S." opt))))
 
 	(unless (and (time-spec-order (operand-parse-dies res)
 				      (operand-parse-born res))
 		     (not (time-spec-order (operand-parse-born res)
 					   (operand-parse-dies res))))
-	  (error "Temporary lifetime doesn't begin before it ends: ~S." spec))
+	  (error _"Temporary lifetime doesn't begin before it ends: ~S." spec))
 
 	(unless (operand-parse-sc res)
-	  (error "Must specifiy :SC for all temporaries: ~S" spec))
+	  (error _"Must specifiy :SC for all temporaries: ~S" spec))
 
 	(setf (vop-parse-temps parse)
 	      (cons res
@@ -1107,7 +1107,7 @@
   (declare (type vop-parse parse) (list specs))
   (dolist (spec specs)
     (unless (consp spec)
-      (error "Malformed option specification: ~S." spec))
+      (error _"Malformed option specification: ~S." spec))
     (case (first spec)
       (:args
        (multiple-value-bind
@@ -1177,7 +1177,7 @@
 	     (vop-spec-arg spec
 			   '(member t nil :compute-only :force-to-stack))))
       (t
-       (error "Unknown option specifier: ~S." (first spec)))))
+       (error _"Unknown option specifier: ~S." (first spec)))))
   (undefined-value))
 
 
@@ -1212,7 +1212,7 @@
 			   (aref (sc-load-costs load-sc) op-scn)
 			   (aref (sc-load-costs op-sc) load-scn))))
 	    (unless load
-	      (error "No move function defined to move ~:[from~;to~] SC ~
+	      (error _"No move function defined to move ~:[from~;to~] SC ~
 	              ~S~%~:[to~;from~] alternate or constant SC ~S."
 		     load-p sc-name load-p (sc-name op-sc)))
 	    
@@ -1313,7 +1313,7 @@
 			  (parse-operand-type alias)
 			  `(:or ,spec))))
 		   ((atom spec)
-		    (error "Bad thing to be a operand type: ~S." spec))
+		    (error _"Bad thing to be a operand type: ~S." spec))
 		   (t
 		    (case (first spec)
 		      (:or
@@ -1321,7 +1321,7 @@
 			 (results :or)
 			 (dolist (item (cdr spec))
 			   (unless (symbolp item)
-			     (error "Bad PRIMITIVE-TYPE name in ~S: ~S"
+			     (error _"Bad PRIMITIVE-TYPE name in ~S: ~S"
 				    spec item))
 			   (let ((alias
 				  (gethash item
@@ -1330,7 +1330,7 @@
 			     (if alias
 				 (let ((alias (parse-operand-type alias)))
 				   (unless (eq (car alias) :or)
-				     (error "Can't include primitive-type ~
+				     (error _"Can't include primitive-type ~
 				             alias ~S in a :OR restriction: ~S."
 					    item spec))
 				   (dolist (x (cdr alias))
@@ -1341,12 +1341,12 @@
 					    :start 1)))
 		      (:constant
 		       (unless args-p
-			 (error "Can't :CONSTANT for a result."))
+			 (error _"Can't :CONSTANT for a result."))
 		       (unless (= (length spec) 2)
-			 (error "Bad :CONSTANT argument type spec: ~S." spec))
+			 (error _"Bad :CONSTANT argument type spec: ~S." spec))
 		       spec)
 		      (t
-		       (error "Bad thing to be a operand type: ~S." spec)))))))
+		       (error _"Bad thing to be a operand type: ~S." spec)))))))
     (mapcar #'parse-operand-type specs)))
 
 
@@ -1374,7 +1374,7 @@
 				(meta-primitive-type-or-lose ptype))
 			       nil)
 		    (when (svref load-scs rep) (return t)))
-	    (error "In the ~A ~:[result~;argument~] to VOP ~S,~@
+	    (error _"In the ~A ~:[result~;argument~] to VOP ~S,~@
 	            none of the SCs allowed by the operand type ~S can ~
 		    directly be loaded~@
 		    into any of the restriction's SCs:~%  ~S~:[~;~@
@@ -1390,7 +1390,7 @@
 			     (meta-sc-or-lose sc)
 			     (meta-primitive-type-or-lose ptype))
 			(return t))))
-	  (warn "~:[Result~;Argument~] ~A to VOP ~S~@
+	  (warn _"~:[Result~;Argument~] ~A to VOP ~S~@
 	         has SC restriction ~S which is ~
 		 not allowed by the operand type:~%  ~S"
 		load-p (operand-parse-name op) (vop-parse-name parse)
@@ -1414,13 +1414,13 @@
 					(eq (car x) :constant)))
 			       types)
 		 num)
-	(error "Expected ~D ~:[result~;argument~] type~P: ~S."
+	(error _"Expected ~D ~:[result~;argument~] type~P: ~S."
 	       num load-p types num)))
     
     (when more-op
       (let ((mtype (car (last types))))
 	(when (and (consp mtype) (eq (first mtype) :constant))
-	  (error "Can't use :CONSTANT on VOP more args.")))))
+	  (error _"Can't use :CONSTANT on VOP more args.")))))
   
   (when (vop-parse-translate parse)
     (let ((types (specify-operand-types types ops more-op)))
@@ -1591,7 +1591,7 @@
 
     (let ((nvars (length (vop-parse-variant-vars parse))))
       (unless (= (length variant) nvars)
-	(error "Expected ~D variant values: ~S." nvars variant)))
+	(error _"Expected ~D variant values: ~S." nvars variant)))
 
     `(make-vop-info
       :name ',(vop-parse-name parse)
@@ -1623,7 +1623,7 @@
 ;;; inheritance by copying the VOP-Parse structure for the inherited structure.
 ;;;
 (defmacro define-vop ((name &optional inherits) &rest specs)
-  "Define-VOP (Name [Inherits]) Spec*
+  _N"Define-VOP (Name [Inherits]) Spec*
   Define the symbol Name to be a Virtual OPeration in the compiler.  If
   specified, Inherits is the name of a VOP that we default unspecified
   information from.  Each Spec is a list beginning with a keyword indicating
@@ -1839,7 +1839,7 @@
 ;;; Emit-Template  -- Interface
 ;;;
 (defmacro emit-template (node block template args results &optional info)
-  "Emit-Template Node Block Template Args Results [Info]
+  _N"Emit-Template Node Block Template Args Results [Info]
   Call the emit function for Template, linking the result in at the end of
   Block."
   (let ((n-first (gensym))
@@ -1858,7 +1858,7 @@
 ;;; VOP  --  Interface
 ;;;
 (defmacro vop (name node block &rest operands)
-  "VOP Name Node Block Arg* Info* Result*
+  _N"VOP Name Node Block Arg* Info* Result*
   Emit the VOP (or other template) Name at the end of the IR2-Block Block,
   using Node for the source context.  The interpretation of the remaining
   arguments depends on the number of operands of various kinds that are
@@ -1880,9 +1880,9 @@
 	 (n-template (gensym)))
     
     (when (or (vop-parse-more-args parse) (vop-parse-more-results parse))
-      (error "Cannot use VOP with variable operand count templates."))
+      (error _"Cannot use VOP with variable operand count templates."))
     (unless (= noperands (length operands))
-      (error "Called with ~D operands, but was expecting ~D."
+      (error _"Called with ~D operands, but was expecting ~D."
 	     (length operands) noperands))
     
     (multiple-value-bind
@@ -1917,7 +1917,7 @@
 ;;; VOP*  --  Interface
 ;;;
 (defmacro vop* (name node block args results &rest info)
-  "VOP* Name Node Block (Arg* More-Args) (Result* More-Results) Info*
+  _N"VOP* Name Node Block (Arg* More-Args) (Result* More-Results) Info*
   Like VOP, but allows for emission of templates with arbitrary numbers of
   arguments, and for emission of templates using already-created TN-Ref lists.
 
@@ -1943,12 +1943,12 @@
     
     (unless (or (vop-parse-more-args parse)
 		(<= (length fixed-args) arg-count))
-      (error "Too many fixed arguments."))
+      (error _"Too many fixed arguments."))
     (unless (or (vop-parse-more-results parse)
 		(<= (length fixed-results) result-count))
-      (error "Too many fixed results."))
+      (error _"Too many fixed results."))
     (unless (= (length info) info-count)
-      (error "Expected ~D info args." info-count))
+      (error _"Expected ~D info args." info-count))
     
     (multiple-value-bind
 	(acode abinds n-args)
@@ -1975,7 +1975,7 @@
 ;;; SC-Case  --  Public
 ;;;
 (defmacro sc-case (tn &rest forms)
-  "SC-Case TN {({(SC-Name*) | SC-Name | T} Form*)}*
+  _N"SC-Case TN {({(SC-Name*) | SC-Name | T} Form*)}*
   Case off of TN's SC.  The first clause containing TN's SC is evaulated,
   returning the values of the last form.  A clause beginning with T specifies a
   default.  If it appears, it must be last.  If no default is specified, and no
@@ -1985,15 +1985,15 @@
     (collect ((clauses))
       (do ((cases forms (rest cases)))
 	  ((null cases)
-	   (clauses `(t (error "Unknown SC to SC-Case for ~S:~%  ~S" ,n-tn
+	   (clauses `(t (error _"Unknown SC to SC-Case for ~S:~%  ~S" ,n-tn
 			       (sc-name (tn-sc ,n-tn))))))
 	(let ((case (first cases)))
 	  (when (atom case) 
-	    (error "Illegal SC-Case clause: ~S." case))
+	    (error _"Illegal SC-Case clause: ~S." case))
 	  (let ((head (first case)))
 	    (when (eq head t)
 	      (when (rest cases)
-		(error "T case is not last in SC-Case."))
+		(error _"T case is not last in SC-Case."))
 	      (clauses `(t nil ,@(rest case)))
 	      (return))
 	    (clauses `((or ,@(mapcar #'(lambda (x)
@@ -2010,7 +2010,7 @@
 ;;; SC-Is  --  Interface
 ;;;
 (defmacro sc-is (tn &rest scs)
-  "SC-Is TN SC*
+  _N"SC-Is TN SC*
   Returns true if TNs SC is any of the named SCs, false otherwise."
   (once-only ((n-sc `(sc-number (tn-sc ,tn))))
     `(or ,@(mapcar #'(lambda (x)
@@ -2021,7 +2021,7 @@
 ;;;
 (defmacro do-ir2-blocks ((block-var component &optional result)
 			 &body forms)
-  "Do-IR2-Blocks (Block-Var Component [Result]) Form*
+  _N"Do-IR2-Blocks (Block-Var Component [Result]) Form*
   Iterate over the IR2 blocks in component, in emission order."
   `(do ((,block-var (block-info (component-head ,component))
 		    (ir2-block-next ,block-var)))
@@ -2032,7 +2032,7 @@
 ;;; DO-LIVE-TNS  --  Interface
 ;;;
 (defmacro do-live-tns ((tn-var live block &optional result) &body body)
-  "DO-LIVE-TNS (TN-Var Live Block [Result]) Form*
+  _N"DO-LIVE-TNS (TN-Var Live Block [Result]) Form*
   Iterate over all the TNs live at some point, with the live set represented by
   a local conflicts bit-vector and the IR2-Block containing the location."
   (let ((n-conf (gensym))
@@ -2075,7 +2075,7 @@
 ;;;
 (defmacro do-environment-ir2-blocks ((block-var env &optional result)
 				     &body body)
-  "DO-ENVIRONMENT-IR2-BLOCKS (Block-Var Env [Result]) Form*
+  _N"DO-ENVIRONMENT-IR2-BLOCKS (Block-Var Env [Result]) Form*
   Iterate over all the IR2 blocks in the environment Env, in emit order."
   (once-only ((n-env env))
     (once-only ((n-first `(node-block

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.148.2.2 2010/02/08 17:15:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.148.2.3 2010/02/11 02:19:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,22 +44,22 @@
 
 ;;; Exported:
 (defvar *block-compile-default* :specified
-  "The default value for the :Block-Compile argument to COMPILE-FILE.")
+  _N"The default value for the :Block-Compile argument to COMPILE-FILE.")
 (declaim (type (member t nil :specified) *block-compile-default*))
 
 ;;; Exported:
 (defvar *byte-compile-default* :maybe
-  "The default value for the :Byte-Compile argument to COMPILE-FILE.")
+  _N"The default value for the :Byte-Compile argument to COMPILE-FILE.")
 
 ;;; Exported:
 (defvar *byte-compile-top-level* t
-  "Similar to *BYTE-COMPILE-DEFAULT*, but controls the compilation of top-level
+  _N"Similar to *BYTE-COMPILE-DEFAULT*, but controls the compilation of top-level
    forms (evaluated at load-time) when the :BYTE-COMPILE argument is :MAYBE
    (the default.)  When true, we decide to byte-compile.")
 
 ;;; Exported:
 (defvar *loop-analyze* nil
-  "Whether loop analysis should be done or not.")
+  _N"Whether loop analysis should be done or not.")
 
 ;;; Value of the :byte-compile argument to the compiler.
 (defvar *byte-compile* :maybe)
@@ -82,7 +82,7 @@
 (defvar *check-consistency* nil)
 
 (defvar *record-xref-info* nil
-  "Whether the compiler should record cross-reference information.")
+  _N"Whether the compiler should record cross-reference information.")
 
 (defvar *all-components*)
 
@@ -109,17 +109,17 @@
 (declaim (list *top-level-lambdas*))
 
 (defvar *compile-verbose* t
-  "The default for the :VERBOSE argument to COMPILE-FILE.")
+  _N"The default for the :VERBOSE argument to COMPILE-FILE.")
 (defvar *compile-print* t
-  "The default for the :PRINT argument to COMPILE-FILE.")
+  _N"The default for the :PRINT argument to COMPILE-FILE.")
 (defvar *compile-progress* nil
-  "The default for the :PROGRESS argument to COMPILE-FILE.")
+  _N"The default for the :PROGRESS argument to COMPILE-FILE.")
 
 (defvar *compile-file-pathname* nil
-  "The defaulted pathname of the file currently being compiled, or NIL if not
+  _N"The defaulted pathname of the file currently being compiled, or NIL if not
   compiling.")
 (defvar *compile-file-truename* nil
-  "The TRUENAME of the file currently being compiled, or NIL if not
+  _N"The TRUENAME of the file currently being compiled, or NIL if not
   compiling.")
 
 (declaim (type (or pathname null) *compile-file-pathname*
@@ -138,7 +138,7 @@
 (defvar *source-info* nil)
 
 (defvar *user-source-info* nil
-  "The user supplied source-info for the current compilation.  
+  _N"The user supplied source-info for the current compilation.  
 This is the :source-info argument to COMPILE-FROM-STREAM and will be
 stored in the INFO slot of the DEBUG-SOURCE in code components and 
 in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
@@ -162,7 +162,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 ;;;; Component compilation:
 
 (defparameter max-optimize-iterations 6
-  "The upper limit on the number of times that we will consecutively do IR1
+  _N"The upper limit on the number of times that we will consecutively do IR1
   optimization that doesn't introduce any new code.  A finite limit is
   necessary, since type inference may take arbitrarily long to converge.")
 
@@ -217,7 +217,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 (defparameter *reoptimize-after-type-check-max* 10)
 
 (defevent reoptimize-maxed-out
-  "*REOPTIMIZE-AFTER-TYPE-CHECK-MAX* exceeded.")
+  _N"*REOPTIMIZE-AFTER-TYPE-CHECK-MAX* exceeded.")
 
 
 ;;; DFO-AS-NEEDED  --  Internal
@@ -355,7 +355,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	    (when (and *compiler-trace-output*
 		       (backend-disassem-params *backend*))
 	      (format *compiler-trace-output*
-		      "~|~%Disassembly of code for ~S~2%" component)
+		      _"~|~%Disassembly of code for ~S~2%" component)
 	      (disassem:disassemble-assem-segment *code-segment*
 						  *compiler-trace-output*
 						  *backend*))
@@ -435,7 +435,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
     (when *compile-print*
       (compiler-mumble "~&")
       (pprint-logical-block (*compiler-error-output* nil :per-line-prefix "; ")
-	(compiler-mumble "~:[~;Byte ~]Compiling ~A: "
+	(compiler-mumble _"~:[~;Byte ~]Compiling ~A: "
 		       *byte-compiling*
 		       (component-name component))))
 
@@ -584,12 +584,12 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		  (warnings (undefined-warning-warnings undef))
 		  (count (undefined-warning-count undef)))
 	      (dolist (*compiler-error-context* warnings)
-		(compiler-warning "Undefined ~(~A~) ~S~@[ ~A~]" kind name context))
+		(compiler-warning _"Undefined ~(~A~) ~S~@[ ~A~]" kind name context))
 	      
 	      (let ((warn-count (length warnings)))
 		(when (and warnings (> count warn-count))
 		  (let ((more (- count warn-count)))
-		    (compiler-warning "~D more use~:P of undefined ~(~A~) ~S."
+		    (compiler-warning _"~D more use~:P of undefined ~(~A~) ~S."
 				      more kind name)))))))
 	
 	(dolist (kind '(:variable :function :type))
@@ -598,7 +598,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 					 :key #'undefined-warning-kind))))
 	    (when summary
 	      (compiler-warning
-	       "~:[This ~(~A~) is~;These ~(~A~)s are~] undefined:~
+	       _"~:[This ~(~A~) is~;These ~(~A~)s are~] undefined:~
 		~%  ~{~<~%  ~1:;~S~>~^ ~}"
 	       (cdr summary) kind summary)))))))
   
@@ -608,7 +608,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		   (zerop *compiler-warning-count*)
 		   (zerop *compiler-note-count*)))
     (compiler-mumble
-     "~2&; Compilation unit ~:[finished~;aborted~].~
+     _"~2&; Compilation unit ~:[finished~;aborted~].~
       ~[~:;~:*~&;   ~D fatal error~:P~]~
       ~[~:;~:*~&;   ~D error~:P~]~
       ~[~:;~:*~&;   ~D warning~:P~]~
@@ -628,17 +628,17 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 ;;;
 (defun describe-component (component *standard-output*)
   (declare (type component component))
-  (format t "~|~%;;;; Component: ~S~2%" (component-name component))
+  (format t _"~|~%;;;; Component: ~S~2%" (component-name component))
   (print-blocks component)  
   (undefined-value))
 
 
 (defun describe-ir2-component (component *standard-output*)
-  (format t "~%~|~%;;;; IR2 component: ~S~2%" (component-name component))
+  (format t _"~%~|~%;;;; IR2 component: ~S~2%" (component-name component))
   
-  (format t "Entries:~%")
+  (format t _"Entries:~%")
   (dolist (entry (ir2-component-entries (component-info component)))
-    (format t "~4TL~D: ~S~:[~; [Closure]~]~%"
+    (format t _"~4TL~D: ~S~:[~; [Closure]~]~%"
 	    (label-id (entry-info-offset entry))
 	    (entry-info-name entry)
 	    (entry-info-closure-p entry)))
@@ -784,7 +784,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	      (end (file-position stream)))
 	  (when (>= end pos)
 	    (compiler-read-error 
-	     pos "Read error at ~D:~% \"~A/\\~A\"~%~A"
+	     pos _"Read error at ~D:~% \"~A/\\~A\"~%~A"
 	     pos (string-left-trim '(#\space #\tab)
 				   (subseq line 0 (- pos start)))
 	     (subseq line (- pos start))
@@ -808,7 +808,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		  (read stream))
     (error (condition)
       (declare (ignore condition))
-      (compiler-error "Unable to recover from read error."))))
+      (compiler-error _"Unable to recover from read error."))))
 
 
 ;;; Unexpected-EOF-Error  --  Internal
@@ -832,7 +832,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	   (setq res line))))
 
     (compiler-read-error 
-     pos "Read error in form starting at ~D:~%~@[ \"~A\"~%~]~A"
+     pos _"Read error in form starting at ~D:~%~@[ \"~A\"~%~]~A"
      pos res condition)
 
     (file-position stream eof-pos)
@@ -853,8 +853,8 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
           (progn
             (normal-read-error stream pos condition)
             (ignore-error-form stream pos)))
-      '(cerror "Skip this form."
-	       "Attempt to load a file having a compile-time read error."))))
+      '(cerror _"Skip this form."
+	       _"Attempt to load a file having a compile-time read error."))))
 
 
 ;;; Get-Source-Stream  --  Internal
@@ -1056,7 +1056,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 (defun preprocessor-macroexpand (form)
   (handler-case (macroexpand-1 form *lexical-environment*)
     (error (condition)
-       (compiler-error "(during macroexpansion)~%~A" condition))))
+       (compiler-error _"(during macroexpansion)~%~A" condition))))
 
 
 ;;; PROCESS-LOCALLY  --  Internal
@@ -1089,15 +1089,15 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 ;;;
 (defun process-file-comment (form)
   (unless (and (= (length form) 2) (stringp (second form)))
-    (compiler-error "Bad FILE-COMMENT form: ~S." form))
+    (compiler-error _"Bad FILE-COMMENT form: ~S." form))
   (let ((file (first (source-info-current-file *source-info*))))
     (cond ((file-info-comment file)
-	   (compiler-warning "Ignoring extra file comment:~%  ~S." form))
+	   (compiler-warning _"Ignoring extra file comment:~%  ~S." form))
 	  (t
 	   (let ((comment (coerce (second form) 'simple-string)))
 	     (setf (file-info-comment file) comment)
 	     (when *compile-verbose*
-	       (compiler-mumble "~&; Comment: ~A~2&" comment)))))))
+	       (compiler-mumble _"~&; Comment: ~A~2&" comment)))))))
 
 
 ;;; PROCESS-COLD-LOAD-FORM  --  Internal
@@ -1159,7 +1159,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	    #'(lambda ()
 		(convert-and-maybe-compile
 		 `(error 'simple-program-error
-		    :format-control "Execution of a form compiled with errors:~% ~S"
+		    :format-control _"Execution of a form compiled with errors:~% ~S"
 		    :format-arguments (list ',form))
 		 path)
 		(throw 'process-form-error-abort nil))))
@@ -1177,7 +1177,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	     (compile-top-level-lambdas () t))
 	    ((eval-when)
 	     (unless (>= (length form) 2)
-	       (compiler-error "EVAL-WHEN form is too short: ~S." form))
+	       (compiler-error _"EVAL-WHEN form is too short: ~S." form))
 	     (do-eval-when-stuff
 	      (cadr form) (cddr form)
 	      #'(lambda (forms)
@@ -1185,7 +1185,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	      t))
 	    ((macrolet)
 	     (unless (>= (length form) 2)
-	       (compiler-error "MACROLET form is too short: ~S." form))
+	       (compiler-error _"MACROLET form is too short: ~S." form))
 	     ;; Macrolets can have declarations.
 	     (multiple-value-bind (body decls)
 		 (system:parse-body (cddr form) nil nil)
@@ -1228,7 +1228,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 (defun compile-load-time-value
        (form &optional
 	     (name (let ((*print-level* 2) (*print-length* 3))
-		     (format nil "Load Time Value of ~S"
+		     (format nil _"Load Time Value of ~S"
 			     (if (and (listp form)
 				      (eq (car form) 'make-value-cell))
 				 (second form)
@@ -1348,7 +1348,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
                 (ext:without-package-locks
                  (make-structure-load-form constant)))
 	  (error (condition)
-            (compiler-error "(while making load form for ~S)~%~A"
+            (compiler-error _"(while making load form for ~S)~%~A"
                             constant condition)))
       (case creation-form
 	(:just-dump-it-normally
@@ -1376,10 +1376,10 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		    constant
 		    (compile-load-time-value
 		     creation-form
-		     (format nil "Creation Form for ~A" name))
+		     (format nil _"Creation Form for ~A" name))
 		    *compile-object*)
 		   nil)
-	       (compiler-error "Circular references in creation form for ~S"
+	       (compiler-error _"Circular references in creation form for ~S"
 			       constant)))
 	   (when (cdr info)
 	     (let* ((*constants-created-since-last-init* nil)
@@ -1391,7 +1391,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 			 finally
 			 (compile-make-load-form-init-forms
 			  forms
-			  (format nil "Init Form~:[~;s~] for ~{~A~^, ~}"
+			  (format nil _"Init Form~:[~;s~] for ~{~A~^, ~}"
 				  (cdr forms) names)))
 		       nil)))
 	       (when circular-ref
@@ -1585,7 +1585,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	   (*compiler-error-bailout*
 	    #'(lambda ()
 		(compiler-mumble
-		 "~2&Fatal error, aborting compilation...~%")
+		 _"~2&Fatal error, aborting compilation...~%")
 		(return-from sub-compile-file :error)))
 	   (*current-path* nil)
 	   (*last-source-context* nil)
@@ -1634,7 +1634,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		   new
 		   (and error-p (truename new))))))
       (unless stuff
-	(error "Can't compile with no source files."))
+	(error _"Can't compile with no source files."))
       (mapcar #'(lambda (x)
 		  (let ((x (pathname (merge-pathnames x))))
 		    (cond ((typep x 'logical-pathname)
@@ -1662,7 +1662,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	       ((:byte-compile *byte-compile*) *byte-compile-default*)
 	       source-info
 	       (language :lisp))
-  "Similar to COMPILE-FILE, but compiles text from Stream into the current lisp
+  _N"Similar to COMPILE-FILE, but compiles text from Stream into the current lisp
   environment.  Stream is closed when compilation is complete.  These keywords
   are supported:
 
@@ -1703,14 +1703,14 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 ;;;
 (defun start-error-output (source-info)
   (declare (type source-info source-info))
-  (compiler-mumble "~2&; Python version ~A, VM version ~A on ~A.~%"
+  (compiler-mumble _"~2&; Python version ~A, VM version ~A on ~A.~%"
 		   compiler-version (backend-version *backend*)
 		   (ext:format-universal-time nil (get-universal-time)
 					      :style :government
 					      :print-weekday nil
 					      :print-timezone nil))
   (dolist (x (source-info-files source-info))
-    (compiler-mumble "; Compiling: ~A ~A~%"
+    (compiler-mumble _"; Compiling: ~A ~A~%"
 		     (namestring (file-info-name x))
 		     (ext:format-universal-time nil (file-info-write-date x)
 						:style :government
@@ -1721,7 +1721,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 ;;;
 (defun finish-error-output (source-info won)
   (declare (type source-info source-info))
-  (compiler-mumble "~&; Compilation ~:[aborted after~;finished in~] ~A.~&"
+  (compiler-mumble _"~&; Compilation ~:[aborted after~;finished in~] ~A.~&"
 		   won
 		   (elapsed-time-to-string
 		    (- (get-universal-time)
@@ -1752,7 +1752,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 			     *byte-compile-default*)
 		            ((:xref *record-xref-info*)
 			     *record-xref-info*))
-  "Compiles Source, producing a corresponding .FASL file.  Source may be a list
+  _N"Compiles Source, producing a corresponding .FASL file.  Source may be a list
    of files, in which case the files are compiled as a unit, producing a single
    .FASL file.  The output file names are defaulted from the first (or only)
    input file name.  Other options available via keywords:
@@ -1862,7 +1862,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	(close-fasl-file fasl-file (not compile-won))
 	(setq output-file-pathname (pathname (fasl-file-stream fasl-file)))
 	(when (and compile-won *compile-verbose*)
-	  (compiler-mumble "~2&; ~A written.~%"
+	  (compiler-mumble _"~2&; ~A written.~%"
 			   (namestring output-file-pathname))))
 
       (when *compile-verbose*
@@ -1883,7 +1883,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 
     (when load
       (unless output-file
-	(error "Can't :LOAD with no output file."))
+	(error _"Can't :LOAD with no output file."))
       (load output-file-pathname :verbose *compile-verbose*))
 
     (values (if output-file
@@ -1904,9 +1904,9 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
       (multiple-value-bind (def env-p)
 			   (function-lambda-expression definition)
 	(when env-p
-	  (error "~S was defined in a non-null environment." definition))
+	  (error _"~S was defined in a non-null environment." definition))
 	(unless def
-	  (error "Can't find a definition for ~S." definition))
+	  (error _"Can't find a definition for ~S." definition))
 	def)))
 
 
@@ -1934,7 +1934,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 ;;; COMPILE  --  Public
 ;;;
 (defun compile (name &optional (definition (fdefinition name)))
-  "Compiles the function whose name is NAME.  If DEFINITION is supplied,
+  _N"Compiles the function whose name is NAME.  If DEFINITION is supplied,
   it should be a lambda expression that is compiled and then placed in the
   function cell of NAME.  If NAME is Nil, the compiled code object is
   returned."
@@ -1957,7 +1957,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	     (*compiler-error-bailout*
 	      #'(lambda ()
 		  (compiler-mumble
-		   "~2&Fatal error, aborting compilation...~%")
+		   _"~2&Fatal error, aborting compilation...~%")
 		  (return-from compile (values nil t nil))))
 	     (*compiler-error-output* *error-output*)
 	     (*compiler-trace-output* nil)
@@ -2006,12 +2006,12 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 ;;; UNCOMPILE  --  Public
 ;;;
 (defun uncompile (name)
-  "Attempt to replace Name's definition with an interpreted version of that
+  _N"Attempt to replace Name's definition with an interpreted version of that
   definition.  If no interpreted definition is to be found, then signal an
   error."
   (let ((def (fdefinition name)))
     (if (eval:interpreted-function-p def)
-	(warn "~S is already interpreted." name)
+	(warn _"~S is already interpreted." name)
 	(setf (fdefinition name)
 	      (coerce (get-lambda-to-compile def) 'function))))
   name)
@@ -2039,7 +2039,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 			      (byte-compile *byte-compile-default*)
 			      (output-file t output-file-supplied-p)
 			      &allow-other-keys)
-  "Return a pathname describing what file COMPILE-FILE would write to given
+  _N"Return a pathname describing what file COMPILE-FILE would write to given
    these arguments."
   (declare (type (or string pathname stream) input-file)
 	   (type (or string pathname stream (member t)) output-file)
@@ -2051,7 +2051,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	     (error 'simple-type-error
 		    :datum input-file
 		    :expected-type 'file-stream
-		    :format-control "The ~A parameter is a ~S, which is an invalid value ~@
+		    :format-control _"The ~A parameter is a ~S, which is an invalid value ~@
             to COMPILE-FILE-PATHNAME."
 		    :format-arguments (list name (type-of input-file))))
 	   ;; Maybe this is too much.  CLHS says "might".

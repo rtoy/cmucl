@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.44.24.1 2010/02/08 17:15:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.44.24.2 2010/02/11 02:19:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -135,35 +135,35 @@
                           (char= (char name 0) #\&))))
           (unless (member arg lambda-list-keywords)
             (compiler-note
-             "~S uses lambda-list keyword naming convention, but is not a recognized lambda-list keyword."
+             _"~S uses lambda-list keyword naming convention, but is not a recognized lambda-list keyword."
              arg)))
 	(if (member arg lambda-list-keywords)
 	    (ecase arg
 	      (&optional
 	       (unless (eq state :required)
-		 (compiler-error "Misplaced &optional in lambda-list: ~S." list))
+		 (compiler-error _"Misplaced &optional in lambda-list: ~S." list))
 	       (setq state '&optional))
 	      (&rest
 	       (unless (member state '(:required &optional))
-		 (compiler-error "Misplaced &rest in lambda-list: ~S." list))
+		 (compiler-error _"Misplaced &rest in lambda-list: ~S." list))
 	       (setq state '&rest))
 	      (&more
 	       (unless (member state '(:required &optional))
-		 (compiler-error "Misplaced &more in lambda-list: ~S." list))
+		 (compiler-error _"Misplaced &more in lambda-list: ~S." list))
 	       (setq morep t  state '&more-context))
 	      (&key
 	       (unless (member state '(:required &optional :post-rest
 						 :post-more))
-		 (compiler-error "Misplaced &key in lambda-list: ~S." list))
+		 (compiler-error _"Misplaced &key in lambda-list: ~S." list))
 	       (setq keyp t)
 	       (setq state '&key))
 	      (&allow-other-keys
 	       (unless (eq state '&key)
-		 (compiler-error "Misplaced &allow-other-keys in lambda-list: ~S." list))
+		 (compiler-error _"Misplaced &allow-other-keys in lambda-list: ~S." list))
 	       (setq allowp t  state '&allow-other-keys))
 	      (&aux
 	       (when (member state '(&rest &more-context &more-count))
-		 (compiler-error "Misplaced &aux in lambda-list: ~S." list))
+		 (compiler-error _"Misplaced &aux in lambda-list: ~S." list))
 	       (setq state '&aux)))
 	    (case state
 	      (:required (required arg))
@@ -177,10 +177,10 @@
 	      (&key (keys arg))
 	      (&aux (aux arg))
 	      (t
-	       (compiler-error "Found garbage in lambda-list when expecting a keyword: ~S." arg)))))
+	       (compiler-error _"Found garbage in lambda-list when expecting a keyword: ~S." arg)))))
 
       (when (eq state '&rest)
-	(compiler-error "&rest not followed by required variable."))
+	(compiler-error _"&rest not followed by required variable."))
       
       (values (required) (optional) restp rest keyp (keys) allowp (aux)
 	      morep more-context more-count))))
@@ -196,14 +196,14 @@
   (typecase name
     (list
      (unless (valid-function-name-p name)
-       (compiler-error "Illegal function name: ~S." name))
+       (compiler-error _"Illegal function name: ~S." name))
      name)
     (symbol
      (when (eq (info function kind name) :special-form)
-       (compiler-error "Special form is an illegal function name: ~S." name))
+       (compiler-error _"Special form is an illegal function name: ~S." name))
      name)
     (t
-     (compiler-error "Illegal function name: ~S." name))))
+     (compiler-error _"Illegal function name: ~S." name))))
 
 
 ;;; NOTE-IF-SETF-FUNCTION-AND-MACRO  --  Interface
@@ -220,7 +220,7 @@
     (when (or (info setf inverse name)
 	      (info setf expander name))
       (compiler-warning
-       "Defining as a SETF function a name that already has a SETF macro:~
+       _"Defining as a SETF function a name that already has a SETF macro:~
        ~%  ~S"
        name)))
   (undefined-value))
@@ -242,13 +242,13 @@
      (let ((for (info function accessor-for name)))
        (when for
 	 (compiler-warning
-	  "Undefining structure type:~%  ~S~@
+	  _"Undefining structure type:~%  ~S~@
 	   so that this slot accessor can be redefined:~%  ~S"
 	  (%class-name for) name)
 	 (undefine-structure for)
 	 (setf (info function kind name) :function))))
     (:macro
-     (compiler-warning "~S previously defined as a macro." name)
+     (compiler-warning _"~S previously defined as a macro." name)
      (setf (info function kind name) :function)
      (setf (info function where-from name) :assumed)
      (clear-info function macro-function name))
@@ -304,10 +304,10 @@
 		((inhibit-warnings brevity) (setf (cookie-brevity res) value))
 		((debug-info debug) (setf (cookie-debug res) value))
 		(t
-		 (compiler-warning "Unknown optimization quality ~S in ~S."
+		 (compiler-warning _"Unknown optimization quality ~S in ~S."
 				   (car quality) spec))))
 	    (compiler-warning
-	     "Malformed optimization quality specifier ~S in ~S."
+	     _"Malformed optimization quality specifier ~S in ~S."
 	     quality spec))))
     res))
 
@@ -316,7 +316,7 @@
 ;;;
 
 (defmacro declaim (&rest specs)
-  "DECLAIM Declaration*
+  _N"DECLAIM Declaration*
   Do a declaration for the global environment."
   `(progn
      (eval-when (:load-toplevel :execute)
@@ -340,7 +340,7 @@
 ;;;
 (defun proclaim (form)
   (unless (consp form)
-    (error "Malformed PROCLAIM spec: ~S." form))
+    (error _"Malformed PROCLAIM spec: ~S." form))
 
   (when (boundp '*proclamation-hooks*)
     (dolist (hook *proclamation-hooks*)
@@ -352,7 +352,7 @@
       (special
        (dolist (name args)
 	 (unless (symbolp name)
-	   (error "Variable name is not a symbol: ~S." name))
+	   (error _"Variable name is not a symbol: ~S." name))
 	 (unless (or (member (info variable kind name) '(:global :special))
 		     ;; If we are still in cold-load, and the package system
 		     ;; is not set up, the global db will claim all variables
@@ -361,18 +361,18 @@
 		     (null (symbol-package :end)))
 	   (cond
 	     ((eq name 'nil)
-	      (error "Nihil ex nihil, can't declare ~S special." name))
+	      (error _"Nihil ex nihil, can't declare ~S special." name))
 	     ((eq name 't)
-	      (error "Veritas aeterna, can't declare ~S special." name))
+	      (error _"Veritas aeterna, can't declare ~S special." name))
 	     ((keywordp name)
-	      (error "Can't declare ~S special, it is a keyword." name))
+	      (error _"Can't declare ~S special, it is a keyword." name))
 	     (t
-	      (cerror "Proceed anyway."
-		      "Trying to declare ~S special, which is ~A." name
+	      (cerror _"Proceed anyway."
+		      _"Trying to declare ~S special, which is ~A." name
 		      (ecase (info variable kind name)
-			(:constant "a constant")
-			(:alien "an alien variable")
-			(:macro "a symbol macro"))))))
+			(:constant _"a constant")
+			(:alien _"an alien variable")
+			(:macro _"a symbol macro"))))))
 	 (clear-info variable constant-value name)
 	 (setf (info variable kind name) :special)))
       (type
@@ -380,18 +380,18 @@
 	 (let ((type (specifier-type (first args))))
 	   (dolist (name (rest args))
 	     (unless (symbolp name)
-	       (error "Variable name is not a symbol: ~S." name))
+	       (error _"Variable name is not a symbol: ~S." name))
 	     (setf (info variable type name) type)
 	     (setf (info variable where-from name) :declared)))))
       (ftype
        (when *type-system-initialized*
 	 (let ((type (specifier-type (first args))))
 	   (unless (csubtypep type (specifier-type 'function))
-	     (error "Declared functional type is not a function type: ~S."
+	     (error _"Declared functional type is not a function type: ~S."
 		    (first args)))
 	   (dolist (name (rest args))
 	     (cond ((info function accessor-for name)
-		    (warn "Ignoring FTYPE declaration for slot accesor:~%  ~S"
+		    (warn _"Ignoring FTYPE declaration for slot accesor:~%  ~S"
 			  name))
 		   (t
 		    (define-function-name name)
@@ -440,9 +440,9 @@
       (declaration
        (dolist (decl args)
 	 (unless (symbolp decl)
-	   (error "Declaration to be RECOGNIZED is not a symbol: ~S." decl))
+	   (error _"Declaration to be RECOGNIZED is not a symbol: ~S." decl))
 	 (when (info type kind decl)
-	   (error "Declaration already names a type: ~S." decl))
+	   (error _"Declaration already names a type: ~S." decl))
 	 (setf (info declaration recognized decl) t)))
       ((start-block end-block)) ; ignore.
       (t
@@ -452,7 +452,7 @@
 		  (and (consp kind) (info type translator (car kind))))
 	      (proclaim `(type . ,form)))
 	     ((not (info declaration recognized kind))
-	      (warn "Unrecognized proclamation: ~S." form))))))
+	      (warn _"Unrecognized proclamation: ~S." form))))))
   (undefined-value))
 
 
