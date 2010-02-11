@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltv.lisp,v 1.2.56.1 2010/02/08 17:15:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltv.lisp,v 1.2.56.2 2010/02/11 01:33:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,7 @@
 (defknown %load-time-value (t) t (flushable movable))
 
 (def-ir1-translator load-time-value ((form &optional read-only-p) start cont)
-  "Arrange for FORM to be evaluated at load-time and use the value produced
+  _N"Arrange for FORM to be evaluated at load-time and use the value produced
    as if it were a constant.  If READ-ONLY-P is non-NIL, then the resultant
    object is guaranteed to never be modified, so it can be put in read-only
    storage."
@@ -43,7 +43,7 @@
       (let ((value
 	     (handler-case (eval form)
 	       (error (condition)
-		 (compiler-error "(during EVAL of LOAD-TIME-VALUE)~%~A"
+		 (compiler-error _"(during EVAL of LOAD-TIME-VALUE)~%~A"
 				 condition)))))
 	(ir1-convert start cont
 		     (if read-only-p

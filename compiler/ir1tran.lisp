@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.173.32.1 2010/02/08 17:15:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.173.32.2 2010/02/11 01:33:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -118,7 +118,7 @@
 (defvar *current-function-names* ())
 
 (defvar *derive-function-types* t
-  "If true, argument and result type information derived from compilation of
+  _N"If true, argument and result type information derived from compilation of
   DEFUNs is used when compiling calls to that function.  If false, only
   information from FTYPE proclamations will be used.")
 
@@ -157,7 +157,7 @@
 ;;;; Dynamic-Extent
 
 (defvar *trust-dynamic-extent-declarations* nil
-  "If NIL, never trust dynamic-extent declarations.
+  _N"If NIL, never trust dynamic-extent declarations.
 
    If T, always trust dynamic-extent declarations.
 
@@ -208,7 +208,7 @@
 					"in a dynamic-extent declaration")))))
 		(t
 		 (compiler-warning
-		  "~@<Invalid name ~s in a dynamic-extent declaration.~@:>"
+		  _"~@<Invalid name ~s in a dynamic-extent declaration.~@:>"
 		  name))))
 	(if (dynamic-extent)
 	    (make-lexenv :default lexenv :dynamic-extent (dynamic-extent))
@@ -316,7 +316,7 @@
 		     :key #'kernel:dsd-accessor))
 	 (type (kernel:dd-name info))
 	 (slot-type (kernel:dsd-type slot)))
-    (assert slot () "Can't find slot ~S." type)
+    (assert slot () _"Can't find slot ~S." type)
     (make-slot-accessor
      :name name
      :type (specifier-type
@@ -341,9 +341,9 @@
   (or (gethash name *free-functions*)
       (ecase (info function kind name)
 	(:macro
-	 (compiler-error "Found macro name ~S ~A." name context))
+	 (compiler-error _"Found macro name ~S ~A." name context))
 	(:special-form
-	 (compiler-error "Found special-form name ~S ~A." name context))
+	 (compiler-error _"Found special-form name ~S ~A." name context))
 	((:function nil)
 	 (check-function-name name)
 	 (note-if-setf-function-and-macro name)
@@ -382,7 +382,7 @@
     (cond (var
 	   (unless (leaf-p var)
 	     (assert (and (consp var) (eq (car var) 'macro)))
-	     (compiler-error "Found macro name ~S ~A." name context))
+	     (compiler-error _"Found macro name ~S ~A." name context))
 	   var)
 	  (t
 	   (find-free-function name context)))))
@@ -400,7 +400,7 @@
 (defun find-free-variable (name)
   (declare (values (or leaf cons heap-alien-info)))
   (unless (symbolp name)
-    (compiler-error "Variable name is not a symbol: ~S." name))
+    (compiler-error _"Variable name is not a symbol: ~S." name))
   (or (gethash name *free-variables*)
       (let ((kind (info variable kind name))
 	    (type (info variable type name))
@@ -495,7 +495,7 @@
 			(grovel (%instance-ref value i)))))
 		   (t
 		    (compiler-error
-		     "Cannot dump objects of type ~S into fasl files."
+		     _"Cannot dump objects of type ~S into fasl files."
 		     (type-of value)))))))
       (grovel constant)))
   (undefined-value))
@@ -513,7 +513,7 @@
 	  ((start cont form
 	    &optional
 	    (proxy ``(error 'simple-program-error
-		       :format-control "Execution of a form compiled with errors:~% ~S"
+		       :format-control _"Execution of a form compiled with errors:~% ~S"
 		       :format-arguments (list ',,form))))
 	   &body body)
   (let ((skip (gensym)))
@@ -573,14 +573,14 @@
   (let ((block (continuation-block cont))
 	(node-block (continuation-block (node-prev node))))
     (assert (eq (continuation-kind cont) :block-start))
-    (assert (not (block-last node-block)) () "~S has already ended."
+    (assert (not (block-last node-block)) () _"~S has already ended."
 	    node-block)
     (setf (block-last node-block) node)
-    (assert (null (block-succ node-block)) () "~S already has successors."
+    (assert (null (block-succ node-block)) () _"~S already has successors."
 	    node-block)
     (setf (block-succ node-block) (list block))
     (assert (not (member node-block (block-pred block) :test #'eq)) ()
-	    "~S is already a predecessor of ~S." node-block block)
+	    _"~S is already a predecessor of ~S." node-block block)
     (push node-block (block-pred block))
     (add-continuation-use node cont)
     (unless (eq (continuation-asserted-type cont) *wild-type*)
@@ -720,7 +720,7 @@
 		(typecase lexical-def
 		  (null
 		   (when (eq fun 'declare)
-		     (compiler-error "Misplaced declaration."))
+		     (compiler-error _"Misplaced declaration."))
 		   (ir1-convert-global-functoid start cont form))
 		  (functional
 		   (ir1-convert-local-combination start cont form lexical-def))
@@ -733,7 +733,7 @@
 				(careful-expand-macro (cdr lexical-def)
 						      form))))))
 	     ((or (atom fun) (not (eq (car fun) 'lambda)))
-	      (compiler-error "Illegal function call."))
+	      (compiler-error _"Illegal function call."))
 	     (t
 	      (ir1-convert-combination start cont form
 				       ;; TODO: check this case --jwr
@@ -754,7 +754,7 @@
   (declare (type continuation start cont) (inline find-constant))
   (ir1-error-bailout
       (start cont value
-       '(error "Attempt to reference undumpable constant."))
+       '(error _"Attempt to reference undumpable constant."))
     (when (and (producing-fasl-file)
 	       (not (typep value '(or symbol number character string))))
       (maybe-emit-make-load-forms value))
@@ -815,7 +815,7 @@
       (leaf
        (when (lambda-var-p var)
 	 (when (lambda-var-ignorep var)
-	   (compiler-note "Reading an ignored variable: ~S." name))
+	   (compiler-note _"Reading an ignored variable: ~S." name))
 	 ;;
 	 ;; FIXME: There's a quirk somewhere when recording this
 	 ;; dependency, which I don't have to time to debug right now.
@@ -891,7 +891,7 @@
 (defun careful-expand-macro (fun form)
   (handler-case (invoke-macroexpand-hook fun form *lexical-environment*)
     (error (condition)
-	   (compiler-error "(during macroexpansion)~%~A"
+	   (compiler-error _"(during macroexpansion)~%~A"
 			   condition))))
 
 
@@ -932,7 +932,7 @@
     (if indices
 	(with-dynamic-extent (start cont nnext-cont :closure)
 	  (when *dynamic-extent-trace*
-	    (format t "~&dynamic-extent args ~:s in ~s~%" indices form))
+	    (format t _"~&dynamic-extent args ~:s in ~s~%" indices form))
 	  (let ((fun-cont (make-continuation)))
 	    (reference-leaf nnext-cont fun-cont fun)
 	    (ir1-convert-combination-args fun-cont cont (cdr form) indices)))
@@ -1130,7 +1130,7 @@
 			(cond ((eq int *empty-type*)
 			       (unless (policy nil (= brevity 3))
 				 (compiler-warning
-				  "Conflicting type declarations ~
+				  _"Conflicting type declarations ~
 				   ~S and ~S for ~S."
 				  (type-specifier old-type)
 				  (type-specifier type)
@@ -1149,7 +1149,7 @@
 	     (new-vars `(,var-name . (MACRO . (the ,(first decl)
 						   ,(cdr var))))))
 	    (heap-alien-info
-	     (compiler-error "Can't declare type of Alien variable: ~S."
+	     (compiler-error _"Can't declare type of Alien variable: ~S."
 			     var-name)))))
 
       (if (or (restr) (new-vars))
@@ -1202,10 +1202,10 @@
 	(etypecase var
 	  (cons
 	   (assert (eq (car var) 'MACRO))
-	   (compiler-error "Declaring symbol-macro ~S special." name))
+	   (compiler-error _"Declaring symbol-macro ~S special." name))
 	  (lambda-var
 	   (when (lambda-var-ignorep var)
-	     (compiler-note "Ignored variable ~S is being declared special."
+	     (compiler-note _"Ignored variable ~S is being declared special."
 			    name))
 	   (setf (lambda-var-specvar var)
 		 (specvar-for-binding name)))
@@ -1267,7 +1267,7 @@
 	      (etypecase found
 		(functional
 		 (when (policy nil (>= speed brevity))
-		   (compiler-note "Ignoring ~A declaration not at ~
+		   (compiler-note _"Ignoring ~A declaration not at ~
 				   definition of local function:~%  ~S"
 				  sense name)))
 		(global-var
@@ -1288,7 +1288,7 @@
   (if (consp name)
       (destructuring-bind (wot fn-name) name
 	(unless (eq wot 'function)
-	  (compiler-error "Unrecognizable function or variable name: ~S"
+	  (compiler-error _"Unrecognizable function or variable name: ~S"
 			  name))
 	(find fn-name fvars
 	      :key #'leaf-name
@@ -1309,8 +1309,8 @@
        ((not var)
 	(if (or (lexenv-find name variables)
 		(lexenv-find-function name))
-	    (compiler-note "Ignoring free ignore declaration for ~S." name)
-	    (compiler-warning "Ignore declaration for unknown variable ~S."
+	    (compiler-note _"Ignoring free ignore declaration for ~S." name)
+	    (compiler-warning _"Ignore declaration for unknown variable ~S."
 			      name)))
        ((and (consp var)
 	     (eq (car var) 'macro)
@@ -1325,7 +1325,7 @@
        ((functional-p var)
 	(setf (leaf-ever-used var) t))
        ((lambda-var-specvar var)
-	(compiler-note "Declaring special variable ~S to be ignored." name))
+	(compiler-note _"Declaring special variable ~S to be ignored." name))
        ((eq (first spec) 'ignorable)
 	(setf (leaf-ever-used var) t))
        (t
@@ -1333,7 +1333,7 @@
   (undefined-value))
 
 (defvar *suppress-values-declaration* nil
-  "If true, processing of the VALUES declaration is inhibited.")
+  _N"If true, processing of the VALUES declaration is inhibited.")
 
 ;;; PROCESS-1-DECLARATION  --  Internal
 ;;;
@@ -1347,7 +1347,7 @@
     (special (process-special-declaration spec res vars))
     (ftype
      (unless (cdr spec)
-       (compiler-error "No type specified in FTYPE declaration: ~S." spec))
+       (compiler-error _"No type specified in FTYPE declaration: ~S." spec))
      (process-ftype-declaration (second spec) res (cddr spec) fvars))
     (function
      ;;
@@ -1396,12 +1396,12 @@
 			     (string= (symbol-name what) "CLASS"))) ; pcl hack
 		   (or (info type kind what)
 		       (and (consp what) (info type translator (car what)))))
-	      (compiler-note "Abbreviated type declaration: ~S." spec)
+	      (compiler-note _"Abbreviated type declaration: ~S." spec)
 	      (process-type-declaration spec res vars))
 	     ((info declaration recognized what)
 	      res)
 	     (t
-	      (compiler-warning "Unrecognized declaration: ~S." spec)
+	      (compiler-warning _"Unrecognized declaration: ~S." spec)
 	      res))))))
 
 
@@ -1423,7 +1423,7 @@
   (dolist (decl decls)
     (dolist (spec (rest decl))
       (unless (consp spec)
-	(compiler-error "Malformed declaration specifier ~S in ~S."
+	(compiler-error _"Malformed declaration specifier ~S in ~S."
 			spec decl))
       
       (setq env (process-1-declaration spec env vars fvars cont))))
@@ -1440,11 +1440,11 @@
   (cond ((not (eq (info variable where-from name) :assumed))
 	 (let ((found (find-free-variable name)))
 	   (when (heap-alien-info-p found)
-	     (compiler-error "Declaring an alien variable to be special: ~S"
+	     (compiler-error _"Declaring an alien variable to be special: ~S"
 			     name))
 	   (when (or (not (global-var-p found))
 		     (eq (global-var-kind found) :constant))
-	     (compiler-error "Declaring a constant to be special: ~S." name))
+	     (compiler-error _"Declaring a constant to be special: ~S." name))
 	   found))
 	(t
 	 (make-global-var :kind :special  :name name  :where-from :declared))))
@@ -1468,12 +1468,12 @@
   (declare (list names-so-far) (values lambda-var)
 	   (inline member))
   (unless (symbolp name)
-    (compiler-error "Lambda-variable is not a symbol: ~S." name))
+    (compiler-error _"Lambda-variable is not a symbol: ~S." name))
   (when (member name names-so-far :test #'eq)
-    (compiler-error "Repeated variable in lambda-list: ~S." name))
+    (compiler-error _"Repeated variable in lambda-list: ~S." name))
   (let ((kind (info variable kind name)))
     (when (or (keywordp name) (eq kind :constant))
-      (compiler-error "Name of lambda-variable is a constant: ~S." name))
+      (compiler-error _"Name of lambda-variable is a constant: ~S." name))
     (if (eq kind :special)
 	(let ((specvar (find-free-variable name)))
 	  (make-lambda-var :name name
@@ -1498,7 +1498,7 @@
 	(when (and info
 		   (eq (arg-info-kind info) :keyword)
 		   (eq (arg-info-keyword info) key))
-	  (compiler-error "Multiple uses of keyword ~S in lambda-list." key))))
+	  (compiler-error _"Multiple uses of keyword ~S in lambda-list." key))))
     key))
 
 
@@ -1531,13 +1531,13 @@
 				allow-debug-catch-tag
 				caller)
   (unless (consp form)
-    (compiler-error "Found a ~S when expecting a lambda expression:~%  ~S"
+    (compiler-error _"Found a ~S when expecting a lambda expression:~%  ~S"
 		    (type-of form) form))
   (unless (eq (car form) 'lambda)
-    (compiler-error "Expecting a lambda, but form begins with ~S:~%  ~S"
+    (compiler-error _"Expecting a lambda, but form begins with ~S:~%  ~S"
 		    (car form) form))
   (unless (and (consp (cdr form)) (listp (cadr form)))
-    (compiler-error "Lambda-list absent or not a list:~%  ~S" form))
+    (compiler-error _"Lambda-list absent or not a list:~%  ~S" form))
 
   (multiple-value-bind (vars keyp allow-other-keys aux-vars aux-vals)
       (find-lambda-vars (cadr form))
@@ -1550,7 +1550,7 @@
 				(policy nil (= debug 3))) ; TODO: check the policy settings --jwr
 			   (progn
 			     (when (and *compile-print* *print-debug-tag-conversions*)
-			       (format t "ir1-convert-lambda: called by: ~S, parent-form: ~S~%" 
+			       (format t _"ir1-convert-lambda: called by: ~S, parent-form: ~S~%" 
 				       caller parent-form))
 			     (ir1-wrap-for-debug body))
 			   body))
@@ -1630,7 +1630,7 @@
 		     (setf (arg-info-supplied-p info) supplied-var)
 		     (names-so-far supplied-p)
 		     (when (> (length (the list spec)) 3)
-		       (compiler-error "Arg specifier is too long: ~S." spec)))))))
+		       (compiler-error _"Arg specifier is too long: ~S." spec)))))))
 	
 	(dolist (name required)
 	  (let ((var (varify-lambda-arg name (names-so-far))))
@@ -1691,7 +1691,7 @@
 	   (t
 	    (let ((head (first spec)))
 	      (unless (= (length (the list head)) 2)
-		(error "Malformed keyword arg specifier: ~S." spec))
+		(error _"Malformed keyword arg specifier: ~S." spec))
 	      (let* ((name (second head))
 		     (var (varify-lambda-arg name (names-so-far)))
 		     (info (make-arg-info
@@ -1710,7 +1710,7 @@
 		   (names-so-far spec)))
 		(t
 		 (unless (<= 1 (length spec) 2)
-		   (compiler-error "Malformed &aux binding specifier: ~S."
+		   (compiler-error _"Malformed &aux binding specifier: ~S."
 				   spec))
 		 (let* ((name (first spec))
 			(var (varify-lambda-arg name nil)))
@@ -2320,13 +2320,13 @@
 ;;;; Control special forms:
 
 (def-ir1-translator progn ((&rest forms) start cont)
-  "Progn Form*
+  _N"Progn Form*
   Evaluates each Form in order, returing the values of the last form.  With no
   forms, returns NIL."
   (ir1-convert-progn-body start cont forms))
 
 (def-ir1-translator if ((test then &optional else) start cont)
-  "If Predicate Then [Else]
+  _N"If Predicate Then [Else]
   If Predicate evaluates to non-null, evaluate Then and returns its values,
   otherwise evaluate Else and return its values.  Else defaults to NIL."
   (let* ((pred (make-continuation))
@@ -2366,12 +2366,12 @@
 ;;; done later, the block would be in the wrong environment.
 ;;;
 (def-ir1-translator block ((name &rest forms) start cont)
-  "Block Name Form*
+  _N"Block Name Form*
   Evaluate the Forms as a PROGN.  Within the lexical scope of the body,
   (RETURN-FROM Name Value-Form) can be used to exit the form, returning the
   result of Value-Form."
   (unless (symbolp name)
-    (compiler-error "Block name is not a symbol: ~S." name))
+    (compiler-error _"Block name is not a symbol: ~S." name))
   (continuation-starts-block cont)
   (let* ((dummy (make-continuation))
 	 (entry (make-entry))
@@ -2393,13 +2393,13 @@
 ;;;
 (def-ir1-translator return-from ((name &optional value)
 				 start cont)
-  "Return-From Block-Name Value-Form
+  _N"Return-From Block-Name Value-Form
   Evaluate the Value-Form, returning its values from the lexically enclosing
   BLOCK Block-Name.  This is constrained to be used only within the dynamic
   extent of the BLOCK."
   (continuation-starts-block cont)
   (let* ((found (or (lexenv-find name blocks)
-		    (compiler-error "Return for unknown block: ~S." name)))
+		    (compiler-error _"Return for unknown block: ~S." name)))
 	 (value-cont (make-continuation))
 	 (entry (first found))
 	 (exit (make-exit :entry entry  :value value-cont)))
@@ -2431,9 +2431,9 @@
 	    (return))
 	  (let ((tag (elt current tag-pos)))
 	    (when (assoc tag (segments))
-	      (compiler-error "Repeated tagbody tag: ~S." tag))
+	      (compiler-error _"Repeated tagbody tag: ~S." tag))
 	    (unless (or (symbolp tag) (integerp tag))
-	      (compiler-error "Illegal tagbody statement: ~S." tag))	      
+	      (compiler-error _"Illegal tagbody statement: ~S." tag))	      
 	    (segments `(,@(subseq current 0 tag-pos) (go ,tag))))
 	  (setq current (nthcdr tag-pos current)))))
     (segments)))
@@ -2446,7 +2446,7 @@
 ;;; each segment with the precomputed Start and Cont values.
 ;;;
 (def-ir1-translator tagbody ((&rest statements) start cont)
-  "Tagbody {Tag | Statement}*
+  _N"Tagbody {Tag | Statement}*
   Define tags for used with GO.  The Statements are evaluated in order
   (skipping Tags) and NIL is returned.  If a statement contains a GO to a
   defined Tag within the lexical scope of the form, then control is transferred
@@ -2488,12 +2488,12 @@
 ;;;    Emit an Exit node without any value.
 ;;;
 (def-ir1-translator go ((tag) start cont)
-  "Go Tag
+  _N"Go Tag
   Transfer control to the named Tag in the lexically enclosing TAGBODY.  This
   is constrained to be used only within the dynamic extent of the TAGBODY."
   (continuation-starts-block cont)
   (let* ((found (or (lexenv-find tag tags :test #'eql)
-		    (compiler-error "Go to nonexistent tag: ~S." tag)))
+		    (compiler-error _"Go to nonexistent tag: ~S." tag)))
 	 (entry (first found))
 	 (exit (make-exit :entry entry)))
     (push exit (entry-exits entry))
@@ -2514,11 +2514,11 @@
 	 (values nil))
 	(list
 	 (unless (= (length bind) 2)
-	   (compiler-error "Bad compiler-let binding spec: ~S." bind))
+	   (compiler-error _"Bad compiler-let binding spec: ~S." bind))
 	 (vars (first bind))
 	 (values (eval (second bind))))
 	(t
-	 (compiler-error "Bad compiler-let binding spec: ~S." bind))))
+	 (compiler-error _"Bad compiler-let binding spec: ~S." bind))))
     (progv (vars) (values)
       (ir1-convert-progn-body start cont body))))
 
@@ -2536,7 +2536,7 @@
 	    (set-difference situations
 			    '(compile load eval
 			      :compile-toplevel :load-toplevel :execute)))
-    (compiler-error "Bad Eval-When situation list: ~S." situations))
+    (compiler-error _"Bad Eval-When situation list: ~S." situations))
 
   (if toplevel-p
       ;; Can only get here from compile-file
@@ -2555,7 +2555,7 @@
 	  (funcall fun '(nil)))))
   
 (def-ir1-translator eval-when ((situations &rest body) start cont)
-  "EVAL-WHEN (Situation*) Form*
+  _N"EVAL-WHEN (Situation*) Form*
   Evaluate the Forms in the specified Situations, any of :COMPILE-TOPLEVEL,
   :LOAD-TOPLEVEL, :EXECUTE."
   (do-eval-when-stuff situations body
@@ -2605,13 +2605,13 @@
 	      (lisp::parse-defmacro arglist whole body name 'macrolet
 				    :environment environment)
 	    (unless (symbolp name)
-	      (compiler-error "Macro name ~S is not a symbol." name))
+	      (compiler-error _"Macro name ~S is not a symbol." name))
 	    (unless (listp arglist)
-	      (compiler-error "Local macro ~S has argument list that is not a list: ~S."
+	      (compiler-error _"Local macro ~S has argument list that is not a list: ~S."
 			      name arglist))
 	    (when (< (length def) 3)
 	      (compiler-error
-	       "Local macro ~S is too short to be a legal definition." name))
+	       _"Local macro ~S is too short to be a legal definition." name))
 	    (new-fenv `(,(first def) macro .
 			,(eval:internal-eval
 			  `(lambda (,whole ,environment)
@@ -2628,7 +2628,7 @@
 
 
 (def-ir1-translator macrolet ((definitions &parse-body (body decls)) start cont)
-  "MACROLET ({(Name Lambda-List Form*)}*) Body-Form*
+  _N"MACROLET ({(Name Lambda-List Form*)}*) Body-Form*
   Evaluate the Body-Forms in an environment with the specified local macros
   defined.  Name is the local macro name, Lambda-List is the DEFMACRO style
   destructuring lambda list, and the Forms evaluate to the expansion."
@@ -2642,7 +2642,7 @@
 ;;; COMPILER-OPTION-BIND
 ;;; 
 (def-ir1-translator compiler-option-bind ((bindings &body body) start cont)
-  "Compiler-Option-Bind ({(Name Value-Form)}*) Body-Form*
+  _N"Compiler-Option-Bind ({(Name Value-Form)}*) Body-Form*
    Establish the specified compiler options for the (lexical) duration of
    the body.  The Value-Forms are evaluated at compile time."
   (let ((*lexical-environment*
@@ -2652,7 +2652,7 @@
 					       (cdr binding)
 					       (listp (cdr binding))
 					       (null (cddr binding)))
-				    (compiler-error "Bogus binding for ~
+				    (compiler-error _"Bogus binding for ~
 						     COMPILER-OPTION-BIND: ~S"
 						    binding))
 				  (cons (car binding)
@@ -2675,7 +2675,7 @@
   (declare (list args))
   (handler-case (mapcar #'eval args)
     (error (condition)
-      (compiler-error "Lisp error during evaluation of info args:~%~A"
+      (compiler-error _"Lisp error during evaluation of info args:~%~A"
 		      condition))))
 
 ;;; A hashtable that translates from primitive names to translation functions.
@@ -2696,7 +2696,7 @@
 				       start cont)
   
   (unless (symbolp name)
-    (compiler-error "%Primitive name is not a symbol: ~S." name))
+    (compiler-error _"%Primitive name is not a symbol: ~S." name))
 
   (let* ((name (intern (symbol-name name)
 		       (or (find-package "OLD-C")
@@ -2705,7 +2705,7 @@
     (if translator
 	(ir1-convert start cont (funcall translator (cdr form)))
 	(let* ((template (or (gethash name (backend-template-names *backend*))
-			     (compiler-error "Undefined primitive name: ~A."
+			     (compiler-error _"Undefined primitive name: ~A."
 					     name)))
 	       (required (length (template-arg-types template)))
 	       (info (template-info-arg-count template))
@@ -2713,20 +2713,20 @@
 	       (nargs (length args)))
 	  (if (template-more-args-type template)
 	      (when (< nargs min)
-		(compiler-error "Primitive called with ~R argument~:P, ~
+		(compiler-error _"Primitive called with ~R argument~:P, ~
 	    		         but wants at least ~R."
 				nargs min))
 	      (unless (= nargs min)
-		(compiler-error "Primitive called with ~R argument~:P, ~
+		(compiler-error _"Primitive called with ~R argument~:P, ~
 				 but wants exactly ~R."
 				nargs min)))
 
 	  (when (eq (template-result-types template) :conditional)
-	    (compiler-error "%Primitive used with a conditional template."))
+	    (compiler-error _"%Primitive used with a conditional template."))
 
 	  (when (template-more-results-type template)
 	    (compiler-error
-	     "%Primitive used with an unknown values template."))
+	     _"%Primitive used with an unknown values template."))
 	  
 	  (ir1-convert start cont
 		      `(%%primitive ',template
@@ -2739,13 +2739,13 @@
 ;;;; Quote and Function:
 
 (def-ir1-translator quote ((thing) start cont)
-  "QUOTE Value
+  _N"QUOTE Value
   Return Value without evaluating it."
   (reference-constant start cont thing))
 
 
 (def-ir1-translator function ((thing) start cont)
-  "FUNCTION Name
+  _N"FUNCTION Name
   Return the lexically apparent definition of the function Name.  Name may also
   be a lambda."
   (flet ((reference-it ()
@@ -2767,7 +2767,7 @@
 	  (t
 	   (if (valid-function-name-p thing)
 	       (reference-it)
-	       (compiler-error "Illegal function name: ~S" thing))))
+	       (compiler-error _"Illegal function name: ~S" thing))))
 	(reference-it))))
 
 
@@ -2809,29 +2809,29 @@
       (values nil t)))
 
 (deftransform %coerce-to-function ((thing) * * :when :both)
-  (give-up "Might be a symbol, so must call FDEFINITION at runtime."))
+  (give-up _"Might be a symbol, so must call FDEFINITION at runtime."))
 
 
 ;;;; Symbol macros:
 
 (def-ir1-translator symbol-macrolet ((specs &parse-body (body decls))
 				     start cont)
-  "SYMBOL-MACROLET ({(Name Expansion)}*) Decl* Form*
+  _N"SYMBOL-MACROLET ({(Name Expansion)}*) Decl* Form*
   Define the Names as symbol macros with the given Expansions.  Within the
   body, references to a Name will effectively be replaced with the Expansion."
   (collect ((res))
     (dolist (spec specs)
       (unless (= (length spec) 2)
-	(compiler-error "Malformed symbol macro binding: ~S." spec))
+	(compiler-error _"Malformed symbol macro binding: ~S." spec))
       (let ((name (first spec))
 	    (def (second spec)))
 	(unless (symbolp name)
-	  (compiler-error "Symbol macro name is not a symbol: ~S." name))
+	  (compiler-error _"Symbol macro name is not a symbol: ~S." name))
 	(let ((kind (info variable kind name)))
 	  (when (member kind '(:special :constant))
-	    (compiler-error "Attempt to bind a special or constant variable with SYMBOL-MACROLET: ~S." name)))
+	    (compiler-error _"Attempt to bind a special or constant variable with SYMBOL-MACROLET: ~S." name)))
 	(when (assoc name (res) :test #'eq)
-	  (compiler-warning "Repeated name in SYMBOL-MACROLET: ~S." name))
+	  (compiler-warning _"Repeated name in SYMBOL-MACROLET: ~S." name))
 	(res `(,name . (MACRO . ,def)))))
 
     (let* ((*lexical-environment* (make-lexenv :variables (res)))
@@ -2859,7 +2859,7 @@
   (collect ((vars))
     (dolist (name names (vars))
       (unless (symbolp name)
-	(compiler-error "Name is not a symbol: ~S." name))
+	(compiler-error _"Name is not a symbol: ~S." name))
       (let ((old (gethash name *free-variables*)))
 	(when old (vars old))))))
 
@@ -2882,7 +2882,7 @@
 	(let ((old-type (info variable type name)))
 	  (unless (types-intersect type old-type)
 	    (compiler-warning
-	     "New proclaimed type ~S for ~S conflicts with old type ~S."
+	     _"New proclaimed type ~S for ~S conflicts with old type ~S."
 	     (type-specifier type) name (type-specifier old-type))))))
 
     (dolist (var (get-old-vars names))
@@ -2939,7 +2939,7 @@
   (let ((type (specifier-type spec)))
     (unless (csubtypep type (specifier-type 'function))
       (compiler-error
-       "Declared functional type is not a function type: ~S." spec))
+       _"Declared functional type is not a function type: ~S." spec))
     (dolist (name names)
       (process-1-ftype-proclamation name type))))
 
@@ -2967,7 +2967,7 @@
   (if (constantp what)
       (let ((form (eval what)))
 	(unless (consp form)
-	  (compiler-error "Malformed PROCLAIM spec: ~S." form))
+	  (compiler-error _"Malformed PROCLAIM spec: ~S." form))
 
 	(let ((identifier (first form))
 	      (args (rest form))
@@ -2979,7 +2979,7 @@
 		 (when (or (constant-p old)
 			   (eq (global-var-kind old) :constant))
 		   (compiler-error
-		    "Attempt to proclaim constant ~S to be special." name))
+		    _"Attempt to proclaim constant ~S to be special." name))
 
 		 (ecase (global-var-kind old)
 		   (:special)
@@ -2990,16 +2990,16 @@
 					   :kind :special)))))))
 	    (type
 	     (when (endp args)
-	       (compiler-error "Malformed TYPE proclamation: ~S." form))
+	       (compiler-error _"Malformed TYPE proclamation: ~S." form))
 	     (process-type-proclamation (first args) (rest args)))
 	    (function
 	     (when (endp args)
-	       (compiler-error "Malformed FUNCTION proclamation: ~S." form))
+	       (compiler-error _"Malformed FUNCTION proclamation: ~S." form))
 	     (process-ftype-proclamation `(function . ,(rest args))
 					 (list (first args))))
 	    (ftype
 	     (when (endp args)
-	       (compiler-error "Malformed FTYPE proclamation: ~S." form))
+	       (compiler-error _"Malformed FTYPE proclamation: ~S." form))
 	     (process-ftype-proclamation (first args) (rest args)))
 	    ((inline notinline maybe-inline)
 	     (process-inline-proclamation identifier args))
@@ -3018,7 +3018,7 @@
 		    (setq ignore t))
 		   (t
 		    (setq ignore t)
-		    (compiler-warning "Unrecognized proclamation: ~S."
+		    (compiler-warning _"Unrecognized proclamation: ~S."
 				      form)))))
 	  
 	  (unless ignore
@@ -3094,7 +3094,7 @@
 		 (vals nil)))
 	      (t
 	       (unless (<= 1 (length spec) 2)
-		 (compiler-error "Malformed ~S binding spec: ~S."
+		 (compiler-error _"Malformed ~S binding spec: ~S."
 				 context spec))
 	       (let* ((name (first spec))
 		      (var (get-var name)))
@@ -3106,7 +3106,7 @@
 
 (def-ir1-translator let ((bindings &parse-body (body decls))
 			 start cont)
-  "LET ({(Var [Value]) | Var}*) Declaration* Form*
+  _N"LET ({(Var [Value]) | Var}*) Declaration* Form*
   During evaluation of the Forms, Bind the Vars to the result of evaluating the
   Value forms.  The variables are bound in parallel after all of the Values are
   evaluated."
@@ -3126,7 +3126,7 @@
 
 (def-ir1-translator locally ((&parse-body (body decls))
                             start cont)
-  "LOCALLY Declaration* Form*
+  _N"LOCALLY Declaration* Form*
    Sequentially evaluates a body of Form's in a lexical environment
    where the given Declaration's have effect."
   (let* ((*lexical-environment* (process-declarations decls nil nil cont)))
@@ -3134,7 +3134,7 @@
 
 (def-ir1-translator let* ((bindings &parse-body (body decls))
 			  start cont)
-  "LET* ({(Var [Value]) | Var}*) Declaration* Form*
+  _N"LET* ({(Var [Value]) | Var}*) Declaration* Form*
   Similar to LET, but the variables are bound sequentially, allowing each Value
   form to reference any of the previous Vars."
   (multiple-value-bind (vars values)
@@ -3171,7 +3171,7 @@
     (collect ((names) (defs))
        (dolist (def definitions)
 	 (when (or (atom def) (< (length def) 2))
-	   (compiler-error "Malformed ~S definition spec: ~S." context def))
+	   (compiler-error _"Malformed ~S definition spec: ~S." context def))
 	 (let* ((name (check-function-name (first def)))
 		(block-name (nth-value 1 (valid-function-name-p (first def))))
 		(local-name (local-function-name name)))
@@ -3187,7 +3187,7 @@
 
 (def-ir1-translator flet ((definitions &parse-body (body decls))
 			  start cont)
-  "FLET ({(Name Lambda-List Declaration* Form*)}*) Declaration* Body-Form*
+  _N"FLET ({(Name Lambda-List Declaration* Form*)}*) Declaration* Body-Form*
   Evaluate the Body-Forms with some local function definitions.   The bindings
   do not enclose the definitions; any use of Name in the Forms will refer to
   the lexically apparent function definition in the enclosing environment."
@@ -3214,7 +3214,7 @@
 ;;; used for inline expansion we will get the right functions.
 ;;;
 (def-ir1-translator labels ((definitions &parse-body (body decls)) start cont)
-  "LABELS ({(Name Lambda-List Declaration* Form*)}*) Declaration* Body-Form*
+  _N"LABELS ({(Name Lambda-List Declaration* Form*)}*) Declaration* Body-Form*
   Evaluate the Body-Forms with some local function definitions.  The bindings
   enclose the new definitions, so the defined functions can call themselves or
   each other."
@@ -3290,7 +3290,7 @@
     (when (and (not intersects)
 	       (not (policy nil (= brevity 3))))
       (compiler-warning
-       "Type ~S in ~S declaration conflicts with enclosing assertion:~%   ~S"
+       _"Type ~S in ~S declaration conflicts with enclosing assertion:~%   ~S"
        (type-specifier ctype) name (type-specifier old-type)))
     (make-lexenv :type-restrictions `((,cont . ,new))
 		 :default lexenv)))
@@ -3303,7 +3303,7 @@
 ;;; expected behavior.
 ;;;
 (def-ir1-translator the ((type value) start cont)
-  "THE Type Form
+  _N"THE Type Form
   Assert that Form evaluates to the specified type (which may be a VALUES
   type.)"
   (let ((ctype (values-specifier-type type)))
@@ -3329,7 +3329,7 @@
 ;;; with the uses's Derived-Type.
 ;;;
 (def-ir1-translator truly-the ((type value) start cont)
-  "Truly-The Type Value
+  _N"Truly-The Type Value
   Like the THE special form, except that it believes whatever you tell it.  It
   will never generate a type check, but will cause a warning if the compiler
   can prove the assertion is wrong."
@@ -3349,13 +3349,13 @@
 ;;; out.
 
 (def-ir1-translator setq ((&whole source &rest things) start cont)
-  "SETQ {Var Value}*
+  _N"SETQ {Var Value}*
   Set the variables to the values.  If more than one pair is supplied, the
   assignments are done sequentially.  If Var names a symbol macro, SETF the
   expansion."
   (let ((len (length things)))
     (when (oddp len)
-      (compiler-error "Odd number of args to SETQ: ~S." source))
+      (compiler-error _"Odd number of args to SETQ: ~S." source))
     (if (= len 2)
 	(let* ((name (first things))
 	       (leaf (or (lexenv-find name variables)
@@ -3365,10 +3365,10 @@
 	     (when (or (constant-p leaf)
 		       (and (global-var-p leaf)
 			    (eq (global-var-kind leaf) :constant)))
-	       (compiler-error "Attempt to set constant ~S." name))
+	       (compiler-error _"Attempt to set constant ~S." name))
 	     (when (lambda-var-p leaf)
 	       (when (lambda-var-ignorep leaf)
-		 (compiler-note "Setting an ignored variable: ~S." name))
+		 (compiler-note _"Setting an ignored variable: ~S." name))
 	       (note-dfo-dependency start leaf))
 	     (set-variable start cont leaf (second things)))
 	    (cons
@@ -3415,7 +3415,7 @@
 ;;; than receiving multiple-values.
 ;;;
 (def-ir1-translator throw ((tag result) start cont)
-  "Throw Tag Form
+  _N"Throw Tag Form
   Do a non-local exit, return the values of Form from the CATCH whose tag
   evaluates to the same thing as Tag."
   (ir1-convert start cont
@@ -3480,7 +3480,7 @@
 ;;; using %within-cleanup.
 ;;;
 (def-ir1-translator catch ((tag &body body) start cont)
-  "Catch Tag Form*
+  _N"Catch Tag Form*
   Evaluates Tag and instantiates it as a catcher while the body forms are
   evaluated in an implicit PROGN.  If a THROW is done to Tag within the dynamic
   scope of the body, then control will be transferred to the end of the body
@@ -3504,7 +3504,7 @@
 ;;; doesn't cause creation of an XEP.
 ;;;
 (def-ir1-translator unwind-protect ((protected &body cleanup) start cont)
-  "Unwind-Protect Protected Cleanup*
+  _N"Unwind-Protect Protected Cleanup*
   Evaluate the form Protected, returning its values.  The cleanup forms are
   evaluated whenever the dynamic scope of the Protected form is exited (either
   due to normal completion or a non-local exit such as THROW)."
@@ -3540,7 +3540,7 @@
 ;;; compilation of MV-Combinations.
 ;;;
 (def-ir1-translator multiple-value-call ((fun &rest args) start cont)
-  "MULTIPLE-VALUE-CALL Function Values-Form*
+  _N"MULTIPLE-VALUE-CALL Function Values-Form*
   Call Function, passing all the values of each Values-Form as arguments,
   values from the first Values-Form making up the first argument, etc."
   (let* ((fun-cont (make-continuation))
@@ -3595,7 +3595,7 @@
 ;;; whose block is the true control destination.
 ;;;
 (def-ir1-translator multiple-value-prog1 ((result &rest forms) start cont)
-  "MULTIPLE-VALUE-PROG1 Values-Form Form*
+  _N"MULTIPLE-VALUE-PROG1 Values-Form Form*
   Evaluate Values-Form and then the Forms, but return all the values of
   Values-Form." 
   (continuation-starts-block cont)
@@ -3656,7 +3656,7 @@
 ;;;
 (defun do-macro-compile-time (name def)
   (unless (symbolp name)
-    (compiler-error "Macro name is not a symbol: ~S." name))
+    (compiler-error _"Macro name is not a symbol: ~S." name))
 
   (ecase (info function kind name)
     ((nil))
@@ -3664,11 +3664,11 @@
      (remhash name *free-functions*)
      (undefine-function-name name)
      (compiler-warning
-      "Defining ~S to be a macro when it was ~(~A~) to be a function."
+      _"Defining ~S to be a macro when it was ~(~A~) to be a function."
       name (info function where-from name)))
     (:macro)
     (:special-form
-     (compiler-error "Attempt to redefine special form ~S as a macro." name)))
+     (compiler-error _"Attempt to redefine special form ~S as a macro." name)))
 
   (setf (info function kind name) :macro)
   (setf (info function where-from name) :defined)
@@ -3688,12 +3688,12 @@
       (ir1-convert start cont `(%%defmacro ',name ,fun ,doc)))
 
     (when *compile-print*
-      (compiler-mumble "~&; Converted ~S.~%" name))))
+      (compiler-mumble _"~&; Converted ~S.~%" name))))
 
 
 (defun do-compiler-macro-compile-time (name def)
   (when (eq (info function kind name) :special-form)
-    (compiler-error "Attempt to define a compiler-macro for special form ~S."
+    (compiler-error _"Attempt to define a compiler-macro for special form ~S."
 		    name))
   (when *compile-time-define-macros*
     (setf (info function compiler-macro-function name)
@@ -3714,30 +3714,30 @@
       (ir1-convert start cont `(%%define-compiler-macro ',name ,fun ,doc)))
 
     (when *compile-print*
-      (compiler-mumble "~&; Converted ~S.~%" name))))
+      (compiler-mumble _"~&; Converted ~S.~%" name))))
 
 
 ;;; Update the global environment to correspond to the new definition.
 ;;;
 (defun do-defconstant-compile-time (name value doc)
   (unless (symbolp name)
-    (compiler-error "Constant name is not a symbol: ~S." name))
+    (compiler-error _"Constant name is not a symbol: ~S." name))
   (when (eq name t)
-    (compiler-error "Can't change T."))
+    (compiler-error _"Can't change T."))
   (when (eq name nil)
-    (compiler-error "Nihil ex nihil (Can't change NIL)."))
+    (compiler-error _"Nihil ex nihil (Can't change NIL)."))
   (when (keywordp name)
-    (compiler-error "Can't change the value of keywords."))
+    (compiler-error _"Can't change the value of keywords."))
 
   (let ((kind (info variable kind name)))
     (case kind
       (:constant
        (unless (equalp value (info variable constant-value name))
-	 (compiler-warning "Redefining constant ~S as:~%  ~S"
+	 (compiler-warning _"Redefining constant ~S as:~%  ~S"
 			   name value)))
       (:global)
       (t
-       (compiler-warning "Redefining ~(~A~) ~S to be a constant."
+       (compiler-warning _"Redefining ~(~A~) ~S to be a constant."
 			 kind name))))
 
   (setf (info variable kind name) :constant)
@@ -3999,4 +3999,4 @@
 		       ,@(when save-expansion `(',save-expansion)))))
 
 	(when *compile-print*
-	  (compiler-mumble "~&; Converted ~S.~%" name))))))
+	  (compiler-mumble _"~&; Converted ~S.~%" name))))))

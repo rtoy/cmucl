@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.110.26.1 2010/02/08 17:15:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.110.26.2 2010/02/11 01:33:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -447,17 +447,17 @@
   form)
 
 (defun encode-form-numbers (tlf-number form-number)
-  "Return the TLF-NUMBER and FORM-NUMBER encoded as fixnum."
+  _N"Return the TLF-NUMBER and FORM-NUMBER encoded as fixnum."
   (declare (type (unsigned-byte 14) tlf-number form-number))
   (logior tlf-number (ash form-number 14)))
 
 (defun decode-form-numbers (fixnum)
-  "Return the tlf-number and form-number from an encoded FIXNUM."
+  _N"Return the tlf-number and form-number from an encoded FIXNUM."
   (values (ldb (byte 14 0) fixnum) 
 	  (ldb (byte 14 14) fixnum)))
 
 (defun source-location ()
-  "Return a source-location for the call site."
+  _N"Return a source-location for the call site."
   nil)
 
 (define-compiler-macro source-location ()
@@ -845,7 +845,7 @@
 	    (mark-for-deletion (node-block ref)))
 	  (unless (leaf-ever-used leaf)
 	    (let ((*compiler-error-context* bind))
-	      (compiler-note "Deleting unused function~:[.~;~:*~%  ~S~]"
+	      (compiler-note _"Deleting unused function~:[.~;~:*~%  ~S~]"
 			     (leaf-name leaf))))
           (unless (block-delete-p bind-block)
 	    (unlink-blocks (component-head component) bind-block))
@@ -1069,7 +1069,7 @@
 ;;;
 (defun delete-block (block)
   (declare (type cblock block))
-  (assert (block-component block) () "Block is already deleted.")
+  (assert (block-component block) () _"Block is already deleted.")
   (note-block-deletion block)
   (setf (block-delete-p block) t)
 
@@ -1199,7 +1199,7 @@
     (unless (or (leaf-ever-used var)
 		(lambda-var-ignorep var))
       (let ((*compiler-error-context* (lambda-bind fun)))
-	(compiler-note "Variable ~S defined but never used." (leaf-name var)))
+	(compiler-note _"Variable ~S defined but never used." (leaf-name var)))
       (setf (leaf-ever-used var) t)))
   (undefined-value))
 
@@ -1274,7 +1274,7 @@
 					  0)))
 	    (unless (return-p node)
 	      (let ((*compiler-error-context* node))
-		(compiler-note "Deleting unreachable code.")))
+		(compiler-note _"Deleting unreachable code.")))
 	    (return))))))
   (undefined-value))
 
@@ -1404,7 +1404,7 @@
 ;;; with the correct number of arguments.
 ;;; 
 (defun extract-function-args (cont fun num-args)
-  "If CONT is a call to FUN with NUM-ARGS args, change those arguments
+  _N"If CONT is a call to FUN with NUM-ARGS args, change those arguments
    to feed directly to the continuation-dest of CONT, which must be
    a combination."
   (declare (type continuation cont)
@@ -1618,7 +1618,7 @@
 
 
 (defvar *inline-expansion-limit* 400
-  "An upper limit on the number of inline function calls that will be expanded
+  _N"An upper limit on the number of inline function calls that will be expanded
    in any given code object (single function or block compilation.)")
 
 
@@ -1634,7 +1634,7 @@
     (cond ((> expanded *inline-expansion-limit*) nil)
 	  ((= expanded *inline-expansion-limit*)
 	   (let ((*compiler-error-context* node))
-	     (compiler-note "*Inline-Expansion-Limit* (~D) exceeded, ~
+	     (compiler-note _"*Inline-Expansion-Limit* (~D) exceeded, ~
 			     probably trying to~%  ~
 			     inline a recursive function."
 			    *inline-expansion-limit*))
@@ -1654,14 +1654,14 @@
 	       *error-print-length* *error-print-lines*))
 
 (defvar *error-print-level* 3
-  "The value for *Print-Level* when printing compiler error messages.")
+  _N"The value for *Print-Level* when printing compiler error messages.")
 (defvar *error-print-length* 5
-  "The value for *Print-Length* when printing compiler error messages.")
+  _N"The value for *Print-Length* when printing compiler error messages.")
 (defvar *error-print-lines* 5
-  "The value for *Print-Lines* when printing compiler error messages.")
+  _N"The value for *Print-Lines* when printing compiler error messages.")
 
 (defvar *enclosing-source-cutoff* 1
-  "The maximum number of enclosing non-original source forms (i.e. from
+  _N"The maximum number of enclosing non-original source forms (i.e. from
   macroexpansion) that we print in full.  For additional enclosing forms, we
   print only the CAR.")
 (declaim (type unsigned-byte *enclosing-source-cutoff*))
@@ -1722,7 +1722,7 @@
 ;;; DEF-SOURCE-CONTEXT  --  Public
 ;;;
 (defmacro def-source-context (name ll &body body)
-  "DEF-SOURCE-CONTEXT Name Lambda-List Form*
+  _N"DEF-SOURCE-CONTEXT Name Lambda-List Form*
    This macro defines how to extract an abbreviated source context from the
    Named form when it appears in the compiler input.  Lambda-List is a DEFMACRO
    style lambda-list used to parse the arguments.  The Body should return a
@@ -1880,7 +1880,7 @@
 ;;;
 (declaim (type (function () nil) *compiler-error-bailout*))
 (defvar *compiler-error-bailout*
-  #'(lambda () (error "Compiler-Error with no bailout.")))
+  #'(lambda () (error _"Compiler-Error with no bailout.")))
 
 ;;; The stream that compiler error output is directed to.
 ;;;
@@ -1908,7 +1908,7 @@
 (declaim (type index *last-message-count*))
 
 (defvar *compiler-notification-function* nil
-  "This is the function called by the compiler to specially note a
+  _N"This is the function called by the compiler to specially note a
 warning, comment, or error. The function must take five arguments: the
 severity, a string describing the nature of the notification, a string
 for context, the file namestring, and the file position. The severity
@@ -1950,7 +1950,7 @@ these can be NIL if unavailable or inapplicable.")
 	 (when terpri (terpri *compiler-error-output*)))
 	((> *last-message-count* 1)
 	 (pprint-logical-block (*compiler-error-output* nil :per-line-prefix "; ")
-	   (format *compiler-error-output* "[Last message occurs ~D times]"
+	   (format *compiler-error-output* _"[Last message occurs ~D times]"
 		   *last-message-count*))
 	 (format *compiler-error-output* "~2%")))
   (setq *last-message-count* 0))
@@ -2001,7 +2001,7 @@ these can be NIL if unavailable or inapplicable.")
 		 (setq last nil)
 		 (format stream "~2&")
 		 (pprint-logical-block (stream nil :per-line-prefix "; ")
-		   (format stream "~2&File: ~A" (namestring file)))
+		   (format stream _"~2&File: ~A" (namestring file)))
 		 (format stream "~%")))
 	    
 	     (unless (and last
@@ -2198,7 +2198,7 @@ these can be NIL if unavailable or inapplicable.")
 
 
 (defvar *undefined-warning-limit* 3
-  "If non-null, then an upper limit on the number of unknown function or type
+  _N"If non-null, then an upper limit on the number of unknown function or type
   warnings that the compiler will print for any given name in a single
   compilation.  This prevents excessive amounts of output when there really is
   a missing definition (as opposed to a typo in the use.)")

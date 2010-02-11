@@ -10054,7 +10054,7 @@ msgstr ""
 msgid "Declaring ~S special."
 msgstr ""
 
-#: target:code/eval.lisp
+#: target:compiler/ir1tran.lisp target:code/eval.lisp
 msgid "Bad Eval-When situation list: ~S."
 msgstr ""
 
@@ -13328,7 +13328,7 @@ msgstr ""
 msgid "Define a compiler-macro for NAME."
 msgstr ""
 
-#: target:code/macros.lisp
+#: target:compiler/ir1tran.lisp target:code/macros.lisp
 msgid "Symbol macro name is not a symbol: ~S."
 msgstr ""
 
@@ -14703,6 +14703,785 @@ msgstr ""
 msgid "~S already deallocated!"
 msgstr ""
 
+#: target:compiler/knownfun.lisp
+msgid "optimize"
+msgstr ""
+
+#: target:compiler/knownfun.lisp
+msgid "~S is not a known function."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"If true, argument and result type information derived from compilation of\n"
+"  DEFUNs is used when compiling calls to that function.  If false, only\n"
+"  information from FTYPE proclamations will be used."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"If NIL, never trust dynamic-extent declarations.\n"
+"\n"
+"   If T, always trust dynamic-extent declarations.\n"
+"\n"
+"   Otherwise, the value of this variable must be a function of four\n"
+"   arguments SAFETY, SPACE, SPEED, and DEBUG.  If the function returns\n"
+"   true when called, dynamic-extent declarations are trusted,\n"
+"   otherwise they are not trusted."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "~@<Invalid name ~s in a dynamic-extent declaration.~@:>"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Can't find slot ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Found macro name ~S ~A."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Found special-form name ~S ~A."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Variable name is not a symbol: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Cannot dump objects of type ~S into fasl files."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Execution of a form compiled with errors:~% ~S"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "~S has already ended."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "~S already has successors."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "~S is already a predecessor of ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Misplaced declaration."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Illegal function call."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Attempt to reference undumpable constant."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Reading an ignored variable: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "(during macroexpansion)~%~A"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "~&dynamic-extent args ~:s in ~s~%"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Conflicting type declarations ~\n"
+"				   ~S and ~S for ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Can't declare type of Alien variable: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Declaring symbol-macro ~S special."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Ignored variable ~S is being declared special."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"Ignoring ~A declaration not at ~\n"
+"				   definition of local function:~%  ~S"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Unrecognizable function or variable name: ~S"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Ignoring free ignore declaration for ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Ignore declaration for unknown variable ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Declaring special variable ~S to be ignored."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "If true, processing of the VALUES declaration is inhibited."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "No type specified in FTYPE declaration: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Abbreviated type declaration: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Unrecognized declaration: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Malformed declaration specifier ~S in ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Declaring an alien variable to be special: ~S"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Declaring a constant to be special: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Lambda-variable is not a symbol: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Repeated variable in lambda-list: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Name of lambda-variable is a constant: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Multiple uses of keyword ~S in lambda-list."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Found a ~S when expecting a lambda expression:~%  ~S"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Expecting a lambda, but form begins with ~S:~%  ~S"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Lambda-list absent or not a list:~%  ~S"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "ir1-convert-lambda: called by: ~S, parent-form: ~S~%"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Arg specifier is too long: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Malformed keyword arg specifier: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Malformed &aux binding specifier: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"Progn Form*\n"
+"  Evaluates each Form in order, returing the values of the last form.  With "
+"no\n"
+"  forms, returns NIL."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"If Predicate Then [Else]\n"
+"  If Predicate evaluates to non-null, evaluate Then and returns its values,\n"
+"  otherwise evaluate Else and return its values.  Else defaults to NIL."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"Block Name Form*\n"
+"  Evaluate the Forms as a PROGN.  Within the lexical scope of the body,\n"
+"  (RETURN-FROM Name Value-Form) can be used to exit the form, returning the\n"
+"  result of Value-Form."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Block name is not a symbol: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"Return-From Block-Name Value-Form\n"
+"  Evaluate the Value-Form, returning its values from the lexically enclosing"
+"\n"
+"  BLOCK Block-Name.  This is constrained to be used only within the dynamic\n"
+"  extent of the BLOCK."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Return for unknown block: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Repeated tagbody tag: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Illegal tagbody statement: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"Tagbody {Tag | Statement}*\n"
+"  Define tags for used with GO.  The Statements are evaluated in order\n"
+"  (skipping Tags) and NIL is returned.  If a statement contains a GO to a\n"
+"  defined Tag within the lexical scope of the form, then control is transfer"
+"red\n"
+"  to the next statement following that tag.  A Tag must an integer or a\n"
+"  symbol.  A statement must be a list.  Other objects are illegal within "
+"the\n"
+"  body."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"Go Tag\n"
+"  Transfer control to the named Tag in the lexically enclosing TAGBODY.  "
+"This\n"
+"  is constrained to be used only within the dynamic extent of the TAGBODY."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Go to nonexistent tag: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Bad compiler-let binding spec: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"EVAL-WHEN (Situation*) Form*\n"
+"  Evaluate the Forms in the specified Situations, any of :COMPILE-TOPLEVEL,\n"
+"  :LOAD-TOPLEVEL, :EXECUTE."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Macro name ~S is not a symbol."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Local macro ~S has argument list that is not a list: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Local macro ~S is too short to be a legal definition."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"MACROLET ({(Name Lambda-List Form*)}*) Body-Form*\n"
+"  Evaluate the Body-Forms in an environment with the specified local macros\n"
+"  defined.  Name is the local macro name, Lambda-List is the DEFMACRO style\n"
+"  destructuring lambda list, and the Forms evaluate to the expansion."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"Compiler-Option-Bind ({(Name Value-Form)}*) Body-Form*\n"
+"   Establish the specified compiler options for the (lexical) duration of\n"
+"   the body.  The Value-Forms are evaluated at compile time."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Bogus binding for ~\n"
+"						     COMPILER-OPTION-BIND: ~S"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Lisp error during evaluation of info args:~%~A"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "%Primitive name is not a symbol: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Undefined primitive name: ~A."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"Primitive called with ~R argument~:P, ~\n"
+"	    		         but wants at least ~R."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Primitive called with ~R argument~:P, ~\n"
+"				 but wants exactly ~R."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "%Primitive used with a conditional template."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "%Primitive used with an unknown values template."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "QUOTE Value\n"
+"  Return Value without evaluating it."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"FUNCTION Name\n"
+"  Return the lexically apparent definition of the function Name.  Name may "
+"also\n"
+"  be a lambda."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Illegal function name: ~S"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Might be a symbol, so must call FDEFINITION at runtime."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"SYMBOL-MACROLET ({(Name Expansion)}*) Decl* Form*\n"
+"  Define the Names as symbol macros with the given Expansions.  Within the\n"
+"  body, references to a Name will effectively be replaced with the Expansion"
+"."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Malformed symbol macro binding: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"Attempt to bind a special or constant variable with SYMBOL-MACROLET: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Repeated name in SYMBOL-MACROLET: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Name is not a symbol: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "New proclaimed type ~S for ~S conflicts with old type ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Declared functional type is not a function type: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Malformed PROCLAIM spec: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Attempt to proclaim constant ~S to be special."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Malformed TYPE proclamation: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Malformed FUNCTION proclamation: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Malformed FTYPE proclamation: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Unrecognized proclamation: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Malformed ~S binding spec: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"LET ({(Var [Value]) | Var}*) Declaration* Form*\n"
+"  During evaluation of the Forms, Bind the Vars to the result of evaluating "
+"the\n"
+"  Value forms.  The variables are bound in parallel after all of the Values "
+"are\n"
+"  evaluated."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"LOCALLY Declaration* Form*\n"
+"   Sequentially evaluates a body of Form's in a lexical environment\n"
+"   where the given Declaration's have effect."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"LET* ({(Var [Value]) | Var}*) Declaration* Form*\n"
+"  Similar to LET, but the variables are bound sequentially, allowing each "
+"Value\n"
+"  form to reference any of the previous Vars."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Malformed ~S definition spec: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"FLET ({(Name Lambda-List Declaration* Form*)}*) Declaration* Body-Form*\n"
+"  Evaluate the Body-Forms with some local function definitions.   The "
+"bindings\n"
+"  do not enclose the definitions; any use of Name in the Forms will refer "
+"to\n"
+"  the lexically apparent function definition in the enclosing environment."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"LABELS ({(Name Lambda-List Declaration* Form*)}*) Declaration* Body-Form*\n"
+"  Evaluate the Body-Forms with some local function definitions.  The "
+"bindings\n"
+"  enclose the new definitions, so the defined functions can call themselves "
+"or\n"
+"  each other."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Type ~S in ~S declaration conflicts with enclosing assertion:~%   ~S"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"THE Type Form\n"
+"  Assert that Form evaluates to the specified type (which may be a VALUES\n"
+"  type.)"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"Truly-The Type Value\n"
+"  Like the THE special form, except that it believes whatever you tell it.  "
+"It\n"
+"  will never generate a type check, but will cause a warning if the compiler"
+"\n"
+"  can prove the assertion is wrong."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"SETQ {Var Value}*\n"
+"  Set the variables to the values.  If more than one pair is supplied, the\n"
+"  assignments are done sequentially.  If Var names a symbol macro, SETF the\n"
+"  expansion."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Odd number of args to SETQ: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Attempt to set constant ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Setting an ignored variable: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"Throw Tag Form\n"
+"  Do a non-local exit, return the values of Form from the CATCH whose tag\n"
+"  evaluates to the same thing as Tag."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"Catch Tag Form*\n"
+"  Evaluates Tag and instantiates it as a catcher while the body forms are\n"
+"  evaluated in an implicit PROGN.  If a THROW is done to Tag within the "
+"dynamic\n"
+"  scope of the body, then control will be transferred to the end of the "
+"body\n"
+"  and the thrown values will be returned."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"Unwind-Protect Protected Cleanup*\n"
+"  Evaluate the form Protected, returning its values.  The cleanup forms are\n"
+"  evaluated whenever the dynamic scope of the Protected form is exited "
+"(either\n"
+"  due to normal completion or a non-local exit such as THROW)."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"MULTIPLE-VALUE-CALL Function Values-Form*\n"
+"  Call Function, passing all the values of each Values-Form as arguments,\n"
+"  values from the first Values-Form making up the first argument, etc."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid ""
+"MULTIPLE-VALUE-PROG1 Values-Form Form*\n"
+"  Evaluate Values-Form and then the Forms, but return all the values of\n"
+"  Values-Form."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Macro name is not a symbol: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Defining ~S to be a macro when it was ~(~A~) to be a function."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Attempt to redefine special form ~S as a macro."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "~&; Converted ~S.~%"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Attempt to define a compiler-macro for special form ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Constant name is not a symbol: ~S."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Can't change T."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Nihil ex nihil (Can't change NIL)."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Can't change the value of keywords."
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Redefining constant ~S as:~%  ~S"
+msgstr ""
+
+#: target:compiler/ir1tran.lisp
+msgid "Redefining ~(~A~) ~S to be a constant."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid "Return the TLF-NUMBER and FORM-NUMBER encoded as fixnum."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid "Return the tlf-number and form-number from an encoded FIXNUM."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid "Return a source-location for the call site."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid "Deleting unused function~:[.~;~:*~%  ~S~]"
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid "Block is already deleted."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid "Variable ~S defined but never used."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid "Deleting unreachable code."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid ""
+"If CONT is a call to FUN with NUM-ARGS args, change those arguments\n"
+"   to feed directly to the continuation-dest of CONT, which must be\n"
+"   a combination."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid ""
+"An upper limit on the number of inline function calls that will be expanded\n"
+"   in any given code object (single function or block compilation.)"
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid ""
+"*Inline-Expansion-Limit* (~D) exceeded, ~\n"
+"			     probably trying to~%  ~\n"
+"			     inline a recursive function."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid "The value for *Print-Level* when printing compiler error messages."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid "The value for *Print-Length* when printing compiler error messages."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid "The value for *Print-Lines* when printing compiler error messages."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid ""
+"The maximum number of enclosing non-original source forms (i.e. from\n"
+"  macroexpansion) that we print in full.  For additional enclosing forms, "
+"we\n"
+"  print only the CAR."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid ""
+"DEF-SOURCE-CONTEXT Name Lambda-List Form*\n"
+"   This macro defines how to extract an abbreviated source context from the\n"
+"   Named form when it appears in the compiler input.  Lambda-List is a "
+"DEFMACRO\n"
+"   style lambda-list used to parse the arguments.  The Body should return a\n"
+"   list of subforms suitable for a \"~{~S ~}\" format string."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid "Compiler-Error with no bailout."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid ""
+"This is the function called by the compiler to specially note a\n"
+"warning, comment, or error. The function must take five arguments: the\n"
+"severity, a string describing the nature of the notification, a string\n"
+"for context, the file namestring, and the file position. The severity\n"
+"is one of :note, :warning, or :error. Except for the severity, all of\n"
+"these can be NIL if unavailable or inapplicable."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid "[Last message occurs ~D times]"
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid "~2&File: ~A"
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid ""
+"If non-null, then an upper limit on the number of unknown function or type\n"
+"  warnings that the compiler will print for any given name in a single\n"
+"  compilation.  This prevents excessive amounts of output when there really "
+"is\n"
+"  a missing definition (as opposed to a typo in the use.)"
+msgstr ""
+
+#: target:compiler/ir1opt.lisp
+msgid "New inferred type ~S conflicts with old type:~\n"
+"		~%  ~S~%*** Bug?"
+msgstr ""
+
+#: target:compiler/ir1opt.lisp
+msgid "The return value of ~A should not be discarded."
+msgstr ""
+
+#: target:compiler/ir1opt.lisp
+msgid ""
+"This function is used to throw out of an IR1 transform, aborting this\n"
+"  attempt to transform the call, but admitting the possibility that this or\n"
+"  some other transform will later suceed.  If arguments are supplied, they "
+"are\n"
+"  format arguments for an efficiency note."
+msgstr ""
+
+#: target:compiler/ir1opt.lisp
+msgid ""
+"This function is used to throw out of an IR1 transform and force a normal\n"
+"  call to the function at run time.  No further optimizations will be\n"
+"  attempted."
+msgstr ""
+
+#: target:compiler/ir1opt.lisp
+msgid ""
+"This function is used to throw out of an IR1 transform, and delay the\n"
+"  transform on the node until later. The reasons specifies when the transfor"
+"m\n"
+"  will be later retried. The :optimize reason causes the transform to be\n"
+"  delayed until after the current IR1 optimization pass. The :constraint\n"
+"  reason causes the transform to be delayed until after constraint\n"
+"  propagation."
+msgstr ""
+
+#: target:compiler/ir1opt.lisp
+msgid ""
+"MULTIPLE-VALUE-CALL with ~R values when the function expects ~\n"
+"	     at least ~R."
+msgstr ""
+
+#: target:compiler/ir1opt.lisp
+msgid ""
+"MULTIPLE-VALUE-CALL with ~R values when the function expects ~\n"
+"	     at most ~R."
+msgstr ""
+
+#: target:compiler/ir1final.lisp
+msgid "Unable to ~A because:~%~6T~?"
+msgstr ""
+
+#: target:compiler/ir1final.lisp
+msgid ""
+"Unable to ~A due to type uncertainty:~@\n"
+"	                      ~{~6T~?~^~&~}"
+msgstr ""
+
+#: target:compiler/ir1final.lisp
+msgid ""
+"The result type from previous declaration:~%  ~S~@\n"
+"				  conflicts with the result type:~%  ~S"
+msgstr ""
+
 #: target:compiler/array-tran.lisp
 msgid "Element-Type is not constant."
 msgstr ""
@@ -14866,9 +15645,54 @@ msgstr ""
 msgid "Square"
 msgstr ""
 
+#: target:compiler/locall.lisp
+msgid ""
+"Couldn't inline expand because expansion ~\n"
+"				   calls this let-converted local function:~\n"
+"				   ~%  ~S"
+msgstr ""
+
+#: target:compiler/locall.lisp
+msgid "Function called with ~R argument~:P, but wants exactly ~R."
+msgstr ""
+
+#: target:compiler/locall.lisp
+msgid "Function called with ~R argument~:P, but wants at least ~R."
+msgstr ""
+
+#: target:compiler/locall.lisp
+msgid "Function called with ~R argument~:P, but wants at most ~R."
+msgstr ""
+
+#: target:compiler/locall.lisp
+msgid "Can't local-call functions with &MORE args."
+msgstr ""
+
+#: target:compiler/locall.lisp
+msgid ""
+"Function called with odd number of ~\n"
+"	  		     arguments in keyword portion."
+msgstr ""
+
+#: target:compiler/locall.lisp
+msgid "Non-constant keyword in keyword call."
+msgstr ""
+
+#: target:compiler/locall.lisp
+msgid "non-constant :ALLOW-OTHER-KEYS value"
+msgstr ""
+
+#: target:compiler/locall.lisp
+msgid "Function called with unknown argument keyword ~S."
+msgstr ""
+
 #: target:compiler/constraint.lisp
 msgid "*** Unreachable code in constraint ~\n"
 "			  propagation...  Bug?"
+msgstr ""
+
+#: target:compiler/life.lisp
+msgid "More operand ~S used more than once in its VOP."
 msgstr ""
 
 #: target:compiler/debug-dump.lisp
@@ -14964,6 +15788,18 @@ msgstr ""
 msgid "No unique move-arg-vop for moves in SC ~S."
 msgstr ""
 
+#: target:compiler/ltv.lisp
+msgid ""
+"Arrange for FORM to be evaluated at load-time and use the value produced\n"
+"   as if it were a constant.  If READ-ONLY-P is non-NIL, then the resultant\n"
+"   object is guaranteed to never be modified, so it can be put in read-only\n"
+"   storage."
+msgstr ""
+
+#: target:compiler/ltv.lisp
+msgid "(during EVAL of LOAD-TIME-VALUE)~%~A"
+msgstr ""
+
 #: target:compiler/gtn.lisp
 msgid ""
 "Return value count mismatch prevents known return ~\n"
@@ -14975,6 +15811,93 @@ msgstr ""
 msgid ""
 "Return type not fixed values, so can't use known return ~\n"
 "		      convention:~%  ~S"
+msgstr ""
+
+#: target:compiler/ltn.lisp
+msgid ""
+"Unable to check type assertion in unknown-values ~\n"
+"	                context:~% ~S"
+msgstr ""
+
+#: target:compiler/represent.lisp target:compiler/ir2tran.lisp
+#: target:compiler/ltn.lisp
+msgid "Neither CONT nor TN supplied."
+msgstr ""
+
+#: target:compiler/ltn.lisp
+msgid "~S has :MORE results with :TRANSLATE."
+msgstr ""
+
+#: target:compiler/ltn.lisp
+msgid ""
+"This is the maximum number of possible optimization alternatives will be\n"
+"  mentioned in a particular efficiency note.  NIL means no limit."
+msgstr ""
+
+#: target:compiler/ltn.lisp
+msgid ""
+"This is the minumum cost difference between the chosen implementation and\n"
+"  the next alternative that justifies an efficiency note."
+msgstr ""
+
+#: target:compiler/ltn.lisp
+msgid "This shouldn't happen!  Bug?"
+msgstr ""
+
+#: target:compiler/ltn.lisp
+msgid "Template guard failed."
+msgstr ""
+
+#: target:compiler/ltn.lisp
+msgid "Template is not safe, yet we were counting on it."
+msgstr ""
+
+#: target:compiler/ltn.lisp
+msgid "Argument types invalid."
+msgstr ""
+
+#: target:compiler/ltn.lisp
+msgid "Argument primitive types:~%  ~S"
+msgstr ""
+
+#: target:compiler/ltn.lisp
+msgid "Argument type assertions:~%  ~S"
+msgstr ""
+
+#: target:compiler/ltn.lisp
+msgid "Conditional in a non-conditional context."
+msgstr ""
+
+#: target:compiler/ltn.lisp
+msgid "Result types invalid."
+msgstr ""
+
+#: target:compiler/ltn.lisp
+msgid "Unable to do ~A (cost ~D) because:"
+msgstr ""
+
+#: target:compiler/ltn.lisp
+msgid "Can't trust output type assertion under safe ~\n"
+"		       policy."
+msgstr ""
+
+#: target:compiler/ltn.lisp
+msgid "Recursive known function definition."
+msgstr ""
+
+#: target:compiler/ir2tran.lisp
+msgid ""
+"Always perform stack clearing if non-NIL, independent of the\n"
+"compilation policy"
+msgstr ""
+
+#: target:compiler/ir2tran.lisp
+msgid ""
+"If non-NIL and the compilation policy allows, stack clearing is enabled."
+msgstr ""
+
+#: target:compiler/ir2tran.lisp
+msgid "~@<~2I~_~S ~_not found in ~_~S~:>"
 msgstr ""
 
 #: target:compiler/codegen.lisp

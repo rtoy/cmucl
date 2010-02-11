@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.87.14.1 2010/02/08 17:15:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.87.14.2 2010/02/11 01:33:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -196,7 +196,7 @@
 		     (not (eq rtype *empty-type*)))
 	    (let ((*compiler-error-context* node))
 	      (compiler-warning
-	       "New inferred type ~S conflicts with old type:~
+	       _"New inferred type ~S conflicts with old type:~
 		~%  ~S~%*** Bug?"
 	       (type-specifier rtype) (type-specifier node-type))))
 	  (setf (node-derived-type node) int)
@@ -788,7 +788,7 @@
 	   (let ((unused-result (funcall fun node)))
 	     (when unused-result
 	       (let ((*compiler-error-context* node))
-		 (compiler-warning "The return value of ~A should not be discarded."
+		 (compiler-warning _"The return value of ~A should not be discarded."
 				   (continuation-function-name (basic-combination-fun node))))))))
        
        (let ((fun (function-info-destroyed-constant-args kind)))
@@ -1116,7 +1116,7 @@
 ;;;    Just throw the severity and args...
 ;;;
 (defun give-up (&rest args)
-  "This function is used to throw out of an IR1 transform, aborting this
+  _N"This function is used to throw out of an IR1 transform, aborting this
   attempt to transform the call, but admitting the possibility that this or
   some other transform will later suceed.  If arguments are supplied, they are
   format arguments for an efficiency note."
@@ -1124,7 +1124,7 @@
   (throw 'give-up (values :failure args)))
 ;;;
 (defun abort-transform (&rest args)
-  "This function is used to throw out of an IR1 transform and force a normal
+  _N"This function is used to throw out of an IR1 transform and force a normal
   call to the function at run time.  No further optimizations will be
   attempted."
   (throw 'give-up (values :aborted args)))
@@ -1134,7 +1134,7 @@
 ;;; delay-transform  --  Interface
 ;;;
 (defun delay-transform (node &rest reasons)
-  "This function is used to throw out of an IR1 transform, and delay the
+  _N"This function is used to throw out of an IR1 transform, and delay the
   transform on the node until later. The reasons specifies when the transform
   will be later retried. The :optimize reason causes the transform to be
   delayed until after the current IR1 optimization pass. The :constraint
@@ -1654,14 +1654,14 @@
 	(when total-nvals
 	  (when (and min (< total-nvals min))
 	    (compiler-warning
-	     "MULTIPLE-VALUE-CALL with ~R values when the function expects ~
+	     _"MULTIPLE-VALUE-CALL with ~R values when the function expects ~
 	     at least ~R."
 	     total-nvals min)
 	    (setf (basic-combination-kind node) :error)
 	    (return-from ir1-optimize-mv-call))
 	  (when (and max (> total-nvals max))
 	    (compiler-warning
-	     "MULTIPLE-VALUE-CALL with ~R values when the function expects ~
+	     _"MULTIPLE-VALUE-CALL with ~R values when the function expects ~
 	     at most ~R."
 	     total-nvals max)
 	    (setf (basic-combination-kind node) :error)

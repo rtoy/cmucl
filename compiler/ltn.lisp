@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.43.36.1 2010/02/08 17:15:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.43.36.2 2010/02/11 01:33:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -275,7 +275,7 @@
 	   (*compiler-error-context* dest))
       (when (and (policy-safe-p policy)
 		 (policy dest (>= safety brevity)))
-	(compiler-note "Unable to check type assertion in unknown-values ~
+	(compiler-note _"Unable to check type assertion in unknown-values ~
 	                context:~% ~S"
 		       (continuation-asserted-type cont))))
     (setf (continuation-%type-check cont) :deleted))
@@ -600,7 +600,7 @@
 		(and (eq (tn-kind tn) :constant)
 		     (funcall (second restr) (tn-value tn))))
 	       (t
-		(error "Neither CONT nor TN supplied.")))))))
+		(error _"Neither CONT nor TN supplied.")))))))
 
   
 ;;; Template-Args-OK  --  Internal
@@ -649,7 +649,7 @@
   (declare (type template template)
 	   (type ctype result-type))
   (when (template-more-results-type template)
-    (error "~S has :MORE results with :TRANSLATE." (template-name template)))
+    (error _"~S has :MORE results with :TRANSLATE." (template-name template)))
   (let ((types (template-result-types template)))
     (cond
      ((values-type-p result-type)
@@ -794,12 +794,12 @@
 
 
 (defvar *efficiency-note-limit* 2
-  "This is the maximum number of possible optimization alternatives will be
+  _N"This is the maximum number of possible optimization alternatives will be
   mentioned in a particular efficiency note.  NIL means no limit.")
 (declaim (type (or index null) *efficiency-note-limit*))
 
 (defvar *efficiency-note-cost-threshold* 5
-  "This is the minumum cost difference between the chosen implementation and
+  _N"This is the minumum cost difference between the chosen implementation and
   the next alternative that justifies an efficiency note.")
 (declaim (type index *efficiency-note-cost-threshold*))
 
@@ -814,24 +814,24 @@
 (defun strange-template-failure (template call policy frob)
   (declare (type template template) (type combination call)
 	   (type policies policy) (type function frob))
-  (funcall frob "This shouldn't happen!  Bug?")
+  (funcall frob _"This shouldn't happen!  Bug?")
   (multiple-value-bind (win why)
 		       (is-ok-template-use template call
 					   (policy-safe-p policy))
     (assert (not win))
     (ecase why
       (:guard
-       (funcall frob "Template guard failed."))
+       (funcall frob _"Template guard failed."))
       (:arg-check
-       (funcall frob "Template is not safe, yet we were counting on it."))
+       (funcall frob _"Template is not safe, yet we were counting on it."))
       (:arg-types
-       (funcall frob "Argument types invalid.")
-       (funcall frob "Argument primitive types:~%  ~S"
+       (funcall frob _"Argument types invalid.")
+       (funcall frob _"Argument primitive types:~%  ~S"
 		(mapcar #'(lambda (x)
 			    (primitive-type-name
 			     (continuation-ptype x)))
 			(combination-args call)))
-       (funcall frob "Argument type assertions:~%  ~S"
+       (funcall frob _"Argument type assertions:~%  ~S"
 		(mapcar #'(lambda (x)
 			    (if (atom x)
 				x
@@ -841,9 +841,9 @@
 				  (:constant `(:constant ,(third x))))))
 			(template-arg-types template))))
       (:conditional
-       (funcall frob "Conditional in a non-conditional context."))
+       (funcall frob _"Conditional in a non-conditional context."))
       (:result-types
-       (funcall frob "Result types invalid.")))))
+       (funcall frob _"Result types invalid.")))))
 
 
 ;;; Note-Rejected-Templates  --  Internal
@@ -909,7 +909,7 @@
 		   (valid (valid-function-use call type))
 		   (strict-valid (valid-function-use call type
 						     :strict-result t)))
-	      (frob "Unable to do ~A (cost ~D) because:"
+	      (frob _"Unable to do ~A (cost ~D) because:"
 		    (or (template-note loser) (template-name loser))
 		    (template-cost loser))
 	      (cond
@@ -921,7 +921,7 @@
 						 :warning-function #'frob))))
 	       (t
 		(assert (policy-safe-p policy))
-		(frob "Can't trust output type assertion under safe ~
+		(frob _"Can't trust output type assertion under safe ~
 		       policy.")))
 	      (count 1))))
 
@@ -1010,7 +1010,7 @@
 			      (ir1-attributep (function-info-attributes info)
 					      recursive)))))
 	  (let ((*compiler-error-context* call))
-	    (compiler-warning "Recursive known function definition.")))
+	    (compiler-warning _"Recursive known function definition.")))
 	(ltn-default-call call policy)
 	(return-from ltn-analyze-known-call (undefined-value)))
       (setf (basic-combination-info call) template)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.75.24.1 2010/02/08 17:15:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.75.24.2 2010/02/11 01:33:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,12 +27,12 @@
 
 #+(or sparc ppc)
 (defvar *always-clear-stack* nil
-  "Always perform stack clearing if non-NIL, independent of the
+  _N"Always perform stack clearing if non-NIL, independent of the
 compilation policy")
 
 #+(or sparc ppc)
 (defvar *enable-stack-clearing* t
-  "If non-NIL and the compilation policy allows, stack clearing is enabled.")
+  _N"If non-NIL and the compilation policy allows, stack clearing is enabled.")
 
 (defun ir2-stack-allocate (node)
   (declare (type node node))
@@ -110,7 +110,7 @@ compilation policy")
 	(nlx-info
 	 (assert (eq env (block-environment (nlx-info-target thing))))
 	 (ir2-nlx-info-home (nlx-info-info thing))))
-      (error "~@<~2I~_~S ~_not found in ~_~S~:>" thing env)))
+      (error _"~@<~2I~_~S ~_not found in ~_~S~:>" thing env)))
 
 ;;; Constant-TN  --  Internal
 ;;;
