@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/gtn.lisp,v 1.17.54.1 2010/02/08 17:15:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/gtn.lisp,v 1.17.54.2 2010/02/11 00:04:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,7 +160,7 @@
       (dolist (fun funs
 		   (let ((*compiler-error-context* (lambda-bind (first funs))))
 		     (compiler-note
-		      "Return value count mismatch prevents known return ~
+		      _"Return value count mismatch prevents known return ~
 		       from these functions:~
 		       ~{~%  ~A~}"
 		      (remove nil (mapcar #'leaf-name funs)))))
@@ -173,7 +173,7 @@
 		(when (eq count :unknown)
 		  (let ((*compiler-error-context* (lambda-bind fun)))
 		    (compiler-note
-		     "Return type not fixed values, so can't use known return ~
+		     _"Return type not fixed values, so can't use known return ~
 		      convention:~%  ~S"
 		     (type-specifier rtype)))
 		  (return)))))))))

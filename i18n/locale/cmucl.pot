@@ -13202,6 +13202,105 @@ msgstr ""
 msgid ", but got ~D."
 msgstr ""
 
+#: target:compiler/globaldb.lisp
+msgid "Type not defined yet."
+msgstr ""
+
+#: target:compiler/globaldb.lisp
+msgid "~S is not a defined info class."
+msgstr ""
+
+#: target:compiler/globaldb.lisp
+msgid "~S is not a defined info type."
+msgstr ""
+
+#: target:compiler/globaldb.lisp
+msgid "Define-Info-Class Class\n"
+"  Define a new class of global information."
+msgstr ""
+
+#: target:compiler/globaldb.lisp
+msgid "Out of INFO type numbers!"
+msgstr ""
+
+#: target:compiler/globaldb.lisp
+msgid ""
+"Define-Info-Type Class Type default Type-Spec\n"
+"  Define a new type of global information for Class.  Type is the symbol "
+"name\n"
+"  of the type, Default is the value for that type when it hasn't been set, "
+"and\n"
+"  Type-Spec is a type-specifier which values of the type must satisfy.  The\n"
+"  default expression is evaluated each time the information is needed, with\n"
+"  Name bound to the name for which the information is being looked up.  If "
+"the\n"
+"  default evaluates to something with the second value true, then the "
+"second\n"
+"  value of Info will also be true."
+msgstr ""
+
+#: target:compiler/globaldb.lisp
+msgid "Redefine it."
+msgstr ""
+
+#: target:compiler/globaldb.lisp
+msgid "Changing type number for ~A ~A."
+msgstr ""
+
+#: target:compiler/globaldb.lisp
+msgid "Go for it."
+msgstr ""
+
+#: target:compiler/globaldb.lisp
+msgid "Reusing type number for ~A ~A."
+msgstr ""
+
+#: target:compiler/globaldb.lisp
+msgid ""
+"Return the information of the specified Type and Class for Name.\n"
+"   The second value is true if there is any such information recorded.  If\n"
+"   there is no information, the first value is the default and the second "
+"value\n"
+"   is NIL."
+msgstr ""
+
+#: target:compiler/globaldb.lisp
+msgid "Set the global information for Name."
+msgstr ""
+
+#: target:compiler/globaldb.lisp
+msgid ""
+"DO-INFO (Env &Key Name Class Type Value) Form*\n"
+"  Iterate over all the values stored in the Info-Env Env.  Name is bound to\n"
+"  the entry's name, Class and Type are bound to the class and type\n"
+"  (represented as strings), and Value is bound to the entry's value."
+msgstr ""
+
+#: target:compiler/globaldb.lisp
+msgid ""
+"Return a new compact info environment that holds the same information as\n"
+"  Env."
+msgstr ""
+
+#: target:compiler/knownfun.lisp target:compiler/globaldb.lisp
+msgid "No info environment?"
+msgstr ""
+
+#: target:compiler/knownfun.lisp target:compiler/globaldb.lisp
+msgid "Cannot modify this environment: ~S."
+msgstr ""
+
+#: target:compiler/globaldb.lisp
+msgid "0 is not a legal INFO name."
+msgstr ""
+
+#: target:compiler/globaldb.lisp
+msgid ""
+"Clear the information of the specified Type and Class for Name in the\n"
+"  current environment, allowing any inherited info to become visible.  We\n"
+"  return true if there was any info."
+msgstr ""
+
 #: target:code/macros.lisp
 msgid ""
 "This function is to parse the declarations and doc-string out of the body "
@@ -14662,6 +14761,111 @@ msgid ""
 "	              array-has-fill-pointer-p at runtime."
 msgstr ""
 
+#: target:compiler/float-tran.lisp
+msgid "use inline fixnum operations"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "use inline (unsigned-byte 32) operations"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "use inline (signed-byte 32) operations"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Shouldn't happen"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Can't open-code float to rational comparison."
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "~S doesn't have a precise float representation."
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid ""
+"Unable to avoid inline argument range check~@\n"
+"                      because the argument range (~s) was not within 2^~D"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid ""
+"Unable to avoid inline argument range check~@\n"
+"                   because the argument range (~s) was not within 2^~D"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Float zero bound ~s not correctly canonicalised?"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Computes fl(a+b) and err(a+b), assuming |a| >= |b|"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Computes fl(a+b) and err(a+b)"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Add the double-double A0,A1 to the double-double B0,B1"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Compute fl(a-b) and err(a-b), assuming |a| >= |b|"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Compute fl(a-b) and err(a-b)"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Subtract the double-double B0,B1 from A0,A1"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Compute double-double = double - double-double"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Subtract the double B from the double-double A0,A1"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid ""
+"Split the double-float number a into a-hi and a-lo such that a =\n"
+"  a-hi + a-lo and a-hi contains the upper 26 significant bits of a and\n"
+"  a-lo contains the lower 26 bits."
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Compute fl(a*b) and err(a*b)"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid ""
+"Compute fl(a*a) and err(a*b).  This is a more efficient\n"
+"  implementation of two-prod"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Multiply the double-double A0,A1 with B0,B1"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Add the double-double A0,A1 to the double B"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Divide the double-double A0,A1 by B0,B1"
+msgstr ""
+
+#: target:compiler/float-tran.lisp
+msgid "Square"
+msgstr ""
+
 #: target:compiler/constraint.lisp
 msgid "*** Unreachable code in constraint ~\n"
 "			  propagation...  Bug?"
@@ -14758,6 +14962,19 @@ msgstr ""
 
 #: target:compiler/aliencomp.lisp
 msgid "No unique move-arg-vop for moves in SC ~S."
+msgstr ""
+
+#: target:compiler/gtn.lisp
+msgid ""
+"Return value count mismatch prevents known return ~\n"
+"		       from these functions:~\n"
+"		       ~{~%  ~A~}"
+msgstr ""
+
+#: target:compiler/gtn.lisp
+msgid ""
+"Return type not fixed values, so can't use known return ~\n"
+"		      convention:~%  ~S"
 msgstr ""
 
 #: target:compiler/codegen.lisp

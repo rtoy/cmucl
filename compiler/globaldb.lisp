@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.53.22.1 2010/02/08 16:28:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.53.22.2 2010/02/11 00:04:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -106,7 +106,7 @@
   (type nil :type t)
   ;;
   ;; Function called when there is no information of this type.
-  (default #'(lambda () (error "Type not defined yet.")) :type function))
+  (default #'(lambda () (error _"Type not defined yet.")) :type function))
 
 
 ;;; A hashtable from class names to Class-Info structures.  This data structure
@@ -136,12 +136,12 @@
 (defun class-info-or-lose (class)
   (declare (string class) (values class-info))
   (or (gethash class *info-classes*)
-      (error "~S is not a defined info class." class)))
+      (error _"~S is not a defined info class." class)))
 ;;;
 (defun type-info-or-lose (class type)
   (declare (string class type) (values type-info))
   (or (find-type-info type (class-info-or-lose class))
-      (error "~S is not a defined info type." type)))
+      (error _"~S is not a defined info type." type)))
 
 
 ;;; Define-Info-Class  --  Public
@@ -152,7 +152,7 @@
 ;;; running compiler.
 ;;;
 (defmacro define-info-class (class)
-  "Define-Info-Class Class
+  _N"Define-Info-Class Class
   Define a new class of global information."
   `(progn
      (eval-when (compile load eval)
@@ -177,7 +177,7 @@
 ;;;
 (defun find-unused-type-number ()
   (or (position nil *type-numbers*)
-      (error "Out of INFO type numbers!")))
+      (error _"Out of INFO type numbers!")))
 
 
 ;;; Define-Info-Type  --  Public
@@ -187,7 +187,7 @@
 ;;; %DEFINE-INFO-TYPE must use the same type number.
 ;;;
 (defmacro define-info-type (class type type-spec &optional default)
-  "Define-Info-Type Class Type default Type-Spec
+  _N"Define-Info-Type Class Type default Type-Spec
   Define a new type of global information for Class.  Type is the symbol name
   of the type, Default is the value for that type when it hasn't been set, and
   Type-Spec is a type-specifier which values of the type must satisfy.  The
@@ -228,7 +228,7 @@
     (cond (old
 	   (setf (type-info-type res) type-spec)
 	   (unless (= (type-info-number res) number)
-	     (cerror "Redefine it." "Changing type number for ~A ~A."
+	     (cerror _"Redefine it." _"Changing type number for ~A ~A."
 		     class type)
 	     (setf (type-info-number res) number)))
 	  (t
@@ -236,7 +236,7 @@
 
     (unless (eq num-old res)
       (when num-old
-	(cerror "Go for it." "Reusing type number for ~A ~A."
+	(cerror _"Go for it." _"Reusing type number for ~A ~A."
 		(class-info-name (type-info-class num-old))
 		(type-info-name num-old)))
       (setf (svref *type-numbers* number) res)))
@@ -317,7 +317,7 @@
 ;;; type is constant.
 ;;;
 (defmacro info (class type name &optional env-list)
-  "Return the information of the specified Type and Class for Name.
+  _N"Return the information of the specified Type and Class for Name.
    The second value is true if there is any such information recorded.  If
    there is no information, the first value is the default and the second value
    is NIL."
@@ -331,7 +331,7 @@
 				,@(when env-list `(,env-list))))))
 ;;;
 (define-setf-expander info (class type name &optional env-list)
-  "Set the global information for Name."
+  _N"Set the global information for Name."
   (let* ((n-name (gensym))
 	 (n-env-list (if env-list (gensym)))
 	 (n-value (gensym))
@@ -355,7 +355,7 @@
 (defmacro do-info ((env &key (name (gensym)) (class (gensym)) (type (gensym))
 			(type-number (gensym)) (value (gensym)) known-volatile)
 		   &body body)
-  "DO-INFO (Env &Key Name Class Type Value) Form*
+  _N"DO-INFO (Env &Key Name Class Type Value) Form*
   Iterate over all the values stored in the Info-Env Env.  Name is bound to
   the entry's name, Class and Type are bound to the class and type
   (represented as strings), and Value is bound to the entry's value."
@@ -649,7 +649,7 @@
 ;;; randomizing with the original hash function.
 ;;; 
 (defun compact-info-environment (env &key (name (info-env-name env)))
-  "Return a new compact info environment that holds the same information as
+  _N"Return a new compact info environment that holds the same information as
   Env."
   (let ((name-count 0)
 	(prev-name 0)
@@ -812,9 +812,9 @@
 (defun get-write-info-env (&optional (env-list *info-environment*))
   (let ((env (car env-list)))
     (unless env
-      (error "No info environment?"))
+      (error _"No info environment?"))
     (unless (typep env 'volatile-info-env)
-      (error "Cannot modify this environment: ~S." env))
+      (error _"Cannot modify this environment: ~S." env))
     (the volatile-info-env env)))
 
 
@@ -834,7 +834,7 @@
   (declare (type type-number type) (type volatile-info-env env)
 	   (inline assoc))
   (when (eql name 0)
-    (error "0 is not a legal INFO name."))
+    (error _"0 is not a legal INFO name."))
   ;; We don't enter the value in the cache because we don't know that this
   ;; info-environment is part of *cached-info-environment*.
   (info-cache-enter name type nil :empty)
@@ -889,7 +889,7 @@
 ;;; CLEAR-INFO  --  Public
 ;;;
 (defmacro clear-info (class type name)
-  "Clear the information of the specified Type and Class for Name in the
+  _N"Clear the information of the specified Type and Class for Name in the
   current environment, allowing any inherited info to become visible.  We
   return true if there was any info."
   (let* ((class (symbol-name class))
