@@ -21,6 +21,43 @@ msgid ""
 "  Use (INTL:TEXTDOMAIN \"whatever\") in each source file to set this."
 msgstr ""
 
+#: target:pcl/cpl.lisp target:pcl/dfun.lisp target:pcl/vector.lisp
+#: target:pcl/boot.lisp target:pcl/cache.lisp target:pcl/fngen.lisp
+#: target:pcl/defs.lisp target:pcl/info.lisp pcl:defsys.lisp
+#: target:compiler/byte-comp.lisp target:compiler/eval-comp.lisp
+#: target:compiler/generic/new-genesis.lisp target:compiler/generic/core.lisp
+#: target:compiler/dump.lisp target:compiler/dyncount.lisp
+#: target:compiler/xref.lisp target:compiler/x86/c-call.lisp
+#: target:compiler/x86/insts.lisp target:compiler/srctran.lisp
+#: target:compiler/typetran.lisp target:compiler/ir1util.lisp
+#: target:compiler/main.lisp target:compiler/knownfun.lisp
+#: target:compiler/new-assem.lisp target:compiler/disassem.lisp
+#: target:compiler/meta-vmdef.lisp target:compiler/vop.lisp
+#: target:compiler/ctype.lisp target:compiler/node.lisp
+#: target:compiler/sset.lisp target:compiler/backend.lisp
+#: target:compiler/generic/vm-macs.lisp target:compiler/macros.lisp
+#: target:code/intl.lisp target:compiler/globaldb.lisp
+#: target:code/defstruct.lisp target:code/multi-proc.lisp
+#: target:code/remote.lisp target:code/wire.lisp target:code/internet.lisp
+#: target:code/loop.lisp target:code/run-program.lisp
+#: target:code/parse-time.lisp target:code/profile.lisp target:code/ntrace.lisp
+#: target:code/rand-mt19937.lisp target:code/debug.lisp
+#: target:code/debug-int.lisp target:code/debug-info.lisp target:code/eval.lisp
+#: target:code/filesys.lisp target:code/pathname.lisp
+#: target:code/fd-stream.lisp target:code/extfmts.lisp
+#: target:code/serve-event.lisp target:code/reader.lisp
+#: target:code/package.lisp target:code/format.lisp target:code/pprint.lisp
+#: target:code/stream.lisp target:code/room.lisp target:code/dfixnum.lisp
+#: target:code/commandline.lisp target:code/unidata.lisp
+#: target:compiler/proclaim.lisp target:code/unix.lisp
+#: target:code/hash-new.lisp target:code/byte-interp.lisp
+#: target:code/c-call.lisp target:code/alieneval.lisp target:code/type.lisp
+#: target:code/class.lisp target:code/typedefs.lisp target:code/error.lisp
+#: target:code/fwrappers.lisp target:assembly/assemfile.lisp
+#: target:code/struct.lisp
+msgid "Class not yet defined: ~S"
+msgstr ""
+
 #: target:code/intl.lisp
 msgid "Encountered illegal token: ="
 msgstr ""
@@ -17386,6 +17423,51 @@ msgid ""
 "	              array-has-fill-pointer-p at runtime."
 msgstr ""
 
+#: target:compiler/srctran.lisp target:compiler/seqtran.lisp
+msgid "open code"
+msgstr ""
+
+#: target:compiler/seqtran.lisp
+msgid "convert to EQ test"
+msgstr ""
+
+#: target:compiler/seqtran.lisp
+msgid "Item might be a number"
+msgstr ""
+
+#: target:compiler/seqtran.lisp
+msgid "inline expand"
+msgstr ""
+
+#: target:compiler/seqtran.lisp
+msgid "Specified output type ~S is not a sequence type"
+msgstr ""
+
+#: target:compiler/typetran.lisp
+msgid ""
+"Define-Type-Predicate Name Type\n"
+"  Establish an association between the type predicate Name and the\n"
+"  corresponding Type.  This causes the type predicate to be recognized for\n"
+"  purposes of optimization."
+msgstr ""
+
+#: target:compiler/typetran.lisp
+msgid "Can't open-code test of non-constant type."
+msgstr ""
+
+#: target:compiler/typetran.lisp
+msgid "Can't open-code test of unknown type ~S."
+msgstr ""
+
+#: target:compiler/typetran.lisp
+msgid "Can't compile TYPEP of anonymous or undefined ~\n"
+"			class:~%  ~S"
+msgstr ""
+
+#: target:compiler/typetran.lisp
+msgid "Illegal type specifier for Typep: ~S."
+msgstr ""
+
 #: target:compiler/float-tran.lisp
 msgid "use inline fixnum operations"
 msgstr ""
@@ -17491,6 +17573,105 @@ msgstr ""
 msgid "Square"
 msgstr ""
 
+#: target:compiler/saptran.lisp
+msgid "FOREIGN-SYMBOL-ADDRESS flavor ~S is not :CODE or :DATA"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "Function doesn't have fixed argument count."
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "convert NTHCDR to CAxxR"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "Unknown bound type in make-interval!"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "This shouldn't happen!"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "convert to inline logical ops"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "BOOLE code is not a constant."
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "~S illegal control arg to BOOLE."
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "convert x*2^k to shift"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "convert division by 2^k to shift"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "convert remainder mod 2^k to LOGAND"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "fold identity operations"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "fold identity operation"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "convert (- 0 x) to negate"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "convert (* x 0) to 0."
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "fold zero arg"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "Unexpected types: ~s ~s~%"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "recode as multiplication or sqrt"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "convert to simpler equality predicate"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "Operands might not be the same type."
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "~s: too few args (~d), need at least ~d"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "~s: too many args (~d), wants at most ~d"
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid "Control string is not a constant."
+msgstr ""
+
+#: target:compiler/srctran.lisp
+msgid ""
+"When non-NIL, the compiler will generate code utilizing modular\n"
+"  arithmetic.  Set to NIL to disable this, if you don't want modular\n"
+"  arithmetic in some cases."
+msgstr ""
+
 #: target:compiler/locall.lisp
 msgid ""
 "Couldn't inline expand because expansion ~\n"
@@ -17535,6 +17716,16 @@ msgstr ""
 #: target:compiler/constraint.lisp
 msgid "*** Unreachable code in constraint ~\n"
 "			  propagation...  Bug?"
+msgstr ""
+
+#: target:compiler/tn.lisp
+msgid ""
+"Do-Packed-TNs (TN-Var Component [Result]) Declaration* Form*\n"
+"  Iterate over all packed TNs allocated in Component."
+msgstr ""
+
+#: target:compiler/tn.lisp
+msgid "SC ~S has no :unbounded :save-p NIL alternate SC."
 msgstr ""
 
 #: target:compiler/life.lisp
@@ -17744,6 +17935,89 @@ msgstr ""
 
 #: target:compiler/ir2tran.lisp
 msgid "~@<~2I~_~S ~_not found in ~_~S~:>"
+msgstr ""
+
+#: target:compiler/represent.lisp
+msgid "Couldn't find REF?"
+msgstr ""
+
+#: target:compiler/represent.lisp
+msgid ""
+"Representation selection flamed out for no obvious reason.~@\n"
+"	          Try again after recompiling the VM definition."
+msgstr ""
+
+#: target:compiler/represent.lisp
+msgid ""
+"~S is not valid as the ~:R ~:[result~;argument~] to the~@\n"
+"	        ~S VOP, since the TN's primitive type ~S allows SCs:~%  ~S~@\n"
+"		~:[which cannot be coerced or loaded into the allowed SCs:~\n"
+"		~%  ~S~;~*~]~:[~;~@\n"
+"		Current cost info inconsistent with that in effect at compile ~\n"
+"		time.  Recompile.~%Compilation order may be incorrect.~]"
+msgstr ""
+
+#: target:compiler/represent.lisp
+msgid ""
+"Representation selection flamed out for no ~\n"
+"		             obvious reason."
+msgstr ""
+
+#: target:compiler/represent.lisp
+msgid ""
+"~S is not valid as the ~:R ~:[result~;argument~] to VOP:~\n"
+"	        ~%  ~S~%Primitive type: ~S~@\n"
+"		SC restrictions:~%  ~S~@\n"
+"		~@[The primitive type disallows these loadable SCs:~%  ~S~%~]~\n"
+"		~@[No move VOPs are defined to coerce to these allowed SCs:~\n"
+"		~%  ~S~%~]~\n"
+"		~@[These move VOPs couldn't be used due to operand type ~\n"
+"		restrictions:~%  ~S~%~]~\n"
+"		~:[~;~@\n"
+"		Current cost info inconsistent with that in effect at compile ~\n"
+"		time.  Recompile.~%Compilation order may be incorrect.~]"
+msgstr ""
+
+#: target:compiler/represent.lisp
+msgid ""
+"No :MOVE-ARGUMENT VOP defined to move ~S (SC ~S) to ~\n"
+"          ~S (SC ~S.)"
+msgstr ""
+
+#: target:compiler/represent.lisp
+msgid ""
+"No move function defined to load SC ~S from constant ~\n"
+"	             SC ~S."
+msgstr ""
+
+#: target:compiler/represent.lisp
+msgid ""
+"No move function defined to load SC ~S from alternate ~\n"
+"	             SC ~S."
+msgstr ""
+
+#: target:compiler/represent.lisp
+msgid ""
+"No move function defined to save SC ~S to alternate ~\n"
+"	             SC ~S."
+msgstr ""
+
+#: target:compiler/represent.lisp
+msgid "<return value>"
+msgstr ""
+
+#: target:compiler/represent.lisp
+msgid "Couldn't fine op?  Bug!"
+msgstr ""
+
+#: target:compiler/represent.lisp
+msgid ""
+"Doing ~A (cost ~D)~:[~2*~; ~:[to~;from~] ~S~], for:~%~6T~\n"
+"	       The ~:R ~:[result~;argument~] of ~A."
+msgstr ""
+
+#: target:compiler/represent.lisp
+msgid "Doing ~A (cost ~D)~@[ from ~S~]~@[ to ~S~]."
 msgstr ""
 
 #: target:compiler/codegen.lisp

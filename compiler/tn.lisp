@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.20.56.1 2010/02/08 17:15:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.20.56.2 2010/02/11 02:45:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,7 +34,7 @@
 ;;; Do-Packed-TNs  --  Interface
 ;;;
 (defmacro do-packed-tns ((tn component &optional result) &body body)
-  "Do-Packed-TNs (TN-Var Component [Result]) Declaration* Form*
+  _N"Do-Packed-TNs (TN-Var Component [Result]) Declaration* Form*
   Iterate over all packed TNs allocated in Component."
   (let ((n-component (gensym)))
     `(let ((,n-component (component-info ,component)))
@@ -565,7 +565,7 @@
     (unless (and (not (sc-save-p sc))
 		 (eq (sb-kind (sc-sb sc)) :unbounded))
       (dolist (alt (sc-alternate-scs sc)
-		   (error "SC ~S has no :unbounded :save-p NIL alternate SC."
+		   (error _"SC ~S has no :unbounded :save-p NIL alternate SC."
 			  (sc-name sc)))
 	(when (and (not (sc-save-p alt))
 		   (eq (sb-kind (sc-sb alt)) :unbounded))

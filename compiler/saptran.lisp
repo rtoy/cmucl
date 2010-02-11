@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.18.24.1 2010/02/08 17:15:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.18.24.2 2010/02/11 02:45:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -55,7 +55,7 @@
 	 symbol))
       (t
        (compiler-error
-        "FOREIGN-SYMBOL-ADDRESS flavor ~S is not :CODE or :DATA" flav)))))
+        _"FOREIGN-SYMBOL-ADDRESS flavor ~S is not :CODE or :DATA" flav)))))
 
 (defknown (sap< sap<= sap= sap>= sap>)
 	  (system-area-pointer system-area-pointer) boolean

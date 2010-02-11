@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.38.38.1 2010/02/08 17:15:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.38.38.2 2010/02/11 02:45:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,7 +52,7 @@
 		  (values arg-p
 			  (+ n
 			     (or (position-in #'tn-ref-across ref refs)
-				 (error "Couldn't find REF?"))
+				 (error _"Couldn't find REF?"))
 			     1)
 			  t
 			  more-cost
@@ -118,10 +118,10 @@
 	    (losers (svref (backend-sc-numbers *backend*) scn))))
 
 	(unless (losers)
-	  (error "Representation selection flamed out for no obvious reason.~@
+	  (error _"Representation selection flamed out for no obvious reason.~@
 	          Try again after recompiling the VM definition."))
 	
-	(error "~S is not valid as the ~:R ~:[result~;argument~] to the~@
+	(error _"~S is not valid as the ~:R ~:[result~;argument~] to the~@
 	        ~S VOP, since the TN's primitive type ~S allows SCs:~%  ~S~@
 		~:[which cannot be coerced or loaded into the allowed SCs:~
 		~%  ~S~;~*~]~:[~;~@
@@ -169,14 +169,14 @@
 			   (dolist (vop vops) (move-lose (template-name vop)))
 			   (no-move-scs i-sc))))
 		    (t
-		     (error "Representation selection flamed out for no ~
+		     (error _"Representation selection flamed out for no ~
 		             obvious reason."))))))
 	
 	(unless (or (load-lose) (no-move-scs) (move-lose))
-	  (error "Representation selection flamed out for no obvious reason.~@
+	  (error _"Representation selection flamed out for no obvious reason.~@
 	          Try again after recompiling the VM definition."))
 
-	(error "~S is not valid as the ~:R ~:[result~;argument~] to VOP:~
+	(error _"~S is not valid as the ~:R ~:[result~;argument~] to VOP:~
 	        ~%  ~S~%Primitive type: ~S~@
 		SC restrictions:~%  ~S~@
 		~@[The primitive type disallows these loadable SCs:~%  ~S~%~]~
@@ -201,7 +201,7 @@
 ;;;
 (defun bad-move-arg-error (val pass)
   (declare (type tn val pass))
-  (error "No :MOVE-ARGUMENT VOP defined to move ~S (SC ~S) to ~
+  (error _"No :MOVE-ARGUMENT VOP defined to move ~S (SC ~S) to ~
           ~S (SC ~S.)"
 	 val (sc-name (tn-sc val))
 	 pass (sc-name (tn-sc pass))))
@@ -221,17 +221,17 @@
 	(let ((moves (sc-move-functions sc)))
 	  (dolist (const (sc-constant-scs sc))
 	    (unless (svref moves (sc-number const))
-	      (warn "No move function defined to load SC ~S from constant ~
+	      (warn _"No move function defined to load SC ~S from constant ~
 	             SC ~S."
 		    (sc-name sc) (sc-name const))))
 	  
 	  (dolist (alt (sc-alternate-scs sc))
 	    (unless (svref moves (sc-number alt))
-	      (warn "No move function defined to load SC ~S from alternate ~
+	      (warn _"No move function defined to load SC ~S from alternate ~
 	             SC ~S."
 		    (sc-name sc) (sc-name alt)))
 	    (unless (svref (sc-move-functions alt) i)
-	      (warn "No move function defined to save SC ~S to alternate ~
+	      (warn _"No move function defined to save SC ~S to alternate ~
 	             SC ~S."
 		    (sc-name sc) (sc-name alt)))))))))
 
@@ -387,7 +387,7 @@
     (cond ((lambda-var-p leaf) (leaf-name leaf))
 	  ((and (not arg-p) reads
 		(return-p (vop-node (tn-ref-vop reads))))
-	   "<return value>")
+	   _"<return value>")
 	  (t
 	   nil))))
 
@@ -419,14 +419,14 @@
 					    (if arg-p
 						(vop-args op-vop)
 						(vop-results op-vop)))
-			       (error "Couldn't fine op?  Bug!")))))
+			       (error _"Couldn't fine op?  Bug!")))))
 	     (compiler-note
-	      "Doing ~A (cost ~D)~:[~2*~; ~:[to~;from~] ~S~], for:~%~6T~
+	      _"Doing ~A (cost ~D)~:[~2*~; ~:[to~;from~] ~S~], for:~%~6T~
 	       The ~:R ~:[result~;argument~] of ~A."
 	      note cost name arg-p name
 	      pos arg-p op-note)))
 	  (t
-	   (compiler-note "Doing ~A (cost ~D)~@[ from ~S~]~@[ to ~S~]."
+	   (compiler-note _"Doing ~A (cost ~D)~@[ from ~S~]~@[ to ~S~]."
 			  note cost (get-operand-name op-tn t)
 			  (get-operand-name dest-tn nil)))))
   (undefined-value))
