@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.61.12.1 2010/02/08 17:15:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.61.12.2 2010/02/11 03:14:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -330,7 +330,7 @@
 	 ,@(unless (policy node (zerop safety))
 	     '((unless (= (length bit-array-1) (length bit-array-2)
 			  (length result-bit-array))
-		 (error "Argument and/or result bit arrays not the same length:~
+		 (error _"Argument and/or result bit arrays not the same length:~
 			 ~%  ~S~%  ~S  ~%  ~S"
 			bit-array-1 bit-array-2 result-bit-array))))
 	 (let ((length (length result-bit-array)))
@@ -368,7 +368,7 @@
      ,@(unless (policy node (zerop safety))
 	 '((unless (= (length bit-array)
 		      (length result-bit-array))
-	     (error "Argument and result bit arrays not the same length:~
+	     (error _"Argument and result bit arrays not the same length:~
 	     	     ~%  ~S~%  ~S"
 		    bit-array result-bit-array))))
     (let ((length (length result-bit-array)))

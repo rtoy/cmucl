@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.20.38.1 2010/02/08 17:15:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.20.38.2 2010/02/11 03:14:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -116,7 +116,7 @@
 	  (variable-length nil))
       (dolist (spec slot-specs)
 	(when variable-length
-	  (error "No more slots can follow a :rest-p slott."))
+	  (error _"No more slots can follow a :rest-p slot."))
 	(destructuring-bind
 	    (slot-name &rest options
 		       &key docs rest-p (length (if rest-p 0 1))
@@ -155,7 +155,7 @@
 	(let ((size (symbolicate name "-SIZE")))
 	  (constants `(defconstant ,size ,offset
 			,(format nil
-				 "Number of slots used by each ~S~
+				 _"Number of slots used by each ~S~
 				  ~@[~* including the header~]."
 				 name header)))
 	  (exports size)))

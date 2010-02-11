@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.49.56.1 2010/02/08 17:15:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.49.56.2 2010/02/11 03:13:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,7 @@
 (defun template-or-lose (x &optional (backend *target-backend*))
   (the template
        (or (gethash x (backend-template-names backend))
-	   (error "~S is not a defined template." x))))
+	   (error _"~S is not a defined template." x))))
 
 
 ;;; SC-Or-Lose, SB-Or-Lose, SC-Number-Or-Lose  --  Internal
@@ -40,12 +40,12 @@
 (defun sc-or-lose (x &optional (backend *target-backend*))
   (the sc
        (or (gethash x (backend-sc-names backend))
-	   (error "~S is not a defined storage class." x))))
+	   (error _"~S is not a defined storage class." x))))
 ;;;
 (defun sb-or-lose (x &optional (backend *target-backend*))
   (the sb
        (or (gethash x (backend-sb-names backend))
-	   (error "~S is not a defined storage base." x))))
+	   (error _"~S is not a defined storage base." x))))
 ;;;
 (defun sc-number-or-lose (x &optional (backend *target-backend*))
   (the sc-number (sc-number (sc-or-lose x backend))))
@@ -60,12 +60,12 @@
 (defun meta-sc-or-lose (x)
   (the sc
        (or (gethash x (backend-meta-sc-names *target-backend*))
-	   (error "~S is not a defined storage class." x))))
+	   (error _"~S is not a defined storage class." x))))
 ;;;
 (defun meta-sb-or-lose (x)
   (the sb
        (or (gethash x (backend-meta-sb-names *target-backend*))
-	   (error "~S is not a defined storage base." x))))
+	   (error _"~S is not a defined storage base." x))))
 ;;;
 (defun meta-sc-number-or-lose (x)
   (the sc-number (sc-number (meta-sc-or-lose x))))
@@ -114,7 +114,7 @@
 (defun primitive-type-or-lose (name &optional (backend *target-backend*))
   (the primitive-type
        (or (gethash name (backend-primitive-type-names backend))
-	   (error "~S is not a defined primitive type." name))))
+	   (error _"~S is not a defined primitive type." name))))
 
 
 ;;; SC-ALLOWED-BY-PRIMITIVE-TYPE  --  Interface
@@ -278,7 +278,7 @@
 ;;; NOTE-THIS-LOCATION  --  Interface
 ;;;
 (defun note-this-location (vop kind)
-  "NOTE-THIS-LOCATION VOP Kind
+  _N"NOTE-THIS-LOCATION VOP Kind
   Note that the current code location is an interesting (to the debugger)
   location of the specified Kind.  VOP is the VOP responsible for this code.
   This VOP must specify some non-null :SAVE-P value (perhaps :COMPUTE-ONLY) so
@@ -290,7 +290,7 @@
 ;;; NOTE-NEXT-INSTRUCTION -- interface.
 ;;; 
 (defun note-next-instruction (vop kind)
-  "NOTE-NEXT-INSTRUCTION VOP Kind
+  _N"NOTE-NEXT-INSTRUCTION VOP Kind
    Similar to NOTE-THIS-LOCATION, except the use the location of the next
    instruction for the code location, wherever the scheduler decided to put
    it."

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.25.26.1 2010/02/08 17:15:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.25.26.2 2010/02/11 03:14:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -220,7 +220,7 @@
     ((complex long-float) . simple-array-complex-long-float)
     #+double-double ((complex double-double-float) . simple-array-complex-double-double-float)
     (t . simple-vector))
-  "An a-list for mapping simple array element types to their
+  _N"An a-list for mapping simple array element types to their
   corresponding primitive types.")
 
 

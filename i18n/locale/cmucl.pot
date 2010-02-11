@@ -1052,6 +1052,10 @@ msgstr ""
 msgid "Type for any keyword symbol."
 msgstr ""
 
+#: target:compiler/generic/vm-type.lisp
+msgid "~S isn't an integer type?"
+msgstr ""
+
 #: target:code/pred.lisp
 msgid "Return the type of OBJECT."
 msgstr ""
@@ -10067,7 +10071,7 @@ msgstr ""
 msgid "Top-Level Form"
 msgstr ""
 
-#: target:code/load.lisp
+#: target:compiler/generic/core.lisp target:code/load.lisp
 msgid "Unaligned function object, offset = #x~X."
 msgstr ""
 
@@ -10075,7 +10079,7 @@ msgstr ""
 msgid "~S defined~%"
 msgstr ""
 
-#: target:code/load.lisp
+#: target:compiler/generic/core.lisp target:code/load.lisp
 msgid "Unknown foreign symbol: ~S"
 msgstr ""
 
@@ -10083,7 +10087,7 @@ msgstr ""
 msgid "Cannot load assembler code."
 msgstr ""
 
-#: target:code/load.lisp
+#: target:compiler/generic/core.lisp target:code/load.lisp
 msgid "Undefined assembler routine: ~S"
 msgstr ""
 
@@ -14586,6 +14590,15 @@ msgid ""
 "              modular function lambda lists."
 msgstr ""
 
+#: target:compiler/generic/vm-macs.lisp
+msgid "No more slots can follow a :rest-p slot."
+msgstr ""
+
+#: target:compiler/generic/vm-macs.lisp
+msgid "Number of slots used by each ~S~\n"
+"				  ~@[~* including the header~]."
+msgstr ""
+
 #: target:compiler/backend.lisp
 msgid "Machine specific support routine ~S ~\n"
 "				  undefined for ~S"
@@ -14625,8 +14638,84 @@ msgid ""
 "Same as EXT:FEATUREP, except use the features found in *NATIVE-BACKEND*."
 msgstr ""
 
+#: target:compiler/generic/objdef.lisp
+msgid "Number of bits at the low end of a pointer used for type information."
+msgstr ""
+
+#: target:compiler/generic/objdef.lisp
+msgid "Mask to extract the low tag bits from a pointer."
+msgstr ""
+
+#: target:compiler/generic/objdef.lisp
+msgid ""
+"Exclusive upper bound on the value of the low tag bits from a\n"
+"  pointer."
+msgstr ""
+
+#: target:compiler/generic/objdef.lisp
+msgid "Number of bits used in the header word of a data block for typeing."
+msgstr ""
+
+#: target:compiler/generic/objdef.lisp
+msgid "Mask to extract the type from a header word."
+msgstr ""
+
+#: target:compiler/generic/objdef.lisp
+msgid "most-positive-fixnum in the target architecture."
+msgstr ""
+
+#: target:compiler/generic/objdef.lisp
+msgid "most-negative-fixnum in the target architecture."
+msgstr ""
+
+#: target:compiler/generic/interr.lisp
+msgid "Unknown internal error: ~S"
+msgstr ""
+
 #: target:compiler/bit-util.lisp
 msgid "local-tn-limit not a vm:word-bits multiple."
+msgstr ""
+
+#: target:compiler/pack.lisp target:compiler/generic/vm-tran.lisp
+#: target:compiler/life.lisp target:compiler/bit-util.lisp
+msgid ""
+"Argument and/or result bit arrays not the same length:~\n"
+"			 ~%  ~S~%  ~S  ~%  ~S"
+msgstr ""
+
+#: target:compiler/vmdef.lisp
+msgid "~S is not a defined template."
+msgstr ""
+
+#: target:compiler/vmdef.lisp
+msgid "~S is not a defined storage class."
+msgstr ""
+
+#: target:compiler/vmdef.lisp
+msgid "~S is not a defined storage base."
+msgstr ""
+
+#: target:compiler/meta-vmdef.lisp target:compiler/vmdef.lisp
+msgid "~S is not a defined primitive type."
+msgstr ""
+
+#: target:compiler/vmdef.lisp
+msgid ""
+"NOTE-THIS-LOCATION VOP Kind\n"
+"  Note that the current code location is an interesting (to the debugger)\n"
+"  location of the specified Kind.  VOP is the VOP responsible for this "
+"code.\n"
+"  This VOP must specify some non-null :SAVE-P value (perhaps :COMPUTE-ONLY) "
+"so\n"
+"  that the live set is computed."
+msgstr ""
+
+#: target:compiler/vmdef.lisp
+msgid ""
+"NOTE-NEXT-INSTRUCTION VOP Kind\n"
+"   Similar to NOTE-THIS-LOCATION, except the use the location of the next\n"
+"   instruction for the code location, wherever the scheduler decided to put\n"
+"   it."
 msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
@@ -14747,10 +14836,6 @@ msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
 msgid "Unknown kind ~S."
-msgstr ""
-
-#: target:compiler/meta-vmdef.lisp
-msgid "~S is not a defined primitive type."
 msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
@@ -17739,6 +17824,52 @@ msgid ""
 "otherwise the truename."
 msgstr ""
 
+#: target:compiler/generic/utils.lisp
+msgid "Make a fixnum out of NUM.  (i.e. shift by two bits if it will fit.)"
+msgstr ""
+
+#: target:compiler/generic/utils.lisp
+msgid "~D is too big for a fixnum."
+msgstr ""
+
+#: target:compiler/generic/utils.lisp
+msgid "Returns the byte offset of the static symbol Symbol."
+msgstr ""
+
+#: target:compiler/generic/utils.lisp
+msgid "~S is not a static symbol."
+msgstr ""
+
+#: target:compiler/generic/utils.lisp
+msgid "Given a byte offset, Offset, returns the appropriate static symbol."
+msgstr ""
+
+#: target:compiler/generic/utils.lisp
+msgid "Byte offset, ~D, is not correct."
+msgstr ""
+
+#: target:compiler/generic/utils.lisp
+msgid ""
+"Return the (byte) offset from NIL to the start of the fdefn object\n"
+"   for the static function NAME."
+msgstr ""
+
+#: target:compiler/generic/utils.lisp
+msgid "~S isn't a static function."
+msgstr ""
+
+#: target:compiler/generic/utils.lisp
+msgid ""
+"Given a byte offset, Offset, returns the appropriate static function\n"
+"   symbol."
+msgstr ""
+
+#: target:compiler/generic/primtype.lisp
+msgid ""
+"An a-list for mapping simple array element types to their\n"
+"  corresponding primitive types."
+msgstr ""
+
 #: target:compiler/aliencomp.lisp
 msgid "Slot is not constant, so cannot open code access."
 msgstr ""
@@ -18020,6 +18151,12 @@ msgstr ""
 msgid "Doing ~A (cost ~D)~@[ from ~S~]~@[ to ~S~]."
 msgstr ""
 
+#: target:compiler/generic/vm-tran.lisp
+msgid ""
+"Argument and result bit arrays not the same length:~\n"
+"	     	     ~%  ~S~%  ~S"
+msgstr ""
+
 #: target:compiler/codegen.lisp
 msgid "Returns the number of bytes used by the code object header."
 msgstr ""
@@ -18120,6 +18257,22 @@ msgstr ""
 
 #: target:compiler/dump.lisp
 msgid "Dumping reference to obsolete class: ~S"
+msgstr ""
+
+#: target:compiler/generic/core.lisp
+msgid "Unresolved forward reference."
+msgstr ""
+
+#: target:compiler/generic/core.lisp
+msgid "#<Code Instruction Stream for ~S>"
+msgstr ""
+
+#: target:compiler/generic/core.lisp
+msgid "Writing ~D bytes to ~S would cause it to overflow."
+msgstr ""
+
+#: target:compiler/generic/core.lisp
+msgid "Writing another byte to ~S would cause it to overflow."
 msgstr ""
 
 #: target:compiler/eval-comp.lisp

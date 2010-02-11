@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.44.26.1 2010/02/08 17:15:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.44.26.2 2010/02/11 03:14:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -163,7 +163,7 @@
 		  (unsigned-byte 32)
 		  bignum
 		  integer)
-		(error "~S isn't an integer type?" subtype))
+		(error _"~S isn't an integer type?" subtype))
     (when (csubtypep subtype (specifier-type type))
       (return type))))
 

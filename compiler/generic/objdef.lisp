@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.61.24.1 2010/02/08 17:15:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.61.24.2 2010/02/11 03:14:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -72,29 +72,29 @@
 (eval-when (compile eval load)
 
 (defconstant lowtag-bits 3
-  "Number of bits at the low end of a pointer used for type information.")
+  _N"Number of bits at the low end of a pointer used for type information.")
 
 (defconstant lowtag-mask (1- (ash 1 lowtag-bits))
-  "Mask to extract the low tag bits from a pointer.")
+  _N"Mask to extract the low tag bits from a pointer.")
   
 (defconstant lowtag-limit (ash 1 lowtag-bits)
-  "Exclusive upper bound on the value of the low tag bits from a
+  _N"Exclusive upper bound on the value of the low tag bits from a
   pointer.")
   
 (defconstant type-bits 8
-  "Number of bits used in the header word of a data block for typeing.")
+  _N"Number of bits used in the header word of a data block for typeing.")
 
 (defconstant type-mask (1- (ash 1 type-bits))
-  "Mask to extract the type from a header word.")
+  _N"Mask to extract the type from a header word.")
 
 ); eval-when
 
 
 (defparameter target-most-positive-fixnum (1- (ash 1 #-amd64 29 #+amd64 61))
-  "most-positive-fixnum in the target architecture.")
+  _N"most-positive-fixnum in the target architecture.")
 
 (defparameter target-most-negative-fixnum (ash -1 #-amd64 29 #+amd64 61)
-  "most-negative-fixnum in the target architecture.")
+  _N"most-negative-fixnum in the target architecture.")
 
 
 ;;; The main types.  These types are represented by the low three bits of the
