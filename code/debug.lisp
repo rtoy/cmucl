@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.68.2.1 2010/02/08 17:15:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.68.2.2 2010/02/12 04:07:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,24 +44,24 @@
 ;;;; Variables, parameters, and constants.
 
 (defparameter *debug-print-level* 3
-  "*PRINT-LEVEL* is bound to this value when debug prints a function call.  If
+  _N"*PRINT-LEVEL* is bound to this value when debug prints a function call.  If
   null, use *PRINT-LEVEL*")
 
 (defparameter *debug-print-length* 5
-  "*PRINT-LENGTH* is bound to this value when debug prints a function call.  If
+  _N"*PRINT-LENGTH* is bound to this value when debug prints a function call.  If
   null, use *PRINT-LENGTH*.")
 
 (defparameter *default-print-frame-call-verbosity* 1
-  "default value for the verbose argument to print-frame-call.  If set to >= 2, source will be printed for all frames")
+  _N"default value for the verbose argument to print-frame-call.  If set to >= 2, source will be printed for all frames")
 
 (defvar *in-the-debugger* nil
-  "This is T while in the debugger.")
+  _N"This is T while in the debugger.")
 
 (defvar *debug-command-level* 0
-  "Pushes and pops/exits inside the debugger change this.")
+  _N"Pushes and pops/exits inside the debugger change this.")
 
 (defvar *stack-top-hint* nil
-  "If this is bound before the debugger is invoked, it is used as the stack
+  _N"If this is bound before the debugger is invoked, it is used as the stack
    top by the debugger.")
 (defvar *stack-top* nil)
 (defvar *real-stack-top* nil)
@@ -81,11 +81,11 @@
     (force-output)))
 
 (defparameter *debug-prompt* #'debug-prompt
-  "This is a function of no arguments that prints the debugger prompt
+  _N"This is a function of no arguments that prints the debugger prompt
    on *debug-io*.")
 
 (defconstant debug-help-string
-"
+_N"
 The prompt is right square brackets, the number indicating how many
   recursive command loops you are in.
 Debug commands do not affect * and friends, but evaluation in the debug loop
@@ -145,11 +145,11 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;; Breakpoint state:
 
 (defvar *only-block-start-locations* nil
-  "When true, the LIST-LOCATIONS command only displays block start locations.
+  _N"When true, the LIST-LOCATIONS command only displays block start locations.
    Otherwise, all locations are displayed.")
 
 (defvar *print-location-kind* nil
-  "If true, list the code location type in the LIST-LOCATIONS command.")
+  _N"If true, list the code location type in the LIST-LOCATIONS command.")
 
 ;;; A list of the types of code-locations that should not be stepped to and
 ;;; should not be listed when listing breakpoints.
@@ -284,7 +284,7 @@ See the CMU Common Lisp User's Manual for more information.
 		      (return loc))))
 	(cond ((and (not (di:debug-block-elsewhere-p block))
 		    start)
-	       (format t "~%Unknown location: using block start.~%")
+	       (format t _"~%Unknown location: using block start.~%")
 	       start)
 	      (t
 	       loc)))
@@ -357,14 +357,14 @@ See the CMU Common Lisp User's Manual for more information.
     (case (di:breakpoint-kind (breakpoint-info-breakpoint breakpoint-info))
       (:code-location 
        (print-code-location-source-form place 0)
-       (format t "~&~S: ~S in ~S"
+       (format t _"~&~S: ~S in ~S"
 	       bp-number loc-number (di:debug-function-name
 				      (di:code-location-debug-function place))))
       (:function-start
-       (format t "~&~S: FUNCTION-START in ~S" bp-number
+       (format t _"~&~S: FUNCTION-START in ~S" bp-number
 	       (di:debug-function-name place)))
       (:function-end
-       (format t "~&~S: FUNCTION-END in ~S" bp-number
+       (format t _"~&~S: FUNCTION-END in ~S" bp-number
 	       (di:debug-function-name place))))))
 
 
@@ -402,7 +402,7 @@ See the CMU Common Lisp User's Manual for more information.
 	       (build-string 
 		(with-output-to-string (*standard-output*)
 		  (when function-end-cookie 
-		    (format t "~%Return values: ~S" return-vals))
+		    (format t _"~%Return values: ~S" return-vals))
 		  (when condition
 		    (when (breakpoint-info-print bp-hit-info)
 		      (format t "~%")
@@ -416,11 +416,11 @@ See the CMU Common Lisp User's Manual for more information.
 	(setf condition (funcall (breakpoint-info-condition bp-hit-info)
 				 current-frame)))
       (cond ((and bp-hit-info step-hit-info (= 1 *number-of-steps*))
-	     (build-string (format nil "~&*Step (to a breakpoint)*"))
+	     (build-string (format nil _"~&*Step (to a breakpoint)*"))
 	     (print-common-info)
 	     (break string))
 	    ((and bp-hit-info step-hit-info break)
-	     (build-string (format nil "~&*Step (to a breakpoint)*"))
+	     (build-string (format nil _"~&*Step (to a breakpoint)*"))
 	     (print-common-info)
 	     (break string))
 	    ((and bp-hit-info step-hit-info)
@@ -429,20 +429,20 @@ See the CMU Common Lisp User's Manual for more information.
 	     (decf *number-of-steps*)
 	     (set-step-breakpoint current-frame))
 	    ((and step-hit-info (= 1 *number-of-steps*))
-	     (build-string "*Step*")
+	     (build-string _"*Step*")
 	     (break (make-condition 'step-condition :format-control string)))
 	    (step-hit-info
 	     (decf *number-of-steps*)
 	     (set-step-breakpoint current-frame))
 	    (bp-hit-info
 	     (when break
-	       (build-string (format nil "~&*Breakpoint hit*")))
+	       (build-string (format nil _"~&*Breakpoint hit*")))
 	     (print-common-info)
 	     (if break
 		 (break string)
 		 (format t "~A" string)))
 	    (t
-	     (break "Error in main-hook-function: unknown breakpoint"))))))
+	     (break _"Error in main-hook-function: unknown breakpoint"))))))
 
 
 
@@ -455,7 +455,7 @@ See the CMU Common Lisp User's Manual for more information.
   (cond
    ((di:debug-block-elsewhere-p (di:code-location-debug-block
 				 (di:frame-code-location frame)))
-    (format t "Cannot step, in elsewhere code~%"))
+    (format t _"Cannot step, in elsewhere code~%"))
    (t
     (let* ((code-location (di:frame-code-location frame))
 	   (next-code-locations (next-code-locations code-location)))
@@ -487,13 +487,13 @@ See the CMU Common Lisp User's Manual for more information.
     (handler-case
 	(setq function (compile nil function))
       (error (c)
-	(error "Currently only compiled code can be stepped.~%~
+	(error _"Currently only compiled code can be stepped.~%~
                 Trying to compile the passed form resulted in ~
                 the following error:~%  ~A" c))))
   (let ((*print-length* *debug-print-length*)
 	(*print-level* *debug-print-level*))
-    (format *debug-io* "~2&Stepping the form~%  ~S~%" form)
-    (format *debug-io* "~&using the debugger.  Type HELP for help.~2%"))
+    (format *debug-io* _"~2&Stepping the form~%  ~S~%" form)
+    (format *debug-io* _"~&using the debugger.  Type HELP for help.~2%"))
   (let* ((debug-function (di:function-debug-function function))
 	 (bp (di:make-breakpoint #'main-hook-function debug-function
 				 :kind :function-start)))
@@ -505,7 +505,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;; STEP -- Public.
 ;;;
 (defmacro step (form)
-  "STEP implements a debugging paradigm wherein the programmer is allowed
+  _N"STEP implements a debugging paradigm wherein the programmer is allowed
    to step through the evaluation of a form.  We use the debugger's stepping
    facility to step through an anonymous function containing only form.
 
@@ -522,7 +522,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;
 (defun backtrace (&optional (count most-positive-fixnum)
 			    (*standard-output* *debug-io*))
-  "Show a listing of the call stack going down from the current frame.  In the
+  _N"Show a listing of the call stack going down from the current frame.  In the
    debugger, the current frame is indicated by the prompt.  Count is how many
    frames to show."
   (let ((*print-length* (or *debug-print-length* *print-length*))
@@ -609,11 +609,11 @@ See the CMU Common Lisp User's Manual for more information.
 					       (second ele) frame))
 				     results))
 		       (return))
-		     (push (make-unprintable-object "unavaliable-rest-arg")
+		     (push (make-unprintable-object _"unavaliable-rest-arg")
 			   results)))))
       (di:lambda-list-unavailable
        ()
-       (push (make-unprintable-object "lambda-list-unavailable") results)))
+       (push (make-unprintable-object _"lambda-list-unavailable") results)))
     (prin1 (mapcar #'ensure-printable-object (nreverse results)))
     (when (di:debug-function-kind d-fun)
       (write-char #\[)
@@ -628,14 +628,14 @@ See the CMU Common Lisp User's Manual for more information.
     (error (cond)
       (declare (ignore cond))
       (make-unprintable-object
-       (format nil "error printing object {~X}"
+       (format nil _"error printing object {~X}"
 	       (kernel:get-lisp-obj-address object))))))
 
 (defun frame-call-arg (var location frame)
   (lambda-var-dispatch var location
-    (make-unprintable-object "unused-arg")
+    (make-unprintable-object _"unused-arg")
     (di:debug-variable-value var frame)
-    (make-unprintable-object "unavailable-arg")))
+    (make-unprintable-object _"unavailable-arg")))
 
 
 ;;; PRINT-FRAME-CALL -- Interface
@@ -666,10 +666,10 @@ See the CMU Common Lisp User's Manual for more information.
       (handler-case
 	  (progn
 	    (di:code-location-debug-block loc)
-	    (format t "~%Source: ")
+	    (format t _"~%Source: ")
 	    (print-code-location-source-form loc 0))
 	(di:debug-condition (ignore) ignore)
-	(error (cond) (format t "Error finding source: ~A" cond))))))
+	(error (cond) (format t _"Error finding source: ~A" cond))))))
 
 ;;; SAFE-CONDITION-MESSAGE  --  Internal
 ;;;
@@ -682,14 +682,14 @@ See the CMU Common Lisp User's Manual for more information.
     (error (cond)
       ;; Beware of recursive errors in printing, so only use the condition
       ;; if it is printable itself:
-      (format nil "Unable to display error condition~@[: ~A~]"
+      (format nil _"Unable to display error condition~@[: ~A~]"
 	      (ignore-errors (princ-to-string cond))))))
 
 
 ;;;; Invoke-debugger.
 
 (defvar *debugger-hook* nil
-  "This is either nil or a function of two arguments, a condition and the value
+  _N"This is either nil or a function of two arguments, a condition and the value
    of *debugger-hook*.  This function can either handle the condition or return
    which causes the standard debugger to execute.  The system passes the value
    of this variable to the function because it binds *debugger-hook* to nil
@@ -705,7 +705,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;    Print condition and invoke the TTY debugger.
 ;;;
 (defun invoke-tty-debugger (condition)
-  (format *error-output* "~2&~A~%   [Condition of type ~S]~2&"
+  (format *error-output* _"~2&~A~%   [Condition of type ~S]~2&"
 	  (safe-condition-message *debug-condition*)
           (type-of *debug-condition*))
   (unless (typep condition 'step-condition)
@@ -727,7 +727,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;; INVOKE-DEBUGGER -- Public.
 ;;;
 (defun invoke-debugger (condition)
-  "The CMU Common Lisp debugger.  Type h for help."
+  _N"The CMU Common Lisp debugger.  Type h for help."
   (when *debugger-hook*
     (let ((hook *debugger-hook*)
 	  (*debugger-hook* nil))
@@ -754,7 +754,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;
 (defun show-restarts (restarts &optional (s *error-output*))
   (when restarts
-    (format s "~&Restarts:~%")
+    (format s _"~&Restarts:~%")
     (let ((count 0)
 	  (names-used '(nil))
 	  (max-name-len 0))
@@ -789,7 +789,7 @@ See the CMU Common Lisp User's Manual for more information.
 	(*read-suppress* nil))
     (unless (typep *debug-condition* 'step-condition)
       (clear-input *debug-io*)
-      (format *debug-io* "~2&Debug  (type H for help)~2%"))
+      (format *debug-io* _"~2&Debug  (type H for help)~2%"))
     #-mp (debug-loop)
     #+mp (mp:without-scheduling (debug-loop))))
 
@@ -798,15 +798,15 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;; Debug-loop.
 
 (defvar *flush-debug-errors* t
-  "When set, avoid calling INVOKE-DEBUGGER recursively when errors occur while
+  _N"When set, avoid calling INVOKE-DEBUGGER recursively when errors occur while
    executing in the debugger.  The 'flush' command toggles this.")
 
 (defvar *debug-readtable* nil
-  "When non-NIL, becomes the system *READTABLE* in the debugger
+  _N"When non-NIL, becomes the system *READTABLE* in the debugger
    read-eval-print loop")
 
 (defvar *debug-print-current-frame* t
-  "When non-NIL, print the current frame when entering the debugger.")
+  _N"When non-NIL, print the current frame when entering the debugger.")
 
 (defun maybe-handle-dead-input-stream (condition)
   ;; Scenario: "xon <remote-box> cmucl -edit"
@@ -852,13 +852,13 @@ See the CMU Common Lisp User's Manual for more information.
 				    (when *flush-debug-errors*
 				      (clear-input *debug-io*)
 				      (princ condition)
-				      (format t "~&Error flushed ...")
+				      (format t _"~&Error flushed ...")
 				      (throw 'debug-loop-catcher nil)))))
 	    ;; Must bind level for restart function created by
 	    ;; WITH-SIMPLE-RESTART.
 	    (let ((level *debug-command-level*)
 		  (restart-commands (make-restart-commands)))
-	      (with-simple-restart (abort "Return to debug level ~D." level)
+	      (with-simple-restart (abort _"Return to debug level ~D." level)
 		(funcall *debug-prompt*)
 		(let ((input (ext:get-stream-command *debug-io*)))
 		  (cond (input
@@ -867,9 +867,9 @@ See the CMU Common Lisp User's Manual for more information.
 					 restart-commands)))
 			   (cond
 			    ((not cmd-fun)
-			     (error "Unknown stream-command -- ~S." input))
+			     (error _"Unknown stream-command -- ~S." input))
 			    ((consp cmd-fun)
-			     (error "Ambiguous debugger command: ~S." cmd-fun))
+			     (error _"Ambiguous debugger command: ~S." cmd-fun))
 			    (t
 			     (apply cmd-fun (ext:stream-command-args input))))))
 			(t
@@ -878,7 +878,7 @@ See the CMU Common Lisp User's Manual for more information.
 			   (cond ((not cmd-fun)
 				  (debug-eval-print exp))
 				 ((consp cmd-fun)
-				  (format t "~&Your command, ~S, is ambiguous:~%"
+				  (format t _"~&Your command, ~S, is ambiguous:~%"
 					  exp)
 				  (dolist (ele cmd-fun)
 				    (format t "   ~A~%" ele)))
@@ -886,7 +886,7 @@ See the CMU Common Lisp User's Manual for more information.
 				  (funcall cmd-fun)))))))))))))))
 
 (defvar *auto-eval-in-frame* t
-  "When set (the default), evaluations in the debugger's command loop occur
+  _N"When set (the default), evaluations in the debugger's command loop occur
    relative to the current frame's environment without the need of debugger
    forms that explicitly control this kind of evaluation.")
 
@@ -911,7 +911,7 @@ See the CMU Common Lisp User's Manual for more information.
     (unless (boundp '*)
       (setq * nil)
       (fresh-line)
-      (princ "Setting * to NIL -- was unbound marker."))))
+      (princ _"Setting * to NIL -- was unbound marker."))))
 
 
 
@@ -939,7 +939,7 @@ See the CMU Common Lisp User's Manual for more information.
 			       temp)))
      (declare (list vars))
      (cond ((null vars)
-	    (error "No known valid variables match ~S." name))
+	    (error _"No known valid variables match ~S." name))
 	   ((= (length vars) 1)
 	    ,(ecase ref-or-set
 	       (:ref
@@ -977,7 +977,7 @@ See the CMU Common Lisp User's Manual for more information.
 			  (string= (di:debug-variable-name v)
 				   (di:debug-variable-name (car vars))))
 		      (cdr vars)))
-		(error "Specification ambiguous:~%~{   ~A~%~}"
+		(error _"Specification ambiguous:~%~{   ~A~%~}"
 		       (mapcar #'di:debug-variable-name
 			       (delete-duplicates
 				vars :test #'string=
@@ -986,7 +986,7 @@ See the CMU Common Lisp User's Manual for more information.
 	       (id-supplied
 		(let ((v (find id vars :key #'di:debug-variable-id)))
 		  (unless v
-		    (error "Invalid variable ID, ~D, should have been one of ~S."
+		    (error _"Invalid variable ID, ~D, should have been one of ~S."
 			   id (mapcar #'di:debug-variable-id vars)))
 		  ,(ecase ref-or-set
 		     (:ref
@@ -995,7 +995,7 @@ See the CMU Common Lisp User's Manual for more information.
 		      `(setf (di:debug-variable-value v *current-frame*)
 			     ,value-var)))))
 	       (t
-		(error "Specify variable ID to disambiguate ~S.  Use one of ~S."
+		(error _"Specify variable ID to disambiguate ~S.  Use one of ~S."
 		       name (mapcar #'di:debug-variable-id vars)))))))))
 
 ) ;EVAL-WHEN
@@ -1003,7 +1003,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;; VAR -- Public.
 ;;;
 (defun var (name &optional (id 0 id-supplied))
-  "Returns a variable's value if possible.  Name is a simple-string or symbol.
+  _N"Returns a variable's value if possible.  Name is a simple-string or symbol.
    If it is a simple-string, it is an initial substring of the variable's name.
    If name is a symbol, it has the same name and package as the variable whose
    value this function returns.  If the symbol is uninterned, then the variable
@@ -1028,7 +1028,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;; ARG -- Public.
 ;;;
 (defun arg (n)
-  "Returns the n'th argument's value if possible.  Argument zero is the first
+  _N"Returns the n'th argument's value if possible.  Argument zero is the first
    argument in a frame's default printed representation.  Count keyword/value
    pairs as separate arguments."
   (multiple-value-bind
@@ -1036,12 +1036,12 @@ See the CMU Common Lisp User's Manual for more information.
       (nth-arg n (handler-case (di:debug-function-lambda-list
 				(di:frame-debug-function *current-frame*))
 		   (di:lambda-list-unavailable ()
-		     (error "No argument values are available."))))
+		     (error _"No argument values are available."))))
     (if lambda-var-p
 	(lambda-var-dispatch var (di:frame-code-location *current-frame*)
-	  (error "Unused arguments have no values.")
+	  (error _"Unused arguments have no values.")
 	  (di:debug-variable-value var *current-frame*)
-	  (error "Invalid argument value."))
+	  (error _"Invalid argument value."))
 	var)))
 
 ;;; NTH-ARG -- Internal.
@@ -1053,7 +1053,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;
 (defun nth-arg (count args)
   (let ((n count))
-    (dolist (ele args (error "Argument specification out of range -- ~S." n))
+    (dolist (ele args (error _"Argument specification out of range -- ~S." n))
       (lambda-list-element-dispatch ele
 	:required ((if (zerop n) (return (values ele t))))
 	:optional ((if (zerop n) (return (values (second ele) t))))
@@ -1065,15 +1065,15 @@ See the CMU Common Lisp User's Manual for more information.
 	:rest ((let ((var (second ele)))
 		 (lambda-var-dispatch var
 				      (di:frame-code-location *current-frame*)
-		   (error "Unused rest-arg before n'th argument.")
+		   (error _"Unused rest-arg before n'th argument.")
 		   (dolist (value
 			    (di:debug-variable-value var *current-frame*)
-			    (error "Argument specification out of range -- ~S."
+			    (error _"Argument specification out of range -- ~S."
 				   n))
 		     (if (zerop n)
 			 (return-from nth-arg (values value nil))
 			 (decf n)))
-		   (error "Invalid rest-arg before n'th argument.")))))
+		   (error _"Invalid rest-arg before n'th argument.")))))
       (decf n))))
 
 
@@ -1095,7 +1095,7 @@ See the CMU Common Lisp User's Manual for more information.
 	       (remove ,name *debug-commands* :key #'car :test #'string=)))
        (defun ,fun-name ,args
 	 (unless *in-the-debugger*
-	   (error "Invoking debugger command while outside the debugger."))
+	   (error _"Invoking debugger command while outside the debugger."))
 	 ,@body)
        (push (cons ,name #',fun-name) *debug-commands*)
        ',fun-name)))
@@ -1104,7 +1104,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;
 (defun def-debug-command-alias (new-name existing-name)
   (let ((pair (assoc existing-name *debug-commands* :test #'string=)))
-    (unless pair (error "Unknown debug command name -- ~S" existing-name))
+    (unless pair (error _"Unknown debug command name -- ~S" existing-name))
     (push (cons new-name (cdr pair)) *debug-commands*))
   new-name)
 
@@ -1196,7 +1196,7 @@ See the CMU Common Lisp User's Manual for more information.
 	   (setf *current-frame* next)
 	   (print-frame-call next))
 	  (t
-	   (format t "~&Top of stack.")))))
+	   (format t _"~&Top of stack.")))))
   
 (def-debug-command "DOWN" ()
   (let ((next (di:frame-down *current-frame*)))
@@ -1204,7 +1204,7 @@ See the CMU Common Lisp User's Manual for more information.
 	   (setf *current-frame* next)
 	   (print-frame-call next))
 	  (t
-	   (format t "~&Bottom of stack.")))))
+	   (format t _"~&Bottom of stack.")))))
 
 (def-debug-command-alias "D" "DOWN")
 
@@ -1226,10 +1226,10 @@ See the CMU Common Lisp User's Manual for more information.
 (def-debug-command-alias "B" "BOTTOM")
 
 (def-debug-command "FRAME" (&optional
-			    (n (read-prompting-maybe "Frame number: ")))
+			    (n (read-prompting-maybe _"Frame number: ")))
   (let ((current (di:frame-number *current-frame*)))
     (cond ((= n current)
-	   (princ "You are here."))
+	   (princ _"You are here."))
 	  ((> n current)
 	   (print-frame-call
 	    (setf *current-frame*
@@ -1237,7 +1237,7 @@ See the CMU Common Lisp User's Manual for more information.
 		       (lead (di:frame-down *current-frame*)
 			     (di:frame-down lead)))
 		      ((null lead)
-		       (princ "Bottom of stack encountered.")
+		       (princ _"Bottom of stack encountered.")
 		       prev)
 		    (when (= n (di:frame-number prev))
 		      (return prev))))))
@@ -1248,7 +1248,7 @@ See the CMU Common Lisp User's Manual for more information.
 		       (lead (di:frame-up *current-frame*)
 			     (di:frame-up lead)))
 		      ((null lead)
-		       (princ "Top of stack encountered.")
+		       (princ _"Top of stack encountered.")
 		       prev)
 		    (when (= n (di:frame-number prev))
 		      (return prev)))))))))
@@ -1259,12 +1259,12 @@ See the CMU Common Lisp User's Manual for more information.
 ;; allows us to return an arbitrary value from any frame
 (def-debug-command "DEBUG-RETURN" (&optional
 				   (return (read-prompting-maybe
-					    "debug-return: ")))
+					    _"debug-return: ")))
   (unless (di:return-from-frame *current-frame* return)
     ;; the "unless" here is for aesthetical purposes only. If all goes
     ;; well with return-from-frame, the code after it will never get
     ;; reached anyway.
-    (format t "~@<can't find a tag for this frame ~
+    (format t _"~@<can't find a tag for this frame ~
                    ~2I~_(hint: try increasing the DEBUG optimization quality ~
                    and recompiling)~:@>")))
 
@@ -1280,13 +1280,13 @@ See the CMU Common Lisp User's Manual for more information.
 
 (def-debug-command "GO" ()
   (continue *debug-condition*)
-  (error "No restart named continue."))
+  (error _"No restart named continue."))
 
 (def-debug-command "RESTART" ()
   (let ((num (read-if-available :prompt)))
     (when (eq num :prompt)
       (show-restarts *debug-restarts*)
-      (write-string "Restart: ")
+      (write-string _"Restart: ")
       (force-output)
       (setf num (read *standard-input*)))
     (let ((restart (typecase num
@@ -1298,11 +1298,11 @@ See the CMU Common Lisp User's Manual for more information.
 				      (string= (symbol-name sym1)
 					       (symbol-name sym2)))))
 		     (t
-		      (format t "~S is invalid as a restart name.~%" num)
+		      (format t _"~S is invalid as a restart name.~%" num)
 		      (return-from restart-debug-command nil)))))
       (if restart
 	  (invoke-restart-interactively restart)
-	  (princ "No such restart.")))))
+	  (princ _"No such restart.")))))
 
 
 ;;;
@@ -1310,27 +1310,28 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;
  
 (defvar *help-line-scroll-count* 20
-  "This controls how many lines the debugger's help command prints before
+  _N"This controls how many lines the debugger's help command prints before
    printing a prompting line to continue with output.")
 
 (def-debug-command "HELP" ()
-  (let* ((end -1)
-	 (len (length debug-help-string))
+  (let* ((translated (intl:dgettext "cmucl" debug-help-string))
+	 (end -1)
+	 (len (length translated))
 	 (len-1 (1- len)))
     (loop
       (let ((start (1+ end))
 	    (count *help-line-scroll-count*))
 	(loop
-	  (setf end (position #\newline debug-help-string :start (1+ end)))
+	  (setf end (position #\newline translated :start (1+ end)))
 	  (cond ((or (not end) (= end len-1))
 		 (setf end len)
 		 (return))
 		((or (zerop (decf count)) (= end len))
 		 (return))))
-	(write-string debug-help-string *standard-output*
+	(write-string translated *standard-output*
 		      :start start :end end))
       (when (= end len) (return))
-      (format t "~%[RETURN FOR MORE, Q TO QUIT HELP TEXT]: ")
+      (format t _"~%[RETURN FOR MORE, Q TO QUIT HELP TEXT]: ")
       (force-output)
       (let ((res (read-line)))
 	(when (or (string= res "q") (string= res "Q"))
@@ -1380,14 +1381,14 @@ See the CMU Common Lisp User's Manual for more information.
 
 	  (cond
 	   ((not any-p)
-	    (format t "No local variables ~@[starting with ~A ~]~
+	    (format t _"No local variables ~@[starting with ~A ~]~
 	               in function."
 		    prefix))
 	   ((not any-valid-p)
-	    (format t "All variables ~@[starting with ~A ~]currently ~
+	    (format t _"All variables ~@[starting with ~A ~]currently ~
 	               have invalid values."
 		    prefix))))
-	(write-line "No variable information available."))))
+	(write-line _"No variable information available."))))
 
 (def-debug-command-alias "L" "LIST-LOCALS")
 
@@ -1472,7 +1473,7 @@ See the CMU Common Lisp User's Manual for more information.
 			      (di:debug-source-root-number d-source)))
 	 (char-offset
 	  (aref (or (di:debug-source-start-positions d-source)
-		    (error "No start positions map."))
+		    (error _"No start positions map."))
 		local-tlf-offset))
 	 (name (di:debug-source-name d-source)))
     (unless (eq d-source *cached-debug-source*)
@@ -1485,8 +1486,8 @@ See the CMU Common Lisp User's Manual for more information.
 	      (open name :if-does-not-exist nil
 		    :external-format (or (c::debug-source-info d-source) :default)))
 	(unless *cached-source-stream*
-	  (error "Source file no longer exists:~%  ~A." (namestring name)))
-	(format t "~%; File: ~A~%" (namestring name)))
+	  (error _"Source file no longer exists:~%  ~A." (namestring name)))
+	(format t _"~%; File: ~A~%" (namestring name)))
 
 	(setq *cached-debug-source*
 	      (if (= (di:debug-source-created d-source) (file-write-date name))
@@ -1496,7 +1497,7 @@ See the CMU Common Lisp User's Manual for more information.
      ((eq *cached-debug-source* d-source)
       (file-position *cached-source-stream* char-offset))
      (t
-      (format t "~%; File has been modified since compilation:~%;   ~A~@
+      (format t _"~%; File has been modified since compilation:~%;   ~A~@
 		 ; Using form offset instead of character position.~%"
 	      (namestring name))
       (file-position *cached-source-stream* 0)
@@ -1530,7 +1531,7 @@ See the CMU Common Lisp User's Manual for more information.
     (multiple-value-bind (translations form)
 			 (get-top-level-form location)
       (unless (< form-num (length translations))
-	(error "Source path no longer exists."))
+	(error _"Source path no longer exists."))
       (prin1 (di:source-path-context form
 				     (svref translations form-num)
 				     context)))))
@@ -1545,7 +1546,7 @@ See the CMU Common Lisp User's Manual for more information.
   (setf *number-of-steps* (read-if-available 1))
   (set-step-breakpoint *current-frame*)
   (continue *debug-condition*)
-  (error "Couldn't continue."))
+  (error _"Couldn't continue."))
   
 ;;; Lists possible breakpoint locations, which are active, and where go will
 ;;; continue.  Sets *possible-breakpoints* to the code-locations which can then
@@ -1567,9 +1568,9 @@ See the CMU Common Lisp User's Manual for more information.
 		 (di:debug-function-start-location
 		  *default-breakpoint-debug-function*) continue-at)))
       (when (or active here)
-	(format t "::FUNCTION-START ")
-	(when active (format t " *Active*"))
-	(when here (format t " *Continue here*"))))
+	(format t _"::FUNCTION-START ")
+	(when active (format t _" *Active*"))
+	(when here (format t _" *Continue here*"))))
     
     (let ((prev-location nil)
 	  (prev-num 0)
@@ -1584,9 +1585,9 @@ See the CMU Common Lisp User's Manual for more information.
 		 (when *print-location-kind*
 		   (format t "~S " (di:code-location-kind prev-location)))
 		 (when (location-in-list prev-location *breakpoints*)
-		   (format t " *Active*"))
+		   (format t _" *Active*"))
 		 (when (di:code-location= prev-location continue-at)
-		   (format t " *Continue here*")))))
+		   (format t _" *Continue here*")))))
 	
 	(dolist (code-location *possible-breakpoints*)
 	  (when (or *print-location-kind*
@@ -1608,13 +1609,13 @@ See the CMU Common Lisp User's Manual for more information.
 
     (when (location-in-list *default-breakpoint-debug-function* *breakpoints*
 			    :function-end)
-      (format t "~&::FUNCTION-END *Active* "))))
+      (format t _"~&::FUNCTION-END *Active* "))))
 
 (def-debug-command-alias "LL" "LIST-LOCATIONS")
     
 ;;; set breakpoint at # given
 (def-debug-command "BREAKPOINT" ()
-  (let ((index (read-prompting-maybe "Location number, :start, or :end: "))
+  (let ((index (read-prompting-maybe _"Location number, :start, or :end: "))
 	(break t)
 	(condition t)
 	(print nil)
@@ -1699,10 +1700,10 @@ See the CMU Common Lisp User's Manual for more information.
 	(when old-bp-info
 	  (di:deactivate-breakpoint (breakpoint-info-breakpoint old-bp-info))
 	  (setf *breakpoints* (remove old-bp-info *breakpoints*))
-	  (format t "Note: previous breakpoint removed.~%"))
+	  (format t _"Note: previous breakpoint removed.~%"))
 	(push new-bp-info *breakpoints*))
       (print-breakpoint-info (first *breakpoints*))
-      (format t "~&Added."))))
+      (format t _"~&Added."))))
 
 (def-debug-command-alias "BP" "BREAKPOINT")
 
@@ -1724,13 +1725,13 @@ See the CMU Common Lisp User's Manual for more information.
     (cond (bp-info
 	   (di:delete-breakpoint (breakpoint-info-breakpoint bp-info))
 	   (setf *breakpoints* (remove bp-info *breakpoints*))
-	   (format t "Breakpoint ~S removed.~%" index))
-	  (index (format t "Breakpoint doesn't exist."))
+	   (format t _"Breakpoint ~S removed.~%" index))
+	  (index (format t _"Breakpoint doesn't exist."))
 	  (t
 	   (dolist (ele *breakpoints*)
 	     (di:delete-breakpoint (breakpoint-info-breakpoint ele)))
 	   (setf *breakpoints* nil)
-	   (format t "All breakpoints deleted.~%")))))
+	   (format t _"All breakpoints deleted.~%")))))
 
 (def-debug-command-alias "DBP" "DELETE-BREAKPOINT")
 
@@ -1741,8 +1742,8 @@ See the CMU Common Lisp User's Manual for more information.
 
 (def-debug-command "FLUSH-ERRORS" ()
   (if (setf *flush-debug-errors* (not *flush-debug-errors*))
-      (write-line "Errors now flushed.")
-      (write-line "Errors now create nested debug levels.")))
+      (write-line _"Errors now flushed.")
+      (write-line _"Errors now create nested debug levels.")))
 
 
 (def-debug-command "DESCRIBE" ()
@@ -1751,7 +1752,7 @@ See the CMU Common Lisp User's Manual for more information.
 	 (function (di:debug-function-function debug-fun)))
     (if function
 	(describe function)
-	(format t "Can't figure out the function for this frame."))))
+	(format t _"Can't figure out the function for this frame."))))
 
 
 ;;;
@@ -1760,7 +1761,7 @@ See the CMU Common Lisp User's Manual for more information.
 
 (def-debug-command "EDIT-SOURCE" ()
   (unless (ed::ts-stream-p *terminal-io*)
-    (error "The debugger's EDIT-SOURCE command only works in slave Lisps ~
+    (error _"The debugger's EDIT-SOURCE command only works in slave Lisps ~
 	    connected to a Hemlock editor."))
   (let* ((wire (ed::ts-stream-wire *terminal-io*))
 	 (location (maybe-block-start-location
@@ -1773,7 +1774,7 @@ See the CMU Common Lisp User's Manual for more information.
 	      (local-tlf-offset (- tlf-offset
 				   (di:debug-source-root-number d-source)))
 	      (char-offset (aref (or (di:debug-source-start-positions d-source)
-				     (error "No start positions map."))
+				     (error _"No start positions map."))
 				 local-tlf-offset)))
 	 (wire:remote wire
 	   (ed::edit-source-location (namestring name)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.34.32.1 2010/02/08 17:15:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.34.32.2 2010/02/12 04:07:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -518,17 +518,17 @@
 			  (eq (combination-kind dest) :local))
 		 (let ((lambda (combination-lambda dest))
 		       (pos (eposition cont (combination-args dest))))
-		   (format nil "~:[A possible~;The~] binding of ~S"
+		   (format nil _"~:[A possible~;The~] binding of ~S"
 			   (and (continuation-use cont)
 				(eq (functional-kind lambda) :let))
 			   (leaf-name (elt (lambda-vars lambda) pos)))))))
     (cond ((eq dtype *empty-type*))
 	  ((and (ref-p node) (constant-p (ref-leaf node)))
-	   (compiler-warning "~:[This~;~:*~A~] is not a ~<~%~9T~:;~S:~>~%  ~S"
+	   (compiler-warning _"~:[This~;~:*~A~] is not a ~<~%~9T~:;~S:~>~%  ~S"
 			     what atype-spec (constant-value (ref-leaf node))))
 	  (t
 	   (compiler-warning
-	    "~:[Result~;~:*~A~] is a ~S, ~<~%~9T~:;not a ~S.~>"
+	    _"~:[Result~;~:*~A~] is a ~S, ~<~%~9T~:;not a ~S.~>"
 	    what (type-specifier dtype) atype-spec))))
   (undefined-value))
 

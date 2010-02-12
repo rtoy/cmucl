@@ -11486,6 +11486,552 @@ msgstr ""
 msgid "~S code location at ~D"
 msgstr ""
 
+#: target:code/debug.lisp
+msgid ""
+"*PRINT-LEVEL* is bound to this value when debug prints a function call.  If\n"
+"  null, use *PRINT-LEVEL*"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"*PRINT-LENGTH* is bound to this value when debug prints a function call.  "
+"If\n"
+"  null, use *PRINT-LENGTH*."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"default value for the verbose argument to print-frame-call.  If set to >= 2, "
+"source will be printed for all frames"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "This is T while in the debugger."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Pushes and pops/exits inside the debugger change this."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"If this is bound before the debugger is invoked, it is used as the stack\n"
+"   top by the debugger."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"This is a function of no arguments that prints the debugger prompt\n"
+"   on *debug-io*."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"\n"
+"The prompt is right square brackets, the number indicating how many\n"
+"  recursive command loops you are in.\n"
+"Debug commands do not affect * and friends, but evaluation in the debug "
+"loop\n"
+"  do affect these variables.\n"
+"Any command may be uniquely abbreviated.\n"
+"\n"
+"Getting in and out of DEBUG:\n"
+"  Q        throws to top level.\n"
+"  GO       calls CONTINUE which tries to proceed with the restart "
+"'continue.\n"
+"  RESTART  invokes restart numbered as shown (prompt if not given).\n"
+"  ERROR    prints the error condition and restart cases.\n"
+"  FLUSH    toggles *flush-debug-errors*, which is initially t.\n"
+" \n"
+"  The name of any restart, or its number, is a valid command, and is the "
+"same\n"
+"    as using RESTART to invoke that restart.\n"
+"\n"
+"Changing frames:\n"
+"  U  up frame        D  down frame       T  top frame       B  bottom frame\n"
+"\n"
+"  F n   goes to frame n.\n"
+"\n"
+"Inspecting frames:\n"
+"  BACKTRACE [n]  shows n frames going down the stack.\n"
+"  L              lists locals in current function.\n"
+"  P, PP          displays current function call.\n"
+"  SOURCE [n]     displays frame's source form with n levels of enclosing "
+"forms.\n"
+"  VSOURCE [n]    displays frame's source form without any ellipsis.\n"
+"\n"
+"Breakpoints and steps:\n"
+"  LIST-LOCATIONS [{function | :c}]  list the locations for breakpoints.\n"
+"    Specify :c for the current frame.  Abbreviation: LL\n"
+"  LIST-BREAKPOINTS                  list the active breakpoints.\n"
+"    Abbreviations: LB, LBP\n"
+"  DELETE-BREAKPOINT [n]             remove breakpoint n or all breakpoints.\n"
+"    Abbreviations: DEL, DBP    \n"
+"  BREAKPOINT {n | :end | :start} [:break form] [:function function]\n"
+"    [{:print form}*] [:condition form]    set a breakpoint.\n"
+"    Abbreviations: BR, BP\n"
+"  STEP [n]                          step to the next location or step n "
+"times.\n"
+"\n"
+"Actions on frames:\n"
+"  DEBUG-RETURN expression\n"
+"    returns expression's values from the current frame, exiting the "
+"debugger.\n"
+"    Abbreviations: R\n"
+"\n"
+"Variables:\n"
+"  (DEBUG:VAR name [id])   Returns variable's value if possible.  If "
+"multiple\n"
+"                          variables with the same name exist, use id to "
+"select\n"
+"                          one\n"
+"  (DEBUG:ARG n)           Returns the n'th argument's value if possible.\n"
+"                          Argument zero is the first argument.\n"
+"\n"
+"See the CMU Common Lisp User's Manual for more information.\n"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"When true, the LIST-LOCATIONS command only displays block start locations.\n"
+"   Otherwise, all locations are displayed."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "If true, list the code location type in the LIST-LOCATIONS command."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~%Unknown location: using block start.~%"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~&~S: ~S in ~S"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~&~S: FUNCTION-START in ~S"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~&~S: FUNCTION-END in ~S"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~%Return values: ~S"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~&*Step (to a breakpoint)*"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "*Step*"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~&*Breakpoint hit*"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Error in main-hook-function: unknown breakpoint"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Cannot step, in elsewhere code~%"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"Currently only compiled code can be stepped.~%~\n"
+"                Trying to compile the passed form resulted in ~\n"
+"                the following error:~%  ~A"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~2&Stepping the form~%  ~S~%"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~&using the debugger.  Type HELP for help.~2%"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"STEP implements a debugging paradigm wherein the programmer is allowed\n"
+"   to step through the evaluation of a form.  We use the debugger's "
+"stepping\n"
+"   facility to step through an anonymous function containing only form.\n"
+"\n"
+"   Currently the stepping facility only supports stepping compiled code,\n"
+"   so step will try to compile the resultant anonymous function.  If this\n"
+"   fails, e.g. because it closes over a non-null lexical environment, an\n"
+"   error is signalled."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"Show a listing of the call stack going down from the current frame.  In the\n"
+"   debugger, the current frame is indicated by the prompt.  Count is how "
+"many\n"
+"   frames to show."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "unavaliable-rest-arg"
+msgstr ""
+
+#: target:code/debug.lisp
+#, fuzzy
+msgid "lambda-list-unavailable"
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:code/debug.lisp
+msgid "error printing object {~X}"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "unused-arg"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "unavailable-arg"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~%Source: "
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Error finding source: ~A"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Unable to display error condition~@[: ~A~]"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"This is either nil or a function of two arguments, a condition and the "
+"value\n"
+"   of *debugger-hook*.  This function can either handle the condition or "
+"return\n"
+"   which causes the standard debugger to execute.  The system passes the "
+"value\n"
+"   of this variable to the function because it binds *debugger-hook* to nil\n"
+"   around the invocation."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~2&~A~%   [Condition of type ~S]~2&"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "The CMU Common Lisp debugger.  Type h for help."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~&Restarts:~%"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~2&Debug  (type H for help)~2%"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"When set, avoid calling INVOKE-DEBUGGER recursively when errors occur while\n"
+"   executing in the debugger.  The 'flush' command toggles this."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"When non-NIL, becomes the system *READTABLE* in the debugger\n"
+"   read-eval-print loop"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "When non-NIL, print the current frame when entering the debugger."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~&Error flushed ..."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Return to debug level ~D."
+msgstr ""
+
+#: target:code/debug.lisp
+#, fuzzy
+msgid "Unknown stream-command -- ~S."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:code/debug.lisp
+msgid "Ambiguous debugger command: ~S."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~&Your command, ~S, is ambiguous:~%"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"When set (the default), evaluations in the debugger's command loop occur\n"
+"   relative to the current frame's environment without the need of debugger\n"
+"   forms that explicitly control this kind of evaluation."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Setting * to NIL -- was unbound marker."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "No known valid variables match ~S."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Specification ambiguous:~%~{   ~A~%~}"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Invalid variable ID, ~D, should have been one of ~S."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Specify variable ID to disambiguate ~S.  Use one of ~S."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"Returns a variable's value if possible.  Name is a simple-string or symbol.\n"
+"   If it is a simple-string, it is an initial substring of the variable's "
+"name.\n"
+"   If name is a symbol, it has the same name and package as the variable "
+"whose\n"
+"   value this function returns.  If the symbol is uninterned, then the "
+"variable\n"
+"   has the same name as the symbol, but it has no package.\n"
+"\n"
+"   If name is the initial substring of variables with different names, then\n"
+"   this return no values after displaying the ambiguous names.  If name\n"
+"   determines multiple variables with the same name, then you must use the\n"
+"   optional id argument to specify which one you want.  If you left id\n"
+"   unspecified, then this returns no values after displaying the "
+"distinguishing\n"
+"   id values.\n"
+"\n"
+"   The result of this function is limited to the availability of variable\n"
+"   information.  This is SETF'able."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"Returns the n'th argument's value if possible.  Argument zero is the first\n"
+"   argument in a frame's default printed representation.  Count keyword/"
+"value\n"
+"   pairs as separate arguments."
+msgstr ""
+
+#: target:code/debug.lisp
+#, fuzzy
+msgid "No argument values are available."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:code/debug.lisp
+msgid "Unused arguments have no values."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Invalid argument value."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Argument specification out of range -- ~S."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Unused rest-arg before n'th argument."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Invalid rest-arg before n'th argument."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Invoking debugger command while outside the debugger."
+msgstr ""
+
+#: target:code/debug.lisp
+#, fuzzy
+msgid "Unknown debug command name -- ~S"
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:code/debug.lisp
+msgid "~&Top of stack."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~&Bottom of stack."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Frame number: "
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "You are here."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Bottom of stack encountered."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Top of stack encountered."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "debug-return: "
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"~@<can't find a tag for this frame ~\n"
+"                   ~2I~_(hint: try increasing the DEBUG optimization quality "
+"~\n"
+"                   and recompiling)~:@>"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "No restart named continue."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Restart: "
+msgstr ""
+
+#: target:code/debug.lisp
+#, fuzzy
+msgid "~S is invalid as a restart name.~%"
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:code/debug.lisp
+#, fuzzy
+msgid "No such restart."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:code/debug.lisp
+msgid ""
+"This controls how many lines the debugger's help command prints before\n"
+"   printing a prompting line to continue with output."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~%[RETURN FOR MORE, Q TO QUIT HELP TEXT]: "
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"No local variables ~@[starting with ~A ~]~\n"
+"\t               in function."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"All variables ~@[starting with ~A ~]currently ~\n"
+"\t               have invalid values."
+msgstr ""
+
+#: target:code/debug.lisp
+#, fuzzy
+msgid "No variable information available."
+msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:code/debug.lisp
+msgid "No start positions map."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Source file no longer exists:~%  ~A."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~%; File: ~A~%"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"~%; File has been modified since compilation:~%;   ~A~@\n"
+"\t\t ; Using form offset instead of character position.~%"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Source path no longer exists."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Couldn't continue."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "::FUNCTION-START "
+msgstr ""
+
+#: target:code/debug.lisp
+msgid " *Active*"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid " *Continue here*"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~&::FUNCTION-END *Active* "
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Location number, :start, or :end: "
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Note: previous breakpoint removed.~%"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "~&Added."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Breakpoint ~S removed.~%"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Breakpoint doesn't exist."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "All breakpoints deleted.~%"
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Errors now flushed."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Errors now create nested debug levels."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid "Can't figure out the function for this frame."
+msgstr ""
+
+#: target:code/debug.lisp
+msgid ""
+"The debugger's EDIT-SOURCE command only works in slave Lisps ~\n"
+"\t    connected to a Hemlock editor."
+msgstr ""
+
 #: target:code/query.lisp
 msgid ""
 "Y-OR-N-P prints the message, if any, and reads characters from *QUERY-IO*\n"
@@ -18128,6 +18674,18 @@ msgstr ""
 #, fuzzy
 msgid "Function called with unknown argument keyword ~S."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+
+#: target:compiler/checkgen.lisp
+msgid "~:[A possible~;The~] binding of ~S"
+msgstr ""
+
+#: target:compiler/checkgen.lisp
+msgid "~:[This~;~:*~A~] is not a ~<~%~9T~:;~S:~>~%  ~S"
+msgstr ""
+
+#: target:compiler/checkgen.lisp
+msgid "~:[Result~;~:*~A~] is a ~S, ~<~%~9T~:;not a ~S.~>"
+msgstr ""
 
 #: target:compiler/constraint.lisp
 msgid ""
