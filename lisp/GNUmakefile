@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.33.14.2 2010/02/12 15:01:23 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.33.14.3 2010/02/12 22:21:23 rtoy Exp $
 
 all: lisp.nm translations
 
@@ -63,7 +63,10 @@ Depends: ${SRCS}
 # Find all directories in ../i18n/locale.  These are the locales we
 # currently support.
 
-LOCALES=$(patsubst ../i18n/locale/%, %, $(shell find ../i18n/locale -type d -depth 1))
+# This would be a nice way to do it so we don't have to keep track of
+# the directories, but Solaris' find doesn't grok -depth 1
+#LOCALES=$(patsubst ../i18n/locale/%, %, $(shell find ../i18n/locale -type d -depth 1))
+LOCALES=en@piglatin ko
 
 # Convert locale names to the appropriate path where we want the mo files to go.
 LOCALE_MO=$(patsubst %, ../i18n/locale/%/LC_MESSAGES/cmucl.mo, $(LOCALES))
