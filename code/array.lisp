@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.51.2.2 2010/02/08 20:21:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.51.2.3 2010/02/12 14:46:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1187,39 +1187,41 @@
      result-bit-array)))
 
 (defmacro def-bit-array-op (name function)
-  `(defun ,name (bit-array-1 bit-array-2 &optional result-bit-array)
-     ,(format nil
-	      "Perform a bit-wise ~A on the elements of BIT-ARRAY-1 and ~
-	      BIT-ARRAY-2,~%  putting the results in RESULT-BIT-ARRAY.  ~
-	      If RESULT-BIT-ARRAY is T,~%  BIT-ARRAY-1 is used.  If ~
-	      RESULT-BIT-ARRAY is NIL or omitted, a new array is~%  created.  ~
-	      All the arrays must have the same rank and dimensions."
-	      (symbol-name function))
-     (declare (type (array bit) bit-array-1 bit-array-2)
-	      (type (or (array bit) (member t nil)) result-bit-array))
-     (unless (bit-array-same-dimensions-p bit-array-1 bit-array-2)
-       (simple-program-error _"~S and ~S do not have the same dimensions."
-	      bit-array-1 bit-array-2))
-     (let ((result-bit-array (pick-result-array result-bit-array bit-array-1)))
-       (if (and (simple-bit-vector-p bit-array-1)
-		(simple-bit-vector-p bit-array-2)
-		(simple-bit-vector-p result-bit-array))
-	   (locally (declare (optimize (speed 3) (safety 0)))
-	     (,name bit-array-1 bit-array-2 result-bit-array))
-	   (with-array-data ((data1 bit-array-1) (start1) (end1))
-	     (declare (ignore end1))
-	     (with-array-data ((data2 bit-array-2) (start2) (end2))
-	       (declare (ignore end2))
-	       (with-array-data ((data3 result-bit-array) (start3) (end3))
-		 (do ((index-1 start1 (1+ index-1))
-		      (index-2 start2 (1+ index-2))
-		      (index-3 start3 (1+ index-3)))
-		     ((>= index-3 end3) result-bit-array)
-		   (declare (type index index-1 index-2 index-3))
-		   (setf (sbit data3 index-3)
-			 (logand (,function (sbit data1 index-1)
-					    (sbit data2 index-2))
-				 1))))))))))
+  (let ((docstring (format nil
+			   "Perform a bit-wise ~A on the elements of BIT-ARRAY-1 and ~
+			    BIT-ARRAY-2,~%  putting the results in RESULT-BIT-ARRAY.  ~
+			    If RESULT-BIT-ARRAY is T,~%  BIT-ARRAY-1 is used.  If ~
+			    RESULT-BIT-ARRAY is NIL or omitted, a new array is~%  created.  ~
+			    All the arrays must have the same rank and dimensions."
+			   (symbol-name function))))
+    (intl::note-translatable intl::*default-domain* docstring)
+    `(defun ,name (bit-array-1 bit-array-2 &optional result-bit-array)
+       ,docstring
+       (declare (type (array bit) bit-array-1 bit-array-2)
+		(type (or (array bit) (member t nil)) result-bit-array))
+       (unless (bit-array-same-dimensions-p bit-array-1 bit-array-2)
+	 (simple-program-error _"~S and ~S do not have the same dimensions."
+			       bit-array-1 bit-array-2))
+       (let ((result-bit-array (pick-result-array result-bit-array bit-array-1)))
+	 (if (and (simple-bit-vector-p bit-array-1)
+		  (simple-bit-vector-p bit-array-2)
+		  (simple-bit-vector-p result-bit-array))
+	     (locally (declare (optimize (speed 3) (safety 0)))
+	       (,name bit-array-1 bit-array-2 result-bit-array))
+	     (with-array-data ((data1 bit-array-1) (start1) (end1))
+	       (declare (ignore end1))
+	       (with-array-data ((data2 bit-array-2) (start2) (end2))
+		 (declare (ignore end2))
+		 (with-array-data ((data3 result-bit-array) (start3) (end3))
+		   (do ((index-1 start1 (1+ index-1))
+			(index-2 start2 (1+ index-2))
+			(index-3 start3 (1+ index-3)))
+		       ((>= index-3 end3) result-bit-array)
+		     (declare (type index index-1 index-2 index-3))
+		     (setf (sbit data3 index-3)
+			   (logand (,function (sbit data1 index-1)
+					      (sbit data2 index-2))
+				   1)))))))))))
 
 (def-bit-array-op bit-and logand)
 (def-bit-array-op bit-ior logior)
