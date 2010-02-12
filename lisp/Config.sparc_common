@@ -10,6 +10,11 @@ vpath %.h .:$(PATH1)
 vpath %.c .:$(PATH1)
 vpath %.S .:$(PATH1)
 
+CMULOCALE = ../../src/i18n/locale
+vpath %.pot $(CMULOCALE)
+vpath %.po  $(CMULOCALE)
+vpath %.mo  $(CMULOCALE)
+
 # Enable support for :linkage-table feature.
 
 ifdef FEATURE_LINKAGE_TABLE
