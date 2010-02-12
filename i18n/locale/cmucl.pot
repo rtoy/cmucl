@@ -2327,6 +2327,96 @@ msgstr ""
 
 #: target:code/array.lisp
 msgid ""
+"Perform a bit-wise LOGAND on the elements of BIT-ARRAY-1 and BIT-ARRAY-2,\n"
+"  putting the results in RESULT-BIT-ARRAY.  If RESULT-BIT-ARRAY is T,\n"
+"  BIT-ARRAY-1 is used.  If RESULT-BIT-ARRAY is NIL or omitted, a new array "
+"is\n"
+"  created.  All the arrays must have the same rank and dimensions."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Perform a bit-wise LOGIOR on the elements of BIT-ARRAY-1 and BIT-ARRAY-2,\n"
+"  putting the results in RESULT-BIT-ARRAY.  If RESULT-BIT-ARRAY is T,\n"
+"  BIT-ARRAY-1 is used.  If RESULT-BIT-ARRAY is NIL or omitted, a new array "
+"is\n"
+"  created.  All the arrays must have the same rank and dimensions."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Perform a bit-wise LOGXOR on the elements of BIT-ARRAY-1 and BIT-ARRAY-2,\n"
+"  putting the results in RESULT-BIT-ARRAY.  If RESULT-BIT-ARRAY is T,\n"
+"  BIT-ARRAY-1 is used.  If RESULT-BIT-ARRAY is NIL or omitted, a new array "
+"is\n"
+"  created.  All the arrays must have the same rank and dimensions."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Perform a bit-wise LOGEQV on the elements of BIT-ARRAY-1 and BIT-ARRAY-2,\n"
+"  putting the results in RESULT-BIT-ARRAY.  If RESULT-BIT-ARRAY is T,\n"
+"  BIT-ARRAY-1 is used.  If RESULT-BIT-ARRAY is NIL or omitted, a new array "
+"is\n"
+"  created.  All the arrays must have the same rank and dimensions."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Perform a bit-wise LOGNAND on the elements of BIT-ARRAY-1 and BIT-ARRAY-2,\n"
+"  putting the results in RESULT-BIT-ARRAY.  If RESULT-BIT-ARRAY is T,\n"
+"  BIT-ARRAY-1 is used.  If RESULT-BIT-ARRAY is NIL or omitted, a new array "
+"is\n"
+"  created.  All the arrays must have the same rank and dimensions."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Perform a bit-wise LOGNOR on the elements of BIT-ARRAY-1 and BIT-ARRAY-2,\n"
+"  putting the results in RESULT-BIT-ARRAY.  If RESULT-BIT-ARRAY is T,\n"
+"  BIT-ARRAY-1 is used.  If RESULT-BIT-ARRAY is NIL or omitted, a new array "
+"is\n"
+"  created.  All the arrays must have the same rank and dimensions."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Perform a bit-wise LOGANDC1 on the elements of BIT-ARRAY-1 and BIT-ARRAY-2,\n"
+"  putting the results in RESULT-BIT-ARRAY.  If RESULT-BIT-ARRAY is T,\n"
+"  BIT-ARRAY-1 is used.  If RESULT-BIT-ARRAY is NIL or omitted, a new array "
+"is\n"
+"  created.  All the arrays must have the same rank and dimensions."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Perform a bit-wise LOGANDC2 on the elements of BIT-ARRAY-1 and BIT-ARRAY-2,\n"
+"  putting the results in RESULT-BIT-ARRAY.  If RESULT-BIT-ARRAY is T,\n"
+"  BIT-ARRAY-1 is used.  If RESULT-BIT-ARRAY is NIL or omitted, a new array "
+"is\n"
+"  created.  All the arrays must have the same rank and dimensions."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Perform a bit-wise LOGORC1 on the elements of BIT-ARRAY-1 and BIT-ARRAY-2,\n"
+"  putting the results in RESULT-BIT-ARRAY.  If RESULT-BIT-ARRAY is T,\n"
+"  BIT-ARRAY-1 is used.  If RESULT-BIT-ARRAY is NIL or omitted, a new array "
+"is\n"
+"  created.  All the arrays must have the same rank and dimensions."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
+"Perform a bit-wise LOGORC2 on the elements of BIT-ARRAY-1 and BIT-ARRAY-2,\n"
+"  putting the results in RESULT-BIT-ARRAY.  If RESULT-BIT-ARRAY is T,\n"
+"  BIT-ARRAY-1 is used.  If RESULT-BIT-ARRAY is NIL or omitted, a new array "
+"is\n"
+"  created.  All the arrays must have the same rank and dimensions."
+msgstr ""
+
+#: target:code/array.lisp
+msgid ""
 "Performs a bit-wise logical NOT on the elements of BIT-ARRAY,\n"
 "  putting the results in RESULT-BIT-ARRAY.  If RESULT-BIT-ARRAY is T,\n"
 "  BIT-ARRAY is used.  If RESULT-BIT-ARRAY is NIL or omitted, a new array is\n"
