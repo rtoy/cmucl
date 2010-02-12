@@ -83,10 +83,6 @@ msgid "Expecting end of expression.  ~S."
 msgstr ""
 
 #: target:code/intl.lisp
-msgid "Bad magic number in \"~A.mo\"."
-msgstr ""
-
-#: target:code/intl.lisp
 msgid ""
 "Look up STRING in the current message domain and return its translation."
 msgstr ""
