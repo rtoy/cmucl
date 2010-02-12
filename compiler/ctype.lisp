@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.35.52.1 2010/02/08 17:15:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.35.52.2 2010/02/12 04:47:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,10 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
+;;; WARNING: Watch out when marking translatable strings.  You can
+;;; really, really slow down the compiler if you do it in a simple
+;;; fashion!  (Compile times for cmucl went up by a factor of about
+;;; 10!)
 (in-package "C")
 (intl:textdomain "cmucl")
 
@@ -52,13 +56,13 @@
   (declare (string format-string))
   (setq *lossage-detected* t)
   (when *error-function*
-    (apply *error-function* format-string format-args)))
+    (apply *error-function* (intl:gettext format-string) format-args)))
 ;;;
 (defun note-slime (format-string &rest format-args)
   (declare (string format-string))
   (setq *slime-detected* t)
   (when *warning-function*
-    (apply *warning-function* format-string format-args)))
+    (apply *warning-function* (intl:gettext format-string) format-args)))
 
 
 (declaim (special *compiler-error-context*))
@@ -127,22 +131,22 @@
      ((not (or optional keyp rest))
       (if (/= nargs min-args)
 	  (note-lossage
-	   "Function called with ~R argument~:P, but wants exactly ~R."
+	   _N"Function called with ~R argument~:P, but wants exactly ~R."
 	   nargs min-args)
 	  (check-fixed-and-rest args required nil)))
      ((< nargs min-args)
       (note-lossage
-       "Function called with ~R argument~:P, but wants at least ~R."
+       _N"Function called with ~R argument~:P, but wants at least ~R."
        nargs min-args))
      ((<= nargs max-args)
       (check-fixed-and-rest args (append required optional) rest))
      ((not (or keyp rest))
       (note-lossage
-       "Function called with ~R argument~:P, but wants at most ~R."
+       _N"Function called with ~R argument~:P, but wants at most ~R."
        nargs max-args))
      ((and keyp (oddp (- nargs max-args)))
       (note-lossage
-       "Function has an odd number of arguments in the keyword portion."))
+       _N"Function has an odd number of arguments in the keyword portion."))
      (t
       (check-fixed-and-rest args (append required optional) rest)
       (when keyp
@@ -160,10 +164,10 @@
       (multiple-value-bind (int win)
 			   (funcall result-test out-type return-type)
 	(cond ((not win)
-	       (note-slime "Can't tell whether the result is a ~S."
+	       (note-slime _N"Can't tell whether the result is a ~S."
 			   (type-specifier return-type)))
 	      ((not int)
-	       (note-lossage "The result is a ~S, not a ~S."
+	       (note-lossage _N"The result is a ~S, not a ~S."
 			     (type-specifier out-type)
 			     (type-specifier return-type)))))) 
     
@@ -189,20 +193,20 @@
       (multiple-value-bind (int win)
 			   (funcall *test-function* ctype type)
 	(cond ((not win)
-	       (note-slime "Can't tell whether the ~:R argument is a ~S." n
+	       (note-slime _N"Can't tell whether the ~:R argument is a ~S." n
 			   (type-specifier type))
 	       nil)
 	      ((not int)
-	       (note-lossage "The ~:R argument is a ~S, not a ~S." n
+	       (note-lossage _N"The ~:R argument is a ~S, not a ~S." n
 			     (type-specifier ctype)
 			     (type-specifier type))
 	       nil)
 	      ((eq ctype *empty-type*)
-	       (note-slime "The ~:R argument never returns a value." n)
+	       (note-slime _N"The ~:R argument never returns a value." n)
 	       nil)
 	      (t t)))))
     ((not (constant-continuation-p cont))
-     (note-slime "The ~:R argument is not a constant." n)
+     (note-slime _N"The ~:R argument is not a constant." n)
      nil)
     (t
      (let ((val (continuation-value cont))
@@ -210,12 +214,12 @@
        (multiple-value-bind (res win)
 			    (ctypep val type)
 	 (cond ((not win)
-		(note-slime "Can't tell whether the ~:R argument is a ~
+		(note-slime _N"Can't tell whether the ~:R argument is a ~
 		             constant ~S:~%  ~S"
 			    n (type-specifier type) val)
 		nil)
 	       ((not res)
-		(note-lossage "The ~:R argument is not a constant ~S:~%  ~S"
+		(note-lossage _N"The ~:R argument is not a constant ~S:~%  ~S"
 			      n (type-specifier type) val)
 		nil)
 	       (t t)))))))
@@ -260,7 +264,7 @@
 	(cond
 	  ((not (check-arg-type k (specifier-type 'symbol) n)))
 	  ((not (constant-continuation-p k))
-	   (note-slime "The ~:R argument (in keyword position) is not a constant."
+	   (note-slime _N"The ~:R argument (in keyword position) is not a constant."
 		       n))
 	  (t
 	   (let* ((name (continuation-value k))
@@ -284,12 +288,12 @@
 			    (setq allow-other-keys (continuation-value value))
 			    (progn
 			      (setq allow-other-keys t)
-			      (note-slime "The value of ~S is not a constant"
+			      (note-slime _N"The value of ~S is not a constant"
 					  :allow-other-keys)))
 			(setq allow-other-keys-seen t))))
 		   ((not info)
 		    (unless (function-type-allowp type)
-		      (note-lossage "~S is not a known argument keyword."
+		      (note-lossage _N"~S is not a known argument keyword."
 				    name)))
 		   (t
 		    (check-arg-type (second key) (key-info-type info)
@@ -478,18 +482,18 @@
     (let ((call-min (approximate-function-type-min-args call-type)))
       (when (< call-min min-args)
 	(note-lossage
-	 "Function previously called with ~R argument~:P, but wants at least ~R."
+	 _N"Function previously called with ~R argument~:P, but wants at least ~R."
 	 call-min min-args)))
 
     (let ((call-max (approximate-function-type-max-args call-type)))
       (cond ((<= call-max max-args))
 	    ((not (or keyp rest))
 	     (note-lossage
-	      "Function previously called with ~R argument~:P, but wants at most ~R."
+	      _N"Function previously called with ~R argument~:P, but wants at most ~R."
 	      call-max max-args))
 	    ((and keyp (oddp (- call-max max-args)))
 	     (note-lossage
-	      "Function previously called with an odd number of arguments in ~
+	      _N"Function previously called with an odd number of arguments in ~
 	      the keyword portion.")))
 
       (when (and keyp (> call-max max-args))
@@ -534,13 +538,13 @@
 			   (funcall *test-function* ctype decl-type)
 	(cond
 	 ((not win)
-	  (note-slime "Can't tell whether previous ~? argument type ~S is a ~S."
+	  (note-slime _N"Can't tell whether previous ~? argument type ~S is a ~S."
 		      context args (type-specifier ctype) (type-specifier decl-type)))
 	 ((not int)
 	  (setq losers (type-union ctype losers))))))
 
     (unless (eq losers *empty-type*)
-      (note-lossage "~:(~?~) argument should be a ~S but was a ~S in a previous call."
+      (note-lossage _N"~:(~?~) argument should be a ~S but was a ~S in a previous call."
 		    context args (type-specifier decl-type) (type-specifier losers)))))
 
 
@@ -576,7 +580,7 @@
 
 	(dolist (name (names))
 	  (unless (find name keys :key #'key-info-name)
-	    (note-lossage "Function previously called with unknown argument keyword ~S."
+	    (note-lossage _N"Function previously called with unknown argument keyword ~S."
 		  name)))))))
 
 
@@ -597,7 +601,7 @@
 		(cond
 		 ((eq int *empty-type*)
 		  (note-lossage
-		   "Definition's declared type for variable ~A:~%  ~S~@
+		   _N"Definition's declared type for variable ~A:~%  ~S~@
 		   conflicts with this type from ~A:~%  ~S"
 		   (leaf-name var) (type-specifier vtype)
 		   where (type-specifier type))
@@ -642,22 +646,26 @@
     (flet ((frob (x y what)
 	     (unless (= x y)
 	       (note-lossage
-		"Definition has ~R ~A arg~P, but ~A has ~R."
+		_N"Definition has ~R ~A arg~P, but ~A has ~R."
 		x what x where y))))
-      (frob min (length req) "fixed")
-      (frob (- (optional-dispatch-max-args od) min) (length opt) "optional"))
+      ;; TRANSLATORS:  Usage is "Definition has <n> FIXED args but <where> <m>"
+      ;; TRANSLATORS:  Translate FIXED above appropriately.
+      (frob min (length req) _"fixed")
+      ;; TRANSLATORS:  Usage is "Definition has <n> OPTIONAL args but <where> <m>"
+      ;; TRANSLATORS:  Translate OPTIONAL above appropriately.
+      (frob (- (optional-dispatch-max-args od) min) (length opt) _"optional"))
     (flet ((frob (x y what)
 	     (unless (eq x y)
 	       (note-lossage
-		"Definition ~:[doesn't have~;has~] ~A, but ~
+		_N"Definition ~:[doesn't have~;has~] ~A, but ~
 		~A ~:[doesn't~;does~]."
 		x what where y))))
       (frob (optional-dispatch-keyp od) (function-type-keyp type)
-	    "keyword args")
+	    _"keyword args")
       (unless (optional-dispatch-keyp od)
 	(frob (not (null (optional-dispatch-more-entry od)))
 	      (not (null (function-type-rest type)))
-	      "rest args"))
+	      _"rest args"))
       (frob (optional-dispatch-allowp od) (function-type-allowp type)
 	    "&allow-other-keys"))
 
@@ -685,7 +693,7 @@
 				      (or def-type (specifier-type 'null)))))
 		    (t
 		     (note-lossage
-		      "Defining a ~S keyword not present in ~A."
+		      _N"Defining a ~S keyword not present in ~A."
 		      key where)
 		     (res *universal-type*)))))
 		(:required (res (pop req)))
@@ -715,7 +723,7 @@
 				   (when info
 				     (arg-info-keyword info)))))
 	    (note-lossage
-	     "Definition lacks the ~S keyword present in ~A."
+	     _N"Definition lacks the ~S keyword present in ~A."
 	     (key-info-name key) where))))
 
       (try-type-intersections (vars) (res) where))))
@@ -730,17 +738,17 @@
   (flet ((frob (x what)
 	   (when x
 	     (note-lossage
-	      "Definition has no ~A, but the ~A did."
+	      _N"Definition has no ~A, but the ~A did."
 	      what where))))
-    (frob (function-type-optional type) "optional args")
-    (frob (function-type-keyp type) "keyword args")
-    (frob (function-type-rest type) "rest arg"))
+    (frob (function-type-optional type) _"optional args")
+    (frob (function-type-keyp type) _"keyword args")
+    (frob (function-type-rest type) _"rest arg"))
   (let* ((vars (lambda-vars lambda))
 	 (nvars (length vars))
 	 (req (function-type-required type))
 	 (nreq (length req)))
     (unless (= nvars nreq)
-      (note-lossage "Definition has ~R arg~:P, but the ~A has ~R."
+      (note-lossage _N"Definition has ~R arg~:P, but the ~A has ~R."
 		    nvars where nreq))
     (if *lossage-detected*
 	(values nil nil)
@@ -787,7 +795,7 @@
 	(cond
 	 ((and atype (not (values-types-intersect atype type-returns)))
 	  (note-lossage
-	   "The result type from ~A:~%  ~S~@
+	   _N"The result type from ~A:~%  ~S~@
 	   conflicts with the definition's result type assertion:~%  ~S"
 	   where (type-specifier type-returns) (type-specifier atype))
 	  nil)
@@ -801,7 +809,7 @@
 		   (when (and warning-function
 			      (not (csubtypep (leaf-type var) type)))
 		     (funcall warning-function
-			      "Assignment to argument: ~S~%  ~
+			      _N"Assignment to argument: ~S~%  ~
 			       prevents use of assertion from function ~
 			       type ~A:~%  ~S~%"
 			      (leaf-name var) where (type-specifier type))))

@@ -15219,6 +15219,164 @@ msgid ""
 "			 ~%  ~S~%  ~S  ~%  ~S"
 msgstr ""
 
+#: target:compiler/locall.lisp target:compiler/ctype.lisp
+msgid "Function called with ~R argument~:P, but wants exactly ~R."
+msgstr ""
+
+#: target:compiler/locall.lisp target:compiler/ctype.lisp
+msgid "Function called with ~R argument~:P, but wants at least ~R."
+msgstr ""
+
+#: target:compiler/locall.lisp target:compiler/ctype.lisp
+msgid "Function called with ~R argument~:P, but wants at most ~R."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "Function has an odd number of arguments in the keyword portion."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "Can't tell whether the result is a ~S."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "The result is a ~S, not a ~S."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "Can't tell whether the ~:R argument is a ~S."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "The ~:R argument is a ~S, not a ~S."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "The ~:R argument never returns a value."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "The ~:R argument is not a constant."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid ""
+"Can't tell whether the ~:R argument is a ~\n"
+"		             constant ~S:~%  ~S"
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "The ~:R argument is not a constant ~S:~%  ~S"
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "The ~:R argument (in keyword position) is not a constant."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "The value of ~S is not a constant"
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "~S is not a known argument keyword."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "Function previously called with ~R argument~:P, but wants at least ~R."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "Function previously called with ~R argument~:P, but wants at most ~R."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid ""
+"Function previously called with an odd number of arguments in ~\n"
+"	      the keyword portion."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "Can't tell whether previous ~? argument type ~S is a ~S."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "~:(~?~) argument should be a ~S but was a ~S in a previous call."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "Function previously called with unknown argument keyword ~S."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid ""
+"Definition's declared type for variable ~A:~%  ~S~@\n"
+"		   conflicts with this type from ~A:~%  ~S"
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "Definition has ~R ~A arg~P, but ~A has ~R."
+msgstr ""
+
+#.  Translate FIXED above appropriately.
+#: target:compiler/ctype.lisp
+msgid "fixed"
+msgstr ""
+
+#.  Translate OPTIONAL above appropriately.
+#: target:compiler/ctype.lisp
+msgid "optional"
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "Definition ~:[doesn't have~;has~] ~A, but ~\n"
+"		~A ~:[doesn't~;does~]."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "keyword args"
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "rest args"
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "Defining a ~S keyword not present in ~A."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "Definition lacks the ~S keyword present in ~A."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "Definition has no ~A, but the ~A did."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "optional args"
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "rest arg"
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "Definition has ~R arg~:P, but the ~A has ~R."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid ""
+"The result type from ~A:~%  ~S~@\n"
+"	   conflicts with the definition's result type assertion:~%  ~S"
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid ""
+"Assignment to argument: ~S~%  ~\n"
+"			       prevents use of assertion from function ~\n"
+"			       type ~A:~%  ~S~%"
+msgstr ""
+
 #: target:compiler/vmdef.lisp
 msgid "~S is not a defined template."
 msgstr ""
@@ -18298,18 +18456,6 @@ msgid ""
 "Couldn't inline expand because expansion ~\n"
 "				   calls this let-converted local function:~\n"
 "				   ~%  ~S"
-msgstr ""
-
-#: target:compiler/locall.lisp
-msgid "Function called with ~R argument~:P, but wants exactly ~R."
-msgstr ""
-
-#: target:compiler/locall.lisp
-msgid "Function called with ~R argument~:P, but wants at least ~R."
-msgstr ""
-
-#: target:compiler/locall.lisp
-msgid "Function called with ~R argument~:P, but wants at most ~R."
 msgstr ""
 
 #: target:compiler/locall.lisp
