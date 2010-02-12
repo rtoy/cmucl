@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.1.2.9 $
+;;; $Revision: 1.1.2.10 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,7 +23,7 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.9 2010/02/10 17:26:43 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.1.2.10 2010/02/12 00:37:00 rtoy Exp $")
 
 (in-package "INTL")
 
@@ -63,7 +63,7 @@
 
 (declaim (ftype (function (stream) (unsigned-byte 32)) read-lelong))
 (defun read-lelong (stream)
-  (declare (optimize (speed 3) (space 2) (safety 0)
+  (declare #+(or)(optimize (speed 3) (space 2) (safety 0)
 		     #+CMU (ext:inhibit-warnings 3))) ;quiet about boxing retn
   (+ (the (unsigned-byte 8) (read-byte stream))
      (ash (the (unsigned-byte 8) (read-byte stream)) 8)
@@ -72,7 +72,7 @@
 
 (declaim (ftype (function (stream) (unsigned-byte 32)) read-belong))
 (defun read-belong (stream)
-  (declare (optimize (speed 3) (space 2) (safety 0)
+  (declare #+(or)(optimize (speed 3) (space 2) (safety 0)
 		     #+CMU (ext:inhibit-warnings 3))) ;quiet about boxing retn
   (+ (ash (the (unsigned-byte 8) (read-byte stream)) 24)
      (ash (the (unsigned-byte 8) (read-byte stream)) 16)
@@ -106,7 +106,10 @@
 (defun find-encoding (domain)
   (when (null (domain-entry-encoding domain))
     (setf (domain-entry-encoding domain) :iso-8859-1)
-    (let* ((header (domain-lookup "" domain))
+    ;; Domain lookup can call the compiler, so set the locale to "C"
+    ;; so things work.
+    (let* ((*locale* "C")
+	   (header (domain-lookup "" domain))
 	   (ctype (search "Content-Type: " header))
 	   (eoln (and ctype (position #\Newline header :start ctype)))
 	   (charset (and ctype (search "; charset=" header
@@ -326,7 +329,12 @@
 	(cond ((= magic #x950412de) (setq read #'read-lelong))
 	      ((= magic #xde120495) (setq read #'read-belong))
 	      (t
-	       (error _"Bad magic number in \"~A.mo\"." domain))))
+	       ;; DON'T translate this!  If we can't load the domain,
+	       ;; we can't print this message, Which causes an error
+	       ;; that causes use to do a domain lookup again, which
+	       ;; fails which cause an error message which ...
+	       (warn "Bad magic number in \"~A.mo\"." domain)
+	       (return-from load-domain nil))))
       (let ((version (funcall read stream))
 	    (messages (funcall read stream))
 	    (master (funcall read stream))
@@ -389,16 +397,18 @@
 			 (start2 0) (end2 (length b)))
   (declare (type (simple-array (unsigned-byte 8) (*)) a b)
 	   (type (integer 0 #.array-dimension-limit) start1 end1 start2 end2)
-	   (optimize (speed 3) (space 2) (safety 0) #-gcl (debug 0)))
-  (loop
-    (unless (= (aref a start1) (aref b start2)) (return nil))
-    (when (or (= (incf start1) end1) (= (incf start2) end2)) (return t))))
+	   #+(or)(optimize (speed 3) (space 2) (safety 0) #-gcl (debug 0)))
+  (when (and (< start1 end1)
+	     (< start2 end2))
+    (loop
+       (unless (= (aref a start1) (aref b start2)) (return nil))
+       (when (or (= (incf start1) end1) (= (incf start2) end2)) (return t)))))
 
 (defun search-domain (octets domain pos)
   (declare (type (simple-array (unsigned-byte 8) (*)) octets)
 	   (type domain-entry domain)
 	   (type list pos)
-	   (optimize (speed 3) (space 2) (safety 0) #-gcl (debug 0)
+	   #+(or)(optimize (speed 3) (space 2) (safety 0) #-gcl (debug 0)
 		     #+CMU (ext:inhibit-warnings 3))) ; quiet about boxing
   (when pos
     (let ((temp (make-array 120 :element-type '(unsigned-byte 8)))
@@ -413,14 +423,14 @@
 				    :end (min 120 length))))
 	    (declare (type (integer 0 #.array-dimension-limit) off end))
 	    (loop while (octets= octets temp
-			  :start1 off
-			  :end1 (min (+ off 120) length)
-			  :end2 end)
-	      do
-		(incf off end)
-		(when (< off length)
-		  (setf end (read-sequence temp stream
-					   :end (min 120 (- length off))))))
+			 :start1 off
+			 :end1 (min (+ off 120) length)
+			 :end2 end)
+	       do
+	       (incf off end)
+	       (when (< off length)
+		 (setf end (read-sequence temp stream
+					  :end (min 120 (- length off))))))
 	    (when (= off length)
 	      (file-position stream (cdr entry))
 	      (let* ((len (funcall (domain-entry-readfn domain) stream))
@@ -432,7 +442,7 @@
 
 (defun domain-lookup (string domain)
   (declare (type string string) (type domain-entry domain)
-	   (optimize (speed 3) (space 2) (safety 0)))
+	   #+(or)(optimize (speed 3) (space 2) (safety 0)))
   (or (if (null (domain-entry-encoding domain)) string)
       (gethash string (domain-entry-hash domain))
       (let* ((octets (string-to-octets string
@@ -452,7 +462,7 @@
 
 (defun domain-lookup-plural (singular plural domain)
   (declare (type string singular plural) (type domain-entry domain)
-	   (optimize (speed 3) (space 2) (safety 0)))
+	   #+(or)(optimize (speed 3) (space 2) (safety 0)))
   (or (if (null (domain-entry-encoding domain)) nil)
       (gethash (cons singular plural) (domain-entry-hash domain))
       (let* ((octets (let* ((a (string-to-octets singular
@@ -526,14 +536,14 @@
 (declaim (inline dgettext))
 (defun dgettext (domain string)
   _N"Look up STRING in the specified message domain and return its translation."
-  (declare (optimize (speed 3) (space 2) (safety 0)))
+  #+(or)(declare (optimize (speed 3) (space 2) (safety 0)))
   (let ((domain (and domain (find-domain domain *locale*))))
     (or (and domain (domain-lookup string domain)) string)))
 
 (defun dngettext (domain singular plural n)
   _N"Look up the singular or plural form of a message in the specified domain."
   (declare (type integer n)
-	   (optimize (speed 3) (space 2) (safety 0)))
+	   #+(or)(optimize (speed 3) (space 2) (safety 0)))
   (let* ((domain (and domain (find-domain domain *locale*)))
 	 (list (and domain (domain-lookup-plural singular plural domain))))
     (if list
