@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.35.52.2 2010/02/12 04:47:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.35.52.3 2010/02/12 05:52:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -773,7 +773,7 @@
        (functional type &key (really-assert t)
 		   ((:error-function *error-function*) #'compiler-warning)
 		   warning-function
-		   (where "previous declaration"))
+		   (where _"previous declaration"))
   (declare (type functional functional)
 	   (type function *error-function*)
 	   (string where))

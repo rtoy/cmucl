@@ -255,6 +255,64 @@ msgstr ""
 msgid "Argument ~A is not a ~S: ~S."
 msgstr ""
 
+#: target:code/lispinit.lisp
+msgid ""
+"Holds a list of symbols that describe features provided by the\n"
+"   implementation."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Features affecting the runtime"
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "The fixnum closest in value to positive infinity."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "The fixnum closest in value to negative infinity."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid ""
+"When (typep condition *break-on-signals*) is true, then calls to SIGNAL "
+"will\n"
+"   enter the debugger prior to signalling that condition."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid ""
+"Invokes the signal facility on a condition formed from datum and arguments.\n"
+"   If the condition is not handled, nil is returned.  If\n"
+"   (TYPEP condition *BREAK-ON-SIGNALS*) is true, the debugger is invoked "
+"before\n"
+"   any signalling is done."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "~A~%Break entered because of *break-on-signals* (now NIL.)"
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Ignore the additional arguments."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid ""
+"You may not supply additional arguments ~\n"
+"				     when giving ~S to ~S."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Bad argument to ~S: ~S"
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid ""
+"Invokes the signal facility on a condition formed from datum and arguments.\n"
+"   If the condition is not handled, the debugger is invoked."
+msgstr ""
+
 #: target:pcl/dfun.lisp target:code/interr.lisp target:code/lispinit.lisp
 msgid "Help! "
 msgstr ""
@@ -268,11 +326,163 @@ msgid "KERNEL:*MAXIMUM-ERROR-DEPTH* exceeded."
 msgstr ""
 
 #: target:code/lispinit.lisp
+msgid ""
+"Prints a message and invokes the debugger without allowing any possibility\n"
+"   of condition handling occurring."
+msgstr ""
+
+#: target:code/lispinit.lisp
 msgid "Return from BREAK."
 msgstr ""
 
 #: target:code/lispinit.lisp
+msgid ""
+"Warns about a situation by signalling a condition formed by datum and\n"
+"   arguments.  While the condition is being signaled, a muffle-warning "
+"restart\n"
+"   exists that causes WARN to immediately return nil."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "a warning condition"
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Skip warning."
+msgstr ""
+
+#: target:code/lispinit.lisp
 msgid "~&~@<Warning:  ~3i~:_~A~:>~%"
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid ""
+"Invokes the signal facility on a condition formed from datum and arguments.\n"
+"   If the condition is not handled, the debugger is invoked.  This function\n"
+"   is just like error, except that the condition type defaults to the type\n"
+"   simple-program-error, instead of program-error."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Gives the world a shove and hopes it spins."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Functions to be invoked during cleanup at Lisp exit."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid ""
+"Terminates the current Lisp.  Things are cleaned up unless Recklessly-P is\n"
+"  non-Nil."
+msgstr ""
+
+#: target:code/multi-proc.lisp target:code/lispinit.lisp
+msgid ""
+"This function causes execution to be suspended for N seconds.  N may\n"
+"  be any non-negative, non-complex number."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid ""
+"Zero the unused portion of the control stack so that old objects are not\n"
+"   kept alive because of uninitialized stack variables."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid ""
+"Holds a list of all the values returned by the most recent top-level EVAL."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Gets the previous value of / when a new value is computed."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Gets the previous value of // when a new value is computed."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Holds the value of the most recent top-level EVAL."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Gets the previous value of * when a new value is computed."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Gets the previous value of ** when a new value is computed."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Holds the value of the most recent top-level READ."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Gets the previous value of + when a new value is read."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Gets the previous value of ++ when a new value is read."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Holds the form curently being evaluated."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid ""
+"The top-level prompt string.  This also may be a function of no arguments\n"
+"   that returns a simple-string."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid ""
+"True if we are within the Top-Level-Catcher.  This is used by interrupt\n"
+"  handlers to see whether it is o.k. to throw."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid ""
+"Evaluate FORM, returning whatever it returns but adjust ***, **, *, +++, ++,"
+"\n"
+"  +, ///, //, /, and -."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Go on with * set to NIL."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "EVAL returned an unbound marker."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid ""
+"How many pages to reserve from the total heap space so we can handle\n"
+"heap overflow."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Top-level READ-EVAL-PRINT loop.  Do not call this."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "Return to Top-Level."
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid ""
+"~&Received EOF on *standard-input*, ~\n"
+"					switching to *terminal-io*.~%"
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "~&Received more than ~D EOFs; Aborting.~%"
+msgstr ""
+
+#: target:code/lispinit.lisp
+msgid "~&Received EOF.~%"
 msgstr ""
 
 #: target:code/fwrappers.lisp
@@ -13555,12 +13765,6 @@ msgstr ""
 
 #: target:code/multi-proc.lisp
 msgid ""
-"This function causes execution to be suspended for N seconds.  N may\n"
-"  be any non-negative, non-complex number."
-msgstr ""
-
-#: target:code/multi-proc.lisp
-msgid ""
 "Executes body and returns the values of the last form in body. However, if\n"
 "  the execution takes longer than timeout seconds, abort it and evaluate\n"
 "  timeout-forms, returning the values of last form."
@@ -15362,6 +15566,10 @@ msgstr ""
 
 #: target:compiler/ctype.lisp
 msgid "Definition has ~R arg~:P, but the ~A has ~R."
+msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "previous declaration"
 msgstr ""
 
 #: target:compiler/ctype.lisp

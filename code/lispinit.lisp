@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.79.12.4 2010/02/12 00:37:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.79.12.5 2010/02/12 05:52:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 	  ++ +++ ** *** // ///))
 
 (defvar *features* '(:common :common-lisp :ansi-cl :ieee-floating-point :cmu)
-  "Holds a list of symbols that describe features provided by the
+  _N"Holds a list of symbols that describe features provided by the
    implementation.")
 
 
@@ -29,7 +29,7 @@
 (export '(compiler-version scrub-control-stack *runtime-features*))
 
 (defvar *runtime-features* nil
-  "Features affecting the runtime")
+  _N"Features affecting the runtime")
 
 (in-package :extensions)
 (export '(quit *prompt*))
@@ -48,10 +48,10 @@
 ;;; Make the error system enable interrupts.
 
 (defconstant most-positive-fixnum #.vm:target-most-positive-fixnum
-  "The fixnum closest in value to positive infinity.")
+  _N"The fixnum closest in value to positive infinity.")
 
 (defconstant most-negative-fixnum #.vm:target-most-negative-fixnum
-  "The fixnum closest in value to negative infinity.")
+  _N"The fixnum closest in value to negative infinity.")
 
 
 ;;; Random information:
@@ -142,11 +142,11 @@
 (in-package "CONDITIONS")
 
 (defvar *break-on-signals* nil
-  "When (typep condition *break-on-signals*) is true, then calls to SIGNAL will
+  _N"When (typep condition *break-on-signals*) is true, then calls to SIGNAL will
    enter the debugger prior to signalling that condition.")
 
 (defun signal (datum &rest arguments)
-  "Invokes the signal facility on a condition formed from datum and arguments.
+  _N"Invokes the signal facility on a condition formed from datum and arguments.
    If the condition is not handled, nil is returned.  If
    (TYPEP condition *BREAK-ON-SIGNALS*) is true, the debugger is invoked before
    any signalling is done."
@@ -156,7 +156,7 @@
     (let ((obos *break-on-signals*)
 	  (*break-on-signals* nil))
       (when (typep condition obos)
-	(break "~A~%Break entered because of *break-on-signals* (now NIL.)"
+	(break _"~A~%Break entered because of *break-on-signals* (now NIL.)"
 	       condition)))
     (loop
       (unless *handler-clusters* (return))
@@ -173,11 +173,11 @@
 (defun coerce-to-condition (datum arguments default-type function-name)
   (cond ((typep datum 'condition)
 	 (if arguments
-	     (cerror "Ignore the additional arguments."
+	     (cerror _"Ignore the additional arguments."
 		     'simple-type-error
 		     :datum arguments
 		     :expected-type 'null
-		     :format-control "You may not supply additional arguments ~
+		     :format-control _"You may not supply additional arguments ~
 				     when giving ~S to ~S."
 		     :format-arguments (list datum function-name)))
 	 datum)
@@ -191,11 +191,11 @@
          (error 'simple-type-error
 		:datum datum
 		:expected-type '(or symbol string)
-		:format-control "Bad argument to ~S: ~S"
+		:format-control _"Bad argument to ~S: ~S"
 		:format-arguments (list function-name datum)))))
 
 (defun error (datum &rest arguments)
-  "Invokes the signal facility on a condition formed from datum and arguments.
+  _N"Invokes the signal facility on a condition formed from datum and arguments.
    If the condition is not handled, the debugger is invoked."
   (kernel:infinite-error-protect
     (let ((condition (coerce-to-condition datum arguments
@@ -241,7 +241,7 @@
   nil)
 
 (defun break (&optional (datum "Break") &rest arguments)
-  "Prints a message and invokes the debugger without allowing any possibility
+  _N"Prints a message and invokes the debugger without allowing any possibility
    of condition handling occurring."
   (kernel:infinite-error-protect
     (with-simple-restart (continue _"Return from BREAK.")
@@ -253,16 +253,18 @@
   nil)
 
 (defun warn (datum &rest arguments)
-  "Warns about a situation by signalling a condition formed by datum and
+  _N"Warns about a situation by signalling a condition formed by datum and
    arguments.  While the condition is being signaled, a muffle-warning restart
    exists that causes WARN to immediately return nil."
   (kernel:infinite-error-protect
     (let ((condition (coerce-to-condition datum arguments
 					  'simple-warning 'warn)))
-      (check-type condition warning "a warning condition")
+      (check-type condition warning _"a warning condition")
       (restart-case (signal condition)
 	(muffle-warning ()
-	  :report "Skip warning."
+	  :report (lambda (condition stream)
+		    (declare (ignore condition))
+		    (write-string _"Skip warning." stream))
 	  (return-from warn nil)))
       (format *error-output* _"~&~@<Warning:  ~3i~:_~A~:>~%" condition)))
   nil)
@@ -270,7 +272,7 @@
 ;;; Utility functions
 
 (defun simple-program-error (datum &rest arguments)
-  "Invokes the signal facility on a condition formed from datum and arguments.
+  _N"Invokes the signal facility on a condition formed from datum and arguments.
    If the condition is not handled, the debugger is invoked.  This function
    is just like error, except that the condition type defaults to the type
    simple-program-error, instead of program-error."
@@ -326,7 +328,7 @@
     str))
 
 (defun %initial-function ()
-  "Gives the world a shove and hopes it spins."
+  _N"Gives the world a shove and hopes it spins."
   (%primitive print "In initial-function, and running.")
   #-gengc (setf *already-maybe-gcing* t)
   #-gengc (setf *gc-inhibit* t)
@@ -483,12 +485,12 @@
 ;;;; Miscellaneous external functions:
 
 (defvar *cleanup-functions* nil
-  "Functions to be invoked during cleanup at Lisp exit.")
+  _N"Functions to be invoked during cleanup at Lisp exit.")
 
 ;;; Quit gets us out, one way or another.
 
 (defun quit (&optional recklessly-p)
-  "Terminates the current Lisp.  Things are cleaned up unless Recklessly-P is
+  _N"Terminates the current Lisp.  Things are cleaned up unless Recklessly-P is
   non-Nil."
   (if recklessly-p
       (unix:unix-exit 0)
@@ -499,7 +501,7 @@
 
 #-mp ; Multi-processing version defined in multi-proc.lisp.
 (defun sleep (n)
-  "This function causes execution to be suspended for N seconds.  N may
+  _N"This function causes execution to be suspended for N seconds.  N may
   be any non-negative, non-complex number."
   (when (or (not (realp n))
 	    (minusp n))
@@ -532,7 +534,7 @@
 ;;;
 #-(or x86 amd64)
 (defun %scrub-control-stack ()
-  "Zero the unused portion of the control stack so that old objects are not
+  _N"Zero the unused portion of the control stack so that old objects are not
    kept alive because of uninitialized stack variables."
   (declare (optimize (speed 3) (safety 0))
 	   (values (unsigned-byte 20)))
@@ -571,7 +573,7 @@
 ;;; demand stacks the stack must be decreased as it is scrubbed.
 ;;;
 (defun scrub-control-stack ()
-  "Zero the unused portion of the control stack so that old objects are not
+  _N"Zero the unused portion of the control stack so that old objects are not
    kept alive because of uninitialized stack variables."
   ;;
   ;; The guard zone of the control stack is used by Lisp sometimes,
@@ -588,25 +590,25 @@
 ;;;; TOP-LEVEL loop.
 
 (defvar / nil
-  "Holds a list of all the values returned by the most recent top-level EVAL.")
-(defvar // nil "Gets the previous value of / when a new value is computed.")
-(defvar /// nil "Gets the previous value of // when a new value is computed.")
-(defvar * nil "Holds the value of the most recent top-level EVAL.")
-(defvar ** nil "Gets the previous value of * when a new value is computed.")
-(defvar *** nil "Gets the previous value of ** when a new value is computed.")
-(defvar + nil "Holds the value of the most recent top-level READ.")
-(defvar ++ nil "Gets the previous value of + when a new value is read.")
-(defvar +++ nil "Gets the previous value of ++ when a new value is read.")
-(defvar - nil "Holds the form curently being evaluated.")
+  _N"Holds a list of all the values returned by the most recent top-level EVAL.")
+(defvar // nil _N"Gets the previous value of / when a new value is computed.")
+(defvar /// nil _N"Gets the previous value of // when a new value is computed.")
+(defvar * nil _N"Holds the value of the most recent top-level EVAL.")
+(defvar ** nil _N"Gets the previous value of * when a new value is computed.")
+(defvar *** nil _N"Gets the previous value of ** when a new value is computed.")
+(defvar + nil _N"Holds the value of the most recent top-level READ.")
+(defvar ++ nil _N"Gets the previous value of + when a new value is read.")
+(defvar +++ nil _N"Gets the previous value of ++ when a new value is read.")
+(defvar - nil _N"Holds the form curently being evaluated.")
 (defvar *prompt* "* "
-  "The top-level prompt string.  This also may be a function of no arguments
+  _N"The top-level prompt string.  This also may be a function of no arguments
    that returns a simple-string.")
 (defvar *in-top-level-catcher* nil
-  "True if we are within the Top-Level-Catcher.  This is used by interrupt
+  _N"True if we are within the Top-Level-Catcher.  This is used by interrupt
   handlers to see whether it is o.k. to throw.")
 
 (defun interactive-eval (form)
-  "Evaluate FORM, returning whatever it returns but adjust ***, **, *, +++, ++,
+  _N"Evaluate FORM, returning whatever it returns but adjust ***, **, *, +++, ++,
   +, ///, //, /, and -."
   (when (and (fboundp 'commandp) (funcall 'commandp form))
     (return-from interactive-eval (funcall 'invoke-command-interactive form)))
@@ -625,29 +627,29 @@
   (unless (boundp '*)
     ;; The bogon returned an unbound marker.
     (setf * nil)
-    (cerror "Go on with * set to NIL."
-	    "EVAL returned an unbound marker."))
+    (cerror _"Go on with * set to NIL."
+	    _"EVAL returned an unbound marker."))
   (values-list /))
 
 
 (defconstant eofs-before-quit 10)
 
 (defparameter *reserved-heap-pages* 256
-  "How many pages to reserve from the total heap space so we can handle
+  _N"How many pages to reserve from the total heap space so we can handle
 heap overflow.")
 
 #+heap-overflow-check
 (alien:def-alien-variable "reserved_heap_pages" c-call:unsigned-long)
 
 (defun %top-level ()
-  "Top-level READ-EVAL-PRINT loop.  Do not call this."
+  _N"Top-level READ-EVAL-PRINT loop.  Do not call this."
   (let  ((* nil) (** nil) (*** nil)
 	 (- nil) (+ nil) (++ nil) (+++ nil)
 	 (/// nil) (// nil) (/ nil)
 	 (magic-eof-cookie (cons :eof nil))
 	 (number-of-eofs 0))
     (loop
-      (with-simple-restart (abort "Return to Top-Level.")
+      (with-simple-restart (abort _"Return to Top-Level.")
 	(catch 'top-level-catcher
 	  (unix:unix-sigsetmask 0)
 	  (let ((*in-top-level-catcher* t))
@@ -674,14 +676,14 @@ heap overflow.")
 			   (let ((stream (make-synonym-stream '*terminal-io*)))
 			     (setf *standard-input* stream)
 			     (setf *standard-output* stream)
-			     (format t "~&Received EOF on *standard-input*, ~
+			     (format t _"~&Received EOF on *standard-input*, ~
 					switching to *terminal-io*.~%"))))
 		      ((> number-of-eofs eofs-before-quit)
-		       (format t "~&Received more than ~D EOFs; Aborting.~%"
+		       (format t _"~&Received more than ~D EOFs; Aborting.~%"
 			       eofs-before-quit)
 		       (quit))
 		      (t
-		       (format t "~&Received EOF.~%")))))))))))
+		       (format t _"~&Received EOF.~%")))))))))))
 
 
 ;;; %Halt  --  Interface
