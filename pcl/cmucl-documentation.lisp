@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.16.32.4 2010/02/13 01:28:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.16.32.5 2010/02/13 14:24:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -215,6 +215,32 @@
 (defmethod (setf documentation) (new-value (x symbol) (doc-type symbol))
   (set-random-documentation x doc-type new-value)
   new-value)
+
+;;; Define AROUND methods to translate the docstring.
+(macrolet
+    ((frob (dt)
+	`(defmethod documentation :around ((x t) (doc-type (eql ',dt)))
+	   (let ((doc (call-next-method))
+		 (domain (info ,dt :textdomain x)))
+	     (or (intl:dgettext domain doc)
+		 doc)))))
+  (frob function)
+  (frob setf)
+  (frob type)
+  (frob variable))
+
+(defmethod documentation ((x symbol) (doc-type (eql 'structure)))
+  (let ((doc (call-next-method))
+	(domain (cond ((eq (info type kind x) :instance)
+		       (values (info type textdomain x)))
+		      ((info typed-structure info x)
+		       (values (info typed-structure textdomain x)))
+		      (t
+		       nil))))
+    (or (intl:dgettext domain doc)
+	doc)))
+
+  
 
 ;;; Replace the minimal documentation function with the PCL version
 ;;; when loaded.
