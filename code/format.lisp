@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.93.10.2 2010/02/09 20:07:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.93.10.3 2010/02/13 16:28:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,7 +50,7 @@
 
 (defun %print-format-error (condition stream)
   (cl:format stream
-	     "~:[~;Error in format: ~]~
+	     _"~:[~;Error in format: ~]~
 	      ~?~@[~%  ~A~%  ~V@T^~]"
 	     (format-error-print-banner condition)
 	     (format-error-complaint condition)
@@ -126,7 +126,7 @@
 	  (setf index (format-directive-end directive)))))
     (when (and pprint (plusp justification-semi))
       (error 'format-error
-	     :complaint "A justification directive cannot be in the same format string~%~
+	     :complaint _"A justification directive cannot be in the same format string~%~
                          as ~~W, ~~I, ~~:T, or a logical-block directive."
 	     :control-string string
 	     :offset 0))
@@ -138,7 +138,7 @@
     (flet ((get-char ()
 	     (if (= posn end)
 		 (error 'format-error
-			:complaint "String ended before directive was found."
+			:complaint _"String ended before directive was found."
 			:control-string string
 			:offset start)
 		 (schar string posn))))
@@ -185,14 +185,14 @@
 		((char= char #\:)
 		 (if colonp
 		     (error 'format-error
-			    :complaint "Too many colons supplied."
+			    :complaint _"Too many colons supplied."
 			    :control-string string
 			    :offset posn)
 		     (setf colonp t)))
 		((char= char #\@)
 		 (if atsignp
 		     (error 'format-error
-			    :complaint "Too many at-signs supplied."
+			    :complaint _"Too many at-signs supplied."
 			    :control-string string
 			    :offset posn)
 		     (setf atsignp t)))
@@ -205,7 +205,7 @@
 	    (if closing-slash
 		(setf posn closing-slash)
 		(error 'format-error
-		       :complaint "No matching closing slash."
+		       :complaint _"No matching closing slash."
 		       :control-string string
 		       :offset posn))))
 	(make-format-directive
@@ -337,7 +337,7 @@
 		      (1- (format-directive-end directive))))
 		 (unless function
 		   (error 'format-error
-			  :complaint "Unknown format directive."))
+			  :complaint _"Unknown format directive."))
 		 (multiple-value-bind
 		     (new-directives new-args)
 		     (funcall function stream directive
@@ -364,7 +364,7 @@
 	  (push `(,(car arg)
 		  (error
 		   'format-error
-		   :complaint "Required argument missing"
+		   :complaint _"Required argument missing"
 		   :control-string ,control-string
 		   :offset ,(cdr arg)))
 		args))
@@ -414,7 +414,7 @@
        (if expander
 	   (funcall expander directive more-directives)
 	   (error 'format-error
-		  :complaint "Unknown directive."))))
+		  :complaint _"Unknown directive."))))
     (simple-string
      (values `(write-string ,directive stream)
 	     more-directives))))
@@ -440,7 +440,7 @@
   `(if args
        (pop args)
        (error 'format-error
-	      :complaint "No more arguments."
+	      :complaint _"No more arguments."
 	      :control-string ,string
 	      :offset ,offset)))
 
@@ -448,7 +448,7 @@
   `(progn
      (when (null args)
        (error 'format-error
-	      :complaint "No more arguments."
+	      :complaint _"No more arguments."
 	      :control-string ,string
 	      :offset ,offset))
      (pprint-pop)
@@ -465,7 +465,7 @@
   `(progn
      (when (null args)
        (error 'format-error
-	      :complaint "No more arguments."
+	      :complaint _"No more arguments."
 	      ,@(when offset
 		  `(:offset ,offset))))
      (when *logical-block-popper*
@@ -537,14 +537,14 @@
 		       ,@(if ,params
 			     (error 'format-error
 				    :complaint
-			    "Too many parameters, expected no more than ~D"
+				    _"Too many parameters, expected no more than ~D"
 				    :arguments (list ,(length specs))
 				    :offset (caar ,params)))
 		       ,,@body)))
 	`(progn
 	   (when ,params
 	     (error 'format-error
-		    :complaint "Too many parameters, expected no more than 0"
+		    :complaint _"Too many parameters, expected no more than 0"
 		    :offset (caar ,params)))
 	   ,@body))))
 
@@ -599,7 +599,7 @@
 	 (when ,params
 	   (error 'format-error
 		  :complaint
-		  "Too many parameters, expected no more than ~D"
+		  _"Too many parameters, expected no more than ~D"
 		  :arguments (list ,(length specs))
 		  :offset (caar ,params)))
 	 ,@body))))
