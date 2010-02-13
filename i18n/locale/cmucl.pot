@@ -1535,6 +1535,19 @@ msgstr ""
 msgid "Dimension is not a non-negative fixnum: ~S"
 msgstr ""
 
+#: target:pcl/simple-streams/socket.lisp target:pcl/simple-streams/file.lisp
+#: target:pcl/simple-streams/internal.lisp
+#: target:pcl/simple-streams/classes.lisp target:pcl/env.lisp
+#: target:pcl/fixup.lisp target:pcl/methods.lisp target:pcl/cpl.lisp
+#: target:pcl/seal.lisp target:pcl/dfun.lisp
+#: target:pcl/method-slot-access-optimization.lisp target:pcl/boot.lisp
+#: target:pcl/dlisp.lisp target:pcl/cache.lisp target:pcl/defclass.lisp
+#: target:pcl/low.lisp target:compiler/disassem.lisp target:code/pathname.lisp
+#: target:code/format.lisp target:code/pprint-loop.lisp target:code/pprint.lisp
+#: target:code/bignum.lisp target:code/alieneval.lisp
+msgid "Required argument missing"
+msgstr ""
+
 #: target:compiler/aliencomp.lisp target:code/alieneval.lisp
 msgid "Unknown size: ~S"
 msgstr ""
@@ -8276,6 +8289,39 @@ msgstr ""
 msgid "CONS PPRINT dispatch ignored w/o compiler loaded:~%  ~S"
 msgstr ""
 
+#: target:pcl/env.lisp target:pcl/methods.lisp target:pcl/std-class.lisp
+#: target:pcl/defclass.lisp target:code/format.lisp
+#: target:code/pprint-loop.lisp target:code/pprint.lisp
+msgid "No more arguments."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "~:[~;Error in format: ~]~\n"
+"	      ~?~@[~%  ~A~%  ~V@T^~]"
+msgstr ""
+
+#: target:code/format.lisp
+msgid ""
+"A justification directive cannot be in the same format string~%~\n"
+"                         as ~~W, ~~I, ~~:T, or a logical-block directive."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "String ended before directive was found."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Too many colons supplied."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Too many at-signs supplied."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "No matching closing slash."
+msgstr ""
+
 #: target:code/format.lisp
 msgid ""
 "Provides various facilities for formatting output.\n"
@@ -8302,6 +8348,22 @@ msgid ""
 "  FORMAT has many additional capabilities not described here.  Consult\n"
 "  Section 22.3 (Formatted Output) of the ANSI Common Lisp standard for\n"
 "  details."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Unknown format directive."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Unknown directive."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Too many parameters, expected no more than ~D"
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Too many parameters, expected no more than 0"
 msgstr ""
 
 #: target:code/format.lisp
