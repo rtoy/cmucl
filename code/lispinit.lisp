@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.79.12.5 2010/02/12 05:52:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.79.12.6 2010/02/13 17:10:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -262,8 +262,7 @@
       (check-type condition warning _"a warning condition")
       (restart-case (signal condition)
 	(muffle-warning ()
-	  :report (lambda (condition stream)
-		    (declare (ignore condition))
+	  :report (lambda (stream)
 		    (write-string _"Skip warning." stream))
 	  (return-from warn nil)))
       (format *error-output* _"~&~@<Warning:  ~3i~:_~A~:>~%" condition)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.93.12.3 2010/02/10 14:08:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.93.12.4 2010/02/13 17:10:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -589,13 +589,11 @@
 			     :format-control _"~S does not exist."
 			     :format-arguments (list (namestring pathname)))
 	  (check-again ()
-	    :report (lambda (condition stream)
-		      (declare (ignore condition))
+	    :report (lambda (stream)
 		      (write-string _"See if it exists now." stream))
 	    (load pathname))
 	  (use-value ()
-	    :report (lambda (condition stream)
-		      (declare (ignore condition))
+	    :report (lambda (stream)
 		      (write-string _"Prompt for a new name."))
 	    (write-string _"New name: " *query-io*)
 	    (force-output *query-io*)
@@ -686,14 +684,12 @@
 		       older than the presumed source:~%  ~A."
 		      (namestring obj-tn) (namestring src-tn))
 	     (continue ()
-	       :report (lambda (condition stream)
-			 (declare (ignore condition))
+	       :report (lambda (stream)
 			 (write-string _"load source file" stream))
 	       (internal-load src-pn src-tn if-does-not-exist :source
 			      external-format))
 	     (load-object ()
-	       :report (lambda (condition stream)
-			 (declare (ignore condition))
+	       :report (lambda (stream)
 			 (write-string _"load object file" stream))
 	       (internal-load src-pn obj-tn if-does-not-exist :binary
 			      :void))))))
