@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.26.48.1 2010/02/08 17:15:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.26.48.2 2010/02/13 01:28:04 rtoy Exp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
@@ -78,22 +78,22 @@
 	  (:class    (push slotd class-slotds))
 	  (otherwise (push slotd other-slotds))))
       (setq max-slot-name-length  (min (+ max-slot-name-length 3) 30))
-      (format stream "~%~S is an instance of class ~S:" object class)
+      (format stream _"~%~S is an instance of class ~S:" object class)
 
       (when instance-slotds
-	(format stream "~% The following slots have :INSTANCE allocation:")
+	(format stream _"~% The following slots have :INSTANCE allocation:")
 	(dolist (slotd (nreverse instance-slotds))
 	  (describe-slot (slot-definition-name slotd)
 			 (slot-value-or-default object (slot-definition-name slotd)))))
 
       (when class-slotds
-	(format stream "~% The following slots have :CLASS allocation:")
+	(format stream _"~% The following slots have :CLASS allocation:")
 	(dolist (slotd (nreverse class-slotds))
 	  (describe-slot (slot-definition-name slotd)
 			 (slot-value-or-default object (slot-definition-name slotd)))))
 
       (when other-slotds 
-	(format stream "~% The following slots have allocation as shown:")
+	(format stream _"~% The following slots have allocation as shown:")
 	(dolist (slotd (nreverse other-slotds))
 	  (describe-slot (slot-definition-name slotd)
 			 (slot-value-or-default object (slot-definition-name slotd))
@@ -113,21 +113,21 @@
 		    elt)))
 
 (defmethod describe-object ((gf standard-generic-function) stream)
-  (format stream "~A is a generic function.~%" gf)
+  (format stream _"~A is a generic function.~%" gf)
   (let* ((gf-name (generic-function-name gf))
 	 (doc (documentation gf-name 'function)))
-    (format stream "Its lambda-list is:~%  ~S~%"
+    (format stream _"Its lambda-list is:~%  ~S~%"
 	    (generic-function-lambda-list gf))
     (when doc
-      (format stream "Generic function documentation:~%  ~s~%" doc))
-    (format stream "Its methods are:~%")
+      (format stream _"Generic function documentation:~%  ~s~%" doc))
+    (format stream _"Its methods are:~%")
     (loop for method in (generic-function-methods gf) and i from 1
 	  as doc = (plist-value method 'documentation) do
 	    (format stream "  ~d: ~a ~@[~{~s ~}~]~:s~%"
 		    i gf-name (method-qualifiers method)
 		    (method-specialized-lambda-list method))
 	    (when doc
-	      (format stream "    Method documentation: ~s~%" doc)))
+	      (format stream _"    Method documentation: ~s~%" doc)))
     (when *describe-metaobjects-as-objects-p*
       (call-next-method))))
 
@@ -137,15 +137,15 @@
 (defmethod describe-object ((class class) stream)
   (flet ((pretty-class (c) (or (class-name c) c)))
     (macrolet ((ft (string &rest args) `(format stream ,string ,@args)))
-      (ft "~&~@<~S is a class, it is an instance of ~S.~@:>~%"
+      (ft _"~&~@<~S is a class, it is an instance of ~S.~@:>~%"
 	  class (pretty-class (class-of class)))
       (let ((name (class-name class)))
 	(if name
 	    (if (eq class (find-class name nil))
-		(ft "Its proper name is ~S.~%" name)
-		(ft "Its name is ~S, but this is not a proper name.~%" name))
-	    (ft "It has no name (the name is NIL).~%")))
-      (ft "The direct superclasses are: ~:S, and the direct~%~
+		(ft _"Its proper name is ~S.~%" name)
+		(ft _"Its name is ~S, but this is not a proper name.~%" name))
+	    (ft _"It has no name (the name is NIL).~%")))
+      (ft _"The direct superclasses are: ~:S, and the direct~%~
            subclasses are: ~:S.  The class is ~:[not ~;~]finalized.  ~
            The class precedence list is:~%~S~%~
            There are ~D methods specialized for this class."
@@ -155,20 +155,20 @@
 	  (mapcar #'pretty-class (cpl-or-nil class))
 	  (length (specializer-direct-methods class)))
       (unless (typep class 'condition-class)
-	(loop initially (ft "~&Its direct slots are:~%")
+	(loop initially (ft _"~&Its direct slots are:~%")
 	      for slotd in (class-direct-slots class)
 	      as name = (slot-definition-name slotd)
 	      as doc = (slot-value slotd 'documentation) do
-		(ft "  ~a, documentation ~s~%" name doc)))))
+		(ft _"  ~a, documentation ~s~%" name doc)))))
   (when *describe-metaobjects-as-objects-p*
     (call-next-method)))
 
 (defun describe-package (object stream)
   (unless (packagep object) (setq object (find-package object)))
-  (format stream "~&~S is a ~S.~%" object (type-of object))
+  (format stream _"~&~S is a ~S.~%" object (type-of object))
   (let ((nick (package-nicknames object)))
     (when nick
-      (format stream "You can also call it~@[ ~{~S~^, ~} or~] ~S.~%"
+      (format stream _"You can also call it~@[ ~{~S~^, ~} or~] ~S.~%"
 	      (butlast nick) (first (last nick)))))  
   (let* ((internal (lisp::package-internal-symbols object))
 	 (internal-count (- (lisp::package-hashtable-size internal)
@@ -176,31 +176,31 @@
 	 (external (lisp::package-external-symbols object))
 	 (external-count (- (lisp::package-hashtable-size external)
 				  (lisp::package-hashtable-free external))))
-    (format stream "It has ~D internal and ~D external symbols (~D total).~%"
+    (format stream _"It has ~D internal and ~D external symbols (~D total).~%"
 	    internal-count external-count (+ internal-count external-count)))
   (let ((used (package-use-list object)))
     (when used
-      (format stream "It uses the packages ~{~S~^, ~}.~%"
+      (format stream _"It uses the packages ~{~S~^, ~}.~%"
 	      (mapcar #'package-name used))))
   (let ((users (package-used-by-list object)))
     (when users
-      (format stream "It is used by the packages ~{~S~^, ~}.~%"
+      (format stream _"It is used by the packages ~{~S~^, ~}.~%"
 	      (mapcar #'package-name users)))))
 
 (defmethod describe-object ((object package) stream)
   (describe-package object stream))
 
 (defmethod describe-object ((object hash-table) stream)
-  (format stream "~&~S is an ~a hash table."
+  (format stream _"~&~S is an ~a hash table."
 	  object
 	  (lisp::hash-table-test object))
-  (format stream "~&Its size is ~d buckets."
+  (format stream _"~&Its size is ~d buckets."
 	  (lisp::hash-table-size object))
-  (format stream "~&Its rehash-size is ~d."
+  (format stream _"~&Its rehash-size is ~d."
 	  (lisp::hash-table-rehash-size object))
-  (format stream "~&Its rehash-threshold is ~d."
+  (format stream _"~&Its rehash-threshold is ~d."
 	  (hash-table-rehash-threshold object))
-  (format stream "~&It currently holds ~d entries."
+  (format stream _"~&It currently holds ~d entries."
 	  (lisp::hash-table-number-entries object)))
 
 
@@ -282,7 +282,7 @@
 (macrolet ((define-default-method (class)
 	     `(defmethod make-load-form ((object ,class) &optional env)
 		(declare (ignore env))
-		(error "~@<Default ~s method for ~s called.~@>"
+		(error _"~@<Default ~s method for ~s called.~@>"
 		       'make-load-form object))))
   (define-default-method condition)
   (define-default-method standard-object))
@@ -295,7 +295,7 @@
   (declare (ignore env))
   (let ((pname (kernel:class-proper-name (kernel:layout-class object))))
     (unless pname
-      (error "~@<Can't dump wrapper for anonymous class ~S.~@:>"
+      (error _"~@<Can't dump wrapper for anonymous class ~S.~@:>"
 	     (kernel:layout-class object)))
     `(kernel:%class-layout (kernel::find-class ',pname))))
 
@@ -303,7 +303,7 @@
   (declare (ignore env))
   (let ((name (class-name class)))
     (unless (and name (eq (find-class name nil) class))
-      (error "~@<Can't use anonymous or undefined class as constant: ~S~:@>"
+      (error _"~@<Can't use anonymous or undefined class as constant: ~S~:@>"
 	     class))
     `(find-class ',name)))
 

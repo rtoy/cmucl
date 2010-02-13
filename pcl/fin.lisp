@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.22.48.1 2010/02/08 17:15:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.22.48.2 2010/02/13 01:28:04 rtoy Exp $")
 ;;;
 
   ;;   
@@ -113,7 +113,7 @@ explicitly marked saying who wrote it.
 (declaim (notinline called-fin-without-function))
 (defun called-fin-without-function (&rest args)
   (declare (ignore args))
-  (error "~@<Attempt to funcall a funcallable instance without first ~
+  (error _"~@<Attempt to funcall a funcallable instance without first ~
           setting its function.~@:>"))
 
 

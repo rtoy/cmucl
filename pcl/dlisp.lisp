@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp.lisp,v 1.12.48.1 2010/02/08 17:15:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp.lisp,v 1.12.48.2 2010/02/13 01:28:04 rtoy Exp $")
 ;;;
 
 (in-package :pcl)
@@ -281,7 +281,7 @@
 				   args metatypes))
 	 (wrappers (mapcar #'car wrapper-bindings)))
     (declare (fixnum index))
-    (assert (not (null wrappers)) () "Every metatype is T.")
+    (assert (not (null wrappers)) () _"Every metatype is T.")
     `(block dfun
        (tagbody
 	  (let ((field (cache-field cache))
@@ -453,9 +453,9 @@
 	    (t
 	     (go ,miss-label))))
     (class
-     (assert (null slot) () "Can't do a slot reg for this metatype.")
+     (assert (null slot) () _"Can't do a slot reg for this metatype.")
      `(wrapper-of-macro ,argument))
     ((built-in-instance structure-instance)
-     (assert (null slot) () "Can't do a slot reg for this metatype.")
+     (assert (null slot) () _"Can't do a slot reg for this metatype.")
      `(built-in-or-structure-wrapper ,argument))))
 

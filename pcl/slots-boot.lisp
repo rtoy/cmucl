@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.26.38.1 2010/02/08 17:15:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.26.38.2 2010/02/13 01:28:04 rtoy Exp $")
 ;;;
 
 (in-package :pcl)
@@ -165,7 +165,7 @@
 	(t
 	 (let* ((fsc-p (cond ((standard-class-p class) nil)
 			     ((funcallable-standard-class-p class) t)
-			     (t (error "~@<~S is not a standard-class.~@:>"
+			     (t (error _"~@<~S is not a standard-class.~@:>"
 				       class))))
 		(slot-name (slot-definition-name slotd))
 		(index (slot-definition-location slotd))
@@ -202,7 +202,7 @@
 		     value))))
      (null   (lambda (instance)
 	       (check-obsolete-instance instance)
-	       (error "~@<Slot ~S in class ~S ~
+	       (error _"~@<Slot ~S in class ~S ~
                        does not have standard allocation.~@:>"
 		      slot-name (class-of instance)))))
    `(reader ,slot-name)))
@@ -223,7 +223,7 @@
 	       (setf (cdr index) nv)))
      (null   (lambda (instance)
 	       (check-obsolete-instance instance)
-	       (error "~@<Slot ~S in class ~S ~
+	       (error _"~@<Slot ~S in class ~S ~
                        does not have standard allocation.~@:>"
 		      slot-name (class-of instance)))))
    `(writer ,slot-name)))
@@ -246,7 +246,7 @@
 	       (not (eq (cdr index) +slot-unbound+))))
      (null   (lambda (instance)
 	       (check-obsolete-instance instance)
-	       (error "~@<Slot ~S in class ~S ~
+	       (error _"~@<Slot ~S in class ~S ~
                        does not have standard allocation.~@:>"
 		      slot-name (class-of instance)))))
    `(boundp ,slot-name)))
@@ -299,7 +299,7 @@
 	(t
 	 (let* ((fsc-p (cond ((standard-class-p class) nil)
 			     ((funcallable-standard-class-p class) t)
-			     (t (error "~@<~S is not a standard-class.~@:>" class))))
+			     (t (error _"~@<~S is not a standard-class.~@:>" class))))
 		(slot-name (slot-definition-name slotd))
 		(index (slot-definition-location slotd))
 		(function 
@@ -342,7 +342,7 @@
     (null   (lambda (class instance slotd)
 	      (declare (ignore slotd))
 	      (check-obsolete-instance instance)
-	      (error "~@<Slot ~S in class ~S ~
+	      (error _"~@<Slot ~S in class ~S ~
                       does not have standard allocation.~@:>"
 		     slot-name class)))))
 
@@ -367,7 +367,7 @@
     (null   (lambda (class instance slotd)
 	      (declare (ignore slotd))
 	      (check-obsolete-instance instance)
-	      (error "~@<Slot ~S in class ~S ~
+	      (error _"~@<Slot ~S in class ~S ~
                       does not have standard allocation.~@:>"
 		     slot-name class)))))
 
@@ -394,7 +394,7 @@
     (null   (lambda (class instance slotd)
 	      (declare (ignore slotd))
 	      (check-obsolete-instance instance)
-	      (error "~@<Slot ~S in class ~S ~
+	      (error _"~@<Slot ~S in class ~S ~
                       does not have standard allocation.~@:>"
 		     slot-name class)))))
 
@@ -419,7 +419,7 @@
 			     (values (slot-unbound (class-of instance) instance slot-name))
 			     value)))
 		      (t
-		       (error "~@<The wrapper for class ~S does not have ~
+		       (error _"~@<The wrapper for class ~S does not have ~
                                the slot ~S.~@:>"
 			      class slot-name))))
 		  (slot-value instance slot-name)))))))

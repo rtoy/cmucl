@@ -30,12 +30,12 @@
 #-(or loadable-pcl bootable-pcl)
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (when (eq *boot-state* 'complete)
-    (error "~@<Trying to load (or compile) PCL in an environment in which it ~
+    (error _"~@<Trying to load (or compile) PCL in an environment in which it ~
             has already been loaded.  This doesn't work, you will have to ~
             get a fresh lisp (reboot) and then load PCL.~@:>"))
   
   (when *boot-state*
-    (cerror "Try loading (or compiling) PCL anyways."
+    (cerror _"Try loading (or compiling) PCL anyways."
 	    "~@<Trying to load (or compile) PCL in an environment in which it ~
              has already been partially loaded.  This may not work, you may ~
              need to get a fresh lisp (reboot) and then load PCL.~@:>")))
@@ -146,7 +146,7 @@
 	 t)
 	((consp specl)
          (unless (member (car specl) '(class class-eq eql))
-           (error "~@<~S is not a legal specializer type.~@:>" specl))
+           (error _"~@<~S is not a legal specializer type.~@:>" specl))
          specl)
         ((progn
 	   (when (symbolp specl)
@@ -156,7 +156,7 @@
 	       (specializerp specl)))
 	 (specializer-type specl))
         (t
-         (error "~@<~s is neither a type nor a specializer.~@:>" specl))))
+         (error _"~@<~s is neither a type nor a specializer.~@:>" specl))))
 
 (defun type-class (type)
   (declare (special *the-class-t*))
@@ -164,7 +164,7 @@
   (if (atom type)
       (if (eq type t)
 	  *the-class-t*
-	  (internal-error "Bad argument to type-class."))
+	  (internal-error _"Bad argument to type-class."))
       (case (car type)
         (eql (class-of (cadr type)))
         (class-eq (cadr type))
@@ -212,7 +212,7 @@
 	     (specializerp type))
 	 (specializer-type type))
         (t
-         (error "~s is not a type." type))))
+         (error _"~s is not a type." type))))
 
 ;;; internal to this file...
 (defun convert-to-system-type (type)
@@ -629,7 +629,7 @@
     :initarg :allocation
     :accessor slot-definition-allocation)
    (allocation-class
-    :documentation "For class slots, the class defininig the slot.
+    :documentation _N"For class slots, the class defininig the slot.
 For inherited class slots, this is the superclass from which the slot
 was inherited."
     :initform nil

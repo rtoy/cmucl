@@ -485,6 +485,64 @@ msgstr ""
 msgid "~&Received EOF.~%"
 msgstr ""
 
+#: target:pcl/walk.lisp
+msgid ""
+"~@<The evaluator was called to evaluate a form in a macroexpansion ~\n"
+"          environment constructed by the PCL portable code walker.  These ~\n"
+"          environments are only useful for macroexpansion, they cannot be ~\n"
+"          used for evaluation.  ~\n"
+"          This error should never occur when using PCL.  ~\n"
+"          This most likely source of this error is a program which tries to "
+"~\n"
+"          to use the PCL portable code walker to build its own evaluator.~@:"
+">"
+msgstr ""
+
+#: target:pcl/walk.lisp
+msgid "~@<~S is not a recognized variable declaration.~@:>"
+msgstr ""
+
+#: target:pcl/walk.lisp
+msgid "~@<Can't get template for ~S.~@:>"
+msgstr ""
+
+#: target:pcl/walk.lisp
+msgid ""
+"~@<~S is a special form, not defined in the CommonLisp ~\n"
+"		      manual.  This code walker doesn't know how to walk it.  ~\n"
+"		      Define a template for this special form and try again.~@:>"
+msgstr ""
+
+#: target:pcl/walk.lisp
+msgid ""
+"~@<While handling repeat: ~\n"
+"                     Ran into stop while still in repeat template.~@:>"
+msgstr ""
+
+#: target:pcl/walk.lisp
+msgid ""
+"~@<Encountered declare ~S in a place where a ~\n"
+"         declare was not expected.~@:>"
+msgstr ""
+
+#: target:pcl/walk.lisp
+msgid "~@<Can't understand something in the arglist ~S.~@:>"
+msgstr ""
+
+#: target:pcl/walk.lisp
+msgid ""
+"~@<In the form ~S: ~\n"
+"                       IF only accepts three arguments, you are using ~D. ~\n"
+"                       It is true that some Common Lisps support this, but "
+"~\n"
+"                       it is not truly legal Common Lisp.  For now, this "
+"code ~\n"
+"                       walker is interpreting the extra arguments as extra "
+"else clauses. ~\n"
+"                       Even if this is what you intended, you should fix "
+"your source code.~@:>"
+msgstr ""
+
 #: target:code/fwrappers.lisp
 msgid ""
 "A funcallable instance used to implement fwrappers.\n"
@@ -1959,11 +2017,11 @@ msgstr ""
 msgid "Not enough arguments."
 msgstr ""
 
-#: target:code/byte-interp.lisp
+#: target:pcl/boot.lisp target:code/byte-interp.lisp
 msgid "Too many arguments."
 msgstr ""
 
-#: target:code/interr.lisp target:code/byte-interp.lisp
+#: target:pcl/combin.lisp target:code/interr.lisp target:code/byte-interp.lisp
 msgid "Odd number of keyword arguments."
 msgstr ""
 
@@ -2542,7 +2600,7 @@ msgid ""
 "object."
 msgstr ""
 
-#: target:code/hash-new.lisp
+#: target:pcl/slots.lisp target:code/hash-new.lisp
 msgid "What kind of instance is this?"
 msgstr ""
 
@@ -6247,7 +6305,7 @@ msgid ""
 "  NIL if no such character exists."
 msgstr ""
 
-#: target:code/misc.lisp
+#: target:pcl/cmucl-documentation.lisp target:code/misc.lisp
 msgid ""
 "Returns the documentation string of Doc-Type for X, or NIL if\n"
 "  none exists.  System doc-types are VARIABLE, FUNCTION, STRUCTURE, TYPE,\n"
@@ -7346,11 +7404,11 @@ msgstr ""
 msgid "~S is an unsupported Gray stream."
 msgstr ""
 
-#: target:code/stream.lisp
+#: target:pcl/gray-streams.lisp target:code/stream.lisp
 msgid "Returns non-nil if the given Stream can perform input operations."
 msgstr ""
 
-#: target:code/stream.lisp
+#: target:pcl/gray-streams.lisp target:code/stream.lisp
 msgid "Returns non-nil if the given Stream can perform output operations."
 msgstr ""
 
@@ -12511,7 +12569,7 @@ msgstr ""
 msgid "~&Its rehash-threshold is ~S."
 msgstr ""
 
-#: target:code/describe.lisp
+#: target:pcl/env.lisp target:code/describe.lisp
 msgid "~&It currently holds ~d entries."
 msgstr ""
 
@@ -19458,5 +19516,1309 @@ msgstr ""
 
 #: target:compiler/byte-comp.lisp
 msgid "inline ~A"
+msgstr ""
+
+#: target:pcl/init.lisp target:pcl/defclass.lisp target:pcl/macros.lisp
+msgid "Malformed plist in doplist, odd number of elements."
+msgstr ""
+
+#: target:pcl/macros.lisp
+msgid "~@<~S is not a legal class name.~@:>"
+msgstr ""
+
+#: target:pcl/macros.lisp
+msgid "No class named ~S."
+msgstr ""
+
+#: target:pcl/macros.lisp
+msgid "~S is not a legal class name."
+msgstr ""
+
+#: target:pcl/macros.lisp
+msgid ""
+"Returns the PCL class metaobject named by SYMBOL. An error of type\n"
+"   SIMPLE-ERROR is signaled if the class does not exist unless ERRORP\n"
+"   is NIL in which case NIL is returned. SYMBOL cannot be a keyword."
+msgstr ""
+
+#: target:pcl/low.lisp
+msgid "Set the name of a compiled function object and return the function."
+msgstr ""
+
+#: target:pcl/low.lisp
+msgid ""
+"PCL debugging aid that breaks into the debugger each time\n"
+"`compile-lambda' is invoked."
+msgstr ""
+
+#: target:pcl/low.lisp
+msgid ""
+"If true (the default), then `compile-lambda' will try to silence\n"
+"the compiler as completely as possible.  Currently this means that\n"
+"`*compile-print*' will be bound to nil during compilation."
+msgstr ""
+
+#: target:pcl/info.lisp
+msgid ""
+"~@<The declaration ~S is not understood by ~S. ~\n"
+"                               Please put ~S on one of the lists ~S, ~S, or "
+"~S. ~\n"
+"                               (Assuming it is a variable declarations "
+"without ~\n"
+"                               argument).~@:>"
+msgstr ""
+
+#: target:pcl/info.lisp
+msgid "~@<Invalid slot access specifier ~s in ~s.~@:>"
+msgstr ""
+
+#: target:pcl/info.lisp
+msgid "~@<Invalid slot access declaration ~s.~@:>"
+msgstr ""
+
+#: target:pcl/info.lisp
+msgid "~@<Invalid auto-compile specifier ~s in ~s.~@:>"
+msgstr ""
+
+#: target:pcl/info.lisp
+msgid "~@<Invalid auto-compile declaration ~s.~@:>"
+msgstr ""
+
+#: target:pcl/fin.lisp
+msgid ""
+"~@<Attempt to funcall a funcallable instance without first ~\n"
+"          setting its function.~@:>"
+msgstr ""
+
+#: target:pcl/defclass.lisp
+msgid "~S is not a legal defclass option."
+msgstr ""
+
+#: target:pcl/defclass.lisp
+msgid ""
+"~@<The value of the ~s option (~s) is not a legal ~\n"
+"	        class name.~@:>"
+msgstr ""
+
+#: target:pcl/defclass.lisp
+msgid "~@<~S is not a legal slot specification.~@:>"
+msgstr ""
+
+#: target:pcl/defclass.lisp
+msgid ""
+"~@<In the class definintion of ~s, the slot specification ~s ~\n"
+"                 is obsolete.  Convert it to ~s.~@:>"
+msgstr ""
+
+#: target:pcl/defclass.lisp
+msgid "~@<~S is not a class in *early-class-definitions*.~@:>"
+msgstr ""
+
+#: target:pcl/defclass.lisp
+msgid ""
+"~@<More than one early class defines a slot with the ~\n"
+"                    name ~S.  This can't work because the bootstrap ~\n"
+"                    object system doesn't know how to compute effective ~\n"
+"                    slots.~@:>"
+msgstr ""
+
+#: target:pcl/defclass.lisp
+msgid "Discard it."
+msgstr ""
+
+#: target:pcl/defclass.lisp
+msgid ""
+"~@<The defclass option ~S is not supported by ~\n"
+"                                 the bootstrap object system.~@:>"
+msgstr ""
+
+#: target:pcl/defclass.lisp
+msgid "Slot ~S not found in class ~S"
+msgstr ""
+
+#: target:pcl/defs.lisp
+msgid ""
+"~@<Trying to load (or compile) PCL in an environment in which it ~\n"
+"            has already been loaded.  This doesn't work, you will have to ~\n"
+"            get a fresh lisp (reboot) and then load PCL.~@:>"
+msgstr ""
+
+#: target:pcl/defs.lisp
+msgid "Try loading (or compiling) PCL anyways."
+msgstr ""
+
+#: target:pcl/defs.lisp
+msgid "~@<~S is not a legal specializer type.~@:>"
+msgstr ""
+
+#: target:pcl/defs.lisp
+msgid "~@<~s is neither a type nor a specializer.~@:>"
+msgstr ""
+
+#: target:pcl/defs.lisp
+msgid "Bad argument to type-class."
+msgstr ""
+
+#: target:pcl/defs.lisp
+msgid "~s is not a type."
+msgstr ""
+
+#: target:pcl/defs.lisp
+msgid ""
+"For class slots, the class defininig the slot.\n"
+"For inherited class slots, this is the superclass from which the slot\n"
+"was inherited."
+msgstr ""
+
+#: target:pcl/fngen.lisp
+msgid ""
+"Flush cached emf functions.  If GF is supplied, it should be a\n"
+"   generic function metaobject or the name of a generic function, and\n"
+"   this function flushes all cached emfs for the given generic\n"
+"   function.  If GF is not supplied, all cached emfs are flushed."
+msgstr ""
+
+#: target:pcl/cache.lisp
+msgid "Wrapper ~S"
+msgstr ""
+
+#: target:pcl/cache.lisp
+msgid "Unknown wrapper state"
+msgstr ""
+
+#: target:pcl/cache.lisp
+msgid ""
+"~@<PCL cannot handle the specializer ~S ~\n"
+"                                (meta-specializer ~S).~@:>"
+msgstr ""
+
+#: target:pcl/cache.lisp
+msgid "Line is reserved."
+msgstr ""
+
+#: target:pcl/cache.lisp
+msgid ""
+"~@<Bad cache ~S: Value at location ~D is ~D ~\n"
+"                               lines from its home, limit is ~D.~@:>"
+msgstr ""
+
+#: target:pcl/cache.lisp
+msgid "Attempt to fill a reserved cache line."
+msgstr ""
+
+#: target:pcl/cache.lisp
+msgid "Transfering something into a reserved cache line."
+msgstr ""
+
+#: target:pcl/dlisp.lisp
+msgid "Every metatype is T."
+msgstr ""
+
+#: target:pcl/dlisp.lisp
+msgid "Can't do a slot reg for this metatype."
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "~~@<Generic function ~a: ~?.~~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "Invalid generic function parameter name ~a"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"Optional and key parameters of generic functions ~\n"
+"                   may not have default values or supplied-p ~\n"
+"                   parameters: ~<~s~>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "~s is not allowed in generic function lambda lists"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "~~@<Generic function ~~s: ~?.~~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "The option ~s appears more than once"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "Declaration specifier ~s is not allowed"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"Argument precedence order must list all ~\n"
+"                           required parameters and only those: ~s"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"Duplicate parameter names in argument ~\n"
+"                           precedence order: ~s"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "Special operators cannot be made generic functions"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "Unsupported option ~s"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "If true, allow inlining of methods in effective methods."
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"~@<Defining method ~s ~s ~s using inline slot access in a ~\n"
+"                   non-null lexical environment means that it cannot be ~\n"
+"                   automatically recompiled.~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"The method-lambda argument to make-method-function, ~S,~\n"
+"            is not a lambda form"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "~@<The ~s argument to ~s, ~s, is not a lambda form.~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"Assignment to method parameter~p ~{~s~^, ~} ~\n"
+"                           might prevent CLOS optimizations"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "Wrong number of args."
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "1 or 2 args expected."
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "1 arg expected."
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"~@<The set of methods ~s applicable to argument~p ~\n"
+"                ~{~s~^, ~} to call-next-method is different from ~\n"
+"                the set of methods ~s applicable to the original ~\n"
+"                method argument~p ~{~s~^, ~}.~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "When true, compile interpreted method functions."
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"~&~@<At the time the method with qualifiers ~S and ~\n"
+"               specializers ~S on the generic function ~S ~\n"
+"               was compiled, the method class for that generic function was "
+"~\n"
+"               ~S.  But, the method class is now ~S, this ~\n"
+"               may mean that this method was compiled improperly.~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"~@<~S already names an ordinary function or a macro.  ~\n"
+"	If you want to replace it with a generic function, you should remove ~\n"
+"        the existing definition beforehand.~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "~@<Discard the existing definition of ~S.~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"~@<The lambda-list ~S is incompatible with ~\n"
+"                      existing methods of ~S.~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"~~@<Attempt to add the method ~~S to the generic ~\n"
+"                           function ~~S, but ~?.~~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "more"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "fewer"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"the method has ~A required arguments than the ~\n"
+"                 generic function"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"the method has ~S optional arguments than the ~\n"
+"                 generic function"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"the method and generic function differ in whether ~\n"
+"                 they accept rest or keyword arguments"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"the method does not accept each of the keyword ~\n"
+"                   arguments ~S"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "~@<The function ~S is not already defined.~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "~@<~S should be on the list ~S.~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"~@<The function of the funcallable instance ~S ~\n"
+"			 has not been set.~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "~@<No way to determine the lambda list~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"~@<The ~s argument (~S) was neither a class nor a ~\n"
+"                    symbol naming a class.~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "~S is not an early-method."
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "Early add-method didn't get a funcallable instance."
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "Early add-method didn't get an early method."
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "Early remove-method didn't get a funcallable instance."
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "Early remove-method didn't get an early method."
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "Can't get early method."
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "~@<Qualifiers must be non-null atoms: ~s~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid ""
+"~@<~S used as a specializer, ~\n"
+"                             but is not the name of a class.~@:>"
+msgstr ""
+
+#: target:pcl/boot.lisp
+msgid "~S is not a legal specializer."
+msgstr ""
+
+#: target:pcl/method-slot-access-optimization.lisp
+msgid "Set to true to activate the inline slot access optimization."
+msgstr ""
+
+#: target:pcl/method-slot-access-optimization.lisp
+msgid "When true, check slot values against specified slot types."
+msgstr ""
+
+#: target:pcl/method-slot-access-optimization.lisp
+msgid "When true, optimize slot access through slot reader/writer functions."
+msgstr ""
+
+#: target:pcl/method-slot-access-optimization.lisp
+msgid "Cannot optimize slot access to"
+msgstr ""
+
+#: target:pcl/method-slot-access-optimization.lisp
+msgid "The class is not a standard class"
+msgstr ""
+
+#: target:pcl/method-slot-access-optimization.lisp
+msgid "The class doesn't contain a slot with name ~s"
+msgstr ""
+
+#: target:pcl/method-slot-access-optimization.lisp
+msgid "Slot ~s is a class slot"
+msgstr ""
+
+#: target:pcl/method-slot-access-optimization.lisp
+msgid "There are non-standard accessors for slot ~s"
+msgstr ""
+
+#: target:pcl/method-slot-access-optimization.lisp
+msgid ""
+"Slot ~s is not at the same location ~\n"
+"                               in the class and all of its subclasses"
+msgstr ""
+
+#: target:pcl/method-slot-access-optimization.lisp
+msgid "Auto-compiling method ~s."
+msgstr ""
+
+#: target:pcl/method-slot-access-optimization.lisp
+msgid ""
+"Methods may need to be recompiled for the changed ~\n"
+"                    class layout of"
+msgstr ""
+
+#: target:pcl/method-slot-access-optimization.lisp
+msgid "The class is not defined at compile time"
+msgstr ""
+
+#: target:pcl/method-slot-access-optimization.lisp
+msgid ""
+"~s has a method that is not a standard ~\n"
+"                                    slot accessor"
+msgstr ""
+
+#: target:pcl/method-slot-access-optimization.lisp
+msgid "Methods of ~s access different slots"
+msgstr ""
+
+#: target:pcl/slots-boot.lisp
+msgid "~@<~S is not a standard-class.~@:>"
+msgstr ""
+
+#: target:pcl/slots-boot.lisp
+msgid ""
+"~@<Slot ~S in class ~S ~\n"
+"                       does not have standard allocation.~@:>"
+msgstr ""
+
+#: target:pcl/slots-boot.lisp
+msgid ""
+"~@<Slot ~S in class ~S ~\n"
+"                      does not have standard allocation.~@:>"
+msgstr ""
+
+#: target:pcl/slots-boot.lisp
+msgid ""
+"~@<The wrapper for class ~S does not have ~\n"
+"                               the slot ~S.~@:>"
+msgstr ""
+
+#: target:pcl/defcombin.lisp target:pcl/combin.lisp
+msgid "has more than one qualifier"
+msgstr ""
+
+#: target:pcl/combin.lisp
+msgid "has an invalid qualifier"
+msgstr ""
+
+#: target:pcl/combin.lisp
+msgid ""
+"~@<~s was called outside the dynamic scope ~\n"
+"            of a method combination function (inside the body of ~\n"
+"            ~s or a method on the generic function ~s).~@:>"
+msgstr ""
+
+#: target:pcl/combin.lisp
+msgid "~@<~S used outside of a effective method form.~@:>"
+msgstr ""
+
+#: target:pcl/combin.lisp
+msgid ""
+"~@<Invalid keyword argument~p ~{~s~^, ~}.  ~\n"
+"               Valid keywords are: ~{~s~^, ~}.~@:>"
+msgstr ""
+
+#: target:pcl/combin.lisp
+msgid "Invalid keyword argument ~s"
+msgstr ""
+
+#: target:pcl/dfun.lisp
+msgid "~@<Slot ~s of class ~s is unbound in object ~s~@:>"
+msgstr ""
+
+#: target:pcl/dfun.lisp
+msgid ""
+"~@<Cannot get standard value of slot ~s of class ~s ~\n"
+"                in object ~s~@:>"
+msgstr ""
+
+#: target:pcl/dfun.lisp
+msgid "~&Name ~S  caching cost ~D  dispatch cost ~D~%"
+msgstr ""
+
+#: target:pcl/dfun.lisp
+msgid ""
+"Precompute effective methods at method load time if the generic\n"
+"   function has less than this number of methods.  If zero,\n"
+"   no effective methods are precomputed at method load time."
+msgstr ""
+
+#: target:pcl/dfun.lisp
+msgid "~@<The function ~S requires at least ~D arguments.~@:>"
+msgstr ""
+
+#: target:pcl/dfun.lisp
+msgid "~<The function ~S requires at least ~D arguments.~@:>"
+msgstr ""
+
+#: target:pcl/dfun.lisp
+msgid ""
+"~@<Vicious metacircle:  The computation of an ~\n"
+"	   effective method of ~s for arguments of types ~s uses ~\n"
+"	   the effective method being computed.~@:>"
+msgstr ""
+
+#: target:pcl/dfun.lisp
+msgid "This can't happen."
+msgstr ""
+
+#: target:pcl/dfun.lisp
+msgid "~@<~s cannot handle the second argument ~s.~@:>"
+msgstr ""
+
+#: target:pcl/dfun.lisp
+msgid "~&There are ~4d dfuns of type ~s"
+msgstr ""
+
+#: target:pcl/dfun.lisp
+msgid "~&DFUN constructor caching is ~A."
+msgstr ""
+
+#: target:pcl/dfun.lisp
+msgid "enabled"
+msgstr ""
+
+#: target:pcl/dfun.lisp
+msgid "disabled"
+msgstr ""
+
+#: target:pcl/ctor.lisp
+msgid "~@<Not a property list: ~S.~@:>"
+msgstr ""
+
+#: target:pcl/braid.lisp
+msgid ""
+"~@<The function of the funcallable instance ~S ~\n"
+"                 has not been set.~@:>"
+msgstr ""
+
+#: target:pcl/braid.lisp
+msgid ""
+"~@<Slot allocation ~S is not supported ~\n"
+"                          in bootstrap.~@:>"
+msgstr ""
+
+#: target:pcl/braid.lisp
+msgid "The standard method combination."
+msgstr ""
+
+#: target:pcl/braid.lisp
+msgid ""
+"In *built-in-classes*: ~S has ~S as a superclass,~%~\n"
+"                but ~S is not itself a class in *built-in-classes*."
+msgstr ""
+
+#: target:pcl/braid.lisp
+msgid "~@<~S is not the name of a class.~@:>"
+msgstr ""
+
+#: target:pcl/braid.lisp
+msgid ""
+"~@<No matching method for the generic function ~\n"
+"                             ~S, when called with arguments ~S.~@:>"
+msgstr ""
+
+#: target:pcl/braid.lisp
+msgid "Retry call to ~S."
+msgstr ""
+
+#: target:pcl/braid.lisp
+msgid "~@<In method ~S: No next method for arguments ~S.~@:>"
+msgstr ""
+
+#: target:pcl/braid.lisp
+msgid "Try again."
+msgstr ""
+
+#: target:pcl/braid.lisp
+msgid ""
+"~@<Generic function ~S: ~\n"
+"                             No primary method given arguments ~S~@:>"
+msgstr ""
+
+#: target:pcl/braid.lisp
+msgid ""
+"~@<In a call to ~s with arguments ~:s: ~\n"
+"              The method ~s has invalid qualifiers for method ~\n"
+"              combination ~s.~@:>"
+msgstr ""
+
+#: target:pcl/braid.lisp
+msgid ""
+"~@<In a call to ~s with arguments ~:s: ~\n"
+"              The methods ~{~s~^, ~} have invalid qualifiers for ~\n"
+"              method combination ~s.~@:>"
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid "~@<The slot ~S is unbound in the object ~S.~@:>"
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid "is not a symbol and so cannot be bound"
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid "is a keyword and so cannot be bound"
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid "cannot be bound"
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid "is a constant and so cannot be bound"
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid ""
+"~@<The slot ~s has neither ~s nor ~s ~\n"
+"                           allocation, so it can't be read by the default "
+"~s ~\n"
+"                           method.~@:>"
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid ""
+"~@<The slot ~s has neither ~s nor ~s allocation, ~\n"
+"               so it can't be written by the default ~s method.~@:>"
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid ""
+"~@<The slot ~s has neither ~s nor ~s ~\n"
+"                           allocation, so it can't be read by the default "
+"~s ~\n"
+"			   method.~@:>"
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid "Structure slots cannot be unbound."
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid "Condition slots cannot be unbound."
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid ""
+"~~@<When attempting to ~A, the slot ~S is missing ~\n"
+"                from the object ~S.~~@:>"
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid "read the slot's value (slot-value)"
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid "set the slot's value to ~S (setf of slot-value)"
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid "test to see if slot is bound (slot-boundp)"
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid "make the slot unbound (slot-makunbound)"
+msgstr ""
+
+#: target:pcl/slots.lisp
+msgid "~@<Can't allocate an instance of class ~S.~@:>"
+msgstr ""
+
+#: target:pcl/init.lisp
+msgid ""
+"~@<Invalid initialization argument~P ~2I~_~\n"
+"                         ~<~{~S~^, ~}~@:> ~I~_in call for class ~S.~:>"
+msgstr ""
+
+#: target:pcl/seal.lisp
+msgid "~@<Invalid sealing specifier ~s.~@:>"
+msgstr ""
+
+#: target:pcl/seal.lisp
+msgid "~s is sealed wrt ~a"
+msgstr ""
+
+#: target:pcl/cpl.lisp
+msgid ""
+"~~@<While computing the class precedence list ~\n"
+"                of the class ~A: ~?.~~@:>"
+msgstr ""
+
+#: target:pcl/cpl.lisp
+msgid "named ~S"
+msgstr ""
+
+#: target:pcl/cpl.lisp
+msgid "The class ~A is a forward referenced class"
+msgstr ""
+
+#: target:pcl/cpl.lisp
+msgid ""
+"The class ~A is a forward referenced class. ~\n"
+"                      The class ~A is ~A."
+msgstr ""
+
+#: target:pcl/cpl.lisp
+msgid "a direct superclass of the class ~A"
+msgstr ""
+
+#: target:pcl/cpl.lisp
+msgid ""
+"reached from the class ~A by following~@\n"
+"                                  the direct superclass chain through: ~A~\n"
+"                                  ~%  ending at the class ~A"
+msgstr ""
+
+#: target:pcl/cpl.lisp
+msgid "~{~%  the class ~A,~}"
+msgstr ""
+
+#: target:pcl/cpl.lisp
+msgid ""
+"It is not possible to compute the class precedence list because ~\n"
+"       there ~A in the local precedence relations.  ~\n"
+"       ~A because:~{~%  ~A~}."
+msgstr ""
+
+#: target:pcl/cpl.lisp
+msgid "are circularities"
+msgstr ""
+
+#: target:pcl/cpl.lisp
+msgid "is a circularity"
+msgstr ""
+
+#: target:pcl/cpl.lisp
+msgid "These arise"
+msgstr ""
+
+#: target:pcl/cpl.lisp
+msgid "This arises"
+msgstr ""
+
+#: target:pcl/cpl.lisp
+msgid "the class ~A appears in the supers of the class ~A"
+msgstr ""
+
+#: target:pcl/cpl.lisp
+msgid "the class ~A follows the class ~A in the supers of the class ~A"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid "Instance"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid "~@<Structure slots must have ~s allocation.~@:>"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid "~@<~S doesn't seem to have a method function.~@:>"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid ""
+"~@<Attempt to reinitialize the method ~S.  ~\n"
+"          Method objects cannot be reinitialized.~@:>"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid ""
+"~@<When initializing the method ~S, ~\n"
+"                   the ~S initialization argument was ~S, ~\n"
+"                   which ~A.~@:>"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid "is not a string or NULL"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid "is not a function"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid "Contains ~S which ~A"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid "is not a non-null atom"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid "is neither a class object nor an eql specializer"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid "The value of the ~s initarg, ~s, ~A."
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid ""
+"~~@<When initializing the generic-function ~S: ~\n"
+"                               The ~S initialization argument was ~A.  ~\n"
+"                               It must be ~A.~~@:>"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid "~@<~S does not name a generic function.~@:>"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid ""
+"~@<There is no method for the generic function ~S ~\n"
+"                   matching argument specifiers ~S.~@:>"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid ""
+"~@<No method on ~S with qualifiers ~S and ~\n"
+"           specializers ~S.~@:>"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid ""
+"~@<No method on ~S with qualifiers ~S and ~\n"
+"            specializers ~S.~@:>"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid "~@<The generic function ~s takes ~d required argument~p.~@:>"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid ""
+"~@<The method ~S is already part of the generic ~\n"
+"            function ~S.  It can't be added to another generic ~\n"
+"            function until it is removed from the first one.~@:>"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid ""
+"~@<Method ~s contains invalid qualifiers for ~\n"
+"                        the standard method combination.~@:>"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid ""
+"~@<Method ~s contains invalid qualifiers for ~\n"
+"                          the method combination ~s.~@:>"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid "~@<Generic function ~S requires at least ~D arguments.~@:>"
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid "In get-accessor-method-function."
+msgstr ""
+
+#: target:pcl/methods.lisp
+msgid "The key for the last case arg to mcase was not T."
+msgstr ""
+
+#: target:pcl/defcombin.lisp
+msgid ""
+"~@<Invalid options to a short method combination type.  ~\n"
+"            The method combination type ~S accepts one option which ~\n"
+"            must be either ~s or ~s.~@:>"
+msgstr ""
+
+#: target:pcl/defcombin.lisp
+msgid ""
+"~@<The method ~S ~A.  ~\n"
+"                    The method combination type ~S was defined with the ~\n"
+"                    short form of ~s and so requires all methods have ~\n"
+"		    either the single qualifier ~S or the single qualifier ~\n"
+"		    ~s.~@:>"
+msgstr ""
+
+#: target:pcl/defcombin.lisp
+msgid "has no qualifiers"
+msgstr ""
+
+#: target:pcl/defcombin.lisp
+msgid "has an illegal qualifier"
+msgstr ""
+
+#: target:pcl/defcombin.lisp
+msgid ""
+"~@<More than one method of type ~S ~\n"
+"                                     with the same specializers.~@:>"
+msgstr ""
+
+#: target:pcl/defcombin.lisp
+msgid "No ~S methods."
+msgstr ""
+
+#: target:pcl/defcombin.lisp
+msgid ""
+"~@<In the method group specifier ~S, ~\n"
+"                   ~S isn't a valid qualifier pattern.~@:>"
+msgstr ""
+
+#: target:pcl/defcombin.lisp
+msgid "methods matching one of the patterns: ~{~S, ~} ~S"
+msgstr ""
+
+#: target:pcl/defcombin.lisp
+msgid "methods matching the pattern: ~S"
+msgstr ""
+
+#: target:pcl/defcombin.lisp
+msgid "Invalid parameter specifier: ~s"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "~%~S is an instance of class ~S:"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "~% The following slots have :INSTANCE allocation:"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "~% The following slots have :CLASS allocation:"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "~% The following slots have allocation as shown:"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "~A is a generic function.~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "Its lambda-list is:~%  ~S~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "Generic function documentation:~%  ~s~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "Its methods are:~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "    Method documentation: ~s~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "~&~@<~S is a class, it is an instance of ~S.~@:>~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "Its proper name is ~S.~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "Its name is ~S, but this is not a proper name.~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "It has no name (the name is NIL).~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid ""
+"The direct superclasses are: ~:S, and the direct~%~\n"
+"           subclasses are: ~:S.  The class is ~:[not ~;~]finalized.  ~\n"
+"           The class precedence list is:~%~S~%~\n"
+"           There are ~D methods specialized for this class."
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "~&Its direct slots are:~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "  ~a, documentation ~s~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "~&~S is a ~S.~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "You can also call it~@[ ~{~S~^, ~} or~] ~S.~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "It has ~D internal and ~D external symbols (~D total).~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "It uses the packages ~{~S~^, ~}.~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "It is used by the packages ~{~S~^, ~}.~%"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "~&~S is an ~a hash table."
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "~&Its size is ~d buckets."
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "~&Its rehash-size is ~d."
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "~&Its rehash-threshold is ~d."
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "~@<Default ~s method for ~s called.~@>"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "~@<Can't dump wrapper for anonymous class ~S.~@:>"
+msgstr ""
+
+#: target:pcl/env.lisp
+msgid "~@<Can't use anonymous or undefined class as constant: ~S~:@>"
+msgstr ""
+
+#: target:pcl/cmucl-documentation.lisp
+msgid "Invalid function name ~s"
+msgstr ""
+
+#: target:pcl/cmucl-documentation.lisp
+msgid "~@<~S is not the name of a structure type.~@:>"
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Returns a type specifier for the kind of object returned by the\n"
+"  Stream. Class FUNDAMENTAL-CHARACTER-STREAM provides a default method\n"
+"  which returns CHARACTER."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Return true if Stream is not closed.  A default method is provided\n"
+"  by class FUNDAMENTAL-STREAM which returns true if CLOSE has not been\n"
+"  called on the stream."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Closes the given Stream.  No more I/O may be performed, but\n"
+"  inquiries may still be made.  If :Abort is non-nil, an attempt is made\n"
+"  to clean up the side effects of having created the stream."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"This reads one character from the stream.  It returns either a\n"
+"  character object, or the symbol :EOF if the stream is at end-of-file.\n"
+"  Every subclass of FUNDAMENTAL-CHARACTER-INPUT-STREAM must define a\n"
+"  method for this function."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Un-does the last call to STREAM-READ-CHAR, as in UNREAD-CHAR.\n"
+"  Returns NIL.  Every subclass of FUNDAMENTAL-CHARACTER-INPUT-STREAM\n"
+"  must define a method for this function."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"This is used to implement READ-CHAR-NO-HANG.  It returns either a\n"
+"  character, or NIL if no input is currently available, or :EOF if\n"
+"  end-of-file is reached.  The default method provided by\n"
+"  FUNDAMENTAL-CHARACTER-INPUT-STREAM simply calls STREAM-READ-CHAR; this\n"
+"  is sufficient for file streams, but interactive streams should define\n"
+"  their own method."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Used to implement PEEK-CHAR; this corresponds to peek-type of NIL.\n"
+"  It returns either a character or :EOF.  The default method calls\n"
+"  STREAM-READ-CHAR and STREAM-UNREAD-CHAR."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Used by LISTEN.  Returns true or false.  The default method uses\n"
+"  STREAM-READ-CHAR-NO-HANG and STREAM-UNREAD-CHAR.  Most streams should \n"
+"  define their own method since it will usually be trivial and will\n"
+"  always be more efficient than the default method."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Used by READ-LINE.  A string is returned as the first value.  The\n"
+"  second value is true if the string was terminated by end-of-file\n"
+"  instead of the end of a line.  The default method uses repeated\n"
+"  calls to STREAM-READ-CHAR."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Implements CLEAR-INPUT for the stream, returning NIL.  The default\n"
+"  method does nothing."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid "Implements READ-SEQUENCE for the stream."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Writes character to the stream and returns the character.  Every\n"
+"  subclass of FUNDAMENTAL-CHARACTER-OUTPUT-STREAM must have a method\n"
+"  defined for this function."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"This function returns the column number where the next character\n"
+"  will be written, or NIL if that is not meaningful for this stream.\n"
+"  The first column on a line is numbered 0.  This function is used in\n"
+"  the implementation of PPRINT and the FORMAT ~T directive.  For every\n"
+"  character output stream class that is defined, a method must be\n"
+"  defined for this function, although it is permissible for it to\n"
+"  always return NIL."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid "Return the stream line length or Nil."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"This is a predicate which returns T if the stream is positioned at\n"
+"  the beginning of a line, else NIL.  It is permissible to always return\n"
+"  NIL.  This is used in the implementation of FRESH-LINE.  Note that\n"
+"  while a value of 0 from STREAM-LINE-COLUMN also indicates the\n"
+"  beginning of a line, there are cases where STREAM-START-LINE-P can be\n"
+"  meaningfully implemented although STREAM-LINE-COLUMN can't be.  For\n"
+"  example, for a window using variable-width characters, the column\n"
+"  number isn't very meaningful, but the beginning of the line does have\n"
+"  a clear meaning.  The default method for STREAM-START-LINE-P on class\n"
+"  FUNDAMENTAL-CHARACTER-OUTPUT-STREAM uses STREAM-LINE-COLUMN, so if\n"
+"  that is defined to return NIL, then a method should be provided for\n"
+"  either STREAM-START-LINE-P or STREAM-FRESH-LINE."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"This is used by WRITE-STRING.  It writes the string to the stream,\n"
+"  optionally delimited by start and end, which default to 0 and NIL.\n"
+"  The string argument is returned.  The default method provided by\n"
+"  FUNDAMENTAL-CHARACTER-OUTPUT-STREAM uses repeated calls to\n"
+"  STREAM-WRITE-CHAR."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Writes an end of line, as for TERPRI.  Returns NIL.  The default\n"
+"  method does (STREAM-WRITE-CHAR stream #NEWLINE)."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Outputs a new line to the Stream if it is not positioned at the\n"
+"  begining of a line.  Returns T if it output a new line, nil\n"
+"  otherwise. Used by FRESH-LINE. The default method uses\n"
+"  STREAM-START-LINE-P and STREAM-TERPRI."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Attempts to ensure that all output sent to the Stream has reached\n"
+"  its destination, and only then returns false. Implements\n"
+"  FINISH-OUTPUT.  The default method does nothing."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Attempts to force any buffered output to be sent. Implements\n"
+"  FORCE-OUTPUT.  The default method does nothing."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Clears the given output Stream. Implements CLEAR-OUTPUT.  The\n"
+"  default method does nothing."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Writes enough blank space so that the next character will be\n"
+"  written at the specified column.  Returns true if the operation is\n"
+"  successful, or NIL if it is not supported for this stream.  This is\n"
+"  intended for use by by PPRINT and FORMAT ~T.  The default method uses\n"
+"  STREAM-LINE-COLUMN and repeated calls to STREAM-WRITE-CHAR with a\n"
+"  #SPACE character; it returns NIL if STREAM-LINE-COLUMN returns NIL."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid "Implements WRITE-SEQUENCE for the stream."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Used by READ-BYTE; returns either an integer, or the symbol :EOF\n"
+"  if the stream is at end-of-file."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid ""
+"Implements WRITE-BYTE; writes the integer to the stream and\n"
+"  returns the integer as the result."
+msgstr ""
+
+#: target:pcl/gray-streams.lisp
+msgid "    Gray Streams Protocol Support"
 msgstr ""
 

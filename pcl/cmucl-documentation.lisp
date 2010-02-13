@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.16.32.3 2010/02/09 02:41:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.16.32.4 2010/02/13 01:28:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,7 +43,7 @@
 
 (defmethod (setf documentation) (new-value (x list) (doc-type (eql 'function)))
   (unless (valid-function-name-p x)
-    (simple-program-error "Invalid function name ~s" x))
+    (simple-program-error _"Invalid function name ~s" x))
   (if (eq 'setf (cadr x))
       (progn
 	#+(or)
@@ -169,7 +169,7 @@
 #+nil
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'structure)))
   (unless (eq (info type kind x) :instance)
-    (simple-program-error "~@<~S is not the name of a structure type.~@:>" x))
+    (simple-program-error _"~@<~S is not the name of a structure type.~@:>" x))
   (setf (info type documentation x) new-value))
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'structure)))
@@ -180,7 +180,7 @@
 	 (setf (info typed-structure textdomain x) intl::*default-domain*)
 	 (setf (info typed-structure documentation x) new-value))
 	(t
-	 (simple-program-error "~@<~S is not the name of a structure type.~@:>" x))))
+	 (simple-program-error _"~@<~S is not the name of a structure type.~@:>" x))))
 
 ;;; Variables.
 (defmethod documentation ((x symbol) (doc-type (eql 'variable)))
@@ -221,7 +221,7 @@
 (eval-when (:load-toplevel)
   (setf (symbol-function 'lisp:documentation) #'documentation)
   (setf (documentation 'documentation 'function)
-    "Returns the documentation string of Doc-Type for X, or NIL if
+    _N"Returns the documentation string of Doc-Type for X, or NIL if
   none exists.  System doc-types are VARIABLE, FUNCTION, STRUCTURE, TYPE,
   SETF, and T.")
   (setf (fdefinition '(setf lisp:documentation)) #'(setf documentation)))

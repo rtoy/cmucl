@@ -52,19 +52,19 @@
 ;;;
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.7.34.1 2010/02/08 17:15:53 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.7.34.2 2010/02/13 01:28:04 rtoy Exp $")
  
 (in-package "PCL")
 (intl:textdomain "cmucl")
 
 (defvar *optimize-inline-slot-access-p* t
-  "Set to true to activate the inline slot access optimization.")
+  _N"Set to true to activate the inline slot access optimization.")
 
 (defvar *use-slot-types-p* t
-  "When true, check slot values against specified slot types.")
+  _N"When true, check slot values against specified slot types.")
 
 (defvar *optimize-accessor-calls-p* t
-  "When true, optimize slot access through slot reader/writer functions.")
+  _N"When true, optimize slot access through slot reader/writer functions.")
 
 
 ;;; *******************
@@ -87,7 +87,7 @@
 
 (defun cant-optimize (class format-control &rest format-args)
   (warn 'cant-optimize-warning
-	:title "Cannot optimize slot access to"
+	:title _"Cannot optimize slot access to"
 	:class class
 	:format-control format-control
 	:format-arguments format-args))
@@ -274,27 +274,27 @@
 	;; For now only for standard classes.  If this
 	;; is changed we need to get smart.
 	((not (standard-class-p class))
-	 (cant-optimize class "The class is not a standard class"))
+	 (cant-optimize class _"The class is not a standard class"))
 	;;
 	((null (setq slotd (find-slot-definition class slot-name)))
-	 (cant-optimize class "The class doesn't contain a slot with name ~s"
+	 (cant-optimize class _"The class doesn't contain a slot with name ~s"
 			slot-name))
 	;;
 	;; Class slots not implemented because it's difficult to
 	;; back-patch the class slot cons cell into the code.  It's
 	;; anyway not important to optimize this.
 	((consp (slot-definition-location slotd))
-	 (cant-optimize class "Slot ~s is a class slot" slot-name))
+	 (cant-optimize class _"Slot ~s is a class slot" slot-name))
 	;;
 	;; Check for non-standard slot accessors, SLOT-VALUE-USING-CLASS.
 	((not (optimize-slot-value-by-class-p class slot-name 'all))
-	 (cant-optimize class "There are non-standard accessors for slot ~s"
+	 (cant-optimize class _"There are non-standard accessors for slot ~s"
 			slot-name))
 	;;
 	;; Check if the accessed slot is at the same location in the
 	;; class and all its subclasses.
 	((not (slot-at-fixed-location-p class slot-name))
-	 (cant-optimize class "Slot ~s is not at the same location ~
+	 (cant-optimize class _"Slot ~s is not at the same location ~
                                in the class and all of its subclasses"
 			slot-name))
 	;;
@@ -434,7 +434,7 @@
     (loop for method in methods
 	  as defmethod-form = (reconstruct-defmethod-form method)
 	  if defmethod-form do
-	    (warn "Auto-compiling method ~s." method)
+	    (warn _"Auto-compiling method ~s." method)
 	    (eval defmethod-form)
 	  else
 	    collect method into remaining-methods
@@ -442,7 +442,7 @@
 	    (setq methods remaining-methods))
     (when methods
       (warn 'method-recompilation-warning
-	    :title "Methods may need to be recompiled for the changed ~
+	    :title _"Methods may need to be recompiled for the changed ~
                     class layout of"
 	    :class class
 	    :format-control "~{~%     ~s~}"
@@ -689,7 +689,7 @@
       (let ((real-class (find-class class nil)))
 	(unless (std-class-p real-class)
 	  (when (slot-declaration env 'inline class)
-	    (cant-optimize class "The class is not defined at compile time"))
+	    (cant-optimize class _"The class is not defined at compile time"))
 	  (return-from check-inline-accessor-call-p nil))
 	(setq class real-class)))
     ;;
@@ -705,10 +705,10 @@
 	      ((not (some #'declared-inline slot-names))
 	       nil)
 	      ((not all-standard-accessors-p)
-	       (cant-optimize class "~s has a method that is not a standard ~
+	       (cant-optimize class _"~s has a method that is not a standard ~
                                     slot accessor" gf-name))
 	      (t
-	       (cant-optimize class "Methods of ~s access different slots"
+	       (cant-optimize class _"Methods of ~s access different slots"
 			      gf-name)))))))
 
 ;;;

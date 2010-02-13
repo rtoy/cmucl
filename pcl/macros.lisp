@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.29.48.1 2010/02/08 17:15:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.29.48.2 2010/02/13 01:28:04 rtoy Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -98,7 +98,7 @@
        (loop (when (null .plist-tail.) (return nil))
 	     (setq ,key (pop .plist-tail.))
 	     (when (null .plist-tail.)
-	       (error "Malformed plist in doplist, odd number of elements."))
+	       (error _"Malformed plist in doplist, odd number of elements."))
 	     (setq ,val (pop .plist-tail.))
 	     (progn ,@bod)))))
 
@@ -128,7 +128,7 @@
   (or (gethash symbol *find-class*)
       (unless dont-create-p
 	(unless (legal-class-name-p symbol)
-	  (error "~@<~S is not a legal class name.~@:>" symbol))
+	  (error _"~@<~S is not a legal class name.~@:>" symbol))
 	(setf (gethash symbol *find-class*) (make-find-class-cell symbol)))))
 
 (defvar *create-classes-from-internal-structure-definitions-p* t)
@@ -140,9 +140,9 @@
            (ensure-non-standard-class symbol))
       (cond ((null errorp) nil)
 	    ((legal-class-name-p symbol)
-	     (error "No class named ~S." symbol))
+	     (error _"No class named ~S." symbol))
 	    (t
-	     (error "~S is not a legal class name." symbol)))))
+	     (error _"~S is not a legal class name." symbol)))))
 
 (defun find-class-predicate-from-cell (symbol cell &optional (errorp t))
   (unless (find-class-cell-class cell)
@@ -153,7 +153,7 @@
   (symbolp x))
 
 (defun find-class (symbol &optional (errorp t) environment)
-  "Returns the PCL class metaobject named by SYMBOL. An error of type
+  _N"Returns the PCL class metaobject named by SYMBOL. An error of type
    SIMPLE-ERROR is signaled if the class does not exist unless ERRORP
    is NIL in which case NIL is returned. SYMBOL cannot be a keyword."
   (declare (ignore environment))
@@ -206,12 +206,12 @@
 		  (fdefinition (class-predicate-name new-value))))
 	  (update-ctors 'setf-find-class :class new-value :name name))
 	new-value)
-      (error "~S is not a legal class name." name)))
+      (error _"~S is not a legal class name." name)))
 
 (defun (setf find-class-predicate) (new-value symbol)
   (if (legal-class-name-p symbol)
       (setf (find-class-cell-predicate (find-class-cell symbol)) new-value)
-      (error "~S is not a legal class name." symbol)))
+      (error _"~S is not a legal class name." symbol)))
 
 (defmacro function-funcall (form &rest args)
   `(funcall (the function ,form) ,@args))

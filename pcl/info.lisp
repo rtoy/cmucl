@@ -36,7 +36,7 @@
 ;;; GF is actually non-accessor GF.  Clean this up.
 ;;; (setf symbol-value) should be handled like (setf fdefinition)
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.11.34.1 2010/02/08 17:15:53 rtoy Exp $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.11.34.2 2010/02/13 01:28:04 rtoy Exp $")
 
 (in-package "PCL")
 (intl:textdomain "cmucl")
@@ -485,7 +485,7 @@
 				   *variable-declarations-without-argument*))
 			  (dname (list (pop form))))
 		      (unless (or arg-p non-arg-p)
-			(warn "~@<The declaration ~S is not understood by ~S. ~
+			(warn _"~@<The declaration ~S is not understood by ~S. ~
                                Please put ~S on one of the lists ~S, ~S, or ~S. ~
                                (Assuming it is a variable declarations without ~
                                argument).~@:>"
@@ -565,9 +565,9 @@
 (define-declaration slots (form)
   (flet ((invalid (&optional subform)
 	   (if subform
-	       (warn "~@<Invalid slot access specifier ~s in ~s.~@:>"
+	       (warn _"~@<Invalid slot access specifier ~s in ~s.~@:>"
 		     subform form)
-	       (warn "~@<Invalid slot access declaration ~s.~@:>"
+	       (warn _"~@<Invalid slot access declaration ~s.~@:>"
 		     form))))
     (dolist (specifier (cdr form))
       (if (and (consp specifier)
@@ -638,7 +638,7 @@
 		      (or (null slot-name)
 			  (null (cdr entry))
 			  (memq slot-name (cdr entry)))))
-		(t (warn "~@<Invalid slot access declaration ~s.~@:>"
+		(t (warn _"~@<Invalid slot access declaration ~s.~@:>"
 			 specifier)))
 	  (return-from slot-access-specifier entry))))))
 
@@ -688,9 +688,9 @@
 (defun auto-compile-proclamation (form compilep)
   (flet ((invalid (&optional subform)
 	   (if subform
-	       (warn "~@<Invalid auto-compile specifier ~s in ~s.~@:>"
+	       (warn _"~@<Invalid auto-compile specifier ~s in ~s.~@:>"
 		     subform form)
-	       (warn "~@<Invalid auto-compile declaration ~s.~@:>"
+	       (warn _"~@<Invalid auto-compile declaration ~s.~@:>"
 		     form)))
 	 (gf-name-p (name)
 	   (valid-function-name-p name)))

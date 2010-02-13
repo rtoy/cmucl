@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.27.36.1 2010/02/08 17:15:52 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.27.36.2 2010/02/13 01:28:04 rtoy Exp $")
 
 (in-package :pcl)
 (intl:textdomain "cmucl")
@@ -163,7 +163,7 @@
 	((equal options '(:most-specific-last)))
 	(t
 	 (method-combination-error
-	   "~@<Invalid options to a short method combination type.  ~
+	   _"~@<Invalid options to a short method combination type.  ~
             The method combination type ~S accepts one option which ~
             must be either ~s or ~s.~@:>"
 	   type :most-specific-first :most-specific-last)))
@@ -190,7 +190,7 @@
 	(labels ((lose (method why)
 		 (invalid-method-error
 		   method
-		   "~@<The method ~S ~A.  ~
+		   _"~@<The method ~S ~A.  ~
                     The method combination type ~S was defined with the ~
                     short form of ~s and so requires all methods have ~
 		    either the single qualifier ~S or the single qualifier ~
@@ -202,15 +202,15 @@
 		       (push method invalid)
 		       (lose method why))))
 	  (cond ((null qualifiers)
-		 (invalid-method m "has no qualifiers"))
+		 (invalid-method m _"has no qualifiers"))
 		((cdr qualifiers)
-		 (invalid-method m "has more than one qualifier"))
+		 (invalid-method m _"has more than one qualifier"))
 		((eq (car qualifiers) :around)
 		 (push m around))
 		((eq (car qualifiers) type)
 		 (push m primary))
 		(t
-		 (invalid-method m "has an illegal qualifier"))))))
+		 (invalid-method m _"has an illegal qualifier"))))))
     (setq around (nreverse around))
     (unless (eq order :most-specific-last)
       (setq primary (nreverse primary)))
@@ -336,7 +336,7 @@
 		      (if (and (equal ,specializer-cache .specializers.)
 			       (not (null .specializers.)))
 			  (return-from .long-method-combination-function.
-			    '(error "~@<More than one method of type ~S ~
+			    '(error _"~@<More than one method of type ~S ~
                                      with the same specializers.~@:>"
 			            ',name))
 			   (setq ,specializer-cache .specializers.))
@@ -345,7 +345,7 @@
 	  (when required
 	    (push `(when (null ,name)
 		     (return-from .long-method-combination-function.
-		       '(error "No ~S methods." ',name)))
+		       '(error _"No ~S methods." ',name)))
 		  required-checks))
 	  (loop (unless (and (constantp order)
 			     (neq order (setq order (eval order))))
@@ -391,7 +391,7 @@
 	((eq pattern '*) t)
 	((symbolp pattern) `(,pattern .qualifiers.))
 	((listp pattern) `(qualifier-check-runtime ',pattern .qualifiers.))
-	(t (error "~@<In the method group specifier ~S, ~
+	(t (error _"~@<In the method group specifier ~S, ~
                    ~S isn't a valid qualifier pattern.~@:>"
 		  name pattern))))
 
@@ -410,10 +410,10 @@
 (defun make-default-method-group-description (patterns)
   (if (cdr patterns)
       (format nil
-	      "methods matching one of the patterns: ~{~S, ~} ~S"
+	      _"methods matching one of the patterns: ~{~S, ~} ~S"
 	      (butlast patterns) (car (last patterns)))
       (format nil
-	      "methods matching the pattern: ~S"
+	      _"methods matching the pattern: ~S"
 	      (car patterns))))
 
 ;;;
@@ -427,7 +427,7 @@
 	 (loop for arg in args-lambda-list
 	       as var = (if (consp arg) (car arg) arg)
 	       unless (symbolp var) do
-		 (error "Invalid parameter specifier: ~s" arg)
+		 (error _"Invalid parameter specifier: ~s" arg)
 	       unless (memq arg lambda-list-keywords)
 	         collect `(,var ',var)))
 	(nreq 0)

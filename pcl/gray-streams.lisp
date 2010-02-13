@@ -5,7 +5,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.13.24.1 2010/02/08 17:15:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.13.24.2 2010/02/13 01:28:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 
 (defgeneric stream-element-type (stream)
   (:documentation
-   "Returns a type specifier for the kind of object returned by the
+   _N"Returns a type specifier for the kind of object returned by the
   Stream. Class FUNDAMENTAL-CHARACTER-STREAM provides a default method
   which returns CHARACTER."))
 
@@ -40,7 +40,7 @@
 
 (defgeneric pcl-open-stream-p (stream)
   (:documentation
-   "Return true if Stream is not closed.  A default method is provided
+   _N"Return true if Stream is not closed.  A default method is provided
   by class FUNDAMENTAL-STREAM which returns true if CLOSE has not been
   called on the stream."))
 
@@ -62,7 +62,7 @@
 
 (defgeneric pcl-close (stream &key abort)
   (:documentation
-   "Closes the given Stream.  No more I/O may be performed, but
+   _N"Closes the given Stream.  No more I/O may be performed, but
   inquiries may still be made.  If :Abort is non-nil, an attempt is made
   to clean up the side effects of having created the stream."))
 
@@ -83,7 +83,7 @@
 (fmakunbound 'input-stream-p)
 
 (defgeneric input-stream-p (stream)
-  (:documentation "Returns non-nil if the given Stream can perform input operations."))
+  (:documentation _N"Returns non-nil if the given Stream can perform input operations."))
 
 (defmethod input-stream-p ((stream lisp-stream))
   (and (not (eq (lisp-stream-in stream) #'closed-flame))
@@ -103,7 +103,7 @@
 (fmakunbound 'output-stream-p)
 
 (defgeneric output-stream-p (stream)
-  (:documentation "Returns non-nil if the given Stream can perform output operations."))
+  (:documentation _N"Returns non-nil if the given Stream can perform output operations."))
 
 (defmethod output-stream-p ((stream lisp-stream))
   (and (not (eq (lisp-stream-in stream) #'closed-flame))
@@ -126,20 +126,20 @@
 
 (defgeneric stream-read-char (stream)
   (:documentation
-   "This reads one character from the stream.  It returns either a
+   _N"This reads one character from the stream.  It returns either a
   character object, or the symbol :EOF if the stream is at end-of-file.
   Every subclass of FUNDAMENTAL-CHARACTER-INPUT-STREAM must define a
   method for this function."))
 
 (defgeneric stream-unread-char (stream character)
   (:documentation
-   "Un-does the last call to STREAM-READ-CHAR, as in UNREAD-CHAR.
+   _N"Un-does the last call to STREAM-READ-CHAR, as in UNREAD-CHAR.
   Returns NIL.  Every subclass of FUNDAMENTAL-CHARACTER-INPUT-STREAM
   must define a method for this function."))
 
 (defgeneric stream-read-char-no-hang (stream)
   (:documentation
-   "This is used to implement READ-CHAR-NO-HANG.  It returns either a
+   _N"This is used to implement READ-CHAR-NO-HANG.  It returns either a
   character, or NIL if no input is currently available, or :EOF if
   end-of-file is reached.  The default method provided by
   FUNDAMENTAL-CHARACTER-INPUT-STREAM simply calls STREAM-READ-CHAR; this
@@ -151,7 +151,7 @@
 
 (defgeneric stream-peek-char (stream)
   (:documentation
-   "Used to implement PEEK-CHAR; this corresponds to peek-type of NIL.
+   _N"Used to implement PEEK-CHAR; this corresponds to peek-type of NIL.
   It returns either a character or :EOF.  The default method calls
   STREAM-READ-CHAR and STREAM-UNREAD-CHAR."))
 
@@ -163,7 +163,7 @@
 
 (defgeneric stream-listen (stream)
   (:documentation
-   "Used by LISTEN.  Returns true or false.  The default method uses
+   _N"Used by LISTEN.  Returns true or false.  The default method uses
   STREAM-READ-CHAR-NO-HANG and STREAM-UNREAD-CHAR.  Most streams should 
   define their own method since it will usually be trivial and will
   always be more efficient than the default method."))
@@ -176,7 +176,7 @@
 
 (defgeneric stream-read-line (stream)
   (:documentation
-   "Used by READ-LINE.  A string is returned as the first value.  The
+   _N"Used by READ-LINE.  A string is returned as the first value.  The
   second value is true if the string was terminated by end-of-file
   instead of the end of a line.  The default method uses repeated
   calls to STREAM-READ-CHAR."))
@@ -202,7 +202,7 @@
 
 (defgeneric stream-clear-input (stream)
   (:documentation
-   "Implements CLEAR-INPUT for the stream, returning NIL.  The default
+   _N"Implements CLEAR-INPUT for the stream, returning NIL.  The default
   method does nothing."))
 
 (defmethod stream-clear-input ((stream fundamental-character-input-stream))
@@ -210,7 +210,7 @@
 
 (defgeneric stream-read-sequence (stream seq &optional start end)
   (:documentation
-   "Implements READ-SEQUENCE for the stream."))
+   _N"Implements READ-SEQUENCE for the stream."))
 
 
 ;;; Character output streams.
@@ -221,13 +221,13 @@
 
 (defgeneric stream-write-char (stream character)
   (:documentation
-   "Writes character to the stream and returns the character.  Every
+   _N"Writes character to the stream and returns the character.  Every
   subclass of FUNDAMENTAL-CHARACTER-OUTPUT-STREAM must have a method
   defined for this function."))
 
 (defgeneric stream-line-column (stream)
   (:documentation
-   "This function returns the column number where the next character
+   _N"This function returns the column number where the next character
   will be written, or NIL if that is not meaningful for this stream.
   The first column on a line is numbered 0.  This function is used in
   the implementation of PPRINT and the FORMAT ~T directive.  For every
@@ -237,14 +237,14 @@
 
 ;;; Stream-line-length is a CMUCL extension to Gray streams.
 (defgeneric stream-line-length (stream)
-  (:documentation "Return the stream line length or Nil."))
+  (:documentation _N"Return the stream line length or Nil."))
 
 (defmethod stream-line-length ((stream fundamental-character-output-stream))
   nil)
 
 (defgeneric stream-start-line-p (stream)
   (:documentation
-   "This is a predicate which returns T if the stream is positioned at
+   _N"This is a predicate which returns T if the stream is positioned at
   the beginning of a line, else NIL.  It is permissible to always return
   NIL.  This is used in the implementation of FRESH-LINE.  Note that
   while a value of 0 from STREAM-LINE-COLUMN also indicates the
@@ -262,7 +262,7 @@
 
 (defgeneric stream-write-string (stream string &optional start end)
   (:documentation
-   "This is used by WRITE-STRING.  It writes the string to the stream,
+   _N"This is used by WRITE-STRING.  It writes the string to the stream,
   optionally delimited by start and end, which default to 0 and NIL.
   The string argument is returned.  The default method provided by
   FUNDAMENTAL-CHARACTER-OUTPUT-STREAM uses repeated calls to
@@ -282,7 +282,7 @@
 
 (defgeneric stream-terpri (stream)
   (:documentation
-   "Writes an end of line, as for TERPRI.  Returns NIL.  The default
+   _N"Writes an end of line, as for TERPRI.  Returns NIL.  The default
   method does (STREAM-WRITE-CHAR stream #\NEWLINE)."))
 
 (defmethod stream-terpri ((stream fundamental-character-output-stream))
@@ -290,7 +290,7 @@
 
 (defgeneric stream-fresh-line (stream)
   (:documentation
-   "Outputs a new line to the Stream if it is not positioned at the
+   _N"Outputs a new line to the Stream if it is not positioned at the
   begining of a line.  Returns T if it output a new line, nil
   otherwise. Used by FRESH-LINE. The default method uses
   STREAM-START-LINE-P and STREAM-TERPRI."))
@@ -302,7 +302,7 @@
 
 (defgeneric stream-finish-output (stream)
   (:documentation
-   "Attempts to ensure that all output sent to the Stream has reached
+   _N"Attempts to ensure that all output sent to the Stream has reached
   its destination, and only then returns false. Implements
   FINISH-OUTPUT.  The default method does nothing."))
 
@@ -311,7 +311,7 @@
 
 (defgeneric stream-force-output (stream)
   (:documentation
-   "Attempts to force any buffered output to be sent. Implements
+   _N"Attempts to force any buffered output to be sent. Implements
   FORCE-OUTPUT.  The default method does nothing."))
 
 (defmethod stream-force-output ((stream fundamental-output-stream))
@@ -319,7 +319,7 @@
 
 (defgeneric stream-clear-output (stream)
   (:documentation
-   "Clears the given output Stream. Implements CLEAR-OUTPUT.  The
+   _N"Clears the given output Stream. Implements CLEAR-OUTPUT.  The
   default method does nothing."))
 
 (defmethod stream-clear-output ((stream fundamental-output-stream))
@@ -327,7 +327,7 @@
 
 (defgeneric stream-advance-to-column (stream column)
   (:documentation
-   "Writes enough blank space so that the next character will be
+   _N"Writes enough blank space so that the next character will be
   written at the specified column.  Returns true if the operation is
   successful, or NIL if it is not supported for this stream.  This is
   intended for use by by PPRINT and FORMAT ~T.  The default method uses
@@ -345,7 +345,7 @@
 
 (defgeneric stream-write-sequence (stream seq &optional start end)
   (:documentation
-   "Implements WRITE-SEQUENCE for the stream."))
+   _N"Implements WRITE-SEQUENCE for the stream."))
 
 
 ;;; Binary streams.
@@ -358,12 +358,12 @@
 
 (defgeneric stream-read-byte (stream)
   (:documentation
-   "Used by READ-BYTE; returns either an integer, or the symbol :EOF
+   _N"Used by READ-BYTE; returns either an integer, or the symbol :EOF
   if the stream is at end-of-file."))
 
 (defgeneric stream-write-byte (stream integer)
   (:documentation
-   "Implements WRITE-BYTE; writes the integer to the stream and
+   _N"Implements WRITE-BYTE; writes the integer to the stream and
   returns the integer as the result."))
 
 
@@ -446,7 +446,8 @@
 (provide :gray-streams)
 
 (setf (getf *herald-items* :gray-streams)
-      '("    Gray Streams Protocol Support"))
+      `(,#'(lambda (stream)
+	     (write-string _"    Gray Streams Protocol Support" stream))))
 
 
 

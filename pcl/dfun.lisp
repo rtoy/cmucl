@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.39.18.1 2010/02/08 17:15:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.39.18.2 2010/02/13 01:28:04 rtoy Exp $")
 
 (in-package :pcl)
 (intl:textdomain "cmucl")
@@ -219,10 +219,10 @@ And so, we are saved.
 			 (funcallable-standard-instance-access object location)
 			 (standard-instance-access object location))))
 	  (when (eq +slot-unbound+ value)
-	    (error "~@<Slot ~s of class ~s is unbound in object ~s~@:>"
+	    (error _"~@<Slot ~s of class ~s is unbound in object ~s~@:>"
 		   slot-name class object))
 	  value)
-	(error "~@<Cannot get standard value of slot ~s of class ~s ~
+	(error _"~@<Cannot get standard value of slot ~s of class ~s ~
                 in object ~s~@:>"
 	       slot-name class object))))
 
@@ -625,7 +625,7 @@ And so, we are saved.
 (defun show-dfun-costs (gf)
   (when (or (symbolp gf) (consp gf))
     (setq gf (gdefinition gf)))
-  (format t "~&Name ~S  caching cost ~D  dispatch cost ~D~%"
+  (format t _"~&Name ~S  caching cost ~D  dispatch cost ~D~%"
 	  (generic-function-name gf)
 	  (caching-dfun-cost gf)
 	  (dispatch-dfun-cost gf)))
@@ -771,7 +771,7 @@ And so, we are saved.
 (defvar *early-p* nil)
 
 (defvar *max-emf-precomputation-methods* 100
-  "Precompute effective methods at method load time if the generic
+  _N"Precompute effective methods at method load time if the generic
    function has less than this number of methods.  If zero,
    no effective methods are precomputed at method load time.")
 
@@ -1129,11 +1129,11 @@ And so, we are saved.
     (with-dfun-wrappers (args metatypes)
       (dfun-wrappers invalid-wrapper-p wrappers classes types)
       #+nil
-      (error "~@<The function ~S requires at least ~D arguments.~@:>"
+      (error _"~@<The function ~S requires at least ~D arguments.~@:>"
 	     gf (length metatypes))
       (error 'kernel:simple-program-error
 	     :name gf
-	     :format-control "~<The function ~S requires at least ~D arguments.~@:>"
+	     :format-control _"~<The function ~S requires at least ~D arguments.~@:>"
 	     :format-arguments (list gf (length metatypes)))
       (multiple-value-bind (emf methods accessor-type index)
 	  (cache-miss-values-internal gf arg-info wrappers classes types state)
@@ -1209,7 +1209,7 @@ And so, we are saved.
 	    (return-from break-vicious-metacircle
 	      (values index (list method) type index)))))))
   (kernel:infinite-error-protect
-   (error "~@<Vicious metacircle:  The computation of an ~
+   (error _"~@<Vicious metacircle:  The computation of an ~
 	   effective method of ~s for arguments of types ~s uses ~
 	   the effective method being computed.~@:>"
 	  gf classes)))
@@ -1385,7 +1385,7 @@ And so, we are saved.
 		   (slot-name->class-table slot-name))))
       (maphash (lambda (class specl+slotd-list)
 		 (dolist (sclass (precedence class)
-			  (internal-error "This can't happen."))
+			  (internal-error _"This can't happen."))
 		   (let ((a (assq sclass specl+slotd-list)))
 		     (when a
 		       (let* ((slotd (cdr a))
@@ -1597,7 +1597,7 @@ And so, we are saved.
 	     (class-eq (saut-class-eq specl type))
 	     (eql (saut-eql specl type))
 	     (t (internal-error
-		 "~@<~s cannot handle the second argument ~s.~@:>"
+		 _"~@<~s cannot handle the second argument ~s.~@:>"
 		 'specializer-applicable-using-type-p type)))))))
 
 (defun saut-and (specl type)
@@ -1639,7 +1639,7 @@ And so, we are saved.
 	  (eql (not (eql (cadr specl) (cadr ntype))))
 	  (t t)))
        (t
-	(internal-error "~@<~s cannot handle the second argument ~s.~@:>"
+	(internal-error _"~@<~s cannot handle the second argument ~s.~@:>"
 			'specializer-applicable-using-type-p type))))))
 
 (defun saut-class (specl type)
@@ -1849,7 +1849,7 @@ And so, we are saved.
 		(sort (third type+count+sizes) #'< :key #'car)))
 	dfun-count)
   (mapc (lambda (type+count+sizes)
-	  (format t "~&There are ~4d dfuns of type ~s"
+	  (format t _"~&There are ~4d dfuns of type ~s"
 		  (cadr type+count+sizes) (car type+count+sizes))
 	  (format t "~%   ~S~%" (caddr type+count+sizes)))
 	dfun-count)
@@ -1857,9 +1857,9 @@ And so, we are saved.
 
 
 (defun show-dfun-constructors ()
-  (format t "~&DFUN constructor caching is ~A." 
+  (format t _"~&DFUN constructor caching is ~A." 
 	  (if *enable-dfun-constructor-caching*
-	      "enabled" "disabled"))
+	      _"enabled" _"disabled"))
   (dolist (generator-entry *dfun-constructors*)
     (dolist (args-entry (cdr generator-entry))
       (format t "~&~S ~S"

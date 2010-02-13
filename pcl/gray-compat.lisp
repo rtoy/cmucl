@@ -5,7 +5,7 @@
 ;;; domain.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-compat.lisp,v 1.1.48.1 2010/02/08 17:15:53 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-compat.lisp,v 1.1.48.2 2010/02/13 01:28:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,7 @@
 (defmacro define-gray-stream-method (name lambda-list &body body)
   `(defmethod ,name ,lambda-list
      (when *enable-gray-compat-warnings*
-       (warn "Called ~S on a simple-stream" ',name))
+       (warn _"Called ~S on a simple-stream" ',name))
      ,@body))
 
 (define-gray-stream-method ext:stream-advance-to-column ((stream

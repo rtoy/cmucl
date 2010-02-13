@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.26.48.1 2010/02/08 17:15:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.26.48.2 2010/02/13 01:28:04 rtoy Exp $")
 ;;;
 ;;; A simple code walker, based IN PART on: (roll the credits)
 ;;;   Larry Masinter's Masterscope
@@ -120,7 +120,7 @@
 
 (defun unbound-lexical-function (&rest args)
   (declare (ignore args))
-  (error "~@<The evaluator was called to evaluate a form in a macroexpansion ~
+  (error _"~@<The evaluator was called to evaluate a form in a macroexpansion ~
           environment constructed by the PCL portable code walker.  These ~
           environments are only useful for macroexpansion, they cannot be ~
           used for evaluation.  ~
@@ -310,7 +310,7 @@
 
 (defun variable-declaration (declaration var env)
   (if (not (member declaration *variable-declarations*))
-      (error "~@<~S is not a recognized variable declaration.~@:>" declaration)
+      (error _"~@<~S is not a recognized variable declaration.~@:>" declaration)
       (let ((id (or (variable-lexical-p var env) var)))
 	(dolist (decl (env-declarations env))
 	  (when (and (eq (car decl) declaration)
@@ -412,7 +412,7 @@
 	((and (listp x) (eq (car x) 'lambda))
 	 '(lambda repeat (eval)))
 	(t
-	 (error "~@<Can't get template for ~S.~@:>" x))))
+	 (error _"~@<Can't get template for ~S.~@:>" x))))
 
 (defun get-implementation-dependent-walker-template (x)
   (declare (ignore x))
@@ -611,7 +611,7 @@
 			 (not (fboundp fn))
 			 (special-operator-p fn))
 		    (error
-		     "~@<~S is a special form, not defined in the CommonLisp ~
+		     _"~@<~S is a special form, not defined in the CommonLisp ~
 		      manual.  This code walker doesn't know how to walk it.  ~
 		      Define a template for this special form and try again.~@:>"
 		     fn))
@@ -683,7 +683,7 @@
         ((eq form stop-form)
          (if (null repeat-template)
              (walk-template stop-form (cdr template) context env)       
-             (error "~@<While handling repeat: ~
+             (error _"~@<While handling repeat: ~
                      Ran into stop while still in repeat template.~@:>")))
         ((null repeat-template)
          (walk-template-handle-repeat-1
@@ -781,7 +781,7 @@
 
 (defun walk-unexpected-declare (form context env)
   (declare (ignore context env))
-  (warn "~@<Encountered declare ~S in a place where a ~
+  (warn _"~@<Encountered declare ~S in a place where a ~
          declare was not expected.~@:>"
 	form)
   form)
@@ -816,7 +816,7 @@
                     (not (symbolp (caddr arg)))
                     (note-lexical-binding (caddr arg) env))))
           (t
-	   (error "~@<Can't understand something in the arglist ~S.~@:>" arglist))))
+	   (error _"~@<Can't understand something in the arglist ~S.~@:>" arglist))))
 
 (defun walk-let (form context env)
   (walk-let/let* form context env nil))
@@ -1157,7 +1157,7 @@
 	(arm2 
 	  (if (cddddr form)
 	      (progn
-		(warn "~@<In the form ~S: ~
+		(warn _"~@<In the form ~S: ~
                        IF only accepts three arguments, you are using ~D. ~
                        It is true that some Common Lisps support this, but ~
                        it is not truly legal Common Lisp.  For now, this code ~

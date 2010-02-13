@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.24.48.1 2010/02/08 17:15:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.24.48.2 2010/02/13 01:28:04 rtoy Exp $")
 
 ;;;
 ;;; This file defines the initialization and related protocols.
@@ -219,7 +219,7 @@
     (values legal nil)))
 
 (defun invalid-initargs-error (class invalid-keys)
-  (simple-program-error "~@<Invalid initialization argument~P ~2I~_~
+  (simple-program-error _"~@<Invalid initialization argument~P ~2I~_~
                          ~<~{~S~^, ~}~@:> ~I~_in call for class ~S.~:>"
 			(length invalid-keys)
 			(list invalid-keys)
