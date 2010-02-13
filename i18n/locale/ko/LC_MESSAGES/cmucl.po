@@ -160,14 +160,12 @@ msgid ""
 msgstr ""
 
 #: target:code/kernel.lisp
-#, fuzzy
 msgid "Returns the three-bit lowtag for the object X."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/kernel.lisp
-#, fuzzy
 msgid "Returns the 8-bit header type for the object X."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/kernel.lisp
 msgid ""
@@ -186,14 +184,12 @@ msgid ""
 msgstr ""
 
 #: target:code/kernel.lisp
-#, fuzzy
 msgid "Return a System-Area-Pointer pointing to the end of the control stack."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/kernel.lisp
-#, fuzzy
 msgid "Return the header typecode for FUNCTION.  Can be set with SETF."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/kernel.lisp
 msgid "Extracts the arglist from the function header FUNC."
@@ -297,9 +293,8 @@ msgid "~A~%Break entered because of *break-on-signals* (now NIL.)"
 msgstr ""
 
 #: target:code/lispinit.lisp
-#, fuzzy
 msgid "Ignore the additional arguments."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/lispinit.lisp
 msgid ""
@@ -502,9 +497,8 @@ msgid ""
 msgstr ""
 
 #: target:pcl/walk.lisp
-#, fuzzy
 msgid "~@<~S is not a recognized variable declaration.~@:>"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/walk.lisp
 msgid "~@<Can't get template for ~S.~@:>"
@@ -648,9 +642,8 @@ msgid ""
 msgstr ""
 
 #: target:code/fwrappers.lisp
-#, fuzzy
 msgid "Return the expansion of a DEFINE-FWRAPPER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/fwrappers.lisp
 msgid "&MORE not supported in fwrapper lambda lists"
@@ -751,9 +744,8 @@ msgid ""
 msgstr ""
 
 #: target:code/error.lisp
-#, fuzzy
 msgid "Returns the name of the given restart object."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/error.lisp
 msgid ""
@@ -1324,14 +1316,12 @@ msgid "Type for any keyword symbol."
 msgstr ""
 
 #: target:compiler/generic/vm-type.lisp
-#, fuzzy
 msgid "~S isn't an integer type?"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/pred.lisp
-#, fuzzy
 msgid "Return the type of OBJECT."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/pred.lisp
 msgid ""
@@ -1348,9 +1338,8 @@ msgid ""
 msgstr ""
 
 #: target:code/pred.lisp
-#, fuzzy
 msgid "Return T iff OBJECT is of type TYPE."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/pred.lisp
 msgid "~@<unknown element type in array type: ~2I~_~S~:>"
@@ -1741,9 +1730,8 @@ msgid ""
 msgstr ""
 
 #: target:code/alieneval.lisp
-#, fuzzy
 msgid "Wrong number of arguments for ~S~%Expected ~D, got ~D."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/alieneval.lisp
 msgid "~S is not an alien function."
@@ -1828,9 +1816,8 @@ msgid "Unable to mprotect ~S bytes (~S) at ~S (~S).  Callbacks may not work."
 msgstr ""
 
 #: target:code/alieneval.lisp
-#, fuzzy
 msgid "Return the trampoline pointer for the callback NAME."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/alieneval.lisp
 msgid ""
@@ -1895,14 +1882,12 @@ msgid "Return T iff the SAP X points to a larger address then the SAP Y."
 msgstr ""
 
 #: target:code/sap.lisp
-#, fuzzy
 msgid "Return a new sap OFFSET bytes from SAP."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/sap.lisp
-#, fuzzy
 msgid "Return the byte offset between SAP1 and SAP2."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/sap.lisp
 msgid "Converts a System Area Pointer into an integer."
@@ -1913,64 +1898,52 @@ msgid "Converts an integer into a System Area Pointer."
 msgstr ""
 
 #: target:code/sap.lisp
-#, fuzzy
 msgid "Returns the 8-bit byte at OFFSET bytes from SAP."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/sap.lisp
-#, fuzzy
 msgid "Returns the 16-bit word at OFFSET bytes from SAP."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/sap.lisp
-#, fuzzy
 msgid "Returns the 32-bit dualword at OFFSET bytes from SAP."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/sap.lisp
-#, fuzzy
 msgid "Returns the 64-bit quadword at OFFSET bytes from SAP."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/sap.lisp
-#, fuzzy
 msgid "Returns the 32-bit system-area-pointer at OFFSET bytes from SAP."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/sap.lisp
-#, fuzzy
 msgid "Returns the 32-bit single-float at OFFSET bytes from SAP."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/sap.lisp
-#, fuzzy
 msgid "Returns the 64-bit double-float at OFFSET bytes from SAP."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/sap.lisp
-#, fuzzy
 msgid "Returns the long-float at OFFSET bytes from SAP."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/sap.lisp
-#, fuzzy
 msgid "Returns the signed 8-bit byte at OFFSET bytes from SAP."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/sap.lisp
-#, fuzzy
 msgid "Returns the signed 16-bit word at OFFSET bytes from SAP."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/sap.lisp
-#, fuzzy
 msgid "Returns the signed 32-bit dualword at OFFSET bytes from SAP."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/sap.lisp
-#, fuzzy
 msgid "Returns the signed 64-bit quadword at OFFSET bytes from SAP."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/bit-bash.lisp
 msgid "The number of bits to process at a time."
@@ -2048,24 +2021,20 @@ msgid "Undefined XOP."
 msgstr ""
 
 #: target:code/byte-interp.lisp
-#, fuzzy
 msgid "Wrong number of arguments."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/byte-interp.lisp
-#, fuzzy
 msgid "Not enough arguments."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/boot.lisp target:code/byte-interp.lisp
-#, fuzzy
 msgid "Too many arguments."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/combin.lisp target:code/interr.lisp target:code/byte-interp.lisp
-#, fuzzy
 msgid "Odd number of keyword arguments."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/interr.lisp target:code/byte-interp.lisp
 msgid "Unknown keyword: ~S"
@@ -2076,19 +2045,16 @@ msgid "function-end breakpoints not supported."
 msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "The exclusive upper bound on the rank of an array."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "The exclusive upper bound any given dimension of an array."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "The exclusive upper bound on the total number of elements in an array."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
 msgid "End ~D is greater than total size ~D."
@@ -2185,9 +2151,8 @@ msgid ""
 msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "~S doesn't have enough elements."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
 msgid "~&Freeing foreign vector at #x~X~%"
@@ -2248,14 +2213,12 @@ msgid "Invalid index ~D in ~S"
 msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "Returns T if the Subscipts are in bounds for the Array, Nil otherwise."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "Returns the element of the Array specified by the Subscripts."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
 msgid ""
@@ -2265,34 +2228,28 @@ msgid ""
 msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "Returns the Index'th element of the given Simple-Vector."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "Returns the bit from the Bit-Array at the specified Subscripts."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "Returns the bit from the Simple-Bit-Array at the specified Subscripts."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "Returns the type of the elements of the array"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "Returns the number of dimensions of the Array."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "Returns length of dimension Axis-Number of the Array."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
 msgid "Vector axis is not zero: ~S"
@@ -2303,14 +2260,12 @@ msgid "~D is too big; ~S only has ~D dimension~:P"
 msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "Returns a list whose elements are the dimensions of the array"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "Returns the total number of elements in the Array."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
 msgid ""
@@ -2325,14 +2280,12 @@ msgid ""
 msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "Returns T if the given Array has a fill pointer, or Nil otherwise."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "Returns the Fill-Pointer of the given Vector."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
 msgid "New fill pointer, ~S, is larger than the length of the vector."
@@ -2369,9 +2322,8 @@ msgid "Adjusts the Array's dimensions to the given Dimensions and stuff."
 msgstr ""
 
 #: target:code/array.lisp
-#, fuzzy
 msgid "Number of dimensions not equal to rank of array."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/array.lisp
 msgid "New element type, ~S, is incompatible with old."
@@ -2590,9 +2542,8 @@ msgid "Unknown :TEST for MAKE-HASH-TABLE: ~S"
 msgstr ""
 
 #: target:code/hash-new.lisp
-#, fuzzy
 msgid "Returns the number of entries in the given HASH-TABLE."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/hash-new.lisp
 msgid "Return the rehash-size HASH-TABLE was created with."
@@ -2676,9 +2627,8 @@ msgid ""
 msgstr ""
 
 #: target:code/seq.lisp
-#, fuzzy
 msgid "Returns a sequence of the same type as SEQUENCE and the given LENGTH."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/seq.lisp
 msgid "Returns the broad class of which TYPE is a specific subclass."
@@ -2701,14 +2651,12 @@ msgid "Error in ~S: ~S: Index too large."
 msgstr ""
 
 #: target:code/seq.lisp
-#, fuzzy
 msgid "Returns a sequence of the given TYPE and LENGTH."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/seq.lisp
-#, fuzzy
 msgid "Returns the element of SEQUENCE specified by INDEX."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/seq.lisp
 msgid "Store NEWVAL as the component of SEQUENCE specified by INDEX."
@@ -2945,37 +2893,31 @@ msgid ""
 msgstr ""
 
 #: target:code/seq.lisp
-#, fuzzy
 msgid "Returns the zero-origin index of the first element satisfying test(el)"
+msgstr ""
+
+#: target:code/seq.lisp
+msgid ""
+"Returns"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/seq.lisp
-#, fuzzy
 msgid ""
-"Returns the zero-origin index of the first element not satisfying test(el)"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#: target:code/seq.lisp
-#, fuzzy
-msgid ""
-"Returns the first element in SEQUENCE satisfying the test (default\n"
+"Returns"
 "   is EQL) with the given ITEM"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/seq.lisp
-#, fuzzy
 msgid "Returns the first element in SEQUENCE satisfying the test."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/seq.lisp
-#, fuzzy
 msgid "Returns the first element in SEQUENCE not satisfying the test."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/seq.lisp
-#, fuzzy
 msgid ""
-"Returns the number of elements in SEQUENCE satisfying a test with ITEM,\n"
+"Returns"
 "   which defaults to EQL."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
@@ -2984,9 +2926,8 @@ msgid ":TEST and :TEST-NOT are both present."
 msgstr ""
 
 #: target:code/seq.lisp
-#, fuzzy
 msgid "Returns the number of elements in SEQUENCE satisfying TEST(el)."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/seq.lisp
 msgid ""
@@ -3430,9 +3371,8 @@ msgid "No such file or directory"
 msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "No such process"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
 msgid "Interrupted system call"
@@ -3467,9 +3407,8 @@ msgid "Resource deadlock avoided"
 msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "No more processes"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
 msgid "Try again"
@@ -3524,9 +3463,8 @@ msgid "File table overflow"
 msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "Too many open files"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
 msgid "Inappropriate ioctl for device"
@@ -3553,9 +3491,8 @@ msgid "Read-only file system"
 msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "Too many links"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
 msgid "Broken pipe"
@@ -3658,9 +3595,8 @@ msgid "Connection reset by peer"
 msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "No buffer space available"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
 msgid "Socket is already connected"
@@ -3707,14 +3643,12 @@ msgid "Directory not empty"
 msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "Too many processes"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "Too many users"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
 msgid "Disc quota exceeded"
@@ -3745,9 +3679,8 @@ msgid "Identifier removed"
 msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "Channel number out of range"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
 msgid "Level 2 not synchronized"
@@ -3762,9 +3695,8 @@ msgid "Level 3 reset"
 msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "Link number out of range"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
 msgid "Protocol driver not attached"
@@ -3831,9 +3763,8 @@ msgid "Not a stream device"
 msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "No data available"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
 msgid "Timer expired"
@@ -4078,9 +4009,8 @@ msgid "Quota exceeded"
 msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid ""
-"Returns a string describing the error number which was returned by a\n"
+"Returns"
 "  UNIX system call."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
@@ -4675,9 +4605,8 @@ msgid ""
 msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "The calling process."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
 msgid "Terminated child processes."
@@ -4734,30 +4663,25 @@ msgid ""
 msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "Unix-getpid returns the process-id of the current process."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid ""
-"Unix-getppid returns the process-id of the parent of the current process."
+"Unix-ge"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "Unix-getgid returns the real group-id of the current process."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "Unix-getegid returns the effective group-id of the current process."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "Unix-getpgrp returns the group-id of the calling process."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
 msgid ""
@@ -4773,21 +4697,18 @@ msgid ""
 msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid ""
-"Unix-getuid returns the real user-id associated with the\n"
+"Unix-ge"
 "   current process."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "Unix-getpagesize returns the number of bytes in a system page."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "Unix-gethostname returns the name of the host machine as a string."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
 msgid ""
@@ -4928,9 +4849,8 @@ msgid "Core file size"
 msgstr ""
 
 #: target:code/unix.lisp
-#, fuzzy
 msgid "Number of open files"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/unix.lisp
 msgid "Maximum mapped memory"
@@ -4972,14 +4892,12 @@ msgid "Getpagesize failed: ~A"
 msgstr ""
 
 #: target:code/x86-vm.lisp
-#, fuzzy
 msgid "Returns a string describing the type of the local machine."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/x86-vm.lisp
-#, fuzzy
 msgid "Returns a string describing the version of the local machine."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/x86-vm.lisp
 msgid ""
@@ -5090,9 +5008,8 @@ msgid "Make and return a new symbol with the STRING as its print name."
 msgstr ""
 
 #: target:code/symbol.lisp
-#, fuzzy
 msgid "Return the hash value for symbol."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/symbol.lisp
 msgid ""
@@ -5256,14 +5173,12 @@ msgid "Builds a complex number from the specified components."
 msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Extracts the real part of a number."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Extracts the imaginary part of a number."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
 msgid ""
@@ -5284,14 +5199,12 @@ msgid "Return the denominator of NUMBER, which must be rational."
 msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns the sum of its arguments.  With no args, returns 0."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns the product of its arguments.  With no args, returns 1."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
 msgid ""
@@ -5306,14 +5219,12 @@ msgid ""
 msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns NUMBER + 1."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns NUMBER - 1."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
 msgid ""
@@ -5340,14 +5251,12 @@ msgid ""
 msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns second result of TRUNCATE."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns second result of FLOOR."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
 msgid "Same as TRUNCATE, but returns first value as a float."
@@ -5366,110 +5275,91 @@ msgid "Same as ROUND, but returns first value as a float."
 msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns T if all of its arguments are numerically equal, NIL otherwise."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid ""
-"Returns T if no two of its arguments are numerically equal, NIL otherwise."
+"Returns"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid ""
-"Returns T if its arguments are in strictly increasing order, NIL otherwise."
+"Returns"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid ""
-"Returns T if its arguments are in strictly decreasing order, NIL otherwise."
+"Returns"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid ""
-"Returns T if arguments are in strictly non-decreasing order, NIL otherwise."
+"Returns"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid ""
-"Returns T if arguments are in strictly non-increasing order, NIL otherwise."
+"Returns"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns the greatest of its arguments."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns the least of its arguments."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
 msgid "Return T if OBJ1 and OBJ2 represent the same object, otherwise NIL."
 msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns the bit-wise or of its arguments.  Args must be integers."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid ""
-"Returns the bit-wise exclusive or of its arguments.  Args must be integers."
+"Returns"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns the bit-wise and of its arguments.  Args must be integers."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid ""
-"Returns the bit-wise equivalence of its arguments.  Args must be integers."
+"Returns"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns the complement of the logical AND of integer1 and integer2."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns the complement of the logical OR of integer1 and integer2."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns the logical AND of (LOGNOT integer1) and integer2."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns the logical AND of integer1 and (LOGNOT integer2)."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns the logical OR of (LOGNOT integer1) and integer2."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns the logical OR of integer1 and (LOGNOT integer2)."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns the bit-wise logical not of integer."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
 msgid ""
@@ -5478,9 +5368,8 @@ msgid ""
 msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid ""
-"Predicate which returns T if logand of integer1 and integer2 is not zero."
+"Predica"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
@@ -5495,34 +5384,29 @@ msgid ""
 msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid ""
-"Returns the number of significant bits in the absolute value of integer."
+"Returns"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns a byte specifier which may be used by other byte functions."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns the size part of the byte specifier bytespec."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns the position part of the byte specifier bytespec."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
 msgid "Extract the specified byte from integer, and right justify result."
 msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns T if any of the specified bits in integer are 1's."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
 msgid ""
@@ -5542,87 +5426,71 @@ msgid ""
 msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Boole function op, makes BOOLE return 0."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Boole function op, makes BOOLE return -1."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Boole function op, makes BOOLE return integer1."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Boole function op, makes BOOLE return integer2."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Boole function op, makes BOOLE return complement of integer1."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Boole function op, makes BOOLE return complement of integer2."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Boole function op, makes BOOLE return logand of integer1 and integer2."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Boole function op, makes BOOLE return logior of integer1 and integer2."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Boole function op, makes BOOLE return logxor of integer1 and integer2."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Boole function op, makes BOOLE return logeqv of integer1 and integer2."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid ""
-"Boole function op, makes BOOLE return log nand of integer1 and integer2."
+"Boole f"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Boole function op, makes BOOLE return lognor of integer1 and integer2."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid ""
-"Boole function op, makes BOOLE return logandc1 of integer1 and integer2."
+"Boole f"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid ""
-"Boole function op, makes BOOLE return logandc2 of integer1 and integer2."
+"Boole f"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Boole function op, makes BOOLE return logorc1 of integer1 and integer2."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Boole function op, makes BOOLE return logorc2 of integer1 and integer2."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
 msgid ""
@@ -5658,9 +5526,8 @@ msgid ""
 msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns T iff X is a positive prime integer."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
 msgid ""
@@ -5669,29 +5536,24 @@ msgid ""
 msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns T if number = 0, NIL otherwise."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns T if number > 0, NIL otherwise."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns T if number < 0, NIL otherwise."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns T if number is odd, NIL otherwise."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/numbers.lisp
-#, fuzzy
 msgid "Returns T if number is even, NIL otherwise."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/float-trap.lisp
 msgid "Unknown float trap kind: ~S."
@@ -5768,9 +5630,8 @@ msgid ""
 msgstr ""
 
 #: target:code/float.lisp
-#, fuzzy
 msgid "Return true if the float X is denormalized."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/float.lisp
 msgid ""
@@ -5854,14 +5715,12 @@ msgid ""
 msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "Return e raised to the power NUMBER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "The absolute value of ~S exceeds limit ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
 msgid "Continue with calculation"
@@ -5872,23 +5731,20 @@ msgid "Continue with calculation, update limit"
 msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "Returns BASE raised to the POWER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
 msgid "Return the logarithm of NUMBER in the base BASE, which defaults to e."
 msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "Return the square root of NUMBER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "Returns the absolute value of the number."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
 msgid ""
@@ -5899,19 +5755,16 @@ msgid ""
 msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "Return the sine of NUMBER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "Return the cosine of NUMBER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "Return the tangent of NUMBER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
 msgid "Return cos(Theta) + i sin(Theta), AKA exp(i Theta)."
@@ -5922,48 +5775,40 @@ msgid "Argument to CIS is complex: ~S"
 msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "Return the arc sine of NUMBER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "Return the arc cosine of NUMBER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
 msgid "Return the arc tangent of Y if X is omitted or Y/X if X is supplied."
 msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "Return the hyperbolic sine of NUMBER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "Return the hyperbolic cosine of NUMBER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "Return the hyperbolic tangent of NUMBER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "Return the hyperbolic arc sine of NUMBER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "Return the hyperbolic arc cosine of NUMBER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
-#, fuzzy
 msgid "Return the hyperbolic arc tangent of NUMBER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/irrat.lisp
 msgid ""
@@ -6278,9 +6123,8 @@ msgid ""
 msgstr ""
 
 #: target:code/char.lisp
-#, fuzzy
 msgid "Returns the integer code of CHAR."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/char.lisp
 msgid ""
@@ -6289,9 +6133,8 @@ msgid ""
 msgstr ""
 
 #: target:code/char.lisp
-#, fuzzy
 msgid "Returns the character with the code CODE."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/char.lisp
 msgid ""
@@ -6388,76 +6231,64 @@ msgid ""
 msgstr ""
 
 #: target:code/char.lisp
-#, fuzzy
 msgid "Returns T if all of its arguments are the same character."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/char.lisp
-#, fuzzy
 msgid "Returns T if no two of its arguments are the same character."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/char.lisp
-#, fuzzy
 msgid "Returns T if its arguments are in strictly increasing alphabetic order."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/char.lisp
-#, fuzzy
 msgid "Returns T if its arguments are in strictly decreasing alphabetic order."
+msgstr ""
+
+#: target:code/char.lisp
+msgid ""
+"Returns"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/char.lisp
-#, fuzzy
 msgid ""
-"Returns T if its arguments are in strictly non-decreasing alphabetic order."
+"Returns"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/char.lisp
-#, fuzzy
 msgid ""
-"Returns T if its arguments are in strictly non-increasing alphabetic order."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#: target:code/char.lisp
-#, fuzzy
-msgid ""
-"Returns T if all of its arguments are the same character.\n"
+"Returns"
 "   Case is ignored."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/char.lisp
-#, fuzzy
 msgid ""
-"Returns T if no two of its arguments are the same character.\n"
+"Returns"
 "   Case is ignored."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/char.lisp
-#, fuzzy
 msgid ""
-"Returns T if its arguments are in strictly increasing alphabetic order.\n"
+"Returns"
 "   Case is ignored."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/char.lisp
-#, fuzzy
 msgid ""
-"Returns T if its arguments are in strictly decreasing alphabetic order.\n"
+"Returns"
 "   Case is ignored."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/char.lisp
-#, fuzzy
 msgid ""
-"Returns T if its arguments are in strictly non-decreasing alphabetic order.\n"
+"Returns"
 "   Case is ignored."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/char.lisp
-#, fuzzy
 msgid ""
-"Returns T if its arguments are in strictly non-increasing alphabetic order.\n"
+"Returns"
 "   Case is ignored."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
@@ -6502,32 +6333,28 @@ msgid "Unknown operator in feature expression: ~S."
 msgstr ""
 
 #: target:code/misc.lisp
-#, fuzzy
 msgid "Returns a string describing the implementation type."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/misc.lisp
-#, fuzzy
 msgid "Returns a string describing the implementation version."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/misc.lisp
 msgid " Unicode"
 msgstr ""
 
 #: target:code/misc.lisp
-#, fuzzy
 msgid "Returns a string giving the name of the local machine."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/misc.lisp
 msgid "The value of SOFTWARE-TYPE.  Set in FOO-os.lisp."
 msgstr ""
 
 #: target:code/misc.lisp
-#, fuzzy
 msgid "Returns a string describing the supporting software."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/misc.lisp
 msgid "Unknown"
@@ -6538,9 +6365,8 @@ msgid "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp."
 msgstr ""
 
 #: target:code/misc.lisp
-#, fuzzy
 msgid "Returns a string with the abbreviated site name."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/misc.lisp
 msgid "Site name not initialized"
@@ -6551,9 +6377,8 @@ msgid "The value of LONG-SITE-NAME.  Set in library:site-init.lisp."
 msgstr ""
 
 #: target:code/misc.lisp
-#, fuzzy
 msgid "Returns a string with the long form of the site name."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/misc.lisp
 msgid ""
@@ -7137,9 +6962,8 @@ msgid ""
 msgstr ""
 
 #: target:code/gc.lisp
-#, fuzzy
 msgid "Oh no.  The current dynamic space is missing!"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/gc.lisp
 msgid "Dynamic Space Usage:    ~13:D bytes (out of ~4:D MB).~%"
@@ -7546,47 +7370,40 @@ msgid "Default output stream."
 msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Error output stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
 msgid "Query I/O stream."
 msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Trace output stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
 msgid "Interactive debugging stream."
 msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "~S is not an input stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "~S is not an output stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "~S is not a character input stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "~S is not a character output stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "~S is not a binary input stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
 msgid ""
@@ -7595,9 +7412,8 @@ msgid ""
 msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "~S is not a binary output stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
 msgid "~S is closed."
@@ -7608,24 +7424,20 @@ msgid "~S is an unsupported Gray stream."
 msgstr ""
 
 #: target:pcl/gray-streams.lisp target:code/stream.lisp
-#, fuzzy
 msgid "Returns non-nil if the given Stream can perform input operations."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/gray-streams.lisp target:code/stream.lisp
-#, fuzzy
 msgid "Returns non-nil if the given Stream can perform output operations."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Return true if Stream is not closed."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Returns a type specifier for the kind of object returned by the Stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
 msgid ""
@@ -7637,9 +7449,8 @@ msgid "Can't set interactive flag on ~S."
 msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Returns the external format used by the given Stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
 msgid ""
@@ -7668,14 +7479,12 @@ msgid ""
 msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Inputs a character from Stream and returns it."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Puts the Character back on the front of the input Stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
 msgid "Nothing to unread."
@@ -7686,9 +7495,8 @@ msgid "Impossible case reached in PEEK-CHAR"
 msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid ""
-"Peeks at the next character in the input Stream.  See manual for details."
+"Peeks a"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/stream.lisp
@@ -7696,23 +7504,20 @@ msgid "~@<bad PEEK-TYPE=~S, ~_expected ~S~:>"
 msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Returns T if a character is available on the given Stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Returns the next character from the Stream if one is available, or nil."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
 msgid "Clears any buffered input associated with the Stream."
 msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Returns the next byte of the Stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
 msgid ""
@@ -7729,14 +7534,12 @@ msgid ""
 msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Outputs the Character to the Stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Outputs a new line to the Stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
 msgid ""
@@ -7746,14 +7549,12 @@ msgid ""
 msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Outputs the String to the given Stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid ""
-"Outputs the String to the given Stream, followed by a newline character."
+"Outputs"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/stream.lisp
@@ -7783,9 +7584,8 @@ msgid "Clears the given output Stream."
 msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Outputs the Integer to the binary Stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
 msgid ""
@@ -7897,24 +7697,20 @@ msgid ""
 msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "The stream is not open."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "The stream is not open for input."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Trying to read characters from a binary stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Trying to read binary data from a text stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
 msgid ""
@@ -7932,24 +7728,20 @@ msgid ""
 msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "The stream is not open for output."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Trying to output an element of unproper type to a stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Trying to output a string to a binary stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/stream.lisp
-#, fuzzy
 msgid "Trying to output binary data to a text stream."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/print.lisp
 msgid ""
@@ -8055,24 +7847,21 @@ msgid "Outputs OBJECT to the specified stream, defaulting to *standard-output*"
 msgstr ""
 
 #: target:code/print.lisp
-#, fuzzy
 msgid ""
-"Outputs a mostly READable printed representation of OBJECT on the specified\n"
+"Outputs"
 "  stream."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/print.lisp
-#, fuzzy
 msgid ""
-"Outputs an asthetic but not READable printed representation of OBJECT on "
+"Outputs"
 "the\n"
 "  specified stream."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/print.lisp
-#, fuzzy
 msgid ""
-"Outputs a terpri, the mostly READable printed represenation of OBJECT, and \n"
+"Outputs"
 "  space to the stream."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
@@ -8081,21 +7870,18 @@ msgid "Prettily outputs the Object preceded by a newline."
 msgstr ""
 
 #: target:code/print.lisp
-#, fuzzy
 msgid "Returns the printed representation of OBJECT as a string."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/print.lisp
-#, fuzzy
 msgid ""
-"Returns the printed representation of OBJECT as a string with \n"
+"Returns"
 "   slashification on."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/print.lisp
-#, fuzzy
 msgid ""
-"Returns the printed representation of OBJECT as a string with\n"
+"Returns"
 "  slashification off."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
@@ -8184,9 +7970,8 @@ msgid "Invalid READTABLE-CASE value: ~S"
 msgstr ""
 
 #: target:code/print.lisp
-#, fuzzy
 msgid ""
-"Outputs the printed representation of any array in either the #< or #A\n"
+"Outputs"
 "   form."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
@@ -8509,9 +8294,8 @@ msgstr ""
 #: target:pcl/env.lisp target:pcl/methods.lisp target:pcl/std-class.lisp
 #: target:pcl/defclass.lisp target:code/format.lisp
 #: target:code/pprint-loop.lisp target:code/pprint.lisp
-#, fuzzy
 msgid "No more arguments."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/format.lisp
 msgid ""
@@ -8530,14 +8314,12 @@ msgid "String ended before directive was found."
 msgstr ""
 
 #: target:code/format.lisp
-#, fuzzy
 msgid "Too many colons supplied."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/format.lisp
-#, fuzzy
 msgid "Too many at-signs supplied."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/format.lisp
 msgid "No matching closing slash."
@@ -8577,9 +8359,8 @@ msgid "Unknown format directive."
 msgstr ""
 
 #: target:code/format.lisp
-#, fuzzy
 msgid "Unknown directive."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/format.lisp
 msgid "Too many parameters, expected no more than ~D"
@@ -8617,19 +8398,16 @@ msgid "The ~A package, ~D/~D internal, ~D/~D external"
 msgstr ""
 
 #: target:code/package.lisp
-#, fuzzy
 msgid "The ~A package"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/package.lisp
-#, fuzzy
 msgid "deleted package"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/package.lisp
-#, fuzzy
 msgid "The current package."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/package.lisp
 msgid "~&~@<Attempt to modify the locked package ~A, by ~3i~:_~?~:>"
@@ -8670,9 +8448,8 @@ msgid "The parent of ~a does not exist."
 msgstr ""
 
 #: target:code/package.lisp
-#, fuzzy
 msgid "There is no parent of ~a."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/package.lisp
 msgid ""
@@ -8682,14 +8459,12 @@ msgid ""
 msgstr ""
 
 #: target:code/package.lisp
-#, fuzzy
 msgid "Find the package having the specified name."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/package.lisp
-#, fuzzy
 msgid "Make this package."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/package.lisp
 msgid "#<Package-Hashtable: Size = ~D, Free = ~D, Deleted = ~D>"
@@ -8800,18 +8575,16 @@ msgid "~A does not contain a symbol ~A"
 msgstr ""
 
 #: target:code/package.lisp
-#, fuzzy
 msgid "Ignore this nickname."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/package.lisp
 msgid "~S is a package name, so it cannot be a nickname for ~S."
 msgstr ""
 
 #: target:code/package.lisp
-#, fuzzy
 msgid "Redefine this nickname."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/package.lisp
 msgid "~S is already a nickname for ~S."
@@ -8877,14 +8650,12 @@ msgid "Remove dependency in other packages."
 msgstr ""
 
 #: target:code/package.lisp
-#, fuzzy
 msgid "Returns a list of all existing packages."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/package.lisp
-#, fuzzy
 msgid "Returns a symbol having the specified name, creating it if necessary."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/package.lisp
 msgid ""
@@ -9033,9 +8804,8 @@ msgid "Remove PACKAGES-TO-UNUSE from the use list for PACKAGE."
 msgstr ""
 
 #: target:code/package.lisp
-#, fuzzy
 msgid "Return a list of all symbols in the system having the specified name."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/describe.lisp target:code/package.lisp
 msgid "special variable"
@@ -9249,14 +9019,12 @@ msgid "dot context error"
 msgstr ""
 
 #: target:code/reader.lisp
-#, fuzzy
 msgid "too many dots"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/reader.lisp
-#, fuzzy
 msgid "too many colons in ~S"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/reader.lisp
 msgid "after reading a colon"
@@ -9359,9 +9127,8 @@ msgid "Dispatch Sub-Char must not be a decimal digit: ~S"
 msgstr ""
 
 #: target:code/reader.lisp
-#, fuzzy
 msgid "~S is not a dispatch character."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/reader.lisp
 msgid ""
@@ -9695,9 +9462,8 @@ msgid "~S is not a Composing-External-Format."
 msgstr ""
 
 #: target:code/extfmts.lisp
-#, fuzzy
 msgid "~S is not a valid external format name."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/extfmts.lisp
 msgid "External format ~S not found."
@@ -9943,9 +9709,8 @@ msgid "A path specification, either a string, file-stream or pathname."
 msgstr ""
 
 #: target:code/pathname.lisp
-#, fuzzy
 msgid "Convert thing (a pathname, string or stream) into a pathname."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/pathname.lisp
 msgid ""
@@ -10035,9 +9800,8 @@ msgid "Can't figure out the file associated with stream:~%  ~S"
 msgstr ""
 
 #: target:code/pathname.lisp
-#, fuzzy
 msgid "Construct the full (name)string form of the pathname."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/pathname.lisp
 msgid ""
@@ -10046,9 +9810,8 @@ msgid ""
 msgstr ""
 
 #: target:code/pathname.lisp
-#, fuzzy
 msgid ""
-"Returns a string representation of the name of the host in the pathname."
+"Returns"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/pathname.lisp
@@ -10056,15 +9819,13 @@ msgid "Cannot determine the namestring for pathnames with no host:~%  ~S"
 msgstr ""
 
 #: target:code/pathname.lisp
-#, fuzzy
 msgid ""
-"Returns a string representation of the directories used in the pathname."
+"Returns"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/pathname.lisp
-#, fuzzy
 msgid "Returns a string representation of the name used in the pathname."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/pathname.lisp
 msgid ""
@@ -10258,14 +10019,12 @@ msgid "Logical pathname translation is not a two-list:~%  ~S"
 msgstr ""
 
 #: target:code/pathname.lisp
-#, fuzzy
 msgid "Return the (logical) host object argument's list of translations."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/pathname.lisp
-#, fuzzy
 msgid ""
-"Set the translations list for the logical host argument.\n"
+"Set the"
 "   Return translations."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
@@ -10839,9 +10598,8 @@ msgid ""
 msgstr ""
 
 #: target:code/eval.lisp
-#, fuzzy
 msgid ""
-"The exclusive upper bound on the number of arguments which may be passed\n"
+"The exc"
 "  to a function, including rest args."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
@@ -10854,9 +10612,8 @@ msgid ""
 msgstr ""
 
 #: target:code/eval.lisp
-#, fuzzy
 msgid ""
-"The exclusive upper bound on the number of multiple-values that you can\n"
+"The exc"
 "  have."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
@@ -10880,9 +10637,8 @@ msgid ""
 msgstr ""
 
 #: target:code/eval.lisp
-#, fuzzy
 msgid "Wrong number of args to FUNCTION:~% ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/eval.lisp
 msgid "~S is a macro."
@@ -10893,14 +10649,12 @@ msgid "~S is a special operator."
 msgstr ""
 
 #: target:code/eval.lisp
-#, fuzzy
 msgid "Wrong number of args to QUOTE:~% ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/eval.lisp
-#, fuzzy
 msgid "Odd number of args to SETQ:~% ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/eval.lisp
 msgid "Declaring ~S special."
@@ -11032,19 +10786,16 @@ msgid "Calls Function with the given Arguments."
 msgstr ""
 
 #: target:code/eval.lisp
-#, fuzzy
 msgid "Returns all of its arguments, in order, as values."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/eval.lisp
-#, fuzzy
 msgid "Returns all of the elements of List, in order, as values."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/signal.lisp
-#, fuzzy
 msgid "A list of unix signal structures."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/signal.lisp
 msgid "~S is not a valid signal name or number."
@@ -11069,9 +10820,8 @@ msgid ""
 msgstr ""
 
 #: target:code/signal.lisp
-#, fuzzy
 msgid "Returns a mask given a set of signals."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/signal.lisp
 msgid ""
@@ -11195,14 +10945,12 @@ msgid ""
 msgstr ""
 
 #: target:code/debug-int.lisp
-#, fuzzy
 msgid "There is absolutely no debugging information available."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug-int.lisp
-#, fuzzy
 msgid "No debugging information available."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug-int.lisp
 msgid ""
@@ -11222,18 +10970,16 @@ msgid "The debug-function has no debug-block information."
 msgstr ""
 
 #: target:code/debug-int.lisp
-#, fuzzy
 msgid "~&~S has no debug-block information."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug-int.lisp
 msgid "The debug-function has no debug-variable information."
 msgstr ""
 
 #: target:code/debug-int.lisp
-#, fuzzy
 msgid "~&~S has no debug-variable information."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug-int.lisp
 msgid ""
@@ -11242,9 +10988,8 @@ msgid ""
 msgstr ""
 
 #: target:code/debug-int.lisp
-#, fuzzy
 msgid "~&~S has no lambda-list information available."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug-int.lisp
 msgid "~&~S has :invalid or :unknown value in ~S."
@@ -11344,14 +11089,12 @@ msgid ""
 msgstr ""
 
 #: target:code/debug-int.lisp
-#, fuzzy
 msgid "Returns the breakpoint's what specification."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug-int.lisp
-#, fuzzy
 msgid "Returns the breakpoint's kind specification."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug-int.lisp
 msgid ""
@@ -11411,9 +11154,8 @@ msgid ""
 msgstr ""
 
 #: target:code/debug-int.lisp
-#, fuzzy
 msgid "Returns whether object is a debug-source."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug-int.lisp
 msgid ""
@@ -11446,9 +11188,8 @@ msgid ""
 msgstr ""
 
 #: target:code/debug-int.lisp
-#, fuzzy
 msgid "Return a string describing the foreign function near ADDRESS"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug-int.lisp
 msgid "Foreign function call land"
@@ -11588,9 +11329,8 @@ msgid ""
 msgstr ""
 
 #: target:code/debug-int.lisp
-#, fuzzy
 msgid "Returns the code-location's debug-source."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug-int.lisp
 msgid ""
@@ -11811,9 +11551,8 @@ msgid ""
 msgstr ""
 
 #: target:code/debug-int.lisp
-#, fuzzy
 msgid "This returns whether breakpoint is currently active."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug-int.lisp
 msgid ""
@@ -12108,9 +11847,8 @@ msgid "unavaliable-rest-arg"
 msgstr ""
 
 #: target:code/debug.lisp
-#, fuzzy
 msgid "lambda-list-unavailable"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug.lisp
 msgid "error printing object {~X}"
@@ -12189,9 +11927,8 @@ msgid "Return to debug level ~D."
 msgstr ""
 
 #: target:code/debug.lisp
-#, fuzzy
 msgid "Unknown stream-command -- ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug.lisp
 msgid "Ambiguous debugger command: ~S."
@@ -12260,9 +11997,8 @@ msgid ""
 msgstr ""
 
 #: target:code/debug.lisp
-#, fuzzy
 msgid "No argument values are available."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug.lisp
 msgid "Unused arguments have no values."
@@ -12289,9 +12025,8 @@ msgid "Invoking debugger command while outside the debugger."
 msgstr ""
 
 #: target:code/debug.lisp
-#, fuzzy
 msgid "Unknown debug command name -- ~S"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug.lisp
 msgid "~&Top of stack."
@@ -12338,14 +12073,12 @@ msgid "Restart: "
 msgstr ""
 
 #: target:code/debug.lisp
-#, fuzzy
 msgid "~S is invalid as a restart name.~%"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug.lisp
-#, fuzzy
 msgid "No such restart."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug.lisp
 msgid ""
@@ -12370,9 +12103,8 @@ msgid ""
 msgstr ""
 
 #: target:code/debug.lisp
-#, fuzzy
 msgid "No variable information available."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/debug.lisp
 msgid "No start positions map."
@@ -12819,9 +12551,8 @@ msgid "The last object passed to describe."
 msgstr ""
 
 #: target:code/describe.lisp
-#, fuzzy
 msgid "Prints a description of the object X."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/describe.lisp
 msgid "*describe-level* should be a nonnegative integer - ~A."
@@ -12942,9 +12673,8 @@ msgid "~&~@(~@[~A ~]arguments:~%~)"
 msgstr ""
 
 #: target:code/describe.lisp
-#, fuzzy
 msgid "  There are no arguments."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/describe.lisp
 msgid "~&Its closure environment is:"
@@ -12967,9 +12697,8 @@ msgid "~&  Comment: ~A"
 msgstr ""
 
 #: target:code/describe.lisp
-#, fuzzy
 msgid "  There is no argument information available."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/describe.lisp
 msgid "Macro-function: ~S"
@@ -13313,9 +13042,8 @@ msgid "Return any available status information on child processed. "
 msgstr ""
 
 #: target:code/run-program.lisp
-#, fuzzy
 msgid "List of process structures for all active processes."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/run-program.lisp
 msgid ""
@@ -13341,9 +13069,8 @@ msgid ""
 msgstr ""
 
 #: target:code/run-program.lisp
-#, fuzzy
 msgid "Returns T if the process is still alive, NIL otherwise."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/run-program.lisp
 msgid ""
@@ -13365,9 +13092,8 @@ msgid "List of handlers installed by RUN-PROGRAM."
 msgstr ""
 
 #: target:code/run-program.lisp
-#, fuzzy
 msgid "Returns the master fd, the slave fd, and the name of the tty"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/run-program.lisp
 msgid "Could not find a pty."
@@ -13515,9 +13241,8 @@ msgid "Could not create temporary file ~S: ~A"
 msgstr ""
 
 #: target:code/foreign.lisp
-#, fuzzy
 msgid "Not enough memory left."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/foreign.lisp
 msgid "Make sure the header starts with the ELF magic value."
@@ -13872,9 +13597,8 @@ msgid "Next available id for remote objects."
 msgstr ""
 
 #: target:code/wire.lisp
-#, fuzzy
 msgid "There is a problem with ~A."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/wire.lisp
 msgid "Received EOF on ~A."
@@ -13885,9 +13609,8 @@ msgid "Error ~A ~A: ~A."
 msgstr ""
 
 #: target:code/wire.lisp
-#, fuzzy
 msgid "Returns T iff the given remote object is defined locally."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/wire.lisp
 msgid ""
@@ -13926,9 +13649,8 @@ msgid ""
 msgstr ""
 
 #: target:code/wire.lisp
-#, fuzzy
 msgid ""
-"Return T iff anything is in the input buffer or available on the socket."
+"Return "
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:code/wire.lisp
@@ -13948,9 +13670,8 @@ msgid "reading"
 msgstr ""
 
 #: target:code/wire.lisp
-#, fuzzy
 msgid "Return the next byte from the wire."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/wire.lisp
 msgid ""
@@ -13961,9 +13682,8 @@ msgid ""
 msgstr ""
 
 #: target:code/wire.lisp
-#, fuzzy
 msgid ""
-"Reads an arbitrary integer sent by WIRE-OUTPUT-BIGNUM from the wire and\n"
+"Reads a"
 "   return it."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
@@ -13972,9 +13692,8 @@ msgid "Reads a string from the wire. The first four bytes spec the size."
 msgstr ""
 
 #: target:code/wire.lisp
-#, fuzzy
 msgid "Reads the next object from the wire and returns it."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/wire.lisp
 msgid ""
@@ -13998,14 +13717,12 @@ msgid ""
 msgstr ""
 
 #: target:code/wire.lisp
-#, fuzzy
 msgid "Output the given (8-bit) byte on the wire."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/wire.lisp
-#, fuzzy
 msgid "Output the given (32-bit) number on the wire."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/wire.lisp
 msgid ""
@@ -14083,33 +13800,28 @@ msgid ""
 msgstr ""
 
 #: target:code/multi-proc.lisp
-#, fuzzy
 msgid "Return the real time in seconds."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/multi-proc.lisp
-#, fuzzy
 msgid "Return the run time in seconds"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/multi-proc.lisp
 msgid "Return the process state which is either Run, Killed, or a wait reason."
 msgstr ""
 
 #: target:code/multi-proc.lisp
-#, fuzzy
 msgid "Returns the current process."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/multi-proc.lisp
-#, fuzzy
 msgid "A list of all alive processes."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/multi-proc.lisp
-#, fuzzy
 msgid "Return a list of all the live processes."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/multi-proc.lisp
 msgid "Execute the body the scheduling disabled."
@@ -14571,9 +14283,8 @@ msgid "Invalid ~a"
 msgstr ""
 
 #: target:code/defmacro.lisp
-#, fuzzy
 msgid "Ignore extra noise."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/defmacro.lisp
 msgid ""
@@ -14637,14 +14348,12 @@ msgid "Type not defined yet."
 msgstr ""
 
 #: target:compiler/globaldb.lisp
-#, fuzzy
 msgid "~S is not a defined info class."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/globaldb.lisp
-#, fuzzy
 msgid "~S is not a defined info type."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/globaldb.lisp
 msgid ""
@@ -14673,9 +14382,8 @@ msgid ""
 msgstr ""
 
 #: target:compiler/globaldb.lisp
-#, fuzzy
 msgid "Redefine it."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/globaldb.lisp
 msgid "Changing type number for ~A ~A."
@@ -14725,9 +14433,8 @@ msgid "Cannot modify this environment: ~S."
 msgstr ""
 
 #: target:compiler/globaldb.lisp
-#, fuzzy
 msgid "0 is not a legal INFO name."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/globaldb.lisp
 msgid ""
@@ -14937,9 +14644,8 @@ msgid ""
 msgstr ""
 
 #: target:code/macros.lisp
-#, fuzzy
 msgid "Odd number of args to SETF."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/macros.lisp
 msgid ""
@@ -14950,9 +14656,8 @@ msgid ""
 msgstr ""
 
 #: target:code/macros.lisp
-#, fuzzy
 msgid "Odd number of args to PSETF."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/macros.lisp
 msgid ""
@@ -15315,9 +15020,8 @@ msgid ""
 msgstr ""
 
 #: target:code/macros.lisp
-#, fuzzy
 msgid "Odd number of key/value pairs: ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:code/macros.lisp
 msgid "Ignoring unknown option: ~S."
@@ -15672,9 +15376,8 @@ msgid "Losing Defprinter option: ~S."
 msgstr ""
 
 #: target:compiler/macros.lisp
-#, fuzzy
 msgid "Unknown attribute name: ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/macros.lisp
 msgid ""
@@ -15733,14 +15436,12 @@ msgid ""
 msgstr ""
 
 #: target:compiler/macros.lisp
-#, fuzzy
 msgid "~S is not the name of an event."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/macros.lisp
-#, fuzzy
 msgid "Return the number of times that Event has happened."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/macros.lisp
 msgid ""
@@ -15906,9 +15607,8 @@ msgid "Mask to extract the low tag bits from a pointer."
 msgstr ""
 
 #: target:compiler/generic/objdef.lisp
-#, fuzzy
 msgid ""
-"Exclusive upper bound on the value of the low tag bits from a\n"
+"Exclusi"
 "  pointer."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
@@ -15929,9 +15629,8 @@ msgid "most-negative-fixnum in the target architecture."
 msgstr ""
 
 #: target:compiler/generic/interr.lisp
-#, fuzzy
 msgid "Unknown internal error: ~S"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/bit-util.lisp
 msgid "local-tn-limit not a vm:word-bits multiple."
@@ -15957,9 +15656,8 @@ msgid "Function called with ~R argument~:P, but wants at most ~R."
 msgstr ""
 
 #: target:compiler/ctype.lisp
-#, fuzzy
 msgid "Function has an odd number of arguments in the keyword portion."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/ctype.lisp
 msgid "Can't tell whether the result is a ~S."
@@ -15978,9 +15676,8 @@ msgid "The ~:R argument is a ~S, not a ~S."
 msgstr ""
 
 #: target:compiler/ctype.lisp
-#, fuzzy
 msgid "The ~:R argument never returns a value."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/ctype.lisp
 msgid "The ~:R argument is not a constant."
@@ -16005,23 +15702,20 @@ msgid "The value of ~S is not a constant"
 msgstr ""
 
 #: target:compiler/ctype.lisp
-#, fuzzy
 msgid "~S is not a known argument keyword."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/ctype.lisp
 msgid "Function previously called with ~R argument~:P, but wants at least ~R."
 msgstr ""
 
 #: target:compiler/ctype.lisp
-#, fuzzy
 msgid "Function previously called with ~R argument~:P, but wants at most ~R."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/ctype.lisp
-#, fuzzy
 msgid ""
-"Function previously called with an odd number of arguments in ~\n"
+"Functio"
 "\t      the keyword portion."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
@@ -16034,9 +15728,8 @@ msgid "~:(~?~) argument should be a ~S but was a ~S in a previous call."
 msgstr ""
 
 #: target:compiler/ctype.lisp
-#, fuzzy
 msgid "Function previously called with unknown argument keyword ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/ctype.lisp
 msgid ""
@@ -16114,24 +15807,20 @@ msgid ""
 msgstr ""
 
 #: target:compiler/vmdef.lisp
-#, fuzzy
 msgid "~S is not a defined template."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/vmdef.lisp
-#, fuzzy
 msgid "~S is not a defined storage class."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/vmdef.lisp
-#, fuzzy
 msgid "~S is not a defined storage base."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/meta-vmdef.lisp target:compiler/vmdef.lisp
-#, fuzzy
 msgid "~S is not a defined primitive type."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/vmdef.lisp
 msgid ""
@@ -16270,9 +15959,8 @@ msgid ""
 msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
-#, fuzzy
 msgid "Unknown kind ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
 msgid ""
@@ -16306,23 +15994,20 @@ msgid ""
 msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
-#, fuzzy
 msgid "Unknown kind: ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
 msgid "Operand ~S isn't one of these kinds: ~S."
 msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
-#, fuzzy
 msgid "~S is not an operand to ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
-#, fuzzy
 msgid "~S is not the name of a defined VOP."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
 msgid "~:R argument missing: ~S."
@@ -16341,9 +16026,8 @@ msgid "Malformed time specifier: ~S."
 msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
-#, fuzzy
 msgid "Unknown phase in time specifier: ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
 msgid "Cannot target a ~S operand: ~S."
@@ -16393,9 +16077,8 @@ msgid "Can only specify :TO in an argument: ~S"
 msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
-#, fuzzy
 msgid "Unknown keyword in operand specifier: ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
 msgid "Cannot specify :TARGET in a :MORE operand."
@@ -16414,9 +16097,8 @@ msgid "Malformed options list: ~S."
 msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
-#, fuzzy
 msgid "Odd number of arguments in keyword options: ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
 msgid "Temporary spec allocates no temps:~%  ~S"
@@ -16431,9 +16113,8 @@ msgid "Must specify exactly one SC for a temporary."
 msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
-#, fuzzy
 msgid "Unknown temporary option: ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
 msgid "Temporary lifetime doesn't begin before it ends: ~S."
@@ -16448,9 +16129,8 @@ msgid "Malformed option specification: ~S."
 msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
-#, fuzzy
 msgid "Unknown option specifier: ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
 msgid ""
@@ -16742,14 +16422,12 @@ msgid ""
 msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
-#, fuzzy
 msgid "Too many fixed arguments."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
-#, fuzzy
 msgid "Too many fixed results."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
 msgid "Expected ~D info args."
@@ -16970,9 +16648,8 @@ msgid "Can't dump functions, so function ref form must be quoted: ~s"
 msgstr ""
 
 #: target:compiler/disassem.lisp
-#, fuzzy
 msgid "Unknown argument ~s"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/disassem.lisp
 msgid "~s must not have multiple values"
@@ -17096,9 +16773,8 @@ msgid ""
 msgstr ""
 
 #: target:compiler/disassem.lisp
-#, fuzzy
 msgid ""
-"Returns an integer corresponding to the specifivity of the instruction INST."
+"Returns"
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
 #: target:compiler/disassem.lisp
@@ -17153,9 +16829,8 @@ msgid "Prints a nicely formatted version of INST-SPACE."
 msgstr ""
 
 #: target:compiler/disassem.lisp
-#, fuzzy
 msgid "Print the inst space for the specified backend"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/disassem.lisp
 msgid "Converts a word-offset NUM to a byte-offset."
@@ -17170,14 +16845,12 @@ msgid "Get the value of the property called NAME in DSTATE.  Also setf'able."
 msgstr ""
 
 #: target:compiler/disassem.lisp
-#, fuzzy
 msgid "Returns the absolute address of the current instruction in DSTATE."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/disassem.lisp
-#, fuzzy
 msgid "Returns the absolute address of the next instruction in DSTATE."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/disassem.lisp
 msgid ""
@@ -17230,9 +16903,8 @@ msgid ""
 msgstr ""
 
 #: target:compiler/disassem.lisp
-#, fuzzy
 msgid "Get the instruction-space from PARAMS, creating it if necessary."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/disassem.lisp
 msgid ""
@@ -17469,9 +17141,8 @@ msgid ""
 msgstr ""
 
 #: target:compiler/disassem.lisp
-#, fuzzy
 msgid "Returns the lisp object located BYTE-OFFSET from NIL."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/disassem.lisp
 msgid ""
@@ -17735,9 +17406,8 @@ msgid "Emit the specified instruction to the current segment."
 msgstr ""
 
 #: target:compiler/new-assem.lisp
-#, fuzzy
 msgid "Unknown instruction: ~S"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/new-assem.lisp
 msgid "Emit LABEL at this location in the current segment."
@@ -17786,9 +17456,8 @@ msgid ""
 msgstr ""
 
 #: target:compiler/new-assem.lisp
-#, fuzzy
 msgid "There are holes."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/new-assem.lisp
 msgid "Can only specify one emitter per instruction."
@@ -17822,9 +17491,8 @@ msgid "optimize"
 msgstr ""
 
 #: target:compiler/knownfun.lisp
-#, fuzzy
 msgid "~S is not a known function."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/main.lisp
 msgid "The default value for the :Block-Compile argument to COMPILE-FILE."
@@ -18640,9 +18308,8 @@ msgid ""
 msgstr ""
 
 #: target:compiler/ir1tran.lisp
-#, fuzzy
 msgid "Odd number of args to SETQ: ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/ir1tran.lisp
 msgid "Attempt to set constant ~S."
@@ -18746,9 +18413,8 @@ msgid "Return the tlf-number and form-number from an encoded FIXNUM."
 msgstr ""
 
 #: target:compiler/ir1util.lisp
-#, fuzzy
 msgid "Return a source-location for the call site."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/ir1util.lisp
 msgid "Deleting unused function~:[.~;~:*~%  ~S~]"
@@ -19037,9 +18703,8 @@ msgid "Can't open-code float to rational comparison."
 msgstr ""
 
 #: target:compiler/float-tran.lisp
-#, fuzzy
 msgid "~S doesn't have a precise float representation."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/float-tran.lisp
 msgid ""
@@ -19233,9 +18898,8 @@ msgid "Can't local-call functions with &MORE args."
 msgstr ""
 
 #: target:compiler/locall.lisp
-#, fuzzy
 msgid ""
-"Function called with odd number of ~\n"
+"Functio"
 "\t  \t\t     arguments in keyword portion."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
 
@@ -19248,9 +18912,8 @@ msgid "non-constant :ALLOW-OTHER-KEYS value"
 msgstr ""
 
 #: target:compiler/locall.lisp
-#, fuzzy
 msgid "Function called with unknown argument keyword ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/checkgen.lisp
 msgid "~:[A possible~;The~] binding of ~S"
@@ -19300,14 +18963,12 @@ msgid "~D is too big for a fixnum."
 msgstr ""
 
 #: target:compiler/generic/utils.lisp
-#, fuzzy
 msgid "Returns the byte offset of the static symbol Symbol."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/generic/utils.lisp
-#, fuzzy
 msgid "~S is not a static symbol."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/generic/utils.lisp
 msgid "Given a byte offset, Offset, returns the appropriate static symbol."
@@ -19324,9 +18985,8 @@ msgid ""
 msgstr ""
 
 #: target:compiler/generic/utils.lisp
-#, fuzzy
 msgid "~S isn't a static function."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/generic/utils.lisp
 msgid ""
@@ -19345,9 +19005,8 @@ msgid "Slot is not constant, so cannot open code access."
 msgstr ""
 
 #: target:compiler/aliencomp.lisp
-#, fuzzy
 msgid "~S doesn't have a slot named ~S"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/aliencomp.lisp
 msgid "Too many indices for pointer deref: ~D"
@@ -19416,9 +19075,8 @@ msgid "Can't tell function type at compile time."
 msgstr ""
 
 #: target:compiler/aliencomp.lisp
-#, fuzzy
 msgid "Wrong number of arguments.  Expected ~D, got ~D."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/aliencomp.lisp
 msgid "Something is broken."
@@ -19631,9 +19289,8 @@ msgid ""
 msgstr ""
 
 #: target:compiler/codegen.lisp
-#, fuzzy
 msgid "Returns the number of bytes used by the code object header."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/codegen.lisp
 msgid ""
@@ -19754,24 +19411,20 @@ msgid "Fatal error, aborting evaluation."
 msgstr ""
 
 #: target:compiler/eval-comp.lisp
-#, fuzzy
 msgid "Wrong argument count, wanted ~D and got ~D."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/eval-comp.lisp
-#, fuzzy
 msgid "Wrong number of arguments passed -- ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/eval-comp.lisp
-#, fuzzy
 msgid "Function called with odd number of keyword arguments."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/eval-comp.lisp
-#, fuzzy
 msgid "Unknown keyword argument -- ~S."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:compiler/eval.lisp
 msgid "[PUSH: growing stack.]~%"
@@ -19951,18 +19604,16 @@ msgid "Malformed plist in doplist, odd number of elements."
 msgstr ""
 
 #: target:pcl/macros.lisp
-#, fuzzy
 msgid "~@<~S is not a legal class name.~@:>"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/macros.lisp
 msgid "No class named ~S."
 msgstr ""
 
 #: target:pcl/macros.lisp
-#, fuzzy
 msgid "~S is not a legal class name."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/macros.lisp
 msgid ""
@@ -20021,9 +19672,8 @@ msgid ""
 msgstr ""
 
 #: target:pcl/defclass.lisp
-#, fuzzy
 msgid "~S is not a legal defclass option."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/defclass.lisp
 msgid ""
@@ -20032,9 +19682,8 @@ msgid ""
 msgstr ""
 
 #: target:pcl/defclass.lisp
-#, fuzzy
 msgid "~@<~S is not a legal slot specification.~@:>"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/defclass.lisp
 msgid ""
@@ -20043,9 +19692,8 @@ msgid ""
 msgstr ""
 
 #: target:pcl/defclass.lisp
-#, fuzzy
 msgid "~@<~S is not a class in *early-class-definitions*.~@:>"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/defclass.lisp
 msgid ""
@@ -20066,9 +19714,8 @@ msgid ""
 msgstr ""
 
 #: target:pcl/defclass.lisp
-#, fuzzy
 msgid "Slot ~S not found in class ~S"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/defs.lisp
 msgid ""
@@ -20082,23 +19729,20 @@ msgid "Try loading (or compiling) PCL anyways."
 msgstr ""
 
 #: target:pcl/defs.lisp
-#, fuzzy
 msgid "~@<~S is not a legal specializer type.~@:>"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/defs.lisp
-#, fuzzy
 msgid "~@<~s is neither a type nor a specializer.~@:>"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/defs.lisp
 msgid "Bad argument to type-class."
 msgstr ""
 
 #: target:pcl/defs.lisp
-#, fuzzy
 msgid "~s is not a type."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/defs.lisp
 msgid ""
@@ -20120,9 +19764,8 @@ msgid "Wrapper ~S"
 msgstr ""
 
 #: target:pcl/cache.lisp
-#, fuzzy
 msgid "Unknown wrapper state"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/cache.lisp
 msgid ""
@@ -20235,9 +19878,8 @@ msgid ""
 msgstr ""
 
 #: target:pcl/boot.lisp
-#, fuzzy
 msgid "Wrong number of args."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/boot.lisp
 msgid "1 or 2 args expected."
@@ -20349,9 +19991,8 @@ msgid ""
 msgstr ""
 
 #: target:pcl/boot.lisp
-#, fuzzy
 msgid "~S is not an early-method."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/boot.lisp
 msgid "Early add-method didn't get a funcallable instance."
@@ -20384,9 +20025,8 @@ msgid ""
 msgstr ""
 
 #: target:pcl/boot.lisp
-#, fuzzy
 msgid "~S is not a legal specializer."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/method-slot-access-optimization.lisp
 msgid "Set to true to activate the inline slot access optimization."
@@ -20409,9 +20049,8 @@ msgid "The class is not a standard class"
 msgstr ""
 
 #: target:pcl/method-slot-access-optimization.lisp
-#, fuzzy
 msgid "The class doesn't contain a slot with name ~s"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/method-slot-access-optimization.lisp
 msgid "Slot ~s is a class slot"
@@ -20438,9 +20077,8 @@ msgid ""
 msgstr ""
 
 #: target:pcl/method-slot-access-optimization.lisp
-#, fuzzy
 msgid "The class is not defined at compile time"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/method-slot-access-optimization.lisp
 msgid ""
@@ -20453,9 +20091,8 @@ msgid "Methods of ~s access different slots"
 msgstr ""
 
 #: target:pcl/slots-boot.lisp
-#, fuzzy
 msgid "~@<~S is not a standard-class.~@:>"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/slots-boot.lisp
 msgid ""
@@ -20501,9 +20138,8 @@ msgid ""
 msgstr ""
 
 #: target:pcl/combin.lisp
-#, fuzzy
 msgid "Invalid keyword argument ~s"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/dfun.lisp
 msgid "~@<Slot ~s of class ~s is unbound in object ~s~@:>"
@@ -20592,9 +20228,8 @@ msgid ""
 msgstr ""
 
 #: target:pcl/braid.lisp
-#, fuzzy
 msgid "~@<~S is not the name of a class.~@:>"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/braid.lisp
 msgid ""
@@ -20707,9 +20342,8 @@ msgid "make the slot unbound (slot-makunbound)"
 msgstr ""
 
 #: target:pcl/slots.lisp
-#, fuzzy
 msgid "~@<Can't allocate an instance of class ~S.~@:>"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/init.lisp
 msgid ""
@@ -20718,9 +20352,8 @@ msgid ""
 msgstr ""
 
 #: target:pcl/seal.lisp
-#, fuzzy
 msgid "~@<Invalid sealing specifier ~s.~@:>"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/seal.lisp
 msgid "~s is sealed wrt ~a"
@@ -20822,23 +20455,20 @@ msgid "is not a string or NULL"
 msgstr ""
 
 #: target:pcl/methods.lisp
-#, fuzzy
 msgid "is not a function"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/methods.lisp
 msgid "Contains ~S which ~A"
 msgstr ""
 
 #: target:pcl/methods.lisp
-#, fuzzy
 msgid "is not a non-null atom"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/methods.lisp
-#, fuzzy
 msgid "is neither a class object nor an eql specializer"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/methods.lisp
 msgid "The value of the ~s initarg, ~s, ~A."
@@ -20852,9 +20482,8 @@ msgid ""
 msgstr ""
 
 #: target:pcl/methods.lisp
-#, fuzzy
 msgid "~@<~S does not name a generic function.~@:>"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/methods.lisp
 msgid ""
@@ -20962,9 +20591,8 @@ msgid "Invalid parameter specifier: ~s"
 msgstr ""
 
 #: target:pcl/env.lisp
-#, fuzzy
 msgid "~%~S is an instance of class ~S:"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/env.lisp
 msgid "~% The following slots have :INSTANCE allocation:"
@@ -20979,9 +20607,8 @@ msgid "~% The following slots have allocation as shown:"
 msgstr ""
 
 #: target:pcl/env.lisp
-#, fuzzy
 msgid "~A is a generic function.~%"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/env.lisp
 msgid "Its lambda-list is:~%  ~S~%"
@@ -21052,9 +20679,8 @@ msgid "It is used by the packages ~{~S~^, ~}.~%"
 msgstr ""
 
 #: target:pcl/env.lisp
-#, fuzzy
 msgid "~&~S is an ~a hash table."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/env.lisp
 msgid "~&Its size is ~d buckets."
@@ -21085,14 +20711,12 @@ msgid "Invalid function name ~s"
 msgstr ""
 
 #: target:pcl/cmucl-documentation.lisp
-#, fuzzy
 msgid "~@<~S is not the name of a structure type.~@:>"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/gray-streams.lisp
-#, fuzzy
 msgid ""
-"Returns a type specifier for the kind of object returned by the\n"
+"Returns"
 "  Stream. Class FUNDAMENTAL-CHARACTER-STREAM provides a default method\n"
 "  which returns CHARACTER."
 msgstr "현재의 역동적인 공간은 ~D입니다.~%"
@@ -21188,9 +20812,8 @@ msgid ""
 msgstr ""
 
 #: target:pcl/gray-streams.lisp
-#, fuzzy
 msgid "Return the stream line length or Nil."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: target:pcl/gray-streams.lisp
 msgid ""
