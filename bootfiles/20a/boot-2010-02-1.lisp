@@ -1,5 +1,7 @@
 ;; Bootstrap file for adding support for localization.
 
+(setf lisp::*enable-package-locked-errors* nil)
+
 (defvar lisp::*environment-list-initialized* nil)
 
 (defpackage "INTL"
