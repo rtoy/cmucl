@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/linux-os.lisp,v 1.8.12.1 2010/02/08 17:15:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/linux-os.lisp,v 1.8.12.2 2010/02/14 03:06:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,7 @@
 (in-package "SYSTEM")
 (use-package "EXTENSIONS")
 (intl:textdomain "cmucl")
-
+ 
 (export '(get-system-info get-page-size os-init))
 
 (register-lisp-feature :linux)
@@ -32,7 +32,7 @@
 ;;; select() in Linux kernel 2.6.x) and instead of running uname -r,
 ;;; let's just get the info from uname().
 (defun software-version ()
-  "Returns a string describing version of the supporting software."
+  _N"Returns a string describing version of the supporting software."
   (multiple-value-bind (sysname nodename release version)
       (unix:unix-uname)
     (declare (ignore sysname nodename))
@@ -54,7 +54,7 @@
 		       (unix:unix-getrusage unix:rusage_self)
     (declare (ignore maxrss ixrss idrss isrss minflt))
     (unless err?
-      (error "Unix system call getrusage failed: ~A."
+      (error _"Unix system call getrusage failed: ~A."
 	     (unix:get-unix-error-msg utime)))
     
     (values utime stime majflt)))
@@ -68,6 +68,6 @@
   (multiple-value-bind (val err)
       (unix:unix-getpagesize)
     (unless val
-      (error "Getpagesize failed: ~A" (unix:get-unix-error-msg err)))
+      (error _"Getpagesize failed: ~A" (unix:get-unix-error-msg err)))
     val))
 

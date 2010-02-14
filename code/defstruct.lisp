@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.98.12.4 2010/02/13 17:10:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.98.12.5 2010/02/14 03:06:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1639,11 +1639,15 @@
 		definition."
 	       name)
       (continue ()
-	:report "Invalidate already loaded code and instances, use new definition."
+	:report (lambda (stream)
+		  (write-string _"Invalidate already loaded code and instances, use new definition."
+				stream))
 	(warn _"Previously loaded ~S accessors will no longer work." name)
 	(register-layout new-layout))
       (clobber-it ()
-	:report "Assume redefinition is compatible, allow old code and instances."
+	:report (lambda (stream)
+		  (write-string "Assume redefinition is compatible, allow old code and instances."
+				stream))
 	(warn _"Any old ~S instances will be in a bad way.~@
 	       I hope you know what you're doing..."
 	      name)

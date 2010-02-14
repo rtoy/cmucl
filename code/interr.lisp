@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.47.24.2 2010/02/09 20:23:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.47.24.3 2010/02/14 03:06:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,7 +50,7 @@
 	 (macrolet ((set-value (var value)
 		      (let ((pos (position var ',required)))
 			(unless pos
-			  (error "~S isn't one of the required args."
+			  (error _"~S isn't one of the required args."
 				 var))
 			`(let ((,',temp ,value))
 			   (di::sub-set-debug-var-slot
@@ -82,7 +82,7 @@
 
 
 (deferr unknown-error (&rest args)
-  (error "Unknown error:~{ ~S~})" args))
+  (error _"Unknown error:~{ ~S~})" args))
 
 (deferr object-not-function-error (object)
   (error 'type-error
@@ -246,7 +246,7 @@
 (deferr invalid-argument-count-error (nargs)
   (error 'simple-program-error
 	 :function-name name
-	 :format-control "Invalid number of arguments: ~S"
+	 :format-control _"Invalid number of arguments: ~S"
 	 :format-arguments (list nargs)))
 
 (deferr bogus-argument-to-values-list-error (list)
@@ -254,7 +254,7 @@
 	 :function-name name
 	 :datum list
 	 :expected-type 'list
-	 :format-control "Attempt to use VALUES-LIST on a dotted-list:~%  ~S"
+	 :format-control _"Attempt to use VALUES-LIST on a dotted-list:~%  ~S"
 	 :format-arguments (list list)))
 
 (deferr unbound-symbol-error (symbol)
@@ -330,11 +330,11 @@
 	 :expected-type `(integer 0 (,bound))
 	 :format-control
 	 (cond ((zerop bound)
-		"Invalid array index, ~D for ~S.  Array has no elements.")
+		_"Invalid array index, ~D for ~S.  Array has no elements.")
 	       ((minusp index)
-		"Invalid array index, ~D for ~S.  Should have greater than or equal to 0.")
+		_"Invalid array index, ~D for ~S.  Should have greater than or equal to 0.")
 	       (t
-		"Invalid array index, ~D for ~S.  Should have been less than ~D"))
+		_"Invalid array index, ~D for ~S.  Should have been less than ~D"))
 	 :format-arguments (list index array bound)))
 
 (deferr object-not-simple-array-error (object)

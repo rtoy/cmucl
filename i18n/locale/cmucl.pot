@@ -1666,6 +1666,10 @@ msgid ""
 msgstr ""
 
 #: target:code/alieneval.lisp
+msgid "Too many indices when derefing ~S: ~D"
+msgstr ""
+
+#: target:code/alieneval.lisp
 msgid "Incorrect number of indices when derefing ~S: ~D"
 msgstr ""
 
@@ -2542,6 +2546,14 @@ msgid "Unknown :TEST for MAKE-HASH-TABLE: ~S"
 msgstr ""
 
 #: target:code/hash-new.lisp
+msgid ";; Creating unsupported weak-p hash table~%"
+msgstr ""
+
+#: target:code/hash-new.lisp
+msgid "Cannot make a weak ~A hashtable with test: ~S"
+msgstr ""
+
+#: target:code/hash-new.lisp
 msgid "Returns the number of entries in the given HASH-TABLE."
 msgstr ""
 
@@ -2619,6 +2631,500 @@ msgstr ""
 
 #: target:code/hash-new.lisp
 msgid "Computes a hash code for S-EXPR and returns it as an integer."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the 1st object in a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns all but the first object."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the 2nd object in a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the cdr of the 1st sublist."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the car of the 1st sublist."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns all but the 1st two objects of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the 1st object in the cddr of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the 1st object in the cadr of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the 1st object in the caar of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the cdr of the caar of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the cdr of the cdar of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the cdr of the cddr of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the car of the cdar of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the cdr of the cadr of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the car of the caaar of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the car of the caadr of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the car of the caddr of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the car of the cdddr of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the cdr of the cdddr of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the cdr of the caaar of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the cdr of the cdaar of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the cdr of the cddar of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the car of the cadar of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the car of the cdaar of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the car of the cdadr of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the car of the cddar of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the cdr of the caadr of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the cdr of the cadar of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the cdr of the caddr of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the cdr of the cdadr of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns a list with se1 as the car and se2 as the cdr."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns T if X and Y are isomorphic trees with identical leaves."
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"The recommended way to test for the end of a list.  True if Object is nil,\n"
+"   false if Object is a cons, and an error for any other types of "
+"arguments."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the length of the given List, or Nil if the List is circular."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the nth object in a list where the car is the zero-th element."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the 1st object in a list or NIL if the list is empty."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the 2nd object in a list or NIL if there is no 2nd object."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the 3rd object in a list or NIL if there is no 3rd object."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the 4th object in a list or NIL if there is no 4th object."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the 5th object in a list or NIL if there is no 5th object."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the 6th object in a list or NIL if there is no 6th object."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the 7th object in a list or NIL if there is no 7th object."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the 8th object in a list or NIL if there is no 8th object."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the 9th object in a list or NIL if there is no 9th object."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the 10th object in a list or NIL if there is no 10th object."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Means the same as the cdr of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Performs the cdr function n times on a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the last N conses (not the last element!) of a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns constructs and returns a list of its arguments."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns a list of the arguments with last cons a dotted pair"
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Constructs a list with size elements each set to value"
+msgstr ""
+
+#: target:code/list.lisp
+msgid "~S is not a proper list"
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Typically, returns a new list that is the concatenation of Args.\n"
+"\n"
+"  Each Arg in Args must be a proper list except the last one, which\n"
+"  may be any object.  The function is not destructive: for all but the\n"
+"  last Arg, its list structure is copied.  The last argument is not\n"
+"  copied; it becomes the cdr of the final dotted pair of the\n"
+"  concatenation of the preceding lists, or is returned directly if\n"
+"  there are no preceding non-empty lists.  In the latter case, if the\n"
+"  last Arg is not a list, the returned value is not a list either."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "~S is not a list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns a new list EQUAL but not EQ to list"
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns a new association list equal to alist, constructed in space"
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Copy-Tree recursively copys trees of conses."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns (append (reverse x) y)"
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Concatenates the lists given as arguments (by changing them)"
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Argument is not a list -- ~S."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns (nconc (nreverse x) y)"
+msgstr ""
+
+#: target:code/list.lisp
+msgid "First argument is not a proper list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Returns a new list the same as List without the last N conses.\n"
+"   List must not be circular."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Modifies List to remove the last N conses. List must not be circular."
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Returns a new list, whose elements are those of List that appear before\n"
+"   Object.  If Object is not a tail of List, a copy of List is returned.\n"
+"   List must be a proper list or a dotted list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Changes the car of x to y and returns the new x."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Changes the cdr of x to y and returns the new x."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Sets the Nth element of List (zero based) to Newval."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "~S is too large an index for SETF of NTH."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns what was passed to it."
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Builds a new function that returns T whenever FUNCTION returns NIL and\n"
+"   NIL whenever FUNCTION returns T."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Builds a function that always returns VALUE, and posisbly MORE-VALUES."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Substitutes new for subtrees matching old."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Substitutes new for subtrees for which test is true."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Substitutes new for subtrees for which test is false."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Substitutes new for subtrees of tree for which test is true."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Substitutes new for subtrees of tree for which test is false."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Substitutes from alist into tree nondestructively."
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Returns tail of list beginning with first element satisfying EQLity,\n"
+"   :test, or :test-not with a given item."
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Returns tail of list beginning with first element satisfying test(element)"
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Returns tail of list beginning with first element not satisfying test(el)"
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Returns true if Object is the same as some tail of List, otherwise\n"
+"   returns false. List must be a proper list or a dotted list."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Add item to list unless it is already a member"
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the union of list1 and list2."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Test and test-not both supplied."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Destructively returns the union list1 and list2."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the intersection of list1 and list2."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Destructively returns the intersection of list1 and list2."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns the elements of list1 which are not in list2."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Destructively returns the elements of list1 which are not in list2."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Return new list of elements appearing exactly once in LIST1 and LIST2."
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Destructively return a list with elements which appear but once in LIST1\n"
+"   and LIST2."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns T if every element in list1 is also in list2."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Construct a new alist by adding the pair (key . datum) to alist"
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Construct an association list from keys and data (adding to alist)"
+msgstr ""
+
+#: target:code/list.lisp
+msgid "The lists of keys and data are of unequal length."
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Returns the cons in alist whose car is equal (by a given test or EQL) to\n"
+"   the Item."
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Returns the first cons in alist whose car satisfies the Predicate.  If\n"
+"   key is supplied, apply it to the car of each cons before testing."
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Returns the first cons in alist whose car does not satisfiy the Predicate.\n"
+"  If key is supplied, apply it to the car of each cons before testing."
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Returns the cons in alist whose cdr is equal (by a given test or EQL) to\n"
+"   the Item."
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Returns the first cons in alist whose cdr satisfies the Predicate.  If key\n"
+"  is supplied, apply it to the cdr of each cons before testing."
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Returns the first cons in alist whose cdr does not satisfy the Predicate.\n"
+"  If key is supplied, apply it to the cdr of each cons before testing."
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"This function is called by mapc, mapcar, mapcan, mapl, maplist, and mapcon.\n"
+"  It Maps function over the arglists in the appropriate way. It is done "
+"when any\n"
+"  of the arglists runs out.  Until then, it CDRs down the arglists calling "
+"the\n"
+"  function and accumulating results as desired."
+msgstr ""
+
+#: target:code/list.lisp
+msgid ""
+"Applies fn to successive elements of lists, returns its second argument."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Applies fn to successive elements of list, returns list of results."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Applies fn to successive elements of list, returns NCONC of results."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Applies fn to successive CDRs of list, returns ()."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Applies fn to successive CDRs of list, returns list of results."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Applies fn to successive CDRs of lists, returns NCONC of results."
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns tail of list beginning with first element eq to item"
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Return the first pair of alist where item EQ the key of pair"
+msgstr ""
+
+#: target:code/list.lisp
+msgid "Returns list with all elements with all elements EQ to ITEM deleted."
 msgstr ""
 
 #: target:code/seq.lisp
@@ -4886,6 +5392,14 @@ msgid ""
 msgstr ""
 
 #: target:code/bsd-os.lisp
+msgid "Version string for supporting software"
+msgstr ""
+
+#: target:code/bsd-os.lisp
+msgid "Returns a string describing version of the supporting software."
+msgstr ""
+
+#: target:code/bsd-os.lisp
 msgid "Unix system call getrusage failed: ~A."
 msgstr ""
 
@@ -4899,6 +5413,15 @@ msgstr ""
 
 #: target:code/x86-vm.lisp
 msgid "Returns a string describing the version of the local machine."
+msgstr ""
+
+#: target:code/x86-vm.lisp
+msgid "Unknown code-object-fixup kind ~s."
+msgstr ""
+
+#: target:compiler/generic/core.lisp target:code/load.lisp
+#: target:code/x86-vm.lisp
+msgid "Unknown foreign symbol: ~S"
 msgstr ""
 
 #: target:code/x86-vm.lisp
@@ -5637,6 +6160,18 @@ msgstr ""
 
 #: target:code/float.lisp
 msgid "Return true if the float X is denormalized."
+msgstr ""
+
+#: target:code/float.lisp
+msgid "Return true if the float X is an infinity (+ or -)."
+msgstr ""
+
+#: target:code/float.lisp
+msgid "Return true if the float X is a NaN (Not a Number)."
+msgstr ""
+
+#: target:code/float.lisp
+msgid "Return true if the float X is a trapping NaN (Not a Number)."
 msgstr ""
 
 #: target:code/float.lisp
@@ -7113,6 +7648,17 @@ msgid ""
 msgstr ""
 
 #: target:code/gc.lisp
+msgid "~&Adjusting *last-bytes-in-use* from ~:D to ~:D, gen ~d, pre ~:D ~%"
+msgstr ""
+
+#: target:code/gc.lisp
+msgid ""
+"Initiates a garbage collection.  The optional argument, VERBOSE-P,\n"
+"  which defaults to the value of the variable *GC-VERBOSE* controls\n"
+"  whether or not GC statistics are printed."
+msgstr ""
+
+#: target:code/gc.lisp
 msgid ""
 "Initiates a garbage collection.  The keyword :VERBOSE, which\n"
 "   defaults to the value of the variable *GC-VERBOSE* controls whether or\n"
@@ -8374,6 +8920,138 @@ msgstr ""
 msgid "Table of ordinal tens-place digits in English"
 msgstr ""
 
+#: target:code/format.lisp
+msgid "Number too large to print in old Roman numerals: ~:D"
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Number too large to print in Roman numerals: ~:D"
+msgstr ""
+
+#: target:code/format.lisp
+msgid "No previous argument."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Cannot specify the colon modifier with this directive."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Cannot specify either colon or atsign for this directive."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Cannot specify both colon and atsign for this directive."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Cannot specify the at-sign modifier."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Cannot specify both colon and at-sign."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Index ~D out of bounds.  Should have been ~\n"
+"				    between 0 and ~D."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Index ~D out of bounds.  Should have been ~\n"
+"				between 0 and ~D."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Index ~D out of bounds.  Should have been ~\n"
+"				   between 0 and ~D."
+msgstr ""
+
+#: target:code/format.lisp
+msgid ""
+"Index ~D out of bounds.  Should have been ~\n"
+"			       between 0 and ~D."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Cannot specify the colon modifier."
+msgstr ""
+
+#: target:pcl/seal.lisp target:pcl/method-slot-access-optimization.lisp
+#: target:pcl/low.lisp target:code/format.lisp
+msgid "~A~%while processing indirect format string:"
+msgstr ""
+
+#: target:code/format.lisp
+msgid "No corresponding close paren."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "No corresponding open paren."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "No corresponding close bracket."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Cannot specify both the colon and at-sign modifiers."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Can only specify one section"
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Must specify exactly two sections."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "~~; not contained within either ~~[...~~] or ~~<...~~>."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "No corresponding open bracket."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Attempt to use ~~:^ outside a ~~:{...~~} construct."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "No corresponding close brace."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "No corresponding open brace."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "~D illegal directive~:P found inside justification block"
+msgstr ""
+
+#: target:code/format.lisp
+msgid "No parameters can be supplied with ~~<...~~:>."
+msgstr ""
+
+#: target:code/format.lisp
+msgid ""
+"Cannot include format directives inside the ~\n"
+"			       ~:[suffix~;prefix~] segment of ~~<...~~:>"
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Too many segments for ~~<...~~:>."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "Malformed ~~/ directive."
+msgstr ""
+
+#: target:code/format.lisp
+msgid "No package named ~S"
+msgstr ""
+
 #: target:code/package.lisp
 msgid ""
 "The list of packages to use by default of no :USE argument is supplied\n"
@@ -9548,6 +10226,10 @@ msgid "The maximum supported byte size for a stream element-type."
 msgstr ""
 
 #: target:code/fd-stream.lisp
+msgid "Timeout ~(~A~)ing ~S."
+msgstr ""
+
+#: target:code/fd-stream.lisp
 msgid ""
 "List of all available output routines. Each element is a list of the\n"
 "  element-type output, the kind of buffering, the function name, and the "
@@ -9568,6 +10250,14 @@ msgid ""
 "Output THING to stream.  THING can be any kind of vector or a sap.  If "
 "THING\n"
 "  is a SAP, END must be supplied (as length won't work)."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Just go on as if nothing happened..."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "~S called with :END before :START!"
 msgstr ""
 
 #: target:code/fd-stream.lisp
@@ -9598,11 +10288,35 @@ msgid "Input type (~S) and output type (~S) are unrelated?"
 msgstr ""
 
 #: target:code/fd-stream.lisp
+msgid "Go on as if nothing bad happened."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Could not restore ~S to its original contents: ~A"
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "~s is not a stream associated with a file."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Error fstating ~S: ~A"
+msgstr ""
+
+#: target:code/fd-stream.lisp
 msgid "Error lseek'ing ~S: ~A"
 msgstr ""
 
 #: target:code/fd-stream.lisp
 msgid "Invalid position given to file-position: ~S"
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "file ~S"
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "descriptor ~D"
 msgstr ""
 
 #: target:code/fd-stream.lisp
@@ -9625,11 +10339,67 @@ msgid "File descriptor must be opened either for input or output."
 msgstr ""
 
 #: target:code/fd-stream.lisp
+msgid "** Closed ~A~%"
+msgstr ""
+
+#: target:code/fd-stream.lisp
 msgid ""
 "This is a string that OPEN tacks on the end of a file namestring to produce\n"
 "   a name for the :if-exists :rename-and-delete and :rename options.  Also,\n"
 "   this can be a function that takes a namestring and returns a complete\n"
 "   namestring."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Enter new value for ~*~S"
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "~S is invalid for ~S. Must be one of~{ ~S~}"
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Enter new value for ~S: "
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Try to rename it anyway."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "File ~S is not writable."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Use :SUPERSEDE instead."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Could not rename ~S to ~S: ~A."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Cannot open ~S for output: Is a directory."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Cannot find ~S: ~A"
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Return NIL."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Error opening ~S, ~A."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Error creating ~S, path does not exist."
+msgstr ""
+
+#: target:pcl/braid.lisp target:code/fd-stream.lisp
+msgid "Try again."
 msgstr ""
 
 #: target:code/fd-stream.lisp
@@ -9643,6 +10413,14 @@ msgid ""
 "   :if-does-not-exist - one of :error, :create or nil\n"
 "   :external-format - an external format name\n"
 "  See the manual for details."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Do it anyway."
+msgstr ""
+
+#: target:code/fd-stream.lisp
+msgid "Can't create simple-streams with an element-type."
 msgstr ""
 
 #: target:code/fd-stream.lisp
@@ -10495,10 +11273,6 @@ msgstr ""
 msgid "~S defined~%"
 msgstr ""
 
-#: target:compiler/generic/core.lisp target:code/load.lisp
-msgid "Unknown foreign symbol: ~S"
-msgstr ""
-
 #: target:code/load.lisp
 msgid "Cannot load assembler code."
 msgstr ""
@@ -10872,6 +11646,22 @@ msgid ""
 msgstr ""
 
 #: target:code/interr.lisp
+msgid "~S isn't one of the required args."
+msgstr ""
+
+#: target:code/interr.lisp
+msgid "Unknown error:~{ ~S~})"
+msgstr ""
+
+#: target:code/interr.lisp
+msgid "Invalid number of arguments: ~S"
+msgstr ""
+
+#: target:code/interr.lisp
+msgid "Attempt to use VALUES-LIST on a dotted-list:~%  ~S"
+msgstr ""
+
+#: target:code/interr.lisp
 msgid "Attempt to RETURN-FROM a block or GO to a tag that no longer exists"
 msgstr ""
 
@@ -10881,6 +11671,19 @@ msgstr ""
 
 #: target:code/interr.lisp
 msgid "Function with declared result type NIL returned:~%  ~S"
+msgstr ""
+
+#: target:code/interr.lisp
+msgid "Invalid array index, ~D for ~S.  Array has no elements."
+msgstr ""
+
+#: target:code/interr.lisp
+msgid ""
+"Invalid array index, ~D for ~S.  Should have greater than or equal to 0."
+msgstr ""
+
+#: target:code/interr.lisp
+msgid "Invalid array index, ~D for ~S.  Should have been less than ~D"
 msgstr ""
 
 #: target:code/interr.lisp
@@ -13365,6 +14168,18 @@ msgid "Reloaded library ~S~%"
 msgstr ""
 
 #: target:code/foreign.lisp
+msgid "Ignore library and continue"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Try reloading again"
+msgstr ""
+
+#: target:code/foreign.lisp
+msgid "Choose new library path"
+msgstr ""
+
+#: target:code/foreign.lisp
 msgid "Enter new library path: "
 msgstr ""
 
@@ -14205,6 +15020,10 @@ msgstr ""
 #: target:code/defstruct.lisp
 msgid "Redefining class ~S incompatibly with the current ~\n"
 "		definition."
+msgstr ""
+
+#: target:code/defstruct.lisp
+msgid "Invalidate already loaded code and instances, use new definition."
 msgstr ""
 
 #: target:code/defstruct.lisp
@@ -20224,10 +21043,6 @@ msgstr ""
 
 #: target:pcl/braid.lisp
 msgid "~@<In method ~S: No next method for arguments ~S.~@:>"
-msgstr ""
-
-#: target:pcl/braid.lisp
-msgid "Try again."
 msgstr ""
 
 #: target:pcl/braid.lisp

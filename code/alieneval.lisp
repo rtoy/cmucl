@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.66.12.3 2010/02/09 14:56:37 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.66.12.4 2010/02/14 03:06:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1701,7 +1701,7 @@ If so return true; otherwise call ALTERNATIVE."
     (etypecase type
       (alien-pointer-type
        (when (cdr indices)
-	 (error "Too many indices when derefing ~S: ~D"
+	 (error _"Too many indices when derefing ~S: ~D"
 		type
 		(length indices)))
        (let ((element-type (alien-pointer-type-to type)))

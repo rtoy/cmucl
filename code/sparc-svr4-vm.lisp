@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.13.12.2 2010/02/10 04:01:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.13.12.3 2010/02/14 03:06:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -159,13 +159,13 @@
 (defun fixup-code-object (code offset fixup kind)
   (declare (type index offset))
   (unless (zerop (rem offset vm:word-bytes))
-    (error "Unaligned instruction?  offset=#x~X." offset))
+    (error _"Unaligned instruction?  offset=#x~X." offset))
   (system:without-gcing
    (let ((sap (truly-the system-area-pointer
 			 (%primitive c::code-instructions code))))
      (ecase kind
        (:call
-	(error "Can't deal with CALL fixups, yet."))
+	(error _"Can't deal with CALL fixups, yet."))
        (:sethi
 	(setf (ldb (byte 22 0) (sap-ref-32 sap offset))
 	      (ldb (byte 22 10) fixup)))

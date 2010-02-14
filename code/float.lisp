@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.45.2.2 2010/02/09 18:41:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.45.2.3 2010/02/14 03:06:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -290,7 +290,7 @@
 		  ((double-double-float)
 		   ,double-double)))))
 
-  (frob float-infinity-p "Return true if the float X is an infinity (+ or -)."
+  (frob float-infinity-p _N"Return true if the float X is an infinity (+ or -)."
     (zerop (ldb vm:single-float-significand-byte bits))
     (and (zerop (ldb vm:double-float-significand-byte hi))
 	 (zerop lo))
@@ -300,7 +300,7 @@
     #+double-double
     (float-infinity-p (double-double-hi x)))
 
-  (frob float-nan-p "Return true if the float X is a NaN (Not a Number)."
+  (frob float-nan-p _N"Return true if the float X is a NaN (Not a Number)."
     (not (zerop (ldb vm:single-float-significand-byte bits)))
     (or (not (zerop (ldb vm:double-float-significand-byte hi)))
 	(not (zerop lo)))
@@ -311,7 +311,7 @@
     (float-nan-p (double-double-hi x)))
 
   (frob float-trapping-nan-p
-    "Return true if the float X is a trapping NaN (Not a Number)."
+    _N"Return true if the float X is a trapping NaN (Not a Number)."
     (zerop (logand (ldb vm:single-float-significand-byte bits)
 		   vm:single-float-trapping-nan-bit))
     (zerop (logand (ldb vm:double-float-significand-byte hi)

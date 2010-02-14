@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.51.10.3 2010/02/10 04:00:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.51.10.4 2010/02/14 03:06:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -272,7 +272,7 @@
 	(declare (type index size+1 scaled-size length))
 	#-gencgc
 	(when weak-p
-	  (format *debug-io* ";; Creating unsupported weak-p hash table~%"))
+	  (format *debug-io* _";; Creating unsupported weak-p hash table~%"))
 	#+gencgc
 	(when (and (member weak-p '(t :key :key-and-value :key-or-value))
 		   (not (member test '(eq eql))))
@@ -282,7 +282,7 @@
 	  ;;
 	  ;; XXX: Either fix GC to work with other tests, or change
 	  ;; this warning into an error.
-	  (error "Cannot make a weak ~A hashtable with test: ~S" weak-p test))
+	  (error _"Cannot make a weak ~A hashtable with test: ~S" weak-p test))
 	(let* ((index-vector
 		(make-array length :element-type '(unsigned-byte 32)
 			    :initial-element 0))

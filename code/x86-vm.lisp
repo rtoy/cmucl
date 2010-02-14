@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.32.2.2 2010/02/10 04:01:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.32.2.3 2010/02/14 03:06:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -111,7 +111,7 @@
 	    (ncode-words (kernel:code-header-ref code 1))
 	    (code-end-addr (+ code-start-addr (* ncode-words 4))))
        (unless (member kind '(:absolute :relative))
-	 (error "Unknown code-object-fixup kind ~s." kind))
+	 (error _"Unknown code-object-fixup kind ~s." kind))
        (ecase kind
 	 (:absolute
 	  ;; Word at sap + offset contains a value to be replaced by
@@ -318,7 +318,7 @@
 	      value
 	      (let ((value (system:alternate-get-global-address name)))
 		(when (zerop value)
-		  (error "Unknown foreign symbol: ~S" name))
+		  (error _"Unknown foreign symbol: ~S" name))
 		value))))))
 
 

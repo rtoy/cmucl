@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.42.38.3 2010/02/09 02:44:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.42.38.4 2010/02/14 03:06:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -209,7 +209,7 @@
 
 #-(or cgc gencgc)
 (defun get-bytes-consed-dfixnum ()
-  "Returns the number of bytes consed since the first time this function
+  _N"Returns the number of bytes consed since the first time this function
   was called.  The first time it is called, it returns zero."
   (declare (optimize (speed 3) (safety 0)(inhibit-warnings 3)))
   (cond ((null *last-bytes-in-use*)
@@ -464,7 +464,7 @@
 		#+nil
 		(when verbose-p
 		  (format
-		   t "~&Adjusting *last-bytes-in-use* from ~:D to ~:D, gen ~d, pre ~:D ~%"
+		   t _"~&Adjusting *last-bytes-in-use* from ~:D to ~:D, gen ~d, pre ~:D ~%"
 		   *last-bytes-in-use*
 		   post-gc-dyn-usage
 		   gen
@@ -509,7 +509,7 @@
 ;;; 
 #-gencgc
 (defun gc (&optional (verbose-p *gc-verbose*))
-  "Initiates a garbage collection.  The optional argument, VERBOSE-P,
+  _N"Initiates a garbage collection.  The optional argument, VERBOSE-P,
   which defaults to the value of the variable *GC-VERBOSE* controls
   whether or not GC statistics are printed."
   (sub-gc :verbose-p verbose-p :force-p t))

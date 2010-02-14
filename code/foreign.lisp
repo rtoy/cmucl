@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.57.4.2 2010/02/09 18:41:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.57.4.3 2010/02/14 03:06:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -801,13 +801,16 @@ to skip undefined symbols which don't have an address."
 		(setf (car lib-entry) new-sap)
 		(return))
 	    (continue ()
-	      :report "Ignore library and continue"
+	      :report (lambda (stream)
+			(write-string _"Ignore library and continue" stream))
 	      (return))
 	    (try-again ()
-	      :report "Try reloading again"
+	      :report (lambda (stream)
+			(write-string _"Try reloading again" stream))
 	      )
 	    (new-library ()
-	      :report "Choose new library path"
+	      :report (lambda (stream)
+			(write-string _"Choose new library path" stream))
 	      (format *query-io* _"Enter new library path: ")
 	      (setf lib-path (read))))))
   (alien:alien-funcall (alien:extern-alien "os_resolve_data_linkage"

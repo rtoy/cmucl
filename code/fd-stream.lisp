@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.97.2.2 2010/02/09 19:54:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.97.2.3 2010/02/14 03:06:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -288,7 +288,7 @@
   (:report
    (lambda (condition stream)
      (declare (stream stream))
-     (format stream "Timeout ~(~A~)ing ~S."
+     (format stream _"Timeout ~(~A~)ing ~S."
 	     (io-timeout-direction condition)
 	     (stream-error-stream condition)))))
 
@@ -611,8 +611,8 @@
 	   (bytes (- end start))
 	   (newtail (+ tail bytes)))
       (cond ((minusp bytes) ; Error case
-	     (cerror "Just go on as if nothing happened..."
-		     "~S called with :END before :START!"
+	     (cerror _"Just go on as if nothing happened..."
+		     _"~S called with :END before :START!"
 		     'output-raw-bytes))
 	    ((zerop bytes)) ; Easy case
 	    ((<= bytes space)
@@ -1483,8 +1483,8 @@
     (multiple-value-bind (okay err)
 	(unix:unix-rename original filename)
       (unless okay
-	  (cerror "Go on as if nothing bad happened."
-		  "Could not restore ~S to its original contents: ~A"
+	  (cerror _"Go on as if nothing bad happened."
+		  _"Could not restore ~S to its original contents: ~A"
 		  filename (unix:get-unix-error-msg err))))))
 
 ;;; DELETE-ORIGINAL -- internal
@@ -1618,7 +1618,7 @@
        (error 'simple-type-error
 	      :datum stream
 	      :expected-type 'file-stream
-	      :format-control "~s is not a stream associated with a file."
+	      :format-control _"~s is not a stream associated with a file."
 	      :format-arguments (list stream)))
      (multiple-value-bind
 	 (okay dev ino mode nlink uid gid rdev size
@@ -1628,7 +1628,7 @@
 			atime mtime ctime blksize blocks))
        (unless okay
 	 (error 'simple-file-error
-                :format-control "Error fstating ~S: ~A"
+                :format-control _"Error fstating ~S: ~A"
 		:format-arguments (list stream (unix:get-unix-error-msg dev))))
        (if (zerop mode)
 	   nil
@@ -1759,8 +1759,8 @@
 		       pathname
 		       input-buffer-p
 		       (name (if file
-				 (format nil "file ~S" file)
-				 (format nil "descriptor ~D" fd)))
+				 (format nil _"file ~S" file)
+				 (format nil _"descriptor ~D" fd)))
 		       auto-close
 		       (external-format :default)
 		       binary-stream-p)
@@ -1814,7 +1814,7 @@
       (finalize stream
 		#'(lambda ()
 		    (unix:unix-close fd)
-		    (format *terminal-io* "** Closed ~A~%" name)
+		    (format *terminal-io* _"** Closed ~A~%" name)
 		    (when original
 		      (revert-file file original)))))
     stream))
@@ -1878,12 +1878,12 @@
 (defun assure-one-of (item list what)
   (unless (member item list)
     (loop
-      (cerror "Enter new value for ~*~S"
-	      "~S is invalid for ~S. Must be one of~{ ~S~}"
+      (cerror _"Enter new value for ~*~S"
+	      _"~S is invalid for ~S. Must be one of~{ ~S~}"
 	      item
 	      what
 	      list)
-      (format (the stream *query-io*) "Enter new value for ~S: " what)
+      (format (the stream *query-io*) _"Enter new value for ~S: " what)
       (force-output *query-io*)
       (setf item (read *query-io*))
       (when (member item list)
@@ -1898,14 +1898,14 @@
 ;;;
 (defun do-old-rename (namestring original)
   (unless (unix:unix-access namestring unix:w_ok)
-    (cerror "Try to rename it anyway." "File ~S is not writable." namestring))
+    (cerror _"Try to rename it anyway." _"File ~S is not writable." namestring))
   (multiple-value-bind
       (okay err)
       (unix:unix-rename namestring original)
     (cond (okay t)
 	  (t
-	   (cerror "Use :SUPERSEDE instead."
-		   "Could not rename ~S to ~S: ~A."
+	   (cerror _"Use :SUPERSEDE instead."
+		   _"Could not rename ~S to ~S: ~A."
 		   namestring
 		   original
 		   (unix:get-unix-error-msg err))
@@ -1986,7 +1986,7 @@
                              (error 'simple-file-error
                                  :pathname pathname
                                  :format-control
-                                 "Cannot open ~S for output: Is a directory."
+                                 _"Cannot open ~S for output: Is a directory."
                                  :format-arguments (list name)))
                            (setf mode (logand orig-mode #o777))
                            t)
@@ -1995,7 +1995,7 @@
                           (t
                            (error 'simple-file-error
                                   :pathname pathname
-                                  :format-control "Cannot find ~S: ~A"
+                                  :format-control _"Cannot find ~S: ~A"
                                   :format-arguments
                                     (list name
                                       (unix:get-unix-error-msg err/dev)))))))))
@@ -2025,44 +2025,44 @@
                   ((eql errno unix:enoent)
                    (case if-does-not-exist
                      (:error
-                       (cerror "Return NIL."
+                       (cerror _"Return NIL."
                                'simple-file-error
                                :pathname pathname
-                               :format-control "Error opening ~S, ~A."
+                               :format-control _"Error opening ~S, ~A."
                                :format-arguments
                                    (list pathname
                                          (unix:get-unix-error-msg errno))))
                      (:create
-                       (cerror "Return NIL."
+                       (cerror _"Return NIL."
                                'simple-file-error
                                :pathname pathname
                                :format-control
-                                   "Error creating ~S, path does not exist."
+                                   _"Error creating ~S, path does not exist."
                                :format-arguments (list pathname))))
                    (return nil))
                   ((eql errno unix:eexist)
                    (unless (eq nil if-exists)
-                     (cerror "Return NIL."
+                     (cerror _"Return NIL."
                              'simple-file-error
                              :pathname pathname
-                             :format-control "Error opening ~S, ~A."
+                             :format-control _"Error opening ~S, ~A."
                              :format-arguments
                                  (list pathname
                                        (unix:get-unix-error-msg errno))))
                    (return nil))
                   ((eql errno unix:eacces)
-                   (cerror "Try again."
+                   (cerror _"Try again."
                            'simple-file-error
                            :pathname pathname
-                           :format-control "Error opening ~S, ~A."
+                           :format-control _"Error opening ~S, ~A."
                            :format-arguments
                                (list pathname
                                      (unix:get-unix-error-msg errno))))
                   (t
-                   (cerror "Return NIL."
+                   (cerror _"Return NIL."
                            'simple-file-error
                            :pathname pathname
-                           :format-control "Error opening ~S, ~A."
+                           :format-control _"Error opening ~S, ~A."
                            :format-arguments
                                (list pathname
                                      (unix:get-unix-error-msg errno)))
@@ -2184,8 +2184,8 @@
 	   (apply #'open-fd-stream filespec options))
 	  ((subtypep class 'stream:simple-stream)
 	   (when element-type-given
-             (cerror "Do it anyway."
-		     "Can't create simple-streams with an element-type."))
+             (cerror _"Do it anyway."
+		     _"Can't create simple-streams with an element-type."))
            (when (and (eq class 'stream:file-simple-stream) mapped)
              (setq class 'stream:mapped-file-simple-stream)
              (setf (getf options :class) 'stream:mapped-file-simple-stream))
