@@ -36,9 +36,10 @@ New in this release:
       only arrays of character; 8, 16, and 32-bit integers (signed and
       unsigned); single and double floats; and complex single and
       double floats are supported.
-    - FROUND is much faster for single and double float numbers.  This
-      is not currently available for x87 (due to potential roundoff
-      errors), but is available everywhere else.
+    - FROUND and FTRUNCATE are much faster for single and double float
+      numbers.  This is not currently available for x87 (due to
+      potential roundoff errors), but is available everywhere else.
+
 
   * ANSI compliance fixes:
 
@@ -77,6 +78,8 @@ New in this release:
     - GET-MACRO-CHARACTER would return the wrong second value because
       *READTABLE* was always being used instead of the specified
       readtable. 
+    - Compiling a file containing "(compile nil (lambda ...))" caused
+      an error when loading the file.  This is fixed.
 
   * Trac Tickets:
     #33: get-dispatch-macro-character doesn't signal errors in
