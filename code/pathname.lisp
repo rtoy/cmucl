@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.89.2.2 2010/02/10 01:53:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.89.2.3 2010/02/16 05:17:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1865,7 +1865,7 @@ a host-structure or string."
 		 (unless (and chunks (simple-string-p (caar chunks)))
 		   (error 'namestring-parse-error
 			  :complaint _"Expecting ~A, got ~:[nothing~;~:*~S~]."
-			  :arguments (list what (caar chunks))
+			  :arguments (list (intl:gettext what) (caar chunks))
 			  :namestring namestr
 			  :offset (if chunks (cdar chunks) end)))
 		 (caar chunks))
@@ -1873,7 +1873,7 @@ a host-structure or string."
 		 (case (caadr chunks)
 		   (#\:
 		    (setq host
-			  (find-logical-host (expecting _"a host name" chunks)))
+			  (find-logical-host (expecting _N"a host name" chunks)))
 		    (parse-relative (cddr chunks)))
 		   (t
 		    (parse-relative chunks))))
@@ -1889,7 +1889,7 @@ a host-structure or string."
 		 (case (caadr chunks)
 		   (#\;
 		    (directory
-		     (let ((res (expecting _"a directory name" chunks)))
+		     (let ((res (expecting _N"a directory name" chunks)))
 		       (cond ((string= res "..") :up)
 			     ((string= res "**") :wild-inferiors)
 			     (t
@@ -1899,14 +1899,14 @@ a host-structure or string."
 		    (parse-name chunks))))
 	       (parse-name (chunks)
 		 (when chunks
-		   (expecting _"a file name" chunks)
+		   (expecting _N"a file name" chunks)
 		   (setq name (maybe-make-logical-pattern namestr chunks))
 		   (expecting-dot (cdr chunks))))
 	       (expecting-dot (chunks)
 		 (when chunks
 		   (unless (eql (caar chunks) #\.)
 		     (error 'namestring-parse-error
-			    :complaint _"Expecting a dot, got ~S."
+			    :complaint _N"Expecting a dot, got ~S."
 			    :arguments (list (caar chunks))
 			    :namestring namestr
 			    :offset (cdar chunks)))
@@ -1914,11 +1914,11 @@ a host-structure or string."
 		       (parse-version (cdr chunks))
 		       (parse-type (cdr chunks)))))
 	       (parse-type (chunks)
-		 (expecting _"a file type" chunks)
+		 (expecting _N"a file type" chunks)
 		 (setq type (maybe-make-logical-pattern namestr chunks))
 		 (expecting-dot (cdr chunks)))
 	       (parse-version (chunks)
-		 (let ((str (expecting _"a positive integer, * or NEWEST"
+		 (let ((str (expecting _N"a positive integer, * or NEWEST"
 				       chunks)))
 		   (cond
 		    ((string= str "*") (setq version :wild))
