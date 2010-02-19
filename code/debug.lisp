@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.68 2010/01/22 13:36:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.69 2010/02/19 14:59:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -107,10 +107,12 @@ Changing frames:
 
 Inspecting frames:
   BACKTRACE [n]  shows n frames going down the stack.
-  L              lists locals in current function.
-  P, PP          displays current function call.
+  L [prefix]     lists locals starting with the given prefix in current function.
+  P              displays current function call.
+  PP             verbose display of current function, with source.
   SOURCE [n]     displays frame's source form with n levels of enclosing forms.
   VSOURCE [n]    displays frame's source form without any ellipsis.
+  DESCRIBE       describe the current function.
 
 Breakpoints and steps:
   LIST-LOCATIONS [{function | :c}]  list the locations for breakpoints.
