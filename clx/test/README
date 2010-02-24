@@ -1,0 +1,9 @@
+$Id: README,v 1.1 2007/08/21 15:49:30 fgilham Rel $
+
+Neither of these tests works correctly.
+
+image.lisp: Draws images on your screen.  Doesn't do what it says it will do, but that's
+probably because of various assumptions it makes that aren't true.
+
+trapezoid.lisp: Doesn't compile and wouldn't work if it did because of lack of the extension
+that implements the "poly-fill-trapezoids" functions.

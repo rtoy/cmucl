@@ -1,0 +1,203 @@
+========================== C M U C L  19 f =============================
+
+The CMUCL project is pleased to announce the release of CMUCL 19f.
+This is a major release which contains numerous enhancements and
+bugfixes from the 19e release.
+
+CMUCL is a free, high performance implementation of the Common Lisp
+programming language which runs on most major Unix platforms. It
+mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
+sophisticated native code compiler; a powerful foreign function
+interface; an implementation of CLOS, the Common Lisp Object System,
+which includes multimethods and a metaobject protocol; a source-level
+debugger and code profiler; and an Emacs-like editor implemented in
+Common Lisp. CMUCL is maintained by a team of volunteers collaborating
+over the Internet, and is mostly in the public domain.
+
+New in this release:
+
+
+  * Feature enhancements:
+    - ~R supports many more cardinal names.
+    - Updated network support:
+      o Added BIND-INET-SOCKET to bind a socket to a local address.
+      o Added OPEN-NETWORK-STREAM to create a stream connected to a given host.
+      o Added ACCEPT-NETWORK-STREAM to create a stream connected to
+        the new network connection
+      o Updated CONNECT-TO-INET-SOCKET to allow binding the newly
+        created socket to a local address
+    - Added UNIX:UNIX-OPENPTY, an interface to the openpty C library
+      function.
+    - SSE2 support added for x86.
+      o CMUCL automatically detects whether sse2 is supported or not
+        and loads up the appropriate core file.
+      o New -fpu switch allows the user to specify explicitly which
+        core should be used.  The valid values are x87, sse2, or auto
+        (the default).
+      o Fasls compiled with sse2 support have the extension sse2f.
+        Otherwise, the normal x86f extension is used.  This allows the
+        user to do tests/experiments with both x87 and sse2 without
+        having to mess around with different directories and removing
+        fasls before building for a different FPU.
+      o If the chip supports sse2, but CMUCL can't find the sse2 core,
+        CMUCL will try to fall back to the x87 core.  (This only
+        happens if -fpu is auto.)
+    - Command line parsing now recognizes the option "--".  Everything
+      after "--" is not subject to CMUCL's command line parsing, and
+      everything after the "--" is placed in the new variable
+      EXT:*COMMAND-LINE-APPLICATION-ARGUMENTS*. 
+
+  * ANSI compliance fixes:
+    - Fix bug in backquote printer.  If the variable is @foo, we want
+      to print ", @foo" not ",@foo".  Similarly, for .foo, we want to
+      print ", .foo" instead of ",.foo".
+    - Fix merging of version in MAKE-PATHNAME.  If the pathname name
+      is given, the version is not affected by the version in the
+      default pathname.
+    - RENAME-FILE now creates defaulted-new-name from merging new-name
+      with the original filespec.  This is an incompatible change from
+      the previous version which created defaulted-new-name from
+      merging the new-name with the truename of filespec.  Also, a
+      logical pathname should be returned if new-name is a logical
+      pathname. 
+    - Character names need to be a capital letter followed by lower
+      case.  Needed to match what ~:C does.  (Found via ansi-tests).
+
+  * Bugfixes:
+    - Compiler can now derive the rank of an array, even if the array
+      is not simple.
+    - Fix off-by-one bug in ~R which prevents printing numbers from
+      10^63 to 10^66-1.  10^63 is a vigintillion.
+    - The compiler and interpreter should now handle slot-value the
+      same.  Previously, different results were returned for things
+      like (slot-value foo :a).
+    - UNIX-GETGRNAM is now defined for Darwin (x86 and ppc).
+    - UNIX-GETPWUID is defined for all BSD systems.
+    - Type-derivation for EXPT no longer causes errors in some
+      situations.  The computed bounds were of the wrong type for the
+      resulting type specifier.
+    - Pathname printer no longer produces an error for (MAKE-PATHNAME
+      :HOST NIL :TYPE "foo").  It returns #P(:HOST NIL :TYPE "foo")
+      now. 
+    - Type derivation for DOUBLE-DOUBLE-FLOAT arithmetic should be
+      working.  Previously, all arithmetic operations would just
+      return DOUBLE-DOUBLE-FLOAT even though the compiler should have
+      been able to figure out a tighter result.
+    - When SCALE-FLOAT would underflow, it would always return 0f0,
+      instead of a floating-point zero of the correct type.
+    - Fix some issues in creating the debug arglist string when the
+      arglist contains items that can't be printed readably.
+    - DIRECTORY is now faster for directories with a large number of
+      files.  
+    - RANDOM is now much faster on all platforms for numbers upto
+      #xffffffff.  This is an incompatible change from previous
+      releases because the numbers produced may be different from
+      before.  
+    - The small bias in RANDOM for integer args up to 32 bits long
+      should now be gone.
+    - Improved type derivation for LOGAND when one arg is bounded but
+      the other is not.
+    - Some issues with tracing on sparc and ppc have been fixed.  This
+      usually manifests itself with a segfault just after the function
+      result is printed.
+    - Fixed bug on sparc where C-c sometimes causes a segfault.  We
+      now handle the case where siginfo_t is NULL, which can also
+      happen on other architectures.
+    - The interpreter catches invalid EVAL-WHEN situations just like
+      the compiler, instead of silently ignoring them.
+    - FLOAT-PRECISION supports double-double floats.
+    - Tracing should now be working on Darwin/x86.  Previously,
+      certain cases would cause Lisp to segfault in bad ways where you
+      could not return to the repl.  Do not need to do encapsulation
+      by default anymore.
+    - The bounds for type (REAL lo hi) are computed better now.  The
+      REAL type is a union of SINGLE-FLOAT, DOUBLE-FLOAT, and
+      DOUBLE-DOUBLE-FLOAT.  The computed bounds for
+      DOUBLE-DOUBLE-FLOAT only had double-float accuracy if the bound
+      for REAL was a rational.
+    - The FLOAT type now requires that the bounds, if given, are
+      floats.  Previously, any real type would be accepted.  This
+      makes FLOAT behave like SINGLE-FLOAT and DOUBLE-FLOAT which
+      required the bounds to be a float of the appropriate type.
+
+  * Trac Tickets:
+    - #16: Read-time hash-table issue
+      Fixed.
+    - #17: LOOP NAMED NIL has no effect
+      Fixed.
+    - #18: Modular arith bug 1
+      Fixed
+    - #19: Modular arith bug 2
+      Fixed by not doing modular arith if the args are known to be
+      fixnums.
+    - #20: Modular arith bug?
+      Fixed via the fix for Trac #21.  The original workaround has
+      been removed.
+    - #24: Float contagion for expt
+      Float contagion is applied to the arguments before computing
+      expt.
+    - #21: Modular arith bug 3
+      Fixed by delaying the logand defoptimizer.
+    - #15: x86 double-float issue
+      Fixed when using SSE2 support.  We will not fix this for x87.
+    - #25: Compiler bug
+      Fixed.
+    - #26: slot-value type check
+      Fixed for some cases.  When used in methods, slot-value may not
+      do the type check.if the object is not a argument to the method.
+    - #29: make-condition doesn't accept class objects
+      Fixed.
+
+  * Other changes:
+    - IS1, IS2, IS3, and IS4 are recognized character names for the
+      ASCII control codes US, RS, GS, FS, respectively.
+    - Added OPEN-NETWORK-STREAM and ACCEPT-NETWORK-STREAM functions.
+    - When initializing a random state, try to read 627 words from
+      /dev/urandom to initialize the entire state vector with random
+      bits.  Previously, only one word was read.
+    - A seed of 0 is allowed in KERNEL:INIT-RANDOM-STATE.
+    - Updated User guide to include more examples of tracing.
+    - Enable gencgc page protection on x86/darwin.  This can speed up
+      GC a bit.  (Not measured.)
+    - Bignum truncate is significantly faster.  Some cl-bench
+      benchmarks are now almost twice as fast.
+    - The continuable error produced by raising an integer to a power
+      exceeding *intexp-maximum-exponent* is now a restart, giving the
+      user the option to continue and update the limit to the new
+      power.
+    - The Darwin/x86 port can run on Mac OS X 10.4 or later.
+
+  * Improvements to the PCL implementation of CLOS:
+    - The compiler and interpreter should handle SLOT-VALUE the same
+      way.  Previously, (SLOT-VALUE obj :a) would behave differently
+      in the compiler and interpreter.
+    - Some issues with get-accessor-method-function and
+      slot-value-using-class have been fixed.
+      Get-accessor-method-function was causing an error to be signaled
+      incorrectly.
+    - (setf (slot-value <obj> <slot>) <new>) will now signal an error
+      in some situations when the new value is not of the correct
+      declared type for slot.
+
+  * Changes to building procedure:
+    - For Linux, custom CFLAGS, CC, and LDFLAGS are supported.
+      Requested by Stelian Ionescu for Gentoo support.
+    - The FreeBSD config file is now named Config.x86_freebsd, which
+      is equivalent to Config.FreeBSD_gencgc, which is deprecated.
+    - The Linux config file is now named Config.x86_linux, which is
+      the equivalent to Config.linux_gencgc, which is deprecated.
+
+  * Known issues:
+    - Executables (via save-lisp) on recent FreeBSD versions are
+      currently not working.  The executable is created, but the
+      resulting executable doesn't work correctly.
+
+This release is not binary compatible with code compiled using CMUCL
+19e; you will need to recompile FASL files. 
+
+See <URL:http://www.cons.org/cmucl/> for download information,
+guidelines on reporting bugs, and mailing list details.
+
+
+We hope you enjoy using this release of CMUCL!
+

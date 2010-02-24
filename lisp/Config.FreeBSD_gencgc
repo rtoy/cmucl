@@ -1,0 +1,55 @@
+# -*- Mode: makefile -*-
+PATH1 = ../../src/lisp
+vpath %.h $(PATH1)
+vpath %.c $(PATH1)
+vpath %.S $(PATH1)
+
+CC = gcc
+LD = ld
+CPP = cpp
+
+# Enable support for :linkage-table feature.
+ifdef FEATURE_LINKAGE_TABLE
+LINKAGE = -DLINKAGE_TABLE
+endif
+
+# Enable support for generational GC
+ifdef FEATURE_GENCGC
+GENCGC = -DGENCGC
+GC_SRC = gencgc.c
+endif
+
+# Enable support for SSE2.  If FEATURE_X87 is set, we want SSE2
+# support in the C code too so that the same binary is built in both
+# cases.  If neither is set, then we don't want any SSE2 support at
+# all.
+ifdef FEATURE_X87
+SSE2 = -DFEATURE_SSE2
+else
+ifdef FEATURE_SSE2
+SSE2 = -DFEATURE_SSE2
+endif
+endif
+
+RUNTIME = -Di386 $(GENCGC) $(LINKAGE) $(SSE2)
+
+ifneq (,$(filter 2% 3%, $(shell $(CC) -dumpversion)))
+CPPFLAGS = -I. -I$(PATH1) -I-
+else
+CPPFLAGS = -iquote . -iquote $(PATH1)
+endif
+CPPFLAGS += $(RUNTIME)
+
+CFLAGS = -Wstrict-prototypes -Wall -O2 -g 
+ASFLAGS = -g 
+NM = nm -gp
+UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
+ASSEM_SRC = x86-assem.S
+ARCH_SRC = x86-arch.c
+OS_SRC = FreeBSD-os.c os-common.c elf.c e_rem_pio2.c k_rem_pio2.c undefineds.c
+OS_LINK_FLAGS = -dynamic -export-dynamic
+OS_LIBS = -lutil
+
+# This has aliasing problems, so turn off aliasing.
+e_rem_pio2.o : e_rem_pio2.c
+	$(CC) -c -fno-strict-aliasing -ffloat-store $(CFLAGS)  $<

@@ -1,0 +1,117 @@
+========================== C M U C L  20 b =============================
+
+[--- WORK IN PROGRESS ---]
+
+The CMUCL project is pleased to announce the release of CMUCL 20b.
+This is a major release which contains numerous enhancements and
+bug fixes from the 19f release.
+
+CMUCL is a free, high performance implementation of the Common Lisp
+programming language which runs on most major Unix platforms. It
+mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
+sophisticated native code compiler; a powerful foreign function
+interface; an implementation of CLOS, the Common Lisp Object System,
+which includes multi-methods and a meta-object protocol; a source-level
+debugger and code profiler; and an Emacs-like editor implemented in
+Common Lisp. CMUCL is maintained by a team of volunteers collaborating
+over the Internet, and is mostly in the public domain.
+
+New in this release:
+
+  * Known issues:
+    - CMUCL cannot create working executable images anymore.
+    - FILE-POSITION is sometimes off by 2 (4) for input files for
+      UTF-16 (UTF-32) encodings.  This is caused by the BOM
+      (byte-order mark) which is essentially never seen by Lisp.
+
+  * Feature enhancements:
+    - Read operations using an external format of utf8 are now much
+      faster.  Some simple tests on Linux shows that read-line now
+      only takes 40% as much time.  Sparc shows 60% as much time.
+    - ASCII external format added.
+    - Support for static arrays added.  These are allocated in foreign
+      space and are never moved by GC.  When the arrays are no longer
+      referenced, they are properly freed.  To create an array, use
+      new the :ALLOCATION :MALLOC parameter to MAKE-ARRAY.  Currently,
+      only arrays of character; 8, 16, and 32-bit integers (signed and
+      unsigned); single and double floats; and complex single and
+      double floats are supported.
+    - FROUND is much faster for single and double float numbers.  This
+      is not currently available for x87 (due to potential roundoff
+      errors), but is available everywhere else.
+
+  * ANSI compliance fixes:
+
+  * Bugfixes:
+    - On Unicode builds, printing of '|\|| and '|`| was incorrect
+      because no escapes were printed.  This is fixed now.
+    - Fixed issue with SSE2 support.  The vops for complex +/- float
+      would add random junk to the imaginary part of the result.
+    - UNIX-SYSINFO was broken for Unicode builds, which affected
+      MACHINE-TYPE and MACHINE-VERSION.
+    - Type predicates for double-double float and complex
+      double-double float arrays are now done inline.
+    - UNIX:UNIX-EXECVE was not converting Lisp strings to C strings on
+      Unicode builds.
+    - When continuing from the INTEXP-LIMIT-ERROR condition (for
+      raising an integer to a large integer power) and setting a new
+      limit, the limit was set to the power.  We really wanted the
+      absolute valie of the power to used as the new limit.
+    - FILE-POSITION was returning incorrect values for file streams on
+      unicode builds.  This is fixed now.  But also see the known
+      issue listed above.
+    - The error-output and trace-file files for COMPILE-FILE are now
+      opened using the same external format as specified in
+      COMPILE-FILE.  Previously, they were opened using the default
+      external format.  This meant that these files could lose
+      information if the default format could not represent the
+      characters in the source file.
+    - Handling of source files in the debugger is better now for
+      unicode builds.  The source files are opened using the same
+      format as used to compile them.  Previously, the default format
+      was used, which would be wrong if the file is in a different
+      format.
+    - CMUCL no longer segfaults on Linux when running on a kernel
+      without COMPAT_BRK.  CMUCL will set the personality
+      appropriately and re-exec itself.
+    - GET-MACRO-CHARACTER would return the wrong second value because
+      *READTABLE* was always being used instead of the specified
+      readtable. 
+
+  * Trac Tickets:
+    #33: get-dispatch-macro-character doesn't signal errors in
+      compiled code
+      Fixed.
+    #22: sun4_solaris_sunc config uses gcc to build motif
+      This is fixed.  If Sun C is used to build lisp, it is also used
+      to build motifd.
+
+  * Other changes:
+    - :freebsd4 is no longer a *feature*
+    - Added UNIX-GETENV, UNIX-SETENV, UNIX-PUTENV, and UNIX-UNSETENV,
+      in the UNIX package to allow access to these C functions.
+    - OCTETS-TO-STRING has changed.
+      o The output string is no longer automatically extended.
+      o Parameters can be given to specify the start and end of the
+        octet array and for the start and end of the string.
+        (These all default to the beginning and end of the arrays.)
+    - UNIX-GETRLIMIT added for solaris and darwin/x86.
+    - TRANSLATE-PATHNAMES now creates the resulting path to be an
+      absolute or relative path according to whether the TO pathname
+      is abslute or relative.  Previously, the result was take from
+      the SOURCE pathname, except if TO were absolute, in which case
+      the result was absolute.
+
+  * Improvements to the PCL implementation of CLOS:
+
+  * Changes to building procedure:
+
+This release is not binary compatible with code compiled using CMUCL
+20a; you will need to recompile FASL files. 
+
+See <URL:http://www.cons.org/cmucl/> for download information,
+guidelines on reporting bugs, and mailing list details.
+
+
+We hope you enjoy using this release of CMUCL!
+

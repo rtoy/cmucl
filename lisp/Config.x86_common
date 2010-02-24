@@ -1,0 +1,67 @@
+# -*- Mode: makefile -*-
+
+# These tell gmake where to look for .h, .c and .S files.  Mostly for
+# building the binary outside of the src tree.
+
+PATH1 = ../../src/lisp
+vpath %.h $(PATH1)
+vpath %.c $(PATH1)
+vpath %.S $(PATH1)
+
+CPP_DEFINE_OPTIONS := -Di386
+
+# Enable support for :linkage-table feature.
+ifdef FEATURE_LINKAGE_TABLE
+CPP_DEFINE_OPTIONS += -DLINKAGE_TABLE
+endif
+
+# Enable support for generational GC
+ifdef FEATURE_GENCGC
+CPP_DEFINE_OPTIONS += -DGENCGC
+GC_SRC := gencgc.c
+else
+GC_SRC := cgc.c
+CPP_DEFINE_OPTIONS += -DWANT_CGC
+endif
+
+# Enable support for SSE2.  If FEATURE_X87 is set, we want SSE2
+# support in the C code too so that the same binary is built in both
+# cases.  If neither is set, then we don't want any SSE2 support at
+# all.
+ifdef FEATURE_X87
+CPP_DEFINE_OPTIONS += -DFEATURE_SSE2
+else
+ifdef FEATURE_SSE2
+CPP_DEFINE_OPTIONS += -DFEATURE_SSE2
+endif
+endif
+
+ifdef FEATURE_UNICODE
+CPP_DEFINE_OPTIONS += -DUNICODE
+endif
+
+CC = gcc
+LD = ld
+
+ifeq ($(filter 2% 3%, $(shell $(CC) -dumpversion)),)
+CPP_INCLUDE_OPTIONS := -iquote . -iquote $(PATH1)
+else
+CPP_INCLUDE_OPTIONS := -I. -I$(PATH1) -I-
+endif
+
+CPPFLAGS := $(CPP_DEFINE_OPTIONS) $(CPP_INCLUDE_OPTIONS) 
+CFLAGS += -Wstrict-prototypes -Wall -O2 -g
+ASFLAGS = -g 
+
+ASSEM_SRC = x86-assem.S
+ARCH_SRC = x86-arch.c
+OS_SRC = os-common.c e_rem_pio2.c k_rem_pio2.c 
+
+NM = nm -gp
+DEPEND = $(CC) -MM -E
+DEPEND_FLAGS = 
+
+# This no longer has aliasing problems, so no need to use
+# -ffloat-store and -fno-strict-aliasing anymore.
+e_rem_pio2.o : e_rem_pio2.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $<

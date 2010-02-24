@@ -1,0 +1,24 @@
+# This is basically the contents of /usr/lib/ld/map.default, but
+# modified for our purposes.
+text = V0x10000;
+
+# Add core sections for Lisp
+#
+# We make these files be NOTE sections so that it doesn't mess up the
+# linker and the resulting executable.  We'd really like to use LOAD,
+# but when we do that the linker puts sections (like the procedure
+# linkage table!) into the dynamic space.
+
+corro  = NOTE;
+corro : CORRO : CORRO.o;
+corsta = NOTE;
+corsta : CORSTA : CORSTA.o;
+cordyn = NOTE;
+cordyn : CORDYN : CORDYN.o;
+
+{
+	global:
+		builtin_image_flag    = data V@BIFLAG@ S4;
+		initial_function_addr = data V@IFADDR@ S4;
+};
+

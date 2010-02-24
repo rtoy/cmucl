@@ -1,0 +1,101 @@
+;; -*- Mode: Lisp -*-
+;;
+;; List of aliases for external formats.
+;; The first column is the alias; the second is the implementation name
+;;
+;; The alias can also be a list, so, for example, windows-western can
+;; be aliased to (cp1252 crlf)
+
+null		void
+
+latin1		iso8859-1
+latin-1		iso8859-1
+iso-8859-1	iso8859-1
+
+latin2		iso8859-2
+latin-2		iso8859-2
+iso-8859-2	iso8859-2
+
+latin3		iso8859-3
+latin-3		iso8859-3
+iso-8859-3	iso8859-3
+
+latin4		iso8859-4
+latin-4		iso8859-4
+iso-8859-4	iso8859-4
+
+cyrillic	iso8859-5
+iso-8859-5	iso8859-5
+arabic		iso8859-6
+iso-8859-6	iso8859-6
+
+greek		iso8859-7
+iso-8859-7	iso8859-7
+
+hebrew		iso8859-8
+iso-8859-8	iso8859-8
+
+latin5		iso8859-9
+latin-5		iso8859-9
+iso-8859-9	iso8859-9
+
+latin6		iso8859-10
+latin-6		iso8859-10
+iso-8859-10	iso8859-10
+
+latin7		iso8859-13
+latin-7		iso8859-13
+iso-8859-13	iso8859-13
+
+latin8		iso8859-14
+latin-8		iso8859-14
+iso-8859-14	iso8859-14
+
+latin9		iso8859-15
+latin-9		iso8859-15
+iso-8859-15	iso8859-15
+
+utf		utf-8
+utf8		utf-8
+
+;; UTF-16 will recognize a BOM at the beginning of the file and will
+;; output the BOM.  (UTF-16 output is always big-endian.)  UTF-16BE
+;; and UTF-16LE do not recognize the BOM will not output the BOM.
+;; This is what Unicode standard says for UTF-16 formats.
+utf16		utf-16
+utf-16be	utf-16-be
+utf16-be	utf-16-be
+utf-16le	utf-16-le
+utf16-le	utf-16-le
+utf16be		utf-16-be
+utf16le		utf-16-le
+
+;; Like UTF-16, UTF-32 recognizes the BOM and outputs the BOM.  UTF-32
+;; output is always big-endian.  UTF-32BE and UTF-32LE neither
+;; recognizes the BOM on input nor write the BOM on output.
+utf32		utf-32
+utf32-be	utf-32-be
+utf-32be	utf-32-be
+utf32-le	utf-32-le
+utf-32le	utf-32-le
+utf32be		utf-32-be
+utf32le		utf-32-le
+
+;;ucs2		ucs-2
+;;ucs4		ucs-4
+
+windows-1252	cp1252
+windows-cp1252	cp1252
+windows-latin1	cp1252
+
+;; These are not yet implemented
+;;iso-2022-jp	iso2022-jp
+;;iso2022jp	iso2022-jp
+;;jis7		iso2022-jp
+;;ujis		euc-jp
+;;eucjp		euc-jp
+
+;; This is a composing format for converting DOS end-of-line
+;; characters to Lisp #\newline character.  On output, #\newline is
+;; converted to CR LF sequence.
+dos		crlf

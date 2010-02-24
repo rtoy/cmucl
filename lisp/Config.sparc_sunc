@@ -1,0 +1,26 @@
+# -*- Mode: makefile -*-
+
+include Config.sparc_common
+
+# For v8plus support (allows 64-bit integer support on V9
+# architectures), uncomment the definitions for CC_V8PLUS and
+# AS_V8PLUS.  The -Wa,xarch=v8plus option tells the assembler to
+# accept v8plus instructions and generate a v8plus object files and
+# executable.
+#
+# However, we should also make sure the binary is marked as v8plus by
+# enabling AS_V8PLUS whenever we have the :sparc-v9 *feature* enabled
+# because we really are a v8plus application by using some of the v9
+# instructions, even if we don't use the 64-bit registers.
+
+ifdef FEATURE_SPARC_V9
+# For SunStudio 11, use -xarch=v8plus.  For SunStudio 12, that is
+# deprecated; use -m32 -xarch=sparc.
+CC_V8PLUS = -m32 -xarch=sparc
+AS_V8PLUS = -m32 -xarch=sparc
+endif
+
+CC = cc -xlibmieee -O
+CPP = cc -E
+DEPEND_FLAGS = -xM
+ASFLAGS = $(AS_V8PLUS)

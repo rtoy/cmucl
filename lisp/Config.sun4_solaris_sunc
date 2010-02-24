@@ -1,0 +1,60 @@
+# -*- Mode: makefile -*-
+# These tell gmake where to look for .h, .c and .S files.  Mostly for
+# building the binary outside of the src tree.
+
+PATH1 = ../../src/lisp
+vpath %.h .:$(PATH1)
+vpath %.c .:$(PATH1)
+vpath %.S .:$(PATH1)
+
+# For v8plus support (allows 64-bit integer support on V9
+# architectures), uncomment the definitions for CC_V8PLUS and
+# AS_V8PLUS.  The -Wa,xarch=v8plus option tells the assembler to
+# accept v8plus instructions and generate a v8plus object files and
+# executable.
+#
+# However, we should also make sure the binary is marked as v8plus by
+# enabling AS_V8PLUS whenever we have the :sparc-v9 *feature* enabled
+# because we really are a v8plus application by using some of the v9
+# instructions, even if we don't use the 64-bit registers.
+
+ifdef FEATURE_SPARC_V9
+CC_V8PLUS = -xarch=v8plus
+AS_V8PLUS = -xarch=v8plus
+endif
+
+# Enable support for :linkage-table feature.
+
+ifdef FEATURE_LINKAGE_TABLE
+LINKAGE = -DLINKAGE_TABLE
+endif
+
+# Enable support for generational GC
+ifdef FEATURE_GENCGC
+GENCGC = -DGENCGC
+GC_SRC = gencgc.c
+endif
+
+# Enable support for Unicode
+ifdef FEATURE_UNICODE
+UNICODE = -DUNICODE
+endif
+
+CPPFLAGS = -I. -I$(PATH1) -DSOLARIS -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC) $(UNICODE)
+
+
+CC = cc -xlibmieee
+CPP = cc -E
+CFLAGS = -g $(CC_V8PLUS)
+ASFLAGS = $(AS_V8PLUS)
+
+NM = $(PATH1)/solaris-nm
+ASSEM_SRC = sparc-assem.S
+ARCH_SRC = sparc-arch.c
+
+DEPEND=$(CC) 
+DEPEND_FLAGS = -xM
+OS_SRC = solaris-os.c os-common.c undefineds.c elf.c k_rem_pio2.c
+OS_LINK_FLAGS=
+OS_LIBS= -lsocket -lnsl -ldl
+

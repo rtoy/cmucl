@@ -1,0 +1,172 @@
+========================== C M U C L  20 a =============================
+
+The CMUCL project is pleased to announce the release of CMUCL 20a.
+This is a major release which contains numerous enhancements and
+bug fixes from the 19f release.
+
+CMUCL is a free, high performance implementation of the Common Lisp
+programming language which runs on most major Unix platforms. It
+mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
+sophisticated native code compiler; a powerful foreign function
+interface; an implementation of CLOS, the Common Lisp Object System,
+which includes multi-methods and a meta-object protocol; a source-level
+debugger and code profiler; and an Emacs-like editor implemented in
+Common Lisp. CMUCL is maintained by a team of volunteers collaborating
+over the Internet, and is mostly in the public domain.
+
+New in this release:
+
+  * Known issues:
+    - On Linux and FreeBSD, it may not be possible call SAVE-LISP and
+      create executables.  This seems to be broken on FreeBSD.  On
+      Linux, it seems to depend on what version of Linux is used to
+      create the executable.  Redhat Enterprise Linux appears to be
+      ok, but Open SuSE 10.x is not.
+
+  * Feature enhancements:
+    - Support for Unicode has been added.  You have Unicode support if
+      *FEATURES* includes :UNICODE.
+      o CHAR-CODE-LIMIT is 65536.  
+      o There is only one character type;  CHARACTER and BASE-CHAR are
+        the same types.
+      o There is only one string type; STRING and BASE-STRING are the
+        same type. All strings are UTF-16 strings and therefore
+        contain UTF-16 surrogate pairs.  While most string functions
+        correctly handle surrogate pairs, not all do.  It is up to the
+        user to handle this.  In particular, processing of strings on
+        a character-by-character basis will need to handle surrogate
+        pairs. 
+      o External formats are supported.  Functions that need to know
+        the external format take an :EXTERNAL-FORMAT keyword argument
+        to specify the format.
+        + The special variable STREAM:*DEFAULT-EXTERNAL-FORMAT*
+          specifies the default format to be used for all streams.
+          The default value is :ISO8859-1. 
+        + The standard streams, *STANDARD-INPUT*, *STANDARD-OUTPUT*,
+          and *STANDARD-ERROR* all default to
+          *DEFAULT-EXTERNAL-FORMAT* (which itself defaults to
+          :ISO8859-1).  You can change the encoding used for these
+          streams by calling STREAM:SET-SYSTEM-EXTERNAL-FORMAT to set
+          the encoding for all three streams.  Alternatively, you can
+          use (SETF EXTERNAL-FORMAT) to change the format for each
+          stream.
+        + Many external formats are supported.  The complete list is
+          in aliases, but we support at least :ISO-8859-1, :UTF-8,
+          :UTF-16, :UTF-32, and the composing external format :CRLF.
+       o CHAR-LESSP and friends perform case-folding by converting to
+         lowercase.  (The non-Unicode version converted to uppercase.)
+       o STRING<, STRING>, and friends compare strings in codepoint order.
+       o STRING-LESSP, STRING-GREATERP, and friends compare strings in
+         codepoint order after doing a case-folding operation on each
+         codepoint.  The case-folding operation converts each
+         codepoint to the corresponding lowercase codepoint.
+       o LISP:UTF16-STRING-P checks to see if a string is a valid
+         UTF-16 encoded string.
+       o Unicode normalization forms are supported via
+         LISP:STRING-TO-NFC, LISP:STRING-TO-NFKC, LISP:STRING-TO-NFD,
+         and LISP:STRING-TO-NFKD.
+       o Symbols are always normalized to NFC form.
+
+    - WRITE-VECTOR and READ-VECTOR support vectors of with element
+      sizes of 1 bit, 2 bits and 4 bits.  For :NETWORK-ORDER, the
+      bytes are written such that the lowest indexed element is
+      written to the most significant part of a byte.
+
+  * ANSI compliance fixes:
+    - MERGE-PATHNAMES no longer generates pathnames whose directory
+      component doesn't start with either :ABSOLUTE or :RELATIVE.
+      MERGE-PATHNAMES also signals errors if the generated pathname
+      directory is invalid (such as :ABSOLUTE followed by :BACK).
+
+  * Bugfixes:
+    - CMUCL sometimes gets "stuck" during compilation where it is
+      trying to simplify the union of a large number of disjoint
+      numeric types.  Previously, we handled the case of integer
+      types.  Extend this to handle floats as well.
+    - SXHASH was computing the same hash code for upper and lower case
+      characters by up-casing the character.  This isn't necessary
+      since the characters are not EQUAL, so make SXHASH return
+      different values for upper and lower case letter.
+    - WRITE-VECTOR was not writing out enough data when no
+      byte-swapping is needed and the end index was not given.
+      (Confusion about the length of the vector versus the index as an
+      octet count, not element count.)
+    - Motif (CLM) should work with Unicode.
+    - The stream created by WITH-INPUT-FROM-STREAM was not properly
+      closed.
+    - SXHASH was returning different values for -0f0 and -0d0 for
+      compiled and interpreted code.  They both return the same value
+      now.
+    - Some issues with potential spurious floating-point exceptions
+      with complex arithmetic on x86 with SSE2 have been fixed.
+      (Random junk in unused parts of an sse2 register could cause
+      spurious FP exceptions.)
+    - Numeric contagion for complex + real and complex - real was not
+      done correctly in compiled code.  Proper contagion is now done
+      by converting the real to a complex before performing the
+      operation. 
+    - CMUCL can now handle the X11 local Unix display connection on
+      Mac OS X.
+    - SETF-SLOT-VALUE-USING-CLASS-DFUN no longer signals errors when
+      checking the new value against the declared slot type when the
+      declared slot type was too hairy for TYPEP.
+    - GENTEMP no longer generates the wrong symbol if the
+      pretty-printer is used.
+    - Some issues with slow allocation with gencgc have been worked
+      around.  Certain allocation sequences were causing all
+      allocations to be done out-of-line into an almost full
+      allocation region.  This was especially evident on sparc and ppc
+      when running the ansi test suite from gcl on a unicode build.
+      CMUCL will attempt to detect this and abandon the region,
+      allowing inline allocation to be done again.
+    - For x86 builds, the floating-point precision was incorrectly set
+      to 64 bits (long-float) instead of 53 bits (double-float).  This
+      is fixed now.
+
+  * Trac Tickets:
+    #31: pathname bug with :case :common
+    Fixed.  The common case is applied to each part of the directory,
+    not to the directory as a whole.
+
+  * Other changes:
+    - SOFTWARE-VERSION may return different results than previously.
+      UNIX:UNIX-UNAME is now used to obtain the software version on
+      Linux and Solaris.
+    - User's manual updated with a section on internationalization
+      (unicode).
+    - DESCRIBE on characters includes the character's code and name.
+    - CLX updated to the portable clx version from Christophe Rhodes
+      darcs repository of 2009-06-16.
+    - make-dist.sh will also install the source code in the specified
+      directory if -I and -S are given.
+    - CMUCL contribs (in the src/contribs directory) are now
+      distributed as part of extras package.  The contribs can be
+      loaded by first using (require "cmu-contribs").  Then the
+      individual contribs can be loaded with require.  The available
+      contribs are, "contrib-demos", "contrib-follow-mouse",
+      "contrib-games-feebs", "contrib-hist", "contrib-psgraph",
+      "contrib-ops", "contrib-embedded-c", "contrib-sprof".  The names
+      must be given as lower case strings.  These are not officially
+      supported as part of CMUCL, but users may find them useful.
+
+  * Improvements to the PCL implementation of CLOS:
+
+  * Changes to building procedure:
+    - The sparc config files are now named sparc_gcc and sparc_sunc,
+      which use gcc and Sun C, respectively, for the C compiler.  Only
+      Solaris is supported.  The old sun4_solaris_gcc and
+      sun4_solaris_sunc configs are deprecated.
+    - The Linux config file is x86_linux, which supports gencgc.  The
+      old cgc config is no longer supported.
+    - The FreeBSD config file is x86_freebsd, which supports gencgc.  The
+      old cgc config is no longer supported.
+
+This release is not binary compatible with code compiled using CMUCL
+19f; you will need to recompile FASL files. 
+
+See <URL:http://www.cons.org/cmucl/> for download information,
+guidelines on reporting bugs, and mailing list details.
+
+
+We hope you enjoy using this release of CMUCL!
+
