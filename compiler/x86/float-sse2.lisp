@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.10.4.1 2010/02/08 17:15:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.10.4.2 2010/02/25 00:33:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2034,7 +2034,7 @@
 	       (unless (location= y r)
 		 (inst movaps r y))	; r = yi|yr or 0|0|yi|yr
 	       (inst ,fmul r t0)))))))
-  (complex-*-float single mulps movlhps 4)
+  (complex-*-float single mulps unpcklps 4)
   (complex-*-float double mulpd unpcklpd 4))
 
 ;; Divide a complex by a real
