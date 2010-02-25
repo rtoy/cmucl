@@ -7,13 +7,24 @@
 	 (let ((case (cond ((every #'upper-case-p word) :uppercase)
 			   ((upper-case-p (char word 0)) :capitalized)
 			   (t :lowercase)))
+	       (orig-word word)
 	       (word (string-downcase word)))
 	   (flet ((casify (string)
 		    (case case
 		      (:uppercase (nstring-upcase string))
 		      (:lowercase (nstring-downcase string))
 		      (:capitalized (nstring-capitalize string)))))
-	     (cond ((position (char word 0) "AEIOUaeiou")
+	     (cond ((and (char= (char word 0) #\*)
+			 (char= (char word (1- (length word))) #\*))
+		    orig-word)
+		   ((eq case :uppercase)
+		    ;; For CMUCL's docstrings, if the word is
+		    ;; uppercase, let's not change it.  This usually
+		    ;; means it a reference to either a Lisp function
+		    ;; or variable that should probably not be
+		    ;; changed.
+		    (casify word))
+		   ((position (char word 0) "AEIOUaeiou")
 		    (casify (concatenate 'string word "way")))
 		   ((and (> (length word) 3)
 			 (member (subseq word 0 3)
@@ -33,13 +44,25 @@
 					 (subseq word 0 1) "ay")))))))))
 
 (defun latinize (string)
-  (with-output-to-string (str)
-    (loop for i = -1 then k
-	   as j = 0 then (or (position-if #'alpha-char-p string :start k)
-			     (length string))
-	   as k = (position-if-not #'alpha-char-p string :start j)
-       unless (minusp i) do (write-string string str :start i :end j)
-       do (write-string (latinize-1 (subseq string j k)) str) while k)))
+  (flet ((word-constituent-p (c)
+	   (or (char= c #\*)
+	       (alpha-char-p c)))
+	 (word-constituent-*-p (c)
+	   (or (char= c #\*)
+	       (char= c #\-)
+	       (alpha-char-p c))))
+    (with-output-to-string (str)
+      (loop for i = -1 then k
+	    as j = 0 then
+	       (or (position-if #'word-constituent-p string :start k)
+		   (length string))
+	    as k = (if (and (< j (length string))
+			    (char= (char string j) #\*))
+		       (position-if-not #'word-constituent-*-p string :start j)
+		       (position-if-not #'word-constituent-p string :start j))
+	    unless (minusp i) do (write-string string str :start i :end j)
+	    do (write-string (latinize-1 (subseq string j k)) str)
+	    while k))))
 
 
 (defconstant +piglatin-header+
