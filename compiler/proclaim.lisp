@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.44.24.2 2010/02/11 02:19:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.44.24.3 2010/02/25 03:59:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -135,7 +135,7 @@
                           (char= (char name 0) #\&))))
           (unless (member arg lambda-list-keywords)
             (compiler-note
-             _"~S uses lambda-list keyword naming convention, but is not a recognized lambda-list keyword."
+             _N"~S uses lambda-list keyword naming convention, but is not a recognized lambda-list keyword."
              arg)))
 	(if (member arg lambda-list-keywords)
 	    (ecase arg

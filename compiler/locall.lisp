@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.60.24.2 2010/02/11 01:33:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.60.24.3 2010/02/25 03:59:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -342,7 +342,7 @@
 		 res)
 		(t
 		 (let ((*compiler-error-context* call))
-		   (compiler-note _"Couldn't inline expand because expansion ~
+		   (compiler-note _N"Couldn't inline expand because expansion ~
 				   calls this let-converted local function:~
 				   ~%  ~S"
 				  (leaf-name res)))
@@ -590,7 +590,7 @@
 	  (let ((cont (first key)))
 	    (unless (constant-continuation-p cont)
 	      (when flame
-		(compiler-note _"Non-constant keyword in keyword call."))
+		(compiler-note _N"Non-constant keyword in keyword call."))
 	      (setf (basic-combination-kind call) :error)
 	      (return-from convert-more-call))
 	    
@@ -605,7 +605,7 @@
 			       allowp (continuation-value val)))
 			(t
 			 (when flame
-			   (compiler-note _"non-constant :ALLOW-OTHER-KEYS value"))
+			   (compiler-note _N"non-constant :ALLOW-OTHER-KEYS value"))
 			 (setf (basic-combination-kind call) :error)
 			 (return-from convert-more-call)))))
 	      (dolist (var (key-vars)

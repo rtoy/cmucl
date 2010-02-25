@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.136.2.2 2010/02/11 00:04:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.136.2.3 2010/02/25 03:59:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -731,7 +731,7 @@
 		   'single-float))
 		(t 
 		 (compiler-note
-		  _"Unable to avoid inline argument range check~@
+		  _N"Unable to avoid inline argument range check~@
                       because the argument range (~s) was not within 2^~D"
 		  (type-specifier (continuation-type x))
 		  limit)
@@ -747,7 +747,7 @@
 		 `(,prim-quick x))
 		(t 
 		 (compiler-note
-		  _"Unable to avoid inline argument range check~@
+		  _N"Unable to avoid inline argument range check~@
                    because the argument range (~s) was not within 2^~D"
 		  (type-specifier (continuation-type x))
 		  limit)
@@ -873,11 +873,11 @@
     ;; Check that the ARG bounds are correctly canonicalised.
     (when (and arg-lo (floatp arg-lo-val) (zerop arg-lo-val) (consp arg-lo)
 	       (minusp (float-sign arg-lo-val)))
-      (compiler-note _"Float zero bound ~s not correctly canonicalised?" arg-lo)
+      (compiler-note _N"Float zero bound ~s not correctly canonicalised?" arg-lo)
       (setq arg-lo 0l0 arg-lo-val 0l0))
     (when (and arg-hi (zerop arg-hi-val) (floatp arg-hi-val) (consp arg-hi)
 	       (plusp (float-sign arg-hi-val)))
-      (compiler-note _"Float zero bound ~s not correctly canonicalised?" arg-hi)
+      (compiler-note _N"Float zero bound ~s not correctly canonicalised?" arg-hi)
       (setq arg-hi -0l0 arg-hi-val -0l0))
     (flet ((fp-neg-zero-p (f)	; Is F -0.0?
 	     (and (floatp f) (zerop f) (minusp (float-sign f))))

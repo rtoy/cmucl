@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.43.12.2 2010/02/10 17:38:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.43.12.3 2010/02/25 03:59:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -327,7 +327,7 @@
 				   default-initial-element))))
 		(unless (csubtypep (ctype-of default-initial-element)
 				   eltype-type)
-		  (compiler-note _"Default initial element ~s is not a ~s."
+		  (compiler-note _N"Default initial element ~s is not a ~s."
 				 default-initial-element eltype))
 		constructor)
 	       (t

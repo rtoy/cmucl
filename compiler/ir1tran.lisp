@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.173.32.2 2010/02/11 01:33:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.173.32.3 2010/02/25 03:59:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -815,7 +815,7 @@
       (leaf
        (when (lambda-var-p var)
 	 (when (lambda-var-ignorep var)
-	   (compiler-note _"Reading an ignored variable: ~S." name))
+	   (compiler-note _N"Reading an ignored variable: ~S." name))
 	 ;;
 	 ;; FIXME: There's a quirk somewhere when recording this
 	 ;; dependency, which I don't have to time to debug right now.
@@ -1205,7 +1205,7 @@
 	   (compiler-error _"Declaring symbol-macro ~S special." name))
 	  (lambda-var
 	   (when (lambda-var-ignorep var)
-	     (compiler-note _"Ignored variable ~S is being declared special."
+	     (compiler-note _N"Ignored variable ~S is being declared special."
 			    name))
 	   (setf (lambda-var-specvar var)
 		 (specvar-for-binding name)))
@@ -1267,7 +1267,7 @@
 	      (etypecase found
 		(functional
 		 (when (policy nil (>= speed brevity))
-		   (compiler-note _"Ignoring ~A declaration not at ~
+		   (compiler-note _N"Ignoring ~A declaration not at ~
 				   definition of local function:~%  ~S"
 				  sense name)))
 		(global-var
@@ -1309,7 +1309,7 @@
        ((not var)
 	(if (or (lexenv-find name variables)
 		(lexenv-find-function name))
-	    (compiler-note _"Ignoring free ignore declaration for ~S." name)
+	    (compiler-note _N"Ignoring free ignore declaration for ~S." name)
 	    (compiler-warning _"Ignore declaration for unknown variable ~S."
 			      name)))
        ((and (consp var)
@@ -1325,7 +1325,7 @@
        ((functional-p var)
 	(setf (leaf-ever-used var) t))
        ((lambda-var-specvar var)
-	(compiler-note _"Declaring special variable ~S to be ignored." name))
+	(compiler-note _N"Declaring special variable ~S to be ignored." name))
        ((eq (first spec) 'ignorable)
 	(setf (leaf-ever-used var) t))
        (t
@@ -1396,7 +1396,7 @@
 			     (string= (symbol-name what) "CLASS"))) ; pcl hack
 		   (or (info type kind what)
 		       (and (consp what) (info type translator (car what)))))
-	      (compiler-note _"Abbreviated type declaration: ~S." spec)
+	      (compiler-note _N"Abbreviated type declaration: ~S." spec)
 	      (process-type-declaration spec res vars))
 	     ((info declaration recognized what)
 	      res)
@@ -3368,7 +3368,7 @@
 	       (compiler-error _"Attempt to set constant ~S." name))
 	     (when (lambda-var-p leaf)
 	       (when (lambda-var-ignorep leaf)
-		 (compiler-note _"Setting an ignored variable: ~S." name))
+		 (compiler-note _N"Setting an ignored variable: ~S." name))
 	       (note-dfo-dependency start leaf))
 	     (set-variable start cont leaf (second things)))
 	    (cons

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.38.38.2 2010/02/11 02:45:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.38.38.3 2010/02/25 03:59:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -421,12 +421,12 @@
 						(vop-results op-vop)))
 			       (error _"Couldn't fine op?  Bug!")))))
 	     (compiler-note
-	      _"Doing ~A (cost ~D)~:[~2*~; ~:[to~;from~] ~S~], for:~%~6T~
+	      _N"Doing ~A (cost ~D)~:[~2*~; ~:[to~;from~] ~S~], for:~%~6T~
 	       The ~:R ~:[result~;argument~] of ~A."
 	      note cost name arg-p name
 	      pos arg-p op-note)))
 	  (t
-	   (compiler-note _"Doing ~A (cost ~D)~@[ from ~S~]~@[ to ~S~]."
+	   (compiler-note _N"Doing ~A (cost ~D)~@[ from ~S~]~@[ to ~S~]."
 			  note cost (get-operand-name op-tn t)
 			  (get-operand-name dest-tn nil)))))
   (undefined-value))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.34.32.2 2010/02/12 04:07:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.34.32.3 2010/02/25 03:59:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -622,7 +622,7 @@
 		  (*compiler-error-context* context))
 	     (when (policy context (>= safety brevity))
 	       (compiler-note
-		"Type assertion too complex to check:~% ~S."
+		_N"Type assertion too complex to check:~% ~S."
 		(type-specifier (continuation-asserted-type cont)))))
 	   (setf (continuation-%type-check cont) :deleted))))))
 

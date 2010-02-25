@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.43.36.2 2010/02/11 01:33:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.43.36.3 2010/02/25 03:59:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -275,7 +275,7 @@
 	   (*compiler-error-context* dest))
       (when (and (policy-safe-p policy)
 		 (policy dest (>= safety brevity)))
-	(compiler-note _"Unable to check type assertion in unknown-values ~
+	(compiler-note _N"Unable to check type assertion in unknown-values ~
 	                context:~% ~S"
 		       (continuation-asserted-type cont))))
     (setf (continuation-%type-check cont) :deleted))

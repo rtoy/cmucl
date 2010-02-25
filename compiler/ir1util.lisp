@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.110.26.2 2010/02/11 01:33:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.110.26.3 2010/02/25 03:59:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -845,7 +845,7 @@
 	    (mark-for-deletion (node-block ref)))
 	  (unless (leaf-ever-used leaf)
 	    (let ((*compiler-error-context* bind))
-	      (compiler-note _"Deleting unused function~:[.~;~:*~%  ~S~]"
+	      (compiler-note _N"Deleting unused function~:[.~;~:*~%  ~S~]"
 			     (leaf-name leaf))))
           (unless (block-delete-p bind-block)
 	    (unlink-blocks (component-head component) bind-block))
@@ -1199,7 +1199,7 @@
     (unless (or (leaf-ever-used var)
 		(lambda-var-ignorep var))
       (let ((*compiler-error-context* (lambda-bind fun)))
-	(compiler-note _"Variable ~S defined but never used." (leaf-name var)))
+	(compiler-note _N"Variable ~S defined but never used." (leaf-name var)))
       (setf (leaf-ever-used var) t)))
   (undefined-value))
 
@@ -1274,7 +1274,7 @@
 					  0)))
 	    (unless (return-p node)
 	      (let ((*compiler-error-context* node))
-		(compiler-note _"Deleting unreachable code.")))
+		(compiler-note _N"Deleting unreachable code.")))
 	    (return))))))
   (undefined-value))
 
@@ -1634,7 +1634,7 @@
     (cond ((> expanded *inline-expansion-limit*) nil)
 	  ((= expanded *inline-expansion-limit*)
 	   (let ((*compiler-error-context* node))
-	     (compiler-note _"*Inline-Expansion-Limit* (~D) exceeded, ~
+	     (compiler-note _N"*Inline-Expansion-Limit* (~D) exceeded, ~
 			     probably trying to~%  ~
 			     inline a recursive function."
 			    *inline-expansion-limit*))
@@ -2180,7 +2180,8 @@ these can be NIL if unavailable or inapplicable.")
   (unless (if *compiler-error-context*
 	      (policy *compiler-error-context* (= brevity 3))
 	      (policy nil (= brevity 3)))
-    (warn 'simple-style-warning :format-control format-string
+    (warn 'simple-style-warning
+	  :format-control (intl::dgettext intl::*default-domain* format-string)
 	  :format-arguments format-args))
   (values))
 

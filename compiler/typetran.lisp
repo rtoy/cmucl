@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.45.38.2 2010/02/11 02:45:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.45.38.3 2010/02/25 03:59:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -248,7 +248,7 @@
   (let ((spec (hairy-type-specifier type)))
     (cond ((unknown-type-p type)
 	   (when (policy nil (> speed brevity))
-	     (compiler-note _"Can't open-code test of unknown type ~S."
+	     (compiler-note _N"Can't open-code test of unknown type ~S."
 			    (type-specifier type)))
 	   `(%typep ,object ',spec))
 	  (t

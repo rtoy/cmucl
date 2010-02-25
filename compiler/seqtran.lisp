@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.33.10.2 2010/02/11 02:45:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.33.10.3 2010/02/25 03:59:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -455,7 +455,7 @@
 				(specifier-type 'function)))
 		(when (policy *compiler-error-context* (> speed brevity))
 		  (compiler-note
-		   _"~S may not be a function, so must coerce at run-time."
+		   _N"~S may not be a function, so must coerce at run-time."
 		   n-fun))
 		(once-only ((n-fun `(if (functionp ,n-fun)
 					,n-fun
