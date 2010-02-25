@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.34.32.3 2010/02/25 03:59:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.34.32.4 2010/02/25 04:35:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -524,11 +524,11 @@
 			   (leaf-name (elt (lambda-vars lambda) pos)))))))
     (cond ((eq dtype *empty-type*))
 	  ((and (ref-p node) (constant-p (ref-leaf node)))
-	   (compiler-warning _"~:[This~;~:*~A~] is not a ~<~%~9T~:;~S:~>~%  ~S"
+	   (compiler-warning _N"~:[This~;~:*~A~] is not a ~<~%~9T~:;~S:~>~%  ~S"
 			     what atype-spec (constant-value (ref-leaf node))))
 	  (t
 	   (compiler-warning
-	    _"~:[Result~;~:*~A~] is a ~S, ~<~%~9T~:;not a ~S.~>"
+	    _N"~:[Result~;~:*~A~] is a ~S, ~<~%~9T~:;not a ~S.~>"
 	    what (type-specifier dtype) atype-spec))))
   (undefined-value))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.60.24.3 2010/02/25 03:59:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.60.24.4 2010/02/25 04:35:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -458,7 +458,7 @@
 	   (convert-call ref call fun))
 	  (t
 	   (compiler-warning
-	    _"Function called with ~R argument~:P, but wants exactly ~R."
+	    _N"Function called with ~R argument~:P, but wants exactly ~R."
 	    call-args nargs)
 	   (setf (basic-combination-kind call) :error)))))
 
@@ -480,7 +480,7 @@
 	(max-args (optional-dispatch-max-args fun))
 	(call-args (length (combination-args call))))
     (cond ((< call-args min-args)
-	   (compiler-warning _"Function called with ~R argument~:P, but wants at least ~R."
+	   (compiler-warning _N"Function called with ~R argument~:P, but wants at least ~R."
 			     call-args min-args)
 	   (setf (basic-combination-kind call) :error))
 	  ((<= call-args max-args)
@@ -490,7 +490,7 @@
 	  ((optional-dispatch-more-entry fun)
 	   (convert-more-call ref call fun))
 	  (t
-	   (compiler-warning _"Function called with ~R argument~:P, but wants at most ~R."
+	   (compiler-warning _N"Function called with ~R argument~:P, but wants at most ~R."
 			     call-args max-args)
 	   (setf (basic-combination-kind call) :error))))
   (undefined-value))
@@ -566,7 +566,7 @@
 	       (key-vars var))
 	      ((:rest :optional))
 	      ((:more-context :more-count)
-	       (compiler-warning _"Can't local-call functions with &MORE args.")
+	       (compiler-warning _N"Can't local-call functions with &MORE args.")
 	       (setf (basic-combination-kind call) :error)
 	       (return-from convert-more-call))))))
 
@@ -578,7 +578,7 @@
 
       (when (optional-dispatch-keyp fun)
 	(when (oddp (length more))
-	  (compiler-warning _"Function called with odd number of ~
+	  (compiler-warning _N"Function called with odd number of ~
 	  		     arguments in keyword portion.")
 
 	  (setf (basic-combination-kind call) :error)
@@ -624,7 +624,7 @@
 		    (return)))))))
 	
 	(when (and loser (not (optional-dispatch-allowp fun)) (not allowp))
-	  (compiler-warning _"Function called with unknown argument keyword ~S."
+	  (compiler-warning _N"Function called with unknown argument keyword ~S."
 			    (car loser))
 	  (setf (basic-combination-kind call) :error)
 	  (return-from convert-more-call)))

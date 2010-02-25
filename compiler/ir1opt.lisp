@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.87.14.2 2010/02/11 01:33:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.87.14.3 2010/02/25 04:35:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -196,7 +196,7 @@
 		     (not (eq rtype *empty-type*)))
 	    (let ((*compiler-error-context* node))
 	      (compiler-warning
-	       _"New inferred type ~S conflicts with old type:~
+	       _N"New inferred type ~S conflicts with old type:~
 		~%  ~S~%*** Bug?"
 	       (type-specifier rtype) (type-specifier node-type))))
 	  (setf (node-derived-type node) int)
@@ -788,7 +788,7 @@
 	   (let ((unused-result (funcall fun node)))
 	     (when unused-result
 	       (let ((*compiler-error-context* node))
-		 (compiler-warning _"The return value of ~A should not be discarded."
+		 (compiler-warning _N"The return value of ~A should not be discarded."
 				   (continuation-function-name (basic-combination-fun node))))))))
        
        (let ((fun (function-info-destroyed-constant-args kind)))
@@ -1654,14 +1654,14 @@
 	(when total-nvals
 	  (when (and min (< total-nvals min))
 	    (compiler-warning
-	     _"MULTIPLE-VALUE-CALL with ~R values when the function expects ~
+	     _N"MULTIPLE-VALUE-CALL with ~R values when the function expects ~
 	     at least ~R."
 	     total-nvals min)
 	    (setf (basic-combination-kind node) :error)
 	    (return-from ir1-optimize-mv-call))
 	  (when (and max (> total-nvals max))
 	    (compiler-warning
-	     _"MULTIPLE-VALUE-CALL with ~R values when the function expects ~
+	     _N"MULTIPLE-VALUE-CALL with ~R values when the function expects ~
 	     at most ~R."
 	     total-nvals max)
 	    (setf (basic-combination-kind node) :error)

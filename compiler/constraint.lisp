@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.26.42.2 2010/02/10 21:50:39 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.26.42.3 2010/02/25 04:35:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -534,7 +534,7 @@
 		    (when *check-consistency*
 		      (let ((*compiler-error-context* (block-last block)))
 			(compiler-warning
-			 _"*** Unreachable code in constraint ~
+			 _N"*** Unreachable code in constraint ~
 			  propagation...  Bug?")))
 		    (make-sset))))
 	 (kill (block-kill block))

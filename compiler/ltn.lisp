@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.43.36.3 2010/02/25 03:59:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.43.36.4 2010/02/25 04:35:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1010,7 +1010,7 @@
 			      (ir1-attributep (function-info-attributes info)
 					      recursive)))))
 	  (let ((*compiler-error-context* call))
-	    (compiler-warning _"Recursive known function definition.")))
+	    (compiler-warning _N"Recursive known function definition.")))
 	(ltn-default-call call policy)
 	(return-from ltn-analyze-known-call (undefined-value)))
       (setf (basic-combination-info call) template)

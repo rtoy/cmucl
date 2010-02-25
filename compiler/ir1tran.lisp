@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.173.32.3 2010/02/25 03:59:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.173.32.4 2010/02/25 04:35:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,7 +208,7 @@
 					"in a dynamic-extent declaration")))))
 		(t
 		 (compiler-warning
-		  _"~@<Invalid name ~s in a dynamic-extent declaration.~@:>"
+		  _N"~@<Invalid name ~s in a dynamic-extent declaration.~@:>"
 		  name))))
 	(if (dynamic-extent)
 	    (make-lexenv :default lexenv :dynamic-extent (dynamic-extent))
@@ -1130,7 +1130,7 @@
 			(cond ((eq int *empty-type*)
 			       (unless (policy nil (= brevity 3))
 				 (compiler-warning
-				  _"Conflicting type declarations ~
+				  _N"Conflicting type declarations ~
 				   ~S and ~S for ~S."
 				  (type-specifier old-type)
 				  (type-specifier type)
@@ -1310,7 +1310,7 @@
 	(if (or (lexenv-find name variables)
 		(lexenv-find-function name))
 	    (compiler-note _N"Ignoring free ignore declaration for ~S." name)
-	    (compiler-warning _"Ignore declaration for unknown variable ~S."
+	    (compiler-warning _N"Ignore declaration for unknown variable ~S."
 			      name)))
        ((and (consp var)
 	     (eq (car var) 'macro)
@@ -1401,7 +1401,7 @@
 	     ((info declaration recognized what)
 	      res)
 	     (t
-	      (compiler-warning _"Unrecognized declaration: ~S." spec)
+	      (compiler-warning _N"Unrecognized declaration: ~S." spec)
 	      res))))))
 
 
@@ -2831,7 +2831,7 @@
 	  (when (member kind '(:special :constant))
 	    (compiler-error _"Attempt to bind a special or constant variable with SYMBOL-MACROLET: ~S." name)))
 	(when (assoc name (res) :test #'eq)
-	  (compiler-warning _"Repeated name in SYMBOL-MACROLET: ~S." name))
+	  (compiler-warning _N"Repeated name in SYMBOL-MACROLET: ~S." name))
 	(res `(,name . (MACRO . ,def)))))
 
     (let* ((*lexical-environment* (make-lexenv :variables (res)))
@@ -3018,7 +3018,7 @@
 		    (setq ignore t))
 		   (t
 		    (setq ignore t)
-		    (compiler-warning _"Unrecognized proclamation: ~S."
+		    (compiler-warning _N"Unrecognized proclamation: ~S."
 				      form)))))
 	  
 	  (unless ignore
@@ -3290,7 +3290,7 @@
     (when (and (not intersects)
 	       (not (policy nil (= brevity 3))))
       (compiler-warning
-       _"Type ~S in ~S declaration conflicts with enclosing assertion:~%   ~S"
+       _N"Type ~S in ~S declaration conflicts with enclosing assertion:~%   ~S"
        (type-specifier ctype) name (type-specifier old-type)))
     (make-lexenv :type-restrictions `((,cont . ,new))
 		 :default lexenv)))
@@ -3664,7 +3664,7 @@
      (remhash name *free-functions*)
      (undefine-function-name name)
      (compiler-warning
-      _"Defining ~S to be a macro when it was ~(~A~) to be a function."
+      _N"Defining ~S to be a macro when it was ~(~A~) to be a function."
       name (info function where-from name)))
     (:macro)
     (:special-form
@@ -3733,11 +3733,11 @@
     (case kind
       (:constant
        (unless (equalp value (info variable constant-value name))
-	 (compiler-warning _"Redefining constant ~S as:~%  ~S"
+	 (compiler-warning _N"Redefining constant ~S as:~%  ~S"
 			   name value)))
       (:global)
       (t
-       (compiler-warning _"Redefining ~(~A~) ~S to be a constant."
+       (compiler-warning _N"Redefining ~(~A~) ~S to be a constant."
 			 kind name))))
 
   (setf (info variable kind name) :constant)

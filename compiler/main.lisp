@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.148.2.5 2010/02/25 00:33:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.148.2.6 2010/02/25 04:35:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -584,12 +584,12 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		  (warnings (undefined-warning-warnings undef))
 		  (count (undefined-warning-count undef)))
 	      (dolist (*compiler-error-context* warnings)
-		(compiler-warning _"Undefined ~(~A~) ~S~@[ ~A~]" kind name context))
+		(compiler-warning _N"Undefined ~(~A~) ~S~@[ ~A~]" kind name context))
 	      
 	      (let ((warn-count (length warnings)))
 		(when (and warnings (> count warn-count))
 		  (let ((more (- count warn-count)))
-		    (compiler-warning _"~D more use~:P of undefined ~(~A~) ~S."
+		    (compiler-warning _N"~D more use~:P of undefined ~(~A~) ~S."
 				      more kind name)))))))
 	
 	(dolist (kind '(:variable :function :type))
@@ -598,7 +598,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 					 :key #'undefined-warning-kind))))
 	    (when summary
 	      (compiler-warning
-	       _"~:[This ~(~A~) is~;These ~(~A~)s are~] undefined:~
+	       _N"~:[This ~(~A~) is~;These ~(~A~)s are~] undefined:~
 		~%  ~{~<~%  ~1:;~S~>~^ ~}"
 	       (cdr summary) kind summary)))))))
   
@@ -1092,7 +1092,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
     (compiler-error _"Bad FILE-COMMENT form: ~S." form))
   (let ((file (first (source-info-current-file *source-info*))))
     (cond ((file-info-comment file)
-	   (compiler-warning _"Ignoring extra file comment:~%  ~S." form))
+	   (compiler-warning _N"Ignoring extra file comment:~%  ~S." form))
 	  (t
 	   (let ((comment (coerce (second form) 'simple-string)))
 	     (setf (file-info-comment file) comment)

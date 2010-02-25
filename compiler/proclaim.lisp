@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.44.24.3 2010/02/25 03:59:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.44.24.4 2010/02/25 04:35:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -220,7 +220,7 @@
     (when (or (info setf inverse name)
 	      (info setf expander name))
       (compiler-warning
-       _"Defining as a SETF function a name that already has a SETF macro:~
+       _N"Defining as a SETF function a name that already has a SETF macro:~
        ~%  ~S"
        name)))
   (undefined-value))
@@ -242,13 +242,13 @@
      (let ((for (info function accessor-for name)))
        (when for
 	 (compiler-warning
-	  _"Undefining structure type:~%  ~S~@
+	  _N"Undefining structure type:~%  ~S~@
 	   so that this slot accessor can be redefined:~%  ~S"
 	  (%class-name for) name)
 	 (undefine-structure for)
 	 (setf (info function kind name) :function))))
     (:macro
-     (compiler-warning _"~S previously defined as a macro." name)
+     (compiler-warning _N"~S previously defined as a macro." name)
      (setf (info function kind name) :function)
      (setf (info function where-from name) :assumed)
      (clear-info function macro-function name))
@@ -304,10 +304,10 @@
 		((inhibit-warnings brevity) (setf (cookie-brevity res) value))
 		((debug-info debug) (setf (cookie-debug res) value))
 		(t
-		 (compiler-warning _"Unknown optimization quality ~S in ~S."
+		 (compiler-warning _N"Unknown optimization quality ~S in ~S."
 				   (car quality) spec))))
 	    (compiler-warning
-	     _"Malformed optimization quality specifier ~S in ~S."
+	     _N"Malformed optimization quality specifier ~S in ~S."
 	     quality spec))))
     res))
 

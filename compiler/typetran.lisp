@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.45.38.3 2010/02/25 03:59:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.45.38.4 2010/02/25 04:35:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -516,7 +516,7 @@
 	      (member-type
 	       `(member ,object ',(member-type-members type)))
 	      (args-type
-	       (compiler-warning _"Illegal type specifier for Typep: ~S."
+	       (compiler-warning _N"Illegal type specifier for Typep: ~S."
 				 (cadr spec))
 	       `(%typep ,object ,spec))
 	      (t nil))

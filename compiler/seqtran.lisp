@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.33.10.3 2010/02/25 03:59:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.33.10.4 2010/02/25 04:35:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -651,7 +651,7 @@
     (let ((spec (continuation-value output-spec)))
       (if (subtypep spec 'sequence)
 	  (specifier-type spec)
-	  (compiler-warning _"Specified output type ~S is not a sequence type" spec)))))
+	  (compiler-warning _N"Specified output type ~S is not a sequence type" spec)))))
 
 (defoptimizer (concatenate derive-type) ((output-spec  seq &rest more-seq))
   ;; The result type of CONCATENATE is OUTPUT-SPEC, but check to see

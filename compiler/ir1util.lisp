@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.110.26.3 2010/02/25 03:59:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.110.26.4 2010/02/25 04:35:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2172,7 +2172,7 @@ these can be NIL if unavailable or inapplicable.")
 ;;;
 (defun compiler-warning (format-string &rest format-args)
   (declare (string format-string))
-  (apply #'warn format-string format-args)
+  (apply #'warn (intl:gettext format-string) format-args)
   (values))
 ;;;
 (defun compiler-note (format-string &rest format-args)
@@ -2181,7 +2181,7 @@ these can be NIL if unavailable or inapplicable.")
 	      (policy *compiler-error-context* (= brevity 3))
 	      (policy nil (= brevity 3)))
     (warn 'simple-style-warning
-	  :format-control (intl::dgettext intl::*default-domain* format-string)
+	  :format-control (intl:gettext format-string)
 	  :format-arguments format-args))
   (values))
 
@@ -2250,7 +2250,7 @@ these can be NIL if unavailable or inapplicable.")
     (handler-case (apply function args)
       (error (condition)
 	(let ((*compiler-error-context* node))
-	  (compiler-warning "Lisp error during ~A:~%~A" context condition)
+	  (compiler-warning _N"Lisp error during ~A:~%~A" context condition)
 	  (return-from careful-call (values nil nil))))))
    t))
 
