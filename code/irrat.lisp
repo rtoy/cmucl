@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.60.2.5 2010/02/13 17:10:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.60.2.6 2010/02/25 01:11:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -307,7 +307,7 @@
 (define-condition intexp-limit-error (error)
   ((base :initarg :base :reader intexp-base)
    (power :initarg :power :reader intexp-power))
-  (:report (lambda (stream)
+  (:report (lambda (condition stream)
 	     (format stream _"The absolute value of ~S exceeds limit ~S."
 		     (intexp-power condition)
 		     *intexp-maximum-exponent*))))
