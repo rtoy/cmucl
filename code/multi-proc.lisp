@@ -5,7 +5,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.44.14.2 2010/02/09 21:33:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.44.14.3 2010/02/26 15:32:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,7 +13,7 @@
 ;;;
 
 (in-package "MULTIPROCESSING")
-(intl:textdomain "cmucl")
+(intl:textdomain "cmucl-mp")
 
 (sys:register-lisp-runtime-feature :mp)
 

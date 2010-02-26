@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/linux-os.lisp,v 1.8.12.2 2010/02/14 03:06:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/linux-os.lisp,v 1.8.12.3 2010/02/26 15:32:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (in-package "SYSTEM")
 (use-package "EXTENSIONS")
-(intl:textdomain "cmucl")
+(intl:textdomain "cmucl-linux-os")
  
 (export '(get-system-info get-page-size os-init))
 
