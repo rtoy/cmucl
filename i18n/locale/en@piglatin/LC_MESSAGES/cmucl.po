@@ -12823,14 +12823,6 @@ msgid "Invalid position given to file-position: ~S"
 msgstr "Invalidway ositionpay ivengay otay ilefay-ositionpay: ~S"
 
 #: target:code/fd-stream.lisp
-msgid "file ~S"
-msgstr "ilefay ~S"
-
-#: target:code/fd-stream.lisp
-msgid "descriptor ~D"
-msgstr "escriptorday ~D"
-
-#: target:code/fd-stream.lisp
 msgid ""
 "Create a stream for the given unix file descriptor.\n"
 "  If input is non-nil, allow input operations.\n"
@@ -24636,6 +24628,10 @@ msgstr ""
 "isway\n"
 "  away issingmay efinitionday (asway opposedway otay away ypotay inway ethay useway.)"
 
+#: target:compiler/ir1util.lisp
+msgid "Lisp error during ~A:~%~A"
+msgstr "Isplay errorway uringday ~Away:~%~Away"
+
 #: target:compiler/ir1opt.lisp
 msgid "New inferred type ~S conflicts with old type:~\n"
 "		~%  ~S~%*** Bug?"
@@ -25095,6 +25091,10 @@ msgstr "~:[Isthay~;~:*~Away~] isway otnay away ~<~%~9T~:;~S:~>~%  ~S"
 #: target:compiler/checkgen.lisp
 msgid "~:[Result~;~:*~A~] is a ~S, ~<~%~9T~:;not a ~S.~>"
 msgstr "~:[Esultray~;~:*~Away~] isway away ~S, ~<~%~9T~:;otnay away ~S.~>"
+
+#: target:compiler/checkgen.lisp
+msgid "Type assertion too complex to check:~% ~S."
+msgstr "Ypetay assertionway ootay omplexcay otay eckchay:~% ~S."
 
 #: target:compiler/constraint.lisp
 msgid "*** Unreachable code in constraint ~\n"

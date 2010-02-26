@@ -10322,14 +10322,6 @@ msgid "Invalid position given to file-position: ~S"
 msgstr ""
 
 #: target:code/fd-stream.lisp
-msgid "file ~S"
-msgstr ""
-
-#: target:code/fd-stream.lisp
-msgid "descriptor ~D"
-msgstr ""
-
-#: target:code/fd-stream.lisp
 msgid ""
 "Create a stream for the given unix file descriptor.\n"
 "  If input is non-nil, allow input operations.\n"
@@ -19343,6 +19335,10 @@ msgid ""
 "  a missing definition (as opposed to a typo in the use.)"
 msgstr ""
 
+#: target:compiler/ir1util.lisp
+msgid "Lisp error during ~A:~%~A"
+msgstr ""
+
 #: target:compiler/ir1opt.lisp
 msgid ""
 "New inferred type ~S conflicts with old type:~\n"
@@ -19756,6 +19752,10 @@ msgstr ""
 
 #: target:compiler/checkgen.lisp
 msgid "~:[Result~;~:*~A~] is a ~S, ~<~%~9T~:;not a ~S.~>"
+msgstr ""
+
+#: target:compiler/checkgen.lisp
+msgid "Type assertion too complex to check:~% ~S."
 msgstr ""
 
 #: target:compiler/constraint.lisp
