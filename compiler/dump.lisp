@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.83.12.4 2010/02/26 03:38:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.83.12.5 2010/02/26 06:10:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1727,7 +1727,7 @@
 
 (defun dump-layout (obj file)
   (unless (member (layout-invalid obj) '(nil :compiler))
-x    (compiler-error _N"Dumping reference to obsolete class: ~S"
+    (compiler-error _N"Dumping reference to obsolete class: ~S"
 		    (layout-class obj)))
   (let ((name (%class-name (layout-class obj))))
     (assert name)
