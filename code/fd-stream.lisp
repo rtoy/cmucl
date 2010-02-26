@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.97.2.3 2010/02/14 03:06:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.97.2.4 2010/02/26 03:39:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1758,9 +1758,15 @@
 		       delete-original
 		       pathname
 		       input-buffer-p
+		       ;; DO NOT translate these!  It causes an
+		       ;; infinite loop.  We need to open a file for
+		       ;; the translations, but if you translate
+		       ;; these, then we need to do a lookup which
+		       ;; wants to open the mo file which calls this
+		       ;; to name which causes a lookup ....
 		       (name (if file
-				 (format nil _"file ~S" file)
-				 (format nil _"descriptor ~D" fd)))
+				 (format nil "file ~S" file)
+				 (format nil "descriptor ~D" fd)))
 		       auto-close
 		       (external-format :default)
 		       binary-stream-p)
