@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.14.26.2 2010/02/10 04:01:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.14.26.3 2010/02/26 06:23:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -124,12 +124,12 @@
 ;;;
 (defun type-class-or-lose (name)
   (or (gethash name *type-classes*)
-      (error "~S is not a defined type class." name)))
+      (error _"~S is not a defined type class." name)))
 
 ;;; MUST-SUPPLY-THIS  --  Interface
 ;;;
 (defun must-supply-this (&rest foo)
-  (error "Missing type method for ~S" foo))
+  (error _"Missing type method for ~S" foo))
 
 
 (defstruct (type-class
@@ -225,7 +225,7 @@
 ;;;
 (defun class-function-slot-or-lose (name)
   (or (cdr (assoc name type-class-function-slots))
-      (error "~S is not a defined type class method." name)))
+      (error _"~S is not a defined type class method." name)))
 
 ); Eval-When (Compile Load Eval)
 

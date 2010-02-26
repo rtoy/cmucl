@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.31.10.1 2010/02/08 17:15:48 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.31.10.2 2010/02/26 06:23:24 rtoy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -768,7 +768,7 @@ a LET-like macro, and a SETQ-like macro, which perform LOOP-style destructuring.
 		     epilogue
 		     &aux rbefore rafter flagvar)
   (unless (= (length before-loop) (length after-loop))
-    (error "LOOP-BODY called with non-synched before- and after-loop lists."))
+    (error _"LOOP-BODY called with non-synched before- and after-loop lists."))
   ;;All our work is done from these copies, working backwards from the end:
   (setq rbefore (reverse before-loop) rafter (reverse after-loop))
   (labels ((psimp (l)
@@ -948,12 +948,12 @@ a LET-like macro, and a SETQ-like macro, which perform LOOP-style destructuring.
 (defun loop-error (format-string &rest format-args)
   #+(or Genera CLOE) (declare (dbg:error-reporter))
   #+Genera (setq format-args (copy-list format-args))	;Don't ask.
-  (kernel:simple-program-error "~?~%Current LOOP context:~{ ~S~}."
-			       format-string format-args (loop-context)))
+  (kernel:simple-program-error _"~?~%Current LOOP context:~{ ~S~}."
+			       (intl:gettext format-string) format-args (loop-context)))
 
 
 (defun loop-warn (format-string &rest format-args)
-  (warn "~?~%Current LOOP context:~{ ~S~}." format-string format-args (loop-context)))
+  (warn _"~?~%Current LOOP context:~{ ~S~}." (intl:gettext format-string) format-args (loop-context)))
 
 
 (defun loop-check-data-type (specified-type required-type
@@ -962,17 +962,17 @@ a LET-like macro, and a SETQ-like macro, which perform LOOP-style destructuring.
       default-type
       (multiple-value-bind (a b) (subtypep specified-type required-type)
 	(cond ((not b)
-	       (loop-warn "LOOP couldn't verify that ~S is a subtype of the required type ~S."
+	       (loop-warn _N"LOOP couldn't verify that ~S is a subtype of the required type ~S."
 			  specified-type required-type))
 	      ((not a)
-	       (loop-error "Specified data type ~S is not a subtype of ~S."
+	       (loop-error _N"Specified data type ~S is not a subtype of ~S."
 			   specified-type required-type)))
 	specified-type)))
 
 
 ;;;INTERFACE: Traditional, ANSI, Lucid.
 (defmacro loop-finish () 
-  "Causes the iteration to terminate \"normally\", the same as implicit
+  _N"Causes the iteration to terminate \"normally\", the same as implicit
 termination by an iteration driving clause, or by use of WHILE or
 UNTIL -- the epilogue code (if any) will be run, and any implicitly
 collected result will be returned as the value of the LOOP."
@@ -1056,7 +1056,7 @@ collected result will be returned as the value of the LOOP."
   (do () ((null *loop-source-code*))
     (let ((keyword (car *loop-source-code*)) (tem nil))
       (cond ((not (symbolp keyword))
-	     (loop-error "~S found where LOOP keyword expected." keyword))
+	     (loop-error _N"~S found where LOOP keyword expected." keyword))
 	    (t (setq *loop-source-context* *loop-source-code*)
 	       (loop-pop-source)
 	       (cond ((setq tem (loop-lookup-keyword keyword (loop-universe-keywords *loop-universe*)))
@@ -1066,22 +1066,22 @@ collected result will be returned as the value of the LOOP."
 		      (loop-hack-iteration tem))
 		     ((loop-tmember keyword '(and else))
 		      ;; Alternative is to ignore it, ie let it go around to the next keyword...
-		      (loop-error "Secondary clause misplaced at top level in LOOP macro: ~S ~S ~S ..."
+		      (loop-error _N"Secondary clause misplaced at top level in LOOP macro: ~S ~S ~S ..."
 				  keyword (car *loop-source-code*) (cadr *loop-source-code*)))
-		     (t (loop-error "~S is an unknown keyword in LOOP macro." keyword))))))))
+		     (t (loop-error _N"~S is an unknown keyword in LOOP macro." keyword))))))))
 
 
 
 (defun loop-pop-source ()
   (if *loop-source-code*
       (pop *loop-source-code*)
-      (loop-error "LOOP source code ran out when another token was expected.")))
+      (loop-error _N"LOOP source code ran out when another token was expected.")))
 
 
 (defun loop-get-compound-form ()
   (let ((form (loop-get-form)))
     (unless (consp form)
-      (loop-error "Compound form expected, but found ~A." form))
+      (loop-error _N"Compound form expected, but found ~A." form))
     form))
 
 (defun loop-get-progn ()
@@ -1096,7 +1096,7 @@ collected result will be returned as the value of the LOOP."
 (defun loop-get-form ()
   (if *loop-source-code*
       (loop-pop-source)
-      (loop-error "LOOP code ran out where a form was expected.")))
+      (loop-error _N"LOOP code ran out where a form was expected.")))
 
 
 (defun loop-construct-return (form)
@@ -1115,7 +1115,7 @@ collected result will be returned as the value of the LOOP."
   (when form-supplied-p
     (push (loop-construct-return form) *loop-after-epilogue*))
   (when *loop-final-value-culprit*
-    (loop-warn "LOOP clause is providing a value for the iteration,~@
+    (loop-warn _N"LOOP clause is providing a value for the iteration,~@
 	        however one was already established by a ~S clause."
 	       *loop-final-value-culprit*))
   (setq *loop-final-value-culprit* (car *loop-source-context*)))
@@ -1124,15 +1124,15 @@ collected result will be returned as the value of the LOOP."
 (defun loop-disallow-conditional (&optional kwd)
   #+(or Genera CLOE) (declare (dbg:error-reporter))
   (when *loop-inside-conditional*
-    (loop-error "~:[This LOOP~;The LOOP ~:*~S~] clause is not permitted inside a conditional." kwd)))
+    (loop-error _N"~:[This LOOP~;The LOOP ~:*~S~] clause is not permitted inside a conditional." kwd)))
 
 (defun loop-disallow-anonymous-collectors ()
   (when (find-if-not 'loop-collector-name *loop-collection-cruft*)
-    (loop-error "This LOOP clause is not permitted with anonymous collectors.")))
+    (loop-error _N"This LOOP clause is not permitted with anonymous collectors.")))
 
 (defun loop-disallow-aggregate-booleans ()
   (when (loop-tmember *loop-final-value-culprit* '(always never thereis))
-    (loop-error "This anonymous collection LOOP clause is not permitted with aggregate booleans.")))
+    (loop-error _N"This anonymous collection LOOP clause is not permitted with aggregate booleans.")))
 
 
 
@@ -1174,9 +1174,9 @@ collected result will be returned as the value of the LOOP."
 		(if (consp variable)
 		    (unless (consp z)
 		     (loop-error
-			"~S found where a LOOP keyword, LOOP type keyword, or LOOP type pattern expected."
+			_N"~S found where a LOOP keyword, LOOP type keyword, or LOOP type pattern expected."
 			z))
-		    (loop-error "~S found where a LOOP keyword or LOOP type keyword expected." z))
+		    (loop-error _N"~S found where a LOOP keyword or LOOP type keyword expected." z))
 		(loop-pop-source)
 		(labels ((translate (k v)
 			   (cond ((null k) nil)
@@ -1185,12 +1185,12 @@ collected result will be returned as the value of the LOOP."
 				    (or (gethash k (loop-universe-type-symbols *loop-universe*))
 					(gethash (symbol-name k) (loop-universe-type-keywords *loop-universe*))
 					(loop-error
-					  "Destructuring type pattern ~S contains unrecognized type keyword ~S."
+					  _N"Destructuring type pattern ~S contains unrecognized type keyword ~S."
 					  z k))
 				    v))
 				 ((atom v)
 				  (loop-error
-				    "Destructuring type pattern ~S doesn't match variable pattern ~S."
+				    _N"Destructuring type pattern ~S doesn't match variable pattern ~S."
 				    z variable))
 				 (t (cons (translate (car k) (car v)) (translate (cdr k) (cdr v))))))
 			 (replicate (typ v)
@@ -1228,12 +1228,12 @@ collected result will be returned as the value of the LOOP."
 	((atom name)
 	 (cond (iteration-variable-p
 		(if (member name *loop-iteration-variables*)
-		    (loop-error "Duplicated LOOP iteration variable ~S." name)
+		    (loop-error _N"Duplicated LOOP iteration variable ~S." name)
 		    (push name *loop-iteration-variables*)))
 	       ((assoc name *loop-variables*)
-		(loop-error "Duplicated variable ~S in LOOP parallel binding." name)))
+		(loop-error _N"Duplicated variable ~S in LOOP parallel binding." name)))
 	 (unless (symbolp name)
-	   (loop-error "Bad variable ~S somewhere in LOOP." name))
+	   (loop-error _N"Bad variable ~S somewhere in LOOP." name))
 	 (loop-declare-variable name dtype)
 	 ;; We use ASSOC on this list to check for duplications (above),
 	 ;; so don't optimize out this list:
@@ -1261,7 +1261,7 @@ collected result will be returned as the value of the LOOP."
 
 (defun loop-make-iteration-variable (name initialization dtype)
   (when (and name (loop-variable-p name))
-    (loop-error "Variable ~S has already been used" name))
+    (loop-error _N"Variable ~S has already been used" name))
   (loop-make-variable name initialization dtype t))
 
 
@@ -1282,7 +1282,7 @@ collected result will be returned as the value of the LOOP."
 		(loop-declare-variable (cdr name) (cdr dtype)))
 	       (t (loop-declare-variable (car name) dtype)
 		  (loop-declare-variable (cdr name) dtype))))
-	(t (error "Invalid LOOP variable passed in: ~S." name))))
+	(t (error _"Invalid LOOP variable passed in: ~S." name))))
 
 
 (defun loop-maybe-bind-form (form data-type)
@@ -1302,7 +1302,7 @@ collected result will be returned as the value of the LOOP."
 		 (let ((key (car *loop-source-code*)) (*loop-body* nil) data)
 		   (cond ((not (symbolp key))
 			  (loop-error
-			     "~S found where keyword expected getting LOOP clause after ~S."
+			     _N"~S found where keyword expected getting LOOP clause after ~S."
 			     key for))
 			 (t (setq *loop-source-context* *loop-source-code*)
 			    (loop-pop-source)
@@ -1316,7 +1316,7 @@ collected result will be returned as the value of the LOOP."
 				       (progn (apply (symbol-function (car data)) (cdr data))
 					      (null *loop-body*)))
 				   (loop-error
-				      "~S does not introduce a LOOP clause that can follow ~S."
+				      _N"~S does not introduce a LOOP clause that can follow ~S."
 				      key for))
 				  (t (setq body (nreconc *loop-body* body)))))))
 		 (setq first-clause-p nil)
@@ -1351,11 +1351,11 @@ collected result will be returned as the value of the LOOP."
 (defun loop-do-named ()
   (let ((name (loop-pop-source)))
     (unless (symbolp name)
-      (loop-error "~S is an invalid name for your LOOP." name))
+      (loop-error _N"~S is an invalid name for your LOOP." name))
     (when (or *loop-before-loop* *loop-body* *loop-after-epilogue* *loop-inside-conditional*)
-      (loop-error "The NAMED ~S clause occurs too late." name))
+      (loop-error _N"The NAMED ~S clause occurs too late." name))
     (when *loop-names*
-      (loop-error "You may only use one NAMED clause in your loop: NAMED ~S ... NAMED ~S."
+      (loop-error _N"You may only use one NAMED clause in your loop: NAMED ~S ... NAMED ~S."
 		  (car *loop-names*) name))
     (setq *loop-names* (list name))))
 
@@ -1384,7 +1384,7 @@ collected result will be returned as the value of the LOOP."
 		(loop-pop-source)
 		(loop-pop-source))))
     (when (not (symbolp name))
-      (loop-error "Value accumulation recipient name, ~S, is not a symbol." name))
+      (loop-error _N"Value accumulation recipient name, ~S, is not a symbol." name))
     (unless name
       (loop-disallow-aggregate-booleans))
     (unless dtype
@@ -1393,19 +1393,19 @@ collected result will be returned as the value of the LOOP."
 		       :key #'loop-collector-name)))
       (cond ((not cruft)
 	     (when (and name (loop-variable-p name))
-	       (loop-error "Variable ~S cannot be used in INTO clause" name))
+	       (loop-error _N"Variable ~S cannot be used in INTO clause" name))
 	     (push (setq cruft (make-loop-collector
 				 :name name :class class
 				 :history (list collector) :dtype dtype))
 		   *loop-collection-cruft*))
 	    (t (unless (eq (loop-collector-class cruft) class)
 		 (loop-error
-		   "Incompatible kinds of LOOP value accumulation specified for collecting~@
+		   _N"Incompatible kinds of LOOP value accumulation specified for collecting~@
 		    ~:[as the value of the LOOP~;~:*INTO ~S~]: ~S and ~S."
 		   name (car (loop-collector-history cruft)) collector))
 	       (unless (equal dtype (loop-collector-dtype cruft))
 		 (loop-warn
-		   "Unequal datatypes specified in different LOOP value accumulations~@
+		   _N"Unequal datatypes specified in different LOOP value accumulations~@
 		   into ~S: ~S and ~S."
 		   name dtype (loop-collector-dtype cruft))
 		 (when (eq (loop-collector-dtype cruft) t)
@@ -1519,7 +1519,7 @@ collected result will be returned as the value of the LOOP."
 		     (loop-get-form))
 		    (t nil)))
     (when (and var (loop-variable-p var))
-      (loop-error "Variable ~S has already been used" var))
+      (loop-error _N"Variable ~S has already been used" var))
     (loop-make-variable var val dtype)
     (if (loop-tequal (car *loop-source-code*) :and)
 	(loop-pop-source)
@@ -1555,7 +1555,7 @@ collected result will be returned as the value of the LOOP."
       (setq pseudo-steps (nconc pseudo-steps (loop-copylist* (car (setq tem (cdr tem))))))
       (setq tem (cdr tem))
       (when *loop-emitted-body*
-	(loop-error "Iteration in LOOP follows body code."))
+	(loop-error _N"Iteration in LOOP follows body code."))
       (unless tem (setq tem data))
       (when (car tem) (push (car tem) pre-loop-pre-step-tests))
       (setq pre-loop-steps (nconc pre-loop-steps (loop-copylist* (car (setq tem (cdr tem))))))
@@ -1599,7 +1599,7 @@ collected result will be returned as the value of the LOOP."
 		 (setq tem (loop-lookup-keyword
 			     keyword
 			     (loop-universe-for-keywords *loop-universe*))))
-      (loop-error "~S is an unknown keyword in FOR or AS clause in LOOP." keyword))
+      (loop-error _N"~S is an unknown keyword in FOR or AS clause in LOOP." keyword))
     (apply (car tem) var first-arg data-type (cdr tem))))
 
 (defun loop-do-repeat ()
@@ -1728,7 +1728,7 @@ collected result will be returned as the value of the LOOP."
 			(loop-get-form))
 		       (t '(function cdr)))))
     (cond ((and (consp stepper) (eq (car stepper) 'quote))
-	   (loop-warn "Use of QUOTE around stepping function in LOOP will be left verbatim.")
+	   (loop-warn _N"Use of QUOTE around stepping function in LOOP will be left verbatim.")
 	   (values `(funcall ,stepper ,listvar) nil))
 	  ((and (consp stepper) (eq (car stepper) 'function))
 	   (values (list (cadr stepper) listvar) (cadr stepper)))
@@ -1838,18 +1838,18 @@ collected result will be returned as the value of the LOOP."
 	   (loop-pop-source)
 	   (setq inclusive t)
 	   (unless (loop-tmember (car *loop-source-code*) '(:its :each :his :her))
-	     (loop-error "~S found where ITS or EACH expected in LOOP iteration path syntax."
+	     (loop-error _N"~S found where ITS or EACH expected in LOOP iteration path syntax."
 			 (car *loop-source-code*)))
 	   (loop-pop-source)
 	   (setq path (loop-pop-source))
 	   (setq initial-prepositions `((:in ,val))))
-	  (t (loop-error "Unrecognizable LOOP iteration path syntax.  Missing EACH or THE?")))
+	  (t (loop-error _N"Unrecognizable LOOP iteration path syntax.  Missing EACH or THE?")))
     (cond ((not (symbolp path))
-	   (loop-error "~S found where a LOOP iteration path name was expected." path))
+	   (loop-error _N"~S found where a LOOP iteration path name was expected." path))
 	  ((not (setq data (loop-lookup-keyword path (loop-universe-path-keywords *loop-universe*))))
-	   (loop-error "~S is not the name of a LOOP iteration path." path))
+	   (loop-error _N"~S is not the name of a LOOP iteration path." path))
 	  ((and inclusive (not (loop-path-inclusive-permitted data)))
-	   (loop-error "\"Inclusive\" iteration is not possible with the ~S LOOP iteration path." path)))
+	   (loop-error _N"\"Inclusive\" iteration is not possible with the ~S LOOP iteration path." path)))
     (let ((fun (loop-path-function data))
 	  (preps (nconc initial-prepositions
 			(loop-collect-prepositional-phrases (loop-path-preposition-groups data) t)))
@@ -1859,11 +1859,11 @@ collected result will be returned as the value of the LOOP."
 		      (apply fun var data-type preps :inclusive t user-data)
 		      (apply fun var data-type preps user-data))))
     (when *loop-named-variables*
-      (loop-error "Unused USING variables: ~S." *loop-named-variables*))
+      (loop-error _N"Unused USING variables: ~S." *loop-named-variables*))
     ;; STUFF is now (bindings prologue-forms . stuff-to-pass-back).  Protect the system from the user
     ;; and the user from himself.
     (unless (member (length stuff) '(6 10))
-      (loop-error "Value passed back by LOOP iteration path function for path ~S has invalid length."
+      (loop-error _N"Value passed back by LOOP iteration path function for path ~S has invalid length."
 		  path))
     (do ((l (car stuff) (cdr l)) (x)) ((null l))
       (if (atom (setq x (car l)))
@@ -1906,8 +1906,8 @@ collected result will be returned as the value of the LOOP."
 	     (when (member this-prep disallowed-prepositions)
 	       (loop-error
 		 (if (member this-prep used-prepositions)
-		     "A ~S prepositional phrase occurs multiply for some LOOP clause."
-		     "Preposition ~S used when some other preposition has subsumed it.")
+		     _N"A ~S prepositional phrase occurs multiply for some LOOP clause."
+		     _N"Preposition ~S used when some other preposition has subsumed it.")
 		 token))
 	     (setq used-prepositions (if (listp this-group)
 					 (append this-group used-prepositions)
@@ -1920,7 +1920,7 @@ collected result will be returned as the value of the LOOP."
 	       (when (cadr z)
 		 (if (setq tem (loop-tassoc (car z) *loop-named-variables*))
 		     (loop-error
-		       "The variable substitution for ~S occurs twice in a USING phrase,~@
+		       _N"The variable substitution for ~S occurs twice in a USING phrase,~@
 		        with ~S and ~S."
 		       (car z) (cadr z) (cadr tem))
 		     (push (cons (car z) (cadr z)) *loop-named-variables*)))
@@ -1986,14 +1986,14 @@ collected result will be returned as the value of the LOOP."
 	   (unless stepby-constantp
 	     (loop-make-variable (setq stepby (loop-gentemp 'loop-step-by-)) form indexv-type)))
 	 (t (loop-error
-	      "~S invalid preposition in sequencing or sequence path.~@
+	      _N"~S invalid preposition in sequencing or sequence path.~@
 	       Invalid prepositions specified in iteration path descriptor or something?"
 	      prep)))
        (when (and odir dir (not (eq dir odir)))
-	 (loop-error "Conflicting stepping directions in LOOP sequencing path"))
+	 (loop-error _N"Conflicting stepping directions in LOOP sequencing path"))
        (setq odir dir))
      (when (and sequence-variable (not sequencep))
-       (loop-error "Missing OF or IN phrase in sequence path"))
+       (loop-error _N"Missing OF or IN phrase in sequence path"))
      ;; Now fill in the defaults.
      (unless start-given
        (loop-make-iteration-variable
@@ -2010,7 +2010,7 @@ collected result will be returned as the value of the LOOP."
 	    (setq step (if (eql stepby 1) `(1+ ,indexv) `(+ ,indexv ,stepby))))
 	   (t (unless start-given
 		(unless default-top
-		  (loop-error "Don't know where to start stepping."))
+		  (loop-error _N"Don't know where to start stepping."))
 		(push `(setq ,indexv (1- ,default-top)) *loop-prologue*))
 	      (when (and default-top (not endform))
 		(setq endform (loop-typed-init indexv-type) inclusive-iteration t))
@@ -2072,8 +2072,8 @@ collected result will be returned as the value of the LOOP."
 (defun loop-hash-table-iteration-path (variable data-type prep-phrases &key which)
   (check-type which (member hash-key hash-value))
   (cond ((or (cdr prep-phrases) (not (member (caar prep-phrases) '(:in :of))))
-	 (loop-error "Too many prepositions!"))
-	((null prep-phrases) (loop-error "Missing OF or IN in ~S iteration path.")))
+	 (loop-error _N"Too many prepositions!"))
+	((null prep-phrases) (loop-error _N"Missing OF or IN in ~S iteration path.")))
   (let ((ht-var (loop-gentemp 'loop-hashtab-))
 	(next-fn (loop-gentemp 'loop-hashtab-next-))
 	(dummy-predicate-var nil)
@@ -2131,11 +2131,11 @@ collected result will be returned as the value of the LOOP."
 
 (defun loop-package-symbols-iteration-path (variable data-type prep-phrases &key symbol-types)
   (cond ((and prep-phrases (cdr prep-phrases))
-	 (loop-error "Too many prepositions!"))
+	 (loop-error _N"Too many prepositions!"))
 	((and prep-phrases (not (member (caar prep-phrases) '(:in :of))))
-	 (loop-error "Unknown preposition ~S" (caar prep-phrases))))
+	 (loop-error _N"Unknown preposition ~S" (caar prep-phrases))))
   (unless (symbolp variable)
-    (loop-error "Destructuring is not valid for package symbol iteration."))
+    (loop-error _N"Destructuring is not valid for package symbol iteration."))
   (let ((pkg-var (loop-gentemp 'loop-pkgsym-))
 	(next-fn (loop-gentemp 'loop-pkgsym-next-))
 	(variable (or variable (loop-gentemp)))

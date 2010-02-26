@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.9.18.1 2010/02/08 17:15:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.9.18.2 2010/02/26 06:23:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -112,11 +112,11 @@
 ;;;; MACHINE-TYPE and MACHINE-VERSION
 
 (defun machine-type ()
-  "Returns a string describing the type of the local machine."
+  _N"Returns a string describing the type of the local machine."
   "PowerPC")
 
 (defun machine-version ()
-  "Returns a string describing the version of the local machine."
+  _N"Returns a string describing the version of the local machine."
   "who-knows?")
 
 
@@ -361,12 +361,12 @@
 ;; compiler will normally use vops to implement these functions.
 
 (defun fused-multiply-subtract (x y z)
-  "Compute x*y-z with only one rounding operation"
+  _N"Compute x*y-z with only one rounding operation"
   (declare (double-float x y z))
   (fused-multiply-subtract x y z))
 
 (defun fused-multiply-add (x y z)
-  "Compute x*y+z with only one rounding operation"
+  _N"Compute x*y+z with only one rounding operation"
   (declare (double-float x y z))
   (fused-multiply-add x y z))
 

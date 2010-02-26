@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.30.10.2 2010/02/10 04:01:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.30.10.3 2010/02/26 06:23:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -267,7 +267,7 @@
       (declare (ignore def))
       (cond
        (env-p
-	(warn "TIME form in a non-null environment, forced to interpret.~@
+	(warn _"TIME form in a non-null environment, forced to interpret.~@
 	       Compiling entire form will produce more accurate times.")
 	fun)
        (t
@@ -378,7 +378,7 @@
 	  (terpri *trace-output*)
 	  (pprint-logical-block (*trace-output* nil :per-line-prefix "; ")
 	    (format *trace-output*
-		    "Evaluation took:~%  ~
+		    _"Evaluation took:~%  ~
 		     ~S second~:P of real time~%  ~
 		     ~S second~:P of user run time~%  ~
 		     ~S second~:P of system run time~%  ~

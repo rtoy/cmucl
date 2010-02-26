@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.137.4.2 2010/02/09 14:56:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.137.4.3 2010/02/26 06:23:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3898,7 +3898,7 @@ The result is a symbol or nil if the routine cannot be found."
     (dotimes (i (- (length path) context))
       (let ((index (first path)))
 	(unless (and (listp form) (< index (length form)))
-	  (error "Source path no longer exists."))
+	  (error _"Source path no longer exists."))
 	(setq form (elt form index))
 	(setq path (rest path))))
     ;;
