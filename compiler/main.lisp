@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.148.2.6 2010/02/25 04:35:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.148.2.7 2010/02/26 03:38:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -808,7 +808,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		  (read stream))
     (error (condition)
       (declare (ignore condition))
-      (compiler-error _"Unable to recover from read error."))))
+      (compiler-error _N"Unable to recover from read error."))))
 
 
 ;;; Unexpected-EOF-Error  --  Internal
@@ -1056,7 +1056,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 (defun preprocessor-macroexpand (form)
   (handler-case (macroexpand-1 form *lexical-environment*)
     (error (condition)
-       (compiler-error _"(during macroexpansion)~%~A" condition))))
+       (compiler-error _N"(during macroexpansion)~%~A" condition))))
 
 
 ;;; PROCESS-LOCALLY  --  Internal
@@ -1089,7 +1089,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 ;;;
 (defun process-file-comment (form)
   (unless (and (= (length form) 2) (stringp (second form)))
-    (compiler-error _"Bad FILE-COMMENT form: ~S." form))
+    (compiler-error _N"Bad FILE-COMMENT form: ~S." form))
   (let ((file (first (source-info-current-file *source-info*))))
     (cond ((file-info-comment file)
 	   (compiler-warning _N"Ignoring extra file comment:~%  ~S." form))
@@ -1177,7 +1177,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	     (compile-top-level-lambdas () t))
 	    ((eval-when)
 	     (unless (>= (length form) 2)
-	       (compiler-error _"EVAL-WHEN form is too short: ~S." form))
+	       (compiler-error _N"EVAL-WHEN form is too short: ~S." form))
 	     (do-eval-when-stuff
 	      (cadr form) (cddr form)
 	      #'(lambda (forms)
@@ -1185,7 +1185,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	      t))
 	    ((macrolet)
 	     (unless (>= (length form) 2)
-	       (compiler-error _"MACROLET form is too short: ~S." form))
+	       (compiler-error _N"MACROLET form is too short: ~S." form))
 	     ;; Macrolets can have declarations.
 	     (multiple-value-bind (body decls)
 		 (system:parse-body (cddr form) nil nil)
@@ -1348,7 +1348,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
                 (ext:without-package-locks
                  (make-structure-load-form constant)))
 	  (error (condition)
-            (compiler-error _"(while making load form for ~S)~%~A"
+            (compiler-error _N"(while making load form for ~S)~%~A"
                             constant condition)))
       (case creation-form
 	(:just-dump-it-normally
@@ -1379,7 +1379,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		     (format nil _"Creation Form for ~A" name))
 		    *compile-object*)
 		   nil)
-	       (compiler-error _"Circular references in creation form for ~S"
+	       (compiler-error _N"Circular references in creation form for ~S"
 			       constant)))
 	   (when (cdr info)
 	     (let* ((*constants-created-since-last-init* nil)

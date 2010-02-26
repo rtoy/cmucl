@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.173.32.4 2010/02/25 04:35:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.173.32.5 2010/02/26 03:38:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -341,9 +341,9 @@
   (or (gethash name *free-functions*)
       (ecase (info function kind name)
 	(:macro
-	 (compiler-error _"Found macro name ~S ~A." name context))
+	 (compiler-error _N"Found macro name ~S ~A." name context))
 	(:special-form
-	 (compiler-error _"Found special-form name ~S ~A." name context))
+	 (compiler-error _N"Found special-form name ~S ~A." name context))
 	((:function nil)
 	 (check-function-name name)
 	 (note-if-setf-function-and-macro name)
@@ -382,7 +382,7 @@
     (cond (var
 	   (unless (leaf-p var)
 	     (assert (and (consp var) (eq (car var) 'macro)))
-	     (compiler-error _"Found macro name ~S ~A." name context))
+	     (compiler-error _N"Found macro name ~S ~A." name context))
 	   var)
 	  (t
 	   (find-free-function name context)))))
@@ -400,7 +400,7 @@
 (defun find-free-variable (name)
   (declare (values (or leaf cons heap-alien-info)))
   (unless (symbolp name)
-    (compiler-error _"Variable name is not a symbol: ~S." name))
+    (compiler-error _N"Variable name is not a symbol: ~S." name))
   (or (gethash name *free-variables*)
       (let ((kind (info variable kind name))
 	    (type (info variable type name))
@@ -495,7 +495,7 @@
 			(grovel (%instance-ref value i)))))
 		   (t
 		    (compiler-error
-		     _"Cannot dump objects of type ~S into fasl files."
+		     _N"Cannot dump objects of type ~S into fasl files."
 		     (type-of value)))))))
       (grovel constant)))
   (undefined-value))
@@ -720,7 +720,7 @@
 		(typecase lexical-def
 		  (null
 		   (when (eq fun 'declare)
-		     (compiler-error _"Misplaced declaration."))
+		     (compiler-error _N"Misplaced declaration."))
 		   (ir1-convert-global-functoid start cont form))
 		  (functional
 		   (ir1-convert-local-combination start cont form lexical-def))
@@ -733,7 +733,7 @@
 				(careful-expand-macro (cdr lexical-def)
 						      form))))))
 	     ((or (atom fun) (not (eq (car fun) 'lambda)))
-	      (compiler-error _"Illegal function call."))
+	      (compiler-error _N"Illegal function call."))
 	     (t
 	      (ir1-convert-combination start cont form
 				       ;; TODO: check this case --jwr
@@ -891,7 +891,7 @@
 (defun careful-expand-macro (fun form)
   (handler-case (invoke-macroexpand-hook fun form *lexical-environment*)
     (error (condition)
-	   (compiler-error _"(during macroexpansion)~%~A"
+	   (compiler-error _N"(during macroexpansion)~%~A"
 			   condition))))
 
 
@@ -1149,7 +1149,7 @@
 	     (new-vars `(,var-name . (MACRO . (the ,(first decl)
 						   ,(cdr var))))))
 	    (heap-alien-info
-	     (compiler-error _"Can't declare type of Alien variable: ~S."
+	     (compiler-error _N"Can't declare type of Alien variable: ~S."
 			     var-name)))))
 
       (if (or (restr) (new-vars))
@@ -1202,7 +1202,7 @@
 	(etypecase var
 	  (cons
 	   (assert (eq (car var) 'MACRO))
-	   (compiler-error _"Declaring symbol-macro ~S special." name))
+	   (compiler-error _N"Declaring symbol-macro ~S special." name))
 	  (lambda-var
 	   (when (lambda-var-ignorep var)
 	     (compiler-note _N"Ignored variable ~S is being declared special."
@@ -1288,7 +1288,7 @@
   (if (consp name)
       (destructuring-bind (wot fn-name) name
 	(unless (eq wot 'function)
-	  (compiler-error _"Unrecognizable function or variable name: ~S"
+	  (compiler-error _N"Unrecognizable function or variable name: ~S"
 			  name))
 	(find fn-name fvars
 	      :key #'leaf-name
@@ -1347,7 +1347,7 @@
     (special (process-special-declaration spec res vars))
     (ftype
      (unless (cdr spec)
-       (compiler-error _"No type specified in FTYPE declaration: ~S." spec))
+       (compiler-error _N"No type specified in FTYPE declaration: ~S." spec))
      (process-ftype-declaration (second spec) res (cddr spec) fvars))
     (function
      ;;
@@ -1423,7 +1423,7 @@
   (dolist (decl decls)
     (dolist (spec (rest decl))
       (unless (consp spec)
-	(compiler-error _"Malformed declaration specifier ~S in ~S."
+	(compiler-error _N"Malformed declaration specifier ~S in ~S."
 			spec decl))
       
       (setq env (process-1-declaration spec env vars fvars cont))))
@@ -1440,11 +1440,11 @@
   (cond ((not (eq (info variable where-from name) :assumed))
 	 (let ((found (find-free-variable name)))
 	   (when (heap-alien-info-p found)
-	     (compiler-error _"Declaring an alien variable to be special: ~S"
+	     (compiler-error _N"Declaring an alien variable to be special: ~S"
 			     name))
 	   (when (or (not (global-var-p found))
 		     (eq (global-var-kind found) :constant))
-	     (compiler-error _"Declaring a constant to be special: ~S." name))
+	     (compiler-error _N"Declaring a constant to be special: ~S." name))
 	   found))
 	(t
 	 (make-global-var :kind :special  :name name  :where-from :declared))))
@@ -1468,12 +1468,12 @@
   (declare (list names-so-far) (values lambda-var)
 	   (inline member))
   (unless (symbolp name)
-    (compiler-error _"Lambda-variable is not a symbol: ~S." name))
+    (compiler-error _N"Lambda-variable is not a symbol: ~S." name))
   (when (member name names-so-far :test #'eq)
-    (compiler-error _"Repeated variable in lambda-list: ~S." name))
+    (compiler-error _N"Repeated variable in lambda-list: ~S." name))
   (let ((kind (info variable kind name)))
     (when (or (keywordp name) (eq kind :constant))
-      (compiler-error _"Name of lambda-variable is a constant: ~S." name))
+      (compiler-error _N"Name of lambda-variable is a constant: ~S." name))
     (if (eq kind :special)
 	(let ((specvar (find-free-variable name)))
 	  (make-lambda-var :name name
@@ -1498,7 +1498,7 @@
 	(when (and info
 		   (eq (arg-info-kind info) :keyword)
 		   (eq (arg-info-keyword info) key))
-	  (compiler-error _"Multiple uses of keyword ~S in lambda-list." key))))
+	  (compiler-error _N"Multiple uses of keyword ~S in lambda-list." key))))
     key))
 
 
@@ -1531,13 +1531,13 @@
 				allow-debug-catch-tag
 				caller)
   (unless (consp form)
-    (compiler-error _"Found a ~S when expecting a lambda expression:~%  ~S"
+    (compiler-error _N"Found a ~S when expecting a lambda expression:~%  ~S"
 		    (type-of form) form))
   (unless (eq (car form) 'lambda)
-    (compiler-error _"Expecting a lambda, but form begins with ~S:~%  ~S"
+    (compiler-error _N"Expecting a lambda, but form begins with ~S:~%  ~S"
 		    (car form) form))
   (unless (and (consp (cdr form)) (listp (cadr form)))
-    (compiler-error _"Lambda-list absent or not a list:~%  ~S" form))
+    (compiler-error _N"Lambda-list absent or not a list:~%  ~S" form))
 
   (multiple-value-bind (vars keyp allow-other-keys aux-vars aux-vals)
       (find-lambda-vars (cadr form))
@@ -1630,7 +1630,7 @@
 		     (setf (arg-info-supplied-p info) supplied-var)
 		     (names-so-far supplied-p)
 		     (when (> (length (the list spec)) 3)
-		       (compiler-error _"Arg specifier is too long: ~S." spec)))))))
+		       (compiler-error _N"Arg specifier is too long: ~S." spec)))))))
 	
 	(dolist (name required)
 	  (let ((var (varify-lambda-arg name (names-so-far))))
@@ -1710,7 +1710,7 @@
 		   (names-so-far spec)))
 		(t
 		 (unless (<= 1 (length spec) 2)
-		   (compiler-error _"Malformed &aux binding specifier: ~S."
+		   (compiler-error _N"Malformed &aux binding specifier: ~S."
 				   spec))
 		 (let* ((name (first spec))
 			(var (varify-lambda-arg name nil)))
@@ -2371,7 +2371,7 @@
   (RETURN-FROM Name Value-Form) can be used to exit the form, returning the
   result of Value-Form."
   (unless (symbolp name)
-    (compiler-error _"Block name is not a symbol: ~S." name))
+    (compiler-error _N"Block name is not a symbol: ~S." name))
   (continuation-starts-block cont)
   (let* ((dummy (make-continuation))
 	 (entry (make-entry))
@@ -2399,7 +2399,7 @@
   extent of the BLOCK."
   (continuation-starts-block cont)
   (let* ((found (or (lexenv-find name blocks)
-		    (compiler-error _"Return for unknown block: ~S." name)))
+		    (compiler-error _N"Return for unknown block: ~S." name)))
 	 (value-cont (make-continuation))
 	 (entry (first found))
 	 (exit (make-exit :entry entry  :value value-cont)))
@@ -2431,9 +2431,9 @@
 	    (return))
 	  (let ((tag (elt current tag-pos)))
 	    (when (assoc tag (segments))
-	      (compiler-error _"Repeated tagbody tag: ~S." tag))
+	      (compiler-error _N"Repeated tagbody tag: ~S." tag))
 	    (unless (or (symbolp tag) (integerp tag))
-	      (compiler-error _"Illegal tagbody statement: ~S." tag))	      
+	      (compiler-error _N"Illegal tagbody statement: ~S." tag))	      
 	    (segments `(,@(subseq current 0 tag-pos) (go ,tag))))
 	  (setq current (nthcdr tag-pos current)))))
     (segments)))
@@ -2493,7 +2493,7 @@
   is constrained to be used only within the dynamic extent of the TAGBODY."
   (continuation-starts-block cont)
   (let* ((found (or (lexenv-find tag tags :test #'eql)
-		    (compiler-error _"Go to nonexistent tag: ~S." tag)))
+		    (compiler-error _N"Go to nonexistent tag: ~S." tag)))
 	 (entry (first found))
 	 (exit (make-exit :entry entry)))
     (push exit (entry-exits entry))
@@ -2514,11 +2514,11 @@
 	 (values nil))
 	(list
 	 (unless (= (length bind) 2)
-	   (compiler-error _"Bad compiler-let binding spec: ~S." bind))
+	   (compiler-error _N"Bad compiler-let binding spec: ~S." bind))
 	 (vars (first bind))
 	 (values (eval (second bind))))
 	(t
-	 (compiler-error _"Bad compiler-let binding spec: ~S." bind))))
+	 (compiler-error _N"Bad compiler-let binding spec: ~S." bind))))
     (progv (vars) (values)
       (ir1-convert-progn-body start cont body))))
 
@@ -2536,7 +2536,7 @@
 	    (set-difference situations
 			    '(compile load eval
 			      :compile-toplevel :load-toplevel :execute)))
-    (compiler-error _"Bad Eval-When situation list: ~S." situations))
+    (compiler-error _N"Bad Eval-When situation list: ~S." situations))
 
   (if toplevel-p
       ;; Can only get here from compile-file
@@ -2605,13 +2605,13 @@
 	      (lisp::parse-defmacro arglist whole body name 'macrolet
 				    :environment environment)
 	    (unless (symbolp name)
-	      (compiler-error _"Macro name ~S is not a symbol." name))
+	      (compiler-error _N"Macro name ~S is not a symbol." name))
 	    (unless (listp arglist)
-	      (compiler-error _"Local macro ~S has argument list that is not a list: ~S."
+	      (compiler-error _N"Local macro ~S has argument list that is not a list: ~S."
 			      name arglist))
 	    (when (< (length def) 3)
 	      (compiler-error
-	       _"Local macro ~S is too short to be a legal definition." name))
+	       _N"Local macro ~S is too short to be a legal definition." name))
 	    (new-fenv `(,(first def) macro .
 			,(eval:internal-eval
 			  `(lambda (,whole ,environment)
@@ -2652,7 +2652,7 @@
 					       (cdr binding)
 					       (listp (cdr binding))
 					       (null (cddr binding)))
-				    (compiler-error _"Bogus binding for ~
+				    (compiler-error _N"Bogus binding for ~
 						     COMPILER-OPTION-BIND: ~S"
 						    binding))
 				  (cons (car binding)
@@ -2675,7 +2675,7 @@
   (declare (list args))
   (handler-case (mapcar #'eval args)
     (error (condition)
-      (compiler-error _"Lisp error during evaluation of info args:~%~A"
+      (compiler-error _N"Lisp error during evaluation of info args:~%~A"
 		      condition))))
 
 ;;; A hashtable that translates from primitive names to translation functions.
@@ -2696,7 +2696,7 @@
 				       start cont)
   
   (unless (symbolp name)
-    (compiler-error _"%Primitive name is not a symbol: ~S." name))
+    (compiler-error _N"%Primitive name is not a symbol: ~S." name))
 
   (let* ((name (intern (symbol-name name)
 		       (or (find-package "OLD-C")
@@ -2705,7 +2705,7 @@
     (if translator
 	(ir1-convert start cont (funcall translator (cdr form)))
 	(let* ((template (or (gethash name (backend-template-names *backend*))
-			     (compiler-error _"Undefined primitive name: ~A."
+			     (compiler-error _N"Undefined primitive name: ~A."
 					     name)))
 	       (required (length (template-arg-types template)))
 	       (info (template-info-arg-count template))
@@ -2713,20 +2713,20 @@
 	       (nargs (length args)))
 	  (if (template-more-args-type template)
 	      (when (< nargs min)
-		(compiler-error _"Primitive called with ~R argument~:P, ~
+		(compiler-error _N"Primitive called with ~R argument~:P, ~
 	    		         but wants at least ~R."
 				nargs min))
 	      (unless (= nargs min)
-		(compiler-error _"Primitive called with ~R argument~:P, ~
+		(compiler-error _N"Primitive called with ~R argument~:P, ~
 				 but wants exactly ~R."
 				nargs min)))
 
 	  (when (eq (template-result-types template) :conditional)
-	    (compiler-error _"%Primitive used with a conditional template."))
+	    (compiler-error _N"%Primitive used with a conditional template."))
 
 	  (when (template-more-results-type template)
 	    (compiler-error
-	     _"%Primitive used with an unknown values template."))
+	     _N"%Primitive used with an unknown values template."))
 	  
 	  (ir1-convert start cont
 		      `(%%primitive ',template
@@ -2767,7 +2767,7 @@
 	  (t
 	   (if (valid-function-name-p thing)
 	       (reference-it)
-	       (compiler-error _"Illegal function name: ~S" thing))))
+	       (compiler-error _N"Illegal function name: ~S" thing))))
 	(reference-it))))
 
 
@@ -2822,14 +2822,14 @@
   (collect ((res))
     (dolist (spec specs)
       (unless (= (length spec) 2)
-	(compiler-error _"Malformed symbol macro binding: ~S." spec))
+	(compiler-error _N"Malformed symbol macro binding: ~S." spec))
       (let ((name (first spec))
 	    (def (second spec)))
 	(unless (symbolp name)
-	  (compiler-error _"Symbol macro name is not a symbol: ~S." name))
+	  (compiler-error _N"Symbol macro name is not a symbol: ~S." name))
 	(let ((kind (info variable kind name)))
 	  (when (member kind '(:special :constant))
-	    (compiler-error _"Attempt to bind a special or constant variable with SYMBOL-MACROLET: ~S." name)))
+	    (compiler-error _N"Attempt to bind a special or constant variable with SYMBOL-MACROLET: ~S." name)))
 	(when (assoc name (res) :test #'eq)
 	  (compiler-warning _N"Repeated name in SYMBOL-MACROLET: ~S." name))
 	(res `(,name . (MACRO . ,def)))))
@@ -2859,7 +2859,7 @@
   (collect ((vars))
     (dolist (name names (vars))
       (unless (symbolp name)
-	(compiler-error _"Name is not a symbol: ~S." name))
+	(compiler-error _N"Name is not a symbol: ~S." name))
       (let ((old (gethash name *free-variables*)))
 	(when old (vars old))))))
 
@@ -2939,7 +2939,7 @@
   (let ((type (specifier-type spec)))
     (unless (csubtypep type (specifier-type 'function))
       (compiler-error
-       _"Declared functional type is not a function type: ~S." spec))
+       _N"Declared functional type is not a function type: ~S." spec))
     (dolist (name names)
       (process-1-ftype-proclamation name type))))
 
@@ -2967,7 +2967,7 @@
   (if (constantp what)
       (let ((form (eval what)))
 	(unless (consp form)
-	  (compiler-error _"Malformed PROCLAIM spec: ~S." form))
+	  (compiler-error _N"Malformed PROCLAIM spec: ~S." form))
 
 	(let ((identifier (first form))
 	      (args (rest form))
@@ -2979,7 +2979,7 @@
 		 (when (or (constant-p old)
 			   (eq (global-var-kind old) :constant))
 		   (compiler-error
-		    _"Attempt to proclaim constant ~S to be special." name))
+		    _N"Attempt to proclaim constant ~S to be special." name))
 
 		 (ecase (global-var-kind old)
 		   (:special)
@@ -2990,16 +2990,16 @@
 					   :kind :special)))))))
 	    (type
 	     (when (endp args)
-	       (compiler-error _"Malformed TYPE proclamation: ~S." form))
+	       (compiler-error _N"Malformed TYPE proclamation: ~S." form))
 	     (process-type-proclamation (first args) (rest args)))
 	    (function
 	     (when (endp args)
-	       (compiler-error _"Malformed FUNCTION proclamation: ~S." form))
+	       (compiler-error _N"Malformed FUNCTION proclamation: ~S." form))
 	     (process-ftype-proclamation `(function . ,(rest args))
 					 (list (first args))))
 	    (ftype
 	     (when (endp args)
-	       (compiler-error _"Malformed FTYPE proclamation: ~S." form))
+	       (compiler-error _N"Malformed FTYPE proclamation: ~S." form))
 	     (process-ftype-proclamation (first args) (rest args)))
 	    ((inline notinline maybe-inline)
 	     (process-inline-proclamation identifier args))
@@ -3094,7 +3094,7 @@
 		 (vals nil)))
 	      (t
 	       (unless (<= 1 (length spec) 2)
-		 (compiler-error _"Malformed ~S binding spec: ~S."
+		 (compiler-error _N"Malformed ~S binding spec: ~S."
 				 context spec))
 	       (let* ((name (first spec))
 		      (var (get-var name)))
@@ -3171,7 +3171,7 @@
     (collect ((names) (defs))
        (dolist (def definitions)
 	 (when (or (atom def) (< (length def) 2))
-	   (compiler-error _"Malformed ~S definition spec: ~S." context def))
+	   (compiler-error _N"Malformed ~S definition spec: ~S." context def))
 	 (let* ((name (check-function-name (first def)))
 		(block-name (nth-value 1 (valid-function-name-p (first def))))
 		(local-name (local-function-name name)))
@@ -3355,7 +3355,7 @@
   expansion."
   (let ((len (length things)))
     (when (oddp len)
-      (compiler-error _"Odd number of args to SETQ: ~S." source))
+      (compiler-error _N"Odd number of args to SETQ: ~S." source))
     (if (= len 2)
 	(let* ((name (first things))
 	       (leaf (or (lexenv-find name variables)
@@ -3365,7 +3365,7 @@
 	     (when (or (constant-p leaf)
 		       (and (global-var-p leaf)
 			    (eq (global-var-kind leaf) :constant)))
-	       (compiler-error _"Attempt to set constant ~S." name))
+	       (compiler-error _N"Attempt to set constant ~S." name))
 	     (when (lambda-var-p leaf)
 	       (when (lambda-var-ignorep leaf)
 		 (compiler-note _N"Setting an ignored variable: ~S." name))
@@ -3656,7 +3656,7 @@
 ;;;
 (defun do-macro-compile-time (name def)
   (unless (symbolp name)
-    (compiler-error _"Macro name is not a symbol: ~S." name))
+    (compiler-error _N"Macro name is not a symbol: ~S." name))
 
   (ecase (info function kind name)
     ((nil))
@@ -3668,7 +3668,7 @@
       name (info function where-from name)))
     (:macro)
     (:special-form
-     (compiler-error _"Attempt to redefine special form ~S as a macro." name)))
+     (compiler-error _N"Attempt to redefine special form ~S as a macro." name)))
 
   (setf (info function kind name) :macro)
   (setf (info function where-from name) :defined)
@@ -3693,7 +3693,7 @@
 
 (defun do-compiler-macro-compile-time (name def)
   (when (eq (info function kind name) :special-form)
-    (compiler-error _"Attempt to define a compiler-macro for special form ~S."
+    (compiler-error _N"Attempt to define a compiler-macro for special form ~S."
 		    name))
   (when *compile-time-define-macros*
     (setf (info function compiler-macro-function name)
@@ -3721,13 +3721,13 @@
 ;;;
 (defun do-defconstant-compile-time (name value doc)
   (unless (symbolp name)
-    (compiler-error _"Constant name is not a symbol: ~S." name))
+    (compiler-error _N"Constant name is not a symbol: ~S." name))
   (when (eq name t)
-    (compiler-error _"Can't change T."))
+    (compiler-error _N"Can't change T."))
   (when (eq name nil)
-    (compiler-error _"Nihil ex nihil (Can't change NIL)."))
+    (compiler-error _N"Nihil ex nihil (Can't change NIL)."))
   (when (keywordp name)
-    (compiler-error _"Can't change the value of keywords."))
+    (compiler-error _N"Can't change the value of keywords."))
 
   (let ((kind (info variable kind name)))
     (case kind

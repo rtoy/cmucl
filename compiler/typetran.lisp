@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.45.38.4 2010/02/25 04:35:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.45.38.5 2010/02/26 03:38:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -414,7 +414,7 @@
       ((csubtypep otype class) 't)
       ;; If not properly named, error.
       ((not (and name (eq (kernel::find-class name) class)))
-       (compiler-error _"Can't compile TYPEP of anonymous or undefined ~
+       (compiler-error _N"Can't compile TYPEP of anonymous or undefined ~
 			class:~%  ~S"
 		       class))
       (t

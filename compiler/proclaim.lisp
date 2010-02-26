@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.44.24.4 2010/02/25 04:35:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.44.24.5 2010/02/26 03:38:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -141,29 +141,29 @@
 	    (ecase arg
 	      (&optional
 	       (unless (eq state :required)
-		 (compiler-error _"Misplaced &optional in lambda-list: ~S." list))
+		 (compiler-error _N"Misplaced &optional in lambda-list: ~S." list))
 	       (setq state '&optional))
 	      (&rest
 	       (unless (member state '(:required &optional))
-		 (compiler-error _"Misplaced &rest in lambda-list: ~S." list))
+		 (compiler-error _N"Misplaced &rest in lambda-list: ~S." list))
 	       (setq state '&rest))
 	      (&more
 	       (unless (member state '(:required &optional))
-		 (compiler-error _"Misplaced &more in lambda-list: ~S." list))
+		 (compiler-error _N"Misplaced &more in lambda-list: ~S." list))
 	       (setq morep t  state '&more-context))
 	      (&key
 	       (unless (member state '(:required &optional :post-rest
 						 :post-more))
-		 (compiler-error _"Misplaced &key in lambda-list: ~S." list))
+		 (compiler-error _N"Misplaced &key in lambda-list: ~S." list))
 	       (setq keyp t)
 	       (setq state '&key))
 	      (&allow-other-keys
 	       (unless (eq state '&key)
-		 (compiler-error _"Misplaced &allow-other-keys in lambda-list: ~S." list))
+		 (compiler-error _N"Misplaced &allow-other-keys in lambda-list: ~S." list))
 	       (setq allowp t  state '&allow-other-keys))
 	      (&aux
 	       (when (member state '(&rest &more-context &more-count))
-		 (compiler-error _"Misplaced &aux in lambda-list: ~S." list))
+		 (compiler-error _N"Misplaced &aux in lambda-list: ~S." list))
 	       (setq state '&aux)))
 	    (case state
 	      (:required (required arg))
@@ -177,10 +177,10 @@
 	      (&key (keys arg))
 	      (&aux (aux arg))
 	      (t
-	       (compiler-error _"Found garbage in lambda-list when expecting a keyword: ~S." arg)))))
+	       (compiler-error _N"Found garbage in lambda-list when expecting a keyword: ~S." arg)))))
 
       (when (eq state '&rest)
-	(compiler-error _"&rest not followed by required variable."))
+	(compiler-error _N"&rest not followed by required variable."))
       
       (values (required) (optional) restp rest keyp (keys) allowp (aux)
 	      morep more-context more-count))))
@@ -196,14 +196,14 @@
   (typecase name
     (list
      (unless (valid-function-name-p name)
-       (compiler-error _"Illegal function name: ~S." name))
+       (compiler-error _N"Illegal function name: ~S." name))
      name)
     (symbol
      (when (eq (info function kind name) :special-form)
-       (compiler-error _"Special form is an illegal function name: ~S." name))
+       (compiler-error _N"Special form is an illegal function name: ~S." name))
      name)
     (t
-     (compiler-error _"Illegal function name: ~S." name))))
+     (compiler-error _N"Illegal function name: ~S." name))))
 
 
 ;;; NOTE-IF-SETF-FUNCTION-AND-MACRO  --  Interface

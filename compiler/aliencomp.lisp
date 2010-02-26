@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.31.32.2 2010/02/10 17:38:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.31.32.3 2010/02/26 03:38:16 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -386,7 +386,7 @@
 		((ctypep 0.0d0 alien-rep-type) 0.0d0)
 		(t
 		 (compiler-error
-		  _"Aliens of type ~S cannot be represented immediately."
+		  _N"Aliens of type ~S cannot be represented immediately."
 		  (unparse-alien-type alien-type))))))))
 
 (deftransform note-local-alien-type ((info var) * * :important t)

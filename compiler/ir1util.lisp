@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.110.26.4 2010/02/25 04:35:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.110.26.5 2010/02/26 03:38:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2156,7 +2156,8 @@ these can be NIL if unavailable or inapplicable.")
 (defun compiler-error (format-string &rest format-args)
   (declare (string format-string))
   (cerror "replace form with call to ERROR."
-	  'compiler-error :format-control format-string
+	  'compiler-error
+	  :format-control (intl:gettext format-string)
 	  :format-arguments format-args)
   (funcall *compiler-error-bailout*))
 ;;;
