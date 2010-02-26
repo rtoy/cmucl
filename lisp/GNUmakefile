@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.33.14.3 2010/02/12 22:21:23 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.33.14.4 2010/02/26 15:35:03 rtoy Exp $
 
 all: lisp.nm translations
 
@@ -69,17 +69,17 @@ Depends: ${SRCS}
 LOCALES=en@piglatin ko
 
 # Convert locale names to the appropriate path where we want the mo files to go.
-LOCALE_MO=$(patsubst %, ../i18n/locale/%/LC_MESSAGES/cmucl.mo, $(LOCALES))
+LOCALE_DIRS = $(patsubst %, i18n/locale/%/LC_MESSAGES, $(LOCALES))
 
-translations: $(LOCALE_MO)
+translations: 
+	for pot in ../../src/i18n/locale/*.pot; do \
+	  for po in $(LOCALE_DIRS); do \
+            d=`dirname $$pot`; \
+	    f=`basename $$pot .pot`; \
+	    touch ../../src/$$po/$$f.po; \
+	    msgmerge -v ../../src/$$po/$$f.po $$pot -o ../../src/$$po/$$f.po; \
+	    msgfmt -v  ../../src/$$po/$$f.po -o ../$$po/$$f.mo; \
+	  done; done
 
 .PHONY : translations
-
-# Create the mo files 
-../i18n/locale/%/LC_MESSAGES/cmucl.mo : ../../src/i18n/locale/%/LC_MESSAGES/cmucl.po
-	-msgfmt -v $^ -o $@
-
-# Update the translations with the template
-../../src/i18n/locale/%/LC_MESSAGES/cmucl.po : ../../src/i18n/locale/cmucl.pot
-	msgmerge -v $@ $^ -o $@
 
