@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.15 2004/05/13 14:37:06 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.15.38.1 2010/02/26 21:36:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.15 2004/05/13 14:37:06 rtoy Rel $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.15.38.1 2010/02/26 21:36:21 rtoy Exp $
 ;;;
 ;;;    This file contains the SPARC VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -18,6 +18,7 @@
 ;;; SPARC conversion by William Lott.
 ;;;
 (in-package "SPARC")
+(intl:textdomain "cmucl-sparc-vm")
 
 
 (define-move-function (load-immediate 1) (vop x y)
@@ -162,7 +163,7 @@
   (:args (x :scs (any-reg descriptor-reg)))
   (:results (y :scs (signed-reg unsigned-reg)))
   (:arg-types tagged-num)
-  (:note "fixnum untagging")
+  (:note _N"fixnum untagging")
   (:generator 1
     (inst sran y x fixnum-tag-bits)))
 
@@ -174,7 +175,7 @@
 (define-vop (move-to-word-c)
   (:args (x :scs (constant)))
   (:results (y :scs (signed-reg unsigned-reg)))
-  (:note "constant load")
+  (:note _N"constant load")
   (:generator 1
     (inst li y (tn-value x))))
 
@@ -187,7 +188,7 @@
 (define-vop (move-to-word/integer)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (signed-reg unsigned-reg)))
-  (:note "integer to untagged word coercion")
+  (:note _N"integer to untagged word coercion")
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
     (let ((done (gen-label)))
@@ -205,7 +206,7 @@
 (define-vop (move-to-word/integer)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (signed-reg unsigned-reg)))
-  (:note "integer to untagged word coercion")
+  (:note _N"integer to untagged word coercion")
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
     (let ((done (gen-label)))
@@ -231,7 +232,7 @@
   (:args (x :scs (signed-reg unsigned-reg)))
   (:results (y :scs (any-reg descriptor-reg)))
   (:result-types tagged-num)
-  (:note "fixnum tagging")
+  (:note _N"fixnum tagging")
   (:generator 1
     (inst slln y x fixnum-tag-bits)))
 ;;;
@@ -246,7 +247,7 @@
   (:args (arg :scs (signed-reg unsigned-reg) :target x))
   (:results (y :scs (any-reg descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
-  (:note "signed word to integer coercion")
+  (:note _N"signed word to integer coercion")
   (:generator 20
     (move x arg)
     (let ((done (gen-label)))
@@ -284,7 +285,7 @@
   (:args (arg :scs (signed-reg unsigned-reg) :target x))
   (:results (y :scs (any-reg descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
-  (:note "unsigned word to integer coercion")
+  (:note _N"unsigned word to integer coercion")
   (:generator 20
     (move x arg)
     (let ((done (gen-label))
@@ -315,7 +316,7 @@
   (:args (arg :scs (signed-reg unsigned-reg) :target x))
   (:results (y :scs (any-reg descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
-  (:note "unsigned word to integer coercion")
+  (:note _N"unsigned word to integer coercion")
   (:generator 20
     (move x arg)
     (let ((done (gen-label)))
@@ -351,7 +352,7 @@
 	       :load-if (not (location= x y))))
   (:effects)
   (:affected)
-  (:note "word integer move")
+  (:note _N"word integer move")
   (:generator 0
     (move y x)))
 ;;;
@@ -367,7 +368,7 @@
 	     :load-if (not (sc-is y sap-reg))))
   (:results (y))
   (:temporary (:scs (non-descriptor-reg)) temp)
-  (:note "word integer argument move")
+  (:note _N"word integer argument move")
   (:generator 0
     (sc-case y
       ((signed-reg unsigned-reg)
@@ -421,7 +422,7 @@
   (:args (x :scs (any-reg descriptor-reg)))
   (:results (y :scs (signed64-reg unsigned64-reg)))
   (:arg-types tagged-num)
-  (:note "fixnum untagging")
+  (:note _N"fixnum untagging")
   (:generator 0
     ;; Sign-extend the fixnum and then remove the tag.  (Can't just
     ;; remove the tag because we don't know for sure if X has been
@@ -436,7 +437,7 @@
 (define-vop (move-to-64bit-word-c)
   (:args (x :scs (constant)))
   (:results (y :scs (signed64-reg unsigned64-reg)))
-  (:note "constant load")
+  (:note _N"constant load")
   (:generator 1
     (inst li64 y (tn-value x))))
 
@@ -447,7 +448,7 @@
 (define-vop (move-to-64bit-word/integer)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (signed64-reg)))
-  (:note "integer to untagged word coercion")
+  (:note _N"integer to untagged word coercion")
   (:temporary (:scs (signed64-reg)) temp)
   (:generator 4
     (let ((done (gen-label)))
@@ -517,7 +518,7 @@
   (:args (arg :scs (signed64-reg) :target x))
   (:results (y :scs (descriptor-reg)))
   (:temporary (:scs (signed64-reg) :from (:argument 0)) x temp)
-  (:note "signed 64-bit word to integer coercion")
+  (:note _N"signed 64-bit word to integer coercion")
   (:generator 20
     (move x arg)
     (let ((fixnum (gen-label))
@@ -557,7 +558,7 @@
   (:args (arg :scs (unsigned64-reg) :target x))
   (:results (y :scs (descriptor-reg)))
   (:temporary (:scs (unsigned64-reg) :from (:argument 0)) x temp)
-  (:note "unsigned 64-bit word to integer coercion")
+  (:note _N"unsigned 64-bit word to integer coercion")
   (:generator 20
     (move x arg)
     (let ((two-words (gen-label))
@@ -596,7 +597,7 @@
 (define-vop (move-to-unsigned-64bit-word/integer)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (unsigned64-reg)))
-  (:note "integer to untagged word coercion")
+  (:note _N"integer to untagged word coercion")
   (:temporary (:scs (unsigned64-reg)) temp)
   (:generator 4
     (let ((done (gen-label)))
@@ -643,7 +644,7 @@
 	       :load-if (not (location= x y))))
   (:effects)
   (:affected)
-  (:note "word integer move")
+  (:note _N"word integer move")
   (:generator 0
     (move y x)))
 
@@ -657,7 +658,7 @@
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y sap-reg))))
   (:results (y))
-  (:note "word integer argument move")
+  (:note _N"word integer argument move")
   (:generator 0
     (sc-case y
       ((signed64-reg unsigned64-reg)

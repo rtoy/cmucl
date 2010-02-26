@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/sap.lisp,v 1.10 2000/08/12 07:33:42 dtc Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/sap.lisp,v 1.10.54.1 2010/02/26 21:36:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,7 @@
 ;;; Written by William Lott.
 ;;;
 (in-package "SPARC")
+(intl:textdomain "cmucl-sparc-vm")
 
 
 ;;;; Moves and coercions:
@@ -23,7 +24,7 @@
 (define-vop (move-to-sap)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (sap-reg)))
-  (:note "pointer to SAP coercion")
+  (:note _N"pointer to SAP coercion")
   (:generator 1
     (loadw y x sap-pointer-slot other-pointer-type)))
 
@@ -38,7 +39,7 @@
   (:args (sap :scs (sap-reg) :to :save))
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:results (res :scs (descriptor-reg)))
-  (:note "SAP to pointer coercion") 
+  (:note _N"SAP to pointer coercion") 
   (:generator 20
     (with-fixed-allocation (res ndescr sap-type sap-size)
       (storew sap res sap-pointer-slot other-pointer-type))))
@@ -55,7 +56,7 @@
 	    :load-if (not (location= x y))))
   (:results (y :scs (sap-reg)
 	       :load-if (not (location= x y))))
-  (:note "SAP move")
+  (:note _N"SAP move")
   (:effects)
   (:affected)
   (:generator 0
@@ -73,7 +74,7 @@
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y sap-reg))))
   (:results (y))
-  (:note "SAP argument move")
+  (:note _N"SAP argument move")
   (:generator 0
     (sc-case y
       (sap-reg

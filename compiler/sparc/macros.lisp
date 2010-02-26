@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.34 2006/06/30 18:41:32 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.34.26.1 2010/02/26 21:36:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.34 2006/06/30 18:41:32 rtoy Rel $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.34.26.1 2010/02/26 21:36:21 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -17,12 +17,13 @@
 ;;; 
 
 (in-package "SPARC")
+(intl:textdomain "cmucl-sparc-vm")
 
 
 ;;; Instruction-like macros.
 
 (defmacro move (dst src)
-  "Move SRC into DST unless they are location=."
+  _N"Move SRC into DST unless they are location=."
   (once-only ((n-dst dst)
 	      (n-src src))
     `(unless (location= ,n-dst ,n-src)
@@ -108,7 +109,7 @@
   (frob function))
 
 (defmacro load-type (target source &optional (offset 0))
-  "Loads the type bits of a pointer into target independent of
+  _N"Loads the type bits of a pointer into target independent of
   byte-ordering issues."
   (once-only ((n-target target)
 	      (n-source source)
@@ -123,14 +124,14 @@
 ;;; return instructions. 
 
 (defmacro lisp-jump (function)
-  "Jump to the lisp function FUNCTION.  LIP is an interior-reg temporary."
+  _N"Jump to the lisp function FUNCTION.  LIP is an interior-reg temporary."
   `(progn
      (inst j ,function
 	   (- (ash function-code-offset word-shift) vm:function-pointer-type))
      (move code-tn ,function)))
 
 (defmacro lisp-return (return-pc &key (offset 0) (frob-code t))
-  "Return to RETURN-PC."
+  _N"Return to RETURN-PC."
   `(progn
      (inst j ,return-pc
 	   (- (* (1+ ,offset) word-bytes) other-pointer-type))
@@ -139,7 +140,7 @@
 	  '(inst nop))))
 
 (defmacro emit-return-pc (label)
-  "Emit a return-pc header word.  LABEL is the label to use for this return-pc."
+  _N"Emit a return-pc header word.  LABEL is the label to use for this return-pc."
   `(progn
      (align lowtag-bits)
      (emit-label ,label)
@@ -173,7 +174,7 @@
 ;;; MAYBE-LOAD-STACK-TN  --  Interface
 ;;;
 (defmacro maybe-load-stack-tn (reg reg-or-stack)
-  "Move the TN Reg-Or-Stack into Reg if it isn't already there."
+  _N"Move the TN Reg-Or-Stack into Reg if it isn't already there."
   (once-only ((n-reg reg)
 	      (n-stack reg-or-stack))
     `(sc-case ,n-reg
@@ -294,7 +295,7 @@
 					    &key (lowtag other-pointer-type)
 					    stack-p)
 				 &body body)
-  "Do stuff to allocate an other-pointer object of fixed Size with a single
+  _N"Do stuff to allocate an other-pointer object of fixed Size with a single
   word header having the specified Type-Code.  The result is placed in
   Result-TN, and Temp-TN is a non-descriptor temp (which may be randomly used
   by the body.)  The body is placed inside the PSEUDO-ATOMIC, and presumably
@@ -335,13 +336,13 @@
 		   (push (cons start end) tests))))
 	(dolist (value values)
 	  (cond ((< value min)
-		 (error "~S is less than the specified minimum of ~S"
+		 (error _"~S is less than the specified minimum of ~S"
 			value min))
 		((> value max)
-		 (error "~S is greater than the specified maximum of ~S"
+		 (error _"~S is greater than the specified maximum of ~S"
 			value max))
 		((not (zerop (rem (- value min) seperation)))
-		 (error "~S isn't an even multiple of ~S from ~S"
+		 (error _"~S isn't an even multiple of ~S from ~S"
 			value seperation min))
 		((null start)
 		 (setf start value))
@@ -365,7 +366,7 @@
 		(let ((start (car test))
 		      (end (cdr test)))
 		  (cond ((and (= start min) (= end max))
-			 (warn "The values ~S cover the entire range from ~
+			 (warn _"The values ~S cover the entire range from ~
 			 ~S to ~S [step ~S]."
 			       values min max seperation)
 			 (push `(unless ,not-p (inst b ,target)) insts))
@@ -467,18 +468,18 @@
 	 (headers (set-difference extended immediate-types :test #'eql))
 	 (function-p nil))
     (unless type-codes
-      (error "Must supply at least on type for test-type."))
+      (error _"Must supply at least on type for test-type."))
     (when (and headers (member other-pointer-type lowtags))
-      (warn "OTHER-POINTER-TYPE supersedes the use of ~S" headers)
+      (warn _"OTHER-POINTER-TYPE supersedes the use of ~S" headers)
       (setf headers nil))
     (when (and immediates
 	       (or (member other-immediate-0-type lowtags)
 		   (member other-immediate-1-type lowtags)))
-      (warn "OTHER-IMMEDIATE-n-TYPE supersedes the use of ~S" immediates)
+      (warn _"OTHER-IMMEDIATE-n-TYPE supersedes the use of ~S" immediates)
       (setf immediates nil))
     (when (intersection headers function-subtypes)
       (unless (subsetp headers function-subtypes)
-	(error "Can't test for mix of function subtypes and normal ~
+	(error _"Can't test for mix of function subtypes and normal ~
 		header types."))
       (setq function-p t))
       
@@ -545,20 +546,20 @@
 	(align word-shift)))))
 
 (defmacro error-call (vop error-code &rest values)
-  "Cause an error.  ERROR-CODE is the error to cause."
+  _N"Cause an error.  ERROR-CODE is the error to cause."
   (cons 'progn
 	(emit-error-break vop error-trap error-code values)))
 
 
 (defmacro cerror-call (vop label error-code &rest values)
-  "Cause a continuable error.  If the error is continued, execution resumes at
+  _N"Cause a continuable error.  If the error is continued, execution resumes at
   LABEL."
   `(progn
      (inst b ,label)
      ,@(emit-error-break vop cerror-trap error-code values)))
 
 (defmacro generate-error-code (vop error-code &rest values)
-  "Generate-Error-Code Error-code Value*
+  _N"Generate-Error-Code Error-code Value*
   Emit code for an error with the specified Error-Code and context Values."
   `(assemble (*elsewhere*)
      (let ((start-lab (gen-label)))
@@ -567,7 +568,7 @@
        start-lab)))
 
 (defmacro generate-cerror-code (vop error-code &rest values)
-  "Generate-CError-Code Error-code Value*
+  _N"Generate-CError-Code Error-code Value*
   Emit code for a continuable error with the specified Error-Code and
   context Values.  If the error is continued, execution resumes after
   the GENERATE-CERROR-CODE form."
