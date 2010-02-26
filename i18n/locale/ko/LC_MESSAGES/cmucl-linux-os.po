@@ -1,0 +1,11 @@
+#: target:code/linux-os.lisp
+msgid "Returns a string describing version of the supporting software."
+msgstr ""
+
+#: target:code/linux-os.lisp
+msgid "Unix system call getrusage failed: ~A."
+msgstr ""
+
+#: target:code/linux-os.lisp
+msgid "Getpagesize failed: ~A"
+msgstr ""

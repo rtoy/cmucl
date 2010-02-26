@@ -1,0 +1,2010 @@
+#: target:code/unix-glibc2.lisp
+msgid "Class not yet defined: ~S"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Returns a string describing the error number which was returned by a\n"
+"  UNIX system call."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Unknown error [~d]"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Syscall ~A failed: ~A"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-rename renames the file with string name1 to the string\n"
+"   name2.  NIL and an error code is returned if an error occured."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Test for read permission"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Test for write permission"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Test for execute permission"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Test for presence of file"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-fcntl manipulates file descriptors accoridng to the\n"
+"   argument CMD which can be one of the following:\n"
+"\n"
+"   F-DUPFD         Duplicate a file descriptor.\n"
+"   F-GETFD         Get file descriptor flags.\n"
+"   F-SETFD         Set file descriptor flags.\n"
+"   F-GETFL         Get file flags.\n"
+"   F-SETFL         Set file flags.\n"
+"   F-GETOWN        Get owner.\n"
+"   F-SETOWN        Set owner.\n"
+"\n"
+"   The flags that can be specified for F-SETFL are:\n"
+"\n"
+"   FNDELAY         Non-blocking reads.\n"
+"   FAPPEND         Append on each write.\n"
+"   FASYNC          Signal pgrp when data ready.\n"
+"   FCREAT          Create if nonexistant.\n"
+"   FTRUNC          Truncate to zero length.\n"
+"   FEXCL           Error if already created.\n"
+"   "
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-open opens the file whose pathname is specified by PATH\n"
+"   for reading and/or writing as specified by the FLAGS argument.\n"
+"   Returns an integer file descriptor.\n"
+"   The flags argument can be:\n"
+"\n"
+"     o_rdonly        Read-only flag.\n"
+"     o_wronly        Write-only flag.\n"
+"     o_rdwr          Read-and-write flag.\n"
+"     o_append        Append flag.\n"
+"     o_creat         Create-if-nonexistant flag.\n"
+"     o_trunc         Truncate-to-size-0 flag.\n"
+"     o_excl          Error if the file already exists\n"
+"     o_noctty        Don't assign controlling tty\n"
+"     o_ndelay        Non-blocking I/O\n"
+"     o_sync          Synchronous I/O\n"
+"     o_async         Asynchronous I/O\n"
+"\n"
+"   If the o_creat flag is specified, then the file is created with\n"
+"   a permission of argument MODE if the file doesn't exist."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-getdtablesize returns the maximum size of the file descriptor\n"
+"   table. (i.e. the maximum number of descriptors that can exist at\n"
+"   one time.)"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-close takes an integer file descriptor as an argument and\n"
+"   closes the file associated with it.  T is returned upon successful\n"
+"   completion, otherwise NIL and an error number."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-creat accepts a file name and a mode (same as those for\n"
+"   unix-chmod) and creates a file by that name with the specified\n"
+"   permission mode.  It returns a file descriptor on success,\n"
+"   or NIL and an error  number otherwise.\n"
+"\n"
+"   This interface is made obsolete by UNIX-OPEN."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Open for reading"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Open for writing"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Read-only flag."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Write-only flag."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Read-write flag."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Access mode mask."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Create if nonexistant flag. (not fcntl)"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Error if already exists. (not fcntl)"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Don't assign controlling tty. (not fcntl)"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Truncate flag. (not fcntl)"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Append flag."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Non-blocking I/O"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Synchronous writes (on ext2)"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Asynchronous I/O"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Duplicate a file descriptor"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get file desc. flags"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set file desc. flags"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get file flags"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set file flags"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get lock"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set lock"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set lock, wait for release"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set owner (for sockets)"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get owner (for sockets)"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "for f-getfl and f-setfl"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "for fcntl and lockf"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "old bsd flock (depricated)"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Shared lock for bsd flock"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Exclusive lock for bsd flock"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Don't block. Combine with F-LOCK-SH or F-LOCK-EX"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Remove lock for bsd flock"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "depricated stuff"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Rewind the group-file stream."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Close the group-file stream."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Read an entry from the group-file stream, opening it if necessary."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Size of control character vector."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "See errno."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No problem."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Authoritative Answer Host not found."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Non-Authoritative Host not found,or SERVERFAIL."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Non recoverable errors, FORMERR, REFUSED, NOTIMP."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Open host data base files and mark them as staying open even after\n"
+"a later search if STAY_OPEN is non-zero."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Close host data base files and clear `stay open' flag."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Get next entry from host data base file.  Open data base if\n"
+"necessary."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return entry from host data base which address match ADDR with\n"
+"length LEN and type TYPE."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Return entry from host data base for host with NAME."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return entry from host data base for host with NAME.  AF must be\n"
+"   set to the address type which as `AF_INET' for IPv4 or `AF_INET6'\n"
+"   for IPv6."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Open network data base files and mark them as staying open even\n"
+"   after a later search if STAY_OPEN is non-zero."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Close network data base files and clear `stay open' flag."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Get next entry from network data base file.  Open data base if\n"
+"   necessary."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return entry from network data base which address match NET and\n"
+"   type TYPE."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Return entry from network data base for network with NAME."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Open service data base files and mark them as staying open even\n"
+"   after a later search if STAY_OPEN is non-zero."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Close service data base files and clear `stay open' flag."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Get next entry from service data base file.  Open data base if\n"
+"   necessary."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return entry from network data base for network with NAME and\n"
+"   protocol PROTO."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return entry from service data base which matches port PORT and\n"
+"   protocol PROTO."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Open protocol data base files and mark them as staying open even\n"
+"   after a later search if STAY_OPEN is non-zero."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Close protocol data base files and clear `stay open' flag."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Get next entry from protocol data base file.  Open data base if\n"
+"   necessary."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Return entry from protocol data base for network with NAME."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Return entry from protocol data base which number is PROTO."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Establish network group NETGROUP for enumeration."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Free all space allocated by previous `setnetgrent' call."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Get next member of netgroup established by last `setnetgrent' call\n"
+"   and return pointers to elements in HOSTP, USERP, and DOMAINP."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Test whether NETGROUP contains the triple (HOST,USER,DOMAIN)."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Socket address is intended for `bind'."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Request for canonical name."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Invalid value for `ai_flags' field."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "NAME or SERVICE is unknown."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Temporary failure in name resolution."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Non-recoverable failure in name res."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No address associated with NAME."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "ai_family not supported."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "ai_socktype not supported."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "SERVICE not supported for ai_socktype."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Address family for NAME not supported."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Memory allocation failure."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "System error returned in errno."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Translate name of a service location and/or a service name to set of\n"
+"   socket addresses."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Free `addrinfo' structure AI including associated storage."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Create pseudo tty master slave pair with NAME and set terminal\n"
+"   attributes according to TERMP and WINP and return handles for both\n"
+"   ends in AMASTER and ASLAVE."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Create child process and establish the slave pseudo terminal as the\n"
+"   child's controlling terminal."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Rewind the password-file stream."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Close the password-file stream."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Read an entry from the password-file stream, opening it if necessary."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "The calling process."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Terminated child processes."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Minimum priority a process can have"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Maximum priority a process can have"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "WHO is a process ID"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "WHO is a process group ID"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "WHO is a user ID"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set scheduling algorithm and/or parameters for a process."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Retrieve scheduling algorithm for a particular purpose."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get maximum priority value for a scheduler."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get minimum priority value for a scheduler."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get the SCHED_RR interval for the named process."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Signal mask to be sent at exit."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set if VM shared between processes."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set if fs info shared between processes"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set if open files shared between processe"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set if signal handlers shared."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set if pid shared."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Open database for reading."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Close database."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get next entry from database, perhaps after opening the file."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get shadow entry matching NAME."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Read shadow entry from STRING."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Protect password file against multi writers."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Unlock password file."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "These bits determine file type."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "FIFO"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Character device"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Directory"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Block device"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Regular file"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Symbolic link."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Socket."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set user ID on execution."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set group ID on execution."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Save swapped text after use (sticky)."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Read by owner"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Write by owner."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Execute by owner."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get terminal output speed."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set terminal output speed."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Bogus baud rate ~S"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get terminal input speed."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set terminal input speed."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get terminal attributes."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set terminal attributes."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Send break"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Wait for output for finish"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "See tcflush(3)"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Flow control"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Executes the Unix execve system call.  If the system call suceeds, lisp\n"
+"   will no longer be running in this process.  If the system call fails "
+"this\n"
+"   function returns two values: NIL and an error code.  Arg-list should be "
+"a\n"
+"   list of simple-strings which are passed as arguments to the exec'ed "
+"program.\n"
+"   Environment should be an a-list mapping symbols to simple-strings which "
+"this\n"
+"   function bashes together to form the environment for the exec'ed program."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Given a file path (a string) and one of four constant modes,\n"
+"   unix-access returns T if the file is accessible with that\n"
+"   mode and NIL if not.  It also returns an errno value with\n"
+"   NIL which determines why the file was not accessible.\n"
+"\n"
+"   The access modes are:\n"
+"\tr_ok     Read permission.\n"
+"\tw_ok     Write permission.\n"
+"\tx_ok     Execute permission.\n"
+"\tf_ok     Presence of file."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "set the file pointer"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "increment the file pointer"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "extend the file size"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"UNIX-LSEEK accepts a file descriptor and moves the file pointer ahead\n"
+"   a certain OFFSET for that file.  WHENCE can be any of the following:\n"
+"\n"
+"   l_set        Set the file pointer.\n"
+"   l_incr       Increment the file pointer.\n"
+"   l_xtnd       Extend the file size.\n"
+"  "
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"UNIX-READ attempts to read from the file described by fd into\n"
+"   the buffer buf until it is full.  Len is the length of the buffer.\n"
+"   The number of bytes actually read is returned or NIL and an error\n"
+"   number if an error occured."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-write attempts to write a character buffer (buf) of length\n"
+"   len to the file described by the file descriptor fd.  NIL and an\n"
+"   error is returned if the call is unsuccessful."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-pipe sets up a unix-piping mechanism consisting of\n"
+"  an input pipe and an output pipe.  Unix-Pipe returns two\n"
+"  values: if no error occurred the first value is the pipe\n"
+"  to be read from and the second is can be written to.  If\n"
+"  an error occurred the first value is NIL and the second\n"
+"  the unix error code."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Given a file path, an integer user-id, and an integer group-id,\n"
+"   unix-chown changes the owner of the file and the group of the\n"
+"   file to those specified.  Either the owner or the group may be\n"
+"   left unchanged by specifying them as -1.  Note: Permission will\n"
+"   fail if the caller is not the superuser."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-fchown is like unix-chown, except that it accepts an integer\n"
+"   file descriptor instead of a file path name."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Given a file path string, unix-chdir changes the current working \n"
+"   directory to the one specified."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Put the absolute pathname of the current working directory in BUF.\n"
+"   If successful, return BUF.  If not, put an error message in\n"
+"   BUF and return NULL.  BUF should be at least PATH_MAX bytes long."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-dup duplicates an existing file descriptor (given as the\n"
+"   argument) and return it.  If FD is not a valid file descriptor, NIL\n"
+"   and an error number are returned."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-dup2 duplicates an existing file descriptor just as unix-dup\n"
+"   does only the new value of the duplicate descriptor may be requested\n"
+"   through the second argument.  If a file already exists with the\n"
+"   requested descriptor number, it will be closed and the number\n"
+"   assigned to the duplicate."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-exit terminates the current process with an optional\n"
+"   error code.  If successful, the call doesn't return.  If\n"
+"   unsuccessful, the call returns NIL and an error number."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get file-specific configuration information about PATH."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get the value of the system variable NAME."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get the value of the string-valued system variable NAME."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Unix-getpid returns the process-id of the current process."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-getppid returns the process-id of the parent of the current process."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Unix-getpgrp returns the group-id of the calling process."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-setpgrp sets the process group on the process pid to\n"
+"   pgrp.  NIL and an error number are returned upon failure."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-setpgid sets the process group of the process pid to\n"
+"   pgrp. If pgid is equal to pid, the process becomes a process\n"
+"   group leader. NIL and an error number are returned upon failure."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Create a new session with the calling process as its leader.\n"
+"   The process group IDs of the session and the calling process\n"
+"   are set to the process ID of the calling process, which is returned."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Return the session ID of the given process."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-getuid returns the real user-id associated with the\n"
+"   current process."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get the effective user ID of the calling process."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Unix-getgid returns the real group-id of the current process."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Unix-getegid returns the effective group-id of the current process."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Return nonzero iff the calling process is in group GID."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Set the user ID of the calling process to UID.\n"
+"   If the calling process is the super-user, set the real\n"
+"   and effective user IDs, and the saved set-user-ID to UID;\n"
+"   if not, the effective user ID is set to UID."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-setreuid sets the real and effective user-id's of the current\n"
+"   process to the specified ones.  NIL and an error number is returned\n"
+"   if the call fails."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Set the group ID of the calling process to GID.\n"
+"   If the calling process is the super-user, set the real\n"
+"   and effective group IDs, and the saved set-group-ID to GID;\n"
+"   if not, the effective group ID is set to GID."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-setregid sets the real and effective group-id's of the current\n"
+"   process process to the specified ones.  NIL and an error number is\n"
+"   returned if the call fails."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Executes the unix fork system call.  Returns 0 in the child and the pid\n"
+"   of the child in the parent if it works, or NIL and an error number if it\n"
+"   doesn't work."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Get the value of the environment variable named Name.  If no such\n"
+"  variable exists, Nil is returned."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Adds the environment variable named Name to the environment with\n"
+"  the given Value if Name does not already exist. If Name does exist,\n"
+"  the value is changed to Value if Overwrite is non-zero.  Otherwise,\n"
+"  the value is not changed."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Adds or changes the environment.  Name-value must be a string of\n"
+"  the form \"name=value\".  If the name does not exist, it is added.\n"
+"  If name does exist, the value is updated to the given value."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Removes the variable Name from the environment"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Accepts a Unix file descriptor and returns T if the device\n"
+"  associated with it is a terminal."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-link creates a hard link from the file with name1 to the\n"
+"   file with name2."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-symlink creates a symbolic link named name2 to the file\n"
+"   named name1.  NIL and an error number is returned if the call\n"
+"   is unsuccessful."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-readlink invokes the readlink system call on the file name\n"
+"  specified by the simple string path.  It returns up to two values:\n"
+"  the contents of the symbolic link if the call is successful, or\n"
+"  NIL and the Unix error number."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-unlink removes the directory entry for the named file.\n"
+"   NIL and an error code is returned if the call fails."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-rmdir attempts to remove the directory name.  NIL and\n"
+"   an error number is returned if an error occured."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get the tty-process-group for the unix file-descriptor FD."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Get the tty-process-group for the unix file-descriptor FD.  If not "
+"supplied,\n"
+"  FD defaults to /dev/tty."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set the tty-process-group for the unix file-descriptor FD to PGRP."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Set the tty-process-group for the unix file-descriptor FD to PGRP.  If not\n"
+"  supplied, FD defaults to /dev/tty."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Return the login name of the user."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-uname returns the name and information about the current kernel. The\n"
+"  values returned upon success are: sysname, nodename, release, version,\n"
+"  machine, and domainname. Upon failure, 'nil and the 'errno are returned."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Unix-gethostname returns the name of the host machine as a string."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-fsync writes the core image of the file described by\n"
+"   fd to disk."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Revoke access permissions to all processes currently communicating\n"
+"  with the control terminal, and then send a SIGHUP signal to the process\n"
+"  group of the control terminal."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Revoke the access of all descriptors currently open on FILE."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Make PATH be the root directory (the starting point for absolute paths).\n"
+"   This call is restricted to the super-user."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-gethostid returns a 32-bit integer which provides unique\n"
+"   identification for the host machine."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-sync writes all information in core memory which has been\n"
+"   modified to disk.  It returns NIL and an error code if an error\n"
+"   occured."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Unix-getpagesize returns the number of bytes in a system page."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-truncate truncates the named file to the length (in\n"
+"   bytes) specified by LENGTH.  NIL and an error number is returned\n"
+"   if the call is unsuccessful."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-ftruncate is similar to unix-truncate except that the first\n"
+"   argument is a file descriptor rather than a file name."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return the maximum number of file descriptors\n"
+"   the current process could possibly have."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Unlock a locked region"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Lock a region for exclusive use"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Test and lock a region for exclusive use"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Test a region for othwer processes locks"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-locks can lock, unlock and test files according to the cmd\n"
+"   which can be one of the following:\n"
+"\n"
+"   f_ulock  Unlock a locked region\n"
+"   f_lock   Lock a region for exclusive use\n"
+"   f_tlock  Test and lock a region for exclusive use\n"
+"   f_test   Test a region for othwer processes locks\n"
+"\n"
+"   The lock is for a region from the current location for a length\n"
+"   of length.\n"
+"\n"
+"   This is a simpler version of the interface provided by unix-fcntl.\n"
+"   "
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-utimes sets the 'last-accessed' and 'last-updated'\n"
+"   times on a specified file.  NIL and an error number is\n"
+"   returned if the call is unsuccessful."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Don't block waiting."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Report status of stopped children."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Wait for cloned process."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-ioctl performs a variety of operations on open i/o\n"
+"   descriptors.  See the UNIX Programmer's Manual for more\n"
+"   information."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Change uid used for file access control to UID, without affecting\n"
+"   other priveledges (such as who can send signals at the process)."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Change gid used for file access control to GID, without affecting\n"
+"   other priveledges (such as who can send signals at the process)."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "There is data to read."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "There is urgent data to read."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Writing now will not block."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Error condition."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Hung up."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Invalid polling request."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Canonical number of polling requests to read\n"
+"in at a time in poll."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+" Poll the file descriptors described by the NFDS structures starting at\n"
+"   FDS.  If TIMEOUT is nonzero and not -1, allow TIMEOUT milliseconds for\n"
+"   an event to occur; if TIMEOUT is -1, block until an event occurs.\n"
+"   Returns the number of file descriptors with events, zero if timed out,\n"
+"   or -1 for errors."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Get the soft and hard limits for RESOURCE."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Set the current soft and hard maximum limits for RESOURCE.\n"
+"   Only the super-user can increase hard limits."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Like call getrusage, but return only the system and user time, and returns\n"
+"   the seconds and microseconds as separate values."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-getrusage returns information about the resource usage\n"
+"   of the process specified by who.  Who can be either the\n"
+"   current process (rusage_self) or all of the terminated\n"
+"   child processes (rusage_children).  NIL and an error number\n"
+"   is returned if the call fails."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Function depends on CMD:\n"
+"  1 = Return the limit on the size of a file, in units of 512 bytes.\n"
+"  2 = Set the limit on the size of a file to NEWLIMIT.  Only the\n"
+"      super-user can increase the limit.\n"
+"  3 = Return the maximum possible address of the data segment.\n"
+"  4 = Return the maximum number of files that the calling process can open.\n"
+"  Returns -1 on errors."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return the highest priority of any process specified by WHICH and WHO\n"
+"   (see above); if WHO is zero, the current process, process group, or user\n"
+"   (as specified by WHO) is used.  A lower priority number means higher\n"
+"   priority.  Priorities range from PRIO_MIN to PRIO_MAX (above)."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Set the priority of all processes specified by WHICH and WHO (see above)\n"
+"   to PRIO.  Returns 0 on success, -1 on errors."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Perform the UNIX select(2) system call."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-select examines the sets of descriptors passed as arguments\n"
+"   to see if they are ready for reading and writing.  See the UNIX\n"
+"   Programmers Manual for more information."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"UNIX-STAT retrieves information about the specified\n"
+"   file returning them in the form of multiple values.\n"
+"   See the UNIX Programmer's Manual for a description\n"
+"   of the values returned.  If the call fails, then NIL\n"
+"   and an error number is returned instead."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"UNIX-FSTAT is similar to UNIX-STAT except the file is specified\n"
+"   by the file descriptor FD."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"UNIX-LSTAT is similar to UNIX-STAT except the specified\n"
+"   file must be a symbolic link."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Given a file path string and a constant mode, unix-chmod changes the\n"
+"   permission mode for that file to the one specified. The new mode\n"
+"   can be created by logically OR'ing the following:\n"
+"\n"
+"      setuidexec        Set user ID on execution.\n"
+"      setgidexec        Set group ID on execution.\n"
+"      savetext          Save text image after execution.\n"
+"      readown           Read by owner.\n"
+"      writeown          Write by owner.\n"
+"      execown           Execute (search directory) by owner.\n"
+"      readgrp           Read by group.\n"
+"      writegrp          Write by group.\n"
+"      execgrp           Execute (search directory) by group.\n"
+"      readoth           Read by others.\n"
+"      writeoth          Write by others.\n"
+"      execoth           Execute (search directory) by others.\n"
+"\n"
+"  Thus #o444 and (logior unix:readown unix:readgrp unix:readoth)\n"
+"  are equivalent for 'mode.  The octal-base is familar to Unix users.\n"
+"  \n"
+"  It returns T on successfully completion; NIL and an error number\n"
+"  otherwise."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Given an integer file descriptor and a mode (the same as those\n"
+"   used for unix-chmod), unix-fchmod changes the permission mode\n"
+"   for that file to the one specified. T is returned if the call\n"
+"   was successful."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Set the file creation mask of the current process to MASK,\n"
+"   and return the old creation mask."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-mkdir creates a new directory with the specified name and mode.\n"
+"   (Same as those for unix-chmod.)  It returns T upon success, otherwise\n"
+"   NIL and an error number."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Create a device file named PATH, with permission and special bits MODE\n"
+"  and device number DEV (which can be constructed from major and minor\n"
+"  device numbers with the `makedev' macro above)."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Create a new FIFO named PATH, with permission bits MODE."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Return information about the filesystem on which FILE resides."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Make the block special device PATH available to the system for swapping.\n"
+"  This call is restricted to the super-user."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Make the block special device PATH unavailable to the system for swapping.\n"
+"  This call is restricted to the super-user."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Read or write system parameters."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Time used by the program so far (user time + system time).\n"
+"   The result / CLOCKS_PER_SECOND is program time in seconds."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Return the current time and put it in *TIMER if TIMER is not NULL."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"If it works, unix-gettimeofday returns 5 values: T, the seconds and\n"
+"   microseconds of the current time of day, the timezone (in minutes west\n"
+"   of Greenwich), and a daylight-savings flag.  If it doesn't work, it\n"
+"   returns NIL and the errno."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-getitimer returns the INTERVAL and VALUE slots of one of\n"
+"   three system timers (:real :virtual or :profile). On success,\n"
+"   unix-getitimer returns 5 values,\n"
+"   T, it-interval-secs, it-interval-usec, it-value-secs, it-value-usec."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+" Unix-setitimer sets the INTERVAL and VALUE slots of one of\n"
+"   three system timers (:real :virtual or :profile). A SIGALRM signal\n"
+"   will be delivered VALUE <seconds+microseconds> from now. INTERVAL,\n"
+"   when non-zero, is <seconds+microseconds> to be loaded each time\n"
+"   the timer expires. Setting INTERVAL and VALUE to zero disables\n"
+"   the timer. See the Unix man page for more details. On success,\n"
+"   unix-setitimer returns the old contents of the INTERVAL and VALUE\n"
+"   slots as in unix-getitimer."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Fill in TIMEBUF with information about the current time."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Store the CPU time used by this process and all its\n"
+"   dead children (and their dead children) in BUFFER.\n"
+"   Return the elapsed real time, or (clock_t) -1 for errors.\n"
+"   All times are in CLK_TCKths of a second."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Wait for a child to die.  When one does, put its status in *STAT_LOC\n"
+"   and return its process ID.  For errors, return (pid_t) -1."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Wait for a child matching PID to die.\n"
+"   If PID is greater than 0, match any process whose process ID is PID.\n"
+"   If PID is (pid_t) -1, match any process.\n"
+"   If PID is (pid_t) 0, match any process with the\n"
+"   same process group as the current process.\n"
+"   If PID is less than -1, match any process whose\n"
+"   process group is the absolute value of PID.\n"
+"   If the WNOHANG bit is set in OPTIONS, and that child\n"
+"   is not already dead, return (pid_t) 0.  If successful,\n"
+"   return PID and store the dead child's status in STAT_LOC.\n"
+"   Return (pid_t) -1 for errors.  If the WUNTRACED bit is\n"
+"   set in OPTIONS, return status for stopped children; otherwise don't."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Successful"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Operation not permitted"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No such file or directory"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No such process"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Interrupted system call"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "I/O error"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No such device or address"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Arg list too long"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Exec format error"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Bad file number"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No children"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Try again"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Out of memory"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Permission denied"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Bad address"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Block device required"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Device or resource busy"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "File exists"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Cross-device link"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No such device"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Not a director"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Is a directory"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Invalid argument"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "File table overflow"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Too many open files"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Not a typewriter"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Text file busy"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "File too large"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No space left on device"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Illegal seek"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Read-only file system"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Too many links"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Broken pipe"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Math argument out of domain"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Math result not representable"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Resource deadlock would occur"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "File name too long"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No record locks available"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Function not implemented"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Directory not empty"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Too many symbolic links encountered"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Operation would block"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No message of desired type"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Identifier removed"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Channel number out of range"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Level 2 not synchronized"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Level 3 halted"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Level 3 reset"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Link number out of range"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Protocol driver not attached"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No CSI structure available"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Level 2 halted"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Invalid exchange"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Invalid request descriptor"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Exchange full"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No anode"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Invalid request code"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Invalid slot"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "File locking deadlock error"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Bad font file format"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Device not a stream"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No data available"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Timer expired"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Out of streams resources"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Machine is not on the network"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Package not installed"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Object is remote"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Link has been severed"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Advertise error"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Srmount error"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Communication error on send"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Protocol error"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Multihop attempted"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "RFS specific error"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Not a data message"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Value too large for defined data type"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Name not unique on network"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "File descriptor in bad state"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Remote address changed"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Can not access a needed shared library"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Accessing a corrupted shared library"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ".lib section in a.out corrupted"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Attempting to link in too many shared libraries"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Cannot exec a shared library directly"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Illegal byte sequence"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Interrupted system call should be restarted _N"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Streams pipe error"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Too many users"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Socket operation on non-socket"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Destination address required"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Message too long"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Protocol wrong type for socket"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Protocol not available"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Protocol not supported"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Socket type not supported"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Operation not supported on transport endpoint"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Protocol family not supported"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Address family not supported by protocol"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Address already in use"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Cannot assign requested address"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Network is down"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Network is unreachable"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Network dropped connection because of reset"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Software caused connection abort"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Connection reset by peer"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No buffer space available"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Transport endpoint is already connected"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Transport endpoint is not connected"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Cannot send after transport endpoint shutdown"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Too many references: cannot splice"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Connection timed out"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Connection refused"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Host is down"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No route to host"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Operation already in progress"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Operation now in progress"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Stale NFS file handle"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Structure needs cleaning"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Not a XENIX named type file"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "No XENIX semaphores available"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Is a named type file"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Remote I/O error"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Quota exceeded"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Define an ioctl command. If the optional ARG and PARM-TYPE are given\n"
+"  then ioctl argument size and direction are included as for ioctls defined\n"
+"  by _IO, _IOR, _IOW, or _IOWR. If DEV is a character then the ioctl type\n"
+"  is the characters code, else DEV may be an integer giving the type."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set the socket process-group for the unix file-descriptor FD to PGRP."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set user ID on execution"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Set group ID on execution"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Save text image after execution"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Write by owner"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Execute (search directory) by owner"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Read by group"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Write by group"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Execute (search directory) by group"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Read by others"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Write by others"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Execute (search directory) by others"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Returns either :file, :directory, :link, :special, or NIL."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Returns the pathname with all symbolic links resolved."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid "Error reading link ~S: ~S"
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return a USER-INFO structure for the user identified by LOGIN, or NIL if not "
+"found."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return a USER-INFO structure for the user identified by UID, or NIL if not "
+"found."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return a GROUP-INFO structure for the group identified by NAME, or NIL if "
+"not found."
+msgstr ""
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return a GROUP-INFO structure for the group identified by GID, or NIL if not "
+"found."
+msgstr ""
