@@ -127,3 +127,13 @@
 		 (terpri po)
 		 (setq string (nconc string (list (latinize item)))))))))
     (format t "~&Translated ~D messages~%" count)))
+
+;; Translate all of the pot files in DIR
+(defun do-translations (&optional (dir "target:i18n/locale"))
+  (dolist (pot (directory (merge-pathnames (make-pathname :name :wild :type "pot" :version :newest)
+					   dir)))
+    (let ((po (merge-pathnames (make-pathname :directory '(:relative "en@piglatin" "LC_MESSAGES")
+					      :name (pathname-name pot) :type "po")
+			       dir)))
+      (format t "~A -> ~A~%" pot po)
+      (latinize-pot pot po))))
