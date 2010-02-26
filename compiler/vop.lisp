@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.43.38.1 2010/02/08 17:15:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.43.38.2 2010/02/26 21:34:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -727,7 +727,10 @@
   ;; Two values are returned: the first and last VOP emitted.  This vop
   ;; sequence must be linked into the VOP Next/Prev chain for the block.  At
   ;; least one VOP is always emitted.
-  (emit-function (required-argument) :type function))
+  (emit-function (required-argument) :type function)
+  ;;
+  ;; The text domain for the note.
+  (note-domain intl::*default-domain* :type (or string null)))
 
 (defprinter template
   name

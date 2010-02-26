@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.9.48.2 2010/02/11 02:19:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.9.48.3 2010/02/26 21:34:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1599,6 +1599,7 @@
       :guard ,(when (vop-parse-guard parse)
 		`#'(lambda () ,(vop-parse-guard parse)))
       :note ',(vop-parse-note parse)
+      :note-domain ,intl::*default-domain*
       :info-arg-count ,(length (vop-parse-info-args parse))
       :policy ',(vop-parse-policy parse)
       :save-p ',(vop-parse-save-p parse)

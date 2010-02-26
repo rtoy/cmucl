@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.43.36.4 2010/02/25 04:35:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.43.36.5 2010/02/26 21:34:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -903,14 +903,15 @@
 	  (dolist (loser (losers))
 	    (when (and *efficiency-note-limit*
 		       (>= (count) *efficiency-note-limit*))
-	      (frob "etc.")
+	      (frob _"etc.")
 	      (return))
 	    (let* ((type (template-type loser))
 		   (valid (valid-function-use call type))
 		   (strict-valid (valid-function-use call type
 						     :strict-result t)))
 	      (frob _"Unable to do ~A (cost ~D) because:"
-		    (or (template-note loser) (template-name loser))
+		    (intl:dgettext (template-note-domain loser)
+				   (or (template-note loser) (template-name loser)))
 		    (template-cost loser))
 	      (cond
 	       ((and valid strict-valid)
@@ -928,14 +929,14 @@
 	(let ((*compiler-error-context* call))
 	  (efficiency-note "~{~?~^~&~6T~}"
 			   (if template
-			       `("Forced to do ~A (cost ~D)."
-				 (,(or (template-note template)
-				       (template-name template))
-				   ,(template-cost template))
-				 . ,(messages))
-			       `("Forced to do full call."
-				 nil
-				 . ,(messages))))))))
+			       (list* _"Forced to do ~A (cost ~D)."
+				      `(,(or (template-note template)
+					     (template-name template))
+					 ,(template-cost template))
+				      (messages))
+			       (list* _"Forced to do full call."
+				      nil
+				      (messages))))))))
   (undefined-value))
 
 
