@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.25.12.1 2010/02/08 17:15:51 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.25.12.2 2010/02/26 15:44:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,7 @@
 ;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998,1999.
 ;;;
 (in-package :x86)
-(intl:textdomain "cmucl")
+(intl:textdomain "cmucl-x86-vm")
 
 
 ;;;; Allocator for the array header.
@@ -179,7 +179,7 @@
 	 (bit-shift (1- (integer-length elements-per-word))))
     `(progn
        (define-vop (,(symbolicate 'data-vector-ref/ type))
-	 (:note "inline array access")
+	 (:note _N"inline array access")
 	 (:translate data-vector-ref)
 	 (:policy :fast-safe)
 	 (:args (object :scs (descriptor-reg))
@@ -218,7 +218,7 @@
 	     (unless (= extra ,(1- elements-per-word))
 	       (inst and result ,(1- (ash 1 bits)))))))
        (define-vop (,(symbolicate 'data-vector-set/ type))
-	 (:note "inline array store")
+	 (:note _N"inline array store")
 	 (:translate data-vector-set)
 	 (:policy :fast-safe)
 	 (:args (object :scs (descriptor-reg) :target ptr)

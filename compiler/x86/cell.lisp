@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.15.38.1 2010/02/08 17:15:51 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.15.38.2 2010/02/26 15:44:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 ;;; 
 
 (in-package :x86)
-(intl:textdomain "cmucl")
+(intl:textdomain "cmucl-x86-vm")
 
 
 ;;;; Data object ref/set stuff.

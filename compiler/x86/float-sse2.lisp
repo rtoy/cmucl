@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.10.4.2 2010/02/25 00:33:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.10.4.3 2010/02/26 15:44:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 ;;;
 
 (in-package :x86)
-(intl:textdomain "cmucl")
+(intl:textdomain "cmucl-x86-vm")
 
 ;;; Popping the FP stack.
 ;;;
@@ -184,7 +184,7 @@
 	     (single-reg (inst xorps y y))
 	     (double-reg (inst xorpd y y))))
 	  (t
-	   (warn "Ignoring bogus i387 Constant ~a" value)))))
+	   (warn _"Ignoring bogus i387 Constant ~a" value)))))
 
 
 ;;;; Complex float move functions
@@ -304,7 +304,7 @@
 (define-vop (float-move)
   (:args (x))
   (:results (y))
-  (:note "float move")
+  (:note _N"float move")
   (:generator 0
      (unless (location= x y)
        (inst movq y x))))
@@ -371,7 +371,7 @@
   (:args (x :scs (single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "float to pointer coercion")
+  (:note _N"float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:single-float-type vm:single-float-size node)
        (inst movss (ea-for-sf-desc y) x))))
@@ -382,7 +382,7 @@
   (:args (x :scs (double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "float to pointer coercion")
+  (:note _N"float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:double-float-type vm:double-float-size node)
        (inst movsd (ea-for-df-desc y) x))))
@@ -394,7 +394,7 @@
   (:args (x :scs (long-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "float to pointer coercion")
+  (:note _N"float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:long-float-type vm:long-float-size node)
        (with-tn@fp-top(x)
@@ -423,7 +423,7 @@
 (define-vop (move-to-single)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (single-reg)))
-  (:note "pointer to float coercion")
+  (:note _N"pointer to float coercion")
   (:generator 2
     (inst movss y (ea-for-sf-desc x))))
 (define-move-vop move-to-single :move (descriptor-reg) (single-reg))
@@ -431,7 +431,7 @@
 (define-vop (move-to-double)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (double-reg)))
-  (:note "pointer to float coercion")
+  (:note _N"pointer to float coercion")
   (:generator 2
     (inst movsd y (ea-for-df-desc x))))
 (define-move-vop move-to-double :move (descriptor-reg) (double-reg))
@@ -440,7 +440,7 @@
 (define-vop (move-to-long)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (long-reg)))
-  (:note "pointer to float coercion")
+  (:note _N"pointer to float coercion")
   (:generator 2
      (with-empty-tn@fp-top(y)
        (inst fldl (ea-for-lf-desc x)))))
@@ -456,7 +456,7 @@
   (:args (x :scs (complex-single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "complex float to pointer coercion")
+  (:note _N"complex float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:complex-single-float-type
 			       vm:complex-single-float-size node)
@@ -468,7 +468,7 @@
   (:args (x :scs (complex-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "complex float to pointer coercion")
+  (:note _N"complex float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:complex-double-float-type
 			       vm:complex-double-float-size node)
@@ -482,7 +482,7 @@
   (:args (x :scs (complex-long-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "complex float to pointer coercion")
+  (:note _N"complex float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:complex-long-float-type
 			       vm:complex-long-float-size node)
@@ -501,7 +501,7 @@
   (:args (x :scs (complex-double-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "complex double-double float to pointer coercion")
+  (:note _N"complex double-double float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm::complex-double-double-float-type
 			       vm::complex-double-double-float-size node)
@@ -523,7 +523,7 @@
 (define-vop (move-to-complex-single)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (complex-single-reg)))
-  (:note "pointer to complex float coercion")
+  (:note _N"pointer to complex float coercion")
   (:generator 2
     (inst movlps y (ea-for-csf-real-desc x))))
 
@@ -533,7 +533,7 @@
 (define-vop (move-to-complex-double)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (complex-double-reg)))
-  (:note "pointer to complex float coercion")
+  (:note _N"pointer to complex float coercion")
   (:generator 2
     (inst movupd y (ea-for-cdf-real-desc x))))
 
@@ -555,7 +555,7 @@
 			 (fp :scs (any-reg)
 			     :load-if (not (sc-is y ,sc))))
 		  (:results (y))
-		  (:note "float argument move")
+		  (:note _N"float argument move")
 		  (:generator ,(case format (:single 2) (:double 3) (:long 4))
 		    (sc-case y
 		      (,sc
@@ -590,7 +590,7 @@
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y complex-single-reg))))
   (:results (y))
-  (:note "complex float argument move")
+  (:note _N"complex float argument move")
   (:generator 3
     (sc-case y
       (complex-single-reg
@@ -607,7 +607,7 @@
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y complex-double-reg))))
   (:results (y))
-  (:note "complex float argument move")
+  (:note _N"complex float argument move")
   (:generator 3
     (sc-case y
       (complex-double-reg
@@ -624,7 +624,7 @@
   (:args (x :scs (complex-double-double-reg) :target y)
 	 (fp :scs (any-reg) :load-if (not (sc-is y complex-double-double-reg))))
   (:results (y))
-  (:note "complex double-double-float argument move")
+  (:note _N"complex double-double-float argument move")
   (:generator 2
     (sc-case y
       (complex-double-double-reg
@@ -701,7 +701,7 @@
   (:args (x) (y))
   (:results (r))
   (:policy :fast-safe)
-  (:note "inline float arithmetic")
+  (:note _N"inline float arithmetic")
   (:vop-var vop)
   (:save-p :compute-only))
 
@@ -753,7 +753,7 @@
   (:policy :fast-safe)
   (:arg-types double-float)
   (:result-types double-float)
-  (:note "inline float arithmetic")
+  (:note _N"inline float arithmetic")
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 1
@@ -769,7 +769,7 @@
                 (:arg-types ,type)
                 (:result-types ,type)
                 (:temporary (:sc ,sc) tmp)
-                (:note "inline float arithmetic")
+                (:note _N"inline float arithmetic")
                 (:vop-var vop)
                 (:save-p :compute-only)
                 (:generator 1
@@ -817,7 +817,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:save-p :compute-only)
-  (:note "inline float comparison"))
+  (:note _N"inline float comparison"))
 
 ;;; comiss and comisd can cope with one or other arg in memory: we
 ;;; could (should, indeed) extend these to cope with descriptor args
@@ -934,7 +934,7 @@
                 (:arg-types signed-num)
                 (:result-types ,to-type)
                 (:policy :fast-safe)
-                (:note "inline float coercion")
+                (:note _N"inline float coercion")
                 (:translate ,translate)
                 (:vop-var vop)
                 (:save-p :compute-only)
@@ -957,7 +957,7 @@
                (:arg-types ,from-type)
                (:result-types ,to-type)
                (:policy :fast-safe)
-               (:note "inline float coercion")
+               (:note _N"inline float coercion")
                (:translate ,translate)
                (:vop-var vop)
                (:save-p :compute-only)
@@ -980,7 +980,7 @@
                (:result-types signed-num)
                (:translate ,trans)
                (:policy :fast-safe)
-               (:note "inline float truncate")
+               (:note _N"inline float truncate")
                (:vop-var vop)
                (:save-p :compute-only)
                (:generator 5
@@ -1307,7 +1307,7 @@
 	       :load-if (not (sc-is r complex-single-stack))))
   (:result-types complex-single-float)
   (:temporary (:sc complex-single-reg) temp)
-  (:note "inline complex single-float creation")
+  (:note _N"inline complex single-float creation")
   (:policy :fast-safe)
   (:generator 5
     (sc-case r
@@ -1330,7 +1330,7 @@
 	       :load-if (not (sc-is r complex-double-stack))))
   (:result-types complex-double-float)
   (:temporary (:sc complex-double-reg) temp)
-  (:note "inline complex double-float creation")
+  (:note _N"inline complex double-float creation")
   (:policy :fast-safe)
   (:generator 5
     (sc-case r
@@ -1351,7 +1351,7 @@
   (:result-types single-float)
   (:temporary (:sc complex-single-reg) temp)
   (:policy :fast-safe)
-  (:note "complex float realpart")
+  (:note _N"complex float realpart")
   (:generator 3
     (sc-case x
       (complex-single-reg
@@ -1370,7 +1370,7 @@
   (:result-types double-float)
   (:temporary (:sc complex-double-reg) temp)
   (:policy :fast-safe)
-  (:note "complex float realpart")
+  (:note _N"complex float realpart")
   (:generator 3
     (sc-case x
       (complex-double-reg
@@ -1389,7 +1389,7 @@
   (:result-types single-float)
   (:temporary (:sc complex-single-reg) temp)
   (:policy :fast-safe)
-  (:note "complex float imagpart")
+  (:note _N"complex float imagpart")
   (:generator 3
     (sc-case x
       (complex-single-reg
@@ -1413,7 +1413,7 @@
   (:result-types double-float)
   (:temporary (:sc complex-double-reg) temp)
   (:policy :fast-safe)
-  (:note "complex float imagpart")
+  (:note _N"complex float imagpart")
   (:generator 3
     (sc-case x
       (complex-double-reg
@@ -1435,7 +1435,7 @@
   (:args (x :scs (double-reg double-stack) :load-if nil))
   (:arg-types double-float)
   (:policy :fast-safe)
-  (:note "inline dummy FP register bias")
+  (:note _N"inline dummy FP register bias")
   (:ignore x)
   (:generator 0))
 
@@ -1446,7 +1446,7 @@
   (:args (x :scs (single-reg single-stack) :load-if nil))
   (:arg-types single-float)
   (:policy :fast-safe)
-  (:note "inline dummy FP register bias")
+  (:note _N"inline dummy FP register bias")
   (:ignore x)
   (:generator 0))
 
@@ -1483,7 +1483,7 @@
   (:args (x :scs (double-double-reg)
 	    :target y :load-if (not (location= x y))))
   (:results (y :scs (double-double-reg) :load-if (not (location= x y))))
-  (:note "double-double float move")
+  (:note _N"double-double float move")
   (:generator 0
      (unless (location= x y)
        ;; Note the double-float-regs are aligned to every second
@@ -1505,7 +1505,7 @@
   (:args (x :scs (double-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "double double float to pointer coercion")
+  (:note _N"double double float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:double-double-float-type
 			       vm:double-double-float-size node)
@@ -1522,7 +1522,7 @@
 (define-vop (move-to-double-double)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (double-double-reg)))
-  (:note "pointer to double-double-float coercion")
+  (:note _N"pointer to double-double-float coercion")
   (:generator 2
     (let ((real-tn (double-double-reg-hi-tn y)))
       (inst movsd real-tn (ea-for-cdf-real-desc x)))
@@ -1538,7 +1538,7 @@
   (:args (x :scs (double-double-reg) :target y)
 	 (fp :scs (any-reg) :load-if (not (sc-is y double-double-reg))))
   (:results (y))
-  (:note "double double-float argument move")
+  (:note _N"double double-float argument move")
   (:generator 2
     (sc-case y
       (double-double-reg
@@ -1562,7 +1562,7 @@
 (define-vop (move-to-complex-double-double)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (complex-double-double-reg)))
-  (:note "pointer to complex float coercion")
+  (:note _N"pointer to complex float coercion")
   (:generator 2
     (let ((real-tn (complex-double-double-reg-real-hi-tn y)))
       (inst movsd real-tn (ea-for-cddf-real-hi-desc x)))
@@ -1586,7 +1586,7 @@
   (:arg-types double-float double-float)
   (:result-types double-double-float)
   (:translate kernel::%make-double-double-float)
-  (:note "inline double-double-float creation")
+  (:note _N"inline double-double-float creation")
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 5
@@ -1637,7 +1637,7 @@
   (:arg-types double-double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
-  (:note "double-double high part")
+  (:note _N"double-double high part")
   (:variant 0))
 
 (define-vop (lo/double-double-value double-double-value)
@@ -1647,7 +1647,7 @@
   (:arg-types double-double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
-  (:note "double-double low part")
+  (:note _N"double-double low part")
   (:variant 1))
 
 (define-vop (make-complex-double-double-float)
@@ -1660,7 +1660,7 @@
   (:results (r :scs (complex-double-double-reg) :from (:argument 0)
 	       :load-if (not (sc-is r complex-double-double-stack))))
   (:result-types complex-double-double-float)
-  (:note "inline complex double-double-float creation")
+  (:note _N"inline complex double-double-float creation")
   (:policy :fast-safe)
   (:generator 5
     (sc-case r
@@ -1735,12 +1735,12 @@
 
 (define-vop (realpart/complex-double-double-float complex-double-double-float-value)
   (:translate realpart)
-  (:note "complex float realpart")
+  (:note _N"complex float realpart")
   (:variant :real))
 
 (define-vop (imagpart/complex-double-double-float complex-double-double-float-value)
   (:translate imagpart)
-  (:note "complex float imagpart")
+  (:note _N"complex float imagpart")
   (:variant :imag))
 
 ); progn
@@ -1854,7 +1854,7 @@
 	   (:arg-types ,c-type ,c-type)
 	   (:result-types ,c-type)
 	   (:policy :fast-safe)
-	   (:note "inline complex float arithmetic")
+	   (:note _N"inline complex float arithmetic")
 	   (:translate ,op)
 	   (:temporary (:sc ,complex-reg) tmp)
 	   (:generator ,cost
@@ -1901,7 +1901,7 @@
 	    (:arg-types ,c-type ,r-type)
 	    (:result-types ,c-type)
 	    (:policy :fast-safe)
-	    (:note "inline complex float/float arithmetic")
+	    (:note _N"inline complex float/float arithmetic")
 	    (:translate ,op)
 	    (:temporary (:sc ,complex-reg) tmp)
 	    (:temporary (:sc ,real-reg) rtmp)
@@ -1963,7 +1963,7 @@
 	    (:arg-types ,r-type ,c-type)
 	    (:result-types ,c-type)
 	    (:policy :fast-safe)
-	    (:note "inline complex float/float arithmetic")
+	    (:note _N"inline complex float/float arithmetic")
 	    (:translate ,op)
 	    (:temporary (:sc ,complex-reg) tmp)
 	    (:temporary (:sc ,real-reg) rtmp)
@@ -2009,7 +2009,7 @@
 	     (:arg-types ,c-type ,r-type)
 	     (:result-types ,c-type)
 	     (:policy :fast-safe)
-	     (:note "inline complex float arithmetic")
+	     (:note _N"inline complex float arithmetic")
 	     (:translate *)
 	     (:temporary (:scs (,complex-sc-type)) t0)
 	     (:generator ,cost
@@ -2025,7 +2025,7 @@
 	     (:arg-types ,r-type ,c-type)
 	     (:result-types ,c-type)
 	     (:policy :fast-safe)
-	     (:note "inline complex float arithmetic")
+	     (:note _N"inline complex float arithmetic")
 	     (:translate *)
 	     (:temporary (:scs (,complex-sc-type)) t0)
 	     (:generator ,cost
@@ -2044,7 +2044,7 @@
   (:arg-types complex-double-float double-float)
   (:result-types complex-double-float)
   (:policy :fast-safe)
-  (:note "inline complex float arithmetic")
+  (:note _N"inline complex float arithmetic")
   (:translate /)
   (:temporary (:sc complex-double-reg) t0)
   (:generator 4
@@ -2060,7 +2060,7 @@
   (:arg-types complex-single-float single-float)
   (:result-types complex-single-float)
   (:policy :fast-safe)
-  (:note "inline complex float arithmetic")
+  (:note _N"inline complex float arithmetic")
   (:translate /)
   (:temporary (:sc complex-single-reg) t0 t1)
   (:generator 5

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.22.18.1 2010/02/08 17:15:51 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.22.18.2 2010/02/26 15:44:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,7 @@
 ;;; 
 
 (in-package :x86)
-(intl:textdomain "cmucl")
+(intl:textdomain "cmucl-x86-vm")
 
 
 ;;;; Unary operations.
@@ -34,14 +34,14 @@
 (define-vop (fixnum-unop fast-safe-arith-op)
   (:args (x :scs (any-reg) :target res))
   (:results (res :scs (any-reg)))
-  (:note "inline fixnum arithmetic")
+  (:note _N"inline fixnum arithmetic")
   (:arg-types tagged-num)
   (:result-types tagged-num))
 
 (define-vop (signed-unop fast-safe-arith-op)
   (:args (x :scs (signed-reg) :target res))
   (:results (res :scs (signed-reg)))
-  (:note "inline (signed-byte 32) arithmetic")
+  (:note _N"inline (signed-byte 32) arithmetic")
   (:arg-types signed-num)
   (:result-types signed-num))
 
@@ -89,7 +89,7 @@
 				  (sc-is r control-stack)
 				  (location= x r)))))
   (:result-types tagged-num)
-  (:note "inline fixnum arithmetic"))
+  (:note _N"inline fixnum arithmetic"))
 
 (define-vop (fast-unsigned-binop fast-safe-arith-op)
   (:args (x :target r :scs (unsigned-reg)
@@ -105,7 +105,7 @@
 			       (sc-is r unsigned-stack)
 			       (location= x r)))))
   (:result-types unsigned-num)
-  (:note "inline (unsigned-byte 32) arithmetic"))
+  (:note _N"inline (unsigned-byte 32) arithmetic"))
 
 (define-vop (fast-signed-binop fast-safe-arith-op)
   (:args (x :target r :scs (signed-reg)
@@ -121,7 +121,7 @@
 			       (sc-is r signed-stack)
 			       (location= x r)))))
   (:result-types signed-num)
-  (:note "inline (signed-byte 32) arithmetic"))
+  (:note _N"inline (signed-byte 32) arithmetic"))
 
 (define-vop (fast-fixnum-binop-c fast-safe-arith-op)
   (:args (x :target r :scs (any-reg control-stack)))
@@ -130,7 +130,7 @@
   (:results (r :scs (any-reg)
 	       :load-if (not (location= x r))))
   (:result-types tagged-num)
-  (:note "inline fixnum arithmetic"))
+  (:note _N"inline fixnum arithmetic"))
 
 (define-vop (fast-unsigned-binop-c fast-safe-arith-op)
   (:args (x :target r :scs (unsigned-reg unsigned-stack)))
@@ -139,7 +139,7 @@
   (:results (r :scs (unsigned-reg)
 	       :load-if (not (location= x r))))
   (:result-types unsigned-num)
-  (:note "inline (unsigned-byte 32) arithmetic"))
+  (:note _N"inline (unsigned-byte 32) arithmetic"))
 
 (define-vop (fast-signed-binop-c fast-safe-arith-op)
   (:args (x :target r :scs (signed-reg signed-stack)))
@@ -148,7 +148,7 @@
   (:results (r :scs (signed-reg)
 	       :load-if (not (location= x r))))
   (:result-types signed-num)
-  (:note "inline (signed-byte 32) arithmetic"))
+  (:note _N"inline (signed-byte 32) arithmetic"))
 
 
 (eval-when (compile load eval)
@@ -220,7 +220,7 @@
 				  (sc-is r control-stack)
 				  (location= x r)))))
   (:result-types tagged-num)
-  (:note "inline fixnum arithmetic")
+  (:note _N"inline fixnum arithmetic")
   (:generator 2
     (cond ((and (sc-is x any-reg) (sc-is y any-reg) (sc-is r any-reg)
 		(not (location= x r)))
@@ -237,7 +237,7 @@
   (:results (r :scs (any-reg)
 	       :load-if (not (location= x r))))
   (:result-types tagged-num)
-  (:note "inline fixnum arithmetic")
+  (:note _N"inline fixnum arithmetic")
   (:generator 1
     (cond ((and (sc-is x any-reg) (sc-is r any-reg) (not (location= x r)))
 	   (inst lea r (make-ea :dword :base x :disp (fixnumize y))))
@@ -259,7 +259,7 @@
 				  (sc-is y signed-reg)
 				  (location= x r)))))
   (:result-types signed-num)
-  (:note "inline (signed-byte 32) arithmetic")
+  (:note _N"inline (signed-byte 32) arithmetic")
   (:generator 5
     (cond ((and (sc-is x signed-reg) (sc-is y signed-reg) (sc-is r signed-reg)
 		(not (location= x r)))
@@ -276,7 +276,7 @@
   (:results (r :scs (signed-reg)
 	       :load-if (not (location= x r))))
   (:result-types signed-num)
-  (:note "inline (signed-byte 32) arithmetic")
+  (:note _N"inline (signed-byte 32) arithmetic")
   (:generator 4
     (cond ((and (sc-is x signed-reg) (sc-is r signed-reg)
 		(not (location= x r)))
@@ -302,7 +302,7 @@
 				  (sc-is r unsigned-stack)
 				  (location= x r)))))
   (:result-types unsigned-num)
-  (:note "inline (unsigned-byte 32) arithmetic")
+  (:note _N"inline (unsigned-byte 32) arithmetic")
   (:generator 5
     (cond ((and (sc-is x unsigned-reg) (sc-is y unsigned-reg)
 		(sc-is r unsigned-reg) (not (location= x r)))
@@ -319,7 +319,7 @@
   (:results (r :scs (unsigned-reg)
 	       :load-if (not (location= x r))))
   (:result-types unsigned-num)
-  (:note "inline (unsigned-byte 32) arithmetic")
+  (:note _N"inline (unsigned-byte 32) arithmetic")
   (:generator 4
     (cond ((and (sc-is x unsigned-reg)
 		(sc-is r unsigned-reg)
@@ -371,7 +371,7 @@
   (:arg-types tagged-num tagged-num)
   (:results (r :scs (any-reg) :from (:argument 0)))
   (:result-types tagged-num)
-  (:note "inline fixnum arithmetic")
+  (:note _N"inline fixnum arithmetic")
   (:generator 4
     (move r x)
     (inst sar r 2)
@@ -385,7 +385,7 @@
   (:arg-types tagged-num (:constant (signed-byte 30)))
   (:results (r :scs (any-reg)))
   (:result-types tagged-num)
-  (:note "inline fixnum arithmetic")
+  (:note _N"inline fixnum arithmetic")
   (:generator 3
     (inst imul r x y)))
 
@@ -397,7 +397,7 @@
   (:arg-types signed-num signed-num)
   (:results (r :scs (signed-reg) :from (:argument 0)))
   (:result-types signed-num)
-  (:note "inline (signed-byte 32) arithmetic")
+  (:note _N"inline (signed-byte 32) arithmetic")
   (:generator 5
     (move r x)
     (inst imul r y)))
@@ -410,7 +410,7 @@
   (:arg-types signed-num (:constant (signed-byte 32)))
   (:results (r :scs (signed-reg)))
   (:result-types signed-num)
-  (:note "inline (signed-byte 32) arithmetic")
+  (:note _N"inline (signed-byte 32) arithmetic")
   (:generator 4
     (inst imul r x y)))
 
@@ -426,7 +426,7 @@
   (:ignore edx)
   (:results (result :scs (unsigned-reg)))
   (:result-types unsigned-num)
-  (:note "inline (unsigned-byte 32) arithmetic")
+  (:note _N"inline (unsigned-byte 32) arithmetic")
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 6
@@ -447,7 +447,7 @@
   (:results (quo :scs (any-reg))
 	    (rem :scs (any-reg)))
   (:result-types tagged-num tagged-num)
-  (:note "inline fixnum arithmetic")
+  (:note _N"inline fixnum arithmetic")
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 31
@@ -477,7 +477,7 @@
   (:results (quo :scs (any-reg))
 	    (rem :scs (any-reg)))
   (:result-types tagged-num tagged-num)
-  (:note "inline fixnum arithmetic")
+  (:note _N"inline fixnum arithmetic")
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 30
@@ -502,7 +502,7 @@
   (:results (quo :scs (unsigned-reg))
 	    (rem :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
-  (:note "inline (unsigned-byte 32) arithmetic")
+  (:note _N"inline (unsigned-byte 32) arithmetic")
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 33
@@ -530,7 +530,7 @@
   (:results (quo :scs (unsigned-reg))
 	    (rem :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
-  (:note "inline (unsigned-byte 32) arithmetic")
+  (:note _N"inline (unsigned-byte 32) arithmetic")
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 32
@@ -553,7 +553,7 @@
   (:results (quo :scs (signed-reg))
 	    (rem :scs (signed-reg)))
   (:result-types signed-num signed-num)
-  (:note "inline (signed-byte 32) arithmetic")
+  (:note _N"inline (signed-byte 32) arithmetic")
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 33
@@ -581,7 +581,7 @@
   (:results (quo :scs (signed-reg))
 	    (rem :scs (signed-reg)))
   (:result-types signed-num signed-num)
-  (:note "inline (signed-byte 32) arithmetic")
+  (:note _N"inline (signed-byte 32) arithmetic")
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 32
@@ -609,7 +609,7 @@
 				       (sc-is result control-stack)
 				       (location= number result)))))
   (:result-types tagged-num)
-  (:note "inline ASH")
+  (:note _N"inline ASH")
   (:generator 2
     (cond ((and (= amount 1) (not (location= number result)))
 	   (inst lea result (make-ea :dword :index number :scale 2)))
@@ -646,7 +646,7 @@
 				       (location= number result)))))
   (:result-types tagged-num)
   (:policy :fast-safe)
-  (:note "inline ASH")
+  (:note _N"inline ASH")
   (:generator 3
     (move result number)
     (move ecx amount)
@@ -667,7 +667,7 @@
 				       (sc-is result unsigned-stack)
 				       (location= number result)))))
   (:result-types unsigned-num)
-  (:note "inline ASH")
+  (:note _N"inline ASH")
   (:generator 3
     (cond ((and (= amount 1) (not (location= number result)))
 	   (inst lea result (make-ea :dword :index number :scale 2)))
@@ -700,7 +700,7 @@
 				       (sc-is result signed-stack)
 				       (location= number result)))))
   (:result-types signed-num)
-  (:note "inline ASH")
+  (:note _N"inline ASH")
   (:generator 3
     (cond ((and (= amount 1) (not (location= number result)))
 	   (inst lea result (make-ea :dword :index number :scale 2)))
@@ -735,7 +735,7 @@
 				       (location= number result)))))
   (:result-types unsigned-num)
   (:policy :fast-safe)
-  (:note "inline ASH")
+  (:note _N"inline ASH")
   (:generator 4
     (move result number)
     (move ecx amount)
@@ -757,7 +757,7 @@
 				       (location= number result)))))
   (:result-types signed-num)
   (:policy :fast-safe)
-  (:note "inline ASH")
+  (:note _N"inline ASH")
   (:generator 4
     (move result number)
     (move ecx amount)
@@ -773,7 +773,7 @@
   (:results (result :scs (unsigned-reg) :from (:argument 0)))
   (:result-types unsigned-num)
   (:temporary (:sc signed-reg :offset ecx-offset :from (:argument 1)) ecx)
-  (:note "inline ASH")
+  (:note _N"inline ASH")
   (:generator 5
     (move result number)
     (move ecx amount)
@@ -803,7 +803,7 @@
   (:results (result :scs (signed-reg) :from (:argument 0)))
   (:result-types signed-num)
   (:temporary (:sc signed-reg :offset ecx-offset :from (:argument 1)) ecx)
-  (:note "inline ASH")
+  (:note _N"inline ASH")
   (:generator 5
     (move result number)
     (move ecx amount)
@@ -827,7 +827,7 @@
 ;;; note documentation for this function is wrong - rtfm
 (define-vop (signed-byte-32-len)
   (:translate integer-length)
-  (:note "inline (signed-byte 32) integer-length")
+  (:note _N"inline (signed-byte 32) integer-length")
   (:policy :fast-safe)
   (:args (arg :scs (signed-reg) :target res))
   (:arg-types signed-num)
@@ -850,7 +850,7 @@
 
 (define-vop (unsigned-byte-32-count)
   (:translate logcount)
-  (:note "inline (unsigned-byte 32) logcount")
+  (:note _N"inline (unsigned-byte 32) logcount")
   (:policy :fast-safe)
   (:args (arg :scs (unsigned-reg)))
   (:arg-types unsigned-num)
@@ -907,7 +907,7 @@
 			       (sc-is y any-reg))))
 	 (y :scs (any-reg control-stack)))
   (:arg-types tagged-num tagged-num)
-  (:note "inline fixnum comparison"))
+  (:note _N"inline fixnum comparison"))
 
 (define-vop (fast-conditional-c/fixnum fast-conditional/fixnum)
   (:args (x :scs (any-reg control-stack)))
@@ -920,7 +920,7 @@
 			       (sc-is y signed-reg))))
 	 (y :scs (signed-reg signed-stack)))
   (:arg-types signed-num signed-num)
-  (:note "inline (signed-byte 32) comparison"))
+  (:note _N"inline (signed-byte 32) comparison"))
 
 (define-vop (fast-conditional-c/signed fast-conditional/signed)
   (:args (x :scs (signed-reg signed-stack)))
@@ -933,7 +933,7 @@
 			       (sc-is y unsigned-reg))))
 	 (y :scs (unsigned-reg unsigned-stack)))
   (:arg-types unsigned-num unsigned-num)
-  (:note "inline (unsigned-byte 32) comparison"))
+  (:note _N"inline (unsigned-byte 32) comparison"))
 
 (define-vop (fast-conditional-c/unsigned fast-conditional/unsigned)
   (:args (x :scs (unsigned-reg unsigned-stack)))
@@ -1012,7 +1012,7 @@
 			       (sc-is y any-reg))))
 	 (y :scs (any-reg control-stack)))
   (:arg-types tagged-num tagged-num)
-  (:note "inline fixnum comparison")
+  (:note _N"inline fixnum comparison")
   (:translate eql)
   (:generator 4
     (inst cmp x y)
@@ -1147,7 +1147,7 @@
 
 (define-vop (shift-towards-start shift-towards-someplace)
   (:translate shift-towards-start)
-  (:note "SHIFT-TOWARDS-START")
+  (:note _N"SHIFT-TOWARDS-START")
   (:generator 1
     (move r num)
     (move ecx amount)
@@ -1155,7 +1155,7 @@
 
 (define-vop (shift-towards-end shift-towards-someplace)
   (:translate shift-towards-end)
-  (:note "SHIFT-TOWARDS-END")
+  (:note _N"SHIFT-TOWARDS-END")
   (:generator 1
     (move r num)
     (move ecx amount)
