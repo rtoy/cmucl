@@ -1,0 +1,19 @@
+#: target:code/sparc-svr4-vm.lisp
+msgid "Returns a string describing the type of the local machine."
+msgstr ""
+
+#: target:code/sparc-svr4-vm.lisp
+msgid "Returns a string describing the version of the local machine."
+msgstr ""
+
+#: target:code/sparc-svr4-vm.lisp
+msgid "Unaligned instruction?  offset=#x~X."
+msgstr ""
+
+#: target:code/sparc-svr4-vm.lisp
+msgid "Can't deal with CALL fixups, yet."
+msgstr ""
+
+#: target:code/sparc-svr4-vm.lisp
+msgid "XRS ID invalid but attempting to access double-float register ~d!"
+msgstr ""
