@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.33 2008/11/12 15:04:23 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.34 2010/03/01 13:55:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3199,22 +3199,99 @@
                         (emit-sse-inst segment src dst ,prefix ,(1+ (ash op 1))
                                        :operand-size :do-not-set)))))))
   (define-movsd/ss-sse-inst movsd #xf2 #b0001000)
-  (define-movsd/ss-sse-inst movss #xf3 #b0001000)
+  (define-movsd/ss-sse-inst movss #xf3 #b0001000))
+
+
+;; MOVHLPS and MOVLHPS are incorrectly disassembled as MOVLPS and
+;; MOVHPS (respectively).  I (rtoy) don't know how to fix that;
+;; instead. just print a note with the correct instruction name.
+(defun movlps-control (chunk inst stream dstate)
+  (when stream
+    (when (>= (ldb (byte 8 16) chunk) #xc0)
+      (disassem:note "MOVHLPS" dstate))))
+
+(defun movhps-control (chunk inst stream dstate)
+  (when stream
+    (when (>= (ldb (byte 8 16) chunk) #xc0)
+      (disassem:note "MOVLHPS" dstate))))
+
+
+(macrolet ((define-mov-sse-inst (name prefix opcode-from opcode-to
+                                      &key force-to-mem reg-reg-name control)
+               `(progn
+                  ,(when reg-reg-name
+                     `(define-instruction ,reg-reg-name (segment dst src)
+                        (:emitter
+                         (assert (xmm-register-p dst))
+                         (assert (xmm-register-p src))
+                         (emit-regular-sse-inst segment dst src ,prefix ,opcode-from))))
+                  (define-instruction ,name (segment dst src)
+                    ,@(if prefix
+                          `((:printer ext-xmm-xmm/mem
+                                      ((prefix ,prefix) (op ,opcode-from))
+				      :default
+				      :control ,control)
+			    #+nil
+                            (:printer ext-rex-xmm-xmm/mem
+                                      ((prefix ,prefix) (op ,opcode-from)))
+                            (:printer ext-xmm-xmm/mem
+                                      ((prefix ,prefix) (op ,opcode-to))
+                                      '(:name :tab reg/mem ", " reg)
+				      :control ,control)
+			    #+nil
+			    (:printer ext-rex-xmm-xmm/mem
+                                      ((prefix ,prefix) (op ,opcode-to))
+                                      '(:name :tab reg/mem ", " reg)))
+                          `((:printer xmm-xmm/mem
+                                      ((op ,opcode-from))
+				      :default
+				      :control ,control)
+			    #+nil
+                            (:printer rex-xmm-xmm/mem
+                                      ((op ,opcode-from)))
+                            (:printer xmm-xmm/mem
+                                      ((op ,opcode-to))
+                                      '(:name :tab reg/mem ", " reg)
+				      :control ,control)
+			    #+nil
+                            (:printer rex-xmm-xmm/mem
+                                      ((op ,opcode-to))
+                                      '(:name :tab reg/mem ", " reg))))
+                    (:emitter
+                     (cond ((xmm-register-p dst)
+                            ,(when force-to-mem
+                               `(assert (not (or (register-p src)
+                                               (xmm-register-p src)))))
+                            (emit-regular-sse-inst segment dst src ,prefix ,opcode-from))
+                           (t
+                            (assert (xmm-register-p src))
+                            ,(when force-to-mem
+                               `(assert (not (or (register-p dst)
+                                               (xmm-register-p dst)))))
+                            (emit-regular-sse-inst segment src dst ,prefix ,opcode-to))))))))
+  ;; direction bit?
+
+  ;; This is useful for moving between xmm registers.  We don't have
+  ;; aligned 128-bit objects.
+  (define-mov-sse-inst movapd #x66 #x28 #x29)
+  (define-mov-sse-inst movaps nil  #x28 #x29)
+  (define-mov-sse-inst movdqa #x66 #x6f #x7f)
+  (define-mov-sse-inst movdqu #xf3 #x6f #x7f)
+
+  ;; Load/store high part of packed single/double.  Low part untouched.
+  (define-mov-sse-inst movhpd #x66 #x16 #x17 :force-to-mem t)
+  (define-mov-sse-inst movlpd #x66 #x12 #x13 :force-to-mem t)
+  ;; Note: movhps and movlhps have exactly the same encoding.  The
+  ;; only difference is that movhps moves between registers and memory
+  ;; and movlhps moves between registers.  Same for movlps and movhlps.
+  (define-mov-sse-inst movhps nil  #x16 #x17 :reg-reg-name movlhps :control #'movhps-control)
+  (define-mov-sse-inst movlps nil  #x12 #x13 :reg-reg-name movhlps :control #'movlps-control)
+
   ;; We don't enforce it, but movupd should be used for moving to/from
   ;; memory because we 128-bit objects aren't aligned on 128-bit
   ;; boundaries.
-  (define-movsd/ss-sse-inst movupd #x66 #b0001000)
-  (define-movsd/ss-sse-inst movups nil  #b0001000)
-  ;; This is useful for moving between xmm registers.  We don't have
-  ;; aligned 128-bit objects.
-  (define-movsd/ss-sse-inst movapd #x66 #b0010100)
-  (define-movsd/ss-sse-inst movaps nil  #b0010100)
-  ;; Load/store high part of packed double.  Low part untouched.
-  (define-movsd/ss-sse-inst movhpd #x66 #b0001011)
-  ;; Load/store low part of packed double.  High part untouched.
-  (define-movsd/ss-sse-inst movlpd #x66 #b0001001)
-  (define-movsd/ss-sse-inst movlps nil  #b0001001)
-  )
+  (define-mov-sse-inst movupd #x66 #x10 #x11)
+  (define-mov-sse-inst movups nil  #x10 #x11))
 
 ;;; MOVQ
 (define-instruction movq (segment dst src)
@@ -3235,24 +3312,6 @@
   (:printer ext-xmm-xmm/mem ((prefix #xf2) (op #x12)))
   (:emitter
    (emit-sse-inst segment dst src #xf2 #x12
-		  :operand-size :do-not-set)))
-
-;;; MOVHLPS
-;;;
-;;; dst[63:0] = src[127:64]
-;;; dst[127:64] unchanged.
-(define-instruction movhlps (segment dst src)
-  (:printer xmm-xmm/mem ((op #x12)))
-  (:emitter
-   (assert (xmm-register-p src))
-   (emit-sse-inst segment dst src nil #x12
-		  :operand-size :do-not-set)))
-
-(define-instruction movlhps (segment dst src)
-  (:printer xmm-xmm/mem ((op #x16)))
-  (:emitter
-   (assert (xmm-register-p src))
-   (emit-sse-inst segment dst src nil #x16
 		  :operand-size :do-not-set)))
 
 ;;; SHUFPD
