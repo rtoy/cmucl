@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.51.2.3 2010/02/12 14:46:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.51.2.4 2010/03/02 13:45:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -447,10 +447,12 @@
 		      (incf index))
 		     (t
 		      (unless (typep contents 'sequence)
-			(error _"Malformed :initial-contents.  ~S is not a ~
-			        sequence, but ~D more layer~:P needed."
-			       contents
-			       (- (length dimensions) axis)))
+			(error (intl:ngettext "Malformed :initial-contents.  ~S is not a ~
+			                       sequence, but ~D more layer needed."
+					      "Malformed :initial-contents.  ~S is not a ~
+			                       sequence, but ~D more layers needed."
+					      (- (length dimensions) axis))
+			       contents))
 		      (unless (= (length contents) (car dims))
 			(error _"Malformed :initial-contents.  Dimension of ~
 			        axis ~D is ~D, but ~S is ~D long."
@@ -728,8 +730,10 @@
 	   (simple-program-error _"Vector axis is not zero: ~S" axis-number))
 	 (length (the (simple-array * (*)) array)))
 	((>= axis-number (%array-rank array))
-	 (simple-program-error _"~D is too big; ~S only has ~D dimension~:P"
-		axis-number array (%array-rank array)))
+	 (simple-program-error (intl:ngettext "~D is too big; ~S only has ~D dimension"
+					      "~D is too big; ~S only has ~D dimensions"
+					      (%array-rank array))
+			       axis-number array))
 	(t
 	 (%array-dimension array axis-number))))
 

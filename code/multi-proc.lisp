@@ -5,7 +5,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.44.14.3 2010/02/26 15:32:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.44.14.4 2010/03/02 13:45:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1230,7 +1230,9 @@
 	    (push process destroyed-processes)))
 	(unless (rest *all-processes*)
 	  (return))
-	(format t "Destroyed ~d process~:P; remaining ~d~%"
+	(format t (intl:ngettext "Destroyed ~d process; remaining ~d~%"
+				 "Destroyed ~d processes; remaining ~d~%"
+				 (length destroyed-processes))
 		(length destroyed-processes) (length *all-processes*))
 	(process-yield)))
 

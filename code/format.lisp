@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.93.10.4 2010/02/14 03:06:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.93.10.5 2010/03/02 13:45:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2809,7 +2809,9 @@
 	     ;; ANSI specifies that "an error is signalled" in this
 	     ;; situation.
 	     (error 'format-error
-		    :complaint _"~D illegal directive~:P found inside justification block"
+		    :complaint (intl:ngettext "~D illegal directive found inside justification block"
+					      "~D illegal directives found inside justification block"
+					      count)
 		    :arguments (list count)))
 	   (expand-format-justification segments colonp atsignp
 				      first-semi params)))
@@ -2836,7 +2838,10 @@
 		  ;; ANSI specifies that "an error is signalled" in this
 		  ;; situation.
 		  (error 'format-error
-			 :complaint _"~D illegal directive~:P found inside justification block"
+			 :complaint (intl:ngettext
+				     "~D illegal directive found inside justification block"
+				     "~D illegal directives found inside justification block"
+				     count)
 			 :arguments (list count)))
 		(interpret-format-justification stream orig-args args
 						segments colonp atsignp

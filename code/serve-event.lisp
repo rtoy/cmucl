@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.28.12.4 2010/02/13 17:10:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.28.12.5 2010/03/02 13:45:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -238,7 +238,10 @@
 		  (unix:unix-fstat (handler-descriptor handler)))
 	(setf (handler-bogus handler) t)
 	(push handler bogus-handlers)))
-    (restart-case (error "~S ~[have~;has a~:;have~] bad file descriptor~:P."
+    ;; TRANSLATORS:  This needs more work.
+    (restart-case (error (intl:ngettext "~S ~[have~;has a~:;have~] bad file descriptor."
+					"~S ~[have~;has a~:;have~] bad file descriptors."
+					(length bogus-handlers))
 			 bogus-handlers (length bogus-handlers))
       (remove-them ()
 	:report (lambda (stream)

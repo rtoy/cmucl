@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.37.10.3 2010/03/02 00:39:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.37.10.4 2010/03/02 13:45:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -509,7 +509,9 @@
 		  (incf total-bytes (first total))
 		  (incf total-objects (second total))
 		  (spaces (cons (car space-total) (first total)))))
-	      (format t _"~%~A:~%    ~:D bytes, ~:D object~:P"
+	      (format t (intl:ngettext "~%~A:~%    ~:D bytes, ~:D object"
+				       "~%~A:~%    ~:D bytes, ~:D objects"
+				       total-objects)
 		      name total-bytes total-objects)
 	      (dolist (space (spaces))
 		(format t ", ~D% ~(~A~)"
@@ -746,16 +748,23 @@
 		(objects (cadr what)))
 	    (incf printed-bytes bytes)
 	    (incf printed-objects objects)
-	    (format t _"  ~32A: ~7:D bytes, ~5D object~:P.~%" (car what)
+	    (format t (intl:ngettext "  ~32A: ~7:D bytes, ~5D object.~%"
+				     "  ~32A: ~7:D bytes, ~5D objects.~%"
+				     objects)
+		    (car what)
 		    bytes objects)))
 
 	(let ((residual-objects (- total-objects printed-objects))
 	      (residual-bytes (- total-bytes printed-bytes)))
 	  (unless (zerop residual-objects)
-	    (format t _"  Other types: ~:D bytes, ~D: object~:P.~%"
+	    (format t (intl:ngettext "  Other types: ~:D bytes, ~D: object~:P.~%"
+				     "  Other types: ~:D bytes, ~D: object~:P.~%"
+				     residual-objects)
 		    residual-bytes residual-objects))))
 
-      (format t _"  ~:(~A~) instance total: ~:D bytes, ~:D object~:P.~%"
+      (format t (intl:ngettext "  ~:(~A~) instance total: ~:D bytes, ~:D object.~%"
+			       "  ~:(~A~) instance total: ~:D bytes, ~:D objects.~%"
+			       total-objects)
 	      space total-bytes total-objects)))
 
   (values))
@@ -1004,12 +1013,16 @@
 	    
       (loop for (pkg (pkg-count . pkg-size) . files) in
 	    (sort res #'> :key #'(lambda (x) (cdr (second x)))) do
-	(format t _"~%Package ~A: ~32T~9:D bytes, ~9:D object~:P.~%"
+	(format t (intl:ngettext "~%Package ~A: ~32T~9:D bytes, ~9:D object.~%"
+				 "~%Package ~A: ~32T~9:D bytes, ~9:D objects.~%"
+				 pkg-count)
 		pkg pkg-size pkg-count)
 	(when (eq how :file)
 	  (loop for (file (file-count . file-size)) in
 	        (sort files #'> :key #'(lambda (x) (cdr (second x)))) do
-	    (format t _"~30@A: ~9:D bytes, ~9:D object~:P.~%"
+	    (format t (intl:ngettext "~30@A: ~9:D bytes, ~9:D object.~%"
+				     "~30@A: ~9:D bytes, ~9:D objects.~%"
+				     file-count)
 		    (file-namestring file) file-size file-count))))))
 
   (values))

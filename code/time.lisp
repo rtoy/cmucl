@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.30.10.3 2010/02/26 06:23:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.30.10.4 2010/03/02 13:45:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -379,24 +379,35 @@
 	  (pprint-logical-block (*trace-output* nil :per-line-prefix "; ")
 	    (format *trace-output*
 		    _"Evaluation took:~%  ~
-		     ~S second~:P of real time~%  ~
-		     ~S second~:P of user run time~%  ~
-		     ~S second~:P of system run time~%  ~
-                     ~:D ~A cycles~%  ~
-		     ~@[[Run times include ~S second~:P GC run time]~%  ~]~
-		     ~S page fault~:P and~%  ~
-		     ~:D bytes consed.~%"
+		     ~S seconds of real time~%  ~
+		     ~S seconds of user run time~%  ~
+		     ~S seconds of system run time~%  "
 		    (max (/ (- new-real-time old-real-time)
 			    (float internal-time-units-per-second))
 			 0.0)
 		    (max (/ (- new-run-utime old-run-utime) 1000000.0) 0.0)
-		    (max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0)
+		    (max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0))
+	    (format *trace-output*
+		    (intl:ngettext
+		     "~:D ~A cycle~%  ~
+		     ~@[[Run times include ~S seconds GC run time]~%  ~]"
+		     "~:D ~A cycles~%  ~
+		     ~@[[Run times include ~S seconds GC run time]~%  ~]"
+		     (truncate cycle-count))
 		    (truncate cycle-count)
 		    "CPU"
 		    (unless (zerop gc-run-time)
 		      (/ (float gc-run-time)
-			 (float internal-time-units-per-second)))
-		    (max (- new-page-faults old-page-faults) 0)
+			 (float internal-time-units-per-second))))
+	    (format *trace-output*
+		    (intl:ngettext "~S page fault and~%  "
+				   "~S page faults and~%  "
+				   (max (- new-page-faults old-page-faults) 0))
+		    (max (- new-page-faults old-page-faults) 0))
+	    (format *trace-output*
+		    (intl:ngettext "~:D byte consed.~%"
+				   "~:D bytes consed.~%"
+				   (max (- bytes-consed (or *time-consing* 0)) 0))
 		    (max (- bytes-consed (or *time-consing* 0)) 0)))
 	  (terpri *trace-output*))
 	(setq *last-time-consing* bytes-consed))))))
