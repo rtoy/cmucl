@@ -5774,16 +5774,22 @@ msgid "~2&Breakdown for ~(~A~) space:~%"
 msgstr ""
 
 #: target:code/room.lisp
-msgid "  ~13:D bytes for ~9:D other object~2:*~P.~%"
-msgstr ""
+msgid "  ~13:D bytes for ~9:D other object.~%"
+msgid_plural "  ~13:D bytes for ~9:D other objects.~%"
+msgstr[0] ""
+msgstr[1] ""
 
 #: target:code/room.lisp
-msgid "  ~13:D bytes for ~9:D ~(~A~) object~2:*~P.~%"
-msgstr ""
+msgid "  ~13:D bytes for ~9:D ~(~A~) object.~%"
+msgid_plural "  ~13:D bytes for ~9:D ~(~A~) objects.~%"
+msgstr[0] ""
+msgstr[1] ""
 
 #: target:code/room.lisp
-msgid "  ~13:D bytes for ~9:D ~(~A~) object~2:*~P (space total.)~%"
-msgstr ""
+msgid "  ~13:D bytes for ~9:D ~(~A~) object (space total.)~%"
+msgid_plural "  ~13:D bytes for ~9:D ~(~A~) objects (space total.)~%"
+msgstr[0] ""
+msgstr[1] ""
 
 #: target:code/room.lisp
 msgid ""

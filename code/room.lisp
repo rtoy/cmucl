@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.37.10.2 2010/02/10 02:22:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.37.10.3 2010/03/02 00:39:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -541,15 +541,21 @@
 	     (type memory-size total-bytes reported-bytes))
     (loop for (bytes objects name) in types do
       (when (<= bytes cutoff-point)
-	(format t _"  ~13:D bytes for ~9:D other object~2:*~P.~%"
+	(format t (intl:ngettext "  ~13:D bytes for ~9:D other object.~%"
+				 "  ~13:D bytes for ~9:D other objects.~%"
+				 (- total-objects reported-objects))
 		(- total-bytes reported-bytes)
 		(- total-objects reported-objects))
 	(return))
       (incf reported-bytes bytes)
       (incf reported-objects objects)
-      (format t _"  ~13:D bytes for ~9:D ~(~A~) object~2:*~P.~%"
+      (format t (intl:ngettext "  ~13:D bytes for ~9:D ~(~A~) object.~%"
+			       "  ~13:D bytes for ~9:D ~(~A~) objects.~%"
+			       objects)
 	      bytes objects name))
-    (format t _"  ~13:D bytes for ~9:D ~(~A~) object~2:*~P (space total.)~%"
+    (format t (intl:ngettext "  ~13:D bytes for ~9:D ~(~A~) object (space total.)~%"
+			     "  ~13:D bytes for ~9:D ~(~A~) objects (space total.)~%"
+			     total-objects)
 	    total-bytes total-objects (car space-total))))
 
 

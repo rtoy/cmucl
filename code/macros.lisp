@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.113.10.6 2010/02/13 17:10:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.113.10.7 2010/03/02 00:39:16 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1490,8 +1490,10 @@
 (defun assert-report (names stream)
   (format stream _"Retry assertion")
   (if names
-      (format stream _" with new value~P for ~{~S~^, ~}."
-	      (length names) names)
+      (format stream (intl:ngettext " with new value for ~{~S~^, ~}."
+				    " with new values for ~{~S~^, ~}."
+				    (length names))
+	      names)
       (format stream ".")))
 
 (defun assert-prompt (name value)
