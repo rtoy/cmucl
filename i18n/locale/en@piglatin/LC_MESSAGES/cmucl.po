@@ -8274,17 +8274,23 @@ msgid "~2&Breakdown for ~(~A~) space:~%"
 msgstr "~2&Eakdownbray orfay ~(~Away~) acespay:~%"
 
 #: target:code/room.lisp
-msgid "  ~13:D bytes for ~9:D other object~2:*~P.~%"
-msgstr "  ~13:D ytesbay orfay ~9:D otherway objectway~2:*~P.~%"
+msgid "  ~13:D bytes for ~9:D other object.~%"
+msgid_plural "  ~13:D bytes for ~9:D other objects.~%"
+msgstr[0] "  ~13:D ytesbay orfay ~9:D otherway objectway.~%"
+msgstr[1] "  ~13:D ytesbay orfay ~9:D otherway objectsway.~%"
 
 #: target:code/room.lisp
-msgid "  ~13:D bytes for ~9:D ~(~A~) object~2:*~P.~%"
-msgstr "  ~13:D ytesbay orfay ~9:D ~(~Away~) objectway~2:*~P.~%"
+msgid "  ~13:D bytes for ~9:D ~(~A~) object.~%"
+msgid_plural "  ~13:D bytes for ~9:D ~(~A~) objects.~%"
+msgstr[0] "  ~13:D ytesbay orfay ~9:D ~(~Away~) objectway.~%"
+msgstr[1] "  ~13:D ytesbay orfay ~9:D ~(~Away~) objectsway.~%"
 
 #: target:code/room.lisp
-msgid "  ~13:D bytes for ~9:D ~(~A~) object~2:*~P (space total.)~%"
-msgstr ""
-"  ~13:D ytesbay orfay ~9:D ~(~Away~) objectway~2:*~P (acespay otaltay.)~%"
+msgid "  ~13:D bytes for ~9:D ~(~A~) object (space total.)~%"
+msgid_plural "  ~13:D bytes for ~9:D ~(~A~) objects (space total.)~%"
+msgstr[0] "  ~13:D ytesbay orfay ~9:D ~(~Away~) objectway (acespay otaltay.)~%"
+msgstr[1] ""
+"  ~13:D ytesbay orfay ~9:D ~(~Away~) objectsway (acespay otaltay.)~%"
 
 #: target:code/room.lisp
 msgid ""
