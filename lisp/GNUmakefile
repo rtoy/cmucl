@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.33.14.4 2010/02/26 15:35:03 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.33.14.5 2010/03/02 13:44:24 rtoy Exp $
 
 all: lisp.nm translations
 
@@ -77,6 +77,8 @@ translations:
             d=`dirname $$pot`; \
 	    f=`basename $$pot .pot`; \
 	    touch ../../src/$$po/$$f.po; \
+	    echo ; \
+	    echo '***' Processing $$f.pot:  $$po; \
 	    msgmerge -v ../../src/$$po/$$f.po $$pot -o ../../src/$$po/$$f.po; \
 	    msgfmt -v  ../../src/$$po/$$f.po -o ../$$po/$$f.mo; \
 	  done; done
