@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.73 2005/08/18 16:55:00 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.74 2010/03/04 14:03:31 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -1177,7 +1177,8 @@ work during bootstrapping.
 		    (optimize-slot-writer form required-parameters slots env))
 		   ;;
 		   ((and (valid-function-name-p (car form))
-			 (info-gf-name-p (car form)))
+			 (info-gf-name-p (car form))
+			 (not (walker::environment-function env (car form))))
 		    (optimize-gf-call form required-parameters calls env))
 		   (t
 		    form))))
