@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.110.26.5 2010/02/26 03:38:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.110.26.6 2010/03/05 00:05:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2010,7 +2010,7 @@ these can be NIL if unavailable or inapplicable.")
 	       (setq last nil)
 	       (format stream "~2&")
 	       (pprint-logical-block (stream nil :per-line-prefix "; ")
-		 (format stream "In:~{~<~%   ~4:;~{ ~S~}~>~^ =>~}" in))
+		 (format stream _"In:~{~<~%   ~4:;~{ ~S~}~>~^ =>~}" in))
 	       (format stream "~2%"))
 	    
 	     (unless (and last
@@ -2155,19 +2155,19 @@ these can be NIL if unavailable or inapplicable.")
 ;;;
 (defun compiler-error (format-string &rest format-args)
   (declare (string format-string))
-  (cerror "replace form with call to ERROR."
+  (cerror _"replace form with call to ERROR."
 	  'compiler-error
 	  :format-control (intl:gettext format-string)
 	  :format-arguments format-args)
   (funcall *compiler-error-bailout*))
 ;;;
 (defun compiler-error-message (format-string &rest format-args)
-  (cerror "ignore it." 
+  (cerror _"ignore it." 
 	  'compiler-error :format-control format-string
 	  :format-arguments format-args))
 ;;; 
 (defun compiler-read-error (position format-string &rest format-args)
-  (cerror "replace form with call to ERROR."
+  (cerror _"replace form with call to ERROR."
 	  'compiler-read-error :position position
 	  :message (apply #'format nil format-string format-args)))
 ;;;
