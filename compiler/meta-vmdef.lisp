@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.9.48.3 2010/02/26 21:34:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.9.48.4 2010/03/05 00:06:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1414,7 +1414,9 @@
 					(eq (car x) :constant)))
 			       types)
 		 num)
-	(error _"Expected ~D ~:[result~;argument~] type~P: ~S."
+	(error (intl:ngettext "Expected ~D ~:[result~;argument~] type: ~S."
+			      "Expected ~D ~:[result~;argument~] types: ~S."
+			      (length types))
 	       num load-p types num)))
     
     (when more-op
