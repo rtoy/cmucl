@@ -77,6 +77,19 @@ New in this release:
     - GET-MACRO-CHARACTER would return the wrong second value because
       *READTABLE* was always being used instead of the specified
       readtable. 
+    - COMPILE-FILE was generating an error when compiling COMPILE
+      forms.  This is fixed.
+    - A critical bug in SSE2 support has been fixed.  Multiplying a
+      complex single-float by a single-float produced the wrong
+      result. 
+    - Fix issue where CMUCL does not correctly handle FLETs in
+      DEFMETHOD bodies which use the same name as that of the generic
+      function.   The generic function was called instead of the local
+      function.
+    - CMUCL would fail to compile external formats if *readtable* was
+      not the standard readtable.  This is fixed by binding
+      *readtable* to the standard readtable before compiling the
+      external format.
 
   * Trac Tickets:
     #33: get-dispatch-macro-character doesn't signal errors in
@@ -101,6 +114,9 @@ New in this release:
       is abslute or relative.  Previously, the result was take from
       the SOURCE pathname, except if TO were absolute, in which case
       the result was absolute.
+    - The debugger help message is updated to reflect the actual
+      options for L and PP commands.  Help for the DESCRIBE command
+      has been added.
 
   * Improvements to the PCL implementation of CLOS:
 
