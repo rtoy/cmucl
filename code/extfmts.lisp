@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.20 2009/10/18 14:21:23 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.21 2010/03/08 20:43:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -362,6 +362,10 @@
       (and (consp name) (find-external-format name))
       (and (let ((*package* (find-package "STREAM"))
 		 (lisp::*enable-package-locked-errors* nil)
+		 ;; The standard readtable is what we want to use when
+		 ;; compiling the external format, in case the user
+		 ;; has changed *readtable* in some way.
+		 (*readtable* (copy-readtable nil))
 		 (s (open (format nil "ext-formats:~(~A~).lisp" name)
 			  :if-does-not-exist nil :external-format :iso8859-1)))
 	     (when s
