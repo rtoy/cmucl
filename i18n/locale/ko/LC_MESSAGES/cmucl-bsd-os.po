@@ -1,15 +1,31 @@
+# @ cmucl-bsd-os
+# SOME DESCRIPTIVE TITLE
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
 #: target:code/bsd-os.lisp
 msgid "Version string for supporting software"
-msgstr ""
+msgstr "소프트 웨어를 지원하기위한 버전 문자열"
 
 #: target:code/bsd-os.lisp
 msgid "Returns a string describing version of the supporting software."
-msgstr ""
+msgstr "문자열을 지원하는 소프트웨어의 버전을 설명을 반환합니다."
 
 #: target:code/bsd-os.lisp
 msgid "Unix system call getrusage failed: ~A."
-msgstr ""
+msgstr "유닉스 시스템 호출에 실패 getrusage: ~A 등급."
 
 #: target:code/bsd-os.lisp
 msgid "Getpagesize failed: ~A"
-msgstr ""
+msgstr "Getpagesize 실패: ~ A 등급"

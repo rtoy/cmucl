@@ -1,3 +1,19 @@
+# @ cmucl-mp
+# SOME DESCRIPTIVE TITLE
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
 #: target:code/multi-proc.lisp
 msgid "Class not yet defined: ~S"
 msgstr ""
@@ -137,6 +153,12 @@ msgid ""
 "  currently necessary before a purify and is performed before a save-lisp.\n"
 "  Multi-processing can be restarted by calling init-multi-processing."
 msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Destroyed ~d process; remaining ~d~%"
+msgid_plural "Destroyed ~d processes; remaining ~d~%"
+msgstr[0] ""
+msgstr[1] ""
 
 #: target:code/multi-proc.lisp
 msgid ""
