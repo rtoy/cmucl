@@ -2199,15 +2199,18 @@ msgstr ""
 
 #: target:code/array.lisp
 msgid ""
-"Malformed :initial-contents.  ~S is not a ~\n"
-"			        sequence, but ~D more layer~:P needed."
+"Malformed :initial-contents.  Dimension of ~\n"
+"			        axis ~D is ~D, but ~S is ~D long."
 msgstr ""
 
 #: target:code/array.lisp
 msgid ""
-"Malformed :initial-contents.  Dimension of ~\n"
-"			        axis ~D is ~D, but ~S is ~D long."
-msgstr ""
+"Malformed :initial-contents.  ~S is not a ~\n"
+"			                       sequence, but ~D more layer needed."
+msgid_plural ""
+"Malformed :initial-contents.  ~S is not a ~\n"
+"			                       sequence, but ~D more layers needed."
+msgstr[0] ""
 
 #: target:code/array.lisp
 msgid "Constructs a simple-vector from the given objects."
@@ -2269,8 +2272,9 @@ msgid "Vector axis is not zero: ~S"
 msgstr ""
 
 #: target:code/array.lisp
-msgid "~D is too big; ~S only has ~D dimension~:P"
-msgstr ""
+msgid "~D is too big; ~S only has ~D dimension"
+msgid_plural "~D is too big; ~S only has ~D dimensions"
+msgstr[0] ""
 
 #: target:code/array.lisp
 msgid "Returns a list whose elements are the dimensions of the array"
@@ -5764,12 +5768,13 @@ msgid "~2&Summary of spaces: ~(~{~A ~}~)~%"
 msgstr ""
 
 #: target:code/room.lisp
-msgid "~%~A:~%    ~:D bytes, ~:D object~:P"
+msgid "~%Summary total:~%    ~:D bytes, ~:D objects.~%"
 msgstr ""
 
 #: target:code/room.lisp
-msgid "~%Summary total:~%    ~:D bytes, ~:D objects.~%"
-msgstr ""
+msgid "~%~A:~%    ~:D bytes, ~:D object"
+msgid_plural "~%~A:~%    ~:D bytes, ~:D objects"
+msgstr[0] ""
 
 #: target:code/room.lisp
 msgid "~2&Breakdown for ~(~A~) space:~%"
@@ -5839,16 +5844,19 @@ msgid "~2&~@[Top ~D ~]~(~A~) instance types:~%"
 msgstr ""
 
 #: target:code/room.lisp
-msgid "  ~32A: ~7:D bytes, ~5D object~:P.~%"
-msgstr ""
+msgid "  ~32A: ~7:D bytes, ~5D object.~%"
+msgid_plural "  ~32A: ~7:D bytes, ~5D objects.~%"
+msgstr[0] ""
 
 #: target:code/room.lisp
 msgid "  Other types: ~:D bytes, ~D: object~:P.~%"
-msgstr ""
+msgid_plural "  Other types: ~:D bytes, ~D: object~:P.~%"
+msgstr[0] ""
 
 #: target:code/room.lisp
-msgid "  ~:(~A~) instance total: ~:D bytes, ~:D object~:P.~%"
-msgstr ""
+msgid "  ~:(~A~) instance total: ~:D bytes, ~:D object.~%"
+msgid_plural "  ~:(~A~) instance total: ~:D bytes, ~:D objects.~%"
+msgstr[0] ""
 
 #: target:code/room.lisp
 msgid "In ~A space:~%"
@@ -5863,12 +5871,14 @@ msgid "No source for ~S"
 msgstr ""
 
 #: target:code/room.lisp
-msgid "~%Package ~A: ~32T~9:D bytes, ~9:D object~:P.~%"
-msgstr ""
+msgid "~%Package ~A: ~32T~9:D bytes, ~9:D object.~%"
+msgid_plural "~%Package ~A: ~32T~9:D bytes, ~9:D objects.~%"
+msgstr[0] ""
 
 #: target:code/room.lisp
-msgid "~30@A: ~9:D bytes, ~9:D object~:P.~%"
-msgstr ""
+msgid "~30@A: ~9:D bytes, ~9:D object.~%"
+msgid_plural "~30@A: ~9:D bytes, ~9:D objects.~%"
+msgstr[0] ""
 
 #: target:code/room.lisp
 msgid ""
@@ -7426,8 +7436,9 @@ msgid "No corresponding open brace."
 msgstr ""
 
 #: target:code/format.lisp
-msgid "~D illegal directive~:P found inside justification block"
-msgstr ""
+msgid "~D illegal directive found inside justification block"
+msgid_plural "~D illegal directives found inside justification block"
+msgstr[0] ""
 
 #: target:code/format.lisp
 msgid "No parameters can be supplied with ~~<...~~:>."
@@ -8451,6 +8462,7 @@ msgid ""
 "   use, and FUNCTION is the function to call whenever FD is usable."
 msgstr ""
 
+#.  This needs more work.
 #: target:code/serve-event.lisp
 msgid "Remove bogus handlers."
 msgstr ""
@@ -8462,6 +8474,11 @@ msgstr ""
 #: target:code/serve-event.lisp
 msgid "Go on, leaving handlers marked as bogus."
 msgstr ""
+
+#: target:code/serve-event.lisp
+msgid "~S ~[have~;has a~:;have~] bad file descriptor."
+msgid_plural "~S ~[have~;has a~:;have~] bad file descriptors."
+msgstr[0] ""
 
 #: target:code/serve-event.lisp
 msgid "Timeout is not a real number or NIL: ~S"
@@ -11685,14 +11702,29 @@ msgstr ""
 #: target:code/time.lisp
 msgid ""
 "Evaluation took:~%  ~\n"
-"		     ~S second~:P of real time~%  ~\n"
-"		     ~S second~:P of user run time~%  ~\n"
-"		     ~S second~:P of system run time~%  ~\n"
-"                     ~:D ~A cycles~%  ~\n"
-"		     ~@[[Run times include ~S second~:P GC run time]~%  ~]~\n"
-"		     ~S page fault~:P and~%  ~\n"
-"		     ~:D bytes consed.~%"
+"		     ~S seconds of real time~%  ~\n"
+"		     ~S seconds of user run time~%  ~\n"
+"		     ~S seconds of system run time~%  "
 msgstr ""
+
+#: target:code/time.lisp
+msgid ""
+"~:D ~A cycle~%  ~\n"
+"		     ~@[[Run times include ~S seconds GC run time]~%  ~]"
+msgid_plural ""
+"~:D ~A cycles~%  ~\n"
+"		     ~@[[Run times include ~S seconds GC run time]~%  ~]"
+msgstr[0] ""
+
+#: target:code/time.lisp
+msgid "~S page fault and~%  "
+msgid_plural "~S page faults and~%  "
+msgstr[0] ""
+
+#: target:code/time.lisp
+msgid "~:D byte consed.~%"
+msgid_plural "~:D bytes consed.~%"
+msgstr[0] ""
 
 #: target:code/weak.lisp
 msgid "Allocates and returns a weak pointer which points to OBJECT."
@@ -14074,8 +14106,9 @@ msgid "Retry assertion"
 msgstr ""
 
 #: target:code/macros.lisp
-msgid " with new value~P for ~{~S~^, ~}."
-msgstr ""
+msgid " with new value for ~{~S~^, ~}."
+msgid_plural " with new values for ~{~S~^, ~}."
+msgstr[0] ""
 
 #: target:code/macros.lisp
 msgid "The old value of ~S is ~S.~\n"
@@ -14879,18 +14912,6 @@ msgid ""
 "			 ~%  ~S~%  ~S  ~%  ~S"
 msgstr ""
 
-#: target:compiler/locall.lisp target:compiler/ctype.lisp
-msgid "Function called with ~R argument~:P, but wants exactly ~R."
-msgstr ""
-
-#: target:compiler/locall.lisp target:compiler/ctype.lisp
-msgid "Function called with ~R argument~:P, but wants at least ~R."
-msgstr ""
-
-#: target:compiler/locall.lisp target:compiler/ctype.lisp
-msgid "Function called with ~R argument~:P, but wants at most ~R."
-msgstr ""
-
 #: target:compiler/ctype.lisp
 msgid "Function has an odd number of arguments in the keyword portion."
 msgstr ""
@@ -14902,6 +14923,21 @@ msgstr ""
 #: target:compiler/ctype.lisp
 msgid "The result is a ~S, not a ~S."
 msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "Function called with ~R argument, but wants exactly ~R."
+msgid_plural "Function called with ~R arguments, but wants exactly ~R."
+msgstr[0] ""
+
+#: target:compiler/ctype.lisp
+msgid "Function called with ~R argument, but wants at least ~R."
+msgid_plural "Function called with ~R arguments, but wants at least ~R."
+msgstr[0] ""
+
+#: target:compiler/ctype.lisp
+msgid "Function called with ~R argument, but wants at most ~R."
+msgid_plural "Function called with ~R arguments, but wants at most ~R."
+msgstr[0] ""
 
 #: target:compiler/ctype.lisp
 msgid "Can't tell whether the ~:R argument is a ~S."
@@ -14942,18 +14978,22 @@ msgid "~S is not a known argument keyword."
 msgstr ""
 
 #: target:compiler/ctype.lisp
-msgid "Function previously called with ~R argument~:P, but wants at least ~R."
-msgstr ""
-
-#: target:compiler/ctype.lisp
-msgid "Function previously called with ~R argument~:P, but wants at most ~R."
-msgstr ""
-
-#: target:compiler/ctype.lisp
 msgid ""
 "Function previously called with an odd number of arguments in ~\n"
 "	      the keyword portion."
 msgstr ""
+
+#: target:compiler/ctype.lisp
+msgid "Function previously called with ~R argument, but wants at least ~R."
+msgid_plural ""
+"Function previously called with ~R arguments, but wants at least ~R."
+msgstr[0] ""
+
+#: target:compiler/ctype.lisp
+msgid "Function previously called with ~R argument, but wants at most ~R."
+msgid_plural ""
+"Function previously called with ~R arguments, but wants at most ~R."
+msgstr[0] ""
 
 #: target:compiler/ctype.lisp
 msgid "Can't tell whether previous ~? argument type ~S is a ~S."
@@ -14973,10 +15013,6 @@ msgid ""
 "		   conflicts with this type from ~A:~%  ~S"
 msgstr ""
 
-#: target:compiler/ctype.lisp
-msgid "Definition has ~R ~A arg~P, but ~A has ~R."
-msgstr ""
-
 #.  Translate FIXED above appropriately.
 #: target:compiler/ctype.lisp
 msgid "fixed"
@@ -14987,6 +15023,7 @@ msgstr ""
 msgid "optional"
 msgstr ""
 
+#. updated to allow better translations.
 #: target:compiler/ctype.lisp
 msgid "Definition ~:[doesn't have~;has~] ~A, but ~\n"
 "		~A ~:[doesn't~;does~]."
@@ -15009,6 +15046,11 @@ msgid "Definition lacks the ~S keyword present in ~A."
 msgstr ""
 
 #: target:compiler/ctype.lisp
+msgid "Definition has ~R ~A arg, but ~A has ~R."
+msgid_plural "Definition has ~R ~A args, but ~A has ~R."
+msgstr[0] ""
+
+#: target:compiler/ctype.lisp
 msgid "Definition has no ~A, but the ~A did."
 msgstr ""
 
@@ -15021,8 +15063,9 @@ msgid "rest arg"
 msgstr ""
 
 #: target:compiler/ctype.lisp
-msgid "Definition has ~R arg~:P, but the ~A has ~R."
-msgstr ""
+msgid "Definition has ~R arg, but the ~A has ~R."
+msgid_plural "Definition has ~R args, but the ~A has ~R."
+msgstr[0] ""
 
 #: target:compiler/ctype.lisp
 msgid "previous declaration"
@@ -15408,12 +15451,13 @@ msgid ""
 msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
-msgid "Expected ~D ~:[result~;argument~] type~P: ~S."
+msgid "Can't use :CONSTANT on VOP more args."
 msgstr ""
 
 #: target:compiler/meta-vmdef.lisp
-msgid "Can't use :CONSTANT on VOP more args."
-msgstr ""
+msgid "Expected ~D ~:[result~;argument~] type: ~S."
+msgid_plural "Expected ~D ~:[result~;argument~] types: ~S."
+msgstr[0] ""
 
 #: target:compiler/meta-vmdef.lisp
 msgid "Expected ~D variant values: ~S."
@@ -17728,6 +17772,18 @@ msgid "~2&File: ~A"
 msgstr ""
 
 #: target:compiler/ir1util.lisp
+msgid "In:~{~<~%   ~4:;~{ ~S~}~>~^ =>~}"
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid "replace form with call to ERROR."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
+msgid "ignore it."
+msgstr ""
+
+#: target:compiler/ir1util.lisp
 msgid ""
 "If non-null, then an upper limit on the number of unknown function or type\n"
 "  warnings that the compiler will print for any given name in a single\n"
@@ -18116,6 +18172,18 @@ msgid ""
 "Couldn't inline expand because expansion ~\n"
 "				   calls this let-converted local function:~\n"
 "				   ~%  ~S"
+msgstr ""
+
+#: target:compiler/locall.lisp
+msgid "Function called with ~R argument~:P, but wants exactly ~R."
+msgstr ""
+
+#: target:compiler/locall.lisp
+msgid "Function called with ~R argument~:P, but wants at least ~R."
+msgstr ""
+
+#: target:compiler/locall.lisp
+msgid "Function called with ~R argument~:P, but wants at most ~R."
 msgstr ""
 
 #: target:compiler/locall.lisp

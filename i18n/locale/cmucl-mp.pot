@@ -157,6 +157,11 @@ msgid ""
 msgstr ""
 
 #: target:code/multi-proc.lisp
+msgid "Destroyed ~d process; remaining ~d~%"
+msgid_plural "Destroyed ~d processes; remaining ~d~%"
+msgstr[0] ""
+
+#: target:code/multi-proc.lisp
 msgid ""
 "An idle loop to be run by the initial process. The select based event\n"
 "  server is called with a timeout calculated from the minimum of the\n"
