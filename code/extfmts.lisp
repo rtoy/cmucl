@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.21 2010/03/08 20:43:20 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.22 2010/03/12 10:39:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -360,16 +360,15 @@
 
   (or (gethash name *external-formats*)
       (and (consp name) (find-external-format name))
-      (and (let ((*package* (find-package "STREAM"))
-		 (lisp::*enable-package-locked-errors* nil)
-		 ;; The standard readtable is what we want to use when
-		 ;; compiling the external format, in case the user
-		 ;; has changed *readtable* in some way.
-		 (*readtable* (copy-readtable nil))
-		 (s (open (format nil "ext-formats:~(~A~).lisp" name)
-			  :if-does-not-exist nil :external-format :iso8859-1)))
-	     (when s
-	       (null (nth-value 1 (ext:compile-from-stream s)))))
+      (and (with-standard-io-syntax
+	     ;; Use standard IO syntax so that changes by the user
+	     ;; don't mess up compiling the external format.
+	     (let ((*package* (find-package "STREAM"))
+		   (lisp::*enable-package-locked-errors* nil)
+		   (s (open (format nil "ext-formats:~(~A~).lisp" name)
+			    :if-does-not-exist nil :external-format :iso8859-1)))
+	       (when s
+		 (null (nth-value 1 (ext:compile-from-stream s))))))
            (gethash name *external-formats*))))
 
 (defun %composed-ef-name (a b)
