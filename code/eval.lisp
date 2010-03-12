@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.45 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.46 2010/03/12 11:00:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -299,7 +299,8 @@
 	     (info (kernel:%code-debug-info code)))
 	(if info
 	    (let ((source (first (c::compiled-debug-info-source info))))
-	      (cond ((and (eq (c::debug-source-from source) :lisp)
+	      (cond ((and source
+			  (eq (c::debug-source-from source) :lisp)
 			  (eq (c::debug-source-info source) fun))
 		     (values (second (svref (c::debug-source-name source) 0))
 			     nil name))
