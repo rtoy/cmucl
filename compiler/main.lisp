@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.149 2010/02/15 16:34:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.150 2010/03/14 14:51:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1952,10 +1952,20 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	     ;;   If the definition is already a compiled function,
 	     ;;   compile either produces that function itself (i.e.,
 	     ;;   is an identity operation) or an equivalent function.
+	     ;;
+	     ;; But if the function lambda expression is available,
+	     ;; and if the expression is defined in a null lexical
+	     ;; environment, recompile from sources.  (This was the
+	     ;; old behavior, which is quite useful.)
 	     (form (etypecase definition
 		     ((or cons eval:interpreted-function)
 		      `#',(get-lambda-to-compile definition))
-		     (function `',definition)))
+		     (function
+		      (multiple-value-bind (exp lexenv)
+			  (function-lambda-expression definition)
+			(if (and exp (not lexenv))
+			    `#',exp
+			    `',definition)))))
 	     (*source-info* (make-lisp-source-info form))
 	     (*top-level-lambdas* ())
 	     (*converting-for-interpreter* nil)
