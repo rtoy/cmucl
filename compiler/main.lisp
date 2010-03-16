@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.150 2010/03/14 14:51:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.151 2010/03/16 14:13:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1930,11 +1930,14 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 
 ;;; COMPILE  --  Public
 ;;;
-(defun compile (name &optional (definition (fdefinition name)))
-  "Compiles the function whose name is NAME.  If DEFINITION is supplied,
-  it should be a lambda expression that is compiled and then placed in the
-  function cell of NAME.  If NAME is Nil, the compiled code object is
-  returned."
+(defun compile (name &optional (definition (or (macro-function name)
+					       (fdefinition name))))
+  "Compiles the function (or macro-function) whose name is NAME.  If
+  DEFINITION is supplied, it should be a lambda expression that is
+  compiled.  IF NAME names a macro, then the compiled expression
+  replaces the existing macro-function.  If NAME names a function, the
+  compiled expression is placed in the function cell of NAME.  If NAME
+  is Nil, the compiled code object is returned."
   (with-compilation-unit ()
     (with-ir1-namespace
       (let* ((*backend* *native-backend*)
@@ -1993,6 +1996,8 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	  (find-source-paths form 0)
 	  (let ((lambda (ir1-top-level form '(original-source-start 0 0) t)))
 
+	    ;; XXX: If NAME is a macro function, do we need to do
+	    ;; call COMPILE-FIX-FUNCTION-NAME?
 	    (compile-fix-function-name lambda name)
 	    (let* ((component
 		    (block-component (node-block (lambda-bind lambda))))
@@ -2009,7 +2014,10 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		   (return (or name res)))
 	      (fix-core-source-info *source-info* *compile-object* res)
 	      (when name
-		(setf (fdefinition name) res))
+		(if (and (symbolp name)
+			 (macro-function name))
+		    (setf (macro-function name) res)
+		    (setf (fdefinition name) res)))
 
 	      (cond ((or (> *compiler-error-count* start-errors)
 			 (> *compiler-warning-count* start-warnings))
