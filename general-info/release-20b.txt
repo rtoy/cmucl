@@ -94,6 +94,11 @@ New in this release:
     - The debugger help message is updated to reflect the actual
       options for L and PP commands.  Help for the DESCRIBE command
       has been added.
+    - CMUCL now signals a cerror when attempting to redefine a slot
+      accessor via DEFUN or COMPILE.  If continued, the accessor is
+      redefined, and CMUCL assumes the new definition is usable as a
+      slot accessor.  Previously, CMUCL would print a warning and
+      undefine the structure.
 
   * Trac Tickets:
     #33: get-dispatch-macro-character doesn't signal errors in
