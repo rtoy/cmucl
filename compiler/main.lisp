@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.151 2010/03/16 14:13:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.152 2010/03/18 16:43:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1919,6 +1919,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 (defun compile-fix-function-name (lambda name)
   (declare (type clambda lambda) (type (or symbol cons) name))
   (when name
+    (note-if-accessor name)
     (let ((fun (ref-leaf
 		(continuation-next
 		 (node-cont (lambda-bind lambda))))))

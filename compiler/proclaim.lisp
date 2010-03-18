@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.44 2007/11/14 10:04:35 cshapiro Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.45 2010/03/18 16:43:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -224,28 +224,35 @@
        name)))
   (undefined-value))
 
+;;; Note-If-Accessor  -- Interface
+;;;
+;;;    Check if Name is also the name of a slot accessor for some
+;;; structure.  If it is, we signal an continuable error.  If we
+;;; continue, assume the user knows what he's doing and redefine the
+;;; function.
+(defun note-if-accessor (name)
+  (let ((for (info function accessor-for name)))
+    (when for
+      (cerror "Assume redefinition is compatible and allow it"
+	      "Redefining slot accessor ~S for structure type ~S"
+	      name (%class-name for))
+      ;;(undefine-structure for)
+      (setf (info function kind name) :function))))
 
 ;;; Define-Function-Name  --  Interface
 ;;;
 ;;;    Check the legality of a function name that is being introduced.
 ;;; -- If it names a macro, then give a warning and blast the macro
 ;;;    information.
-;;; -- If it is a structure slot accessor, give a warning and blast the
-;;;    structure. 
+;;; -- If it is a structure slot accessor, give a continuable error
+;;;    and allow redefinition if continued.
 ;;; -- Check for conflicting setf macros.
 ;;;
 (defun define-function-name (name)
   (check-function-name name)
   (ecase (info function kind name)
     (:function
-     (let ((for (info function accessor-for name)))
-       (when for
-	 (compiler-warning
-	  "Undefining structure type:~%  ~S~@
-	   so that this slot accessor can be redefined:~%  ~S"
-	  (%class-name for) name)
-	 (undefine-structure for)
-	 (setf (info function kind name) :function))))
+     (note-if-accessor name))
     (:macro
      (compiler-warning "~S previously defined as a macro." name)
      (setf (info function kind name) :function)

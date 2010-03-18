@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.113 2009/06/18 17:34:58 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.114 2010/03/18 16:43:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -351,12 +351,12 @@
 ;;;    Similar to %Defmacro, ...
 ;;;
 (defun c::%%defun (name def doc &optional inline-expansion)
+  (c::define-function-name name)
   (setf (fdefinition name) def)
   (when doc
     (if (and (consp name) (eq (first name) 'setf))
 	(setf (documentation (second name) 'setf) doc)
 	(setf (documentation name 'function) doc)))
-  (c::define-function-name name)
   (when (eq (info function where-from name) :assumed)
     (setf (info function where-from name) :defined)
     (when (info function assumed-type name)
