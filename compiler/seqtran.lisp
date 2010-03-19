@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.33 2009/07/02 21:00:48 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.34 2010/03/19 15:19:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; written by Wholey and Fahlman.
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 
 (defun mapper-transform (fn arglists accumulate take-car)
@@ -77,7 +78,7 @@
 (deftransform map-into ((result fun &rest seqs)
                         (vector * &rest *)
                         *)
-  "open code"
+  _N"open code"
   (let ((seqs-names (mapcar (lambda (x)
                               (declare (ignore x))
                               (gensym))
@@ -142,17 +143,17 @@
   (destructuring-bind (fun eq-fun) x
     (deftransform fun ((item list &key test) '(t list &rest t) '*
 			:eval-name t)
-      "convert to EQ test"
+      _N"convert to EQ test"
       (cond (test
 	     (unless (continuation-function-is test '(eq))
 	       (give-up)))
 	    ((types-intersect (continuation-type item)
 			      (specifier-type 'number))
-	     (give-up "Item might be a number")))
+	     (give-up _"Item might be a number")))
       `(,eq-fun item list))))
 
 (deftransform delete-if ((pred list) (t list))
-  "inline expand"
+  _N"inline expand"
   '(do ((x list (cdr x))
 	(splice '()))
        ((endp x) list)
@@ -164,14 +165,14 @@
 
 (deftransform fill ((seq item &key (start 0) (end (length seq)))
 		    (simple-array t &key (:start t) (:end index)))
-  "open code"
+  _N"open code"
   '(do ((i start (1+ i)))
        ((= i end) seq)
      (declare (type index i))
      (setf (aref seq i) item)))
 
 (deftransform position ((item list &key (test #'eql)) (t list))
-  "open code"
+  _N"open code"
   '(do ((i 0 (1+ i))
 	(l list (cdr l)))
        ((endp l) nil)
@@ -181,7 +182,7 @@
 (deftransform position ((item vec &key (test #'eql) (start 0)
 			      (end (length vec)))
 			(t simple-array &key (:start t) (:end index)))
-  "open code"
+  _N"open code"
   '(do ((i start (1+ i)))
        ((= i end) nil)
      (declare (type index i))
@@ -295,7 +296,7 @@
   (if (and arg (arg-cont arg))
       (let ((cont (arg-cont arg)))
 	(unless (constant-continuation-p cont)
-	  (give-up "Argument is not constant: ~S." (arg-name arg)))
+	  (give-up _"Argument is not constant: ~S." (arg-name arg)))
 	(continuation-value from-end))
       default))
 
@@ -327,7 +328,7 @@
   ;;
   ;; A form that returns the current value.  This may be set with SETF to set
   ;; the current value.
-  (current (error "Must specify CURRENT."))
+  (current (error _"Must specify CURRENT."))
   ;;
   ;; In a :Normal iterator, a form that tests whether there is a current value.
   (done nil)
@@ -338,11 +339,11 @@
   ;;
   ;; A form that returns the initial total number of values.  The result is
   ;; undefined after NEXT has been evaluated.
-  (length (error "Must specify LENGTH."))
+  (length (error _"Must specify LENGTH."))
   ;;
   ;; A form that advances the state to the next value.  It is an error to call
   ;; this when the iterator is Done.
-  (next (error "Must specify NEXT.")))
+  (next (error _"Must specify NEXT.")))
 
 
 ;;; Type of an index var that can go negative (in the from-end case.)
@@ -419,7 +420,7 @@
 					`(1- ,index)
 					`(1+ ,index)))))))))
 	  (t
-	   (give-up "Can't tell whether sequence is a list or a vector.")))))
+	   (give-up _"Can't tell whether sequence is a list or a vector.")))))
 
 
 ;;; MAKE-RESULT-SEQUENCE-ITERATOR  --  Interface
@@ -439,7 +440,7 @@
 ;;; function, give them an efficiency note and reference a coerced version.
 ;;;
 (defmacro coerce-functions (specs &body body)
-  "COERCE-FUNCTIONS ({(Name Fun-Arg Default)}*) Form*"
+  _N"COERCE-FUNCTIONS ({(Name Fun-Arg Default)}*) Form*"
   (collect ((binds)
 	    (defs))
     (dolist (spec specs)
@@ -454,7 +455,7 @@
 				(specifier-type 'function)))
 		(when (policy *compiler-error-context* (> speed brevity))
 		  (compiler-note
-		   "~S may not be a function, so must coerce at run-time."
+		   _N"~S may not be a function, so must coerce at run-time."
 		   n-fun))
 		(once-only ((n-fun `(if (functionp ,n-fun)
 					,n-fun
@@ -478,7 +479,7 @@
 (defmacro with-sequence-test ((name test test-not) &body body)
   `(let ((not-p (arg-cont ,test-not)))
      (when (and (arg-cont ,test) not-p)
-       (abort-transform "Both ~S and ~S supplied." (arg-name ,test)
+       (abort-transform _"Both ~S and ~S supplied." (arg-name ,test)
 			(arg-name ,test-not)))
      (coerce-functions ((,name (if not-p ,test-not ,test) eql))
        ,@body)))
@@ -650,7 +651,7 @@
     (let ((spec (continuation-value output-spec)))
       (if (subtypep spec 'sequence)
 	  (specifier-type spec)
-	  (compiler-warning "Specified output type ~S is not a sequence type" spec)))))
+	  (compiler-warning _N"Specified output type ~S is not a sequence type" spec)))))
 
 (defoptimizer (concatenate derive-type) ((output-spec  seq &rest more-seq))
   ;; The result type of CONCATENATE is OUTPUT-SPEC, but check to see

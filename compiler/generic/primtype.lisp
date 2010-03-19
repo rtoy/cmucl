@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.25 2006/06/30 18:41:23 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.26 2010/03/19 15:19:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; Alpha conversion by Sean Hallgren.
 ;;;
 (in-package "VM")
+(intl:textdomain "cmucl")
 
 
 ;;;; Primitive Type Definitions
@@ -219,7 +220,7 @@
     ((complex long-float) . simple-array-complex-long-float)
     #+double-double ((complex double-double-float) . simple-array-complex-double-double-float)
     (t . simple-vector))
-  "An a-list for mapping simple array element types to their
+  _N"An a-list for mapping simple array element types to their
   corresponding primitive types.")
 
 

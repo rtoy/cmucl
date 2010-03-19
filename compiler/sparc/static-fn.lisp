@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/static-fn.lisp,v 1.7 2003/10/27 18:30:27 toy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/static-fn.lisp,v 1.8 2010/03/19 15:19:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/static-fn.lisp,v 1.7 2003/10/27 18:30:27 toy Rel $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/static-fn.lisp,v 1.8 2010/03/19 15:19:01 rtoy Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -17,6 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 (in-package "SPARC")
+(intl:textdomain "cmucl-sparc-vm")
 
 
 
@@ -54,7 +55,7 @@
   (assert (and (<= num-args register-arg-count)
 	       (<= num-results register-arg-count))
 	  (num-args num-results)
-	  "Either too many args (~D) or too many results (~D).  Max = ~D"
+	  _"Either too many args (~D) or too many results (~D).  Max = ~D"
 	  num-args num-results register-arg-count)
   (let ((num-temps (max num-args num-results)))
     (collect ((temp-names) (temps) (arg-names) (args) (result-names) (results))

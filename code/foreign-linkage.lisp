@@ -1,5 +1,7 @@
 (in-package "LISP")
 
+(intl:textdomain "cmucl")
+
 (sys:register-lisp-runtime-feature :linkage-table)
 
 ;;; This gets created by genesis and lives in the static area.
@@ -52,7 +54,7 @@
 							  c-call:long))
 					 entry-num)))
 	(when (zerop result)
-	  (error "~A is not defined as a foreign symbol"
+	  (error _"~A is not defined as a foreign symbol"
 		 symbol-name))))
     (setf (gethash symbol-name linkage-hash) entry-num)
     entry-num))

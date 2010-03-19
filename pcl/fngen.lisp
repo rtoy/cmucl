@@ -25,9 +25,10 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fngen.lisp,v 1.13 2003/06/03 10:28:23 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fngen.lisp,v 1.14 2010/03/19 15:19:03 rtoy Exp $")
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;;
 ;;; GET-FUNCTION is the main user interface to this code. It is like
@@ -207,7 +208,7 @@
   (store-fgen (make-fgen test gensyms generator generator-lambda system)))
 
 (defun flush-emf-cache (&optional gf)
-  "Flush cached emf functions.  If GF is supplied, it should be a
+  _N"Flush cached emf functions.  If GF is supplied, it should be a
    generic function metaobject or the name of a generic function, and
    this function flushes all cached emfs for the given generic
    function.  If GF is not supplied, all cached emfs are flushed."

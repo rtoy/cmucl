@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.22 2003/05/07 17:14:24 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.23 2010/03/19 15:19:03 rtoy Rel $")
 ;;;
 
   ;;   
@@ -70,6 +70,7 @@ explicitly marked saying who wrote it.
 |#
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;;
 ;;; The first part of the file contains the implementation dependent code to
@@ -112,7 +113,7 @@ explicitly marked saying who wrote it.
 (declaim (notinline called-fin-without-function))
 (defun called-fin-without-function (&rest args)
   (declare (ignore args))
-  (error "~@<Attempt to funcall a funcallable instance without first ~
+  (error _"~@<Attempt to funcall a funcallable instance without first ~
           setting its function.~@:>"))
 
 

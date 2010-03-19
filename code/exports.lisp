@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.293 2010/02/07 04:28:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.294 2010/03/19 15:18:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,6 +13,8 @@
 ;;;
 
 (in-package "LISP")
+
+(intl:textdomain "cmucl")
 
 (if (find-package "PCL")
     (rename-package "PCL" "PCL" 'nil)
@@ -588,8 +590,14 @@
    "WRITE-SEQUENCE" "WRITE-STRING" "WRITE-TO-STRING" "Y-OR-N-P" "YES-OR-NO-P"
    "ZEROP"))
 
+(defpackage "INTL"
+  (:use "COMMON-LISP")
+  (:export "SETLOCALE" "TEXTDOMAIN" "GETTEXT" "DGETTEXT" "NGETTEXT" "DNGETTEXT"
+           "*TRANSLATABLE-DUMP-STREAM*" "READ-TRANSLATABLE-STRING"
+	   "*LOCALE-DIRECTORIES*"))
+
 (defpackage "LISP"
-  (:use "COMMON-LISP" "EXTENSIONS" "KERNEL" "SYSTEM" "DEBUG" "BIGNUM")
+  (:use "COMMON-LISP" "EXTENSIONS" "KERNEL" "SYSTEM" "DEBUG" "BIGNUM" "INTL")
   (:shadowing-import-from
    "COMMON-LISP" "CLASS" "BUILT-IN-CLASS" "STANDARD-CLASS" "STRUCTURE-CLASS"
    "CLASS-OF" "FIND-CLASS")

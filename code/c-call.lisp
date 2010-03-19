@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.18 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.19 2010/03/19 15:18:58 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 (use-package "ALIEN")
 (use-package "ALIEN-INTERNALS")
 (use-package "SYSTEM")
+
+(intl:textdomain "cmucl")
 
 (export '(char short int long long-long unsigned-char unsigned-short unsigned-int
 	  unsigned-long unsigned-long-long float double c-string void))

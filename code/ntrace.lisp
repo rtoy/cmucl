@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.43 2009/03/11 01:19:27 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.44 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; **********************************************************************
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
 
 (export '(trace untrace))
 
@@ -27,15 +28,15 @@
 (use-package :fwrappers)
 
 (defvar *trace-values* nil
-  "This is bound to the returned values when evaluating :BREAK-AFTER and
+  _N"This is bound to the returned values when evaluating :BREAK-AFTER and
    :PRINT-AFTER forms.")
 
 (defvar *max-trace-indentation* 40
-  "If the trace indentation exceeds this value, then indentation restarts at
+  _N"If the trace indentation exceeds this value, then indentation restarts at
    0.")
 
 (defvar *trace-encapsulate-default* :default
-  "The default value for the :ENCAPSULATE option to trace.")
+  _N"The default value for the :ENCAPSULATE option to trace.")
 
 (defvar *trace-encapsulate-package-names*
   '("LISP"
@@ -50,7 +51,7 @@
     "SYSTEM"
     "COMPILER"
     "TRACE")
-  "List of package names.  Encapsulate functions from these packages
+  _N"List of package names.  Encapsulate functions from these packages
    by default.  This should at least include the packages of functions
    used by TRACE, directly or indirectly.")
 
@@ -162,7 +163,7 @@
       (typecase x
 	(symbol
 	 (cond ((special-operator-p x)
-		(error "Can't trace special form ~S." x))
+		(error _"Can't trace special form ~S." x))
 	       ((macro-function x))
 	       (t
 		(values (fdefinition x) t))))
@@ -301,7 +302,7 @@
   (when (and break (funcall (cdr break) frame))
     (di:flush-frames-above frame)
     (let ((*stack-top-hint* frame))
-      (break "Breaking ~A traced call to ~S:" where
+      (break _"Breaking ~A traced call to ~S:" where
 	     (trace-info-what info)))))
 
 ;;; DISCARD-INVALID-ENTRIES  --  Internal
@@ -397,7 +398,7 @@
 	    (pprint-logical-block (*standard-output* nil)
 	      (print-trace-indentation)
 	      (pprint-indent :current 2)
-	      (format t "~S returned" (trace-info-what info))
+	      (format t _"~S returned" (trace-info-what info))
 	      (dolist (v *trace-values*)
 		(write-char #\space)
 		(pprint-newline :linear)
@@ -457,7 +458,7 @@
 		    (nth-value 2 (trace-fdefinition definition))))
 	  (trace-fdefinition function-or-name))
     (when (gethash (or local fun) *traced-functions*)
-      (warn "Function ~S already TRACE'd, retracing it." function-or-name)
+      (warn _"Function ~S already TRACE'd, retracing it." function-or-name)
       (untrace-1 fun))
     
     (let* ((debug-fun (di:function-debug-function fun :local-name local))
@@ -471,7 +472,7 @@
 		     encapsulate-p)
 		    (:compiled-closure
 		     (unless (functionp function-or-name)
-		       (warn "Tracing shared code for ~S:~%  ~S"
+		       (warn _"Tracing shared code for ~S:~%  ~S"
 			     function-or-name fun))
 		     encapsulate-p)
 		    ((:interpreted :interpreted-closure
@@ -503,7 +504,7 @@
 		   (declare (ignore validp))
 		   (unless (or (stringp block-name)
 			       (fboundp block-name))
-		     (warn "~S name is not a defined global function: ~S"
+		     (warn _"~S name is not a defined global function: ~S"
 			   type wherein))))))
 	(verify-wherein (trace-info-wherein info) :wherein)
 	(verify-wherein (trace-info-wherein-only info) :wherein-only))
@@ -512,10 +513,10 @@
       (cond
        (encapsulated
 	(unless named
-	  (error "Can't use encapsulation to trace anonymous function ~S."
+	  (error _"Can't use encapsulation to trace anonymous function ~S."
 		 fun))
 	(when (listp fun)
-	  (error "Can't use encapsulation to trace local flet/labels function ~S."
+	  (error _"Can't use encapsulation to trace local flet/labels function ~S."
 		 fun))
 	(fwrap function-or-name #'trace-fwrapper :type 'trace
 	       :user-data info))
@@ -625,7 +626,7 @@
 	     (t (return)))
 	   (pop current)
 	   (unless current
-	     (error "Missing argument to ~S TRACE option." option))
+	     (error _"Missing argument to ~S TRACE option." option))
 	   (pop current)))
       current)))
 
@@ -660,7 +661,7 @@
 			  (trace-1 name ',options))))))
 	   ((and (keywordp name)
 		 (not (or (fboundp name) (macro-function name))))
-	    (error "Unknown TRACE option: ~S" name))
+	    (error _"Unknown TRACE option: ~S" name))
 	   ;;
 	   ;; Method name -> trace method functions.
 	   ((and (consp name) (eq (car name) 'method))
@@ -688,7 +689,7 @@
 ;;; TRACE -- Public.
 ;;;
 (defmacro trace (&rest specs)
-  "TRACE {Option Global-Value}* {Name {Option Value}*}*
+  _N"TRACE {Option Global-Value}* {Name {Option Value}*}*
    TRACE is a debugging tool that prints information when specified functions
    are called.  In its simplest form:
        (trace Name-1 Name-2 ...)
@@ -785,7 +786,7 @@
     (let* ((key (or local fun))
 	   (info (gethash key *traced-functions*)))
       (cond ((not info)
-	     (warn "Function is not TRACE'd -- ~S." function-or-name))
+	     (warn _"Function is not TRACE'd -- ~S." function-or-name))
 	    (t
 	     (cond ((trace-info-encapsulated info)
 		    (funwrap (trace-info-what info) :type 'trace))
@@ -805,7 +806,7 @@
   t)
 
 (defmacro untrace (&rest specs)
-  "Removes tracing from the specified functions.  With no args, untraces all
+  _N"Removes tracing from the specified functions.  With no args, untraces all
    functions."
   (if specs
       (collect ((res))

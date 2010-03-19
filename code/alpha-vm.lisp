@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.5 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.6 2010/03/19 15:18:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.5 2009/06/11 16:03:57 rtoy Rel $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.6 2010/03/19 15:18:58 rtoy Exp $
 ;;;
 ;;; This file contains the Alpha specific runtime stuff.
 ;;;
@@ -18,6 +18,8 @@
 (use-package "ALIEN")
 (use-package "C-CALL")
 (use-package "UNIX")
+
+(intl:textdomain "cmucl")
 
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register
@@ -60,11 +62,11 @@
 ;;;; MACHINE-TYPE and MACHINE-VERSION
 
 (defun machine-type ()
-  "Returns a string describing the type of the local machine."
+  _N"Returns a string describing the type of the local machine."
   "DECstation")
 
 (defun machine-version ()
-  "Returns a string describing the version of the local machine."
+  _N"Returns a string describing the version of the local machine."
   "DECstation")
 
 
@@ -73,7 +75,7 @@
 ;;;
 (defun fixup-code-object (code offset value kind)
   (unless (zerop (rem offset word-bytes))
-    (error "Unaligned instruction?  offset=#x~X." offset))
+    (error _"Unaligned instruction?  offset=#x~X." offset))
   (system:without-gcing
    (let ((sap (truly-the system-area-pointer
 			 (%primitive c::code-instructions code))))
@@ -225,7 +227,7 @@
 	      value
 	      (let ((value (system:alternate-get-global-address name)))
 		(when (zerop value)
-		  (error "Unknown foreign symbol: ~S" name))
+		  (error _"Unknown foreign symbol: ~S" name))
 		value))))))
 
 

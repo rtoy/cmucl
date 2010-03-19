@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.24 2008/05/22 13:44:25 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.25 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package :c)
+(intl:textdomain "cmucl")
 
 (in-package :new-assem)
 (import '(label gen-label emit-label label-position) :c)
@@ -33,7 +34,7 @@
 ;;; Component-Header-Length   --  Interface
 ;;; 
 (defun component-header-length (&optional (component *compile-component*))
-  "Returns the number of bytes used by the code object header."
+  _N"Returns the number of bytes used by the code object header."
   (let* ((2comp (component-info component))
 	 (constants (ir2-component-constants 2comp))
 	 (num-consts (length constants)))
@@ -42,7 +43,7 @@
 ;;; SB-Allocated-Size  --  Interface
 ;;;
 (defun sb-allocated-size (name)
-  "The size of the Name'd SB in the currently compiled component.  Useful
+  _N"The size of the Name'd SB in the currently compiled component.  Useful
   mainly for finding the size for allocating stack frames."
   (finite-sb-current-size (sb-or-lose name *backend*)))
 
@@ -50,7 +51,7 @@
 ;;; Current-NFP-TN  --  Interface
 ;;;
 (defun current-nfp-tn (vop)
-  "Return the TN that is used to hold the number stack frame-pointer in VOP's
+  _N"Return the TN that is used to hold the number stack frame-pointer in VOP's
   function.  Returns NIL if no number stack frame was allocated."
   (unless (zerop (sb-allocated-size 'non-descriptor-stack))
     (let ((block (ir2-block-block (vop-block vop))))
@@ -62,7 +63,7 @@
 ;;; CALLEE-NFP-TN  --  Interface
 ;;;
 (defun callee-nfp-tn (2env)
-  "Return the TN that is used to hold the number stack frame-pointer in the
+  _N"Return the TN that is used to hold the number stack frame-pointer in the
   function designated by 2env.  Returns NIL if no number stack frame was
   allocated."
   (unless (zerop (sb-allocated-size 'non-descriptor-stack))
@@ -73,7 +74,7 @@
 ;;; CALLEE-RETURN-PC-TN  --  Interface
 ;;;
 (defun callee-return-pc-tn (2env)
-  "Return the TN used for passing the return PC in a local call to the function
+  _N"Return the TN used for passing the return PC in a local call to the function
   designated by 2env."
   (ir2-environment-return-pc-pass 2env))
 
@@ -125,7 +126,7 @@
 (defvar *elsewhere-label* nil)
 
 (defvar *assembly-optimize* t
-  "Set to NIL to inhibit assembly-level optimization.  For compiler debugging,
+  _N"Set to NIL to inhibit assembly-level optimization.  For compiler debugging,
   rather than policy control.")
 
 
@@ -137,7 +138,7 @@
 (defun trace-instruction (segment vop inst args)
   (let ((*standard-output* *compiler-trace-output*))
     (unless (eq *prev-segment* segment)
-      (format t "In the ~A segment:~%" (new-assem:segment-name segment))
+      (format t _"In the ~A segment:~%" (new-assem:segment-name segment))
       (setf *prev-segment* segment))
     (unless (eq *prev-vop* vop)
       (when vop
@@ -185,7 +186,7 @@
 (defun generate-code (component)
   (when *compiler-trace-output*
     (format *compiler-trace-output*
-	    "~|~%Assembly code for ~S~2%"
+	    _"~|~%Assembly code for ~S~2%"
 	    component))
   (let ((prev-env nil)
 	(*trace-table-info* nil)
@@ -215,7 +216,7 @@
 	(let ((gen (vop-info-generator-function (vop-info vop))))
 	  (if gen 
 	      (funcall gen vop)
-	      (format t "Missing generator for ~S.~%"
+	      (format t _"Missing generator for ~S.~%"
 		      (template-name (vop-info vop)))))))
     
     (new-assem:append-segment *code-segment* *elsewhere*)

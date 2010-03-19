@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/setf-funs.lisp,v 1.6 1998/07/19 00:22:19 dtc Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/setf-funs.lisp,v 1.7 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,6 +13,7 @@
 ;;; functions that are currently implemented with setf macros.
 ;;;
 (in-package "KERNEL")
+(intl:textdomain "cmucl")
 
 (eval-when (compile eval)
 
@@ -31,7 +32,7 @@
 			    (cons res args)))
 	 (setf (,name ,@(rest arglist)) ,(first arglist))))
      (t
-      (warn "Hairy setf expander for function ~S." name)
+      (warn _"Hairy setf expander for function ~S." name)
       nil))))
        
 

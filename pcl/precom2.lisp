@@ -26,6 +26,7 @@
 ;;;
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 (precompile-random-code-segments pcl)
 

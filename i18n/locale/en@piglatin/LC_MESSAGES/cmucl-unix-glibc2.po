@@ -1,0 +1,2661 @@
+# @ cmucl-unix-glibc2
+# SOME DESCRIPTIVE TITLE
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: CMUCL 20A\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
+"Last-Translator: Automatic translation\n"
+"Language-Team: Pig Latin (auto-translated)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: target:code/unix-glibc2.lisp
+msgid "Class not yet defined: ~S"
+msgstr "Assclay otnay etyay efinedday: ~S"
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Returns a string describing the error number which was returned by a\n"
+"  UNIX system call."
+msgstr ""
+"Eturnsray away ingstray escribingday ethay errorway umbernay ichwhay asway "
+"eturnedray ybay away\n"
+"  UNIX ystemsay allcay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Unknown error [~d]"
+msgstr "Unknownway errorway [~d]"
+
+#: target:code/unix-glibc2.lisp
+msgid "Syscall ~A failed: ~A"
+msgstr "Yscallsay ~Away ailedfay: ~Away"
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-rename renames the file with string name1 to the string\n"
+"   name2.  NIL and an error code is returned if an error occured."
+msgstr ""
+"Unixway-enameray enamesray ethay ilefay ithway ingstray amenay1 otay ethay "
+"ingstray\n"
+"   amenay2.  NIL andway anway errorway odecay isway eturnedray ifway anway "
+"errorway occuredway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Test for read permission"
+msgstr "Esttay orfay eadray ermissionpay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Test for write permission"
+msgstr "Esttay orfay itewray ermissionpay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Test for execute permission"
+msgstr "Esttay orfay executeway ermissionpay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Test for presence of file"
+msgstr "Esttay orfay esencepray ofway ilefay"
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-fcntl manipulates file descriptors accoridng to the\n"
+"   argument CMD which can be one of the following:\n"
+"\n"
+"   F-DUPFD         Duplicate a file descriptor.\n"
+"   F-GETFD         Get file descriptor flags.\n"
+"   F-SETFD         Set file descriptor flags.\n"
+"   F-GETFL         Get file flags.\n"
+"   F-SETFL         Set file flags.\n"
+"   F-GETOWN        Get owner.\n"
+"   F-SETOWN        Set owner.\n"
+"\n"
+"   The flags that can be specified for F-SETFL are:\n"
+"\n"
+"   FNDELAY         Non-blocking reads.\n"
+"   FAPPEND         Append on each write.\n"
+"   FASYNC          Signal pgrp when data ready.\n"
+"   FCREAT          Create if nonexistant.\n"
+"   FTRUNC          Truncate to zero length.\n"
+"   FEXCL           Error if already created.\n"
+"   "
+msgstr ""
+"Unixway-cntlfay anipulatesmay ilefay escriptorsday accoridngway otay ethay\n"
+"   argumentway CMD ichwhay ancay ebay oneway ofway ethay ollowingfay:\n"
+"\n"
+"   F-DUPFD         Uplicateday away ilefay escriptorday.\n"
+"   F-GETFD         Etgay ilefay escriptorday agsflay.\n"
+"   F-SETFD         Etsay ilefay escriptorday agsflay.\n"
+"   F-GETFL         Etgay ilefay agsflay.\n"
+"   F-SETFL         Etsay ilefay agsflay.\n"
+"   F-GETOWN        Etgay ownerway.\n"
+"   F-SETOWN        Etsay ownerway.\n"
+"\n"
+"   Ethay agsflay atthay ancay ebay ecifiedspay orfay F-SETFL areway:\n"
+"\n"
+"   FNDELAY         Onnay-ockingblay eadsray.\n"
+"   FAPPEND         Appendway onway eachway itewray.\n"
+"   FASYNC          Ignalsay grppay enwhay ataday eadyray.\n"
+"   FCREAT          Eatecray ifway onexistantnay.\n"
+"   FTRUNC          Uncatetray otay erozay engthlay.\n"
+"   FEXCL           Errorway ifway alreadyway eatedcray.\n"
+"   "
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-open opens the file whose pathname is specified by PATH\n"
+"   for reading and/or writing as specified by the FLAGS argument.\n"
+"   Returns an integer file descriptor.\n"
+"   The flags argument can be:\n"
+"\n"
+"     o_rdonly        Read-only flag.\n"
+"     o_wronly        Write-only flag.\n"
+"     o_rdwr          Read-and-write flag.\n"
+"     o_append        Append flag.\n"
+"     o_creat         Create-if-nonexistant flag.\n"
+"     o_trunc         Truncate-to-size-0 flag.\n"
+"     o_excl          Error if the file already exists\n"
+"     o_noctty        Don't assign controlling tty\n"
+"     o_ndelay        Non-blocking I/O\n"
+"     o_sync          Synchronous I/O\n"
+"     o_async         Asynchronous I/O\n"
+"\n"
+"   If the o_creat flag is specified, then the file is created with\n"
+"   a permission of argument MODE if the file doesn't exist."
+msgstr ""
+"Unixway-openway opensway ethay ilefay osewhay athnamepay isway ecifiedspay "
+"ybay PATH\n"
+"   orfay eadingray andway/orway itingwray asway ecifiedspay ybay ethay FLAGS "
+"argumentway.\n"
+"   Eturnsray anway integerway ilefay escriptorday.\n"
+"   Ethay agsflay argumentway ancay ebay:\n"
+"\n"
+"     o_donlyray        Eadray-onlyway agflay.\n"
+"     o_onlywray        Itewray-onlyway agflay.\n"
+"     o_dwrray          Eadray-andway-itewray agflay.\n"
+"     o_appendway        Appendway agflay.\n"
+"     o_eatcray         Eatecray-ifway-onexistantnay agflay.\n"
+"     o_unctray         Uncatetray-otay-izesay-0 agflay.\n"
+"     o_exclway          Errorway ifway ethay ilefay alreadyway existsway\n"
+"     o_octtynay        Onday't assignway ontrollingcay tytay\n"
+"     o_delaynay        Onnay-ockingblay Iway/O\n"
+"     o_yncsay          Ynchronoussay Iway/O\n"
+"     o_asyncway         Asynchronousway Iway/O\n"
+"\n"
+"   Ifway ethay o_eatcray agflay isway ecifiedspay, enthay ethay ilefay isway "
+"eatedcray ithway\n"
+"   away ermissionpay ofway argumentway MODE ifway ethay ilefay oesnday't "
+"existway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-getdtablesize returns the maximum size of the file descriptor\n"
+"   table. (i.e. the maximum number of descriptors that can exist at\n"
+"   one time.)"
+msgstr ""
+"Unixway-etdtablesizegay eturnsray ethay aximummay izesay ofway ethay ilefay "
+"escriptorday\n"
+"   abletay. (i.e. ethay aximummay umbernay ofway escriptorsday atthay ancay "
+"existway atway\n"
+"   oneway imetay.)"
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-close takes an integer file descriptor as an argument and\n"
+"   closes the file associated with it.  T is returned upon successful\n"
+"   completion, otherwise NIL and an error number."
+msgstr ""
+"Unixway-oseclay akestay anway integerway ilefay escriptorday asway anway "
+"argumentway andway\n"
+"   osesclay ethay ilefay associatedway ithway itway.  T isway eturnedray "
+"uponway uccessfulsay\n"
+"   ompletioncay, otherwiseway NIL andway anway errorway umbernay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-creat accepts a file name and a mode (same as those for\n"
+"   unix-chmod) and creates a file by that name with the specified\n"
+"   permission mode.  It returns a file descriptor on success,\n"
+"   or NIL and an error  number otherwise.\n"
+"\n"
+"   This interface is made obsolete by UNIX-OPEN."
+msgstr ""
+"Unixway-eatcray acceptsway away ilefay amenay andway away odemay (amesay "
+"asway osethay orfay\n"
+"   unixway-modchay) andway eatescray away ilefay ybay atthay amenay ithway "
+"ethay ecifiedspay\n"
+"   ermissionpay odemay.  Itway eturnsray away ilefay escriptorday onway "
+"uccesssay,\n"
+"   orway NIL andway anway errorway  umbernay otherwiseway.\n"
+"\n"
+"   Isthay interfaceway isway ademay obsoleteway ybay UNIX-OPEN."
+
+#: target:code/unix-glibc2.lisp
+msgid "Open for reading"
+msgstr "Openway orfay eadingray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Open for writing"
+msgstr "Openway orfay itingwray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Read-only flag."
+msgstr "Eadray-onlyway agflay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Write-only flag."
+msgstr "Itewray-onlyway agflay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Read-write flag."
+msgstr "Eadray-itewray agflay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Access mode mask."
+msgstr "Accessway odemay askmay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Create if nonexistant flag. (not fcntl)"
+msgstr "Eatecray ifway onexistantnay agflay. (otnay cntlfay)"
+
+#: target:code/unix-glibc2.lisp
+msgid "Error if already exists. (not fcntl)"
+msgstr "Errorway ifway alreadyway existsway. (otnay cntlfay)"
+
+#: target:code/unix-glibc2.lisp
+msgid "Don't assign controlling tty. (not fcntl)"
+msgstr "Onday't assignway ontrollingcay tytay. (otnay cntlfay)"
+
+#: target:code/unix-glibc2.lisp
+msgid "Truncate flag. (not fcntl)"
+msgstr "Uncatetray agflay. (otnay cntlfay)"
+
+#: target:code/unix-glibc2.lisp
+msgid "Append flag."
+msgstr "Appendway agflay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Non-blocking I/O"
+msgstr "Onnay-ockingblay Iway/O"
+
+#: target:code/unix-glibc2.lisp
+msgid "Synchronous writes (on ext2)"
+msgstr "Ynchronoussay iteswray (onway extway2)"
+
+#: target:code/unix-glibc2.lisp
+msgid "Asynchronous I/O"
+msgstr "Asynchronousway Iway/O"
+
+#: target:code/unix-glibc2.lisp
+msgid "Duplicate a file descriptor"
+msgstr "Uplicateday away ilefay escriptorday"
+
+#: target:code/unix-glibc2.lisp
+msgid "Get file desc. flags"
+msgstr "Etgay ilefay escday. agsflay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Set file desc. flags"
+msgstr "Etsay ilefay escday. agsflay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Get file flags"
+msgstr "Etgay ilefay agsflay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Set file flags"
+msgstr "Etsay ilefay agsflay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Get lock"
+msgstr "Etgay ocklay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Set lock"
+msgstr "Etsay ocklay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Set lock, wait for release"
+msgstr "Etsay ocklay, aitway orfay eleaseray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Set owner (for sockets)"
+msgstr "Etsay ownerway (orfay ocketssay)"
+
+#: target:code/unix-glibc2.lisp
+msgid "Get owner (for sockets)"
+msgstr "Etgay ownerway (orfay ocketssay)"
+
+#: target:code/unix-glibc2.lisp
+msgid "for f-getfl and f-setfl"
+msgstr "orfay f-etflgay andway f-etflsay"
+
+#: target:code/unix-glibc2.lisp
+msgid "for fcntl and lockf"
+msgstr "orfay cntlfay andway ockflay"
+
+#: target:code/unix-glibc2.lisp
+msgid "old bsd flock (depricated)"
+msgstr "oldway sdbay ockflay (epricatedday)"
+
+#: target:code/unix-glibc2.lisp
+msgid "Shared lock for bsd flock"
+msgstr "Aredshay ocklay orfay sdbay ockflay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Exclusive lock for bsd flock"
+msgstr "Exclusiveway ocklay orfay sdbay ockflay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Don't block. Combine with F-LOCK-SH or F-LOCK-EX"
+msgstr "Onday't ockblay. Ombinecay ithway F-LOCK-SH orway F-LOCK-EX"
+
+#: target:code/unix-glibc2.lisp
+msgid "Remove lock for bsd flock"
+msgstr "Emoveray ocklay orfay sdbay ockflay"
+
+#: target:code/unix-glibc2.lisp
+msgid "depricated stuff"
+msgstr "epricatedday tuffsay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Rewind the group-file stream."
+msgstr "Ewindray ethay oupgray-ilefay eamstray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Close the group-file stream."
+msgstr "Oseclay ethay oupgray-ilefay eamstray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Read an entry from the group-file stream, opening it if necessary."
+msgstr ""
+"Eadray anway entryway omfray ethay oupgray-ilefay eamstray, openingway itway "
+"ifway ecessarynay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Size of control character vector."
+msgstr "Izesay ofway ontrolcay aracterchay ectorvay."
+
+#: target:code/unix-glibc2.lisp
+msgid "See errno."
+msgstr "Eesay errnoway."
+
+#: target:code/unix-glibc2.lisp
+msgid "No problem."
+msgstr "Onay oblempray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Authoritative Answer Host not found."
+msgstr "Authoritativeway Answerway Osthay otnay oundfay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Non-Authoritative Host not found,or SERVERFAIL."
+msgstr "Onnay-Authoritativeway Osthay otnay oundfay,orway SERVERFAIL."
+
+#: target:code/unix-glibc2.lisp
+msgid "Non recoverable errors, FORMERR, REFUSED, NOTIMP."
+msgstr "Onnay ecoverableray errorsway, FORMERR, REFUSED, NOTIMP."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Open host data base files and mark them as staying open even after\n"
+"a later search if STAY_OPEN is non-zero."
+msgstr ""
+"Openway osthay ataday asebay ilesfay andway arkmay emthay asway tayingsay "
+"openway evenway afterway\n"
+"away aterlay earchsay ifway STAY_OPEN isway onnay-erozay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Close host data base files and clear `stay open' flag."
+msgstr ""
+"Oseclay osthay ataday asebay ilesfay andway earclay `taysay openway' agflay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Get next entry from host data base file.  Open data base if\n"
+"necessary."
+msgstr ""
+"Etgay extnay entryway omfray osthay ataday asebay ilefay.  Openway ataday "
+"asebay ifway\n"
+"ecessarynay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return entry from host data base which address match ADDR with\n"
+"length LEN and type TYPE."
+msgstr ""
+"Eturnray entryway omfray osthay ataday asebay ichwhay addressway atchmay "
+"ADDR ithway\n"
+"engthlay LEN andway ypetay TYPE."
+
+#: target:code/unix-glibc2.lisp
+msgid "Return entry from host data base for host with NAME."
+msgstr ""
+"Eturnray entryway omfray osthay ataday asebay orfay osthay ithway NAME."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return entry from host data base for host with NAME.  AF must be\n"
+"   set to the address type which as `AF_INET' for IPv4 or `AF_INET6'\n"
+"   for IPv6."
+msgstr ""
+"Eturnray entryway omfray osthay ataday asebay orfay osthay ithway NAME.  AF "
+"ustmay ebay\n"
+"   etsay otay ethay addressway ypetay ichwhay asway `AF_INET' orfay Ipvway4 "
+"orway `AF_INET6'\n"
+"   orfay Ipvway6."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Open network data base files and mark them as staying open even\n"
+"   after a later search if STAY_OPEN is non-zero."
+msgstr ""
+"Openway etworknay ataday asebay ilesfay andway arkmay emthay asway tayingsay "
+"openway evenway\n"
+"   afterway away aterlay earchsay ifway STAY_OPEN isway onnay-erozay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Close network data base files and clear `stay open' flag."
+msgstr ""
+"Oseclay etworknay ataday asebay ilesfay andway earclay `taysay openway' "
+"agflay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Get next entry from network data base file.  Open data base if\n"
+"   necessary."
+msgstr ""
+"Etgay extnay entryway omfray etworknay ataday asebay ilefay.  Openway ataday "
+"asebay ifway\n"
+"   ecessarynay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return entry from network data base which address match NET and\n"
+"   type TYPE."
+msgstr ""
+"Eturnray entryway omfray etworknay ataday asebay ichwhay addressway atchmay "
+"NET andway\n"
+"   ypetay TYPE."
+
+#: target:code/unix-glibc2.lisp
+msgid "Return entry from network data base for network with NAME."
+msgstr ""
+"Eturnray entryway omfray etworknay ataday asebay orfay etworknay ithway NAME."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Open service data base files and mark them as staying open even\n"
+"   after a later search if STAY_OPEN is non-zero."
+msgstr ""
+"Openway ervicesay ataday asebay ilesfay andway arkmay emthay asway tayingsay "
+"openway evenway\n"
+"   afterway away aterlay earchsay ifway STAY_OPEN isway onnay-erozay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Close service data base files and clear `stay open' flag."
+msgstr ""
+"Oseclay ervicesay ataday asebay ilesfay andway earclay `taysay openway' "
+"agflay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Get next entry from service data base file.  Open data base if\n"
+"   necessary."
+msgstr ""
+"Etgay extnay entryway omfray ervicesay ataday asebay ilefay.  Openway ataday "
+"asebay ifway\n"
+"   ecessarynay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return entry from network data base for network with NAME and\n"
+"   protocol PROTO."
+msgstr ""
+"Eturnray entryway omfray etworknay ataday asebay orfay etworknay ithway NAME "
+"andway\n"
+"   otocolpray PROTO."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return entry from service data base which matches port PORT and\n"
+"   protocol PROTO."
+msgstr ""
+"Eturnray entryway omfray ervicesay ataday asebay ichwhay atchesmay ortpay "
+"PORT andway\n"
+"   otocolpray PROTO."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Open protocol data base files and mark them as staying open even\n"
+"   after a later search if STAY_OPEN is non-zero."
+msgstr ""
+"Openway otocolpray ataday asebay ilesfay andway arkmay emthay asway "
+"tayingsay openway evenway\n"
+"   afterway away aterlay earchsay ifway STAY_OPEN isway onnay-erozay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Close protocol data base files and clear `stay open' flag."
+msgstr ""
+"Oseclay otocolpray ataday asebay ilesfay andway earclay `taysay openway' "
+"agflay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Get next entry from protocol data base file.  Open data base if\n"
+"   necessary."
+msgstr ""
+"Etgay extnay entryway omfray otocolpray ataday asebay ilefay.  Openway "
+"ataday asebay ifway\n"
+"   ecessarynay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Return entry from protocol data base for network with NAME."
+msgstr ""
+"Eturnray entryway omfray otocolpray ataday asebay orfay etworknay ithway "
+"NAME."
+
+#: target:code/unix-glibc2.lisp
+msgid "Return entry from protocol data base which number is PROTO."
+msgstr ""
+"Eturnray entryway omfray otocolpray ataday asebay ichwhay umbernay isway "
+"PROTO."
+
+#: target:code/unix-glibc2.lisp
+msgid "Establish network group NETGROUP for enumeration."
+msgstr "Establishway etworknay oupgray NETGROUP orfay enumerationway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Free all space allocated by previous `setnetgrent' call."
+msgstr ""
+"Eefray allway acespay allocatedway ybay eviouspray `etnetgrentsay' allcay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Get next member of netgroup established by last `setnetgrent' call\n"
+"   and return pointers to elements in HOSTP, USERP, and DOMAINP."
+msgstr ""
+"Etgay extnay embermay ofway etgroupnay establishedway ybay astlay "
+"`etnetgrentsay' allcay\n"
+"   andway eturnray ointerspay otay elementsway inway HOSTP, USERP, andway "
+"DOMAINP."
+
+#: target:code/unix-glibc2.lisp
+msgid "Test whether NETGROUP contains the triple (HOST,USER,DOMAIN)."
+msgstr ""
+"Esttay etherwhay NETGROUP ontainscay ethay ipletray (HOST,USER,DOMAIN)."
+
+#: target:code/unix-glibc2.lisp
+msgid "Socket address is intended for `bind'."
+msgstr "Ocketsay addressway isway intendedway orfay `indbay'."
+
+#: target:code/unix-glibc2.lisp
+msgid "Request for canonical name."
+msgstr "Equestray orfay anonicalcay amenay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Invalid value for `ai_flags' field."
+msgstr "Invalidway aluevay orfay `aiway_agsflay' ieldfay."
+
+#: target:code/unix-glibc2.lisp
+msgid "NAME or SERVICE is unknown."
+msgstr "NAME orway SERVICE isway unknownway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Temporary failure in name resolution."
+msgstr "Emporarytay ailurefay inway amenay esolutionray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Non-recoverable failure in name res."
+msgstr "Onnay-ecoverableray ailurefay inway amenay esray."
+
+#: target:code/unix-glibc2.lisp
+msgid "No address associated with NAME."
+msgstr "Onay addressway associatedway ithway NAME."
+
+#: target:code/unix-glibc2.lisp
+msgid "ai_family not supported."
+msgstr "aiway_amilyfay otnay upportedsay."
+
+#: target:code/unix-glibc2.lisp
+msgid "ai_socktype not supported."
+msgstr "aiway_ocktypesay otnay upportedsay."
+
+#: target:code/unix-glibc2.lisp
+msgid "SERVICE not supported for ai_socktype."
+msgstr "SERVICE otnay upportedsay orfay aiway_ocktypesay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Address family for NAME not supported."
+msgstr "Addressway amilyfay orfay NAME otnay upportedsay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Memory allocation failure."
+msgstr "Emorymay allocationway ailurefay."
+
+#: target:code/unix-glibc2.lisp
+msgid "System error returned in errno."
+msgstr "Ystemsay errorway eturnedray inway errnoway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Translate name of a service location and/or a service name to set of\n"
+"   socket addresses."
+msgstr ""
+"Anslatetray amenay ofway away ervicesay ocationlay andway/orway away "
+"ervicesay amenay otay etsay ofway\n"
+"   ocketsay addressesway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Free `addrinfo' structure AI including associated storage."
+msgstr ""
+"Eefray `addrinfoway' ucturestray AI includingway associatedway toragesay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Create pseudo tty master slave pair with NAME and set terminal\n"
+"   attributes according to TERMP and WINP and return handles for both\n"
+"   ends in AMASTER and ASLAVE."
+msgstr ""
+"Eatecray seudopay tytay astermay aveslay airpay ithway NAME andway etsay "
+"erminaltay\n"
+"   attributesway accordingway otay TERMP andway WINP andway eturnray "
+"andleshay orfay othbay\n"
+"   endsway inway AMASTER andway ASLAVE."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Create child process and establish the slave pseudo terminal as the\n"
+"   child's controlling terminal."
+msgstr ""
+"Eatecray ildchay ocesspray andway establishway ethay aveslay seudopay "
+"erminaltay asway ethay\n"
+"   ildchay's ontrollingcay erminaltay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Rewind the password-file stream."
+msgstr "Ewindray ethay asswordpay-ilefay eamstray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Close the password-file stream."
+msgstr "Oseclay ethay asswordpay-ilefay eamstray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Read an entry from the password-file stream, opening it if necessary."
+msgstr ""
+"Eadray anway entryway omfray ethay asswordpay-ilefay eamstray, openingway "
+"itway ifway ecessarynay."
+
+#: target:code/unix-glibc2.lisp
+msgid "The calling process."
+msgstr "Ethay allingcay ocesspray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Terminated child processes."
+msgstr "Erminatedtay ildchay ocessespray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Minimum priority a process can have"
+msgstr "Inimummay ioritypray away ocesspray ancay avehay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Maximum priority a process can have"
+msgstr "Aximummay ioritypray away ocesspray ancay avehay"
+
+#: target:code/unix-glibc2.lisp
+msgid "WHO is a process ID"
+msgstr "WHO isway away ocesspray ID"
+
+#: target:code/unix-glibc2.lisp
+msgid "WHO is a process group ID"
+msgstr "WHO isway away ocesspray oupgray ID"
+
+#: target:code/unix-glibc2.lisp
+msgid "WHO is a user ID"
+msgstr "WHO isway away userway ID"
+
+#: target:code/unix-glibc2.lisp
+msgid "Set scheduling algorithm and/or parameters for a process."
+msgstr ""
+"Etsay edulingschay algorithmway andway/orway arameterspay orfay away "
+"ocesspray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Retrieve scheduling algorithm for a particular purpose."
+msgstr ""
+"Etrieveray edulingschay algorithmway orfay away articularpay urposepay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Get maximum priority value for a scheduler."
+msgstr "Etgay aximummay ioritypray aluevay orfay away edulerschay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Get minimum priority value for a scheduler."
+msgstr "Etgay inimummay ioritypray aluevay orfay away edulerschay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Get the SCHED_RR interval for the named process."
+msgstr "Etgay ethay SCHED_RR intervalway orfay ethay amednay ocesspray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Signal mask to be sent at exit."
+msgstr "Ignalsay askmay otay ebay entsay atway exitway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Set if VM shared between processes."
+msgstr "Etsay ifway VM aredshay etweenbay ocessespray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Set if fs info shared between processes"
+msgstr "Etsay ifway sfay infoway aredshay etweenbay ocessespray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Set if open files shared between processe"
+msgstr "Etsay ifway openway ilesfay aredshay etweenbay ocessepray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Set if signal handlers shared."
+msgstr "Etsay ifway ignalsay andlershay aredshay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Set if pid shared."
+msgstr "Etsay ifway idpay aredshay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Open database for reading."
+msgstr "Openway atabaseday orfay eadingray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Close database."
+msgstr "Oseclay atabaseday."
+
+#: target:code/unix-glibc2.lisp
+msgid "Get next entry from database, perhaps after opening the file."
+msgstr ""
+"Etgay extnay entryway omfray atabaseday, erhapspay afterway openingway ethay "
+"ilefay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Get shadow entry matching NAME."
+msgstr "Etgay adowshay entryway atchingmay NAME."
+
+#: target:code/unix-glibc2.lisp
+msgid "Read shadow entry from STRING."
+msgstr "Eadray adowshay entryway omfray STRING."
+
+#: target:code/unix-glibc2.lisp
+msgid "Protect password file against multi writers."
+msgstr "Otectpray asswordpay ilefay againstway ultimay iterswray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Unlock password file."
+msgstr "Unlockway asswordpay ilefay."
+
+#: target:code/unix-glibc2.lisp
+msgid "These bits determine file type."
+msgstr "Esethay itsbay etermineday ilefay ypetay."
+
+#: target:code/unix-glibc2.lisp
+msgid "FIFO"
+msgstr "FIFO"
+
+#: target:code/unix-glibc2.lisp
+msgid "Character device"
+msgstr "Aracterchay eviceday"
+
+#: target:code/unix-glibc2.lisp
+msgid "Directory"
+msgstr "Irectoryday"
+
+#: target:code/unix-glibc2.lisp
+msgid "Block device"
+msgstr "Ockblay eviceday"
+
+#: target:code/unix-glibc2.lisp
+msgid "Regular file"
+msgstr "Egularray ilefay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Symbolic link."
+msgstr "Ymbolicsay inklay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Socket."
+msgstr "Ocketsay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Set user ID on execution."
+msgstr "Etsay userway ID onway executionway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Set group ID on execution."
+msgstr "Etsay oupgray ID onway executionway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Save swapped text after use (sticky)."
+msgstr "Avesay wappedsay exttay afterway useway (tickysay)."
+
+#: target:code/unix-glibc2.lisp
+msgid "Read by owner"
+msgstr "Eadray ybay ownerway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Write by owner."
+msgstr "Itewray ybay ownerway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Execute by owner."
+msgstr "Executeway ybay ownerway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Get terminal output speed."
+msgstr "Etgay erminaltay outputway eedspay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Set terminal output speed."
+msgstr "Etsay erminaltay outputway eedspay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Bogus baud rate ~S"
+msgstr "Ogusbay audbay ateray ~S"
+
+#: target:code/unix-glibc2.lisp
+msgid "Get terminal input speed."
+msgstr "Etgay erminaltay inputway eedspay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Set terminal input speed."
+msgstr "Etsay erminaltay inputway eedspay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Get terminal attributes."
+msgstr "Etgay erminaltay attributesway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Set terminal attributes."
+msgstr "Etsay erminaltay attributesway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Send break"
+msgstr "Endsay eakbray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Wait for output for finish"
+msgstr "Aitway orfay outputway orfay inishfay"
+
+#: target:code/unix-glibc2.lisp
+msgid "See tcflush(3)"
+msgstr "Eesay cflushtay(3)"
+
+#: target:code/unix-glibc2.lisp
+msgid "Flow control"
+msgstr "Owflay ontrolcay"
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Executes the Unix execve system call.  If the system call suceeds, lisp\n"
+"   will no longer be running in this process.  If the system call fails "
+"this\n"
+"   function returns two values: NIL and an error code.  Arg-list should be "
+"a\n"
+"   list of simple-strings which are passed as arguments to the exec'ed "
+"program.\n"
+"   Environment should be an a-list mapping symbols to simple-strings which "
+"this\n"
+"   function bashes together to form the environment for the exec'ed program."
+msgstr ""
+"Executesway ethay Unixway execveway ystemsay allcay.  Ifway ethay ystemsay "
+"allcay uceedssay, isplay\n"
+"   illway onay ongerlay ebay unningray inway isthay ocesspray.  Ifway ethay "
+"ystemsay allcay ailsfay isthay\n"
+"   unctionfay eturnsray wotay aluesvay: NIL andway anway errorway odecay.  "
+"Argway-istlay ouldshay ebay away\n"
+"   istlay ofway implesay-ingsstray ichwhay areway assedpay asway "
+"argumentsway otay ethay execway'edway ogrampray.\n"
+"   Environmentway ouldshay ebay anway away-istlay appingmay ymbolssay otay "
+"implesay-ingsstray ichwhay isthay\n"
+"   unctionfay ashesbay ogethertay otay ormfay ethay environmentway orfay "
+"ethay execway'edway ogrampray."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Given a file path (a string) and one of four constant modes,\n"
+"   unix-access returns T if the file is accessible with that\n"
+"   mode and NIL if not.  It also returns an errno value with\n"
+"   NIL which determines why the file was not accessible.\n"
+"\n"
+"   The access modes are:\n"
+"\tr_ok     Read permission.\n"
+"\tw_ok     Write permission.\n"
+"\tx_ok     Execute permission.\n"
+"\tf_ok     Presence of file."
+msgstr ""
+"Ivengay away ilefay athpay (away ingstray) andway oneway ofway ourfay "
+"onstantcay odesmay,\n"
+"   unixway-accessway eturnsray T ifway ethay ilefay isway accessibleway "
+"ithway atthay\n"
+"   odemay andway NIL ifway otnay.  Itway alsoway eturnsray anway errnoway "
+"aluevay ithway\n"
+"   NIL ichwhay eterminesday ywhay ethay ilefay asway otnay accessibleway.\n"
+"\n"
+"   Ethay accessway odesmay areway:\n"
+"\tr_okway     Eadray ermissionpay.\n"
+"\tw_okway     Itewray ermissionpay.\n"
+"\tx_okway     Executeway ermissionpay.\n"
+"\tf_okway     Esencepray ofway ilefay."
+
+#: target:code/unix-glibc2.lisp
+msgid "set the file pointer"
+msgstr "etsay ethay ilefay ointerpay"
+
+#: target:code/unix-glibc2.lisp
+msgid "increment the file pointer"
+msgstr "incrementway ethay ilefay ointerpay"
+
+#: target:code/unix-glibc2.lisp
+msgid "extend the file size"
+msgstr "extendway ethay ilefay izesay"
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"UNIX-LSEEK accepts a file descriptor and moves the file pointer ahead\n"
+"   a certain OFFSET for that file.  WHENCE can be any of the following:\n"
+"\n"
+"   l_set        Set the file pointer.\n"
+"   l_incr       Increment the file pointer.\n"
+"   l_xtnd       Extend the file size.\n"
+"  "
+msgstr ""
+"UNIX-LSEEK acceptsway away ilefay escriptorday andway ovesmay ethay ilefay "
+"ointerpay aheadway\n"
+"   away ertaincay OFFSET orfay atthay ilefay.  WHENCE ancay ebay anyway "
+"ofway ethay ollowingfay:\n"
+"\n"
+"   l_etsay        Etsay ethay ilefay ointerpay.\n"
+"   l_incrway       Incrementway ethay ilefay ointerpay.\n"
+"   l_tndxay       Extendway ethay ilefay izesay.\n"
+"  "
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"UNIX-READ attempts to read from the file described by fd into\n"
+"   the buffer buf until it is full.  Len is the length of the buffer.\n"
+"   The number of bytes actually read is returned or NIL and an error\n"
+"   number if an error occured."
+msgstr ""
+"UNIX-READ attemptsway otay eadray omfray ethay ilefay escribedday ybay dfay "
+"intoway\n"
+"   ethay ufferbay ufbay untilway itway isway ullfay.  Enlay isway ethay "
+"engthlay ofway ethay ufferbay.\n"
+"   Ethay umbernay ofway ytesbay actuallyway eadray isway eturnedray orway "
+"NIL andway anway errorway\n"
+"   umbernay ifway anway errorway occuredway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-write attempts to write a character buffer (buf) of length\n"
+"   len to the file described by the file descriptor fd.  NIL and an\n"
+"   error is returned if the call is unsuccessful."
+msgstr ""
+"Unixway-itewray attemptsway otay itewray away aracterchay ufferbay (ufbay) "
+"ofway engthlay\n"
+"   enlay otay ethay ilefay escribedday ybay ethay ilefay escriptorday dfay.  "
+"NIL andway anway\n"
+"   errorway isway eturnedray ifway ethay allcay isway unsuccessfulway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-pipe sets up a unix-piping mechanism consisting of\n"
+"  an input pipe and an output pipe.  Unix-Pipe returns two\n"
+"  values: if no error occurred the first value is the pipe\n"
+"  to be read from and the second is can be written to.  If\n"
+"  an error occurred the first value is NIL and the second\n"
+"  the unix error code."
+msgstr ""
+"Unixway-ipepay etssay upway away unixway-ipingpay echanismmay onsistingcay "
+"ofway\n"
+"  anway inputway ipepay andway anway outputway ipepay.  Unixway-Ipepay "
+"eturnsray wotay\n"
+"  aluesvay: ifway onay errorway occurredway ethay irstfay aluevay isway "
+"ethay ipepay\n"
+"  otay ebay eadray omfray andway ethay econdsay isway ancay ebay ittenwray "
+"otay.  Ifway\n"
+"  anway errorway occurredway ethay irstfay aluevay isway NIL andway ethay "
+"econdsay\n"
+"  ethay unixway errorway odecay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Given a file path, an integer user-id, and an integer group-id,\n"
+"   unix-chown changes the owner of the file and the group of the\n"
+"   file to those specified.  Either the owner or the group may be\n"
+"   left unchanged by specifying them as -1.  Note: Permission will\n"
+"   fail if the caller is not the superuser."
+msgstr ""
+"Ivengay away ilefay athpay, anway integerway userway-idway, andway anway "
+"integerway oupgray-idway,\n"
+"   unixway-ownchay angeschay ethay ownerway ofway ethay ilefay andway ethay "
+"oupgray ofway ethay\n"
+"   ilefay otay osethay ecifiedspay.  Eitherway ethay ownerway orway ethay "
+"oupgray aymay ebay\n"
+"   eftlay unchangedway ybay ecifyingspay emthay asway -1.  Otenay: "
+"Ermissionpay illway\n"
+"   ailfay ifway ethay allercay isway otnay ethay uperusersay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-fchown is like unix-chown, except that it accepts an integer\n"
+"   file descriptor instead of a file path name."
+msgstr ""
+"Unixway-chownfay isway ikelay unixway-ownchay, exceptway atthay itway "
+"acceptsway anway integerway\n"
+"   ilefay escriptorday insteadway ofway away ilefay athpay amenay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Given a file path string, unix-chdir changes the current working \n"
+"   directory to the one specified."
+msgstr ""
+"Ivengay away ilefay athpay ingstray, unixway-dirchay angeschay ethay "
+"urrentcay orkingway \n"
+"   irectoryday otay ethay oneway ecifiedspay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Put the absolute pathname of the current working directory in BUF.\n"
+"   If successful, return BUF.  If not, put an error message in\n"
+"   BUF and return NULL.  BUF should be at least PATH_MAX bytes long."
+msgstr ""
+"Utpay ethay absoluteway athnamepay ofway ethay urrentcay orkingway "
+"irectoryday inway BUF.\n"
+"   Ifway uccessfulsay, eturnray BUF.  Ifway otnay, utpay anway errorway "
+"essagemay inway\n"
+"   BUF andway eturnray NULL.  BUF ouldshay ebay atway eastlay PATH_MAX "
+"ytesbay onglay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-dup duplicates an existing file descriptor (given as the\n"
+"   argument) and return it.  If FD is not a valid file descriptor, NIL\n"
+"   and an error number are returned."
+msgstr ""
+"Unixway-upday uplicatesday anway existingway ilefay escriptorday (ivengay "
+"asway ethay\n"
+"   argumentway) andway eturnray itway.  Ifway FD isway otnay away alidvay "
+"ilefay escriptorday, NIL\n"
+"   andway anway errorway umbernay areway eturnedray."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-dup2 duplicates an existing file descriptor just as unix-dup\n"
+"   does only the new value of the duplicate descriptor may be requested\n"
+"   through the second argument.  If a file already exists with the\n"
+"   requested descriptor number, it will be closed and the number\n"
+"   assigned to the duplicate."
+msgstr ""
+"Unixway-upday2 uplicatesday anway existingway ilefay escriptorday ustjay "
+"asway unixway-upday\n"
+"   oesday onlyway ethay ewnay aluevay ofway ethay uplicateday escriptorday "
+"aymay ebay equestedray\n"
+"   roughthay ethay econdsay argumentway.  Ifway away ilefay alreadyway "
+"existsway ithway ethay\n"
+"   equestedray escriptorday umbernay, itway illway ebay osedclay andway "
+"ethay umbernay\n"
+"   assignedway otay ethay uplicateday."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-exit terminates the current process with an optional\n"
+"   error code.  If successful, the call doesn't return.  If\n"
+"   unsuccessful, the call returns NIL and an error number."
+msgstr ""
+"Unixway-exitway erminatestay ethay urrentcay ocesspray ithway anway "
+"optionalway\n"
+"   errorway odecay.  Ifway uccessfulsay, ethay allcay oesnday't eturnray.  "
+"Ifway\n"
+"   unsuccessfulway, ethay allcay eturnsray NIL andway anway errorway "
+"umbernay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Get file-specific configuration information about PATH."
+msgstr "Etgay ilefay-ecificspay onfigurationcay informationway aboutway PATH."
+
+#: target:code/unix-glibc2.lisp
+msgid "Get the value of the system variable NAME."
+msgstr "Etgay ethay aluevay ofway ethay ystemsay ariablevay NAME."
+
+#: target:code/unix-glibc2.lisp
+msgid "Get the value of the string-valued system variable NAME."
+msgstr ""
+"Etgay ethay aluevay ofway ethay ingstray-aluedvay ystemsay ariablevay NAME."
+
+#: target:code/unix-glibc2.lisp
+msgid "Unix-getpid returns the process-id of the current process."
+msgstr ""
+"Unixway-etpidgay eturnsray ethay ocesspray-idway ofway ethay urrentcay "
+"ocesspray."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-getppid returns the process-id of the parent of the current process."
+msgstr ""
+"Unixway-etppidgay eturnsray ethay ocesspray-idway ofway ethay arentpay ofway "
+"ethay urrentcay ocesspray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Unix-getpgrp returns the group-id of the calling process."
+msgstr ""
+"Unixway-etpgrpgay eturnsray ethay oupgray-idway ofway ethay allingcay "
+"ocesspray."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-setpgrp sets the process group on the process pid to\n"
+"   pgrp.  NIL and an error number are returned upon failure."
+msgstr ""
+"Unixway-etpgrpsay etssay ethay ocesspray oupgray onway ethay ocesspray idpay "
+"otay\n"
+"   grppay.  NIL andway anway errorway umbernay areway eturnedray uponway "
+"ailurefay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-setpgid sets the process group of the process pid to\n"
+"   pgrp. If pgid is equal to pid, the process becomes a process\n"
+"   group leader. NIL and an error number are returned upon failure."
+msgstr ""
+"Unixway-etpgidsay etssay ethay ocesspray oupgray ofway ethay ocesspray idpay "
+"otay\n"
+"   grppay. Ifway gidpay isway equalway otay idpay, ethay ocesspray ecomesbay "
+"away ocesspray\n"
+"   oupgray eaderlay. NIL andway anway errorway umbernay areway eturnedray "
+"uponway ailurefay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Create a new session with the calling process as its leader.\n"
+"   The process group IDs of the session and the calling process\n"
+"   are set to the process ID of the calling process, which is returned."
+msgstr ""
+"Eatecray away ewnay essionsay ithway ethay allingcay ocesspray asway itsway "
+"eaderlay.\n"
+"   Ethay ocesspray oupgray Idsway ofway ethay essionsay andway ethay "
+"allingcay ocesspray\n"
+"   areway etsay otay ethay ocesspray ID ofway ethay allingcay ocesspray, "
+"ichwhay isway eturnedray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Return the session ID of the given process."
+msgstr "Eturnray ethay essionsay ID ofway ethay ivengay ocesspray."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-getuid returns the real user-id associated with the\n"
+"   current process."
+msgstr ""
+"Unixway-etuidgay eturnsray ethay ealray userway-idway associatedway ithway "
+"ethay\n"
+"   urrentcay ocesspray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Get the effective user ID of the calling process."
+msgstr "Etgay ethay effectiveway userway ID ofway ethay allingcay ocesspray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Unix-getgid returns the real group-id of the current process."
+msgstr ""
+"Unixway-etgidgay eturnsray ethay ealray oupgray-idway ofway ethay urrentcay "
+"ocesspray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Unix-getegid returns the effective group-id of the current process."
+msgstr ""
+"Unixway-etegidgay eturnsray ethay effectiveway oupgray-idway ofway ethay "
+"urrentcay ocesspray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Return nonzero iff the calling process is in group GID."
+msgstr ""
+"Eturnray onzeronay iffway ethay allingcay ocesspray isway inway oupgray GID."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Set the user ID of the calling process to UID.\n"
+"   If the calling process is the super-user, set the real\n"
+"   and effective user IDs, and the saved set-user-ID to UID;\n"
+"   if not, the effective user ID is set to UID."
+msgstr ""
+"Etsay ethay userway ID ofway ethay allingcay ocesspray otay UID.\n"
+"   Ifway ethay allingcay ocesspray isway ethay upersay-userway, etsay ethay "
+"ealray\n"
+"   andway effectiveway userway Idsway, andway ethay avedsay etsay-userway-ID "
+"otay UID;\n"
+"   ifway otnay, ethay effectiveway userway ID isway etsay otay UID."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-setreuid sets the real and effective user-id's of the current\n"
+"   process to the specified ones.  NIL and an error number is returned\n"
+"   if the call fails."
+msgstr ""
+"Unixway-etreuidsay etssay ethay ealray andway effectiveway userway-idway's "
+"ofway ethay urrentcay\n"
+"   ocesspray otay ethay ecifiedspay onesway.  NIL andway anway errorway "
+"umbernay isway eturnedray\n"
+"   ifway ethay allcay ailsfay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Set the group ID of the calling process to GID.\n"
+"   If the calling process is the super-user, set the real\n"
+"   and effective group IDs, and the saved set-group-ID to GID;\n"
+"   if not, the effective group ID is set to GID."
+msgstr ""
+"Etsay ethay oupgray ID ofway ethay allingcay ocesspray otay GID.\n"
+"   Ifway ethay allingcay ocesspray isway ethay upersay-userway, etsay ethay "
+"ealray\n"
+"   andway effectiveway oupgray Idsway, andway ethay avedsay etsay-oupgray-ID "
+"otay GID;\n"
+"   ifway otnay, ethay effectiveway oupgray ID isway etsay otay GID."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-setregid sets the real and effective group-id's of the current\n"
+"   process process to the specified ones.  NIL and an error number is\n"
+"   returned if the call fails."
+msgstr ""
+"Unixway-etregidsay etssay ethay ealray andway effectiveway oupgray-idway's "
+"ofway ethay urrentcay\n"
+"   ocesspray ocesspray otay ethay ecifiedspay onesway.  NIL andway anway "
+"errorway umbernay isway\n"
+"   eturnedray ifway ethay allcay ailsfay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Executes the unix fork system call.  Returns 0 in the child and the pid\n"
+"   of the child in the parent if it works, or NIL and an error number if it\n"
+"   doesn't work."
+msgstr ""
+"Executesway ethay unixway orkfay ystemsay allcay.  Eturnsray 0 inway ethay "
+"ildchay andway ethay idpay\n"
+"   ofway ethay ildchay inway ethay arentpay ifway itway orksway, orway NIL "
+"andway anway errorway umbernay ifway itway\n"
+"   oesnday't orkway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Get the value of the environment variable named Name.  If no such\n"
+"  variable exists, Nil is returned."
+msgstr ""
+"Etgay ethay aluevay ofway ethay environmentway ariablevay amednay Amenay.  "
+"Ifway onay uchsay\n"
+"  ariablevay existsway, Ilnay isway eturnedray."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Adds the environment variable named Name to the environment with\n"
+"  the given Value if Name does not already exist. If Name does exist,\n"
+"  the value is changed to Value if Overwrite is non-zero.  Otherwise,\n"
+"  the value is not changed."
+msgstr ""
+"Addsway ethay environmentway ariablevay amednay Amenay otay ethay "
+"environmentway ithway\n"
+"  ethay ivengay Aluevay ifway Amenay oesday otnay alreadyway existway. Ifway "
+"Amenay oesday existway,\n"
+"  ethay aluevay isway angedchay otay Aluevay ifway Overwriteway isway onnay-"
+"erozay.  Otherwiseway,\n"
+"  ethay aluevay isway otnay angedchay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Adds or changes the environment.  Name-value must be a string of\n"
+"  the form \"name=value\".  If the name does not exist, it is added.\n"
+"  If name does exist, the value is updated to the given value."
+msgstr ""
+"Addsway orway angeschay ethay environmentway.  Amenay-aluevay ustmay ebay "
+"away ingstray ofway\n"
+"  ethay ormfay \"amenay=aluevay\".  Ifway ethay amenay oesday otnay "
+"existway, itway isway addedway.\n"
+"  Ifway amenay oesday existway, ethay aluevay isway updatedway otay ethay "
+"ivengay aluevay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Removes the variable Name from the environment"
+msgstr "Emovesray ethay ariablevay Amenay omfray ethay environmentway"
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Accepts a Unix file descriptor and returns T if the device\n"
+"  associated with it is a terminal."
+msgstr ""
+"Acceptsway away Unixway ilefay escriptorday andway eturnsray T ifway ethay "
+"eviceday\n"
+"  associatedway ithway itway isway away erminaltay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-link creates a hard link from the file with name1 to the\n"
+"   file with name2."
+msgstr ""
+"Unixway-inklay eatescray away ardhay inklay omfray ethay ilefay ithway "
+"amenay1 otay ethay\n"
+"   ilefay ithway amenay2."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-symlink creates a symbolic link named name2 to the file\n"
+"   named name1.  NIL and an error number is returned if the call\n"
+"   is unsuccessful."
+msgstr ""
+"Unixway-ymlinksay eatescray away ymbolicsay inklay amednay amenay2 otay "
+"ethay ilefay\n"
+"   amednay amenay1.  NIL andway anway errorway umbernay isway eturnedray "
+"ifway ethay allcay\n"
+"   isway unsuccessfulway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-readlink invokes the readlink system call on the file name\n"
+"  specified by the simple string path.  It returns up to two values:\n"
+"  the contents of the symbolic link if the call is successful, or\n"
+"  NIL and the Unix error number."
+msgstr ""
+"Unixway-eadlinkray invokesway ethay eadlinkray ystemsay allcay onway ethay "
+"ilefay amenay\n"
+"  ecifiedspay ybay ethay implesay ingstray athpay.  Itway eturnsray upway "
+"otay wotay aluesvay:\n"
+"  ethay ontentscay ofway ethay ymbolicsay inklay ifway ethay allcay isway "
+"uccessfulsay, orway\n"
+"  NIL andway ethay Unixway errorway umbernay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-unlink removes the directory entry for the named file.\n"
+"   NIL and an error code is returned if the call fails."
+msgstr ""
+"Unixway-unlinkway emovesray ethay irectoryday entryway orfay ethay amednay "
+"ilefay.\n"
+"   NIL andway anway errorway odecay isway eturnedray ifway ethay allcay "
+"ailsfay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-rmdir attempts to remove the directory name.  NIL and\n"
+"   an error number is returned if an error occured."
+msgstr ""
+"Unixway-mdirray attemptsway otay emoveray ethay irectoryday amenay.  NIL "
+"andway\n"
+"   anway errorway umbernay isway eturnedray ifway anway errorway occuredway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Get the tty-process-group for the unix file-descriptor FD."
+msgstr ""
+"Etgay ethay tytay-ocesspray-oupgray orfay ethay unixway ilefay-escriptorday "
+"FD."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Get the tty-process-group for the unix file-descriptor FD.  If not "
+"supplied,\n"
+"  FD defaults to /dev/tty."
+msgstr ""
+"Etgay ethay tytay-ocesspray-oupgray orfay ethay unixway ilefay-escriptorday "
+"FD.  Ifway otnay uppliedsay,\n"
+"  FD efaultsday otay /evday/tytay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Set the tty-process-group for the unix file-descriptor FD to PGRP."
+msgstr ""
+"Etsay ethay tytay-ocesspray-oupgray orfay ethay unixway ilefay-escriptorday "
+"FD otay PGRP."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Set the tty-process-group for the unix file-descriptor FD to PGRP.  If not\n"
+"  supplied, FD defaults to /dev/tty."
+msgstr ""
+"Etsay ethay tytay-ocesspray-oupgray orfay ethay unixway ilefay-escriptorday "
+"FD otay PGRP.  Ifway otnay\n"
+"  uppliedsay, FD efaultsday otay /evday/tytay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Return the login name of the user."
+msgstr "Eturnray ethay oginlay amenay ofway ethay userway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-uname returns the name and information about the current kernel. The\n"
+"  values returned upon success are: sysname, nodename, release, version,\n"
+"  machine, and domainname. Upon failure, 'nil and the 'errno are returned."
+msgstr ""
+"Unixway-unameway eturnsray ethay amenay andway informationway aboutway ethay "
+"urrentcay ernelkay. Ethay\n"
+"  aluesvay eturnedray uponway uccesssay areway: ysnamesay, odenamenay, "
+"eleaseray, ersionvay,\n"
+"  achinemay, andway omainnameday. Uponway ailurefay, 'ilnay andway ethay "
+"'errnoway areway eturnedray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Unix-gethostname returns the name of the host machine as a string."
+msgstr ""
+"Unixway-ethostnamegay eturnsray ethay amenay ofway ethay osthay achinemay "
+"asway away ingstray."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-fsync writes the core image of the file described by\n"
+"   fd to disk."
+msgstr ""
+"Unixway-syncfay iteswray ethay orecay imageway ofway ethay ilefay "
+"escribedday ybay\n"
+"   dfay otay iskday."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Revoke access permissions to all processes currently communicating\n"
+"  with the control terminal, and then send a SIGHUP signal to the process\n"
+"  group of the control terminal."
+msgstr ""
+"Evokeray accessway ermissionspay otay allway ocessespray urrentlycay "
+"ommunicatingcay\n"
+"  ithway ethay ontrolcay erminaltay, andway enthay endsay away SIGHUP "
+"ignalsay otay ethay ocesspray\n"
+"  oupgray ofway ethay ontrolcay erminaltay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Revoke the access of all descriptors currently open on FILE."
+msgstr ""
+"Evokeray ethay accessway ofway allway escriptorsday urrentlycay openway "
+"onway FILE."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Make PATH be the root directory (the starting point for absolute paths).\n"
+"   This call is restricted to the super-user."
+msgstr ""
+"Akemay PATH ebay ethay ootray irectoryday (ethay tartingsay ointpay orfay "
+"absoluteway athspay).\n"
+"   Isthay allcay isway estrictedray otay ethay upersay-userway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-gethostid returns a 32-bit integer which provides unique\n"
+"   identification for the host machine."
+msgstr ""
+"Unixway-ethostidgay eturnsray away 32-itbay integerway ichwhay ovidespray "
+"uniqueway\n"
+"   identificationway orfay ethay osthay achinemay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-sync writes all information in core memory which has been\n"
+"   modified to disk.  It returns NIL and an error code if an error\n"
+"   occured."
+msgstr ""
+"Unixway-yncsay iteswray allway informationway inway orecay emorymay ichwhay "
+"ashay eenbay\n"
+"   odifiedmay otay iskday.  Itway eturnsray NIL andway anway errorway odecay "
+"ifway anway errorway\n"
+"   occuredway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Unix-getpagesize returns the number of bytes in a system page."
+msgstr ""
+"Unixway-etpagesizegay eturnsray ethay umbernay ofway ytesbay inway away "
+"ystemsay agepay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-truncate truncates the named file to the length (in\n"
+"   bytes) specified by LENGTH.  NIL and an error number is returned\n"
+"   if the call is unsuccessful."
+msgstr ""
+"Unixway-uncatetray uncatestray ethay amednay ilefay otay ethay engthlay "
+"(inway\n"
+"   ytesbay) ecifiedspay ybay LENGTH.  NIL andway anway errorway umbernay "
+"isway eturnedray\n"
+"   ifway ethay allcay isway unsuccessfulway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-ftruncate is similar to unix-truncate except that the first\n"
+"   argument is a file descriptor rather than a file name."
+msgstr ""
+"Unixway-truncatefay isway imilarsay otay unixway-uncatetray exceptway atthay "
+"ethay irstfay\n"
+"   argumentway isway away ilefay escriptorday atherray anthay away ilefay "
+"amenay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return the maximum number of file descriptors\n"
+"   the current process could possibly have."
+msgstr ""
+"Eturnray ethay aximummay umbernay ofway ilefay escriptorsday\n"
+"   ethay urrentcay ocesspray ouldcay ossiblypay avehay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Unlock a locked region"
+msgstr "Unlockway away ockedlay egionray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Lock a region for exclusive use"
+msgstr "Ocklay away egionray orfay exclusiveway useway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Test and lock a region for exclusive use"
+msgstr "Esttay andway ocklay away egionray orfay exclusiveway useway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Test a region for othwer processes locks"
+msgstr "Esttay away egionray orfay othwerway ocessespray ockslay"
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-locks can lock, unlock and test files according to the cmd\n"
+"   which can be one of the following:\n"
+"\n"
+"   f_ulock  Unlock a locked region\n"
+"   f_lock   Lock a region for exclusive use\n"
+"   f_tlock  Test and lock a region for exclusive use\n"
+"   f_test   Test a region for othwer processes locks\n"
+"\n"
+"   The lock is for a region from the current location for a length\n"
+"   of length.\n"
+"\n"
+"   This is a simpler version of the interface provided by unix-fcntl.\n"
+"   "
+msgstr ""
+"Unixway-ockslay ancay ocklay, unlockway andway esttay ilesfay accordingway "
+"otay ethay mdcay\n"
+"   ichwhay ancay ebay oneway ofway ethay ollowingfay:\n"
+"\n"
+"   f_ulockway  Unlockway away ockedlay egionray\n"
+"   f_ocklay   Ocklay away egionray orfay exclusiveway useway\n"
+"   f_locktay  Esttay andway ocklay away egionray orfay exclusiveway useway\n"
+"   f_esttay   Esttay away egionray orfay othwerway ocessespray ockslay\n"
+"\n"
+"   Ethay ocklay isway orfay away egionray omfray ethay urrentcay ocationlay "
+"orfay away engthlay\n"
+"   ofway engthlay.\n"
+"\n"
+"   Isthay isway away implersay ersionvay ofway ethay interfaceway ovidedpray "
+"ybay unixway-cntlfay.\n"
+"   "
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-utimes sets the 'last-accessed' and 'last-updated'\n"
+"   times on a specified file.  NIL and an error number is\n"
+"   returned if the call is unsuccessful."
+msgstr ""
+"Unixway-utimesway etssay ethay 'astlay-accessedway' andway 'astlay-"
+"updatedway'\n"
+"   imestay onway away ecifiedspay ilefay.  NIL andway anway errorway "
+"umbernay isway\n"
+"   eturnedray ifway ethay allcay isway unsuccessfulway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Don't block waiting."
+msgstr "Onday't ockblay aitingway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Report status of stopped children."
+msgstr "Eportray tatussay ofway toppedsay ildrenchay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Wait for cloned process."
+msgstr "Aitway orfay onedclay ocesspray."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-ioctl performs a variety of operations on open i/o\n"
+"   descriptors.  See the UNIX Programmer's Manual for more\n"
+"   information."
+msgstr ""
+"Unixway-ioctlway erformspay away arietyvay ofway operationsway onway openway "
+"i/o\n"
+"   escriptorsday.  Eesay ethay UNIX Ogrammerpray's Anualmay orfay oremay\n"
+"   informationway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Change uid used for file access control to UID, without affecting\n"
+"   other priveledges (such as who can send signals at the process)."
+msgstr ""
+"Angechay uidway usedway orfay ilefay accessway ontrolcay otay UID, ithoutway "
+"affectingway\n"
+"   otherway iveledgespray (uchsay asway owhay ancay endsay ignalssay atway "
+"ethay ocesspray)."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Change gid used for file access control to GID, without affecting\n"
+"   other priveledges (such as who can send signals at the process)."
+msgstr ""
+"Angechay idgay usedway orfay ilefay accessway ontrolcay otay GID, ithoutway "
+"affectingway\n"
+"   otherway iveledgespray (uchsay asway owhay ancay endsay ignalssay atway "
+"ethay ocesspray)."
+
+#: target:code/unix-glibc2.lisp
+msgid "There is data to read."
+msgstr "Erethay isway ataday otay eadray."
+
+#: target:code/unix-glibc2.lisp
+msgid "There is urgent data to read."
+msgstr "Erethay isway urgentway ataday otay eadray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Writing now will not block."
+msgstr "Itingwray ownay illway otnay ockblay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Error condition."
+msgstr "Errorway onditioncay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Hung up."
+msgstr "Unghay upway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Invalid polling request."
+msgstr "Invalidway ollingpay equestray."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Canonical number of polling requests to read\n"
+"in at a time in poll."
+msgstr ""
+"Anonicalcay umbernay ofway ollingpay equestsray otay eadray\n"
+"inway atway away imetay inway ollpay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+" Poll the file descriptors described by the NFDS structures starting at\n"
+"   FDS.  If TIMEOUT is nonzero and not -1, allow TIMEOUT milliseconds for\n"
+"   an event to occur; if TIMEOUT is -1, block until an event occurs.\n"
+"   Returns the number of file descriptors with events, zero if timed out,\n"
+"   or -1 for errors."
+msgstr ""
+" Ollpay ethay ilefay escriptorsday escribedday ybay ethay NFDS ucturesstray "
+"tartingsay atway\n"
+"   FDS.  Ifway TIMEOUT isway onzeronay andway otnay -1, allowway TIMEOUT "
+"illisecondsmay orfay\n"
+"   anway eventway otay occurway; ifway TIMEOUT isway -1, ockblay untilway "
+"anway eventway occursway.\n"
+"   Eturnsray ethay umbernay ofway ilefay escriptorsday ithway eventsway, "
+"erozay ifway imedtay outway,\n"
+"   orway -1 orfay errorsway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Get the soft and hard limits for RESOURCE."
+msgstr "Etgay ethay oftsay andway ardhay imitslay orfay RESOURCE."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Set the current soft and hard maximum limits for RESOURCE.\n"
+"   Only the super-user can increase hard limits."
+msgstr ""
+"Etsay ethay urrentcay oftsay andway ardhay aximummay imitslay orfay "
+"RESOURCE.\n"
+"   Onlyway ethay upersay-userway ancay increaseway ardhay imitslay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Like call getrusage, but return only the system and user time, and returns\n"
+"   the seconds and microseconds as separate values."
+msgstr ""
+"Ikelay allcay etrusagegay, utbay eturnray onlyway ethay ystemsay andway "
+"userway imetay, andway eturnsray\n"
+"   ethay econdssay andway icrosecondsmay asway eparatesay aluesvay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-getrusage returns information about the resource usage\n"
+"   of the process specified by who.  Who can be either the\n"
+"   current process (rusage_self) or all of the terminated\n"
+"   child processes (rusage_children).  NIL and an error number\n"
+"   is returned if the call fails."
+msgstr ""
+"Unixway-etrusagegay eturnsray informationway aboutway ethay esourceray "
+"usageway\n"
+"   ofway ethay ocesspray ecifiedspay ybay owhay.  Owhay ancay ebay eitherway "
+"ethay\n"
+"   urrentcay ocesspray (usageray_elfsay) orway allway ofway ethay "
+"erminatedtay\n"
+"   ildchay ocessespray (usageray_ildrenchay).  NIL andway anway errorway "
+"umbernay\n"
+"   isway eturnedray ifway ethay allcay ailsfay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Function depends on CMD:\n"
+"  1 = Return the limit on the size of a file, in units of 512 bytes.\n"
+"  2 = Set the limit on the size of a file to NEWLIMIT.  Only the\n"
+"      super-user can increase the limit.\n"
+"  3 = Return the maximum possible address of the data segment.\n"
+"  4 = Return the maximum number of files that the calling process can open.\n"
+"  Returns -1 on errors."
+msgstr ""
+"Unctionfay ependsday onway CMD:\n"
+"  1 = Eturnray ethay imitlay onway ethay izesay ofway away ilefay, inway "
+"unitsway ofway 512 ytesbay.\n"
+"  2 = Etsay ethay imitlay onway ethay izesay ofway away ilefay otay "
+"NEWLIMIT.  Onlyway ethay\n"
+"      upersay-userway ancay increaseway ethay imitlay.\n"
+"  3 = Eturnray ethay aximummay ossiblepay addressway ofway ethay ataday "
+"egmentsay.\n"
+"  4 = Eturnray ethay aximummay umbernay ofway ilesfay atthay ethay allingcay "
+"ocesspray ancay openway.\n"
+"  Eturnsray -1 onway errorsway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return the highest priority of any process specified by WHICH and WHO\n"
+"   (see above); if WHO is zero, the current process, process group, or user\n"
+"   (as specified by WHO) is used.  A lower priority number means higher\n"
+"   priority.  Priorities range from PRIO_MIN to PRIO_MAX (above)."
+msgstr ""
+"Eturnray ethay ighesthay ioritypray ofway anyway ocesspray ecifiedspay ybay "
+"WHICH andway WHO\n"
+"   (eesay aboveway); ifway WHO isway erozay, ethay urrentcay ocesspray, "
+"ocesspray oupgray, orway userway\n"
+"   (asway ecifiedspay ybay WHO) isway usedway.  Away owerlay ioritypray "
+"umbernay eansmay igherhay\n"
+"   ioritypray.  Ioritiespray angeray omfray PRIO_MIN otay PRIO_MAX "
+"(aboveway)."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Set the priority of all processes specified by WHICH and WHO (see above)\n"
+"   to PRIO.  Returns 0 on success, -1 on errors."
+msgstr ""
+"Etsay ethay ioritypray ofway allway ocessespray ecifiedspay ybay WHICH "
+"andway WHO (eesay aboveway)\n"
+"   otay PRIO.  Eturnsray 0 onway uccesssay, -1 onway errorsway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Perform the UNIX select(2) system call."
+msgstr "Erformpay ethay UNIX electsay(2) ystemsay allcay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-select examines the sets of descriptors passed as arguments\n"
+"   to see if they are ready for reading and writing.  See the UNIX\n"
+"   Programmers Manual for more information."
+msgstr ""
+"Unixway-electsay examinesway ethay etssay ofway escriptorsday assedpay asway "
+"argumentsway\n"
+"   otay eesay ifway eythay areway eadyray orfay eadingray andway itingwray.  "
+"Eesay ethay UNIX\n"
+"   Ogrammerspray Anualmay orfay oremay informationway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"UNIX-STAT retrieves information about the specified\n"
+"   file returning them in the form of multiple values.\n"
+"   See the UNIX Programmer's Manual for a description\n"
+"   of the values returned.  If the call fails, then NIL\n"
+"   and an error number is returned instead."
+msgstr ""
+"UNIX-STAT etrievesray informationway aboutway ethay ecifiedspay\n"
+"   ilefay eturningray emthay inway ethay ormfay ofway ultiplemay aluesvay.\n"
+"   Eesay ethay UNIX Ogrammerpray's Anualmay orfay away escriptionday\n"
+"   ofway ethay aluesvay eturnedray.  Ifway ethay allcay ailsfay, enthay NIL\n"
+"   andway anway errorway umbernay isway eturnedray insteadway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"UNIX-FSTAT is similar to UNIX-STAT except the file is specified\n"
+"   by the file descriptor FD."
+msgstr ""
+"UNIX-FSTAT isway imilarsay otay UNIX-STAT exceptway ethay ilefay isway "
+"ecifiedspay\n"
+"   ybay ethay ilefay escriptorday FD."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"UNIX-LSTAT is similar to UNIX-STAT except the specified\n"
+"   file must be a symbolic link."
+msgstr ""
+"UNIX-LSTAT isway imilarsay otay UNIX-STAT exceptway ethay ecifiedspay\n"
+"   ilefay ustmay ebay away ymbolicsay inklay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Given a file path string and a constant mode, unix-chmod changes the\n"
+"   permission mode for that file to the one specified. The new mode\n"
+"   can be created by logically OR'ing the following:\n"
+"\n"
+"      setuidexec        Set user ID on execution.\n"
+"      setgidexec        Set group ID on execution.\n"
+"      savetext          Save text image after execution.\n"
+"      readown           Read by owner.\n"
+"      writeown          Write by owner.\n"
+"      execown           Execute (search directory) by owner.\n"
+"      readgrp           Read by group.\n"
+"      writegrp          Write by group.\n"
+"      execgrp           Execute (search directory) by group.\n"
+"      readoth           Read by others.\n"
+"      writeoth          Write by others.\n"
+"      execoth           Execute (search directory) by others.\n"
+"\n"
+"  Thus #o444 and (logior unix:readown unix:readgrp unix:readoth)\n"
+"  are equivalent for 'mode.  The octal-base is familar to Unix users.\n"
+"  \n"
+"  It returns T on successfully completion; NIL and an error number\n"
+"  otherwise."
+msgstr ""
+"Ivengay away ilefay athpay ingstray andway away onstantcay odemay, unixway-"
+"modchay angeschay ethay\n"
+"   ermissionpay odemay orfay atthay ilefay otay ethay oneway ecifiedspay. "
+"Ethay ewnay odemay\n"
+"   ancay ebay eatedcray ybay ogicallylay OR'ingway ethay ollowingfay:\n"
+"\n"
+"      etuidexecsay        Etsay userway ID onway executionway.\n"
+"      etgidexecsay        Etsay oupgray ID onway executionway.\n"
+"      avetextsay          Avesay exttay imageway afterway executionway.\n"
+"      eadownray           Eadray ybay ownerway.\n"
+"      iteownwray          Itewray ybay ownerway.\n"
+"      execownway           Executeway (earchsay irectoryday) ybay ownerway.\n"
+"      eadgrpray           Eadray ybay oupgray.\n"
+"      itegrpwray          Itewray ybay oupgray.\n"
+"      execgrpway           Executeway (earchsay irectoryday) ybay oupgray.\n"
+"      eadothray           Eadray ybay othersway.\n"
+"      iteothwray          Itewray ybay othersway.\n"
+"      execothway           Executeway (earchsay irectoryday) ybay "
+"othersway.\n"
+"\n"
+"  Usthay #o444 andway (ogiorlay unixway:eadownray unixway:eadgrpray unixway:"
+"eadothray)\n"
+"  areway equivalentway orfay 'odemay.  Ethay octalway-asebay isway amilarfay "
+"otay Unixway usersway.\n"
+"  \n"
+"  Itway eturnsray T onway uccessfullysay ompletioncay; NIL andway anway "
+"errorway umbernay\n"
+"  otherwiseway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Given an integer file descriptor and a mode (the same as those\n"
+"   used for unix-chmod), unix-fchmod changes the permission mode\n"
+"   for that file to the one specified. T is returned if the call\n"
+"   was successful."
+msgstr ""
+"Ivengay anway integerway ilefay escriptorday andway away odemay (ethay "
+"amesay asway osethay\n"
+"   usedway orfay unixway-modchay), unixway-chmodfay angeschay ethay "
+"ermissionpay odemay\n"
+"   orfay atthay ilefay otay ethay oneway ecifiedspay. T isway eturnedray "
+"ifway ethay allcay\n"
+"   asway uccessfulsay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Set the file creation mask of the current process to MASK,\n"
+"   and return the old creation mask."
+msgstr ""
+"Etsay ethay ilefay eationcray askmay ofway ethay urrentcay ocesspray otay "
+"MASK,\n"
+"   andway eturnray ethay oldway eationcray askmay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-mkdir creates a new directory with the specified name and mode.\n"
+"   (Same as those for unix-chmod.)  It returns T upon success, otherwise\n"
+"   NIL and an error number."
+msgstr ""
+"Unixway-kdirmay eatescray away ewnay irectoryday ithway ethay ecifiedspay "
+"amenay andway odemay.\n"
+"   (Amesay asway osethay orfay unixway-modchay.)  Itway eturnsray T uponway "
+"uccesssay, otherwiseway\n"
+"   NIL andway anway errorway umbernay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Create a device file named PATH, with permission and special bits MODE\n"
+"  and device number DEV (which can be constructed from major and minor\n"
+"  device numbers with the `makedev' macro above)."
+msgstr ""
+"Eatecray away eviceday ilefay amednay PATH, ithway ermissionpay andway "
+"ecialspay itsbay MODE\n"
+"  andway eviceday umbernay DEV (ichwhay ancay ebay onstructedcay omfray "
+"ajormay andway inormay\n"
+"  eviceday umbersnay ithway ethay `akedevmay' acromay aboveway)."
+
+#: target:code/unix-glibc2.lisp
+msgid "Create a new FIFO named PATH, with permission bits MODE."
+msgstr ""
+"Eatecray away ewnay FIFO amednay PATH, ithway ermissionpay itsbay MODE."
+
+#: target:code/unix-glibc2.lisp
+msgid "Return information about the filesystem on which FILE resides."
+msgstr ""
+"Eturnray informationway aboutway ethay ilesystemfay onway ichwhay FILE "
+"esidesray."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Make the block special device PATH available to the system for swapping.\n"
+"  This call is restricted to the super-user."
+msgstr ""
+"Akemay ethay ockblay ecialspay eviceday PATH availableway otay ethay "
+"ystemsay orfay wappingsay.\n"
+"  Isthay allcay isway estrictedray otay ethay upersay-userway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Make the block special device PATH unavailable to the system for swapping.\n"
+"  This call is restricted to the super-user."
+msgstr ""
+"Akemay ethay ockblay ecialspay eviceday PATH unavailableway otay ethay "
+"ystemsay orfay wappingsay.\n"
+"  Isthay allcay isway estrictedray otay ethay upersay-userway."
+
+#: target:code/unix-glibc2.lisp
+msgid "Read or write system parameters."
+msgstr "Eadray orway itewray ystemsay arameterspay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Time used by the program so far (user time + system time).\n"
+"   The result / CLOCKS_PER_SECOND is program time in seconds."
+msgstr ""
+"Imetay usedway ybay ethay ogrampray osay arfay (userway imetay + ystemsay "
+"imetay).\n"
+"   Ethay esultray / CLOCKS_PER_SECOND isway ogrampray imetay inway econdssay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Return the current time and put it in *TIMER if TIMER is not NULL."
+msgstr ""
+"Eturnray ethay urrentcay imetay andway utpay itway inway timer*ay ifway "
+"TIMER isway otnay NULL."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"If it works, unix-gettimeofday returns 5 values: T, the seconds and\n"
+"   microseconds of the current time of day, the timezone (in minutes west\n"
+"   of Greenwich), and a daylight-savings flag.  If it doesn't work, it\n"
+"   returns NIL and the errno."
+msgstr ""
+"Ifway itway orksway, unixway-ettimeofdaygay eturnsray 5 aluesvay: T, ethay "
+"econdssay andway\n"
+"   icrosecondsmay ofway ethay urrentcay imetay ofway ayday, ethay imezonetay "
+"(inway inutesmay estway\n"
+"   ofway Eenwichgray), andway away aylightday-avingssay agflay.  Ifway itway "
+"oesnday't orkway, itway\n"
+"   eturnsray NIL andway ethay errnoway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Unix-getitimer returns the INTERVAL and VALUE slots of one of\n"
+"   three system timers (:real :virtual or :profile). On success,\n"
+"   unix-getitimer returns 5 values,\n"
+"   T, it-interval-secs, it-interval-usec, it-value-secs, it-value-usec."
+msgstr ""
+"Unixway-etitimergay eturnsray ethay INTERVAL andway VALUE otsslay ofway "
+"oneway ofway\n"
+"   reethay ystemsay imerstay (:ealray :irtualvay orway :ofilepray). Onway "
+"uccesssay,\n"
+"   unixway-etitimergay eturnsray 5 aluesvay,\n"
+"   T, itway-intervalway-ecssay, itway-intervalway-usecway, itway-aluevay-"
+"ecssay, itway-aluevay-usecway."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+" Unix-setitimer sets the INTERVAL and VALUE slots of one of\n"
+"   three system timers (:real :virtual or :profile). A SIGALRM signal\n"
+"   will be delivered VALUE <seconds+microseconds> from now. INTERVAL,\n"
+"   when non-zero, is <seconds+microseconds> to be loaded each time\n"
+"   the timer expires. Setting INTERVAL and VALUE to zero disables\n"
+"   the timer. See the Unix man page for more details. On success,\n"
+"   unix-setitimer returns the old contents of the INTERVAL and VALUE\n"
+"   slots as in unix-getitimer."
+msgstr ""
+" Unixway-etitimersay etssay ethay INTERVAL andway VALUE otsslay ofway oneway "
+"ofway\n"
+"   reethay ystemsay imerstay (:ealray :irtualvay orway :ofilepray). Away "
+"SIGALRM ignalsay\n"
+"   illway ebay eliveredday VALUE <econdssay+icrosecondsmay> omfray ownay. "
+"INTERVAL,\n"
+"   enwhay onnay-erozay, isway <econdssay+icrosecondsmay> otay ebay oadedlay "
+"eachway imetay\n"
+"   ethay imertay expiresway. Ettingsay INTERVAL andway VALUE otay erozay "
+"isablesday\n"
+"   ethay imertay. Eesay ethay Unixway anmay agepay orfay oremay etailsday. "
+"Onway uccesssay,\n"
+"   unixway-etitimersay eturnsray ethay oldway ontentscay ofway ethay "
+"INTERVAL andway VALUE\n"
+"   otsslay asway inway unixway-etitimergay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Fill in TIMEBUF with information about the current time."
+msgstr ""
+"Illfay inway TIMEBUF ithway informationway aboutway ethay urrentcay imetay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Store the CPU time used by this process and all its\n"
+"   dead children (and their dead children) in BUFFER.\n"
+"   Return the elapsed real time, or (clock_t) -1 for errors.\n"
+"   All times are in CLK_TCKths of a second."
+msgstr ""
+"Toresay ethay CPU imetay usedway ybay isthay ocesspray andway allway itsway\n"
+"   eadday ildrenchay (andway eirthay eadday ildrenchay) inway BUFFER.\n"
+"   Eturnray ethay elapsedway ealray imetay, orway (ockclay_t) -1 orfay "
+"errorsway.\n"
+"   Allway imestay areway inway CLK_Ckthstay ofway away econdsay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Wait for a child to die.  When one does, put its status in *STAT_LOC\n"
+"   and return its process ID.  For errors, return (pid_t) -1."
+msgstr ""
+"Aitway orfay away ildchay otay ieday.  Enwhay oneway oesday, utpay itsway "
+"tatussay inway stat*ay_LOC\n"
+"   andway eturnray itsway ocesspray ID.  Orfay errorsway, eturnray (idpay_t) "
+"-1."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Wait for a child matching PID to die.\n"
+"   If PID is greater than 0, match any process whose process ID is PID.\n"
+"   If PID is (pid_t) -1, match any process.\n"
+"   If PID is (pid_t) 0, match any process with the\n"
+"   same process group as the current process.\n"
+"   If PID is less than -1, match any process whose\n"
+"   process group is the absolute value of PID.\n"
+"   If the WNOHANG bit is set in OPTIONS, and that child\n"
+"   is not already dead, return (pid_t) 0.  If successful,\n"
+"   return PID and store the dead child's status in STAT_LOC.\n"
+"   Return (pid_t) -1 for errors.  If the WUNTRACED bit is\n"
+"   set in OPTIONS, return status for stopped children; otherwise don't."
+msgstr ""
+"Aitway orfay away ildchay atchingmay PID otay ieday.\n"
+"   Ifway PID isway eatergray anthay 0, atchmay anyway ocesspray osewhay "
+"ocesspray ID isway PID.\n"
+"   Ifway PID isway (idpay_t) -1, atchmay anyway ocesspray.\n"
+"   Ifway PID isway (idpay_t) 0, atchmay anyway ocesspray ithway ethay\n"
+"   amesay ocesspray oupgray asway ethay urrentcay ocesspray.\n"
+"   Ifway PID isway esslay anthay -1, atchmay anyway ocesspray osewhay\n"
+"   ocesspray oupgray isway ethay absoluteway aluevay ofway PID.\n"
+"   Ifway ethay WNOHANG itbay isway etsay inway OPTIONS, andway atthay "
+"ildchay\n"
+"   isway otnay alreadyway eadday, eturnray (idpay_t) 0.  Ifway "
+"uccessfulsay,\n"
+"   eturnray PID andway toresay ethay eadday ildchay's tatussay inway "
+"STAT_LOC.\n"
+"   Eturnray (idpay_t) -1 orfay errorsway.  Ifway ethay WUNTRACED itbay "
+"isway\n"
+"   etsay inway OPTIONS, eturnray tatussay orfay toppedsay ildrenchay; "
+"otherwiseway onday't."
+
+#: target:code/unix-glibc2.lisp
+msgid "Successful"
+msgstr "Uccessfulsay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Operation not permitted"
+msgstr "Operationway otnay ermittedpay"
+
+#: target:code/unix-glibc2.lisp
+msgid "No such file or directory"
+msgstr "Onay uchsay ilefay orway irectoryday"
+
+#: target:code/unix-glibc2.lisp
+msgid "No such process"
+msgstr "Onay uchsay ocesspray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Interrupted system call"
+msgstr "Interruptedway ystemsay allcay"
+
+#: target:code/unix-glibc2.lisp
+msgid "I/O error"
+msgstr "Iway/O errorway"
+
+#: target:code/unix-glibc2.lisp
+msgid "No such device or address"
+msgstr "Onay uchsay eviceday orway addressway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Arg list too long"
+msgstr "Argway istlay ootay onglay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Exec format error"
+msgstr "Execway ormatfay errorway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Bad file number"
+msgstr "Adbay ilefay umbernay"
+
+#: target:code/unix-glibc2.lisp
+msgid "No children"
+msgstr "Onay ildrenchay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Try again"
+msgstr "Ytray againway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Out of memory"
+msgstr "Outway ofway emorymay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Permission denied"
+msgstr "Ermissionpay eniedday"
+
+#: target:code/unix-glibc2.lisp
+msgid "Bad address"
+msgstr "Adbay addressway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Block device required"
+msgstr "Ockblay eviceday equiredray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Device or resource busy"
+msgstr "Eviceday orway esourceray usybay"
+
+#: target:code/unix-glibc2.lisp
+msgid "File exists"
+msgstr "Ilefay existsway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Cross-device link"
+msgstr "Osscray-eviceday inklay"
+
+#: target:code/unix-glibc2.lisp
+msgid "No such device"
+msgstr "Onay uchsay eviceday"
+
+#: target:code/unix-glibc2.lisp
+msgid "Not a director"
+msgstr "Otnay away irectorday"
+
+#: target:code/unix-glibc2.lisp
+msgid "Is a directory"
+msgstr "Isway away irectoryday"
+
+#: target:code/unix-glibc2.lisp
+msgid "Invalid argument"
+msgstr "Invalidway argumentway"
+
+#: target:code/unix-glibc2.lisp
+msgid "File table overflow"
+msgstr "Ilefay abletay overflowway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Too many open files"
+msgstr "Ootay anymay openway ilesfay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Not a typewriter"
+msgstr "Otnay away ypewritertay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Text file busy"
+msgstr "Exttay ilefay usybay"
+
+#: target:code/unix-glibc2.lisp
+msgid "File too large"
+msgstr "Ilefay ootay argelay"
+
+#: target:code/unix-glibc2.lisp
+msgid "No space left on device"
+msgstr "Onay acespay eftlay onway eviceday"
+
+#: target:code/unix-glibc2.lisp
+msgid "Illegal seek"
+msgstr "Illegalway eeksay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Read-only file system"
+msgstr "Eadray-onlyway ilefay ystemsay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Too many links"
+msgstr "Ootay anymay inkslay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Broken pipe"
+msgstr "Okenbray ipepay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Math argument out of domain"
+msgstr "Athmay argumentway outway ofway omainday"
+
+#: target:code/unix-glibc2.lisp
+msgid "Math result not representable"
+msgstr "Athmay esultray otnay epresentableray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Resource deadlock would occur"
+msgstr "Esourceray eadlockday ouldway occurway"
+
+#: target:code/unix-glibc2.lisp
+msgid "File name too long"
+msgstr "Ilefay amenay ootay onglay"
+
+#: target:code/unix-glibc2.lisp
+msgid "No record locks available"
+msgstr "Onay ecordray ockslay availableway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Function not implemented"
+msgstr "Unctionfay otnay implementedway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Directory not empty"
+msgstr "Irectoryday otnay emptyway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Too many symbolic links encountered"
+msgstr "Ootay anymay ymbolicsay inkslay encounteredway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Operation would block"
+msgstr "Operationway ouldway ockblay"
+
+#: target:code/unix-glibc2.lisp
+msgid "No message of desired type"
+msgstr "Onay essagemay ofway esiredday ypetay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Identifier removed"
+msgstr "Identifierway emovedray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Channel number out of range"
+msgstr "Annelchay umbernay outway ofway angeray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Level 2 not synchronized"
+msgstr "Evellay 2 otnay ynchronizedsay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Level 3 halted"
+msgstr "Evellay 3 altedhay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Level 3 reset"
+msgstr "Evellay 3 esetray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Link number out of range"
+msgstr "Inklay umbernay outway ofway angeray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Protocol driver not attached"
+msgstr "Otocolpray iverdray otnay attachedway"
+
+#: target:code/unix-glibc2.lisp
+msgid "No CSI structure available"
+msgstr "Onay CSI ucturestray availableway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Level 2 halted"
+msgstr "Evellay 2 altedhay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Invalid exchange"
+msgstr "Invalidway exchangeway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Invalid request descriptor"
+msgstr "Invalidway equestray escriptorday"
+
+#: target:code/unix-glibc2.lisp
+msgid "Exchange full"
+msgstr "Exchangeway ullfay"
+
+#: target:code/unix-glibc2.lisp
+msgid "No anode"
+msgstr "Onay anodeway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Invalid request code"
+msgstr "Invalidway equestray odecay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Invalid slot"
+msgstr "Invalidway otslay"
+
+#: target:code/unix-glibc2.lisp
+msgid "File locking deadlock error"
+msgstr "Ilefay ockinglay eadlockday errorway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Bad font file format"
+msgstr "Adbay ontfay ilefay ormatfay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Device not a stream"
+msgstr "Eviceday otnay away eamstray"
+
+#: target:code/unix-glibc2.lisp
+msgid "No data available"
+msgstr "Onay ataday availableway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Timer expired"
+msgstr "Imertay expiredway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Out of streams resources"
+msgstr "Outway ofway eamsstray esourcesray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Machine is not on the network"
+msgstr "Achinemay isway otnay onway ethay etworknay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Package not installed"
+msgstr "Ackagepay otnay installedway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Object is remote"
+msgstr "Objectway isway emoteray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Link has been severed"
+msgstr "Inklay ashay eenbay everedsay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Advertise error"
+msgstr "Advertiseway errorway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Srmount error"
+msgstr "Rmountsay errorway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Communication error on send"
+msgstr "Ommunicationcay errorway onway endsay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Protocol error"
+msgstr "Otocolpray errorway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Multihop attempted"
+msgstr "Ultihopmay attemptedway"
+
+#: target:code/unix-glibc2.lisp
+msgid "RFS specific error"
+msgstr "RFS ecificspay errorway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Not a data message"
+msgstr "Otnay away ataday essagemay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Value too large for defined data type"
+msgstr "Aluevay ootay argelay orfay efinedday ataday ypetay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Name not unique on network"
+msgstr "Amenay otnay uniqueway onway etworknay"
+
+#: target:code/unix-glibc2.lisp
+msgid "File descriptor in bad state"
+msgstr "Ilefay escriptorday inway adbay tatesay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Remote address changed"
+msgstr "Emoteray addressway angedchay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Can not access a needed shared library"
+msgstr "Ancay otnay accessway away eedednay aredshay ibrarylay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Accessing a corrupted shared library"
+msgstr "Accessingway away orruptedcay aredshay ibrarylay"
+
+#: target:code/unix-glibc2.lisp
+msgid ".lib section in a.out corrupted"
+msgstr ".iblay ectionsay inway away.outway orruptedcay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Attempting to link in too many shared libraries"
+msgstr "Attemptingway otay inklay inway ootay anymay aredshay ibrarieslay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Cannot exec a shared library directly"
+msgstr "Annotcay execway away aredshay ibrarylay irectlyday"
+
+#: target:code/unix-glibc2.lisp
+msgid "Illegal byte sequence"
+msgstr "Illegalway ytebay equencesay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Interrupted system call should be restarted _N"
+msgstr "Interruptedway ystemsay allcay ouldshay ebay estartedray _N"
+
+#: target:code/unix-glibc2.lisp
+msgid "Streams pipe error"
+msgstr "Eamsstray ipepay errorway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Too many users"
+msgstr "Ootay anymay usersway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Socket operation on non-socket"
+msgstr "Ocketsay operationway onway onnay-ocketsay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Destination address required"
+msgstr "Estinationday addressway equiredray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Message too long"
+msgstr "Essagemay ootay onglay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Protocol wrong type for socket"
+msgstr "Otocolpray ongwray ypetay orfay ocketsay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Protocol not available"
+msgstr "Otocolpray otnay availableway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Protocol not supported"
+msgstr "Otocolpray otnay upportedsay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Socket type not supported"
+msgstr "Ocketsay ypetay otnay upportedsay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Operation not supported on transport endpoint"
+msgstr "Operationway otnay upportedsay onway ansporttray endpointway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Protocol family not supported"
+msgstr "Otocolpray amilyfay otnay upportedsay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Address family not supported by protocol"
+msgstr "Addressway amilyfay otnay upportedsay ybay otocolpray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Address already in use"
+msgstr "Addressway alreadyway inway useway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Cannot assign requested address"
+msgstr "Annotcay assignway equestedray addressway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Network is down"
+msgstr "Etworknay isway ownday"
+
+#: target:code/unix-glibc2.lisp
+msgid "Network is unreachable"
+msgstr "Etworknay isway unreachableway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Network dropped connection because of reset"
+msgstr "Etworknay oppeddray onnectioncay ecausebay ofway esetray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Software caused connection abort"
+msgstr "Oftwaresay ausedcay onnectioncay abortway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Connection reset by peer"
+msgstr "Onnectioncay esetray ybay eerpay"
+
+#: target:code/unix-glibc2.lisp
+msgid "No buffer space available"
+msgstr "Onay ufferbay acespay availableway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Transport endpoint is already connected"
+msgstr "Ansporttray endpointway isway alreadyway onnectedcay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Transport endpoint is not connected"
+msgstr "Ansporttray endpointway isway otnay onnectedcay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Cannot send after transport endpoint shutdown"
+msgstr "Annotcay endsay afterway ansporttray endpointway utdownshay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Too many references: cannot splice"
+msgstr "Ootay anymay eferencesray: annotcay licespay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Connection timed out"
+msgstr "Onnectioncay imedtay outway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Connection refused"
+msgstr "Onnectioncay efusedray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Host is down"
+msgstr "Osthay isway ownday"
+
+#: target:code/unix-glibc2.lisp
+msgid "No route to host"
+msgstr "Onay outeray otay osthay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Operation already in progress"
+msgstr "Operationway alreadyway inway ogresspray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Operation now in progress"
+msgstr "Operationway ownay inway ogresspray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Stale NFS file handle"
+msgstr "Talesay NFS ilefay andlehay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Structure needs cleaning"
+msgstr "Ucturestray eedsnay eaningclay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Not a XENIX named type file"
+msgstr "Otnay away XENIX amednay ypetay ilefay"
+
+#: target:code/unix-glibc2.lisp
+msgid "No XENIX semaphores available"
+msgstr "Onay XENIX emaphoressay availableway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Is a named type file"
+msgstr "Isway away amednay ypetay ilefay"
+
+#: target:code/unix-glibc2.lisp
+msgid "Remote I/O error"
+msgstr "Emoteray Iway/O errorway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Quota exceeded"
+msgstr "Otaquay exceededway"
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Define an ioctl command. If the optional ARG and PARM-TYPE are given\n"
+"  then ioctl argument size and direction are included as for ioctls defined\n"
+"  by _IO, _IOR, _IOW, or _IOWR. If DEV is a character then the ioctl type\n"
+"  is the characters code, else DEV may be an integer giving the type."
+msgstr ""
+"Efineday anway ioctlway ommandcay. Ifway ethay optionalway ARG andway PARM-"
+"TYPE areway ivengay\n"
+"  enthay ioctlway argumentway izesay andway irectionday areway includedway "
+"asway orfay ioctlsway efinedday\n"
+"  ybay _IO, _IOR, _IOW, orway _IOWR. Ifway DEV isway away aracterchay enthay "
+"ethay ioctlway ypetay\n"
+"  isway ethay aracterschay odecay, elseway DEV aymay ebay anway integerway "
+"ivinggay ethay ypetay."
+
+#: target:code/unix-glibc2.lisp
+msgid "Set the socket process-group for the unix file-descriptor FD to PGRP."
+msgstr ""
+"Etsay ethay ocketsay ocesspray-oupgray orfay ethay unixway ilefay-"
+"escriptorday FD otay PGRP."
+
+#: target:code/unix-glibc2.lisp
+msgid "Set user ID on execution"
+msgstr "Etsay userway ID onway executionway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Set group ID on execution"
+msgstr "Etsay oupgray ID onway executionway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Save text image after execution"
+msgstr "Avesay exttay imageway afterway executionway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Write by owner"
+msgstr "Itewray ybay ownerway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Execute (search directory) by owner"
+msgstr "Executeway (earchsay irectoryday) ybay ownerway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Read by group"
+msgstr "Eadray ybay oupgray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Write by group"
+msgstr "Itewray ybay oupgray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Execute (search directory) by group"
+msgstr "Executeway (earchsay irectoryday) ybay oupgray"
+
+#: target:code/unix-glibc2.lisp
+msgid "Read by others"
+msgstr "Eadray ybay othersway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Write by others"
+msgstr "Itewray ybay othersway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Execute (search directory) by others"
+msgstr "Executeway (earchsay irectoryday) ybay othersway"
+
+#: target:code/unix-glibc2.lisp
+msgid "Returns either :file, :directory, :link, :special, or NIL."
+msgstr ""
+"Eturnsray eitherway :ilefay, :irectoryday, :inklay, :ecialspay, orway NIL."
+
+#: target:code/unix-glibc2.lisp
+msgid "Returns the pathname with all symbolic links resolved."
+msgstr ""
+"Eturnsray ethay athnamepay ithway allway ymbolicsay inkslay esolvedray."
+
+#: target:code/unix-glibc2.lisp
+msgid "Error reading link ~S: ~S"
+msgstr "Errorway eadingray inklay ~S: ~S"
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return a USER-INFO structure for the user identified by LOGIN, or NIL if not "
+"found."
+msgstr ""
+"Eturnray away USER-INFO ucturestray orfay ethay userway identifiedway ybay "
+"LOGIN, orway NIL ifway otnay oundfay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return a USER-INFO structure for the user identified by UID, or NIL if not "
+"found."
+msgstr ""
+"Eturnray away USER-INFO ucturestray orfay ethay userway identifiedway ybay "
+"UID, orway NIL ifway otnay oundfay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return a GROUP-INFO structure for the group identified by NAME, or NIL if "
+"not found."
+msgstr ""
+"Eturnray away GROUP-INFO ucturestray orfay ethay oupgray identifiedway ybay "
+"NAME, orway NIL ifway otnay oundfay."
+
+#: target:code/unix-glibc2.lisp
+msgid ""
+"Return a GROUP-INFO structure for the group identified by GID, or NIL if not "
+"found."
+msgstr ""
+"Eturnray away GROUP-INFO ucturestray orfay ethay oupgray identifiedway ybay "
+"GID, orway NIL ifway otnay oundfay."

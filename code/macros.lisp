@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.114 2010/03/18 16:43:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.115 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 ;;; Modified by Bill Chiles to adhere to the wall.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export '(defvar defparameter defconstant when unless setf
 	  defsetf psetf shiftf rotatef push pushnew pop
 	  incf decf remf case typecase with-open-file
@@ -39,7 +41,7 @@
 ;;; into declarations anymore.
 ;;;
 (defun parse-body (body environment &optional (doc-string-allowed t))
-  "This function is to parse the declarations and doc-string out of the body of
+  _N"This function is to parse the declarations and doc-string out of the body of
   a defun-like form.  Body is the list of stuff which is to be parsed.
   Environment is ignored.  If Doc-String-Allowed is true, then a doc string
   will be parsed out of the body and returned.  If it is false then a string
@@ -85,15 +87,18 @@
             (restart-case
                 (error 'lisp::package-locked-error
                        :package package
-                       :format-control "defining macro ~A"
+                       :format-control _"defining macro ~A"
                        :format-arguments (list name))
               (continue ()
-                :report "Ignore the lock and continue")
+                :report (lambda (stream)
+			  (write-string _"Ignore the lock and continue" stream)))
               (unlock-package ()
-                :report "Disable the package's definition-lock then continue"
+                :report (lambda (stream)
+			  (write-string _"Disable the package's definition-lock then continue" stream))
                 (setf (ext:package-definition-lock package) nil))
               (unlock-all ()
-                :report "Unlock all packages, then continue"
+                :report (lambda (stream)
+			  (write-string _"Unlock all packages, then continue" stream))
                 (lisp::unlock-all-packages))))))))
   (let ((whole (gensym "WHOLE-"))
 	(environment (gensym "ENV-")))
@@ -140,7 +145,7 @@
 ;;;; DEFINE-COMPILER-MACRO
 
 (defmacro define-compiler-macro (name lambda-list &body body)
-  "Define a compiler-macro for NAME."
+  _N"Define a compiler-macro for NAME."
   (let ((whole (gensym "WHOLE-"))
 	(environment (gensym "ENV-")))
     (multiple-value-bind
@@ -184,7 +189,7 @@
 (defun %define-symbol-macro (name expansion)
   (unless (symbolp name)
     (error 'simple-type-error :datum name :expected-type 'symbol
-	   :format-control "Symbol macro name is not a symbol: ~S."
+	   :format-control _"Symbol macro name is not a symbol: ~S."
 	   :format-arguments (list name)))
   (ecase (info variable kind name)
     ((:macro :global nil)
@@ -192,11 +197,11 @@
      (setf (info variable macro-expansion name) expansion))
     (:special
      (error 'simple-program-error
-	    :format-control "Symbol macro name already declared special: ~S."
+	    :format-control _"Symbol macro name already declared special: ~S."
 	    :format-arguments (list name)))
     (:constant
      (error 'simple-program-error
-	    :format-control "Symbol macro name already declared constant: ~S."
+	    :format-control _"Symbol macro name already declared constant: ~S."
 	    :format-arguments (list name))))
   name)
     
@@ -204,24 +209,27 @@
 ;;; DEFTYPE is a lot like DEFMACRO.
 
 (defmacro deftype (name arglist &body body)
-  "Syntax like DEFMACRO, but defines a new type."
+  _N"Syntax like DEFMACRO, but defines a new type."
   (unless (symbolp name)
-    (simple-program-error "~S -- Type name not a symbol." name))
+    (simple-program-error _"~S -- Type name not a symbol." name))
   (and lisp::*enable-package-locked-errors*
        (symbol-package name)
        (ext:package-definition-lock (symbol-package name))
        (restart-case
            (error 'lisp::package-locked-error
                   :package (symbol-package name)
-                  :format-control "defining type ~A"
+                  :format-control _"defining type ~A"
                   :format-arguments (list name))
          (continue ()
-           :report "Ignore the lock and continue")
+           :report (lambda (stream)
+		     (write-string _"Ignore the lock and continue" stream)))
          (unlock-package ()
-           :report "Disable package's definition-lock then continue"
+           :report (lambda (stream)
+		     (write-string _"Disable package's definition-lock then continue" stream))
            (setf (ext:package-definition-lock (symbol-package name)) nil))
          (unlock-all ()
-           :report "Unlock all packages, then continue"
+           :report (lambda (stream)
+		     (write-string _"Unlock all packages, then continue" stream))
            (lisp::unlock-all-packages))))
   (let ((whole (gensym "WHOLE-")))
     (multiple-value-bind (body local-decs doc)
@@ -236,13 +244,13 @@
 ;;;
 (defun %deftype (name expander &optional doc)
   (when (info declaration recognized name)
-    (error "Deftype already names a declaration: ~S." name))
+    (error _"Deftype already names a declaration: ~S." name))
   (ecase (info type kind name)
     (:primitive
      (when *type-system-initialized*
-       (error "Illegal to redefine standard type: ~S." name)))
+       (error _"Illegal to redefine standard type: ~S." name)))
     (:instance
-     (warn "Redefining class ~S to be a DEFTYPE." name)
+     (warn _"Redefining class ~S to be a DEFTYPE." name)
      (undefine-structure (layout-info (%class-layout (kernel::find-class name))))
      (setf (class-cell-class (find-class-cell name)) nil)
      (setf (info type compiler-layout name) nil)
@@ -263,13 +271,13 @@
 
 ;;; And so is DEFINE-SETF-EXPANDER.
 
-(defparameter defsetf-error-string "Setf expander for ~S cannot be called with ~S args.")
+(defparameter defsetf-error-string _N"Setf expander for ~S cannot be called with ~S args.")
 
 (defmacro define-setf-expander (access-fn lambda-list &body body)
-  "Syntax like DEFMACRO, but creates a Setf-Expansion generator.  The body
+  _N"Syntax like DEFMACRO, but creates a Setf-Expansion generator.  The body
   must be a form that returns the five magical values."
   (unless (symbolp access-fn)
-    (simple-program-error "~S -- Access-function name not a symbol in DEFINE-SETF-EXPANDER."
+    (simple-program-error _"~S -- Access-function name not a symbol in DEFINE-SETF-EXPANDER."
 	   access-fn))
 
   (let ((whole (gensym "WHOLE-"))
@@ -288,7 +296,7 @@
 	  ',doc)))))
 
 (defmacro define-setf-method (&rest stuff)
-  "Obsolete, use define-setf-expander."
+  _N"Obsolete, use define-setf-expander."
   `(define-setf-expander ,@stuff))
 
 
@@ -299,12 +307,12 @@
 (defun %define-setf-macro (name expander inverse doc)
   (cond ((not (fboundp `(setf ,name))))
 	((info function accessor-for name)
-	 (warn "Defining setf macro for destruct slot accessor; redefining as ~
+	 (warn _"Defining setf macro for destruct slot accessor; redefining as ~
 	        a normal function:~%  ~S"
 	       name)
 	 (c::define-function-name name))
 	((not (eq (symbol-package name) (symbol-package 'aref)))
-	 (warn "Defining setf macro for ~S, but ~S is fbound."
+	 (warn _"Defining setf macro for ~S, but ~S is fbound."
 	       name `(setf ,name))))
   (when (or inverse (info setf inverse name))
     (setf (info setf inverse name) inverse))
@@ -318,7 +326,7 @@
 ;;;; Destructuring-bind
 
 (defmacro destructuring-bind (lambda-list arg-list &rest body)
-  "Bind the variables in LAMBDA-LIST to the contents of ARG-LIST."
+  _N"Bind the variables in LAMBDA-LIST to the contents of ARG-LIST."
   (let* ((arg-list-name (gensym "ARG-LIST-")))
     (multiple-value-bind
 	(body local-decls)
@@ -381,7 +389,7 @@
 ;;; DEFCONSTANT  --  Public
 ;;;
 (defmacro defconstant (var val &optional doc)
-  "For defining global constants at top level.  The DEFCONSTANT says that the
+  _N"For defining global constants at top level.  The DEFCONSTANT says that the
   value is constant and may be compiled into code.  If the variable already has
   a value, and this is not equal to the init, an error is signalled.  The third
   argument is an optional documentation string for the variable."
@@ -408,8 +416,8 @@
     (setf (documentation name 'variable) doc))
   (when (boundp name)
     (unless (equalp (symbol-value name) value)
-      (cerror "Go ahead and change the value."
-	      "Constant ~S being redefined." name)))
+      (cerror _"Go ahead and change the value."
+	      _"Constant ~S being redefined." name)))
   (setf (symbol-value name) value)
   (setf (info variable kind name) :constant)
   (clear-info variable constant-value name)
@@ -418,7 +426,7 @@
 
 
 (defmacro defvar (var &optional (val nil valp) (doc nil docp))
-  "For defining global variables at top level.  Declares the variable
+  _N"For defining global variables at top level.  Declares the variable
   SPECIAL and, optionally, initializes it.  If the variable already has a
   value, the old value is not clobbered.  The third argument is an optional
   documentation string for the variable."
@@ -428,12 +436,14 @@
 	 `((unless (boundp ',var)
 	     (setq ,var ,val))))
     ,@(when docp
-	`((setf (documentation ',var 'variable) ',doc)))
+	`((setf (documentation ',var 'variable) ',doc)
+	  (eval-when (:load-toplevel :execute)
+	   (setf (c::info variable textdomain ',var) ,intl::*default-domain*))))
     (set-defvar-source-location ',var (c::source-location))
     ',var))
 
 (defmacro defparameter (var val &optional (doc nil docp))
-  "Defines a parameter that is not normally changed by the program,
+  _N"Defines a parameter that is not normally changed by the program,
   but that may be changed without causing an error.  Declares the
   variable special and sets its value to VAL.  The third argument is
   an optional documentation string for the parameter."
@@ -441,7 +451,9 @@
     (declaim (special ,var))
     (setq ,var ,val)
     ,@(when docp
-	`((setf (documentation ',var 'variable) ',doc)))
+	`((setf (documentation ',var 'variable) ',doc)
+	  (eval-when (:load-toplevel :execute)
+	   (setf (c::info variable textdomain ',var) ,intl::*default-domain*))))
     (set-defvar-source-location ',var (c::source-location))
     ',var))
 
@@ -450,12 +462,12 @@
 
 
 (defmacro when (test &body forms)
-  "First arg is a predicate.  If it is non-null, the rest of the forms are
+  _N"First arg is a predicate.  If it is non-null, the rest of the forms are
   evaluated as a PROGN."
   `(cond (,test nil ,@forms)))
 
 (defmacro unless (test &rest forms)
-  "First arg is a predicate.  If it is null, the rest of the forms are
+  _N"First arg is a predicate.  If it is null, the rest of the forms are
   evaluated as a PROGN."
   `(cond ((not ,test) nil ,@forms)))
 
@@ -522,7 +534,7 @@
       nil
       (let ((clause (first clauses)))
 	(when (atom clause)
-	  (error "Cond clause is not a list: ~S." clause))
+	  (error _"Cond clause is not a list: ~S." clause))
 	(let ((test (first clause))
 	      (forms (rest clause)))
 	  (if (endp forms)
@@ -545,7 +557,7 @@
 ;;;
 (defmacro multiple-value-setq (varlist value-form)
   (unless (and (listp varlist) (every #'symbolp varlist))
-    (simple-program-error "Varlist is not a list of symbols: ~S." varlist))
+    (simple-program-error _"Varlist is not a list of symbols: ~S." varlist))
   (if varlist
       `(values (setf (values ,@varlist) ,value-form))
       `(values ,value-form)))
@@ -553,7 +565,7 @@
 ;;;
 (defmacro multiple-value-bind (varlist value-form &body body)
   (unless (and (listp varlist) (every #'symbolp varlist))
-    (simple-program-error  "Varlist is not a list of symbols: ~S." varlist))
+    (simple-program-error  _"Varlist is not a list of symbols: ~S." varlist))
   (if (= (length varlist) 1)
       `(let ((,(car varlist) ,value-form))
 	 ,@body)
@@ -568,7 +580,7 @@
 
 
 (defmacro nth-value (n form)
-  "Evaluates FORM and returns the Nth value (zero based).  This involves no
+  _N"Evaluates FORM and returns the Nth value (zero based).  This involves no
   consing when N is a trivial constant integer."
   (if (integerp n)
       (let ((dummy-list nil)
@@ -612,7 +624,7 @@
 ;;; and an accessing function.
 
 (defun get-setf-expansion (form &optional environment)
-  "Returns five values needed by the SETF machinery: a list of temporary
+  _N"Returns five values needed by the SETF machinery: a list of temporary
    variables, a list of values with which to fill them, a list of temporaries
    for the new values, the setting function, and the accessing function."
   (let (temp)
@@ -642,7 +654,7 @@
 	   (expand-or-get-setf-inverse form environment)))))
 
 (defun get-setf-method-multiple-value (form &optional env)
-  "Obsolete: use GET-SETF-EXPANSION."
+  _N"Obsolete: use GET-SETF-EXPANSION."
   (get-setf-expansion form env))
 
 ;;;
@@ -674,12 +686,12 @@
 
 
 (defun get-setf-method (form &optional environment)
-  "Obsolete: use GET-SETF-EXPANSION and handle multiple store values."
+  _N"Obsolete: use GET-SETF-EXPANSION and handle multiple store values."
   (multiple-value-bind
       (temps value-forms store-vars store-form access-form)
       (get-setf-expansion form environment)
     (when (cdr store-vars)
-      (error "GET-SETF-METHOD used for a form with multiple store ~
+      (error _"GET-SETF-METHOD used for a form with multiple store ~
 	      variables:~%  ~S" form))
     (values temps value-forms store-vars store-form access-form)))
 
@@ -699,7 +711,7 @@
 
 
 (defmacro defsetf (access-fn &rest rest)
-  "Associates a SETF update function or macro with the specified access
+  _N"Associates a SETF update function or macro with the specified access
   function or macro.  The format is complex.  See the manual for
   details."
   (cond ((not (listp (car rest)))
@@ -732,7 +744,7 @@
 		   nil
 		   ',doc))))))
 	(t
-	 (error "Ill-formed DEFSETF for ~S." access-fn))))
+	 (error _"Ill-formed DEFSETF for ~S." access-fn))))
 
 (defun %defsetf (orig-access-form num-store-vars expander)
   (collect ((subforms) (subform-vars) (subform-exprs) (store-vars))
@@ -761,7 +773,7 @@
 ;;; use of setf inverses without the full interpreter.
 ;;;
 (defmacro setf (&rest args &environment env)
-  "Takes pairs of arguments like SETQ.  The first is a place and the second
+  _N"Takes pairs of arguments like SETQ.  The first is a place and the second
   is the value that is supposed to go into that place.  Returns the last
   value.  The place argument may be any of the access forms for which SETF
   knows a corresponding setting form."
@@ -782,14 +794,14 @@
 		       (multiple-value-bind ,newval ,value-form
 			 ,setter))))))))
      ((oddp nargs) 
-      (error "Odd number of args to SETF."))
+      (error _"Odd number of args to SETF."))
      (t
       (do ((a args (cddr a)) (l nil))
 	  ((null a) `(progn ,@(nreverse l)))
 	(setq l (cons (list 'setf (car a) (cadr a)) l)))))))
 
 (defmacro psetf (&rest args &environment env)
-  "This is to SETF as PSETQ is to SETQ.  Args are alternating place
+  _N"This is to SETF as PSETQ is to SETQ.  Args are alternating place
   expressions and values to go into those places.  All of the subforms and
   values are determined, left to right, and only then are the locations
   updated.  Returns NIL."
@@ -797,7 +809,7 @@
     (do ((a args (cddr a)))
 	((endp a))
       (if (endp (cdr a))
-	  (simple-program-error "Odd number of args to PSETF."))
+	  (simple-program-error _"Odd number of args to PSETF."))
       (multiple-value-bind
 	  (dummies vals newval setter getter)
 	  (get-setf-expansion (car a) env)
@@ -814,7 +826,7 @@
       (thunk (let*-bindings) (mv-bindings)))))
 
 (defmacro shiftf (&rest args &environment env)
-  "One or more SETF-style place expressions, followed by a single
+  _N"One or more SETF-style place expressions, followed by a single
    value expression.  Evaluates all of the expressions in turn, then
    assigns the value of each expression to the place on its left,
    returning the value of the leftmost."
@@ -853,7 +865,7 @@
 	    (values ,@(car (mv-bindings)))))))))
 
 (defmacro rotatef (&rest args &environment env)
-  "Takes any number of SETF-style place expressions.  Evaluates all of the
+  _N"Takes any number of SETF-style place expressions.  Evaluates all of the
    expressions in turn, then assigns to each place the value of the form to
    its right.  The rightmost form gets the value of the leftmost.
    Returns NIL."
@@ -884,7 +896,7 @@
 
 
 (defmacro define-modify-macro (name lambda-list function &optional doc-string)
-  "Creates a new read-modify-write macro like PUSH or INCF."
+  _N"Creates a new read-modify-write macro like PUSH or INCF."
   (let ((other-args nil)
 	(rest-arg nil)
 	(env (gensym "ENV-"))
@@ -899,17 +911,17 @@
 	    ((eq arg '&rest)
 	     (if (symbolp (cadr ll))
 		 (setq rest-arg (cadr ll))
-		 (error "Non-symbol &rest arg in definition of ~S." name))
+		 (error _"Non-symbol &rest arg in definition of ~S." name))
 	     (if (null (cddr ll))
 		 (return nil)
-		 (error "Illegal stuff after &rest arg in Define-Modify-Macro.")))
+		 (error _"Illegal stuff after &rest arg in Define-Modify-Macro.")))
 	    ((memq arg '(&key &allow-other-keys &aux))
-	     (error "~S not allowed in Define-Modify-Macro lambda list." arg))
+	     (error _"~S not allowed in Define-Modify-Macro lambda list." arg))
 	    ((symbolp arg)
 	     (push arg other-args))
 	    ((and (listp arg) (symbolp (car arg)))
 	     (push (car arg) other-args))
-	    (t (error "Illegal stuff in lambda list of Define-Modify-Macro."))))
+	    (t (error _"Illegal stuff in lambda list of Define-Modify-Macro."))))
     (setq other-args (nreverse other-args))
     `(defmacro ,name (,reference ,@lambda-list &environment ,env)
        ,doc-string
@@ -929,7 +941,7 @@
 		 ,setter)))))))
 
 (defmacro push (obj place &environment env)
-  "Takes an object and a location holding a list.  Conses the object onto
+  _N"Takes an object and a location holding a list.  Conses the object onto
   the list, returning the modified list.  OBJ is evaluated before PLACE."
 
   ;; This special case for place being a symbol isn't strictly needed.
@@ -963,7 +975,7 @@
 	       ,setter)))))))
 
 (defmacro pushnew (obj place &rest keys &environment env)
-  "Takes an object and a location holding a list.  If the object is already
+  _N"Takes an object and a location holding a list.  If the object is already
   in the list, does nothing.  Else, conses the object onto the list.  Returns
   NIL.  If there is a :TEST keyword, this is used for the comparison."
   (if (and (symbolp place)
@@ -995,7 +1007,7 @@
 		,setter)))))))
 
 (defmacro pop (place &environment env)
-  "The argument is a location holding a list.  Pops one item off the front
+  _N"The argument is a location holding a list.  Pops one item off the front
   of the list and returns it."
   (if (and (symbolp place)
 	   (eq place (macroexpand place env)))
@@ -1017,7 +1029,7 @@
 
 ;;; we can't use DEFINE-MODIFY-MACRO because of ANSI 5.1.3
 (defmacro incf (place &optional (delta 1) &environment env)
-  "The first argument is some location holding a number. This number is
+  _N"The first argument is some location holding a number. This number is
   incremented by the second argument, DELTA, which defaults to 1."
   (multiple-value-bind (dummies vals newval setter getter)
       (get-setf-method place env)
@@ -1028,7 +1040,7 @@
          ,setter))))
 
 (defmacro decf (place &optional (delta 1) &environment env)
-  "The first argument is some location holding a number. This number is
+  _N"The first argument is some location holding a number. This number is
   decremented by the second argument, DELTA, which defaults to 1."
   (multiple-value-bind (dummies vals newval setter getter)
       (get-setf-method place env)
@@ -1039,7 +1051,7 @@
          ,setter))))
 
 (defmacro remf (place indicator &environment env)
-  "Place may be any place expression acceptable to SETF, and is expected
+  _N"Place may be any place expression acceptable to SETF, and is expected
   to hold a property list or ().  This list is destructively altered to
   remove the property specified by the indicator.  Returns T if such a
   property was present, NIL if not."
@@ -1060,7 +1072,7 @@
 		  (,local2 nil ,local1))
 		 ((atom ,local1) nil)
 	       (cond ((atom (cdr ,local1))
-		      (error "Odd-length property list in REMF."))
+		      (error _"Odd-length property list in REMF."))
 		     ((eq (car ,local1) ,ind-temp)
 		      (cond (,local2
 			     (rplacd (cdr ,local2) (cddr ,local1))
@@ -1198,7 +1210,7 @@
 	       (= (list-length function) 2)
 	       (eq (first function) 'function)
 	       (symbolp (second function)))
-    (error "Setf of Apply is only defined for function args like #'symbol."))
+    (error _"Setf of Apply is only defined for function args like #'symbol."))
   (let ((function (second function))
 	(new-var (gensym))
 	(vars nil))
@@ -1213,7 +1225,7 @@
 ;;; Special-case a BYTE bytespec so that the compiler can recognize it.
 ;;;
 (define-setf-expander ldb (bytespec place &environment env)
-  "The first argument is a byte specifier.  The second is any place form
+  _N"The first argument is a byte specifier.  The second is any place form
   acceptable to SETF.  Replaces the specified byte of the number in this
   place with bits from the low-order end of the new value."
   (multiple-value-bind (dummies vals newval setter getter)
@@ -1242,7 +1254,7 @@
 
 
 (define-setf-expander mask-field (bytespec place &environment env)
-  "The first argument is a byte specifier.  The second is any place form
+  _N"The first argument is a byte specifier.  The second is any place form
   acceptable to SETF.  Replaces the specified byte of the number in this place
   with bits from the corresponding position in the new value."
   (multiple-value-bind (dummies vals newval setter getter)
@@ -1314,7 +1326,7 @@
 	  (case (first case-list) (first case-list)))
 	 ((null case-list))
       (cond ((atom case)
-	     (error "~S -- Bad clause in ~S." case name))
+	     (error _"~S -- Bad clause in ~S." case name))
 	    ((and (not allow-otherwise)
 		  (memq (car case) '(t otherwise)))
 	     (cond ((null (cdr case-list))
@@ -1322,10 +1334,10 @@
 		    ;; only if it's the last case.  Otherwise, it's just a
 		    ;; normal clause.
 		    (if errorp
-			(error "No default clause allowed in ~S: ~S" name case)
+			(error _"No default clause allowed in ~S: ~S" name case)
 			(push `(t nil ,@(rest case)) clauses)))
 		   ((and (eq name 'case))
-		    (error "T and OTHERWISE may not be used as key designators for ~A" name))
+		    (error _"T and OTHERWISE may not be used as key designators for ~A" name))
 		   ((eq (first case) t)
 		    ;; The key T is normal clause, because it's not
 		    ;; the last clause.
@@ -1342,7 +1354,7 @@
 	    (t
 	     (when (and allow-otherwise
 			(memq (car case) '(t otherwise)))
-	       (warn "Bad style to use T or OTHERWISE in ECASE or CCASE"))
+	       (warn _"Bad style to use T or OTHERWISE in ECASE or CCASE"))
 	     (push (first case) keys)
 	     (push `((,test ,keyform-value
 			    ',(first case)) nil ,@(rest case)) clauses))))
@@ -1398,46 +1410,46 @@
 	     :possibilities keys)
     (store-value (value)
       :report (lambda (stream)
-		(format stream "Supply a new value for ~S." keyform))
+		(format stream _"Supply a new value for ~S." keyform))
       :interactive read-evaluated-form
       value)))
 
 
 (defmacro case (keyform &body cases)
-  "CASE Keyform {({(Key*) | Key} Form*)}*
+  _N"CASE Keyform {({(Key*) | Key} Form*)}*
   Evaluates the Forms in the first clause with a Key EQL to the value
   of Keyform.  If a singleton key is T or Otherwise then the clause is
   a default clause."
   (case-body 'case keyform cases t 'eql nil nil))
 
 (defmacro ccase (keyform &body cases)
-  "CCASE Keyform {({(Key*) | Key} Form*)}*
+  _N"CCASE Keyform {({(Key*) | Key} Form*)}*
   Evaluates the Forms in the first clause with a Key EQL to the value of
   Keyform.  If none of the keys matches then a correctable error is
   signalled."
   (case-body 'ccase keyform cases t 'eql nil t t))
 
 (defmacro ecase (keyform &body cases)
-  "ECASE Keyform {({(Key*) | Key} Form*)}*
+  _N"ECASE Keyform {({(Key*) | Key} Form*)}*
   Evaluates the Forms in the first clause with a Key EQL to the value of
   Keyform.  If none of the keys matches then an error is signalled."
   (case-body 'ecase keyform cases t 'eql nil nil t))
 
 (defmacro typecase (keyform &body cases)
-  "TYPECASE Keyform {(Type Form*)}*
+  _N"TYPECASE Keyform {(Type Form*)}*
   Evaluates the Forms in the first clause for which TYPEP of Keyform
   and Type is true.  If a singleton key is T or Otherwise then the
   clause is a default clause."
   (case-body 'typecase keyform cases nil 'typep nil nil))
 
 (defmacro ctypecase (keyform &body cases)
-  "CTYPECASE Keyform {(Type Form*)}*
+  _N"CTYPECASE Keyform {(Type Form*)}*
   Evaluates the Forms in the first clause for which TYPEP of Keyform and Type
   is true.  If no form is satisfied then a correctable error is signalled."
   (case-body 'ctypecase keyform cases nil 'typep nil t t))
 
 (defmacro etypecase (keyform &body cases)
-  "ETYPECASE Keyform {(Type Form*)}*
+  _N"ETYPECASE Keyform {(Type Form*)}*
   Evaluates the Forms in the first clause for which TYPEP of Keyform and Type
   is true.  If no form is satisfied then an error is signalled."
   (case-body 'etypecase keyform cases nil 'typep nil nil t))
@@ -1451,7 +1463,7 @@
 ;;; of whether they are needed.
 ;;;
 (defmacro assert (test-form &optional places datum &rest arguments)
-  "Signals an error if the value of test-form is nil.  Continuing from this
+  _N"Signals an error if the value of test-form is nil.  Continuing from this
    error using the CONTINUE restart will allow the user to alter the value of
    some locations known to SETF, starting over with test-form.  Returns nil."
   `(loop
@@ -1467,7 +1479,7 @@
 		   datum arguments
 		   'simple-error 'error)
 		  (make-condition 'simple-error
-				  :format-control "The assertion ~S failed."
+				  :format-control _"The assertion ~S failed."
 				  :format-arguments (list assertion)))))
   (restart-case (error cond)
     (continue ()
@@ -1476,17 +1488,19 @@
 
 
 (defun assert-report (names stream)
-  (format stream "Retry assertion")
+  (format stream _"Retry assertion")
   (if names
-      (format stream " with new value~P for ~{~S~^, ~}."
-	      (length names) names)
+      (format stream (intl:ngettext " with new value for ~{~S~^, ~}."
+				    " with new values for ~{~S~^, ~}."
+				    (length names))
+	      names)
       (format stream ".")))
 
 (defun assert-prompt (name value)
-  (cond ((y-or-n-p "The old value of ~S is ~S.~
+  (cond ((y-or-n-p _"The old value of ~S is ~S.~
 		  ~%Do you want to supply a new value? "
 		   name value)
-	 (format *query-io* "~&Type a form to be evaluated:~%")
+	 (format *query-io* _"~&Type a form to be evaluated:~%")
 	 (flet ((read-it () (eval (read *query-io*))))
 	   (if (symbolp name) ;help user debug lexical variables
 	       (progv (list name) (list value) (read-it))
@@ -1503,7 +1517,7 @@
 ;;;
 
 (defmacro check-type (place type &optional type-string)
-  "Signals an error of type type-error if the contents of place are not of the
+  _N"Signals an error of type type-error if the contents of place are not of the
    specified type.  If an error is signaled, this can only return if
    STORE-VALUE is invoked.  It will store into place and start over."
   (let ((place-value (gensym)))
@@ -1518,19 +1532,19 @@
 		  (make-condition 'simple-type-error
 				  :datum place-value :expected-type type
 				  :format-control
-				  "The value of ~S is ~S, which is not ~A."
+				  _"The value of ~S is ~S, which is not ~A."
 				  :format-arguments
 				  (list place place-value type-string))
 		  (make-condition 'simple-type-error
 				  :datum place-value :expected-type type
 				  :format-control
-				  "The value of ~S is ~S, which is not of type ~S."
+				  _"The value of ~S is ~S, which is not of type ~S."
 				  :format-arguments
 				  (list place place-value type)))))
     (restart-case (error cond)
       (store-value (value)
 	:report (lambda (stream)
-		  (format stream "Supply a new value of ~S."
+		  (format stream _"Supply a new value of ~S."
 			  place))
 	:interactive read-evaluated-form
 	value))))
@@ -1540,13 +1554,13 @@
 ;;; and by CHECK-TYPE.
 ;;;
 (defun read-evaluated-form ()
-  (format *query-io* "~&Type a form to be evaluated:~%")
+  (format *query-io* _"~&Type a form to be evaluated:~%")
   (list (eval (read *query-io*))))
 
 
 ;;;; With-XXX
 (defmacro with-open-file ((var filespec &rest open-args) &parse-body (forms decls))
-  "The file whose name is Filespec is opened using the Open-args and
+  _N"The file whose name is Filespec is opened using the Open-args and
   bound to the variable Var. If the call to open is unsuccessful, the
   forms are not evaluated.  The Forms are executed, and when they
   terminate, normally or otherwise, the file is closed."
@@ -1563,7 +1577,7 @@
 
 
 (defmacro with-open-stream ((var stream) &parse-body (forms decls))
-  "The form stream should evaluate to a stream.  VAR is bound
+  _N"The form stream should evaluate to a stream.  VAR is bound
    to the stream and the forms are evaluated as an implicit
    progn.  The stream is closed upon exit."
   (let ((abortp (gensym)))
@@ -1580,7 +1594,7 @@
 
 (defmacro with-input-from-string ((var string &key index start end)
 				  &parse-body (forms decls))
-  "Binds the Var to an input stream that returns characters from String and
+  _N"Binds the Var to an input stream that returns characters from String and
   executes the body.  See manual for details."
   ;; The once-only inhibits compiler note for unreachable code when 'end' is true.
   (once-only ((string string))
@@ -1604,7 +1618,7 @@
 
 (defmacro with-output-to-string ((var &optional string &key element-type)
 				 &parse-body (forms decls))
-  "If STRING is specified, it must be a string with a fill pointer;
+  _N"If STRING is specified, it must be a string with a fill pointer;
    the output is incrementally appended to the string (as if by use of
    VECTOR-PUSH-EXTEND)."
   (declare (ignore element-type))
@@ -1724,7 +1738,7 @@
 
 
 (defmacro do (varlist endlist &parse-body (body decls))
-  "DO ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*
+  _N"DO ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*
   Iteration construct.  Each Var is initialized in parallel to the value of the
   specified Init form.  On subsequent iterations, the Vars are assigned the
   value of the Step form (if any) in paralell.  The Test is evaluated before
@@ -1737,7 +1751,7 @@
 
 
 (defmacro do* (varlist endlist &parse-body (body decls))
-  "DO* ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*
+  _N"DO* ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*
   Iteration construct.  Each Var is initialized sequentially (like LET*) to the
   value of the specified Init form.  On subsequent iterations, the Vars are
   sequentially assigned the value of the Step form (if any).  The Test is
@@ -1751,7 +1765,7 @@
 ;;;; Miscellaneous macros:
 
 (defmacro psetq (&rest pairs)
-  "PSETQ {var value}*
+  _N"PSETQ {var value}*
    Set the variables to the values, like SETQ, except that assignments
    happen in parallel, i.e. no assignments take place until all the
    forms have been evaluated."
@@ -1762,7 +1776,7 @@
       ((endp pair) `(psetf ,@pairs))
     (unless (symbolp (car pair))
       (error 'simple-program-error
-             :format-control "variable ~S in PSETQ is not a SYMBOL"
+             :format-control _"variable ~S in PSETQ is not a SYMBOL"
              :format-arguments (list (car pair))))))
 
 
@@ -1814,7 +1828,7 @@
 	      (:global (member parent '(defun defmacro function)))
 	      (:local (member parent '(labels flet)))
 	      (t
-	       (error "Unknown declaration context: ~S." context))))
+	       (error _"Unknown declaration context: ~S." context))))
 	  (case (first context)
 	    (:or
 	     (loop for x in (rest context)
@@ -1835,7 +1849,7 @@
 		  (loop for x in (rest context)
 			thereis (eq (find-package (string x)) package))))
 	    (t
-	     (error "Unknown declaration context: ~S." context)))))))
+	     (error _"Unknown declaration context: ~S." context)))))))
 
   
 ;;; PROCESS-CONTEXT-DECLARATIONS  --  Internal
@@ -1848,7 +1862,7 @@
    (mapcar
     #'(lambda (decl)
 	(unless (>= (length decl) 2)
-	  (error "Context declaration spec should have context and at ~
+	  (error _"Context declaration spec should have context and at ~
 	  least one DECLARE form:~%  ~S" decl))
 	#'(lambda (name parent)
 	    (when (evaluate-declaration-context (first decl) name parent)
@@ -1860,7 +1874,7 @@
 ;;; With-Compilation-Unit  --  Public
 ;;;
 (defmacro with-compilation-unit (options &body body)
-  "WITH-COMPILATION-UNIT ({Key Value}*) Form*
+  _N"WITH-COMPILATION-UNIT ({Key Value}*) Form*
   This form affects compilations that take place within its dynamic extent.  It
   is intended to be wrapped around the compilation of all files in the same
   system.  These keywords are defined:
@@ -1922,7 +1936,7 @@
 	(n-fun (gensym))
 	(n-abort-p (gensym)))
     (when (oddp (length options))
-      (error "Odd number of key/value pairs: ~S." options))
+      (error _"Odd number of key/value pairs: ~S." options))
     (do ((opt options (cddr opt)))
 	((null opt))
       (case (first opt)
@@ -1935,7 +1949,7 @@
 	(:context-declarations
 	 (setq context-declarations (second opt)))
 	(t
-	 (warn "Ignoring unknown option: ~S." (first opt)))))
+	 (warn _"Ignoring unknown option: ~S." (first opt)))))
 
     `(flet ((,n-fun ()
 	      (let (,@(when optimize

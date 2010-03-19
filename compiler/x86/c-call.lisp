@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.20 2008/11/12 15:04:23 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.21 2010/03/19 15:19:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,6 +23,7 @@
 (in-package :x86)
 (use-package :alien)
 (use-package :alien-internals)
+(intl:textdomain "cmucl-x86-vm")
 
 ;; The move-argument vop is going to store args on the stack for
 ;; call-out. These tn's will be used for that. move-arg is normally
@@ -121,7 +122,7 @@
 (def-alien-type-method (values :result-tn) (type state)
   (let ((values (alien-values-type-values type)))
     (when (> (length values) 2)
-      (error "Too many result values from c-call."))
+      (error _"Too many result values from c-call."))
     (mapcar #'(lambda (type)
 		(invoke-alien-type-method :result-tn type state))
 	    (alien-values-type-values type))))
@@ -266,7 +267,7 @@
       (eq (machine-rep type1) (machine-rep type2)))))
 
 (defun make-callback-trampoline (index fn-type)
-  "Cons up a piece of code which calls call-callback with INDEX and a
+  _N"Cons up a piece of code which calls call-callback with INDEX and a
 pointer to the arguments."
   (let* ((return-type (alien-function-type-result-type fn-type))
 	 (segment (make-segment))

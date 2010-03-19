@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.107 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.108 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,8 @@
 ;;; **********************************************************************
 
 (in-package "LISP")
+
+(intl:textdomain "cmucl")
 
 (export '(truename probe-file user-homedir-pathname directory
           rename-file delete-file file-write-date file-author))
@@ -70,7 +72,7 @@
 ;;;
 
 (defun remove-backslashes (namestr start end)
-  "Remove any occurrences of \\ from the string because we've already
+  _N"Remove any occurrences of \\ from the string because we've already
    checked for whatever may have been backslashed."
   (declare (type simple-base-string namestr)
 	   (type index start end))
@@ -92,13 +94,13 @@
 		      (incf dst)))))))
     (when quoted
       (error 'namestring-parse-error
-	     :complaint "Backslash in bad place."
+	     :complaint _"Backslash in bad place."
 	     :namestring namestr
 	     :offset (1- end)))
     (shrink-vector result dst)))
 
 (defvar *ignore-wildcards* nil
-  "If non-NIL, Unix shell-style wildcards are ignored when parsing
+  _N"If non-NIL, Unix shell-style wildcards are ignored when parsing
   pathname namestrings.  They are also ignored when computing
   namestrings for pathname objects.  Thus, *, ?, etc. are not
   wildcards when parsing a namestring, and are not escaped when
@@ -150,7 +152,7 @@
 			      (position #\] namestr :start index :end end)))
 			 (unless close-bracket
 			   (error 'namestring-parse-error
-				  :complaint "``['' with no corresponding ``]''"
+				  :complaint _"``['' with no corresponding ``]''"
 				  :namestring namestr
 				  :offset index))
 			 (pattern (list :character-set
@@ -320,7 +322,7 @@
 		     ;; same, we can't allow the creation of one when
 		     ;; the other is defined.
 		     (when (find-logical-host search-list nil)
-		       (error "~A already names a logical host" search-list))
+		       (error _"~A already names a logical host" search-list))
 		     (setf absolute t)
 		     (setf (car first) new-start))
 		   search-list)))))
@@ -457,7 +459,7 @@
 	       (strings (second piece))
 	       (strings "]"))
 	      (t
-	       (error "Invalid pattern piece: ~S" piece))))))
+	       (error _"Invalid pattern piece: ~S" piece))))))
        (apply #'concatenate
 	      'simple-string
 	      (strings))))))
@@ -483,14 +485,14 @@
 	  ((member :up)
 	   (pieces "../"))
 	  ((member :back)
-	   (error ":BACK cannot be represented in namestrings."))
+	   (error _":BACK cannot be represented in namestrings."))
 	  ((member :wild-inferiors)
 	   (pieces "**/"))
 	  ((or simple-string pattern (eql :wild))
 	   (pieces (unparse-unix-piece dir))
 	   (pieces "/"))
 	  (t
-	   (error "Invalid directory component: ~S" dir)))))
+	   (error _"Invalid directory component: ~S" dir)))))
     (apply #'concatenate 'simple-string (pieces))))
 
 (defun unparse-unix-directory (pathname)
@@ -514,33 +516,33 @@
       (when name
 	(when (stringp name)
 	  (when (find #\/ name)
-	    (error "Cannot specify a directory separator in a pathname name: ~S" name))
+	    (error _"Cannot specify a directory separator in a pathname name: ~S" name))
 	  (when (and (not type-supplied)
 		     (find #\. name :start 1))
 	    ;; A single leading dot is ok.
-	    (error "Cannot specify a dot in a pathname name without a pathname type: ~S" name))
+	    (error _"Cannot specify a dot in a pathname name without a pathname type: ~S" name))
 	  (when (or (and (string= ".." name)
 			 (not type-supplied))
 		    (and (string= "." name)
 			 (not type-supplied)))
 	    ;; Can't have a name of ".." or "." without a type.
-	    (error "Invalid value for a pathname name: ~S" name)))
+	    (error _"Invalid value for a pathname name: ~S" name)))
 	(strings (unparse-unix-piece name)))
       (when type-supplied
 	(unless name
-	  (error "Cannot specify the type without a file: ~S" pathname))
+	  (error _"Cannot specify the type without a file: ~S" pathname))
 	(when (stringp type)
 	  (when (find #\/ type)
-	    (error "Cannot specify a directory separator in a pathname type: ~S" type))
+	    (error _"Cannot specify a directory separator in a pathname type: ~S" type))
 	  (when (find #\. type)
-	    (error "Cannot specify a dot in a pathname type: ~S" type)))
+	    (error _"Cannot specify a dot in a pathname type: ~S" type)))
 	(strings ".")
 	(strings (unparse-unix-piece type)))
       (when (and (not (member version '(nil :newest :unspecific)))
 		 (not name))
 	;; We don't want version without a name, because when we try
 	;; to read #p".~*~" back, the name is "", not NIL.
-	(error "Cannot specify a version without a file: ~S" pathname))
+	(error _"Cannot specify a version without a file: ~S" pathname))
       (when version-supplied
 	(strings (if (eq version :wild)
 		     (if logical-p ".*" ".~*~")
@@ -557,7 +559,7 @@
 (defun unparse-unix-enough (pathname defaults)
   (declare (type pathname pathname defaults))
   (flet ((lose ()
-	   (error "~S cannot be represented relative to ~S"
+	   (error _"~S cannot be represented relative to ~S"
 		  pathname defaults)))
     ;; Only the first path in a search-list is considered.
     (enumerate-search-list (pathname pathname)
@@ -672,7 +674,7 @@
 (defun %enumerate-matches (pathname verify-existance follow-links function)
   (when (pathname-type pathname)
     (unless (pathname-name pathname)
-      (error "Cannot supply a type without a name:~%  ~S" pathname)))
+      (error _"Cannot supply a type without a name:~%  ~S" pathname)))
   (let ((directory (pathname-directory pathname)))
     (if directory
 	(ecase (car directory)
@@ -852,7 +854,7 @@
 ;;;; UNIX-NAMESTRING -- public
 ;;; 
 (defun unix-namestring (pathname &optional (for-input t) executable-only)
-  "Convert PATHNAME into a string that can be used with UNIX system calls.
+  _N"Convert PATHNAME into a string that can be used with UNIX system calls.
    Search-lists and wild-cards are expanded. If optional argument
    FOR-INPUT is true and PATHNAME doesn't exist, NIL is returned.
    If optional argument EXECUTABLE-ONLY is true, NIL is returned
@@ -876,7 +878,7 @@
 	(when names
 	  (when (cdr names)
 	    (error 'simple-file-error
-		   :format-control "~S is ambiguous:~{~%  ~A~}"
+		   :format-control _"~S is ambiguous:~{~%  ~A~}"
 		   :format-arguments (list pathname names)))
 	  (return (car names))))))))
 
@@ -888,18 +890,18 @@
 ;;; Another silly file function trivially different from another function.
 ;;;
 (defun truename (pathname)
-  "Return the pathname for the actual file described by the pathname
+  _N"Return the pathname for the actual file described by the pathname
   An error of type file-error is signalled if no such file exists,
   or the pathname is wild."
   (if (wild-pathname-p pathname)
       (error 'simple-file-error
-	     :format-control "Bad place for a wild pathname."
+	     :format-control _"Bad place for a wild pathname."
 	     :pathname pathname)
       (let ((result (probe-file pathname)))
 	(unless result
 	  (error 'simple-file-error
 		 :pathname pathname
-		 :format-control "The file ~S does not exist."
+		 :format-control _"The file ~S does not exist."
 		 :format-arguments (list (namestring pathname))))
 	result)))
 
@@ -908,12 +910,12 @@
 ;;; If PATHNAME exists, return its truename, otherwise NIL.
 ;;;
 (defun probe-file (pathname)
-  "Return a pathname which is the truename of the file if it exists, NIL
+  _N"Return a pathname which is the truename of the file if it exists, NIL
   otherwise. An error of type file-error is signalled if pathname is wild."
   (if (wild-pathname-p pathname)
       (error 'simple-file-error 
 	     :pathname pathname
-	     :format-control "Bad place for a wild pathname.")
+	     :format-control _"Bad place for a wild pathname.")
       (let ((namestring (unix-namestring (merge-pathnames pathname) t)))
 	(when (and namestring (unix:unix-file-kind namestring))
 	  (let ((truename (unix:unix-resolve-links
@@ -929,7 +931,7 @@
 ;;; Rename-File  --  Public
 ;;;
 (defun rename-file (file new-name)
-  "Rename File to have the specified New-Name.  If file is a stream open to a
+  _N"Rename File to have the specified New-Name.  If file is a stream open to a
   file, then the associated file is renamed."
   (let* ((original (truename file))
 	 (original-namestring (unix-namestring original t))
@@ -938,7 +940,7 @@
     (unless new-namestring
       (error 'simple-file-error
 	     :pathname new-name
-	     :format-control "~S can't be created."
+	     :format-control _"~S can't be created."
 	     :format-arguments (list new-name)))
     (multiple-value-bind (res error)
 			 (unix:unix-rename original-namestring
@@ -946,7 +948,7 @@
       (unless res
 	(error 'simple-file-error
 	       :pathname new-name
-	       :format-control "Failed to rename ~A to ~A: ~A"
+	       :format-control _"Failed to rename ~A to ~A: ~A"
 	       :format-arguments (list original new-name
 				       (unix:get-unix-error-msg error))))
       (when (streamp file)
@@ -958,7 +960,7 @@
 ;;;    Delete the file, Man.
 ;;;
 (defun delete-file (file)
-  "Delete the specified file."
+  _N"Delete the specified file."
   (let ((namestring (unix-namestring file t)))
     (when (streamp file)
       ;; Close the file, but don't try to revert or anything.  We want
@@ -967,14 +969,14 @@
     (unless namestring
       (error 'simple-file-error
 	     :pathname file
-	     :format-control "~S doesn't exist."
+	     :format-control _"~S doesn't exist."
 	     :format-arguments (list file)))
 
     (multiple-value-bind (res err) (unix:unix-unlink namestring)
       (unless res
 	(error 'simple-file-error
 	       :pathname namestring
-	       :format-control "Could not delete ~A: ~A."
+	       :format-control _"Could not delete ~A: ~A."
 	       :format-arguments (list namestring
 				       (unix:get-unix-error-msg err))))))
   t)
@@ -984,7 +986,7 @@
 ;;;    Purge old file versions
 ;;;
 (defun purge-backup-files (pathname &optional (keep 0))
-  "Delete old versions of files matching the given Pathname,
+  _N"Delete old versions of files matching the given Pathname,
 optionally keeping some of the most recent old versions."
   (declare (type (or pathname string stream) pathname)
 	   (type (integer 0 *) keep))
@@ -1019,7 +1021,7 @@ optionally keeping some of the most recent old versions."
 ;;;    Return Home:, which is set up for us at initialization time.
 ;;;
 (defun user-homedir-pathname (&optional host)
-  "Returns the home directory of the logged in user as a pathname.
+  _N"Returns the home directory of the logged in user as a pathname.
   This is obtained from the logical name \"home:\"."
   (declare (ignore host))
   #p"home:")
@@ -1027,12 +1029,12 @@ optionally keeping some of the most recent old versions."
 ;;; File-Write-Date  --  Public
 ;;;
 (defun file-write-date (file)
-  "Return file's creation date, or NIL if it doesn't exist.
+  _N"Return file's creation date, or NIL if it doesn't exist.
  An error of type file-error is signalled if file is a wild pathname"
   (if (wild-pathname-p file)
       (error 'simple-file-error 
 	     :pathname file
-	     :format-control "Bad place for a wild pathname.")
+	     :format-control _"Bad place for a wild pathname.")
       (let ((name (unix-namestring file t)))
 	(when name
 	  (multiple-value-bind
@@ -1045,18 +1047,18 @@ optionally keeping some of the most recent old versions."
 ;;; File-Author  --  Public
 ;;;
 (defun file-author (file)
-  "Returns the file author as a string, or nil if the author cannot be
+  _N"Returns the file author as a string, or nil if the author cannot be
  determined.  Signals an error of type file-error if file doesn't exist,
  or file is a wild pathname."
   (if (wild-pathname-p file)
       (error 'simple-file-error
 	     :pathname file
-	     :format-control "Bad place for a wild pathname.")
+	     :format-control _"Bad place for a wild pathname.")
       (let ((name (unix-namestring (pathname file) t)))
 	(unless name
 	  (error 'simple-file-error
 		 :pathname file
-		 :format-control "~S doesn't exist."
+		 :format-control _"~S doesn't exist."
 		 :format-arguments (list file)))
 	(multiple-value-bind (winp dev ino mode nlink uid)
 			     (unix:unix-stat name)
@@ -1073,7 +1075,7 @@ optionally keeping some of the most recent old versions."
 ;;;
 (defun directory (pathname &key (all t) (check-for-subdirs t)
 		  (truenamep t) (follow-links t))
-  "Returns a list of pathnames, one for each file that matches the given
+  _N"Returns a list of pathnames, one for each file that matches the given
    pathname.  Supplying :ALL as nil causes this to ignore Unix dot files.  This
    never includes Unix dot and dot-dot in the result.  If :TRUENAMEP is NIL,
    then symbolic links in the result are not expanded, which is not the
@@ -1122,7 +1124,7 @@ optionally keeping some of the most recent old versions."
 ;;; PRINT-DIRECTORY is exported from the EXTENSIONS package.
 ;;; 
 (defun print-directory (pathname &optional stream &key all verbose return-list)
-  "Like Directory, but prints a terse, multi-column directory listing
+  _N"Like Directory, but prints a terse, multi-column directory listing
    instead of returning a list of pathnames.  When :all is supplied and
    non-nil, then Unix dot files are included too (as ls -a).  When :verbose
    is supplied and non-nil, then a long listing of miscellaneous
@@ -1137,7 +1139,7 @@ optionally keeping some of the most recent old versions."
   (let ((contents (directory pathname :all all :check-for-subdirs nil
 			     :truenamep nil))
 	(result nil))
-    (format t "Directory of ~A:~%" (namestring pathname))
+    (format t _"Directory of ~A:~%" (namestring pathname))
     (dolist (file contents)
       (let* ((namestring (unix-namestring file))
 	     (tail (subseq namestring
@@ -1186,7 +1188,7 @@ optionally keeping some of the most recent old versions."
 			   (decode-universal-time-for-files mtime year)
 			   tail
 			   (= (logand mode unix:s-ifmt) unix:s-ifdir))))
-		(t (format t "Couldn't stat ~A -- ~A.~%"
+		(t (format t _"Couldn't stat ~A -- ~A.~%"
 			   tail
 			   (unix:get-unix-error-msg dev-or-err))))
 	  (when return-list
@@ -1241,7 +1243,7 @@ optionally keeping some of the most recent old versions."
 	   (cols (max (truncate width col-width) 1))
 	   (lines (ceiling cnt cols)))
       (declare (fixnum cols lines))
-      (format t "Directory of ~A:~%" (namestring pathname))
+      (format t _"Directory of ~A:~%" (namestring pathname))
       (dotimes (i lines)
 	(declare (fixnum i))
 	(dotimes (j cols)
@@ -1329,7 +1331,7 @@ optionally keeping some of the most recent old versions."
 ;;;
 (defun ambiguous-files (pathname
 			&optional (defaults *default-pathname-defaults*))
-  "Return a list of all files which are possible completions of Pathname.
+  _N"Return a list of all files which are possible completions of Pathname.
    We look in the directory specified by Defaults as well as looking down
    the search list."
   (directory (complete-file-directory-arg pathname defaults)
@@ -1344,7 +1346,7 @@ optionally keeping some of the most recent old versions."
 ;;;   can be written by the current task.
 ;;;
 (defun file-writable (name)
-  "File-writable accepts a pathname and returns T if the current
+  _N"File-writable accepts a pathname and returns T if the current
   process can write it, and NIL otherwise."
   (let ((name (unix-namestring name nil)))
     (cond ((null name)
@@ -1379,7 +1381,7 @@ optionally keeping some of the most recent old versions."
 ;;; Default-Directory  --  Public
 ;;;
 (defun default-directory ()
-  "Returns the pathname for the default directory.  This is the place where
+  _N"Returns the pathname for the default directory.  This is the place where
   a file will be written if no directory is specified.  This may be changed
   with setf."
   (multiple-value-bind (gr dir-or-error)
@@ -1409,7 +1411,7 @@ optionally keeping some of the most recent old versions."
 ;;; Seems like maybe it's fixed by changes made by Ray Toy to avoid heap corruption.
 #- (and)
 (defun default-directory ()
-  "Returns the pathname for the default directory.  This is the place where
+  _N"Returns the pathname for the default directory.  This is the place where
   a file will be written if no directory is specified.  This may be changed
   with setf."
   (multiple-value-bind (gr dir-or-error)
@@ -1430,7 +1432,7 @@ optionally keeping some of the most recent old versions."
   (let ((namestring (unix-namestring new-val t)))
     (unless namestring
       (error 'simple-file-error
-             :format-control "~S doesn't exist."
+             :format-control _"~S doesn't exist."
              :format-arguments (list new-val)))
     (multiple-value-bind (gr error)
 			 (unix:unix-chdir namestring)
@@ -1453,7 +1455,7 @@ optionally keeping some of the most recent old versions."
 ;;; Ensure-Directories-Exist  --  Public
 ;;;
 (defun ensure-directories-exist (pathspec &key verbose (mode #o777))
-  "Tests whether the directories containing the specified file
+  _N"Tests whether the directories containing the specified file
   actually exist, and attempts to create them if they do not.
   Portable programs should avoid using the :MODE keyword argument."
   (let* ((pathname (pathname pathspec))
@@ -1463,7 +1465,7 @@ optionally keeping some of the most recent old versions."
 	 (created-p nil))
     (when (wild-pathname-p pathname)
       (error 'simple-file-error
-	     :format-control "Bad place for a wild pathname."
+	     :format-control _"Bad place for a wild pathname."
 	     :pathname pathspec))
     (enumerate-search-list (pathname pathname)
        (let ((dir (pathname-directory pathname)))
@@ -1478,13 +1480,13 @@ optionally keeping some of the most recent old versions."
 			   (unless (probe-file newpath)
 			     (let ((namestring (namestring newpath)))
 			       (when verbose
-				 (format *standard-output* "~&Creating directory: ~A~%"
+				 (format *standard-output* _"~&Creating directory: ~A~%"
 					 namestring))
 			       (unix:unix-mkdir namestring mode)
 			       (unless (probe-file namestring)
 				 (error 'simple-file-error
 					:pathname pathspec
-					:format-control "Can't create directory ~A."
+					:format-control _"Can't create directory ~A."
 					:format-arguments (list namestring)))
 			       (setf created-p t)))
 			 (retry () :report "Try to create the directory again"

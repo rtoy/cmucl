@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.44 2006/06/30 18:41:23 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.45 2010/03/19 15:19:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "KERNEL")
+(intl:textdomain "cmucl")
 
 
 ;;;; Implementation dependent deftypes:
@@ -162,7 +163,7 @@
 		  (unsigned-byte 32)
 		  bignum
 		  integer)
-		(error "~S isn't an integer type?" subtype))
+		(error _"~S isn't an integer type?" subtype))
     (when (csubtypep subtype (specifier-type type))
       (return type))))
 

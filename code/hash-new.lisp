@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.51 2009/08/09 03:54:42 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.52 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 ;;; Equalp hashing by William Newman, Cadabra Inc, and Douglas Crosher, 2000.
 ;;;
 (in-package :lisp)
+
+(intl:textdomain "cmucl")
 
 (export '(hash-table hash-table-p make-hash-table
 	  gethash remhash maphash clrhash
@@ -39,7 +41,7 @@
 	    (:constructor %make-hash-table)
 	    (:print-function %print-hash-table)
 	    (:make-load-form-fun make-hash-table-load-form))
-  "Structure used to implement hash tables."
+  _N"Structure used to implement hash tables."
   ;;
   ;; The type of hash table this is.  Only used for printing and as part of
   ;; the exported interface.
@@ -171,7 +173,7 @@
 
 (defun almost-primify (num)
   (declare (type index num))
-  "Almost-Primify returns an almost prime number greater than or equal
+  _N"Almost-Primify returns an almost prime number greater than or equal
    to NUM."
   (if (= (rem num 2) 0)
       (setq num (+ 1 num)))
@@ -192,7 +194,7 @@
 ;;; DEFINE-HASH-TABLE-TEST -- Public.
 ;;;
 (defun define-hash-table-test (name test-fun hash-fun)
-  "Define a new kind of hash table test."
+  _N"Define a new kind of hash table test."
   (declare (type symbol name)
 	   (type function test-fun hash-fun))
   (setf *hash-table-tests*
@@ -207,7 +209,7 @@
 ;;; 
 (defun make-hash-table (&key (test 'eql) (size 65) (rehash-size 1.5)
 			     (rehash-threshold 1.0) (weak-p nil))
-  "Creates and returns a new hash table.  The keywords are as follows:
+  _N"Creates and returns a new hash table.  The keywords are as follows:
      :TEST -- Indicates what kind of test to use.  Only EQ, EQL, EQUAL,
        and EQUALP are currently supported.
      :SIZE -- A hint as to how many elements will be put in this hash
@@ -252,7 +254,7 @@
 	      (t
 	       (dolist (info *hash-table-tests*
 			     (error 'simple-program-error
-                                    :format-control "Unknown :TEST for MAKE-HASH-TABLE: ~S"
+                                    :format-control _"Unknown :TEST for MAKE-HASH-TABLE: ~S"
 				    :format-arguments (list test)))
 		 (destructuring-bind
 		  (test-name test-fun hash-fun)
@@ -270,7 +272,7 @@
 	(declare (type index size+1 scaled-size length))
 	#-gencgc
 	(when weak-p
-	  (format *debug-io* ";; Creating unsupported weak-p hash table~%"))
+	  (format *debug-io* _";; Creating unsupported weak-p hash table~%"))
 	#+gencgc
 	(when (and (member weak-p '(t :key :key-and-value :key-or-value))
 		   (not (member test '(eq eql))))
@@ -280,7 +282,7 @@
 	  ;;
 	  ;; XXX: Either fix GC to work with other tests, or change
 	  ;; this warning into an error.
-	  (error "Cannot make a weak ~A hashtable with test: ~S" weak-p test))
+	  (error _"Cannot make a weak ~A hashtable with test: ~S" weak-p test))
 	(let* ((index-vector
 		(make-array length :element-type '(unsigned-byte 32)
 			    :initial-element 0))
@@ -318,29 +320,29 @@
 
 (declaim (inline hash-table-count))
 (defun hash-table-count (hash-table)
-  "Returns the number of entries in the given HASH-TABLE."
+  _N"Returns the number of entries in the given HASH-TABLE."
   (declare (type hash-table hash-table)
 	   (values index))
   (hash-table-number-entries hash-table))
 
 (setf (documentation 'hash-table-rehash-size 'function)
-      "Return the rehash-size HASH-TABLE was created with.")
+      _N"Return the rehash-size HASH-TABLE was created with.")
 
 (setf (documentation 'hash-table-rehash-threshold 'function)
-      "Return the rehash-threshold HASH-TABLE was created with.")
+      _N"Return the rehash-threshold HASH-TABLE was created with.")
 
 (declaim (inline hash-table-size))
 (defun hash-table-size (hash-table)
-  "Return a size that can be used with MAKE-HASH-TABLE to create a hash
+  _N"Return a size that can be used with MAKE-HASH-TABLE to create a hash
    table that can hold however many entries HASH-TABLE can hold without
    having to be grown."
   (hash-table-rehash-trigger hash-table))
 
 (setf (documentation 'hash-table-test 'function)
-      "Return the test HASH-TABLE was created with.")
+      _N"Return the test HASH-TABLE was created with.")
 
 (setf (documentation 'hash-table-weak-p 'function)
-      "Return T if HASH-TABLE will not keep entries for keys that would
+      _N"Return T if HASH-TABLE will not keep entries for keys that would
    otherwise be garbage, and NIL if it will.")
 
 
@@ -528,7 +530,7 @@
 ;;; GETHASH -- Public.
 ;;; 
 (defun gethash (key hash-table &optional default)
-  "Finds the entry in HASH-TABLE whose key is KEY and returns the associated
+  _N"Finds the entry in HASH-TABLE whose key is KEY and returns the associated
    value and T as multiple values, or returns DEFAULT and NIL if there is no
    such entry.  Entries can be added using SETF."
   (declare (type hash-table hash-table)
@@ -655,7 +657,7 @@
 ;;; REMHASH -- public.
 ;;; 
 (defun remhash (key hash-table)
-  "Remove the entry in HASH-TABLE associated with KEY.  Returns T if there
+  _N"Remove the entry in HASH-TABLE associated with KEY.  Returns T if there
    was such an entry, and NIL if not."
   (declare (type hash-table hash-table)
 	   (values (member t nil)))
@@ -750,7 +752,7 @@
 ;;; CLRHASH -- public.
 ;;; 
 (defun clrhash (hash-table)
-  "This removes all the entries from HASH-TABLE and returns the hash table
+  _N"This removes all the entries from HASH-TABLE and returns the hash table
    itself."
   (let* ((kv-vector (hash-table-table hash-table))
 	 (kv-length (length kv-vector))
@@ -788,7 +790,7 @@
 ;;; CLOBBER-HASH -- public.
 ;;; 
 (defun clobber-hash (hash-table)
-  "This removes all the entries from HASH-TABLE and returns the hash table
+  _N"This removes all the entries from HASH-TABLE and returns the hash table
    itself, shrinking the size to free memory."
   (let* ((old-kv-vector (hash-table-table hash-table))
 	 (old-index-vector (hash-table-index-vector hash-table))
@@ -836,7 +838,7 @@
 
 (declaim (maybe-inline maphash))
 (defun maphash (map-function hash-table)
-  "For each entry in HASH-TABLE, calls MAP-FUNCTION on the key and value
+  _N"For each entry in HASH-TABLE, calls MAP-FUNCTION on the key and value
    of the entry; returns NIL."
   (declare (type (or function symbol) map-function)
 	   (type hash-table hash-table))
@@ -860,7 +862,7 @@
 	  (funcall fun key value))))))
 
 (defmacro with-hash-table-iterator ((function hash-table) &body body)
-  "WITH-HASH-TABLE-ITERATOR ((function hash-table) &body body)
+  _N"WITH-HASH-TABLE-ITERATOR ((function hash-table) &body body)
    provides a method of manually looping over the elements of a hash-table.
    FUNCTION is bound to a generator-macro that, within the scope of the
    invocation, returns one or three values. The first value tells whether
@@ -970,7 +972,7 @@
 	((funcallable-instance-p instance)
 	 (%funcallable-instance-info instance 2))
 	(t
-	 (error "What kind of instance is this?"))))
+	 (error _"What kind of instance is this?"))))
 
 ;; End pcl/low.lisp
 
@@ -1059,7 +1061,7 @@
     (t 42)))
 
 (defun sxhash (s-expr)
-  "Computes a hash code for S-EXPR and returns it as an integer."
+  _N"Computes a hash code for S-EXPR and returns it as an integer."
   (internal-sxhash s-expr 0))
 
 

@@ -26,10 +26,11 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cpl.lisp,v 1.13 2003/05/04 13:11:22 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cpl.lisp,v 1.14 2010/03/19 15:19:03 rtoy Rel $")
 ;;;
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;;
 ;;; compute-class-precedence-list
@@ -216,40 +217,40 @@
 
 (defun cpl-error (class format-string &rest format-args)
   (error
-   (format nil "~~@<While computing the class precedence list ~
+   (format nil _"~~@<While computing the class precedence list ~
                 of the class ~A: ~?.~~@:>"
 	   (if (class-name class)
-	       (format nil "named ~S" (class-name class))
+	       (format nil _"named ~S" (class-name class))
 	       class)
 	   format-string format-args)))
 
 (defun cpl-forward-referenced-class-error (class forward-class)
   (flet ((class-or-name (class)
 	   (if (class-name class)
-	       (format nil "named ~S" (class-name class))
+	       (format nil _"named ~S" (class-name class))
 	       class)))
     (if (eq class forward-class)
 	(cpl-error class
-		   "The class ~A is a forward referenced class"
+		   _"The class ~A is a forward referenced class"
 		   (class-or-name class))
 	(let ((names (mapcar #'class-or-name
 			     (cdr (find-superclass-chain class forward-class)))))
 	  (cpl-error class
-		     "The class ~A is a forward referenced class. ~
+		     _"The class ~A is a forward referenced class. ~
                       The class ~A is ~A."
 		     (class-or-name forward-class)
 		     (class-or-name forward-class)
 		     (if (null (cdr names))
 			 (format nil
-				 "a direct superclass of the class ~A"
+				 _"a direct superclass of the class ~A"
 				 (class-or-name class))
 			 (format nil
-				 "reached from the class ~A by following~@
+				 _"reached from the class ~A by following~@
                                   the direct superclass chain through: ~A~
                                   ~%  ending at the class ~A"
 				 (class-or-name class)
 				 (format nil
-					 "~{~%  the class ~A,~}"
+					 _"~{~%  the class ~A,~}"
 					 (butlast names))
 				 (car (last names)))))))))
 
@@ -265,18 +266,18 @@
 (defun cpl-inconsistent-error (class all-cpds)
   (let ((reasons (find-cycle-reasons all-cpds)))
     (cpl-error class
-      "It is not possible to compute the class precedence list because ~
+      _"It is not possible to compute the class precedence list because ~
        there ~A in the local precedence relations.  ~
        ~A because:~{~%  ~A~}."
-      (if (cdr reasons) "are circularities" "is a circularity")
-      (if (cdr reasons) "These arise" "This arises")
+      (if (cdr reasons) _"are circularities" _"is a circularity")
+      (if (cdr reasons) _"These arise" _"This arises")
       (format-cycle-reasons (apply #'append reasons)))))
 
 (defun format-cycle-reasons (reasons)
   (flet ((class-or-name (cpd)
 	   (let ((class (cpd-class cpd)))
 	     (if (class-name class)
-		 (format nil "named ~S" (class-name class))
+		 (format nil _"named ~S" (class-name class))
 		 class))))
     (mapcar
       (lambda (reason)
@@ -284,13 +285,13 @@
 	  (:super
 	   (format
 	    nil
-	    "the class ~A appears in the supers of the class ~A"
+	    _"the class ~A appears in the supers of the class ~A"
 	    (class-or-name (cadr reason))
 	    (class-or-name (car reason))))
 	  (:in-supers
 	   (format
 	    nil
-	    "the class ~A follows the class ~A in the supers of the class ~A"
+	    _"the class ~A follows the class ~A in the supers of the class ~A"
 	    (class-or-name (cadr reason))
 	    (class-or-name (car reason))
 	    (class-or-name (cadddr reason))))))      

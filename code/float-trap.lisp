@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.35 2009/07/06 13:29:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.36 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 ;;; Author: Rob MacLachlan
 ;;; 
 (in-package "VM")
+(intl:textdomain "cmucl")
+
 (export '(current-float-trap floating-point-modes sigfpe-handler))
 (in-package "EXTENSIONS")
 (export '(set-floating-point-modes get-floating-point-modes
@@ -40,7 +42,7 @@
   (reduce #'logior
 	  (mapcar #'(lambda (x)
 		      (or (cdr (assoc x float-trap-alist))
-			  (error "Unknown float trap kind: ~S." x)))
+			  (error _"Unknown float trap kind: ~S." x)))
 		  names)))
 
 (defconstant rounding-mode-alist
@@ -124,7 +126,7 @@
 				      (current-exceptions nil current-x-p)
 				      (accrued-exceptions nil accrued-x-p)
 				      (fast-mode nil fast-mode-p))
-  "This function sets options controlling the floating-point hardware.  If a
+  _N"This function sets options controlling the floating-point hardware.  If a
   keyword is not supplied, then the current value is preserved.  Possible
   keywords:
 
@@ -157,7 +159,7 @@
     (when round-p
       (setf (ldb float-rounding-mode modes)
 	    (or (cdr (assoc rounding-mode rounding-mode-alist))
-		(error "Unknown rounding mode: ~S." rounding-mode))))
+		(error _"Unknown rounding mode: ~S." rounding-mode))))
     (when current-x-p
       (setf (ldb float-exceptions-byte modes)
 	    (float-trap-mask current-exceptions))
@@ -185,7 +187,7 @@
 ;;; GET-FLOATING-POINT-MODES  --  Public
 ;;;
 (defun get-floating-point-modes ()
-  "This function returns a list representing the state of the floating point
+  _N"This function returns a list representing the state of the floating point
   modes.  The list is in the same format as the keyword arguments to
   SET-FLOATING-POINT-MODES, i.e. 
       (apply #'set-floating-point-modes (get-floating-point-modes))
@@ -212,7 +214,7 @@
 ;;; CURRENT-FLOAT-TRAP  --  Interface
 ;;;
 (defmacro current-float-trap (&rest traps)
-  "Current-Float-Trap Trap-Name*
+  _N"Current-Float-Trap Trap-Name*
   Return true if any of the named traps are currently trapped, false
   otherwise."
   `(not (zerop (logand ,(dpb (float-trap-mask traps) float-traps-byte 0)
@@ -288,12 +290,12 @@
 		    :operation fop
 		    :operands operands))
 	    (t
-	     (error "SIGFPE with no exceptions currently enabled?"))))))
+	     (error _"SIGFPE with no exceptions currently enabled?"))))))
 
 ;;; WITH-FLOAT-TRAPS-MASKED  --  Public
 ;;;
 (defmacro with-float-traps-masked (traps &body body)
-  "Execute BODY with the floating point exceptions listed in TRAPS
+  _N"Execute BODY with the floating point exceptions listed in TRAPS
   masked (disabled).  TRAPS should be a list of possible exceptions
   which includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and
   :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective

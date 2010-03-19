@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.31 2009/10/18 14:21:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.32 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,15 +14,17 @@
 (in-package "LISP")
 
 (in-package "SYSTEM")
+(intl:textdomain "cmucl")
+
 (export '(without-gcing without-hemlock
 	  register-lisp-feature register-lisp-runtime-feature))
 
 (defmacro register-lisp-feature (feature)
-  "Register the feature as having influenced the CMUCL build process."
+  _N"Register the feature as having influenced the CMUCL build process."
   `(pushnew ,feature *features*))
 
 (defmacro register-lisp-runtime-feature (feature)
-  "Register the feature as having influenced the CMUCL build process,
+  _N"Register the feature as having influenced the CMUCL build process,
 and also the CMUCL C runtime."
   (let ((f (gensym)))
     `(progn
@@ -45,7 +47,7 @@ and also the CMUCL C runtime."
 			    (start-var &optional (svalue 0))
 			    (end-var &optional (evalue nil)))
 			   &rest forms)
-  "Given any Array, binds Data-Var to the array's data vector and Start-Var and
+  _N"Given any Array, binds Data-Var to the array's data vector and Start-Var and
   End-Var to the start and end of the designated portion of the data vector.
   Svalue and Evalue are any start and end specified to the original operation,
   and are factored into the bindings of Start-Var and End-Var.  Offset-Var is
@@ -70,7 +72,7 @@ and also the CMUCL C runtime."
 
 #-gengc
 (defmacro without-gcing (&rest body)
-  "Executes the forms in the body without doing a garbage collection."
+  _N"Executes the forms in the body without doing a garbage collection."
   `(unwind-protect
        (let ((*gc-inhibit* t))
 	 ,@body)
@@ -79,7 +81,7 @@ and also the CMUCL C runtime."
 
 #+gengc
 (defmacro without-gcing (&rest body)
-  "Executes the forms in the body without doing a garbage collection."
+  _N"Executes the forms in the body without doing a garbage collection."
   `(without-interrupts ,@body))
 
 #-no-hemlock

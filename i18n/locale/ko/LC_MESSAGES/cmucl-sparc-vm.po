@@ -1,0 +1,756 @@
+# @ cmucl-sparc-vm
+# SOME DESCRIPTIVE TITLE
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: target:compiler/sparc/parms.lisp
+msgid "Number of bits per word where a word holds one lisp descriptor."
+msgstr ""
+
+#: target:compiler/sparc/parms.lisp
+msgid ""
+"Number of bits per byte where a byte is the smallest addressable object."
+msgstr ""
+
+#: target:compiler/sparc/parms.lisp
+msgid "Number of bits needed to represent a character"
+msgstr ""
+
+#: target:compiler/sparc/parms.lisp
+msgid "Number of bytes needed to represent a character"
+msgstr ""
+
+#: target:compiler/sparc/parms.lisp
+msgid "Number of bits to shift between word addresses and byte addresses."
+msgstr ""
+
+#: target:compiler/sparc/parms.lisp
+msgid "Number of bytes in a word."
+msgstr ""
+
+#: target:compiler/sparc/parms.lisp
+msgid "Number of bits at the low end of a pointer used for type information."
+msgstr ""
+
+#: target:compiler/sparc/parms.lisp
+msgid "Mask to extract the low tag bits from a pointer."
+msgstr ""
+
+#: target:compiler/sparc/parms.lisp
+msgid ""
+"Exclusive upper bound on the value of the low tag bits from a\n"
+"  pointer."
+msgstr ""
+
+#: target:compiler/sparc/parms.lisp
+msgid "Number of tag bits used for a fixnum"
+msgstr ""
+
+#: target:compiler/sparc/parms.lisp
+msgid "Mask to get the fixnum tag"
+msgstr ""
+
+#: target:compiler/sparc/parms.lisp
+msgid "Maximum number of bits in a positive fixnum"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "~S isn't a register."
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "~S isn't a floating-point register."
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid ""
+"If non-NIL, print registers using the Lisp register names.\n"
+"Otherwise, use the Sparc register names"
+msgstr ""
+
+#: target:assembly/sparc/arith.lisp target:assembly/sparc/array.lisp
+#: target:assembly/sparc/assem-rtns.lisp target:compiler/sparc/type-vops.lisp
+#: target:compiler/sparc/pred.lisp target:compiler/sparc/array.lisp
+#: target:compiler/sparc/print.lisp target:compiler/sparc/nlx.lisp
+#: target:compiler/sparc/call.lisp target:compiler/sparc/alloc.lisp
+#: target:compiler/sparc/values.lisp target:compiler/sparc/cell.lisp
+#: target:compiler/sparc/c-call.lisp target:compiler/sparc/debug.lisp
+#: target:compiler/sparc/subprim.lisp target:compiler/sparc/arith.lisp
+#: target:compiler/sparc/static-fn.lisp target:compiler/sparc/memory.lisp
+#: target:compiler/sparc/char.lisp target:compiler/sparc/system.lisp
+#: target:compiler/sparc/sap.lisp target:compiler/sparc/float.lisp
+#: target:compiler/sparc/move.lisp target:compiler/sparc/insts.lisp
+msgid "Unknown SC to SC-Case for ~S:~%  ~S"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "The Lisp names for the Sparc integer registers"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "The standard names for the Sparc integer registers"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid ""
+"An alist for the disassembler indicating the target register and\n"
+"value used in a SETHI instruction.  This is used to make annotations\n"
+"about function addresses and register values."
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Set pseudo-atomic flag"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Reset pseudo-atomic"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Allocating ~D bytes"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Allocating bytes"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Header word ~A, size ~D?"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Reset pseudo-atomic flag"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "pseudo-atomic interrupted?"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Unknown branch condition: ~S~%Must be one of: ~S"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Unknown fp-branch condition: ~S~%Must be one of: ~S"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Unknown integer condition register:  ~S~%"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Unknown branch prediction:  ~S~%Must be one of: ~S~%"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Unknown conditional move condition register:  ~S~%"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Unknown register condition:  ~S~%"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Fixups aren't allowed."
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Pseudo atomic interrupted trap?"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Allocation trap"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid "Use it anyway"
+msgstr ""
+
+#: target:compiler/sparc/insts.lisp
+msgid ""
+"Immediate trap number ~A specified, but only trap numbers\n"
+"   16 to 31 are available to the application"
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid "Move SRC into DST unless they are location=."
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid ""
+"Loads the type bits of a pointer into target independent of\n"
+"  byte-ordering issues."
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid "Jump to the lisp function FUNCTION.  LIP is an interior-reg temporary."
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid "Return to RETURN-PC."
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid ""
+"Emit a return-pc header word.  LABEL is the label to use for this return-pc."
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid "Move the TN Reg-Or-Stack into Reg if it isn't already there."
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid ""
+"Do stuff to allocate an other-pointer object of fixed Size with a single\n"
+"  word header having the specified Type-Code.  The result is placed in\n"
+"  Result-TN, and Temp-TN is a non-descriptor temp (which may be randomly "
+"used\n"
+"  by the body.)  The body is placed inside the PSEUDO-ATOMIC, and "
+"presumably\n"
+"  initializes the object."
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid "~S is less than the specified minimum of ~S"
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid "~S is greater than the specified maximum of ~S"
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid "~S isn't an even multiple of ~S from ~S"
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid ""
+"The values ~S cover the entire range from ~\n"
+"\t\t\t ~S to ~S [step ~S]."
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid "Must supply at least on type for test-type."
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid "OTHER-POINTER-TYPE supersedes the use of ~S"
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid "OTHER-IMMEDIATE-n-TYPE supersedes the use of ~S"
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid ""
+"Can't test for mix of function subtypes and normal ~\n"
+"\t\theader types."
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid "Cause an error.  ERROR-CODE is the error to cause."
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid ""
+"Cause a continuable error.  If the error is continued, execution resumes at\n"
+"  LABEL."
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid ""
+"Generate-Error-Code Error-code Value*\n"
+"  Emit code for an error with the specified Error-Code and context Values."
+msgstr ""
+
+#: target:compiler/sparc/macros.lisp
+msgid ""
+"Generate-CError-Code Error-code Value*\n"
+"  Emit code for a continuable error with the specified Error-Code and\n"
+"  context Values.  If the error is continued, execution resumes after\n"
+"  the GENERATE-CERROR-CODE form."
+msgstr ""
+
+#: target:compiler/sparc/move.lisp
+msgid "fixnum untagging"
+msgstr ""
+
+#: target:compiler/sparc/move.lisp
+msgid "constant load"
+msgstr ""
+
+#: target:compiler/sparc/move.lisp
+msgid ""
+"Load TN allocated, but no move function?~@\n"
+"\t           VM definition inconsistent, recompile and try again."
+msgstr ""
+
+#: target:compiler/sparc/move.lisp
+msgid "integer to untagged word coercion"
+msgstr ""
+
+#: target:compiler/sparc/move.lisp
+msgid "fixnum tagging"
+msgstr ""
+
+#: target:compiler/sparc/move.lisp
+msgid "signed word to integer coercion"
+msgstr ""
+
+#: target:compiler/sparc/move.lisp
+msgid "unsigned word to integer coercion"
+msgstr ""
+
+#: target:compiler/sparc/move.lisp
+msgid "word integer move"
+msgstr ""
+
+#: target:compiler/sparc/move.lisp
+msgid "word integer argument move"
+msgstr ""
+
+#: target:compiler/sparc/move.lisp
+msgid "signed 64-bit word to integer coercion"
+msgstr ""
+
+#: target:compiler/sparc/move.lisp
+msgid "unsigned 64-bit word to integer coercion"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "float move"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "float to pointer coercion"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "pointer to float coercion"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "float argument move"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex single float move"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex double float move"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex long float move"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex double-double float move"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex single float to pointer coercion"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex double float to pointer coercion"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex long float to pointer coercion"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex double-double float to pointer coercion"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "pointer to complex float coercion"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "pointer to complex double-double float coercion"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex single-float argument move"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex double-float argument move"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex long-float argument move"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex double-double float argument move"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline float arithmetic"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline float comparison"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline float coercion"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline float truncate"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline ftruncate"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline complex single-float creation"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline complex double-float creation"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline complex long-float creation"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex single float realpart"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex single float imagpart"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex double float realpart"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex double float imagpart"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex long float realpart"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex long float imagpart"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline complex float arithmetic"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline complex float/float arithmetic"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline complex float multiplication"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline complex float division"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline complex conjugate"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline complex float/float comparison"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline complex float comparison"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline float max"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline float min"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline (signed-byte 32) max"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline (unsigned-byte 32) max"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline fixnum max"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline (signed-byte 32) min"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline (unsigned-byte 32) min"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline fixnum min"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline float max/min"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "double-double float move"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "double-double float to pointer coercion"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "pointer to double-double float coercion"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "double-double float argument move"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline double-double float creation"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "double-double high part"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "double-double low part"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "inline complex double-double float creation"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex double-double float realpart"
+msgstr ""
+
+#: target:compiler/sparc/float.lisp
+msgid "complex double-double float imagpart"
+msgstr ""
+
+#: target:compiler/sparc/sap.lisp
+msgid "pointer to SAP coercion"
+msgstr ""
+
+#: target:compiler/sparc/sap.lisp
+msgid "SAP to pointer coercion"
+msgstr ""
+
+#: target:compiler/sparc/sap.lisp
+msgid "SAP move"
+msgstr ""
+
+#: target:compiler/sparc/sap.lisp
+msgid "SAP argument move"
+msgstr ""
+
+#: target:compiler/sparc/system.lisp
+msgid ""
+"Read the instruction cycle counter available on UltraSparcs.  The\n"
+"64-bit counter is returned as two 32-bit unsigned integers.  The low 32-bit\n"
+"result is the first value."
+msgstr ""
+
+#: target:compiler/sparc/char.lisp
+msgid "character untagging"
+msgstr ""
+
+#: target:compiler/sparc/char.lisp
+msgid "character tagging"
+msgstr ""
+
+#: target:compiler/sparc/char.lisp
+msgid "character move"
+msgstr ""
+
+#: target:compiler/sparc/char.lisp
+msgid "character arg move"
+msgstr ""
+
+#: target:compiler/sparc/char.lisp
+msgid "inline comparison"
+msgstr ""
+
+#: target:compiler/sparc/static-fn.lisp
+msgid "Either too many args (~D) or too many results (~D).  Max = ~D"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline fixnum arithmetic"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline (signed-byte 32) arithmetic"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline (unsigned-byte 32) arithmetic"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline 32-bit abs"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "safe inline fixnum arithmetic"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline (signed-byte 32) ASH"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline (unsigned-byte 32) ASH"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline constant ASH"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "identity ASH not transformed away"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline ASH"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline right ASH"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline (signed-byte 32) integer-length"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline (unsigned-byte 32) integer-length"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline (unsigned-byte 32) logcount"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "Bad size specified for SIGNED-BYTE type specifier: ~S."
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline fixnum comparison"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline (signed-byte 32) comparison"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline (unsigned-byte 32) comparison"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "shift-towards-start"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "shift-towards-end"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid ""
+"Emit code to multiply MULTIPLIER with MULTIPLICAND, putting the result\n"
+"  in RESULT-HIGH and RESULT-LOW.  KIND is either :signed or :unsigned.\n"
+"  Note: the lifetimes of MULTIPLICAND and RESULT-HIGH overlap."
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline (signed-byte 64) arithmetic"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline (unsigned-byte 64) arithmetic"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline (signed-byte 64) ASH"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline (signed-byte 64) comparison"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "inline (unsigned-byte 64) comparison"
+msgstr ""
+
+#: target:compiler/sparc/arith.lisp
+msgid "recode as shifts and adds"
+msgstr ""
+
+#: target:compiler/sparc/c-call.lisp
+msgid "Class not yet defined: ~S"
+msgstr ""
+
+#: target:compiler/sparc/c-call.lisp
+msgid "Too many result values from c-call."
+msgstr ""
+
+#: target:compiler/sparc/c-call.lisp
+msgid "Method ~S not defined for ~S"
+msgstr ""
+
+#: target:compiler/sparc/c-call.lisp
+msgid ""
+"Cons up a piece of code which calls call-callback with INDEX and a\n"
+"pointer to the arguments."
+msgstr ""
+
+#: target:compiler/sparc/call.lisp
+msgid "more-arg-context"
+msgstr ""
+
+#: target:compiler/sparc/array.lisp
+msgid "inline array access"
+msgstr ""
+
+#: target:compiler/sparc/array.lisp
+msgid "inline array store"
+msgstr ""
+
+#: target:compiler/sparc/array.lisp
+msgid "raw-bits VOP"
+msgstr ""
+
+#: target:compiler/sparc/array.lisp
+msgid "setf raw-bits VOP"
+msgstr ""

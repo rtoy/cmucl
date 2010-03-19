@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.60 2007/12/10 18:48:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.61 2010/03/19 15:19:00 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,6 +23,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package :c)
+(intl:textdomain "cmucl")
 
 
 ;;; Propagate-To-Args  --  Interface
@@ -341,7 +342,7 @@
 		 res)
 		(t
 		 (let ((*compiler-error-context* call))
-		   (compiler-note "Couldn't inline expand because expansion ~
+		   (compiler-note _N"Couldn't inline expand because expansion ~
 				   calls this let-converted local function:~
 				   ~%  ~S"
 				  (leaf-name res)))
@@ -457,7 +458,7 @@
 	   (convert-call ref call fun))
 	  (t
 	   (compiler-warning
-	    "Function called with ~R argument~:P, but wants exactly ~R."
+	    _N"Function called with ~R argument~:P, but wants exactly ~R."
 	    call-args nargs)
 	   (setf (basic-combination-kind call) :error)))))
 
@@ -479,7 +480,7 @@
 	(max-args (optional-dispatch-max-args fun))
 	(call-args (length (combination-args call))))
     (cond ((< call-args min-args)
-	   (compiler-warning "Function called with ~R argument~:P, but wants at least ~R."
+	   (compiler-warning _N"Function called with ~R argument~:P, but wants at least ~R."
 			     call-args min-args)
 	   (setf (basic-combination-kind call) :error))
 	  ((<= call-args max-args)
@@ -489,7 +490,7 @@
 	  ((optional-dispatch-more-entry fun)
 	   (convert-more-call ref call fun))
 	  (t
-	   (compiler-warning "Function called with ~R argument~:P, but wants at most ~R."
+	   (compiler-warning _N"Function called with ~R argument~:P, but wants at most ~R."
 			     call-args max-args)
 	   (setf (basic-combination-kind call) :error))))
   (undefined-value))
@@ -565,7 +566,7 @@
 	       (key-vars var))
 	      ((:rest :optional))
 	      ((:more-context :more-count)
-	       (compiler-warning "Can't local-call functions with &MORE args.")
+	       (compiler-warning _N"Can't local-call functions with &MORE args.")
 	       (setf (basic-combination-kind call) :error)
 	       (return-from convert-more-call))))))
 
@@ -577,7 +578,7 @@
 
       (when (optional-dispatch-keyp fun)
 	(when (oddp (length more))
-	  (compiler-warning "Function called with odd number of ~
+	  (compiler-warning _N"Function called with odd number of ~
 	  		     arguments in keyword portion.")
 
 	  (setf (basic-combination-kind call) :error)
@@ -589,7 +590,7 @@
 	  (let ((cont (first key)))
 	    (unless (constant-continuation-p cont)
 	      (when flame
-		(compiler-note "Non-constant keyword in keyword call."))
+		(compiler-note _N"Non-constant keyword in keyword call."))
 	      (setf (basic-combination-kind call) :error)
 	      (return-from convert-more-call))
 	    
@@ -604,7 +605,7 @@
 			       allowp (continuation-value val)))
 			(t
 			 (when flame
-			   (compiler-note "non-constant :ALLOW-OTHER-KEYS value"))
+			   (compiler-note _N"non-constant :ALLOW-OTHER-KEYS value"))
 			 (setf (basic-combination-kind call) :error)
 			 (return-from convert-more-call)))))
 	      (dolist (var (key-vars)
@@ -623,7 +624,7 @@
 		    (return)))))))
 	
 	(when (and loser (not (optional-dispatch-allowp fun)) (not allowp))
-	  (compiler-warning "Function called with unknown argument keyword ~S."
+	  (compiler-warning _N"Function called with unknown argument keyword ~S."
 			    (car loser))
 	  (setf (basic-combination-kind call) :error)
 	  (return-from convert-more-call)))

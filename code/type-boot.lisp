@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type-boot.lisp,v 1.9 1994/10/31 04:11:27 ram Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type-boot.lisp,v 1.10 2010/03/19 15:19:00 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,6 +13,7 @@
 ;;; enough so that we can define the types used to define types.
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 (deftype inlinep ()
   '(member :inline :maybe-inline :notinline nil))

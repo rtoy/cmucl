@@ -32,7 +32,7 @@
 #
 # For more information see src/BUILDING.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.28 2010/02/01 15:04:51 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.29 2010/03/19 15:19:03 rtoy Exp $
 #
 
 ENABLE2="yes"
@@ -86,6 +86,7 @@ usage ()
     echo '               you would give to create-target.sh for the lisp'
     echo '               and motif variant.'
     echo '    -f mode   FPU mode:  x87, sse2, or auto.  Default is auto'
+    echo '    -P        On the last build, generate cmucl.pot'
     echo "    -?        This help message"
 
     exit 1
@@ -131,7 +132,7 @@ buildit ()
 }
 
 FPU_MODE=
-while getopts "123o:b:v:uB:C:i:f:?" arg
+while getopts "123Po:b:v:uB:C:i:f:?" arg
 do
     case $arg in
 	1) ENABLE2="no" ;;
@@ -146,6 +147,7 @@ do
 	B) bootfiles="$bootfiles $OPTARG" ;;
         i) INTERACTIVE_BUILD="$OPTARG" ;;
 	f) FPU_MODE="-fpu $OPTARG" ;;
+        P) BUILD_POT=yes ;;
 	\?) usage
 	    ;;
     esac
@@ -184,6 +186,11 @@ TARGET=$BASE-4
 CLEAN_FLAGS="-K all"
 OLDLISP="${BASE}-3/lisp/lisp -noinit $FPU_MODE"
 ENABLE=$ENABLE4
+
+if [ "${BUILD_POT}" = "yes" ]; then
+   MAKE_POT=yes
+   export MAKE_POT
+fi
 
 BUILD=3
 buildit

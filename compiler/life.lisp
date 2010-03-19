@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/life.lisp,v 1.23 1994/10/31 04:27:28 ram Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/life.lisp,v 1.24 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 
 ;;;; Utilities:
@@ -335,7 +336,7 @@
 				(not (eq ref op)))
 		       (return nil)))))
 	    (and (frob (tn-reads tn)) (frob (tn-writes tn))))
-	  () "More operand ~S used more than once in its VOP." op)
+	  () _"More operand ~S used more than once in its VOP." op)
 	(assert (not (find-in #'global-conflicts-next tn
 			      (ir2-block-global-tns block)
 			      :key #'global-conflicts-tn)))

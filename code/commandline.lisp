@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.17 2009/01/06 01:11:23 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.18 2010/03/19 15:18:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,9 @@
 ;;;
 
 (in-package "EXTENSIONS")
+
+(intl:textdomain "cmucl")
+
 (export '(*command-line-application-arguments* *command-line-words* *command-line-switches*
 	  *command-switch-demons* *command-line-utility-name*
 	  *command-line-strings* *batch-mode*
@@ -22,26 +25,26 @@
 	  defswitch cmd-switch-arg get-command-line-switch))
 
 (defvar *command-line-application-arguments* ()
-  "A list of all the command line arguments after --")
+  _N"A list of all the command line arguments after --")
 
 (defvar *command-line-switches* ()
-  "A list of cmd-switch's representing the arguments used to invoke
+  _N"A list of cmd-switch's representing the arguments used to invoke
   this process.")
 
 (defvar *command-line-utility-name* ""
-  "The string name that was used to invoke this process.")
+  _N"The string name that was used to invoke this process.")
 
 (defvar *command-line-words* ()
-  "A list of words between the utility name and the first switch.")
+  _N"A list of words between the utility name and the first switch.")
 
 (defvar *command-line-strings* ()
-  "A list of strings obtained from the command line that invoked this process.")
+  _N"A list of strings obtained from the command line that invoked this process.")
 
 (defvar *command-switch-demons* ()
-  "An Alist of (\"argument-name\" . demon-function)")
+  _N"An Alist of (\"argument-name\" . demon-function)")
 
 (defvar *batch-mode* nil
-  "When True runs lisp with its input coming from standard-input.
+  _N"When True runs lisp with its input coming from standard-input.
    If an error is detected returns error code 1, otherwise 0.")
 
 (defstruct (command-line-switch (:conc-name cmd-switch-)
@@ -125,7 +128,7 @@
 	    (setq str (pop cmd-strings))))))))
 
 (defun get-command-line-switch (sname)
-  "Accepts the name of a switch as a string and returns the value of the
+  _N"Accepts the name of a switch as a string and returns the value of the
    switch.  If no value was specified, then any following words are returned.
    If there are no following words, then t is returned.  If the switch was not
    specified, then nil is returned."
@@ -143,7 +146,7 @@
 ;;;; Defining Switches and invoking demons.
 
 (defvar *complain-about-illegal-switches* t
-  "When set, invoking switch demons complains about illegal switches that have
+  _N"When set, invoking switch demons complains about illegal switches that have
    not been defined with DEFSWITCH.")
 
 ;;; This is a list of legal switch names.  DEFSWITCH sets this, and
@@ -164,11 +167,11 @@
       (cond (demon (funcall demon switch))
 	    ((or (member name *legal-cmd-line-switches* :test #'string-equal)
 		 (not *complain-about-illegal-switches*)))
-	    (t (warn "~S is an illegal switch" switch)))
+	    (t (warn _"~S is an illegal switch" switch)))
       (lisp::finish-standard-output-streams))))
 
 (defmacro defswitch (name &optional function)
-  "Associates function with the switch name in *command-switch-demons*.  Name
+  _N"Associates function with the switch name in *command-switch-demons*.  Name
    is a simple-string that does not begin with a hyphen, unless the switch name
    really does begin with one.  Function is optional, but defining the switch
    is necessary to keep invoking switch demons from complaining about illegal
@@ -178,7 +181,7 @@
     `(let ((,gname ,name)
 	   (,gfunction ,function))
        (check-type ,gname simple-string)
-       (check-type ,gfunction (or symbol function) "a symbol or function")
+       (check-type ,gfunction (or symbol function) _"a symbol or function")
        (push ,gname *legal-cmd-line-switches*)
        (when ,gfunction
 	 (push (cons ,gname ,gfunction) *command-switch-demons*)))))

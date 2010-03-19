@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.46 2008/08/18 20:40:02 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.47 2010/03/19 15:19:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 ;;; Enhancements/debugging by Raymond Toy 1999, 2000
 
 (in-package "SPARC")
-
+(intl:textdomain "cmucl-sparc-vm")
 
 
 ;;;; Unary operations.
@@ -32,14 +32,14 @@
 (define-vop (fixnum-unop fast-safe-arith-op)
   (:args (x :scs (any-reg)))
   (:results (res :scs (any-reg)))
-  (:note "inline fixnum arithmetic")
+  (:note _N"inline fixnum arithmetic")
   (:arg-types tagged-num)
   (:result-types tagged-num))
 
 (define-vop (signed-unop fast-safe-arith-op)
   (:args (x :scs (signed-reg)))
   (:results (res :scs (signed-reg)))
-  (:note "inline (signed-byte 32) arithmetic")
+  (:note _N"inline (signed-byte 32) arithmetic")
   (:arg-types signed-num)
   (:result-types signed-num))
 
@@ -74,7 +74,7 @@
   (:arg-types tagged-num tagged-num)
   (:results (r :scs (any-reg)))
   (:result-types tagged-num)
-  (:note "inline fixnum arithmetic"))
+  (:note _N"inline fixnum arithmetic"))
 
 (define-vop (fast-unsigned-binop fast-safe-arith-op)
   (:args (x :target r :scs (unsigned-reg zero))
@@ -82,7 +82,7 @@
   (:arg-types unsigned-num unsigned-num)
   (:results (r :scs (unsigned-reg)))
   (:result-types unsigned-num)
-  (:note "inline (unsigned-byte 32) arithmetic"))
+  (:note _N"inline (unsigned-byte 32) arithmetic"))
 
 (define-vop (fast-signed-binop fast-safe-arith-op)
   (:args (x :target r :scs (signed-reg zero))
@@ -90,7 +90,7 @@
   (:arg-types signed-num signed-num)
   (:results (r :scs (signed-reg)))
   (:result-types signed-num)
-  (:note "inline (signed-byte 32) arithmetic"))
+  (:note _N"inline (signed-byte 32) arithmetic"))
 
 (define-vop (fast-fixnum-binop-c fast-safe-arith-op)
   (:args (x :target r :scs (any-reg zero)))
@@ -99,7 +99,7 @@
 	      (:constant (and (signed-byte #.(- 13 vm:fixnum-tag-bits)) (not (integer 0 0)))))
   (:results (r :scs (any-reg)))
   (:result-types tagged-num)
-  (:note "inline fixnum arithmetic"))
+  (:note _N"inline fixnum arithmetic"))
 
 (define-vop (fast-unsigned-binop-c fast-safe-arith-op)
   (:args (x :target r :scs (unsigned-reg zero)))
@@ -108,7 +108,7 @@
 	      (:constant (and (signed-byte 13) (not (integer 0 0)))))
   (:results (r :scs (unsigned-reg)))
   (:result-types unsigned-num)
-  (:note "inline (unsigned-byte 32) arithmetic"))
+  (:note _N"inline (unsigned-byte 32) arithmetic"))
 
 (define-vop (fast-signed-binop-c fast-safe-arith-op)
   (:args (x :target r :scs (signed-reg zero)))
@@ -117,7 +117,7 @@
 	      (:constant (and (signed-byte 13) (not (integer 0 0)))))
   (:results (r :scs (signed-reg)))
   (:result-types signed-num)
-  (:note "inline (signed-byte 32) arithmetic"))
+  (:note _N"inline (signed-byte 32) arithmetic"))
 
 (eval-when (compile load eval)
 
@@ -226,7 +226,7 @@
   (:results (r :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:translate abs)
-  (:note "inline 32-bit abs")
+  (:note _N"inline 32-bit abs")
   (:temporary (:scs (signed-reg)) y)
   (:generator 1
     ;; From Hacker's Delight
@@ -247,7 +247,7 @@
   (:policy :safe)
   (:results (r :scs (any-reg descriptor-reg)))
   (:result-types tagged-num)
-  (:note "safe inline fixnum arithmetic")
+  (:note _N"safe inline fixnum arithmetic")
   (:generator 4
     (inst taddcctv r x y)))
 
@@ -255,7 +255,7 @@
   (:policy :safe)
   (:results (r :scs (any-reg descriptor-reg)))
   (:result-types tagged-num)
-  (:note "safe inline fixnum arithmetic")
+  (:note _N"safe inline fixnum arithmetic")
   (:generator 3
     (inst taddcctv r x (fixnumize y))))
 
@@ -263,7 +263,7 @@
   (:policy :safe)
   (:results (r :scs (any-reg descriptor-reg)))
   (:result-types tagged-num)
-  (:note "safe inline fixnum arithmetic")
+  (:note _N"safe inline fixnum arithmetic")
   (:generator 4
     (inst tsubcctv r x y)))
 
@@ -271,7 +271,7 @@
   (:policy :safe)
   (:results (r :scs (any-reg descriptor-reg)))
   (:result-types tagged-num)
-  (:note "safe inline fixnum arithmetic")
+  (:note _N"safe inline fixnum arithmetic")
   (:generator 3
     (inst tsubcctv r x (fixnumize y))))
 
@@ -289,7 +289,7 @@
   (:results (quo :scs (any-reg))
 	    (rem :scs (any-reg)))
   (:result-types tagged-num tagged-num)
-  (:note "inline fixnum arithmetic")
+  (:note _N"inline fixnum arithmetic")
   (:temporary (:scs (any-reg) :target quo) q)
   (:temporary (:scs (any-reg)) r)
   (:temporary (:scs (signed-reg)) y-int)
@@ -325,7 +325,7 @@
   (:results (quo :scs (signed-reg))
 	    (rem :scs (signed-reg)))
   (:result-types signed-num signed-num)
-  (:note "inline (signed-byte 32) arithmetic")
+  (:note _N"inline (signed-byte 32) arithmetic")
   (:temporary (:scs (signed-reg) :target quo) q)
   (:temporary (:scs (signed-reg)) r)
   (:vop-var vop)
@@ -359,7 +359,7 @@
   (:results (quo :scs (unsigned-reg))
 	    (rem :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
-  (:note "inline (unsigned-byte 32) arithmetic")
+  (:note _N"inline (unsigned-byte 32) arithmetic")
   (:temporary (:scs (unsigned-reg) :target quo) q)
   (:temporary (:scs (unsigned-reg)) r)
   (:vop-var vop)
@@ -391,7 +391,7 @@
   (:results (quo :scs (signed-reg))
 	    (rem :scs (signed-reg)))
   (:result-types signed-num signed-num)
-  (:note "inline (signed-byte 32) arithmetic")
+  (:note _N"inline (signed-byte 32) arithmetic")
   (:temporary (:scs (signed-reg) :target quo) q)
   (:temporary (:scs (signed-reg)) r)
   (:vop-var vop)
@@ -420,7 +420,7 @@
   (:results (quo :scs (signed64-reg))
 	    (rem :scs (signed64-reg)))
   (:result-types signed64-num signed64-num)
-  (:note "inline (signed-byte 32) arithmetic")
+  (:note _N"inline (signed-byte 32) arithmetic")
   (:temporary (:scs (signed64-reg) :target quo) q)
   (:temporary (:scs (signed64-reg)) r)
   (:vop-var vop)
@@ -447,7 +447,7 @@
   (:results (quo :scs (unsigned-reg))
 	    (rem :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
-  (:note "inline (unsigned-byte 32) arithmetic")
+  (:note _N"inline (unsigned-byte 32) arithmetic")
   (:temporary (:scs (unsigned-reg) :target quo) q)
   (:temporary (:scs (unsigned-reg)) r)
   (:vop-var vop)
@@ -470,7 +470,7 @@
 ;;; Shifting
 
 (define-vop (fast-ash/signed=>signed)
-  (:note "inline (signed-byte 32) ASH")
+  (:note _N"inline (signed-byte 32) ASH")
   (:args (number :scs (signed-reg) :to :save)
 	 (amount :scs (signed-reg immediate) :to :save))
   (:arg-types signed-num signed-num)
@@ -527,7 +527,7 @@
 		  (move result number))))))))
 
 (define-vop (fast-ash/unsigned=>unsigned)
-  (:note "inline (unsigned-byte 32) ASH")
+  (:note _N"inline (unsigned-byte 32) ASH")
   (:args (number :scs (unsigned-reg) :to :save)
 	 (amount :scs (signed-reg immediate) :to :save))
   (:arg-types unsigned-num signed-num)
@@ -583,7 +583,7 @@
 		(move result number))))))))
 
 (define-vop (fast-ash-c/unsigned=>unsigned)
-  (:note "inline constant ASH")
+  (:note _N"inline constant ASH")
   (:args (number :scs (unsigned-reg)))
   (:info count)
   (:arg-types unsigned-num (:constant integer))
@@ -596,14 +596,14 @@
       ((< count -31) (move result zero-tn))
       ((< count 0) (inst srl result number (min (- count) 31)))
       ((> count 0) (inst sll result number (min count 31)))
-      (t (error "identity ASH not transformed away")))))
+      (t (error _"identity ASH not transformed away")))))
 
 ;; Some special cases where we know we want a left shift.  Just do the
 ;; shift, instead of checking for the sign of the shift.
 (macrolet
     ((frob (name sc-type type result-type cost)
        `(define-vop (,name)
-	 (:note "inline ASH")
+	 (:note _N"inline ASH")
 	 (:translate ash)
 	 (:args (number :scs (,sc-type))
 	        (amount :scs (signed-reg unsigned-reg immediate)))
@@ -630,7 +630,7 @@
 (macrolet
     ((frob (name sc-type type result-type cost)
        `(define-vop (,name)
-	  (:note "inline ASH")
+	  (:note _N"inline ASH")
 	  (:translate ash)
 	  (:args (number :scs (,sc-type)))
 	  (:info amount)
@@ -653,7 +653,7 @@
 ;;#+sparc-v9
 #+nil
 (define-vop (fast-ash-left/signed64=>signed64)
-    (:note "inline ASH")
+    (:note _N"inline ASH")
   (:translate ash)
   (:args (number :scs (signed64-reg))
 	 (amount :scs (signed-reg unsigned-reg immediate)))
@@ -705,7 +705,7 @@
 (macrolet
     ((frob (trans name sc-type type shift-inst cost)
        `(define-vop (,name)
-	 (:note "inline right ASH")
+	 (:note _N"inline right ASH")
 	 (:translate ,trans)
 	 (:args (number :scs (,sc-type))
 	        (amount :scs (signed-reg unsigned-reg immediate)))
@@ -736,7 +736,7 @@
 (macrolet
     ((frob (trans name sc-type type shift-inst cost max-shift)
        `(define-vop (,name)
-	 (:note "inline right ASH")
+	 (:note _N"inline right ASH")
 	 (:translate ,trans)
 	 (:args (number :target result :scs (,sc-type)))
 	 (:info amount)
@@ -769,7 +769,7 @@
   (:results (r :scs (signed-reg)))
   (:result-types signed-num)
   (:translate ash-right-signed)
-  (:note "inline (signed-byte 32) arithmetic")
+  (:note _N"inline (signed-byte 32) arithmetic")
   (:generator 1
     (if (zerop y)
 	(move r x)
@@ -777,7 +777,7 @@
 
   
 (define-vop (fast-ash-right/fixnum=>fixnum)
-    (:note "inline right ASH")
+    (:note _N"inline right ASH")
   (:translate ash-right-signed)
   (:args (number :scs (any-reg))
 	 (amount :scs (signed-reg unsigned-reg immediate)))
@@ -801,7 +801,7 @@
 
 (define-vop (signed-byte-32-len)
   (:translate integer-length)
-  (:note "inline (signed-byte 32) integer-length")
+  (:note _N"inline (signed-byte 32) integer-length")
   (:policy :fast-safe)
   (:args (arg :scs (signed-reg) :target shift))
   (:arg-types signed-num)
@@ -827,7 +827,7 @@
 
 (define-vop (unsigned-byte-32-len)
   (:translate integer-length)
-  (:note "inline (unsigned-byte 32) integer-length")
+  (:note _N"inline (unsigned-byte 32) integer-length")
   (:policy :fast-safe)
   (:args (arg :scs (unsigned-reg) :target shift))
   (:arg-types unsigned-num)
@@ -852,7 +852,7 @@
 
 (define-vop (unsigned-byte-32-count)
   (:translate logcount)
-  (:note "inline (unsigned-byte 32) logcount")
+  (:note _N"inline (unsigned-byte 32) logcount")
   (:policy :fast-safe)
   (:args (arg :scs (unsigned-reg)))
   (:arg-types unsigned-num)
@@ -915,7 +915,7 @@
 	      (:constant (and (signed-byte 13) (not (integer 0 0)))))
   (:results (r :scs (any-reg)))
   (:result-types tagged-num)
-  (:note "inline fixnum arithmetic")
+  (:note _N"inline fixnum arithmetic")
   (:translate *)
   (:guard (or (backend-featurep :sparc-v8)
 	      (and (backend-featurep :sparc-v9)
@@ -978,13 +978,13 @@
 	 (let ((bound (ash 1 (1- s))))
 	   `(integer ,(- bound) ,(- bound bite 1))))
 	(t
-	 (error "Bad size specified for SIGNED-BYTE type specifier: ~S." s))))
+	 (error _"Bad size specified for SIGNED-BYTE type specifier: ~S." s))))
 
 (define-vop (fast-conditional/fixnum fast-conditional)
   (:args (x :scs (any-reg zero))
 	 (y :scs (any-reg zero)))
   (:arg-types tagged-num tagged-num)
-  (:note "inline fixnum comparison"))
+  (:note _N"inline fixnum comparison"))
 
 (define-vop (fast-conditional-c/fixnum fast-conditional/fixnum)
   (:args (x :scs (any-reg zero)))
@@ -995,7 +995,7 @@
   (:args (x :scs (signed-reg zero))
 	 (y :scs (signed-reg zero)))
   (:arg-types signed-num signed-num)
-  (:note "inline (signed-byte 32) comparison"))
+  (:note _N"inline (signed-byte 32) comparison"))
 
 (define-vop (fast-conditional-c/signed fast-conditional/signed)
   (:args (x :scs (signed-reg zero)))
@@ -1006,7 +1006,7 @@
   (:args (x :scs (unsigned-reg zero))
 	 (y :scs (unsigned-reg zero)))
   (:arg-types unsigned-num unsigned-num)
-  (:note "inline (unsigned-byte 32) comparison"))
+  (:note _N"inline (unsigned-byte 32) comparison"))
 
 (define-vop (fast-conditional-c/unsigned fast-conditional/unsigned)
   (:args (x :scs (unsigned-reg zero)))
@@ -1057,7 +1057,7 @@
   (:args (x :scs (any-reg descriptor-reg zero))
 	 (y :scs (any-reg zero)))
   (:arg-types tagged-num tagged-num)
-  (:note "inline fixnum comparison")
+  (:note _N"inline fixnum comparison")
   (:translate eql)
   (:generator 4
     (inst cmp x y)
@@ -1180,13 +1180,13 @@
 
 (define-vop (shift-towards-start shift-towards-someplace)
   (:translate shift-towards-start)
-  (:note "shift-towards-start")
+  (:note _N"shift-towards-start")
   (:generator 1
     (inst slln r num amount)))
 
 (define-vop (shift-towards-end shift-towards-someplace)
   (:translate shift-towards-end)
-  (:note "shift-towards-end")
+  (:note _N"shift-towards-end")
   (:generator 1
     (inst srln r num amount)))
 
@@ -1297,7 +1297,7 @@
 ;;; routines.
 ;;; 
 (defun emit-multiply (multiplier multiplicand result-high result-low)
-  "Emit code to multiply MULTIPLIER with MULTIPLICAND, putting the result
+  _N"Emit code to multiply MULTIPLIER with MULTIPLICAND, putting the result
   in RESULT-HIGH and RESULT-LOW.  KIND is either :signed or :unsigned.
   Note: the lifetimes of MULTIPLICAND and RESULT-HIGH overlap."
   (declare (type tn multiplier result-high result-low)
@@ -1573,7 +1573,7 @@
   (:results (quo :scs (signed-reg))
             (rem :scs (signed-reg)))
   (:result-types signed-num signed-num)
-  (:note "inline (signed-byte 32) arithmetic")
+  (:note _N"inline (signed-byte 32) arithmetic")
   (:guard (or (backend-featurep :sparc-v8)
               (and (backend-featurep :sparc-v9)
                    (not (backend-featurep :sparc-64)))))
@@ -1618,7 +1618,7 @@
   (:results (quo :scs (unsigned-reg))
             (rem :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
-  (:note "inline (unsigned-byte 32) arithmetic")
+  (:note _N"inline (unsigned-byte 32) arithmetic")
   (:guard (or (backend-featurep :sparc-v8)
               (and (backend-featurep :sparc-v9)
                    (not (backend-featurep :sparc-64)))))
@@ -1784,7 +1784,7 @@
   (:arg-types (:or signed64-num signed-num unsigned-num))
   (:result-types signed64-num)
   (:temporary (:scs (signed64-reg)) x64)
-  (:note "inline (signed-byte 64) arithmetic"))
+  (:note _N"inline (signed-byte 64) arithmetic"))
 
 (define-vop (fast-signed64-binop fast-safe-arith-op)
   (:args (x :target r :scs (signed64-reg unsigned-reg signed-reg zero))
@@ -1793,7 +1793,7 @@
 	      (:or signed64-num signed-num unsigned-num))
   (:results (r :scs (signed64-reg)))
   (:result-types signed64-num)
-  (:note "inline (signed-byte 64) arithmetic"))
+  (:note _N"inline (signed-byte 64) arithmetic"))
 
 (define-vop (fast-signed64-binop-c fast-safe-arith-op)
   (:args (x :target r :scs (signed64-reg unsigned-reg signed-reg zero)))
@@ -1802,7 +1802,7 @@
 	      (:constant (and (signed-byte 13) (not (integer 0 0)))))
   (:results (r :scs (signed64-reg)))
   (:result-types signed64-num)
-  (:note "inline (signed-byte 64) arithmetic"))
+  (:note _N"inline (signed-byte 64) arithmetic"))
 
 (define-vop (fast-unsigned64-binop fast-safe-arith-op)
   (:args (x :target r :scs (unsigned64-reg unsigned-reg zero))
@@ -1811,7 +1811,7 @@
 	      (:or unsigned64-num unsigned-num))
   (:results (r :scs (unsigned64-reg)))
   (:result-types unsigned64-num)
-  (:note "inline (unsigned-byte 64) arithmetic"))
+  (:note _N"inline (unsigned-byte 64) arithmetic"))
 
 (define-vop (fast-unsigned64-binop-c fast-safe-arith-op)
   (:args (x :target r :scs (unsigned64-reg unsigned-reg zero)))
@@ -1820,7 +1820,7 @@
 	      (:constant (and (signed-byte 13) (not (integer 0 0)))))
   (:results (r :scs (unsigned64-reg)))
   (:result-types unsigned64-num)
-  (:note "inline (unsigned-byte 64) arithmetic"))
+  (:note _N"inline (unsigned-byte 64) arithmetic"))
 
 ;; Extend the sign of Y appropriately and perform the desired
 ;; operation. R is where the result should go, X is the first arg, Y
@@ -2014,7 +2014,7 @@
   (:result-types signed64-num)
   (:temporary (:scs (signed64-reg)) x64 y64)
   (:translate *)
-  (:note "inline (signed-byte 64) arithmetic")
+  (:note _N"inline (signed-byte 64) arithmetic")
   (:guard (backend-featurep :sparc-v9))
   (:generator 3
     (sc-dispatch r x y x64 y64 mulx)))
@@ -2028,7 +2028,7 @@
   (:result-types unsigned64-num)
   (:temporary (:scs (signed64-reg)) x64 y64)
   (:translate *)
-  (:note "inline (signed-byte 64) arithmetic")
+  (:note _N"inline (signed-byte 64) arithmetic")
   (:guard (backend-featurep :sparc-v9))
   (:generator 3
     (sc-dispatch r x y x64 y64 mulx)))
@@ -2044,7 +2044,7 @@
   (:result-types signed64-num)
   (:temporary (:scs (signed64-reg)) x64 y64)
   (:translate *)
-  (:note "inline (signed-byte 64) arithmetic")
+  (:note _N"inline (signed-byte 64) arithmetic")
   (:guard (backend-featurep :sparc-v9))
   (:generator 3
     (sc-dispatch r x y x64 y64 mulx)))
@@ -2059,13 +2059,13 @@
   (:result-types unsigned64-num)
   (:temporary (:scs (unsigned64-reg)) x64 y64)
   (:translate *)
-  (:note "inline (unsigned-byte 64) arithmetic")
+  (:note _N"inline (unsigned-byte 64) arithmetic")
   (:guard (backend-featurep :sparc-v9))
   (:generator 3
     (sc-dispatch r x y x64 y64 mulx)))
 
 (define-vop (fast-ash/signed64=>signed64)
-  (:note "inline (signed-byte 64) ASH")
+  (:note _N"inline (signed-byte 64) ASH")
   (:args (number :scs (signed64-reg unsigned-reg signed-reg) :to :save)
 	 (amount :scs (signed64-reg signed-reg unsigned-reg) :to :save))
   (:arg-types (:or signed64-num signed-num unsigned-num)
@@ -2131,7 +2131,7 @@
 		(move result num64))))))))
 
 (define-vop (fast-ash/unsigned64=>unsigned64)
-  (:note "inline (signed-byte 64) ASH")
+  (:note _N"inline (signed-byte 64) ASH")
   (:args (number :scs (unsigned64-reg unsigned-reg) :to :save)
 	 (amount :scs (signed64-reg signed-reg unsigned-reg immediate) :to :save))
   (:arg-types (:or unsigned64-num unsigned-num)
@@ -2208,28 +2208,28 @@
 	 (y :scs (signed64-reg unsigned-reg signed-reg zero)))
   (:arg-types (:or signed64-num unsigned-num signed-num)
 	      (:or signed64-num unsigned-num signed-num))
-  (:note "inline (signed-byte 64) comparison"))
+  (:note _N"inline (signed-byte 64) comparison"))
 
 (define-vop (fast-conditional-c/signed64 fast-conditional)
   (:args (x :scs (signed64-reg unsigned-reg signed-reg zero)))
   (:arg-types (:or signed64-num unsigned-num signed-num)
 	      (:constant (signed-byte 13)))
   (:info target not-p y)
-  (:note "inline (signed-byte 64) comparison"))
+  (:note _N"inline (signed-byte 64) comparison"))
 
 (define-vop (fast-conditional/unsigned64 fast-conditional)
   (:args (x :scs (unsigned64-reg zero))
 	 (y :scs (unsigned64-reg zero)))
   (:arg-types (:or unsigned64-num)
 	      (:or unsigned64-num))
-  (:note "inline (unsigned-byte 64) comparison"))
+  (:note _N"inline (unsigned-byte 64) comparison"))
 
 (define-vop (fast-conditional-c/unsigned64 fast-conditional)
   (:args (x :scs (unsigned64-reg zero)))
   (:arg-types (:or unsigned64-num)
 	      (:constant (unsigned-byte 12)))
   (:info target not-p y)
-  (:note "inline (signed-byte 64) comparison"))
+  (:note _N"inline (signed-byte 64) comparison"))
 
 ;; If I were smarter, This would be a macro like it is for the 32-bit
 ;; versions.  It's easier this way to see what's happening, though.
@@ -2577,12 +2577,12 @@
 (deftransform * ((x y)
 		 ((unsigned-byte 32) (constant-argument (unsigned-byte 32)))
 		 (unsigned-byte 32))
-  "recode as shifts and adds"
+  _N"recode as shifts and adds"
   (*-transformer y))
 
 #+modular-arith
 (deftransform vm::*-mod32 ((x y)
 		 ((unsigned-byte 32) (constant-argument (unsigned-byte 32)))
 		 (unsigned-byte 32))
-  "recode as shifts and adds"
+  _N"recode as shifts and adds"
   (*-transformer y))

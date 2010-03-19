@@ -55,11 +55,13 @@
 ;;; jmorrill@bbn.com
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/clos-bench.lisp,v 1.3 2003/05/22 15:50:06 gerd Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/clos-bench.lisp,v 1.4 2010/03/19 15:19:03 rtoy Rel $")
  
 #+cmu
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (import '(pcl:allocate-instance pcl::allocate-standard-instance)))
+
+(intl:textdomain "cmucl")
 
 #+nil
 (declaim (optimize (speed 3) (safety 1) (space 0)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/print.lisp,v 1.5 2007/07/06 08:04:39 cshapiro Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/print.lisp,v 1.6 2010/03/19 15:19:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,7 @@
 ;;; Enhancements/debugging by Douglas T. Crosher 1996.
 ;;;
 (in-package :x86)
+(intl:textdomain "cmucl")
 
 (define-vop (print)
   (:args (object :scs (descriptor-reg any-reg)))

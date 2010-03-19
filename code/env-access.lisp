@@ -6,7 +6,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/env-access.lisp,v 1.5 2008/07/21 21:04:17 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/env-access.lisp,v 1.6 2010/03/19 15:18:58 rtoy Exp $")
 
 ;;;
 ;;; **********************************************************************
@@ -17,6 +17,8 @@
 
 (in-package "EXT")
 
+(intl:textdomain "cmucl")
+
 (export '(variable-information
 	  function-information
 	  declaration-information
@@ -26,7 +28,7 @@
 (in-package "C")
 
 (defun variable-information (var &optional env)
-  "Returns information about the symbol VAR in the lexical environment ENV.
+  _N"Returns information about the symbol VAR in the lexical environment ENV.
 Three values are returned:
   1) Type or binding of VAR.
      NIL           No definition or binding
@@ -74,7 +76,7 @@ Three values are returned:
 			   (info variable type var)))))))))
 
 (defun declaration-information (declaration-name &optional env)
-  "Returns information about declarations named by the symbol DECLARATION-NAME.
+  _N"Returns information about declarations named by the symbol DECLARATION-NAME.
 Supported DECLARATION-NAMES are
   1) OPTIMIZE
      A list whose entries are of the form (QUALITY VALUE) is returned,
@@ -121,10 +123,10 @@ Supported DECLARATION-NAMES are
 		    (when (equal class "DECLARATION")
 		      (push name decls))))
 		decls))))
-      (t (error "Unsupported declaration ~S." declaration-name)))))
+      (t (error _"Unsupported declaration ~S." declaration-name)))))
 
 (defun parse-macro (name lambda-list body &optional env)
-  "Process a macro in the same way that DEFMACRO or MACROLET would.
+  _N"Process a macro in the same way that DEFMACRO or MACROLET would.
 Three values are returned:
   1) A lambda-expression that accepts two arguments
   2) A form
@@ -141,7 +143,7 @@ Three values are returned:
          ,body))))
 
 (defun function-information (function &optional env)
-  "Returns information about the function name FUNCTION in the lexical environment ENV.
+  _N"Returns information about the function name FUNCTION in the lexical environment ENV.
 Three values are returned:
   1) Type of definition or binding:
      NIL          No apparent definition
@@ -217,7 +219,7 @@ Three values are returned:
   `(quote ,env))
 
 (defun augment-environment (env &key variable symbol-macro function macro declare)
-  "Return a new environment containing information in ENV that is augmented
+  _N"Return a new environment containing information in ENV that is augmented
 by the specified parameters:
   :VARIABLE     a list of symbols visible as bound variables in the new
                 environemnt

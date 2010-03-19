@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.49 2010/01/31 19:26:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.50 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package :c)
+(intl:textdomain "cmucl")
 
 (defvar *byte-buffer*)
 (declaim (type (vector (unsigned-byte 8)) *byte-buffer*))
@@ -281,7 +282,7 @@
 
 
 (defun namestring-for-debug-source (file-info)
-  "Extract the namestring from FILE-INFO for the DEBUG-SOURCE.  
+  _N"Extract the namestring from FILE-INFO for the DEBUG-SOURCE.  
 Return FILE-INFO's untruename (e.g., target:foo) if it is absolute;
 otherwise the truename."
   (let* ((untruename (file-info-untruename file-info))

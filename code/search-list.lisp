@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/search-list.lisp,v 1.4 1994/10/31 04:11:27 ram Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/search-list.lisp,v 1.5 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 
 (in-package 'lisp)
 (in-package "EXTENSIONS")
+(intl:textdomain "cmucl")
+
 (export 'search-list)
 (in-package 'lisp)
 
@@ -24,20 +26,20 @@
 
 
 (defun search-list (name)
-  "Returns a list of strings that are the of name.
+  _N"Returns a list of strings that are the of name.
    This is setf'able.  If any provided string in a setting value
    does end with a colon or slash, a slash is added.  Also, the
    list is copied."
   (let ((dev (pathname-device name)))
-    (unless dev (error "No device in ~S." name))
+    (unless dev (error _"No device in ~S." name))
     (copy-list (gethash dev *search-list-table*))))
 
 (defun %set-search-list (name new-value)
   (unless (listp new-value)
-    (error "New value for search-list ~S not a list -- ~S."
+    (error _"New value for search-list ~S not a list -- ~S."
 	   name new-value))
   (let ((dev (pathname-device name)))
-    (unless dev (error "No device in ~S." name))
+    (unless dev (error _"No device in ~S." name))
     (nstring-downcase dev)
     (setf (gethash dev *search-list-table*)
 	  (mapcar #'(lambda (x)
@@ -53,7 +55,7 @@
 
 
 (defun resolve-search-list (name first-only-p)
-  "This takes a Sesame search-list name (\"default\") instead of the form
+  _N"This takes a Sesame search-list name (\"default\") instead of the form
    taken by SEARCH-LIST (\"default:\").  If first-only-p is non-nil, then
    only the first complete expansion of name is returned.  If, during the
    expansion of name, an undefined search list is encountered, an error
@@ -88,7 +90,7 @@
      (if pos
 	 (let ((dev (nstring-downcase (subseq ,element 0 pos))))
 	   (if (gethash dev *rsl-circularity-check*)
-	       (error "Circularity in search list -- ~S." dev)
+	       (error _"Circularity in search list -- ~S." dev)
 	       (setf (gethash dev *rsl-circularity-check*) t))
 	   (let ((res (resolve-search-list-aux dev ,first-only-p)))
 	     (remhash dev *rsl-circularity-check*)
@@ -96,7 +98,7 @@
 		 (if (= (the fixnum pos) (the fixnum (1- len)))
 		     ,expanded-form
 		     ,concat-form)
-		 (error "Undefined search list -- ~S"
+		 (error _"Undefined search list -- ~S"
 			(subseq ,element 0 (1+ pos))))))
 	 ,already-form)))
 ) ; eval-when
@@ -128,7 +130,7 @@
 		 nil entry (nconc result res)
 		 (nconc result (rsl-concat res (subseq entry (1+ pos) len)))
 		 (nconc result (list entry))))))
-	(error "Undefined search list -- ~S" 
+	(error _"Undefined search list -- ~S" 
 	       (concatenate 'simple-string dev ":")))))
 
 ;;; RSL-FIRST takes a possible expansion and resolves it if necessary.

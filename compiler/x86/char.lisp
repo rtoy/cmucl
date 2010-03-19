@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/char.lisp,v 1.8 2008/04/21 23:59:12 cshapiro Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/char.lisp,v 1.9 2010/03/19 15:19:01 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -23,6 +23,7 @@
 ;;;
 
 (in-package :x86)
+(intl:textdomain "cmucl-x86-vm")
 
 
 ;;;; Moves and coercions:
@@ -32,7 +33,7 @@
 (define-vop (move-to-base-char)
   (:args (x :scs (any-reg control-stack) :target y))
   (:results (y :scs (base-char-reg)))
-  (:note "character untagging")
+  (:note _N"character untagging")
   (:generator 1
     (move y x)
     (inst shr y type-bits)))
@@ -46,7 +47,7 @@
 (define-vop (move-from-base-char)
   (:args (x :scs (base-char-reg base-char-stack) :target y))
   (:results (y :scs (any-reg descriptor-reg)))
-  (:note "character tagging")
+  (:note _N"character tagging")
   (:generator 1
     (move y x)
     (inst shl y type-bits)
@@ -64,7 +65,7 @@
 	    :load-if (not (location= x y))))
   (:results (y :scs (base-char-reg base-char-stack)
 	       :load-if (not (location= x y))))
-  (:note "character move")
+  (:note _N"character move")
   (:effects)
   (:affected)
   (:generator 0
@@ -82,7 +83,7 @@
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y base-char-reg))))
   (:results (y))
-  (:note "character arg move")
+  (:note _N"character arg move")
   (:generator 0
     (sc-case y
       (base-char-reg
@@ -136,7 +137,7 @@
   (:conditional)
   (:info target not-p)
   (:policy :fast-safe)
-  (:note "inline comparison")
+  (:note _N"inline comparison")
   (:variant-vars condition not-condition)
   (:generator 3
     (inst cmp x y)
@@ -160,7 +161,7 @@
   (:conditional)
   (:info target not-p y)
   (:policy :fast-safe)
-  (:note "inline comparison")
+  (:note _N"inline comparison")
   (:variant-vars condition not-condition)
   (:generator 2
     (inst cmp x (char-code y))

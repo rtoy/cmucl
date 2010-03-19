@@ -5,20 +5,21 @@
 ;;; domain.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-compat.lisp,v 1.1 2003/06/06 16:27:05 toy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-compat.lisp,v 1.2 2010/03/19 15:19:03 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Gray streams compatibility functions for simple-streams
 
 (in-package "STREAM")
+(intl:textdomain "cmucl")
 
 (defvar *enable-gray-compat-warnings* nil)
 
 (defmacro define-gray-stream-method (name lambda-list &body body)
   `(defmethod ,name ,lambda-list
      (when *enable-gray-compat-warnings*
-       (warn "Called ~S on a simple-stream" ',name))
+       (warn _"Called ~S on a simple-stream" ',name))
      ,@body))
 
 (define-gray-stream-method ext:stream-advance-to-column ((stream

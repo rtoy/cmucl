@@ -8,6 +8,11 @@ vpath %.h $(PATH1)
 vpath %.c $(PATH1)
 vpath %.S $(PATH1)
 
+CMULOCALE = ../../src/i18n/locale
+vpath %.pot $(CMULOCALE)
+vpath %.po  $(CMULOCALE)
+vpath %.mo  $(CMULOCALE)
+
 CPP_DEFINE_OPTIONS := -Di386
 
 # Enable support for :linkage-table feature.

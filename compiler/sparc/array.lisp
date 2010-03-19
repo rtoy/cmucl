@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.36 2009/06/11 16:04:00 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.37 2010/03/19 15:19:01 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; Complex-float and long-float support by Douglas Crosher 1998.
 ;;;
 (in-package "SPARC")
+(intl:textdomain "cmucl-sparc-vm")
 
 
 ;;;; Allocator for the array header.
@@ -116,7 +117,7 @@
 		  ,(intern (concatenate 'simple-string
 					(string variant)
 					"-REF")))
-       (:note "inline array access")
+       (:note _N"inline array access")
        (:variant vm:vector-data-offset vm:other-pointer-type)
        (:translate data-vector-ref)
        (:arg-types ,type positive-fixnum)
@@ -128,7 +129,7 @@
 		  ,(intern (concatenate 'simple-string
 					(string variant)
 					"-SET")))
-       (:note "inline array store")
+       (:note _N"inline array store")
        (:variant vm:vector-data-offset vm:other-pointer-type)
        (:translate data-vector-set)
        (:arg-types ,type positive-fixnum ,element-type)
@@ -174,7 +175,7 @@
 	 (bit-shift (1- (integer-length elements-per-word))))
     `(progn
        (define-vop (,(symbolicate 'data-vector-ref/ type))
-	 (:note "inline array access")
+	 (:note _N"inline array access")
 	 (:translate data-vector-ref)
 	 (:policy :fast-safe)
 	 (:args (object :scs (descriptor-reg))
@@ -230,7 +231,7 @@
 	     (unless (= extra ,(1- elements-per-word))
 	       (inst and result ,(1- (ash 1 bits)))))))
        (define-vop (,(symbolicate 'data-vector-set/ type))
-	 (:note "inline array store")
+	 (:note _N"inline array store")
 	 (:translate data-vector-set)
 	 (:policy :fast-safe)
 	 (:args (object :scs (descriptor-reg))
@@ -341,7 +342,7 @@
 ;;; 
 
 (define-vop (data-vector-ref/simple-array-single-float)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
@@ -356,7 +357,7 @@
     (inst ldf value object offset)))
 
 (define-vop (data-vector-ref-c/simple-array-single-float)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg)))
@@ -377,7 +378,7 @@
 
 
 (define-vop (data-vector-set/simple-array-single-float)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
@@ -396,7 +397,7 @@
       (inst fmovs result value))))
 
 (define-vop (data-vector-set-c/simple-array-single-float)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
@@ -421,7 +422,7 @@
 	(inst fmovs result value)))))
 
 (define-vop (data-vector-ref/simple-array-double-float)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
@@ -437,7 +438,7 @@
     (inst lddf value object offset)))
 
 (define-vop (data-vector-ref-c/simple-array-double-float)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg)))
@@ -457,7 +458,7 @@
 	    (inst lddf value object temp))))))
 
 (define-vop (data-vector-set/simple-array-double-float)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
@@ -476,7 +477,7 @@
       (move-double-reg result value))))
 
 (define-vop (data-vector-set-c/simple-array-double-float)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
@@ -502,7 +503,7 @@
 
 #+long-float
 (define-vop (data-vector-ref/simple-array-long-float)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
@@ -519,7 +520,7 @@
 
 #+long-float
 (define-vop (data-vector-set/simple-array-long-float)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
@@ -555,7 +556,7 @@
 
 ;;;
 (define-vop (data-vector-ref/simple-array-signed-byte-8 signed-byte-index-ref)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:variant vm:vector-data-offset vm:other-pointer-type)
   (:translate data-vector-ref)
   (:arg-types simple-array-signed-byte-8 positive-fixnum)
@@ -563,7 +564,7 @@
   (:result-types tagged-num))
 
 (define-vop (data-vector-set/simple-array-signed-byte-8 byte-index-set)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:variant vm:vector-data-offset vm:other-pointer-type)
   (:translate data-vector-set)
   (:arg-types simple-array-signed-byte-8 positive-fixnum tagged-num)
@@ -576,7 +577,7 @@
 
 (define-vop (data-vector-ref/simple-array-signed-byte-16
 	     signed-halfword-index-ref)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:variant vm:vector-data-offset vm:other-pointer-type)
   (:translate data-vector-ref)
   (:arg-types simple-array-signed-byte-16 positive-fixnum)
@@ -584,7 +585,7 @@
   (:result-types tagged-num))
 
 (define-vop (data-vector-set/simple-array-signed-byte-16 halfword-index-set)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:variant vm:vector-data-offset vm:other-pointer-type)
   (:translate data-vector-set)
   (:arg-types simple-array-signed-byte-16 positive-fixnum tagged-num)
@@ -598,7 +599,7 @@
 ;;; Complex float arrays.
 
 (define-vop (data-vector-ref/simple-array-complex-single-float)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result)
@@ -618,7 +619,7 @@
       (inst ldf imag-tn object offset))))
 
 (define-vop (data-vector-ref-c/simple-array-complex-single-float)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result))
@@ -644,7 +645,7 @@
 	     (inst ldf imag-tn object temp))))))
 
 (define-vop (data-vector-set/simple-array-complex-single-float)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result)
@@ -672,7 +673,7 @@
 	(inst fmovs result-imag value-imag)))))
 
 (define-vop (data-vector-set-c/simple-array-complex-single-float)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result)
@@ -706,7 +707,7 @@
 	(inst fmovs result-imag value-imag)))))
 
 (define-vop (data-vector-ref/simple-array-complex-double-float)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result)
@@ -726,7 +727,7 @@
       (inst lddf imag-tn object offset))))
 
 (define-vop (data-vector-ref-c/simple-array-complex-double-float)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result))
@@ -751,7 +752,7 @@
 	     (inst lddf imag-tn object temp))))))
 
 (define-vop (data-vector-set/simple-array-complex-double-float)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result)
@@ -779,7 +780,7 @@
 	(move-double-reg result-imag value-imag)))))
 
 (define-vop (data-vector-set-c/simple-array-complex-double-float)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result)
@@ -818,7 +819,7 @@
 
 #+long-float
 (define-vop (data-vector-ref/simple-array-complex-long-float)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result)
@@ -839,7 +840,7 @@
 
 #+long-float
 (define-vop (data-vector-set/simple-array-complex-long-float)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result)
@@ -976,14 +977,14 @@
 ;;; 
 
 (define-vop (raw-bits word-index-ref)
-  (:note "raw-bits VOP")
+  (:note _N"raw-bits VOP")
   (:translate %raw-bits)
   (:results (value :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:variant 0 vm:other-pointer-type))
 
 (define-vop (set-raw-bits word-index-set)
-  (:note "setf raw-bits VOP")
+  (:note _N"setf raw-bits VOP")
   (:translate %set-raw-bits)
   (:args (object :scs (descriptor-reg))
 	 (index :scs (any-reg zero immediate))
@@ -997,7 +998,7 @@
 #+double-double
 (progn
 (define-vop (data-vector-ref/simple-array-double-double-float)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result)
@@ -1017,7 +1018,7 @@
       (inst lddf lo-tn object offset))))
 
 (define-vop (data-vector-ref-c/simple-array-double-double-float)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result))
@@ -1042,7 +1043,7 @@
 	     (inst lddf lo-tn object temp))))))
 
 (define-vop (data-vector-set/simple-array-double-double-float)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result)
@@ -1070,7 +1071,7 @@
 	(move-double-reg result-lo value-lo)))))
 
 (define-vop (data-vector-set-c/simple-array-double-double-float)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result)
@@ -1108,7 +1109,7 @@
 	(move-double-reg result-lo value-lo)))))
 
 (define-vop (data-vector-ref/simple-array-complex-double-double-float)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result)
@@ -1134,7 +1135,7 @@
       (inst lddf imag-tn object offset))))
 
 (define-vop (data-vector-ref-c/simple-array-complex-double-double-float)
-  (:note "inline array access")
+  (:note _N"inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result))
@@ -1167,7 +1168,7 @@
 	     (inst lddf imag-lo-tn object temp))))))
 
 (define-vop (data-vector-set/simple-array-complex-double-double-float)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result)
@@ -1207,7 +1208,7 @@
 	(move-double-reg result-imag value-imag)))))
 
 (define-vop (data-vector-set-c/simple-array-complex-double-double-float)
-  (:note "inline array store")
+  (:note _N"inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to :result)

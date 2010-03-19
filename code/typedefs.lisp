@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.14 2006/06/30 18:41:22 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.15 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,8 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "KERNEL")
+(intl:textdomain "cmucl")
+
 (export '(ctype typedef-init))
 
 ;;; These are the Common Lisp defined type specifier symbols.  These are the
@@ -59,7 +61,7 @@
 (eval-when (compile load eval)
 
 (defparameter cold-type-init-forms nil
-  "Forms that must happen before top level forms are run.")
+  _N"Forms that must happen before top level forms are run.")
 
 (defmacro with-cold-load-init-forms ()
   '(eval-when (compile eval)
@@ -70,7 +72,7 @@
       (let ((when (cadar forms))
 	    (eval-when-forms (cddar forms)))
 	(unless (= (length forms) 1)
-	  (warn "Can't cold-load-init other forms along with an eval-when."))
+	  (warn _"Can't cold-load-init other forms along with an eval-when."))
 	(when (member 'load when)
 	  (setf cold-type-init-forms
 		(nconc cold-type-init-forms (copy-list eval-when-forms))))
@@ -122,12 +124,12 @@
 ;;;
 (defun type-class-or-lose (name)
   (or (gethash name *type-classes*)
-      (error "~S is not a defined type class." name)))
+      (error _"~S is not a defined type class." name)))
 
 ;;; MUST-SUPPLY-THIS  --  Interface
 ;;;
 (defun must-supply-this (&rest foo)
-  (error "Missing type method for ~S" foo))
+  (error _"Missing type method for ~S" foo))
 
 
 (defstruct (type-class
@@ -223,7 +225,7 @@
 ;;;
 (defun class-function-slot-or-lose (name)
   (or (cdr (assoc name type-class-function-slots))
-      (error "~S is not a defined type class method." name)))
+      (error _"~S is not a defined type class method." name)))
 
 ); Eval-When (Compile Load Eval)
 
@@ -232,7 +234,7 @@
 ;;;
 (defmacro define-type-method ((class method &rest more-methods)
 			      lambda-list &body body)
-  "DEFINE-TYPE-METHOD (Class-Name Method-Name+) Lambda-List Form*"
+  _N"DEFINE-TYPE-METHOD (Class-Name Method-Name+) Lambda-List Form*"
   (let ((name (symbolicate CLASS "-" method "-TYPE-METHOD")))
     `(progn
        (defun ,name ,lambda-list ,@body)
@@ -248,7 +250,7 @@
 ;;; DEFINE-TYPE-CLASS  --  Interface
 ;;;
 (defmacro define-type-class (name &optional inherits)
-  "DEFINE-TYPE-CLASS Name [Inherits]"
+  _N"DEFINE-TYPE-CLASS Name [Inherits]"
   `(cold-load-init
      ,(once-only ((n-class (if inherits
 			       `(copy-type-class (type-class-or-lose ',inherits))

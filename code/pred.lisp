@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.62 2009/11/02 15:05:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.63 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;;
 
 (in-package "KERNEL")
+(intl:textdomain "cmucl")
+
 (export '(%instancep instance fixnump bignump bitp ratiop weak-pointer-p
 	  %typep class-cell-typep))
 
@@ -136,7 +138,7 @@
 ;;; it is not permitted to return member types.
 ;;; 
 (defun type-of (object)
-  "Return the type of OBJECT."
+  _N"Return the type of OBJECT."
   (typecase object
     ((or array complex)
      (type-specifier (ctype-of object)))
@@ -165,7 +167,7 @@
 ;;;; UPGRADED-ARRAY-ELEMENT-TYPE  --  public
 ;;;
 (defun upgraded-array-element-type (spec &optional environment)
-  "Return the element type that will actually be used to implement an array
+  _N"Return the element type that will actually be used to implement an array
    with the specifier :ELEMENT-TYPE Spec."
   ;; Type expansion (TYPE-EXPAND) currently doesn't handle environments.
   (declare (ignore environment))
@@ -178,7 +180,7 @@
 ;;; Just parse the type specifiers and call csubtype.
 ;;; 
 (defun subtypep (type1 type2 &optional environment)
-  "Return two values indicating the relationship between type1 and type2:
+  _N"Return two values indicating the relationship between type1 and type2:
   T and T: type1 definitely is a subtype of type2.
   NIL and T: type1 definitely is not a subtype of type2.
   NIL and NIL: who knows?"
@@ -195,7 +197,7 @@
 ;;; Just call %typep
 ;;; 
 (defun typep (object type &optional environment)
-  "Return T iff OBJECT is of type TYPE."
+  _N"Return T iff OBJECT is of type TYPE."
   (declare (ignore environment))
   (%typep object type))
 
@@ -268,7 +270,7 @@
 	  (if (unknown-type-p (array-type-element-type type))
 	      ;; better to fail this way than to get bogosities like
 	      ;;   (TYPEP (MAKE-ARRAY 11) '(ARRAY SOME-UNDEFINED-TYPE)) => T
-	      (error "~@<unknown element type in array type: ~2I~_~S~:>"
+	      (error _"~@<unknown element type in array type: ~2I~_~S~:>"
 		     (type-specifier type))
 	      t)
 	  (or (eq (array-type-element-type type) *wild-type*)
@@ -293,7 +295,7 @@
      ;; Parse it again to make sure it's really undefined.
      (let ((reparse (specifier-type (unknown-type-specifier type))))
        (if (typep reparse 'unknown-type)
-	   (error "Unknown type specifier: ~S"
+	   (error _"Unknown type specifier: ~S"
 		  (unknown-type-specifier reparse))
 	   (%%typep object reparse))))
     (negation-type
@@ -312,11 +314,11 @@
 	 ;; HAIRY-TYPE for them.
 	 (not
 	  (unless (and (listp hairy-spec) (= (length hairy-spec) 2))
-	    (error "Invalid type specifier: ~S" hairy-spec))
+	    (error _"Invalid type specifier: ~S" hairy-spec))
 	  (not (%%typep object (specifier-type (cadr hairy-spec)))))
 	 (satisfies
 	  (unless (and (listp hairy-spec) (= (length hairy-spec) 2))
-	    (error "Invalid type specifier: ~S" hairy-spec))
+	    (error _"Invalid type specifier: ~S" hairy-spec))
 	  (let ((fn (cadr hairy-spec)))
 	    (if (funcall (typecase fn
 			   (function fn)
@@ -329,7 +331,7 @@
     (alien-type-type
      (alien-internals:alien-typep object (alien-type-type-alien-type type)))
     (function-type
-     (error "Function types are not a legal argument to TYPEP:~%  ~S"
+     (error _"Function types are not a legal argument to TYPEP:~%  ~S"
 	    (type-specifier type)))))
 
 
@@ -341,7 +343,7 @@
 (defun class-cell-typep (obj-layout cell object)
   (let ((class (class-cell-class cell)))
     (unless class
-      (error "Class has not yet been defined: ~S" (class-cell-name cell)))
+      (error _"Class has not yet been defined: ~S" (class-cell-name cell)))
     (class-typep obj-layout class object)))
 
 
@@ -354,12 +356,12 @@
   (when (layout-invalid obj-layout)
     (if (and (typep (kernel::class-of object) 'kernel::standard-class) object)
 	(setq obj-layout (pcl::check-wrapper-validity object))
-	(error "TYPEP on obsolete object (was class ~S)."
+	(error _"TYPEP on obsolete object (was class ~S)."
 	       (class-proper-name (layout-class obj-layout)))))
   (let ((layout (%class-layout class))
 	(obj-inherits (layout-inherits obj-layout)))
     (when (layout-invalid layout)
-      (error "Class is currently invalid: ~S" class))
+      (error _"Class is currently invalid: ~S" class))
     (or (eq obj-layout layout)
 	(dotimes (i (length obj-inherits) nil)
 	  (when (eq (svref obj-inherits i) layout)
@@ -376,14 +378,14 @@
 ;;; 
 
 (defun eq (obj1 obj2)
-  "Return T if OBJ1 and OBJ2 are the same object, otherwise NIL."
+  _N"Return T if OBJ1 and OBJ2 are the same object, otherwise NIL."
   (eq obj1 obj2))
 
 
 ;;; EQUAL -- public.
 ;;;
 (defun equal (x y)
-  "Returns T if X and Y are EQL or if they are structured components
+  _N"Returns T if X and Y are EQL or if they are structured components
   whose elements are EQUAL.  Strings and bit-vectors are EQUAL if they
   are the same length and have indentical components.  Other arrays must be
   EQ to be EQUAL."
@@ -412,7 +414,7 @@
 ;;; EQUALP -- public.
 ;;; 
 (defun equalp (x y)
-  "Just like EQUAL, but more liberal in several respects.
+  _N"Just like EQUAL, but more liberal in several respects.
   Numbers may be of different types, as long as the values are identical
   after coercion.  Characters may differ in alphabetic case.  Vectors and
   arrays must have identical dimensions and EQUALP elements, but may differ

@@ -1,0 +1,35 @@
+# @ cmucl-sparc-svr4
+# SOME DESCRIPTIVE TITLE
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: target:code/sparc-svr4-vm.lisp
+msgid "Returns a string describing the type of the local machine."
+msgstr ""
+
+#: target:code/sparc-svr4-vm.lisp
+msgid "Returns a string describing the version of the local machine."
+msgstr ""
+
+#: target:code/sparc-svr4-vm.lisp
+msgid "Unaligned instruction?  offset=#x~X."
+msgstr ""
+
+#: target:code/sparc-svr4-vm.lisp
+msgid "Can't deal with CALL fixups, yet."
+msgstr ""
+
+#: target:code/sparc-svr4-vm.lisp
+msgid "XRS ID invalid but attempting to access double-float register ~d!"
+msgstr ""

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.38 2009/09/09 15:51:27 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.39 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;; Scott Fahlman, Dan Aronson, and Steve Handerson did stuff here, too.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export '(documentation *features* variable room
 	  lisp-implementation-type lisp-implementation-version machine-type
 	  machine-version machine-instance software-type software-version
@@ -55,7 +57,7 @@
       (values (info function documentation name)))))
 
 (defun documentation (x doc-type)
-  "Returns the documentation string of Doc-Type for X, or NIL if
+  _N"Returns the documentation string of Doc-Type for X, or NIL if
   none exists.  System doc-types are VARIABLE, FUNCTION, STRUCTURE, TYPE,
   SETF, and T."
   (flet (;; CMUCL random-documentation.
@@ -95,14 +97,33 @@
 (defun (setf documentation) (string name doc-type)
   #-no-docstrings
   (case doc-type
-    (variable (setf (info variable documentation name) string))
-    (function (setf (info function documentation name) string))
+    (variable
+     #+nil
+     (when string
+       (%primitive print "Set variable text domain")
+       (%primitive print (symbol-name name))
+       (%primitive print intl::*default-domain*))
+     (setf (info variable textdomain name) intl::*default-domain*)
+     (setf (info variable documentation name) string))
+    (function
+     #+nil
+     (when intl::*default-domain*
+       (%primitive print "Set function text domain")
+       (%primitive print (symbol-name name))
+       (%primitive print intl::*default-domain*))
+     (setf (info function textdomain name) intl::*default-domain*)
+     (setf (info function documentation name) string))
     (structure
      (unless (eq (info type kind name) :instance)
-       (error "~S is not the name of a structure type." name))
+       (error _"~S is not the name of a structure type." name))
+     (setf (info type textdomain name) intl::*default-domain*)
      (setf (info type documentation name) string))
-    (type (setf (info type documentation name) string))
-    (setf (setf (info setf documentation name) string))
+    (type
+     (setf (info type textdomain name) intl::*default-domain*)
+     (setf (info type documentation name) string))
+    (setf
+     (setf (info setf textdomain name) intl::*default-domain*)
+     (setf (info setf documentation name) string))
     (t
      (let ((pair (assoc doc-type (info random-documentation stuff name))))
        (if pair
@@ -140,7 +161,7 @@
 (sys:register-lisp-runtime-feature :unicode)
 
 (defun featurep (x)
-  "If X is an atom, see if it is present in *FEATURES*.  Also
+  _N"If X is an atom, see if it is present in *FEATURES*.  Also
   handle arbitrary combinations of atoms using NOT, AND, OR."
   (if (consp x)
       (case (car x)
@@ -148,44 +169,44 @@
 	((:and and) (every #'featurep (cdr x)))
 	((:or or) (some #'featurep (cdr x)))
 	(t
-	 (error "Unknown operator in feature expression: ~S." x)))
+	 (error _"Unknown operator in feature expression: ~S." x)))
       (not (null (memq x *features*)))))
 
 
 ;;; Other Environment Inquiries.
 
 (defun lisp-implementation-type ()
-  "Returns a string describing the implementation type."
+  _N"Returns a string describing the implementation type."
   "CMU Common Lisp")
 
 (defun lisp-implementation-version ()
-  "Returns a string describing the implementation version."
+  _N"Returns a string describing the implementation version."
   (format nil "~A (~X~A)" *lisp-implementation-version* c:byte-fasl-file-version
-	  #+unicode " Unicode" #-unicode ""))
+	  #+unicode _" Unicode" #-unicode ""))
 
 (defun machine-instance ()
-  "Returns a string giving the name of the local machine."
+  _N"Returns a string giving the name of the local machine."
   (unix:unix-gethostname))
 
 (defvar *software-type* "Unix"
-  "The value of SOFTWARE-TYPE.  Set in FOO-os.lisp.")
+  _N"The value of SOFTWARE-TYPE.  Set in FOO-os.lisp.")
 
 (defun software-type ()
-  "Returns a string describing the supporting software."
+  _N"Returns a string describing the supporting software."
   *software-type*)
 
-(defvar *short-site-name* "Unknown"
-  "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp.")
+(defvar *short-site-name* _"Unknown"
+  _N"The value of SHORT-SITE-NAME.  Set in library:site-init.lisp.")
 
 (defun short-site-name ()
-  "Returns a string with the abbreviated site name."
+  _N"Returns a string with the abbreviated site name."
   *short-site-name*)
 
-(defvar *long-site-name* "Site name not initialized"
-  "The value of LONG-SITE-NAME.  Set in library:site-init.lisp.")
+(defvar *long-site-name* _"Site name not initialized"
+  _N"The value of LONG-SITE-NAME.  Set in library:site-init.lisp.")
 
 (defun long-site-name ()
-  "Returns a string with the long form of the site name."
+  _N"Returns a string with the long form of the site name."
   *long-site-name*)
 
 
@@ -207,7 +228,7 @@
 (defvar *dribble-stream* nil)
 
 (defun dribble (&optional pathname &key (if-exists :append))
-  "With a file name as an argument, dribble opens the file and
+  _N"With a file name as an argument, dribble opens the file and
    sends a record of further I/O to that file.  Without an
    argument, it closes the dribble file, and quits logging."
   (cond (pathname
@@ -228,7 +249,7 @@
 	   (setf *standard-output* new-standard-output)
 	   (setf *error-output* new-error-output)))
 	((null *dribble-stream*)
-	 (error "Not currently dribbling."))
+	 (error _"Not currently dribbling."))
 	(t
 	 (let ((old-streams (pop *previous-streams*)))
 	   (close *dribble-stream*)
@@ -239,7 +260,7 @@
   (values))
 
 (defun ed (&optional x)
-  "Default implementation of ed.  This does nothing.  If hemlock is
+  _N"Default implementation of ed.  This does nothing.  If hemlock is
   loaded, ed can be used to edit a file"
   (declare (ignorable x))
   (values))

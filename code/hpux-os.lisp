@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hpux-os.lisp,v 1.2 1994/10/31 04:11:27 ram Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hpux-os.lisp,v 1.3 2010/03/19 15:18:59 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,8 @@
 ;;;
 (in-package "SYSTEM")
 (use-package "EXTENSIONS")
+(intl:textdomain "cmucl")
+
 (export '(get-system-info get-page-size os-init))
 
 (pushnew :hpux *features*)

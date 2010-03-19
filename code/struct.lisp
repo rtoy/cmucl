@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.22 2009/10/18 14:21:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.23 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,10 +13,11 @@
 ;;; for bootstrapping reasons.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
 
 ;;;; The stream structure:
 
-(defconstant in-buffer-length 512 "The size of a stream in-buffer.")
+(defconstant in-buffer-length 512 _N"The size of a stream in-buffer.")
 (deftype in-buffer-type ()
   `(simple-array (unsigned-byte 8) (,in-buffer-length)))
 

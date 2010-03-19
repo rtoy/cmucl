@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.89 2010/01/31 16:10:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.90 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; **********************************************************************
 
 (in-package "LISP")
+(intl:textdomain "cmucl")
 
 (export '(pathname pathnamep logical-pathname
 	  parse-namestring merge-pathnames make-pathname
@@ -33,7 +34,7 @@
 (in-package "LISP")
 
 (defvar *autoload-translations* nil
-  "When non-nil, attempt to load \"library:<host>.translations\" to resolve
+  _N"When non-nil, attempt to load \"library:<host>.translations\" to resolve
    an otherwise undefined logical host.")
 							    
 
@@ -282,7 +283,7 @@
 ;;; PATH-DESIGNATOR -- internal type
 ;;;
 (deftype path-designator ()
-  "A path specification, either a string, file-stream or pathname."
+  _N"A path specification, either a string, file-stream or pathname."
   ;; This used to be stream, not file-stream, but ANSI CL says a
   ;; pathname designator is a string, a pathname or a stream
   ;; associated with a file.  In the places we use path-designator, we
@@ -529,7 +530,7 @@
 ;;; PATHNAME -- Interface
 ;;;
 (defun pathname (thing)
-  "Convert thing (a pathname, string or stream) into a pathname."
+  _N"Convert thing (a pathname, string or stream) into a pathname."
   (declare (type path-designator thing))
   (with-pathname (pathname thing)
     pathname))
@@ -631,7 +632,7 @@
 			&optional
 			(defaults *default-pathname-defaults*)
 			(default-version :newest))
-  "Construct a filled in pathname by completing the unspecified components
+  _N"Construct a filled in pathname by completing the unspecified components
    from the defaults."
   (declare (type path-designator pathname)
 	   (type path-designator defaults)
@@ -690,7 +691,7 @@
 		(results (maybe-diddle-case (coerce piece 'simple-string)
 					    diddle-case)))
 	       (t
-		(error "~S is not allowed as a directory component." piece))))
+		(error _"~S is not allowed as a directory component." piece))))
        (results)))
     (simple-string
      `(:absolute
@@ -710,7 +711,7 @@
 			   (version nil versionp)
 			   defaults
 			   (case :local))
-  "Makes a new pathname from the component arguments.  Note that host is
+  _N"Makes a new pathname from the component arguments.  Note that host is
 a host-structure or string."
   (declare (type (or null string host component-tokens) host)
 	   (type (or string component-tokens) device)
@@ -789,7 +790,7 @@ a host-structure or string."
 	       (let ((unix-directory-separator #\/))
 		 (when (eq host (%pathname-host *default-pathname-defaults*))
 		   (when (find unix-directory-separator name)
-		     (warn "Silly argument for a unix ~A: ~S"
+		     (warn _"Silly argument for a unix ~A: ~S"
 			   name-or-type name)))))))
       (check-component-validity name :pathname-name)
       (check-component-validity type :pathname-type)
@@ -802,7 +803,7 @@ a host-structure or string."
 		     (and (string= name ".")
 			  (not type))))
 	;; 
-	(warn "Silly argument for a unix PATHNAME-NAME: ~S" name)))
+	(warn _"Silly argument for a unix PATHNAME-NAME: ~S" name)))
 
     ;; More sanity checking
     (when dir
@@ -835,7 +836,7 @@ a host-structure or string."
 	       :pathname (make-pathname :directory (remove-if #'(lambda (x)
 								  (member x '(:up :back)))
 							      dir))
-	       :format-control "Illegal pathname: ~
+	       :format-control _"Illegal pathname: ~
                                 Directory with ~S immediately followed by ~S"
 	       :format-arguments (list (first d) (second d)))))
     
@@ -863,7 +864,7 @@ a host-structure or string."
 ;;; PATHNAME-HOST -- Interface
 ;;;
 (defun pathname-host (pathname &key (case :local))
-  "Accessor for the pathname's host."
+  _N"Accessor for the pathname's host."
   (declare (type path-designator pathname)
 	   (type (member :local :common) case)
 	   (values (or string null))
@@ -873,7 +874,7 @@ a host-structure or string."
 ;;; PATHNAME-DEVICE -- Interface
 ;;;
 (defun pathname-device (pathname &key (case :local))
-  "Accessor for pathname's device."
+  _N"Accessor for pathname's device."
   (declare (type path-designator pathname)
 	   (type (member :local :common) case))
   (with-pathname (pathname pathname)
@@ -886,7 +887,7 @@ a host-structure or string."
 ;;; PATHNAME-DIRECTORY -- Interface
 ;;;
 (defun pathname-directory (pathname &key (case :local))
-  "Accessor for the pathname's directory list."
+  _N"Accessor for the pathname's directory list."
   (declare (type path-designator pathname)
 	   (type (member :local :common) case))
   (with-pathname (pathname pathname)
@@ -907,7 +908,7 @@ a host-structure or string."
 ;;; PATHNAME-NAME -- Interface
 ;;;
 (defun pathname-name (pathname &key (case :local))
-  "Accessor for the pathname's name."
+  _N"Accessor for the pathname's name."
   (declare (type path-designator pathname)
 	   (type (member :local :common) case))
   (with-pathname (pathname pathname)
@@ -920,7 +921,7 @@ a host-structure or string."
 ;;; PATHNAME-TYPE
 ;;;
 (defun pathname-type (pathname &key (case :local))
-  "Accessor for the pathname's name."
+  _N"Accessor for the pathname's name."
   (declare (type path-designator pathname)
 	   (type (member :local :common) case))
   (with-pathname (pathname pathname)
@@ -933,7 +934,7 @@ a host-structure or string."
 ;;; PATHNAME-VERSION
 ;;;
 (defun pathname-version (pathname)
-  "Accessor for the pathname's version."
+  _N"Accessor for the pathname's version."
   (declare (type path-designator pathname))
   (with-pathname (pathname pathname)
     (%pathname-version pathname)))
@@ -944,7 +945,7 @@ a host-structure or string."
 ;;; %PRINT-NAMESTRING-PARSE-ERROR -- Internal
 ;;;
 (defun %print-namestring-parse-error (condition stream)
-  (format stream "Parse error in namestring: ~?~%  ~A~%  ~V@T^"
+  (format stream _"Parse error in namestring: ~?~%  ~A~%  ~V@T^"
 	  (namestring-parse-error-complaint condition)
 	  (namestring-parse-error-arguments condition)
 	  (namestring-parse-error-namestring condition)
@@ -985,14 +986,14 @@ a host-structure or string."
 			     (extract-logical-host-prefix namestr start end)
 			     default-host)))
 	(unless parse-host
-	  (error "When Host arg is not supplied, Defaults arg must ~
+	  (error _"When Host arg is not supplied, Defaults arg must ~
 		  have a non-null PATHNAME-HOST."))
 
 	(multiple-value-bind
 	    (new-host device directory file type version)
 	    (funcall (host-parse parse-host) namestr start end)
 	  (when (and host new-host (not (eq new-host host)))
-	    (error "Host in namestring: ~S~@
+	    (error _"Host in namestring: ~S~@
 		    does not match explicit host argument: ~S"
 		   namestr host))
 	  (let ((pn-host (or new-host parse-host)))
@@ -1021,7 +1022,7 @@ a host-structure or string."
 (defun parse-namestring (thing
 			 &optional host (defaults *default-pathname-defaults*)
 			 &key (start 0) end junk-allowed)
-  "Converts pathname, a pathname designator, into a pathname structure,
+  _N"Converts pathname, a pathname designator, into a pathname structure,
    for a physical pathname, returns the printed representation. Host may be
    a physical host structure or host namestring."
   (declare (type path-designator thing)
@@ -1075,7 +1076,7 @@ a host-structure or string."
 		 ;; but leaves its interpretation
 		 ;; implementation-defined. Our interpretation
 		 ;; is that it's unsupported.:-|
-		 (error "A LIST representing a pathname host is not ~
+		 (error _"A LIST representing a pathname host is not ~
                               supported in this implementation:~%  ~S"
 			host))
 		(host
@@ -1091,7 +1092,7 @@ a host-structure or string."
 	(pathname
 	 (let ((host (if host host (%pathname-host defaults))))
 	   (unless (eq host (%pathname-host thing))
-	     (error "Hosts do not match: ~S and ~S."
+	     (error _"Hosts do not match: ~S and ~S."
 		    host (%pathname-host thing))))
 	 (values thing start))
 	(stream
@@ -1100,7 +1101,7 @@ a host-structure or string."
 	     (error 'simple-type-error
 		    :datum thing
 		    :expected-type 'pathname
-		    :format-control "Can't figure out the file associated with stream:~%  ~S"
+		    :format-control _"Can't figure out the file associated with stream:~%  ~S"
 		    :format-arguments (list thing)))
 	   (values name nil)))))))
 
@@ -1108,7 +1109,7 @@ a host-structure or string."
 ;;; NAMESTRING -- Interface
 ;;;
 (defun namestring (pathname)
-  "Construct the full (name)string form of the pathname."
+  _N"Construct the full (name)string form of the pathname."
   (declare (type path-designator pathname)
 	   (values (or null simple-base-string)))
   (with-pathname (pathname pathname)
@@ -1121,7 +1122,7 @@ a host-structure or string."
 		      *unix-host*)
 		      ))
 	(unless host
-	  (error "Cannot determine the namestring for pathnames with no ~
+	  (error _"Cannot determine the namestring for pathnames with no ~
 		  host:~%  ~S" pathname))
 	(funcall (host-unparse host) pathname)))))
 
@@ -1129,7 +1130,7 @@ a host-structure or string."
 ;;; HOST-NAMESTRING -- Interface
 ;;;
 (defun host-namestring (pathname)
-  "Returns a string representation of the name of the host in the pathname."
+  _N"Returns a string representation of the name of the host in the pathname."
   (declare (type path-designator pathname)
 	   (values (or null simple-base-string)))
   (with-pathname (pathname pathname)
@@ -1137,13 +1138,13 @@ a host-structure or string."
       (if host
 	  (funcall (host-unparse-host host) pathname)
 	  (error
-	   "Cannot determine the namestring for pathnames with no host:~%  ~S"
+	   _"Cannot determine the namestring for pathnames with no host:~%  ~S"
 	   pathname)))))
 
 ;;; DIRECTORY-NAMESTRING -- Interface
 ;;;
 (defun directory-namestring (pathname)
-  "Returns a string representation of the directories used in the pathname."
+  _N"Returns a string representation of the directories used in the pathname."
   (declare (type path-designator pathname)
 	   (values (or null simple-base-string)))
   (with-pathname (pathname pathname)
@@ -1151,13 +1152,13 @@ a host-structure or string."
       (if host
 	  (funcall (host-unparse-directory host) pathname)
 	  (error
-	   "Cannot determine the namestring for pathnames with no host:~%  ~S"
+	   _"Cannot determine the namestring for pathnames with no host:~%  ~S"
 	   pathname)))))
 
 ;;; FILE-NAMESTRING -- Interface
 ;;;
 (defun file-namestring (pathname)
-  "Returns a string representation of the name used in the pathname."
+  _N"Returns a string representation of the name used in the pathname."
   (declare (type path-designator pathname)
 	   (values (or null simple-base-string)))
   (with-pathname (pathname pathname)
@@ -1165,14 +1166,14 @@ a host-structure or string."
       (if host
 	  (funcall (host-unparse-file host) pathname)
 	  (error
-	   "Cannot determine the namestring for pathnames with no host:~%  ~S"
+	   _"Cannot determine the namestring for pathnames with no host:~%  ~S"
 	   pathname)))))
 
 ;;; ENOUGH-NAMESTRING -- Interface
 ;;;
 (defun enough-namestring (pathname
 			  &optional (defaults *default-pathname-defaults*))
-  "Returns an abbreviated pathname sufficent to identify the pathname relative
+  _N"Returns an abbreviated pathname sufficent to identify the pathname relative
    to the defaults."
   (declare (type path-designator pathname defaults))
   (with-pathname (pathname pathname)
@@ -1186,7 +1187,7 @@ a host-structure or string."
 		(funcall (host-unparse-enough host) pathname defaults)
 		(namestring pathname)))
 	  (error
-	   "Cannot determine the namestring for pathnames with no host:~%  ~S"
+	   _"Cannot determine the namestring for pathnames with no host:~%  ~S"
 	   pathname)))))
 
 
@@ -1195,7 +1196,7 @@ a host-structure or string."
 ;;; WILD-PATHNAME-P -- Interface
 ;;;
 (defun wild-pathname-p (pathname &optional field-key)
-  "Predicate for determining whether pathname contains any wildcards."
+  _N"Predicate for determining whether pathname contains any wildcards."
   (declare (type path-designator pathname)
 	   (type (member nil :host :device :directory :name :type :version)
 		 field-key))
@@ -1221,7 +1222,7 @@ a host-structure or string."
 ;;; PATHNAME-MATCH-P -- Interface
 ;;;
 (defun pathname-match-p (in-pathname in-wildname)
-  "Pathname matches the wildname template?"
+  _N"Pathname matches the wildname template?"
   (declare (type path-designator in-pathname)
 	   ;; Not path-designator because a file-stream can't have a
 	   ;; wild pathname.
@@ -1264,7 +1265,7 @@ a host-structure or string."
 	    (t
 	     (setf in-wildcard t)
 	     (unless subs
-	       (error "Not enough wildcards in FROM pattern to match ~
+	       (error _"Not enough wildcards in FROM pattern to match ~
 		       TO pattern:~%  ~S"
 		      pattern))
 	     (let ((sub (pop subs)))
@@ -1279,7 +1280,7 @@ a host-structure or string."
 		 (simple-string
 		  (push sub strings))
 		 (t
-		  (error "Can't substitute this into the middle of a word:~
+		  (error _"Can't substitute this into the middle of a word:~
 			  ~%  ~S"
 			 sub)))))))
 
@@ -1300,7 +1301,7 @@ a host-structure or string."
 ;;;    Called when we can't see how source and from matched.
 ;;;
 (defun didnt-match-error (source from)
-  (error "Pathname components from Source and From args to TRANSLATE-PATHNAME~@
+  (error _"Pathname components from Source and From args to TRANSLATE-PATHNAME~@
 	  did not match:~%  ~S ~S"
 	 source from))
 
@@ -1442,14 +1443,14 @@ a host-structure or string."
 	       (assert subs-left)
 	       (let ((match (pop subs-left)))
 		 (when (listp match)
-		   (error ":WILD-INFERIORS not paired in from and to ~
+		   (error _":WILD-INFERIORS not paired in from and to ~
 			   patterns:~%  ~S ~S" from to))
 		 (res (maybe-diddle-case match diddle-case))))
 	      ((member :wild-inferiors)
 	       (assert subs-left)
 	       (let ((match (pop subs-left)))
 		 (unless (listp match)
-		   (error ":WILD-INFERIORS not paired in from and to ~
+		   (error _":WILD-INFERIORS not paired in from and to ~
 			   patterns:~%  ~S ~S" from to))
 		 (dolist (x match)
 		   (res (maybe-diddle-case x diddle-case)))))
@@ -1466,7 +1467,7 @@ a host-structure or string."
 ;;; TRANSLATE-PATHNAME -- Interface
 ;;;
 (defun translate-pathname (source from-wildname to-wildname &key)
-  "Use the source pathname to translate the from-wildname's wild and
+  _N"Use the source pathname to translate the from-wildname's wild and
    unspecified elements into a completed to-pathname based on the to-wildname."
   (declare (type path-designator source from-wildname to-wildname))
   (with-pathname (source source)
@@ -1486,7 +1487,7 @@ a host-structure or string."
 					     (,field to)
 					     diddle-case)))
 			    (if (eq result :error)
-				(error "~S doesn't match ~S" source from)
+				(error _"~S doesn't match ~S" source from)
 				result))))
 	      (%make-pathname-object
 	       (or to-host source-host)
@@ -1535,7 +1536,7 @@ a host-structure or string."
   (let ((search-list (gethash (string-downcase name) *search-lists*)))
     (if search-list search-list
 	(when flame-not-found-p
-	  (error "Search-list ~a not defined." name)))))
+	  (error _"Search-list ~a not defined." name)))))
 
 ;;; INTERN-SEARCH-LIST -- internal interface.
 ;;;
@@ -1558,7 +1559,7 @@ a host-structure or string."
 ;;; out the expansions and set defined to NIL.
 ;;; 
 (defun clear-search-list (name)
-  "Clear the current definition for the search-list NAME.  Returns T if such
+  _N"Clear the current definition for the search-list NAME.  Returns T if such
    a definition existed, and NIL if not."
   (let* ((name (string-downcase name))
 	 (search-list (gethash name *search-lists*)))
@@ -1573,7 +1574,7 @@ a host-structure or string."
 ;;; just mark them as being undefined.
 ;;;
 (defun clear-all-search-lists ()
-  "Clear the definition for all search-lists.  Only use this if you know
+  _N"Clear the definition for all search-lists.  Only use this if you know
    what you are doing."
   (maphash #'(lambda (name search-list)
 	       (declare (ignore name))
@@ -1595,7 +1596,7 @@ a host-structure or string."
       (cond ((search-list-p search-list)
 	     search-list)
 	    (flame-if-none
-	     (error "~S doesn't start with a search-list." pathname))
+	     (error _"~S doesn't start with a search-list." pathname))
 	    (t
 	     nil)))))
 
@@ -1605,7 +1606,7 @@ a host-structure or string."
 ;;; bunch of pathnames.
 ;;; 
 (defun search-list (pathname)
-  "Return the expansions for the search-list starting PATHNAME.  If PATHNAME
+  _N"Return the expansions for the search-list starting PATHNAME.  If PATHNAME
    does not start with a search-list, then an error is signaled.  If
    the search-list has not been defined yet, then an error is signaled.
    The expansion for a search-list can be set with SETF." 
@@ -1617,12 +1618,12 @@ a host-structure or string."
 		      (make-pathname :host host
 				     :directory (cons :absolute directory)))
 		  (search-list-expansions search-list))
-	  (error "Search list ~S has not been defined yet." pathname)))))
+	  (error _"Search list ~S has not been defined yet." pathname)))))
 
 ;;; SEARCH-LIST-DEFINED-P -- public.
 ;;; 
 (defun search-list-defined-p (pathname)
-  "Returns T if the search-list starting PATHNAME is currently defined, and
+  _N"Returns T if the search-list starting PATHNAME is currently defined, and
    NIL otherwise.  An error is signaled if PATHNAME does not start with a
    search-list."
   (with-pathname (pathname pathname)
@@ -1639,7 +1640,7 @@ a host-structure or string."
     (labels
 	((check (target-list path)
 	   (when (eq search-list target-list)
-	     (error "That would result in a circularity:~%  ~
+	     (error _"That would result in a circularity:~%  ~
 		     ~A~{ -> ~A~} -> ~A"
 		    (search-list-name search-list)
 		    (reverse path)
@@ -1653,7 +1654,7 @@ a host-structure or string."
 	     (when (or (pathname-name pathname)
 		       (pathname-type pathname)
 		       (pathname-version pathname))
-	       (error "Search-lists cannot expand into pathnames that have ~
+	       (error _"Search-lists cannot expand into pathnames that have ~
 		       a name, type, or ~%version specified:~%  ~S"
 		      pathname))
 	     (let ((directory (pathname-directory pathname)))
@@ -1676,7 +1677,7 @@ a host-structure or string."
 ;;; ENUMERATE-SEARCH-LIST -- public.
 ;;; 
 (defmacro enumerate-search-list ((var pathname &optional result) &body body)
-  "Execute BODY with VAR bound to each successive possible expansion for
+  _N"Execute BODY with VAR bound to each successive possible expansion for
    PATHNAME and then return RESULT.  Note: if PATHNAME does not contain a
    search-list, then BODY is executed exactly once.  Everything is wrapped
    in a block named NIL, so RETURN can be used to terminate early.  Note:
@@ -1697,7 +1698,7 @@ a host-structure or string."
      ((not search-list)
       (funcall function pathname))
      ((not (search-list-defined search-list))
-      (error "Undefined search list: ~A"
+      (error _"Undefined search list: ~A"
 	     (search-list-name search-list)))
      (t
       (let ((tail (cddr (pathname-directory pathname))))
@@ -1729,7 +1730,7 @@ a host-structure or string."
       (let ((ch (schar word i)))
 	(unless (or (alpha-char-p ch) (digit-char-p ch) (char= ch #\-))
 	  (error 'namestring-parse-error
-		 :complaint "Logical namestring character ~
+		 :complaint _"Logical namestring character ~
 			     is not alphanumeric or hyphen:~%  ~S"
 		 :arguments (list ch)
 		 :namestring word :offset i))))
@@ -1764,7 +1765,7 @@ a host-structure or string."
 	   found
 	   (error 'simple-file-error
 		  :pathname thing
-		  :format-control "Logical host not yet defined: ~S"
+		  :format-control _"Logical host not yet defined: ~S"
 		  :format-arguments (list thing)))))
     (logical-host thing)))
 
@@ -1800,7 +1801,7 @@ a host-structure or string."
 	    (if (= pos last-pos)
 		(when (pattern)
 		  (error 'namestring-parse-error
-			 :complaint "Double asterisk inside of logical ~
+			 :complaint _"Double asterisk inside of logical ~
 				     word: ~S"
 			 :arguments (list chunk)
 			 :namestring namestring
@@ -1839,7 +1840,7 @@ a host-structure or string."
 	  (setq prev (1+ i))
 	  (unless (member ch '(#\; #\: #\.))
 	    (error 'namestring-parse-error
-		   :complaint "Illegal character for logical pathname:~%  ~S"
+		   :complaint _"Illegal character for logical pathname:~%  ~S"
 		   :arguments (list ch)
 		   :namestring namestr
 		   :offset i))
@@ -1863,8 +1864,8 @@ a host-structure or string."
       (labels ((expecting (what chunks)
 		 (unless (and chunks (simple-string-p (caar chunks)))
 		   (error 'namestring-parse-error
-			  :complaint "Expecting ~A, got ~:[nothing~;~:*~S~]."
-			  :arguments (list what (caar chunks))
+			  :complaint _"Expecting ~A, got ~:[nothing~;~:*~S~]."
+			  :arguments (list (intl:gettext what) (caar chunks))
 			  :namestring namestr
 			  :offset (if chunks (cdar chunks) end)))
 		 (caar chunks))
@@ -1872,7 +1873,7 @@ a host-structure or string."
 		 (case (caadr chunks)
 		   (#\:
 		    (setq host
-			  (find-logical-host (expecting "a host name" chunks)))
+			  (find-logical-host (expecting _N"a host name" chunks)))
 		    (parse-relative (cddr chunks)))
 		   (t
 		    (parse-relative chunks))))
@@ -1888,7 +1889,7 @@ a host-structure or string."
 		 (case (caadr chunks)
 		   (#\;
 		    (directory
-		     (let ((res (expecting "a directory name" chunks)))
+		     (let ((res (expecting _N"a directory name" chunks)))
 		       (cond ((string= res "..") :up)
 			     ((string= res "**") :wild-inferiors)
 			     (t
@@ -1898,14 +1899,14 @@ a host-structure or string."
 		    (parse-name chunks))))
 	       (parse-name (chunks)
 		 (when chunks
-		   (expecting "a file name" chunks)
+		   (expecting _N"a file name" chunks)
 		   (setq name (maybe-make-logical-pattern namestr chunks))
 		   (expecting-dot (cdr chunks))))
 	       (expecting-dot (chunks)
 		 (when chunks
 		   (unless (eql (caar chunks) #\.)
 		     (error 'namestring-parse-error
-			    :complaint "Expecting a dot, got ~S."
+			    :complaint _N"Expecting a dot, got ~S."
 			    :arguments (list (caar chunks))
 			    :namestring namestr
 			    :offset (cdar chunks)))
@@ -1913,11 +1914,11 @@ a host-structure or string."
 		       (parse-version (cdr chunks))
 		       (parse-type (cdr chunks)))))
 	       (parse-type (chunks)
-		 (expecting "a file type" chunks)
+		 (expecting _N"a file type" chunks)
 		 (setq type (maybe-make-logical-pattern namestr chunks))
 		 (expecting-dot (cdr chunks)))
 	       (parse-version (chunks)
-		 (let ((str (expecting "a positive integer, * or NEWEST"
+		 (let ((str (expecting _N"a positive integer, * or NEWEST"
 				       chunks)))
 		   (cond
 		    ((string= str "*") (setq version :wild))
@@ -1928,7 +1929,7 @@ a host-structure or string."
 			 (parse-integer str :junk-allowed t)
 		       (unless (and res (plusp res))
 			 (error 'namestring-parse-error
-				:complaint "Expected a positive integer, ~
+				:complaint _"Expected a positive integer, ~
 					    got ~S"
 				:arguments (list str)
 				:namestring namestr
@@ -1936,7 +1937,7 @@ a host-structure or string."
 		       (setq version res)))))
 		 (when (cdr chunks)
 		   (error 'namestring-parse-error
-			  :complaint "Extra stuff after end of file name."
+			  :complaint _"Extra stuff after end of file name."
 			  :namestring namestr
 			  :offset (cdadr chunks)))))
 	(parse-host (logical-chunkify namestr start end)))
@@ -1962,7 +1963,7 @@ a host-structure or string."
 ;;; LOGICAL-PATHNAME -- Public
 ;;;
 (defun logical-pathname (pathspec)
-  "Converts the pathspec argument to a logical-pathname and returns it."
+  _N"Converts the pathspec argument to a logical-pathname and returns it."
   (declare (type (or logical-pathname string stream) pathspec)
 	   (values logical-pathname))
   (if (typep pathspec 'logical-pathname)
@@ -1972,7 +1973,7 @@ a host-structure or string."
 	(unless logical-p
 	  (error
 	   'simple-type-error
-	   :format-control "Logical namestring does not specify a host:~%  ~S"
+	   :format-control _"Logical namestring does not specify a host:~%  ~S"
 	   :format-arguments (list pathspec)
 	   :datum pathspec
 	   :expected-type '(satisfies logical-pathname-namestring-p)))
@@ -2005,7 +2006,7 @@ a host-structure or string."
 		((eq dir :wild-inferiors)
 		 (pieces "**;"))
 		(t
-		 (error "Invalid directory component: ~S" dir))))))
+		 (error _"Invalid directory component: ~S" dir))))))
     (apply #'concatenate 'simple-string (pieces))))
 
 
@@ -2024,7 +2025,7 @@ a host-structure or string."
 		   (strings "**"))
 		  ((eq piece :multi-char-wild)
 		   (strings "*"))
-		  (t (error "Invalid keyword: ~S" piece))))))
+		  (t (error _"Invalid keyword: ~S" piece))))))
        (apply #'concatenate 'simple-string (strings))))))
 
 ;;; UNPARSE-ENOUGH-NAMESTRING -- Internal
@@ -2087,7 +2088,7 @@ a host-structure or string."
   (collect ((res))
     (dolist (tr transl-list)
       (unless (and (consp tr) (= (length tr) 2))
-	(error "Logical pathname translation is not a two-list:~%  ~S"
+	(error _"Logical pathname translation is not a two-list:~%  ~S"
 	       tr))
       (let ((from (first tr)))
 	(res (list (if (typep from 'logical-pathname)
@@ -2100,7 +2101,7 @@ a host-structure or string."
 ;;; LOGICAL-PATHNAME-TRANSLATIONS -- Public
 ;;;
 (defun logical-pathname-translations (host)
-  "Return the (logical) host object argument's list of translations."
+  _N"Return the (logical) host object argument's list of translations."
   (declare (type (or string logical-host) host)
 	   (values list))
   (logical-host-translations (find-logical-host host)))
@@ -2108,7 +2109,7 @@ a host-structure or string."
 ;;; (SETF LOGICAL-PATHNAME-TRANSLATIONS) -- Public
 ;;;
 (defun (setf logical-pathname-translations) (translations host)
-  "Set the translations list for the logical host argument.
+  _N"Set the translations list for the logical host argument.
    Return translations."
   (declare (type (or string logical-host) host)
 	   (type list translations)
@@ -2117,8 +2118,8 @@ a host-structure or string."
   (let ((maybe-search-list-host (concatenate 'string host ":")))
     (when (and (not (logical-pathname-p (pathname maybe-search-list-host)))
 	       (search-list-defined-p maybe-search-list-host))
-      (cerror "Clobber search-list host with logical pathname host"
-	      "~S names a CMUCL search-list"
+      (cerror _"Clobber search-list host with logical pathname host"
+	      _"~S names a CMUCL search-list"
 	      host)))
   (let ((host (intern-logical-host host)))
     (setf (logical-host-canon-transls host)
@@ -2134,7 +2135,7 @@ a host-structure or string."
 ;;; LOAD-LOGICAL-PATHNAME-TRANSLATIONS -- Public
 ;;;
 (defun load-logical-pathname-translations (host)
-  "Search for a logical pathname named host, if not already defined. If already
+  _N"Search for a logical pathname named host, if not already defined. If already
    defined no attempt to find or load a definition is attempted and NIL is
    returned. If host is not already defined, but definition is found and loaded
    successfully, T is returned, else error."
@@ -2148,7 +2149,7 @@ a host-structure or string."
 					     :type "translations"))
 	(if *load-verbose*
 	    (format *error-output*
-		    ";; Loading pathname translations from ~A~%"
+		    _";; Loading pathname translations from ~A~%"
 		    (namestring (truename in-str))))
 	(setf (logical-pathname-translations host) (read in-str)))
       t)))
@@ -2156,7 +2157,7 @@ a host-structure or string."
 ;;; TRANSLATE-LOGICAL-PATHNAME  -- Public
 ;;;
 (defun translate-logical-pathname (pathname &key)
-  "Translates pathname to a physical pathname, which is returned."
+  _N"Translates pathname to a physical pathname, which is returned."
   (declare (type path-designator pathname)
 	   (values (or null pathname)))
   (typecase pathname
@@ -2164,7 +2165,7 @@ a host-structure or string."
      (dolist (x (logical-host-canon-transls (%pathname-host pathname))
 		(error 'simple-file-error
 		       :pathname pathname
-		       :format-control "No translation for ~S"
+		       :format-control _"No translation for ~S"
 		       :format-arguments (list pathname)))
        (destructuring-bind (from to) x
 	 (when (pathname-match-p pathname from)

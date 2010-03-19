@@ -5,17 +5,18 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.6 1994/10/31 04:27:28 ram Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.7 2010/03/19 15:19:01 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.6 1994/10/31 04:27:28 ram Rel $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.7 2010/03/19 15:19:01 rtoy Rel $
 ;;;
 ;;; Functions and utilities for collecting statistics on static vop usages.
 ;;;
 ;;; Written by William Lott
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 (export '(*count-vop-usages*))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.38 2005/02/11 21:02:34 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.39 2010/03/19 15:19:01 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,7 @@
 ;;; Written by William Lott.
 ;;;
 (in-package "SPARC")
+(intl:textdomain "cmucl-sparc-vm")
 
 
 ;;;; Interfaces to IR2 conversion:
@@ -1248,7 +1249,7 @@ default-value-8
   (:results (context :scs (descriptor-reg))
 	    (count :scs (any-reg)))
   (:result-types t tagged-num)
-  (:note "more-arg-context")
+  (:note _N"more-arg-context")
   (:generator 5
     (inst sub count supplied (fixnumize fixed))
     (inst sub context csp-tn count)))

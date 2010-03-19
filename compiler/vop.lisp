@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.43 2004/12/16 21:55:38 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.44 2010/03/19 15:19:01 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 (export '(tn-ref tn-ref-p make-tn-ref tn-ref-tn tn-ref-write-p
 	  tn-ref-next tn-ref-vop tn-ref-next-ref tn-ref-across
@@ -726,7 +727,10 @@
   ;; Two values are returned: the first and last VOP emitted.  This vop
   ;; sequence must be linked into the VOP Next/Prev chain for the block.  At
   ;; least one VOP is always emitted.
-  (emit-function (required-argument) :type function))
+  (emit-function (required-argument) :type function)
+  ;;
+  ;; The text domain for the note.
+  (note-domain intl::*default-domain* :type (or string null)))
 
 (defprinter template
   name

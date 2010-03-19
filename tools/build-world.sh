@@ -21,6 +21,10 @@ else
 	shift
 fi
 
+if [ -n "$MAKE_POT" ]; then
+    SAVEPOT='(intl::dump-pot-files :output-directory "default:src/i18n/locale/")'
+fi
+
 $LISP "$@" -noinit -nositeinit <<EOF
 (in-package :cl-user)
 
@@ -52,6 +56,8 @@ $LISP "$@" -noinit -nositeinit <<EOF
 ;; Compile at least new-genesis, so that genesis doesn't take ages
 #+(or no-compiler runtime) (comf "target:compiler/generic/new-genesis")
 #-(or no-pcl runtime) (load "target:tools/pclcom")
+
+$SAVEPOT
 
 (setq *gc-verbose* t *interactive* t)
 

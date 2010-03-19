@@ -25,9 +25,10 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.25 2005/07/26 13:18:21 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.26 2010/03/19 15:19:03 rtoy Rel $")
 
 (in-package "PCL")
+(intl:textdomain "cmucl")
 
 ;;;
 ;;; In the following:
@@ -104,7 +105,7 @@
 	  (cond ((null qualifiers)
 		 (primary m))
 		((cdr qualifiers)
-		 (invalid-method m "has more than one qualifier"))
+		 (invalid-method m _"has more than one qualifier"))
 		((eq (car qualifiers) :around)
 		 (around m))
 		((eq (car qualifiers) :before)
@@ -112,7 +113,7 @@
 		((eq (car qualifiers) :after)
 		 (after m))
 		(t
-		 (invalid-method m "has an invalid qualifier")))))
+		 (invalid-method m _"has an invalid qualifier")))))
       (cond ((invalid)
 	     `(%invalid-qualifiers ',gf ',combin .args. ',(invalid)))
 	    ((null (primary))
@@ -154,7 +155,7 @@
 	(lambda (&rest args)
 	  (declare (ignore args))
 	  (error
-	   "~@<~s was called outside the dynamic scope ~
+	   _"~@<~s was called outside the dynamic scope ~
             of a method combination function (inside the body of ~
             ~s or a method on the generic function ~s).~@:>"
 	   'invalid-method-error 'define-method-combination
@@ -164,7 +165,7 @@
 	(lambda (&rest args)
 	  (declare (ignore args))
 	  (error
-	   "~@<~s was called outside the dynamic scope ~
+	   _"~@<~s was called outside the dynamic scope ~
             of a method combination function (inside the body of ~
             ~s or a method on the generic function ~s).~@:>"
 	   'method-combination-error 'define-method-combination
@@ -181,7 +182,7 @@
   ;;
   ;; Hack: The PROGN is here so that RESTART-CASE doesn't see the
   ;; ERROR.  See MUNGE-RESTART-CASE-EXPRESSION in code:error.lisp.
-  `(progn (error "~@<~S used outside of a effective method form.~@:>" 'call-method)))
+  `(progn (error _"~@<~S used outside of a effective method form.~@:>" 'call-method)))
 
 (defmacro call-method-list (&rest calls)
   `(progn ,@calls))
@@ -396,7 +397,7 @@
 	 (when (null args)
 	   (when (and (invalid) (not allow-other-keys))
 	     (simple-program-error
-	      "~@<Invalid keyword argument~p ~{~s~^, ~}.  ~
+	      _"~@<Invalid keyword argument~p ~{~s~^, ~}.  ~
                Valid keywords are: ~{~s~^, ~}.~@:>"
 	      (length (invalid))
 	      (invalid)
@@ -417,10 +418,10 @@
 	 (pop args)))))
 
 (defun odd-number-of-keyword-arguments ()
-  (simple-program-error "Odd number of keyword arguments."))
+  (simple-program-error _"Odd number of keyword arguments."))
 
 (defun invalid-keyword-argument (key)
-  (simple-program-error "Invalid keyword argument ~s" key))
+  (simple-program-error _"Invalid keyword argument ~s" key))
 
 ;;;
 ;;; Return a lambda-form for an effective method of generic function

@@ -26,9 +26,10 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.48 2009/06/19 12:38:02 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.49 2010/03/19 15:19:03 rtoy Rel $")
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;;; *********************
 ;;;; PRINT-OBJECT  *******
@@ -51,7 +52,7 @@
     (let ((name (class-name (class-of instance))))
       (if name
 	  (format stream "~S" name)
-	  (format stream "Instance")))))
+	  (format stream _"Instance")))))
 
 (defmethod print-object ((class class) stream)
   (named-object-print-function class stream))
@@ -108,7 +109,7 @@
 				     allocation-class)
   (declare (ignore slot-names allocation-class))
   (unless (eq allocation :instance)
-    (error "~@<Structure slots must have ~s allocation.~@:>" :instance)))
+    (error _"~@<Structure slots must have ~s allocation.~@:>" :instance)))
 
 
 ;;;
@@ -127,7 +128,7 @@
       (let ((fmf (slot-value method 'fast-function)))
 	;; The :before shared-initialize method prevents this
 	(unless fmf
-	  (internal-error "~@<~S doesn't seem to have a method function.~@:>"
+	  (internal-error _"~@<~S doesn't seem to have a method function.~@:>"
 			  method))
 	(setf (slot-value method 'function)
 	      (method-function-from-fast-function fmf)))))
@@ -162,7 +163,7 @@
 
 (defmethod reinitialize-instance ((method standard-method) &rest initargs &key)
   (declare (ignore initargs))
-  (error "~@<Attempt to reinitialize the method ~S.  ~
+  (error _"~@<Attempt to reinitialize the method ~S.  ~
           Method objects cannot be reinitialized.~@:>"
 	 method))
 
@@ -176,7 +177,7 @@
 					   documentation)
   (declare (ignore slot-names))
   (flet ((lose (initarg value string)
-	   (error "~@<When initializing the method ~S, ~
+	   (error _"~@<When initializing the method ~S, ~
                    the ~S initialization argument was ~S, ~
                    which ~A.~@:>"
 		  method initarg value string)))
@@ -201,7 +202,7 @@
 (defmethod legal-documentation-p ((object standard-method) x)
   (if (or (null x) (stringp x))
       t
-      "is not a string or NULL"))
+      _"is not a string or NULL"))
 
 (defmethod legal-lambda-list-p ((object standard-method) x)
   (declare (ignore x))
@@ -210,19 +211,19 @@
 (defmethod legal-method-function-p ((object standard-method) x)
   (if (functionp x)
       t
-      "is not a function"))
+      _"is not a function"))
 
 (defmethod legal-qualifiers-p ((object standard-method) x)
   (dolist (q x t)
     (let ((ok (legal-qualifier-p object q)))
       (unless (eq ok t)
 	(return-from legal-qualifiers-p
-	  (format nil "Contains ~S which ~A" q ok))))))
+	  (format nil _"Contains ~S which ~A" q ok))))))
 
 (defmethod legal-qualifier-p ((object standard-method) x)
   (if (and x (atom x))
       t
-      "is not a non-null atom"))
+      _"is not a non-null atom"))
 
 (defmethod legal-slot-name-p ((object standard-method) x)
   (legal-slot-name-p-internal x))
@@ -232,7 +233,7 @@
     (let ((ok (legal-specializer-p object s)))
       (unless (eq ok t)
 	(return-from legal-specializers-p
-	  (format nil "Contains ~S which ~A" s ok))))))
+	  (format nil _"Contains ~S which ~A" s ok))))))
 
 (defmethod legal-specializer-p ((object standard-method) x)
   (if (if *allow-experimental-specializers-p*
@@ -240,7 +241,7 @@
 	  (or (classp x)
 	      (eql-specializer-p x)))
       t
-      "is neither a class object nor an eql specializer"))
+      _"is neither a class object nor an eql specializer"))
 
 (defmethod shared-initialize :before ((method standard-accessor-method)
 				      slot-names
@@ -250,7 +251,7 @@
     (multiple-value-bind (legalp reason)
 	(legal-slot-name-p method slot-name)
       (unless legalp
-	(error "The value of the ~s initarg, ~s, ~A."
+	(error _"The value of the ~s initarg, ~s, ~A."
 	       :slot-name slot-name reason)))))
 
 (defmethod shared-initialize :after ((method standard-method) slot-names
@@ -292,7 +293,7 @@
     (set-function-name gf name))
 		   
   (flet ((initarg-error (initarg value string)
-	   (error (format nil "~~@<When initializing the generic-function ~S: ~
+	   (error (format nil _"~~@<When initializing the generic-function ~S: ~
                                The ~S initialization argument was ~A.  ~
                                It must be ~A.~~@:>"
 			  gf initarg value string))))
@@ -325,12 +326,12 @@
   (let (gf method)
     (cond ((or (not (fboundp gf-name))
 	       (not (generic-function-p (setq gf (gdefinition gf-name)))))
-	   (error "~@<~S does not name a generic function.~@:>" gf-name))
+	   (error _"~@<~S does not name a generic function.~@:>" gf-name))
 	  ((null (setq method
 		       (get-method gf extra
 				   (parse-specializers argument-specifiers)
 				   nil)))
-	   (error "~@<There is no method for the generic function ~S ~
+	   (error _"~@<There is no method for the generic function ~S ~
                    matching argument specifiers ~S.~@:>"
 		  gf argument-specifiers))
 	  (t
@@ -367,7 +368,7 @@
 		  (every #'same-specializer-p specs specializers)) do
 	  (return-from get-method method))
   (when errorp
-    (error "~@<No method on ~S with qualifiers ~S and ~
+    (error _"~@<No method on ~S with qualifiers ~S and ~
            specializers ~S.~@:>"
 	   gf qualifiers specializers)))
 
@@ -382,7 +383,7 @@
 		  (every #'same-specializer-p specs specializers)) do
 	  (return-from real-get-method method))
   (when errorp
-    (error "~@<No method on ~S with qualifiers ~S and ~
+    (error _"~@<No method on ~S with qualifiers ~S and ~
             specializers ~S.~@:>"
 	   gf qualifiers specializers)))
 
@@ -390,7 +391,7 @@
 			qualifiers specializers &optional (errorp t))
   (let ((nreq (count-gf-required-parameters gf)))
     (when (/= (length specializers) nreq)
-      (error "~@<The generic function ~s takes ~d required argument~p.~@:>"
+      (error _"~@<The generic function ~s takes ~d required argument~p.~@:>"
 	     gf nreq nreq))
     (real-get-method gf qualifiers (parse-specializers specializers) errorp)))
   
@@ -410,7 +411,7 @@
 
 (defun real-add-method (gf method &optional skip-dfun-update-p)
   (when (method-generic-function method)
-    (error "~@<The method ~S is already part of the generic ~
+    (error _"~@<The method ~S is already part of the generic ~
             function ~S.  It can't be added to another generic ~
             function until it is removed from the first one.~@:>"
 	   method (method-generic-function method)))
@@ -462,7 +463,7 @@
 			  (or (cdr qualifiers)
 			      (not (memq (car qualifiers)
 					 '(:around :before :after)))))
-		 (warn "~@<Method ~s contains invalid qualifiers for ~
+		 (warn _"~@<Method ~s contains invalid qualifiers for ~
                         the standard method combination.~@:>"
 		       method)))
 	      ((short-method-combination-p mc)
@@ -470,7 +471,7 @@
 		 (when (or (/= (length qualifiers) 1)
 			   (and (neq (car qualifiers) :around)
 				(neq (car qualifiers) mc-name)))
-		   (warn "~@<Method ~s contains invalid qualifiers for ~
+		   (warn _"~@<Method ~s contains invalid qualifiers for ~
                           the method combination ~s.~@:>"
 			 method mc-name))))))
       ;;
@@ -658,7 +659,7 @@
 	    else
 	      collect (pop arguments) into types
 	  else do
-	    (error "~@<Generic function ~S requires at least ~D arguments.~@:>"
+	    (error _"~@<Generic function ~S requires at least ~D arguments.~@:>"
 		   (generic-function-name gf) nreq)
 	  finally
 	    (return (values types arg-info)))))
@@ -833,7 +834,7 @@
 		(method-alist
 		 `((,(car (or (member std-method methods)
 			      (member str-method methods)
-			      (internal-error "In get-accessor-method-function.")))
+			      (internal-error _"In get-accessor-method-function.")))
 		     ,optimized-std-fn)))
 		(wrappers
 		 ;;
@@ -1259,7 +1260,7 @@
 ;;;
 (defun compute-mcase-parameters (case-list)
   (unless (eq t (caar (last case-list)))
-    (internal-error "The key for the last case arg to mcase was not T."))
+    (internal-error _"The key for the last case arg to mcase was not T."))
   (let* ((eq-p (loop for case in case-list
 		     always (or (eq (car case) t)
 				(symbolp (caar case)))))

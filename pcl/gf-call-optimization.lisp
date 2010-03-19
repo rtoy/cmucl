@@ -27,9 +27,10 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gf-call-optimization.lisp,v 1.6 2003/10/29 12:14:35 gerd Rel $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gf-call-optimization.lisp,v 1.7 2010/03/19 15:19:03 rtoy Rel $")
 
 (in-package "PCL")
+(intl:textdomain "cmucl")
 
 ;;; ***************************************************
 ;;; General Generic Function Call Optimization  *******

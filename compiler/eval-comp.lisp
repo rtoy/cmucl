@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.36 2003/10/26 17:31:25 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.37 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;;
 
 (in-package "C")
+(intl:textdomain "cmucl")
 
 (declaim (special *constants* *free-variables* *compile-component*
 		  *code-vector* *next-location* *result-fixups*
@@ -58,7 +59,7 @@
 		*error-output*))
 	   (*compiler-trace-output* nil)
 	   (*compiler-error-bailout*
-	    #'(lambda () (error "Fatal error, aborting evaluation.")))
+	    #'(lambda () (error _"Fatal error, aborting evaluation.")))
 	   ;;
 	   (*current-path* nil)
 	   (*last-source-context* nil)
@@ -277,7 +278,7 @@
 
 (defun %verify-argument-count (supplied-args defined-args)
   (unless (= supplied-args defined-args)
-    (simple-program-error "Wrong argument count, wanted ~D and got ~D."
+    (simple-program-error _"Wrong argument count, wanted ~D and got ~D."
 	   defined-args supplied-args))
   (values))
 
@@ -301,17 +302,17 @@
 
 (defun %argument-count-error (args-passed-count)
   (error 'simple-program-error
-	 :format-control "Wrong number of arguments passed -- ~S."
+	 :format-control _"Wrong number of arguments passed -- ~S."
 	 :format-arguments (list args-passed-count)))
 
 (defun %odd-keyword-arguments-error ()
   (error 'simple-program-error
 	 :format-control
-	 "Function called with odd number of keyword arguments."))
+	 _"Function called with odd number of keyword arguments."))
 
 (defun %unknown-keyword-argument-error (keyword)
   (error 'simple-program-error
-	 :format-control "Unknown keyword argument -- ~S."
+	 :format-control _"Unknown keyword argument -- ~S."
 	 :format-arguments (list keyword)))
 
 (defun %cleanup-point ())

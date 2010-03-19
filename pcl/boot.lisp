@@ -25,9 +25,10 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.74 2010/03/04 14:03:31 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.75 2010/03/19 15:19:03 rtoy Exp $")
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 #|
 
@@ -186,30 +187,30 @@ work during bootstrapping.
     (declare (ignore restp rest keyp aux allow-other-keys-p))
     (labels ((lambda-list-error (format-control &rest format-arguments)
 	       (simple-program-error
-		(format nil "~~@<Generic function ~a: ~?.~~@:>"
+		(format nil _"~~@<Generic function ~a: ~?.~~@:>"
 			function-specifier
 			format-control format-arguments)))
 	     (check-required-parameter (parameter)
 	       (unless (symbolp parameter)
 		 (lambda-list-error
-		  "Invalid generic function parameter name ~a"
+		  _"Invalid generic function parameter name ~a"
 		  parameter)))
 	     (check-key-or-optional-parameter (parameter)
 	       (unless (or (symbolp parameter)
 			   (and (consp parameter)
 				(symbolp (car parameter))))
 		 (lambda-list-error
-		  "Invalid generic function parameter name ~a"
+		  _"Invalid generic function parameter name ~a"
 		  parameter))
 	       (when (and (consp parameter)
 			  (not (null (cdr parameter))))
 		 (lambda-list-error
-		  "Optional and key parameters of generic functions ~
+		  _"Optional and key parameters of generic functions ~
                    may not have default values or supplied-p ~
                    parameters: ~<~s~>" parameter))))
       (when auxp
 	(lambda-list-error
-	 "~s is not allowed in generic function lambda lists" '&aux))
+	 _"~s is not allowed in generic function lambda lists" '&aux))
       (mapc #'check-required-parameter required)
       (mapc #'check-key-or-optional-parameter optional)
       (mapc #'check-key-or-optional-parameter keys))))
@@ -223,11 +224,11 @@ work during bootstrapping.
 	(methods ()))
     (labels ((loose (format-control &rest format-arguments)
 	       (simple-program-error
-		(format nil "~~@<Generic function ~~s: ~?.~~@:>"
+		(format nil _"~~@<Generic function ~~s: ~?.~~@:>"
 			format-control format-arguments)
 		function-specifier))
 	     (duplicate-option (name)
-	       (loose "The option ~s appears more than once" name))
+	       (loose _"The option ~s appears more than once" name))
 	     (check-declaration (declaration-specifiers)
 	       (loop for specifier in declaration-specifiers
 		     when (and (consp specifier)
@@ -235,17 +236,17 @@ work during bootstrapping.
 				       '(special ftype function inline
 					 notinline declaration)
 				       :test #'eq)) do
-		     (loose "Declaration specifier ~s is not allowed"
+		     (loose _"Declaration specifier ~s is not allowed"
 			    specifier)))
 	     (check-argument-precedence-order (precedence)
 	       (let ((required (parse-lambda-list lambda-list)))
 		 (when (set-difference required precedence)
-		   (loose "Argument precedence order must list all ~
+		   (loose _"Argument precedence order must list all ~
                            required parameters and only those: ~s"
 			  precedence))
 		 (when (/= (length (remove-duplicates precedence))
 			   (length precedence))
-		   (loose "Duplicate parameter names in argument ~
+		   (loose _"Duplicate parameter names in argument ~
                            precedence order: ~s"
 			  precedence))))
 	     (initarg (key &optional (new nil new-supplied-p))
@@ -255,7 +256,7 @@ work during bootstrapping.
 
       (when (and (symbolp function-specifier)
 		 (special-operator-p function-specifier))
-	(loose "Special operators cannot be made generic functions"))
+	(loose _"Special operators cannot be made generic functions"))
       
       (dolist (option options)
 	(case (car option)
@@ -290,7 +291,7 @@ work during bootstrapping.
 					'method-description-methods))
 		    methods))
 	  (t		  ;unsuported things must get a 'program-error
-	   (loose "Unsupported option ~s" option))))
+	   (loose _"Unsupported option ~s" option))))
 
 	(let ((declarations (initarg :declarations)))
 	  (when declarations (initarg :declarations `',declarations))))
@@ -379,7 +380,7 @@ work during bootstrapping.
 (defvar *method-source-info*)
 
 (defvar *inline-methods-in-emfs* t
-  "If true, allow inlining of methods in effective methods.")
+  _N"If true, allow inlining of methods in effective methods.")
 
 (defun expand-defmethod (name proto-gf proto-method qualifiers
 			 lambda-list body env)
@@ -401,7 +402,7 @@ work during bootstrapping.
 		     (or (c::lexenv-functions env)
 			 (c::lexenv-variables env)))
 	    (setq *method-source-info* nil)
-	    (warn "~@<Defining method ~s ~s ~s using inline slot access in a ~
+	    (warn _"~@<Defining method ~s ~s ~s using inline slot access in a ~
                    non-null lexical environment means that it cannot be ~
                    automatically recompiled.~@:>"
 		  name qualifiers lambda-list))
@@ -549,7 +550,7 @@ work during bootstrapping.
 				      (proto-mothed standard-method)
 				      method-lambda initargs env)
   (unless (eq (car-safe method-lambda) 'lambda)
-    (error "The method-lambda argument to make-method-function, ~S,~
+    (error _"The method-lambda argument to make-method-function, ~S,~
             is not a lambda form" method-lambda))
   (make-method-initargs-form-internal method-lambda initargs env))
 
@@ -558,7 +559,7 @@ work during bootstrapping.
 				       method-lambda initargs env)
   (declare (ignore proto-gf proto-method))
   (unless (and (consp method-lambda) (eq (car method-lambda) 'lambda))
-    (error "~@<The ~s argument to ~s, ~s, is not a lambda form.~@:>"
+    (error _"~@<The ~s argument to ~s, ~s, is not a lambda form.~@:>"
 	   'method-lambda 'make-method-lambda method-lambda))
   (make-method-initargs-form-internal method-lambda initargs env))
 
@@ -591,7 +592,7 @@ work during bootstrapping.
 
 (defun make-method-lambda-internal (method-lambda &optional env)
   (unless (and (consp method-lambda) (eq (car method-lambda) 'lambda))
-    (error "~@<The ~s argument to ~s, ~s, is not a lambda form.~@:>"
+    (error _"~@<The ~s argument to ~s, ~s, is not a lambda form.~@:>"
 	   'method-lambda 'make-method-lambda method-lambda))
   (multiple-value-bind (real-body declarations documentation)
       (system:parse-body (cddr method-lambda) env)
@@ -617,7 +618,7 @@ work during bootstrapping.
 		  (when assigned
 		    (warn 'kernel:simple-style-warning
 			  :format-control
-			  "Assignment to method parameter~p ~{~s~^, ~} ~
+			  _"Assignment to method parameter~p ~{~s~^, ~} ~
                            might prevent CLOS optimizations"
 			  :format-arguments
 			  (list (length assigned) assigned)))
@@ -910,15 +911,15 @@ work during bootstrapping.
 	   (cond ((null args)
 		  (if (eql nreq 0) 
 		      (invoke-fast-method-call emf)
-		      (internal-program-error emf "Wrong number of args.")))
+		      (internal-program-error emf _"Wrong number of args.")))
 		 ((null (cdr args))
 		  (if (eql nreq 1) 
 		      (invoke-fast-method-call emf (car args))
-		      (internal-program-error emf "Wrong number of args.")))
+		      (internal-program-error emf _"Wrong number of args.")))
 		 ((null (cddr args))
 		  (if (eql nreq 2) 
 		      (invoke-fast-method-call emf (car args) (cadr args))
-		      (internal-program-error emf "Wrong number of args.")))
+		      (internal-program-error emf _"Wrong number of args.")))
 		 (t
 		  (apply (fast-method-call-function emf)
 			 (fast-method-call-pv-cell emf)
@@ -930,7 +931,7 @@ work during bootstrapping.
 	    (method-call-call-method-args emf)))
     (fixnum 
      (cond ((null args)
-	    (internal-program-error emf "1 or 2 args expected."))
+	    (internal-program-error emf _"1 or 2 args expected."))
 	   ((null (cdr args))
 	    (let ((value (%slot-ref (get-slots (car args)) emf)))
 	      (if (eq value +slot-unbound+)
@@ -940,10 +941,10 @@ work during bootstrapping.
 	    (setf (%slot-ref (get-slots (cadr args)) emf)
 		  (car args)))
 	   (t
-	    (internal-program-error emf "1 or 2 args expected."))))
+	    (internal-program-error emf _"1 or 2 args expected."))))
     (fast-instance-boundp
      (if (or (null args) (cdr args))
-	 (internal-program-error emf "1 arg expected.")
+	 (internal-program-error emf _"1 arg expected.")
 	 (not (eq (%slot-ref (get-slots (car args)) 
 			     (fast-instance-boundp-index emf))
 		  +slot-unbound+))))
@@ -1044,7 +1045,7 @@ work during bootstrapping.
 	   (omethods (compute-applicable-methods gf orig-args))
 	   (nmethods (compute-applicable-methods gf cnm-args)))
       (unless (equal omethods nmethods)
-	(error "~@<The set of methods ~s applicable to argument~p ~
+	(error _"~@<The set of methods ~s applicable to argument~p ~
                 ~{~s~^, ~} to call-next-method is different from ~
                 the set of methods ~s applicable to the original ~
                 method argument~p ~{~s~^, ~}.~@:>"
@@ -1065,7 +1066,7 @@ work during bootstrapping.
 (in-package :pcl)
 	
 (defun too-many-args ()
-  (simple-program-error "Too many arguments."))
+  (simple-program-error _"Too many arguments."))
 
 (declaim (inline get-key-arg))
 (defun get-key-arg (keyword list)
@@ -1310,7 +1311,7 @@ work during bootstrapping.
 			     method-info)))
 
 (defvar *compile-interpreted-methods-p* t
-  "When true, compile interpreted method functions.")
+  _N"When true, compile interpreted method functions.")
 
 (defun load-defmethod-internal
     (method-class gf-name qualifiers specializers lambda-list 
@@ -1343,7 +1344,7 @@ work during bootstrapping.
     (unless (or (eq method-class 'standard-method)
 		(eq (find-class method-class nil) (class-of method)))
       (format *error-output*
-	      "~&~@<At the time the method with qualifiers ~S and ~
+	      _"~&~@<At the time the method with qualifiers ~S and ~
                specializers ~S on the generic function ~S ~
                was compiled, the method class for that generic function was ~
                ~S.  But, the method class is now ~S, this ~
@@ -1465,13 +1466,13 @@ work during bootstrapping.
 (defun generic-clobbers-function (function-specifier)
   (restart-case
       (simple-program-error
-       "~@<~S already names an ordinary function or a macro.  ~
+       _"~@<~S already names an ordinary function or a macro.  ~
 	If you want to replace it with a generic function, you should remove ~
         the existing definition beforehand.~@:>"
        function-specifier)
     (continue ()
       :report (lambda (stream)
-		(format stream "~@<Discard the existing definition of ~S.~@:>"
+		(format stream _"~@<Discard the existing definition of ~S.~@:>"
 			function-specifier))
       (fmakunbound function-specifier))))
 
@@ -1569,7 +1570,7 @@ work during bootstrapping.
 	    (unless (and (= nreq gf-nreq)
 			 (= nopt gf-nopt)
 			 (eq (or keysp restp) gf-key/rest-p))
-	      (error "~@<The lambda-list ~S is incompatible with ~
+	      (error _"~@<The lambda-list ~S is incompatible with ~
                       existing methods of ~S.~@:>"
 		     lambda-list gf))))
 	(when lambda-list-p
@@ -1629,32 +1630,32 @@ work during bootstrapping.
       (analyze-lambda-list (method-lambda-list* method))
     (flet ((lose (format-control &rest format-args)
 	     (simple-program-error
-	      (format nil "~~@<Attempt to add the method ~~S to the generic ~
+	      (format nil _"~~@<Attempt to add the method ~~S to the generic ~
                            function ~~S, but ~?.~~@:>"
 		      format-control format-args)
 	      method gf))
 	   (compare (x y)
-	     (if (> x y) "more" "fewer")))
+	     (if (> x y) _"more" _"fewer")))
       (let ((gf-nreq (arg-info-number-required arg-info))
 	    (gf-nopt (arg-info-number-optional arg-info))
 	    (gf-key/rest-p (arg-info-key/rest-p arg-info))
 	    (gf-keywords (arg-info-keywords arg-info)))
 	(unless (= nreq gf-nreq)
-	  (lose "the method has ~A required arguments than the ~
+	  (lose _"the method has ~A required arguments than the ~
                  generic function"
 		(compare nreq gf-nreq)))
 	(unless (= nopt gf-nopt)
-	  (lose "the method has ~S optional arguments than the ~
+	  (lose _"the method has ~S optional arguments than the ~
                  generic function"
 		(compare nopt gf-nopt)))
 	(unless (eq (or keysp restp) gf-key/rest-p)
-	  (lose "the method and generic function differ in whether ~
+	  (lose _"the method and generic function differ in whether ~
                  they accept rest or keyword arguments"))
 	(when (consp gf-keywords)
 	  (unless (or (and restp (not keysp))
 		      allow-other-keys-p
 		      (every (lambda (k) (memq k keywords)) gf-keywords))
-	    (lose "the method does not accept each of the keyword ~
+	    (lose _"the method does not accept each of the keyword ~
                    arguments ~S"
 		  gf-keywords)))))))
 
@@ -1759,9 +1760,9 @@ work during bootstrapping.
 	 (if existing
 	     (make-early-gf spec lambda-list lambda-list-p existing
 			    argument-precedence-order)
-	     (error "~@<The function ~S is not already defined.~@:>" spec)))
+	     (error _"~@<The function ~S is not already defined.~@:>" spec)))
 	(existing
-	 (error "~@<~S should be on the list ~S.~@:>" spec
+	 (error _"~@<~S should be on the list ~S.~@:>" spec
 		'*generic-function-fixups*))
 	(t
 	 (pushnew spec *early-generic-functions* :test #'equal)
@@ -1780,7 +1781,7 @@ work during bootstrapping.
 		   (format stream "std-instance")))
 	     #'(kernel:instance-lambda (&rest args)
 		 (declare (ignore args))
-		 (error "~@<The function of the funcallable instance ~S ~
+		 (error _"~@<The function of the funcallable instance ~S ~
 			 has not been set.~@:>" fin)))))
     (setf (gdefinition spec) fin)
     (bootstrap-set-slot 'standard-generic-function fin 'name spec)
@@ -1875,7 +1876,7 @@ work during bootstrapping.
 			   (generic-function-methods gf)
 			   (early-gf-methods gf))))
 	  (if (null methods)
-	      (internal-error "~@<No way to determine the lambda list~@:>")
+	      (internal-error _"~@<No way to determine the lambda list~@:>")
 	      (gf-lambda-list-from-method (car (last methods)))))
 	(arg-info-lambda-list arg-info))))
 
@@ -1885,7 +1886,7 @@ work during bootstrapping.
 	    (setq ,gf-class (find-class ,gf-class t ,env)))
 	   ((classp ,gf-class))
 	   (t
-	    (error "~@<The ~s argument (~S) was neither a class nor a ~
+	    (error _"~@<The ~s argument (~S) was neither a class nor a ~
                     symbol naming a class.~@:>"
 		   :generic-function-class ,gf-class)))
      (remf ,all-keys :generic-function-class)
@@ -2082,7 +2083,7 @@ work during bootstrapping.
 		       (mapcar #'find-class (cadddr (fifth early-method))))))
 	    (t
 	     (cadddr (fifth early-method))))
-      (error "~S is not an early-method." early-method)))
+      (error _"~S is not an early-method." early-method)))
 
 (defun early-method-qualifiers (early-method)
   (cadr (fifth early-method)))
@@ -2120,9 +2121,9 @@ work during bootstrapping.
 (progn
   (defun add-method (generic-function method)
     (when (not (fsc-instance-p generic-function))
-      (error "Early add-method didn't get a funcallable instance."))
+      (error _"Early add-method didn't get a funcallable instance."))
     (when (not (and (listp method) (eq (car method) :early-method)))
-      (error "Early add-method didn't get an early method."))
+      (error _"Early add-method didn't get an early method."))
     (push method (early-gf-methods generic-function))
     (set-arg-info generic-function :new-method method)
     (unless (assoc (early-gf-name generic-function) *generic-function-fixups*
@@ -2135,9 +2136,9 @@ work during bootstrapping.
   ;;
   (defun remove-method (generic-function method)
     (when (not (fsc-instance-p generic-function))
-      (error "Early remove-method didn't get a funcallable instance."))
+      (error _"Early remove-method didn't get a funcallable instance."))
     (when (not (and (listp method) (eq (car method) :early-method)))
-      (error "Early remove-method didn't get an early method."))
+      (error _"Early remove-method didn't get an early method."))
     (setf (early-gf-methods generic-function)
 	  (remove method (early-gf-methods generic-function)))
     (set-arg-info generic-function)
@@ -2160,7 +2161,7 @@ work during bootstrapping.
 			 (equal (early-method-qualifiers m) qualifiers))
 		(return m)))
 	    (if errorp
-		(error "Can't get early method.")
+		(error _"Can't get early method.")
 		nil))
 	(real-get-method generic-function qualifiers specializers errorp))))
 
@@ -2255,7 +2256,7 @@ work during bootstrapping.
 	    (when (and (null lambda-list)
 		       (consp (car form))
 		       (consp (caar form)))
-	      (error "~@<Qualifiers must be non-null atoms: ~s~@:>"
+	      (error _"~@<Qualifiers must be non-null atoms: ~s~@:>"
 		     original-form))
 	    (return (values name qualifiers lambda-list form)))))
 
@@ -2266,10 +2267,10 @@ work during bootstrapping.
 	     (if (specializerp result)
 		 result
 		 (if (symbolp spec)
-		     (error "~@<~S used as a specializer, ~
+		     (error _"~@<~S used as a specializer, ~
                              but is not the name of a class.~@:>"
 			    spec)
-		     (error "~S is not a legal specializer." spec))))))
+		     (error _"~S is not a legal specializer." spec))))))
     (mapcar #'parse specializers)))
 
 (defun unparse-specializers (specializers-or-method)
@@ -2285,7 +2286,7 @@ work during bootstrapping.
                                class-name
                                type))
                          type))
-		   (error "~S is not a legal specializer." spec))))
+		   (error _"~S is not a legal specializer." spec))))
 	(mapcar #'unparse specializers-or-method))
       (unparse-specializers (method-specializers specializers-or-method))))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.27 2003/10/02 19:23:11 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.28 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 
 ;;; Find-DFO  --  Interface
@@ -317,7 +318,7 @@
 		   (real-top com)))
 		(has-top 
 		 (setf (component-kind com) :top-level)
-		 (setf (component-name com) "Top-Level Form")
+		 (setf (component-name com) _"Top-Level Form")
 		 (top com))
 		(t
 		 (delete-component com))))))

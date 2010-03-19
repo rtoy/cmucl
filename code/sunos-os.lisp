@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.12 2009/03/25 15:28:03 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.13 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 
 (in-package "SYSTEM")
 (use-package "EXTENSIONS")
+(intl:textdomain "cmucl-sunos-os")
+
 (export '(get-system-info get-page-size os-init))
 
 (pushnew :sunos *features*)
@@ -24,10 +26,10 @@
 
 (setq *software-type* "SunOS")
 
-(defvar *software-version* nil "Version string for supporting software")
+(defvar *software-version* nil _N"Version string for supporting software")
 
 (defun software-version ()
-  "Returns a string describing version of the supporting software."
+  _N"Returns a string describing version of the supporting software."
   (unless *software-version*
     (setf *software-version*
 	  (multiple-value-bind (sysname nodename release version)
@@ -56,7 +58,7 @@
       (unix:unix-getrusage unix:rusage_self)
     (declare (ignore maxrss ixrss idrss isrss minflt))
     (cond ((null err?)
-	   (error "Unix system call getrusage failed: ~A."
+	   (error _"Unix system call getrusage failed: ~A."
 		  (unix:get-unix-error-msg utime)))
 	  (T
 	   (values utime stime majflt)))))
@@ -82,5 +84,5 @@
   (multiple-value-bind (val err)
 		       (unix:unix-getpagesize)
     (unless val
-      (error "Getpagesize failed: ~A" (unix:get-unix-error-msg err)))
+      (error _"Getpagesize failed: ~A" (unix:get-unix-error-msg err)))
     val))

@@ -36,9 +36,10 @@ New in this release:
       only arrays of character; 8, 16, and 32-bit integers (signed and
       unsigned); single and double floats; and complex single and
       double floats are supported.
-    - FROUND is much faster for single and double float numbers.  This
-      is not currently available for x87 (due to potential roundoff
-      errors), but is available everywhere else.
+    - FROUND and FTRUNCATE are much faster for single and double float
+      numbers.  This is not currently available for x87 (due to
+      potential roundoff errors), but is available everywhere else.
+
 
   * ANSI compliance fixes:
     - COMPILE will update the macro-function if the specified names a

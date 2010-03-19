@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.170 2009/06/11 16:03:59 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.171 2010/03/19 15:19:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,7 @@
 ;;; Propagate-float-type extension by Raymond Toy.
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 #+conservative-float-type
 (sys:register-lisp-feature :conservative-float-type)
@@ -67,7 +68,7 @@
 ;;; things out.
 ;;;
 (deftransform complement ((fun) * * :node node :when :both)
-  "open code"
+  _N"open code"
   (multiple-value-bind (min max)
 		       (function-type-nargs (continuation-type fun))
     (cond
@@ -81,7 +82,7 @@
       '#'(lambda (&rest args)
 	   (not (apply fun args))))
      (t
-      (give-up "Function doesn't have fixed argument count.")))))
+      (give-up _"Function doesn't have fixed argument count.")))))
 
 
 ;;;; List hackery:
@@ -148,7 +149,7 @@
 (defvar *extreme-nthcdr-open-code-limit* 20)
 
 (deftransform nthcdr ((n l) (unsigned-byte t) * :node node)
-  "convert NTHCDR to CAxxR"
+  _N"convert NTHCDR to CAxxR"
   (unless (constant-continuation-p n) (give-up))
   (let ((n (continuation-value n)))
     (when (> n
@@ -279,7 +280,7 @@
 			;; Bound exists, so keep it open still
 			(list new-val))))
 		   (t
-		    (error "Unknown bound type in make-interval!")))))
+		    (error _"Unknown bound type in make-interval!")))))
     (%make-interval :low (normalize-bound low)
 		    :high (normalize-bound high))))
 
@@ -770,7 +771,7 @@
 			      :high (bound-mul (interval-high x)
 					       (interval-high y)))))
 	    (t
-	     (error "This shouldn't happen!"))))))
+	     (error _"This shouldn't happen!"))))))
 
 ;;; INTERVAL-DIV
 ;;;
@@ -835,7 +836,7 @@
 			      :high (bound-div (interval-high top)
 					       (interval-low bot) t))))
 	    (t
-	     (error "This shouldn't happen!"))))))
+	     (error _"This shouldn't happen!"))))))
 
 
 ;;; INTERVAL-FUNC
@@ -2861,7 +2862,7 @@
 (deftransform %ldb ((size posn int)
 		    (fixnum fixnum integer)
 		    (unsigned-byte #.vm:word-bits))
-  "convert to inline logical ops"
+  _N"convert to inline logical ops"
   ;; Try to help out the compiler by precomputing things if SIZE or
   ;; POSN are constants.  This helps out modular arithmetic in some
   ;; cases.  (I think it's a deficiency in modular arithmetic that it
@@ -2881,7 +2882,7 @@
 (deftransform %mask-field ((size posn int)
 			   (fixnum fixnum integer)
 			   (unsigned-byte #.vm:word-bits))
-  "convert to inline logical ops"
+  _N"convert to inline logical ops"
   `(logand int
 	   (ash (ash ,(1- (ash 1 vm:word-bits))
 		     (- size ,vm:word-bits))
@@ -2895,7 +2896,7 @@
 (deftransform %dpb ((new size posn int)
 		    *
 		    (unsigned-byte #.vm:word-bits))
-  "convert to inline logical ops"
+  _N"convert to inline logical ops"
   `(let ((mask (ldb (byte size 0) -1)))
      (logior (ash (logand new mask) posn)
 	     (logand int (lognot (ash mask posn))))))
@@ -2903,7 +2904,7 @@
 (deftransform %dpb ((new size posn int)
 		    *
 		    (signed-byte #.vm:word-bits))
-  "convert to inline logical ops"
+  _N"convert to inline logical ops"
   `(let ((mask (ldb (byte size 0) -1)))
      (logior (ash (logand new mask) posn)
 	     (logand int (lognot (ash mask posn))))))
@@ -2911,7 +2912,7 @@
 (deftransform %deposit-field ((new size posn int)
 			      *
 			      (unsigned-byte #.vm:word-bits))
-  "convert to inline logical ops"
+  _N"convert to inline logical ops"
   `(let ((mask (ash (ldb (byte size 0) -1) posn)))
      (logior (logand new mask)
 	     (logand int (lognot mask)))))
@@ -2919,7 +2920,7 @@
 (deftransform %deposit-field ((new size posn int)
 			      *
 			      (signed-byte #.vm:word-bits))
-  "convert to inline logical ops"
+  _N"convert to inline logical ops"
   `(let ((mask (ash (ldb (byte size 0) -1) posn)))
      (logior (logand new mask)
 	     (logand int (lognot mask)))))
@@ -2947,9 +2948,9 @@
 ;;; Handle the case of a constant boole-code.
 ;;;
 (deftransform boole ((op x y) * * :when :both)
-  "convert to inline logical ops"
+  _N"convert to inline logical ops"
   (unless (constant-continuation-p op)
-    (give-up "BOOLE code is not a constant."))
+    (give-up _"BOOLE code is not a constant."))
   (let ((control (continuation-value op)))
     (case control
       (#.boole-clr 0)
@@ -2969,7 +2970,7 @@
       (#.boole-orc1 '(logorc1 x y))
       (#.boole-orc2 '(logorc2 x y))
       (t
-       (abort-transform "~S illegal control arg to BOOLE." control)))))
+       (abort-transform _"~S illegal control arg to BOOLE." control)))))
 
 
 ;;;; Convert multiply/divide to shifts.
@@ -2977,7 +2978,7 @@
 ;;; If arg is a constant power of two, turn * into a shift.
 ;;;
 (deftransform * ((x y) (integer integer) * :when :both)
-  "convert x*2^k to shift"
+  _N"convert x*2^k to shift"
   (unless (constant-continuation-p y) (give-up))
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
@@ -3011,17 +3012,17 @@
 		     `(values (ash x ,shift)
 			      (- (logand x ,mask) ,delta))))))))
   (deftransform floor ((x y) (integer integer) *)
-    "convert division by 2^k to shift"
+    _N"convert division by 2^k to shift"
     (frob y nil))
   (deftransform ceiling ((x y) (integer integer) *)
-    "convert division by 2^k to shift"
+    _N"convert division by 2^k to shift"
     (frob y t)))
 
 
 ;;; Do the same for mod.
 ;;;
 (deftransform mod ((x y) (integer integer) * :when :both)
-  "convert remainder mod 2^k to LOGAND"
+  _N"convert remainder mod 2^k to LOGAND"
   (unless (constant-continuation-p y) (give-up))
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
@@ -3038,7 +3039,7 @@
 ;;; If arg is a constant power of two, turn truncate into a shift and mask.
 ;;;
 (deftransform truncate ((x y) (integer integer))
-  "convert division by 2^k to shift"
+  _N"convert division by 2^k to shift"
   (unless (constant-continuation-p y) (give-up))
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
@@ -3061,7 +3062,7 @@
 ;;; And the same for rem.
 ;;;
 (deftransform rem ((x y) (integer integer) * :when :both)
-  "convert remainder mod 2^k to LOGAND"
+  _N"convert remainder mod 2^k to LOGAND"
   (unless (constant-continuation-p y) (give-up))
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
@@ -3091,11 +3092,11 @@
   (destructuring-bind (name identity result) stuff
     (deftransform name ((x y) `(* (constant-argument (member ,identity))) '*
 			:eval-name t :when :both)
-      "fold identity operations"
+      _N"fold identity operations"
       result)))
 
 (deftransform logand ((x y) (* (constant-argument t)) *)
-  "fold identity operation"
+  _N"fold identity operation"
   (let ((y (continuation-value y)))
     (unless (and (plusp y)
                  (= y (1- (ash 1 (integer-length y)))))
@@ -3111,14 +3112,14 @@
 ;;;
 (deftransform - ((x y) ((constant-argument (member 0)) rational) *
 		 :when :both)
-  "convert (- 0 x) to negate"
+  _N"convert (- 0 x) to negate"
   '(%negate y))
 
 ;;; Restricted to rationals, because (* 0 -4.0) is -0.0.
 ;;;
 (deftransform * ((x y) (rational (constant-argument (member 0))) *
 		 :when :both)
-  "convert (* x 0) to 0."
+  _N"convert (* x 0) to 0."
   0)
 
 ;;; Fold (+ x 0).
@@ -3127,7 +3128,7 @@
 ;;;
 (deftransform + ((x y) (rational (constant-argument (member 0))) *
 		 :when :both)
-  "fold zero arg"
+  _N"fold zero arg"
   'x)
 
 
@@ -3178,7 +3179,7 @@
 		((and (eq class1 'float) (member class2 '(integer rational)))
 		 Nil)
 		(t
-		 (error "Unexpected types: ~s ~s~%" type1 type2)))))))
+		 (error _"Unexpected types: ~s ~s~%" type1 type2)))))))
 
 ;;; Fold (- x 0).
 ;;;
@@ -3186,7 +3187,7 @@
 ;;; float -0.0 then give up because (- -0.0 -0.0) is 0.0, not -0.0.
 ;;;
 (deftransform - ((x y) (t (constant-argument number)) * :when :both)
-  "fold zero arg"
+  _N"fold zero arg"
   (let ((val (continuation-value y)))
     (unless (and (zerop val)
 		 (not (and (floatp val) (minusp (float-sign val))))
@@ -3202,7 +3203,7 @@
   (destructuring-bind (name result minus-result) stuff
     (deftransform name ((x y) '(t (constant-argument real)) '* :eval-name t
 			:when :both)
-      "fold identity operations"
+      _N"fold identity operations"
       (let ((val (continuation-value y)))
 	(unless (and (= (abs val) 1)
 		     (not-more-contagious y x))
@@ -3213,7 +3214,7 @@
 ;;; N; convert (expt x 1/2) to sqrt.
 ;;;
 (deftransform expt ((x y) (t (constant-argument real)) *)
-  "recode as multiplication or sqrt"
+  _N"recode as multiplication or sqrt"
   (let ((val (continuation-value y)))
     ;; If Y would cause the result to be promoted to the same type as
     ;; Y, we give up.  If not, then the result will be the same type
@@ -3244,13 +3245,13 @@
 (dolist (name '(ash /))
   (deftransform name ((x y) '((constant-argument (integer 0 0)) integer) '*
 		      :eval-name t :when :both)
-    "fold zero arg"
+    _N"fold zero arg"
     0))
 
 (dolist (name '(truncate round floor ceiling))
   (deftransform name ((x y) '((constant-argument (integer 0 0)) integer) '*
 		      :eval-name t :when :both)
-    "fold zero arg"
+    _N"fold zero arg"
     '(values 0 0)))
 
     
@@ -3258,7 +3259,7 @@
 ;;;; Character operations:
 
 (deftransform char-equal ((a b) (base-char base-char))
-  "open code"
+  _N"open code"
   #-(and unicode (not unicode-bootstrap))
   '(let* ((ac (char-code a))
 	  (bc (char-code b))
@@ -3283,7 +3284,7 @@
 	    (lisp::equal-char-code b)))))
 
 (deftransform char-upcase ((x) (base-char))
-  "open code"
+  _N"open code"
   #-(and unicode (not unicode-bootstrap))
   '(if (lower-case-p x)
        (code-char (- (char-code x) 32))
@@ -3295,7 +3296,7 @@
 	   (t x))))
 
 (deftransform char-downcase ((x) (base-char))
-  "open code"
+  _N"open code"
   #-(and unicode (not unicode-bootstrap))
   '(if (upper-case-p x)
        (code-char (+ (char-code x) 32))
@@ -3359,7 +3360,7 @@
 ;;;    that case, otherwise give an efficency note.
 ;;;
 (deftransform eql ((x y) * * :when :both)
-  "convert to simpler equality predicate"
+  _N"convert to simpler equality predicate"
   (let ((x-type (continuation-type x))
 	(y-type (continuation-type y))
 	(char-type (specifier-type 'character))
@@ -3389,7 +3390,7 @@
 ;;; and the same for both.
 ;;; 
 (deftransform = ((x y) * * :when :both)
-  "open code"
+  _N"open code"
   (let ((x-type (continuation-type x))
 	(y-type (continuation-type y)))
     (if (and (csubtypep x-type (specifier-type 'number))
@@ -3409,8 +3410,8 @@
 	       ;; to EQL.
 	       '(eql x y))
 	      (t
-	       (give-up "Operands might not be the same type.")))
-	(give-up "Operands might not be the same type."))))
+	       (give-up _"Operands might not be the same type.")))
+	(give-up _"Operands might not be the same type."))))
 
 
 ;;; Numeric-Type-Or-Lose  --  Interface
@@ -3731,10 +3732,10 @@
       (cond ((stringp min-args)
 	     (compiler-warning "~a" min-args))
 	    ((< nargs min-args)
-	     (compiler-warning "~s: too few args (~d), need at least ~d"
+	     (compiler-warning _N"~s: too few args (~d), need at least ~d"
 			       context nargs min-args))
 	    ((> nargs max-args)
-	     (compiler-note "~s: too many args (~d), wants at most ~d"
+	     (compiler-note _N"~s: too many args (~d), wants at most ~d"
 			    context nargs max-args))))))
 
 (defun check-format-args-1 (string args context)
@@ -3753,7 +3754,7 @@
 (deftransform format ((dest control &rest args) (t simple-string &rest t) *)
   (cond ((policy nil (> speed space))
 	 (unless (constant-continuation-p control)
-	   (give-up "Control string is not a constant."))
+	   (give-up _"Control string is not a constant."))
 	 (let ((string (continuation-value control)))
 	   (check-format-args-1 string args 'format)
 	   (let ((arg-names (loop repeat (length args) collect (gensym))))
@@ -3958,7 +3959,7 @@
               )))))))
 
 (defvar *enable-modular-arithmetic* t
-  "When non-NIL, the compiler will generate code utilizing modular
+  _N"When non-NIL, the compiler will generate code utilizing modular
   arithmetic.  Set to NIL to disable this, if you don't want modular
   arithmetic in some cases.")
 

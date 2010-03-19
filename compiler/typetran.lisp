@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.45 2005/02/07 17:27:16 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.46 2010/03/19 15:19:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 
 ;;;; Type predicate translation:
@@ -41,7 +42,7 @@
 ;;; Define-Type-Predicate  --  Interface
 ;;;
 (defmacro define-type-predicate (name type)
-  "Define-Type-Predicate Name Type
+  _N"Define-Type-Predicate Name Type
   Establish an association between the type predicate Name and the
   corresponding Type.  This causes the type predicate to be recognized for
   purposes of optimization."
@@ -70,7 +71,7 @@
 ;;;
 (deftransform typep ((object type))
   (unless (constant-continuation-p type)
-    (give-up "Can't open-code test of non-constant type."))
+    (give-up _"Can't open-code test of non-constant type."))
   `(typep object ',(continuation-value type)))
 
 
@@ -124,7 +125,7 @@
   (let* ((name (continuation-value name))
 	 (cell (find-class-cell name)))
     `(or (class-cell-class ',cell)
-	 (error "Class not yet defined: ~S" ',name))))
+	 (error _"Class not yet defined: ~S" ',name))))
 
 ;;;; Standard type predicates:
 
@@ -247,7 +248,7 @@
   (let ((spec (hairy-type-specifier type)))
     (cond ((unknown-type-p type)
 	   (when (policy nil (> speed brevity))
-	     (compiler-note "Can't open-code test of unknown type ~S."
+	     (compiler-note _N"Can't open-code test of unknown type ~S."
 			    (type-specifier type)))
 	   `(%typep ,object ',spec))
 	  (t
@@ -413,7 +414,7 @@
       ((csubtypep otype class) 't)
       ;; If not properly named, error.
       ((not (and name (eq (kernel::find-class name) class)))
-       (compiler-error "Can't compile TYPEP of anonymous or undefined ~
+       (compiler-error _N"Can't compile TYPEP of anonymous or undefined ~
 			class:~%  ~S"
 		       class))
       (t
@@ -515,7 +516,7 @@
 	      (member-type
 	       `(member ,object ',(member-type-members type)))
 	      (args-type
-	       (compiler-warning "Illegal type specifier for Typep: ~S."
+	       (compiler-warning _N"Illegal type specifier for Typep: ~S."
 				 (cadr spec))
 	       `(%typep ,object ,spec))
 	      (t nil))

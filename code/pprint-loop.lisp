@@ -57,7 +57,7 @@
 ;; existing implementations of LOOP.
 
 (in-package "PRETTY-PRINT")
-
+(intl:textdomain "cmucl")
 (defun pprint-loop-token-type (token &aux string)
   (cond ((not (symbolp token)) :expr)
 	((string= (setq string (string token)) "FINALLY") :finally)

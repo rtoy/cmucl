@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.25 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.26 2010/03/19 15:18:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 
 (in-package "VM")
 
+(intl:textdomain "cmucl")
 
 
 ;;;; Constants and Types.
@@ -24,10 +25,10 @@
 (eval-when (compile load eval)
 
 (defconstant unit-bits vm:word-bits
-  "The number of bits to process at a time.")
+  _N"The number of bits to process at a time.")
 
 (defconstant max-bits (1- (ash 1 vm:word-bits))
-  "The maximum number of bits that can be dealt with during a single call.")
+  _N"The maximum number of bits that can be dealt with during a single call.")
 
 
 (deftype unit ()
@@ -78,7 +79,7 @@
       (:little-endian little-endian))))
 
 (defun shift-towards-start (number count)
-  "Shift NUMBER by COUNT bits, adding zero bits at the ``end'' and removing
+  _N"Shift NUMBER by COUNT bits, adding zero bits at the ``end'' and removing
   bits from the ``start.''  On big-endian machines this is a left-shift and
   on little-endian machines this is a right-shift.  Note: only the low 5/6 bits
   of count are significant."
@@ -92,7 +93,7 @@
 	 (ash number (- count))))))
 
 (defun shift-towards-end (number count)
-  "Shift NUMBER by COUNT bits, adding zero bits at the ``start'' and removing
+  _N"Shift NUMBER by COUNT bits, adding zero bits at the ``start'' and removing
   bits from the ``end.''  On big-endian machines this is a right-shift and
   on little-endian machines this is a left-shift."
   (declare (type unit number) (fixnum count))
@@ -106,20 +107,20 @@
 
 (declaim (inline start-mask end-mask fix-sap-and-offset))
 (defun start-mask (count)
-  "Produce a mask that contains 1's for the COUNT ``start'' bits and 0's for
+  _N"Produce a mask that contains 1's for the COUNT ``start'' bits and 0's for
   the remaining ``end'' bits.  Only the lower 5 bits of COUNT are significant."
   (declare (fixnum count))
   (shift-towards-start (1- (ash 1 unit-bits)) (- count)))
 
 (defun end-mask (count)
-  "Produce a mask that contains 1's for the COUNT ``end'' bits and 0's for
+  _N"Produce a mask that contains 1's for the COUNT ``end'' bits and 0's for
   the remaining ``start'' bits.  Only the lower 5 bits of COUNT are
   significant."
   (declare (fixnum count))
   (shift-towards-end (1- (ash 1 unit-bits)) (- count)))
 
 (defun fix-sap-and-offset (sap offset)
-  "Align the SAP to a word boundry, and update the offset accordingly."
+  _N"Align the SAP to a word boundry, and update the offset accordingly."
   (declare (type system-area-pointer sap)
 	   (type index offset)
 	   (values system-area-pointer index))
@@ -156,7 +157,7 @@
 
 (declaim (inline do-constant-bit-bash))
 (defun do-constant-bit-bash (dst dst-offset length value dst-ref-fn dst-set-fn)
-  "Fill DST with VALUE starting at DST-OFFSET and continuing for LENGTH bits."
+  _N"Fill DST with VALUE starting at DST-OFFSET and continuing for LENGTH bits."
   (declare (type offset dst-offset) (type unit value)
 	   (type function dst-ref-fn dst-set-fn))
   (multiple-value-bind (dst-word-offset dst-bit-offset)

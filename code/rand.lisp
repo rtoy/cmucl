@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand.lisp,v 1.11 2002/07/10 16:15:59 toy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand.lisp,v 1.12 2010/03/19 15:18:59 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 ;;;
 #-new-random
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 #-new-random
 (export '(random-state random-state-p random *random-state*
 	  make-random-state))

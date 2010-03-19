@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.10 2002/11/19 14:41:14 toy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.11 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,13 +19,14 @@
 ;;; *******************************************************************
 
 (in-package "LISP")
+(intl:textdomain "cmucl")
 
 (export '(sort stable-sort merge))
 
 
 
 (defun sort (sequence predicate &key key)
-  "Destructively sorts sequence.  Predicate should returns non-Nil if
+  _N"Destructively sorts sequence.  Predicate should returns non-Nil if
    Arg1 is to precede Arg2."
   (typecase sequence
     (simple-vector
@@ -42,7 +43,7 @@
      (error 'simple-type-error
 	    :datum sequence
 	    :expected-type 'sequence
-	    :format-control "~S is not a sequence."
+	    :format-control _"~S is not a sequence."
 	    :format-arguments (list sequence)))))
 
 
@@ -132,7 +133,7 @@
 ;;;; Stable Sorting
 
 (defun stable-sort (sequence predicate &key key)
-  "Destructively sorts sequence.  Predicate should returns non-Nil if
+  _N"Destructively sorts sequence.  Predicate should returns non-Nil if
    Arg1 is to precede Arg2."
   (typecase sequence
     (simple-vector
@@ -145,7 +146,7 @@
      (error 'simple-type-error
 	    :datum sequence
 	    :expected-type 'sequence
-	    :format-control "~S is not a sequence."
+	    :format-control _"~S is not a sequence."
 	    :format-arguments (list sequence)))))
 
 
@@ -423,7 +424,7 @@
 ) ; eval-when
 
 (defun merge (result-type sequence1 sequence2 predicate &key key)
-  "The sequences Sequence1 and Sequence2 are destructively merged into
+  _N"The sequences Sequence1 and Sequence2 are destructively merged into
    a sequence of type Result-Type using the Predicate to order the elements."
   (cond ((or (eq result-type 'list)
 	     (subtypep result-type 'list))

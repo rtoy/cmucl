@@ -1,0 +1,142 @@
+# @ cmucl-sse2
+# SOME DESCRIPTIVE TITLE
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "Ignoring bogus i387 Constant ~a"
+msgstr ""
+
+#: target:compiler/x86/sse2-array.lisp target:compiler/x86/sse2-c-call.lisp
+#: target:compiler/x86/sse2-sap.lisp target:compiler/x86/float-sse2.lisp
+msgid "Unknown SC to SC-Case for ~S:~%  ~S"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "float move"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "float to pointer coercion"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid ""
+"Load TN allocated, but no move function?~@\n"
+"\t           VM definition inconsistent, recompile and try again."
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "pointer to float coercion"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "complex float to pointer coercion"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "complex double-double float to pointer coercion"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "pointer to complex float coercion"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "float argument move"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "complex float argument move"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "complex double-double-float argument move"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "inline float arithmetic"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "inline float comparison"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "inline float coercion"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "inline float truncate"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "inline complex single-float creation"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "inline complex double-float creation"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "complex float realpart"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "complex float imagpart"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "inline dummy FP register bias"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "double-double float move"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "double double float to pointer coercion"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "pointer to double-double-float coercion"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "double double-float argument move"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "inline double-double-float creation"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "double-double high part"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "double-double low part"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "inline complex double-double-float creation"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "inline complex float arithmetic"
+msgstr ""
+
+#: target:compiler/x86/float-sse2.lisp
+msgid "inline complex float/float arithmetic"
+msgstr ""

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/final.lisp,v 1.3 2009/11/21 12:58:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/final.lisp,v 1.4 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,12 +15,14 @@
 
 (in-package "EXTENSIONS")
 
+(intl:textdomain "cmucl")
+
 (export '(finalize cancel-finalization))
 
 (defvar *objects-pending-finalization* nil)
 
 (defun finalize (object function)
-  "Arrange for FUNCTION to be called when there are no more references to
+  _N"Arrange for FUNCTION to be called when there are no more references to
    OBJECT.  FUNCTION takes no arguments."
   (declare (type function function))
   (system:without-gcing
@@ -29,7 +31,7 @@
   object)
 
 (defun cancel-finalization (object)
-  "Cancel any finalization registers for OBJECT."
+  _N"Cancel any finalization registers for OBJECT."
   (when object
     ;; We check to make sure object isn't nil because if there are any
     ;; broken weak pointers, their value will show up as nil.  Therefore,

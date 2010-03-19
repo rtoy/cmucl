@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.32 2010/01/23 15:24:16 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.33 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,6 +23,8 @@
 (use-package "C-CALL")
 (use-package "UNIX")
 (use-package "KERNEL")
+
+(intl:textdomain "cmucl-x86-vm")
 
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register
@@ -53,13 +55,13 @@
 
 #-cross-compiler
 (defun machine-type ()
-  "Returns a string describing the type of the local machine."
+  _N"Returns a string describing the type of the local machine."
   "X86")
 
 
 #-cross-compiler
 (defun machine-version ()
-  "Returns a string describing the version of the local machine."
+  _N"Returns a string describing the version of the local machine."
   "X86")
 
 
@@ -109,7 +111,7 @@
 	    (ncode-words (kernel:code-header-ref code 1))
 	    (code-end-addr (+ code-start-addr (* ncode-words 4))))
        (unless (member kind '(:absolute :relative))
-	 (error "Unknown code-object-fixup kind ~s." kind))
+	 (error _"Unknown code-object-fixup kind ~s." kind))
        (ecase kind
 	 (:absolute
 	  ;; Word at sap + offset contains a value to be replaced by
@@ -316,7 +318,7 @@
 	      value
 	      (let ((value (system:alternate-get-global-address name)))
 		(when (zerop value)
-		  (error "Unknown foreign symbol: ~S" name))
+		  (error _"Unknown foreign symbol: ~S" name))
 		value))))))
 
 
@@ -385,36 +387,36 @@
 (defun %instance-set-conditional (object slot test-value new-value)
   (declare (type instance object)
 	   (type index slot))
-  "Atomically compare object's slot value to test-value and if EQ store
+  _N"Atomically compare object's slot value to test-value and if EQ store
    new-value in the slot. The original value of the slot is returned."
   (%instance-set-conditional object slot test-value new-value))
 
 (defun set-symbol-value-conditional (symbol test-value new-value)
   (declare (type symbol symbol))
-  "Atomically compare symbol's value to test-value and if EQ store
+  _N"Atomically compare symbol's value to test-value and if EQ store
   new-value in symbol's value slot and return the original value."
   (set-symbol-value-conditional symbol test-value new-value))
 
 (defun rplaca-conditional (cons test-value new-value)
   (declare (type cons cons))
-  "Atomically compare the car of CONS to test-value and if EQ store
+  _N"Atomically compare the car of CONS to test-value and if EQ store
   new-value its car and return the original value."
   (rplaca-conditional cons test-value new-value))
 
 (defun rplacd-conditional (cons test-value new-value)
   (declare (type cons cons))
-  "Atomically compare the cdr of CONS to test-value and if EQ store
+  _N"Atomically compare the cdr of CONS to test-value and if EQ store
   new-value its cdr and return the original value."
   (rplacd-conditional cons test-value new-value))
 
 (defun data-vector-set-conditional (vector index test-value new-value)
   (declare (type simple-vector vector))
-  "Atomically compare an element of vector to test-value and if EQ store
+  _N"Atomically compare an element of vector to test-value and if EQ store
   new-value the element and return the original value."
   (data-vector-set-conditional vector index test-value new-value))
 
 (defmacro atomic-push-symbol-value (val symbol)
-  "Thread safe push of val onto the list in the symbol global value."
+  _N"Thread safe push of val onto the list in the symbol global value."
   (ext:once-only ((n-val val))
     (let ((new-list (gensym))
 	  (old-list (gensym)))
@@ -428,7 +430,7 @@
 	      (return ,new-list))))))))
 
 (defmacro atomic-pop-symbol-value (symbol)
-  "Thread safe pop from the list in the symbol global value."
+  _N"Thread safe pop from the list in the symbol global value."
   (let ((new-list (gensym))
 	(old-list (gensym)))
     `(loop
@@ -440,7 +442,7 @@
 	  (return (car ,old-list)))))))
 
 (defmacro atomic-pusha (val cons)
-  "Thread safe push of val onto the list in the car of cons."
+  _N"Thread safe push of val onto the list in the car of cons."
   (once-only ((n-val val)
 	      (n-cons cons))
     (let ((new-list (gensym))
@@ -454,7 +456,7 @@
 	      (return ,new-list))))))))
 
 (defmacro atomic-pushd (val cons)
-  "Thread safe push of val onto the list in the cdr of cons."
+  _N"Thread safe push of val onto the list in the cdr of cons."
   (once-only ((n-val val)
 	      (n-cons cons))
     (let ((new-list (gensym))
@@ -468,7 +470,7 @@
 	      (return ,new-list))))))))
 
 (defmacro atomic-push-vector (val vect index)
-  "Thread safe push of val onto the list in the vector element."
+  _N"Thread safe push of val onto the list in the vector element."
   (once-only ((n-val val)
 	      (n-vect vect)
 	      (n-index index))

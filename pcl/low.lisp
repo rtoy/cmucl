@@ -26,13 +26,14 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.35 2007/10/08 15:35:37 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.36 2010/03/19 15:19:03 rtoy Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
 ;;; 
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defvar *optimize-speed* '(optimize (speed 3) (safety 0)
@@ -102,7 +103,7 @@
 ;;; In all cases, set-function-name must return the new (or same) function.
 ;;; 
 (defun set-function-name (function new-name)
-  "Set the name of a compiled function object and return the function."
+  _N"Set the name of a compiled function object and return the function."
   (declare (special *boot-state* *the-class-standard-generic-function*))
   (when (valid-function-name-p function)
     (setq function (fdefinition function)))
@@ -141,11 +142,11 @@
 ;;; forms).
 ;;;
 (defvar *compile-lambda-break-p* nil
-  "PCL debugging aid that breaks into the debugger each time
+  _N"PCL debugging aid that breaks into the debugger each time
 `compile-lambda' is invoked.")
 
 (defvar *compile-lambda-silent-p* t
-  "If true (the default), then `compile-lambda' will try to silence
+  _N"If true (the default), then `compile-lambda' will try to silence
 the compiler as completely as possible.  Currently this means that
 `*compile-print*' will be bound to nil during compilation.")
 

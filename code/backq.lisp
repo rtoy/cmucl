@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.14 2008/03/03 15:54:12 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.15 2010/03/19 15:18:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,6 +13,8 @@
 ;;;   		  (unparsing by Miles Bader)
 ;;;
 (in-package "LISP")
+
+(intl:textdomain "cmucl")
 
 
 ;;; The flags passed back by BACKQUOTIFY can be interpreted as follows:
@@ -43,7 +45,7 @@
 ;;;<hair> involves starting over again pretending you had read ".,a)" instead
 ;;; of ",@a)"
 
-(defvar *backquote-count* 0  "How deep we are into backquotes")
+(defvar *backquote-count* 0  _N"How deep we are into backquotes")
 (defvar *bq-comma-flag* '(|,|))
 (defvar *bq-at-flag* '(|,@|))
 (defvar *bq-dot-flag* '(|,.|))
@@ -59,9 +61,9 @@
     (multiple-value-bind (flag thing)
 			 (backquotify stream (read stream t nil t))
       (if (eq flag *bq-at-flag*)
-	  (%reader-error stream ",@ after backquote in ~S" thing))
+	  (%reader-error stream _",@ after backquote in ~S" thing))
       (if (eq flag *bq-dot-flag*)
-	  (%reader-error stream ",. after backquote in ~S" thing))
+	  (%reader-error stream _",. after backquote in ~S" thing))
       (values (backquotify-1 flag thing) 'list))))
 
 (defun comma-macro (stream ignore)
@@ -69,7 +71,7 @@
   (unless (> *backquote-count* 0)
     (when *read-suppress*
       (return-from comma-macro nil))
-    (%reader-error stream "Comma not inside a backquote."))
+    (%reader-error stream _"Comma not inside a backquote."))
   (let ((c (read-char stream))
 	(*backquote-count* (1- *backquote-count*)))
     (values
@@ -110,9 +112,9 @@
 	     (multiple-value-bind (dflag d) (backquotify stream (cdr code))
 	       (if (eq dflag *bq-at-flag*)
 		   ;; get the errors later.
-		   (%reader-error stream ",@ after dot in ~S" code))
+		   (%reader-error stream _",@ after dot in ~S" code))
 	       (if (eq dflag *bq-dot-flag*)
-		   (%reader-error stream ",. after dot in ~S" code))
+		   (%reader-error stream _",. after dot in ~S" code))
 	       (cond
 		((eq aflag *bq-at-flag*)
 		 (if (null dflag)
@@ -236,7 +238,7 @@
     ))
 
 (defun backq-unparse (form &optional splicing)
-  "Given a lisp form containing the magic functions BACKQ-LIST, BACKQ-LIST*,
+  _N"Given a lisp form containing the magic functions BACKQ-LIST, BACKQ-LIST*,
   BACKQ-APPEND, etc. produced by the backquote reader macro, will return a
   corresponding backquote input form.  In this form, `,' `,@' and `,.' are
   represented by lists whose cars are BACKQ-COMMA, BACKQ-COMMA-AT, and
@@ -248,7 +250,7 @@
    ((atom form)
     (backq-unparse-expr form splicing))
    ((not (null (cdr (last form))))
-    "### illegal dotted backquote form ###")
+    _"### illegal dotted backquote form ###")
    (t
     (case (car form)
       (backq-list

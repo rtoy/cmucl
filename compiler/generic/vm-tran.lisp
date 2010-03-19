@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.61 2009/06/12 12:43:49 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.62 2010/03/19 15:19:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 ;;; We need to define these predicates, since the TYPEP source transform picks
 ;;; whichever predicate was defined last when there are multiple predicates for
@@ -329,7 +330,7 @@
 	 ,@(unless (policy node (zerop safety))
 	     '((unless (= (length bit-array-1) (length bit-array-2)
 			  (length result-bit-array))
-		 (error "Argument and/or result bit arrays not the same length:~
+		 (error _"Argument and/or result bit arrays not the same length:~
 			 ~%  ~S~%  ~S  ~%  ~S"
 			bit-array-1 bit-array-2 result-bit-array))))
 	 (let ((length (length result-bit-array)))
@@ -367,7 +368,7 @@
      ,@(unless (policy node (zerop safety))
 	 '((unless (= (length bit-array)
 		      (length result-bit-array))
-	     (error "Argument and result bit arrays not the same length:~
+	     (error _"Argument and result bit arrays not the same length:~
 	     	     ~%  ~S~%  ~S"
 		    bit-array result-bit-array))))
     (let ((length (length result-bit-array)))

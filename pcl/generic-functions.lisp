@@ -1,10 +1,11 @@
 ;;;-*-Mode:LISP; Package:PCL; Base:10; Syntax:Common-lisp -*-
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.28 2003/08/25 20:10:41 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.29 2010/03/19 15:19:03 rtoy Rel $")
 ;;;
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;; class predicates
 (defgeneric class-eq-specializer-p (object))

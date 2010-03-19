@@ -25,10 +25,12 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.30 2004/04/06 20:44:03 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.31 2010/03/19 15:19:03 rtoy Exp $")
 ;;;
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
+
 
 ;;;
 ;;; MAKE-TOP-LEVEL-FORM is used by all PCL macros that appear `at top-level'.
@@ -107,12 +109,12 @@
     ;; TBD - ANSI compliant class and slot option checking.
     (dolist (option options)
       (if (not (listp option))
-          (simple-program-error "~S is not a legal defclass option."
+          (simple-program-error _"~S is not a legal defclass option."
 				option)
           (when (eq (car option) :metaclass)
             (unless (legal-class-name-p (cadr option))
               (simple-program-error
-	       "~@<The value of the ~s option (~s) is not a legal ~
+	       _"~@<The value of the ~s option (~s) is not a legal ~
 	        class name.~@:>"
 	       :metaclass (cadr option)))
 	    (setq metaclass (cadr option))
@@ -215,12 +217,12 @@
 	 (push spec *slots*)
 	 `'(:name ,spec))
 	((not (consp spec))
-	 (error "~@<~S is not a legal slot specification.~@:>" spec))
+	 (error _"~@<~S is not a legal slot specification.~@:>" spec))
 	((null (cdr spec))
 	 (push (car spec) *slots*)
 	 `'(:name ,(car spec)))
 	((null (cddr spec))
-	 (error "~@<In the class definintion of ~s, the slot specification ~s ~
+	 (error _"~@<In the class definintion of ~s, the slot specification ~s ~
                  is obsolete.  Convert it to ~s.~@:>"
 		class-name spec
 		(list (car spec) :initform (cadr spec))))
@@ -286,7 +288,7 @@
 
 (defun early-class-definition (class-name)
   (or (find class-name *early-class-definitions* :key #'ecd-class-name)
-      (error "~@<~S is not a class in *early-class-definitions*.~@:>"
+      (error _"~@<~S is not a class in *early-class-definitions*.~@:>"
 	     class-name)))
 
 (defun make-early-class-definition
@@ -336,7 +338,7 @@
       (let ((name1 (canonical-slot-name s1)))
 	(dolist (s2 (cdr (memq s1 slots)))
 	  (when (eq name1 (canonical-slot-name s2))
-	    (error "~@<More than one early class defines a slot with the ~
+	    (error _"~@<More than one early class defines a slot with the ~
                     name ~S.  This can't work because the bootstrap ~
                     object system doesn't know how to compute effective ~
                     slots.~@:>"
@@ -362,8 +364,8 @@
 		       (setq default-initargs
 			     (nconc default-initargs (reverse (pop others)))))
 		      (t
-		       (cerror "Discard it."
-			       "~@<The defclass option ~S is not supported by ~
+		       (cerror _"Discard it."
+			       _"~@<The defclass option ~S is not supported by ~
                                  the bootstrap object system.~@:>"
 			       initarg)
 		       (pop others)))))))
@@ -371,7 +373,7 @@
 
 (defun bootstrap-slot-index (class-name slot-name)
   (or (position slot-name (early-class-slots class-name))
-      (internal-error "Slot ~S not found in class ~S" slot-name class-name)))
+      (internal-error _"Slot ~S not found in class ~S" slot-name class-name)))
 
 ;;;
 ;;; bootstrap-get-slot and bootstrap-set-slot are used to access and change

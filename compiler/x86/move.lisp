@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.8 2003/08/03 11:27:45 gerd Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.9 2010/03/19 15:19:01 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,7 @@
 ;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;;
 (in-package :x86)
+(intl:textdomain "cmucl-x86-vm")
 
 (define-move-function (load-immediate 1) (vop x y)
   ((immediate)
@@ -209,7 +210,7 @@
   (:results (y :scs (signed-reg unsigned-reg)
 	       :load-if (not (location= x y))))
   (:arg-types tagged-num)
-  (:note "fixnum untagging")
+  (:note _N"fixnum untagging")
   (:generator 1
     (move y x)
     (inst sar y 2)))
@@ -221,7 +222,7 @@
 (define-vop (move-to-word-c)
   (:args (x :scs (constant)))
   (:results (y :scs (signed-reg unsigned-reg)))
-  (:note "constant load")
+  (:note _N"constant load")
   (:generator 1
     (inst mov y (tn-value x))))
 ;;;
@@ -233,7 +234,7 @@
 (define-vop (move-to-word/integer)
   (:args (x :scs (descriptor-reg) :target eax))
   (:results (y :scs (signed-reg unsigned-reg)))
-  (:note "integer to untagged word coercion")
+  (:note _N"integer to untagged word coercion")
   (:temporary (:sc unsigned-reg :offset eax-offset
 		   :from (:argument 0) :to (:result 0) :target y) eax)
   (:generator 4
@@ -260,7 +261,7 @@
   (:results (y :scs (any-reg descriptor-reg)
 	       :load-if (not (location= x y))))
   (:result-types tagged-num)
-  (:note "fixnum tagging")
+  (:note _N"fixnum tagging")
   (:generator 1
     (cond ((and (sc-is x signed-reg unsigned-reg)
 		(not (location= x y)))
@@ -287,7 +288,7 @@
 		   :from (:argument 0) :to (:result 0)) ecx)
   (:ignore ecx)
   (:results (y :scs (any-reg descriptor-reg)))
-  (:note "signed word to integer coercion")
+  (:note _N"signed word to integer coercion")
   (:generator 20
     (move eax x)
     (inst call (make-fixup 'move-from-signed :assembly-routine))
@@ -297,7 +298,7 @@
 (define-vop (move-from-signed)
   (:args (x :scs (signed-reg unsigned-reg) :to :result))
   (:results (y :scs (any-reg descriptor-reg) :from :argument))
-  (:note "signed word to integer coercion")
+  (:note _N"signed word to integer coercion")
   (:node-var node)
   (:generator 20
      (assert (not (location= x y)))
@@ -334,7 +335,7 @@
 		   :from (:argument 0) :to (:result 0)) ecx)
   (:ignore ecx)
   (:results (y :scs (any-reg descriptor-reg)))
-  (:note "unsigned word to integer coercion")
+  (:note _N"unsigned word to integer coercion")
   (:generator 20
     (move eax x)
     (inst call (make-fixup 'move-from-unsigned :assembly-routine))
@@ -346,7 +347,7 @@
   (:temporary (:sc unsigned-reg) alloc)
   (:results (y :scs (any-reg descriptor-reg)))
   (:node-var node)
-  (:note "unsigned word to integer coercion")
+  (:note _N"unsigned word to integer coercion")
   (:generator 20
     (assert (not (location= x y)))
     (assert (not (location= x alloc)))
@@ -400,7 +401,7 @@
 			     (sc-is y signed-stack unsigned-stack))))))
   (:effects)
   (:affected)
-  (:note "word integer move")
+  (:note _N"word integer move")
   (:generator 0
     (move y x)))
 ;;;
@@ -413,7 +414,7 @@
   (:args (x :scs (signed-reg unsigned-reg) :target y)
 	 (fp :scs (any-reg) :load-if (not (sc-is y sap-reg))))
   (:results (y))
-  (:note "word integer argument move")
+  (:note _N"word integer argument move")
   (:generator 0
     (sc-case y
       ((signed-reg unsigned-reg)

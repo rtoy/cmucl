@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.19 2001/03/04 20:12:40 pw Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.20 2010/03/19 15:18:59 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; 
 
 (in-package "MIPS" :use '("LISP"))
+(intl:textdomain "cmucl")
 
 (export '(register-name disassemble-code-vector))
 

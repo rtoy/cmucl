@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.32 1998/03/04 14:53:22 dtc Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.33 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; Written by William Lott.
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 (export '(*backend* *target-backend* *native-backend* backend
 	  backend-name backend-version backend-fasl-file-type
@@ -49,7 +50,7 @@
 	    `(defun ,name (&rest args)
 	       (apply (or (,(symbolicate "VM-SUPPORT-ROUTINES-" name)
 			   (backend-support-routines *backend*))
-			  (error "Machine specific support routine ~S ~
+			  (error _"Machine specific support routine ~S ~
 				  undefined for ~S"
 				 ',name *backend*))
 		      args)))
@@ -100,7 +101,7 @@
 (defmacro def-vm-support-routine (name ll &body body)
   (unless (member (intern (string name) (find-package "C"))
 		  vm-support-routines)
-    (warn "Unknown VM support routine: ~A" name))
+    (warn _"Unknown VM support routine: ~A" name))
   (let ((local-name (symbolicate (backend-name *target-backend*) "-" name)))
     `(progn
        (defun ,local-name ,ll ,@body)
@@ -233,11 +234,11 @@
 
 
 (defvar *native-backend* (make-backend)
-  "The backend for the machine we are running on. Do not change this.")
+  _N"The backend for the machine we are running on. Do not change this.")
 (defvar *target-backend* *native-backend*
-  "The backend we are attempting to compile.")
+  _N"The backend we are attempting to compile.")
 (defvar *backend* *native-backend*
-  "The backend we are using to compile with.")
+  _N"The backend we are using to compile with.")
 
 
 
@@ -246,23 +247,23 @@
 (export '(backend-features target-featurep backend-featurep native-featurep))
 
 (defun backend-features (backend)
-  "Compute the *FEATURES* list to use with BACKEND."
+  _N"Compute the *FEATURES* list to use with BACKEND."
   (union (backend-%features backend)
 	 (set-difference *features*
 			 (backend-misfeatures backend))))
 
 (defun target-featurep (feature)
-  "Same as EXT:FEATUREP, except use the features found in *TARGET-BACKEND*."
+  _N"Same as EXT:FEATUREP, except use the features found in *TARGET-BACKEND*."
   (let ((*features* (backend-features *target-backend*)))
     (featurep feature)))
 
 (defun backend-featurep (feature)
-  "Same as EXT:FEATUREP, except use the features found in *BACKEND*."
+  _N"Same as EXT:FEATUREP, except use the features found in *BACKEND*."
   (let ((*features* (backend-features *backend*)))
     (featurep feature)))
 
 (defun native-featurep (feature)
-  "Same as EXT:FEATUREP, except use the features found in *NATIVE-BACKEND*."
+  _N"Same as EXT:FEATUREP, except use the features found in *NATIVE-BACKEND*."
   (let ((*features* (backend-features *native-backend*)))
     (featurep feature)))
 

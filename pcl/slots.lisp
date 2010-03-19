@@ -26,17 +26,18 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.30 2009/01/06 18:17:50 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.31 2010/03/19 15:19:03 rtoy Rel $")
 ;;;
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;; ANSI CL condition for unbound slots.
 
 (define-condition unbound-slot (cell-error)
   ((instance :reader unbound-slot-instance :initarg :instance))
   (:report (lambda (condition stream)
-	     (format stream "~@<The slot ~S is unbound in the object ~S.~@:>"
+	     (format stream _"~@<The slot ~S is unbound in the object ~S.~@:>"
 		     (cell-error-name condition)
 		     (unbound-slot-instance condition)))))
 
@@ -107,16 +108,16 @@
 ;; legal.
 (defun legal-slot-name-p-internal (x)
   (cond ((not (symbolp x))
-	 (values nil "is not a symbol and so cannot be bound"))
+	 (values nil _"is not a symbol and so cannot be bound"))
 	;;
 	;; Structure slots names can be any symbol.
 	(*allow-funny-slot-names*)
 	((keywordp x)
-	 (values nil "is a keyword and so cannot be bound"))
+	 (values nil _"is a keyword and so cannot be bound"))
 	((memq x '(t nil))
-	 (values nil "cannot be bound"))
+	 (values nil _"cannot be bound"))
 	((constantp x)
-	 (values nil "is a constant and so cannot be bound"))
+	 (values nil _"is a constant and so cannot be bound"))
 	(t t)))
 
 (define-compiler-macro slot-value (&whole form object slot-name)
@@ -192,11 +193,11 @@
 			  (%slot-ref (std-instance-slots object) location))
 			 ((fsc-instance-p object)
 			  (%slot-ref (fsc-instance-slots object) location))
-			 (t (internal-error "What kind of instance is this?"))))
+			 (t (internal-error _"What kind of instance is this?"))))
 		  (cons
 		   (cdr location))
 		  (t
-		   (error "~@<The slot ~s has neither ~s nor ~s ~
+		   (error _"~@<The slot ~s has neither ~s nor ~s ~
                            allocation, so it can't be read by the default ~s ~
                            method.~@:>"
 			  slotd :instance :class 'slot-value-using-class)))))
@@ -216,11 +217,11 @@
 	      (setf (%slot-ref (std-instance-slots object) location) new-value))
 	     ((fsc-instance-p object)
 	      (setf (%slot-ref (fsc-instance-slots object) location) new-value))
-	     (t (internal-error "What kind of instance is this?"))))
+	     (t (internal-error _"What kind of instance is this?"))))
       (cons
        (setf (cdr location) new-value))
       (t
-       (error "~@<The slot ~s has neither ~s nor ~s allocation, ~
+       (error _"~@<The slot ~s has neither ~s nor ~s allocation, ~
                so it can't be written by the default ~s method.~@:>"
 	      slotd :instance :class '(setf slot-value-using-class))))))
 
@@ -236,11 +237,11 @@
 			  (%slot-ref (std-instance-slots object) location))
 			 ((fsc-instance-p object)
 			  (%slot-ref (fsc-instance-slots object) location))
-			 (t (internal-error "What kind of instance is this?"))))
+			 (t (internal-error _"What kind of instance is this?"))))
 		  (cons
 		   (cdr location))
 		  (t
-		   (error "~@<The slot ~s has neither ~s nor ~s ~
+		   (error _"~@<The slot ~s has neither ~s nor ~s ~
                            allocation, so it can't be read by the default ~s ~
 			   method.~@:>"
 			  slotd :instance :class 'slot-boundp-using-class)))))
@@ -258,11 +259,11 @@
 	      (setf (%slot-ref (std-instance-slots object) location) +slot-unbound+))
 	     ((fsc-instance-p object)
 	      (setf (%slot-ref (fsc-instance-slots object) location) +slot-unbound+))
-	     (t (internal-error "What kind of instance is this?"))))
+	     (t (internal-error _"What kind of instance is this?"))))
       (cons
        (setf (cdr location) +slot-unbound+))
       (t
-       (error "~@<The slot ~s has neither ~s nor ~s allocation, ~
+       (error _"~@<The slot ~s has neither ~s nor ~s allocation, ~
                so it can't be written by the default ~s method.~@:>"
 	      slotd :instance :class 'slot-makunbound-using-class))))
   object)
@@ -293,7 +294,7 @@
 	   ((class structure-class)
 	    (object structure-object)
 	    (slotd structure-effective-slot-definition))
-  (error "Structure slots cannot be unbound."))
+  (error _"Structure slots cannot be unbound."))
 
 
 (defmethod slot-value-using-class
@@ -323,20 +324,20 @@
 
 (defmethod slot-makunbound-using-class ((class condition-class) object slot)
   (declare (ignore object slot))
-  (error "Condition slots cannot be unbound."))
+  (error _"Condition slots cannot be unbound."))
 
 
 (defmethod slot-missing
 	   ((class t) instance slot-name operation &optional new-value)
   (error
-   (format nil "~~@<When attempting to ~A, the slot ~S is missing ~
+   (format nil _"~~@<When attempting to ~A, the slot ~S is missing ~
                 from the object ~S.~~@:>"
 	   (ecase operation
-	     (slot-value "read the slot's value (slot-value)")
-	     (setf (format nil "set the slot's value to ~S (setf of slot-value)"
+	     (slot-value _"read the slot's value (slot-value)")
+	     (setf (format nil _"set the slot's value to ~S (setf of slot-value)"
 			   new-value))
-	     (slot-boundp "test to see if slot is bound (slot-boundp)")
-	     (slot-makunbound "make the slot unbound (slot-makunbound)"))
+	     (slot-boundp _"test to see if slot is bound (slot-boundp)")
+	     (slot-makunbound _"make the slot unbound (slot-makunbound)"))
 	   slot-name
 	   instance)))
 
@@ -364,7 +365,7 @@
   (let ((constructor (class-defstruct-constructor class)))
     (if constructor
 	(funcall constructor)
-	(error "~@<Can't allocate an instance of class ~S.~@:>"
+	(error _"~@<Can't allocate an instance of class ~S.~@:>"
 	       (class-name class)))))
 
 (defmethod allocate-instance ((class condition-class) &rest initargs &key)

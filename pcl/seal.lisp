@@ -27,9 +27,10 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/seal.lisp,v 1.3 2003/05/04 13:11:21 gerd Rel $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/seal.lisp,v 1.4 2010/03/19 15:19:03 rtoy Rel $")
 
 (in-package "PCL")
+(intl:textdomain "cmucl")
 
 (define-condition sealed-error (simple-program-error)
   ()
@@ -117,7 +118,7 @@
 
 (defmethod seal-quality->type (quality)
   (or (cdr (assq quality *seal-quality->type*))
-      (error "~@<Invalid sealing specifier ~s.~@:>" quality)))
+      (error _"~@<Invalid sealing specifier ~s.~@:>" quality)))
 
 (defmethod make-seal (type name quality spec)
   (declare (ignore type name spec))
@@ -128,6 +129,6 @@
 
 (defmethod check-seal ((seal seal) object action)
   (declare (ignore action))
-  (sealed-error "~s is sealed wrt ~a" object (seal-quality seal)))
+  (sealed-error _"~s is sealed wrt ~a" object (seal-quality seal)))
 
 ;;; end of seal.lisp

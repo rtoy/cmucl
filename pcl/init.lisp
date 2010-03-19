@@ -26,13 +26,14 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.24 2003/05/25 14:33:49 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.25 2010/03/19 15:19:03 rtoy Rel $")
 
 ;;;
 ;;; This file defines the initialization and related protocols.
 ;;; 
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 (defmethod make-instance ((class symbol) &rest initargs &key)
   (apply #'make-instance (find-class class) initargs))
@@ -218,7 +219,7 @@
     (values legal nil)))
 
 (defun invalid-initargs-error (class invalid-keys)
-  (simple-program-error "~@<Invalid initialization argument~P ~2I~_~
+  (simple-program-error _"~@<Invalid initialization argument~P ~2I~_~
                          ~<~{~S~^, ~}~@:> ~I~_in call for class ~S.~:>"
 			(length invalid-keys)
 			(list invalid-keys)

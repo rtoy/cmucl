@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/bit-util.lisp,v 1.7 1994/10/31 04:27:28 ram Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/bit-util.lisp,v 1.8 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 (declaim (inline clear-bit-vector set-bit-vector bit-vector-replace
 		 bit-vector-copy))
@@ -39,7 +40,7 @@
 	   (word vm:vector-data-offset (1+ word)))
 	  ((<= i 0)
 	   (unless (zerop i)
-	     (error "local-tn-limit not a vm:word-bits multiple.")))
+	     (error _"local-tn-limit not a vm:word-bits multiple.")))
 	(res `(setf (kernel:%raw-bits ,n-vec ,word) 0)))
       `(progn ,@(res) ,n-vec))))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.18 2009/03/18 01:24:52 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.19 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,40 +19,42 @@
 
 (in-package "KERNEL")
 
+(intl:textdomain "cmucl")
+
 ;;;; Random constants, utility functions.
 
 (defconstant max-log
   7.0978271289338399678773454114191w2
-  "log(most-positive-double-double-float)")
+  _N"log(most-positive-double-double-float)")
 
 (defconstant min-log
   -7.4444007192138126231410729844608w2
-  "log(least-positive-double-double-float")
+  _N"log(least-positive-double-double-float")
 
 
 (defconstant loge2
   0.6931471805599453094172321214581765680755001w0
-  "log(2)")
+  _N"log(2)")
 
 (defconstant log2e
   1.442695040888963407359924681001892137426646w0
-  "Log base 2 of e")
+  _N"Log base 2 of e")
 
 (defconstant log2ea
   4.4269504088896340735992468100189213742664595w-1
-  "log2(e)-1")
+  _N"log2(e)-1")
 
 (defconstant dd-pi
   3.141592653589793238462643383279502884197169w0
-  "Pi")
+  _N"Pi")
 
 (defconstant dd-pi/2
   1.570796326794896619231321691639751442098585w0
-  "Pi/2")
+  _N"Pi/2")
 
 (defconstant dd-pi/4
   0.7853981633974483096156608458198757210492923w0
-  "Pi/4")
+  _N"Pi/4")
 
 ;; log2-c1 and log-c2 are log(2) arranged in such a way that log2-c1 +
 ;; log2-c2 is log(2) to an accuracy greater than double-double-float.
@@ -64,7 +66,7 @@
 
 (defconstant sqrt-1/2
   0.7071067811865475244008443621048490392848w0
-  "Sqrt(1/2)")
+  _N"Sqrt(1/2)")
 
 ;; Evaluate polynomial
 (declaim (maybe-inline poly-eval poly-eval-1))
@@ -144,7 +146,7 @@
   ;; log(2)/2, where the coefficients of P and Q are given Pn and Qn
   ;; above.  Theoretical peak relative error = 8.1e-36.
   (defun dd-%expm1 (x)
-    "exp(x) - 1"
+    _N"exp(x) - 1"
     (declare (type double-double-float x)
 	     (optimize (speed 3) (space 0)
 		       (inhibit-warnings 3)))
@@ -1206,7 +1208,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 		#x91615E #xE61B08 #x659985 #x5F14A0 #x68408D #xFFD880 
 		#x4D7327 #x310606 #x1556CA #x73A8C9 #x60E27B #xC08C6B 
 		))
-  "396 (hex) digits of 2/pi")
+  _N"396 (hex) digits of 2/pi")
 
 
 (let ((y (make-array 3 :element-type 'double-float))
@@ -1506,7 +1508,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 	       (setf s (* loge2 e))))
 	(when (> s max-log)
 	  ;; Overflow.  What to do?
-	  (error "Overflow"))
+	  (error _"Overflow"))
 	(when (< s min-log)
 	  (return-from dd-%powil 0w0))
 
@@ -1638,7 +1640,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 	       (values rho 0)))))))
 
 (defun dd-complex-sqrt (z)
-  "Principle square root of Z
+  _N"Principle square root of Z
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1680,7 +1682,7 @@ Z may be any number, but the result is always a complex."
 	(complex eta nu)))))
 
 (defun dd-complex-log-scaled (z j)
-  "Compute log(2^j*z).
+  _N"Compute log(2^j*z).
 
 This is for use with J /= 0 only when |z| is huge."
   (declare (number z)
@@ -1715,7 +1717,7 @@ This is for use with J /= 0 only when |z| is huge."
 		 (atan y x))))))
 
 (defun dd-complex-log (z)
-  "Log of Z = log |Z| + i * arg Z
+  _N"Log of Z = log |Z| + i * arg Z
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1727,7 +1729,7 @@ Z may be any number, but the result is always a complex."
 ;; never 0 since we have positive and negative zeroes.
 
 (defun dd-complex-atanh (z)
-  "Compute atanh z = (log(1+z) - log(1-z))/2"
+  _N"Compute atanh z = (log(1+z) - log(1-z))/2"
   (declare (number z))
   (cond ((and (realp z) (< z -1))
 	 ;; ATANH is continuous with quadrant III in this case.
@@ -1788,7 +1790,7 @@ Z may be any number, but the result is always a complex."
 		      (- (* beta nu))))))))
 
 (defun dd-complex-tanh (z)
-  "Compute tanh z = sinh z / cosh z"
+  _N"Compute tanh z = sinh z / cosh z"
   (declare (number z))
   (let ((x (float (realpart z) 1.0w0))
 	(y (float (imagpart z) 1.0w0)))
@@ -1868,7 +1870,7 @@ Z may be any number, but the result is always a complex."
   (complex (+ (realpart z) 1) (imagpart z)))
 
 (defun dd-complex-acos (z)
-  "Compute acos z = pi/2 - asin z
+  _N"Compute acos z = pi/2 - asin z
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1894,7 +1896,7 @@ Z may be any number, but the result is always a complex."
 					    sqrt-1-z)))))))))
 
 (defun dd-complex-acosh (z)
-  "Compute acosh z = 2 * log(sqrt((z+1)/2) + sqrt((z-1)/2))
+  _N"Compute acosh z = 2 * log(sqrt((z+1)/2) + sqrt((z-1)/2))
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1920,7 +1922,7 @@ Z may be any number, but the result is always a complex."
 
 
 (defun dd-complex-asin (z)
-  "Compute asin z = asinh(i*z)/i
+  _N"Compute asin z = asinh(i*z)/i
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1949,7 +1951,7 @@ Z may be any number, but the result is always a complex."
 						 sqrt-1+z)))))))))))
 
 (defun dd-complex-asinh (z)
-  "Compute asinh z = log(z + sqrt(1 + z*z))
+  _N"Compute asinh z = log(z + sqrt(1 + z*z))
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1960,7 +1962,7 @@ Z may be any number, but the result is always a complex."
 	     (- (realpart result)))))
 	 
 (defun dd-complex-atan (z)
-  "Compute atan z = atanh (i*z) / i
+  _N"Compute atan z = atanh (i*z) / i
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1971,7 +1973,7 @@ Z may be any number, but the result is always a complex."
 	     (- (realpart result)))))
 
 (defun dd-complex-tan (z)
-  "Compute tan z = -i * tanh(i * z)
+  _N"Compute tan z = -i * tanh(i * z)
 
 Z may be any number, but the result is always a complex."
   (declare (number z))

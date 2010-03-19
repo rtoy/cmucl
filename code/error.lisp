@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.88 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.89 2010/03/19 15:18:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,8 @@
 (in-package "CONDITIONS")
 (use-package "EXTENSIONS")
 (use-package "KERNEL")
+
+(intl:textdomain "cmucl")
 
 (in-package "KERNEL")
 (export '(layout-invalid condition-function-name simple-control-error
@@ -69,7 +71,7 @@
 			      &body forms)
   (let ((temp (member '&rest names)))
     (unless (= (length temp) 2)
-      (simple-program-error "&rest keyword is ~:[missing~;misplaced~]." temp))
+      (simple-program-error _"&rest keyword is ~:[missing~;misplaced~]." temp))
     (let ((key-vars (ldiff names temp))
           (key-var (or keywords-var (gensym)))
           (rest-var (cadr temp)))
@@ -99,7 +101,7 @@
 (defvar *condition-restarts* ())
 
 (defun compute-restarts (&optional condition)
-  "Return a list of all the currently active restarts ordered from most
+  _N"Return a list of all the currently active restarts ordered from most
    recently established to less recently established.  If Condition is
    specified, then only restarts associated with Condition (or with no
    condition) will be returned."
@@ -134,7 +136,7 @@
   (test-function #'(lambda (cond) (declare (ignore cond)) t)))
 
 (setf (documentation 'restart-name 'function)
-      "Returns the name of the given restart object.")
+      _N"Returns the name of the given restart object.")
 
 (defun restart-report (restart stream)
   (funcall (or (restart-report-function restart)
@@ -145,7 +147,7 @@
            stream))
 
 (defmacro with-condition-restarts (condition-form restarts-form &body body)
-  "WITH-CONDITION-RESTARTS Condition-Form Restarts-Form Form*
+  _N"WITH-CONDITION-RESTARTS Condition-Form Restarts-Form Form*
    Evaluates the Forms in a dynamic environment where the restarts in the list
    Restarts-Form are associated with the condition returned by Condition-Form.
    This allows FIND-RESTART, etc., to recognize restarts that are not related
@@ -160,7 +162,7 @@
        ,@body)))
 
 (defmacro restart-bind (bindings &body forms)
-  "Executes forms in a dynamic context where the given restart bindings are
+  _N"Executes forms in a dynamic context where the given restart bindings are
    in effect.  Users probably want to use RESTART-CASE.  When clauses contain
    the same restart name, FIND-RESTART will find the first such clause."
   `(let ((*restart-clusters*
@@ -169,7 +171,7 @@
 			       (unless (or (car binding)
 					   (member :report-function
 						   binding :test #'eq))
-				 (warn "Unnamed restart does not have a ~
+				 (warn _"Unnamed restart does not have a ~
 					report function -- ~S"
 				       binding))
 			       `(make-restart
@@ -181,7 +183,7 @@
      ,@forms))
 
 (defun find-restart (name &optional condition)
-  "Returns the first restart named name.  If name is a restart, it is returned
+  _N"Returns the first restart named name.  If name is a restart, it is returned
    if it is currently active.  If no such restart is found, nil is returned.
    It is an error to supply nil as a name.  If Condition is specified and not
    NIL, then only restarts associated with that condition (or with no
@@ -192,24 +194,24 @@
 	   (compute-restarts condition)))
 
 (defun invoke-restart (restart &rest values)
-  "Calls the function associated with the given restart, passing any given
+  _N"Calls the function associated with the given restart, passing any given
    arguments.  If the argument restart is not a restart or a currently active
    non-nil restart name, then a control-error is signalled."
   (let ((real-restart (find-restart restart)))
     (unless real-restart
       (error 'simple-control-error
-	     :format-control "Restart ~S is not active."
+	     :format-control _"Restart ~S is not active."
 	     :format-arguments (list restart)))
     (apply (restart-function real-restart) values)))
 
 (defun invoke-restart-interactively (restart)
-  "Calls the function associated with the given restart, prompting for any
+  _N"Calls the function associated with the given restart, prompting for any
    necessary arguments.  If the argument restart is not a restart or a
    currently active non-nil restart name, then a control-error is signalled."
   (let ((real-restart (find-restart restart)))
     (unless real-restart
       (error 'simple-control-error
-	     :format-control "Restart ~S is not active."
+	     :format-control _"Restart ~S is not active."
 	     :format-arguments (list restart)))
     (%invoke-restart-interactively real-restart)))
 
@@ -270,7 +272,7 @@
 ); eval-when (compile load eval)
 
 (defmacro restart-case (expression &body clauses &environment env)
-  "(RESTART-CASE form
+  _N"(RESTART-CASE form
    {(case-name arg-list {keyword value}* body)}*)
    The form is evaluated in a dynamic context where the clauses have special
    meanings as points to which control may be transferred (see INVOKE-RESTART).
@@ -343,7 +345,7 @@
 (defmacro with-simple-restart ((restart-name format-string
 					     &rest format-arguments)
 			       &body forms)
-  "(WITH-SIMPLE-RESTART (restart-name format-string format-arguments)
+  _N"(WITH-SIMPLE-RESTART (restart-name format-string format-arguments)
    body)
    If restart-name is not invoked, then all values returned by forms are
    returned.  If control is transferred to this restart, it immediately
@@ -431,7 +433,7 @@
 
 (setf (condition-class-report (kernel::find-class 'condition))
       #'(lambda (cond stream)
-	  (format stream "Condition ~S was signalled." (type-of cond))))
+	  (format stream _"Condition ~S was signalled." (type-of cond))))
 
 (eval-when (compile load eval)
 
@@ -472,7 +474,7 @@
   (if *print-escape*
       (print-unreadable-object (s stream :identity t :type t))
       (dolist (class (condition-class-cpl (kernel::class-of s))
-		     (error "No REPORT?  Shouldn't happen!"))
+		     (error _"No REPORT?  Shouldn't happen!"))
 	(let ((report (condition-class-report class)))
 	  (when report
 	    (return (funcall report s stream)))))))
@@ -499,7 +501,7 @@
 	  (if (functionp initform)
 	      (funcall initform)
 	      initform))
-	(error "Condition slot is not bound: ~S"
+	(error _"Condition slot is not bound: ~S"
 	       (condition-slot-name slot)))))
 
 (defun find-slot (classes name)
@@ -529,7 +531,7 @@
 	  (let ((actual-initargs (condition-actual-initargs condition))
 		(slot (find-slot (condition-class-cpl class) name)))
 	    (unless slot
-	      (error "Slot ~S of ~S missing." name condition))
+	      (error _"Slot ~S of ~S missing." name condition))
 	    ;;
 	    ;; Loop over actual initargs because the order of
 	    ;; actual initargs determines how slots are initialized.
@@ -546,7 +548,7 @@
 
 
 (defun make-condition (thing &rest args)
-  "Make an instance of a condition object using the specified initargs."
+  _N"Make an instance of a condition object using the specified initargs."
   ;; Note: ANSI specifies no exceptional situations in this function.
   ;; signalling simple-type-error would not be wrong.
   (let* ((thing (if (symbolp thing)
@@ -562,13 +564,13 @@
 		   (error 'simple-type-error
 			  :datum thing
 			  :expected-type 'condition-class
-			  :format-control "~S is not a condition class."
+			  :format-control _"~S is not a condition class."
 			  :format-arguments (list thing)))
 		  (t
 		   (error 'simple-type-error
 			  :datum thing
 			  :expected-type 'condition-class
-			  :format-control "Bad thing for class arg:~%  ~S"
+			  :format-control _"Bad thing for class arg:~%  ~S"
 			  :format-arguments (list thing)))))
 	 (res (make-condition-object args)))
     (setf (%instance-layout res) (%class-layout class))
@@ -697,7 +699,7 @@
 
 (defun %define-condition (name slots documentation report default-initargs)
   (when (info declaration recognized name)
-    (error "Condition already names a declaration: ~S." name))
+    (error _"Condition already names a declaration: ~S." name))
   (let ((class (kernel::find-class name)))
     (setf (slot-class-print-function class) #'%print-condition)
     (setf (condition-class-slots class) slots)
@@ -744,7 +746,7 @@
 
 (defmacro define-condition (name (&rest parent-types) (&rest slot-specs)
 				 &body options)
-  "DEFINE-CONDITION Name (Parent-Type*) (Slot-Spec*) Option*
+  _N"DEFINE-CONDITION Name (Parent-Type*) (Slot-Spec*) Option*
    Define NAME as a condition type.  This new type inherits slots and its
    report function from the specified PARENT-TYPEs.  A slot spec is either
    a symbol denoting the name of the slot, or a list of the form:
@@ -780,7 +782,7 @@
 	      (all-writers nil append))
       (dolist (spec slot-specs)
 	(when (keywordp spec)
-	  (warn "Keyword slot name indicates probable syntax error:~%  ~S"
+	  (warn _"Keyword slot name indicates probable syntax error:~%  ~S"
 		spec))
 	(let* ((spec (if (consp spec) spec (list spec)))
 	       (slot-name (first spec))
@@ -794,7 +796,7 @@
 	    (do ((options (rest spec) (cddr options)))
 		((null options))
 	      (unless (and (consp options) (consp (cdr options)))
-		(simple-program-error "Malformed condition slot spec:~%  ~S."
+		(simple-program-error _"Malformed condition slot spec:~%  ~S."
                                       spec))
 	      (let ((arg (second options)))
 		(case (first options)
@@ -805,7 +807,7 @@
 		   (writers `(setf ,arg)))
 		  (:initform
 		   (when initform-p
-		     (simple-program-error "More than one :INITFORM in:~%  ~S"
+		     (simple-program-error _"More than one :INITFORM in:~%  ~S"
                                            spec))
 		   (setq initform-p t)
 		   (setq initform arg))
@@ -815,14 +817,14 @@
 		  (:documentation
 		   (when documentation
 		     (simple-program-error
-		      "More than one slot :DOCUMENTATION in~%  ~s" spec))
+		      _"More than one slot :DOCUMENTATION in~%  ~s" spec))
 		   (unless (stringp arg)
 		     (simple-program-error
-		      "Slot :DOCUMENTATION is not a string in~%  ~s" spec))
+		      _"Slot :DOCUMENTATION is not a string in~%  ~s" spec))
 		   (setq documentation arg))
 		  (:type)
 		  (t
-		   (simple-program-error "Unknown slot option:~%  ~S"
+		   (simple-program-error _"Unknown slot option:~%  ~S"
                                          (first options))))))
 
 	    (push (list slot-name (readers) (writers)) slot-name/accessors)
@@ -842,7 +844,7 @@
       
       (dolist (option options)
 	(unless (consp option)
-	  (simple-program-error "Bad option:~%  ~S" option))
+	  (simple-program-error _"Bad option:~%  ~S" option))
 	(case (first option)
 	  (:documentation (setq documentation (second option)))
 	  (:report
@@ -865,7 +867,7 @@
 				`#'(lambda () ,val))
 			    default-initargs)))))
 	  (t
-	   (simple-program-error "Unknown option: ~S" (first option)))))
+	   (simple-program-error _"Unknown option: ~S" (first option)))))
 
       `(progn
 	 (eval-when (compile load eval)
@@ -898,13 +900,13 @@
 (defvar *handler-clusters* nil)
 
 (defmacro handler-bind (bindings &body forms)
-  "(HANDLER-BIND ( {(type handler)}* )  body)
+  _N"(HANDLER-BIND ( {(type handler)}* )  body)
    Executes body in a dynamic context where the given handler bindings are
    in effect.  Each handler must take the condition being signalled as an
    argument.  The bindings are searched first to last in the event of a
    signalled condition."
   (unless (every #'(lambda (x) (and (listp x) (= (length x) 2))) bindings)
-    (simple-program-error "Ill-formed handler bindings."))
+    (simple-program-error _"Ill-formed handler bindings."))
   `(let ((*handler-clusters*
 	  (cons (list ,@(mapcar #'(lambda (x) `(cons ',(car x) ,(cadr x)))
 				bindings))
@@ -940,7 +942,7 @@
 (define-condition simple-style-warning (simple-condition style-warning) ())
 
 (defun print-simple-error (condition stream)
-  (format stream "~&~@<Error in function ~S:  ~3i~:_~?~:>"
+  (format stream _"~&~@<Error in function ~S:  ~3i~:_~?~:>"
 	  (condition-function-name condition)
 	  (simple-condition-format-control condition)
 	  (simple-condition-format-arguments condition)))
@@ -957,21 +959,21 @@
   ()
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
-	     (format stream "Control stack overflow"))))
+	     (format stream _"Control stack overflow"))))
 
 #+heap-overflow-check
 (define-condition heap-overflow (storage-condition)
   ()
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
-	     (format stream "Heap (dynamic space) overflow"))))
+	     (format stream _"Heap (dynamic space) overflow"))))
 
 (define-condition type-error (error)
   ((datum :reader type-error-datum :initarg :datum)
    (expected-type :reader type-error-expected-type :initarg :expected-type))
   (:report
    (lambda (condition stream)
-     (format stream "~@<Type-error in ~S:  ~3i~:_~S is not of type ~S~:>"
+     (format stream _"~@<Type-error in ~S:  ~3i~:_~S is not of type ~S~:>"
 	     (condition-function-name condition)
 	     (type-error-datum condition)
 	     (type-error-expected-type condition)))))
@@ -982,7 +984,7 @@
   ()
   (:report
    (lambda (condition stream)
-     (format stream "Layout-invalid error in ~S:~@
+     (format stream _"Layout-invalid error in ~S:~@
 		     Type test of class ~S was passed obsolete instance:~%  ~S"
 	     (condition-function-name condition)
 	     (kernel:class-proper-name (type-error-expected-type condition))
@@ -993,7 +995,7 @@
    (possibilities :reader case-failure-possibilities :initarg :possibilities))
   (:report
     (lambda (condition stream)
-      (format stream "~@<~S fell through ~S expression.  ~:_Wanted one of ~:S.~:>"
+      (format stream _"~@<~S fell through ~S expression.  ~:_Wanted one of ~:S.~:>"
 	      (type-error-datum condition)
 	      (case-failure-name condition)
 	      (case-failure-possibilities condition)))))
@@ -1056,7 +1058,7 @@
 (define-condition end-of-file (stream-error) ()
   (:report
    (lambda (condition stream)
-     (format stream "End-of-File on ~S"
+     (format stream _"End-of-File on ~S"
 	     (stream-error-stream condition)))))
 
 (define-condition file-error (error)
@@ -1071,7 +1073,7 @@
 (define-condition simple-file-error (simple-condition file-error) ()
   (:report
    (lambda (condition stream)
-     (format stream "~&~@<File-error in function ~S:  ~3i~:_~?~:>"
+     (format stream _"~&~@<File-error in function ~S:  ~3i~:_~?~:>"
 	     (condition-function-name condition)
 	     (simple-condition-format-control condition)
 	     (simple-condition-format-arguments condition)))))
@@ -1086,7 +1088,7 @@
   (:report
    (lambda (condition stream)
      (format stream
-	     "Error in ~S:  the variable ~S is unbound."
+	     _"Error in ~S:  the variable ~S is unbound."
 	     (condition-function-name condition)
 	     (cell-error-name condition)))))
   
@@ -1094,7 +1096,7 @@
   (:report
    (lambda (condition stream)
      (format stream
-	     "Error in ~S:  the function ~S is undefined."
+	     _"Error in ~S:  the function ~S is undefined."
 	     (condition-function-name condition)
 	     (cell-error-name condition)))))
 
@@ -1104,7 +1106,7 @@
 (define-condition constant-modified (reference-condition warning)
   ((function-name :initarg :function-name :reader constant-modified-function-name))
   (:report (lambda (c s)
-             (format s "~@<Destructive function ~S called on ~
+             (format s _"~@<Destructive function ~S called on ~
                          constant data.~@:>"
                      (constant-modified-function-name c))
 	     (print-references (reference-condition-references c) s)))
@@ -1115,10 +1117,10 @@
 	      :initform nil)
    (operands :reader arithmetic-error-operands :initarg :operands))
   (:report (lambda (condition stream)
-	     (format stream "Arithmetic error ~S signalled."
+	     (format stream _"Arithmetic error ~S signalled."
 		     (type-of condition))
 	     (when (arithmetic-error-operation condition)
-	       (format stream "~%Operation was ~S, operands ~S."
+	       (format stream _"~%Operation was ~S, operands ~S."
 		       (arithmetic-error-operation condition)
 		       (arithmetic-error-operands condition))))))
 
@@ -1141,7 +1143,7 @@
 ;;; in closing over tags.  The previous version sets up unique run-time tags.
 ;;;
 (defmacro handler-case (form &rest cases)
-  "(HANDLER-CASE form
+  _N"(HANDLER-CASE form
    { (type ([var]) body) }* )
    Executes form in a context with handlers established for the condition
    types.  A peculiar property allows type to be :no-error.  If such a clause
@@ -1193,7 +1195,7 @@
 		     annotated-cases))))))))
 
 (defmacro ignore-errors (&rest forms)
-  "Executes forms after establishing a handler for all error conditions that
+  _N"Executes forms after establishing a handler for all error conditions that
    returns from this form nil and the condition signalled."
   `(handler-case (progn ,@forms)
      (error (condition) (values nil condition))))
@@ -1203,21 +1205,23 @@
 ;;;; Restart definitions.
 
 (define-condition abort-failure (control-error) ()
-  (:report
-   "Found an \"abort\" restart that failed to transfer control dynamically."))
+  (:report (lambda (condition stream)
+	     (declare (ignore condition))
+	     (write-string _"Found an \"abort\" restart that failed to transfer control dynamically."
+			   stream))))
 
 ;;; ABORT signals an error in case there was a restart named abort that did
 ;;; not tranfer control dynamically.  This could happen with RESTART-BIND.
 ;;;
 (defun abort (&optional condition)
-  "Transfers control to a restart named abort, signalling a control-error if
+  _N"Transfers control to a restart named abort, signalling a control-error if
    none exists."
   (invoke-restart (find-restart 'abort condition))
   (error 'abort-failure))
 
 
 (defun muffle-warning (&optional condition)
-  "Transfers control to a restart named muffle-warning, signalling a
+  _N"Transfers control to a restart named muffle-warning, signalling a
    control-error if none exists."
   (invoke-restart (find-restart 'muffle-warning condition)))
 
@@ -1233,12 +1237,12 @@
 	 (invoke-restart restart ,@args)))))
 
 (define-nil-returning-restart continue ()
-  "Transfer control to a restart named continue, returning nil if none exists.")
+  _N"Transfer control to a restart named continue, returning nil if none exists.")
 
 (define-nil-returning-restart store-value (value)
-  "Transfer control and value to a restart named store-value, returning nil if
+  _N"Transfer control and value to a restart named store-value, returning nil if
    none exists.")
 
 (define-nil-returning-restart use-value (value)
-  "Transfer control and value to a restart named use-value, returning nil if
+  _N"Transfer control and value to a restart named use-value, returning nil if
    none exists.")

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.27 2005/11/29 17:02:53 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.28 2010/03/19 15:19:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; Written by William Lott.
 ;;;
 (in-package "SPARC")
+(intl:textdomain "cmucl-sparc-vm")
 (use-package "ALIEN")
 (use-package "ALIEN-INTERNALS")
 
@@ -89,7 +90,7 @@
 (def-alien-type-method (values :result-tn) (type state)
   (let ((values (alien-values-type-values type)))
     (when (> (length values) 2)
-      (error "Too many result values from c-call."))
+      (error _"Too many result values from c-call."))
     (mapcar #'(lambda (type)
 		(invoke-alien-type-method :result-tn type state))
 	    values)))
@@ -365,7 +366,7 @@
       (eq (machine-rep type1) (machine-rep type2)))))
 
 (defun make-callback-trampoline (index fn-type)
-  "Cons up a piece of code which calls call-callback with INDEX and a
+  _N"Cons up a piece of code which calls call-callback with INDEX and a
 pointer to the arguments."
   (let ((return-type (alien-function-type-result-type fn-type)))
     (flet ((def-reg-tn (offset)

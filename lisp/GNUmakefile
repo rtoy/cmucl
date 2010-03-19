@@ -1,6 +1,6 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.33 2009/01/20 04:52:47 agoncharov Rel $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.34 2010/03/19 15:19:03 rtoy Exp $
 
-all: lisp.nm
+all: lisp.nm translations
 
 -include internals.inc
 include Config
@@ -59,3 +59,29 @@ Depends: ${SRCS}
 	mv ,depends Depends
 
 -include Depends
+
+# Find all directories in ../i18n/locale.  These are the locales we
+# currently support.
+
+# This would be a nice way to do it so we don't have to keep track of
+# the directories, but Solaris' find doesn't grok -depth 1
+#LOCALES=$(patsubst ../i18n/locale/%, %, $(shell find ../i18n/locale -type d -depth 1))
+LOCALES=en@piglatin ko
+
+# Convert locale names to the appropriate path where we want the mo files to go.
+LOCALE_DIRS = $(patsubst %, i18n/locale/%/LC_MESSAGES, $(LOCALES))
+
+translations: 
+	for pot in ../../src/i18n/locale/*.pot; do \
+	  for po in $(LOCALE_DIRS); do \
+            d=`dirname $$pot`; \
+	    f=`basename $$pot .pot`; \
+	    touch ../../src/$$po/$$f.po; \
+	    echo ; \
+	    echo '***' Processing $$f.pot:  $$po; \
+	    msgmerge -v ../../src/$$po/$$f.po $$pot -o ../../src/$$po/$$f.po; \
+	    msgfmt -v  ../../src/$$po/$$f.po -o ../$$po/$$f.mo; \
+	  done; done
+
+.PHONY : translations
+

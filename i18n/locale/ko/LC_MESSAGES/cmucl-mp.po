@@ -1,0 +1,266 @@
+# @ cmucl-mp
+# SOME DESCRIPTIVE TITLE
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: target:code/multi-proc.lisp
+msgid "Class not yet defined: ~S"
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Syscall ~A failed: ~A"
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Return the real time in seconds."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Return the run time in seconds"
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Return the process state which is either Run, Killed, or a wait reason."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Returns the current process."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "A list of all alive processes."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Return a list of all the live processes."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Execute the body the scheduling disabled."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Increaments the reference by delta in a single atomic operation"
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Decrements the reference by delta in a single atomic operation"
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Atomically push object onto place."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Atomically pop place."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Make a process which will run FUNCTION when it starts up.  By\n"
+"  default the process is created in a runnable (active) state.\n"
+"  If FUNCTION is NIL, the process is started in a killed state; it may\n"
+"  be restarted later with process-preset.\n"
+"\n"
+"  :NAME\n"
+"\tA name for the process displayed in process listings.\n"
+"\n"
+"  :RUN-REASONS\n"
+"\tInitial value for process-run-reasons; defaults to (:ENABLE).  A\n"
+"\tprocess needs a at least one run reason to be runnable.  Together with\n"
+"\tarrest reasons, run reasons provide an alternative to process-wait for\n"
+"\tcontroling whether or not a process is runnable.  To get the default\n"
+"\tbehavior of MAKE-PROCESS in Allegro Common Lisp, which is to create a\n"
+"\tprocess which is active but not runnable, initialize RUN-REASONS to\n"
+"\tNIL.\n"
+"\n"
+"  :ARREST-REASONS\n"
+"\tInitial value for process-arrest-reasons; defaults to NIL.  A\n"
+"\tprocess must have no arrest reasons in order to be runnable.\n"
+"\n"
+"  :INITIAL-BINDINGS\n"
+"\tAn alist of initial special bindings for the process.  At\n"
+"\tstartup the new process has a fresh set of special bindings\n"
+"\twith a default binding of *package* setup to the CL-USER\n"
+"\tpackage.  INITIAL-BINDINGS specifies additional bindings for\n"
+"\tthe process.  The cdr of each alist element is evaluated in\n"
+"\tthe fresh dynamic environment and then bound to the car of the\n"
+"\telement."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Interrupt process and cause it to evaluate function."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Destroy a process. The process is sent a interrupt which throws to\n"
+"  the end of the process allowing it to unwind gracefully."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Restart process by unwinding it to its initial state and calling its\n"
+"  initial function."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Restart process, unwinding it to its initial state and calls\n"
+"  function with args."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Disable process from being runnable until enabled."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Allow process to become runnable again after it has been disabled."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Causes the process to wait until predicate returns True. Processes\n"
+"  can only call process-wait when scheduling is enabled, and the predicate\n"
+"  can not call process-wait. Since the predicate may be evaluated may\n"
+"  times by the scheduler it should be relative fast native compiled code.\n"
+"  The single True predicate value is returned."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Causes the process to wait until predicate returns True, or the\n"
+"  number of seconds specified by timeout has elapsed. The timeout may\n"
+"  be a fixnum or a float in seconds.  The single True predicate value is\n"
+"  returned, or NIL if the timeout was reached."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Try to gracefully destroy all the processes giving them some\n"
+"  chance to unwinding, before shutting down multi-processing. This is\n"
+"  currently necessary before a purify and is performed before a save-lisp.\n"
+"  Multi-processing can be restarted by calling init-multi-processing."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Destroyed ~d process; remaining ~d~%"
+msgid_plural "Destroyed ~d processes; remaining ~d~%"
+msgstr[0] ""
+msgstr[1] ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"An idle loop to be run by the initial process. The select based event\n"
+"  server is called with a timeout calculated from the minimum of the\n"
+"  *idle-loop-timeout* and the time to the next process wait timeout.\n"
+"  To avoid this delay when there are runnable processes the *idle-process*\n"
+"  should be setup to the *initial-process*. If one of the processes quits\n"
+"  by throwing to %end-of-the-world then *quitting-lisp* will have been\n"
+"  set to the exit value which is noted by the idle loop which tries to\n"
+"  exit gracefully destroying all the processes and giving them a chance\n"
+"  to unwind."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Allow other processes to run."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Return the accrued real time elapsed while the given process was\n"
+"  scheduled. The returned time is a double-float in seconds."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Return the accrued run time elapsed for the given process. The returned\n"
+"  time is a double-float in seconds."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Return the real time elapsed since the given process was last\n"
+"  descheduled. The returned time is a double-float in seconds."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Start a regular SIGALRM interrupt which calls process-yield. An optional\n"
+"  time in seconds and micro seconds may be provided. Note that CMUCL code\n"
+"  base is not too interrupt safe so this may cause problems."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Wait until FD is usable for DIRECTION and return True. DIRECTION should be\n"
+"  either :INPUT or :OUTPUT. TIMEOUT, if supplied, is the number of seconds "
+"to\n"
+"  wait before giving up and returing NIL."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"This function causes execution to be suspended for N seconds.  N may\n"
+"  be any non-negative, non-complex number."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Executes body and returns the values of the last form in body. However, if\n"
+"  the execution takes longer than timeout seconds, abort it and evaluate\n"
+"  timeout-forms, returning the values of last form."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Show the all the processes, their whostate, and state. If the optional\n"
+"  verbose argument is true then the run, real, and idle times are also\n"
+"  shown."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid "Top-level READ-EVAL-PRINT loop for processes."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Enter the idle loop, starting a new process to run the top level loop.\n"
+"  The awaking of sleeping processes is timed better with the idle loop "
+"process\n"
+"  running, and starting a new process for the top level loop supports a\n"
+"  simultaneous interactive session. Such an initialisation will likely be "
+"the\n"
+"  default when there is better MP debug support etc."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Create a Lisp connection listener, listening on a TCP port for new\n"
+"  connections and starting a new top-level loop for each. If a password\n"
+"  is not given then one will be generated and reported.  A search is\n"
+"  performed for the first free port starting at the given port which\n"
+"  defaults to 1025."
+msgstr ""
+
+#: target:code/multi-proc.lisp
+msgid ""
+"Execute the body with the lock held. If the lock is held by another\n"
+"  process then the current process waits until the lock is released or\n"
+"  an optional timeout is reached. The optional wait timeout is a time in\n"
+"  seconds acceptable to process-wait-with-timeout.  The results of the\n"
+"  body are return upon success and NIL is return if the timeout is\n"
+"  reached. When the wait key is NIL and the lock is held by another\n"
+"  process then NIL is return immediately without processing the body."
+msgstr ""

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.64 2010/02/05 18:14:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.65 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 ;;;
 
 (in-package "EXTENSIONS")
+(intl:textdomain "cmucl")
+
 (export '*ignore-extra-close-parentheses*)
 
 (in-package "LISP")
@@ -30,14 +32,14 @@
 
 ;;;Random global variables
 
-(defvar *read-default-float-format* 'single-float "Float format for 1.0E1")
+(defvar *read-default-float-format* 'single-float _N"Float format for 1.0E1")
 (declaim (type (member short-float single-float double-float long-float)
 	       *read-default-float-format*))
 
 (defvar *readtable*)
 (declaim (type readtable *readtable*))
 (setf (documentation '*readtable* 'variable)
-       "Variable bound to current readtable.")
+       _N"Variable bound to current readtable.")
 
 
 ;;;; Reader errors:
@@ -60,7 +62,7 @@
                          (reader-error-format-arguments condition))
                   nil error-stream
                   (file-position error-stream)))
-       (format stream "Reader error ~@[at ~D ~]on ~S:~%~?"
+       (format stream _"Reader error ~@[at ~D ~]on ~S:~%~?"
 	       (file-position error-stream) error-stream
 	       (reader-error-format-control condition)
 	       (reader-error-format-arguments condition))))))
@@ -79,7 +81,7 @@
   ((context :reader reader-eof-error-context :initarg :context))
   (:report
    (lambda (condition stream)
-     (format stream "Unexpected EOF on ~S ~A."
+     (format stream _"Unexpected EOF on ~S ~A."
 	     (stream-error-stream condition)
 	     (reader-eof-error-context condition)))))
 
@@ -91,7 +93,7 @@
 
 
 (defvar std-lisp-readtable ()
-  "Standard lisp readtable. This is for recovery from broken
+  _N"Standard lisp readtable. This is for recovery from broken
    read-tables, and should not normally be user-visible.")
 
 ;; Max size of the attribute table before we switch from an array to a
@@ -112,7 +114,7 @@
 	       (declare (ignore d))
 	       (print-unreadable-object (s stream :identity t)
 		 (prin1 'readtable stream)))))
-  "Readtable is a data structure that maps characters into syntax
+  _N"Readtable is a data structure that maps characters into syntax
    types for the Common Lisp expression reader."
   ;; The CHARACTER-ATTRIBUTE-TABLE is a vector of ATTRIBUTE-TABLE-LIMIT integers for
   ;; describing the character type.  Conceptually, there are 4 distinct
@@ -194,7 +196,7 @@
 ;;;; Package specials.
 
 (defvar *old-package* ()
-  "Value of *package* at the start of the last read or Nil.")
+  _N"Value of *package* at the start of the last read or Nil.")
 
 ;;; In case we get an error trying to parse a symbol, we want to rebind the
 ;;; above stuff so it's cool.
@@ -278,7 +280,7 @@
 
 (defun undefined-macro-char (stream char)
   (unless *read-suppress*
-    (%reader-error stream "Undefined read-macro character ~S" char)))
+    (%reader-error stream _"Undefined read-macro character ~S" char)))
 
 ;;; The character attribute table is a CHAR-CODE-LIMIT vector of integers. 
 
@@ -454,7 +456,7 @@
 ;;;; Readtable operations.
 
 (defun copy-readtable (&optional (from-readtable *readtable*) to-readtable)
-  "A copy is made of from-readtable and place into to-readtable."
+  _N"A copy is made of from-readtable and place into to-readtable."
   (let ((from-readtable (or from-readtable std-lisp-readtable))
 	(to-readtable (or to-readtable (make-readtable))))
     (flet ((copy-hash-table (to from)
@@ -484,7 +486,7 @@
 (defun set-syntax-from-char (to-char from-char &optional
 				     (to-readtable *readtable*)
 				     (from-readtable ()))
-  "Causes the syntax of to-char to be the same as from-char in the 
+  _N"Causes the syntax of to-char to be the same as from-char in the 
   optional readtable (defaults to the current readtable).  The
   from-table defaults the standard lisp readtable by being nil."
   (let ((from-readtable (or from-readtable std-lisp-readtable)))
@@ -525,7 +527,7 @@
 
 (defun set-macro-character (char function &optional
 				 (non-terminatingp nil) (rt *readtable*))
-  "Causes char to be a macro character which invokes function when
+  _N"Causes char to be a macro character which invokes function when
    seen by the reader.  The non-terminatingp flag can be used to
    make the macro character non-terminating.  The optional readtable
    argument defaults to the current readtable.  Set-macro-character
@@ -537,7 +539,7 @@
   T)
 
 (defun get-macro-character (char &optional (rt *readtable*))
-  "Returns the function associated with the specified char which is a macro
+  _N"Returns the function associated with the specified char which is a macro
   character.  The optional readtable argument defaults to the current
   readtable."
   (let ((rt (or rt std-lisp-readtable)))
@@ -673,7 +675,7 @@
 ;;; current read-buffer.  
 
 (defmacro with-read-buffer (() &body body)
-  "Bind *read-buffer* to a fresh buffer and execute Body."
+  _N"Bind *read-buffer* to a fresh buffer and execute Body."
   `(let* ((*read-buffer* (allocate-read-buffer))
 	  (*read-buffer-length* (length *read-buffer*))
 	  (*ouch-ptr* 0)
@@ -738,7 +740,7 @@
 ;;;; READ-PRESERVING-WHITESPACE, READ-DELIMITED-LIST, and READ.
 
 (defvar *ignore-extra-close-parentheses* t
-  "If true, only warn when there is an extra close paren, otherwise error.")
+  _N"If true, only warn when there is an extra close paren, otherwise error.")
 
 (declaim (special *standard-input*))
 
@@ -781,7 +783,7 @@
 (defun read-preserving-whitespace (&optional (stream *standard-input*)
 				   (eof-errorp t) (eof-value nil)
 				   (recursivep nil))
-  "Reads from stream and returns the object read, preserving the whitespace
+  _N"Reads from stream and returns the object read, preserving the whitespace
    that followed the object."
   (with-read-buffer ()
     (read-preserving-whitespace-internal stream eof-errorp eof-value recursivep)))
@@ -822,7 +824,7 @@
 
 (defun read (&optional (stream *standard-input*) (eof-errorp t)
 		       (eof-value ()) (recursivep ()))
-  "Reads in the next object in the stream, which defaults to
+  _N"Reads in the next object in the stream, which defaults to
    *standard-input*. For details see the I/O chapter of
    the manual."
   (with-read-buffer ()
@@ -841,7 +843,7 @@
 (defun read-delimited-list (endchar &optional
 				    (input-stream *standard-input*)
 				    recursive-p)
-  "Reads objects from input-stream until the next character after an
+  _N"Reads objects from input-stream until the next character after an
    object's representation is endchar.  A list of those objects read
    is returned."
   (declare (ignore recursive-p))
@@ -891,7 +893,7 @@
 		     (cond ((eq listtail thelist)
 			    (if *read-suppress*
 				(return-from read-list nil)
-				(%reader-error stream "Nothing appears before . in list.")))
+				(%reader-error stream _"Nothing appears before . in list.")))
 			   ((whitespacep nextchar)
 			    (setq nextchar (flush-whitespace stream))))
 		     (rplacd listtail
@@ -912,7 +914,7 @@
   (let ((lastobj ()))
     (do ((char firstchar (flush-whitespace stream)))
 	((char= char #\) )
-	 (%reader-error stream "Nothing appears after . in list."))
+	 (%reader-error stream _"Nothing appears after . in list."))
       ;;see if there's something there.
       (setq lastobj (read-maybe-nothing stream char))
       (when lastobj (return t)))
@@ -923,7 +925,7 @@
 	((char= lastchar #\) ) lastobj)	;success!
       ;;try reading virtual whitespace
       (if (read-maybe-nothing stream lastchar)
-	  (%reader-error stream "More than one object follows . in list.")))))
+	  (%reader-error stream _"More than one object follows . in list.")))))
 
 (defun read-string (stream closech)
   ;;this accumulates chars until it sees same char that invoked it.
@@ -959,12 +961,12 @@
 (defun read-right-paren (stream ignore)
   (declare (ignore ignore))
     (cond (*ignore-extra-close-parentheses*
-	   (warn "Ignoring unmatched close parenthesis~
+	   (warn _"Ignoring unmatched close parenthesis~
 		  ~@[ at file position ~D~]."
 		 (file-position stream))
 	   (values))
 	  (t
-	   (%reader-error stream "Unmatched close parenthesis."))))
+	   (%reader-error stream _"Unmatched close parenthesis."))))
 
 ;;; INTERNAL-READ-EXTENDED-TOKEN  --  Internal
 ;;;
@@ -995,7 +997,7 @@
 	     (push *ouch-ptr* escapes)
 	     (let ((nextchar (read-char stream nil eof-object)))
 	       (if (eofp nextchar)
-		   (reader-eof-error stream "after escape character")
+		   (reader-eof-error stream _"after escape character")
 		   (ouch-read-buffer nextchar))))
 	    ((multiple-escape-p char)
 	     ;; Read to next multiple-escape, escaping single chars along the
@@ -1004,12 +1006,12 @@
 	      (let ((ch (read-char stream nil eof-object)))
 		(cond
 		  ((eofp ch)
-		   (reader-eof-error stream "inside extended token"))
+		   (reader-eof-error stream _"inside extended token"))
 		  ((multiple-escape-p ch) (return))
 		  ((escapep ch)
 		   (let ((nextchar (read-char stream nil eof-object)))
 		     (cond ((eofp nextchar)
-			    (reader-eof-error stream "after escape character"))
+			    (reader-eof-error stream _"after escape character"))
 			   (t
 			    (push *ouch-ptr* escapes)
 			    (ouch-read-buffer nextchar)))))
@@ -1040,7 +1042,7 @@
 	   (t
 	    (setf att (get-secondary-attribute ,char))
 	    (cond ((= att #.constituent-invalid)
-		   (%reader-error stream "invalid constituent"))
+		   (%reader-error stream _"invalid constituent"))
 		  (t
 		   att))))))
 
@@ -1062,7 +1064,7 @@
 		  ((= att constituent-digit)
 		   constituent)
 		  ((= att constituent-invalid)
-		   (%reader-error stream "invalid constituent"))
+		   (%reader-error stream _"invalid constituent"))
 		  (t
 		   att))))))
 
@@ -1094,7 +1096,7 @@
 			   constituent-digit)
 		       constituent-decimal-digit))
 		  ((= att constituent-invalid)
-		   (%reader-error stream "invalid constituent"))
+		   (%reader-error stream _"invalid constituent"))
 		  (t
 		   att))))))
 
@@ -1103,10 +1105,10 @@
 ;;;; Token fetching.
 
 (defvar *read-suppress* nil 
-  "Suppresses most interpreting of the reader when T")
+  _N"Suppresses most interpreting of the reader when T")
 
 (defvar *read-base* 10
-  "The radix that Lisp reads numbers in.")
+  _N"The radix that Lisp reads numbers in.")
 (declaim (type (integer 2 36) *read-base*))
 
 ;;; CASIFY-READ-BUFFER  --  Internal
@@ -1156,7 +1158,7 @@
 		     (all-upper (lower-em))))))))))))
   
 (defun read-token (stream firstchar)
-  "This function is just an fsm that recognizes numbers and symbols."
+  _N"This function is just an fsm that recognizes numbers and symbols."
   ;; Check explicitly whether FIRSTCHAR has an entry for
   ;; NON-TERMINATING in CHARACTER-ATTRIBUTE-TABLE and
   ;; READ-DOT-NUMBER-SYMBOL in CMT. Report an error if these are
@@ -1188,7 +1190,7 @@
 	(#.escape (go ESCAPE))
 	(#.package-delimiter (go COLON))
 	(#.multiple-escape (go MULT-ESCAPE))
-	(#.constituent-invalid (%reader-error stream "invalid constituent"))
+	(#.constituent-invalid (%reader-error stream _"invalid constituent"))
 	;; can't have eof, whitespace, or terminating macro as first char!
 	(t (go SYMBOL)))
      SIGN ; saw "sign"
@@ -1245,7 +1247,7 @@
       (unless char (return (make-integer)))
       (case (char-class3 char *readtable*)
 	(#.constituent-digit (go LEFTDIGIT))
-	(#.constituent-decimal-digit (error "impossible!"))
+	(#.constituent-decimal-digit (error _"impossible!"))
 	(#.constituent-dot (go SYMBOL))
 	(#.constituent-digit-or-expt (go LEFTDIGIT))
 	(#.constituent-expt (go SYMBOL))
@@ -1319,11 +1321,11 @@
      FRONTDOT ; saw "dot"
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
-      (unless char (%reader-error stream "dot context error"))
+      (unless char (%reader-error stream _"dot context error"))
       (case (char-class char *readtable*)
 	(#.constituent-digit (go RIGHTDIGIT))
 	(#.constituent-dot (go DOTS))
-	(#.delimiter  (%reader-error stream "dot context error"))
+	(#.delimiter  (%reader-error stream _"dot context error"))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
 	(#.package-delimiter (go COLON))
@@ -1392,12 +1394,12 @@
      DOTS ; saw "dot {dot}+"
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
-      (unless char (%reader-error stream "too many dots"))
+      (unless char (%reader-error stream _"too many dots"))
       (case (char-class char *readtable*)
 	(#.constituent-dot (go DOTS))
 	(#.delimiter
 	 (unread-char char stream)
-	 (%reader-error stream "too many dots"))
+	 (%reader-error stream _"too many dots"))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
 	(#.package-delimiter (go COLON))
@@ -1454,7 +1456,7 @@
       ;; READ-NEXT CHAR, put in buffer (no case conversion).
       (let ((nextchar (read-char stream nil nil)))
 	(unless nextchar
-	  (reader-eof-error stream "after escape character"))
+	  (reader-eof-error stream _"after escape character"))
 	(push *ouch-ptr* escapes)
 	(ouch-read-buffer nextchar))
       (setq char (read-char stream nil nil))
@@ -1483,7 +1485,7 @@
       COLON
       (casify-read-buffer escapes)
       (unless (zerop colons)
-	(%reader-error stream "too many colons in ~S"
+	(%reader-error stream _"too many colons in ~S"
 		      (read-buffer-to-string)))
       (setq colons 1)
       (setq package-designator
@@ -1500,7 +1502,7 @@
       (reset-read-buffer)
       (setq escapes ())
       (setq char (read-char stream nil nil))
-      (unless char (reader-eof-error stream "after reading a colon"))
+      (unless char (reader-eof-error stream _"after reading a colon"))
       (case (char-class char *readtable*)
 	(#.delimiter
 	 (unread-char char stream)
@@ -1515,7 +1517,7 @@
       (setq colons 2)
       (setq char (read-char stream nil nil))
       (unless char
-	(reader-eof-error stream "after reading a colon"))
+	(reader-eof-error stream _"after reading a colon"))
       (case (char-class char *readtable*)
 	(#.delimiter
 	 (unread-char char stream)
@@ -1537,7 +1539,7 @@
 	(unless found
 	  (error 'reader-package-error :stream stream
 		 :format-arguments (list package-designator)
-		 :format-control "package ~S not found"))
+		 :format-control _"package ~S not found"))
 
 	(if (or (zerop colons) (= colons 2) (eq found *keyword-package*))
 	    (return (intern* *read-buffer* *ouch-ptr* found))
@@ -1545,18 +1547,18 @@
 		(find-symbol* *read-buffer* *ouch-ptr* found)
 	      (when (eq test :external) (return symbol))
 	      (let ((name (read-buffer-to-string)))
-		(with-simple-restart (continue "Use symbol anyway.")
+		(with-simple-restart (continue _"Use symbol anyway.")
 		  (error 'reader-package-error :stream stream
 			 :format-arguments (list name (package-name found))
 			 :format-control
 			 (if test
-			     "The symbol ~S is not external in the ~A package."
-			     "Symbol ~S not found in the ~A package.")))
+			     _"The symbol ~S is not external in the ~A package."
+			     _"Symbol ~S not found in the ~A package.")))
 		(return (intern name found)))))))))
 
 
 (defun read-extended-token (stream &optional (*readtable* *readtable*))
-  "For semi-external use: returns 3 values: the string for the token,
+  _N"For semi-external use: returns 3 values: the string for the token,
    a flag for whether there was an escape char, and the position of any
    package delimiter."
   (let ((firstch (read-char stream nil nil t)))
@@ -1569,7 +1571,7 @@
 	   (values "" nil nil)))))
 
 (defun read-extended-token-escaped (stream &optional (*readtable* *readtable*))
-  "For semi-external use: read an extended token with the first character
+  _N"For semi-external use: read an extended token with the first character
   escaped.  Returns the string for the token."
   (let ((firstch (read-char stream nil nil)))
     (cond (firstch
@@ -1577,7 +1579,7 @@
 	     (casify-read-buffer escapes)
 	     (read-buffer-to-string)))
 	  (t
-	   (reader-eof-error stream "after escape")))))
+	   (reader-eof-error stream _"after escape")))))
 
 
 
@@ -1592,7 +1594,7 @@
 (defvar *integer-reader-safe-digits*
   '#(NIL NIL
      26 17 13 11 10 9 8 8 8 7 7 7 7 6 6 6 6 6 6 6 6 5 5 5 5 5 5 5 5 5 5 5 5 5 5)
-  "Holds the mapping of base to 'safe' number of digits to read for a fixnum.")
+  _N"Holds the mapping of base to 'safe' number of digits to read for a fixnum.")
 
 (defvar *integer-reader-base-power* 
   '#(NIL NIL
@@ -1601,7 +1603,7 @@
      16777216 24137569 34012224 47045881 64000000 85766121 113379904 6436343
      7962624 9765625 11881376 14348907 17210368 20511149 24300000 28629151
      33554432 39135393 45435424 52521875 60466176)
-  "Holds the largest fixnum power of the base for make-integer.")
+  _N"Holds the largest fixnum power of the base for make-integer.")
 
 (declaim (simple-vector *integer-reader-safe-digits*
 			*integer-reader-base-power*))
@@ -1622,7 +1624,7 @@
 |#
 
 (defun make-integer ()
-  "Minimizes bignum-fixnum multiplies by reading a 'safe' number of digits, 
+  _N"Minimizes bignum-fixnum multiplies by reading a 'safe' number of digits, 
   then multiplying by a power of the base and adding."
   (read-unwind-read-buffer)
   ;; Use the fast reader if the number has enough digits.  It seems
@@ -1659,7 +1661,7 @@
 	     (setq number (+ num (* number base-power))))))))
 
 (defun fast-read-integer (r)
-  "Fast bignum-reading interface.  Reads from stream S an integer in radix
+  _N"Fast bignum-reading interface.  Reads from stream S an integer in radix
 R.  If we find some kind of error (bad characters, EOF), then NIL is
 returned; otherwise the number.  Reads at least one digit, but may not get to
 the end of the stream."
@@ -1787,7 +1789,7 @@ the end of the stream."
 	     (return-from make-float (if negative-fraction
                                              (- num)
                                              num))))
-	  (t (error "Internal error in floating point reader.")))))
+	  (t (error _"Internal error in floating point reader.")))))
 
 (defun make-float-aux (number divisor float-format stream)
   (handler-case
@@ -1799,10 +1801,10 @@ the end of the stream."
 	    ;; But we really want to indicate that we can't read it.
 	    ;; So if we converted the number to zero, but the number
 	    ;; wasn't actually zero, throw an error.
-	    (error "Underflow"))
+	    (error _"Underflow"))
 	  result))
     (error ()
-	   (%reader-error stream "Floating-point number not representable"))))
+	   (%reader-error stream _"Floating-point number not representable"))))
 
 
 (defun make-ratio (stream)
@@ -1829,7 +1831,7 @@ the end of the stream."
 	 ((or (eofp ch) (not (setq dig (digit-char-p ch *read-base*)))))
 	 (setq denominator (+ (* denominator *read-base*) dig)))
     (when (zerop denominator)
-      (%reader-error stream "Invalid ratio: ~S/~S"
+      (%reader-error stream _"Invalid ratio: ~S/~S"
 		     (if negative-number (- numerator) numerator)
 		     denominator))
     (let ((num (/ numerator denominator)))
@@ -1843,12 +1845,12 @@ the end of the stream."
   (declare (ignore ignore))
   (if *read-suppress*
       (values)
-      (%reader-error stream "No dispatch function defined for ~S." sub-char)))
+      (%reader-error stream _"No dispatch function defined for ~S." sub-char)))
 
 (defun make-dispatch-macro-character (char &optional
 					   (non-terminating-p nil)
 					   (rt *readtable*))
-  "Causes char to become a dispatching macro character in readtable
+  _N"Causes char to become a dispatching macro character in readtable
    (which defaults to the current readtable).  If the non-terminating-p
    flag is set to T, the char will be non-terminating.  Make-dispatch-
    macro-character returns T."
@@ -1860,23 +1862,23 @@ the end of the stream."
 
 (defun set-dispatch-macro-character
        (disp-char sub-char function &optional (rt *readtable*))
-  "Causes function to be called whenever the reader reads
+  _N"Causes function to be called whenever the reader reads
    disp-char followed by sub-char. Set-dispatch-macro-character
    returns T."
   ;;get the dispatch char for macro (error if not there), diddle
   ;;entry for sub-char.
   (when (digit-char-p sub-char)
-    (simple-program-error "Dispatch Sub-Char must not be a decimal digit: ~S" sub-char))
+    (simple-program-error _"Dispatch Sub-Char must not be a decimal digit: ~S" sub-char))
   (let* ((sub-char (char-upcase sub-char))
 	 (dpair (find disp-char (dispatch-tables rt)
 		      :test #'char= :key #'car)))
     (if dpair
 	(set-dispatch-char sub-char function (cdr dpair))
-	(simple-program-error "~S is not a dispatch character." disp-char))))
+	(simple-program-error _"~S is not a dispatch character." disp-char))))
 
 (defun get-dispatch-macro-character
        (disp-char sub-char &optional (rt *readtable*))
-  "Returns the macro character function for sub-char under disp-char
+  _N"Returns the macro character function for sub-char under disp-char
    or nil if there is no associated function."
   (unless (digit-char-p sub-char)
     (let* ((sub-char (char-upcase sub-char))
@@ -1885,7 +1887,7 @@ the end of the stream."
 			:test #'char= :key #'car)))
       (if dpair
 	  (get-dispatch-char sub-char (cdr dpair))
-	  (simple-program-error "~S is not a dispatch character." disp-char)))))
+	  (simple-program-error _"~S is not a dispatch character." disp-char)))))
 
 (defun read-dispatch-char (stream char)
   ;;read some digits
@@ -1899,7 +1901,7 @@ the end of the stream."
 	      (not (setq dig (digit-char-p ch))))
 	  ;;take care of the extra char.
 	  (if (eofp ch)
-	      (reader-eof-error stream "inside dispatch character")
+	      (reader-eof-error stream _"inside dispatch character")
 	      (setq sub-char (char-upcase ch))))
       (setq numargp t)
       (setq numarg (+ (* numarg 10) dig)))
@@ -1909,19 +1911,19 @@ the end of the stream."
       (if dpair
 	  (funcall (the function (get-dispatch-char sub-char (cdr dpair)))
 		   stream sub-char (if numargp numarg nil))
-	  (%reader-error stream "No dispatch table for dispatch char.")))))
+	  (%reader-error stream _"No dispatch table for dispatch char.")))))
 
 
 
 ;;;; READ-FROM-STRING.
 
 (defvar read-from-string-spares ()
-  "A resource of string streams for Read-From-String.")
+  _N"A resource of string streams for Read-From-String.")
 
 (defun read-from-string (string &optional (eof-error-p t) eof-value
 				&key (start 0) end
 				preserve-whitespace)
-  "The characters of string are successively given to the lisp reader
+  _N"The characters of string are successively given to the lisp reader
    and the lisp object built by the reader is returned.  Macro chars
    will take effect."
   (declare (string string))
@@ -1946,7 +1948,7 @@ the end of the stream."
 ;;;; PARSE-INTEGER.
 
 (defun parse-integer (string &key (start 0) end (radix 10) junk-allowed)
-  "Examine the substring of string delimited by start and end
+  _N"Examine the substring of string delimited by start and end
   (default to the beginning and end of the string)  It skips over
   whitespace characters and then tries to parse an integer.  The
   radix parameter must be between 2 and 36."
@@ -1986,11 +1988,11 @@ the end of the stream."
 		   (if junk-allowed
 		       (values nil real-index)
 		       (error 'simple-parse-error
-			      :format-control "There are no digits in this string: ~S"
+			      :format-control _"There are no digits in this string: ~S"
 			      :format-arguments (list string))))
 		  ((and (< index end) (not junk-allowed))
 		   (error 'simple-parse-error
-			  :format-control "There's junk in this string: ~S."
+			  :format-control _"There's junk in this string: ~S."
 			  :format-arguments (list string)))
 		  (t
 		   (values (* sign result) real-index)))))))))

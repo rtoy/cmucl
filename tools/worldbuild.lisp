@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.55 2009/06/18 17:39:45 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.56 2010/03/19 15:19:04 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -184,7 +184,8 @@
     "target:code/debug"
 
     ,@(when (c:backend-featurep :mp)
-	'("target:code/multi-proc"))
+	    '("target:code/multi-proc"))
+    "target:code/intl-tramp"
     ))
 
 (setf *genesis-core-name* "target:lisp/kernel.core")

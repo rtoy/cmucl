@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.37 2009/08/19 16:51:36 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.38 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,6 +13,8 @@
 ;;; 
 (in-package "VM")
 (use-package "SYSTEM")
+(intl:textdomain "cmucl")
+
 (export '(memory-usage count-no-ops descriptor-vs-non-descriptor-storage
 		       instance-usage find-holes print-allocated-objects
 		       code-breakdown uninterned-symbol-count
@@ -489,7 +491,7 @@
 		     (summary-totals (cons sum v))))
 	       summary)
       
-      (format t "~2&Summary of spaces: ~(~{~A ~}~)~%" spaces)
+      (format t _"~2&Summary of spaces: ~(~{~A ~}~)~%" spaces)
       (let ((summary-total-bytes 0)
 	    (summary-total-objects 0))
 	(declare (type memory-size summary-total-bytes summary-total-objects))
@@ -507,7 +509,9 @@
 		  (incf total-bytes (first total))
 		  (incf total-objects (second total))
 		  (spaces (cons (car space-total) (first total)))))
-	      (format t "~%~A:~%    ~:D bytes, ~:D object~:P"
+	      (format t (intl:ngettext "~%~A:~%    ~:D bytes, ~:D object"
+				       "~%~A:~%    ~:D bytes, ~:D objects"
+				       total-objects)
 		      name total-bytes total-objects)
 	      (dolist (space (spaces))
 		(format t ", ~D% ~(~A~)"
@@ -516,7 +520,7 @@
 	      (format t ".~%")
 	      (incf summary-total-bytes total-bytes)
 	      (incf summary-total-objects total-objects))))
-	(format t "~%Summary total:~%    ~:D bytes, ~:D objects.~%"
+	(format t _"~%Summary total:~%    ~:D bytes, ~:D objects.~%"
 		summary-total-bytes summary-total-objects)))))
 
 
@@ -526,7 +530,7 @@
 ;;;
 (defun report-space-total (space-total cutoff)
   (declare (list space-total) (type (or single-float null) cutoff))
-  (format t "~2&Breakdown for ~(~A~) space:~%" (car space-total))
+  (format t _"~2&Breakdown for ~(~A~) space:~%" (car space-total))
   (let* ((types (cdr space-total))
 	 (total-bytes (reduce #'+ (mapcar #'first types)))
 	 (total-objects (reduce #'+ (mapcar #'second types)))
@@ -539,15 +543,21 @@
 	     (type memory-size total-bytes reported-bytes))
     (loop for (bytes objects name) in types do
       (when (<= bytes cutoff-point)
-	(format t "  ~13:D bytes for ~9:D other object~2:*~P.~%"
+	(format t (intl:ngettext "  ~13:D bytes for ~9:D other object.~%"
+				 "  ~13:D bytes for ~9:D other objects.~%"
+				 (- total-objects reported-objects))
 		(- total-bytes reported-bytes)
 		(- total-objects reported-objects))
 	(return))
       (incf reported-bytes bytes)
       (incf reported-objects objects)
-      (format t "  ~13:D bytes for ~9:D ~(~A~) object~2:*~P.~%"
+      (format t (intl:ngettext "  ~13:D bytes for ~9:D ~(~A~) object.~%"
+			       "  ~13:D bytes for ~9:D ~(~A~) objects.~%"
+			       objects)
 	      bytes objects name))
-    (format t "  ~13:D bytes for ~9:D ~(~A~) object~2:*~P (space total.)~%"
+    (format t (intl:ngettext "  ~13:D bytes for ~9:D ~(~A~) object (space total.)~%"
+			     "  ~13:D bytes for ~9:D ~(~A~) objects (space total.)~%"
+			     total-objects)
 	    total-bytes total-objects (car space-total))))
 
 
@@ -555,7 +565,7 @@
 ;;;
 (defun memory-usage (&key print-spaces (count-spaces '(:dynamic))
 			  (print-summary t) cutoff)
-  "Print out information about the heap memory in use.  :Print-Spaces is a list
+  _N"Print out information about the heap memory in use.  :Print-Spaces is a list
   of the spaces to print detailed information for.  :Count-Spaces is a list of
   the spaces to scan.  For either one, T means all spaces (:Static, :Dyanmic
   and :Read-Only.)  If :Print-Summary is true, then summary information will be
@@ -583,7 +593,7 @@
 ;;; COUNT-NO-OPS  --  Public
 ;;;
 (defun count-no-ops (space)
-  "Print info about how much code and no-ops there are in Space."
+  _N"Print info about how much code and no-ops there are in Space."
   (declare (type spaces space))
   (let ((code-words 0)
 	(no-ops 0)
@@ -605,7 +615,7 @@
      space)
     
     (format t
-	    "~:D code-object bytes, ~:D code words, with ~:D no-ops (~D%).~%"
+	    _"~:D code-object bytes, ~:D code words, with ~:D no-ops (~D%).~%"
 	    total-bytes code-words no-ops
 	    (round (* no-ops 100) code-words)))
   
@@ -684,11 +694,11 @@
 	       #.scavenger-hook-type)
 	      (incf descriptor-words (truncate size word-bytes)))
 	     (t
-	      (error "Bogus type: ~D" type))))
+	      (error _"Bogus type: ~D" type))))
        space))
-    (format t "~:D words allocated for descriptor objects.~%"
+    (format t _"~:D words allocated for descriptor objects.~%"
 	    descriptor-words)
-    (format t "~:D bytes data/~:D words header for non-descriptor objects.~%"
+    (format t _"~:D bytes data/~:D words header for non-descriptor objects.~%"
 	    non-descriptor-bytes non-descriptor-headers)
     (values)))
 
@@ -697,10 +707,10 @@
 ;;;
 (defun instance-usage (space &key (top-n 15))
   (declare (type spaces space) (type (or fixnum null) top-n))
-  "Print a breakdown by instance type of all the instances allocated in
+  _N"Print a breakdown by instance type of all the instances allocated in
   Space.  If TOP-N is true, print only information for the the TOP-N types with
   largest usage."
-  (format t "~2&~@[Top ~D ~]~(~A~) instance types:~%" top-n space)
+  (format t _"~2&~@[Top ~D ~]~(~A~) instance types:~%" top-n space)
   (let ((totals (make-hash-table :test #'eq))
 	(total-objects 0)
 	(total-bytes 0))
@@ -738,16 +748,23 @@
 		(objects (cadr what)))
 	    (incf printed-bytes bytes)
 	    (incf printed-objects objects)
-	    (format t "  ~32A: ~7:D bytes, ~5D object~:P.~%" (car what)
+	    (format t (intl:ngettext "  ~32A: ~7:D bytes, ~5D object.~%"
+				     "  ~32A: ~7:D bytes, ~5D objects.~%"
+				     objects)
+		    (car what)
 		    bytes objects)))
 
 	(let ((residual-objects (- total-objects printed-objects))
 	      (residual-bytes (- total-bytes printed-bytes)))
 	  (unless (zerop residual-objects)
-	    (format t "  Other types: ~:D bytes, ~D: object~:P.~%"
+	    (format t (intl:ngettext "  Other types: ~:D bytes, ~D: object~:P.~%"
+				     "  Other types: ~:D bytes, ~D: object~:P.~%"
+				     residual-objects)
 		    residual-bytes residual-objects))))
 
-      (format t "  ~:(~A~) instance total: ~:D bytes, ~:D object~:P.~%"
+      (format t (intl:ngettext "  ~:(~A~) instance total: ~:D bytes, ~:D object.~%"
+			       "  ~:(~A~) instance total: ~:D bytes, ~:D objects.~%"
+			       total-objects)
 	      space total-bytes total-objects)))
 
   (values))
@@ -757,7 +774,7 @@
 ;;; 
 (defun find-holes (&rest spaces)
   (dolist (space (or spaces '(:read-only :static :dynamic)))
-    (format t "In ~A space:~%" space)
+    (format t _"In ~A space:~%" space)
     (let ((start-addr nil)
 	  (total-bytes 0))
       (declare (type (or null (unsigned-byte 32)) start-addr)
@@ -774,11 +791,11 @@
 		   (setf start-addr (di::get-lisp-obj-address object)
 			 total-bytes bytes))
 	       (when start-addr
-		 (format t "~D bytes at #x~X~%" total-bytes start-addr)
+		 (format t _"~D bytes at #x~X~%" total-bytes start-addr)
 		 (setf start-addr nil))))
        space)
       (when start-addr
-	(format t "~D bytes at #x~X~%" total-bytes start-addr))))
+	(format t _"~D bytes at #x~X~%" total-bytes start-addr))))
   (values))
 
 
@@ -971,7 +988,7 @@
 				      (c::debug-source-name source)
 				      "FROM LISP")))
 			       (t
-				(warn "No source for ~S" obj)
+				(warn _"No source for ~S" obj)
 				"NO SOURCE")))
 		       "UNKNOWN"))
 		  (file-info (or (gethash file pkg-info)
@@ -996,12 +1013,16 @@
 	    
       (loop for (pkg (pkg-count . pkg-size) . files) in
 	    (sort res #'> :key #'(lambda (x) (cdr (second x)))) do
-	(format t "~%Package ~A: ~32T~9:D bytes, ~9:D object~:P.~%"
+	(format t (intl:ngettext "~%Package ~A: ~32T~9:D bytes, ~9:D object.~%"
+				 "~%Package ~A: ~32T~9:D bytes, ~9:D objects.~%"
+				 pkg-count)
 		pkg pkg-size pkg-count)
 	(when (eq how :file)
 	  (loop for (file (file-count . file-size)) in
 	        (sort files #'> :key #'(lambda (x) (cdr (second x)))) do
-	    (format t "~30@A: ~9:D bytes, ~9:D object~:P.~%"
+	    (format t (intl:ngettext "~30@A: ~9:D bytes, ~9:D object.~%"
+				     "~30@A: ~9:D bytes, ~9:D objects.~%"
+				     file-count)
 		    (file-namestring file) file-size file-count))))))
 
   (values))
@@ -1044,7 +1065,7 @@
 #+nil
 (defun report-histogram (table &key (low 1) (high 20) (bucket-size 1)
 			       (function #'identity))
-  "Given a hashtable, print a histogram of the contents.  Function should give
+  _N"Given a hashtable, print a histogram of the contents.  Function should give
   the value to plot when applied to the hashtable values."
   (let ((function (if (eval:interpreted-function-p function)
 		      (compile nil function)
@@ -1054,7 +1075,7 @@
 	(hist:hist-record (funcall function count))))))
 
 (defun report-top-n (table &key (top-n 20) (function #'identity))
-  "Report the Top-N entries in the hashtable Table, when sorted by Function
+  _N"Report the Top-N entries in the hashtable Table, when sorted by Function
   applied to the hash value.  If Top-N is NIL, report all entries."
   (let ((function (if (eval:interpreted-function-p function)
 		      (compile nil function)
@@ -1078,9 +1099,9 @@
 
 	(let ((residual (- (total-val) printed)))
 	  (unless (zerop residual)
-	    (format t "~8:D: Other~%" residual))))
+	    (format t _"~8:D: Other~%" residual))))
 
-      (format t "~8:D: Total~%" (total-val))))
+      (format t _"~8:D: Total~%" (total-val))))
   (values))
 
 
@@ -1105,7 +1126,7 @@
 	
 
 (defun find-caller-counts (space)
-  "Return a hashtable mapping each function in for which a call appears in
+  _N"Return a hashtable mapping each function in for which a call appears in
   Space to the number of times such a call appears."
   (let ((counts (make-hash-table :test #'eq)))
     (map-allocated-objects
@@ -1120,7 +1141,7 @@
     counts))
 
 (defun find-high-callers (space &key (above 10) table (threshold 2))
-  "Return a hashtable translating code objects to function constant counts for
+  _N"Return a hashtable translating code objects to function constant counts for
   all code objects in Space with more than Above function constants."
   (let ((counts (make-hash-table :test #'eq)))
     (map-allocated-objects

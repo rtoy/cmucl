@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.21 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.22 2010/03/19 15:18:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;;
 
 (in-package "EXTENSIONS")
+
+(intl:textdomain "cmucl")
 
 (export '(open-clx-display with-clx-event-handling enable-clx-event-handling
 	  disable-clx-event-handling object-set-event-handler
@@ -41,7 +43,7 @@
 ;;; New version to interface with "telent-clx".
 #+(and)
 (defun open-clx-display (&optional display-name)
-  "Open a connection to DISPLAY-NAME if supplied, or to the appropriate
+  _N"Open a connection to DISPLAY-NAME if supplied, or to the appropriate
 default display as given by GET-DEFAULT-DISPLAY otherwise."
   (destructuring-bind (host display screen protocol)
       (xlib::get-default-display display-name)
@@ -55,7 +57,7 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 (defun open-clx-display (&optional (string (cdr (assoc :display
 						       *environment-list*
 						       :test #'eq))))
-  "Parses the display specifier STRING, including display and screen numbers.
+  _N"Parses the display specifier STRING, including display and screen numbers.
    STRING defaults to the value of the  DISPLAY environment variable.  If STRING
    is non-nil, and any fields are missing in the specification, this signals an
    error.  If you specify a screen, then this sets XLIB:DISPLAY-DEFAULT-SCREEN
@@ -70,14 +72,14 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
       (declare (simple-string string))
       (let ((colon (position #\: string :test #'char=)))
 	(cond ((null colon)
-	       (error "Missing display number in DISPLAY environment variable."))
+	       (error _"Missing display number in DISPLAY environment variable."))
 	      (t
 	       (unless (zerop colon) (setf host-name (subseq string 0 colon)))
 	       (let* ((start (1+ colon))
 		      (first-dot (position #\. string
 					   :test #'char= :start start)))
 		 (cond ((= start (or first-dot length))
-			(error "Badly formed display number in DISPLAY ~
+			(error _"Badly formed display number in DISPLAY ~
 				environment variable."))
 		       ((null first-dot)
 			(setf display-num (parse-integer string :start start)))
@@ -88,7 +90,7 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 			       (second-dot (position #\. string :test #'char=
 						     :start start)))
 			  (cond ((= start (or second-dot length))
-				 (error "Badly formed screen number in ~
+				 (error _"Badly formed screen number in ~
 					 DISPLAY environment variable."))
 				(t
 				 (setf screen-num
@@ -100,7 +102,7 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 		 (num-screens (length screens)))
 	    (when (>= screen-num num-screens)
 	      (xlib:close-display display)
-	      (error "No such screen number (~D)." screen-num))
+	      (error _"No such screen number (~D)." screen-num))
 	    (setf (xlib:display-default-screen display)
 		  (elt screens screen-num))))
 	(values display (xlib:display-default-screen display))))))
@@ -110,7 +112,7 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 
 (defun carefully-add-font-paths (display font-pathnames
 					 &optional (operation :append))
-  "Adds the list of font pathnames, Font-Pathnames, to the font path of
+  _N"Adds the list of font pathnames, Font-Pathnames, to the font path of
   the server Display but does so carefully by checking to make sure that
   the font pathnames are not already on the server's font path.  If any
   of the font pathnames are on the server's font path, they will remain
@@ -137,13 +139,13 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 ;;;; Enabling and disabling event handling through SYSTEM:SERVE-EVENT.
 
 (defvar *clx-fds-to-displays* (make-hash-table :test #'eql)
-  "This is a hash table that maps CLX file descriptors to CLX display
+  _N"This is a hash table that maps CLX file descriptors to CLX display
    structures.  For every CLX file descriptor know to SYSTEM:SERVE-EVENT,
    there must be a mapping from that file descriptor to its CLX display
    structure when events are handled via SYSTEM:SERVE-EVENT.")
 
 (defmacro with-clx-event-handling ((display handler) &rest body)
-  "Evaluates body in a context where events are handled for the display
+  _N"Evaluates body in a context where events are handled for the display
    by calling handler on the display.  This destroys any previously established
    handler for display."
   `(unwind-protect
@@ -160,7 +162,7 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 ;;; *clx-fds-to-displays*, so the user's handler can be called on the display.
 ;;;
 (defun enable-clx-event-handling (display handler)
-  "After calling this, when SYSTEM:SERVE-EVENT notices input on display's
+  _N"After calling this, when SYSTEM:SERVE-EVENT notices input on display's
    connection to the X11 server, handler is called on the display.  Handler
    is invoked in a dynamic context with an error handler bound that will
    flush all events from the display and return.  By returning, it declines
@@ -197,20 +199,20 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 			     (fd-stream-fd
 			      (xlib::display-input-stream
 			       (car d/h))))))
-      (error "File descriptor ~S not associated with any CLX display.~%~
+      (error _"File descriptor ~S not associated with any CLX display.~%~
                 It has been removed from system:serve-event's knowledge."
 	     file-descriptor))
     (let ((handler (cdr (assoc display *display-event-handlers*))))
       (unless handler
 	(flush-display-events display)
-	(error "Display ~S not associated with any event handler." display))
+	(error _"Display ~S not associated with any event handler." display))
       (handler-bind ((error #'(lambda (condx)
 				(declare (ignore condx))
 				(flush-display-events display))))
 	(funcall handler display)))))
 
 (defun disable-clx-event-handling (display)
-  "Undoes the effect of EXT:ENABLE-CLX-EVENT-HANDLING."
+  _N"Undoes the effect of EXT:ENABLE-CLX-EVENT-HANDLING."
   (setf *display-event-handlers*
 	(delete display *display-event-handlers* :key #'car))
   (let ((fd (fd-stream-fd (xlib::display-input-stream display))))
@@ -234,7 +236,7 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 (declaim (declaration values))
 
 (defun object-set-event-handler (display)
-  "This display event handler uses object sets to map event windows cross
+  _N"This display event handler uses object sets to map event windows cross
    event types to handlers.  It uses XLIB:EVENT-CASE to bind all the slots
    of each event, calling the handlers on all these values in addition to
    the event key and send-event-p.  Describe EXT:SERVE-MUMBLE, where mumble
@@ -253,12 +255,12 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 		  (unless object
 		    (cond ((not (typep event-window 'xlib:window))
 			   (xlib:discard-current-event display)
-			   (warn "Discarding ~S event on non-window ~S."
+			   (warn _"Discarding ~S event on non-window ~S."
 				 ,event-key event-window)
 			   (return-from object-set-event-handler nil))
 			  (t
 			   (flush-display-events display)
-			   (error "~S not a known X window.~%~
+			   (error _"~S not a known X window.~%~
 			           Received event ~S."
 				  event-window ,event-key))))
 		  (handler-bind ((error #'(lambda (condx)
@@ -306,7 +308,7 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 	(:FOCUS-OUT (event-window mode kind send-event-p)
 	 (dispatch :focus-out event-window mode kind send-event-p))
 	(:KEYMAP-NOTIFY ()
-	 (warn "Ignoring keymap notify event.")
+	 (warn _"Ignoring keymap notify event.")
 	 (when *object-set-event-handler-print*
 	   (print :keymap-notify) (force-output))
 	 (setf result t))
@@ -363,7 +365,7 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 	 (dispatch :colormap-notify event-window colormap new-p installed-p
 		   send-event-p))
 	(:MAPPING-NOTIFY (request)
-	 (warn "Ignoring mapping notify event -- ~S." request)
+	 (warn _"Ignoring mapping notify event -- ~S." request)
 	 (when *object-set-event-handler-print*
 	   (print :mapping-notify) (force-output))
 	 (setf result t))
@@ -374,11 +376,11 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 (defun default-clx-event-handler (object event-key event-window &rest ignore)
   (declare (ignore ignore))
   (flush-display-events *process-clx-event-display*)
-  (error "No handler for event type ~S on ~S in ~S."
+  (error _"No handler for event type ~S on ~S in ~S."
 	 event-key object (lisp::map-xwindow event-window)))
 
 (defun flush-display-events (display)
-  "Dumps all the events in display's event queue including the current one
+  _N"Dumps all the events in display's event queue including the current one
    in case this is called from within XLIB:EVENT-CASE, etc."
   (xlib:discard-current-event display)
   (xlib:event-case (display :discard-p t :timeout 0)
@@ -389,28 +391,28 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 ;;;; Key and button service.
 
 (defun serve-key-press (object-set fun)
-  "Associate a method in the object-set with :key-press events.  The method
+  _N"Associate a method in the object-set with :key-press events.  The method
    is called on the object the event occurred, event key, event window, root,
    child, same-screen-p, x, y, root-x, root-y, state, time, code, and
    send-event-p."
   (setf (gethash :key-press (lisp::object-set-table object-set)) fun))
 
 (defun serve-key-release (object-set fun)
-  "Associate a method in the object-set with :key-release events.  The method
+  _N"Associate a method in the object-set with :key-release events.  The method
    is called on the object the event occurred, event key, event window, root,
    child, same-screen-p, x, y, root-x, root-y, state, time, code, and
    send-event-p."
   (setf (gethash :key-release (lisp::object-set-table object-set)) fun))
 
 (defun serve-button-press (object-set fun)
-  "Associate a method in the object-set with :button-press events.  The method
+  _N"Associate a method in the object-set with :button-press events.  The method
    is called on the object the event occurred, event key, event window, root,
    child, same-screen-p, x, y, root-x, root-y, state, time, code, and
    send-event-p."
   (setf (gethash :button-press (lisp::object-set-table object-set)) fun))
 
 (defun serve-button-release (object-set fun)
-  "Associate a method in the object-set with :button-release events.  The
+  _N"Associate a method in the object-set with :button-release events.  The
    method is called on the object the event occurred, event key, event window,
    root, child, same-screen-p, x, y, root-x, root-y, state, time, code, and
    send-event-p."
@@ -421,21 +423,21 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 ;;;; Mouse service.
 
 (defun serve-motion-notify (object-set fun)
-  "Associate a method in the object-set with :motion-notify events.  The method
+  _N"Associate a method in the object-set with :motion-notify events.  The method
    is called on the object the event occurred, event key, event window, root,
    child, same-screen-p, x, y, root-x, root-y, state, time, hint-p, and
    send-event-p."
   (setf (gethash :motion-notify (lisp::object-set-table object-set)) fun))
 
 (defun serve-enter-notify (object-set fun)
-  "Associate a method in the object-set with :enter-notify events.  The method
+  _N"Associate a method in the object-set with :enter-notify events.  The method
    is called on the object the event occurred, event key, event window, root,
    child, same-screen-p, x, y, root-x, root-y, state, time, mode, kind,
    and send-event-p."
   (setf (gethash :enter-notify (lisp::object-set-table object-set)) fun))
 
 (defun serve-leave-notify (object-set fun)
-  "Associate a method in the object-set with :leave-notify events.  The method
+  _N"Associate a method in the object-set with :leave-notify events.  The method
    is called on the object the event occurred, event key, event window, root,
    child, same-screen-p, x, y, root-x, root-y, state, time, mode, kind,
    and send-event-p."
@@ -446,13 +448,13 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 ;;;; Keyboard service.
 
 (defun serve-focus-in (object-set fun)
-  "Associate a method in the object-set with :focus-in events.  The method
+  _N"Associate a method in the object-set with :focus-in events.  The method
    is called on the object the event occurred, event key, event window, mode,
    kind, and send-event-p."
   (setf (gethash :focus-in (lisp::object-set-table object-set)) fun))
 
 (defun serve-focus-out (object-set fun) 
-  "Associate a method in the object-set with :focus-out events.  The method
+  _N"Associate a method in the object-set with :focus-out events.  The method
    is called on the object the event occurred, event key, event window, mode,
    kind, and send-event-p."
   (setf (gethash :focus-out (lisp::object-set-table object-set)) fun))
@@ -462,19 +464,19 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 ;;;; Exposure service.
 
 (defun serve-exposure (object-set fun)
-  "Associate a method in the object-set with :exposure events.  The method
+  _N"Associate a method in the object-set with :exposure events.  The method
    is called on the object the event occurred, event key, event window, x, y,
    width, height, count, and send-event-p."
   (setf (gethash :exposure (lisp::object-set-table object-set)) fun))
 
 (defun serve-graphics-exposure (object-set fun)
-  "Associate a method in the object-set with :graphics-exposure events.  The
+  _N"Associate a method in the object-set with :graphics-exposure events.  The
    method is called on the object the event occurred, event key, event window,
    x, y, width, height, count, major, minor, and send-event-p."
   (setf (gethash :graphics-exposure (lisp::object-set-table object-set)) fun))
 
 (defun serve-no-exposure (object-set fun)
-  "Associate a method in the object-set with :no-exposure events.  The method
+  _N"Associate a method in the object-set with :no-exposure events.  The method
    is called on the object the event occurred, event key, event window, major,
    minor, and send-event-p."
   (setf (gethash :no-exposure (lisp::object-set-table object-set)) fun))
@@ -484,82 +486,82 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 ;;;; Structure service.
 
 (defun serve-visibility-notify (object-set fun)
-  "Associate a method in the object-set with :visibility-notify events.  The
+  _N"Associate a method in the object-set with :visibility-notify events.  The
    method is called on the object the event occurred, event key, event window,
    state, and send-event-p."
   (setf (gethash :visibility-notify (lisp::object-set-table object-set)) fun))
 
 (defun serve-create-notify (object-set fun)
-  "Associate a method in the object-set with :create-notify events.  The
+  _N"Associate a method in the object-set with :create-notify events.  The
    method is called on the object the event occurred, event key, event window,
    window, x, y, width, height, border-width, override-redirect-p, and
    send-event-p."
   (setf (gethash :create-notify (lisp::object-set-table object-set)) fun))
 
 (defun serve-destroy-notify (object-set fun)
-  "Associate a method in the object-set with :destroy-notify events.  The
+  _N"Associate a method in the object-set with :destroy-notify events.  The
    method is called on the object the event occurred, event key, event window,
    window, and send-event-p."
   (setf (gethash :destroy-notify (lisp::object-set-table object-set)) fun))
 
 (defun serve-unmap-notify (object-set fun)
-  "Associate a method in the object-set with :unmap-notify events.  The
+  _N"Associate a method in the object-set with :unmap-notify events.  The
    method is called on the object the event occurred, event key, event window,
    window, configure-p, and send-event-p."
   (setf (gethash :unmap-notify (lisp::object-set-table object-set)) fun))
 
 (defun serve-map-notify (object-set fun)
-  "Associate a method in the object-set with :map-notify events.  The
+  _N"Associate a method in the object-set with :map-notify events.  The
    method is called on the object the event occurred, event key, event window,
    window, override-redirect-p, and send-event-p."
   (setf (gethash :map-notify (lisp::object-set-table object-set)) fun))
 
 (defun serve-map-request (object-set fun)
-  "Associate a method in the object-set with :map-request events.  The
+  _N"Associate a method in the object-set with :map-request events.  The
    method is called on the object the event occurred, event key, event window,
    window, and send-event-p."
   (setf (gethash :map-request (lisp::object-set-table object-set)) fun))
 
 (defun serve-reparent-notify (object-set fun)
-  "Associate a method in the object-set with :reparent-notify events.  The
+  _N"Associate a method in the object-set with :reparent-notify events.  The
    method is called on the object the event occurred, event key, event window,
    window, parent, x, y, override-redirect-p, and send-event-p."
   (setf (gethash :reparent-notify (lisp::object-set-table object-set)) fun))
 
 (defun serve-configure-notify (object-set fun)
-  "Associate a method in the object-set with :configure-notify events.  The
+  _N"Associate a method in the object-set with :configure-notify events.  The
    method is called on the object the event occurred, event key, event window,
    window, x, y, width, height, border-width, above-sibling,
    override-redirect-p, and send-event-p."
   (setf (gethash :configure-notify (lisp::object-set-table object-set)) fun))
 
 (defun serve-gravity-notify (object-set fun)
-  "Associate a method in the object-set with :gravity-notify events.  The
+  _N"Associate a method in the object-set with :gravity-notify events.  The
    method is called on the object the event occurred, event key, event window,
    window, x, y, and send-event-p."
   (setf (gethash :gravity-notify (lisp::object-set-table object-set)) fun))
 
 (defun serve-resize-request (object-set fun)
-  "Associate a method in the object-set with :resize-request events.  The
+  _N"Associate a method in the object-set with :resize-request events.  The
    method is called on the object the event occurred, event key, event window,
    width, height, and send-event-p."
   (setf (gethash :resize-request (lisp::object-set-table object-set)) fun))
 
 (defun serve-configure-request (object-set fun)
-  "Associate a method in the object-set with :configure-request events.  The
+  _N"Associate a method in the object-set with :configure-request events.  The
    method is called on the object the event occurred, event key, event window,
    window, x, y, width, height, border-width, stack-mode, above-sibling,
    value-mask, and send-event-p."
   (setf (gethash :configure-request (lisp::object-set-table object-set)) fun))
 
 (defun serve-circulate-notify (object-set fun)
-  "Associate a method in the object-set with :circulate-notify events.  The
+  _N"Associate a method in the object-set with :circulate-notify events.  The
    method is called on the object the event occurred, event key, event window,
    window, place, and send-event-p."
   (setf (gethash :circulate-notify (lisp::object-set-table object-set)) fun))
 
 (defun serve-circulate-request (object-set fun)
-  "Associate a method in the object-set with :circulate-request events.  The
+  _N"Associate a method in the object-set with :circulate-request events.  The
    method is called on the object the event occurred, event key, event window,
    window, place, and send-event-p."
   (setf (gethash :circulate-request (lisp::object-set-table object-set)) fun))
@@ -569,37 +571,37 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 ;;;; Misc. service.
 
 (defun serve-property-notify (object-set fun)
-  "Associate a method in the object-set with :property-notify events.  The
+  _N"Associate a method in the object-set with :property-notify events.  The
    method is called on the object the event occurred, event key, event window,
    atom, state, time, and send-event-p."
   (setf (gethash :property-notify (lisp::object-set-table object-set)) fun))
 
 (defun serve-selection-clear (object-set fun)
-  "Associate a method in the object-set with :selection-clear events.  The
+  _N"Associate a method in the object-set with :selection-clear events.  The
    method is called on the object the event occurred, event key, event window,
    selection, time, and send-event-p."
   (setf (gethash :selection-clear (lisp::object-set-table object-set)) fun))
 
 (defun serve-selection-request (object-set fun)
-  "Associate a method in the object-set with :selection-request events.  The
+  _N"Associate a method in the object-set with :selection-request events.  The
    method is called on the object the event occurred, event key, event window,
    requestor, selection, target, property, time, and send-event-p."
   (setf (gethash :selection-request (lisp::object-set-table object-set)) fun))
 
 (defun serve-selection-notify (object-set fun)
-  "Associate a method in the object-set with :selection-notify events.  The
+  _N"Associate a method in the object-set with :selection-notify events.  The
    method is called on the object the event occurred, event key, event window,
    selection, target, property, time, and send-event-p."
   (setf (gethash :selection-notify (lisp::object-set-table object-set)) fun))
 
 (defun serve-colormap-notify (object-set fun)
-  "Associate a method in the object-set with :colormap-notify events.  The
+  _N"Associate a method in the object-set with :colormap-notify events.  The
    method is called on the object the event occurred, event key, event window,
    colormap, new-p, installed-p, and send-event-p."
   (setf (gethash :colormap-notify (lisp::object-set-table object-set)) fun))
 
 (defun serve-client-message (object-set fun)
-  "Associate a method in the object-set with :client-message events.  The
+  _N"Associate a method in the object-set with :client-message events.  The
    method is called on the object the event occurred, event key, event window,
    format, data, and send-event-p."
   (setf (gethash :client-message (lisp::object-set-table object-set)) fun))

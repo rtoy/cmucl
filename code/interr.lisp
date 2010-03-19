@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.47 2007/08/17 14:02:12 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.48 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 ;;;
 
 (in-package "KERNEL")
+
+(intl:textdomain "cmucl")
 
 (export '(infinite-error-protect find-caller-name *maximum-error-depth*
 	  #+stack-checking red-zone-hit #+stack-checking yellow-zone-hit
@@ -48,7 +50,7 @@
 	 (macrolet ((set-value (var value)
 		      (let ((pos (position var ',required)))
 			(unless pos
-			  (error "~S isn't one of the required args."
+			  (error _"~S isn't one of the required args."
 				 var))
 			`(let ((,',temp ,value))
 			   (di::sub-set-debug-var-slot
@@ -80,7 +82,7 @@
 
 
 (deferr unknown-error (&rest args)
-  (error "Unknown error:~{ ~S~})" args))
+  (error _"Unknown error:~{ ~S~})" args))
 
 (deferr object-not-function-error (object)
   (error 'type-error
@@ -244,7 +246,7 @@
 (deferr invalid-argument-count-error (nargs)
   (error 'simple-program-error
 	 :function-name name
-	 :format-control "Invalid number of arguments: ~S"
+	 :format-control _"Invalid number of arguments: ~S"
 	 :format-arguments (list nargs)))
 
 (deferr bogus-argument-to-values-list-error (list)
@@ -252,7 +254,7 @@
 	 :function-name name
 	 :datum list
 	 :expected-type 'list
-	 :format-control "Attempt to use VALUES-LIST on a dotted-list:~%  ~S"
+	 :format-control _"Attempt to use VALUES-LIST on a dotted-list:~%  ~S"
 	 :format-arguments (list list)))
 
 (deferr unbound-symbol-error (symbol)
@@ -274,19 +276,19 @@
   (error 'simple-control-error
 	 :function-name name
 	 :format-control
-	 "Attempt to RETURN-FROM a block or GO to a tag that no longer exists"))
+	 _"Attempt to RETURN-FROM a block or GO to a tag that no longer exists"))
 
 (deferr unseen-throw-tag-error (tag)
   (error 'simple-control-error
 	 :function-name name
-	 :format-control "Attempt to THROW to a tag that does not exist: ~S"
+	 :format-control _"Attempt to THROW to a tag that does not exist: ~S"
 	 :format-arguments (list tag)))
 
 (deferr nil-function-returned-error (function)
   (error 'simple-control-error
 	 :function-name name
 	 :format-control
-	 "Function with declared result type NIL returned:~%  ~S"
+	 _"Function with declared result type NIL returned:~%  ~S"
 	 :format-arguments (list function)))
 
 (deferr division-by-zero-error (this that)
@@ -313,12 +315,12 @@
 (deferr odd-keyword-arguments-error ()
   (error 'simple-program-error
 	 :function-name name
-	 :format-control "Odd number of keyword arguments."))
+	 :format-control _"Odd number of keyword arguments."))
 
 (deferr unknown-keyword-argument-error (key)
   (error 'simple-program-error
 	 :function-name name
-	 :format-control "Unknown keyword: ~S"
+	 :format-control _"Unknown keyword: ~S"
 	 :format-arguments (list key)))
 
 (deferr invalid-array-index-error (array bound index)
@@ -328,11 +330,11 @@
 	 :expected-type `(integer 0 (,bound))
 	 :format-control
 	 (cond ((zerop bound)
-		"Invalid array index, ~D for ~S.  Array has no elements.")
+		_"Invalid array index, ~D for ~S.  Array has no elements.")
 	       ((minusp index)
-		"Invalid array index, ~D for ~S.  Should have greater than or equal to 0.")
+		_"Invalid array index, ~D for ~S.  Should have greater than or equal to 0.")
 	       (t
-		"Invalid array index, ~D for ~S.  Should have been less than ~D"))
+		_"Invalid array index, ~D for ~S.  Should have been less than ~D"))
 	 :format-arguments (list index array bound)))
 
 (deferr object-not-simple-array-error (object)
@@ -506,7 +508,7 @@
 (deferr undefined-foreign-symbol-error (symbol)
   (error 'simple-program-error
          :function-name name
-	 :format-control "Undefined foreign symbol: ~S"
+	 :format-control _"Undefined foreign symbol: ~S"
 	 :format-arguments (list symbol)))
 
 
@@ -518,17 +520,17 @@
 	    (numberp *current-error-depth*))
        (let ((*current-error-depth* (1+ *current-error-depth*)))
 	 (if (> *current-error-depth* *maximum-error-depth*)
-	     (error-error "Help! " *current-error-depth* " nested errors.  "
-			  "KERNEL:*MAXIMUM-ERROR-DEPTH* exceeded.")
+	     (error-error _"Help! " *current-error-depth* _" nested errors.  "
+			  _"KERNEL:*MAXIMUM-ERROR-DEPTH* exceeded.")
 	     (progn ,@forms)))
        (%primitive halt)))
 
 ;;; Track the depth of recursive errors.
 ;;;
 (defvar *maximum-error-depth* 10
-  "The maximum number of nested errors allowed.  Internal errors are
+  _N"The maximum number of nested errors allowed.  Internal errors are
    double-counted.")
-(defvar *current-error-depth* 0 "The current number of nested errors.")
+(defvar *current-error-depth* 0 _N"The current number of nested errors.")
 
 ;;; These specials are used by ERROR-ERROR to track the success of recovery
 ;;; attempts.
@@ -632,7 +634,7 @@
 		  (error 'simple-error
 			 :function-name name
 			 :format-control
-			 "Unknown internal error, ~D?  args=~S"
+			 _"Unknown internal error, ~D?  args=~S"
 			 :format-arguments
 			 (list error-number
 			       (mapcar #'(lambda (sc-offset)
@@ -643,7 +645,7 @@
 		  (error 'simple-error
 			 :function-name name
 			 :format-control
-			 "Internal error ~D: ~A.  args=~S"
+			 _"Internal error ~D: ~A.  args=~S"
 			 :format-arguments
 			 (list error-number
 			       handler
@@ -664,7 +666,7 @@
 (defun yellow-zone-hit ()
   (let ((debug:*stack-top-hint* nil))
     (format *error-output*
-	    "~2&~@<A control stack overflow has occurred: ~
+	    _"~2&~@<A control stack overflow has occurred: ~
             the program has entered the yellow control stack guard zone.  ~
             Please note that you will be returned to the Top-Level if you ~
             enter the red control stack guard zone while debugging.~@:>~2%")
@@ -682,7 +684,7 @@
 #+stack-checking
 (defun red-zone-hit ()
   (format *error-output*
-	  "~2&~@<Fatal control stack overflow.  You have entered~%~
+	  _"~2&~@<Fatal control stack overflow.  You have entered~%~
            the red control stack guard zone while debugging.~%~
            Returning to Top-Level.~@:>~2%")
   (throw 'lisp::top-level-catcher nil))
@@ -693,7 +695,7 @@
     ;; Don't reserve any more pages
     (setf lisp::reserved-heap-pages 0)
     (format *error-output*
-	    "~2&~@<Imminent dynamic space overflow has occurred:~%~
+	    _"~2&~@<Imminent dynamic space overflow has occurred:~%~
             Only a small amount of dynamic space is available now.~%~
             Please note that you will be returned to the Top-Level without~%~
             warning if you run out of space while debugging.~@:>~%")

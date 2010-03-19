@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.52 2009/12/07 01:48:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.53 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,6 +58,7 @@
 (use-package "C-CALL")
 (use-package "SYSTEM")
 (use-package "EXT")
+(intl:textdomain "cmucl-unix-glibc2")
 
 ;; Check the G_BROKEN_FILENAMES environment variable; if set the encoding
 ;; is locale-dependent...else use :utf-8 on Unicode Lisps.  On 8 bit Lisps
@@ -360,13 +361,13 @@
 ;;; GET-UNIX-ERROR-MSG -- public.
 ;;; 
 (defun get-unix-error-msg (&optional (error-number (unix-errno)))
-  "Returns a string describing the error number which was returned by a
+  _N"Returns a string describing the error number which was returned by a
   UNIX system call."
   (declare (type integer error-number))
   
   (if (array-in-bounds-p *unix-errors* error-number)
       (svref *unix-errors* error-number)
-      (format nil "Unknown error [~d]" error-number)))
+      (format nil _"Unknown error [~d]" error-number)))
 
 (defmacro syscall ((name &rest arg-types) success-form &rest args)
   `(let ((result (alien-funcall (extern-alien ,name (function int ,@arg-types))
@@ -383,7 +384,7 @@
   `(let ((result (alien-funcall (extern-alien ,name (function int ,@arg-types))
 				,@args)))
      (if (minusp result)
-	 (error "Syscall ~A failed: ~A" ,name (get-unix-error-msg))
+	 (error _"Syscall ~A failed: ~A" ,name (get-unix-error-msg))
 	 ,success-form)))
 
 (defmacro void-syscall ((name &rest arg-types) &rest args)
@@ -397,7 +398,7 @@
 ;;; Unix-rename accepts two files names and renames the first to the second.
 
 (defun unix-rename (name1 name2)
-  "Unix-rename renames the file with string name1 to the string
+  _N"Unix-rename renames the file with string name1 to the string
    name2.  NIL and an error code is returned if an error occured."
   (declare (type unix-pathname name1 name2))
   (void-syscall ("rename" c-string c-string)
@@ -537,13 +538,13 @@
 ;;;
 ;;; POSIX Standard: 6.5 File Control Operations	<fcntl.h>
 
-(defconstant r_ok 4 "Test for read permission")
-(defconstant w_ok 2 "Test for write permission")
-(defconstant x_ok 1 "Test for execute permission")
-(defconstant f_ok 0 "Test for presence of file")
+(defconstant r_ok 4 _N"Test for read permission")
+(defconstant w_ok 2 _N"Test for write permission")
+(defconstant x_ok 1 _N"Test for execute permission")
+(defconstant f_ok 0 _N"Test for presence of file")
 
 (defun unix-fcntl (fd cmd arg)
-  "Unix-fcntl manipulates file descriptors accoridng to the
+  _N"Unix-fcntl manipulates file descriptors accoridng to the
    argument CMD which can be one of the following:
 
    F-DUPFD         Duplicate a file descriptor.
@@ -569,7 +570,7 @@
   (int-syscall ("fcntl" int unsigned-int unsigned-int) fd cmd arg))
 
 (defun unix-open (path flags mode)
-  "Unix-open opens the file whose pathname is specified by PATH
+  _N"Unix-open opens the file whose pathname is specified by PATH
    for reading and/or writing as specified by the FLAGS argument.
    Returns an integer file descriptor.
    The flags argument can be:
@@ -594,7 +595,7 @@
   (int-syscall ("open64" c-string int int) (%name->file path) flags mode))
 
 (defun unix-getdtablesize ()
-  "Unix-getdtablesize returns the maximum size of the file descriptor
+  _N"Unix-getdtablesize returns the maximum size of the file descriptor
    table. (i.e. the maximum number of descriptors that can exist at
    one time.)"
   (int-syscall ("getdtablesize")))
@@ -603,7 +604,7 @@
 ;;; associated with it.
 
 (defun unix-close (fd)
-  "Unix-close takes an integer file descriptor as an argument and
+  _N"Unix-close takes an integer file descriptor as an argument and
    closes the file associated with it.  T is returned upon successful
    completion, otherwise NIL and an error number."
   (declare (type unix-fd fd))
@@ -613,7 +614,7 @@
 ;;; with name and sets it mode to mode (as for chmod).
 
 (defun unix-creat (name mode)
-  "Unix-creat accepts a file name and a mode (same as those for
+  _N"Unix-creat accepts a file name and a mode (same as those for
    unix-chmod) and creates a file by that name with the specified
    permission mode.  It returns a file descriptor on success,
    or NIL and an error  number otherwise.
@@ -626,84 +627,84 @@
 
 ;;; fcntlbits.h
 
-(defconstant o_read    o_rdonly "Open for reading")
-(defconstant o_write   o_wronly "Open for writing")
+(defconstant o_read    o_rdonly _N"Open for reading")
+(defconstant o_write   o_wronly _N"Open for writing")
 
-(defconstant o_rdonly  0 "Read-only flag.") 
-(defconstant o_wronly  1 "Write-only flag.")
-(defconstant o_rdwr    2 "Read-write flag.")
-(defconstant o_accmode 3 "Access mode mask.")
+(defconstant o_rdonly  0 _N"Read-only flag.") 
+(defconstant o_wronly  1 _N"Write-only flag.")
+(defconstant o_rdwr    2 _N"Read-write flag.")
+(defconstant o_accmode 3 _N"Access mode mask.")
 
 #-alpha
 (progn
-  (defconstant o_creat   #o100 "Create if nonexistant flag. (not fcntl)") 
-  (defconstant o_excl    #o200 "Error if already exists. (not fcntl)")
-  (defconstant o_noctty  #o400 "Don't assign controlling tty. (not fcntl)")
-  (defconstant o_trunc   #o1000 "Truncate flag. (not fcntl)")
-  (defconstant o_append  #o2000 "Append flag.")
-  (defconstant o_ndelay  #o4000 "Non-blocking I/O")
-  (defconstant o_nonblock #o4000 "Non-blocking I/O")
+  (defconstant o_creat   #o100 _N"Create if nonexistant flag. (not fcntl)") 
+  (defconstant o_excl    #o200 _N"Error if already exists. (not fcntl)")
+  (defconstant o_noctty  #o400 _N"Don't assign controlling tty. (not fcntl)")
+  (defconstant o_trunc   #o1000 _N"Truncate flag. (not fcntl)")
+  (defconstant o_append  #o2000 _N"Append flag.")
+  (defconstant o_ndelay  #o4000 _N"Non-blocking I/O")
+  (defconstant o_nonblock #o4000 _N"Non-blocking I/O")
   (defconstant o_ndelay  o_nonblock)
-  (defconstant o_sync    #o10000 "Synchronous writes (on ext2)")
+  (defconstant o_sync    #o10000 _N"Synchronous writes (on ext2)")
   (defconstant o_fsync    o_sync)
-  (defconstant o_async   #o20000 "Asynchronous I/O"))
+  (defconstant o_async   #o20000 _N"Asynchronous I/O"))
 #+alpha
 (progn
-  (defconstant o_creat   #o1000 "Create if nonexistant flag. (not fcntl)") 
-  (defconstant o_trunc   #o2000 "Truncate flag. (not fcntl)")
-  (defconstant o_excl    #o4000 "Error if already exists. (not fcntl)")
-  (defconstant o_noctty  #o10000 "Don't assign controlling tty. (not fcntl)")
-  (defconstant o_nonblock #o4 "Non-blocking I/O")
-  (defconstant o_append  #o10 "Append flag.")
+  (defconstant o_creat   #o1000 _N"Create if nonexistant flag. (not fcntl)") 
+  (defconstant o_trunc   #o2000 _N"Truncate flag. (not fcntl)")
+  (defconstant o_excl    #o4000 _N"Error if already exists. (not fcntl)")
+  (defconstant o_noctty  #o10000 _N"Don't assign controlling tty. (not fcntl)")
+  (defconstant o_nonblock #o4 _N"Non-blocking I/O")
+  (defconstant o_append  #o10 _N"Append flag.")
   (defconstant o_ndelay  o_nonblock)
-  (defconstant o_sync    #o40000 "Synchronous writes (on ext2)")
+  (defconstant o_sync    #o40000 _N"Synchronous writes (on ext2)")
   (defconstant o_fsync    o_sync)
-  (defconstant o_async   #o20000 "Asynchronous I/O"))
+  (defconstant o_async   #o20000 _N"Asynchronous I/O"))
 
-(defconstant f-dupfd    0  "Duplicate a file descriptor")
-(defconstant f-getfd    1  "Get file desc. flags")
-(defconstant f-setfd    2  "Set file desc. flags")
-(defconstant f-getfl    3  "Get file flags")
-(defconstant f-setfl    4  "Set file flags")
-
-#-alpha
-(progn
-  (defconstant f-getlk    5   "Get lock")
-  (defconstant f-setlk    6   "Set lock")
-  (defconstant f-setlkw   7   "Set lock, wait for release")
-  (defconstant f-setown   8  "Set owner (for sockets)")
-  (defconstant f-getown   9  "Get owner (for sockets)"))
-#+alpha
-(progn
-  (defconstant f-getlk    7   "Get lock")
-  (defconstant f-setlk    8   "Set lock")
-  (defconstant f-setlkw   9   "Set lock, wait for release")
-  (defconstant f-setown   5  "Set owner (for sockets)")
-  (defconstant f-getown   6  "Get owner (for sockets)"))
-
-
-
-(defconstant F-CLOEXEC 1 "for f-getfl and f-setfl")
+(defconstant f-dupfd    0  _N"Duplicate a file descriptor")
+(defconstant f-getfd    1  _N"Get file desc. flags")
+(defconstant f-setfd    2  _N"Set file desc. flags")
+(defconstant f-getfl    3  _N"Get file flags")
+(defconstant f-setfl    4  _N"Set file flags")
 
 #-alpha
 (progn
-  (defconstant F-RDLCK 0 "for fcntl and lockf")
-  (defconstant F-WRLCK 1 "for fcntl and lockf")
-  (defconstant F-UNLCK 2 "for fcntl and lockf")
-  (defconstant F-EXLCK 4 "old bsd flock (depricated)")
-  (defconstant F-SHLCK 8 "old bsd flock (depricated)"))
+  (defconstant f-getlk    5   _N"Get lock")
+  (defconstant f-setlk    6   _N"Set lock")
+  (defconstant f-setlkw   7   _N"Set lock, wait for release")
+  (defconstant f-setown   8  _N"Set owner (for sockets)")
+  (defconstant f-getown   9  _N"Get owner (for sockets)"))
 #+alpha
 (progn
-  (defconstant F-RDLCK 1 "for fcntl and lockf")
-  (defconstant F-WRLCK 2 "for fcntl and lockf")
-  (defconstant F-UNLCK 8 "for fcntl and lockf")
-  (defconstant F-EXLCK 16 "old bsd flock (depricated)")
-  (defconstant F-SHLCK 32 "old bsd flock (depricated)"))
+  (defconstant f-getlk    7   _N"Get lock")
+  (defconstant f-setlk    8   _N"Set lock")
+  (defconstant f-setlkw   9   _N"Set lock, wait for release")
+  (defconstant f-setown   5  _N"Set owner (for sockets)")
+  (defconstant f-getown   6  _N"Get owner (for sockets)"))
 
-(defconstant F-LOCK-SH 1 "Shared lock for bsd flock")
-(defconstant F-LOCK-EX 2 "Exclusive lock for bsd flock")
-(defconstant F-LOCK-NB 4 "Don't block. Combine with F-LOCK-SH or F-LOCK-EX")
-(defconstant F-LOCK-UN 8 "Remove lock for bsd flock")
+
+
+(defconstant F-CLOEXEC 1 _N"for f-getfl and f-setfl")
+
+#-alpha
+(progn
+  (defconstant F-RDLCK 0 _N"for fcntl and lockf")
+  (defconstant F-WRLCK 1 _N"for fcntl and lockf")
+  (defconstant F-UNLCK 2 _N"for fcntl and lockf")
+  (defconstant F-EXLCK 4 _N"old bsd flock (depricated)")
+  (defconstant F-SHLCK 8 _N"old bsd flock (depricated)"))
+#+alpha
+(progn
+  (defconstant F-RDLCK 1 _N"for fcntl and lockf")
+  (defconstant F-WRLCK 2 _N"for fcntl and lockf")
+  (defconstant F-UNLCK 8 _N"for fcntl and lockf")
+  (defconstant F-EXLCK 16 _N"old bsd flock (depricated)")
+  (defconstant F-SHLCK 32 _N"old bsd flock (depricated)"))
+
+(defconstant F-LOCK-SH 1 _N"Shared lock for bsd flock")
+(defconstant F-LOCK-EX 2 _N"Exclusive lock for bsd flock")
+(defconstant F-LOCK-NB 4 _N"Don't block. Combine with F-LOCK-SH or F-LOCK-EX")
+(defconstant F-LOCK-UN 8 _N"Remove lock for bsd flock")
 
 (def-alien-type nil
     (struct flock
@@ -716,11 +717,11 @@
 ;;; Define some more compatibility macros to be backward compatible with
 ;;; BSD systems which did not managed to hide these kernel macros. 
 
-(defconstant FAPPEND  o_append "depricated stuff")
-(defconstant FFSYNC   o_fsync  "depricated stuff")
-(defconstant FASYNC   o_async  "depricated stuff")
-(defconstant FNONBLOCK  o_nonblock "depricated stuff")
-(defconstant FNDELAY  o_ndelay "depricated stuff")
+(defconstant FAPPEND  o_append _N"depricated stuff")
+(defconstant FFSYNC   o_fsync  _N"depricated stuff")
+(defconstant FASYNC   o_async  _N"depricated stuff")
+(defconstant FNONBLOCK  o_nonblock _N"depricated stuff")
+(defconstant FNDELAY  o_ndelay _N"depricated stuff")
 
 
 ;;; grp.h 
@@ -729,17 +730,17 @@
 
 #+(or)
 (defun unix-setgrend ()
-  "Rewind the group-file stream."
+  _N"Rewind the group-file stream."
   (void-syscall ("setgrend")))
 
 #+(or)
 (defun unix-endgrent ()
-  "Close the group-file stream."
+  _N"Close the group-file stream."
   (void-syscall ("endgrent")))
 
 #+(or)
 (defun unix-getgrent ()
-  "Read an entry from the group-file stream, opening it if necessary."
+  _N"Read an entry from the group-file stream, opening it if necessary."
   
   (let ((result (alien-funcall (extern-alien "getgrent"
 					     (function (* (struct group)))))))
@@ -758,7 +759,7 @@
     (ws-ypixel unsigned-short)))	; veritical size, pixels
 
 (defconstant +NCC+ 8
-  "Size of control character vector.")
+  _N"Size of control character vector.")
 
 (def-alien-type nil
   (struct termio
@@ -968,11 +969,11 @@
 
 
 ;;; Possible values left in `h_errno'.
-(defconstant netdb-internal -1 "See errno.")
-(defconstant netdb-success 0 "No problem.")
-(defconstant host-not-found 1 "Authoritative Answer Host not found.")
-(defconstant try-again 2 "Non-Authoritative Host not found,or SERVERFAIL.")
-(defconstant no-recovery 3 "Non recoverable errors, FORMERR, REFUSED, NOTIMP.")
+(defconstant netdb-internal -1 _N"See errno.")
+(defconstant netdb-success 0 _N"No problem.")
+(defconstant host-not-found 1 _N"Authoritative Answer Host not found.")
+(defconstant try-again 2 _N"Non-Authoritative Host not found,or SERVERFAIL.")
+(defconstant no-recovery 3 _N"Non recoverable errors, FORMERR, REFUSED, NOTIMP.")
 (defconstant no-data 4	"Valid name, no data record of requested type.")
 (defconstant no-address	no-data	"No address, look for MX record.")
 
@@ -988,18 +989,18 @@
 
 #+(or)
 (defun unix-sethostent (stay-open)
-  "Open host data base files and mark them as staying open even after
+  _N"Open host data base files and mark them as staying open even after
 a later search if STAY_OPEN is non-zero."
   (void-syscall ("sethostent" int) stay-open))
 
 #+(or)
 (defun unix-endhostent ()
-  "Close host data base files and clear `stay open' flag."
+  _N"Close host data base files and clear `stay open' flag."
   (void-syscall ("endhostent")))
 
 #+(or)
 (defun unix-gethostent ()
-  "Get next entry from host data base file.  Open data base if
+  _N"Get next entry from host data base file.  Open data base if
 necessary."
     (let ((result (alien-funcall (extern-alien "gethostent"
 					     (function (* (struct hostent)))))))
@@ -1010,7 +1011,7 @@ necessary."
 
 #+(or)
 (defun unix-gethostbyaddr(addr length type)
-  "Return entry from host data base which address match ADDR with
+  _N"Return entry from host data base which address match ADDR with
 length LEN and type TYPE."
     (let ((result (alien-funcall (extern-alien "gethostbyaddr"
 					     (function (* (struct hostent))
@@ -1023,7 +1024,7 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-gethostbyname (name)
-  "Return entry from host data base for host with NAME."
+  _N"Return entry from host data base for host with NAME."
     (let ((result (alien-funcall (extern-alien "gethostbyname"
 					     (function (* (struct hostent))
 						       c-string))
@@ -1035,7 +1036,7 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-gethostbyname2 (name af)
-  "Return entry from host data base for host with NAME.  AF must be
+  _N"Return entry from host data base for host with NAME.  AF must be
    set to the address type which as `AF_INET' for IPv4 or `AF_INET6'
    for IPv6."
     (let ((result (alien-funcall (extern-alien "gethostbyname2"
@@ -1060,20 +1061,20 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-setnetent (stay-open)
-  "Open network data base files and mark them as staying open even
+  _N"Open network data base files and mark them as staying open even
    after a later search if STAY_OPEN is non-zero."
   (void-syscall ("setnetent" int) stay-open))
 
 
 #+(or)
 (defun unix-endnetent ()
-  "Close network data base files and clear `stay open' flag."
+  _N"Close network data base files and clear `stay open' flag."
   (void-syscall ("endnetent")))
 
 
 #+(or)
 (defun unix-getnetent ()
-  "Get next entry from network data base file.  Open data base if
+  _N"Get next entry from network data base file.  Open data base if
    necessary."
     (let ((result (alien-funcall (extern-alien "getnetent"
 					     (function (* (struct netent)))))))
@@ -1085,7 +1086,7 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-getnetbyaddr (net type)
-  "Return entry from network data base which address match NET and
+  _N"Return entry from network data base which address match NET and
    type TYPE."
     (let ((result (alien-funcall (extern-alien "getnetbyaddr"
 					     (function (* (struct netent))
@@ -1098,7 +1099,7 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-getnetbyname (name)
-  "Return entry from network data base for network with NAME."
+  _N"Return entry from network data base for network with NAME."
     (let ((result (alien-funcall (extern-alien "getnetbyname"
 					     (function (* (struct netent))
 						       c-string))
@@ -1118,19 +1119,19 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-setservent (stay-open)
-  "Open service data base files and mark them as staying open even
+  _N"Open service data base files and mark them as staying open even
    after a later search if STAY_OPEN is non-zero."
   (void-syscall ("setservent" int) stay-open))
 
 #+(or)
 (defun unix-endservent (stay-open)
-  "Close service data base files and clear `stay open' flag."
+  _N"Close service data base files and clear `stay open' flag."
   (void-syscall ("endservent")))
 
 
 #+(or)
 (defun unix-getservent ()
-  "Get next entry from service data base file.  Open data base if
+  _N"Get next entry from service data base file.  Open data base if
    necessary."
     (let ((result (alien-funcall (extern-alien "getservent"
 					     (function (* (struct servent)))))))
@@ -1141,7 +1142,7 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-getservbyname (name proto)
-  "Return entry from network data base for network with NAME and
+  _N"Return entry from network data base for network with NAME and
    protocol PROTO."
     (let ((result (alien-funcall (extern-alien "getservbyname"
 					     (function (* (struct netent))
@@ -1154,7 +1155,7 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-getservbyport (port proto)
-  "Return entry from service data base which matches port PORT and
+  _N"Return entry from service data base which matches port PORT and
    protocol PROTO."
     (let ((result (alien-funcall (extern-alien "getservbyport"
 					     (function (* (struct netent))
@@ -1175,18 +1176,18 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-setprotoent (stay-open)
-  "Open protocol data base files and mark them as staying open even
+  _N"Open protocol data base files and mark them as staying open even
    after a later search if STAY_OPEN is non-zero."
   (void-syscall ("setprotoent" int) stay-open))
 
 #+(or)
 (defun unix-endprotoent ()
-  "Close protocol data base files and clear `stay open' flag."
+  _N"Close protocol data base files and clear `stay open' flag."
   (void-syscall ("endprotoent")))
 
 #+(or)
 (defun unix-getprotoent ()
-  "Get next entry from protocol data base file.  Open data base if
+  _N"Get next entry from protocol data base file.  Open data base if
    necessary."
     (let ((result (alien-funcall (extern-alien "getprotoent"
 					     (function (* (struct protoent)))))))
@@ -1197,7 +1198,7 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-getprotobyname (name)
-  "Return entry from protocol data base for network with NAME."
+  _N"Return entry from protocol data base for network with NAME."
     (let ((result (alien-funcall (extern-alien "getprotobyname"
 					     (function (* (struct protoent))
 						       c-string))
@@ -1209,7 +1210,7 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-getprotobynumber (proto)
-  "Return entry from protocol data base which number is PROTO."
+  _N"Return entry from protocol data base which number is PROTO."
     (let ((result (alien-funcall (extern-alien "getprotobynumber"
 					     (function (* (struct protoent))
 						       int))
@@ -1221,24 +1222,24 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-setnetgrent (netgroup)
-  "Establish network group NETGROUP for enumeration."
+  _N"Establish network group NETGROUP for enumeration."
   (int-syscall ("setservent" c-string) netgroup))
 
 #+(or)
 (defun unix-endnetgrent ()
-  "Free all space allocated by previous `setnetgrent' call."
+  _N"Free all space allocated by previous `setnetgrent' call."
   (void-syscall ("endnetgrent")))
 
 #+(or)
 (defun unix-getnetgrent (hostp userp domainp)
-  "Get next member of netgroup established by last `setnetgrent' call
+  _N"Get next member of netgroup established by last `setnetgrent' call
    and return pointers to elements in HOSTP, USERP, and DOMAINP."
   (int-syscall ("getnetgrent" (* c-string) (* c-string) (* c-string))
 	       hostp userp domainp))
 
 #+(or)
 (defun unix-innetgr (netgroup host user domain)
-  "Test whether NETGROUP contains the triple (HOST,USER,DOMAIN)."
+  _N"Test whether NETGROUP contains the triple (HOST,USER,DOMAIN)."
   (int-syscall ("innetgr" c-string c-string c-string c-string)
 	       netgroup host user domain))
 
@@ -1257,26 +1258,26 @@ length LEN and type TYPE."
 
 ;; Possible values for `ai_flags' field in `addrinfo' structure.
 
-(defconstant ai_passive 1 "Socket address is intended for `bind'.")
-(defconstant ai_canonname 2 "Request for canonical name.")
+(defconstant ai_passive 1 _N"Socket address is intended for `bind'.")
+(defconstant ai_canonname 2 _N"Request for canonical name.")
 
 ;; Error values for `getaddrinfo' function.
-(defconstant eai_badflags -1 "Invalid value for `ai_flags' field.")
-(defconstant eai_noname -2 "NAME or SERVICE is unknown.")
-(defconstant eai_again -3 "Temporary failure in name resolution.")
-(defconstant eai_fail -4 "Non-recoverable failure in name res.")
-(defconstant eai_nodata -5 "No address associated with NAME.")
-(defconstant eai_family -6 "ai_family not supported.")
-(defconstant eai_socktype -7 "ai_socktype not supported.")
-(defconstant eai_service -8 "SERVICE not supported for ai_socktype.")
-(defconstant eai_addrfamily -9 "Address family for NAME not supported.")
-(defconstant eai_memory -10 "Memory allocation failure.")
-(defconstant eai_system -11 "System error returned in errno.")
+(defconstant eai_badflags -1 _N"Invalid value for `ai_flags' field.")
+(defconstant eai_noname -2 _N"NAME or SERVICE is unknown.")
+(defconstant eai_again -3 _N"Temporary failure in name resolution.")
+(defconstant eai_fail -4 _N"Non-recoverable failure in name res.")
+(defconstant eai_nodata -5 _N"No address associated with NAME.")
+(defconstant eai_family -6 _N"ai_family not supported.")
+(defconstant eai_socktype -7 _N"ai_socktype not supported.")
+(defconstant eai_service -8 _N"SERVICE not supported for ai_socktype.")
+(defconstant eai_addrfamily -9 _N"Address family for NAME not supported.")
+(defconstant eai_memory -10 _N"Memory allocation failure.")
+(defconstant eai_system -11 _N"System error returned in errno.")
 
 
 #+(or)
 (defun unix-getaddrinfo (name service req pai)
-  "Translate name of a service location and/or a service name to set of
+  _N"Translate name of a service location and/or a service name to set of
    socket addresses."
   (int-syscall ("getaddrinfo" c-string c-string (* (struct addrinfo))
 			      (* (* struct addrinfo)))
@@ -1285,7 +1286,7 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-freeaddrinfo (ai)
-  "Free `addrinfo' structure AI including associated storage."
+  _N"Free `addrinfo' structure AI including associated storage."
   (void-syscall ("freeaddrinfo" (* struct addrinfo))
 		ai))
 
@@ -1293,7 +1294,7 @@ length LEN and type TYPE."
 ;;; pty.h
 
 (defun unix-openpty (name termp winp)
-  "Create pseudo tty master slave pair with NAME and set terminal
+  _N"Create pseudo tty master slave pair with NAME and set terminal
    attributes according to TERMP and WINP and return handles for both
    ends in AMASTER and ASLAVE."
   (with-alien ((amaster int)
@@ -1306,7 +1307,7 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-forkpty (amaster name termp winp)
-  "Create child process and establish the slave pseudo terminal as the
+  _N"Create child process and establish the slave pseudo terminal as the
    child's controlling terminal."
   (int-syscall ("forkpty" (* int) c-string (* (struct termios))
 			  (* (struct winsize)))
@@ -1317,17 +1318,17 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-setpwent ()
-  "Rewind the password-file stream."
+  _N"Rewind the password-file stream."
   (void-syscall ("setpwent")))
 
 #+(or)
 (defun unix-endpwent ()
-  "Close the password-file stream."
+  _N"Close the password-file stream."
   (void-syscall ("endpwent")))
 
 #+(or)
 (defun unix-getpwent ()
-  "Read an entry from the password-file stream, opening it if necessary."
+  _N"Read an entry from the password-file stream, opening it if necessary."
     (let ((result (alien-funcall (extern-alien "getpwent"
 					     (function (* (struct passwd)))))))
     (declare (type system-area-pointer result))
@@ -1342,8 +1343,8 @@ length LEN and type TYPE."
     (rlim-cur long)	 ; current (soft) limit
     (rlim-max long))); maximum value for rlim-cur
 
-(defconstant rusage_self 0 "The calling process.")
-(defconstant rusage_children -1 "Terminated child processes.")
+(defconstant rusage_self 0 _N"The calling process.")
+(defconstant rusage_children -1 _N"Terminated child processes.")
 (defconstant rusage_both -2)
 
 (def-alien-type nil
@@ -1367,57 +1368,57 @@ length LEN and type TYPE."
 
 ;; Priority limits.
 
-(defconstant prio-min -20 "Minimum priority a process can have")
-(defconstant prio-max 20 "Maximum priority a process can have")
+(defconstant prio-min -20 _N"Minimum priority a process can have")
+(defconstant prio-max 20 _N"Maximum priority a process can have")
 
 
 ;;; The type of the WHICH argument to `getpriority' and `setpriority',
 ;;; indicating what flavor of entity the WHO argument specifies.
 
-(defconstant priority-process 0 "WHO is a process ID")
-(defconstant priority-pgrp 1 "WHO is a process group ID")
-(defconstant priority-user 2 "WHO is a user ID")
+(defconstant priority-process 0 _N"WHO is a process ID")
+(defconstant priority-pgrp 1 _N"WHO is a process group ID")
+(defconstant priority-user 2 _N"WHO is a user ID")
 
 ;;; sched.h
 
 #+(or)
 (defun unix-sched_setparam (pid param)
-  "Rewind the password-file stream."
+  _N"Rewind the password-file stream."
   (int-syscall ("sched_setparam" pid-t (struct psched-param))
 		pid param))
 
 #+(or)
 (defun unix-sched_getparam (pid param)
-  "Rewind the password-file stream."
+  _N"Rewind the password-file stream."
   (int-syscall ("sched_getparam" pid-t (struct psched-param))
 		pid param))
 
 
 #+(or)
 (defun unix-sched_setscheduler (pid policy param)
-  "Set scheduling algorithm and/or parameters for a process."
+  _N"Set scheduling algorithm and/or parameters for a process."
   (int-syscall ("sched_setscheduler" pid-t int (struct psched-param))
 		pid policy param))
 
 #+(or)
 (defun unix-sched_getscheduler (pid)
-  "Retrieve scheduling algorithm for a particular purpose."
+  _N"Retrieve scheduling algorithm for a particular purpose."
   (int-syscall ("sched_getscheduler" pid-t)
 		pid))
 
 (defun unix-sched-yield ()
-  "Retrieve scheduling algorithm for a particular purpose."
+  _N"Retrieve scheduling algorithm for a particular purpose."
   (int-syscall ("sched_yield")))
 
 #+(or)
 (defun unix-sched_get_priority_max (algorithm)
-  "Get maximum priority value for a scheduler."
+  _N"Get maximum priority value for a scheduler."
   (int-syscall ("sched_get_priority_max" int)
 		algorithm))
 
 #+(or)
 (defun unix-sched_get_priority_min (algorithm)
-  "Get minimum priority value for a scheduler."
+  _N"Get minimum priority value for a scheduler."
   (int-syscall ("sched_get_priority_min" int)
 		algorithm))
 
@@ -1425,7 +1426,7 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-sched_rr_get_interval (pid t)
-  "Get the SCHED_RR interval for the named process."
+  _N"Get the SCHED_RR interval for the named process."
   (int-syscall ("sched_rr_get_interval" pid-t (* (struct timespec)))
 		pid t))
 
@@ -1443,12 +1444,12 @@ length LEN and type TYPE."
 	    (sched-priority int)))
 
 ;; Cloning flags.
-(defconstant csignal       #x000000ff "Signal mask to be sent at exit.")
-(defconstant clone_vm      #x00000100 "Set if VM shared between processes.")
-(defconstant clone_fs      #x00000200 "Set if fs info shared between processes")
-(defconstant clone_files   #x00000400 "Set if open files shared between processe")
-(defconstant clone_sighand #x00000800 "Set if signal handlers shared.")
-(defconstant clone_pid     #x00001000 "Set if pid shared.")
+(defconstant csignal       #x000000ff _N"Signal mask to be sent at exit.")
+(defconstant clone_vm      #x00000100 _N"Set if VM shared between processes.")
+(defconstant clone_fs      #x00000200 _N"Set if fs info shared between processes")
+(defconstant clone_files   #x00000400 _N"Set if open files shared between processe")
+(defconstant clone_sighand #x00000800 _N"Set if signal handlers shared.")
+(defconstant clone_pid     #x00001000 _N"Set if pid shared.")
 
 
 ;;; shadow.h
@@ -1469,17 +1470,17 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-setspent ()
-  "Open database for reading."
+  _N"Open database for reading."
   (void-syscall ("setspent")))
 
 #+(or)
 (defun unix-endspent ()
-  "Close database."
+  _N"Close database."
   (void-syscall ("endspent")))
 
 #+(or)
 (defun unix-getspent ()
-  "Get next entry from database, perhaps after opening the file."
+  _N"Get next entry from database, perhaps after opening the file."
     (let ((result (alien-funcall (extern-alien "getspent"
 					     (function (* (struct spwd)))))))
     (declare (type system-area-pointer result))
@@ -1489,7 +1490,7 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-getspnam (name)
-  "Get shadow entry matching NAME."
+  _N"Get shadow entry matching NAME."
     (let ((result (alien-funcall (extern-alien "getspnam"
 					     (function (* (struct spwd))
 						       c-string))
@@ -1501,7 +1502,7 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-sgetspent (string)
-  "Read shadow entry from STRING."
+  _N"Read shadow entry from STRING."
     (let ((result (alien-funcall (extern-alien "sgetspent"
 					     (function (* (struct spwd))
 						       c-string))
@@ -1515,13 +1516,13 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-lckpwdf ()
-  "Protect password file against multi writers."
+  _N"Protect password file against multi writers."
   (void-syscall ("lckpwdf")))
 
 
 #+(or)
 (defun unix-ulckpwdf ()
-  "Unlock password file."
+  _N"Unlock password file."
   (void-syscall ("ulckpwdf")))
 
 ;;; bits/stat.h
@@ -1561,29 +1562,29 @@ length LEN and type TYPE."
 
 ;; Encoding of the file mode.
 
-(defconstant s-ifmt   #o0170000 "These bits determine file type.")
+(defconstant s-ifmt   #o0170000 _N"These bits determine file type.")
 
 ;; File types.
 
-(defconstant s-ififo  #o0010000 "FIFO")
-(defconstant s-ifchr  #o0020000 "Character device")
-(defconstant s-ifdir  #o0040000 "Directory")
-(defconstant s-ifblk  #o0060000 "Block device")
-(defconstant s-ifreg  #o0100000 "Regular file")
+(defconstant s-ififo  #o0010000 _N"FIFO")
+(defconstant s-ifchr  #o0020000 _N"Character device")
+(defconstant s-ifdir  #o0040000 _N"Directory")
+(defconstant s-ifblk  #o0060000 _N"Block device")
+(defconstant s-ifreg  #o0100000 _N"Regular file")
 
 ;; These don't actually exist on System V, but having them doesn't hurt.
 
-(defconstant s-iflnk  #o0120000 "Symbolic link.")
-(defconstant s-ifsock #o0140000 "Socket.")
+(defconstant s-iflnk  #o0120000 _N"Symbolic link.")
+(defconstant s-ifsock #o0140000 _N"Socket.")
 
 ;; Protection bits.
 
-(defconstant s-isuid #o0004000 "Set user ID on execution.")
-(defconstant s-isgid #o0002000 "Set group ID on execution.")
-(defconstant s-isvtx #o0001000 "Save swapped text after use (sticky).")
-(defconstant s-iread #o0000400 "Read by owner")
-(defconstant s-iwrite #o0000200 "Write by owner.")
-(defconstant s-iexec #o0000100 "Execute by owner.")
+(defconstant s-isuid #o0004000 _N"Set user ID on execution.")
+(defconstant s-isgid #o0002000 _N"Set group ID on execution.")
+(defconstant s-isvtx #o0001000 _N"Save swapped text after use (sticky).")
+(defconstant s-iread #o0000400 _N"Read by owner")
+(defconstant s-iwrite #o0000200 _N"Write by owner.")
+(defconstant s-iexec #o0000100 _N"Execute by owner.")
 
 ;;; statfsbuf.h
 
@@ -1608,7 +1609,7 @@ length LEN and type TYPE."
 (def-alien-type tcflag-t unsigned-int)
 
 (defconstant +NCCS+ 32
-  "Size of control character vector.")
+  _N"Size of control character vector.")
 
 (def-alien-type nil
   (struct termios
@@ -1727,7 +1728,7 @@ length LEN and type TYPE."
 ;;; termios.h
 
 (defun unix-cfgetospeed (termios)
-  "Get terminal output speed."
+  _N"Get terminal output speed."
   (multiple-value-bind (speed errno)
       (int-syscall ("cfgetospeed" (* (struct termios))) termios)
     (if speed
@@ -1735,13 +1736,13 @@ length LEN and type TYPE."
       (values speed errno))))
 
 (defun unix-cfsetospeed (termios speed)
-  "Set terminal output speed."
+  _N"Set terminal output speed."
   (let ((baud (or (position speed terminal-speeds)
-		  (error "Bogus baud rate ~S" speed))))
+		  (error _"Bogus baud rate ~S" speed))))
     (void-syscall ("cfsetospeed" (* (struct termios)) int) termios baud)))
 
 (defun unix-cfgetispeed (termios)
-  "Get terminal input speed."
+  _N"Get terminal input speed."
   (multiple-value-bind (speed errno)
       (int-syscall ("cfgetispeed" (* (struct termios))) termios)
     (if speed
@@ -1749,38 +1750,38 @@ length LEN and type TYPE."
       (values speed errno))))
 
 (defun unix-cfsetispeed (termios speed)
-  "Set terminal input speed."
+  _N"Set terminal input speed."
   (let ((baud (or (position speed terminal-speeds)
-		  (error "Bogus baud rate ~S" speed))))
+		  (error _"Bogus baud rate ~S" speed))))
     (void-syscall ("cfsetispeed" (* (struct termios)) int) termios baud)))
 
 (defun unix-tcgetattr (fd termios)
-  "Get terminal attributes."
+  _N"Get terminal attributes."
   (declare (type unix-fd fd))
   (void-syscall ("tcgetattr" int (* (struct termios))) fd termios))
 
 (defun unix-tcsetattr (fd opt termios)
-  "Set terminal attributes."
+  _N"Set terminal attributes."
   (declare (type unix-fd fd))
   (void-syscall ("tcsetattr" int int (* (struct termios))) fd opt termios))
 
 (defun unix-tcsendbreak (fd duration)
-  "Send break"
+  _N"Send break"
   (declare (type unix-fd fd))
   (void-syscall ("tcsendbreak" int int) fd duration))
 
 (defun unix-tcdrain (fd)
-  "Wait for output for finish"
+  _N"Wait for output for finish"
   (declare (type unix-fd fd))
   (void-syscall ("tcdrain" int) fd))
 
 (defun unix-tcflush (fd selector)
-  "See tcflush(3)"
+  _N"See tcflush(3)"
   (declare (type unix-fd fd))
   (void-syscall ("tcflush" int int) fd selector))
 
 (defun unix-tcflow (fd action)
-  "Flow control"
+  _N"Flow control"
   (declare (type unix-fd fd))
   (void-syscall ("tcflow" int int) fd action))
 
@@ -1829,7 +1830,7 @@ length LEN and type TYPE."
 
 (defun unix-execve (program &optional arg-list
 			    (environment *environment-list*))
-  "Executes the Unix execve system call.  If the system call suceeds, lisp
+  _N"Executes the Unix execve system call.  If the system call suceeds, lisp
    will no longer be running in this process.  If the system call fails this
    function returns two values: NIL and an error code.  Arg-list should be a
    list of simple-strings which are passed as arguments to the exec'ed program.
@@ -1858,7 +1859,7 @@ length LEN and type TYPE."
 ;;; only has meaning in the second case and is the unix errno value.
 
 (defun unix-access (path mode)
-  "Given a file path (a string) and one of four constant modes,
+  _N"Given a file path (a string) and one of four constant modes,
    unix-access returns T if the file is accessible with that
    mode and NIL if not.  It also returns an errno value with
    NIL which determines why the file was not accessible.
@@ -1872,12 +1873,12 @@ length LEN and type TYPE."
 	   (type (mod 8) mode))
   (void-syscall ("access" c-string int) (%name->file path) mode))
 
-(defconstant l_set 0 "set the file pointer")
-(defconstant l_incr 1 "increment the file pointer")
-(defconstant l_xtnd 2 "extend the file size")
+(defconstant l_set 0 _N"set the file pointer")
+(defconstant l_incr 1 _N"increment the file pointer")
+(defconstant l_xtnd 2 _N"extend the file size")
 
 (defun unix-lseek (fd offset whence)
-  "UNIX-LSEEK accepts a file descriptor and moves the file pointer ahead
+  _N"UNIX-LSEEK accepts a file descriptor and moves the file pointer ahead
    a certain OFFSET for that file.  WHENCE can be any of the following:
 
    l_set        Set the file pointer.
@@ -1901,7 +1902,7 @@ length LEN and type TYPE."
 ;;; bytes read.
 
 (defun unix-read (fd buf len)
-  "UNIX-READ attempts to read from the file described by fd into
+  _N"UNIX-READ attempts to read from the file described by fd into
    the buffer buf until it is full.  Len is the length of the buffer.
    The number of bytes actually read is returned or NIL and an error
    number if an error occured."
@@ -1940,7 +1941,7 @@ length LEN and type TYPE."
 ;;; the actual number of bytes written.
 
 (defun unix-write (fd buf offset len)
-  "Unix-write attempts to write a character buffer (buf) of length
+  _N"Unix-write attempts to write a character buffer (buf) of length
    len to the file described by the file descriptor fd.  NIL and an
    error is returned if the call is unsuccessful."
   (declare (type unix-fd fd)
@@ -1956,7 +1957,7 @@ length LEN and type TYPE."
 	       len))
 
 (defun unix-pipe ()
-  "Unix-pipe sets up a unix-piping mechanism consisting of
+  _N"Unix-pipe sets up a unix-piping mechanism consisting of
   an input pipe and an output pipe.  Unix-Pipe returns two
   values: if no error occurred the first value is the pipe
   to be read from and the second is can be written to.  If
@@ -1969,7 +1970,7 @@ length LEN and type TYPE."
 
 
 (defun unix-chown (path uid gid)
-  "Given a file path, an integer user-id, and an integer group-id,
+  _N"Given a file path, an integer user-id, and an integer group-id,
    unix-chown changes the owner of the file and the group of the
    file to those specified.  Either the owner or the group may be
    left unchanged by specifying them as -1.  Note: Permission will
@@ -1983,7 +1984,7 @@ length LEN and type TYPE."
 ;;; is specified by a file-descriptor ("fd") instead of a pathname.
 
 (defun unix-fchown (fd uid gid)
-  "Unix-fchown is like unix-chown, except that it accepts an integer
+  _N"Unix-fchown is like unix-chown, except that it accepts an integer
    file descriptor instead of a file path name."
   (declare (type unix-fd fd)
 	   (type (or unix-uid (integer -1 -1)) uid)
@@ -1994,13 +1995,13 @@ length LEN and type TYPE."
 ;;; current working directory.
 
 (defun unix-chdir (path)
-  "Given a file path string, unix-chdir changes the current working 
+  _N"Given a file path string, unix-chdir changes the current working 
    directory to the one specified."
   (declare (type unix-pathname path))
   (void-syscall ("chdir" c-string) (%name->file path)))
 
 (defun unix-current-directory ()
-  "Put the absolute pathname of the current working directory in BUF.
+  _N"Put the absolute pathname of the current working directory in BUF.
    If successful, return BUF.  If not, put an error message in
    BUF and return NULL.  BUF should be at least PATH_MAX bytes long."
   ;; 5120 is some randomly selected maximum size for the buffer for getcwd.
@@ -2020,7 +2021,7 @@ length LEN and type TYPE."
 ;;; passed as an argument.
 
 (defun unix-dup (fd)
-  "Unix-dup duplicates an existing file descriptor (given as the
+  _N"Unix-dup duplicates an existing file descriptor (given as the
    argument) and return it.  If FD is not a valid file descriptor, NIL
    and an error number are returned."
   (declare (type unix-fd fd))
@@ -2032,7 +2033,7 @@ length LEN and type TYPE."
 ;;; value which is a valid file-descriptor.
 
 (defun unix-dup2 (fd1 fd2)
-  "Unix-dup2 duplicates an existing file descriptor just as unix-dup
+  _N"Unix-dup2 duplicates an existing file descriptor just as unix-dup
    does only the new value of the duplicate descriptor may be requested
    through the second argument.  If a file already exists with the
    requested descriptor number, it will be closed and the number
@@ -2043,7 +2044,7 @@ length LEN and type TYPE."
 ;;; Unix-exit terminates a program.
 
 (defun unix-exit (&optional (code 0))
-  "Unix-exit terminates the current process with an optional
+  _N"Unix-exit terminates the current process with an optional
    error code.  If successful, the call doesn't return.  If
    unsuccessful, the call returns NIL and an error number."
   (declare (type (signed-byte 32) code))
@@ -2051,17 +2052,17 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-pathconf (path name)
-  "Get file-specific configuration information about PATH."
+  _N"Get file-specific configuration information about PATH."
   (int-syscall ("pathconf" c-string int) (%name->file path) name))
 
 #+(or)
 (defun unix-sysconf (name)
-  "Get the value of the system variable NAME."
+  _N"Get the value of the system variable NAME."
   (int-syscall ("sysconf" int) name))
 
 #+(or)
 (defun unix-confstr (name)
-  "Get the value of the string-valued system variable NAME."
+  _N"Get the value of the string-valued system variable NAME."
   (with-alien ((buf (array char 1024)))
     (values (not (zerop (alien-funcall (extern-alien "confstr"
 						     (function int
@@ -2072,16 +2073,16 @@ length LEN and type TYPE."
 
 
 (def-alien-routine ("getpid" unix-getpid) int
-  "Unix-getpid returns the process-id of the current process.")
+  _N"Unix-getpid returns the process-id of the current process.")
 
 (def-alien-routine ("getppid" unix-getppid) int
-  "Unix-getppid returns the process-id of the parent of the current process.")
+  _N"Unix-getppid returns the process-id of the parent of the current process.")
 
 ;;; Unix-getpgrp returns the group-id associated with the
 ;;; current process.
 
 (defun unix-getpgrp ()
-  "Unix-getpgrp returns the group-id of the calling process."
+  _N"Unix-getpgrp returns the group-id of the calling process."
   (int-syscall ("getpgrp")))
 
 ;;; Unix-setpgid sets the group-id of the process specified by 
@@ -2093,41 +2094,41 @@ length LEN and type TYPE."
 ;;; out in favor of setsid().
 
 (defun unix-setpgrp (pid pgrp)
-  "Unix-setpgrp sets the process group on the process pid to
+  _N"Unix-setpgrp sets the process group on the process pid to
    pgrp.  NIL and an error number are returned upon failure."
   (void-syscall ("setpgid" int int) pid pgrp))
 
 (defun unix-setpgid (pid pgrp)
-  "Unix-setpgid sets the process group of the process pid to
+  _N"Unix-setpgid sets the process group of the process pid to
    pgrp. If pgid is equal to pid, the process becomes a process
    group leader. NIL and an error number are returned upon failure."
   (void-syscall ("setpgid" int int) pid pgrp))
 
 #+(or)
 (defun unix-setsid ()
-  "Create a new session with the calling process as its leader.
+  _N"Create a new session with the calling process as its leader.
    The process group IDs of the session and the calling process
    are set to the process ID of the calling process, which is returned."
   (void-syscall ( "setsid")))
 
 #+(or)
 (defun unix-getsid ()
-  "Return the session ID of the given process."
+  _N"Return the session ID of the given process."
   (int-syscall ( "getsid")))
 
 (def-alien-routine ("getuid" unix-getuid) int
-  "Unix-getuid returns the real user-id associated with the
+  _N"Unix-getuid returns the real user-id associated with the
    current process.")
 
 #+(or)
 (def-alien-routine ("geteuid" unix-getuid) int
-  "Get the effective user ID of the calling process.")
+  _N"Get the effective user ID of the calling process.")
 
 (def-alien-routine ("getgid" unix-getgid) int
-  "Unix-getgid returns the real group-id of the current process.")
+  _N"Unix-getgid returns the real group-id of the current process.")
 
 (def-alien-routine ("getegid" unix-getegid) int
-  "Unix-getegid returns the effective group-id of the current process.")
+  _N"Unix-getegid returns the effective group-id of the current process.")
 
 ;/* If SIZE is zero, return the number of supplementary groups
 ;   the calling process is in.  Otherwise, fill in the group IDs
@@ -2136,12 +2137,12 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-group-member (gid)
-  "Return nonzero iff the calling process is in group GID."
+  _N"Return nonzero iff the calling process is in group GID."
   (int-syscall ( "group-member" gid-t) gid))
 
 
 (defun unix-setuid (uid)
-  "Set the user ID of the calling process to UID.
+  _N"Set the user ID of the calling process to UID.
    If the calling process is the super-user, set the real
    and effective user IDs, and the saved set-user-ID to UID;
    if not, the effective user ID is set to UID."
@@ -2153,13 +2154,13 @@ length LEN and type TYPE."
 ;;; "euid" to -1 makes the system use the current id instead.
 
 (defun unix-setreuid (ruid euid)
-  "Unix-setreuid sets the real and effective user-id's of the current
+  _N"Unix-setreuid sets the real and effective user-id's of the current
    process to the specified ones.  NIL and an error number is returned
    if the call fails."
   (void-syscall ("setreuid" int int) ruid euid))
 
 (defun unix-setgid (gid)
-  "Set the group ID of the calling process to GID.
+  _N"Set the group ID of the calling process to GID.
    If the calling process is the super-user, set the real
    and effective group IDs, and the saved set-group-ID to GID;
    if not, the effective group ID is set to GID."
@@ -2172,13 +2173,13 @@ length LEN and type TYPE."
 ;;; "egid" to -1 makes the system use the current id instead.
 
 (defun unix-setregid (rgid egid)
-  "Unix-setregid sets the real and effective group-id's of the current
+  _N"Unix-setregid sets the real and effective group-id's of the current
    process process to the specified ones.  NIL and an error number is
    returned if the call fails."
   (void-syscall ("setregid" int int) rgid egid))
 
 (defun unix-fork ()
-  "Executes the unix fork system call.  Returns 0 in the child and the pid
+  _N"Executes the unix fork system call.  Returns 0 in the child and the pid
    of the child in the parent if it works, or NIL and an error number if it
    doesn't work."
   (int-syscall ("fork")))
@@ -2186,47 +2187,47 @@ length LEN and type TYPE."
 ;; Environment maninpulation; man getenv(3)
 (def-alien-routine ("getenv" unix-getenv) c-call:c-string
   (name c-call:c-string) 
-  "Get the value of the environment variable named Name.  If no such
+  _N"Get the value of the environment variable named Name.  If no such
   variable exists, Nil is returned.")
 
 (def-alien-routine ("setenv" unix-setenv) c-call:int
   (name c-call:c-string)
   (value c-call:c-string)
   (overwrite c-call:int)
-  "Adds the environment variable named Name to the environment with
+  _N"Adds the environment variable named Name to the environment with
   the given Value if Name does not already exist. If Name does exist,
   the value is changed to Value if Overwrite is non-zero.  Otherwise,
   the value is not changed.")
 
 (def-alien-routine ("putenv" unix-putenv) c-call:int
   (name c-call:c-string)
-  "Adds or changes the environment.  Name-value must be a string of
+  _N"Adds or changes the environment.  Name-value must be a string of
   the form \"name=value\".  If the name does not exist, it is added.
   If name does exist, the value is updated to the given value.")
 
 (def-alien-routine ("unsetenv" unix-unsetenv) c-call:int
   (name c-call:c-string)
-  "Removes the variable Name from the environment")
+  _N"Removes the variable Name from the environment")
 
 (def-alien-routine ("ttyname" unix-ttyname) c-string
   (fd int))
 
 (def-alien-routine ("isatty" unix-isatty) boolean
-  "Accepts a Unix file descriptor and returns T if the device
+  _N"Accepts a Unix file descriptor and returns T if the device
   associated with it is a terminal."
   (fd int))
 
 ;;; Unix-link creates a hard link from name2 to name1.
 
 (defun unix-link (name1 name2)
-  "Unix-link creates a hard link from the file with name1 to the
+  _N"Unix-link creates a hard link from the file with name1 to the
    file with name2."
   (declare (type unix-pathname name1 name2))
   (void-syscall ("link" c-string c-string)
 		(%name->file name1) (%name->file name2)))
 
 (defun unix-symlink (name1 name2)
-  "Unix-symlink creates a symbolic link named name2 to the file
+  _N"Unix-symlink creates a symbolic link named name2 to the file
    named name1.  NIL and an error number is returned if the call
    is unsuccessful."
   (declare (type unix-pathname name1 name2))
@@ -2234,7 +2235,7 @@ length LEN and type TYPE."
 		(%name->file name1) (%name->file name2)))
 
 (defun unix-readlink (path)
-  "Unix-readlink invokes the readlink system call on the file name
+  _N"Unix-readlink invokes the readlink system call on the file name
   specified by the simple string path.  It returns up to two values:
   the contents of the symbolic link if the call is successful, or
   NIL and the Unix error number."
@@ -2258,7 +2259,7 @@ length LEN and type TYPE."
 ;;; name and the file if this is the last link.
 
 (defun unix-unlink (name)
-  "Unix-unlink removes the directory entry for the named file.
+  _N"Unix-unlink removes the directory entry for the named file.
    NIL and an error code is returned if the call fails."
   (declare (type unix-pathname name))
   (void-syscall ("unlink" c-string) (%name->file name)))
@@ -2266,13 +2267,13 @@ length LEN and type TYPE."
 ;;; Unix-rmdir accepts a name and removes the associated directory.
 
 (defun unix-rmdir (name)
-  "Unix-rmdir attempts to remove the directory name.  NIL and
+  _N"Unix-rmdir attempts to remove the directory name.  NIL and
    an error number is returned if an error occured."
   (declare (type unix-pathname name))
   (void-syscall ("rmdir" c-string) (%name->file name)))
 
 (defun tcgetpgrp (fd)
-  "Get the tty-process-group for the unix file-descriptor FD."
+  _N"Get the tty-process-group for the unix file-descriptor FD."
   (alien:with-alien ((alien-pgrp c-call:int))
     (multiple-value-bind (ok err)
 	(unix-ioctl fd
@@ -2283,7 +2284,7 @@ length LEN and type TYPE."
 	  (values nil err)))))
 
 (defun tty-process-group (&optional fd)
-  "Get the tty-process-group for the unix file-descriptor FD.  If not supplied,
+  _N"Get the tty-process-group for the unix file-descriptor FD.  If not supplied,
   FD defaults to /dev/tty."
   (if fd
       (tcgetpgrp fd)
@@ -2297,14 +2298,14 @@ length LEN and type TYPE."
 	       (values nil errno))))))
 
 (defun tcsetpgrp (fd pgrp)
-  "Set the tty-process-group for the unix file-descriptor FD to PGRP."
+  _N"Set the tty-process-group for the unix file-descriptor FD to PGRP."
   (alien:with-alien ((alien-pgrp c-call:int pgrp))
     (unix-ioctl fd
 		tiocspgrp
 		(alien:alien-sap (alien:addr alien-pgrp)))))
 
 (defun %set-tty-process-group (pgrp &optional fd)
-  "Set the tty-process-group for the unix file-descriptor FD to PGRP.  If not
+  _N"Set the tty-process-group for the unix file-descriptor FD to PGRP.  If not
   supplied, FD defaults to /dev/tty."
   (let ((old-sigs
 	 (unix-sigblock
@@ -2324,13 +2325,13 @@ length LEN and type TYPE."
       (unix-sigsetmask old-sigs))))
   
 (defsetf tty-process-group (&optional fd) (pgrp)
-  "Set the tty-process-group for the unix file-descriptor FD to PGRP.  If not
+  _N"Set the tty-process-group for the unix file-descriptor FD to PGRP.  If not
   supplied, FD defaults to /dev/tty."
   `(%set-tty-process-group ,pgrp ,fd))
 
 #+(or)
 (defun unix-getlogin ()
-  "Return the login name of the user."
+  _N"Return the login name of the user."
     (let ((result (alien-funcall (extern-alien "getlogin"
 					     (function c-string)))))
     (declare (type system-area-pointer result))
@@ -2348,7 +2349,7 @@ length LEN and type TYPE."
     (domainname (array char 65))))
 
 (defun unix-uname ()
-  "Unix-uname returns the name and information about the current kernel. The
+  _N"Unix-uname returns the name and information about the current kernel. The
   values returned upon success are: sysname, nodename, release, version,
   machine, and domainname. Upon failure, 'nil and the 'errno are returned."
   (with-alien ((utsname (struct utsname)))
@@ -2362,7 +2363,7 @@ length LEN and type TYPE."
 	      (addr utsname))))
 
 (defun unix-gethostname ()
-  "Unix-gethostname returns the name of the host machine as a string."
+  _N"Unix-gethostname returns the name of the host machine as a string."
   (with-alien ((buf (array char 256)))
     (syscall* ("gethostname" (* char) int)
 	      (cast buf c-string)
@@ -2388,7 +2389,7 @@ length LEN and type TYPE."
 ;;; permanent storage (i.e. disk).
 
 (defun unix-fsync (fd)
-  "Unix-fsync writes the core image of the file described by
+  _N"Unix-fsync writes the core image of the file described by
    fd to disk."
   (declare (type unix-fd fd))
   (void-syscall ("fsync" int) fd))
@@ -2396,32 +2397,32 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-vhangup ()
- "Revoke access permissions to all processes currently communicating
+ _N"Revoke access permissions to all processes currently communicating
   with the control terminal, and then send a SIGHUP signal to the process
   group of the control terminal." 
  (int-syscall ("vhangup")))
 
 #+(or)
 (defun unix-revoke (file)
- "Revoke the access of all descriptors currently open on FILE."
+ _N"Revoke the access of all descriptors currently open on FILE."
  (int-syscall ("revoke" c-string) (%name->file file)))
 
 
 #+(or)
 (defun unix-chroot (path)
- "Make PATH be the root directory (the starting point for absolute paths).
+ _N"Make PATH be the root directory (the starting point for absolute paths).
    This call is restricted to the super-user."
  (int-syscall ("chroot" c-string) (%name->file path)))
 
 (def-alien-routine ("gethostid" unix-gethostid) unsigned-long
-  "Unix-gethostid returns a 32-bit integer which provides unique
+  _N"Unix-gethostid returns a 32-bit integer which provides unique
    identification for the host machine.")
 
 ;;; Unix-sync writes all information in core memory which has been modified
 ;;; to permanent storage (i.e. disk).
 
 (defun unix-sync ()
-  "Unix-sync writes all information in core memory which has been
+  _N"Unix-sync writes all information in core memory which has been
    modified to disk.  It returns NIL and an error code if an error
    occured."
   (void-syscall ("sync")))
@@ -2429,14 +2430,14 @@ length LEN and type TYPE."
 ;;; Unix-getpagesize returns the number of bytes in the system page.
 
 (defun unix-getpagesize ()
-  "Unix-getpagesize returns the number of bytes in a system page."
+  _N"Unix-getpagesize returns the number of bytes in a system page."
   (int-syscall ("getpagesize")))
 
 ;;; Unix-truncate accepts a file name and a new length.  The file is
 ;;; truncated to the new length.
 
 (defun unix-truncate (name length)
-  "Unix-truncate truncates the named file to the length (in
+  _N"Unix-truncate truncates the named file to the length (in
    bytes) specified by LENGTH.  NIL and an error number is returned
    if the call is unsuccessful."
   (declare (type unix-pathname name)
@@ -2444,7 +2445,7 @@ length LEN and type TYPE."
   (void-syscall ("truncate64" c-string off-t) (%name->file name) length))
 
 (defun unix-ftruncate (fd length)
-  "Unix-ftruncate is similar to unix-truncate except that the first
+  _N"Unix-ftruncate is similar to unix-truncate except that the first
    argument is a file descriptor rather than a file name."
   (declare (type unix-fd fd)
 	   (type (unsigned-byte 64) length))
@@ -2452,17 +2453,17 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-getdtablesize ()
-  "Return the maximum number of file descriptors
+  _N"Return the maximum number of file descriptors
    the current process could possibly have."
   (int-syscall ("getdtablesize")))
 
-(defconstant f_ulock 0 "Unlock a locked region")
-(defconstant f_lock 1 "Lock a region for exclusive use")
-(defconstant f_tlock 2 "Test and lock a region for exclusive use")
-(defconstant f_test 3 "Test a region for othwer processes locks")
+(defconstant f_ulock 0 _N"Unlock a locked region")
+(defconstant f_lock 1 _N"Lock a region for exclusive use")
+(defconstant f_tlock 2 _N"Test and lock a region for exclusive use")
+(defconstant f_test 3 _N"Test a region for othwer processes locks")
 
 (defun unix-lockf (fd cmd length)
-  "Unix-locks can lock, unlock and test files according to the cmd
+  _N"Unix-locks can lock, unlock and test files according to the cmd
    which can be one of the following:
 
    f_ulock  Unlock a locked region
@@ -2495,7 +2496,7 @@ length LEN and type TYPE."
 ;;; updated seconds and microseconds.
 
 (defun unix-utimes (file atime-sec atime-usec mtime-sec mtime-usec)
-  "Unix-utimes sets the 'last-accessed' and 'last-updated'
+  _N"Unix-utimes sets the 'last-accessed' and 'last-updated'
    times on a specified file.  NIL and an error number is
    returned if the call is unsuccessful."
   (declare (type unix-pathname file)
@@ -2514,15 +2515,15 @@ length LEN and type TYPE."
 
 ;; Bits in the third argument to `waitpid'.
 
-(defconstant waitpid-wnohang 1 "Don't block waiting.")
-(defconstant waitpid-wuntranced 2 "Report status of stopped children.")
+(defconstant waitpid-wnohang 1 _N"Don't block waiting.")
+(defconstant waitpid-wuntranced 2 _N"Report status of stopped children.")
 
-(defconstant waitpid-wclone #x80000000 "Wait for cloned process.")
+(defconstant waitpid-wclone #x80000000 _N"Wait for cloned process.")
 
 ;;; sys/ioctl.h
 
 (defun unix-ioctl (fd cmd arg)
-  "Unix-ioctl performs a variety of operations on open i/o
+  _N"Unix-ioctl performs a variety of operations on open i/o
    descriptors.  See the UNIX Programmer's Manual for more
    information."
   (declare (type unix-fd fd)
@@ -2534,13 +2535,13 @@ length LEN and type TYPE."
 
 #+(or)
 (defun unix-setfsuid (uid)
-  "Change uid used for file access control to UID, without affecting
+  _N"Change uid used for file access control to UID, without affecting
    other priveledges (such as who can send signals at the process)."
   (int-syscall ("setfsuid" uid-t) uid))
 
 #+(or)
 (defun unix-setfsgid (gid)
-  "Change gid used for file access control to GID, without affecting
+  _N"Change gid used for file access control to GID, without affecting
    other priveledges (such as who can send signals at the process)."
   (int-syscall ("setfsgid" gid-t) gid))
 
@@ -2558,26 +2559,26 @@ length LEN and type TYPE."
 ;; to indicate the interesting event types; they will appear in `revents'
 ;; to indicate the status of the file descriptor.  
 
-(defconstant POLLIN  #o1 "There is data to read.")
-(defconstant POLLPRI #o2 "There is urgent data to read.")
-(defconstant POLLOUT #o4 "Writing now will not block.")
+(defconstant POLLIN  #o1 _N"There is data to read.")
+(defconstant POLLPRI #o2 _N"There is urgent data to read.")
+(defconstant POLLOUT #o4 _N"Writing now will not block.")
 
 ;; Event types always implicitly polled for.  These bits need not be set in
 ;;`events', but they will appear in `revents' to indicate the status of
 ;; the file descriptor.  */
 
 
-(defconstant POLLERR  #o10 "Error condition.")
-(defconstant POLLHUP  #o20 "Hung up.")
-(defconstant POLLNVAL #o40 "Invalid polling request.")
+(defconstant POLLERR  #o10 _N"Error condition.")
+(defconstant POLLHUP  #o20 _N"Hung up.")
+(defconstant POLLNVAL #o40 _N"Invalid polling request.")
 
 
-(defconstant +npollfile+ 30 "Canonical number of polling requests to read
+(defconstant +npollfile+ 30 _N"Canonical number of polling requests to read
 in at a time in poll.")
 
 #+(or)
 (defun unix-poll (fds nfds timeout)
- " Poll the file descriptors described by the NFDS structures starting at
+ _N" Poll the file descriptors described by the NFDS structures starting at
    FDS.  If TIMEOUT is nonzero and not -1, allow TIMEOUT milliseconds for
    an event to occur; if TIMEOUT is -1, block until an event occurs.
    Returns the number of file descriptors with events, zero if timed out,
@@ -2588,7 +2589,7 @@ in at a time in poll.")
 ;;; sys/resource.h
 
 (defun unix-getrlimit (resource)
-  "Get the soft and hard limits for RESOURCE."
+  _N"Get the soft and hard limits for RESOURCE."
   (with-alien ((rlimits (struct rlimit)))
     (syscall ("getrlimit" int (* (struct rlimit)))
 	     (values t
@@ -2597,7 +2598,7 @@ in at a time in poll.")
 	     resource (addr rlimits))))
 
 (defun unix-setrlimit (resource current maximum)
-  "Set the current soft and hard maximum limits for RESOURCE.
+  _N"Set the current soft and hard maximum limits for RESOURCE.
    Only the super-user can increase hard limits."
   (with-alien ((rlimits (struct rlimit)))
     (setf (slot rlimits 'rlim-cur) current)
@@ -2607,7 +2608,7 @@ in at a time in poll.")
 
 (declaim (inline unix-fast-getrusage))
 (defun unix-fast-getrusage (who)
-  "Like call getrusage, but return only the system and user time, and returns
+  _N"Like call getrusage, but return only the system and user time, and returns
    the seconds and microseconds as separate values."
   (declare (values (member t)
 		   (unsigned-byte 31) (mod 1000000)
@@ -2622,7 +2623,7 @@ in at a time in poll.")
 	      who (addr usage))))
 
 (defun unix-getrusage (who)
-  "Unix-getrusage returns information about the resource usage
+  _N"Unix-getrusage returns information about the resource usage
    of the process specified by who.  Who can be either the
    current process (rusage_self) or all of the terminated
    child processes (rusage_children).  NIL and an error number
@@ -2652,7 +2653,7 @@ in at a time in poll.")
 
 #+(or)
 (defun unix-ulimit (cmd newlimit)
- "Function depends on CMD:
+ _N"Function depends on CMD:
   1 = Return the limit on the size of a file, in units of 512 bytes.
   2 = Set the limit on the size of a file to NEWLIMIT.  Only the
       super-user can increase the limit.
@@ -2663,7 +2664,7 @@ in at a time in poll.")
 
 #+(or)
 (defun unix-getpriority (which who)
-  "Return the highest priority of any process specified by WHICH and WHO
+  _N"Return the highest priority of any process specified by WHICH and WHO
    (see above); if WHO is zero, the current process, process group, or user
    (as specified by WHO) is used.  A lower priority number means higher
    priority.  Priorities range from PRIO_MIN to PRIO_MAX (above)."
@@ -2672,7 +2673,7 @@ in at a time in poll.")
 
 #+(or)
 (defun unix-setpriority (which who)
-  "Set the priority of all processes specified by WHICH and WHO (see above)
+  _N"Set the priority of all processes specified by WHICH and WHO (see above)
    to PRIO.  Returns 0 on success, -1 on errors."
   (int-syscall ("setpriority" int int)
 	       which who))
@@ -2772,7 +2773,7 @@ in at a time in poll.")
 (defmacro unix-fast-select (num-descriptors
 			    read-fds write-fds exception-fds
 			    timeout-secs &optional (timeout-usecs 0))
-  "Perform the UNIX select(2) system call."
+  _N"Perform the UNIX select(2) system call."
   (declare (type (integer 0 #.FD-SETSIZE) num-descriptors) 
 	   (type (or (alien (* (struct fd-set))) null) 
 		 read-fds write-fds exception-fds) 
@@ -2812,7 +2813,7 @@ in at a time in poll.")
 			    ,(* index nfdbits))))))
 
 (defun unix-select (nfds rdfds wrfds xpfds to-secs &optional (to-usecs 0))
-  "Unix-select examines the sets of descriptors passed as arguments
+  _N"Unix-select examines the sets of descriptors passed as arguments
    to see if they are ready for reading and writing.  See the UNIX
    Programmers Manual for more information."
   (declare (type (integer 0 #.FD-SETSIZE) nfds)
@@ -2872,7 +2873,7 @@ in at a time in poll.")
 	   (slot ,buf 'st-blocks)))
 
 (defun unix-stat (name)
-  "UNIX-STAT retrieves information about the specified
+  _N"UNIX-STAT retrieves information about the specified
    file returning them in the form of multiple values.
    See the UNIX Programmer's Manual for a description
    of the values returned.  If the call fails, then NIL
@@ -2886,7 +2887,7 @@ in at a time in poll.")
 	     (%name->file name) (addr buf))))
 
 (defun unix-fstat (fd)
-  "UNIX-FSTAT is similar to UNIX-STAT except the file is specified
+  _N"UNIX-FSTAT is similar to UNIX-STAT except the file is specified
    by the file descriptor FD."
   (declare (type unix-fd fd))
   (with-alien ((buf (struct stat)))
@@ -2895,7 +2896,7 @@ in at a time in poll.")
 	     fd (addr buf))))
 
 (defun unix-lstat (name)
-  "UNIX-LSTAT is similar to UNIX-STAT except the specified
+  _N"UNIX-LSTAT is similar to UNIX-STAT except the specified
    file must be a symbolic link."
   (declare (type unix-pathname name))
   (with-alien ((buf (struct stat)))
@@ -2906,7 +2907,7 @@ in at a time in poll.")
 ;;; Unix-chmod accepts a path and a mode and changes the mode to the new mode.
 
 (defun unix-chmod (path mode)
-  "Given a file path string and a constant mode, unix-chmod changes the
+  _N"Given a file path string and a constant mode, unix-chmod changes the
    permission mode for that file to the one specified. The new mode
    can be created by logically OR'ing the following:
 
@@ -2937,7 +2938,7 @@ in at a time in poll.")
 ;;; "mode".
 
 (defun unix-fchmod (fd mode)
-  "Given an integer file descriptor and a mode (the same as those
+  _N"Given an integer file descriptor and a mode (the same as those
    used for unix-chmod), unix-fchmod changes the permission mode
    for that file to the one specified. T is returned if the call
    was successful."
@@ -2947,7 +2948,7 @@ in at a time in poll.")
 
 
 (defun unix-umask (mask)
-  "Set the file creation mask of the current process to MASK,
+  _N"Set the file creation mask of the current process to MASK,
    and return the old creation mask."
   (int-syscall ("umask" mode-t) mask))
 
@@ -2955,7 +2956,7 @@ in at a time in poll.")
 ;;; corresponding directory with mode mode.
 
 (defun unix-mkdir (name mode)
-  "Unix-mkdir creates a new directory with the specified name and mode.
+  _N"Unix-mkdir creates a new directory with the specified name and mode.
    (Same as those for unix-chmod.)  It returns T upon success, otherwise
    NIL and an error number."
   (declare (type unix-pathname name)
@@ -2964,7 +2965,7 @@ in at a time in poll.")
 
 #+(or)
 (defun unix-makedev (path mode dev)
- "Create a device file named PATH, with permission and special bits MODE
+ _N"Create a device file named PATH, with permission and special bits MODE
   and device number DEV (which can be constructed from major and minor
   device numbers with the `makedev' macro above)."
   (declare (type unix-pathname path)
@@ -2974,7 +2975,7 @@ in at a time in poll.")
 
 #+(or)
 (defun unix-fifo (name mode)
-  "Create a new FIFO named PATH, with permission bits MODE."
+  _N"Create a new FIFO named PATH, with permission bits MODE."
   (declare (type unix-pathname name)
 	   (type unix-file-mode mode))
   (void-syscall ("mkfifo" c-string int) (%name->file name) mode))
@@ -2983,7 +2984,7 @@ in at a time in poll.")
 
 #+(or)
 (defun unix-statfs (file buf)
-  "Return information about the filesystem on which FILE resides."
+  _N"Return information about the filesystem on which FILE resides."
   (int-syscall ("statfs64" c-string (* (struct statfs)))
 	       (%name->file file) buf))
 
@@ -2991,13 +2992,13 @@ in at a time in poll.")
 
 #+(or)
 (defun unix-swapon (path flags)
- "Make the block special device PATH available to the system for swapping.
+ _N"Make the block special device PATH available to the system for swapping.
   This call is restricted to the super-user."
  (int-syscall ("swapon" c-string int) (%name->file path) flags))
 
 #+(or)
 (defun unix-swapoff (path)
- "Make the block special device PATH unavailable to the system for swapping.
+ _N"Make the block special device PATH unavailable to the system for swapping.
   This call is restricted to the super-user."
  (int-syscall ("swapoff" c-string) (%name->file path)))
 
@@ -3005,7 +3006,7 @@ in at a time in poll.")
 
 #+(or)
 (defun unix-sysctl (name nlen oldval oldlenp newval newlen)
-  "Read or write system parameters."
+  _N"Read or write system parameters."
   (int-syscall ("sysctl" int int (* void) (* void) (* void) size-t)
 	       name nlen oldval oldlenp newval newlen))
 
@@ -3037,13 +3038,13 @@ in at a time in poll.")
 
 #+(or)
 (defun unix-clock ()
-  "Time used by the program so far (user time + system time).
+  _N"Time used by the program so far (user time + system time).
    The result / CLOCKS_PER_SECOND is program time in seconds."
   (int-syscall ("clock")))
 
 #+(or)
 (defun unix-time (timer)
-  "Return the current time and put it in *TIMER if TIMER is not NULL."
+  _N"Return the current time and put it in *TIMER if TIMER is not NULL."
   (int-syscall ("time" time-t) timer))
 
 ;; Requires call to tzset() in main.
@@ -3080,7 +3081,7 @@ in at a time in poll.")
 
 (declaim (inline unix-gettimeofday))
 (defun unix-gettimeofday ()
-  "If it works, unix-gettimeofday returns 5 values: T, the seconds and
+  _N"If it works, unix-gettimeofday returns 5 values: T, the seconds and
    microseconds of the current time of day, the timezone (in minutes west
    of Greenwich), and a daylight-savings flag.  If it doesn't work, it
    returns NIL and the errno."
@@ -3126,7 +3127,7 @@ in at a time in poll.")
 (defconstant ITIMER-PROF 2)
 
 (defun unix-getitimer (which)
-  "Unix-getitimer returns the INTERVAL and VALUE slots of one of
+  _N"Unix-getitimer returns the INTERVAL and VALUE slots of one of
    three system timers (:real :virtual or :profile). On success,
    unix-getitimer returns 5 values,
    T, it-interval-secs, it-interval-usec, it-value-secs, it-value-usec."
@@ -3148,7 +3149,7 @@ in at a time in poll.")
 		which (alien-sap (addr itv))))))
 
 (defun unix-setitimer (which int-secs int-usec val-secs val-usec)
-  " Unix-setitimer sets the INTERVAL and VALUE slots of one of
+  _N" Unix-setitimer sets the INTERVAL and VALUE slots of one of
    three system timers (:real :virtual or :profile). A SIGALRM signal
    will be delivered VALUE <seconds+microseconds> from now. INTERVAL,
    when non-zero, is <seconds+microseconds> to be loaded each time
@@ -3193,7 +3194,7 @@ in at a time in poll.")
 
 #+(or)
 (defun unix-fstime (timebuf)
-  "Fill in TIMEBUF with information about the current time."
+  _N"Fill in TIMEBUF with information about the current time."
   (int-syscall ("ftime" (* (struct timeb))) timebuf))
 
 
@@ -3210,7 +3211,7 @@ in at a time in poll.")
 
 #+(or)
 (defun unix-times (buffer)
-  "Store the CPU time used by this process and all its
+  _N"Store the CPU time used by this process and all its
    dead children (and their dead children) in BUFFER.
    Return the elapsed real time, or (clock_t) -1 for errors.
    All times are in CLK_TCKths of a second."
@@ -3220,13 +3221,13 @@ in at a time in poll.")
 
 #+(or)
 (defun unix-wait (status)
-  "Wait for a child to die.  When one does, put its status in *STAT_LOC
+  _N"Wait for a child to die.  When one does, put its status in *STAT_LOC
    and return its process ID.  For errors, return (pid_t) -1."
   (int-syscall ("wait" (* int)) status))
 
 #+(or)
 (defun unix-waitpid (pid status options)
-  "Wait for a child matching PID to die.
+  _N"Wait for a child matching PID to die.
    If PID is greater than 0, match any process whose process ID is PID.
    If PID is (pid_t) -1, match any process.
    If PID is (pid_t) 0, match any process with the
@@ -3243,132 +3244,132 @@ in at a time in poll.")
 
 ;;; asm/errno.h
 
-(def-unix-error ESUCCESS 0 "Successful")
-(def-unix-error EPERM 1 "Operation not permitted")
-(def-unix-error ENOENT 2 "No such file or directory")
-(def-unix-error ESRCH 3 "No such process")
-(def-unix-error EINTR 4 "Interrupted system call")
-(def-unix-error EIO 5 "I/O error")
-(def-unix-error ENXIO 6 "No such device or address")
-(def-unix-error E2BIG 7 "Arg list too long")
-(def-unix-error ENOEXEC 8 "Exec format error")
-(def-unix-error EBADF 9 "Bad file number")
-(def-unix-error ECHILD 10 "No children")
-(def-unix-error EAGAIN 11 "Try again")
-(def-unix-error ENOMEM 12 "Out of memory")
-(def-unix-error EACCES 13 "Permission denied")
-(def-unix-error EFAULT 14 "Bad address")
-(def-unix-error ENOTBLK 15 "Block device required")
-(def-unix-error EBUSY 16 "Device or resource busy")
-(def-unix-error EEXIST 17 "File exists")
-(def-unix-error EXDEV 18 "Cross-device link")
-(def-unix-error ENODEV 19 "No such device")
-(def-unix-error ENOTDIR 20 "Not a director")
-(def-unix-error EISDIR 21 "Is a directory")
-(def-unix-error EINVAL 22 "Invalid argument")
-(def-unix-error ENFILE 23 "File table overflow")
-(def-unix-error EMFILE 24 "Too many open files")
-(def-unix-error ENOTTY 25 "Not a typewriter")
-(def-unix-error ETXTBSY 26 "Text file busy")
-(def-unix-error EFBIG 27 "File too large")
-(def-unix-error ENOSPC 28 "No space left on device")
-(def-unix-error ESPIPE 29 "Illegal seek")
-(def-unix-error EROFS 30 "Read-only file system")
-(def-unix-error EMLINK 31 "Too many links")
-(def-unix-error EPIPE 32 "Broken pipe")
+(def-unix-error ESUCCESS 0 _N"Successful")
+(def-unix-error EPERM 1 _N"Operation not permitted")
+(def-unix-error ENOENT 2 _N"No such file or directory")
+(def-unix-error ESRCH 3 _N"No such process")
+(def-unix-error EINTR 4 _N"Interrupted system call")
+(def-unix-error EIO 5 _N"I/O error")
+(def-unix-error ENXIO 6 _N"No such device or address")
+(def-unix-error E2BIG 7 _N"Arg list too long")
+(def-unix-error ENOEXEC 8 _N"Exec format error")
+(def-unix-error EBADF 9 _N"Bad file number")
+(def-unix-error ECHILD 10 _N"No children")
+(def-unix-error EAGAIN 11 _N"Try again")
+(def-unix-error ENOMEM 12 _N"Out of memory")
+(def-unix-error EACCES 13 _N"Permission denied")
+(def-unix-error EFAULT 14 _N"Bad address")
+(def-unix-error ENOTBLK 15 _N"Block device required")
+(def-unix-error EBUSY 16 _N"Device or resource busy")
+(def-unix-error EEXIST 17 _N"File exists")
+(def-unix-error EXDEV 18 _N"Cross-device link")
+(def-unix-error ENODEV 19 _N"No such device")
+(def-unix-error ENOTDIR 20 _N"Not a director")
+(def-unix-error EISDIR 21 _N"Is a directory")
+(def-unix-error EINVAL 22 _N"Invalid argument")
+(def-unix-error ENFILE 23 _N"File table overflow")
+(def-unix-error EMFILE 24 _N"Too many open files")
+(def-unix-error ENOTTY 25 _N"Not a typewriter")
+(def-unix-error ETXTBSY 26 _N"Text file busy")
+(def-unix-error EFBIG 27 _N"File too large")
+(def-unix-error ENOSPC 28 _N"No space left on device")
+(def-unix-error ESPIPE 29 _N"Illegal seek")
+(def-unix-error EROFS 30 _N"Read-only file system")
+(def-unix-error EMLINK 31 _N"Too many links")
+(def-unix-error EPIPE 32 _N"Broken pipe")
 ;;; 
 ;;; Math
-(def-unix-error EDOM 33 "Math argument out of domain")
-(def-unix-error ERANGE 34 "Math result not representable")
+(def-unix-error EDOM 33 _N"Math argument out of domain")
+(def-unix-error ERANGE 34 _N"Math result not representable")
 ;;; 
-(def-unix-error  EDEADLK         35     "Resource deadlock would occur")
-(def-unix-error  ENAMETOOLONG    36     "File name too long")
-(def-unix-error  ENOLCK          37     "No record locks available")
-(def-unix-error  ENOSYS          38     "Function not implemented")
-(def-unix-error  ENOTEMPTY       39     "Directory not empty")
-(def-unix-error  ELOOP           40     "Too many symbolic links encountered")
-(def-unix-error  EWOULDBLOCK     11     "Operation would block")
-(def-unix-error  ENOMSG          42     "No message of desired type")
-(def-unix-error  EIDRM           43     "Identifier removed")
-(def-unix-error  ECHRNG          44     "Channel number out of range")
-(def-unix-error  EL2NSYNC        45     "Level 2 not synchronized")
-(def-unix-error  EL3HLT          46     "Level 3 halted")
-(def-unix-error  EL3RST          47     "Level 3 reset")
-(def-unix-error  ELNRNG          48     "Link number out of range")
-(def-unix-error  EUNATCH         49     "Protocol driver not attached")
-(def-unix-error  ENOCSI          50     "No CSI structure available")
-(def-unix-error  EL2HLT          51     "Level 2 halted")
-(def-unix-error  EBADE           52     "Invalid exchange")
-(def-unix-error  EBADR           53     "Invalid request descriptor")
-(def-unix-error  EXFULL          54     "Exchange full")
-(def-unix-error  ENOANO          55     "No anode")
-(def-unix-error  EBADRQC         56     "Invalid request code")
-(def-unix-error  EBADSLT         57     "Invalid slot")
-(def-unix-error  EDEADLOCK       EDEADLK     "File locking deadlock error")
-(def-unix-error  EBFONT          59     "Bad font file format")
-(def-unix-error  ENOSTR          60     "Device not a stream")
-(def-unix-error  ENODATA         61     "No data available")
-(def-unix-error  ETIME           62     "Timer expired")
-(def-unix-error  ENOSR           63     "Out of streams resources")
-(def-unix-error  ENONET          64     "Machine is not on the network")
-(def-unix-error  ENOPKG          65     "Package not installed")
-(def-unix-error  EREMOTE         66     "Object is remote")
-(def-unix-error  ENOLINK         67     "Link has been severed")
-(def-unix-error  EADV            68     "Advertise error")
-(def-unix-error  ESRMNT          69     "Srmount error")
-(def-unix-error  ECOMM           70     "Communication error on send")
-(def-unix-error  EPROTO          71     "Protocol error")
-(def-unix-error  EMULTIHOP       72     "Multihop attempted")
-(def-unix-error  EDOTDOT         73     "RFS specific error")
-(def-unix-error  EBADMSG         74     "Not a data message")
-(def-unix-error  EOVERFLOW       75     "Value too large for defined data type")
-(def-unix-error  ENOTUNIQ        76     "Name not unique on network")
-(def-unix-error  EBADFD          77     "File descriptor in bad state")
-(def-unix-error  EREMCHG         78     "Remote address changed")
-(def-unix-error  ELIBACC         79     "Can not access a needed shared library")
-(def-unix-error  ELIBBAD         80     "Accessing a corrupted shared library")
-(def-unix-error  ELIBSCN         81     ".lib section in a.out corrupted")
-(def-unix-error  ELIBMAX         82     "Attempting to link in too many shared libraries")
-(def-unix-error  ELIBEXEC        83     "Cannot exec a shared library directly")
-(def-unix-error  EILSEQ          84     "Illegal byte sequence")
-(def-unix-error  ERESTART        85     "Interrupted system call should be restarted ")
-(def-unix-error  ESTRPIPE        86     "Streams pipe error")
-(def-unix-error  EUSERS          87     "Too many users")
-(def-unix-error  ENOTSOCK        88     "Socket operation on non-socket")
-(def-unix-error  EDESTADDRREQ    89     "Destination address required")
-(def-unix-error  EMSGSIZE        90     "Message too long")
-(def-unix-error  EPROTOTYPE      91     "Protocol wrong type for socket")
-(def-unix-error  ENOPROTOOPT     92     "Protocol not available")
-(def-unix-error  EPROTONOSUPPORT 93     "Protocol not supported")
-(def-unix-error  ESOCKTNOSUPPORT 94     "Socket type not supported")
-(def-unix-error  EOPNOTSUPP      95     "Operation not supported on transport endpoint")
-(def-unix-error  EPFNOSUPPORT    96     "Protocol family not supported")
-(def-unix-error  EAFNOSUPPORT    97     "Address family not supported by protocol")
-(def-unix-error  EADDRINUSE      98     "Address already in use")
-(def-unix-error  EADDRNOTAVAIL   99     "Cannot assign requested address")
-(def-unix-error  ENETDOWN        100    "Network is down")
-(def-unix-error  ENETUNREACH     101    "Network is unreachable")
-(def-unix-error  ENETRESET       102    "Network dropped connection because of reset")
-(def-unix-error  ECONNABORTED    103    "Software caused connection abort")
-(def-unix-error  ECONNRESET      104    "Connection reset by peer")
-(def-unix-error  ENOBUFS         105    "No buffer space available")
-(def-unix-error  EISCONN         106    "Transport endpoint is already connected")
-(def-unix-error  ENOTCONN        107    "Transport endpoint is not connected")
-(def-unix-error  ESHUTDOWN       108    "Cannot send after transport endpoint shutdown")
-(def-unix-error  ETOOMANYREFS    109    "Too many references: cannot splice")
-(def-unix-error  ETIMEDOUT       110    "Connection timed out")
-(def-unix-error  ECONNREFUSED    111    "Connection refused")
-(def-unix-error  EHOSTDOWN       112    "Host is down")
-(def-unix-error  EHOSTUNREACH    113    "No route to host")
-(def-unix-error  EALREADY        114    "Operation already in progress")
-(def-unix-error  EINPROGRESS     115    "Operation now in progress")
-(def-unix-error  ESTALE          116    "Stale NFS file handle")
-(def-unix-error  EUCLEAN         117    "Structure needs cleaning")
-(def-unix-error  ENOTNAM         118    "Not a XENIX named type file")
-(def-unix-error  ENAVAIL         119    "No XENIX semaphores available")
-(def-unix-error  EISNAM          120    "Is a named type file")
-(def-unix-error  EREMOTEIO       121    "Remote I/O error")
-(def-unix-error  EDQUOT          122    "Quota exceeded")
+(def-unix-error  EDEADLK         35     _N"Resource deadlock would occur")
+(def-unix-error  ENAMETOOLONG    36     _N"File name too long")
+(def-unix-error  ENOLCK          37     _N"No record locks available")
+(def-unix-error  ENOSYS          38     _N"Function not implemented")
+(def-unix-error  ENOTEMPTY       39     _N"Directory not empty")
+(def-unix-error  ELOOP           40     _N"Too many symbolic links encountered")
+(def-unix-error  EWOULDBLOCK     11     _N"Operation would block")
+(def-unix-error  ENOMSG          42     _N"No message of desired type")
+(def-unix-error  EIDRM           43     _N"Identifier removed")
+(def-unix-error  ECHRNG          44     _N"Channel number out of range")
+(def-unix-error  EL2NSYNC        45     _N"Level 2 not synchronized")
+(def-unix-error  EL3HLT          46     _N"Level 3 halted")
+(def-unix-error  EL3RST          47     _N"Level 3 reset")
+(def-unix-error  ELNRNG          48     _N"Link number out of range")
+(def-unix-error  EUNATCH         49     _N"Protocol driver not attached")
+(def-unix-error  ENOCSI          50     _N"No CSI structure available")
+(def-unix-error  EL2HLT          51     _N"Level 2 halted")
+(def-unix-error  EBADE           52     _N"Invalid exchange")
+(def-unix-error  EBADR           53     _N"Invalid request descriptor")
+(def-unix-error  EXFULL          54     _N"Exchange full")
+(def-unix-error  ENOANO          55     _N"No anode")
+(def-unix-error  EBADRQC         56     _N"Invalid request code")
+(def-unix-error  EBADSLT         57     _N"Invalid slot")
+(def-unix-error  EDEADLOCK       EDEADLK     _N"File locking deadlock error")
+(def-unix-error  EBFONT          59     _N"Bad font file format")
+(def-unix-error  ENOSTR          60     _N"Device not a stream")
+(def-unix-error  ENODATA         61     _N"No data available")
+(def-unix-error  ETIME           62     _N"Timer expired")
+(def-unix-error  ENOSR           63     _N"Out of streams resources")
+(def-unix-error  ENONET          64     _N"Machine is not on the network")
+(def-unix-error  ENOPKG          65     _N"Package not installed")
+(def-unix-error  EREMOTE         66     _N"Object is remote")
+(def-unix-error  ENOLINK         67     _N"Link has been severed")
+(def-unix-error  EADV            68     _N"Advertise error")
+(def-unix-error  ESRMNT          69     _N"Srmount error")
+(def-unix-error  ECOMM           70     _N"Communication error on send")
+(def-unix-error  EPROTO          71     _N"Protocol error")
+(def-unix-error  EMULTIHOP       72     _N"Multihop attempted")
+(def-unix-error  EDOTDOT         73     _N"RFS specific error")
+(def-unix-error  EBADMSG         74     _N"Not a data message")
+(def-unix-error  EOVERFLOW       75     _N"Value too large for defined data type")
+(def-unix-error  ENOTUNIQ        76     _N"Name not unique on network")
+(def-unix-error  EBADFD          77     _N"File descriptor in bad state")
+(def-unix-error  EREMCHG         78     _N"Remote address changed")
+(def-unix-error  ELIBACC         79     _N"Can not access a needed shared library")
+(def-unix-error  ELIBBAD         80     _N"Accessing a corrupted shared library")
+(def-unix-error  ELIBSCN         81     _N".lib section in a.out corrupted")
+(def-unix-error  ELIBMAX         82     _N"Attempting to link in too many shared libraries")
+(def-unix-error  ELIBEXEC        83     _N"Cannot exec a shared library directly")
+(def-unix-error  EILSEQ          84     _N"Illegal byte sequence")
+(def-unix-error  ERESTART        85     _N"Interrupted system call should be restarted _N")
+(def-unix-error  ESTRPIPE        86     _N"Streams pipe error")
+(def-unix-error  EUSERS          87     _N"Too many users")
+(def-unix-error  ENOTSOCK        88     _N"Socket operation on non-socket")
+(def-unix-error  EDESTADDRREQ    89     _N"Destination address required")
+(def-unix-error  EMSGSIZE        90     _N"Message too long")
+(def-unix-error  EPROTOTYPE      91     _N"Protocol wrong type for socket")
+(def-unix-error  ENOPROTOOPT     92     _N"Protocol not available")
+(def-unix-error  EPROTONOSUPPORT 93     _N"Protocol not supported")
+(def-unix-error  ESOCKTNOSUPPORT 94     _N"Socket type not supported")
+(def-unix-error  EOPNOTSUPP      95     _N"Operation not supported on transport endpoint")
+(def-unix-error  EPFNOSUPPORT    96     _N"Protocol family not supported")
+(def-unix-error  EAFNOSUPPORT    97     _N"Address family not supported by protocol")
+(def-unix-error  EADDRINUSE      98     _N"Address already in use")
+(def-unix-error  EADDRNOTAVAIL   99     _N"Cannot assign requested address")
+(def-unix-error  ENETDOWN        100    _N"Network is down")
+(def-unix-error  ENETUNREACH     101    _N"Network is unreachable")
+(def-unix-error  ENETRESET       102    _N"Network dropped connection because of reset")
+(def-unix-error  ECONNABORTED    103    _N"Software caused connection abort")
+(def-unix-error  ECONNRESET      104    _N"Connection reset by peer")
+(def-unix-error  ENOBUFS         105    _N"No buffer space available")
+(def-unix-error  EISCONN         106    _N"Transport endpoint is already connected")
+(def-unix-error  ENOTCONN        107    _N"Transport endpoint is not connected")
+(def-unix-error  ESHUTDOWN       108    _N"Cannot send after transport endpoint shutdown")
+(def-unix-error  ETOOMANYREFS    109    _N"Too many references: cannot splice")
+(def-unix-error  ETIMEDOUT       110    _N"Connection timed out")
+(def-unix-error  ECONNREFUSED    111    _N"Connection refused")
+(def-unix-error  EHOSTDOWN       112    _N"Host is down")
+(def-unix-error  EHOSTUNREACH    113    _N"No route to host")
+(def-unix-error  EALREADY        114    _N"Operation already in progress")
+(def-unix-error  EINPROGRESS     115    _N"Operation now in progress")
+(def-unix-error  ESTALE          116    _N"Stale NFS file handle")
+(def-unix-error  EUCLEAN         117    _N"Structure needs cleaning")
+(def-unix-error  ENOTNAM         118    _N"Not a XENIX named type file")
+(def-unix-error  ENAVAIL         119    _N"No XENIX semaphores available")
+(def-unix-error  EISNAM          120    _N"Is a named type file")
+(def-unix-error  EREMOTEIO       121    _N"Remote I/O error")
+(def-unix-error  EDQUOT          122    _N"Quota exceeded")
 
 ;;; And now for something completely different ...
 (emit-unix-errors)
@@ -3389,7 +3390,7 @@ in at a time in poll.")
 (defconstant ioc_inout (logior ioc_in ioc_out))
 
 (defmacro define-ioctl-command (name dev cmd &optional arg parm-type)
-  "Define an ioctl command. If the optional ARG and PARM-TYPE are given
+  _N"Define an ioctl command. If the optional ARG and PARM-TYPE are given
   then ioctl argument size and direction are included as for ioctls defined
   by _IO, _IOR, _IOW, or _IOWR. If DEV is a character then the ioctl type
   is the characters code, else DEV may be an integer giving the type."
@@ -3431,7 +3432,7 @@ in at a time in poll.")
 (define-ioctl-command SIOCSPGRP #x89 #x02)
 
 (defun siocspgrp (fd pgrp)
-  "Set the socket process-group for the unix file-descriptor FD to PGRP."
+  _N"Set the socket process-group for the unix file-descriptor FD to PGRP."
   (alien:with-alien ((alien-pgrp c-call:int pgrp))
     (unix-ioctl fd
 		siocspgrp
@@ -3439,18 +3440,18 @@ in at a time in poll.")
 
 ;;; A few random constants and functions
 
-(defconstant setuidexec #o4000 "Set user ID on execution")
-(defconstant setgidexec #o2000 "Set group ID on execution")
-(defconstant savetext #o1000 "Save text image after execution")
-(defconstant readown #o400 "Read by owner")
-(defconstant writeown #o200 "Write by owner")
-(defconstant execown #o100 "Execute (search directory) by owner")
-(defconstant readgrp #o40 "Read by group")
-(defconstant writegrp #o20 "Write by group")
-(defconstant execgrp #o10 "Execute (search directory) by group")
-(defconstant readoth #o4 "Read by others")
-(defconstant writeoth #o2 "Write by others")
-(defconstant execoth #o1 "Execute (search directory) by others")
+(defconstant setuidexec #o4000 _N"Set user ID on execution")
+(defconstant setgidexec #o2000 _N"Set group ID on execution")
+(defconstant savetext #o1000 _N"Save text image after execution")
+(defconstant readown #o400 _N"Read by owner")
+(defconstant writeown #o200 _N"Write by owner")
+(defconstant execown #o100 _N"Execute (search directory) by owner")
+(defconstant readgrp #o40 _N"Read by group")
+(defconstant writegrp #o20 _N"Write by group")
+(defconstant execgrp #o10 _N"Execute (search directory) by group")
+(defconstant readoth #o4 _N"Read by others")
+(defconstant writeoth #o2 _N"Write by others")
+(defconstant execoth #o1 _N"Execute (search directory) by others")
 
 (defconstant terminal-speeds
   '#(0 50 75 110 134 150 200 300 600 1200 1800 2400
@@ -3462,7 +3463,7 @@ in at a time in poll.")
 	  unix-resolve-links unix-simplify-pathname))
 
 (defun unix-file-kind (name &optional check-for-links)
-  "Returns either :file, :directory, :link, :special, or NIL."
+  _N"Returns either :file, :directory, :link, :special, or NIL."
   (declare (simple-string name))
   (multiple-value-bind (res dev ino mode)
 		       (if check-for-links
@@ -3487,7 +3488,7 @@ in at a time in poll.")
 	    name))))
 
 (defun unix-resolve-links (pathname)
-  "Returns the pathname with all symbolic links resolved."
+  _N"Returns the pathname with all symbolic links resolved."
   (declare (simple-string pathname))
   (let ((len (length pathname))
 	(pending pathname))
@@ -3518,7 +3519,7 @@ in at a time in poll.")
 		(cond ((eq kind :link)
 		       (multiple-value-bind (link err) (unix-readlink result)
 			 (unless link
-			   (error "Error reading link ~S: ~S"
+			   (error _"Error reading link ~S: ~S"
 				  (subseq result 0 fill-ptr)
 				  (get-unix-error-msg err)))
 			 (cond ((or (zerop (length link))
@@ -3751,7 +3752,7 @@ in at a time in poll.")
 ;;;; User and group database access, POSIX Standard 9.2.2
 
 (defun unix-getpwnam (login)
-  "Return a USER-INFO structure for the user identified by LOGIN, or NIL if not found."
+  _N"Return a USER-INFO structure for the user identified by LOGIN, or NIL if not found."
   (declare (type simple-string login))
   (with-alien ((buf (array c-call:char 1024))
 	       (user-info (struct passwd))
@@ -3781,7 +3782,7 @@ in at a time in poll.")
          :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
 
 (defun unix-getpwuid (uid)
-  "Return a USER-INFO structure for the user identified by UID, or NIL if not found."
+  _N"Return a USER-INFO structure for the user identified by UID, or NIL if not found."
   (declare (type unix-uid uid))
   (with-alien ((buf (array c-call:char 1024))
 	       (user-info (struct passwd))
@@ -3811,7 +3812,7 @@ in at a time in poll.")
          :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
 
 (defun unix-getgrnam (name)
-  "Return a GROUP-INFO structure for the group identified by NAME, or NIL if not found."
+  _N"Return a GROUP-INFO structure for the group identified by NAME, or NIL if not found."
   (declare (type simple-string name))
   (with-alien ((buf (array c-call:char 2048))
 	       (group-info (struct group))
@@ -3842,7 +3843,7 @@ in at a time in poll.")
                         :collect (string (cast member c-call:c-string))))))))
 
 (defun unix-getgrgid (gid)
-  "Return a GROUP-INFO structure for the group identified by GID, or NIL if not found."
+  _N"Return a GROUP-INFO structure for the group identified by GID, or NIL if not found."
   (declare (type unix-gid gid))
   (with-alien ((buf (array c-call:char 2048))
 	       (group-info (struct group))

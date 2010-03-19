@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.97 2010/01/25 13:58:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.98 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,8 @@
 
 
 (in-package "SYSTEM")
+
+(intl:textdomain "cmucl")
 
 (export '(fd-stream fd-stream-p fd-stream-fd make-fd-stream
           io-timeout beep *beep-function* output-raw-bytes
@@ -38,17 +40,17 @@
 ;;;; Buffer manipulation routines.
 
 (defvar *available-buffers* ()
-  "List of available buffers.  Each buffer is an sap pointing to
+  _N"List of available buffers.  Each buffer is an sap pointing to
   bytes-per-buffer of memory.")
 
 (defvar lisp::*enable-stream-buffer-p* nil)
 
 (defconstant bytes-per-buffer (* 4 1024)
-  "Number of bytes per buffer.")
+  _N"Number of bytes per buffer.")
 
 ;; This limit is rather arbitrary
 (defconstant max-stream-element-size 1024
-  "The maximum supported byte size for a stream element-type.")
+  _N"The maximum supported byte size for a stream element-type.")
 
 ;;; NEXT-AVAILABLE-BUFFER -- Internal.
 ;;;
@@ -286,7 +288,7 @@
   (:report
    (lambda (condition stream)
      (declare (stream stream))
-     (format stream "Timeout ~(~A~)ing ~S."
+     (format stream _"Timeout ~(~A~)ing ~S."
 	     (io-timeout-direction condition)
 	     (stream-error-stream condition)))))
 
@@ -294,7 +296,7 @@
 ;;;; Output routines and related noise.
 
 (defvar *output-routines* ()
-  "List of all available output routines. Each element is a list of the
+  _N"List of all available output routines. Each element is a list of the
   element-type output, the kind of buffering, the function name, and the number
   of bytes per element.")
 
@@ -320,8 +322,8 @@
 			 length)
       (cond ((not count)
 	     (if (= errno unix:ewouldblock)
-		 (error "Write would have blocked, but SERVER told us to go.")
-		 (error "While writing ~S: ~A"
+		 (error _"Write would have blocked, but SERVER told us to go.")
+		 (error _"While writing ~S: ~A"
 			stream (unix:get-unix-error-msg errno))))
 	    ((eql count length) ; Hot damn, it worked.
 	     (when reuse-sap
@@ -591,7 +593,7 @@
 ;;; send it directly (after flushing the buffer, of course).
 ;;;
 (defun output-raw-bytes (stream thing &optional start end)
-  "Output THING to stream.  THING can be any kind of vector or a sap.  If THING
+  _N"Output THING to stream.  THING can be any kind of vector or a sap.  If THING
   is a SAP, END must be supplied (as length won't work)."
   (let ((start (or start 0))
 	(end (or end (length (the (simple-array * (*)) thing)))))
@@ -609,8 +611,8 @@
 	   (bytes (- end start))
 	   (newtail (+ tail bytes)))
       (cond ((minusp bytes) ; Error case
-	     (cerror "Just go on as if nothing happened..."
-		     "~S called with :END before :START!"
+	     (cerror _"Just go on as if nothing happened..."
+		     _"~S called with :END before :START!"
 		     'output-raw-bytes))
 	    ((zerop bytes)) ; Easy case
 	    ((<= bytes space)
@@ -823,7 +825,7 @@
 ;;;; Input routines and related noise.
 
 (defvar *input-routines* ()
-  "List of all available input routines. Each element is a list of the
+  _N"List of all available input routines. Each element is a list of the
   element-type input, the function name, and the number of bytes per element.")
 
 ;;; DO-INPUT -- internal
@@ -890,7 +892,7 @@
 			   :format-arguments (list (unix:get-unix-error-msg errno))
 			   :errno errno))
 		   (t
-		    (error "Error reading ~S: ~A"
+		    (error _"Error reading ~S: ~A"
 			   stream
 			   (unix:get-unix-error-msg errno)))))
 	    ((zerop count)
@@ -1280,7 +1282,7 @@
 				  now-needed)
 		(declare (type (or index null) count))
 		(unless count
-		  (error "Error reading ~S: ~A" stream
+		  (error _"Error reading ~S: ~A" stream
 			 (unix:get-unix-error-msg err)))
 		(decf now-needed count)
 		(if eof-error-p
@@ -1300,7 +1302,7 @@
 		(unix:unix-read (fd-stream-fd stream) sap len)
 	      (declare (type (or index null) count))
 	      (unless count
-		(error "Error reading ~S: ~A" stream
+		(error _"Error reading ~S: ~A" stream
 		       (unix:get-unix-error-msg err)))
 	      (when (and eof-error-p (zerop count))
 		(error 'end-of-file :stream stream))
@@ -1366,7 +1368,7 @@
 	  (routine type size)
 	  (pick-input-routine target-type)
 	(unless routine
-	  (error "Could not find any input routine for ~S" target-type))
+	  (error _"Could not find any input routine for ~S" target-type))
 	(setf (fd-stream-ibuf-sap stream) (next-available-buffer))
 	(setf (fd-stream-ibuf-length stream) bytes-per-buffer)
 	(setf (fd-stream-ibuf-tail stream) 0)
@@ -1424,7 +1426,7 @@
 	  (routine type size)
 	  (pick-output-routine target-type (fd-stream-buffering stream))
 	(unless routine
-	  (error "Could not find any output routine for ~S buffered ~S."
+	  (error _"Could not find any output routine for ~S buffered ~S."
 		 (fd-stream-buffering stream)
 		 target-type))
 	(setf (fd-stream-obuf-sap stream) (next-available-buffer))
@@ -1447,7 +1449,7 @@
 
     (when (and input-size output-size
 	       (not (eql input-size output-size)))
-      (error "Element sizes for input (~S:~S) and output (~S:~S) differ?"
+      (error _"Element sizes for input (~S:~S) and output (~S:~S) differ?"
 	     input-type input-size
 	     output-type output-size))
     (setf (fd-stream-element-size stream)
@@ -1465,7 +1467,7 @@
 		((subtypep output-type input-type)
 		 output-type)
 		(t
-		 (error "Input type (~S) and output type (~S) are unrelated?"
+		 (error _"Input type (~S) and output type (~S) are unrelated?"
 			input-type
 			output-type))))))
 
@@ -1481,8 +1483,8 @@
     (multiple-value-bind (okay err)
 	(unix:unix-rename original filename)
       (unless okay
-	  (cerror "Go on as if nothing bad happened."
-		  "Could not restore ~S to its original contents: ~A"
+	  (cerror _"Go on as if nothing bad happened."
+		  _"Could not restore ~S to its original contents: ~A"
 		  filename (unix:get-unix-error-msg err))))))
 
 ;;; DELETE-ORIGINAL -- internal
@@ -1616,7 +1618,7 @@
        (error 'simple-type-error
 	      :datum stream
 	      :expected-type 'file-stream
-	      :format-control "~s is not a stream associated with a file."
+	      :format-control _"~s is not a stream associated with a file."
 	      :format-arguments (list stream)))
      (multiple-value-bind
 	 (okay dev ino mode nlink uid gid rdev size
@@ -1626,7 +1628,7 @@
 			atime mtime ctime blksize blocks))
        (unless okay
 	 (error 'simple-file-error
-                :format-control "Error fstating ~S: ~A"
+                :format-control _"Error fstating ~S: ~A"
 		:format-arguments (list stream (unix:get-unix-error-msg dev))))
        (if (zerop mode)
 	   nil
@@ -1687,7 +1689,7 @@
 		 nil)
 		(t
 		 (system:with-interrupts
-		   (error "Error lseek'ing ~S: ~A"
+		   (error _"Error lseek'ing ~S: ~A"
 			  stream
 			  (unix:get-unix-error-msg errno)))))))
       (let ((offset 0)
@@ -1723,7 +1725,7 @@
 	       (setf offset (* newpos (fd-stream-element-size stream))
 		     origin unix:l_set))
 	      (t
-	       (error "Invalid position given to file-position: ~S" newpos)))
+	       (error _"Invalid position given to file-position: ~S" newpos)))
 	(multiple-value-bind
 	    (posn errno)
 	    (unix:unix-lseek (fd-stream-fd stream) offset origin)
@@ -1732,7 +1734,7 @@
 		((eq errno unix:espipe)
 		 nil)
 		(t
-		 (error "Error lseek'ing ~S: ~A"
+		 (error _"Error lseek'ing ~S: ~A"
 			stream
 			(unix:get-unix-error-msg errno))))))))
 
@@ -1756,6 +1758,12 @@
 		       delete-original
 		       pathname
 		       input-buffer-p
+		       ;; DO NOT translate these!  It causes an
+		       ;; infinite loop.  We need to open a file for
+		       ;; the translations, but if you translate
+		       ;; these, then we need to do a lookup which
+		       ;; wants to open the mo file which calls this
+		       ;; to name which causes a lookup ....
 		       (name (if file
 				 (format nil "file ~S" file)
 				 (format nil "descriptor ~D" fd)))
@@ -1764,7 +1772,7 @@
 		       binary-stream-p)
   (declare (type index fd) (type (or index null) timeout)
 	   (type (member :none :line :full) buffering))
-  "Create a stream for the given unix file descriptor.
+  _N"Create a stream for the given unix file descriptor.
   If input is non-nil, allow input operations.
   If output is non-nil, allow output operations.
   If neither input nor output are specified, default to allowing input.
@@ -1777,7 +1785,7 @@
   (cond ((not (or input-p output-p))
 	 (setf input t))
 	((not (or input output))
-	 (error "File descriptor must be opened either for input or output.")))
+	 (error _"File descriptor must be opened either for input or output.")))
   (let ((stream (if binary-stream-p
 		    (%make-binary-text-stream :fd fd
 					      :name name
@@ -1812,7 +1820,7 @@
       (finalize stream
 		#'(lambda ()
 		    (unix:unix-close fd)
-		    (format *terminal-io* "** Closed ~A~%" name)
+		    (format *terminal-io* _"** Closed ~A~%" name)
 		    (when original
 		      (revert-file file original)))))
     stream))
@@ -1823,7 +1831,7 @@
 ;;; Pick a name to use for the backup file.
 ;;;
 (defvar *backup-extension* ".BAK"
-  "This is a string that OPEN tacks on the end of a file namestring to produce
+  _N"This is a string that OPEN tacks on the end of a file namestring to produce
    a name for the :if-exists :rename-and-delete and :rename options.  Also,
    this can be a function that takes a namestring and returns a complete
    namestring.")
@@ -1876,12 +1884,12 @@
 (defun assure-one-of (item list what)
   (unless (member item list)
     (loop
-      (cerror "Enter new value for ~*~S"
-	      "~S is invalid for ~S. Must be one of~{ ~S~}"
+      (cerror _"Enter new value for ~*~S"
+	      _"~S is invalid for ~S. Must be one of~{ ~S~}"
 	      item
 	      what
 	      list)
-      (format (the stream *query-io*) "Enter new value for ~S: " what)
+      (format (the stream *query-io*) _"Enter new value for ~S: " what)
       (force-output *query-io*)
       (setf item (read *query-io*))
       (when (member item list)
@@ -1896,14 +1904,14 @@
 ;;;
 (defun do-old-rename (namestring original)
   (unless (unix:unix-access namestring unix:w_ok)
-    (cerror "Try to rename it anyway." "File ~S is not writable." namestring))
+    (cerror _"Try to rename it anyway." _"File ~S is not writable." namestring))
   (multiple-value-bind
       (okay err)
       (unix:unix-rename namestring original)
     (cond (okay t)
 	  (t
-	   (cerror "Use :SUPERSEDE instead."
-		   "Could not rename ~S to ~S: ~A."
+	   (cerror _"Use :SUPERSEDE instead."
+		   _"Could not rename ~S to ~S: ~A."
 		   namestring
 		   original
 		   (unix:get-unix-error-msg err))
@@ -1984,7 +1992,7 @@
                              (error 'simple-file-error
                                  :pathname pathname
                                  :format-control
-                                 "Cannot open ~S for output: Is a directory."
+                                 _"Cannot open ~S for output: Is a directory."
                                  :format-arguments (list name)))
                            (setf mode (logand orig-mode #o777))
                            t)
@@ -1993,7 +2001,7 @@
                           (t
                            (error 'simple-file-error
                                   :pathname pathname
-                                  :format-control "Cannot find ~S: ~A"
+                                  :format-control _"Cannot find ~S: ~A"
                                   :format-arguments
                                     (list name
                                       (unix:get-unix-error-msg err/dev)))))))))
@@ -2023,44 +2031,44 @@
                   ((eql errno unix:enoent)
                    (case if-does-not-exist
                      (:error
-                       (cerror "Return NIL."
+                       (cerror _"Return NIL."
                                'simple-file-error
                                :pathname pathname
-                               :format-control "Error opening ~S, ~A."
+                               :format-control _"Error opening ~S, ~A."
                                :format-arguments
                                    (list pathname
                                          (unix:get-unix-error-msg errno))))
                      (:create
-                       (cerror "Return NIL."
+                       (cerror _"Return NIL."
                                'simple-file-error
                                :pathname pathname
                                :format-control
-                                   "Error creating ~S, path does not exist."
+                                   _"Error creating ~S, path does not exist."
                                :format-arguments (list pathname))))
                    (return nil))
                   ((eql errno unix:eexist)
                    (unless (eq nil if-exists)
-                     (cerror "Return NIL."
+                     (cerror _"Return NIL."
                              'simple-file-error
                              :pathname pathname
-                             :format-control "Error opening ~S, ~A."
+                             :format-control _"Error opening ~S, ~A."
                              :format-arguments
                                  (list pathname
                                        (unix:get-unix-error-msg errno))))
                    (return nil))
                   ((eql errno unix:eacces)
-                   (cerror "Try again."
+                   (cerror _"Try again."
                            'simple-file-error
                            :pathname pathname
-                           :format-control "Error opening ~S, ~A."
+                           :format-control _"Error opening ~S, ~A."
                            :format-arguments
                                (list pathname
                                      (unix:get-unix-error-msg errno))))
                   (t
-                   (cerror "Return NIL."
+                   (cerror _"Return NIL."
                            'simple-file-error
                            :pathname pathname
-                           :format-control "Error opening ~S, ~A."
+                           :format-control _"Error opening ~S, ~A."
                            :format-arguments
                                (list pathname
                                      (unix:get-unix-error-msg errno)))
@@ -2125,7 +2133,7 @@
 		      (direction direction)
 		      (if-does-not-exist if-does-not-exist)
 		      (if-exists if-exists))
-  "Return a stream which reads from or writes to Filename.
+  _N"Return a stream which reads from or writes to Filename.
   Defined keywords:
    :direction - one of :input, :output, :io, or :probe
    :element-type - Type of object to read or write, default BASE-CHAR
@@ -2182,8 +2190,8 @@
 	   (apply #'open-fd-stream filespec options))
 	  ((subtypep class 'stream:simple-stream)
 	   (when element-type-given
-             (cerror "Do it anyway."
-		     "Can't create simple-streams with an element-type."))
+             (cerror _"Do it anyway."
+		     _"Can't create simple-streams with an element-type."))
            (when (and (eq class 'stream:file-simple-stream) mapped)
              (setq class 'stream:mapped-file-simple-stream)
              (setf (getf options :class) 'stream:mapped-file-simple-stream))
@@ -2200,18 +2208,18 @@
 	     (when stream
 	       (make-instance class :lisp-stream stream))))
 	  (t
-	   (error "Unable to open streams of class ~S." class)))))
+	   (error _"Unable to open streams of class ~S." class)))))
 
 ;;;; Initialization.
 
 (defvar *tty* nil
-  "The stream connected to the controlling terminal or NIL if there is none.")
+  _N"The stream connected to the controlling terminal or NIL if there is none.")
 (defvar *stdin* nil
-  "The stream connected to the standard input (file descriptor 0).")
+  _N"The stream connected to the standard input (file descriptor 0).")
 (defvar *stdout* nil
-  "The stream connected to the standard output (file descriptor 1).")
+  _N"The stream connected to the standard output (file descriptor 1).")
 (defvar *stderr* nil
-  "The stream connected to the standard error output (file descriptor 2).")
+  _N"The stream connected to the standard error output (file descriptor 2).")
 
 ;;; STREAM-INIT -- internal interface
 ;;;
@@ -2263,7 +2271,7 @@
   (finish-output stream))
 
 (defvar *beep-function* #'default-beep-function
-  "This is called in BEEP to feep the user.  It takes a stream.")
+  _N"This is called in BEEP to feep the user.  It takes a stream.")
 
 (defun beep (&optional (stream *terminal-io*))
   (funcall *beep-function* stream))
@@ -2325,7 +2333,7 @@
 (defun file-string-length (stream object)
   (declare (type (or string character) object)
 	   (type (or file-stream broadcast-stream stream:simple-stream) stream))
-  "Return the delta in Stream's FILE-POSITION that would be caused by writing
+  _N"Return the delta in Stream's FILE-POSITION that would be caused by writing
    Object to Stream.  Non-trivial only in implementations that support
    international character sets."
   (typecase stream

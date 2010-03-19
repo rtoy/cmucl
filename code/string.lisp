@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.21 2009/10/18 14:21:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.22 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,8 @@
 ;;; ****************************************************************
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export '(char schar glyph sglyph string
 	  string= string-equal string< string> string<= string>= string/=
 	  string-lessp string-greaterp string-not-lessp string-not-greaterp
@@ -33,7 +35,7 @@
 (declaim (inline surrogatep surrogates-to-codepoint codepoint surrogates))
 
 (defun surrogatep (char-or-code &optional surrogate-type)
-  "Test if C is a surrogate.  C may be either an integer or a
+  _N"Test if C is a surrogate.  C may be either an integer or a
   character. Surrogate-type indicates what kind of surrogate to test
   for.  :High means to test for the high (leading) surrogate; :Low
   tests for the low (trailing surrogate).  A value of :Any or Nil
@@ -54,14 +56,14 @@
        (= #b11011 (ash code -11))))))
 
 (defun surrogates-to-codepoint (hi-surrogate-char lo-surrogate-char)
-  "Convert the given Hi and Lo surrogate characters to the
+  _N"Convert the given Hi and Lo surrogate characters to the
   corresponding codepoint value"
   (declare (type character hi-surrogate-char lo-surrogate-char))
   (+ (ash (- (the (integer #xD800 #xDBFF) (char-code hi-surrogate-char)) #xD800) 10)
      (the (integer #xDC00 #xDFFF) (char-code lo-surrogate-char)) #x2400))
 
 (defun codepoint (string i &optional (end (length string)))
-  "Return the codepoint value from String at position I.  If that
+  _N"Return the codepoint value from String at position I.  If that
   position is a surrogate, it is combined with either the previous or
   following character (when possible) to compute the codepoint.  The
   second return value is NIL if the position is not a surrogate pair.
@@ -82,7 +84,7 @@
 	  (t (values code nil)))))
 
 (defun surrogates (codepoint)
-  "Return the high and low surrogate characters for Codepoint.  If
+  _N"Return the high and low surrogate characters for Codepoint.  If
   Codepoint is in the BMP, the first return value is the corresponding
   character and the second is NIL."
   (declare (type codepoint codepoint))
@@ -94,7 +96,7 @@
 	(values (code-char hi) (code-char lo)))))
 
 (defun (setf codepoint) (codepoint string i)
-  "Set the codepoint at string position I to the Codepoint.  If the
+  _N"Set the codepoint at string position I to the Codepoint.  If the
   codepoint requires a surrogate pair, the high (leading surrogate) is
   stored at position I and the low (trailing) surrogate is stored at
   I+1"
@@ -111,7 +113,7 @@
 
 #+unicode
 (defun utf16-string-p (string)
-  "Check if String is a valid UTF-16 string.  If the string is valid,
+  _N"Check if String is a valid UTF-16 string.  If the string is valid,
   T is returned.  If the string is not valid, NIL is returned, and the
   second value is the index into the string of the invalid character.
   A string is also invalid if it contains any unassigned codepoints."
@@ -134,7 +136,7 @@
       (when wide (incf index)))))
 
 (defun string (X)
-  "Coerces X into a string.  If X is a string, X is returned.  If X is a
+  _N"Coerces X into a string.  If X is a string, X is returned.  If X is a
   symbol, X's pname is returned.  If X is a character then a one element
   string containing that character is returned.  If X cannot be coerced
   into a string, an error occurs."
@@ -147,7 +149,7 @@
 	 (error 'simple-type-error
 		:datum x
 		:expected-type '(or string symbol character)
-		:format-control "~S cannot be coerced to a string."
+		:format-control _"~S cannot be coerced to a string."
 		:format-arguments (list x)))))
 
 ;;; With-One-String is used to set up some string hacking things.  The keywords
@@ -200,7 +202,7 @@
 
 
 (defun char (string index)
-  "Given a string and a non-negative integer index less than the length of
+  _N"Given a string and a non-negative integer index less than the length of
   the string, returns the character object representing the character at
   that position in the string."
   (declare (optimize (safety 1)))
@@ -211,7 +213,7 @@
   (setf (char string index) new-el))
 
 (defun schar (string index)
-  "SCHAR returns the character object at an indexed position in a string
+  _N"SCHAR returns the character object at an indexed position in a string
   just as CHAR does, except the string must be a simple-string."
   (declare (optimize (safety 1)))
   (schar string index))
@@ -303,38 +305,38 @@
 
 
 (defun string< (string1 string2 &key (start1 0) end1 (start2 0) end2)
-  "Given two strings, if the first string is lexicographically less than
+  _N"Given two strings, if the first string is lexicographically less than
   the second string, returns the longest common prefix (using char=)
   of the two strings. Otherwise, returns ()."
   (string<* string1 string2 start1 end1 start2 end2))
 
 (defun string> (string1 string2 &key (start1 0) end1 (start2 0) end2)
-  "Given two strings, if the first string is lexicographically greater than
+  _N"Given two strings, if the first string is lexicographically greater than
   the second string, returns the longest common prefix (using char=)
   of the two strings. Otherwise, returns ()."
   (string>* string1 string2 start1 end1 start2 end2))
 
 
 (defun string<= (string1 string2 &key (start1 0) end1 (start2 0) end2)
-  "Given two strings, if the first string is lexicographically less than
+  _N"Given two strings, if the first string is lexicographically less than
   or equal to the second string, returns the longest common prefix
   (using char=) of the two strings. Otherwise, returns ()."
   (string<=* string1 string2 start1 end1 start2 end2))
 
 (defun string>= (string1 string2 &key (start1 0) end1 (start2 0) end2)
-  "Given two strings, if the first string is lexicographically greater
+  _N"Given two strings, if the first string is lexicographically greater
   than or equal to the second string, returns the longest common prefix
   (using char=) of the two strings. Otherwise, returns ()."
   (string>=* string1 string2 start1 end1 start2 end2))
 
 (defun string= (string1 string2 &key (start1 0) end1 (start2 0) end2)
-  "Given two strings (string1 and string2), and optional integers start1,
+  _N"Given two strings (string1 and string2), and optional integers start1,
   start2, end1 and end2, compares characters in string1 to characters in
   string2 (using char=)."
   (string=* string1 string2 start1 end1 start2 end2))
 
 (defun string/= (string1 string2 &key (start1 0) end1 (start2 0) end2)
-  "Given two strings, if the first string is not lexicographically equal
+  _N"Given two strings, if the first string is not lexicographically equal
   to the second string, returns the longest common prefix (using char=)
   of the two strings. Otherwise, returns ()."
   (string/=* string1 string2 start1 end1 start2 end2))
@@ -367,7 +369,7 @@
 
 #+unicode
 (defun string-case-fold (string &key (start 0) end (casing :simple))
-  "Return a new string with the case folded according to Casing as follows:
+  _N"Return a new string with the case folded according to Casing as follows:
 
   :SIMPLE  Unicode simple case folding (preserving length)
   :FULL    Unicode full case folding (possibly changing length)
@@ -397,7 +399,7 @@
 	     (write-string (unicode-case-fold-full code) s))))))))
 
 (defun string-equal (string1 string2 &key (start1 0) end1 (start2 0) end2)
-  "Given two strings (string1 and string2), and optional integers start1,
+  _N"Given two strings (string1 and string2), and optional integers start1,
   start2, end1 and end2, compares characters in string1 to characters in
   string2 (using char-equal)."
   (declare (fixnum start1 start2))
@@ -407,13 +409,13 @@
       (declare (fixnum slen1 slen2))
       (if (or (minusp slen1) (minusp slen2))
 	  ;;prevent endless looping later.
-	  (error "Improper bounds for string comparison."))
+	  (error _"Improper bounds for string comparison."))
       (if (= slen1 slen2)
 	  ;;return () immediately if lengths aren't equal.
 	  (string-not-equal-loop 1 t nil)))))
 
 (defun string-not-equal (string1 string2 &key (start1 0) end1 (start2 0) end2)
-  "Given two strings, if the first string is not lexicographically equal
+  _N"Given two strings, if the first string is not lexicographically equal
   to the second string, returns the longest common prefix (using char-equal)
   of the two strings. Otherwise, returns ()."
   (with-two-strings string1 string2 start1 end1 offset1 start2 end2
@@ -422,9 +424,9 @@
       (declare (fixnum slen1 slen2))
       (if (or (minusp slen1) (minusp slen2))
 	  ;;prevent endless looping later.
-	  (error "Improper bounds for string comparison."))
+	  (error _"Improper bounds for string comparison."))
       (cond ((or (minusp slen1) (or (minusp slen2)))
-	     (error "Improper substring for comparison."))
+	     (error _"Improper substring for comparison."))
 	    ((= slen1 slen2)
 	     (string-not-equal-loop 1 nil (- index1 offset1)))
 	    ((< slen1 slen2)
@@ -470,7 +472,7 @@
 	 (declare (fixnum slen1 slen2))
 	 (if (or (minusp slen1) (minusp slen2))
 	     ;;prevent endless looping later.
-	     (error "Improper bounds for string comparison."))
+	     (error _"Improper bounds for string comparison."))
 	 (do ((index1 start1 (1+ index1))
 	      (index2 start2 (1+ index2))
 	      (char1)
@@ -509,7 +511,7 @@
 	 (declare (fixnum slen1 slen2))
 	 (if (or (minusp slen1) (minusp slen2))
 	     ;;prevent endless looping later.
-	     (error "Improper bounds for string comparison."))
+	     (error _"Improper bounds for string comparison."))
 	 (do ((index1 start1 (1+ index1))
 	      (index2 start2 (1+ index2)))
 	     ((or (= index1 (the fixnum end1)) (= index2 (the fixnum end2)))
@@ -550,33 +552,33 @@
   (string-less-greater-equal t t))
 
 (defun string-lessp (string1 string2 &key (start1 0) end1 (start2 0) end2)
-  "Given two strings, if the first string is lexicographically less than
+  _N"Given two strings, if the first string is lexicographically less than
   the second string, returns the longest common prefix (using char-equal)
   of the two strings. Otherwise, returns ()."
   (string-lessp* string1 string2 start1 end1 start2 end2))
 
 (defun string-greaterp (string1 string2 &key (start1 0) end1 (start2 0) end2)
-  "Given two strings, if the first string is lexicographically greater than
+  _N"Given two strings, if the first string is lexicographically greater than
   the second string, returns the longest common prefix (using char-equal)
   of the two strings. Otherwise, returns ()."
   (string-greaterp* string1 string2 start1 end1 start2 end2))
 
 (defun string-not-lessp (string1 string2 &key (start1 0) end1 (start2 0) end2)
-  "Given two strings, if the first string is lexicographically greater
+  _N"Given two strings, if the first string is lexicographically greater
   than or equal to the second string, returns the longest common prefix
   (using char-equal) of the two strings. Otherwise, returns ()."
   (string-not-lessp* string1 string2 start1 end1 start2 end2))
 
 (defun string-not-greaterp (string1 string2 &key (start1 0) end1 (start2 0)
 				    end2)
-  "Given two strings, if the first string is lexicographically less than
+  _N"Given two strings, if the first string is lexicographically less than
   or equal to the second string, returns the longest common prefix
   (using char-equal) of the two strings. Otherwise, returns ()."
   (string-not-greaterp* string1 string2 start1 end1 start2 end2))
 
 
 (defun make-string (count &key element-type ((:initial-element fill-char)))
-  "Given a character count and an optional fill character, makes and returns
+  _N"Given a character count and an optional fill character, makes and returns
   a new string Count long filled with the fill character."
   (declare (type fixnum count))
   (assert (subtypep element-type 'character))
@@ -661,10 +663,10 @@
 
 (defun string-upcase (string &key (start 0) end #+unicode (casing :simple))
   #-unicode
-  "Given a string, returns a new string that is a copy of it with all
+  _N"Given a string, returns a new string that is a copy of it with all
   lower case alphabetic characters converted to uppercase."
   #+unicode
-  "Given a string, returns a new string that is a copy of it with all
+  _N"Given a string, returns a new string that is a copy of it with all
   lower case alphabetic characters converted to uppercase.  Casing is
   :simple or :full for simple or full case conversion, respectively."
   (declare (fixnum start))
@@ -747,10 +749,10 @@
 
 (defun string-downcase (string &key (start 0) end #+unicode (casing :simple))
   #-unicode
-  "Given a string, returns a new string that is a copy of it with all
+  _N"Given a string, returns a new string that is a copy of it with all
   upper case alphabetic characters converted to lowercase."
   #+unicode
-  "Given a string, returns a new string that is a copy of it with all
+  _N"Given a string, returns a new string that is a copy of it with all
   upper case alphabetic characters converted to lowercase.  Casing is
   :simple or :full for simple or full case conversion, respectively."
   (declare (fixnum start))
@@ -841,13 +843,13 @@
 				 #+unicode (casing :simple)
 				 #+unicode unicode-word-break)
   #-unicode
-  "Given a string, returns a copy of the string with the first
+  _N"Given a string, returns a copy of the string with the first
   character of each ``word'' converted to upper-case, and remaining
   chars in the word converted to lower case. A ``word'' is defined
   to be a string of case-modifiable characters delimited by
   non-case-modifiable chars."
   #+unicode
-  "Given a string, returns a copy of the string with the first
+  _N"Given a string, returns a copy of the string with the first
   character of each ``word'' converted to upper-case, and remaining
   chars in the word converted to lower case. A ``word'' is defined
   to be a string of case-modifiable characters delimited by
@@ -865,7 +867,7 @@
 	  (string-capitalize-full string :start start :end end))))
 
 (defun nstring-upcase (string &key (start 0) end)
-  "Given a string, returns that string with all lower case alphabetic
+  _N"Given a string, returns that string with all lower case alphabetic
   characters converted to uppercase."
   (declare (fixnum start))
   (let ((save-header string))
@@ -892,7 +894,7 @@
     save-header))
 
 (defun nstring-downcase (string &key (start 0) end)
-  "Given a string, returns that string with all upper case alphabetic
+  _N"Given a string, returns that string with all upper case alphabetic
   characters converted to lowercase."
   (declare (fixnum start))
   (let ((save-header string))
@@ -917,7 +919,7 @@
     save-header))
 
 (defun nstring-capitalize (string &key (start 0) end)
-  "Given a string, returns that string with the first
+  _N"Given a string, returns that string with the first
   character of each ``word'' converted to upper-case, and remaining
   chars in the word converted to lower case. A ``word'' is defined
   to be a string of case-modifiable characters delimited by
@@ -984,7 +986,7 @@
 	    (when widep (incf index)))))))
 
 (defun string-left-trim (char-bag string)
-  "Given a set of characters (a list or string) and a string, returns
+  _N"Given a set of characters (a list or string) and a string, returns
   a copy of the string with the characters in the set removed from the
   left end.  If the set of characters is a string, surrogates will be
   properly handled."
@@ -1032,7 +1034,7 @@
 	    (when widep (decf index)))))))
 
 (defun string-right-trim (char-bag string)
-  "Given a set of characters (a list or string) and a string, returns
+  _N"Given a set of characters (a list or string) and a string, returns
   a copy of the string with the characters in the set removed from the
   right end.  If the set of characters is a string, surrogates will be
   properly handled."
@@ -1042,7 +1044,7 @@
       (subseq string start stop))))
 
 (defun string-trim (char-bag string)
-  "Given a set of characters (a list or string) and a string, returns a
+  _N"Given a set of characters (a list or string) and a string, returns a
   copy of the string with the characters in the set removed from both
   ends.  If the set of characters is a string, surrogates will be
   properly handled."
@@ -1056,7 +1058,7 @@
 #-unicode
 (progn
 (defun string-left-trim (char-bag string)
-  "Given a set of characters (a list or string) and a string, returns
+  _N"Given a set of characters (a list or string) and a string, returns
   a copy of the string with the characters in the set removed from the
   left end."
   (with-string string
@@ -1067,7 +1069,7 @@
       (declare (fixnum index)))))
 
 (defun string-right-trim (char-bag string)
-  "Given a set of characters (a list or string) and a string, returns
+  _N"Given a set of characters (a list or string) and a string, returns
   a copy of the string with the characters in the set removed from the
   right end."
   (with-string string
@@ -1077,7 +1079,7 @@
       (declare (fixnum index)))))
 
 (defun string-trim (char-bag string)
-  "Given a set of characters (a list or string) and a string, returns a
+  _N"Given a set of characters (a list or string) and a string, returns a
   copy of the string with the characters in the set removed from both
   ends."
   (with-string string
@@ -1131,7 +1133,7 @@
 ) ; unicode
 
 (defun glyph (string index &key (from-end nil))
-  "GLYPH returns the glyph at the indexed position in a string, and the
+  _N"GLYPH returns the glyph at the indexed position in a string, and the
   position of the next glyph (or NIL) as a second value.  A glyph is
   a substring consisting of the character at INDEX followed by all
   subsequent combining characters."
@@ -1147,7 +1149,7 @@
 	  (values (subseq string index n) (and (< n (length string)) n))))))
 
 (defun sglyph (string index &key (from-end nil))
-  "SGLYPH returns the glyph at the indexed position, the same as GLYPH,
+  _N"SGLYPH returns the glyph at the indexed position, the same as GLYPH,
   except that the string must be a simple-string"
   (declare (type simple-string string) (type kernel:index index))
   #-unicode
@@ -1336,17 +1338,17 @@
 	(shrink-vector target comp-pos)))))
 
 (defun string-to-nfd (string)
-  "Convert String to Unicode Normalization Form D (NFD) using the
+  _N"Convert String to Unicode Normalization Form D (NFD) using the
   canonical decomposition.  The NFD string is returned"
   (decompose string nil))
 
 (defun string-to-nfkd (string)
-  "Convert String to Unicode Normalization Form KD (NFKD) uisng the
+  _N"Convert String to Unicode Normalization Form KD (NFKD) uisng the
   compatible decomposition form.  The NFKD string is returned."
   (decompose string t))
 
 (defun string-to-nfc (string)
-  "Convert String to Unicode Normalization Form C (NFC).  If the
+  _N"Convert String to Unicode Normalization Form C (NFC).  If the
   string a simple string and is already normalized, the original
   string is returned."
   (if (normalized-form-p string :nfc)
@@ -1357,7 +1359,7 @@
 	      'simple-string)))
 
 (defun string-to-nfkc (string)
-  "Convert String to Unicode Normalization Form KC (NFKC).  If the
+  _N"Convert String to Unicode Normalization Form KC (NFKC).  If the
   string is a simple string and is already normalized, the original
   string is returned."
   (if (normalized-form-p string :nfkc)

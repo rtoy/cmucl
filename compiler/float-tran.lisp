@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.136 2010/02/05 18:10:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.137 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; Author: Rob MacLachlan
 ;;; 
 (in-package "C")
+(intl:textdomain "cmucl")
 
 
 ;;;; Coercions:
@@ -275,7 +276,7 @@
 #-(or new-random random-mt19937)
 (deftransform random ((num &optional state)
 		      ((integer 1 #.random-fixnum-max) &optional *))
-  "use inline fixnum operations"
+  _N"use inline fixnum operations"
   '(rem (random-chunk (or state *random-state*)) num))
 
 ;;; With the latest propagate-float-type code the compiler can inline
@@ -290,15 +291,15 @@
 				#-x86 #x7fffffff
 				)
 		       &optional *))
-  #+x86 "use inline (unsigned-byte 32) operations"
-  #-x86 "use inline (signed-byte 32) operations"
+  #+x86 _"use inline (unsigned-byte 32) operations"
+  #-x86 _"use inline (signed-byte 32) operations"
   '(values (truncate (%random-double-float (coerce num 'double-float)
 		      (or state *random-state*)))))
 
 #+random-mt19937
 (deftransform random ((num &optional state)
 		      ((integer 1 #.(expt 2 32)) &optional *))
-  "use inline (unsigned-byte 32) operations"
+  _N"use inline (unsigned-byte 32) operations"
   (let* ((num-type (continuation-type num))
 	 (num-high (cond ((numeric-type-p num-type)
 			  (numeric-type-high num-type))
@@ -334,7 +335,7 @@
 		(values (bignum::%multiply (random-chunk (or state *random-state*))
 					   num))))
 	  (t
-	   (error "Shouldn't happen")))))
+	   (error _"Shouldn't happen")))))
 
 
 ;;;; Float accessors:
@@ -623,10 +624,10 @@
 (macrolet ((frob (op)
 	     `(deftransform ,op ((x y) (float rational) * :when :both)
 		(unless (constant-continuation-p y)
-		  (give-up "Can't open-code float to rational comparison."))
+		  (give-up _"Can't open-code float to rational comparison."))
 		(let ((val (continuation-value y)))
 		  (unless (eql (rational (float val)) val)
-		    (give-up "~S doesn't have a precise float representation."
+		    (give-up _"~S doesn't have a precise float representation."
 			     val)))
 		`(,',op x (float y x)))))
   (frob <)
@@ -730,7 +731,7 @@
 		   'single-float))
 		(t 
 		 (compiler-note
-		  "Unable to avoid inline argument range check~@
+		  _N"Unable to avoid inline argument range check~@
                       because the argument range (~s) was not within 2^~D"
 		  (type-specifier (continuation-type x))
 		  limit)
@@ -746,7 +747,7 @@
 		 `(,prim-quick x))
 		(t 
 		 (compiler-note
-		  "Unable to avoid inline argument range check~@
+		  _N"Unable to avoid inline argument range check~@
                    because the argument range (~s) was not within 2^~D"
 		  (type-specifier (continuation-type x))
 		  limit)
@@ -872,11 +873,11 @@
     ;; Check that the ARG bounds are correctly canonicalised.
     (when (and arg-lo (floatp arg-lo-val) (zerop arg-lo-val) (consp arg-lo)
 	       (minusp (float-sign arg-lo-val)))
-      (compiler-note "Float zero bound ~s not correctly canonicalised?" arg-lo)
+      (compiler-note _N"Float zero bound ~s not correctly canonicalised?" arg-lo)
       (setq arg-lo 0l0 arg-lo-val 0l0))
     (when (and arg-hi (zerop arg-hi-val) (floatp arg-hi-val) (consp arg-hi)
 	       (plusp (float-sign arg-hi-val)))
-      (compiler-note "Float zero bound ~s not correctly canonicalised?" arg-hi)
+      (compiler-note _N"Float zero bound ~s not correctly canonicalised?" arg-hi)
       (setq arg-hi -0l0 arg-hi-val -0l0))
     (flet ((fp-neg-zero-p (f)	; Is F -0.0?
 	     (and (floatp f) (zerop f) (minusp (float-sign f))))
@@ -1817,7 +1818,7 @@
   
 (declaim (inline quick-two-sum))
 (defun quick-two-sum (a b)
-  "Computes fl(a+b) and err(a+b), assuming |a| >= |b|"
+  _N"Computes fl(a+b) and err(a+b), assuming |a| >= |b|"
   (declare (double-float a b))
   (let* ((s (+ a b))
 	 (e (- b (- s a))))
@@ -1825,7 +1826,7 @@
 
 (declaim (inline two-sum))
 (defun two-sum (a b)
-  "Computes fl(a+b) and err(a+b)"
+  _N"Computes fl(a+b) and err(a+b)"
   (declare (double-float a b))
   (let* ((s (+ a b))
 	 (v (- s a))
@@ -1837,7 +1838,7 @@
 
 (declaim (maybe-inline add-dd))
 (defun add-dd (a0 a1 b0 b1)
-  "Add the double-double A0,A1 to the double-double B0,B1"
+  _N"Add the double-double A0,A1 to the double-double B0,B1"
   (declare (double-float a0 a1 b0 b1)
 	   (optimize (speed 3)
 		     (inhibit-warnings 3)))
@@ -1872,14 +1873,14 @@
 
 (declaim (inline quick-two-diff))
 (defun quick-two-diff (a b)
-  "Compute fl(a-b) and err(a-b), assuming |a| >= |b|"
+  _N"Compute fl(a-b) and err(a-b), assuming |a| >= |b|"
   (declare (double-float a b))
   (let ((s (- a b)))
     (values s (- (- a s) b))))
 
 (declaim (inline two-diff))
 (defun two-diff (a b)
-  "Compute fl(a-b) and err(a-b)"
+  _N"Compute fl(a-b) and err(a-b)"
   (declare (double-float a b))
   (let* ((s (- a b))
 	 (v (- s a))
@@ -1891,7 +1892,7 @@
 
 (declaim (maybe-inline sub-dd))
 (defun sub-dd (a0 a1 b0 b1)
-  "Subtract the double-double B0,B1 from A0,A1"
+  _N"Subtract the double-double B0,B1 from A0,A1"
   (declare (double-float a0 a1 b0 b1)
 	   (optimize (speed 3)
 		     (inhibit-warnings 3)))
@@ -1916,7 +1917,7 @@
 
 (declaim (maybe-inline sub-d-dd))
 (defun sub-d-dd (a b0 b1)
-  "Compute double-double = double - double-double"
+  _N"Compute double-double = double - double-double"
   (declare (double-float a b0 b1)
 	   (optimize (speed 3) (safety 0)
 		     (inhibit-warnings 3)))
@@ -1934,7 +1935,7 @@
 
 (declaim (maybe-inline sub-dd-d))
 (defun sub-dd-d (a0 a1 b)
-  "Subtract the double B from the double-double A0,A1"
+  _N"Subtract the double B from the double-double A0,A1"
   (declare (double-float a0 a1 b)
 	   (optimize (speed 3) (safety 0)
 		     (inhibit-warnings 3)))
@@ -1992,7 +1993,7 @@
 ;; printing algorithm, or even divide 1w308 by 10.
 #+nil
 (defun split (a)
-  "Split the double-float number a into a-hi and a-lo such that a =
+  _N"Split the double-float number a into a-hi and a-lo such that a =
   a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
   a-lo contains the lower 26 bits."
   (declare (double-float a))
@@ -2011,7 +2012,7 @@
   (scale-float (/ (float (1+ (expt 2 27)) 1d0)) 1024))
 
 (defun split (a)
-  "Split the double-float number a into a-hi and a-lo such that a =
+  _N"Split the double-float number a into a-hi and a-lo such that a =
   a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
   a-lo contains the lower 26 bits."
   (declare (double-float a)
@@ -2047,7 +2048,7 @@
 (declaim (inline two-prod))
 #-ppc
 (defun two-prod (a b)
-  "Compute fl(a*b) and err(a*b)"
+  _N"Compute fl(a*b) and err(a*b)"
   (declare (double-float a b))
   (let ((p (* a b)))
     (multiple-value-bind (a-hi a-lo)
@@ -2066,7 +2067,7 @@
 
 #+ppc
 (defun two-prod (a b)
-  "Compute fl(a*b) and err(a*b)"
+  _N"Compute fl(a*b) and err(a*b)"
   (declare (double-float a b))
   ;; PPC has a fused multiply-subtract instruction that can be used
   ;; here, so use it.
@@ -2077,7 +2078,7 @@
 (declaim (inline two-sqr))
 #-ppc
 (defun two-sqr (a)
-  "Compute fl(a*a) and err(a*b).  This is a more efficient
+  _N"Compute fl(a*a) and err(a*b).  This is a more efficient
   implementation of two-prod"
   (declare (double-float a))
   (let ((q (* a a)))
@@ -2091,7 +2092,7 @@
 
 #+ppc
 (defun two-sqr (a)
-  "Compute fl(a*a) and err(a*b).  This is a more efficient
+  _N"Compute fl(a*a) and err(a*b).  This is a more efficient
   implementation of two-prod"
   (declare (double-float a))
   (let ((q (* a a)))
@@ -2119,7 +2120,7 @@
 
 (declaim (maybe-inline mul-dd))
 (defun mul-dd (a0 a1 b0 b1)
-  "Multiply the double-double A0,A1 with B0,B1"
+  _N"Multiply the double-double A0,A1 with B0,B1"
   (declare (double-float a0 a1 b0 b1)
 	   (optimize (speed 3)
 		     (inhibit-warnings 3)))
@@ -2138,7 +2139,7 @@
 
 (declaim (maybe-inline add-dd-d))
 (defun add-dd-d (a0 a1 b)
-  "Add the double-double A0,A1 to the double B"
+  _N"Add the double-double A0,A1 to the double B"
   (declare (double-float a0 a1 b)
 	   (optimize (speed 3)
 		     (inhibit-warnings 3)))
@@ -2233,7 +2234,7 @@
 
 (declaim (maybe-inline div-dd))
 (defun div-dd (a0 a1 b0 b1)
-  "Divide the double-double A0,A1 by B0,B1"
+  _N"Divide the double-double A0,A1 by B0,B1"
   (declare (double-float a0 a1 b0 b1)
 	   (optimize (speed 3)
 		     (inhibit-warnings 3))
@@ -2299,7 +2300,7 @@
 
 (declaim (inline sqr-d))
 (defun sqr-d (a)
-  "Square"
+  _N"Square"
   (declare (double-float a)
 	   (optimize (speed 3)
 		     (inhibit-warnings 3)))

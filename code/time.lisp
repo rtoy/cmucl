@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.30 2009/08/09 03:54:42 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.31 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,12 +16,14 @@
 ;;;    Written by Rob MacLachlan.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export '(internal-time-units-per-second get-internal-real-time
 	  get-internal-run-time get-universal-time
 	  get-decoded-time encode-universal-time decode-universal-time))
 
 (defconstant internal-time-units-per-second 100
-  "The number of internal time units that fit into a second.  See
+  _N"The number of internal time units that fit into a second.  See
   Get-Internal-Real-Time and Get-Internal-Run-Time.")
 
 (defconstant micro-seconds-per-internal-time-unit
@@ -40,7 +42,7 @@
 ;;; Get-Internal-Real-Time  --  Public
 ;;;
 (defun get-internal-real-time ()
-  "Return the real time in the internal time format.  This is useful for
+  _N"Return the real time in the internal time format.  This is useful for
   finding elapsed time.  See Internal-Time-Units-Per-Second."
   (locally (declare (optimize (speed 3) (safety 0)))
     (multiple-value-bind (ignore seconds useconds) (unix:unix-gettimeofday)
@@ -64,7 +66,7 @@
 ;;;
 #-(and sparc svr4)
 (defun get-internal-run-time ()
-  "Return the run time in the internal time format.  This is useful for
+  _N"Return the run time in the internal time format.  This is useful for
   finding CPU usage."
   (declare (values (unsigned-byte 32)))
   (locally (declare (optimize (speed 3) (safety 0)))
@@ -83,7 +85,7 @@
 ;;;
 #+(and sparc svr4)
 (defun get-internal-run-time ()
-  "Return the run time in the internal time format.  This is useful for
+  _N"Return the run time in the internal time format.  This is useful for
   finding CPU usage."
   (declare (values (unsigned-byte 32)))
   (locally (declare (optimize (speed 3) (safety 0)))
@@ -127,21 +129,21 @@
 ;;;
 ;;;
 (defun get-universal-time ()
-  "Returns a single integer for the current time of
+  _N"Returns a single integer for the current time of
    day in universal time format."
   (multiple-value-bind (res secs) (unix:unix-gettimeofday)
     (declare (ignore res))
     (+ secs unix-to-universal-time)))
 
 (defun get-decoded-time ()
-  "Returns nine values specifying the current time as follows:
+  _N"Returns nine values specifying the current time as follows:
    second, minute, hour, date, month, year, day of week (0 = Monday), T
    (daylight savings times) or NIL (standard time), and timezone."
   (decode-universal-time (get-universal-time)))
 
 
 (defun decode-universal-time (universal-time &optional time-zone)
-  "Converts a universal-time to decoded time format returning the following
+  _N"Converts a universal-time to decoded time format returning the following
    nine values: second, minute, hour, date, month, year, day of week (0 =
    Monday), T (daylight savings time) or NIL (standard time), and timezone.
    Completely ignores daylight-savings-time when time-zone is supplied."
@@ -214,7 +216,7 @@
 ;;;
 (defun encode-universal-time (second minute hour date month year
 				     &optional time-zone)
-  "The time values specified in decoded format are converted to 
+  _N"The time values specified in decoded format are converted to 
    universal time, which is returned."
   (declare (type (mod 60) second)
 	   (type (mod 60) minute)
@@ -250,7 +252,7 @@
 ;;;; Time:
 
 (defmacro time (form)
-  "Evaluates the Form and prints timing information on *Trace-Output*."
+  _N"Evaluates the Form and prints timing information on *Trace-Output*."
   `(%time #'(lambda () ,form)))
 
 ;;; MASSAGE-TIME-FUNCTION  --  Internal
@@ -265,7 +267,7 @@
       (declare (ignore def))
       (cond
        (env-p
-	(warn "TIME form in a non-null environment, forced to interpret.~@
+	(warn _"TIME form in a non-null environment, forced to interpret.~@
 	       Compiling entire form will produce more accurate times.")
 	fun)
        (t
@@ -376,25 +378,36 @@
 	  (terpri *trace-output*)
 	  (pprint-logical-block (*trace-output* nil :per-line-prefix "; ")
 	    (format *trace-output*
-		    "Evaluation took:~%  ~
-		     ~S second~:P of real time~%  ~
-		     ~S second~:P of user run time~%  ~
-		     ~S second~:P of system run time~%  ~
-                     ~:D ~A cycles~%  ~
-		     ~@[[Run times include ~S second~:P GC run time]~%  ~]~
-		     ~S page fault~:P and~%  ~
-		     ~:D bytes consed.~%"
+		    _"Evaluation took:~%  ~
+		     ~S seconds of real time~%  ~
+		     ~S seconds of user run time~%  ~
+		     ~S seconds of system run time~%  "
 		    (max (/ (- new-real-time old-real-time)
 			    (float internal-time-units-per-second))
 			 0.0)
 		    (max (/ (- new-run-utime old-run-utime) 1000000.0) 0.0)
-		    (max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0)
+		    (max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0))
+	    (format *trace-output*
+		    (intl:ngettext
+		     "~:D ~A cycle~%  ~
+		     ~@[[Run times include ~S seconds GC run time]~%  ~]"
+		     "~:D ~A cycles~%  ~
+		     ~@[[Run times include ~S seconds GC run time]~%  ~]"
+		     (truncate cycle-count))
 		    (truncate cycle-count)
 		    "CPU"
 		    (unless (zerop gc-run-time)
 		      (/ (float gc-run-time)
-			 (float internal-time-units-per-second)))
-		    (max (- new-page-faults old-page-faults) 0)
+			 (float internal-time-units-per-second))))
+	    (format *trace-output*
+		    (intl:ngettext "~S page fault and~%  "
+				   "~S page faults and~%  "
+				   (max (- new-page-faults old-page-faults) 0))
+		    (max (- new-page-faults old-page-faults) 0))
+	    (format *trace-output*
+		    (intl:ngettext "~:D byte consed.~%"
+				   "~:D bytes consed.~%"
+				   (max (- bytes-consed (or *time-consing* 0)) 0))
 		    (max (- bytes-consed (or *time-consing* 0)) 0)))
 	  (terpri *trace-output*))
 	(setq *last-time-consing* bytes-consed))))))

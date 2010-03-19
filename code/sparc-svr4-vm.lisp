@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.13 2009/06/15 16:56:08 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.14 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,8 @@
 (in-package "SPARC")
 (use-package "SYSTEM")
 (use-package "UNIX")
+
+(intl:textdomain "cmucl-sparc-svr4")
 
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register
@@ -135,7 +137,7 @@
 ;;;; MACHINE-TYPE and MACHINE-VERSION
 
 (defun machine-type ()
-  "Returns a string describing the type of the local machine."
+  _N"Returns a string describing the type of the local machine."
   ;; Helps cross-compile from a different system that might not have
   ;; unix:unix-sysinfo.
   (if (fboundp (find-symbol "UNIX-SYSINFO" "UNIX"))
@@ -144,7 +146,7 @@
       "sun4"))
 
 (defun machine-version ()
-  "Returns a string describing the version of the local machine."
+  _N"Returns a string describing the version of the local machine."
   (if (fboundp (find-symbol "UNIX-SYSINFO" "UNIX"))
       (funcall (find-symbol "UNIX-SYSINFO" "UNIX")
 	       (symbol-value (find-symbol "SI-PLATFORM" "UNIX")))
@@ -157,13 +159,13 @@
 (defun fixup-code-object (code offset fixup kind)
   (declare (type index offset))
   (unless (zerop (rem offset vm:word-bytes))
-    (error "Unaligned instruction?  offset=#x~X." offset))
+    (error _"Unaligned instruction?  offset=#x~X." offset))
   (system:without-gcing
    (let ((sap (truly-the system-area-pointer
 			 (%primitive c::code-instructions code))))
      (ecase kind
        (:call
-	(error "Can't deal with CALL fixups, yet."))
+	(error _"Can't deal with CALL fixups, yet."))
        (:sethi
 	(setf (ldb (byte 22 0) (sap-ref-32 sap offset))
 	      (ldb (byte 22 10) fixup)))
@@ -332,7 +334,7 @@
 		;; constant is the C string "xrs", in big-endian
 		;; order, of course.)
 		(unless (= (slot scp 'xrs-id) +xrs-id-valid+)
-		  (error "XRS ID invalid but attempting to accessing double-float register ~d!" (ash index 1)))
+		  (error _"XRS ID invalid but attempting to access double-float register ~d!" (ash index 1)))
 		(let* ((xrs-ptr (slot scp 'xrs-ptr))
 		       (fp-sap (alien-sap (slot (slot (deref xrs-ptr 0) 'pr-xfr) 'pr-regs))))
 		  (system:sap-ref-double fp-sap (* (- index 32) vm:word-bytes))))))))))
@@ -349,7 +351,7 @@
 		(setf (sap-ref-double sap (* index vm:word-bytes)) new-value))
 	       (t
 		(unless (= (slot scp 'xrs-id) +xrs-id-valid+)
-		  (error "XRS ID invalid but attempting to accessing double-float register ~d!" (ash index 1)))
+		  (error _"XRS ID invalid but attempting to access double-float register ~d!" (ash index 1)))
 		(let* ((xrs-ptr (slot scp 'xrs-ptr))
 		       (fp-sap (alien-sap (slot (slot (deref xrs-ptr 0) 'pr-xfr) 'pr-regs))))
 		  (setf (system:sap-ref-double fp-sap (* (- index 32) vm:word-bytes)) new-value)))))))))

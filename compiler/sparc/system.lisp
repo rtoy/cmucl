@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.17 2004/01/16 03:24:49 toy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.18 2010/03/19 15:19:01 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; Mips conversion by William Lott and Christopher Hoover.
 ;;;
 (in-package "SPARC")
+(intl:textdomain "cmucl-sparc-vm")
 
 
 
@@ -279,7 +280,7 @@
 
 #+sparc-v9
 (defun read-cycle-counter ()
-  "Read the instruction cycle counter available on UltraSparcs.  The
+  _N"Read the instruction cycle counter available on UltraSparcs.  The
 64-bit counter is returned as two 32-bit unsigned integers.  The low 32-bit
 result is the first value."
   (read-cycle-counter))

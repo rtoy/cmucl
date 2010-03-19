@@ -25,10 +25,11 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp.lisp,v 1.12 2003/05/04 13:11:21 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp.lisp,v 1.13 2010/03/19 15:19:03 rtoy Rel $")
 ;;;
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;; This file is (almost) functionally equivalent to dlap.lisp,
 ;;; but easier to read.
@@ -280,7 +281,7 @@
 				   args metatypes))
 	 (wrappers (mapcar #'car wrapper-bindings)))
     (declare (fixnum index))
-    (assert (not (null wrappers)) () "Every metatype is T.")
+    (assert (not (null wrappers)) () _"Every metatype is T.")
     `(block dfun
        (tagbody
 	  (let ((field (cache-field cache))
@@ -452,9 +453,9 @@
 	    (t
 	     (go ,miss-label))))
     (class
-     (assert (null slot) () "Can't do a slot reg for this metatype.")
+     (assert (null slot) () _"Can't do a slot reg for this metatype.")
      `(wrapper-of-macro ,argument))
     ((built-in-instance structure-instance)
-     (assert (null slot) () "Can't do a slot reg for this metatype.")
+     (assert (null slot) () _"Can't do a slot reg for this metatype.")
      `(built-in-or-structure-wrapper ,argument))))
 

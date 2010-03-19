@@ -26,9 +26,10 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.84 2009/01/06 18:17:50 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.85 2010/03/19 15:19:03 rtoy Rel $")
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 (defmethod slot-accessor-function ((slotd effective-slot-definition) type)
   (ecase type

@@ -5,13 +5,14 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loop.lisp,v 1.1 2004/11/05 21:57:25 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loop.lisp,v 1.2 2010/03/19 15:19:00 rtoy Rel $")
 ;;; **********************************************************************
 ;;;
 ;;; Stuff to annotate the flow graph with information about the loops in it.
 ;;;
 ;;; Written by Rob MacLachlan
 (in-package "C")
+(intl:textdomain "cmucl")
 
 ;;; FIND-DOMINATORS  --  Internal
 ;;;

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.41 2009/06/25 13:29:06 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.42 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,8 @@
 ;;; open-coded by the compiler.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export '(get remprop symbol-plist getf get-properties symbol-name
 	  make-symbol copy-symbol gensym gentemp *gensym-counter*
 	  symbol-package keywordp makunbound symbol-value symbol-function
@@ -31,27 +33,27 @@
 (declaim (maybe-inline get %put getf remprop %putf get-properties keywordp))
 
 (defun symbol-value (variable)
-  "VARIABLE must evaluate to a symbol.  This symbol's current special
+  _N"VARIABLE must evaluate to a symbol.  This symbol's current special
   value is returned."
   (declare (optimize (safety 1)))
   (symbol-value variable))
 
 (defun boundp (variable)
-  "VARIABLE must evaluate to a symbol.  Return NIL if this symbol is
+  _N"VARIABLE must evaluate to a symbol.  Return NIL if this symbol is
   unbound, T if it has a value."
   (boundp variable))
 
 (defun set (variable new-value)
-  "VARIABLE must evaluate to a symbol.  This symbol's special value cell is
+  _N"VARIABLE must evaluate to a symbol.  This symbol's special value cell is
   set to the specified new value."
   (declare (type symbol variable))
   (cond ((null variable)
-	 (simple-program-error "Nihil ex nihil, can't set NIL."))
+	 (simple-program-error _"Nihil ex nihil, can't set NIL."))
 	((eq variable t)
-	 (simple-program-error "Veritas aeterna, can't set T."))
+	 (simple-program-error _"Veritas aeterna, can't set T."))
 	((and (boundp '*keyword-package*)
 	      (keywordp variable))
-	 (simple-program-error "Can't set keywords."))
+	 (simple-program-error _"Can't set keywords."))
 	(t
 	 (%set-symbol-value variable new-value))))
 
@@ -59,14 +61,14 @@
   (%set-symbol-value symbol new-value))
 
 (defun makunbound (variable)
-  "VARIABLE must evaluate to a symbol.  This symbol is made unbound,
+  _N"VARIABLE must evaluate to a symbol.  This symbol is made unbound,
   removing any value it may currently have."
   (set variable
        (%primitive make-other-immediate-type 0 vm:unbound-marker-type))
   variable)
 
 (defun symbol-function (variable)
-  "VARIABLE must evaluate to a symbol.  This symbol's current definition
+  _N"VARIABLE must evaluate to a symbol.  This symbol's current definition
    is returned.  Settable with SETF."
   (raw-definition variable))
 
@@ -76,18 +78,18 @@
 
 
 (defun symbol-plist (variable)
-  "VARIABLE must evaluate to a symbol.  Return its property list."
+  _N"VARIABLE must evaluate to a symbol.  Return its property list."
   (symbol-plist variable))
 
 (defun %set-symbol-plist (symbol new-value)
   (setf (symbol-plist symbol) new-value))
 
 (defun symbol-name (variable)
-  "VARIABLE must evaluate to a symbol.  Return its print name."
+  _N"VARIABLE must evaluate to a symbol.  Return its print name."
   (symbol-name variable))
 
 (defun symbol-package (variable)
-  "VARIABLE must evaluate to a symbol.  Return its package."
+  _N"VARIABLE must evaluate to a symbol.  Return its package."
   (symbol-package variable))
 
 (defun %set-symbol-package (symbol package)
@@ -95,7 +97,7 @@
   (%set-symbol-package symbol package))
 
 (defun make-symbol (string)
-  "Make and return a new symbol with the STRING as its print name."
+  _N"Make and return a new symbol with the STRING as its print name."
   #-(or gengc x86 amd64 sparc ppc) (make-symbol string)
   #+gengc (%make-symbol (random most-positive-fixnum) string)
   ;; Initialize the symbol-hash to -1 to make this fast.  It will get
@@ -104,7 +106,7 @@
 
 #+(or gengc x86 amd64 sparc ppc)
 (defun symbol-hash (symbol)
-  "Return the hash value for symbol."
+  _N"Return the hash value for symbol."
   (symbol-hash symbol))
 
 #+(or sparc ppc)
@@ -112,18 +114,18 @@
   (kernel::%set-symbol-hash symbol hash))
 
 (defun get (symbol indicator &optional (default nil))
-  "Look on the property list of SYMBOL for the specified INDICATOR.  If this
+  _N"Look on the property list of SYMBOL for the specified INDICATOR.  If this
   is found, return the associated value, else return DEFAULT."
   (do ((pl (symbol-plist symbol) (cddr pl)))
       ((atom pl) default)
     (cond ((atom (cdr pl))
 	   (simple-program-error
-	    "~S has an odd number of items in its property list." symbol))
+	    _"~S has an odd number of items in its property list." symbol))
 	  ((eq (car pl) indicator)
 	   (return (cadr pl))))))
 
 (defun %put (symbol indicator value)
-  "The VALUE is added as a property of SYMBOL under the specified INDICATOR.
+  _N"The VALUE is added as a property of SYMBOL under the specified INDICATOR.
   Returns VALUE."
   (do ((pl (symbol-plist symbol) (cddr pl)))
       ((endp pl)
@@ -132,13 +134,13 @@
        value)
     (cond ((endp (cdr pl))
 	   (simple-program-error
-	    "~S has an odd number of items in its property list." symbol))
+	    _"~S has an odd number of items in its property list." symbol))
 	  ((eq (car pl) indicator)
 	   (rplaca (cdr pl) value)
 	   (return value)))))
 
 (defun remprop (symbol indicator)
-  "Look on property list of SYMBOL for property with specified
+  _N"Look on property list of SYMBOL for property with specified
   INDICATOR.  If found, splice this indicator and its value out of
   the plist, and return the tail of the original list starting with
   INDICATOR.  If not found, return () with no side effects.
@@ -150,7 +152,7 @@
       ((atom pl) nil)
     (cond ((atom (cdr pl))
 	   (simple-program-error
-	    "~S has an odd number of items in its property list." symbol))
+	    _"~S has an odd number of items in its property list." symbol))
 	  ((eq (car pl) indicator)
 	   (cond (prev (rplacd (cdr prev) (cddr pl)))
 		 (t
@@ -162,7 +164,7 @@
     (and result (evenp result))))
 
 (defun getf (place indicator &optional (default ()))
-  "Searches the property list stored in Place for an indicator EQ to Indicator.
+  _N"Searches the property list stored in Place for an indicator EQ to Indicator.
   If one is found, the corresponding value is returned, else the Default is
   returned."
   (do ((plist place (cddr plist)))
@@ -171,7 +173,7 @@
 	   (error 'simple-type-error
 		  :datum place
 		  :expected-type '(satisfies valid-property-list-p)
-		  :format-control "Malformed property list: ~S"
+		  :format-control _"Malformed property list: ~S"
 		  :format-arguments (list place)))	   
 	  ((eq (car plist) indicator)
 	   (return (cadr plist))))))
@@ -187,7 +189,7 @@
 
 
 (defun get-properties (place indicator-list)
-  "Like GETF, except that Indicator-List is a list of indicators which will
+  _N"Like GETF, except that Indicator-List is a list of indicators which will
   be looked for in the property list stored in Place.  Three values are
   returned, see manual for details."
   (do ((plist place (cddr plist)))
@@ -196,13 +198,13 @@
 	   (error 'simple-type-error
 		  :datum place
 		  :expected-type '(satisfies valid-property-list-p)
-		  :format-control "Malformed property list: ~S"
+		  :format-control _"Malformed property list: ~S"
 		  :format-arguments (list place)))
 	  ((memq (car plist) indicator-list)
 	   (return (values (car plist) (cadr plist) plist))))))
 
 (defun copy-symbol (symbol &optional (copy-props nil) &aux new-symbol)
-  "Make and return a new uninterned symbol with the same print name
+  _N"Make and return a new uninterned symbol with the same print name
   as SYMBOL.  If COPY-PROPS is false, the new symbol is neither bound
   nor fbound and has no properties, else it has a copy of SYMBOL's
   function, value and property list."
@@ -218,7 +220,7 @@
 (declaim (special *keyword-package*))
 
 (defun keywordp (object)
-  "Returns true if Object is a symbol in the keyword package."
+  _N"Returns true if Object is a symbol in the keyword package."
   (and (symbolp object)
        (eq (symbol-package object) *keyword-package*)))
 
@@ -226,11 +228,11 @@
 ;;;; Gensym and friends.
 
 (defvar *gensym-counter* 0
-  "Counter for generating unique GENSYM symbols.")
+  _N"Counter for generating unique GENSYM symbols.")
 (declaim (type unsigned-byte *gensym-counter*))
 
 (defun gensym (&optional (thing "G"))
-  "Creates a new uninterned symbol whose name is a prefix string (defaults
+  _N"Creates a new uninterned symbol whose name is a prefix string (defaults
    to \"G\"), followed by a decimal number.  Thing, when supplied, will
    alter the prefix if it is a string, or be used for the decimal number
    if it is a number, of this symbol. The default value of the number is
@@ -259,7 +261,7 @@
 (declaim (type index *gentemp-counter*))
 
 (defun gentemp (&optional (prefix "T") (package *package*))
-  "Creates a new symbol interned in package Package with the given Prefix."
+  _N"Creates a new symbol interned in package Package with the given Prefix."
   (loop
     (let* ((*print-base* 10)
 	   (*print-radix* nil)

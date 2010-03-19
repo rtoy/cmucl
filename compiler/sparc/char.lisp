@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.12 2003/10/20 01:25:01 toy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.13 2010/03/19 15:19:01 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -16,6 +16,7 @@
 ;;; And then to the SPARC by William Lott.
 ;;;
 (in-package "SPARC")
+(intl:textdomain "cmucl-sparc-vm")
 
 
 
@@ -26,7 +27,7 @@
 (define-vop (move-to-base-char)
   (:args (x :scs (any-reg descriptor-reg)))
   (:results (y :scs (base-char-reg)))
-  (:note "character untagging")
+  (:note _N"character untagging")
   (:generator 1
     (inst srln y x vm:type-bits)))
 ;;;
@@ -39,7 +40,7 @@
 (define-vop (move-from-base-char)
   (:args (x :scs (base-char-reg)))
   (:results (y :scs (any-reg descriptor-reg)))
-  (:note "character tagging")
+  (:note _N"character tagging")
   (:generator 1
     (inst slln y x vm:type-bits)
     (inst or y vm:base-char-type)))
@@ -55,7 +56,7 @@
 	    :load-if (not (location= x y))))
   (:results (y :scs (base-char-reg)
 	       :load-if (not (location= x y))))
-  (:note "character move")
+  (:note _N"character move")
   (:effects)
   (:affected)
   (:generator 0
@@ -74,7 +75,7 @@
 	     :load-if (not (sc-is y base-char-reg))))
   (:results (y))
   (:temporary (:sc non-descriptor-reg) temp)
-  (:note "character arg move")
+  (:note _N"character arg move")
   (:generator 0
     (sc-case y
       (base-char-reg
@@ -126,7 +127,7 @@
   (:conditional)
   (:info target not-p)
   (:policy :fast-safe)
-  (:note "inline comparison")
+  (:note _N"inline comparison")
   (:variant-vars condition not-condition)
   (:generator 3
     (inst cmp x y)
@@ -151,7 +152,7 @@
   (:conditional)
   (:info target not-p y)
   (:policy :fast-safe)
-  (:note "inline comparison")
+  (:note _N"inline comparison")
   (:variant-vars condition not-condition)
   (:generator 2
     (inst cmp x (char-code y))

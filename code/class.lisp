@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.62 2009/06/11 16:03:57 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.63 2010/03/19 15:18:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;; overwritten when CLOS is loaded.
 ;;;
 (in-package "KERNEL")
+
+(intl:textdomain "cmucl")
 
 (export '(layout layout-hash layout-hash-length layout-hash-max
 	  initialize-layout-hash layout-class layout-invalid
@@ -93,7 +95,7 @@
 		    (lambda (s stream d)
 		      (declare (ignore d))
 		      (print-unreadable-object (s stream :identity t)
-			(format stream "Layout for ~S~@[, Invalid=~S~]"
+			(format stream _"Layout for ~S~@[, Invalid=~S~]"
 				(class-proper-name (layout-class s))
 				(layout-invalid s)))))
 		   (:make-load-form-fun :ignore-it)
@@ -165,7 +167,7 @@
   (setf (%instance-ref layout (1+ i)) new-value))
 
 (defconstant layout-hash-max (ash most-positive-fixnum -3)
-  "The inclusive upper bound on LAYOUT-HASH values.")
+  _N"The inclusive upper bound on LAYOUT-HASH values.")
 
 (defvar *layout-hash-seed* nil)
 
@@ -209,7 +211,7 @@
 	  (unless (eql depth -1)
 	    (let ((old-layout (svref inherits depth)))
 	      (unless (or (eql old-layout 0) (eq old-layout layout))
-		(error "Layout depth conflict: ~S~%  ~
+		(error _"Layout depth conflict: ~S~%  ~
 		        (~S collides at ~S with ~S)~%"
 		       layouts layout depth old-layout)))
 	    (setf (svref inherits depth) layout))))
@@ -287,14 +289,14 @@
   (let ((name (%class-name class)))
     (unless (and name (eq (find-class name nil) class))
       (error
-       "Can't use anonymous or undefined class as constant:~%  ~S"
+       _"Can't use anonymous or undefined class as constant:~%  ~S"
        class))
     `(find-class ',name)))
 ;;;
 (defun %print-class (s stream d)
   (declare (ignore d))
   (print-unreadable-object (s stream :identity t :type t)
-    (format stream "~:[<anonymous>~;~:*~S~]~@[ (~(~A~))~]"
+    (format stream _"~:[<anonymous>~;~:*~S~]~@[ (~(~A~))~]"
 	    (%class-name s) (%class-state s))))
 
 
@@ -388,7 +390,7 @@
 ;;; FIND-CLASS  --  Public
 ;;;
 (defun find-class (name &optional (errorp t) environment)
-  "Return the class with the specified Name.  If ERRORP is false, then NIL is
+  _N"Return the class with the specified Name.  If ERRORP is false, then NIL is
    returned when no such class exists."
   (declare (type symbol name) (ignore environment))
   (let ((res (class-cell-class (find-class-cell name))))
@@ -397,7 +399,7 @@
 	(error 'simple-type-error
 	       :datum name
 	       :expected-type t		; Not really
-	       :format-control "Class not yet defined:~%  ~S"
+	       :format-control _"Class not yet defined:~%  ~S"
 	       :format-arguments (list name)))))
 ;;;
 (defun (setf find-class) (new-value name &optional (errorp t) environment)
@@ -407,7 +409,7 @@
      ;; Clear info db if name names a class
      (ecase (info type kind name)
        (:primitive
-	(error "Illegal to redefine standard type ~S." name))
+	(error _"Illegal to redefine standard type ~S." name))
        (:defined)
        ((nil))
        (:instance
@@ -422,12 +424,12 @@
 	(let ((old (class-of (find-class name)))
 	      (new (class-of new-value)))
 	  (unless (eq old new)
-	    (warn "Changing meta-class of ~S from ~S to ~S."
+	    (warn _"Changing meta-class of ~S from ~S to ~S."
 		  name (%class-name old) (%class-name new)))))
        (:primitive
-	(error "Illegal to redefine standard type ~S." name))
+	(error _"Illegal to redefine standard type ~S." name))
        (:defined
-	(warn "Redefining DEFTYPE type to be a class: ~S."
+	(warn _"Redefining DEFTYPE type to be a class: ~S."
 	      name)
 	(setf (info type expander name) nil)))
      
@@ -1018,7 +1020,7 @@
 ;;;
 (declaim (inline class-of))
 (defun class-of (object)
-  "Return the class of the supplied object, which may be any Lisp object, not
+  _N"Return the class of the supplied object, which may be any Lisp object, not
    just a CLOS STANDARD-OBJECT."
   (layout-class (layout-of object)))
 
@@ -1033,7 +1035,7 @@
 (defun modify-class (class)
   (clear-type-caches)
   (when (member (%class-state class) '(:read-only :frozen))
-    (warn "Modifing ~(~A~) class ~S; making it writable."
+    (warn _"Modifing ~(~A~) class ~S; making it writable."
 	  (%class-state class) (%class-name class))
     (setf (%class-state class) nil)))
 
@@ -1107,7 +1109,7 @@
 				     (make-hash-table :test #'eq)))))
 	  (when (and (eq (%class-state super) :sealed)
 		     (not (gethash class subclasses)))
-	    (warn "Subclassing sealed class ~S; unsealing it."
+	    (warn _"Subclassing sealed class ~S; unsealing it."
 		  (%class-name super))
 	    (setf (%class-state super) :read-only))
 	  (setf (gethash class subclasses)
@@ -1137,7 +1139,7 @@
 	      (newi (layout-inherits new)))
 	  (or (when (mismatch oldi newi :key #'layout-proper-name)
 		(warn
-		 "Change in superclasses of class ~S:~%  ~
+		 _"Change in superclasses of class ~S:~%  ~
 		  ~A superclasses: ~S~%  ~
 		  ~A superclasses: ~S"
 		 name
@@ -1147,7 +1149,7 @@
 	      (let ((diff (mismatch oldi newi)))
 		(when diff
 		  (warn
-		   "In class ~S:~%  ~
+		   _"In class ~S:~%  ~
 		    ~:(~A~) definition of superclass ~S incompatible with~%  ~
 		    ~A definition."
 		   name old-context (layout-proper-name (svref oldi diff))
@@ -1156,7 +1158,7 @@
 	(let ((old-len (layout-length old))
 	      (new-len (layout-length new)))
 	  (unless (= old-len new-len)
-	    (warn "Change in instance length of class ~S:~%  ~
+	    (warn _"Change in instance length of class ~S:~%  ~
 		   ~A length: ~D~%  ~
 		   ~A length: ~D"
 		  name
@@ -1165,7 +1167,7 @@
 	    t))
 	(when (/= (layout-inheritance-depth old)
 		  (layout-inheritance-depth new))
-	  (warn "Change in the inheritance structure of class ~S~%  ~
+	  (warn _"Change in the inheritance structure of class ~S~%  ~
 		 between the ~A definition and the ~A definition."
 		name old-context new-context)
 	  t))))
@@ -1204,18 +1206,20 @@
 	  #-bootstrap-dynamic-extent
 	  ((redefine-layout-warning old "current" res "compile time")
 	   (restart-case
-	       (error "Loading a reference to class ~S when the compile~
+	       (error _"Loading a reference to class ~S when the compile~
 		       ~%  time definition was incompatible with the current ~
 		       one."
 		      name)
 	     (continue ()
-	       :report "Invalidate current definition."
-	       (warn "New definition of ~S must be loaded eventually." name)
+	       :report (lambda (stream)
+			 (write-string _"Invalidate current definition." stream))
+	       (warn _"New definition of ~S must be loaded eventually." name)
 	       (invalidate-layout old)
 	       (setf (gethash name *forward-referenced-layouts*) res))
 	     (clobber-it ()
-	       :report "Smash current layout, preserving old code."
-	       (warn "Any old ~S instances will be in a bad way.~@
+	       :report (lambda (stream)
+			 (write-string _"Smash current layout, preserving old code." stream))
+	       (warn _"Any old ~S instances will be in a bad way.~@
 		      I hope you know what you're doing..."
 		     name)
 	       (setf (layout-inherits old) inherits)
@@ -1223,8 +1227,9 @@
 	       (setf (layout-length old) length)
 	       old)
 	     (use-current ()
-	       :report "Ignore the incompatibility, leave class alone."
-	       (warn "Assuming the current definition of ~S is correct, and~@
+	       :report (lambda (stream)
+			 (write-string _"Ignore the incompatibility, leave class alone." stream))
+	       (warn _"Assuming the current definition of ~S is correct, and~@
 		      that the loaded code doesn't care about the ~
 		      incompatibility."
 		     name)
@@ -1275,7 +1280,7 @@
        (cond ((endp free-objs)
 	      (do-hash (obj info obj-info)
 		(unless (zerop (first info))
-		  (error "Topological sort failed due to constraint on ~S."
+		  (error _"Topological sort failed due to constraint on ~S."
 			 obj)))
 	      (return (nreverse result)))
 	     ((endp (rest free-objs))
@@ -1336,7 +1341,7 @@
 	    ((eq (%class-layout class) layout)
 	     (remhash name *forward-referenced-layouts*))
 	    (t
-	     (warn "Something strange with forward layout for ~S:~%  ~S"
+	     (warn _"Something strange with forward layout for ~S:~%  ~S"
 		   name layout))))))
 
 (emit-cold-load-defuns "CLASS")

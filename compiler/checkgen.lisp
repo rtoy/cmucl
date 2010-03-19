@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.34 2005/12/09 15:50:20 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.35 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 
 ;;;; Cost estimation:
@@ -517,17 +518,17 @@
 			  (eq (combination-kind dest) :local))
 		 (let ((lambda (combination-lambda dest))
 		       (pos (eposition cont (combination-args dest))))
-		   (format nil "~:[A possible~;The~] binding of ~S"
+		   (format nil _"~:[A possible~;The~] binding of ~S"
 			   (and (continuation-use cont)
 				(eq (functional-kind lambda) :let))
 			   (leaf-name (elt (lambda-vars lambda) pos)))))))
     (cond ((eq dtype *empty-type*))
 	  ((and (ref-p node) (constant-p (ref-leaf node)))
-	   (compiler-warning "~:[This~;~:*~A~] is not a ~<~%~9T~:;~S:~>~%  ~S"
+	   (compiler-warning _N"~:[This~;~:*~A~] is not a ~<~%~9T~:;~S:~>~%  ~S"
 			     what atype-spec (constant-value (ref-leaf node))))
 	  (t
 	   (compiler-warning
-	    "~:[Result~;~:*~A~] is a ~S, ~<~%~9T~:;not a ~S.~>"
+	    _N"~:[Result~;~:*~A~] is a ~S, ~<~%~9T~:;not a ~S.~>"
 	    what (type-specifier dtype) atype-spec))))
   (undefined-value))
 
@@ -621,7 +622,7 @@
 		  (*compiler-error-context* context))
 	     (when (policy context (>= safety brevity))
 	       (compiler-note
-		"Type assertion too complex to check:~% ~S."
+		_N"Type assertion too complex to check:~% ~S."
 		(type-specifier (continuation-asserted-type cont)))))
 	   (setf (continuation-%type-check cont) :deleted))))))
 

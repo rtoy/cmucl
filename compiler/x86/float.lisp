@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.58 2009/01/05 22:26:26 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.59 2010/03/19 15:19:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,6 +22,8 @@
 ;;;
 
 (in-package :x86)
+(intl:textdomain "cmucl-x86-vm")
+
 
 
 
@@ -240,7 +242,7 @@
 	     (inst fldlg2))
 	    ((= value (log 2l0 2.718281828459045235360287471352662L0))
 	     (inst fldln2))
-	    (t (warn "Ignoring bogus i387 Constant ~a" value))))))
+	    (t (warn _"Ignoring bogus i387 Constant ~a" value))))))
 
 
 ;;;; Complex float move functions
@@ -407,7 +409,7 @@
 (define-vop (float-move)
   (:args (x))
   (:results (y))
-  (:note "float move")
+  (:note _N"float move")
   (:generator 0
      (unless (location= x y)
         (cond ((zerop (tn-offset y))
@@ -442,7 +444,7 @@
 (define-vop (complex-float-move)
   (:args (x :target y :load-if (not (location= x y))))
   (:results (y :load-if (not (location= x y))))
-  (:note "complex float move")
+  (:note _N"complex float move")
   (:generator 0
      (unless (location= x y)
        ;; Note the complex-float-regs are aligned to every second
@@ -495,7 +497,7 @@
   (:args (x :scs (single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "float to pointer coercion")
+  (:note _N"float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:single-float-type vm:single-float-size node)
        (with-tn@fp-top(x)
@@ -507,7 +509,7 @@
   (:args (x :scs (double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "float to pointer coercion")
+  (:note _N"float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:double-float-type vm:double-float-size node)
        (with-tn@fp-top(x)
@@ -520,7 +522,7 @@
   (:args (x :scs (long-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "float to pointer coercion")
+  (:note _N"float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:long-float-type vm:long-float-size node)
        (with-tn@fp-top(x)
@@ -563,7 +565,7 @@
 (define-vop (move-to-single)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (single-reg)))
-  (:note "pointer to float coercion")
+  (:note _N"pointer to float coercion")
   (:generator 2
      (with-empty-tn@fp-top(y)
        (inst fld (ea-for-sf-desc x)))))
@@ -572,7 +574,7 @@
 (define-vop (move-to-double)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (double-reg)))
-  (:note "pointer to float coercion")
+  (:note _N"pointer to float coercion")
   (:generator 2
      (with-empty-tn@fp-top(y)
        (inst fldd (ea-for-df-desc x)))))
@@ -582,7 +584,7 @@
 (define-vop (move-to-long)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (long-reg)))
-  (:note "pointer to float coercion")
+  (:note _N"pointer to float coercion")
   (:generator 2
      (with-empty-tn@fp-top(y)
        (inst fldl (ea-for-lf-desc x)))))
@@ -598,7 +600,7 @@
   (:args (x :scs (complex-single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "complex float to pointer coercion")
+  (:note _N"complex float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:complex-single-float-type
 			       vm:complex-single-float-size node)
@@ -615,7 +617,7 @@
   (:args (x :scs (complex-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "complex float to pointer coercion")
+  (:note _N"complex float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:complex-double-float-type
 			       vm:complex-double-float-size node)
@@ -633,7 +635,7 @@
   (:args (x :scs (complex-long-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "complex float to pointer coercion")
+  (:note _N"complex float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:complex-long-float-type
 			       vm:complex-long-float-size node)
@@ -652,7 +654,7 @@
   (:args (x :scs (complex-double-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "complex double-double float to pointer coercion")
+  (:note _N"complex double-double float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm::complex-double-double-float-type
 			       vm::complex-double-double-float-size node)
@@ -680,7 +682,7 @@
 		(define-vop (,name)
 		  (:args (x :scs (descriptor-reg)))
 		  (:results (y :scs (,sc)))
-		  (:note "pointer to complex float coercion")
+		  (:note _N"pointer to complex float coercion")
 		  (:generator 2
 		    (let ((real-tn (complex-double-reg-real-tn y)))
 		      (with-empty-tn@fp-top(real-tn)
@@ -717,7 +719,7 @@
 			 (fp :scs (any-reg)
 			     :load-if (not (sc-is y ,sc))))
 		  (:results (y))
-		  (:note "float argument move")
+		  (:note _N"float argument move")
 		  (:generator ,(case format (:single 2) (:double 3) (:long 4))
 		    (sc-case y
 		      (,sc
@@ -769,7 +771,7 @@
 			 (fp :scs (any-reg)
 			     :load-if (not (sc-is y ,sc))))
 		  (:results (y))
-		  (:note "complex float argument move")
+		  (:note _N"complex float argument move")
 		  (:generator ,(ecase format (:single 2) (:double 3) (:long 4))
 		    (sc-case y
 		      (,sc
@@ -844,7 +846,7 @@
   (:args (x :scs (complex-double-double-reg) :target y)
 	 (fp :scs (any-reg) :load-if (not (sc-is y complex-double-double-reg))))
   (:results (y))
-  (:note "complex double-double-float argument move")
+  (:note _N"complex double-double-float argument move")
   (:generator 2
     (sc-case y
       (complex-double-double-reg
@@ -974,7 +976,7 @@
 	   (:arg-types single-float single-float)
 	   (:result-types single-float)
 	   (:policy :fast-safe)
-	   (:note "inline float arithmetic")
+	   (:note _N"inline float arithmetic")
 	   (:vop-var vop)
 	   (:save-p :compute-only)
 	   (:node-var node)
@@ -1134,7 +1136,7 @@
 	   (:arg-types double-float double-float)
 	   (:result-types double-float)
 	   (:policy :fast-safe)
-	   (:note "inline float arithmetic")
+	   (:note _N"inline float arithmetic")
 	   (:vop-var vop)
 	   (:save-p :compute-only)
 	   (:node-var node)
@@ -1279,7 +1281,7 @@
 	   (:arg-types long-float long-float)
 	   (:result-types long-float)
 	   (:policy :fast-safe)
-	   (:note "inline float arithmetic")
+	   (:note _N"inline float arithmetic")
 	   (:vop-var vop)
 	   (:save-p :compute-only)
 	   (:node-var node)
@@ -1384,7 +1386,7 @@
 	       (:temporary (:sc double-reg :offset fr0-offset
 				:from :argument :to :result) fr0)
 	       (:ignore fr0)
-	       (:note "inline float arithmetic")
+	       (:note _N"inline float arithmetic")
 	       (:vop-var vop)
 	       (:save-p :compute-only)
 	       (:generator 1
@@ -1429,7 +1431,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:save-p :compute-only)
-  (:note "inline float comparison")
+  (:note _N"inline float comparison")
   (:ignore temp)
   (:generator 3
      (note-this-location vop :internal-error)
@@ -1481,7 +1483,7 @@
 		(:info target not-p)
 		(:policy :fast-safe)
 		(:guard (not (backend-featurep :ppro)))
-		(:note "inline float comparison")
+		(:note _N"inline float comparison")
 		(:ignore temp fr0)
 		(:generator 3
 		   ;; Handle a few special cases
@@ -1570,7 +1572,7 @@
 		(:info target not-p)
 		(:policy :fast-safe)
 		(:guard (not (backend-featurep :ppro)))
-		(:note "inline float comparison")
+		(:note _N"inline float comparison")
 		(:ignore temp fr0)
 		(:generator 3
 		   ;; Handle a few special cases
@@ -1658,7 +1660,7 @@
 		(:info target not-p)
 		(:policy :fast-safe)
 		(:guard (not (backend-featurep :ppro)))
-		(:note "inline float comparison")
+		(:note _N"inline float comparison")
 		(:ignore temp)
 		(:generator 3
 		   (cond
@@ -1716,7 +1718,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:save-p :compute-only)
-  (:note "inline float comparison")
+  (:note _N"inline float comparison")
   (:ignore temp y)
   (:guard (not (backend-featurep :sse2)))
   (:generator 2
@@ -1783,7 +1785,7 @@
   (:info target not-p)
   (:policy :fast-safe)
   (:guard (backend-featurep :ppro))
-  (:note "inline float comparison")
+  (:note _N"inline float comparison")
   (:generator 3
     ;; Handle a few special cases
     (cond
@@ -1823,7 +1825,7 @@
   (:info target not-p)
   (:policy :fast-safe)
   (:guard (backend-featurep :ppro))
-  (:note "inline float comparison")
+  (:note _N"inline float comparison")
   (:generator 3
     ;; Handle a few special cases
     (cond
@@ -1868,7 +1870,7 @@
 		(:arg-types signed-num)
 		(:result-types ,to-type)
 		(:policy :fast-safe)
-		(:note "inline float coercion")
+		(:note _N"inline float coercion")
 		(:translate ,translate)
 		(:vop-var vop)
 		(:save-p :compute-only)
@@ -1897,7 +1899,7 @@
   (:arg-types signed-num)
   (:result-types single-float)
   (:policy :fast-safe)
-  (:note "inline float coercion")
+  (:note _N"inline float coercion")
   (:translate %single-float)
   (:vop-var vop)
   (:save-p :compute-only)
@@ -1925,7 +1927,7 @@
 		(:arg-types unsigned-num)
 		(:result-types ,to-type)
 		(:policy :fast-safe)
-		(:note "inline float coercion")
+		(:note _N"inline float coercion")
 		(:translate ,translate)
 		(:vop-var vop)
 		(:save-p :compute-only)
@@ -1949,7 +1951,7 @@
   (:arg-types unsigned-num)
   (:result-types single-float)
   (:policy :fast-safe)
-  (:note "inline float coercion")
+  (:note _N"inline float coercion")
   (:translate %single-float)
   (:vop-var vop)
   (:save-p :compute-only)
@@ -1972,7 +1974,7 @@
 	       (:arg-types ,from-type)
 	       (:result-types ,to-type)
 	       (:policy :fast-safe)
-	       (:note "inline float coercion")
+	       (:note _N"inline float coercion")
 	       (:translate ,translate)
 	       (:vop-var vop)
 	       (:save-p :compute-only)
@@ -2017,7 +2019,7 @@
   (:arg-types double-float)
   (:result-types single-float)
   (:policy :fast-safe)
-  (:note "inline float coercion")
+  (:note _N"inline float coercion")
   (:translate %single-float)
   (:temporary (:sc single-stack) sf-temp)
   (:vop-var vop)
@@ -2072,7 +2074,7 @@
 	       (:result-types signed-num)
 	       (:translate ,trans)
 	       (:policy :fast-safe)
-	       (:note "inline float truncate")
+	       (:note _N"inline float truncate")
 	       (:vop-var vop)
 	       (:save-p :compute-only)
 	       (:generator 5
@@ -2120,7 +2122,7 @@
 	       (:result-types unsigned-num)
 	       (:translate ,trans)
 	       (:policy :fast-safe)
-	       (:note "inline float truncate")
+	       (:note _N"inline float truncate")
 	       (:vop-var vop)
 	       (:save-p :compute-only)
 	       (:guard (not (backend-featurep :sse2)))
@@ -2462,7 +2464,7 @@
 	       (:result-types double-float)
 	       (:translate ,trans)
 	       (:policy :fast-safe)
-	       (:note "inline NPX function")
+	       (:note _N"inline NPX function")
 	       (:vop-var vop)
 	       (:save-p :compute-only)
 	       (:node-var node)
@@ -2502,7 +2504,7 @@
   (:arg-types double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:note "inline tan function")
+  (:note _N"inline tan function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore fr0)
@@ -2548,7 +2550,7 @@
 		(:arg-types double-float)
 		(:result-types double-float)
 		(:policy :fast-safe)
-		(:note "inline sin/cos function")
+		(:note _N"inline sin/cos function")
 		(:vop-var vop)
 		(:save-p :compute-only)
 		(:ignore eax)
@@ -2593,7 +2595,7 @@
   (:arg-types double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:note "inline tan function")
+  (:note _N"inline tan function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore eax)
@@ -2651,7 +2653,7 @@
 	        (:arg-types double-float)
 	        (:result-types double-float)
 		(:policy :fast-safe)
-		(:note "inline sin/cos function")
+		(:note _N"inline sin/cos function")
 		(:vop-var vop)
 		(:save-p :compute-only)
 	        (:ignore eax fr0)
@@ -2689,7 +2691,7 @@
   (:result-types double-float)
   (:ignore eax)
   (:policy :fast-safe)
-  (:note "inline tan function")
+  (:note _N"inline tan function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore eax fr0)
@@ -2737,7 +2739,7 @@
   (:arg-types double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:note "inline exp function")
+  (:note _N"inline exp function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 5
@@ -2790,7 +2792,7 @@
   (:arg-types double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:note "inline exp function")
+  (:note _N"inline exp function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore temp)
@@ -2847,7 +2849,7 @@
   (:arg-types double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:note "inline expm1 function")
+  (:note _N"inline expm1 function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore temp fr0)
@@ -2904,7 +2906,7 @@
   (:arg-types double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:note "inline log function")
+  (:note _N"inline log function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:guard (not (backend-featurep :sse2)))
@@ -2956,7 +2958,7 @@
   (:arg-types double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:note "inline log10 function")
+  (:note _N"inline log10 function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:guard (not (backend-featurep :sse2)))
@@ -3011,7 +3013,7 @@
   (:arg-types double-float double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:note "inline pow function")
+  (:note _N"inline pow function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:guard (not (backend-featurep :sse2)))
@@ -3127,7 +3129,7 @@
   (:arg-types double-float signed-num)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:note "inline scalbn function")
+  (:note _N"inline scalbn function")
   (:ignore fr0)
   (:guard (not (backend-featurep :sse2)))
   (:generator 5
@@ -3193,7 +3195,7 @@
   (:arg-types double-float double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:note "inline scalb function")
+  (:note _N"inline scalb function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore fr0)
@@ -3301,7 +3303,7 @@
   (:policy :fast-safe)
   (:guard (or (not (backend-featurep :pentium))
 	      (not (backend-featurep :sse2))))
-  (:note "inline log1p function")
+  (:note _N"inline log1p function")
   (:ignore temp)
   (:generator 5
      ;; x is in a FP reg, not fr0, fr1.
@@ -3356,7 +3358,7 @@
   (:policy :fast-safe)
   (:guard (and (backend-featurep :pentium)
 	       (not (backend-featurep :sse2))))
-  (:note "inline log1p with limited x range function")
+  (:note _N"inline log1p with limited x range function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 5
@@ -3406,7 +3408,7 @@
   (:arg-types double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:note "inline logb function")
+  (:note _N"inline logb function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore fr0)
@@ -3454,7 +3456,7 @@
   (:arg-types double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:note "inline atan function")
+  (:note _N"inline atan function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:guard (not (backend-featurep :sse2)))
@@ -3502,7 +3504,7 @@
   (:arg-types double-float double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:note "inline atan2 function")
+  (:note _N"inline atan2 function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:guard (not (backend-featurep :sse2)))
@@ -3625,7 +3627,7 @@
 	       (:result-types long-float)
 	       (:translate ,trans)
 	       (:policy :fast-safe)
-	       (:note "inline NPX function")
+	       (:note _N"inline NPX function")
 	       (:vop-var vop)
 	       (:save-p :compute-only)
 	       (:node-var node)
@@ -3662,7 +3664,7 @@
   (:arg-types long-float)
   (:result-types long-float)
   (:policy :fast-safe)
-  (:note "inline tan function")
+  (:note _N"inline tan function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore fr0)
@@ -3707,7 +3709,7 @@
 		(:arg-types long-float)
 		(:result-types long-float)
 		(:policy :fast-safe)
-		(:note "inline sin/cos function")
+		(:note _N"inline sin/cos function")
 		(:vop-var vop)
 		(:save-p :compute-only)
 		(:ignore eax)
@@ -3752,7 +3754,7 @@
   (:arg-types long-float)
   (:result-types long-float)
   (:policy :fast-safe)
-  (:note "inline tan function")
+  (:note _N"inline tan function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore eax)
@@ -3810,7 +3812,7 @@
 	        (:arg-types long-float)
 	        (:result-types long-float)
 		(:policy :fast-safe)
-		(:note "inline sin/cos function")
+		(:note _N"inline sin/cos function")
 		(:vop-var vop)
 		(:save-p :compute-only)
 	        (:ignore eax fr0)
@@ -3847,7 +3849,7 @@
   (:result-types long-float)
   (:ignore eax)
   (:policy :fast-safe)
-  (:note "inline tan function")
+  (:note _N"inline tan function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore eax fr0)
@@ -3897,7 +3899,7 @@
   (:arg-types long-float)
   (:result-types long-float)
   (:policy :fast-safe)
-  (:note "inline exp function")
+  (:note _N"inline exp function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore temp)
@@ -3953,7 +3955,7 @@
   (:arg-types long-float)
   (:result-types long-float)
   (:policy :fast-safe)
-  (:note "inline expm1 function")
+  (:note _N"inline expm1 function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore temp fr0)
@@ -4009,7 +4011,7 @@
   (:arg-types long-float)
   (:result-types long-float)
   (:policy :fast-safe)
-  (:note "inline log function")
+  (:note _N"inline log function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 5
@@ -4060,7 +4062,7 @@
   (:arg-types long-float)
   (:result-types long-float)
   (:policy :fast-safe)
-  (:note "inline log10 function")
+  (:note _N"inline log10 function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 5
@@ -4114,7 +4116,7 @@
   (:arg-types long-float long-float)
   (:result-types long-float)
   (:policy :fast-safe)
-  (:note "inline pow function")
+  (:note _N"inline pow function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 5
@@ -4229,7 +4231,7 @@
   (:arg-types long-float signed-num)
   (:result-types long-float)
   (:policy :fast-safe)
-  (:note "inline scalbn function")
+  (:note _N"inline scalbn function")
   (:ignore fr0)
   (:generator 5
      ;; Setup x in fr0 and y in fr1
@@ -4294,7 +4296,7 @@
   (:arg-types long-float long-float)
   (:result-types long-float)
   (:policy :fast-safe)
-  (:note "inline scalb function")
+  (:note _N"inline scalb function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore fr0)
@@ -4400,7 +4402,7 @@
   (:result-types long-float)
   (:policy :fast-safe)
   (:guard (not (backend-featurep :pentium)))
-  (:note "inline log1p function")
+  (:note _N"inline log1p function")
   (:ignore temp)
   (:generator 5
      ;; x is in a FP reg, not fr0, fr1.
@@ -4454,7 +4456,7 @@
   (:result-types long-float)
   (:policy :fast-safe)
   (:guard (backend-featurep :pentium))
-  (:note "inline log1p function")
+  (:note _N"inline log1p function")
   (:generator 5
      (sc-case x
         (long-reg
@@ -4501,7 +4503,7 @@
   (:arg-types long-float)
   (:result-types long-float)
   (:policy :fast-safe)
-  (:note "inline logb function")
+  (:note _N"inline logb function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore fr0)
@@ -4548,7 +4550,7 @@
   (:arg-types long-float)
   (:result-types long-float)
   (:policy :fast-safe)
-  (:note "inline atan function")
+  (:note _N"inline atan function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 5
@@ -4595,7 +4597,7 @@
   (:arg-types long-float long-float)
   (:result-types long-float)
   (:policy :fast-safe)
-  (:note "inline atan2 function")
+  (:note _N"inline atan2 function")
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 5
@@ -4703,7 +4705,7 @@
   (:results (r :scs (complex-single-reg) :from (:argument 0)
 	       :load-if (not (sc-is r complex-single-stack))))
   (:result-types complex-single-float)
-  (:note "inline complex single-float creation")
+  (:note _N"inline complex single-float creation")
   (:policy :fast-safe)
   (:generator 5
     (sc-case r
@@ -4747,7 +4749,7 @@
   (:results (r :scs (complex-double-reg) :from (:argument 0)
 	       :load-if (not (sc-is r complex-double-stack))))
   (:result-types complex-double-float)
-  (:note "inline complex double-float creation")
+  (:note _N"inline complex double-float creation")
   (:policy :fast-safe)
   (:generator 5
     (sc-case r
@@ -4792,7 +4794,7 @@
   (:results (r :scs (complex-long-reg) :from (:argument 0)
 	       :load-if (not (sc-is r complex-long-stack))))
   (:result-types complex-long-float)
-  (:note "inline complex long-float creation")
+  (:note _N"inline complex long-float creation")
   (:policy :fast-safe)
   (:generator 5
     (sc-case r
@@ -4895,7 +4897,7 @@
   (:arg-types complex-single-float)
   (:results (r :scs (single-reg)))
   (:result-types single-float)
-  (:note "complex float realpart")
+  (:note _N"complex float realpart")
   (:variant 0))
 
 (define-vop (realpart/complex-double-float complex-float-value)
@@ -4905,7 +4907,7 @@
   (:arg-types complex-double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
-  (:note "complex float realpart")
+  (:note _N"complex float realpart")
   (:variant 0))
 
 #+long-float
@@ -4916,7 +4918,7 @@
   (:arg-types complex-long-float)
   (:results (r :scs (long-reg)))
   (:result-types long-float)
-  (:note "complex float realpart")
+  (:note _N"complex float realpart")
   (:variant 0))
 
 (define-vop (imagpart/complex-single-float complex-float-value)
@@ -4926,7 +4928,7 @@
   (:arg-types complex-single-float)
   (:results (r :scs (single-reg)))
   (:result-types single-float)
-  (:note "complex float imagpart")
+  (:note _N"complex float imagpart")
   (:variant 1))
 
 (define-vop (imagpart/complex-double-float complex-float-value)
@@ -4936,7 +4938,7 @@
   (:arg-types complex-double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
-  (:note "complex float imagpart")
+  (:note _N"complex float imagpart")
   (:variant 1))
 
 #+long-float
@@ -4947,7 +4949,7 @@
   (:arg-types complex-long-float)
   (:results (r :scs (long-reg)))
   (:result-types long-float)
-  (:note "complex float imagpart")
+  (:note _N"complex float imagpart")
   (:variant 1))
 
 
@@ -4962,7 +4964,7 @@
   (:args (x :scs (double-reg double-stack) :load-if nil))
   (:arg-types double-float)
   (:policy :fast-safe)
-  (:note "inline dummy FP register bias")
+  (:note _N"inline dummy FP register bias")
   (:ignore x)
   (:generator 0))
 
@@ -4973,7 +4975,7 @@
   (:args (x :scs (single-reg single-stack) :load-if nil))
   (:arg-types single-float)
   (:policy :fast-safe)
-  (:note "inline dummy FP register bias")
+  (:note _N"inline dummy FP register bias")
   (:ignore x)
   (:generator 0))
 
@@ -5019,7 +5021,7 @@
   (:args (x :scs (double-double-reg)
 	    :target y :load-if (not (location= x y))))
   (:results (y :scs (double-double-reg) :load-if (not (location= x y))))
-  (:note "double-double float move")
+  (:note _N"double-double float move")
   (:generator 0
      (unless (location= x y)
        ;; Note the double-float-regs are aligned to every second
@@ -5050,7 +5052,7 @@
   (:args (x :scs (double-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "double double float to pointer coercion")
+  (:note _N"double double float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:double-double-float-type
 			       vm:double-double-float-size node)
@@ -5069,7 +5071,7 @@
 (define-vop (move-to-double-double)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (double-double-reg)))
-  (:note "pointer to double-double-float coercion")
+  (:note _N"pointer to double-double-float coercion")
   (:generator 2
     (let ((real-tn (double-double-reg-hi-tn y)))
       (with-empty-tn@fp-top(real-tn)
@@ -5087,7 +5089,7 @@
   (:args (x :scs (double-double-reg) :target y)
 	 (fp :scs (any-reg) :load-if (not (sc-is y double-double-reg))))
   (:results (y))
-  (:note "double double-float argument move")
+  (:note _N"double double-float argument move")
   (:generator 2
     (sc-case y
       (double-double-reg
@@ -5127,7 +5129,7 @@
 (define-vop (move-to-complex-double-double)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (complex-double-double-reg)))
-  (:note "pointer to complex float coercion")
+  (:note _N"pointer to complex float coercion")
   (:generator 2
     (let ((real-tn (complex-double-double-reg-real-hi-tn y)))
       (with-empty-tn@fp-top(real-tn)
@@ -5155,7 +5157,7 @@
   (:arg-types double-float double-float)
   (:result-types double-double-float)
   (:translate kernel::%make-double-double-float)
-  (:note "inline double-double-float creation")
+  (:note _N"inline double-double-float creation")
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 5
@@ -5233,7 +5235,7 @@
   (:arg-types double-double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
-  (:note "double-double high part")
+  (:note _N"double-double high part")
   (:variant 0))
 
 (define-vop (lo/double-double-value double-double-value)
@@ -5243,7 +5245,7 @@
   (:arg-types double-double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
-  (:note "double-double low part")
+  (:note _N"double-double low part")
   (:variant 1))
 
 (define-vop (make-complex-double-double-float)
@@ -5256,7 +5258,7 @@
   (:results (r :scs (complex-double-double-reg) :from (:argument 0)
 	       :load-if (not (sc-is r complex-double-double-stack))))
   (:result-types complex-double-double-float)
-  (:note "inline complex double-double-float creation")
+  (:note _N"inline complex double-double-float creation")
   (:policy :fast-safe)
   (:generator 5
     (sc-case r
@@ -5387,12 +5389,12 @@
 
 (define-vop (realpart/complex-double-double-float complex-double-double-float-value)
   (:translate realpart)
-  (:note "complex float realpart")
+  (:note _N"complex float realpart")
   (:variant :real))
 
 (define-vop (imagpart/complex-double-double-float complex-double-double-float-value)
   (:translate imagpart)
-  (:note "complex float imagpart")
+  (:note _N"complex float imagpart")
   (:variant :imag))
 
 ); progn

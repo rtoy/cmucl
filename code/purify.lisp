@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.19 1997/11/04 16:00:16 dtc Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.20 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;; Rewritten in C by William Lott.
 ;;;
 (in-package "LISP")
+(intl:textdomain "cmucl")
+
 (export 'ext::purify "EXT")
 
 (alien:def-alien-routine ("purify" %purify) c-call:void
@@ -44,7 +46,7 @@
 
 
 (defun purify (&key root-structures (environment-name "Auxiliary"))
-  "This function optimizes garbage collection by moving all currently live
+  _N"This function optimizes garbage collection by moving all currently live
    objects into non-collected storage.  ROOT-STRUCTURES is an optional list of
    objects which should be copied first to maximize locality.
 
@@ -61,7 +63,7 @@
   (let ((*gc-notify-before*
 	 #'(lambda (bytes-in-use)
 	     (declare (ignore bytes-in-use))
-	     (write-string "[Doing purification: ")
+	     (write-string _"[Doing purification: ")
 	     (force-output)))
 	(*internal-gc*
 	 #'(lambda ()
@@ -70,7 +72,7 @@
 	(*gc-notify-after*
 	 #'(lambda (&rest ignore)
 	     (declare (ignore ignore))
-	     (write-line "Done.]"))))
+	     (write-line _"Done.]"))))
     #-gencgc (gc t)
     #+gencgc (gc :verbose t))
   nil)

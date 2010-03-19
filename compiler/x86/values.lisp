@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/values.lisp,v 1.6 2008/04/01 07:25:09 cshapiro Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/values.lisp,v 1.7 2010/03/19 15:19:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,7 @@
 ;;; Enhancements/debugging by Douglas T. Crosher 1996.
 
 (in-package :x86)
+(intl:textdomain "cmucl")
 
 (define-vop (reset-stack-pointer)
   (:args (ptr :scs (any-reg)))

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.51 2008/05/24 14:41:39 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.52 2010/03/19 15:19:03 rtoy Rel $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -39,6 +39,7 @@
 ;;; 
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 (defun allocate-standard-instance (wrapper &optional (slots-init nil slots-init-p))
   (declare #.*optImize-speed*)
@@ -72,7 +73,7 @@
      fin
      #'(kernel:instance-lambda (&rest args)
          (declare (ignore args))
-	 (error "~@<The function of the funcallable instance ~S ~
+	 (error _"~@<The function of the funcallable instance ~S ~
                  has not been set.~@:>"
 		fin)))
     (setf (fsc-instance-wrapper fin) wrapper
@@ -198,7 +199,7 @@
 		   class)
 	      (dolist (slot slots)
 		(unless (eq (getf slot :allocation :instance) :instance)
-		  (error "~@<Slot allocation ~S is not supported ~
+		  (error _"~@<Slot allocation ~S is not supported ~
                           in bootstrap.~@:>"
 			 (getf slot :allocation))))
 	      
@@ -256,7 +257,7 @@
 	       (bootstrap-set-slot 'standard-method-combination smc name value)))
 	(set-slot 'source *load-pathname*)
 	(set-slot 'type 'standard)
-	(set-slot 'documentation "The standard method combination.")
+	(set-slot 'documentation _N"The standard method combination.")
 	(set-slot 'options ()))
       (setq *standard-method-combination* smc))))
 
@@ -455,7 +456,7 @@
     (dolist (super (cadr e))
       (unless (or (eq super t)
 		  (assq super *built-in-classes*))
-	(error "In *built-in-classes*: ~S has ~S as a superclass,~%~
+	(error _"In *built-in-classes*: ~S has ~S as a superclass,~%~
                 but ~S is not itself a class in *built-in-classes*."
 	       (car e) super super))))
   ;;
@@ -560,7 +561,7 @@
 		     (mapcar #'slot-initargs-from-condition-slotd
 			     (conditions::condition-class-slots class)))))
 	  (t
-	   (error "~@<~S is not the name of a class.~@:>" name)))))
+	   (error _"~@<~S is not the name of a class.~@:>" name)))))
 
 (defun reinitialize-structure-class (kernel-class)
   (let ((class (kernel:%class-pcl-class kernel-class)))
@@ -675,13 +676,13 @@
   ((function :reader no-applicable-method-function :initarg :function)
    (arguments :reader no-applicable-method-arguments :initarg :arguments))
   (:report (lambda (condition stream)
-             (format stream "~@<No matching method for the generic function ~
+             (format stream _"~@<No matching method for the generic function ~
                              ~S, when called with arguments ~S.~@:>"
                      (no-applicable-method-function condition)
                      (no-applicable-method-arguments condition)))))
 
 (defmethod no-applicable-method (generic-function &rest args)
-  (cerror "Retry call to ~S."
+  (cerror _"Retry call to ~S."
           'no-applicable-method-error
           :function generic-function
           :arguments args)
@@ -692,27 +693,27 @@
    (arguments :reader no-next-method-arguments :initarg :arguments))
   (:report (lambda (condition stream)
              (format stream
-		     "~@<In method ~S: No next method for arguments ~S.~@:>"
+		     _"~@<In method ~S: No next method for arguments ~S.~@:>"
                      (no-next-method-method condition)
                      (no-next-method-arguments condition)))))
 
 (defmethod no-next-method ((generic-function standard-generic-function)
 			   (method standard-method)
 			   &rest args)
-  (cerror "Try again." 'no-next-method-error :method method :arguments args)
+  (cerror _"Try again." 'no-next-method-error :method method :arguments args)
   (apply generic-function args))
 
 (define-condition no-primary-method-error (no-applicable-method-error)
   ()
   (:report (lambda (condition stream)
-             (format stream "~@<Generic function ~S: ~
+             (format stream _"~@<Generic function ~S: ~
                              No primary method given arguments ~S~@:>"
                      (no-applicable-method-function condition)
                      (no-applicable-method-arguments condition)))))
 
 (defmethod no-primary-method ((generic-function standard-generic-function)
 			      &rest args)
-  (cerror "Try again." 'no-primary-method-error
+  (cerror _"Try again." 'no-primary-method-error
 	  :function generic-function :arguments args)
   (apply generic-function args))
 
@@ -724,11 +725,11 @@
 
 (defmethod invalid-qualifiers ((gf generic-function) combin args methods)
   (if (null (cdr methods))
-      (error "~@<In a call to ~s with arguments ~:s: ~
+      (error _"~@<In a call to ~s with arguments ~:s: ~
               The method ~s has invalid qualifiers for method ~
               combination ~s.~@:>"
 	 gf args (car methods) combin)
-      (error "~@<In a call to ~s with arguments ~:s: ~
+      (error _"~@<In a call to ~s with arguments ~:s: ~
               The methods ~{~s~^, ~} have invalid qualifiers for ~
               method combination ~s.~@:>"
 	 gf args methods combin)))

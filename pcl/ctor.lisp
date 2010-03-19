@@ -46,9 +46,10 @@
 ;;; is called.
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.18 2007/05/02 13:33:46 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.19 2010/03/19 15:19:03 rtoy Rel $")
 
 (in-package "PCL")
+(intl:textdomain "cmucl")
 
 ;;; ******************
 ;;; Utilities  *******
@@ -66,7 +67,7 @@
 (defun plist-keys (plist &key test)
   (loop for (key . more) on plist by #'cddr
 	if (null more) do
-	  (error "~@<Not a property list: ~S.~@:>" plist)
+	  (error _"~@<Not a property list: ~S.~@:>" plist)
 	else if (or (null test) (funcall test key))
 	  collect key))
 

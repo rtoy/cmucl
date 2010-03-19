@@ -5,13 +5,15 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream-extfmt.lisp,v 1.6 2010/01/23 18:02:04 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream-extfmt.lisp,v 1.7 2010/03/19 15:18:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Implementation of external-formats for fd-streams
 
 (in-package "LISP")
+
+(intl:textdomain "cmucl")
 
 ;; an fd-sout that works with external-formats; needs slots in fd-stream
 (defun fd-sout (stream thing start end)
@@ -49,16 +51,16 @@
   (declare (type stream stream))
   (stream-dispatch stream
     ;; simple-stream
-    (error "Loading simple-streams should redefine this")
+    (error _"Loading simple-streams should redefine this")
     ;; lisp-stream
     (typecase stream
       (fd-stream (%set-fd-stream-external-format stream extfmt))
       (synonym-stream (setf (stream-external-format
 			     (symbol-value (synonym-stream-symbol stream)))
 			  extfmt))
-      (t (error "Don't know how to set external-format for ~S." stream)))
+      (t (error _"Don't know how to set external-format for ~S." stream)))
     ;; fundamental-stream
-    (error "Setting external-format on Gray streams not supported."))
+    (error _"Setting external-format on Gray streams not supported."))
   extfmt)
 
 (defun %set-fd-stream-external-format (stream extfmt &optional (updatep t))
@@ -119,5 +121,8 @@
 (stream::precompile-ef-slot :iso8859-1 #.stream::+ef-cout+)
 (stream::precompile-ef-slot :iso8859-1 #.stream::+ef-sout+)
 (stream::precompile-ef-slot :iso8859-1 #.stream::+ef-os+)
+(stream::precompile-ef-slot :iso8859-1 #.stream::+ef-so+)
+(stream::precompile-ef-slot :iso8859-1 #.stream::+ef-en+)
+(stream::precompile-ef-slot :iso8859-1 #.stream::+ef-de+)
 
 (setf lisp::*enable-stream-buffer-p* t)

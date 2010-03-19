@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.37 2008/11/24 18:40:43 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.38 2010/03/19 15:19:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,12 +15,13 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 (export '(label-id))
 
 
 (defvar *args* ()
-  "This variable is bound to the format arguments when an error is signalled
+  _N"This variable is bound to the format arguments when an error is signalled
   by Barf or Burp.")
 
 (defvar *ignored-errors* (make-hash-table :test #'equal))
@@ -42,7 +43,7 @@
 	(setf (gethash string *ignored-errors*) t)))))
 
 (defvar *burp-action* :warn
-  "Action taken by the Burp function when a possible compiler bug is detected.
+  _N"Action taken by the Burp function when a possible compiler bug is detected.
   One of :Warn, :Error or :None.")
 
 (declaim (type (member :warn :error :none) *burp-action*))
@@ -1313,7 +1314,7 @@
 ;;;  List-Conflicts  --  Interface
 ;;;
 (defun list-conflicts (tn)
-  "Return a list of a the TNs that conflict with TN.  Sort of, kind of.  For
+  _N"Return a list of a the TNs that conflict with TN.  Sort of, kind of.  For
   debugging use only.  Probably doesn't work on :COMPONENT TNs."
   (assert (member (tn-kind tn) '(:normal :environment :debug-environment)))
   (let ((confs (tn-global-conflicts tn)))
@@ -1356,7 +1357,7 @@
 ;;; Nth-VOP  --  Interface
 ;;;
 (defun nth-vop (thing n)
-  "Return the Nth VOP in the IR2-Block pointed to by Thing."
+  _N"Return the Nth VOP in the IR2-Block pointed to by Thing."
   (let ((block (block-info (block-or-lose thing))))
     (do ((i 0 (1+ i))
 	 (vop (ir2-block-start-vop block) (vop-next vop)))

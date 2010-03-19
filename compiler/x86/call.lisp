@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.21 2008/04/01 07:25:09 cshapiro Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.22 2010/03/19 15:19:01 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,7 @@
 ;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;;
 (in-package :x86)
+(intl:textdomain "cmucl-x86-vm")
 
 ;;;
 
@@ -1421,7 +1422,7 @@
   (:results (context :scs (descriptor-reg))
 	    (count :scs (any-reg)))
   (:result-types t tagged-num)
-  (:note "more-arg-context")
+  (:note _N"more-arg-context")
   (:generator 5
     (move count supplied)
     ;; SP at this point points at the last arg pushed.

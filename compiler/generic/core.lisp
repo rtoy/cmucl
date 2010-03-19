@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.40 2002/08/27 22:18:27 moore Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.41 2010/03/19 15:19:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,7 @@
 ;;; into core, e.g. incremental compilation.
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 
 ;;; The CORE-OBJECT structure holds the state needed to resolve cross-component
@@ -64,7 +65,7 @@
   (let ((offset (label-position (entry-info-offset entry))))
     (declare (type index offset))
     (unless (zerop (logand offset vm:lowtag-mask))
-      (error "Unaligned function object, offset = #x~X." offset))
+      (error _"Unaligned function object, offset = #x~X." offset))
     (let ((res (%primitive compute-function code-obj offset)))
       (setf (%function-self res) res)
       (setf (%function-next res) (%code-entry-points code-obj))
@@ -108,8 +109,8 @@
 	     (values (get-lisp-obj-address code) t)))
 	(unless found
 	  (error (ecase flavor
-		   (:assembly-routine "Undefined assembler routine: ~S")
-		   (:foreign "Unknown foreign symbol: ~S"))
+		   (:assembly-routine _"Undefined assembler routine: ~S")
+		   (:foreign _"Unknown foreign symbol: ~S"))
 		 name))
 	(vm:fixup-code-object code offset value kind)))))
 
@@ -277,7 +278,7 @@
   (declare (type functional entry) (type core-object object))
   (funcall (or (gethash (leaf-info entry)
 			(core-object-entry-table object))
-	       (error "Unresolved forward reference."))))
+	       (error _"Unresolved forward reference."))))
 
 
 ;;; FIX-CORE-SOURCE-INFO  --  Interface
@@ -319,7 +320,7 @@
 
 (defun %print-code-inst-stream (code-inst-stream stream depth)
   (declare (ignore depth))
-  (format stream "#<Code Instruction Stream for ~S>"
+  (format stream _"#<Code Instruction Stream for ~S>"
 	  (code-instruction-stream-code-object code-inst-stream)))
 
 (defun code-inst-stream-sout (stream string start end)
@@ -329,7 +330,7 @@
 	 (current (code-instruction-stream-current stream))
 	 (new (sap+ current length)))
     (when (sap> new (code-instruction-stream-end stream))
-      (error "Writing ~D bytes to ~S would cause it to overflow."
+      (error _"Writing ~D bytes to ~S would cause it to overflow."
 	     length stream))
     (copy-to-system-area string (+ (* start vm:byte-bits)
 				   (* vm:vector-data-offset vm:word-bits))
@@ -343,7 +344,7 @@
   (let* ((current (code-instruction-stream-current stream))
 	 (new (sap+ current 1)))
     (when (sap> new (code-instruction-stream-end stream))
-      (error "Writing another byte to ~S would cause it to overflow."
+      (error _"Writing another byte to ~S would cause it to overflow."
 	     stream))
     (setf (sap-ref-8 current 0) byte)
     (setf (code-instruction-stream-current stream) new)))

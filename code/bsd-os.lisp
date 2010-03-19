@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bsd-os.lisp,v 1.13 2009/10/10 03:00:03 agoncharov Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bsd-os.lisp,v 1.14 2010/03/19 15:18:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,6 +21,9 @@
 
 (in-package "SYSTEM")
 (use-package "EXTENSIONS")
+
+(intl:textdomain "cmucl-bsd-os")
+
 (export '(get-system-info get-page-size os-init))
 
 (register-lisp-feature :bsd)
@@ -45,10 +48,10 @@
 		      #+Darwin "Darwin"
 		      #-(or freebsd NetBSD OpenBSD Darwin) "BSD")
 
-(defvar *software-version* nil "Version string for supporting software")
+(defvar *software-version* nil _N"Version string for supporting software")
 
 (defun software-version ()
-  "Returns a string describing version of the supporting software."
+  _N"Returns a string describing version of the supporting software."
   (unless *software-version*
     (setf *software-version*
 	  (string-trim '(#\newline)
@@ -76,7 +79,7 @@
 		       (unix:unix-getrusage unix:rusage_self)
     (declare (ignore maxrss ixrss idrss isrss minflt))
     (unless err?
-      (error "Unix system call getrusage failed: ~A."
+      (error _"Unix system call getrusage failed: ~A."
 	     (unix:get-unix-error-msg utime)))
     
     (values utime stime majflt)))
@@ -90,5 +93,5 @@
   (multiple-value-bind (val err)
       (unix:unix-getpagesize)
     (unless val
-      (error "Getpagesize failed: ~A" (unix:get-unix-error-msg err)))
+      (error _"Getpagesize failed: ~A" (unix:get-unix-error-msg err)))
     val))

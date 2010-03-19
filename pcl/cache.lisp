@@ -25,13 +25,14 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.35 2005/06/20 13:03:21 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.36 2010/03/19 15:19:03 rtoy Rel $")
 
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
 ;;;
 
 (in-package :pcl)
+(intl:textdomain "cmucl")
 
 ;;;
 ;;; The caching algorithm implemented:
@@ -347,7 +348,7 @@
 (defun print-wrapper (wrapper stream depth)
   (declare (ignore depth))
   (print-unreadable-object (wrapper stream :identity t)
-    (format stream "Wrapper ~S" (wrapper-class wrapper))))
+    (format stream _"Wrapper ~S" (wrapper-class wrapper))))
 
 (defmacro wrapper-class* (wrapper)
   `(let ((wrapper ,wrapper))
@@ -421,7 +422,7 @@
 	  ((eq (car state) :obsolete)
 	   (obsolete-instance-trap owrapper (second state) instance))
 	  (t
-	   (internal-error "Unknown wrapper state")))))
+	   (internal-error _"Unknown wrapper state")))))
 
 (declaim (inline check-obsolete-instance))
 (defun check-obsolete-instance (instance)
@@ -660,7 +661,7 @@
 		     ((*subtypep meta-specializer structure) 'structure-instance)
 		     ((*subtypep meta-specializer built-in)  'built-in-instance)
 		     ((*subtypep meta-specializer slot)      'slot-instance)
-		     (t (error "~@<PCL cannot handle the specializer ~S ~
+		     (t (error _"~@<PCL cannot handle the specializer ~S ~
                                 (meta-specializer ~S).~@:>"
 			       new-specializer meta-specializer))))))
       ;;
@@ -810,7 +811,7 @@
 	      (line-location (line)
 		(declare (fixnum line))
 		(when (line-reserved-p line)
-		  (internal-error "Line is reserved."))
+		  (internal-error _"Line is reserved."))
 		(if (= (nkeys) 1)
 		    (the fixnum (* line (line-size)))
 		    (the fixnum (1+ (the fixnum (* line (line-size)))))))
@@ -833,7 +834,7 @@
 	      (line-wrappers (line)
 		(declare (fixnum line))
 		(when (line-reserved-p line)
-		  (internal-error "Line is reserved."))
+		  (internal-error _"Line is reserved."))
 		(location-wrappers (line-location line)))
 	      ;;
 	      (location-wrappers (location) ; avoid multiplies caused by line-location
@@ -874,7 +875,7 @@
 	      (line-value (line)
 		(declare (fixnum line))
 		(when (line-reserved-p line)
-		  (internal-error "Line is reserved."))
+		  (internal-error _"Line is reserved."))
 		(location-value (line-location line)))
 	      ;;
 	      (location-value (loc)
@@ -887,7 +888,7 @@
 	      ;; checked.  An error is signalled if line is reserved.
 	      (line-full-p (line)
 		(when (line-reserved-p line)
-		  (internal-error "Line is reserved."))
+		  (internal-error _"Line is reserved."))
 		(not (null (cache-vector-ref (vector) (line-location line)))))
 	      ;;
 	      ;; Given a line number, return true IFF the line is full and
@@ -898,7 +899,7 @@
 	      (line-valid-p (line wrappers)
 		(declare (fixnum line))
 		(when (line-reserved-p line)
-		  (internal-error "Line is reserved."))
+		  (internal-error _"Line is reserved."))
 		(location-valid-p (line-location line) wrappers))
 	      ;;
 	      (location-valid-p (loc wrappers)
@@ -1033,7 +1034,7 @@
 					  home-loc)))
 		 (sep (when home (line-distance home i))))
 	    (when (and sep (> sep limit))
-	      (internal-error "~@<Bad cache ~S: Value at location ~D is ~D ~
+	      (internal-error _"~@<Bad cache ~S: Value at location ~D is ~D ~
                                lines from its home, limit is ~D.~@:>"
 			      cache location sep limit))))
 	(setq location (next-location location))))))
@@ -1139,7 +1140,7 @@
 	  (let ((line free))
 	    (declare (fixnum line))
 	    (when (line-reserved-p line)
-	      (internal-error "Attempt to fill a reserved cache line."))
+	      (internal-error _"Attempt to fill a reserved cache line."))
 	    (let ((loc (line-location line))
 		  (cache-vector (vector)))
 	      (declare (fixnum loc) (simple-vector cache-vector))
@@ -1177,7 +1178,7 @@
 	    (declare (fixnum to-line))
 	    (if (line-reserved-p to-line)
 		(internal-error
-		 "Transfering something into a reserved cache line.")
+		 _"Transfering something into a reserved cache line.")
 		(let ((from-loc (line-location from-line))
 		      (to-loc (line-location to-line)))
 		  (declare (fixnum from-loc to-loc))

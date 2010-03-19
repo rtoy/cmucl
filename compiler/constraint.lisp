@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.26 2003/10/03 15:02:02 gerd Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.27 2010/03/19 15:19:00 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "C")
+(intl:textdomain "cmucl")
 
 (defstruct (constraint
 	    (:include sset-element)
@@ -533,7 +534,7 @@
 		    (when *check-consistency*
 		      (let ((*compiler-error-context* (block-last block)))
 			(compiler-warning
-			 "*** Unreachable code in constraint ~
+			 _N"*** Unreachable code in constraint ~
 			  propagation...  Bug?")))
 		    (make-sset))))
 	 (kill (block-kill block))
