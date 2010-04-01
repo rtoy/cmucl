@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.106 2009/12/21 11:36:43 rswindells Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.107 2010/04/01 14:05:45 rtoy Exp $
  *
  */
 
@@ -662,7 +662,14 @@ print_generation_stats(int verbose)
 
 #if defined(i386) || defined(__x86_64)
 #define FPU_STATE_SIZE 27
+    /* 
+     * Need 512 byte area, aligned on a 16-byte boundary.  So allocate
+     * 512+16 bytes of space and let the routine adjust use the
+     * appropriate alignment.
+     */
+#define SSE_STATE_SIZE ((512+16)/4)
     int fpu_state[FPU_STATE_SIZE];
+    int sse_state[SSE_STATE_SIZE];
 #elif defined(sparc)
     /*
      * 32 (single-precision) FP registers, and the FP state register.
@@ -683,7 +690,11 @@ print_generation_stats(int verbose)
      */
 
     fpu_save(fpu_state);
-
+#if defined(i386) || defined(__x86_64)
+    if (fpu_mode == SSE2) {
+      sse_save(sse_state);
+    }
+#endif    
 
     /* Number of generations to print out. */
     if (verbose)
@@ -738,6 +749,11 @@ print_generation_stats(int verbose)
     fprintf(stderr, "   Total bytes alloc=%ld\n", bytes_allocated);
 
     fpu_restore(fpu_state);
+#if defined(i386) || defined(__x86_64)
+    if (fpu_mode == SSE2) {
+      sse_restore(sse_state);
+    }
+#endif
 }
 
 /* Get statistics that are kept "on the fly" out of the generation

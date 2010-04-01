@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.32 2008/12/24 04:36:40 rtoy Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.33 2010/04/01 14:05:45 rtoy Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -134,9 +134,22 @@ FUNCDEF(call_into_lisp)
 
 /* Save the NPX state */
 	fwait			# Catch any pending NPX exceptions.
+	/* Save the SSE2 for X87 state */
+	mov	GNAME(fpu_mode), %eax
+	cmp	$2, %eax	# SSE2 mode?
+	jne	x87_save
+	movl	%esp, %eax	# Remember the current stack pointer
+	subl	$512,%esp	# Make room for the SSE state
+	andl	$-16, %esp	# fxsave needs 16-byte alignment
+	fxsave	(%esp)		
+	pushl	%eax		# Save the old stack pointer
+	fninit			# Reset fpu, just in case
+	jmp	npx_save_done
+
+x87_save:
 	subl	$108,%esp	# Make room for the NPX state.
 	fnsave	(%esp)		# Resets NPX
-
+		
 	movl	(%esp),%eax	# Load NPX control word
 	andl	$0xfffff3ff,%eax	# Set rounding mode to nearest
 #ifdef type_LongFloat
@@ -147,6 +160,7 @@ FUNCDEF(call_into_lisp)
 	pushl	%eax
 	fldcw	(%esp)		# Recover modes
 	popl	%eax
+npx_save_done:			
 
 	fldz			# insure no FP regs are empty
 	fldz
@@ -224,9 +238,19 @@ Ldone:
 	popl	%ebx
 
 /* Restore the NPX state */
+	/* Restore SSE2 state? */
+	mov	GNAME(fpu_mode), %eax
+	cmp	$2, %eax	# SSE2 mode?
+	jne	x87_restore
+	popl	%eax		# Get the old stack pointer
+	fxrstor	(%esp)		# Restore the SSE state
+	movl	%eax, %esp	# Now really restore the old stack pointer
+	jmp	npx_restore_done
+x87_restore:
 	frstor  (%esp)
 	addl	$108, %esp
-	
+npx_restore_done:	
+			
 	popl	%ebp		# c-sp
 	movl	%edx,%eax	# c-val
 	ret
@@ -244,6 +268,22 @@ FUNCDEF(fpu_restore)
 	frstor	(%eax)		# Restore the NPX state.
 	ret
 ENDFUNC(fpu_restore)
+
+FUNCDEF(sse_save)
+	movl	4(%esp),%eax
+	addl	$16, %eax	# Make sure eax is on a 16-byte boundary
+	and	$-16, %eax
+	fxsave	(%eax)
+	ret
+ENDFUNC(sse_save)
+		
+FUNCDEF(sse_restore)
+	movl	4(%esp),%eax
+	addl	$16, %eax	# Make sure eax is on a 16-byte boundary
+	and	$-16, %eax
+	fxrstor	(%eax)
+	ret
+ENDFUNC(sse_restore)
 
 
 /*
