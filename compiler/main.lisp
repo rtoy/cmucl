@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.153 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.154 2010/04/03 18:40:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1597,7 +1597,8 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	   (*info-environment*
 	    (or (backend-info-environment *backend*)
 		*info-environment*))
-	   (*gensym-counter* 0))
+	   (*gensym-counter* 0)
+	   (intl::*default-domain* intl::*default-domain*))
       (with-debug-counters
 	(clear-stuff)
 	(with-compilation-unit ()
