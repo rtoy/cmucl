@@ -2470,7 +2470,7 @@ innermost fwrapper object.  Likewise, if a function is fwrapped,
 \code{(setf fdefinition)} will set the primary function in the
 innermost fwrapper.
 
-\begin{defmac}{fwrappers:}{define-fwrapper}{name lambda-list \ampbody body}
+\begin{defmac}{fwrappers:}{define-fwrapper}{name lambda-list \ampbody{} body}
   This macro is like \code{defun}, but defines a function named
   \var{name} that can be used as an fwrapper definition.
   
@@ -2552,8 +2552,8 @@ innermost fwrapper.
   undefined function.
 \end{defun}
 
-\begin{defmac}{fwrappers:}{do-fwrappers}{(var fdefn \ampoptional
-  result) \ampbody body}
+\begin{defmac}{fwrappers:}{do-fwrappers}{(var fdefn \ampoptional{}
+  result) \ampbody{} body}
   Evaluate \var{body} with \var{var} bound to consecutive fwrappers of
   \var{fdefn}.  Return \var{result} at the end.  Note that \var{fdefn}
   must be an \code{fdefn} object.  You can use
@@ -2763,3 +2763,193 @@ that order.
   :case :common to :case :local.  This merged name will be probed with
   both a .lisp and .fasl extensions, calling \code{LOAD} if it exists.
 \end{defun}
+
+
+\section{Localization}
+\label{sec:localization}
+
+\cmucl{} support localization where messages can be presented in the
+native language.  This is done in the style of \code{gettext} which
+marks strings that are to be translated and provides the lookup to
+convert the string to the specified language.
+
+All messages from \cmucl{} can be translated but as of this writing,
+the only complete translation is a Pig Latin translation done by
+machine.  There are a few messages translated to Korean.
+
+\subsection{Dictionary}
+\label{sec:localization-dictionary}
+
+
+\begin{defun}{intl:}{setlocale}{\ampoptional{} locale}
+  Sets the locale to the locale specified by \var{locale}.  If
+  \var{locale} is not give or is \nil, the locale is determined by
+  look at the environment variables \code{LANGUAGE}, \code{LC\_ALL},
+  \code{LC\_MESSAGES}, or \code{LANG}.  If none of these are set, the
+  locale is unchanged.
+
+  The default locale is ``C''.
+\end{defun}
+
+\begin{defun}{intl:}{textdomain}{domain}
+  Set the default domain to the domain specified by \var{domain}.
+  Typically,  this only needs to be done at the top of each source
+  file.  This is used to \code{gettext} and \code{ngettext} to set the
+  domain for the message string.
+\end{defun}
+
+\begin{defmac}{intl:}{gettext}{string}
+  Look up the specified string, \var{string}, in the current message
+  domain and return its translation.
+\end{defmac}
+
+\begin{defun}{intl:}{dgettext}{domain string}
+  Look up the specified string, \var{string}, in the message domain,
+  \var{domain}.  The translation is returned.
+
+  When compiled, this also function also records the string so that an
+  appropriate message template file can be created.  (See
+  \code{intl::dump-pot-files}.) 
+\end{defun}
+
+\begin{defmac}{intl:}{ngettext}{singular plural n}
+  Look up the singular or plural form of a message in the default
+  domain.  The singular form is \var{singular}; the plural is
+  \var{plural}.  The number of items is specified by \var{n} in case
+  the correct translation depends on the actual number of items.
+\end{defmac}
+
+\begin{defun}{intl:}{dngettext}{domain singular plural n}
+  Look up the singular or plural form of a message in the specified
+  domain, \var{domain}.  The singular form is \var{singular}; the
+  plural is \var{plural}.  The number of items is specified by \var{n}
+  in case the correct translation depends on the actual number of
+  items.
+
+  When compiled, this also function also records the singular and
+  plural forms so that an appropriate message template file can be
+  created.  (See \code{intl::dump-pot-files}.)
+\end{defun}
+
+\begin{defun}{intl::}{dump-pot-files}{\keys copyright
+    output-directory}
+  Dumps the translatable strings recorded by \code{dgettext} and
+  \code{dngettext}.  The message template file (pot file) is written
+  to a file in the directory specified by \var{output-directory}, and
+  the name of the file is the domain of the string.
+
+  If \var{copyright} is specified, this is placed in the output file
+  as the copyright message.
+\end{defun}
+
+\begin{defvar}{intl:}{locale-directories}
+  This is a list of directory pathnames where the translations can be found.
+\end{defvar}  
+
+Two reader macros are also provided: \code{\_''} and \code{\_N''}.  The
+first is equivalent to wrapping \code{dgettext} around the string.
+The second returns the string, but also records the string.  This is
+needed when we want to record a docstring for translation or any other
+string in a place where a macro or function call would be incorrect.
+
+Also, the standard comment reader is extended to allow translator
+comments to be saved and written to the messages template file so that
+the translator may not need to look at the original source to
+understand the string.  Any comment line that begins with exactly
+\verb|"TRANSLATORS: "| is saved.  This means each translator comment
+must be preceded by this string to be saved; the translator comment
+ends at the end of each line.
+
+
+\subsection{Example Usage}
+\label{sec:localization-usage}
+
+Here is a simple example of how to localize your code.
+
+\begin{example}
+
+(intl:textdomain "example")  
+
+(defun foo (x y)
+  _N"Cool function foo of x and y"
+  (let ((result (bar x y)))
+    (format t _"bar of ~A and ~A = ~A~%" x y result)
+    ;; TRANSLATORS:  Do the right thing here.
+    ;; TRANSLATORS:  Whatever that might be.
+    (format t (intl:ngettext "There is one X"
+                             "There are many Xs"
+                             x))
+    result))
+\end{example}
+
+The call to \code{textdomain} sets the default domain for all
+translatable strings following the call.
+
+When this file is compiled, all of the translatable strings are
+recorded.  This includes the docstring for \code{foo}, the string for
+the first \code{format}, and the string marked by the call to
+\code{intl:ngettext}.
+
+After all of the files have been compiled, we can dump the recorded
+strings.  In this case,
+\begin{example}
+* (intl::dump-pot-files :output-directory "dir/")
+Dumping 3 messages for domain "example"
+NIL
+\end{example}
+will create a file named ``example.pot'' in the directory ``dir/''.
+The contents of this file are:
+\begin{example}
+#@ example
+
+# SOME DESCRIPTIVE TITLE
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION"
+"Report-Msgid-Bugs-To: "
+"PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>"
+"Language-Team: LANGUAGE <LL@li.org>"
+"MIME-Version: 1.0"
+"Content-Type: text/plain; charset=UTF-8"
+"Content-Transfer-Encoding: 8bit"
+
+#: /tmp/foo.lisp
+msgid "Cool function foo of x and y"
+msgstr ""
+
+#.  Whatever that might be.
+#: /tmp/foo.lisp
+msgid "bar of ~A and ~A = ~A~%"
+msgstr ""
+
+#: /tmp/foo.lisp
+msgid "There is one X"
+msgid_plural "There are many Xs"
+msgstr[0] ""
+
+\end{example}
+
+To finish the translation, a corresponding ``example.po'' file needs
+to be created with the appropriate translations for the given
+strings.  This file must be placed in some directory that is included
+in \code{intl:*locale-directories*}.
+
+Suppose the translation is done for Korean.  Then the user can set the
+environment variables appropriately or call \code{(intl:setlocale
+  "ko")}.  Note that the external format for the standard streams
+needs to be set up appropriately too.  It is up to the user to set
+this correctly.  Once this is all done, the output from the function
+\code{foo} will now be in Korean instead of English as in the original
+source file.
+
+For further information, we refer the reader to documentation on
+\ifpdf
+\href{http://www.gnu.org/software/gettext/manual/gettext.html}{gettext}.
+\else
+gettext at
+\href{http://www.gnu.org/software/gettext/manual/gettext.html}{\texttt{http://www.gnu.org/software/gettext/manual/gettext.html}}.
+\fi
