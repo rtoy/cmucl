@@ -30,6 +30,9 @@ $LISP "$@" -noinit -nositeinit <<EOF
 
 ;;(setf lisp::*enable-package-locked-errors* nil)
 
+(setf *default-pathname-defaults* (ext:default-directory))
+(intl::install)
+
 (setf (ext:search-list "target:")
       '("$TARGET/" "src/"))
 

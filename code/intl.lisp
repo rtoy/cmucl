@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.2 $
+;;; $Revision: 1.3 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,7 +23,7 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.2 2010/03/19 15:18:59 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.3 2010/04/14 16:39:52 rtoy Exp $")
 
 (in-package "INTL")
 
@@ -569,7 +569,7 @@
 	   (key (if plural (cons string plural) string))
 	   (val (or (gethash key hash) (cons nil nil))))
       (pushnew *translator-comment* (car val) :test #'equal)
-      (pushnew *compile-file-pathname* (cdr val) :test #'equal)
+      (pushnew (enough-namestring *compile-file-truename*) (cdr val) :test #'equal)
       ;; FIXME: How does this happen?  Need to figure this out and get
       ;; rid of this!
       (unless key
@@ -596,7 +596,6 @@
     (case (peek-char nil stream nil nil t)
       (#\" (let* ((*read-suppress* nil)
 		  (string (read stream t nil t)))
-	     #-runtime
 	     (note-translatable *default-domain* string)
 	     `(gettext ,string)))
       (#\N (read-char stream t nil t)
@@ -676,12 +675,12 @@
 	   (vector-push-extend prev text))))
   (values))
 
-(defun install ()
-  (set-macro-character #\_ #'read-translatable-string t)
+(defun install (&optional (rt *readtable*))
+  (set-macro-character #\_ #'read-translatable-string t rt)
   #-runtime
-  (set-macro-character #\; #'read-comment)
+  (set-macro-character #\; #'read-comment nil rt)
   #-runtime
-  (set-dispatch-macro-character #\# #\| #'read-nested-comment)
+  (set-dispatch-macro-character #\# #\| #'read-nested-comment rt)
   t)
 
 
@@ -812,4 +811,6 @@
 		   (fdefinition 'intl:read-translatable-string)))
     (set-syntax-from-char #\_ #\_)))
 
+;; Don't install the reader macros by default.
+#+(or)
 (install)

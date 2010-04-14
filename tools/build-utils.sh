@@ -23,6 +23,8 @@ $TARGET/lisp/lisp \
 (setf (ext:search-list "target:")
       '("$TARGET/" "src/"))
 
+(setf *default-pathname-defaults* (ext:default-directory))
+(intl:install)
 (load "target:setenv")
 
 (pushnew :no-clx *features*)
