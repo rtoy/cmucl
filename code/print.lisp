@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.128 2010/04/16 00:28:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.129 2010/04/16 12:54:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -216,8 +216,8 @@
 
 (defun princ-to-string (object)
   _N"Returns the printed representation of OBJECT as a string with
-  slashification off."
-  (stringify-object object nil))
+  slashification off and readability off."
+  (stringify-object object nil nil))
 
 ;;; STRINGIFY-OBJECT -- Internal.
 ;;;
@@ -226,7 +226,8 @@
 ;;;
 (defvar *string-output-streams* ())
 ;;;
-(defun stringify-object (object &optional (*print-escape* *print-escape*))
+(defun stringify-object (object &optional (*print-escape* *print-escape*)
+			                  (*print-readably* *print-readably*))
   (let ((stream (if *string-output-streams*
 		    (pop *string-output-streams*)
 		    (make-string-output-stream))))

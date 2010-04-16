@@ -50,6 +50,8 @@ New in this release:
       set.)
     - WITH-STANDARD-IO-SYNTAX uses the standard pprint dispatch table
       now instead of the current table.
+    - PRINC-TO-STRING binds *PRINT-READABLY* to NIL as required.
+      Previously, it used the current value of *PRINT-READABLY*.
 
   * Bugfixes:
     - On Unicode builds, printing of '|\|| and '|`| was incorrect
