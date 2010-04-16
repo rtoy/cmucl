@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.127 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.128 2010/04/16 00:28:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,6 +91,7 @@
        *PRINT-LEVEL*			NIL
        *PRINT-LINES*			NIL
        *PRINT-MISER-WIDTH*		NIL
+       *PRINT-PPRINT-DISPATCH*          The standard pprint dispatch table
        *PRINT-PRETTY*			NIL
        *PRINT-RADIX*			NIL
        *PRINT-READABLY*			T
@@ -114,6 +115,7 @@
 	(*print-level* nil)
 	(*print-lines* nil)
 	(*print-miser-width* nil)
+	(*print-pprint-dispatch* (copy-pprint-dispatch nil))
 	(*print-pretty* nil)
 	(*print-radix* nil)
 	(*print-readably* t)

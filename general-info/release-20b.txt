@@ -45,8 +45,11 @@ New in this release:
       translation (done by machine).  
 
   * ANSI compliance fixes:
-    - COMPILE will update the macro-function if the specified names a
-      macro.  (Previously, the fdefinition of the name was set.)
+    - COMPILE will update the macro-function if the specified name
+      names a macro.  (Previously, the fdefinition of the name was
+      set.)
+    - WITH-STANDARD-IO-SYNTAX uses the standard pprint dispatch table
+      now instead of the current table.
 
   * Bugfixes:
     - On Unicode builds, printing of '|\|| and '|`| was incorrect
