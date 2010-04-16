@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.128 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.129 2010/04/16 19:59:16 agoncharov Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2451,7 +2451,7 @@
    doesn't work."
   (int-syscall ("fork")))
 
-;; Environment maninpulation; man getenv(3)
+;; Environment manipulation; man getenv(3)
 (def-alien-routine ("getenv" unix-getenv) c-call:c-string
   (name c-call:c-string) 
   _N"Get the value of the environment variable named Name.  If no such
