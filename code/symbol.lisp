@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.42 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.43 2010/04/16 01:28:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,7 +102,10 @@
   #+gengc (%make-symbol (random most-positive-fixnum) string)
   ;; Initialize the symbol-hash to -1 to make this fast.  It will get
   ;; computed correctly later on.
-  #+(or sparc x86 amd64 ppc) (%make-symbol -1 (coerce string 'simple-string)))
+  #+(or sparc x86 amd64 ppc )
+  (%make-symbol -1 (coerce #-unicode string
+			   #+unicode (string-to-nfc string)
+			   'simple-string)))
 
 #+(or gengc x86 amd64 sparc ppc)
 (defun symbol-hash (symbol)
