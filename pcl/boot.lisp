@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.75 2010/03/19 15:19:03 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.76 2010/04/17 18:31:42 rtoy Exp $")
 
 (in-package :pcl)
 (intl:textdomain "cmucl")
@@ -1900,7 +1900,9 @@ work during bootstrapping.
      (let ((method-class (getf ,all-keys :method-class '.shes-not-there.)))
        (unless (eq method-class '.shes-not-there.)
 	 (setf (getf ,all-keys :method-class)
-	       (find-class method-class t ,env))))))
+	       (if (symbolp method-class)
+		   (find-class method-class t ,env)
+		   method-class))))))
 
 #+loadable-pcl
 (progn
