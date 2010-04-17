@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.76 2010/04/17 18:31:42 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.77 2010/04/17 19:05:51 rtoy Exp $")
 
 (in-package :pcl)
 (intl:textdomain "cmucl")
@@ -1891,6 +1891,7 @@ work during bootstrapping.
 		   :generic-function-class ,gf-class)))
      (remf ,all-keys :generic-function-class)
      (remf ,all-keys :environment)
+     (remf ,all-keys :declare)
      (let ((combin (getf ,all-keys :method-combination '.shes-not-there.)))
        (unless (eq combin '.shes-not-there.)
 	 (setf (getf ,all-keys :method-combination)

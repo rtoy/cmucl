@@ -56,6 +56,8 @@ New in this release:
       DECLARATION. 
     - The :METHOD-CLASS argument to ENSURE-GENERIC-FUNCTION can be a
       class object as well as a name.
+    - Recognize but ignore the :DECLARE argument to
+      ENSURE-GENERIC-FUNCTION. 
 
   * Bugfixes:
     - On Unicode builds, printing of '|\|| and '|`| was incorrect
