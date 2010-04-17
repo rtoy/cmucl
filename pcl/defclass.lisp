@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.31 2010/03/19 15:19:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.32 2010/04/17 15:57:04 rtoy Rel $")
 ;;;
 
 (in-package :pcl)
@@ -101,6 +101,9 @@
 	options (copy-tree options))
   ;;
   (when (eq *boot-state* 'complete)
+    (when (c::info declaration recognized name)
+      (error _"Defclass already names a declaration: ~S." name))
+  
     (dolist (super supers)
       (check-seals super 'expand-defclass)))
   ;;
