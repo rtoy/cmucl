@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.28 2010/03/19 15:19:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.29 2010/04/17 20:12:25 rtoy Rel $")
 
 (in-package :pcl)
 (intl:textdomain "cmucl")
@@ -110,7 +110,7 @@
 (defun expand-short-defcombin (whole)
   (let* ((type (cadr whole))
 	 (documentation
-	   (getf (cddr whole) :documentation ""))
+	   (getf (cddr whole) :documentation nil))
 	 (identity-with-one-arg
 	   (getf (cddr whole) :identity-with-one-argument nil))
 	 (operator 

@@ -58,6 +58,8 @@ New in this release:
       class object as well as a name.
     - Recognize but ignore the :DECLARE argument to
       ENSURE-GENERIC-FUNCTION. 
+    - Default documentation for short form of
+      DEFINE-METHOD-COMBINATION is NIL, not "".
 
   * Bugfixes:
     - On Unicode builds, printing of '|\|| and '|`| was incorrect
