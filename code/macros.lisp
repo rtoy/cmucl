@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.115 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.116 2010/04/18 17:27:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,7 +41,7 @@
 ;;; into declarations anymore.
 ;;;
 (defun parse-body (body environment &optional (doc-string-allowed t))
-  _N"This function is to parse the declarations and doc-string out of the body of
+  "This function is to parse the declarations and doc-string out of the body of
   a defun-like form.  Body is the list of stuff which is to be parsed.
   Environment is ignored.  If Doc-String-Allowed is true, then a doc string
   will be parsed out of the body and returned.  If it is false then a string
@@ -106,6 +106,8 @@
 	(body local-decs doc)
 	(parse-defmacro lambda-list whole body name 'defmacro
 			:environment environment)
+      (when doc
+	(intl::note-translatable intl::*default-domain* doc))
       (let ((def `(lambda (,whole ,environment)
 		    ,@local-decs
 		    (block ,name
@@ -145,13 +147,15 @@
 ;;;; DEFINE-COMPILER-MACRO
 
 (defmacro define-compiler-macro (name lambda-list &body body)
-  _N"Define a compiler-macro for NAME."
+  "Define a compiler-macro for NAME."
   (let ((whole (gensym "WHOLE-"))
 	(environment (gensym "ENV-")))
     (multiple-value-bind
 	(body local-decs doc)
 	(parse-defmacro lambda-list whole body name 'define-compiler-macro
 			:environment environment)
+      (when doc
+	(intl::note-translatable intl::*default-domain* doc))
       (let ((def `(lambda (,whole ,environment)
 		    ,@local-decs
 		    (block ,name
@@ -209,7 +213,7 @@
 ;;; DEFTYPE is a lot like DEFMACRO.
 
 (defmacro deftype (name arglist &body body)
-  _N"Syntax like DEFMACRO, but defines a new type."
+  "Syntax like DEFMACRO, but defines a new type."
   (unless (symbolp name)
     (simple-program-error _"~S -- Type name not a symbol." name))
   (and lisp::*enable-package-locked-errors*
@@ -235,6 +239,8 @@
     (multiple-value-bind (body local-decs doc)
 			 (parse-defmacro arglist whole body name 'deftype
 					 :default-default ''*)
+      (when doc
+	(intl::note-translatable intl::*default-domain* doc))
       `(eval-when (:compile-toplevel :load-toplevel :execute)
 	 (%deftype ',name
 		   #'(lambda (,whole)
@@ -271,10 +277,10 @@
 
 ;;; And so is DEFINE-SETF-EXPANDER.
 
-(defparameter defsetf-error-string _N"Setf expander for ~S cannot be called with ~S args.")
+(defparameter defsetf-error-string "Setf expander for ~S cannot be called with ~S args.")
 
 (defmacro define-setf-expander (access-fn lambda-list &body body)
-  _N"Syntax like DEFMACRO, but creates a Setf-Expansion generator.  The body
+  "Syntax like DEFMACRO, but creates a Setf-Expansion generator.  The body
   must be a form that returns the five magical values."
   (unless (symbolp access-fn)
     (simple-program-error _"~S -- Access-function name not a symbol in DEFINE-SETF-EXPANDER."
@@ -286,6 +292,8 @@
 			 (parse-defmacro lambda-list whole body access-fn
 					 'define-setf-expander
 					 :environment environment)
+      (when doc
+	(intl::note-translatable intl::*default-domain* doc))
       `(eval-when (:compile-toplevel :load-toplevel :execute)
 	 (%define-setf-macro
 	  ',access-fn
@@ -296,7 +304,7 @@
 	  ',doc)))))
 
 (defmacro define-setf-method (&rest stuff)
-  _N"Obsolete, use define-setf-expander."
+  "Obsolete, use define-setf-expander."
   `(define-setf-expander ,@stuff))
 
 
@@ -326,7 +334,7 @@
 ;;;; Destructuring-bind
 
 (defmacro destructuring-bind (lambda-list arg-list &rest body)
-  _N"Bind the variables in LAMBDA-LIST to the contents of ARG-LIST."
+  "Bind the variables in LAMBDA-LIST to the contents of ARG-LIST."
   (let* ((arg-list-name (gensym "ARG-LIST-")))
     (multiple-value-bind
 	(body local-decls)
@@ -348,6 +356,8 @@
   (multiple-value-bind (valid block-name)
       (valid-function-name-p name)
     (declare (ignore valid))
+    (when doc
+      (intl::note-translatable intl::*default-domain* doc))
     (let ((def `(lambda ,lambda-list
 		  ,@decls
 		  (block ,block-name ,@body))))
@@ -389,10 +399,12 @@
 ;;; DEFCONSTANT  --  Public
 ;;;
 (defmacro defconstant (var val &optional doc)
-  _N"For defining global constants at top level.  The DEFCONSTANT says that the
+  "For defining global constants at top level.  The DEFCONSTANT says that the
   value is constant and may be compiled into code.  If the variable already has
   a value, and this is not equal to the init, an error is signalled.  The third
   argument is an optional documentation string for the variable."
+  (when doc
+    (intl::note-translatable intl::*default-domain* doc))
   `(progn
      (eval-when (:compile-toplevel)
        (c::do-defconstant-compile-time ',var ,val ',doc))
@@ -426,10 +438,12 @@
 
 
 (defmacro defvar (var &optional (val nil valp) (doc nil docp))
-  _N"For defining global variables at top level.  Declares the variable
+  "For defining global variables at top level.  Declares the variable
   SPECIAL and, optionally, initializes it.  If the variable already has a
   value, the old value is not clobbered.  The third argument is an optional
   documentation string for the variable."
+  (when docp
+    (intl::note-translatable intl::*default-domain* doc))
   `(progn
     (declaim (special ,var))
      ,@(when valp
@@ -443,10 +457,12 @@
     ',var))
 
 (defmacro defparameter (var val &optional (doc nil docp))
-  _N"Defines a parameter that is not normally changed by the program,
+  "Defines a parameter that is not normally changed by the program,
   but that may be changed without causing an error.  Declares the
   variable special and sets its value to VAL.  The third argument is
   an optional documentation string for the parameter."
+  (when docp
+    (intl::note-translatable intl::*default-domain* doc))
   `(progn
     (declaim (special ,var))
     (setq ,var ,val)
@@ -462,12 +478,12 @@
 
 
 (defmacro when (test &body forms)
-  _N"First arg is a predicate.  If it is non-null, the rest of the forms are
+  "First arg is a predicate.  If it is non-null, the rest of the forms are
   evaluated as a PROGN."
   `(cond (,test nil ,@forms)))
 
 (defmacro unless (test &rest forms)
-  _N"First arg is a predicate.  If it is null, the rest of the forms are
+  "First arg is a predicate.  If it is null, the rest of the forms are
   evaluated as a PROGN."
   `(cond ((not ,test) nil ,@forms)))
 
@@ -580,7 +596,7 @@
 
 
 (defmacro nth-value (n form)
-  _N"Evaluates FORM and returns the Nth value (zero based).  This involves no
+  "Evaluates FORM and returns the Nth value (zero based).  This involves no
   consing when N is a trivial constant integer."
   (if (integerp n)
       (let ((dummy-list nil)
@@ -624,7 +640,7 @@
 ;;; and an accessing function.
 
 (defun get-setf-expansion (form &optional environment)
-  _N"Returns five values needed by the SETF machinery: a list of temporary
+  "Returns five values needed by the SETF machinery: a list of temporary
    variables, a list of values with which to fill them, a list of temporaries
    for the new values, the setting function, and the accessing function."
   (let (temp)
@@ -654,7 +670,7 @@
 	   (expand-or-get-setf-inverse form environment)))))
 
 (defun get-setf-method-multiple-value (form &optional env)
-  _N"Obsolete: use GET-SETF-EXPANSION."
+  "Obsolete: use GET-SETF-EXPANSION."
   (get-setf-expansion form env))
 
 ;;;
@@ -686,7 +702,7 @@
 
 
 (defun get-setf-method (form &optional environment)
-  _N"Obsolete: use GET-SETF-EXPANSION and handle multiple store values."
+  "Obsolete: use GET-SETF-EXPANSION and handle multiple store values."
   (multiple-value-bind
       (temps value-forms store-vars store-form access-form)
       (get-setf-expansion form environment)
@@ -703,6 +719,8 @@
     (multiple-value-bind
 	(body local-decs doc)
 	(parse-defmacro arglist arglist-var (cddr rest) fn 'defsetf)
+      (when doc
+	(intl::note-translatable intl::*default-domain* doc))
       (values 
        `(lambda (,arglist-var ,new-var)
 	  ,@local-decs
@@ -711,7 +729,7 @@
 
 
 (defmacro defsetf (access-fn &rest rest)
-  _N"Associates a SETF update function or macro with the specified access
+  "Associates a SETF update function or macro with the specified access
   function or macro.  The format is complex.  See the manual for
   details."
   (cond ((not (listp (car rest)))
@@ -731,6 +749,8 @@
 		 (parse-defmacro `(,lambda-list ,@store-variables)
 				 arglist-var body access-fn 'defsetf
 				 :annonymousp t)
+	       (when doc
+		 (intl::note-translatable intl::*default-domain* doc))
 	       `(eval-when (load compile eval)
 		  (%define-setf-macro
 		   ',access-fn
@@ -773,7 +793,7 @@
 ;;; use of setf inverses without the full interpreter.
 ;;;
 (defmacro setf (&rest args &environment env)
-  _N"Takes pairs of arguments like SETQ.  The first is a place and the second
+  "Takes pairs of arguments like SETQ.  The first is a place and the second
   is the value that is supposed to go into that place.  Returns the last
   value.  The place argument may be any of the access forms for which SETF
   knows a corresponding setting form."
@@ -801,7 +821,7 @@
 	(setq l (cons (list 'setf (car a) (cadr a)) l)))))))
 
 (defmacro psetf (&rest args &environment env)
-  _N"This is to SETF as PSETQ is to SETQ.  Args are alternating place
+  "This is to SETF as PSETQ is to SETQ.  Args are alternating place
   expressions and values to go into those places.  All of the subforms and
   values are determined, left to right, and only then are the locations
   updated.  Returns NIL."
@@ -826,7 +846,7 @@
       (thunk (let*-bindings) (mv-bindings)))))
 
 (defmacro shiftf (&rest args &environment env)
-  _N"One or more SETF-style place expressions, followed by a single
+  "One or more SETF-style place expressions, followed by a single
    value expression.  Evaluates all of the expressions in turn, then
    assigns the value of each expression to the place on its left,
    returning the value of the leftmost."
@@ -865,7 +885,7 @@
 	    (values ,@(car (mv-bindings)))))))))
 
 (defmacro rotatef (&rest args &environment env)
-  _N"Takes any number of SETF-style place expressions.  Evaluates all of the
+  "Takes any number of SETF-style place expressions.  Evaluates all of the
    expressions in turn, then assigns to each place the value of the form to
    its right.  The rightmost form gets the value of the leftmost.
    Returns NIL."
@@ -896,7 +916,7 @@
 
 
 (defmacro define-modify-macro (name lambda-list function &optional doc-string)
-  _N"Creates a new read-modify-write macro like PUSH or INCF."
+  "Creates a new read-modify-write macro like PUSH or INCF."
   (let ((other-args nil)
 	(rest-arg nil)
 	(env (gensym "ENV-"))
@@ -941,7 +961,7 @@
 		 ,setter)))))))
 
 (defmacro push (obj place &environment env)
-  _N"Takes an object and a location holding a list.  Conses the object onto
+  "Takes an object and a location holding a list.  Conses the object onto
   the list, returning the modified list.  OBJ is evaluated before PLACE."
 
   ;; This special case for place being a symbol isn't strictly needed.
@@ -975,7 +995,7 @@
 	       ,setter)))))))
 
 (defmacro pushnew (obj place &rest keys &environment env)
-  _N"Takes an object and a location holding a list.  If the object is already
+  "Takes an object and a location holding a list.  If the object is already
   in the list, does nothing.  Else, conses the object onto the list.  Returns
   NIL.  If there is a :TEST keyword, this is used for the comparison."
   (if (and (symbolp place)
@@ -1007,7 +1027,7 @@
 		,setter)))))))
 
 (defmacro pop (place &environment env)
-  _N"The argument is a location holding a list.  Pops one item off the front
+  "The argument is a location holding a list.  Pops one item off the front
   of the list and returns it."
   (if (and (symbolp place)
 	   (eq place (macroexpand place env)))
@@ -1029,7 +1049,7 @@
 
 ;;; we can't use DEFINE-MODIFY-MACRO because of ANSI 5.1.3
 (defmacro incf (place &optional (delta 1) &environment env)
-  _N"The first argument is some location holding a number. This number is
+  "The first argument is some location holding a number. This number is
   incremented by the second argument, DELTA, which defaults to 1."
   (multiple-value-bind (dummies vals newval setter getter)
       (get-setf-method place env)
@@ -1040,7 +1060,7 @@
          ,setter))))
 
 (defmacro decf (place &optional (delta 1) &environment env)
-  _N"The first argument is some location holding a number. This number is
+  "The first argument is some location holding a number. This number is
   decremented by the second argument, DELTA, which defaults to 1."
   (multiple-value-bind (dummies vals newval setter getter)
       (get-setf-method place env)
@@ -1051,7 +1071,7 @@
          ,setter))))
 
 (defmacro remf (place indicator &environment env)
-  _N"Place may be any place expression acceptable to SETF, and is expected
+  "Place may be any place expression acceptable to SETF, and is expected
   to hold a property list or ().  This list is destructively altered to
   remove the property specified by the indicator.  Returns T if such a
   property was present, NIL if not."
@@ -1225,7 +1245,7 @@
 ;;; Special-case a BYTE bytespec so that the compiler can recognize it.
 ;;;
 (define-setf-expander ldb (bytespec place &environment env)
-  _N"The first argument is a byte specifier.  The second is any place form
+  "The first argument is a byte specifier.  The second is any place form
   acceptable to SETF.  Replaces the specified byte of the number in this
   place with bits from the low-order end of the new value."
   (multiple-value-bind (dummies vals newval setter getter)
@@ -1254,7 +1274,7 @@
 
 
 (define-setf-expander mask-field (bytespec place &environment env)
-  _N"The first argument is a byte specifier.  The second is any place form
+  "The first argument is a byte specifier.  The second is any place form
   acceptable to SETF.  Replaces the specified byte of the number in this place
   with bits from the corresponding position in the new value."
   (multiple-value-bind (dummies vals newval setter getter)
@@ -1416,40 +1436,40 @@
 
 
 (defmacro case (keyform &body cases)
-  _N"CASE Keyform {({(Key*) | Key} Form*)}*
+  "CASE Keyform {({(Key*) | Key} Form*)}*
   Evaluates the Forms in the first clause with a Key EQL to the value
   of Keyform.  If a singleton key is T or Otherwise then the clause is
   a default clause."
   (case-body 'case keyform cases t 'eql nil nil))
 
 (defmacro ccase (keyform &body cases)
-  _N"CCASE Keyform {({(Key*) | Key} Form*)}*
+  "CCASE Keyform {({(Key*) | Key} Form*)}*
   Evaluates the Forms in the first clause with a Key EQL to the value of
   Keyform.  If none of the keys matches then a correctable error is
   signalled."
   (case-body 'ccase keyform cases t 'eql nil t t))
 
 (defmacro ecase (keyform &body cases)
-  _N"ECASE Keyform {({(Key*) | Key} Form*)}*
+  "ECASE Keyform {({(Key*) | Key} Form*)}*
   Evaluates the Forms in the first clause with a Key EQL to the value of
   Keyform.  If none of the keys matches then an error is signalled."
   (case-body 'ecase keyform cases t 'eql nil nil t))
 
 (defmacro typecase (keyform &body cases)
-  _N"TYPECASE Keyform {(Type Form*)}*
+  "TYPECASE Keyform {(Type Form*)}*
   Evaluates the Forms in the first clause for which TYPEP of Keyform
   and Type is true.  If a singleton key is T or Otherwise then the
   clause is a default clause."
   (case-body 'typecase keyform cases nil 'typep nil nil))
 
 (defmacro ctypecase (keyform &body cases)
-  _N"CTYPECASE Keyform {(Type Form*)}*
+  "CTYPECASE Keyform {(Type Form*)}*
   Evaluates the Forms in the first clause for which TYPEP of Keyform and Type
   is true.  If no form is satisfied then a correctable error is signalled."
   (case-body 'ctypecase keyform cases nil 'typep nil t t))
 
 (defmacro etypecase (keyform &body cases)
-  _N"ETYPECASE Keyform {(Type Form*)}*
+  "ETYPECASE Keyform {(Type Form*)}*
   Evaluates the Forms in the first clause for which TYPEP of Keyform and Type
   is true.  If no form is satisfied then an error is signalled."
   (case-body 'etypecase keyform cases nil 'typep nil nil t))
@@ -1463,7 +1483,7 @@
 ;;; of whether they are needed.
 ;;;
 (defmacro assert (test-form &optional places datum &rest arguments)
-  _N"Signals an error if the value of test-form is nil.  Continuing from this
+  "Signals an error if the value of test-form is nil.  Continuing from this
    error using the CONTINUE restart will allow the user to alter the value of
    some locations known to SETF, starting over with test-form.  Returns nil."
   `(loop
@@ -1517,7 +1537,7 @@
 ;;;
 
 (defmacro check-type (place type &optional type-string)
-  _N"Signals an error of type type-error if the contents of place are not of the
+  "Signals an error of type type-error if the contents of place are not of the
    specified type.  If an error is signaled, this can only return if
    STORE-VALUE is invoked.  It will store into place and start over."
   (let ((place-value (gensym)))
@@ -1560,7 +1580,7 @@
 
 ;;;; With-XXX
 (defmacro with-open-file ((var filespec &rest open-args) &parse-body (forms decls))
-  _N"The file whose name is Filespec is opened using the Open-args and
+  "The file whose name is Filespec is opened using the Open-args and
   bound to the variable Var. If the call to open is unsuccessful, the
   forms are not evaluated.  The Forms are executed, and when they
   terminate, normally or otherwise, the file is closed."
@@ -1577,7 +1597,7 @@
 
 
 (defmacro with-open-stream ((var stream) &parse-body (forms decls))
-  _N"The form stream should evaluate to a stream.  VAR is bound
+  "The form stream should evaluate to a stream.  VAR is bound
    to the stream and the forms are evaluated as an implicit
    progn.  The stream is closed upon exit."
   (let ((abortp (gensym)))
@@ -1594,7 +1614,7 @@
 
 (defmacro with-input-from-string ((var string &key index start end)
 				  &parse-body (forms decls))
-  _N"Binds the Var to an input stream that returns characters from String and
+  "Binds the Var to an input stream that returns characters from String and
   executes the body.  See manual for details."
   ;; The once-only inhibits compiler note for unreachable code when 'end' is true.
   (once-only ((string string))
@@ -1618,7 +1638,7 @@
 
 (defmacro with-output-to-string ((var &optional string &key element-type)
 				 &parse-body (forms decls))
-  _N"If STRING is specified, it must be a string with a fill pointer;
+  "If STRING is specified, it must be a string with a fill pointer;
    the output is incrementally appended to the string (as if by use of
    VECTOR-PUSH-EXTEND)."
   (declare (ignore element-type))
@@ -1738,7 +1758,7 @@
 
 
 (defmacro do (varlist endlist &parse-body (body decls))
-  _N"DO ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*
+  "DO ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*
   Iteration construct.  Each Var is initialized in parallel to the value of the
   specified Init form.  On subsequent iterations, the Vars are assigned the
   value of the Step form (if any) in paralell.  The Test is evaluated before
@@ -1751,7 +1771,7 @@
 
 
 (defmacro do* (varlist endlist &parse-body (body decls))
-  _N"DO* ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*
+  "DO* ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*
   Iteration construct.  Each Var is initialized sequentially (like LET*) to the
   value of the specified Init form.  On subsequent iterations, the Vars are
   sequentially assigned the value of the Step form (if any).  The Test is
@@ -1765,7 +1785,7 @@
 ;;;; Miscellaneous macros:
 
 (defmacro psetq (&rest pairs)
-  _N"PSETQ {var value}*
+  "PSETQ {var value}*
    Set the variables to the values, like SETQ, except that assignments
    happen in parallel, i.e. no assignments take place until all the
    forms have been evaluated."
@@ -1874,7 +1894,7 @@
 ;;; With-Compilation-Unit  --  Public
 ;;;
 (defmacro with-compilation-unit (options &body body)
-  _N"WITH-COMPILATION-UNIT ({Key Value}*) Form*
+  "WITH-COMPILATION-UNIT ({Key Value}*) Form*
   This form affects compilations that take place within its dynamic extent.  It
   is intended to be wrapped around the compilation of all files in the same
   system.  These keywords are defined:
