@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.295 2010/04/14 16:39:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.296 2010/04/18 16:47:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -592,9 +592,9 @@
 
 (defpackage "INTL"
   (:use "COMMON-LISP")
-  (:export "*LOCALE-DIRECTORIES*" "*TRANSLATABLE-DUMP-STREAM*" "DGETTEXT" "DNGETTEXT"
+  (:export "*LOCALE-DIRECTORIES*" "DGETTEXT" "DNGETTEXT"
 	   "GETTEXT" "INSTALL" "NGETTEXT" "READ-TRANSLATABLE-STRING" "SETLOCALE"
-	   "TEXTDOMAIN"))
+	   "TEXTDOMAIN" "TRANSLATION-ENABLE" "TRANSLATION-DISABLE"))
 
 (defpackage "LISP"
   (:use "COMMON-LISP" "EXTENSIONS" "KERNEL" "SYSTEM" "DEBUG" "BIGNUM" "INTL")

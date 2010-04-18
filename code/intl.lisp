@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.3 $
+;;; $Revision: 1.4 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,7 +23,7 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.3 2010/04/14 16:39:52 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.4 2010/04/18 16:47:37 rtoy Exp $")
 
 (in-package "INTL")
 
@@ -558,18 +558,28 @@
 (defvar *translator-comment* nil)
 
 #-runtime
-(defvar *translations* (make-hash-table :test 'equal))
+(defvar *translations* nil)
+
+#-runtime
+(defun translation-enable ()
+  (setq *translations* (or *translations* (make-hash-table :test 'equal)))
+  t)
+
+#-runtime
+(defun translation-disable ()
+  (setq *translations* nil))
 
 #-runtime
 (defun note-translatable (domain string &optional plural)
-  (when domain
+  (when (and domain *translations*)
     (let* ((hash (or (gethash domain *translations*)
 		     (setf (gethash domain *translations*)
 			   (make-hash-table :test 'equal))))
 	   (key (if plural (cons string plural) string))
 	   (val (or (gethash key hash) (cons nil nil))))
       (pushnew *translator-comment* (car val) :test #'equal)
-      (pushnew (enough-namestring *compile-file-truename*) (cdr val) :test #'equal)
+      (pushnew (and *compile-file-truename* (enough-namestring *compile-file-truename*))
+	       (cdr val) :test #'equal)
       ;; FIXME: How does this happen?  Need to figure this out and get
       ;; rid of this!
       (unless key
