@@ -25,6 +25,7 @@ $TARGET/lisp/lisp \
 
 (setf *default-pathname-defaults* (ext:default-directory))
 (intl:install)
+(intl::translation-enable)
 (load "target:setenv")
 
 (pushnew :no-clx *features*)

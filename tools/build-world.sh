@@ -32,6 +32,7 @@ $LISP "$@" -noinit -nositeinit <<EOF
 
 (setf *default-pathname-defaults* (ext:default-directory))
 (intl::install)
+(intl::translation-enable)
 
 (setf (ext:search-list "target:")
       '("$TARGET/" "src/"))
