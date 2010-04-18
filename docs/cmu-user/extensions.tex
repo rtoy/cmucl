@@ -2777,9 +2777,26 @@ All messages from \cmucl{} can be translated but as of this writing,
 the only complete translation is a Pig Latin translation done by
 machine.  There are a few messages translated to Korean.
 
+In general, translatable strings are marked as such by using the
+functions \code{intl:gettext} and \code{intl:ngettext} or by using the
+reader macros \verb+_+ or \verb+_N+.  When loading or compiling, such
+strings are recorded for translation.  At runtime, such strings are
+looked in and the translation is returned.  Doc strings do not need to
+be noted in any way; the are automatically noted for translation.
+
+By default, recording of translatable strings is disabled.  To enable
+recording of strings, call \code{intl:translation-enable}.
+
 \subsection{Dictionary}
 \label{sec:localization-dictionary}
 
+\begin{defun}{intl:}{translation-enable}{}
+  Enable recording of translatable strings.
+\end{defun}
+
+\begin{defun}{intl:}{translation-disable}{}
+  Disablle recording of translatable strings.
+\end{defun}
 
 \begin{defun}{intl:}{setlocale}{\ampoptional{} locale}
   Sets the locale to the locale specified by \var{locale}.  If
@@ -2846,6 +2863,12 @@ machine.  There are a few messages translated to Korean.
   This is a list of directory pathnames where the translations can be found.
 \end{defvar}  
 
+\begin{defun}{intl:}{install}{\ampoptional{} (rt *readtable*)}
+  Installs reader macros and comment reader into the specified
+  readtable as explained below.  The readtable defaults to
+  \var{*readtable*}.
+\end{defun}
+
 Two reader macros are also provided: \code{\_''} and \code{\_N''}.  The
 first is equivalent to wrapping \code{dgettext} around the string.
 The second returns the string, but also records the string.  This is
@@ -2864,7 +2887,8 @@ ends at the end of each line.
 \subsection{Example Usage}
 \label{sec:localization-usage}
 
-Here is a simple example of how to localize your code.
+Here is a simple example of how to localize your code.  This assumes
+that you've installed the reader macros via \code{intl::install}.
 
 \begin{example}
 
