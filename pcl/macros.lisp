@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.30 2010/03/19 15:19:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.31 2010/04/19 02:31:14 rtoy Rel $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -153,7 +153,7 @@
   (symbolp x))
 
 (defun find-class (symbol &optional (errorp t) environment)
-  _N"Returns the PCL class metaobject named by SYMBOL. An error of type
+  "Returns the PCL class metaobject named by SYMBOL. An error of type
    SIMPLE-ERROR is signaled if the class does not exist unless ERRORP
    is NIL in which case NIL is returned. SYMBOL cannot be a keyword."
   (declare (ignore environment))

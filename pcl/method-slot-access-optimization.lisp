@@ -52,19 +52,19 @@
 ;;;
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.8 2010/03/19 15:19:03 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.9 2010/04/19 02:31:14 rtoy Rel $")
  
 (in-package "PCL")
 (intl:textdomain "cmucl")
 
 (defvar *optimize-inline-slot-access-p* t
-  _N"Set to true to activate the inline slot access optimization.")
+  "Set to true to activate the inline slot access optimization.")
 
 (defvar *use-slot-types-p* t
-  _N"When true, check slot values against specified slot types.")
+  "When true, check slot values against specified slot types.")
 
 (defvar *optimize-accessor-calls-p* t
-  _N"When true, optimize slot access through slot reader/writer functions.")
+  "When true, optimize slot access through slot reader/writer functions.")
 
 
 ;;; *******************

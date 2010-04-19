@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fngen.lisp,v 1.14 2010/03/19 15:19:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fngen.lisp,v 1.15 2010/04/19 02:31:14 rtoy Rel $")
 
 (in-package :pcl)
 (intl:textdomain "cmucl")
@@ -208,7 +208,7 @@
   (store-fgen (make-fgen test gensyms generator generator-lambda system)))
 
 (defun flush-emf-cache (&optional gf)
-  _N"Flush cached emf functions.  If GF is supplied, it should be a
+  "Flush cached emf functions.  If GF is supplied, it should be a
    generic function metaobject or the name of a generic function, and
    this function flushes all cached emfs for the given generic
    function.  If GF is not supplied, all cached emfs are flushed."

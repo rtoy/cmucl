@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.36 2010/03/19 15:19:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.37 2010/04/19 02:31:14 rtoy Rel $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -103,7 +103,7 @@
 ;;; In all cases, set-function-name must return the new (or same) function.
 ;;; 
 (defun set-function-name (function new-name)
-  _N"Set the name of a compiled function object and return the function."
+  "Set the name of a compiled function object and return the function."
   (declare (special *boot-state* *the-class-standard-generic-function*))
   (when (valid-function-name-p function)
     (setq function (fdefinition function)))
@@ -142,11 +142,11 @@
 ;;; forms).
 ;;;
 (defvar *compile-lambda-break-p* nil
-  _N"PCL debugging aid that breaks into the debugger each time
+  "PCL debugging aid that breaks into the debugger each time
 `compile-lambda' is invoked.")
 
 (defvar *compile-lambda-silent-p* t
-  _N"If true (the default), then `compile-lambda' will try to silence
+  "If true (the default), then `compile-lambda' will try to silence
 the compiler as completely as possible.  Currently this means that
 `*compile-print*' will be bound to nil during compilation.")
 

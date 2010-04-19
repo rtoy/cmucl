@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.40 2010/03/19 15:19:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.41 2010/04/19 02:31:14 rtoy Rel $")
 
 (in-package :pcl)
 (intl:textdomain "cmucl")
@@ -771,7 +771,7 @@ And so, we are saved.
 (defvar *early-p* nil)
 
 (defvar *max-emf-precomputation-methods* 100
-  _N"Precompute effective methods at method load time if the generic
+  "Precompute effective methods at method load time if the generic
    function has less than this number of methods.  If zero,
    no effective methods are precomputed at method load time.")
 

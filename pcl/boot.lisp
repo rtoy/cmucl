@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.77 2010/04/17 19:05:51 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.78 2010/04/19 02:31:13 rtoy Rel $")
 
 (in-package :pcl)
 (intl:textdomain "cmucl")
@@ -380,7 +380,7 @@ work during bootstrapping.
 (defvar *method-source-info*)
 
 (defvar *inline-methods-in-emfs* t
-  _N"If true, allow inlining of methods in effective methods.")
+  "If true, allow inlining of methods in effective methods.")
 
 (defun expand-defmethod (name proto-gf proto-method qualifiers
 			 lambda-list body env)
@@ -1311,7 +1311,7 @@ work during bootstrapping.
 			     method-info)))
 
 (defvar *compile-interpreted-methods-p* t
-  _N"When true, compile interpreted method functions.")
+  "When true, compile interpreted method functions.")
 
 (defun load-defmethod-internal
     (method-class gf-name qualifiers specializers lambda-list 
