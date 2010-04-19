@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.108 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.109 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -72,7 +72,7 @@
 ;;;
 
 (defun remove-backslashes (namestr start end)
-  _N"Remove any occurrences of \\ from the string because we've already
+  "Remove any occurrences of \\ from the string because we've already
    checked for whatever may have been backslashed."
   (declare (type simple-base-string namestr)
 	   (type index start end))
@@ -100,7 +100,7 @@
     (shrink-vector result dst)))
 
 (defvar *ignore-wildcards* nil
-  _N"If non-NIL, Unix shell-style wildcards are ignored when parsing
+  "If non-NIL, Unix shell-style wildcards are ignored when parsing
   pathname namestrings.  They are also ignored when computing
   namestrings for pathname objects.  Thus, *, ?, etc. are not
   wildcards when parsing a namestring, and are not escaped when
@@ -854,7 +854,7 @@
 ;;;; UNIX-NAMESTRING -- public
 ;;; 
 (defun unix-namestring (pathname &optional (for-input t) executable-only)
-  _N"Convert PATHNAME into a string that can be used with UNIX system calls.
+  "Convert PATHNAME into a string that can be used with UNIX system calls.
    Search-lists and wild-cards are expanded. If optional argument
    FOR-INPUT is true and PATHNAME doesn't exist, NIL is returned.
    If optional argument EXECUTABLE-ONLY is true, NIL is returned
@@ -890,7 +890,7 @@
 ;;; Another silly file function trivially different from another function.
 ;;;
 (defun truename (pathname)
-  _N"Return the pathname for the actual file described by the pathname
+  "Return the pathname for the actual file described by the pathname
   An error of type file-error is signalled if no such file exists,
   or the pathname is wild."
   (if (wild-pathname-p pathname)
@@ -910,7 +910,7 @@
 ;;; If PATHNAME exists, return its truename, otherwise NIL.
 ;;;
 (defun probe-file (pathname)
-  _N"Return a pathname which is the truename of the file if it exists, NIL
+  "Return a pathname which is the truename of the file if it exists, NIL
   otherwise. An error of type file-error is signalled if pathname is wild."
   (if (wild-pathname-p pathname)
       (error 'simple-file-error 
@@ -931,7 +931,7 @@
 ;;; Rename-File  --  Public
 ;;;
 (defun rename-file (file new-name)
-  _N"Rename File to have the specified New-Name.  If file is a stream open to a
+  "Rename File to have the specified New-Name.  If file is a stream open to a
   file, then the associated file is renamed."
   (let* ((original (truename file))
 	 (original-namestring (unix-namestring original t))
@@ -960,7 +960,7 @@
 ;;;    Delete the file, Man.
 ;;;
 (defun delete-file (file)
-  _N"Delete the specified file."
+  "Delete the specified file."
   (let ((namestring (unix-namestring file t)))
     (when (streamp file)
       ;; Close the file, but don't try to revert or anything.  We want
@@ -986,7 +986,7 @@
 ;;;    Purge old file versions
 ;;;
 (defun purge-backup-files (pathname &optional (keep 0))
-  _N"Delete old versions of files matching the given Pathname,
+  "Delete old versions of files matching the given Pathname,
 optionally keeping some of the most recent old versions."
   (declare (type (or pathname string stream) pathname)
 	   (type (integer 0 *) keep))
@@ -1021,7 +1021,7 @@ optionally keeping some of the most recent old versions."
 ;;;    Return Home:, which is set up for us at initialization time.
 ;;;
 (defun user-homedir-pathname (&optional host)
-  _N"Returns the home directory of the logged in user as a pathname.
+  "Returns the home directory of the logged in user as a pathname.
   This is obtained from the logical name \"home:\"."
   (declare (ignore host))
   #p"home:")
@@ -1029,7 +1029,7 @@ optionally keeping some of the most recent old versions."
 ;;; File-Write-Date  --  Public
 ;;;
 (defun file-write-date (file)
-  _N"Return file's creation date, or NIL if it doesn't exist.
+  "Return file's creation date, or NIL if it doesn't exist.
  An error of type file-error is signalled if file is a wild pathname"
   (if (wild-pathname-p file)
       (error 'simple-file-error 
@@ -1047,7 +1047,7 @@ optionally keeping some of the most recent old versions."
 ;;; File-Author  --  Public
 ;;;
 (defun file-author (file)
-  _N"Returns the file author as a string, or nil if the author cannot be
+  "Returns the file author as a string, or nil if the author cannot be
  determined.  Signals an error of type file-error if file doesn't exist,
  or file is a wild pathname."
   (if (wild-pathname-p file)
@@ -1075,7 +1075,7 @@ optionally keeping some of the most recent old versions."
 ;;;
 (defun directory (pathname &key (all t) (check-for-subdirs t)
 		  (truenamep t) (follow-links t))
-  _N"Returns a list of pathnames, one for each file that matches the given
+  "Returns a list of pathnames, one for each file that matches the given
    pathname.  Supplying :ALL as nil causes this to ignore Unix dot files.  This
    never includes Unix dot and dot-dot in the result.  If :TRUENAMEP is NIL,
    then symbolic links in the result are not expanded, which is not the
@@ -1124,7 +1124,7 @@ optionally keeping some of the most recent old versions."
 ;;; PRINT-DIRECTORY is exported from the EXTENSIONS package.
 ;;; 
 (defun print-directory (pathname &optional stream &key all verbose return-list)
-  _N"Like Directory, but prints a terse, multi-column directory listing
+  "Like Directory, but prints a terse, multi-column directory listing
    instead of returning a list of pathnames.  When :all is supplied and
    non-nil, then Unix dot files are included too (as ls -a).  When :verbose
    is supplied and non-nil, then a long listing of miscellaneous
@@ -1331,7 +1331,7 @@ optionally keeping some of the most recent old versions."
 ;;;
 (defun ambiguous-files (pathname
 			&optional (defaults *default-pathname-defaults*))
-  _N"Return a list of all files which are possible completions of Pathname.
+  "Return a list of all files which are possible completions of Pathname.
    We look in the directory specified by Defaults as well as looking down
    the search list."
   (directory (complete-file-directory-arg pathname defaults)
@@ -1346,7 +1346,7 @@ optionally keeping some of the most recent old versions."
 ;;;   can be written by the current task.
 ;;;
 (defun file-writable (name)
-  _N"File-writable accepts a pathname and returns T if the current
+  "File-writable accepts a pathname and returns T if the current
   process can write it, and NIL otherwise."
   (let ((name (unix-namestring name nil)))
     (cond ((null name)
@@ -1381,7 +1381,7 @@ optionally keeping some of the most recent old versions."
 ;;; Default-Directory  --  Public
 ;;;
 (defun default-directory ()
-  _N"Returns the pathname for the default directory.  This is the place where
+  "Returns the pathname for the default directory.  This is the place where
   a file will be written if no directory is specified.  This may be changed
   with setf."
   (multiple-value-bind (gr dir-or-error)
@@ -1411,7 +1411,7 @@ optionally keeping some of the most recent old versions."
 ;;; Seems like maybe it's fixed by changes made by Ray Toy to avoid heap corruption.
 #- (and)
 (defun default-directory ()
-  _N"Returns the pathname for the default directory.  This is the place where
+  "Returns the pathname for the default directory.  This is the place where
   a file will be written if no directory is specified.  This may be changed
   with setf."
   (multiple-value-bind (gr dir-or-error)
@@ -1455,7 +1455,7 @@ optionally keeping some of the most recent old versions."
 ;;; Ensure-Directories-Exist  --  Public
 ;;;
 (defun ensure-directories-exist (pathspec &key verbose (mode #o777))
-  _N"Tests whether the directories containing the specified file
+  "Tests whether the directories containing the specified file
   actually exist, and attempts to create them if they do not.
   Portable programs should avoid using the :MODE keyword argument."
   (let* ((pathname (pathname pathspec))

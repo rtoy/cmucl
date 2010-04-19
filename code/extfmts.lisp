@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.23 2010/03/19 15:18:58 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.24 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -683,7 +683,7 @@
 
 (defun string-to-octets (string &key (start 0) end (external-format :default)
 				     (buffer nil bufferp))
-  _N"Convert String to octets using the specified External-format.  The
+  "Convert String to octets using the specified External-format.  The
    string is bounded by Start (defaulting to 0) and End (defaulting to
    the end of the string.  If Buffer is given, the octets are stored
    there.  If not, a new buffer is created."
@@ -723,7 +723,7 @@
 				     (string nil stringp)
 			             (s-start 0) (s-end nil s-end-p)
 			             (state nil))
-  _N"Octets-to-string converts an array of octets in Octets to a string
+  "Octets-to-string converts an array of octets in Octets to a string
   according to the specified External-format.  The array of octets is
   bounded by Start (defaulting ot 0) and End (defaulting to the end of
   the array.  If String is not given, a new string is created.  If
@@ -773,7 +773,7 @@
 			     (code-char b)))))))
 
 (defun string-encode (string external-format &optional (start 0) end)
-  _N"Encode the given String using External-Format and return a new
+  "Encode the given String using External-Format and return a new
   string.  The characters of the new string are the octets of the
   encoded result, with each octet converted to a character via
   code-char.  This is the inverse to String-Decode"
@@ -806,7 +806,7 @@
 	finally (return (values result (1+ pos))))))
 
 (defun string-decode (string external-format &optional (start 0) end)
-  _N"Decode String using the given External-Format and return the new
+  "Decode String using the given External-Format and return the new
   string.  The input string is treated as if it were an array of
   octets, where the char-code of each character is the octet.  This is
   the inverse of String-Encode."
@@ -820,7 +820,7 @@
 
 
 (defun set-system-external-format (terminal &optional filenames)
-  _N"Change the external format of the standard streams to Terminal.
+  "Change the external format of the standard streams to Terminal.
   The standard streams are sys::*stdin*, sys::*stdout*, and
   sys::*stderr*, which are normally the input and/or output streams
   for *standard-input* and *standard-output*.  Also sets sys::*tty*

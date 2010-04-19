@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/linux-os.lisp,v 1.9 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/linux-os.lisp,v 1.10 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,7 @@
 ;;; select() in Linux kernel 2.6.x) and instead of running uname -r,
 ;;; let's just get the info from uname().
 (defun software-version ()
-  _N"Returns a string describing version of the supporting software."
+  "Returns a string describing version of the supporting software."
   (multiple-value-bind (sysname nodename release version)
       (unix:unix-uname)
     (declare (ignore sysname nodename))

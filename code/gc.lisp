@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.43 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.44 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -143,7 +143,7 @@
 
 
 (defun room (&optional (verbosity :default))
-  _N"Prints to *STANDARD-OUTPUT* information about the state of internal
+  "Prints to *STANDARD-OUTPUT* information about the state of internal
   storage and its management.  The optional argument controls the
   verbosity of ROOM.  If it is T, ROOM prints out a maximal amount of
   information.  If it is NIL, ROOM prints out a minimal amount of
@@ -223,7 +223,7 @@
   *total-bytes-consed*)
 
 (defun get-bytes-consed ()
-  _N"Returns the number of bytes consed since the first time this function
+  "Returns the number of bytes consed since the first time this function
   was called.  The first time it is called, it returns zero."
   (dfixnum:dfixnum-integer (get-bytes-consed-dfixnum)))
     
@@ -239,14 +239,14 @@
 ;;; will be triggered.
 ;;; 
 (defparameter *bytes-consed-between-gcs* default-bytes-consed-between-gcs
-  _N"This number specifies the minimum number of bytes of dynamic space
+  "This number specifies the minimum number of bytes of dynamic space
    that must be consed before the next gc will occur.")
 ;;;
 (declaim (type index *bytes-consed-between-gcs*))
 
 ;;; Public
 (defvar *gc-run-time* 0
-  _N"The total CPU time spend doing garbage collection (as reported by
+  "The total CPU time spend doing garbage collection (as reported by
    GET-INTERNAL-RUN-TIME.)")
 
 (declaim (type index *gc-run-time*))
@@ -304,11 +304,11 @@
 ;;; after garbage collection occurs.
 ;;;
 (defvar *before-gc-hooks* nil
-  _N"A list of functions that are called before garbage collection occurs.
+  "A list of functions that are called before garbage collection occurs.
   The functions should take no arguments.")
 ;;; 
 (defvar *after-gc-hooks* nil
-  _N"A list of functions that are called after garbage collection occurs.
+  "A list of functions that are called after garbage collection occurs.
   The functions should take no arguments.")
 
 ;;;
@@ -321,7 +321,7 @@
 ;;; Presumably someone will call GC-ON later to collect the garbage.
 ;;;
 (defvar *gc-inhibit-hook* nil
-  _N"Should be bound to a function or NIL.  If it is a function, this
+  "Should be bound to a function or NIL.  If it is a function, this
   function should take one argument, the current amount of dynamic
   usage.  The function should return NIL if garbage collection should
   continue and non-NIL if it should be inhibited.  Use with caution.")
@@ -332,7 +332,7 @@
 ;;; *GC-VERBOSE*
 ;;;
 (defvar *gc-verbose* t
-  _N"When non-NIL, causes the functions bound to *GC-NOTIFY-BEFORE* and
+  "When non-NIL, causes the functions bound to *GC-NOTIFY-BEFORE* and
   *GC-NOTIFY-AFTER* to be called before and after a garbage collection
   occurs respectively.  If :BEEP, causes the default notify functions to beep
   annoyingly.")
@@ -346,7 +346,7 @@
   (finish-output))
 ;;;
 (defparameter *gc-notify-before* #'default-gc-notify-before
-  _N"This function bound to this variable is invoked before GC'ing (unless
+  "This function bound to this variable is invoked before GC'ing (unless
   *GC-VERBOSE* is NIL) with the current amount of dynamic usage (in
   bytes).  It should notify the user that the system is going to GC.")
 
@@ -360,7 +360,7 @@
   (finish-output))
 ;;;
 (defparameter *gc-notify-after* #'default-gc-notify-after
-  _N"The function bound to this variable is invoked after GC'ing (unless
+  "The function bound to this variable is invoked after GC'ing (unless
   *GC-VERBOSE* is NIL) with the amount of dynamic usage (in bytes) now
   free, the number of bytes freed by the GC, and the new GC trigger
   threshold.  The function should notify the user that the system has
@@ -526,7 +526,7 @@
 ;;;; Auxiliary Functions.
 
 (defun bytes-consed-between-gcs ()
-  _N"Return the amount of memory that will be allocated before the next garbage
+  "Return the amount of memory that will be allocated before the next garbage
    collection is initiated.  This can be set with SETF."
   *bytes-consed-between-gcs*)
 ;;;
@@ -548,14 +548,14 @@
 
 
 (defun gc-on ()
-  _N"Enables the garbage collector."
+  "Enables the garbage collector."
   (setq *gc-inhibit* nil)
   (when *need-to-collect-garbage*
     (sub-gc))
   nil)
 
 (defun gc-off ()
-  _N"Disables the garbage collector."
+  "Disables the garbage collector."
   (setq *gc-inhibit* t)
   nil)
 
@@ -584,7 +584,7 @@
     (min-av-mem-age c-call:double)))
 
 (defun gencgc-stats (generation)
-  _N"Return some GC statistics for the specified GENERATION.  The
+  "Return some GC statistics for the specified GENERATION.  The
   statistics are the number of bytes allocated in this generation; the
   gc-trigger; the number of bytes consed between GCs; the number of
   GCs that have occurred; the trigger age; the cumulative number of

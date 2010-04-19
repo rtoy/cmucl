@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.27 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.28 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,7 +52,7 @@
 	      (acons name syntax-checker *valid-function-names*)))))
 
 (defmacro define-function-name-syntax (name (var) &body body)
-  _N"Define (NAME ...) to be a valid function name whose syntax is checked
+  "Define (NAME ...) to be a valid function name whose syntax is checked
   by BODY.  In BODY, VAR is bound to an actual function name of the
   form (NAME ...) to check.  BODY should return two values.
   First value true means the function name is valid.  Second value
@@ -64,7 +64,7 @@
        (%define-function-name-syntax ',name #',syntax-checker))))
 
 (defun valid-function-name-p (name)
-  _N"First value is true if NAME has valid function name syntax.
+  "First value is true if NAME has valid function name syntax.
   Second value is the name, a symbol, to use as a block name in DEFUNs
   and in similar situations."
   (typecase name
@@ -157,7 +157,7 @@
 ;;; FDEFINITION-OBJECT -- internal interface.
 ;;;
 (defun fdefinition-object (name create)
-  _N"Return the fdefn object for NAME.  If it doesn't already exist and CREATE
+  "Return the fdefn object for NAME.  If it doesn't already exist and CREATE
    is non-NIL, create a new (unbound) one."
   (declare (values (or fdefn null)))
   (multiple-value-bind (valid-name-p fname)
@@ -175,7 +175,7 @@
 
 (declaim (inline fdefn-or-lose))
 (defun fdefn-or-lose (name)
-  _N"Return the FDEFN of NAME.  Signal an error if there is none
+  "Return the FDEFN of NAME.  Signal an error if there is none
    or if it's function is null."
   (let ((fdefn (fdefinition-object name nil)))
     (unless (and fdefn (fdefn-function fdefn))
@@ -187,7 +187,7 @@
 ;;; The compiler emits calls to this when someone tries to funcall a symbol.
 ;;;
 (defun %coerce-to-function (name)
-  _N"Returns the definition for name, including any encapsulations.  Settable
+  "Returns the definition for name, including any encapsulations.  Settable
    with SETF."
   (fdefn-function (fdefn-or-lose name)))
 
@@ -210,7 +210,7 @@
 ;;;; FDEFINITION.
 
 (defun fdefinition (function-name)
-  _N"Return FUNCTION-NAME's global function definition.
+  "Return FUNCTION-NAME's global function definition.
    If FUNCTION-NAME is fwrapped, return the primary function definition
    stored in the innermost fwrapper."
   (let* ((fdefn (fdefn-or-lose function-name))
@@ -220,11 +220,11 @@
 	  (fdefn-function fdefn))))
 
 (defvar *setf-fdefinition-hook* nil
-  _N"This holds functions that (SETF FDEFINITION) invokes before storing the
+  "This holds functions that (SETF FDEFINITION) invokes before storing the
    new value.  These functions take the function name and the new value.")
 
 (defun %set-fdefinition (function-name new-value)
-  _N"Set FUNCTION-NAME's global function definition to NEW-VALUE.
+  "Set FUNCTION-NAME's global function definition to NEW-VALUE.
    If FUNCTION-NAME is fwrapped, set the primary function stored
    in the innermost fwrapper."
   (declare (type function new-value) (optimize (safety 1)))
@@ -244,12 +244,12 @@
 ;;;; FBOUNDP and FMAKUNBOUND.
 
 (defun fboundp (name)
-  _N"Return true if name has a global function definition."
+  "Return true if name has a global function definition."
   (let ((fdefn (fdefinition-object name nil)))
     (and fdefn (fdefn-function fdefn) t)))
 
 (defun fmakunbound (name)
-  _N"Make Name have no global function definition."
+  "Make Name have no global function definition."
   (let ((fdefn (fdefinition-object name nil)))
     (when fdefn
       (fdefn-makunbound fdefn)))

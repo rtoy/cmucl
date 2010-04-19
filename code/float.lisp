@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.46 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.47 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -246,7 +246,7 @@
 ;;; FLOAT-DENORMALIZED-P  --  Public
 ;;;
 (defun float-denormalized-p (x)
-  _N"Return true if the float X is denormalized."
+  "Return true if the float X is denormalized."
   (number-dispatch ((x float))
     ((single-float)
      (and (zerop (ldb vm:single-float-exponent-byte (single-float-bits x)))
@@ -290,7 +290,7 @@
 		  ((double-double-float)
 		   ,double-double)))))
 
-  (frob float-infinity-p _N"Return true if the float X is an infinity (+ or -)."
+  (frob float-infinity-p "Return true if the float X is an infinity (+ or -)."
     (zerop (ldb vm:single-float-significand-byte bits))
     (and (zerop (ldb vm:double-float-significand-byte hi))
 	 (zerop lo))
@@ -300,7 +300,7 @@
     #+double-double
     (float-infinity-p (double-double-hi x)))
 
-  (frob float-nan-p _N"Return true if the float X is a NaN (Not a Number)."
+  (frob float-nan-p "Return true if the float X is a NaN (Not a Number)."
     (not (zerop (ldb vm:single-float-significand-byte bits)))
     (or (not (zerop (ldb vm:double-float-significand-byte hi)))
 	(not (zerop lo)))
@@ -311,7 +311,7 @@
     (float-nan-p (double-double-hi x)))
 
   (frob float-trapping-nan-p
-    _N"Return true if the float X is a trapping NaN (Not a Number)."
+    "Return true if the float X is a trapping NaN (Not a Number)."
     (zerop (logand (ldb vm:single-float-significand-byte bits)
 		   vm:single-float-trapping-nan-bit))
     (zerop (logand (ldb vm:double-float-significand-byte hi)
@@ -331,7 +331,7 @@
 ;;;
 (declaim (maybe-inline float-precision))
 (defun float-precision (f)
-  _N"Returns a non-negative number of significant digits in it's float argument.
+  "Returns a non-negative number of significant digits in it's float argument.
   Will be less than FLOAT-DIGITS if denormalized or zero."
   (macrolet ((frob (digits bias decode)
 	       `(cond ((zerop f) 0)
@@ -382,7 +382,7 @@
 
 #+nil
 (defun float-sign (float1 &optional (float2 (float 1 float1)))
-  _N"Returns a floating-point number that has the same sign as
+  "Returns a floating-point number that has the same sign as
    float1 and, if float2 is given, has the same absolute value
    as float2."
   (declare (float float1 float2))
@@ -398,7 +398,7 @@
      (abs float2)))
 
 (defun float-sign (float1 &optional float2)
-  _N"Returns a floating-point number that has the same sign as
+  "Returns a floating-point number that has the same sign as
    float1 and, if float2 is given, has the same absolute value
    as float2."
   (declare (float float1)
@@ -433,7 +433,7 @@
 (declaim (inline float-digits float-radix))
 
 (defun float-digits (f)
-  _N"Returns a non-negative number of radix-b digits used in the
+  "Returns a non-negative number of radix-b digits used in the
    representation of it's argument.  See Common Lisp: The Language
    by Guy Steele for more details."
   (number-dispatch ((f float))
@@ -445,7 +445,7 @@
     ((double-double-float) vm:double-double-float-digits)))
 
 (defun float-radix (f)
-  _N"Returns (as an integer) the radix b of its floating-point
+  "Returns (as an integer) the radix b of its floating-point
    argument."
   (number-dispatch ((f float))
     ((float) 2)))
@@ -647,7 +647,7 @@
 ;;;    Dispatch to the correct type-specific i-d-f function.
 ;;;
 (defun integer-decode-float (x)
-  _N"Returns three values:
+  "Returns three values:
    1) an integer representation of the significand.
    2) the exponent for the power of 2 that the significand must be multiplied
       by to get the actual value.  This differs from the DECODE-FLOAT exponent
@@ -808,7 +808,7 @@
 ;;;    Dispatch to the appropriate type-specific function.
 ;;;
 (defun decode-float (f)
-  _N"Returns three values:
+  "Returns three values:
    1) a floating-point number representing the significand.  This is always
       between 0.5 (inclusive) and 1.0 (exclusive).
    2) an integer representing the exponent.
@@ -960,7 +960,7 @@
 ;;;    Dispatch to the correct type-specific scale-float function.
 ;;;
 (defun scale-float (f ex)
-  _N"Returns the value (* f (expt (float 2 f) ex)), but with no unnecessary loss
+  "Returns the value (* f (expt (float 2 f) ex)), but with no unnecessary loss
   of precision or overflow."
   (number-dispatch ((f float))
     ((single-float)
@@ -978,7 +978,7 @@
 ;;;; Converting to/from floats:
 
 (defun float (number &optional (other () otherp))
-  _N"Converts any REAL to a float.  If OTHER is not provided, it returns a
+  "Converts any REAL to a float.  If OTHER is not provided, it returns a
   SINGLE-FLOAT if NUMBER is not already a FLOAT.  If OTHER is provided, the
   result is the same float format as OTHER."
   (if otherp
@@ -1495,7 +1495,7 @@ rounding modes & do ieee round-to-integer.
 ) ; not x87
 
 (defun rational (x)
-  _N"RATIONAL produces a rational number for any real numeric argument.  This is
+  "RATIONAL produces a rational number for any real numeric argument.  This is
   more efficient than RATIONALIZE, but it assumes that floating-point is
   completely accurate, giving a result that isn't as pretty."
   (number-dispatch ((x real))
@@ -1516,7 +1516,7 @@ rounding modes & do ieee round-to-integer.
 
 #+nil
 (defun rationalize (x)
-  _N"Converts any REAL to a RATIONAL.  Floats are converted to a simple rational
+  "Converts any REAL to a RATIONAL.  Floats are converted to a simple rational
   representation exploiting the assumption that floats are only accurate to
   their precision.  RATIONALIZE (and also RATIONAL) preserve the invariant:
       (= x (float (rationalize x) x))"
@@ -1615,7 +1615,7 @@ rounding modes & do ieee round-to-integer.
 ;;;   p[i]*q[i-1]-p[i-1]*q[i] = (-1)^i.
 ;;;
 (defun rationalize (x)
-  _N"Converts any REAL to a RATIONAL.  Floats are converted to a simple rational
+  "Converts any REAL to a RATIONAL.  Floats are converted to a simple rational
   representation exploiting the assumption that floats are only accurate to
   their precision.  RATIONALIZE (and also RATIONAL) preserve the invariant:
       (= x (float (rationalize x) x))"

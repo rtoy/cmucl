@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.63 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.64 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -167,7 +167,7 @@
   (setf (%instance-ref layout (1+ i)) new-value))
 
 (defconstant layout-hash-max (ash most-positive-fixnum -3)
-  _N"The inclusive upper bound on LAYOUT-HASH values.")
+  "The inclusive upper bound on LAYOUT-HASH values.")
 
 (defvar *layout-hash-seed* nil)
 
@@ -390,7 +390,7 @@
 ;;; FIND-CLASS  --  Public
 ;;;
 (defun find-class (name &optional (errorp t) environment)
-  _N"Return the class with the specified Name.  If ERRORP is false, then NIL is
+  "Return the class with the specified Name.  If ERRORP is false, then NIL is
    returned when no such class exists."
   (declare (type symbol name) (ignore environment))
   (let ((res (class-cell-class (find-class-cell name))))
@@ -1020,7 +1020,7 @@
 ;;;
 (declaim (inline class-of))
 (defun class-of (object)
-  _N"Return the class of the supplied object, which may be any Lisp object, not
+  "Return the class of the supplied object, which may be any Lisp object, not
    just a CLOS STANDARD-OBJECT."
   (layout-class (layout-of object)))
 

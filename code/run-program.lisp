@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.29 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.30 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,7 +40,7 @@
   (defconstant wait-wstopped #-svr4 #o177 #+svr4 wait-wuntraced))
 
 (defun wait3 (&optional do-not-hang check-for-stopped)
-  _N"Return any available status information on child processed. "
+  "Return any available status information on child processed. "
   (multiple-value-bind (pid status)
 		       (c-wait3 (logior (if do-not-hang
 					  wait-wnohang
@@ -78,7 +78,7 @@
 ;;;; Process control stuff.
 
 (defvar *active-processes* nil
-  _N"List of process structures for all active processes.")
+  "List of process structures for all active processes.")
 
 (defstruct (process (:print-function %print-process))
   pid			    ; PID of child process.
@@ -103,7 +103,7 @@
 ;;; PROCESS-STATUS -- Public.
 ;;;
 (defun process-status (proc)
-  _N"Return the current status of process.  The result is one of :running,
+  "Return the current status of process.  The result is one of :running,
    :stopped, :exited, :signaled."
   (declare (type process proc))
   (get-processes-status-changes)
@@ -113,7 +113,7 @@
 ;;; PROCESS-WAIT -- Public.
 ;;;
 (defun process-wait (proc &optional check-for-stopped)
-  _N"Wait for PROC to quit running for some reason.  Returns PROC."
+  "Wait for PROC to quit running for some reason.  Returns PROC."
   (declare (type process proc))
   (loop
     (case (process-status proc)
@@ -152,7 +152,7 @@
 ;;; Hand a process a signal.
 ;;;
 (defun process-kill (proc signal &optional (whom :pid))
-  _N"Hand SIGNAL to PROC.  If whom is :pid, use the kill Unix system call.  If
+  "Hand SIGNAL to PROC.  If whom is :pid, use the kill Unix system call.  If
    whom is :process-group, use the killpg Unix system call.  If whom is
    :pty-process-group deliver the signal to whichever process group is currently
    in the foreground."
@@ -194,7 +194,7 @@
 ;;; Returns T if the process is still alive, NIL otherwise.
 ;;; 
 (defun process-alive-p (proc)
-  _N"Returns T if the process is still alive, NIL otherwise."
+  "Returns T if the process is still alive, NIL otherwise."
   (declare (type process proc))
   (let ((status (process-status proc)))
     (if (or (eq status :running)
@@ -207,7 +207,7 @@
 ;;; Close all the streams held open by PROC.
 ;;; 
 (defun process-close (proc)
-  _N"Close all streams connected to PROC and stop maintaining the status slot."
+  "Close all streams connected to PROC and stop maintaining the status slot."
   (declare (type process proc))
   (macrolet ((frob (stream abort)
 	       `(when ,stream (close ,stream :abort ,abort))))
@@ -253,11 +253,11 @@
 ;;;; RUN-PROGRAM and close friends.
 
 (defvar *close-on-error* nil
-  _N"List of file descriptors to close when RUN-PROGRAM exits due to an error.")
+  "List of file descriptors to close when RUN-PROGRAM exits due to an error.")
 (defvar *close-in-parent* nil
-  _N"List of file descriptors to close when RUN-PROGRAM returns in the parent.")
+  "List of file descriptors to close when RUN-PROGRAM returns in the parent.")
 (defvar *handlers-installed* nil
-  _N"List of handlers installed by RUN-PROGRAM.")
+  "List of handlers installed by RUN-PROGRAM.")
 
 
 ;;; FIND-A-PTY -- internal
@@ -455,7 +455,7 @@
 		    &key (env *environment-list*) (wait t) pty input
 		    if-input-does-not-exist output (if-output-exists :error)
 		    (error :output) (if-error-exists :error) status-hook)
-  _N"RUN-PROGRAM creates a new process and runs the unix program in the
+  "RUN-PROGRAM creates a new process and runs the unix program in the
    file specified by the simple-string PROGRAM.  ARGS are the standard
    arguments that can be passed to a Unix program, for no arguments
    use NIL (which means just the name of the program is passed as arg 0).

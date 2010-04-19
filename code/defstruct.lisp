@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.99 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.100 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,27 +38,27 @@
 
 
 (defparameter *ANSI-defstruct-options-p* nil
-  _N"Controls compiling DEFSTRUCT :print-function and :print-method
+  "Controls compiling DEFSTRUCT :print-function and :print-method
    options according to ANSI spec. MUST be NIL to compile CMUCL & PCL")
 
 ;;;; Structure frobbing primitives.
 
 (defun %make-instance (length)
-  _N"Allocate a new instance with LENGTH data slots."
+  "Allocate a new instance with LENGTH data slots."
   (declare (type index length))
   (%make-instance length))
 
 (defun %instance-length (instance)
-  _N"Given an instance, return its length."
+  "Given an instance, return its length."
   (declare (type instance instance))
   (%instance-length instance))
 
 (defun %instance-ref (instance index)
-  _N"Return the value from the INDEXth slot of INSTANCE.  This is SETFable."
+  "Return the value from the INDEXth slot of INSTANCE.  This is SETFable."
   (%instance-ref instance index))
 
 (defun %instance-set (instance index new-value)
-  _N"Set the INDEXth slot of INSTANCE to NEW-VALUE."
+  "Set the INDEXth slot of INSTANCE to NEW-VALUE."
   (setf (%instance-ref instance index) new-value))
 
 (defun %raw-ref-single (vec index)
@@ -418,7 +418,7 @@
 ;;; DEFSTRUCT  --  Public
 ;;;
 (defmacro defstruct (name-and-options &rest slot-descriptions)
-  _N"DEFSTRUCT {Name | (Name Option*)} {Slot | (Slot [Default] {Key Value}*)}
+  "DEFSTRUCT {Name | (Name Option*)} {Slot | (Slot [Default] {Key Value}*)}
    Define the structure type Name.  Instances are created by MAKE-<name>, which
    takes keyword arguments allowing initial slot values to the specified.
    A SETF'able function <name>-<slot> is defined for each slot to read&write
@@ -1828,7 +1828,7 @@
 ;;;    Copy any old kind of structure.
 ;;;
 (defun copy-structure (structure)
-  _N"Return a copy of Structure with the same (EQL) slot values."
+  "Return a copy of Structure with the same (EQL) slot values."
   (declare (type structure-object structure) (optimize (speed 3) (safety 0)))
   (let* ((len (%instance-length structure))
 	 (res (%make-instance len))

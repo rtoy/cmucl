@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.19 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.20 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,14 +47,14 @@
 (defconstant char-code-limit
   #-unicode 256
   #+unicode 65536
-  _N"The upper exclusive bound on values produced by CHAR-CODE.")
+  "The upper exclusive bound on values produced by CHAR-CODE.")
 
 (deftype char-code ()
   `(integer 0 (,char-code-limit)))
 
 (defconstant codepoint-limit
   #x110000
-  _N"The upper exclusive bound on the value of a Unicode codepoint")
+  "The upper exclusive bound on the value of a Unicode codepoint")
 
 ;;; The range of a Unicode code point
 (deftype codepoint ()
@@ -69,7 +69,7 @@
 		   (dolist (name names)
 		     (results (cons name (code-char ccode))))))
 	       `(defparameter char-name-alist ',(results)
-  _N"This is the alist of (character-name . character) for characters with
+  "This is the alist of (character-name . character) for characters with
   long names.  The first name in this list for a given character is used
   on typeout and is the preferred form for input."))))
   ;; Note: the char-name listed here should be what string-capitalize
@@ -114,25 +114,25 @@
 ;;;; Accessor functions:
 
 (defun char-code (char)
-  _N"Returns the integer code of CHAR."
+  "Returns the integer code of CHAR."
   (etypecase char
     (base-char (char-code (truly-the base-char char)))))
 
 
 (defun char-int (char)
-  _N"Returns the integer code of CHAR.  This is the same as char-code, as
+  "Returns the integer code of CHAR.  This is the same as char-code, as
    CMU Common Lisp does not implement character bits or fonts."
   (char-code char))
 
 
 (defun code-char (code)
-  _N"Returns the character with the code CODE."
+  "Returns the character with the code CODE."
   (declare (type char-code code))
   (code-char code))
 
 
 (defun character (object)
-  _N"Coerces its argument into a character object if possible.  Accepts
+  "Coerces its argument into a character object if possible.  Accepts
   characters, strings and symbols of length 1."
   (flet ((do-error (control args)
 	   (error 'simple-type-error
@@ -155,7 +155,7 @@
 
 
 (defun char-name (char)
-  _N"Given a character object, char-name returns the name for that
+  "Given a character object, char-name returns the name for that
   object (a symbol)."
   (let ((name (car (rassoc char char-name-alist))))
     (if name
@@ -171,7 +171,7 @@
 	      (format nil "U+~4,'0X" code))))))
 
 (defun name-char (name)
-  _N"Given an argument acceptable to string, name-char returns a character
+  "Given an argument acceptable to string, name-char returns a character
   object whose name is that symbol, if one exists, otherwise NIL."
   (if (and (stringp name) (> (length name) 2) (string-equal name "U+" :end1 2))
       (code-char (parse-integer name :radix 16 :start 1))
@@ -188,7 +188,7 @@
 ;;;; Predicates:
 
 (defun standard-char-p (char)
-  _N"The argument must be a character object.  Standard-char-p returns T if the
+  "The argument must be a character object.  Standard-char-p returns T if the
    argument is a standard character -- one of the 95 ASCII printing characters
    or <return>."
   (declare (character char))
@@ -198,12 +198,12 @@
 	     (= n 10)))))
 
 (defun %standard-char-p (thing)
-  _N"Return T if and only if THING is a standard-char.  Differs from
+  "Return T if and only if THING is a standard-char.  Differs from
   standard-char-p in that THING doesn't have to be a character."
   (and (characterp thing) (standard-char-p thing)))
 
 (defun graphic-char-p (char)
-  _N"The argument must be a character object.  Graphic-char-p returns T if the
+  "The argument must be a character object.  Graphic-char-p returns T if the
   argument is a printing character, otherwise returns NIL."
   (declare (character char))
   (and (typep char 'base-char)
@@ -215,7 +215,7 @@
 
 
 (defun alpha-char-p (char)
-  _N"The argument must be a character object.  Alpha-char-p returns T if the
+  "The argument must be a character object.  Alpha-char-p returns T if the
   argument is an alphabetic character; otherwise NIL."
   (declare (character char))
   (let ((m (char-code char)))
@@ -227,7 +227,7 @@
 
 
 (defun upper-case-p (char)
-  _N"The argument must be a character object; upper-case-p returns T if the
+  "The argument must be a character object; upper-case-p returns T if the
   argument is an upper-case character, NIL otherwise."
   (declare (character char))
   (let ((m (char-code char)))
@@ -238,7 +238,7 @@
 
 
 (defun lower-case-p (char)
-  _N"The argument must be a character object; lower-case-p returns T if the 
+  "The argument must be a character object; lower-case-p returns T if the 
   argument is a lower-case character, NIL otherwise."
   (declare (character char))
   (let ((m (char-code char)))
@@ -248,7 +248,7 @@
 	     (= (unicode-category m) +unicode-category-lower+)))))
 
 (defun title-case-p (char)
-  _N"The argument must be a character object; title-case-p returns T if the
+  "The argument must be a character object; title-case-p returns T if the
   argument is a title-case character, NIL otherwise."
   (declare (character char))
   (let ((m (char-code char)))
@@ -259,7 +259,7 @@
 
 
 (defun both-case-p (char)
-  _N"The argument must be a character object.  Both-case-p returns T if the
+  "The argument must be a character object.  Both-case-p returns T if the
   argument is an alphabetic character and if the character exists in
   both upper and lower case.  For ASCII, this is the same as Alpha-char-p."
   (declare (character char))
@@ -273,7 +273,7 @@
 
 
 (defun digit-char-p (char &optional (radix 10.))
-  _N"If char is a digit in the specified radix, returns the fixnum for
+  "If char is a digit in the specified radix, returns the fixnum for
   which that digit stands, else returns NIL.  Radix defaults to 10
   (decimal)."
   (declare (character char) (type (integer 2 36) radix))
@@ -293,7 +293,7 @@
 
 
 (defun alphanumericp (char)
-  _N"Given a character-object argument, alphanumericp returns T if the
+  "Given a character-object argument, alphanumericp returns T if the
   argument is either numeric or alphabetic."
   (declare (character char))
   (let ((m (char-code char)))
@@ -306,14 +306,14 @@
 
 
 (defun char= (character &rest more-characters)
-  _N"Returns T if all of its arguments are the same character."
+  "Returns T if all of its arguments are the same character."
   (do ((clist more-characters (cdr clist)))
       ((atom clist) T)
     (unless (eq (car clist) character) (return nil))))
 
 
 (defun char/= (character &rest more-characters)
-  _N"Returns T if no two of its arguments are the same character."
+  "Returns T if no two of its arguments are the same character."
   (do* ((head character (car list))
 	(list more-characters (cdr list)))
        ((atom list) T)
@@ -324,7 +324,7 @@
 
 
 (defun char< (character &rest more-characters)
-  _N"Returns T if its arguments are in strictly increasing alphabetic order."
+  "Returns T if its arguments are in strictly increasing alphabetic order."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
        ((atom list) T)
@@ -334,7 +334,7 @@
 
 
 (defun char> (character &rest more-characters)
-  _N"Returns T if its arguments are in strictly decreasing alphabetic order."
+  "Returns T if its arguments are in strictly decreasing alphabetic order."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
        ((atom list) T)
@@ -344,7 +344,7 @@
 
 
 (defun char<= (character &rest more-characters)
-  _N"Returns T if its arguments are in strictly non-decreasing alphabetic order."
+  "Returns T if its arguments are in strictly non-decreasing alphabetic order."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
        ((atom list) T)
@@ -354,7 +354,7 @@
 
 
 (defun char>= (character &rest more-characters)
-  _N"Returns T if its arguments are in strictly non-increasing alphabetic order."
+  "Returns T if its arguments are in strictly non-increasing alphabetic order."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
        ((atom list) T)
@@ -379,7 +379,7 @@
 
 
 (defun char-equal (character &rest more-characters)
-  _N"Returns T if all of its arguments are the same character.
+  "Returns T if all of its arguments are the same character.
    Case is ignored."
   (do ((clist more-characters (cdr clist)))
       ((atom clist) T)
@@ -389,7 +389,7 @@
 
 
 (defun char-not-equal (character &rest more-characters)
-  _N"Returns T if no two of its arguments are the same character.
+  "Returns T if no two of its arguments are the same character.
    Case is ignored."
   (do* ((head character (car list))
 	(list more-characters (cdr list)))
@@ -403,7 +403,7 @@
 
 
 (defun char-lessp (character &rest more-characters)
-  _N"Returns T if its arguments are in strictly increasing alphabetic order.
+  "Returns T if its arguments are in strictly increasing alphabetic order.
    Case is ignored."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
@@ -414,7 +414,7 @@
 
 
 (defun char-greaterp (character &rest more-characters)
-  _N"Returns T if its arguments are in strictly decreasing alphabetic order.
+  "Returns T if its arguments are in strictly decreasing alphabetic order.
    Case is ignored."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
@@ -425,7 +425,7 @@
 
 
 (defun char-not-greaterp (character &rest more-characters)
-  _N"Returns T if its arguments are in strictly non-decreasing alphabetic order.
+  "Returns T if its arguments are in strictly non-decreasing alphabetic order.
    Case is ignored."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
@@ -436,7 +436,7 @@
 
 
 (defun char-not-lessp (character &rest more-characters)
-  _N"Returns T if its arguments are in strictly non-increasing alphabetic order.
+  "Returns T if its arguments are in strictly non-increasing alphabetic order.
    Case is ignored."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
@@ -451,7 +451,7 @@
 ;;;; Miscellaneous functions:
 
 (defun char-upcase (char)
-  _N"Returns CHAR converted to upper-case if that is possible."
+  "Returns CHAR converted to upper-case if that is possible."
   (declare (character char))
   #-(and unicode (not unicode-bootstrap))
   (if (lower-case-p char)
@@ -464,7 +464,7 @@
 	  (t char))))
 
 (defun char-titlecase (char)
-  _N"Returns CHAR converted to title-case if that is possible."
+  "Returns CHAR converted to title-case if that is possible."
   (declare (character char))
   #-(and unicode (not unicode-bootstrap))
   (if (lower-case-p char)
@@ -477,7 +477,7 @@
 	  (t char))))
 
 (defun char-downcase (char)
-  _N"Returns CHAR converted to lower-case if that is possible."
+  "Returns CHAR converted to lower-case if that is possible."
   (declare (character char))
   #-(and unicode (not unicode-bootstrap))
   (if (upper-case-p char)
@@ -490,7 +490,7 @@
 	  (t char))))
 
 (defun digit-char (weight &optional (radix 10))
-  _N"All arguments must be integers.  Returns a character object that
+  "All arguments must be integers.  Returns a character object that
   represents a digit of the given weight in the specified radix.  Returns
   NIL if no such character exists."
   (declare (type (integer 2 36) radix) (type unsigned-byte weight))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.37 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.38 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,7 +50,7 @@
   (%description nil :type string))  ; Documentation
 
 (defvar *unix-signals* nil
-  _N"A list of unix signal structures.")
+  "A list of unix signal structures.")
 
 
 (eval-when (compile eval)
@@ -78,17 +78,17 @@
     signal))
 
 (defun unix-signal-name (signal)
-  _N"Return the name of the signal as a string.  Signal should be a valid
+  "Return the name of the signal as a string.  Signal should be a valid
   signal number or a keyword of the standard UNIX signal name."
   (symbol-name (unix-signal-%name (unix-signal-or-lose signal))))
 
 (defun unix-signal-description (signal)
-  _N"Return a string describing signal.  Signal should be a valid signal
+  "Return a string describing signal.  Signal should be a valid signal
   number or a keyword of the standard UNIX signal name."
   (unix-signal-%description (unix-signal-or-lose signal)))
 
 (defun unix-signal-number (signal)
-  _N"Return the number of the given signal.  Signal should be a valid
+  "Return the number of the given signal.  Signal should be a valid
   signal number or a keyword of the standard UNIX signal name."
   (unix-signal-%number (unix-signal-or-lose signal)))
 
@@ -156,7 +156,7 @@
 ;;; SIGMASK -- Public
 ;;;
 (defmacro sigmask (&rest signals)
-  _N"Returns a mask given a set of signals."
+  "Returns a mask given a set of signals."
   (apply #'logior
 	 (mapcar #'(lambda (signal)
 		     (ash 1 (1- (unix-signal-number signal))))
@@ -172,7 +172,7 @@
   (signal c-call:int))
 
 (defun unix-kill (pid signal)
-  _N"Unix-kill sends the signal signal to the process with process 
+  "Unix-kill sends the signal signal to the process with process 
    id pid.  Signal should be a valid signal number or a keyword of the
    standard UNIX signal name."
   (if (minusp (real-unix-kill pid (unix-signal-number signal)))
@@ -186,7 +186,7 @@
   (signal c-call:int))
 
 (defun unix-killpg (pgrp signal)
-  _N"Unix-killpg sends the signal signal to the all the process in process
+  "Unix-killpg sends the signal signal to the all the process in process
   group PGRP.  Signal should be a valid signal number or a keyword of
   the standard UNIX signal name."
   (if (minusp (real-unix-killpg pgrp (unix-signal-number signal)))
@@ -194,21 +194,21 @@
       t))
 
 (alien:def-alien-routine ("sigblock" unix-sigblock) c-call:unsigned-long
-  _N"Unix-sigblock cause the signals specified in mask to be
+  "Unix-sigblock cause the signals specified in mask to be
    added to the set of signals currently being blocked from
    delivery.  The macro sigmask is provided to create masks."
   (mask c-call:unsigned-long))
 
 
 (alien:def-alien-routine ("sigpause" unix-sigpause) c-call:void
-  _N"Unix-sigpause sets the set of masked signals to its argument
+  "Unix-sigpause sets the set of masked signals to its argument
    and then waits for a signal to arrive, restoring the previous
    mask upon its return."
   (mask c-call:unsigned-long))
 
 
 (alien:def-alien-routine ("sigsetmask" unix-sigsetmask) c-call:unsigned-long
-  _N"Unix-sigsetmask sets the current set of masked signals (those
+  "Unix-sigsetmask sets the current set of masked signals (those
    being blocked from delivery) to the argument.  The macro sigmask
    can be used to create the mask.  The previous value of the signal
    mask is returned."
@@ -282,7 +282,7 @@
   (throw 'lisp::top-level-catcher nil))
 
 (defun signal-init ()
-  _N"Enable all the default signals that Lisp knows how to deal with."
+  "Enable all the default signals that Lisp knows how to deal with."
   (unless (member "-monitor" lisp::lisp-command-line-list :test #'string=)
     (enable-interrupt :sigint #'sigint-handler))
   (enable-interrupt :sigquit #'sigquit-handler)
@@ -342,7 +342,7 @@
 ;;; WITHOUT-INTERRUPTS  --  puiblic
 ;;; 
 (defmacro without-interrupts (&body body)
-  _N"Execute BODY in a context impervious to interrupts."
+  "Execute BODY in a context impervious to interrupts."
   (let ((name (gensym)))
     `(flet ((,name () ,@body))
        (if *interrupts-enabled*
@@ -356,7 +356,7 @@
 ;;; WITH-INTERRUPTS  --  puiblic
 ;;;
 (defmacro with-interrupts (&body body)
-  _N"Allow interrupts while executing BODY.  As interrupts are normally allowed,
+  "Allow interrupts while executing BODY.  As interrupts are normally allowed,
   this is only useful inside a WITHOUT-INTERRUPTS."
   (let ((name (gensym)))
     `(flet ((,name () ,@body))
@@ -395,7 +395,7 @@
 ;;;; WITH-ENABLED-INTERRUPTS
 
 (defmacro with-enabled-interrupts (interrupt-list &body body)
-  _N"With-enabled-interrupts ({(interrupt function)}*) {form}*
+  "With-enabled-interrupts ({(interrupt function)}*) {form}*
    Establish function as a handler for the Unix signal interrupt which
    should be a number between 1 and 31 inclusive."
   (let ((il (gensym))

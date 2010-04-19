@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.21 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.22 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -177,7 +177,7 @@
 
 ;; 
 (defun init-random-state (&optional (seed 5489) state)
-  _N"Generate an random state vector from the given SEED.  The seed can be
+  "Generate an random state vector from the given SEED.  The seed can be
   either an integer or a vector of (unsigned-byte 32)"
   (declare (type (or null integer
 		     (array (unsigned-byte 32) (*)))
@@ -196,7 +196,7 @@
 (defvar *random-state* (make-random-object))
 
 (defun make-random-state (&optional state)
-  _N"Make a random state object.  If STATE is not supplied, return a copy
+  "Make a random state object.  If STATE is not supplied, return a copy
   of the default random state.  If STATE is a random state, then return a
   copy of it.  If STATE is T then return a random state generated from
   the universal time or /dev/urandom if available."
@@ -440,7 +440,7 @@
       (declare (fixnum count)))))
 
 (defun random (arg &optional (state *random-state*))
-  _N"Generate a uniformly distributed pseudo-random number between zero
+  "Generate a uniformly distributed pseudo-random number between zero
   and Arg.  State, if supplied, is the random state to use."
   (declare (inline %random-single-float %random-double-float
 		   #+long-float %long-float))

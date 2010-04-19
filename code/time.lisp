@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.31 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.32 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,7 +23,7 @@
 	  get-decoded-time encode-universal-time decode-universal-time))
 
 (defconstant internal-time-units-per-second 100
-  _N"The number of internal time units that fit into a second.  See
+  "The number of internal time units that fit into a second.  See
   Get-Internal-Real-Time and Get-Internal-Run-Time.")
 
 (defconstant micro-seconds-per-internal-time-unit
@@ -42,7 +42,7 @@
 ;;; Get-Internal-Real-Time  --  Public
 ;;;
 (defun get-internal-real-time ()
-  _N"Return the real time in the internal time format.  This is useful for
+  "Return the real time in the internal time format.  This is useful for
   finding elapsed time.  See Internal-Time-Units-Per-Second."
   (locally (declare (optimize (speed 3) (safety 0)))
     (multiple-value-bind (ignore seconds useconds) (unix:unix-gettimeofday)
@@ -129,21 +129,21 @@
 ;;;
 ;;;
 (defun get-universal-time ()
-  _N"Returns a single integer for the current time of
+  "Returns a single integer for the current time of
    day in universal time format."
   (multiple-value-bind (res secs) (unix:unix-gettimeofday)
     (declare (ignore res))
     (+ secs unix-to-universal-time)))
 
 (defun get-decoded-time ()
-  _N"Returns nine values specifying the current time as follows:
+  "Returns nine values specifying the current time as follows:
    second, minute, hour, date, month, year, day of week (0 = Monday), T
    (daylight savings times) or NIL (standard time), and timezone."
   (decode-universal-time (get-universal-time)))
 
 
 (defun decode-universal-time (universal-time &optional time-zone)
-  _N"Converts a universal-time to decoded time format returning the following
+  "Converts a universal-time to decoded time format returning the following
    nine values: second, minute, hour, date, month, year, day of week (0 =
    Monday), T (daylight savings time) or NIL (standard time), and timezone.
    Completely ignores daylight-savings-time when time-zone is supplied."
@@ -216,7 +216,7 @@
 ;;;
 (defun encode-universal-time (second minute hour date month year
 				     &optional time-zone)
-  _N"The time values specified in decoded format are converted to 
+  "The time values specified in decoded format are converted to 
    universal time, which is returned."
   (declare (type (mod 60) second)
 	   (type (mod 60) minute)
@@ -252,7 +252,7 @@
 ;;;; Time:
 
 (defmacro time (form)
-  _N"Evaluates the Form and prints timing information on *Trace-Output*."
+  "Evaluates the Form and prints timing information on *Trace-Output*."
   `(%time #'(lambda () ,form)))
 
 ;;; MASSAGE-TIME-FUNCTION  --  Internal

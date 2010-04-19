@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.6 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.7 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.6 2010/03/19 15:18:58 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.7 2010/04/19 02:18:03 rtoy Exp $
 ;;;
 ;;; This file contains the Alpha specific runtime stuff.
 ;;;
@@ -62,11 +62,11 @@
 ;;;; MACHINE-TYPE and MACHINE-VERSION
 
 (defun machine-type ()
-  _N"Returns a string describing the type of the local machine."
+  "Returns a string describing the type of the local machine."
   "DECstation")
 
 (defun machine-version ()
-  _N"Returns a string describing the version of the local machine."
+  "Returns a string describing the version of the local machine."
   "DECstation")
 
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.82 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.83 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -367,7 +367,7 @@
 
 ;;;
 (defvar *use-implementation-types* t
-  _N"*Use-Implementation-Types* is a semi-public flag which determines how
+  "*Use-Implementation-Types* is a semi-public flag which determines how
    restrictive we are in determining type membership.  If two types are the
    same in the implementation, then we will consider them them the same when
    this switch is on.  When it is off, we try to be as restrictive as the
@@ -1157,7 +1157,7 @@
 	
 
 (defparameter *union-length-threshold* 50
-  _N"The maximum length of a union of integer types before we take a
+  "The maximum length of a union of integer types before we take a
   short cut and return a simpler union.")
 	    
 (defun simplify-unions (types)
@@ -3509,11 +3509,11 @@
 (deftype atom () '(not cons))
 
 (deftype extended-char ()
-  _N"Type of characters that aren't base-char's.  None in CMU CL."
+  "Type of characters that aren't base-char's.  None in CMU CL."
   '(and character (not base-char)))
 
 (deftype standard-char ()
-  _N"Type corresponding to the charaters required by the standard."
+  "Type corresponding to the charaters required by the standard."
   '(member #\NEWLINE #\SPACE #\! #\" #\# #\$ #\% #\& #\' #\( #\) #\* #\+ #\,
 	   #\- #\. #\/ #\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9 #\: #\; #\< #\=
 	   #\> #\?  #\@ #\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M
@@ -3523,7 +3523,7 @@
 	   #\| #\} #\~))
 
 (deftype keyword ()
-  _N"Type for any keyword symbol."
+  "Type for any keyword symbol."
   '(and symbol (satisfies keywordp)))
 
 (deftype eql (n) `(member ,n))

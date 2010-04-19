@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.38 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.39 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,37 +59,37 @@
 
 ;;; These functions perform basic list operations:
 
-(defun car (list) _N"Returns the 1st object in a list." (car list))
-(defun cdr (list) _N"Returns all but the first object." (cdr list))
-(defun cadr (list) _N"Returns the 2nd object in a list." (cadr list))
-(defun cdar (list) _N"Returns the cdr of the 1st sublist." (cdar list))
-(defun caar (list) _N"Returns the car of the 1st sublist." (caar list))
-(defun cddr (list) _N"Returns all but the 1st two objects of a list." (cddr list))
-(defun caddr (list) _N"Returns the 1st object in the cddr of a list." (caddr list))
-(defun caadr (list) _N"Returns the 1st object in the cadr of a list." (caadr list))
-(defun caaar (list) _N"Returns the 1st object in the caar of a list." (caaar list))
-(defun cdaar (list) _N"Returns the cdr of the caar of a list." (cdaar list))
-(defun cddar (list) _N"Returns the cdr of the cdar of a list." (cddar list))
-(defun cdddr (list) _N"Returns the cdr of the cddr of a list." (cdddr list))
-(defun cadar (list) _N"Returns the car of the cdar of a list." (cadar list))
-(defun cdadr (list) _N"Returns the cdr of the cadr of a list." (cdadr list))
-(defun caaaar (list) _N"Returns the car of the caaar of a list." (caaaar list))
-(defun caaadr (list) _N"Returns the car of the caadr of a list." (caaadr list))
-(defun caaddr (list) _N"Returns the car of the caddr of a list." (caaddr list))
-(defun cadddr (list) _N"Returns the car of the cdddr of a list." (cadddr list))
-(defun cddddr (list) _N"Returns the cdr of the cdddr of a list." (cddddr list))
-(defun cdaaar (list) _N"Returns the cdr of the caaar of a list." (cdaaar list))
-(defun cddaar (list) _N"Returns the cdr of the cdaar of a list." (cddaar list))
-(defun cdddar (list) _N"Returns the cdr of the cddar of a list." (cdddar list))
-(defun caadar (list) _N"Returns the car of the cadar of a list." (caadar list))
-(defun cadaar (list) _N"Returns the car of the cdaar of a list." (cadaar list))
-(defun cadadr (list) _N"Returns the car of the cdadr of a list." (cadadr list))
-(defun caddar (list) _N"Returns the car of the cddar of a list." (caddar list))
-(defun cdaadr (list) _N"Returns the cdr of the caadr of a list." (cdaadr list))
-(defun cdadar (list) _N"Returns the cdr of the cadar of a list." (cdadar list))
-(defun cdaddr (list) _N"Returns the cdr of the caddr of a list." (cdaddr list))
-(defun cddadr (list) _N"Returns the cdr of the cdadr of a list." (cddadr list))
-(defun cons (se1 se2) _N"Returns a list with se1 as the car and se2 as the cdr."
+(defun car (list) "Returns the 1st object in a list." (car list))
+(defun cdr (list) "Returns all but the first object." (cdr list))
+(defun cadr (list) "Returns the 2nd object in a list." (cadr list))
+(defun cdar (list) "Returns the cdr of the 1st sublist." (cdar list))
+(defun caar (list) "Returns the car of the 1st sublist." (caar list))
+(defun cddr (list) "Returns all but the 1st two objects of a list." (cddr list))
+(defun caddr (list) "Returns the 1st object in the cddr of a list." (caddr list))
+(defun caadr (list) "Returns the 1st object in the cadr of a list." (caadr list))
+(defun caaar (list) "Returns the 1st object in the caar of a list." (caaar list))
+(defun cdaar (list) "Returns the cdr of the caar of a list." (cdaar list))
+(defun cddar (list) "Returns the cdr of the cdar of a list." (cddar list))
+(defun cdddr (list) "Returns the cdr of the cddr of a list." (cdddr list))
+(defun cadar (list) "Returns the car of the cdar of a list." (cadar list))
+(defun cdadr (list) "Returns the cdr of the cadr of a list." (cdadr list))
+(defun caaaar (list) "Returns the car of the caaar of a list." (caaaar list))
+(defun caaadr (list) "Returns the car of the caadr of a list." (caaadr list))
+(defun caaddr (list) "Returns the car of the caddr of a list." (caaddr list))
+(defun cadddr (list) "Returns the car of the cdddr of a list." (cadddr list))
+(defun cddddr (list) "Returns the cdr of the cdddr of a list." (cddddr list))
+(defun cdaaar (list) "Returns the cdr of the caaar of a list." (cdaaar list))
+(defun cddaar (list) "Returns the cdr of the cdaar of a list." (cddaar list))
+(defun cdddar (list) "Returns the cdr of the cddar of a list." (cdddar list))
+(defun caadar (list) "Returns the car of the cadar of a list." (caadar list))
+(defun cadaar (list) "Returns the car of the cdaar of a list." (cadaar list))
+(defun cadadr (list) "Returns the car of the cdadr of a list." (cadadr list))
+(defun caddar (list) "Returns the car of the cddar of a list." (caddar list))
+(defun cdaadr (list) "Returns the cdr of the caadr of a list." (cdaadr list))
+(defun cdadar (list) "Returns the cdr of the cadar of a list." (cdadar list))
+(defun cdaddr (list) "Returns the cdr of the caddr of a list." (cdaddr list))
+(defun cddadr (list) "Returns the cdr of the cdadr of a list." (cddadr list))
+(defun cons (se1 se2) "Returns a list with se1 as the car and se2 as the cdr."
                       (cons se1 se2))
 
 
@@ -114,19 +114,19 @@
 	(t ())))
 
 (defun tree-equal (x y &key (test #'eql) test-not)
-  _N"Returns T if X and Y are isomorphic trees with identical leaves."
+  "Returns T if X and Y are isomorphic trees with identical leaves."
   (if test-not
       (tree-equal-test-not x y test-not)
       (tree-equal-test x y test)))
 
 
 (defun endp (object)
-  _N"The recommended way to test for the end of a list.  True if Object is nil,
+  "The recommended way to test for the end of a list.  True if Object is nil,
    false if Object is a cons, and an error for any other types of arguments."
   (endp object))
 
 (defun list-length (list)
-  _N"Returns the length of the given List, or Nil if the List is circular."
+  "Returns the length of the given List, or Nil if the List is circular."
   (do ((n 0 (+ n 2))
        (y list (cddr y))
        (z list (cdr z)))
@@ -137,45 +137,45 @@
     (when (and (eq y z) (> n 0)) (return nil))))
 
 (defun nth (n list)
-  _N"Returns the nth object in a list where the car is the zero-th element."
+  "Returns the nth object in a list where the car is the zero-th element."
   (car (nthcdr n list)))
 
 (defun first (list)
-  _N"Returns the 1st object in a list or NIL if the list is empty."
+  "Returns the 1st object in a list or NIL if the list is empty."
   (car list))
 (defun second (list)
-  _N"Returns the 2nd object in a list or NIL if there is no 2nd object."
+  "Returns the 2nd object in a list or NIL if there is no 2nd object."
   (cadr list))
 (defun third (list)
-  _N"Returns the 3rd object in a list or NIL if there is no 3rd object."
+  "Returns the 3rd object in a list or NIL if there is no 3rd object."
   (caddr list))
 (defun fourth (list)
-  _N"Returns the 4th object in a list or NIL if there is no 4th object."
+  "Returns the 4th object in a list or NIL if there is no 4th object."
   (cadddr list))
 (defun fifth (list)
-  _N"Returns the 5th object in a list or NIL if there is no 5th object."
+  "Returns the 5th object in a list or NIL if there is no 5th object."
   (car (cddddr list)))
 (defun sixth (list)
-  _N"Returns the 6th object in a list or NIL if there is no 6th object."
+  "Returns the 6th object in a list or NIL if there is no 6th object."
   (cadr (cddddr list)))
 (defun seventh (list)
-  _N"Returns the 7th object in a list or NIL if there is no 7th object."
+  "Returns the 7th object in a list or NIL if there is no 7th object."
   (caddr (cddddr list)))
 (defun eighth (list)
-  _N"Returns the 8th object in a list or NIL if there is no 8th object."
+  "Returns the 8th object in a list or NIL if there is no 8th object."
   (cadddr (cddddr list)))
 (defun ninth (list)
-  _N"Returns the 9th object in a list or NIL if there is no 9th object."
+  "Returns the 9th object in a list or NIL if there is no 9th object."
   (car (cddddr (cddddr list))))
 (defun tenth (list)
-  _N"Returns the 10th object in a list or NIL if there is no 10th object."
+  "Returns the 10th object in a list or NIL if there is no 10th object."
   (cadr (cddddr (cddddr list))))
 (defun rest (list)
-  _N"Means the same as the cdr of a list."
+  "Means the same as the cdr of a list."
   (cdr list))
 
 (defun nthcdr (n list)
-  _N"Performs the cdr function n times on a list."
+  "Performs the cdr function n times on a list."
   (flet ((fast-nthcdr (n list)
            (declare (type index n))
            (do ((i n (1- i))
@@ -192,7 +192,7 @@
            (declare (type index i)))))))
 
 (defun last (list &optional (n 1))
-  _N"Returns the last N conses (not the last element!) of a list."
+  "Returns the last N conses (not the last element!) of a list."
   (declare (type unsigned-byte n))
   (if (typep n 'index)
       (do ((checked-list list (cdr checked-list))
@@ -205,14 +205,14 @@
       list))
 
 (defun list (&rest args)
-  _N"Returns constructs and returns a list of its arguments."
+  "Returns constructs and returns a list of its arguments."
   args)
 
 ;;; List* is done the same as list, except that the last cons is made a
 ;;; dotted pair
 
 (defun list* (arg &rest others)
-  _N"Returns a list of the arguments with last cons a dotted pair"
+  "Returns a list of the arguments with last cons a dotted pair"
   (cond ((atom others) arg)
 	((atom (cdr others)) (cons arg (car others)))
 	(t (do ((x others (cdr x)))
@@ -220,7 +220,7 @@
 	   (cons arg others))))
 
 (defun make-list (size &key initial-element)
-  _N"Constructs a list with size elements each set to value"
+  "Constructs a list with size elements each set to value"
   (declare (type index size))
   (do ((count size (1- count))
        (result '() (cons initial-element result)))
@@ -258,7 +258,7 @@
 ;;; using splice which cdr's down the end of the new list
 
 (defun append (&rest args)
-  _N"Typically, returns a new list that is the concatenation of Args.
+  "Typically, returns a new list that is the concatenation of Args.
 
   Each Arg in Args must be a proper list except the last one, which
   may be any object.  The function is not destructive: for all but the
@@ -309,7 +309,7 @@
 ;;; of the new list
 
 (defun copy-list (list)
-  _N"Returns a new list EQUAL but not EQ to list"
+  "Returns a new list EQUAL but not EQ to list"
   (if (atom list)
       list
       (let ((result (list (car list))))
@@ -322,7 +322,7 @@
 	result)))
 
 (defun copy-alist (alist)
-  _N"Returns a new association list equal to alist, constructed in space"
+  "Returns a new association list equal to alist, constructed in space"
   (if (atom alist)
       alist
       (let ((result
@@ -344,7 +344,7 @@
 	result)))
 
 (defun copy-tree (object)
-  _N"Copy-Tree recursively copys trees of conses."
+  "Copy-Tree recursively copys trees of conses."
   (if (consp object)
       (cons (copy-tree (car object)) (copy-tree (cdr object)))
       object))
@@ -353,7 +353,7 @@
 ;;; More Commonly-used List Functions
 
 (defun revappend (x y)
-  _N"Returns (append (reverse x) y)"
+  "Returns (append (reverse x) y)"
   (do ((top x (cdr top))
        (result y (cons (car top) result)))
       ((endp top) result)))
@@ -370,7 +370,7 @@
 ;;; argument to be circular.
 ;;;
 (defun nconc (&rest lists)
-  _N"Concatenates the lists given as arguments (by changing them)"
+  "Concatenates the lists given as arguments (by changing them)"
   (do ((top lists (cdr top)))
       ((null top) nil)
     (let ((top-of-top (car top)))
@@ -398,7 +398,7 @@
 	(t (error _"Argument is not a list -- ~S." top-of-top))))))
 
 (defun nreconc (x y)
-  _N"Returns (nconc (nreverse x) y)"
+  "Returns (nconc (nreverse x) y)"
   (do ((1st (cdr x) (if (atom 1st) 1st (cdr 1st)))
        (2nd x 1st)		;2nd follows first down the list.
        (3rd y 2nd))		;3rd follows 2nd down the list.
@@ -417,7 +417,7 @@
     (rplacd 2nd 3rd)))
 
 (defun butlast (list &optional (n 1))
-  _N"Returns a new list the same as List without the last N conses.
+  "Returns a new list the same as List without the last N conses.
    List must not be circular."
   (declare (list list) (type unsigned-byte n))
   (when (and list (typep n 'index))
@@ -435,7 +435,7 @@
 	  (setq splice (cdr (rplacd splice (list (car top))))))))))
 
 (defun nbutlast (list &optional (n 1))
-  _N"Modifies List to remove the last N conses. List must not be circular."
+  "Modifies List to remove the last N conses. List must not be circular."
   (declare (list list) (type unsigned-byte n))
   (when (and list (typep n 'index))
     (let ((length (do ((list list (cdr list))
@@ -452,7 +452,7 @@
 	  (declare (type index count)))))))
 
 (defun ldiff (list object)
-  _N"Returns a new list, whose elements are those of List that appear before
+  "Returns a new list, whose elements are those of List that appear before
    Object.  If Object is not a tail of List, a copy of List is returned.
    List must be a proper list or a dotted list."
   (do* ((list list (cdr list))
@@ -469,11 +469,11 @@
 ;;; Functions to alter list structure
 
 (defun rplaca (x y)
-  _N"Changes the car of x to y and returns the new x."
+  "Changes the car of x to y and returns the new x."
   (rplaca x y))
 
 (defun rplacd (x y)
-  _N"Changes the cdr of x to y and returns the new x."
+  "Changes the cdr of x to y and returns the new x."
   (rplacd x y))
 
 ;;; The following are for use by SETF.
@@ -484,7 +484,7 @@
 
 (defun %setnth (n list newval)
   (declare (type index n))
-  _N"Sets the Nth element of List (zero based) to Newval."
+  "Sets the Nth element of List (zero based) to Newval."
   (do ((count n (1- count))
        (list list (cdr list)))
       ((endp list)
@@ -507,12 +507,12 @@
        ,element))
 
 (defun identity (thing)
-  _N"Returns what was passed to it."
+  "Returns what was passed to it."
   thing)
 
 
 (defun complement (function)
-  _N"Builds a new function that returns T whenever FUNCTION returns NIL and
+  "Builds a new function that returns T whenever FUNCTION returns NIL and
    NIL whenever FUNCTION returns T."
   #'(lambda (&optional (arg0 nil arg0-p) (arg1 nil arg1-p) (arg2 nil arg2-p)
 		       &rest more-args)
@@ -525,7 +525,7 @@
 
 (defun constantly (value &optional (val1 nil val1-p) (val2 nil val2-p)
 			 &rest more-values)
-  _N"Builds a function that always returns VALUE, and posisbly MORE-VALUES."
+  "Builds a function that always returns VALUE, and posisbly MORE-VALUES."
   (cond (more-values
 	 (let ((list (list* value val1 val2 more-values)))
 	   #'(lambda ()
@@ -566,7 +566,7 @@
 
 
 (defun subst (new old tree &key key (test #'eql testp) (test-not nil notp))
-  _N"Substitutes new for subtrees matching old."
+  "Substitutes new for subtrees matching old."
   (labels ((s (subtree)
 	      (cond ((satisfies-the-test old subtree) new)
 		    ((atom subtree) subtree)
@@ -579,7 +579,7 @@
     (s tree)))
 
 (defun subst-if (new test tree &key key)
-  _N"Substitutes new for subtrees for which test is true."
+  "Substitutes new for subtrees for which test is true."
   (labels ((s (subtree)
 	      (cond ((funcall test (apply-key key subtree)) new)
 		    ((atom subtree) subtree)
@@ -592,7 +592,7 @@
     (s tree)))
 
 (defun subst-if-not (new test tree &key key)
-  _N"Substitutes new for subtrees for which test is false."
+  "Substitutes new for subtrees for which test is false."
   (labels ((s (subtree)
 	      (cond ((not (funcall test (apply-key key subtree))) new)
 		    ((atom subtree) subtree)
@@ -605,7 +605,7 @@
     (s tree)))
 
 (defun nsubst (new old tree &key key (test #'eql testp) (test-not nil notp))
-  _N"Substitutes new for subtrees matching old."
+  "Substitutes new for subtrees matching old."
   (labels ((s (subtree)
 	      (cond ((satisfies-the-test old subtree) new)
 		    ((atom subtree) subtree)
@@ -621,7 +621,7 @@
     (s tree)))
 
 (defun nsubst-if (new test tree &key key)
-  _N"Substitutes new for subtrees of tree for which test is true."
+  "Substitutes new for subtrees of tree for which test is true."
   (labels ((s (subtree)
 	      (cond ((funcall test (apply-key key subtree)) new)
 		    ((atom subtree) subtree)
@@ -637,7 +637,7 @@
     (s tree)))
 
 (defun nsubst-if-not (new test tree &key key)
-  _N"Substitutes new for subtrees of tree for which test is false."
+  "Substitutes new for subtrees of tree for which test is false."
   (labels ((s (subtree)
 	      (cond ((not (funcall test (apply-key key subtree))) new)
 		    ((atom subtree) subtree)
@@ -656,7 +656,7 @@
 
 
 (defun sublis (alist tree &key key (test #'eql) (test-not nil notp))
-  _N"Substitutes from alist into tree nondestructively."
+  "Substitutes from alist into tree nondestructively."
   (declare (inline assoc))
   (labels ((s (subtree)
 	     (let* ((key-val (apply-key key subtree))
@@ -682,7 +682,7 @@
 	  (assoc ,key-tmp alist :test test)))))
 
 (defun nsublis (alist tree &key key (test #'eql) (test-not nil notp))
-  _N"Substitutes new for subtrees matching old."
+  "Substitutes new for subtrees matching old."
   (declare (inline assoc))
   (let (temp)
     (labels ((s (subtree)
@@ -704,7 +704,7 @@
 ;;;; Functions for using lists as sets
 
 (defun member (item list &key key (test #'eql testp) (test-not nil notp))
-  _N"Returns tail of list beginning with first element satisfying EQLity,
+  "Returns tail of list beginning with first element satisfying EQLity,
    :test, or :test-not with a given item."
   (do ((list list (cdr list)))
       ((null list) nil)
@@ -713,21 +713,21 @@
 	  (return list)))))
 
 (defun member-if (test list &key key)
-  _N"Returns tail of list beginning with first element satisfying test(element)"
+  "Returns tail of list beginning with first element satisfying test(element)"
   (do ((list list (Cdr list)))
       ((endp list) nil)
     (if (funcall test (apply-key key (car list)))
 	(return list))))
 
 (defun member-if-not (test list &key key)
-  _N"Returns tail of list beginning with first element not satisfying test(el)"
+  "Returns tail of list beginning with first element not satisfying test(el)"
   (do ((list list (cdr list)))
       ((endp list) ())
     (if (not (funcall test (apply-key key (car list))))
 	(return list))))
 
 (defun tailp (object list)
-  _N"Returns true if Object is the same as some tail of List, otherwise
+  "Returns true if Object is the same as some tail of List, otherwise
    returns false. List must be a proper list or a dotted list."
   (do ((list list (cdr list)))
       ((atom list) (eql list object))
@@ -735,7 +735,7 @@
 	(return t))))
 
 (defun adjoin (item list &key key (test #'eql) (test-not nil notp))
-  _N"Add item to list unless it is already a member"
+  "Add item to list unless it is already a member"
   (declare (inline member))
   (if (let ((key-val (apply-key key item)))
 	(if notp
@@ -753,7 +753,7 @@
 ;;; order.
 ;;;
 (defun union (list1 list2 &key key (test #'eql testp) (test-not nil notp))
-  _N"Returns the union of list1 and list2."
+  "Returns the union of list1 and list2."
   (declare (inline member))
   (when (and testp notp) (error _"Test and test-not both supplied."))
   (let ((res list2))
@@ -772,7 +772,7 @@
 	   ,destination temp)))
 
 (defun nunion (list1 list2 &key key (test #'eql testp) (test-not nil notp))
-  _N"Destructively returns the union list1 and list2."
+  "Destructively returns the union list1 and list2."
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
@@ -788,7 +788,7 @@
 
 (defun intersection (list1 list2 &key key
 			   (test #'eql testp) (test-not nil notp))
-  _N"Returns the intersection of list1 and list2."
+  "Returns the intersection of list1 and list2."
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
@@ -800,7 +800,7 @@
 
 (defun nintersection (list1 list2 &key key
 			    (test #'eql testp) (test-not nil notp))
-  _N"Destructively returns the intersection of list1 and list2."
+  "Destructively returns the intersection of list1 and list2."
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
@@ -814,7 +814,7 @@
 
 (defun set-difference (list1 list2 &key key
 			     (test #'eql testp) (test-not nil notp))
-  _N"Returns the elements of list1 which are not in list2."
+  "Returns the elements of list1 which are not in list2."
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
@@ -829,7 +829,7 @@
 
 (defun nset-difference (list1 list2 &key key
 			      (test #'eql testp) (test-not nil notp))
-  _N"Destructively returns the elements of list1 which are not in list2."
+  "Destructively returns the elements of list1 which are not in list2."
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
@@ -844,7 +844,7 @@
 
 (defun set-exclusive-or (list1 list2 &key key
                          (test #'eql testp) (test-not nil notp))
-  _N"Return new list of elements appearing exactly once in LIST1 and LIST2."
+  "Return new list of elements appearing exactly once in LIST1 and LIST2."
   (declare (inline member))
   (let ((result nil)
         (key (when key (coerce key 'function)))
@@ -876,7 +876,7 @@
 
 (defun nset-exclusive-or (list1 list2
 				&key key (test #'eql testp) (test-not #'eql notp))
-  _N"Destructively return a list with elements which appear but once in LIST1
+  "Destructively return a list with elements which appear but once in LIST1
    and LIST2."
   (when (and testp notp)
     (error ":TEST and :TEST-NOT were both supplied."))
@@ -929,7 +929,7 @@
 	  (setq splicex x)))))
 
 (defun subsetp (list1 list2 &key key (test #'eql testp) (test-not nil notp))
-  _N"Returns T if every element in list1 is also in list2."
+  "Returns T if every element in list1 is also in list2."
   (declare (inline member))
   (dolist (elt list1)
     (unless (with-set-keys (member (apply-key key elt) list2))
@@ -941,11 +941,11 @@
 ;;; Functions that operate on association lists
 
 (defun acons (key datum alist)
-  _N"Construct a new alist by adding the pair (key . datum) to alist"
+  "Construct a new alist by adding the pair (key . datum) to alist"
   (cons (cons key datum) alist))
 
 (defun pairlis (keys data &optional (alist '()))
-  _N"Construct an association list from keys and data (adding to alist)"
+  "Construct an association list from keys and data (adding to alist)"
   (do ((x keys (cdr x))
        (y data (cdr y)))
       ((and (endp x) (endp y)) alist)
@@ -962,7 +962,7 @@
 	 (if ,test-guy (return (car alist))))))
 
 (defun assoc (item alist &key key test test-not)
-  _N"Returns the cons in alist whose car is equal (by a given test or EQL) to
+  "Returns the cons in alist whose car is equal (by a given test or EQL) to
    the Item."
   (cond (test
 	 (if key
@@ -979,14 +979,14 @@
 	     (assoc-guts (eql item (caar alist)))))))
 
 (defun assoc-if (predicate alist &key key)
-  _N"Returns the first cons in alist whose car satisfies the Predicate.  If
+  "Returns the first cons in alist whose car satisfies the Predicate.  If
    key is supplied, apply it to the car of each cons before testing."
   (if key
       (assoc-guts (funcall predicate (funcall key (caar alist))))
       (assoc-guts (funcall predicate (caar alist)))))
 
 (defun assoc-if-not (predicate alist &key key)
-  _N"Returns the first cons in alist whose car does not satisfiy the Predicate.
+  "Returns the first cons in alist whose car does not satisfiy the Predicate.
   If key is supplied, apply it to the car of each cons before testing."
   (if key
       (assoc-guts (not (funcall predicate (funcall key (caar alist)))))
@@ -995,7 +995,7 @@
 
 (defun rassoc (item alist &key key test test-not)
   (declare (list alist))
-  _N"Returns the cons in alist whose cdr is equal (by a given test or EQL) to
+  "Returns the cons in alist whose cdr is equal (by a given test or EQL) to
    the Item."
   (cond (test
 	 (if key
@@ -1012,14 +1012,14 @@
 	     (assoc-guts (eql item (cdar alist)))))))
 
 (defun rassoc-if (predicate alist &key key)
-  _N"Returns the first cons in alist whose cdr satisfies the Predicate.  If key
+  "Returns the first cons in alist whose cdr satisfies the Predicate.  If key
   is supplied, apply it to the cdr of each cons before testing."
   (if key
       (assoc-guts (funcall predicate (funcall key (cdar alist))))
       (assoc-guts (funcall predicate (cdar alist)))))
 
 (defun rassoc-if-not (predicate alist &key key)
-  _N"Returns the first cons in alist whose cdr does not satisfy the Predicate.
+  "Returns the first cons in alist whose cdr does not satisfy the Predicate.
   If key is supplied, apply it to the cdr of each cons before testing."
   (if key
       (assoc-guts (not (funcall predicate (funcall key (cdar alist)))))
@@ -1030,7 +1030,7 @@
 ;;;; Mapping functions.
 
 (defun map1 (function original-arglists accumulate take-car)
-  _N"This function is called by mapc, mapcar, mapcan, mapl, maplist, and mapcon.
+  "This function is called by mapc, mapcar, mapcan, mapl, maplist, and mapcon.
   It Maps function over the arglists in the appropriate way. It is done when any
   of the arglists runs out.  Until then, it CDRs down the arglists calling the
   function and accumulating results as desired."
@@ -1056,45 +1056,45 @@
 
 
 (defun mapc (function list &rest more-lists)
-  _N"Applies fn to successive elements of lists, returns its second argument."
+  "Applies fn to successive elements of lists, returns its second argument."
   (map1 function (cons list more-lists) nil t))
 
 (defun mapcar (function list &rest more-lists)
-  _N"Applies fn to successive elements of list, returns list of results."
+  "Applies fn to successive elements of list, returns list of results."
   (map1 function (cons list more-lists) :list t))
 
 (defun mapcan (function list &rest more-lists)
-  _N"Applies fn to successive elements of list, returns NCONC of results."
+  "Applies fn to successive elements of list, returns NCONC of results."
   (map1 function (cons list more-lists) :nconc t))
 
 (defun mapl (function list &rest more-lists)
-  _N"Applies fn to successive CDRs of list, returns ()."
+  "Applies fn to successive CDRs of list, returns ()."
   (map1 function (cons list more-lists) nil nil))
 
 (defun maplist (function list &rest more-lists)
-  _N"Applies fn to successive CDRs of list, returns list of results."
+  "Applies fn to successive CDRs of list, returns list of results."
   (map1 function (cons list more-lists) :list nil))
 
 (defun mapcon (function list &rest more-lists)
-  _N"Applies fn to successive CDRs of lists, returns NCONC of results."
+  "Applies fn to successive CDRs of lists, returns NCONC of results."
   (map1 function (cons list more-lists) :nconc nil))
 
 
 ;;; Functions for compatibility sake:
 
 (defun memq (item list)
-  _N"Returns tail of list beginning with first element eq to item"
+  "Returns tail of list beginning with first element eq to item"
   (declare (inline member)
 	   (optimize (inhibit-warnings 3))) ; from MEMBER optimizations
   (member item list :test #'eq))
 
 (defun assq (item alist)
-  _N"Return the first pair of alist where item EQ the key of pair"
+  "Return the first pair of alist where item EQ the key of pair"
   (declare (inline assoc))
   (assoc item alist :test #'eq))
 
 (defun delq (item list)
-  _N"Returns list with all elements with all elements EQ to ITEM deleted."
+  "Returns list with all elements with all elements EQ to ITEM deleted."
   (let ((list list))
     (do ((x list (cdr x))
 	 (splice '()))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/search-list.lisp,v 1.5 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/search-list.lisp,v 1.6 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,7 +26,7 @@
 
 
 (defun search-list (name)
-  _N"Returns a list of strings that are the of name.
+  "Returns a list of strings that are the of name.
    This is setf'able.  If any provided string in a setting value
    does end with a colon or slash, a slash is added.  Also, the
    list is copied."
@@ -55,7 +55,7 @@
 
 
 (defun resolve-search-list (name first-only-p)
-  _N"This takes a Sesame search-list name (\"default\") instead of the form
+  "This takes a Sesame search-list name (\"default\") instead of the form
    taken by SEARCH-LIST (\"default:\").  If first-only-p is non-nil, then
    only the first complete expansion of name is returned.  If, during the
    expansion of name, an undefined search list is encountered, an error

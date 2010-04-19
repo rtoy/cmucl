@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.12 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.13 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -31,21 +31,21 @@
 ;;;; Exported specials.
 
 (defvar *modules* ()
-  _N"This is a list of module names that have been loaded into Lisp so far.
+  "This is a list of module names that have been loaded into Lisp so far.
    It is used by PROVIDE and REQUIRE.")
 
 (defvar *require-verbose* t
-  _N"*load-verbose* is bound to this before loading files.")
+  "*load-verbose* is bound to this before loading files.")
 
 (defvar *module-provider-functions*
     '(module-provide-cmucl-defmodule module-provide-cmucl-library)
-  _N"See function documentation for REQUIRE")
+  "See function documentation for REQUIRE")
 
 ;;;; Defmodule.
 
 (defvar *module-file-translations* (make-hash-table :test #'equal))
 (defmacro defmodule (name &rest files)
-  _N"Defines a module by registering the files that need to be loaded when
+  "Defines a module by registering the files that need to be loaded when
    the module is required.  If name is a symbol, its print name is used
    after downcasing it."
   `(%define-module ,name ',files))
@@ -62,14 +62,14 @@
 ;;;; Provide and Require.
 
 (defun provide (module-name)
-  _N"Adds a new module name to *modules* indicating that it has been loaded.
+  "Adds a new module name to *modules* indicating that it has been loaded.
    Module-name may be any valid string designator.  All comparisons are
    done using string=, i.e. module names are case-sensitive."
   (pushnew (module-name-string module-name) *modules* :test #'string=)
   t)
 
 (defun require (module-name &optional pathname)
-  _N"Loads a module when it has not been already.  Pathname, if supplied,
+  "Loads a module when it has not been already.  Pathname, if supplied,
    is a single pathname or list of pathnames to be loaded if the module
    needs to be.  If pathname is not supplied, then functions from the list
    *MODULE-PROVIDER-FUNCTIONS* are called in order with the stringified
@@ -115,11 +115,11 @@
 ;;;; Misc.
 
 (defun module-name-string (name)
-  _N"Coerce a string designator to a module name."
+  "Coerce a string designator to a module name."
   (string name))
 
 (defun module-default-pathname (module-name)
-  _N"Derive a default pathname to try to load for an undefined module
+  "Derive a default pathname to try to load for an undefined module
 named module-name.  The default pathname is constructed from the
 module-name by appending the suffix \"-LIBRARY\" to it, and merging
 with \"modules:\".  Note that both the module-name and the suffix are

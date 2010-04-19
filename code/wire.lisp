@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.14 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.15 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,19 +53,19 @@
 
 
 (defvar *current-wire* nil
-  _N"The wire the form we are currently evaluating came across.")
+  "The wire the form we are currently evaluating came across.")
 
 (defvar *this-host* nil
-  _N"Unique identifier for this host.")
+  "Unique identifier for this host.")
 (defvar *this-pid* nil
-  _N"Unique identifier for this process.")
+  "Unique identifier for this process.")
 
 (defvar *object-to-id* (make-hash-table :test 'eq)
-  _N"Hash table mapping local objects to the corresponding remote id.")
+  "Hash table mapping local objects to the corresponding remote id.")
 (defvar *id-to-object* (make-hash-table :test 'eql)
-  _N"Hash table mapping remote id's to the curresponding local object.")
+  "Hash table mapping remote id's to the curresponding local object.")
 (defvar *next-id* 0
-  _N"Next available id for remote objects.")
+  "Next available id for remote objects.")
 
 
 (defstruct (wire
@@ -132,7 +132,7 @@
 ;;; *this-pid*
 
 (defun remote-object-local-p (remote)
-  _N"Returns T iff the given remote object is defined locally."
+  "Returns T iff the given remote object is defined locally."
   (declare (type remote-object remote))
   (unless *this-host*
     (setf *this-host* (unix:unix-gethostid))
@@ -147,7 +147,7 @@
 ;;; numbers).
 
 (defun remote-object-eq (remote1 remote2)
-  _N"Returns T iff the two objects refer to the same (eq) object in the same
+  "Returns T iff the two objects refer to the same (eq) object in the same
   process."
   (declare (type remote-object remote1 remote2))
   (and (eql (remote-object-host remote1)
@@ -165,7 +165,7 @@
 ;;; on the local object.
 
 (defun remote-object-value (remote)
-  _N"Return the associated value for the given remote object. It is an error if
+  "Return the associated value for the given remote object. It is an error if
   the remote object was not created in this process or if
   FORGET-REMOTE-TRANSLATION has been called on this remote object."
   (declare (type remote-object remote))
@@ -190,7 +190,7 @@
 ;;; tables.
 
 (defun make-remote-object (local)
-  _N"Convert the given local object to a remote object."
+  "Convert the given local object to a remote object."
   (unless *this-host*
     (setf *this-host* (unix:unix-gethostid))
     (setf *this-pid* (unix:unix-getpid)))
@@ -210,7 +210,7 @@
 ;;; from the *id-to-object* hashtable.
 
 (defun forget-remote-translation (local)
-  _N"Forget the translation from the given local to the corresponding remote
+  "Forget the translation from the given local to the corresponding remote
 object. Passing that remote object to remote-object-value will new return NIL."
   (let ((id (gethash local *object-to-id*)))
     (when id
@@ -226,7 +226,7 @@ object. Passing that remote object to remote-object-value will new return NIL."
 ;;;   If nothing is in the current input buffer, select on the file descriptor.
 
 (defun wire-listen (wire)
-  _N"Return T iff anything is in the input buffer or available on the socket."
+  "Return T iff anything is in the input buffer or available on the socket."
   (or (< (wire-ibuf-offset wire)
 	 (wire-ibuf-end wire))
       (multiple-value-bind
@@ -251,7 +251,7 @@ object. Passing that remote object to remote-object-value will new return NIL."
 ;;; data, set the ibuf-end index.
 
 (defun fill-input-buffer (wire)
-  _N"Read data off the socket, filling the input buffer. The buffer is cleared
+  "Read data off the socket, filling the input buffer. The buffer is cleared
 first. If fill-input-buffer returns, it is guarenteed that there will be at
 least one byte in the input buffer. If EOF was reached, as wire-eof error
 is signaled."
@@ -285,7 +285,7 @@ is signaled."
 ;;; the input offset index.
 
 (defun wire-get-byte (wire)
-  _N"Return the next byte from the wire."
+  "Return the next byte from the wire."
   (when (<= (wire-ibuf-end wire)
 	    (wire-ibuf-offset wire))
     (fill-input-buffer wire))
@@ -299,7 +299,7 @@ is signaled."
 ;;;   Just read four bytes and pack them together with normal math ops.
 
 (defun wire-get-number (wire &optional (signed t))
-  _N"Read a number off the wire. Numbers are 4 bytes in network order.
+  "Read a number off the wire. Numbers are 4 bytes in network order.
 The optional argument controls weather or not the number should be considered
 signed (defaults to T)."
   (let* ((b1 (wire-get-byte wire))
@@ -317,7 +317,7 @@ signed (defaults to T)."
 ;;; Extracts a number, which might be a bignum.
 ;;;
 (defun wire-get-bignum (wire)
-  _N"Reads an arbitrary integer sent by WIRE-OUTPUT-BIGNUM from the wire and
+  "Reads an arbitrary integer sent by WIRE-OUTPUT-BIGNUM from the wire and
    return it."
   (let ((count-and-sign (wire-get-number wire)))
     (do ((count (abs count-and-sign) (1- count))
@@ -334,7 +334,7 @@ signed (defaults to T)."
 ;;; the entire string.
 
 (defun wire-get-string (wire)
-  _N"Reads a string from the wire. The first four bytes spec the size."
+  "Reads a string from the wire. The first four bytes spec the size."
   (let* ((length (wire-get-number wire))
 	 (result (make-string length))
 	 (offset 0)
@@ -372,7 +372,7 @@ signed (defaults to T)."
 ;;; to read the necessary data. Note, funcall objects are funcalled.
 
 (defun wire-get-object (wire)
-  _N"Reads the next object from the wire and returns it."
+  "Reads the next object from the wire and returns it."
   (let ((identifier (wire-get-byte wire))
 	(*current-wire* wire))
     (declare (fixnum identifier))
@@ -503,7 +503,7 @@ signed (defaults to T)."
 ;;;   Output any stuff remaining in the output buffer.
 
 (defun wire-force-output (wire)
-  _N"Send any info still in the output buffer down the wire and clear it. Nothing
+  "Send any info still in the output buffer down the wire and clear it. Nothing
 harmfull will happen if called when the output buffer is empty."
   (unless (zerop (wire-obuf-end wire))
     (write-stuff (wire-fd wire)
@@ -518,7 +518,7 @@ harmfull will happen if called when the output buffer is empty."
 ;;; buffer using WIRE-FORCE-OUTPUT.
 
 (defun wire-output-byte (wire byte)
-  _N"Output the given (8-bit) byte on the wire."
+  "Output the given (8-bit) byte on the wire."
   (declare (integer byte))
   (let ((fill-pointer (wire-obuf-end wire))
 	(obuf (wire-obuf wire)))
@@ -536,7 +536,7 @@ harmfull will happen if called when the output buffer is empty."
 ;;; because we just crank out the low 32 bits.
 ;;;
 (defun wire-output-number (wire number)
-  _N"Output the given (32-bit) number on the wire."
+  "Output the given (32-bit) number on the wire."
   (declare (integer number))
   (wire-output-byte wire (+ 0 (ldb (byte 8 24) number)))
   (wire-output-byte wire (ldb (byte 8 16) number))
@@ -549,7 +549,7 @@ harmfull will happen if called when the output buffer is empty."
 ;;; Output an arbitrary integer.
 ;;; 
 (defun wire-output-bignum (wire number)
-  _N"Outputs an arbitrary integer, but less effeciently than WIRE-OUTPUT-NUMBER."
+  "Outputs an arbitrary integer, but less effeciently than WIRE-OUTPUT-NUMBER."
   (do ((digits 0 (1+ digits))
        (remaining (abs number) (ash remaining -32))
        (words nil (cons (ldb (byte 32 0) remaining) words)))
@@ -567,7 +567,7 @@ harmfull will happen if called when the output buffer is empty."
 ;;; followed by the bytes of the string.
 ;;;
 (defun wire-output-string (wire string)
-  _N"Output the given string. First output the length using WIRE-OUTPUT-NUMBER,
+  "Output the given string. First output the length using WIRE-OUTPUT-NUMBER,
 then output the bytes."
   (declare (simple-string string))
   (let ((length (length string)))
@@ -600,7 +600,7 @@ then output the bytes."
 ;;; Caching defaults to yes for symbols, and nil for everything else.
 
 (defun wire-output-object (wire object &optional (cache-it (symbolp object)))
-  _N"Output the given object on the given wire. If cache-it is T, enter this
+  "Output the given object on the given wire. If cache-it is T, enter this
 object in the cache for future reference."
   (let ((cache-index (gethash object
 			      (wire-object-hash wire))))
@@ -651,7 +651,7 @@ object in the cache for future reference."
 ;;; lexical environment of the WIRE-OUTPUT-FUNCALL.
 
 (defmacro wire-output-funcall (wire-form function &rest args)
-  _N"Send the function and args down the wire as a funcall."
+  "Send the function and args down the wire as a funcall."
   (let ((num-args (length args))
 	(wire (gensym)))
     `(let ((,wire ,wire-form))

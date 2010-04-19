@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.78 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.79 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,7 +42,7 @@
 (sys:register-lisp-feature :relative-package-names)
 
 (defvar *default-package-use-list* '("COMMON-LISP")
-  _N"The list of packages to use by default of no :USE argument is supplied
+  "The list of packages to use by default of no :USE argument is supplied
    to MAKE-PACKAGE or other package creation forms.")
 
 ;;; INTERNAL conditions
@@ -56,7 +56,7 @@
 	     (lambda (package)
 	       (values `(package-or-lose ',(package-name package))
 		       nil))))
-  _N"Standard structure for the description of a package.  Consists of 
+  "Standard structure for the description of a package.  Consists of 
    a list of all hash tables, the name of the package, the nicknames of
    the package, the use-list for the package, the used-by- list, hash-
    tables for the internal and external symbols, and a list of the
@@ -122,7 +122,7 @@
   (frob package-used-by-list package-%used-by-list)
   (frob package-shadowing-symbols package-%shadowing-symbols))
 
-(defvar *package* () _N"The current package.")
+(defvar *package* () "The current package.")
 
 ;;; An equal hashtable from package names to packages.
 ;;;
@@ -278,7 +278,7 @@
 ;;;
 #+relative-package-names
 (defun package-parent (package-specifier)
-  _N"Given PACKAGE-SPECIFIER, a package, symbol or string, return the
+  "Given PACKAGE-SPECIFIER, a package, symbol or string, return the
   parent package.  If there is not a parent, signal an error."
   (declare (optimize (speed 3)))
   (flet ((find-last-dot (name)
@@ -310,7 +310,7 @@
 ;;;
 #+relative-package-names
 (defun package-children (package-specifier &key (recurse t))
-  _N"Given PACKAGE-SPECIFIER, a package, symbol or string, return all the
+  "Given PACKAGE-SPECIFIER, a package, symbol or string, return all the
   packages which are in the hierarchy 'under' the given package.  If
   :recurse is nil, then only return the immediate children of the package."
   (declare (optimize (speed 3)))
@@ -401,7 +401,7 @@
 ;;;
 ;;;
 (defun find-package (name)
-  _N"Find the package having the specified name."
+  "Find the package having the specified name."
   (if (packagep name)
       name
       (let ((name (package-namify name)))
@@ -663,7 +663,7 @@
 
 (defmacro do-symbols ((var &optional (package '*package*) result-form)
 		      &parse-body (body decls))
-  _N"DO-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECLARATION}* {TAG | FORM}*
+  "DO-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECLARATION}* {TAG | FORM}*
    Executes the FORMs at least once for each symbol accessible in the given
    PACKAGE with VAR bound to the current symbol."
   (let ((flet-name (gensym "DO-SYMBOLS-")))
@@ -697,7 +697,7 @@
 
 (defmacro do-external-symbols ((var &optional (package '*package*) result-form)
 			       &parse-body (body decls))
-  _N"DO-EXTERNAL-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECL}* {TAG | FORM}*
+  "DO-EXTERNAL-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECL}* {TAG | FORM}*
    Executes the FORMs once for each external symbol in the given PACKAGE with
    VAR bound to the current symbol."
   (let ((flet-name (gensym "DO-SYMBOLS-")))
@@ -721,7 +721,7 @@
 	 ,result-form))))
 
 (defmacro do-all-symbols ((var &optional result-form) &parse-body (body decls))
-  _N"DO-ALL-SYMBOLS (VAR [RESULT-FORM]) {DECLARATION}* {TAG | FORM}*
+  "DO-ALL-SYMBOLS (VAR [RESULT-FORM]) {DECLARATION}* {TAG | FORM}*
    Executes the FORMs once for each symbol in every package with VAR bound
    to the current symbol."
   (let ((flet-name (gensym "DO-SYMBOLS-")))
@@ -751,7 +751,7 @@
 
 (defmacro with-package-iterator ((mname package-list &rest symbol-types)
 				 &body body)
-  _N"Within the lexical scope of the body forms, MNAME is defined via macrolet
+  "Within the lexical scope of the body forms, MNAME is defined via macrolet
    such that successive invocations of (mname) will return the symbols,
    one by one, from the packages in PACKAGE-LIST. SYMBOL-TYPES may be
    any of :inherited :external :internal."
@@ -912,7 +912,7 @@
 ;;;; DEFPACKAGE:
 
 (defmacro defpackage (package &rest options)
-  _N"Defines a new package called PACKAGE.  Each of OPTIONS should be one of the
+  "Defines a new package called PACKAGE.  Each of OPTIONS should be one of the
    following:
      (:NICKNAMES {package-name}*)
      (:SIZE <integer>)
@@ -1137,7 +1137,7 @@
 ;;;
 (defun make-package (name &key (use *default-package-use-list*) nicknames
 			  (internal-symbols 10) (external-symbols 10))
-  _N"Makes a new package having the specified Name and Nicknames.  The
+  "Makes a new package having the specified Name and Nicknames.  The
   package will inherit all external symbols from each package in
   the use list.  :Internal-Symbols and :External-Symbols are
   estimates for the number of internal and external symbols which
@@ -1161,7 +1161,7 @@
 ;;;    Like Make-Package, only different.  Should go away someday.
 ;;;
 (defun old-in-package (name &rest keys &key nicknames use)
-  _N"Sets *PACKAGE* to package with given NAME, creating the package if
+  "Sets *PACKAGE* to package with given NAME, creating the package if
    it does not exist.  If the package already exists then it is modified
    to agree with the :USE and :NICKNAMES arguments.  Any new nicknames
    are added without removing any old ones not specified.  If any package
@@ -1205,7 +1205,7 @@
 ;;; add in any new ones.
 ;;;
 (defun rename-package (package name &optional (nicknames ()))
-  _N"Changes the name and nicknames for a package."
+  "Changes the name and nicknames for a package."
   (let* ((package (package-or-lose package))
 	 (name (string name))
 	 (found (find-package name)))
@@ -1226,7 +1226,7 @@
 ;;; Delete-Package -- Public
 ;;;
 (defun delete-package (package-or-name)
-  _N"Delete the PACKAGE-OR-NAME from the package system data structures."
+  "Delete the PACKAGE-OR-NAME from the package system data structures."
   (let ((package (if (packagep package-or-name)
 		     package-or-name
 		     (find-package package-or-name))))
@@ -1266,7 +1266,7 @@
 ;;;
 ;;;
 (defun list-all-packages ()
-  _N"Returns a list of all existing packages."
+  "Returns a list of all existing packages."
   (let ((res ()))
     (maphash #'(lambda (k v)
 		 (declare (ignore k))
@@ -1279,7 +1279,7 @@
 ;;;    Simple-stringify the name and call intern*.
 ;;;
 (defun intern (name &optional package)
-  _N"Returns a symbol having the specified name, creating it if necessary."
+  "Returns a symbol having the specified name, creating it if necessary."
   (let ((name (string-to-nfc name))
         (package (if package (package-or-lose package) *package*)))
     (declare (type simple-string name))
@@ -1290,7 +1290,7 @@
 ;;;    Ditto.
 ;;;
 (defun find-symbol (name &optional package)
-  _N"Returns the symbol NAME in PACKAGE.  If such a symbol is found
+  "Returns the symbol NAME in PACKAGE.  If such a symbol is found
   then the second value is :internal, :external or :inherited to indicate
   how the symbol is accessible.  If no symbol is found then both values
   are NIL."
@@ -1387,7 +1387,7 @@
 ;;; result, otherwise just nuke the symbol.
 ;;;
 (defun unintern (symbol &optional (package *package*))
-  _N"Makes SYMBOL no longer present in PACKAGE.  If SYMBOL was present
+  "Makes SYMBOL no longer present in PACKAGE.  If SYMBOL was present
   then T is returned, otherwise NIL.  If PACKAGE is SYMBOL's home
   package, then it is made uninterned."
   (let* ((package (package-or-lose package))
@@ -1494,7 +1494,7 @@
 ;;;    Do more stuff.
 ;;;
 (defun export (symbols &optional (package *package*))
-  _N"Exports SYMBOLS from PACKAGE, checking that no name conflicts result."
+  "Exports SYMBOLS from PACKAGE, checking that no name conflicts result."
   (let ((package (package-or-lose package))
 	(syms ()))
     ;;
@@ -1573,7 +1573,7 @@
 ;;; internal.
 ;;;
 (defun unexport (symbols &optional (package *package*))
-  _N"Makes SYMBOLS no longer exported from PACKAGE."
+  "Makes SYMBOLS no longer exported from PACKAGE."
   (let ((package (package-or-lose package))
 	(syms ()))
     (when *enable-package-locked-errors*
@@ -1616,7 +1616,7 @@
 ;;; shadowing-import if there is.
 ;;;
 (defun import (symbols &optional (package *package*))
-  _N"Make SYMBOLS accessible as internal symbols in PACKAGE.  If a symbol
+  "Make SYMBOLS accessible as internal symbols in PACKAGE.  If a symbol
   is already accessible then it has no effect.  If a name conflict
   would result from the importation, then a correctable error is signalled."
   (let ((package (package-or-lose package))
@@ -1659,7 +1659,7 @@
 ;;; stick the symbol in.
 ;;;
 (defun shadowing-import (symbols &optional (package *package*))
-  _N"Import SYMBOLS into PACKAGE, disregarding any name conflict.  If
+  "Import SYMBOLS into PACKAGE, disregarding any name conflict.  If
   a symbol of the same name is present, then it is uninterned.
   The symbols are added to the Package-Shadowing-Symbols."
   (let* ((package (package-or-lose package))
@@ -1682,7 +1682,7 @@
 ;;;
 ;;;
 (defun shadow (symbols &optional (package *package*))
-  _N"Make an internal symbol in PACKAGE with the same name as each of the
+  "Make an internal symbol in PACKAGE with the same name as each of the
   specified SYMBOLS, adding the new symbols to the Package-Shadowing-Symbols.
   If a symbol with the given name is already present in PACKAGE, then
   the existing symbol is placed in the shadowing symbols list if it is
@@ -1707,7 +1707,7 @@
 ;;; checking.
 ;;;
 (defun use-package (packages-to-use &optional (package *package*))
-  _N"Add all the PACKAGES-TO-USE to the use list for PACKAGE so that
+  "Add all the PACKAGES-TO-USE to the use list for PACKAGE so that
   the external symbols of the used packages are accessible as internal
   symbols in PACKAGE."
   (let ((packages (package-listify packages-to-use))
@@ -1770,7 +1770,7 @@
 ;;;
 ;;;
 (defun unuse-package (packages-to-unuse &optional (package *package*))
-  _N"Remove PACKAGES-TO-UNUSE from the use list for PACKAGE."
+  "Remove PACKAGES-TO-UNUSE from the use list for PACKAGE."
   (let ((package (package-or-lose package)))
     (dolist (p (package-listify packages-to-unuse))
       (setf (package-%use-list package)
@@ -1786,7 +1786,7 @@
 ;;;
 ;;;
 (defun find-all-symbols (string-or-symbol)
-  _N"Return a list of all symbols in the system having the specified name."
+  "Return a list of all symbols in the system having the specified name."
   (let ((string (string string-or-symbol))
 	(res ()))
     (maphash #'(lambda (k v)
@@ -1885,7 +1885,7 @@
 ;;; MAP-APROPOS -- public (extension).
 ;;;
 (defun map-apropos (fun string &optional package external-only)
-  _N"Call FUN with each symbol that contains STRING.
+  "Call FUN with each symbol that contains STRING.
   If PACKAGE is supplied then only use symbols present in
   that package.  If EXTERNAL-ONLY is true then only use
   symbols exported from the specified package."
@@ -1909,7 +1909,7 @@
 ;;; APROPOS -- public.
 ;;; 
 (defun apropos (string &optional package)
-  _N"Briefly describe all symbols which contain the specified STRING.
+  "Briefly describe all symbols which contain the specified STRING.
   If PACKAGE is supplied then only describe symbols present in
   that package.  If EXTERNAL-ONLY is non-NIL then only describe
   external symbols in the specified package."
@@ -1919,7 +1919,7 @@
 ;;; APROPOS-LIST -- public.
 ;;; 
 (defun apropos-list (string &optional package)
-  _N"Identical to APROPOS, except that it returns a list of the symbols
+  "Identical to APROPOS, except that it returns a list of the symbols
   found instead of describing them."
   (collect ((result))
     (map-apropos #'(lambda (symbol)

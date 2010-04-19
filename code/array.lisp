@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.52 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.53 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,13 +34,13 @@
 		 array-displacement))
 
 (defconstant array-rank-limit 65529
-  _N"The exclusive upper bound on the rank of an array.")
+  "The exclusive upper bound on the rank of an array.")
 
 (defconstant array-dimension-limit most-positive-fixnum
-  _N"The exclusive upper bound any given dimension of an array.")
+  "The exclusive upper bound any given dimension of an array.")
 
 (defconstant array-total-size-limit most-positive-fixnum
-  _N"The exclusive upper bound on the total number of elements in an array.")
+  "The exclusive upper bound on the total number of elements in an array.")
 
 
 
@@ -161,7 +161,7 @@
     (t #.vm:complex-vector-type)))
 
 (defvar *static-vectors* nil
-  _N"List of weak-pointers to static vectors.  Needed for GCing static vectors")
+  "List of weak-pointers to static vectors.  Needed for GCing static vectors")
 
 (defun make-static-vector (length element-type)
   (multiple-value-bind (type bits)
@@ -219,7 +219,7 @@
                               adjustable fill-pointer
 			      displaced-to displaced-index-offset
 		              allocation)
-  _N"Creates an array of the specified Dimensions and properties.  See the
+  "Creates an array of the specified Dimensions and properties.  See the
   manual for details.
 
   :Element-type
@@ -466,7 +466,7 @@
 
 
 (defun vector (&rest objects)
-  _N"Constructs a simple-vector from the given objects."
+  "Constructs a simple-vector from the given objects."
   (coerce (the list objects) 'simple-vector))
 
 
@@ -576,7 +576,7 @@
 	  index))))
 
 (defun array-in-bounds-p (array &rest subscripts)
-  _N"Returns T if the Subscipts are in bounds for the Array, Nil otherwise."
+  "Returns T if the Subscipts are in bounds for the Array, Nil otherwise."
   (if (%array-row-major-index array subscripts nil)
       t))
 
@@ -584,7 +584,7 @@
   (%array-row-major-index array subscripts))
 
 (defun aref (array &rest subscripts)
-  _N"Returns the element of the Array specified by the Subscripts."
+  "Returns the element of the Array specified by the Subscripts."
   (row-major-aref array (%array-row-major-index array subscripts)))
 
 (defun %aset (array &rest stuff)
@@ -600,7 +600,7 @@
 	new-value))
 
 (defun row-major-aref (array index)
-  _N"Returns the element of array corressponding to the row-major index.  This is
+  "Returns the element of array corressponding to the row-major index.  This is
    SETF'able."
   (declare (optimize (safety 1)))
   (row-major-aref array index))
@@ -611,7 +611,7 @@
   (setf (row-major-aref array index) new-value))
 
 (defun svref (simple-vector index)
-  _N"Returns the Index'th element of the given Simple-Vector."
+  "Returns the Index'th element of the given Simple-Vector."
   (declare (optimize (safety 1)))
   (aref simple-vector index))
 
@@ -621,7 +621,7 @@
 
 
 (defun bit (bit-array &rest subscripts)
-  _N"Returns the bit from the Bit-Array at the specified Subscripts."
+  "Returns the bit from the Bit-Array at the specified Subscripts."
   (declare (type (array bit) bit-array) (optimize (safety 1)))
   (row-major-aref bit-array (%array-row-major-index bit-array subscripts)))
 
@@ -642,7 +642,7 @@
 	new-value))
 
 (defun sbit (simple-bit-array &rest subscripts)
-  _N"Returns the bit from the Simple-Bit-Array at the specified Subscripts."
+  "Returns the bit from the Simple-Bit-Array at the specified Subscripts."
   (declare (type (simple-array bit) simple-bit-array) (optimize (safety 1)))
   (row-major-aref simple-bit-array
 		  (%array-row-major-index simple-bit-array subscripts)))
@@ -666,7 +666,7 @@
 ;;;; Random array properties.
 
 (defun array-element-type (array)
-  _N"Returns the type of the elements of the array"
+  "Returns the type of the elements of the array"
   (let ((type (get-type array)))
     (macrolet ((pick-element-type (&rest stuff)
 		 `(cond ,@(mapcar #'(lambda (stuff)
@@ -717,13 +717,13 @@
 
 
 (defun array-rank (array)
-  _N"Returns the number of dimensions of the Array."
+  "Returns the number of dimensions of the Array."
   (if (array-header-p array)
       (%array-rank array)
       1))
 
 (defun array-dimension (array axis-number)
-  _N"Returns length of dimension Axis-Number of the Array."
+  "Returns length of dimension Axis-Number of the Array."
   (declare (array array) (type index axis-number))
   (cond ((not (array-header-p array))
 	 (unless (= axis-number 0)
@@ -738,7 +738,7 @@
 	 (%array-dimension array axis-number))))
 
 (defun array-dimensions (array)
-  _N"Returns a list whose elements are the dimensions of the array"
+  "Returns a list whose elements are the dimensions of the array"
   (declare (array array))
   (if (array-header-p array)
       (do ((results nil (cons (array-dimension array index) results))
@@ -747,14 +747,14 @@
       (list (array-dimension array 0))))
 
 (defun array-total-size (array)
-  _N"Returns the total number of elements in the Array."
+  "Returns the total number of elements in the Array."
   (declare (array array))
   (if (array-header-p array)
       (%array-available-elements array)
       (length (the vector array))))
 
 (defun array-displacement (array)
-  _N"Returns values of :displaced-to and :displaced-index-offset options to
+  "Returns values of :displaced-to and :displaced-index-offset options to
    make-array, or the defaults nil and 0 if not a displaced array."
   (declare (array array))
   (if (and (array-header-p array) (%array-displaced-p array))
@@ -763,7 +763,7 @@
       (values nil 0)))
 
 (defun adjustable-array-p (array)
-  _N"Returns T if (adjust-array array...) would return an array identical
+  "Returns T if (adjust-array array...) would return an array identical
    to the argument, this happens for complex arrays."
   (declare (array array))
   (not (typep array 'simple-array)))
@@ -772,12 +772,12 @@
 ;;;; Fill pointer frobbing stuff.
 
 (defun array-has-fill-pointer-p (array)
-  _N"Returns T if the given Array has a fill pointer, or Nil otherwise."
+  "Returns T if the given Array has a fill pointer, or Nil otherwise."
   (declare (array array))
   (and (array-header-p array) (%array-fill-pointer-p array)))
 
 (defun fill-pointer (vector)
-  _N"Returns the Fill-Pointer of the given Vector."
+  "Returns the Fill-Pointer of the given Vector."
   (declare (vector vector))
   (if (and (array-header-p vector) (%array-fill-pointer-p vector))
       (%array-fill-pointer vector)
@@ -803,7 +803,7 @@
 	     :format-arguments (list vector))))
 
 (defun vector-push (new-el array)
-  _N"Attempts to set the element of Array designated by the fill pointer
+  "Attempts to set the element of Array designated by the fill pointer
    to New-El and increment fill pointer by one.  If the fill pointer is
    too large, Nil is returned, otherwise the index of the pushed element is 
    returned."
@@ -821,7 +821,7 @@
 				  (extension (if (zerop (length array))
 						 1
 						 (length array))))
-  _N"Like Vector-Push except that if the fill pointer gets too large, the
+  "Like Vector-Push except that if the fill pointer gets too large, the
    Array is extended rather than Nil being returned."
   (declare (vector array) (fixnum extension))
   (let ((fill-pointer (fill-pointer array)))
@@ -833,7 +833,7 @@
     fill-pointer))
 
 (defun vector-pop (array)
-  _N"Attempts to decrease the fill-pointer by 1 and return the element
+  "Attempts to decrease the fill-pointer by 1 and return the element
    pointer to by the new fill pointer.  If the original value of the fill
    pointer is 0, an error occurs."
   (declare (vector array))
@@ -854,7 +854,7 @@
 			   (initial-contents nil initial-contents-p)
                            fill-pointer
 			   displaced-to displaced-index-offset)
-  _N"Adjusts the Array's dimensions to the given Dimensions and stuff."
+  "Adjusts the Array's dimensions to the given Dimensions and stuff."
   (let ((dimensions (if (listp dimensions) dimensions (list dimensions))))
     (cond ((/= (the fixnum (length (the list dimensions)))
 	       (the fixnum (array-rank array)))
@@ -1008,7 +1008,7 @@
                                fill-pointer))))
 
 (defun shrink-vector (vector new-size)
-  _N"Destructively alters the Vector, changing its length to New-Size, which
+  "Destructively alters the Vector, changing its length to New-Size, which
    must be less than or equal to its current size."
   (declare (vector vector))
   (unless (array-header-p vector)
@@ -1057,7 +1057,7 @@
 
 (defun set-array-header (array data length fill-pointer displacement dimensions
 			 &optional displacedp)
-  _N"Fills in array header with provided information.  Returns array."
+  "Fills in array header with provided information.  Returns array."
   (setf (%array-data-vector array) data)
   (setf (%array-available-elements array) length)
   (cond (fill-pointer
@@ -1239,7 +1239,7 @@
 (def-bit-array-op bit-orc2 logorc2)
 
 (defun bit-not (bit-array &optional result-bit-array)
-  _N"Performs a bit-wise logical NOT on the elements of BIT-ARRAY,
+  "Performs a bit-wise logical NOT on the elements of BIT-ARRAY,
   putting the results in RESULT-BIT-ARRAY.  If RESULT-BIT-ARRAY is T,
   BIT-ARRAY is used.  If RESULT-BIT-ARRAY is NIL or omitted, a new array is
   created.  Both arrays must have the same rank and dimensions."

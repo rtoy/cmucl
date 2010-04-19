@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.44 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.45 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,15 +28,15 @@
 (use-package :fwrappers)
 
 (defvar *trace-values* nil
-  _N"This is bound to the returned values when evaluating :BREAK-AFTER and
+  "This is bound to the returned values when evaluating :BREAK-AFTER and
    :PRINT-AFTER forms.")
 
 (defvar *max-trace-indentation* 40
-  _N"If the trace indentation exceeds this value, then indentation restarts at
+  "If the trace indentation exceeds this value, then indentation restarts at
    0.")
 
 (defvar *trace-encapsulate-default* :default
-  _N"The default value for the :ENCAPSULATE option to trace.")
+  "The default value for the :ENCAPSULATE option to trace.")
 
 (defvar *trace-encapsulate-package-names*
   '("LISP"
@@ -51,7 +51,7 @@
     "SYSTEM"
     "COMPILER"
     "TRACE")
-  _N"List of package names.  Encapsulate functions from these packages
+  "List of package names.  Encapsulate functions from these packages
    by default.  This should at least include the packages of functions
    used by TRACE, directly or indirectly.")
 
@@ -689,7 +689,7 @@
 ;;; TRACE -- Public.
 ;;;
 (defmacro trace (&rest specs)
-  _N"TRACE {Option Global-Value}* {Name {Option Value}*}*
+  "TRACE {Option Global-Value}* {Name {Option Value}*}*
    TRACE is a debugging tool that prints information when specified functions
    are called.  In its simplest form:
        (trace Name-1 Name-2 ...)
@@ -806,7 +806,7 @@
   t)
 
 (defmacro untrace (&rest specs)
-  _N"Removes tracing from the specified functions.  With no args, untraces all
+  "Removes tracing from the specified functions.  With no args, untraces all
    functions."
   (if specs
       (collect ((res))

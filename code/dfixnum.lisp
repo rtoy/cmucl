@@ -5,7 +5,7 @@
 ;;; and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dfixnum.lisp,v 1.4 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dfixnum.lisp,v 1.5 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,7 +61,7 @@
   (l 0 :type dfparttype))
 
 (defun dfixnum-inc-df (v i)
-  _N"increments dfixnum v by dfixnum i"
+  "increments dfixnum v by dfixnum i"
   (declare (type dfixnum v) (type dfixnum i))
   (let ((low (+ (dfixnum-l v) (dfixnum-l i))))
     (if (> low dfmax)
@@ -81,7 +81,7 @@
   (setf (dfixnum-l v) (dfixnum-l i)))
 
 (defun dfixnum-inc-hf (v i)
-  _N"increments dfixnum v by i (max half fixnum)"
+  "increments dfixnum v by i (max half fixnum)"
   (declare (type dfixnum v) (type fixnum i))
   (when (> i dfmax)
       (error _"not a half-fixnum: ~a" i))
@@ -96,7 +96,7 @@
   v)
 
 (defun dfixnum-dec-df (v i)
-  _N"decrement dfixnum v by dfixnum i"
+  "decrement dfixnum v by dfixnum i"
   (declare (type dfixnum v) (type dfixnum i))
   (let ((low (- (dfixnum-l v) (dfixnum-l i)))
 	(high (- (dfixnum-h v) (dfixnum-h i))))
@@ -111,7 +111,7 @@
   v)
 
 (defun dfixnum-dec-hf (v i)
-  _N"decrement dfixnum v by half-fixnum i"
+  "decrement dfixnum v by half-fixnum i"
   (declare (type dfixnum v) (type (integer 0 #.dfmax) i))
   (let ((low (- (dfixnum-l v) i))
 	(high (dfixnum-h v)))
@@ -126,7 +126,7 @@
   v)
 
 (defun dfixnum-inc-integer (df i)
-  _N"increments dfixnum by an interger which may be bigger than fixnum.
+  "increments dfixnum by an interger which may be bigger than fixnum.
    May cons"
   (declare (type dfixnum df) (integer i) (optimize (ext:inhibit-warnings 3)))
   (let ((carry (+ (dfixnum-l df) (mod i dfmax))))
@@ -145,7 +145,7 @@
   (setf (dfixnum-l df) (mod i dfmax)))
 
 (defun dfixnum-make-from-number (i)
-  _N"returns a new dfixnum from number i"
+  "returns a new dfixnum from number i"
   (declare (type number i) (optimize (ext:inhibit-warnings 3)))
   (let ((df (make-dfixnum)))
     (declare (type dfixnum df))
@@ -190,7 +190,7 @@
      (setf ,l (dfixnum-l ,dfnum))))
 
 (defmacro dfixnum-inc-pair (vh vl ih il)
-  _N"increments a pair of halffixnums by another pair"
+  "increments a pair of halffixnums by another pair"
   `(progn
      (let ((low (+ ,vl ,il)))
        (if (> low dfmax)
@@ -207,7 +207,7 @@
   (+ (* h dfmax) l))
 
 (defmacro dfixnum-dec-pair (vh vl ih il)
-  _N"decrement dfixnum pair by another pair"
+  "decrement dfixnum pair by another pair"
   `(let ((low (- ,vl ,il))
 	 (high (- ,vh ,ih)))
      (declare (type fixnum low high))

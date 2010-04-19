@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.39 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.40 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,7 +57,7 @@
       (values (info function documentation name)))))
 
 (defun documentation (x doc-type)
-  _N"Returns the documentation string of Doc-Type for X, or NIL if
+  "Returns the documentation string of Doc-Type for X, or NIL if
   none exists.  System doc-types are VARIABLE, FUNCTION, STRUCTURE, TYPE,
   SETF, and T."
   (flet (;; CMUCL random-documentation.
@@ -161,7 +161,7 @@
 (sys:register-lisp-runtime-feature :unicode)
 
 (defun featurep (x)
-  _N"If X is an atom, see if it is present in *FEATURES*.  Also
+  "If X is an atom, see if it is present in *FEATURES*.  Also
   handle arbitrary combinations of atoms using NOT, AND, OR."
   (if (consp x)
       (case (car x)
@@ -176,37 +176,37 @@
 ;;; Other Environment Inquiries.
 
 (defun lisp-implementation-type ()
-  _N"Returns a string describing the implementation type."
+  "Returns a string describing the implementation type."
   "CMU Common Lisp")
 
 (defun lisp-implementation-version ()
-  _N"Returns a string describing the implementation version."
+  "Returns a string describing the implementation version."
   (format nil "~A (~X~A)" *lisp-implementation-version* c:byte-fasl-file-version
 	  #+unicode _" Unicode" #-unicode ""))
 
 (defun machine-instance ()
-  _N"Returns a string giving the name of the local machine."
+  "Returns a string giving the name of the local machine."
   (unix:unix-gethostname))
 
 (defvar *software-type* "Unix"
-  _N"The value of SOFTWARE-TYPE.  Set in FOO-os.lisp.")
+  "The value of SOFTWARE-TYPE.  Set in FOO-os.lisp.")
 
 (defun software-type ()
-  _N"Returns a string describing the supporting software."
+  "Returns a string describing the supporting software."
   *software-type*)
 
 (defvar *short-site-name* _"Unknown"
-  _N"The value of SHORT-SITE-NAME.  Set in library:site-init.lisp.")
+  "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp.")
 
 (defun short-site-name ()
-  _N"Returns a string with the abbreviated site name."
+  "Returns a string with the abbreviated site name."
   *short-site-name*)
 
 (defvar *long-site-name* _"Site name not initialized"
-  _N"The value of LONG-SITE-NAME.  Set in library:site-init.lisp.")
+  "The value of LONG-SITE-NAME.  Set in library:site-init.lisp.")
 
 (defun long-site-name ()
-  _N"Returns a string with the long form of the site name."
+  "Returns a string with the long form of the site name."
   *long-site-name*)
 
 
@@ -228,7 +228,7 @@
 (defvar *dribble-stream* nil)
 
 (defun dribble (&optional pathname &key (if-exists :append))
-  _N"With a file name as an argument, dribble opens the file and
+  "With a file name as an argument, dribble opens the file and
    sends a record of further I/O to that file.  Without an
    argument, it closes the dribble file, and quits logging."
   (cond (pathname
@@ -260,7 +260,7 @@
   (values))
 
 (defun ed (&optional x)
-  _N"Default implementation of ed.  This does nothing.  If hemlock is
+  "Default implementation of ed.  This does nothing.  If hemlock is
   loaded, ed can be used to edit a file"
   (declare (ignorable x))
   (values))

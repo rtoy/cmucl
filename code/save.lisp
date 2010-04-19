@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.66 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.67 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,23 +26,23 @@
 (in-package "LISP")
 
 (defvar *before-save-initializations* nil
-  _N"This is a list of functions which are called before creating a saved core
+  "This is a list of functions which are called before creating a saved core
   image.  These functions are executed in the child process which has no ports,
   so they cannot do anything that tries to talk to the outside world.")
 
 (defvar *after-save-initializations* nil
-  _N"This is a list of functions which are called when a saved core image starts
+  "This is a list of functions which are called when a saved core image starts
   up.  The system itself should be initialized at this point, but applications
   might not be.")
 
 (defvar *environment-list* nil
-  _N"An alist mapping environment variables (as keywords) to either values")
+  "An alist mapping environment variables (as keywords) to either values")
 
 (defvar *environment-list-initialized* nil
-  _N"Non-NIL if environment-init has been called")
+  "Non-NIL if environment-init has been called")
 
 (defvar *editor-lisp-p* nil
-  _N"This is true if and only if the lisp was started with the -edit switch.")
+  "This is true if and only if the lisp was started with the -edit switch.")
 
 
 
@@ -150,7 +150,7 @@
 		                  #+:executable
 		                 (executable nil)
 				 (batch-mode nil))
-  _N"Saves a CMU Common Lisp core image in the file of the specified name.  The
+  "Saves a CMU Common Lisp core image in the file of the specified name.  The
   following keywords are defined:
   
   :purify
@@ -311,7 +311,7 @@
 ;;;; PRINT-HERALD support.
 
 (defvar *herald-items* ()
-  _N"Determines what PRINT-HERALD prints (the system startup banner.)  This is a
+  "Determines what PRINT-HERALD prints (the system startup banner.)  This is a
    database which can be augmented by each loaded system.  The format is a
    property list which maps from subsystem names to the banner information for
    that system.  This list can be manipulated with GETF -- entries are printed
@@ -374,7 +374,7 @@
 ;;; PRINT-HERALD  --  Public
 ;;;
 (defun print-herald (&optional (stream *standard-output*))
-  _N"Print some descriptive information about the Lisp system version and
+  "Print some descriptive information about the Lisp system version and
    configuration."
   (let ((res ()))
     (do ((item *herald-items* (cddr item)))

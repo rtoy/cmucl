@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.38 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.39 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,16 +22,16 @@
 ;;; in DEFMACRO are the reason this isn't as easy as it sounds.
 ;;;
 (defvar *arg-tests* ()
-  _N"A list of tests that do argument counting at expansion time.")
+  "A list of tests that do argument counting at expansion time.")
 
 (defvar *system-lets* ()
-  _N"Let bindings that are done to make lambda-list parsing possible.")
+  "Let bindings that are done to make lambda-list parsing possible.")
 
 (defvar *user-lets* ()
-  _N"Let bindings that the user has explicitly supplied.")
+  "Let bindings that the user has explicitly supplied.")
 
 (defvar *default-default* nil
-  _N"Unsupplied optional and keyword arguments get this value defaultly.")
+  "Unsupplied optional and keyword arguments get this value defaultly.")
 
 ;; Temps that we introduce and might not reference.
 (defvar *ignorable-vars*)
@@ -50,7 +50,7 @@
 				   ((:environment env-arg-name))
 				   ((:default-default *default-default*))
 				   (error-fun 'error))
-  _N"Returns as multiple-values a parsed body, any local-declarations that
+  "Returns as multiple-values a parsed body, any local-declarations that
    should be made where this body is inserted, and a doc-string if there is
    one."
   (multiple-value-bind (body declarations documentation)
@@ -409,7 +409,7 @@
 	                       value-var))))
 
 (defun make-keyword (symbol)
-  _N"Takes a non-keyword symbol, symbol, and returns the corresponding keyword."
+  "Takes a non-keyword symbol, symbol, and returns the corresponding keyword."
   (intern (symbol-name symbol) *keyword-package*))
 
 (defun defmacro-error (problem kind name)

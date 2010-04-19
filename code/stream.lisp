@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.90 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.91 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -55,13 +55,13 @@
 ;;; The initialization of these streams is performed by Stream-Init,
 ;;; which lives in the file of machine-specific stream functions.
 ;;;
-(defvar *terminal-io* () _N"Terminal I/O stream.")
-(defvar *standard-input* () _N"Default input stream.")
-(defvar *standard-output* () _N"Default output stream.")
-(defvar *error-output* () _N"Error output stream.")
-(defvar *query-io* () _N"Query I/O stream.")
-(defvar *trace-output* () _N"Trace output stream.")
-(defvar *debug-io* () _N"Interactive debugging stream.")
+(defvar *terminal-io* () "Terminal I/O stream.")
+(defvar *standard-input* () "Default input stream.")
+(defvar *standard-output* () "Default output stream.")
+(defvar *error-output* () "Error output stream.")
+(defvar *query-io* () "Query I/O stream.")
+(defvar *trace-output* () "Trace output stream.")
+(defvar *debug-io* () "Interactive debugging stream.")
 
 (defun ill-in-any (stream &rest ignore)
   (declare (ignore ignore))
@@ -207,7 +207,7 @@
 ;;; Stream manipulation functions.
 
 (defun input-stream-p (stream)
-  _N"Returns non-nil if the given Stream can perform input operations."
+  "Returns non-nil if the given Stream can perform input operations."
   (declare (type stream stream))
   ;; Note: Gray streams redefines this function; any changes made here need
   ;; to be duplicated in .../pcl/gray-streams.lisp
@@ -224,7 +224,7 @@
 	       (not (eq (lisp-stream-n-bin stream) #'ill-n-bin)))))))
 
 (defun output-stream-p (stream)
-  _N"Returns non-nil if the given Stream can perform output operations."
+  "Returns non-nil if the given Stream can perform output operations."
   (declare (type stream stream))
   ;; Note: Gray streams redefines this function; any changes made here need
   ;; to be duplicated in .../pcl/gray-streams.lisp
@@ -240,7 +240,7 @@
 	       (not (eq (lisp-stream-bout stream) #'ill-bout)))))))
 
 (defun open-stream-p (stream)
-  _N"Return true if Stream is not closed."
+  "Return true if Stream is not closed."
   (declare (type stream stream))
   ;; Note: Gray streams redefines this function; any changes made here need
   ;; to be duplicated in .../pcl/gray-streams.lisp
@@ -251,7 +251,7 @@
     (not (eq (lisp-stream-in stream) #'closed-flame))))
 
 (defun stream-element-type (stream)
-  _N"Returns a type specifier for the kind of object returned by the Stream."
+  "Returns a type specifier for the kind of object returned by the Stream."
   (declare (type stream stream))
   ;; Note: Gray streams redefines this function; any changes made here need
   ;; to be duplicated in .../pcl/gray-streams.lisp
@@ -262,7 +262,7 @@
     (funcall (lisp-stream-misc stream) stream :element-type)))
 
 (defun interactive-stream-p (stream)
-  _N"Return true if Stream does I/O on a terminal or other interactive device."
+  "Return true if Stream does I/O on a terminal or other interactive device."
   (declare (type stream stream))
   (stream-dispatch stream
     ;; simple-stream
@@ -285,7 +285,7 @@
 	   :format-arguments (list stream))))
 
 (defun stream-external-format (stream)
-  _N"Returns the external format used by the given Stream."
+  "Returns the external format used by the given Stream."
   (declare (type stream stream))
   (stream-dispatch stream
     ;; simple-stream
@@ -314,7 +314,7 @@
   extfmt)
 
 (defun close (stream &key abort)
-  _N"Closes the given Stream.  No more I/O may be performed, but inquiries
+  "Closes the given Stream.  No more I/O may be performed, but inquiries
   may still be made.  If :Abort is non-nil, an attempt is made to clean
   up the side effects of having created the stream."
   (declare (type stream stream))
@@ -347,7 +347,7 @@
 ;;;    Call the misc method with the :file-position operation.
 ;;;
 (defun file-position (stream &optional position)
-  _N"With one argument returns the current position within the file
+  "With one argument returns the current position within the file
    File-Stream is open to.  If the second argument is supplied, then
    this becomes the new file position.  The second argument may also
    be :start or :end for the start and end of the file, respectively."
@@ -373,7 +373,7 @@
 ;;;    Like File-Position, only use :file-length.
 ;;;
 (defun file-length (stream)
-  _N"This function returns the length of the file that File-Stream is open to."
+  "This function returns the length of the file that File-Stream is open to."
   (stream-dispatch stream
     ;; simple-stream
     (stream::%file-length stream)
@@ -385,7 +385,7 @@
 
 (defun read-line (&optional (stream *standard-input*) (eof-errorp t) eof-value
 			    recursive-p)
-  _N"Returns a line of text read from the Stream as a string, discarding the
+  "Returns a line of text read from the Stream as a string, discarding the
   newline character."
   (let ((stream (in-synonym-of stream)))
     (stream-dispatch stream
@@ -431,7 +431,7 @@
 (declaim (inline read-char unread-char read-byte listen))
 (defun read-char (&optional (stream *standard-input*) (eof-errorp t) eof-value
 			    recursive-p)
-  _N"Inputs a character from Stream and returns it."
+  "Inputs a character from Stream and returns it."
   (let ((stream (in-synonym-of stream)))
     (stream-dispatch stream
       ;; simple-stream
@@ -448,7 +448,7 @@
 	    char)))))
 
 (defun unread-char (character &optional (stream *standard-input*))
-  _N"Puts the Character back on the front of the input Stream."
+  "Puts the Character back on the front of the input Stream."
   (let ((stream (in-synonym-of stream)))
     (stream-dispatch stream
       ;; simple-stream
@@ -545,7 +545,7 @@
 
 (defun peek-char (&optional (peek-type nil) (stream *standard-input*)
 			    (eof-errorp t) eof-value recursive-p)
-  _N"Peeks at the next character in the input Stream.  See manual for details."
+  "Peeks at the next character in the input Stream.  See manual for details."
   ;; FIXME: The type of PEEK-TYPE is also declared in a DEFKNOWN, but
   ;; the compiler doesn't seem to be smart enough to go from there to
   ;; imposing a type check. Figure out why (because PEEK-TYPE is an
@@ -586,7 +586,7 @@
 	   :eof-detected-form (eof-or-lose stream eof-errorp eof-value))))))
 
 (defun listen (&optional (stream *standard-input*) (width 1))
-  _N"Returns T if a character is available on the given Stream."
+  "Returns T if a character is available on the given Stream."
   (declare (type streamlike stream))
   (let ((stream (in-synonym-of stream)))
     (stream-dispatch stream
@@ -601,7 +601,7 @@
 
 (defun read-char-no-hang (&optional (stream *standard-input*)
 				    (eof-errorp t) eof-value recursive-p)
-  _N"Returns the next character from the Stream if one is available, or nil."
+  "Returns the next character from the Stream if one is available, or nil."
   (let ((stream (in-synonym-of stream)))
     (stream-dispatch stream
       ;; simple-stream
@@ -619,7 +619,7 @@
 
 
 (defun clear-input (&optional (stream *standard-input*) buffer-only)
-  _N"Clears any buffered input associated with the Stream."
+  "Clears any buffered input associated with the Stream."
   (declare (type streamlike stream))
   (let ((stream (in-synonym-of stream)))
     (stream-dispatch stream
@@ -634,7 +634,7 @@
   nil)
 
 (defun read-byte (stream &optional (eof-errorp t) eof-value)
-  _N"Returns the next byte of the Stream."
+  "Returns the next byte of the Stream."
   (declare (type stream stream))
   (let ((stream (in-synonym-of stream)))
     (stream-dispatch stream
@@ -652,7 +652,7 @@
 	    char)))))
 
 (defun read-n-bytes (stream buffer start numbytes &optional (eof-errorp t))
-  _N"Reads Numbytes bytes into the Buffer starting at Start, returning the number
+  "Reads Numbytes bytes into the Buffer starting at Start, returning the number
    of bytes read.
    -- If EOF-ERROR-P is true, an END-OF-FILE condition is signalled if
       end-of-file is encountered before Count bytes have been read.
@@ -817,7 +817,7 @@
 ;;; Output functions:
 
 (defun write-char (character &optional (stream *standard-output*))
-  _N"Outputs the Character to the Stream."
+  "Outputs the Character to the Stream."
   (declare (type streamlike stream))
   (let ((stream (out-synonym-of stream)))
     (stream-dispatch stream
@@ -830,7 +830,7 @@
   character)
 
 (defun terpri (&optional (stream *standard-output*))
-  _N"Outputs a new line to the Stream."
+  "Outputs a new line to the Stream."
   (declare (type streamlike stream))
   (let ((stream (out-synonym-of stream)))
     (stream-dispatch stream
@@ -843,7 +843,7 @@
   nil)
 
 (defun fresh-line (&optional (stream *standard-output*))
-  _N"Outputs a new line to the Stream if it is not positioned at the beginning of
+  "Outputs a new line to the Stream if it is not positioned at the beginning of
    a line.  Returns T if it output a new line, nil otherwise."
   (declare (type streamlike stream))
   (let ((stream (out-synonym-of stream)))
@@ -859,7 +859,7 @@
 
 (defun write-string (string &optional (stream *standard-output*)
 			    &key (start 0) end)
-  _N"Outputs the String to the given Stream."
+  "Outputs the String to the given Stream."
   (write-string* string stream start (or end (length (the vector string)))))
 
 (defun write-string* (string &optional (stream *standard-output*)
@@ -886,7 +886,7 @@
 
 (defun write-line (string &optional (stream *standard-output*)
 			  &key (start 0) (end (length string)))
-  _N"Outputs the String to the given Stream, followed by a newline character."
+  "Outputs the String to the given Stream, followed by a newline character."
   (write-line* string stream start (or end (length string))))
 
 (defun write-line* (string &optional (stream *standard-output*)
@@ -918,7 +918,7 @@
     string))
 
 (defun charpos (&optional (stream *standard-output*))
-  _N"Returns the number of characters on the current line of output of the given
+  "Returns the number of characters on the current line of output of the given
   Stream, or Nil if that information is not availible."
   (declare (type streamlike stream))
   (let ((stream (out-synonym-of stream)))
@@ -931,7 +931,7 @@
       (stream-line-column stream))))
 
 (defun line-length (&optional (stream *standard-output*))
-  _N"Returns the number of characters that will fit on a line of output on the
+  "Returns the number of characters that will fit on a line of output on the
   given Stream, or Nil if that information is not available."
   (declare (type streamlike stream))
   (let ((stream (out-synonym-of stream)))
@@ -944,7 +944,7 @@
       (stream-line-length stream))))
 
 (defun finish-output (&optional (stream *standard-output*))
-  _N"Attempts to ensure that all output sent to the Stream has reached its
+  "Attempts to ensure that all output sent to the Stream has reached its
    destination, and only then returns."
   (declare (type streamlike stream))
   (let ((stream (out-synonym-of stream)))
@@ -958,7 +958,7 @@
   nil)
 
 (defun force-output (&optional (stream *standard-output*))
-  _N"Attempts to force any buffered output to be sent."
+  "Attempts to force any buffered output to be sent."
   (declare (type streamlike stream))
   (let ((stream (out-synonym-of stream)))
     (stream-dispatch stream
@@ -971,7 +971,7 @@
   nil)
 
 (defun clear-output (&optional (stream *standard-output*))
-  _N"Clears the given output Stream."
+  "Clears the given output Stream."
   (declare (type streamlike stream))
   (let ((stream (out-synonym-of stream)))
     (stream-dispatch stream
@@ -984,7 +984,7 @@
   nil)
 
 (defun write-byte (integer stream)
-  _N"Outputs the Integer to the binary Stream."
+  "Outputs the Integer to the binary Stream."
   (declare (type stream stream))
   (let ((stream (out-synonym-of stream)))
     (stream-dispatch stream
@@ -1050,7 +1050,7 @@
   (streams () :type list :read-only t))
 
 (defun make-broadcast-stream (&rest streams)
-  _N"Returns an output stream which sends its output to all of the given
+  "Returns an output stream which sends its output to all of the given
 streams."
   (dolist (s streams)
     (unless (output-stream-p s)
@@ -1224,7 +1224,7 @@ streams."
 	  (two-way-stream-output-stream s)))
 
 (defun make-two-way-stream (input-stream output-stream)
-  _N"Returns a bidirectional stream which gets its input from Input-Stream and
+  "Returns a bidirectional stream which gets its input from Input-Stream and
    sends its output to Output-Stream."
   (unless (input-stream-p input-stream)
     (ill-in-any input-stream))
@@ -1310,7 +1310,7 @@ streams."
 	  (concatenated-stream-streams s)))
 
 (defun make-concatenated-stream (&rest streams)
-  _N"Returns a stream which takes its input from each of the Streams in turn,
+  "Returns a stream which takes its input from each of the Streams in turn,
    going on to the next at EOF."
   (dolist (s streams)
     (unless (input-stream-p s)
@@ -1395,7 +1395,7 @@ streams."
   unread-stuff)
 
 (defun make-echo-stream (input-stream output-stream)
-  _N"Returns an echo stream that takes input from Input-stream and sends
+  "Returns an echo stream that takes input from Input-stream and sends
 output to Output-stream"
   (unless (input-stream-p input-stream)
     (ill-in-any input-stream))
@@ -1612,7 +1612,7 @@ output to Output-stream"
   
 (defun make-string-input-stream (string &optional
 					(start 0) (end (length string)))
-  _N"Returns an input stream which will supply the characters of String between
+  "Returns an input stream which will supply the characters of String between
   Start and End in order."
   (declare (type string string)
 	   (type index start)
@@ -1639,7 +1639,7 @@ output to Output-stream"
   (write-string "#<String-Output Stream>" stream))
 
 (defun make-string-output-stream (&key (element-type 'character))
-  _N"Returns an Output stream which will accumulate all output given to it for
+  "Returns an Output stream which will accumulate all output given to it for
    the benefit of the function Get-Output-Stream-String."
   (declare (ignore element-type))
   (%make-string-output-stream))
@@ -1699,7 +1699,7 @@ output to Output-stream"
      (set-closed-flame stream))))
 
 (defun get-output-stream-string (stream)
-  _N"Returns a string of all the characters sent to a stream made by
+  "Returns a string of all the characters sent to a stream made by
    Make-String-Output-Stream since the last call to this function."
   (declare (type string-output-stream stream))
   (let* ((length (string-output-stream-index stream))
@@ -1709,7 +1709,7 @@ output to Output-stream"
     result))
 
 (defun dump-output-stream-string (in-stream out-stream)
-  _N"Dumps the characters buffer up in the In-Stream to the Out-Stream as
+  "Dumps the characters buffer up in the In-Stream to the Out-Stream as
   Get-Output-Stream-String would return them."
   (write-string* (string-output-stream-string in-stream) out-stream
 		 0 (string-output-stream-index in-stream))
@@ -1904,7 +1904,7 @@ output to Output-stream"
   (target (required-argument) :type stream))
 
 (defun make-case-frob-stream (target kind)
-  _N"Returns a stream that sends all output to the stream TARGET, but modifies
+  "Returns a stream that sends all output to the stream TARGET, but modifies
    the case of letters, depending on KIND, which should be one of:
      :upcase - convert to upper case.
      :downcase - convert to lower case.
@@ -2153,7 +2153,7 @@ output to Output-stream"
 ;;; LISTEN fails, then we have some random stream we must wait on.
 ;;;
 (defun get-stream-command (stream)
-  _N"This takes a stream and waits for text or a command to appear on it.  If
+  "This takes a stream and waits for text or a command to appear on it.  If
    text appears before a command, this returns nil, and otherwise it returns
    a command."
   (let ((cmdp (funcall (lisp-stream-misc stream) stream :get-command)))
@@ -2168,7 +2168,7 @@ output to Output-stream"
 ;;; READ-SEQUENCE --
 
 (defun read-sequence (seq stream &key (start 0) (end nil) partial-fill)
-  _N"Destructively modify SEQ by reading elements from STREAM.
+  "Destructively modify SEQ by reading elements from STREAM.
 
   Seq is bounded by Start and End. Seq is destructively modified by
   copying successive elements into it from Stream. If the end of file
@@ -2536,7 +2536,7 @@ output to Output-stream"
 ;;; will always puzzle me.
 
 (defun write-sequence (seq stream &key (start 0) (end nil))
-  _N"Writes the elements of the Seq bounded by Start and End to Stream.
+  "Writes the elements of the Seq bounded by Start and End to Stream.
 
   Argument(s):
   SEQ:     a proper SEQUENCE

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.47 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.48 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -191,11 +191,11 @@
 ;;;; The stack.
 
 (defvar *eval-stack* (make-array 100)
-  _N"This is the interpreter's evaluation stack.")
+  "This is the interpreter's evaluation stack.")
 (declaim (type simple-vector *eval-stack*))
 
 (defvar *eval-stack-top* 0
-  _N"This is the next free element of the interpreter's evaluation stack.")
+  "This is the next free element of the interpreter's evaluation stack.")
 (declaim (type index *eval-stack-top*))
 
 (defmacro current-stack-pointer () '*eval-stack-top*)

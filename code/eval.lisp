@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.47 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.48 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -65,20 +65,20 @@
 (defconstant lambda-list-keywords
   '(&optional &rest &key &aux &body &whole &allow-other-keys &environment
     &parse-body c:&more)
-  _N"Keywords that you can put in a lambda-list, supposing you should want
+  "Keywords that you can put in a lambda-list, supposing you should want
   to do such a thing.")
 
 (defconstant call-arguments-limit most-positive-fixnum
-  _N"The exclusive upper bound on the number of arguments which may be passed
+  "The exclusive upper bound on the number of arguments which may be passed
   to a function, including rest args.")
 
 (defconstant lambda-parameters-limit most-positive-fixnum
-  _N"The exclusive upper bound on the number of parameters which may be specifed
+  "The exclusive upper bound on the number of parameters which may be specifed
   in a given lambda list.  This is actually the limit on required and optional
   parameters.  With &key and &aux you can get more.")
 
 (defconstant multiple-values-limit most-positive-fixnum
-  _N"The exclusive upper bound on the number of multiple-values that you can
+  "The exclusive upper bound on the number of multiple-values that you can
   have.")
 
 
@@ -140,7 +140,7 @@
 (declaim (type (member :warn t nil) *top-level-auto-declare*))
 
 (defvar *top-level-auto-declare* :warn
-  _N"This variable controls whether assignments to unknown variables at top-level
+  "This variable controls whether assignments to unknown variables at top-level
    (or in any other call to EVAL of SETQ) will implicitly declare the variable
    SPECIAL.  These values are meaningful:
      :WARN  -- Print a warning, but declare the variable special (the default.)
@@ -153,7 +153,7 @@
 ;;;    Pick off a few easy cases, and call INTERNAL-EVAL for the rest.
 ;;;
 (defun eval (original-exp)
-  _N"Evaluates its single arg in a null lexical environment, returns the
+  "Evaluates its single arg in a null lexical environment, returns the
   result or results."
   (declare (optimize (safety 1)))
   (let ((exp (macroexpand original-exp)))
@@ -286,7 +286,7 @@
 ;;; compiled with COMPILE.  If that fails, check for an inline expansion.
 ;;;
 (defun function-lambda-expression (fun)
-  _N"Given a function, return three values:
+  "Given a function, return three values:
    1] A lambda expression that could be used to define the function, or NIL if
       the definition isn't available.
    2] NIL if the function was definitely defined in a null lexical environment,
@@ -331,12 +331,12 @@
 ;;;; Syntactic environment access:
 
 (defun special-operator-p (symbol)
-  _N"If the symbol globally names a special form, returns T, otherwise NIL."
+  "If the symbol globally names a special form, returns T, otherwise NIL."
   (declare (symbol symbol))
   (eq (info function kind symbol) :special-form))
 
 (defvar *macroexpand-hook* 'funcall
-  _N"The value of this variable must be a function that can take three
+  "The value of this variable must be a function that can take three
   arguments, a macro expander function, the macro form to be expanded,
   and the lexical environment to expand in.  The function should
   return the expanded form.  This function is called by MACROEXPAND-1
@@ -356,7 +356,7 @@
 ;;; it again.
 ;;; 
 (defun invoke-macroexpand-hook (fun form env)
-  _N"Invoke *MACROEXPAND-HOOK* on FUN, FORM, and ENV after coercing it to
+  "Invoke *MACROEXPAND-HOOK* on FUN, FORM, and ENV after coercing it to
    a function."
   (unless (functionp *macroexpand-hook*)
     (setf *macroexpand-hook*
@@ -364,7 +364,7 @@
   (funcall *macroexpand-hook* fun form env))
 
 (defun macro-function (symbol &optional env)
-  _N"If SYMBOL names a macro in ENV, returns the expansion function,
+  "If SYMBOL names a macro in ENV, returns the expansion function,
    else returns NIL.  If ENV is unspecified or NIL, use the global
    environment only."
   (declare (symbol symbol))
@@ -404,7 +404,7 @@
 ;;;    The Env is a LEXENV or NIL (the null environment.)
 ;;;
 (defun macroexpand-1 (form &optional env)
-  _N"If form is a macro (or symbol macro), expands it once.  Returns two values,
+  "If form is a macro (or symbol macro), expands it once.  Returns two values,
    the expanded form and a T-or-NIL flag indicating whether the form was, in
    fact, a macro.  Env is the lexical environment to expand in, which defaults
    to the null environment."
@@ -428,7 +428,7 @@
 	 (values form nil))))
 
 (defun macroexpand (form &optional env)
-  _N"Repetitively call MACROEXPAND-1 until the form can no longer be expanded.
+  "Repetitively call MACROEXPAND-1 until the form can no longer be expanded.
    Returns the final resultant form, and T if it was expanded.  ENV is the
    lexical environment to expand in, or NIL (the default) for the null
    environment."
@@ -442,7 +442,7 @@
     (frob form nil)))
 
 (defun compiler-macro-function (name &optional env)
-  _N"If NAME names a compiler-macro, returns the expansion function,
+  "If NAME names a compiler-macro, returns the expansion function,
    else returns NIL.  Note: if the name is shadowed in ENV by a local
    definition, or declared NOTINLINE, NIL is returned.  Can be
    set with SETF."
@@ -470,7 +470,7 @@
 ;;; trying to debug his compiler macros.
 
 (defun compiler-macroexpand-1 (form &optional env)
-  _N"If FORM is a function call for which a compiler-macro has been defined,
+  "If FORM is a function call for which a compiler-macro has been defined,
    invoke the expander function using *macroexpand-hook* and return the
    results and T.  Otherwise, return the original form and NIL."
   (let ((fun (and (consp form) (compiler-macro-function (car form) env))))
@@ -480,7 +480,7 @@
 	(values form nil))))
 
 (defun compiler-macroexpand (form &optional env)
-  _N"Repetitively call COMPILER-MACROEXPAND-1 until the form can no longer be
+  "Repetitively call COMPILER-MACROEXPAND-1 until the form can no longer be
    expanded.  ENV is the lexical environment to expand in, or NIL (the
    default) for the null environment."
   (labels ((frob (form expanded)
@@ -493,7 +493,7 @@
     (frob form env)))
 
 (defun constantp (object &optional environment)
-  _N"True of any Lisp object that has a constant value: types that eval to
+  "True of any Lisp object that has a constant value: types that eval to
   themselves, keywords, constants, and list whose car is QUOTE."
   (declare (ignore environment))
   (typecase object
@@ -510,7 +510,7 @@
 ;;; Function invocation:
 
 (defun apply (function arg &rest args)
-  _N"Applies FUNCTION to a list of arguments produced by evaluating ARGS in
+  "Applies FUNCTION to a list of arguments produced by evaluating ARGS in
   the manner of LIST*.  That is, a list is made of the values of all but the
   last argument, appended to the value of the last argument, which must be a
   list."
@@ -526,7 +526,7 @@
 
 
 (defun funcall (function &rest arguments)
-  _N"Calls Function with the given Arguments."
+  "Calls Function with the given Arguments."
   (apply function arguments))
 
 
@@ -534,9 +534,9 @@
 ;;; Multiple-Value forms:
 
 (defun values (&rest values)
-  _N"Returns all of its arguments, in order, as values."
+  "Returns all of its arguments, in order, as values."
   (values-list values))
 
 (defun values-list (list)
-  _N"Returns all of the elements of List, in order, as values."
+  "Returns all of the elements of List, in order, as values."
   (values-list list))

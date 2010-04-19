@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.28 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.29 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -130,7 +130,7 @@
 ;;;; #. handling.
 
 (defvar *read-eval* t
-  _N"If false, then the #. read macro is disabled.")
+  "If false, then the #. read macro is disabled.")
 
 (defun sharp-dot (stream sub-char numarg)
   (ignore-numarg sub-char numarg)

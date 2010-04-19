@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.48 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.49 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -528,9 +528,9 @@
 ;;; Track the depth of recursive errors.
 ;;;
 (defvar *maximum-error-depth* 10
-  _N"The maximum number of nested errors allowed.  Internal errors are
+  "The maximum number of nested errors allowed.  Internal errors are
    double-counted.")
-(defvar *current-error-depth* 0 _N"The current number of nested errors.")
+(defvar *current-error-depth* 0 "The current number of nested errors.")
 
 ;;; These specials are used by ERROR-ERROR to track the success of recovery
 ;;; attempts.

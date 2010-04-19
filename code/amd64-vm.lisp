@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/amd64-vm.lisp,v 1.5 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/amd64-vm.lisp,v 1.6 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -174,13 +174,13 @@
 
 #-cross-compiler
 (defun machine-type ()
-  _N"Returns a string describing the type of the local machine."
+  "Returns a string describing the type of the local machine."
   "AMD x86-64")
 
 
 #-cross-compiler
 (defun machine-version ()
-  _N"Returns a string describing the version of the local machine."
+  "Returns a string describing the version of the local machine."
   "AMD x86-64")
 
 
@@ -539,36 +539,36 @@
 (defun %instance-set-conditional (object slot test-value new-value)
   (declare (type instance object)
 	   (type index slot))
-  _N"Atomically compare object's slot value to test-value and if EQ store
+  "Atomically compare object's slot value to test-value and if EQ store
    new-value in the slot. The original value of the slot is returned."
   (%instance-set-conditional object slot test-value new-value))
 
 (defun set-symbol-value-conditional (symbol test-value new-value)
   (declare (type symbol symbol))
-  _N"Atomically compare symbol's value to test-value and if EQ store
+  "Atomically compare symbol's value to test-value and if EQ store
   new-value in symbol's value slot and return the original value."
   (set-symbol-value-conditional symbol test-value new-value))
 
 (defun rplaca-conditional (cons test-value new-value)
   (declare (type cons cons))
-  _N"Atomically compare the car of CONS to test-value and if EQ store
+  "Atomically compare the car of CONS to test-value and if EQ store
   new-value its car and return the original value."
   (rplaca-conditional cons test-value new-value))
 
 (defun rplacd-conditional (cons test-value new-value)
   (declare (type cons cons))
-  _N"Atomically compare the cdr of CONS to test-value and if EQ store
+  "Atomically compare the cdr of CONS to test-value and if EQ store
   new-value its cdr and return the original value."
   (rplacd-conditional cons test-value new-value))
 
 (defun data-vector-set-conditional (vector index test-value new-value)
   (declare (type simple-vector vector))
-  _N"Atomically compare an element of vector to test-value and if EQ store
+  "Atomically compare an element of vector to test-value and if EQ store
   new-value the element and return the original value."
   (data-vector-set-conditional vector index test-value new-value))
 
 (defmacro atomic-push-symbol-value (val symbol)
-  _N"Thread safe push of val onto the list in the symbol global value."
+  "Thread safe push of val onto the list in the symbol global value."
   (ext:once-only ((n-val val))
     (let ((new-list (gensym))
 	  (old-list (gensym)))
@@ -582,7 +582,7 @@
 	      (return ,new-list))))))))
 
 (defmacro atomic-pop-symbol-value (symbol)
-  _N"Thread safe pop from the list in the symbol global value."
+  "Thread safe pop from the list in the symbol global value."
   (let ((new-list (gensym))
 	(old-list (gensym)))
     `(loop
@@ -594,7 +594,7 @@
 	  (return (car ,old-list)))))))
 
 (defmacro atomic-pusha (val cons)
-  _N"Thread safe push of val onto the list in the car of cons."
+  "Thread safe push of val onto the list in the car of cons."
   (once-only ((n-val val)
 	      (n-cons cons))
     (let ((new-list (gensym))
@@ -608,7 +608,7 @@
 	      (return ,new-list))))))))
 
 (defmacro atomic-pushd (val cons)
-  _N"Thread safe push of val onto the list in the cdr of cons."
+  "Thread safe push of val onto the list in the cdr of cons."
   (once-only ((n-val val)
 	      (n-cons cons))
     (let ((new-list (gensym))
@@ -622,7 +622,7 @@
 	      (return ,new-list))))))))
 
 (defmacro atomic-push-vector (val vect index)
-  _N"Thread safe push of val onto the list in the vector element."
+  "Thread safe push of val onto the list in the vector element."
   (once-only ((n-val val)
 	      (n-vect vect)
 	      (n-index index))

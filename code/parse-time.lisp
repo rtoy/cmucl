@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.19 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.20 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -27,7 +27,7 @@
 (defconstant date-time-dividers '(#\T #\t))
 
 (defvar *error-on-mismatch* nil
-  _N"If t, an error will be signalled if parse-time is unable
+  "If t, an error will be signalled if parse-time is unable
    to determine the time/date format of the string.")
 
 ;;; Set up hash tables for month, weekday, zone, and special strings.
@@ -714,7 +714,7 @@
 			       (default-hours nil) (default-day nil)
 			       (default-month nil) (default-year nil)
 			       (default-zone nil) (default-weekday -1))
-  _N"Tries very hard to make sense out of the argument time-string and
+  "Tries very hard to make sense out of the argument time-string and
    returns a single integer representing the universal time if
    successful.  If not, it returns nil.  If the :error-on-mismatch
    keyword is true, parse-time will signal an error instead of

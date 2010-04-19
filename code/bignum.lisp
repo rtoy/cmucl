@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.48 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.49 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -572,7 +572,7 @@
 ;; This might need some tuning
 (declaim (fixnum *karatsuba-classical-cutoff*))
 (defparameter *karatsuba-classical-cutoff* 10
-  _N"When the bignum pieces are smaller than this many words, we use the
+  "When the bignum pieces are smaller than this many words, we use the
 classical multiplication algorithm instead of recursing all the way
 down to individual words.")
 
@@ -917,7 +917,7 @@ down to individual words.")
     (%normalize-bignum res len-res)))
 
 (defparameter *min-karatsuba-bits* 512
-  _N"Use Karatsuba if the bignums have at least this many bits")
+  "Use Karatsuba if the bignums have at least this many bits")
 
 (defun multiply-bignums (a b)
   (declare (type bignum-type a b))
@@ -1137,7 +1137,7 @@ down to individual words.")
 ;;; Could do freelisting someday.
 ;;;
 (defmacro with-bignum-buffers (specs &body body)
-  _N"WITH-BIGNUM-BUFFERS ({(var size [init])}*) Form*"
+  "WITH-BIGNUM-BUFFERS ({(var size [init])}*) Form*"
   (ext:collect ((binds)
 		(inits))
     (dolist (spec specs)

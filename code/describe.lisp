@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.55 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.56 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,39 +36,39 @@
 ;;;; DESCRIBE public switches.
 
 (defvar *describe-level* 2
-  _N"Depth of recursive descriptions allowed.")
+  "Depth of recursive descriptions allowed.")
 
 (defvar *describe-verbose* nil
-  _N"If non-nil, descriptions may provide interpretations of information and
+  "If non-nil, descriptions may provide interpretations of information and
   pointers to additional information.  Normally nil.")
 
 (defvar *describe-print-level* 2
-  _N"*print-level* gets bound to this inside describe.  If null, use
+  "*print-level* gets bound to this inside describe.  If null, use
   *print-level*")
 
 (defvar *describe-print-length* 5
-  _N"*print-length* gets bound to this inside describe.  If null, use
+  "*print-length* gets bound to this inside describe.  If null, use
   *print-length*.")
 
 (defvar *describe-indentation* 3
-  _N"Number of spaces that sets off each line of a recursive description.")
+  "Number of spaces that sets off each line of a recursive description.")
 
 (defvar *in-describe* nil
-  _N"Used to tell whether we are doing a recursive describe.")
+  "Used to tell whether we are doing a recursive describe.")
 (defvar *current-describe-level* 0
-  _N"Used to implement recursive description cutoff.  Don't touch.")
+  "Used to implement recursive description cutoff.  Don't touch.")
 (defvar *describe-output* nil
-  _N"An output stream used by Describe for indenting and stuff.")
+  "An output stream used by Describe for indenting and stuff.")
 (defvar *described-objects* nil
-  _N"List of all objects describe within the current top-level call to describe.")
+  "List of all objects describe within the current top-level call to describe.")
 (defvar *current-describe-object* nil
-  _N"The last object passed to describe.")
+  "The last object passed to describe.")
 
 ;;; DESCRIBE sets up the output stream and calls DESCRIBE-AUX, which does the
 ;;; hard stuff.
 ;;;
 (defun describe (x &optional stream)
-  _N"Prints a description of the object X."
+  "Prints a description of the object X."
   (declare (type (or stream (member t nil)) stream))
   (unless *describe-output*
     (setq *describe-output* (make-indenting-stream *standard-output*)))

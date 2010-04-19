@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.38 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.39 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -565,7 +565,7 @@
 ;;;
 (defun memory-usage (&key print-spaces (count-spaces '(:dynamic))
 			  (print-summary t) cutoff)
-  _N"Print out information about the heap memory in use.  :Print-Spaces is a list
+  "Print out information about the heap memory in use.  :Print-Spaces is a list
   of the spaces to print detailed information for.  :Count-Spaces is a list of
   the spaces to scan.  For either one, T means all spaces (:Static, :Dyanmic
   and :Read-Only.)  If :Print-Summary is true, then summary information will be
@@ -593,7 +593,7 @@
 ;;; COUNT-NO-OPS  --  Public
 ;;;
 (defun count-no-ops (space)
-  _N"Print info about how much code and no-ops there are in Space."
+  "Print info about how much code and no-ops there are in Space."
   (declare (type spaces space))
   (let ((code-words 0)
 	(no-ops 0)
@@ -707,7 +707,7 @@
 ;;;
 (defun instance-usage (space &key (top-n 15))
   (declare (type spaces space) (type (or fixnum null) top-n))
-  _N"Print a breakdown by instance type of all the instances allocated in
+  "Print a breakdown by instance type of all the instances allocated in
   Space.  If TOP-N is true, print only information for the the TOP-N types with
   largest usage."
   (format t _"~2&~@[Top ~D ~]~(~A~) instance types:~%" top-n space)
@@ -1075,7 +1075,7 @@
 	(hist:hist-record (funcall function count))))))
 
 (defun report-top-n (table &key (top-n 20) (function #'identity))
-  _N"Report the Top-N entries in the hashtable Table, when sorted by Function
+  "Report the Top-N entries in the hashtable Table, when sorted by Function
   applied to the hash value.  If Top-N is NIL, report all entries."
   (let ((function (if (eval:interpreted-function-p function)
 		      (compile nil function)
@@ -1126,7 +1126,7 @@
 	
 
 (defun find-caller-counts (space)
-  _N"Return a hashtable mapping each function in for which a call appears in
+  "Return a hashtable mapping each function in for which a call appears in
   Space to the number of times such a call appears."
   (let ((counts (make-hash-table :test #'eq)))
     (map-allocated-objects
@@ -1141,7 +1141,7 @@
     counts))
 
 (defun find-high-callers (space &key (above 10) table (threshold 2))
-  _N"Return a hashtable translating code objects to function constant counts for
+  "Return a hashtable translating code objects to function constant counts for
   all code objects in Space with more than Above function constants."
   (let ((counts (make-hash-table :test #'eq)))
     (map-allocated-objects

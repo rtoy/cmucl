@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.94 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.95 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -267,7 +267,7 @@
 ;;;; FORMAT
 
 (defun format (destination control-string &rest format-arguments)
-  _N"Provides various facilities for formatting output.
+  "Provides various facilities for formatting output.
   CONTROL-STRING contains a string to be output, possibly with embedded
   directives, which are flagged with the escape character \"~\".  Directives
   generally expand into additional text to be output, usually consuming one
@@ -1378,12 +1378,12 @@
 (defconstant ordinal-ones
   #(nil "first" "second" "third" "fourth"
 	"fifth" "sixth" "seventh" "eighth" "ninth")
-  _N"Table of ordinal ones-place digits in English")
+  "Table of ordinal ones-place digits in English")
 
 (defconstant ordinal-tens 
   #(nil "tenth" "twentieth" "thirtieth" "fortieth"
 	"fiftieth" "sixtieth" "seventieth" "eightieth" "ninetieth")
-  _N"Table of ordinal tens-place digits in English")
+  "Table of ordinal tens-place digits in English")
 
 (defun format-print-small-cardinal (stream n)
   (multiple-value-bind 

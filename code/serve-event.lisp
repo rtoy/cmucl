@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.29 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.30 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -125,7 +125,7 @@
 ;;;    Look up the handler function for a given message ID.
 ;;;
 (defun object-set-operation (object-set message-id)
-  _N"Return the handler function in Object-Set for the operation specified by
+  "Return the handler function in Object-Set for the operation specified by
    Message-ID, if none, NIL is returned."
   (check-type object-set object-set)
   (check-type message-id fixnum)
@@ -141,7 +141,7 @@
   (setf (gethash message-id (object-set-table object-set)) new-value))
 ;;;
 (defsetf object-set-operation %set-object-set-operation
-  _N"Sets the handler function for an object set operation.")
+  "Sets the handler function for an object set operation.")
 
 
 
@@ -170,14 +170,14 @@
 	  (handler-function handler)))
 
 (defvar *descriptor-handlers* nil
-  _N"List of all the currently active handlers for file descriptors")
+  "List of all the currently active handlers for file descriptors")
 
 ;;; ADD-FD-HANDLER -- public
 ;;;
 ;;;   Add a new handler to *descriptor-handlers*.
 ;;;
 (defun add-fd-handler (fd direction function)
-  _N"Arange to call FUNCTION whenever FD is usable. DIRECTION should be
+  "Arange to call FUNCTION whenever FD is usable. DIRECTION should be
   either :INPUT or :OUTPUT. The value returned should be passed to
   SYSTEM:REMOVE-FD-HANDLER when it is no longer needed."
   (assert (member direction '(:input :output))
@@ -192,7 +192,7 @@
 ;;;   Remove an old handler from *descriptor-handlers*.
 ;;;
 (defun remove-fd-handler (handler)
-  _N"Removes HANDLER from the list of active handlers."
+  "Removes HANDLER from the list of active handlers."
   (setf *descriptor-handlers*
 	(delete handler *descriptor-handlers*
 		:test #'eq)))
@@ -202,7 +202,7 @@
 ;;;   Search *descriptor-handlers* for any reference to fd, and nuke 'em.
 ;;; 
 (defun invalidate-descriptor (fd)
-  _N"Remove any handers refering to FD. This should only be used when attempting
+  "Remove any handers refering to FD. This should only be used when attempting
   to recover from a detected inconsistency."
   (setf *descriptor-handlers*
 	(delete fd *descriptor-handlers*
@@ -213,7 +213,7 @@
 ;;; Add the handler to *descriptor-handlers* for the duration of BODY.
 ;;;
 (defmacro with-fd-handler ((fd direction function) &rest body)
-  _N"Establish a handler with SYSTEM:ADD-FD-HANDLER for the duration of BODY.
+  "Establish a handler with SYSTEM:ADD-FD-HANDLER for the duration of BODY.
    DIRECTION should be either :INPUT or :OUTPUT, FD is the file descriptor to
    use, and FUNCTION is the function to call whenever FD is usable."
   (let ((handler (gensym)))
@@ -289,7 +289,7 @@
 ;;; the meantime.
 ;;;
 (defun wait-until-fd-usable (fd direction &optional timeout)
-  _N"Wait until FD is usable for DIRECTION. DIRECTION should be either :INPUT or
+  "Wait until FD is usable for DIRECTION. DIRECTION should be either :INPUT or
   :OUTPUT. TIMEOUT, if supplied, is the number of seconds to wait before giving
   up."
   (declare (type (or real null) timeout))
@@ -336,7 +336,7 @@
 
 
 (defvar *display-event-handlers* nil
-  _N"This is an alist mapping displays to user functions to be called when
+  "This is an alist mapping displays to user functions to be called when
    SYSTEM:SERVE-EVENT notices input on a display connection.  Do not modify
    this directly; use EXT:ENABLE-CLX-EVENT-HANDLING.  A given display
    should be represented here only once.")
@@ -347,7 +347,7 @@
 ;;; pending events are processed before returning.
 ;;;
 (defun serve-all-events (&optional timeout)
-  _N"SERVE-ALL-EVENTS calls SERVE-EVENT with the specified timeout.  If
+  "SERVE-ALL-EVENTS calls SERVE-EVENT with the specified timeout.  If
   SERVE-EVENT does something (returns T) it loops over SERVE-EVENT with timeout
   0 until all events have been served.  SERVE-ALL-EVENTS returns T if
   SERVE-EVENT did something and NIL if not."
@@ -362,7 +362,7 @@
 ;;;   Serve a single event.
 ;;;
 (defun serve-event (&optional timeout)
-  _N"Receive on all ports and Xevents and dispatch to the appropriate handler
+  "Receive on all ports and Xevents and dispatch to the appropriate handler
   function.  If timeout is specified, server will wait the specified time (in
   seconds) and then return, otherwise it will wait until something happens.
   Server returns T if something happened and NIL otherwise."

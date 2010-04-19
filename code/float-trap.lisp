@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.36 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.37 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -126,7 +126,7 @@
 				      (current-exceptions nil current-x-p)
 				      (accrued-exceptions nil accrued-x-p)
 				      (fast-mode nil fast-mode-p))
-  _N"This function sets options controlling the floating-point hardware.  If a
+  "This function sets options controlling the floating-point hardware.  If a
   keyword is not supplied, then the current value is preserved.  Possible
   keywords:
 
@@ -187,7 +187,7 @@
 ;;; GET-FLOATING-POINT-MODES  --  Public
 ;;;
 (defun get-floating-point-modes ()
-  _N"This function returns a list representing the state of the floating point
+  "This function returns a list representing the state of the floating point
   modes.  The list is in the same format as the keyword arguments to
   SET-FLOATING-POINT-MODES, i.e. 
       (apply #'set-floating-point-modes (get-floating-point-modes))
@@ -214,7 +214,7 @@
 ;;; CURRENT-FLOAT-TRAP  --  Interface
 ;;;
 (defmacro current-float-trap (&rest traps)
-  _N"Current-Float-Trap Trap-Name*
+  "Current-Float-Trap Trap-Name*
   Return true if any of the named traps are currently trapped, false
   otherwise."
   `(not (zerop (logand ,(dpb (float-trap-mask traps) float-traps-byte 0)
@@ -295,7 +295,7 @@
 ;;; WITH-FLOAT-TRAPS-MASKED  --  Public
 ;;;
 (defmacro with-float-traps-masked (traps &body body)
-  _N"Execute BODY with the floating point exceptions listed in TRAPS
+  "Execute BODY with the floating point exceptions listed in TRAPS
   masked (disabled).  TRAPS should be a list of possible exceptions
   which includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and
   :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective

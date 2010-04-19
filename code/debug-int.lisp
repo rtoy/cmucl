@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.138 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.139 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -776,7 +776,7 @@
 (declaim (inline debug-source-root-number))
 ;;;
 (defun debug-source-root-number (debug-source)
-  _N"Returns the number of top-level forms processed by the compiler before
+  "Returns the number of top-level forms processed by the compiler before
    compiling this source.  If this source is uncompiled, this is zero.  This
    may be zero even if the source is compiled since the first form in the first
    file compiled in one compilation, for example, must have a root number of
@@ -994,7 +994,7 @@
 ;;; TOP-FRAME -- Public.
 ;;;
 (defun top-frame ()
-  _N"Returns the top frame of the control stack as it was before calling this
+  "Returns the top frame of the control stack as it was before calling this
    function."
   (multiple-value-bind (fp pc)
       (kernel:%caller-frame-and-pc)
@@ -1007,7 +1007,7 @@
 ;;; FLUSH-FRAMES-ABOVE -- public.
 ;;; 
 (defun flush-frames-above (frame)
-  _N"Flush all of the frames above FRAME, and renumber all the frames below
+  "Flush all of the frames above FRAME, and renumber all the frames below
    FRAME."
   (setf (frame-up frame) nil)
   (do ((number 0 (1+ number))
@@ -1021,7 +1021,7 @@
 ;;; COMPUTE-CALLING-FRAME.
 ;;;
 (defun frame-down (frame)
-  _N"Returns the frame immediately below frame on the stack.  When frame is
+  "Returns the frame immediately below frame on the stack.  When frame is
    the bottom of the stack, this returns nil."
   (let ((down (frame-%down frame)))
     (if (eq down :unparsed)
@@ -1133,7 +1133,7 @@
 
 
 (defvar *debugging-interpreter* nil
-  _N"When set, the debugger foregoes making interpreted-frames, so you can
+  "When set, the debugger foregoes making interpreted-frames, so you can
    debug the functions that manifest the interpreter.")
 
 ;;; POSSIBLY-AN-INTERPRETED-FRAME -- Internal.
@@ -1182,7 +1182,7 @@
 
 #+(or sparc (and x86 darwin) (and (or x86 amd64) linux))
 (defun find-foreign-function-name (address)
-  _N"Return a string describing the foreign function near ADDRESS"
+  "Return a string describing the foreign function near ADDRESS"
   (let ((addr (sys:sap-int address)))
     (alien:with-alien ((info (alien:struct dl-info
 					   (filename c-call:c-string)
@@ -1206,10 +1206,10 @@
 #-(or sparc (and x86 darwin) (and (or x86 amd64) linux))
 (defun find-foreign-function-name (ra)
   (declare (ignore ra))
-  _N"Foreign function call land")
+  "Foreign function call land")
 
 (defun assembly-routines-p (component)
-  _N"Return t if COMPONENT contains code from assembly routines."
+  "Return t if COMPONENT contains code from assembly routines."
   (let ((start (sap-int (kernel:code-instructions component))))
     (maphash (lambda (_ addr)
 	       (declare (ignore _))
@@ -1218,7 +1218,7 @@
 	     lisp::*assembler-routines*)))
 
 (defun find-assembly-routine-name (component pc)
-  _N"Return the name of the assembly routine at offset PC in COMPONENT.
+  "Return the name of the assembly routine at offset PC in COMPONENT.
 The result is a symbol or nil if the routine cannot be found."
   (let* ((start (sap-int (kernel:code-instructions component)))
 	 (end (+ start (* (kernel::%code-code-size component) 
@@ -1453,7 +1453,7 @@ The result is a symbol or nil if the routine cannot be found."
 
 #-(or gengc x86 amd64)
 (defun find-pc-from-assembly-fun (code scp)
-  _N"find the PC"
+  "find the PC"
   (let ((return-machine-address
 	 #-ppc
 	  (- (vm:sigcontext-register scp vm::lra-offset)
@@ -1759,7 +1759,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; FRAME-CATCHES -- Public.
 ;;;
 (defun frame-catches (frame)
-  _N"Returns an a-list mapping catch tags to code-locations.  These are
+  "Returns an a-list mapping catch tags to code-locations.  These are
    code-locations at which execution would continue with frame as the top
    frame if someone threw to the corresponding tag."
   (let ((catch
@@ -1842,7 +1842,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;;
 (defmacro do-debug-function-blocks ((block-var debug-function &optional result)
 				    &body body)
-  _N"Executes the forms in a context with block-var bound to each debug-block in
+  "Executes the forms in a context with block-var bound to each debug-block in
    debug-function successively.  Result is an optional form to execute for
    return values, and DO-DEBUG-FUNCTION-BLOCKS returns nil if there is no
    result form.  This signals a no-debug-blocks condition when the
@@ -1859,7 +1859,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;;
 (defmacro do-debug-function-variables ((var debug-function &optional result)
 				       &body body)
-  _N"Executes body in a context with var bound to each debug-variable in
+  "Executes body in a context with var bound to each debug-variable in
    debug-function.  This returns the value of executing result (defaults to
    nil).  This may iterate over only some of debug-function's variables or none
    depending on debug policy; for example, possibly the compilation only
@@ -1877,7 +1877,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; DEBUG-FUNCTION-FUNCTION -- Public.
 ;;;
 (defun debug-function-function (debug-function)
-  _N"Returns the Common Lisp function associated with the debug-function.  This
+  "Returns the Common Lisp function associated with the debug-function.  This
    returns nil if the function is unavailable or is non-existent as a user
    callable function object."
   (let ((cached-value (debug-function-%function debug-function)))
@@ -1910,7 +1910,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; DEBUG-FUNCTION-NAME -- Public.
 ;;;
 (defun debug-function-name (debug-function)
-  _N"Returns the name of the function represented by debug-function.  This may
+  "Returns the name of the function represented by debug-function.  This may
    be a string or a cons; do not assume it is a symbol."
   (etypecase debug-function
     (compiled-debug-function
@@ -1927,7 +1927,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; If LOCAL-NAME is given, try to return the debug function for the
 ;;; local function (labels or flet).
 (defun function-debug-function (fun &key local-name)
-  _N"Returns a debug-function that represents debug information for function."
+  "Returns a debug-function that represents debug information for function."
   (case (get-type fun)
     (#.vm:closure-header-type
      (function-debug-function (%closure-function fun)))
@@ -1967,7 +1967,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; DEBUG-FUNCTION-KIND -- Public.
 ;;;
 (defun debug-function-kind (debug-function)
-  _N"Returns the kind of the function which is one of :optional, :external,
+  "Returns the kind of the function which is one of :optional, :external,
    :top-level, :cleanup, nil."
   (etypecase debug-function
     (compiled-debug-function
@@ -1981,13 +1981,13 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; DEBUG-VARIABLE-INFO-AVAILABLE -- Public.
 ;;;
 (defun debug-variable-info-available (debug-function)
-  _N"Returns whether there is any variable information for debug-function."
+  "Returns whether there is any variable information for debug-function."
   (not (not (debug-function-debug-variables debug-function))))
 
 ;;; DEBUG-FUNCTION-SYMBOL-VARIABLES -- Public.
 ;;;
 (defun debug-function-symbol-variables (debug-function symbol)
-  _N"Returns a list of debug-variables in debug-function having the same name
+  "Returns a list of debug-variables in debug-function having the same name
    and package as symbol.  If symbol is uninterned, then this returns a list of
    debug-variables without package names and with the same name as symbol.  The
    result of this function is limited to the availability of variable
@@ -2008,7 +2008,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; AMBIGUOUS-DEBUG-VARIABLES -- Public.
 ;;;
 (defun ambiguous-debug-variables (debug-function name-prefix-string)
-   _N"Returns a list of debug-variables in debug-function whose names contain
+   "Returns a list of debug-variables in debug-function whose names contain
     name-prefix-string as an intial substring.  The result of this function is
     limited to the availability of variable information in debug-function; for
     example, possibly debug-function only knows about its arguments."
@@ -2058,7 +2058,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; DEBUG-FUNCTION-LAMBDA-LIST -- Public.
 ;;;
 (defun debug-function-lambda-list (debug-function)
-  _N"Returns a list representing the lambda-list for debug-function.  The list
+  "Returns a list representing the lambda-list for debug-function.  The list
    has the following structure:
       (required-var1 required-var2
        ...
@@ -2692,7 +2692,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; :unsure part to get the HANDLER-CASE into another function.
 ;;;
 (defun code-location-unknown-p (basic-code-location)
-  _N"Returns whether basic-code-location is unknown.  It returns nil when the
+  "Returns whether basic-code-location is unknown.  It returns nil when the
    code-location is known."
   (ecase (code-location-%unknown-p basic-code-location)
     ((t) t)
@@ -2705,7 +2705,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; CODE-LOCATION-DEBUG-BLOCK -- Public.
 ;;;
 (defun code-location-debug-block (basic-code-location)
-  _N"Returns the debug-block containing code-location if it is available.  Some
+  "Returns the debug-block containing code-location if it is available.  Some
    debug policies inhibit debug-block information, and if none is available,
    then this signals a no-debug-blocks condition."
   (let ((block (code-location-%debug-block basic-code-location)))
@@ -2773,7 +2773,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; CODE-LOCATION-DEBUG-SOURCE -- Public.
 ;;;
 (defun code-location-debug-source (code-location)
-  _N"Returns the code-location's debug-source."
+  "Returns the code-location's debug-source."
   (etypecase code-location
     (compiled-code-location
      (let* ((info (compiled-debug-function-debug-info
@@ -2805,7 +2805,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; CODE-LOCATION-TOP-LEVEL-FORM-OFFSET -- Public.
 ;;;
 (defun code-location-top-level-form-offset (code-location)
-  _N"Returns the number of top-level forms before the one containing
+  "Returns the number of top-level forms before the one containing
    code-location as seen by the compiler in some compilation unit.  A
    compilation unit is not necessarily a single file, see the section on
    debug-sources."
@@ -2830,7 +2830,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; CODE-LOCATION-FORM-NUMBER -- Public.
 ;;;
 (defun code-location-form-number (code-location)
-  _N"Returns the number of the form corresponding to code-location.  The form
+  "Returns the number of the form corresponding to code-location.  The form
    number is derived by a walking the subforms of a top-level form in
    depth-first order."
   (when (code-location-unknown-p code-location)
@@ -2854,7 +2854,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; CODE-LOCATION-KIND -- Public
 ;;; 
 (defun code-location-kind (code-location)
-  _N"Return the kind of CODE-LOCATION, one of:
+  "Return the kind of CODE-LOCATION, one of:
      :interpreted, :unknown-return, :known-return, :internal-error,
      :non-local-exit, :block-start, :call-site, :single-value-return,
      :non-local-entry"
@@ -2894,7 +2894,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; CODE-LOCATION= -- Public.
 ;;;
 (defun code-location= (obj1 obj2)
-  _N"Returns whether obj1 and obj2 are the same place in the code."
+  "Returns whether obj1 and obj2 are the same place in the code."
   (etypecase obj1
     (compiled-code-location
      (etypecase obj2
@@ -2955,7 +2955,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;;
 (defmacro do-debug-block-locations ((code-var debug-block &optional return)
 				    &body body)
-  _N"Executes forms in a context with code-var bound to each code-location in
+  "Executes forms in a context with code-var bound to each code-location in
    debug-block.  This returns the value of executing result (defaults to nil)."
   (let ((code-locations (gensym))
 	(i (gensym)))
@@ -2968,7 +2968,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; DEBUG-BLOCK-FUNCTION-NAME -- Internal.
 ;;;
 (defun debug-block-function-name (debug-block)
-  _N"Returns the name of the function represented by debug-function.  This may
+  "Returns the name of the function represented by debug-function.  This may
    be a string or a cons; do not assume it is a symbol."
   (etypecase debug-block
     (compiled-debug-block
@@ -3016,7 +3016,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; DEBUG-VARIABLE-SYMBOL -- Public.
 ;;;
 (defun debug-variable-symbol (debug-var)
-  _N"Returns the symbol from interning DEBUG-VARIABLE-NAME in the package named
+  "Returns the symbol from interning DEBUG-VARIABLE-NAME in the package named
    by DEBUG-VARIABLE-PACKAGE."
   (let ((package (debug-variable-package debug-var)))
     (if package
@@ -3026,7 +3026,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; DEBUG-VARIABLE-VALID-VALUE -- Public.
 ;;;
 (defun debug-variable-valid-value (debug-var frame)
-  _N"Returns the value stored for debug-variable in frame.  If the value is not
+  "Returns the value stored for debug-variable in frame.  If the value is not
    :valid, then this signals an invalid-value error."
   (unless (eq (debug-variable-validity debug-var (frame-code-location frame))
 	      :valid)
@@ -3036,7 +3036,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; DEBUG-VARIABLE-VALUE -- Public.
 ;;;
 (defun debug-variable-value (debug-var frame)
-  _N"Returns the value stored for debug-variable in frame.  The value may be
+  "Returns the value stored for debug-variable in frame.  The value may be
    invalid.  This is SETF'able."
   (etypecase debug-var
     (compiled-debug-variable
@@ -3763,7 +3763,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; in the code-location.
 ;;;
 (defun debug-variable-validity (debug-var basic-code-loc)
-  _N"Returns three values reflecting the validity of debug-variable's value
+  "Returns three values reflecting the validity of debug-variable's value
    at basic-code-location:
       :valid    The value is known to be available.
       :invalid  The value is known to be unavailable.
@@ -3850,7 +3850,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; is the top-level-form number.
 ;;;
 (defun form-number-translations (form tlf-number)
-  _N"This returns a table mapping form numbers to source-paths.  A source-path
+  "This returns a table mapping form numbers to source-paths.  A source-path
    indicates a descent into the top-level-form form, going directly to the
    subform corressponding to the form number."
   (clrhash *form-number-circularity-table*)
@@ -3885,7 +3885,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; SOURCE-PATH-CONTEXT  --  Public.
 ;;;
 (defun source-path-context (form path context)
-  _N"Form is a top-level form, and path is a source-path into it.  This returns
+  "Form is a top-level form, and path is a source-path into it.  This returns
    the form indicated by the source-path.  Context is the number of enclosing
    forms to return instead of directly returning the source-path form.  When
    context is non-zero, the form returned contains a marker, #:****HERE****,
@@ -3929,7 +3929,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; accesses that variable from the frame argument.
 ;;;
 (defun preprocess-for-eval (form loc)
-  _N"Return a function of one argument that evaluates form in the lexical
+  "Return a function of one argument that evaluates form in the lexical
    context of the basic-code-location loc.  PREPROCESS-FOR-EVAL signals a
    no-debug-variables condition when the loc's debug-function has no
    debug-variable information available.  The returned function takes the frame
@@ -3992,7 +3992,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;;
 (defun eval-in-frame (frame form)
   (declare (type frame frame))
-  _N"Evaluate Form in the lexical context of Frame's current code location,
+  "Evaluate Form in the lexical context of Frame's current code location,
    returning the results of the evaluation."
   (funcall (preprocess-for-eval form (frame-code-location frame)) frame))
 
@@ -4001,7 +4001,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;;
 ;;; helper function, used also by debug:debug-return.
 (defun find-debug-tag-for-frame (frame)
-  _N"Find and return the debug catch tag for a given frame, if it exists."
+  "Find and return the debug catch tag for a given frame, if it exists."
   (assoc-if #'(lambda (x)
 		(and (symbolp x)
 		     (not (symbol-package x))
@@ -4013,7 +4013,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;;
 (defun return-from-frame (frame form)
   (declare (type frame frame))
-  _N"Evaluate Form in the lexical context of Frame's current code location,
+  "Evaluate Form in the lexical context of Frame's current code location,
    returning from the current frame the results of the evaluation."
   (let ((tag (find-debug-tag-for-frame frame)))
     (when tag (throw (car tag) (eval-in-frame frame form)))))
@@ -4028,7 +4028,7 @@ The result is a symbol or nil if the routine cannot be found."
 
 (defun make-breakpoint (hook-function what
 			&key (kind :code-location) info function-end-cookie)
-  _N"This creates and returns a breakpoint.  When program execution encounters
+  "This creates and returns a breakpoint.  When program execution encounters
    the breakpoint, the system calls hook-function.  Hook-function takes the
    current frame for the function in which the program is running and the
    breakpoint object.
@@ -4175,7 +4175,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; FUNCTION-END-COOKIE-VALID-P -- Public.
 ;;;
 (defun function-end-cookie-valid-p (frame cookie)
-  _N"This takes a function-end-cookie and a frame, and it returns whether the
+  "This takes a function-end-cookie and a frame, and it returns whether the
    cookie is still valid.  A cookie becomes invalid when the frame that
    established the cookie has exited.  Sometimes cookie holders are unaware
    of cookie invalidation because their :function-end breakpoint hooks didn't
@@ -4204,7 +4204,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; ACTIVATE-BREAKPOINT -- Public.
 ;;;
 (defun activate-breakpoint (breakpoint)
-  _N"This causes the system to invoke the breakpoint's hook-function until the
+  "This causes the system to invoke the breakpoint's hook-function until the
    next call to DEACTIVATE-BREAKPOINT or DELETE-BREAKPOINT.  The system invokes
    breakpoint hook functions in the opposite order that you activate them."
   (when (eq (breakpoint-status breakpoint) :deleted)
@@ -4295,7 +4295,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; DEACTIVATE-BREAKPOINT -- Public.
 ;;;
 (defun deactivate-breakpoint (breakpoint)
-  _N"This stops the system from invoking the breakpoint's hook-function."
+  "This stops the system from invoking the breakpoint's hook-function."
   (when (eq (breakpoint-status breakpoint) :active)
     (system:without-interrupts
      (let ((loc (breakpoint-what breakpoint)))
@@ -4339,7 +4339,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; BREAKPOINT-INFO -- Public.
 ;;;
 (defun breakpoint-info (breakpoint)
-  _N"This returns the user maintained info associated with breakpoint.  This
+  "This returns the user maintained info associated with breakpoint.  This
    is SETF'able."
   (breakpoint-%info breakpoint))
 ;;;
@@ -4358,7 +4358,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; BREAKPOINT-ACTIVE-P -- Public.
 ;;;
 (defun breakpoint-active-p (breakpoint)
-  _N"This returns whether breakpoint is currently active."
+  "This returns whether breakpoint is currently active."
   (ecase (breakpoint-status breakpoint)
     (:active t)
     ((:inactive :deleted) nil)))
@@ -4366,7 +4366,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; DELETE-BREAKPOINT -- Public.
 ;;;
 (defun delete-breakpoint (breakpoint)
-  _N"This frees system storage and removes computational overhead associated with
+  "This frees system storage and removes computational overhead associated with
    breakpoint.  After calling this, breakpoint is completely impotent and can
    never become active again."
   (let ((status (breakpoint-status breakpoint)))
@@ -4627,7 +4627,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; MAKE-BOGUS-LRA -- Interface.
 ;;;
 (defun make-bogus-lra (real-lra &optional known-return-p)
-  _N"Make a bogus LRA object that signals a breakpoint trap when returned to.  If
+  "Make a bogus LRA object that signals a breakpoint trap when returned to.  If
    the breakpoint trap handler returns, REAL-LRA is returned to.  Three values
    are returned: the bogus LRA object, the code component it is part of, and
    the PC offset for the trap instruction."
@@ -4693,7 +4693,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; SET-BREAKPOINT-FOR-EDITOR -- Internal Interface.
 ;;;
 (defun set-breakpoint-for-editor (package name-str path)
-  _N"The editor calls this remotely in the slave to set breakpoints.  Package is
+  "The editor calls this remotely in the slave to set breakpoints.  Package is
    the string name of a package or nil, and name-str is a string representing a
    function name (for example, \"foo\" or \"(setf foo)\").  After finding
    package, this READs name-str with *package* bound appropriately.  Path is
@@ -4951,7 +4951,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; SET-LOCATION-BREAKPOINT-FOR-EDITOR -- Internal Interface.
 ;;;
 (defun set-location-breakpoint-for-editor (remote-obj-loc)
-  _N"The editor calls this in the slave with a remote-object representing a
+  "The editor calls this in the slave with a remote-object representing a
    code-location to set a breakpoint."
   (let ((loc (wire:remote-object-value remote-obj-loc)))
     (etypecase loc
@@ -4974,7 +4974,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; DELETE-BREAKPOINT-FOR-EDITOR -- Internal Interface.
 ;;;
 (defun delete-breakpoint-for-editor (remote-obj-bpt)
-  _N"The editor calls this remotely in the slave to delete a breakpoint."
+  "The editor calls this remotely in the slave to delete a breakpoint."
   (delete-breakpoint (wire:remote-object-value remote-obj-bpt))
   (wire:forget-remote-translation remote-obj-bpt))
 
@@ -4990,7 +4990,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; DEBUG-FUNCTION-START-LOCATION -- Public.
 ;;;
 (defun debug-function-start-location (debug-fun)
-  _N"This returns a code-location before the body of a function and after all
+  "This returns a code-location before the body of a function and after all
    the arguments are in place.  If this cannot determine that location due to
    a lack of debug information, it returns nil."
   (etypecase debug-fun

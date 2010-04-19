@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.89 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.90 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -101,7 +101,7 @@
 (defvar *condition-restarts* ())
 
 (defun compute-restarts (&optional condition)
-  _N"Return a list of all the currently active restarts ordered from most
+  "Return a list of all the currently active restarts ordered from most
    recently established to less recently established.  If Condition is
    specified, then only restarts associated with Condition (or with no
    condition) will be returned."
@@ -147,7 +147,7 @@
            stream))
 
 (defmacro with-condition-restarts (condition-form restarts-form &body body)
-  _N"WITH-CONDITION-RESTARTS Condition-Form Restarts-Form Form*
+  "WITH-CONDITION-RESTARTS Condition-Form Restarts-Form Form*
    Evaluates the Forms in a dynamic environment where the restarts in the list
    Restarts-Form are associated with the condition returned by Condition-Form.
    This allows FIND-RESTART, etc., to recognize restarts that are not related
@@ -162,7 +162,7 @@
        ,@body)))
 
 (defmacro restart-bind (bindings &body forms)
-  _N"Executes forms in a dynamic context where the given restart bindings are
+  "Executes forms in a dynamic context where the given restart bindings are
    in effect.  Users probably want to use RESTART-CASE.  When clauses contain
    the same restart name, FIND-RESTART will find the first such clause."
   `(let ((*restart-clusters*
@@ -183,7 +183,7 @@
      ,@forms))
 
 (defun find-restart (name &optional condition)
-  _N"Returns the first restart named name.  If name is a restart, it is returned
+  "Returns the first restart named name.  If name is a restart, it is returned
    if it is currently active.  If no such restart is found, nil is returned.
    It is an error to supply nil as a name.  If Condition is specified and not
    NIL, then only restarts associated with that condition (or with no
@@ -194,7 +194,7 @@
 	   (compute-restarts condition)))
 
 (defun invoke-restart (restart &rest values)
-  _N"Calls the function associated with the given restart, passing any given
+  "Calls the function associated with the given restart, passing any given
    arguments.  If the argument restart is not a restart or a currently active
    non-nil restart name, then a control-error is signalled."
   (let ((real-restart (find-restart restart)))
@@ -205,7 +205,7 @@
     (apply (restart-function real-restart) values)))
 
 (defun invoke-restart-interactively (restart)
-  _N"Calls the function associated with the given restart, prompting for any
+  "Calls the function associated with the given restart, prompting for any
    necessary arguments.  If the argument restart is not a restart or a
    currently active non-nil restart name, then a control-error is signalled."
   (let ((real-restart (find-restart restart)))
@@ -272,7 +272,7 @@
 ); eval-when (compile load eval)
 
 (defmacro restart-case (expression &body clauses &environment env)
-  _N"(RESTART-CASE form
+  "(RESTART-CASE form
    {(case-name arg-list {keyword value}* body)}*)
    The form is evaluated in a dynamic context where the clauses have special
    meanings as points to which control may be transferred (see INVOKE-RESTART).
@@ -345,7 +345,7 @@
 (defmacro with-simple-restart ((restart-name format-string
 					     &rest format-arguments)
 			       &body forms)
-  _N"(WITH-SIMPLE-RESTART (restart-name format-string format-arguments)
+  "(WITH-SIMPLE-RESTART (restart-name format-string format-arguments)
    body)
    If restart-name is not invoked, then all values returned by forms are
    returned.  If control is transferred to this restart, it immediately
@@ -548,7 +548,7 @@
 
 
 (defun make-condition (thing &rest args)
-  _N"Make an instance of a condition object using the specified initargs."
+  "Make an instance of a condition object using the specified initargs."
   ;; Note: ANSI specifies no exceptional situations in this function.
   ;; signalling simple-type-error would not be wrong.
   (let* ((thing (if (symbolp thing)
@@ -746,7 +746,7 @@
 
 (defmacro define-condition (name (&rest parent-types) (&rest slot-specs)
 				 &body options)
-  _N"DEFINE-CONDITION Name (Parent-Type*) (Slot-Spec*) Option*
+  "DEFINE-CONDITION Name (Parent-Type*) (Slot-Spec*) Option*
    Define NAME as a condition type.  This new type inherits slots and its
    report function from the specified PARENT-TYPEs.  A slot spec is either
    a symbol denoting the name of the slot, or a list of the form:
@@ -900,7 +900,7 @@
 (defvar *handler-clusters* nil)
 
 (defmacro handler-bind (bindings &body forms)
-  _N"(HANDLER-BIND ( {(type handler)}* )  body)
+  "(HANDLER-BIND ( {(type handler)}* )  body)
    Executes body in a dynamic context where the given handler bindings are
    in effect.  Each handler must take the condition being signalled as an
    argument.  The bindings are searched first to last in the event of a
@@ -1143,7 +1143,7 @@
 ;;; in closing over tags.  The previous version sets up unique run-time tags.
 ;;;
 (defmacro handler-case (form &rest cases)
-  _N"(HANDLER-CASE form
+  "(HANDLER-CASE form
    { (type ([var]) body) }* )
    Executes form in a context with handlers established for the condition
    types.  A peculiar property allows type to be :no-error.  If such a clause
@@ -1195,7 +1195,7 @@
 		     annotated-cases))))))))
 
 (defmacro ignore-errors (&rest forms)
-  _N"Executes forms after establishing a handler for all error conditions that
+  "Executes forms after establishing a handler for all error conditions that
    returns from this form nil and the condition signalled."
   `(handler-case (progn ,@forms)
      (error (condition) (values nil condition))))
@@ -1214,14 +1214,14 @@
 ;;; not tranfer control dynamically.  This could happen with RESTART-BIND.
 ;;;
 (defun abort (&optional condition)
-  _N"Transfers control to a restart named abort, signalling a control-error if
+  "Transfers control to a restart named abort, signalling a control-error if
    none exists."
   (invoke-restart (find-restart 'abort condition))
   (error 'abort-failure))
 
 
 (defun muffle-warning (&optional condition)
-  _N"Transfers control to a restart named muffle-warning, signalling a
+  "Transfers control to a restart named muffle-warning, signalling a
    control-error if none exists."
   (invoke-restart (find-restart 'muffle-warning condition)))
 
@@ -1237,12 +1237,12 @@
 	 (invoke-restart restart ,@args)))))
 
 (define-nil-returning-restart continue ()
-  _N"Transfer control to a restart named continue, returning nil if none exists.")
+  "Transfer control to a restart named continue, returning nil if none exists.")
 
 (define-nil-returning-restart store-value (value)
-  _N"Transfer control and value to a restart named store-value, returning nil if
+  "Transfer control and value to a restart named store-value, returning nil if
    none exists.")
 
 (define-nil-returning-restart use-value (value)
-  _N"Transfer control and value to a restart named use-value, returning nil if
+  "Transfer control and value to a restart named use-value, returning nil if
    none exists.")

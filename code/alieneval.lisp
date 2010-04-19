@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.67 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.68 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -323,7 +323,7 @@
 ;;; PARSE-ALIEN-TYPE -- public
 ;;;
 (defun parse-alien-type (type)
-  _N"Parse the list structure TYPE as an alien type specifier and return
+  "Parse the list structure TYPE as an alien type specifier and return
    the resultant alien-type structure."
   (if (boundp '*new-auxiliary-types*)
       (%parse-alien-type type)
@@ -400,7 +400,7 @@
 ;;; UNPARSE-ALIEN-TYPE -- public.
 ;;; 
 (defun unparse-alien-type (type)
-  _N"Convert the alien-type structure TYPE back into a list specification of
+  "Convert the alien-type structure TYPE back into a list specification of
    the type."
   (declare (type alien-type type))
   (let ((*record-types-already-unparsed* nil))
@@ -447,7 +447,7 @@
 
 
 (defmacro def-alien-type (name type)
-  _N"Define the alien type NAME to be equivalent to TYPE.  Name may be NIL for
+  "Define the alien type NAME to be equivalent to TYPE.  Name may be NIL for
    STRUCT and UNION types, in which case the name is taken from the type
    specifier."
   (with-auxiliary-alien-types
@@ -491,14 +491,14 @@
 ;;;; Interfaces to the different methods
 
 (defun alien-type-= (type1 type2)
-  _N"Return T iff TYPE1 and TYPE2 describe equivalent alien types."
+  "Return T iff TYPE1 and TYPE2 describe equivalent alien types."
   (or (eq type1 type2)
       (and (eq (alien-type-class type1)
 	       (alien-type-class type2))
 	   (invoke-alien-type-method :type= type1 type2))))
 
 (defun alien-subtype-p (type1 type2)
-  _N"Return T iff the alien type TYPE1 is a subtype of TYPE2.  Currently, the
+  "Return T iff the alien type TYPE1 is a subtype of TYPE2.  Currently, the
    only supported subtype relationships are that any pointer type is a
    subtype of (* t), and any array type's first dimension will match 
    (array <eltype> nil ...).  Otherwise, the two types have to be
@@ -507,7 +507,7 @@
       (invoke-alien-type-method :subtypep type1 type2)))
 
 (defun alien-typep (object type)
-  _N"Return T iff OBJECT is an alien of type TYPE."
+  "Return T iff OBJECT is an alien of type TYPE."
   (let ((lisp-rep-type (compute-lisp-rep-type type)))
     (if lisp-rep-type
 	(typep object lisp-rep-type)
@@ -1199,10 +1199,10 @@
 		     (alien-record-field-type field2))))
 
 (defvar *match-history* nil
-  _N"A hash table used to detect cycles while comparing record types.")
+  "A hash table used to detect cycles while comparing record types.")
 
 (defun in-match-history-or (type1 type2 alternative)
-  _N"Test if TYPE1 and TYPE2 are in the *MATCH-HISTORY*.
+  "Test if TYPE1 and TYPE2 are in the *MATCH-HISTORY*.
 If so return true; otherwise call ALTERNATIVE."
   (cond (*match-history*
 	 (let ((list (gethash type1 *match-history*)))
@@ -1374,7 +1374,7 @@ If so return true; otherwise call ALTERNATIVE."
 ;;; DEF-ALIEN-VARIABLE -- public
 ;;;
 (defmacro def-alien-variable (name type)
-  _N"Define NAME as an external alien variable of type TYPE.  NAME should be
+  "Define NAME as an external alien variable of type TYPE.  NAME should be
    a list of a string holding the alien name and a symbol to use as the Lisp
    name.  If NAME is just a symbol or string, then the other name is guessed
    from the one supplied."
@@ -1406,7 +1406,7 @@ If so return true; otherwise call ALTERNATIVE."
 ;;; EXTERN-ALIEN -- public.
 ;;; 
 (defmacro extern-alien (name type)
-  _N"Access the alien variable named NAME, assuming it is of type TYPE.  This
+  "Access the alien variable named NAME, assuming it is of type TYPE.  This
    is SETFable."
   (let* ((alien-name (etypecase name
 		       (symbol (guess-alien-name-from-lisp-name name))
@@ -1423,7 +1423,7 @@ If so return true; otherwise call ALTERNATIVE."
 ;;; WITH-ALIEN -- public.
 ;;;
 (defmacro with-alien (bindings &body body)
-  _N"Establish some local alien variables.  Each BINDING is of the form:
+  "Establish some local alien variables.  Each BINDING is of the form:
      VAR TYPE [ ALLOCATION ] [ INITIAL-VALUE | EXTERNAL-NAME ]
    ALLOCATION should be one of:
      :LOCAL (the default)
@@ -1522,12 +1522,12 @@ If so return true; otherwise call ALTERNATIVE."
 
 (declaim (inline null-alien))
 (defun null-alien (x)
-  _N"Return true if X (which must be an Alien pointer) is null, false otherwise."
+  "Return true if X (which must be an Alien pointer) is null, false otherwise."
   (zerop (sap-int (alien-sap x))))
 
   
 (defmacro sap-alien (sap type)
-  _N"Convert the System-Area-Pointer SAP to an Alien of the specified Type (not
+  "Convert the System-Area-Pointer SAP to an Alien of the specified Type (not
    evaluated.)  Type must be pointer-like."
   (let ((alien-type (parse-alien-type type)))
     (if (eq (compute-alien-rep-type alien-type) 'system-area-pointer)
@@ -1540,7 +1540,7 @@ If so return true; otherwise call ALTERNATIVE."
   (make-alien-value :sap sap :type type))
 
 (defun alien-sap (alien)
-  _N"Return a System-Area-Pointer pointing to Alien's data."
+  "Return a System-Area-Pointer pointing to Alien's data."
   (declare (type alien-value alien))
   (alien-value-sap alien))
 
@@ -1551,7 +1551,7 @@ If so return true; otherwise call ALTERNATIVE."
 ;;; MAKE-ALIEN -- public.
 ;;; 
 (defmacro make-alien (type &optional size)
-  _N"Allocate an alien of type TYPE and return an alien pointer to it.  If SIZE
+  "Allocate an alien of type TYPE and return an alien pointer to it.  If SIZE
    is supplied, how it is interpreted depends on TYPE.  If TYPE is an array
    type, SIZE is used as the first dimension for the allocated array.  If TYPE
    is not an array, then SIZE is the number of elements to allocate.  The
@@ -1603,7 +1603,7 @@ If so return true; otherwise call ALTERNATIVE."
 ;;;
 (declaim (inline free-alien))
 (defun free-alien (alien)
-  _N"Dispose of the storage pointed to by ALIEN.  ALIEN must have been allocated
+  "Dispose of the storage pointed to by ALIEN.  ALIEN must have been allocated
    by MAKE-ALIEN or ``malloc''."
   (alien-funcall (extern-alien "free" (function (values) system-area-pointer))
 		 (alien-sap alien))
@@ -1629,7 +1629,7 @@ If so return true; otherwise call ALTERNATIVE."
 ;;; alien is actually a pointer, then deref it first.
 ;;; 
 (defun slot (alien slot)
-  _N"Extract SLOT from the Alien STRUCT or UNION ALIEN.  May be set with SETF."
+  "Extract SLOT from the Alien STRUCT or UNION ALIEN.  May be set with SETF."
   (declare (type alien-value alien)
 	   (type symbol slot)
 	   (optimize (inhibit-warnings 3)))
@@ -1735,7 +1735,7 @@ If so return true; otherwise call ALTERNATIVE."
 ;;; Dereference the alien and return the results.
 ;;; 
 (defun deref (alien &rest indices)
-  _N"De-reference an Alien pointer or array.  If an array, the indices are used
+  "De-reference an Alien pointer or array.  If an array, the indices are used
    as the indices of the array element to access.  If a pointer, one index can
    optionally be specified, giving the equivalent of C pointer arithmetic."
   (declare (type alien-value alien)
@@ -1866,7 +1866,7 @@ If so return true; otherwise call ALTERNATIVE."
 ;;;; The ADDR macro.
 
 (defmacro addr (expr &environment env)
-  _N"Return an Alien pointer to the data addressed by Expr, which must be a call
+  "Return an Alien pointer to the data addressed by Expr, which must be a call
    to SLOT or DEREF, or a reference to an Alien variable."
   (let ((form (macroexpand expr env)))
     (or (typecase form
@@ -1899,7 +1899,7 @@ If so return true; otherwise call ALTERNATIVE."
 ;;;; The CAST macro.
 
 (defmacro cast (alien type)
-  _N"Convert ALIEN to an Alien of the specified TYPE (not evaluated).  Both types
+  "Convert ALIEN to an Alien of the specified TYPE (not evaluated).  Both types
    must be Alien array, pointer or function types."
   `(%cast ,alien ',(parse-alien-type type)))
 
@@ -1924,7 +1924,7 @@ If so return true; otherwise call ALTERNATIVE."
 ;;;; The ALIEN-SIZE macro.
 
 (defmacro alien-size (type &optional (units :bits))
-  _N"Return the size of the alien type TYPE.  UNITS specifies the units to
+  "Return the size of the alien type TYPE.  UNITS specifies the units to
    use and can be either :BITS, :BYTES, or :WORDS."
   (let* ((alien-type (parse-alien-type type))
 	 (bits (alien-type-bits alien-type)))
@@ -1970,7 +1970,7 @@ If so return true; otherwise call ALTERNATIVE."
 ;;;; alien-funcall, def-alien-function
 
 (defun alien-funcall (alien &rest args)
-  _N"Call the foreign function ALIEN with the specified arguments.  ALIEN's
+  "Call the foreign function ALIEN with the specified arguments.  ALIEN's
    type specifies the argument and result types."
   (declare (type alien-value alien))
   (let ((type (alien-value-type alien)))
@@ -1999,7 +1999,7 @@ If so return true; otherwise call ALTERNATIVE."
        (error _"~S is not an alien function." alien)))))
 
 (defmacro def-alien-routine (name result-type &rest args)
-  _N"Def-Alien-Routine Name Result-Type
+  "Def-Alien-Routine Name Result-Type
                     {(Arg-Name Arg-Type [Style])}*
 
   Define a foreign interface function for the routine with the specified Name,
@@ -2157,7 +2157,7 @@ If so return true; otherwise call ALTERNATIVE."
 
 (defstruct (callback
 	     (:constructor make-callback (trampoline lisp-fn function-type)))
-  _N"A callback consists of a piece assembly code -- the trampoline --
+  "A callback consists of a piece assembly code -- the trampoline --
 and a lisp function.  We store the function type (including return
 type and arg types), so we can detect incompatible redefinitions."
   (trampoline (required-argument) :type system-area-pointer)
@@ -2167,7 +2167,7 @@ type and arg types), so we can detect incompatible redefinitions."
 (declaim (type (vector callback) *callbacks*))
 (defvar *callbacks* (make-array 10 :element-type 'callback
 				:fill-pointer 0 :adjustable t)
-  _N"Vector of all callbacks.")
+  "Vector of all callbacks.")
 
 (defun call-callback (index sp-fixnum ret-addr)
   (declare (type fixnum index sp-fixnum ret-addr)
@@ -2242,7 +2242,7 @@ type and arg types), so we can detect incompatible redefinitions."
   (callback-trampoline (symbol-value symbol)))
 
 (defmacro callback (name)
-  _N"Return the trampoline pointer for the callback NAME."
+  "Return the trampoline pointer for the callback NAME."
   `(symbol-trampoline ',name))
 
 ;; Convenience macro to make it easy to call callbacks.
@@ -2314,7 +2314,7 @@ Create new trampoline (old trampoline calls old lisp function).")))
 	(t (error _"Unsupported return type: ~A" spec))))))
 
 (defmacro def-callback (name (return-type &rest arg-specs) &parse-body (body decls doc))
-  _N"(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*)
+  "(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*)
      {doc-string} {decls}* {FORM}*)
 
 Define a function which can be called by foreign code.  The pointer

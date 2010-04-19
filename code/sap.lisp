@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.22 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.23 2010/04/19 02:18:04 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,91 +36,91 @@
 ;;;; Primitive SAP operations.
 
 (defun sap< (x y)
-  _N"Return T iff the SAP X points to a smaller address then the SAP Y."
+  "Return T iff the SAP X points to a smaller address then the SAP Y."
   (declare (type system-area-pointer x y))
   (sap< x y))
 
 (defun sap<= (x y)
-  _N"Return T iff the SAP X points to a smaller or the same address as
+  "Return T iff the SAP X points to a smaller or the same address as
    the SAP Y."
   (declare (type system-area-pointer x y))
   (sap<= x y))
 
 (defun sap= (x y)
-  _N"Return T iff the SAP X points to the same address as the SAP Y."
+  "Return T iff the SAP X points to the same address as the SAP Y."
   (declare (type system-area-pointer x y))
   (sap= x y))
 
 (defun sap>= (x y)
-  _N"Return T iff the SAP X points to a larger or the same address as
+  "Return T iff the SAP X points to a larger or the same address as
    the SAP Y."
   (declare (type system-area-pointer x y))
   (sap>= x y))
 
 (defun sap> (x y)
-  _N"Return T iff the SAP X points to a larger address then the SAP Y."
+  "Return T iff the SAP X points to a larger address then the SAP Y."
   (declare (type system-area-pointer x y))
   (sap> x y))
 
 (defun sap+ (sap offset)
-  _N"Return a new sap OFFSET bytes from SAP."
+  "Return a new sap OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset))
   (sap+ sap offset))
 
 (defun sap- (sap1 sap2)
-  _N"Return the byte offset between SAP1 and SAP2."
+  "Return the byte offset between SAP1 and SAP2."
   (declare (type system-area-pointer sap1 sap2))
   (sap- sap1 sap2))
 
 (defun sap-int (sap)
-  _N"Converts a System Area Pointer into an integer."
+  "Converts a System Area Pointer into an integer."
   (declare (type system-area-pointer sap))
   (sap-int sap))
 
 (defun int-sap (int)
-  _N"Converts an integer into a System Area Pointer."
+  "Converts an integer into a System Area Pointer."
   (declare (type (unsigned-byte #-alpha #.vm:word-bits #+alpha 64) int))
   (int-sap int))
 
 (defun sap-ref-8 (sap offset)
-  _N"Returns the 8-bit byte at OFFSET bytes from SAP."
+  "Returns the 8-bit byte at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset))
   (sap-ref-8 sap offset))
 
 (defun sap-ref-16 (sap offset)
-  _N"Returns the 16-bit word at OFFSET bytes from SAP."
+  "Returns the 16-bit word at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (type (signed-byte #-alpha #.(1- vm:word-bits) #+alpha 63) offset))
   (sap-ref-16 sap offset))
 
 (defun sap-ref-32 (sap offset)
-  _N"Returns the 32-bit dualword at OFFSET bytes from SAP."
+  "Returns the 32-bit dualword at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (fixnum offset))
   (sap-ref-32 sap offset))
 
 (defun sap-ref-64 (sap offset)
-  _N"Returns the 64-bit quadword at OFFSET bytes from SAP."
+  "Returns the 64-bit quadword at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (fixnum offset))
   (sap-ref-64 sap offset))
 
 (defun sap-ref-sap (sap offset)
-  _N"Returns the 32-bit system-area-pointer at OFFSET bytes from SAP."
+  "Returns the 32-bit system-area-pointer at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset))
   (sap-ref-sap sap offset))
 
 (defun sap-ref-single (sap offset)
-  _N"Returns the 32-bit single-float at OFFSET bytes from SAP."
+  "Returns the 32-bit single-float at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (fixnum offset))
   (sap-ref-single sap offset))
 
 (defun sap-ref-double (sap offset)
-  _N"Returns the 64-bit double-float at OFFSET bytes from SAP."
+  "Returns the 64-bit double-float at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (fixnum offset))
   (sap-ref-double sap offset))
@@ -133,25 +133,25 @@
   (sap-ref-long sap offset))
 
 (defun signed-sap-ref-8 (sap offset)
-  _N"Returns the signed 8-bit byte at OFFSET bytes from SAP."
+  "Returns the signed 8-bit byte at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset))
   (signed-sap-ref-8 sap offset))
 
 (defun signed-sap-ref-16 (sap offset)
-  _N"Returns the signed 16-bit word at OFFSET bytes from SAP."
+  "Returns the signed 16-bit word at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (type (signed-byte #-alpha #.(1- vm:word-bits) #+alpha 63) offset))
   (signed-sap-ref-16 sap offset))
 
 (defun signed-sap-ref-32 (sap offset)
-  _N"Returns the signed 32-bit dualword at OFFSET bytes from SAP."
+  "Returns the signed 32-bit dualword at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (fixnum offset))
   (signed-sap-ref-32 sap offset))
 
 (defun signed-sap-ref-64 (sap offset)
-  _N"Returns the signed 64-bit quadword at OFFSET bytes from SAP."
+  "Returns the signed 64-bit quadword at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (fixnum offset))
   (signed-sap-ref-64 sap offset))

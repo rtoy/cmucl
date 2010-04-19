@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.90 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.91 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,7 +34,7 @@
 (in-package "LISP")
 
 (defvar *autoload-translations* nil
-  _N"When non-nil, attempt to load \"library:<host>.translations\" to resolve
+  "When non-nil, attempt to load \"library:<host>.translations\" to resolve
    an otherwise undefined logical host.")
 							    
 
@@ -283,7 +283,7 @@
 ;;; PATH-DESIGNATOR -- internal type
 ;;;
 (deftype path-designator ()
-  _N"A path specification, either a string, file-stream or pathname."
+  "A path specification, either a string, file-stream or pathname."
   ;; This used to be stream, not file-stream, but ANSI CL says a
   ;; pathname designator is a string, a pathname or a stream
   ;; associated with a file.  In the places we use path-designator, we
@@ -530,7 +530,7 @@
 ;;; PATHNAME -- Interface
 ;;;
 (defun pathname (thing)
-  _N"Convert thing (a pathname, string or stream) into a pathname."
+  "Convert thing (a pathname, string or stream) into a pathname."
   (declare (type path-designator thing))
   (with-pathname (pathname thing)
     pathname))
@@ -632,7 +632,7 @@
 			&optional
 			(defaults *default-pathname-defaults*)
 			(default-version :newest))
-  _N"Construct a filled in pathname by completing the unspecified components
+  "Construct a filled in pathname by completing the unspecified components
    from the defaults."
   (declare (type path-designator pathname)
 	   (type path-designator defaults)
@@ -711,7 +711,7 @@
 			   (version nil versionp)
 			   defaults
 			   (case :local))
-  _N"Makes a new pathname from the component arguments.  Note that host is
+  "Makes a new pathname from the component arguments.  Note that host is
 a host-structure or string."
   (declare (type (or null string host component-tokens) host)
 	   (type (or string component-tokens) device)
@@ -864,7 +864,7 @@ a host-structure or string."
 ;;; PATHNAME-HOST -- Interface
 ;;;
 (defun pathname-host (pathname &key (case :local))
-  _N"Accessor for the pathname's host."
+  "Accessor for the pathname's host."
   (declare (type path-designator pathname)
 	   (type (member :local :common) case)
 	   (values (or string null))
@@ -874,7 +874,7 @@ a host-structure or string."
 ;;; PATHNAME-DEVICE -- Interface
 ;;;
 (defun pathname-device (pathname &key (case :local))
-  _N"Accessor for pathname's device."
+  "Accessor for pathname's device."
   (declare (type path-designator pathname)
 	   (type (member :local :common) case))
   (with-pathname (pathname pathname)
@@ -887,7 +887,7 @@ a host-structure or string."
 ;;; PATHNAME-DIRECTORY -- Interface
 ;;;
 (defun pathname-directory (pathname &key (case :local))
-  _N"Accessor for the pathname's directory list."
+  "Accessor for the pathname's directory list."
   (declare (type path-designator pathname)
 	   (type (member :local :common) case))
   (with-pathname (pathname pathname)
@@ -908,7 +908,7 @@ a host-structure or string."
 ;;; PATHNAME-NAME -- Interface
 ;;;
 (defun pathname-name (pathname &key (case :local))
-  _N"Accessor for the pathname's name."
+  "Accessor for the pathname's name."
   (declare (type path-designator pathname)
 	   (type (member :local :common) case))
   (with-pathname (pathname pathname)
@@ -921,7 +921,7 @@ a host-structure or string."
 ;;; PATHNAME-TYPE
 ;;;
 (defun pathname-type (pathname &key (case :local))
-  _N"Accessor for the pathname's name."
+  "Accessor for the pathname's name."
   (declare (type path-designator pathname)
 	   (type (member :local :common) case))
   (with-pathname (pathname pathname)
@@ -934,7 +934,7 @@ a host-structure or string."
 ;;; PATHNAME-VERSION
 ;;;
 (defun pathname-version (pathname)
-  _N"Accessor for the pathname's version."
+  "Accessor for the pathname's version."
   (declare (type path-designator pathname))
   (with-pathname (pathname pathname)
     (%pathname-version pathname)))
@@ -1022,7 +1022,7 @@ a host-structure or string."
 (defun parse-namestring (thing
 			 &optional host (defaults *default-pathname-defaults*)
 			 &key (start 0) end junk-allowed)
-  _N"Converts pathname, a pathname designator, into a pathname structure,
+  "Converts pathname, a pathname designator, into a pathname structure,
    for a physical pathname, returns the printed representation. Host may be
    a physical host structure or host namestring."
   (declare (type path-designator thing)
@@ -1109,7 +1109,7 @@ a host-structure or string."
 ;;; NAMESTRING -- Interface
 ;;;
 (defun namestring (pathname)
-  _N"Construct the full (name)string form of the pathname."
+  "Construct the full (name)string form of the pathname."
   (declare (type path-designator pathname)
 	   (values (or null simple-base-string)))
   (with-pathname (pathname pathname)
@@ -1130,7 +1130,7 @@ a host-structure or string."
 ;;; HOST-NAMESTRING -- Interface
 ;;;
 (defun host-namestring (pathname)
-  _N"Returns a string representation of the name of the host in the pathname."
+  "Returns a string representation of the name of the host in the pathname."
   (declare (type path-designator pathname)
 	   (values (or null simple-base-string)))
   (with-pathname (pathname pathname)
@@ -1144,7 +1144,7 @@ a host-structure or string."
 ;;; DIRECTORY-NAMESTRING -- Interface
 ;;;
 (defun directory-namestring (pathname)
-  _N"Returns a string representation of the directories used in the pathname."
+  "Returns a string representation of the directories used in the pathname."
   (declare (type path-designator pathname)
 	   (values (or null simple-base-string)))
   (with-pathname (pathname pathname)
@@ -1158,7 +1158,7 @@ a host-structure or string."
 ;;; FILE-NAMESTRING -- Interface
 ;;;
 (defun file-namestring (pathname)
-  _N"Returns a string representation of the name used in the pathname."
+  "Returns a string representation of the name used in the pathname."
   (declare (type path-designator pathname)
 	   (values (or null simple-base-string)))
   (with-pathname (pathname pathname)
@@ -1173,7 +1173,7 @@ a host-structure or string."
 ;;;
 (defun enough-namestring (pathname
 			  &optional (defaults *default-pathname-defaults*))
-  _N"Returns an abbreviated pathname sufficent to identify the pathname relative
+  "Returns an abbreviated pathname sufficent to identify the pathname relative
    to the defaults."
   (declare (type path-designator pathname defaults))
   (with-pathname (pathname pathname)
@@ -1196,7 +1196,7 @@ a host-structure or string."
 ;;; WILD-PATHNAME-P -- Interface
 ;;;
 (defun wild-pathname-p (pathname &optional field-key)
-  _N"Predicate for determining whether pathname contains any wildcards."
+  "Predicate for determining whether pathname contains any wildcards."
   (declare (type path-designator pathname)
 	   (type (member nil :host :device :directory :name :type :version)
 		 field-key))
@@ -1222,7 +1222,7 @@ a host-structure or string."
 ;;; PATHNAME-MATCH-P -- Interface
 ;;;
 (defun pathname-match-p (in-pathname in-wildname)
-  _N"Pathname matches the wildname template?"
+  "Pathname matches the wildname template?"
   (declare (type path-designator in-pathname)
 	   ;; Not path-designator because a file-stream can't have a
 	   ;; wild pathname.
@@ -1467,7 +1467,7 @@ a host-structure or string."
 ;;; TRANSLATE-PATHNAME -- Interface
 ;;;
 (defun translate-pathname (source from-wildname to-wildname &key)
-  _N"Use the source pathname to translate the from-wildname's wild and
+  "Use the source pathname to translate the from-wildname's wild and
    unspecified elements into a completed to-pathname based on the to-wildname."
   (declare (type path-designator source from-wildname to-wildname))
   (with-pathname (source source)
@@ -1559,7 +1559,7 @@ a host-structure or string."
 ;;; out the expansions and set defined to NIL.
 ;;; 
 (defun clear-search-list (name)
-  _N"Clear the current definition for the search-list NAME.  Returns T if such
+  "Clear the current definition for the search-list NAME.  Returns T if such
    a definition existed, and NIL if not."
   (let* ((name (string-downcase name))
 	 (search-list (gethash name *search-lists*)))
@@ -1574,7 +1574,7 @@ a host-structure or string."
 ;;; just mark them as being undefined.
 ;;;
 (defun clear-all-search-lists ()
-  _N"Clear the definition for all search-lists.  Only use this if you know
+  "Clear the definition for all search-lists.  Only use this if you know
    what you are doing."
   (maphash #'(lambda (name search-list)
 	       (declare (ignore name))
@@ -1606,7 +1606,7 @@ a host-structure or string."
 ;;; bunch of pathnames.
 ;;; 
 (defun search-list (pathname)
-  _N"Return the expansions for the search-list starting PATHNAME.  If PATHNAME
+  "Return the expansions for the search-list starting PATHNAME.  If PATHNAME
    does not start with a search-list, then an error is signaled.  If
    the search-list has not been defined yet, then an error is signaled.
    The expansion for a search-list can be set with SETF." 
@@ -1623,7 +1623,7 @@ a host-structure or string."
 ;;; SEARCH-LIST-DEFINED-P -- public.
 ;;; 
 (defun search-list-defined-p (pathname)
-  _N"Returns T if the search-list starting PATHNAME is currently defined, and
+  "Returns T if the search-list starting PATHNAME is currently defined, and
    NIL otherwise.  An error is signaled if PATHNAME does not start with a
    search-list."
   (with-pathname (pathname pathname)
@@ -1677,7 +1677,7 @@ a host-structure or string."
 ;;; ENUMERATE-SEARCH-LIST -- public.
 ;;; 
 (defmacro enumerate-search-list ((var pathname &optional result) &body body)
-  _N"Execute BODY with VAR bound to each successive possible expansion for
+  "Execute BODY with VAR bound to each successive possible expansion for
    PATHNAME and then return RESULT.  Note: if PATHNAME does not contain a
    search-list, then BODY is executed exactly once.  Everything is wrapped
    in a block named NIL, so RETURN can be used to terminate early.  Note:
@@ -1963,7 +1963,7 @@ a host-structure or string."
 ;;; LOGICAL-PATHNAME -- Public
 ;;;
 (defun logical-pathname (pathspec)
-  _N"Converts the pathspec argument to a logical-pathname and returns it."
+  "Converts the pathspec argument to a logical-pathname and returns it."
   (declare (type (or logical-pathname string stream) pathspec)
 	   (values logical-pathname))
   (if (typep pathspec 'logical-pathname)
@@ -2101,7 +2101,7 @@ a host-structure or string."
 ;;; LOGICAL-PATHNAME-TRANSLATIONS -- Public
 ;;;
 (defun logical-pathname-translations (host)
-  _N"Return the (logical) host object argument's list of translations."
+  "Return the (logical) host object argument's list of translations."
   (declare (type (or string logical-host) host)
 	   (values list))
   (logical-host-translations (find-logical-host host)))
@@ -2109,7 +2109,7 @@ a host-structure or string."
 ;;; (SETF LOGICAL-PATHNAME-TRANSLATIONS) -- Public
 ;;;
 (defun (setf logical-pathname-translations) (translations host)
-  _N"Set the translations list for the logical host argument.
+  "Set the translations list for the logical host argument.
    Return translations."
   (declare (type (or string logical-host) host)
 	   (type list translations)
@@ -2135,7 +2135,7 @@ a host-structure or string."
 ;;; LOAD-LOGICAL-PATHNAME-TRANSLATIONS -- Public
 ;;;
 (defun load-logical-pathname-translations (host)
-  _N"Search for a logical pathname named host, if not already defined. If already
+  "Search for a logical pathname named host, if not already defined. If already
    defined no attempt to find or load a definition is attempted and NIL is
    returned. If host is not already defined, but definition is found and loaded
    successfully, T is returned, else error."
@@ -2157,7 +2157,7 @@ a host-structure or string."
 ;;; TRANSLATE-LOGICAL-PATHNAME  -- Public
 ;;;
 (defun translate-logical-pathname (pathname &key)
-  _N"Translates pathname to a physical pathname, which is returned."
+  "Translates pathname to a physical pathname, which is returned."
   (declare (type path-designator pathname)
 	   (values (or null pathname)))
   (typecase pathname

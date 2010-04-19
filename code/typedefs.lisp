@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.15 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.16 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,7 +61,7 @@
 (eval-when (compile load eval)
 
 (defparameter cold-type-init-forms nil
-  _N"Forms that must happen before top level forms are run.")
+  "Forms that must happen before top level forms are run.")
 
 (defmacro with-cold-load-init-forms ()
   '(eval-when (compile eval)
@@ -234,7 +234,7 @@
 ;;;
 (defmacro define-type-method ((class method &rest more-methods)
 			      lambda-list &body body)
-  _N"DEFINE-TYPE-METHOD (Class-Name Method-Name+) Lambda-List Form*"
+  "DEFINE-TYPE-METHOD (Class-Name Method-Name+) Lambda-List Form*"
   (let ((name (symbolicate CLASS "-" method "-TYPE-METHOD")))
     `(progn
        (defun ,name ,lambda-list ,@body)
@@ -250,7 +250,7 @@
 ;;; DEFINE-TYPE-CLASS  --  Interface
 ;;;
 (defmacro define-type-class (name &optional inherits)
-  _N"DEFINE-TYPE-CLASS Name [Inherits]"
+  "DEFINE-TYPE-CLASS Name [Inherits]"
   `(cold-load-init
      ,(once-only ((n-class (if inherits
 			       `(copy-type-class (type-class-or-lose ',inherits))

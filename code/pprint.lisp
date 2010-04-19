@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.67 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.68 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -501,7 +501,7 @@
   (record))
 
 (defun enqueue-annotation (stream handler record)
-  _N"Insert an annotation into the pretty-printing stream STREAM.
+  "Insert an annotation into the pretty-printing stream STREAM.
 HANDLER is a function, and RECORD is an arbitrary datum.  The
 pretty-printing stream conceptionally queues annotations in sequence
 with the characters that are printed to the stream, until the stream
@@ -517,7 +517,7 @@ with the arguments RECORD, STREAM and nil."
 	   :record record))
 
 (defun re-enqueue-annotation (stream annotation)
-  _N"Insert ANNOTATION into the queue of annotations in STREAM."
+  "Insert ANNOTATION into the queue of annotations in STREAM."
   (let* ((annotation-cons (list annotation))
 	 (head (pretty-stream-annotations-head stream)))
     (if head
@@ -526,7 +526,7 @@ with the arguments RECORD, STREAM and nil."
     (setf (pretty-stream-annotations-head stream) annotation-cons)))
 
 (defun re-enqueue-annotations (stream end)
-  _N"Insert all annotations in STREAM from the queue of pending
+  "Insert all annotations in STREAM from the queue of pending
 operations into the queue of annotations.  When END is non-nil, 
 stop before reaching the queued-op END."
   #-(and)
@@ -541,7 +541,7 @@ stop before reaching the queued-op END."
       (re-enqueue-annotation stream (car tail)))))
 
 (defun dequeue-annotation (stream &key end-posn)
-  _N"Dequeue the next annotation from the queue of annotations of STREAM
+  "Dequeue the next annotation from the queue of annotations of STREAM
 and return it.  Return nil if there are no more annotations.  When
 :END-POSN is given and the next annotation has a posn greater than
 this, also return nil."
@@ -562,7 +562,7 @@ this, also return nil."
 	     truncatep)))
 
 (defun output-buffer-with-annotations (stream end)
-  _N"Output the buffer of STREAM up to (excluding) the buffer index END.
+  "Output the buffer of STREAM up to (excluding) the buffer index END.
 When annotations are present, invoke them at the right positions."
   (let ((target (pretty-stream-target stream))
 	(buffer (pretty-stream-buffer stream))
@@ -592,7 +592,7 @@ When annotations are present, invoke them at the right positions."
     (write-string buffer target :start start :end end)))
 
 (defun flush-annotations (stream end truncatep)
-  _N"Invoke all annotations in STREAM up to (including) the buffer index END."
+  "Invoke all annotations in STREAM up to (including) the buffer index END."
   (let ((end-posn (index-posn end stream)))
     #-(and)
     (loop
@@ -837,7 +837,7 @@ When annotations are present, invoke them at the right positions."
 (defmacro pprint-logical-block
 	  ((stream-symbol object &key (prefix "" prefix-p) (per-line-prefix nil per-line-p) (suffix "" suffix-p))
 	   &body body)
-  _N"Group some output into a logical block.  STREAM-SYMBOL should be either a
+  "Group some output into a logical block.  STREAM-SYMBOL should be either a
    stream, T (for *TERMINAL-IO*), or NIL (for *STANDARD-OUTPUT*).  The printer
    control variable *PRINT-LEVEL* is automatically handled."
   (when (and prefix-p per-line-prefix)
@@ -915,7 +915,7 @@ When annotations are present, invoke them at the right positions."
 	 ,body))))
 
 (defmacro pprint-exit-if-list-exhausted ()
-  _N"Cause the closest enclosing use of PPRINT-LOGICAL-BLOCK to return
+  "Cause the closest enclosing use of PPRINT-LOGICAL-BLOCK to return
    if it's list argument is exhausted.  Can only be used inside
    PPRINT-LOGICAL-BLOCK, and only when the LIST argument to
    PPRINT-LOGICAL-BLOCK is supplied."
@@ -923,7 +923,7 @@ When annotations are present, invoke them at the right positions."
 	  PPRINT-LOGICAL-BLOCK."))
 
 (defmacro pprint-pop ()
-  _N"Return the next element from LIST argument to the closest enclosing
+  "Return the next element from LIST argument to the closest enclosing
    use of PPRINT-LOGICAL-BLOCK, automatically handling *PRINT-LENGTH*
    and *PRINT-CIRCLE*.  Can only be used inside PPRINT-LOGICAL-BLOCK.
    If the LIST argument to PPRINT-LOGICAL-BLOCK was NIL, then nothing
@@ -931,7 +931,7 @@ When annotations are present, invoke them at the right positions."
   (error _"PPRINT-POP must be lexically inside PPRINT-LOGICAL-BLOCK."))
   
 (defun pprint-newline (kind &optional stream)
-  _N"Output a conditional newline to STREAM (which defaults to
+  "Output a conditional newline to STREAM (which defaults to
    *STANDARD-OUTPUT*) if it is a pretty-printing stream, and do
    nothing if not.  KIND can be one of:
      :LINEAR - A line break is inserted if and only if the immediatly
@@ -961,7 +961,7 @@ When annotations are present, invoke them at the right positions."
   nil)
 
 (defun pprint-indent (relative-to n &optional stream)
-  _N"Specify the indentation to use in the current logical block if STREAM
+  "Specify the indentation to use in the current logical block if STREAM
    (which defaults to *STANDARD-OUTPUT*) is a pretty-printing stream
    and do nothing if not.  (See PPRINT-LOGICAL-BLOCK.)  N is the indention
    to use (in ems, the width of an ``m'') and RELATIVE-TO can be either:
@@ -985,7 +985,7 @@ When annotations are present, invoke them at the right positions."
   nil)
 
 (defun pprint-tab (kind colnum colinc &optional stream)
-  _N"If STREAM (which defaults to *STANDARD-OUTPUT*) is a pretty-printing
+  "If STREAM (which defaults to *STANDARD-OUTPUT*) is a pretty-printing
    stream, perform tabbing based on KIND, otherwise do nothing.  KIND can
    be one of:
      :LINE - Tab to column COLNUM.  If already past COLNUM tab to the next
@@ -1009,7 +1009,7 @@ When annotations are present, invoke them at the right positions."
   nil)
 
 (defun pprint-fill (stream list &optional (colon? t) atsign?)
-  _N"Output LIST to STREAM putting :FILL conditional newlines between each
+  "Output LIST to STREAM putting :FILL conditional newlines between each
    element.  If COLON? is NIL (defaults to T), then no parens are printed
    around the output.  ATSIGN? is ignored (but allowed so that PPRINT-FILL
    can be used with the ~/.../ format directive."
@@ -1025,7 +1025,7 @@ When annotations are present, invoke them at the right positions."
       (pprint-newline :fill stream))))
 
 (defun pprint-linear (stream list &optional (colon? t) atsign?)
-  _N"Output LIST to STREAM putting :LINEAR conditional newlines between each
+  "Output LIST to STREAM putting :LINEAR conditional newlines between each
    element.  If COLON? is NIL (defaults to T), then no parens are printed
    around the output.  ATSIGN? is ignored (but allowed so that PPRINT-LINEAR
    can be used with the ~/.../ format directive."
@@ -1041,7 +1041,7 @@ When annotations are present, invoke them at the right positions."
       (pprint-newline :linear stream))))
 
 (defun pprint-tabular (stream list &optional (colon? t) atsign? tabsize)
-  _N"Output LIST to STREAM tabbing to the next column that is an even multiple
+  "Output LIST to STREAM tabbing to the next column that is an even multiple
    of TABSIZE (which defaults to 16) between each element.  :FILL style
    conditional newlines are also output between each element.  If COLON? is
    NIL (defaults to T), then no parens are printed around the output.

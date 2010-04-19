@@ -5,7 +5,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.45 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.46 2010/04/19 02:18:04 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -727,7 +727,7 @@
 (declaim (inline get-real-time))
 ;;;
 (defun get-real-time ()
-  _N"Return the real time in seconds."
+  "Return the real time in seconds."
   (declare (optimize (speed 3) (safety 0)))
   (multiple-value-bind (ignore seconds useconds)
       (unix:unix-gettimeofday)
@@ -741,7 +741,7 @@
 (declaim (inline get-run-time))
 ;;;
 (defun get-run-time ()
-  _N"Return the run time in seconds"
+  "Return the run time in seconds"
   (declare (optimize (speed 3) (safety 0)))
   (multiple-value-bind (ignore utime-sec utime-usec stime-sec stime-usec)
       (unix:unix-fast-getrusage unix:rusage_self)
@@ -762,7 +762,7 @@
 ;;; Process-Whostate  --  Public
 ;;;
 (defun process-whostate (process)
-  _N"Return the process state which is either Run, Killed, or a wait reason."
+  "Return the process state which is either Run, Killed, or a wait reason."
   (cond ((eq (process-state process) :killed)
 	 "Killed")
 	((process-wait-function process)
@@ -795,18 +795,18 @@
 ;;;
 (declaim (inline current-process))
 (defun current-process ()
-  _N"Returns the current process."
+  "Returns the current process."
   *current-process*)
 
 (declaim (list *all-processes*))
 (defvar *all-processes* nil
-  _N"A list of all alive processes.")
+  "A list of all alive processes.")
 
 ;;; All-Processes  --  Public
 ;;;
 (declaim (inline all-processes))
 (defun all-processes ()
-  _N"Return a list of all the live processes."
+  "Return a list of all the live processes."
   *all-processes*)
 
 (declaim (type (or null process) *initial-process*))
@@ -820,7 +820,7 @@
 (defvar *inhibit-scheduling* t)
 ;;;
 (defmacro without-scheduling (&body body)
-  _N"Execute the body the scheduling disabled."
+  "Execute the body the scheduling disabled."
   `(let ((inhibit *inhibit-scheduling*))
     (unwind-protect
 	 (progn
@@ -829,22 +829,22 @@
       (setf *inhibit-scheduling* inhibit))))
 
 (defmacro atomic-incf (reference &optional (delta 1))
-  _N"Increaments the reference by delta in a single atomic operation"
+  "Increaments the reference by delta in a single atomic operation"
   `(without-scheduling
     (incf ,reference ,delta)))
 
 (defmacro atomic-decf (reference &optional (delta 1))
-  _N"Decrements the reference by delta in a single atomic operation"
+  "Decrements the reference by delta in a single atomic operation"
   `(without-scheduling
     (decf ,reference ,delta)))
 
 (defmacro atomic-push (obj place)
-  _N"Atomically push object onto place."
+  "Atomically push object onto place."
   `(without-scheduling
     (push ,obj ,place)))
 
 (defmacro atomic-pop (place)
-  _N"Atomically pop place."
+  "Atomically pop place."
   `(without-scheduling
     (pop ,place)))
 
@@ -894,7 +894,7 @@
 		     (run-reasons (list :enable))
 		     (arrest-reasons nil)
 		     (initial-bindings nil))
-  _N"Make a process which will run FUNCTION when it starts up.  By
+  "Make a process which will run FUNCTION when it starts up.  By
   default the process is created in a runnable (active) state.
   If FUNCTION is NIL, the process is started in a killed state; it may
   be restarted later with process-preset.
@@ -1015,7 +1015,7 @@
 ;;; Process-Interrupt  --  Public
 ;;;
 (defun process-interrupt (process function)
-  _N"Interrupt process and cause it to evaluate function."
+  "Interrupt process and cause it to evaluate function."
   ;; Place the interrupt function at the end of process's interrupts
   ;; queue, to be called the next time the process is scheduled.
   (without-scheduling
@@ -1027,7 +1027,7 @@
 ;;; Destroy-Process  --  Public
 ;;;
 (defun destroy-process (process)
-  _N"Destroy a process. The process is sent a interrupt which throws to
+  "Destroy a process. The process is sent a interrupt which throws to
   the end of the process allowing it to unwind gracefully."
   (declare (type process process))
   (assert (not (eq process *current-process*)))
@@ -1046,7 +1046,7 @@
   (process-yield))
 
 (defun restart-process (process)
-  _N"Restart process by unwinding it to its initial state and calling its
+  "Restart process by unwinding it to its initial state and calling its
   initial function."
   (destroy-process process)
   (if *inhibit-scheduling*		;Called inside without-scheduling?
@@ -1112,7 +1112,7 @@
 
 ;;; Process-Preset
 (defun process-preset (process function &rest args)
-  _N"Restart process, unwinding it to its initial state and calls
+  "Restart process, unwinding it to its initial state and calls
   function with args."
   (setf (process-initial-function process) function)
   (setf (process-initial-args process) args)
@@ -1122,7 +1122,7 @@
 ;;; Disable-Process  --  Public
 ;;;
 (defun disable-process (process)
-  _N"Disable process from being runnable until enabled."
+  "Disable process from being runnable until enabled."
   (without-scheduling
    (assert (not (eq (process-state process) :killed)))
    (setf (process-state process) :inactive)))
@@ -1130,7 +1130,7 @@
 ;;; Enable-Process  --  Public
 ;;;
 (defun enable-process (process)
-  _N"Allow process to become runnable again after it has been disabled."
+  "Allow process to become runnable again after it has been disabled."
   (without-scheduling
    (assert (not (eq (process-state process) :killed)))
    (setf (process-state process) :active)))
@@ -1138,7 +1138,7 @@
 ;;; Process-Wait  --  Public.
 ;;;
 (defun process-wait (whostate predicate &rest args)
-  _N"Causes the process to wait until predicate returns True. Processes
+  "Causes the process to wait until predicate returns True. Processes
   can only call process-wait when scheduling is enabled, and the predicate
   can not call process-wait. Since the predicate may be evaluated may
   times by the scheduler it should be relative fast native compiled code.
@@ -1160,7 +1160,7 @@
 ;;;
 (defun process-wait-with-timeout (whostate timeout predicate &rest args)
   (declare (type (or fixnum float) timeout))
-  _N"Causes the process to wait until predicate returns True, or the
+  "Causes the process to wait until predicate returns True, or the
   number of seconds specified by timeout has elapsed. The timeout may
   be a fixnum or a float in seconds.  The single True predicate value is
   returned, or NIL if the timeout was reached."
@@ -1210,7 +1210,7 @@
 ;;; Shutdown-multi-processing  --  Internal.
 ;;;
 (defun shutdown-multi-processing ()
-  _N"Try to gracefully destroy all the processes giving them some
+  "Try to gracefully destroy all the processes giving them some
   chance to unwinding, before shutting down multi-processing. This is
   currently necessary before a purify and is performed before a save-lisp.
   Multi-processing can be restarted by calling init-multi-processing."
@@ -1262,7 +1262,7 @@
 (defvar *idle-loop-timeout* 0.1d0)
 ;;;
 (defun idle-process-loop ()
-  _N"An idle loop to be run by the initial process. The select based event
+  "An idle loop to be run by the initial process. The select based event
   server is called with a timeout calculated from the minimum of the
   *idle-loop-timeout* and the time to the next process wait timeout.
   To avoid this delay when there are runnable processes the *idle-process*
@@ -1305,7 +1305,7 @@
 ;;;
 (defun process-yield ()
   (declare (optimize (speed 3)))
-  _N"Allow other processes to run."
+  "Allow other processes to run."
   (unless *inhibit-scheduling*
     ;; Catch any FP exceptions before entering the scheduler.
     #+x87 (kernel:float-wait)
@@ -1448,7 +1448,7 @@
 ;;; The real time in seconds accrued while the process was scheduled.
 ;;;
 (defun process-real-time (process)
-  _N"Return the accrued real time elapsed while the given process was
+  "Return the accrued real time elapsed while the given process was
   scheduled. The returned time is a double-float in seconds."
   (declare (type process process))
   (if (eq process *current-process*)
@@ -1463,7 +1463,7 @@
 ;;; The run time in seconds accrued while the process was scheduled.
 ;;;
 (defun process-run-time (process)
-  _N"Return the accrued run time elapsed for the given process. The returned
+  "Return the accrued run time elapsed for the given process. The returned
   time is a double-float in seconds."
   (declare (type process process))
   (if (eq process *current-process*)
@@ -1479,7 +1479,7 @@
 ;;; de-scheduled.
 ;;;
 (defun process-idle-time (process)
-  _N"Return the real time elapsed since the given process was last
+  "Return the real time elapsed since the given process was last
   descheduled. The returned time is a double-float in seconds."
   (declare (type process process))
   (if (eq process *current-process*)
@@ -1494,7 +1494,7 @@
 ;;; good idea yet as the CMUCL code is not too interrupt safe.
 ;;;
 (defun start-sigalrm-yield (&optional (sec 0) (usec 500000))
-  _N"Start a regular SIGALRM interrupt which calls process-yield. An optional
+  "Start a regular SIGALRM interrupt which calls process-yield. An optional
   time in seconds and micro seconds may be provided. Note that CMUCL code
   base is not too interrupt safe so this may cause problems."
   (declare (fixnum sec usec))
@@ -1554,7 +1554,7 @@
 ;;; Wait until FD is usable for DIRECTION.
 ;;;
 (defun process-wait-until-fd-usable (fd direction &optional timeout)
-  _N"Wait until FD is usable for DIRECTION and return True. DIRECTION should be
+  "Wait until FD is usable for DIRECTION and return True. DIRECTION should be
   either :INPUT or :OUTPUT. TIMEOUT, if supplied, is the number of seconds to
   wait before giving up and returing NIL."
   (declare (type kernel:index fd)
@@ -1627,7 +1627,7 @@
 ;;; rather than blocking.
 ;;;
 (defun sleep (n)
-  _N"This function causes execution to be suspended for N seconds.  N may
+  "This function causes execution to be suspended for N seconds.  N may
   be any non-negative, non-complex number."
   (when (or (not (realp n))
 	    (minusp n))
@@ -1670,7 +1670,7 @@
 ;;; With-Timeout  --  Public
 ;;;
 (defmacro with-timeout ((timeout &body timeout-forms) &body body)
-  _N"Executes body and returns the values of the last form in body. However, if
+  "Executes body and returns the values of the last form in body. However, if
   the execution takes longer than timeout seconds, abort it and evaluate
   timeout-forms, returning the values of last form."
   `(flet ((fn () . ,body)
@@ -1681,7 +1681,7 @@
 ;;; Show-Processes  --  Public
 ;;;
 (defun show-processes (&optional verbose)
-  _N"Show the all the processes, their whostate, and state. If the optional
+  "Show the all the processes, their whostate, and state. If the optional
   verbose argument is true then the run, real, and idle times are also
   shown."
   (fresh-line)
@@ -1700,7 +1700,7 @@
 ;;; Top-Level  --  Internal
 ;;;
 (defun top-level ()
-  _N"Top-level READ-EVAL-PRINT loop for processes."
+  "Top-level READ-EVAL-PRINT loop for processes."
   (let ((* nil) (** nil) (*** nil)
 	(- nil) (+ nil) (++ nil) (+++ nil)
 	(/// nil) (// nil) (/ nil)
@@ -1731,7 +1731,7 @@
 ;;; Startup-Idle-and-Top-Level-Loops -- Internal
 ;;;
 (defun startup-idle-and-top-level-loops ()
-  _N"Enter the idle loop, starting a new process to run the top level loop.
+  "Enter the idle loop, starting a new process to run the top level loop.
   The awaking of sleeping processes is timed better with the idle loop process
   running, and starting a new process for the top level loop supports a
   simultaneous interactive session. Such an initialisation will likely be the
@@ -1752,7 +1752,7 @@
 (defun start-lisp-connection-listener (&key (port 1025)
 					    (password (random (expt 2 24))))
   (declare (type (unsigned-byte 16) port))
-  _N"Create a Lisp connection listener, listening on a TCP port for new
+  "Create a Lisp connection listener, listening on a TCP port for new
   connections and starting a new top-level loop for each. If a password
   is not given then one will be generated and reported.  A search is
   performed for the first free port starting at the given port which
@@ -1928,7 +1928,7 @@
 (defmacro with-lock-held ((lock &optional (whostate "Lock Wait")
 				&key (wait t) timeout)
 			  &body body)
-  _N"Execute the body with the lock held. If the lock is held by another
+  "Execute the body with the lock held. If the lock is held by another
   process then the current process waits until the lock is released or
   an optional timeout is reached. The optional wait timeout is a time in
   seconds acceptable to process-wait-with-timeout.  The results of the

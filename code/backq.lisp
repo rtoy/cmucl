@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.15 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.16 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,7 +45,7 @@
 ;;;<hair> involves starting over again pretending you had read ".,a)" instead
 ;;; of ",@a)"
 
-(defvar *backquote-count* 0  _N"How deep we are into backquotes")
+(defvar *backquote-count* 0  "How deep we are into backquotes")
 (defvar *bq-comma-flag* '(|,|))
 (defvar *bq-at-flag* '(|,@|))
 (defvar *bq-dot-flag* '(|,.|))
@@ -238,7 +238,7 @@
     ))
 
 (defun backq-unparse (form &optional splicing)
-  _N"Given a lisp form containing the magic functions BACKQ-LIST, BACKQ-LIST*,
+  "Given a lisp form containing the magic functions BACKQ-LIST, BACKQ-LIST*,
   BACKQ-APPEND, etc. produced by the backquote reader macro, will return a
   corresponding backquote input form.  In this form, `,' `,@' and `,.' are
   represented by lists whose cars are BACKQ-COMMA, BACKQ-COMMA-AT, and

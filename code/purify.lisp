@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.20 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.21 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,7 +46,7 @@
 
 
 (defun purify (&key root-structures (environment-name "Auxiliary"))
-  _N"This function optimizes garbage collection by moving all currently live
+  "This function optimizes garbage collection by moving all currently live
    objects into non-collected storage.  ROOT-STRUCTURES is an optional list of
    objects which should be copied first to maximize locality.
 

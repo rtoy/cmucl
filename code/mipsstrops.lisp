@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mipsstrops.lisp,v 1.9 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mipsstrops.lisp,v 1.10 2010/04/19 02:18:04 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,7 @@
 (defun %sp-string-compare (string1 start1 end1 string2 start2 end2)
   (declare (simple-string string1 string2))
   (declare (fixnum start1 end1 start2 end2))
-  _N"Compares the substrings specified by String1 and String2 and returns
+  "Compares the substrings specified by String1 and String2 and returns
 NIL if the strings are String=, or the lowest index of String1 in
 which the two differ. If one string is longer than the other and the
 shorter is a prefix of the longer, the length of the shorter + start1 is
@@ -67,7 +67,7 @@ be simple strings."
 (defun %sp-reverse-string-compare (string1 start1 end1 string2 start2 end2)
   (declare (simple-string string1 string2))
   (declare (fixnum start1 end1 start2 end2))
-  _N"Like %sp-string-compare, only backwards."
+  "Like %sp-string-compare, only backwards."
   (let ((len1 (- end1 start1))
 	(len2 (- end2 start2)))
     (declare (fixnum len1 len2))
@@ -113,7 +113,7 @@ be simple strings."
   (declare (type (simple-array (unsigned-byte 8) (256)) table)
 	   (type (or simple-string system-area-pointer) string)
 	   (fixnum start end mask))
-  _N"%SP-Find-Character-With-Attribute  String, Start, End, Table, Mask
+  "%SP-Find-Character-With-Attribute  String, Start, End, Table, Mask
   The codes of the characters of String from Start to End are used as indices
   into the Table, which is a U-Vector of 8-bit bytes. When the number picked
   up from the table bitwise ANDed with Mask is non-zero, the current
@@ -126,7 +126,7 @@ be simple strings."
 	(return index)))))
 
 (defun %sp-reverse-find-character-with-attribute (string start end table mask)
-  _N"Like %SP-Find-Character-With-Attribute, only sdrawkcaB."
+  "Like %SP-Find-Character-With-Attribute, only sdrawkcaB."
   (declare (type (or simple-string system-area-pointer) string)
 	   (fixnum start end mask)
 	   (type (array (unsigned-byte 8) (256)) table))
@@ -138,7 +138,7 @@ be simple strings."
 	(return index)))))
 
 (defun %sp-find-character (string start end character)
-  _N"%SP-Find-Character  String, Start, End, Character
+  "%SP-Find-Character  String, Start, End, Character
   Searches String for the Character from Start to End.  If the character is
   found, the corresponding index into String is returned, otherwise NIL is
   returned."
@@ -156,7 +156,7 @@ be simple strings."
   (declare (type (or simple-string system-area-pointer) string)
 	   (fixnum start end)
 	   (base-char character))
-  _N"%SP-Reverse-Find-Character  String, Start, End, Character
+  "%SP-Reverse-Find-Character  String, Start, End, Character
   Searches String for Character from End to Start.  If the character is
   found, the corresponding index into String is returned, otherwise NIL is
   returned."
@@ -172,7 +172,7 @@ be simple strings."
   (declare (type (or simple-string system-area-pointer) string)
 	   (fixnum start end)
 	   (base-char character))
-  _N"%SP-Skip-Character  String, Start, End, Character
+  "%SP-Skip-Character  String, Start, End, Character
   Returns the index of the first character between Start and End which
   is not Char=  to Character, or NIL if there is no such character."
   (maybe-sap-maybe-string (string)
@@ -186,7 +186,7 @@ be simple strings."
   (declare (type (or simple-string system-area-pointer) string)
 	   (fixnum start end)
 	   (base-char character))
-  _N"%SP-Skip-Character  String, Start, End, Character
+  "%SP-Skip-Character  String, Start, End, Character
   Returns the index of the last character between Start and End which
   is not Char=  to Character, or NIL if there is no such character."
   (maybe-sap-maybe-string (string)
@@ -198,7 +198,7 @@ be simple strings."
 	  (return index)))))
 
 (defun %sp-string-search (string1 start1 end1 string2 start2 end2)
-  _N"%SP-String-Search  String1, Start1, End1, String2, Start2, End2
+  "%SP-String-Search  String1, Start1, End1, String2, Start2, End2
    Searches for the substring of String1 specified in String2.
    Returns an index into String2 or NIL if the substring wasn't
    found."

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.29 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.30 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,7 +40,7 @@
 ;;;
 (declaim (ftype (function () nil) required-argument))
 (defun required-argument ()
-  _N"This function can be used as the default value for keyword arguments that
+  "This function can be used as the default value for keyword arguments that
   must be always be supplied.  Since it is known by the compiler to never
   return, it will avoid any compile-time type warnings that would result from a
   default value inconsistent with the declared type.  When this function is
@@ -53,7 +53,7 @@
 ;;; FILE-COMMENT  --  Public
 ;;;
 (defmacro file-comment (string)
-  _N"FILE-COMMENT String
+  "FILE-COMMENT String
   When COMPILE-FILE sees this form at top-level, it places the constant string
   in the run-time source location information.  DESCRIBE will print the file
   comment for the file that a function was defined in.  The string is also
@@ -70,7 +70,7 @@
 
   
 (defun listen-skip-whitespace (&optional (stream *standard-input*))
-  _N"See listen.  Any whitespace in the input stream will be flushed."
+  "See listen.  Any whitespace in the input stream will be flushed."
   (do ((char (read-char-no-hang stream nil nil nil)
 	     (read-char-no-hang stream nil nil nil)))
       ((null char) nil)
@@ -81,7 +81,7 @@
 ;;; These macros waste time as opposed to space.
 
 (defmacro letf* (bindings &body body &environment env)
-  _N"Does what one might expect, saving the old values and setting the generalized
+  "Does what one might expect, saving the old values and setting the generalized
   variables to the new values in sequence.  Unwind-protects and get-setf-method
   are used to preserve the semantics one might expect in analogy to let*,
   and the once-only evaluation of subforms."
@@ -103,7 +103,7 @@
 
 
 (defmacro letf (bindings &body body &environment env)
-  _N"Like letf*, but evaluates all the implicit subforms and new values of all
+  "Like letf*, but evaluates all the implicit subforms and new values of all
   the implied setfs before altering any values.  However, the store forms
   (see get-setf-method) must still be evaluated in sequence.  Uses unwind-
   protects to protect the environment."
@@ -151,7 +151,7 @@
 ;;; the indentation of a stream.
 
 (defmacro indenting-further (stream more &rest body)
-  _N"Causes the output of the indenting Stream to indent More spaces.  More is
+  "Causes the output of the indenting Stream to indent More spaces.  More is
   evaluated twice."
   `(unwind-protect
      (progn
@@ -175,7 +175,7 @@
 
 
 (defmacro dovector ((elt vector &optional default) &rest forms)
-  _N"Just like dolist, but with one-dimensional arrays."
+  "Just like dolist, but with one-dimensional arrays."
   (let ((index (gensym))
 	(length (gensym))
 	(vec (gensym)))
@@ -201,7 +201,7 @@
 ;;;    The ultimate iteration macro...
 ;;;
 (defmacro iterate (name binds &body body)
-  _N"Iterate Name ({(Var Initial-Value)}*) Declaration* Form*
+  "Iterate Name ({(Var Initial-Value)}*) Declaration* Form*
   This is syntactic sugar for Labels.  It creates a local function Name with
   the specified Vars as its arguments and the Declarations and Forms as its
   body.  This function is then called with the Initial-Values, and the result
@@ -253,7 +253,7 @@
 ;;;    The ultimate collection macro...
 ;;;
 (defmacro collect (collections &body body)
-  _N"Collect ({(Name [Initial-Value] [Function])}*) {Form}*
+  "Collect ({(Name [Initial-Value] [Function])}*) {Form}*
   Collect some values somehow.  Each of the collections specifies a bunch of
   things which collected during the evaluation of the body of the form.  The
   name of the collection is used to define a local macro, a la MACROLET.
@@ -305,7 +305,7 @@
 ;;; forms are only evaluated once.
 ;;;
 (defmacro once-only (specs &body body)
-  _N"Once-Only ({(Var Value-Expression)}*) Form*
+  "Once-Only ({(Var Value-Expression)}*) Form*
   Create a Let* which evaluates each Value-Expression, binding a temporary
   variable to the result, and wrapping the Let* around the result of the
   evaluation of Body.  Within the body, each Var is bound to the corresponding
@@ -367,7 +367,7 @@
 
 
 (defmacro do-anonymous (varlist endlist &parse-body (body decls))
-  _N"DO-ANONYMOUS ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*
+  "DO-ANONYMOUS ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*
   Like DO, but has no implicit NIL block.  Each Var is initialized in parallel
   to the value of the specified Init form.  On subsequent iterations, the Vars
   are assigned the value of the Step form (if any) in paralell.  The Test is
@@ -379,7 +379,7 @@
 
 (defmacro do-hash ((key-var value-var table &optional result)
 		   &parse-body (body decls))
-  _N"DO-HASH (Key-Var Value-Var Table [Result]) Declaration* Form*
+  "DO-HASH (Key-Var Value-Var Table [Result]) Declaration* Form*
    Iterate over the entries in a hash-table."
   (let ((gen (gensym))
 	(n-more (gensym)))
@@ -405,7 +405,7 @@
 (defmacro define-hash-cache (name args &key hash-function hash-bits default
 				  (init-form 'progn)
 				  (values 1))
-  _N"DEFINE-HASH-CACHE Name ({(Arg-Name Test-Function)}*) {Key Value}*
+  "DEFINE-HASH-CACHE Name ({(Arg-Name Test-Function)}*) {Key Value}*
   Define a hash cache that associates some number of argument values to a
   result value.  The Test-Function paired with each Arg-Name is used to compare
   the value for that arg in a cache entry with a supplied arg.  The
@@ -579,7 +579,7 @@
 (defmacro defun-cached ((name &rest options &key (values 1) default
 			      &allow-other-keys)
 			args &parse-body (body decls doc))
-  _N"DEFUN-CACHED (Name {Key Value}*) ({(Arg-Name Test-Function)}*) Form*
+  "DEFUN-CACHED (Name {Key Value}*) ({(Arg-Name Test-Function)}*) Form*
   Some syntactic sugar for defining a function whose values are cached by
   DEFINE-HASH-CACHE."
   (let ((default-values (if (and (consp default) (eq (car default) 'values))
@@ -609,6 +609,6 @@
 ;;; CACHE-HASH-EQ  -- Public
 ;;;
 (defmacro cache-hash-eq (x)
-  _N"Return an EQ hash of X.  The value of this hash for any given object can (of
+  "Return an EQ hash of X.  The value of this hash for any given object can (of
   course) change at arbitary times."
   `(lisp::pointer-hash ,x))

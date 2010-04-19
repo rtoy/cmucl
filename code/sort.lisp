@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.11 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.12 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,7 +26,7 @@
 
 
 (defun sort (sequence predicate &key key)
-  _N"Destructively sorts sequence.  Predicate should returns non-Nil if
+  "Destructively sorts sequence.  Predicate should returns non-Nil if
    Arg1 is to precede Arg2."
   (typecase sequence
     (simple-vector
@@ -133,7 +133,7 @@
 ;;;; Stable Sorting
 
 (defun stable-sort (sequence predicate &key key)
-  _N"Destructively sorts sequence.  Predicate should returns non-Nil if
+  "Destructively sorts sequence.  Predicate should returns non-Nil if
    Arg1 is to precede Arg2."
   (typecase sequence
     (simple-vector
@@ -424,7 +424,7 @@
 ) ; eval-when
 
 (defun merge (result-type sequence1 sequence2 predicate &key key)
-  _N"The sequences Sequence1 and Sequence2 are destructively merged into
+  "The sequences Sequence1 and Sequence2 are destructively merged into
    a sequence of type Result-Type using the Predicate to order the elements."
   (cond ((or (eq result-type 'list)
 	     (subtypep result-type 'list))

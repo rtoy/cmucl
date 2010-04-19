@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.32 2010/03/19 15:18:59 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.33 2010/04/19 02:18:04 rtoy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -972,7 +972,7 @@ a LET-like macro, and a SETQ-like macro, which perform LOOP-style destructuring.
 
 ;;;INTERFACE: Traditional, ANSI, Lucid.
 (defmacro loop-finish () 
-  _N"Causes the iteration to terminate \"normally\", the same as implicit
+  "Causes the iteration to terminate \"normally\", the same as implicit
 termination by an iteration driving clause, or by use of WHILE or
 UNTIL -- the epilogue code (if any) will be run, and any implicitly
 collected result will be returned as the value of the LOOP."

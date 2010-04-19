@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format-time.lisp,v 1.10 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format-time.lisp,v 1.11 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -65,7 +65,7 @@
 					  (print-meridian t)
 					  (print-timezone t)
 					  (print-weekday t))
-  _N"Format-Universal-Time formats a string containing the time and date
+  "Format-Universal-Time formats a string containing the time and date
    given by universal-time in a common manner.  The destination is any
    destination which can be accepted by the Format function.  The
    timezone keyword is an integer specifying hours west of Greenwich.
@@ -220,7 +220,7 @@
 					  (print-meridian t)
 					  (print-timezone t)
 					  (print-weekday t))
-  _N"Format-Decoded-Time formats a string containing decoded-time
+  "Format-Decoded-Time formats a string containing decoded-time
    expressed in a humanly-readable manner.  The destination is any
    destination which can be accepted by the Format function.  The
    timezone keyword is an integer specifying hours west of Greenwich.

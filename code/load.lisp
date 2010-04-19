@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.94 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.95 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,39 +32,39 @@
 ;;; Public:
 
 (defvar *load-if-source-newer* :load-object
-  _N"The default for the :IF-SOURCE-NEWER argument to load.")
+  "The default for the :IF-SOURCE-NEWER argument to load.")
 
 (declaim (type (member :load-object :load-source :query :compile)
 	       *load-if-source-newer*))
 
 (defvar *load-source-types* '("lisp" "l" "cl" "lsp")
-  _N"The source file types which LOAD recognizes.")
+  "The source file types which LOAD recognizes.")
 
 (defvar *load-object-types*
   '(#.(c:backend-fasl-file-type c:*backend*)
     #.(c:backend-byte-fasl-file-type c:*backend*)
     "fasl")
-  _N"A list of the object file types recognized by LOAD.")
+  "A list of the object file types recognized by LOAD.")
 
 (defvar *load-lp-object-types*
   '(#.(string-upcase (c:backend-fasl-file-type c:*backend*))
     #.(string-upcase (c:backend-byte-fasl-file-type c:*backend*))
     "FASL")
-  _N"A list of the object file types recognized by LOAD for logical pathnames.")
+  "A list of the object file types recognized by LOAD for logical pathnames.")
 
 (declaim (list *load-source-types* *load-object-types* *load-lp-object-types*))
 
 (defvar *load-verbose* t
-  _N"The default for the :VERBOSE argument to Load.")
+  "The default for the :VERBOSE argument to Load.")
 
 (defvar *load-print* ()
-  _N"The default for the :PRINT argument to Load.")
+  "The default for the :PRINT argument to Load.")
 
 (defvar *load-truename* nil
-  _N"The TRUENAME of the file that LOAD is currently loading.")
+  "The TRUENAME of the file that LOAD is currently loading.")
 
 (defvar *load-pathname* nil
-  _N"The defaulted pathname that LOAD is currently loading.")
+  "The defaulted pathname that LOAD is currently loading.")
 
 (declaim (type (or pathname null) *load-truename* *load-pathname*)) 
 
@@ -72,7 +72,7 @@
 ;;; Internal state variables:
 
 (defvar *load-depth* 0
-  _N"Count of the number of recursive loads.")
+  "Count of the number of recursive loads.")
 (declaim (type index *load-depth*))
 (defvar *fasl-file*)
 (declaim (type lisp-stream *fasl-file*))
@@ -118,7 +118,7 @@
 ;;; offset.  We may need to have several, since load can be called recursively.
 
 (defvar *free-fop-tables* (list (make-array 1000))
-  _N"List of free fop tables for the fasloader.")
+  "List of free fop tables for the fasloader.")
 
 ;;; The current fop table.
 (defvar *current-fop-table*)
@@ -155,7 +155,7 @@
 ;;; cheaper to test for overflow that way.
 ;;;
 (defvar *fop-stack* (make-array 100)
-  _N"The fop stack (we only need one!).")
+  "The fop stack (we only need one!).")
 (declaim (simple-vector *fop-stack*))
 
 ;;; The index of the most recently pushed item on the fop-stack.
@@ -217,11 +217,11 @@
 ;;; FOP database:
 
 (defvar fop-codes (make-array 256)
-  _N"Vector indexed by a FaslOP that yields the FOP's name.")
+  "Vector indexed by a FaslOP that yields the FOP's name.")
 
 (defvar fop-functions
   (make-array 256 :initial-element #'(lambda () (error _"Losing FOP!")))
-  _N"Vector indexed by a FaslOP that yields a function of 0 arguments which
+  "Vector indexed by a FaslOP that yields a function of 0 arguments which
   will perform the operation.")
 
 (declaim (simple-vector fop-codes fop-functions))
@@ -495,7 +495,7 @@
 		      (if-source-newer nil if-source-newer-p)
 		      (if-does-not-exist :error) contents
 		      (external-format :default))
-  _N"Loads the file named by Filename into the Lisp environment.  The file type
+  "Loads the file named by Filename into the Lisp environment.  The file type
    (a.k.a extension) is defaulted if missing.  These options are defined:
 
    :IF-SOURCE-NEWER <keyword>

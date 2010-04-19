@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.129 2010/04/16 12:54:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.130 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -300,7 +300,7 @@
 ;;; This is used in other files, but is defined in this one for some reason.
 
 (defun whitespace-char-p (char)
-  _N"Determines whether or not the character is considered whitespace."
+  "Determines whether or not the character is considered whitespace."
   (or (char= char #\space)
       (char= char #\tab)
       (char= char #\return)
@@ -332,7 +332,7 @@
 ;;; CHECK-FOR-CIRCULARITY -- interface.
 ;;;
 (defun check-for-circularity (object &optional assign (mode t))
-  _N"Check to see if OBJECT is a circular reference, and return something non-NIL
+  "Check to see if OBJECT is a circular reference, and return something non-NIL
    if it is.  If ASSIGN is T, then the number to use in the #n= and #n# noise
    is assigned at this time.  Note: CHECK-FOR-CIRCULARITY must be called
    *EXACTLY* once with ASSIGN T, or the circularity detection noise will get
@@ -419,7 +419,7 @@
 ;;; HANDLE-CIRCULARITY -- interface.
 ;;; 
 (defun handle-circularity (marker stream)
-  _N"Handle the results of CHECK-FOR-CIRCULARITY.  If this returns T then
+  "Handle the results of CHECK-FOR-CIRCULARITY.  If this returns T then
    you should go ahead and print the object.  If it returns NIL, then
    you should blow it off."
   (case marker
@@ -472,13 +472,13 @@
 ;;; *CURRENT-LEVEL* -- interface.
 ;;; 
 (defvar *current-level* 0
-  _N"The current level we are printing at, to be compared against *PRINT-LEVEL*.
+  "The current level we are printing at, to be compared against *PRINT-LEVEL*.
    See the macro DESCEND-INTO for a handy interface to depth abbreviation.")
 
 ;;; DESCEND-INTO -- interface.
 ;;; 
 (defmacro descend-into ((stream) &body body)
-  _N"Automatically handle *print-level* abbreviation.  If we are too deep, then
+  "Automatically handle *print-level* abbreviation.  If we are too deep, then
    a # is printed to STREAM and BODY is ignored."
   (let ((flet-name (gensym)))
     `(flet ((,flet-name ()
@@ -494,7 +494,7 @@
 ;;; PUNT-IF-TOO-LONG -- interface.
 ;;; 
 (defmacro punt-if-too-long (index stream)
-  _N"Punt if INDEX is equal or larger then *PRINT-LENGTH* (and *PRINT-READABLY*
+  "Punt if INDEX is equal or larger then *PRINT-LENGTH* (and *PRINT-READABLY*
    is NIL) by outputting \"...\" and returning from the block named NIL."
   `(when (and (not *print-readably*)
 	      *print-length*
@@ -508,14 +508,14 @@
 ;;; *PRETTY-PRINTER* -- public.
 ;;; 
 (defvar *pretty-printer* nil
-  _N"The current pretty printer.  Should be either a function that takes two
+  "The current pretty printer.  Should be either a function that takes two
    arguments (the object and the stream) or NIL to indicate that there is
    no pretty printer installed.")
 
 ;;; OUTPUT-OBJECT -- interface.
 ;;; 
 (defun output-object (object stream)
-  _N"Output OBJECT to STREAM observing all printer control variables."
+  "Output OBJECT to STREAM observing all printer control variables."
   (labels ((print-it (stream)
 	     (if *print-pretty*
 		 (if *pretty-printer*
@@ -560,7 +560,7 @@
 ;;; OUTPUT-UGLY-OBJECT -- interface.
 ;;; 
 (defun output-ugly-object (object stream)
-  _N"Output OBJECT to STREAM observing all printer control variables except
+  "Output OBJECT to STREAM observing all printer control variables except
    for *PRINT-PRETTY*.  Note: if *PRINT-PRETTY* is non-NIL, then the pretty
    printer will be used for any components of OBJECT, just not for OBJECT
    itself."
@@ -1149,7 +1149,7 @@
 	  (write-char char stream))))))
 
 (defun output-array (array stream)
-  _N"Outputs the printed representation of any array in either the #< or #A
+  "Outputs the printed representation of any array in either the #< or #A
    form."
   (if (or *print-array* *print-readably*)
       (output-array-guts array stream)
@@ -1333,7 +1333,7 @@
   big)
 
 (defun power-list (n r)
-  _N"Compute a list of pairs (2^i . r^{2^i}), stopping with the largest r^{2^i}
+  "Compute a list of pairs (2^i . r^{2^i}), stopping with the largest r^{2^i}
 greater than n."
   (declare (integer n) (fixnum r))
   (do ((l nil (acons i r l))
@@ -1343,7 +1343,7 @@ greater than n."
 
 (declaim (inline digit-to-char))
 (defun digit-to-char (d)
-  _N"Convert digit into a character representation.  We use 0..9, a..z for
+  "Convert digit into a character representation.  We use 0..9, a..z for
 10..35, and A..Z for 36..52."
   (declare (fixnum d))
   (labels ((offset (d b) (code-char (+ d (char-code b)))))
@@ -1352,7 +1352,7 @@ greater than n."
 	  (t (error _"overflow in digit-to-char")))))
 
 (defun print-fixnum-sub (n r z s)
-  _N"Print a fixnum N to stream S, maybe with leading zeros.  This isn't
+  "Print a fixnum N to stream S, maybe with leading zeros.  This isn't
 ever-so efficient, but we probably don't need to care."
   (declare (fixnum n r z)
 	   (stream s))
@@ -1371,7 +1371,7 @@ ever-so efficient, but we probably don't need to care."
     (gen-digits n nil z)))
 
 (defun print-bignum-fast-sub (n r z s pl)
-  _N"Use the power list (see power-list) PL to split N roughly in half; then
+  "Use the power list (see power-list) PL to split N roughly in half; then
 print the left and right halves using (cdr PL).  Make sure we count the
 leading zeroes correctly."
   (declare (integer n)
@@ -1401,7 +1401,7 @@ leading zeroes correctly."
     pl))
 
 (defun print-bignum-fast (n s)
-  _N"Primary fast bignum-printing interface.  Prints integer N to stream S in
+  "Primary fast bignum-printing interface.  Prints integer N to stream S in
 radix-R.  If you have a power-list then pass it in as PL."
   (when (minusp n)
     (write-char #\- s)
@@ -1732,11 +1732,11 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 
 (defconstant output-float-free-format-exponent-min -3
-  _N"Minimum power of 10 that allows the float printer to use free format,
+  "Minimum power of 10 that allows the float printer to use free format,
    instead of exponential format.  See section 22.1.3.1.3: Printing Floats
    in the ANSI CL standard.")
 (defconstant output-float-free-format-exponent-max 8
-  _N"Maximum power of 10 that allows the float printer to use free format,
+  "Maximum power of 10 that allows the float printer to use free format,
    instead of exponential format.  See section 22.1.3.1.3: Printing Floats
    in the ANSI CL standard.")
 
@@ -1787,7 +1787,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 #+double-double
 (defun dd->lisp (a0 a1)
-  _N"Convert a DD number to a lisp rational"
+  "Convert a DD number to a lisp rational"
   (declare (double-float a0 a1))
   (+ (rational a0) (rational a1)))
 
@@ -1808,7 +1808,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 #+double-double
 (defun dd->string (x0 x1 stream)
-  _N"Print out a double-double to a string"
+  "Print out a double-double to a string"
   (cond ((and (zerop x0) (zerop x1))
 	 (format stream "0.dd0"))
 	(t

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.43 2010/04/16 01:28:37 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.44 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,18 +33,18 @@
 (declaim (maybe-inline get %put getf remprop %putf get-properties keywordp))
 
 (defun symbol-value (variable)
-  _N"VARIABLE must evaluate to a symbol.  This symbol's current special
+  "VARIABLE must evaluate to a symbol.  This symbol's current special
   value is returned."
   (declare (optimize (safety 1)))
   (symbol-value variable))
 
 (defun boundp (variable)
-  _N"VARIABLE must evaluate to a symbol.  Return NIL if this symbol is
+  "VARIABLE must evaluate to a symbol.  Return NIL if this symbol is
   unbound, T if it has a value."
   (boundp variable))
 
 (defun set (variable new-value)
-  _N"VARIABLE must evaluate to a symbol.  This symbol's special value cell is
+  "VARIABLE must evaluate to a symbol.  This symbol's special value cell is
   set to the specified new value."
   (declare (type symbol variable))
   (cond ((null variable)
@@ -61,14 +61,14 @@
   (%set-symbol-value symbol new-value))
 
 (defun makunbound (variable)
-  _N"VARIABLE must evaluate to a symbol.  This symbol is made unbound,
+  "VARIABLE must evaluate to a symbol.  This symbol is made unbound,
   removing any value it may currently have."
   (set variable
        (%primitive make-other-immediate-type 0 vm:unbound-marker-type))
   variable)
 
 (defun symbol-function (variable)
-  _N"VARIABLE must evaluate to a symbol.  This symbol's current definition
+  "VARIABLE must evaluate to a symbol.  This symbol's current definition
    is returned.  Settable with SETF."
   (raw-definition variable))
 
@@ -78,18 +78,18 @@
 
 
 (defun symbol-plist (variable)
-  _N"VARIABLE must evaluate to a symbol.  Return its property list."
+  "VARIABLE must evaluate to a symbol.  Return its property list."
   (symbol-plist variable))
 
 (defun %set-symbol-plist (symbol new-value)
   (setf (symbol-plist symbol) new-value))
 
 (defun symbol-name (variable)
-  _N"VARIABLE must evaluate to a symbol.  Return its print name."
+  "VARIABLE must evaluate to a symbol.  Return its print name."
   (symbol-name variable))
 
 (defun symbol-package (variable)
-  _N"VARIABLE must evaluate to a symbol.  Return its package."
+  "VARIABLE must evaluate to a symbol.  Return its package."
   (symbol-package variable))
 
 (defun %set-symbol-package (symbol package)
@@ -97,7 +97,7 @@
   (%set-symbol-package symbol package))
 
 (defun make-symbol (string)
-  _N"Make and return a new symbol with the STRING as its print name."
+  "Make and return a new symbol with the STRING as its print name."
   #-(or gengc x86 amd64 sparc ppc) (make-symbol string)
   #+gengc (%make-symbol (random most-positive-fixnum) string)
   ;; Initialize the symbol-hash to -1 to make this fast.  It will get
@@ -109,7 +109,7 @@
 
 #+(or gengc x86 amd64 sparc ppc)
 (defun symbol-hash (symbol)
-  _N"Return the hash value for symbol."
+  "Return the hash value for symbol."
   (symbol-hash symbol))
 
 #+(or sparc ppc)
@@ -117,7 +117,7 @@
   (kernel::%set-symbol-hash symbol hash))
 
 (defun get (symbol indicator &optional (default nil))
-  _N"Look on the property list of SYMBOL for the specified INDICATOR.  If this
+  "Look on the property list of SYMBOL for the specified INDICATOR.  If this
   is found, return the associated value, else return DEFAULT."
   (do ((pl (symbol-plist symbol) (cddr pl)))
       ((atom pl) default)
@@ -128,7 +128,7 @@
 	   (return (cadr pl))))))
 
 (defun %put (symbol indicator value)
-  _N"The VALUE is added as a property of SYMBOL under the specified INDICATOR.
+  "The VALUE is added as a property of SYMBOL under the specified INDICATOR.
   Returns VALUE."
   (do ((pl (symbol-plist symbol) (cddr pl)))
       ((endp pl)
@@ -143,7 +143,7 @@
 	   (return value)))))
 
 (defun remprop (symbol indicator)
-  _N"Look on property list of SYMBOL for property with specified
+  "Look on property list of SYMBOL for property with specified
   INDICATOR.  If found, splice this indicator and its value out of
   the plist, and return the tail of the original list starting with
   INDICATOR.  If not found, return () with no side effects.
@@ -167,7 +167,7 @@
     (and result (evenp result))))
 
 (defun getf (place indicator &optional (default ()))
-  _N"Searches the property list stored in Place for an indicator EQ to Indicator.
+  "Searches the property list stored in Place for an indicator EQ to Indicator.
   If one is found, the corresponding value is returned, else the Default is
   returned."
   (do ((plist place (cddr plist)))
@@ -192,7 +192,7 @@
 
 
 (defun get-properties (place indicator-list)
-  _N"Like GETF, except that Indicator-List is a list of indicators which will
+  "Like GETF, except that Indicator-List is a list of indicators which will
   be looked for in the property list stored in Place.  Three values are
   returned, see manual for details."
   (do ((plist place (cddr plist)))
@@ -207,7 +207,7 @@
 	   (return (values (car plist) (cadr plist) plist))))))
 
 (defun copy-symbol (symbol &optional (copy-props nil) &aux new-symbol)
-  _N"Make and return a new uninterned symbol with the same print name
+  "Make and return a new uninterned symbol with the same print name
   as SYMBOL.  If COPY-PROPS is false, the new symbol is neither bound
   nor fbound and has no properties, else it has a copy of SYMBOL's
   function, value and property list."
@@ -223,7 +223,7 @@
 (declaim (special *keyword-package*))
 
 (defun keywordp (object)
-  _N"Returns true if Object is a symbol in the keyword package."
+  "Returns true if Object is a symbol in the keyword package."
   (and (symbolp object)
        (eq (symbol-package object) *keyword-package*)))
 
@@ -231,11 +231,11 @@
 ;;;; Gensym and friends.
 
 (defvar *gensym-counter* 0
-  _N"Counter for generating unique GENSYM symbols.")
+  "Counter for generating unique GENSYM symbols.")
 (declaim (type unsigned-byte *gensym-counter*))
 
 (defun gensym (&optional (thing "G"))
-  _N"Creates a new uninterned symbol whose name is a prefix string (defaults
+  "Creates a new uninterned symbol whose name is a prefix string (defaults
    to \"G\"), followed by a decimal number.  Thing, when supplied, will
    alter the prefix if it is a string, or be used for the decimal number
    if it is a number, of this symbol. The default value of the number is
@@ -264,7 +264,7 @@
 (declaim (type index *gentemp-counter*))
 
 (defun gentemp (&optional (prefix "T") (package *package*))
-  _N"Creates a new symbol interned in package Package with the given Prefix."
+  "Creates a new symbol interned in package Package with the given Prefix."
   (loop
     (let* ((*print-base* 10)
 	   (*print-radix* nil)

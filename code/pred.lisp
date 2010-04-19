@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.63 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.64 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,7 +138,7 @@
 ;;; it is not permitted to return member types.
 ;;; 
 (defun type-of (object)
-  _N"Return the type of OBJECT."
+  "Return the type of OBJECT."
   (typecase object
     ((or array complex)
      (type-specifier (ctype-of object)))
@@ -167,7 +167,7 @@
 ;;;; UPGRADED-ARRAY-ELEMENT-TYPE  --  public
 ;;;
 (defun upgraded-array-element-type (spec &optional environment)
-  _N"Return the element type that will actually be used to implement an array
+  "Return the element type that will actually be used to implement an array
    with the specifier :ELEMENT-TYPE Spec."
   ;; Type expansion (TYPE-EXPAND) currently doesn't handle environments.
   (declare (ignore environment))
@@ -180,7 +180,7 @@
 ;;; Just parse the type specifiers and call csubtype.
 ;;; 
 (defun subtypep (type1 type2 &optional environment)
-  _N"Return two values indicating the relationship between type1 and type2:
+  "Return two values indicating the relationship between type1 and type2:
   T and T: type1 definitely is a subtype of type2.
   NIL and T: type1 definitely is not a subtype of type2.
   NIL and NIL: who knows?"
@@ -197,7 +197,7 @@
 ;;; Just call %typep
 ;;; 
 (defun typep (object type &optional environment)
-  _N"Return T iff OBJECT is of type TYPE."
+  "Return T iff OBJECT is of type TYPE."
   (declare (ignore environment))
   (%typep object type))
 
@@ -378,14 +378,14 @@
 ;;; 
 
 (defun eq (obj1 obj2)
-  _N"Return T if OBJ1 and OBJ2 are the same object, otherwise NIL."
+  "Return T if OBJ1 and OBJ2 are the same object, otherwise NIL."
   (eq obj1 obj2))
 
 
 ;;; EQUAL -- public.
 ;;;
 (defun equal (x y)
-  _N"Returns T if X and Y are EQL or if they are structured components
+  "Returns T if X and Y are EQL or if they are structured components
   whose elements are EQUAL.  Strings and bit-vectors are EQUAL if they
   are the same length and have indentical components.  Other arrays must be
   EQ to be EQUAL."
@@ -414,7 +414,7 @@
 ;;; EQUALP -- public.
 ;;; 
 (defun equalp (x y)
-  _N"Just like EQUAL, but more liberal in several respects.
+  "Just like EQUAL, but more liberal in several respects.
   Numbers may be of different types, as long as the values are identical
   after coercion.  Characters may differ in alphabetic case.  Vectors and
   arrays must have identical dimensions and EQUALP elements, but may differ

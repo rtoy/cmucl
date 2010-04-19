@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.98 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.99 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,17 +40,17 @@
 ;;;; Buffer manipulation routines.
 
 (defvar *available-buffers* ()
-  _N"List of available buffers.  Each buffer is an sap pointing to
+  "List of available buffers.  Each buffer is an sap pointing to
   bytes-per-buffer of memory.")
 
 (defvar lisp::*enable-stream-buffer-p* nil)
 
 (defconstant bytes-per-buffer (* 4 1024)
-  _N"Number of bytes per buffer.")
+  "Number of bytes per buffer.")
 
 ;; This limit is rather arbitrary
 (defconstant max-stream-element-size 1024
-  _N"The maximum supported byte size for a stream element-type.")
+  "The maximum supported byte size for a stream element-type.")
 
 ;;; NEXT-AVAILABLE-BUFFER -- Internal.
 ;;;
@@ -296,7 +296,7 @@
 ;;;; Output routines and related noise.
 
 (defvar *output-routines* ()
-  _N"List of all available output routines. Each element is a list of the
+  "List of all available output routines. Each element is a list of the
   element-type output, the kind of buffering, the function name, and the number
   of bytes per element.")
 
@@ -593,7 +593,7 @@
 ;;; send it directly (after flushing the buffer, of course).
 ;;;
 (defun output-raw-bytes (stream thing &optional start end)
-  _N"Output THING to stream.  THING can be any kind of vector or a sap.  If THING
+  "Output THING to stream.  THING can be any kind of vector or a sap.  If THING
   is a SAP, END must be supplied (as length won't work)."
   (let ((start (or start 0))
 	(end (or end (length (the (simple-array * (*)) thing)))))
@@ -825,7 +825,7 @@
 ;;;; Input routines and related noise.
 
 (defvar *input-routines* ()
-  _N"List of all available input routines. Each element is a list of the
+  "List of all available input routines. Each element is a list of the
   element-type input, the function name, and the number of bytes per element.")
 
 ;;; DO-INPUT -- internal
@@ -1772,7 +1772,7 @@
 		       binary-stream-p)
   (declare (type index fd) (type (or index null) timeout)
 	   (type (member :none :line :full) buffering))
-  _N"Create a stream for the given unix file descriptor.
+  "Create a stream for the given unix file descriptor.
   If input is non-nil, allow input operations.
   If output is non-nil, allow output operations.
   If neither input nor output are specified, default to allowing input.
@@ -1831,7 +1831,7 @@
 ;;; Pick a name to use for the backup file.
 ;;;
 (defvar *backup-extension* ".BAK"
-  _N"This is a string that OPEN tacks on the end of a file namestring to produce
+  "This is a string that OPEN tacks on the end of a file namestring to produce
    a name for the :if-exists :rename-and-delete and :rename options.  Also,
    this can be a function that takes a namestring and returns a complete
    namestring.")
@@ -2133,7 +2133,7 @@
 		      (direction direction)
 		      (if-does-not-exist if-does-not-exist)
 		      (if-exists if-exists))
-  _N"Return a stream which reads from or writes to Filename.
+  "Return a stream which reads from or writes to Filename.
   Defined keywords:
    :direction - one of :input, :output, :io, or :probe
    :element-type - Type of object to read or write, default BASE-CHAR
@@ -2213,13 +2213,13 @@
 ;;;; Initialization.
 
 (defvar *tty* nil
-  _N"The stream connected to the controlling terminal or NIL if there is none.")
+  "The stream connected to the controlling terminal or NIL if there is none.")
 (defvar *stdin* nil
-  _N"The stream connected to the standard input (file descriptor 0).")
+  "The stream connected to the standard input (file descriptor 0).")
 (defvar *stdout* nil
-  _N"The stream connected to the standard output (file descriptor 1).")
+  "The stream connected to the standard output (file descriptor 1).")
 (defvar *stderr* nil
-  _N"The stream connected to the standard error output (file descriptor 2).")
+  "The stream connected to the standard error output (file descriptor 2).")
 
 ;;; STREAM-INIT -- internal interface
 ;;;
@@ -2271,7 +2271,7 @@
   (finish-output stream))
 
 (defvar *beep-function* #'default-beep-function
-  _N"This is called in BEEP to feep the user.  It takes a stream.")
+  "This is called in BEEP to feep the user.  It takes a stream.")
 
 (defun beep (&optional (stream *terminal-io*))
   (funcall *beep-function* stream))
@@ -2333,7 +2333,7 @@
 (defun file-string-length (stream object)
   (declare (type (or string character) object)
 	   (type (or file-stream broadcast-stream stream:simple-stream) stream))
-  _N"Return the delta in Stream's FILE-POSITION that would be caused by writing
+  "Return the delta in Stream's FILE-POSITION that would be caused by writing
    Object to Stream.  Non-trivial only in implementations that support
    international character sets."
   (typecase stream

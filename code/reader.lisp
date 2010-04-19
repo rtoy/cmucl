@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.65 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.66 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,7 @@
 
 ;;;Random global variables
 
-(defvar *read-default-float-format* 'single-float _N"Float format for 1.0E1")
+(defvar *read-default-float-format* 'single-float "Float format for 1.0E1")
 (declaim (type (member short-float single-float double-float long-float)
 	       *read-default-float-format*))
 
@@ -93,7 +93,7 @@
 
 
 (defvar std-lisp-readtable ()
-  _N"Standard lisp readtable. This is for recovery from broken
+  "Standard lisp readtable. This is for recovery from broken
    read-tables, and should not normally be user-visible.")
 
 ;; Max size of the attribute table before we switch from an array to a
@@ -114,7 +114,7 @@
 	       (declare (ignore d))
 	       (print-unreadable-object (s stream :identity t)
 		 (prin1 'readtable stream)))))
-  _N"Readtable is a data structure that maps characters into syntax
+  "Readtable is a data structure that maps characters into syntax
    types for the Common Lisp expression reader."
   ;; The CHARACTER-ATTRIBUTE-TABLE is a vector of ATTRIBUTE-TABLE-LIMIT integers for
   ;; describing the character type.  Conceptually, there are 4 distinct
@@ -196,7 +196,7 @@
 ;;;; Package specials.
 
 (defvar *old-package* ()
-  _N"Value of *package* at the start of the last read or Nil.")
+  "Value of *package* at the start of the last read or Nil.")
 
 ;;; In case we get an error trying to parse a symbol, we want to rebind the
 ;;; above stuff so it's cool.
@@ -456,7 +456,7 @@
 ;;;; Readtable operations.
 
 (defun copy-readtable (&optional (from-readtable *readtable*) to-readtable)
-  _N"A copy is made of from-readtable and place into to-readtable."
+  "A copy is made of from-readtable and place into to-readtable."
   (let ((from-readtable (or from-readtable std-lisp-readtable))
 	(to-readtable (or to-readtable (make-readtable))))
     (flet ((copy-hash-table (to from)
@@ -486,7 +486,7 @@
 (defun set-syntax-from-char (to-char from-char &optional
 				     (to-readtable *readtable*)
 				     (from-readtable ()))
-  _N"Causes the syntax of to-char to be the same as from-char in the 
+  "Causes the syntax of to-char to be the same as from-char in the 
   optional readtable (defaults to the current readtable).  The
   from-table defaults the standard lisp readtable by being nil."
   (let ((from-readtable (or from-readtable std-lisp-readtable)))
@@ -527,7 +527,7 @@
 
 (defun set-macro-character (char function &optional
 				 (non-terminatingp nil) (rt *readtable*))
-  _N"Causes char to be a macro character which invokes function when
+  "Causes char to be a macro character which invokes function when
    seen by the reader.  The non-terminatingp flag can be used to
    make the macro character non-terminating.  The optional readtable
    argument defaults to the current readtable.  Set-macro-character
@@ -539,7 +539,7 @@
   T)
 
 (defun get-macro-character (char &optional (rt *readtable*))
-  _N"Returns the function associated with the specified char which is a macro
+  "Returns the function associated with the specified char which is a macro
   character.  The optional readtable argument defaults to the current
   readtable."
   (let ((rt (or rt std-lisp-readtable)))
@@ -675,7 +675,7 @@
 ;;; current read-buffer.  
 
 (defmacro with-read-buffer (() &body body)
-  _N"Bind *read-buffer* to a fresh buffer and execute Body."
+  "Bind *read-buffer* to a fresh buffer and execute Body."
   `(let* ((*read-buffer* (allocate-read-buffer))
 	  (*read-buffer-length* (length *read-buffer*))
 	  (*ouch-ptr* 0)
@@ -740,7 +740,7 @@
 ;;;; READ-PRESERVING-WHITESPACE, READ-DELIMITED-LIST, and READ.
 
 (defvar *ignore-extra-close-parentheses* t
-  _N"If true, only warn when there is an extra close paren, otherwise error.")
+  "If true, only warn when there is an extra close paren, otherwise error.")
 
 (declaim (special *standard-input*))
 
@@ -783,7 +783,7 @@
 (defun read-preserving-whitespace (&optional (stream *standard-input*)
 				   (eof-errorp t) (eof-value nil)
 				   (recursivep nil))
-  _N"Reads from stream and returns the object read, preserving the whitespace
+  "Reads from stream and returns the object read, preserving the whitespace
    that followed the object."
   (with-read-buffer ()
     (read-preserving-whitespace-internal stream eof-errorp eof-value recursivep)))
@@ -824,7 +824,7 @@
 
 (defun read (&optional (stream *standard-input*) (eof-errorp t)
 		       (eof-value ()) (recursivep ()))
-  _N"Reads in the next object in the stream, which defaults to
+  "Reads in the next object in the stream, which defaults to
    *standard-input*. For details see the I/O chapter of
    the manual."
   (with-read-buffer ()
@@ -843,7 +843,7 @@
 (defun read-delimited-list (endchar &optional
 				    (input-stream *standard-input*)
 				    recursive-p)
-  _N"Reads objects from input-stream until the next character after an
+  "Reads objects from input-stream until the next character after an
    object's representation is endchar.  A list of those objects read
    is returned."
   (declare (ignore recursive-p))
@@ -1105,10 +1105,10 @@
 ;;;; Token fetching.
 
 (defvar *read-suppress* nil 
-  _N"Suppresses most interpreting of the reader when T")
+  "Suppresses most interpreting of the reader when T")
 
 (defvar *read-base* 10
-  _N"The radix that Lisp reads numbers in.")
+  "The radix that Lisp reads numbers in.")
 (declaim (type (integer 2 36) *read-base*))
 
 ;;; CASIFY-READ-BUFFER  --  Internal
@@ -1158,7 +1158,7 @@
 		     (all-upper (lower-em))))))))))))
   
 (defun read-token (stream firstchar)
-  _N"This function is just an fsm that recognizes numbers and symbols."
+  "This function is just an fsm that recognizes numbers and symbols."
   ;; Check explicitly whether FIRSTCHAR has an entry for
   ;; NON-TERMINATING in CHARACTER-ATTRIBUTE-TABLE and
   ;; READ-DOT-NUMBER-SYMBOL in CMT. Report an error if these are
@@ -1558,7 +1558,7 @@
 
 
 (defun read-extended-token (stream &optional (*readtable* *readtable*))
-  _N"For semi-external use: returns 3 values: the string for the token,
+  "For semi-external use: returns 3 values: the string for the token,
    a flag for whether there was an escape char, and the position of any
    package delimiter."
   (let ((firstch (read-char stream nil nil t)))
@@ -1571,7 +1571,7 @@
 	   (values "" nil nil)))))
 
 (defun read-extended-token-escaped (stream &optional (*readtable* *readtable*))
-  _N"For semi-external use: read an extended token with the first character
+  "For semi-external use: read an extended token with the first character
   escaped.  Returns the string for the token."
   (let ((firstch (read-char stream nil nil)))
     (cond (firstch
@@ -1594,7 +1594,7 @@
 (defvar *integer-reader-safe-digits*
   '#(NIL NIL
      26 17 13 11 10 9 8 8 8 7 7 7 7 6 6 6 6 6 6 6 6 5 5 5 5 5 5 5 5 5 5 5 5 5 5)
-  _N"Holds the mapping of base to 'safe' number of digits to read for a fixnum.")
+  "Holds the mapping of base to 'safe' number of digits to read for a fixnum.")
 
 (defvar *integer-reader-base-power* 
   '#(NIL NIL
@@ -1603,7 +1603,7 @@
      16777216 24137569 34012224 47045881 64000000 85766121 113379904 6436343
      7962624 9765625 11881376 14348907 17210368 20511149 24300000 28629151
      33554432 39135393 45435424 52521875 60466176)
-  _N"Holds the largest fixnum power of the base for make-integer.")
+  "Holds the largest fixnum power of the base for make-integer.")
 
 (declaim (simple-vector *integer-reader-safe-digits*
 			*integer-reader-base-power*))
@@ -1624,7 +1624,7 @@
 |#
 
 (defun make-integer ()
-  _N"Minimizes bignum-fixnum multiplies by reading a 'safe' number of digits, 
+  "Minimizes bignum-fixnum multiplies by reading a 'safe' number of digits, 
   then multiplying by a power of the base and adding."
   (read-unwind-read-buffer)
   ;; Use the fast reader if the number has enough digits.  It seems
@@ -1661,7 +1661,7 @@
 	     (setq number (+ num (* number base-power))))))))
 
 (defun fast-read-integer (r)
-  _N"Fast bignum-reading interface.  Reads from stream S an integer in radix
+  "Fast bignum-reading interface.  Reads from stream S an integer in radix
 R.  If we find some kind of error (bad characters, EOF), then NIL is
 returned; otherwise the number.  Reads at least one digit, but may not get to
 the end of the stream."
@@ -1850,7 +1850,7 @@ the end of the stream."
 (defun make-dispatch-macro-character (char &optional
 					   (non-terminating-p nil)
 					   (rt *readtable*))
-  _N"Causes char to become a dispatching macro character in readtable
+  "Causes char to become a dispatching macro character in readtable
    (which defaults to the current readtable).  If the non-terminating-p
    flag is set to T, the char will be non-terminating.  Make-dispatch-
    macro-character returns T."
@@ -1862,7 +1862,7 @@ the end of the stream."
 
 (defun set-dispatch-macro-character
        (disp-char sub-char function &optional (rt *readtable*))
-  _N"Causes function to be called whenever the reader reads
+  "Causes function to be called whenever the reader reads
    disp-char followed by sub-char. Set-dispatch-macro-character
    returns T."
   ;;get the dispatch char for macro (error if not there), diddle
@@ -1878,7 +1878,7 @@ the end of the stream."
 
 (defun get-dispatch-macro-character
        (disp-char sub-char &optional (rt *readtable*))
-  _N"Returns the macro character function for sub-char under disp-char
+  "Returns the macro character function for sub-char under disp-char
    or nil if there is no associated function."
   (unless (digit-char-p sub-char)
     (let* ((sub-char (char-upcase sub-char))
@@ -1918,12 +1918,12 @@ the end of the stream."
 ;;;; READ-FROM-STRING.
 
 (defvar read-from-string-spares ()
-  _N"A resource of string streams for Read-From-String.")
+  "A resource of string streams for Read-From-String.")
 
 (defun read-from-string (string &optional (eof-error-p t) eof-value
 				&key (start 0) end
 				preserve-whitespace)
-  _N"The characters of string are successively given to the lisp reader
+  "The characters of string are successively given to the lisp reader
    and the lisp object built by the reader is returned.  Macro chars
    will take effect."
   (declare (string string))
@@ -1948,7 +1948,7 @@ the end of the stream."
 ;;;; PARSE-INTEGER.
 
 (defun parse-integer (string &key (start 0) end (radix 10) junk-allowed)
-  _N"Examine the substring of string delimited by start and end
+  "Examine the substring of string delimited by start and end
   (default to the beginning and end of the string)  It skips over
   whitespace characters and then tries to parse an integer.  The
   radix parameter must be between 2 and 36."

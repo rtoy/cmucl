@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.7 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.8 2010/04/19 02:18:04 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.7 2010/03/19 15:19:00 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.8 2010/04/19 02:18:04 rtoy Rel $
 ;;;
 ;;; Weak Pointer Support.
 ;;;
@@ -23,13 +23,13 @@
 (export '(weak-pointer weak-pointer-p make-weak-pointer weak-pointer-value))
 
 (defun make-weak-pointer (object)
-  _N"Allocates and returns a weak pointer which points to OBJECT."
+  "Allocates and returns a weak pointer which points to OBJECT."
   (declare (values weak-pointer))
   (make-weak-pointer object))
 
 (declaim (inline weak-pointer-value))
 (defun weak-pointer-value (weak-pointer)
-  _N"If WEAK-POINTER is valid, returns the value of WEAK-POINTER and T.
+  "If WEAK-POINTER is valid, returns the value of WEAK-POINTER and T.
    If the referent of WEAK-POINTER has been garbage collected, returns
    the values NIL and NIL."
   (declare (type weak-pointer weak-pointer)
@@ -44,7 +44,7 @@
 
 (declaim (inline (setf weak-pointer-value)))
 (defun (setf weak-pointer-value) (object weak-pointer)
-  _N"Updates WEAK-POINTER to point to a new object."
+  "Updates WEAK-POINTER to point to a new object."
   (declare (type weak-pointer weak-pointer))
   (c::%set-weak-pointer-broken weak-pointer nil)
   (c::%set-weak-pointer-value weak-pointer object))

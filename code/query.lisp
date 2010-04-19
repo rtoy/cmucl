@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/query.lisp,v 1.6 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/query.lisp,v 1.7 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,7 @@
 ;;; Y-OR-N-P  --  Public.
 ;;;
 (defun y-or-n-p (&optional format-string &rest arguments)
-  _N"Y-OR-N-P prints the message, if any, and reads characters from *QUERY-IO*
+  "Y-OR-N-P prints the message, if any, and reads characters from *QUERY-IO*
    until the user enters y or Y as an affirmative, or either n or N as a
    negative answer.  It ignores preceding whitespace and asks again if you
    enter any other characters."
@@ -60,7 +60,7 @@
 ;;; uses READ-LINE to get "YES" or "NO".
 ;;;
 (defun yes-or-no-p (&optional format-string &rest arguments)
-  _N"YES-OR-NO-P is similar to Y-OR-N-P, except that it clears the 
+  "YES-OR-NO-P is similar to Y-OR-N-P, except that it clears the 
    input buffer, beeps, and uses READ-LINE to get the strings 
    YES or NO."
   (clear-input *query-io*)

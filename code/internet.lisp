@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.58 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.59 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -86,7 +86,7 @@
 (defvar *internet-protocols*
   '((:stream    6 #.sock-stream)
     (:datagram 17 #.sock-dgram))
-  _N"AList of socket kinds and protocol values.")
+  "AList of socket kinds and protocol values.")
 
 (defun internet-protocol (kind)
   (when (eq kind :data-gram) ; Sep-2000. Remove someday.
@@ -207,7 +207,7 @@ struct in_addr {
 (def-alien-routine ("os_get_h_errno" get-h-errno) int)
 
 (defun lookup-host-entry (host)
-  _N"Return a host-entry for the given host. The host may be an address
+  "Return a host-entry for the given host. The host may be an address
   string or an IP address in host order."
   (declare (type (or host-entry string (unsigned-byte 32)) host)
 	   (optimize (inhibit-warnings 3)))
@@ -347,7 +347,7 @@ struct in_addr {
       (values connected (slot sockaddr 'path)))))
 
 (defun bind-inet-socket (socket host port)
-  _N"bind Socket to (local) Host and Port"
+  "bind Socket to (local) Host and Port"
   (let ((addr (if (stringp host)
 		  (host-entry-addr (or (lookup-host-entry host)
 				       (error _"Unknown host: ~S." host)))
@@ -380,7 +380,7 @@ struct in_addr {
 
 (defun connect-to-inet-socket (host port &optional (kind :stream)
 			       &key local-host local-port)
-  _N"The host may be an address string or an IP address in host order."
+  "The host may be an address string or an IP address in host order."
   (let* ((addr (if (stringp host)
 		   (host-entry-addr (or (lookup-host-entry host)
 					(error _"Unknown host: ~S." host)))
@@ -442,7 +442,7 @@ struct in_addr {
 ;; cause errno set to the real reason for the failure.
 
 (defun connect-to-inet-socket/non-blocking (host port &optional (kind :stream))
-  _N"The host may be an address string or an IP address in host order."
+  "The host may be an address string or an IP address in host order."
    (let ((addr (if (stringp host)
                  (host-entry-addr (or (lookup-host-entry host)
                                       (error _"Unknown host: ~S." host)))
@@ -511,7 +511,7 @@ struct in_addr {
 (defconstant so-reuseaddr #+linux 2 #+(or solaris bsd hpux irix) 4)
 
 (defun get-socket-option (socket level optname)
-  _N"Get an integer value socket option."
+  "Get an integer value socket option."
   (declare (type unix:unix-fd socket)
 	   (type (signed-byte 32) level optname))
   (with-alien ((optval signed))
@@ -521,7 +521,7 @@ struct in_addr {
 	(values optval 0))))
 
 (defun set-socket-option (socket level optname optval)
-  _N"Set an integer value socket option."
+  "Set an integer value socket option."
   (declare (type unix:unix-fd socket)
 	   (type (signed-byte 32) level optname optval))
   (with-alien ((optval signed optval))
@@ -602,7 +602,7 @@ struct in_addr {
   (undefined-value))
 
 (defun get-peer-host-and-port (fd)
-  _N"Return the peer host address and port in host order."
+  "Return the peer host address and port in host order."
   (with-alien ((sockaddr inet-sockaddr)
 	       (length (alien:array unsigned 1)))
     (setf (deref length 0) (alien-size inet-sockaddr :bytes))
@@ -679,7 +679,7 @@ struct in_addr {
 ;;; will be delivered.)
 
 (defun add-oob-handler (fd char handler)
-  _N"Arrange to funcall HANDLER when CHAR shows up out-of-band on FD."
+  "Arrange to funcall HANDLER when CHAR shows up out-of-band on FD."
   (declare (integer fd)
 	   (base-char char))
   (let ((handlers (assoc fd *oob-handlers*)))
@@ -706,7 +706,7 @@ struct in_addr {
 ;;; descriptor.
 
 (defun remove-oob-handler (fd char)
-  _N"Remove any handlers for CHAR on FD."
+  "Remove any handlers for CHAR on FD."
   (declare (integer fd)
 	   (base-char char))
   (let ((handlers (assoc fd *oob-handlers*)))
@@ -729,7 +729,7 @@ struct in_addr {
 ;;;   Delete the entry for the given file descriptor.
 
 (defun remove-all-oob-handlers (fd)
-  _N"Remove all handlers for FD."
+  "Remove all handlers for FD."
   (declare (integer fd))
   (setf *oob-handlers*
 	(delete fd *oob-handlers*
@@ -753,7 +753,7 @@ struct in_addr {
 	     (unix:get-unix-error-msg)))))
 
 (defun inet-recvfrom (fd buffer size &key (flags 0))
-  _N"A packaging of the unix recvfrom call.  Returns three values:
+  "A packaging of the unix recvfrom call.  Returns three values:
 bytecount, source address as integer, and source port.  bytecount
 can of course be negative, to indicate faults."
   #+mp (mp:process-wait-until-fd-usable fd :input)
@@ -764,7 +764,7 @@ can of course be negative, to indicate faults."
       (values bytecount (ntohl (slot sockaddr 'addr)) (ntohs (slot sockaddr 'port))))))
 
 (defun inet-sendto (fd buffer size addr port &key (flags 0))
-  _N"A packaging of the unix sendto call.  Return value like sendto"
+  "A packaging of the unix sendto call.  Return value like sendto"
     (with-alien ((sockaddr inet-sockaddr))
       (setf (slot sockaddr 'family) af-inet)
       (setf (slot sockaddr 'port) (htons port))
@@ -781,7 +781,7 @@ can of course be negative, to indicate faults."
 (defconstant shut-rdwr 2)
 
 (defun inet-shutdown (fd level)
-  _N"A packaging of the unix shutdown call.  An error is signaled if shutdown fails." 
+  "A packaging of the unix shutdown call.  An error is signaled if shutdown fails." 
   (when (minusp (unix:unix-shutdown fd level))
     (error 'socket-error
 	   :format-control _"Error on shutdown of socket: ~A"
@@ -794,7 +794,7 @@ can of course be negative, to indicate faults."
 ;;;   Returns a stream connected to the specified Port on the given Host.
 (defun open-network-stream (host port &key (buffering :line) timeout
 					   (external-format '(:latin-1 :crlf)))
-  _N"Return a network stream.  HOST may be an address string or an integer
+  "Return a network stream.  HOST may be an address string or an integer
 IP address."
   (let (hostent hostaddr)
     (cond ((stringp host)

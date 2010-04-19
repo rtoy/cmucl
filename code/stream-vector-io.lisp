@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.7 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.8 2010/04/19 02:18:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -176,7 +176,7 @@
 
 ;;; READ-VECTOR --
 (defun read-vector (vector stream &key (start 0) end (endian-swap :byte-8))
-  _N"Read from Stream into Vector.  The Start and End indices of Vector
+  "Read from Stream into Vector.  The Start and End indices of Vector
   is in octets, and must be an multiple of the octets per element of
   the vector element.  The keyword argument :Endian-Swap specifies any
   endian swapping to be done. "
@@ -213,7 +213,7 @@
 ;;; WRITE VECTOR --
 ;;; returns the next octet-position in vector.
 (defun write-vector (vector stream &key (start 0) (end nil) (endian-swap :byte-8))
-  _N"Write Vector to Stream.  The Start and End indices of Vector is in
+  "Write Vector to Stream.  The Start and End indices of Vector is in
   octets, and must be an multiple of the octets per element of the
   vector element.  The keyword argument :Endian-Swap specifies any
   endian swapping to be done. "

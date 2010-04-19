@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.70 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.71 2010/04/19 02:18:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,24 +44,24 @@
 ;;;; Variables, parameters, and constants.
 
 (defparameter *debug-print-level* 3
-  _N"*PRINT-LEVEL* is bound to this value when debug prints a function call.  If
+  "*PRINT-LEVEL* is bound to this value when debug prints a function call.  If
   null, use *PRINT-LEVEL*")
 
 (defparameter *debug-print-length* 5
-  _N"*PRINT-LENGTH* is bound to this value when debug prints a function call.  If
+  "*PRINT-LENGTH* is bound to this value when debug prints a function call.  If
   null, use *PRINT-LENGTH*.")
 
 (defparameter *default-print-frame-call-verbosity* 1
-  _N"default value for the verbose argument to print-frame-call.  If set to >= 2, source will be printed for all frames")
+  "default value for the verbose argument to print-frame-call.  If set to >= 2, source will be printed for all frames")
 
 (defvar *in-the-debugger* nil
-  _N"This is T while in the debugger.")
+  "This is T while in the debugger.")
 
 (defvar *debug-command-level* 0
-  _N"Pushes and pops/exits inside the debugger change this.")
+  "Pushes and pops/exits inside the debugger change this.")
 
 (defvar *stack-top-hint* nil
-  _N"If this is bound before the debugger is invoked, it is used as the stack
+  "If this is bound before the debugger is invoked, it is used as the stack
    top by the debugger.")
 (defvar *stack-top* nil)
 (defvar *real-stack-top* nil)
@@ -81,11 +81,11 @@
     (force-output)))
 
 (defparameter *debug-prompt* #'debug-prompt
-  _N"This is a function of no arguments that prints the debugger prompt
+  "This is a function of no arguments that prints the debugger prompt
    on *debug-io*.")
 
 (defconstant debug-help-string
-_N"
+"
 The prompt is right square brackets, the number indicating how many
   recursive command loops you are in.
 Debug commands do not affect * and friends, but evaluation in the debug loop
@@ -147,11 +147,11 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;; Breakpoint state:
 
 (defvar *only-block-start-locations* nil
-  _N"When true, the LIST-LOCATIONS command only displays block start locations.
+  "When true, the LIST-LOCATIONS command only displays block start locations.
    Otherwise, all locations are displayed.")
 
 (defvar *print-location-kind* nil
-  _N"If true, list the code location type in the LIST-LOCATIONS command.")
+  "If true, list the code location type in the LIST-LOCATIONS command.")
 
 ;;; A list of the types of code-locations that should not be stepped to and
 ;;; should not be listed when listing breakpoints.
@@ -507,7 +507,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;; STEP -- Public.
 ;;;
 (defmacro step (form)
-  _N"STEP implements a debugging paradigm wherein the programmer is allowed
+  "STEP implements a debugging paradigm wherein the programmer is allowed
    to step through the evaluation of a form.  We use the debugger's stepping
    facility to step through an anonymous function containing only form.
 
@@ -524,7 +524,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;
 (defun backtrace (&optional (count most-positive-fixnum)
 			    (*standard-output* *debug-io*))
-  _N"Show a listing of the call stack going down from the current frame.  In the
+  "Show a listing of the call stack going down from the current frame.  In the
    debugger, the current frame is indicated by the prompt.  Count is how many
    frames to show."
   (let ((*print-length* (or *debug-print-length* *print-length*))
@@ -691,7 +691,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;; Invoke-debugger.
 
 (defvar *debugger-hook* nil
-  _N"This is either nil or a function of two arguments, a condition and the value
+  "This is either nil or a function of two arguments, a condition and the value
    of *debugger-hook*.  This function can either handle the condition or return
    which causes the standard debugger to execute.  The system passes the value
    of this variable to the function because it binds *debugger-hook* to nil
@@ -729,7 +729,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;; INVOKE-DEBUGGER -- Public.
 ;;;
 (defun invoke-debugger (condition)
-  _N"The CMU Common Lisp debugger.  Type h for help."
+  "The CMU Common Lisp debugger.  Type h for help."
   (when *debugger-hook*
     (let ((hook *debugger-hook*)
 	  (*debugger-hook* nil))
@@ -800,15 +800,15 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;; Debug-loop.
 
 (defvar *flush-debug-errors* t
-  _N"When set, avoid calling INVOKE-DEBUGGER recursively when errors occur while
+  "When set, avoid calling INVOKE-DEBUGGER recursively when errors occur while
    executing in the debugger.  The 'flush' command toggles this.")
 
 (defvar *debug-readtable* nil
-  _N"When non-NIL, becomes the system *READTABLE* in the debugger
+  "When non-NIL, becomes the system *READTABLE* in the debugger
    read-eval-print loop")
 
 (defvar *debug-print-current-frame* t
-  _N"When non-NIL, print the current frame when entering the debugger.")
+  "When non-NIL, print the current frame when entering the debugger.")
 
 (defun maybe-handle-dead-input-stream (condition)
   ;; Scenario: "xon <remote-box> cmucl -edit"
@@ -888,7 +888,7 @@ See the CMU Common Lisp User's Manual for more information.
 				  (funcall cmd-fun)))))))))))))))
 
 (defvar *auto-eval-in-frame* t
-  _N"When set (the default), evaluations in the debugger's command loop occur
+  "When set (the default), evaluations in the debugger's command loop occur
    relative to the current frame's environment without the need of debugger
    forms that explicitly control this kind of evaluation.")
 
@@ -1005,7 +1005,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;; VAR -- Public.
 ;;;
 (defun var (name &optional (id 0 id-supplied))
-  _N"Returns a variable's value if possible.  Name is a simple-string or symbol.
+  "Returns a variable's value if possible.  Name is a simple-string or symbol.
    If it is a simple-string, it is an initial substring of the variable's name.
    If name is a symbol, it has the same name and package as the variable whose
    value this function returns.  If the symbol is uninterned, then the variable
@@ -1030,7 +1030,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;; ARG -- Public.
 ;;;
 (defun arg (n)
-  _N"Returns the n'th argument's value if possible.  Argument zero is the first
+  "Returns the n'th argument's value if possible.  Argument zero is the first
    argument in a frame's default printed representation.  Count keyword/value
    pairs as separate arguments."
   (multiple-value-bind
@@ -1312,7 +1312,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;
  
 (defvar *help-line-scroll-count* 20
-  _N"This controls how many lines the debugger's help command prints before
+  "This controls how many lines the debugger's help command prints before
    printing a prompting line to continue with output.")
 
 (def-debug-command "HELP" ()
