@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.60 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.61 2010/04/19 18:21:31 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -87,41 +87,41 @@
 (eval-when (compile load eval)
 
 (defconstant word-bits 32
-  _N"Number of bits per word where a word holds one lisp descriptor.")
+  "Number of bits per word where a word holds one lisp descriptor.")
 
 (defconstant byte-bits 8
-  _N"Number of bits per byte where a byte is the smallest addressable object.")
+  "Number of bits per byte where a byte is the smallest addressable object.")
 
 (defconstant char-bits #-unicode 8 #+unicode 16
-  _N"Number of bits needed to represent a character")
+  "Number of bits needed to represent a character")
 
 (defconstant char-bytes (truncate char-bits byte-bits)
-  _N"Number of bytes needed to represent a character")
+  "Number of bytes needed to represent a character")
 
 (defconstant word-shift (1- (integer-length (/ word-bits byte-bits)))
-  _N"Number of bits to shift between word addresses and byte addresses.")
+  "Number of bits to shift between word addresses and byte addresses.")
 
 (defconstant word-bytes (/ word-bits byte-bits)
-  _N"Number of bytes in a word.")
+  "Number of bytes in a word.")
 
 (defconstant lowtag-bits 3
-  _N"Number of bits at the low end of a pointer used for type information.")
+  "Number of bits at the low end of a pointer used for type information.")
 
 (defconstant lowtag-mask (1- (ash 1 lowtag-bits))
-  _N"Mask to extract the low tag bits from a pointer.")
+  "Mask to extract the low tag bits from a pointer.")
   
 (defconstant lowtag-limit (ash 1 lowtag-bits)
-  _N"Exclusive upper bound on the value of the low tag bits from a
+  "Exclusive upper bound on the value of the low tag bits from a
   pointer.")
 
 (defconstant fixnum-tag-bits (1- lowtag-bits)
-  _N"Number of tag bits used for a fixnum")
+  "Number of tag bits used for a fixnum")
 
 (defconstant fixnum-tag-mask (1- (ash 1 fixnum-tag-bits))
-  _N"Mask to get the fixnum tag")
+  "Mask to get the fixnum tag")
 
 (defconstant positive-fixnum-bits (- word-bits fixnum-tag-bits 1)
-  _N"Maximum number of bits in a positive fixnum")
+  "Maximum number of bits in a positive fixnum")
 
 (defconstant float-sign-shift 31)
 

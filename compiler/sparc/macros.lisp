@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.35 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.36 2010/04/19 18:21:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.35 2010/03/19 15:19:01 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.36 2010/04/19 18:21:31 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -23,7 +23,7 @@
 ;;; Instruction-like macros.
 
 (defmacro move (dst src)
-  _N"Move SRC into DST unless they are location=."
+  "Move SRC into DST unless they are location=."
   (once-only ((n-dst dst)
 	      (n-src src))
     `(unless (location= ,n-dst ,n-src)
@@ -109,7 +109,7 @@
   (frob function))
 
 (defmacro load-type (target source &optional (offset 0))
-  _N"Loads the type bits of a pointer into target independent of
+  "Loads the type bits of a pointer into target independent of
   byte-ordering issues."
   (once-only ((n-target target)
 	      (n-source source)
@@ -124,14 +124,14 @@
 ;;; return instructions. 
 
 (defmacro lisp-jump (function)
-  _N"Jump to the lisp function FUNCTION.  LIP is an interior-reg temporary."
+  "Jump to the lisp function FUNCTION.  LIP is an interior-reg temporary."
   `(progn
      (inst j ,function
 	   (- (ash function-code-offset word-shift) vm:function-pointer-type))
      (move code-tn ,function)))
 
 (defmacro lisp-return (return-pc &key (offset 0) (frob-code t))
-  _N"Return to RETURN-PC."
+  "Return to RETURN-PC."
   `(progn
      (inst j ,return-pc
 	   (- (* (1+ ,offset) word-bytes) other-pointer-type))
@@ -140,7 +140,7 @@
 	  '(inst nop))))
 
 (defmacro emit-return-pc (label)
-  _N"Emit a return-pc header word.  LABEL is the label to use for this return-pc."
+  "Emit a return-pc header word.  LABEL is the label to use for this return-pc."
   `(progn
      (align lowtag-bits)
      (emit-label ,label)
@@ -174,7 +174,7 @@
 ;;; MAYBE-LOAD-STACK-TN  --  Interface
 ;;;
 (defmacro maybe-load-stack-tn (reg reg-or-stack)
-  _N"Move the TN Reg-Or-Stack into Reg if it isn't already there."
+  "Move the TN Reg-Or-Stack into Reg if it isn't already there."
   (once-only ((n-reg reg)
 	      (n-stack reg-or-stack))
     `(sc-case ,n-reg
@@ -295,7 +295,7 @@
 					    &key (lowtag other-pointer-type)
 					    stack-p)
 				 &body body)
-  _N"Do stuff to allocate an other-pointer object of fixed Size with a single
+  "Do stuff to allocate an other-pointer object of fixed Size with a single
   word header having the specified Type-Code.  The result is placed in
   Result-TN, and Temp-TN is a non-descriptor temp (which may be randomly used
   by the body.)  The body is placed inside the PSEUDO-ATOMIC, and presumably
@@ -546,20 +546,20 @@
 	(align word-shift)))))
 
 (defmacro error-call (vop error-code &rest values)
-  _N"Cause an error.  ERROR-CODE is the error to cause."
+  "Cause an error.  ERROR-CODE is the error to cause."
   (cons 'progn
 	(emit-error-break vop error-trap error-code values)))
 
 
 (defmacro cerror-call (vop label error-code &rest values)
-  _N"Cause a continuable error.  If the error is continued, execution resumes at
+  "Cause a continuable error.  If the error is continued, execution resumes at
   LABEL."
   `(progn
      (inst b ,label)
      ,@(emit-error-break vop cerror-trap error-code values)))
 
 (defmacro generate-error-code (vop error-code &rest values)
-  _N"Generate-Error-Code Error-code Value*
+  "Generate-Error-Code Error-code Value*
   Emit code for an error with the specified Error-Code and context Values."
   `(assemble (*elsewhere*)
      (let ((start-lab (gen-label)))
@@ -568,7 +568,7 @@
        start-lab)))
 
 (defmacro generate-cerror-code (vop error-code &rest values)
-  _N"Generate-CError-Code Error-code Value*
+  "Generate-CError-Code Error-code Value*
   Emit code for a continuable error with the specified Error-Code and
   context Values.  If the error is continued, execution resumes after
   the GENERATE-CERROR-CODE form."

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.47 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.48 2010/04/19 18:21:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1297,7 +1297,7 @@
 ;;; routines.
 ;;; 
 (defun emit-multiply (multiplier multiplicand result-high result-low)
-  _N"Emit code to multiply MULTIPLIER with MULTIPLICAND, putting the result
+  "Emit code to multiply MULTIPLIER with MULTIPLICAND, putting the result
   in RESULT-HIGH and RESULT-LOW.  KIND is either :signed or :unsigned.
   Note: the lifetimes of MULTIPLICAND and RESULT-HIGH overlap."
   (declare (type tn multiplier result-high result-low)
@@ -2577,12 +2577,12 @@
 (deftransform * ((x y)
 		 ((unsigned-byte 32) (constant-argument (unsigned-byte 32)))
 		 (unsigned-byte 32))
-  _N"recode as shifts and adds"
+  "recode as shifts and adds"
   (*-transformer y))
 
 #+modular-arith
 (deftransform vm::*-mod32 ((x y)
 		 ((unsigned-byte 32) (constant-argument (unsigned-byte 32)))
 		 (unsigned-byte 32))
-  _N"recode as shifts and adds"
+  "recode as shifts and adds"
   (*-transformer y))

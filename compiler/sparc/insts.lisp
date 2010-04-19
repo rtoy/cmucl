@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.54 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.55 2010/04/19 18:21:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,7 +56,7 @@
 			      :opcode-column-width 11)
 
 (defvar *disassem-use-lisp-reg-names* t
-  _N"If non-NIL, print registers using the Lisp register names.
+  "If non-NIL, print registers using the Lisp register names.
 Otherwise, use the Sparc register names")
 
 (def-vm-support-routine location-number (loc)
@@ -102,7 +102,7 @@ Otherwise, use the Sparc register names")
 	   (cond ((null name) nil)
 		 (t (make-symbol (concatenate 'string "%" name)))))
        sparc::*register-names*)
-  _N"The Lisp names for the Sparc integer registers")
+  "The Lisp names for the Sparc integer registers")
 
 (defparameter sparc-reg-symbols
   (map 'vector
@@ -113,7 +113,7 @@ Otherwise, use the Sparc register names")
 	 "O0" "O1" "O2" "O3" "O4" "O5" "O6" "O7"
 	 "L0" "L1" "L2" "L3" "L4" "L5" "L6" "L7"
 	 "I0" "I1" "I2" "I3" "I4" "I5" "I6" "I7"))
-  _N"The standard names for the Sparc integer registers")
+  "The standard names for the Sparc integer registers")
     
 (defun get-reg-name (index)
   (if *disassem-use-lisp-reg-names*
@@ -121,7 +121,7 @@ Otherwise, use the Sparc register names")
       (aref sparc-reg-symbols index)))
 
 (defvar *note-sethi-inst* nil
-  _N"An alist for the disassembler indicating the target register and
+  "An alist for the disassembler indicating the target register and
 value used in a SETHI instruction.  This is used to make annotations
 about function addresses and register values.")
 
