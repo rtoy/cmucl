@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.46 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.47 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -323,7 +323,7 @@
 ;;;
 
 (defmacro declaim (&rest specs)
-  _N"DECLAIM Declaration*
+  "DECLAIM Declaration*
   Do a declaration for the global environment."
   `(progn
      (eval-when (:load-toplevel :execute)

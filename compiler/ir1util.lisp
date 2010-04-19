@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.111 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.112 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -447,17 +447,17 @@
   form)
 
 (defun encode-form-numbers (tlf-number form-number)
-  _N"Return the TLF-NUMBER and FORM-NUMBER encoded as fixnum."
+  "Return the TLF-NUMBER and FORM-NUMBER encoded as fixnum."
   (declare (type (unsigned-byte 14) tlf-number form-number))
   (logior tlf-number (ash form-number 14)))
 
 (defun decode-form-numbers (fixnum)
-  _N"Return the tlf-number and form-number from an encoded FIXNUM."
+  "Return the tlf-number and form-number from an encoded FIXNUM."
   (values (ldb (byte 14 0) fixnum) 
 	  (ldb (byte 14 14) fixnum)))
 
 (defun source-location ()
-  _N"Return a source-location for the call site."
+  "Return a source-location for the call site."
   nil)
 
 (define-compiler-macro source-location ()
@@ -1404,7 +1404,7 @@
 ;;; with the correct number of arguments.
 ;;; 
 (defun extract-function-args (cont fun num-args)
-  _N"If CONT is a call to FUN with NUM-ARGS args, change those arguments
+  "If CONT is a call to FUN with NUM-ARGS args, change those arguments
    to feed directly to the continuation-dest of CONT, which must be
    a combination."
   (declare (type continuation cont)
@@ -1618,7 +1618,7 @@
 
 
 (defvar *inline-expansion-limit* 400
-  _N"An upper limit on the number of inline function calls that will be expanded
+  "An upper limit on the number of inline function calls that will be expanded
    in any given code object (single function or block compilation.)")
 
 
@@ -1654,14 +1654,14 @@
 	       *error-print-length* *error-print-lines*))
 
 (defvar *error-print-level* 3
-  _N"The value for *Print-Level* when printing compiler error messages.")
+  "The value for *Print-Level* when printing compiler error messages.")
 (defvar *error-print-length* 5
-  _N"The value for *Print-Length* when printing compiler error messages.")
+  "The value for *Print-Length* when printing compiler error messages.")
 (defvar *error-print-lines* 5
-  _N"The value for *Print-Lines* when printing compiler error messages.")
+  "The value for *Print-Lines* when printing compiler error messages.")
 
 (defvar *enclosing-source-cutoff* 1
-  _N"The maximum number of enclosing non-original source forms (i.e. from
+  "The maximum number of enclosing non-original source forms (i.e. from
   macroexpansion) that we print in full.  For additional enclosing forms, we
   print only the CAR.")
 (declaim (type unsigned-byte *enclosing-source-cutoff*))
@@ -1722,7 +1722,7 @@
 ;;; DEF-SOURCE-CONTEXT  --  Public
 ;;;
 (defmacro def-source-context (name ll &body body)
-  _N"DEF-SOURCE-CONTEXT Name Lambda-List Form*
+  "DEF-SOURCE-CONTEXT Name Lambda-List Form*
    This macro defines how to extract an abbreviated source context from the
    Named form when it appears in the compiler input.  Lambda-List is a DEFMACRO
    style lambda-list used to parse the arguments.  The Body should return a
@@ -1908,7 +1908,7 @@
 (declaim (type index *last-message-count*))
 
 (defvar *compiler-notification-function* nil
-  _N"This is the function called by the compiler to specially note a
+  "This is the function called by the compiler to specially note a
 warning, comment, or error. The function must take five arguments: the
 severity, a string describing the nature of the notification, a string
 for context, the file namestring, and the file position. The severity
@@ -2200,7 +2200,7 @@ these can be NIL if unavailable or inapplicable.")
 
 
 (defvar *undefined-warning-limit* 3
-  _N"If non-null, then an upper limit on the number of unknown function or type
+  "If non-null, then an upper limit on the number of unknown function or type
   warnings that the compiler will print for any given name in a single
   compilation.  This prevents excessive amounts of output when there really is
   a missing definition (as opposed to a typo in the use.)")

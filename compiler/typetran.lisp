@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.46 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.47 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,7 +42,7 @@
 ;;; Define-Type-Predicate  --  Interface
 ;;;
 (defmacro define-type-predicate (name type)
-  _N"Define-Type-Predicate Name Type
+  "Define-Type-Predicate Name Type
   Establish an association between the type predicate Name and the
   corresponding Type.  This causes the type predicate to be recognized for
   purposes of optimization."

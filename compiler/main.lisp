@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.154 2010/04/03 18:40:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.155 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,22 +44,22 @@
 
 ;;; Exported:
 (defvar *block-compile-default* :specified
-  _N"The default value for the :Block-Compile argument to COMPILE-FILE.")
+  "The default value for the :Block-Compile argument to COMPILE-FILE.")
 (declaim (type (member t nil :specified) *block-compile-default*))
 
 ;;; Exported:
 (defvar *byte-compile-default* :maybe
-  _N"The default value for the :Byte-Compile argument to COMPILE-FILE.")
+  "The default value for the :Byte-Compile argument to COMPILE-FILE.")
 
 ;;; Exported:
 (defvar *byte-compile-top-level* t
-  _N"Similar to *BYTE-COMPILE-DEFAULT*, but controls the compilation of top-level
+  "Similar to *BYTE-COMPILE-DEFAULT*, but controls the compilation of top-level
    forms (evaluated at load-time) when the :BYTE-COMPILE argument is :MAYBE
    (the default.)  When true, we decide to byte-compile.")
 
 ;;; Exported:
 (defvar *loop-analyze* nil
-  _N"Whether loop analysis should be done or not.")
+  "Whether loop analysis should be done or not.")
 
 ;;; Value of the :byte-compile argument to the compiler.
 (defvar *byte-compile* :maybe)
@@ -82,7 +82,7 @@
 (defvar *check-consistency* nil)
 
 (defvar *record-xref-info* nil
-  _N"Whether the compiler should record cross-reference information.")
+  "Whether the compiler should record cross-reference information.")
 
 (defvar *all-components*)
 
@@ -109,17 +109,17 @@
 (declaim (list *top-level-lambdas*))
 
 (defvar *compile-verbose* t
-  _N"The default for the :VERBOSE argument to COMPILE-FILE.")
+  "The default for the :VERBOSE argument to COMPILE-FILE.")
 (defvar *compile-print* t
-  _N"The default for the :PRINT argument to COMPILE-FILE.")
+  "The default for the :PRINT argument to COMPILE-FILE.")
 (defvar *compile-progress* nil
-  _N"The default for the :PROGRESS argument to COMPILE-FILE.")
+  "The default for the :PROGRESS argument to COMPILE-FILE.")
 
 (defvar *compile-file-pathname* nil
-  _N"The defaulted pathname of the file currently being compiled, or NIL if not
+  "The defaulted pathname of the file currently being compiled, or NIL if not
   compiling.")
 (defvar *compile-file-truename* nil
-  _N"The TRUENAME of the file currently being compiled, or NIL if not
+  "The TRUENAME of the file currently being compiled, or NIL if not
   compiling.")
 
 (declaim (type (or pathname null) *compile-file-pathname*
@@ -138,7 +138,7 @@
 (defvar *source-info* nil)
 
 (defvar *user-source-info* nil
-  _N"The user supplied source-info for the current compilation.  
+  "The user supplied source-info for the current compilation.  
 This is the :source-info argument to COMPILE-FROM-STREAM and will be
 stored in the INFO slot of the DEBUG-SOURCE in code components and 
 in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
@@ -162,7 +162,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 ;;;; Component compilation:
 
 (defparameter max-optimize-iterations 6
-  _N"The upper limit on the number of times that we will consecutively do IR1
+  "The upper limit on the number of times that we will consecutively do IR1
   optimization that doesn't introduce any new code.  A finite limit is
   necessary, since type inference may take arbitrarily long to converge.")
 
@@ -217,7 +217,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 (defparameter *reoptimize-after-type-check-max* 10)
 
 (defevent reoptimize-maxed-out
-  _N"*REOPTIMIZE-AFTER-TYPE-CHECK-MAX* exceeded.")
+  "*REOPTIMIZE-AFTER-TYPE-CHECK-MAX* exceeded.")
 
 
 ;;; DFO-AS-NEEDED  --  Internal
@@ -1663,7 +1663,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	       ((:byte-compile *byte-compile*) *byte-compile-default*)
 	       source-info
 	       (language :lisp))
-  _N"Similar to COMPILE-FILE, but compiles text from Stream into the current lisp
+  "Similar to COMPILE-FILE, but compiles text from Stream into the current lisp
   environment.  Stream is closed when compilation is complete.  These keywords
   are supported:
 
@@ -1753,7 +1753,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 			     *byte-compile-default*)
 		            ((:xref *record-xref-info*)
 			     *record-xref-info*))
-  _N"Compiles Source, producing a corresponding .FASL file.  Source may be a list
+  "Compiles Source, producing a corresponding .FASL file.  Source may be a list
    of files, in which case the files are compiled as a unit, producing a single
    .FASL file.  The output file names are defaulted from the first (or only)
    input file name.  Other options available via keywords:
@@ -1937,7 +1937,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 ;;;
 (defun compile (name &optional (definition (or (macro-function name)
 					       (fdefinition name))))
-  _N"Compiles the function (or macro-function) whose name is NAME.  If
+  "Compiles the function (or macro-function) whose name is NAME.  If
   DEFINITION is supplied, it should be a lambda expression which will
   be compiled.  IF NAME names a macro, then the compiled expression
   replaces the existing macro-function.  If NAME names a function, the
@@ -2036,7 +2036,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 ;;; UNCOMPILE  --  Public
 ;;;
 (defun uncompile (name)
-  _N"Attempt to replace Name's definition with an interpreted version of that
+  "Attempt to replace Name's definition with an interpreted version of that
   definition.  If no interpreted definition is to be found, then signal an
   error."
   (let ((def (fdefinition name)))
@@ -2069,7 +2069,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 			      (byte-compile *byte-compile-default*)
 			      (output-file t output-file-supplied-p)
 			      &allow-other-keys)
-  _N"Return a pathname describing what file COMPILE-FILE would write to given
+  "Return a pathname describing what file COMPILE-FILE would write to given
    these arguments."
   (declare (type (or string pathname stream) input-file)
 	   (type (or string pathname stream (member t)) output-file)

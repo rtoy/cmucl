@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.137 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.138 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1818,7 +1818,7 @@
   
 (declaim (inline quick-two-sum))
 (defun quick-two-sum (a b)
-  _N"Computes fl(a+b) and err(a+b), assuming |a| >= |b|"
+  "Computes fl(a+b) and err(a+b), assuming |a| >= |b|"
   (declare (double-float a b))
   (let* ((s (+ a b))
 	 (e (- b (- s a))))
@@ -1826,7 +1826,7 @@
 
 (declaim (inline two-sum))
 (defun two-sum (a b)
-  _N"Computes fl(a+b) and err(a+b)"
+  "Computes fl(a+b) and err(a+b)"
   (declare (double-float a b))
   (let* ((s (+ a b))
 	 (v (- s a))
@@ -1838,7 +1838,7 @@
 
 (declaim (maybe-inline add-dd))
 (defun add-dd (a0 a1 b0 b1)
-  _N"Add the double-double A0,A1 to the double-double B0,B1"
+  "Add the double-double A0,A1 to the double-double B0,B1"
   (declare (double-float a0 a1 b0 b1)
 	   (optimize (speed 3)
 		     (inhibit-warnings 3)))
@@ -1873,14 +1873,14 @@
 
 (declaim (inline quick-two-diff))
 (defun quick-two-diff (a b)
-  _N"Compute fl(a-b) and err(a-b), assuming |a| >= |b|"
+  "Compute fl(a-b) and err(a-b), assuming |a| >= |b|"
   (declare (double-float a b))
   (let ((s (- a b)))
     (values s (- (- a s) b))))
 
 (declaim (inline two-diff))
 (defun two-diff (a b)
-  _N"Compute fl(a-b) and err(a-b)"
+  "Compute fl(a-b) and err(a-b)"
   (declare (double-float a b))
   (let* ((s (- a b))
 	 (v (- s a))
@@ -1892,7 +1892,7 @@
 
 (declaim (maybe-inline sub-dd))
 (defun sub-dd (a0 a1 b0 b1)
-  _N"Subtract the double-double B0,B1 from A0,A1"
+  "Subtract the double-double B0,B1 from A0,A1"
   (declare (double-float a0 a1 b0 b1)
 	   (optimize (speed 3)
 		     (inhibit-warnings 3)))
@@ -1917,7 +1917,7 @@
 
 (declaim (maybe-inline sub-d-dd))
 (defun sub-d-dd (a b0 b1)
-  _N"Compute double-double = double - double-double"
+  "Compute double-double = double - double-double"
   (declare (double-float a b0 b1)
 	   (optimize (speed 3) (safety 0)
 		     (inhibit-warnings 3)))
@@ -1935,7 +1935,7 @@
 
 (declaim (maybe-inline sub-dd-d))
 (defun sub-dd-d (a0 a1 b)
-  _N"Subtract the double B from the double-double A0,A1"
+  "Subtract the double B from the double-double A0,A1"
   (declare (double-float a0 a1 b)
 	   (optimize (speed 3) (safety 0)
 		     (inhibit-warnings 3)))
@@ -1993,7 +1993,7 @@
 ;; printing algorithm, or even divide 1w308 by 10.
 #+nil
 (defun split (a)
-  _N"Split the double-float number a into a-hi and a-lo such that a =
+  "Split the double-float number a into a-hi and a-lo such that a =
   a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
   a-lo contains the lower 26 bits."
   (declare (double-float a))
@@ -2012,7 +2012,7 @@
   (scale-float (/ (float (1+ (expt 2 27)) 1d0)) 1024))
 
 (defun split (a)
-  _N"Split the double-float number a into a-hi and a-lo such that a =
+  "Split the double-float number a into a-hi and a-lo such that a =
   a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
   a-lo contains the lower 26 bits."
   (declare (double-float a)
@@ -2120,7 +2120,7 @@
 
 (declaim (maybe-inline mul-dd))
 (defun mul-dd (a0 a1 b0 b1)
-  _N"Multiply the double-double A0,A1 with B0,B1"
+  "Multiply the double-double A0,A1 with B0,B1"
   (declare (double-float a0 a1 b0 b1)
 	   (optimize (speed 3)
 		     (inhibit-warnings 3)))
@@ -2139,7 +2139,7 @@
 
 (declaim (maybe-inline add-dd-d))
 (defun add-dd-d (a0 a1 b)
-  _N"Add the double-double A0,A1 to the double B"
+  "Add the double-double A0,A1 to the double B"
   (declare (double-float a0 a1 b)
 	   (optimize (speed 3)
 		     (inhibit-warnings 3)))
@@ -2234,7 +2234,7 @@
 
 (declaim (maybe-inline div-dd))
 (defun div-dd (a0 a1 b0 b1)
-  _N"Divide the double-double A0,A1 by B0,B1"
+  "Divide the double-double A0,A1 by B0,B1"
   (declare (double-float a0 a1 b0 b1)
 	   (optimize (speed 3)
 		     (inhibit-warnings 3))
@@ -2300,7 +2300,7 @@
 
 (declaim (inline sqr-d))
 (defun sqr-d (a)
-  _N"Square"
+  "Square"
   (declare (double-float a)
 	   (optimize (speed 3)
 		     (inhibit-warnings 3)))

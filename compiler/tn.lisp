@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.21 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.22 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,7 +34,7 @@
 ;;; Do-Packed-TNs  --  Interface
 ;;;
 (defmacro do-packed-tns ((tn component &optional result) &body body)
-  _N"Do-Packed-TNs (TN-Var Component [Result]) Declaration* Form*
+  "Do-Packed-TNs (TN-Var Component [Result]) Declaration* Form*
   Iterate over all packed TNs allocated in Component."
   (let ((n-component (gensym)))
     `(let ((,n-component (component-info ,component)))

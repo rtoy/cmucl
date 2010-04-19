@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.174 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.175 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -118,7 +118,7 @@
 (defvar *current-function-names* ())
 
 (defvar *derive-function-types* t
-  _N"If true, argument and result type information derived from compilation of
+  "If true, argument and result type information derived from compilation of
   DEFUNs is used when compiling calls to that function.  If false, only
   information from FTYPE proclamations will be used.")
 
@@ -157,7 +157,7 @@
 ;;;; Dynamic-Extent
 
 (defvar *trust-dynamic-extent-declarations* nil
-  _N"If NIL, never trust dynamic-extent declarations.
+  "If NIL, never trust dynamic-extent declarations.
 
    If T, always trust dynamic-extent declarations.
 
@@ -1333,7 +1333,7 @@
   (undefined-value))
 
 (defvar *suppress-values-declaration* nil
-  _N"If true, processing of the VALUES declaration is inhibited.")
+  "If true, processing of the VALUES declaration is inhibited.")
 
 ;;; PROCESS-1-DECLARATION  --  Internal
 ;;;
@@ -2320,13 +2320,13 @@
 ;;;; Control special forms:
 
 (def-ir1-translator progn ((&rest forms) start cont)
-  _N"Progn Form*
+  "Progn Form*
   Evaluates each Form in order, returing the values of the last form.  With no
   forms, returns NIL."
   (ir1-convert-progn-body start cont forms))
 
 (def-ir1-translator if ((test then &optional else) start cont)
-  _N"If Predicate Then [Else]
+  "If Predicate Then [Else]
   If Predicate evaluates to non-null, evaluate Then and returns its values,
   otherwise evaluate Else and return its values.  Else defaults to NIL."
   (let* ((pred (make-continuation))
@@ -2366,7 +2366,7 @@
 ;;; done later, the block would be in the wrong environment.
 ;;;
 (def-ir1-translator block ((name &rest forms) start cont)
-  _N"Block Name Form*
+  "Block Name Form*
   Evaluate the Forms as a PROGN.  Within the lexical scope of the body,
   (RETURN-FROM Name Value-Form) can be used to exit the form, returning the
   result of Value-Form."
@@ -2393,7 +2393,7 @@
 ;;;
 (def-ir1-translator return-from ((name &optional value)
 				 start cont)
-  _N"Return-From Block-Name Value-Form
+  "Return-From Block-Name Value-Form
   Evaluate the Value-Form, returning its values from the lexically enclosing
   BLOCK Block-Name.  This is constrained to be used only within the dynamic
   extent of the BLOCK."
@@ -2446,7 +2446,7 @@
 ;;; each segment with the precomputed Start and Cont values.
 ;;;
 (def-ir1-translator tagbody ((&rest statements) start cont)
-  _N"Tagbody {Tag | Statement}*
+  "Tagbody {Tag | Statement}*
   Define tags for used with GO.  The Statements are evaluated in order
   (skipping Tags) and NIL is returned.  If a statement contains a GO to a
   defined Tag within the lexical scope of the form, then control is transferred
@@ -2488,7 +2488,7 @@
 ;;;    Emit an Exit node without any value.
 ;;;
 (def-ir1-translator go ((tag) start cont)
-  _N"Go Tag
+  "Go Tag
   Transfer control to the named Tag in the lexically enclosing TAGBODY.  This
   is constrained to be used only within the dynamic extent of the TAGBODY."
   (continuation-starts-block cont)
@@ -2555,7 +2555,7 @@
 	  (funcall fun '(nil)))))
   
 (def-ir1-translator eval-when ((situations &rest body) start cont)
-  _N"EVAL-WHEN (Situation*) Form*
+  "EVAL-WHEN (Situation*) Form*
   Evaluate the Forms in the specified Situations, any of :COMPILE-TOPLEVEL,
   :LOAD-TOPLEVEL, :EXECUTE."
   (do-eval-when-stuff situations body
@@ -2628,7 +2628,7 @@
 
 
 (def-ir1-translator macrolet ((definitions &parse-body (body decls)) start cont)
-  _N"MACROLET ({(Name Lambda-List Form*)}*) Body-Form*
+  "MACROLET ({(Name Lambda-List Form*)}*) Body-Form*
   Evaluate the Body-Forms in an environment with the specified local macros
   defined.  Name is the local macro name, Lambda-List is the DEFMACRO style
   destructuring lambda list, and the Forms evaluate to the expansion."
@@ -2642,7 +2642,7 @@
 ;;; COMPILER-OPTION-BIND
 ;;; 
 (def-ir1-translator compiler-option-bind ((bindings &body body) start cont)
-  _N"Compiler-Option-Bind ({(Name Value-Form)}*) Body-Form*
+  "Compiler-Option-Bind ({(Name Value-Form)}*) Body-Form*
    Establish the specified compiler options for the (lexical) duration of
    the body.  The Value-Forms are evaluated at compile time."
   (let ((*lexical-environment*
@@ -2739,13 +2739,13 @@
 ;;;; Quote and Function:
 
 (def-ir1-translator quote ((thing) start cont)
-  _N"QUOTE Value
+  "QUOTE Value
   Return Value without evaluating it."
   (reference-constant start cont thing))
 
 
 (def-ir1-translator function ((thing) start cont)
-  _N"FUNCTION Name
+  "FUNCTION Name
   Return the lexically apparent definition of the function Name.  Name may also
   be a lambda."
   (flet ((reference-it ()
@@ -2816,7 +2816,7 @@
 
 (def-ir1-translator symbol-macrolet ((specs &parse-body (body decls))
 				     start cont)
-  _N"SYMBOL-MACROLET ({(Name Expansion)}*) Decl* Form*
+  "SYMBOL-MACROLET ({(Name Expansion)}*) Decl* Form*
   Define the Names as symbol macros with the given Expansions.  Within the
   body, references to a Name will effectively be replaced with the Expansion."
   (collect ((res))
@@ -3106,7 +3106,7 @@
 
 (def-ir1-translator let ((bindings &parse-body (body decls))
 			 start cont)
-  _N"LET ({(Var [Value]) | Var}*) Declaration* Form*
+  "LET ({(Var [Value]) | Var}*) Declaration* Form*
   During evaluation of the Forms, Bind the Vars to the result of evaluating the
   Value forms.  The variables are bound in parallel after all of the Values are
   evaluated."
@@ -3126,7 +3126,7 @@
 
 (def-ir1-translator locally ((&parse-body (body decls))
                             start cont)
-  _N"LOCALLY Declaration* Form*
+  "LOCALLY Declaration* Form*
    Sequentially evaluates a body of Form's in a lexical environment
    where the given Declaration's have effect."
   (let* ((*lexical-environment* (process-declarations decls nil nil cont)))
@@ -3134,7 +3134,7 @@
 
 (def-ir1-translator let* ((bindings &parse-body (body decls))
 			  start cont)
-  _N"LET* ({(Var [Value]) | Var}*) Declaration* Form*
+  "LET* ({(Var [Value]) | Var}*) Declaration* Form*
   Similar to LET, but the variables are bound sequentially, allowing each Value
   form to reference any of the previous Vars."
   (multiple-value-bind (vars values)
@@ -3187,7 +3187,7 @@
 
 (def-ir1-translator flet ((definitions &parse-body (body decls))
 			  start cont)
-  _N"FLET ({(Name Lambda-List Declaration* Form*)}*) Declaration* Body-Form*
+  "FLET ({(Name Lambda-List Declaration* Form*)}*) Declaration* Body-Form*
   Evaluate the Body-Forms with some local function definitions.   The bindings
   do not enclose the definitions; any use of Name in the Forms will refer to
   the lexically apparent function definition in the enclosing environment."
@@ -3214,7 +3214,7 @@
 ;;; used for inline expansion we will get the right functions.
 ;;;
 (def-ir1-translator labels ((definitions &parse-body (body decls)) start cont)
-  _N"LABELS ({(Name Lambda-List Declaration* Form*)}*) Declaration* Body-Form*
+  "LABELS ({(Name Lambda-List Declaration* Form*)}*) Declaration* Body-Form*
   Evaluate the Body-Forms with some local function definitions.  The bindings
   enclose the new definitions, so the defined functions can call themselves or
   each other."
@@ -3303,7 +3303,7 @@
 ;;; expected behavior.
 ;;;
 (def-ir1-translator the ((type value) start cont)
-  _N"THE Type Form
+  "THE Type Form
   Assert that Form evaluates to the specified type (which may be a VALUES
   type.)"
   (let ((ctype (values-specifier-type type)))
@@ -3329,7 +3329,7 @@
 ;;; with the uses's Derived-Type.
 ;;;
 (def-ir1-translator truly-the ((type value) start cont)
-  _N"Truly-The Type Value
+  "Truly-The Type Value
   Like the THE special form, except that it believes whatever you tell it.  It
   will never generate a type check, but will cause a warning if the compiler
   can prove the assertion is wrong."
@@ -3349,7 +3349,7 @@
 ;;; out.
 
 (def-ir1-translator setq ((&whole source &rest things) start cont)
-  _N"SETQ {Var Value}*
+  "SETQ {Var Value}*
   Set the variables to the values.  If more than one pair is supplied, the
   assignments are done sequentially.  If Var names a symbol macro, SETF the
   expansion."
@@ -3415,7 +3415,7 @@
 ;;; than receiving multiple-values.
 ;;;
 (def-ir1-translator throw ((tag result) start cont)
-  _N"Throw Tag Form
+  "Throw Tag Form
   Do a non-local exit, return the values of Form from the CATCH whose tag
   evaluates to the same thing as Tag."
   (ir1-convert start cont
@@ -3480,7 +3480,7 @@
 ;;; using %within-cleanup.
 ;;;
 (def-ir1-translator catch ((tag &body body) start cont)
-  _N"Catch Tag Form*
+  "Catch Tag Form*
   Evaluates Tag and instantiates it as a catcher while the body forms are
   evaluated in an implicit PROGN.  If a THROW is done to Tag within the dynamic
   scope of the body, then control will be transferred to the end of the body
@@ -3504,7 +3504,7 @@
 ;;; doesn't cause creation of an XEP.
 ;;;
 (def-ir1-translator unwind-protect ((protected &body cleanup) start cont)
-  _N"Unwind-Protect Protected Cleanup*
+  "Unwind-Protect Protected Cleanup*
   Evaluate the form Protected, returning its values.  The cleanup forms are
   evaluated whenever the dynamic scope of the Protected form is exited (either
   due to normal completion or a non-local exit such as THROW)."
@@ -3540,7 +3540,7 @@
 ;;; compilation of MV-Combinations.
 ;;;
 (def-ir1-translator multiple-value-call ((fun &rest args) start cont)
-  _N"MULTIPLE-VALUE-CALL Function Values-Form*
+  "MULTIPLE-VALUE-CALL Function Values-Form*
   Call Function, passing all the values of each Values-Form as arguments,
   values from the first Values-Form making up the first argument, etc."
   (let* ((fun-cont (make-continuation))
@@ -3595,7 +3595,7 @@
 ;;; whose block is the true control destination.
 ;;;
 (def-ir1-translator multiple-value-prog1 ((result &rest forms) start cont)
-  _N"MULTIPLE-VALUE-PROG1 Values-Form Form*
+  "MULTIPLE-VALUE-PROG1 Values-Form Form*
   Evaluate Values-Form and then the Forms, but return all the values of
   Values-Form." 
   (continuation-starts-block cont)

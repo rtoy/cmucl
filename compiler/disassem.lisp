@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.56 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.57 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -99,11 +99,11 @@
 ;;; ----------------------------------------------------------------
 
 (defvar *opcode-column-width* nil
-  _N"The width of the column in which instruction-names are printed.
+  "The width of the column in which instruction-names are printed.
   NIL means use the default.  A value of zero gives the effect of not
   aligning the arguments at all.")
 (defvar *note-column* 45
-  _N"The column in which end-of-line comments for notes are started.")
+  "The column in which end-of-line comments for notes are started.")
 
 (defconstant default-opcode-column-width 6)
 (defconstant default-location-column-width 8)
@@ -129,7 +129,7 @@
 ;;; ----------------------------------------------------------------
 
 (defmacro set-disassem-params (&rest args)
-  _N"Specify global disassembler params for C:*TARGET-BACKEND*.
+  "Specify global disassembler params for C:*TARGET-BACKEND*.
   Keyword arguments include:
       
   :INSTRUCTION-ALIGNMENT number
@@ -144,7 +144,7 @@
   (gen-preamble-form args))
 
 (defmacro define-argument-type (name &rest args)
-  _N"DEFINE-ARGUMENT-TYPE Name {Key Value}*
+  "DEFINE-ARGUMENT-TYPE Name {Key Value}*
   Define a disassembler argument type NAME (which can then be referenced in
   another argument definition using the :TYPE keyword argument).  Keyword
   arguments are:
@@ -173,7 +173,7 @@
   (gen-arg-type-def-form name args))
 
 (defmacro define-instruction-format (header &rest fields)
-  _N"DEFINE-INSTRUCTION-FORMAT (Name Length {Format-Key Value}*) Arg-Def*
+  "DEFINE-INSTRUCTION-FORMAT (Name Length {Format-Key Value}*) Arg-Def*
   Define an instruction format NAME for the disassembler's use.  LENGTH is
   the length of the format in bits.
   Possible FORMAT-KEYs:
@@ -256,13 +256,13 @@
       int))
 
 (defun aligned-p (address size)
-  _N"Returns non-NIL if ADDRESS is aligned on a SIZE byte boundary."
+  "Returns non-NIL if ADDRESS is aligned on a SIZE byte boundary."
   (declare (type address address)
 	   (type alignment size))
   (zerop (logand (1- size) address)))
 
 (defun align (address size)
-  _N"Return ADDRESS aligned *upward* to a SIZE byte boundary."
+  "Return ADDRESS aligned *upward* to a SIZE byte boundary."
   (declare (type address address)
 	   (type alignment size))
   (logandc1 (1- size) (+ (1- size) address)))
@@ -292,14 +292,14 @@
 ;;; recursively filtering things that usually don't change.
 
 (defun sharing-cons (old-cons car cdr)
-  _N"If CAR is eq to the car of OLD-CONS and CDR is eq to the CDR, return
+  "If CAR is eq to the car of OLD-CONS and CDR is eq to the CDR, return
   OLD-CONS, otherwise return (cons CAR CDR)."
   (if (and (eq car (car old-cons)) (eq cdr (cdr old-cons)))
       old-cons
       (cons car cdr)))
 
 (defun sharing-mapcar (fun list)
-  _N"A simple (one list arg) mapcar that avoids consing up a new list
+  "A simple (one list arg) mapcar that avoids consing up a new list
   as long as the results of calling FUN on the elements of LIST are
   eq to the original."
   (and list
@@ -861,7 +861,7 @@
 ;;; ----------------------------------------------------------------
 
 (defun find-first-field-name (tree)
-  _N"Returns the first non-keyword symbol in a depth-first search of TREE."
+  "Returns the first non-keyword symbol in a depth-first search of TREE."
   (cond ((null tree)
 	 nil)
 	((and (symbolp tree) (not (keywordp tree)))
@@ -1134,7 +1134,7 @@
 	  printer)))))
 
 (defun preprocess-printer (printer args)
-  _N"Returns a version of the disassembly-template PRINTER with compile-time
+  "Returns a version of the disassembly-template PRINTER with compile-time
   tests (e.g. :constant without a value), and any :CHOOSE operators resolved
   properly for the args ARGS.  (:CHOOSE Sub*) simply returns the first Sub in
   which every field reference refers to a valid arg."
@@ -1416,7 +1416,7 @@
 ;;; ----------------------------------------------------------------
 
 (defun gen-preamble-form (args)
-  _N"Generate a form to specify global disassembler params.  See the
+  "Generate a form to specify global disassembler params.  See the
   documentation for SET-DISASSEM-PARAMS for more info."
   (destructuring-bind
 	(&key instruction-alignment
@@ -1469,7 +1469,7 @@
 		      ',descrip-forms))))
 
 (defun gen-arg-type-def-form (name args &optional (evalp t))
-  _N"Generate a form to define a disassembler argument type.  See
+  "Generate a form to define a disassembler argument type.  See
   DEFINE-ARGUMENT-TYPE for more info."
   (multiple-value-bind (args wrapper-defs)
       (munge-fun-refs args evalp t name)
@@ -1505,7 +1505,7 @@
 	      ,',arg-val-form))))))
 
 (defun gen-format-def-form (header descrips &optional (evalp t))
-  _N"Generate a form to define an instruction format.  See
+  "Generate a form to define an instruction format.  See
   DEFINE-INSTRUCTION-FORMAT for more info."
   (when (atom header)
     (setf header (list header)))
@@ -1646,7 +1646,7 @@
 ;;; combining instructions where one specializes another
 
 (defun inst-specializes-p (special general)
-  _N"Returns non-NIL if the instruction SPECIAL is a more specific version of
+  "Returns non-NIL if the instruction SPECIAL is a more specific version of
   GENERAL (i.e., the same instruction, but with more constraints)."
   (declare (type instruction special general))
   (let ((smask (inst-mask special))
@@ -1657,12 +1657,12 @@
 
 ;;; a bit arbitrary, but should work ok...
 (defun specializer-rank (inst)
-  _N"Returns an integer corresponding to the specifivity of the instruction INST."
+  "Returns an integer corresponding to the specifivity of the instruction INST."
   (declare (type instruction inst))
   (* (dchunk-count-bits (inst-mask inst)) 4))
 
 (defun order-specializers (insts)
-  _N"Order the list of instructions INSTS with more specific (more constant
+  "Order the list of instructions INSTS with more specific (more constant
   bits, or same-as argument constains) ones first.  Returns the ordered list."
   (declare (type list insts))
   (sort insts
@@ -1673,7 +1673,7 @@
   (error _"Instructions either aren't related or conflict in some way:~% ~s" insts))
 
 (defun try-specializing (insts)
-  _N"Given a list of instructions INSTS, Sees if one of these instructions is a
+  "Given a list of instructions INSTS, Sees if one of these instructions is a
   more general form of all the others, in which case they are put into its
   specializers list, and it is returned.  Otherwise an error is signaled."
   (declare (type list insts))
@@ -1701,13 +1701,13 @@
 (declaim (inline inst-matches-p choose-inst-specialization))
 
 (defun inst-matches-p (inst chunk)
-  _N"Returns non-NIL if all constant-bits in INST match CHUNK."
+  "Returns non-NIL if all constant-bits in INST match CHUNK."
   (declare (type instruction inst)
 	   (type dchunk chunk))
   (dchunk= (dchunk-and (inst-mask inst) chunk) (inst-id inst)))
 
 (defun choose-inst-specialization (inst chunk)
-  _N"Given an instruction object, INST, and a bit-pattern, CHUNK, picks the
+  "Given an instruction object, INST, and a bit-pattern, CHUNK, picks the
   most specific instruction on INST's specializer list who's constraints are
   met by CHUNK.  If none do, then INST is returned."
   (declare (type instruction inst)
@@ -1740,7 +1740,7 @@
 ;;; searching for an instruction in instruction space
 
 (defun find-inst (chunk inst-space)
-  _N"Returns the instruction object within INST-SPACE corresponding to the
+  "Returns the instruction object within INST-SPACE corresponding to the
   bit-pattern CHUNK, or NIL if there isn't one."
   (declare (type dchunk chunk)
 	   (type (or null inst-space instruction) inst-space))
@@ -1763,7 +1763,7 @@
 ;;; building the instruction space
 
 (defun build-inst-space (insts &optional (initial-mask dchunk-one))
-  _N"Returns an instruction-space object corresponding to the list of
+  "Returns an instruction-space object corresponding to the list of
   instructions INSTS.  If the optional parameter INITIAL-MASK is supplied, only
   bits it has set are used."
   ;; This is done by finding any set of bits that's common to
@@ -1831,7 +1831,7 @@
 		       (bytes-to-bits (inst-length inst))))
 
 (defun print-inst-space (inst-space &optional (indent 0))
-  _N"Prints a nicely formatted version of INST-SPACE."
+  "Prints a nicely formatted version of INST-SPACE."
   (etypecase inst-space
     (null)
     (instruction
@@ -1858,7 +1858,7 @@
 	  (ispace-choices inst-space)))))
 
 (defun print-backend-inst-space (&optional (backend c:*target-backend*))
-  _N"Print the inst space for the specified backend"
+  "Print the inst space for the specified backend"
   (let ((ext:*gc-verbose* nil))
     (print-inst-space (get-inst-space (c:backend-disassem-params backend)))))
 
@@ -1898,13 +1898,13 @@
 
 (eval-when (eval load compile)		; used in a defconstant
   (defun words-to-bytes (num)
-    _N"Converts a word-offset NUM to a byte-offset."
+    "Converts a word-offset NUM to a byte-offset."
     (declare (type offset num))
     (ash num vm:word-shift))
   )
 
 (defun bytes-to-words (num)
-  _N"Converts a byte-offset NUM to a word-offset."
+  "Converts a byte-offset NUM to a word-offset."
   (declare (type offset num))
   (ash num (- vm:word-shift)))
 
@@ -1995,16 +1995,16 @@
     (format stream "+~d~@[ in ~s~]" (dstate-cur-offs dstate) (dstate-segment dstate))))
 
 (defmacro dstate-get-prop (dstate name)
-  _N"Get the value of the property called NAME in DSTATE.  Also setf'able."
+  "Get the value of the property called NAME in DSTATE.  Also setf'able."
   `(getf (dstate-properties ,dstate) ,name))
 
 (defun dstate-cur-addr (dstate)
-  _N"Returns the absolute address of the current instruction in DSTATE."
+  "Returns the absolute address of the current instruction in DSTATE."
   (the address (+ (seg-virtual-location (dstate-segment dstate))
 		  (dstate-cur-offs dstate))))
 
 (defun dstate-next-addr (dstate)
-  _N"Returns the absolute address of the next instruction in DSTATE."
+  "Returns the absolute address of the next instruction in DSTATE."
   (the address (+ (seg-virtual-location (dstate-segment dstate))
 		  (dstate-next-offs dstate))))
 
@@ -2034,13 +2034,13 @@
      (fun-address (kernel:funcallable-instance-function function)))))
 
 (defun fun-insts-offset (function)
-  _N"Offset of FUNCTION from the start of its code-component's instruction area."
+  "Offset of FUNCTION from the start of its code-component's instruction area."
   (declare (type compiled-function function))
   (- (fun-address function)
      (system:sap-int (kernel:code-instructions (fun-code function)))))
 
 (defun fun-offset (function)
-  _N"Offset of FUNCTION from the start of its code-component."
+  "Offset of FUNCTION from the start of its code-component."
   (declare (type compiled-function function))
   (words-to-bytes (kernel:get-closure-length function)))
 
@@ -2049,17 +2049,17 @@
 ;;; one or more functions).
 
 (defun code-inst-area-length (code-component)
-  _N"Returns the length of the instruction area in CODE-COMPONENT."
+  "Returns the length of the instruction area in CODE-COMPONENT."
   (declare (type kernel:code-component code-component))
   (kernel:code-header-ref code-component vm:code-trace-table-offset-slot))
 
 (defun code-inst-area-address (code-component)
-  _N"Returns the address of the instruction area in CODE-COMPONENT."
+  "Returns the address of the instruction area in CODE-COMPONENT."
   (declare (type kernel:code-component code-component))
   (system:sap-int (kernel:code-instructions code-component)))
 
 (defun code-first-function (code-component)
-  _N"Returns the first function in CODE-COMPONENT."
+  "Returns the first function in CODE-COMPONENT."
   (declare (type kernel:code-component code-component))
   (kernel:code-header-ref code-component vm:code-trace-table-offset-slot))
 
@@ -2114,7 +2114,7 @@
   nil)
 
 (defun fun-header-hook (stream dstate)
-  _N"Print the function-header (entry-point) pseudo-instruction at the current
+  "Print the function-header (entry-point) pseudo-instruction at the current
   location in DSTATE to STREAM."
   (declare (type (or null stream) stream)
 	   (type disassem-state dstate))
@@ -2214,7 +2214,7 @@
     (incf (dstate-next-offs dstate) alignment)))
 
 (defun map-segment-instructions (function segment dstate &optional stream)
-  _N"Iterate through the instructions in SEGMENT, calling FUNCTION
+  "Iterate through the instructions in SEGMENT, calling FUNCTION
   for each instruction, with arguments of CHUNK, STREAM, and DSTATE."
   (declare (type function function)
 	   (type segment segment)
@@ -2281,7 +2281,7 @@
 ;;; ----------------------------------------------------------------
 
 (defun add-segment-labels (segment dstate)
-  _N"Make an initial non-printing disassembly pass through DSTATE, noting any
+  "Make an initial non-printing disassembly pass through DSTATE, noting any
   addresses that are referenced by instructions in this segment."
   ;; add labels at the beginning with a label-number of nil; we'll notice
   ;; later and fill them in (and sort them)
@@ -2300,7 +2300,7 @@
     (setf (dstate-notes dstate) nil)))
 
 (defun number-labels (dstate)
-  _N"If any labels in DSTATE have been added since the last call to this
+  "If any labels in DSTATE have been added since the last call to this
   function, give them label-numbers, enter them in the hash-table, and make
   sure the label list is in sorted order."
   (let ((labels (dstate-labels dstate)))
@@ -2323,7 +2323,7 @@
 ;;; ----------------------------------------------------------------
 
 (defun get-inst-space (params)
-  _N"Get the instruction-space from PARAMS, creating it if necessary."
+  "Get the instruction-space from PARAMS, creating it if necessary."
   (declare (type params params))
   (let ((ispace (params-inst-space params)))
     (when (null ispace)
@@ -2381,7 +2381,7 @@
 	(ceiling (integer-length (logxor from (+ from length))) 4)))
 
 (defun print-current-address (stream dstate)
-  _N"Print the current address in DSTATE to STREAM, plus any labels that
+  "Print the current address in DSTATE to STREAM, plus any labels that
   correspond to it, and leave the cursor in the instruction column."
   (declare (type stream stream)
 	   (type disassem-state dstate))
@@ -2440,7 +2440,7 @@
      ,@body))
 
 (defun print-notes-and-newline (stream dstate)
-  _N"Print a newline to STREAM, inserting any pending notes in DSTATE as
+  "Print a newline to STREAM, inserting any pending notes in DSTATE as
   end-of-line comments.  If there is more than one note, a separate line
   will be used for each one."
   (declare (type stream stream)
@@ -2459,7 +2459,7 @@
     (setf (dstate-notes dstate) nil)))
 
 (defun print-bytes (num stream dstate)
-  _N"Disassemble NUM bytes to STREAM as simple `BYTE' instructions"
+  "Disassemble NUM bytes to STREAM as simple `BYTE' instructions"
   (declare (type offset num)
 	   (type stream stream)
 	   (type disassem-state dstate))
@@ -2472,7 +2472,7 @@
       (format stream "#x~2,'0x" (system:sap-ref-8 sap (+ offs start-offs))))))
 
 (defun print-words (num stream dstate)
-  _N"Disassemble NUM machine-words to STREAM as simple `WORD' instructions"
+  "Disassemble NUM machine-words to STREAM as simple `WORD' instructions"
   (declare (type offset num)
 	   (type stream stream)
 	   (type disassem-state dstate))
@@ -2501,7 +2501,7 @@
 (defvar *default-dstate-hooks* (list #'lra-hook))
 
 (defun make-dstate (params &optional (fun-hooks *default-dstate-hooks*))
-  _N"Make a disassembler-state object."
+  "Make a disassembler-state object."
   (declare (type params params))
   (let ((sap
 	 ;; a random address
@@ -2581,7 +2581,7 @@
 		     code virtual-location
 		     debug-function source-form-cache
 		     hooks)
-  _N"Return a memory segment located at the system-area-pointer returned by
+  "Return a memory segment located at the system-area-pointer returned by
   SAP-MAKER and LENGTH bytes long in the disassem-state object DSTATE.
   Optional keyword arguments include :VIRTUAL-LOCATION (by default the same as
   the address), :DEBUG-FUNCTION, :SOURCE-FORM-CACHE (a source-form-cache
@@ -2769,12 +2769,12 @@
   )
 
 (defun dstate-debug-variables (dstate)
-  _N"Return the vector of debug-variables currently associated with DSTATE."
+  "Return the vector of debug-variables currently associated with DSTATE."
   (declare (type disassem-state dstate))
   (storage-info-debug-variables (seg-storage-info (dstate-segment dstate))))
 
 (defun find-valid-storage-location (offset lg-name dstate)
-  _N"Given the OFFSET of a location within the location-group called LG-NAME,
+  "Given the OFFSET of a location within the location-group called LG-NAME,
   see if there's a current mapping to a source variable in DSTATE, and if so,
   return the offset of that variable in the current debug-variable vector."
   (declare (type offset offset)
@@ -2820,7 +2820,7 @@
 			 ))))))))
 
 (defun grow-vector (vec new-len &optional initial-element)
-  _N"Return a new vector which has the same contents as the old one VEC, plus
+  "Return a new vector which has the same contents as the old one VEC, plus
   new cells (for a total size of NEW-LEN).  The additional elements are
   initailized to INITIAL-ELEMENT."
   (declare (type vector vec)
@@ -2834,7 +2834,7 @@
     new))
 
 (defun storage-info-for-debug-function (debug-function)
-  _N"Returns a STORAGE-INFO struction describing the object-to-source
+  "Returns a STORAGE-INFO struction describing the object-to-source
   variable mappings from DEBUG-FUNCTION."
   (declare (type di:debug-function debug-function))
   (let ((sc-vec (c::backend-sc-numbers c:*native-backend*))
@@ -2902,7 +2902,7 @@
 	    :block-boundary))))
 
 (defun add-source-tracking-hooks (segment debug-function &optional sfcache)
-  _N"Add hooks to track to track the source code in SEGMENT during
+  "Add hooks to track to track the source code in SEGMENT during
   disassembly.  SFCACHE can be either NIL or it can be a SOURCE-FORM-CACHE
   structure, in which case it is used to cache forms from files."
   (declare (type segment segment)
@@ -3008,7 +3008,7 @@
 ;;; ----------------------------------------------------------------
 
 (defun fun-header-pc (function)
-  _N"Return the PC of FUNCTION's header."
+  "Return the PC of FUNCTION's header."
   (declare (type compiled-function function))
   (let ((code (fun-code function)))
     (* (- (kernel:function-word-offset function)
@@ -3016,10 +3016,10 @@
        vm:word-bytes)))
 
 (defvar *disassemble-flets* t
-  _N"If non-NIL, disassemble flets/labels too")
+  "If non-NIL, disassemble flets/labels too")
 
 (defun get-function-segments (function)
-  _N"Returns a list of the segments of memory containing machine code
+  "Returns a list of the segments of memory containing machine code
   instructions for FUNCTION."
   (declare (type compiled-function function))
   (let* ((code (fun-code function))
@@ -3098,7 +3098,7 @@
 			  &optional
 			  (start-offs 0)
 			  (length (code-inst-area-length code)))
-  _N"Returns a list of the segments of memory containing machine code
+  "Returns a list of the segments of memory containing machine code
   instructions for the code-component CODE.  If START-OFFS and/or LENGTH is
   supplied, only that part of the code-segment is used (but these are
   constrained to lie within the code-segment)."
@@ -3171,7 +3171,7 @@
 ;;; ----------------------------------------------------------------
 
 (defun segment-overflow (segment dstate)
-  _N"Returns two values:  the amount by which the last instruction in the
+  "Returns two values:  the amount by which the last instruction in the
   segment goes past the end of the segment, and the offset of the end of the
   segment from the beginning of that instruction.  If all instructions fit
   perfectly, this will return 0 and 0."
@@ -3188,7 +3188,7 @@
 	    (- seglen last-start))))
   
 (defun label-segments (seglist dstate)
-  _N"Computes labels for all the memory segments in SEGLIST and adds them to
+  "Computes labels for all the memory segments in SEGLIST and adds them to
   DSTATE.  It's important to call this function with all the segments you're
   interested in, so it can find references from one to another."
   (declare (type list seglist)
@@ -3208,7 +3208,7 @@
 		   (dstate-labels dstate))))
 
 (defun disassemble-segment (segment stream dstate)
-  _N"Disassemble the machine code instructions in SEGMENT to STREAM."
+  "Disassemble the machine code instructions in SEGMENT to STREAM."
   (declare (type segment segment)
 	   (type stream stream)
 	   (type disassem-state dstate))
@@ -3225,7 +3225,7 @@
      stream)))
 
 (defun disassemble-segments (segments stream dstate)
-  _N"Disassemble the machine code instructions in each memory segment in
+  "Disassemble the machine code instructions in each memory segment in
   SEGMENTS in turn to STREAM."
   (declare (type list segments)
 	   (type stream stream)
@@ -3258,7 +3258,7 @@
 (defun disassemble-function (function &key (stream *standard-output*)
 				      (use-labels t)
 				      (backend c:*native-backend*))
-  _N"Disassemble the machine code instructions for FUNCTION."
+  "Disassemble the machine code instructions for FUNCTION."
   (declare (type compiled-function function)
 	   (type stream stream)
 	   (type (member t nil) use-labels)
@@ -3299,7 +3299,7 @@
 (defun disassemble (object &key (stream *standard-output*)
 			   (use-labels t)
 			   (backend c:*native-backend*))
-  _N"Disassemble the machine code associated with OBJECT, which can be a
+  "Disassemble the machine code associated with OBJECT, which can be a
   function, a lambda expression, or a symbol with a function definition.  If
   it is not already compiled, the compiler is called to produce something to
   disassemble."
@@ -3324,7 +3324,7 @@
 			   code-component
 			   (use-labels t)
 			   (backend c:*backend*))
-  _N"Disassembles the given area of memory starting at ADDRESS and LENGTH long.
+  "Disassembles the given area of memory starting at ADDRESS and LENGTH long.
   Note that if CODE-COMPONENT is NIL and this memory could move during a GC,
   you'd better disable it around the call to this function."
   (declare (type (or address system:system-area-pointer) address)
@@ -3358,7 +3358,7 @@
 						  (stream *standard-output*)
 						  (use-labels t)
 						  (backend c:*native-backend*))
-  _N"Disassemble the machine code instructions associated with
+  "Disassemble the machine code instructions associated with
   CODE-COMPONENT (this may include multiple entry points)."
   (declare (type (or null kernel:code-component compiled-function)
 		 code-component)
@@ -3486,7 +3486,7 @@
     (sort disassem-segments #'< :key #'seg-virtual-location))) 
 
 (defun disassemble-assem-segment (assem-segment stream backend)
-  _N"Disassemble the machine code instructions associated with
+  "Disassemble the machine code instructions associated with
   ASSEM-SEGMENT (of type new-assem:segment)."
   (declare (type new-assem:segment assem-segment)
 	   (type stream stream)
@@ -3508,11 +3508,11 @@
 	  (,vm:symbol-package-slot . symbol-package))
 	#'<
 	:key #'car)
-  _N"An alist of (SYMBOL-SLOT-OFFSET . ACCESS-FUNCTION-NAME) for slots in a
+  "An alist of (SYMBOL-SLOT-OFFSET . ACCESS-FUNCTION-NAME) for slots in a
 symbol object that we know about.")
 
 (defun grok-symbol-slot-ref (address)
-  _N"Given ADDRESS, try and figure out if which slot of which symbol is being
+  "Given ADDRESS, try and figure out if which slot of which symbol is being
   refered to.  Of course we can just give up, so it's not a big deal...
   Returns two values, the symbol and the name of the access function of the
   slot."
@@ -3534,19 +3534,19 @@ symbol object that we know about.")
 (defconstant nil-addr (kernel:get-lisp-obj-address nil))
 
 (defun grok-nil-indexed-symbol-slot-ref (byte-offset)
-  _N"Given a BYTE-OFFSET from NIL, try and figure out if which slot of which
+  "Given a BYTE-OFFSET from NIL, try and figure out if which slot of which
   symbol is being refered to.  Of course we can just give up, so it's not a big
   deal...  Returns two values, the symbol and the access function."
   (declare (type offset byte-offset))
   (grok-symbol-slot-ref (+ nil-addr byte-offset)))
 
 (defun get-nil-indexed-object (byte-offset)
-  _N"Returns the lisp object located BYTE-OFFSET from NIL."
+  "Returns the lisp object located BYTE-OFFSET from NIL."
   (declare (type offset byte-offset))
   (kernel:make-lisp-obj (+ nil-addr byte-offset)))
 
 (defun get-code-constant (byte-offset dstate)
-  _N"Returns two values; the lisp-object located at BYTE-OFFSET in the constant
+  "Returns two values; the lisp-object located at BYTE-OFFSET in the constant
   area of the code-object in the current segment and T, or NIL and NIL if
   there is no code-object in the current segment."
   (declare (type offset byte-offset)
@@ -3583,14 +3583,14 @@ symbol object that we know about.")
 (defvar *foreign-symbols-by-addr* nil)
 
 (defun invert-address-hash (htable &optional (addr-hash (make-hash-table)))
-  _N"Build an address-name hash-table from the name-address hash"
+  "Build an address-name hash-table from the name-address hash"
   (maphash #'(lambda (name address)
 	       (setf (gethash address addr-hash) name))
 	     htable)
   addr-hash)
 
 (defun find-assembler-routine (address)
-  _N"Returns the name of the primitive lisp assembler routine or foreign
+  "Returns the name of the primitive lisp assembler routine or foreign
   symbol located at ADDRESS, or NIL if there isn't one."
   (declare (type address address))
   (when (null *assembler-routines-by-addr*)
@@ -3652,7 +3652,7 @@ symbol object that we know about.")
 ;;; optional routines to make notes about code
 
 (defun note (note dstate)
-  _N"Store NOTE (which can be either a string or a function with a single
+  "Store NOTE (which can be either a string or a function with a single
   stream argument) to be printed as an end-of-line comment after the current
   instruction is disassembled."
   (declare (type (or string function) note)
@@ -3669,7 +3669,7 @@ symbol object that we know about.")
       (prin1-short `',thing stream)))
 
 (defun note-code-constant (byte-offset dstate)
-  _N"Store a note about the lisp constant located BYTE-OFFSET bytes from the
+  "Store a note about the lisp constant located BYTE-OFFSET bytes from the
   current code-component, to be printed as an end-of-line comment after the
   current instruction is disassembled."
   (declare (type offset byte-offset)
@@ -3683,7 +3683,7 @@ symbol object that we know about.")
     const))
 
 (defun note-code-constant-absolute (addr dstate)
-  _N"Store a note about the lisp constant located at ADDR in the
+  "Store a note about the lisp constant located at ADDR in the
   current code-component, to be printed as an end-of-line comment after the
   current instruction is disassembled."
   (declare (type address addr)
@@ -3697,7 +3697,7 @@ symbol object that we know about.")
     (values const valid)))
 
 (defun maybe-note-nil-indexed-symbol-slot-ref (nil-byte-offset dstate)
-  _N"If the memory address located NIL-BYTE-OFFSET bytes from the constant NIL
+  "If the memory address located NIL-BYTE-OFFSET bytes from the constant NIL
   is a valid slot in a symbol, store a note describing which symbol and slot,
   to be printed as an end-of-line comment after the current instruction is
   disassembled.  Returns non-NIL iff a note was recorded."
@@ -3715,7 +3715,7 @@ symbol object that we know about.")
     access-fun))
 
 (defun maybe-note-nil-indexed-object (nil-byte-offset dstate)
-  _N"If the memory address located NIL-BYTE-OFFSET bytes from the constant NIL
+  "If the memory address located NIL-BYTE-OFFSET bytes from the constant NIL
   is a valid lisp object, store a note describing which symbol and slot, to
   be printed as an end-of-line comment after the current instruction is
   disassembled.  Returns non-NIL iff a note was recorded."
@@ -3728,7 +3728,7 @@ symbol object that we know about.")
     t))
 
 (defun maybe-note-assembler-routine (address note-address-p dstate)
-  _N"If ADDRESS is the address of a primitive assembler routine or
+  "If ADDRESS is the address of a primitive assembler routine or
   foreign symbol, store a note describing which one, to be printed as
   an end-of-line comment after the current instruction is disassembled.
   Returns non-NIL iff a note was recorded.  If NOTE-ADDRESS-P is non-NIL, a
@@ -3748,7 +3748,7 @@ symbol object that we know about.")
     name))
 
 (defun maybe-note-static-function (nil-byte-offset dstate)
-  _N"If NIL-BYTE-OFFSET is the offset of static function, store a note
+  "If NIL-BYTE-OFFSET is the offset of static function, store a note
   describing which one, to be printed as an end-of-line comment after
   the current instruction is disassembled.  Returns non-NIL iff a note
   was recorded."
@@ -3762,7 +3762,7 @@ symbol object that we know about.")
     sym))
 
 (defun maybe-note-single-storage-ref (offset sc-name dstate)
-  _N"If there's a valid mapping from OFFSET in the storage class SC-NAME to a
+  "If there's a valid mapping from OFFSET in the storage class SC-NAME to a
   source variable, make a note of the source-variable name, to be printed as
   an end-of-line comment after the current instruction is disassembled.
   Returns non-NIL iff a note was recorded."
@@ -3782,7 +3782,7 @@ symbol object that we know about.")
       t)))
 
 (defun maybe-note-associated-storage-ref (offset sb-name assoc-with dstate)
-  _N"If there's a valid mapping from OFFSET in the storage-base called SB-NAME
+  "If there's a valid mapping from OFFSET in the storage-base called SB-NAME
   to a source variable, make a note equating ASSOC-WITH with the
   source-variable name, to be printed as an end-of-line comment after the
   current instruction is disassembled.  Returns non-NIL iff a note was
@@ -3819,7 +3819,7 @@ symbol object that we know about.")
 ;;; ----------------------------------------------------------------
 
 (defun handle-break-args (error-parse-fun stream dstate)
-  _N"When called from an error break instruction's :DISASSEM-CONTROL (or
+  "When called from an error break instruction's :DISASSEM-CONTROL (or
   :DISASSEM-PRINTER) function, will correctly deal with printing the
   arguments to the break.
 

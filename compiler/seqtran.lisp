@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.34 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.35 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -78,7 +78,7 @@
 (deftransform map-into ((result fun &rest seqs)
                         (vector * &rest *)
                         *)
-  _N"open code"
+  "open code"
   (let ((seqs-names (mapcar (lambda (x)
                               (declare (ignore x))
                               (gensym))
@@ -143,7 +143,7 @@
   (destructuring-bind (fun eq-fun) x
     (deftransform fun ((item list &key test) '(t list &rest t) '*
 			:eval-name t)
-      _N"convert to EQ test"
+      "convert to EQ test"
       (cond (test
 	     (unless (continuation-function-is test '(eq))
 	       (give-up)))
@@ -153,7 +153,7 @@
       `(,eq-fun item list))))
 
 (deftransform delete-if ((pred list) (t list))
-  _N"inline expand"
+  "inline expand"
   '(do ((x list (cdr x))
 	(splice '()))
        ((endp x) list)
@@ -165,14 +165,14 @@
 
 (deftransform fill ((seq item &key (start 0) (end (length seq)))
 		    (simple-array t &key (:start t) (:end index)))
-  _N"open code"
+  "open code"
   '(do ((i start (1+ i)))
        ((= i end) seq)
      (declare (type index i))
      (setf (aref seq i) item)))
 
 (deftransform position ((item list &key (test #'eql)) (t list))
-  _N"open code"
+  "open code"
   '(do ((i 0 (1+ i))
 	(l list (cdr l)))
        ((endp l) nil)
@@ -182,7 +182,7 @@
 (deftransform position ((item vec &key (test #'eql) (start 0)
 			      (end (length vec)))
 			(t simple-array &key (:start t) (:end index)))
-  _N"open code"
+  "open code"
   '(do ((i start (1+ i)))
        ((= i end) nil)
      (declare (type index i))

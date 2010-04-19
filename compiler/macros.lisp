@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.57 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.58 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,7 +75,7 @@
 ;;; the compiler policy parameters.
 ;;;
 (defmacro policy (node &rest conditions)
-  _N"Policy Node Condition*
+  "Policy Node Condition*
   Test whether some conditions apply to the current compiler policy for Node.
   Each condition is a predicate form which accesses the policy values by
   referring to them as the variables SPEED, SPACE, SAFETY, CSPEED, BREVITY and
@@ -151,7 +151,7 @@
 (defmacro def-ir1-translator (name (lambda-list start-var cont-var
 						&key (kind :special-form))
 				   &body body)
-  _N"Def-IR1-Translator Name (Lambda-List Start-Var Cont-Var {Key Value}*)
+  "Def-IR1-Translator Name (Lambda-List Start-Var Cont-Var {Key Value}*)
                       [Doc-String] Form*
   Define a function that converts a Special-Form or other magical thing into
   IR1.  Lambda-List is a defmacro style lambda list.  Start-Var and Cont-Var
@@ -168,6 +168,8 @@
 			      :doc-string-allowed t
 			      :environment n-env
 			      :error-fun 'convert-condition-into-compiler-error)
+      (when doc
+	(intl::note-translatable intl::*default-domain* doc))
       `(progn
 	 (declaim (function ,fn-name (continuation continuation t) void))
 	 (defun ,fn-name (,start-var ,cont-var ,n-form)
@@ -198,7 +200,7 @@
 ;;; invalid.
 ;;;
 (defmacro def-source-transform (name lambda-list &body body)
-  _N"Def-Source-Transform Name Lambda-List Form*
+  "Def-Source-Transform Name Lambda-List Form*
   Define a macro-like source-to-source transformation for the function Name.
   A source transform may \"pass\" by returning a non-nil second value.  If the
   transform passes, then the form is converted as a normal function call.  If
@@ -239,7 +241,7 @@
 
 
 (defmacro def-primitive-translator (name lambda-list &body body)
-  _N"Def-Primitive-Translator Name Lambda-List Form*
+  "Def-Primitive-Translator Name Lambda-List Form*
   Define a function that converts a use of (%PRIMITIVE Name ...) into Lisp
   code.  Lambda-List is a defmacro style lambda list."
   (let ((fn-name (symbolicate "PRIMITIVE-TRANSLATE-" name))
@@ -353,7 +355,7 @@
 					  &key result policy node defun-only
 					  eval-name important (when :native))
 			     &parse-body (body decls doc))
-  _N"Deftransform Name (Lambda-List [Arg-Types] [Result-Type] {Key Value}*)
+  "Deftransform Name (Lambda-List [Arg-Types] [Result-Type] {Key Value}*)
                Declaration* [Doc-String] Form*
   Define an IR1 transformation for Name.  An IR1 transformation computes a
   lambda that replaces the function variable reference for the call.  A
@@ -461,7 +463,7 @@
 ;;;
 (defmacro defknown (name arg-types result-type &optional (attributes '(any))
 			 &rest keys)
-  _N"Defknown Name Arg-Types Result-Type [Attributes] {Key Value}* 
+  "Defknown Name Arg-Types Result-Type [Attributes] {Key Value}* 
   Declare the function Name to be a known function.  We construct a type
   specifier for the function by wrapping (FUNCTION ...) around the Arg-Types
   and Result-Type.  Attributes is a an unevaluated list of the boolean
@@ -527,7 +529,7 @@
 (defmacro defoptimizer (what (lambda-list &optional (n-node (gensym))
 					  &rest vars)
 			     &body body)
-  _N"Defoptimizer (Function Kind) (Lambda-List [Node-Var] Var*)
+  "Defoptimizer (Function Kind) (Lambda-List [Node-Var] Var*)
                 Declaration* Form*
   Define some Kind of optimizer for the named Function.  Function must be a
   known function.  Lambda-List is used to parse the arguments to the
@@ -566,7 +568,7 @@
 ;;; Do-Blocks, Do-Blocks-Backwards  --  Interface
 ;;;    
 (defmacro do-blocks ((block-var component &optional ends result) &body body)
-  _N"Do-Blocks (Block-Var Component [Ends] [Result-Form]) {Declaration}* {Form}*
+  "Do-Blocks (Block-Var Component [Ends] [Result-Form]) {Declaration}* {Form}*
   Iterate over the blocks in a component, binding Block-Var to each block in
   turn.  The value of Ends determines whether to iterate over dummy head and
   tail blocks:
@@ -592,7 +594,7 @@
 	 ,@body))))
 ;;;
 (defmacro do-blocks-backwards ((block-var component &optional ends result) &body body)
-  _N"Do-Blocks-Backwards (Block-Var Component [Ends] [Result-Form]) {Declaration}* {Form}*
+  "Do-Blocks-Backwards (Block-Var Component [Ends] [Result-Form]) {Declaration}* {Form}*
   Like Do-Blocks, only iterate over the blocks in reverse order."
   (unless (member ends '(nil :head :tail :both))
     (error _"Losing Ends value: ~S." ends))
@@ -615,7 +617,7 @@
 ;;;    Could change it not to replicate the code someday perhaps...
 ;;;
 (defmacro do-uses ((node-var continuation &optional result) &body body)
-  _N"Do-Uses (Node-Var Continuation [Result]) {Declaration}* {Form}*
+  "Do-Uses (Node-Var Continuation [Result]) {Declaration}* {Form}*
   Iterate over the uses of Continuation, binding Node to each one succesively."
   (once-only ((n-cont continuation))
     `(ecase (continuation-kind ,n-cont)
@@ -648,7 +650,7 @@
 ;;; BLOCK-LAST each time.
 ;;;
 (defmacro do-nodes ((node-var cont-var block &key restart-p) &body body)
-  _N"Do-Nodes (Node-Var Cont-Var Block {Key Value}*) {Declaration}* {Form}*
+  "Do-Nodes (Node-Var Cont-Var Block {Key Value}*) {Declaration}* {Form}*
   Iterate over the nodes in Block, binding Node-Var to the each node and
   Cont-Var to the node's Cont.  The only keyword option is Restart-P, which
   causes iteration to be restarted when a node is deleted out from under us (if
@@ -680,7 +682,7 @@
 	   (return nil))))))
 ;;;
 (defmacro do-nodes-backwards ((node-var cont-var block) &body body)
-  _N"Do-Nodes-Backwards (Node-Var Cont-Var Block) {Declaration}* {Form}*
+  "Do-Nodes-Backwards (Node-Var Cont-Var Block) {Declaration}* {Form}*
   Like Do-Nodes, only iterates in reverse order."
   (let ((n-block (gensym))
 	(n-start (gensym))
@@ -704,7 +706,7 @@
 ;;;    The lexical environment is presumably already null...
 ;;;
 (defmacro with-ir1-environment (node &rest forms)
-  _N"With-IR1-Environment Node Form*
+  "With-IR1-Environment Node Form*
   Bind the IR1 context variables so that IR1 conversion can be done after the
   main conversion pass has finished."
   (let ((n-node (gensym)))
@@ -735,7 +737,7 @@
 ;;; LEXENV-FIND  --  Interface
 ;;;
 (defmacro lexenv-find (name slot &key test)
-  _N"LEXENV-FIND Name Slot {Key Value}*
+  "LEXENV-FIND Name Slot {Key Value}*
   Look up Name in the lexical environment namespace designated by Slot,
   returning the <value, T>, or <NIL, NIL> if no entry.  The :TEST keyword
   may be used to determine the name equality predicate."
@@ -782,7 +784,7 @@
 ;;;; The Defprinter macro:
 
 (defvar *defprint-pretty* nil
-  _N"If true, defprinter print functions print each slot on a separate line.")
+  "If true, defprinter print functions print each slot on a separate line.")
 
 
 ;;; Defprinter-Prin1, Defprinter-Princ  --  Internal
@@ -809,7 +811,7 @@
   (princ value stream))
 
 (defmacro defprinter (name &rest slots)
-  _N"Defprinter Name Slot-Desc*
+  "Defprinter Name Slot-Desc*
   Define some kind of reasonable defstruct structure-print function.  Name
   is the name of the structure.  We define a function %PRINT-name which
   prints the slots in the structure in the way described by the Slot-Descs.
@@ -916,7 +918,7 @@
 ;;;    Parse the specification and generate some accessor macros.
 ;;;
 (defmacro def-boolean-attribute (name &rest attribute-names)
-  _N"Def-Boolean-Attribute Name Attribute-Name*
+  "Def-Boolean-Attribute Name Attribute-Name*
   Define a new class of boolean attributes, with the attributes havin the
   specified Attribute-Names.  Name is the name of the class, which is used to
   generate some macros to manipulate sets of the attributes: 
@@ -979,13 +981,13 @@
 ;;;    And now for some gratuitous pseudo-abstraction...
 ;;;
 (defmacro attributes-union (&rest attributes)
-  _N"Returns the union of all the sets of boolean attributes which are its
+  "Returns the union of all the sets of boolean attributes which are its
   arguments." 
   `(the attributes
 	(logior ,@(mapcar #'(lambda (x) `(the attributes ,x)) attributes))))
 ;;;
 (defmacro attributes-intersection (&rest attributes)
-  _N"Returns the intersection of all the sets of boolean attributes which are its
+  "Returns the intersection of all the sets of boolean attributes which are its
   arguments." 
   `(the attributes
 	(logand ,@(mapcar #'(lambda (x) `(the attributes ,x)) attributes))))
@@ -993,7 +995,7 @@
 (declaim (inline attributes=))
 (defun attributes= (attr1 attr2)
   (declare (type attributes attr1 attr2))
-  _N"Returns true if the attributes present in Attr1 are indentical to those in
+  "Returns true if the attributes present in Attr1 are indentical to those in
   Attr2."
   (eql attr1 attr2))
 
@@ -1045,12 +1047,12 @@
 ;;; Event-Count, Event-Action, Event-Level  --  Interface
 ;;;
 (defun event-count (name)
-  _N"Return the number of times that Event has happened."
+  "Return the number of times that Event has happened."
   (declare (symbol name) (values fixnum))
   (event-info-count (event-info-or-lose name)))
 ;;;
 (defun event-action (name)
-  _N"Return the function that is called when Event happens.  If this is null,
+  "Return the function that is called when Event happens.  If this is null,
   there is no action.  The function is passed the node to which the event
   happened, or NIL if there is no relevant node.  This may be set with SETF."
   (declare (symbol name) (values (or function null)))
@@ -1065,7 +1067,7 @@
 (defsetf event-action %set-event-action)
 ;;;
 (defun event-level (name)
-  _N"Return the non-negative integer which represents the level of significance
+  "Return the non-negative integer which represents the level of significance
   of the event Name.  This is used to determine whether to print a message when
   the event happens.  This may be set with SETF."
   (declare (symbol name) (values unsigned-byte))
@@ -1086,7 +1088,7 @@
 ;;; it quickly.
 ;;;
 (defmacro defevent (name description &optional (level 0))
-  _N"Defevent Name Description
+  "Defevent Name Description
   Define a new kind of event.  Name is a symbol which names the event and
   Description is a string which describes the event.  Level (default 0) is the
   level of significance associated with this event; it is used to determine
@@ -1101,7 +1103,7 @@
 
 (declaim (type unsigned-byte *event-note-threshold*))
 (defvar *event-note-threshold* 1
-  _N"This variable is a non-negative integer specifying the lowest level of
+  "This variable is a non-negative integer specifying the lowest level of
   event that will print a Note when it occurs.")
 
 ;;; Event  --  Interface
@@ -1110,7 +1112,7 @@
 ;;; policy indicates.
 ;;;
 (defmacro event (name &optional node)
-  _N"Event Name Node
+  "Event Name Node
   Note that the event with the specified Name has happened.  Node is evaluated
   to determine the node to which the event happened."
   `(%event ,(event-info-var (event-info-or-lose name)) ,node))
@@ -1120,7 +1122,7 @@
 ;;;
 (defun event-statistics (&optional (min-count 1) (stream *standard-output*))
   (declare (type unsigned-byte min-count) (stream stream) (values))
-  _N"Print a listing of events and their counts, sorted by the count.  Events
+  "Print a listing of events and their counts, sorted by the count.  Events
   that happened fewer than Min-Count times will not be printed.  Stream is the
   stream to write to."
   (collect ((info))
@@ -1151,7 +1153,7 @@
 ;;;
 (defun find-in (next element list &key (key #'identity)
 		     (test #'eql test-p) (test-not nil not-p))
-  _N"Find Element in a null-terminated List linked by the accessor function
+  "Find Element in a null-terminated List linked by the accessor function
   Next.  Key, Test and Test-Not are the same as for generic sequence
   functions."
   (when (and test-p not-p)
@@ -1170,7 +1172,7 @@
 ;;;
 (defun position-in (next element list &key (key #'identity)
 		     (test #'eql test-p) (test-not nil not-p))
-  _N"Return the position of Element (or NIL if absent) in a null-terminated List
+  "Return the position of Element (or NIL if absent) in a null-terminated List
   linked by the accessor function Next.  Key, Test and Test-Not are the same as
   for generic sequence functions."
   (when (and test-p not-p)
@@ -1191,7 +1193,7 @@
 ;;; Map-In  --  Interface
 ;;;
 (defun map-in (next function list)
-  _N"Map Function over the elements in a null-terminated List linked by the
+  "Map Function over the elements in a null-terminated List linked by the
   accessor function Next, returning a list of the results."
   (collect ((res))
     (do ((current list (funcall next current)))
@@ -1203,7 +1205,7 @@
 ;;; Deletef-In  --  Interface
 ;;;
 (defmacro deletef-in (next place item &environment env)
-  _N"Deletef-In Next Place Item
+  "Deletef-In Next Place Item
   Delete Item from a null-terminated list linked by the accessor function Next
   that is stored in Place.  Item must appear exactly once in the list."
   (multiple-value-bind
@@ -1231,7 +1233,7 @@
 ;;; Push-In  --  Interface
 ;;;
 (defmacro push-in (next item place &environment env)
-  _N"Push Item onto a list linked by the accessor function Next that is stored in
+  "Push Item onto a list linked by the accessor function Next that is stored in
   Place."
   (multiple-value-bind
       (temps vals stores store access)

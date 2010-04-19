@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.37 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.38 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -129,12 +129,12 @@
 ;;;; Interpreted functions:
 
 (defvar *interpreted-function-cache-minimum-size* 25
-  _N"If the interpreted function cache has more functions than this come GC time,
+  "If the interpreted function cache has more functions than this come GC time,
   then attempt to prune it according to
   *INTERPRETED-FUNCTION-CACHE-THRESHOLD*.")
 
 (defvar *interpreted-function-cache-threshold* 3
-  _N"If an interpreted function goes uncalled for more than this many GCs, then
+  "If an interpreted function goes uncalled for more than this many GCs, then
   it is eligible for flushing from the cache.")
 
 (declaim (type c::index
@@ -279,7 +279,7 @@
 ;;; FLUSH-INTERPRETED-FUNCTION-CACHE  --  Interface
 ;;;
 (defun flush-interpreted-function-cache ()
-  _N"Clear all entries in the eval function cache.  This allows the internal
+  "Clear all entries in the eval function cache.  This allows the internal
   representation of the functions to be reclaimed, and also lazily forces
   macroexpansions to be recomputed."
   (dolist (fun *interpreted-function-cache*)

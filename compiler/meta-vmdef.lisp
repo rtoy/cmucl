@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.10 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.11 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,7 +38,7 @@
 ;;; missing slots at load time.
 ;;;
 (defmacro define-storage-base (name kind &key size)
-  _N"Define-Storage-Base Name Kind {Key Value}*
+  "Define-Storage-Base Name Kind {Key Value}*
   Define a storage base having the specified Name.  Kind may be :Finite,
   :Unbounded or :Non-Packed.  The following keywords are legal:
 
@@ -88,7 +88,7 @@
 (defmacro define-storage-class (name number sb-name &key (element-size '1)
 				     (alignment '1) locations reserve-locations
 				     save-p alternate-scs constant-scs)
-  _N"Define-Storage-Class Name Number Storage-Base {Key Value}*
+  "Define-Storage-Class Name Number Storage-Base {Key Value}*
   Define a storage class Name that uses the named Storage-Base.  Number is a
   small, non-negative integer that is used as an alias.  The following
   keywords are defined:
@@ -215,7 +215,7 @@
 ;;; DEFINE-MOVE-FUNCTION  --  Public
 ;;;
 (defmacro define-move-function ((name cost) lambda-list scs &body body)
-  _N"Define-Move-Function (Name Cost) lambda-list ({(From-SC*) (To-SC*)}*) form*
+  "Define-Move-Function (Name Cost) lambda-list ({(From-SC*) (To-SC*)}*) form*
   Define the function Name and note it as the function used for moving operands
   from the From-SCs to the To-SCs.  Cost is the cost of this move operation.
   The function is called with three arguments: the VOP (for context), and the
@@ -247,7 +247,7 @@
 ;;; (including implicit loading).
 ;;;
 (defmacro define-move-vop (name kind &rest scs)
-  _N"Define-Move-VOP Name {:Move | :Move-Argument} {(From-SC*) (To-SC*)}*
+  "Define-Move-VOP Name {:Move | :Move-Argument} {(From-SC*) (To-SC*)}*
   Make Name be the VOP used to move values in the specified From-SCs to the
   representation of the To-SCs.  If kind is :Move-Argument, then the VOP takes
   an extra argument, which is the frame pointer of the frame to move into." 
@@ -294,7 +294,7 @@
 ;;; break the running compiler.
 ;;;
 (defmacro def-primitive-type (name scs &key (type name))
-  _N"Def-Primitive-Type Name (SC*) {Key Value}*
+  "Def-Primitive-Type Name (SC*) {Key Value}*
    Define a primitive type Name.  Each SC specifies a Storage Class that values
    of this type may be allocated in.  The following keyword options are
    defined:
@@ -333,7 +333,7 @@
 ;;; Just record the translation.
 ;;; 
 (defmacro def-primitive-type-alias (name result)
-  _N"DEF-PRIMITIVE-TYPE-ALIAS Name Result
+  "DEF-PRIMITIVE-TYPE-ALIAS Name Result
   Define name to be an alias for Result in VOP operand type restrictions."
   `(eval-when (compile load eval)
      (setf (gethash ',name (backend-primitive-type-aliases *target-backend*))
@@ -346,7 +346,7 @@
 ;;; Primitive-Type-Vop  --  Public
 ;;;
 (defmacro primitive-type-vop (vop kinds &rest types)
-  _N"Primitive-Type-VOP Vop (Kind*) Type*
+  "Primitive-Type-VOP Vop (Kind*) Type*
   Annotate all the specified primitive Types with the named VOP under each of
   the specified kinds:
 
@@ -1626,7 +1626,7 @@
 ;;; inheritance by copying the VOP-Parse structure for the inherited structure.
 ;;;
 (defmacro define-vop ((name &optional inherits) &rest specs)
-  _N"Define-VOP (Name [Inherits]) Spec*
+  "Define-VOP (Name [Inherits]) Spec*
   Define the symbol Name to be a Virtual OPeration in the compiler.  If
   specified, Inherits is the name of a VOP that we default unspecified
   information from.  Each Spec is a list beginning with a keyword indicating
@@ -1842,7 +1842,7 @@
 ;;; Emit-Template  -- Interface
 ;;;
 (defmacro emit-template (node block template args results &optional info)
-  _N"Emit-Template Node Block Template Args Results [Info]
+  "Emit-Template Node Block Template Args Results [Info]
   Call the emit function for Template, linking the result in at the end of
   Block."
   (let ((n-first (gensym))
@@ -1861,7 +1861,7 @@
 ;;; VOP  --  Interface
 ;;;
 (defmacro vop (name node block &rest operands)
-  _N"VOP Name Node Block Arg* Info* Result*
+  "VOP Name Node Block Arg* Info* Result*
   Emit the VOP (or other template) Name at the end of the IR2-Block Block,
   using Node for the source context.  The interpretation of the remaining
   arguments depends on the number of operands of various kinds that are
@@ -1920,7 +1920,7 @@
 ;;; VOP*  --  Interface
 ;;;
 (defmacro vop* (name node block args results &rest info)
-  _N"VOP* Name Node Block (Arg* More-Args) (Result* More-Results) Info*
+  "VOP* Name Node Block (Arg* More-Args) (Result* More-Results) Info*
   Like VOP, but allows for emission of templates with arbitrary numbers of
   arguments, and for emission of templates using already-created TN-Ref lists.
 
@@ -1978,7 +1978,7 @@
 ;;; SC-Case  --  Public
 ;;;
 (defmacro sc-case (tn &rest forms)
-  _N"SC-Case TN {({(SC-Name*) | SC-Name | T} Form*)}*
+  "SC-Case TN {({(SC-Name*) | SC-Name | T} Form*)}*
   Case off of TN's SC.  The first clause containing TN's SC is evaulated,
   returning the values of the last form.  A clause beginning with T specifies a
   default.  If it appears, it must be last.  If no default is specified, and no
@@ -2013,7 +2013,7 @@
 ;;; SC-Is  --  Interface
 ;;;
 (defmacro sc-is (tn &rest scs)
-  _N"SC-Is TN SC*
+  "SC-Is TN SC*
   Returns true if TNs SC is any of the named SCs, false otherwise."
   (once-only ((n-sc `(sc-number (tn-sc ,tn))))
     `(or ,@(mapcar #'(lambda (x)
@@ -2024,7 +2024,7 @@
 ;;;
 (defmacro do-ir2-blocks ((block-var component &optional result)
 			 &body forms)
-  _N"Do-IR2-Blocks (Block-Var Component [Result]) Form*
+  "Do-IR2-Blocks (Block-Var Component [Result]) Form*
   Iterate over the IR2 blocks in component, in emission order."
   `(do ((,block-var (block-info (component-head ,component))
 		    (ir2-block-next ,block-var)))
@@ -2035,7 +2035,7 @@
 ;;; DO-LIVE-TNS  --  Interface
 ;;;
 (defmacro do-live-tns ((tn-var live block &optional result) &body body)
-  _N"DO-LIVE-TNS (TN-Var Live Block [Result]) Form*
+  "DO-LIVE-TNS (TN-Var Live Block [Result]) Form*
   Iterate over all the TNs live at some point, with the live set represented by
   a local conflicts bit-vector and the IR2-Block containing the location."
   (let ((n-conf (gensym))
@@ -2078,7 +2078,7 @@
 ;;;
 (defmacro do-environment-ir2-blocks ((block-var env &optional result)
 				     &body body)
-  _N"DO-ENVIRONMENT-IR2-BLOCKS (Block-Var Env [Result]) Form*
+  "DO-ENVIRONMENT-IR2-BLOCKS (Block-Var Env [Result]) Form*
   Iterate over all the IR2 blocks in the environment Env, in emit order."
   (once-only ((n-env env))
     (once-only ((n-first `(node-block

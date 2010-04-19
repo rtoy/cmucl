@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.25 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.26 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,7 +34,7 @@
 ;;; Component-Header-Length   --  Interface
 ;;; 
 (defun component-header-length (&optional (component *compile-component*))
-  _N"Returns the number of bytes used by the code object header."
+  "Returns the number of bytes used by the code object header."
   (let* ((2comp (component-info component))
 	 (constants (ir2-component-constants 2comp))
 	 (num-consts (length constants)))
@@ -43,7 +43,7 @@
 ;;; SB-Allocated-Size  --  Interface
 ;;;
 (defun sb-allocated-size (name)
-  _N"The size of the Name'd SB in the currently compiled component.  Useful
+  "The size of the Name'd SB in the currently compiled component.  Useful
   mainly for finding the size for allocating stack frames."
   (finite-sb-current-size (sb-or-lose name *backend*)))
 
@@ -51,7 +51,7 @@
 ;;; Current-NFP-TN  --  Interface
 ;;;
 (defun current-nfp-tn (vop)
-  _N"Return the TN that is used to hold the number stack frame-pointer in VOP's
+  "Return the TN that is used to hold the number stack frame-pointer in VOP's
   function.  Returns NIL if no number stack frame was allocated."
   (unless (zerop (sb-allocated-size 'non-descriptor-stack))
     (let ((block (ir2-block-block (vop-block vop))))
@@ -63,7 +63,7 @@
 ;;; CALLEE-NFP-TN  --  Interface
 ;;;
 (defun callee-nfp-tn (2env)
-  _N"Return the TN that is used to hold the number stack frame-pointer in the
+  "Return the TN that is used to hold the number stack frame-pointer in the
   function designated by 2env.  Returns NIL if no number stack frame was
   allocated."
   (unless (zerop (sb-allocated-size 'non-descriptor-stack))
@@ -74,7 +74,7 @@
 ;;; CALLEE-RETURN-PC-TN  --  Interface
 ;;;
 (defun callee-return-pc-tn (2env)
-  _N"Return the TN used for passing the return PC in a local call to the function
+  "Return the TN used for passing the return PC in a local call to the function
   designated by 2env."
   (ir2-environment-return-pc-pass 2env))
 
@@ -126,7 +126,7 @@
 (defvar *elsewhere-label* nil)
 
 (defvar *assembly-optimize* t
-  _N"Set to NIL to inhibit assembly-level optimization.  For compiler debugging,
+  "Set to NIL to inhibit assembly-level optimization.  For compiler debugging,
   rather than policy control.")
 
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.54 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.55 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -152,7 +152,7 @@
 ;;; running compiler.
 ;;;
 (defmacro define-info-class (class)
-  _N"Define-Info-Class Class
+  "Define-Info-Class Class
   Define a new class of global information."
   `(progn
      (eval-when (compile load eval)
@@ -187,7 +187,7 @@
 ;;; %DEFINE-INFO-TYPE must use the same type number.
 ;;;
 (defmacro define-info-type (class type type-spec &optional default)
-  _N"Define-Info-Type Class Type default Type-Spec
+  "Define-Info-Type Class Type default Type-Spec
   Define a new type of global information for Class.  Type is the symbol name
   of the type, Default is the value for that type when it hasn't been set, and
   Type-Spec is a type-specifier which values of the type must satisfy.  The
@@ -317,7 +317,7 @@
 ;;; type is constant.
 ;;;
 (defmacro info (class type name &optional env-list)
-  _N"Return the information of the specified Type and Class for Name.
+  "Return the information of the specified Type and Class for Name.
    The second value is true if there is any such information recorded.  If
    there is no information, the first value is the default and the second value
    is NIL."
@@ -331,7 +331,7 @@
 				,@(when env-list `(,env-list))))))
 ;;;
 (define-setf-expander info (class type name &optional env-list)
-  _N"Set the global information for Name."
+  "Set the global information for Name."
   (let* ((n-name (gensym))
 	 (n-env-list (if env-list (gensym)))
 	 (n-value (gensym))
@@ -355,7 +355,7 @@
 (defmacro do-info ((env &key (name (gensym)) (class (gensym)) (type (gensym))
 			(type-number (gensym)) (value (gensym)) known-volatile)
 		   &body body)
-  _N"DO-INFO (Env &Key Name Class Type Value) Form*
+  "DO-INFO (Env &Key Name Class Type Value) Form*
   Iterate over all the values stored in the Info-Env Env.  Name is bound to
   the entry's name, Class and Type are bound to the class and type
   (represented as strings), and Value is bound to the entry's value."
@@ -649,7 +649,7 @@
 ;;; randomizing with the original hash function.
 ;;; 
 (defun compact-info-environment (env &key (name (info-env-name env)))
-  _N"Return a new compact info environment that holds the same information as
+  "Return a new compact info environment that holds the same information as
   Env."
   (let ((name-count 0)
 	(prev-name 0)
@@ -889,7 +889,7 @@
 ;;; CLEAR-INFO  --  Public
 ;;;
 (defmacro clear-info (class type name)
-  _N"Clear the information of the specified Type and Class for Name in the
+  "Clear the information of the specified Type and Class for Name in the
   current environment, allowing any inherited info to become visible.  We
   return true if there was any info."
   (let* ((class (symbol-name class))

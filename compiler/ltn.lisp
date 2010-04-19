@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.44 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.45 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -794,12 +794,12 @@
 
 
 (defvar *efficiency-note-limit* 2
-  _N"This is the maximum number of possible optimization alternatives will be
+  "This is the maximum number of possible optimization alternatives will be
   mentioned in a particular efficiency note.  NIL means no limit.")
 (declaim (type (or index null) *efficiency-note-limit*))
 
 (defvar *efficiency-note-cost-threshold* 5
-  _N"This is the minumum cost difference between the chosen implementation and
+  "This is the minumum cost difference between the chosen implementation and
   the next alternative that justifies an efficiency note.")
 (declaim (type index *efficiency-note-cost-threshold*))
 

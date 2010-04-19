@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.171 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.172 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,7 +68,7 @@
 ;;; things out.
 ;;;
 (deftransform complement ((fun) * * :node node :when :both)
-  _N"open code"
+  "open code"
   (multiple-value-bind (min max)
 		       (function-type-nargs (continuation-type fun))
     (cond
@@ -149,7 +149,7 @@
 (defvar *extreme-nthcdr-open-code-limit* 20)
 
 (deftransform nthcdr ((n l) (unsigned-byte t) * :node node)
-  _N"convert NTHCDR to CAxxR"
+  "convert NTHCDR to CAxxR"
   (unless (constant-continuation-p n) (give-up))
   (let ((n (continuation-value n)))
     (when (> n
@@ -2862,7 +2862,7 @@
 (deftransform %ldb ((size posn int)
 		    (fixnum fixnum integer)
 		    (unsigned-byte #.vm:word-bits))
-  _N"convert to inline logical ops"
+  "convert to inline logical ops"
   ;; Try to help out the compiler by precomputing things if SIZE or
   ;; POSN are constants.  This helps out modular arithmetic in some
   ;; cases.  (I think it's a deficiency in modular arithmetic that it
@@ -2882,7 +2882,7 @@
 (deftransform %mask-field ((size posn int)
 			   (fixnum fixnum integer)
 			   (unsigned-byte #.vm:word-bits))
-  _N"convert to inline logical ops"
+  "convert to inline logical ops"
   `(logand int
 	   (ash (ash ,(1- (ash 1 vm:word-bits))
 		     (- size ,vm:word-bits))
@@ -2896,7 +2896,7 @@
 (deftransform %dpb ((new size posn int)
 		    *
 		    (unsigned-byte #.vm:word-bits))
-  _N"convert to inline logical ops"
+  "convert to inline logical ops"
   `(let ((mask (ldb (byte size 0) -1)))
      (logior (ash (logand new mask) posn)
 	     (logand int (lognot (ash mask posn))))))
@@ -2904,7 +2904,7 @@
 (deftransform %dpb ((new size posn int)
 		    *
 		    (signed-byte #.vm:word-bits))
-  _N"convert to inline logical ops"
+  "convert to inline logical ops"
   `(let ((mask (ldb (byte size 0) -1)))
      (logior (ash (logand new mask) posn)
 	     (logand int (lognot (ash mask posn))))))
@@ -2912,7 +2912,7 @@
 (deftransform %deposit-field ((new size posn int)
 			      *
 			      (unsigned-byte #.vm:word-bits))
-  _N"convert to inline logical ops"
+  "convert to inline logical ops"
   `(let ((mask (ash (ldb (byte size 0) -1) posn)))
      (logior (logand new mask)
 	     (logand int (lognot mask)))))
@@ -2920,7 +2920,7 @@
 (deftransform %deposit-field ((new size posn int)
 			      *
 			      (signed-byte #.vm:word-bits))
-  _N"convert to inline logical ops"
+  "convert to inline logical ops"
   `(let ((mask (ash (ldb (byte size 0) -1) posn)))
      (logior (logand new mask)
 	     (logand int (lognot mask)))))
@@ -2948,7 +2948,7 @@
 ;;; Handle the case of a constant boole-code.
 ;;;
 (deftransform boole ((op x y) * * :when :both)
-  _N"convert to inline logical ops"
+  "convert to inline logical ops"
   (unless (constant-continuation-p op)
     (give-up _"BOOLE code is not a constant."))
   (let ((control (continuation-value op)))
@@ -2978,7 +2978,7 @@
 ;;; If arg is a constant power of two, turn * into a shift.
 ;;;
 (deftransform * ((x y) (integer integer) * :when :both)
-  _N"convert x*2^k to shift"
+  "convert x*2^k to shift"
   (unless (constant-continuation-p y) (give-up))
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
@@ -3012,17 +3012,17 @@
 		     `(values (ash x ,shift)
 			      (- (logand x ,mask) ,delta))))))))
   (deftransform floor ((x y) (integer integer) *)
-    _N"convert division by 2^k to shift"
+    "convert division by 2^k to shift"
     (frob y nil))
   (deftransform ceiling ((x y) (integer integer) *)
-    _N"convert division by 2^k to shift"
+    "convert division by 2^k to shift"
     (frob y t)))
 
 
 ;;; Do the same for mod.
 ;;;
 (deftransform mod ((x y) (integer integer) * :when :both)
-  _N"convert remainder mod 2^k to LOGAND"
+  "convert remainder mod 2^k to LOGAND"
   (unless (constant-continuation-p y) (give-up))
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
@@ -3039,7 +3039,7 @@
 ;;; If arg is a constant power of two, turn truncate into a shift and mask.
 ;;;
 (deftransform truncate ((x y) (integer integer))
-  _N"convert division by 2^k to shift"
+  "convert division by 2^k to shift"
   (unless (constant-continuation-p y) (give-up))
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
@@ -3062,7 +3062,7 @@
 ;;; And the same for rem.
 ;;;
 (deftransform rem ((x y) (integer integer) * :when :both)
-  _N"convert remainder mod 2^k to LOGAND"
+  "convert remainder mod 2^k to LOGAND"
   (unless (constant-continuation-p y) (give-up))
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
@@ -3092,11 +3092,11 @@
   (destructuring-bind (name identity result) stuff
     (deftransform name ((x y) `(* (constant-argument (member ,identity))) '*
 			:eval-name t :when :both)
-      _N"fold identity operations"
+      "fold identity operations"
       result)))
 
 (deftransform logand ((x y) (* (constant-argument t)) *)
-  _N"fold identity operation"
+  "fold identity operation"
   (let ((y (continuation-value y)))
     (unless (and (plusp y)
                  (= y (1- (ash 1 (integer-length y)))))
@@ -3112,14 +3112,14 @@
 ;;;
 (deftransform - ((x y) ((constant-argument (member 0)) rational) *
 		 :when :both)
-  _N"convert (- 0 x) to negate"
+  "convert (- 0 x) to negate"
   '(%negate y))
 
 ;;; Restricted to rationals, because (* 0 -4.0) is -0.0.
 ;;;
 (deftransform * ((x y) (rational (constant-argument (member 0))) *
 		 :when :both)
-  _N"convert (* x 0) to 0."
+  "convert (* x 0) to 0."
   0)
 
 ;;; Fold (+ x 0).
@@ -3128,7 +3128,7 @@
 ;;;
 (deftransform + ((x y) (rational (constant-argument (member 0))) *
 		 :when :both)
-  _N"fold zero arg"
+  "fold zero arg"
   'x)
 
 
@@ -3187,7 +3187,7 @@
 ;;; float -0.0 then give up because (- -0.0 -0.0) is 0.0, not -0.0.
 ;;;
 (deftransform - ((x y) (t (constant-argument number)) * :when :both)
-  _N"fold zero arg"
+  "fold zero arg"
   (let ((val (continuation-value y)))
     (unless (and (zerop val)
 		 (not (and (floatp val) (minusp (float-sign val))))
@@ -3203,7 +3203,7 @@
   (destructuring-bind (name result minus-result) stuff
     (deftransform name ((x y) '(t (constant-argument real)) '* :eval-name t
 			:when :both)
-      _N"fold identity operations"
+      "fold identity operations"
       (let ((val (continuation-value y)))
 	(unless (and (= (abs val) 1)
 		     (not-more-contagious y x))
@@ -3214,7 +3214,7 @@
 ;;; N; convert (expt x 1/2) to sqrt.
 ;;;
 (deftransform expt ((x y) (t (constant-argument real)) *)
-  _N"recode as multiplication or sqrt"
+  "recode as multiplication or sqrt"
   (let ((val (continuation-value y)))
     ;; If Y would cause the result to be promoted to the same type as
     ;; Y, we give up.  If not, then the result will be the same type
@@ -3245,13 +3245,13 @@
 (dolist (name '(ash /))
   (deftransform name ((x y) '((constant-argument (integer 0 0)) integer) '*
 		      :eval-name t :when :both)
-    _N"fold zero arg"
+    "fold zero arg"
     0))
 
 (dolist (name '(truncate round floor ceiling))
   (deftransform name ((x y) '((constant-argument (integer 0 0)) integer) '*
 		      :eval-name t :when :both)
-    _N"fold zero arg"
+    "fold zero arg"
     '(values 0 0)))
 
     
@@ -3259,7 +3259,7 @@
 ;;;; Character operations:
 
 (deftransform char-equal ((a b) (base-char base-char))
-  _N"open code"
+  "open code"
   #-(and unicode (not unicode-bootstrap))
   '(let* ((ac (char-code a))
 	  (bc (char-code b))
@@ -3284,7 +3284,7 @@
 	    (lisp::equal-char-code b)))))
 
 (deftransform char-upcase ((x) (base-char))
-  _N"open code"
+  "open code"
   #-(and unicode (not unicode-bootstrap))
   '(if (lower-case-p x)
        (code-char (- (char-code x) 32))
@@ -3296,7 +3296,7 @@
 	   (t x))))
 
 (deftransform char-downcase ((x) (base-char))
-  _N"open code"
+  "open code"
   #-(and unicode (not unicode-bootstrap))
   '(if (upper-case-p x)
        (code-char (+ (char-code x) 32))
@@ -3360,7 +3360,7 @@
 ;;;    that case, otherwise give an efficency note.
 ;;;
 (deftransform eql ((x y) * * :when :both)
-  _N"convert to simpler equality predicate"
+  "convert to simpler equality predicate"
   (let ((x-type (continuation-type x))
 	(y-type (continuation-type y))
 	(char-type (specifier-type 'character))
@@ -3390,7 +3390,7 @@
 ;;; and the same for both.
 ;;; 
 (deftransform = ((x y) * * :when :both)
-  _N"open code"
+  "open code"
   (let ((x-type (continuation-type x))
 	(y-type (continuation-type y)))
     (if (and (csubtypep x-type (specifier-type 'number))
@@ -3959,7 +3959,7 @@
               )))))))
 
 (defvar *enable-modular-arithmetic* t
-  _N"When non-NIL, the compiler will generate code utilizing modular
+  "When non-NIL, the compiler will generate code utilizing modular
   arithmetic.  Set to NIL to disable this, if you don't want modular
   arithmetic in some cases.")
 

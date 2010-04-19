@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.35 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.36 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,7 +50,7 @@
 ;;; DEF-ASSEMBLER-PARAMS -- Interface.
 ;;;
 (defmacro def-assembler-params (&rest options)
-  _N"Set up the assembler."
+  "Set up the assembler."
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (setf (c:backend-assembler-params c:*target-backend*)
 	   (make-assem-params :backend c:*target-backend*
@@ -310,7 +310,7 @@
 ;;;
 (defmacro without-scheduling ((&optional (segment '(%%current-segment%%)))
 			      &body body)
-  _N"Execute BODY (as a progn) without scheduling any of the instructions
+  "Execute BODY (as a progn) without scheduling any of the instructions
    generated inside it.  DO NOT throw or return-from out of it."
   (let ((var (gensym))
 	(seg (gensym)))
@@ -919,7 +919,7 @@
 ;;; 
 (declaim (inline emit-byte))
 (defun emit-byte (segment byte)
-  _N"Emit BYTE to SEGMENT."
+  "Emit BYTE to SEGMENT."
   (declare (type segment segment)
 	   (type (or assembly-unit (signed-byte #.assembly-unit-bits)) byte))
   (let* ((orig-ptr (segment-fill-pointer segment))
@@ -935,7 +935,7 @@
 ;;; EMIT-SKIP -- interface.
 ;;; 
 (defun emit-skip (segment amount &optional (fill-byte 0))
-  _N"Output AMOUNT zeros (in bytes) to SEGMENT."
+  "Output AMOUNT zeros (in bytes) to SEGMENT."
   (declare (type segment segment)
 	   (type index amount))
   (dotimes (i amount)
@@ -966,7 +966,7 @@
 ;;; EMIT-BACK-PATCH -- interface.
 ;;; 
 (defun emit-back-patch (segment size function)
-  _N"Note that the instruction stream has to be back-patched when label positions
+  "Note that the instruction stream has to be back-patched when label positions
    are finally known.  SIZE bytes are reserved in SEGMENT, and function will
    be called with two arguments: the segment and the position.  The function
    should look at the position and the position of any labels it wants to
@@ -979,7 +979,7 @@
 ;;; EMIT-CHOOSER -- interface.
 ;;; 
 (defun emit-chooser (segment size alignment maybe-shrink worst-case-fun)
-  _N"Note that the instruction stream here depends on the actual positions of
+  "Note that the instruction stream here depends on the actual positions of
    various labels, so can't be output until label positions are known.  Space
    is made in SEGMENT for at least SIZE bytes.  When all output has been
    generated, the MAYBE-SHRINK functions for all choosers are called with
@@ -1338,7 +1338,7 @@
 ;;; does anything like that...
 (defmacro assemble ((&optional segment vop &key labels) &body body
 		    &environment env)
-  _N"Execute BODY (as a progn) with SEGMENT as the current segment."
+  "Execute BODY (as a progn) with SEGMENT as the current segment."
   (flet ((label-name-p (thing)
 	   (and thing (symbolp thing))))
     (let* ((seg-var (gensym "SEGMENT-"))
@@ -1380,7 +1380,7 @@
 ;;; INST -- interface.
 ;;; 
 (defmacro inst (&whole whole instruction &rest args &environment env)
-  _N"Emit the specified instruction to the current segment."
+  "Emit the specified instruction to the current segment."
   (let ((inst (gethash (symbol-name instruction)
 		       (assem-params-instructions
 			(c:backend-assembler-params c:*target-backend*)))))
@@ -1397,7 +1397,7 @@
 ;;; and %%CURRENT-VOP%% prevents this from being an ordinary function
 ;;; (likewise for EMIT-POSTIT and ALIGN, below).
 (defmacro emit-label (label)
-  _N"Emit LABEL at this location in the current segment."
+  "Emit LABEL at this location in the current segment."
   `(%emit-label (%%current-segment%%) (%%current-vop%%) ,label))
 
 ;;; EMIT-POSTIT -- interface.
@@ -1408,13 +1408,13 @@
 ;;; ALIGN -- interface.
 ;;; 
 (defmacro align (bits &optional (fill-byte 0))
-  _N"Emit an alignment restriction to the current segment."
+  "Emit an alignment restriction to the current segment."
   `(emit-alignment (%%current-segment%%) (%%current-vop%%) ,bits ,fill-byte))
 
 ;;; LABEL-POSITION -- interface.
 ;;; 
 (defun label-position (label &optional if-after delta)
-  _N"Return the current position for LABEL.  Chooser maybe-shrink functions
+  "Return the current position for LABEL.  Chooser maybe-shrink functions
    should supply IF-AFTER and DELTA to assure correct results."
   (let ((posn (label-posn label)))
     (if (and if-after (> posn if-after))
@@ -1424,7 +1424,7 @@
 ;;; APPEND-SEGMENT -- interface.
 ;;; 
 (defun append-segment (segment other-segment)
-  _N"Append OTHER-SEGMENT to the end of SEGMENT.  Don't use OTHER-SEGMENT
+  "Append OTHER-SEGMENT to the end of SEGMENT.  Don't use OTHER-SEGMENT
    for anything after this."
   (when (segment-run-scheduler segment)
     (schedule-pending-instructions segment))
@@ -1471,7 +1471,7 @@
 ;;; FINALIZE-SEGMENT -- interface.
 ;;; 
 (defun finalize-segment (segment)
-  _N"Does any final processing of SEGMENT and returns the total number of bytes
+  "Does any final processing of SEGMENT and returns the total number of bytes
    covered by this segment."
   (when (segment-run-scheduler segment)
     (schedule-pending-instructions segment))
@@ -1491,7 +1491,7 @@
 ;;; SEGMENT-MAP-OUTPUT -- interface.
 ;;;
 (defun segment-map-output (segment function)
-  _N"Call FUNCTION on all the output accumulated in SEGMENT.  FUNCTION is called
+  "Call FUNCTION on all the output accumulated in SEGMENT.  FUNCTION is called
    zero or more times with two arguments: a SAP and a number of bytes."
   (let ((old-index 0)
 	(blocks (segment-output-blocks segment))
@@ -1528,7 +1528,7 @@
 ;;; RELEASE-SEGMENT -- interface.
 ;;; 
 (defun release-segment (segment)
-  _N"Releases any output buffers held on to by segment."
+  "Releases any output buffers held on to by segment."
   (let ((blocks (segment-output-blocks segment)))
     (loop
       for block across blocks

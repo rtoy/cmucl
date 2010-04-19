@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.88 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.89 2010/04/19 15:08:20 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1116,7 +1116,7 @@
 ;;;    Just throw the severity and args...
 ;;;
 (defun give-up (&rest args)
-  _N"This function is used to throw out of an IR1 transform, aborting this
+  "This function is used to throw out of an IR1 transform, aborting this
   attempt to transform the call, but admitting the possibility that this or
   some other transform will later suceed.  If arguments are supplied, they are
   format arguments for an efficiency note."
@@ -1124,7 +1124,7 @@
   (throw 'give-up (values :failure args)))
 ;;;
 (defun abort-transform (&rest args)
-  _N"This function is used to throw out of an IR1 transform and force a normal
+  "This function is used to throw out of an IR1 transform and force a normal
   call to the function at run time.  No further optimizations will be
   attempted."
   (throw 'give-up (values :aborted args)))
@@ -1134,7 +1134,7 @@
 ;;; delay-transform  --  Interface
 ;;;
 (defun delay-transform (node &rest reasons)
-  _N"This function is used to throw out of an IR1 transform, and delay the
+  "This function is used to throw out of an IR1 transform, and delay the
   transform on the node until later. The reasons specifies when the transform
   will be later retried. The :optimize reason causes the transform to be
   delayed until after the current IR1 optimization pass. The :constraint

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.50 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.51 2010/04/19 15:08:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -278,7 +278,7 @@
 ;;; NOTE-THIS-LOCATION  --  Interface
 ;;;
 (defun note-this-location (vop kind)
-  _N"NOTE-THIS-LOCATION VOP Kind
+  "NOTE-THIS-LOCATION VOP Kind
   Note that the current code location is an interesting (to the debugger)
   location of the specified Kind.  VOP is the VOP responsible for this code.
   This VOP must specify some non-null :SAVE-P value (perhaps :COMPUTE-ONLY) so
@@ -290,7 +290,7 @@
 ;;; NOTE-NEXT-INSTRUCTION -- interface.
 ;;; 
 (defun note-next-instruction (vop kind)
-  _N"NOTE-NEXT-INSTRUCTION VOP Kind
+  "NOTE-NEXT-INSTRUCTION VOP Kind
    Similar to NOTE-THIS-LOCATION, except the use the location of the next
    instruction for the code location, wherever the scheduler decided to put
    it."
