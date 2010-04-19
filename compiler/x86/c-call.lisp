@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.21 2010/03/19 15:19:01 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.22 2010/04/19 17:49:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -267,7 +267,7 @@
       (eq (machine-rep type1) (machine-rep type2)))))
 
 (defun make-callback-trampoline (index fn-type)
-  _N"Cons up a piece of code which calls call-callback with INDEX and a
+  "Cons up a piece of code which calls call-callback with INDEX and a
 pointer to the arguments."
   (let* ((return-type (alien-function-type-result-type fn-type))
 	 (segment (make-segment))

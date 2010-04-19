@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.11 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.12 2010/04/19 17:49:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,7 @@
 ;;;; Handy routine for making fixnums:
 
 (defun fixnumize (num)
-  _N"Make a fixnum out of NUM.  (i.e. shift by two bits if it will fit.)"
+  "Make a fixnum out of NUM.  (i.e. shift by two bits if it will fit.)"
   ;; the bounds must be hardcoded for cross-compilation
   (if (<= #-amd64 #x-20000000 #+amd64 #x-2000000000000000
 	  num
@@ -42,7 +42,7 @@
       (and (member symbol static-symbols) t)))
 
 (defun static-symbol-offset (symbol)
-  _N"Returns the byte offset of the static symbol Symbol."
+  "Returns the byte offset of the static symbol Symbol."
   (if symbol
       (let ((posn (position symbol static-symbols)))
 	(unless posn (error _"~S is not a static symbol." symbol))
@@ -54,7 +54,7 @@
       0))
 
 (defun offset-static-symbol (offset)
-  _N"Given a byte offset, Offset, returns the appropriate static symbol."
+  "Given a byte offset, Offset, returns the appropriate static symbol."
   (if (zerop offset)
       nil
       (multiple-value-bind
@@ -68,7 +68,7 @@
 	(elt static-symbols n))))
 
 (defun static-function-offset (name)
-  _N"Return the (byte) offset from NIL to the start of the fdefn object
+  "Return the (byte) offset from NIL to the start of the fdefn object
    for the static function NAME."
   (let ((static-syms (length static-symbols))
 	(static-function-index (position name static-functions)))
@@ -82,7 +82,7 @@
        (* fdefn-raw-addr-slot word-bytes))))
 
 (defun offset-static-function (offset)
-  _N"Given a byte offset, Offset, returns the appropriate static function
+  "Given a byte offset, Offset, returns the appropriate static function
    symbol."
   (let* ((static-syms (length static-symbols))
 	 (offsets (+ (* static-syms (pad-data-block symbol-size))

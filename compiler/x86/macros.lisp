@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.27 2010/03/19 15:19:01 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.28 2010/04/19 17:49:02 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,7 +50,7 @@
 
 ;;; Instruction-like macros.
 (defmacro move (dst src)
-  _N"Move SRC into DST unless they are location=."
+  "Move SRC into DST unless they are location=."
   (once-only ((n-dst dst)
 	      (n-src src))
     `(unless (location= ,n-dst ,n-src)
@@ -103,7 +103,7 @@
 		    (- other-pointer-type))))
 
 (defmacro load-type (target source &optional (offset 0))
-  _N"Loads the type bits of a pointer into target independent of
+  "Loads the type bits of a pointer into target independent of
    byte-ordering issues."
   (once-only ((n-target target)
 	      (n-source source)
@@ -253,7 +253,7 @@
   (values))
 
 (defun allocation (alloc-tn size &optional inline dynamic-extent)
-  _N"Allocate an object with a size in bytes given by Size.
+  "Allocate an object with a size in bytes given by Size.
    The size may be an integer or a TN.
    If Inline is a VOP node-var then it is used to make an appropriate
    speed vs size decision.  If Dynamic-Extent is true, and otherwise
@@ -271,7 +271,7 @@
 
 (defmacro with-fixed-allocation ((result-tn type-code size &optional inline)
 				 &rest forms)
-  _N"Allocate an other-pointer object of fixed Size with a single
+  "Allocate an other-pointer object of fixed Size with a single
    word header having the specified Type-Code.  The result is placed in
    Result-TN."
   `(pseudo-atomic
@@ -311,20 +311,20 @@
 	      (inst byte (aref ,vector i)))))))))
 
 (defmacro error-call (vop error-code &rest values)
-  _N"Cause an error.  ERROR-CODE is the error to cause."
+  "Cause an error.  ERROR-CODE is the error to cause."
   (cons 'progn
 	(emit-error-break vop error-trap error-code values)))
 
 
 (defmacro cerror-call (vop label error-code &rest values)
-  _N"Cause a continuable error.  If the error is continued, execution resumes at
+  "Cause a continuable error.  If the error is continued, execution resumes at
   LABEL."
   `(progn
      ,@(emit-error-break vop cerror-trap error-code values)
      (inst jmp ,label)))
 
 (defmacro generate-error-code (vop error-code &rest values)
-  _N"Generate-Error-Code Error-code Value*
+  "Generate-Error-Code Error-code Value*
   Emit code for an error with the specified Error-Code and context Values."
   `(assemble (*elsewhere*)
      (let ((start-lab (gen-label)))
@@ -333,7 +333,7 @@
        start-lab)))
 
 (defmacro generate-cerror-code (vop error-code &rest values)
-  _N"Generate-CError-Code Error-code Value*
+  "Generate-CError-Code Error-code Value*
   Emit code for a continuable error with the specified Error-Code and
   context Values.  If the error is continued, execution resumes after
   the GENERATE-CERROR-CODE form."
