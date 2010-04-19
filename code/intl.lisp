@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.4 $
+;;; $Revision: 1.5 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,7 +23,7 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.4 2010/04/18 16:47:37 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.5 2010/04/19 12:18:16 rtoy Exp $")
 
 (in-package "INTL")
 
@@ -47,7 +47,7 @@
 (defvar *locale* "C")
 
 (defvar *default-domain* nil
-  _N"The message-lookup domain used by INTL:GETTEXT and INTL:NGETTEXT.
+  "The message-lookup domain used by INTL:GETTEXT and INTL:NGETTEXT.
   Use (INTL:TEXTDOMAIN \"whatever\") in each source file to set this.")
 (defvar *loaded-domains* (make-hash-table :test 'equal))
 (defvar *locale-aliases* (make-hash-table :test 'equal))
@@ -526,22 +526,22 @@
      (setf *default-domain* ,domain)))
 
 (defmacro gettext (string)
-  _N"Look up STRING in the current message domain and return its translation."
+  "Look up STRING in the current message domain and return its translation."
   `(dgettext ,*default-domain* ,string))
 
 (defmacro ngettext (singular plural n)
-  _N"Look up the singular or plural form of a message in the current domain."
+  "Look up the singular or plural form of a message in the current domain."
   `(dngettext ,*default-domain* ,singular ,plural ,n))
 
 (declaim (inline dgettext))
 (defun dgettext (domain string)
-  _N"Look up STRING in the specified message domain and return its translation."
+  "Look up STRING in the specified message domain and return its translation."
   #+(or)(declare (optimize (speed 3) (space 2) (safety 0)))
   (let ((domain (and domain (find-domain domain *locale*))))
     (or (and domain (domain-lookup string domain)) string)))
 
 (defun dngettext (domain singular plural n)
-  _N"Look up the singular or plural form of a message in the specified domain."
+  "Look up the singular or plural form of a message in the specified domain."
   (declare (type integer n)
 	   #+(or)(optimize (speed 3) (space 2) (safety 0)))
   (let* ((domain (and domain (find-domain domain *locale*)))
