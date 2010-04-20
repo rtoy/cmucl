@@ -1,12 +1,10 @@
-# @ cmucl-sunos-os
+#@ cmucl-sunos-os
 # SOME DESCRIPTIVE TITLE
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
 #
 #, fuzzy
 msgid ""
-msgstr ""
-"Project-Id-Version: CMUCL 20A\n"
-"Report-Msgid-Bugs-To: \n"
+msgstr "Project-Id-Version: CMUCL 20A\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: Automatic translation\n"
 "Language-Team: Pig Latin (auto-translated)\n"
@@ -21,9 +19,7 @@ msgstr "Ersionvay ingstray orfay upportingsay oftwaresay"
 
 #: target:code/sunos-os.lisp
 msgid "Returns a string describing version of the supporting software."
-msgstr ""
-"Eturnsray away ingstray escribingday ersionvay ofway ethay upportingsay "
-"oftwaresay."
+msgstr "Eturnsray away ingstray escribingday ersionvay ofway ethay upportingsay oftwaresay."
 
 #: target:code/sunos-os.lisp
 msgid "Unix system call getrusage failed: ~A."
@@ -32,3 +28,4 @@ msgstr "Unixway ystemsay allcay etrusagegay ailedfay: ~Away."
 #: target:code/sunos-os.lisp
 msgid "Getpagesize failed: ~A"
 msgstr "Etpagesizegay ailedfay: ~Away"
+

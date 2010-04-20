@@ -1,12 +1,10 @@
-# @ cmucl-x86-vm
+#@ cmucl-x86-vm
 # SOME DESCRIPTIVE TITLE
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
 #
 #, fuzzy
 msgid ""
-msgstr ""
-"Project-Id-Version: CMUCL 20A\n"
-"Report-Msgid-Bugs-To: \n"
+msgstr "Project-Id-Version: CMUCL 20A\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: Automatic translation\n"
 "Language-Team: Pig Latin (auto-translated)\n"
@@ -15,121 +13,95 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: target:code/x86-vm.lisp
+#: src/code/x86-vm.lisp
 msgid "Returns a string describing the type of the local machine."
-msgstr ""
-"Eturnsray away ingstray escribingday ethay ypetay ofway ethay ocallay "
-"achinemay."
+msgstr "Eturnsray away ingstray escribingday ethay ypetay ofway ethay ocallay achinemay."
 
-#: target:code/x86-vm.lisp
+#: src/code/x86-vm.lisp
 msgid "Returns a string describing the version of the local machine."
-msgstr ""
-"Eturnsray away ingstray escribingday ethay ersionvay ofway ethay ocallay "
-"achinemay."
+msgstr "Eturnsray away ingstray escribingday ethay ersionvay ofway ethay ocallay achinemay."
 
-#: target:code/x86-vm.lisp
+#: src/code/x86-vm.lisp
 msgid "Unknown code-object-fixup kind ~s."
 msgstr "Unknownway odecay-objectway-ixupfay indkay ~s."
 
-#: target:code/x86-vm.lisp
-msgid "Unknown foreign symbol: ~S"
-msgstr "Unknownway oreignfay ymbolsay: ~S"
-
-#: target:code/x86-vm.lisp
+#: src/code/x86-vm.lisp
 msgid ""
 "Atomically compare object's slot value to test-value and if EQ store\n"
 "   new-value in the slot. The original value of the slot is returned."
 msgstr ""
-"Atomicallyway omparecay objectway's otslay aluevay otay esttay-aluevay "
-"andway ifway EQ toresay\n"
-"   ewnay-aluevay inway ethay otslay. Ethay originalway aluevay ofway ethay "
-"otslay isway eturnedray."
+"Atomicallyway omparecay objectway's otslay aluevay otay esttay-aluevay andway ifway EQ toresay\n"
+"   ewnay-aluevay inway ethay otslay. Ethay originalway aluevay ofway ethay otslay isway eturnedray."
 
-#: target:code/x86-vm.lisp
+#: src/code/x86-vm.lisp
 msgid ""
 "Atomically compare symbol's value to test-value and if EQ store\n"
 "  new-value in symbol's value slot and return the original value."
 msgstr ""
-"Atomicallyway omparecay ymbolsay's aluevay otay esttay-aluevay andway ifway "
-"EQ toresay\n"
-"  ewnay-aluevay inway ymbolsay's aluevay otslay andway eturnray ethay "
-"originalway aluevay."
+"Atomicallyway omparecay ymbolsay's aluevay otay esttay-aluevay andway ifway EQ toresay\n"
+"  ewnay-aluevay inway ymbolsay's aluevay otslay andway eturnray ethay originalway aluevay."
 
-#: target:code/x86-vm.lisp
+#: src/code/x86-vm.lisp
 msgid ""
 "Atomically compare the car of CONS to test-value and if EQ store\n"
 "  new-value its car and return the original value."
 msgstr ""
-"Atomicallyway omparecay ethay arcay ofway CONS otay esttay-aluevay andway "
-"ifway EQ toresay\n"
+"Atomicallyway omparecay ethay arcay ofway CONS otay esttay-aluevay andway ifway EQ toresay\n"
 "  ewnay-aluevay itsway arcay andway eturnray ethay originalway aluevay."
 
-#: target:code/x86-vm.lisp
+#: src/code/x86-vm.lisp
 msgid ""
 "Atomically compare the cdr of CONS to test-value and if EQ store\n"
 "  new-value its cdr and return the original value."
 msgstr ""
-"Atomicallyway omparecay ethay drcay ofway CONS otay esttay-aluevay andway "
-"ifway EQ toresay\n"
+"Atomicallyway omparecay ethay drcay ofway CONS otay esttay-aluevay andway ifway EQ toresay\n"
 "  ewnay-aluevay itsway drcay andway eturnray ethay originalway aluevay."
 
-#: target:code/x86-vm.lisp
+#: src/code/x86-vm.lisp
 msgid ""
 "Atomically compare an element of vector to test-value and if EQ store\n"
 "  new-value the element and return the original value."
 msgstr ""
-"Atomicallyway omparecay anway elementway ofway ectorvay otay esttay-aluevay "
-"andway ifway EQ toresay\n"
+"Atomicallyway omparecay anway elementway ofway ectorvay otay esttay-aluevay andway ifway EQ toresay\n"
 "  ewnay-aluevay ethay elementway andway eturnray ethay originalway aluevay."
 
-#: target:code/x86-vm.lisp
+#: src/code/x86-vm.lisp
 msgid "Thread safe push of val onto the list in the symbol global value."
-msgstr ""
-"Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay ymbolsay "
-"obalglay aluevay."
+msgstr "Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay ymbolsay obalglay aluevay."
 
-#: target:code/x86-vm.lisp
+#: src/code/x86-vm.lisp
 msgid "Thread safe pop from the list in the symbol global value."
-msgstr ""
-"Readthay afesay oppay omfray ethay istlay inway ethay ymbolsay obalglay "
-"aluevay."
+msgstr "Readthay afesay oppay omfray ethay istlay inway ethay ymbolsay obalglay aluevay."
 
-#: target:code/x86-vm.lisp
+#: src/code/x86-vm.lisp
 msgid "Thread safe push of val onto the list in the car of cons."
-msgstr ""
-"Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay arcay "
-"ofway onscay."
+msgstr "Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay arcay ofway onscay."
 
-#: target:code/x86-vm.lisp
+#: src/code/x86-vm.lisp
 msgid "Thread safe push of val onto the list in the cdr of cons."
-msgstr ""
-"Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay drcay "
-"ofway onscay."
+msgstr "Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay drcay ofway onscay."
 
-#: target:code/x86-vm.lisp
+#: src/code/x86-vm.lisp
 msgid "Thread safe push of val onto the list in the vector element."
-msgstr ""
-"Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay ectorvay "
-"elementway."
+msgstr "Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay ectorvay elementway."
 
-#: target:compiler/x86/c-call.lisp target:compiler/x86/insts.lisp
+#: src/compiler/x86/c-call.lisp src/compiler/x86/insts.lisp
 msgid "Class not yet defined: ~S"
 msgstr "Assclay otnay etyay efinedday: ~S"
 
-#: target:compiler/x86/macros.lisp
+#: src/compiler/x86/macros.lisp
 msgid "Move SRC into DST unless they are location=."
 msgstr "Ovemay SRC intoway DST unlessway eythay areway ocationlay=."
 
-#: target:compiler/x86/macros.lisp
+#: src/compiler/x86/macros.lisp
 msgid ""
 "Loads the type bits of a pointer into target independent of\n"
 "   byte-ordering issues."
 msgstr ""
-"Oadslay ethay ypetay itsbay ofway away ointerpay intoway argettay "
-"independentway ofway\n"
+"Oadslay ethay ypetay itsbay ofway away ointerpay intoway argettay independentway ofway\n"
 "   ytebay-orderingway issuesway."
 
-#: target:compiler/x86/macros.lisp
+#: src/compiler/x86/macros.lisp
 msgid ""
 "Allocate an object with a size in bytes given by Size.\n"
 "   The size may be an integer or a TN.\n"
@@ -137,50 +109,43 @@ msgid ""
 "   speed vs size decision.  If Dynamic-Extent is true, and otherwise\n"
 "   appropriate, allocate from the stack."
 msgstr ""
-"Allocateway anway objectway ithway away izesay inway ytesbay ivengay ybay "
-"Izesay.\n"
+"Allocateway anway objectway ithway away izesay inway ytesbay ivengay ybay Izesay.\n"
 "   Ethay izesay aymay ebay anway integerway orway away TN.\n"
-"   Ifway Inlineway isway away VOP odenay-arvay enthay itway isway usedway "
-"otay akemay anway appropriateway\n"
-"   eedspay svay izesay ecisionday.  Ifway Ynamicday-Extentway isway uetray, "
-"andway otherwiseway\n"
+"   Ifway Inlineway isway away VOP odenay-arvay enthay itway isway usedway otay akemay anway appropriateway\n"
+"   eedspay svay izesay ecisionday.  Ifway Ynamicday-Extentway isway uetray, andway otherwiseway\n"
 "   appropriateway, allocateway omfray ethay tacksay."
 
-#: target:compiler/x86/macros.lisp
+#: src/compiler/x86/macros.lisp
 msgid ""
 "Allocate an other-pointer object of fixed Size with a single\n"
 "   word header having the specified Type-Code.  The result is placed in\n"
 "   Result-TN."
 msgstr ""
-"Allocateway anway otherway-ointerpay objectway ofway ixedfay Izesay ithway "
-"away inglesay\n"
-"   ordway eaderhay avinghay ethay ecifiedspay Ypetay-Odecay.  Ethay esultray "
-"isway acedplay inway\n"
+"Allocateway anway otherway-ointerpay objectway ofway ixedfay Izesay ithway away inglesay\n"
+"   ordway eaderhay avinghay ethay ecifiedspay Ypetay-Odecay.  Ethay esultray isway acedplay inway\n"
 "   Esultray-TN."
 
-#: target:compiler/x86/macros.lisp
+#: src/compiler/x86/macros.lisp
 msgid "Cause an error.  ERROR-CODE is the error to cause."
 msgstr "Ausecay anway errorway.  ERROR-CODE isway ethay errorway otay ausecay."
 
-#: target:compiler/x86/macros.lisp
+#: src/compiler/x86/macros.lisp
 msgid ""
 "Cause a continuable error.  If the error is continued, execution resumes at\n"
 "  LABEL."
 msgstr ""
-"Ausecay away ontinuablecay errorway.  Ifway ethay errorway isway "
-"ontinuedcay, executionway esumesray atway\n"
+"Ausecay away ontinuablecay errorway.  Ifway ethay errorway isway ontinuedcay, executionway esumesray atway\n"
 "  LABEL."
 
-#: target:compiler/x86/macros.lisp
+#: src/compiler/x86/macros.lisp
 msgid ""
 "Generate-Error-Code Error-code Value*\n"
 "  Emit code for an error with the specified Error-Code and context Values."
 msgstr ""
 "Enerategay-Errorway-Odecay Errorway-odecay Alue*Vay\n"
-"  Emitway odecay orfay anway errorway ithway ethay ecifiedspay Errorway-"
-"Odecay andway ontextcay Aluesvay."
+"  Emitway odecay orfay anway errorway ithway ethay ecifiedspay Errorway-Odecay andway ontextcay Aluesvay."
 
-#: target:compiler/x86/macros.lisp
+#: src/compiler/x86/macros.lisp
 msgid ""
 "Generate-CError-Code Error-code Value*\n"
 "  Emit code for a continuable error with the specified Error-Code and\n"
@@ -188,283 +153,325 @@ msgid ""
 "  the GENERATE-CERROR-CODE form."
 msgstr ""
 "Enerategay-Errorcay-Odecay Errorway-odecay Alue*Vay\n"
-"  Emitway odecay orfay away ontinuablecay errorway ithway ethay ecifiedspay "
-"Errorway-Odecay andway\n"
-"  ontextcay Aluesvay.  Ifway ethay errorway isway ontinuedcay, executionway "
-"esumesray afterway\n"
+"  Emitway odecay orfay away ontinuablecay errorway ithway ethay ecifiedspay Errorway-Odecay andway\n"
+"  ontextcay Aluesvay.  Ifway ethay errorway isway ontinuedcay, executionway esumesray afterway\n"
 "  ethay GENERATE-CERROR-CODE ormfay."
 
-#: target:compiler/x86/array.lisp target:compiler/x86/call.lisp
-#: target:compiler/x86/alloc.lisp target:compiler/x86/cell.lisp
-#: target:compiler/x86/debug.lisp target:compiler/x86/arith.lisp
-#: target:compiler/x86/memory.lisp target:compiler/x86/char.lisp
-#: target:compiler/x86/move.lisp
+#: src/compiler/x86/array.lisp src/compiler/x86/call.lisp
+#: src/compiler/x86/alloc.lisp src/compiler/x86/cell.lisp
+#: src/compiler/x86/debug.lisp src/compiler/x86/arith.lisp
+#: src/compiler/x86/memory.lisp src/compiler/x86/char.lisp
+#: src/compiler/x86/float.lisp src/compiler/x86/move.lisp
 msgid "Unknown SC to SC-Case for ~S:~%  ~S"
 msgstr "Unknownway SC otay SC-Asecay orfay ~S:~%  ~S"
 
-#: target:compiler/x86/move.lisp
+#: src/compiler/x86/move.lisp
 msgid "fixnum untagging"
 msgstr "ixnumfay untaggingway"
 
-#: target:compiler/x86/move.lisp
+#: src/compiler/x86/move.lisp
 msgid "constant load"
 msgstr "onstantcay oadlay"
 
-#: target:compiler/x86/call.lisp target:compiler/x86/debug.lisp
-#: target:compiler/x86/char.lisp target:compiler/x86/move.lisp
+#: src/compiler/x86/call.lisp src/compiler/x86/debug.lisp
+#: src/compiler/x86/char.lisp src/compiler/x86/float.lisp
+#: src/compiler/x86/move.lisp
 msgid ""
 "Load TN allocated, but no move function?~@\n"
-"\t           VM definition inconsistent, recompile and try again."
+"	           VM definition inconsistent, recompile and try again."
 msgstr ""
 "Oadlay TN allocatedway, utbay onay ovemay unctionfay?~@\n"
-"\t           VM efinitionday inconsistentway, ecompileray andway ytray "
-"againway."
+"	           VM efinitionday inconsistentway, ecompileray andway ytray againway."
 
-#: target:compiler/x86/move.lisp
+#: src/compiler/x86/move.lisp
 msgid "integer to untagged word coercion"
 msgstr "integerway otay untaggedway ordway oercioncay"
 
-#: target:compiler/x86/move.lisp
+#: src/compiler/x86/move.lisp
 msgid "fixnum tagging"
 msgstr "ixnumfay aggingtay"
 
-#: target:compiler/x86/move.lisp
+#: src/compiler/x86/move.lisp
 msgid "signed word to integer coercion"
 msgstr "ignedsay ordway otay integerway oercioncay"
 
-#: target:compiler/x86/move.lisp
+#: src/compiler/x86/move.lisp
 msgid "unsigned word to integer coercion"
 msgstr "unsignedway ordway otay integerway oercioncay"
 
-#: target:compiler/x86/move.lisp
+#: src/compiler/x86/move.lisp
 msgid "word integer move"
 msgstr "ordway integerway ovemay"
 
-#: target:compiler/x86/move.lisp
+#: src/compiler/x86/move.lisp
 msgid "word integer argument move"
 msgstr "ordway integerway argumentway ovemay"
 
-#: target:compiler/x86/char.lisp
+#: src/compiler/x86/float.lisp
+msgid "Ignoring bogus i387 Constant ~a"
+msgstr "Ignoringway ogusbay i387 Onstantcay ~away"
+
+#: src/compiler/x86/float.lisp
+msgid "float move"
+msgstr "oatflay ovemay"
+
+#: src/compiler/x86/float.lisp
+msgid "complex float move"
+msgstr "omplexcay oatflay ovemay"
+
+#: src/compiler/x86/float.lisp
+msgid "float to pointer coercion"
+msgstr "oatflay otay ointerpay oercioncay"
+
+#: src/compiler/x86/float.lisp
+msgid "pointer to float coercion"
+msgstr "ointerpay otay oatflay oercioncay"
+
+#: src/compiler/x86/float.lisp
+msgid "complex float to pointer coercion"
+msgstr "omplexcay oatflay otay ointerpay oercioncay"
+
+#: src/compiler/x86/float.lisp
+msgid "complex double-double float to pointer coercion"
+msgstr "omplexcay oubleday-oubleday oatflay otay ointerpay oercioncay"
+
+#: src/compiler/x86/float.lisp
+msgid "pointer to complex float coercion"
+msgstr "ointerpay otay omplexcay oatflay oercioncay"
+
+#: src/compiler/x86/float.lisp
+msgid "float argument move"
+msgstr "oatflay argumentway ovemay"
+
+#: src/compiler/x86/float.lisp
+msgid "complex float argument move"
+msgstr "omplexcay oatflay argumentway ovemay"
+
+#: src/compiler/x86/float.lisp
+msgid "complex double-double-float argument move"
+msgstr "omplexcay oubleday-oubleday-oatflay argumentway ovemay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline float arithmetic"
+msgstr "inlineway oatflay arithmeticway"
+
+#: src/compiler/x86/float.lisp
+msgid "inline float comparison"
+msgstr "inlineway oatflay omparisoncay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline float coercion"
+msgstr "inlineway oatflay oercioncay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline float truncate"
+msgstr "inlineway oatflay uncatetray"
+
+#: src/compiler/x86/float.lisp
+msgid "inline NPX function"
+msgstr "inlineway NPX unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline tan function"
+msgstr "inlineway antay unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline sin/cos function"
+msgstr "inlineway insay/oscay unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline exp function"
+msgstr "inlineway expway unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline expm1 function"
+msgstr "inlineway expmway1 unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline log function"
+msgstr "inlineway oglay unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline log10 function"
+msgstr "inlineway oglay10 unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline pow function"
+msgstr "inlineway owpay unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline scalbn function"
+msgstr "inlineway albnscay unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline scalb function"
+msgstr "inlineway albscay unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline log1p function"
+msgstr "inlineway oglay1p unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline log1p with limited x range function"
+msgstr "inlineway oglay1p ithway imitedlay x angeray unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline logb function"
+msgstr "inlineway ogblay unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline atan function"
+msgstr "inlineway atanway unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline atan2 function"
+msgstr "inlineway atanway2 unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline complex single-float creation"
+msgstr "inlineway omplexcay inglesay-oatflay eationcray"
+
+#: src/compiler/x86/float.lisp
+msgid "inline complex double-float creation"
+msgstr "inlineway omplexcay oubleday-oatflay eationcray"
+
+#: src/compiler/x86/float.lisp
+msgid "inline complex long-float creation"
+msgstr "inlineway omplexcay onglay-oatflay eationcray"
+
+#: src/compiler/x86/float.lisp
+msgid "complex float realpart"
+msgstr "omplexcay oatflay ealpartray"
+
+#: src/compiler/x86/float.lisp
+msgid "complex float imagpart"
+msgstr "omplexcay oatflay imagpartway"
+
+#: src/compiler/x86/float.lisp
+msgid "inline dummy FP register bias"
+msgstr "inlineway ummyday FP egisterray iasbay"
+
+#: src/compiler/x86/float.lisp
+msgid "double-double float move"
+msgstr "oubleday-oubleday oatflay ovemay"
+
+#: src/compiler/x86/float.lisp
+msgid "double double float to pointer coercion"
+msgstr "oubleday oubleday oatflay otay ointerpay oercioncay"
+
+#: src/compiler/x86/float.lisp
+msgid "pointer to double-double-float coercion"
+msgstr "ointerpay otay oubleday-oubleday-oatflay oercioncay"
+
+#: src/compiler/x86/float.lisp
+msgid "double double-float argument move"
+msgstr "oubleday oubleday-oatflay argumentway ovemay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline double-double-float creation"
+msgstr "inlineway oubleday-oubleday-oatflay eationcray"
+
+#: src/compiler/x86/float.lisp
+msgid "double-double high part"
+msgstr "oubleday-oubleday ighhay artpay"
+
+#: src/compiler/x86/float.lisp
+msgid "double-double low part"
+msgstr "oubleday-oubleday owlay artpay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline complex double-double-float creation"
+msgstr "inlineway omplexcay oubleday-oubleday-oatflay eationcray"
+
+#: src/compiler/x86/char.lisp
 msgid "character untagging"
 msgstr "aracterchay untaggingway"
 
-#: target:compiler/x86/char.lisp
+#: src/compiler/x86/char.lisp
 msgid "character tagging"
 msgstr "aracterchay aggingtay"
 
-#: target:compiler/x86/char.lisp
+#: src/compiler/x86/char.lisp
 msgid "character move"
 msgstr "aracterchay ovemay"
 
-#: target:compiler/x86/char.lisp
+#: src/compiler/x86/char.lisp
 msgid "character arg move"
 msgstr "aracterchay argway ovemay"
 
-#: target:compiler/x86/char.lisp
+#: src/compiler/x86/char.lisp
 msgid "inline comparison"
 msgstr "inlineway omparisoncay"
 
-#: target:compiler/x86/arith.lisp
+#: src/compiler/x86/arith.lisp
 msgid "inline fixnum arithmetic"
 msgstr "inlineway ixnumfay arithmeticway"
 
-#: target:compiler/x86/arith.lisp
+#: src/compiler/x86/arith.lisp
 msgid "inline (signed-byte 32) arithmetic"
 msgstr "inlineway (ignedsay-ytebay 32) arithmeticway"
 
-#: target:compiler/x86/arith.lisp
+#: src/compiler/x86/arith.lisp
 msgid "inline (unsigned-byte 32) arithmetic"
 msgstr "inlineway (unsignedway-ytebay 32) arithmeticway"
 
-#: target:compiler/x86/arith.lisp
+#: src/compiler/x86/arith.lisp
 msgid "inline ASH"
 msgstr "inlineway ASH"
 
-#: target:compiler/x86/arith.lisp
+#: src/compiler/x86/arith.lisp
 msgid "inline (signed-byte 32) integer-length"
 msgstr "inlineway (ignedsay-ytebay 32) integerway-engthlay"
 
-#: target:compiler/x86/arith.lisp
+#: src/compiler/x86/arith.lisp
 msgid "inline (unsigned-byte 32) logcount"
 msgstr "inlineway (unsignedway-ytebay 32) ogcountlay"
 
-#: target:compiler/x86/arith.lisp
+#: src/compiler/x86/arith.lisp
 msgid "inline fixnum comparison"
 msgstr "inlineway ixnumfay omparisoncay"
 
-#: target:compiler/x86/arith.lisp
+#: src/compiler/x86/arith.lisp
 msgid "inline (signed-byte 32) comparison"
 msgstr "inlineway (ignedsay-ytebay 32) omparisoncay"
 
-#: target:compiler/x86/arith.lisp
+#: src/compiler/x86/arith.lisp
 msgid "inline (unsigned-byte 32) comparison"
 msgstr "inlineway (unsignedway-ytebay 32) omparisoncay"
 
-#: target:compiler/x86/arith.lisp
+#: src/compiler/x86/arith.lisp
 msgid "SHIFT-TOWARDS-START"
 msgstr "SHIFT-TOWARDS-START"
 
-#: target:compiler/x86/arith.lisp
+#: src/compiler/x86/arith.lisp
 msgid "SHIFT-TOWARDS-END"
 msgstr "SHIFT-TOWARDS-END"
 
-#: target:compiler/x86/c-call.lisp
+#: src/compiler/x86/c-call.lisp
 msgid "Too many result values from c-call."
 msgstr "Ootay anymay esultray aluesvay omfray c-allcay."
 
-#: target:compiler/x86/c-call.lisp
+#: src/compiler/x86/c-call.lisp
 msgid "Method ~S not defined for ~S"
 msgstr "Ethodmay ~S otnay efinedday orfay ~S"
 
-#: target:compiler/x86/c-call.lisp
+#: src/compiler/x86/c-call.lisp
 msgid ""
 "Cons up a piece of code which calls call-callback with INDEX and a\n"
 "pointer to the arguments."
 msgstr ""
-"Onscay upway away iecepay ofway odecay ichwhay allscay allcay-allbackcay "
-"ithway INDEX andway away\n"
+"Onscay upway away iecepay ofway odecay ichwhay allscay allcay-allbackcay ithway INDEX andway away\n"
 "ointerpay otay ethay argumentsway."
 
-#: target:compiler/x86/call.lisp
+#: src/compiler/x86/call.lisp
 msgid "more-arg-context"
 msgstr "oremay-argway-ontextcay"
 
-#: target:compiler/x86/array.lisp
+#: src/compiler/x86/array.lisp
 msgid "inline array access"
 msgstr "inlineway arrayway accessway"
 
-#: target:compiler/x86/array.lisp
+#: src/compiler/x86/array.lisp
 msgid "inline array store"
 msgstr "inlineway arrayway toresay"
 
-#~ msgid "Ignoring bogus i387 Constant ~a"
-#~ msgstr "Ignoringway ogusbay i387 Onstantcay ~away"
-
-#~ msgid "float move"
-#~ msgstr "oatflay ovemay"
-
-#~ msgid "complex float move"
-#~ msgstr "omplexcay oatflay ovemay"
-
-#~ msgid "float to pointer coercion"
-#~ msgstr "oatflay otay ointerpay oercioncay"
-
-#~ msgid "pointer to float coercion"
-#~ msgstr "ointerpay otay oatflay oercioncay"
-
-#~ msgid "complex float to pointer coercion"
-#~ msgstr "omplexcay oatflay otay ointerpay oercioncay"
-
-#~ msgid "complex double-double float to pointer coercion"
-#~ msgstr "omplexcay oubleday-oubleday oatflay otay ointerpay oercioncay"
-
-#~ msgid "pointer to complex float coercion"
-#~ msgstr "ointerpay otay omplexcay oatflay oercioncay"
-
-#~ msgid "float argument move"
-#~ msgstr "oatflay argumentway ovemay"
-
-#~ msgid "complex float argument move"
-#~ msgstr "omplexcay oatflay argumentway ovemay"
-
-#~ msgid "complex double-double-float argument move"
-#~ msgstr "omplexcay oubleday-oubleday-oatflay argumentway ovemay"
-
-#~ msgid "inline float arithmetic"
-#~ msgstr "inlineway oatflay arithmeticway"
-
-#~ msgid "inline float comparison"
-#~ msgstr "inlineway oatflay omparisoncay"
-
-#~ msgid "inline float coercion"
-#~ msgstr "inlineway oatflay oercioncay"
-
-#~ msgid "inline float truncate"
-#~ msgstr "inlineway oatflay uncatetray"
-
-#~ msgid "inline NPX function"
-#~ msgstr "inlineway NPX unctionfay"
-
-#~ msgid "inline tan function"
-#~ msgstr "inlineway antay unctionfay"
-
-#~ msgid "inline sin/cos function"
-#~ msgstr "inlineway insay/oscay unctionfay"
-
-#~ msgid "inline exp function"
-#~ msgstr "inlineway expway unctionfay"
-
-#~ msgid "inline expm1 function"
-#~ msgstr "inlineway expmway1 unctionfay"
-
-#~ msgid "inline log function"
-#~ msgstr "inlineway oglay unctionfay"
-
-#~ msgid "inline log10 function"
-#~ msgstr "inlineway oglay10 unctionfay"
-
-#~ msgid "inline pow function"
-#~ msgstr "inlineway owpay unctionfay"
-
-#~ msgid "inline scalbn function"
-#~ msgstr "inlineway albnscay unctionfay"
-
-#~ msgid "inline scalb function"
-#~ msgstr "inlineway albscay unctionfay"
-
-#~ msgid "inline log1p function"
-#~ msgstr "inlineway oglay1p unctionfay"
-
-#~ msgid "inline log1p with limited x range function"
-#~ msgstr "inlineway oglay1p ithway imitedlay x angeray unctionfay"
-
-#~ msgid "inline logb function"
-#~ msgstr "inlineway ogblay unctionfay"
-
-#~ msgid "inline atan function"
-#~ msgstr "inlineway atanway unctionfay"
-
-#~ msgid "inline atan2 function"
-#~ msgstr "inlineway atanway2 unctionfay"
-
-#~ msgid "inline complex single-float creation"
-#~ msgstr "inlineway omplexcay inglesay-oatflay eationcray"
-
-#~ msgid "inline complex double-float creation"
-#~ msgstr "inlineway omplexcay oubleday-oatflay eationcray"
-
-#~ msgid "inline complex long-float creation"
-#~ msgstr "inlineway omplexcay onglay-oatflay eationcray"
-
-#~ msgid "complex float realpart"
-#~ msgstr "omplexcay oatflay ealpartray"
-
-#~ msgid "complex float imagpart"
-#~ msgstr "omplexcay oatflay imagpartway"
-
-#~ msgid "inline dummy FP register bias"
-#~ msgstr "inlineway ummyday FP egisterray iasbay"
-
-#~ msgid "double-double float move"
-#~ msgstr "oubleday-oubleday oatflay ovemay"
-
-#~ msgid "double double float to pointer coercion"
-#~ msgstr "oubleday oubleday oatflay otay ointerpay oercioncay"
-
-#~ msgid "pointer to double-double-float coercion"
-#~ msgstr "ointerpay otay oubleday-oubleday-oatflay oercioncay"
-
-#~ msgid "double double-float argument move"
-#~ msgstr "oubleday oubleday-oatflay argumentway ovemay"
-
-#~ msgid "inline double-double-float creation"
-#~ msgstr "inlineway oubleday-oubleday-oatflay eationcray"
-
-#~ msgid "double-double high part"
-#~ msgstr "oubleday-oubleday ighhay artpay"
-
-#~ msgid "double-double low part"
-#~ msgstr "oubleday-oubleday owlay artpay"
-
-#~ msgid "inline complex double-double-float creation"
-#~ msgstr "inlineway omplexcay oubleday-oubleday-oatflay eationcray"

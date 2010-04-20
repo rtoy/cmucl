@@ -1,12 +1,10 @@
-# @ cmucl-sparc-svr4
+#@ cmucl-sparc-svr4
 # SOME DESCRIPTIVE TITLE
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
 #
 #, fuzzy
 msgid ""
-msgstr ""
-"Project-Id-Version: CMUCL 20A\n"
-"Report-Msgid-Bugs-To: \n"
+msgstr "Project-Id-Version: CMUCL 20A\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: Automatic translation\n"
 "Language-Team: Pig Latin (auto-translated)\n"
@@ -17,15 +15,11 @@ msgstr ""
 
 #: target:code/sparc-svr4-vm.lisp
 msgid "Returns a string describing the type of the local machine."
-msgstr ""
-"Eturnsray away ingstray escribingday ethay ypetay ofway ethay ocallay "
-"achinemay."
+msgstr "Eturnsray away ingstray escribingday ethay ypetay ofway ethay ocallay achinemay."
 
 #: target:code/sparc-svr4-vm.lisp
 msgid "Returns a string describing the version of the local machine."
-msgstr ""
-"Eturnsray away ingstray escribingday ethay ersionvay ofway ethay ocallay "
-"achinemay."
+msgstr "Eturnsray away ingstray escribingday ethay ersionvay ofway ethay ocallay achinemay."
 
 #: target:code/sparc-svr4-vm.lisp
 msgid "Unaligned instruction?  offset=#x~X."
@@ -37,6 +31,5 @@ msgstr "Ancay't ealday ithway CALL ixupsfay, etyay."
 
 #: target:code/sparc-svr4-vm.lisp
 msgid "XRS ID invalid but attempting to access double-float register ~d!"
-msgstr ""
-"XRS ID invalidway utbay attemptingway otay accessway oubleday-oatflay "
-"egisterray ~d!"
+msgstr "XRS ID invalidway utbay attemptingway otay accessway oubleday-oatflay egisterray ~d!"
+

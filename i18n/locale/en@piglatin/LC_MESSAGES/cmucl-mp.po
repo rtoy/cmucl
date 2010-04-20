@@ -1,12 +1,10 @@
-# @ cmucl-mp
+#@ cmucl-mp
 # SOME DESCRIPTIVE TITLE
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
 #
 #, fuzzy
 msgid ""
-msgstr ""
-"Project-Id-Version: CMUCL 20A\n"
-"Report-Msgid-Bugs-To: \n"
+msgstr "Project-Id-Version: CMUCL 20A\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: Automatic translation\n"
 "Language-Team: Pig Latin (auto-translated)\n"
@@ -15,65 +13,61 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Class not yet defined: ~S"
 msgstr "Assclay otnay etyay efinedday: ~S"
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Syscall ~A failed: ~A"
 msgstr "Yscallsay ~Away ailedfay: ~Away"
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Return the real time in seconds."
 msgstr "Eturnray ethay ealray imetay inway econdssay."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Return the run time in seconds"
 msgstr "Eturnray ethay unray imetay inway econdssay"
 
-#: target:code/multi-proc.lisp
-msgid "Return the process state which is either Run, Killed, or a wait reason."
+#: src/code/multi-proc.lisp
+msgid ""
+"Return the process state which is either Run, Killed, or a wait reason."
 msgstr ""
-"Eturnray ethay ocesspray tatesay ichwhay isway eitherway Unray, Illedkay, "
-"orway away aitway easonray."
+"Eturnray ethay ocesspray tatesay ichwhay isway eitherway Unray, Illedkay, orway away aitway easonray."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Returns the current process."
 msgstr "Eturnsray ethay urrentcay ocesspray."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "A list of all alive processes."
 msgstr "Away istlay ofway allway aliveway ocessespray."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Return a list of all the live processes."
 msgstr "Eturnray away istlay ofway allway ethay ivelay ocessespray."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Execute the body the scheduling disabled."
 msgstr "Executeway ethay odybay ethay edulingschay isabledday."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Increaments the reference by delta in a single atomic operation"
-msgstr ""
-"Increamentsway ethay eferenceray ybay eltaday inway away inglesay atomicway "
-"operationway"
+msgstr "Increamentsway ethay eferenceray ybay eltaday inway away inglesay atomicway operationway"
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Decrements the reference by delta in a single atomic operation"
-msgstr ""
-"Ecrementsday ethay eferenceray ybay eltaday inway away inglesay atomicway "
-"operationway"
+msgstr "Ecrementsday ethay eferenceray ybay eltaday inway away inglesay atomicway operationway"
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Atomically push object onto place."
 msgstr "Atomicallyway ushpay objectway ontoway aceplay."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Atomically pop place."
 msgstr "Atomicallyway oppay aceplay."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Make a process which will run FUNCTION when it starts up.  By\n"
 "  default the process is created in a runnable (active) state.\n"
@@ -81,120 +75,97 @@ msgid ""
 "  be restarted later with process-preset.\n"
 "\n"
 "  :NAME\n"
-"\tA name for the process displayed in process listings.\n"
+"	A name for the process displayed in process listings.\n"
 "\n"
 "  :RUN-REASONS\n"
-"\tInitial value for process-run-reasons; defaults to (:ENABLE).  A\n"
-"\tprocess needs a at least one run reason to be runnable.  Together with\n"
-"\tarrest reasons, run reasons provide an alternative to process-wait for\n"
-"\tcontroling whether or not a process is runnable.  To get the default\n"
-"\tbehavior of MAKE-PROCESS in Allegro Common Lisp, which is to create a\n"
-"\tprocess which is active but not runnable, initialize RUN-REASONS to\n"
-"\tNIL.\n"
+"	Initial value for process-run-reasons; defaults to (:ENABLE).  A\n"
+"	process needs a at least one run reason to be runnable.  Together with\n"
+"	arrest reasons, run reasons provide an alternative to process-wait for\n"
+"	controling whether or not a process is runnable.  To get the default\n"
+"	behavior of MAKE-PROCESS in Allegro Common Lisp, which is to create a\n"
+"	process which is active but not runnable, initialize RUN-REASONS to\n"
+"	NIL.\n"
 "\n"
 "  :ARREST-REASONS\n"
-"\tInitial value for process-arrest-reasons; defaults to NIL.  A\n"
-"\tprocess must have no arrest reasons in order to be runnable.\n"
+"	Initial value for process-arrest-reasons; defaults to NIL.  A\n"
+"	process must have no arrest reasons in order to be runnable.\n"
 "\n"
 "  :INITIAL-BINDINGS\n"
-"\tAn alist of initial special bindings for the process.  At\n"
-"\tstartup the new process has a fresh set of special bindings\n"
-"\twith a default binding of *package* setup to the CL-USER\n"
-"\tpackage.  INITIAL-BINDINGS specifies additional bindings for\n"
-"\tthe process.  The cdr of each alist element is evaluated in\n"
-"\tthe fresh dynamic environment and then bound to the car of the\n"
-"\telement."
+"	An alist of initial special bindings for the process.  At\n"
+"	startup the new process has a fresh set of special bindings\n"
+"	with a default binding of *package* setup to the CL-USER\n"
+"	package.  INITIAL-BINDINGS specifies additional bindings for\n"
+"	the process.  The cdr of each alist element is evaluated in\n"
+"	the fresh dynamic environment and then bound to the car of the\n"
+"	element."
 msgstr ""
-"Akemay away ocesspray ichwhay illway unray FUNCTION enwhay itway tartssay "
-"upway.  Ybay\n"
-"  efaultday ethay ocesspray isway eatedcray inway away unnableray "
-"(activeway) tatesay.\n"
-"  Ifway FUNCTION isway NIL, ethay ocesspray isway tartedsay inway away "
-"illedkay tatesay; itway aymay\n"
+"Akemay away ocesspray ichwhay illway unray FUNCTION enwhay itway tartssay upway.  Ybay\n"
+"  efaultday ethay ocesspray isway eatedcray inway away unnableray (activeway) tatesay.\n"
+"  Ifway FUNCTION isway NIL, ethay ocesspray isway tartedsay inway away illedkay tatesay; itway aymay\n"
 "  ebay estartedray aterlay ithway ocesspray-esetpray.\n"
 "\n"
 "  :NAME\n"
-"\tAway amenay orfay ethay ocesspray isplayedday inway ocesspray istingslay.\n"
+"	Away amenay orfay ethay ocesspray isplayedday inway ocesspray istingslay.\n"
 "\n"
 "  :RUN-REASONS\n"
-"\tInitialway aluevay orfay ocesspray-unray-easonsray; efaultsday otay (:"
-"ENABLE).  Away\n"
-"\tocesspray eedsnay away atway eastlay oneway unray easonray otay ebay "
-"unnableray.  Ogethertay ithway\n"
-"\tarrestway easonsray, unray easonsray ovidepray anway alternativeway otay "
-"ocesspray-aitway orfay\n"
-"\tontrolingcay etherwhay orway otnay away ocesspray isway unnableray.  Otay "
-"etgay ethay efaultday\n"
-"\tehaviorbay ofway MAKE-PROCESS inway Allegroway Ommoncay Isplay, ichwhay "
-"isway otay eatecray away\n"
-"\tocesspray ichwhay isway activeway utbay otnay unnableray, initializeway "
-"RUN-REASONS otay\n"
-"\tNIL.\n"
+"	Initialway aluevay orfay ocesspray-unray-easonsray; efaultsday otay (:ENABLE).  Away\n"
+"	ocesspray eedsnay away atway eastlay oneway unray easonray otay ebay unnableray.  Ogethertay ithway\n"
+"	arrestway easonsray, unray easonsray ovidepray anway alternativeway otay ocesspray-aitway orfay\n"
+"	ontrolingcay etherwhay orway otnay away ocesspray isway unnableray.  Otay etgay ethay efaultday\n"
+"	ehaviorbay ofway MAKE-PROCESS inway Allegroway Ommoncay Isplay, ichwhay isway otay eatecray away\n"
+"	ocesspray ichwhay isway activeway utbay otnay unnableray, initializeway RUN-REASONS otay\n"
+"	NIL.\n"
 "\n"
 "  :ARREST-REASONS\n"
-"\tInitialway aluevay orfay ocesspray-arrestway-easonsray; efaultsday otay "
-"NIL.  Away\n"
-"\tocesspray ustmay avehay onay arrestway easonsray inway orderway otay ebay "
-"unnableray.\n"
+"	Initialway aluevay orfay ocesspray-arrestway-easonsray; efaultsday otay NIL.  Away\n"
+"	ocesspray ustmay avehay onay arrestway easonsray inway orderway otay ebay unnableray.\n"
 "\n"
 "  :INITIAL-BINDINGS\n"
-"\tAnway alistway ofway initialway ecialspay indingsbay orfay ethay "
-"ocesspray.  Atway\n"
-"\ttartupsay ethay ewnay ocesspray ashay away eshfray etsay ofway ecialspay "
-"indingsbay\n"
-"\tithway away efaultday indingbay ofway *package* etupsay otay ethay CL-"
-"USER\n"
-"\tackagepay.  INITIAL-BINDINGS ecifiesspay additionalway indingsbay orfay\n"
-"\tethay ocesspray.  Ethay drcay ofway eachway alistway elementway isway "
-"evaluatedway inway\n"
-"\tethay eshfray ynamicday environmentway andway enthay oundbay otay ethay "
-"arcay ofway ethay\n"
-"\telementway."
+"	Anway alistway ofway initialway ecialspay indingsbay orfay ethay ocesspray.  Atway\n"
+"	tartupsay ethay ewnay ocesspray ashay away eshfray etsay ofway ecialspay indingsbay\n"
+"	ithway away efaultday indingbay ofway *package* etupsay otay ethay CL-USER\n"
+"	ackagepay.  INITIAL-BINDINGS ecifiesspay additionalway indingsbay orfay\n"
+"	ethay ocesspray.  Ethay drcay ofway eachway alistway elementway isway evaluatedway inway\n"
+"	ethay eshfray ynamicday environmentway andway enthay oundbay otay ethay arcay ofway ethay\n"
+"	elementway."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Interrupt process and cause it to evaluate function."
-msgstr ""
-"Interruptway ocesspray andway ausecay itway otay evaluateway unctionfay."
+msgstr "Interruptway ocesspray andway ausecay itway otay evaluateway unctionfay."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Destroy a process. The process is sent a interrupt which throws to\n"
 "  the end of the process allowing it to unwind gracefully."
 msgstr ""
-"Estroyday away ocesspray. Ethay ocesspray isway entsay away interruptway "
-"ichwhay rowsthay otay\n"
-"  ethay endway ofway ethay ocesspray allowingway itway otay unwindway "
-"acefullygray."
+"Estroyday away ocesspray. Ethay ocesspray isway entsay away interruptway ichwhay rowsthay otay\n"
+"  ethay endway ofway ethay ocesspray allowingway itway otay unwindway acefullygray."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Restart process by unwinding it to its initial state and calling its\n"
 "  initial function."
 msgstr ""
-"Estartray ocesspray ybay unwindingway itway otay itsway initialway tatesay "
-"andway allingcay itsway\n"
+"Estartray ocesspray ybay unwindingway itway otay itsway initialway tatesay andway allingcay itsway\n"
 "  initialway unctionfay."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Restart process, unwinding it to its initial state and calls\n"
 "  function with args."
 msgstr ""
-"Estartray ocesspray, unwindingway itway otay itsway initialway tatesay "
-"andway allscay\n"
+"Estartray ocesspray, unwindingway itway otay itsway initialway tatesay andway allscay\n"
 "  unctionfay ithway argsway."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Disable process from being runnable until enabled."
 msgstr "Isableday ocesspray omfray eingbay unnableray untilway enabledway."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Allow process to become runnable again after it has been disabled."
-msgstr ""
-"Allowway ocesspray otay ecomebay unnableray againway afterway itway ashay "
-"eenbay isabledday."
+msgstr "Allowway ocesspray otay ecomebay unnableray againway afterway itway ashay eenbay isabledday."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Causes the process to wait until predicate returns True. Processes\n"
 "  can only call process-wait when scheduling is enabled, and the predicate\n"
@@ -202,54 +173,43 @@ msgid ""
 "  times by the scheduler it should be relative fast native compiled code.\n"
 "  The single True predicate value is returned."
 msgstr ""
-"Ausescay ethay ocesspray otay aitway untilway edicatepray eturnsray Uetray. "
-"Ocessespray\n"
-"  ancay onlyway allcay ocesspray-aitway enwhay edulingschay isway "
-"enabledway, andway ethay edicatepray\n"
-"  ancay otnay allcay ocesspray-aitway. Incesay ethay edicatepray aymay ebay "
-"evaluatedway aymay\n"
-"  imestay ybay ethay edulerschay itway ouldshay ebay elativeray astfay "
-"ativenay ompiledcay odecay.\n"
+"Ausescay ethay ocesspray otay aitway untilway edicatepray eturnsray Uetray. Ocessespray\n"
+"  ancay onlyway allcay ocesspray-aitway enwhay edulingschay isway enabledway, andway ethay edicatepray\n"
+"  ancay otnay allcay ocesspray-aitway. Incesay ethay edicatepray aymay ebay evaluatedway aymay\n"
+"  imestay ybay ethay edulerschay itway ouldshay ebay elativeray astfay ativenay ompiledcay odecay.\n"
 "  Ethay inglesay Uetray edicatepray aluevay isway eturnedray."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Causes the process to wait until predicate returns True, or the\n"
 "  number of seconds specified by timeout has elapsed. The timeout may\n"
 "  be a fixnum or a float in seconds.  The single True predicate value is\n"
 "  returned, or NIL if the timeout was reached."
 msgstr ""
-"Ausescay ethay ocesspray otay aitway untilway edicatepray eturnsray Uetray, "
-"orway ethay\n"
-"  umbernay ofway econdssay ecifiedspay ybay imeouttay ashay elapsedway. "
-"Ethay imeouttay aymay\n"
-"  ebay away ixnumfay orway away oatflay inway econdssay.  Ethay inglesay "
-"Uetray edicatepray aluevay isway\n"
+"Ausescay ethay ocesspray otay aitway untilway edicatepray eturnsray Uetray, orway ethay\n"
+"  umbernay ofway econdssay ecifiedspay ybay imeouttay ashay elapsedway. Ethay imeouttay aymay\n"
+"  ebay away ixnumfay orway away oatflay inway econdssay.  Ethay inglesay Uetray edicatepray aluevay isway\n"
 "  eturnedray, orway NIL ifway ethay imeouttay asway eachedray."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Try to gracefully destroy all the processes giving them some\n"
 "  chance to unwinding, before shutting down multi-processing. This is\n"
 "  currently necessary before a purify and is performed before a save-lisp.\n"
 "  Multi-processing can be restarted by calling init-multi-processing."
 msgstr ""
-"Ytray otay acefullygray estroyday allway ethay ocessespray ivinggay emthay "
-"omesay\n"
-"  ancechay otay unwindingway, eforebay uttingshay ownday ultimay-"
-"ocessingpray. Isthay isway\n"
-"  urrentlycay ecessarynay eforebay away urifypay andway isway erformedpay "
-"eforebay away avesay-isplay.\n"
-"  Ultimay-ocessingpray ancay ebay estartedray ybay allingcay initway-ultimay-"
-"ocessingpray."
+"Ytray otay acefullygray estroyday allway ethay ocessespray ivinggay emthay omesay\n"
+"  ancechay otay unwindingway, eforebay uttingshay ownday ultimay-ocessingpray. Isthay isway\n"
+"  urrentlycay ecessarynay eforebay away urifypay andway isway erformedpay eforebay away avesay-isplay.\n"
+"  Ultimay-ocessingpray ancay ebay estartedray ybay allingcay initway-ultimay-ocessingpray."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Destroyed ~d process; remaining ~d~%"
 msgid_plural "Destroyed ~d processes; remaining ~d~%"
 msgstr[0] "Estroyedday ~d ocesspray; emainingray ~d~%"
 msgstr[1] "Estroyedday ~d ocessespray; emainingray ~d~%"
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "An idle loop to be run by the initial process. The select based event\n"
 "  server is called with a timeout calculated from the minimum of the\n"
@@ -261,121 +221,99 @@ msgid ""
 "  exit gracefully destroying all the processes and giving them a chance\n"
 "  to unwind."
 msgstr ""
-"Anway idleway ooplay otay ebay unray ybay ethay initialway ocesspray. Ethay "
-"electsay asedbay eventway\n"
-"  erversay isway alledcay ithway away imeouttay alculatedcay omfray ethay "
-"inimummay ofway ethay\n"
-"  *idle-loop-timeout* andway ethay imetay otay ethay extnay ocesspray aitway "
-"imeouttay.\n"
-"  Otay avoidway isthay elayday enwhay erethay areway unnableray ocessespray "
-"ethay *idle-process*\n"
-"  ouldshay ebay etupsay otay ethay *initial-process*. Ifway oneway ofway "
-"ethay ocessespray itsquay\n"
-"  ybay rowingthay otay %endway-ofway-ethay-orldway enthay *quitting-lisp* "
-"illway avehay eenbay\n"
-"  etsay otay ethay exitway aluevay ichwhay isway otednay ybay ethay idleway "
-"ooplay ichwhay iestray otay\n"
-"  exitway acefullygray estroyingday allway ethay ocessespray andway ivinggay "
-"emthay away ancechay\n"
+"Anway idleway ooplay otay ebay unray ybay ethay initialway ocesspray. Ethay electsay asedbay eventway\n"
+"  erversay isway alledcay ithway away imeouttay alculatedcay omfray ethay inimummay ofway ethay\n"
+"  *idle-loop-timeout* andway ethay imetay otay ethay extnay ocesspray aitway imeouttay.\n"
+"  Otay avoidway isthay elayday enwhay erethay areway unnableray ocessespray ethay *idle-process*\n"
+"  ouldshay ebay etupsay otay ethay *initial-process*. Ifway oneway ofway ethay ocessespray itsquay\n"
+"  ybay rowingthay otay %endway-ofway-ethay-orldway enthay *quitting-lisp* illway avehay eenbay\n"
+"  etsay otay ethay exitway aluevay ichwhay isway otednay ybay ethay idleway ooplay ichwhay iestray otay\n"
+"  exitway acefullygray estroyingday allway ethay ocessespray andway ivinggay emthay away ancechay\n"
 "  otay unwindway."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Allow other processes to run."
 msgstr "Allowway otherway ocessespray otay unray."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Return the accrued real time elapsed while the given process was\n"
 "  scheduled. The returned time is a double-float in seconds."
 msgstr ""
-"Eturnray ethay accruedway ealray imetay elapsedway ilewhay ethay ivengay "
-"ocesspray asway\n"
-"  eduledschay. Ethay eturnedray imetay isway away oubleday-oatflay inway "
-"econdssay."
+"Eturnray ethay accruedway ealray imetay elapsedway ilewhay ethay ivengay ocesspray asway\n"
+"  eduledschay. Ethay eturnedray imetay isway away oubleday-oatflay inway econdssay."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Return the accrued run time elapsed for the given process. The returned\n"
 "  time is a double-float in seconds."
 msgstr ""
-"Eturnray ethay accruedway unray imetay elapsedway orfay ethay ivengay "
-"ocesspray. Ethay eturnedray\n"
+"Eturnray ethay accruedway unray imetay elapsedway orfay ethay ivengay ocesspray. Ethay eturnedray\n"
 "  imetay isway away oubleday-oatflay inway econdssay."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Return the real time elapsed since the given process was last\n"
 "  descheduled. The returned time is a double-float in seconds."
 msgstr ""
-"Eturnray ethay ealray imetay elapsedway incesay ethay ivengay ocesspray "
-"asway astlay\n"
-"  escheduledday. Ethay eturnedray imetay isway away oubleday-oatflay inway "
-"econdssay."
+"Eturnray ethay ealray imetay elapsedway incesay ethay ivengay ocesspray asway astlay\n"
+"  escheduledday. Ethay eturnedray imetay isway away oubleday-oatflay inway econdssay."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Start a regular SIGALRM interrupt which calls process-yield. An optional\n"
 "  time in seconds and micro seconds may be provided. Note that CMUCL code\n"
 "  base is not too interrupt safe so this may cause problems."
 msgstr ""
-"Tartsay away egularray SIGALRM interruptway ichwhay allscay ocesspray-"
-"ieldyay. Anway optionalway\n"
-"  imetay inway econdssay andway icromay econdssay aymay ebay ovidedpray. "
-"Otenay atthay CMUCL odecay\n"
-"  asebay isway otnay ootay interruptway afesay osay isthay aymay ausecay "
-"oblemspray."
+"Tartsay away egularray SIGALRM interruptway ichwhay allscay ocesspray-ieldyay. Anway optionalway\n"
+"  imetay inway econdssay andway icromay econdssay aymay ebay ovidedpray. Otenay atthay CMUCL odecay\n"
+"  asebay isway otnay ootay interruptway afesay osay isthay aymay ausecay oblemspray."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Wait until FD is usable for DIRECTION and return True. DIRECTION should be\n"
 "  either :INPUT or :OUTPUT. TIMEOUT, if supplied, is the number of seconds "
 "to\n"
 "  wait before giving up and returing NIL."
 msgstr ""
-"Aitway untilway FD isway usableway orfay DIRECTION andway eturnray Uetray. "
-"DIRECTION ouldshay ebay\n"
-"  eitherway :INPUT orway :OUTPUT. TIMEOUT, ifway uppliedsay, isway ethay "
-"umbernay ofway econdssay otay\n"
+"Aitway untilway FD isway usableway orfay DIRECTION andway eturnray Uetray. DIRECTION ouldshay ebay\n"
+"  eitherway :INPUT orway :OUTPUT. TIMEOUT, ifway uppliedsay, isway ethay umbernay ofway econdssay "
+"otay\n"
 "  aitway eforebay ivinggay upway andway eturingray NIL."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "This function causes execution to be suspended for N seconds.  N may\n"
 "  be any non-negative, non-complex number."
 msgstr ""
-"Isthay unctionfay ausescay executionway otay ebay uspendedsay orfay N "
-"econdssay.  N aymay\n"
+"Isthay unctionfay ausescay executionway otay ebay uspendedsay orfay N econdssay.  N aymay\n"
 "  ebay anyway onnay-egativenay, onnay-omplexcay umbernay."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Executes body and returns the values of the last form in body. However, if\n"
 "  the execution takes longer than timeout seconds, abort it and evaluate\n"
 "  timeout-forms, returning the values of last form."
 msgstr ""
-"Executesway odybay andway eturnsray ethay aluesvay ofway ethay astlay ormfay "
-"inway odybay. Oweverhay, ifway\n"
-"  ethay executionway akestay ongerlay anthay imeouttay econdssay, abortway "
-"itway andway evaluateway\n"
+"Executesway odybay andway eturnsray ethay aluesvay ofway ethay astlay ormfay inway odybay. Oweverhay, ifway\n"
+"  ethay executionway akestay ongerlay anthay imeouttay econdssay, abortway itway andway evaluateway\n"
 "  imeouttay-ormsfay, eturningray ethay aluesvay ofway astlay ormfay."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Show the all the processes, their whostate, and state. If the optional\n"
 "  verbose argument is true then the run, real, and idle times are also\n"
 "  shown."
 msgstr ""
-"Owshay ethay allway ethay ocessespray, eirthay ostatewhay, andway tatesay. "
-"Ifway ethay optionalway\n"
-"  erbosevay argumentway isway uetray enthay ethay unray, ealray, andway "
-"idleway imestay areway alsoway\n"
+"Owshay ethay allway ethay ocessespray, eirthay ostatewhay, andway tatesay. Ifway ethay optionalway\n"
+"  erbosevay argumentway isway uetray enthay ethay unray, ealray, andway idleway imestay areway alsoway\n"
 "  ownshay."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid "Top-level READ-EVAL-PRINT loop for processes."
 msgstr "Optay-evellay READ-EVAL-PRINT ooplay orfay ocessespray."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Enter the idle loop, starting a new process to run the top level loop.\n"
 "  The awaking of sleeping processes is timed better with the idle loop "
@@ -385,17 +323,15 @@ msgid ""
 "the\n"
 "  default when there is better MP debug support etc."
 msgstr ""
-"Enterway ethay idleway ooplay, tartingsay away ewnay ocesspray otay unray "
-"ethay optay evellay ooplay.\n"
-"  Ethay awakingway ofway eepingslay ocessespray isway imedtay etterbay "
-"ithway ethay idleway ooplay ocesspray\n"
-"  unningray, andway tartingsay away ewnay ocesspray orfay ethay optay "
-"evellay ooplay upportssay away\n"
-"  imultaneoussay interactiveway essionsay. Uchsay anway initialisationway "
-"illway ikelylay ebay ethay\n"
+"Enterway ethay idleway ooplay, tartingsay away ewnay ocesspray otay unray ethay optay evellay ooplay.\n"
+"  Ethay awakingway ofway eepingslay ocessespray isway imedtay etterbay ithway ethay idleway ooplay "
+"ocesspray\n"
+"  unningray, andway tartingsay away ewnay ocesspray orfay ethay optay evellay ooplay upportssay away\n"
+"  imultaneoussay interactiveway essionsay. Uchsay anway initialisationway illway ikelylay ebay "
+"ethay\n"
 "  efaultday enwhay erethay isway etterbay MP ebugday upportsay etcway."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Create a Lisp connection listener, listening on a TCP port for new\n"
 "  connections and starting a new top-level loop for each. If a password\n"
@@ -403,17 +339,13 @@ msgid ""
 "  performed for the first free port starting at the given port which\n"
 "  defaults to 1025."
 msgstr ""
-"Eatecray away Isplay onnectioncay istenerlay, isteninglay onway away TCP "
-"ortpay orfay ewnay\n"
-"  onnectionscay andway tartingsay away ewnay optay-evellay ooplay orfay "
-"eachway. Ifway away asswordpay\n"
-"  isway otnay ivengay enthay oneway illway ebay eneratedgay andway "
-"eportedray.  Away earchsay isway\n"
-"  erformedpay orfay ethay irstfay eefray ortpay tartingsay atway ethay "
-"ivengay ortpay ichwhay\n"
+"Eatecray away Isplay onnectioncay istenerlay, isteninglay onway away TCP ortpay orfay ewnay\n"
+"  onnectionscay andway tartingsay away ewnay optay-evellay ooplay orfay eachway. Ifway away asswordpay\n"
+"  isway otnay ivengay enthay oneway illway ebay eneratedgay andway eportedray.  Away earchsay isway\n"
+"  erformedpay orfay ethay irstfay eefray ortpay tartingsay atway ethay ivengay ortpay ichwhay\n"
 "  efaultsday otay 1025."
 
-#: target:code/multi-proc.lisp
+#: src/code/multi-proc.lisp
 msgid ""
 "Execute the body with the lock held. If the lock is held by another\n"
 "  process then the current process waits until the lock is released or\n"
@@ -423,17 +355,11 @@ msgid ""
 "  reached. When the wait key is NIL and the lock is held by another\n"
 "  process then NIL is return immediately without processing the body."
 msgstr ""
-"Executeway ethay odybay ithway ethay ocklay eldhay. Ifway ethay ocklay isway "
-"eldhay ybay anotherway\n"
-"  ocesspray enthay ethay urrentcay ocesspray aitsway untilway ethay ocklay "
-"isway eleasedray orway\n"
-"  anway optionalway imeouttay isway eachedray. Ethay optionalway aitway "
-"imeouttay isway away imetay inway\n"
-"  econdssay acceptableway otay ocesspray-aitway-ithway-imeouttay.  Ethay "
-"esultsray ofway ethay\n"
-"  odybay areway eturnray uponway uccesssay andway NIL isway eturnray ifway "
-"ethay imeouttay isway\n"
-"  eachedray. Enwhay ethay aitway eykay isway NIL andway ethay ocklay isway "
-"eldhay ybay anotherway\n"
-"  ocesspray enthay NIL isway eturnray immediatelyway ithoutway ocessingpray "
-"ethay odybay."
+"Executeway ethay odybay ithway ethay ocklay eldhay. Ifway ethay ocklay isway eldhay ybay anotherway\n"
+"  ocesspray enthay ethay urrentcay ocesspray aitsway untilway ethay ocklay isway eleasedray orway\n"
+"  anway optionalway imeouttay isway eachedray. Ethay optionalway aitway imeouttay isway away imetay inway\n"
+"  econdssay acceptableway otay ocesspray-aitway-ithway-imeouttay.  Ethay esultsray ofway ethay\n"
+"  odybay areway eturnray uponway uccesssay andway NIL isway eturnray ifway ethay imeouttay isway\n"
+"  eachedray. Enwhay ethay aitway eykay isway NIL andway ethay ocklay isway eldhay ybay anotherway\n"
+"  ocesspray enthay NIL isway eturnray immediatelyway ithoutway ocessingpray ethay odybay."
+
