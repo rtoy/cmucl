@@ -127,6 +127,8 @@ New in this release:
     #22: sun4_solaris_sunc config uses gcc to build motif
       This is fixed.  If Sun C is used to build lisp, it is also used
       to build motifd.
+    #39: non-standard lexical syntax
+      The reader macros are no longer installed by default.
 
   * Other changes:
     - :freebsd4 is no longer a *feature*
