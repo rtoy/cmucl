@@ -14,7 +14,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: target:compiler/x86/x87-array.lisp target:compiler/x86/x87-c-call.lisp
-#: target:compiler/x86/x87-sap.lisp
+#: src/compiler/x86/x87-array.lisp src/compiler/x86/x87-c-call.lisp
+#: src/compiler/x86/x87-sap.lisp
 msgid "Unknown SC to SC-Case for ~S:~%  ~S"
 msgstr ""

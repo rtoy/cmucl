@@ -15,19 +15,19 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: target:code/bsd-os.lisp
+#: src/code/bsd-os.lisp
 msgid "Version string for supporting software"
 msgstr ""
 
-#: target:code/bsd-os.lisp
+#: src/code/bsd-os.lisp
 msgid "Returns a string describing version of the supporting software."
 msgstr ""
 
-#: target:code/bsd-os.lisp
+#: src/code/bsd-os.lisp
 msgid "Unix system call getrusage failed: ~A."
 msgstr ""
 
-#: target:code/bsd-os.lisp
+#: src/code/bsd-os.lisp
 msgid "Getpagesize failed: ~A"
 msgstr ""
 
