@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.91 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.92 2010/04/20 17:57:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,61 +68,61 @@
   (error 'simple-type-error
 	 :datum stream
 	 :expected-type '(satisfies input-stream-p)
-	 :format-control _"~S is not an input stream."
+	 :format-control (intl:gettext "~S is not an input stream.")
 	 :format-arguments (list stream)))
 (defun ill-out-any (stream &rest ignore)
   (declare (ignore ignore))
   (error 'simple-type-error
 	 :datum stream
 	 :expected-type '(satisfies output-stream-p)
-	 :format-control _"~S is not an output stream."
+	 :format-control (intl:gettext "~S is not an output stream.")
 	 :format-arguments (list stream)))
 (defun ill-in (stream &rest ignore)
   (declare (ignore ignore))
   (error 'simple-type-error
 	 :datum stream
 	 :expected-type '(satisfies input-stream-p)
-	 :format-control _"~S is not a character input stream."
+	 :format-control (intl:gettext "~S is not a character input stream.")
 	 :format-arguments (list stream)))
 (defun ill-out (stream &rest ignore)
   (declare (ignore ignore))
   (error 'simple-type-error
 	 :datum stream
 	 :expected-type '(satisfies output-stream-p)
-	 :format-control _"~S is not a character output stream."
+	 :format-control (intl:gettext "~S is not a character output stream.")
 	 :format-arguments (list stream)))
 (defun ill-bin (stream &rest ignore)
   (declare (ignore ignore))
   (error 'simple-type-error
 	 :datum stream
 	 :expected-type '(satisfies input-stream-p)
-	 :format-control _"~S is not a binary input stream."
+	 :format-control (intl:gettext "~S is not a binary input stream.")
 	 :format-arguments (list stream)))
 (defun ill-n-bin (stream &rest ignore)
   (declare (ignore ignore))
   (error 'simple-type-error
 	 :datum stream
 	 :expected-type '(satisfies input-stream-p)
-	 :format-control _"~S is not a binary input stream ~
-                          or does not support multi-byte read operations."
+	 :format-control (intl:gettext "~S is not a binary input stream ~
+                          or does not support multi-byte read operations.")
 	 :format-arguments (list stream)))
 (defun ill-bout (stream &rest ignore)
   (declare (ignore ignore))
   (error 'simple-type-error
 	 :datum stream
 	 :expected-type '(satisfies output-stream-p)
-	 :format-control _"~S is not a binary output stream."
+	 :format-control (intl:gettext "~S is not a binary output stream.")
 	 :format-arguments (list stream)))
 (defun closed-flame (stream &rest ignore)
   (declare (ignore ignore))
-  (error _"~S is closed." stream))
+  (error (intl:gettext "~S is closed.") stream))
 (defun do-nothing (&rest ignore)
   (declare (ignore ignore)))
 (defun no-gray-streams (stream)
   (error 'simple-type-error
 	 :datum stream
 	 :expected-type 'stream
-	 :format-control _"~S is an unsupported Gray stream."
+	 :format-control (intl:gettext "~S is an unsupported Gray stream.")
 	 :format-arguments (list stream)))
 
 (defun %print-stream (structure stream d)
@@ -281,7 +281,7 @@
     (error 'simple-type-error
 	   :datum stream
 	   :expected-type 'stream:simple-stream
-	   :format-control _"Can't set interactive flag on ~S."
+	   :format-control (intl:gettext "Can't set interactive flag on ~S.")
 	   :format-arguments (list stream))))
 
 (defun stream-external-format (stream)
@@ -458,7 +458,7 @@
       (let ((index (1- (lisp-stream-in-index stream)))
 	    (buffer (lisp-stream-in-buffer stream)))
 	(declare (fixnum index))
-	(when (minusp index) (error _"Nothing to unread."))
+	(when (minusp index) (error (intl:gettext "Nothing to unread.")))
 	(cond (buffer
 	       (setf (aref buffer index) (char-code character))
 	       (setf (lisp-stream-in-index stream) index))
@@ -471,13 +471,13 @@
 	(cond (sbuf
 	       (let ((index (1- (lisp-stream-string-index stream))))
 		 (when (minusp index)
-		   (error _"Nothing to unread."))
+		   (error (intl:gettext "Nothing to unread.")))
 		 (setf (aref sbuf index) character)
 		 (setf (lisp-stream-string-index stream) index)))
 	      (ibuf
 	       (let ((index (1- (lisp-stream-in-index stream))))
 		 (when (minusp index)
-		   (error _"Nothing to unread."))
+		   (error (intl:gettext "Nothing to unread.")))
 		 ;; This only works for iso8859-1!
 		 (setf (aref ibuf index) (char-code character))
 		 (setf (lisp-stream-in-index stream) index)))
@@ -541,7 +541,7 @@
 		  eof-detected-form))
 	   ,char-var)
 	  (t
-	   (error _"Impossible case reached in PEEK-CHAR")))))
+	   (error (intl:gettext "Impossible case reached in PEEK-CHAR"))))))
 
 (defun peek-char (&optional (peek-type nil) (stream *standard-input*)
 			    (eof-errorp t) eof-value recursive-p)
@@ -555,7 +555,7 @@
     (error 'simple-type-error
 	   :datum peek-type
 	   :expected-type '(or character boolean)
-	   :format-control _"~@<bad PEEK-TYPE=~S, ~_expected ~S~:>"
+	   :format-control (intl:gettext "~@<bad PEEK-TYPE=~S, ~_expected ~S~:>")
 	   :format-arguments (list peek-type '(or character boolean))))
   (let ((stream (in-synonym-of stream)))
     (if (typep stream 'echo-stream)
@@ -2205,11 +2205,11 @@ output to Output-stream"
       (cond ((not (open-stream-p stream))
 	     (error 'simple-stream-error
 		    :stream stream
-		    :format-control _"The stream is not open."))
+		    :format-control (intl:gettext "The stream is not open.")))
 	    ((not (input-stream-p stream))
 	     (error 'simple-stream-error
 		    :stream stream
-		    :format-control _"The stream is not open for input."))
+		    :format-control (intl:gettext "The stream is not open for input.")))
 	    ((and seq (>= start end) 0))
 	    (t
 	     ;; So much for object-oriented programming!
@@ -2293,7 +2293,7 @@ output to Output-stream"
     (error 'type-error
 	   :datum (read-char stream nil #\Null)
 	   :expected-type (stream-element-type stream)
-	   :format-control _"Trying to read characters from a binary stream."))
+	   :format-control (intl:gettext "Trying to read characters from a binary stream.")))
   ;; Let's go as low level as it seems reasonable.
   (let* ((numbytes (- end start))
 	 (total-bytes 0))
@@ -2321,7 +2321,7 @@ output to Output-stream"
     (error 'type-error
 	   :datum (read-char stream nil #\Null)
 	   :expected-type (stream-element-type stream)
-	   :format-control _"Trying to read characters from a binary stream."))
+	   :format-control (intl:gettext "Trying to read characters from a binary stream.")))
   ;; Let's go as low level as it seems reasonable.
   (let* ((numbytes (- end start))
 	 (total-bytes 0))
@@ -2345,7 +2345,7 @@ output to Output-stream"
     (error 'type-error
 	   :datum (read-char stream nil #\Null)
 	   :expected-type (stream-element-type stream)
-	   :format-control _"Trying to read characters from a binary stream."))
+	   :format-control (intl:gettext "Trying to read characters from a binary stream.")))
   (do ((i start (1+ i))
        (s-len (length s)))
       ((or (>= i s-len)
@@ -2418,7 +2418,7 @@ output to Output-stream"
 		  :datum (read-byte stream nil 0)
 		  :expected-type (stream-element-type stream) ; Bogus?!?
 		  :format-control
-		  _"Trying to read binary data from a text stream."))
+		  (intl:gettext "Trying to read binary data from a text stream.")))
 
 	  ;; Let's go as low level as it seems reasonable.
 	  ((not (member stream-et
@@ -2565,11 +2565,11 @@ output to Output-stream"
       (cond ((not (open-stream-p stream))
 	     (error 'simple-stream-error
 		    :stream stream
-		    :format-control _"The stream is not open."))
+		    :format-control (intl:gettext "The stream is not open.")))
 	    ((not (output-stream-p stream))
 	     (error 'simple-stream-error
 		    :stream stream
-		    :format-control _"The stream is not open for output."))
+		    :format-control (intl:gettext "The stream is not open for output.")))
 	    ((and seq (>= start end)) seq)
 	    (t
 	     ;; So much for object-oriented programming!
@@ -2621,7 +2621,7 @@ output to Output-stream"
 		      :datum e
 		      :expected-type type
 		      :format-control
-		      _"Trying to output an element of unproper type to a stream.")))))
+		      (intl:gettext "Trying to output an element of unproper type to a stream."))))))
     (let ((stream-et (stream-element-type stream)))
 
       (check-list-element-types seq stream-et)
@@ -2663,7 +2663,7 @@ output to Output-stream"
     (error 'type-error
 	   :datum seq
 	   :expected-type (stream-element-type stream)
-	   :format-control _"Trying to output a string to a binary stream."))
+	   :format-control (intl:gettext "Trying to output a string to a binary stream.")))
   (write-string seq stream :start start :end end)
   seq)
 
@@ -2700,7 +2700,7 @@ output to Output-stream"
     (error 'simple-type-error
 	   :datum (elt seq 0)
 	   :expected-type (stream-element-type stream)
-	   :format-control _"Trying to output binary data to a text stream."))
+	   :format-control (intl:gettext "Trying to output binary data to a text stream.")))
   (cond ((system:fd-stream-p stream)
 	 (flet ((write-n-x8-bytes (stream data start end byte-size)
 		  (let ((x8-mult (truncate byte-size 8)))

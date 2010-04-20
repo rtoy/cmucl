@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.30 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.31 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,15 +57,15 @@
   default-handler)
 
 (setf (documentation 'make-object-set 'function)
-      _"Make an object set for use by a RPC/xevent server.  Name is for
-      descriptive purposes only.")
+      (intl:gettext "Make an object set for use by a RPC/xevent server.  Name is for
+      descriptive purposes only."))
 
 ;;; Default-Default-Handler  --  Internal
 ;;;
 ;;;    If no such operation defined, signal an error.
 ;;;
 (defun default-default-handler (object)
-  (error _"You lose, object: ~S" object))
+  (error (intl:gettext "You lose, object: ~S") object))
 
 
 ;;; MAP-XWINDOW and MAP-PORT return as multiple values the object and
@@ -163,7 +163,7 @@
 
 (defun %print-handler (handler stream depth)
   (declare (ignore depth))
-  (format stream _"#<Handler for ~A on ~:[~;BOGUS ~]descriptor ~D: ~S>"
+  (format stream (intl:gettext "#<Handler for ~A on ~:[~;BOGUS ~]descriptor ~D: ~S>")
 	  (handler-direction handler)
 	  (handler-bogus handler)
 	  (handler-descriptor handler)
@@ -182,7 +182,7 @@
   SYSTEM:REMOVE-FD-HANDLER when it is no longer needed."
   (assert (member direction '(:input :output))
 	  (direction)
-	  _"Invalid direction ~S, must be either :INPUT or :OUTPUT" direction)
+	  (intl:gettext "Invalid direction ~S, must be either :INPUT or :OUTPUT") direction)
   (let ((handler (make-handler direction fd function)))
     (push handler *descriptor-handlers*)
     handler))
@@ -245,17 +245,17 @@
 			 bogus-handlers (length bogus-handlers))
       (remove-them ()
 	:report (lambda (stream)
-		  (write-string _"Remove bogus handlers." stream))
+		  (write-string (intl:gettext "Remove bogus handlers.") stream))
        (setf *descriptor-handlers*
 	     (delete-if #'handler-bogus *descriptor-handlers*)))
       (retry-them ()
 	:report (lambda (stream)
-		  (write-string _"Retry bogus handlers." stream))
+		  (write-string (intl:gettext "Retry bogus handlers.") stream))
        (dolist (handler bogus-handlers)
 	 (setf (handler-bogus handler) nil)))
       (continue ()
 	:report (lambda (stream)
-		  (write-string _"Go on, leaving handlers marked as bogus." stream))))))
+		  (write-string (intl:gettext "Go on, leaving handlers marked as bogus.") stream))))))
 
 
 
@@ -278,7 +278,7 @@
        (declare (type index q) (single-float r))
        (values q (the (values index t) (truncate (* r 1f6))))))
     (t
-     (error _"Timeout is not a real number or NIL: ~S" timeout))))
+     (error (intl:gettext "Timeout is not a real number or NIL: ~S") timeout))))
 
 
 ;;; WAIT-UNTIL-FD-USABLE -- Public.
@@ -392,7 +392,7 @@
 				  (flush-display-events d))))
 	  (unless (funcall (cdr d/h) d)
 	    (disable-clx-event-handling d)
-	    (error _"Event-listen was true, but handler didn't handle: ~%~S"
+	    (error (intl:gettext "Event-listen was true, but handler didn't handle: ~%~S")
 		   d/h)))
 	(return-from handle-queued-clx-event t)))))
 

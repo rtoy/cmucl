@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.15 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.16 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -104,20 +104,20 @@
 (define-condition wire-error (error)
   ((wire :reader wire-error-wire :initarg :wire))
   (:report (lambda (condition stream)
-	     (format stream _"There is a problem with ~A."
+	     (format stream (intl:gettext "There is a problem with ~A.")
 		     (wire-error-wire condition)))))
 
 (define-condition wire-eof (wire-error)
   ()
   (:report (lambda (condition stream)
-	     (format stream _"Received EOF on ~A."
+	     (format stream (intl:gettext "Received EOF on ~A.")
 		     (wire-error-wire condition)))))
 
 (define-condition wire-io-error (wire-error)
   ((when :reader wire-io-error-when :initarg :when :initform "using")
    (msg :reader wire-io-error-msg :initarg :msg :initform "Failed."))
   (:report (lambda (condition stream)
-	     (format stream _"Error ~A ~A: ~A."
+	     (format stream (intl:gettext "Error ~A ~A: ~A.")
 		     (wire-io-error-when condition)
 		     (wire-error-wire condition)
 		     (wire-io-error-msg condition)))))
@@ -170,15 +170,15 @@
   FORGET-REMOTE-TRANSLATION has been called on this remote object."
   (declare (type remote-object remote))
   (unless (remote-object-local-p remote)
-    (error _"~S is defined is a different process." remote))
+    (error (intl:gettext "~S is defined is a different process.") remote))
   (multiple-value-bind
       (value found)
       (gethash (remote-object-id remote)
 	       *id-to-object*)
     (unless found
       (cerror
-       _"Use the value of NIL"
-       _"No value for ~S -- FORGET-REMOTE-TRANSLATION was called to early."
+       (intl:gettext "Use the value of NIL")
+       (intl:gettext "No value for ~S -- FORGET-REMOTE-TRANSLATION was called to early.")
        remote))
     value))
 
@@ -239,7 +239,7 @@ object. Passing that remote object to remote-object-value will new return NIL."
 	(unless number
 	  (error 'wire-io-error
 		 :wire wire
-		 :when _"listening to"
+		 :when (intl:gettext "listening to")
 		 :msg (unix:get-unix-error-msg error)))
 	(not (zerop number)))))
 
@@ -269,7 +269,7 @@ is signaled."
       (cond ((null bytes)
 	     (error 'wire-io-error
 		    :wire wire
-		    :when _"reading"
+		    :when (intl:gettext "reading")
 		    :msg (unix:get-unix-error-msg error)))
 	    ((zerop bytes)
 	     (setf (wire-ibuf wire) nil)
@@ -394,8 +394,8 @@ signed (defaults to T)."
 		  (package-name (wire-get-string wire))
 		  (package (find-package package-name)))
 	     (unless package
-	       (error _"Attempt to read symbol, ~A, of wire into non-existent ~
-		       package, ~A."
+	       (error (intl:gettext "Attempt to read symbol, ~A, of wire into non-existent ~
+		       package, ~A.")
 		      symbol-name package-name))
 	     (intern symbol-name package)))
 	  ((eql identifier cons-op)
@@ -488,15 +488,15 @@ signed (defaults to T)."
 	 (cond ((null ,result)
 		(error 'wire-io-error
 		       :wire wire
-		       :when _"writing"
+		       :when (intl:gettext "writing")
 		       :msg (unix:get-unix-error-msg ,error)))
 	       ((eql ,result ,(or end length))
 		)
 	       (t
 		(error 'wire-io-error
 		       :wire wire
-		       :when _"writing"
-		       :msg _"Not everything wrote.")))))))
+		       :when (intl:gettext "writing")
+		       :msg (intl:gettext "Not everything wrote."))))))))
 
 ;;; WIRE-FORCE-OUTPUT -- internal
 ;;;
@@ -641,7 +641,7 @@ object in the cache for future reference."
 	 (wire-output-number wire (remote-object-pid object))
 	 (wire-output-number wire (remote-object-id object)))
 	(t
-	 (error _"Error: Cannot output objects of type ~s across a wire."
+	 (error (intl:gettext "Error: Cannot output objects of type ~s across a wire.")
 		(type-of object)))))))
   (values))
 

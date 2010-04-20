@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.69 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.70 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,13 +48,13 @@
 ;;;
 (defun parse-number-dispatch (vars result types var-types body)
   (cond ((null vars)
-	 (unless (null types) (error _"More types than vars."))
+	 (unless (null types) (error (intl:gettext "More types than vars.")))
 	 (when (cdr result)
-	   (error _"Duplicate case: ~S." body))
+	   (error (intl:gettext "Duplicate case: ~S.") body))
 	 (setf (cdr result)
 	       (sublis var-types body :test #'equal)))
 	((null types)
-	 (error _"More vars than types."))
+	 (error (intl:gettext "More vars than types.")))
 	(t
 	 (flet ((frob (var type)
 		  (parse-number-dispatch
@@ -155,7 +155,7 @@
 		    (error 'simple-type-error :datum ,var
 			   :expected-type ',type
 			   :format-control
-			   _"Argument ~A is not a ~S: ~S."
+			   (intl:gettext "Argument ~A is not a ~S: ~S.")
 			   :format-arguments
 			   (list ',var ',type ,var))))))
       
@@ -307,8 +307,8 @@
 	 'real)
 	((kernel::hairy-type-p (specifier-type spec))
 	 ;; Do we really want to produce this error here?
-	 (cerror _"Assume this is a subtype of REAL anyway."
-		 _"Cannot determine if ~S is a subtype of REAL."
+	 (cerror (intl:gettext "Assume this is a subtype of REAL anyway.")
+		 (intl:gettext "Cannot determine if ~S is a subtype of REAL.")
 		 spec)
 	'real)
 	(t
@@ -316,7 +316,7 @@
 	 (error 'type-error
 		:datum spec
 		:expected-type 'real
-		:format-control _"Complex numbers cannot have components of type ~S."
+		:format-control (intl:gettext "Complex numbers cannot have components of type ~S.")
 		:format-arguments (list spec)))))
 
 (defun complex (realpart &optional (imagpart 0))

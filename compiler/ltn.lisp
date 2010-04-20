@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.45 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.46 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -600,7 +600,7 @@
 		(and (eq (tn-kind tn) :constant)
 		     (funcall (second restr) (tn-value tn))))
 	       (t
-		(error _"Neither CONT nor TN supplied.")))))))
+		(error (intl:gettext "Neither CONT nor TN supplied."))))))))
 
   
 ;;; Template-Args-OK  --  Internal
@@ -649,7 +649,7 @@
   (declare (type template template)
 	   (type ctype result-type))
   (when (template-more-results-type template)
-    (error _"~S has :MORE results with :TRANSLATE." (template-name template)))
+    (error (intl:gettext "~S has :MORE results with :TRANSLATE.") (template-name template)))
   (let ((types (template-result-types template)))
     (cond
      ((values-type-p result-type)
@@ -814,24 +814,24 @@
 (defun strange-template-failure (template call policy frob)
   (declare (type template template) (type combination call)
 	   (type policies policy) (type function frob))
-  (funcall frob _"This shouldn't happen!  Bug?")
+  (funcall frob (intl:gettext "This shouldn't happen!  Bug?"))
   (multiple-value-bind (win why)
 		       (is-ok-template-use template call
 					   (policy-safe-p policy))
     (assert (not win))
     (ecase why
       (:guard
-       (funcall frob _"Template guard failed."))
+       (funcall frob (intl:gettext "Template guard failed.")))
       (:arg-check
-       (funcall frob _"Template is not safe, yet we were counting on it."))
+       (funcall frob (intl:gettext "Template is not safe, yet we were counting on it.")))
       (:arg-types
-       (funcall frob _"Argument types invalid.")
-       (funcall frob _"Argument primitive types:~%  ~S"
+       (funcall frob (intl:gettext "Argument types invalid."))
+       (funcall frob (intl:gettext "Argument primitive types:~%  ~S")
 		(mapcar #'(lambda (x)
 			    (primitive-type-name
 			     (continuation-ptype x)))
 			(combination-args call)))
-       (funcall frob _"Argument type assertions:~%  ~S"
+       (funcall frob (intl:gettext "Argument type assertions:~%  ~S")
 		(mapcar #'(lambda (x)
 			    (if (atom x)
 				x
@@ -841,9 +841,9 @@
 				  (:constant `(:constant ,(third x))))))
 			(template-arg-types template))))
       (:conditional
-       (funcall frob _"Conditional in a non-conditional context."))
+       (funcall frob (intl:gettext "Conditional in a non-conditional context.")))
       (:result-types
-       (funcall frob _"Result types invalid.")))))
+       (funcall frob (intl:gettext "Result types invalid."))))))
 
 
 ;;; Note-Rejected-Templates  --  Internal
@@ -903,13 +903,13 @@
 	  (dolist (loser (losers))
 	    (when (and *efficiency-note-limit*
 		       (>= (count) *efficiency-note-limit*))
-	      (frob _"etc.")
+	      (frob (intl:gettext "etc."))
 	      (return))
 	    (let* ((type (template-type loser))
 		   (valid (valid-function-use call type))
 		   (strict-valid (valid-function-use call type
 						     :strict-result t)))
-	      (frob _"Unable to do ~A (cost ~D) because:"
+	      (frob (intl:gettext "Unable to do ~A (cost ~D) because:")
 		    (intl:dgettext (template-note-domain loser)
 				   (or (template-note loser) (template-name loser)))
 		    (template-cost loser))
@@ -922,19 +922,19 @@
 						 :warning-function #'frob))))
 	       (t
 		(assert (policy-safe-p policy))
-		(frob _"Can't trust output type assertion under safe ~
-		       policy.")))
+		(frob (intl:gettext "Can't trust output type assertion under safe ~
+		       policy."))))
 	      (count 1))))
 
 	(let ((*compiler-error-context* call))
 	  (efficiency-note "~{~?~^~&~6T~}"
 			   (if template
-			       (list* _"Forced to do ~A (cost ~D)."
+			       (list* (intl:gettext "Forced to do ~A (cost ~D).")
 				      `(,(or (template-note template)
 					     (template-name template))
 					 ,(template-cost template))
 				      (messages))
-			       (list* _"Forced to do full call."
+			       (list* (intl:gettext "Forced to do full call.")
 				      nil
 				      (messages))))))))
   (undefined-value))

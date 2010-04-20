@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.24 2010/04/19 02:18:03 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.25 2010/04/20 17:57:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,7 +46,7 @@
   (:report
     (lambda (condition stream)
       (declare (ignore condition))
-      (format stream _"Attempting unimplemented external-format I/O."))))
+      (format stream (intl:gettext "Attempting unimplemented external-format I/O.")))))
 
 (defun %efni (a b c d)
   (declare (ignore a b c d))
@@ -189,7 +189,7 @@
 				       &optional octets-to-code code-to-octets
 				       flush-state copy-state)
   (when (and (oddp (length args)) (not (= (length args) 1)))
-    (warn _"Nonsensical argument (~S) to DEFINE-EXTERNAL-FORMAT." args))
+    (warn (intl:gettext "Nonsensical argument (~S) to DEFINE-EXTERNAL-FORMAT.") args))
   (let* ((tmp (gensym))
 	 (min (if (evenp (length args))
 		  (or (getf args :min) (getf args :size) 1)
@@ -331,12 +331,12 @@
 	     (value (read stm nil stm) (read stm nil stm)))
 	    ((or (eq alias stm) (eq value stm))
 	     (unless (eq alias stm)
-	       (warn _"External-format aliases file ends early.")))
+	       (warn (intl:gettext "External-format aliases file ends early."))))
 	  (if (and (keywordp alias) (or (keywordp value)
 					(and (consp value)
 					     (every #'keywordp value))))
 	      (setf (gethash alias *external-format-aliases*) value)
-	      (warn _"Bad entry in external-format aliases file: ~S => ~S."
+	      (warn (intl:gettext "Bad entry in external-format aliases file: ~S => ~S.")
 		    alias value)))))))
 
 (defun %find-external-format (name)
@@ -357,7 +357,7 @@
        (cnt 0 (1+ cnt)))
       ((or (null tmp) (= cnt 50))
        (unless (null tmp)
-         (error _"External-format aliasing depth exceeded.")))
+         (error (intl:gettext "External-format aliasing depth exceeded."))))
     (setq name tmp))
 
   (or (gethash name *external-formats*)
@@ -378,9 +378,9 @@
 
 (defun %compose-external-formats (a b)
   (when (ef-composingp a)
-    (error _"~S is a Composing-External-Format." (ef-name a)))
+    (error (intl:gettext "~S is a Composing-External-Format.") (ef-name a)))
   (unless (ef-composingp b)
-    (error _"~S is not a Composing-External-Format." (ef-name b)))
+    (error (intl:gettext "~S is not a Composing-External-Format.") (ef-name b)))
   (make-external-format
    (%composed-ef-name (ef-name a) (ef-name b))
    (make-efx
@@ -412,7 +412,7 @@
     (return-from find-external-format name))
 
   (or (if (consp name) (every #'keywordp name) (keywordp name))
-      (error _"~S is not a valid external format name." name))
+      (error (intl:gettext "~S is not a valid external format name.") name))
 
   (when (eq name :default)
     (setq name *default-external-format*))
@@ -423,7 +423,7 @@
   (flet ((not-found ()
 	   (when (equal *default-external-format* name)
 	     (setq *default-external-format* :iso8859-1))
-	   (if error-p (error _"External format ~S not found." name) nil)))
+	   (if error-p (error (intl:gettext "External format ~S not found.") name) nil)))
     (if (consp name)
 	(let ((efs (mapcar #'%find-external-format name)))
 	  (if (member nil efs)
@@ -510,7 +510,7 @@
   (:report
     (lambda (condition stream)
       (declare (ignore condition))
-      (format stream _"Attempting I/O through void external-format."))))
+      (format stream (intl:gettext "Attempting I/O through void external-format.")))))
 
 (define-external-format :void (:size 0) ()
   (octets-to-code (state input unput)
@@ -828,7 +828,7 @@
   optional argument Filenames is gvien, then the filename encoding is
   set to the specified format."
   (unless (find-external-format terminal)
-    (error _"Can't find external-format ~S." terminal))
+    (error (intl:gettext "Can't find external-format ~S.") terminal))
   (setf (stream-external-format sys:*stdin*) terminal
 	(stream-external-format sys:*stdout*) terminal
 	(stream-external-format sys:*stderr*) terminal)
@@ -836,11 +836,11 @@
     (setf (stream-external-format sys:*tty*) terminal))
   (when filenames
     (unless (find-external-format filenames)
-      (error _"Can't find external-format ~S." filenames))
+      (error (intl:gettext "Can't find external-format ~S.") filenames))
     (when (and unix::*filename-encoding*
 	       (not (eq unix::*filename-encoding* filenames)))
-      (cerror _"Change it anyway."
-	      _"The external-format for encoding filenames is already set.")
+      (cerror (intl:gettext "Change it anyway.")
+	      (intl:gettext "The external-format for encoding filenames is already set."))
       (setq unix::*filename-encoding* filenames)))
   t)
 

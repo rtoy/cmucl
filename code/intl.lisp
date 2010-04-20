@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.5 $
+;;; $Revision: 1.6 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,7 +23,7 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.5 2010/04/19 12:18:16 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.6 2010/04/20 17:57:44 rtoy Exp $")
 
 (in-package "INTL")
 
@@ -166,7 +166,7 @@
 			'LOGAND))
 	       (#\= (if (char= (char string pos) #\=)
 			(progn (incf pos) 'CMP=)
-			(error _"Encountered illegal token: =")))
+			(error (intl:gettext "Encountered illegal token: ="))))
 	       (#\! (if (char= (char string pos) #\=)
 			(progn (incf pos) 'CMP/=)
 			'NOT))
@@ -184,14 +184,14 @@
 				      while nx
 				   do (setq n (+ (* n 10) nx)) (incf pos)
 				   finally (return n))
-				(error _"Encountered illegal token: ~C"
+				(error (intl:gettext "Encountered illegal token: ~C")
 				       (char string (1- pos))))))))
 	   (conditional (tok &aux tree)
 	     (multiple-value-setq (tree tok) (logical-or tok))
 	     (when (eql tok 'IF)
 	       (multiple-value-bind (right next) (logical-or (next))
 		 (unless (eql next 'THEN)
-		   (error _"Expected : in ?: construct"))
+		   (error (intl:gettext "Expected : in ?: construct")))
 		 (multiple-value-bind (else next) (conditional (next))
 		   (setq tree (list tok (list 'zerop tree) else right)
 			 tok next))))
@@ -270,7 +270,7 @@
 	     (cond ((eq tok 'LPAR)
 		    (multiple-value-setq (tree tok) (conditional (next)))
 		    (unless (eq tok 'RPAR)
-		      (error _"Expected close-paren."))
+		      (error (intl:gettext "Expected close-paren.")))
 		    (values tree (next)))
 		   ((numberp tok)
 		    (values tok (next)))
@@ -288,10 +288,10 @@
 		    (multiple-value-setq (tree tok) (unary (next)))
 		    (values (list 'CNOT tree) tok))
 		   (t
-		    (error _"Unexpected token: ~S." tok)))))
+		    (error (intl:gettext "Unexpected token: ~S.") tok)))))
     (multiple-value-bind (tree end) (conditional (next))
       (unless (eq end 'END)
-	(error _"Expecting end of expression.  ~S." end))
+	(error (intl:gettext "Expecting end of expression.  ~S.") end))
       (let ((*compile-print* nil))
 	(compile nil
 		 `(lambda (n)

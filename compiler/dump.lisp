@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.85 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.86 2010/04/20 17:57:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -238,7 +238,7 @@
 (defmacro dump-fop (fs file)
   (let* ((fs (eval fs))
 	 (val (get fs 'lisp::fop-code)))
-    (assert val () _"Compiler bug: ~S not a legal fasload operator." fs)
+    (assert val () (intl:gettext "Compiler bug: ~S not a legal fasload operator.") fs)
     `(dump-byte ',val ,file)))
 
 
@@ -452,7 +452,7 @@
      #'(lambda (sap amount)
 	 (system:output-raw-bytes stream sap 0 amount)))
     (unless (= (- (file-position stream) posn) code-length)
-      (error _"Tried to output ~D bytes, but only ~D made it."
+      (error (intl:gettext "Tried to output ~D bytes, but only ~D made it.")
 	     code-length (- (file-position stream) posn))))
   (when (backend-featurep :gengc)
     (unless (zerop (logand code-length 3))
@@ -923,7 +923,7 @@
 	      ;;
 	      ;; This probably never happens, since bad things are detected
 	      ;; during IR1 conversion.
-	      (error _"This object cannot be dumped into a fasl file:~% ~S"
+	      (error (intl:gettext "This object cannot be dumped into a fasl file:~% ~S")
 		     x))))))
   (undefined-value))
 
@@ -1039,7 +1039,7 @@
 (defun fasl-note-handle-for-constant (constant handle file)
   (let ((table (fasl-file-eq-table file)))
     (when (gethash constant table)
-      (error _"~S already dumped?" constant))
+      (error (intl:gettext "~S already dumped?") constant))
     (setf (gethash constant table) handle))
   (undefined-value))
 
@@ -1080,13 +1080,13 @@
 	   ;; Some format converstion will be needed, just dump 0l0
 	   ;; for now.
 	   (unless (zerop float)
-	     (format t _"Warning: dumping ~s as 0l0~%" float))
+	     (format t (intl:gettext "Warning: dumping ~s as 0l0~%") float))
 	   (dump-unsigned-32 0 file)
 	   (dump-unsigned-32 0 file)
 	   (dump-unsigned-32 0 file)
 	   (dump-var-signed 0 4 file))
 	  (t
-	   (error _"Unable to dump long-float")))))
+	   (error (intl:gettext "Unable to dump long-float"))))))
 
 #+(and long-float sparc)
 (defun dump-long-float (float file)
@@ -1101,7 +1101,7 @@
 	   (dump-unsigned-32 high-bits file)
 	   (dump-var-signed exp-bits 4 file))
 	  (t
-	   (error _"Unable to dump long-float")))))
+	   (error (intl:gettext "Unable to dump long-float"))))))
 
 #+double-double
 (defun dump-double-double-float (float file)
@@ -1699,7 +1699,7 @@
 (defun dump-structure (struct file)
   (when *dump-only-valid-structures*
     (unless (gethash struct (fasl-file-valid-structures file))
-      (error _"Attempt to dump invalid structure:~%  ~S~%How did this happen?"
+      (error (intl:gettext "Attempt to dump invalid structure:~%  ~S~%How did this happen?")
 	     struct)))
   (note-potential-circularity struct file)
   (do ((index 0 (1+ index))

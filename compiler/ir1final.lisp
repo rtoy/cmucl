@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.25 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.26 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,7 @@
 	      (note (transform-note (car failure))))
 	  (cond
 	   ((consp what)
-	    (efficiency-note _"Unable to ~A because:~%~6T~?"
+	    (efficiency-note (intl:gettext "Unable to ~A because:~%~6T~?")
 			     note (first what) (rest what)))
 	   ((valid-function-use node what
 				:argument-test #'types-intersect
@@ -48,8 +48,8 @@
 				    :warning-function #'frob
 				    :error-function #'frob))
 	      
-	      (efficiency-note _"Unable to ~A due to type uncertainty:~@
-	                      ~{~6T~?~^~&~}"
+	      (efficiency-note (intl:gettext "Unable to ~A due to type uncertainty:~@
+	                      ~{~6T~?~^~&~}")
 			       note (messages))))))))))
 
 
@@ -91,8 +91,8 @@
 		     (dtype-returns (function-type-returns dtype))
 		     (*error-function* #'compiler-warning))
 		 (unless (values-types-intersect type-returns dtype-returns)
-		   (note-lossage _"The result type from previous declaration:~%  ~S~@
-				  conflicts with the result type:~%  ~S"
+		   (note-lossage (intl:gettext "The result type from previous declaration:~%  ~S~@
+				  conflicts with the result type:~%  ~S")
 				 (type-specifier type-returns)
 				 (type-specifier dtype-returns)))))))
 	  (:defined

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.36 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.37 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -332,7 +332,7 @@
 (defun note-read-dependency (segment inst read)
   (multiple-value-bind (loc-num size)
       (c:location-number read)
-    #+debug (format *trace-output* _"~&~S reads ~S[~D for ~D]~%"
+    #+debug (format *trace-output* (intl:gettext "~&~S reads ~S[~D for ~D]~%")
 	    inst read loc-num size)
     (when loc-num
       ;; Iterate over all the locations for this TN.
@@ -368,7 +368,7 @@
 (defun note-write-dependency (segment inst write &key partially)
   (multiple-value-bind (loc-num size)
       (c:location-number write)
-    #+debug (format *trace-output* _"~&~S writes ~S[~D for ~D]~%"
+    #+debug (format *trace-output* (intl:gettext "~&~S writes ~S[~D for ~D]~%")
 	    inst write loc-num size)
     (when loc-num
       ;; Iterate over all the locations for this TN.
@@ -401,9 +401,9 @@
 ;;; computed, so we just have to check to see if the basic block is terminated.
 ;;; 
 (defun queue-inst (segment inst)
-  #+debug (format *trace-output* _"~&Queuing ~S~%" inst)
+  #+debug (format *trace-output* (intl:gettext "~&Queuing ~S~%") inst)
   #+debug
-  (format *trace-output* _"  reads ~S~%  writes ~S~%"
+  (format *trace-output* (intl:gettext "  reads ~S~%  writes ~S~%")
 	  (ext:collect ((reads))
 	    (do-elements (read (inst-read-dependencies inst))
 	      (reads read))
@@ -449,7 +449,7 @@
 		 (ext:undefined-value)))
   ;;
   #+debug
-  (format *trace-output* _"~&Scheduling pending instructions...~%")
+  (format *trace-output* (intl:gettext "~&Scheduling pending instructions...~%"))
   ;;
   ;; Note that any values live at the end of the block have to be computed
   ;; last.
@@ -488,7 +488,7 @@
 			   (instruction-attributep (inst-attributes inst)
 						   flushable))
 		      #+debug
-		      (format *trace-output* _"Flushing ~S~%" inst)
+		      (format *trace-output* (intl:gettext "Flushing ~S~%") inst)
 		      (setf (inst-emitter inst) nil)
 		      (setf (inst-depth inst) max))
 		     (t
@@ -507,13 +507,13 @@
     (dolist (branch (segment-queued-branches segment))
       (grovel-inst (cdr branch))))
   #+debug
-  (format *trace-output* _"Queued branches: ~S~%"
+  (format *trace-output* (intl:gettext "Queued branches: ~S~%")
 	  (segment-queued-branches segment))
   #+debug
-  (format *trace-output* _"Initially emittable: ~S~%"
+  (format *trace-output* (intl:gettext "Initially emittable: ~S~%")
 	  (segment-emittable-insts-queue segment))
   #+debug
-  (format *trace-output* _"Initially delayed: ~S~%"
+  (format *trace-output* (intl:gettext "Initially delayed: ~S~%")
 	  (segment-delayed segment))
   ;;
   ;; Accumulate the results in reverse order.  Well, actually, this list will
@@ -572,7 +572,7 @@
  			      (schedule-one-inst segment t)
 			      :nop)))
 		#+debug
-		(format *trace-output* _"Filling branch delay slot with ~S~%"
+		(format *trace-output* (intl:gettext "Filling branch delay slot with ~S~%")
 			fill)
 		(push fill results)))
 	    (advance-one-inst segment)
@@ -580,7 +580,7 @@
 	  (note-resolved-dependencies segment inst)
 	  (push inst results)
 	  #+debug
-	  (format *trace-output* _"Emitting ~S~%" inst)
+	  (format *trace-output* (intl:gettext "Emitting ~S~%") inst)
 	  (advance-one-inst segment))))
     ;;
     ;; Keep scheduling stuff until we run out.
@@ -641,7 +641,7 @@
 					   variable-length))
 	;; We've got us a live one here.  Go for it.
 	#+debug
-	(format *Trace-output* _"Emitting ~S~%" inst)
+	(format *Trace-output* (intl:gettext "Emitting ~S~%") inst)
 	;; Delete it from the list of insts.
 	(if prev
 	    (setf (cdr prev) (cdr remaining))
@@ -663,7 +663,7 @@
   (cond ((segment-delayed segment)
 	 ;; No emittable instructions, but we have more work to do.  Emit
 	 ;; a NOP to fill in a delay slot.
-	 #+debug (format *trace-output* _"Emitting a NOP.~%")
+	 #+debug (format *trace-output* (intl:gettext "Emitting a NOP.~%"))
 	 :nop)
 	(t
 	 ;; All done.
@@ -733,7 +733,7 @@
 (defun insert-emittable-inst (segment inst)
   (unless (instruction-attributep (inst-attributes inst) branch)
     #+debug
-    (format *Trace-output* _"Now emittable: ~S~%" inst)
+    (format *Trace-output* (intl:gettext "Now emittable: ~S~%") inst)
     (do ((my-depth (inst-depth inst))
 	 (remaining (segment-emittable-insts-queue segment) (cdr remaining))
 	 (prev nil remaining))
@@ -952,7 +952,7 @@
   (declare (type segment segment)
 	   (type annotation note))
   (when (annotation-posn note)
-    (error _"Attempt to emit ~S for the second time." note))
+    (error (intl:gettext "Attempt to emit ~S for the second time.") note))
   (setf (annotation-posn note) (segment-current-posn segment))
   (setf (annotation-index note) (segment-current-index segment))
   (let ((last (segment-last-annotation segment))
@@ -1159,13 +1159,13 @@
 				 (chooser-index note)))
 		    (old-size (chooser-size note)))
 		(when (> new-size old-size)
-		  (error _"~S emitted ~D bytes, but claimed it's max was ~D"
+		  (error (intl:gettext "~S emitted ~D bytes, but claimed it's max was ~D")
 			 note new-size old-size))
 		(let ((additional-delta (- old-size new-size)))
 		  (when (< (find-alignment additional-delta)
 			   (chooser-alignment note))
-		    (error _"~S shrunk by ~D bytes, but claimed that it ~
-			    preserve ~D bits of alignment."
+		    (error (intl:gettext "~S shrunk by ~D bytes, but claimed that it ~
+			    preserve ~D bits of alignment.")
 			   note additional-delta (chooser-alignment note)))
 		  (incf delta additional-delta)
 		  (emit-filler segment additional-delta))
@@ -1178,7 +1178,7 @@
 	      ;; The chooser passed on shrinking.  Make sure it didn't emit
 	      ;; anything.
 	      (unless (= (segment-current-index segment) (chooser-index note))
-		(error _"Chooser ~S passed, but not before emitting ~D bytes."
+		(error (intl:gettext "Chooser ~S passed, but not before emitting ~D bytes.")
 		       note
 		       (- (segment-current-index segment)
 			  (chooser-index note))))
@@ -1207,8 +1207,8 @@
 		       (old-size (alignment-size note))
 		       (additional-delta (- old-size size)))
 		  (when (minusp additional-delta)
-		    (error _"Alignment ~S needs more space now?  It was ~D, ~
-			    and is ~D now."
+		    (error (intl:gettext "Alignment ~S needs more space now?  It was ~D, ~
+			    and is ~D now.")
 			   note old-size size))
 		  (when (plusp additional-delta)
 		    (emit-filler segment additional-delta)
@@ -1287,7 +1287,7 @@
 		 (funcall function segment posn)
 		 (let ((new-size (- (segment-current-index segment) index)))
 		   (unless (= new-size old-size)
-		     (error _"~S emitted ~D bytes, but claimed it's was ~D"
+		     (error (intl:gettext "~S emitted ~D bytes, but claimed it's was ~D")
 			    note new-size old-size)))
 		 (let ((tail (segment-last-annotation segment)))
 		   (if tail
@@ -1355,7 +1355,7 @@
 	   (nested-labels (set-difference (append inherited-labels new-labels)
 					  visable-labels)))
       (when (intersection labels inherited-labels)
-	(error _"Duplicate nested labels: ~S"
+	(error (intl:gettext "Duplicate nested labels: ~S")
 	       (intersection labels inherited-labels)))
       `(let* ((,seg-var ,(or segment '(%%current-segment%%)))
               (,vop-var ,(or vop '(%%current-vop%%)))
@@ -1385,7 +1385,7 @@
 		       (assem-params-instructions
 			(c:backend-assembler-params c:*target-backend*)))))
     (cond ((null inst)
-	   (error _"Unknown instruction: ~S" instruction))
+	   (error (intl:gettext "Unknown instruction: ~S") instruction))
 	  ((functionp inst)
 	   (funcall inst (cdr whole) env))
 	  (t
@@ -1553,7 +1553,7 @@
 			  (quo rem)
 			  (truncate total-bits assembly-unit-bits)
 			(unless (zerop rem)
-			  (error _"~D isn't an even multiple of ~D"
+			  (error (intl:gettext "~D isn't an even multiple of ~D")
 				 total-bits assembly-unit-bits))
 			quo))
 	   (bytes (make-array num-bytes :initial-element nil))
@@ -1564,8 +1564,8 @@
 	       (byte-posn (byte-position byte-spec))
 	       (arg (gensym (format nil "~:@(ARG-FOR-~S-~)" byte-spec-expr))))
 	  (when (ldb-test (byte byte-size byte-posn) overall-mask)
-	    (error _"Byte spec ~S either overlaps another byte spec, or ~
-		    extends past the end."
+	    (error (intl:gettext "Byte spec ~S either overlaps another byte spec, or ~
+		    extends past the end.")
 		   byte-spec-expr))
 	  (setf (ldb byte-spec overall-mask) -1)
 	  (arg-names arg)
@@ -1614,7 +1614,7 @@
 				,arg)
 			  (svref bytes end-byte))))))))))
       (unless (= overall-mask -1)
-	(error _"There are holes."))
+	(error (intl:gettext "There are holes.")))
       (let ((forms nil))
 	(dotimes (i num-bytes)
 	  (let ((pieces (svref bytes i)))
@@ -1725,7 +1725,7 @@
 	(case option
 	  (:emitter
 	   (when emitter
-	     (error _"Can only specify one emitter per instruction."))
+	     (error (intl:gettext "Can only specify one emitter per instruction.")))
 	   (setf emitter args))
 	  (:declare
 	   (setf decls (append decls args)))
@@ -1737,13 +1737,13 @@
 	   (setf dependencies (append dependencies args)))
 	  (:delay
 	   (when delay
-	     (error _"Can only specify delay once per instruction."))
+	     (error (intl:gettext "Can only specify delay once per instruction.")))
 	   (setf delay args))
 	  (:pinned
 	   (setf pinned t))
 	  (:vop-var
 	   (if vop-var
-	       (error _"Can only specify :vop-var once.")
+	       (error (intl:gettext "Can only specify :vop-var once."))
 	       (setf vop-var (car args))))
 	  (:printer
 	   (push
@@ -1765,7 +1765,7 @@
 				,(cadr option-spec)))))
 	    pdefs))
 	  (t
-	   (error _"Unknown option: ~S" option)))))
+	   (error (intl:gettext "Unknown option: ~S") option)))))
     (setf pdefs (nreverse pdefs))
     (multiple-value-bind
 	(new-lambda-list segment-name vop-name arg-reconstructor)
@@ -1822,7 +1822,7 @@
 	   (let ((,postits (segment-postits ,segment-name)))
 	     (setf (segment-postits ,segment-name) nil)
              (macrolet ((%%current-segment%% ()
-                          (error _"You can't use INST without an ASSEMBLE inside emitters.")))
+                          (error (intl:gettext "You can't use INST without an ASSEMBLE inside emitters."))))
 	       ,@emitter))
 	   (ext:undefined-value))
 	 (eval-when (compile load eval)

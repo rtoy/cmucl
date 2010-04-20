@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.68 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.69 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -798,7 +798,7 @@ When annotations are present, invoke them at the right positions."
 	 (new-fill-ptr (- fill-ptr count))
 	 (buffer (pretty-stream-buffer stream)))
     (when (zerop count)
-      (error _"Output-partial-line called when nothing can be output."))
+      (error (intl:gettext "Output-partial-line called when nothing can be output.")))
     (output-buffer-with-annotations stream count)
     (incf (pretty-stream-buffer-start-column stream) count)
     (replace buffer buffer :end1 new-fill-ptr :start2 count :end2 fill-ptr)
@@ -841,7 +841,7 @@ When annotations are present, invoke them at the right positions."
    stream, T (for *TERMINAL-IO*), or NIL (for *STANDARD-OUTPUT*).  The printer
    control variable *PRINT-LEVEL* is automatically handled."
   (when (and prefix-p per-line-prefix)
-    (error _"Cannot specify both a prefix and a per-line-prefix."))
+    (error (intl:gettext "Cannot specify both a prefix and a per-line-prefix.")))
   (multiple-value-bind
       (stream-var stream-expression)
       (case stream-symbol
@@ -919,8 +919,8 @@ When annotations are present, invoke them at the right positions."
    if it's list argument is exhausted.  Can only be used inside
    PPRINT-LOGICAL-BLOCK, and only when the LIST argument to
    PPRINT-LOGICAL-BLOCK is supplied."
-  (error _"PPRINT-EXIT-IF-LIST-EXHAUSTED must be lexically inside ~
-	  PPRINT-LOGICAL-BLOCK."))
+  (error (intl:gettext "PPRINT-EXIT-IF-LIST-EXHAUSTED must be lexically inside ~
+	  PPRINT-LOGICAL-BLOCK.")))
 
 (defmacro pprint-pop ()
   "Return the next element from LIST argument to the closest enclosing
@@ -928,7 +928,7 @@ When annotations are present, invoke them at the right positions."
    and *PRINT-CIRCLE*.  Can only be used inside PPRINT-LOGICAL-BLOCK.
    If the LIST argument to PPRINT-LOGICAL-BLOCK was NIL, then nothing
    is poped, but the *PRINT-LENGTH* testing still happens."
-  (error _"PPRINT-POP must be lexically inside PPRINT-LOGICAL-BLOCK."))
+  (error (intl:gettext "PPRINT-POP must be lexically inside PPRINT-LOGICAL-BLOCK.")))
   
 (defun pprint-newline (kind &optional stream)
   "Output a conditional newline to STREAM (which defaults to
@@ -1184,7 +1184,7 @@ When annotations are present, invoke them at the right positions."
 	      ((fboundp 'compile)
 	       (compile nil `(lambda (object) ,expr)))
 	      (was-cons
-	       (warn _"CONS PPRINT dispatch ignored w/o compiler loaded:~%  ~S"
+	       (warn (intl:gettext "CONS PPRINT dispatch ignored w/o compiler loaded:~%  ~S")
 		     type)
 	       #'(lambda (object) (declare (ignore object)) nil))
 	      (t

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.81 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.82 2010/04/20 17:57:44 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -156,7 +156,7 @@
     (let ((obos *break-on-signals*)
 	  (*break-on-signals* nil))
       (when (typep condition obos)
-	(break _"~A~%Break entered because of *break-on-signals* (now NIL.)"
+	(break (intl:gettext "~A~%Break entered because of *break-on-signals* (now NIL.)")
 	       condition)))
     (loop
       (unless *handler-clusters* (return))
@@ -173,12 +173,12 @@
 (defun coerce-to-condition (datum arguments default-type function-name)
   (cond ((typep datum 'condition)
 	 (if arguments
-	     (cerror _"Ignore the additional arguments."
+	     (cerror (intl:gettext "Ignore the additional arguments.")
 		     'simple-type-error
 		     :datum arguments
 		     :expected-type 'null
-		     :format-control _"You may not supply additional arguments ~
-				     when giving ~S to ~S."
+		     :format-control (intl:gettext "You may not supply additional arguments ~
+				     when giving ~S to ~S.")
 		     :format-arguments (list datum function-name)))
 	 datum)
         ((symbolp datum) ;Roughly, (subtypep datum 'condition).
@@ -191,7 +191,7 @@
          (error 'simple-type-error
 		:datum datum
 		:expected-type '(or symbol string)
-		:format-control _"Bad argument to ~S: ~S"
+		:format-control (intl:gettext "Bad argument to ~S: ~S")
 		:format-arguments (list function-name datum)))))
 
 (defun error (datum &rest arguments)
@@ -244,7 +244,7 @@
   "Prints a message and invokes the debugger without allowing any possibility
    of condition handling occurring."
   (kernel:infinite-error-protect
-    (with-simple-restart (continue _"Return from BREAK.")
+    (with-simple-restart (continue (intl:gettext "Return from BREAK."))
       (let ((debug:*stack-top-hint*
 	     (or debug:*stack-top-hint*
 		 (nth-value 1 (kernel:find-caller-name)))))
@@ -259,13 +259,13 @@
   (kernel:infinite-error-protect
     (let ((condition (coerce-to-condition datum arguments
 					  'simple-warning 'warn)))
-      (check-type condition warning _"a warning condition")
+      (check-type condition warning (intl:gettext "a warning condition"))
       (restart-case (signal condition)
 	(muffle-warning ()
 	  :report (lambda (stream)
-		    (write-string _"Skip warning." stream))
+		    (write-string (intl:gettext "Skip warning.") stream))
 	  (return-from warn nil)))
-      (format *error-output* _"~&~@<Warning:  ~3i~:_~A~:>~%" condition)))
+      (format *error-output* (intl:gettext "~&~@<Warning:  ~3i~:_~A~:>~%") condition)))
   nil)
 
 ;;; Utility functions
@@ -626,8 +626,8 @@
   (unless (boundp '*)
     ;; The bogon returned an unbound marker.
     (setf * nil)
-    (cerror _"Go on with * set to NIL."
-	    _"EVAL returned an unbound marker."))
+    (cerror (intl:gettext "Go on with * set to NIL.")
+	    (intl:gettext "EVAL returned an unbound marker.")))
   (values-list /))
 
 
@@ -648,7 +648,7 @@ heap overflow.")
 	 (magic-eof-cookie (cons :eof nil))
 	 (number-of-eofs 0))
     (loop
-      (with-simple-restart (abort _"Return to Top-Level.")
+      (with-simple-restart (abort (intl:gettext "Return to Top-Level."))
 	(catch 'top-level-catcher
 	  (unix:unix-sigsetmask 0)
 	  (let ((*in-top-level-catcher* t))
@@ -675,14 +675,14 @@ heap overflow.")
 			   (let ((stream (make-synonym-stream '*terminal-io*)))
 			     (setf *standard-input* stream)
 			     (setf *standard-output* stream)
-			     (format t _"~&Received EOF on *standard-input*, ~
-					switching to *terminal-io*.~%"))))
+			     (format t (intl:gettext "~&Received EOF on *standard-input*, ~
+					switching to *terminal-io*.~%")))))
 		      ((> number-of-eofs eofs-before-quit)
-		       (format t _"~&Received more than ~D EOFs; Aborting.~%"
+		       (format t (intl:gettext "~&Received more than ~D EOFs; Aborting.~%")
 			       eofs-before-quit)
 		       (quit))
 		      (t
-		       (format t _"~&Received EOF.~%")))))))))))
+		       (format t (intl:gettext "~&Received EOF.~%"))))))))))))
 
 
 ;;; %Halt  --  Interface

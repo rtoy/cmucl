@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.47 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.48 2010/04/20 17:57:44 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -492,7 +492,7 @@
 	 (biased (- exp vm:single-float-bias vm:single-float-digits)))
     (declare (fixnum biased))
     (unless (<= exp vm:single-float-normal-exponent-max)
-      (error _"Can't decode NAN or infinity: ~S." x))
+      (error (intl:gettext "Can't decode NAN or infinity: ~S.") x))
     (cond ((and (zerop exp) (zerop sig))
 	   (values 0 biased sign))
 	  ((< exp vm:single-float-normal-exponent-min)
@@ -552,7 +552,7 @@
 	 (biased (- exp vm:double-float-bias vm:double-float-digits)))
     (declare (fixnum biased))
     (unless (<= exp vm:double-float-normal-exponent-max)
-      (error _"Can't decode NAN or infinity: ~S." x))
+      (error (intl:gettext "Can't decode NAN or infinity: ~S.") x))
     (cond ((and (zerop exp) (zerop sig) (zerop lo))
 	   (values 0 biased sign))
 	  ((< exp vm:double-float-normal-exponent-min)
@@ -633,7 +633,7 @@
 	 (biased (- exp vm:long-float-bias vm:long-float-digits)))
     (declare (fixnum biased))
     (unless (<= exp vm:long-float-normal-exponent-max)
-      (error _"Can't decode NAN or infinity: ~S." x))
+      (error (intl:gettext "Can't decode NAN or infinity: ~S.") x))
     (cond ((and (zerop exp) (zerop hi) (zerop lo))
 	   (values 0 biased sign))
 	  ((< exp vm:long-float-normal-exponent-min)
@@ -698,7 +698,7 @@
 	 (biased (truly-the single-float-exponent
 			    (- exp vm:single-float-bias))))
     (unless (<= exp vm:single-float-normal-exponent-max) 
-      (error _"Can't decode NAN or infinity: ~S." x))
+      (error (intl:gettext "Can't decode NAN or infinity: ~S.") x))
     (cond ((zerop x)
 	   (values 0.0f0 biased sign))
 	  ((< exp vm:single-float-normal-exponent-min)
@@ -742,7 +742,7 @@
 	 (biased (truly-the double-float-exponent
 			    (- exp vm:double-float-bias))))
     (unless (<= exp vm:double-float-normal-exponent-max)
-      (error _"Can't decode NAN or infinity: ~S." x))
+      (error (intl:gettext "Can't decode NAN or infinity: ~S.") x))
     (cond ((zerop x)
 	   (values 0.0d0 biased sign))
 	  ((< exp vm:double-float-normal-exponent-min)
@@ -779,7 +779,7 @@
 	 (sign (if (minusp exp-bits) -1l0 1l0))
 	 (biased (truly-the long-float-exponent (- exp vm:long-float-bias))))
     (unless (<= exp vm:long-float-normal-exponent-max)
-      (error _"Can't decode NAN or infinity: ~S." x))
+      (error (intl:gettext "Can't decode NAN or infinity: ~S.") x))
     (cond ((zerop x)
 	   (values 0.0l0 biased sign))
 	  ((< exp vm:long-float-normal-exponent-min)

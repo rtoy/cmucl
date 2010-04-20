@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.76 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.77 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -110,7 +110,7 @@ compilation policy")
 	(nlx-info
 	 (assert (eq env (block-environment (nlx-info-target thing))))
 	 (ir2-nlx-info-home (nlx-info-info thing))))
-      (error _"~@<~2I~_~S ~_not found in ~_~S~:>" thing env)))
+      (error (intl:gettext "~@<~2I~_~S ~_not found in ~_~S~:>") thing env)))
 
 ;;; Constant-TN  --  Internal
 ;;;

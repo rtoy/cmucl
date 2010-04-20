@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.39 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.40 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,7 +52,7 @@
 		  (values arg-p
 			  (+ n
 			     (or (position-in #'tn-ref-across ref refs)
-				 (error _"Couldn't find REF?"))
+				 (error (intl:gettext "Couldn't find REF?")))
 			     1)
 			  t
 			  more-cost
@@ -118,15 +118,15 @@
 	    (losers (svref (backend-sc-numbers *backend*) scn))))
 
 	(unless (losers)
-	  (error _"Representation selection flamed out for no obvious reason.~@
-	          Try again after recompiling the VM definition."))
+	  (error (intl:gettext "Representation selection flamed out for no obvious reason.~@
+	          Try again after recompiling the VM definition.")))
 	
-	(error _"~S is not valid as the ~:R ~:[result~;argument~] to the~@
+	(error (intl:gettext "~S is not valid as the ~:R ~:[result~;argument~] to the~@
 	        ~S VOP, since the TN's primitive type ~S allows SCs:~%  ~S~@
 		~:[which cannot be coerced or loaded into the allowed SCs:~
 		~%  ~S~;~*~]~:[~;~@
 		Current cost info inconsistent with that in effect at compile ~
-		time.  Recompile.~%Compilation order may be incorrect.~]"
+		time.  Recompile.~%Compilation order may be incorrect.~]")
 	       tn pos arg-p
 	       (template-name (vop-info (tn-ref-vop ref)))
 	       (primitive-type-name ptype)
@@ -169,14 +169,14 @@
 			   (dolist (vop vops) (move-lose (template-name vop)))
 			   (no-move-scs i-sc))))
 		    (t
-		     (error _"Representation selection flamed out for no ~
-		             obvious reason."))))))
+		     (error (intl:gettext "Representation selection flamed out for no ~
+		             obvious reason.")))))))
 	
 	(unless (or (load-lose) (no-move-scs) (move-lose))
-	  (error _"Representation selection flamed out for no obvious reason.~@
-	          Try again after recompiling the VM definition."))
+	  (error (intl:gettext "Representation selection flamed out for no obvious reason.~@
+	          Try again after recompiling the VM definition.")))
 
-	(error _"~S is not valid as the ~:R ~:[result~;argument~] to VOP:~
+	(error (intl:gettext "~S is not valid as the ~:R ~:[result~;argument~] to VOP:~
 	        ~%  ~S~%Primitive type: ~S~@
 		SC restrictions:~%  ~S~@
 		~@[The primitive type disallows these loadable SCs:~%  ~S~%~]~
@@ -186,7 +186,7 @@
 		restrictions:~%  ~S~%~]~
 		~:[~;~@
 		Current cost info inconsistent with that in effect at compile ~
-		time.  Recompile.~%Compilation order may be incorrect.~]"
+		time.  Recompile.~%Compilation order may be incorrect.~]")
 	       op-tn pos arg-p
 	       (template-name (vop-info (tn-ref-vop op)))
 	       (primitive-type-name ptype)
@@ -201,8 +201,8 @@
 ;;;
 (defun bad-move-arg-error (val pass)
   (declare (type tn val pass))
-  (error _"No :MOVE-ARGUMENT VOP defined to move ~S (SC ~S) to ~
-          ~S (SC ~S.)"
+  (error (intl:gettext "No :MOVE-ARGUMENT VOP defined to move ~S (SC ~S) to ~
+          ~S (SC ~S.)")
 	 val (sc-name (tn-sc val))
 	 pass (sc-name (tn-sc pass))))
 
@@ -221,18 +221,18 @@
 	(let ((moves (sc-move-functions sc)))
 	  (dolist (const (sc-constant-scs sc))
 	    (unless (svref moves (sc-number const))
-	      (warn _"No move function defined to load SC ~S from constant ~
-	             SC ~S."
+	      (warn (intl:gettext "No move function defined to load SC ~S from constant ~
+	             SC ~S.")
 		    (sc-name sc) (sc-name const))))
 	  
 	  (dolist (alt (sc-alternate-scs sc))
 	    (unless (svref moves (sc-number alt))
-	      (warn _"No move function defined to load SC ~S from alternate ~
-	             SC ~S."
+	      (warn (intl:gettext "No move function defined to load SC ~S from alternate ~
+	             SC ~S.")
 		    (sc-name sc) (sc-name alt)))
 	    (unless (svref (sc-move-functions alt) i)
-	      (warn _"No move function defined to save SC ~S to alternate ~
-	             SC ~S."
+	      (warn (intl:gettext "No move function defined to save SC ~S to alternate ~
+	             SC ~S.")
 		    (sc-name sc) (sc-name alt)))))))))
 
 
@@ -387,7 +387,7 @@
     (cond ((lambda-var-p leaf) (leaf-name leaf))
 	  ((and (not arg-p) reads
 		(return-p (vop-node (tn-ref-vop reads))))
-	   _"<return value>")
+	   (intl:gettext "<return value>"))
 	  (t
 	   nil))))
 
@@ -419,7 +419,7 @@
 					    (if arg-p
 						(vop-args op-vop)
 						(vop-results op-vop)))
-			       (error _"Couldn't fine op?  Bug!")))))
+			       (error (intl:gettext "Couldn't fine op?  Bug!"))))))
 	     (compiler-note
 	      _N"Doing ~A (cost ~D)~:[~2*~; ~:[to~;from~] ~S~], for:~%~6T~
 	       The ~:R ~:[result~;argument~] of ~A."

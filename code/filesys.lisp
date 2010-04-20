@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.109 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.110 2010/04/20 17:57:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -94,7 +94,7 @@
 		      (incf dst)))))))
     (when quoted
       (error 'namestring-parse-error
-	     :complaint _"Backslash in bad place."
+	     :complaint (intl:gettext "Backslash in bad place.")
 	     :namestring namestr
 	     :offset (1- end)))
     (shrink-vector result dst)))
@@ -152,7 +152,7 @@
 			      (position #\] namestr :start index :end end)))
 			 (unless close-bracket
 			   (error 'namestring-parse-error
-				  :complaint _"``['' with no corresponding ``]''"
+				  :complaint (intl:gettext "``['' with no corresponding ``]''")
 				  :namestring namestr
 				  :offset index))
 			 (pattern (list :character-set
@@ -322,7 +322,7 @@
 		     ;; same, we can't allow the creation of one when
 		     ;; the other is defined.
 		     (when (find-logical-host search-list nil)
-		       (error _"~A already names a logical host" search-list))
+		       (error (intl:gettext "~A already names a logical host") search-list))
 		     (setf absolute t)
 		     (setf (car first) new-start))
 		   search-list)))))
@@ -459,7 +459,7 @@
 	       (strings (second piece))
 	       (strings "]"))
 	      (t
-	       (error _"Invalid pattern piece: ~S" piece))))))
+	       (error (intl:gettext "Invalid pattern piece: ~S") piece))))))
        (apply #'concatenate
 	      'simple-string
 	      (strings))))))
@@ -485,14 +485,14 @@
 	  ((member :up)
 	   (pieces "../"))
 	  ((member :back)
-	   (error _":BACK cannot be represented in namestrings."))
+	   (error (intl:gettext ":BACK cannot be represented in namestrings.")))
 	  ((member :wild-inferiors)
 	   (pieces "**/"))
 	  ((or simple-string pattern (eql :wild))
 	   (pieces (unparse-unix-piece dir))
 	   (pieces "/"))
 	  (t
-	   (error _"Invalid directory component: ~S" dir)))))
+	   (error (intl:gettext "Invalid directory component: ~S") dir)))))
     (apply #'concatenate 'simple-string (pieces))))
 
 (defun unparse-unix-directory (pathname)
@@ -516,33 +516,33 @@
       (when name
 	(when (stringp name)
 	  (when (find #\/ name)
-	    (error _"Cannot specify a directory separator in a pathname name: ~S" name))
+	    (error (intl:gettext "Cannot specify a directory separator in a pathname name: ~S") name))
 	  (when (and (not type-supplied)
 		     (find #\. name :start 1))
 	    ;; A single leading dot is ok.
-	    (error _"Cannot specify a dot in a pathname name without a pathname type: ~S" name))
+	    (error (intl:gettext "Cannot specify a dot in a pathname name without a pathname type: ~S") name))
 	  (when (or (and (string= ".." name)
 			 (not type-supplied))
 		    (and (string= "." name)
 			 (not type-supplied)))
 	    ;; Can't have a name of ".." or "." without a type.
-	    (error _"Invalid value for a pathname name: ~S" name)))
+	    (error (intl:gettext "Invalid value for a pathname name: ~S") name)))
 	(strings (unparse-unix-piece name)))
       (when type-supplied
 	(unless name
-	  (error _"Cannot specify the type without a file: ~S" pathname))
+	  (error (intl:gettext "Cannot specify the type without a file: ~S") pathname))
 	(when (stringp type)
 	  (when (find #\/ type)
-	    (error _"Cannot specify a directory separator in a pathname type: ~S" type))
+	    (error (intl:gettext "Cannot specify a directory separator in a pathname type: ~S") type))
 	  (when (find #\. type)
-	    (error _"Cannot specify a dot in a pathname type: ~S" type)))
+	    (error (intl:gettext "Cannot specify a dot in a pathname type: ~S") type)))
 	(strings ".")
 	(strings (unparse-unix-piece type)))
       (when (and (not (member version '(nil :newest :unspecific)))
 		 (not name))
 	;; We don't want version without a name, because when we try
 	;; to read #p".~*~" back, the name is "", not NIL.
-	(error _"Cannot specify a version without a file: ~S" pathname))
+	(error (intl:gettext "Cannot specify a version without a file: ~S") pathname))
       (when version-supplied
 	(strings (if (eq version :wild)
 		     (if logical-p ".*" ".~*~")
@@ -559,7 +559,7 @@
 (defun unparse-unix-enough (pathname defaults)
   (declare (type pathname pathname defaults))
   (flet ((lose ()
-	   (error _"~S cannot be represented relative to ~S"
+	   (error (intl:gettext "~S cannot be represented relative to ~S")
 		  pathname defaults)))
     ;; Only the first path in a search-list is considered.
     (enumerate-search-list (pathname pathname)
@@ -674,7 +674,7 @@
 (defun %enumerate-matches (pathname verify-existance follow-links function)
   (when (pathname-type pathname)
     (unless (pathname-name pathname)
-      (error _"Cannot supply a type without a name:~%  ~S" pathname)))
+      (error (intl:gettext "Cannot supply a type without a name:~%  ~S") pathname)))
   (let ((directory (pathname-directory pathname)))
     (if directory
 	(ecase (car directory)
@@ -878,7 +878,7 @@
 	(when names
 	  (when (cdr names)
 	    (error 'simple-file-error
-		   :format-control _"~S is ambiguous:~{~%  ~A~}"
+		   :format-control (intl:gettext "~S is ambiguous:~{~%  ~A~}")
 		   :format-arguments (list pathname names)))
 	  (return (car names))))))))
 
@@ -895,13 +895,13 @@
   or the pathname is wild."
   (if (wild-pathname-p pathname)
       (error 'simple-file-error
-	     :format-control _"Bad place for a wild pathname."
+	     :format-control (intl:gettext "Bad place for a wild pathname.")
 	     :pathname pathname)
       (let ((result (probe-file pathname)))
 	(unless result
 	  (error 'simple-file-error
 		 :pathname pathname
-		 :format-control _"The file ~S does not exist."
+		 :format-control (intl:gettext "The file ~S does not exist.")
 		 :format-arguments (list (namestring pathname))))
 	result)))
 
@@ -915,7 +915,7 @@
   (if (wild-pathname-p pathname)
       (error 'simple-file-error 
 	     :pathname pathname
-	     :format-control _"Bad place for a wild pathname.")
+	     :format-control (intl:gettext "Bad place for a wild pathname."))
       (let ((namestring (unix-namestring (merge-pathnames pathname) t)))
 	(when (and namestring (unix:unix-file-kind namestring))
 	  (let ((truename (unix:unix-resolve-links
@@ -940,7 +940,7 @@
     (unless new-namestring
       (error 'simple-file-error
 	     :pathname new-name
-	     :format-control _"~S can't be created."
+	     :format-control (intl:gettext "~S can't be created.")
 	     :format-arguments (list new-name)))
     (multiple-value-bind (res error)
 			 (unix:unix-rename original-namestring
@@ -948,7 +948,7 @@
       (unless res
 	(error 'simple-file-error
 	       :pathname new-name
-	       :format-control _"Failed to rename ~A to ~A: ~A"
+	       :format-control (intl:gettext "Failed to rename ~A to ~A: ~A")
 	       :format-arguments (list original new-name
 				       (unix:get-unix-error-msg error))))
       (when (streamp file)
@@ -969,14 +969,14 @@
     (unless namestring
       (error 'simple-file-error
 	     :pathname file
-	     :format-control _"~S doesn't exist."
+	     :format-control (intl:gettext "~S doesn't exist.")
 	     :format-arguments (list file)))
 
     (multiple-value-bind (res err) (unix:unix-unlink namestring)
       (unless res
 	(error 'simple-file-error
 	       :pathname namestring
-	       :format-control _"Could not delete ~A: ~A."
+	       :format-control (intl:gettext "Could not delete ~A: ~A.")
 	       :format-arguments (list namestring
 				       (unix:get-unix-error-msg err))))))
   t)
@@ -1034,7 +1034,7 @@ optionally keeping some of the most recent old versions."
   (if (wild-pathname-p file)
       (error 'simple-file-error 
 	     :pathname file
-	     :format-control _"Bad place for a wild pathname.")
+	     :format-control (intl:gettext "Bad place for a wild pathname."))
       (let ((name (unix-namestring file t)))
 	(when name
 	  (multiple-value-bind
@@ -1053,12 +1053,12 @@ optionally keeping some of the most recent old versions."
   (if (wild-pathname-p file)
       (error 'simple-file-error
 	     :pathname file
-	     :format-control _"Bad place for a wild pathname.")
+	     :format-control (intl:gettext "Bad place for a wild pathname."))
       (let ((name (unix-namestring (pathname file) t)))
 	(unless name
 	  (error 'simple-file-error
 		 :pathname file
-		 :format-control _"~S doesn't exist."
+		 :format-control (intl:gettext "~S doesn't exist.")
 		 :format-arguments (list file)))
 	(multiple-value-bind (winp dev ino mode nlink uid)
 			     (unix:unix-stat name)
@@ -1139,7 +1139,7 @@ optionally keeping some of the most recent old versions."
   (let ((contents (directory pathname :all all :check-for-subdirs nil
 			     :truenamep nil))
 	(result nil))
-    (format t _"Directory of ~A:~%" (namestring pathname))
+    (format t (intl:gettext "Directory of ~A:~%") (namestring pathname))
     (dolist (file contents)
       (let* ((namestring (unix-namestring file))
 	     (tail (subseq namestring
@@ -1188,7 +1188,7 @@ optionally keeping some of the most recent old versions."
 			   (decode-universal-time-for-files mtime year)
 			   tail
 			   (= (logand mode unix:s-ifmt) unix:s-ifdir))))
-		(t (format t _"Couldn't stat ~A -- ~A.~%"
+		(t (format t (intl:gettext "Couldn't stat ~A -- ~A.~%")
 			   tail
 			   (unix:get-unix-error-msg dev-or-err))))
 	  (when return-list
@@ -1243,7 +1243,7 @@ optionally keeping some of the most recent old versions."
 	   (cols (max (truncate width col-width) 1))
 	   (lines (ceiling cnt cols)))
       (declare (fixnum cols lines))
-      (format t _"Directory of ~A:~%" (namestring pathname))
+      (format t (intl:gettext "Directory of ~A:~%") (namestring pathname))
       (dotimes (i lines)
 	(declare (fixnum i))
 	(dotimes (j cols)
@@ -1432,7 +1432,7 @@ optionally keeping some of the most recent old versions."
   (let ((namestring (unix-namestring new-val t)))
     (unless namestring
       (error 'simple-file-error
-             :format-control _"~S doesn't exist."
+             :format-control (intl:gettext "~S doesn't exist.")
              :format-arguments (list new-val)))
     (multiple-value-bind (gr error)
 			 (unix:unix-chdir namestring)
@@ -1465,7 +1465,7 @@ optionally keeping some of the most recent old versions."
 	 (created-p nil))
     (when (wild-pathname-p pathname)
       (error 'simple-file-error
-	     :format-control _"Bad place for a wild pathname."
+	     :format-control (intl:gettext "Bad place for a wild pathname.")
 	     :pathname pathspec))
     (enumerate-search-list (pathname pathname)
        (let ((dir (pathname-directory pathname)))
@@ -1480,13 +1480,13 @@ optionally keeping some of the most recent old versions."
 			   (unless (probe-file newpath)
 			     (let ((namestring (namestring newpath)))
 			       (when verbose
-				 (format *standard-output* _"~&Creating directory: ~A~%"
+				 (format *standard-output* (intl:gettext "~&Creating directory: ~A~%")
 					 namestring))
 			       (unix:unix-mkdir namestring mode)
 			       (unless (probe-file namestring)
 				 (error 'simple-file-error
 					:pathname pathspec
-					:format-control _"Can't create directory ~A."
+					:format-control (intl:gettext "Can't create directory ~A.")
 					:format-arguments (list namestring)))
 			       (setf created-p t)))
 			 (retry () :report "Try to create the directory again"

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.15 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.16 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -159,13 +159,13 @@
 (defun fixup-code-object (code offset fixup kind)
   (declare (type index offset))
   (unless (zerop (rem offset vm:word-bytes))
-    (error _"Unaligned instruction?  offset=#x~X." offset))
+    (error (intl:gettext "Unaligned instruction?  offset=#x~X.") offset))
   (system:without-gcing
    (let ((sap (truly-the system-area-pointer
 			 (%primitive c::code-instructions code))))
      (ecase kind
        (:call
-	(error _"Can't deal with CALL fixups, yet."))
+	(error (intl:gettext "Can't deal with CALL fixups, yet.")))
        (:sethi
 	(setf (ldb (byte 22 0) (sap-ref-32 sap offset))
 	      (ldb (byte 22 10) fixup)))
@@ -334,7 +334,7 @@
 		;; constant is the C string "xrs", in big-endian
 		;; order, of course.)
 		(unless (= (slot scp 'xrs-id) +xrs-id-valid+)
-		  (error _"XRS ID invalid but attempting to access double-float register ~d!" (ash index 1)))
+		  (error (intl:gettext "XRS ID invalid but attempting to access double-float register ~d!") (ash index 1)))
 		(let* ((xrs-ptr (slot scp 'xrs-ptr))
 		       (fp-sap (alien-sap (slot (slot (deref xrs-ptr 0) 'pr-xfr) 'pr-regs))))
 		  (system:sap-ref-double fp-sap (* (- index 32) vm:word-bytes))))))))))
@@ -351,7 +351,7 @@
 		(setf (sap-ref-double sap (* index vm:word-bytes)) new-value))
 	       (t
 		(unless (= (slot scp 'xrs-id) +xrs-id-valid+)
-		  (error _"XRS ID invalid but attempting to access double-float register ~d!" (ash index 1)))
+		  (error (intl:gettext "XRS ID invalid but attempting to access double-float register ~d!") (ash index 1)))
 		(let* ((xrs-ptr (slot scp 'xrs-ptr))
 		       (fp-sap (alien-sap (slot (slot (deref xrs-ptr 0) 'pr-xfr) 'pr-regs))))
 		  (setf (system:sap-ref-double fp-sap (* (- index 32) vm:word-bytes)) new-value)))))))))

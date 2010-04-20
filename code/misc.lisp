@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.40 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.41 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -115,7 +115,7 @@
      (setf (info function documentation name) string))
     (structure
      (unless (eq (info type kind name) :instance)
-       (error _"~S is not the name of a structure type." name))
+       (error (intl:gettext "~S is not the name of a structure type.") name))
      (setf (info type textdomain name) intl::*default-domain*)
      (setf (info type documentation name) string))
     (type
@@ -169,7 +169,7 @@
 	((:and and) (every #'featurep (cdr x)))
 	((:or or) (some #'featurep (cdr x)))
 	(t
-	 (error _"Unknown operator in feature expression: ~S." x)))
+	 (error (intl:gettext "Unknown operator in feature expression: ~S.") x)))
       (not (null (memq x *features*)))))
 
 
@@ -182,7 +182,7 @@
 (defun lisp-implementation-version ()
   "Returns a string describing the implementation version."
   (format nil "~A (~X~A)" *lisp-implementation-version* c:byte-fasl-file-version
-	  #+unicode _" Unicode" #-unicode ""))
+	  #+unicode (intl:gettext " Unicode") #-unicode ""))
 
 (defun machine-instance ()
   "Returns a string giving the name of the local machine."
@@ -195,14 +195,14 @@
   "Returns a string describing the supporting software."
   *software-type*)
 
-(defvar *short-site-name* _"Unknown"
+(defvar *short-site-name* (intl:gettext "Unknown")
   "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp.")
 
 (defun short-site-name ()
   "Returns a string with the abbreviated site name."
   *short-site-name*)
 
-(defvar *long-site-name* _"Site name not initialized"
+(defvar *long-site-name* (intl:gettext "Site name not initialized")
   "The value of LONG-SITE-NAME.  Set in library:site-init.lisp.")
 
 (defun long-site-name ()
@@ -249,7 +249,7 @@
 	   (setf *standard-output* new-standard-output)
 	   (setf *error-output* new-error-output)))
 	((null *dribble-stream*)
-	 (error _"Not currently dribbling."))
+	 (error (intl:gettext "Not currently dribbling.")))
 	(t
 	 (let ((old-streams (pop *previous-streams*)))
 	   (close *dribble-stream*)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.35 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.36 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -518,7 +518,7 @@
 			  (eq (combination-kind dest) :local))
 		 (let ((lambda (combination-lambda dest))
 		       (pos (eposition cont (combination-args dest))))
-		   (format nil _"~:[A possible~;The~] binding of ~S"
+		   (format nil (intl:gettext "~:[A possible~;The~] binding of ~S")
 			   (and (continuation-use cont)
 				(eq (functional-kind lambda) :let))
 			   (leaf-name (elt (lambda-vars lambda) pos)))))))

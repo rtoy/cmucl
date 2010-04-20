@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.38 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.39 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,12 +50,12 @@
 (defun eval-stack-push (value)
   (let ((len (length (the simple-vector *eval-stack*))))
     (when (= len *eval-stack-top*)
-      (when *eval-stack-trace* (format t _"[PUSH: growing stack.]~%"))
+      (when *eval-stack-trace* (format t (intl:gettext "[PUSH: growing stack.]~%")))
       (let ((new-stack (make-array (ash len 1))))
 	(replace new-stack *eval-stack* :end1 len :end2 len)
 	(setf *eval-stack* new-stack))))
   (let ((top *eval-stack-top*))
-    (when *eval-stack-trace* (format t _"pushing ~D.~%" top))
+    (when *eval-stack-trace* (format t (intl:gettext "pushing ~D.~%") top))
     (incf *eval-stack-top*)
     (setf (svref *eval-stack* top) value)))
 
@@ -70,10 +70,10 @@
 ;;;
 (defun eval-stack-pop ()
   (when (zerop *eval-stack-top*)
-    (error _"Attempt to pop empty eval stack."))
+    (error (intl:gettext "Attempt to pop empty eval stack.")))
   (let* ((new-top (1- *eval-stack-top*))
 	 (value (svref *eval-stack* new-top)))
-    (when *eval-stack-trace* (format t _"popping ~D --> ~S.~%" new-top value))
+    (when *eval-stack-trace* (format t (intl:gettext "popping ~D --> ~S.~%") new-top value))
     (setf *eval-stack-top* new-top)
     value))
 
@@ -87,12 +87,12 @@
 (defun eval-stack-extend (n)
   (let ((len (length (the simple-vector *eval-stack*))))
     (when (> (+ n *eval-stack-top*) len)
-      (when *eval-stack-trace* (format t _"[EXTEND: growing stack.]~%"))
+      (when *eval-stack-trace* (format t (intl:gettext "[EXTEND: growing stack.]~%")))
       (let ((new-stack (make-array (+ n (ash len 1)))))
 	(replace new-stack *eval-stack* :end1 len :end2 len)
 	(setf *eval-stack* new-stack))))
   (let ((new-top (+ *eval-stack-top* n)))
-  (when *eval-stack-trace* (format t _"extending to ~D.~%" new-top))
+  (when *eval-stack-trace* (format t (intl:gettext "extending to ~D.~%") new-top))
     (do ((i *eval-stack-top* (1+ i)))
 	((= i new-top))
       (setf (svref *eval-stack* i) nil))
@@ -104,7 +104,7 @@
 ;;;
 (defun eval-stack-shrink (n)
   (when *eval-stack-trace*
-    (format t _"shrinking to ~D.~%" (- *eval-stack-top* n)))
+    (format t (intl:gettext "shrinking to ~D.~%") (- *eval-stack-top* n)))
   (decf *eval-stack-top* n))
 
 ;;; EVAL-STACK-SET-TOP -- Internal.
@@ -112,7 +112,7 @@
 ;;; This is used to shrink the stack back to a previous frame pointer.
 ;;;
 (defun eval-stack-set-top (ptr)
-  (when *eval-stack-trace* (format t _"setting top to ~D.~%" ptr))
+  (when *eval-stack-trace* (format t (intl:gettext "setting top to ~D.~%") ptr))
   (setf *eval-stack-top* ptr))
 
 
@@ -550,7 +550,7 @@
 	    (assert (eq (c::continuation-info cont) :multiple))
 	    (eval-stack-push (list more-args (length more-args)))))
 	 (c::%unknown-values
-	  (error _"C::%UNKNOWN-VALUES should never be in interpreter's IR1."))
+	  (error (intl:gettext "C::%UNKNOWN-VALUES should never be in interpreter's IR1.")))
 	 (c::%lexical-exit-breakup
 	  ;; We see this whenever we locally exit the extent of a lexical
 	  ;; target.  That is, we are truly locally exiting an extent we could

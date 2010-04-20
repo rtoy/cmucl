@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.56 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.57 2010/04/20 17:57:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -100,7 +100,7 @@
 (defun describe-aux (x)
   (when (or (not (integerp *describe-level*))
 	    (minusp *describe-level*))
-    (error _"*describe-level* should be a nonnegative integer - ~A."
+    (error (intl:gettext "*describe-level* should be a nonnegative integer - ~A.")
 	   *describe-level*))
   (when (or (>= *current-describe-level* *describe-level*)
 	    (member x *described-objects*))
@@ -140,14 +140,14 @@
 ;;;; Miscellaneous DESCRIBE methods:
 	  
 (defun default-describe (x)
-  (format t _"~&~S is a ~S." x (type-of x)))
+  (format t (intl:gettext "~&~S is a ~S.") x (type-of x)))
 
 (defun describe-character (x)
-  (format t _"~&~S is a ~S." x (type-of x))
-  (format t _"~&Its code is #x~4,'0x." (char-code x))
-  (format t _"~&Its name is ~A." (char-name x))
+  (format t (intl:gettext "~&~S is a ~S.") x (type-of x))
+  (format t (intl:gettext "~&Its code is #x~4,'0x.") (char-code x))
+  (format t (intl:gettext "~&Its name is ~A.") (char-name x))
   (when (surrogatep x)
-    (format t _"~&It is a ~:[high (leading)~;low (trailing)~] surrogate character."
+    (format t (intl:gettext "~&It is a ~:[high (leading)~;low (trailing)~] surrogate character.")
 	    (surrogatep x :low))))
 
 (defun describe-instance (x &optional (kind :structure))
@@ -156,7 +156,7 @@
 	 (fresh-line *standard-output*)
 	 (describe-object x *standard-output*))
 	(t
-	 (format t _"~&~S is a ~(~A~) of type ~A." x kind (type-of x))
+	 (format t (intl:gettext "~&~S is a ~(~A~) of type ~A.") x kind (type-of x))
 	 (dolist (slot (cddr (inspect::describe-parts x)))
 	   (format t "~%~A: ~S." (car slot) (cdr slot))))))
 
@@ -164,47 +164,47 @@
   (let ((rank (array-rank x))
 	(element-type (array-element-type x)))
     (cond ((= rank 1)
-	   (format t _"~&~S is a ~:[~;displaced ~]vector of length ~D." x
+	   (format t (intl:gettext "~&~S is a ~:[~;displaced ~]vector of length ~D.") x
 		   (and (array-header-p x) (%array-displaced-p x))
 		   (array-dimension x 0))
 	   (if (array-has-fill-pointer-p x)
-	       (format t _"~&It has a fill pointer, currently ~d"
+	       (format t (intl:gettext "~&It has a fill pointer, currently ~d")
 		       (fill-pointer x))
-	       (format t _"~&It has no fill pointer.")))
+	       (format t (intl:gettext "~&It has no fill pointer."))))
 	  (t
-	   (format t _"~&~S is ~:[an~;a displaced~] array of rank ~A"
+	   (format t (intl:gettext "~&~S is ~:[an~;a displaced~] array of rank ~A")
 		   x (%array-displaced-p x) rank)
-	   (format t _"~%Its dimensions are ~S." (array-dimensions x))))
+	   (format t (intl:gettext "~%Its dimensions are ~S.") (array-dimensions x))))
     (unless (eq t element-type)
-      (format t _"~&Its element type is specialized to ~S." element-type))
+      (format t (intl:gettext "~&Its element type is specialized to ~S.") element-type))
     (when (adjustable-array-p x)
-      (format t _"~&It is adjustable."))
+      (format t (intl:gettext "~&It is adjustable.")))
     (when (static-array-p x)
-      (format t _"~&It is static."))))
+      (format t (intl:gettext "~&It is static.")))))
 
 (defun describe-fixnum (x)
   (cond ((not (or *describe-verbose* (zerop *current-describe-level*))))
 	((primep x)
-	 (format t _"~&It is a prime number."))
+	 (format t (intl:gettext "~&It is a prime number.")))
 	(t
-	 (format t _"~&It is a composite number."))))
+	 (format t (intl:gettext "~&It is a composite number.")))))
 
 #+double-double
 (defun describe-double-double-float (x)
-  (format t _"~&~S is a ~S." x (type-of x))
-  (format t _"~&Its components are ~S and ~S."
+  (format t (intl:gettext "~&~S is a ~S.") x (type-of x))
+  (format t (intl:gettext "~&Its components are ~S and ~S.")
 	  (kernel:double-double-hi x) (kernel:double-double-lo x)))
 
 (defun describe-hash-table (x)
-  (format t _"~&~S is an ~A hash table." x (hash-table-test x))
-  (format t _"~&Its size is ~D buckets." (length (hash-table-table x)))
-  (format t _"~&Its rehash-size is ~S." (hash-table-rehash-size x))
-  (format t _"~&Its rehash-threshold is ~S."
+  (format t (intl:gettext "~&~S is an ~A hash table.") x (hash-table-test x))
+  (format t (intl:gettext "~&Its size is ~D buckets.") (length (hash-table-table x)))
+  (format t (intl:gettext "~&Its rehash-size is ~S.") (hash-table-rehash-size x))
+  (format t (intl:gettext "~&Its rehash-threshold is ~S.")
 	  (hash-table-rehash-threshold x))
-  (format t _"~&It currently holds ~d entries."
+  (format t (intl:gettext "~&It currently holds ~d entries.")
 	  (hash-table-number-entries x))
   (when (hash-table-weak-p x)
-    (format t _"~&It is weak ~A table." (hash-table-weak-p x))))
+    (format t (intl:gettext "~&It is weak ~A table.") (hash-table-weak-p x))))
 
 (defun describe-package (x)
   (describe-instance x)
@@ -214,7 +214,7 @@
 	 (external (package-external-symbols x))
 	 (external-count (- (package-hashtable-size external)
 			    (package-hashtable-free external))))
-    (format t _"~&~d symbols total: ~d internal and ~d external."
+    (format t (intl:gettext "~&~d symbols total: ~d internal and ~d external.")
 	     (+ internal-count external-count) internal-count external-count)))
 
 
@@ -238,7 +238,7 @@
 		    (setf
 		     (info setf textdomain name)))))
       (when doc
-	(format t _"~&~@(~A documentation:~)~&  ~A"
+	(format t (intl:gettext "~&~@(~A documentation:~)~&  ~A")
 		(or kind-doc kind)
 		(dgettext domain doc))))))
 
@@ -259,14 +259,14 @@
 		    (info function where-from name))
 	    (values type-spec :defined))
       (when (consp type)
-	(format t _"~&Its ~(~A~) argument types are:~%  ~S"
+	(format t (intl:gettext "~&Its ~(~A~) argument types are:~%  ~S")
 		where (second type))
-	(format t _"~&Its result type is:~%  ~S" (third type)))))
+	(format t (intl:gettext "~&Its result type is:~%  ~S") (third type)))))
       
   (let ((inlinep (info function inlinep name)))
     (when inlinep
-      (format t _"~&It is currently declared ~(~A~);~
-		 ~:[no~;~] expansion is available."
+      (format t (intl:gettext "~&It is currently declared ~(~A~);~
+		 ~:[no~;~] expansion is available.")
 	      inlinep (info function inline-expansion name)))))
 
 
@@ -280,9 +280,9 @@
   (multiple-value-bind (exp closure-p dname)
 		       (eval:interpreted-function-lambda-expression x)
     (let ((args (eval:interpreted-function-arglist x)))
-      (format t _"~&~@(~@[~A ~]arguments:~%~)" kind)
+      (format t (intl:gettext "~&~@(~@[~A ~]arguments:~%~)") kind)
       (cond ((not args)
-	     (write-string _"  There are no arguments."))
+	     (write-string (intl:gettext "  There are no arguments.")))
 	    (t
 	     (write-string "  ")
 	     (indenting-further *standard-output* 2
@@ -296,13 +296,13 @@
 	 (type-specifier (eval:interpreted-function-type x)))))
     
     (when closure-p
-      (format t _"~&Its closure environment is:")
+      (format t (intl:gettext "~&Its closure environment is:"))
       (indenting-further *standard-output* 2
 	(let ((clos (eval:interpreted-function-closure x)))
 	  (dotimes (i (length clos))
 	    (format t "~&~D: ~S" i (svref clos i))))))
     
-    (format t _"~&Its definition is:~%  ~S" exp)))
+    (format t (intl:gettext "~&Its definition is:~%  ~S") exp)))
 
 
 ;;; PRINT-COMPILED-FROM  --  Internal
@@ -313,7 +313,7 @@
   (let ((info (kernel:%code-debug-info code-obj)))
     (when info
       (let ((sources (c::debug-info-source info)))
-	(format t _"~&On ~A it was compiled from:"
+	(format t (intl:gettext "~&On ~A it was compiled from:")
 		(format-universal-time nil
 				       (c::debug-source-compiled
 					(first sources))))
@@ -321,11 +321,11 @@
 	  (let ((name (c::debug-source-name source)))
 	    (ecase (c::debug-source-from source)
 	      (:file
-	       (format t _"~&~A~%  Created: " (namestring name))
+	       (format t (intl:gettext "~&~A~%  Created: ") (namestring name))
 	       (ext:format-universal-time t (c::debug-source-created source))
 	       (let ((comment (c::debug-source-comment source)))
 		 (when comment
-		   (format t _"~&  Comment: ~A" comment))))
+		   (format t (intl:gettext "~&  Comment: ~A") comment))))
 	      (:stream (format t "~&~S" name))
 	      (:lisp (format t "~&~S" name)))))))))
 
@@ -337,11 +337,11 @@
 ;;;
 (defun describe-function-compiled (x kind name)
   (let ((args (%function-arglist x)))
-    (format t _"~&~@(~@[~A ~]arguments:~%~)" kind)
+    (format t (intl:gettext "~&~@(~@[~A ~]arguments:~%~)") kind)
     (cond ((not args)
-	   (format t _"  There is no argument information available."))
+	   (format t (intl:gettext "  There is no argument information available.")))
 	  ((string= args "()")
-	   (write-string _"  There are no arguments."))
+	   (write-string (intl:gettext "  There are no arguments.")))
 	  (t
 	   (write-string "  ")
 	   (indenting-further *standard-output* 2
@@ -375,14 +375,14 @@
   (declare (type function x) (type (member :macro :function nil) kind))
   (fresh-line)
   (ecase kind
-    (:macro (format t _"Macro-function: ~S" x))
-    (:function (format t _"Function: ~S" x))
+    (:macro (format t (intl:gettext "Macro-function: ~S") x))
+    (:function (format t (intl:gettext "Function: ~S") x))
     ((nil)
-     (format t _"~S is a function." x)))
+     (format t (intl:gettext "~S is a function.") x)))
   (case (get-type x)
     (#.vm:closure-header-type
      (describe-function-compiled (%closure-function x) kind name)
-     (format t _"~&Its closure environment is:")
+     (format t (intl:gettext "~&Its closure environment is:"))
      (indenting-further *standard-output* 8)
      (dotimes (i (- (get-closure-length x) (1- vm:closure-info-offset)))
 	      (format t "~&~D: ~S" i (%closure-index-ref x i))))
@@ -395,7 +395,7 @@
        (kernel:byte-closure
 	(describe-function-byte-compiled (byte-closure-function x)
 					 kind name)
-	(format t _"~&Its closure environment is:")
+	(format t (intl:gettext "~&Its closure environment is:"))
 	(indenting-further *standard-output* 8)
 	(let ((data (byte-closure-data x)))
 	  (dotimes (i (length data))
@@ -405,7 +405,7 @@
        (t
 	 (describe-instance x :funcallable-instance))))
     (t
-     (format t _"~&It is an unknown type of function."))))
+     (format t (intl:gettext "~&It is an unknown type of function.")))))
 
 
 (defun describe-symbol (x)
@@ -414,40 +414,40 @@
 	(multiple-value-bind (symbol status)
 			     (find-symbol (symbol-name x) package)
 	  (declare (ignore symbol))
-	  (format t _"~&~A is an ~A symbol in the ~A package." x
+	  (format t (intl:gettext "~&~A is an ~A symbol in the ~A package.") x
 		  (string-downcase (symbol-name status))
 		  (package-name (symbol-package x))))
-	(format t _"~&~A is an uninterned symbol." x)))
+	(format t (intl:gettext "~&~A is an uninterned symbol.") x)))
   ;;
   ;; Describe the value cell.
   (let* ((kind (info variable kind x))
 	 (wot (ecase kind
-		(:special _"special variable")
-		(:constant _"constant")
-		(:global _"undefined variable")
-		(:macro _"symbol macro")
+		(:special (intl:gettext "special variable"))
+		(:constant (intl:gettext "constant"))
+		(:global (intl:gettext "undefined variable"))
+		(:macro (intl:gettext "symbol macro"))
 		(:alien nil))))
     (cond
      ((eq kind :alien)
       (let ((info (info variable alien-info x)))
-	(format t _"~&~@<It is an alien at #x~8,'0X of type ~3I~:_~S.~:>~%"
+	(format t (intl:gettext "~&~@<It is an alien at #x~8,'0X of type ~3I~:_~S.~:>~%")
 		(sap-int (eval (alien::heap-alien-info-sap-form info)))
 		(alien-internals:unparse-alien-type
 		 (alien::heap-alien-info-type info)))
-	(format t _"~@<Its current value is ~3I~:_~S.~:>"
+	(format t (intl:gettext "~@<Its current value is ~3I~:_~S.~:>")
 		(eval x))))
      ((eq kind :macro)
       (let ((expansion (info variable macro-expansion x)))
-	(format t _"~&It is a ~A with expansion: ~S." wot expansion)))
+	(format t (intl:gettext "~&It is a ~A with expansion: ~S.") wot expansion)))
      ((boundp x)
       (let ((value (symbol-value x)))
-	(format t _"~&It is a ~A; its value is ~S." wot value)
+	(format t (intl:gettext "~&It is a ~A; its value is ~S.") wot value)
 	(describe value)))
      ((not (eq kind :global))
-      (format t _"~&It is a ~A; no current value." wot)))
+      (format t (intl:gettext "~&It is a ~A; no current value.") wot)))
 
     (when (eq (info variable where-from x) :declared)
-      (format t _"~&Its declared type is ~S."
+      (format t (intl:gettext "~&Its declared type is ~S.")
 	      (type-specifier (info variable type x))))
 
     (desc-doc x 'variable kind))
@@ -456,39 +456,39 @@
   (cond ((macro-function x)
 	 (describe-function (macro-function x) :macro x))
 	((special-operator-p x)
-	 (desc-doc x 'function _"Special form"))
+	 (desc-doc x 'function (intl:gettext "Special form")))
 	((fboundp x)
 	 (describe-function (fdefinition x) :function x)))
   ;;
   ;; Print other documentation.
-  (desc-doc x 'structure _"Structure")
-  (desc-doc x 'type _"Type")
-  (desc-doc x 'setf _"Setf macro")
+  (desc-doc x 'structure (intl:gettext "Structure"))
+  (desc-doc x 'type (intl:gettext "Type"))
+  (desc-doc x 'setf (intl:gettext "Setf macro"))
   (dolist (assoc (info random-documentation stuff x))
-    (format t _"~&Documentation on the ~(~A~):~%~A" (car assoc) (cdr assoc)))
+    (format t (intl:gettext "~&Documentation on the ~(~A~):~%~A") (car assoc) (cdr assoc)))
   ;;
   ;; Print Class information
   (let ((class (kernel::find-class x nil)))
     (when class
-      (format t _"~&It names a class ~A." class)
+      (format t (intl:gettext "~&It names a class ~A.") class)
       (describe class)
       (let ((pcl-class (%class-pcl-class class)))
 	(when pcl-class
-	  (format t _"~&It names a PCL class ~A." pcl-class)
+	  (format t (intl:gettext "~&It names a PCL class ~A.") pcl-class)
 	  (describe pcl-class)))))
   ;;
   ;; Print out information about any types named by the symbol
   (when (eq (info type kind x) :defined)
-    (format t _"~&It names a type specifier."))
+    (format t (intl:gettext "~&It names a type specifier.")))
   ;;
   ;; Print out properties, possibly ignoring implementation details.
   (do ((plist (symbol-plist X) (cddr plist)))
       ((null plist) ())
     (unless (member (car plist) *implementation-properties*)
-      (format t _"~&Its ~S property is ~S." (car plist) (cadr plist))
+      (format t (intl:gettext "~&Its ~S property is ~S.") (car plist) (cadr plist))
       (describe (cadr plist))))
 
   ;; Describe where it was defined.
   (let ((locn (info :source-location :defvar x)))
     (when locn
-      (format t _"~&It is defined in:~&~A" (c::file-source-location-pathname locn)))))
+      (format t (intl:gettext "~&It is defined in:~&~A") (c::file-source-location-pathname locn)))))

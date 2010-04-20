@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.19 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.20 2010/04/20 17:57:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -167,7 +167,7 @@
       (cond (demon (funcall demon switch))
 	    ((or (member name *legal-cmd-line-switches* :test #'string-equal)
 		 (not *complain-about-illegal-switches*)))
-	    (t (warn _"~S is an illegal switch" switch)))
+	    (t (warn (intl:gettext "~S is an illegal switch") switch)))
       (lisp::finish-standard-output-streams))))
 
 (defmacro defswitch (name &optional function)
@@ -181,7 +181,7 @@
     `(let ((,gname ,name)
 	   (,gfunction ,function))
        (check-type ,gname simple-string)
-       (check-type ,gfunction (or symbol function) _"a symbol or function")
+       (check-type ,gfunction (or symbol function) (intl:gettext "a symbol or function"))
        (push ,gname *legal-cmd-line-switches*)
        (when ,gfunction
 	 (push (cons ,gname ,gfunction) *command-switch-demons*)))))

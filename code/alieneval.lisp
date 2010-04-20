@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.68 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.69 2010/04/20 17:57:43 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -186,7 +186,7 @@
 
 (defun alien-type-class-or-lose (name)
   (or (gethash name *alien-type-classes*)
-      (error _"No alien type class ~S" name)))
+      (error (intl:gettext "No alien type class ~S") name)))
 
 (defun create-alien-type-class-if-necessary (name include)
   (let ((old (gethash name *alien-type-classes*))
@@ -212,7 +212,7 @@
 
 (defun method-slot (method)
   (cdr (or (assoc method method-slot-alist)
-	   (error _"No method ~S" method))))
+	   (error (intl:gettext "No method ~S") method))))
 
 ); eval-when
 
@@ -275,7 +275,7 @@
       `(funcall (do ((class (alien-type-class-or-lose (alien-type-class ,type))
 			    (alien-type-class-include class)))
 		    ((null class)
-		     (error _"Method ~S not defined for ~S"
+		     (error (intl:gettext "Method ~S not defined for ~S")
 			    ',method (alien-type-class ,type)))
 		  (let ((fn (,slot class)))
 		    (when fn
@@ -334,19 +334,19 @@
   (if (consp type)
       (let ((translator (info alien-type translator (car type))))
 	(unless translator
-	  (error _"Unknown alien type: ~S" type))
+	  (error (intl:gettext "Unknown alien type: ~S") type))
 	(funcall translator type))
       (case (info alien-type kind type)
 	(:primitive
 	 (let ((translator (info alien-type translator type)))
 	   (unless translator
-	     (error _"No translator for primitive alien type ~S?" type))
+	     (error (intl:gettext "No translator for primitive alien type ~S?") type))
 	   (funcall translator (list type))))
 	(:defined
 	 (or (info alien-type definition type)
-	     (error _"Definition missing for alien type ~S?" type)))
+	     (error (intl:gettext "Definition missing for alien type ~S?") type)))
 	(:unknown
-	 (error _"Unknown alien type: ~S" type)))))
+	 (error (intl:gettext "Unknown alien type: ~S") type)))))
 
 (defun auxiliary-alien-type (kind name)
   (flet ((aux-defn-matches (x)
@@ -368,9 +368,9 @@
   (flet ((aux-defn-matches (x)
 	   (and (eq (first x) kind) (eq (second x) name))))
     (when (find-if #'aux-defn-matches *new-auxiliary-types*)
-      (error _"Attempt to multiple define ~A ~S." kind name))
+      (error (intl:gettext "Attempt to multiple define ~A ~S.") kind name))
     (when (find-if #'aux-defn-matches *auxiliary-type-definitions*)
-      (error _"Attempt to shadow definition of ~A ~S." kind name)))
+      (error (intl:gettext "Attempt to shadow definition of ~A ~S.") kind name)))
   (push (list kind name defn) *new-auxiliary-types*)
   defn)
 
@@ -387,7 +387,7 @@
 	       (info alien-type union name))
 	      (:enum
 	       (info alien-type enum name)))
-	(error _"Attempt to shadow definition of ~A ~S." kind name)))))
+	(error (intl:gettext "Attempt to shadow definition of ~A ~S.") kind name)))))
 
 ;;; *record-type-already-unparsed* -- internal
 ;;;
@@ -464,7 +464,7 @@
       (macrolet ((frob (kind)
 		   `(let ((old (info alien-type ,kind name)))
 		      (unless (or (null old) (alien-type-= old defn))
-			(warn _"Redefining ~A ~S to be:~%  ~S,~%was:~%  ~S"
+			(warn (intl:gettext "Redefining ~A ~S to be:~%  ~S,~%was:~%  ~S")
 			      kind name defn old))
 		      (setf (info alien-type ,kind name) defn))))
 	(ecase kind
@@ -475,11 +475,11 @@
 (defun %def-alien-type (name new)
   (ecase (info alien-type kind name)
     (:primitive
-     (error _"~S is a built-in alien type." name))
+     (error (intl:gettext "~S is a built-in alien type.") name))
     (:defined
      (let ((old (info alien-type definition name)))
        (unless (or (null old) (alien-type-= new old))
-	 (warn _"Redefining ~S to be:~%  ~S,~%was~%  ~S" name
+	 (warn (intl:gettext "Redefining ~S to be:~%  ~S,~%was~%  ~S") name
 	       (unparse-alien-type new) (unparse-alien-type old)))))
     (:unknown))
   (setf (info alien-type definition name) new)
@@ -588,27 +588,27 @@
 
 (def-alien-type-method (root :naturalize-gen) (type alien)
   (declare (ignore alien))
-  (error _"Cannot represent ~S typed aliens." type))
+  (error (intl:gettext "Cannot represent ~S typed aliens.") type))
 
 (def-alien-type-method (root :deport-gen) (type object)
   (declare (ignore object))
-  (error _"Cannot represent ~S typed aliens." type))
+  (error (intl:gettext "Cannot represent ~S typed aliens.") type))
 
 (def-alien-type-method (root :extract-gen) (type sap offset)
   (declare (ignore sap offset))
-  (error _"Cannot represent ~S typed aliens." type))
+  (error (intl:gettext "Cannot represent ~S typed aliens.") type))
 
 (def-alien-type-method (root :deposit-gen) (type sap offset value)
   `(setf ,(invoke-alien-type-method :extract-gen type sap offset) ,value))
 
 (def-alien-type-method (root :arg-tn) (type state)
   (declare (ignore state))
-  (error _"Cannot pass aliens of type ~S as arguments to call-out"
+  (error (intl:gettext "Cannot pass aliens of type ~S as arguments to call-out")
 	 (unparse-alien-type type)))
 
 (def-alien-type-method (root :result-tn) (type state)
   (declare (ignore state))
-  (error _"Cannot return aliens of type ~S from call-out"
+  (error (intl:gettext "Cannot return aliens of type ~S from call-out")
 	 (unparse-alien-type type)))
 
 
@@ -685,7 +685,7 @@
 	    (64 'sap-ref-64)))))
     (if ref-fun
 	`(,ref-fun ,sap (/ ,offset vm:byte-bits))
-	(error _"Cannot extract ~D bit integers."
+	(error (intl:gettext "Cannot extract ~D bit integers.")
 	       (alien-integer-type-bits type)))))
 
 
@@ -731,7 +731,7 @@
 		 (auxiliary-alien-type :enum name)
 	       (when old-p
 		 (unless (alien-type-= result old)
-		   (warn _"Redefining alien enum ~S" name)))
+		   (warn (intl:gettext "Redefining alien enum ~S") name)))
 	       ;; I (rtoy) am not 100% sure about this.  But compare
 	       ;; what this does with what PARSE-ALIEN-RECORD-TYPE
 	       ;; does.  So, if we've seen this type before and it's
@@ -754,14 +754,14 @@
 	     (result found)
 	     (auxiliary-alien-type :enum name)
 	   (unless found
-	     (error _"Unknown enum type: ~S" name))
+	     (error (intl:gettext "Unknown enum type: ~S") name))
 	   result))
 	(t
-	 (error _"Empty enum type: ~S" type))))
+	 (error (intl:gettext "Empty enum type: ~S") type))))
 
 (defun parse-enum (name elements)
   (when (null elements)
-    (error _"An enumeration must contain at least one element."))
+    (error (intl:gettext "An enumeration must contain at least one element.")))
   (let ((min nil)
 	(max nil)
 	(from-alist ())
@@ -775,15 +775,15 @@
 	      (values el (1+ prev)))
 	(setf prev val)
 	(unless (keywordp sym)
-	  (error _"Enumeration element ~S is not a keyword." sym))
+	  (error (intl:gettext "Enumeration element ~S is not a keyword.") sym))
 	(unless (integerp val)
-	  (error _"Element value ~S is not an integer." val))
+	  (error (intl:gettext "Element value ~S is not an integer.") val))
 	(unless (and max (> max val)) (setq max val))
 	(unless (and min (< min val)) (setq min val))
 	(when (rassoc val from-alist)
-	  (error _"Element value ~S used more than once." val))
+	  (error (intl:gettext "Element value ~S used more than once.") val))
 	(when (assoc sym from-alist :test #'eq)
-	  (error _"Enumeration element ~S used more than once." sym))
+	  (error (intl:gettext "Enumeration element ~S used more than once.") sym))
 	(push (cons sym val) from-alist)))
     (let* ((signed (minusp min))
 	   (min-bits (if signed
@@ -791,7 +791,7 @@
 				  (integer-length max)))
 			 (integer-length max))))
       (when (> min-bits 32)
-	(error _"Can't represent enums needing more than 32 bits."))
+	(error (intl:gettext "Can't represent enums needing more than 32 bits.")))
       (setf from-alist (sort from-alist #'< :key #'cdr))
       (cond
        ;;
@@ -1022,7 +1022,7 @@
 (def-alien-type-method (mem-block :deposit-gen) (type sap offset value)
   (let ((bits (alien-mem-block-type-bits type)))
     (unless bits
-      (error _"Cannot deposit aliens of type ~S (unknown size)." type))
+      (error (intl:gettext "Cannot deposit aliens of type ~S (unknown size).") type))
     `(kernel:system-area-copy ,value 0 ,sap ,offset ',bits)))
 
 
@@ -1035,12 +1035,12 @@
 (def-alien-type-translator array (ele-type &rest dims)
   (when dims
     (unless (typep (first dims) '(or kernel:index null))
-      (error _"First dimension is not a non-negative fixnum or NIL: ~S"
+      (error (intl:gettext "First dimension is not a non-negative fixnum or NIL: ~S")
 	     (first dims)))
     (let ((loser (find-if-not #'(lambda (x) (typep x 'kernel:index))
 			      (rest dims))))
       (when loser
-	(error _"Dimension is not a non-negative fixnum: ~S" loser))))
+	(error (intl:gettext "Dimension is not a non-negative fixnum: ~S") loser))))
 
   (let ((type (parse-alien-type ele-type)))
     (make-alien-array-type
@@ -1149,10 +1149,10 @@
 					 :name var)))
 	  (push parsed-field parsed-fields)
 	  (when (null bits)
-	    (error _"Unknown size: ~S"
+	    (error (intl:gettext "Unknown size: ~S")
 		   (unparse-alien-type field-type)))
 	  (when (null alignment)
-	    (error _"Unknown alignment: ~S"
+	    (error (intl:gettext "Unknown alignment: ~S")
 		   (unparse-alien-type field-type)))
 	  (setf overall-alignment (max overall-alignment alignment))
 	  (ecase (alien-record-type-kind result)
@@ -1270,7 +1270,7 @@ If so return true; otherwise call ALTERNATIVE."
 
 (def-alien-type-translator values (&rest values)
   (unless *values-type-okay*
-    (error _"Cannot use values types here."))
+    (error (intl:gettext "Cannot use values types here.")))
   (let ((*values-type-okay* nil))
     (make-alien-values-type
      :values (mapcar #'parse-alien-type values))))
@@ -1368,7 +1368,7 @@ If so return true; otherwise call ALTERNATIVE."
      (values name (guess-alien-name-from-lisp-name name)))
     (list
      (unless (= (length name) 2)
-       (error _"Badly formed alien name."))
+       (error (intl:gettext "Badly formed alien name.")))
      (values (cadr name) (car name)))))
 
 ;;; DEF-ALIEN-VARIABLE -- public
@@ -1532,7 +1532,7 @@ If so return true; otherwise call ALTERNATIVE."
   (let ((alien-type (parse-alien-type type)))
     (if (eq (compute-alien-rep-type alien-type) 'system-area-pointer)
 	`(%sap-alien ,sap ',alien-type)
-	(error _"Cannot make aliens of type ~S out of SAPs" type))))
+	(error (intl:gettext "Cannot make aliens of type ~S out of SAPs") type))))
 
 (defun %sap-alien (sap type)
   (declare (type system-area-pointer sap)
@@ -1566,7 +1566,7 @@ If so return true; otherwise call ALTERNATIVE."
 	       (size
 		(unless dims
 		  (error
-		   _"Cannot override the size of zero-dimensional arrays."))
+		   (intl:gettext "Cannot override the size of zero-dimensional arrays.")))
 		(when (constantp size)
 		  (setf alien-type (copy-alien-array-type alien-type))
 		  (setf (alien-array-type-dimensions alien-type)
@@ -1581,9 +1581,9 @@ If so return true; otherwise call ALTERNATIVE."
       (let ((bits (alien-type-bits element-type))
 	    (alignment (alien-type-alignment element-type)))
 	(unless bits
-	  (error _"Size of ~S unknown." (unparse-alien-type element-type)))
+	  (error (intl:gettext "Size of ~S unknown.") (unparse-alien-type element-type)))
 	(unless alignment
-	  (error _"Alignment of ~S unknown." (unparse-alien-type element-type)))
+	  (error (intl:gettext "Alignment of ~S unknown.") (unparse-alien-type element-type)))
 	`(%sap-alien (%make-alien (* ,(align-offset bits alignment)
 				     ,size-expr))
 		     ',(make-alien-pointer-type :to alien-type))))))
@@ -1621,7 +1621,7 @@ If so return true; otherwise call ALTERNATIVE."
 	   (type symbol slot))
   (or (find slot (alien-record-type-fields type)
 	    :key #'alien-record-field-name)
-      (error _"No slot named ~S in ~S" slot type)))
+      (error (intl:gettext "No slot named ~S in ~S") slot type)))
 
 ;;; SLOT -- public
 ;;;
@@ -1701,7 +1701,7 @@ If so return true; otherwise call ALTERNATIVE."
     (etypecase type
       (alien-pointer-type
        (when (cdr indices)
-	 (error _"Too many indices when derefing ~S: ~D"
+	 (error (intl:gettext "Too many indices when derefing ~S: ~D")
 		type
 		(length indices)))
        (let ((element-type (alien-pointer-type-to type)))
@@ -1713,7 +1713,7 @@ If so return true; otherwise call ALTERNATIVE."
 		     0))))
       (alien-array-type
        (unless (= (length indices) (length (alien-array-type-dimensions type)))
-	 (error _"Incorrect number of indices when derefing ~S: ~D"
+	 (error (intl:gettext "Incorrect number of indices when derefing ~S: ~D")
 		type (length indices)))
        (labels ((frob (dims indices offset)
 		  (if (null dims)
@@ -1835,7 +1835,7 @@ If so return true; otherwise call ALTERNATIVE."
 	(info (if (and (consp info)
 		       (eq (car info) 'quote))
 		  (second info)
-		  (error _"Something is wrong; local-alien-info not found: ~S"
+		  (error (intl:gettext "Something is wrong; local-alien-info not found: ~S")
 			 whole))))
     (values nil
 	    nil
@@ -1854,7 +1854,7 @@ If so return true; otherwise call ALTERNATIVE."
 (defun %local-alien-addr (info alien)
   (declare (type local-alien-info info))
   (unless (local-alien-info-force-to-memory-p info)
-    (error _"~S isn't forced to memory.  Something went wrong." alien))
+    (error (intl:gettext "~S isn't forced to memory.  Something went wrong.") alien))
   alien)
 
 (defun dispose-local-alien (info alien)
@@ -1885,7 +1885,7 @@ If so return true; otherwise call ALTERNATIVE."
 			    (eq (car info-arg) 'quote)
 			    (second info-arg)))))
 		(unless (local-alien-info-p info)
-		  (error _"Something is wrong, local-alien-info not found: ~S"
+		  (error (intl:gettext "Something is wrong, local-alien-info not found: ~S")
 			 form))
 		(setf (local-alien-info-force-to-memory-p info) t))
 	      (cons '%local-alien-addr (cdr form)))))
@@ -1893,7 +1893,7 @@ If so return true; otherwise call ALTERNATIVE."
 	   (let ((kind (info variable kind form)))
 	     (when (eq kind :alien)
 	       `(%heap-alien-addr ',(info variable alien-info form))))))
-	(error _"~S is not a valid L-value" form))))
+	(error (intl:gettext "~S is not a valid L-value") form))))
 
 
 ;;;; The CAST macro.
@@ -1916,8 +1916,8 @@ If so return true; otherwise call ALTERNATIVE."
 		(alien-array-type-p alien-type)
 		(alien-function-type-p alien-type))
 	    (naturalize (alien-value-sap alien) target-type)
-	    (error _"~S cannot be cast." alien)))
-      (error _"Cannot cast to alien type ~S" (unparse-alien-type target-type))))
+	    (error (intl:gettext "~S cannot be cast.") alien)))
+      (error (intl:gettext "Cannot cast to alien type ~S") (unparse-alien-type target-type))))
 
 
 
@@ -1934,7 +1934,7 @@ If so return true; otherwise call ALTERNATIVE."
 			   (:bits 1)
 			   (:bytes vm:byte-bits)
 			   (:words vm:word-bits))))
-	(error _"Unknown size for alien type ~S."
+	(error (intl:gettext "Unknown size for alien type ~S.")
 	       (unparse-alien-type alien-type)))))
 
 
@@ -1980,7 +1980,7 @@ If so return true; otherwise call ALTERNATIVE."
       (alien-function-type
        (unless (= (length (alien-function-type-arg-types type))
 		  (length args))
-	 (error _"Wrong number of arguments for ~S~%Expected ~D, got ~D."
+	 (error (intl:gettext "Wrong number of arguments for ~S~%Expected ~D, got ~D.")
 		type
 		(length (alien-function-type-arg-types type))
 		(length args)))
@@ -1996,7 +1996,7 @@ If so return true; otherwise call ALTERNATIVE."
 	   (setf (alien-function-type-stub type) stub))
 	 (apply stub alien args)))
       (t
-       (error _"~S is not an alien function." alien)))))
+       (error (intl:gettext "~S is not an alien function.") alien)))))
 
 (defmacro def-alien-routine (name result-type &rest args)
   "Def-Alien-Routine Name Result-Type
@@ -2043,12 +2043,12 @@ If so return true; otherwise call ALTERNATIVE."
 	    (docs arg)
 	    (destructuring-bind (name type &optional (style :in)) arg
 	      (unless (member style '(:in :copy :out :in-out))
-		(error _"Bogus argument style ~S in ~S." style arg))
+		(error (intl:gettext "Bogus argument style ~S in ~S.") style arg))
 	      (unless (eq style :out)
 		(lisp-args name))
 	      (when (and (member style '(:out :in-out))
 			 (typep (parse-alien-type type) 'alien-pointer-type))
-		(error _"Can't use :out or :in-out on pointer-like type:~%  ~S"
+		(error (intl:gettext "Can't use :out or :in-out on pointer-like type:~%  ~S")
 		       type))
 	      (cond ((eq style :in)
 		     (arg-types type)
@@ -2229,7 +2229,7 @@ type and arg types), so we can detect incompatible redefinitions."
 	   (len (* page-size (ceiling length page-size))))
       (unless (unix::unix-mprotect code-base len
 				   (logior unix:prot_exec unix:prot_read unix:prot_write))
-	(warn _"Unable to mprotect ~S bytes (~S) at ~S (~S).  Callbacks may not work."
+	(warn (intl:gettext "Unable to mprotect ~S bytes (~S) at ~S (~S).  Callbacks may not work.")
 	      len length code-base code)))
     (new-assem:segment-map-output segment
       (lambda (sap length)
@@ -2271,12 +2271,12 @@ type and arg types), so we can detect incompatible redefinitions."
 			  (setf (callback-function-type callback) fn-type)
 			  callback)
 			 (t
-			  (let ((e (format nil _"~
+			  (let ((e (format nil (intl:gettext "~
 Attempt to redefine callback with incompatible return type.
    Old type was: ~A 
-    New type is: ~A" old-type fn-type))
-				(c (format nil _"~
-Create new trampoline (old trampoline calls old lisp function).")))
+    New type is: ~A") old-type fn-type))
+				(c (format nil (intl:gettext "~
+Create new trampoline (old trampoline calls old lisp function)."))))
 			    (cerror c e)
 			    (register-new-callback))))))
 		(t (register-new-callback))))
@@ -2290,7 +2290,7 @@ Create new trampoline (old trampoline calls old lisp function).")))
     (typecase type
       ((or integer$ single$ double$ pointer$ sap$)
        (ceiling (word-aligned-bits type) vm:byte-bits))
-      (t (error _"Unsupported argument type: ~A" spec)))))
+      (t (error (intl:gettext "Unsupported argument type: ~A") spec)))))
 
 (defun parse-return-type (spec)
   (let ((*values-type-okay* t))
@@ -2311,7 +2311,7 @@ Create new trampoline (old trampoline calls old lisp function).")))
 	 (store `(unsigned ,(word-aligned-bits type))))
 	((or single$ double$ pointer$ sap$)
 	 (store spec))
-	(t (error _"Unsupported return type: ~A" spec))))))
+	(t (error (intl:gettext "Unsupported return type: ~A") spec))))))
 
 (defmacro def-callback (name (return-type &rest arg-specs) &parse-body (body decls doc))
   "(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*)

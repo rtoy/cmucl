@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.20 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.21 2010/04/20 17:57:43 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -146,12 +146,12 @@
       (string (if (= 1 (length (the string object)))
 		  (char object 0)
 		  (do-error
-		   _"String is not of length one: ~S" (list object))))
+		   (intl:gettext "String is not of length one: ~S") (list object))))
       (symbol (if (= 1 (length (symbol-name object)))
 		  (schar (symbol-name object) 0)
 		  (do-error
-		   _"Symbol name is not of length one: ~S" (list object))))
-      (t (do-error _"~S cannot be coerced to a character." (list object))))))
+		   (intl:gettext "Symbol name is not of length one: ~S") (list object))))
+      (t (do-error (intl:gettext "~S cannot be coerced to a character.") (list object))))))
 
 
 (defun char-name (char)

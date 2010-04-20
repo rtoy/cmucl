@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.38 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.39 2010/04/20 17:57:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -74,7 +74,7 @@
 			     (symbol #'unix-signal-%name)
 			     (number #'unix-signal-%number)))))
     (unless signal
-      (error _"~S is not a valid signal name or number." arg))
+      (error (intl:gettext "~S is not a valid signal name or number.") arg))
     signal))
 
 (defun unix-signal-name (signal)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.155 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.156 2010/04/20 17:57:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -355,7 +355,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	    (when (and *compiler-trace-output*
 		       (backend-disassem-params *backend*))
 	      (format *compiler-trace-output*
-		      _"~|~%Disassembly of code for ~S~2%" component)
+		      (intl:gettext "~|~%Disassembly of code for ~S~2%") component)
 	      (disassem:disassemble-assem-segment *code-segment*
 						  *compiler-trace-output*
 						  *backend*))
@@ -435,7 +435,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
     (when *compile-print*
       (compiler-mumble "~&")
       (pprint-logical-block (*compiler-error-output* nil :per-line-prefix "; ")
-	(compiler-mumble _"~:[~;Byte ~]Compiling ~A: "
+	(compiler-mumble (intl:gettext "~:[~;Byte ~]Compiling ~A: ")
 		       *byte-compiling*
 		       (component-name component))))
 
@@ -608,11 +608,11 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		   (zerop *compiler-warning-count*)
 		   (zerop *compiler-note-count*)))
     (compiler-mumble
-     _"~2&; Compilation unit ~:[finished~;aborted~].~
+     (intl:gettext "~2&; Compilation unit ~:[finished~;aborted~].~
       ~[~:;~:*~&;   ~D fatal error~:P~]~
       ~[~:;~:*~&;   ~D error~:P~]~
       ~[~:;~:*~&;   ~D warning~:P~]~
-      ~[~:;~:*~&;   ~D note~:P~]~2%"
+      ~[~:;~:*~&;   ~D note~:P~]~2%")
      abort-p
      abort-count
      *compiler-error-count*
@@ -628,17 +628,17 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 ;;;
 (defun describe-component (component *standard-output*)
   (declare (type component component))
-  (format t _"~|~%;;;; Component: ~S~2%" (component-name component))
+  (format t (intl:gettext "~|~%;;;; Component: ~S~2%") (component-name component))
   (print-blocks component)  
   (undefined-value))
 
 
 (defun describe-ir2-component (component *standard-output*)
-  (format t _"~%~|~%;;;; IR2 component: ~S~2%" (component-name component))
+  (format t (intl:gettext "~%~|~%;;;; IR2 component: ~S~2%") (component-name component))
   
-  (format t _"Entries:~%")
+  (format t (intl:gettext "Entries:~%"))
   (dolist (entry (ir2-component-entries (component-info component)))
-    (format t _"~4TL~D: ~S~:[~; [Closure]~]~%"
+    (format t (intl:gettext "~4TL~D: ~S~:[~; [Closure]~]~%")
 	    (label-id (entry-info-offset entry))
 	    (entry-info-name entry)
 	    (entry-info-closure-p entry)))
@@ -784,7 +784,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	      (end (file-position stream)))
 	  (when (>= end pos)
 	    (compiler-read-error 
-	     pos _"Read error at ~D:~% \"~A/\\~A\"~%~A"
+	     pos (intl:gettext "Read error at ~D:~% \"~A/\\~A\"~%~A")
 	     pos (string-left-trim '(#\space #\tab)
 				   (subseq line 0 (- pos start)))
 	     (subseq line (- pos start))
@@ -853,8 +853,8 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
           (progn
             (normal-read-error stream pos condition)
             (ignore-error-form stream pos)))
-      '(cerror _"Skip this form."
-	       _"Attempt to load a file having a compile-time read error."))))
+      '(cerror (intl:gettext "Skip this form.")
+	       (intl:gettext "Attempt to load a file having a compile-time read error.")))))
 
 
 ;;; Get-Source-Stream  --  Internal
@@ -1097,7 +1097,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	   (let ((comment (coerce (second form) 'simple-string)))
 	     (setf (file-info-comment file) comment)
 	     (when *compile-verbose*
-	       (compiler-mumble _"~&; Comment: ~A~2&" comment)))))))
+	       (compiler-mumble (intl:gettext "~&; Comment: ~A~2&") comment)))))))
 
 
 ;;; PROCESS-COLD-LOAD-FORM  --  Internal
@@ -1159,7 +1159,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	    #'(lambda ()
 		(convert-and-maybe-compile
 		 `(error 'simple-program-error
-		    :format-control _"Execution of a form compiled with errors:~% ~S"
+		    :format-control (intl:gettext "Execution of a form compiled with errors:~% ~S")
 		    :format-arguments (list ',form))
 		 path)
 		(throw 'process-form-error-abort nil))))
@@ -1228,7 +1228,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 (defun compile-load-time-value
        (form &optional
 	     (name (let ((*print-level* 2) (*print-length* 3))
-		     (format nil _"Load Time Value of ~S"
+		     (format nil (intl:gettext "Load Time Value of ~S")
 			     (if (and (listp form)
 				      (eq (car form) 'make-value-cell))
 				 (second form)
@@ -1376,7 +1376,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		    constant
 		    (compile-load-time-value
 		     creation-form
-		     (format nil _"Creation Form for ~A" name))
+		     (format nil (intl:gettext "Creation Form for ~A") name))
 		    *compile-object*)
 		   nil)
 	       (compiler-error _N"Circular references in creation form for ~S"
@@ -1391,7 +1391,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 			 finally
 			 (compile-make-load-form-init-forms
 			  forms
-			  (format nil _"Init Form~:[~;s~] for ~{~A~^, ~}"
+			  (format nil (intl:gettext "Init Form~:[~;s~] for ~{~A~^, ~}")
 				  (cdr forms) names)))
 		       nil)))
 	       (when circular-ref
@@ -1585,7 +1585,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	   (*compiler-error-bailout*
 	    #'(lambda ()
 		(compiler-mumble
-		 _"~2&Fatal error, aborting compilation...~%")
+		 (intl:gettext "~2&Fatal error, aborting compilation...~%"))
 		(return-from sub-compile-file :error)))
 	   (*current-path* nil)
 	   (*last-source-context* nil)
@@ -1635,7 +1635,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		   new
 		   (and error-p (truename new))))))
       (unless stuff
-	(error _"Can't compile with no source files."))
+	(error (intl:gettext "Can't compile with no source files.")))
       (mapcar #'(lambda (x)
 		  (let ((x (pathname (merge-pathnames x))))
 		    (cond ((typep x 'logical-pathname)
@@ -1704,14 +1704,14 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 ;;;
 (defun start-error-output (source-info)
   (declare (type source-info source-info))
-  (compiler-mumble _"~2&; Python version ~A, VM version ~A on ~A.~%"
+  (compiler-mumble (intl:gettext "~2&; Python version ~A, VM version ~A on ~A.~%")
 		   compiler-version (backend-version *backend*)
 		   (ext:format-universal-time nil (get-universal-time)
 					      :style :government
 					      :print-weekday nil
 					      :print-timezone nil))
   (dolist (x (source-info-files source-info))
-    (compiler-mumble _"; Compiling: ~A ~A~%"
+    (compiler-mumble (intl:gettext "; Compiling: ~A ~A~%")
 		     (namestring (file-info-name x))
 		     (ext:format-universal-time nil (file-info-write-date x)
 						:style :government
@@ -1722,7 +1722,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 ;;;
 (defun finish-error-output (source-info won)
   (declare (type source-info source-info))
-  (compiler-mumble _"~&; Compilation ~:[aborted after~;finished in~] ~A.~&"
+  (compiler-mumble (intl:gettext "~&; Compilation ~:[aborted after~;finished in~] ~A.~&")
 		   won
 		   (elapsed-time-to-string
 		    (- (get-universal-time)
@@ -1863,7 +1863,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	(close-fasl-file fasl-file (not compile-won))
 	(setq output-file-pathname (pathname (fasl-file-stream fasl-file)))
 	(when (and compile-won *compile-verbose*)
-	  (compiler-mumble _"~2&; ~A written.~%"
+	  (compiler-mumble (intl:gettext "~2&; ~A written.~%")
 			   (namestring output-file-pathname))))
 
       (when *compile-verbose*
@@ -1884,7 +1884,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 
     (when load
       (unless output-file
-	(error _"Can't :LOAD with no output file."))
+	(error (intl:gettext "Can't :LOAD with no output file.")))
       (load output-file-pathname :verbose *compile-verbose*))
 
     (values (if output-file
@@ -1905,9 +1905,9 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
       (multiple-value-bind (def env-p)
 			   (function-lambda-expression definition)
 	(when env-p
-	  (error _"~S was defined in a non-null environment." definition))
+	  (error (intl:gettext "~S was defined in a non-null environment.") definition))
 	(unless def
-	  (error _"Can't find a definition for ~S." definition))
+	  (error (intl:gettext "Can't find a definition for ~S.") definition))
 	def)))
 
 
@@ -1982,7 +1982,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	     (*compiler-error-bailout*
 	      #'(lambda ()
 		  (compiler-mumble
-		   _"~2&Fatal error, aborting compilation...~%")
+		   (intl:gettext "~2&Fatal error, aborting compilation...~%"))
 		  (return-from compile (values nil t nil))))
 	     (*compiler-error-output* *error-output*)
 	     (*compiler-trace-output* nil)
@@ -2041,7 +2041,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
   error."
   (let ((def (fdefinition name)))
     (if (eval:interpreted-function-p def)
-	(warn _"~S is already interpreted." name)
+	(warn (intl:gettext "~S is already interpreted.") name)
 	(setf (fdefinition name)
 	      (coerce (get-lambda-to-compile def) 'function))))
   name)
@@ -2081,8 +2081,8 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	     (error 'simple-type-error
 		    :datum input-file
 		    :expected-type 'file-stream
-		    :format-control _"The ~A parameter is a ~S, which is an invalid value ~@
-            to COMPILE-FILE-PATHNAME."
+		    :format-control (intl:gettext "The ~A parameter is a ~S, which is an invalid value ~@
+            to COMPILE-FILE-PATHNAME.")
 		    :format-arguments (list name (type-of input-file))))
 	   ;; Maybe this is too much.  CLHS says "might".
 	   (when (wild-pathname-p input-file)

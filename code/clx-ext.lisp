@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.23 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.24 2010/04/20 17:57:44 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -72,15 +72,15 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
       (declare (simple-string string))
       (let ((colon (position #\: string :test #'char=)))
 	(cond ((null colon)
-	       (error _"Missing display number in DISPLAY environment variable."))
+	       (error (intl:gettext "Missing display number in DISPLAY environment variable.")))
 	      (t
 	       (unless (zerop colon) (setf host-name (subseq string 0 colon)))
 	       (let* ((start (1+ colon))
 		      (first-dot (position #\. string
 					   :test #'char= :start start)))
 		 (cond ((= start (or first-dot length))
-			(error _"Badly formed display number in DISPLAY ~
-				environment variable."))
+			(error (intl:gettext "Badly formed display number in DISPLAY ~
+				environment variable.")))
 		       ((null first-dot)
 			(setf display-num (parse-integer string :start start)))
 		       (t
@@ -90,8 +90,8 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 			       (second-dot (position #\. string :test #'char=
 						     :start start)))
 			  (cond ((= start (or second-dot length))
-				 (error _"Badly formed screen number in ~
-					 DISPLAY environment variable."))
+				 (error (intl:gettext "Badly formed screen number in ~
+					 DISPLAY environment variable.")))
 				(t
 				 (setf screen-num
 				       (parse-integer string :start start
@@ -102,7 +102,7 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 		 (num-screens (length screens)))
 	    (when (>= screen-num num-screens)
 	      (xlib:close-display display)
-	      (error _"No such screen number (~D)." screen-num))
+	      (error (intl:gettext "No such screen number (~D).") screen-num))
 	    (setf (xlib:display-default-screen display)
 		  (elt screens screen-num))))
 	(values display (xlib:display-default-screen display))))))
@@ -199,13 +199,13 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 			     (fd-stream-fd
 			      (xlib::display-input-stream
 			       (car d/h))))))
-      (error _"File descriptor ~S not associated with any CLX display.~%~
-                It has been removed from system:serve-event's knowledge."
+      (error (intl:gettext "File descriptor ~S not associated with any CLX display.~%~
+                It has been removed from system:serve-event's knowledge.")
 	     file-descriptor))
     (let ((handler (cdr (assoc display *display-event-handlers*))))
       (unless handler
 	(flush-display-events display)
-	(error _"Display ~S not associated with any event handler." display))
+	(error (intl:gettext "Display ~S not associated with any event handler.") display))
       (handler-bind ((error #'(lambda (condx)
 				(declare (ignore condx))
 				(flush-display-events display))))
@@ -255,13 +255,13 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 		  (unless object
 		    (cond ((not (typep event-window 'xlib:window))
 			   (xlib:discard-current-event display)
-			   (warn _"Discarding ~S event on non-window ~S."
+			   (warn (intl:gettext "Discarding ~S event on non-window ~S.")
 				 ,event-key event-window)
 			   (return-from object-set-event-handler nil))
 			  (t
 			   (flush-display-events display)
-			   (error _"~S not a known X window.~%~
-			           Received event ~S."
+			   (error (intl:gettext "~S not a known X window.~%~
+			           Received event ~S.")
 				  event-window ,event-key))))
 		  (handler-bind ((error #'(lambda (condx)
 					    (declare (ignore condx))
@@ -308,7 +308,7 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 	(:FOCUS-OUT (event-window mode kind send-event-p)
 	 (dispatch :focus-out event-window mode kind send-event-p))
 	(:KEYMAP-NOTIFY ()
-	 (warn _"Ignoring keymap notify event.")
+	 (warn (intl:gettext "Ignoring keymap notify event."))
 	 (when *object-set-event-handler-print*
 	   (print :keymap-notify) (force-output))
 	 (setf result t))
@@ -365,7 +365,7 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 	 (dispatch :colormap-notify event-window colormap new-p installed-p
 		   send-event-p))
 	(:MAPPING-NOTIFY (request)
-	 (warn _"Ignoring mapping notify event -- ~S." request)
+	 (warn (intl:gettext "Ignoring mapping notify event -- ~S.") request)
 	 (when *object-set-event-handler-print*
 	   (print :mapping-notify) (force-output))
 	 (setf result t))
@@ -376,7 +376,7 @@ default display as given by GET-DEFAULT-DISPLAY otherwise."
 (defun default-clx-event-handler (object event-key event-window &rest ignore)
   (declare (ignore ignore))
   (flush-display-events *process-clx-event-display*)
-  (error _"No handler for event type ~S on ~S in ~S."
+  (error (intl:gettext "No handler for event type ~S on ~S in ~S.")
 	 event-key object (lisp::map-xwindow event-window)))
 
 (defun flush-display-events (display)

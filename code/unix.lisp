@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.129 2010/04/16 19:59:16 agoncharov Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.130 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2697,7 +2697,7 @@
 		(cond ((eq kind :link)
 		       (multiple-value-bind (link err) (unix-readlink result)
 			 (unless link
-			   (error _"Error reading link ~S: ~S"
+			   (error (intl:gettext "Error reading link ~S: ~S")
 				  (subseq result 0 fill-ptr)
 				  (get-unix-error-msg err)))
 			 (cond ((or (zerop (length link))

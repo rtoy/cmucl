@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.22 2010/04/19 17:49:02 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.23 2010/04/20 17:57:47 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -122,7 +122,7 @@
 (def-alien-type-method (values :result-tn) (type state)
   (let ((values (alien-values-type-values type)))
     (when (> (length values) 2)
-      (error _"Too many result values from c-call."))
+      (error (intl:gettext "Too many result values from c-call.")))
     (mapcar #'(lambda (type)
 		(invoke-alien-type-method :result-tn type state))
 	    (alien-values-type-values type))))

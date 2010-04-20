@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.100 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.101 2010/04/20 17:57:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -322,9 +322,9 @@
 (defun compiler-layout-or-lose (name)
   (let ((res (info type compiler-layout name)))
     (cond ((not res)
-	   (error _"Class not yet defined or was undefined: ~S" name))
+	   (error (intl:gettext "Class not yet defined or was undefined: ~S") name))
 	  ((not (typep (layout-info res) 'defstruct-description))
-	   (error _"Class is not a structure class: ~S" name))
+	   (error (intl:gettext "Class is not a structure class: ~S") name))
 	  (t res))))
 
 (defun dd-maybe-make-print-method (defstruct)
@@ -458,21 +458,21 @@
       (restart-case
 	  (error 'lisp::package-locked-error
 		 :package pkg
-		 :format-control _"defining structure ~A"
+		 :format-control (intl:gettext "defining structure ~A")
 		 :format-arguments (list name))
 	(continue ()
 	  :report (lambda (stream)
-		    (write-string _"Ignore the lock and continue" stream)))
+		    (write-string (intl:gettext "Ignore the lock and continue") stream)))
 	(unlock-package ()
 	  :report (lambda (stream)
-		    (write-string _"Disable package's definition lock then continue" stream))
+		    (write-string (intl:gettext "Disable package's definition lock then continue") stream))
 	  (setf (ext:package-definition-lock pkg) nil))
         (unlock-all ()
           :report (lambda (stream)
-		    (write-string _"Unlock all packages, then continue" stream))
+		    (write-string (intl:gettext "Unlock all packages, then continue") stream))
           (lisp::unlock-all-packages))))
     (when (info declaration recognized name)
-      (error _"Defstruct already names a declaration: ~S." name))
+      (error (intl:gettext "Defstruct already names a declaration: ~S.") name))
     (when (stringp (car slot-descriptions))
       (setf (dd-doc defstruct) (pop slot-descriptions)))
     (dolist (slot slot-descriptions)
@@ -530,7 +530,7 @@
 	 (setf (dd-predicate defstruct) pred)))
       (:include
        (when (dd-include defstruct)
-	 (error _"Can't have more than one :INCLUDE option."))
+	 (error (intl:gettext "Can't have more than one :INCLUDE option.")))
        (setf (dd-include defstruct) args))
       (:alternate-metaclass
        (setf (dd-alternate-metaclass defstruct) args))
@@ -553,9 +553,9 @@
 		  (setf (dd-element-type defstruct) vtype)
 		  (setf (dd-type defstruct) 'vector)))
 	       (t
-		(error _"~S is a bad :TYPE for Defstruct." type)))))
+		(error (intl:gettext "~S is a bad :TYPE for Defstruct.") type)))))
       (:named
-       (error _"The Defstruct option :NAMED takes no arguments."))
+       (error (intl:gettext "The Defstruct option :NAMED takes no arguments.")))
       (:initial-offset
        (destructuring-bind (offset) args
 	 (setf (dd-offset defstruct) offset)))
@@ -565,7 +565,7 @@
       (:pure
        (destructuring-bind (fun) args
 	 (setf (dd-pure defstruct) fun)))
-      (t (error _"Unknown DEFSTRUCT option~%  ~S" option)))))
+      (t (error (intl:gettext "Unknown DEFSTRUCT option~%  ~S") option)))))
 
 #+ORIGINAL
 (defun parse-1-option (option defstruct)
@@ -593,7 +593,7 @@
 	 (setf (dd-predicate defstruct) pred)))
       (:include
        (when (dd-include defstruct)
-	 (error _"Can't have more than one :INCLUDE option."))
+	 (error (intl:gettext "Can't have more than one :INCLUDE option.")))
        (setf (dd-include defstruct) args))
       (:alternate-metaclass
        (setf (dd-alternate-metaclass defstruct) args))
@@ -613,9 +613,9 @@
 		  (setf (dd-element-type defstruct) vtype)
 		  (setf (dd-type defstruct) 'vector)))
 	       (t
-		(error _"~S is a bad :TYPE for Defstruct." type)))))
+		(error (intl:gettext "~S is a bad :TYPE for Defstruct.") type)))))
       (:named
-       (error _"The Defstruct option :NAMED takes no arguments."))
+       (error (intl:gettext "The Defstruct option :NAMED takes no arguments.")))
       (:initial-offset
        (destructuring-bind (offset) args
 	 (setf (dd-offset defstruct) offset)))
@@ -625,7 +625,7 @@
       (:pure
        (destructuring-bind (fun) args
 	 (setf (dd-pure defstruct) fun)))
-      (t (error _"Unknown DEFSTRUCT option~%  ~S" option)))))
+      (t (error (intl:gettext "Unknown DEFSTRUCT option~%  ~S") option)))))
 
 
 ;;; PARSE-NAME-AND-OPTIONS  --  Internal
@@ -644,20 +644,20 @@
 				:conc-name))
 	       (parse-1-option (list option) defstruct))
 	      (t
-	       (error _"Unrecognized DEFSTRUCT option: ~S" option))))
+	       (error (intl:gettext "Unrecognized DEFSTRUCT option: ~S") option))))
 
       (case (dd-type defstruct)
 	(structure
 	 (when (dd-offset defstruct)
-	   (error _"Can't specify :OFFSET unless :TYPE is specified."))
+	   (error (intl:gettext "Can't specify :OFFSET unless :TYPE is specified.")))
 	 (unless (dd-include defstruct)
 	   (incf (dd-length defstruct))))
 	(funcallable-structure)
 	(t
 	 (when (dd-print-function defstruct)
-	   (warn _"Silly to specify :PRINT-FUNCTION with :TYPE."))
+	   (warn (intl:gettext "Silly to specify :PRINT-FUNCTION with :TYPE.")))
 	 (when (dd-make-load-form-fun defstruct)
-	   (warn _"Silly to specify :MAKE-LOAD-FORM-FUN with :TYPE."))
+	   (warn (intl:gettext "Silly to specify :MAKE-LOAD-FORM-FUN with :TYPE.")))
 	 (when (dd-named defstruct) (incf (dd-length defstruct)))
 	 (let ((offset (dd-offset defstruct)))
 	   (when offset (incf (dd-length defstruct) offset)))))
@@ -688,13 +688,13 @@
 	       (values name default default-p type type-p read-only ro-p)))
 	    (t
 	     (when (keywordp spec)
-	       (warn _"Keyword slot name indicates probable syntax ~
-		      error in DEFSTRUCT -- ~S."
+	       (warn (intl:gettext "Keyword slot name indicates probable syntax ~
+		      error in DEFSTRUCT -- ~S.")
 		     spec))
 	     spec))
     (when (find name (dd-slots defstruct) :test #'string= :key #'dsd-%name)
       (error 'simple-program-error
-	     :format-control _"Duplicate slot name ~S."
+	     :format-control (intl:gettext "Duplicate slot name ~S.")
 	     :format-arguments (list name)))
     (setf (dsd-name islot) name)
     (setf (dd-slots defstruct) (nconc (dd-slots defstruct) (list islot)))
@@ -710,7 +710,7 @@
       (if read-only
 	  (setf (dsd-read-only islot) t)
 	  (when (dsd-read-only islot)
-	    (error _"Slot ~S must be read-only in subtype ~S." name
+	    (error (intl:gettext "Slot ~S must be read-only in subtype ~S.") name
 		   (dsd-name islot)))))
     islot))
 
@@ -780,7 +780,7 @@
       (unless (and (eq type (dd-type included-structure))
 		   (type= (specifier-type (dd-element-type included-structure))
 			  (specifier-type (dd-element-type defstruct))))
-	(error _":TYPE option mismatch between structures ~S and ~S."
+	(error (intl:gettext ":TYPE option mismatch between structures ~S and ~S.")
 	       (dd-name defstruct) included-name))
       
       (incf (dd-length defstruct) (dd-length included-structure))
@@ -830,7 +830,7 @@
 
 (defun typed-structure-info-or-lose (name)
   (or (info typed-structure info name)
-      (error _":TYPE'd defstruct ~S not found for inclusion." name)))
+      (error (intl:gettext ":TYPE'd defstruct ~S not found for inclusion.") name)))
 
 ;;; %GET-COMPILER-LAYOUT  --  Internal
 ;;;
@@ -1105,7 +1105,7 @@
 
     (when no-constructors
       (when (or defaults boas)
-	(error _"(:CONSTRUCTOR NIL) combined with other :CONSTRUCTORs."))
+	(error (intl:gettext "(:CONSTRUCTOR NIL) combined with other :CONSTRUCTORs.")))
       (return-from define-constructors ()))
 
     (unless (or defaults boas)
@@ -1265,9 +1265,9 @@
 		((not (= (cdr inherited) index))
 		 (warn 'simple-style-warning
 		       :format-control
-		       _"~@<Non-overwritten accessor ~S does not access ~
+		       (intl:gettext "~@<Non-overwritten accessor ~S does not access ~
                         slot with name ~S (accessing an inherited slot ~
-                        instead).~:@>"
+                        instead).~:@>")
 		       :format-arguments (list aname (dsd-%name slot))))))
 	))
     (stuff)))
@@ -1337,7 +1337,7 @@
 (defun typep-to-layout (obj layout &optional no-error)
   (declare (type layout layout) (optimize (speed 3) (safety 0)))
   (when (layout-invalid layout)
-    (error _"Obsolete structure accessor function called."))
+    (error (intl:gettext "Obsolete structure accessor function called.")))
   (and (%instancep obj)
        (let ((depth (layout-inheritance-depth layout))
 	     (obj-layout (%instance-layout obj)))
@@ -1369,7 +1369,7 @@
 	      (error 'simple-type-error
 		     :datum structure
 		     :expected-type class
-		     :format-control _"Structure for accessor ~S is not a ~S:~% ~S"
+		     :format-control (intl:gettext "Structure for accessor ~S is not a ~S:~% ~S")
 		     :format-arguments (list (dsd-accessor dsd)
 					     (%class-name class)
 					     structure)))
@@ -1380,7 +1380,7 @@
 	      (error 'simple-type-error
 		     :datum structure
 		     :expected-type class
-		     :format-control _"Structure for accessor ~S is not a ~S:~% ~S"
+		     :format-control (intl:gettext "Structure for accessor ~S is not a ~S:~% ~S")
 		     :format-arguments (list (dsd-accessor dsd) class
 					     structure)))
 	    (%instance-ref structure (dsd-index dsd))))))
@@ -1394,7 +1394,7 @@
 	      (error 'simple-type-error
 		     :datum structure
 		     :expected-type class
-		     :format-control _"Structure for setter ~S is not a ~S:~% ~S"
+		     :format-control (intl:gettext "Structure for setter ~S is not a ~S:~% ~S")
 		     :format-arguments (list `(setf ,(dsd-accessor dsd))
 					     (%class-name class)
 					     structure)))
@@ -1402,7 +1402,7 @@
 	      (error 'simple-type-error
 		     :datum new-value
 		     :expected-type (dsd-type dsd)
-		     :format-control _"New-Value for setter ~S is not a ~S:~% ~S."
+		     :format-control (intl:gettext "New-Value for setter ~S is not a ~S:~% ~S.")
 		     :format-arguments (list `(setf ,(dsd-accessor dsd))
 					     (dsd-type dsd)
 					     new-value)))
@@ -1413,7 +1413,7 @@
 	      (error 'simple-type-error
 		     :datum structure
 		     :expected-type class
-		     :format-control _"Structure for setter ~S is not a ~S:~% ~S"
+		     :format-control (intl:gettext "Structure for setter ~S is not a ~S:~% ~S")
 		     :format-arguments (list `(setf ,(dsd-accessor dsd))
 					     (%class-name class)
 					     structure)))
@@ -1421,7 +1421,7 @@
 	      (error 'simple-type-error
 		     :datum new-value
 		     :expected-type (dsd-type dsd)
-		     :format-control _"New-Value for setter ~S is not a ~S:~% ~S."
+		     :format-control (intl:gettext "New-Value for setter ~S is not a ~S:~% ~S.")
 		     :format-arguments (list `(setf ,(dsd-accessor dsd))
 					     (dsd-type dsd)
 					     new-value)))
@@ -1491,7 +1491,7 @@
 		    (error 'simple-type-error
 			   :datum structure
 			   :expected-type class
-			   :format-control _"Structure for copier is not a ~S:~% ~S"
+			   :format-control (intl:gettext "Structure for copier is not a ~S:~% ~S")
 			   :format-arguments (list class structure)))
 		  (copy-structure structure))))
 
@@ -1562,8 +1562,8 @@
 	     (setf (layout-info old-layout) info)
 	     (values class old-layout nil))
 	    (t
-	     (warn _"Shouldn't happen!  Some strange thing in LAYOUT-INFO:~
-		    ~%  ~S"
+	     (warn (intl:gettext "Shouldn't happen!  Some strange thing in LAYOUT-INFO:~
+		    ~%  ~S")
 		   old-layout)
 	     (values class new-layout old-layout)))))))))
 	    
@@ -1609,11 +1609,11 @@
 			 (compare-slots old new)
       (when (or moved retyped deleted)
 	(warn 
-	 _"Incompatibly redefining slots of structure class ~S~@
+	 (intl:gettext "Incompatibly redefining slots of structure class ~S~@
 	  Make sure any uses of affected accessors are recompiled:~@
 	  ~@[  These slots were moved to new positions:~%    ~S~%~]~
 	  ~@[  These slots have new incompatible types:~%    ~S~%~]~
-	  ~@[  These slots were deleted:~%    ~S~%~]"
+	  ~@[  These slots were deleted:~%    ~S~%~]")
 	 name moved retyped deleted)
 	t))))
 
@@ -1635,21 +1635,21 @@
   (declare (type class class) (type layout old-layout new-layout))
   (let ((name (class-proper-name class)))
     (restart-case
-	(error _"Redefining class ~S incompatibly with the current ~
-		definition."
+	(error (intl:gettext "Redefining class ~S incompatibly with the current ~
+		definition.")
 	       name)
       (continue ()
 	:report (lambda (stream)
-		  (write-string _"Invalidate already loaded code and instances, use new definition."
+		  (write-string (intl:gettext "Invalidate already loaded code and instances, use new definition.")
 				stream))
-	(warn _"Previously loaded ~S accessors will no longer work." name)
+	(warn (intl:gettext "Previously loaded ~S accessors will no longer work.") name)
 	(register-layout new-layout))
       (clobber-it ()
 	:report (lambda (stream)
 		  (write-string "Assume redefinition is compatible, allow old code and instances."
 				stream))
-	(warn _"Any old ~S instances will be in a bad way.~@
-	       I hope you know what you're doing..."
+	(warn (intl:gettext "Any old ~S instances will be in a bad way.~@
+	       I hope you know what you're doing...")
 	      name)
 	(register-layout new-layout :invalidate nil
 			 :destruct-layout old-layout))))
@@ -1759,7 +1759,7 @@
 	    (undefine-structure class)
 	    (subs (class-proper-name class)))
 	  (when (subs)
-	    (warn _"Removing old subclasses of ~S:~%  ~S"
+	    (warn (intl:gettext "Removing old subclasses of ~S:~%  ~S")
 		  (%class-name class) (subs))))))
      (t
       (unless (eq (%class-layout class) layout)
@@ -1803,9 +1803,9 @@
 	       (unless (= (cdr inherited) (dsd-index slot))
 		 (warn 'simple-style-warning
 		       :format-control
-		       _"~@<Non-overwritten accessor ~S does not access ~
+		       (intl:gettext "~@<Non-overwritten accessor ~S does not access ~
                         slot with name ~S (accessing an inherited slot ~
-                        instead).~:@>"
+                        instead).~:@>")
 		       :format-arguments (list aname (dsd-%name slot)))))
 	      (t
 	       (unless (or (dsd-inherited-p info slot)
@@ -1835,7 +1835,7 @@
 	 (layout (%instance-layout structure)))
     (declare (type index len))
     (when (layout-invalid layout)
-      (error _"Copying an obsolete structure:~%  ~S" structure))
+      (error (intl:gettext "Copying an obsolete structure:~%  ~S") structure))
     
     (dotimes (i len)
       (declare (type index i))
@@ -1928,7 +1928,7 @@
       ((member :just-dump-it-normally :ignore-it)
        fun)
       (null
-       (error _"Structures of type ~S cannot be dumped as constants."
+       (error (intl:gettext "Structures of type ~S cannot be dumped as constants.")
 	      (%class-name class)))
       (function
        (funcall fun structure))

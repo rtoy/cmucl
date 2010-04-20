@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.55 2010/04/19 18:21:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.56 2010/04/20 17:57:47 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,12 +35,12 @@
     (t
      (if (eq (sb-name (sc-sb (tn-sc tn))) 'registers)
 	 (tn-offset tn)
-	 (error _"~S isn't a register." tn)))))
+	 (error (intl:gettext "~S isn't a register.") tn)))))
 
 (defun fp-reg-tn-encoding (tn)
   (declare (type tn tn))
   (unless (eq (sb-name (sc-sb (tn-sc tn))) 'float-registers)
-    (error _"~S isn't a floating-point register." tn))
+    (error (intl:gettext "~S isn't a floating-point register.") tn))
   (let ((offset (tn-offset tn)))
     (cond ((> offset 31)
 	   ;; Use the sparc v9 double float register encoding.
@@ -291,7 +291,7 @@ about function addresses and register values.")
 		   (= rd alloc-offset)
 		   (not *pseudo-atomic-set*))
 	      ;; "ADD 4, %ALLOC" sets the flag
-	      (disassem:note _"Set pseudo-atomic flag" dstate)
+	      (disassem:note (intl:gettext "Set pseudo-atomic flag") dstate)
 	      (setf *pseudo-atomic-set* t))
 	     ((= rd alloc-offset)
 	      ;; "ADD n, %ALLOC" is either allocating space or
@@ -299,17 +299,17 @@ about function addresses and register values.")
 	      (cond (immed-p
 		     (cond ((= immed-val -4)
 			    (disassem:note
-			     (format nil _"Reset pseudo-atomic")
+			     (format nil (intl:gettext "Reset pseudo-atomic"))
 			     dstate)
 			    (setf *pseudo-atomic-set* nil))
 			   (t
 			    (disassem:note
-			     (format nil _"Allocating ~D bytes" immed-val)
+			     (format nil (intl:gettext "Allocating ~D bytes") immed-val)
 			     dstate))))
 		    (t
 		     ;; Some other allocation
 		     (disassem:note
-			     (format nil _"Allocating bytes")
+			     (format nil (intl:gettext "Allocating bytes"))
 			     dstate))))))
       ((and (= rs1 zero-offset) *pseudo-atomic-set*)
        ;; "ADD %ZERO, num, RD" inside a pseudo-atomic is very
@@ -318,7 +318,7 @@ about function addresses and register values.")
        (let ((type (second (assoc (logand immed-val #xff) header-word-type-alist)))
 	     (size (ldb (byte 24 8) immed-val)))
 	 (when type
-	   (disassem:note (format nil _"Header word ~A, size ~D?" type size)
+	   (disassem:note (format nil (intl:gettext "Header word ~A, size ~D?") type size)
 			  dstate)))))))
 
 (defun handle-or-inst (rs1 immed-val rd dstate immed-p)
@@ -331,7 +331,7 @@ about function addresses and register values.")
 		 (= rd alloc-offset)
 		 (not *pseudo-atomic-set*))
 	    ;; "OR 4, %ALLOC" sets the flag
-	    (disassem:note _"Set pseudo-atomic flag" dstate)
+	    (disassem:note (intl:gettext "Set pseudo-atomic flag") dstate)
 	    (setf *pseudo-atomic-set* t))))))
 
 (defun handle-andn-inst (rs1 immed-val rd dstate immed-p)
@@ -344,7 +344,7 @@ about function addresses and register values.")
 		 *pseudo-atomic-set*)
 	    ;; "ANDN 4, %ALLOC" resets the flag
 	    ;;(format t "Got reset~%")
-	    (disassem:note _"Reset pseudo-atomic flag" dstate)
+	    (disassem:note (intl:gettext "Reset pseudo-atomic flag") dstate)
 	    (setf *pseudo-atomic-set* nil))))))
 
 (defun handle-jmpl-inst (rs1 immed-val rd dstate)
@@ -384,7 +384,7 @@ about function addresses and register values.")
 (defun handle-andcc-inst (rs1 immed-val rd dstate)
   ;; ANDCC %ALLOC, 3, %ZERO instruction
   (when (and (= rs1 alloc-offset) (= rd zero-offset) (= immed-val 3))
-    (disassem:note _"pseudo-atomic interrupted?" dstate)))
+    (disassem:note (intl:gettext "pseudo-atomic interrupted?") dstate)))
 	 
 (eval-when (compile load eval)
 (defun reg-arg-printer (value stream dstate)
@@ -456,7 +456,7 @@ about function addresses and register values.")
 
 (defun branch-condition (condition)
   (or (position condition branch-conditions)
-      (error _"Unknown branch condition: ~S~%Must be one of: ~S"
+      (error (intl:gettext "Unknown branch condition: ~S~%Must be one of: ~S")
 	     condition branch-conditions)))
 
 (defconstant branch-cond-true
@@ -478,7 +478,7 @@ about function addresses and register values.")
 
 (defun fp-branch-condition (condition)
   (or (position condition branch-fp-conditions)
-      (error _"Unknown fp-branch condition: ~S~%Must be one of: ~S"
+      (error (intl:gettext "Unknown fp-branch condition: ~S~%Must be one of: ~S")
 	     condition branch-fp-conditions)))
 
 
@@ -547,12 +547,12 @@ about function addresses and register values.")
 (defun integer-condition (condition-reg)
   (declare (type (member :icc :xcc) condition-reg))
   (or (position condition-reg integer-condition-registers)
-      (error _"Unknown integer condition register:  ~S~%"
+      (error (intl:gettext "Unknown integer condition register:  ~S~%")
 	     condition-reg)))
 
 (defun branch-prediction (pred)
   (or (position pred branch-predictions)
-      (error _"Unknown branch prediction:  ~S~%Must be one of: ~S~%"
+      (error (intl:gettext "Unknown branch prediction:  ~S~%Must be one of: ~S~%")
 	     pred branch-predictions)))
 
 (defconstant branch-pred-printer
@@ -767,12 +767,12 @@ about function addresses and register values.")
   (let ((posn (position condition-reg cond-move-condition-registers)))
     (if posn
 	(truncate posn 4)
-	(error _"Unknown conditional move condition register:  ~S~%"
+	(error (intl:gettext "Unknown conditional move condition register:  ~S~%")
 	       condition-reg))))
 
 (defun cond-move-condition (condition-reg)
   (or (position condition-reg cond-move-condition-registers)
-      (error _"Unknown conditional move condition register:  ~S~%" condition-reg)))
+      (error (intl:gettext "Unknown conditional move condition register:  ~S~%") condition-reg)))
 
 (defconstant cond-move-printer
   `(:name cond :tab
@@ -829,7 +829,7 @@ about function addresses and register values.")
 
 (defun register-condition (rcond)
   (or (position rcond cond-move-integer-conditions)
-      (error _"Unknown register condition:  ~S~%" rcond)))
+      (error (intl:gettext "Unknown register condition:  ~S~%") rcond)))
 
 (disassem:define-instruction-format
     (format-4-cond-move-integer 32 :default-printer cond-move-integer-printer)
@@ -981,7 +981,7 @@ about function addresses and register values.")
 			  op3 (reg-tn-encoding src1) 1 src2))
     (fixup
      (unless (or load-store fixup)
-       (error _"Fixups aren't allowed."))
+       (error (intl:gettext "Fixups aren't allowed.")))
      (note-fixup segment :add src2)
      (emit-format-3-immed segment op
 			  (if dest-kind
@@ -1698,9 +1698,9 @@ about function addresses and register values.")
     (let ((*package* (find-package :vm)))
       (case value
 	(#.pseudo-atomic-trap
-	 (disassem:note _"Pseudo atomic interrupted trap?" dstate))
+	 (disassem:note (intl:gettext "Pseudo atomic interrupted trap?") dstate))
 	(#.allocation-trap
-	 (disassem:note _"Allocation trap" dstate)))
+	 (disassem:note (intl:gettext "Allocation trap") dstate)))
       (format stream "~A" value))))
 
 ;; The Sparc Compliance Definition 2.4.1 says only trap numbers 16-31
@@ -1742,9 +1742,9 @@ about function addresses and register values.")
 	;; src2 shouldn't be given (or should be NIL) in this case.
 	(assert (null src2))
 	(unless (typep src1-or-imm '(integer 16 31))
-	  (cerror _"Use it anyway"
-		  _"Immediate trap number ~A specified, but only trap numbers
-   16 to 31 are available to the application"
+	  (cerror (intl:gettext "Use it anyway")
+		  (intl:gettext "Immediate trap number ~A specified, but only trap numbers
+   16 to 31 are available to the application")
 		  src1-or-imm))
 	(emit-format-4-trap segment
 			    #b10

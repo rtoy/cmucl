@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.79 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.80 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,13 +102,13 @@
              (multiple-value-bind (iu it) (internal-symbol-count s)
                (multiple-value-bind (eu et) (external-symbol-count s)
                  (print-unreadable-object (s stream)
-                   (format stream _"The ~A package, ~D/~D internal, ~D/~D external"
+                   (format stream (intl:gettext "The ~A package, ~D/~D internal, ~D/~D external")
                            (package-%name s) iu it eu et)))))
             (t
              (print-unreadable-object (s stream)
-               (format stream _"The ~A package" (package-%name s)))))
+               (format stream (intl:gettext "The ~A package") (package-%name s)))))
       (print-unreadable-object (s stream :identity t)
-	(format stream _"deleted package"))))
+	(format stream (intl:gettext "deleted package")))))
 
 ;;; Can get the name (NIL) of a deleted package.
 ;;;
@@ -142,7 +142,7 @@
 (define-condition package-locked-error (simple-package-error)
   ()
   (:report (lambda (condition stream)
-             (format stream _"~&~@<Attempt to modify the locked package ~A, by ~3i~:_~?~:>"
+             (format stream (intl:gettext "~&~@<Attempt to modify the locked package ~A, by ~3i~:_~?~:>")
                      (package-name (package-error-package condition))
                      (simple-condition-format-control condition)
                      (simple-condition-format-arguments condition)))))
@@ -207,18 +207,18 @@
             (restart-case
                 (error 'package-locked-error
                        :package package
-                       :format-control _"redefining function ~A"
+                       :format-control (intl:gettext "redefining function ~A")
                        :format-arguments (list function))
               (continue ()
                 :report (lambda (stream)
-			  (write-string _"Ignore the lock and continue" stream)))
+			  (write-string (intl:gettext "Ignore the lock and continue") stream)))
               (unlock-package ()
                 :report (lambda (stream)
-			  (write-string _"Disable package's definition-lock, then continue" stream))
+			  (write-string (intl:gettext "Disable package's definition-lock, then continue") stream))
                 (setf (ext:package-definition-lock package) nil))
               (unlock-all ()
                 :report (lambda (stream)
-			  (write-string _"Disable all package locks, then continue" stream))
+			  (write-string (intl:gettext "Disable all package locks, then continue") stream))
                 (unlock-all-packages)))))))))
 
 
@@ -238,7 +238,7 @@
        (setf (schar res 0) name)
        res))
     (t
-     (error _"Bogus ~A name: ~S" kind name))))
+     (error (intl:gettext "Bogus ~A name: ~S") kind name))))
 
 (defun stringify-names (names kind)
   (mapcar #'(lambda (name)
@@ -260,7 +260,7 @@
   (if (packagep thing)
       (let ((name (package-%name thing)))
 	(or name
-	    (error _"Can't do anything to a deleted package: ~S" thing)))
+	    (error (intl:gettext "Can't do anything to a deleted package: ~S") thing)))
       (package-namify thing)))
 
 ;;; package-name-to-package  --  Internal
@@ -294,12 +294,12 @@
                (or (package-name-to-package parent)
 		   (error 'simple-package-error
                           :name child
-                          :format-control _"The parent of ~a does not exist."
+                          :format-control (intl:gettext "The parent of ~a does not exist.")
                           :format-arguments (list child)))))
             (t
 	     (error 'simple-package-error
                     :name child
-                    :format-control _"There is no parent of ~a."
+                    :format-control (intl:gettext "There is no parent of ~a.")
                     :format-arguments (list child)))))))
 
 
@@ -364,7 +364,7 @@
 	       package
 	       (let ((parent-name (package-%name package)))
 		 (unless parent-name
-		   (error _"Can't do anything to a deleted package: ~S"
+		   (error (intl:gettext "Can't do anything to a deleted package: ~S")
 			  package))
 		 (package-name-to-package
 		  (concatenate 'simple-string parent-name "." name)))))
@@ -392,7 +392,7 @@
                    (unless tmp
 		     (error 'simple-package-error
                             :name (string package)
-                            :format-control _"The parent of ~a does not exist."
+                            :format-control (intl:gettext "The parent of ~a does not exist.")
                             :format-arguments (list package)))
                    (setq package tmp))
                  (relative-to package name))))))))
@@ -416,7 +416,7 @@
 (defun package-or-lose (thing)
   (cond ((packagep thing)
 	 (unless (package-%name thing)
-	   (error _"Can't do anything to a deleted package: ~S" thing))
+	   (error (intl:gettext "Can't do anything to a deleted package: ~S") thing))
 	 thing)
 	(t
 	 (let ((thing (package-namify thing)))
@@ -426,7 +426,7 @@
 		  ;; but the resulting message is somewhat unclear.
 		  ;; May need a new condition type?
 		  (with-simple-restart
-		      (continue _"Make this package.")
+		      (continue (intl:gettext "Make this package."))
 		    (error 'type-error
 			   :datum thing
 			   :expected-type 'package))
@@ -469,7 +469,7 @@
 	     (lambda (table stream d)
 	       (declare (ignore d) (stream stream))
 	       (format stream
-		       _"#<Package-Hashtable: Size = ~D, Free = ~D, Deleted = ~D>"
+		       (intl:gettext "#<Package-Hashtable: Size = ~D, Free = ~D, Deleted = ~D>")
 		       (package-hashtable-size table)
 		       (package-hashtable-free table)
 		       (package-hashtable-deleted table)))))
@@ -779,7 +779,7 @@
 					 (or (find-package package)
 					     (error 'simple-package-error
 						    :name (string package)
-						    :format-control _"~@<~S does not name a package ~:>"
+						    :format-control (intl:gettext "~@<~S does not name a package ~:>")
 						    :format-arguments (list package)))))
 				 (if (consp ,these-packages)
 				     ,these-packages
@@ -829,12 +829,12 @@
 				  (,',init-macro ,(car ',ordered-types)))))))
 	 (when ,packages
 	   ,(when (null symbol-types)
-	      (simple-program-error _"Must supply at least one of :internal, ~
-	                             :external, or :inherited."))
+	      (simple-program-error (intl:gettext "Must supply at least one of :internal, ~
+	                             :external, or :inherited.")))
 	   ,(dolist (symbol symbol-types)
 	      (unless (member symbol '(:internal :external :inherited))
-		(simple-program-error _"~S is not one of :internal, :external, ~
-		                       or :inherited."
+		(simple-program-error (intl:gettext "~S is not one of :internal, :external, ~
+		                       or :inherited.")
 			              symbol)))
 	   (,init-macro ,(car ordered-types))
 	   (flet ((,real-symbol-p (number)
@@ -936,19 +936,19 @@
 	(doc nil))
     (dolist (option options)
       (unless (consp option)
-	(simple-program-error _"Bogus DEFPACKAGE option: ~S" option))
+	(simple-program-error (intl:gettext "Bogus DEFPACKAGE option: ~S") option))
       (case (car option)
 	(:nicknames
 	 (setf nicknames (stringify-names (cdr option) "package")))
 	(:size
 	 (cond (size
-		(simple-program-error _"Can't specify :SIZE twice."))
+		(simple-program-error (intl:gettext "Can't specify :SIZE twice.")))
 	       ((and (consp (cdr option))
 		     (typep (second option) 'unsigned-byte))
 		(setf size (second option)))
 	       (t
 		(simple-program-error
-		 _"Bogus :SIZE, must be a positive integer: ~S"
+		 (intl:gettext "Bogus :SIZE, must be a positive integer: ~S")
 		 (second option)))))
 	(:shadow
 	 (let ((new (stringify-names (cdr option) "symbol")))
@@ -982,10 +982,10 @@
 	   (setf exports (append exports new))))
 	(:documentation
 	 (when doc
-	   (simple-program-error _"Can't specify :DOCUMENTATION twice."))
+	   (simple-program-error (intl:gettext "Can't specify :DOCUMENTATION twice.")))
 	 (setf doc (coerce (second option) 'simple-string)))
 	(t
-	 (simple-program-error _"Bogus DEFPACKAGE option: ~S" option))))
+	 (simple-program-error (intl:gettext "Bogus DEFPACKAGE option: ~S") option))))
     (check-disjoint `(:intern ,@interns) `(:export  ,@exports))
     (check-disjoint `(:intern ,@interns)
 		    `(:import-from
@@ -1009,8 +1009,8 @@
 	                    (intersection set1 set2 :test #'string=))
 	      unless (null common)
 	      do
-	      (simple-program-error _"Parameters ~S and ~S must be disjoint ~
-	                             but have common elements ~%   ~S"
+	      (simple-program-error (intl:gettext "Parameters ~S and ~S must be disjoint ~
+	                             but have common elements ~%   ~S")
 				    key1 key2 common))))
 
 (defun %defpackage (name nicknames size shadows shadowing-imports
@@ -1031,7 +1031,7 @@
     (unless (string= (the string (package-name package)) name)
       (error 'simple-package-error
 	     :package name
-	     :format-control _"~A is a nick-name for the package ~A"
+	     :format-control (intl:gettext "~A is a nick-name for the package ~A")
 	     :format-arguments (list name (package-name name))))
     (enter-new-nicknames package nicknames)
     ;; Shadows and Shadowing-imports.
@@ -1046,7 +1046,7 @@
 	      (shadowing-import sym package)
 	      (setf old-shadows (remove sym old-shadows))))))
       (when old-shadows
-	(warn _"~A also shadows the following symbols:~%  ~S"
+	(warn (intl:gettext "~A also shadows the following symbols:~%  ~S")
 	      name old-shadows)))
     ;; Use
     (unless (eq use :default)
@@ -1056,7 +1056,7 @@
 	(let ((laterize (set-difference old-use-list new-use-list)))
 	  (when laterize
 	    (unuse-package laterize package)
-	    (warn _"~A previously used the following packages:~%  ~S"
+	    (warn (intl:gettext "~A previously used the following packages:~%  ~S")
 		  name
 		  laterize)))))
     ;; Import and Intern.
@@ -1076,7 +1076,7 @@
       (export exports package)
       (let ((diff (set-difference old-exports exports)))
 	(when diff
-	  (warn _"~A also exports the following symbols:~%  ~S"
+	  (warn (intl:gettext "~A also exports the following symbols:~%  ~S")
 		name diff))))
     ;; Documentation
     (setf (package-doc-string package) doc-string)
@@ -1092,7 +1092,7 @@
 	   (with-simple-restart (continue "INTERN it.")
 	     (error 'simple-package-error
 		    :package package
-		    :format-control _"~A does not contain a symbol ~A"
+		    :format-control (intl:gettext "~A does not contain a symbol ~A")
 		    :format-arguments (list (package-name package) name)))
 	   (intern name package)))))
 
@@ -1113,17 +1113,17 @@
 	     (push n (package-%nicknames package)))
 	    ((eq found package))
 	    ((string= (the string (package-%name found)) n)
-	     (with-simple-restart (continue _"Ignore this nickname.")
+	     (with-simple-restart (continue (intl:gettext "Ignore this nickname."))
 	       (error 'simple-package-error
 		      :package package
 		      :format-control
-		      _"~S is a package name, so it cannot be a nickname for ~S."
+		      (intl:gettext "~S is a package name, so it cannot be a nickname for ~S.")
 		      :format-arguments (list n (package-%name package)))))
 	    (t
-	     (with-simple-restart (continue  _"Redefine this nickname.")
+	     (with-simple-restart (continue  (intl:gettext "Redefine this nickname."))
 	       (error 'simple-package-error
 		      :package package
-		      :format-control _"~S is already a nickname for ~S."
+		      :format-control (intl:gettext "~S is already a nickname for ~S.")
 		      :format-arguments (list n (package-%name found))))
 	     (setf (gethash n *package-names*) package)
 	     (push n (package-%nicknames package)))))))
@@ -1143,8 +1143,8 @@
   estimates for the number of internal and external symbols which
   will ultimately be present in the package."
   (when (find-package name)
-    (cerror _"Leave existing package alone."
-	    _"A package named ~S already exists" name))
+    (cerror (intl:gettext "Leave existing package alone.")
+	    (intl:gettext "A package named ~S already exists") name))
   (let* ((name (package-namify name))
 	 (package (internal-make-package
 		   :%name name
@@ -1183,7 +1183,7 @@
 (defmacro in-package (package &rest noise)
   (cond ((or noise
 	     (not (or (stringp package) (symbolp package))))
-	 (warn _"Old-style IN-PACKAGE.")
+	 (warn (intl:gettext "Old-style IN-PACKAGE."))
 	 `(old-in-package ,package ,@noise))
 	(t
 	 `(%in-package ',(stringify-name package "package")))))
@@ -1191,10 +1191,10 @@
 (defun %in-package (name)
   (let ((package (find-package name)))
     (unless package
-      (with-simple-restart (continue _"Make this package.")
+      (with-simple-restart (continue (intl:gettext "Make this package."))
 	(error 'simple-package-error
 	       :package name
-	       :format-control _"The package named ~S doesn't exist."
+	       :format-control (intl:gettext "The package named ~S doesn't exist.")
 	       :format-arguments (list name)))
       (setq package (make-package name)))
     (setf *package* package)))
@@ -1212,7 +1212,7 @@
     (unless (or (not found) (eq found package))
       (error 'simple-package-error
              :package name
-             :format-control _"A package named ~S already exists."
+             :format-control (intl:gettext "A package named ~S already exists.")
              :format-arguments (list name)))
     (remhash (package-%name package) *package-names*)
     (dolist (n (package-%nicknames package))
@@ -1231,10 +1231,10 @@
 		     package-or-name
 		     (find-package package-or-name))))
     (cond ((not package)
-	   (with-simple-restart (continue _"Return NIL")
+	   (with-simple-restart (continue (intl:gettext "Return NIL"))
 	     (error 'simple-package-error
 		    :package package-or-name
-		    :format-control _"No package of name ~S."
+		    :format-control (intl:gettext "No package of name ~S.")
 		    :format-arguments (list package-or-name)))
 	   nil)
 	  ((not (package-name package)) nil)
@@ -1242,7 +1242,7 @@
 	   (let ((use-list (package-used-by-list package)))
 	     (when use-list
 	       (with-simple-restart
-		   (continue _"Remove dependency in other packages.")
+		   (continue (intl:gettext "Remove dependency in other packages."))
 		 (error 'simple-package-error
 			:package package
 			:format-control
@@ -1316,7 +1316,7 @@
               (restart-case
                   (error 'package-locked-error
                          :package package
-                         :format-control _"interning symbol ~A"
+                         :format-control (intl:gettext "interning symbol ~A")
                          :format-arguments (list (subseq name 0 length)))
                 (continue ()
                   :report "Ignore the lock and continue")
@@ -1399,18 +1399,18 @@
         (restart-case
             (error 'package-locked-error
                    :package package
-                   :format-control _"uninterning symbol ~A"
+                   :format-control (intl:gettext "uninterning symbol ~A")
                    :format-arguments (list name))
           (continue ()
             :report (lambda (stream)
-		      (write-string _"Ignore the lock and continue" stream)))
+		      (write-string (intl:gettext "Ignore the lock and continue") stream)))
           (unlock-package ()
             :report (lambda (stream)
-		      (write-string _"Disable package's lock then continue" stream))
+		      (write-string (intl:gettext "Disable package's lock then continue") stream))
             (setf (ext:package-lock package) nil))
           (unlock-all ()
             :report (lambda (stream)
-		      (write-string _"Unlock all packages, then continue" stream))
+		      (write-string (intl:gettext "Unlock all packages, then continue") stream))
             (unlock-all-packages)))))
     ;;
     ;; If a name conflict is revealed, give use a chance to shadowing-import
@@ -1423,19 +1423,19 @@
 	(when (cdr cset)
 	  (loop
 	   (cerror
-	    _"prompt for a symbol to shadowing-import."
+	    (intl:gettext "prompt for a symbol to shadowing-import.")
 	    'simple-package-error
 	    :package package
 	    :format-control
-	    _"Uninterning symbol ~S causes name conflict among these symbols:~%~S"
+	    (intl:gettext "Uninterning symbol ~S causes name conflict among these symbols:~%~S")
 	    :format-arguments (list symbol cset))
-	   (write-string _"Symbol to shadowing-import: " *query-io*)
+	   (write-string (intl:gettext "Symbol to shadowing-import: ") *query-io*)
 	   (let ((sym (read *query-io*)))
 	     (cond
 	      ((not (symbolp sym))
-	       (format *query-io* _"~S is not a symbol." sym))
+	       (format *query-io* (intl:gettext "~S is not a symbol.") sym))
 	      ((not (member sym cset))
-	       (format *query-io* _"~S is not one of the conflicting symbols."
+	       (format *query-io* (intl:gettext "~S is not one of the conflicting symbols.")
 		       sym))
 	      (t
 	       (shadowing-import sym package)
@@ -1462,11 +1462,11 @@
 (defun symbol-listify (thing)
   (cond ((listp thing)
 	 (dolist (s thing)
-	   (unless (symbolp s) (error _"~S is not a symbol." s)))
+	   (unless (symbolp s) (error (intl:gettext "~S is not a symbol.") s)))
 	 thing)
 	((symbolp thing) (list thing))
 	(t
-	 (error _"~S is neither a symbol nor a list of symbols." thing))))
+	 (error (intl:gettext "~S is neither a symbol nor a list of symbols.") thing))))
 
 ;;; Moby-Unintern  --  Internal
 ;;;
@@ -1523,20 +1523,20 @@
 	     'simple-package-error
 	     :package package
 	     :format-control
-	     _"Exporting these symbols from the ~A package:~%~S~%~
-	      results in name conflicts with these packages:~%~{~A ~}"
+	     (intl:gettext "Exporting these symbols from the ~A package:~%~S~%~
+	      results in name conflicts with these packages:~%~{~A ~}")
 	     :format-arguments
 	     (list (package-%name package) cset
 		   (mapcar #'package-%name cpackages)))
 	  (unintern-conflicting-symbols ()
 	   :report (lambda (stream)
-		     (write-string _"Unintern conflicting symbols." stream))
+		     (write-string (intl:gettext "Unintern conflicting symbols.") stream))
 	   (dolist (p cpackages)
 	     (dolist (sym cset)
 	       (moby-unintern sym p))))
 	  (skip-exporting-these-symbols ()
 	   :report (lambda (stream)
-		     (write-string _"Skip exporting conflicting symbols." stream))
+		     (write-string (intl:gettext "Skip exporting conflicting symbols.") stream))
 	   (setq syms (nset-difference syms cset))))))
     ;;
     ;; Check that all symbols are accessible.  If not, ask to import them.
@@ -1548,12 +1548,12 @@
 		((eq w :inherited) (push sym imports)))))
       (when missing
 	(with-simple-restart
-	    (continue _"Import these symbols into the ~A package."
+	    (continue (intl:gettext "Import these symbols into the ~A package.")
 	      (package-%name package))
 	  (error 'simple-package-error
 		 :package package
 		 :format-control
-		 _"These symbols are not accessible in the ~A package:~%~S"
+		 (intl:gettext "These symbols are not accessible in the ~A package:~%~S")
 		 :format-arguments
 		 (list (package-%name package) missing)))
 	(import missing package))
@@ -1581,25 +1581,25 @@
         (restart-case
             (error 'package-locked-error
                    :package package
-                   :format-control _"unexporting symbols ~A"
+                   :format-control (intl:gettext "unexporting symbols ~A")
                    :format-arguments (list symbols))
           (continue ()
             :report (lambda (stream)
-		      (write-string _"Ignore the lock and continue" stream)))
+		      (write-string (intl:gettext "Ignore the lock and continue") stream)))
           (unlock-package ()
             :report (lambda (stream)
-		      (write-string _"Disable package's lock then continue" stream))
+		      (write-string (intl:gettext "Disable package's lock then continue") stream))
             (setf (ext:package-lock package) nil))
           (unlock-all ()
             :report (lambda (stream)
-		      (write-string _"Unlock all packages, then continue" stream))
+		      (write-string (intl:gettext "Unlock all packages, then continue") stream))
             (unlock-all-packages)))))
     (dolist (sym (symbol-listify symbols))
       (multiple-value-bind (s w) (find-symbol (symbol-name sym) package)
 	(cond ((or (not w) (not (eq s sym)))
 	       (error 'simple-package-error
 		      :package package
-		      :format-control _"~S is not accessible in the ~A package."
+		      :format-control (intl:gettext "~S is not accessible in the ~A package.")
 		      :format-arguments (list sym (package-%name package))))
 	      ((eq w :external) (pushnew sym syms)))))
 
@@ -1635,12 +1635,12 @@
 	      ((eq w :inherited) (push sym syms)))))
     (when cset
       (with-simple-restart
-	  (continue _"Import these symbols with Shadowing-Import.")
+	  (continue (intl:gettext "Import these symbols with Shadowing-Import."))
 	(error 'simple-package-error
 	       :package package
 	       :format-control
-	       _"Importing these symbols into the ~A package ~
-		causes a name conflict:~%~S"
+	       (intl:gettext "Importing these symbols into the ~A package ~
+		causes a name conflict:~%~S")
 	       :format-arguments (list (package-%name package) cset))))
     ;;
     ;; Add the new symbols to the internal hashtable.
@@ -1756,8 +1756,8 @@
 	  
 	  (when cset
 	    (cerror
-	     _"Unintern the conflicting symbols in the ~2*~A package."
-	     _"Use'ing package ~A results in name conflicts for these symbols:~%~S"
+	     (intl:gettext "Unintern the conflicting symbols in the ~2*~A package.")
+	     (intl:gettext "Use'ing package ~A results in name conflicts for these symbols:~%~S")
 	     (package-%name pkg) cset (package-%name package))
 	    (dolist (s cset) (moby-unintern s package))))
 
@@ -1818,13 +1818,13 @@
       (multiple-value-bind (kind recorded-p) (info variable kind symbol)
         (when (or (boundp symbol) recorded-p)
 	  (print-symbol (ecase kind
-                          (:special  _"special variable")
-                          (:constant _"constant")
-                          (:global   _"undefined variable")
-                          (:macro    _"symbol macro")
-                          (:alien    _"alien variable")))
+                          (:special  (intl:gettext "special variable"))
+                          (:constant (intl:gettext "constant"))
+                          (:global   (intl:gettext "undefined variable"))
+                          (:macro    (intl:gettext "symbol macro"))
+                          (:alien    (intl:gettext "alien variable"))))
           (when (boundp symbol)
-	    (write-string _"value: ")
+	    (write-string (intl:gettext "value: "))
 	    (let ((*print-length*
 	             (or ext:*describe-print-length* *print-length*))
 	          (*print-level*
@@ -1835,15 +1835,15 @@
       (when (fboundp symbol)
         (cond
           ((macro-function symbol)
-           (print-symbol _"macro")
+           (print-symbol (intl:gettext "macro"))
            (let ((arglist (kernel:%function-arglist (macro-function symbol))))
              (when (stringp arglist) (write-string arglist))))
           ((special-operator-p symbol)
-           (print-symbol _"special operator")
+           (print-symbol (intl:gettext "special operator"))
            (let ((arglist (kernel:%function-arglist (symbol-function symbol))))
              (when (stringp arglist) (write-string arglist))))
           (t
-           (print-symbol _"function")
+           (print-symbol (intl:gettext "function"))
            ;; could do better than this with (kernel:type-specifier
            ;; (info function type symbol)) when it's a byte-compiled function
            (let ((arglist (kernel:%function-arglist (symbol-function symbol))))
@@ -1852,9 +1852,9 @@
       ;; Class and Type Namespace(s)
       (cond
         ((kernel::find-class symbol nil)
-         (print-symbol _"class"))
+         (print-symbol (intl:gettext "class")))
         ((info type kind symbol)
-         (print-symbol _"type")))
+         (print-symbol (intl:gettext "type"))))
 
       ;; Make sure we at least print the symbol itself if we don't know
       ;; anything else about it:

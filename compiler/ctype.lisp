@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.36 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.37 2010/04/20 17:57:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,7 +160,7 @@
        nargs max-args))
      ((and keyp (oddp (- nargs max-args)))
       (note-lossage
-       _"Function has an odd number of arguments in the keyword portion."))
+       (intl:gettext "Function has an odd number of arguments in the keyword portion.")))
      (t
       (check-fixed-and-rest args (append required optional) rest)
       (when keyp
@@ -178,10 +178,10 @@
       (multiple-value-bind (int win)
 			   (funcall result-test out-type return-type)
 	(cond ((not win)
-	       (note-slime _"Can't tell whether the result is a ~S."
+	       (note-slime (intl:gettext "Can't tell whether the result is a ~S.")
 			   (type-specifier return-type)))
 	      ((not int)
-	       (note-lossage _"The result is a ~S, not a ~S."
+	       (note-lossage (intl:gettext "The result is a ~S, not a ~S.")
 			     (type-specifier out-type)
 			     (type-specifier return-type)))))) 
     
@@ -207,20 +207,20 @@
       (multiple-value-bind (int win)
 			   (funcall *test-function* ctype type)
 	(cond ((not win)
-	       (note-slime _"Can't tell whether the ~:R argument is a ~S." n
+	       (note-slime (intl:gettext "Can't tell whether the ~:R argument is a ~S.") n
 			   (type-specifier type))
 	       nil)
 	      ((not int)
-	       (note-lossage _"The ~:R argument is a ~S, not a ~S." n
+	       (note-lossage (intl:gettext "The ~:R argument is a ~S, not a ~S.") n
 			     (type-specifier ctype)
 			     (type-specifier type))
 	       nil)
 	      ((eq ctype *empty-type*)
-	       (note-slime _"The ~:R argument never returns a value." n)
+	       (note-slime (intl:gettext "The ~:R argument never returns a value.") n)
 	       nil)
 	      (t t)))))
     ((not (constant-continuation-p cont))
-     (note-slime _"The ~:R argument is not a constant." n)
+     (note-slime (intl:gettext "The ~:R argument is not a constant.") n)
      nil)
     (t
      (let ((val (continuation-value cont))
@@ -228,12 +228,12 @@
        (multiple-value-bind (res win)
 			    (ctypep val type)
 	 (cond ((not win)
-		(note-slime _"Can't tell whether the ~:R argument is a ~
-		             constant ~S:~%  ~S"
+		(note-slime (intl:gettext "Can't tell whether the ~:R argument is a ~
+		             constant ~S:~%  ~S")
 			    n (type-specifier type) val)
 		nil)
 	       ((not res)
-		(note-lossage _"The ~:R argument is not a constant ~S:~%  ~S"
+		(note-lossage (intl:gettext "The ~:R argument is not a constant ~S:~%  ~S")
 			      n (type-specifier type) val)
 		nil)
 	       (t t)))))))
@@ -278,7 +278,7 @@
 	(cond
 	  ((not (check-arg-type k (specifier-type 'symbol) n)))
 	  ((not (constant-continuation-p k))
-	   (note-slime _"The ~:R argument (in keyword position) is not a constant."
+	   (note-slime (intl:gettext "The ~:R argument (in keyword position) is not a constant.")
 		       n))
 	  (t
 	   (let* ((name (continuation-value k))
@@ -302,12 +302,12 @@
 			    (setq allow-other-keys (continuation-value value))
 			    (progn
 			      (setq allow-other-keys t)
-			      (note-slime _"The value of ~S is not a constant"
+			      (note-slime (intl:gettext "The value of ~S is not a constant")
 					  :allow-other-keys)))
 			(setq allow-other-keys-seen t))))
 		   ((not info)
 		    (unless (function-type-allowp type)
-		      (note-lossage _"~S is not a known argument keyword."
+		      (note-lossage (intl:gettext "~S is not a known argument keyword.")
 				    name)))
 		   (t
 		    (check-arg-type (second key) (key-info-type info)
@@ -511,8 +511,8 @@
 	      call-max max-args))
 	    ((and keyp (oddp (- call-max max-args)))
 	     (note-lossage
-	      _"Function previously called with an odd number of arguments in ~
-	      the keyword portion.")))
+	      (intl:gettext "Function previously called with an odd number of arguments in ~
+	      the keyword portion."))))
 
       (when (and keyp (> call-max max-args))
 	(check-approximate-keywords call-type max-args type)))
@@ -556,13 +556,13 @@
 			   (funcall *test-function* ctype decl-type)
 	(cond
 	 ((not win)
-	  (note-slime _"Can't tell whether previous ~? argument type ~S is a ~S."
+	  (note-slime (intl:gettext "Can't tell whether previous ~? argument type ~S is a ~S.")
 		      context args (type-specifier ctype) (type-specifier decl-type)))
 	 ((not int)
 	  (setq losers (type-union ctype losers))))))
 
     (unless (eq losers *empty-type*)
-      (note-lossage _"~:(~?~) argument should be a ~S but was a ~S in a previous call."
+      (note-lossage (intl:gettext "~:(~?~) argument should be a ~S but was a ~S in a previous call.")
 		    context args (type-specifier decl-type) (type-specifier losers)))))
 
 
@@ -598,7 +598,7 @@
 
 	(dolist (name (names))
 	  (unless (find name keys :key #'key-info-name)
-	    (note-lossage _"Function previously called with unknown argument keyword ~S."
+	    (note-lossage (intl:gettext "Function previously called with unknown argument keyword ~S.")
 		  name)))))))
 
 
@@ -619,8 +619,8 @@
 		(cond
 		 ((eq int *empty-type*)
 		  (note-lossage
-		   _"Definition's declared type for variable ~A:~%  ~S~@
-		   conflicts with this type from ~A:~%  ~S"
+		   (intl:gettext "Definition's declared type for variable ~A:~%  ~S~@
+		   conflicts with this type from ~A:~%  ~S")
 		   (leaf-name var) (type-specifier vtype)
 		   where (type-specifier type))
 		  (return-from try-type-intersections (values nil nil)))
@@ -670,24 +670,24 @@
 		x what x where y))))
       ;; TRANSLATORS:  Usage is "Definition has <n> FIXED args but <where> <m>"
       ;; TRANSLATORS:  Translate FIXED above appropriately.
-      (frob min (length req) _"fixed")
+      (frob min (length req) (intl:gettext "fixed"))
       ;; TRANSLATORS:  Usage is "Definition has <n> OPTIONAL args but <where> <m>"
       ;; TRANSLATORS:  Translate OPTIONAL above appropriately.
-      (frob (- (optional-dispatch-max-args od) min) (length opt) _"optional"))
+      (frob (- (optional-dispatch-max-args od) min) (length opt) (intl:gettext "optional")))
     (flet ((frob (x y what)
 	     (unless (eq x y)
 	       ;; TRANSLATORS: This format string probably needs to be
 	       ;; TRANSLATORS: updated to allow better translations.
 	       (note-lossage
-		_"Definition ~:[doesn't have~;has~] ~A, but ~
-		~A ~:[doesn't~;does~]."
+		(intl:gettext "Definition ~:[doesn't have~;has~] ~A, but ~
+		~A ~:[doesn't~;does~].")
 		x what where y))))
       (frob (optional-dispatch-keyp od) (function-type-keyp type)
-	    _"keyword args")
+	    (intl:gettext "keyword args"))
       (unless (optional-dispatch-keyp od)
 	(frob (not (null (optional-dispatch-more-entry od)))
 	      (not (null (function-type-rest type)))
-	      _"rest args"))
+	      (intl:gettext "rest args")))
       (frob (optional-dispatch-allowp od) (function-type-allowp type)
 	    "&allow-other-keys"))
 
@@ -715,7 +715,7 @@
 				      (or def-type (specifier-type 'null)))))
 		    (t
 		     (note-lossage
-		      _"Defining a ~S keyword not present in ~A."
+		      (intl:gettext "Defining a ~S keyword not present in ~A.")
 		      key where)
 		     (res *universal-type*)))))
 		(:required (res (pop req)))
@@ -745,7 +745,7 @@
 				   (when info
 				     (arg-info-keyword info)))))
 	    (note-lossage
-	     _"Definition lacks the ~S keyword present in ~A."
+	     (intl:gettext "Definition lacks the ~S keyword present in ~A.")
 	     (key-info-name key) where))))
 
       (try-type-intersections (vars) (res) where))))
@@ -760,11 +760,11 @@
   (flet ((frob (x what)
 	   (when x
 	     (note-lossage
-	      _"Definition has no ~A, but the ~A did."
+	      (intl:gettext "Definition has no ~A, but the ~A did.")
 	      what where))))
-    (frob (function-type-optional type) _"optional args")
-    (frob (function-type-keyp type) _"keyword args")
-    (frob (function-type-rest type) _"rest arg"))
+    (frob (function-type-optional type) (intl:gettext "optional args"))
+    (frob (function-type-keyp type) (intl:gettext "keyword args"))
+    (frob (function-type-rest type) (intl:gettext "rest arg")))
   (let* ((vars (lambda-vars lambda))
 	 (nvars (length vars))
 	 (req (function-type-required type))
@@ -797,7 +797,7 @@
        (functional type &key (really-assert t)
 		   ((:error-function *error-function*) #'compiler-warning)
 		   warning-function
-		   (where _"previous declaration"))
+		   (where (intl:gettext "previous declaration")))
   (declare (type functional functional)
 	   (type function *error-function*)
 	   (string where))
@@ -819,8 +819,8 @@
 	(cond
 	 ((and atype (not (values-types-intersect atype type-returns)))
 	  (note-lossage
-	   _"The result type from ~A:~%  ~S~@
-	   conflicts with the definition's result type assertion:~%  ~S"
+	   (intl:gettext "The result type from ~A:~%  ~S~@
+	   conflicts with the definition's result type assertion:~%  ~S")
 	   where (type-specifier type-returns) (type-specifier atype))
 	  nil)
 	 (*lossage-detected* nil)
@@ -833,9 +833,9 @@
 		   (when (and warning-function
 			      (not (csubtypep (leaf-type var) type)))
 		     (funcall warning-function
-			      _"Assignment to argument: ~S~%  ~
+			      (intl:gettext "Assignment to argument: ~S~%  ~
 			       prevents use of assertion from function ~
-			       type ~A:~%  ~S~%"
+			       type ~A:~%  ~S~%")
 			      (leaf-name var) where (type-specifier type))))
 		  (t
 		   (setf (leaf-type var) type)

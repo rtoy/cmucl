@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.25 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.26 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -74,7 +74,7 @@
 	(integer
 	 (cond ((< -1 command parts-len-2)
 		(cond ((eq (nth-parts parts command) %illegal-object%)
-		       (format s _"~%That slot is unbound.~%"))
+		       (format s (intl:gettext "~%That slot is unbound.~%")))
 		      (t
 		       (push (cons object parts) *tty-object-stack*)
 		       (setf object (nth-parts parts command))
@@ -82,8 +82,8 @@
 		       (tty-display-object parts s))))
 	       (t
 		(if (= parts-len-2 0)
-		    (format s _"~%This object contains nothing to inspect.~%~%")
-		    (format s _"~%Enter a VALID number (~:[0-~D~;0~]).~%~%"
+		    (format s (intl:gettext "~%This object contains nothing to inspect.~%~%"))
+		    (format s (intl:gettext "~%Enter a VALID number (~:[0-~D~;0~]).~%~%")
 			    (= parts-len-2 1) (1- parts-len-2))))))
 	(symbol
 	 (case (find-symbol (symbol-name command) (find-package "KEYWORD"))
@@ -95,7 +95,7 @@
 		   (setf parts (cdar *tty-object-stack*))
 		   (pop *tty-object-stack*)
 		   (tty-display-object parts s))
-		  (t (format s _"~%Bottom of Stack.~%"))))
+		  (t (format s (intl:gettext "~%Bottom of Stack.~%")))))
 	   (:r
 	    (setf parts (describe-parts object))
 	    (tty-display-object parts s))
@@ -111,7 +111,7 @@
 (defun do-tty-inspect-eval (command stream)
   (let ((result-list (restart-case (multiple-value-list (eval command))
 		       (nil () :report "Return to the TTY-INSPECTOR"
-			  (format stream _"~%Returning to INSPECTOR.~%")
+			  (format stream (intl:gettext "~%Returning to INSPECTOR.~%"))
 			  (return-from do-tty-inspect-eval nil)))))
     (setf /// // // / / result-list)
     (setf +++ ++ ++ + + - - command)
@@ -120,13 +120,13 @@
 
 (defun show-help (s)
   (terpri)
-  (write-line _"TTY-Inspector Help:" s)
-  (write-line _"  R           -  recompute current object." s)
-  (write-line _"  D           -  redisplay current object." s)
-  (write-line _"  U           -  Move upward through the object stack." s)
-  (write-line _"  <number>    -  Inspect this slot." s)
-  (write-line _"  Q, E        -  Quit TTY-INSPECTOR." s)
-  (write-line _"  ?, H, Help  -  Show this help." s))
+  (write-line (intl:gettext "TTY-Inspector Help:") s)
+  (write-line (intl:gettext "  R           -  recompute current object.") s)
+  (write-line (intl:gettext "  D           -  redisplay current object.") s)
+  (write-line (intl:gettext "  U           -  Move upward through the object stack.") s)
+  (write-line (intl:gettext "  <number>    -  Inspect this slot.") s)
+  (write-line (intl:gettext "  Q, E        -  Quit TTY-INSPECTOR.") s)
+  (write-line (intl:gettext "  ?, H, Help  -  Show this help.") s))
 
 (defun tty-display-object (parts stream)
   (format stream "~%~a" (car parts))
@@ -138,7 +138,7 @@
       (if numbered-parts-p
 	  (format stream "~d. ~a: ~a~%" i (caar part)
 		  (if (eq (cdar part) %illegal-object%)
-		      _"Unbound"
+		      (intl:gettext "Unbound")
 		      (cdar part)))
 	  (format stream "~d. ~a~%" i (car part))))))
 
@@ -168,31 +168,31 @@
 	 (describe-atomic-parts object))))
 
 (defun describe-symbol-parts (object)
-  (list (format nil _"~s is a symbol.~%" object) t
-	(cons _"Value" (if (boundp object)
+  (list (format nil (intl:gettext "~s is a symbol.~%") object) t
+	(cons (intl:gettext "Value") (if (boundp object)
 			  (symbol-value object)
 			  %illegal-object%))
-	(cons _"Function" (if (fboundp object)
+	(cons (intl:gettext "Function") (if (fboundp object)
 			     (symbol-function object)
 			     %illegal-object%))
-	(cons _"Plist" (symbol-plist object))
-	(cons _"Package" (symbol-package object))))
+	(cons (intl:gettext "Plist") (symbol-plist object))
+	(cons (intl:gettext "Package") (symbol-package object))))
 
 (defun describe-standard-object-parts (object)
   (collect ((parts))
     (let ((class (class-of object)))
-      (parts (format nil _"~s is an instance of ~s.~%" object class))
+      (parts (format nil (intl:gettext "~s is an instance of ~s.~%") object class))
       (parts t)
       (dolist (slot (pcl::class-slots class) (parts))
 	(parts (cons (pcl::slot-definition-name slot)
 		     (if (pcl::slot-boundp-using-class class object slot)
 			 (pcl::slot-value-using-class class object slot)
-			 _"- (slot is unbound)")))))))
+			 (intl:gettext "- (slot is unbound)"))))))))
 
 (defun describe-instance-parts (object kind)
   (let ((info (layout-info (kernel:layout-of object)))
 	(parts-list ()))
-    (push (format nil _"~s is a ~(~A~).~%" object kind) parts-list)
+    (push (format nil (intl:gettext "~s is a ~(~A~).~%") object kind) parts-list)
     (push t parts-list)
     (when (kernel::defstruct-description-p info)
       (dolist (dd-slot (dd-slots info) (nreverse parts-list))
@@ -205,14 +205,14 @@
 	 (object (if (= type vm:closure-header-type)
 		     (kernel:%closure-function object)
 		     object)))
-    (list (format nil _"Function ~s.~@[~%Argument List: ~a~]." object
+    (list (format nil (intl:gettext "Function ~s.~@[~%Argument List: ~a~].") object
 		  (kernel:%function-arglist object)
 		  ;; Defined from stuff used to be here.  Someone took it out.
 		  )
 	  t)))
 
 (defun describe-vector-parts (object)
-  (list* (format nil _"Object is a ~:[~;displaced ~]vector of length ~d.~%"
+  (list* (format nil (intl:gettext "Object is a ~:[~;displaced ~]vector of length ~d.~%")
 		 (and (lisp::array-header-p object)
 		      (lisp::%array-displaced-p object))
 		 (length object))
@@ -221,10 +221,10 @@
 
 (defun describe-cons-parts (object)
   (if (listp (cdr object))
-      (list* (format nil _"Object is a LIST of length ~d.~%" (length object))
+      (list* (format nil (intl:gettext "Object is a LIST of length ~d.~%") (length object))
 	     nil
 	     object)
-      (list (format nil _"Object is a CONS.~%") t
+      (list (format nil (intl:gettext "Object is a CONS.~%")) t
 	    (cons "Car" (car object))
 	    (cons "Cdr" (cdr object)))))
 
@@ -249,8 +249,8 @@
 				      (array-element-type object)))
 	 (dimensions (array-dimensions object))
 	 (parts ()))
-    (push (format nil _"Object is ~:[a displaced~;an~] array of ~a.~%~
-                       Its dimensions are ~s.~%"
+    (push (format nil (intl:gettext "Object is ~:[a displaced~;an~] array of ~a.~%~
+                       Its dimensions are ~s.~%")
 		  (array-element-type object)
 		  (and (lisp::array-header-p object)
 		       (lisp::%array-displaced-p object))
@@ -263,4 +263,4 @@
 	    parts))))
 
 (defun describe-atomic-parts (object)
-  (list (format nil _"Object is an atom.~%") nil object))
+  (list (format nil (intl:gettext "Object is an atom.~%")) nil object))

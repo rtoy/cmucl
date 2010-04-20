@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.35 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.36 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -149,7 +149,7 @@
 	       (give-up)))
 	    ((types-intersect (continuation-type item)
 			      (specifier-type 'number))
-	     (give-up _"Item might be a number")))
+	     (give-up (intl:gettext "Item might be a number"))))
       `(,eq-fun item list))))
 
 (deftransform delete-if ((pred list) (t list))
@@ -296,7 +296,7 @@
   (if (and arg (arg-cont arg))
       (let ((cont (arg-cont arg)))
 	(unless (constant-continuation-p cont)
-	  (give-up _"Argument is not constant: ~S." (arg-name arg)))
+	  (give-up (intl:gettext "Argument is not constant: ~S.") (arg-name arg)))
 	(continuation-value from-end))
       default))
 
@@ -328,7 +328,7 @@
   ;;
   ;; A form that returns the current value.  This may be set with SETF to set
   ;; the current value.
-  (current (error _"Must specify CURRENT."))
+  (current (error (intl:gettext "Must specify CURRENT.")))
   ;;
   ;; In a :Normal iterator, a form that tests whether there is a current value.
   (done nil)
@@ -339,11 +339,11 @@
   ;;
   ;; A form that returns the initial total number of values.  The result is
   ;; undefined after NEXT has been evaluated.
-  (length (error _"Must specify LENGTH."))
+  (length (error (intl:gettext "Must specify LENGTH.")))
   ;;
   ;; A form that advances the state to the next value.  It is an error to call
   ;; this when the iterator is Done.
-  (next (error _"Must specify NEXT.")))
+  (next (error (intl:gettext "Must specify NEXT."))))
 
 
 ;;; Type of an index var that can go negative (in the from-end case.)
@@ -420,7 +420,7 @@
 					`(1- ,index)
 					`(1+ ,index)))))))))
 	  (t
-	   (give-up _"Can't tell whether sequence is a list or a vector.")))))
+	   (give-up (intl:gettext "Can't tell whether sequence is a list or a vector."))))))
 
 
 ;;; MAKE-RESULT-SEQUENCE-ITERATOR  --  Interface
@@ -479,7 +479,7 @@
 (defmacro with-sequence-test ((name test test-not) &body body)
   `(let ((not-p (arg-cont ,test-not)))
      (when (and (arg-cont ,test) not-p)
-       (abort-transform _"Both ~S and ~S supplied." (arg-name ,test)
+       (abort-transform (intl:gettext "Both ~S and ~S supplied.") (arg-name ,test)
 			(arg-name ,test-not)))
      (coerce-functions ((,name (if not-p ,test-not ,test) eql))
        ,@body)))

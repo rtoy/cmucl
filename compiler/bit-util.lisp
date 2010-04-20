@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/bit-util.lisp,v 1.8 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/bit-util.lisp,v 1.9 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,7 +40,7 @@
 	   (word vm:vector-data-offset (1+ word)))
 	  ((<= i 0)
 	   (unless (zerop i)
-	     (error _"local-tn-limit not a vm:word-bits multiple.")))
+	     (error (intl:gettext "local-tn-limit not a vm:word-bits multiple."))))
 	(res `(setf (kernel:%raw-bits ,n-vec ,word) 0)))
       `(progn ,@(res) ,n-vec))))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.57 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.58 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -245,7 +245,7 @@
   (multiple-value-bind (bytes rbits)
       (truncate bits vm:byte-bits)
     (when (not (zerop rbits))
-      (error _"~d bits is not a byte-multiple" bits))
+      (error (intl:gettext "~d bits is not a byte-multiple") bits))
     bytes))
 
 (defun sign-extend (int size)
@@ -524,7 +524,7 @@
 	 (valsrc-source thing))
 	((functionp thing)
 	 (pd-error
-	  _"Can't dump functions, so function ref form must be quoted: ~s"
+	  (intl:gettext "Can't dump functions, so function ref form must be quoted: ~s")
 	  thing))
 	((self-evaluating-p thing)
 	 thing)
@@ -567,7 +567,7 @@
 (defun arg-or-lose (name funstate)
   (let ((arg (find name (funstate-args funstate) :key #'arg-name)))
     (when (null arg)
-      (pd-error _"Unknown argument ~s" name))
+      (pd-error (intl:gettext "Unknown argument ~s") name))
     arg))
 
 (defun get-arg-temp (arg kind funstate)
@@ -654,7 +654,7 @@
     (when (and (not allow-multiple-p)
 	       (listp forms)
 	       (/= (length forms) 1))
-      (pd-error _"~s must not have multiple values" arg))
+      (pd-error (intl:gettext "~s must not have multiple values") arg))
     (maybe-listify forms)))
 
 ;;; ----------------------------------------------------------------
@@ -672,7 +672,7 @@
 
 (defun arg-form-kind-or-lose (kind)
   (or (getf *arg-form-kinds* kind)
-      (pd-error _"Unknown arg-form kind ~s" kind)))
+      (pd-error (intl:gettext "Unknown arg-form kind ~s") kind)))
 
 (defun find-arg-form-producer (kind)
   (arg-form-kind-producer (arg-form-kind-or-lose kind)))
@@ -771,8 +771,8 @@
 				 (not (atom adjusted-forms))
 				 (/= (Length adjusted-forms) 1))
 			    (pd-error
-			     _"Cannot label a multiple-field argument ~
-			      unless using a function: ~s" arg)
+			     (intl:gettext "Cannot label a multiple-field argument ~
+			      unless using a function: ~s") arg)
 			    `((lookup-label ,form))))
 		      adjusted-forms)))
   :checker #'(lambda (new-arg old-arg)
@@ -785,7 +785,7 @@
 (def-arg-form-kind (:printed)
   :producer #'(lambda (&rest noise)
 		(declare (ignore noise))
-		(pd-error _"Bogus!  Can't use the :printed value of an arg!"))
+		(pd-error (intl:gettext "Bogus!  Can't use the :printed value of an arg!")))
   :checker #'(lambda (new-arg old-arg)
 	       (valsrc-equal (arg-printer new-arg) (arg-printer old-arg))))
 
@@ -821,8 +821,8 @@
 		  (fields (arg-fields arg))
 		  (consts body))
 	     (when (not (= (length fields) (length consts)))
-	       (pd-error _"number of constants doesn't match number of fields ~
-			  in: (~s :constant~{ ~s~})"
+	       (pd-error (intl:gettext "number of constants doesn't match number of fields ~
+			  in: (~s :constant~{ ~s~})")
 			 subj body))
 	     (compare-fields-form (gen-arg-forms arg :numeric funstate)
 				  consts)))
@@ -841,8 +841,8 @@
 				     (= (byte-size bs1) (byte-size bs2)))
 				 (arg-fields arg1)
 				 (arg-fields arg2)))
-	       (pd-error _"Can't compare differently sized fields: ~
-		          (~s :same-as ~s)" subj (car body)))
+	       (pd-error (intl:gettext "Can't compare differently sized fields: ~
+		          (~s :same-as ~s)") subj (car body)))
 	     (compare-fields-form (gen-arg-forms arg1 :numeric funstate)
 				  (gen-arg-forms arg2 :numeric funstate))))
 	  ((eq key :or)
@@ -856,7 +856,7 @@
 	  ((and (consp key) (null body))
 	   (compile-test subj key funstate))
 	  (t
-	   (pd-error _"Bogus test-form: ~s" test)))))
+	   (pd-error (intl:gettext "Bogus test-form: ~s") test)))))
 
 ;;; ----------------------------------------------------------------
 
@@ -927,7 +927,7 @@
 	   `(,(if (arg-use-label arg) 'local-princ16 'local-princ)
 	     ,(arg-value-form arg funstate)))
 	  (t
-	   (pd-error _"Illegal printer: ~s" printer-src)))))
+	   (pd-error (intl:gettext "Illegal printer: ~s") printer-src)))))
 
 (defun compile-printer-body (source funstate)
   (cond ((null source)
@@ -937,7 +937,7 @@
 	((eq source :tab)
 	 `(local-tab-to-arg-column))
 	((keywordp source)
-	 (pd-error _"Unknown printer element: ~s" source))
+	 (pd-error (intl:gettext "Unknown printer element: ~s") source))
 	((symbolp source)
 	 (compile-print source funstate))
 	((atom source)
@@ -946,7 +946,7 @@
 	 (unless (or (stringp (cadr source))
 		     (and (listp (cadr source))
 			  (eq (caadr source) 'function)))
-	   (pd-error _"First arg to :USING must be a string or #'function"))
+	   (pd-error (intl:gettext "First arg to :USING must be a string or #'function")))
 	 (compile-print (caddr source) funstate
 			(cons (eval (cadr source)) (cadr source))))
 	((eq (car source) :plus-integer)
@@ -1046,7 +1046,7 @@
 
 (defun pick-printer-choice (choices args)
   (dolist (choice choices
-	   (pd-error _"No suitable choice found in ~s" choices))
+	   (pd-error (intl:gettext "No suitable choice found in ~s") choices))
     (when (all-arg-refs-relevent-p choice args)
       (return choice))))
 
@@ -1077,7 +1077,7 @@
 	      (null
 	       (arg-value
 		(or (find subj args :key #'arg-name)
-		    (pd-error _"Unknown argument ~s" subj)))))
+		    (pd-error (intl:gettext "Unknown argument ~s") subj)))))
 	     ;; otherwise, defer to run-time
 	     form))
 	((:or :and :not)
@@ -1165,7 +1165,7 @@
 					      ,args ,constraint-var)))
        (cond (,cache-var
 	      #+nil
-	      (Format t _"~&; Using cached function ~s~%"
+	      (Format t (intl:gettext "~&; Using cached function ~s~%")
 		      (cached-fun-name ,cache-var))
 	      (values (cached-fun-name ,cache-var) nil))
 	     (t
@@ -1176,7 +1176,7 @@
 					    :funstate ,funstate-var
 					    :constraint ,constraint-var)))
 		#+nil
-		(format t _"~&; Making new function ~s~%"
+		(format t (intl:gettext "~&; Making new function ~s~%")
 			(cached-fun-name ,cache-var))
 		(values ,name-var
 			`(progn
@@ -1284,7 +1284,7 @@
 (defun set-arg-from-type (arg type-name table)
   (let ((type-arg (find type-name table :key #'arg-name)))
     (when (null type-arg)
-      (pd-error _"Unknown argument type: ~s" type-name))
+      (pd-error (intl:gettext "Unknown argument type: ~s") type-name))
     (setf (arg-printer arg) (arg-printer type-arg))
     (setf (arg-prefilter arg) (arg-prefilter type-arg))
     (setf (arg-sign-extend-p arg) (arg-sign-extend-p type-arg))
@@ -1330,17 +1330,17 @@
     (when fields-p
       (when (null format-length)
 	(error
-	 _"~@<In arg ~s:  ~3i~:_~
-          Can't specify fields except using DEFINE-INSTRUCTION-FORMAT.~:>"
+	 (intl:gettext "~@<In arg ~s:  ~3i~:_~
+          Can't specify fields except using DEFINE-INSTRUCTION-FORMAT.~:>")
 	 arg-name))
       (setf (arg-fields arg)
 	    (mapcar #'(lambda (bytespec)
 			(when (> (+ (byte-position bytespec)
 				    (byte-size bytespec))
 				 format-length)
-			  (error _"~@<In arg ~s:  ~3i~:_~
+			  (error (intl:gettext "~@<In arg ~s:  ~3i~:_~
 				     Field ~s doesn't fit in an ~
-				     instruction-format ~d bits wide.~:>"
+				     instruction-format ~d bits wide.~:>")
 				 arg-name
 				 bytespec
 				 format-length))
@@ -1565,7 +1565,7 @@
 	      ((null fields))
 	    (let ((field-mask (dchunk-make-mask (car fields))))
 	      (when (/= (dchunk-and mask field-mask) dchunk-zero)
-		(pd-error _"Field ~s in arg ~s overlaps some other field"
+		(pd-error (intl:gettext "Field ~s in arg ~s overlaps some other field")
 			  (car fields)
 			  (arg-name arg)))
 	      (dchunk-insertf id (car fields) (car values))
@@ -1579,7 +1579,7 @@
 			  
 (defun format-or-lose (name table)
   (or (gethash name table)
-      (pd-error _"Unknown instruction format ~s" name)))
+      (pd-error (intl:gettext "Unknown instruction format ~s") name)))
 
 (defun filter-overrides (overrides evalp)
   (mapcar #'(lambda (override)
@@ -1670,7 +1670,7 @@
 	    (> (specializer-rank i1) (specializer-rank i2)))))
 
 (defun specialization-error (insts)
-  (error _"Instructions either aren't related or conflict in some way:~% ~s" insts))
+  (error (intl:gettext "Instructions either aren't related or conflict in some way:~% ~s") insts))
 
 (defun try-specializing (insts)
   "Given a list of instructions INSTS, Sees if one of these instructions is a
@@ -1688,7 +1688,7 @@
     (cond ((null masters)
 	   (specialization-error insts))
 	  ((cdr masters)
-	   (error _"Multiple specializing masters: ~s" masters))
+	   (error (intl:gettext "Multiple specializing masters: ~s") masters))
 	  (t
 	   (let ((master (car masters)))
 	     (setf (inst-specializers master)
@@ -2110,7 +2110,7 @@
 				      (+ (dstate-cur-offs dstate)
 					 (1- lra-size))))
 		vm:return-pc-header-type))
-    (note (format nil _"Possible ~A header word" '.lra) dstate))
+    (note (format nil (intl:gettext "Possible ~A header word") '.lra) dstate))
   nil)
 
 (defun fun-header-hook (stream dstate)
@@ -2627,7 +2627,7 @@
   (declare (type compiled-function function))
   (let* ((self (fun-self function))
 	 (code (kernel:function-code-header self)))
-    (format t _"Code-header ~s: size: ~s, trace-table-offset: ~s~%"
+    (format t (intl:gettext "Code-header ~s: size: ~s, trace-table-offset: ~s~%")
 	    code
 	    (kernel:code-header-ref code vm:code-code-size-slot)
 	    (kernel:code-header-ref code vm:code-trace-table-offset-slot))
@@ -2637,7 +2637,7 @@
       (let ((fun-offset (kernel:get-closure-length fun)))
 	;; There is function header fun-offset words from the
 	;; code header.
-	(format t _"Fun-header ~s at offset ~d (words): ~s~a => ~s~%"
+	(format t (intl:gettext "Fun-header ~s at offset ~d (words): ~s~a => ~s~%")
 		fun
 		fun-offset
 		(kernel:code-header-ref
@@ -2663,13 +2663,13 @@
     (ecase (di:debug-source-from debug-source)
       (:file
        (cond ((not (probe-file name))
-	      (warn _"The source file ~s no longer seems to exist" name)
+	      (warn (intl:gettext "The source file ~s no longer seems to exist") name)
 	      nil)
 	     (t
 	      (let ((start-positions
 		     (di:debug-source-start-positions debug-source)))
 		(cond ((null start-positions)
-		       (warn _"No start positions map")
+		       (warn (intl:gettext "No start positions map"))
 		       nil)
 		      (t
 		       (let* ((local-tlf-index
@@ -2682,8 +2682,8 @@
 				     (file-write-date name))
 				  (file-position f char-offset))
 				 (t
-				  (warn _"Source file ~s has been modified; ~@
-					 Using form offset instead of file index"
+				  (warn (intl:gettext "Source file ~s has been modified; ~@
+					 Using form offset instead of file index")
 					name)
 				  (let ((*read-suppress* t))
 				    (dotimes (i local-tlf-index) (read f)))))
@@ -2727,8 +2727,8 @@
     (cond ((null top-level-form)
 	   nil)
 	  ((>= form-number (length mapping-table))
-	   (warn _"Bogus form-number in form!  The source file has probably ~@
-		  been changed too much to cope with")
+	   (warn (intl:gettext "Bogus form-number in form!  The source file has probably ~@
+		  been changed too much to cope with"))
 	   (when cache
 	     ;; disable future warnings
 	     (setf (sfcache-top-level-form cache) nil))
@@ -2847,14 +2847,14 @@
 				      :debug-variables debug-variables))
 	   (let ((debug-var (aref debug-variables debug-var-offset)))
 	     #+nil
-	     (format t _";;; At offset ~d: ~s~%" debug-var-offset debug-var)
+	     (format t (intl:gettext ";;; At offset ~d: ~s~%") debug-var-offset debug-var)
 	     (let* ((sc-offset
 		     (di::compiled-debug-variable-sc-offset debug-var))
 		    (sb-name
 		     (c:sb-name
 		      (c:sc-sb (aref sc-vec (c:sc-offset-scn sc-offset))))))
 	       #+nil
-	       (format t _";;; SET: ~s[~d]~%"
+	       (format t (intl:gettext ";;; SET: ~s[~d]~%")
 		       sb-name (c:sc-offset-offset sc-offset))
 	       (unless (null sb-name)
 		 (let ((group (cdr (assoc sb-name groups))))
@@ -3000,10 +3000,10 @@
 	(case kind
 	  (:external)
 	  ((nil)
-	   (anh _"No-arg-parsing entry point"))
+	   (anh (intl:gettext "No-arg-parsing entry point")))
 	  (t
 	   (anh #'(lambda (stream)
-		    (format stream _"~s entry point" kind)))))))))
+		    (format stream (intl:gettext "~s entry point") kind)))))))))
 
 ;;; ----------------------------------------------------------------
 
@@ -3276,7 +3276,7 @@
       (function-lambda-expression function)
     (declare (ignore name))
     (when closurep
-      (error _"Cannot compile a lexical closure"))
+      (error (intl:gettext "Cannot compile a lexical closure")))
     (compile nil lambda)))
 
 (defun compiled-function-or-lose (thing &optional (name thing))
@@ -3293,7 +3293,7 @@
 	 (error 'simple-type-error
 		:datum name
 		:expected-type '(satisfies valid-function-name-p)
-		:format-control _"Can't make a compiled function from ~S"
+		:format-control (intl:gettext "Can't make a compiled function from ~S")
 		:format-arguments (list name)))))
 
 (defun disassemble (object &key (stream *standard-output*)
@@ -3346,7 +3346,7 @@
 			 (kernel:code-instructions code-component)))))
 		(when (or (< code-offs 0)
 			  (> code-offs (code-inst-area-length code-component)))
-		  (error _" Address ~x not in the code component ~s."
+		  (error (intl:gettext " Address ~x not in the code component ~s.")
 			 address code-component))
 		(get-code-segments code-component code-offs length))
 	      (list (make-memory-segment address length)))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.22 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.23 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -565,7 +565,7 @@
     (unless (and (not (sc-save-p sc))
 		 (eq (sb-kind (sc-sb sc)) :unbounded))
       (dolist (alt (sc-alternate-scs sc)
-		   (error _"SC ~S has no :unbounded :save-p NIL alternate SC."
+		   (error (intl:gettext "SC ~S has no :unbounded :save-p NIL alternate SC.")
 			  (sc-name sc)))
 	(when (and (not (sc-save-p alt))
 		   (eq (sb-kind (sc-sb alt)) :unbounded))

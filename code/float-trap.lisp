@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.37 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.38 2010/04/20 17:57:44 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,7 +42,7 @@
   (reduce #'logior
 	  (mapcar #'(lambda (x)
 		      (or (cdr (assoc x float-trap-alist))
-			  (error _"Unknown float trap kind: ~S." x)))
+			  (error (intl:gettext "Unknown float trap kind: ~S.") x)))
 		  names)))
 
 (defconstant rounding-mode-alist
@@ -159,7 +159,7 @@
     (when round-p
       (setf (ldb float-rounding-mode modes)
 	    (or (cdr (assoc rounding-mode rounding-mode-alist))
-		(error _"Unknown rounding mode: ~S." rounding-mode))))
+		(error (intl:gettext "Unknown rounding mode: ~S.") rounding-mode))))
     (when current-x-p
       (setf (ldb float-exceptions-byte modes)
 	    (float-trap-mask current-exceptions))
@@ -290,7 +290,7 @@
 		    :operation fop
 		    :operands operands))
 	    (t
-	     (error _"SIGFPE with no exceptions currently enabled?"))))))
+	     (error (intl:gettext "SIGFPE with no exceptions currently enabled?")))))))
 
 ;;; WITH-FLOAT-TRAPS-MASKED  --  Public
 ;;;

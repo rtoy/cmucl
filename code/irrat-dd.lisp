@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.19 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.20 2010/04/20 17:57:44 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1508,7 +1508,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 	       (setf s (* loge2 e))))
 	(when (> s max-log)
 	  ;; Overflow.  What to do?
-	  (error _"Overflow"))
+	  (error (intl:gettext "Overflow")))
 	(when (< s min-log)
 	  (return-from dd-%powil 0w0))
 

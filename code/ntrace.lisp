@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.45 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.46 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -163,7 +163,7 @@
       (typecase x
 	(symbol
 	 (cond ((special-operator-p x)
-		(error _"Can't trace special form ~S." x))
+		(error (intl:gettext "Can't trace special form ~S.") x))
 	       ((macro-function x))
 	       (t
 		(values (fdefinition x) t))))
@@ -302,7 +302,7 @@
   (when (and break (funcall (cdr break) frame))
     (di:flush-frames-above frame)
     (let ((*stack-top-hint* frame))
-      (break _"Breaking ~A traced call to ~S:" where
+      (break (intl:gettext "Breaking ~A traced call to ~S:") where
 	     (trace-info-what info)))))
 
 ;;; DISCARD-INVALID-ENTRIES  --  Internal
@@ -398,7 +398,7 @@
 	    (pprint-logical-block (*standard-output* nil)
 	      (print-trace-indentation)
 	      (pprint-indent :current 2)
-	      (format t _"~S returned" (trace-info-what info))
+	      (format t (intl:gettext "~S returned") (trace-info-what info))
 	      (dolist (v *trace-values*)
 		(write-char #\space)
 		(pprint-newline :linear)
@@ -458,7 +458,7 @@
 		    (nth-value 2 (trace-fdefinition definition))))
 	  (trace-fdefinition function-or-name))
     (when (gethash (or local fun) *traced-functions*)
-      (warn _"Function ~S already TRACE'd, retracing it." function-or-name)
+      (warn (intl:gettext "Function ~S already TRACE'd, retracing it.") function-or-name)
       (untrace-1 fun))
     
     (let* ((debug-fun (di:function-debug-function fun :local-name local))
@@ -472,7 +472,7 @@
 		     encapsulate-p)
 		    (:compiled-closure
 		     (unless (functionp function-or-name)
-		       (warn _"Tracing shared code for ~S:~%  ~S"
+		       (warn (intl:gettext "Tracing shared code for ~S:~%  ~S")
 			     function-or-name fun))
 		     encapsulate-p)
 		    ((:interpreted :interpreted-closure
@@ -504,7 +504,7 @@
 		   (declare (ignore validp))
 		   (unless (or (stringp block-name)
 			       (fboundp block-name))
-		     (warn _"~S name is not a defined global function: ~S"
+		     (warn (intl:gettext "~S name is not a defined global function: ~S")
 			   type wherein))))))
 	(verify-wherein (trace-info-wherein info) :wherein)
 	(verify-wherein (trace-info-wherein-only info) :wherein-only))
@@ -513,10 +513,10 @@
       (cond
        (encapsulated
 	(unless named
-	  (error _"Can't use encapsulation to trace anonymous function ~S."
+	  (error (intl:gettext "Can't use encapsulation to trace anonymous function ~S.")
 		 fun))
 	(when (listp fun)
-	  (error _"Can't use encapsulation to trace local flet/labels function ~S."
+	  (error (intl:gettext "Can't use encapsulation to trace local flet/labels function ~S.")
 		 fun))
 	(fwrap function-or-name #'trace-fwrapper :type 'trace
 	       :user-data info))
@@ -626,7 +626,7 @@
 	     (t (return)))
 	   (pop current)
 	   (unless current
-	     (error _"Missing argument to ~S TRACE option." option))
+	     (error (intl:gettext "Missing argument to ~S TRACE option.") option))
 	   (pop current)))
       current)))
 
@@ -661,7 +661,7 @@
 			  (trace-1 name ',options))))))
 	   ((and (keywordp name)
 		 (not (or (fboundp name) (macro-function name))))
-	    (error _"Unknown TRACE option: ~S" name))
+	    (error (intl:gettext "Unknown TRACE option: ~S") name))
 	   ;;
 	   ;; Method name -> trace method functions.
 	   ((and (consp name) (eq (car name) 'method))
@@ -786,7 +786,7 @@
     (let* ((key (or local fun))
 	   (info (gethash key *traced-functions*)))
       (cond ((not info)
-	     (warn _"Function is not TRACE'd -- ~S." function-or-name))
+	     (warn (intl:gettext "Function is not TRACE'd -- ~S.") function-or-name))
 	    (t
 	     (cond ((trace-info-encapsulated info)
 		    (funwrap (trace-info-what info) :type 'trace))

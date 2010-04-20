@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.130 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.131 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -254,7 +254,7 @@
    (lambda (condition stream)
      (let ((obj (print-not-readable-object condition))
 	   (*print-array* nil))
-       (format stream _"~S cannot be printed readably." obj)))))
+       (format stream (intl:gettext "~S cannot be printed readably.") obj)))))
 
 ;;; Guts of print-unreadable-object.
 ;;;
@@ -426,8 +426,8 @@
     (:initiate
      ;; Someone forgot to initiate circularity detection.
      (let ((*print-circle* nil))
-       (error _"Attempt to use CHECK-FOR-CIRCULARITY when circularity ~
-	       checking has not been initiated.")))
+       (error (intl:gettext "Attempt to use CHECK-FOR-CIRCULARITY when circularity ~
+	       checking has not been initiated."))))
     ((t :logical-block)
      ;; It's a second (or later) reference to the object while we are
      ;; just looking.  So don't bother groveling it again.
@@ -639,11 +639,11 @@
     (setq *previous-readtable-case* (readtable-case *readtable*))
     (unless (member *print-case* '(:upcase :downcase :capitalize))
       (setq *print-case* :upcase)
-      (error _"Invalid *PRINT-CASE* value: ~S" *previous-case*))
+      (error (intl:gettext "Invalid *PRINT-CASE* value: ~S") *previous-case*))
     (unless (member *previous-readtable-case*
 		    '(:upcase :downcase :invert :preserve))
       (setf (readtable-case *readtable*) :upcase)
-      (error _"Invalid READTABLE-CASE value: ~S" *previous-readtable-case*))
+      (error (intl:gettext "Invalid READTABLE-CASE value: ~S") *previous-readtable-case*))
 
     (setq *internal-symbol-output-function*
 	  (case *previous-readtable-case*

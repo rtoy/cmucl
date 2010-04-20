@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.23 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.24 2010/04/20 17:57:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -149,7 +149,7 @@
 	 (error 'simple-type-error
 		:datum x
 		:expected-type '(or string symbol character)
-		:format-control _"~S cannot be coerced to a string."
+		:format-control (intl:gettext "~S cannot be coerced to a string.")
 		:format-arguments (list x)))))
 
 ;;; With-One-String is used to set up some string hacking things.  The keywords
@@ -409,7 +409,7 @@
       (declare (fixnum slen1 slen2))
       (if (or (minusp slen1) (minusp slen2))
 	  ;;prevent endless looping later.
-	  (error _"Improper bounds for string comparison."))
+	  (error (intl:gettext "Improper bounds for string comparison.")))
       (if (= slen1 slen2)
 	  ;;return () immediately if lengths aren't equal.
 	  (string-not-equal-loop 1 t nil)))))
@@ -424,9 +424,9 @@
       (declare (fixnum slen1 slen2))
       (if (or (minusp slen1) (minusp slen2))
 	  ;;prevent endless looping later.
-	  (error _"Improper bounds for string comparison."))
+	  (error (intl:gettext "Improper bounds for string comparison.")))
       (cond ((or (minusp slen1) (or (minusp slen2)))
-	     (error _"Improper substring for comparison."))
+	     (error (intl:gettext "Improper substring for comparison.")))
 	    ((= slen1 slen2)
 	     (string-not-equal-loop 1 nil (- index1 offset1)))
 	    ((< slen1 slen2)
@@ -472,7 +472,7 @@
 	 (declare (fixnum slen1 slen2))
 	 (if (or (minusp slen1) (minusp slen2))
 	     ;;prevent endless looping later.
-	     (error _"Improper bounds for string comparison."))
+	     (error (intl:gettext "Improper bounds for string comparison.")))
 	 (do ((index1 start1 (1+ index1))
 	      (index2 start2 (1+ index2))
 	      (char1)
@@ -511,7 +511,7 @@
 	 (declare (fixnum slen1 slen2))
 	 (if (or (minusp slen1) (minusp slen2))
 	     ;;prevent endless looping later.
-	     (error _"Improper bounds for string comparison."))
+	     (error (intl:gettext "Improper bounds for string comparison.")))
 	 (do ((index1 start1 (1+ index1))
 	      (index2 start2 (1+ index2)))
 	     ((or (= index1 (the fixnum end1)) (= index2 (the fixnum end2)))
@@ -1442,7 +1442,7 @@
 ;;   incorrect; instead, what we need is a new rule:
 ;; 
 ;;   *Break after paragraph separators.*
-;;    WB3a. Sep ÷
+;;    WB3a. Sep ï¿½
 ;;   I'll make a propose to the UTC for this.
 ;;
 ;; Here is Will's translation of those rules (including WB3a)

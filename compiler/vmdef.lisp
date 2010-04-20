@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.51 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.52 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,7 @@
 (defun template-or-lose (x &optional (backend *target-backend*))
   (the template
        (or (gethash x (backend-template-names backend))
-	   (error _"~S is not a defined template." x))))
+	   (error (intl:gettext "~S is not a defined template.") x))))
 
 
 ;;; SC-Or-Lose, SB-Or-Lose, SC-Number-Or-Lose  --  Internal
@@ -40,12 +40,12 @@
 (defun sc-or-lose (x &optional (backend *target-backend*))
   (the sc
        (or (gethash x (backend-sc-names backend))
-	   (error _"~S is not a defined storage class." x))))
+	   (error (intl:gettext "~S is not a defined storage class.") x))))
 ;;;
 (defun sb-or-lose (x &optional (backend *target-backend*))
   (the sb
        (or (gethash x (backend-sb-names backend))
-	   (error _"~S is not a defined storage base." x))))
+	   (error (intl:gettext "~S is not a defined storage base.") x))))
 ;;;
 (defun sc-number-or-lose (x &optional (backend *target-backend*))
   (the sc-number (sc-number (sc-or-lose x backend))))
@@ -60,12 +60,12 @@
 (defun meta-sc-or-lose (x)
   (the sc
        (or (gethash x (backend-meta-sc-names *target-backend*))
-	   (error _"~S is not a defined storage class." x))))
+	   (error (intl:gettext "~S is not a defined storage class.") x))))
 ;;;
 (defun meta-sb-or-lose (x)
   (the sb
        (or (gethash x (backend-meta-sb-names *target-backend*))
-	   (error _"~S is not a defined storage base." x))))
+	   (error (intl:gettext "~S is not a defined storage base.") x))))
 ;;;
 (defun meta-sc-number-or-lose (x)
   (the sc-number (sc-number (meta-sc-or-lose x))))
@@ -114,7 +114,7 @@
 (defun primitive-type-or-lose (name &optional (backend *target-backend*))
   (the primitive-type
        (or (gethash name (backend-primitive-type-names backend))
-	   (error _"~S is not a defined primitive type." name))))
+	   (error (intl:gettext "~S is not a defined primitive type.") name))))
 
 
 ;;; SC-ALLOWED-BY-PRIMITIVE-TYPE  --  Interface

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.53 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.54 2010/04/20 17:57:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -254,7 +254,7 @@
 	      (t
 	       (dolist (info *hash-table-tests*
 			     (error 'simple-program-error
-                                    :format-control _"Unknown :TEST for MAKE-HASH-TABLE: ~S"
+                                    :format-control (intl:gettext "Unknown :TEST for MAKE-HASH-TABLE: ~S")
 				    :format-arguments (list test)))
 		 (destructuring-bind
 		  (test-name test-fun hash-fun)
@@ -272,7 +272,7 @@
 	(declare (type index size+1 scaled-size length))
 	#-gencgc
 	(when weak-p
-	  (format *debug-io* _";; Creating unsupported weak-p hash table~%"))
+	  (format *debug-io* (intl:gettext ";; Creating unsupported weak-p hash table~%")))
 	#+gencgc
 	(when (and (member weak-p '(t :key :key-and-value :key-or-value))
 		   (not (member test '(eq eql))))
@@ -282,7 +282,7 @@
 	  ;;
 	  ;; XXX: Either fix GC to work with other tests, or change
 	  ;; this warning into an error.
-	  (error _"Cannot make a weak ~A hashtable with test: ~S" weak-p test))
+	  (error (intl:gettext "Cannot make a weak ~A hashtable with test: ~S") weak-p test))
 	(let* ((index-vector
 		(make-array length :element-type '(unsigned-byte 32)
 			    :initial-element 0))
@@ -972,7 +972,7 @@
 	((funcallable-instance-p instance)
 	 (%funcallable-instance-info instance 2))
 	(t
-	 (error _"What kind of instance is this?"))))
+	 (error (intl:gettext "What kind of instance is this?")))))
 
 ;; End pcl/low.lisp
 

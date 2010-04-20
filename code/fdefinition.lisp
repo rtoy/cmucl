@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.28 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.29 2010/04/20 17:57:44 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -166,7 +166,7 @@
       (error 'simple-type-error
 	     :datum fname
 	     :expected-type '(satisfies valid-function-name-p)
-	     :format-control _"Invalid function name: ~S"
+	     :format-control (intl:gettext "Invalid function name: ~S")
 	     :format-arguments (list name))))
   (let ((fdefn (info function definition name)))
     (if (and (null fdefn) create)

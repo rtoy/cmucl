@@ -6,7 +6,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/env-access.lisp,v 1.7 2010/04/19 02:18:03 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/env-access.lisp,v 1.8 2010/04/20 17:57:44 rtoy Rel $")
 
 ;;;
 ;;; **********************************************************************
@@ -123,7 +123,7 @@ Supported DECLARATION-NAMES are
 		    (when (equal class "DECLARATION")
 		      (push name decls))))
 		decls))))
-      (t (error _"Unsupported declaration ~S." declaration-name)))))
+      (t (error (intl:gettext "Unsupported declaration ~S.") declaration-name)))))
 
 (defun parse-macro (name lambda-list body &optional env)
   "Process a macro in the same way that DEFMACRO or MACROLET would.

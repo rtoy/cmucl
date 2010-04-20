@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.11 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.12 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,9 +50,9 @@
   (ecase kind
     (:non-packed
      (when size
-       (error _"Size specification meaningless in a ~S SB." kind)))
+       (error (intl:gettext "Size specification meaningless in a ~S SB.") kind)))
     ((:finite :unbounded)
-     (unless size (error _"Size not specified in a ~S SB." kind))
+     (unless size (error (intl:gettext "Size not specified in a ~S SB.") kind))
      (check-type size unsigned-byte)))
     
   (let ((res (if (eq kind :non-packed)
@@ -133,7 +133,7 @@
   (check-type alternate-scs list)
   (check-type constant-scs list)
   (unless (= (logcount alignment) 1)
-    (error _"Alignment is not a power of two: ~S" alignment))
+    (error (intl:gettext "Alignment is not a power of two: ~S") alignment))
 
   (let ((sb (meta-sb-or-lose sb-name)))
     (if (eq (sb-kind sb) :finite)
@@ -143,16 +143,16 @@
 	  (dolist (el locations)
 	    (check-type el unsigned-byte)
 	    (unless (<= 1 (+ el element-size) size)
-	      (error _"SC element ~D out of bounds for ~S." el sb))))
+	      (error (intl:gettext "SC element ~D out of bounds for ~S.") el sb))))
 	(when locations
-	  (error _":Locations is meaningless in a ~S SB." (sb-kind sb))))
+	  (error (intl:gettext ":Locations is meaningless in a ~S SB.") (sb-kind sb))))
 
     (unless (subsetp reserve-locations locations)
-      (error _"Reserve-Locations not a subset of Locations."))
+      (error (intl:gettext "Reserve-Locations not a subset of Locations.")))
 
     (when (and (or alternate-scs constant-scs)
 	       (eq (sb-kind sb) :non-packed))
-      (error _"Meaningless to specify alternate or constant SCs in a ~S SB."
+      (error (intl:gettext "Meaningless to specify alternate or constant SCs in a ~S SB.")
 	     (sb-kind sb))))
 
   (let ((nstack-p
@@ -183,7 +183,7 @@
 
        (let ((old (svref (backend-sc-numbers *target-backend*) ',number)))
 	 (when (and old (not (eq (sc-name old) ',name)))
-	   (warn _"Redefining SC number ~D from ~S to ~S." ',number
+	   (warn (intl:gettext "Redefining SC number ~D from ~S to ~S.") ',number
 		 (sc-name old) ',name)))
        
        (setf (svref (backend-sc-numbers *target-backend*) ',number)
@@ -223,7 +223,7 @@
   All uses of DEFINE-MOVE-FUNCTION should be compiled before any uses of
   DEFINE-VOP."
   (when (or (oddp (length scs)) (null scs))
-    (error _"Malformed SCs spec: ~S." scs))
+    (error (intl:gettext "Malformed SCs spec: ~S.") scs))
   (check-type cost index)
   `(progn
      (eval-when (compile load eval)
@@ -252,9 +252,9 @@
   representation of the To-SCs.  If kind is :Move-Argument, then the VOP takes
   an extra argument, which is the frame pointer of the frame to move into." 
   (when (or (oddp (length scs)) (null scs))
-    (error _"Malformed SCs spec: ~S." scs))
+    (error (intl:gettext "Malformed SCs spec: ~S.") scs))
   (let ((accessor (or (cdr (assoc kind sc-vop-slots))
-		      (error _"Unknown kind ~S." kind))))
+		      (error (intl:gettext "Unknown kind ~S.") kind))))
     `(progn
        ,@(when (eq kind :move)
 	   `((eval-when (compile load eval)
@@ -284,7 +284,7 @@
 (defun meta-primitive-type-or-lose (name)
   (the primitive-type
        (or (gethash name (backend-meta-primitive-type-names *target-backend*))
-	   (error _"~S is not a defined primitive type." name))))
+	   (error (intl:gettext "~S is not a defined primitive type.") name))))
 
 ;;; Def-Primitive-Type  --  Public
 ;;;
@@ -363,7 +363,7 @@
 		    #'(lambda (kind)
 			(let ((slot (or (cdr (assoc kind
 						    primitive-type-slot-alist))
-					(error _"Unknown kind: ~S." kind))))
+					(error (intl:gettext "Unknown kind: ~S.") kind))))
 			  `(setf (,slot ,n-type) ,n-vop)))
 		    kinds)))
 	  types)
@@ -579,9 +579,9 @@
 		     :key #'operand-parse-name)))
     (if found
 	(unless (member (operand-parse-kind found) kinds)
-	  (error _"Operand ~S isn't one of these kinds: ~S." name kinds))
+	  (error (intl:gettext "Operand ~S isn't one of these kinds: ~S.") name kinds))
 	(when error-p
-	  (error _"~S is not an operand to ~S." name (vop-parse-name parse))))
+	  (error (intl:gettext "~S is not an operand to ~S.") name (vop-parse-name parse))))
     found))
 
 
@@ -594,7 +594,7 @@
 (defun vop-parse-or-lose (name &optional (backend *target-backend*))
   (the vop-parse
        (or (gethash name (backend-parsed-vops backend))
-	   (error _"~S is not the name of a defined VOP." name))))
+	   (error (intl:gettext "~S is not the name of a defined VOP.") name))))
 
 
 ;;; Access-Operands  --  Internal
@@ -636,12 +636,12 @@
 (defun vop-spec-arg (spec type &optional (n 1) (last t))
   (let ((len (length spec)))
     (when (<= len n)
-      (error _"~:R argument missing: ~S." n spec))
+      (error (intl:gettext "~:R argument missing: ~S.") n spec))
     (when (and last (> len (1+ n)))
-      (error _"Extra junk at end of ~S." spec))
+      (error (intl:gettext "Extra junk at end of ~S.") spec))
     (let ((thing (elt spec n)))
       (unless (typep thing type)
-	(error _"~:R argument is not a ~S: ~S." n type spec))
+	(error (intl:gettext "~:R argument is not a ~S: ~S.") n type spec))
       thing)))
 
 
@@ -658,7 +658,7 @@
   (let ((dspec (if (atom spec) (list spec 0) spec)))
     (unless (and (= (length dspec) 2)
 		 (typep (second dspec) 'unsigned-byte))
-      (error _"Malformed time specifier: ~S." spec))
+      (error (intl:gettext "Malformed time specifier: ~S.") spec))
 
     (cons (case (first dspec)
 	    (:load 0)
@@ -667,7 +667,7 @@
 	    (:result 3)
 	    (:save 4)
 	    (t
-	     (error _"Unknown phase in time specifier: ~S." spec)))
+	     (error (intl:gettext "Unknown phase in time specifier: ~S.") spec)))
 	  (second dspec))))
 
 
@@ -713,7 +713,7 @@
       (dolist (op (vop-parse-operands parse))
 	(when (operand-parse-target op)
 	  (unless (member (operand-parse-kind op) '(:argument :temporary))
-	    (error _"Cannot target a ~S operand: ~S." (operand-parse-kind op)
+	    (error (intl:gettext "Cannot target a ~S operand: ~S.") (operand-parse-kind op)
 		   (operand-parse-name op)))
 	  (let ((target (find-operand (operand-parse-target op) parse
 				      '(:temporary :result))))
@@ -802,22 +802,22 @@
 		     (found (or (assoc alt (funs) :test #'member)
 				(rassoc name (funs)))))
 		(unless name
-		  (error _"No move function defined to ~:[save~;load~] SC ~S~
-			  ~:[to~;from~] from SC ~S."
+		  (error (intl:gettext "No move function defined to ~:[save~;load~] SC ~S~
+			  ~:[to~;from~] from SC ~S.")
 			 load-p sc-name load-p (sc-name alt)))
 		
 		(cond (found
 		       (unless (eq (cdr found) name)
-			 (error _"Can't tell whether to ~:[save~;load~] with ~S~@
-				 or ~S when operand is in SC ~S."
+			 (error (intl:gettext "Can't tell whether to ~:[save~;load~] with ~S~@
+				 or ~S when operand is in SC ~S.")
 				load-p name (cdr found) (sc-name alt)))
 		       (pushnew alt (car found)))
 		      (t
 		       (funs (cons (list alt) name))))))))
 	 ((member (sb-kind (sc-sb sc)) '(:non-packed :unbounded)))
 	 (t
-	  (error _"SC ~S has no alternate~:[~; or constant~] SCs, yet it is~@
-	          mentioned in the restriction for operand ~S."
+	  (error (intl:gettext "SC ~S has no alternate~:[~; or constant~] SCs, yet it is~@
+	          mentioned in the restriction for operand ~S.")
 		 sc-name load-p (operand-parse-name op))))))
     (funs)))
 
@@ -855,8 +855,8 @@
 	      `(when (eq ,load-tn ,(operand-parse-name op))
 		 ,form)))
 	`(when ,load-tn
-	   (error _"Load TN allocated, but no move function?~@
-	           VM definition inconsistent, recompile and try again.")))))
+	   (error (intl:gettext "Load TN allocated, but no move function?~@
+	           VM definition inconsistent, recompile and try again."))))))
 
 ;;; DECIDE-TO-LOAD  --  Internal
 ;;;
@@ -957,9 +957,9 @@
     (collect ((operands))
       (dolist (spec specs)
 	(unless (and (consp spec) (symbolp (first spec)) (oddp (length spec)))
-	  (error _"Malformed operand specifier: ~S." spec))
+	  (error (intl:gettext "Malformed operand specifier: ~S.") spec))
 	(when more
-	  (error _"More operand isn't last: ~S." specs)) 
+	  (error (intl:gettext "More operand isn't last: ~S.") specs)) 
 	(let* ((name (first spec))
 	       (old (if (vop-parse-inherits parse)
 			(find-operand name
@@ -1012,21 +1012,21 @@
 		 (setf (operand-parse-target res) value))
 		(:from
 		 (unless (eq kind :result)
-		   (error _"Can only specify :FROM in a result: ~S" spec))
+		   (error (intl:gettext "Can only specify :FROM in a result: ~S") spec))
 		 (setf (operand-parse-born res) (parse-time-spec value)))
 		(:to
 		 (unless (eq kind :argument)
-		   (error _"Can only specify :TO in an argument: ~S" spec))
+		   (error (intl:gettext "Can only specify :TO in an argument: ~S") spec))
 		 (setf (operand-parse-dies res) (parse-time-spec value)))
 		(t
-		 (error _"Unknown keyword in operand specifier: ~S." spec)))))
+		 (error (intl:gettext "Unknown keyword in operand specifier: ~S.") spec)))))
 
 	  (cond ((not more)
 		 (operands res))
 		((operand-parse-target more)
-		 (error _"Cannot specify :TARGET in a :MORE operand."))
+		 (error (intl:gettext "Cannot specify :TARGET in a :MORE operand.")))
 		((operand-parse-load more)
-		 (error _"Cannot specify :LOAD-IF in a :MORE operand.")))))
+		 (error (intl:gettext "Cannot specify :LOAD-IF in a :MORE operand."))))))
       (values (the list (operands)) more))))
 
 
@@ -1040,16 +1040,16 @@
 	   (type vop-parse parse))
   (let ((len (length spec)))
     (unless (>= len 2)
-      (error _"Malformed temporary spec: ~S." spec))
+      (error (intl:gettext "Malformed temporary spec: ~S.") spec))
     (unless (listp (second spec))
-      (error _"Malformed options list: ~S." (second spec)))
+      (error (intl:gettext "Malformed options list: ~S.") (second spec)))
     (unless (evenp (length (second spec)))
-      (error _"Odd number of arguments in keyword options: ~S." spec))
+      (error (intl:gettext "Odd number of arguments in keyword options: ~S.") spec))
     (unless (consp (cddr spec))
-      (warn _"Temporary spec allocates no temps:~%  ~S" spec))
+      (warn (intl:gettext "Temporary spec allocates no temps:~%  ~S") spec))
     (dolist (name (cddr spec))
       (unless (symbolp name)
-	(error _"Bad temporary name: ~S." name))
+	(error (intl:gettext "Bad temporary name: ~S.") name))
       (let ((res (make-operand-parse :name name  :kind :temporary
 				     :temp-temp (gensym)
 				     :born (parse-time-spec :load)
@@ -1076,20 +1076,20 @@
 	    (:scs
 	     (let ((scs (vop-spec-arg opt 'list 1 nil)))
 	       (unless (= (length scs) 1)
-		 (error _"Must specify exactly one SC for a temporary."))
+		 (error (intl:gettext "Must specify exactly one SC for a temporary.")))
 	       (setf (operand-parse-sc res) (first scs))))
 	    (:type)
 	    (t
-	     (error _"Unknown temporary option: ~S." opt))))
+	     (error (intl:gettext "Unknown temporary option: ~S.") opt))))
 
 	(unless (and (time-spec-order (operand-parse-dies res)
 				      (operand-parse-born res))
 		     (not (time-spec-order (operand-parse-born res)
 					   (operand-parse-dies res))))
-	  (error _"Temporary lifetime doesn't begin before it ends: ~S." spec))
+	  (error (intl:gettext "Temporary lifetime doesn't begin before it ends: ~S.") spec))
 
 	(unless (operand-parse-sc res)
-	  (error _"Must specifiy :SC for all temporaries: ~S" spec))
+	  (error (intl:gettext "Must specifiy :SC for all temporaries: ~S") spec))
 
 	(setf (vop-parse-temps parse)
 	      (cons res
@@ -1107,7 +1107,7 @@
   (declare (type vop-parse parse) (list specs))
   (dolist (spec specs)
     (unless (consp spec)
-      (error _"Malformed option specification: ~S." spec))
+      (error (intl:gettext "Malformed option specification: ~S.") spec))
     (case (first spec)
       (:args
        (multiple-value-bind
@@ -1177,7 +1177,7 @@
 	     (vop-spec-arg spec
 			   '(member t nil :compute-only :force-to-stack))))
       (t
-       (error _"Unknown option specifier: ~S." (first spec)))))
+       (error (intl:gettext "Unknown option specifier: ~S.") (first spec)))))
   (undefined-value))
 
 
@@ -1212,8 +1212,8 @@
 			   (aref (sc-load-costs load-sc) op-scn)
 			   (aref (sc-load-costs op-sc) load-scn))))
 	    (unless load
-	      (error _"No move function defined to move ~:[from~;to~] SC ~
-	              ~S~%~:[to~;from~] alternate or constant SC ~S."
+	      (error (intl:gettext "No move function defined to move ~:[from~;to~] SC ~
+	              ~S~%~:[to~;from~] alternate or constant SC ~S.")
 		     load-p sc-name load-p (sc-name op-sc)))
 	    
 	    (let ((op-cost (svref costs op-scn)))
@@ -1313,7 +1313,7 @@
 			  (parse-operand-type alias)
 			  `(:or ,spec))))
 		   ((atom spec)
-		    (error _"Bad thing to be a operand type: ~S." spec))
+		    (error (intl:gettext "Bad thing to be a operand type: ~S.") spec))
 		   (t
 		    (case (first spec)
 		      (:or
@@ -1321,7 +1321,7 @@
 			 (results :or)
 			 (dolist (item (cdr spec))
 			   (unless (symbolp item)
-			     (error _"Bad PRIMITIVE-TYPE name in ~S: ~S"
+			     (error (intl:gettext "Bad PRIMITIVE-TYPE name in ~S: ~S")
 				    spec item))
 			   (let ((alias
 				  (gethash item
@@ -1330,8 +1330,8 @@
 			     (if alias
 				 (let ((alias (parse-operand-type alias)))
 				   (unless (eq (car alias) :or)
-				     (error _"Can't include primitive-type ~
-				             alias ~S in a :OR restriction: ~S."
+				     (error (intl:gettext "Can't include primitive-type ~
+				             alias ~S in a :OR restriction: ~S.")
 					    item spec))
 				   (dolist (x (cdr alias))
 				     (results x)))
@@ -1341,12 +1341,12 @@
 					    :start 1)))
 		      (:constant
 		       (unless args-p
-			 (error _"Can't :CONSTANT for a result."))
+			 (error (intl:gettext "Can't :CONSTANT for a result.")))
 		       (unless (= (length spec) 2)
-			 (error _"Bad :CONSTANT argument type spec: ~S." spec))
+			 (error (intl:gettext "Bad :CONSTANT argument type spec: ~S.") spec))
 		       spec)
 		      (t
-		       (error _"Bad thing to be a operand type: ~S." spec)))))))
+		       (error (intl:gettext "Bad thing to be a operand type: ~S.") spec)))))))
     (mapcar #'parse-operand-type specs)))
 
 
@@ -1374,11 +1374,11 @@
 				(meta-primitive-type-or-lose ptype))
 			       nil)
 		    (when (svref load-scs rep) (return t)))
-	    (error _"In the ~A ~:[result~;argument~] to VOP ~S,~@
+	    (error (intl:gettext "In the ~A ~:[result~;argument~] to VOP ~S,~@
 	            none of the SCs allowed by the operand type ~S can ~
 		    directly be loaded~@
 		    into any of the restriction's SCs:~%  ~S~:[~;~@
-		    [* type operand must allow T's SCs.]~]"
+		    [* type operand must allow T's SCs.]~]")
 		   (operand-parse-name op) load-p (vop-parse-name parse)
 		   ptype
 		   scs (eq type '*)))))
@@ -1390,9 +1390,9 @@
 			     (meta-sc-or-lose sc)
 			     (meta-primitive-type-or-lose ptype))
 			(return t))))
-	  (warn _"~:[Result~;Argument~] ~A to VOP ~S~@
+	  (warn (intl:gettext "~:[Result~;Argument~] ~A to VOP ~S~@
 	         has SC restriction ~S which is ~
-		 not allowed by the operand type:~%  ~S"
+		 not allowed by the operand type:~%  ~S")
 		load-p (operand-parse-name op) (vop-parse-name parse)
 		sc type)))))
 
@@ -1422,7 +1422,7 @@
     (when more-op
       (let ((mtype (car (last types))))
 	(when (and (consp mtype) (eq (first mtype) :constant))
-	  (error _"Can't use :CONSTANT on VOP more args.")))))
+	  (error (intl:gettext "Can't use :CONSTANT on VOP more args."))))))
   
   (when (vop-parse-translate parse)
     (let ((types (specify-operand-types types ops more-op)))
@@ -1593,7 +1593,7 @@
 
     (let ((nvars (length (vop-parse-variant-vars parse))))
       (unless (= (length variant) nvars)
-	(error _"Expected ~D variant values: ~S." nvars variant)))
+	(error (intl:gettext "Expected ~D variant values: ~S.") nvars variant)))
 
     `(make-vop-info
       :name ',(vop-parse-name parse)
@@ -1883,9 +1883,9 @@
 	 (n-template (gensym)))
     
     (when (or (vop-parse-more-args parse) (vop-parse-more-results parse))
-      (error _"Cannot use VOP with variable operand count templates."))
+      (error (intl:gettext "Cannot use VOP with variable operand count templates.")))
     (unless (= noperands (length operands))
-      (error _"Called with ~D operands, but was expecting ~D."
+      (error (intl:gettext "Called with ~D operands, but was expecting ~D.")
 	     (length operands) noperands))
     
     (multiple-value-bind
@@ -1946,12 +1946,12 @@
     
     (unless (or (vop-parse-more-args parse)
 		(<= (length fixed-args) arg-count))
-      (error _"Too many fixed arguments."))
+      (error (intl:gettext "Too many fixed arguments.")))
     (unless (or (vop-parse-more-results parse)
 		(<= (length fixed-results) result-count))
-      (error _"Too many fixed results."))
+      (error (intl:gettext "Too many fixed results.")))
     (unless (= (length info) info-count)
-      (error _"Expected ~D info args." info-count))
+      (error (intl:gettext "Expected ~D info args.") info-count))
     
     (multiple-value-bind
 	(acode abinds n-args)
@@ -1988,15 +1988,15 @@
     (collect ((clauses))
       (do ((cases forms (rest cases)))
 	  ((null cases)
-	   (clauses `(t (error _"Unknown SC to SC-Case for ~S:~%  ~S" ,n-tn
+	   (clauses `(t (error (intl:gettext "Unknown SC to SC-Case for ~S:~%  ~S") ,n-tn
 			       (sc-name (tn-sc ,n-tn))))))
 	(let ((case (first cases)))
 	  (when (atom case) 
-	    (error _"Illegal SC-Case clause: ~S." case))
+	    (error (intl:gettext "Illegal SC-Case clause: ~S.") case))
 	  (let ((head (first case)))
 	    (when (eq head t)
 	      (when (rest cases)
-		(error _"T case is not last in SC-Case."))
+		(error (intl:gettext "T case is not last in SC-Case.")))
 	      (clauses `(t nil ,@(rest case)))
 	      (return))
 	    (clauses `((or ,@(mapcar #'(lambda (x)

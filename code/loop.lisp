@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.33 2010/04/19 02:18:04 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.34 2010/04/20 17:57:44 rtoy Rel $")
 
 ;;;; LOOP Iteration Macro
 
@@ -768,7 +768,7 @@ a LET-like macro, and a SETQ-like macro, which perform LOOP-style destructuring.
 		     epilogue
 		     &aux rbefore rafter flagvar)
   (unless (= (length before-loop) (length after-loop))
-    (error _"LOOP-BODY called with non-synched before- and after-loop lists."))
+    (error (intl:gettext "LOOP-BODY called with non-synched before- and after-loop lists.")))
   ;;All our work is done from these copies, working backwards from the end:
   (setq rbefore (reverse before-loop) rafter (reverse after-loop))
   (labels ((psimp (l)
@@ -948,12 +948,12 @@ a LET-like macro, and a SETQ-like macro, which perform LOOP-style destructuring.
 (defun loop-error (format-string &rest format-args)
   #+(or Genera CLOE) (declare (dbg:error-reporter))
   #+Genera (setq format-args (copy-list format-args))	;Don't ask.
-  (kernel:simple-program-error _"~?~%Current LOOP context:~{ ~S~}."
+  (kernel:simple-program-error (intl:gettext "~?~%Current LOOP context:~{ ~S~}.")
 			       (intl:gettext format-string) format-args (loop-context)))
 
 
 (defun loop-warn (format-string &rest format-args)
-  (warn _"~?~%Current LOOP context:~{ ~S~}." (intl:gettext format-string) format-args (loop-context)))
+  (warn (intl:gettext "~?~%Current LOOP context:~{ ~S~}.") (intl:gettext format-string) format-args (loop-context)))
 
 
 (defun loop-check-data-type (specified-type required-type
@@ -1282,7 +1282,7 @@ collected result will be returned as the value of the LOOP."
 		(loop-declare-variable (cdr name) (cdr dtype)))
 	       (t (loop-declare-variable (car name) dtype)
 		  (loop-declare-variable (cdr name) dtype))))
-	(t (error _"Invalid LOOP variable passed in: ~S." name))))
+	(t (error (intl:gettext "Invalid LOOP variable passed in: ~S.") name))))
 
 
 (defun loop-maybe-bind-form (form data-type)

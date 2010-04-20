@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.112 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.113 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1069,7 +1069,7 @@
 ;;;
 (defun delete-block (block)
   (declare (type cblock block))
-  (assert (block-component block) () _"Block is already deleted.")
+  (assert (block-component block) () (intl:gettext "Block is already deleted."))
   (note-block-deletion block)
   (setf (block-delete-p block) t)
 
@@ -1880,7 +1880,7 @@
 ;;;
 (declaim (type (function () nil) *compiler-error-bailout*))
 (defvar *compiler-error-bailout*
-  #'(lambda () (error _"Compiler-Error with no bailout.")))
+  #'(lambda () (error (intl:gettext "Compiler-Error with no bailout."))))
 
 ;;; The stream that compiler error output is directed to.
 ;;;
@@ -1950,7 +1950,7 @@ these can be NIL if unavailable or inapplicable.")
 	 (when terpri (terpri *compiler-error-output*)))
 	((> *last-message-count* 1)
 	 (pprint-logical-block (*compiler-error-output* nil :per-line-prefix "; ")
-	   (format *compiler-error-output* _"[Last message occurs ~D times]"
+	   (format *compiler-error-output* (intl:gettext "[Last message occurs ~D times]")
 		   *last-message-count*))
 	 (format *compiler-error-output* "~2%")))
   (setq *last-message-count* 0))
@@ -2001,7 +2001,7 @@ these can be NIL if unavailable or inapplicable.")
 		 (setq last nil)
 		 (format stream "~2&")
 		 (pprint-logical-block (stream nil :per-line-prefix "; ")
-		   (format stream _"~2&File: ~A" (namestring file)))
+		   (format stream (intl:gettext "~2&File: ~A") (namestring file)))
 		 (format stream "~%")))
 	    
 	     (unless (and last
@@ -2010,7 +2010,7 @@ these can be NIL if unavailable or inapplicable.")
 	       (setq last nil)
 	       (format stream "~2&")
 	       (pprint-logical-block (stream nil :per-line-prefix "; ")
-		 (format stream _"In:~{~<~%   ~4:;~{ ~S~}~>~^ =>~}" in))
+		 (format stream (intl:gettext "In:~{~<~%   ~4:;~{ ~S~}~>~^ =>~}") in))
 	       (format stream "~2%"))
 	    
 	     (unless (and last
@@ -2155,19 +2155,19 @@ these can be NIL if unavailable or inapplicable.")
 ;;;
 (defun compiler-error (format-string &rest format-args)
   (declare (string format-string))
-  (cerror _"replace form with call to ERROR."
+  (cerror (intl:gettext "replace form with call to ERROR.")
 	  'compiler-error
 	  :format-control (intl:gettext format-string)
 	  :format-arguments format-args)
   (funcall *compiler-error-bailout*))
 ;;;
 (defun compiler-error-message (format-string &rest format-args)
-  (cerror _"ignore it." 
+  (cerror (intl:gettext "ignore it.") 
 	  'compiler-error :format-control format-string
 	  :format-arguments format-args))
 ;;; 
 (defun compiler-read-error (position format-string &rest format-args)
-  (cerror _"replace form with call to ERROR."
+  (cerror (intl:gettext "replace form with call to ERROR.")
 	  'compiler-read-error :position position
 	  :message (apply #'format nil format-string format-args)))
 ;;;

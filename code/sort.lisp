@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.12 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.13 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,7 +43,7 @@
      (error 'simple-type-error
 	    :datum sequence
 	    :expected-type 'sequence
-	    :format-control _"~S is not a sequence."
+	    :format-control (intl:gettext "~S is not a sequence.")
 	    :format-arguments (list sequence)))))
 
 
@@ -146,7 +146,7 @@
      (error 'simple-type-error
 	    :datum sequence
 	    :expected-type 'sequence
-	    :format-control _"~S is not a sequence."
+	    :format-control (intl:gettext "~S is not a sequence.")
 	    :format-arguments (list sequence)))))
 
 

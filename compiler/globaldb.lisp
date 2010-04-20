@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.55 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.56 2010/04/20 17:57:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -106,7 +106,7 @@
   (type nil :type t)
   ;;
   ;; Function called when there is no information of this type.
-  (default #'(lambda () (error _"Type not defined yet.")) :type function))
+  (default #'(lambda () (error (intl:gettext "Type not defined yet."))) :type function))
 
 
 ;;; A hashtable from class names to Class-Info structures.  This data structure
@@ -136,12 +136,12 @@
 (defun class-info-or-lose (class)
   (declare (string class) (values class-info))
   (or (gethash class *info-classes*)
-      (error _"~S is not a defined info class." class)))
+      (error (intl:gettext "~S is not a defined info class.") class)))
 ;;;
 (defun type-info-or-lose (class type)
   (declare (string class type) (values type-info))
   (or (find-type-info type (class-info-or-lose class))
-      (error _"~S is not a defined info type." type)))
+      (error (intl:gettext "~S is not a defined info type.") type)))
 
 
 ;;; Define-Info-Class  --  Public
@@ -177,7 +177,7 @@
 ;;;
 (defun find-unused-type-number ()
   (or (position nil *type-numbers*)
-      (error _"Out of INFO type numbers!")))
+      (error (intl:gettext "Out of INFO type numbers!"))))
 
 
 ;;; Define-Info-Type  --  Public
@@ -228,7 +228,7 @@
     (cond (old
 	   (setf (type-info-type res) type-spec)
 	   (unless (= (type-info-number res) number)
-	     (cerror _"Redefine it." _"Changing type number for ~A ~A."
+	     (cerror (intl:gettext "Redefine it.") (intl:gettext "Changing type number for ~A ~A.")
 		     class type)
 	     (setf (type-info-number res) number)))
 	  (t
@@ -236,7 +236,7 @@
 
     (unless (eq num-old res)
       (when num-old
-	(cerror _"Go for it." _"Reusing type number for ~A ~A."
+	(cerror (intl:gettext "Go for it.") (intl:gettext "Reusing type number for ~A ~A.")
 		(class-info-name (type-info-class num-old))
 		(type-info-name num-old)))
       (setf (svref *type-numbers* number) res)))
@@ -812,9 +812,9 @@
 (defun get-write-info-env (&optional (env-list *info-environment*))
   (let ((env (car env-list)))
     (unless env
-      (error _"No info environment?"))
+      (error (intl:gettext "No info environment?")))
     (unless (typep env 'volatile-info-env)
-      (error _"Cannot modify this environment: ~S." env))
+      (error (intl:gettext "Cannot modify this environment: ~S.") env))
     (the volatile-info-env env)))
 
 
@@ -834,7 +834,7 @@
   (declare (type type-number type) (type volatile-info-env env)
 	   (inline assoc))
   (when (eql name 0)
-    (error _"0 is not a legal INFO name."))
+    (error (intl:gettext "0 is not a legal INFO name.")))
   ;; We don't enter the value in the cache because we don't know that this
   ;; info-environment is part of *cached-info-environment*.
   (info-cache-enter name type nil :empty)

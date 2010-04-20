@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.20 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.21 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 
@@ -442,7 +442,7 @@
 	(let ((test-value (special-string-p substring)))
 	  (if test-value  (cons 'special test-value)))
 	(if *error-on-mismatch*
-	    (error _"\"~A\" is not a recognized word or abbreviation."
+	    (error (intl:gettext "\"~A\" is not a recognized word or abbreviation.")
 		   substring)
 	    (return-from match-substring nil)))))
 
@@ -520,8 +520,8 @@
 	     (if *error-on-mismatch*
 		 (error
 		  'simple-error
-		  :format-control _"Can't parse time/date string.~%>>> ~A~
-				   ~%~VT^-- Bogus character encountered here."
+		  :format-control (intl:gettext "Can't parse time/date string.~%>>> ~A~
+				   ~%~VT^-- Bogus character encountered here.")
 		  :format-arguments (list string (+ string-index 4)))
 		 (return-from decompose-string nil)))))))
 
@@ -578,7 +578,7 @@
 	 (setf (decoded-time-hour parsed-values) 12))
 	((eq form-value 'midn)
 	 (setf (decoded-time-hour parsed-values) 0))
-	(t (error _"Unrecognized symbol: ~A" form-value)))
+	(t (error (intl:gettext "Unrecognized symbol: ~A") form-value)))
   (setf (decoded-time-minute parsed-values) 0)
   (setf (decoded-time-second parsed-values) 0))
 
@@ -593,12 +593,12 @@
 		  (setf (decoded-time-hour parsed-values) 0))
 		 ((not (<= 0 hour 12))
 		  (if *error-on-mismatch*
-		      (error _"~D is not an AM hour, dummy." hour)))))
+		      (error (intl:gettext "~D is not an AM hour, dummy.") hour)))))
 	  ((eq form-value 'pm)
 	   (if (<= 0 hour 11)
 	       (setf (decoded-time-hour parsed-values)
 		     (mod (+ hour 12) 24))))
-	  (t (error _"~A isn't AM/PM - this shouldn't happen."
+	  (t (error (intl:gettext "~A isn't AM/PM - this shouldn't happen.")
 		    form-value)))))
 
 ;;; Internet numerical time zone, e.g. RFC1123, in hours and minutes.
@@ -629,7 +629,7 @@
 	       (t
 		t))))
     (unless ok
-      (error _"Invalid number of days (~D) for month ~D in ~D"
+      (error (intl:gettext "Invalid number of days (~D) for month ~D in ~D")
 	     (decoded-time-day parsed-values)
 	     (decoded-time-month parsed-values)
 	     (decoded-time-year parsed-values)))))      
@@ -671,8 +671,8 @@
       (if (< (decoded-time-dotw parsed-values) 0)
 	  (setf (decoded-time-dotw parsed-values) dotw)
 	  (unless (= dotw (decoded-time-dotw parsed-values))
-	    (cerror _"Ignore."
-		    _"Specified day (~@(~A~)) doesn't match actual day (~@(~A~))"
+	    (cerror (intl:gettext "Ignore.")
+		    (intl:gettext "Specified day (~@(~A~)) doesn't match actual day (~@(~A~))")
 		    (lookup-name (decoded-time-dotw parsed-values))
 		    (lookup-name dotw)))))))
 
@@ -700,7 +700,7 @@
 	(noon-midn (deal-with-noon-midn form-value parsed-values))
 	(date-time-divider 0)
 	(special (funcall form-value parsed-values))
-	(t (error _"Unrecognized symbol in form list: ~A." form-type)))))
+	(t (error (intl:gettext "Unrecognized symbol in form list: ~A.") form-type)))))
   ;; Some simple sanity checks, like does the given month have that
   ;; many days?  Is it a leap year?
   (check-days-per-month parsed-values)
@@ -739,7 +739,7 @@
 	  (set-time-values string-form parsed-values)
 	  (convert-to-unitime parsed-values))
 	(if *error-on-mismatch*
-	  (error _"\"~A\" is not a recognized time/date format." time-string)
+	  (error (intl:gettext "\"~A\" is not a recognized time/date format.") time-string)
 	  nil))))
 
 

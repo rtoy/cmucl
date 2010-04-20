@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.16 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.17 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -72,7 +72,7 @@
       (let ((when (cadar forms))
 	    (eval-when-forms (cddar forms)))
 	(unless (= (length forms) 1)
-	  (warn _"Can't cold-load-init other forms along with an eval-when."))
+	  (warn (intl:gettext "Can't cold-load-init other forms along with an eval-when.")))
 	(when (member 'load when)
 	  (setf cold-type-init-forms
 		(nconc cold-type-init-forms (copy-list eval-when-forms))))
@@ -124,12 +124,12 @@
 ;;;
 (defun type-class-or-lose (name)
   (or (gethash name *type-classes*)
-      (error _"~S is not a defined type class." name)))
+      (error (intl:gettext "~S is not a defined type class.") name)))
 
 ;;; MUST-SUPPLY-THIS  --  Interface
 ;;;
 (defun must-supply-this (&rest foo)
-  (error _"Missing type method for ~S" foo))
+  (error (intl:gettext "Missing type method for ~S") foo))
 
 
 (defstruct (type-class
@@ -225,7 +225,7 @@
 ;;;
 (defun class-function-slot-or-lose (name)
   (or (cdr (assoc name type-class-function-slots))
-      (error _"~S is not a defined type class method." name)))
+      (error (intl:gettext "~S is not a defined type class method.") name)))
 
 ); Eval-When (Compile Load Eval)
 

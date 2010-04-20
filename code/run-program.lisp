@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.30 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.31 2010/04/20 17:57:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -141,7 +141,7 @@
 			 unix:TIOCGPGRP
 			 (alien:alien-sap (alien:addr result)))
       (unless wonp
-	(error _"TIOCPGRP ioctl failed: ~S"
+	(error (intl:gettext "TIOCPGRP ioctl failed: ~S")
 	       (unix:get-unix-error-msg error)))
       result))
   (process-pid proc))
@@ -287,7 +287,7 @@
 		   (values master-fd
 			   slave-fd
 			   (unix:unix-ttyname slave-fd))))
-    (error _"Could not find a pty.")))
+    (error (intl:gettext "Could not find a pty."))))
 
 #+irix
 (alien:def-alien-routine ("_getpty" c-getpty) c-call:c-string
@@ -321,7 +321,7 @@
 			     slave-fd
 			     slave-name))))
     (unix:unix-close master-fd))
-  (error _"Could not find a pty."))
+  (error (intl:gettext "Could not find a pty.")))
 
 ;;; OPEN-PTY -- internal
 ;;;
@@ -335,7 +335,7 @@
       (when (streamp pty)
 	(multiple-value-bind (new-fd errno) (unix:unix-dup master)
 	  (unless new-fd
-	    (error _"Could not UNIX:UNIX-DUP ~D: ~A"
+	    (error (intl:gettext "Could not UNIX:UNIX-DUP ~D: ~A")
 		   master (unix:get-unix-error-msg errno)))
 	  (push new-fd *close-on-error*)
 	  (copy-descriptor-to-stream new-fd pty cookie)))
@@ -512,7 +512,7 @@
   (system:enable-interrupt unix:sigchld #'sigchld-handler)
   ;; Make sure all the args are okay.
   (unless (every #'simple-string-p args)
-    (error _"All args to program must be simple strings -- ~S." args))
+    (error (intl:gettext "All args to program must be simple strings -- ~S.") args))
   ;; Pre-pend the program to the argument list.
   (push (namestring program) args)
   ;; Clear random specials used by GET-DESCRIPTOR-FOR to communicate cleanup
@@ -522,7 +522,7 @@
 	(let ((pfile (unix-namestring (merge-pathnames program "path:") t t))
 	      (cookie (list 0)))
 	  (unless pfile
-	    (error _"No such program: ~S" program))
+	    (error (intl:gettext "No such program: ~S") program))
 	  (multiple-value-bind
 	      (stdin input-stream)
 	      (get-descriptor-for input cookie :direction :input
@@ -558,7 +558,7 @@
 				(spawn pfile argv envp pty-name
 				       stdin stdout stderr))))
 			  (when (< child-pid 0)
-			    (error _"Could not fork child process: ~A"
+			    (error (intl:gettext "Could not fork child process: ~A")
 				   (unix:get-unix-error-msg)))
 			  (setf proc (make-process :pid child-pid
 						   :%status :running
@@ -601,7 +601,7 @@
 		      (unix:unix-select (1+ descriptor) (ash 1 descriptor)
 					0 0 0)
 		    (cond ((null result)
-			   (error _"Could not select on sub-process: ~A"
+			   (error (intl:gettext "Could not select on sub-process: ~A")
 				  (unix:get-unix-error-msg readable/errno)))
 			  ((zerop result)
 			   (return))))
@@ -621,7 +621,7 @@
 			     (system:remove-fd-handler handler)
 			     (setf handler nil)
 			     (decf (car cookie))
-			     (error _"Could not read input from sub-process: ~A"
+			     (error (intl:gettext "Could not read input from sub-process: ~A")
 				    (unix:get-unix-error-msg errno)))
 			    (t
 			     #-unicode
@@ -659,7 +659,7 @@
 			       (t unix:o_rdwr))
 			     #o666)
 	   (unless fd
-	     (error _"Could not open \"/dev/null\": ~A"
+	     (error (intl:gettext "Could not open \"/dev/null\": ~A")
 		    (unix:get-unix-error-msg errno)))
 	   (push fd *close-in-parent*)
 	   (values fd nil)))
@@ -668,7 +668,7 @@
 	     (read-fd write-fd)
 	     (unix:unix-pipe)
 	   (unless read-fd
-	     (error _"Could not create pipe: ~A"
+	     (error (intl:gettext "Could not create pipe: ~A")
 		    (unix:get-unix-error-msg write-fd)))
 	   (case direction
 	     (:input
@@ -684,7 +684,7 @@
 	     (t
 	      (unix:unix-close read-fd)
 	      (unix:unix-close write-fd)
-	      (error _"Direction must be either :INPUT or :OUTPUT, not ~S"
+	      (error (intl:gettext "Direction must be either :INPUT or :OUTPUT, not ~S")
 		     direction)))))
 	((or (pathnamep object) (stringp object))
 	 (with-open-stream (file (apply #'open object keys))
@@ -695,7 +695,7 @@
 		    (push fd *close-in-parent*)
 		    (values fd nil))
 		   (t
-		    (error _"Could not duplicate file descriptor: ~A"
+		    (error (intl:gettext "Could not duplicate file descriptor: ~A")
 			   (unix:get-unix-error-msg errno)))))))
 	((system:fd-stream-p object)
 	 (values (system:fd-stream-fd object) nil))
@@ -704,7 +704,7 @@
 	   (:input
 	    (dotimes (count
 		      256
-		      (error _"Could not open a temporary file in /tmp"))
+		      (error (intl:gettext "Could not open a temporary file in /tmp")))
 	      (let* ((name (format nil "/tmp/.run-program-~D" count))
 		     (fd (unix:unix-open name
 					 (logior unix:o_rdwr
@@ -731,12 +731,12 @@
 	    (multiple-value-bind (read-fd write-fd)
 				 (unix:unix-pipe)
 	      (unless read-fd
-		(error _"Cound not create pipe: ~A"
+		(error (intl:gettext "Cound not create pipe: ~A")
 		       (unix:get-unix-error-msg write-fd)))
 	      (copy-descriptor-to-stream read-fd object cookie)
 	      (push read-fd *close-on-error*)
 	      (push write-fd *close-in-parent*)
 	      (values write-fd nil)))))
 	(t
-	 (error _"Invalid option to run-program: ~S" object))))
+	 (error (intl:gettext "Invalid option to run-program: ~S") object))))
 

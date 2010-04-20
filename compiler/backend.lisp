@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.34 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.35 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,8 +50,8 @@
 	    `(defun ,name (&rest args)
 	       (apply (or (,(symbolicate "VM-SUPPORT-ROUTINES-" name)
 			   (backend-support-routines *backend*))
-			  (error _"Machine specific support routine ~S ~
-				  undefined for ~S"
+			  (error (intl:gettext "Machine specific support routine ~S ~
+				  undefined for ~S")
 				 ',name *backend*))
 		      args)))
 	routines)))
@@ -101,7 +101,7 @@
 (defmacro def-vm-support-routine (name ll &body body)
   (unless (member (intern (string name) (find-package "C"))
 		  vm-support-routines)
-    (warn _"Unknown VM support routine: ~A" name))
+    (warn (intl:gettext "Unknown VM support routine: ~A") name))
   (let ((local-name (symbolicate (backend-name *target-backend*) "-" name)))
     `(progn
        (defun ,local-name ,ll ,@body)

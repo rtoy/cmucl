@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.99 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.100 2010/04/20 17:57:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -288,7 +288,7 @@
   (:report
    (lambda (condition stream)
      (declare (stream stream))
-     (format stream _"Timeout ~(~A~)ing ~S."
+     (format stream (intl:gettext "Timeout ~(~A~)ing ~S.")
 	     (io-timeout-direction condition)
 	     (stream-error-stream condition)))))
 
@@ -322,8 +322,8 @@
 			 length)
       (cond ((not count)
 	     (if (= errno unix:ewouldblock)
-		 (error _"Write would have blocked, but SERVER told us to go.")
-		 (error _"While writing ~S: ~A"
+		 (error (intl:gettext "Write would have blocked, but SERVER told us to go."))
+		 (error (intl:gettext "While writing ~S: ~A")
 			stream (unix:get-unix-error-msg errno))))
 	    ((eql count length) ; Hot damn, it worked.
 	     (when reuse-sap
@@ -611,8 +611,8 @@
 	   (bytes (- end start))
 	   (newtail (+ tail bytes)))
       (cond ((minusp bytes) ; Error case
-	     (cerror _"Just go on as if nothing happened..."
-		     _"~S called with :END before :START!"
+	     (cerror (intl:gettext "Just go on as if nothing happened...")
+		     (intl:gettext "~S called with :END before :START!")
 		     'output-raw-bytes))
 	    ((zerop bytes)) ; Easy case
 	    ((<= bytes space)
@@ -892,7 +892,7 @@
 			   :format-arguments (list (unix:get-unix-error-msg errno))
 			   :errno errno))
 		   (t
-		    (error _"Error reading ~S: ~A"
+		    (error (intl:gettext "Error reading ~S: ~A")
 			   stream
 			   (unix:get-unix-error-msg errno)))))
 	    ((zerop count)
@@ -1282,7 +1282,7 @@
 				  now-needed)
 		(declare (type (or index null) count))
 		(unless count
-		  (error _"Error reading ~S: ~A" stream
+		  (error (intl:gettext "Error reading ~S: ~A") stream
 			 (unix:get-unix-error-msg err)))
 		(decf now-needed count)
 		(if eof-error-p
@@ -1302,7 +1302,7 @@
 		(unix:unix-read (fd-stream-fd stream) sap len)
 	      (declare (type (or index null) count))
 	      (unless count
-		(error _"Error reading ~S: ~A" stream
+		(error (intl:gettext "Error reading ~S: ~A") stream
 		       (unix:get-unix-error-msg err)))
 	      (when (and eof-error-p (zerop count))
 		(error 'end-of-file :stream stream))
@@ -1368,7 +1368,7 @@
 	  (routine type size)
 	  (pick-input-routine target-type)
 	(unless routine
-	  (error _"Could not find any input routine for ~S" target-type))
+	  (error (intl:gettext "Could not find any input routine for ~S") target-type))
 	(setf (fd-stream-ibuf-sap stream) (next-available-buffer))
 	(setf (fd-stream-ibuf-length stream) bytes-per-buffer)
 	(setf (fd-stream-ibuf-tail stream) 0)
@@ -1426,7 +1426,7 @@
 	  (routine type size)
 	  (pick-output-routine target-type (fd-stream-buffering stream))
 	(unless routine
-	  (error _"Could not find any output routine for ~S buffered ~S."
+	  (error (intl:gettext "Could not find any output routine for ~S buffered ~S.")
 		 (fd-stream-buffering stream)
 		 target-type))
 	(setf (fd-stream-obuf-sap stream) (next-available-buffer))
@@ -1449,7 +1449,7 @@
 
     (when (and input-size output-size
 	       (not (eql input-size output-size)))
-      (error _"Element sizes for input (~S:~S) and output (~S:~S) differ?"
+      (error (intl:gettext "Element sizes for input (~S:~S) and output (~S:~S) differ?")
 	     input-type input-size
 	     output-type output-size))
     (setf (fd-stream-element-size stream)
@@ -1467,7 +1467,7 @@
 		((subtypep output-type input-type)
 		 output-type)
 		(t
-		 (error _"Input type (~S) and output type (~S) are unrelated?"
+		 (error (intl:gettext "Input type (~S) and output type (~S) are unrelated?")
 			input-type
 			output-type))))))
 
@@ -1483,8 +1483,8 @@
     (multiple-value-bind (okay err)
 	(unix:unix-rename original filename)
       (unless okay
-	  (cerror _"Go on as if nothing bad happened."
-		  _"Could not restore ~S to its original contents: ~A"
+	  (cerror (intl:gettext "Go on as if nothing bad happened.")
+		  (intl:gettext "Could not restore ~S to its original contents: ~A")
 		  filename (unix:get-unix-error-msg err))))))
 
 ;;; DELETE-ORIGINAL -- internal
@@ -1618,7 +1618,7 @@
        (error 'simple-type-error
 	      :datum stream
 	      :expected-type 'file-stream
-	      :format-control _"~s is not a stream associated with a file."
+	      :format-control (intl:gettext "~s is not a stream associated with a file.")
 	      :format-arguments (list stream)))
      (multiple-value-bind
 	 (okay dev ino mode nlink uid gid rdev size
@@ -1628,7 +1628,7 @@
 			atime mtime ctime blksize blocks))
        (unless okay
 	 (error 'simple-file-error
-                :format-control _"Error fstating ~S: ~A"
+                :format-control (intl:gettext "Error fstating ~S: ~A")
 		:format-arguments (list stream (unix:get-unix-error-msg dev))))
        (if (zerop mode)
 	   nil
@@ -1689,7 +1689,7 @@
 		 nil)
 		(t
 		 (system:with-interrupts
-		   (error _"Error lseek'ing ~S: ~A"
+		   (error (intl:gettext "Error lseek'ing ~S: ~A")
 			  stream
 			  (unix:get-unix-error-msg errno)))))))
       (let ((offset 0)
@@ -1725,7 +1725,7 @@
 	       (setf offset (* newpos (fd-stream-element-size stream))
 		     origin unix:l_set))
 	      (t
-	       (error _"Invalid position given to file-position: ~S" newpos)))
+	       (error (intl:gettext "Invalid position given to file-position: ~S") newpos)))
 	(multiple-value-bind
 	    (posn errno)
 	    (unix:unix-lseek (fd-stream-fd stream) offset origin)
@@ -1734,7 +1734,7 @@
 		((eq errno unix:espipe)
 		 nil)
 		(t
-		 (error _"Error lseek'ing ~S: ~A"
+		 (error (intl:gettext "Error lseek'ing ~S: ~A")
 			stream
 			(unix:get-unix-error-msg errno))))))))
 
@@ -1785,7 +1785,7 @@
   (cond ((not (or input-p output-p))
 	 (setf input t))
 	((not (or input output))
-	 (error _"File descriptor must be opened either for input or output.")))
+	 (error (intl:gettext "File descriptor must be opened either for input or output."))))
   (let ((stream (if binary-stream-p
 		    (%make-binary-text-stream :fd fd
 					      :name name
@@ -1820,7 +1820,7 @@
       (finalize stream
 		#'(lambda ()
 		    (unix:unix-close fd)
-		    (format *terminal-io* _"** Closed ~A~%" name)
+		    (format *terminal-io* (intl:gettext "** Closed ~A~%") name)
 		    (when original
 		      (revert-file file original)))))
     stream))
@@ -1884,12 +1884,12 @@
 (defun assure-one-of (item list what)
   (unless (member item list)
     (loop
-      (cerror _"Enter new value for ~*~S"
-	      _"~S is invalid for ~S. Must be one of~{ ~S~}"
+      (cerror (intl:gettext "Enter new value for ~*~S")
+	      (intl:gettext "~S is invalid for ~S. Must be one of~{ ~S~}")
 	      item
 	      what
 	      list)
-      (format (the stream *query-io*) _"Enter new value for ~S: " what)
+      (format (the stream *query-io*) (intl:gettext "Enter new value for ~S: ") what)
       (force-output *query-io*)
       (setf item (read *query-io*))
       (when (member item list)
@@ -1904,14 +1904,14 @@
 ;;;
 (defun do-old-rename (namestring original)
   (unless (unix:unix-access namestring unix:w_ok)
-    (cerror _"Try to rename it anyway." _"File ~S is not writable." namestring))
+    (cerror (intl:gettext "Try to rename it anyway.") (intl:gettext "File ~S is not writable.") namestring))
   (multiple-value-bind
       (okay err)
       (unix:unix-rename namestring original)
     (cond (okay t)
 	  (t
-	   (cerror _"Use :SUPERSEDE instead."
-		   _"Could not rename ~S to ~S: ~A."
+	   (cerror (intl:gettext "Use :SUPERSEDE instead.")
+		   (intl:gettext "Could not rename ~S to ~S: ~A.")
 		   namestring
 		   original
 		   (unix:get-unix-error-msg err))
@@ -1992,7 +1992,7 @@
                              (error 'simple-file-error
                                  :pathname pathname
                                  :format-control
-                                 _"Cannot open ~S for output: Is a directory."
+                                 (intl:gettext "Cannot open ~S for output: Is a directory.")
                                  :format-arguments (list name)))
                            (setf mode (logand orig-mode #o777))
                            t)
@@ -2001,7 +2001,7 @@
                           (t
                            (error 'simple-file-error
                                   :pathname pathname
-                                  :format-control _"Cannot find ~S: ~A"
+                                  :format-control (intl:gettext "Cannot find ~S: ~A")
                                   :format-arguments
                                     (list name
                                       (unix:get-unix-error-msg err/dev)))))))))
@@ -2031,44 +2031,44 @@
                   ((eql errno unix:enoent)
                    (case if-does-not-exist
                      (:error
-                       (cerror _"Return NIL."
+                       (cerror (intl:gettext "Return NIL.")
                                'simple-file-error
                                :pathname pathname
-                               :format-control _"Error opening ~S, ~A."
+                               :format-control (intl:gettext "Error opening ~S, ~A.")
                                :format-arguments
                                    (list pathname
                                          (unix:get-unix-error-msg errno))))
                      (:create
-                       (cerror _"Return NIL."
+                       (cerror (intl:gettext "Return NIL.")
                                'simple-file-error
                                :pathname pathname
                                :format-control
-                                   _"Error creating ~S, path does not exist."
+                                   (intl:gettext "Error creating ~S, path does not exist.")
                                :format-arguments (list pathname))))
                    (return nil))
                   ((eql errno unix:eexist)
                    (unless (eq nil if-exists)
-                     (cerror _"Return NIL."
+                     (cerror (intl:gettext "Return NIL.")
                              'simple-file-error
                              :pathname pathname
-                             :format-control _"Error opening ~S, ~A."
+                             :format-control (intl:gettext "Error opening ~S, ~A.")
                              :format-arguments
                                  (list pathname
                                        (unix:get-unix-error-msg errno))))
                    (return nil))
                   ((eql errno unix:eacces)
-                   (cerror _"Try again."
+                   (cerror (intl:gettext "Try again.")
                            'simple-file-error
                            :pathname pathname
-                           :format-control _"Error opening ~S, ~A."
+                           :format-control (intl:gettext "Error opening ~S, ~A.")
                            :format-arguments
                                (list pathname
                                      (unix:get-unix-error-msg errno))))
                   (t
-                   (cerror _"Return NIL."
+                   (cerror (intl:gettext "Return NIL.")
                            'simple-file-error
                            :pathname pathname
-                           :format-control _"Error opening ~S, ~A."
+                           :format-control (intl:gettext "Error opening ~S, ~A.")
                            :format-arguments
                                (list pathname
                                      (unix:get-unix-error-msg errno)))
@@ -2190,8 +2190,8 @@
 	   (apply #'open-fd-stream filespec options))
 	  ((subtypep class 'stream:simple-stream)
 	   (when element-type-given
-             (cerror _"Do it anyway."
-		     _"Can't create simple-streams with an element-type."))
+             (cerror (intl:gettext "Do it anyway.")
+		     (intl:gettext "Can't create simple-streams with an element-type.")))
            (when (and (eq class 'stream:file-simple-stream) mapped)
              (setq class 'stream:mapped-file-simple-stream)
              (setf (getf options :class) 'stream:mapped-file-simple-stream))
@@ -2208,7 +2208,7 @@
 	     (when stream
 	       (make-instance class :lisp-stream stream))))
 	  (t
-	   (error _"Unable to open streams of class ~S." class)))))
+	   (error (intl:gettext "Unable to open streams of class ~S.") class)))))
 
 ;;;; Initialization.
 

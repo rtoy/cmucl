@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.90 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.91 2010/04/20 17:57:44 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,7 +71,7 @@
 			      &body forms)
   (let ((temp (member '&rest names)))
     (unless (= (length temp) 2)
-      (simple-program-error _"&rest keyword is ~:[missing~;misplaced~]." temp))
+      (simple-program-error (intl:gettext "&rest keyword is ~:[missing~;misplaced~].") temp))
     (let ((key-vars (ldiff names temp))
           (key-var (or keywords-var (gensym)))
           (rest-var (cadr temp)))
@@ -171,8 +171,8 @@
 			       (unless (or (car binding)
 					   (member :report-function
 						   binding :test #'eq))
-				 (warn _"Unnamed restart does not have a ~
-					report function -- ~S"
+				 (warn (intl:gettext "Unnamed restart does not have a ~
+					report function -- ~S")
 				       binding))
 			       `(make-restart
 				 :name ',(car binding)
@@ -200,7 +200,7 @@
   (let ((real-restart (find-restart restart)))
     (unless real-restart
       (error 'simple-control-error
-	     :format-control _"Restart ~S is not active."
+	     :format-control (intl:gettext "Restart ~S is not active.")
 	     :format-arguments (list restart)))
     (apply (restart-function real-restart) values)))
 
@@ -211,7 +211,7 @@
   (let ((real-restart (find-restart restart)))
     (unless real-restart
       (error 'simple-control-error
-	     :format-control _"Restart ~S is not active."
+	     :format-control (intl:gettext "Restart ~S is not active.")
 	     :format-arguments (list restart)))
     (%invoke-restart-interactively real-restart)))
 
@@ -433,7 +433,7 @@
 
 (setf (condition-class-report (kernel::find-class 'condition))
       #'(lambda (cond stream)
-	  (format stream _"Condition ~S was signalled." (type-of cond))))
+	  (format stream (intl:gettext "Condition ~S was signalled.") (type-of cond))))
 
 (eval-when (compile load eval)
 
@@ -474,7 +474,7 @@
   (if *print-escape*
       (print-unreadable-object (s stream :identity t :type t))
       (dolist (class (condition-class-cpl (kernel::class-of s))
-		     (error _"No REPORT?  Shouldn't happen!"))
+		     (error (intl:gettext "No REPORT?  Shouldn't happen!")))
 	(let ((report (condition-class-report class)))
 	  (when report
 	    (return (funcall report s stream)))))))
@@ -501,7 +501,7 @@
 	  (if (functionp initform)
 	      (funcall initform)
 	      initform))
-	(error _"Condition slot is not bound: ~S"
+	(error (intl:gettext "Condition slot is not bound: ~S")
 	       (condition-slot-name slot)))))
 
 (defun find-slot (classes name)
@@ -531,7 +531,7 @@
 	  (let ((actual-initargs (condition-actual-initargs condition))
 		(slot (find-slot (condition-class-cpl class) name)))
 	    (unless slot
-	      (error _"Slot ~S of ~S missing." name condition))
+	      (error (intl:gettext "Slot ~S of ~S missing.") name condition))
 	    ;;
 	    ;; Loop over actual initargs because the order of
 	    ;; actual initargs determines how slots are initialized.
@@ -564,13 +564,13 @@
 		   (error 'simple-type-error
 			  :datum thing
 			  :expected-type 'condition-class
-			  :format-control _"~S is not a condition class."
+			  :format-control (intl:gettext "~S is not a condition class.")
 			  :format-arguments (list thing)))
 		  (t
 		   (error 'simple-type-error
 			  :datum thing
 			  :expected-type 'condition-class
-			  :format-control _"Bad thing for class arg:~%  ~S"
+			  :format-control (intl:gettext "Bad thing for class arg:~%  ~S")
 			  :format-arguments (list thing)))))
 	 (res (make-condition-object args)))
     (setf (%instance-layout res) (%class-layout class))
@@ -699,7 +699,7 @@
 
 (defun %define-condition (name slots documentation report default-initargs)
   (when (info declaration recognized name)
-    (error _"Condition already names a declaration: ~S." name))
+    (error (intl:gettext "Condition already names a declaration: ~S.") name))
   (let ((class (kernel::find-class name)))
     (setf (slot-class-print-function class) #'%print-condition)
     (setf (condition-class-slots class) slots)
@@ -782,7 +782,7 @@
 	      (all-writers nil append))
       (dolist (spec slot-specs)
 	(when (keywordp spec)
-	  (warn _"Keyword slot name indicates probable syntax error:~%  ~S"
+	  (warn (intl:gettext "Keyword slot name indicates probable syntax error:~%  ~S")
 		spec))
 	(let* ((spec (if (consp spec) spec (list spec)))
 	       (slot-name (first spec))
@@ -796,7 +796,7 @@
 	    (do ((options (rest spec) (cddr options)))
 		((null options))
 	      (unless (and (consp options) (consp (cdr options)))
-		(simple-program-error _"Malformed condition slot spec:~%  ~S."
+		(simple-program-error (intl:gettext "Malformed condition slot spec:~%  ~S.")
                                       spec))
 	      (let ((arg (second options)))
 		(case (first options)
@@ -807,7 +807,7 @@
 		   (writers `(setf ,arg)))
 		  (:initform
 		   (when initform-p
-		     (simple-program-error _"More than one :INITFORM in:~%  ~S"
+		     (simple-program-error (intl:gettext "More than one :INITFORM in:~%  ~S")
                                            spec))
 		   (setq initform-p t)
 		   (setq initform arg))
@@ -817,14 +817,14 @@
 		  (:documentation
 		   (when documentation
 		     (simple-program-error
-		      _"More than one slot :DOCUMENTATION in~%  ~s" spec))
+		      (intl:gettext "More than one slot :DOCUMENTATION in~%  ~s") spec))
 		   (unless (stringp arg)
 		     (simple-program-error
-		      _"Slot :DOCUMENTATION is not a string in~%  ~s" spec))
+		      (intl:gettext "Slot :DOCUMENTATION is not a string in~%  ~s") spec))
 		   (setq documentation arg))
 		  (:type)
 		  (t
-		   (simple-program-error _"Unknown slot option:~%  ~S"
+		   (simple-program-error (intl:gettext "Unknown slot option:~%  ~S")
                                          (first options))))))
 
 	    (push (list slot-name (readers) (writers)) slot-name/accessors)
@@ -844,7 +844,7 @@
       
       (dolist (option options)
 	(unless (consp option)
-	  (simple-program-error _"Bad option:~%  ~S" option))
+	  (simple-program-error (intl:gettext "Bad option:~%  ~S") option))
 	(case (first option)
 	  (:documentation (setq documentation (second option)))
 	  (:report
@@ -867,7 +867,7 @@
 				`#'(lambda () ,val))
 			    default-initargs)))))
 	  (t
-	   (simple-program-error _"Unknown option: ~S" (first option)))))
+	   (simple-program-error (intl:gettext "Unknown option: ~S") (first option)))))
 
       `(progn
 	 (eval-when (compile load eval)
@@ -906,7 +906,7 @@
    argument.  The bindings are searched first to last in the event of a
    signalled condition."
   (unless (every #'(lambda (x) (and (listp x) (= (length x) 2))) bindings)
-    (simple-program-error _"Ill-formed handler bindings."))
+    (simple-program-error (intl:gettext "Ill-formed handler bindings.")))
   `(let ((*handler-clusters*
 	  (cons (list ,@(mapcar #'(lambda (x) `(cons ',(car x) ,(cadr x)))
 				bindings))
@@ -942,7 +942,7 @@
 (define-condition simple-style-warning (simple-condition style-warning) ())
 
 (defun print-simple-error (condition stream)
-  (format stream _"~&~@<Error in function ~S:  ~3i~:_~?~:>"
+  (format stream (intl:gettext "~&~@<Error in function ~S:  ~3i~:_~?~:>")
 	  (condition-function-name condition)
 	  (simple-condition-format-control condition)
 	  (simple-condition-format-arguments condition)))
@@ -959,21 +959,21 @@
   ()
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
-	     (format stream _"Control stack overflow"))))
+	     (format stream (intl:gettext "Control stack overflow")))))
 
 #+heap-overflow-check
 (define-condition heap-overflow (storage-condition)
   ()
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
-	     (format stream _"Heap (dynamic space) overflow"))))
+	     (format stream (intl:gettext "Heap (dynamic space) overflow")))))
 
 (define-condition type-error (error)
   ((datum :reader type-error-datum :initarg :datum)
    (expected-type :reader type-error-expected-type :initarg :expected-type))
   (:report
    (lambda (condition stream)
-     (format stream _"~@<Type-error in ~S:  ~3i~:_~S is not of type ~S~:>"
+     (format stream (intl:gettext "~@<Type-error in ~S:  ~3i~:_~S is not of type ~S~:>")
 	     (condition-function-name condition)
 	     (type-error-datum condition)
 	     (type-error-expected-type condition)))))
@@ -984,8 +984,8 @@
   ()
   (:report
    (lambda (condition stream)
-     (format stream _"Layout-invalid error in ~S:~@
-		     Type test of class ~S was passed obsolete instance:~%  ~S"
+     (format stream (intl:gettext "Layout-invalid error in ~S:~@
+		     Type test of class ~S was passed obsolete instance:~%  ~S")
 	     (condition-function-name condition)
 	     (kernel:class-proper-name (type-error-expected-type condition))
 	     (type-error-datum condition)))))
@@ -995,7 +995,7 @@
    (possibilities :reader case-failure-possibilities :initarg :possibilities))
   (:report
     (lambda (condition stream)
-      (format stream _"~@<~S fell through ~S expression.  ~:_Wanted one of ~:S.~:>"
+      (format stream (intl:gettext "~@<~S fell through ~S expression.  ~:_Wanted one of ~:S.~:>")
 	      (type-error-datum condition)
 	      (case-failure-name condition)
 	      (case-failure-possibilities condition)))))
@@ -1058,7 +1058,7 @@
 (define-condition end-of-file (stream-error) ()
   (:report
    (lambda (condition stream)
-     (format stream _"End-of-File on ~S"
+     (format stream (intl:gettext "End-of-File on ~S")
 	     (stream-error-stream condition)))))
 
 (define-condition file-error (error)
@@ -1073,7 +1073,7 @@
 (define-condition simple-file-error (simple-condition file-error) ()
   (:report
    (lambda (condition stream)
-     (format stream _"~&~@<File-error in function ~S:  ~3i~:_~?~:>"
+     (format stream (intl:gettext "~&~@<File-error in function ~S:  ~3i~:_~?~:>")
 	     (condition-function-name condition)
 	     (simple-condition-format-control condition)
 	     (simple-condition-format-arguments condition)))))
@@ -1088,7 +1088,7 @@
   (:report
    (lambda (condition stream)
      (format stream
-	     _"Error in ~S:  the variable ~S is unbound."
+	     (intl:gettext "Error in ~S:  the variable ~S is unbound.")
 	     (condition-function-name condition)
 	     (cell-error-name condition)))))
   
@@ -1096,7 +1096,7 @@
   (:report
    (lambda (condition stream)
      (format stream
-	     _"Error in ~S:  the function ~S is undefined."
+	     (intl:gettext "Error in ~S:  the function ~S is undefined.")
 	     (condition-function-name condition)
 	     (cell-error-name condition)))))
 
@@ -1106,8 +1106,8 @@
 (define-condition constant-modified (reference-condition warning)
   ((function-name :initarg :function-name :reader constant-modified-function-name))
   (:report (lambda (c s)
-             (format s _"~@<Destructive function ~S called on ~
-                         constant data.~@:>"
+             (format s (intl:gettext "~@<Destructive function ~S called on ~
+                         constant data.~@:>")
                      (constant-modified-function-name c))
 	     (print-references (reference-condition-references c) s)))
   (:default-initargs :references (list '(:ansi-cl :section (3 2 2 3)))))
@@ -1117,10 +1117,10 @@
 	      :initform nil)
    (operands :reader arithmetic-error-operands :initarg :operands))
   (:report (lambda (condition stream)
-	     (format stream _"Arithmetic error ~S signalled."
+	     (format stream (intl:gettext "Arithmetic error ~S signalled.")
 		     (type-of condition))
 	     (when (arithmetic-error-operation condition)
-	       (format stream _"~%Operation was ~S, operands ~S."
+	       (format stream (intl:gettext "~%Operation was ~S, operands ~S.")
 		       (arithmetic-error-operation condition)
 		       (arithmetic-error-operands condition))))))
 
@@ -1207,7 +1207,7 @@
 (define-condition abort-failure (control-error) ()
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
-	     (write-string _"Found an \"abort\" restart that failed to transfer control dynamically."
+	     (write-string (intl:gettext "Found an \"abort\" restart that failed to transfer control dynamically.")
 			   stream))))
 
 ;;; ABORT signals an error in case there was a restart named abort that did

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.67 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.68 2010/04/20 17:57:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -202,7 +202,7 @@
 
   (unless (probe-file (directory-namestring core-file-name))
     (error 'simple-file-error
-           :format-control _"Directory ~S does not exist"
+           :format-control (intl:gettext "Directory ~S does not exist")
            :format-arguments (list (directory-namestring core-file-name))))
   
   #+mp (mp::shutdown-multi-processing)
@@ -229,7 +229,7 @@
   (setq ext:*batch-mode* (if batch-mode t nil))
   (labels
       ((%restart-lisp ()
-	 (with-simple-restart (abort _"Skip remaining initializations.")
+	 (with-simple-restart (abort (intl:gettext "Skip remaining initializations."))
 	   (catch 'top-level-catcher
 	     (reinit)
 	     (environment-init)
@@ -285,7 +285,7 @@
 		    (handler-case
 			(%restart-lisp)
 		      (error (cond)
-			(format *error-output* _"Error in batch processing:~%~A~%"
+			(format *error-output* (intl:gettext "Error in batch processing:~%~A~%")
 				cond)
 			(throw '%end-of-the-world 1)))
 		    (%restart-lisp))
@@ -325,7 +325,7 @@
 	,#'(lambda (stream)
 	     (write-string (lisp-implementation-version) stream))
 	,#'(lambda (stream)
-	     (write-string _", running on " stream))
+	     (write-string (intl:gettext ", running on ") stream))
 	,#'(lambda (stream) (write-string (machine-instance) stream))
 	terpri
 	,#'(lambda (stream)
@@ -336,33 +336,33 @@
 		                  *cmucl-core-dump-time*
 				  nil)))
 	       (when core
-		 (write-string _"With core: " stream)
+		 (write-string (intl:gettext "With core: ") stream)
 		 (write-line (namestring core) stream))
 	       (when dump-time
-		 (write-string _"Dumped on: " stream)
+		 (write-string (intl:gettext "Dumped on: ") stream)
 		 (ext:format-universal-time stream dump-time :style :iso8601)
-		 (write-string _" on " stream)
+		 (write-string (intl:gettext " on ") stream)
 		 (write-line *cmucl-core-dump-host* stream))))
 	))
 
 (setf (getf *herald-items* :bugs)
       `(,#'(lambda (stream)
-	     (write-string _"See <http://www.cons.org/cmucl/> for support information." stream))
+	     (write-string (intl:gettext "See <http://www.cons.org/cmucl/> for support information.") stream))
 	terpri
 	,#'(lambda (stream)
-	     (write-string _"Loaded subsystems:" stream))))
+	     (write-string (intl:gettext "Loaded subsystems:") stream))))
 
 #+unicode
 (setf (getf *herald-items* :unicode)
       `(,#'(lambda (stream)
-	     (write-string _"    Unicode " stream))
+	     (write-string (intl:gettext "    Unicode ") stream))
 	,(if (and (boundp 'lisp::*unidata-version*)
 		  (>= (length lisp::*unidata-version*) 11))
 	     (subseq lisp::*unidata-version* 11
 		     (1- (length lisp::*unidata-version*)))
 	     " ")
 	,#'(lambda (stream)
-	     (write-string _"with Unicode version " stream))
+	     (write-string (intl:gettext "with Unicode version ") stream))
 	,#'(lambda (stream)
 	     (princ lisp::+unicode-major-version+ stream)
 	     (write-char #\. stream)
@@ -391,7 +391,7 @@
 	  ((or symbol cons)
 	   (funcall (fdefinition thing) stream))
 	  (t
-	   (error _"Unrecognized *HERALD-ITEMS* entry: ~S." thing))))
+	   (error (intl:gettext "Unrecognized *HERALD-ITEMS* entry: ~S.") thing))))
       (fresh-line stream)))
 
   (values))
@@ -401,7 +401,7 @@
 
 (defun assert-user-package ()
   (unless (eq *package* (find-package "CL-USER"))
-    (error _"Change *PACKAGE* to the USER package and try again.")))
+    (error (intl:gettext "Change *PACKAGE* to the USER package and try again."))))
 
 ;;; MAYBE-BYTE-LOAD  --  Interface
 ;;;

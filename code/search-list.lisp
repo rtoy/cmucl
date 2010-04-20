@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/search-list.lisp,v 1.6 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/search-list.lisp,v 1.7 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,15 +31,15 @@
    does end with a colon or slash, a slash is added.  Also, the
    list is copied."
   (let ((dev (pathname-device name)))
-    (unless dev (error _"No device in ~S." name))
+    (unless dev (error (intl:gettext "No device in ~S.") name))
     (copy-list (gethash dev *search-list-table*))))
 
 (defun %set-search-list (name new-value)
   (unless (listp new-value)
-    (error _"New value for search-list ~S not a list -- ~S."
+    (error (intl:gettext "New value for search-list ~S not a list -- ~S.")
 	   name new-value))
   (let ((dev (pathname-device name)))
-    (unless dev (error _"No device in ~S." name))
+    (unless dev (error (intl:gettext "No device in ~S.") name))
     (nstring-downcase dev)
     (setf (gethash dev *search-list-table*)
 	  (mapcar #'(lambda (x)
@@ -90,7 +90,7 @@
      (if pos
 	 (let ((dev (nstring-downcase (subseq ,element 0 pos))))
 	   (if (gethash dev *rsl-circularity-check*)
-	       (error _"Circularity in search list -- ~S." dev)
+	       (error (intl:gettext "Circularity in search list -- ~S.") dev)
 	       (setf (gethash dev *rsl-circularity-check*) t))
 	   (let ((res (resolve-search-list-aux dev ,first-only-p)))
 	     (remhash dev *rsl-circularity-check*)
@@ -98,7 +98,7 @@
 		 (if (= (the fixnum pos) (the fixnum (1- len)))
 		     ,expanded-form
 		     ,concat-form)
-		 (error _"Undefined search list -- ~S"
+		 (error (intl:gettext "Undefined search list -- ~S")
 			(subseq ,element 0 (1+ pos))))))
 	 ,already-form)))
 ) ; eval-when
@@ -130,7 +130,7 @@
 		 nil entry (nconc result res)
 		 (nconc result (rsl-concat res (subseq entry (1+ pos) len)))
 		 (nconc result (list entry))))))
-	(error _"Undefined search list -- ~S" 
+	(error (intl:gettext "Undefined search list -- ~S") 
 	       (concatenate 'simple-string dev ":")))))
 
 ;;; RSL-FIRST takes a possible expansion and resolves it if necessary.

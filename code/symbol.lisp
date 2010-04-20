@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.44 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.45 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,12 +48,12 @@
   set to the specified new value."
   (declare (type symbol variable))
   (cond ((null variable)
-	 (simple-program-error _"Nihil ex nihil, can't set NIL."))
+	 (simple-program-error (intl:gettext "Nihil ex nihil, can't set NIL.")))
 	((eq variable t)
-	 (simple-program-error _"Veritas aeterna, can't set T."))
+	 (simple-program-error (intl:gettext "Veritas aeterna, can't set T.")))
 	((and (boundp '*keyword-package*)
 	      (keywordp variable))
-	 (simple-program-error _"Can't set keywords."))
+	 (simple-program-error (intl:gettext "Can't set keywords.")))
 	(t
 	 (%set-symbol-value variable new-value))))
 
@@ -123,7 +123,7 @@
       ((atom pl) default)
     (cond ((atom (cdr pl))
 	   (simple-program-error
-	    _"~S has an odd number of items in its property list." symbol))
+	    (intl:gettext "~S has an odd number of items in its property list.") symbol))
 	  ((eq (car pl) indicator)
 	   (return (cadr pl))))))
 
@@ -137,7 +137,7 @@
        value)
     (cond ((endp (cdr pl))
 	   (simple-program-error
-	    _"~S has an odd number of items in its property list." symbol))
+	    (intl:gettext "~S has an odd number of items in its property list.") symbol))
 	  ((eq (car pl) indicator)
 	   (rplaca (cdr pl) value)
 	   (return value)))))
@@ -155,7 +155,7 @@
       ((atom pl) nil)
     (cond ((atom (cdr pl))
 	   (simple-program-error
-	    _"~S has an odd number of items in its property list." symbol))
+	    (intl:gettext "~S has an odd number of items in its property list.") symbol))
 	  ((eq (car pl) indicator)
 	   (cond (prev (rplacd (cdr prev) (cddr pl)))
 		 (t
@@ -176,7 +176,7 @@
 	   (error 'simple-type-error
 		  :datum place
 		  :expected-type '(satisfies valid-property-list-p)
-		  :format-control _"Malformed property list: ~S"
+		  :format-control (intl:gettext "Malformed property list: ~S")
 		  :format-arguments (list place)))	   
 	  ((eq (car plist) indicator)
 	   (return (cadr plist))))))
@@ -201,7 +201,7 @@
 	   (error 'simple-type-error
 		  :datum place
 		  :expected-type '(satisfies valid-property-list-p)
-		  :format-control _"Malformed property list: ~S"
+		  :format-control (intl:gettext "Malformed property list: ~S")
 		  :format-arguments (list place)))
 	  ((memq (car plist) indicator-list)
 	   (return (values (car plist) (cadr plist) plist))))))

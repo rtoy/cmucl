@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.33 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.34 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -195,7 +195,7 @@
 	   (type (member t nil) important)
 	   (type (member :native :byte :both) when))
   (let* ((ctype (specifier-type type))
-	 (note (or note _"optimize"))
+	 (note (or note (intl:gettext "optimize")))
 	 (info (function-info-or-lose name))
 	 (old (find-if #'(lambda (x)
 			   (and (type= (transform-type x) ctype)
@@ -248,7 +248,7 @@
   (let ((*info-environment* (or (backend-info-environment *target-backend*)
 				*info-environment*)))
     (let ((old (info function info name)))
-      (unless old (error _"~S is not a known function." name))
+      (unless old (error (intl:gettext "~S is not a known function.") name))
       (setf (info function info name) (copy-function-info old)))))
 
 

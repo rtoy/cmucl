@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.36 2010/04/19 18:21:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.37 2010/04/20 17:57:47 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.36 2010/04/19 18:21:31 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.37 2010/04/20 17:57:47 rtoy Rel $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -336,13 +336,13 @@
 		   (push (cons start end) tests))))
 	(dolist (value values)
 	  (cond ((< value min)
-		 (error _"~S is less than the specified minimum of ~S"
+		 (error (intl:gettext "~S is less than the specified minimum of ~S")
 			value min))
 		((> value max)
-		 (error _"~S is greater than the specified maximum of ~S"
+		 (error (intl:gettext "~S is greater than the specified maximum of ~S")
 			value max))
 		((not (zerop (rem (- value min) seperation)))
-		 (error _"~S isn't an even multiple of ~S from ~S"
+		 (error (intl:gettext "~S isn't an even multiple of ~S from ~S")
 			value seperation min))
 		((null start)
 		 (setf start value))
@@ -366,8 +366,8 @@
 		(let ((start (car test))
 		      (end (cdr test)))
 		  (cond ((and (= start min) (= end max))
-			 (warn _"The values ~S cover the entire range from ~
-			 ~S to ~S [step ~S]."
+			 (warn (intl:gettext "The values ~S cover the entire range from ~
+			 ~S to ~S [step ~S].")
 			       values min max seperation)
 			 (push `(unless ,not-p (inst b ,target)) insts))
 			((= start min)
@@ -468,19 +468,19 @@
 	 (headers (set-difference extended immediate-types :test #'eql))
 	 (function-p nil))
     (unless type-codes
-      (error _"Must supply at least on type for test-type."))
+      (error (intl:gettext "Must supply at least on type for test-type.")))
     (when (and headers (member other-pointer-type lowtags))
-      (warn _"OTHER-POINTER-TYPE supersedes the use of ~S" headers)
+      (warn (intl:gettext "OTHER-POINTER-TYPE supersedes the use of ~S") headers)
       (setf headers nil))
     (when (and immediates
 	       (or (member other-immediate-0-type lowtags)
 		   (member other-immediate-1-type lowtags)))
-      (warn _"OTHER-IMMEDIATE-n-TYPE supersedes the use of ~S" immediates)
+      (warn (intl:gettext "OTHER-IMMEDIATE-n-TYPE supersedes the use of ~S") immediates)
       (setf immediates nil))
     (when (intersection headers function-subtypes)
       (unless (subsetp headers function-subtypes)
-	(error _"Can't test for mix of function subtypes and normal ~
-		header types."))
+	(error (intl:gettext "Can't test for mix of function subtypes and normal ~
+		header types.")))
       (setq function-p t))
       
     (let ((n-reg (gensym))

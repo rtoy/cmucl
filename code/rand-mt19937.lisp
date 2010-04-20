@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.22 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.23 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -211,7 +211,7 @@
 	  ((random-state-p state) (copy-random-state state))
 	  ((eq state t)
 	   (make-random-object :state (init-random-state (generate-seed 627))))
-	  (t (error _"Argument is not a RANDOM-STATE, T or NIL: ~S" state)))))
+	  (t (error (intl:gettext "Argument is not a RANDOM-STATE, T or NIL: ~S") state)))))
 
 (defun rand-mt19937-initializer ()
   (init-random-state (generate-seed)
@@ -463,5 +463,5 @@
     (t
      (error 'simple-type-error
 	    :expected-type '(or (integer 1) (float (0.0))) :datum arg
-	    :format-control _"Argument is not a positive integer or a positive float: ~S"
+	    :format-control (intl:gettext "Argument is not a positive integer or a positive float: ~S")
 	    :format-arguments (list arg)))))

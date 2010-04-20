@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.39 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.40 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -491,7 +491,7 @@
 		     (summary-totals (cons sum v))))
 	       summary)
       
-      (format t _"~2&Summary of spaces: ~(~{~A ~}~)~%" spaces)
+      (format t (intl:gettext "~2&Summary of spaces: ~(~{~A ~}~)~%") spaces)
       (let ((summary-total-bytes 0)
 	    (summary-total-objects 0))
 	(declare (type memory-size summary-total-bytes summary-total-objects))
@@ -520,7 +520,7 @@
 	      (format t ".~%")
 	      (incf summary-total-bytes total-bytes)
 	      (incf summary-total-objects total-objects))))
-	(format t _"~%Summary total:~%    ~:D bytes, ~:D objects.~%"
+	(format t (intl:gettext "~%Summary total:~%    ~:D bytes, ~:D objects.~%")
 		summary-total-bytes summary-total-objects)))))
 
 
@@ -530,7 +530,7 @@
 ;;;
 (defun report-space-total (space-total cutoff)
   (declare (list space-total) (type (or single-float null) cutoff))
-  (format t _"~2&Breakdown for ~(~A~) space:~%" (car space-total))
+  (format t (intl:gettext "~2&Breakdown for ~(~A~) space:~%") (car space-total))
   (let* ((types (cdr space-total))
 	 (total-bytes (reduce #'+ (mapcar #'first types)))
 	 (total-objects (reduce #'+ (mapcar #'second types)))
@@ -615,7 +615,7 @@
      space)
     
     (format t
-	    _"~:D code-object bytes, ~:D code words, with ~:D no-ops (~D%).~%"
+	    (intl:gettext "~:D code-object bytes, ~:D code words, with ~:D no-ops (~D%).~%")
 	    total-bytes code-words no-ops
 	    (round (* no-ops 100) code-words)))
   
@@ -694,11 +694,11 @@
 	       #.scavenger-hook-type)
 	      (incf descriptor-words (truncate size word-bytes)))
 	     (t
-	      (error _"Bogus type: ~D" type))))
+	      (error (intl:gettext "Bogus type: ~D") type))))
        space))
-    (format t _"~:D words allocated for descriptor objects.~%"
+    (format t (intl:gettext "~:D words allocated for descriptor objects.~%")
 	    descriptor-words)
-    (format t _"~:D bytes data/~:D words header for non-descriptor objects.~%"
+    (format t (intl:gettext "~:D bytes data/~:D words header for non-descriptor objects.~%")
 	    non-descriptor-bytes non-descriptor-headers)
     (values)))
 
@@ -710,7 +710,7 @@
   "Print a breakdown by instance type of all the instances allocated in
   Space.  If TOP-N is true, print only information for the the TOP-N types with
   largest usage."
-  (format t _"~2&~@[Top ~D ~]~(~A~) instance types:~%" top-n space)
+  (format t (intl:gettext "~2&~@[Top ~D ~]~(~A~) instance types:~%") top-n space)
   (let ((totals (make-hash-table :test #'eq))
 	(total-objects 0)
 	(total-bytes 0))
@@ -774,7 +774,7 @@
 ;;; 
 (defun find-holes (&rest spaces)
   (dolist (space (or spaces '(:read-only :static :dynamic)))
-    (format t _"In ~A space:~%" space)
+    (format t (intl:gettext "In ~A space:~%") space)
     (let ((start-addr nil)
 	  (total-bytes 0))
       (declare (type (or null (unsigned-byte 32)) start-addr)
@@ -791,11 +791,11 @@
 		   (setf start-addr (di::get-lisp-obj-address object)
 			 total-bytes bytes))
 	       (when start-addr
-		 (format t _"~D bytes at #x~X~%" total-bytes start-addr)
+		 (format t (intl:gettext "~D bytes at #x~X~%") total-bytes start-addr)
 		 (setf start-addr nil))))
        space)
       (when start-addr
-	(format t _"~D bytes at #x~X~%" total-bytes start-addr))))
+	(format t (intl:gettext "~D bytes at #x~X~%") total-bytes start-addr))))
   (values))
 
 
@@ -988,7 +988,7 @@
 				      (c::debug-source-name source)
 				      "FROM LISP")))
 			       (t
-				(warn _"No source for ~S" obj)
+				(warn (intl:gettext "No source for ~S") obj)
 				"NO SOURCE")))
 		       "UNKNOWN"))
 		  (file-info (or (gethash file pkg-info)
@@ -1099,9 +1099,9 @@
 
 	(let ((residual (- (total-val) printed)))
 	  (unless (zerop residual)
-	    (format t _"~8:D: Other~%" residual))))
+	    (format t (intl:gettext "~8:D: Other~%") residual))))
 
-      (format t _"~8:D: Total~%" (total-val))))
+      (format t (intl:gettext "~8:D: Total~%") (total-val))))
   (values))
 
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.57 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.58 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -81,7 +81,7 @@
 		  :datum type
 		  :expected-type '(or vector cons)
 		  :format-control
-		  _"NIL output type invalid for this sequence function."
+		  (intl:gettext "NIL output type invalid for this sequence function.")
 		  :format-arguments ())))
       ((or (union-type-p type)
 	   (and (member-type-p type)
@@ -89,7 +89,7 @@
        (error 'simple-type-error
 	      :datum type
 	      :exptected-type 'sequence
-	      :format-control _"~S is too hairy for sequence functions."
+	      :format-control (intl:gettext "~S is too hairy for sequence functions.")
 	      :format-arguments (list seq-type)))
       ((dolist (seq-type '(list string simple-vector bit-vector))
 	 (when (csubtypep type (specifier-type seq-type))
@@ -101,14 +101,14 @@
 	      :datum type
 	      :expected-type 'sequence
 	      :format-control
-	      _"~S is a bad type specifier for sequence functions."
+	      (intl:gettext "~S is a bad type specifier for sequence functions.")
 	      :format-arguments (list seq-type))))))
 
 (define-condition index-too-large-error (type-error)
   ()
   (:report
    (lambda(condition stream)
-     (format stream _"Error in ~S: ~S: Index too large."
+     (format stream (intl:gettext "Error in ~S: ~S: Index too large.")
 	     (condition-function-name condition)
 	     (type-error-datum condition)))))
 
@@ -195,7 +195,7 @@
 	 ;; (SATISFIES IS-A-VALID-SEQUENCE-TYPE-SPECIFIER-P), but we
 	 ;; aren't really using it.
 	 :expected-type 'sequence
-	 :format-control _"~S is a bad type specifier for sequences"
+	 :format-control (intl:gettext "~S is a bad type specifier for sequences")
 	 :format-arguments (list type-spec)))
 
 (defun sequence-length-error (type-spec length)
@@ -208,9 +208,9 @@
 			      ((cons-type-p type-spec)
 			       `(integer 1))
 			      (t
-			       (error _"Shouldn't happen!  Weird type")))
-	 :format-control _"The length of ~S does not match the specified ~
-                          length of ~S."
+			       (error (intl:gettext "Shouldn't happen!  Weird type"))))
+	 :format-control (intl:gettext "The length of ~S does not match the specified ~
+                          length of ~S.")
 	 :format-arguments (list (type-specifier type-spec) length)))
 	 
 (defun make-sequence (type length &key (initial-element NIL iep))
@@ -259,8 +259,8 @@
 			  :datum (type-specifier type)
 			  :expected-type (type-specifier type)
 			  :format-control
-			  _"The length of ~S does not match the specified ~
-                           length  of ~S."
+			  (intl:gettext "The length of ~S does not match the specified ~
+                           length  of ~S.")
 			  :format-arguments
 			  (list (type-specifier type) length)))
 	       (if iep
@@ -271,7 +271,7 @@
 	(t (error 'simple-type-error
 		  :datum type
 		  :expected-type 'sequence
-		  :format-control _"~S is a bad type specifier for sequences."
+		  :format-control (intl:gettext "~S is a bad type specifier for sequences.")
 		  :format-arguments (list (type-specifier type))))))))
 
 
@@ -990,7 +990,7 @@
 	     (error 'simple-type-error
 		    :expected-type output-type-spec
 		    :datum object
-		    :format-control _"~S can't be converted to type ~S."
+		    :format-control (intl:gettext "~S can't be converted to type ~S.")
 		    :format-arguments (list object output-type-spec)))
 	   (check-seq-len (type length)
 	     (unless (valid-sequence-and-length-p type length)
@@ -2329,7 +2329,7 @@
   (when (and test-p test-not-p)
     ;; ANSI Common Lisp has left the behavior in this situation unspecified.
     ;; (CLHS 17.2.1)
-    (error _":TEST and :TEST-NOT are both present."))
+    (error (intl:gettext ":TEST and :TEST-NOT are both present.")))
   (let* ((length (length sequence))
 	 (end (or end length)))
     (declare (type index end))

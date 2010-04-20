@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.49 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.50 2010/04/20 17:57:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1387,7 +1387,7 @@ down to individual words.")
   (declare (type bignum-index len-a len-b) (type bignum-type a))
   (do ((i 0 (1+ i))
        (end (min len-a len-b)))
-      ((= i end) (error _"Unexpected zero bignums?"))
+      ((= i end) (error (intl:gettext "Unexpected zero bignums?")))
     (declare (type bignum-index i end))
     (let ((or-digits (%logior (%bignum-ref a i) (%bignum-ref b i))))
       (unless (zerop or-digits)
@@ -1734,7 +1734,7 @@ down to individual words.")
     (let* ((bignum-len (or bignum-len (%bignum-length bignum)))
 	   (res-len (+ digits bignum-len 1)))
       (when (> res-len maximum-bignum-length)
-	(error _"Can't represent result of left shift."))
+	(error (intl:gettext "Can't represent result of left shift.")))
       (if (zerop n-bits)
 	  (bignum-ashift-left-digits bignum bignum-len digits)
 	  (bignum-ashift-left-unaligned bignum digits n-bits res-len)))))
@@ -1961,7 +1961,7 @@ down to individual words.")
 		 (when (> exp max)
 		   (error 'simple-type-error
 			  :datum x
-                          :format-control _"Too large to be represented as a ~S:~%  ~S"
+                          :format-control (intl:gettext "Too large to be represented as a ~S:~%  ~S")
 			  :format-arguments (list format x)
                           :expected-type format))
 		 exp)))

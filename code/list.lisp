@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.39 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.40 2010/04/20 17:57:44 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -250,7 +250,7 @@
   (error 'simple-type-error
 	 :datum list
 	 :expected-type '(satisfies proper-list-p)
-	 :format-control _"~S is not a proper list"
+	 :format-control (intl:gettext "~S is not a proper list")
 	 :format-arguments (list list)))
 
 ;;; The outer loop finds the first non-null list and the result is started.
@@ -273,7 +273,7 @@
     (cond ((null (car top)))				; Nil -> Keep looping
 	  ((not (consp (car top)))			; Non cons
 	   (if (cdr top)
-	       (error _"~S is not a list." (car top))
+	       (error (intl:gettext "~S is not a list.") (car top))
 	       (return (car top))))
 	  (t						; Start appending
 	   (return
@@ -299,7 +299,7 @@
 			   (setq
 			    splice
 			    (cdr (rplacd splice (cons (car x) ())))))
-			 (error _"~S is not a list." (car y)))))))))))
+			 (error (intl:gettext "~S is not a list.") (car y)))))))))))
   
 
 ;;; List Copying Functions
@@ -386,16 +386,16 @@
 		       (setf splice ele))
 		 (null (rplacd (last splice) nil))
 		 (atom (if (cdr elements)
-			   (error _"Argument is not a list -- ~S." ele)
+			   (error (intl:gettext "Argument is not a list -- ~S.") ele)
 			   (rplacd (last splice) ele)))
-		 (t (error _"Argument is not a list -- ~S." ele)))))
+		 (t (error (intl:gettext "Argument is not a list -- ~S.") ele)))))
 	   (return result)))
 	(null)
 	(atom
 	 (if (cdr top)
-	     (error _"Argument is not a list -- ~S." top-of-top)
+	     (error (intl:gettext "Argument is not a list -- ~S.") top-of-top)
 	     (return top-of-top)))
-	(t (error _"Argument is not a list -- ~S." top-of-top))))))
+	(t (error (intl:gettext "Argument is not a list -- ~S.") top-of-top))))))
 
 (defun nreconc (x y)
   "Returns (nconc (nreverse x) y)"
@@ -411,7 +411,7 @@
 	   (error 'simple-type-error
 		  :datum 2nd
 		  :expected-type 'list
-		  :format-control _"First argument is not a proper list."
+		  :format-control (intl:gettext "First argument is not a proper list.")
 		  :format-arguments nil)
 	   3rd))
     (rplacd 2nd 3rd)))
@@ -488,7 +488,7 @@
   (do ((count n (1- count))
        (list list (cdr list)))
       ((endp list)
-       (error _"~S is too large an index for SETF of NTH." n))
+       (error (intl:gettext "~S is too large an index for SETF of NTH.") n))
     (declare (fixnum count))
     (when (<= count 0)
       (rplaca list newval)
@@ -755,7 +755,7 @@
 (defun union (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns the union of list1 and list2."
   (declare (inline member))
-  (when (and testp notp) (error _"Test and test-not both supplied."))
+  (when (and testp notp) (error (intl:gettext "Test and test-not both supplied.")))
   (let ((res list2))
     (dolist (elt list1)
       (unless (with-set-keys (member (apply-key key elt) list2))
@@ -950,7 +950,7 @@
        (y data (cdr y)))
       ((and (endp x) (endp y)) alist)
     (if (or (endp x) (endp y)) 
-	(error _"The lists of keys and data are of unequal length."))
+	(error (intl:gettext "The lists of keys and data are of unequal length.")))
     (setq alist (acons (car x) (car y) alist))))
 
 ;;; In run-time environment, since these guys can be inline expanded.

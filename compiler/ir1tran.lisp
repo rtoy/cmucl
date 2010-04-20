@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.175 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.176 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -316,7 +316,7 @@
 		     :key #'kernel:dsd-accessor))
 	 (type (kernel:dd-name info))
 	 (slot-type (kernel:dsd-type slot)))
-    (assert slot () _"Can't find slot ~S." type)
+    (assert slot () (intl:gettext "Can't find slot ~S.") type)
     (make-slot-accessor
      :name name
      :type (specifier-type
@@ -513,7 +513,7 @@
 	  ((start cont form
 	    &optional
 	    (proxy ``(error 'simple-program-error
-		       :format-control _"Execution of a form compiled with errors:~% ~S"
+		       :format-control (intl:gettext "Execution of a form compiled with errors:~% ~S")
 		       :format-arguments (list ',,form))))
 	   &body body)
   (let ((skip (gensym)))
@@ -573,14 +573,14 @@
   (let ((block (continuation-block cont))
 	(node-block (continuation-block (node-prev node))))
     (assert (eq (continuation-kind cont) :block-start))
-    (assert (not (block-last node-block)) () _"~S has already ended."
+    (assert (not (block-last node-block)) () (intl:gettext "~S has already ended.")
 	    node-block)
     (setf (block-last node-block) node)
-    (assert (null (block-succ node-block)) () _"~S already has successors."
+    (assert (null (block-succ node-block)) () (intl:gettext "~S already has successors.")
 	    node-block)
     (setf (block-succ node-block) (list block))
     (assert (not (member node-block (block-pred block) :test #'eq)) ()
-	    _"~S is already a predecessor of ~S." node-block block)
+	    (intl:gettext "~S is already a predecessor of ~S.") node-block block)
     (push node-block (block-pred block))
     (add-continuation-use node cont)
     (unless (eq (continuation-asserted-type cont) *wild-type*)
@@ -754,7 +754,7 @@
   (declare (type continuation start cont) (inline find-constant))
   (ir1-error-bailout
       (start cont value
-       '(error _"Attempt to reference undumpable constant."))
+       '(error (intl:gettext "Attempt to reference undumpable constant.")))
     (when (and (producing-fasl-file)
 	       (not (typep value '(or symbol number character string))))
       (maybe-emit-make-load-forms value))
@@ -932,7 +932,7 @@
     (if indices
 	(with-dynamic-extent (start cont nnext-cont :closure)
 	  (when *dynamic-extent-trace*
-	    (format t _"~&dynamic-extent args ~:s in ~s~%" indices form))
+	    (format t (intl:gettext "~&dynamic-extent args ~:s in ~s~%") indices form))
 	  (let ((fun-cont (make-continuation)))
 	    (reference-leaf nnext-cont fun-cont fun)
 	    (ir1-convert-combination-args fun-cont cont (cdr form) indices)))
@@ -1550,7 +1550,7 @@
 				(policy nil (= debug 3))) ; TODO: check the policy settings --jwr
 			   (progn
 			     (when (and *compile-print* *print-debug-tag-conversions*)
-			       (format t _"ir1-convert-lambda: called by: ~S, parent-form: ~S~%" 
+			       (format t (intl:gettext "ir1-convert-lambda: called by: ~S, parent-form: ~S~%") 
 				       caller parent-form))
 			     (ir1-wrap-for-debug body))
 			   body))
@@ -1691,7 +1691,7 @@
 	   (t
 	    (let ((head (first spec)))
 	      (unless (= (length (the list head)) 2)
-		(error _"Malformed keyword arg specifier: ~S." spec))
+		(error (intl:gettext "Malformed keyword arg specifier: ~S.") spec))
 	      (let* ((name (second head))
 		     (var (varify-lambda-arg name (names-so-far)))
 		     (info (make-arg-info
@@ -2809,7 +2809,7 @@
       (values nil t)))
 
 (deftransform %coerce-to-function ((thing) * * :when :both)
-  (give-up _"Might be a symbol, so must call FDEFINITION at runtime."))
+  (give-up (intl:gettext "Might be a symbol, so must call FDEFINITION at runtime.")))
 
 
 ;;;; Symbol macros:
@@ -2882,7 +2882,7 @@
 	(let ((old-type (info variable type name)))
 	  (unless (types-intersect type old-type)
 	    (compiler-warning
-	     _"New proclaimed type ~S for ~S conflicts with old type ~S."
+	     (intl:gettext "New proclaimed type ~S for ~S conflicts with old type ~S.")
 	     (type-specifier type) name (type-specifier old-type))))))
 
     (dolist (var (get-old-vars names))
@@ -3688,7 +3688,7 @@
       (ir1-convert start cont `(%%defmacro ',name ,fun ,doc)))
 
     (when *compile-print*
-      (compiler-mumble _"~&; Converted ~S.~%" name))))
+      (compiler-mumble (intl:gettext "~&; Converted ~S.~%") name))))
 
 
 (defun do-compiler-macro-compile-time (name def)
@@ -3714,7 +3714,7 @@
       (ir1-convert start cont `(%%define-compiler-macro ',name ,fun ,doc)))
 
     (when *compile-print*
-      (compiler-mumble _"~&; Converted ~S.~%" name))))
+      (compiler-mumble (intl:gettext "~&; Converted ~S.~%") name))))
 
 
 ;;; Update the global environment to correspond to the new definition.
@@ -3999,4 +3999,4 @@
 		       ,@(when save-expansion `(',save-expansion)))))
 
 	(when *compile-print*
-	  (compiler-mumble _"~&; Converted ~S.~%" name))))))
+	  (compiler-mumble (intl:gettext "~&; Converted ~S.~%") name))))))

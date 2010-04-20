@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.48 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.49 2010/04/20 17:57:44 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,7 +173,7 @@
 	   (function
 	    (unless (= args 1)
 	      (error 'simple-program-error
-		     :format-control _"Wrong number of args to FUNCTION:~% ~S."
+		     :format-control (intl:gettext "Wrong number of args to FUNCTION:~% ~S.")
 		     :format-arguments (list exp)))
 	    (let ((name (second exp)))
 	      (cond ((consp name)
@@ -184,27 +184,27 @@
 		     (error 'simple-type-error
 			    :datum name
 			    :expected-type '(not (satisfies macro-function))
-			    :format-control _"~S is a macro."
+			    :format-control (intl:gettext "~S is a macro.")
 			    :format-arguments (list name)))
 		    ((special-operator-p name)
 		     (error 'simple-type-error
 			    :datum name
 			    :expected-type '(not
 					     (satisfies special-operator-p))
-			    :format-control _"~S is a special operator."
+			    :format-control (intl:gettext "~S is a special operator.")
 			    :format-arguments (list name)))
 		    (t
 		     (fdefinition name)))))
 	   (quote
 	    (unless (= args 1)
 	      (error 'simple-program-error
-		     :format-control _"Wrong number of args to QUOTE:~% ~S."
+		     :format-control (intl:gettext "Wrong number of args to QUOTE:~% ~S.")
 		     :format-arguments (list exp)))
 	    (second exp))
 	   (setq
 	    (unless (evenp args)
 	      (error 'simple-program-error
-		     :format-control _"Odd number of args to SETQ:~% ~S."
+		     :format-control (intl:gettext "Odd number of args to SETQ:~% ~S.")
 		     :format-arguments (list exp)))
 	    (unless (zerop args)
 	      (do ((name (cdr exp) (cddr name)))
@@ -221,7 +221,7 @@
 		    (:global
 		     (case *top-level-auto-declare*
 		       (:warn
-			(warn _"Declaring ~S special." symbol))
+			(warn (intl:gettext "Declaring ~S special.") symbol))
 		       ((t))
 		       ((nil)
 			(return (eval:internal-eval original-exp))))
@@ -243,7 +243,7 @@
 			  situations)))
 		(when (or (not (listp situations))
 			  bad-situations)
-		  (warn _"Bad Eval-When situation list: ~S." bad-situations))))
+		  (warn (intl:gettext "Bad Eval-When situation list: ~S.") bad-situations))))
 	    (if (and (> args 0)
 		     (or (member 'eval (second exp))
 			 (member :execute (second exp))))
@@ -269,14 +269,14 @@
 (declaim (notinline eval:internal-eval))
 (defun eval:internal-eval (form &optional quietly env)
   (declare (ignore quietly env))
-  (error _"Attempt to evaluation a complex expression:~%     ~S~@
-	  This expression must be compiled, but the compiler is not loaded."
+  (error (intl:gettext "Attempt to evaluation a complex expression:~%     ~S~@
+	  This expression must be compiled, but the compiler is not loaded.")
 	 form))
 ;;;
 (declaim (notinline eval:make-interpreted-function))
 (defun eval:make-interpreted-function (x)
-  (error _"EVAL called on #'(lambda (x) ...) when the compiler isn't loaded:~
-	  ~%     ~S~%"
+  (error (intl:gettext "EVAL called on #'(lambda (x) ...) when the compiler isn't loaded:~
+	  ~%     ~S~%")
 	 x))
 
 
@@ -388,7 +388,7 @@
   (declare (symbol symbol) (type function function))
 
   (when (eq (info function kind symbol) :special-form)
-    (error _"~S names a special form." symbol))
+    (error (intl:gettext "~S names a special form.") symbol))
 
   (setf (info function kind symbol) :macro)
   (setf (info function macro-function symbol) function)
@@ -396,7 +396,7 @@
 	#'(lambda (&rest args) (declare (ignore args))
 	    (error 'simple-undefined-function
 		   :name symbol
-		   :format-control _"Cannot funcall macro functions.")))
+		   :format-control (intl:gettext "Cannot funcall macro functions."))))
   function)
 
 ;;; Macroexpand-1  --  Public
@@ -461,7 +461,7 @@
   (declare (type (or symbol list) name)
 	   (type (or function null) function))
   (when (eq (info function kind name) :special-form)
-    (error _"~S names a special form." name))
+    (error (intl:gettext "~S names a special form.") name))
   (setf (info function compiler-macro-function name) function)
   function)
 

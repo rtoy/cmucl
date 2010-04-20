@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.44 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.45 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -293,7 +293,7 @@
 			  (integer &rest *))
   (let* ((eltype (cond ((not element-type) t)
 		       ((not (constant-continuation-p element-type))
-			(give-up _"Element-Type is not constant."))
+			(give-up (intl:gettext "Element-Type is not constant.")))
 		       (t
 			(continuation-value element-type))))
 	 (len (if (constant-continuation-p length)
@@ -304,7 +304,7 @@
     (multiple-value-bind
 	(default-initial-element element-size typecode)
 	(dolist (info array-info
-		      (give-up _"Cannot open-code creation of ~S" spec))
+		      (give-up (intl:gettext "Cannot open-code creation of ~S") spec))
 	  (when (csubtypep eltype-type (specifier-type (car info)))
 	    (return (values-list (cdr info)))))
       (let* ((nwords-form
@@ -342,12 +342,12 @@
 (deftransform make-array ((dims &key initial-element element-type)
 			  (list &rest *))
   (unless (or (null element-type) (constant-continuation-p element-type))
-    (give-up _"Element-type not constant; cannot open code array creation")) 
+    (give-up (intl:gettext "Element-type not constant; cannot open code array creation"))) 
   (unless (constant-continuation-p dims)
-    (give-up _"Dimension list not constant; cannot open code array creation"))
+    (give-up (intl:gettext "Dimension list not constant; cannot open code array creation")))
   (let ((dims (continuation-value dims)))
     (unless (every #'integerp dims)
-      (give-up _"Dimension list contains something other than an integer: ~S"
+      (give-up (intl:gettext "Dimension list contains something other than an integer: ~S")
 	       dims))
     (if (= (length dims) 1)
 	`(make-array ',(car dims)
@@ -397,7 +397,7 @@
       (give-up))
     (let ((dims (array-type-dimensions array-type)))
       (if (not (listp dims))
-	  (give-up _"Array rank not known at compile time: ~S" dims)
+	  (give-up (intl:gettext "Array rank not known at compile time: ~S") dims)
 	  (length dims)))))
 
 ;;; ARRAY-DIMENSION  --  transform.
@@ -410,7 +410,7 @@
 (deftransform array-dimension ((array axis)
 			       (array index))
   (unless (constant-continuation-p axis)
-    (give-up _"Axis not constant."))
+    (give-up (intl:gettext "Axis not constant.")))
   (let ((array-type (continuation-type array))
 	(axis (continuation-value axis)))
     (unless (array-type-p array-type)
@@ -418,9 +418,9 @@
     (let ((dims (array-type-dimensions array-type)))
       (unless (listp dims)
 	(give-up
-	 _"Array dimensions unknown, must call array-dimension at runtime."))
+	 (intl:gettext "Array dimensions unknown, must call array-dimension at runtime.")))
       (unless (> (length dims) axis)
-	(abort-transform _"Array has dimensions ~S, ~D is too large."
+	(abort-transform (intl:gettext "Array has dimensions ~S, ~D is too large.")
 			 dims axis))
       (let ((dim (nth axis dims)))
 	(cond ((integerp dim)
@@ -432,7 +432,7 @@
 		 ((nil)
 		  '(length array))
 		 ((:maybe *)
-		  (give-up _"Can't tell if array is simple."))))
+		  (give-up (intl:gettext "Can't tell if array is simple.")))))
 	      (t
 	       '(%array-dimension array axis)))))))
 
@@ -447,7 +447,7 @@
       (give-up))
     (let ((dims (array-type-dimensions type)))
       (unless (and (listp dims) (integerp (car dims)))
-	(give-up _"Vector length unknown, must call length at runtime."))
+	(give-up (intl:gettext "Vector length unknown, must call length at runtime.")))
       (car dims))))
 
 ;;; LENGTH  --  transform.
@@ -486,7 +486,7 @@
       (give-up))
     (let ((dims (array-type-dimensions array-type)))
       (unless (listp dims)
-	(give-up _"Can't tell the rank at compile time."))
+	(give-up (intl:gettext "Can't tell the rank at compile time.")))
       (if (member '* dims)
 	  (do ((form 1 `(truly-the index
 				   (* (array-dimension array ,i) ,form)))
@@ -511,8 +511,8 @@
 	    ((nil)
 	     nil)
 	    (:maybe
-	     (give-up _"Array type ambiguous; must call ~
-	              array-has-fill-pointer-p at runtime.")))))))
+	     (give-up (intl:gettext "Array type ambiguous; must call ~
+	              array-has-fill-pointer-p at runtime."))))))))
 
 ;;; %CHECK-BOUND  --  transform.
 ;;; 

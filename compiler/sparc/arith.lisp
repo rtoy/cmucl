@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.48 2010/04/19 18:21:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.49 2010/04/20 17:57:47 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -596,7 +596,7 @@
       ((< count -31) (move result zero-tn))
       ((< count 0) (inst srl result number (min (- count) 31)))
       ((> count 0) (inst sll result number (min count 31)))
-      (t (error _"identity ASH not transformed away")))))
+      (t (error (intl:gettext "identity ASH not transformed away"))))))
 
 ;; Some special cases where we know we want a left shift.  Just do the
 ;; shift, instead of checking for the sign of the shift.
@@ -978,7 +978,7 @@
 	 (let ((bound (ash 1 (1- s))))
 	   `(integer ,(- bound) ,(- bound bite 1))))
 	(t
-	 (error _"Bad size specified for SIGNED-BYTE type specifier: ~S." s))))
+	 (error (intl:gettext "Bad size specified for SIGNED-BYTE type specifier: ~S.") s))))
 
 (define-vop (fast-conditional/fixnum fast-conditional)
   (:args (x :scs (any-reg zero))

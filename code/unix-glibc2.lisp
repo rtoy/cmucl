@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.53 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.54 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -367,7 +367,7 @@
   
   (if (array-in-bounds-p *unix-errors* error-number)
       (svref *unix-errors* error-number)
-      (format nil _"Unknown error [~d]" error-number)))
+      (format nil (intl:gettext "Unknown error [~d]") error-number)))
 
 (defmacro syscall ((name &rest arg-types) success-form &rest args)
   `(let ((result (alien-funcall (extern-alien ,name (function int ,@arg-types))
@@ -384,7 +384,7 @@
   `(let ((result (alien-funcall (extern-alien ,name (function int ,@arg-types))
 				,@args)))
      (if (minusp result)
-	 (error _"Syscall ~A failed: ~A" ,name (get-unix-error-msg))
+	 (error (intl:gettext "Syscall ~A failed: ~A") ,name (get-unix-error-msg))
 	 ,success-form)))
 
 (defmacro void-syscall ((name &rest arg-types) &rest args)
@@ -3519,7 +3519,7 @@ in at a time in poll.")
 		(cond ((eq kind :link)
 		       (multiple-value-bind (link err) (unix-readlink result)
 			 (unless link
-			   (error _"Error reading link ~S: ~S"
+			   (error (intl:gettext "Error reading link ~S: ~S")
 				  (subseq result 0 fill-ptr)
 				  (get-unix-error-msg err)))
 			 (cond ((or (zerop (length link))

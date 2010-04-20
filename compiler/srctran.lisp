@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.172 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.173 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,7 +82,7 @@
       '#'(lambda (&rest args)
 	   (not (apply fun args))))
      (t
-      (give-up _"Function doesn't have fixed argument count.")))))
+      (give-up (intl:gettext "Function doesn't have fixed argument count."))))))
 
 
 ;;;; List hackery:
@@ -280,7 +280,7 @@
 			;; Bound exists, so keep it open still
 			(list new-val))))
 		   (t
-		    (error _"Unknown bound type in make-interval!")))))
+		    (error (intl:gettext "Unknown bound type in make-interval!"))))))
     (%make-interval :low (normalize-bound low)
 		    :high (normalize-bound high))))
 
@@ -771,7 +771,7 @@
 			      :high (bound-mul (interval-high x)
 					       (interval-high y)))))
 	    (t
-	     (error _"This shouldn't happen!"))))))
+	     (error (intl:gettext "This shouldn't happen!")))))))
 
 ;;; INTERVAL-DIV
 ;;;
@@ -836,7 +836,7 @@
 			      :high (bound-div (interval-high top)
 					       (interval-low bot) t))))
 	    (t
-	     (error _"This shouldn't happen!"))))))
+	     (error (intl:gettext "This shouldn't happen!")))))))
 
 
 ;;; INTERVAL-FUNC
@@ -2950,7 +2950,7 @@
 (deftransform boole ((op x y) * * :when :both)
   "convert to inline logical ops"
   (unless (constant-continuation-p op)
-    (give-up _"BOOLE code is not a constant."))
+    (give-up (intl:gettext "BOOLE code is not a constant.")))
   (let ((control (continuation-value op)))
     (case control
       (#.boole-clr 0)
@@ -2970,7 +2970,7 @@
       (#.boole-orc1 '(logorc1 x y))
       (#.boole-orc2 '(logorc2 x y))
       (t
-       (abort-transform _"~S illegal control arg to BOOLE." control)))))
+       (abort-transform (intl:gettext "~S illegal control arg to BOOLE.") control)))))
 
 
 ;;;; Convert multiply/divide to shifts.
@@ -3179,7 +3179,7 @@
 		((and (eq class1 'float) (member class2 '(integer rational)))
 		 Nil)
 		(t
-		 (error _"Unexpected types: ~s ~s~%" type1 type2)))))))
+		 (error (intl:gettext "Unexpected types: ~s ~s~%") type1 type2)))))))
 
 ;;; Fold (- x 0).
 ;;;
@@ -3410,8 +3410,8 @@
 	       ;; to EQL.
 	       '(eql x y))
 	      (t
-	       (give-up _"Operands might not be the same type.")))
-	(give-up _"Operands might not be the same type."))))
+	       (give-up (intl:gettext "Operands might not be the same type."))))
+	(give-up (intl:gettext "Operands might not be the same type.")))))
 
 
 ;;; Numeric-Type-Or-Lose  --  Interface
@@ -3754,7 +3754,7 @@
 (deftransform format ((dest control &rest args) (t simple-string &rest t) *)
   (cond ((policy nil (> speed space))
 	 (unless (constant-continuation-p control)
-	   (give-up _"Control string is not a constant."))
+	   (give-up (intl:gettext "Control string is not a constant.")))
 	 (let ((string (continuation-value control)))
 	   (check-format-args-1 string args 'format)
 	   (let ((arg-names (loop repeat (length args) collect (gensym))))

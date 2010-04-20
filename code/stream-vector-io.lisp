@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.8 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.9 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -55,7 +55,7 @@
   (declare (fixnum start end endian-swap ))
   (unless (eql endian-swap 0)
     (when (>= endian-swap (vector-elt-width vector))
-      (error _"endian-swap ~a is illegal for element-type of vector ~a"
+      (error (intl:gettext "endian-swap ~a is illegal for element-type of vector ~a")
 	     endian-swap vector))
     (lisp::with-array-data ((data vector) (offset-start start)
 			    (offset-end end))
@@ -190,7 +190,7 @@
   ;; Return value is index of next octet to be read into (i.e., start+count)
 
   (unless (typep vector '(or string simple-numeric-vector))
-    (error _"Wrong vector type ~a for read-vector on stream ~a." (type-of vector) stream))
+    (error (intl:gettext "Wrong vector type ~a for read-vector on stream ~a.") (type-of vector) stream))
   (let* ((octets-per-element (vector-elt-width vector))
 	 (start-elt (truncate start octets-per-element))
 	 (end-octet (or end (ceiling (* (length vector) octets-per-element))))

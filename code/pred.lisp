@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.64 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.65 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -270,7 +270,7 @@
 	  (if (unknown-type-p (array-type-element-type type))
 	      ;; better to fail this way than to get bogosities like
 	      ;;   (TYPEP (MAKE-ARRAY 11) '(ARRAY SOME-UNDEFINED-TYPE)) => T
-	      (error _"~@<unknown element type in array type: ~2I~_~S~:>"
+	      (error (intl:gettext "~@<unknown element type in array type: ~2I~_~S~:>")
 		     (type-specifier type))
 	      t)
 	  (or (eq (array-type-element-type type) *wild-type*)
@@ -295,7 +295,7 @@
      ;; Parse it again to make sure it's really undefined.
      (let ((reparse (specifier-type (unknown-type-specifier type))))
        (if (typep reparse 'unknown-type)
-	   (error _"Unknown type specifier: ~S"
+	   (error (intl:gettext "Unknown type specifier: ~S")
 		  (unknown-type-specifier reparse))
 	   (%%typep object reparse))))
     (negation-type
@@ -314,11 +314,11 @@
 	 ;; HAIRY-TYPE for them.
 	 (not
 	  (unless (and (listp hairy-spec) (= (length hairy-spec) 2))
-	    (error _"Invalid type specifier: ~S" hairy-spec))
+	    (error (intl:gettext "Invalid type specifier: ~S") hairy-spec))
 	  (not (%%typep object (specifier-type (cadr hairy-spec)))))
 	 (satisfies
 	  (unless (and (listp hairy-spec) (= (length hairy-spec) 2))
-	    (error _"Invalid type specifier: ~S" hairy-spec))
+	    (error (intl:gettext "Invalid type specifier: ~S") hairy-spec))
 	  (let ((fn (cadr hairy-spec)))
 	    (if (funcall (typecase fn
 			   (function fn)
@@ -331,7 +331,7 @@
     (alien-type-type
      (alien-internals:alien-typep object (alien-type-type-alien-type type)))
     (function-type
-     (error _"Function types are not a legal argument to TYPEP:~%  ~S"
+     (error (intl:gettext "Function types are not a legal argument to TYPEP:~%  ~S")
 	    (type-specifier type)))))
 
 
@@ -343,7 +343,7 @@
 (defun class-cell-typep (obj-layout cell object)
   (let ((class (class-cell-class cell)))
     (unless class
-      (error _"Class has not yet been defined: ~S" (class-cell-name cell)))
+      (error (intl:gettext "Class has not yet been defined: ~S") (class-cell-name cell)))
     (class-typep obj-layout class object)))
 
 
@@ -356,12 +356,12 @@
   (when (layout-invalid obj-layout)
     (if (and (typep (kernel::class-of object) 'kernel::standard-class) object)
 	(setq obj-layout (pcl::check-wrapper-validity object))
-	(error _"TYPEP on obsolete object (was class ~S)."
+	(error (intl:gettext "TYPEP on obsolete object (was class ~S).")
 	       (class-proper-name (layout-class obj-layout)))))
   (let ((layout (%class-layout class))
 	(obj-inherits (layout-inherits obj-layout)))
     (when (layout-invalid layout)
-      (error _"Class is currently invalid: ~S" class))
+      (error (intl:gettext "Class is currently invalid: ~S") class))
     (or (eq obj-layout layout)
 	(dotimes (i (length obj-inherits) nil)
 	  (when (eq (svref obj-inherits i) layout)

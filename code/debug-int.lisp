@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.139 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.140 2010/04/20 17:57:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -105,21 +105,21 @@
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
 	     (fresh-line stream)
-	     (write-line _"No debugging information available." stream))))
+	     (write-line (intl:gettext "No debugging information available.") stream))))
 
 (define-condition no-debug-function-returns (debug-condition)
   ((debug-function :reader no-debug-function-returns-debug-function
 		   :initarg :debug-function))
   (:documentation
-   _"The system could not return values from a frame with debug-function since
-    it lacked information about returning values.")
+   (intl:gettext "The system could not return values from a frame with debug-function since
+    it lacked information about returning values."))
   (:report (lambda (condition stream)
 	     (let ((fun (debug-function-function
 			 (no-debug-function-returns-debug-function condition))))
 	       (format stream
-		       _"~&Cannot return values from ~:[frame~;~:*~S~] since ~
+		       (intl:gettext "~&Cannot return values from ~:[frame~;~:*~S~] since ~
 			the debug information lacks details about returning ~
-			values here."
+			values here.")
 		       fun)))))
 
 (define-condition no-debug-blocks (debug-condition)
@@ -127,7 +127,7 @@
 		   :initarg :debug-function))
   (:documentation _N"The debug-function has no debug-block information.")
   (:report (lambda (condition stream)
-	     (format stream _"~&~S has no debug-block information."
+	     (format stream (intl:gettext "~&~S has no debug-block information.")
 		     (no-debug-blocks-debug-function condition)))))
 
 (define-condition no-debug-variables (debug-condition)
@@ -135,7 +135,7 @@
 		   :initarg :debug-function))
   (:documentation _N"The debug-function has no debug-variable information.")
   (:report (lambda (condition stream)
-	     (format stream _"~&~S has no debug-variable information."
+	     (format stream (intl:gettext "~&~S has no debug-variable information.")
 		     (no-debug-variables-debug-function condition)))))
 
 (define-condition lambda-list-unavailable (debug-condition)
@@ -145,7 +145,7 @@
    _N"The debug-function has no lambda-list since argument debug-variables are
     unavailable.")
   (:report (lambda (condition stream)
-	     (format stream _"~&~S has no lambda-list information available."
+	     (format stream (intl:gettext "~&~S has no lambda-list information available.")
 		     (lambda-list-unavailable-debug-function condition)))))
 
 (define-condition invalid-value (debug-condition)
@@ -153,7 +153,7 @@
 		   :initarg :debug-variable)
    (frame :reader invalid-value-frame :initarg :frame))
   (:report (lambda (condition stream)
-	     (format stream _"~&~S has :invalid or :unknown value in ~S."
+	     (format stream (intl:gettext "~&~S has :invalid or :unknown value in ~S.")
 		     (invalid-value-debug-variable condition)
 		     (invalid-value-frame condition)))))
 
@@ -161,7 +161,7 @@
   ((name :reader ambiguous-variable-name-name :initarg :name)
    (frame :reader ambiguous-variable-name-frame :initarg :frame))
   (:report (lambda (condition stream)
-	     (format stream _"~&~S names more than one valid variable in ~S."
+	     (format stream (intl:gettext "~&~S names more than one valid variable in ~S.")
 		     (ambiguous-variable-name-name condition)
 		     (ambiguous-variable-name-frame condition)))))
 
@@ -184,14 +184,14 @@
 (define-condition unhandled-condition (debug-error)
   ((condition :reader unhandled-condition-condition :initarg :condition))
   (:report (lambda (condition stream)
-	     (format stream _"~&Unhandled debug-condition:~%~A"
+	     (format stream (intl:gettext "~&Unhandled debug-condition:~%~A")
 		     (unhandled-condition-condition condition)))))
 
 (define-condition unknown-code-location (debug-error)
   ((code-location :reader unknown-code-location-code-location
 		  :initarg :code-location))
   (:report (lambda (condition stream)
-	     (format stream _"~&Invalid use of an unknown code-location -- ~S."
+	     (format stream (intl:gettext "~&Invalid use of an unknown code-location -- ~S.")
 		     (unknown-code-location-code-location condition)))))
 
 (define-condition unknown-debug-variable (debug-error)
@@ -200,7 +200,7 @@
    (debug-function :reader unknown-debug-variable-debug-function
 		   :initarg :debug-function))
   (:report (lambda (condition stream)
-	     (format stream _"~&~S not in ~S."
+	     (format stream (intl:gettext "~&~S not in ~S.")
 		     (unknown-debug-variable-debug-variable condition)
 		     (unknown-debug-variable-debug-function condition)))))
 
@@ -209,7 +209,7 @@
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
 	     (fresh-line stream)
-	     (write-string _"Invalid control stack pointer." stream))))
+	     (write-string (intl:gettext "Invalid control stack pointer.") stream))))
 
 (define-condition frame-function-mismatch (debug-error)
   ((code-location :reader frame-function-mismatch-code-location
@@ -218,7 +218,7 @@
    (form :reader frame-function-mismatch-form :initarg :form))
   (:report (lambda (condition stream)
 	     (format stream
-		     _"~&Form was preprocessed for ~S,~% but called on ~S:~%  ~S"
+		     (intl:gettext "~&Form was preprocessed for ~S,~% but called on ~S:~%  ~S")
 		     (frame-function-mismatch-code-location condition)
 		     (frame-function-mismatch-frame condition)
 		     (frame-function-mismatch-form condition)))))
@@ -378,7 +378,7 @@
 
 (defun print-compiled-frame (obj str n)
   (declare (ignore n))
-  (format str _"#<Compiled-Frame ~S~:[~;, interrupted~]>"
+  (format str (intl:gettext "#<Compiled-Frame ~S~:[~;, interrupted~]>")
 	  (debug-function-name (frame-debug-function obj))
 	  (compiled-frame-escaped obj)))
 
@@ -432,7 +432,7 @@
 
 (defun print-debug-function (obj str n)
   (declare (ignore n))
-  (format str _"#<~A-Debug-Function ~S>"
+  (format str (intl:gettext "#<~A-Debug-Function ~S>")
 	  (etypecase obj
 	    (compiled-debug-function "Compiled")
 	    (interpreted-debug-function "Interpreted")
@@ -1155,8 +1155,8 @@
 	       (let ((vars (di:ambiguous-debug-variables
 			    (di:frame-debug-function frame) name)))
 		 (when (or (null vars) (> (length vars) 1))
-		   (error _"Zero or more than one ~A variable in ~
-			   EVAL::INTERNAL-APPLY-LOOP?"
+		   (error (intl:gettext "Zero or more than one ~A variable in ~
+			   EVAL::INTERNAL-APPLY-LOOP?")
 			  (string-downcase name)))
 		 (if (eq (debug-variable-validity (car vars) location)
 			 :valid)
@@ -1194,7 +1194,7 @@
 			       :extern "dladdr"))
       (let ((err (alien:alien-funcall dladdr addr (alien:addr info))))
 	(cond ((zerop err)
-	       _"Foreign function call land")
+	       (intl:gettext "Foreign function call land"))
 	      (t
 	       (format nil "~A+#x~x [#x~X] ~A"
 		       (alien:slot info 'symbol)
@@ -1295,7 +1295,7 @@ The result is a symbol or nil if the routine cannot be found."
 			      (debug-function-from-pc code pc-offset)
 			    (no-debug-info ()
 			      (make-bogus-debug-function
-			       (format nil _"no debug info: ~A:~A"
+			       (format nil (intl:gettext "no debug info: ~A:~A")
 				       code pc-offset))))))))
 	    (make-compiled-frame caller up-frame d-fun
 				 (code-location-from-pc d-fun pc-offset
@@ -2260,7 +2260,7 @@ The result is a symbol or nil if the routine cannot be found."
   (let ((ele (aref args i)))
     (cond ((not (symbolp ele)) (svref vars ele))
 	  ((eq ele 'c::deleted) :deleted)
-	  (t (error _"Malformed arguments description.")))))
+	  (t (error (intl:gettext "Malformed arguments description."))))))
 
 ;;; COMPILED-DEBUG-FUNCTION-DEBUG-INFO -- Internal.
 ;;;
@@ -2818,7 +2818,7 @@ The result is a symbol or nil if the routine cannot be found."
 	      (unless (fill-in-code-location code-location)
 		;; This check should be unnecessary.  We're missing debug info
 		;; the compiler should have dumped.
-		(error _"Unknown code location?  It should be known."))
+		(error (intl:gettext "Unknown code location?  It should be known.")))
 	      (code-location-%tlf-offset code-location))
 	     (interpreted-code-location
 	      (setf (code-location-%tlf-offset code-location)
@@ -2842,7 +2842,7 @@ The result is a symbol or nil if the routine cannot be found."
 	      (unless (fill-in-code-location code-location)
 		;; This check should be unnecessary.  We're missing debug info
 		;; the compiler should have dumped.
-		(error _"Unknown code location?  It should be known."))
+		(error (intl:gettext "Unknown code location?  It should be known.")))
 	      (code-location-%form-number code-location))
 	     (interpreted-code-location
 	      (setf (code-location-%form-number code-location)
@@ -2867,7 +2867,7 @@ The result is a symbol or nil if the routine cannot be found."
              ((not (fill-in-code-location code-location))
               ;; This check should be unnecessary.  We're missing
               ;; debug info the compiler should have dumped.
-              (error _"Unknown code location?  It should be known."))
+              (error (intl:gettext "Unknown code location?  It should be known.")))
              (t
               (compiled-code-location-kind code-location)))))
     (interpreted-code-location
@@ -2887,7 +2887,7 @@ The result is a symbol or nil if the routine cannot be found."
 	       (unless (fill-in-code-location code-location)
 		 ;; This check should be unnecessary.  We're missing debug info
 		 ;; the compiler should have dumped.
-		 (error _"Unknown code location?  It should be known."))
+		 (error (intl:gettext "Unknown code location?  It should be known.")))
 	       (compiled-code-location-%live-set code-location))
 	      (t live-set)))))
 
@@ -2975,7 +2975,7 @@ The result is a symbol or nil if the routine cannot be found."
      (let ((code-locs (compiled-debug-block-code-locations debug-block)))
        (declare (simple-vector code-locs))
        (if (zerop (length code-locs))
-	   _"??? Can't get name of debug-block's function."
+	   (intl:gettext "??? Can't get name of debug-block's function.")
 	   (debug-function-name
 	    (code-location-debug-function (svref code-locs 0))))))
     (interpreted-debug-block
@@ -3125,9 +3125,9 @@ The result is a symbol or nil if the routine cannot be found."
        (with-escaped-value (val)
 	 val))
       (#.vm:non-descriptor-reg-sc-number
-       (error _"Local non-descriptor register access?"))
+       (error (intl:gettext "Local non-descriptor register access?")))
       (#.vm:interior-reg-sc-number
-       (error _"Local interior register access?"))
+       (error (intl:gettext "Local interior register access?")))
       (#.vm:single-reg-sc-number
        (escaped-float-value single-float))
       (#.vm:double-reg-sc-number
@@ -3546,7 +3546,7 @@ The result is a symbol or nil if the routine cannot be found."
       (#.vm:unsigned-reg-sc-number
        (set-escaped-value value))
       (#.vm:non-descriptor-reg-sc-number
-       (error _"Local non-descriptor register access?"))
+       (error (intl:gettext "Local non-descriptor register access?")))
       (#.vm:interior-reg-sc-number
        (error "Local interior register access?"))
       (#.vm:single-reg-sc-number
@@ -3898,7 +3898,7 @@ The result is a symbol or nil if the routine cannot be found."
     (dotimes (i (- (length path) context))
       (let ((index (first path)))
 	(unless (and (listp form) (< index (length form)))
-	  (error _"Source path no longer exists."))
+	  (error (intl:gettext "Source path no longer exists.")))
 	(setq form (elt form index))
 	(setq path (rest path))))
     ;;
@@ -3946,7 +3946,7 @@ The result is a symbol or nil if the routine cannot be found."
       ;;; however, might still be useful.
       #+nil
       (debug-signal 'no-debug-variables :debug-function fun)
-      (warn _"~&~S has no debug-variable information." fun))
+      (warn (intl:gettext "~&~S has no debug-variable information.") fun))
     (ext:collect ((binds) (symbol-macros) (special-binds))
       (do-debug-function-variables (var fun)
 	(let ((validity (debug-variable-validity var loc)))
@@ -4054,13 +4054,13 @@ The result is a symbol or nil if the routine cannot be found."
   (etypecase what
     (code-location
      (when (code-location-unknown-p what)
-       (error _"Cannot make a breakpoint at an unknown code location -- ~S."
+       (error (intl:gettext "Cannot make a breakpoint at an unknown code location -- ~S.")
 	      what))
      (assert (eq kind :code-location))
      (let ((bpt (%make-breakpoint hook-function what kind info)))
        (etypecase what
 	 (interpreted-code-location
-	  (error _"Breakpoints in interpreted code are currently unsupported."))
+	  (error (intl:gettext "Breakpoints in interpreted code are currently unsupported.")))
 	 (compiled-code-location
 	  ;; This slot is filled in due to calling CODE-LOCATION-UNKNOWN-P.
 	  (when (eq (compiled-code-location-kind what) :unknown-return)
@@ -4091,11 +4091,11 @@ The result is a symbol or nil if the routine cannot be found."
 		   (setf (breakpoint-cookie-fun bpt) function-end-cookie)
 		   bpt))
 		(t
-		 (error _":FUNCTION-END breakpoints are currently unsupported ~
-		       for the known return convention.")))))))
+		 (error (intl:gettext ":FUNCTION-END breakpoints are currently unsupported ~
+		       for the known return convention."))))))))
     (interpreted-debug-function
-     (error _":function-end breakpoints are currently unsupported ~
-	     for interpreted-debug-functions."))))
+     (error (intl:gettext ":function-end breakpoints are currently unsupported ~
+	     for interpreted-debug-functions.")))))
 
 (defun can-set-function-end-breakpoint-p (what)
   (typecase what
@@ -4208,14 +4208,14 @@ The result is a symbol or nil if the routine cannot be found."
    next call to DEACTIVATE-BREAKPOINT or DELETE-BREAKPOINT.  The system invokes
    breakpoint hook functions in the opposite order that you activate them."
   (when (eq (breakpoint-status breakpoint) :deleted)
-    (error _"Cannot activate a deleted breakpoint -- ~S." breakpoint))
+    (error (intl:gettext "Cannot activate a deleted breakpoint -- ~S.") breakpoint))
   (unless (eq (breakpoint-status breakpoint) :active)
     (ecase (breakpoint-kind breakpoint)
       (:code-location
        (let ((loc (breakpoint-what breakpoint)))
 	 (etypecase loc
 	   (interpreted-code-location
-	    (error _"Breakpoints in interpreted code are currently unsupported."))
+	    (error (intl:gettext "Breakpoints in interpreted code are currently unsupported.")))
 	   (compiled-code-location
 	    (activate-compiled-code-location-breakpoint breakpoint)
 	    (let ((other (breakpoint-unknown-return-partner breakpoint)))
@@ -4226,7 +4226,7 @@ The result is a symbol or nil if the routine cannot be found."
 	 (compiled-debug-function
 	  (activate-compiled-function-start-breakpoint breakpoint))
 	 (interpreted-debug-function
-	  (error _"I don't know how you made this, but they're unsupported -- ~S"
+	  (error (intl:gettext "I don't know how you made this, but they're unsupported -- ~S")
 		 (breakpoint-what breakpoint)))))
       (:function-end
        (etypecase (breakpoint-what breakpoint)
@@ -4237,7 +4237,7 @@ The result is a symbol or nil if the routine cannot be found."
 	      (activate-compiled-function-start-breakpoint starter)))
 	  (setf (breakpoint-status breakpoint) :active))
 	 (interpreted-debug-function
-	  (error _"I don't know how you made this, but they're unsupported -- ~S"
+	  (error (intl:gettext "I don't know how you made this, but they're unsupported -- ~S")
 		 (breakpoint-what breakpoint)))))))
   breakpoint)
 
@@ -4302,7 +4302,7 @@ The result is a symbol or nil if the routine cannot be found."
        (etypecase loc
 	 ((or interpreted-code-location interpreted-debug-function)
 	  (error
-	   _"Breakpoints in interpreted code are currently unsupported."))
+	   (intl:gettext "Breakpoints in interpreted code are currently unsupported.")))
 	 ((or compiled-code-location compiled-debug-function)
 	  (deactivate-compiled-breakpoint breakpoint)
 	  (let ((other (breakpoint-unknown-return-partner breakpoint)))
@@ -4470,7 +4470,7 @@ The result is a symbol or nil if the routine cannot be found."
 (defun handle-breakpoint (offset component signal-context)
   (let ((data (breakpoint-data component offset nil)))
     (unless data
-      (error _"Unknown breakpoint in ~S at offset ~S."
+      (error (intl:gettext "Unknown breakpoint in ~S at offset ~S.")
 	      (debug-function-name (debug-function-from-pc component offset))
 	      offset))
     (let ((breakpoints (breakpoint-data-breakpoints data)))
@@ -4494,7 +4494,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;;
 (defun handle-breakpoint-aux (breakpoints data offset component signal-context)
   (unless breakpoints
-    (error _"Breakpoint that nobody wants?"))
+    (error (intl:gettext "Breakpoint that nobody wants?")))
   (unless (member data *executing-breakpoint-hooks*)
     (let ((*executing-breakpoint-hooks* (cons data
 					      *executing-breakpoint-hooks*)))
@@ -4516,7 +4516,7 @@ The result is a symbol or nil if the routine cannot be found."
 				    (breakpoint-data-instruction data))
       ; Under HPUX we can't sigreturn so bp-do-disp-i has to return.
       #-(or hpux irix x86 amd64)
-      (error _"BREAKPOINT-DO-DISPLACED-INST returned?"))))
+      (error (intl:gettext "BREAKPOINT-DO-DISPLACED-INST returned?")))))
 
 (defun invoke-breakpoint-hooks (breakpoints component offset)
   (let* ((debug-fun (debug-function-from-pc component offset))
@@ -4538,7 +4538,7 @@ The result is a symbol or nil if the routine cannot be found."
 (defun handle-function-end-breakpoint (offset component sigcontext)
   (let ((data (breakpoint-data component offset nil)))
     (unless data
-      (error _"Unknown breakpoint in ~S at offset ~S."
+      (error (intl:gettext "Unknown breakpoint in ~S at offset ~S.")
 	      (debug-function-name (debug-function-from-pc component offset))
 	      offset))
     (let ((breakpoints (breakpoint-data-breakpoints data)))
@@ -4711,7 +4711,7 @@ The result is a symbol or nil if the routine cannot be found."
        (let* ((bpt (di:make-breakpoint
 		    #'(lambda (frame bpt)
 			(declare (ignore frame bpt))
-			(break _"Editor installed breakpoint."))
+			(break (intl:gettext "Editor installed breakpoint.")))
 		    debug-fun :kind path))
 	      (remote-bpt (wire:make-remote-object bpt)))
 	 (activate-breakpoint bpt)
@@ -4724,7 +4724,7 @@ The result is a symbol or nil if the routine cannot be found."
 	   debug-fun #|name|# path))
 	 (interpreted-debug-function
 	  (error
-	   _"We don't currently support breakpoints in interpreted code.")))))))
+	   (intl:gettext "We don't currently support breakpoints in interpreted code."))))))))
 
 (defun compiled-debug-function-set-breakpoint-for-editor (debug-fun #|name|# path)
   (let* ((source-paths (generate-component-source-paths
@@ -4761,7 +4761,7 @@ The result is a symbol or nil if the routine cannot be found."
 	   (let* ((bpt (make-breakpoint
 			#'(lambda (frame bpt)
 			    (declare (ignore frame bpt))
-			    (break _"Editor installed breakpoint."))
+			    (break (intl:gettext "Editor installed breakpoint.")))
 			(wire:remote-object-value (caar matches))))
 		  (remote-bpt (wire:make-remote-object bpt)))
 	     (activate-breakpoint bpt)
@@ -4922,16 +4922,16 @@ The result is a symbol or nil if the routine cannot be found."
       (:file
        (cond
 	((not (probe-file name))
-	 (format t _"~%Cannot set breakpoints for editor when source file no ~
-		    longer exists:~%  ~A."
+	 (format t (intl:gettext "~%Cannot set breakpoints for editor when source file no ~
+		    longer exists:~%  ~A.")
 		 (namestring name)))
 	(t
 	 (let* ((local-tlf-offset (- tlf-offset
 				     (debug-source-root-number d-source)))
 		(char-offset
 		 (aref (or (debug-source-start-positions d-source)
-			   (error _"Cannot set breakpoints for editor when ~
-				   there is no start positions map."))
+			   (error (intl:gettext "Cannot set breakpoints for editor when ~
+				   there is no start positions map.")))
 		       local-tlf-offset)))
 	   (with-open-file (f name)
 	     (cond
@@ -4939,9 +4939,9 @@ The result is a symbol or nil if the routine cannot be found."
 	       (file-position f char-offset))
 	      (t
 	       (format t
-		       _"~%While setting a breakpoint for the editor, noticed ~
+		       (intl:gettext "~%While setting a breakpoint for the editor, noticed ~
 			source file has been modified since compilation:~%  ~A~@
-			Using form offset instead of character position.~%"
+			Using form offset instead of character position.~%")
 		       (namestring name))
 	       (dotimes (i local-tlf-offset) (read f))))
 	     (form-number-translations (read f) tlf-offset))))))
@@ -4956,11 +4956,11 @@ The result is a symbol or nil if the routine cannot be found."
   (let ((loc (wire:remote-object-value remote-obj-loc)))
     (etypecase loc
       (interpreted-code-location
-       (error _"Breakpoints in interpreted code are currently unsupported."))
+       (error (intl:gettext "Breakpoints in interpreted code are currently unsupported.")))
       (compiled-code-location
        (let* ((bpt (make-breakpoint #'(lambda (frame bpt)
 					(declare (ignore frame bpt))
-					(break _"Editor installed breakpoint."))
+					(break (intl:gettext "Editor installed breakpoint.")))
 				    loc))
 	      (remote-bpt (wire:make-remote-object bpt)))
 	 (activate-breakpoint bpt)
@@ -5016,7 +5016,7 @@ The result is a symbol or nil if the routine cannot be found."
     (do-debug-function-blocks (block debug-fun)
       (do-debug-block-locations (loc block)
 	(fill-in-code-location loc)
-	(format t _"~S code location at ~D"
+	(format t (intl:gettext "~S code location at ~D")
 		(compiled-code-location-kind loc)
 		(compiled-code-location-pc loc))
 	(debug::print-code-location-source-form loc 0)

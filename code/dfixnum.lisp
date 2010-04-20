@@ -5,7 +5,7 @@
 ;;; and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dfixnum.lisp,v 1.5 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dfixnum.lisp,v 1.6 2010/04/20 17:57:44 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,7 +71,7 @@
       (setf (dfixnum-l v) low)))
   (let ((high (+ (dfixnum-h v) (dfixnum-h i))))
     (when (> high dfmax)
-      (error _"dfixnum became too big ~a + ~a" v i))
+      (error (intl:gettext "dfixnum became too big ~a + ~a") v i))
     (setf (dfixnum-h v) high))
   v)
 
@@ -84,7 +84,7 @@
   "increments dfixnum v by i (max half fixnum)"
   (declare (type dfixnum v) (type fixnum i))
   (when (> i dfmax)
-      (error _"not a half-fixnum: ~a" i))
+      (error (intl:gettext "not a half-fixnum: ~a") i))
   (let ((low (+ (dfixnum-l v) i)))
     (if (> low dfmax)
 	(progn
@@ -92,7 +92,7 @@
 	  (incf (dfixnum-h v)))
       (setf (dfixnum-l v) (the dfparttype low))))
   (when (> (+ (dfixnum-h v) i) dfmax)
-    (error _"dfixnum became too big ~a + ~a" v i))
+    (error (intl:gettext "dfixnum became too big ~a + ~a") v i))
   v)
 
 (defun dfixnum-dec-df (v i)
@@ -105,7 +105,7 @@
 	(decf high)
 	(setf low (+ low dfmax)))
     (when (< high 0)
-      (error _"dfixnum became negative ~a - ~a (~a/~a)" v i low high))
+      (error (intl:gettext "dfixnum became negative ~a - ~a (~a/~a)") v i low high))
     (setf (dfixnum-h v) high)
     (setf (dfixnum-l v) low))
   v)
@@ -120,7 +120,7 @@
 	(decf high)
 	(setf low (+ low dfmax)))
     (when (< high 0)
-      (error _"dfixnum became negative ~a - ~a (~a/~a)" v i low high))
+      (error (intl:gettext "dfixnum became negative ~a - ~a (~a/~a)") v i low high))
     (setf (dfixnum-h v) high)
     (setf (dfixnum-l v) low))
   v)
@@ -200,7 +200,7 @@
 	 (setf ,vl low)))
      (let ((high (+ ,vh ,ih)))
        (when (> high dfmax)
-	 (error _"dfixnum became too big ~a/~a + ~a/~a" ,vh ,vl ,ih ,il))
+	 (error (intl:gettext "dfixnum became too big ~a/~a + ~a/~a") ,vh ,vl ,ih ,il))
        (setf ,vh high))))
 
 (defun dfixnum-pair-integer (h l)
@@ -215,7 +215,7 @@
        (decf high)
        (setf low (+ low dfmax)))
      (when (< high 0)
-       (error _"dfixnum became negative ~a/~a - ~a/~a(~a/~a)"
+       (error (intl:gettext "dfixnum became negative ~a/~a - ~a/~a(~a/~a)")
 	      ,vh ,vl ,ih ,il low high))
      (setf ,vh high)
      (setf ,vl low)))

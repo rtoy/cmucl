@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.28 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.29 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,7 +318,7 @@
 		   (real-top com)))
 		(has-top 
 		 (setf (component-kind com) :top-level)
-		 (setf (component-name com) _"Top-Level Form")
+		 (setf (component-name com) (intl:gettext "Top-Level Form"))
 		 (top com))
 		(t
 		 (delete-component com))))))

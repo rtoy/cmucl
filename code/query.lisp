@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/query.lisp,v 1.7 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/query.lisp,v 1.8 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,7 +49,7 @@
 	  ((#\y #\Y) (return t))
 	  ((#\n #\N) (return nil))
 	  (t
-	   (write-line _"Type \"y\" for yes or \"n\" for no. " *query-io*)
+	   (write-line (intl:gettext "Type \"y\" for yes or \"n\" for no. ") *query-io*)
 	   (when format-string
 	     (apply #'format *query-io* format-string arguments))
 	   (force-output *query-io*)))))))
@@ -73,6 +73,6 @@
     (cond ((string-equal ans "YES") (return t))
 	  ((string-equal ans "NO") (return nil))
 	  (t
-	   (write-line _"Type \"yes\" for yes or \"no\" for no. " *query-io*)
+	   (write-line (intl:gettext "Type \"yes\" for yes or \"no\" for no. ") *query-io*)
 	   (when format-string
 	     (apply #'format *query-io* format-string arguments))))))

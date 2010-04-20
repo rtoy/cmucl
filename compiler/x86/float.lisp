@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.59 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.60 2010/04/20 17:57:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -242,7 +242,7 @@
 	     (inst fldlg2))
 	    ((= value (log 2l0 2.718281828459045235360287471352662L0))
 	     (inst fldln2))
-	    (t (warn _"Ignoring bogus i387 Constant ~a" value))))))
+	    (t (warn (intl:gettext "Ignoring bogus i387 Constant ~a") value))))))
 
 
 ;;;; Complex float move functions

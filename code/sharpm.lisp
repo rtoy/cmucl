@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.29 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.30 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,7 +26,7 @@
 
 (defun ignore-numarg (sub-char numarg)
   (when numarg
-    (warn _"Numeric argument ignored in #~D~A." numarg sub-char)))
+    (warn (intl:gettext "Numeric argument ignored in #~D~A.") numarg sub-char)))
 
 (defun sharp-backslash (stream backslash numarg)
   (ignore-numarg backslash numarg)
@@ -37,7 +37,7 @@
 	   (char charstring 0))
 	  ((name-char charstring))
 	  (t
-	   (%reader-error stream _"Unrecognized character name: ~S"
+	   (%reader-error stream (intl:gettext "Unrecognized character name: ~S")
 			  charstring)))))
 
 
@@ -53,7 +53,7 @@
     ;; error if so.  Do we need to check for other kinds of badly
     ;; formed lists?
     (when (cdr (last list))
-      (%reader-error stream _"Ill-formed vector: #~S" list))
+      (%reader-error stream (intl:gettext "Ill-formed vector: #~S") list))
     (let ((listlength (length list)))
       (declare (list list)
 	       (fixnum listlength))
@@ -63,7 +63,7 @@
 		 (cond ((> listlength (the fixnum length))
 			(%reader-error
 			 stream
-			 _"Vector longer than specified length: #~S~S"
+			 (intl:gettext "Vector longer than specified length: #~S~S")
 			 length list))
 		       (t
 			(fill (the simple-vector
@@ -82,11 +82,11 @@
     (declare (simple-string bstring))
     (cond (*read-suppress* nil)
 	  (escape-appearedp
-	   (%reader-error stream _"Escape character appeared after #*"))
+	   (%reader-error stream (intl:gettext "Escape character appeared after #*")))
 	  ((and numarg (zerop (length bstring)) (not (zerop numarg)))
 	   (%reader-error
 	    stream
-	    _"You have to give a little bit for non-zero #* bit-vectors."))
+	    (intl:gettext "You have to give a little bit for non-zero #* bit-vectors.")))
 	  ((or (null numarg) (>= (the fixnum numarg) (length bstring)))
 	   (let* ((len1 (length bstring))
 		  (last1 (1- len1))
@@ -105,12 +105,12 @@
 			   (t
 			    (%reader-error
 			     stream
-			     _"Illegal element given for bit-vector: ~S"
+			     (intl:gettext "Illegal element given for bit-vector: ~S")
 			     char)))))
 	     bvec))
 	  (t
 	   (%reader-error stream
-			 _"Bit vector is longer than specified length #~A*~A"
+			 (intl:gettext "Bit vector is longer than specified length #~A*~A")
 			 numarg bstring)))))
 
 
@@ -122,7 +122,7 @@
     (cond
      (*read-suppress* nil)
      (colon
-      (%reader-error stream _"Symbol following #: contains a package marker: ~S"
+      (%reader-error stream (intl:gettext "Symbol following #: contains a package marker: ~S")
 		     token))
      (t
       (make-symbol token)))))
@@ -138,7 +138,7 @@
     (unless *read-suppress*
       (unless *read-eval*
 	(%reader-error stream
-		      _"Attempt to read #. while *READ-EVAL* is bound to NIL."))
+		      (intl:gettext "Attempt to read #. while *READ-EVAL* is bound to NIL.")))
       (eval token))))
 
 
@@ -149,14 +149,14 @@
 	 (read-extended-token stream)
 	 nil)
 	((not radix)
-	 (%reader-error stream _"Radix missing in #R."))
+	 (%reader-error stream (intl:gettext "Radix missing in #R.")))
 	((not (<= 2 radix 36))
-	 (%reader-error stream _"Illegal radix for #R: ~D." radix))
+	 (%reader-error stream (intl:gettext "Illegal radix for #R: ~D.") radix))
 	(t
 	 (let ((res (let ((*read-base* radix))
 		      (read stream t nil t))))
 	   (unless (typep res 'rational)
-	     (%reader-error stream _"#~A (base ~D) value is not a rational: ~S."
+	     (%reader-error stream (intl:gettext "#~A (base ~D) value is not a rational: ~S.")
 			   sub-char radix res))
 	   res))))
 
@@ -196,8 +196,8 @@
 			  (setq zero-axis axis))
 			 (zero-axis
 			  (%reader-error stream
-					 _"#~DA axis ~D is empty, but axis ~
-				          ~D is non-empty."
+					 (intl:gettext "#~DA axis ~D is empty, but axis ~
+				          ~D is non-empty.")
 					 dimensions zero-axis axis))
 			 (t
 			  (setq seq (elt seq 0)))))))
@@ -216,21 +216,21 @@
     (return-from sharp-S nil))
   (let ((body (if (char= (read-char stream t) #\( )
 		  (read-list stream nil)
-		  (%reader-error stream _"Non-list following #S"))))
+		  (%reader-error stream (intl:gettext "Non-list following #S")))))
     (unless (listp body)
-      (%reader-error stream _"Non-list following #S: ~S" body))
+      (%reader-error stream (intl:gettext "Non-list following #S: ~S") body))
     (unless (symbolp (car body))
-      (%reader-error stream _"Structure type is not a symbol: ~S" (car body)))
+      (%reader-error stream (intl:gettext "Structure type is not a symbol: ~S") (car body)))
     (let ((class (kernel::find-class (car body) nil)))
       (unless (typep class 'kernel::structure-class)
-	(%reader-error stream _"~S is not a defined structure type."
+	(%reader-error stream (intl:gettext "~S is not a defined structure type.")
 		       (car body)))
       (let ((def-con (dd-default-constructor
 		      (layout-info
 		       (%class-layout class)))))
 	(unless def-con
 	  (%reader-error
-	   stream _"The ~S structure does not have a default constructor."
+	   stream (intl:gettext "The ~S structure does not have a default constructor.")
 	   (car body)))
 	(apply (fdefinition def-con) (rest body))))))
 
@@ -313,16 +313,16 @@
   (declare (ignore ignore))
   (when *read-suppress* (return-from sharp-equal (values)))
   (unless label
-    (%reader-error stream _"Missing label for #=." label))
+    (%reader-error stream (intl:gettext "Missing label for #=.") label))
   (maybe-create-tables)
   (when (or (nth-value 1 (gethash label *sharp-equal-final-table*))
 	    (nth-value 1 (gethash label *sharp-equal-temp-table*)))
-    (%reader-error stream _"Multiply defined label: #~D=" label))
+    (%reader-error stream (intl:gettext "Multiply defined label: #~D=") label))
   (let* ((tag (gensym)))
     (setf (gethash label *sharp-equal-temp-table*) tag)
     (let ((obj (read stream t nil t)))
       (when (eq obj tag)
-	(%reader-error stream _"Have to tag something more than just #~D#."
+	(%reader-error stream (intl:gettext "Have to tag something more than just #~D#.")
 		       label))
       (setf (gethash tag *sharp-equal-repl-table*) obj)
       (let ((*sharp-equal-circle-table* (make-hash-table :test #'eq :size 20)))
@@ -333,7 +333,7 @@
   (declare (ignore ignore))
   (when *read-suppress* (return-from sharp-sharp nil))
   (unless label
-    (%reader-error stream _"Missing label for ##." label))
+    (%reader-error stream (intl:gettext "Missing label for ##.") label))
 
   (maybe-create-tables)
   ;; Don't read ANSI "2.4.8.15 Sharpsign Equal-Sign" and worry that it requires
@@ -347,7 +347,7 @@
 	    (gethash label *sharp-equal-temp-table*)
 	  (if successp
 	      temporary-tag
-	      (%reader-error stream _"reference to undefined label #~D#" label))))))
+	      (%reader-error stream (intl:gettext "reference to undefined label #~D#") label))))))
 
 ;;;; #+/-
 
@@ -381,7 +381,7 @@
     (when *read-suppress* (return-from sharp-c nil))
     (if (and (listp cnum) (= (length cnum) 2))
 	(complex (car cnum) (cadr cnum))
-	(%reader-error stream _"Illegal complex number format: #C~S" cnum))))
+	(%reader-error stream (intl:gettext "Illegal complex number format: #C~S") cnum))))
 
 (defun sharp-vertical-bar (stream sub-char numarg)
   (ignore-numarg sub-char numarg)
@@ -417,7 +417,7 @@
 
 (defun sharp-illegal (stream sub-char ignore)
   (declare (ignore ignore))
-  (%reader-error stream _"Illegal sharp character ~S" sub-char))
+  (%reader-error stream (intl:gettext "Illegal sharp character ~S") sub-char))
 
 (defun sharp-P (stream sub-char numarg)
   (ignore-numarg sub-char numarg)

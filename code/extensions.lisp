@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.30 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.31 2010/04/20 17:57:44 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,7 +47,7 @@
   called, it signals an error indicating that a required keyword argument was
   not supplied.  This function is also useful for DEFSTRUCT slot defaults
   corresponding to required arguments."
-  (error _"A required keyword argument was not supplied."))
+  (error (intl:gettext "A required keyword argument was not supplied.")))
 
 
 ;;; FILE-COMMENT  --  Public
@@ -209,7 +209,7 @@
   (dolist (x binds)
     (unless (and (listp x)
 		 (= (length x) 2))
-      (error _"Malformed iterate variable spec: ~S." x)))
+      (error (intl:gettext "Malformed iterate variable spec: ~S.") x)))
   
   `(labels ((,name ,(mapcar #'first binds) ,@body))
      (,name ,@(mapcar #'second binds))))
@@ -276,7 +276,7 @@
 	(binds ()))
     (dolist (spec collections)
       (unless (<= 1 (length spec) 3)
-	(error _"Malformed collection specifier: ~S." spec))
+	(error (intl:gettext "Malformed collection specifier: ~S.") spec))
       (let ((n-value (gensym))
 	    (name (first spec))
 	    (default (second spec))
@@ -317,7 +317,7 @@
 	`(progn ,@body)
 	(let ((spec (first specs)))
 	  (when (/= (length spec) 2)
-	    (error _"Malformed Once-Only binding spec: ~S." spec))
+	    (error (intl:gettext "Malformed Once-Only binding spec: ~S.") spec))
 	  (let ((name (first spec))
 		(exp-temp (gensym)))
 	    `(let ((,exp-temp ,(second spec))
@@ -338,20 +338,20 @@
 	 (l2 (gensym)))
     ;; Check for illegal old-style do.
     (when (or (not (listp varlist)) (atom endlist))
-      (error _"Ill-formed ~S -- possibly illegal old style DO?" name))
+      (error (intl:gettext "Ill-formed ~S -- possibly illegal old style DO?") name))
     ;; Parse the varlist to get inits and steps.
     (dolist (v varlist)
       (cond ((symbolp v) (push v inits))
 	    ((listp v)
 	     (unless (symbolp (first v))
-	       (error _"~S step variable is not a symbol: ~S" name (first v)))
+	       (error (intl:gettext "~S step variable is not a symbol: ~S") name (first v)))
 	     (case (length v)
 	       (1 (push (first v) inits))
 	       (2 (push v inits))
 	       (3 (push (list (first v) (second v)) inits)
 		  (setq steps (list* (third v) (first v) steps)))
-	       (t (error _"~S is an illegal form for a ~S varlist." v name))))
-	    (t (error _"~S is an illegal form for a ~S varlist." v name))))
+	       (t (error (intl:gettext "~S is an illegal form for a ~S varlist.") v name))))
+	    (t (error (intl:gettext "~S is an illegal form for a ~S varlist.") v name))))
     ;; And finally construct the new form.
     `(block ,BLOCK
        (,bind ,(nreverse inits)
@@ -458,7 +458,7 @@
 	 (n-cache (gensym)))
 
     (unless (= (length default-values) values)
-      (error _"Number of default values ~S differs from :VALUES ~D."
+      (error (intl:gettext "Number of default values ~S differs from :VALUES ~D.")
 	     default values))
 
     (collect ((inlines)
@@ -476,7 +476,7 @@
       (let ((n 0))
 	(dolist (arg args)
 	  (unless (= (length arg) 2)
-	    (error _"Bad arg spec: ~S." arg))
+	    (error (intl:gettext "Bad arg spec: ~S.") arg))
 	  (let ((arg-name (first arg))
 		(test (second arg)))
 	    (arg-vars arg-name)

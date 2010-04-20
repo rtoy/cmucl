@@ -27,7 +27,7 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fwrappers.lisp,v 1.7 2010/04/19 02:18:03 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fwrappers.lisp,v 1.8 2010/04/20 17:57:44 rtoy Rel $")
 
 (in-package :fwrappers)
 
@@ -176,7 +176,7 @@
 				   aux morep)
 	(kernel:parse-lambda-list lambda-list)
       (when morep
-	(error _"&MORE not supported in fwrapper lambda lists"))
+	(error (intl:gettext "&MORE not supported in fwrapper lambda lists")))
       (multiple-value-bind (body declarations documentation)
 	  (system:parse-body body env t)
 	(multiple-value-bind (lambda-list call-next)

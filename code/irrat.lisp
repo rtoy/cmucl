@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.62 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.63 2010/04/20 17:57:44 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -308,7 +308,7 @@
   ((base :initarg :base :reader intexp-base)
    (power :initarg :power :reader intexp-power))
   (:report (lambda (condition stream)
-	     (format stream _"The absolute value of ~S exceeds limit ~S."
+	     (format stream (intl:gettext "The absolute value of ~S exceeds limit ~S.")
 		     (intexp-power condition)
 		     *intexp-maximum-exponent*))))
 
@@ -333,10 +333,10 @@
 	       :power power)
       (continue ()
 	:report (lambda (stream)
-		  (write-string _"Continue with calculation" stream)))
+		  (write-string (intl:gettext "Continue with calculation") stream)))
       (new-limit ()
 	:report (lambda (stream)
-		  (write-string _"Continue with calculation, update limit" stream))
+		  (write-string (intl:gettext "Continue with calculation, update limit") stream))
 	(setq *intexp-maximum-exponent* (abs power)))))
   (cond ((minusp power)
 	 (/ (intexp base (- power))))
@@ -909,7 +909,7 @@
 (defun cis (theta)
   "Return cos(Theta) + i sin(Theta), AKA exp(i Theta)."
   (if (complexp theta)
-      (error _"Argument to CIS is complex: ~S" theta)
+      (error (intl:gettext "Argument to CIS is complex: ~S") theta)
       (complex (cos theta) (sin theta))))
 
 (defun asin (number)

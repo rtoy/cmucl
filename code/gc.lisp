@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.44 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.45 2010/04/20 17:57:44 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -105,7 +105,7 @@
 	  ((= start (dynamic-1-space-start))
 	   1)
 	  (t
-	   (error _"Oh no.  The current dynamic space is missing!")))))
+	   (error (intl:gettext "Oh no.  The current dynamic space is missing!"))))))
 
 
 ;;;; Room.
@@ -114,18 +114,18 @@
   (flet ((megabytes (bytes)
 	   ;; Convert bytes to nearest megabyte
 	   (ceiling bytes (* 1024 1024))))
-    (format t _"Dynamic Space Usage:    ~13:D bytes (out of ~4:D MB).~%"
+    (format t (intl:gettext "Dynamic Space Usage:    ~13:D bytes (out of ~4:D MB).~%")
 	    (dynamic-usage) (megabytes (dynamic-space-size)))
-    (format t _"Read-Only Space Usage:  ~13:D bytes (out of ~4:D MB).~%"
+    (format t (intl:gettext "Read-Only Space Usage:  ~13:D bytes (out of ~4:D MB).~%")
 	    (read-only-space-usage) (megabytes (read-only-space-size)))
-    (format t _"Static Space Usage:     ~13:D bytes (out of ~4:D MB).~%"
+    (format t (intl:gettext "Static Space Usage:     ~13:D bytes (out of ~4:D MB).~%")
 	    (static-space-usage) (megabytes (static-space-size)))
-    (format t _"Control Stack Usage:    ~13:D bytes (out of ~4:D MB).~%"
+    (format t (intl:gettext "Control Stack Usage:    ~13:D bytes (out of ~4:D MB).~%")
 	    (control-stack-usage) (megabytes (control-stack-size)))
-    (format t _"Binding Stack Usage:    ~13:D bytes (out of ~4:D MB).~%"
+    (format t (intl:gettext "Binding Stack Usage:    ~13:D bytes (out of ~4:D MB).~%")
 	    (binding-stack-usage) (megabytes (binding-stack-size)))
-    (format t _"The current dynamic space is ~D.~%" (current-dynamic-space))
-    (format t _"Garbage collection is currently ~:[enabled~;DISABLED~].~%"
+    (format t (intl:gettext "The current dynamic space is ~D.~%") (current-dynamic-space))
+    (format t (intl:gettext "Garbage collection is currently ~:[enabled~;DISABLED~].~%")
 	    *gc-inhibit*)))
 
 (defun room-intermediate-info ()
@@ -160,8 +160,8 @@
 	(:default
 	 (room-intermediate-info))
 	(t
-	 (error _"No way man!  The optional argument to ROOM must be T, NIL, ~
-		 or :DEFAULT.~%What do you think you are doing?")))
+	 (error (intl:gettext "No way man!  The optional argument to ROOM must be T, NIL, ~
+		 or :DEFAULT.~%What do you think you are doing?"))))
       (room-minimal-info))
   (values))
 
@@ -185,7 +185,7 @@
   (cond ((null *last-bytes-in-use*)
 	 (pushnew
 	  #'(lambda ()
-	      (print _"resetting GC counters")
+	      (print (intl:gettext "resetting GC counters"))
 	      (force-output)
 	      (setf *last-bytes-in-use* nil)
 	      (setf *total-bytes-consed* (dfixnum:make-dfixnum)))
@@ -341,8 +341,8 @@
 (defun default-gc-notify-before (bytes-in-use)
   (when (eq *gc-verbose* :beep)
     (system:beep *standard-output*))
-  (format t _"~&; [GC threshold exceeded with ~:D bytes in use.  ~
-             Commencing GC.]~%" bytes-in-use)
+  (format t (intl:gettext "~&; [GC threshold exceeded with ~:D bytes in use.  ~
+             Commencing GC.]~%") bytes-in-use)
   (finish-output))
 ;;;
 (defparameter *gc-notify-before* #'default-gc-notify-before
@@ -351,9 +351,9 @@
   bytes).  It should notify the user that the system is going to GC.")
 
 (defun default-gc-notify-after (bytes-retained bytes-freed new-trigger)
-  (format t _"~&; [GC completed with ~:D bytes retained and ~:D bytes freed.]~%"
+  (format t (intl:gettext "~&; [GC completed with ~:D bytes retained and ~:D bytes freed.]~%")
 	  bytes-retained bytes-freed)
-  (format t _"~&; [GC will next occur when at least ~:D bytes are in use.]~%"
+  (format t (intl:gettext "~&; [GC will next occur when at least ~:D bytes are in use.]~%")
 	  new-trigger)
   (when (eq *gc-verbose* :beep)
     (system:beep *standard-output*))
@@ -381,7 +381,7 @@
   (let ((words (ash (+ (current-dynamic-space-start) bytes) -2)))
     (unless (and (fixnump words) (plusp words))
       (clear-auto-gc-trigger)
-      (warn _"Attempt to set GC trigger to something bogus: ~S" bytes))
+      (warn (intl:gettext "Attempt to set GC trigger to something bogus: ~S") bytes))
     (setf rt::*internal-gc-trigger* words)))
 
 #-ibmrt
@@ -411,7 +411,7 @@
 (defmacro carefully-funcall (function &rest args)
   `(handler-case (funcall ,function ,@args)
      (error (cond)
-       (warn _"(FUNCALL ~S~{ ~S~}) lost:~%~A" ',function ',args cond)
+       (warn (intl:gettext "(FUNCALL ~S~{ ~S~}) lost:~%~A") ',function ',args cond)
        nil)))
 
 ;;;
@@ -433,8 +433,8 @@
 	;; The noise w/ symbol-value above is to keep the compiler from
 	;; optimizing the test away because of the type declaim for
 	;; *bytes-consed-between-gcs*.
-	(warn _"The value of *BYTES-CONSED-BETWEEN-GCS*, ~S, is not an ~
-	       integer.  Resetting it to ~D." *bytes-consed-between-gcs*
+	(warn (intl:gettext "The value of *BYTES-CONSED-BETWEEN-GCS*, ~S, is not an ~
+	       integer.  Resetting it to ~D.") *bytes-consed-between-gcs*
 	       default-bytes-consed-between-gcs)
 	(setf *bytes-consed-between-gcs* default-bytes-consed-between-gcs))
       (when (and *gc-trigger* (>= pre-gc-dyn-usage *gc-trigger*))
@@ -464,7 +464,7 @@
 		#+nil
 		(when verbose-p
 		  (format
-		   t _"~&Adjusting *last-bytes-in-use* from ~:D to ~:D, gen ~d, pre ~:D ~%"
+		   t (intl:gettext "~&Adjusting *last-bytes-in-use* from ~:D to ~:D, gen ~d, pre ~:D ~%")
 		   *last-bytes-in-use*
 		   post-gc-dyn-usage
 		   gen

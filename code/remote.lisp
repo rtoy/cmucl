@@ -6,7 +6,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.11 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.12 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -143,7 +143,7 @@ to aborting due to a throw)."
 ;;;
 (defmacro remote-value (wire-form form &optional
 				  (on-server-unwind
-				   `(error _"Remote server unwound")))
+				   `(error (intl:gettext "Remote server unwound"))))
   "Execute the single form remotly. The value of the form is returned.
   The optional form on-server-unwind is only evaluated if the server unwinds
   instead of returning."

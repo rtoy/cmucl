@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.26 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.27 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,7 +138,7 @@
 (defun trace-instruction (segment vop inst args)
   (let ((*standard-output* *compiler-trace-output*))
     (unless (eq *prev-segment* segment)
-      (format t _"In the ~A segment:~%" (new-assem:segment-name segment))
+      (format t (intl:gettext "In the ~A segment:~%") (new-assem:segment-name segment))
       (setf *prev-segment* segment))
     (unless (eq *prev-vop* vop)
       (when vop
@@ -186,7 +186,7 @@
 (defun generate-code (component)
   (when *compiler-trace-output*
     (format *compiler-trace-output*
-	    _"~|~%Assembly code for ~S~2%"
+	    (intl:gettext "~|~%Assembly code for ~S~2%")
 	    component))
   (let ((prev-env nil)
 	(*trace-table-info* nil)
@@ -216,7 +216,7 @@
 	(let ((gen (vop-info-generator-function (vop-info vop))))
 	  (if gen 
 	      (funcall gen vop)
-	      (format t _"Missing generator for ~S.~%"
+	      (format t (intl:gettext "Missing generator for ~S.~%")
 		      (template-name (vop-info vop)))))))
     
     (new-assem:append-segment *code-segment* *elsewhere*)

@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.7 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.8 2010/04/20 17:57:43 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.7 2010/04/19 02:18:03 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.8 2010/04/20 17:57:43 rtoy Rel $
 ;;;
 ;;; This file contains the Alpha specific runtime stuff.
 ;;;
@@ -75,7 +75,7 @@
 ;;;
 (defun fixup-code-object (code offset value kind)
   (unless (zerop (rem offset word-bytes))
-    (error _"Unaligned instruction?  offset=#x~X." offset))
+    (error (intl:gettext "Unaligned instruction?  offset=#x~X.") offset))
   (system:without-gcing
    (let ((sap (truly-the system-area-pointer
 			 (%primitive c::code-instructions code))))
@@ -227,7 +227,7 @@
 	      value
 	      (let ((value (system:alternate-get-global-address name)))
 		(when (zerop value)
-		  (error _"Unknown foreign symbol: ~S" name))
+		  (error (intl:gettext "Unknown foreign symbol: ~S") name))
 		value))))))
 
 

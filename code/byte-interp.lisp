@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.48 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.49 2010/04/20 17:57:43 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -450,7 +450,7 @@
 					   `(push-eval-stack ,res))
 				       results)))
 			`(push-eval-stack ,func))))
-	      `(error _"Unknown inline function, id=~D" ,base)))
+	      `(error (intl:gettext "Unknown inline function, id=~D") ,base)))
 	`(if (zerop (logand byte ,(ash 1 bit)))
 	     ,(build-dispatch (1- bit) base)
 	     ,(build-dispatch (1- bit) (+ base (ash 1 bit)))))))
@@ -475,7 +475,7 @@
   `(let ((x ,x))
      (unless (boundp x)
        (with-debugger-info (component pc fp)
-	 (error _"Unbound variable: ~S" x)))
+	 (error (intl:gettext "Unbound variable: ~S") x)))
      (symbol-value x)))
 
 (defmacro %byte-car (x)
@@ -483,7 +483,7 @@
      (unless (listp x)
        (with-debugger-info (component pc fp)
 	 (error 'simple-type-error :datum x :expected-type 'list
-		:format-control _"Non-list argument to CAR: ~S"
+		:format-control (intl:gettext "Non-list argument to CAR: ~S")
 		:format-arguments (list x))))
      (car x)))
 
@@ -492,7 +492,7 @@
      (unless (listp x)
        (with-debugger-info (component pc fp)
 	 (error 'simple-type-error :datum x :expected-type 'list
-		:format-control _"Non-list argument to CDR: ~S"
+		:format-control (intl:gettext "Non-list argument to CDR: ~S")
 		:format-arguments (list x))))
      (cdr x)))
 
@@ -589,7 +589,7 @@
 ;;;
 (defun undefined-xop (component old-pc pc fp)
   (declare (ignore component old-pc pc fp))
-  (error _"Undefined XOP."))
+  (error (intl:gettext "Undefined XOP.")))
 
 ;;; *BYTE-XOPS* -- Simple vector of the XOP functions.
 ;;; 
@@ -1377,7 +1377,7 @@
 	  ((typep xep 'simple-byte-function)
 	   (unless (eql (simple-byte-function-num-args xep) num-args)
 	     (with-debugger-info (old-component ret-pc old-fp)
-	       (simple-program-error _"Wrong number of arguments.")))
+	       (simple-program-error (intl:gettext "Wrong number of arguments."))))
 	   (simple-byte-function-entry-point xep))
 	  (t
 	   (let ((min (hairy-byte-function-min-args xep))
@@ -1385,12 +1385,12 @@
 	     (cond
 	      ((< num-args min)
 	       (with-debugger-info (old-component ret-pc old-fp)
-		 (simple-program-error _"Not enough arguments.")))
+		 (simple-program-error (intl:gettext "Not enough arguments."))))
 	      ((<= num-args max)
 	       (nth (- num-args min) (hairy-byte-function-entry-points xep)))
 	      ((null (hairy-byte-function-more-args-entry-point xep))
 	       (with-debugger-info (old-component ret-pc old-fp)
-		 (simple-program-error _"Too many arguments.")))
+		 (simple-program-error (intl:gettext "Too many arguments."))))
 	      (t
 	       (let* ((more-args-supplied (- num-args max))
 		      (sp (current-stack-pointer))
@@ -1417,7 +1417,7 @@
 		  (t
 		   (unless (evenp more-args-supplied)
 		     (with-debugger-info (old-component ret-pc old-fp)
-		       (simple-program-error _"Odd number of keyword arguments.")))
+		       (simple-program-error (intl:gettext "Odd number of keyword arguments."))))
 		   ;;
 		   ;; If there are keyword args we need to leave the
 		   ;; defaulted and supplied-p values where the more args
@@ -1480,7 +1480,7 @@
 					  (incf target))))))))
 		       (when (and bogus-key-p (not allow))
 			 (with-debugger-info (old-component ret-pc old-fp)
-			   (simple-program-error _"Unknown keyword: ~S"
+			   (simple-program-error (intl:gettext "Unknown keyword: ~S")
 						 bogus-key))))
 		     (setf (current-stack-pointer) new-sp)))))
 	       (hairy-byte-function-more-args-entry-point xep))))))))
@@ -1515,7 +1515,7 @@
 	      (values-list results))))))
       (t
        ;; ### Function end breakpoint?
-       (error _"function-end breakpoints not supported.")))))
+       (error (intl:gettext "function-end breakpoints not supported."))))))
 
 (defun do-local-return (old-component fp num-results)
   (declare (type stack-pointer fp) (type index num-results))

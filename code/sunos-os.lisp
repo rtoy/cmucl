@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.14 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.15 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,7 +58,7 @@
       (unix:unix-getrusage unix:rusage_self)
     (declare (ignore maxrss ixrss idrss isrss minflt))
     (cond ((null err?)
-	   (error _"Unix system call getrusage failed: ~A."
+	   (error (intl:gettext "Unix system call getrusage failed: ~A.")
 		  (unix:get-unix-error-msg utime)))
 	  (T
 	   (values utime stime majflt)))))
@@ -84,5 +84,5 @@
   (multiple-value-bind (val err)
 		       (unix:unix-getpagesize)
     (unless val
-      (error _"Getpagesize failed: ~A" (unix:get-unix-error-msg err)))
+      (error (intl:gettext "Getpagesize failed: ~A") (unix:get-unix-error-msg err)))
     val))

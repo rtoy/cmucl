@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.12 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.13 2010/04/20 17:57:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -184,7 +184,7 @@
 	     (single-reg (inst xorps y y))
 	     (double-reg (inst xorpd y y))))
 	  (t
-	   (warn _"Ignoring bogus i387 Constant ~a" value)))))
+	   (warn (intl:gettext "Ignoring bogus i387 Constant ~a") value)))))
 
 
 ;;;; Complex float move functions

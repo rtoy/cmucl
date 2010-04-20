@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.16 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.17 2010/04/20 17:57:43 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,9 +61,9 @@
     (multiple-value-bind (flag thing)
 			 (backquotify stream (read stream t nil t))
       (if (eq flag *bq-at-flag*)
-	  (%reader-error stream _",@ after backquote in ~S" thing))
+	  (%reader-error stream (intl:gettext ",@ after backquote in ~S") thing))
       (if (eq flag *bq-dot-flag*)
-	  (%reader-error stream _",. after backquote in ~S" thing))
+	  (%reader-error stream (intl:gettext ",. after backquote in ~S") thing))
       (values (backquotify-1 flag thing) 'list))))
 
 (defun comma-macro (stream ignore)
@@ -71,7 +71,7 @@
   (unless (> *backquote-count* 0)
     (when *read-suppress*
       (return-from comma-macro nil))
-    (%reader-error stream _"Comma not inside a backquote."))
+    (%reader-error stream (intl:gettext "Comma not inside a backquote.")))
   (let ((c (read-char stream))
 	(*backquote-count* (1- *backquote-count*)))
     (values
@@ -112,9 +112,9 @@
 	     (multiple-value-bind (dflag d) (backquotify stream (cdr code))
 	       (if (eq dflag *bq-at-flag*)
 		   ;; get the errors later.
-		   (%reader-error stream _",@ after dot in ~S" code))
+		   (%reader-error stream (intl:gettext ",@ after dot in ~S") code))
 	       (if (eq dflag *bq-dot-flag*)
-		   (%reader-error stream _",. after dot in ~S" code))
+		   (%reader-error stream (intl:gettext ",. after dot in ~S") code))
 	       (cond
 		((eq aflag *bq-at-flag*)
 		 (if (null dflag)
@@ -250,7 +250,7 @@
    ((atom form)
     (backq-unparse-expr form splicing))
    ((not (null (cdr (last form))))
-    _"### illegal dotted backquote form ###")
+    (intl:gettext "### illegal dotted backquote form ###"))
    (t
     (case (car form)
       (backq-list

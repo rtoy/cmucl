@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alloc.lisp,v 1.15 2010/03/19 15:19:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alloc.lisp,v 1.16 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -77,7 +77,7 @@
 		  ,@(third spec)
 		  #+nil
 		  (when (find-in #',slot structure ,var-name)
-		    (error _"~S already deallocated!" structure))
+		    (error (intl:gettext "~S already deallocated!") structure))
 		  (setf (,slot structure) ,var-name)
 		  (setq ,var-name structure)))
 

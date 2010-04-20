@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.58 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.59 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -127,7 +127,7 @@
 (defun special-form-function (&rest stuff)
   (declare (ignore stuff))
   (error 'simple-undefined-function
-	 :format-control _"Can't funcall the SYMBOL-FUNCTION of special forms."))
+	 :format-control (intl:gettext "Can't funcall the SYMBOL-FUNCTION of special forms.")))
 
 ;;; CONVERT-CONDITION-INTO-COMPILER-ERROR  --  Internal
 ;;;
@@ -188,7 +188,7 @@
 		 (declare (ignore stuff))
 		 (error 'simple-undefined-function
 			:name ',name
-			:format-control _"Can't funcall the SYMBOL-FUNCTION of the special form ~A."
+			:format-control (intl:gettext "Can't funcall the SYMBOL-FUNCTION of the special form ~A.")
 			:format-arguments (list ',name)))
 	       (setf (symbol-function ',name)
 		     (function ,(symbolicate "SPECIAL-FORM-FUNCTION-" name)))))))))
@@ -415,7 +415,7 @@
               byte-code or both (default :native.)"
 
   (when (and eval-name defun-only)
-    (error _"Can't specify both DEFUN-ONLY and EVAL-NAME."))
+    (error (intl:gettext "Can't specify both DEFUN-ONLY and EVAL-NAME.")))
   (let ((n-args (gensym))
 	(n-node (or node (gensym)))
 	(n-decls (gensym))
@@ -508,7 +508,7 @@
   optimizers that the function might have."
   (when (and (intersection attributes '(any call unwind))
 	     (intersection attributes '(movable)))
-    (error _"Function cannot have both good and bad attributes: ~S" attributes))
+    (error (intl:gettext "Function cannot have both good and bad attributes: ~S") attributes))
   
   `(%defknown ',(if (and (consp name)
 			 (not (eq (car name) 'setf)))
@@ -579,7 +579,7 @@
 
   If supplied, Result-Form is the value to return."
   (unless (member ends '(nil :head :tail :both))
-    (error _"Losing Ends value: ~S." ends))
+    (error (intl:gettext "Losing Ends value: ~S.") ends))
   (let ((n-component (gensym))
 	(n-tail (gensym)))
     `(let* ((,n-component ,component)
@@ -597,7 +597,7 @@
   "Do-Blocks-Backwards (Block-Var Component [Ends] [Result-Form]) {Declaration}* {Form}*
   Like Do-Blocks, only iterate over the blocks in reverse order."
   (unless (member ends '(nil :head :tail :both))
-    (error _"Losing Ends value: ~S." ends))
+    (error (intl:gettext "Losing Ends value: ~S.") ends))
   (let ((n-component (gensym))
 	(n-head (gensym)))
     `(let* ((,n-component ,component)
@@ -855,7 +855,7 @@
 			       stream)))
 		    (:test (setq test (second option)))
 		    (t
-		     (error _"Losing Defprinter option: ~S."
+		     (error (intl:gettext "Losing Defprinter option: ~S.")
 			    (first option)))))))))
 	     
       `(defun ,(symbolicate "%PRINT-" name) (structure stream depth)
@@ -863,7 +863,7 @@
 		  (declare (ignorable stream))
 		  ,@(prints)))
 	   (cond (*print-readably*
-		  (error _"~S cannot be printed readably." structure))
+		  (error (intl:gettext "~S cannot be printed readably.") structure))
 		 ((and *print-level* (>= depth *print-level*))
 		  (format stream "#<~S ~X>"
 			  ',name
@@ -907,7 +907,7 @@
     (dolist (name names)
       (let ((mask (cdr (assoc name alist))))
 	(unless mask
-	  (error _"Unknown attribute name: ~S." name))
+	  (error (intl:gettext "Unknown attribute name: ~S.") name))
 	(res mask)))
     (res)))
 
@@ -1038,7 +1038,7 @@
   (declare (values event-info))
   (let ((res (gethash name *event-info*)))
     (unless res
-      (error _"~S is not the name of an event." name))
+      (error (intl:gettext "~S is not the name of an event.") name))
     res))
 
 ); Eval-When (Compile Load Eval)
@@ -1157,7 +1157,7 @@
   Next.  Key, Test and Test-Not are the same as for generic sequence
   functions."
   (when (and test-p not-p)
-    (error _"Silly to supply both :Test and :Test-Not."))
+    (error (intl:gettext "Silly to supply both :Test and :Test-Not.")))
   (if not-p
       (do ((current list (funcall next current)))
 	  ((null current) nil)
@@ -1176,7 +1176,7 @@
   linked by the accessor function Next.  Key, Test and Test-Not are the same as
   for generic sequence functions."
   (when (and test-p not-p)
-    (error _"Silly to supply both :Test and :Test-Not."))
+    (error (intl:gettext "Silly to supply both :Test and :Test-Not.")))
   (if not-p
       (do ((current list (funcall next current))
 	   (i 0 (1+ i)))
@@ -1249,7 +1249,7 @@
 ;;;
 (defmacro eposition (&rest args)
   `(or (position ,@args)
-       (error _"Shouldn't happen?")))
+       (error (intl:gettext "Shouldn't happen?"))))
 
 
 ;;; Modular functions
@@ -1287,7 +1287,7 @@
                      (= (length lambda-list)
                         (length (modular-fun-info-lambda-list info))))
           (setf (modular-fun-info-name info) name)
-          (warn _"Redefining modular version ~S of ~S for width ~S."
+          (warn (intl:gettext "Redefining modular version ~S of ~S for width ~S.")
 		name prototype width))
         (setf (gethash prototype kernel::*modular-funs*)
               (merge 'list
@@ -1306,8 +1306,8 @@
   (check-type width unsigned-byte)
   (dolist (arg lambda-list)
     (when (member arg lambda-list-keywords)
-      (error _"Lambda list keyword ~S is not supported for ~
-              modular function lambda lists." arg)))
+      (error (intl:gettext "Lambda list keyword ~S is not supported for ~
+              modular function lambda lists.") arg)))
   `(progn
      (%define-modular-fun ',name ',lambda-list ',prototype ,width)
      (defknown ,name ,(mapcar (constantly 'integer) lambda-list)
@@ -1339,8 +1339,8 @@
   (check-type name symbol)
   (dolist (arg lambda-list)
     (when (member arg lambda-list-keywords)
-      (error _"Lambda list keyword ~S is not supported for ~
-              modular function lambda lists." arg)))
+      (error (intl:gettext "Lambda list keyword ~S is not supported for ~
+              modular function lambda lists.") arg)))
   (let ((call (gensym))
 	(args (gensym)))
     `(setf (gethash ',name kernel::*modular-funs*)

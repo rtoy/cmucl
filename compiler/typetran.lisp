@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.47 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.48 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,7 +71,7 @@
 ;;;
 (deftransform typep ((object type))
   (unless (constant-continuation-p type)
-    (give-up _"Can't open-code test of non-constant type."))
+    (give-up (intl:gettext "Can't open-code test of non-constant type.")))
   `(typep object ',(continuation-value type)))
 
 
@@ -125,7 +125,7 @@
   (let* ((name (continuation-value name))
 	 (cell (find-class-cell name)))
     `(or (class-cell-class ',cell)
-	 (error _"Class not yet defined: ~S" ',name))))
+	 (error (intl:gettext "Class not yet defined: ~S") ',name))))
 
 ;;;; Standard type predicates:
 

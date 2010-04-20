@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.47 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.48 2010/04/20 17:57:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -234,8 +234,8 @@
 (defun note-if-accessor (name)
   (let ((for (info function accessor-for name)))
     (when for
-      (cerror _"Assume redefinition is compatible and allow it"
-	      _"Redefining slot accessor ~S for structure type ~S"
+      (cerror (intl:gettext "Assume redefinition is compatible and allow it")
+	      (intl:gettext "Redefining slot accessor ~S for structure type ~S")
 	      name (%class-name for))
       ;;(undefine-structure for)
       (setf (info function kind name) :function))))
@@ -347,7 +347,7 @@
 ;;;
 (defun proclaim (form)
   (unless (consp form)
-    (error _"Malformed PROCLAIM spec: ~S." form))
+    (error (intl:gettext "Malformed PROCLAIM spec: ~S.") form))
 
   (when (boundp '*proclamation-hooks*)
     (dolist (hook *proclamation-hooks*)
@@ -359,7 +359,7 @@
       (special
        (dolist (name args)
 	 (unless (symbolp name)
-	   (error _"Variable name is not a symbol: ~S." name))
+	   (error (intl:gettext "Variable name is not a symbol: ~S.") name))
 	 (unless (or (member (info variable kind name) '(:global :special))
 		     ;; If we are still in cold-load, and the package system
 		     ;; is not set up, the global db will claim all variables
@@ -368,18 +368,18 @@
 		     (null (symbol-package :end)))
 	   (cond
 	     ((eq name 'nil)
-	      (error _"Nihil ex nihil, can't declare ~S special." name))
+	      (error (intl:gettext "Nihil ex nihil, can't declare ~S special.") name))
 	     ((eq name 't)
-	      (error _"Veritas aeterna, can't declare ~S special." name))
+	      (error (intl:gettext "Veritas aeterna, can't declare ~S special.") name))
 	     ((keywordp name)
-	      (error _"Can't declare ~S special, it is a keyword." name))
+	      (error (intl:gettext "Can't declare ~S special, it is a keyword.") name))
 	     (t
-	      (cerror _"Proceed anyway."
-		      _"Trying to declare ~S special, which is ~A." name
+	      (cerror (intl:gettext "Proceed anyway.")
+		      (intl:gettext "Trying to declare ~S special, which is ~A.") name
 		      (ecase (info variable kind name)
-			(:constant _"a constant")
-			(:alien _"an alien variable")
-			(:macro _"a symbol macro"))))))
+			(:constant (intl:gettext "a constant"))
+			(:alien (intl:gettext "an alien variable"))
+			(:macro (intl:gettext "a symbol macro")))))))
 	 (clear-info variable constant-value name)
 	 (setf (info variable kind name) :special)))
       (type
@@ -387,18 +387,18 @@
 	 (let ((type (specifier-type (first args))))
 	   (dolist (name (rest args))
 	     (unless (symbolp name)
-	       (error _"Variable name is not a symbol: ~S." name))
+	       (error (intl:gettext "Variable name is not a symbol: ~S.") name))
 	     (setf (info variable type name) type)
 	     (setf (info variable where-from name) :declared)))))
       (ftype
        (when *type-system-initialized*
 	 (let ((type (specifier-type (first args))))
 	   (unless (csubtypep type (specifier-type 'function))
-	     (error _"Declared functional type is not a function type: ~S."
+	     (error (intl:gettext "Declared functional type is not a function type: ~S.")
 		    (first args)))
 	   (dolist (name (rest args))
 	     (cond ((info function accessor-for name)
-		    (warn _"Ignoring FTYPE declaration for slot accesor:~%  ~S"
+		    (warn (intl:gettext "Ignoring FTYPE declaration for slot accesor:~%  ~S")
 			  name))
 		   (t
 		    (define-function-name name)
@@ -447,9 +447,9 @@
       (declaration
        (dolist (decl args)
 	 (unless (symbolp decl)
-	   (error _"Declaration to be RECOGNIZED is not a symbol: ~S." decl))
+	   (error (intl:gettext "Declaration to be RECOGNIZED is not a symbol: ~S.") decl))
 	 (when (info type kind decl)
-	   (error _"Declaration already names a type: ~S." decl))
+	   (error (intl:gettext "Declaration already names a type: ~S.") decl))
 	 (setf (info declaration recognized decl) t)))
       ((start-block end-block)) ; ignore.
       (t
@@ -459,7 +459,7 @@
 		  (and (consp kind) (info type translator (car kind))))
 	      (proclaim `(type . ,form)))
 	     ((not (info declaration recognized kind))
-	      (warn _"Unrecognized proclamation: ~S." form))))))
+	      (warn (intl:gettext "Unrecognized proclamation: ~S.") form))))))
   (undefined-value))
 
 

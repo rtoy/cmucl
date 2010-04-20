@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.83 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.84 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -542,12 +542,12 @@
 (define-type-method (values :simple-subtypep :complex-subtypep-arg1)
     (type1 type2)
   (declare (ignore type2))
-  (error _"Subtypep is illegal on this type:~%  ~S" (type-specifier type1)))
+  (error (intl:gettext "Subtypep is illegal on this type:~%  ~S") (type-specifier type1)))
 
 (define-type-method (values :complex-subtypep-arg2)
     (type1 type2)
   (declare (ignore type1))
-  (error _"Subtypep is illegal on this type:~%  ~S" (type-specifier type2)))
+  (error (intl:gettext "Subtypep is illegal on this type:~%  ~S") (type-specifier type2)))
 
 (define-type-method (values :unparse) (type)
   (cons 'values (unparse-args-types type)))
@@ -704,7 +704,7 @@
   (multiple-value-bind (required optional restp rest keyp keys allowp aux)
       (parse-lambda-list lambda-list)
     (when aux
-      (simple-program-error _"&Aux in a FUNCTION or VALUES type: ~S."
+      (simple-program-error (intl:gettext "&Aux in a FUNCTION or VALUES type: ~S.")
                             lambda-list))
     (setf (args-type-required result)
 	  (mapcar #'single-value-specifier-type required))
@@ -717,10 +717,10 @@
       (dolist (key keys)
 	(when (or (atom key) (/= (length key) 2))
 	  (simple-program-error
-	   _"Keyword type description is not a two-list: ~S." key))
+	   (intl:gettext "Keyword type description is not a two-list: ~S.") key))
 	(let ((kwd (first key)))
 	  (when (find kwd (key-info) :key #'key-info-name)
-	    (simple-program-error _"Repeated keyword ~S in lambda list: ~S."
+	    (simple-program-error (intl:gettext "Repeated keyword ~S in lambda list: ~S.")
                                   kwd lambda-list))
 	  (key-info (make-key-info
 		     :name kwd
@@ -775,7 +775,7 @@
     ;; Actually, CLHS lists &ALLOW-OTHER-KEYS without listing &KEYS,
     ;; but keys clearly don't make any sense.
     (when (or (values-type-keyp res) (values-type-allowp res))
-      (simple-program-error _"&KEY or &ALLOW-OTHER-KEYS in values type: ~s"
+      (simple-program-error (intl:gettext "&KEY or &ALLOW-OTHER-KEYS in values type: ~s")
 			    res))
     res))
 
@@ -1407,7 +1407,7 @@
 		   (return-from values-specifier-type
 				(make-unknown-type :specifier spec)))
 		  (t
-		   (simple-program-error _"Bad thing to be a type specifier: ~S."
+		   (simple-program-error (intl:gettext "Bad thing to be a type specifier: ~S.")
                                          spec)))))))))
 
 ;;; SPECIFIER-TYPE  --  Interface
@@ -1418,7 +1418,7 @@
 (defun specifier-type (x)
   (let ((res (values-specifier-type x)))
     (when (values-type-p res)
-      (simple-program-error _"VALUES type illegal in this context:~%  ~S" x))
+      (simple-program-error (intl:gettext "VALUES type illegal in this context:~%  ~S") x))
     res))
 
 (defun single-value-specifier-type (x)
@@ -1626,7 +1626,7 @@
       (error 'simple-type-error
 	     :datum predicate-name
 	     :expected-type 'symbol
-	     :format-control _"The SATISFIES predicate name is not a symbol: ~S"
+	     :format-control (intl:gettext "The SATISFIES predicate name is not a symbol: ~S")
 	     :format-arguments (list predicate-name))))
   ;; Create object.
   (make-hairy-type :specifier whole))
@@ -1898,7 +1898,7 @@
 	    *universal-type*
 	    (specifier-type `(not ,(type-specifier
 				    (cons-type-cdr-type not-type))))))
-	  (t (error _"Weird CONS type ~S" not-type)))))
+	  (t (error (intl:gettext "Weird CONS type ~S") not-type)))))
       (t (make-negation-type :type not-type)))))
 
 
@@ -2189,10 +2189,10 @@
 
 (def-type-translator complex (&optional (typespec '*))
   (labels ((not-numeric ()
-	     (error _"The component type for COMPLEX is not numeric: ~S"
+	     (error (intl:gettext "The component type for COMPLEX is not numeric: ~S")
 		    typespec))
 	   (not-real ()
-	     (error _"The component type for COMPLEX is not real: ~S"
+	     (error (intl:gettext "The component type for COMPLEX is not real: ~S")
 		    typespec))
 	   (complex1 (component-type)
 	     (unless (numeric-type-p component-type)
@@ -2221,8 +2221,8 @@
 	     ;; It's not clear how best to fix this. -- WHN 2002-01-21,
 	     ;; trying to summarize CSR's concerns in his patch
 	     (typecase component
-	       (complex (error _"The component type for COMPLEX (EQL X) ~
-                                    is complex: ~S"
+	       (complex (error (intl:gettext "The component type for COMPLEX (EQL X) ~
+                                    is complex: ~S")
 			       component))
 	       ((eql 0) (specifier-type nil)) ; as required by ANSI
 	       (single-float (specifier-type '(complex single-float)))
@@ -2280,8 +2280,8 @@
 	       ;; an intersection type like (AND REAL (SATISFIES ODDP)),
 	       ;; in which case we fall through the logic above and
 	       ;; end up here, stumped.
-	       (error _"~@<(known bug #145): The type ~S is too hairy to be 
-                         used for a COMPLEX component.~:@>"
+	       (error (intl:gettext "~@<(known bug #145): The type ~S is too hairy to be 
+                         used for a COMPLEX component.~:@>")
 		      typespec))))))))
 
 ;;; Check-Bound  --  Internal
@@ -2295,7 +2295,7 @@
 	      (and (consp ,x) (typep (car ,x) ',type) (null (cdr ,x))))
 	  ,x)
 	 (t
-	  (simple-program-error _"Bound is not *, a ~A or a list of a ~A: ~S"
+	  (simple-program-error (intl:gettext "Bound is not *, a ~A or a list of a ~A: ~S")
 	                        ',type ',type ,x))))
 
 (def-type-translator integer (&optional low high)
@@ -2329,7 +2329,7 @@
 
 (deftype mod (n)
   (unless (and (integerp n) (> n 0))
-    (simple-program-error _"Bad N specified for MOD type specifier: ~S." n))
+    (simple-program-error (intl:gettext "Bad N specified for MOD type specifier: ~S.") n))
   `(integer 0 ,(1- n)))
 
 (deftype signed-byte (&optional s)
@@ -2339,7 +2339,7 @@
 	   `(integer ,(- bound) ,(1- bound))))
 	(t
 	 (simple-program-error 
-	  _"Bad size specified for SIGNED-BYTE type specifier: ~S." s))))
+	  (intl:gettext "Bad size specified for SIGNED-BYTE type specifier: ~S.") s))))
 
 (deftype unsigned-byte (&optional s)
   (cond ((eq s '*) '(integer 0))
@@ -2347,7 +2347,7 @@
 	 `(integer 0 ,(1- (ash 1 s))))
 	(t
 	 (simple-program-error 
-	  _"Bad size specified for UNSIGNED-BYTE type specifier: ~S." s))))
+	  (intl:gettext "Bad size specified for UNSIGNED-BYTE type specifier: ~S.") s))))
 
 
 ;;; Unlike CMU CL, we represent the types FLOAT and REAL as
@@ -2579,7 +2579,7 @@
 ;;;
 (defun float-format-max (f1 f2)
   (when (and f1 f2)
-    (dolist (f float-formats (error _"Bad float format: ~S." f1))
+    (dolist (f float-formats (error (intl:gettext "Bad float format: ~S.") f1))
       (when (or (eq f f1) (eq f f2))
 	(return f)))))
 
@@ -2831,22 +2831,22 @@
     (integer
      (when (minusp dims)
        (simple-program-error
-        _"Arrays can't have a negative number of dimensions: ~D." dims))
+        (intl:gettext "Arrays can't have a negative number of dimensions: ~D.") dims))
      (when (>= dims array-rank-limit)
-       (simple-program-error _"Array type has too many dimensions: ~S." dims))
+       (simple-program-error (intl:gettext "Array type has too many dimensions: ~S.") dims))
      (make-list dims :initial-element '*))
     (list
      (when (>= (length dims) array-rank-limit)
-       (simple-program-error _"Array type has too many dimensions: ~S." dims))
+       (simple-program-error (intl:gettext "Array type has too many dimensions: ~S.") dims))
      (dolist (dim dims)
        (unless (eq dim '*)
 	 (unless (and (integerp dim)
 		      (>= dim 0) (< dim array-dimension-limit))
-	   (simple-program-error _"Bad dimension in array type: ~S." dim))))
+	   (simple-program-error (intl:gettext "Bad dimension in array type: ~S.") dim))))
      dims)
     (t
      (simple-program-error
-      _"Array dimensions is not a list, integer or *:~%  ~S" dims))))
+      (intl:gettext "Array dimensions is not a list, integer or *:~%  ~S") dims))))
 
 (def-type-translator array (&optional (element-type '*) (dimensions '*))
   (specialize-array-type

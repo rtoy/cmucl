@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.14 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.15 2010/04/20 17:57:47 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,7 +23,7 @@
 
 (defun error-number-or-lose (name)
   (or (position name (c:backend-internal-errors c:*backend*) :key #'car)
-      (error _"Unknown internal error: ~S" name)))
+      (error (intl:gettext "Unknown internal error: ~S") name)))
 
 
 (eval-when (compile eval)

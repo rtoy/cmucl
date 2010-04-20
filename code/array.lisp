@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.53 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.54 2010/04/20 17:57:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -88,12 +88,12 @@
   (let* ((size (array-total-size array))
 	 (end (cond (end
 		     (unless (<= end size)
-		       (error _"End ~D is greater than total size ~D."
+		       (error (intl:gettext "End ~D is greater than total size ~D.")
 			      end size))
 		     end)
 		    (t size))))
     (when (> start end)
-      (error _"Start ~D is greater than end ~D." start end))
+      (error (intl:gettext "Start ~D is greater than end ~D.") start end))
     (do ((data array (%array-data-vector data))
 	 (cumulative-offset 0
 			    (+ cumulative-offset
@@ -181,7 +181,7 @@
 		      #.vm:simple-array-double-float-type
 		      #.vm:simple-array-complex-single-float-type
 		      #.vm:simple-array-complex-double-float-type))
-      (error _"Cannot make a static array of element type ~S" element-type))
+      (error (intl:gettext "Cannot make a static array of element type ~S") element-type))
     ;; Malloc space for the vector.  We need enough space for the data
     ;; itself, and then 2 words for the vector header (header word and
     ;; length).  Use calloc to make sure the area is initialized to
@@ -198,7 +198,7 @@
 	 ;; Malloc should return double-word (8 byte) alignment.
 	 (assert (zerop (logand 7 (sys:sap-int pointer))))
 	 (when (zerop (sys:sap-int pointer))
-	   (error _"Failed to allocate space for static array of length ~S of type ~S"
+	   (error (intl:gettext "Failed to allocate space for static array of length ~S of type ~S")
 		  length element-type))
 
 	 ;; Fill in the vector header word and length word.  Set the data
@@ -251,11 +251,11 @@
 		      (null displaced-to))))
     (declare (fixnum array-rank))
     (when (and displaced-index-offset (null displaced-to))
-      (error _"Can't specify :displaced-index-offset without :displaced-to"))
+      (error (intl:gettext "Can't specify :displaced-index-offset without :displaced-to")))
     (when (and adjustable static-array-p)
-      (error _"Cannot make an adjustable static array"))
+      (error (intl:gettext "Cannot make an adjustable static array")))
     (when (and displaced-to static-array-p)
-      (error _"Cannot make a displaced array static"))
+      (error (intl:gettext "Cannot make a displaced array static")))
     (if (and simple (= array-rank 1))
 	;; It's a (simple-array * (*))
 	(multiple-value-bind (type bits)
@@ -278,11 +278,11 @@
 	      (fill array initial-element))
 	    (when initial-contents-p
 	      (when initial-element-p
-		(error _"Cannot specify both :initial-element and ~
-		:initial-contents"))
+		(error (intl:gettext "Cannot specify both :initial-element and ~
+		:initial-contents")))
 	      (unless (= length (length initial-contents))
-		(error _"~D elements in the initial-contents, but the ~
-		vector length is ~D."
+		(error (intl:gettext "~D elements in the initial-contents, but the ~
+		vector length is ~D.")
 		       (length initial-contents)
 		       length))
 	      (replace array initial-contents))
@@ -303,7 +303,7 @@
 		       array-rank)))
 	  (cond (fill-pointer
 		 (unless (= array-rank 1)
-		   (error _"Only vectors can have fill pointers."))
+		   (error (intl:gettext "Only vectors can have fill pointers.")))
 		 (let ((length (car dimensions)))
 		   (declare (fixnum length))
 		   (setf (%array-fill-pointer array)
@@ -313,7 +313,7 @@
 			    (unless (and (fixnump fill-pointer)
 					 (>= fill-pointer 0)
 					 (<= fill-pointer length))
-				    (error _"Invalid fill-pointer ~D"
+				    (error (intl:gettext "Invalid fill-pointer ~D")
 					   fill-pointer))
 			    fill-pointer))))
 		 (setf (%array-fill-pointer-p array) t))
@@ -324,8 +324,8 @@
 	  (setf (%array-data-vector array) data)
 	  (cond (displaced-to
 		 (when (or initial-element-p initial-contents-p)
-		   (error _"Neither :initial-element nor :initial-contents ~
-		   can be specified along with :displaced-to"))
+		   (error (intl:gettext "Neither :initial-element nor :initial-contents ~
+		   can be specified along with :displaced-to")))
 		 ;; The CLHS entry for MAKE-ARRAY says that if the
 		 ;; actual array element types are not type equivalent
 		 ;; (subtypes of each other), the consequences are
@@ -334,13 +334,13 @@
 					(array-element-type displaced-to))
 			      (subtypep (array-element-type displaced-to)
 					(upgraded-array-element-type element-type)))
-		   (error _"One can't displace an array of type ~S into ~
-                           another of type ~S."
+		   (error (intl:gettext "One can't displace an array of type ~S into ~
+                           another of type ~S.")
 			  element-type (array-element-type displaced-to)))
 		 (let ((offset (or displaced-index-offset 0)))
 		   (when (> (+ offset total-size)
 			    (array-total-size displaced-to))
-		     (error _"~S doesn't have enough elements." displaced-to))
+		     (error (intl:gettext "~S doesn't have enough elements.") displaced-to))
 		   (setf (%array-displacement array) offset)
 		   (setf (%array-displaced-p array) t)))
 		(t
@@ -362,7 +362,7 @@
 (defun free-static-vector (vector)
   (sys:without-gcing
    (let ((addr (logandc1 vm:lowtag-mask (kernel:get-lisp-obj-address vector))))
-     (format t _"~&Freeing foreign vector at #x~X~%" addr)
+     (format t (intl:gettext "~&Freeing foreign vector at #x~X~%") addr)
      (alien:alien-funcall
       (alien:extern-alien "free"
 			  (function c-call:void
@@ -378,7 +378,7 @@
   ;; gencgc.c.
   (when *static-vectors*
     (let ((*print-array* nil))
-      (format t _"Finalizing static vectors ~S~%" *static-vectors*))
+      (format t (intl:gettext "Finalizing static vectors ~S~%") *static-vectors*))
     (setf *static-vectors*
 	  (delete-if
 	   #'(lambda (wp)
@@ -386,19 +386,19 @@
 		 (when vector
 		   (let* ((sap (sys:vector-sap vector))
 			  (header (sys:sap-ref-32 sap (* -2 vm:word-bytes))))
-		     (format t _"static vector ~A.  header = ~X~%"
+		     (format t (intl:gettext "static vector ~A.  header = ~X~%")
 			     vector header)
 		     (cond ((logbitp 31 header)
 			    ;; Clear mark
 			    (setf (sys:sap-ref-32 sap (* -2 vm:word-bytes))
 				  (logand header #x7fffffff))
 			    (let ((*print-array* nil))
-			      (format t _"  static vector ~A in use~%" vector))
+			      (format t (intl:gettext "  static vector ~A in use~%") vector))
 			    nil)
 			   (t
 			    ;; Mark was clear so free the vector
 			    (let ((*print-array* nil))
-			      (format t _"  Free static vector ~A~%" vector))
+			      (format t (intl:gettext "  Free static vector ~A~%") vector))
 			    (sys:without-interrupts
 			      (setf (weak-pointer-value wp) nil)
 			      (free-static-vector vector))
@@ -418,8 +418,8 @@
 			       initial-element initial-element-p
 			       &optional static-array-p)
   (when (and initial-contents-p initial-element-p)
-    (error _"Cannot supply both :initial-contents and :initial-element to
-            either make-array or adjust-array."))
+    (error (intl:gettext "Cannot supply both :initial-contents and :initial-element to
+            either make-array or adjust-array.")))
   (let ((data (if static-array-p
 		  (make-static-vector total-size element-type)
 		  (if initial-element-p
@@ -431,7 +431,7 @@
     (cond (initial-element-p
 	   (unless (and (simple-vector-p data) static-array-p)
 	     (unless (typep initial-element element-type)
-	       (error _"~S cannot be used to initialize an array of type ~S."
+	       (error (intl:gettext "~S cannot be used to initialize an array of type ~S.")
 		      initial-element element-type))
 	     (fill (the vector data) initial-element)))
 	  (initial-contents-p
@@ -454,8 +454,8 @@
 					      (- (length dimensions) axis))
 			       contents))
 		      (unless (= (length contents) (car dims))
-			(error _"Malformed :initial-contents.  Dimension of ~
-			        axis ~D is ~D, but ~S is ~D long."
+			(error (intl:gettext "Malformed :initial-contents.  Dimension of ~
+			        axis ~D is ~D, but ~S is ~D long.")
 			       axis (car dims) contents (length contents)))
 		      (if (listp contents)
 			  (dolist (content contents)
@@ -549,7 +549,7 @@
 	   (list subscripts))
   (let ((rank (array-rank array)))
     (unless (= rank (length subscripts))
-      (simple-program-error _"Wrong number of subscripts, ~D, for array of rank ~D"
+      (simple-program-error (intl:gettext "Wrong number of subscripts, ~D, for array of rank ~D")
 	     (length subscripts) rank))
     (if (array-header-p array)
 	(do ((subs (nreverse subscripts) (cdr subs))
@@ -563,7 +563,7 @@
 	    (declare (fixnum index dim))
 	    (unless (< -1 index dim)
 	      (if invalid-index-error-p
-		  (error _"Invalid index ~D~[~;~:; on axis ~:*~D~] in ~S"
+		  (error (intl:gettext "Invalid index ~D~[~;~:; on axis ~:*~D~] in ~S")
 			 index axis array)
 		  (return-from %array-row-major-index nil)))
 	    (incf result (* chunk-size index))
@@ -571,7 +571,7 @@
 	(let ((index (first subscripts)))
 	  (unless (< -1 index (length (the (simple-array * (*)) array)))
 	    (if invalid-index-error-p
-		(error _"Invalid index ~D in ~S" index array)
+		(error (intl:gettext "Invalid index ~D in ~S") index array)
 		(return-from %array-row-major-index nil)))
 	  index))))
 
@@ -727,7 +727,7 @@
   (declare (array array) (type index axis-number))
   (cond ((not (array-header-p array))
 	 (unless (= axis-number 0)
-	   (simple-program-error _"Vector axis is not zero: ~S" axis-number))
+	   (simple-program-error (intl:gettext "Vector axis is not zero: ~S") axis-number))
 	 (length (the (simple-array * (*)) array)))
 	((>= axis-number (%array-rank array))
 	 (simple-program-error (intl:ngettext "~D is too big; ~S only has ~D dimension"
@@ -785,7 +785,7 @@
 	     :datum vector
 	     :expected-type '(and vector (satisfies array-has-fill-pointer-p))
 	     :format-control
-	     _"~S is not an array with a fill-pointer."
+	     (intl:gettext "~S is not an array with a fill-pointer.")
 	     :format-arguments (list vector))))
 
 (defun %set-fill-pointer (vector new)
@@ -793,13 +793,13 @@
   (if (and (array-header-p vector) (%array-fill-pointer-p vector))
       (if (> new (%array-available-elements vector))
 	(simple-program-error
-         _"New fill pointer, ~S, is larger than the length of the vector."
+         (intl:gettext "New fill pointer, ~S, is larger than the length of the vector.")
          new)
 	(setf (%array-fill-pointer vector) new))
       (error 'simple-type-error
 	     :datum vector
 	     :expected-type '(and vector (satisfies array-has-fill-pointer-p))
-	     :format-control _"~S is not an array with a fill-pointer."
+	     :format-control (intl:gettext "~S is not an array with a fill-pointer.")
 	     :format-arguments (list vector))))
 
 (defun vector-push (new-el array)
@@ -840,7 +840,7 @@
   (let ((fill-pointer (fill-pointer array)))
     (declare (fixnum fill-pointer))
     (if (zerop fill-pointer)
-	(simple-program-error _"Nothing left to pop.")
+	(simple-program-error (intl:gettext "Nothing left to pop."))
 	(aref array
 	      (setf (%array-fill-pointer array)
 		    (1- fill-pointer))))))
@@ -858,21 +858,21 @@
   (let ((dimensions (if (listp dimensions) dimensions (list dimensions))))
     (cond ((/= (the fixnum (length (the list dimensions)))
 	       (the fixnum (array-rank array)))
-	   (simple-program-error _"Number of dimensions not equal to rank of array."))
+	   (simple-program-error (intl:gettext "Number of dimensions not equal to rank of array.")))
 	  ((not (subtypep element-type (array-element-type array)))
-	   (simple-program-error _"New element type, ~S, is incompatible with old."
+	   (simple-program-error (intl:gettext "New element type, ~S, is incompatible with old.")
 				 element-type))
 	  ((static-array-p array)
-	   (simple-program-error _"Static arrays are not adjustable.")))
+	   (simple-program-error (intl:gettext "Static arrays are not adjustable."))))
     (let ((array-rank (length (the list dimensions))))
       (declare (fixnum array-rank))
       (when (and fill-pointer (> array-rank 1))
-	(simple-program-error _"Multidimensional arrays can't have fill pointers."))
+	(simple-program-error (intl:gettext "Multidimensional arrays can't have fill pointers.")))
       (cond (initial-contents-p
 	     ;; Array former contents replaced by initial-contents.
 	     (if (or initial-element-p displaced-to)
-		 (simple-program-error _"Initial contents may not be specified with ~
-		 the :initial-element or :displaced-to option."))
+		 (simple-program-error (intl:gettext "Initial contents may not be specified with ~
+		 the :initial-element or :displaced-to option.")))
 	     (let* ((array-size (apply #'* dimensions))
 		    (array-data (data-vector-from-inits
 				 dimensions array-size element-type
@@ -892,18 +892,18 @@
 	    (displaced-to
 	     ;; No initial-contents supplied is already established.
 	     (when initial-element
-	       (simple-program-error _"The :initial-element option may not be specified ~
-	       with :displaced-to."))
+	       (simple-program-error (intl:gettext "The :initial-element option may not be specified ~
+	       with :displaced-to.")))
 	     (unless (subtypep element-type (array-element-type displaced-to))
-	       (simple-program-error _"One can't displace an array of type ~S into another of ~
-	               type ~S."
+	       (simple-program-error (intl:gettext "One can't displace an array of type ~S into another of ~
+	               type ~S.")
 		      element-type (array-element-type displaced-to)))
 	     (let ((displacement (or displaced-index-offset 0))
 		   (array-size (apply #'* dimensions)))
 	       (declare (fixnum displacement array-size))
 	       (if (< (the fixnum (array-total-size displaced-to))
 		      (the fixnum (+ displacement array-size)))
-		   (simple-program-error _"The :displaced-to array is too small."))
+		   (simple-program-error (intl:gettext "The :displaced-to array is too small.")))
 	       (if (adjustable-array-p array)
 		   ;; None of the original contents appear in adjusted array.
 		   (set-array-header array displaced-to array-size
@@ -983,28 +983,28 @@
 	 (when (array-has-fill-pointer-p old-array)
 	   (when (> (%array-fill-pointer old-array) new-array-size)
 	     (simple-program-error
-                    _"Cannot adjust-array an array (~S) to a size (~S) that is ~
-	            smaller than it's fill pointer (~S)."
+                    (intl:gettext "Cannot adjust-array an array (~S) to a size (~S) that is ~
+	            smaller than it's fill pointer (~S).")
 		    old-array new-array-size (fill-pointer old-array)))
 	   (%array-fill-pointer old-array)))
 	((not (array-has-fill-pointer-p old-array))
 	 (simple-program-error
-          _"Cannot supply a non-NIL value (~S) for :fill-pointer ~
+          (intl:gettext "Cannot supply a non-NIL value (~S) for :fill-pointer ~
 	   in adjust-array unless the array (~S) was originally ~
- 	   created with a fill pointer."
+ 	   created with a fill pointer.")
           fill-pointer
           old-array))
 	((numberp fill-pointer)
 	 (when (> fill-pointer new-array-size)
 	   (simple-program-error
-            _"Cannot supply a value for :fill-pointer (~S) that is larger ~
-	     than the new length of the vector (~S)."
+            (intl:gettext "Cannot supply a value for :fill-pointer (~S) that is larger ~
+	     than the new length of the vector (~S).")
             fill-pointer new-array-size))
 	 fill-pointer)
 	((eq fill-pointer t)
 	 new-array-size)
 	(t
-	 (simple-program-error _"Bogus value for :fill-pointer in adjust-array: ~S"
+	 (simple-program-error (intl:gettext "Bogus value for :fill-pointer in adjust-array: ~S")
                                fill-pointer))))
 
 (defun shrink-vector (vector new-size)
@@ -1091,7 +1091,7 @@
 	  (make-array length :initial-element t)))
   (when initial-element-p
     (unless (typep initial-element element-type)
-      (simple-program-error _"~S cannot be used to initialize an array of type ~S."
+      (simple-program-error (intl:gettext "~S cannot be used to initialize an array of type ~S.")
 	     initial-element element-type))
     (fill (the simple-vector *zap-array-data-temp*) initial-element
 	  :end length))
@@ -1186,7 +1186,7 @@
     (t
      (unless (bit-array-same-dimensions-p bit-array-1
 					  result-bit-array)
-       (simple-program-error _"~S and ~S do not have the same dimensions."
+       (simple-program-error (intl:gettext "~S and ~S do not have the same dimensions.")
 	      bit-array-1 result-bit-array))
      result-bit-array)))
 
@@ -1204,7 +1204,7 @@
        (declare (type (array bit) bit-array-1 bit-array-2)
 		(type (or (array bit) (member t nil)) result-bit-array))
        (unless (bit-array-same-dimensions-p bit-array-1 bit-array-2)
-	 (simple-program-error _"~S and ~S do not have the same dimensions."
+	 (simple-program-error (intl:gettext "~S and ~S do not have the same dimensions.")
 			       bit-array-1 bit-array-2))
        (let ((result-bit-array (pick-result-array result-bit-array bit-array-1)))
 	 (if (and (simple-bit-vector-p bit-array-1)

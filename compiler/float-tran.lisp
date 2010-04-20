@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.138 2010/04/19 15:08:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.139 2010/04/20 17:57:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -291,8 +291,8 @@
 				#-x86 #x7fffffff
 				)
 		       &optional *))
-  #+x86 _"use inline (unsigned-byte 32) operations"
-  #-x86 _"use inline (signed-byte 32) operations"
+  #+x86 (intl:gettext "use inline (unsigned-byte 32) operations")
+  #-x86 (intl:gettext "use inline (signed-byte 32) operations")
   '(values (truncate (%random-double-float (coerce num 'double-float)
 		      (or state *random-state*)))))
 
@@ -335,7 +335,7 @@
 		(values (bignum::%multiply (random-chunk (or state *random-state*))
 					   num))))
 	  (t
-	   (error _"Shouldn't happen")))))
+	   (error (intl:gettext "Shouldn't happen"))))))
 
 
 ;;;; Float accessors:
@@ -624,10 +624,10 @@
 (macrolet ((frob (op)
 	     `(deftransform ,op ((x y) (float rational) * :when :both)
 		(unless (constant-continuation-p y)
-		  (give-up _"Can't open-code float to rational comparison."))
+		  (give-up (intl:gettext "Can't open-code float to rational comparison.")))
 		(let ((val (continuation-value y)))
 		  (unless (eql (rational (float val)) val)
-		    (give-up _"~S doesn't have a precise float representation."
+		    (give-up (intl:gettext "~S doesn't have a precise float representation.")
 			     val)))
 		`(,',op x (float y x)))))
   (frob <)

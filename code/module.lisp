@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.13 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.14 2010/04/20 17:57:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -98,7 +98,7 @@
 	      (load file))
             (unless (some (lambda (p) (funcall p module-name))
                           *module-provider-functions*)
-              (error _"Don't know how to load ~A" module-name)))))
+              (error (intl:gettext "Don't know how to load ~A") module-name)))))
     (set-difference *modules* saved-modules)))
 
 ;;;; Default module providers

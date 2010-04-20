@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.21 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.22 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,7 +63,7 @@
   (let ((*gc-notify-before*
 	 #'(lambda (bytes-in-use)
 	     (declare (ignore bytes-in-use))
-	     (write-string _"[Doing purification: ")
+	     (write-string (intl:gettext "[Doing purification: "))
 	     (force-output)))
 	(*internal-gc*
 	 #'(lambda ()
@@ -72,7 +72,7 @@
 	(*gc-notify-after*
 	 #'(lambda (&rest ignore)
 	     (declare (ignore ignore))
-	     (write-line _"Done.]"))))
+	     (write-line (intl:gettext "Done.]")))))
     #-gencgc (gc t)
     #+gencgc (gc :verbose t))
   nil)

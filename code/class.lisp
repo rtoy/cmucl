@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.64 2010/04/19 02:18:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.65 2010/04/20 17:57:43 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,7 +95,7 @@
 		    (lambda (s stream d)
 		      (declare (ignore d))
 		      (print-unreadable-object (s stream :identity t)
-			(format stream _"Layout for ~S~@[, Invalid=~S~]"
+			(format stream (intl:gettext "Layout for ~S~@[, Invalid=~S~]")
 				(class-proper-name (layout-class s))
 				(layout-invalid s)))))
 		   (:make-load-form-fun :ignore-it)
@@ -211,8 +211,8 @@
 	  (unless (eql depth -1)
 	    (let ((old-layout (svref inherits depth)))
 	      (unless (or (eql old-layout 0) (eq old-layout layout))
-		(error _"Layout depth conflict: ~S~%  ~
-		        (~S collides at ~S with ~S)~%"
+		(error (intl:gettext "Layout depth conflict: ~S~%  ~
+		        (~S collides at ~S with ~S)~%")
 		       layouts layout depth old-layout)))
 	    (setf (svref inherits depth) layout))))
       (do ((i 0 (1+ i))
@@ -289,14 +289,14 @@
   (let ((name (%class-name class)))
     (unless (and name (eq (find-class name nil) class))
       (error
-       _"Can't use anonymous or undefined class as constant:~%  ~S"
+       (intl:gettext "Can't use anonymous or undefined class as constant:~%  ~S")
        class))
     `(find-class ',name)))
 ;;;
 (defun %print-class (s stream d)
   (declare (ignore d))
   (print-unreadable-object (s stream :identity t :type t)
-    (format stream _"~:[<anonymous>~;~:*~S~]~@[ (~(~A~))~]"
+    (format stream (intl:gettext "~:[<anonymous>~;~:*~S~]~@[ (~(~A~))~]")
 	    (%class-name s) (%class-state s))))
 
 
@@ -399,7 +399,7 @@
 	(error 'simple-type-error
 	       :datum name
 	       :expected-type t		; Not really
-	       :format-control _"Class not yet defined:~%  ~S"
+	       :format-control (intl:gettext "Class not yet defined:~%  ~S")
 	       :format-arguments (list name)))))
 ;;;
 (defun (setf find-class) (new-value name &optional (errorp t) environment)
@@ -409,7 +409,7 @@
      ;; Clear info db if name names a class
      (ecase (info type kind name)
        (:primitive
-	(error _"Illegal to redefine standard type ~S." name))
+	(error (intl:gettext "Illegal to redefine standard type ~S.") name))
        (:defined)
        ((nil))
        (:instance
@@ -424,12 +424,12 @@
 	(let ((old (class-of (find-class name)))
 	      (new (class-of new-value)))
 	  (unless (eq old new)
-	    (warn _"Changing meta-class of ~S from ~S to ~S."
+	    (warn (intl:gettext "Changing meta-class of ~S from ~S to ~S.")
 		  name (%class-name old) (%class-name new)))))
        (:primitive
-	(error _"Illegal to redefine standard type ~S." name))
+	(error (intl:gettext "Illegal to redefine standard type ~S.") name))
        (:defined
-	(warn _"Redefining DEFTYPE type to be a class: ~S."
+	(warn (intl:gettext "Redefining DEFTYPE type to be a class: ~S.")
 	      name)
 	(setf (info type expander name) nil)))
      
@@ -1035,7 +1035,7 @@
 (defun modify-class (class)
   (clear-type-caches)
   (when (member (%class-state class) '(:read-only :frozen))
-    (warn _"Modifing ~(~A~) class ~S; making it writable."
+    (warn (intl:gettext "Modifing ~(~A~) class ~S; making it writable.")
 	  (%class-state class) (%class-name class))
     (setf (%class-state class) nil)))
 
@@ -1109,7 +1109,7 @@
 				     (make-hash-table :test #'eq)))))
 	  (when (and (eq (%class-state super) :sealed)
 		     (not (gethash class subclasses)))
-	    (warn _"Subclassing sealed class ~S; unsealing it."
+	    (warn (intl:gettext "Subclassing sealed class ~S; unsealing it.")
 		  (%class-name super))
 	    (setf (%class-state super) :read-only))
 	  (setf (gethash class subclasses)
@@ -1139,9 +1139,9 @@
 	      (newi (layout-inherits new)))
 	  (or (when (mismatch oldi newi :key #'layout-proper-name)
 		(warn
-		 _"Change in superclasses of class ~S:~%  ~
+		 (intl:gettext "Change in superclasses of class ~S:~%  ~
 		  ~A superclasses: ~S~%  ~
-		  ~A superclasses: ~S"
+		  ~A superclasses: ~S")
 		 name
 		 old-context (map 'list #'layout-proper-name oldi)
 		 new-context (map 'list #'layout-proper-name newi))
@@ -1149,26 +1149,26 @@
 	      (let ((diff (mismatch oldi newi)))
 		(when diff
 		  (warn
-		   _"In class ~S:~%  ~
+		   (intl:gettext "In class ~S:~%  ~
 		    ~:(~A~) definition of superclass ~S incompatible with~%  ~
-		    ~A definition."
+		    ~A definition.")
 		   name old-context (layout-proper-name (svref oldi diff))
 		   new-context)
 		  t))))
 	(let ((old-len (layout-length old))
 	      (new-len (layout-length new)))
 	  (unless (= old-len new-len)
-	    (warn _"Change in instance length of class ~S:~%  ~
+	    (warn (intl:gettext "Change in instance length of class ~S:~%  ~
 		   ~A length: ~D~%  ~
-		   ~A length: ~D"
+		   ~A length: ~D")
 		  name
 		  old-context old-len
 		  new-context new-len)
 	    t))
 	(when (/= (layout-inheritance-depth old)
 		  (layout-inheritance-depth new))
-	  (warn _"Change in the inheritance structure of class ~S~%  ~
-		 between the ~A definition and the ~A definition."
+	  (warn (intl:gettext "Change in the inheritance structure of class ~S~%  ~
+		 between the ~A definition and the ~A definition.")
 		name old-context new-context)
 	  t))))
 
@@ -1206,21 +1206,21 @@
 	  #-bootstrap-dynamic-extent
 	  ((redefine-layout-warning old "current" res "compile time")
 	   (restart-case
-	       (error _"Loading a reference to class ~S when the compile~
+	       (error (intl:gettext "Loading a reference to class ~S when the compile~
 		       ~%  time definition was incompatible with the current ~
-		       one."
+		       one.")
 		      name)
 	     (continue ()
 	       :report (lambda (stream)
-			 (write-string _"Invalidate current definition." stream))
-	       (warn _"New definition of ~S must be loaded eventually." name)
+			 (write-string (intl:gettext "Invalidate current definition.") stream))
+	       (warn (intl:gettext "New definition of ~S must be loaded eventually.") name)
 	       (invalidate-layout old)
 	       (setf (gethash name *forward-referenced-layouts*) res))
 	     (clobber-it ()
 	       :report (lambda (stream)
-			 (write-string _"Smash current layout, preserving old code." stream))
-	       (warn _"Any old ~S instances will be in a bad way.~@
-		      I hope you know what you're doing..."
+			 (write-string (intl:gettext "Smash current layout, preserving old code.") stream))
+	       (warn (intl:gettext "Any old ~S instances will be in a bad way.~@
+		      I hope you know what you're doing...")
 		     name)
 	       (setf (layout-inherits old) inherits)
 	       (setf (layout-inheritance-depth old) depth)
@@ -1228,10 +1228,10 @@
 	       old)
 	     (use-current ()
 	       :report (lambda (stream)
-			 (write-string _"Ignore the incompatibility, leave class alone." stream))
-	       (warn _"Assuming the current definition of ~S is correct, and~@
+			 (write-string (intl:gettext "Ignore the incompatibility, leave class alone.") stream))
+	       (warn (intl:gettext "Assuming the current definition of ~S is correct, and~@
 		      that the loaded code doesn't care about the ~
-		      incompatibility."
+		      incompatibility.")
 		     name)
 	       old)))
 	  (t old))))
@@ -1280,7 +1280,7 @@
        (cond ((endp free-objs)
 	      (do-hash (obj info obj-info)
 		(unless (zerop (first info))
-		  (error _"Topological sort failed due to constraint on ~S."
+		  (error (intl:gettext "Topological sort failed due to constraint on ~S.")
 			 obj)))
 	      (return (nreverse result)))
 	     ((endp (rest free-objs))
@@ -1341,7 +1341,7 @@
 	    ((eq (%class-layout class) layout)
 	     (remhash name *forward-referenced-layouts*))
 	    (t
-	     (warn _"Something strange with forward layout for ~S:~%  ~S"
+	     (warn (intl:gettext "Something strange with forward layout for ~S:~%  ~S")
 		   name layout))))))
 
 (emit-cold-load-defuns "CLASS")

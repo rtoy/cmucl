@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.66 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.67 2010/04/20 17:57:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -62,7 +62,7 @@
                          (reader-error-format-arguments condition))
                   nil error-stream
                   (file-position error-stream)))
-       (format stream _"Reader error ~@[at ~D ~]on ~S:~%~?"
+       (format stream (intl:gettext "Reader error ~@[at ~D ~]on ~S:~%~?")
 	       (file-position error-stream) error-stream
 	       (reader-error-format-control condition)
 	       (reader-error-format-arguments condition))))))
@@ -81,7 +81,7 @@
   ((context :reader reader-eof-error-context :initarg :context))
   (:report
    (lambda (condition stream)
-     (format stream _"Unexpected EOF on ~S ~A."
+     (format stream (intl:gettext "Unexpected EOF on ~S ~A.")
 	     (stream-error-stream condition)
 	     (reader-eof-error-context condition)))))
 
@@ -280,7 +280,7 @@
 
 (defun undefined-macro-char (stream char)
   (unless *read-suppress*
-    (%reader-error stream _"Undefined read-macro character ~S" char)))
+    (%reader-error stream (intl:gettext "Undefined read-macro character ~S") char)))
 
 ;;; The character attribute table is a CHAR-CODE-LIMIT vector of integers. 
 

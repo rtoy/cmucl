@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.58 2010/03/19 15:18:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.59 2010/04/20 17:57:44 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,7 +46,7 @@
 		 (unix:unix-close fd)
 		 (return name))
 		((not (= errno unix:eexist))
-		 (error _"Could not create temporary file ~S: ~A"
+		 (error (intl:gettext "Could not create temporary file ~S: ~A")
 			name (unix:get-unix-error-msg errno)))
 		
 		((= code (char-code #\Z))
@@ -75,7 +75,7 @@
 	 (addr (int-sap *foreign-segment-free-pointer*))
 	 (new-ptr (+ *foreign-segment-free-pointer* memory-needed)))
     (when (> new-ptr (+ foreign-segment-start foreign-segment-size))
-      (error _"Not enough memory left."))
+      (error (intl:gettext "Not enough memory left.")))
     (setf *foreign-segment-free-pointer* new-ptr)
     (allocate-system-memory-at addr memory-needed)
     addr))
@@ -357,29 +357,29 @@
   exit 0
   ||#
 
-  (format t _";;; Loading object file...~%")
+  (format t (intl:gettext ";;; Loading object file...~%"))
   (multiple-value-bind (fd errno) (unix:unix-open name unix:o_rdonly 0)
     (unless fd
-      (error _"Could not open ~S: ~A" name (unix:get-unix-error-msg errno)))
+      (error (intl:gettext "Could not open ~S: ~A") name (unix:get-unix-error-msg errno)))
     (unwind-protect
 	(alien:with-alien ((header eheader))
 	  (unix:unix-read fd
 			  (alien:alien-sap header)
 			  (alien:alien-size eheader :bytes))
 	  (unless (elf-p (alien:slot header 'elf-ident))
-	    (error (format nil _"~A is not an ELF file." name)))
+	    (error (format nil (intl:gettext "~A is not an ELF file.") name)))
 
 	  (let ((osabi (elf-osabi (alien:slot header 'elf-ident)))
 		(expected-osabi #+NetBSD elfosabi-netbsd
 				#+FreeBSD elfosabi-freebsd))
 	    (unless (= osabi expected-osabi)
-	      (error _"~A is not a ~A executable, it's a ~A executable."
+	      (error (intl:gettext "~A is not a ~A executable, it's a ~A executable.")
 		     name
 		     (elf-osabi-name expected-osabi)
 		     (elf-osabi-name osabi))))
 
 	  (unless (elf-executable-p (alien:slot header 'elf-type))
-	    (error (format nil _"~A is not executable." name)))
+	    (error (format nil (intl:gettext "~A is not executable.") name)))
 	  
 	  (alien:with-alien ((program-header pheader))
 	    (unix:unix-read fd
@@ -396,7 +396,7 @@
 (defun parse-symbol-table (name)
   _N"Parse symbol table file created by load-foreign script.  Modified
 to skip undefined symbols which don't have an address."
-  (format t _";;; Parsing symbol table...~%")
+  (format t (intl:gettext ";;; Parsing symbol table...~%"))
   (let ((symbol-table (make-hash-table :test #'equal)))
     (with-open-file (file name)
       (loop
@@ -423,10 +423,10 @@ to skip undefined symbols which don't have an address."
 ;;; expected results. It is probably good enough for now.
 #+(or (and FreeBSD (not ELF)) (and sparc (not svr4)))
 (defun load-object-file (name)
-  (format t _";;; Loading object file...~%")
+  (format t (intl:gettext ";;; Loading object file...~%"))
   (multiple-value-bind (fd errno) (unix:unix-open name unix:o_rdonly 0)
     (unless fd
-      (error _"Could not open ~S: ~A" name (unix:get-unix-error-msg errno)))
+      (error (intl:gettext "Could not open ~S: ~A") name (unix:get-unix-error-msg errno)))
     (unwind-protect
 	(alien:with-alien ((header exec))
 	  (unix:unix-read fd
@@ -526,10 +526,10 @@ to skip undefined symbols which don't have an address."
 
 #+hppa
 (defun load-object-file (name)
-  (format t _";;; Loading object file...~%")
+  (format t (intl:gettext ";;; Loading object file...~%"))
   (multiple-value-bind (fd errno) (unix:unix-open name unix:o_rdonly 0)
     (unless fd
-      (error _"Could not open ~S: ~A" name (unix:get-unix-error-msg errno)))
+      (error (intl:gettext "Could not open ~S: ~A") name (unix:get-unix-error-msg errno)))
     (unwind-protect
         (alien:with-alien ((header (alien:struct som_exec_auxhdr)))
           (unix:unix-lseek fd (alien:alien-size (alien:struct header) :bytes)
@@ -568,7 +568,7 @@ to skip undefined symbols which don't have an address."
 #-(or linux bsd solaris irix)
 (progn
 (defun parse-symbol-table (name)
-  (format t _";;; Parsing symbol table...~%")
+  (format t (intl:gettext ";;; Parsing symbol table...~%"))
   (let ((symbol-table (make-hash-table :test #'equal)))
     (with-open-file (file name)
       (loop
@@ -610,7 +610,7 @@ to skip undefined symbols which don't have an address."
 	(files (if (atom files) (list files) files)))
 
     (when verbose
-      (format t _";;; Running library:load-foreign.csh...~%")
+      (format t (intl:gettext ";;; Running library:load-foreign.csh...~%"))
       (force-output))
     #+hpux
     (dolist (f files)
@@ -619,12 +619,12 @@ to skip undefined symbols which don't have an address."
                   (or (eql sysid cpu-pa-risc1-0)
 		      (and (>= sysid cpu-pa-risc1-1)
 			   (<= sysid cpu-pa-risc-max))))
-	  (error _"Object file is wrong format, so can't load-foreign:~
-		  ~%  ~S"
+	  (error (intl:gettext "Object file is wrong format, so can't load-foreign:~
+		  ~%  ~S")
 		 f))
 	(unless (eql (read-byte stream) reloc-magic)
-	  (error _"Object file is not relocatable, so can't load-foreign:~
-		  ~%  ~S"
+	  (error (intl:gettext "Object file is not relocatable, so can't load-foreign:~
+		  ~%  ~S")
 		 f))))
 
     (let ((proc (ext:run-program
@@ -652,10 +652,10 @@ to skip undefined symbols which don't have an address."
 		 :output error-output
 		 :error :output)))
       (unless proc
-	(error _"Could not run library:load-foreign.csh"))
+	(error (intl:gettext "Could not run library:load-foreign.csh")))
       (unless (zerop (ext:process-exit-code proc))
 	(system:serve-all-events 0)
-	(error _"library:load-foreign.csh failed:~%~A"
+	(error (intl:gettext "library:load-foreign.csh failed:~%~A")
 	       (get-output-stream-string error-output)))
       (load-object-file output-file)
       (parse-symbol-table symbol-table-file)
@@ -665,7 +665,7 @@ to skip undefined symbols which don't have an address."
 	(when old-file
 	  (unix:unix-unlink old-file)))))
   (when verbose
-    (format t _";;; Done.~%")
+    (format t (intl:gettext ";;; Done.~%"))
     (force-output)))
 
 
@@ -728,7 +728,7 @@ to skip undefined symbols which don't have an address."
     (setf *global-table* (acons (int-sap 0) nil nil))
     (setf *global-table* (acons (dlopen nil rtld-lazy) nil nil))
     (when (zerop (system:sap-int (caar *global-table*)))
-      (error _"Can't open global symbol table: ~S" (dlerror)))))
+      (error (intl:gettext "Can't open global symbol table: ~S") (dlerror)))))
 
 (defun convert-object-file-path (path)
   ;; Convert path to something that dlopen might like, which means
@@ -757,11 +757,11 @@ to skip undefined symbols which don't have an address."
 	     ;; which isn't very informative.
 	     (when (zerop (sap-int sap))
 	       (return-from load-object-file
-		 (values nil (format nil  _"Can't open object ~S: ~S" file err-string))))
+		 (values nil (format nil  (intl:gettext "Can't open object ~S: ~S") file err-string))))
 	     (dlclose sap)
 	     (return-from load-object-file
 	       (values nil
-		       (format nil _"LOAD-OBJECT-FILE: Unresolved symbols in file ~S: ~S"
+		       (format nil (intl:gettext "LOAD-OBJECT-FILE: Unresolved symbols in file ~S: ~S")
 			       file err-string)))))
 	  ((and recordp (null (assoc sap *global-table* :test #'sap=)))
 	   (setf *global-table* (acons sap file *global-table*)))
@@ -793,25 +793,25 @@ to skip undefined symbols which don't have an address."
 				     (logior rtld-now rtld-global))))
 		(cond ((zerop (sap-int new-sap))
 		       ;; We're going down
-		       (error _"Couldn't open library ~S: ~S" lib-path (dlerror)))
+		       (error (intl:gettext "Couldn't open library ~S: ~S") lib-path (dlerror)))
 		      (t
-		       (format t _"Reloaded library ~S~%" lib-path)
+		       (format t (intl:gettext "Reloaded library ~S~%") lib-path)
 		       (force-output)))
 
 		(setf (car lib-entry) new-sap)
 		(return))
 	    (continue ()
 	      :report (lambda (stream)
-			(write-string _"Ignore library and continue" stream))
+			(write-string (intl:gettext "Ignore library and continue") stream))
 	      (return))
 	    (try-again ()
 	      :report (lambda (stream)
-			(write-string _"Try reloading again" stream))
+			(write-string (intl:gettext "Try reloading again") stream))
 	      )
 	    (new-library ()
 	      :report (lambda (stream)
-			(write-string _"Choose new library path" stream))
-	      (format *query-io* _"Enter new library path: ")
+			(write-string (intl:gettext "Choose new library path") stream))
+	      (format *query-io* (intl:gettext "Enter new library path: "))
 	      (setf lib-path (read))))))
   (alien:alien-funcall (alien:extern-alien "os_resolve_data_linkage"
                                            (alien:function c-call:void))))
@@ -849,12 +849,12 @@ environment passed to Lisp."
   ;; dlopen(), do that instead of using the linker
   (when (atom files)
     (when verbose
-      (format t _";;; Opening as shared library ~A ...~%" files))
+      (format t (intl:gettext ";;; Opening as shared library ~A ...~%") files))
     (multiple-value-bind (ok error-string)
 	(load-object-file files)
       (cond (ok
 	     (when verbose
-	       (format t _";;; Done.~%")
+	       (format t (intl:gettext ";;; Done.~%"))
 	       (force-output))
 	     (return-from load-foreign))
 	    (error-string
@@ -864,7 +864,7 @@ environment passed to Lisp."
     ;; If we get here, we couldn't open the file as a shared library.
     ;; Try again assuming it's an object file.
     (when verbose
-      (format t _";;; Trying as object file ~A...~%" files)))
+      (format t (intl:gettext ";;; Trying as object file ~A...~%") files)))
   
   
   (let ((output-file (pick-temporary-file-name
@@ -872,7 +872,7 @@ environment passed to Lisp."
 	(error-output (make-string-output-stream)))
  
     (when verbose
-      (format t _";;; Running ~A...~%" *dso-linker*)
+      (format t (intl:gettext ";;; Running ~A...~%") *dso-linker*)
       (force-output))
     
     (let ((proc (ext:run-program
@@ -893,7 +893,7 @@ environment passed to Lisp."
 				   (error 'simple-file-error
 					  :pathname name
 					  :format-control
-					  _"File does not exist: ~A."
+					  (intl:gettext "File does not exist: ~A.")
 					  :format-arguments
 					  (list name))))
 			   (if (atom files)
@@ -916,15 +916,15 @@ environment passed to Lisp."
 		 :output error-output
 		 :error :output)))
       (unless proc
-	(error _"Could not run ~A" *dso-linker*))
+	(error (intl:gettext "Could not run ~A") *dso-linker*))
       (unless (zerop (ext:process-exit-code proc))
 	(system:serve-all-events 0)
-	(error _"~A failed:~%~A" *dso-linker*
+	(error (intl:gettext "~A failed:~%~A") *dso-linker*
 	       (get-output-stream-string error-output)))
       (load-object-file output-file nil)
       (unix:unix-unlink output-file))
     (when verbose
-      (format t _";;; Done.~%")
+      (format t (intl:gettext ";;; Done.~%"))
       (force-output))))
 
 #+linkage-table

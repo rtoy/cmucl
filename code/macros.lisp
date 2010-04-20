@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.116 2010/04/18 17:27:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.117 2010/04/20 17:57:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -87,18 +87,18 @@
             (restart-case
                 (error 'lisp::package-locked-error
                        :package package
-                       :format-control _"defining macro ~A"
+                       :format-control (intl:gettext "defining macro ~A")
                        :format-arguments (list name))
               (continue ()
                 :report (lambda (stream)
-			  (write-string _"Ignore the lock and continue" stream)))
+			  (write-string (intl:gettext "Ignore the lock and continue") stream)))
               (unlock-package ()
                 :report (lambda (stream)
-			  (write-string _"Disable the package's definition-lock then continue" stream))
+			  (write-string (intl:gettext "Disable the package's definition-lock then continue") stream))
                 (setf (ext:package-definition-lock package) nil))
               (unlock-all ()
                 :report (lambda (stream)
-			  (write-string _"Unlock all packages, then continue" stream))
+			  (write-string (intl:gettext "Unlock all packages, then continue") stream))
                 (lisp::unlock-all-packages))))))))
   (let ((whole (gensym "WHOLE-"))
 	(environment (gensym "ENV-")))
@@ -193,7 +193,7 @@
 (defun %define-symbol-macro (name expansion)
   (unless (symbolp name)
     (error 'simple-type-error :datum name :expected-type 'symbol
-	   :format-control _"Symbol macro name is not a symbol: ~S."
+	   :format-control (intl:gettext "Symbol macro name is not a symbol: ~S.")
 	   :format-arguments (list name)))
   (ecase (info variable kind name)
     ((:macro :global nil)
@@ -201,11 +201,11 @@
      (setf (info variable macro-expansion name) expansion))
     (:special
      (error 'simple-program-error
-	    :format-control _"Symbol macro name already declared special: ~S."
+	    :format-control (intl:gettext "Symbol macro name already declared special: ~S.")
 	    :format-arguments (list name)))
     (:constant
      (error 'simple-program-error
-	    :format-control _"Symbol macro name already declared constant: ~S."
+	    :format-control (intl:gettext "Symbol macro name already declared constant: ~S.")
 	    :format-arguments (list name))))
   name)
     
@@ -215,25 +215,25 @@
 (defmacro deftype (name arglist &body body)
   "Syntax like DEFMACRO, but defines a new type."
   (unless (symbolp name)
-    (simple-program-error _"~S -- Type name not a symbol." name))
+    (simple-program-error (intl:gettext "~S -- Type name not a symbol.") name))
   (and lisp::*enable-package-locked-errors*
        (symbol-package name)
        (ext:package-definition-lock (symbol-package name))
        (restart-case
            (error 'lisp::package-locked-error
                   :package (symbol-package name)
-                  :format-control _"defining type ~A"
+                  :format-control (intl:gettext "defining type ~A")
                   :format-arguments (list name))
          (continue ()
            :report (lambda (stream)
-		     (write-string _"Ignore the lock and continue" stream)))
+		     (write-string (intl:gettext "Ignore the lock and continue") stream)))
          (unlock-package ()
            :report (lambda (stream)
-		     (write-string _"Disable package's definition-lock then continue" stream))
+		     (write-string (intl:gettext "Disable package's definition-lock then continue") stream))
            (setf (ext:package-definition-lock (symbol-package name)) nil))
          (unlock-all ()
            :report (lambda (stream)
-		     (write-string _"Unlock all packages, then continue" stream))
+		     (write-string (intl:gettext "Unlock all packages, then continue") stream))
            (lisp::unlock-all-packages))))
   (let ((whole (gensym "WHOLE-")))
     (multiple-value-bind (body local-decs doc)
@@ -250,13 +250,13 @@
 ;;;
 (defun %deftype (name expander &optional doc)
   (when (info declaration recognized name)
-    (error _"Deftype already names a declaration: ~S." name))
+    (error (intl:gettext "Deftype already names a declaration: ~S.") name))
   (ecase (info type kind name)
     (:primitive
      (when *type-system-initialized*
-       (error _"Illegal to redefine standard type: ~S." name)))
+       (error (intl:gettext "Illegal to redefine standard type: ~S.") name)))
     (:instance
-     (warn _"Redefining class ~S to be a DEFTYPE." name)
+     (warn (intl:gettext "Redefining class ~S to be a DEFTYPE.") name)
      (undefine-structure (layout-info (%class-layout (kernel::find-class name))))
      (setf (class-cell-class (find-class-cell name)) nil)
      (setf (info type compiler-layout name) nil)
@@ -283,7 +283,7 @@
   "Syntax like DEFMACRO, but creates a Setf-Expansion generator.  The body
   must be a form that returns the five magical values."
   (unless (symbolp access-fn)
-    (simple-program-error _"~S -- Access-function name not a symbol in DEFINE-SETF-EXPANDER."
+    (simple-program-error (intl:gettext "~S -- Access-function name not a symbol in DEFINE-SETF-EXPANDER.")
 	   access-fn))
 
   (let ((whole (gensym "WHOLE-"))
@@ -315,12 +315,12 @@
 (defun %define-setf-macro (name expander inverse doc)
   (cond ((not (fboundp `(setf ,name))))
 	((info function accessor-for name)
-	 (warn _"Defining setf macro for destruct slot accessor; redefining as ~
-	        a normal function:~%  ~S"
+	 (warn (intl:gettext "Defining setf macro for destruct slot accessor; redefining as ~
+	        a normal function:~%  ~S")
 	       name)
 	 (c::define-function-name name))
 	((not (eq (symbol-package name) (symbol-package 'aref)))
-	 (warn _"Defining setf macro for ~S, but ~S is fbound."
+	 (warn (intl:gettext "Defining setf macro for ~S, but ~S is fbound.")
 	       name `(setf ,name))))
   (when (or inverse (info setf inverse name))
     (setf (info setf inverse name) inverse))
@@ -428,8 +428,8 @@
     (setf (documentation name 'variable) doc))
   (when (boundp name)
     (unless (equalp (symbol-value name) value)
-      (cerror _"Go ahead and change the value."
-	      _"Constant ~S being redefined." name)))
+      (cerror (intl:gettext "Go ahead and change the value.")
+	      (intl:gettext "Constant ~S being redefined.") name)))
   (setf (symbol-value name) value)
   (setf (info variable kind name) :constant)
   (clear-info variable constant-value name)
@@ -550,7 +550,7 @@
       nil
       (let ((clause (first clauses)))
 	(when (atom clause)
-	  (error _"Cond clause is not a list: ~S." clause))
+	  (error (intl:gettext "Cond clause is not a list: ~S.") clause))
 	(let ((test (first clause))
 	      (forms (rest clause)))
 	  (if (endp forms)
@@ -573,7 +573,7 @@
 ;;;
 (defmacro multiple-value-setq (varlist value-form)
   (unless (and (listp varlist) (every #'symbolp varlist))
-    (simple-program-error _"Varlist is not a list of symbols: ~S." varlist))
+    (simple-program-error (intl:gettext "Varlist is not a list of symbols: ~S.") varlist))
   (if varlist
       `(values (setf (values ,@varlist) ,value-form))
       `(values ,value-form)))
@@ -581,7 +581,7 @@
 ;;;
 (defmacro multiple-value-bind (varlist value-form &body body)
   (unless (and (listp varlist) (every #'symbolp varlist))
-    (simple-program-error  _"Varlist is not a list of symbols: ~S." varlist))
+    (simple-program-error  (intl:gettext "Varlist is not a list of symbols: ~S.") varlist))
   (if (= (length varlist) 1)
       `(let ((,(car varlist) ,value-form))
 	 ,@body)
@@ -707,8 +707,8 @@
       (temps value-forms store-vars store-form access-form)
       (get-setf-expansion form environment)
     (when (cdr store-vars)
-      (error _"GET-SETF-METHOD used for a form with multiple store ~
-	      variables:~%  ~S" form))
+      (error (intl:gettext "GET-SETF-METHOD used for a form with multiple store ~
+	      variables:~%  ~S") form))
     (values temps value-forms store-vars store-form access-form)))
 
 
@@ -764,7 +764,7 @@
 		   nil
 		   ',doc))))))
 	(t
-	 (error _"Ill-formed DEFSETF for ~S." access-fn))))
+	 (error (intl:gettext "Ill-formed DEFSETF for ~S.") access-fn))))
 
 (defun %defsetf (orig-access-form num-store-vars expander)
   (collect ((subforms) (subform-vars) (subform-exprs) (store-vars))
@@ -814,7 +814,7 @@
 		       (multiple-value-bind ,newval ,value-form
 			 ,setter))))))))
      ((oddp nargs) 
-      (error _"Odd number of args to SETF."))
+      (error (intl:gettext "Odd number of args to SETF.")))
      (t
       (do ((a args (cddr a)) (l nil))
 	  ((null a) `(progn ,@(nreverse l)))
@@ -829,7 +829,7 @@
     (do ((a args (cddr a)))
 	((endp a))
       (if (endp (cdr a))
-	  (simple-program-error _"Odd number of args to PSETF."))
+	  (simple-program-error (intl:gettext "Odd number of args to PSETF.")))
       (multiple-value-bind
 	  (dummies vals newval setter getter)
 	  (get-setf-expansion (car a) env)
@@ -931,17 +931,17 @@
 	    ((eq arg '&rest)
 	     (if (symbolp (cadr ll))
 		 (setq rest-arg (cadr ll))
-		 (error _"Non-symbol &rest arg in definition of ~S." name))
+		 (error (intl:gettext "Non-symbol &rest arg in definition of ~S.") name))
 	     (if (null (cddr ll))
 		 (return nil)
-		 (error _"Illegal stuff after &rest arg in Define-Modify-Macro.")))
+		 (error (intl:gettext "Illegal stuff after &rest arg in Define-Modify-Macro."))))
 	    ((memq arg '(&key &allow-other-keys &aux))
-	     (error _"~S not allowed in Define-Modify-Macro lambda list." arg))
+	     (error (intl:gettext "~S not allowed in Define-Modify-Macro lambda list.") arg))
 	    ((symbolp arg)
 	     (push arg other-args))
 	    ((and (listp arg) (symbolp (car arg)))
 	     (push (car arg) other-args))
-	    (t (error _"Illegal stuff in lambda list of Define-Modify-Macro."))))
+	    (t (error (intl:gettext "Illegal stuff in lambda list of Define-Modify-Macro.")))))
     (setq other-args (nreverse other-args))
     `(defmacro ,name (,reference ,@lambda-list &environment ,env)
        ,doc-string
@@ -1092,7 +1092,7 @@
 		  (,local2 nil ,local1))
 		 ((atom ,local1) nil)
 	       (cond ((atom (cdr ,local1))
-		      (error _"Odd-length property list in REMF."))
+		      (error (intl:gettext "Odd-length property list in REMF.")))
 		     ((eq (car ,local1) ,ind-temp)
 		      (cond (,local2
 			     (rplacd (cdr ,local2) (cddr ,local1))
@@ -1230,7 +1230,7 @@
 	       (= (list-length function) 2)
 	       (eq (first function) 'function)
 	       (symbolp (second function)))
-    (error _"Setf of Apply is only defined for function args like #'symbol."))
+    (error (intl:gettext "Setf of Apply is only defined for function args like #'symbol.")))
   (let ((function (second function))
 	(new-var (gensym))
 	(vars nil))
@@ -1346,7 +1346,7 @@
 	  (case (first case-list) (first case-list)))
 	 ((null case-list))
       (cond ((atom case)
-	     (error _"~S -- Bad clause in ~S." case name))
+	     (error (intl:gettext "~S -- Bad clause in ~S.") case name))
 	    ((and (not allow-otherwise)
 		  (memq (car case) '(t otherwise)))
 	     (cond ((null (cdr case-list))
@@ -1354,10 +1354,10 @@
 		    ;; only if it's the last case.  Otherwise, it's just a
 		    ;; normal clause.
 		    (if errorp
-			(error _"No default clause allowed in ~S: ~S" name case)
+			(error (intl:gettext "No default clause allowed in ~S: ~S") name case)
 			(push `(t nil ,@(rest case)) clauses)))
 		   ((and (eq name 'case))
-		    (error _"T and OTHERWISE may not be used as key designators for ~A" name))
+		    (error (intl:gettext "T and OTHERWISE may not be used as key designators for ~A") name))
 		   ((eq (first case) t)
 		    ;; The key T is normal clause, because it's not
 		    ;; the last clause.
@@ -1374,7 +1374,7 @@
 	    (t
 	     (when (and allow-otherwise
 			(memq (car case) '(t otherwise)))
-	       (warn _"Bad style to use T or OTHERWISE in ECASE or CCASE"))
+	       (warn (intl:gettext "Bad style to use T or OTHERWISE in ECASE or CCASE")))
 	     (push (first case) keys)
 	     (push `((,test ,keyform-value
 			    ',(first case)) nil ,@(rest case)) clauses))))
@@ -1430,7 +1430,7 @@
 	     :possibilities keys)
     (store-value (value)
       :report (lambda (stream)
-		(format stream _"Supply a new value for ~S." keyform))
+		(format stream (intl:gettext "Supply a new value for ~S.") keyform))
       :interactive read-evaluated-form
       value)))
 
@@ -1499,7 +1499,7 @@
 		   datum arguments
 		   'simple-error 'error)
 		  (make-condition 'simple-error
-				  :format-control _"The assertion ~S failed."
+				  :format-control (intl:gettext "The assertion ~S failed.")
 				  :format-arguments (list assertion)))))
   (restart-case (error cond)
     (continue ()
@@ -1508,7 +1508,7 @@
 
 
 (defun assert-report (names stream)
-  (format stream _"Retry assertion")
+  (format stream (intl:gettext "Retry assertion"))
   (if names
       (format stream (intl:ngettext " with new value for ~{~S~^, ~}."
 				    " with new values for ~{~S~^, ~}."
@@ -1517,10 +1517,10 @@
       (format stream ".")))
 
 (defun assert-prompt (name value)
-  (cond ((y-or-n-p _"The old value of ~S is ~S.~
-		  ~%Do you want to supply a new value? "
+  (cond ((y-or-n-p (intl:gettext "The old value of ~S is ~S.~
+		  ~%Do you want to supply a new value? ")
 		   name value)
-	 (format *query-io* _"~&Type a form to be evaluated:~%")
+	 (format *query-io* (intl:gettext "~&Type a form to be evaluated:~%"))
 	 (flet ((read-it () (eval (read *query-io*))))
 	   (if (symbolp name) ;help user debug lexical variables
 	       (progv (list name) (list value) (read-it))
@@ -1552,19 +1552,19 @@
 		  (make-condition 'simple-type-error
 				  :datum place-value :expected-type type
 				  :format-control
-				  _"The value of ~S is ~S, which is not ~A."
+				  (intl:gettext "The value of ~S is ~S, which is not ~A.")
 				  :format-arguments
 				  (list place place-value type-string))
 		  (make-condition 'simple-type-error
 				  :datum place-value :expected-type type
 				  :format-control
-				  _"The value of ~S is ~S, which is not of type ~S."
+				  (intl:gettext "The value of ~S is ~S, which is not of type ~S.")
 				  :format-arguments
 				  (list place place-value type)))))
     (restart-case (error cond)
       (store-value (value)
 	:report (lambda (stream)
-		  (format stream _"Supply a new value of ~S."
+		  (format stream (intl:gettext "Supply a new value of ~S.")
 			  place))
 	:interactive read-evaluated-form
 	value))))
@@ -1574,7 +1574,7 @@
 ;;; and by CHECK-TYPE.
 ;;;
 (defun read-evaluated-form ()
-  (format *query-io* _"~&Type a form to be evaluated:~%")
+  (format *query-io* (intl:gettext "~&Type a form to be evaluated:~%"))
   (list (eval (read *query-io*))))
 
 
@@ -1796,7 +1796,7 @@
       ((endp pair) `(psetf ,@pairs))
     (unless (symbolp (car pair))
       (error 'simple-program-error
-             :format-control _"variable ~S in PSETQ is not a SYMBOL"
+             :format-control (intl:gettext "variable ~S in PSETQ is not a SYMBOL")
              :format-arguments (list (car pair))))))
 
 
@@ -1848,7 +1848,7 @@
 	      (:global (member parent '(defun defmacro function)))
 	      (:local (member parent '(labels flet)))
 	      (t
-	       (error _"Unknown declaration context: ~S." context))))
+	       (error (intl:gettext "Unknown declaration context: ~S.") context))))
 	  (case (first context)
 	    (:or
 	     (loop for x in (rest context)
@@ -1869,7 +1869,7 @@
 		  (loop for x in (rest context)
 			thereis (eq (find-package (string x)) package))))
 	    (t
-	     (error _"Unknown declaration context: ~S." context)))))))
+	     (error (intl:gettext "Unknown declaration context: ~S.") context)))))))
 
   
 ;;; PROCESS-CONTEXT-DECLARATIONS  --  Internal
@@ -1882,8 +1882,8 @@
    (mapcar
     #'(lambda (decl)
 	(unless (>= (length decl) 2)
-	  (error _"Context declaration spec should have context and at ~
-	  least one DECLARE form:~%  ~S" decl))
+	  (error (intl:gettext "Context declaration spec should have context and at ~
+	  least one DECLARE form:~%  ~S") decl))
 	#'(lambda (name parent)
 	    (when (evaluate-declaration-context (first decl) name parent)
 	      (rest decl))))
@@ -1956,7 +1956,7 @@
 	(n-fun (gensym))
 	(n-abort-p (gensym)))
     (when (oddp (length options))
-      (error _"Odd number of key/value pairs: ~S." options))
+      (error (intl:gettext "Odd number of key/value pairs: ~S.") options))
     (do ((opt options (cddr opt)))
 	((null opt))
       (case (first opt)
@@ -1969,7 +1969,7 @@
 	(:context-declarations
 	 (setq context-declarations (second opt)))
 	(t
-	 (warn _"Ignoring unknown option: ~S." (first opt)))))
+	 (warn (intl:gettext "Ignoring unknown option: ~S.") (first opt)))))
 
     `(flet ((,n-fun ()
 	      (let (,@(when optimize

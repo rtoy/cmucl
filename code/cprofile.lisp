@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/cprofile.lisp,v 1.3 2010/03/19 15:18:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/cprofile.lisp,v 1.4 2010/04/20 17:57:44 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 
 (eval-when (compile)
   (when *collect-dynamic-statistics*
-    (error _"You don't want to compile this file with profiling.")))
+    (error (intl:gettext "You don't want to compile this file with profiling."))))
 
 
 ;;; Represents a single high-cost code object we've pulled out of memory.
@@ -63,7 +63,7 @@
 	     (lambda (s stream d)
 	       (declare (ignore d))
 	       (print-unreadable-object (s stream :type t :identity t)
-		 (format stream _"~A, top ~D, cost ~S" (selection-name s)
+		 (format stream (intl:gettext "~A, top ~D, cost ~S") (selection-name s)
 			 (length (selection-elements s))
 			 (selection-total-cost s))))))
   ;;
@@ -200,7 +200,7 @@
 
     (loop
       (unless res
-	(error _"No profilable code objects found."))
+	(error (intl:gettext "No profilable code objects found.")))
       (unless (minusp (selection-elt-cost (first res))) (return))
       (pop res))
 
@@ -227,8 +227,8 @@
 	    repeat top-n do
 	(format t "~,2E: ~S~%" cost name)
 	(incf total cost))
-      (format t _"~,2E: Total~%" total)
-      (format t _"~,2E: Other~%" (- (selection-total-cost selection) total))))
+      (format t (intl:gettext "~,2E: Total~%") total)
+      (format t (intl:gettext "~,2E: Other~%") (- (selection-total-cost selection) total))))
 
   (values))
 
@@ -323,8 +323,8 @@
 
     (let ((locs (stable-sort (locs) #'>= :key #'second)))
       (dolist (loc (subseq locs 0 (min (length locs) top-n)))
-	(format t _"~%~,2E cycles, ~[not run, ~;~:; ~:*~D repeats, ~]~
-		   ~S:~%    "
+	(format t (intl:gettext "~%~,2E cycles, ~[not run, ~;~:; ~:*~D repeats, ~]~
+		   ~S:~%    ")
 		(second loc)
 		(truncate (third loc))
 		(debug-function-name (code-location-debug-function (car loc))))
@@ -400,16 +400,16 @@
       (unless (string= package-name (second e))
 	(setf package-name (second e))
 	(when (> other cost)
-	  (format t _" ~10:D: Other~&" other))
+	  (format t (intl:gettext " ~10:D: Other~&") other))
 	(setf i 0)
 	(setf other 0)
 	(when (> (third e) cost)
-	  (format t _"Package: ~A~&" package-name)))
+	  (format t (intl:gettext "Package: ~A~&") package-name)))
       (cond ((< i top-n)
 	     (when (> (third e) cost)
-	       (format t _" ~10:D: ~S~&" (third e) (first e))))
+	       (format t (intl:gettext " ~10:D: ~S~&") (third e) (first e))))
 	    (t
 	     (incf other (third e))))
       (incf i))
     (when (> other cost)
-      (format t _" ~10:D: Other~&" other))))
+      (format t (intl:gettext " ~10:D: Other~&") other))))
