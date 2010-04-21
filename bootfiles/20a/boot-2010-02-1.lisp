@@ -7,7 +7,7 @@
 (defpackage "INTL"
   (:use "COMMON-LISP")
   (:export "SETLOCALE" "TEXTDOMAIN" "GETTEXT" "DGETTEXT" "NGETTEXT" "DNGETTEXT"
-           "*TRANSLATABLE-DUMP-STREAM*" "READ-TRANSLATABLE-STRING"
+            "READ-TRANSLATABLE-STRING"
 	   "*LOCALE-DIRECTORIES*"))
 
 (with-open-file (s "target:code/intl.lisp")
