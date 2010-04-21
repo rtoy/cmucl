@@ -2887,19 +2887,21 @@ ends at the end of each line.
 \subsection{Example Usage}
 \label{sec:localization-usage}
 
-Here is a simple example of how to localize your code.  This assumes
-that you've installed the reader macros via \code{intl::install}.
+Here is a simple example of how to localize your code.  Let the file
+\code{intl-ex.lisp} contain:
 
 \begin{example}
 
 (intl:textdomain "example")  
 
 (defun foo (x y)
-  _N"Cool function foo of x and y"
+  "Cool function foo of x and y"
   (let ((result (bar x y)))
+    ;; TRANSLATORS:  One line comment about bar.
     (format t _"bar of ~A and ~A = ~A~%" x y result)
-    ;; TRANSLATORS:  Do the right thing here.
-    ;; TRANSLATORS:  Whatever that might be.
+    #| TRANSLATORS:  Multiline comment about
+    how many Xs there are
+    |#
     (format t (intl:ngettext "There is one X"
                              "There are many Xs"
                              x))
@@ -2909,19 +2911,33 @@ that you've installed the reader macros via \code{intl::install}.
 The call to \code{textdomain} sets the default domain for all
 translatable strings following the call.
 
+Here is a sample session for creating a template file:
+
+\begin{example}
+* (intl:install)
+
+T
+* (intl:translation-enable)
+
+T
+* (compile-file "intl-ex")
+
+#P"/Volumes/share/cmucl/cvs/intl-ex.sse2f"
+NIL
+NIL
+* (intl::dump-pot-files :output-directory "./")
+
+Dumping 3 messages for domain "example"
+NIL
+*
+\end{example}
+
 When this file is compiled, all of the translatable strings are
 recorded.  This includes the docstring for \code{foo}, the string for
 the first \code{format}, and the string marked by the call to
 \code{intl:ngettext}.
 
-After all of the files have been compiled, we can dump the recorded
-strings.  In this case,
-\begin{example}
-* (intl::dump-pot-files :output-directory "dir/")
-Dumping 3 messages for domain "example"
-NIL
-\end{example}
-will create a file named ``example.pot'' in the directory ``dir/''.
+A file named ``example.pot'' in the directory ``./'' is created.
 The contents of this file are:
 \begin{example}
 #@ example
@@ -2941,16 +2957,18 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8"
 "Content-Transfer-Encoding: 8bit"
 
-#: /tmp/foo.lisp
-msgid "Cool function foo of x and y"
-msgstr ""
-
-#.  Whatever that might be.
-#: /tmp/foo.lisp
+#.  One line comment about bar.
+#: intl-ex.lisp
 msgid "bar of ~A and ~A = ~A~%"
 msgstr ""
 
-#: /tmp/foo.lisp
+#.  Multiline comment about
+    how many Xs there are
+#: intl-ex.lisp
+msgid "Cool function foo of x and y"
+msgstr ""
+
+#: intl-ex.lisp
 msgid "There is one X"
 msgid_plural "There are many Xs"
 msgstr[0] ""
