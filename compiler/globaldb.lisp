@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.56 2010/04/20 17:57:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.57 2010/04/23 13:23:29 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1168,8 +1168,10 @@
 (define-info-class random-documentation)
 (define-info-type random-documentation stuff list ())
 
-;;; Used to record the source-location of definitions.
-;;;
+;;; Used to record the source-location of definitions.  Despite the
+;;; type name of "defvar", this holds the location information for
+;;; defvar, defparameter, and defconstant.  It also has the source
+;;; location for defstruct and deftype.
 (define-info-class source-location)
 (define-info-type source-location defvar (or form-numbers null) nil)
 

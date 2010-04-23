@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.117 2010/04/20 17:57:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.118 2010/04/23 13:23:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -242,6 +242,7 @@
       (when doc
 	(intl::note-translatable intl::*default-domain* doc))
       `(eval-when (:compile-toplevel :load-toplevel :execute)
+	 (set-defvar-source-location ',name (c::source-location))
 	 (%deftype ',name
 		   #'(lambda (,whole)
 		       ,@local-decs

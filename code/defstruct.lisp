@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.101 2010/04/20 17:57:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.102 2010/04/23 13:23:29 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -487,6 +487,7 @@
 	     ,@(define-raw-accessors defstruct)
 	     ,@(define-constructors defstruct)
 	     ,@(define-class-methods defstruct)
+	     (lisp::set-defvar-source-location ',name (c::source-location))
 	   ',name))
 	`(progn
 	   (eval-when (compile load eval)
@@ -495,6 +496,7 @@
 	   ,@(define-predicate defstruct)
 	   ,@(define-accessors defstruct)
 	   ,@(define-copier defstruct)
+	   (lisp::set-defvar-source-location ',name (c::source-location))
 	   ',name))))
 	   
 
