@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.118 2010/04/23 13:23:29 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.119 2010/04/27 23:29:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -397,6 +397,9 @@
 	  (setq inline-expansion lambda-expression))))
     (c::%%defun name def doc inline-expansion)))
 
+(defun set-defvar-textdomain (name domain)
+  (setf (c::info variable textdomain name) domain))
+
 ;;; DEFCONSTANT  --  Public
 ;;;
 (defmacro defconstant (var val &optional doc)
@@ -410,6 +413,7 @@
      (eval-when (:compile-toplevel)
        (c::do-defconstant-compile-time ',var ,val ',doc))
      (eval-when (:load-toplevel :execute)
+       (set-defvar-textdomain ',var ,intl::*default-domain*)
        (c::%%defconstant ',var ,val ',doc (c::source-location)))))
 
 (defun set-defvar-source-location (name source-location)
@@ -437,7 +441,6 @@
   (set-defvar-source-location name source-location)
   name)
 
-
 (defmacro defvar (var &optional (val nil valp) (doc nil docp))
   "For defining global variables at top level.  Declares the variable
   SPECIAL and, optionally, initializes it.  If the variable already has a
@@ -453,7 +456,7 @@
     ,@(when docp
 	`((setf (documentation ',var 'variable) ',doc)
 	  (eval-when (:load-toplevel :execute)
-	   (setf (c::info variable textdomain ',var) ,intl::*default-domain*))))
+	    (set-defvar-textdomain ',var ,intl::*default-domain*))))
     (set-defvar-source-location ',var (c::source-location))
     ',var))
 
@@ -470,7 +473,7 @@
     ,@(when docp
 	`((setf (documentation ',var 'variable) ',doc)
 	  (eval-when (:load-toplevel :execute)
-	   (setf (c::info variable textdomain ',var) ,intl::*default-domain*))))
+	    (set-defvar-textdomain ',var ,intl::*default-domain*))))
     (set-defvar-source-location ',var (c::source-location))
     ',var))
 
