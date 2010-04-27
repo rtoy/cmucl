@@ -134,7 +134,7 @@ msgstr ""
 #: src/compiler/x86/alloc.lisp src/compiler/x86/cell.lisp
 #: src/compiler/x86/debug.lisp src/compiler/x86/arith.lisp
 #: src/compiler/x86/memory.lisp src/compiler/x86/char.lisp
-#: src/compiler/x86/float.lisp src/compiler/x86/move.lisp
+#: src/compiler/x86/move.lisp
 msgid "Unknown SC to SC-Case for ~S:~%  ~S"
 msgstr ""
 
@@ -147,8 +147,7 @@ msgid "constant load"
 msgstr ""
 
 #: src/compiler/x86/call.lisp src/compiler/x86/debug.lisp
-#: src/compiler/x86/char.lisp src/compiler/x86/float.lisp
-#: src/compiler/x86/move.lisp
+#: src/compiler/x86/char.lisp src/compiler/x86/move.lisp
 msgid ""
 "Load TN allocated, but no move function?~@\n"
 "\t           VM definition inconsistent, recompile and try again."
@@ -176,182 +175,6 @@ msgstr ""
 
 #: src/compiler/x86/move.lisp
 msgid "word integer argument move"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "Ignoring bogus i387 Constant ~a"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "float move"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "complex float move"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "float to pointer coercion"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "pointer to float coercion"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "complex float to pointer coercion"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "complex double-double float to pointer coercion"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "pointer to complex float coercion"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "float argument move"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "complex float argument move"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "complex double-double-float argument move"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline float arithmetic"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline float comparison"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline float coercion"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline float truncate"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline NPX function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline tan function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline sin/cos function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline exp function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline expm1 function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline log function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline log10 function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline pow function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline scalbn function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline scalb function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline log1p function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline log1p with limited x range function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline logb function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline atan function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline atan2 function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline complex single-float creation"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline complex double-float creation"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline complex long-float creation"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "complex float realpart"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "complex float imagpart"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline dummy FP register bias"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "double-double float move"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "double double float to pointer coercion"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "pointer to double-double-float coercion"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "double double-float argument move"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline double-double-float creation"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "double-double high part"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "double-double low part"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
-msgid "inline complex double-double-float creation"
 msgstr ""
 
 #: src/compiler/x86/char.lisp
