@@ -99,3 +99,7 @@ windows-latin1	cp1252
 ;; characters to Lisp #\newline character.  On output, #\newline is
 ;; converted to CR LF sequence.
 dos		crlf
+
+;; A composing format for converting MAC end-of-line (CR) character to
+;; Lisp #\newline character
+mac		cr
