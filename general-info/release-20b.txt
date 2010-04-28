@@ -43,6 +43,9 @@ New in this release:
       CMUCL can be translated, but currently only a few messages in
       Korean are translated.  For fun, there is a full Pig Latin
       translation (done by machine).  
+    - Source information (file) for defstructs and deftypes is now
+      provided.  DESCRIBE will now print out the name of the file
+      where the defstruct/deftype was defined.
 
   * ANSI compliance fixes:
     - COMPILE will update the macro-function if the specified name
@@ -145,6 +148,8 @@ New in this release:
       is abslute or relative.  Previously, the result was take from
       the SOURCE pathname, except if TO were absolute, in which case
       the result was absolute.
+    - Add MAC as an aliase to the CR composing external format.
+
   * Improvements to the PCL implementation of CLOS:
 
   * Changes to building procedure:
