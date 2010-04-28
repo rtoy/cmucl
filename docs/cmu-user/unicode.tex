@@ -298,7 +298,6 @@ full Unicode codepoint.)
 \end{defun}
 
 \begin{defun}{lisp:}{char-titlecase}{\args \var{character}}
-  \defunx{char-downcase}{\args \var{character}}
   The Unicode titlecase letter is returned.
 \end{defun}
 
@@ -337,8 +336,8 @@ this encoding and handle the surrogate pairs correctly.
   pairs are handled correctly.  The conversion to the appropriate case
   is done based on the Unicode conversion.  The additional argument
   \kwd{casing} controls how case conversion is done.  The default
-  value is \kwd{:simple}, which uses simple Unicode case conversion.
-  If \kwd{casing} is \kwd{:full}, then full Unicode case conversion is
+  value is \kwd{simple}, which uses simple Unicode case conversion.
+  If \kwd{casing} is \kwd{full}, then full Unicode case conversion is
   done where the string may actually increase in length.
 \end{defun}
 
@@ -521,21 +520,31 @@ utility functions are provided to make access easier.
 \end{defun}
 
 \begin{defun}{}{octets-to-string}{\args \var{octets} \keys{\kwd{start}
-      \kwd{end} \kwd{external-format} \kwd{string}}}
+      \kwd{end} \kwd{external-format} \kwd{string} \kwd{s-start}
+      \kwd{s-end} \kwd{state}}}
   \code{octets-to-string} converts the sequence of octets in
-  \var{octets} to a string.   \var{octets} must be a
+  \var{octets} to a string.  \var{octets} must be a
   \code{(simple-array (unsigned-byte 8) (*))}.  The octets to be
   converted are bounded by \var{start} and \var{end}, which default to
   0 and the length of the array, respectively.  The conversion is
   performed according to the external format specified by
   \var{external-format}.  If \var{string} is specified, the octets are
-  converted and stored in \var{string}.  \var{string} must be
-  \code{simple-string}.  Otherwise, a new string is
-  created.  
+  converted and stored in \var{string}, starting at \var{s-start}
+  (defaulting to 0) and ending just before \var{s-end} (defaulting to
+  the end of \var{string}.  \var{string} must be \code{simple-string}.
+  If the bounded string is not large enough to hold all of the
+  characters, then some octets will not be converted.  If \var{string}
+  is not specified, a new string is created.
 
-  Three values are returned: the string, the number of characters
+  The \var{state} is used as the initial state of for the external
+  format.  This is useful when converting buffers of octets where the
+  buffers are not on character boundaries, and state information is
+  needed between buffers.
+
+  Four values are returned: the string, the number of characters
   written to the string, and the number of octets consumed to produce
-  the characters.
+  the characters, and the final state of external format after
+  converting the octets.
 \end{defun}
 
 \section{Writing External Formats}
