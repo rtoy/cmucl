@@ -148,7 +148,7 @@ New in this release:
       is abslute or relative.  Previously, the result was take from
       the SOURCE pathname, except if TO were absolute, in which case
       the result was absolute.
-    - Add MAC as an aliase to the CR composing external format.
+    - Add MAC as an alias to the CR composing external format.
 
   * Improvements to the PCL implementation of CLOS:
 
