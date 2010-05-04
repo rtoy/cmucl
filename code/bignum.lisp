@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.50 2010/04/20 17:57:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.51 2010/05/04 15:08:28 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1277,6 +1277,7 @@ down to individual words.")
 	(rotatef u v)	
 	(rotatef u-len v-len))
       (setf u (copy-bignum u u-len))
+      (bignum-abs-buffer u u-len)
       (let ((n (bignum-mod-gcd v1 u)))	
 	(ash (bignum-mod-gcd u1 (if (fixnump n)
 				    (make-small-bignum n)
