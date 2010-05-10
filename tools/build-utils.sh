@@ -15,6 +15,18 @@ fi
 TARGET="`echo $1 | sed 's:/*$::'`"
 shift
 
+# Compile up the asdf and defsystem modules
+$TARGET/lisp/lisp -noinit -nositeinit -batch "$@" << EOF || exit 3
+(in-package :cl-user)
+(setf (ext:search-list "target:")
+      '("$TARGET/" "src/"))
+(setf (ext:search-list "modules:")
+      '("target:contrib/"))
+
+(compile-file "modules:asdf/asdf")
+(compile-file "modules:defsystem/defsystem")
+EOF
+
 $TARGET/lisp/lisp \
 	-noinit -nositeinit -batch "$@" <<EOF || exit 3
 (in-package :cl-user)

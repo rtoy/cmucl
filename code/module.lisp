@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.14 2010/04/20 17:57:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.15 2010/05/10 19:30:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -62,33 +62,36 @@
 ;;;; Provide and Require.
 
 (defun provide (module-name)
-  "Adds a new module name to *modules* indicating that it has been loaded.
-   Module-name may be any valid string designator.  All comparisons are
-   done using string=, i.e. module names are case-sensitive."
+  "Adds a new module name to *modules* indicating that it has been
+  loaded.  Module-name may be any valid string designator.  All
+  comparisons are done using string=, i.e. module names are
+  case-sensitive."
   (pushnew (module-name-string module-name) *modules* :test #'string=)
   t)
 
 (defun require (module-name &optional pathname)
-  "Loads a module when it has not been already.  Pathname, if supplied,
-   is a single pathname or list of pathnames to be loaded if the module
-   needs to be.  If pathname is not supplied, then functions from the list
-   *MODULE-PROVIDER-FUNCTIONS* are called in order with the stringified
-   MODULE-NAME as the argument, until one of them returns non-NIL.  By
-   default the functions MODULE-PROVIDE-CMUCL-DEFMODULE and MODULE-PROVIDE-
-   CMUCL-LIBRARY are on this list of functions, in that order.  The first
-   of those looks for a list of files that was registered by a EXT:DEFMODULE
-   form.  If the module has not been defined, then the second function
-   causes a file to be loaded whose name is formed by merging \"modules:\"
-   and the concatenation of module-name with the suffix \"-LIBRARY\".
-   Note that both the module-name and the suffix are each, separately,
-   converted from :case :common to :case :local.  This merged name will be
-   probed with both a .lisp and .fasl extensions, calling LOAD if it exists.
+  "Loads a module when it has not been already.  Pathname, if
+  supplied, is a single pathname or list of pathnames to be loaded if
+  the module needs to be.  If pathname is not supplied, then functions
+  from the list *MODULE-PROVIDER-FUNCTIONS* are called in order with
+  the stringified MODULE-NAME as the argument, until one of them
+  returns non-NIL.  By default the functions
+  MODULE-PROVIDE-CMUCL-DEFMODULE and MODULE-PROVIDE- CMUCL-LIBRARY are
+  on this list of functions, in that order.  The first of those looks
+  for a list of files that was registered by a EXT:DEFMODULE form.  If
+  the module has not been defined, then the second function causes a
+  file to be loaded whose name is formed by merging \"modules:\" and
+  the concatenation of module-name with the suffix \"-LIBRARY\".  Note
+  that both the module-name and the suffix are each, separately,
+  converted from :case :common to :case :local.  This merged name will
+  be probed with both a .lisp and .fasl extensions, calling LOAD if it
+  exists.
 
-   Note that in all cases covered above, user code is responsible for
-   calling PROVIDE to indicate a successful load of the module.
+  Note that in all cases covered above, user code is responsible for
+  calling PROVIDE to indicate a successful load of the module.
 
-   While loading any files, *load-verbose* is bound to *require-verbose*
-   which defaults to t."
+  While loading any files, *load-verbose* is bound to *require-verbose*
+  which defaults to t."
   (let ((saved-modules (copy-list *modules*))
         (module-name (module-name-string module-name)))
     (unless (member module-name *modules* :test #'string=)
@@ -120,10 +123,10 @@
 
 (defun module-default-pathname (module-name)
   "Derive a default pathname to try to load for an undefined module
-named module-name.  The default pathname is constructed from the
-module-name by appending the suffix \"-LIBRARY\" to it, and merging
-with \"modules:\".  Note that both the module-name and the suffix are
-each, separately, converted from :case :common to :case :local."
+  named module-name.  The default pathname is constructed from the
+  module-name by appending the suffix \"-LIBRARY\" to it, and merging
+  with \"modules:\".  Note that both the module-name and the suffix
+  are each, separately, converted from :case :common to :case :local."
   (let* ((module-pathname (make-pathname :name module-name :case :common))
          (library-pathname (make-pathname :name "-LIBRARY" :case :common)))
     (merge-pathnames
@@ -133,6 +136,12 @@ each, separately, converted from :case :common to :case :local."
 				 (pathname-name module-pathname :case :local)
 				 (pathname-name library-pathname :case :local))
                     :case :local))))
+
+(defmodule :defsystem
+    "modules:defsystem/defsystem")
+
+(defmodule :asdf
+    "modules:asdf/asdf")
 
 ;; Meta contrib that loads up definitions for all other contribs
 (defmodule "cmu-contribs"

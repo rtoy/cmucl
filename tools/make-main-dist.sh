@@ -122,6 +122,23 @@ do
     install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/ext-formats/
 done
 
+# Create the directories and install the fasl files for asdf and defsystem
+for f in asdf defsystem
+do
+    install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/contrib/$f
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/$f/$f.$FASL $DESTDIR/lib/cmucl/lib/contrib/$f
+    if [ "$FASL" = "x86f" ]; then
+	# For x87, we want both x86f and sse2f
+	install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/$f/$f.sse2f $DESTDIR/lib/cmucl/lib/contrib/$f
+    fi
+done
+
+# Copy the source files for asdf and defsystem
+for f in `(cd src; find contrib/asdf contrib/defsystem -type f -print | grep -v CVS)`
+do
+    install ${GROUP} ${OWNER} -m 0644 src/$f $DESTDIR/lib/cmucl/lib/$f
+done
+
 install ${GROUP} ${OWNER} -m 0644 src/general-info/cmucl.1 \
 	$DESTDIR/${MANDIR}/
 install ${GROUP} ${OWNER} -m 0644 src/general-info/lisp.1 \

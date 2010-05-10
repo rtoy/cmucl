@@ -94,12 +94,12 @@ install ${GROUP} ${OWNER} -m 0755 $TARGET/motif/server/motifd \
 
 # Install the contrib stuff.  Create the directories and then copy the files.
 
-for d in `(cd src; find contrib -type d -print | grep -v CVS)`
+for d in `(cd src; find contrib -type d -print | grep -v "CVS\|asdf\|defsystem")`
 do
     install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/$d
 done
 
-for f in `(cd src/contrib; find . -type f -print | grep -v CVS)`
+for f in `(cd src/contrib; find . -type f -print | grep -v "CVS\|asdf\|defsystem")`
 do
     FILE=`basename $f`
     DIR=`dirname $f`
