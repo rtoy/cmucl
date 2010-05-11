@@ -1072,7 +1072,9 @@
 (provide 'make)
 
 #-(or :cltl2 :lispworks)
-(provide 'make)
+(progn
+  (provide 'make)
+  (provide 'defsystem))
 
 (pushnew :mk-defsystem *features*)
 
