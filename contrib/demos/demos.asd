@@ -2,6 +2,11 @@
 
 (in-package :asdf)
 
+;; It would be nice to make demos :depend-on :clx, but we can't
+;; because we don't currently have an asdf definition for :clx.
+
+(require :clx)
+
 (defsystem :demos
   :name "demos"
   :maintainer "CMU Common Lisp Group"
