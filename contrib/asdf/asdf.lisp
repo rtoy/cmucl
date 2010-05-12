@@ -49,8 +49,8 @@
 
 (cl:in-package :cl-user)
 
-(declaim (optimize (speed 2) (debug 2) (safety 3))
-         #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
+#|(declaim (optimize (speed 2) (debug 2) (safety 3))
+#+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))|#
 
 #+ecl (require :cmp)
 
@@ -70,7 +70,7 @@
                 :test 'equalp :key 'car))
   (let* ((asdf-version
           ;; the 1+ helps the version bumping script discriminate
-          (subseq "VERSION:1.718" (1+ (length "VERSION"))))
+          (subseq "VERSION:1.721" (1+ (length "VERSION"))))
          (existing-asdf (find-package :asdf))
          (vername '#:*asdf-version*)
          (versym (and existing-asdf
@@ -593,7 +593,7 @@ pathnames."
          (last-comp (car (last components))))
     (multiple-value-bind (relative components)
         (if (equal (first components) "")
-            (if (and (plusp (length s)) (eql (char s 0) #\/))
+            (if (equal (first-char s) #\/)
                 (values :absolute (cdr components))
                 (values :relative nil))
           (values :relative components))
@@ -626,7 +626,7 @@ pathnames."
   #+sbcl
   (sb-ext:posix-getenv x)
   #+clozure
-  (ccl::getenv x)
+  (ccl:getenv x)
   #+clisp
   (ext:getenv x)
   #+cmu
@@ -1174,7 +1174,7 @@ to `~a` which is not a directory.~@:>"
 
 (defmethod find-component ((component component) (name symbol))
   (if name
-      (find-component component (string name))
+      (find-component component (coerce-name name))
       component))
 
 (defmethod find-component ((module module) (name cons))
@@ -1947,24 +1947,21 @@ details."
 ;;;; -------------------------------------------------------------------------
 ;;;; Defsystem
 
+(defun load-pathname ()
+  (let ((pn (or *load-pathname* *compile-file-pathname*)))
+    (if *resolve-symlinks*
+        (and pn (resolve-symlinks pn))
+        pn)))
+
 (defun determine-system-pathname (pathname pathname-supplied-p)
-  ;; called from the defsystem macro.
-  ;; the pathname of a system is either
+  ;; The defsystem macro calls us to determine
+  ;; the pathname of a system as follows:
   ;; 1. the one supplied,
-  ;; 2. derived from the *load-truename* (see below), or
-  ;; 3. taken from *default-pathname-defaults*
-  ;;
-  ;; if using *load-truename*, then we also deal with whether or not
-  ;; to resolve symbolic links. If not resolving symlinks, then we use
-  ;; *load-pathname* instead of *load-truename* since in some
-  ;; implementations, the latter has *already resolved it.
-  (let ((file-pathname
-         (when (or *load-pathname* *compile-file-pathname*)
-           (pathname-directory-pathname
-            (if *resolve-symlinks*
-                (resolve-symlinks (or *load-truename* *compile-file-truename*))
-                *load-pathname*)))))
-    (or (and pathname-supplied-p (merge-pathnames* pathname file-pathname))
+  ;; 2. derived from *load-pathname* via load-pathname
+  ;; 3. taken from the *default-pathname-defaults* via current-directory
+  (let* ((file-pathname (load-pathname))
+         (directory-pathname (and file-pathname (pathname-directory-pathname file-pathname))))
+    (or (and pathname-supplied-p (merge-pathnames* pathname directory-pathname))
         file-pathname
         (current-directory))))
 
@@ -1987,7 +1984,7 @@ details."
                  (t
                   (register-system (quote ,name)
                                    (make-instance ',class :name ',name))))
-           (%set-system-source-file *load-truename*
+           (%set-system-source-file (load-pathname)
                                     (cdr (system-registered-p ',name))))
          (parse-component-form
           nil (list*
@@ -2402,9 +2399,7 @@ located."
        #+(and (or win32 windows mswindows mingw32) (not cygwin))
         ,@`(#+lispworks ,(try (sys:get-folder-path :common-appdata) "common-lisp/config/")
             ;;; read-windows-registry HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders\AppData
-           #+(not cygwin)
-           ,(try (or (getenv "USERPROFILE") (user-homedir))
-                 "Application Data/common-lisp/config/"))
+           ,(try (getenv "APPDATA") "common-lisp/config/"))
        ,(try (user-homedir) ".config/common-lisp/")))))
 (defun system-configuration-directories ()
   (remove-if
@@ -2451,10 +2446,15 @@ located."
       (error "One and only one form allowed for ~A. Got: ~S~%" description forms))
     (funcall validator (car forms))))
 
+(defun hidden-file-p (pathname)
+  (equal (first-char (pathname-name pathname)) #\.))
+
 (defun validate-configuration-directory (directory tag validator)
   (let ((files (sort (ignore-errors
-                       (directory (make-pathname :name :wild :type :wild :defaults directory)
-                                  #+sbcl :resolve-symlinks #+sbcl nil))
+                       (remove-if
+                        'hidden-file-p
+                        (directory (make-pathname :name :wild :type "conf" :defaults directory)
+                                   #+sbcl :resolve-symlinks #+sbcl nil)))
                      #'string< :key #'namestring)))
     `(,tag
       ,@(loop :for file :in files :append
@@ -2476,27 +2476,16 @@ Each mapping is a pair of a source pathname and destination pathname,
 and the order is by decreasing length of namestring of the source pathname.")
 
 (defvar *user-cache*
-  (or
-   (let ((h (getenv "XDG_CACHE_HOME")))
-     (and h `(,h "common-lisp" :implementation)))
-   #+(and windows lispworks)
-   (let ((h (sys:get-folder-path :common-appdata))) ;; no :common-caches in Windows???
-     (and h `(,h "common-lisp" "cache")))
-   #+(and (or win32 windows mswindows mingw32) (not cygwin))
-   ;;; read-windows-registry HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders\Cache
-   (let ((h (or (getenv "USERPROFILE") (user-homedir))))
-     (and h `(,h "Local Settings" "Temporary Internet Files" "common-lisp")))
-   '(:home ".cache" "common-lisp" :implementation)))
+  (flet ((try (x &rest sub) (and x `(,x ,@sub))))
+    (or
+     (try (getenv "XDG_CACHE_HOME") "common-lisp" :implementation)
+     #+(and (or win32 windows mswindows mingw32) (not cygwin))
+     (try (getenv "APPDATA") "common-lisp" "cache" :implementation)
+     '(:home ".cache" "common-lisp" :implementation))))
 (defvar *system-cache*
-  (or
-   #+(and windows lispworks)
-   (let ((h (sys:get-folder-path :common-appdata))) ;; no :common-caches in Windows???
-     (and h `(,h "common-lisp" "cache")))
-   #+(and (or win32 windows mswindows mingw32) (not cygwin))
-   (let ((h (or (getenv "USERPROFILE") (user-homedir))))
-     (and h `(,h "Local Settings" "Temporary Internet Files" "common-lisp")))
-   #+(or unix cygwin)
-   '("/var/cache/common-lisp" :uid :implementation)))
+  ;; No good default, plus there's a security problem
+  ;; with other users messing with such directories.
+  *user-cache*)
 
 (defun output-translations ()
   (car *output-translations*))
@@ -2576,6 +2565,7 @@ with a different configuration, so the configuration would be re-read then."
                (relativize-pathname-directory (current-directory)))
               ((eql :implementation) (implementation-identifier))
               ((eql :implementation-type) (string-downcase (implementation-type)))
+              #-(and (or win32 windows mswindows mingw32) (not cygwin))
               ((eql :uid) (princ-to-string (get-uid)))))
          (d (if (pathnamep x) r (ensure-directory-pathname r)))
          (s (if (and wildenp (not (pathnamep x)))
@@ -2690,8 +2680,8 @@ with a different configuration, so the configuration would be re-read then."
     ;; Some implementations have precompiled ASDF systems,
     ;; so we must disable translations for implementation paths.
     #+sbcl (,(getenv "SBCL_HOME") ())
-    #+ecl (,(translate-logical-pathname "SYS:**;*.*") ()) ; only needed if LPNs are resolved manually.
-    #+clozure (,(wilden (ccl::ccl-directory)) ()) ; not needed: no precompiled ASDF system
+    #+ecl (,(translate-logical-pathname "SYS:**;*.*") ()) ; not needed: no precompiled ASDF system
+    #+clozure (,(wilden (truename #p"ccl:")) ()) ; not needed: no precompiled ASDF system
     ;; All-import, here is where we want user stuff to be:
     :inherit-configuration
     ;; These are for convenience, and can be overridden by the user:
@@ -2841,6 +2831,9 @@ effectively disabling the output translation facility."
          (t
           (translate-pathname p absolute-source destination)))
        :finally (return p)))))
+
+(defun first-char (s)
+  (and (stringp s) (plusp (length s)) (char s 0)))
 
 (defun last-char (s)
   (and (stringp s) (plusp (length s)) (char s (1- (length s)))))
@@ -3154,6 +3147,7 @@ with a different configuration, so the configuration would be re-read then."
 
 (defun wrapping-source-registry ()
   `(:source-registry
+    #+cmu (:tree #p"modules:")
     #+sbcl (:tree ,(getenv "SBCL_HOME"))
    :inherit-configuration))
 (defun default-source-registry ()
@@ -3170,10 +3164,7 @@ with a different configuration, so the configuration would be re-read then."
            (or (getenv "XDG_DATA_DIRS") "/usr/local/share:/usr/share"))
           (dirs (cons datahome (split-string datadirs :separator ":"))))
          #+(and (or win32 windows mswindows mingw32) (not cygwin))
-         ((datahome
-           #+lispworks (sys:get-folder-path :common-appdata)
-           #-lispworks (try (or (getenv "USERPROFILE") (user-homedir))
-                            "Application Data"))
+         ((datahome (getenv "APPDATA"))
           (datadir
            #+lispworks (sys:get-folder-path :local-appdata)
            #-lispworks (try (getenv "ALLUSERSPROFILE")
@@ -3290,16 +3281,16 @@ with a different configuration, so the configuration would be re-read then."
         ((style-warning #'muffle-warning)
          (missing-component (constantly nil))
          (error (lambda (e)
-                  (format *error-output* "ASDF could not load ~A because ~A.~%"
+                  (format *error-output* "ASDF could not load ~(~A~) because ~A.~%"
                           name e))))
       (let* ((*verbose-out* (make-broadcast-stream))
-             (system (find-system name nil)))
+             (system (find-system (string-downcase name) nil)))
         (when system
-          (load-system name)
+          (load-system system)
           t))))
   (pushnew 'module-provide-asdf
            #+abcl sys::*module-provider-functions*
-           #+clozure ccl::*module-provider-functions*
+           #+clozure ccl:*module-provider-functions*
            #+cmu ext:*module-provider-functions*
            #+ecl si:*module-provider-functions*
            #+sbcl sb-ext:*module-provider-functions*))
