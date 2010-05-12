@@ -270,4 +270,4 @@
  (defstub coredumpp ((status :int) => :int)
    "return WCOREDUMP(status);"))
 
-(provide "contrib-embedded-c")
+(provide "EMBEDDED-C")

@@ -88,4 +88,4 @@
 	(t (incf (svref *hist-array* (floor (- value *hist-lower-limit*)
 					    *hist-bucket-size*))))))
 
-(provide "contrib-hist")
+(provide "HIST")

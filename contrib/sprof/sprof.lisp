@@ -1342,5 +1342,5 @@
 		    :verbose nil
 		    :print nil :progress nil))))
 
-(provide "contrib-sprof")
+(provide "SPROF")
 ;;; End of file.
