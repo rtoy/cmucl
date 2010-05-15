@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.21 2010/05/15 12:52:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.22 2010/05/15 19:36:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,7 +45,7 @@
 
 (defvar *batch-mode* nil
   "When True runs lisp with its input coming from standard-input.
-   If an error is detected returns error code 1, otherwise 0.")
+  If an error is detected returns error code 1, otherwise 0.")
 
 (defstruct (command-line-switch (:conc-name cmd-switch-)
 				(:constructor make-cmd-switch
@@ -128,10 +128,10 @@
 	    (setq str (pop cmd-strings))))))))
 
 (defun get-command-line-switch (sname)
-  "Accepts the name of a switch as a string and returns the value of the
-   switch.  If no value was specified, then any following words are returned.
-   If there are no following words, then t is returned.  If the switch was not
-   specified, then nil is returned."
+  "Accepts the name of a switch as a string and returns the value of
+  the switch.  If no value was specified, then any following words are
+  returned.  If there are no following words, then t is returned.  If
+  the switch was not specified, then nil is returned."
   (let* ((name (if (char= (schar sname 0) #\-) (subseq sname 1) sname))
 	 (switch (find name *command-line-switches*
 		       :test #'string-equal
@@ -146,8 +146,8 @@
 ;;;; Defining Switches and invoking demons.
 
 (defvar *complain-about-illegal-switches* t
-  "When set, invoking switch demons complains about illegal switches that have
-   not been defined with DEFSWITCH.")
+  "When set, invoking switch demons complains about illegal switches
+  that have not been defined with DEFSWITCH.")
 
 ;;; This is a list of lists consisting of the legal switch names,
 ;;; switch description, and argument description.  The description and
@@ -183,15 +183,16 @@
 	  (invoke-demon switch))))))
 
 (defmacro defswitch (name &optional function docstring arg-name)
-  "Associates function with the switch name in *command-switch-demons*.  Name
-   is a simple-string that does not begin with a hyphen, unless the switch name
-   really does begin with one.  Function is optional, but defining the switch
-   is necessary to keep invoking switch demons from complaining about illegal
-   switches.  This can be inhibited with *complain-about-illegal-switches*.
+  "Associates function with the switch name in
+  *command-switch-demons*.  Name is a simple-string that does not
+  begin with a hyphen, unless the switch name really does begin with
+  one.  Function is optional, but defining the switch is necessary to
+  keep invoking switch demons from complaining about illegal switches.
+  This can be inhibited with *complain-about-illegal-switches*.
 
-   The optional arguments, arg-name and docstring, are used by -help
-   to describe the switch.  Arg-name is a string naming the argument
-   (if any) for the switch.  Docstring describe the switch."
+  The optional arguments, arg-name and docstring, are used by -help to
+  describe the switch.  Arg-name is a string naming the argument (if
+  any) for the switch.  Docstring describe the switch."
   (let ((gname (gensym))
 	(gfunction (gensym)))
     `(let ((,gname ,name)
