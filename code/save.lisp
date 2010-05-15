@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.68 2010/04/20 17:57:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.69 2010/05/15 12:52:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -252,6 +252,12 @@
                        *require-verbose* nil
                        *gc-verbose* nil
                        *herald-items* nil))
+	       (when (and process-command-line
+			  (or (find-switch "help")
+			      (find-switch "-help")))
+		 ;; Don't load any init files if -help or --help is given
+		 (setf site-init nil)
+		 (setf load-init-file nil))
 	       (when (and site-init
 			  (not (and process-command-line
 				    (find-switch "nositeinit"))))

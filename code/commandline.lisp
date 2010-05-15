@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.20 2010/04/20 17:57:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.21 2010/05/15 12:52:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -149,9 +149,12 @@
   "When set, invoking switch demons complains about illegal switches that have
    not been defined with DEFSWITCH.")
 
-;;; This is a list of legal switch names.  DEFSWITCH sets this, and
-;;; INVOKE-SWITCH-DEMONS makes sure all the switches it sees are on this
-;;; list.
+;;; This is a list of lists consisting of the legal switch names,
+;;; switch description, and argument description.  The description and
+;;; argument description can be NIL.  (Should probably do something
+;;; better, but this is good enough for the little bit of processing
+;;; that we need.)  DEFSWITCH sets this, and INVOKE-SWITCH-DEMONS
+;;; makes sure all the switches it sees are on this list.
 ;;;
 (defvar *legal-cmd-line-switches* nil)
 
@@ -161,28 +164,41 @@
 ;;;
 (defun invoke-switch-demons (&optional (switches *command-line-switches*)
 					 (demons *command-switch-demons*))
-  (dolist (switch switches t)
-    (let* ((name (cmd-switch-name switch))
-	   (demon (cdr (assoc name demons :test #'string-equal))))
-      (cond (demon (funcall demon switch))
-	    ((or (member name *legal-cmd-line-switches* :test #'string-equal)
-		 (not *complain-about-illegal-switches*)))
-	    (t (warn (intl:gettext "~S is an illegal switch") switch)))
-      (lisp::finish-standard-output-streams))))
+  (flet ((invoke-demon (switch)
+	   (let* ((name (cmd-switch-name switch))
+		  (demon (cdr (assoc name demons :test #'string-equal))))
+	     (cond (demon (funcall demon switch))
+		   ((or (member name *legal-cmd-line-switches* :test #'string-equal :key #'car)
+			(not *complain-about-illegal-switches*)))
+		   (t (warn (intl:gettext "~S is an illegal switch") switch)))
+	     (lisp::finish-standard-output-streams))))
+    ;; We want to process -help (or --help) first, if it's given.
+    ;; Since we're asking for help, we don't want to process any of
+    ;; the other switches.
+    (let ((maybe-help (or (find "help" switches :key #'cmd-switch-name :test #'string-equal)
+			  (find "-help" switches :key #'cmd-switch-name :test #'string-equal))))
+      (if maybe-help
+	(invoke-demon maybe-help)
+	(dolist (switch switches t)
+	  (invoke-demon switch))))))
 
-(defmacro defswitch (name &optional function)
+(defmacro defswitch (name &optional function docstring arg-name)
   "Associates function with the switch name in *command-switch-demons*.  Name
    is a simple-string that does not begin with a hyphen, unless the switch name
    really does begin with one.  Function is optional, but defining the switch
    is necessary to keep invoking switch demons from complaining about illegal
-   switches.  This can be inhibited with *complain-about-illegal-switches*."
+   switches.  This can be inhibited with *complain-about-illegal-switches*.
+
+   The optional arguments, arg-name and docstring, are used by -help
+   to describe the switch.  Arg-name is a string naming the argument
+   (if any) for the switch.  Docstring describe the switch."
   (let ((gname (gensym))
 	(gfunction (gensym)))
     `(let ((,gname ,name)
 	   (,gfunction ,function))
        (check-type ,gname simple-string)
        (check-type ,gfunction (or symbol function) (intl:gettext "a symbol or function"))
-       (push ,gname *legal-cmd-line-switches*)
+       (push (list ,gname ,docstring,arg-name ) *legal-cmd-line-switches*)
        (when ,gfunction
 	 (push (cons ,gname ,gfunction) *command-switch-demons*)))))
 
@@ -197,26 +213,107 @@
 	(eval form)
 	(lisp::finish-standard-output-streams)
 	(setf start next)))))
-(defswitch "eval" #'eval-switch-demon)
+
+;; Docstrings should have lines longer than 72 characters so that we
+;; can print out the docstrings nicely on one line for help.
+;;                                                                     | <-- char 72
+(defswitch "eval" #'eval-switch-demon
+  "Evaluate the specified Lisp expression during the start up
+  sequence.  the value of the form will not be printed unless it is
+  wrapped in a form that does output."
+  "expression")
 
 (defun load-switch-demon (switch)
   (load (cmd-switch-arg switch)))
-(defswitch "load" #'load-switch-demon)
+
+(defswitch "load" #'load-switch-demon
+  "Loads the specified file into Lisp before entering Lisp's
+  read-eval-print loop."
+  "filename")
 
 (defun cmd-switch-arg (switch)
   (or (cmd-switch-value switch)
       (car (cmd-switch-words switch))
       (car *command-line-words*)))
 
-(defswitch "core")
-(defswitch "init")
-(defswitch "noinit")
-(defswitch "nositeinit")
-(defswitch "hinit")
-(defswitch "batch")
-(defswitch "dynamic-space-size")
-(defswitch "lib")
-(defswitch "quiet")
-(defswitch "debug-lisp-search")
+(defswitch "core" nil
+  "Specifies the suspended Lisp image ('core' file) to start up"
+  "corefile")
+
+(defswitch "init" nil
+  "Specifies the name of a file containing user customizations that is
+  to be loaded each time Lisp starts up (default ~/init or
+  ~/.cmucl-init.lisp).  The loader loads any existing compiled binary
+  or the lisp source if none."
+  "filename")
+
+(defswitch "noinit" nil
+  "Suppresses loading of the init file and also prevents -edit from
+  loading the Hemlock init file.")
+
+(defswitch "nositeinit" nil
+  "Suppresses loading of the site-init site specific initialization
+  file.")
+
+(defswitch "hinit" nil
+  "Specifies the name of the Hemlock init file (default ~/hemlock-init
+  or ~/.hemlock-init), which is loaded only when Hemlock is started."
+  "filename")
+
+(defswitch "batch" nil
+  "Causes Lisp to run in batch mode where all input is directed from
+  standard-input.  A unix return code of 0 is returned upon
+  encountering an EOF, while any unhandled error condition will cause
+  an immediate exit with a return code of 1, instead of entering the
+  debugger.")
+
+(defswitch "dynamic-space-size" nil
+  "Specifies the number of megabytes that should be allocated to the
+  heap.  If not specified, a platform- specific default is used.  The
+  actual maximum allowed heap size is platform-specific."
+  "megabytes")
+
+(defswitch "lib" nil
+  "A colon-separated list of directories to be used for the library:
+  search-list."
+  "libpath")
+
+(defswitch "quiet" nil
+  "Causes Lisp to start up silently, disabling printing of the herald
+  and causing most unnecessary noise, like GC messages,load messages,
+  etc. to be suppressed.")
+
+(defswitch "debug-lisp-search" nil
+  "Enables printing of messages indication how CMUCL is searching for
+  its default core file.")
+
 #+x86
-(defswitch "fpu")
+(defswitch "fpu" nil
+  "Specifies what kind of floating-point support should be used on x86
+  systems.  If 'x87', Lisp will use the x87 floating-point unit; if
+  'sse2', Lisp uses SSE2 floating-point unit. The default is
+  'auto',which causes Lisp to check to see if SSE2 is available.  If
+  so, then SSE2 is used.  If the SSE2 core file cannot be found,Lisp
+  will fallback to the x87 core, which can run on any machine."
+  "mode")
+
+(defun help-switch-demon (switch)
+  (declare (ignore switch))
+  (format t "~&Usage: ~A <options>~2%" *command-line-utility-name*)
+  (dolist (s (sort *legal-cmd-line-switches* #'string<
+		   :key #'car))
+    (destructuring-bind (name doc arg)
+	s
+      (format t "    -~A ~@[~A~]~%" name arg)
+      ;; Poor man's formatting of the help string
+      (with-input-from-string (stream doc)
+	(loop for line = (read-line stream nil nil)
+	   while line
+	   do (format t "~8T~A~%" line)))))
+  (ext:quit))
+  
+(defswitch "help" #'help-switch-demon
+  "Print out the command line options and exit")
+
+(defswitch "-help" #'help-switch-demon
+  "Same as -help.")
