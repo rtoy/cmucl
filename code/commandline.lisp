@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.23 2010/05/16 12:29:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.24 2010/05/16 14:51:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -304,12 +304,12 @@
 
 (defun help-switch-demon (switch)
   (declare (ignore switch))
-  (format t "~&Usage: ~A <options>~2%" *command-line-utility-name*)
+  (format t (intl:gettext "~&Usage: ~A <options>~2%") *command-line-utility-name*)
   (dolist (s (sort *legal-cmd-line-switches* #'string<
 		   :key #'car))
     (destructuring-bind (name doc arg)
 	s
-      (format t "    -~A ~@[~A~]~%" name (intl:gettext arg))
+      (format t "    -~A ~@[~A~]~%" name (if arg (intl:gettext arg)))
       ;; Poor man's formatting of the help string
       (with-input-from-string (stream (intl:gettext doc))
 	(loop for line = (read-line stream nil nil)
