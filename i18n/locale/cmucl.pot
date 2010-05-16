@@ -5812,23 +5812,21 @@ msgstr ""
 #: src/code/commandline.lisp
 msgid ""
 "When True runs lisp with its input coming from standard-input.\n"
-"   If an error is detected returns error code 1, otherwise 0."
+"  If an error is detected returns error code 1, otherwise 0."
 msgstr ""
 
 #: src/code/commandline.lisp
 msgid ""
-"Accepts the name of a switch as a string and returns the value of the\n"
-"   switch.  If no value was specified, then any following words are returned"
-".\n"
-"   If there are no following words, then t is returned.  If the switch was "
-"not\n"
-"   specified, then nil is returned."
+"Accepts the name of a switch as a string and returns the value of\n"
+"  the switch.  If no value was specified, then any following words are\n"
+"  returned.  If there are no following words, then t is returned.  If\n"
+"  the switch was not specified, then nil is returned."
 msgstr ""
 
 #: src/code/commandline.lisp
 msgid ""
-"When set, invoking switch demons complains about illegal switches that have\n"
-"   not been defined with DEFSWITCH."
+"When set, invoking switch demons complains about illegal switches\n"
+"  that have not been defined with DEFSWITCH."
 msgstr ""
 
 #: src/code/commandline.lisp
@@ -5837,18 +5835,144 @@ msgstr ""
 
 #: src/code/commandline.lisp
 msgid ""
-"Associates function with the switch name in *command-switch-demons*.  Name\n"
-"   is a simple-string that does not begin with a hyphen, unless the switch "
-"name\n"
-"   really does begin with one.  Function is optional, but defining the "
-"switch\n"
-"   is necessary to keep invoking switch demons from complaining about "
-"illegal\n"
-"   switches.  This can be inhibited with *complain-about-illegal-switches*."
+"Associates function with the switch name in\n"
+"  *command-switch-demons*.  Name is a simple-string that does not\n"
+"  begin with a hyphen, unless the switch name really does begin with\n"
+"  one.  Function is optional, but defining the switch is necessary to\n"
+"  keep invoking switch demons from complaining about illegal switches.\n"
+"  This can be inhibited with *complain-about-illegal-switches*.\n"
+"\n"
+"  The optional arguments, arg-name and docstring, are used by -help to\n"
+"  describe the switch.  Arg-name is a string naming the argument (if\n"
+"  any) for the switch.  Docstring describe the switch."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"Evaluate the specified Lisp expression during the start up\n"
+"  sequence.  the value of the form will not be printed unless it is\n"
+"  wrapped in a form that does output."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "expression"
 msgstr ""
 
 #: src/code/commandline.lisp
 msgid "a symbol or function"
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"Loads the specified file into Lisp before entering Lisp's\n"
+"  read-eval-print loop."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "filename"
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "Specifies the suspended Lisp image ('core' file) to start up"
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "corefile"
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"Specifies the name of a file containing user customizations that is\n"
+"  to be loaded each time Lisp starts up (default ~/init or\n"
+"  ~/.cmucl-init.lisp).  The loader loads any existing compiled binary\n"
+"  or the lisp source if none."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"Suppresses loading of the init file and also prevents -edit from\n"
+"  loading the Hemlock init file."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"Suppresses loading of the site-init site specific initialization\n"
+"  file."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"Specifies the name of the Hemlock init file (default ~/hemlock-init\n"
+"  or ~/.hemlock-init), which is loaded only when Hemlock is started."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"Causes Lisp to run in batch mode where all input is directed from\n"
+"  standard-input.  A unix return code of 0 is returned upon\n"
+"  encountering an EOF, while any unhandled error condition will cause\n"
+"  an immediate exit with a return code of 1, instead of entering the\n"
+"  debugger."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"Specifies the number of megabytes that should be allocated to the\n"
+"  heap.  If not specified, a platform- specific default is used.  The\n"
+"  actual maximum allowed heap size is platform-specific."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "megabytes"
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"A colon-separated list of directories to be used for the library:\n"
+"  search-list."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "libpath"
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"Causes Lisp to start up silently, disabling printing of the herald\n"
+"  and causing most unnecessary noise, like GC messages,load messages,\n"
+"  etc. to be suppressed."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"Enables printing of messages indication how CMUCL is searching for\n"
+"  its default core file."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"Specifies what kind of floating-point support should be used on x86\n"
+"  systems.  If 'x87', Lisp will use the x87 floating-point unit; if\n"
+"  'sse2', Lisp uses SSE2 floating-point unit. The default is\n"
+"  'auto',which causes Lisp to check to see if SSE2 is available.  If\n"
+"  so, then SSE2 is used.  If the SSE2 core file cannot be found,Lisp\n"
+"  will fallback to the x87 core, which can run on any machine."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "mode"
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "~&Usage: ~A <options>~2%"
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "Print out the command line options and exit"
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "Same as -help."
 msgstr ""
 
 #: src/code/env-access.lisp
@@ -9886,35 +10010,36 @@ msgstr ""
 
 #: src/code/module.lisp
 msgid ""
-"Adds a new module name to *modules* indicating that it has been loaded.\n"
-"   Module-name may be any valid string designator.  All comparisons are\n"
-"   done using string=, i.e. module names are case-sensitive."
+"Adds a new module name to *modules* indicating that it has been\n"
+"  loaded.  Module-name may be any valid string designator.  All\n"
+"  comparisons are done using string=, i.e. module names are\n"
+"  case-sensitive."
 msgstr ""
 
 #: src/code/module.lisp
 msgid ""
-"Loads a module when it has not been already.  Pathname, if supplied,\n"
-"   is a single pathname or list of pathnames to be loaded if the module\n"
-"   needs to be.  If pathname is not supplied, then functions from the list\n"
-"   *MODULE-PROVIDER-FUNCTIONS* are called in order with the stringified\n"
-"   MODULE-NAME as the argument, until one of them returns non-NIL.  By\n"
-"   default the functions MODULE-PROVIDE-CMUCL-DEFMODULE and MODULE-PROVIDE-\n"
-"   CMUCL-LIBRARY are on this list of functions, in that order.  The first\n"
-"   of those looks for a list of files that was registered by a EXT:DEFMODULE"
+"Loads a module when it has not been already.  Pathname, if\n"
+"  supplied, is a single pathname or list of pathnames to be loaded if\n"
+"  the module needs to be.  If pathname is not supplied, then functions\n"
+"  from the list *MODULE-PROVIDER-FUNCTIONS* are called in order with\n"
+"  the stringified MODULE-NAME as the argument, until one of them\n"
+"  returns non-NIL.  By default the functions\n"
+"  MODULE-PROVIDE-CMUCL-DEFMODULE and MODULE-PROVIDE- CMUCL-LIBRARY are\n"
+"  on this list of functions, in that order.  The first of those looks\n"
+"  for a list of files that was registered by a EXT:DEFMODULE form.  If\n"
+"  the module has not been defined, then the second function causes a\n"
+"  file to be loaded whose name is formed by merging \"modules:\" and\n"
+"  the concatenation of module-name with the suffix \"-LIBRARY\".  Note\n"
+"  that both the module-name and the suffix are each, separately,\n"
+"  converted from :case :common to :case :local.  This merged name will\n"
+"  be probed with both a .lisp and .fasl extensions, calling LOAD if it\n"
+"  exists.\n"
 "\n"
-"   form.  If the module has not been defined, then the second function\n"
-"   causes a file to be loaded whose name is formed by merging \"modules:\"\n"
-"   and the concatenation of module-name with the suffix \"-LIBRARY\".\n"
-"   Note that both the module-name and the suffix are each, separately,\n"
-"   converted from :case :common to :case :local.  This merged name will be\n"
-"   probed with both a .lisp and .fasl extensions, calling LOAD if it "
-"exists.\n"
+"  Note that in all cases covered above, user code is responsible for\n"
+"  calling PROVIDE to indicate a successful load of the module.\n"
 "\n"
-"   Note that in all cases covered above, user code is responsible for\n"
-"   calling PROVIDE to indicate a successful load of the module.\n"
-"\n"
-"   While loading any files, *load-verbose* is bound to *require-verbose*\n"
-"   which defaults to t."
+"  While loading any files, *load-verbose* is bound to *require-verbose*\n"
+"  which defaults to t."
 msgstr ""
 
 #: src/code/module.lisp
@@ -9928,10 +10053,10 @@ msgstr ""
 #: src/code/module.lisp
 msgid ""
 "Derive a default pathname to try to load for an undefined module\n"
-"named module-name.  The default pathname is constructed from the\n"
-"module-name by appending the suffix \"-LIBRARY\" to it, and merging\n"
-"with \"modules:\".  Note that both the module-name and the suffix are\n"
-"each, separately, converted from :case :common to :case :local."
+"  named module-name.  The default pathname is constructed from the\n"
+"  module-name by appending the suffix \"-LIBRARY\" to it, and merging\n"
+"  with \"modules:\".  Note that both the module-name and the suffix\n"
+"  are each, separately, converted from :case :common to :case :local."
 msgstr ""
 
 #: src/code/eval.lisp
