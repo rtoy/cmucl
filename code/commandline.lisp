@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.22 2010/05/15 19:36:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.23 2010/05/16 12:29:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -195,11 +195,15 @@
   any) for the switch.  Docstring describe the switch."
   (let ((gname (gensym))
 	(gfunction (gensym)))
+    (when docstring
+      (intl::note-translatable intl::*default-domain* docstring))
+    (when arg-name
+      (intl::note-translatable intl::*default-domain* arg-name))
     `(let ((,gname ,name)
 	   (,gfunction ,function))
        (check-type ,gname simple-string)
        (check-type ,gfunction (or symbol function) (intl:gettext "a symbol or function"))
-       (push (list ,gname ,docstring,arg-name ) *legal-cmd-line-switches*)
+       (push (list ,gname ,docstring ,arg-name) *legal-cmd-line-switches*)
        (when ,gfunction
 	 (push (cons ,gname ,gfunction) *command-switch-demons*)))))
 
@@ -305,9 +309,9 @@
 		   :key #'car))
     (destructuring-bind (name doc arg)
 	s
-      (format t "    -~A ~@[~A~]~%" name arg)
+      (format t "    -~A ~@[~A~]~%" name (intl:gettext arg))
       ;; Poor man's formatting of the help string
-      (with-input-from-string (stream doc)
+      (with-input-from-string (stream (intl:gettext doc))
 	(loop for line = (read-line stream nil nil)
 	   while line
 	   do (format t "~8T~A~%" line)))))
