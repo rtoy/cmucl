@@ -2837,9 +2837,8 @@ msgid "Returns the 1st object in a list."
 msgstr ""
 
 #: src/code/list.lisp
-#, fuzzy
 msgid "Returns all but the first object."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: src/code/list.lisp
 msgid "Returns the 2nd object in a list."
@@ -3126,9 +3125,8 @@ msgid "~S is too large an index for SETF of NTH."
 msgstr ""
 
 #: src/code/list.lisp
-#, fuzzy
 msgid "Returns what was passed to it."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: src/code/list.lisp
 msgid ""
@@ -3171,16 +3169,14 @@ msgid ""
 msgstr ""
 
 #: src/code/list.lisp
-#, fuzzy
 msgid ""
 "Returns tail of list beginning with first element satisfying test(element)"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: src/code/list.lisp
-#, fuzzy
 msgid ""
 "Returns tail of list beginning with first element not satisfying test(el)"
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: src/code/list.lisp
 msgid ""
@@ -9111,9 +9107,8 @@ msgid "Cannot find ~S: ~A"
 msgstr ""
 
 #: src/code/fd-stream.lisp
-#, fuzzy
 msgid "Return NIL."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: src/code/fd-stream.lisp
 msgid "Error opening ~S, ~A."
@@ -15463,25 +15458,22 @@ msgid ""
 msgstr ""
 
 #: src/compiler/ctype.lisp
-#, fuzzy
 msgid "Function called with ~R argument, but wants exactly ~R."
 msgid_plural "Function called with ~R arguments, but wants exactly ~R."
-msgstr[0] "현재의 역동적인 공간은 ~D입니다.~%"
-msgstr[1] "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr[0] ""
+msgstr[1] ""
 
 #: src/compiler/ctype.lisp
-#, fuzzy
 msgid "Function called with ~R argument, but wants at least ~R."
 msgid_plural "Function called with ~R arguments, but wants at least ~R."
-msgstr[0] "현재의 역동적인 공간은 ~D입니다.~%"
-msgstr[1] "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr[0] ""
+msgstr[1] ""
 
 #: src/compiler/ctype.lisp
-#, fuzzy
 msgid "Function called with ~R argument, but wants at most ~R."
 msgid_plural "Function called with ~R arguments, but wants at most ~R."
-msgstr[0] "현재의 역동적인 공간은 ~D입니다.~%"
-msgstr[1] "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr[0] ""
+msgstr[1] ""
 
 #: src/compiler/ctype.lisp
 msgid "Function has an odd number of arguments in the keyword portion."
@@ -15534,27 +15526,24 @@ msgid "~S is not a known argument keyword."
 msgstr ""
 
 #: src/compiler/ctype.lisp
-#, fuzzy
 msgid "Function previously called with ~R argument, but wants at least ~R."
 msgid_plural ""
 "Function previously called with ~R arguments, but wants at least ~R."
-msgstr[0] "현재의 역동적인 공간은 ~D입니다.~%"
-msgstr[1] "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr[0] ""
+msgstr[1] ""
 
 #: src/compiler/ctype.lisp
-#, fuzzy
 msgid "Function previously called with ~R argument, but wants at most ~R."
 msgid_plural ""
 "Function previously called with ~R arguments, but wants at most ~R."
-msgstr[0] "현재의 역동적인 공간은 ~D입니다.~%"
-msgstr[1] "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr[0] ""
+msgstr[1] ""
 
 #: src/compiler/ctype.lisp
-#, fuzzy
 msgid ""
 "Function previously called with an odd number of arguments in ~\n"
 "\t      the keyword portion."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: src/compiler/ctype.lisp
 msgid "Can't tell whether previous ~? argument type ~S is a ~S."
@@ -18590,11 +18579,10 @@ msgid "Can't local-call functions with &MORE args."
 msgstr ""
 
 #: src/compiler/locall.lisp
-#, fuzzy
 msgid ""
 "Function called with odd number of ~\n"
 "\t  \t\t     arguments in keyword portion."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: src/compiler/locall.lisp
 msgid "Non-constant keyword in keyword call."
@@ -20598,12 +20586,11 @@ msgid "~@<Can't use anonymous or undefined class as constant: ~S~:@>"
 msgstr ""
 
 #: src/pcl/gray-streams.lisp
-#, fuzzy
 msgid ""
 "Returns a type specifier for the kind of object returned by the\n"
 "  Stream. Class FUNDAMENTAL-CHARACTER-STREAM provides a default method\n"
 "  which returns CHARACTER."
-msgstr "현재의 역동적인 공간은 ~D입니다.~%"
+msgstr ""
 
 #: src/pcl/gray-streams.lisp
 msgid ""
@@ -20787,78 +20774,3 @@ msgstr ""
 msgid "    Gray Streams Protocol Support"
 msgstr ""
 
-#, fuzzy
-#~ msgid "Skip this form."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#, fuzzy
-#~ msgid ""
-#~ "Function previously called with ~R argument~:P, but wants at least ~R."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#, fuzzy
-#~ msgid ""
-#~ "Function previously called with ~R argument~:P, but wants at most ~R."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Returns   which defaults to EQL."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Returns  UNIX system call."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Unix-ge"
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Unix-ge   current process."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Predica"
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Peeks a"
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Outputs"
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Outputs  stream."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid ""
-#~ "Outputsthe\n"
-#~ "  specified stream."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Outputs  space to the stream."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Returns   slashification on."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Returns  slashification off."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Set the   Return translations."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "The exc  to a function, including rest args."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "The exc  have."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Reads a   return it."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Exclusi  pointer."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Functio\t      the keyword portion."
-#~ msgstr "현재의 역동적인 공간은 ~D입니다.~%"
-
-#~ msgid "Read-Only Space Usage:  ~13:D 바이트 (~4:D 메가바이트의) 아웃.~%"
-#~ msgstr "읽기 전용 공간 사용:  ~13:D 바이트 (~4:D 메가바이트의) 아웃.~%"
-
-#~ msgid "Static Space Usage:     ~13:D 바이트 (~4:D 메가바이트의) 아웃.~%"
-#~ msgstr "정적 공간을 사용:     ~13:D 바이트 (~4:D 메가바이트의) 아웃.~%"
