@@ -46,6 +46,14 @@ New in this release:
     - Source information (file) for defstructs and deftypes is now
       provided.  DESCRIBE will now print out the name of the file
       where the defstruct/deftype was defined.
+    - ASDF2 and MK-DEFSYS have been added as contrib modules.  Use
+      (require 'asdf) or (require 'defsystem) to load these,
+      respectively. 
+    - The previous cmu-contrib module no longer exists.  Just use
+      (require 'module-name) to load the desired contrib module.
+    - A new switch, -help, has been added.  These print out brief
+      summary of the available command line switches and then exits.
+      You may also use --help, which is an alias for -help.
 
   * ANSI compliance fixes:
     - COMPILE will update the macro-function if the specified name
