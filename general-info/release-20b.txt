@@ -155,7 +155,7 @@ New in this release:
     - UNIX-GETRLIMIT added for solaris and darwin/x86.
     - TRANSLATE-PATHNAMES now creates the resulting path to be an
       absolute or relative path according to whether the TO pathname
-      is abslute or relative.  Previously, the result was take from
+      is absolute or relative.  Previously, the result was taken from
       the SOURCE pathname, except if TO were absolute, in which case
       the result was absolute.
     - Add MAC as an alias to the CR composing external format.
