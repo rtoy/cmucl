@@ -17,7 +17,7 @@ msgstr ""
 
 #: src/code/struct.lisp
 msgid "The size of a stream in-buffer."
-msgstr ""
+msgstr "스트림 인 버퍼의 크기."
 
 #: src/pcl/cpl.lisp src/pcl/dfun.lisp src/pcl/vector.lisp src/pcl/boot.lisp
 #: src/pcl/cache.lisp src/pcl/fngen.lisp src/pcl/defs.lisp src/pcl/info.lisp
@@ -45,17 +45,17 @@ msgstr ""
 #: src/code/class.lisp src/code/typedefs.lisp src/code/error.lisp
 #: src/code/fwrappers.lisp src/code/struct.lisp
 msgid "Class not yet defined: ~S"
-msgstr ""
+msgstr "분류명 정의되지 않음 : ~S"
 
 #: src/code/sysmacs.lisp
 msgid "Register the feature as having influenced the CMUCL build process."
-msgstr ""
+msgstr "CMUCL 구축 과정에 영향을 주는 속성으로 입력."
 
 #: src/code/sysmacs.lisp
 msgid ""
 "Register the feature as having influenced the CMUCL build process,\n"
 "and also the CMUCL C runtime."
-msgstr ""
+msgstr "CMUCL 구축 과정과 CMUCL C 런타임에 영향을 주는 속성으로 입력."
 
 #: src/code/sysmacs.lisp
 msgid ""
@@ -20773,4 +20773,3 @@ msgstr ""
 #: src/pcl/gray-streams.lisp
 msgid "    Gray Streams Protocol Support"
 msgstr ""
-
