@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.30 2010/02/01 16:12:04 rtoy Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.31 2010/05/21 19:26:53 rtoy Rel $
  *
  */
 
@@ -139,7 +139,16 @@
 
 #define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)
 #ifdef GENCGC
+#if defined(DARWIN)
+/*
+ * On Darwin, /usr/lib/dyld appears to always be loaded at address
+ * #x8fe2e000.  Hence, the maximum dynamic space size is 1206050816
+ * bytes, or just over 1.150 GB.  Set the limit to 1.150 GB.
+ */
+#define DYNAMIC_SPACE_SIZE	(0x47E00000U)	/* 1.150GB */
+#else
 #define DYNAMIC_SPACE_SIZE	(0x67800000U)	/* 1.656GB */
+#endif
 #else
 #define DYNAMIC_SPACE_SIZE	(0x04000000U)	/* 64MB */
 #endif

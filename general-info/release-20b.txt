@@ -54,6 +54,9 @@ New in this release:
     - A new switch, -help, has been added.  These print out brief
       summary of the available command line switches and then exits.
       You may also use --help, which is an alias for -help.
+    - CMUCL no longer crashes on Mac OS X if the dynamic space size is
+      too large.  This was caused by an erroneous value for the
+      maximum dynamic space size. 
 
   * ANSI compliance fixes:
     - COMPILE will update the macro-function if the specified name
