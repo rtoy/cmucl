@@ -74,6 +74,9 @@ New in this release:
       ENSURE-GENERIC-FUNCTION. 
     - Default documentation for short form of
       DEFINE-METHOD-COMBINATION is NIL, not "".
+    - DEFINE-COMPILER-MACRO no longer sets the wrong block name for
+      SETF functions.  We also check that the name is a valid function
+      name; an error is signaled if it's invalid.
 
   * Bugfixes:
     - On Unicode builds, printing of '|\|| and '|`| was incorrect

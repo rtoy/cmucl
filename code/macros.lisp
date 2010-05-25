@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.119 2010/04/27 23:29:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.120 2010/05/25 20:04:33 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -150,21 +150,25 @@
   "Define a compiler-macro for NAME."
   (let ((whole (gensym "WHOLE-"))
 	(environment (gensym "ENV-")))
-    (multiple-value-bind
-	(body local-decs doc)
-	(parse-defmacro lambda-list whole body name 'define-compiler-macro
-			:environment environment)
-      (when doc
-	(intl::note-translatable intl::*default-domain* doc))
-      (let ((def `(lambda (,whole ,environment)
-		    ,@local-decs
-		    (block ,name
-		      ,body))))
-	`(progn
-	   (eval-when (:compile-toplevel)
-	     (c::do-compiler-macro-compile-time ',name #',def))
-	   (eval-when (:load-toplevel :execute)
-	     (c::%define-compiler-macro ',name #',def ',lambda-list ,doc)))))))
+    (multiple-value-bind (validp block-name)
+	(valid-function-name-p name)
+      (unless validp
+	(simple-program-error (intl:gettext "~S is not a valid function name.") name))
+      (multiple-value-bind
+	    (body local-decs doc)
+	  (parse-defmacro lambda-list whole body name 'define-compiler-macro
+			  :environment environment)
+	(when doc
+	  (intl::note-translatable intl::*default-domain* doc))
+	(let ((def `(lambda (,whole ,environment)
+		      ,@local-decs
+		      (block ,block-name
+			,body))))
+	  `(progn
+	     (eval-when (:compile-toplevel)
+	       (c::do-compiler-macro-compile-time ',name #',def))
+	     (eval-when (:load-toplevel :execute)
+	       (c::%define-compiler-macro ',name #',def ',lambda-list ,doc))))))))
 
 
 (defun c::%define-compiler-macro (name definition lambda-list doc)
