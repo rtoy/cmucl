@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.37 2010/04/20 17:57:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.38 2010/05/27 23:43:16 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -667,7 +667,7 @@
 		(intl:ngettext "Definition has ~R ~A arg, but ~A has ~R."
 			       "Definition has ~R ~A args, but ~A has ~R."
 			       x)
-		x what x where y))))
+		x what where y))))
       ;; TRANSLATORS:  Usage is "Definition has <n> FIXED args but <where> <m>"
       ;; TRANSLATORS:  Translate FIXED above appropriately.
       (frob min (length req) (intl:gettext "fixed"))
