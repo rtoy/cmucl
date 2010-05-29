@@ -35,7 +35,8 @@ msgstr "플로트를 포인터로 변환"
 msgid ""
 "Load TN allocated, but no move function?~@\n"
 "\t           VM definition inconsistent, recompile and try again."
-msgstr "로드 티엔 만들어졌으나, 이동 기능은 없나?~@\n"
+msgstr ""
+"로드 티엔 만들어졌으나, 이동 기능은 없나?~@\n"
 "\t           VM의 정의에 일관성 없음, 컴파일하여 다시 시도."
 
 #: src/compiler/x86/float-sse2.lisp

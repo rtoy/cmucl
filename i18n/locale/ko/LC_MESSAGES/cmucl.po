@@ -14140,6 +14140,10 @@ msgstr ""
 msgid "Define a compiler-macro for NAME."
 msgstr ""
 
+#: src/code/macros.lisp
+msgid "~S is not a valid function name."
+msgstr ""
+
 #: src/compiler/ir1tran.lisp src/code/macros.lisp
 msgid "Symbol macro name is not a symbol: ~S."
 msgstr ""

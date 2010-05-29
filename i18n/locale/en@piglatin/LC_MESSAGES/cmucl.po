@@ -17621,6 +17621,10 @@ msgstr "Isableday ethay ackagepay's efinitionday-ocklay enthay ontinuecay"
 msgid "Define a compiler-macro for NAME."
 msgstr "Efineday away ompilercay-acromay orfay NAME."
 
+#: src/code/macros.lisp
+msgid "~S is not a valid function name."
+msgstr "~S isway otnay away alidvay unctionfay amenay."
+
 #: src/compiler/ir1tran.lisp src/code/macros.lisp
 msgid "Symbol macro name is not a symbol: ~S."
 msgstr "Ymbolsay acromay amenay isway otnay away ymbolsay: ~S."
