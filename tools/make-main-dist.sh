@@ -139,6 +139,17 @@ do
     install ${GROUP} ${OWNER} -m 0644 src/$f $DESTDIR/lib/cmucl/lib/$f
 done
 
+# Touch the fasl files for asdf and defsystem, so we don't get notes
+# about the source being newer than object.
+sleep 1;
+touch $DESTDIR/lib/cmucl/lib/contrib/asdf/asdf.$FASL
+touch $DESTDIR/lib/cmucl/lib/contrib/defsystem/defsystem.$FASL
+if [ "$FASL" = "x86f" ]; then
+    # For x87, we want both x86f and sse2f
+    touch $DESTDIR/lib/cmucl/lib/contrib/asdf/asdf.x86f
+    touch $DESTDIR/lib/cmucl/lib/contrib/defsystem/defsystem.x86f
+fi
+
 install ${GROUP} ${OWNER} -m 0644 src/general-info/cmucl.1 \
 	$DESTDIR/${MANDIR}/
 install ${GROUP} ${OWNER} -m 0644 src/general-info/lisp.1 \
