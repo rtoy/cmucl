@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.86 2010/04/20 17:57:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.87 2010/06/01 20:27:09 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -401,7 +401,7 @@
                CMUCL dumped on: ~A on ~A~@
 	       Targeted for ~A, FASL version ~X~%"
 	      where
-	      (ext:format-universal-time nil (get-universal-time))
+	      (ext:format-universal-time nil (get-universal-time) :style :iso8601)
 	      (machine-instance) compiler-version
 	      (lisp-implementation-version)
 	      (let ((dump-time (if (boundp 'lisp::*cmucl-core-dump-time*)

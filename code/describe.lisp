@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.57 2010/04/20 17:57:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.58 2010/06/01 20:27:09 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -316,13 +316,14 @@
 	(format t (intl:gettext "~&On ~A it was compiled from:")
 		(format-universal-time nil
 				       (c::debug-source-compiled
-					(first sources))))
+					(first sources))
+				       :style :iso8601))
 	(dolist (source sources)
 	  (let ((name (c::debug-source-name source)))
 	    (ecase (c::debug-source-from source)
 	      (:file
 	       (format t (intl:gettext "~&~A~%  Created: ") (namestring name))
-	       (ext:format-universal-time t (c::debug-source-created source))
+	       (ext:format-universal-time t (c::debug-source-created source) :style :iso8601)
 	       (let ((comment (c::debug-source-comment source)))
 		 (when comment
 		   (format t (intl:gettext "~&  Comment: ~A") comment))))

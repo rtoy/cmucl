@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.156 2010/04/20 17:57:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.157 2010/06/01 20:27:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1707,14 +1707,14 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
   (compiler-mumble (intl:gettext "~2&; Python version ~A, VM version ~A on ~A.~%")
 		   compiler-version (backend-version *backend*)
 		   (ext:format-universal-time nil (get-universal-time)
-					      :style :government
+					      :style :iso8601
 					      :print-weekday nil
 					      :print-timezone nil))
   (dolist (x (source-info-files source-info))
     (compiler-mumble (intl:gettext "; Compiling: ~A ~A~%")
 		     (namestring (file-info-name x))
 		     (ext:format-universal-time nil (file-info-write-date x)
-						:style :government
+						:style :iso8601
 						:print-weekday nil
 						:print-timezone nil)))
   (compiler-mumble "~%")
