@@ -77,9 +77,9 @@ New in this release:
     - DEFINE-COMPILER-MACRO no longer sets the wrong block name for
       SETF functions.  We also check that the name is a valid function
       name; an error is signaled if it's invalid.
-    - DELETE-FILE, ENSURE-DIRECTORIES-EXIST, FILE-AUTHOR, and OPEN now
-      merge the given pathname with *DEFAULT-PATHNAME-DEFAULTS* as
-      required by CLHS sec 19.2.3.
+    - DELETE-FILE, ENSURE-DIRECTORIES-EXIST, FILE-AUTHOR,
+      FILE-WRITE-DATE, and OPEN now merge the given pathname with
+      *DEFAULT-PATHNAME-DEFAULTS* as required by CLHS sec 19.2.3.
 
   * Bugfixes:
     - On Unicode builds, printing of '|\|| and '|`| was incorrect

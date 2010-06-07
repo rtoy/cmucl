@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.111 2010/06/07 22:10:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.112 2010/06/07 22:52:17 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1035,7 +1035,7 @@ optionally keeping some of the most recent old versions."
       (error 'simple-file-error 
 	     :pathname file
 	     :format-control (intl:gettext "Bad place for a wild pathname."))
-      (let ((name (unix-namestring file t)))
+      (let ((name (unix-namestring (merge-pathnames file) t)))
 	(when name
 	  (multiple-value-bind
 	      (res dev ino mode nlink uid gid rdev size atime mtime)
