@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.100 2010/04/20 17:57:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.101 2010/06/07 22:10:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2171,7 +2171,7 @@
 			 :if-does-not-exist))
     (setf (getf options :if-does-not-exist) if-does-not-exist))
 
-  (let ((filespec (pathname filename))
+  (let ((filespec (merge-pathnames filename))
 	(options (copy-list options))
 	(class (or class 'fd-stream)))
     (cond ((eq class 'fd-stream)

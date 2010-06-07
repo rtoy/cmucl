@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.110 2010/04/20 17:57:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.111 2010/06/07 22:10:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -961,7 +961,7 @@
 ;;;
 (defun delete-file (file)
   "Delete the specified file."
-  (let ((namestring (unix-namestring file t)))
+  (let ((namestring (unix-namestring (merge-pathnames file) t)))
     (when (streamp file)
       ;; Close the file, but don't try to revert or anything.  We want
       ;; to delete it, man!
@@ -1054,7 +1054,7 @@ optionally keeping some of the most recent old versions."
       (error 'simple-file-error
 	     :pathname file
 	     :format-control (intl:gettext "Bad place for a wild pathname."))
-      (let ((name (unix-namestring (pathname file) t)))
+      (let ((name (unix-namestring (merge-pathnames file) t)))
 	(unless name
 	  (error 'simple-file-error
 		 :pathname file
@@ -1458,7 +1458,7 @@ optionally keeping some of the most recent old versions."
   "Tests whether the directories containing the specified file
   actually exist, and attempts to create them if they do not.
   Portable programs should avoid using the :MODE keyword argument."
-  (let* ((pathname (pathname pathspec))
+  (let* ((pathname (merge-pathnames pathspec))
 	 (pathname (if (logical-pathname-p pathname)
 		       (translate-logical-pathname pathname)
 		       pathname))
