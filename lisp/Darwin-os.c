@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.27 2010/02/01 16:04:43 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.28 2010/06/22 03:24:49 rtoy Exp $
  *
  */
 
@@ -223,6 +223,16 @@ sc_reg(os_context_t * context, int offset)
 #define __fpu_fcw   fpu_fcw
 #define __fpu_fsw   fpu_fsw
 #define __fpu_mxcsr fpu_mxcsr
+#ifdef FEATURE_SSE2
+#define __fpu_xmm0 fpu_xmm0
+#define __fpu_xmm1 fpu_xmm1
+#define __fpu_xmm2 fpu_xmm2
+#define __fpu_xmm3 fpu_xmm3
+#define __fpu_xmm4 fpu_xmm4
+#define __fpu_xmm5 fpu_xmm5
+#define __fpu_xmm6 fpu_xmm6
+#define __fpu_xmm7 fpu_xmm7
+#endif
 #endif
 
 unsigned long *
@@ -278,6 +288,32 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
     }
     return NULL;
 }
+
+#ifdef FEATURE_SSE2
+unsigned char *
+os_sigcontext_fpu_reg_sse2(ucontext_t *scp, int index)
+{
+    switch (index) {
+    case 0:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm0;
+    case 1:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm1;
+    case 2:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm2;
+    case 3:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm3;
+    case 4:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm4;
+    case 5:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm5;
+    case 6:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm6;
+    case 7:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm7;
+    }
+    return NULL;
+}
+#endif
 
 unsigned int
 os_sigcontext_fpu_modes(ucontext_t *scp)
