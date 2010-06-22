@@ -80,6 +80,7 @@ $LISP "$@" -noinit -nositeinit <<EOF
 
 (setf lisp::*enable-package-locked-errors* nil)
 
+(intl::install)
 (setf (ext:search-list "target:")
       '("$CROSS/" "src/"))
 
