@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.36 2010/06/22 03:24:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.37 2010/06/22 15:35:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -250,7 +250,6 @@
 ;;; Like SIGCONTEXT-REGISTER, but returns the value of a float register.
 ;;; Format is the type of float to return.
 ;;;
-#-(and sse2 (or darwin))
 (defun sigcontext-float-register (scp index format)
   (declare (type (alien (* sigcontext)) scp))
   (let ((fn (extern-alien "os_sigcontext_fpu_reg"
@@ -259,16 +258,6 @@
 				    (integer 32)))))
     (coerce (sap-ref-long (alien-funcall fn scp index) 0) format)))
 
-#+(and sse2 (or darwin))
-(defun sigcontext-float-register (scp index format)
-  (declare (type (alien (* sigcontext)) scp))
-  (let ((fn (extern-alien "os_sigcontext_fpu_reg_sse2"
-			  (function system-area-pointer
-				    (* sigcontext)
-				    (integer 32)))))
-    (if (eq format 'double-float)
-	(coerce (sap-ref-double (alien-funcall fn scp index) 0) format)
-	(coerce (sap-ref-single (alien-funcall fn scp index) 0) format))))
 ;;;
 (defun %set-sigcontext-float-register (scp index format new)
   (declare (type (alien (* sigcontext)) scp))

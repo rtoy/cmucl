@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.48 2010/02/01 16:04:43 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.49 2010/06/22 15:35:23 rtoy Exp $
  *
  */
 
@@ -185,12 +185,20 @@ unsigned char *
 os_sigcontext_fpu_reg(ucontext_t *scp, int offset)
 {
     fpregset_t fpregs = scp->uc_mcontext.fpregs;
-
-    if (fpregs == NULL) {
-	return NULL;
-    } else {
-	return (unsigned char *) &fpregs->_st[offset];
+    unsigned char *reg = NULL;
+    
+    if (fpregs) {
+        if (offset < 8) {
+            reg = (unsigned char *) &fpregs->_st[offset];
+        } else {
+            struct _fpstate *fpstate;
+            fpstate = (struct _fpstate*) scp->uc_mcontext.fpregs;
+            if (fpstate->magic != 0xffff) {
+                reg = (unsigned char *) &fpstate->_xmm[offset - 8];
+            }
+        }
     }
+    return reg;
 }
 
 unsigned int

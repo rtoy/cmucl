@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-c-call.lisp,v 1.3 2010/03/19 15:19:01 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-c-call.lisp,v 1.4 2010/06/22 15:35:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,7 +49,7 @@
 	     ;; call_into_c as arranged for ST(0) to contain the result.
 	     ;; Move it to XMM0.
 	     (inst fstd (ea-for-df-stack temp))
-	     (inst movsd fr0-tn (ea-for-df-stack temp))))
+	     (inst movsd xmm0-tn (ea-for-df-stack temp))))
 	  (t
 	   ;; Setup the NPX for C; all the FP registers need to be
 	   ;; empty; pop them all.
@@ -72,7 +72,7 @@
 		  (inst fxch fr7-tn)	; move the result back to fr0
 		  ;; Move the result into xmm0.
 		  (inst fstd (ea-for-df-stack temp))
-		  (inst movsd fr0-tn (ea-for-df-stack temp)))
+		  (inst movsd xmm0-tn (ea-for-df-stack temp)))
 		 (t
 		  ;; Fill up the last x87 register
 		  (inst fldz)))))))

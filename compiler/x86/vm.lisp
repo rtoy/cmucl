@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.15 2010/03/19 15:19:01 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.16 2010/06/22 15:35:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,7 +96,7 @@
 
 ;;; added by jrd
 (eval-when (compile load eval)
-  (defvar *float-register-names* (make-array 8 :initial-element nil)))
+  (defvar *float-register-names* (make-array #-sse2 8 #+sse2 16 :initial-element nil)))
 (defreg fr0 0 :float)
 (defreg fr1 1 :float)
 (defreg fr2 2 :float)
@@ -105,7 +105,17 @@
 (defreg fr5 5 :float)
 (defreg fr6 6 :float)
 (defreg fr7 7 :float)
-(defregset float-regs fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7)
+(defreg xmm0 8 :float)
+(defreg xmm1 9 :float)
+(defreg xmm2 10 :float)
+(defreg xmm3 11 :float)
+(defreg xmm4 12 :float)
+(defreg xmm5 13 :float)
+(defreg xmm6 14 :float)
+(defreg xmm7 15 :float)
+(defregset float-regs
+    fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7
+    xmm0 xmm1 xmm2 xmm3 xmm4 xmm5 xmm6 xmm7)
 
 
 ;;;; SB definitions.
@@ -124,7 +134,7 @@
 ;;; sense to use the 387's idea of a stack.  8 separate registers is easier
 ;;; to deal with.
 ;;; (define-storage-base float-registers :finite :size 1)
-(define-storage-base float-registers :finite :size 8)
+(define-storage-base float-registers :finite :size #-sse2 8 #+sse2 16)
 
 (define-storage-base stack :unbounded :size 8)
 (define-storage-base constant :non-packed)
@@ -258,14 +268,14 @@
 
   ;; Non-Descriptor single-floats.
   (single-reg float-registers
-	      :locations (0 1 2 3 4 5 6 7)
+	      :locations #-sse2 (0 1 2 3 4 5 6 7) #+sse2 (8 9 10 11 12 13 14 15)
 	      :constant-scs (fp-constant)
 	      :save-p t
 	      :alternate-scs (single-stack))
 
   ;; Non-Descriptor double-floats.
   (double-reg float-registers
-	      :locations (0 1 2 3 4 5 6 7)
+	      :locations #-sse2 (0 1 2 3 4 5 6 7) #+sse2 (8 9 10 11 12 13 14 15)
 	      :constant-scs (fp-constant)
 	      :save-p t
 	      :alternate-scs (double-stack))
@@ -280,21 +290,21 @@
 
   #+double-double
   (double-double-reg float-registers
-		     :locations (0 2 4 6)
+		     :locations #-sse2 (0 2 4 6) #+sse2 (8 10 12 14)
 		     :element-size 2
 		     :constant-scs ()
 		     :save-p t
 		     :alternate-scs (double-double-stack))
   
   (complex-single-reg float-registers
-		      :locations #-sse2 (0 2 4 6) #+sse2 (0 1 2 3 4 5 6 7)
+		      :locations #-sse2 (0 2 4 6) #+sse2 (8 9 10 11 12 13 14 15)
 		      :element-size #-sse2 2 #+sse2 1
 		      :constant-scs ()
 		      :save-p t
 		      :alternate-scs (complex-single-stack))
 
   (complex-double-reg float-registers
-		      :locations #-sse2 (0 2 4 6) #+sse2 (0 1 2 3 4 5 6 7)
+		      :locations #-sse2 (0 2 4 6) #+sse2 (8 9 10 11 12 13 14 15)
 		      :element-size #-sse2 2 #+sse2 1
 		      :constant-scs ()
 		      :save-p t
@@ -309,7 +319,7 @@
 		    :alternate-scs (complex-long-stack))
   #+double-double
   (complex-double-double-reg float-registers
-		      :locations (0 4)
+		      :locations #-sse2 (0 4) #+sse2 (8 12)
 		      :element-size 4
 		      :constant-scs ()
 		      :save-p t
@@ -359,7 +369,9 @@
 (def-random-reg-tns byte-reg al ah bl bh cl ch dl dh)
 
 ;; added by jrd
-(def-random-reg-tns single-reg fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7)
+(def-random-reg-tns single-reg
+    fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7
+    xmm0 xmm1 xmm2 xmm3 xmm4 xmm5 xmm6 xmm7)
 
 ;; Added by pw.
 
@@ -454,8 +466,14 @@
 		  (< -1 offset (length name-vec))
 		  (svref name-vec offset))
 	     (format nil "<Unknown Reg: off=~D, sc=~A>" offset sc-name))))
-      (float-registers (format nil #-sse2 "FR~D" #+sse2 "XMM~D"
-			       offset))
+      (float-registers
+       #-sse2
+       (format nil "FR~D" offset)
+       #+sse2
+       (format nil (if (< offset 8)
+		       "FR~D"
+		       "XMM~D")
+	       offset))
       (stack (format nil "S~D" offset))
       (constant (format nil "Const~D" offset))
       (immediate-constant "Immed")
