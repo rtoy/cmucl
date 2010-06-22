@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.16 2010/06/22 15:35:23 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.17 2010/06/22 16:55:16 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,7 +96,7 @@
 
 ;;; added by jrd
 (eval-when (compile load eval)
-  (defvar *float-register-names* (make-array #-sse2 8 #+sse2 16 :initial-element nil)))
+  (defparameter *float-register-names* (make-array #-sse2 8 #+sse2 16 :initial-element nil)))
 (defreg fr0 0 :float)
 (defreg fr1 1 :float)
 (defreg fr2 2 :float)
@@ -105,6 +105,8 @@
 (defreg fr5 5 :float)
 (defreg fr6 6 :float)
 (defreg fr7 7 :float)
+#+sse2
+(progn
 (defreg xmm0 8 :float)
 (defreg xmm1 9 :float)
 (defreg xmm2 10 :float)
@@ -113,6 +115,12 @@
 (defreg xmm5 13 :float)
 (defreg xmm6 14 :float)
 (defreg xmm7 15 :float)
+)
+
+#-sse2
+(defregset float-regs fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7)
+
+#+sse2
 (defregset float-regs
     fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7
     xmm0 xmm1 xmm2 xmm3 xmm4 xmm5 xmm6 xmm7)
@@ -369,6 +377,10 @@
 (def-random-reg-tns byte-reg al ah bl bh cl ch dl dh)
 
 ;; added by jrd
+#-sse2
+(def-random-reg-tns single-reg fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7)
+
+#+sse2
 (def-random-reg-tns single-reg
     fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7
     xmm0 xmm1 xmm2 xmm3 xmm4 xmm5 xmm6 xmm7)

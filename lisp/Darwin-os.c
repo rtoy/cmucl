@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.29 2010/06/22 15:35:23 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.30 2010/06/22 16:55:17 rtoy Rel $
  *
  */
 
@@ -285,6 +285,7 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
 	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm6;
     case 7:
 	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm7;
+#ifdef FEATURE_SSE2
     case 8:
 	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm0;
     case 9:
@@ -301,6 +302,7 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
 	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm6;
     case 15:
 	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm7;
+#endif
     }
     return NULL;
 }
