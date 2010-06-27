@@ -144,10 +144,7 @@ New in this release:
     - When printing out argument values in the debugger and also
       during TRACE, the incorrect values were returned for the SSE2
       core.  This was caused by using the x87 values instead of the
-      sse2 values in the sigcontext.  This is fixed for Mac OS X.
-      This bug still exists on Linux which doesn't seem to have any
-      way to access the SSE2 registers in the sigcontext in 32-bit
-      binaries and on FreeBSD.
+      sse2 values in the sigcontext.  This is fixed now.
 
   * Trac Tickets:
     #33: get-dispatch-macro-character doesn't signal errors in
