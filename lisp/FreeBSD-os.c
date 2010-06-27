@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.33 2010/02/01 16:04:43 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.34 2010/06/27 13:17:17 rtoy Exp $
  *
  */
 
@@ -99,7 +99,11 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
 
     switch (fpformat) {
       case _MC_FPFMT_XMM:
-	  reg = sv->sv_xmm.sv_fp[index].fp_acc.fp_bytes;
+          if (index < 8) {
+              reg = sv->sv_xmm.sv_fp[index].fp_acc.fp_bytes;
+          } else {
+              reg = sv->sv_xmm.sv_xmm[index - 8].xmm_bytes;
+          }
 	  break;
       case _MC_FPFMT_387:
 	  reg = sv->sv_87.sv_ac[index].fp_bytes;
