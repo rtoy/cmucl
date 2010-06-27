@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.15 2010/02/01 16:04:43 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.16 2010/06/27 15:14:54 rswindells Rel $
  *
  */
 
@@ -91,9 +91,9 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
 
     if (scp->uc_flags & _UC_FPU) {
 	if (scp->uc_flags & _UC_FXSAVE) {
-	    reg = scp->uc_mcontext.__fpregs.__fp_reg_set.__fp_xmm_state.__fp_xmm[index];
+	    reg = &scp->uc_mcontext.__fpregs.__fp_reg_set.__fp_xmm_state.__fp_xmm[index];
 	} else {
-	    reg = scp->uc_mcontext.__fpregs.__fp_reg_set.__fpchip_state.__fp_state[index];
+	    reg = &scp->uc_mcontext.__fpregs.__fp_reg_set.__fpchip_state.__fp_state[index];
 	}
     } else {
 	reg = NULL;
@@ -265,9 +265,9 @@ static void
 sigsegv_handler(HANDLER_ARGS)
 {
 #if defined GENCGC
+#if SIGSEGV_VERBOSE
     caddr_t fault_addr = code ? code->si_addr : 0;
 
-#if SIGSEGV_VERBOSE
     fprintf(stderr, "Signal %d, fault_addr=%p, page_index=%d:\n",
 	    signal, fault_addr, page_index);
 #endif
