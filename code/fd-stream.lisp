@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.101 2010/06/07 22:10:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.102 2010/06/30 00:52:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -264,7 +264,20 @@
   ;; in-buffer-length, but could be less if we reached the
   ;; end-of-file.
   #+unicode
-  (in-length 0 :type index))
+  (in-length 0 :type index)
+  ;;
+  ;; Indicates how to handle errors when converting octets to
+  ;; characters.  If NIL, then the external format should handle it
+  ;; itself, doing whatever is deemed appropriate.  If non-NIL, this
+  ;; should be a function (or symbol) that the external format can
+  ;; funcall to deal with the error.
+  #+unicode
+  (octets-to-char-error nil)
+  ;;
+  ;; Like OCTETS-TO-CHAR-ERROR, but for converting characters to
+  ;; octets for output.
+  #+unicode
+  (char-to-octets-error nil))
 
 (defun %print-fd-stream (fd-stream stream depth)
   (declare (ignore depth) (stream stream))
