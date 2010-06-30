@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-2.lisp,v 1.2 2009/06/11 16:04:02 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-2.lisp,v 1.3 2010/06/30 04:02:53 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -23,10 +23,10 @@
   ((table +iso-8859-2+ :type (simple-array (unsigned-byte 16) (96)))
    (itable (invert-table table) :type lisp::ntrie16))
 
-  (octets-to-code (state input unput code)
+  (octets-to-code (state input unput error code)
     `(let ((,code ,input))
        (values (if (< ,code 160) ,code (aref ,table (- ,code 160))) 1)))
-  (code-to-octets (code state output present)
+  (code-to-octets (code state output error present)
     `(,output (if (< ,code 160)
 		  ,code
 		  (let ((,code (get-inverse ,itable ,code)))

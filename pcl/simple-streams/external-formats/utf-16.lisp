@@ -1,7 +1,7 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: STREAM -*-
 ;;;
 ;;; **********************************************************************
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.6 2010/01/22 23:57:29 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.7 2010/06/30 04:02:53 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -25,7 +25,7 @@
 (define-external-format :utf-16 (:size 2)
   ()
 
-  (octets-to-code (state input unput c1 c2 code wd next st)
+  (octets-to-code (state input unput error c1 c2 code wd next st)
     `(block nil
        (when (null ,state) (setf ,state (cons 0 nil)))
        (tagbody
@@ -85,7 +85,7 @@
 		   ;; Replace with REPLACEMENT CHARACTER.  
 		   (setf ,code +replacement-character-code+)))
 	    (return (values ,code ,wd))))))
-  (code-to-octets (code state output c c1 c2)
+  (code-to-octets (code state output error c c1 c2)
     `(flet ((output (code)
 	      (,output (ldb (byte 8 8) code))
 	      (,output (ldb (byte 8 0) code))))

@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.5 2009/09/28 18:12:59 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.6 2010/06/30 04:02:53 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -15,7 +15,7 @@
 
 (define-external-format :utf-8 (:min 1 :max 4)
   ()
-  (octets-to-code (state input unput c i j n)
+  (octets-to-code (state input unput error c i j n)
     `(labels ((utf8 (,c ,i)
 	       (declare (type (unsigned-byte 8) ,c)
 			(type (integer 1 5) ,i))
@@ -58,7 +58,7 @@
 	      ((< ,c #b11110000) (utf8 ,c 2))
 	      ((< ,c #b11111000) (utf8 ,c 3))
 	      (t (values +replacement-character-code+ 1))))))
-  (code-to-octets (code state output i j n p init)
+  (code-to-octets (code state output error i j n p init)
     `(flet ((utf8 (,n ,i)
           (let* ((,j (- 6 ,i))
              (,p (* 6 ,i))

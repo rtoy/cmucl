@@ -4,14 +4,14 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-be.lisp,v 1.3 2009/09/28 18:12:59 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-be.lisp,v 1.4 2010/06/30 04:02:53 rtoy Exp $")
 
 (in-package "STREAM")
 
 (define-external-format :utf-32-be (:size 4)
   ()
 
-  (octets-to-code (state input unput c c1 c2 c3 c4)
+  (octets-to-code (state input unput error c c1 c2 c3 c4)
     `(let* ((,c1 ,input)
 	    (,c2 ,input)
 	    (,c3 ,input)
@@ -29,6 +29,6 @@
 	     (t
 	      (values ,c 4)))))
 
-  (code-to-octets (code state output i)
+  (code-to-octets (code state output error i)
     `(dotimes (,i 4)
        (,output (ldb (byte 8 (* 8 (- 3 ,i))) ,code)))))

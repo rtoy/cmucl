@@ -4,7 +4,7 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32.lisp,v 1.5 2009/10/18 14:21:24 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32.lisp,v 1.6 2010/06/30 04:02:53 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -29,7 +29,7 @@
 (define-external-format :utf-32 (:size 4)
   ()
 
-  (octets-to-code (state input unput code c1 c2 c3 c4 st wd)
+  (octets-to-code (state input unput code error c1 c2 c3 c4 st wd)
     `(block nil
        (when (null ,state) (setf ,state 0))
        (tagbody
@@ -70,7 +70,7 @@
 		   (go :again)))
 	    (return (values ,code ,wd))))))
 
-  (code-to-octets (code state output i c)
+  (code-to-octets (code state output error i c)
     `(flet ((out (,c)
 	      ;; Big-endian output
 	      (dotimes (,i 4)

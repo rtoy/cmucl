@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/mac-roman.lisp,v 1.3 2009/06/21 14:33:07 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/mac-roman.lisp,v 1.4 2010/06/30 04:02:53 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -28,10 +28,10 @@
   ((table +mac-roman+ :type (simple-array (unsigned-byte 16) (128)))
    (itable (invert-table table) :type lisp::ntrie16))
 
-  (octets-to-code (state input unput code)
+  (octets-to-code (state input unput error code)
     `(let ((,code ,input))
        (values (if (< ,code 128) ,code (aref ,table (- ,code 128))) 1)))
-  (code-to-octets (code state output present)
+  (code-to-octets (code state output error present)
     `(,output (if (< ,code 128)
 		  ,code
 		  (let ((,code (get-inverse ,itable ,code)))
