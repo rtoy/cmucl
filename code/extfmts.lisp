@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.25 2010/04/20 17:57:44 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.26 2010/06/30 03:53:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -207,17 +207,17 @@
 			    `(the ,',(fourth slot)
 			      ;; IDENTITY is here to protect against SETF
 			      (identity (svref %slots% ,',(second slot))))))))
-    `(macrolet ((octets-to-code ((state input unput &rest vars) body)
-		  `(lambda (,state ,input ,unput)
-		     (declare (ignorable ,state ,input ,unput)
+    `(macrolet ((octets-to-code ((state input unput error &rest vars) body)
+		  `(lambda (,state ,input ,unput &optional ,error)
+		     (declare (ignorable ,state ,input ,unput ,error)
 			      (optimize (ext:inhibit-warnings 3)))
 		     (let (,@',slotb
 			   (,input `(the (or (unsigned-byte 8) null) ,,input))
 			   ,@(loop for var in vars collect `(,var (gensym))))
 		       ,body)))
-		(code-to-octets ((code state output &rest vars) body)
-		  `(lambda (,',tmp ,state ,output)
-		     (declare (ignorable ,state ,output)
+		(code-to-octets ((code state output error &rest vars) body)
+		  `(lambda (,',tmp ,state ,output &optional ,error)
+		     (declare (ignorable ,state ,output ,error)
 			      (optimize (ext:inhibit-warnings 3)))
 		     (let (,@',slotb
 			   (,code ',code)
@@ -513,15 +513,15 @@
       (format stream (intl:gettext "Attempting I/O through void external-format.")))))
 
 (define-external-format :void (:size 0) ()
-  (octets-to-code (state input unput)
+  (octets-to-code (state input unput error)
     `(error 'void-external-format))
-  (code-to-octets (code state output)
+  (code-to-octets (code state output error)
     `(error 'void-external-format)))
 
 (define-external-format :iso8859-1 (:size 1) ()
-  (octets-to-code (state input unput)
+  (octets-to-code (state input unput error)
     `(values ,input 1))
-  (code-to-octets (code state output)
+  (code-to-octets (code state output error)
     `(,output (if (> ,code 255) #x3F ,code))))
 
 ;;; OCTETS-TO-CODEPOINT, CODEPOINT-TO-OCTETS  -- Semi-Public
@@ -531,7 +531,7 @@
 ;;; in 8 bit Lisp images, or the Unicode BMP in 16 bit images.  If you want
 ;;; to read or write texts containing characters not supported by your Lisp,
 ;;; these macros can be used instead.
-(defmacro octets-to-codepoint (external-format state count input unput)
+(defmacro octets-to-codepoint (external-format state count input unput &optional error)
   (let ((tmp1 (gensym)) (tmp2 (gensym))
 	(ef (find-external-format external-format)))
     `(multiple-value-bind (,tmp1 ,tmp2)
@@ -539,7 +539,7 @@
        (setf ,count (the kernel:index ,tmp2))
        (the (or lisp:codepoint null) ,tmp1))))
 
-(defmacro codepoint-to-octets (external-format code state output)
+(defmacro codepoint-to-octets (external-format code state output &optional error)
   (let ((ef (find-external-format external-format)))
     (funcall (ef-code-to-octets ef) code state output)))
 
@@ -602,7 +602,7 @@
 ;;;
 ;;; Read and write one character through an external-format
 ;;;
-(defmacro octets-to-char (external-format state count input unput)
+(defmacro octets-to-char (external-format state count input unput &optional error)
   (let ((nstate (gensym)))
     `(let ((,nstate ,state))
        (when (null ,nstate) (setq ,nstate (setf ,state (cons nil nil))))
@@ -612,7 +612,7 @@
 	   (prog1 (the character (car ,nstate))
 	     (setf (car ,nstate) nil ,count 0))
 	   (let ((code (octets-to-codepoint ,external-format
-					  (cdr ,nstate) ,count ,input ,unput)))
+					  (cdr ,nstate) ,count ,input ,unput ,error)))
 	     (declare (type lisp:codepoint code))
 	     ;;@@ on non-Unicode builds, limit to 8-bit chars
 	     ;;@@ if unicode-bootstrap, can't use #\u+fffd
@@ -626,7 +626,7 @@
 		      hi))
 		   (t (code-char code))))))))
 
-(defmacro char-to-octets (external-format char state output)
+(defmacro char-to-octets (external-format char state output &optional error)
   (let ((nchar (gensym))
 	(nstate (gensym))
 	(wryte (gensym))
@@ -638,7 +638,7 @@
 	   (setf (car ,nstate) ,nchar)
 	   (flet ((,wryte (,ch)
 		    (codepoint-to-octets ,external-format ,ch (cdr ,nstate)
-					 ,output)))
+					 ,output ,error)))
 	     (declare (dynamic-extent #',wryte))
 	     (if (car ,nstate)
 		 (prog1
