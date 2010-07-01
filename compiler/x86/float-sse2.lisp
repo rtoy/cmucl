@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.13 2010/04/20 17:57:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.14 2010/07/01 03:03:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -301,6 +301,7 @@
 ;;;
 ;;; Float register to register moves.
 ;;;
+#+nil
 (define-vop (float-move)
   (:args (x))
   (:results (y))
@@ -309,13 +310,53 @@
      (unless (location= x y)
        (inst movq y x))))
 
-(define-vop (single-move float-move)
+(define-vop (float-move/single)
+  (:args (x))
+  (:results (y))
+  (:note _N"float move")
+  (:temporary (:sc single-stack) temp)
+  (:generator 0
+    (unless (location= x y)
+      (let ((x-offset (tn-offset x))
+	    (y-offset (tn-offset y)))
+	(cond ((and (zerop x-offset)
+		    (>= y-offset 8))
+	       ;; Move fr0 to xmm
+	       (inst fst (ea-for-sf-stack temp))
+	       (inst movss y (ea-for-sf-stack temp)))
+	      ((and (>= x-offset 8)
+		    (>= y-offset 8))
+	       (inst movq y x))
+	      (t
+	       (error "Don't know how to move ~S to ~S" x y)))))))
+
+(define-vop (float-move/double)
+  (:args (x))
+  (:results (y))
+  (:note _N"float move")
+  (:temporary (:sc double-stack) temp)
+  (:generator 0
+    (unless (location= x y)
+      (let ((x-offset (tn-offset x))
+	    (y-offset (tn-offset y)))
+	(cond ((and (zerop x-offset)
+		    (>= y-offset 8))
+	       ;; Move fr0 to xmm
+	       (inst fstd (ea-for-df-stack temp))
+	       (inst movsd y (ea-for-df-stack temp)))
+	      ((and (>= x-offset 8)
+		    (>= y-offset 8))
+	       (inst movq y x))
+	      (t
+	       (error "Don't know how to move ~S to ~S" x y)))))))
+
+(define-vop (single-move float-move/single)
   (:args (x :scs (single-reg) :target y :load-if (not (location= x y))))
   (:results (y :scs (single-reg) :load-if (not (location= x y)))))
 
 (define-move-vop single-move :move (single-reg) (single-reg))
 
-(define-vop (double-move float-move)
+(define-vop (double-move float-move/double)
   (:args (x :scs (double-reg) :target y :load-if (not (location= x y))))
   (:results (y :scs (double-reg) :load-if (not (location= x y)))))
 (define-move-vop double-move :move (double-reg) (double-reg))

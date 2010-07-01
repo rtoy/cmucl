@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-c-call.lisp,v 1.4 2010/06/22 15:35:23 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-c-call.lisp,v 1.5 2010/07/01 03:03:27 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,13 +43,10 @@
   (:generator 0 
     (cond ((policy node (> space speed))
 	   (move eax function)
-	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign))
-	   (when (and results
-		      (location= (tn-ref-tn results) fr0-tn))
-	     ;; call_into_c as arranged for ST(0) to contain the result.
-	     ;; Move it to XMM0.
-	     (inst fstd (ea-for-df-stack temp))
-	     (inst movsd xmm0-tn (ea-for-df-stack temp))))
+	   ;; call_into_c has arranged for the result to be in ST(0)
+	   ;; (aka fr0), so there's nothing we need to do now.  The
+	   ;; compiler will move fr0 to the appropriate XMM register.
+	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign)))
 	  (t
 	   ;; Setup the NPX for C; all the FP registers need to be
 	   ;; empty; pop them all.
@@ -67,12 +64,12 @@
 	   
 	   (cond ((and results
 		       (location= (tn-ref-tn results) fr0-tn))
-		  ;; If there's a float result, it would have been returned
-		  ;; in fr0, which is now in fr7, thanks to the fldz's above.
-		  (inst fxch fr7-tn)	; move the result back to fr0
-		  ;; Move the result into xmm0.
-		  (inst fstd (ea-for-df-stack temp))
-		  (inst movsd xmm0-tn (ea-for-df-stack temp)))
+		  ;; If there's a float result, it would have been
+		  ;; returned in fr0, which is now in fr7, thanks to
+		  ;; the fldz's above.  Swap fr7 with fr0.  The
+		  ;; compiler will arrange to move fr0 to the
+		  ;; appropriate XMM register.
+		  (inst fxch fr7-tn))
 		 (t
 		  ;; Fill up the last x87 register
 		  (inst fldz)))))))

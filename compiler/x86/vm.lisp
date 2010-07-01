@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.17 2010/06/22 16:55:16 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.18 2010/07/01 03:03:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -485,7 +485,7 @@
        (format nil (if (< offset 8)
 		       "FR~D"
 		       "XMM~D")
-	       offset))
+	       (mod offset 8)))
       (stack (format nil "S~D" offset))
       (constant (format nil "Const~D" offset))
       (immediate-constant "Immed")
