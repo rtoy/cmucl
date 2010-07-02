@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream-extfmt.lisp,v 1.8 2010/04/20 17:57:44 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream-extfmt.lisp,v 1.9 2010/07/02 02:50:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -94,7 +94,8 @@
 			      :start 0
 			      :external-format old-format
 			      :string (make-string sindex)
-			      :state state)
+			      :state state
+			      :error (fd-stream-octets-to-char-error stream))
 	  (declare (ignore s pos))
 	  (setf state new-state)
 	  (setf index count))
@@ -108,7 +109,8 @@
 			      :external-format (fd-stream-external-format stream)
 			      :string (lisp-stream-string-buffer stream)
 			      :s-start 1
-			      :state state)
+			      :state state
+			      :error (fd-stream-octets-to-char-error stream))
 	  (declare (ignore s))
 	  (setf (lisp-stream-string-index stream) 1)
 	  (setf (lisp-stream-string-buffer-len stream) pos)

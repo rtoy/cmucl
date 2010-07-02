@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.102 2010/06/30 00:52:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.103 2010/07/02 02:50:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -270,12 +270,19 @@
   ;; characters.  If NIL, then the external format should handle it
   ;; itself, doing whatever is deemed appropriate.  If non-NIL, this
   ;; should be a function (or symbol) that the external format can
-  ;; funcall to deal with the error.
+  ;; funcall to deal with the error.  The function should take 4
+  ;; arguments: a message string, the offending octet, the number of
+  ;; octets read so far in decoding, and a function to unput
+  ;; characters.  If the function returns, it should return the code
+  ;; of the desired replacement character and the number of octets
+  ;; read (the input parameter).
   #+unicode
   (octets-to-char-error nil)
   ;;
   ;; Like OCTETS-TO-CHAR-ERROR, but for converting characters to
-  ;; octets for output.
+  ;; octets for output.  The function takes two arguments: a message
+  ;; string and the codepoint that cannot be converted.  The function
+  ;; should return the octet that should be output.
   #+unicode
   (char-to-octets-error nil))
 
@@ -1782,7 +1789,9 @@
 				 (format nil "descriptor ~D" fd)))
 		       auto-close
 		       (external-format :default)
-		       binary-stream-p)
+		       binary-stream-p
+		       decoding-error
+		       encoding-error)
   (declare (type index fd) (type (or index null) timeout)
 	   (type (member :none :line :full) buffering))
   "Create a stream for the given unix file descriptor.
@@ -1808,14 +1817,16 @@
 					      :pathname pathname
 					      :buffering buffering
 					      :timeout timeout)
-		    (%make-fd-stream :fd fd
+b		    (%make-fd-stream :fd fd
 				     :name name
 				     :file file
 				     :original original
 				     :delete-original delete-original
 				     :pathname pathname
 				     :buffering buffering
-				     :timeout timeout))))
+				     :timeout timeout
+				     :char-to-octets-error encoding-error
+				     :octets-to-char-error decoding-error))))
     ;; FIXME: setting the external format here should be better
     ;; integrated into set-routines.  We do it before so that
     ;; set-routines can create an in-buffer if appropriate.  But we
@@ -2096,7 +2107,8 @@
 				(if-exists nil if-exists-given)
 				(if-does-not-exist nil if-does-not-exist-given)
 				(external-format :default)
-		                class)
+		                class
+		                decoding-error encoding-error)
   (declare (type pathname pathname)
            (type (member :input :output :io :probe) direction)
            (type (member :error :new-version :rename :rename-and-delete
@@ -2121,7 +2133,9 @@
 			 :input-buffer-p t
 			 :auto-close t
 			 :external-format external-format
-			 :binary-stream-p class))
+			 :binary-stream-p class
+			 :decoding-error decoding-error
+			 :encoding-error encoding-error))
 	(:probe
 	 (let ((stream (%make-fd-stream :name namestring :fd fd
 					:pathname pathname
@@ -2145,7 +2159,8 @@
 		      (options options)
 		      (direction direction)
 		      (if-does-not-exist if-does-not-exist)
-		      (if-exists if-exists))
+		      (if-exists if-exists)
+	              decoding-error encoding-error)
   "Return a stream which reads from or writes to Filename.
   Defined keywords:
    :direction - one of :input, :output, :io, or :probe
@@ -2155,7 +2170,8 @@
    :if-does-not-exist - one of :error, :create or nil
    :external-format - an external format name
   See the manual for details."
-  (declare (ignore element-type external-format input-handle output-handle))
+  (declare (ignore element-type external-format input-handle output-handle
+		   decoding-error encoding-error))
 
   ;; OPEN signals a file-error if the filename is wild.
   (when (wild-pathname-p filename)

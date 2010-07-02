@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.26 2010/06/30 03:53:28 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.27 2010/07/02 02:50:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -522,7 +522,12 @@
   (octets-to-code (state input unput error)
     `(values ,input 1))
   (code-to-octets (code state output error)
-    `(,output (if (> ,code 255) #x3F ,code))))
+    `(,output (if (> ,code 255)
+		  (if ,error
+		      (funcall ,error "Cannot output codepoint #x~X to ISO8859-1 stream"
+			       ,code 1)
+		      #x3F)
+		  ,code))))
 
 ;;; OCTETS-TO-CODEPOINT, CODEPOINT-TO-OCTETS  -- Semi-Public
 ;;;
@@ -535,13 +540,13 @@
   (let ((tmp1 (gensym)) (tmp2 (gensym))
 	(ef (find-external-format external-format)))
     `(multiple-value-bind (,tmp1 ,tmp2)
-	 ,(funcall (ef-octets-to-code ef) state input unput)
+	 ,(funcall (ef-octets-to-code ef) state input unput error)
        (setf ,count (the kernel:index ,tmp2))
        (the (or lisp:codepoint null) ,tmp1))))
 
 (defmacro codepoint-to-octets (external-format code state output &optional error)
   (let ((ef (find-external-format external-format)))
-    (funcall (ef-code-to-octets ef) code state output)))
+    (funcall (ef-code-to-octets ef) code state output error)))
 
 
 
@@ -617,8 +622,10 @@
 	     ;;@@ on non-Unicode builds, limit to 8-bit chars
 	     ;;@@ if unicode-bootstrap, can't use #\u+fffd
 	     (cond ((or (lisp::surrogatep code) (> code #x10FFFF))
-		    #-(and unicode (not unicode-bootstrap)) #\?
-		    #+(and unicode (not unicode-bootstrap)) #\U+FFFD)
+		    (if ,error
+			(funcall ,error "Cannot output codepoint #x~X" code)
+			#-(and unicode (not unicode-bootstrap)) #\?
+			#+(and unicode (not unicode-bootstrap)) #\U+FFFD))
 		   #+unicode
 		   ((> code #xFFFF)
 		    (multiple-value-bind (hi lo) (surrogates code)
@@ -646,12 +653,18 @@
 		     ;; the replacement character.
 		     (,wryte (if (lisp::surrogatep (char-code ,nchar) :low)
 				 (surrogates-to-codepoint (car ,nstate) ,nchar)
-				 +replacement-character-code+))
+				 (if ,error
+				     (funcall ,error "Cannot convert invalid surrogate #x~X to character"
+					      ,nchar)
+				     +replacement-character-code+)))
 		   (setf (car ,nstate) nil))
 		 ;; A lone trailing (low) surrogate gets replaced with
 		 ;; the replacement character.
 		 (,wryte (if (lisp::surrogatep (char-code ,nchar) :low)
-			     +replacement-character-code+
+			     (if ,error
+				 (funcall ,error "Cannot convert lone trailing surrogate #x~X to character"
+					  ,nchar)
+				 +replacement-character-code+)
 			     (char-code ,nchar)))))))))
 
 (defmacro flush-state (external-format state output)
@@ -667,7 +680,7 @@
       (funcall f state))))
 
 (def-ef-macro ef-string-to-octets (extfmt lisp::lisp +ef-max+ +ef-so+)
-  `(lambda (string start end buffer &aux (ptr 0) (state nil))
+  `(lambda (string start end buffer &optional error &aux (ptr 0) (state nil))
      (declare #|(optimize (speed 3) (safety 0) (space 0) (debug 0))|#
 	      (type simple-string string)
 	      (type kernel:index start end ptr)
@@ -679,10 +692,12 @@
 		      (lambda (b)
 			(when (= ptr (length buffer))
 			  (setq buffer (adjust-array buffer (* 2 ptr))))
-			(setf (aref buffer (1- (incf ptr))) b))))))
+			(setf (aref buffer (1- (incf ptr))) b))
+		      error))))
 
 (defun string-to-octets (string &key (start 0) end (external-format :default)
-				     (buffer nil bufferp))
+				     (buffer nil bufferp)
+			             error)
   "Convert String to octets using the specified External-format.  The
    string is bounded by Start (defaulting to 0) and End (defaulting to
    the end of the string.  If Buffer is given, the octets are stored
@@ -696,11 +711,12 @@
     (multiple-value-bind (buffer ptr)
 	(lisp::with-array-data ((string string) (start start) (end end))
 	  (funcall (ef-string-to-octets external-format)
-		   string start end buffer))
+		   string start end buffer error))
       (values (if bufferp buffer (lisp::shrink-vector buffer ptr)) ptr))))
 
 (def-ef-macro ef-octets-to-string (extfmt lisp::lisp +ef-max+ +ef-os+)
-  `(lambda (octets ptr end state string s-start s-end &aux (pos s-start) (count 0) (last-octet 0))
+  `(lambda (octets ptr end state string s-start s-end &optional error
+	    &aux (pos s-start) (count 0) (last-octet 0))
      (declare (optimize (speed 3) (safety 0) #|(space 0) (debug 0)|#)
 	      (type (simple-array (unsigned-byte 8) (*)) octets)
 	      (type kernel:index pos end count last-octet s-start s-end)
@@ -714,7 +730,8 @@
 				   (if (>= ptr end)
 				       (throw 'end-of-octets nil)
 				       (aref octets (incf ptr)))
-				   (lambda (n) (decf ptr n))))
+				   (lambda (n) (decf ptr n))
+				   error))
 	  (incf pos)
 	  (incf last-octet count)))
      (values string pos last-octet state)))
@@ -722,7 +739,8 @@
 (defun octets-to-string (octets &key (start 0) end (external-format :default)
 				     (string nil stringp)
 			             (s-start 0) (s-end nil s-end-p)
-			             (state nil))
+			             (state nil)
+			             error)
   "Octets-to-string converts an array of octets in Octets to a string
   according to the specified External-format.  The array of octets is
   bounded by Start (defaulting ot 0) and End (defaulting to the end of
@@ -751,13 +769,14 @@
 		 octets (1- start) (1- (or end (length octets)))
 		 state
 		 (or string (make-string (length octets)))
-		 s-start s-end)
+		 s-start s-end
+		 error)
       (values (if stringp string (lisp::shrink-vector string pos)) pos last-octet new-state))))
 
 
 
 (def-ef-macro ef-encode (extfmt lisp::lisp +ef-max+ +ef-en+)
-  `(lambda (string start end result &aux (ptr 0) (state nil))
+  `(lambda (string start end result &optional error  &aux (ptr 0) (state nil))
      (declare #|(optimize (speed 3) (safety 0) (space 0) (debug 0))|#
 	      (type simple-string string)
 	      (type kernel:index start end ptr)
@@ -770,9 +789,10 @@
 			 (when (= ptr (length result))
 			   (setq result (adjust-array result (* 2 ptr))))
 			 (setf (aref result (1- (incf ptr)))
-			     (code-char b)))))))
+			       (code-char b)))
+		       error))))
 
-(defun string-encode (string external-format &optional (start 0) end)
+(defun string-encode (string external-format &key (start 0) end error)
   "Encode the given String using External-Format and return a new
   string.  The characters of the new string are the octets of the
   encoded result, with each octet converted to a character via
@@ -782,11 +802,12 @@
   (multiple-value-bind (result ptr)
       (lisp::with-array-data ((string string) (start start) (end end))
 	(funcall (ef-encode external-format) string start end
-		 (make-string (length string) :element-type 'base-char)))
+		 (make-string (length string) :element-type 'base-char)
+		 error))
     (lisp::shrink-vector result ptr)))
 
 (def-ef-macro ef-decode (extfmt lisp::lisp +ef-max+ +ef-de+)
-  `(lambda (string ptr end result &aux (pos -1) (count 0) (state nil))
+  `(lambda (string ptr end result &optional error &aux (pos -1) (count 0) (state nil))
      (declare #|(optimize (speed 3) (safety 0) (space 0) (debug 0))|#
 	      (type simple-string string)
 	      (type kernel:index end count)
@@ -802,10 +823,11 @@
 			       (if (= (1+ ptr) (length string))
 				   nil
 				   (char-code (char string (incf ptr))))
-			       (lambda (n) (decf ptr n))))
+			       (lambda (n) (decf ptr n))
+			       error))
 	finally (return (values result (1+ pos))))))
 
-(defun string-decode (string external-format &optional (start 0) end)
+(defun string-decode (string external-format &key (start 0) end error)
   "Decode String using the given External-Format and return the new
   string.  The input string is treated as if it were an array of
   octets, where the char-code of each character is the octet.  This is
@@ -815,7 +837,8 @@
   (multiple-value-bind (result pos)
       (lisp::with-array-data ((string string) (start start) (end end))
 	(funcall (ef-decode external-format)
-		 string (1- start) (1- end) (make-string (length string))))
+		 string (1- start) (1- end) (make-string (length string))
+		 error))
     (lisp::shrink-vector result pos)))
 
 

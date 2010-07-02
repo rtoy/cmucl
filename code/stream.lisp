@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.92 2010/04/20 17:57:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.93 2010/07/02 02:50:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -781,7 +781,8 @@
 				     :state (fd-stream-oc-state stream)
 				     :string sbuf
 				     :s-start 1
-				     :external-format (fd-stream-external-format stream))
+				     :external-format (fd-stream-external-format stream)
+				     :error (fd-stream-octets-to-char-error stream))
 		 (declare (ignore s))
 		 (setf (fd-stream-oc-state stream) new-state)
 		 (setf (lisp-stream-string-buffer-len stream) char-count)
