@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.103 2010/07/02 02:50:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.104 2010/07/02 11:57:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1817,7 +1817,7 @@
 					      :pathname pathname
 					      :buffering buffering
 					      :timeout timeout)
-b		    (%make-fd-stream :fd fd
+		    (%make-fd-stream :fd fd
 				     :name name
 				     :file file
 				     :original original
