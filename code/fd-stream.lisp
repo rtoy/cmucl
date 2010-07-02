@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.105 2010/07/02 16:29:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.106 2010/07/02 23:06:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -590,7 +590,8 @@
 				   (do-output stream sap 0 tail t)
 				   (setq sap (fd-stream-obuf-sap stream)
 					 tail 0))
-				 (setf (bref sap (1- (incf tail))) byte)))
+				 (setf (bref sap (1- (incf tail))) byte))
+			       (fd-stream-char-to-octets-error stream))
        (setf (fd-stream-obuf-tail stream) tail))
     (if (char= char #\Newline)
 	(setf (fd-stream-char-pos stream) 0)
@@ -1816,16 +1817,30 @@
 					      :pathname pathname
 					      :buffering buffering
 					      :timeout timeout)
-		    (%make-fd-stream :fd fd
-				     :name name
-				     :file file
-				     :original original
-				     :delete-original delete-original
-				     :pathname pathname
-				     :buffering buffering
-				     :timeout timeout
-				     :char-to-octets-error encoding-error
-				     :octets-to-char-error decoding-error))))
+		    (let ((e (cond ((characterp encoding-error)
+				    (constantly (char-code encoding-error)))
+				   (t
+				    encoding-error)))
+			  (d (cond ((characterp decoding-error)
+				    (constantly (char-code decoding-error)))
+				   ((eq t decoding-error)
+				    #'(lambda (&rest args)
+					(apply 'cerror
+					       "Use Unicode replacement character instead"
+					       args)
+					stream:+replacement-character-code+))
+				   (t
+				    decoding-error))))
+		      (%make-fd-stream :fd fd
+				       :name name
+				       :file file
+				       :original original
+				       :delete-original delete-original
+				       :pathname pathname
+				       :buffering buffering
+				       :timeout timeout
+				       :char-to-octets-error e
+				       :octets-to-char-error d)))))
     ;; FIXME: setting the external format here should be better
     ;; integrated into set-routines.  We do it before so that
     ;; set-routines can create an in-buffer if appropriate.  But we
@@ -2153,13 +2168,13 @@
 			   (if-does-not-exist nil if-does-not-exist-given)
 			   (external-format :default)
 			   class mapped input-handle output-handle
+	                   decoding-error encoding-error
 		      &allow-other-keys
 		      &aux ; Squelch assignment warning.
 		      (options options)
 		      (direction direction)
 		      (if-does-not-exist if-does-not-exist)
-		      (if-exists if-exists)
-	              decoding-error encoding-error)
+		      (if-exists if-exists))
   "Return a stream which reads from or writes to Filename.
   Defined keywords:
    :direction - one of :input, :output, :io, or :probe

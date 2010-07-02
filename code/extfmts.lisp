@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.28 2010/07/02 16:29:55 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.29 2010/07/02 23:06:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -384,16 +384,16 @@
   (make-external-format
    (%composed-ef-name (ef-name a) (ef-name b))
    (make-efx
-    :octets-to-code (lambda (state input unput)
+    :octets-to-code (lambda (state input unput error)
 		      (let ((nstate (gensym "STATE-")))
 			`(let ((,nstate ,state))
 			   (when (null ,nstate)
 			     (setq ,nstate (setf ,state (cons nil nil))))
 			   ,(funcall (ef-octets-to-code b) `(car ,nstate)
 				     (funcall (ef-octets-to-code a)
-					      `(cdr ,nstate) input unput)
+					      `(cdr ,nstate) input unput error)
 				     unput))))
-    :code-to-octets (lambda (code state output)
+    :code-to-octets (lambda (code state output error)
 		      (let ((nstate (gensym "STATE-")))
 			`(let ((,nstate ,state))
 			   (when (null ,nstate)
@@ -401,7 +401,7 @@
 			   ,(funcall (ef-code-to-octets b) code `(car ,nstate)
 				     `(lambda (x)
 				       ,(funcall (ef-code-to-octets a)
-						 'x `(cdr ,nstate) output))))))
+						 'x `(cdr ,nstate) output error))))))
     :cache (make-array +ef-max+ :initial-element nil)
     :min (* (ef-min-octets a) (ef-min-octets b))
     :max (* (ef-max-octets a) (ef-max-octets b)))
