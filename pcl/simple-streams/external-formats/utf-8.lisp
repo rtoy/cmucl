@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.7 2010/07/02 02:50:35 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.8 2010/07/02 16:36:01 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -34,41 +34,53 @@
 			  (progn
 			    (,unput 1)
 			    (return
-			      (if ,error
-				  (funcall ,error "Invalid utf8 byte #x~X at offset ~D" ,c (1+ ,j) ,unput)
-				  (values +replacement-character-code+ (1+ ,j))))))))))
+			      (values
+			       (if ,error
+				   (funcall ,error "Invalid utf8 octet #x~X at offset ~D"
+					    ,c (1+ ,j))
+				   +replacement-character-code+)
+			       (1+ ,j)))))))))
 	      (check (,n ,i)
-	       (declare (type (unsigned-byte 31) ,n)
-			(type (integer 1 5) ,i))
-	       ;; We check for overlong sequences (sequences that
-	       ;; encode to codepoints that don't need that long of a
-	       ;; sequence) and any surrogate values and any code
-	       ;; outside the 21-bit Unicode range.
-	       (if (or (> ,n #x10ffff)
-		       (<= ,n (the (member 127 1023 32767)
-				(svref #(127 1023 32767) (1- ,i)))) ; overlong
-		       (lisp::surrogatep ,n)) ; surrogate
-		   (progn
-		     (,unput ,i)
-		     (if ,error
-			 (funcall ,error "Overlong utf8 sequence" nil 1 ,unput)
-			 (values +replacement-character-code+ 1)))
-		   (values ,n (1+ ,i)))))
+		(declare (type (unsigned-byte 31) ,n)
+			 (type (integer 1 5) ,i))
+		;; We check for overlong sequences (sequences that
+		;; encode to codepoints that don't need that long of a
+		;; sequence) and any surrogate values and any code
+		;; outside the 21-bit Unicode range.
+		(if (or (> ,n #x10ffff)
+			(<= ,n (the (member 127 1023 32767)
+				 (svref #(127 1023 32767) (1- ,i)))) ; overlong
+			(lisp::surrogatep ,n)) ; surrogate
+		    (progn
+		      (,unput ,i)
+		      (values (if ,error
+				  (cond
+				    ((> ,n #x10ffff)
+				     (funcall ,error "Invalid codepoint" nil nil))
+				    ((lisp::surrogatep ,n)
+				     (funcall ,error "Invalid surrogate code #x~4,0X" ,n nil))
+				    (t
+				     (funcall ,error "Overlong utf8 sequence" nil nil)))
+				  +replacement-character-code+)
+			      1))
+		    (values ,n (1+ ,i)))))
       (let ((,c ,input))
 	(declare (optimize (ext:inhibit-warnings 3)))
 	(cond ((null ,c) (values nil 0))
 	      ((< ,c #b10000000) (values ,c 1))
 	      ((< ,c #b11000010)
-	       (if ,error
-		   (funcall ,error "Invalid second utf8 octet: #x~X" ,c 1 ,unput)
-		   (values +replacement-character-code+ 1)))
+	       (values (if ,error
+			   (funcall ,error "Invalid initial utf8 octet: #x~X" ,c 1)
+			   +replacement-character-code+)
+		       1))
 	      ((< ,c #b11100000) (utf8 ,c 1))
 	      ((< ,c #b11110000) (utf8 ,c 2))
 	      ((< ,c #b11111000) (utf8 ,c 3))
 	      (t
-	       (if ,error
-		   (funcall ,error "Invalid fourth utf8 octet: #x~X" ,c 1 ,unput)
-		   (values +replacement-character-code+ 1)))))))
+	       (values (if ,error
+			   (funcall ,error "Invalid initial utf8 octet: #x~X" ,c 1)
+			   +replacement-character-code+)
+		       1))))))
   (code-to-octets (code state output error i j n p init)
     `(flet ((utf8 (,n ,i)
           (let* ((,j (- 6 ,i))
