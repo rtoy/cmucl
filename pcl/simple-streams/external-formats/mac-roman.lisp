@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/mac-roman.lisp,v 1.4 2010/06/30 04:02:53 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/mac-roman.lisp,v 1.5 2010/07/02 23:13:11 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -35,4 +35,9 @@
     `(,output (if (< ,code 128)
 		  ,code
 		  (let ((,code (get-inverse ,itable ,code)))
-		    (if ,code (+ (the (unsigned-byte 7) ,code) 128) #x3F))))))
+		    (if ,code
+			(+ (the (unsigned-byte 7) ,code) 128)
+			(if ,error
+			    (funcall ,error "Cannot output codepoint #x~X to MAC-ROMAN stream"
+				     ,code)
+			    #x3F)))))))

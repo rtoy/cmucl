@@ -1,7 +1,7 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: STREAM -*-
 ;;;
 ;;; **********************************************************************
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.7 2010/06/30 04:02:53 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.8 2010/07/02 23:13:11 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -55,7 +55,10 @@
 					   10)
 				      ,code #x2400)
 			     ,state nil)
-		       (setf ,code +replacement-character-code+)))
+		       (setf ,code
+			     (if ,error
+				 (funcall ,error "Bare low surrogate #x~4,0X" ,code 2)
+				 +replacement-character-code+))))
 		  ((lisp::surrogatep ,code :high)
 		   ;; Save the high (leading) code in the state, in
 		   ;; case we fail to read the low (trailing)
@@ -76,14 +79,20 @@
 		     (if (lisp::surrogatep ,next :low)
 			 (setq ,code (+ (ash (- ,code #xD800) 10) ,next #x2400)
 			       ,wd 4)
-			 (setf ,code +replacement-character-code+))))
+			 (setf ,code
+			       (if ,error
+				   (funcall ,error "High surrogate followed by #x~4,0X instead of low surrogate" ,next ,wd)
+				   +replacement-character-code+)))))
 		  ((and (= ,code #xFFFE) (zerop ,st))
 		   (setf (car ,state) 1) (go :again))
 		  ((and (= ,code #xFEFF) (zerop ,st))
 		   (setf (car ,state) 2) (go :again))
 		  ((= ,code #xFFFE)
 		   ;; Replace with REPLACEMENT CHARACTER.  
-		   (setf ,code +replacement-character-code+)))
+		   (setf ,code
+			 (if ,error
+			     (funcall ,error "BOM is not valid within a UTF-16 stream" ,code ,wd)
+			     +replacement-character-code+))))
 	    (return (values ,code ,wd))))))
   (code-to-octets (code state output error c c1 c2)
     `(flet ((output (code)

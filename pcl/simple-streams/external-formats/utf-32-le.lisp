@@ -4,7 +4,7 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-le.lisp,v 1.4 2010/06/30 04:02:53 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-le.lisp,v 1.5 2010/07/02 23:13:12 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -22,13 +22,28 @@
 		   (ash ,c4 24))))
        (declare (type (unsigned-byte 8) ,c1 ,c2 ,c3 ,c4)
 		(optimize (speed 3)))
-       (cond ((or (> ,c #x10ffff)
+       (cond ((or (>= ,c lisp:codepoint-limit)
 		  (lisp::surrogatep ,c))
 	      ;; Surrogates are illegal.  Use replacement character.
-	      (values +replacement-character-code+ 4))
+	      (values (if ,error
+			  (if (>= ,code lisp:codepoint-limit)
+			      (funcall ,error "Illegal codepoint #x~4,0X" ,code 4)
+			      (funcall ,error "Surrogate #x~4,0X not allowed in UTF32"
+				       ,code 4))
+			  +replacement-character-code+)
+		      4))
 	     (t
 	      (values ,c 4)))))
 
-  (code-to-octets (code state output error i)
-    `(dotimes (,i 4)
-       (,output (ldb (byte 8 (* 8 ,i)) ,code)))))
+  (code-to-octets (code state output error c i)
+    `(flet ((out (,c)
+	      ;; Little-endian output
+	      (dotimes (,i 4)
+		(,output (ldb (byte 8 (* 8 ,i)) ,c)))))
+       (cond ((lisp:surrogatep ,code)
+	      (out (if ,error
+		       (funcall ,error "Surrogate code #x~4,0X is illegal for UTF32 output"
+				,code)
+		       +replacement-character-code+)))
+	     (t
+	      (out ,code))))))

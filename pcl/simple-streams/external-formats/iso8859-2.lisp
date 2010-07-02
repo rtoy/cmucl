@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-2.lisp,v 1.3 2010/06/30 04:02:53 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-2.lisp,v 1.4 2010/07/02 23:13:11 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -30,4 +30,8 @@
     `(,output (if (< ,code 160)
 		  ,code
 		  (let ((,code (get-inverse ,itable ,code)))
-		    (if ,code (+ (the (unsigned-byte 7) ,code) 160) #x3F))))))
+		    (if ,code
+			(+ (the (unsigned-byte 7) ,code) 160)
+			(if ,error
+			    (funcall ,error "Cannot output codepoint #x~X to ISO8859-2 stream" ,code)
+			    #x3F)))))))

@@ -4,7 +4,7 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32.lisp,v 1.6 2010/06/30 04:02:53 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32.lisp,v 1.7 2010/07/02 23:13:12 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -54,12 +54,18 @@
 	    (declare (type (integer 0 2) ,st)
 		     (type (unsigned-byte 8) ,c1 ,c2 ,c3 ,c4)
 		     (optimize (speed 3)))
-	    (cond ((or (> ,code #x10fff)
+	    (cond ((or (>= ,code lisp:codepoint-limit)
 		       (lisp::surrogatep ,code))
 		   ;; Surrogates are illegal and codepoints outside
 		   ;; the Unicode range are illegal.  Use replacement
 		   ;; character.
-		   (setf ,code +replacement-character-code+))
+		   (setf ,code
+			 (if ,error
+			     (if (>= ,code lisp:codepoint-limit)
+				 (funcall ,error "Illegal codepoint #x~4,0X" ,code 4)
+				 (funcall ,error "Surrogate #x~4,0X not allowed in UTF32"
+					  ,code 4))
+			     +replacement-character-code+)))
 		  ((and  (zerop ,st) (= ,code #xFFFE0000))
 		   ;; BOM for little-endian
 		   (setf ,state 1)
@@ -79,7 +85,13 @@
        (unless ,state
 	 (out #xFEFF)
 	 (setf ,state t))
-       (out code)))
+       (cond ((lisp:surrogatep ,code)
+	      (out (if ,error
+		       (funcall ,error "Surrogate code #x~4,0X is illegal for UTF32 output"
+				,code)
+		       +replacement-character-code+)))
+	     (t
+	      (out ,code)))))
   nil
   (copy-state (state)
     ;; The state is either NIL or T, so we can just return that.

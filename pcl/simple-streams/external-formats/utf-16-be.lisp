@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-be.lisp,v 1.5 2010/06/30 04:02:53 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-be.lisp,v 1.6 2010/07/02 23:13:11 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -26,7 +26,10 @@
 		  (setf ,code (+ (ash (- (the (integer #xd800 #xdbff) ,state) #xD800) 10)
 				 ,code #x2400)
 			,state nil)
-		  (setf ,code +replacement-character-code+)))
+		  (setf ,code
+			(if ,error
+			    (funcall ,error "Bare low surrogate #x~4,0X" ,code 2)
+			    +replacement-character-code+))))
 	     ((lisp::surrogatep ,code :high)
 	      ;; Remember the high surrogate in case we bail out
 	      ;; reading the low surrogate (for octets-to-string.)
@@ -42,10 +45,16 @@
 		;; next time around?
 		(if (lisp::surrogatep ,next :low)
 		    (setq ,code (+ (ash (- ,code #xD800) 10) ,next #x2400))
-		    (setf ,code +replacement-character-code+))))
+		    (setf ,code
+			  (if ,error
+			      (funcall ,error "High surrogate followed by #x~4,0X instead of low surrogate" ,next ,wd)
+			      +replacement-character-code+)))))
 	     ((= ,code #xFFFE)
 	      ;; Replace with REPLACEMENT CHARACTER.  
-	      (setf ,code +replacement-character-code+))
+	      (setf ,code
+		    (if ,error
+			(funcall ,error "BOM is not valid within a UTF-16 stream" ,code ,wd)
+			+replacement-character-code+)))
 	     (t (setf ,state nil)))
        (values ,code 2)))
   (code-to-octets (code state output error c c1 c2)
