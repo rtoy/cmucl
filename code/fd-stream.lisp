@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.104 2010/07/02 11:57:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.105 2010/07/02 16:29:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -270,12 +270,10 @@
   ;; characters.  If NIL, then the external format should handle it
   ;; itself, doing whatever is deemed appropriate.  If non-NIL, this
   ;; should be a function (or symbol) that the external format can
-  ;; funcall to deal with the error.  The function should take 4
-  ;; arguments: a message string, the offending octet, the number of
-  ;; octets read so far in decoding, and a function to unput
-  ;; characters.  If the function returns, it should return the code
-  ;; of the desired replacement character and the number of octets
-  ;; read (the input parameter).
+  ;; funcall to deal with the error.  The function should take three
+  ;; arguments: a message string, the offending octet, and the number
+  ;; of octets read so far in decoding; if the function returns it
+  ;; should return the codepoint of the desired replacement character.
   #+unicode
   (octets-to-char-error nil)
   ;;
@@ -706,7 +704,8 @@
 				     (do-output stream sap 0 tail t)
 				     (setq sap (fd-stream-obuf-sap stream)
 					   tail 0))
-				   (setf (bref sap (1- (incf tail))) byte))))
+				   (setf (bref sap (1- (incf tail))) byte))
+				 (fd-stream-char-to-octets-error stream)))
        (setf (fd-stream-obuf-tail stream) tail))))
 
 
@@ -2347,7 +2346,8 @@
 					(fd-stream-co-state stream)
 					(lambda (byte)
 					  (declare (ignore byte))
-					  (incf count)))))
+					  (incf count))
+					(fd-stream-char-to-octets-erroor stream))))
        (let* ((co-state (fd-stream-co-state stream))
 	      (old-ef-state (efstate (cdr (fd-stream-co-state stream))))
 	      (old-state (cons (car co-state) old-ef-state)))

@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.27 2010/07/02 02:50:35 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.28 2010/07/02 16:29:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,7 +208,7 @@
 			      ;; IDENTITY is here to protect against SETF
 			      (identity (svref %slots% ,',(second slot))))))))
     `(macrolet ((octets-to-code ((state input unput error &rest vars) body)
-		  `(lambda (,state ,input ,unput &optional ,error)
+		  `(lambda (,state ,input ,unput ,error)
 		     (declare (ignorable ,state ,input ,unput ,error)
 			      (optimize (ext:inhibit-warnings 3)))
 		     (let (,@',slotb
@@ -216,7 +216,7 @@
 			   ,@(loop for var in vars collect `(,var (gensym))))
 		       ,body)))
 		(code-to-octets ((code state output error &rest vars) body)
-		  `(lambda (,',tmp ,state ,output &optional ,error)
+		  `(lambda (,',tmp ,state ,output ,error)
 		     (declare (ignorable ,state ,output ,error)
 			      (optimize (ext:inhibit-warnings 3)))
 		     (let (,@',slotb
@@ -680,7 +680,7 @@
       (funcall f state))))
 
 (def-ef-macro ef-string-to-octets (extfmt lisp::lisp +ef-max+ +ef-so+)
-  `(lambda (string start end buffer &optional error &aux (ptr 0) (state nil))
+  `(lambda (string start end buffer error &aux (ptr 0) (state nil))
      (declare #|(optimize (speed 3) (safety 0) (space 0) (debug 0))|#
 	      (type simple-string string)
 	      (type kernel:index start end ptr)
@@ -715,7 +715,7 @@
       (values (if bufferp buffer (lisp::shrink-vector buffer ptr)) ptr))))
 
 (def-ef-macro ef-octets-to-string (extfmt lisp::lisp +ef-max+ +ef-os+)
-  `(lambda (octets ptr end state string s-start s-end &optional error
+  `(lambda (octets ptr end state string s-start s-end error
 	    &aux (pos s-start) (count 0) (last-octet 0))
      (declare (optimize (speed 3) (safety 0) #|(space 0) (debug 0)|#)
 	      (type (simple-array (unsigned-byte 8) (*)) octets)
@@ -776,7 +776,7 @@
 
 
 (def-ef-macro ef-encode (extfmt lisp::lisp +ef-max+ +ef-en+)
-  `(lambda (string start end result &optional error  &aux (ptr 0) (state nil))
+  `(lambda (string start end result error  &aux (ptr 0) (state nil))
      (declare #|(optimize (speed 3) (safety 0) (space 0) (debug 0))|#
 	      (type simple-string string)
 	      (type kernel:index start end ptr)
@@ -807,7 +807,7 @@
     (lisp::shrink-vector result ptr)))
 
 (def-ef-macro ef-decode (extfmt lisp::lisp +ef-max+ +ef-de+)
-  `(lambda (string ptr end result &optional error &aux (pos -1) (count 0) (state nil))
+  `(lambda (string ptr end result error &aux (pos -1) (count 0) (state nil))
      (declare #|(optimize (speed 3) (safety 0) (space 0) (debug 0))|#
 	      (type simple-string string)
 	      (type kernel:index end count)
