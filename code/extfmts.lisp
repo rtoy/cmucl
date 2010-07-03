@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.29 2010/07/02 23:06:26 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.30 2010/07/03 13:39:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -168,7 +168,7 @@
 ;;;   stream's state variable.  Output is a form that writes one octet
 ;;;   to the output stream.
 ;;;
-;;; flush-state (state output &rest vars)
+;;; flush-state (state output error &rest vars)
 ;;;   Defines a form to be used by the external format to flush out
 ;;;   any state when an output stream is closed.  Similar to
 ;;;   CODE-TO-OCTETS, but there is no code.
@@ -225,9 +225,9 @@
 		       `(let ((,',code (the lisp:codepoint ,,',tmp)))
 			  (declare (ignorable ,',code))
 			  ,,body))))
-		(flush-state ((state output &rest vars) body)
-		  `(lambda (,state ,output)
-		     (declare (ignorable ,state ,output))
+		(flush-state ((state output error &rest vars) body)
+		  `(lambda (,state ,output ,error)
+		     (declare (ignorable ,state ,output ,error))
 		     (let (,@',slotb
 			   ,@(loop for var in vars collect `(,var (gensym))))
 		       ,body)))
@@ -667,11 +667,11 @@
 				 +replacement-character-code+)
 			     (char-code ,nchar)))))))))
 
-(defmacro flush-state (external-format state output)
+(defmacro flush-state (external-format state output &optional error)
   (let* ((ef (find-external-format external-format))
 	 (f (ef-flush-state ef)))
     (when f
-      (funcall f state output))))
+      (funcall f state output error))))
 
 (defmacro copy-state (external-format state)
   (let* ((ef (find-external-format external-format))

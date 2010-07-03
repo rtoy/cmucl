@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.106 2010/07/02 23:06:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.107 2010/07/03 13:39:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -415,15 +415,21 @@
        (declare (type index tail))
        (cond
 	 ((stream::ef-flush-state ,(stream::find-external-format extfmt))
-	  (stream::flush-state ,extfmt
-			       (fd-stream-co-state stream)
-			       (lambda (byte)
-				 (when (= tail len)
-				   (do-output stream sap 0 tail t)
-				   (setq sap (fd-stream-obuf-sap stream)
-					 tail 0))
-				 (setf (bref sap (1- (incf tail))) byte)))
-	  (setf (fd-stream-obuf-tail stream) tail))
+	  (let* ((sap (fd-stream-obuf-sap stream))
+		 (len (fd-stream-obuf-length stream))
+		 (tail (fd-stream-obuf-tail stream)))
+	    (declare (type sys:system-area-pointer sap) (type index len tail))
+
+	    (stream::flush-state ,extfmt
+				 (fd-stream-co-state stream)
+				 (lambda (byte)
+				   (when (= tail len)
+				     (do-output stream sap 0 tail t)
+				     (setq sap (fd-stream-obuf-sap stream)
+					   tail 0))
+				   (setf (bref sap (1- (incf tail))) byte))
+				 (fd-stream-char-to-octets-error stream))
+	    (setf (fd-stream-obuf-tail stream) tail)))
 	 (t
 	  ;; No flush-state function, so just output a replacement
 	  ;; character.  We hack the co-state to what we need for this
@@ -434,7 +440,7 @@
 	      (setf (fd-stream-co-state stream)
 		    (cons nil (cdr state)))
 	      (funcall (ef-cout (fd-stream-external-format stream))
-		       stream (code-char stream::+replacement-character-code+))))))
+		       stream (car state))))))
        (values))))
   
 ;;; FLUSH-OUTPUT-BUFFER -- internal
