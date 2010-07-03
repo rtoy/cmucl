@@ -4,7 +4,7 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-le.lisp,v 1.5 2010/07/02 23:13:12 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-le.lisp,v 1.6 2010/07/03 13:42:52 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -37,10 +37,11 @@
 
   (code-to-octets (code state output error c i)
     `(flet ((out (,c)
+	      (declare (type (unsigned-byte 32) ,c))
 	      ;; Little-endian output
 	      (dotimes (,i 4)
 		(,output (ldb (byte 8 (* 8 ,i)) ,c)))))
-       (cond ((lisp:surrogatep ,code)
+       (cond ((lisp::surrogatep ,code)
 	      (out (if ,error
 		       (funcall ,error "Surrogate code #x~4,0X is illegal for UTF32 output"
 				,code)
