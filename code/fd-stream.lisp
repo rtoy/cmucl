@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.107 2010/07/03 13:39:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.108 2010/07/03 14:10:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -432,15 +432,25 @@
 	    (setf (fd-stream-obuf-tail stream) tail)))
 	 (t
 	  ;; No flush-state function, so just output a replacement
-	  ;; character.  We hack the co-state to what we need for this
-	  ;; to work.  This should be ok because we're closing the
-	  ;; file anyway.
-	  (let ((state (fd-stream-co-state stream)))
-	    (when (and state (car state))
+	  ;; character (or signal an error).  We hack the co-state to
+	  ;; what we need for this to work.  This should be ok because
+	  ;; we're closing the file anyway.
+	  (let* ((state (fd-stream-co-state stream))
+		 (c (car state)))
+	    (when (and state c)
 	      (setf (fd-stream-co-state stream)
 		    (cons nil (cdr state)))
 	      (funcall (ef-cout (fd-stream-external-format stream))
-		       stream (car state))))))
+		       stream
+		       ;; Handle bare surrogates or use the
+		       ;; replacement character.
+		       (if (lisp::surrogatep c)
+			   (if (fd-stream-char-to-octets-error stream)
+			       (funcall (fd-stream-char-to-octets-error stream)
+					"Flushing bare surrogate #x~4,0X is illegal"
+					(char-code c))
+			       (code-char stream:+replacement-character-code+))
+			   c))))))
        (values))))
   
 ;;; FLUSH-OUTPUT-BUFFER -- internal
