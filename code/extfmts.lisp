@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.30 2010/07/03 13:39:19 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.31 2010/07/03 16:44:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -149,29 +149,47 @@
 ;;;   Define an external format based on a previously-defined external
 ;;;   format, Base.  The slot names used in Slots must match those in Base.
 ;;;
-;;; octets-to-code (state input unput &rest vars)
+;;; octets-to-code (state input unput error &rest vars)
 ;;;   Defines a form to be used by the external format to convert
 ;;;   octets to a code point.  State is a form that can be used by the
 ;;;   body to access the state of the stream.  Input is a form that
 ;;;   can be used to read one octet from the input stream.  (It can be
 ;;;   called as many times as needed.)  Similarly, Unput is a form to
-;;;   put back one octet to the input stream.  Vars is a list of vars
-;;;   that need to be defined for any symbols used within the form.
+;;;   put back one octet to the input stream.  Error is an error
+;;;   handler.  The default is NIL to indicate that the code should do
+;;;   its default handling.  Otherwise, it should be a function or
+;;;   symbol to indicate how errors are handled.  Vars is a list of
+;;;   vars that need to be defined for any symbols used within the
+;;;   form.
+;;;
+;;;   The error handler is a function of 3 arguments: a format message
+;;;   string, the offending octet (or NIL) and the number of octets
+;;;   read for this encoding.  If the function returns, it should
+;;;   return the codepoint to be used in place of the erroneous
+;;;   sequence.
 ;;;
 ;;;   This should return two values: the code and the number of octets
 ;;;   read to form the code.
 ;;;
-;;; code-to-octets (code state output &rest vars)
+;;; code-to-octets (code state output error &rest vars)
 ;;;   Defines a form to be used by the external format to convert a
 ;;;   code point to octets for output.  Code is the code point to be
 ;;;   converted.  State is a form to access the current value of the
 ;;;   stream's state variable.  Output is a form that writes one octet
-;;;   to the output stream.
+;;;   to the output stream.  Error is the error handler.  A value of
+;;;   NIL means the external format should use its default method.
+;;;   Otherwise, it should be a symbol or function that will e called
+;;;   to handle the error.
+;;;
+;;;   The error function takes 2 arguments: a format message string
+;;;   and the offending codepoint.  If the function returns, it should
+;;;   be the desired replacement codepoint.
 ;;;
 ;;; flush-state (state output error &rest vars)
 ;;;   Defines a form to be used by the external format to flush out
 ;;;   any state when an output stream is closed.  Similar to
-;;;   CODE-TO-OCTETS, but there is no code.
+;;;   CODE-TO-OCTETS, but there is no code.  Error is similar to the
+;;;   error parameter for code-to-octets.
 ;;;
 ;;; copy-state (state &rest vars)
 ;;;   Defines a form to copy any state needed by the external format.

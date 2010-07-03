@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.109 2010/07/03 15:20:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.110 2010/07/03 16:44:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -275,14 +275,14 @@
   ;; of octets read so far in decoding; if the function returns it
   ;; should return the codepoint of the desired replacement character.
   #+unicode
-  (octets-to-char-error nil)
+  (octets-to-char-error nil :type (or null symbol function))
   ;;
   ;; Like OCTETS-TO-CHAR-ERROR, but for converting characters to
   ;; octets for output.  The function takes two arguments: a message
   ;; string and the codepoint that cannot be converted.  The function
   ;; should return the octet that should be output.
   #+unicode
-  (char-to-octets-error nil))
+  (char-to-octets-error nil :type (or null symbol function)))
 
 (defun %print-fd-stream (fd-stream stream depth)
   (declare (ignore depth) (stream stream))
@@ -1819,7 +1819,10 @@
   Timeout (if true) is the number of seconds to wait for input.  If NIL (the
     default), then wait forever.  When we time out, we signal IO-TIMEOUT.
   File is the name of the file (will be returned by PATHNAME).
-  Name is used to identify the stream when printed."
+  Name is used to identify the stream when printed.
+  External-format is the external format to use for the stream.
+  Decoding-error and Encoding-error indicate how decoding/encoding errors on
+    the stream should be handled.  The default is to use a replacement character."
   (cond ((not (or input-p output-p))
 	 (setf input t))
 	((not (or input output))
@@ -1842,7 +1845,7 @@
 				   ((eq t decoding-error)
 				    #'(lambda (&rest args)
 					(apply 'cerror
-					       "Use Unicode replacement character instead"
+					       (intl:gettext "Use Unicode replacement character instead")
 					       args)
 					stream:+replacement-character-code+))
 				   (t
@@ -2199,6 +2202,17 @@
                        :overwrite, :append, :supersede or nil
    :if-does-not-exist - one of :error, :create or nil
    :external-format - an external format name
+   :decoding-error - How to handle decoding errors from the external format.
+                       Should be a symbol or function of 3 arguments.  If it
+                       returns, it should return a code point to use as the
+                       replacment.  NIL means use the default replacement scheme
+                       specified by the external format.  The function arguments
+                       are a format message string, the offending octet, and the
+                       number of octets read in the current encoding.   
+   :encoding-error - Like :decoding-error, but for errors when encoding the
+                       stream.  The function arguments are a format message
+                       string and the incorrect codepoint.
+
   See the manual for details."
   (declare (ignore element-type external-format input-handle output-handle
 		   decoding-error encoding-error))
