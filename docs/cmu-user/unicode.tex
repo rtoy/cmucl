@@ -591,7 +591,7 @@ external format is defined using the macro
 \end{defmac}
 
 \begin{defmac}{}{octets-to-code}{\args \var{state} \var{input}
-    \var{unput} \amprest{} \var{args}}
+    \var{unput} \var{error} \amprest{} \var{args}}
   This defines a form to be used by an external format to convert
   octets to a code point.  \var{state} is a form that can be used by
   the body to access the state variable of a stream.  This can be used
@@ -600,25 +600,46 @@ external format is defined using the macro
   \var{unput} will put back \var{N} octets to the stream.  \var{args} is a
   list of variables that need to be defined for any symbols in the
   body of the macro.
+
+  \var{error} controls how errors are handled.  If \nil, some suitable
+  replacement character is used.  That is, any errors are silently
+  ignored and replaced by some replacement character.  If non-\nil,
+  \var{error} is a symbol or function that is called to handle the
+  error.  This function takes three arguments: a message string, the
+  invalid octet (or \nil), and a count of the number of octets that
+  have been read so far.  If the function returns, it should be the
+  codepoint of the desired replacement character.
 \end{defmac}
 
 \begin{defmac}{}{code-to-octets}{\args \var{code} \var{state}
-    \var{output} \amprest{} \var{args}}
+    \var{output} \var{error} \amprest{} \var{args}}
   Defines a form to be used by the external format to convert a code
   point to octets for output.  \var{code} is the code point to be
   converted.  \var{state} is a form to access the current value of the
   stream's state variable.  \var{output} is a form that writes one
   octet to the output stream.
+
+  Similar to \code{octets-to-code}, \var{error} indicates how errors
+  should be handled.  If \nil, some default replacement character is
+  substituted.  If non-\nil, \var{error} should be a symbol or
+  function.   This function takes two arguments:  a message string and
+  the invalid codepoint.  If the function returns, it should be the
+  codepoint that will be substituted for the invalid codepoint.
 \end{defmac}
 
 \begin{defmac}{}{flush-state}{\args \var{state}
-    \var{output} \amprest{} \var{args}}
+    \var{output} \var{error} \amprest{} \var{args}}
   Defines a form to be used by the external format to flush out
   any state when an output stream is closed.  Similar to
-  \code{code-to-octets}, but there is no code point to be output.
+  \code{code-to-octets}, but there is no code point to be output.  The
+  \var{error} argument indicates how to handle errors.  If \nil, some
+  default replacement character is used.  Otherwise, \var{error} is a
+  symbol or function that will be called with a message string and
+  codepoint of the offending state.  If the function returns, it
+  should be the codepoint of a suitable replacement.
 
-  If \false, then nothing special is needed to flush the state to the
-  output.
+  If \code{flush-state} is \false, then nothing special is needed to
+  flush the state to the output.
 
   This is called only when an output character stream is being closed.
 \end{defmac}
