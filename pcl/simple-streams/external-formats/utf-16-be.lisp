@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-be.lisp,v 1.6 2010/07/02 23:13:11 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-be.lisp,v 1.7 2010/07/03 13:45:01 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -71,7 +71,18 @@
 		(output (logior ,c2 #xDC00))))
 	     (t
 	      (output +replacement-character-code+)))))
-  nil
+  (flush-state (state output error c)
+    `(flet ((out (code)
+	      (,output (ldb (byte 8 8) code))
+	      (,output (ldb (byte 8 0) code))))
+       (let ((,c (car ,state)))
+	 (,output (if (lisp::surrogatep ,c)
+		      (if ,error
+			  (funcall ,error
+				   "Flushing bare surrogate #x~4,0X is illegal for UTF-16"
+				   (char-code ,c))
+			  +replacement-character-code+)
+		      ,c)))))
   (copy-state (state)
     ;; The state is either NIL or a codepoint, so nothing really
     ;; special is needed to copy it.
