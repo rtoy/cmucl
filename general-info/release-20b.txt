@@ -57,6 +57,27 @@ New in this release:
     - CMUCL no longer crashes on Mac OS X if the dynamic space size is
       too large.  This was caused by an erroneous value for the
       maximum dynamic space size. 
+    - Error handling has been added to external formats.  Previously,
+      all external formats would silently replace bad encodings with a
+      suitable replacement character.  Now, the user can specify how
+      the errors are handled by using the :DECODING-ERROR and
+      :ENCODING-ERROR parameters to OPEN.  The default is the previous
+      behavior.  
+
+      For decoding-error, a character, symbol, or function
+      can be given.  If a character, then that character is used as
+      the replacement character.  For a symbol or function, it must be
+      a function of 3 arguments:  a message string, the offending
+      octet (or nil), and the number of octets read in the encoding.
+      If the function returns, it must be the codepoint of the desired
+      replacement.
+
+      For encoding-error, a character, symbol, or function can be
+      given.  If a character, then that character is used as the
+      replacement character.  For a symbol or function, it must be a
+      function of 2 arguments: a message string and the offending
+      codepoint.  If the function returns, it must be the codepoint of
+      the desired replacement.
 
   * ANSI compliance fixes:
     - COMPILE will update the macro-function if the specified name
