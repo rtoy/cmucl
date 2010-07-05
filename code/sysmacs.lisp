@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.33 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.34 2010/07/05 03:40:02 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -188,6 +188,7 @@ and also the CMUCL C runtime."
      (%frc-string-buffer%
       (cond ((>= %frc-string-index% %frc-string-length%)
 	     (prog1 (fast-read-char-string-refill %frc-stream% ,eof-errorp ,eof-value)
+	       (setq %frc-index% (lisp-stream-in-index %frc-stream%))
 	       (setf %frc-string-index% (lisp-stream-string-index %frc-stream%))
 	       (setf %frc-string-length% (lisp-stream-string-buffer-len %frc-stream%))))
 	    (t

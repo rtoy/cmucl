@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.93 2010/07/02 02:50:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.94 2010/07/05 03:40:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -723,21 +723,39 @@
   ;; Like fast-read-char-refill, but we don't need or want the
   ;; in-buffer-extra.
   (let* ((ibuf (lisp-stream-in-buffer stream))
-	 (index (lisp-stream-in-index stream)))
-    (declare (type (integer 0 #.in-buffer-length) index))
+	 (index (lisp-stream-in-index stream))
+	 (in-length (fd-stream-in-length stream)))
+    (declare (type (integer 0 #.in-buffer-length) index in-length))
+
+    #+(or debug-frc-sr)
+    (progn
+      (format t "index = ~A~%" index)
+      (format t "in-length = ~A~%" in-length)
+      (format t "ibuf before = ~A~%" ibuf))
 
     ;; Copy the stuff we haven't read from in-buffer to the beginning
     ;; of the buffer.
-    (replace ibuf ibuf
-	     :start1 0
-	     :start2 index :end2 in-buffer-length)
+    (if (< index in-length)
+	(replace ibuf ibuf
+		 :start1 0
+		 :start2 index :end2 in-length)
+	(setf index in-length))
+    (setf index (- in-length index))
+    
+    #+(or debug-frc-sr)
+    (format t "ibuf after  = ~A~%" ibuf)
     
     (let ((count (funcall (lisp-stream-n-bin stream) stream
-			  ibuf (- in-buffer-length index)
-			  index
+			  ibuf index
+			  (- in-buffer-length index)
 			  nil)))
       (declare (type (integer 0 #.in-buffer-length) count))
 
+      #+(or debug-frc-sr)
+      (progn
+	(format t "count = ~D~%" count)
+	(format t "new ibuf = ~A~%" ibuf))
+      
       (cond ((zerop count)
 	     ;; Nothing left in the stream, so update our pointers to
 	     ;; indicate we've read everything and call the stream-in
@@ -759,7 +777,9 @@
 	       ;; valid (in case end-of-file was reached), and what
 	       ;; the state was when originally converting the octets
 	       ;; to characters.
-	       (setf (fd-stream-in-length stream) (+ count (- in-buffer-length index)))
+	       (setf (fd-stream-in-length stream) (+ count index))
+	       #+(or debug-frc-sr)
+	       (format t "in-length = ~D~%" (fd-stream-in-length stream))
 	       (let ((state (fd-stream-oc-state stream)))
 		 (setf (fd-stream-saved-oc-state stream)
 		       (cons (car state)
@@ -768,6 +788,8 @@
 
 	       ;; Copy the last read character to the beginning of the
 	       ;; buffer to support unreading.
+	       #+(or)
+	       (format t "slen = ~A~%" slen)
 	       (when (plusp slen)
 		 (setf (schar sbuf 0) (schar sbuf (1- slen))))
 
@@ -777,7 +799,7 @@
 	       (multiple-value-bind (s char-count octet-count new-state)
 		   (octets-to-string ibuf
 				     :start 0
-				     :end (+ count (- in-buffer-length index))
+				     :end (fd-stream-in-length stream)
 				     :state (fd-stream-oc-state stream)
 				     :string sbuf
 				     :s-start 1
@@ -788,6 +810,8 @@
 		 (setf (lisp-stream-string-buffer-len stream) char-count)
 		 (setf (lisp-stream-string-index stream) 2)
 		 (setf (lisp-stream-in-index stream) octet-count)
+		 #+(or debug-frc-sr)
+		 (format t "new in-index = ~A~%" (lisp-stream-in-index stream))
 		 (schar sbuf 1))))))))
 
 ;;; FAST-READ-BYTE-REFILL  --  Interface
