@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.110 2010/07/03 16:44:37 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.111 2010/07/05 03:11:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1713,8 +1713,8 @@
 		     (decf posn
 			   (length (string-encode (fd-stream-string-buffer stream)
 						  (fd-stream-external-format stream)
-						  (fd-stream-string-index stream)
-						  (fd-stream-string-buffer-len stream))))
+						  :start (fd-stream-string-index stream)
+						  :end (fd-stream-string-buffer-len stream))))
 		     (decf posn (- (fd-stream-ibuf-tail stream)
 				   (fd-stream-ibuf-head stream))))
 		 (when (fd-stream-unread stream) ;;@@
