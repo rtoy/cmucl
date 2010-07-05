@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.32 2010/07/05 15:52:47 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.33 2010/07/05 22:45:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -639,9 +639,17 @@
 	     (declare (type lisp:codepoint code))
 	     ;;@@ on non-Unicode builds, limit to 8-bit chars
 	     ;;@@ if unicode-bootstrap, can't use #\u+fffd
-	     (cond ((or (lisp::surrogatep code) (> code #x10FFFF))
+	     (cond ((or (lisp::surrogatep code) (>= code lisp:codepoint-limit))
+		    ;; Surrogate characters (that weren't combined
+		    ;; into a codepoint by octets-to-codepoint) are
+		    ;; illegal.  So are codepoints that are too large.
 		    (if ,error
-			(funcall ,error "Cannot output codepoint #x~X" code)
+			(if (lisp::surrogatep code)
+			    (funcall ,error
+				     ,(format nil "Surrogate codepoint #x~~4,'0X is illegal for ~A"
+					      external-format)
+				     code nil)
+			    (funcall ,error "Illegal codepoint on input: #x~X" code nil))
 			#-(and unicode (not unicode-bootstrap)) #\?
 			#+(and unicode (not unicode-bootstrap)) #\U+FFFD))
 		   #+unicode
