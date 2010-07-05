@@ -166,6 +166,10 @@ New in this release:
       during TRACE, the incorrect values were returned for the SSE2
       core.  This was caused by using the x87 values instead of the
       sse2 values in the sigcontext.  This is fixed now.
+    - A critical bug in the fast unicode stream buffering routine has
+      been fixed.  This bug manifests itself by causing valid
+      sequences to be incorrectly decoded, resulting in a replacement
+      character.
 
   * Trac Tickets:
     #33: get-dispatch-macro-character doesn't signal errors in
