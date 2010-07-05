@@ -1,7 +1,7 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: STREAM -*-
 ;;;
 ;;; **********************************************************************
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.9 2010/07/03 13:45:01 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.10 2010/07/05 04:12:47 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -57,7 +57,7 @@
 			     ,state nil)
 		       (setf ,code
 			     (if ,error
-				 (funcall ,error "Bare low surrogate #x~4,0X" ,code 2)
+				 (funcall ,error "Bare low surrogate #x~4,'0X" ,code 2)
 				 +replacement-character-code+))))
 		  ((lisp::surrogatep ,code :high)
 		   ;; Save the high (leading) code in the state, in
@@ -81,7 +81,7 @@
 			       ,wd 4)
 			 (setf ,code
 			       (if ,error
-				   (funcall ,error "High surrogate followed by #x~4,0X instead of low surrogate" ,next ,wd)
+				   (funcall ,error "High surrogate followed by #x~4,'0X instead of low surrogate" ,next ,wd)
 				   +replacement-character-code+)))))
 		  ((and (= ,code #xFFFE) (zerop ,st))
 		   (setf (car ,state) 1) (go :again))
@@ -120,7 +120,7 @@
 	 (out (if (lisp::surrogatep ,c)
 		  (if ,error
 		      (funcall ,error
-			       "Flushing bare surrogate #x~4,0X is illegal for UTF-16"
+			       "Flushing bare surrogate #x~4,'0X is illegal for UTF-16"
 			       (char-code ,c))
 		      +replacement-character-code+)
 		  ,c)))))

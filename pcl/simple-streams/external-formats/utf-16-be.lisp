@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-be.lisp,v 1.7 2010/07/03 13:45:01 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-be.lisp,v 1.8 2010/07/05 04:12:47 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -28,7 +28,7 @@
 			,state nil)
 		  (setf ,code
 			(if ,error
-			    (funcall ,error "Bare low surrogate #x~4,0X" ,code 2)
+			    (funcall ,error "Bare low surrogate #x~4,'0X" ,code 2)
 			    +replacement-character-code+))))
 	     ((lisp::surrogatep ,code :high)
 	      ;; Remember the high surrogate in case we bail out
@@ -47,7 +47,7 @@
 		    (setq ,code (+ (ash (- ,code #xD800) 10) ,next #x2400))
 		    (setf ,code
 			  (if ,error
-			      (funcall ,error "High surrogate followed by #x~4,0X instead of low surrogate" ,next ,wd)
+			      (funcall ,error "High surrogate followed by #x~4,'0X instead of low surrogate" ,next ,wd)
 			      +replacement-character-code+)))))
 	     ((= ,code #xFFFE)
 	      ;; Replace with REPLACEMENT CHARACTER.  
@@ -79,7 +79,7 @@
 	 (,output (if (lisp::surrogatep ,c)
 		      (if ,error
 			  (funcall ,error
-				   "Flushing bare surrogate #x~4,0X is illegal for UTF-16"
+				   "Flushing bare surrogate #x~4,'0X is illegal for UTF-16"
 				   (char-code ,c))
 			  +replacement-character-code+)
 		      ,c)))))

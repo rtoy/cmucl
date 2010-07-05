@@ -4,7 +4,7 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-be.lisp,v 1.6 2010/07/03 13:42:52 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-be.lisp,v 1.7 2010/07/05 04:12:47 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -27,8 +27,8 @@
 	      ;; Surrogates are illegal.  Use replacement character.
 	      (values (if ,error
 			  (if (>= ,code lisp:codepoint-limit)
-			      (funcall ,error "Illegal codepoint #x~4,0X" ,code 4)
-			      (funcall ,error "Surrogate #x~4,0X not allowed in UTF32" ,code 4))
+			      (funcall ,error "Illegal codepoint #x~4,'0X" ,code 4)
+			      (funcall ,error "Surrogate #x~4,'0X not allowed in UTF32" ,code 4))
 			  +replacement-character-code+)
 		      4))
 	     (t
@@ -46,7 +46,7 @@
 	 (setf ,state t))
        (cond ((lisp::surrogatep ,code)
 	      (out (if ,error
-		       (funcall ,error "Surrogate code #x~4,0X is illegal for UTF32 output"
+		       (funcall ,error "Surrogate code #x~4,'0X is illegal for UTF32 output"
 				,code)
 		       +replacement-character-code+)))
 	     (t

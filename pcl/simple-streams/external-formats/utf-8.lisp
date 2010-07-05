@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.9 2010/07/02 23:13:12 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.10 2010/07/05 04:12:47 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -56,9 +56,9 @@
 		      (values (if ,error
 				  (cond
 				    ((>= ,n lisp:codepoint-limit)
-				     (funcall ,error "Invalid codepoint" nil nil))
+				     (funcall ,error "Invalid codepoint #x~X" ,n nil))
 				    ((lisp::surrogatep ,n)
-				     (funcall ,error "Invalid surrogate code #x~4,0X" ,n nil))
+				     (funcall ,error "Invalid surrogate code #x~X" ,n nil))
 				    (t
 				     (funcall ,error "Overlong utf8 sequence" nil nil)))
 				  +replacement-character-code+)
