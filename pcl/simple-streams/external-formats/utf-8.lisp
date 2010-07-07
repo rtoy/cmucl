@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.11 2010/07/06 04:46:35 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.12 2010/07/07 13:43:12 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -52,17 +52,19 @@
 				 (svref #(127 2047 65535) (1- ,i)))) ; overlong
 			(lisp::surrogatep ,n)) ; surrogate
 		    (progn
-		      (,unput ,i)
+		      ;; Replace the entire sequence with the
+		      ;; replacment character
 		      (values (if ,error
 				  (cond
 				    ((>= ,n lisp:codepoint-limit)
-				     (funcall ,error "Invalid codepoint #x~X" ,n nil))
+				     (funcall ,error "Invalid codepoint #x~X of ~D octets"
+					      ,n (1+ ,i)))
 				    ((lisp::surrogatep ,n)
-				     (funcall ,error "Invalid surrogate code #x~X" ,n nil))
+				     (funcall ,error "Invalid surrogate code #x~X" ,n (1+ ,i)))
 				    (t
-				     (funcall ,error "Overlong utf8 sequence" nil nil)))
+				     (funcall ,error "Overlong utf8 sequence of ~*~D octets" nil (1+ ,i))))
 				  +replacement-character-code+)
-			      1))
+			      (1+ ,i)))
 		    (values ,n (1+ ,i)))))
       (let ((,c ,input))
 	(declare (optimize (ext:inhibit-warnings 3)))
