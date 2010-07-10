@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.33 2010/07/05 22:45:50 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.34 2010/07/10 22:50:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,12 +17,22 @@
 
 (export '(string-to-octets octets-to-string *default-external-format*
 	  string-encode string-decode set-system-external-format
-	  +replacement-character-code+))
+	  +replacement-character-code+
+	  list-all-external-formats))
 
-(defvar *default-external-format* :iso8859-1)
+(defvar *default-external-format*
+  :iso8859-1
+  "The default external format to use if no other external format is
+  specified")
 
-(defvar *external-formats* (make-hash-table :test 'equal))
-(defvar *external-format-aliases* (make-hash-table))
+(defvar *external-formats*
+  (make-hash-table :test 'equal)
+  "Hash table of all the external formats that have been loaded")
+
+(defvar *external-format-aliases*
+  (make-hash-table)
+  "Hash table mapping an external format alias to the actual external
+  format implementation")
 
 (vm::defenum (:prefix "+EF-" :suffix "+" :start 1)
   str					; string length
@@ -357,6 +367,34 @@
 	      (warn (intl:gettext "Bad entry in external-format aliases file: ~S => ~S.")
 		    alias value)))))))
 
+(defun list-all-external-formats ()
+  "List the available external formats.  A list is returned where each
+  element is list of the external format and a list of aliases for the
+  format.  No distinction is made between external formats and
+  composing external formats."
+  ;; Look for all lisp files in the ext-formats directory.  These are
+  ;; the available formats.
+  (let ((ef (make-hash-table))
+	result)
+    (map nil #'(lambda (p)
+		 (setf (gethash (intern (string-upcase (pathname-name p)) :keyword) ef)
+		       nil))
+	 (directory "ext-formats:*.lisp"))
+
+    ;; Look through aliases and update formats with a list of aliases.
+    (load-external-format-aliases)
+    (maphash #'(lambda (k v)
+		 (push k (gethash v ef)))
+	     *external-format-aliases*)
+
+    (maphash #'(lambda (k v)
+		 (push (if v
+			   (list k v)
+			   (list k))
+		       result))
+	     ef)
+    (sort result #'string< :key #'first)))
+
 (defun %find-external-format (name)
   ;; avoid loading files, etc., early in the boot sequence
   (when (or (eq name :iso8859-1)
@@ -605,9 +643,9 @@
 				    ;; the compiler messages.
 				    #|(*default-external-format* :iso8859-1)|#)
 				(compile nil `(lambda (%slots%)
-					       (declare (ignorable %slots%))
-					       (block ,',blknm
-						 ,,body))))))
+						(declare (ignorable %slots%))
+						(block ,',blknm
+						  ,,body))))))
 		    (ef-slots ,tmp1))))
        (declaim (inline ,name))
        (defun ,name (,tmp1)
@@ -635,7 +673,7 @@
 	   (prog1 (the character (car ,nstate))
 	     (setf (car ,nstate) nil ,count 0))
 	   (let ((code (octets-to-codepoint ,external-format
-					  (cdr ,nstate) ,count ,input ,unput ,error)))
+					    (cdr ,nstate) ,count ,input ,unput ,error)))
 	     (declare (type lisp:codepoint code))
 	     ;;@@ on non-Unicode builds, limit to 8-bit chars
 	     ;;@@ if unicode-bootstrap, can't use #\u+fffd
