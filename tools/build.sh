@@ -32,7 +32,7 @@
 #
 # For more information see src/BUILDING.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.29 2010/03/19 15:19:03 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.30 2010/07/12 14:02:49 rtoy Exp $
 #
 
 ENABLE2="yes"
@@ -119,7 +119,7 @@ buildit ()
     then
 	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET || { echo "Failed: $TOOLDIR/clean-target.sh"; exit 1; }
 	time $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT || { echo "Failed: $TOOLDIR/build-world.sh"; exit 1; }
-	$MAKE -C $TARGET/lisp || { echo "Failed: $MAKE -C $TARGET/lisp"; exit 1; }
+	$MAKE -C $TARGET/lisp $MAKE_TARGET || { echo "Failed: $MAKE -C $TARGET/lisp"; exit 1; }
 	if [ "$BUILD_WORLD2" = "yes" ];
 	then
 	    $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT || { echo "Failed: $TOOLDIR/build-world.sh"; exit 1; }
@@ -165,6 +165,7 @@ echo "//starting build: $build_started"
 
 TARGET=$BASE-2
 ENABLE=$ENABLE2
+MAKE_TARGET=all
 export INTERACTIVE
 
 BUILD=1
@@ -183,6 +184,7 @@ BUILD_WORLD2=
 buildit
 
 TARGET=$BASE-4
+MAKE_TARGET="all translations"
 CLEAN_FLAGS="-K all"
 OLDLISP="${BASE}-3/lisp/lisp -noinit $FPU_MODE"
 ENABLE=$ENABLE4

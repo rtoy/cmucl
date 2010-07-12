@@ -1,6 +1,6 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.34 2010/03/19 15:19:03 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.35 2010/07/12 14:02:49 rtoy Exp $
 
-all: lisp.nm translations
+all: lisp.nm
 
 -include internals.inc
 include Config
