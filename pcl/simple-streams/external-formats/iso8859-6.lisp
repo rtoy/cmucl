@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-6.lisp,v 1.2 2009/06/11 16:04:02 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-6.lisp,v 1.3 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -21,5 +21,10 @@
                          1616 1617 1618 65534 65534 65534 65534 65534 65534
                          65534 65534 65534 65534 65534 65534 65534)))
 
-(define-external-format :iso8859-6 (:iso8859-2)
+(define-external-format :iso8859-6 (:base :iso8859-2 :documentation
+"ISO8859-6 is an 8-bit character encoding generally intended languages
+using the Arabic alphabet.
+
+By default, illegal inputs are replaced by the Unicode replacement
+character and illegal outputs are replaced by a question mark.")
   ((table +iso-8859-6+)))

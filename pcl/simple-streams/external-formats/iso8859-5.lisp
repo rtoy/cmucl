@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-5.lisp,v 1.2 2009/06/11 16:04:02 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-5.lisp,v 1.3 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -20,5 +20,11 @@
                          1101 1102 1103 8470 1105 1106 1107 1108 1109 1110 1111
                          1112 1113 1114 1115 1116 167 1118 1119)))
 
-(define-external-format :iso8859-5 (:iso8859-2)
+(define-external-format :iso8859-5 (:base :iso8859-2 :documentation
+"ISO8859-5, informallly referred to as Latin/Cyrillic, is an 8-bit
+character encoding intended for languages using a Cyrillic alphabet
+such as Bulgarian, Belarusian, Russian, Serbian, and Macedonian.
+
+By default, illegal inputs are replaced by the Unicode replacement
+character and illegal outputs are replaced by a question mark.")
   ((table +iso-8859-5+)))

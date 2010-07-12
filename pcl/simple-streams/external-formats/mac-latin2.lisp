@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/mac-latin2.lisp,v 1.2 2009/06/11 16:04:02 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/mac-latin2.lisp,v 1.3 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -22,5 +22,11 @@
                          218 367 368 369 370 371 221 253 311 379 321 380 290
                          711)))
 
-(define-external-format :mac-latin2 (:mac-roman)
+(define-external-format :mac-latin2 (:base :mac-roman :documentation
+
+"MAC-LATIN2 is an 8-bit character encoding for Central European text
+on Apple Macintosh computers.
+
+By default, illegal inputs are replaced by the Unicode replacement
+character and illegal outputs are replaced by a question mark.")
   ((table +mac-latin2+)))

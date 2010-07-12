@@ -1,7 +1,7 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: STREAM -*-
 ;;;
 ;;; **********************************************************************
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.10 2010/07/05 04:12:47 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.11 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -22,7 +22,15 @@
 ;;
 ;; When writing, never output a BOM.
 
-(define-external-format :utf-16 (:size 2)
+(define-external-format :utf-16 (:size 2 :documentation
+"UTF-16 is a variable length character encoding for Unicode.  On
+input, a byte-order mark is recognized.  If no byte-order mark is
+given on input, then the encoding is assumed to be big-endian.  For
+output, the byte-order mark is not written, and the output is
+big-endian.  (This is specified by the Unicode standard.)
+
+By default, illegal inputs and illegal outputs are replaced by the
+Unicode replacement character.")
   ()
 
   (octets-to-code (state input unput error c1 c2 code wd next st)

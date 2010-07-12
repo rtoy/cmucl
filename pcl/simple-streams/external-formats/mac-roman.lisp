@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/mac-roman.lisp,v 1.6 2010/07/07 21:59:49 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/mac-roman.lisp,v 1.7 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -24,7 +24,12 @@
 			 212 63743 210 218 219 217 305 710 732 175 728 729 730
 			 184 733 731 711)))
 
-(define-external-format :mac-roman (:size 1)
+(define-external-format :mac-roman (:size 1 :documentation
+"MAC-ROMAN is an 8-bit character encoding for Western European
+languages including English.
+
+By default, illegal inputs are replaced by the Unicode replacement
+character and illegal outputs are replaced by a question mark.")
   ((table +mac-roman+ :type (simple-array (unsigned-byte 16) (128)))
    (itable (invert-table table) :type lisp::ntrie16))
 

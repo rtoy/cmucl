@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cp1257.lisp,v 1.3 2009/06/21 15:12:25 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cp1257.lisp,v 1.4 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -30,5 +30,9 @@
                                   311 299 316 353 324 326 243 333 245 246
                                   247 371 322 347 363 252 380 382 729)))
 
-(define-external-format :cp1257 (:mac-roman)
+(define-external-format :cp1257 (:base :mac-roman :documentation
+"CP1257 is a Windows code page for Estonian, Latvian, and Lithuanian.
+
+By default, illegal inputs are replaced by the Unicode replacement
+character and illegal outputs are replaced by a question mark.")
   ((table +ms-cp1257+)))

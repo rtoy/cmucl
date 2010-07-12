@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.297 2010/07/10 22:50:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.298 2010/07/12 13:58:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1251,9 +1251,9 @@
 ;; Make these STREAM symbols available
 (dolist
     (name
-     '("STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
-       "STRING-ENCODE" "STRING-DECODE" "SET-SYSTEM-EXTERNAL-FORMAT"
-       "LIST-ALL-EXTERNAL-FORMATS"))
+      '("STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
+	"STRING-ENCODE" "STRING-DECODE" "SET-SYSTEM-EXTERNAL-FORMAT"
+	"LIST-ALL-EXTERNAL-FORMATS" "DESCRIBE-EXTERNAL-FORMAT"))
   (intern name "STREAM"))
 
 (defpackage "EXTENSIONS"
@@ -1484,7 +1484,8 @@
 		"STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
 		"STRING-ENCODE" "STRING-DECODE"
 		"SET-SYSTEM-EXTERNAL-FORMAT"
-		"LIST-ALL-EXTERNAL-FORMATS")
+		"LIST-ALL-EXTERNAL-FORMATS"
+		"DESCRIBE-EXTERNAL-FORMAT")
   ;; Unicode
   (:export "STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
 	   "LIST-ALL-EXTERNAL-FORMATS"
@@ -1555,7 +1556,8 @@
 	   "STRING-ENCODE" "STRING-DECODE"
 	   "SET-SYSTEM-EXTERNAL-FORMAT"
 	   "+REPLACEMENT-CHARACTER-CODE+"
-	   "LIST-ALL-EXTERNAL-FORMATS"))
+	   "LIST-ALL-EXTERNAL-FORMATS"
+	   "DESCRIBE-EXTERNAL-FORMAT"))
 
 (defpackage "LOOP")
 (dolist

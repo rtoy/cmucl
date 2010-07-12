@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cp1253.lisp,v 1.3 2009/06/21 14:03:09 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cp1253.lisp,v 1.4 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -31,5 +31,9 @@
                                   963 964 965 966 967 968 969 970 971 972
                                   973 974 65534)))
 
-(define-external-format :cp1253 (:mac-roman)
+(define-external-format :cp1253 (:base :mac-roman :documentation
+"CP1253 is a Windows code page for Greek.
+
+By default, illegal inputs are replaced by the Unicode replacement
+character and illegal outputs are replaced by a question mark.")
   ((table +ms-cp1253+)))

@@ -4,12 +4,14 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/final-sigma.lisp,v 1.2 2009/06/11 16:04:02 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/final-sigma.lisp,v 1.3 2010/07/12 13:58:42 rtoy Exp $")
 
 ;; This is a composing format that attempts to detect sigma in
 ;; word-final position and change it from "σ" (U+03C3) to "ς" (U+03C2).
 
-(define-composing-external-format :final-sigma (:size 1)
+(define-composing-external-format :final-sigma (:size 1 :documentation
+"FINAL-SIGMA is a composing external format that attempts to detect
+sigma in word-final position and changes it from U+03C3 to U+03C2.")
   (input (state input unput tmp1 tmp2 tmp3 tmp4)
     `(multiple-value-bind (,tmp1 ,tmp2) ,input
        (when (= ,tmp1 #x03C3)

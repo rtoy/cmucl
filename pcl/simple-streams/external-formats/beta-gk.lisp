@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/beta-gk.lisp,v 1.2 2009/06/11 16:04:02 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/beta-gk.lisp,v 1.3 2010/07/12 13:58:42 rtoy Exp $")
 
 ;; This is a composing format that translates (lower-case) Beta code
 ;; (an ASCII encoding of ancient Greek) into Unicode Greek.
@@ -190,7 +190,10 @@
             #(42 47) #(42 40))))))))
 
 
-(define-composing-external-format :beta-gk (:min 1 :max 6) ; 6??
+(define-composing-external-format :beta-gk (:min 1 :max 6  ; 6??
+						 :documentation
+"A composing external format that translates (lower-case) Beta code
+(an ASCII encoding of ancient Greek) into Unicode Greek.")
   (input (state input unput ch wd ent nch nwd nent)
     `(flet ((lookup (c map)
 	      (loop while map do

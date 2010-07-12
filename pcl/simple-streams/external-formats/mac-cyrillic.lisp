@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/mac-cyrillic.lisp,v 1.2 2009/06/11 16:04:02 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/mac-cyrillic.lisp,v 1.3 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -23,5 +23,10 @@
                          1087 1088 1089 1090 1091 1092 1093 1094 1095 1096 1097
                          1098 1099 1100 1101 1102 164)))
 
-(define-external-format :mac-cyrillic (:mac-roman)
+(define-external-format :mac-cyrillic (:base :mac-roman :documentation
+"MAC-CYRILLIC is an 8-bit character encoding for Cyrillic text on
+Apple Macintosh computers.
+
+By default, illegal inputs are replaced by the Unicode replacement
+character and illegal outputs are replaced by a question mark.")
   ((table +mac-cyrillic+)))

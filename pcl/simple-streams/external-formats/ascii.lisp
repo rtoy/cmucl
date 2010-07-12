@@ -4,11 +4,14 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/ascii.lisp,v 1.4 2010/07/07 13:04:04 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/ascii.lisp,v 1.5 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
-(define-external-format :ascii (:size 1)
+(define-external-format :ascii (:size 1 :documentation 
+"US ASCII 7-bit encoding.  Illegal input sequences are replaced with
+the Unicode replacment character.  Illegal output characters are
+replaced with a question mark.")
   ()
   (octets-to-code (state input unput error c)
     `(let ((,c ,input))		  

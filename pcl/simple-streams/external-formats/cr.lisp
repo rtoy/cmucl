@@ -4,12 +4,15 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cr.lisp,v 1.2 2009/09/09 15:51:28 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cr.lisp,v 1.3 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
 ;; Convert CR to/from #\newline.
-(define-composing-external-format :cr (:size 1)
+(define-composing-external-format :cr (:size 1 :documentation
+"CR is a composing external format that converts CR (carriage return)
+to a Lisp newline character.  This is the Mac end-of-line character
+sequence.")
   (input (state input unput tmp1 tmp2)
     `(multiple-value-bind (,tmp1 ,tmp2)
 	 ,input

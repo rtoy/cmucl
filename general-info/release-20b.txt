@@ -75,6 +75,10 @@ New in this release:
       function of 2 arguments: a message string and the offending
       codepoint.  If the function returns, it must be the codepoint of
       the desired replacement.
+    - Add EXT:LIST-ALL-EXTERNAL-FORMATS to list all known external
+      formats and their aliases.
+    - ADD EXT:DESCRIBE-EXTERNAL-FORMAT to print a description of the
+      specified exernal format.
 
   * ANSI compliance fixes:
     - COMPILE will update the macro-function if the specified name

@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.34 2010/07/10 22:50:58 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.35 2010/07/12 13:58:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,8 @@
 (export '(string-to-octets octets-to-string *default-external-format*
 	  string-encode string-decode set-system-external-format
 	  +replacement-character-code+
-	  list-all-external-formats))
+	  list-all-external-formats
+	  describe-external-format))
 
 (defvar *default-external-format*
   :iso8859-1
@@ -58,6 +59,14 @@
       (declare (ignore condition))
       (format stream (intl:gettext "Attempting unimplemented external-format I/O.")))))
 
+(define-condition external-format-not-found (error)
+  ((name :reader external-format-not-found-name
+	:initarg :name))
+  (:report
+    (lambda (condition stream)
+      (format stream (intl:gettext "External format ~S not found.")
+	      (external-format-not-found-name condition)))))
+
 (defun %efni (a b c d)
   (declare (ignore a b c d))
   (error 'external-format-not-implemented))
@@ -86,18 +95,22 @@
   (min 1 :type kernel:index :read-only t)
   ;;
   ;; Maximum number of octets needed to form a codepoint.
-  (max 1 :type kernel:index :read-only t))
+  (max 1 :type kernel:index :read-only t)
+  ;;
+  ;; Documentation for this external format
+  #+nil(documentation nil :type (or null string) :read-only t))
 
 (defstruct (external-format
              (:conc-name ef-)
              (:print-function %print-external-format)
-             (:constructor make-external-format (name efx composingp
+             (:constructor make-external-format (name efx composingp documentation
 						 &optional slots slotd)))
   (name (ext:required-argument) :type (or keyword cons) :read-only t)
   (efx (ext:required-argument) :type efx :read-only t)
   (composingp (ext:required-argument) :type boolean :read-only t)
   (slots #() :type simple-vector :read-only t)
-  (slotd nil :type list :read-only t))
+  (slotd nil :type list :read-only t)
+  (documentation nil :type (or null string) :read-only t))
 
 (defun %print-external-format (ef stream depth)
   (declare (ignore depth))
@@ -147,17 +160,21 @@
 
 ;;; DEFINE-EXTERNAL-FORMAT  -- Public
 ;;;
-;;; name (&key min max size) (&rest slots) octets-to-code code-to-octets
-;;;       flush-state copy-state
+;;; name (&key base min max size documentation) (&rest slots) octets-to-code
+;;;       code-to-octets flush-state copy-state
 ;;;
-;;;   Define a new external format.  Min/Max/Size are the minimum and
-;;;   maximum number of octets that make up a character (:size N is just
-;;;   shorthand for :min N :max N).  Slots is a list of slot descriptions
-;;;   similar to defstruct.
+;;;   Define a new external format.  If base is specified, then an
+;;;   external format is defined that is based on a previously defined
+;;;   external format named Base.  The slot names used in Slots must
+;;;   match those defined in the Base format.
 ;;;
-;;; name (base) (&rest slots)
-;;;   Define an external format based on a previously-defined external
-;;;   format, Base.  The slot names used in Slots must match those in Base.
+;;;   If Base is not specified, a new external format is defined.
+;;;   Min/Max/Size are the minimum and maximum number of octets that
+;;;   make up a character (:size N is just shorthand for :min N :max
+;;;   N).  Slots is a list of slot descriptions similar to defstruct.
+;;;
+;;;   In both cases, Documentation is a string that documents the
+;;;   external format.
 ;;;
 ;;; octets-to-code (state input unput error &rest vars)
 ;;;   Defines a form to be used by the external format to convert
@@ -213,28 +230,24 @@
 ;;;   process characters outside the Lisp range (see
 ;;;   CODEPOINT-TO-OCTETS, OCTETS-TO-CODEPOINT)
 ;;;
-(defmacro define-external-format (name (&rest args) (&rest slots)
+(defmacro define-external-format (name (&key base min max size (documentation ""))
+				       (&rest slots)
 				       &optional octets-to-code code-to-octets
 				       flush-state copy-state)
-  (when (and (oddp (length args)) (not (= (length args) 1)))
-    (warn (intl:gettext "Nonsensical argument (~S) to DEFINE-EXTERNAL-FORMAT.") args))
   (let* ((tmp (gensym))
-	 (min (if (evenp (length args))
-		  (or (getf args :min) (getf args :size) 1)
-		  1))
-	 (max (if (evenp (length args))
-		  (or (getf args :max) (getf args :size) 6)
-		  6))
-	 (base (if (= (length args) 1)
-		   (find-external-format (first args))
-		   nil))
+	 (min (or min size 1))
+	 (max (or max size 6))
+	 (base (when base
+		 (find-external-format base)))
 	 (bslotd (if base (ef-slotd base) nil))
 	 (slotd (%merge-slots bslotd slots))
 	 (slotb (loop for slot in slotd
 		  collect `(,(first slot)
 			    `(the ,',(fourth slot)
 			      ;; IDENTITY is here to protect against SETF
-			      (identity (svref %slots% ,',(second slot))))))))
+			       (identity (svref %slots% ,',(second slot))))))))
+    (when documentation
+      (intl::note-translatable intl::*default-domain* documentation))
     `(macrolet ((octets-to-code ((state input unput error &rest vars) body)
 		  `(lambda (,state ,input ,unput ,error)
 		     (declare (ignorable ,state ,input ,unput ,error)
@@ -274,8 +287,10 @@
 			            :copy-state ,copy-state
 				    :cache (make-array +ef-max+
 							  :initial-element nil)
-				    :min ,(min min max) :max ,(max min max)))
+				    :min ,(min min max)
+				    :max ,(max min max)))
 		    nil
+		    ,documentation
 		    (let* ,(loop for x in slotd
 				 collect (list (first x) (third x)))
 		      (vector ,@(mapcar #'first slotd)))
@@ -290,11 +305,11 @@
 ;;; to be of any use.
 ;;;
 ;;;
-;;; name (&key min max size) input output
+;;; name (&key min max size documentation) input output
 ;;;   Defines a new composing external format.  The parameters Min,
-;;;   Max, and Size are the same as for defining an external format.
-;;;   The parameters input and output are forms to handle input and
-;;;   output.
+;;;   Max, Size, and Documentation are the same as for defining an
+;;;   external format.  The parameters input and output are forms to
+;;;   handle input and output.
 ;;;
 ;;; input (state input unput &rest vars)
 ;;;   Defines a form to be used by the composing external format when
@@ -319,7 +334,7 @@
 ;;;   value of the stream's state variable.  Output is a form that
 ;;;   writes one octet to the output stream.
 
-(defmacro define-composing-external-format (name (&key min max size)
+(defmacro define-composing-external-format (name (&key min max size documentation)
 						 input output)
   (let ((tmp (gensym))
 	(min (or min size 1))
@@ -347,6 +362,7 @@
 			      :code-to-octets ,output
 			      :min ,(min min max) :max ,(max min max))
 		    t
+		    ,documentation
 		    #() '())))))
 
 (defun load-external-format-aliases ()
@@ -394,6 +410,49 @@
 		       result))
 	     ef)
     (sort result #'string< :key #'first)))
+
+(defun describe-external-format (external-format)
+  "Print a description of the given External-Format.  This may cause
+  the external format to be loaded (silently), if it is not already
+  loaded."
+  (when (zerop (hash-table-count
+		*external-format-aliases*))
+    (load-external-format-aliases))
+  (let ((alias (gethash external-format *external-format-aliases*)))
+    (cond (alias
+	   (format t (intl:gettext "~&~S is an alias for the external format ~S.~2%")
+		   external-format alias))
+	  ((and (listp external-format)
+		(> (length external-format) 1))
+	   ;; Some kind of composed external format
+	   (format t (intl:gettext "~&~S is a composed external format.~2%") external-format))
+	  (t
+	   (let ((ef (handler-case (let ((*compile-print* nil)
+					 (ext:*compile-progress* nil)
+					 (*compile-verbose* nil))
+				     ;; Should we be this silent when
+				     ;; loading the external format?
+				     ;; We aren't when the normally
+				     ;; loading the format.
+				     (find-external-format external-format))
+		       (external-format-not-found ()
+			 (format *error-output*
+				 (intl:gettext "~&Could not find external format ~S~%")
+				 external-format)))))
+	     (when ef
+	       (let (aliases)
+		 ;; Find any aliases for this external format.  Doesn't need to be efficient.
+		 (maphash #'(lambda (k v)
+			      (when (eq v external-format)
+				(push k aliases)))
+			  *external-format-aliases*)
+		 (format t (intl:gettext "~S~:[~; - [Aliases: ~{~S~^, ~}~]]~%")
+			 external-format aliases aliases))
+	       (when (ef-composingp ef)
+		 (format t (intl:gettext "~&~S is a composing external format.~2%")
+			 external-format))
+	       (format t "~&~A~%"
+		       (intl:gettext (or (ef-documentation ef) "")))))))))
 
 (defun %find-external-format (name)
   ;; avoid loading files, etc., early in the boot sequence
@@ -461,6 +520,7 @@
     :cache (make-array +ef-max+ :initial-element nil)
     :min (* (ef-min-octets a) (ef-min-octets b))
     :max (* (ef-max-octets a) (ef-max-octets b)))
+   nil
    nil #() '()))
 
 (defun find-external-format (name &optional (error-p t))
@@ -479,7 +539,7 @@
   (flet ((not-found ()
 	   (when (equal *default-external-format* name)
 	     (setq *default-external-format* :iso8859-1))
-	   (if error-p (error (intl:gettext "External format ~S not found.") name) nil)))
+	   (if error-p (error 'external-format-not-found :name name) nil)))
     (if (consp name)
 	(let ((efs (mapcar #'%find-external-format name)))
 	  (if (member nil efs)
@@ -568,19 +628,29 @@
       (declare (ignore condition))
       (format stream (intl:gettext "Attempting I/O through void external-format.")))))
 
-(define-external-format :void (:size 0) ()
+(define-external-format :void (:size 0 :documentation
+"Void external format that signals an error on any input or output.")
+ ()
   (octets-to-code (state input unput error)
     `(error 'void-external-format))
   (code-to-octets (code state output error)
     `(error 'void-external-format)))
 
-(define-external-format :iso8859-1 (:size 1) ()
+(define-external-format :iso8859-1 (:size 1 :documentation
+"ISO8859-1 is an 8-bit character encoding generally intended for
+Western European languages including English, German, Italian,
+Norwegian, Portuguese, Spanish, Swedish and many others.
+
+By default, illegal inputs are replaced by the Unicode replacement
+character and illegal outputs are replaced by a question mark.")
+  ()
   (octets-to-code (state input unput error)
     `(values ,input 1))
   (code-to-octets (code state output error)
     `(,output (if (> ,code 255)
 		  (if ,error
-		      (funcall ,error "Cannot output codepoint #x~X to ISO8859-1 stream"
+		      (funcall ,error
+			       (intl:gettext "Cannot output codepoint #x~X to ISO8859-1 stream")
 			       ,code 1)
 		      #x3F)
 		  ,code))))
@@ -684,10 +754,10 @@
 		    (if ,error
 			(if (lisp::surrogatep code)
 			    (funcall ,error
-				     ,(format nil "Surrogate codepoint #x~~4,'0X is illegal for ~A"
-					      external-format)
+				     (format nil (intl:gettext "Surrogate codepoint #x~~4,'0X is illegal for ~A")
+					      ,external-format)
 				     code nil)
-			    (funcall ,error "Illegal codepoint on input: #x~X" code nil))
+			    (funcall ,error (intl:gettext "Illegal codepoint on input: #x~X") code nil))
 			#-(and unicode (not unicode-bootstrap)) #\?
 			#+(and unicode (not unicode-bootstrap)) #\U+FFFD))
 		   #+unicode
@@ -718,7 +788,8 @@
 		     (,wryte (if (lisp::surrogatep (char-code ,nchar) :low)
 				 (surrogates-to-codepoint (car ,nstate) ,nchar)
 				 (if ,error
-				     (funcall ,error "Cannot convert invalid surrogate #x~X to character"
+				     (funcall ,error
+					      (intl:gettext "Cannot convert invalid surrogate #x~X to character")
 					      ,nchar)
 				     +replacement-character-code+)))
 		   (setf (car ,nstate) nil))
@@ -726,7 +797,8 @@
 		 ;; the replacement character.
 		 (,wryte (if (lisp::surrogatep (char-code ,nchar) :low)
 			     (if ,error
-				 (funcall ,error "Cannot convert lone trailing surrogate #x~X to character"
+				 (funcall ,error
+					  (intl:gettext "Cannot convert lone trailing surrogate #x~X to character")
 					  ,nchar)
 				 +replacement-character-code+)
 			     (char-code ,nchar)))))))))
@@ -763,9 +835,9 @@
 				     (buffer nil bufferp)
 			             error)
   "Convert String to octets using the specified External-format.  The
-   string is bounded by Start (defaulting to 0) and End (defaulting to
-   the end of the string.  If Buffer is given, the octets are stored
-   there.  If not, a new buffer is created."
+  string is bounded by Start (defaulting to 0) and End (defaulting to
+  the end of the string.  If Buffer is given, the octets are stored
+  there.  If not, a new buffer is created."
   (declare (type string string)
 	   (type kernel:index start)
 	   (type (or kernel:index null) end)

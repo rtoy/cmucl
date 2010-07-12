@@ -4,7 +4,7 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32.lisp,v 1.9 2010/07/05 04:12:47 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32.lisp,v 1.10 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -26,7 +26,15 @@
 ;; (evenp state) = big-endian
 ;; (zerop state) = #xFEFF/#xFFFE is BOM (to be skipped)
 ;;
-(define-external-format :utf-32 (:size 4)
+(define-external-format :utf-32 (:size 4 :documentation
+"UTF-32 is a fixed-length character encoding of 4 octets for Unicode.
+On input, a byte-order mark is recognized.  If no byte-order mark is
+given on input, then the encoding is assumed to be big-endian.  For
+output, the byte-order mark is not written, and the output is
+big-endian.  (This is specified by the Unicode standard.)
+
+By default, illegal inputs and illegal outputs are replaced by the
+Unicode replacement character.")
   ()
 
   (octets-to-code (state input unput code error c1 c2 c3 c4 st wd)

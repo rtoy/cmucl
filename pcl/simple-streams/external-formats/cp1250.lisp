@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cp1250.lisp,v 1.3 2009/06/21 15:12:23 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cp1250.lisp,v 1.4 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -32,5 +32,11 @@
                                   324 328 243 244 337 246 247 345 367 250
                                   369 252 253 355 729)))
 
-(define-external-format :cp1250 (:mac-roman)
+(define-external-format :cp1250 (:base :mac-roman :documentation
+"CP1250 is a Windows code page to represent texts in Central and
+Eastern European languages such as Polish, Czech, Slovak, Hungarian,
+Slovene, Bosnian, Croation, Serbian, Romanian, and Albanian.
+
+By default, illegal inputs are replaced by the Unicode replacement
+character and illegal outputs are replaced by a question mark.")
   ((table +ms-cp1250+)))

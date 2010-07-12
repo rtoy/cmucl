@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-2.lisp,v 1.5 2010/07/07 21:59:49 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-2.lisp,v 1.6 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -19,7 +19,14 @@
                          238 271 273 324 328 243 244 337 246 247 345 367 250
                          369 252 253 355 729)))
 
-(define-external-format :iso8859-2 (:size 1)
+(define-external-format :iso8859-2 (:size 1 :documentation
+"ISO8859-2 is an 8-bit character encoding generally intended for
+Eastern European languages including Bosnian, Croation, Czech, German,
+Hungarian, Polish, Romanian, Serbian Latin, Slovak, Slovene, Upper
+Sorbian, and Lower Sorbian.  
+
+By default, illegal inputs are replaced by the Unicode replacement
+character and illegal outputs are replaced by a question mark.")
   ((table +iso-8859-2+ :type (simple-array (unsigned-byte 16) (96)))
    (itable (invert-table table) :type lisp::ntrie16))
 

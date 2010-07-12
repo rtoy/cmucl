@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/koi8-r.lisp,v 1.2 2009/06/11 16:04:02 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/koi8-r.lisp,v 1.3 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -24,5 +24,9 @@
 			 1053 1054 1055 1071 1056 1057 1058 1059 1046 1042
 			 1068 1067 1047 1064 1069 1065 1063 1066)))
 
-(define-external-format :koi8-r (:mac-roman)
+(define-external-format :koi8-r (:base :mac-roman :documentation
+"KOI8-R is an 8-bit character encoding designed to cover Russian.
+
+By default, illegal inputs are replaced by the Unicode replacement
+character and illegal outputs are replaced by a question mark.")
   ((table +koi8-r+)))

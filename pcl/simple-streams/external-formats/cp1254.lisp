@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cp1254.lisp,v 1.3 2009/06/21 15:12:24 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cp1254.lisp,v 1.4 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
@@ -30,5 +30,9 @@
                                   287 241 242 243 244 245 246 247 248 249
                                   250 251 252 305 351 255)))
 
-(define-external-format :cp1254 (:mac-roman)
+(define-external-format :cp1254 (:base :mac-roman :documentation
+"CP1254 is a Windows code page for Turkish.
+
+By default, illegal inputs are replaced by the Unicode replacement
+character and illegal outputs are replaced by a question mark.")
   ((table +ms-cp1254+)))

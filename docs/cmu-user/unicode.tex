@@ -549,6 +549,18 @@ utility functions are provided to make access easier.
   converting the octets.
 \end{defun}
 
+\begin{defun}{}{list-all-external-formats}{}
+  \code{list-all-external-formats} produces a list of all known
+  external formats and the known aliases for for them.  Each element
+  of the list is a list consisting of the name of the external format
+  and a list of the known aliases for the format.
+\end{defun}
+
+\begin{defun}{}{describe-external-format}{\args \var{external-format}}
+  \code{describe-external-format} prints a description of the
+  specified external-format.
+\end{defun}
+
 \section{Writing External Formats}
 
 \subsection{External Formats}
@@ -562,31 +574,34 @@ external format is defined using the macro
 \code{stream::define-external-format}.
 
 \begin{defmac}[base]{stream:}{define-external-format}{\args \var{name}
-    (\keys{\var{min} \var{max} \var{size}}) (\amprest{} \var{slots})
+    (\keys{\var{base} \var{min} \var{max} \var{size}
+      \var{documentation}})
+    (\amprest{} \var{slots})
     \morekeys{\var{octets-to-code} \var{code-to-octets}
               \var{flush-state} \var{copy-state}}}
-  \defmacx[stream:]{define-external-format}{\args \var{name}
-    (\var{base}) (\amprest{} \var{slots})}
 
-  The first defines a new external format of the name \kwd{name}.
-  \var{min}, \var{max}, and \var{size} are the minimum and maximum
-  number of octets that make up a character.  (\code{\kwd{size} n} is
-  just a short cut for \code{\kwd{min} n \kwd{max} n}.)  The arguments
-  \var{octets-to-code} and \var{code-to-octets} are not optional in
-  this case.  They specify how to convert octets to codepoints and
-  vice versa, respectively.  These should be backquoted forms for the
-  body of a function to do the conversion.  See the description below
-  for these functions.  Some good examples are the external format for
+
+  If \kwd{base} is not given, this defines a new external format of
+  the name \kwd{name}. \var{min}, \var{max}, and \var{size} are the
+  minimum and maximum number of octets that make up a character.
+  (\code{\kwd{size} n} is just a short cut for \code{\kwd{min} n
+    \kwd{max} n}.)  The description of the external format can be
+  given using \kwd{documentation}.  The arguments \var{octets-to-code}
+  and \var{code-to-octets} are not optional in this case.  They
+  specify how to convert octets to codepoints and vice versa,
+  respectively.  These should be backquoted forms for the body of a
+  function to do the conversion.  See the description below for these
+  functions.  Some good examples are the external format for
   \kwd{utf-8} or \kwd{utf-16}.  The \kwd{slots} argument is a list of
-  read-only slots, similar to defstruct.  The slot names are available as
-  local variables inside the \var{code-to-octets} and \var{octets-to-code}
-  bodies.
+  read-only slots, similar to defstruct.  The slot names are available
+  as local variables inside the \var{code-to-octets} and
+  \var{octets-to-code} bodies. 
 
-  The second form above defines an external format with the name
-  \kwd{name} that is based on a previously defined format \kwd{base}.
-  The \var{slots} are inherited from the \kwd{base} format by default,
-  although the definition may alter their values and add new slots.
-  See, for example, the \kwd{mac-greek} external format.
+  If \kwd{base} is given, then an external format is defined with the
+  name \kwd{name} that is based on a previously defined format
+  \kwd{base}. The \var{slots} are inherited from the \kwd{base} format
+  by default, although the definition may alter their values and add
+  new slots. See, for example, the \kwd{mac-greek} external format. 
 
 \end{defmac}
 
@@ -657,7 +672,7 @@ external format is defined using the macro
 \subsection{Composing External Formats}
 
 \begin{defmac}{stream:}{define-composing-external-format}{\args \var{name}
-    (\keys{\var{min} \var{max} \var{size}}) \var{input}
+    (\keys{\var{min} \var{max} \var{size} \var{documentation}}) \var{input}
     \var{output}}
   This is the same as \code{define-external-format}, except that a
   composing external format is created.

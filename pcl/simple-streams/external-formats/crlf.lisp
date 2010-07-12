@@ -4,12 +4,15 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/crlf.lisp,v 1.3 2009/09/09 15:51:28 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/crlf.lisp,v 1.4 2010/07/12 13:58:42 rtoy Exp $")
 
 (in-package "STREAM")
 
 ;; Convert DOS cr/lf end-of-line sequence to/from #\newline
-(define-composing-external-format :crlf (:max 2)
+(define-composing-external-format :crlf (:max 2 :documentation
+"CRLF is a composing external format that converts CR/LF (carriage
+return/linefeed) to a Lisp newline character.  This is the Windoes
+end-of-line character sequence.")
   (input (state input unput tmp1 tmp2 tmp3 tmp4)
     `(multiple-value-bind (,tmp1 ,tmp2) 
 	 ,input
