@@ -1,3 +1,14 @@
+;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: CL-USER -*-
+;;;
+;;; A very rudimentary machine translator to convert English to Pig
+;;; Latin.  Written by Paul Foley.
+;;;
+;;; DO-TRANSLATIONS will translate all of the pot files in the given
+;;; directory, placing the translations in the subdirectory
+;;; en@piglatin/LC_MESSAGES.
+
+(in-package "CL-USER")
+
 (defun latinize-1 (word)
   (cond ((string= word "I") "Iway")
 	((string= word "a") "away")
