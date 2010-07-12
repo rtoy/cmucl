@@ -22,6 +22,7 @@ else
 fi
 
 if [ -n "$MAKE_POT" ]; then
+    GETFMT="(map nil #'(lambda (f) (stream::find-external-format (car f))) (list-all-external-formats))"
     SAVEPOT='(intl::dump-pot-files :output-directory "default:src/i18n/locale/")'
 fi
 
@@ -61,6 +62,7 @@ $LISP "$@" -noinit -nositeinit <<EOF
 #+(or no-compiler runtime) (comf "target:compiler/generic/new-genesis")
 #-(or no-pcl runtime) (load "target:tools/pclcom")
 
+$GETFMT
 $SAVEPOT
 
 (setq *gc-verbose* t *interactive* t)

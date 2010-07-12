@@ -4,9 +4,10 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-be.lisp,v 1.8 2010/07/12 13:58:42 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-be.lisp,v 1.9 2010/07/12 14:42:11 rtoy Exp $")
 
 (in-package "STREAM")
+(intl:textdomain "cmucl")
 
 (define-external-format :utf-32-be (:size 4 :documentation
 "UTF-32-BE is a fixed-length character encoding of 4 octets for

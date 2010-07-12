@@ -4,9 +4,10 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cp1258.lisp,v 1.4 2010/07/12 13:58:42 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cp1258.lisp,v 1.5 2010/07/12 14:42:11 rtoy Rel $")
 
 (in-package "STREAM")
+(intl:textdomain "cmucl")
 
 ;; See http://unicode.org/Public/MAPPINGS/VENDORS/MICSFT/WINDOWS/CP1258.TXT
 ;;

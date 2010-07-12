@@ -4,10 +4,13 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/beta-gk.lisp,v 1.3 2010/07/12 13:58:42 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/beta-gk.lisp,v 1.4 2010/07/12 14:42:11 rtoy Rel $")
 
 ;; This is a composing format that translates (lower-case) Beta code
 ;; (an ASCII encoding of ancient Greek) into Unicode Greek.
+
+(in-package "STREAM")
+(intl:textdomain "cmucl")
 
 (defvar *betamap*
   '((109 956)

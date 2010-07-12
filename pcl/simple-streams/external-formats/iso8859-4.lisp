@@ -4,9 +4,10 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-4.lisp,v 1.3 2010/07/12 13:58:42 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-4.lisp,v 1.4 2010/07/12 14:42:11 rtoy Rel $")
 
 (in-package "STREAM")
+(intl:textdomain "cmucl")
 
 (defconstant +iso-8859-4+
   (make-array 96 :element-type '(unsigned-byte 16)

@@ -4,9 +4,10 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cr.lisp,v 1.3 2010/07/12 13:58:42 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/cr.lisp,v 1.4 2010/07/12 14:42:11 rtoy Rel $")
 
 (in-package "STREAM")
+(intl:textdomain "cmucl")
 
 ;; Convert CR to/from #\newline.
 (define-composing-external-format :cr (:size 1 :documentation

@@ -1,9 +1,10 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: STREAM -*-
 ;;;
 ;;; **********************************************************************
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.11 2010/07/12 13:58:42 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.12 2010/07/12 14:42:11 rtoy Exp $")
 
 (in-package "STREAM")
+(intl:textdomain "cmucl")
 
 ;; From the Unicode BOM FAQ
 ;; (http://www.unicode.org/faq/utf_bom.html#BOM), UTF-16BE and

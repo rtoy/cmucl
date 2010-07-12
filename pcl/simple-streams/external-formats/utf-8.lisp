@@ -4,9 +4,10 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.13 2010/07/12 13:58:42 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.14 2010/07/12 14:42:11 rtoy Exp $")
 
 (in-package "STREAM")
+(intl:textdomain "cmucl")
 
 ;; A safe UTF-8 external format.  Any illegal UTF-8 sequences on input
 ;; are replaced with the Unicode REPLACEMENT CHARACTER (U+FFFD).
