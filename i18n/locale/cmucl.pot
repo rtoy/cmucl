@@ -8817,11 +8817,27 @@ msgid "Event-listen was true, but handler didn't handle: ~%~S"
 msgstr ""
 
 #: src/code/extfmts.lisp
+msgid ""
+"The default external format to use if no other external format is\n"
+"  specified"
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid "Hash table of all the external formats that have been loaded"
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid ""
+"Hash table mapping an external format alias to the actual external\n"
+"  format implementation"
+msgstr ""
+
+#: src/code/extfmts.lisp
 msgid "Attempting unimplemented external-format I/O."
 msgstr ""
 
 #: src/code/extfmts.lisp
-msgid "Nonsensical argument (~S) to DEFINE-EXTERNAL-FORMAT."
+msgid "External format ~S not found."
 msgstr ""
 
 #: src/code/extfmts.lisp
@@ -8830,6 +8846,41 @@ msgstr ""
 
 #: src/code/extfmts.lisp
 msgid "External-format aliases file ends early."
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid ""
+"List the available external formats.  A list is returned where each\n"
+"  element is list of the external format and a list of aliases for the\n"
+"  format.  No distinction is made between external formats and\n"
+"  composing external formats."
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid ""
+"Print a description of the given External-Format.  This may cause\n"
+"  the external format to be loaded (silently), if it is not already\n"
+"  loaded."
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid "~&~S is an alias for the external format ~S.~2%"
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid "~&~S is a composed external format.~2%"
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid "~S~:[~; - [Aliases: ~{~S~^, ~}~]]~%"
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid "~&~S is a composing external format.~2%"
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid "~&Could not find external format ~S~%"
 msgstr ""
 
 #: src/code/extfmts.lisp
@@ -8849,19 +8900,29 @@ msgid "~S is not a valid external format name."
 msgstr ""
 
 #: src/code/extfmts.lisp
-msgid "External format ~S not found."
+msgid "Attempting I/O through void external-format."
 msgstr ""
 
 #: src/code/extfmts.lisp
-msgid "Attempting I/O through void external-format."
+msgid "Void external format that signals an error on any input or output."
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid ""
+"ISO8859-1 is an 8-bit character encoding generally intended for\n"
+"Western European languages including English, German, Italian,\n"
+"Norwegian, Portuguese, Spanish, Swedish and many others.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
 msgstr ""
 
 #: src/code/extfmts.lisp
 msgid ""
 "Convert String to octets using the specified External-format.  The\n"
-"   string is bounded by Start (defaulting to 0) and End (defaulting to\n"
-"   the end of the string.  If Buffer is given, the octets are stored\n"
-"   there.  If not, a new buffer is created."
+"  string is bounded by Start (defaulting to 0) and End (defaulting to\n"
+"  the end of the string.  If Buffer is given, the octets are stored\n"
+"  there.  If not, a new buffer is created."
 msgstr ""
 
 #: src/code/extfmts.lisp
@@ -9033,7 +9094,12 @@ msgid ""
 "(the\n"
 "    default), then wait forever.  When we time out, we signal IO-TIMEOUT.\n"
 "  File is the name of the file (will be returned by PATHNAME).\n"
-"  Name is used to identify the stream when printed."
+"  Name is used to identify the stream when printed.\n"
+"  External-format is the external format to use for the stream.\n"
+"  Decoding-error and Encoding-error indicate how decoding/encoding errors "
+"on\n"
+"    the stream should be handled.  The default is to use a replacement "
+"character."
 msgstr ""
 
 #: src/code/fd-stream.lisp
@@ -9042,6 +9108,10 @@ msgstr ""
 
 #: src/code/fd-stream.lisp
 msgid "** Closed ~A~%"
+msgstr ""
+
+#: src/code/fd-stream.lisp
+msgid "Use Unicode replacement character instead"
 msgstr ""
 
 #: src/code/fd-stream.lisp
@@ -9114,6 +9184,22 @@ msgid ""
 "                       :overwrite, :append, :supersede or nil\n"
 "   :if-does-not-exist - one of :error, :create or nil\n"
 "   :external-format - an external format name\n"
+"   :decoding-error - How to handle decoding errors from the external "
+"format.\n"
+"                       Should be a symbol or function of 3 arguments.  If "
+"it\n"
+"                       returns, it should return a code point to use as the\n"
+"                       replacment.  NIL means use the default replacement "
+"scheme\n"
+"                       specified by the external format.  The function "
+"arguments\n"
+"                       are a format message string, the offending octet, "
+"and the\n"
+"                       number of octets read in the current encoding.   \n"
+"   :encoding-error - Like :decoding-error, but for errors when encoding the\n"
+"                       stream.  The function arguments are a format message\n"
+"                       string and the incorrect codepoint.\n"
+"\n"
 "  See the manual for details."
 msgstr ""
 
@@ -9172,6 +9258,26 @@ msgstr ""
 
 #: src/code/fd-stream-extfmt.lisp
 msgid "Setting external-format on Gray streams not supported."
+msgstr ""
+
+#: src/code/fd-stream-extfmt.lisp
+msgid "Surrogate codepoint #x~~4,'0X is illegal for ~A"
+msgstr ""
+
+#: src/code/fd-stream-extfmt.lisp
+msgid "Illegal codepoint on input: #x~X"
+msgstr ""
+
+#: src/code/fd-stream-extfmt.lisp
+msgid "Cannot output codepoint #x~X to ISO8859-1 stream"
+msgstr ""
+
+#: src/code/fd-stream-extfmt.lisp
+msgid "Cannot convert invalid surrogate #x~X to character"
+msgstr ""
+
+#: src/code/fd-stream-extfmt.lisp
+msgid "Cannot convert lone trailing surrogate #x~X to character"
 msgstr ""
 
 #: src/code/pathname.lisp
@@ -20735,5 +20841,301 @@ msgstr ""
 
 #: src/pcl/gray-streams.lisp
 msgid "    Gray Streams Protocol Support"
+msgstr ""
+
+msgid ""
+"US ASCII 7-bit encoding.  Illegal input sequences are replaced with\n"
+"the Unicode replacment character.  Illegal output characters are\n"
+"replaced with a question mark."
+msgstr ""
+
+msgid ""
+"MAC-ROMAN is an 8-bit character encoding for Western European\n"
+"languages including English.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"CP1250 is a Windows code page to represent texts in Central and\n"
+"Eastern European languages such as Polish, Czech, Slovak, Hungarian,\n"
+"Slovene, Bosnian, Croation, Serbian, Romanian, and Albanian.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"CP1251 is a Windows code page to represent texts that use the\n"
+"Cyrillic alphabet such as Russian, Bulgarian, Serbian Cyrillic, and\n"
+"others.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"CP1252 is a Windows code page for the Latin alphabet.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"CP1253 is a Windows code page for Greek.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"CP1254 is a Windows code page for Turkish.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"CP1255 is a Windows code page for Hebrew.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"CP1256 is a Windows code page for Arabic.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"CP1257 is a Windows code page for Estonian, Latvian, and Lithuanian.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"CP1258 is a Windows code page for Vietnamese.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"ISO8859-2 is an 8-bit character encoding generally intended for\n"
+"Eastern European languages including Bosnian, Croation, Czech, German,\n"
+"Hungarian, Polish, Romanian, Serbian Latin, Slovak, Slovene, Upper\n"
+"Sorbian, and Lower Sorbian.  \n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"ISO8859-10 is an 8-bit character encoding intended to cover Nordic\n"
+"languages.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"ISO8859-13 is an 8-bit character encoding for the Baltic languages.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"ISO8859-14 is an 8-bit character encoding intended for the Celtic\n"
+"languages such as Irish, Manx, Scottish Gaelic, Welsh, and Breton.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"ISO8859-15 is an 8-bit character encoding similar to ISO8859-1 but\n"
+"replaces some less common symbols with others, including adding the\n"
+"Euro sign.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"ISO8859-3 is an 8-bit character encoding intended for South European\n"
+"languages including Turkish, Maltese, and Esperanto.  For Turkish,\n"
+"ISO8859-9 supersedes ISO8859-3.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"ISO8859-4 is an 8-bit character encoding for North European languages\n"
+"including Estonian, Latvian, Lithuanian, Greenlandic, and Sami.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"ISO8859-5, informallly referred to as Latin/Cyrillic, is an 8-bit\n"
+"character encoding intended for languages using a Cyrillic alphabet\n"
+"such as Bulgarian, Belarusian, Russian, Serbian, and Macedonian.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"ISO8859-6 is an 8-bit character encoding generally intended languages\n"
+"using the Arabic alphabet.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"ISO8859-7 is an 8-bit character encoding for the modern Greek\n"
+"language.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"ISO8859-8 is an 8-bit character encoding intended for Hebrew.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"ISO8859-9 is an 8-bit character encoding for the Turkish language.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"KOI8-R is an 8-bit character encoding designed to cover Russian.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"MAC-CYRILLIC is an 8-bit character encoding for Cyrillic text on\n"
+"Apple Macintosh computers.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"MAC-GREEK is an 8-bit character encoding for Greek text on Apple\n"
+"Macintosh computers.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"MAC-ICELANDIC is an 8-bit character encoding for Icelandic text on\n"
+"Apple Macintosh computers.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"MAC-LATIN2 is an 8-bit character encoding for Central European text\n"
+"on Apple Macintosh computers.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"MAC-TURKISH is an 8-bit character encoding for Turkish text on\n"
+"Apple Macintosh computers.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"UTF-16 is a variable length character encoding for Unicode.  On\n"
+"input, a byte-order mark is recognized.  If no byte-order mark is\n"
+"given on input, then the encoding is assumed to be big-endian.  For\n"
+"output, the byte-order mark is not written, and the output is\n"
+"big-endian.  (This is specified by the Unicode standard.)\n"
+"\n"
+"By default, illegal inputs and illegal outputs are replaced by the\n"
+"Unicode replacement character."
+msgstr ""
+
+msgid ""
+"UTF-16-BE is a variable length character encoding for Unicode.  For\n"
+"both input and output, the data is assumed to be in big-endian order.\n"
+"No byte-order mark is allowed on input, and no byte-order mark is\n"
+"produced on output.  (This is specified by the Unicode standard.)\n"
+"\n"
+"By default, illegal inputs and illegal outputs are replaced by the\n"
+"Unicode replacement character."
+msgstr ""
+
+msgid ""
+"UTF-16-LE is a variable length character encoding for Unicode.  For\n"
+"both input and output, the data is assumed to be in little-endian\n"
+"order.  No byte-order mark is allowed on input, and no byte-order mark\n"
+"is produced on output.  (This is specified by the Unicode standard.)\n"
+"\n"
+"By default, illegal inputs and illegal outputs are replaced by the\n"
+"Unicode replacement character."
+msgstr ""
+
+msgid ""
+"UTF-32 is a fixed-length character encoding of 4 octets for Unicode.\n"
+"On input, a byte-order mark is recognized.  If no byte-order mark is\n"
+"given on input, then the encoding is assumed to be big-endian.  For\n"
+"output, the byte-order mark is not written, and the output is\n"
+"big-endian.  (This is specified by the Unicode standard.)\n"
+"\n"
+"By default, illegal inputs and illegal outputs are replaced by the\n"
+"Unicode replacement character."
+msgstr ""
+
+msgid ""
+"UTF-32-BE is a fixed-length character encoding of 4 octets for\n"
+"Unicode.  For both input and output, the data is assumed to be in\n"
+"big-endian order.  No byte-order mark is allowed on input, and no\n"
+"byte-order mark is produced on output.  (This is specified by the\n"
+"Unicode standard.)\n"
+"\n"
+"By default, illegal inputs and illegal outputs are replaced by the\n"
+"Unicode replacement character."
+msgstr ""
+
+msgid ""
+"UTF-32-LE is a fixed-length character encoding of 4 octets for\n"
+"Unicode.  For both input and output, the data is assumed to be in\n"
+"little-endian order.  No byte-order mark is allowed on input, and no\n"
+"byte-order mark is produced on output.  (This is specified by the\n"
+"Unicode standard.)\n"
+"\n"
+"By default, illegal inputs and illegal outputs are replaced by the\n"
+"Unicode replacement character."
+msgstr ""
+
+msgid ""
+"UTF-8 is a variable-length character encoding for Unicode.  By\n"
+"default, illegal input sequences are replaced by the Unicode\n"
+"replacement character."
 msgstr ""
 
