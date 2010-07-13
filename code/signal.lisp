@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.39 2010/04/20 17:57:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.40 2010/07/13 23:43:39 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -103,19 +103,32 @@
 (def-unix-signal :SIGTRAP 5 "Trace trap")
 (def-unix-signal :SIGIOT 6 "Iot instruction") ; Compatibility
 (def-unix-signal :SIGABRT 6 "C abort()")
+(intl::with-textdomain (#+linux "cmucl-linux-os"
+			#+sparc "cmucl-sparc-svr4"
+			#+bsd "cmucl-bsd-os")
 #-linux
-(def-unix-signal :SIGEMT 7 "Emt instruction")
+(def-unix-signal :SIGEMT 7 "Emt instruction"))
+
+
 (def-unix-signal :SIGFPE 8 "Floating point exception")
 (def-unix-signal :SIGKILL 9 "Kill")
 (def-unix-signal :SIGBUS #-linux 10 #+linux 7 "Bus error")
 (def-unix-signal :SIGSEGV 11 "Segmentation violation")
+(intl::with-textdomain (#+linux "cmucl-linux-os"
+			#+sparc "cmucl-sparc-svr4"
+			#+bsd "cmucl-bsd-os")
 #-linux
-(def-unix-signal :SIGSYS 12 "Bad argument to system call")
+(def-unix-signal :SIGSYS 12 "Bad argument to system call"))
+
 (def-unix-signal :SIGPIPE 13 "Write on a pipe with no one to read it")
 (def-unix-signal :SIGALRM 14 "Alarm clock")
 (def-unix-signal :SIGTERM 15 "Software termination signal")
+(intl::with-textdomain (#+linux "cmucl-linux-os"
+			#+sparc "cmucl-sparc-svr4"
+			#+bsd "cmucl-bsd-os")
 #+linux
-(def-unix-signal :SIGSTKFLT 16 "Stack fault on coprocessor")
+(def-unix-signal :SIGSTKFLT 16 "Stack fault on coprocessor"))
+
 (def-unix-signal :SIGURG #+svr4 21 #-(or hpux svr4 linux) 16 #+hpux 29
   #+linux 23 "Urgent condition present on socket")
 (def-unix-signal :SIGSTOP #-(or hpux svr4 linux) 17 #+hpux 24 #+svr4 23 
@@ -149,9 +162,11 @@
   #+linux 12 "User defined signal 2")
 
 ;;; SVR4 (or Solaris?) specific signals
+(intl::with-textdomain (#+linux "cmucl-linux-os"
+			#+sparc "cmucl-sparc-svr4"
+			#+bsd "cmucl-bsd-os")
 #+svr4
-(def-unix-signal :SIGWAITING 32 "Process's lwps are blocked")
-
+(def-unix-signal :SIGWAITING 32 "Process's lwps are blocked"))
 
 ;;; SIGMASK -- Public
 ;;;

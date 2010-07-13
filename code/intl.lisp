@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.6 $
+;;; $Revision: 1.7 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,7 +23,7 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.6 2010/04/20 17:57:44 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.7 2010/07/13 23:43:39 rtoy Exp $")
 
 (in-package "INTL")
 
@@ -524,6 +524,13 @@
 (defmacro textdomain (domain)
   `(eval-when (:compile-toplevel :execute)
      (setf *default-domain* ,domain)))
+
+;; Set the textdomain to New-Domain for the body and then restore the
+;; domain to the original.
+(defmacro with-textdomain ((new-domain) &body body)
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     (let ((intl::*default-domain* ,new-domain))
+       ,@body)))
 
 (defmacro gettext (string)
   "Look up STRING in the current message domain and return its translation."

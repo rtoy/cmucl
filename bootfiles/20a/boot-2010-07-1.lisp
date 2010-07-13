@@ -4,19 +4,6 @@
 (in-package "STREAM")
 
 (ext:without-package-locks
-  (handler-bind ((error (lambda (c)
-			  (declare (ignore c))
-			  (invoke-restart 'kernel::clobber-it))))
-    #+nil
-    (defstruct efx
-      (octets-to-code #'%efni :type function :read-only t)
-      (code-to-octets #'%efni :type function :read-only t)
-      (flush-state nil :type (or null function) :read-only t)
-      (copy-state nil :type (or null function) :read-only t)
-      (cache nil :type (or null simple-vector))
-      (min 1 :type kernel:index :read-only t)
-      (max 1 :type kernel:index :read-only t)
-      (documentation nil :type (or null string) :read-only t)))
 
   (handler-bind ((error (lambda (c)
 			  (declare (ignore c))
@@ -32,3 +19,20 @@
       (slots #() :type simple-vector :read-only t)
       (slotd nil :type list :read-only t)
       (documentation nil :type (or null string) :read-only t))))
+
+(in-package "INTL")
+
+(export '(with-textdomain))
+
+(ext:without-package-locks
+
+  ;; Not the same as the definition in intl.lisp, but this works
+  ;; around a bootstrap issue.  It's good enough until the real
+  ;; definition is in place.
+  
+(defmacro with-textdomain ((new-domain) &body body)
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     (setf intl::*default-domain* ,new-domain)
+     ,@body
+     (setf intl::*default-domain* "cmucl")))
+)
