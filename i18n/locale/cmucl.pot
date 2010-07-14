@@ -10426,10 +10426,6 @@ msgid "C abort()"
 msgstr ""
 
 #: src/code/signal.lisp
-msgid "Emt instruction"
-msgstr ""
-
-#: src/code/signal.lisp
 msgid "Floating point exception"
 msgstr ""
 
@@ -10443,10 +10439,6 @@ msgstr ""
 
 #: src/code/signal.lisp
 msgid "Segmentation violation"
-msgstr ""
-
-#: src/code/signal.lisp
-msgid "Bad argument to system call"
 msgstr ""
 
 #: src/code/signal.lisp
