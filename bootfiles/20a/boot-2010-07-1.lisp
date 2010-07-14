@@ -26,13 +26,9 @@
 
 (ext:without-package-locks
 
-  ;; Not the same as the definition in intl.lisp, but this works
-  ;; around a bootstrap issue.  It's good enough until the real
-  ;; definition is in place.
-  
-(defmacro with-textdomain ((new-domain) &body body)
-  `(eval-when (:compile-toplevel :load-toplevel :execute)
-     (setf intl::*default-domain* ,new-domain)
+(defmacro with-textdomain ((old-domain new-domain) &body body)
+  `(progn
+     (intl:textdomain ,new-domain)
      ,@body
-     (setf intl::*default-domain* "cmucl")))
+     (intl:textdomain ,old-domain)))
 )
