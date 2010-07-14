@@ -5950,20 +5950,6 @@ msgid ""
 msgstr ""
 
 #: src/code/commandline.lisp
-msgid ""
-"Specifies what kind of floating-point support should be used on x86\n"
-"  systems.  If 'x87', Lisp will use the x87 floating-point unit; if\n"
-"  'sse2', Lisp uses SSE2 floating-point unit. The default is\n"
-"  'auto',which causes Lisp to check to see if SSE2 is available.  If\n"
-"  so, then SSE2 is used.  If the SSE2 core file cannot be found,Lisp\n"
-"  will fallback to the x87 core, which can run on any machine."
-msgstr ""
-
-#: src/code/commandline.lisp
-msgid "mode"
-msgstr ""
-
-#: src/code/commandline.lisp
 msgid "~&Usage: ~A <options>~2%"
 msgstr ""
 
@@ -10067,10 +10053,6 @@ msgstr ""
 
 #: src/code/load.lisp
 msgid "~A was compiled for a ~A, but this is a ~A"
-msgstr ""
-
-#: src/compiler/dfo.lisp src/code/load.lisp
-msgid "Top-Level Form"
 msgstr ""
 
 #: src/compiler/generic/core.lisp src/code/load.lisp
@@ -15389,31 +15371,6 @@ msgid ""
 "Same as EXT:FEATUREP, except use the features found in *NATIVE-BACKEND*."
 msgstr ""
 
-#: src/compiler/x86/parms.lisp
-msgid "Number of bits per word where a word holds one lisp descriptor."
-msgstr ""
-
-#: src/compiler/x86/parms.lisp
-msgid ""
-"Number of bits per byte where a byte is the smallest addressable object."
-msgstr ""
-
-#: src/compiler/x86/parms.lisp
-msgid "Number of bits needed to represent a character"
-msgstr ""
-
-#: src/compiler/x86/parms.lisp
-msgid "Number of bytes needed to represent a character"
-msgstr ""
-
-#: src/compiler/x86/parms.lisp
-msgid "Number of bits to shift between word addresses and byte addresses."
-msgstr ""
-
-#: src/compiler/x86/parms.lisp
-msgid "Number of bytes in a word."
-msgstr ""
-
 #: src/compiler/generic/objdef.lisp
 msgid "Number of bits at the low end of a pointer used for type information."
 msgstr ""
@@ -18658,6 +18615,10 @@ msgstr ""
 msgid "Function called with unknown argument keyword ~S."
 msgstr ""
 
+#: src/compiler/dfo.lisp
+msgid "Top-Level Form"
+msgstr ""
+
 #: src/compiler/checkgen.lisp
 msgid "~:[This~;~:*~A~] is not a ~<~%~9T~:;~S:~>~%  ~S"
 msgstr ""
@@ -18740,28 +18701,10 @@ msgid ""
 "   symbol."
 msgstr ""
 
-#: src/compiler/x86/vm.lisp
-msgid "Redefining SC number ~D from ~S to ~S."
-msgstr ""
-
 #: src/compiler/generic/primtype.lisp
 msgid ""
 "An a-list for mapping simple array element types to their\n"
 "  corresponding primitive types."
-msgstr ""
-
-#: src/compiler/x86/type-vops.lisp src/compiler/x86/pred.lisp
-#: src/compiler/x86/print.lisp src/compiler/x86/nlx.lisp
-#: src/compiler/x86/values.lisp src/compiler/x86/subprim.lisp
-#: src/compiler/x86/static-fn.lisp src/compiler/x86/system.lisp
-#: src/compiler/x86/sap.lisp
-msgid "Unknown SC to SC-Case for ~S:~%  ~S"
-msgstr ""
-
-#: src/compiler/x86/nlx.lisp
-msgid ""
-"Load TN allocated, but no move function?~@\n"
-"	           VM definition inconsistent, recompile and try again."
 msgstr ""
 
 #: src/compiler/aliencomp.lisp
