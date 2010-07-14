@@ -11257,10 +11257,6 @@ msgid "Unknown breakpoint in ~S at offset ~S."
 msgstr ""
 
 #: src/code/debug-int.lisp
-msgid "Breakpoint that nobody wants?"
-msgstr ""
-
-#: src/code/debug-int.lisp
 msgid ""
 "Make a bogus LRA object that signals a breakpoint trap when returned to.  "
 "If\n"
