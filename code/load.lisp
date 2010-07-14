@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.96 2010/04/20 17:57:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.97 2010/07/14 13:19:03 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1286,6 +1286,7 @@
 (defvar *enable-dynamic-space-code* #-gencgc nil #+gencgc t)
 
 #+(or x86 amd64)
+(intl:with-textdomain ("cmucl" "cmucl-x86-vm")
 (defun load-code (box-num code-length)
   (declare (fixnum box-num code-length))
   (with-fop-stack t
@@ -1344,7 +1345,7 @@
 	    (setf (code-header-ref code (decf index)) (pop stuff)))
 	  (system:without-gcing
 	   (read-n-bytes *fasl-file* (code-instructions code) 0 code-length))
-	  code)))))
+	  code))))))
 
 (define-fop (fop-code 58 :nope)
   (load-code (read-arg 4) (read-arg 4)))

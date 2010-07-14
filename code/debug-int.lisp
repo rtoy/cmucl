@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.140 2010/04/20 17:57:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.141 2010/07/14 13:19:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1253,6 +1253,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; LRA, and the LRA is the word offset.
 ;;;
 #-(or gengc x86 amd64)
+(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-svr4")
 (defun compute-calling-frame (caller lra up-frame)
   (declare (type system:system-area-pointer caller))
   (when (cstack-pointer-valid-p caller)
@@ -1301,9 +1302,10 @@ The result is a symbol or nil if the routine cannot be found."
 				 (code-location-from-pc d-fun pc-offset
 							escaped)
 				 (if up-frame (1+ (frame-number up-frame)) 0)
-				 escaped))))))
+				 escaped)))))))
 
 #+(or x86 amd64)
+(intl:with-textdomain ("cmucl" "cmucl-x86-vm")
 (defun compute-calling-frame (caller ra up-frame)
   (declare (type system:system-area-pointer caller ra))
 ;  (format t "ccf: ~a ~a ~a~%" caller ra up-frame)
@@ -1357,9 +1359,10 @@ The result is a symbol or nil if the routine cannot be found."
 			       (code-location-from-pc d-fun pc-offset
 						      escaped)
 			       (if up-frame (1+ (frame-number up-frame)) 0)
-			       escaped)))))
+			       escaped))))))
 
 #-(or gengc x86 amd64)
+(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-svr4")
 (defun find-escaped-frame (frame-pointer)
   (declare (type system:system-area-pointer frame-pointer))
   (dotimes (index lisp::*free-interrupt-context-index* (values nil 0 nil))
@@ -1414,9 +1417,9 @@ The result is a symbol or nil if the routine cannot be found."
 		      (values (kernel:lra-code-header real-lra)
 			      (kernel:get-header-data real-lra)
 			      nil))
-		    (values code pc-offset scp)))))))))))
+		    (values code pc-offset scp))))))))))))
 #+(or x86 amd64)
-(defun find-escaped-frame (frame-pointer)
+(intl:with-textdomain ("cmucl" "cmucl-x86-vm")(defun find-escaped-frame (frame-pointer)
   (declare (type system:system-area-pointer frame-pointer))
   (dotimes (index lisp::*free-interrupt-context-index* (values nil 0 nil))
     (alien:with-alien
@@ -1449,9 +1452,10 @@ The result is a symbol or nil if the routine cannot be found."
 		 (format t "** pc-offset ~s not in code obj ~s?~%"
 			 pc-offset code))
 	       (return
-		 (values code pc-offset scp))))))))))
+		 (values code pc-offset scp)))))))))))
 
 #-(or gengc x86 amd64)
+(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-svr4")
 (defun find-pc-from-assembly-fun (code scp)
   "find the PC"
   (let ((return-machine-address
@@ -1465,7 +1469,7 @@ The result is a symbol or nil if the routine cannot be found."
 	       (- (get-lisp-obj-address code)
 		  vm:other-pointer-type)
 	       code-header-len)
-	    return-machine-address)))
+	    return-machine-address))))
 
 ;;; CODE-OBJECT-FROM-BITS  --  internal.
 ;;;
@@ -3075,6 +3079,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; SUB-ACCESS-DEBUG-VAR-SLOT -- Internal.
 ;;;
 #-(or x86 amd64)
+(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-svr4")
 (defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
   (macrolet ((with-escaped-value ((var) &body forms)
 	       `(if escaped
@@ -3269,9 +3274,10 @@ The result is a symbol or nil if the routine cannot be found."
       (#.vm:sap-stack-sc-number
        (with-nfp (nfp)
 	 (system:sap-ref-sap nfp (* (c:sc-offset-offset sc-offset)
-				    vm:word-bytes)))))))
+				    vm:word-bytes))))))))
 
 #+(or x86 amd64)
+(intl:with-textdomain ("cmucl" "cmucl-x86-vm")
 (defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
   (declare (type system:system-area-pointer fp))
   (macrolet ((with-escaped-value ((var) &body forms)
@@ -3446,7 +3452,7 @@ The result is a symbol or nil if the routine cannot be found."
 					  vm:word-bytes))))
       (#.vm:sap-stack-sc-number
        (system:sap-ref-sap fp (- (* (1+ (c:sc-offset-offset sc-offset))
-				    vm:word-bytes)))))))
+				    vm:word-bytes))))))))
 
 
 ;;; %SET-DEBUG-VARIABLE-VALUE -- Internal.
@@ -3499,6 +3505,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; SUB-SET-DEBUG-VAR-SLOT -- Internal.
 ;;;
 #-(or x86 amd64)
+(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-svr4")
 (defun sub-set-debug-var-slot (fp sc-offset value &optional escaped)
   (macrolet ((set-escaped-value (val)
 	       `(if escaped
@@ -3652,9 +3659,10 @@ The result is a symbol or nil if the routine cannot be found."
        (with-nfp (nfp)
 	 (setf (system:sap-ref-sap nfp (* (c:sc-offset-offset sc-offset)
 					  vm:word-bytes))
-	       (the system:system-area-pointer value)))))))
+	       (the system:system-area-pointer value))))))))
 
 #+(or x86 amd64)
+(intl:with-textdomain ("cmucl" "cmucl-x86-vm")
 (defun sub-set-debug-var-slot (fp sc-offset value &optional escaped)
   (macrolet ((set-escaped-value (val)
 	       `(if escaped
@@ -3738,7 +3746,7 @@ The result is a symbol or nil if the routine cannot be found."
       (#.vm:sap-stack-sc-number
        (setf (system:sap-ref-sap fp (- (* (1+ (c:sc-offset-offset sc-offset))
 					  vm:word-bytes)))
-	     (the system:system-area-pointer value))))))
+	     (the system:system-area-pointer value)))))))
 
 
 (defsetf debug-variable-value %set-debug-variable-value)

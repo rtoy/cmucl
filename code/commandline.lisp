@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.24 2010/05/16 14:51:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.25 2010/07/14 13:19:03 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -293,6 +293,7 @@
   its default core file.")
 
 #+x86
+(intl:with-textdomain ("cmucl" "cmucl-x86-vm")
 (defswitch "fpu" nil
   "Specifies what kind of floating-point support should be used on x86
   systems.  If 'x87', Lisp will use the x87 floating-point unit; if
@@ -300,7 +301,7 @@
   'auto',which causes Lisp to check to see if SSE2 is available.  If
   so, then SSE2 is used.  If the SSE2 core file cannot be found,Lisp
   will fallback to the x87 core, which can run on any machine."
-  "mode")
+  "mode"))
 
 (defun help-switch-demon (switch)
   (declare (ignore switch))
