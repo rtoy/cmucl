@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.141 2010/07/14 13:19:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.142 2010/07/14 23:08:59 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -4500,6 +4500,8 @@ The result is a symbol or nil if the routine cannot be found."
 ;;;
 ;;; This handles code-location and debug-function :function-start breakpoints.
 ;;;
+(intl:with-textdomain ("cmucl" #+(or x86 amd64) "cmucl-x86-vm"
+			       #+sparc "cmucl-sparc-svr4")
 (defun handle-breakpoint-aux (breakpoints data offset component signal-context)
   (unless breakpoints
     (error (intl:gettext "Breakpoint that nobody wants?")))
@@ -4524,7 +4526,7 @@ The result is a symbol or nil if the routine cannot be found."
 				    (breakpoint-data-instruction data))
       ; Under HPUX we can't sigreturn so bp-do-disp-i has to return.
       #-(or hpux irix x86 amd64)
-      (error (intl:gettext "BREAKPOINT-DO-DISPLACED-INST returned?")))))
+      (error (intl:gettext "BREAKPOINT-DO-DISPLACED-INST returned?"))))))
 
 (defun invoke-breakpoint-hooks (breakpoints component offset)
   (let* ((debug-fun (debug-function-from-pc component offset))
