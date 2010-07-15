@@ -99,6 +99,10 @@ msgstr ""
 msgid "Top-Level Form"
 msgstr ""
 
+#: src/code/debug-int.lisp
+msgid "Breakpoint that nobody wants?"
+msgstr ""
+
 #: src/compiler/x86/parms.lisp
 msgid "Number of bits per word where a word holds one lisp descriptor."
 msgstr ""
