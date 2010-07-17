@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.89.2.1 2010/07/17 01:19:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.89.2.2 2010/07/17 15:43:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2749,8 +2749,11 @@
 		     (string-equal "assem"
 				   (pathname-type x))))
 	      (dolist (file-name (remove-if-not #'is-assemfile  file-list))
-		(write-line (namestring file-name))
-		(cold-load file-name)))
+		(write-line (namestring (truename file-name)))
+		(cold-load file-name))
+	      ;; Don't load the assem files again, otherwise we'll get
+	      ;; two copies of everything.
+	      (setf file-list (remove-if #'is-assemfile file-list)))
 	    (initialize-static-fns)
 	    (dolist (file (if (listp file-list)
 			      file-list
