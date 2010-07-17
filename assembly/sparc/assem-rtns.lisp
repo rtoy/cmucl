@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/assem-rtns.lisp,v 1.4 2005/02/11 21:02:32 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/assem-rtns.lisp,v 1.4.42.1 2010/07/17 01:19:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/assem-rtns.lisp,v 1.4 2005/02/11 21:02:32 rtoy Rel $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/assem-rtns.lisp,v 1.4.42.1 2010/07/17 01:19:01 rtoy Exp $
 ;;;
 ;;;
 (in-package "SPARC")
@@ -239,6 +239,32 @@
   (move target catch)
   (inst li temp (make-fixup 'unwind :assembly-routine))
   (inst j temp)
-  (inst nop))
+  (inst nop)
+  ;; Make sure following routine is dual-word aligned
+  (align vm:lowtag-bits))
 
 
+
+
+;; Assembly routines for undefined_tramp and closure_tramp
+(define-assembly-routine (closure-tramp
+			  (:return-style :none))
+                         ()
+  (loadw lexenv-tn cname-tn fdefn-function-slot other-pointer-type)
+  (loadw code-tn lexenv-tn closure-function-slot function-pointer-type)
+  (inst j code-tn (- (* function-code-offset word-bytes) function-pointer-type))
+  (inst nop)
+  ;; Make sure following routine is dual-word aligned
+  (align vm:lowtag-bits))
+
+(define-assembly-routine (undefined-tramp
+			  (:return-style :none))
+                         ()
+  (let ((error (generate-cerror-code nil undefined-symbol-error cname-tn)))
+    (inst b error)
+    (inst nop)
+    ;; I don't think we ever return from the undefined-symbol-error
+    ;; handler, but the assembly code did this so we'll do it too.
+    (loadw code-tn cname-tn fdefn-raw-addr-slot other-pointer-type)
+    (inst j code-tn (- (* function-code-offset word-bytes) function-pointer-type))
+    (inst nop)))

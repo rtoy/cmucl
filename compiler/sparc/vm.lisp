@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.26 2006/06/30 18:41:32 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.26.30.1 2010/07/17 01:19:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -387,6 +387,8 @@
 (defregtn nsp any-reg)
 (defregtn gtemp any-reg) 
 
+(defregtn lexenv descriptor-reg)
+(defregtn cname descriptor-reg)
 
 
 ;;; Immediate-Constant-SC  --  Interface

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.27 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.27.2.1 2010/07/17 01:19:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -130,6 +130,7 @@
       (inst b :eq err-lab))
     (inst nop)))
 
+#+nil
 (define-vop (set-fdefn-function)
   (:policy :fast-safe)
   (:translate (setf fdefn-function))
@@ -156,6 +157,34 @@
       (storew lip fdefn fdefn-raw-addr-slot other-pointer-type)
       (move result function))))
 
+(define-vop (set-fdefn-function)
+  (:policy :fast-safe)
+  (:translate (setf fdefn-function))
+  (:args (function :scs (descriptor-reg) :target result)
+	 (fdefn :scs (descriptor-reg)))
+  (:temporary (:scs (interior-reg)) lip)
+  (:temporary (:scs (non-descriptor-reg)) type)
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:results (result :scs (descriptor-reg)))
+  (:generator 38
+    (let ((normal-fn (gen-label)))
+      (load-type type function (- function-pointer-type))
+      (inst cmp type function-header-type)
+      (inst b :eq normal-fn)
+      (inst move lip function)
+      (inst li temp (make-fixup 'closure-tramp
+			       :assembly-routine))
+      ;; Since closure-tramp is an assembly routine, it doesn't look
+      ;; like a normal Lisp function.  So before we store it in the
+      ;; raw addr slot, we need to make it look like a Lisp function.
+      (inst sub lip temp (- (* vm:function-code-offset vm:word-bytes)
+			    function-pointer-type))
+      (emit-label normal-fn)
+      (storew function fdefn fdefn-function-slot other-pointer-type)
+      (storew lip fdefn fdefn-raw-addr-slot other-pointer-type)
+      (move result function))))
+
+#+nil
 (define-vop (fdefn-makunbound)
   (:policy :fast-safe)
   (:translate fdefn-makunbound)
@@ -171,6 +200,21 @@
 			      #+linkage-table :foreign-data))
     #+linkage-table
     (loadw temp temp)
+    (storew temp fdefn fdefn-raw-addr-slot other-pointer-type)
+    (move result fdefn)))
+
+(define-vop (fdefn-makunbound)
+  (:policy :fast-safe)
+  (:translate fdefn-makunbound)
+  (:args (fdefn :scs (descriptor-reg) :target result))
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:results (result :scs (descriptor-reg)))
+  (:generator 38
+    (storew null-tn fdefn fdefn-function-slot other-pointer-type)
+    (inst li temp (make-fixup 'undefined-tramp
+			      :assembly-routine))
+    (inst sub temp (- (* vm:function-code-offset vm:word-bytes)
+		      function-pointer-type))
     (storew temp fdefn fdefn-raw-addr-slot other-pointer-type)
     (move result fdefn)))
 
