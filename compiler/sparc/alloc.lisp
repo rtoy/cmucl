@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.24.2.1 2010/07/17 01:19:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.24.2.2 2010/07/17 13:39:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -166,8 +166,6 @@
       ;; the address directly.
       (inst li temp (make-fixup 'undefined-tramp
 				:assembly-routine))
-      (inst sub temp (- (* vm:function-code-offset vm:word-bytes)
-			function-pointer-type))
       (storew name result fdefn-name-slot other-pointer-type)
       (storew null-tn result fdefn-function-slot other-pointer-type)
       (storew temp result fdefn-raw-addr-slot other-pointer-type))))

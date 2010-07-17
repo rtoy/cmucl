@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.27.2.1 2010/07/17 01:19:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.27.2.2 2010/07/17 13:39:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -172,13 +172,8 @@
       (inst cmp type function-header-type)
       (inst b :eq normal-fn)
       (inst move lip function)
-      (inst li temp (make-fixup 'closure-tramp
+      (inst li lip (make-fixup 'closure-tramp
 			       :assembly-routine))
-      ;; Since closure-tramp is an assembly routine, it doesn't look
-      ;; like a normal Lisp function.  So before we store it in the
-      ;; raw addr slot, we need to make it look like a Lisp function.
-      (inst sub lip temp (- (* vm:function-code-offset vm:word-bytes)
-			    function-pointer-type))
       (emit-label normal-fn)
       (storew function fdefn fdefn-function-slot other-pointer-type)
       (storew lip fdefn fdefn-raw-addr-slot other-pointer-type)
@@ -213,8 +208,6 @@
     (storew null-tn fdefn fdefn-function-slot other-pointer-type)
     (inst li temp (make-fixup 'undefined-tramp
 			      :assembly-routine))
-    (inst sub temp (- (* vm:function-code-offset vm:word-bytes)
-		      function-pointer-type))
     (storew temp fdefn fdefn-raw-addr-slot other-pointer-type)
     (move result fdefn)))
 
