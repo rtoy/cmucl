@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.24.2.2 2010/07/17 13:39:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.24.2.3 2010/07/17 19:35:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -131,27 +131,6 @@
       (storew unboxed result code-code-size-slot other-pointer-type)
       (storew null-tn result code-entry-points-slot other-pointer-type)
       (storew null-tn result code-debug-info-slot other-pointer-type))))
-
-#+nil
-(define-vop (make-fdefn)
-  (:args (name :scs (descriptor-reg) :to :eval))
-  (:temporary (:scs (non-descriptor-reg)) temp)
-  (:results (result :scs (descriptor-reg) :from :argument))
-  (:policy :fast-safe)
-  (:translate make-fdefn)
-  (:generator 37
-    (with-fixed-allocation (result temp fdefn-type fdefn-size)
-      ;; For the linkage-table stuff, we need to look up the address
-      ;; of undefined_tramp from the linkage table instead of using
-      ;; the address directly.
-      (inst li temp (make-fixup (extern-alien-name "undefined_tramp")
-				#-linkage-table :foreign
-				#+linkage-table :foreign-data))
-      #+linkage-table
-      (loadw temp temp)
-      (storew name result fdefn-name-slot other-pointer-type)
-      (storew null-tn result fdefn-function-slot other-pointer-type)
-      (storew temp result fdefn-raw-addr-slot other-pointer-type))))
 
 (define-vop (make-fdefn)
   (:args (name :scs (descriptor-reg) :to :eval))

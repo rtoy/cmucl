@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.27.2.2 2010/07/17 13:39:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.27.2.3 2010/07/17 19:35:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -130,13 +130,12 @@
       (inst b :eq err-lab))
     (inst nop)))
 
-#+nil
 (define-vop (set-fdefn-function)
   (:policy :fast-safe)
   (:translate (setf fdefn-function))
   (:args (function :scs (descriptor-reg) :target result)
 	 (fdefn :scs (descriptor-reg)))
-  (:temporary (:scs (interior-reg)) lip)
+  (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (non-descriptor-reg)) type)
   (:results (result :scs (descriptor-reg)))
   (:generator 38
@@ -144,59 +143,13 @@
       (load-type type function (- function-pointer-type))
       (inst cmp type function-header-type)
       (inst b :eq normal-fn)
-      (inst move lip function)
-      ;; For the linkage-table stuff, we need to look up the address
-      ;; from the linkage table instead of using the address directly.
-      (inst li lip (make-fixup (extern-alien-name "closure_tramp")
-			       #-linkage-table :foreign
-			       #+linkage-table :foreign-data))
-      #+linkage-table
-      (loadw lip lip)
-      (emit-label normal-fn)
-      (storew function fdefn fdefn-function-slot other-pointer-type)
-      (storew lip fdefn fdefn-raw-addr-slot other-pointer-type)
-      (move result function))))
-
-(define-vop (set-fdefn-function)
-  (:policy :fast-safe)
-  (:translate (setf fdefn-function))
-  (:args (function :scs (descriptor-reg) :target result)
-	 (fdefn :scs (descriptor-reg)))
-  (:temporary (:scs (interior-reg)) lip)
-  (:temporary (:scs (non-descriptor-reg)) type)
-  (:temporary (:scs (non-descriptor-reg)) temp)
-  (:results (result :scs (descriptor-reg)))
-  (:generator 38
-    (let ((normal-fn (gen-label)))
-      (load-type type function (- function-pointer-type))
-      (inst cmp type function-header-type)
-      (inst b :eq normal-fn)
-      (inst move lip function)
-      (inst li lip (make-fixup 'closure-tramp
+      (inst move temp function)
+      (inst li temp (make-fixup 'closure-tramp
 			       :assembly-routine))
       (emit-label normal-fn)
       (storew function fdefn fdefn-function-slot other-pointer-type)
-      (storew lip fdefn fdefn-raw-addr-slot other-pointer-type)
+      (storew temp fdefn fdefn-raw-addr-slot other-pointer-type)
       (move result function))))
-
-#+nil
-(define-vop (fdefn-makunbound)
-  (:policy :fast-safe)
-  (:translate fdefn-makunbound)
-  (:args (fdefn :scs (descriptor-reg) :target result))
-  (:temporary (:scs (non-descriptor-reg)) temp)
-  (:results (result :scs (descriptor-reg)))
-  (:generator 38
-    (storew null-tn fdefn fdefn-function-slot other-pointer-type)
-    ;; For the linkage-table stuff, we need to look up the address
-    ;; from the linkage table instead of using the address directly.
-    (inst li temp (make-fixup (extern-alien-name "undefined_tramp")
-			      #-linkage-table :foreign
-			      #+linkage-table :foreign-data))
-    #+linkage-table
-    (loadw temp temp)
-    (storew temp fdefn fdefn-raw-addr-slot other-pointer-type)
-    (move result fdefn)))
 
 (define-vop (fdefn-makunbound)
   (:policy :fast-safe)
