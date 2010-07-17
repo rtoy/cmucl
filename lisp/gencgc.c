@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.107 2010/04/01 14:05:45 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.107.2.1 2010/07/17 13:43:43 rtoy Exp $
  *
  */
 
@@ -2019,13 +2019,15 @@ signal_space_p(lispobj obj)
 #endif    
 }
 
-#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
+#if (defined(DARWIN) && defined(__ppc__))
 /*
  * The assembly code defines these as functions, so we make them
  * functions.  We only care about their addresses anyway.
  */
 extern char closure_tramp();
 extern char undefined_tramp();
+#elif defined(sparc)
+/* closure tramp and undefined tramp are Lisp assembly routines */
 #else
 extern int undefined_tramp;
 #endif
@@ -6837,20 +6839,24 @@ verify_space(lispobj * start, size_t words)
 #endif
 	    } else {
 		/* Verify that it points to another valid space */
-		if (!to_readonly_space && !to_static_space &&
-#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
-		    !((thing == (int) &closure_tramp) ||
-		      (thing == (int) &undefined_tramp))
+		if (!to_readonly_space && !to_static_space 
+#if (defined(DARWIN) && defined(__ppc__))
+
+		    && !((thing == (int) &closure_tramp) ||
+                         (thing == (int) &undefined_tramp))
+#elif defined(sparc)
+                    /* Nothing for sparc since these are Lisp assembly routines */
 #else
-		    thing != (int) &undefined_tramp
+		    && thing != (int) &undefined_tramp
 #endif
 		    ) {
+#ifndef sparc
 		    fprintf(stderr,
 			    "*** Ptr %lx @ %lx sees Junk (undefined_tramp = %lx)",
 			    (unsigned long) thing, (unsigned long) start,
 			    (unsigned long) &undefined_tramp);
-                    
-#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
+#endif                    
+#if (defined(DARWIN) && defined(__ppc__))
                     fprintf(stderr, " (closure_tramp = %lx)",
 			    (unsigned long) &closure_tramp);
 #endif
