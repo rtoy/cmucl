@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.107.2.1 2010/07/17 13:43:43 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.107.2.2 2010/07/18 20:29:21 rtoy Exp $
  *
  */
 
@@ -670,6 +670,9 @@ print_generation_stats(int verbose)
 #define SSE_STATE_SIZE ((512+16)/4)
     int fpu_state[FPU_STATE_SIZE];
     int sse_state[SSE_STATE_SIZE];
+
+    extern void sse_save(void *);
+    extern void sse_restore(void *);
 #elif defined(sparc)
     /*
      * 32 (single-precision) FP registers, and the FP state register.
@@ -2028,6 +2031,8 @@ extern char closure_tramp();
 extern char undefined_tramp();
 #elif defined(sparc)
 /* closure tramp and undefined tramp are Lisp assembly routines */
+#elif (defined(i386) || defined(__x86_64))
+/* undefined tramp are Lisp assembly routines */
 #else
 extern int undefined_tramp;
 #endif
@@ -6844,13 +6849,13 @@ verify_space(lispobj * start, size_t words)
 
 		    && !((thing == (int) &closure_tramp) ||
                          (thing == (int) &undefined_tramp))
-#elif defined(sparc)
-                    /* Nothing for sparc since these are Lisp assembly routines */
+#elif defined(sparc) || defined(i386) || defined(__x86_64)
+                    /* Nothing for since these are Lisp assembly routines */
 #else
 		    && thing != (int) &undefined_tramp
 #endif
 		    ) {
-#ifndef sparc
+#if !(defined(sparc) || defined(i386) || defined(__x86_64))
 		    fprintf(stderr,
 			    "*** Ptr %lx @ %lx sees Junk (undefined_tramp = %lx)",
 			    (unsigned long) thing, (unsigned long) start,

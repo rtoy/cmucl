@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.33 2010/04/01 14:05:45 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.33.2.1 2010/07/18 20:29:21 rtoy Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -286,7 +286,14 @@ FUNCDEF(sse_restore)
 ENDFUNC(sse_restore)
 
 
+#if 0
 /*
+ * These are now implemented as Lisp assembly routines.  We leave
+ * these here for the time being until we're sure the assembly
+ * routines are working as expected.
+ */
+
+ /*
  * The undefined-function trampoline.
  */
 FUNCDEF(undefined_tramp)
@@ -307,6 +314,8 @@ FUNCDEF(closure_tramp)
 	movl	FDEFN_FUNCTION_OFFSET(%eax),%eax
 	jmp	*CLOSURE_FUNCTION_OFFSET(%eax)
 ENDFUNC(closure_tramp)
+
+#endif
 
 /*
  * Function-end breakpoint magic.
