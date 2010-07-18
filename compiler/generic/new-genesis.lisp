@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.89.2.2 2010/07/17 15:43:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.89.2.3 2010/07/18 20:03:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2173,10 +2173,10 @@
 
 (defun lookup-special-symbol (name)
   (cond
-    #+sparc
+    #+(or sparc x86 amd64)
     ((string= name "closure_tramp")
      (lookup-assembler-reference 'vm::closure-tramp))
-    #+sparc
+    #+(or sparc x86 amd64)
     ((string= name "undefined_tramp")
      (lookup-assembler-reference 'vm::undefined-tramp))
     (t
