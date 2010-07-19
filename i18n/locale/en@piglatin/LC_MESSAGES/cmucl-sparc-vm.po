@@ -15,48 +15,48 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: target:compiler/sparc/parms.lisp
+#: src/compiler/sparc/parms.lisp
 msgid "Number of bits per word where a word holds one lisp descriptor."
 msgstr ""
 "Umbernay ofway itsbay erpay ordway erewhay away ordway oldshay oneway isplay "
 "escriptorday."
 
-#: target:compiler/sparc/parms.lisp
+#: src/compiler/sparc/parms.lisp
 msgid ""
 "Number of bits per byte where a byte is the smallest addressable object."
 msgstr ""
 "Umbernay ofway itsbay erpay ytebay erewhay away ytebay isway ethay "
 "mallestsay addressableway objectway."
 
-#: target:compiler/sparc/parms.lisp
+#: src/compiler/sparc/parms.lisp
 msgid "Number of bits needed to represent a character"
 msgstr "Umbernay ofway itsbay eedednay otay epresentray away aracterchay"
 
-#: target:compiler/sparc/parms.lisp
+#: src/compiler/sparc/parms.lisp
 msgid "Number of bytes needed to represent a character"
 msgstr "Umbernay ofway ytesbay eedednay otay epresentray away aracterchay"
 
-#: target:compiler/sparc/parms.lisp
+#: src/compiler/sparc/parms.lisp
 msgid "Number of bits to shift between word addresses and byte addresses."
 msgstr ""
 "Umbernay ofway itsbay otay iftshay etweenbay ordway addressesway andway "
 "ytebay addressesway."
 
-#: target:compiler/sparc/parms.lisp
+#: src/compiler/sparc/parms.lisp
 msgid "Number of bytes in a word."
 msgstr "Umbernay ofway ytesbay inway away ordway."
 
-#: target:compiler/sparc/parms.lisp
+#: src/compiler/sparc/parms.lisp
 msgid "Number of bits at the low end of a pointer used for type information."
 msgstr ""
 "Umbernay ofway itsbay atway ethay owlay endway ofway away ointerpay usedway "
 "orfay ypetay informationway."
 
-#: target:compiler/sparc/parms.lisp
+#: src/compiler/sparc/parms.lisp
 msgid "Mask to extract the low tag bits from a pointer."
 msgstr "Askmay otay extractway ethay owlay agtay itsbay omfray away ointerpay."
 
-#: target:compiler/sparc/parms.lisp
+#: src/compiler/sparc/parms.lisp
 msgid ""
 "Exclusive upper bound on the value of the low tag bits from a\n"
 "  pointer."
@@ -65,27 +65,27 @@ msgstr ""
 "itsbay omfray away\n"
 "  ointerpay."
 
-#: target:compiler/sparc/parms.lisp
+#: src/compiler/sparc/parms.lisp
 msgid "Number of tag bits used for a fixnum"
 msgstr "Umbernay ofway agtay itsbay usedway orfay away ixnumfay"
 
-#: target:compiler/sparc/parms.lisp
+#: src/compiler/sparc/parms.lisp
 msgid "Mask to get the fixnum tag"
 msgstr "Askmay otay etgay ethay ixnumfay agtay"
 
-#: target:compiler/sparc/parms.lisp
+#: src/compiler/sparc/parms.lisp
 msgid "Maximum number of bits in a positive fixnum"
 msgstr "Aximummay umbernay ofway itsbay inway away ositivepay ixnumfay"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "~S isn't a register."
 msgstr "~S isnway't away egisterray."
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "~S isn't a floating-point register."
 msgstr "~S isnway't away oatingflay-ointpay egisterray."
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid ""
 "If non-NIL, print registers using the Lisp register names.\n"
 "Otherwise, use the Sparc register names"
@@ -94,30 +94,25 @@ msgstr ""
 "amesnay.\n"
 "Otherwiseway, useway ethay Arcspay egisterray amesnay"
 
-#: target:assembly/sparc/arith.lisp target:assembly/sparc/array.lisp
-#: target:assembly/sparc/assem-rtns.lisp target:compiler/sparc/type-vops.lisp
-#: target:compiler/sparc/pred.lisp target:compiler/sparc/array.lisp
-#: target:compiler/sparc/print.lisp target:compiler/sparc/nlx.lisp
-#: target:compiler/sparc/call.lisp target:compiler/sparc/alloc.lisp
-#: target:compiler/sparc/values.lisp target:compiler/sparc/cell.lisp
-#: target:compiler/sparc/c-call.lisp target:compiler/sparc/debug.lisp
-#: target:compiler/sparc/subprim.lisp target:compiler/sparc/arith.lisp
-#: target:compiler/sparc/static-fn.lisp target:compiler/sparc/memory.lisp
-#: target:compiler/sparc/char.lisp target:compiler/sparc/system.lisp
-#: target:compiler/sparc/sap.lisp target:compiler/sparc/float.lisp
-#: target:compiler/sparc/move.lisp target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/array.lisp src/compiler/sparc/call.lisp
+#: src/compiler/sparc/alloc.lisp src/compiler/sparc/cell.lisp
+#: src/compiler/sparc/c-call.lisp src/compiler/sparc/debug.lisp
+#: src/compiler/sparc/arith.lisp src/compiler/sparc/static-fn.lisp
+#: src/compiler/sparc/char.lisp src/compiler/sparc/system.lisp
+#: src/compiler/sparc/sap.lisp src/compiler/sparc/float.lisp
+#: src/compiler/sparc/move.lisp src/compiler/sparc/insts.lisp
 msgid "Unknown SC to SC-Case for ~S:~%  ~S"
 msgstr "Unknownway SC otay SC-Asecay orfay ~S:~%  ~S"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "The Lisp names for the Sparc integer registers"
 msgstr "Ethay Isplay amesnay orfay ethay Arcspay integerway egistersray"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "The standard names for the Sparc integer registers"
 msgstr "Ethay tandardsay amesnay orfay ethay Arcspay integerway egistersray"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid ""
 "An alist for the disassembler indicating the target register and\n"
 "value used in a SETHI instruction.  This is used to make annotations\n"
@@ -129,75 +124,75 @@ msgstr ""
 "akemay annotationsway\n"
 "aboutway unctionfay addressesway andway egisterray aluesvay."
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Set pseudo-atomic flag"
 msgstr "Etsay seudopay-atomicway agflay"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Reset pseudo-atomic"
 msgstr "Esetray seudopay-atomicway"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Allocating ~D bytes"
 msgstr "Allocatingway ~D ytesbay"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Allocating bytes"
 msgstr "Allocatingway ytesbay"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Header word ~A, size ~D?"
 msgstr "Eaderhay ordway ~Away, izesay ~D?"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Reset pseudo-atomic flag"
 msgstr "Esetray seudopay-atomicway agflay"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "pseudo-atomic interrupted?"
 msgstr "seudopay-atomicway interruptedway?"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Unknown branch condition: ~S~%Must be one of: ~S"
 msgstr "Unknownway anchbray onditioncay: ~S~%Ustmay ebay oneway ofway: ~S"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Unknown fp-branch condition: ~S~%Must be one of: ~S"
 msgstr "Unknownway pfay-anchbray onditioncay: ~S~%Ustmay ebay oneway ofway: ~S"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Unknown integer condition register:  ~S~%"
 msgstr "Unknownway integerway onditioncay egisterray:  ~S~%"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Unknown branch prediction:  ~S~%Must be one of: ~S~%"
 msgstr "Unknownway anchbray edictionpray:  ~S~%Ustmay ebay oneway ofway: ~S~%"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Unknown conditional move condition register:  ~S~%"
 msgstr "Unknownway onditionalcay ovemay onditioncay egisterray:  ~S~%"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Unknown register condition:  ~S~%"
 msgstr "Unknownway egisterray onditioncay:  ~S~%"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Fixups aren't allowed."
 msgstr "Ixupsfay arenway't allowedway."
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Pseudo atomic interrupted trap?"
 msgstr "Seudopay atomicway interruptedway aptray?"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Allocation trap"
 msgstr "Allocationway aptray"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid "Use it anyway"
 msgstr "Useway itway anywayway"
 
-#: target:compiler/sparc/insts.lisp
+#: src/compiler/sparc/insts.lisp
 msgid ""
 "Immediate trap number ~A specified, but only trap numbers\n"
 "   16 to 31 are available to the application"
@@ -206,11 +201,11 @@ msgstr ""
 "umbersnay\n"
 "   16 otay 31 areway availableway otay ethay applicationway"
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid "Move SRC into DST unless they are location=."
 msgstr "Ovemay SRC intoway DST unlessway eythay areway ocationlay=."
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid ""
 "Loads the type bits of a pointer into target independent of\n"
 "  byte-ordering issues."
@@ -219,30 +214,30 @@ msgstr ""
 "independentway ofway\n"
 "  ytebay-orderingway issuesway."
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid "Jump to the lisp function FUNCTION.  LIP is an interior-reg temporary."
 msgstr ""
 "Umpjay otay ethay isplay unctionfay FUNCTION.  LIP isway anway interiorway-"
 "egray emporarytay."
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid "Return to RETURN-PC."
 msgstr "Eturnray otay RETURN-PC."
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid ""
 "Emit a return-pc header word.  LABEL is the label to use for this return-pc."
 msgstr ""
 "Emitway away eturnray-cpay eaderhay ordway.  LABEL isway ethay abellay otay "
 "useway orfay isthay eturnray-cpay."
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid "Move the TN Reg-Or-Stack into Reg if it isn't already there."
 msgstr ""
 "Ovemay ethay TN Egray-Orway-Tacksay intoway Egray ifway itway isnway't "
 "alreadyway erethay."
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid ""
 "Do stuff to allocate an other-pointer object of fixed Size with a single\n"
 "  word header having the specified Type-Code.  The result is placed in\n"
@@ -262,19 +257,19 @@ msgstr ""
 "ATOMIC, andway esumablypray\n"
 "  initializesway ethay objectway."
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid "~S is less than the specified minimum of ~S"
 msgstr "~S isway esslay anthay ethay ecifiedspay inimummay ofway ~S"
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid "~S is greater than the specified maximum of ~S"
 msgstr "~S isway eatergray anthay ethay ecifiedspay aximummay ofway ~S"
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid "~S isn't an even multiple of ~S from ~S"
 msgstr "~S isnway't anway evenway ultiplemay ofway ~S omfray ~S"
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid ""
 "The values ~S cover the entire range from ~\n"
 "\t\t\t ~S to ~S [step ~S]."
@@ -282,19 +277,19 @@ msgstr ""
 "Ethay aluesvay ~S overcay ethay entireway angeray omfray ~\n"
 "\t\t\t ~S otay ~S [tepsay ~S]."
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid "Must supply at least on type for test-type."
 msgstr "Ustmay upplysay atway eastlay onway ypetay orfay esttay-ypetay."
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid "OTHER-POINTER-TYPE supersedes the use of ~S"
 msgstr "OTHER-POINTER-TYPE upersedessay ethay useway ofway ~S"
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid "OTHER-IMMEDIATE-n-TYPE supersedes the use of ~S"
 msgstr "OTHER-IMMEDIATE-n-TYPE upersedessay ethay useway ofway ~S"
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid ""
 "Can't test for mix of function subtypes and normal ~\n"
 "\t\theader types."
@@ -302,11 +297,11 @@ msgstr ""
 "Ancay't esttay orfay ixmay ofway unctionfay ubtypessay andway ormalnay ~\n"
 "\t\teaderhay ypestay."
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid "Cause an error.  ERROR-CODE is the error to cause."
 msgstr "Ausecay anway errorway.  ERROR-CODE isway ethay errorway otay ausecay."
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid ""
 "Cause a continuable error.  If the error is continued, execution resumes at\n"
 "  LABEL."
@@ -315,7 +310,7 @@ msgstr ""
 "ontinuedcay, executionway esumesray atway\n"
 "  LABEL."
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid ""
 "Generate-Error-Code Error-code Value*\n"
 "  Emit code for an error with the specified Error-Code and context Values."
@@ -324,7 +319,7 @@ msgstr ""
 "  Emitway odecay orfay anway errorway ithway ethay ecifiedspay Errorway-"
 "Odecay andway ontextcay Aluesvay."
 
-#: target:compiler/sparc/macros.lisp
+#: src/compiler/sparc/macros.lisp
 msgid ""
 "Generate-CError-Code Error-code Value*\n"
 "  Emit code for a continuable error with the specified Error-Code and\n"
@@ -338,15 +333,15 @@ msgstr ""
 "esumesray afterway\n"
 "  ethay GENERATE-CERROR-CODE ormfay."
 
-#: target:compiler/sparc/move.lisp
+#: src/compiler/sparc/move.lisp
 msgid "fixnum untagging"
 msgstr "ixnumfay untaggingway"
 
-#: target:compiler/sparc/move.lisp
+#: src/compiler/sparc/move.lisp
 msgid "constant load"
 msgstr "onstantcay oadlay"
 
-#: target:compiler/sparc/move.lisp
+#: src/compiler/sparc/move.lisp
 msgid ""
 "Load TN allocated, but no move function?~@\n"
 "\t           VM definition inconsistent, recompile and try again."
@@ -355,287 +350,287 @@ msgstr ""
 "\t           VM efinitionday inconsistentway, ecompileray andway ytray "
 "againway."
 
-#: target:compiler/sparc/move.lisp
+#: src/compiler/sparc/move.lisp
 msgid "integer to untagged word coercion"
 msgstr "integerway otay untaggedway ordway oercioncay"
 
-#: target:compiler/sparc/move.lisp
+#: src/compiler/sparc/move.lisp
 msgid "fixnum tagging"
 msgstr "ixnumfay aggingtay"
 
-#: target:compiler/sparc/move.lisp
+#: src/compiler/sparc/move.lisp
 msgid "signed word to integer coercion"
 msgstr "ignedsay ordway otay integerway oercioncay"
 
-#: target:compiler/sparc/move.lisp
+#: src/compiler/sparc/move.lisp
 msgid "unsigned word to integer coercion"
 msgstr "unsignedway ordway otay integerway oercioncay"
 
-#: target:compiler/sparc/move.lisp
+#: src/compiler/sparc/move.lisp
 msgid "word integer move"
 msgstr "ordway integerway ovemay"
 
-#: target:compiler/sparc/move.lisp
+#: src/compiler/sparc/move.lisp
 msgid "word integer argument move"
 msgstr "ordway integerway argumentway ovemay"
 
-#: target:compiler/sparc/move.lisp
+#: src/compiler/sparc/move.lisp
 msgid "signed 64-bit word to integer coercion"
 msgstr "ignedsay 64-itbay ordway otay integerway oercioncay"
 
-#: target:compiler/sparc/move.lisp
+#: src/compiler/sparc/move.lisp
 msgid "unsigned 64-bit word to integer coercion"
 msgstr "unsignedway 64-itbay ordway otay integerway oercioncay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "float move"
 msgstr "oatflay ovemay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "float to pointer coercion"
 msgstr "oatflay otay ointerpay oercioncay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "pointer to float coercion"
 msgstr "ointerpay otay oatflay oercioncay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "float argument move"
 msgstr "oatflay argumentway ovemay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex single float move"
 msgstr "omplexcay inglesay oatflay ovemay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex double float move"
 msgstr "omplexcay oubleday oatflay ovemay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex long float move"
 msgstr "omplexcay onglay oatflay ovemay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex double-double float move"
 msgstr "omplexcay oubleday-oubleday oatflay ovemay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex single float to pointer coercion"
 msgstr "omplexcay inglesay oatflay otay ointerpay oercioncay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex double float to pointer coercion"
 msgstr "omplexcay oubleday oatflay otay ointerpay oercioncay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex long float to pointer coercion"
 msgstr "omplexcay onglay oatflay otay ointerpay oercioncay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex double-double float to pointer coercion"
 msgstr "omplexcay oubleday-oubleday oatflay otay ointerpay oercioncay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "pointer to complex float coercion"
 msgstr "ointerpay otay omplexcay oatflay oercioncay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "pointer to complex double-double float coercion"
 msgstr "ointerpay otay omplexcay oubleday-oubleday oatflay oercioncay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex single-float argument move"
 msgstr "omplexcay inglesay-oatflay argumentway ovemay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex double-float argument move"
 msgstr "omplexcay oubleday-oatflay argumentway ovemay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex long-float argument move"
 msgstr "omplexcay onglay-oatflay argumentway ovemay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex double-double float argument move"
 msgstr "omplexcay oubleday-oubleday oatflay argumentway ovemay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline float arithmetic"
 msgstr "inlineway oatflay arithmeticway"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline float comparison"
 msgstr "inlineway oatflay omparisoncay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline float coercion"
 msgstr "inlineway oatflay oercioncay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline float truncate"
 msgstr "inlineway oatflay uncatetray"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline ftruncate"
 msgstr "inlineway truncatefay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline complex single-float creation"
 msgstr "inlineway omplexcay inglesay-oatflay eationcray"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline complex double-float creation"
 msgstr "inlineway omplexcay oubleday-oatflay eationcray"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline complex long-float creation"
 msgstr "inlineway omplexcay onglay-oatflay eationcray"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex single float realpart"
 msgstr "omplexcay inglesay oatflay ealpartray"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex single float imagpart"
 msgstr "omplexcay inglesay oatflay imagpartway"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex double float realpart"
 msgstr "omplexcay oubleday oatflay ealpartray"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex double float imagpart"
 msgstr "omplexcay oubleday oatflay imagpartway"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex long float realpart"
 msgstr "omplexcay onglay oatflay ealpartray"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex long float imagpart"
 msgstr "omplexcay onglay oatflay imagpartway"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline complex float arithmetic"
 msgstr "inlineway omplexcay oatflay arithmeticway"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline complex float/float arithmetic"
 msgstr "inlineway omplexcay oatflay/oatflay arithmeticway"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline complex float multiplication"
 msgstr "inlineway omplexcay oatflay ultiplicationmay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline complex float division"
 msgstr "inlineway omplexcay oatflay ivisionday"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline complex conjugate"
 msgstr "inlineway omplexcay onjugatecay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline complex float/float comparison"
 msgstr "inlineway omplexcay oatflay/oatflay omparisoncay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline complex float comparison"
 msgstr "inlineway omplexcay oatflay omparisoncay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline float max"
 msgstr "inlineway oatflay axmay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline float min"
 msgstr "inlineway oatflay inmay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline (signed-byte 32) max"
 msgstr "inlineway (ignedsay-ytebay 32) axmay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline (unsigned-byte 32) max"
 msgstr "inlineway (unsignedway-ytebay 32) axmay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline fixnum max"
 msgstr "inlineway ixnumfay axmay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline (signed-byte 32) min"
 msgstr "inlineway (ignedsay-ytebay 32) inmay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline (unsigned-byte 32) min"
 msgstr "inlineway (unsignedway-ytebay 32) inmay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline fixnum min"
 msgstr "inlineway ixnumfay inmay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline float max/min"
 msgstr "inlineway oatflay axmay/inmay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "double-double float move"
 msgstr "oubleday-oubleday oatflay ovemay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "double-double float to pointer coercion"
 msgstr "oubleday-oubleday oatflay otay ointerpay oercioncay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "pointer to double-double float coercion"
 msgstr "ointerpay otay oubleday-oubleday oatflay oercioncay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "double-double float argument move"
 msgstr "oubleday-oubleday oatflay argumentway ovemay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline double-double float creation"
 msgstr "inlineway oubleday-oubleday oatflay eationcray"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "double-double high part"
 msgstr "oubleday-oubleday ighhay artpay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "double-double low part"
 msgstr "oubleday-oubleday owlay artpay"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "inline complex double-double float creation"
 msgstr "inlineway omplexcay oubleday-oubleday oatflay eationcray"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex double-double float realpart"
 msgstr "omplexcay oubleday-oubleday oatflay ealpartray"
 
-#: target:compiler/sparc/float.lisp
+#: src/compiler/sparc/float.lisp
 msgid "complex double-double float imagpart"
 msgstr "omplexcay oubleday-oubleday oatflay imagpartway"
 
-#: target:compiler/sparc/sap.lisp
+#: src/compiler/sparc/sap.lisp
 msgid "pointer to SAP coercion"
 msgstr "ointerpay otay SAP oercioncay"
 
-#: target:compiler/sparc/sap.lisp
+#: src/compiler/sparc/sap.lisp
 msgid "SAP to pointer coercion"
 msgstr "SAP otay ointerpay oercioncay"
 
-#: target:compiler/sparc/sap.lisp
+#: src/compiler/sparc/sap.lisp
 msgid "SAP move"
 msgstr "SAP ovemay"
 
-#: target:compiler/sparc/sap.lisp
+#: src/compiler/sparc/sap.lisp
 msgid "SAP argument move"
 msgstr "SAP argumentway ovemay"
 
-#: target:compiler/sparc/system.lisp
+#: src/compiler/sparc/system.lisp
 msgid ""
 "Read the instruction cycle counter available on UltraSparcs.  The\n"
 "64-bit counter is returned as two 32-bit unsigned integers.  The low 32-bit\n"
@@ -647,113 +642,113 @@ msgstr ""
 "integersway.  Ethay owlay 32-itbay\n"
 "esultray isway ethay irstfay aluevay."
 
-#: target:compiler/sparc/char.lisp
+#: src/compiler/sparc/char.lisp
 msgid "character untagging"
 msgstr "aracterchay untaggingway"
 
-#: target:compiler/sparc/char.lisp
+#: src/compiler/sparc/char.lisp
 msgid "character tagging"
 msgstr "aracterchay aggingtay"
 
-#: target:compiler/sparc/char.lisp
+#: src/compiler/sparc/char.lisp
 msgid "character move"
 msgstr "aracterchay ovemay"
 
-#: target:compiler/sparc/char.lisp
+#: src/compiler/sparc/char.lisp
 msgid "character arg move"
 msgstr "aracterchay argway ovemay"
 
-#: target:compiler/sparc/char.lisp
+#: src/compiler/sparc/char.lisp
 msgid "inline comparison"
 msgstr "inlineway omparisoncay"
 
-#: target:compiler/sparc/static-fn.lisp
+#: src/compiler/sparc/static-fn.lisp
 msgid "Either too many args (~D) or too many results (~D).  Max = ~D"
 msgstr ""
 "Eitherway ootay anymay argsway (~D) orway ootay anymay esultsray (~D).  "
 "Axmay = ~D"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline fixnum arithmetic"
 msgstr "inlineway ixnumfay arithmeticway"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline (signed-byte 32) arithmetic"
 msgstr "inlineway (ignedsay-ytebay 32) arithmeticway"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline (unsigned-byte 32) arithmetic"
 msgstr "inlineway (unsignedway-ytebay 32) arithmeticway"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline 32-bit abs"
 msgstr "inlineway 32-itbay absway"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "safe inline fixnum arithmetic"
 msgstr "afesay inlineway ixnumfay arithmeticway"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline (signed-byte 32) ASH"
 msgstr "inlineway (ignedsay-ytebay 32) ASH"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline (unsigned-byte 32) ASH"
 msgstr "inlineway (unsignedway-ytebay 32) ASH"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline constant ASH"
 msgstr "inlineway onstantcay ASH"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "identity ASH not transformed away"
 msgstr "identityway ASH otnay ansformedtray awayway"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline ASH"
 msgstr "inlineway ASH"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline right ASH"
 msgstr "inlineway ightray ASH"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline (signed-byte 32) integer-length"
 msgstr "inlineway (ignedsay-ytebay 32) integerway-engthlay"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline (unsigned-byte 32) integer-length"
 msgstr "inlineway (unsignedway-ytebay 32) integerway-engthlay"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline (unsigned-byte 32) logcount"
 msgstr "inlineway (unsignedway-ytebay 32) ogcountlay"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "Bad size specified for SIGNED-BYTE type specifier: ~S."
 msgstr "Adbay izesay ecifiedspay orfay SIGNED-BYTE ypetay ecifierspay: ~S."
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline fixnum comparison"
 msgstr "inlineway ixnumfay omparisoncay"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline (signed-byte 32) comparison"
 msgstr "inlineway (ignedsay-ytebay 32) omparisoncay"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline (unsigned-byte 32) comparison"
 msgstr "inlineway (unsignedway-ytebay 32) omparisoncay"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "shift-towards-start"
 msgstr "iftshay-owardstay-tartsay"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "shift-towards-end"
 msgstr "iftshay-owardstay-endway"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid ""
 "Emit code to multiply MULTIPLIER with MULTIPLICAND, putting the result\n"
 "  in RESULT-HIGH and RESULT-LOW.  KIND is either :signed or :unsigned.\n"
@@ -765,43 +760,39 @@ msgstr ""
 "orway :unsignedway.\n"
 "  Otenay: ethay ifetimeslay ofway MULTIPLICAND andway RESULT-HIGH overlapway."
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline (signed-byte 64) arithmetic"
 msgstr "inlineway (ignedsay-ytebay 64) arithmeticway"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline (unsigned-byte 64) arithmetic"
 msgstr "inlineway (unsignedway-ytebay 64) arithmeticway"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline (signed-byte 64) ASH"
 msgstr "inlineway (ignedsay-ytebay 64) ASH"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline (signed-byte 64) comparison"
 msgstr "inlineway (ignedsay-ytebay 64) omparisoncay"
 
-#: target:compiler/sparc/arith.lisp
+#: src/compiler/sparc/arith.lisp
 msgid "inline (unsigned-byte 64) comparison"
 msgstr "inlineway (unsignedway-ytebay 64) omparisoncay"
 
-#: target:compiler/sparc/arith.lisp
-msgid "recode as shifts and adds"
-msgstr "ecoderay asway iftsshay andway addsway"
-
-#: target:compiler/sparc/c-call.lisp
+#: src/compiler/sparc/c-call.lisp
 msgid "Class not yet defined: ~S"
 msgstr "Assclay otnay etyay efinedday: ~S"
 
-#: target:compiler/sparc/c-call.lisp
+#: src/compiler/sparc/c-call.lisp
 msgid "Too many result values from c-call."
 msgstr "Ootay anymay esultray aluesvay omfray c-allcay."
 
-#: target:compiler/sparc/c-call.lisp
+#: src/compiler/sparc/c-call.lisp
 msgid "Method ~S not defined for ~S"
 msgstr "Ethodmay ~S otnay efinedday orfay ~S"
 
-#: target:compiler/sparc/c-call.lisp
+#: src/compiler/sparc/c-call.lisp
 msgid ""
 "Cons up a piece of code which calls call-callback with INDEX and a\n"
 "pointer to the arguments."
@@ -810,22 +801,22 @@ msgstr ""
 "ithway INDEX andway away\n"
 "ointerpay otay ethay argumentsway."
 
-#: target:compiler/sparc/call.lisp
+#: src/compiler/sparc/call.lisp
 msgid "more-arg-context"
 msgstr "oremay-argway-ontextcay"
 
-#: target:compiler/sparc/array.lisp
+#: src/compiler/sparc/array.lisp
 msgid "inline array access"
 msgstr "inlineway arrayway accessway"
 
-#: target:compiler/sparc/array.lisp
+#: src/compiler/sparc/array.lisp
 msgid "inline array store"
 msgstr "inlineway arrayway toresay"
 
-#: target:compiler/sparc/array.lisp
+#: src/compiler/sparc/array.lisp
 msgid "raw-bits VOP"
 msgstr "awray-itsbay VOP"
 
-#: target:compiler/sparc/array.lisp
+#: src/compiler/sparc/array.lisp
 msgid "setf raw-bits VOP"
 msgstr "etfsay awray-itsbay VOP"

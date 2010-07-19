@@ -15,28 +15,64 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: target:code/sparc-svr4-vm.lisp
+#: src/code/sparc-svr4-vm.lisp
 msgid "Returns a string describing the type of the local machine."
 msgstr ""
 "Eturnsray away ingstray escribingday ethay ypetay ofway ethay ocallay "
 "achinemay."
 
-#: target:code/sparc-svr4-vm.lisp
+#: src/code/sparc-svr4-vm.lisp
 msgid "Returns a string describing the version of the local machine."
 msgstr ""
 "Eturnsray away ingstray escribingday ethay ersionvay ofway ethay ocallay "
 "achinemay."
 
-#: target:code/sparc-svr4-vm.lisp
+#: src/code/sparc-svr4-vm.lisp
 msgid "Unaligned instruction?  offset=#x~X."
 msgstr "Unalignedway instructionway?  offsetway=#x~X."
 
-#: target:code/sparc-svr4-vm.lisp
+#: src/code/sparc-svr4-vm.lisp
 msgid "Can't deal with CALL fixups, yet."
 msgstr "Ancay't ealday ithway CALL ixupsfay, etyay."
 
-#: target:code/sparc-svr4-vm.lisp
+#: src/code/sparc-svr4-vm.lisp
 msgid "XRS ID invalid but attempting to access double-float register ~d!"
 msgstr ""
 "XRS ID invalidway utbay attemptingway otay accessway oubleday-oatflay "
 "egisterray ~d!"
+
+#: src/code/signal.lisp
+msgid "Emt instruction"
+msgstr "Emtway instructionway"
+
+#: src/code/signal.lisp
+msgid "Bad argument to system call"
+msgstr "Adbay argumentway otay ystemsay allcay"
+
+#: src/code/signal.lisp
+msgid "Process's lwps are blocked"
+msgstr "Ocesspray's wpslay areway ockedblay"
+
+#: src/code/debug-int.lisp
+msgid "no debug info: ~A:~A"
+msgstr "onay ebugday infoway: ~Away:~Away"
+
+#: src/code/debug-int.lisp
+msgid "find the PC"
+msgstr "indfay ethay PC"
+
+#: src/code/debug-int.lisp
+msgid "Local non-descriptor register access?"
+msgstr "Ocallay onnay-escriptorday egisterray accessway?"
+
+#: src/code/debug-int.lisp
+msgid "Local interior register access?"
+msgstr "Ocallay interiorway egisterray accessway?"
+
+#: src/code/debug-int.lisp
+msgid "Breakpoint that nobody wants?"
+msgstr "Eakpointbray atthay obodynay antsway?"
+
+#: src/code/debug-int.lisp
+msgid "BREAKPOINT-DO-DISPLACED-INST returned?"
+msgstr "BREAKPOINT-DO-DISPLACED-INST eturnedray?"

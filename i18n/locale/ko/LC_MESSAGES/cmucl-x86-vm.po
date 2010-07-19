@@ -76,6 +76,61 @@ msgstr ""
 msgid "Thread safe push of val onto the list in the vector element."
 msgstr ""
 
+#: src/code/commandline.lisp
+msgid ""
+"Specifies what kind of floating-point support should be used on x86\n"
+"  systems.  If 'x87', Lisp will use the x87 floating-point unit; if\n"
+"  'sse2', Lisp uses SSE2 floating-point unit. The default is\n"
+"  'auto',which causes Lisp to check to see if SSE2 is available.  If\n"
+"  so, then SSE2 is used.  If the SSE2 core file cannot be found,Lisp\n"
+"  will fallback to the x87 core, which can run on any machine."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "mode"
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "a symbol or function"
+msgstr ""
+
+#: src/code/load.lisp
+msgid "Top-Level Form"
+msgstr ""
+
+#: src/code/debug-int.lisp
+msgid "Breakpoint that nobody wants?"
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "Number of bits per word where a word holds one lisp descriptor."
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid ""
+"Number of bits per byte where a byte is the smallest addressable object."
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "Number of bits needed to represent a character"
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "Number of bytes needed to represent a character"
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "Number of bits to shift between word addresses and byte addresses."
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "Number of bytes in a word."
+msgstr ""
+
+#: src/compiler/x86/vm.lisp
+msgid "Redefining SC number ~D from ~S to ~S."
+msgstr ""
+
 #: src/compiler/x86/c-call.lisp src/compiler/x86/insts.lisp
 msgid "Class not yet defined: ~S"
 msgstr ""
@@ -130,11 +185,15 @@ msgid ""
 "  the GENERATE-CERROR-CODE form."
 msgstr ""
 
-#: src/compiler/x86/array.lisp src/compiler/x86/call.lisp
-#: src/compiler/x86/alloc.lisp src/compiler/x86/cell.lisp
-#: src/compiler/x86/debug.lisp src/compiler/x86/arith.lisp
-#: src/compiler/x86/memory.lisp src/compiler/x86/char.lisp
-#: src/compiler/x86/move.lisp
+#: src/compiler/x86/type-vops.lisp src/compiler/x86/pred.lisp
+#: src/compiler/x86/array.lisp src/compiler/x86/print.lisp
+#: src/compiler/x86/nlx.lisp src/compiler/x86/call.lisp
+#: src/compiler/x86/alloc.lisp src/compiler/x86/values.lisp
+#: src/compiler/x86/cell.lisp src/compiler/x86/debug.lisp
+#: src/compiler/x86/subprim.lisp src/compiler/x86/arith.lisp
+#: src/compiler/x86/static-fn.lisp src/compiler/x86/memory.lisp
+#: src/compiler/x86/char.lisp src/compiler/x86/system.lisp
+#: src/compiler/x86/sap.lisp src/compiler/x86/move.lisp
 msgid "Unknown SC to SC-Case for ~S:~%  ~S"
 msgstr ""
 
@@ -146,8 +205,9 @@ msgstr ""
 msgid "constant load"
 msgstr ""
 
-#: src/compiler/x86/call.lisp src/compiler/x86/debug.lisp
-#: src/compiler/x86/char.lisp src/compiler/x86/move.lisp
+#: src/compiler/x86/nlx.lisp src/compiler/x86/call.lisp
+#: src/compiler/x86/debug.lisp src/compiler/x86/char.lisp
+#: src/compiler/x86/move.lisp
 msgid ""
 "Load TN allocated, but no move function?~@\n"
 "\t           VM definition inconsistent, recompile and try again."

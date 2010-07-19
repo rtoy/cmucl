@@ -32,3 +32,11 @@ msgstr "Unixway ystemsay allcay etrusagegay ailedfay: ~Away."
 #: src/code/bsd-os.lisp
 msgid "Getpagesize failed: ~A"
 msgstr "Etpagesizegay ailedfay: ~Away"
+
+#: src/code/signal.lisp
+msgid "Emt instruction"
+msgstr "Emtway instructionway"
+
+#: src/code/signal.lisp
+msgid "Bad argument to system call"
+msgstr "Adbay argumentway otay ystemsay allcay"

@@ -15,20 +15,16 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: target:code/sunos-os.lisp
+#: src/code/sunos-os.lisp
 msgid "Version string for supporting software"
 msgstr "Ersionvay ingstray orfay upportingsay oftwaresay"
 
-#: target:code/sunos-os.lisp
+#: src/code/sunos-os.lisp
 msgid "Returns a string describing version of the supporting software."
 msgstr ""
 "Eturnsray away ingstray escribingday ersionvay ofway ethay upportingsay "
 "oftwaresay."
 
-#: target:code/sunos-os.lisp
-msgid "Unix system call getrusage failed: ~A."
-msgstr "Unixway ystemsay allcay etrusagegay ailedfay: ~Away."
-
-#: target:code/sunos-os.lisp
+#: src/code/sunos-os.lisp
 msgid "Getpagesize failed: ~A"
 msgstr "Etpagesizegay ailedfay: ~Away"

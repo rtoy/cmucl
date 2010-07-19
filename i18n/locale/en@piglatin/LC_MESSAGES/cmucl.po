@@ -8512,32 +8512,6 @@ msgstr ""
 "  itsway efaultday orecay ilefay."
 
 #: src/code/commandline.lisp
-msgid ""
-"Specifies what kind of floating-point support should be used on x86\n"
-"  systems.  If 'x87', Lisp will use the x87 floating-point unit; if\n"
-"  'sse2', Lisp uses SSE2 floating-point unit. The default is\n"
-"  'auto',which causes Lisp to check to see if SSE2 is available.  If\n"
-"  so, then SSE2 is used.  If the SSE2 core file cannot be found,Lisp\n"
-"  will fallback to the x87 core, which can run on any machine."
-msgstr ""
-"Ecifiesspay atwhay indkay ofway oatingflay-ointpay upportsay ouldshay ebay "
-"usedway onway x86\n"
-"  ystemssay.  Ifway 'x87', Isplay illway useway ethay x87 oatingflay-ointpay "
-"unitway; ifway\n"
-"  'sesay2', Isplay usesway SSE2 oatingflay-ointpay unitway. Ethay efaultday "
-"isway\n"
-"  'autoway',ichwhay ausescay Isplay otay eckchay otay eesay ifway SSE2 isway "
-"availableway.  Ifway\n"
-"  osay, enthay SSE2 isway usedway.  Ifway ethay SSE2 orecay ilefay annotcay "
-"ebay oundfay,Isplay\n"
-"  illway allbackfay otay ethay x87 orecay, ichwhay ancay unray onway anyway "
-"achinemay."
-
-#: src/code/commandline.lisp
-msgid "mode"
-msgstr "odemay"
-
-#: src/code/commandline.lisp
 msgid "~&Usage: ~A <options>~2%"
 msgstr "~&Usageway: ~Away <optionsway>~2%"
 
@@ -14302,10 +14276,6 @@ msgstr "Oadlay ~Away anywayway"
 msgid "~A was compiled for a ~A, but this is a ~A"
 msgstr "~Away asway ompiledcay orfay away ~Away, utbay isthay isway away ~Away"
 
-#: src/compiler/dfo.lisp src/code/load.lisp
-msgid "Top-Level Form"
-msgstr "Optay-Evellay Ormfay"
-
 #: src/compiler/generic/core.lisp src/code/load.lisp
 msgid "Unaligned function object, offset = #x~X."
 msgstr "Unalignedway unctionfay objectway, offsetway = #x~X."
@@ -14845,10 +14815,6 @@ msgid "C abort()"
 msgstr "C abortway()"
 
 #: src/code/signal.lisp
-msgid "Emt instruction"
-msgstr "Emtway instructionway"
-
-#: src/code/signal.lisp
 msgid "Floating point exception"
 msgstr "Oatingflay ointpay exceptionway"
 
@@ -14863,10 +14829,6 @@ msgstr "Usbay errorway"
 #: src/code/signal.lisp
 msgid "Segmentation violation"
 msgstr "Egmentationsay iolationvay"
-
-#: src/code/signal.lisp
-msgid "Bad argument to system call"
-msgstr "Adbay argumentway otay ystemsay allcay"
 
 #: src/code/signal.lisp
 msgid "Write on a pipe with no one to read it"
@@ -16114,10 +16076,6 @@ msgstr ""
 #: src/code/debug-int.lisp
 msgid "Unknown breakpoint in ~S at offset ~S."
 msgstr "Unknownway eakpointbray inway ~S atway offsetway ~S."
-
-#: src/code/debug-int.lisp
-msgid "Breakpoint that nobody wants?"
-msgstr "Eakpointbray atthay obodynay antsway?"
 
 #: src/code/debug-int.lisp
 msgid ""
@@ -22033,37 +21991,6 @@ msgstr ""
 "Amesay asway EXT:FEATUREP, exceptway useway ethay eaturesfay oundfay inway "
 "*NATIVE-BACKEND*."
 
-#: src/compiler/x86/parms.lisp
-msgid "Number of bits per word where a word holds one lisp descriptor."
-msgstr ""
-"Umbernay ofway itsbay erpay ordway erewhay away ordway oldshay oneway isplay "
-"escriptorday."
-
-#: src/compiler/x86/parms.lisp
-msgid ""
-"Number of bits per byte where a byte is the smallest addressable object."
-msgstr ""
-"Umbernay ofway itsbay erpay ytebay erewhay away ytebay isway ethay "
-"mallestsay addressableway objectway."
-
-#: src/compiler/x86/parms.lisp
-msgid "Number of bits needed to represent a character"
-msgstr "Umbernay ofway itsbay eedednay otay epresentray away aracterchay"
-
-#: src/compiler/x86/parms.lisp
-msgid "Number of bytes needed to represent a character"
-msgstr "Umbernay ofway ytesbay eedednay otay epresentray away aracterchay"
-
-#: src/compiler/x86/parms.lisp
-msgid "Number of bits to shift between word addresses and byte addresses."
-msgstr ""
-"Umbernay ofway itsbay otay iftshay etweenbay ordway addressesway andway "
-"ytebay addressesway."
-
-#: src/compiler/x86/parms.lisp
-msgid "Number of bytes in a word."
-msgstr "Umbernay ofway ytesbay inway away ordway."
-
 #: src/compiler/generic/objdef.lisp
 msgid "Number of bits at the low end of a pointer used for type information."
 msgstr ""
@@ -26812,6 +26739,10 @@ msgstr "onnay-onstantcay :ALLOW-OTHER-KEYS aluevay"
 msgid "Function called with unknown argument keyword ~S."
 msgstr "Unctionfay alledcay ithway unknownway argumentway eywordkay ~S."
 
+#: src/compiler/dfo.lisp
+msgid "Top-Level Form"
+msgstr "Optay-Evellay Ormfay"
+
 #: src/compiler/checkgen.lisp
 msgid "~:[This~;~:*~A~] is not a ~<~%~9T~:;~S:~>~%  ~S"
 msgstr "~:[Isthay~;~:*~Away~] isway otnay away ~<~%~9T~:;~S:~>~%  ~S"
@@ -26915,10 +26846,6 @@ msgstr ""
 "taticsay unctionfay\n"
 "   ymbolsay."
 
-#: src/compiler/x86/vm.lisp
-msgid "Redefining SC number ~D from ~S to ~S."
-msgstr "Edefiningray SC umbernay ~D omfray ~S otay ~S."
-
 #: src/compiler/generic/primtype.lisp
 msgid ""
 "An a-list for mapping simple array element types to their\n"
@@ -26927,23 +26854,6 @@ msgstr ""
 "Anway away-istlay orfay appingmay implesay arrayway elementway ypestay otay "
 "eirthay\n"
 "  orrespondingcay imitivepray ypestay."
-
-#: src/compiler/x86/type-vops.lisp src/compiler/x86/pred.lisp
-#: src/compiler/x86/print.lisp src/compiler/x86/nlx.lisp
-#: src/compiler/x86/values.lisp src/compiler/x86/subprim.lisp
-#: src/compiler/x86/static-fn.lisp src/compiler/x86/system.lisp
-#: src/compiler/x86/sap.lisp
-msgid "Unknown SC to SC-Case for ~S:~%  ~S"
-msgstr "Unknownway SC otay SC-Asecay orfay ~S:~%  ~S"
-
-#: src/compiler/x86/nlx.lisp
-msgid ""
-"Load TN allocated, but no move function?~@\n"
-"\t           VM definition inconsistent, recompile and try again."
-msgstr ""
-"Oadlay TN allocatedway, utbay onay ovemay unctionfay?~@\n"
-"\t           VM efinitionday inconsistentway, ecompileray andway ytray "
-"againway."
 
 #: src/compiler/aliencomp.lisp
 msgid "Slot is not constant, so cannot open code access."

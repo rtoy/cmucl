@@ -29,3 +29,11 @@ msgstr "유닉스 시스템 호출에 실패 getrusage: ~A 등급."
 #: src/code/bsd-os.lisp
 msgid "Getpagesize failed: ~A"
 msgstr "Getpagesize 실패: ~ A 등급"
+
+#: src/code/signal.lisp
+msgid "Emt instruction"
+msgstr ""
+
+#: src/code/signal.lisp
+msgid "Bad argument to system call"
+msgstr ""

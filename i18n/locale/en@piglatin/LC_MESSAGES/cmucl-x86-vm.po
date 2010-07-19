@@ -108,6 +108,79 @@ msgstr ""
 "Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay ectorvay "
 "elementway."
 
+#: src/code/commandline.lisp
+msgid ""
+"Specifies what kind of floating-point support should be used on x86\n"
+"  systems.  If 'x87', Lisp will use the x87 floating-point unit; if\n"
+"  'sse2', Lisp uses SSE2 floating-point unit. The default is\n"
+"  'auto',which causes Lisp to check to see if SSE2 is available.  If\n"
+"  so, then SSE2 is used.  If the SSE2 core file cannot be found,Lisp\n"
+"  will fallback to the x87 core, which can run on any machine."
+msgstr ""
+"Ecifiesspay atwhay indkay ofway oatingflay-ointpay upportsay ouldshay ebay "
+"usedway onway x86\n"
+"  ystemssay.  Ifway 'x87', Isplay illway useway ethay x87 oatingflay-ointpay "
+"unitway; ifway\n"
+"  'sesay2', Isplay usesway SSE2 oatingflay-ointpay unitway. Ethay efaultday "
+"isway\n"
+"  'autoway',ichwhay ausescay Isplay otay eckchay otay eesay ifway SSE2 isway "
+"availableway.  Ifway\n"
+"  osay, enthay SSE2 isway usedway.  Ifway ethay SSE2 orecay ilefay annotcay "
+"ebay oundfay,Isplay\n"
+"  illway allbackfay otay ethay x87 orecay, ichwhay ancay unray onway anyway "
+"achinemay."
+
+#: src/code/commandline.lisp
+msgid "mode"
+msgstr "odemay"
+
+#: src/code/commandline.lisp
+msgid "a symbol or function"
+msgstr "away ymbolsay orway unctionfay"
+
+#: src/code/load.lisp
+msgid "Top-Level Form"
+msgstr "Optay-Evellay Ormfay"
+
+#: src/code/debug-int.lisp
+msgid "Breakpoint that nobody wants?"
+msgstr "Eakpointbray atthay obodynay antsway?"
+
+#: src/compiler/x86/parms.lisp
+msgid "Number of bits per word where a word holds one lisp descriptor."
+msgstr ""
+"Umbernay ofway itsbay erpay ordway erewhay away ordway oldshay oneway isplay "
+"escriptorday."
+
+#: src/compiler/x86/parms.lisp
+msgid ""
+"Number of bits per byte where a byte is the smallest addressable object."
+msgstr ""
+"Umbernay ofway itsbay erpay ytebay erewhay away ytebay isway ethay "
+"mallestsay addressableway objectway."
+
+#: src/compiler/x86/parms.lisp
+msgid "Number of bits needed to represent a character"
+msgstr "Umbernay ofway itsbay eedednay otay epresentray away aracterchay"
+
+#: src/compiler/x86/parms.lisp
+msgid "Number of bytes needed to represent a character"
+msgstr "Umbernay ofway ytesbay eedednay otay epresentray away aracterchay"
+
+#: src/compiler/x86/parms.lisp
+msgid "Number of bits to shift between word addresses and byte addresses."
+msgstr ""
+"Umbernay ofway itsbay otay iftshay etweenbay ordway addressesway andway "
+"ytebay addressesway."
+
+#: src/compiler/x86/parms.lisp
+msgid "Number of bytes in a word."
+msgstr "Umbernay ofway ytesbay inway away ordway."
+
+#: src/compiler/x86/vm.lisp
+msgid "Redefining SC number ~D from ~S to ~S."
+msgstr "Edefiningray SC umbernay ~D omfray ~S otay ~S."
+
 #: src/compiler/x86/c-call.lisp src/compiler/x86/insts.lisp
 msgid "Class not yet defined: ~S"
 msgstr "Assclay otnay etyay efinedday: ~S"
@@ -190,11 +263,15 @@ msgstr ""
 "esumesray afterway\n"
 "  ethay GENERATE-CERROR-CODE ormfay."
 
-#: src/compiler/x86/array.lisp src/compiler/x86/call.lisp
-#: src/compiler/x86/alloc.lisp src/compiler/x86/cell.lisp
-#: src/compiler/x86/debug.lisp src/compiler/x86/arith.lisp
-#: src/compiler/x86/memory.lisp src/compiler/x86/char.lisp
-#: src/compiler/x86/move.lisp
+#: src/compiler/x86/type-vops.lisp src/compiler/x86/pred.lisp
+#: src/compiler/x86/array.lisp src/compiler/x86/print.lisp
+#: src/compiler/x86/nlx.lisp src/compiler/x86/call.lisp
+#: src/compiler/x86/alloc.lisp src/compiler/x86/values.lisp
+#: src/compiler/x86/cell.lisp src/compiler/x86/debug.lisp
+#: src/compiler/x86/subprim.lisp src/compiler/x86/arith.lisp
+#: src/compiler/x86/static-fn.lisp src/compiler/x86/memory.lisp
+#: src/compiler/x86/char.lisp src/compiler/x86/system.lisp
+#: src/compiler/x86/sap.lisp src/compiler/x86/move.lisp
 msgid "Unknown SC to SC-Case for ~S:~%  ~S"
 msgstr "Unknownway SC otay SC-Asecay orfay ~S:~%  ~S"
 
@@ -206,8 +283,9 @@ msgstr "ixnumfay untaggingway"
 msgid "constant load"
 msgstr "onstantcay oadlay"
 
-#: src/compiler/x86/call.lisp src/compiler/x86/debug.lisp
-#: src/compiler/x86/char.lisp src/compiler/x86/move.lisp
+#: src/compiler/x86/nlx.lisp src/compiler/x86/call.lisp
+#: src/compiler/x86/debug.lisp src/compiler/x86/char.lisp
+#: src/compiler/x86/move.lisp
 msgid ""
 "Load TN allocated, but no move function?~@\n"
 "\t           VM definition inconsistent, recompile and try again."
