@@ -1,7 +1,7 @@
 #!/bin/sh
 
 usage() {
-    echo "cross-build-world.sh [-crl] target-dir cross-dir cross-compiler-script [build-binary [flags]]"
+    echo "cross-build-world.sh [-crl] [-B file] target-dir cross-dir cross-compiler-script [build-binary [flags]]"
     echo "  -c      Clean target and cross directories before compiling"
     echo "  -r      Recompile lisp runtime"
     echo "  -l      Load cross-compiled kernel to make a new lisp kernel"

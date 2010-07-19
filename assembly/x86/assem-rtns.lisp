@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.8 2009/06/11 16:03:56 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.9 2010/07/19 23:08:37 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -274,3 +274,23 @@
 
   (inst jmp (make-ea :byte :base block
 		     :disp (* unwind-block-entry-pc-slot word-bytes))))
+
+#+assembler
+(define-assembly-routine (closure-tramp
+			  (:return-style :none))
+                         ()
+  (loadw eax-tn eax-tn fdefn-function-slot other-pointer-type)
+  (inst jmp (make-ea :dword :base eax-tn
+		     :disp (- (* closure-function-slot word-bytes)
+			      function-pointer-type))))
+
+#+assembler
+(define-assembly-routine (undefined-tramp
+			  (:return-style :none))
+                         ()
+  (let ((error (generate-error-code nil undefined-symbol-error
+				    (make-random-tn :kind :normal
+						    :sc (sc-or-lose 'descriptor-reg c::*backend*)
+						    :offset 0))))
+    (inst jmp error)
+    (inst ret)))

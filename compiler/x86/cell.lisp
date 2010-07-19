@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.16 2010/03/19 15:19:01 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.17 2010/07/19 23:08:37 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -169,6 +169,7 @@
     (let ((err-lab (generate-error-code vop undefined-symbol-error object)))
       (inst jmp :e err-lab))))
 
+#+nil
 (define-vop (set-fdefn-function)
   (:policy :fast-safe)
   (:translate (setf fdefn-function))
@@ -191,6 +192,29 @@
     (storew raw fdefn fdefn-raw-addr-slot other-pointer-type)
     (move result function)))
 
+(define-vop (set-fdefn-function)
+  (:policy :fast-safe)
+  (:translate (setf fdefn-function))
+  (:args (function :scs (descriptor-reg) :target result)
+	 (fdefn :scs (descriptor-reg)))
+  (:temporary (:sc unsigned-reg) raw)
+  (:temporary (:sc byte-reg) type)
+  (:results (result :scs (descriptor-reg)))
+  (:generator 38
+    (load-type type function (- function-pointer-type))
+    (inst lea raw
+	  (make-ea :byte :base function
+		   :disp (- (* function-code-offset word-bytes)
+			    function-pointer-type)))
+    (inst cmp type function-header-type)
+    (inst jmp :e normal-fn)
+    (inst lea raw (make-fixup 'closure-tramp :assembly-routine))
+    NORMAL-FN
+    (storew function fdefn fdefn-function-slot other-pointer-type)
+    (storew raw fdefn fdefn-raw-addr-slot other-pointer-type)
+    (move result function)))
+
+#+nil
 (define-vop (fdefn-makunbound)
   (:policy :fast-safe)
   (:translate fdefn-makunbound)
@@ -199,6 +223,17 @@
   (:generator 38
     (storew nil-value fdefn fdefn-function-slot other-pointer-type)
     (storew (make-fixup (extern-alien-name "undefined_tramp") :foreign)
+	    fdefn fdefn-raw-addr-slot other-pointer-type)
+    (move result fdefn)))
+
+(define-vop (fdefn-makunbound)
+  (:policy :fast-safe)
+  (:translate fdefn-makunbound)
+  (:args (fdefn :scs (descriptor-reg) :target result))
+  (:results (result :scs (descriptor-reg)))
+  (:generator 38
+    (storew nil-value fdefn fdefn-function-slot other-pointer-type)
+    (storew (make-fixup 'undefined-tramp :assembly-routine)
 	    fdefn fdefn-raw-addr-slot other-pointer-type)
     (move result fdefn)))
 

@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.89 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.90 2010/07/19 23:08:37 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2165,10 +2165,24 @@
 ;; running lisp.  Why?  Because new C code may have moved these
 ;; addresses so we need to use the right values.  We get worldbuild
 ;; issues if we use the old values that don't match.
+#+nil
 (defun lookup-special-symbol (name)
   (or (gethash name *cold-foreign-symbol-table* nil)
       (lookup-foreign-symbol (vm::extern-alien-name name)
 			     #+(or sparc ppc) :data)))
+
+(defun lookup-special-symbol (name)
+  (cond
+    #+(or sparc x86 amd64)
+    ((string= name "closure_tramp")
+     (lookup-assembler-reference 'vm::closure-tramp))
+    #+(or sparc x86 amd64)
+    ((string= name "undefined_tramp")
+     (lookup-assembler-reference 'vm::undefined-tramp))
+    (t
+     (or (gethash name *cold-foreign-symbol-table* nil)
+	 (lookup-foreign-symbol (vm::extern-alien-name name)
+				#+(or sparc ppc) :data)))))
 
 (defvar *cold-linkage-table* (make-array 8192 :adjustable t :fill-pointer 0))
 (defvar *cold-foreign-hash* (make-hash-table :test #'equal))
@@ -2193,7 +2207,9 @@
   #+(or sparc ppc)
   (progn
     (cold-register-foreign-linkage (vm::extern-alien-name "call_into_c") :code)
+    #-sparc
     (cold-register-foreign-linkage (vm::extern-alien-name "undefined_tramp") :data)
+    #-sparc
     (cold-register-foreign-linkage (vm::extern-alien-name "closure_tramp") :data)
     ))
 
@@ -2725,6 +2741,19 @@
 	    (initialize-symbols)
 	    (initialize-layouts)
 	    (setf *current-init-functions-cons* *nil-descriptor*)
+	    ;; Load the assembler-routines now since they include
+	    ;; undefined-tramp and closure-tramp.  We need the former
+	    ;; in order to initialize the static functions and we need
+	    ;; the latter to be able to static fset closures.
+	    (flet ((is-assemfile (x)
+		     (string-equal "assem"
+				   (pathname-type x))))
+	      (dolist (file-name (remove-if-not #'is-assemfile  file-list))
+		(write-line (namestring (truename file-name)))
+		(cold-load file-name))
+	      ;; Don't load the assem files again, otherwise we'll get
+	      ;; two copies of everything.
+	      (setf file-list (remove-if #'is-assemfile file-list)))
 	    (initialize-static-fns)
 	    (dolist (file (if (listp file-list)
 			      file-list

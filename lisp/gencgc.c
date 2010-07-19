@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.107 2010/04/01 14:05:45 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.108 2010/07/19 23:08:37 rtoy Exp $
  *
  */
 
@@ -670,6 +670,9 @@ print_generation_stats(int verbose)
 #define SSE_STATE_SIZE ((512+16)/4)
     int fpu_state[FPU_STATE_SIZE];
     int sse_state[SSE_STATE_SIZE];
+
+    extern void sse_save(void *);
+    extern void sse_restore(void *);
 #elif defined(sparc)
     /*
      * 32 (single-precision) FP registers, and the FP state register.
@@ -2019,13 +2022,17 @@ signal_space_p(lispobj obj)
 #endif    
 }
 
-#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
+#if (defined(DARWIN) && defined(__ppc__))
 /*
  * The assembly code defines these as functions, so we make them
  * functions.  We only care about their addresses anyway.
  */
 extern char closure_tramp();
 extern char undefined_tramp();
+#elif defined(sparc)
+/* closure tramp and undefined tramp are Lisp assembly routines */
+#elif (defined(i386) || defined(__x86_64))
+/* undefined tramp are Lisp assembly routines */
 #else
 extern int undefined_tramp;
 #endif
@@ -2576,72 +2583,123 @@ scavenge(void *start_obj, long nwords)
 
 static int boxed_registers[] = BOXED_REGISTERS;
 
+/* The GC has a notion of an "interior pointer" register, an unboxed
+ * register that typically contains a pointer to inside an object
+ * referenced by another pointer.  The most obvious of these is the
+ * program counter, although many compiler backends define a "Lisp
+ * Interior Pointer" register known as reg_LIP, and various CPU
+ * architectures have other registers that also partake of the
+ * interior-pointer nature.  As the code for pairing an interior
+ * pointer value up with its "base" register, and fixing it up after
+ * scavenging is complete is horribly repetitive, a few macros paper
+ * over the monotony.  --AB, 2010-Jul-14 */
+
+#define INTERIOR_POINTER_VARS(name) \
+    unsigned long name;		    \
+    unsigned long name##_offset;    \
+    int name##_register_pair
+
+#define PAIR_INTERIOR_POINTER(name, accessor)		\
+    name = accessor;					\
+    pair_interior_pointer(context, name,		\
+			  &name##_offset,		\
+			  &name##_register_pair)
+
+/*
+ * Do we need to check if the register we're fixing up is in the
+ * from-space?
+ */
+#define FIXUP_INTERIOR_POINTER(name, accessor)				\
+    do {								\
+	if (name##_register_pair >= 0) {				\
+	    accessor =							\
+		SC_REG(context, name##_register_pair)                   \
+                + name##_offset;                                        \
+	}								\
+    } while (0)
+
+
 static void
-scavenge_interrupt_context(os_context_t * context)
+pair_interior_pointer(os_context_t *context, unsigned long pointer,
+		      unsigned long *saved_offset, int *register_pair)
 {
     int i;
-    unsigned long pc_code_offset;
-
-#ifdef reg_LIP
-    unsigned long lip;
-    unsigned long lip_offset;
-    int lip_register_pair;
-#endif
-#ifdef reg_LR
-    unsigned long lr_code_offset;
-#endif
-#ifdef reg_CTR    
-    unsigned long ctr_code_offset;
-#endif
-#ifdef SC_NPC
-    unsigned long npc_code_offset;
-#endif
-
-#ifdef reg_LIP
-    /* Find the LIP's register pair and calculate it's offset */
-    /* before we scavenge the context. */
 
     /*
      * I (RLT) think this is trying to find the boxed register that is
      * closest to the LIP address, without going past it.  Usually, it's
      * reg_CODE or reg_LRA.  But sometimes, nothing can be found.
      */
-    lip = SC_REG(context, reg_LIP);
-    lip_offset = 0x7FFFFFFF;
-    lip_register_pair = -1;
+    *saved_offset = 0x7FFFFFFF;
+    *register_pair = -1;
     for (i = 0; i < (sizeof(boxed_registers) / sizeof(int)); i++) {
-	unsigned long reg;
-	long offset;
-	int index;
+        unsigned long reg;
+        long offset;
+        int index;
 
-	index = boxed_registers[i];
-	reg = SC_REG(context, index);
-	if (Pointerp(reg) && PTR(reg) <= lip) {
-	    offset = lip - reg;
-	    if (offset < lip_offset) {
-		lip_offset = offset;
-		lip_register_pair = index;
-	    }
-	}
+        index = boxed_registers[i];
+        reg = SC_REG(context, index);
+
+	/* An interior pointer is never relative to a non-pointer
+	 * register (an oversight in the original implementation).
+	 * The simplest argument for why this is true is to consider
+	 * the fixnum that happens by coincide to be the word-index in
+	 * memory of the header for some object plus two.  This is
+	 * happenstance would cause the register containing the fixnum
+	 * to be selected as the register_pair if the interior pointer
+	 * is to anywhere after the first two words of the object.
+	 * The fixnum won't be changed during GC, but the object might
+	 * move, thus destroying the interior pointer.  --AB,
+	 * 2010-Jul-14 */
+
+        if (Pointerp(reg) && (PTR(reg) <= pointer)) {
+            offset = pointer - reg;
+            if (offset < *saved_offset) {
+                *saved_offset = offset;
+                *register_pair = index;
+            }
+        }
     }
+}
+
+
+static void
+scavenge_interrupt_context(os_context_t * context)
+{
+    int i;
+
+    INTERIOR_POINTER_VARS(pc);
+#ifdef reg_LIP
+    INTERIOR_POINTER_VARS(lip);
+#endif
+#ifdef reg_LR
+    INTERIOR_POINTER_VARS(lr);
+#endif
+#ifdef reg_CTR    
+    INTERIOR_POINTER_VARS(ctr);
+#endif
+#ifdef SC_NPC
+    INTERIOR_POINTER_VARS(npc);
+#endif
+
+#ifdef reg_LIP
+    PAIR_INTERIOR_POINTER(lip, SC_REG(context, reg_LIP));
 #endif /* reg_LIP */
 
-    /*
-     * Compute the PC's offset from the start of the CODE 
-     * register.
-     */
-    pc_code_offset = SC_PC(context) - SC_REG(context, reg_CODE);
+    PAIR_INTERIOR_POINTER(pc, SC_PC(context));
+
 #ifdef SC_NPC
-    npc_code_offset = SC_NPC(context) - SC_REG(context, reg_CODE);
-#endif /* SC_NPC */
+    PAIR_INTERIOR_POINTER(npc, SC_NPC(context));
+#endif    
 
 #ifdef reg_LR
-    lr_code_offset = SC_REG(context, reg_LR) - SC_REG(context, reg_CODE);
-#endif    
-#ifdef reg_CTR
-    ctr_code_offset = SC_REG(context, reg_CTR) - SC_REG(context, reg_CODE);
-#endif    
+    PAIR_INTERIOR_POINTER(pc, SC_REG(context, reg_LR));
+#endif
 
+#ifdef reg_CTR
+    PAIR_INTERIOR_POINTER(pc, SC_REG(context, reg_CTR));
+#endif    
+    
     /* Scanvenge all boxed registers in the context. */
     for (i = 0; i < (sizeof(boxed_registers) / sizeof(int)); i++) {
 	int index;
@@ -2655,43 +2713,27 @@ scavenge_interrupt_context(os_context_t * context)
 	scavenge(&(SC_REG(context, index)), 1);
     }
 
-#ifdef reg_LIP
-    /* Fix the LIP */
-
     /*
-     * But what happens if lip_register_pair is -1?  SC_REG on Solaris
-     * (see solaris_register_address in solaris-os.c) will return
-     * &context->uc_mcontext.gregs[2].  But gregs[2] is REG_nPC.  Is
-     * that what we really want?  My guess is that that is not what we
-     * want, so if lip_register_pair is -1, we don't touch reg_LIP at
-     * all.  But maybe it doesn't really matter if LIP is trashed?
+     * Now that the scavenging is done, repair the various interior
+     * pointers.
      */
-    if (lip_register_pair >= 0) {
-	SC_REG(context, reg_LIP) =
-	    SC_REG(context, lip_register_pair) + lip_offset;
-    }
-#endif /* reg_LIP */
+#ifdef reg_LIP
+    FIXUP_INTERIOR_POINTER(lip, SC_REG(context, reg_LIP));
+#endif
 
-    /* Fix the PC if it was in from space */
-    if (from_space_p(SC_PC(context))) {
-        SC_PC(context) = SC_REG(context, reg_CODE) + pc_code_offset;
-    }
+    FIXUP_INTERIOR_POINTER(pc, SC_PC(context));
+
 #ifdef SC_NPC
-    if (from_space_p(SC_NPC(context))) {
-	SC_NPC(context) = SC_REG(context, reg_CODE) + npc_code_offset;
-    }
-#endif /* SC_NPC */
+    FIXUP_INTERIOR_POINTER(npc, SC_NPC(context));
+#endif
 
 #ifdef reg_LR
-    if (from_space_p(SC_REG(context, reg_LR))) {
-        SC_REG(context, reg_LR) = SC_REG(context, reg_CODE) + lr_code_offset;
-    }
-#endif	
+    FIXUP_INTERIOR_POINTER(lr, SC_REG(context, reg_LR));
+#endif
+
 #ifdef reg_CTR
-    if (from_space_p(SC_REG(context, reg_CTR))) {
-      SC_REG(context, reg_CTR) = SC_REG(context, reg_CODE) + ctr_code_offset;
-    }
-#endif	
+    FIXUP_INTERIOR_POINTER(ctr, SC_REG(context, reg_CTR));
+#endif
 }
 
 void
@@ -6837,20 +6879,24 @@ verify_space(lispobj * start, size_t words)
 #endif
 	    } else {
 		/* Verify that it points to another valid space */
-		if (!to_readonly_space && !to_static_space &&
-#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
-		    !((thing == (int) &closure_tramp) ||
-		      (thing == (int) &undefined_tramp))
+		if (!to_readonly_space && !to_static_space 
+#if (defined(DARWIN) && defined(__ppc__))
+
+		    && !((thing == (int) &closure_tramp) ||
+                         (thing == (int) &undefined_tramp))
+#elif defined(sparc) || defined(i386) || defined(__x86_64)
+                    /* Nothing for since these are Lisp assembly routines */
 #else
-		    thing != (int) &undefined_tramp
+		    && thing != (int) &undefined_tramp
 #endif
 		    ) {
+#if !(defined(sparc) || defined(i386) || defined(__x86_64))
 		    fprintf(stderr,
 			    "*** Ptr %lx @ %lx sees Junk (undefined_tramp = %lx)",
 			    (unsigned long) thing, (unsigned long) start,
 			    (unsigned long) &undefined_tramp);
-                    
-#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
+#endif                    
+#if (defined(DARWIN) && defined(__ppc__))
                     fprintf(stderr, " (closure_tramp = %lx)",
 			    (unsigned long) &closure_tramp);
 #endif

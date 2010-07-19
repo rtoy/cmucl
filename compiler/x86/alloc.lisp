@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.14 2010/03/19 15:19:01 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.15 2010/07/19 23:08:37 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -162,6 +162,7 @@
     (storew nil-value result code-debug-info-slot other-pointer-type)))
 
 
+#+nil
 (define-vop (make-fdefn)
   (:policy :fast-safe)
   (:translate make-fdefn)
@@ -173,6 +174,19 @@
       (storew name result fdefn-name-slot other-pointer-type)
       (storew nil-value result fdefn-function-slot other-pointer-type)
       (storew (make-fixup (extern-alien-name "undefined_tramp") :foreign)
+	      result fdefn-raw-addr-slot other-pointer-type))))
+
+(define-vop (make-fdefn)
+  (:policy :fast-safe)
+  (:translate make-fdefn)
+  (:args (name :scs (descriptor-reg) :to :eval))
+  (:results (result :scs (descriptor-reg) :from :argument))
+  (:node-var node)
+  (:generator 37
+    (with-fixed-allocation (result fdefn-type fdefn-size node)
+      (storew name result fdefn-name-slot other-pointer-type)
+      (storew nil-value result fdefn-function-slot other-pointer-type)
+      (storew (make-fixup 'undefined-tramp :assembly-routine)
 	      result fdefn-raw-addr-slot other-pointer-type))))
 
 

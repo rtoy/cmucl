@@ -269,7 +269,12 @@ _call_into_c:
 
 	SET_SIZE(_call_into_c)
 
-
+#if 0
+/* undefined_tramp and closure_tramp are now Lisp assembly routines.
+ * so we don't need these anymore.  Leave them here for a bit so 
+ * we can look at the "real" versions for a while.  But eventually,
+ * remove these.
+ */
         .global _undefined_tramp
 	FUNCDEF(_undefined_tramp)
         .align  8
@@ -318,7 +323,7 @@ _closure_tramp:
 	jmp	reg_CODE+FUNCTION_CODE_OFFSET
 	nop
 	SET_SIZE(_closure_tramp)
-
+#endif
 
 
 /*
