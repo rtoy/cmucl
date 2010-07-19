@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.112 2010/07/05 15:52:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.113 2010/07/19 23:41:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -607,7 +607,7 @@
 				   (setq sap (fd-stream-obuf-sap stream)
 					 tail 0))
 				 (setf (bref sap (1- (incf tail))) byte))
-			       (fd-stream-char-to-octets-error stream))
+			       #+unicode (fd-stream-char-to-octets-error stream))
        (setf (fd-stream-obuf-tail stream) tail))
     (if (char= char #\Newline)
 	(setf (fd-stream-char-pos stream) 0)
@@ -722,7 +722,7 @@
 				     (setq sap (fd-stream-obuf-sap stream)
 					   tail 0))
 				   (setf (bref sap (1- (incf tail))) byte))
-				 (fd-stream-char-to-octets-error stream)))
+				 #+unicode (fd-stream-char-to-octets-error stream)))
        (setf (fd-stream-obuf-tail stream) tail))))
 
 
@@ -1836,10 +1836,12 @@
 					      :pathname pathname
 					      :buffering buffering
 					      :timeout timeout)
-		    (let ((e (cond ((characterp encoding-error)
+		    (let (#+unicode
+			  (e (cond ((characterp encoding-error)
 				    (constantly (char-code encoding-error)))
 				   (t
 				    encoding-error)))
+			  #+unicode
 			  (d (cond ((characterp decoding-error)
 				    (constantly (char-code decoding-error)))
 				   ((eq t decoding-error)
@@ -1858,8 +1860,8 @@
 				       :pathname pathname
 				       :buffering buffering
 				       :timeout timeout
-				       :char-to-octets-error e
-				       :octets-to-char-error d)))))
+				       #+unicode :char-to-octets-error #+unicode e
+				       #+unicode :octets-to-char-error #+unicode d)))))
     ;; FIXME: setting the external format here should be better
     ;; integrated into set-routines.  We do it before so that
     ;; set-routines can create an in-buffer if appropriate.  But we
