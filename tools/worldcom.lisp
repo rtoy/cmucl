@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.103 2010/03/19 15:19:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.104 2010/07/20 21:34:30 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -246,6 +246,7 @@
 (comf "target:code/fd-stream")
 (when (c:backend-featurep :unicode)
   (comf "target:code/fd-stream-extfmt"))
+(comf "target:code/fd-stream-comp")
 (comf "target:code/pathname")
 #-no-runtime (comf "target:code/pathname" :byte-compile t)
 (comf "target:code/filesys")

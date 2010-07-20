@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.111 2010/03/19 15:19:04 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.112 2010/07/20 21:34:30 rtoy Rel $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -163,6 +163,8 @@
 ;;#-(or no-compiler runtime unicode-bootstrap)
 #+(and unicode (not (or unicode-bootstrap no-compiler runtime)))
 (maybe-byte-load "code:fd-stream-extfmt")
+
+(maybe-byte-load "code:fd-stream-comp")
 
 (maybe-byte-load "target:code/intl")
 
