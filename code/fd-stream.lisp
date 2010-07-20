@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.113 2010/07/19 23:41:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.114 2010/07/20 22:53:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -274,14 +274,12 @@
   ;; arguments: a message string, the offending octet, and the number
   ;; of octets read so far in decoding; if the function returns it
   ;; should return the codepoint of the desired replacement character.
-  #+unicode
   (octets-to-char-error nil :type (or null symbol function))
   ;;
   ;; Like OCTETS-TO-CHAR-ERROR, but for converting characters to
   ;; octets for output.  The function takes two arguments: a message
   ;; string and the codepoint that cannot be converted.  The function
   ;; should return the octet that should be output.
-  #+unicode
   (char-to-octets-error nil :type (or null symbol function)))
 
 (defun %print-fd-stream (fd-stream stream depth)
@@ -607,7 +605,7 @@
 				   (setq sap (fd-stream-obuf-sap stream)
 					 tail 0))
 				 (setf (bref sap (1- (incf tail))) byte))
-			       #+unicode (fd-stream-char-to-octets-error stream))
+			       (fd-stream-char-to-octets-error stream))
        (setf (fd-stream-obuf-tail stream) tail))
     (if (char= char #\Newline)
 	(setf (fd-stream-char-pos stream) 0)
@@ -722,7 +720,7 @@
 				     (setq sap (fd-stream-obuf-sap stream)
 					   tail 0))
 				   (setf (bref sap (1- (incf tail))) byte))
-				 #+unicode (fd-stream-char-to-octets-error stream)))
+				 (fd-stream-char-to-octets-error stream)))
        (setf (fd-stream-obuf-tail stream) tail))))
 
 
@@ -1836,12 +1834,10 @@
 					      :pathname pathname
 					      :buffering buffering
 					      :timeout timeout)
-		    (let (#+unicode
-			  (e (cond ((characterp encoding-error)
+		    (let ((e (cond ((characterp encoding-error)
 				    (constantly (char-code encoding-error)))
 				   (t
 				    encoding-error)))
-			  #+unicode
 			  (d (cond ((characterp decoding-error)
 				    (constantly (char-code decoding-error)))
 				   ((eq t decoding-error)
@@ -1860,8 +1856,8 @@
 				       :pathname pathname
 				       :buffering buffering
 				       :timeout timeout
-				       #+unicode :char-to-octets-error #+unicode e
-				       #+unicode :octets-to-char-error #+unicode d)))))
+				       :char-to-octets-error e
+				       :octets-to-char-error d)))))
     ;; FIXME: setting the external format here should be better
     ;; integrated into set-routines.  We do it before so that
     ;; set-routines can create an in-buffer if appropriate.  But we
