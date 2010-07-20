@@ -1,7 +1,7 @@
 /*
  * Variables for executable support.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/exec-init.c,v 1.1 2007/07/24 19:09:14 rtoy Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/exec-init.c,v 1.2 2010/07/20 23:34:09 rtoy Rel $
  *
  */
 
@@ -9,8 +9,3 @@
 int builtin_image_flag = 0;
 long initial_function_addr = 0;
 
-/*
- * Local variables:
- * c-file-style: "edge"
- * End:
- */
