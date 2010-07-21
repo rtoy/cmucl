@@ -1,20 +1,23 @@
 #!/bin/sh
 
 usage() {
-    echo "cross-build-world.sh [-crl] [-B file] target-dir cross-dir cross-compiler-script [build-binary [flags]]"
+    echo "cross-build-world.sh [-crl] [-B file] [-G Gnumake] target-dir cross-dir cross-compiler-script [build-binary [flags]]"
     echo "  -c      Clean target and cross directories before compiling"
     echo "  -r      Recompile lisp runtime"
     echo "  -l      Load cross-compiled kernel to make a new lisp kernel"
     echo "  -B file Use this as the cross bootstrap file." 
+    echo "  -G make Specifies the name of GNU make"
 }
 
-while getopts "crlB:" arg
+MAKE=make
+while getopts "crlB:G:" arg
 do
     case $arg in
       c) CLEAN_DIR=yes ;;
       r) BUILD_RUNTIME=yes ;;
       l) LOAD_KERNEL=yes ;;
       B) BOOTSTRAP=$OPTARG ;;
+      B) MAKE=$OPTARG ;;
       h | \?) usage; exit 1 ;;
     esac
 done
@@ -124,7 +127,7 @@ EOF
 
 if [ "$BUILD_RUNTIME" = "yes" ]; then
     echo Building runtime
-    (cd $TARGET/lisp; make)
+    (cd $TARGET/lisp; ${MAKE})
 fi
 
 if [ "$LOAD_KERNEL" = "yes" ]; then
