@@ -32,3 +32,7 @@
      ,@body
      (intl:textdomain ,old-domain)))
 )
+
+;; Executable feature works on sparc!
+#+sparc
+(pushnew :executable *features*)
