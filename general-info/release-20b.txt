@@ -81,6 +81,7 @@ New in this release:
       specified exernal format.  To support this, the macros
       DEFINE-EXTERNAL-FORMAT and DEFINE-COMPOSING-EXTERNAL-FORMAT have
       changed.
+    - The sparc port now supports the :executable feature.
 
   * ANSI compliance fixes:
     - COMPILE will update the macro-function if the specified name
@@ -189,6 +190,8 @@ New in this release:
       snapshot has been fixed.  The bug prevented the non-unicode
       versions of CMUCL from loading the external format aliases
       file. 
+    - With SSE2, the imaginary part of a (complex single-float) is now
+      returned correctly.
 
   * Trac Tickets:
     #33: get-dispatch-macro-character doesn't signal errors in
