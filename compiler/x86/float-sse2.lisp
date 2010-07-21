@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.14 2010/07/01 03:03:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.15 2010/07/21 16:52:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1437,6 +1437,7 @@
        ;; x = a+b*i = b|a
        ;; Get the imag part to the low part of temp.  We don't care about
        ;; the other parts of r.
+       (inst movaps temp x)		; temp = u|u|b|a
        (inst shufps temp x #b01)	; temp = a|a|a|b
        (inst xorps r r)			; r = 0|0|0|0
        (inst movss r temp)		; r = 0|0|0|b
