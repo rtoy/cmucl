@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.108 2010/07/19 23:08:37 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.109 2010/07/22 01:16:47 rtoy Exp $
  *
  */
 
@@ -2613,7 +2613,7 @@ static int boxed_registers[] = BOXED_REGISTERS;
     do {								\
 	if (name##_register_pair >= 0) {				\
 	    accessor =							\
-		SC_REG(context, name##_register_pair)                   \
+                PTR(SC_REG(context, name##_register_pair))              \
                 + name##_offset;                                        \
 	}								\
     } while (0)
@@ -2653,7 +2653,7 @@ pair_interior_pointer(os_context_t *context, unsigned long pointer,
 	 * 2010-Jul-14 */
 
         if (Pointerp(reg) && (PTR(reg) <= pointer)) {
-            offset = pointer - reg;
+            offset = pointer - PTR(reg);
             if (offset < *saved_offset) {
                 *saved_offset = offset;
                 *register_pair = index;
