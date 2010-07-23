@@ -36,6 +36,16 @@
 ;;; Compile the new backend.
 (pushnew :bootstrap *features*)
 (pushnew :building-cross-compiler *features*)
+
+;; Make fixup-code-object and sanctify-for-execution in the VM package
+;; be the same as the original.  Needed to get rid of a compiler error
+;; in generic/core.lisp.  (This halts cross-compilations if the
+;; compiling lisp uses the -batch flag.
+(import 'old-vm::fixup-code-object "VM")
+(import 'old-vm::sanctify-for-execution "VM")
+(export 'vm::fixup-code-object "VM")
+(export 'vm::sanctify-for-execution "VM")
+
 (load "target:tools/comcom")
 
 ;;; Load the new backend.
@@ -193,8 +203,6 @@
   (declare (type simple-string name))
   name)
 (export 'extern-alien-name)
-(export 'fixup-code-object)
-(export 'sanctify-for-execution)
 (in-package :cl-user)
 
 ;;; Don't load compiler parts from the target compilation
