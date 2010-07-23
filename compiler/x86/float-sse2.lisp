@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.15 2010/07/21 16:52:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.16 2010/07/23 11:53:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1390,13 +1390,12 @@
   (:arg-types complex-single-float)
   (:results (r :scs (single-reg)))
   (:result-types single-float)
-  (:temporary (:sc complex-single-reg) temp)
   (:policy :fast-safe)
   (:note _N"complex float realpart")
   (:generator 3
     (sc-case x
       (complex-single-reg
-       (inst xorps temp temp)		; temp = 0|0|0|0
+       (inst xorps r r)			; temp = 0|0|0|0
        (inst movss r x))		; r = 0|0|0|x
       (complex-single-stack
        (inst movss r (ea-for-csf-real-stack x)))
@@ -1409,13 +1408,12 @@
   (:arg-types complex-double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
-  (:temporary (:sc complex-double-reg) temp)
   (:policy :fast-safe)
   (:note _N"complex float realpart")
   (:generator 3
     (sc-case x
       (complex-double-reg
-       (inst xorpd temp temp)		; temp = 0|0
+       (inst xorpd r r)			; temp = 0|0
        (inst movsd r x))		; r = 0|x
       (complex-double-stack
        (inst movsd r (ea-for-cdf-real-stack x)))
