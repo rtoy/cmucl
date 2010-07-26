@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.109 2010/07/22 01:16:47 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.110 2010/07/26 17:17:13 rtoy Rel $
  *
  */
 
@@ -242,6 +242,12 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
  */
 unsigned gencgc_verbose = 0;
 unsigned counters_verbose = 0;
+
+/*
+ * If true, then some debugging information is printed when scavenging
+ * static (malloc'ed) arrays.
+ */
+boolean debug_static_array_p = 0;
 
 /*
  * To enable the use of page protection to help avoid the scavenging
@@ -2476,6 +2482,7 @@ maybe_static_array_p(lispobj header)
       case type_SimpleArrayComplexLongFloat:
 #endif
           result = TRUE;
+          break;
       default:
           result = FALSE;
     }
@@ -2540,15 +2547,24 @@ scavenge(void *start_obj, long nwords)
             } else {
                 lispobj *ptr = (lispobj *) PTR(object);
                 words_scavenged = 1;
-                fprintf(stderr, "Not in Lisp spaces:  object = %p, ptr = %p\n", (void*)object, ptr);
+                if (debug_static_array_p) {
+                    fprintf(stderr, "Not in Lisp spaces:  object = %p, ptr = %p\n",
+                            (void*)object, ptr);    
+                }
+                
                 if (1) {
                     lispobj header = *ptr;
-                    fprintf(stderr, "  Header value = 0x%lx\n", (unsigned long) header);
+                    if (debug_static_array_p) {
+                        fprintf(stderr, "  Header value = 0x%lx\n", (unsigned long) header);
+                    }
+                    
                     if (maybe_static_array_p(header)) {
                         int static_p;
 
-                        fprintf(stderr, "Possible static vector at %p.  header = 0x%lx\n",
-                                ptr, (unsigned long) header);
+                        if (debug_static_array_p) {
+                            fprintf(stderr, "Possible static vector at %p.  header = 0x%lx\n",
+                                    ptr, (unsigned long) header);
+                        }
                       
                         static_p = (HeaderValue(header) & 1) == 1;
                         if (static_p) {
@@ -2557,9 +2573,10 @@ scavenge(void *start_obj, long nwords)
                              * reachable by setting the MSB of the header.
                              */
                             *ptr = header | 0x80000000;
-                            fprintf(stderr, "Scavenged static vector @%p, header = 0x%lx\n",
-                                    ptr, (unsigned long) header);
-                      
+                            if (debug_static_array_p) {
+                                fprintf(stderr, "Scavenged static vector @%p, header = 0x%lx\n",
+                                        ptr, (unsigned long) header);
+                            }
                         }
                     }
                 }
