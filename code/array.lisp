@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.54 2010/04/20 17:57:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.55 2010/07/26 17:20:26 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -243,6 +243,7 @@
   :Allocation
       How to allocate the array.  If :MALLOC, a static, nonmovable array is
       created.  This array is created by calling malloc."
+  (declare (type (member nil :malloc) allocation))
   (let* ((dimensions (if (listp dimensions) dimensions (list dimensions)))
 	 (array-rank (length (the list dimensions)))
 	 (static-array-p (eq allocation :malloc))
@@ -351,6 +352,9 @@
 	      (incf axis)))
 	  array))))
 
+(defvar *debug-static-array-p* nil
+  "If non-NIL, print some debugging information when GC'ing static arrays")
+
 (defun static-array-p (array)
   (with-array-data ((v array) (start) (end))
     (declare (ignore start end))
@@ -362,7 +366,8 @@
 (defun free-static-vector (vector)
   (sys:without-gcing
    (let ((addr (logandc1 vm:lowtag-mask (kernel:get-lisp-obj-address vector))))
-     (format t (intl:gettext "~&Freeing foreign vector at #x~X~%") addr)
+     (when *debug-static-array-p*
+       (format t (intl:gettext "~&Freeing foreign vector at #x~X~%") addr))
      (alien:alien-funcall
       (alien:extern-alien "free"
 			  (function c-call:void
@@ -377,8 +382,9 @@
   ;; The mark bit the MSB of the header word.  Look at scavenge in
   ;; gencgc.c.
   (when *static-vectors*
-    (let ((*print-array* nil))
-      (format t (intl:gettext "Finalizing static vectors ~S~%") *static-vectors*))
+    (when *debug-static-array-p*
+      (let ((*print-array* nil))
+	(format t (intl:gettext "Finalizing static vectors ~S~%") *static-vectors*)))
     (setf *static-vectors*
 	  (delete-if
 	   #'(lambda (wp)
@@ -386,19 +392,22 @@
 		 (when vector
 		   (let* ((sap (sys:vector-sap vector))
 			  (header (sys:sap-ref-32 sap (* -2 vm:word-bytes))))
-		     (format t (intl:gettext "static vector ~A.  header = ~X~%")
-			     vector header)
+		     (when *debug-static-array-p*
+		       (format t (intl:gettext "static vector ~A.  header = ~X~%")
+			       vector header))
 		     (cond ((logbitp 31 header)
 			    ;; Clear mark
 			    (setf (sys:sap-ref-32 sap (* -2 vm:word-bytes))
 				  (logand header #x7fffffff))
-			    (let ((*print-array* nil))
-			      (format t (intl:gettext "  static vector ~A in use~%") vector))
+			    (when *debug-static-array-p*
+			      (let ((*print-array* nil))
+				(format t (intl:gettext "  static vector ~A in use~%") vector)))
 			    nil)
 			   (t
 			    ;; Mark was clear so free the vector
-			    (let ((*print-array* nil))
-			      (format t (intl:gettext "  Free static vector ~A~%") vector))
+			    (when *debug-static-array-p*
+			      (let ((*print-array* nil))
+				(format t (intl:gettext "  Free static vector ~A~%") vector)))
 			    (sys:without-interrupts
 			      (setf (weak-pointer-value wp) nil)
 			      (free-static-vector vector))
