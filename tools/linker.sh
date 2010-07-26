@@ -1,6 +1,6 @@
 #!/bin/sh -x
 
-# $Id: linker.sh,v 1.8 2009/09/28 12:32:42 rtoy Rel $
+# $Id: linker.sh,v 1.9 2010/07/26 19:07:56 rtoy Exp $
 
 # This file was written by Fred Gilham and is placed in the public domain.
 # It comes without warranty of any kind.
@@ -118,10 +118,11 @@ case "$OPSYS" in
 	# first word of main isn't all zeros.
 	BIFLAG=0x14120
 	IFADDR=
-	sed -e "s;@BIFLAG@;$BIFLAG;" -e "s;@IFADDR@;$1;" $SCRIPT > sunos-map-file
+	sed -e "s;@BIFLAG@;$BIFLAG;" -e "s;@IFADDR@;$1;" $SCRIPT > $OUTDIR/sunos-map-file
 	SCRIPT="-M sunos-map-file"
 	# Remove the sunos-map-file when the script exits.
-	trap 'rm -f sunos-map-file' 0
+	trap 'rm -f $OUTDIR/sunos-map-file' 0
+	echo $PWD
 	FLAGS=
 	BIFLAG=
 	;;
