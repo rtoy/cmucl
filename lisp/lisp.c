@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.70 2010/02/01 15:16:09 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.71 2010/07/26 15:58:47 rtoy Exp $
  *
  */
 
@@ -439,7 +439,7 @@ main(int argc, const char *argv[], const char *envp[])
     if (builtin_image_flag != 0)
 	initial_function = (lispobj) & initial_function_addr;
 
-#if defined(SVR4) || defined(__linux__)
+#if defined(SVR4)
     tzset();
 #endif
 
@@ -782,6 +782,16 @@ main(int argc, const char *argv[], const char *envp[])
      */
     verify_gc();
 #endif
+
+#if defined(__linux__)
+    /*
+     * On newer (?) versions of Linux, tzset appears to call malloc.
+     * We set up the timezone here so that malloc happens as late as
+     * possible.
+     */
+    tzset();
+#endif
+    
     if (monitor) {
 	while (1) {
 	    ldb_monitor();
