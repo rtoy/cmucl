@@ -19,7 +19,8 @@ over the Internet, and is mostly in the public domain.
 New in this release:
 
   * Known issues:
-    - CMUCL cannot create working executable images anymore.
+    - CMUCL cannot create working executable images anymore on
+      FreeBSD.
     - FILE-POSITION is sometimes off by 2 (4) for input files for
       UTF-16 (UTF-32) encodings.  This is caused by the BOM
       (byte-order mark) which is essentially never seen by Lisp.
