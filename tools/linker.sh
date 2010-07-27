@@ -1,6 +1,6 @@
 #!/bin/sh -x
 
-# $Id: linker.sh,v 1.10 2010/07/27 02:35:26 rtoy Exp $
+# $Id: linker.sh,v 1.11 2010/07/27 03:21:40 rtoy Exp $
 
 # This file was written by Fred Gilham and is placed in the public domain.
 # It comes without warranty of any kind.
@@ -116,15 +116,16 @@ case "$OPSYS" in
 	SCRIPT="$CMUCLLIB/$OPSYS$VER-cmucl-linker-script"
 	# Is this right?  I just made this point to &main, and the
 	# first word of main isn't all zeros.
-	BIFLAG=0x14120
-	IFADDR=
-	sed -e "s;@BIFLAG@;$BIFLAG;" -e "s;@IFADDR@;$1;" $SCRIPT > $OUTDIR/sunos-map-file
+	BIFLAG=$2
+	IFADDR=$1
+	sed -e "s;@BIFLAG@;$BIFLAG;" -e "s;@IFADDR@;$IFADDR;" $SCRIPT > $OUTDIR/sunos-map-file
 	SCRIPT="-M sunos-map-file"
 	# Remove the sunos-map-file when the script exits.
 	trap 'rm -f $OUTDIR/sunos-map-file' 0
 	echo $PWD
 	FLAGS=
 	BIFLAG=
+	IFADDR=
 	;;
     * )
 	echo "$0: unknown operating system $OPSYS."
