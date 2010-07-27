@@ -1,13 +1,13 @@
 #!/bin/sh -x
 
-# $Id: linker.sh,v 1.9 2010/07/26 19:07:56 rtoy Exp $
+# $Id: linker.sh,v 1.10 2010/07/27 02:35:26 rtoy Exp $
 
 # This file was written by Fred Gilham and is placed in the public domain.
 # It comes without warranty of any kind.
 
-if [ $# -ne 3 ]
+if [ $# -ne 4 ]
     then
-    echo "Usage: `basename $0` <c-compiler> <initial function address> <executable file>"
+    echo "Usage: `basename $0` <c-compiler> <initial function address> <main> <executable file>"
     exit 1
 fi
 
@@ -50,8 +50,8 @@ OPSYS=`uname`
 VER=''
 
 # Default values
-OUTPUT="-o $2"
-OUTDIR=`dirname $2`
+OUTPUT="-o $3"
+OUTDIR=`dirname $3`
 CURDIR=`pwd`
 
 LINKER=/usr/bin/ld
@@ -71,7 +71,7 @@ SCRIPT="-T $CMUCLLIB/$OPSYS$VER-cmucl-linker-script"
 
 # XXXX The process image start address can change depending on the OS
 # (at least).
-BIFLAG='--defsym builtin_image_flag=0x08048000'
+BIFLAG="--defsym builtin_image_flag=$2"
 
 # IFADDR is the initial function address, needed to start lisp processing.
 IFADDR="--defsym initial_function_addr=$1"

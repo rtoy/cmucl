@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.19 2009/07/13 19:41:54 rtoy Rel $
+ $Id: elf.c,v 1.20 2010/07/27 02:35:25 rtoy Exp $
 */
 
 #include <stdio.h>
@@ -286,6 +286,9 @@ write_elf_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t
     size_t length = end - start + (os_vm_page_size -
 				   ((end - start) % os_vm_page_size));
 
+    fprintf(stderr, "sizeof Elf_Ehdr = %d\n", sizeof(Elf_Ehdr));
+    fprintf(stderr, "sizeof Elf32_Phdr = %d\n", sizeof(Elf32_Phdr));
+    
     if(id < 1 || id > 3) {
 	fprintf(stderr, "Invalid space id in %s: %d\n", __func__, id);
 	fprintf(stderr, "Executable not built.\n");
@@ -371,11 +374,13 @@ elf_run_linker(long init_func_address, char *file)
         }
         
 	if(stat(command, &st) == 0) {
+            extern int main();
+            
 	    free(paths);
 	    printf("\t[%s: linking %s... \n", command, file);
 	    fflush(stdout);
-	    sprintf(command_line, "%s %s 0x%lx %s", command, C_COMPILER,
-                    init_func_address, file);
+	    sprintf(command_line, "%s %s 0x%lx 0x%lx %s", command, C_COMPILER,
+                    init_func_address, (unsigned long) &main, file);
 	    ret = system(command_line);
 	    if(ret == -1) {
 		perror("Can't run link script");
