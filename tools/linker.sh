@@ -1,6 +1,6 @@
 #!/bin/sh -x
 
-# $Id: linker.sh,v 1.11 2010/07/27 03:21:40 rtoy Exp $
+# $Id: linker.sh,v 1.12 2010/07/28 01:21:31 rtoy Exp $
 
 # This file was written by Fred Gilham and is placed in the public domain.
 # It comes without warranty of any kind.
@@ -50,8 +50,9 @@ OPSYS=`uname`
 VER=''
 
 # Default values
-OUTPUT="-o $3"
 OUTDIR=`dirname $3`
+OUTNAME=`basename $3`
+OUTPUT="-o $OUTNAME"
 CURDIR=`pwd`
 
 LINKER=/usr/bin/ld
