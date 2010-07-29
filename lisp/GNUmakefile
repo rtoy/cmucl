@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.36 2010/07/29 01:51:12 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.37 2010/07/29 04:28:49 rtoy Exp $
 
 all: lisp.nm
 
@@ -39,7 +39,7 @@ lisp: ${OBJS} version.o
 # builtin_image_flag with the correct value.
 lisp.a:	version.o ${OBJS} ${EXEC_FINAL_OBJ}
 	ar crs lisp.a ${OBJS} version.o
-ifdef FEATURE_SOLARIS
+ifneq (${EXEC_FINAL_OBJ},)
 	ar d lisp.a exec-init.o
 	ar r lisp.a ${EXEC_FINAL_OBJ}
 endif

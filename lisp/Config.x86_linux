@@ -8,3 +8,5 @@ ASSEM_SRC +=  linux-stubs.S
 OS_SRC += Linux-os.c elf.c
 OS_LINK_FLAGS = -m32 -rdynamic -Xlinker --export-dynamic -Xlinker -Map -Xlinker foo
 OS_LIBS = -ldl
+
+EXEC_FINAL_OBJ = exec-final.o
