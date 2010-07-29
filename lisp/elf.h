@@ -1,4 +1,4 @@
-/* $Id: elf.h,v 1.10 2009/01/20 03:58:11 agoncharov Rel $ */
+/* $Id: elf.h,v 1.11 2010/07/29 04:34:10 rtoy Exp $ */
 
 /* This code was written by Fred Gilham and has been placed in the public domain.  It is
    provided "AS-IS" and without warranty of any kind.
@@ -8,7 +8,11 @@
 
 #define _ELF_H_INCLUDED_
 
+#if defined(__linux__)
+#define LINKER_SCRIPT "linker-x86.sh"
+#else
 #define LINKER_SCRIPT "linker.sh"
+#endif
 
 #if defined(SOLARIS)
 #include <sys/elf.h>

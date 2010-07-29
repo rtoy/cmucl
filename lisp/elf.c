@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.20 2010/07/27 02:35:25 rtoy Exp $
+ $Id: elf.c,v 1.21 2010/07/29 04:34:10 rtoy Exp $
 */
 
 #include <stdio.h>
@@ -24,6 +24,7 @@
 #include "internals.h"
 #include "globals.h"
 #include "elf.h"
+#include "validate.h"
 
 static char elf_magic_string[] = {ELFMAG0, ELFMAG1, ELFMAG2, ELFMAG3};
 
@@ -37,7 +38,6 @@ static Elf_Shdr sh;
 static char *section_names[] = {"CORDYN", "CORSTA", "CORRO"};
 
 #ifdef SOLARIS
-#include "sparc-validate.h"
 /*
  * Starting address of the three ELF sections/spaces.  These must be
  * in the same order as section_names above!
@@ -331,7 +331,6 @@ elf_cleanup(const char *dirname)
 int
 elf_run_linker(long init_func_address, char *file)
 {
-
     lispobj libstring = SymbolValue(CMUCL_LIB);     /* Get library: */
     struct vector *vec = (struct vector *)PTR(libstring);
     char *paths;
@@ -373,14 +372,22 @@ elf_run_linker(long init_func_address, char *file)
             printf("  %s\n", command);
         }
         
-	if(stat(command, &st) == 0) {
+	if (stat(command, &st) == 0) {
             extern int main();
             
 	    free(paths);
 	    printf("\t[%s: linking %s... \n", command, file);
 	    fflush(stdout);
+#ifdef __linux__
+            sprintf(command_line, "%s %s 0x%lx '%s' 0x%lx 0x%lx 0x%lx", command,
+                    C_COMPILER, init_func_address, file,
+                    (unsigned long) READ_ONLY_SPACE_START,
+                    (unsigned long) STATIC_SPACE_START,
+                    (unsigned long) DYNAMIC_0_SPACE_START);
+#else
 	    sprintf(command_line, "%s %s 0x%lx 0x%lx %s", command, C_COMPILER,
                     init_func_address, (unsigned long) &main, file);
+#endif
 	    ret = system(command_line);
 	    if(ret == -1) {
 		perror("Can't run link script");

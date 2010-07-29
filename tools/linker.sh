@@ -1,6 +1,6 @@
 #!/bin/sh -x
 
-# $Id: linker.sh,v 1.13 2010/07/29 01:51:12 rtoy Exp $
+# $Id: linker.sh,v 1.14 2010/07/29 04:34:10 rtoy Exp $
 
 # This file was written by Fred Gilham and is placed in the public domain.
 # It comes without warranty of any kind.
@@ -72,7 +72,7 @@ SCRIPT="-T $CMUCLLIB/$OPSYS$VER-cmucl-linker-script"
 
 # XXXX The process image start address can change depending on the OS
 # (at least).
-BIFLAG="--defsym builtin_image_flag=$2"
+#BIFLAG="--defsym builtin_image_flag=$2"
 
 # IFADDR is the initial function address, needed to start lisp processing.
 IFADDR="--defsym initial_function_addr=$1"
