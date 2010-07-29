@@ -45,3 +45,4 @@ DEPEND=$(CC)
 OS_SRC = solaris-os.c os-common.c undefineds.c elf.c k_rem_pio2.c
 OS_LINK_FLAGS=
 OS_LIBS= -lsocket -lnsl -ldl
+EXEC_FINAL_OBJ = exec-final.o

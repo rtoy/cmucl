@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.35 2010/07/12 14:02:49 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.36 2010/07/29 01:51:12 rtoy Exp $
 
 all: lisp.nm
 
@@ -34,11 +34,14 @@ lisp: ${OBJS} version.o
 
 # Create a library out of all the object files so we can build an
 # executable.  However, for Solaris, we need to remove exec-init.o
-# because the linker will add the write symbols in.
-lisp.a:	version.o ${OBJS}
-	ar crs lisp.a version.o ${OBJS}
+# because the linker will define symbols with the correct addresses.
+# Also, we need to add EXEC_FINAL on Solaris to define
+# builtin_image_flag with the correct value.
+lisp.a:	version.o ${OBJS} ${EXEC_FINAL_OBJ}
+	ar crs lisp.a ${OBJS} version.o
 ifdef FEATURE_SOLARIS
 	ar d lisp.a exec-init.o
+	ar r lisp.a ${EXEC_FINAL_OBJ}
 endif
 
 version:

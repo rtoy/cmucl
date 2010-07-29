@@ -18,7 +18,6 @@ cordyn : CORDYN : CORDYN.o;
 
 {
 	global:
-		builtin_image_flag    = data V@BIFLAG@ S4;
 		initial_function_addr = data V@IFADDR@ S4;
 };
 

@@ -1,6 +1,6 @@
 #!/bin/sh -x
 
-# $Id: linker.sh,v 1.12 2010/07/28 01:21:31 rtoy Exp $
+# $Id: linker.sh,v 1.13 2010/07/29 01:51:12 rtoy Exp $
 
 # This file was written by Fred Gilham and is placed in the public domain.
 # It comes without warranty of any kind.
@@ -115,11 +115,10 @@ case "$OPSYS" in
 	LINKER="/usr/ccs/bin/ld"
 	OBJS="-z allextract $CMUCLLIB/lisp.a CORRO.o CORSTA.o CORDYN.o -z defaultextract"
 	SCRIPT="$CMUCLLIB/$OPSYS$VER-cmucl-linker-script"
-	# Is this right?  I just made this point to &main, and the
-	# first word of main isn't all zeros.
-	BIFLAG=$2
+	# Don't need BIFLAG on Solaris.  The lisp.a archive has the
+	# correct value for it.
 	IFADDR=$1
-	sed -e "s;@BIFLAG@;$BIFLAG;" -e "s;@IFADDR@;$IFADDR;" $SCRIPT > $OUTDIR/sunos-map-file
+	sed -e "s;@IFADDR@;$IFADDR;" $SCRIPT > $OUTDIR/sunos-map-file
 	SCRIPT="-M sunos-map-file"
 	# Remove the sunos-map-file when the script exits.
 	trap 'rm -f $OUTDIR/sunos-map-file' 0
