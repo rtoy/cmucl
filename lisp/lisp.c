@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.71 2010/07/26 15:58:47 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.72 2010/07/30 20:26:11 rtoy Exp $
  *
  */
 
@@ -436,8 +436,14 @@ main(int argc, const char *argv[], const char *envp[])
     boolean monitor;
     lispobj initial_function = 0;
 
-    if (builtin_image_flag != 0)
-	initial_function = (lispobj) & initial_function_addr;
+    if (builtin_image_flag != 0) {
+#if defined(i386) && defined(__linux__)
+        initial_function = initial_function_addr;
+#else
+        initial_function = (lispobj) & initial_function_addr;
+#endif
+    }
+    
 
 #if defined(SVR4)
     tzset();

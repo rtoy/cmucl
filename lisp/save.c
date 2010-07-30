@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.24 2010/07/29 04:34:10 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.25 2010/07/30 20:26:11 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -285,14 +285,10 @@ save_executable(char *filename, lispobj init_function)
 #endif
     printf("[Saving current lisp image as executable into \"%s\":\n", filename);
 
-    printf("\t[Writing core objects... ");
-    fflush(stdout);
-    printf("read-only... ");
+    printf("\t[Writing core objects\n");
     fflush(stdout);
     write_elf_object(dir_name, READ_ONLY_SPACE_ID, (os_vm_address_t)read_only_space,
 		     (os_vm_address_t)SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
-    printf("static... ");
-    fflush(stdout);
     write_elf_object(dir_name, STATIC_SPACE_ID, (os_vm_address_t)static_space,
 		     (os_vm_address_t)SymbolValue(STATIC_SPACE_FREE_POINTER));
 #ifdef GENCGC
@@ -346,8 +342,6 @@ save_executable(char *filename, lispobj init_function)
 #endif    
 #endif
 
-    printf("dynamic... ");
-    fflush(stdout);
 #ifdef reg_ALLOC
     write_elf_object(dir_name, DYNAMIC_SPACE_ID, (os_vm_address_t)current_dynamic_space,
 		     (os_vm_address_t)current_dynamic_space_free_pointer);
@@ -356,7 +350,7 @@ save_executable(char *filename, lispobj init_function)
 		     (os_vm_address_t)SymbolValue(ALLOCATION_POINTER));
 #endif
 
-    printf("done]\n");
+    printf("\tdone]\n");
     fflush(stdout);
     
     printf("Linking executable...\n");

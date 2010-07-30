@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.21 2010/07/29 04:34:10 rtoy Exp $
+ $Id: elf.c,v 1.22 2010/07/30 20:26:11 rtoy Exp $
 */
 
 #include <stdio.h>
@@ -285,10 +285,8 @@ write_elf_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t
     /* The length should be a multiple of the page size. */
     size_t length = end - start + (os_vm_page_size -
 				   ((end - start) % os_vm_page_size));
+    static char *names[] = { "Dynamic", "Static", "Read-Only" };
 
-    fprintf(stderr, "sizeof Elf_Ehdr = %d\n", sizeof(Elf_Ehdr));
-    fprintf(stderr, "sizeof Elf32_Phdr = %d\n", sizeof(Elf32_Phdr));
-    
     if(id < 1 || id > 3) {
 	fprintf(stderr, "Invalid space id in %s: %d\n", __func__, id);
 	fprintf(stderr, "Executable not built.\n");
@@ -299,6 +297,9 @@ write_elf_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t
     id--;
 
     object_name = section_names[id];
+
+    printf("\t %s: %d bytes...\n", names[id], (end - start));
+    fflush(stdout);
 
     if ((write_elf_header(out) == -1) ||
 	(write_zero_section_header(out) == -1) ||
