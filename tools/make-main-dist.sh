@@ -51,19 +51,24 @@ case $ARCH in
 esac
 
 case $OS in
-	FreeBSD*)	
-	    EXECUTABLE=true
-	    SCRIPT=FreeBSD
-	    ;;
-	linux*)		
-	    EXECUTABLE=true
-	    SCRIPT=Linux
-	    ;;
-	solaris*)		
-	    EXECUTABLE=true
-	    SCRIPT=SunOS
-	    ;;
-        *)              EXECUTABLE=""   ;;
+  FreeBSD*)	
+      EXECUTABLE=true
+      SCRIPT=FreeBSD
+      ;;
+  linux*)		
+      EXECUTABLE=true
+      SCRIPT=Linux
+      ;;
+  solaris*)		
+      EXECUTABLE=true
+      SCRIPT=SunOS
+      ;;
+  darwin*)
+      EXECUTABLE=true
+      ;;
+  *)
+      EXECUTABLE=""
+      ;;
 esac
 
 # Frob PATH to use /usr/ucb/install for Solaris
@@ -93,6 +98,7 @@ then
     install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp.a $DESTDIR/lib/cmucl/lib/
     install ${GROUP} ${OWNER} -m 0755 src/tools/linker.sh $DESTDIR/lib/cmucl/lib/
     install ${GROUP} ${OWNER} -m 0755 src/tools/linker-x86.sh $DESTDIR/lib/cmucl/lib/
+    install ${GROUP} ${OWNER} -m 0755 src/tools/linker-darwin.sh $DESTDIR/lib/cmucl/lib/
     install ${GROUP} ${OWNER} -m 0755 src/tools/$SCRIPT-cmucl-linker-script $DESTDIR/lib/cmucl/lib/
 fi
 for corefile in $TARGET/lisp/$CORE

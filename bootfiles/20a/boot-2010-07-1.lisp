@@ -34,5 +34,5 @@
 )
 
 ;; Executable feature works on sparc!
-#+sparc
+#+(or sparc (and x86 darwin))
 (pushnew :executable *features*)

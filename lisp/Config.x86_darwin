@@ -12,7 +12,10 @@ ASFLAGS += -g3 $(MIN_VER)
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 
-OS_SRC += Darwin-os.c 
+OS_SRC += Darwin-os.c mach-o.c
 OS_LINK_FLAGS = $(MIN_VER)
 OS_LIBS =
+
+EXEC_FINAL_OBJ = exec-final.o
+
 

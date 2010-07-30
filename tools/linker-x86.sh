@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $Id: linker-x86.sh,v 1.2 2010/07/30 20:26:12 rtoy Exp $
+# $Id: linker-x86.sh,v 1.3 2010/07/30 22:51:58 rtoy Exp $
 
 # This file written by Raymond Toy as part of CMU Common Lisp and is
 # placed in the public domain.
@@ -19,23 +19,53 @@ fi
 CCOMPILER=$1
 IFADDR=$2
 EXEC=$3
-RO_ADDR="-Wl,--section-start=CORRO=$4"
-STATIC_ADDR="-Wl,--section-start=CORSTA=$5"
-DYN_ADDR="-Wl,--section-start=CORDYN=$6"
 
 OUTDIR=`dirname $EXEC`
 OUTNAME=`basename $EXEC`
 
 CMUCLLIB=`dirname $0`
 
-#OPT_IFADDR="-Wl,--defsym -Wl,initial_function_addr=$IFADDR"
-OPT_IFADDR="ifaddr.c"
-OPT_ARCHIVE="-Wl,--whole-archive -Wl,$CMUCLLIB/lisp.a -Wl,--no-whole-archive"
+# Name of file where we write the actual initial function address.
+OPT_IFADDR="cmu-ifaddr-$$.c"
+# Names of the core sections from Lisp.
 OPT_CORE="CORRO.o CORSTA.o CORDYN.o"
+
+case `uname` in
+  Linux*)
+      # How to specify the starting address for each of the sections
+      RO_ADDR="-Wl,--section-start=CORRO=$4"
+      STATIC_ADDR="-Wl,--section-start=CORSTA=$5"
+      DYN_ADDR="-Wl,--section-start=CORDYN=$6"
+
+      #OPT_IFADDR="-Wl,--defsym -Wl,initial_function_addr=$IFADDR"
+
+      # Specify how to link the entire lisp.a library
+      OPT_ARCHIVE="-Wl,--whole-archive -Wl,$CMUCLLIB/lisp.a -Wl,--no-whole-archive"
+      # See Config.x86_linux
+      OS_LIBS=-ldl
+      ;;
+  Darwin*)
+      # How to specify the starting address for each of the sections
+      RO_ADDR="-segaddr CORRO $4"
+      STATIC_ADDR="-segaddr CORSTA $5"
+      DYN_ADDR="-segaddr CORDYN $6"
+
+      # Specify how to link the entire lisp.a library
+      OPT_ARCHIVE="-all_load $CMUCLLIB/lisp.a"
+
+      # Extra stuff.  For some reason one __LINKEDIT segment is mapped
+      # just past the dynamic space.  This messes things up, so we move it
+      # to another address.  This seems to be free, at least on 10.5.
+
+      OPT_EXTRA="-segaddr __LINKEDIT 0x99000000"
+      # See Config.x86_darwin
+      OS_LIBS=
+      ;;
+esac
 
 trap 'rm -f $OUTDIR/$OPT_IFADDR' 0
 
 (cd $OUTDIR
 echo "long initial_function_addr = $IFADDR;" > $OPT_IFADDR
-$CCOMPILER -m32 -o $OUTNAME -rdynamic $OPT_IFADDR $OPT_ARCHIVE $OPT_CORE $RO_ADDR $STATIC_ADDR $DYN_ADDR -ldl -lm)
+$CCOMPILER -m32 -o $OUTNAME -rdynamic $OPT_IFADDR $OPT_ARCHIVE $OPT_CORE $RO_ADDR $STATIC_ADDR $DYN_ADDR $OPT_EXTRA $OS_LIBS -lm)
 

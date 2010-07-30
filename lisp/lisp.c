@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.72 2010/07/30 20:26:11 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.73 2010/07/30 22:51:58 rtoy Exp $
  *
  */
 
@@ -32,8 +32,10 @@
 #include "core.h"
 #include "save.h"
 #include "lispregs.h"
-#if defined FEATURE_EXECUTABLE
+#if defined(FEATURE_EXECUTABLE)
+#if !defined(DARWIN)
 #include "elf.h"
+#endif
 #endif
 
 
@@ -437,8 +439,8 @@ main(int argc, const char *argv[], const char *envp[])
     lispobj initial_function = 0;
 
     if (builtin_image_flag != 0) {
-#if defined(i386) && defined(__linux__)
-        initial_function = initial_function_addr;
+#if defined(i386) && (defined(__linux__) || defined(DARWIN))
+      initial_function = (lispobj) initial_function_addr;
 #else
         initial_function = (lispobj) & initial_function_addr;
 #endif
