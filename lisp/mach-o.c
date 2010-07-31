@@ -16,8 +16,8 @@
 
 typedef struct mach_header MachO_hdr;
 
-/* Elf data structures. */
-static MachO_hdr eh;
+/* Uncomment to enable debugging prints */
+/* #define DEBUG_MACH_O */
 
 /* Names of the Lisp image ELF sections. These names must be the same as
    the corresponding names found in the linker script.  */
@@ -86,7 +86,7 @@ create_mach_o_file (const char *dir, int id)
 static int
 write_mach_o_header(int fd)
 {
-    extern MachO_hdr eh;
+    MachO_hdr eh;
 
     /* Ident array. */
     eh.magic = MH_MAGIC;
@@ -114,7 +114,7 @@ write_load_command(int fd, char* name, int length, os_vm_address_t start)
     /* Size is 1 segment command + 1 section command */
     lc.cmdsize = sizeof(lc) + sizeof(struct section);
     strncpy(lc.segname, name, sizeof(lc.segname));
-    lc.vmaddr = start;
+    lc.vmaddr = (uint32_t) start;
     lc.vmsize = length;
     /* Offset where the data is.  It's the header, the segment
      * command, and one section */
@@ -135,7 +135,7 @@ write_section(int fd, int length, os_vm_address_t start, char* object_name)
 
     strncpy(sc.sectname, object_name, sizeof(sc.sectname));
     strncpy(sc.segname, object_name, sizeof(sc.segname));
-    sc.addr = start;
+    sc.addr = (uint32_t) start;
     sc.size = length;
     /* Offset of the data.  We have one header, one segment and one
      * section */
@@ -246,8 +246,6 @@ obj_run_linker(long init_func_address, char *file)
         }
         
 	if (stat(command, &st) == 0) {
-            extern int main();
-            
 	    free(paths);
 	    printf("\t[%s: linking %s... \n", command, file);
 	    fflush(stdout);
@@ -302,9 +300,11 @@ read_mach_o_header(int fd, MachO_hdr *ehp)
 void
 map_core_sections(const char *exec_name)
 {
+    MachO_hdr eh;
     int exec_fd;
     int sections_remaining = 3;
-    int i, j;
+    int i;
+    int j;
     extern int image_dynamic_space_size;
     extern int image_static_space_size;
     extern int image_read_only_space_size;
@@ -326,22 +326,30 @@ map_core_sections(const char *exec_name)
          */
         
         eread(exec_fd, &lc, sizeof(lc), __func__);
+#ifdef DEBUG_MACH_O
         fprintf(stderr, "Load %d:  cmd = %d, cmdsize = %d\n", i, lc.cmd, lc.cmdsize);
-        
+#endif
+
         if (lc.cmd == LC_SEGMENT) {
             /* Read the rest of the command, which is a segment command. */
-            fprintf(stderr, "Reading next %d bytes for SEGMENT\n", sizeof(sc) - sizeof(lc));
+#ifdef DEBUG_MACH_O
+            fprintf(stderr, "Reading next %ld bytes for SEGMENT\n", sizeof(sc) - sizeof(lc));
+#endif
             eread(exec_fd, &sc.segname, sizeof(sc) - sizeof(lc), __func__);
+#ifdef DEBUG_MACH_O
             fprintf(stderr, "LC_SEGMENT: name = %s\n", sc.segname);
+#endif
 
             /* See if the segment name matches any of our section names */
             for (j = 0; j < 3; ++j) {
                 if (strncmp(sc.segname, section_names[j], sizeof(sc.segname)) == 0) {
                     /* Found a core segment.  Map it! */
+#ifdef DEBUG_MACH_O
                     fprintf(stderr, "Matched!\n");
-                    fprintf(stderr, " Fileoff = %ld\n", sc.fileoff);
-                    fprintf(stderr, " vmaddr  = 0x%lx\n", sc.vmaddr);
-                    fprintf(stderr, " vmsize  = 0x%lx\n", sc.vmsize);
+                    fprintf(stderr, " Fileoff = %u\n", sc.fileoff);
+                    fprintf(stderr, " vmaddr  = 0x%x\n", sc.vmaddr);
+                    fprintf(stderr, " vmsize  = 0x%x\n", sc.vmsize);
+#endif
                     
                     if ((os_vm_address_t) os_map(exec_fd, sc.fileoff,
                                                  (os_vm_address_t) sc.vmaddr,
@@ -371,12 +379,16 @@ map_core_sections(const char *exec_name)
                     break;
                 }
             }
-            fprintf(stderr, "Skipping %d remainder bytes left in command\n",
+#ifdef DEBUG_MACH_O
+            fprintf(stderr, "Skipping %ld remainder bytes left in command\n",
                     lc.cmdsize - sizeof(sc));
+#endif
             elseek(exec_fd, lc.cmdsize - sizeof(sc), SEEK_CUR, __func__);
         } else {
             /* Seek to the next command */
-            fprintf(stderr, "Seeking by %d bytes\n", lc.cmdsize - sizeof(lc));
+#ifdef DEBUG_MACH_O
+            fprintf(stderr, "Seeking by %ld bytes\n", lc.cmdsize - sizeof(lc));
+#endif
             elseek(exec_fd, lc.cmdsize - sizeof(lc), SEEK_CUR, __func__);
         }
     }
