@@ -12,10 +12,7 @@
 #include "globals.h"
 #include "validate.h"
 
-#include "mach-o/loader.h"
-
-#define LINKER_SCRIPT "linker-x86.sh"
-#define C_COMPILER "cc"
+#include "elf.h"
 
 typedef struct mach_header MachO_hdr;
 
@@ -67,9 +64,8 @@ elseek(int d, off_t o, int whence, const char *func)
     }
 }
 
-
 static int
-create_elf_file (const char *dir, int id)
+create_mach_o_file (const char *dir, int id)
 {
     char outfilename[FILENAME_MAX + 1];
     int out;
@@ -80,16 +76,15 @@ create_elf_file (const char *dir, int id)
     out = open(outfilename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
 
     if(!out) {
-	perror("write_elf_object: can't open file");
+	perror("create_mach_o_file: can't open file");
 	fprintf(stderr, "%s\n", outfilename);
     }
 
     return out;
 }
 
-
 static int
-write_elf_header(int fd)
+write_mach_o_header(int fd)
 {
     extern MachO_hdr eh;
 
@@ -162,11 +157,10 @@ write_section_data(int fd, long length, os_vm_address_t real_addr)
     return ewrite(fd, (void *)real_addr, length, __func__);
 }
 
-
 int
-write_elf_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t end)
+write_space_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t end)
 {
-    int out = create_elf_file(dir, id);
+    int out = create_mach_o_file(dir, id);
     int ret = 0;
     /* The length should be a multiple of the page size. */
     size_t length = end - start + (os_vm_page_size -
@@ -181,7 +175,7 @@ write_elf_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t
     /* Make id be 0-based to match array. */
     id--;
 
-    if ((write_elf_header(out) == -1)
+    if ((write_mach_o_header(out) == -1)
         || (write_load_command(out, section_names[id], length, start) == -1)
         || (write_section(out, length, start, section_names[id]) == -1)
         || (write_section_data(out, length, start) == -1)) {
@@ -194,7 +188,7 @@ write_elf_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t
 }
 
 void
-elf_cleanup(const char *dirname)
+obj_cleanup(const char *dirname)
 {
     char filename[FILENAME_MAX + 1];
     int i;
@@ -208,7 +202,7 @@ elf_cleanup(const char *dirname)
 }
 
 int
-elf_run_linker(long init_func_address, char *file)
+obj_run_linker(long init_func_address, char *file)
 {
     lispobj libstring = SymbolValue(CMUCL_LIB);     /* Get library: */
     struct vector *vec = (struct vector *)PTR(libstring);
@@ -240,7 +234,7 @@ elf_run_linker(long init_func_address, char *file)
     strptr = strtok(paths, ":");
 
     if (debug_lisp_search) {
-        printf("Searching for linker.sh script\n");
+        printf("Searching for %s script\n", LINKER_SCRIPT);
     }
 
     while(strptr != NULL) {
@@ -263,7 +257,7 @@ elf_run_linker(long init_func_address, char *file)
                     (unsigned long) STATIC_SPACE_START,
                     (unsigned long) DYNAMIC_0_SPACE_START);
 	    ret = system(command_line);
-	    if(ret == -1) {
+	    if (ret == -1) {
 		perror("Can't run link script");
 	    } else {
 		printf("\tdone]\n");
@@ -281,16 +275,18 @@ elf_run_linker(long init_func_address, char *file)
 }
 
 
-/* Read the ELF header from a file descriptor and stuff it into a
-	 structure.	 Make sure it is really an elf header etc. */
+/*
+ * Read the Mach-O header from a file descriptor and stuff it into a
+ * structure.  Make sure it is really an elf header etc.
+ */
 static void
-read_elf_header(int fd, MachO_hdr *ehp)
+read_mach_o_header(int fd, MachO_hdr *ehp)
 {
     eread(fd, ehp, sizeof(MachO_hdr), __func__);
 
     if (ehp->magic != MH_MAGIC) {
 	fprintf(stderr,
-		"Bad ELF magic number --- not an elf file.	Exiting in %s.\n",
+		"Bad Mach-O magic number --- not a Mach-O file. Exiting in %s.\n",
 		__func__);
 	exit(-1);
     }
@@ -298,11 +294,11 @@ read_elf_header(int fd, MachO_hdr *ehp)
 
 
 /*
-  Map the built-in lisp core sections.
-
-  NOTE!  We need to do this without using malloc because the memory layout
-  is not set until some time after this is done.
-*/
+ * Map the built-in lisp core sections.
+ *
+ * NOTE!  We need to do this without using malloc because the memory
+ * layout is not set until some time after this is done.
+ */
 void
 map_core_sections(const char *exec_name)
 {
@@ -318,25 +314,27 @@ map_core_sections(const char *exec_name)
 	exit(-1);
     }
 
-    read_elf_header(exec_fd, &eh);
+    read_mach_o_header(exec_fd, &eh);
 
     for (i = 0; i < eh.ncmds && sections_remaining > 0; i++) {
         struct load_command lc;
         struct segment_command sc;
         
-        /* Read the load command and see if its segname matches one of
-         * our section names.  If it does, save the file offset for
-         * later so we can map the data */
+        /*
+         * Read the load command to see what kind of command it is and
+         * how big it is.
+         */
         
         eread(exec_fd, &lc, sizeof(lc), __func__);
         fprintf(stderr, "Load %d:  cmd = %d, cmdsize = %d\n", i, lc.cmd, lc.cmdsize);
         
         if (lc.cmd == LC_SEGMENT) {
-            /* Read the segment command and save the file offset */
+            /* Read the rest of the command, which is a segment command. */
             fprintf(stderr, "Reading next %d bytes for SEGMENT\n", sizeof(sc) - sizeof(lc));
             eread(exec_fd, &sc.segname, sizeof(sc) - sizeof(lc), __func__);
             fprintf(stderr, "LC_SEGMENT: name = %s\n", sc.segname);
-            
+
+            /* See if the segment name matches any of our section names */
             for (j = 0; j < 3; ++j) {
                 if (strncmp(sc.segname, section_names[j], sizeof(sc.segname)) == 0) {
                     /* Found a core segment.  Map it! */
@@ -373,7 +371,7 @@ map_core_sections(const char *exec_name)
                     break;
                 }
             }
-            fprintf(stderr, "Reading %d remainder bytes left in command\n",
+            fprintf(stderr, "Skipping %d remainder bytes left in command\n",
                     lc.cmdsize - sizeof(sc));
             elseek(exec_fd, lc.cmdsize - sizeof(sc), SEEK_CUR, __func__);
         } else {
@@ -390,4 +388,3 @@ map_core_sections(const char *exec_name)
 	exit(-1);
     }
 }
-

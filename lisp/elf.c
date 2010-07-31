@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.22 2010/07/30 20:26:11 rtoy Exp $
+ $Id: elf.c,v 1.23 2010/07/31 00:03:23 rtoy Exp $
 */
 
 #include <stdio.h>
@@ -278,7 +278,7 @@ write_object_section(int fd, long length, os_vm_address_t real_addr)
 
 
 int
-write_elf_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t end)
+write_space_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t end)
 {
     int out = create_elf_file(dir, id);
     int ret = 0;
@@ -316,7 +316,7 @@ write_elf_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t
 }
 
 void
-elf_cleanup(const char *dirname)
+obj_cleanup(const char *dirname)
 {
     char filename[FILENAME_MAX + 1];
     int i;
@@ -330,7 +330,7 @@ elf_cleanup(const char *dirname)
 }
 
 int
-elf_run_linker(long init_func_address, char *file)
+obj_run_linker(long init_func_address, char *file)
 {
     lispobj libstring = SymbolValue(CMUCL_LIB);     /* Get library: */
     struct vector *vec = (struct vector *)PTR(libstring);

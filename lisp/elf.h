@@ -1,14 +1,19 @@
-/* $Id: elf.h,v 1.11 2010/07/29 04:34:10 rtoy Exp $ */
+/* $Id: elf.h,v 1.12 2010/07/31 00:03:23 rtoy Exp $ */
 
 /* This code was written by Fred Gilham and has been placed in the public domain.  It is
    provided "AS-IS" and without warranty of any kind.
 */
 
+/*
+ * Despite the fact that this file is named elf.h, it's really the
+ * interface to both elf and mach-o support.  I (rtoy) was too lazy to
+ * change the name to something more descriptive.
+ */
 #if !defined(_ELF_H_INCLUDED_)
 
 #define _ELF_H_INCLUDED_
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(DARWIN)
 #define LINKER_SCRIPT "linker-x86.sh"
 #else
 #define LINKER_SCRIPT "linker.sh"
@@ -16,9 +21,12 @@
 
 #if defined(SOLARIS)
 #include <sys/elf.h>
+#elif defined(DARWIN)
+#include <mach-o/loader.h>
 #else
 #include <elf.h>
 #endif
+
 
 /*
  * We need to know which compiler was used to build lisp.  I think gcc
@@ -31,13 +39,14 @@
 #define C_COMPILER "gcc"
 #endif
 
-int write_elf_object(const char *, int, os_vm_address_t, os_vm_address_t);
-void elf_cleanup(const char *);
-int elf_run_linker(long, char *);
+int write_space_object(const char *, int, os_vm_address_t, os_vm_address_t);
+void obj_cleanup(const char *);
+int obj_run_linker(long, char *);
 
 void map_core_sections(const char *);
 
-#if defined(SOLARIS) || defined(linux) || defined(__NetBSD__)
+#if defined(DARWIN)
+#elif defined(SOLARIS) || defined(linux) || defined(__NetBSD__)
 typedef Elf32_Ehdr Elf_Ehdr;
 typedef Elf32_Shdr Elf_Shdr;
 typedef Elf32_Word Elf_Word;
