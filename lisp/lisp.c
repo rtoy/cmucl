@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.73 2010/07/30 22:51:58 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.74 2010/07/31 01:07:15 rtoy Exp $
  *
  */
 
@@ -439,7 +439,7 @@ main(int argc, const char *argv[], const char *envp[])
     lispobj initial_function = 0;
 
     if (builtin_image_flag != 0) {
-#if defined(i386) && (defined(__linux__) || defined(DARWIN))
+#if defined(sparc) || (defined(i386) && (defined(__linux__) || defined(DARWIN)))
       initial_function = (lispobj) initial_function_addr;
 #else
         initial_function = (lispobj) & initial_function_addr;
