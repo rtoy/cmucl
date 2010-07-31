@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.24 2010/07/31 01:07:15 rtoy Exp $
+ $Id: elf.c,v 1.25 2010/07/31 02:45:45 rtoy Exp $
 */
 
 #include <stdio.h>
@@ -37,7 +37,7 @@ static Elf_Shdr sh;
 
 static char *section_names[] = {"CORDYN", "CORSTA", "CORRO"};
 
-#ifdef SOLARIS
+#if defined(SOLARIS) || defined(__linux__)
 /*
  * Starting address of the three ELF sections/spaces.  These must be
  * in the same order as section_names above!
@@ -482,7 +482,7 @@ map_core_sections(const char *exec_name)
 		if (!strncmp(nambuf, section_names[j], 6)) {
 		    os_vm_address_t addr;
 
-#ifdef SOLARIS
+#if defined(SOLARIS) || defined(__linux__)
 		    /*
 		     * On Solaris, the section header sets the addr
 		     * field to 0 because the linker script says the
@@ -532,4 +532,3 @@ map_core_sections(const char *exec_name)
 	exit(-1);
     }
 }
-

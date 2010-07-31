@@ -19,10 +19,23 @@ typedef struct mach_header MachO_hdr;
 /* Uncomment to enable debugging prints */
 /* #define DEBUG_MACH_O */
 
-/* Names of the Lisp image ELF sections. These names must be the same as
-   the corresponding names found in the linker script.  */
+/*
+ * Names of the Lisp image sections. These names must be the same as
+ * the corresponding names found in the linker script.
+ */
 
 static char *section_names[] = {"CORDYN", "CORSTA", "CORRO"};
+
+/*
+ * Starting addresses of the various spaces.  Must be in the same
+ * order as section_names
+ */
+static os_vm_address_t section_addr[] =
+{
+    (os_vm_address_t) DYNAMIC_0_SPACE_START,
+    (os_vm_address_t) STATIC_SPACE_START,
+    (os_vm_address_t) READ_ONLY_SPACE_START
+};
 
 /* Note: write errors are not fatal. */
 static int
@@ -165,6 +178,7 @@ write_space_object(const char *dir, int id, os_vm_address_t start, os_vm_address
     /* The length should be a multiple of the page size. */
     size_t length = end - start + (os_vm_page_size -
 				   ((end - start) % os_vm_page_size));
+    static char *names[] = { "Dynamic", "Static", "Read-Only" };
 
     if(id < 1 || id > 3) {
 	fprintf(stderr, "Invalid space id in %s: %d\n", __func__, id);
@@ -174,6 +188,9 @@ write_space_object(const char *dir, int id, os_vm_address_t start, os_vm_address
 
     /* Make id be 0-based to match array. */
     id--;
+
+    printf("\t %s: %d bytes...\n", names[id], (end - start));
+    fflush(stdout);
 
     if ((write_mach_o_header(out) == -1)
         || (write_load_command(out, section_names[id], length, start) == -1)
@@ -343,6 +360,8 @@ map_core_sections(const char *exec_name)
             /* See if the segment name matches any of our section names */
             for (j = 0; j < 3; ++j) {
                 if (strncmp(sc.segname, section_names[j], sizeof(sc.segname)) == 0) {
+		    os_vm_address_t addr;
+
                     /* Found a core segment.  Map it! */
 #ifdef DEBUG_MACH_O
                     fprintf(stderr, "Matched!\n");
@@ -350,9 +369,15 @@ map_core_sections(const char *exec_name)
                     fprintf(stderr, " vmaddr  = 0x%x\n", sc.vmaddr);
                     fprintf(stderr, " vmsize  = 0x%x\n", sc.vmsize);
 #endif
+                    /*
+                     * We don't care what address the segment has.  We
+                     * will map it where want it to go.
+                     */
+                    
+		    addr = section_addr[j];
                     
                     if ((os_vm_address_t) os_map(exec_fd, sc.fileoff,
-                                                 (os_vm_address_t) sc.vmaddr,
+                                                 (os_vm_address_t) addr,
                                                  sc.vmsize)
                         == (os_vm_address_t) -1) {
 			fprintf(stderr, "%s: Can't map section %s\n", __func__, section_names[j]);

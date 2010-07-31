@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $Id: linker-x86.sh,v 1.4 2010/07/31 01:07:15 rtoy Exp $
+# $Id: linker-x86.sh,v 1.5 2010/07/31 02:45:45 rtoy Exp $
 
 # This file written by Raymond Toy as part of CMU Common Lisp and is
 # placed in the public domain.
@@ -33,9 +33,9 @@ OPT_CORE="CORRO.o CORSTA.o CORDYN.o"
 case `uname` in
   Linux*)
       # How to specify the starting address for each of the sections
-      RO_ADDR="-Wl,--section-start=CORRO=$4"
-      STATIC_ADDR="-Wl,--section-start=CORSTA=$5"
-      DYN_ADDR="-Wl,--section-start=CORDYN=$6"
+      #RO_ADDR="-Wl,--section-start=CORRO=$4"
+      #STATIC_ADDR="-Wl,--section-start=CORSTA=$5"
+      #DYN_ADDR="-Wl,--section-start=CORDYN=$6"
 
       #OPT_IFADDR="-Wl,--defsym -Wl,initial_function_addr=$IFADDR"
 
@@ -50,9 +50,9 @@ case `uname` in
       ;;
   Darwin*)
       # How to specify the starting address for each of the sections
-      RO_ADDR="-segaddr CORRO $4"
-      STATIC_ADDR="-segaddr CORSTA $5"
-      DYN_ADDR="-segaddr CORDYN $6"
+      #RO_ADDR="-segaddr CORRO $4"
+      #STATIC_ADDR="-segaddr CORSTA $5"
+      #DYN_ADDR="-segaddr CORDYN $6"
 
       # Specify how to link the entire lisp.a library
       OPT_ARCHIVE="-all_load $CMUCLLIB/lisp.a"
