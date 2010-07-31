@@ -98,8 +98,9 @@ then
     install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp.a $DESTDIR/lib/cmucl/lib/
     install ${GROUP} ${OWNER} -m 0755 src/tools/linker.sh $DESTDIR/lib/cmucl/lib/
     install ${GROUP} ${OWNER} -m 0755 src/tools/linker-x86.sh $DESTDIR/lib/cmucl/lib/
-    install ${GROUP} ${OWNER} -m 0755 src/tools/linker-darwin.sh $DESTDIR/lib/cmucl/lib/
-    install ${GROUP} ${OWNER} -m 0755 src/tools/$SCRIPT-cmucl-linker-script $DESTDIR/lib/cmucl/lib/
+    if [ -f src/tools/$SCRIPT-cmucl-linker-script ]; then
+	install ${GROUP} ${OWNER} -m 0755 src/tools/$SCRIPT-cmucl-linker-script $DESTDIR/lib/cmucl/lib/
+    fi
 fi
 for corefile in $TARGET/lisp/$CORE
 do
