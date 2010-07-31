@@ -1330,7 +1330,7 @@ size of each saved Lisp image, typically at least 20 megabytes.
     \args{\var{file}
       \keys{\kwd{purify} \kwd{root-structures} \kwd{init-function}}
       \morekeys{\kwd{load-init-file} \kwd{print-herald} \kwd{site-init}}
-      \yetmorekeys{\kwd{process-command-line} \kwd{batch-mode}}}}
+      \yetmorekeys{\kwd{process-command-line} \kwd{batch-mode} \kwd{executable}}}}
   
   The \code{save-lisp} function saves the state of the currently
   running Lisp core image in \var{file}.  The keyword arguments have
@@ -1385,8 +1385,9 @@ size of each saved Lisp image, typically at least 20 megabytes.
     incorporated into the C runtime, so one (large) executable is
     created instead of a new separate core file.
 
-    This feature is only available on some platforms.  Currently only
-    x86 on Linux and FreeBSD support this.
+    This feature is only available on some platforms, as indicated by
+    having the feature \kwd{executable}.  Currently only x86 ports and
+    the solaris/sparc port have this feature.
   \end{Lentry}
 \end{defun}
 
@@ -1394,6 +1395,12 @@ To resume a saved file, type:
 \begin{example}
 lisp -core file
 \end{example}
+However, if the \kwd{executable} option was specified, you can just
+use
+\begin{example}
+  file
+\end{example}
+since the executable contains the core file within the executable.
 
 \begin{defun}{extensions:}{purify}{
     \args{\var{file}
@@ -1551,11 +1558,16 @@ built:
 \item[\code{home:}] The user's home directory.
 
 \item[\code{library:}] The \cmucl{} \file{lib/} directory (\code{CMUCLLIB} environment
-variable.)
+variable).
 
-\item[\code{path:}] The Unix command path (\code{PATH} environment variable.)
-
+\item[\code{path:}] The Unix command path (\code{PATH} environment variable).
+\item[\code{ld-library-path:}] The Unix \code{LD_LIBRARY_PATH}
+  environment variable.
 \item[\code{target:}] The root of the tree where \cmucl{} was compiled.
+\item[\code{modules:}] The list of directories where \cmucl{}'s
+  modules can be found.
+\item[\code{ext-formats:}] The list of directories where \cmucl{} can
+  find the implementation of external formats.  
 \end{Lentry}
 It can be useful to redefine these search-lists, for example, \file{library:}
 can be augmented to allow logical pathname translations to be located, and
