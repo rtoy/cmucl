@@ -189,8 +189,8 @@ New in this release:
       converted to the replacement character.  Previously, all of the
       octets except the first were put back, and the data read again.
     - Some GC improvements for sparc and ppc.  (Changes for ppc
-      untested).  GC could incorretly move the PC and other registers,
-      causing a segfault.
+      untested).  GC could incorrectly move the PC and other
+      registers, causing a segfault.
     - A bug inadvertently introduced in the 2010-04 non-unicode
       snapshot has been fixed.  The bug prevented the non-unicode
       versions of CMUCL from loading the external format aliases
@@ -199,7 +199,8 @@ New in this release:
       returned correctly.
     - The method used to create executable images for Linux has been
       cleaned up and should be far more robust against different
-      versions of the OS.
+      versions of the OS.  The same is true on sparc as well as Mac OS
+      X.
 
   * Trac Tickets:
     #33: get-dispatch-macro-character doesn't signal errors in
