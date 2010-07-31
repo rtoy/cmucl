@@ -36,3 +36,5 @@
 ;; Executable feature works on sparc!
 #+(or sparc (and x86 darwin))
 (pushnew :executable *features*)
+
+(load "src/bootfiles/20a/boot-20b.lisp")

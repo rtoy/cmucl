@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.51 2010/04/20 17:57:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.52 2010/07/31 16:56:00 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,7 +34,7 @@
 
 ;;;; Fasl file format:
 
-(defconstant byte-fasl-file-version #x20a)
+(defconstant byte-fasl-file-version #x20b)
 
 (let* ((version-string (format nil "~X" byte-fasl-file-version)))
   (sys:register-lisp-feature (intern (concatenate 'string "CMU" version-string) :keyword))
