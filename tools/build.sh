@@ -32,7 +32,7 @@
 #
 # For more information see src/BUILDING.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.30 2010/07/12 14:02:49 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.31 2010/08/01 01:18:36 rtoy Exp $
 #
 
 ENABLE2="yes"
@@ -169,6 +169,7 @@ MAKE_TARGET=all
 export INTERACTIVE
 
 BUILD=1
+OLDLISP="$OLDLISP $FPU_MODE"
 buildit
 
 bootfiles=
