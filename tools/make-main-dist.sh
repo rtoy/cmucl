@@ -51,7 +51,7 @@ case $ARCH in
 esac
 
 case $OS in
-  FreeBSD*)	
+  freebsd*)	
       EXECUTABLE=true
       SCRIPT=FreeBSD
       ;;
