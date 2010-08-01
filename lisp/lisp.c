@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.75 2010/08/01 12:32:11 agoncharov Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.76 2010/08/01 14:47:14 rtoy Exp $
  *
  */
 
@@ -375,19 +375,32 @@ prepend_core_path(const char *lib, const char *corefile)
 }
 
 /*
-  The symbol builtin_image_flag is used globally as a flag to indicate
-  whether the executable contains the lisp image.  Note that we use
-  the linker to set the value of the symbol.  But the symbol is an
-  address, not a variable value.  So for this to work as a flag, it
-  must end up pointing to a valid place in memory or we'll get a bus
-  error or segmentation violation when we check it.  If the lisp image
-  is built in, we'll set this symbol to point to the beginning of the
-  process.
-
-  We also use the linker to set initial_function_addr so that if the
-  lisp core is built in, taking the address of initial_function_addr
-  will give the address of the initial function.
-*/
+ * The value of the variable builtin_image_flag indicate whther the
+ * executable contains the lisp image or not.  The variable
+ * initial_function_addr indicates the address of the initial
+ * function.  How these are interpreted depends on the system.
+ *
+ * For Linux/x86, Darwin/x86, and Solaris/sparc, the
+ * builtin_image_flag is a normal symbol mapped into a normal data
+ * area.  If true, the executable contains the lisp image.  Likewise,
+ * initial_function_addr is a symbol mapped into a normal data area.
+ * The value of this variable is the address of the initial function.
+ *
+ * For other systems, we use the linker to set the value of the symbol.
+ * But the symbol is an address, not a variable value.  So for this to
+ * work as a flag, it must end up pointing to a valid place in memory
+ * or we'll get a bus error or segmentation violation when we check
+ * it.  If the lisp image is built in, we'll set this symbol to point
+ * to the beginning of the process.
+ *
+ * We also use the linker to set initial_function_addr so that if the
+ * lisp core is built in, taking the address of initial_function_addr
+ * will give the address of the initial function.
+ *
+ * The details of how these variables are set up are in
+ * tools/linker.sh and tools/linker-x86.sh.  Which script is used is
+ * set in src/lisp/elf.h.
+ */
 
 extern int builtin_image_flag;
 extern long initial_function_addr;
@@ -618,9 +631,11 @@ main(int argc, const char *argv[], const char *envp[])
 	    cmucllib = strdup(libvar);
 	} else
 #if defined FEATURE_EXECUTABLE
-	    /* The following doesn't make sense for executables.
-	       They need to use the saved library path from the
-	       lisp from which they were dumped. */
+	    /*
+             * The following doesn't make sense for executables.  They
+             * need to use the saved library path from the lisp from
+             * which they were dumped.
+             */
 	    if (builtin_image_flag == 0)
 #endif
 	{
@@ -679,8 +694,10 @@ main(int argc, const char *argv[], const char *envp[])
         }
 #if defined FEATURE_EXECUTABLE
     } else {
-	/* The "core file" is the executable.  We have to save the
-	 * executable path because we operate on the executable file later.
+	/*
+         * The "core file" is the executable.  We have to save the
+         * executable path because we operate on the executable file
+         * later.
 	 */
 	core = argv[0];
     }
@@ -755,10 +772,11 @@ main(int argc, const char *argv[], const char *envp[])
 
     /* Set cmucllib and cmuclcore appropriately */
 #if defined FEATURE_EXECUTABLE
-    /* This test will preserve the library: search list dumped
-       with the executable unless the user specifically overrides
-       it with the -lib flag or by setting the CMUCLLIB environment
-       variable. */
+    /*
+     * This test will preserve the library: search list dumped with
+     * the executable unless the user specifically overrides it with
+     * the -lib flag or by setting the CMUCLLIB environment variable.
+     */
     if (cmucllib)
 #endif
 	SetSymbolValue(CMUCL_LIB, alloc_string(cmucllib));
