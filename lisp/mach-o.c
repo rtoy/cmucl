@@ -1,3 +1,22 @@
+/*
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mach-o.c,v 1.5 2010/08/01 15:23:28 rtoy Exp $
+ *
+ * This code was written by Raymond Toy as part of CMU Common Lisp and
+ * has been placed in the public domain.
+ *
+ * Mach-O support for generating executable images on Mac OS X (aka
+ * Darwin).  This only knows enough of the Mach-O format to be able to
+ * write out very simple object files for the Lisp spaces and to read
+ * just enough of a Mach-O executable to find the segments containing
+ * the Lisp spaces.
+ *
+ * For details of the file format see " Mac OS X ABI Mach-O File
+ * Format Reference",
+ * http://developer.apple.com/mac/library/documentation/DeveloperTools/Conceptual/MachORuntime/Reference/reference.html
+ *
+ * 
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -77,6 +96,10 @@ elseek(int d, off_t o, int whence, const char *func)
     }
 }
 
+/*
+ * Create a file for the specified Lisp space in the specified
+ * directory.
+ */
 static int
 create_mach_o_file (const char *dir, int id)
 {
@@ -96,6 +119,10 @@ create_mach_o_file (const char *dir, int id)
     return out;
 }
 
+/*
+ * Write the Mach-O header.  We only handle what we need for our
+ * purposes.
+ */
 static int
 write_mach_o_header(int fd)
 {
@@ -103,8 +130,14 @@ write_mach_o_header(int fd)
 
     /* Ident array. */
     eh.magic = MH_MAGIC;
-    /* Support any kind x86.  (Should we be more specific?) */
+    /* Currently only support x86's */
     eh.cputype = CPU_TYPE_I386;
+    /*
+     * Support any kind x86.  Should we be more specific?  We need at
+     * least a pentium to run x87.  For SSE2 we need at least a
+     * Pentium 4 chip.  So if the core is SSE2, should we set this to
+     * Pentium 4?
+     */
     eh.cpusubtype = CPU_SUBTYPE_I386_ALL;
 
     eh.filetype = MH_OBJECT;
@@ -118,6 +151,12 @@ write_mach_o_header(int fd)
     return ewrite(fd, &eh, sizeof(MachO_hdr), __func__);
 }
 
+/*
+ * Write one segment (load) command to the object file in fd.  The
+ * name of the segment is in name.  We also need to specify the
+ * starting VM address (start) and the VM size (length) of the section
+ * of memory that we want this to map to.
+ */
 static int
 write_load_command(int fd, char* name, int length, os_vm_address_t start)
 {
@@ -126,32 +165,57 @@ write_load_command(int fd, char* name, int length, os_vm_address_t start)
     lc.cmd = LC_SEGMENT;
     /* Size is 1 segment command + 1 section command */
     lc.cmdsize = sizeof(lc) + sizeof(struct section);
+    /*
+     * Set the segment name.  This is very important because
+     * map_core_sections looks for segment command whose segment name
+     * matches a Lisp section name.
+     */
     strncpy(lc.segname, name, sizeof(lc.segname));
     lc.vmaddr = (uint32_t) start;
+    /*
+     * The size is very important.  map_core_sections uses this to
+     * determine how much to map.
+     */
     lc.vmsize = length;
-    /* Offset where the data is.  It's the header, the segment
-     * command, and one section */
+    /*
+     * Offset where the data is.  It's the header, the segment
+     * command, and one section.
+     */
     lc.fileoff = lc.cmdsize + sizeof(struct mach_header);
     lc.filesize = length;
     lc.maxprot = VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE;
     lc.initprot = lc.maxprot;
+    /* There's only one section for this segment command. */
     lc.nsects = 1;
     lc.flags = 0;
 
     return ewrite(fd, &lc, sizeof(lc), __func__);
 }
 
+/*
+ * Write the section info to the object file, fd.  Again, we need the
+ * object name (object_name) which is used as both the section name
+ * and the segment name.  The starting VM address (start) and the VM
+ * length (length) is needed for the section.
+ */
 static int
 write_section(int fd, int length, os_vm_address_t start, char* object_name)
 {
     struct section sc;
 
+    /*
+     * sectname and segname are the same for our purposes.  However,
+     * map_core_sections never looks here; it looks for the segment
+     * name from the segment commands.
+     */
     strncpy(sc.sectname, object_name, sizeof(sc.sectname));
     strncpy(sc.segname, object_name, sizeof(sc.segname));
     sc.addr = (uint32_t) start;
     sc.size = length;
-    /* Offset of the data.  We have one header, one segment and one
-     * section */
+    /*
+     * Offset of the data.  We have one header, one segment and one
+     * section
+     */
     sc.offset = sizeof(struct mach_header) + sizeof(struct segment_command) +
         sizeof(struct section);
     sc.align = 12;              /* Align on 2^12 = 4096 boundary */
@@ -164,12 +228,24 @@ write_section(int fd, int length, os_vm_address_t start, char* object_name)
     return ewrite(fd, &sc, sizeof(sc), __func__);
 }
 
+/*
+ * Write the actual data for the specific Lisp space to the object
+ * file.  The data is read from memory starting at real_addr and
+ * consists of length bytes.
+ */
+
 static int
 write_section_data(int fd, long length, os_vm_address_t real_addr)
 {
     return ewrite(fd, (void *)real_addr, length, __func__);
 }
 
+/*
+ * Write out an object file containing the data for our Lisp space.
+ * The object file is written to the directory dir.  The selected
+ * space is specified by id, and the starting address of the space is
+ * start, and goes to the address end.
+ */
 int
 write_space_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t end)
 {
@@ -204,6 +280,9 @@ write_space_object(const char *dir, int id, os_vm_address_t start, os_vm_address
     return ret;
 }
 
+/*
+ * Remove the 3 space files that we created.
+ */
 void
 obj_cleanup(const char *dirname)
 {
@@ -218,6 +297,9 @@ obj_cleanup(const char *dirname)
     }
 }
 
+/*
+ * Link everything together to create the executable.
+ */
 int
 obj_run_linker(long init_func_address, char *file)
 {
@@ -292,7 +374,7 @@ obj_run_linker(long init_func_address, char *file)
 
 /*
  * Read the Mach-O header from a file descriptor and stuff it into a
- * structure.  Make sure it is really an elf header etc.
+ * structure.  Make sure it is really a Mach-O header etc.
  */
 static void
 read_mach_o_header(int fd, MachO_hdr *ehp)
