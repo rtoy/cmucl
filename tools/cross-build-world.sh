@@ -53,7 +53,7 @@ SCRIPT="$3"
 LISP="${4:-lisp}"
 
 if [ -z "$BOOTSTRAP" ]; then
-    CROSSBOOT="$TARGET/cross-boootstrap.lisp"
+    CROSSBOOT="$TARGET/cross-bootstrap.lisp"
 else
     CROSSBOOT=$BOOTSTRAP
 fi
