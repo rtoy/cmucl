@@ -17,7 +17,7 @@ do
       r) BUILD_RUNTIME=yes ;;
       l) LOAD_KERNEL=yes ;;
       B) BOOTSTRAP=$OPTARG ;;
-      B) MAKE=$OPTARG ;;
+      G) MAKE=$OPTARG ;;
       h | \?) usage; exit 1 ;;
     esac
 done
