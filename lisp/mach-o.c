@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mach-o.c,v 1.5 2010/08/01 15:23:28 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mach-o.c,v 1.6 2010/08/02 21:45:36 rtoy Exp $
  *
  * This code was written by Raymond Toy as part of CMU Common Lisp and
  * has been placed in the public domain.
@@ -278,23 +278,6 @@ write_space_object(const char *dir, int id, os_vm_address_t start, os_vm_address
 
     close(out);
     return ret;
-}
-
-/*
- * Remove the 3 space files that we created.
- */
-void
-obj_cleanup(const char *dirname)
-{
-    char filename[FILENAME_MAX + 1];
-    int i;
-
-    /* Get rid of lisp space files. */
-    for(i = 0; i < 3; i++) {
-	/* Delete core space .o files. */
-	sprintf(filename, "%s/%s.o", dirname, section_names[i]);
-	unlink(filename);
-    }
 }
 
 /*

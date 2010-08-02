@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.27 2010/07/31 00:03:23 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.28 2010/08/02 21:45:36 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -358,9 +358,6 @@ save_executable(char *filename, lispobj init_function)
     printf("Linking executable...\n");
     fflush(stdout);
     obj_run_linker(init_function, filename);
-#if 0
-    obj_cleanup(dir_name);
-#endif
     printf("done.\n");
     exit(0);
 }

@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.27 2010/08/02 06:03:49 rtoy Exp $
+ $Id: elf.c,v 1.28 2010/08/02 21:45:36 rtoy Exp $
 */
 
 #include <stdio.h>
@@ -311,20 +311,6 @@ write_space_object(const char *dir, int id, os_vm_address_t start, os_vm_address
 
     close(out);
     return ret;
-}
-
-void
-obj_cleanup(const char *dirname)
-{
-    char filename[FILENAME_MAX + 1];
-    int i;
-
-    /* Get rid of lisp space files. */
-    for(i = 0; i < 3; i++) {
-	/* Delete core space .o files. */
-	sprintf(filename, "%s/%s.o", dirname, section_names[i]);
-	unlink(filename);
-    }
 }
 
 int

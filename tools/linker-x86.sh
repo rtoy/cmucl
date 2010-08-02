@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $Id: linker-x86.sh,v 1.8 2010/08/02 14:21:59 rtoy Exp $
+# $Id: linker-x86.sh,v 1.9 2010/08/02 21:45:36 rtoy Exp $
 
 # This file written by Raymond Toy as part of CMU Common Lisp and is
 # placed in the public domain.
@@ -114,7 +114,7 @@ case `uname` in
 esac
 
 # Remove the C file when we're done.
-trap 'rm -f $OUTDIR/$OPT_IFADDR' 0
+trap 'rm -f $OUTDIR/$OPT_IFADDR $OUTDIR/CORRO.o $OUTDIR/CORSTA.o $OUTDIR/CORDYN.o' 0
 
 (cd $OUTDIR
 echo "long initial_function_addr = $IFADDR;" > $OPT_IFADDR
