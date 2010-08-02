@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.76 2010/08/01 14:47:14 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.77 2010/08/02 03:58:59 agoncharov Exp $
  *
  */
 
@@ -375,7 +375,7 @@ prepend_core_path(const char *lib, const char *corefile)
 }
 
 /*
- * The value of the variable builtin_image_flag indicate whther the
+ * The value of the variable builtin_image_flag indicate whether the
  * executable contains the lisp image or not.  The variable
  * initial_function_addr indicates the address of the initial
  * function.  How these are interpreted depends on the system.

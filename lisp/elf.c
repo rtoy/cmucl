@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.25 2010/07/31 02:45:45 rtoy Exp $
+ $Id: elf.c,v 1.26 2010/08/02 03:58:59 agoncharov Exp $
 */
 
 #include <stdio.h>
@@ -37,7 +37,6 @@ static Elf_Shdr sh;
 
 static char *section_names[] = {"CORDYN", "CORSTA", "CORRO"};
 
-#if defined(SOLARIS) || defined(__linux__)
 /*
  * Starting address of the three ELF sections/spaces.  These must be
  * in the same order as section_names above!
@@ -47,11 +46,10 @@ static char *section_names[] = {"CORDYN", "CORSTA", "CORRO"};
  */
 static os_vm_address_t section_addr[] =
 {
-    DYNAMIC_0_SPACE_START,
-    STATIC_SPACE_START,
-    READ_ONLY_SPACE_START
+  (os_vm_address_t) DYNAMIC_0_SPACE_START,
+  (os_vm_address_t) STATIC_SPACE_START,
+  (os_vm_address_t) READ_ONLY_SPACE_START
 };
-#endif  
 
 /* Note: write errors are not fatal. */
 static int
@@ -482,17 +480,7 @@ map_core_sections(const char *exec_name)
 		if (!strncmp(nambuf, section_names[j], 6)) {
 		    os_vm_address_t addr;
 
-#if defined(SOLARIS) || defined(__linux__)
-		    /*
-		     * On Solaris, the section header sets the addr
-		     * field to 0 because the linker script says the
-		     * sections are NOTE sections.  Hence, we need to
-		     * look up the section addresses ourselves.
-		     */
 		    addr = section_addr[j];
-#else
-		    addr = (os_vm_address_t) sh.sh_addr;
-#endif                  
 		    /* Found a core section. Map it! */
 		    if ((os_vm_address_t) os_map(exec_fd, sh.sh_offset,
 						 addr, sh.sh_size)
