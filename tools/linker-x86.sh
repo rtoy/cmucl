@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $Id: linker-x86.sh,v 1.7 2010/08/01 15:23:28 rtoy Exp $
+# $Id: linker-x86.sh,v 1.8 2010/08/02 14:21:59 rtoy Exp $
 
 # This file written by Raymond Toy as part of CMU Common Lisp and is
 # placed in the public domain.
@@ -91,10 +91,12 @@ case `uname` in
       OS_LIBS=
       ;;
   SunOS*)
-      if [ "$CCOMPILER" != "cc" ]; then
-	  echo Using $CCOMPILER is not currently supported
-	  exit 1
-      fi
+      # A quick test indicates that gcc will accept the following
+      # options too, so this will work whether we have Sun C or gcc.
+      # Note, that this probably only works if gcc uses Sun ld and not
+      # GNU ld.  Most (all?) prebuilt versions of gcc for Solaris use
+      # Sun ld.
+
       # We don't need anything special to set the starting address.
       # map_core_sections does that for us on sparc.
 
