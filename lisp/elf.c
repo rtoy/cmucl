@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.26 2010/08/02 03:58:59 agoncharov Exp $
+ $Id: elf.c,v 1.27 2010/08/02 06:03:49 rtoy Exp $
 */
 
 #include <stdio.h>
@@ -479,7 +479,16 @@ map_core_sections(const char *exec_name)
 	    for (j = 0; j < 3; j++) {
 		if (!strncmp(nambuf, section_names[j], 6)) {
 		    os_vm_address_t addr;
-
+		    /*
+		     * On Solaris, the section header sets the addr
+		     * field to 0 because the linker script says the
+		     * sections are NOTE sections.  Hence, we need to
+		     * look up the section addresses ourselves.
+                     *
+                     * For other systems, we don't care what the
+                     * address is.  We infer the address from the
+                     * segment name.
+		     */
 		    addr = section_addr[j];
 		    /* Found a core section. Map it! */
 		    if ((os_vm_address_t) os_map(exec_fd, sh.sh_offset,
