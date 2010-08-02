@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mach-o.c,v 1.6 2010/08/02 21:45:36 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mach-o.c,v 1.7 2010/08/02 21:59:43 rtoy Rel $
  *
  * This code was written by Raymond Toy as part of CMU Common Lisp and
  * has been placed in the public domain.
@@ -413,11 +413,17 @@ map_core_sections(const char *exec_name)
 #endif
 
         if (lc.cmd == LC_SEGMENT) {
-            /* Read the rest of the command, which is a segment command. */
+          /*
+           * Got a segment command, so read the rest of the command so
+           * we can see if it's the segment for one of our Lisp
+           * spaces.
+           */
 #ifdef DEBUG_MACH_O
             fprintf(stderr, "Reading next %ld bytes for SEGMENT\n", sizeof(sc) - sizeof(lc));
 #endif
+
             eread(exec_fd, &sc.segname, sizeof(sc) - sizeof(lc), __func__);
+
 #ifdef DEBUG_MACH_O
             fprintf(stderr, "LC_SEGMENT: name = %s\n", sc.segname);
 #endif
@@ -475,7 +481,7 @@ map_core_sections(const char *exec_name)
 #endif
             elseek(exec_fd, lc.cmdsize - sizeof(sc), SEEK_CUR, __func__);
         } else {
-            /* Seek to the next command */
+            /* Not a segment command, so seek to the next command */
 #ifdef DEBUG_MACH_O
             fprintf(stderr, "Seeking by %ld bytes\n", lc.cmdsize - sizeof(lc));
 #endif

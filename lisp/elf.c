@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.28 2010/08/02 21:45:36 rtoy Exp $
+ $Id: elf.c,v 1.29 2010/08/02 21:59:43 rtoy Exp $
 */
 
 #include <stdio.h>
@@ -466,17 +466,18 @@ map_core_sections(const char *exec_name)
 		if (!strncmp(nambuf, section_names[j], 6)) {
 		    os_vm_address_t addr;
 		    /*
-		     * On Solaris, the section header sets the addr
-		     * field to 0 because the linker script says the
-		     * sections are NOTE sections.  Hence, we need to
-		     * look up the section addresses ourselves.
+                     * Found a core section. Map it!
                      *
-                     * For other systems, we don't care what the
-                     * address is.  We infer the address from the
-                     * segment name.
+                     * Although the segment may contain the correct
+                     * address for the start of the segment, we don't
+                     * care.  We infer the address from the segment
+                     * name.  (The names better be unique!!!!)  This
+                     * approach allows for a possibly simpler linking
+                     * operation because we don't have to figure out
+                     * how to get the linker to give segments the
+                     * correct address.
 		     */
 		    addr = section_addr[j];
-		    /* Found a core section. Map it! */
 		    if ((os_vm_address_t) os_map(exec_fd, sh.sh_offset,
 						 addr, sh.sh_size)
 			== (os_vm_address_t) -1) {
@@ -484,20 +485,20 @@ map_core_sections(const char *exec_name)
 			exit(-1);
 		    }
 		    switch(j) {
-		    case 0: /* Dynamic space. */
-		        /* Dynamic space variables are set in lisp.c. */
-			image_dynamic_space_size = sh.sh_size;
-			break;
-		    case 1: /* Static space. */
-			image_static_space_size = sh.sh_size;
-			break;
-		    case 2: /* Read-only space. */
-			image_read_only_space_size = sh.sh_size;
-			break;
-		    default:
-			/* Should never get here. */
-			abort();
-			break;
+                      case 0: /* Dynamic space. */
+                          /* Dynamic space variables are set in lisp.c. */
+                          image_dynamic_space_size = sh.sh_size;
+                          break;
+                      case 1: /* Static space. */
+                          image_static_space_size = sh.sh_size;
+                          break;
+                      case 2: /* Read-only space. */
+                          image_read_only_space_size = sh.sh_size;
+                          break;
+                      default:
+                          /* Should never get here. */
+                          abort();
+                          break;
 		    }
 
 		    sections_remaining--;
