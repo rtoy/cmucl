@@ -44,10 +44,10 @@ This user's manual contains only implementation-specific information
 about \cmucl. Users will also need a separate manual describing the
 \clisp{} standard, for example, the
 \ifpdf
-\href{http://www.xanalys.com/software_tools/reference/HyperSpec/FrontMatter/index-text.html}
+\href{http://www.lispworks.com/documentation/HyperSpec/Front/index.htm}
 {Hyperspec}.
 \else
-\emph{Hyperspec} at \href{http://www.xanalys.com/software_tools}{www.xanalys.com}
+\emph{Hyperspec} at \href{http://www.lispworks.com/documentation/HyperSpec/Front/index.htm}
 \fi
 
 
@@ -80,6 +80,10 @@ See also \verb|cmucl(1)|. Currently \cmucl{} accepts the following
 switches:
 
 \begin{Lentry}
+\item[\code{--help}] Same as \code{-help}.
+
+\item[\code{-help}] Print ou the command line options and exit.
+  
 \item[\code{-batch}] specifies batch mode, where all input is
   directed from standard-input.  An error code of 0 is returned upon
   encountering an EOF and 1 otherwise.
