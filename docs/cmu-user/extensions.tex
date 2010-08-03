@@ -1561,7 +1561,7 @@ built:
 variable).
 
 \item[\code{path:}] The Unix command path (\code{PATH} environment variable).
-\item[\code{ld-library-path:}] The Unix \code{LD_LIBRARY_PATH}
+\item[\code{ld-library-path:}] The Unix \code{LD\_LIBRARY\_PATH}
   environment variable.
 \item[\code{target:}] The root of the tree where \cmucl{} was compiled.
 \item[\code{modules:}] The list of directories where \cmucl{}'s
@@ -3007,3 +3007,53 @@ For further information, we refer the reader to documentation on
 gettext at
 \href{http://www.gnu.org/software/gettext/manual/gettext.html}{\texttt{http://www.gnu.org/software/gettext/manual/gettext.html}}.
 \fi
+
+\section{Static Arrays}
+\label{sec:static-arrays}
+
+\cmucl{} supports static arrays which are arrays that are not moved by
+the garbage collector.  To create such an array, use the
+\kwd{allocation} option to \code{make-array} with a value of
+\kwd{malloc}.  These arrays appear as normal Lisp arrays, but are
+actually allocated from the \code{C} heap (hence the \kwd{malloc}).
+Thus, the number and size of such arrays are limited by the available
+\code{C} heap.
+
+Also, only certain types of arrays can be allocated.  The static array
+cannot be adjustable and cannot be displaced to.  The array must also
+be a \code{simple-array} of one dimension.  The element type is also
+constrained to be one of the types in
+Table~\ref{tbl:static-array-types}.
+
+\begin{table}[tbhp]
+  \begin{center}
+    \begin{tabular}{|c|}
+      \hline
+      \code{(unsigned-byte 8)} \\
+      \hline
+      \code{(unsigned-byte 16)} \\
+      \hline
+      \code{(unsigned-byte 32)} \\
+      \hline
+      \code{(signed-byte 8)} \\
+      \hline
+      \code{(signed-byte 16)} \\
+      \hline
+      \code{(signed-byte 32)} \\
+      \hline
+      \code{single-float} \\
+      \hline
+      \code{double-float} \\
+      \hline
+      \code{(complex single-float)} \\
+      \hline
+      \code{(complex double-float)} \\
+      \hline
+    \end{tabular}
+    \caption{Allowed element types for static arrays}
+    \label{tbl:static-array-types}
+  \end{center}
+\end{table}
+
+The arrays are properly handled by GC.  GC will not move the arrays,
+but they will be properly removed up if they become garbage.
