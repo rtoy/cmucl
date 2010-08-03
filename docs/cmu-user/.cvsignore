@@ -17,3 +17,9 @@
 *.vnd
 cmu-user-html.tgz
 cmu-user-letter.ps
+cmu-user.haux
+cmu-user.hcnd
+cmu-user.hfnd
+cmu-user.htnd
+cmu-user.htoc
+cmu-user.hvnd
