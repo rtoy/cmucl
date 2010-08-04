@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.114 2010/07/20 22:53:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.115 2010/08/04 03:37:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2201,15 +2201,23 @@
    :if-does-not-exist - one of :error, :create or nil
    :external-format - an external format name
    :decoding-error - How to handle decoding errors from the external format.
-                       Should be a symbol or function of 3 arguments.  If it
-                       returns, it should return a code point to use as the
-                       replacment.  NIL means use the default replacement scheme
-                       specified by the external format.  The function arguments
-                       are a format message string, the offending octet, and the
-                       number of octets read in the current encoding.   
+                       If a character, then that character is used as
+                       the replacment character for all errors.  If T,
+                       then a continuable error is signaled.  If
+                       continued, the Unicode replacement character is
+                       used.  Otherwise, it should be a symbol or
+                       function of 3 arguments.  If it returns, it
+                       should return a code point to use as the
+                       replacment.  The function arguments are a
+                       format message string, the offending octet, and
+                       the number of octets read in the current
+                       encoding.
    :encoding-error - Like :decoding-error, but for errors when encoding the
-                       stream.  The function arguments are a format message
-                       string and the incorrect codepoint.
+                       stream.  If a character, that character is used
+                       as the replacment code point.  Otherwise, it
+                       should be a symbol or function oof two
+                       arguments: a format message string and the
+                       incorrect codepoint.
 
   See the manual for details."
   (declare (ignore element-type external-format input-handle output-handle
