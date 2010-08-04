@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.35 2010/07/12 13:58:42 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.36 2010/08/04 02:56:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -753,11 +753,15 @@ character and illegal outputs are replaced by a question mark.")
 		    ;; illegal.  So are codepoints that are too large.
 		    (if ,error
 			(if (lisp::surrogatep code)
-			    (funcall ,error
-				     (format nil (intl:gettext "Surrogate codepoint #x~~4,'0X is illegal for ~A")
-					      ,external-format)
-				     code nil)
-			    (funcall ,error (intl:gettext "Illegal codepoint on input: #x~X") code nil))
+			    (locally
+				(declare (optimize (ext:inhibit-warnings 3)))
+			      (funcall ,error
+				       (format nil (intl:gettext "Surrogate codepoint #x~~4,'0X is illegal for ~A")
+					       ,external-format)
+				       code nil))
+			    (locally
+				(declare (optimize (ext:inhibit-warnings 3)))
+			      (funcall ,error (intl:gettext "Illegal codepoint on input: #x~X") code nil)))
 			#-(and unicode (not unicode-bootstrap)) #\?
 			#+(and unicode (not unicode-bootstrap)) #\U+FFFD))
 		   #+unicode
@@ -788,18 +792,22 @@ character and illegal outputs are replaced by a question mark.")
 		     (,wryte (if (lisp::surrogatep (char-code ,nchar) :low)
 				 (surrogates-to-codepoint (car ,nstate) ,nchar)
 				 (if ,error
-				     (funcall ,error
-					      (intl:gettext "Cannot convert invalid surrogate #x~X to character")
-					      ,nchar)
+				     (locally
+					 (declare (optimize (ext:inhibit-warnings 3)))
+				       (funcall ,error
+						(intl:gettext "Cannot convert invalid surrogate #x~X to character")
+						,nchar))
 				     +replacement-character-code+)))
 		   (setf (car ,nstate) nil))
 		 ;; A lone trailing (low) surrogate gets replaced with
 		 ;; the replacement character.
 		 (,wryte (if (lisp::surrogatep (char-code ,nchar) :low)
 			     (if ,error
-				 (funcall ,error
-					  (intl:gettext "Cannot convert lone trailing surrogate #x~X to character")
-					  ,nchar)
+				 (locally
+				     (declare (optimize (ext:inhibit-warnings 3)))
+				   (funcall ,error
+					    (intl:gettext "Cannot convert lone trailing surrogate #x~X to character")
+					    ,nchar))
 				 +replacement-character-code+)
 			     (char-code ,nchar)))))))))
 
