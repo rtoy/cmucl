@@ -80,14 +80,6 @@ For files, \code{OPEN} takes the \kwd{external-format}
 parameter to specify the format.  The default external format is
 \kwd{default}. 
 
-\begin{defun}{stream:}{set-system-external-format}{\var{terminal} \ampoptional{} \var{filenames}}
-  This function changes the external format used for
-  \var{*standard-input*}, \var{*standard-output*}, and
-  \var{*standard-error*} to the external format specified by
-  \var{terminal}.  Additionally, the Unix file name encoding can be
-  set to the value specified by \var{filenames} if non-\nil.
-\end{defun}
-
 \subsection{Available External Formats}
 
 The available external formats are listed below in
@@ -451,7 +443,65 @@ The Unicode data base is stored in compressed form in the file
 \file{ext-formats:unidata.bin}.  If this file is not found, Unicode
 support is severely reduced; you can only use ASCII characters.
 
+\begin{defun}{}{open}{\args \var{filename} \amprest \var{options}
+    \keys{\kwd{direction} \kwd{element-type} \kwd{if-exists}
+      \kwd{if-does-not-exist} \morekeys \kwd{class} \kwd{mapped}
+      \kwd{input-handle} \kwd{output-handle}
+      \yetmorekeys \kwd{external-format} \kwd{decoding-error}
+      \kwd{encoding-error}}
+
+    The main options are covered elsewhere.  Here we describe the
+    options specific to Unicode.  The option \kwd{external-format}
+    specifies the external format to use for reading and writing the
+    file.  The external format is a keyword.
+
+    The options \kwd{decoding-error} and \kwd{encoding-error} are used
+    to specify how encoding and decoding errors are handled.  The
+    default value on \nil means the external format handles errors
+    itself and typically replaces invalid sequences with the Unicode
+    replacement character.
+
+    Otherwise, the value for \code{decoding-error} is either a
+    character, a symbol or a function.  If a character is
+    specified. it is used as the replacement character for any invalid
+    decoding.  If a symbol or a function is given, it must be a
+    function of three arguments: a message string to be printed, the
+    offending octet, and the number of octets read.  If the function
+    returns, it should return two values: the code point to use as the
+    replacement character and the number of octets read.  In addition,
+    \true{} may be specified.  This indicates that a continuable error
+    is signaled, which, if continued, the Unicode replacement
+    character is used.
+
+    For \code{encoding-error}, a character, symbol, or function can be
+    specified, like \code{decoding-error}, with the same meaning.  The
+    function, however, takes two arguments:  a format message string
+    and the incorrect codepoint.  If the function returns, it should
+    be the replacement codepoint.
+\end{defun}    
+      
 \subsubsection{Utilities}
+
+\begin{defun}{stream:}{set-system-external-format}{\var{terminal} \ampoptional{} \var{filenames}}
+  This function changes the external format used for
+  \var{*standard-input*}, \var{*standard-output*}, and
+  \var{*standard-error*} to the external format specified by
+  \var{terminal}.  Additionally, the Unix file name encoding can be
+  set to the value specified by \var{filenames} if non-\nil.
+\end{defun}
+
+\begin{defun}{extensions:}{list-all-external-formats}{}
+  list all of the vailable external formats.  A list is returned where
+  each element is a list of the external format name and a list of
+  aliases for the format.  No distinction is made between external
+  formats and composing external formats.
+\end{defun}
+
+\begin{defun}{extensions:}{describe-external-format}{external-format}
+  Print a description of the given \var{external-format}.  This may
+  cause the external format to be loaded (silently) if it is not
+  already loaded.
+\end{defun}
 
 Since strings are UTF-16 and hence may contain surrogate pairs, some
 utility functions are provided to make access easier.

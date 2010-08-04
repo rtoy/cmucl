@@ -1,7 +1,5 @@
 ========================== C M U C L  20 b =============================
 
-[--- WORK IN PROGRESS ---]
-
 The CMUCL project is pleased to announce the release of CMUCL 20b.
 This is a major release which contains numerous enhancements and
 bug fixes from the 19f release.
