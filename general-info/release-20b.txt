@@ -41,10 +41,10 @@ New in this release:
     - FROUND and FTRUNCATE are much faster for single and double float
       numbers.  This is not currently available for x87 (due to
       potential roundoff errors), but is available everywhere else.
-    - Support for internalization/localization added.  Messages from
-      CMUCL can be translated, but currently only a few messages in
-      Korean are translated.  For fun, there is a full Pig Latin
-      translation (done by machine).  
+    - Support for internationalization/localization added.  Messages
+      from CMUCL can be translated, but currently only a few messages
+      in Korean are translated.  For fun, there is a full Pig Latin
+      translation (done by machine).
     - Source information (file) for defstructs and deftypes is now
       provided.  DESCRIBE will now print out the name of the file
       where the defstruct/deftype was defined.
@@ -80,7 +80,7 @@ New in this release:
     - Add EXT:LIST-ALL-EXTERNAL-FORMATS to list all known external
       formats and their aliases.
     - ADD EXT:DESCRIBE-EXTERNAL-FORMAT to print a description of the
-      specified exernal format.  To support this, the macros
+      specified external format.  To support this, the macros
       DEFINE-EXTERNAL-FORMAT and DEFINE-COMPOSING-EXTERNAL-FORMAT have
       changed.
     - The sparc port now supports the :executable feature.
@@ -104,7 +104,7 @@ New in this release:
       DEFINE-METHOD-COMBINATION is NIL, not "".
     - DEFINE-COMPILER-MACRO no longer sets the wrong block name for
       SETF functions.  We also check that the name is a valid function
-      name; an error is signaled if it's invalid.
+      name; an error is signalled if it's invalid.
     - DELETE-FILE, ENSURE-DIRECTORIES-EXIST, FILE-AUTHOR,
       FILE-WRITE-DATE, and OPEN now merge the given pathname with
       *DEFAULT-PATHNAME-DEFAULTS* as required by CLHS sec 19.2.3.
@@ -123,9 +123,9 @@ New in this release:
     - When continuing from the INTEXP-LIMIT-ERROR condition (for
       raising an integer to a large integer power) and setting a new
       limit, the limit was set to the power.  We really wanted the
-      absolute valie of the power to used as the new limit.
+      absolute value of the power to used as the new limit.
     - FILE-POSITION was returning incorrect values for file streams on
-      unicode builds.  This is fixed now.  But also see the known
+      Unicode builds.  This is fixed now.  But also see the known
       issue listed above.
     - The error-output and trace-file files for COMPILE-FILE are now
       opened using the same external format as specified in
@@ -134,7 +134,7 @@ New in this release:
       information if the default format could not represent the
       characters in the source file.
     - Handling of source files in the debugger is better now for
-      unicode builds.  The source files are opened using the same
+      Unicode builds.  The source files are opened using the same
       format as used to compile them.  Previously, the default format
       was used, which would be wrong if the file is in a different
       format.
@@ -176,7 +176,7 @@ New in this release:
       during TRACE, the incorrect values were returned for the SSE2
       core.  This was caused by using the x87 values instead of the
       sse2 values in the sigcontext.  This is fixed now.
-    - A critical bug in the fast unicode stream buffering routine has
+    - A critical bug in the fast Unicode stream buffering routine has
       been fixed.  This bug manifests itself by causing valid
       sequences to be incorrectly decoded, resulting in a replacement
       character.
