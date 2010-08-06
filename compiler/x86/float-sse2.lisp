@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.16 2010/07/23 11:53:37 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.17 2010/08/06 09:41:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2169,7 +2169,7 @@
     (inst shufpd t2 t2 1)		; t2 = a*d|b*d
     (inst mov tmp #x80000000)
     (inst movd t0 tmp)			; t0 = 0|0|0|#x80000000
-    (inst psllq tmp 32)			; t0 = 0|#x80000000,00000000
+    (inst psllq t0 32)			; t0 = 0|#x80000000,00000000
     (inst xorpd t2 t0)			; t2 = a*d|-b*d
     (inst addpd t2 t1)			; t2 = a*d+b*c | a*c-b*d
     (inst movapd r t2)))
