@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.94 2010/07/05 03:40:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.95 2010/08/09 22:45:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -364,8 +364,13 @@
       (t
        (let ((res (funcall (lisp-stream-misc stream) stream
 			   :file-position nil)))
+	 ;; For Unicode, the LISP-STREAM-MISC function handles
+	 ;; everything, so we can just return the result.
+	 #-unicode
 	 (when res
-	   (- res (- in-buffer-length (lisp-stream-in-index stream)))))))))
+	   (- res (- in-buffer-length (lisp-stream-in-index stream))))
+	 #+unicode
+	 res)))))
 
 
 ;;; File-Length  --  Public
