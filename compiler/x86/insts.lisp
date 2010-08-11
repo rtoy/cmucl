@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.36 2010/08/06 19:01:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.37 2010/08/11 21:29:49 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3140,6 +3140,8 @@
   ;; comparison
   (define-regular-sse-inst comisd   #x66 #x2f)
   (define-regular-sse-inst comiss   nil  #x2f)
+  (define-regular-sse-inst ucomisd   #x66 #x2e)
+  (define-regular-sse-inst ucomiss   nil  #x2e)
   ;; arithmetic
   (define-regular-sse-inst addsd    #xf2 #x58)
   (define-regular-sse-inst addpd    #x66 #x58 t)
