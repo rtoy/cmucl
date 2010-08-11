@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.54 2010/04/20 17:57:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.55 2010/08/11 17:40:09 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1016,13 +1016,19 @@
        (single-float
 	;; CLHS says sxhash must return the same thing for +0.0 and
 	;; -0.0.  We get the desired result by adding +0.0, which
-	;; converts -0.0 to 0.0.
-	(let* ((x (+ s-expr 0f0))
+	;; converts -0.0 to 0.0.  But if s-expr is NaN, we don't want
+	;; to signal an error from adding 0, so don't do it since it
+	;; we don't need to anyway.
+	(let* ((x (if (float-nan-p s-expr)
+		      s-expr
+		      (+ s-expr 0f0)))
 	       (bits (single-float-bits x)))
 	  (ldb sxhash-bits-byte
 	       (logxor (ash bits (- sxmash-rotate-bits)) bits))))
        (double-float
-	(let* ((x (+ s-expr 0d0))
+	(let* ((x (if (float-nan-p s-expr)
+		      s-expr
+		      (+ s-expr 0d0)))
 	       (lo (double-float-low-bits x))
 	       (hi (double-float-high-bits x)))
 	  (ldb sxhash-bits-byte
