@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-be.lisp,v 1.10 2010/07/12 14:42:11 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-be.lisp,v 1.11 2010/08/13 01:35:25 rtoy Exp $")
 
 (in-package "STREAM")
 (intl:textdomain "cmucl")
@@ -55,13 +55,13 @@ Unicode replacement character.")
 		    (setq ,code (+ (ash (- ,code #xD800) 10) ,next #x2400))
 		    (setf ,code
 			  (if ,error
-			      (funcall ,error "High surrogate followed by #x~4,'0X instead of low surrogate" ,next ,wd)
+			      (funcall ,error "High surrogate followed by #x~4,'0X instead of low surrogate" ,next 2)
 			      +replacement-character-code+)))))
 	     ((= ,code #xFFFE)
 	      ;; Replace with REPLACEMENT CHARACTER.  
 	      (setf ,code
 		    (if ,error
-			(funcall ,error "BOM is not valid within a UTF-16 stream" ,code ,wd)
+			(funcall ,error "BOM is not valid within a UTF-16 stream" ,code 2)
 			+replacement-character-code+)))
 	     (t (setf ,state nil)))
        (values ,code 2)))
@@ -84,13 +84,14 @@ Unicode replacement character.")
 	      (,output (ldb (byte 8 8) code))
 	      (,output (ldb (byte 8 0) code))))
        (let ((,c (car ,state)))
-	 (,output (if (lisp::surrogatep ,c)
-		      (if ,error
-			  (funcall ,error
-				   "Flushing bare surrogate #x~4,'0X is illegal for UTF-16"
-				   (char-code ,c))
-			  +replacement-character-code+)
-		      ,c)))))
+	 (when ,c
+	   (,output (if (lisp::surrogatep ,c)
+			(if ,error
+			    (funcall ,error
+				     "Flushing bare surrogate #x~4,'0X is illegal for UTF-16"
+				     (char-code ,c))
+			    +replacement-character-code+)
+			,c))))))
   (copy-state (state)
     ;; The state is either NIL or a codepoint, so nothing really
     ;; special is needed to copy it.
