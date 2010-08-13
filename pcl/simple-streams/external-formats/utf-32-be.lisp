@@ -4,7 +4,7 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-be.lisp,v 1.9 2010/07/12 14:42:11 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-be.lisp,v 1.10 2010/08/13 01:33:05 rtoy Exp $")
 
 (in-package "STREAM")
 (intl:textdomain "cmucl")
@@ -35,9 +35,9 @@ Unicode replacement character.")
 		  (lisp::surrogatep ,c))
 	      ;; Surrogates are illegal.  Use replacement character.
 	      (values (if ,error
-			  (if (>= ,code lisp:codepoint-limit)
-			      (funcall ,error "Illegal codepoint #x~4,'0X" ,code 4)
-			      (funcall ,error "Surrogate #x~4,'0X not allowed in UTF32" ,code 4))
+			  (if (>= ,c lisp:codepoint-limit)
+			      (funcall ,error "Illegal codepoint #x~4,'0X" ,c 4)
+			      (funcall ,error "Surrogate #x~4,'0X not allowed in UTF32" ,c 4))
 			  +replacement-character-code+)
 		      4))
 	     (t
@@ -49,10 +49,6 @@ Unicode replacement character.")
 	      ;; Big-endian output
 	      (dotimes (,i 4)
 		(,output (ldb (byte 8 (* 8 (- 3 ,i))) ,c)))))
-       ;; Write BOM
-       (unless ,state
-	 (out #xFEFF)
-	 (setf ,state t))
        (cond ((lisp::surrogatep ,code)
 	      (out (if ,error
 		       (funcall ,error "Surrogate code #x~4,'0X is illegal for UTF32 output"
