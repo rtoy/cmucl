@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.35.4.1 2010/08/04 12:12:09 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.35.4.2 2010/08/14 23:51:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -649,9 +649,12 @@ character and illegal outputs are replaced by a question mark.")
   (code-to-octets (code state output error)
     `(,output (if (> ,code 255)
 		  (if ,error
-		      (funcall ,error
-			       (intl:gettext "Cannot output codepoint #x~X to ISO8859-1 stream")
-			       ,code 1)
+		      (locally
+			  ;; No warnings about fdefinition
+			  (declare (optimize (ext:inhibit-warnings 3)))
+			(funcall ,error
+				 (intl:gettext "Cannot output codepoint #x~X to ISO8859-1 stream")
+				 ,code 1))
 		      #x3F)
 		  ,code))))
 

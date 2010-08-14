@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-le.lisp,v 1.10.4.1 2010/08/13 01:52:53 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-le.lisp,v 1.10.4.2 2010/08/14 23:51:08 rtoy Exp $")
 
 (in-package "STREAM")
 (intl:textdomain "cmucl")
@@ -38,7 +38,10 @@ Unicode replacement character.")
 			,state nil)
 		  (setf ,code
 			(if ,error
-			    (funcall ,error "Bare low surrogate #x~4,'0X" ,code 2)
+			    (locally
+				;; No warnings about fdefinition
+				(declare (optimize (ext:inhibit-warnings 3)))
+			      (funcall ,error "Bare low surrogate #x~4,'0X" ,code 2))
 			    +replacement-character-code+))))
 	     ((lisp::surrogatep ,code :high)
 	      ;; Remember the high surrogate in case we bail out
@@ -56,13 +59,20 @@ Unicode replacement character.")
 		    (setq ,code (+ (ash (- ,code #xD800) 10) ,next #x2400))
 		    (setq ,code
 			  (if ,error
-			      (funcall ,error "High surrogate followed by #x~4,'0X instead of low surrogate" ,next 2)
+			      (locally
+				  ;; No warnings about fdefinition
+				  (declare (optimize (ext:inhibit-warnings 3)))
+				(funcall ,error "High surrogate followed by #x~4,'0X ~
+                                                 instead of low surrogate" ,next 2))
 			      +replacement-character-code+)))))
 	     ((= ,code #xFFFE)
 	      ;; replace with REPLACEMENT CHARACTER.
 	      (setf ,code
 		    (if ,error
-			(funcall ,error "BOM is not valid within a UTF-16 stream" ,code 2)
+			(locally
+			    ;; No warnings about fdefinition
+			    (declare (optimize (ext:inhibit-warnings 3)))
+			  (funcall ,error "BOM is not valid within a UTF-16 stream" ,code 2))
 			+replacement-character-code+)))
 	     (t (setf ,state nil)))
       (values ,code 2)))
@@ -88,9 +98,12 @@ Unicode replacement character.")
 	 (when ,c
 	   (,output (if (lisp::surrogatep ,c)
 			(if ,error
-			    (funcall ,error
-				     "Flushing bare surrogate #x~4,'0X is illegal for UTF-16"
-				     (char-code ,c))
+			    (locally
+				;; No warnings about fdefinition
+				(declare (optimize (ext:inhibit-warnings 3)))
+			      (funcall ,error
+				       "Flushing bare surrogate #x~4,'0X is illegal for UTF-16"
+				       (char-code ,c)))
 			    +replacement-character-code+)
 			,c))))))
   (copy-state (state)
