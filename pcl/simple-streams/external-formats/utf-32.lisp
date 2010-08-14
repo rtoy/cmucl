@@ -4,7 +4,7 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32.lisp,v 1.11 2010/07/12 14:42:11 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32.lisp,v 1.12 2010/08/14 23:18:04 rtoy Rel $")
 
 (in-package "STREAM")
 (intl:textdomain "cmucl")
@@ -70,10 +70,13 @@ Unicode replacement character.")
 		   ;; character.
 		   (setf ,code
 			 (if ,error
-			     (if (>= ,code lisp:codepoint-limit)
-				 (funcall ,error "Illegal codepoint #x~4,'0X" ,code 4)
-				 (funcall ,error "Surrogate #x~4,'0X not allowed in UTF32"
-					  ,code 4))
+			     (locally
+				 ;; No warnings about fdefinition
+				 (declare (optimize (ext:inhibit-warnings 3)))
+			       (if (>= ,code lisp:codepoint-limit)
+				   (funcall ,error "Illegal codepoint #x~4,'0X" ,code 4)
+				   (funcall ,error "Surrogate #x~4,'0X not allowed in UTF32"
+					    ,code 4)))
 			     +replacement-character-code+)))
 		  ((and  (zerop ,st) (= ,code #xFFFE0000))
 		   ;; BOM for little-endian
@@ -97,8 +100,11 @@ Unicode replacement character.")
 	 (setf ,state t))
        (cond ((lisp::surrogatep ,code)
 	      (out (if ,error
-		       (funcall ,error "Surrogate code #x~4,'0X is illegal for UTF32 output"
-				,code)
+		       (locally
+			   ;; No warnings about fdefinition
+			   (declare (optimize (ext:inhibit-warnings 3)))
+			 (funcall ,error "Surrogate code #x~4,'0X is illegal for UTF32 output"
+				  ,code))
 		       +replacement-character-code+)))
 	     (t
 	      (out ,code)))))

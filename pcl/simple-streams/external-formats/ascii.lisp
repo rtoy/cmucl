@@ -4,7 +4,7 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/ascii.lisp,v 1.6 2010/07/12 14:42:11 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/ascii.lisp,v 1.7 2010/08/14 23:18:04 rtoy Rel $")
 
 (in-package "STREAM")
 (intl:textdomain "cmucl")
@@ -19,13 +19,19 @@ replaced with a question mark.")
        (values (if (< ,c #x80)
 		   ,c
 		   (if ,error
-		       (funcall ,error "Invalid octet #x~4,'0X for ASCII" ,c 1)
+		       (locally
+			   ;; No warnings about fdefinition
+			   (declare (optimize (ext:inhibit-warnings 3)))
+			 (funcall ,error "Invalid octet #x~4,'0X for ASCII" ,c 1))
 		       +replacement-character-code+))
 	       1)))
   (code-to-octets (code state output error)
     `(,output (if (> ,code #x7F)
 		  (if ,error
-		      (funcall ,error "Cannot output codepoint #x~X to ASCII stream" ,code)
+		      (locally
+			  ;; No warnings about fdefinition
+			  (declare (optimize (ext:inhibit-warnings 3)))
+			(funcall ,error "Cannot output codepoint #x~X to ASCII stream" ,code))
 		      #x3F)
 		  ,code))))
 

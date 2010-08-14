@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/mac-roman.lisp,v 1.8 2010/07/12 14:42:11 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/mac-roman.lisp,v 1.9 2010/08/14 23:18:04 rtoy Rel $")
 
 (in-package "STREAM")
 (intl:textdomain "cmucl")
@@ -44,6 +44,9 @@ character and illegal outputs are replaced by a question mark.")
 		    (if ,present
 			(+ (the (unsigned-byte 7) ,present) 128)
 			(if ,error
-			    (funcall ,error "Cannot output codepoint #x~X to MAC-ROMAN stream"
-				     ,code)
+			    (locally
+				;; No warnings about fdefinition
+				(declare (optimize (ext:inhibit-warnings 3)))
+			      (funcall ,error "Cannot output codepoint #x~X to MAC-ROMAN stream"
+				       ,code))
 			    #x3F)))))))

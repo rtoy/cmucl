@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.14 2010/07/12 14:42:11 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.15 2010/08/14 23:18:04 rtoy Rel $")
 
 (in-package "STREAM")
 (intl:textdomain "cmucl")
@@ -40,10 +40,13 @@ replacement character.")
 			    (,unput 1)
 			    (return
 			      (values
-			       (if ,error
-				   (funcall ,error "Invalid utf8 octet #x~X at offset ~D"
-					    ,c (1+ ,j))
-				   +replacement-character-code+)
+			       (locally
+				   ;; No warnings about fdefinition
+				   (declare (optimize (ext:inhibit-warnings 3)))
+				 (if ,error
+				     (funcall ,error "Invalid utf8 octet #x~X at offset ~D"
+					      ,c (1+ ,j))
+				     +replacement-character-code+))
 			       (1+ ,j)))))))))
 	      (check (,n ,i)
 		(declare (type (unsigned-byte 31) ,n)
@@ -62,12 +65,21 @@ replacement character.")
 		      (values (if ,error
 				  (cond
 				    ((>= ,n lisp:codepoint-limit)
-				     (funcall ,error "Invalid codepoint #x~X of ~D octets"
-					      ,n (1+ ,i)))
+				     (locally
+					 ;; No warnings about fdefinition
+					 (declare (optimize (ext:inhibit-warnings 3)))
+				       (funcall ,error "Invalid codepoint #x~X of ~D octets"
+						,n (1+ ,i))))
 				    ((lisp::surrogatep ,n)
-				     (funcall ,error "Invalid surrogate code #x~X" ,n (1+ ,i)))
+				     (locally
+					 ;; No warnings about fdefinition
+					 (declare (optimize (ext:inhibit-warnings 3)))
+				       (funcall ,error "Invalid surrogate code #x~X" ,n (1+ ,i))))
 				    (t
-				     (funcall ,error "Overlong utf8 sequence of ~*~D octets" nil (1+ ,i))))
+				     (locally
+					 ;; No warnings about fdefinition
+					 (declare (optimize (ext:inhibit-warnings 3)))
+				       (funcall ,error "Overlong utf8 sequence of ~*~D octets" nil (1+ ,i)))))
 				  +replacement-character-code+)
 			      (1+ ,i)))
 		    (values ,n (1+ ,i)))))
@@ -76,18 +88,26 @@ replacement character.")
 	(cond ((null ,c) (values nil 0))
 	      ((< ,c #b10000000) (values ,c 1))
 	      ((< ,c #b11000010)
-	       (values (if ,error
-			   (funcall ,error "Invalid initial utf8 octet: #x~X" ,c 1)
-			   +replacement-character-code+)
+	       (values
+		(locally
+		    ;; No warnings about fdefinition
+		    (declare (optimize (ext:inhibit-warnings 3)))
+		  (if ,error
+		      (funcall ,error "Invalid initial utf8 octet: #x~X" ,c 1)
+		      +replacement-character-code+))
 		       1))
 	      ((< ,c #b11100000) (utf8 ,c 1))
 	      ((< ,c #b11110000) (utf8 ,c 2))
 	      ((< ,c #b11111000) (utf8 ,c 3))
 	      (t
-	       (values (if ,error
-			   (funcall ,error "Invalid initial utf8 octet: #x~X" ,c 1)
-			   +replacement-character-code+)
-		       1))))))
+	       (values
+		(locally
+		    ;; No warnings about fdefinition
+		    (declare (optimize (ext:inhibit-warnings 3)))
+		  (if ,error
+		      (funcall ,error "Invalid initial utf8 octet: #x~X" ,c 1)
+		      +replacement-character-code+))
+		1))))))
   (code-to-octets (code state output error i j n p init)
     `(flet ((utf8 (,n ,i)
           (let* ((,j (- 6 ,i))
