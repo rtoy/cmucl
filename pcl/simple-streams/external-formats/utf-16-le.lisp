@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-le.lisp,v 1.10.4.2 2010/08/14 23:51:08 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-le.lisp,v 1.10.4.3 2010/08/15 00:01:48 rtoy Exp $")
 
 (in-package "STREAM")
 (intl:textdomain "cmucl")
@@ -96,16 +96,16 @@ Unicode replacement character.")
 	      (,output (ldb (byte 8 8) code))))
        (let ((,c (car ,state)))
 	 (when ,c
-	   (,output (if (lisp::surrogatep ,c)
-			(if ,error
-			    (locally
-				;; No warnings about fdefinition
-				(declare (optimize (ext:inhibit-warnings 3)))
-			      (funcall ,error
-				       "Flushing bare surrogate #x~4,'0X is illegal for UTF-16"
-				       (char-code ,c)))
-			    +replacement-character-code+)
-			,c))))))
+	   (out (if (lisp::surrogatep ,c)
+		    (if ,error
+			(locally
+			    ;; No warnings about fdefinition
+			    (declare (optimize (ext:inhibit-warnings 3)))
+			  (funcall ,error
+				   "Flushing bare surrogate #x~4,'0X is illegal for UTF-16"
+				   (char-code ,c)))
+			+replacement-character-code+)
+		    ,c))))))
   (copy-state (state)
     ;; The state is either NIL or a codepoint, so nothing really
     ;; special is needed.
