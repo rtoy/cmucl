@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.35 2010/03/19 15:19:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.35.4.1 2010/08/15 15:09:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3140,6 +3140,8 @@
   ;; comparison
   (define-regular-sse-inst comisd   #x66 #x2f)
   (define-regular-sse-inst comiss   nil  #x2f)
+  (define-regular-sse-inst ucomisd   #x66 #x2e)
+  (define-regular-sse-inst ucomiss   nil  #x2e)
   ;; arithmetic
   (define-regular-sse-inst addsd    #xf2 #x58)
   (define-regular-sse-inst addpd    #x66 #x58 t)
@@ -3495,6 +3497,8 @@
     ((packed-shift (name imm-op reg-op reg)
        ;; We don't support the MMX version.
        `(define-instruction ,name (segment dst src)
+	  (:declare (type (satisfies xmm-register-p) dst)
+		    (type (or fixnum (satisfies xmm-register-p)) src))
 	  (:printer ext-xmm-mem ((prefix #x66) (op ,reg-op)))
 	  (:printer ext-xmm-mem ((prefix #x66) (op ,imm-op)
 				 (reg ,reg)
@@ -3508,7 +3512,6 @@
 		  (emit-mod-reg-r/m-byte segment #b11 ,reg (reg-tn-encoding dst))
 		  (emit-byte segment src))
 		 (t
-		  (assert (xmm-register-p src))
 		  (emit-regular-sse-inst segment dst src #x66 ,reg-op)))))))
   (packed-shift psrlq #x73 #xd3 2)
   (packed-shift psrld #x72 #xd2 2)

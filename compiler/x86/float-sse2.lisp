@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.16.2.1 2010/08/06 18:02:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.16.2.2 2010/08/15 15:09:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -879,7 +879,7 @@
   (:vop-var vop)
   (:generator 3
     (note-this-location vop :internal-error)
-    (inst comiss x y)
+    (inst ucomiss x y)
     ;; if PF&CF, there was a NaN involved => not equal
     ;; otherwise, ZF => equal
     (cond (not-p
@@ -897,7 +897,7 @@
   (:vop-var vop)
   (:generator 3
     (note-this-location vop :internal-error)
-    (inst comisd x y)
+    (inst ucomisd x y)
     (cond (not-p
            (inst jmp :p target)
            (inst jmp :ne target))
@@ -907,7 +907,7 @@
              (inst jmp :e target)
              (emit-label not-lab))))))
 
-(define-vop (<double-float double-float-compare)
+(define-vop (</double-float double-float-compare)
   (:translate <)
   (:info target not-p)
   (:generator 3
@@ -921,7 +921,7 @@
              (inst jmp :c target)
              (emit-label not-lab))))))
 
-(define-vop (<single-float single-float-compare)
+(define-vop (</single-float single-float-compare)
   (:translate <)
   (:info target not-p)
   (:generator 3
@@ -935,7 +935,7 @@
              (inst jmp :c target)
              (emit-label not-lab))))))
 
-(define-vop (>double-float double-float-compare)
+(define-vop (>/double-float double-float-compare)
   (:translate >)
   (:info target not-p)
   (:generator 3
@@ -949,7 +949,7 @@
              (inst jmp :a target)
              (emit-label not-lab))))))
 
-(define-vop (>single-float single-float-compare)
+(define-vop (>/single-float single-float-compare)
   (:translate >)
   (:info target not-p)
   (:generator 3
