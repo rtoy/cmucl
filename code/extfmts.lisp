@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.35.4.2 2010/08/14 23:51:08 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.35.4.3 2010/08/15 15:07:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -915,6 +915,75 @@ character and illegal outputs are replaced by a question mark.")
 	(funcall (ef-octets-to-string external-format)
 		 octets (1- start) (1- (or end (length octets)))
 		 state
+		 (or string (make-string (length octets)))
+		 s-start s-end
+		 error)
+      (values (if stringp string (lisp::shrink-vector string pos)) pos last-octet new-state))))
+
+
+(def-ef-macro ef-octets-to-string-counted (extfmt lisp::lisp +ef-max+ +ef-os+)
+  `(lambda (octets ptr end state ocount string s-start s-end error
+	    &aux (pos s-start) (last-octet 0))
+     (declare (optimize (speed 3) (safety 0) #|(space 0) (debug 0)|#)
+	      (type (simple-array (unsigned-byte 8) (*)) octets ocount)
+	      (type kernel:index pos end last-octet s-start s-end)
+	      (type (integer -1 (#.array-dimension-limit)) ptr)
+	      (type simple-string string)
+	      (ignorable state))
+     (catch 'end-of-octets
+       (loop for k of-type fixnum from 0 
+	  while (< pos s-end)
+	  do (setf (schar string pos)
+		   (octets-to-char ,extfmt state (aref ocount k)
+				   (if (>= ptr end)
+				       (throw 'end-of-octets nil)
+				       (aref octets (incf ptr)))
+				   (lambda (n) (decf ptr n))
+				   error))
+	  (incf pos)
+	  (incf last-octet (aref ocount k))))
+     (values string pos last-octet state)))
+
+;; Like OCTETS-TO-STRING, but we take an extra argument which is an
+;; array which will contain the number of octets read for each
+;; character placed in the output string.
+(defun octets-to-string-counted (octets ocount
+				 &key (start 0) end (external-format :default)
+				 (string nil stringp)
+				 (s-start 0) (s-end nil s-end-p)
+				 (state nil)
+				 error)
+  "Octets-to-string converts an array of octets in Octets to a string
+  according to the specified External-format.  The array of octets is
+  bounded by Start (defaulting ot 0) and End (defaulting to the end of
+  the array.  If String is not given, a new string is created.  If
+  String is given, the converted octets are stored in String, starting
+  at S-Start (defaulting to the 0) and ending at S-End (defaulting to
+  the length of String).  If the string is not large enough to hold
+  all of characters, then some octets will not be converted.  A State
+  may also be specified; this is used as the state of the external
+  format.
+
+  In Ocount, the number of octets read for each character in the
+  string is saved
+
+  Four values are returned: the string, the number of characters read,
+  the number of octets actually consumed and the new state of the
+  external format."
+  (declare (type (simple-array (unsigned-byte 8) (*)) octets ocount)
+	   (type kernel:index start s-start)
+	   (type (or kernel:index null) end)
+	   (type (or simple-string null) string))
+  (let ((s-end (if s-end-p
+		   s-end
+		   (if stringp
+		       (length string)
+		       (length octets)))))
+    (multiple-value-bind (string pos last-octet new-state)
+	(funcall (ef-octets-to-string-counted external-format)
+		 octets (1- start) (1- (or end (length octets)))
+		 state
+		 ocount
 		 (or string (make-string (length octets)))
 		 s-start s-end
 		 error)

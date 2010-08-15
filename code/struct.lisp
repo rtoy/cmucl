@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.24 2010/04/19 02:18:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.24.4.1 2010/08/15 15:07:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,11 +41,13 @@
   (misc #'do-nothing :type function)		; Less used methods
   ;;
   ;; A string to hold characters that have been converted from
-  ;; in-buffer.
+  ;; in-buffer.  The very first character is for unreading.  New
+  ;; characters are stored starting at index 1.
   #+unicode
   (string-buffer nil :type (or null simple-string))
   ;;
-  ;; Index into string-buffer where the next character should be read from
+  ;; Index into string-buffer where the next character should be read
+  ;; from.
   #+unicode
   (string-index 0 :type index)
   ;;
@@ -53,7 +55,13 @@
   ;; string-buffer, but the number of characters in the buffer, since
   ;; many octets may be consumed to produce one character.)
   #+unicode
-  (string-buffer-len 0 :type index))
+  (string-buffer-len 0 :type index)
+  ;;
+  ;; An array holding the number of octets consumed for each character
+  ;; in string-buffer.  This is basically unused, except by
+  ;; FILE-POSITION so that we can get the correct file position.
+  #+unicode
+  (octet-count nil :type (or null (simple-array (unsigned-byte 8) (*)))))
 
 (declaim (inline streamp))
 (defun streamp (stream)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.114 2010/07/20 22:53:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.114.2.1 2010/08/15 15:07:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1450,6 +1450,8 @@
 		;; FAST-READ-CHAR.)
 		(setf (lisp-stream-string-buffer stream)
 		      (make-string (1+ in-buffer-length)))
+		(setf (fd-stream-octet-count stream)
+		      (make-array in-buffer-length :element-type '(unsigned-byte 8)))
 		(setf (lisp-stream-string-buffer-len stream) 0)
 		(setf (lisp-stream-string-index stream) 0)))))
 	(setf input-size size)
@@ -1706,13 +1708,18 @@
 		     ;; The string buffer contains Lisp characters,
 		     ;; not octets!  To figure out how many octets
 		     ;; have not been already supplied, we need to
-		     ;; convert them back to the encoded format and
-		     ;; count the number of octets.
-		     (decf posn
-			   (length (string-encode (fd-stream-string-buffer stream)
-						  (fd-stream-external-format stream)
-						  (fd-stream-string-index stream)
-						  (fd-stream-string-buffer-len stream))))
+		     ;; count how many octets were consumed for all
+		     ;; the characters in the string bbuffer that have
+		     ;; not been supplied.
+		     (let ((ocount (fd-stream-octet-count stream)))
+		       (when ocount
+			 ;; Note: string-index starts at 1 (because
+			 ;; index 0 is for the unread-char), but
+			 ;; octet-count doesn't use that.  Hence,
+			 ;; subtract one from string-index.
+			 (loop for k of-type fixnum from (1- (fd-stream-string-index stream))
+			    below (fd-stream-string-buffer-len stream)
+			    do (decf posn (aref ocount k)))))
 		     (decf posn (- (fd-stream-ibuf-tail stream)
 				   (fd-stream-ibuf-head stream))))
 		 (when (fd-stream-unread stream) ;;@@
@@ -1841,11 +1848,18 @@
 			  (d (cond ((characterp decoding-error)
 				    (constantly (char-code decoding-error)))
 				   ((eq t decoding-error)
+				    #+unicode
 				    #'(lambda (&rest args)
 					(apply 'cerror
 					       (intl:gettext "Use Unicode replacement character instead")
 					       args)
-					stream:+replacement-character-code+))
+					stream:+replacement-character-code+)
+				    #-unicode
+				    #'(lambda (&rest args)
+					(apply 'cerror
+					       (intl:gettext "Use question mark character instead")
+					       args)
+					#\?))
 				   (t
 				    decoding-error))))
 		      (%make-fd-stream :fd fd
@@ -2201,15 +2215,23 @@
    :if-does-not-exist - one of :error, :create or nil
    :external-format - an external format name
    :decoding-error - How to handle decoding errors from the external format.
-                       Should be a symbol or function of 3 arguments.  If it
-                       returns, it should return a code point to use as the
-                       replacment.  NIL means use the default replacement scheme
-                       specified by the external format.  The function arguments
-                       are a format message string, the offending octet, and the
-                       number of octets read in the current encoding.   
+                       If a character, then that character is used as
+                       the replacment character for all errors.  If T,
+                       then a continuable error is signaled.  If
+                       continued, the Unicode replacement character is
+                       used.  Otherwise, it should be a symbol or
+                       function of 3 arguments.  If it returns, it
+                       should return a code point to use as the
+                       replacment.  The function arguments are a
+                       format message string, the offending octet, and
+                       the number of octets read in the current
+                       encoding.
    :encoding-error - Like :decoding-error, but for errors when encoding the
-                       stream.  The function arguments are a format message
-                       string and the incorrect codepoint.
+                       stream.  If a character, that character is used
+                       as the replacment code point.  Otherwise, it
+                       should be a symbol or function oof two
+                       arguments: a format message string and the
+                       incorrect codepoint.
 
   See the manual for details."
   (declare (ignore element-type external-format input-handle output-handle
