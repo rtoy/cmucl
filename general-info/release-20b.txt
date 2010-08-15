@@ -199,6 +199,10 @@ New in this release:
       cleaned up and should be far more robust against different
       versions of the OS.  The same is true on sparc as well as Mac OS
       X.
+    - It is possible to hash NaNs now.  (Previously gave an invalid
+      operation exception.)
+    - For SSE2 builds, = no longer signals an error if one operand is NaN.  This
+      matches what happens for x87.
 
   * Trac Tickets:
     #33: get-dispatch-macro-character doesn't signal errors in
@@ -209,6 +213,9 @@ New in this release:
       to build motifd.
     #39: non-standard lexical syntax
       The reader macros are no longer installed by default.
+    #36: file-position broken for utf16 and utf32.
+      FILE-POSITION returns the correct value for UTF16 and UTF32 when
+      there is a BOM in the file.
 
   * Other changes:
     - :freebsd4 is no longer a *feature*
