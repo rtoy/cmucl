@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-2.lisp,v 1.7 2010/07/12 14:42:11 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-2.lisp,v 1.7.4.1 2010/08/15 12:45:56 rtoy Exp $")
 
 (in-package "STREAM")
 (intl:textdomain "cmucl")
@@ -42,5 +42,9 @@ character and illegal outputs are replaced by a question mark.")
 		    (if ,code
 			(+ (the (unsigned-byte 7) ,present) 160)
 			(if ,error
-			    (funcall ,error "Cannot output codepoint #x~X to ISO8859-2 stream" ,code)
+			    (locally
+				;; No warnings about fdefinition
+				(declare (optimize (ext:inhibit-warnings 3)))
+			      (funcall ,error "Cannot output codepoint #x~X to ISO8859-2 stream"
+				       ,code))
 			    #x3F)))))))

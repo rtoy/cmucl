@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-1.lisp,v 1.6 2010/07/12 14:42:11 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-1.lisp,v 1.6.4.1 2010/08/15 12:45:56 rtoy Exp $")
 
 (in-package "STREAM")
 (intl:textdomain "cmucl")
@@ -25,7 +25,10 @@ character and illegal outputs are replaced by a question mark.")
   (code-to-octets (code state output error)
     `(,output (if (> ,code 255)
 		  (if ,error
-		      (funcall ,error "Cannot output codepoint #x~X to ISO8859-1 stream"
-			       ,code 1)
+		   (locally
+		       ;; No warnings about fdefinition
+		       (declare (optimize (ext:inhibit-warnings 3)))
+		     (funcall ,error "Cannot output codepoint #x~X to ISO8859-1 stream"
+			      ,code 1))
 		      #x3F)
 		  ,code))))
