@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.95 2010/08/09 22:45:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.96 2010/08/15 12:04:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -802,14 +802,16 @@
 	       ;; Convert all the octets, including the ones that we
 	       ;; haven't processed yet and the ones we just read in.
 	       (multiple-value-bind (s char-count octet-count new-state)
-		   (octets-to-string ibuf
-				     :start 0
-				     :end (fd-stream-in-length stream)
-				     :state (fd-stream-oc-state stream)
-				     :string sbuf
-				     :s-start 1
-				     :external-format (fd-stream-external-format stream)
-				     :error (fd-stream-octets-to-char-error stream))
+		   (stream::octets-to-string-counted
+		    ibuf
+		    (fd-stream-octet-count stream)
+		    :start 0
+		    :end (fd-stream-in-length stream)
+		    :state (fd-stream-oc-state stream)
+		    :string sbuf
+		    :s-start 1
+		    :external-format (fd-stream-external-format stream)
+		    :error (fd-stream-octets-to-char-error stream))
 		 (declare (ignore s))
 		 (setf (fd-stream-oc-state stream) new-state)
 		 (setf (lisp-stream-string-buffer-len stream) char-count)

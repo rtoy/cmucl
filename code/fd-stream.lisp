@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.115 2010/08/04 03:37:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.116 2010/08/15 12:04:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1450,6 +1450,8 @@
 		;; FAST-READ-CHAR.)
 		(setf (lisp-stream-string-buffer stream)
 		      (make-string (1+ in-buffer-length)))
+		(setf (fd-stream-octet-count stream)
+		      (make-array in-buffer-length :element-type '(unsigned-byte 8)))
 		(setf (lisp-stream-string-buffer-len stream) 0)
 		(setf (lisp-stream-string-index stream) 0)))))
 	(setf input-size size)
@@ -1706,13 +1708,18 @@
 		     ;; The string buffer contains Lisp characters,
 		     ;; not octets!  To figure out how many octets
 		     ;; have not been already supplied, we need to
-		     ;; convert them back to the encoded format and
-		     ;; count the number of octets.
-		     (decf posn
-			   (length (string-encode (fd-stream-string-buffer stream)
-						  (fd-stream-external-format stream)
-						  (fd-stream-string-index stream)
-						  (fd-stream-string-buffer-len stream))))
+		     ;; count how many octets were consumed for all
+		     ;; the characters in the string bbuffer that have
+		     ;; not been supplied.
+		     (let ((ocount (fd-stream-octet-count stream)))
+		       (when ocount
+			 ;; Note: string-index starts at 1 (because
+			 ;; index 0 is for the unread-char), but
+			 ;; octet-count doesn't use that.  Hence,
+			 ;; subtract one from string-index.
+			 (loop for k of-type fixnum from (1- (fd-stream-string-index stream))
+			    below (fd-stream-string-buffer-len stream)
+			    do (decf posn (aref ocount k)))))
 		     (decf posn (- (fd-stream-ibuf-tail stream)
 				   (fd-stream-ibuf-head stream))))
 		 (when (fd-stream-unread stream) ;;@@
