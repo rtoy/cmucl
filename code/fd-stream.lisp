@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.114.2.1 2010/08/15 15:07:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.114.2.2 2010/08/18 17:31:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1716,9 +1716,10 @@
 			 ;; Note: string-index starts at 1 (because
 			 ;; index 0 is for the unread-char), but
 			 ;; octet-count doesn't use that.  Hence,
-			 ;; subtract one from string-index.
+			 ;; subtract one from string-index and
+			 ;; string-buffer-len.
 			 (loop for k of-type fixnum from (1- (fd-stream-string-index stream))
-			    below (fd-stream-string-buffer-len stream)
+			    below (1- (fd-stream-string-buffer-len stream))
 			    do (decf posn (aref ocount k)))))
 		     (decf posn (- (fd-stream-ibuf-tail stream)
 				   (fd-stream-ibuf-head stream))))
