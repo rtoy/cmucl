@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.140 2010/08/17 20:17:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.141 2010/08/18 14:55:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1032,6 +1032,178 @@
        (list (interval-expt-> x y-)
 	     (interval-expt-> x y+))))))
 
+;;; Handle the case when x < 0, and when y is known to be an integer.
+;;; In this case, we can do something useful because the x^y is still
+;;; a real number if x and y are.
+(defun interval-expt-<-0 (x y)
+  #+(or)
+  (progn
+    (format t "x = ~A~%" x)
+    (format t "range-info y (~A) = ~A~%" y (interval-range-info y)))
+  (flet ((handle-positive-power-0 (x y)
+	   ;; -1 <= X <= 0 and Y is positive.  We need to consider if
+	   ;; Y contains an odd integer or not.  Find the smallest
+	   ;; even and odd integer (if possible) contained in Y.
+	   (let* ((y-lo (bound-value (interval-low y)))
+		  (min-odd (if (oddp y-lo)
+			       y-lo
+			       (let ((y-odd (1+ y-lo)))
+				 (if (interval-contains-p y-odd y)
+				     y-odd
+				     nil))))
+		  (min-even (if (evenp y-lo)
+				y-lo
+				(let ((y-even (1+ y-lo)))
+				  (if (interval-contains-p y-even y)
+				      y-even
+				      nil)))))
+	     ;; At least one of min-odd and min-even must be non-NIL!
+	     (assert (or min-odd min-even))
+	     (cond ((and min-odd min-even)
+		    ;; The Y interval contains both even and odd
+		    ;; integers.  Then the lower bound is (least
+		    ;; x)^(least positive odd), because this
+		    ;; creates the most negative value.  The upper
+		    ;; is (most x)^(least positive even), because
+		    ;; this is the most positive number.
+		    ;;
+		    ;; (Recall that if |x|<1, |x|^y gets smaller as y
+		    ;; increases.)
+		    (let ((lo (safe-expt (bound-value (interval-low x))
+					 min-odd))
+			  (hi (safe-expt (bound-value (interval-high x))
+					 min-even)))
+		      (list (make-interval :low lo :high hi))))
+		   (min-odd
+		    ;; Y consists of just one odd integer.
+		    (assert (oddp min-odd))
+		    (let ((lo (safe-expt (bound-value (interval-low x))
+					 min-odd))
+			  (hi (safe-expt (bound-value (interval-high x))
+					 min-odd)))
+		      (list (make-interval :low lo :high hi))))
+		   (min-even
+		    ;; Y consists of just one even integer.
+		    (assert (evenp min-even))
+		    (let ((lo (safe-expt (bound-value (interval-high x))
+					 min-even))
+			  (hi (safe-expt (bound-value (interval-low x))
+					 min-even)))
+		      (list (make-interval :low lo :high hi)))))))
+	 (handle-positive-power-1 (x y)
+	   ;; X <= -1, Y is a positive integer.  Find the largest even
+	   ;; and odd integer contained in Y, if possible.
+	   (let* ((y-hi (bound-value (interval-high y)))
+		  (max-odd (if (oddp y-hi)
+			       y-hi
+			       (let ((y-odd (1- y-hi)))
+				 (if (interval-contains-p y-odd y)
+				     y-odd
+				     nil))))
+		  (max-even (if (evenp y-hi)
+				y-hi
+				(let ((y-even (1- y-hi)))
+				  (if (interval-contains-p y-even y)
+				      y-even
+				      nil)))))
+	     ;; At least one of max-odd and max-even must be non-NIL!
+	     (assert (or max-odd max-even))
+	     (cond ((and max-odd max-even)
+		    ;; The Y interval contains both even and odd
+		    ;; integers.  Then the lower bound is (least
+		    ;; x)^(most positive odd), because this
+		    ;; creates the most negative value.  The upper
+		    ;; is (least x)^(most positive even), because
+		    ;; this is the most positive number.
+		    ;;
+		    (let ((lo (safe-expt (bound-value (interval-low x))
+					 max-odd))
+			  (hi (safe-expt (bound-value (interval-low x))
+					 max-even)))
+		      (list (make-interval :low lo :high hi))))
+		   (max-odd
+		    ;; Y consists of just one odd integer.
+		    (assert (oddp max-odd))
+		    (let ((lo (safe-expt (bound-value (interval-low x))
+					 max-odd))
+			  (hi (safe-expt (bound-value (interval-high x))
+					 max-odd)))
+		      (list (make-interval :low lo :high hi))))
+		   (max-even
+		    ;; Y consists of just one even integer.
+		    (assert (evenp max-even))
+		    (let ((lo (safe-expt (bound-value (interval-high x))
+					 max-even))
+			  (hi (safe-expt (bound-value (interval-low x))
+					 max-even)))
+		      (list (make-interval :low lo :high hi))))))))
+    ;; We need to split into x < -1 and -1 <= x <= 0, first.
+    (case (interval-range-info x -1)
+      ('+
+       ;; -1 <= x <= 0
+       #+(or)
+       (format t "x range +~%")
+       (case (interval-range-info y 0)
+	 ('+
+	  (handle-positive-power-0 x y))
+	 ('-
+	  ;; Y is negative.  We should do something better
+	  ;; than this because there's an extra rounding which
+	  ;; we shouldn't do.
+	  #+(or)
+	  (format t "Handle y neg~%")
+	  (let ((unit (make-interval :low 1 :high 1))
+		(result (handle-positive-power-0 x (interval-neg y))))
+	    #+(or)
+	    (format t "result = ~A~%" result)
+	    (mapcar #'(lambda (r)
+			(interval-div unit r))
+		    result)))
+	 (t
+	  ;; Split the interval and try again.  Since we know y is an
+	  ;; integer, we don't need interval-split.  Also we want to
+	  ;; handle an exponent of 0 ourselves as a special case.
+	  (multiple-value-bind (y- y+)
+	      (values (make-interval :low (interval-low y)
+				     :high -1)
+		      (make-interval :low 1
+				     :high (interval-high y)))
+	    (append (list (make-interval :low 1 :high 1))
+		    (interval-expt-<-0 x y-)
+		    (interval-expt-<-0 x y+))))))
+      ('-
+       ;; x < -1
+       (case (c::interval-range-info y)
+	 ('+
+	  ;; Y is positive.  We need to consider if Y contains an
+	  ;; odd integer or not.
+	  ;;
+	  (handle-positive-power-1 x y))
+	 ('-
+	  ;; Y is negative.  Do this in a better way
+	  (let ((unit (make-interval :low 1 :high 1))
+		(result (handle-positive-power-1 x (interval-neg y))))
+	    (mapcar #'(lambda (r)
+			(interval-div unit r))
+		    result)))
+	 (t
+	  ;; Split the interval and try again.
+	  #+(or)
+	  (format t "split y ~A~%" y)
+	  (multiple-value-bind (y- y+)
+	      (values (make-interval :low (interval-low y) :high -1)
+		      (make-interval :low 1 :high (interval-high y)))
+	    (append (list (make-interval :low 1 :high 1))
+		    (interval-expt-<-0 x y-)
+		    (interval-expt-<-0 x y+))))))
+      (t
+       #+(or)
+       (format t "splitting x ~A~%" x)
+       (destructuring-bind (neg pos)
+	   (interval-split -1 x t t)
+	 (append (interval-expt-<-0 neg y)
+		 (interval-expt-<-0 pos y)))))))
+
 ;;; Handle the case when x <= 1
 (defun interval-expt-< (x y &optional integer-power-p)
   (case (c::interval-range-info x 0d0)
@@ -1072,174 +1244,11 @@
     ('-
      ;; The case where x <= 0.
      (cond (integer-power-p
-	    ;; Y is an integer, so we can do something useful.  But we
-	    ;; need to split into x < -1 and -1 <= x <= 0, first
-	    #+(or)
-	    (progn
-	      (format t "integer-power-p = ~A~%" integer-power-p)
-	      (format t "x = ~A~%" x)
-	      (format t "range-info y (~A) = ~A~%" y (interval-range-info y)))
-	    (flet ((handle-positive-power-0 (x y)
-		     ;; -1 <= X <= 0 and Y is positive.  We need to
-		     ;; consider if Y contains an odd integer or not.
-		     ;;
-		     (let* ((y-lo (bound-value (interval-low y)))
-			    (min-odd (if (oddp y-lo)
-					 y-lo
-					 (let ((y-odd (1+ y-lo)))
-					   (if (interval-contains-p y-odd y)
-					       y-odd
-					       nil))))
-			    (min-even (if (evenp y-lo)
-					  y-lo
-					  (let ((y-even (1+ y-lo)))
-					    (if (interval-contains-p y-even y)
-						y-even
-						nil)))))
-		       ;; At least one of min-odd and min-even must be non-NIL!
-		       (assert (or min-odd min-even))
-		       (cond ((and min-odd min-even)
-			      ;; The Y interval contains both even and odd
-			      ;; integers.  Then the lower bound is (least
-			      ;; x)^(least positive odd), because this
-			      ;; creates the most negative value.  The upper
-			      ;; is (most x)^(least positive even), because
-			      ;; this is the most positive number.
-			      ;;
-			      (let ((lo (safe-expt (bound-value (interval-low x))
-						   min-odd))
-				    (hi (safe-expt (bound-value (interval-high x))
-						   min-even)))
-				(list (make-interval :low lo :high hi))))
-			     (min-odd
-			      ;; Y consists of just one odd integer.
-			      (assert (oddp min-odd))
-			      (let ((lo (safe-expt (bound-value (interval-low x))
-						   min-odd))
-				    (hi (safe-expt (bound-value (interval-high x))
-						   min-odd)))
-				(list (make-interval :low lo :high hi))))
-			     (min-even
-			      ;; Y consists of just one even integer.
-			      (assert (evenp min-even))
-			      (let ((lo (safe-expt (bound-value (interval-high x))
-						   min-even))
-				    (hi (safe-expt (bound-value (interval-low x))
-						   min-even)))
-				(list (make-interval :low lo :high hi)))))))
-		   (handle-positive-power-1 (x y)
-		     ;; X <= -1, Y is a positive integer.
-		     (let* ((y-hi (bound-value (interval-high y)))
-			    (max-odd (if (oddp y-hi)
-					 y-hi
-					 (let ((y-odd (1- y-hi)))
-					   (if (interval-contains-p y-odd y)
-					       y-odd
-					       nil))))
-			    (max-even (if (evenp y-hi)
-					  y-hi
-					  (let ((y-even (1- y-hi)))
-					    (if (interval-contains-p y-even y)
-						y-even
-						nil)))))
-		       ;; At least one of max-odd and max-even must be non-NIL!
-		       (assert (or max-odd max-even))
-		       (cond ((and max-odd max-even)
-			      ;; The Y interval contains both even and odd
-			      ;; integers.  Then the lower bound is (least
-			      ;; x)^(most positive odd), because this
-			      ;; creates the most negative value.  The upper
-			      ;; is (least x)^(most positive even), because
-			      ;; this is the most positive number.
-			      ;;
-			      (let ((lo (safe-expt (bound-value (interval-low x))
-						   max-odd))
-				    (hi (safe-expt (bound-value (interval-low x))
-						   max-even)))
-				(list (make-interval :low lo :high hi))))
-			     (max-odd
-			      ;; Y consists of just one odd integer.
-			      (assert (oddp max-odd))
-			      (let ((lo (safe-expt (bound-value (interval-low x))
-						   max-odd))
-				    (hi (safe-expt (bound-value (interval-high x))
-						   max-odd)))
-				(list (make-interval :low lo :high hi))))
-			     (max-even
-			      ;; Y consists of just one even integer.
-			      (assert (evenp max-even))
-			      (let ((lo (safe-expt (bound-value (interval-high x))
-						   max-even))
-				    (hi (safe-expt (bound-value (interval-low x))
-						   max-even)))
-				(list (make-interval :low lo :high hi))))))))
-	      (case (interval-range-info x -1)
-		('+
-		 ;; -1 <= x <= 0
-		 #+(or)
-		 (format t "x range +~%")
-		 (case (interval-range-info y 0)
-		   ('+
-		    (handle-positive-power-0 x y))
-		   ('-
-		    ;; Y is negative.  We should do something better
-		    ;; than this because there's an extra rounding which
-		    ;; we shouldn't do.
-		    #+(or)
-		    (format t "Handle y neg~%")
-		    (let ((unit (make-interval :low 1 :high 1))
-			  (result (handle-positive-power-0 x (interval-neg y))))
-		      #+(or)
-		      (format t "result = ~A~%" result)
-		      (mapcar #'(lambda (r)
-				  (interval-div unit r))
-			      result)))
-		   (t
-		    ;; Split the interval and try again.
-		    (multiple-value-bind (y- y+)
-			(values (make-interval :low (interval-low y)
-					       :high -1)
-				(make-interval :low 1
-					       :high (interval-high y)))
-		      (append (list (make-interval :low 1 :high 1))
-			      (interval-expt-< x y- integer-power-p)
-			      (interval-expt-< x y+ integer-power-p))))))
-		('-
-		 ;; x < -1
-		 (case (c::interval-range-info y)
-		   ('+
-		    ;; Y is positive.  We need to consider if Y contains an
-		    ;; odd integer or not.
-		    ;;
-		    (handle-positive-power-1 x y))
-		   ('-
-		    ;; Y is negative.  Do this in a better way
-		    (let ((unit (make-interval :low 1 :high 1))
-			  (result (handle-positive-power-1 x (interval-neg y))))
-		      (mapcar #'(lambda (r)
-				  (interval-div unit r))
-			      result)))
-		   (t
-		    ;; Split the interval and try again.
-		    #+(or)
-		    (format t "split y ~A~%" y)
-		    (multiple-value-bind (y- y+)
-			(values (make-interval :low (interval-low y) :high -1)
-				(make-interval :low 1 :high (interval-high y)))
-		      (append (list (make-interval :low 1 :high 1))
-			      (interval-expt-< x y- integer-power-p)
-			      (interval-expt-< x y+ integer-power-p))))))
-		(t
-		 #+(or)
-		 (format t "splitting x ~A~%" x)
-		 (destructuring-bind (neg pos)
-		     (interval-split -1 x t t)
-		   (append (interval-expt-< neg y integer-power-p)
-			   (interval-expt-< pos y integer-power-p)))))))
-	    (t
-	     ;; Y is not an integer.  Just give up and return an
-	     ;; unbounded interval.
-	     (list (c::make-interval :low nil :high nil)))))
+	    (interval-expt-<-0 x y))
+	   (t
+	    ;; Y is not an integer.  Just give up and return an
+	    ;; unbounded interval.
+	    (list (c::make-interval :low nil :high nil)))))
     (t
      (destructuring-bind (neg pos)
 	 (interval-split 0 x t t)
