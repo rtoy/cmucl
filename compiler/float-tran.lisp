@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.141 2010/08/18 14:55:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.142 2010/08/18 15:39:01 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1057,8 +1057,6 @@
 				  (if (interval-contains-p y-even y)
 				      y-even
 				      nil)))))
-	     ;; At least one of min-odd and min-even must be non-NIL!
-	     (assert (or min-odd min-even))
 	     (cond ((and min-odd min-even)
 		    ;; The Y interval contains both even and odd
 		    ;; integers.  Then the lower bound is (least
@@ -1089,25 +1087,32 @@
 					 min-even))
 			  (hi (safe-expt (bound-value (interval-low x))
 					 min-even)))
-		      (list (make-interval :low lo :high hi)))))))
+		      (list (make-interval :low lo :high hi))))
+		   (t
+		    ;; No mininum even or odd integer, so Y has no
+		    ;; lower bound
+		    (list (make-interval :low nil :high nil))))))
 	 (handle-positive-power-1 (x y)
 	   ;; X <= -1, Y is a positive integer.  Find the largest even
 	   ;; and odd integer contained in Y, if possible.
 	   (let* ((y-hi (bound-value (interval-high y)))
-		  (max-odd (if (oddp y-hi)
-			       y-hi
-			       (let ((y-odd (1- y-hi)))
-				 (if (interval-contains-p y-odd y)
-				     y-odd
-				     nil))))
-		  (max-even (if (evenp y-hi)
-				y-hi
-				(let ((y-even (1- y-hi)))
-				  (if (interval-contains-p y-even y)
-				      y-even
-				      nil)))))
+		  (max-odd (if y-hi
+			       (if (oddp y-hi)
+				   y-hi
+				   (let ((y-odd (1- y-hi)))
+				     (if (interval-contains-p y-odd y)
+					 y-odd
+					 nil)))
+			       nil))
+		  (max-even (if y-hi
+				(if (evenp y-hi)
+				    y-hi
+				    (let ((y-even (1- y-hi)))
+				      (if (interval-contains-p y-even y)
+					  y-even
+					  nil)))
+				nil)))
 	     ;; At least one of max-odd and max-even must be non-NIL!
-	     (assert (or max-odd max-even))
 	     (cond ((and max-odd max-even)
 		    ;; The Y interval contains both even and odd
 		    ;; integers.  Then the lower bound is (least
@@ -1136,7 +1141,11 @@
 					 max-even))
 			  (hi (safe-expt (bound-value (interval-low x))
 					 max-even)))
-		      (list (make-interval :low lo :high hi))))))))
+		      (list (make-interval :low lo :high hi))))
+		   (t
+		    ;; No maximum even or odd integer, which means y
+		    ;; is no upper bound.
+		    (list (make-interval :low nil :high nil)))))))
     ;; We need to split into x < -1 and -1 <= x <= 0, first.
     (case (interval-range-info x -1)
       ('+
