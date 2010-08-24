@@ -19,9 +19,6 @@ New in this release:
   * Known issues:
     - CMUCL cannot create working executable images anymore on
       FreeBSD.
-    - FILE-POSITION is sometimes off by 2 (4) for input files for
-      UTF-16 (UTF-32) encodings.  This is caused by the BOM
-      (byte-order mark) which is essentially never seen by Lisp.
     - Executable images on Linux may not be able to be created on some
       versions of Linux.  The problem is in GNU ld which doesn't
       allocate enough phdrs to create an executable. 
@@ -125,8 +122,7 @@ New in this release:
       limit, the limit was set to the power.  We really wanted the
       absolute value of the power to used as the new limit.
     - FILE-POSITION was returning incorrect values for file streams on
-      Unicode builds.  This is fixed now.  But also see the known
-      issue listed above.
+      Unicode builds.  This is fixed now.
     - The error-output and trace-file files for COMPILE-FILE are now
       opened using the same external format as specified in
       COMPILE-FILE.  Previously, they were opened using the default
