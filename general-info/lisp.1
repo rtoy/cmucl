@@ -6,7 +6,7 @@
 .\" If you want to use this code or any part of CMU Common Lisp, please contact
 .\" Scott Fahlman or slisp-group@cs.cmu.edu.
 .\"
-.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.14 2009/03/11 01:19:27 rtoy Rel $
+.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.14.18.1 2010/08/25 21:47:15 rtoy Exp $
 .\"
 .\" **********************************************************************
 .\"
@@ -28,6 +28,12 @@ stderr.  The optional
 provide operands for some switches.  These switches are defined:
 
 .TP 10n
+.BR \-help
+Prints out the command line options and exits.
+.TP
+.BR \--help
+Same as -help.
+.TP
 .BR \-core " filename"
 Specifies the suspended Lisp image (or `core file') to start up.  
 .TP
@@ -193,11 +199,28 @@ Various postscript and text documentation files.
 .BR bin/lisp
 The lisp startup program.  This directory should be in PATH.
 .TP
-.BR lib/cmucl/lib/lisp.core
-The suspended Lisp image.
+.BR lib/cmucl/sample-wrapper
+An example shell script that setups up the environment and run lisp.
+This is not normally needed unless you want some special
+configuration. 
 .TP
-.BR lib/cmucl/lib/site-init.lisp
-Site specific initialization (see README file.)
+.BR lib/cmucl/lib/lisp.core
+The suspended Lisp image.  But for x86 machines the suspended core is
+named lisp-x87.core or lisp-sse2.core, depending on whether the x87 or
+sse2 core is used.
+.TP
+.BR lib/cmucl/lib/site-init.lisp, generic-site.lisp
+Site specific initialization (see README file.)  The generic-site.lisp
+file is a template that can be used to create site-init.lisp.  (Note:
+installation of CMUCL does not create or destroy any site-init.lisp file.)
+.TP
+.BR lib/cmucl/lib/lisp.a
+An archive file of all of the C runtime code.  This is needed when
+creating and executable image.
+.TP
+.BR lib/cmucl/lib/linker.sh, linker-x86.sh
+Shell scripts to perform the necessary linking to create an executable
+image.
 .TP
 .BR lib/cmucl/lib/hemlock11.*, lib/cmucl/lib/mh-scan, lib/cmucl/lib/spell-dictionary.bin
 Hemlock files.
@@ -205,13 +228,29 @@ Hemlock files.
 .BR lib/cmucl/lib/fonts/
 X11 fonts for Hemlock.
 .TP
+.BR lib/cmucl/lib/locale
+This directory contains template files for CMUCL messages.
+Translations of the CMUCL messages are also stored here.
+.TP
 .BR lib/cmucl/lib/XKeysymDB
 Database of X Keysym names for Motif.
 .TP
 .BR lib/cmucl/lib/load-foreign.csh
 Script used by LOAD-FOREIGN to run "ld" on some platforms.
 .TP
-.BR ~/init.lisp,~/.cmucl-init.lisp
+.BR lib/cmucl/lib/contrib
+This directory contains contrib modules, including asdf2 and
+mk-defsystem.
+.TP
+.BR lib/cmucl/lib/ext-formats
+This directory contains lisp files that implement the various external
+formats supported by CMUCL.
+.TP
+.BR lib/cmucl/lib/subsystems
+This directory contains the subsystems for CMUCL.  The subsystems
+include CLX, CLM, Gray streams, Hemlock, and Simple Streams.
+.TP
+.BR ~/init.lisp,~/.cmucl\-init.lisp
 User customization files loaded at lisp startup; either name is acceptable.
 Init files can be compiled.
 .TP
