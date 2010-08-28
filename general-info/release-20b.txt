@@ -82,6 +82,11 @@ New in this release:
       changed.
     - The sparc port now supports the :executable feature.
     - The Mac OS X port now support the :executable feature.
+    - Try to return the operation and the operands for arithmetic
+      errors on x86 with SSE2 like what is done on Sparc.  Operands in
+      memory are not extracted, though, and for packed operations, the
+      operands are returned as a list of the "real" and "imaginary"
+      parts of the packed number.
 
   * ANSI compliance fixes:
     - COMPILE will update the macro-function if the specified name

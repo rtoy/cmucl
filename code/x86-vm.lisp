@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.37 2010/06/22 15:35:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.38 2010/08/28 00:09:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -247,8 +247,10 @@
 
 ;;; SIGCONTEXT-FLOAT-REGISTER  --  Interface
 ;;;
-;;; Like SIGCONTEXT-REGISTER, but returns the value of a float register.
-;;; Format is the type of float to return.
+;;; Like SIGCONTEXT-REGISTER, but returns the value of a float
+;;; register.  Format is the type of float to return.  For SSE2, also
+;;; support complex numbers.  The format in this case is
+;;; complex-single-float and complex-double-float.
 ;;;
 (defun sigcontext-float-register (scp index format)
   (declare (type (alien (* sigcontext)) scp))
@@ -256,7 +258,25 @@
 			  (function system-area-pointer
 				    (* sigcontext)
 				    (integer 32)))))
-    (coerce (sap-ref-long (alien-funcall fn scp index) 0) format)))
+    #+x87
+    (coerce (sap-ref-long (alien-funcall fn scp index) 0) format)
+    #+sse2
+    (if (< index 8)
+	(coerce (sap-ref-long (alien-funcall fn scp index) 0) format)
+	(ecase format
+	  (single-float
+	   (sap-ref-single (alien-funcall fn scp index) 0))
+	  (double-float
+	   (sap-ref-double (alien-funcall fn scp index) 0))
+	  (complex-single-float
+	   ;; Need to extract the parts out out of the XMM register
+	   (let ((addr (alien-funcall fn scp index)))
+	     (complex (sap-ref-single addr 0)
+		      (sap-ref-single addr 4))))
+	  (complex-double-float
+	   (let ((addr (alien-funcall fn scp index)))
+	     (complex (sap-ref-double addr 0)
+		      (sap-ref-double addr 8))))))))
 
 ;;;
 (defun %set-sigcontext-float-register (scp index format new)
@@ -265,9 +285,22 @@
 			  (function system-area-pointer
 				    (* sigcontext)
 				    (integer 32)))))
-    (let* ((sap (alien-funcall fn scp index))
-	   (result (setf (sap-ref-long sap 0) (coerce new 'long-float))))
-      (coerce result format))))
+    (let* ((sap (alien-funcall fn scp index)))
+      (if (< index 8)
+	  (let ((result (setf (sap-ref-long sap 0) (coerce new 'long-float))))
+	    (coerce result format))
+	  (ecase format
+	    (single-float
+	     (setf (sap-ref-single sap 0) new))
+	    (double-float
+	     (setf (sap-ref-double sap 0) new))
+	    (complex-single-float
+	     (setf (sap-ref-single sap 0) (realpart new))
+	     (setf (sap-ref-single sap 4) (imagpart new)))
+	    (complex-double-float
+	     (setf (sap-ref-double sap 0) (realpart new))
+	     (setf (sap-ref-double sap 8) (imagpart new))))))))
+
 ;;;
 (defsetf sigcontext-float-register %set-sigcontext-float-register)
 
@@ -501,3 +534,124 @@
       (when (< entry (lisp::foreign-linkage-symbols))
 	(lisp::foreign-linkage-entry entry)))))
 )
+
+(in-package "X86")
+
+(defun get-fp-operation (scp)
+  (declare (type (alien (* sigcontext)) scp))
+  ;; Get the offending FP instruction from the context.  We return the
+  ;; operation associated with the FP instruction, the precision of
+  ;; the operation, and the operands of the instruction.
+
+  ;; For SSE2, the PC should be at the offending SSE2 instruction
+  (let ((pc (sigcontext-program-counter scp)))
+    #+(or)
+    (progn
+      (format *debug-io* "~&PC = ~S~%" pc)
+      (format *debug-io* " ~2,'0X~%" (sys:sap-ref-8 pc 0))
+      (format *debug-io* " ~2,'0X~%" (sys:sap-ref-8 pc 1))
+      (format *debug-io* " ~2,'0X~%" (sys:sap-ref-8 pc 2))
+      (format *debug-io* " ~2,'0X~%" (sys:sap-ref-8 pc 3))
+      (format *debug-io* " ~2,'0X~%" (sys:sap-ref-8 pc 4))
+      (finish-output *debug-io*))
+
+    (labels
+	((fop (x)
+	   ;; Look at the byte and see what kind of operation is
+	   ;; encoded.
+	   (cdr (assoc x '((#x58 . +) (#x59 . *) (#x5c . -) (#x5e . /)))))
+	 (decode-mod-r/m (byte)
+	   ;; Return the mod bits, the r/m bits, and the value, in
+	   ;; that order.  See, for example, Table 2-1 in the Intel 64
+	   ;; and IA-32 Architectures Software Developer's Manual,
+	   ;; Volume 2A.
+	   (values (ldb (byte 2 6) byte)
+		   (ldb (byte 3 0) byte)
+		   (ldb (byte 3 3) byte)))
+	 (decode-operands (offset format)
+	   (multiple-value-bind (mod r/m v)
+	       (decode-mod-r/m (sys:sap-ref-8 pc offset))
+	     #+(or)
+	     (format *debug-io* "~&mod = #b~2,'0b~%r/m = #b~3,'0b~%v   = #b~3,'0b~%" mod r/m v)
+	     ;; I'm lazy right now and don't want to try to fetch the
+	     ;; operand from memory if the source is in memory.  Just
+	     ;; return NIL for that.
+	     (values (sigcontext-float-register scp (+ 8 v) format)
+		     (when (= mod #b11)
+		       (sigcontext-float-register scp (+ 8 r/m) format))))))
+      ;; Look at the instruction and see if it's one of the arithmetic
+      ;; SSE2 instructions.  If so, figure out the operation and try
+      ;; to get the operands.  Currently, if an operand is in memory,
+      ;; we don't try to fetch it.
+      ;;
+      ;; Also, for the packed operations that hold complex numbers,
+      ;; it's not exactly clear what to do.  The main issue is that
+      ;; when multiplying or dividing complex numbers, there is no
+      ;; single instruction.  The operation is decomposed into several
+      ;; operations and the contents of the packed register may not
+      ;; have any simple relationship to the Lisp complex number.  For
+      ;; now, instead of returning the complex number, we return a
+      ;; list of the components.  Perhaps this is better than nothing,
+      ;; but might be confusing.
+      (cond ((and (= (sys:sap-ref-8 pc 0) #xf2)
+		  (= (sys:sap-ref-8 pc 1) #x0f)
+		  (fop (sys:sap-ref-8 pc 2)))
+	     ;; ADDSD:  F2 0F 58
+	     ;; MULSD:  F2 0F 59
+	     ;; SUBSD:  F2 0F 5C
+	     ;; DIVSD:  F2 0F 5E
+	     ;; SQRTSD: F2 0F 51
+	     (multiple-value-bind (dst src)
+		 (decode-operands 3 'double-float)
+	       (values (fop (sys:sap-ref-8 pc 2)) dst src)))
+	    ((and (= (sys:sap-ref-8 pc 0) #xf3)
+		  (= (sys:sap-ref-8 pc 1) #x0f)
+		  (fop (sys:sap-ref-8 pc 2)))
+	     ;; ADDSS:  F3 0F 58
+	     ;; MULSS:  F3 0F 59
+	     ;; SUBSS:  F3 0F 5C
+	     ;; DIVSS:  F3 0F 5E
+	     ;; SQRTSS: F3 0F 51
+	     (multiple-value-bind (dst src)
+		 (decode-operands 3 'single-float)
+	       (values (fop (sys:sap-ref-8 pc 2)) dst src)))
+	    ((and (= (sys:sap-ref-8 pc 0) #x66)
+		  (= (sys:sap-ref-8 pc 1) #x0f)
+		  (fop (sys:sap-ref-8 pc 2)))
+	     ;; ADDPD:  66 0F 58
+	     ;; MULPD:  66 0F 59
+	     ;; SUBPD:  66 0F 5C
+	     ;; DIVPD:  66 0F 5E
+	     (multiple-value-bind (dst src)
+		 (decode-operands 3 'complex-double-float)
+	       (values (fop (sys:sap-ref-8 pc 2))
+		       (list (realpart dst)
+			     (imagpart dst))
+		       (when src
+			 (list (realpart src)
+			       (imagpart src))))))
+	    ((and (= (sys:sap-ref-8 pc 0) #x0f)
+		  (fop (sys:sap-ref-8 pc 1)))
+	     ;; ADDPS:  0F 58
+	     ;; MULPS:  0F 59
+	     ;; SUBPS:  0F 5C
+	     ;; DIVPS:  0F 5E
+	     (multiple-value-bind (dst src)
+		 (decode-operands 2 'complex-single-float)
+	       (values (fop (sys:sap-ref-8 pc 1))
+		       (list (realpart dst)
+			     (imagpart dst))
+		       (when src
+			 (list (realpart src)
+			       (imagpart src))))))
+	    (t
+	     (values nil nil nil nil))))))
+
+(defun get-fp-operands (scp modes)
+  (declare (type (alien (* sigcontext)) scp)
+	   (ignore modes))
+  ;; From the offending FP instruction, get the operation and
+  ;; operands, if we can.
+  (multiple-value-bind (fop dst src)
+      (get-fp-operation scp)
+    (values fop (list dst src))))
