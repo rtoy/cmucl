@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.37 2010/06/22 15:35:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.37.4.1 2010/08/28 00:01:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -247,8 +247,10 @@
 
 ;;; SIGCONTEXT-FLOAT-REGISTER  --  Interface
 ;;;
-;;; Like SIGCONTEXT-REGISTER, but returns the value of a float register.
-;;; Format is the type of float to return.
+;;; Like SIGCONTEXT-REGISTER, but returns the value of a float
+;;; register.  Format is the type of float to return.  For SSE2, also
+;;; support complex numbers.  The format in this case is
+;;; complex-single-float and complex-double-float.
 ;;;
 (defun sigcontext-float-register (scp index format)
   (declare (type (alien (* sigcontext)) scp))
@@ -256,7 +258,25 @@
 			  (function system-area-pointer
 				    (* sigcontext)
 				    (integer 32)))))
-    (coerce (sap-ref-long (alien-funcall fn scp index) 0) format)))
+    #+x87
+    (coerce (sap-ref-long (alien-funcall fn scp index) 0) format)
+    #+sse2
+    (if (< index 8)
+	(coerce (sap-ref-long (alien-funcall fn scp index) 0) format)
+	(ecase format
+	  (single-float
+	   (sap-ref-single (alien-funcall fn scp index) 0))
+	  (double-float
+	   (sap-ref-double (alien-funcall fn scp index) 0))
+	  (complex-single-float
+	   ;; Need to extract the parts out out of the XMM register
+	   (let ((addr (alien-funcall fn scp index)))
+	     (complex (sap-ref-single addr 0)
+		      (sap-ref-single addr 4))))
+	  (complex-double-float
+	   (let ((addr (alien-funcall fn scp index)))
+	     (complex (sap-ref-double addr 0)
+		      (sap-ref-double addr 8))))))))
 
 ;;;
 (defun %set-sigcontext-float-register (scp index format new)
@@ -265,9 +285,21 @@
 			  (function system-area-pointer
 				    (* sigcontext)
 				    (integer 32)))))
-    (let* ((sap (alien-funcall fn scp index))
-	   (result (setf (sap-ref-long sap 0) (coerce new 'long-float))))
-      (coerce result format))))
+    (let* ((sap (alien-funcall fn scp index)))
+      (if (< index 8)
+	  (let ((result (setf (sap-ref-long sap 0) (coerce new 'long-float))))
+	    (coerce result format))
+	  (ecase format
+	    (single-float
+	     (setf (sap-ref-single sap 0) new))
+	    (double-float
+	     (setf (sap-ref-double sap 0) new))
+	    (complex-single-float
+	     (setf (sap-ref-single sap 0) (realpart new))
+	     (setf (sap-ref-single sap 4) (imagpart new)))
+	    (complex-double-float
+	     (setf (sap-ref-double sap 0) (realpart new))
+	     (setf (sap-ref-double sap 8) (imagpart new))))))))
 ;;;
 (defsetf sigcontext-float-register %set-sigcontext-float-register)
 
