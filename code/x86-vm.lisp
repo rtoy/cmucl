@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.38 2010/08/28 00:09:37 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.39 2010/08/30 20:01:15 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -652,6 +652,9 @@
 	   (ignore modes))
   ;; From the offending FP instruction, get the operation and
   ;; operands, if we can.
+  ;;
+  ;; FIXME: How do we distinguish between an exception caused by SSE2
+  ;; and one caused by x87?
   (multiple-value-bind (fop dst src)
       (get-fp-operation scp)
     (values fop (list dst src))))
