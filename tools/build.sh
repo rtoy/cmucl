@@ -32,7 +32,7 @@
 #
 # For more information see src/BUILDING.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.31 2010/08/01 01:18:36 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.32 2010/08/31 22:24:09 rtoy Exp $
 #
 
 ENABLE2="yes"
@@ -88,7 +88,7 @@ usage ()
     echo '    -f mode   FPU mode:  x87, sse2, or auto.  Default is auto'
     echo '    -P        On the last build, generate cmucl.pot'
     echo "    -?        This help message"
-
+    echo "    -w        Specify a different build-world.sh script"
     exit 1
 }
 
@@ -118,11 +118,11 @@ buildit ()
     if [ "$ENABLE" = "yes" ]; 
     then
 	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET || { echo "Failed: $TOOLDIR/clean-target.sh"; exit 1; }
-	time $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT || { echo "Failed: $TOOLDIR/build-world.sh"; exit 1; }
+	time $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
 	$MAKE -C $TARGET/lisp $MAKE_TARGET || { echo "Failed: $MAKE -C $TARGET/lisp"; exit 1; }
 	if [ "$BUILD_WORLD2" = "yes" ];
 	then
-	    $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT || { echo "Failed: $TOOLDIR/build-world.sh"; exit 1; }
+	    $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
 	fi
 	$TOOLDIR/load-world.sh $TARGET "$VERSION" || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
 
@@ -132,7 +132,9 @@ buildit ()
 }
 
 FPU_MODE=
-while getopts "123Po:b:v:uB:C:i:f:?" arg
+BUILDWORLD="$TOOLDIR/build-world.sh"
+
+while getopts "123Po:b:v:uB:C:i:f:w:?" arg
 do
     case $arg in
 	1) ENABLE2="no" ;;
@@ -148,6 +150,7 @@ do
         i) INTERACTIVE_BUILD="$OPTARG" ;;
 	f) FPU_MODE="-fpu $OPTARG" ;;
         P) BUILD_POT=yes ;;
+        w) BUILDWORLD="$OPTARG" ;;
 	\?) usage
 	    ;;
     esac
