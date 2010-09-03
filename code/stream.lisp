@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.94.4.3 2010/09/02 23:47:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.94.4.4 2010/09/03 02:18:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -738,7 +738,7 @@
       (format t "in-length = ~A~%" in-length)
       (format t "ibuf before = ~A~%" ibuf)
       (format t "sbuf before = ~S~%" (subseq (lisp-stream-string-buffer stream) 0
-					     (1+ (lisp-stream-string-buffer-len stream)))))
+					     (lisp-stream-string-buffer-len stream))))
 
     ;; Copy the stuff we haven't read from in-buffer to the beginning
     ;; of the buffer.
@@ -798,7 +798,7 @@
 	       #+(or debug-frc-sr)
 	       (format t "slen = ~A~%" slen)
 	       (when (plusp slen)
-		 (setf (schar sbuf 0) (schar sbuf slen)))
+		 (setf (schar sbuf 0) (schar sbuf (1- slen))))
 	       #+(or debug-frc-sr)
 	       (progn
 		 (format t "sbuf[0] = ~S~%" (schar sbuf 0))
@@ -852,6 +852,7 @@
 				      (lisp-stream-string-buffer-len stream))
 				(funcall (lisp-stream-in stream) stream eof-errorp eof-value))
 			       (t
+				(setf (fd-stream-in-length stream) (+ count index))
 				(convert-buffer)))))))))))))
 
 ;;; FAST-READ-BYTE-REFILL  --  Interface
