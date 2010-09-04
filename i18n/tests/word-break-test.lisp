@@ -5,7 +5,7 @@
 (defvar *word-break-test* "target:i18n/tests/WordBreakTest.txt")
 
 
-(defun parse-line (line)
+(defun parse-word-break-line (line)
   (let* ((eos (or (position #\# line)
 		  (length line))))
     ;; See WordBreakTest.txt for the format of the file.  Basically
@@ -63,13 +63,13 @@
   (let ((count 0)
 	(failed 0))
     (format t "Run WordBreakTest~%")
-    (with-open-file (s file :direction :input :external-format :utf8)
+    (with-open-file (s file :direction :input :external-format :utf)
       (loop for line = (read-line s nil nil)
 	    while line
 	    do
 	    (progn
 	      (multiple-value-bind (s b)
-		  (parse-line line)
+		  (parse-word-break-line line)
 		(when s
 		  (incf count)
 		  (incf failed (if (do-test s b) 0 1)))))))

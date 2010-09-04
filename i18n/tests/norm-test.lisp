@@ -4,7 +4,7 @@
 (in-package "CL-USER")
 (defvar *normalization-test* "target:i18n/tests/NormalizationTest.txt")
 
-(defun parse-line (line)
+(defun parse-norm-line (line)
   (declare (string line))
   (cond ((or (char= (aref line 0) #\@)
 	     (char= (aref line 0) #\#))
@@ -46,7 +46,7 @@
 	  (failures 0))
       (loop for line = (read-line testfile nil nil) while line do
 	   (multiple-value-bind (c1 c2 c3 c4 c5)
-	       (parse-line line)
+	       (parse-norm-line line)
 	     (when c1
 	       (incf total)
 	       (let ((test1 (lisp::string-to-nfd c1))
@@ -78,8 +78,9 @@
     (let ((total 0)
 	  (failures 0))
       (loop for line = (read-line testfile nil nil) while line do
+	   ;;(format t "line = ~S~%" line)
 	   (multiple-value-bind (c1 c2 c3 c4 c5)
-	       (parse-line line)
+	       (parse-norm-line line)
 	     (when c1
 	       (incf total)
 	       (let ((test1 (lisp::string-to-nfkd c1))
@@ -111,7 +112,7 @@
 	  (failures 0))
       (loop for line = (read-line testfile nil nil) while line do
 	   (multiple-value-bind (c1 c2 c3 c4 c5)
-	       (parse-line line)
+	       (parse-norm-line line)
 	     (when c1
 	       (incf total)
 	       (let ((test1 (lisp::string-to-nfc c1))
@@ -144,7 +145,7 @@
 	  (failures 0))
       (loop for line = (read-line testfile nil nil) while line do
 	   (multiple-value-bind (c1 c2 c3 c4 c5)
-	       (parse-line line)
+	       (parse-norm-line line)
 	     (when c1
 	       (incf total)
 	       (let ((test1 (lisp::string-to-nfkc c1))
