@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.38 2010/08/15 12:04:43 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.39 2010/09/04 01:03:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -987,7 +987,7 @@ character and illegal outputs are replaced by a question mark.")
 		 (or string (make-string (length octets)))
 		 s-start s-end
 		 error)
-      (values (if stringp string (lisp::shrink-vector string pos)) pos last-octet new-state))))
+      (values (if stringp string (lisp::shrink-vector string pos)) (- pos s-start) last-octet new-state))))
 
 
 

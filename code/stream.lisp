@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.96 2010/08/15 12:04:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.97 2010/09/04 01:03:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -736,7 +736,14 @@
     (progn
       (format t "index = ~A~%" index)
       (format t "in-length = ~A~%" in-length)
-      (format t "ibuf before = ~A~%" ibuf))
+      (format t "ibuf before = ~A~%" ibuf)
+      (format t "sbuf before = ~S~%" (subseq (lisp-stream-string-buffer stream) 0
+					     (lisp-stream-string-buffer-len stream))))
+
+    ;; For debugging, clear out the stuff we've already read so we can
+    ;; see what's happening.
+    #+(or debug-frc-sr)
+    (fill ibuf 0 :start 0 :end index)
 
     ;; Copy the stuff we haven't read from in-buffer to the beginning
     ;; of the buffer.
@@ -745,6 +752,13 @@
 		 :start1 0
 		 :start2 index :end2 in-length)
 	(setf index in-length))
+
+    ;; For debugging, clear out the stuff we've already read so we can
+    ;; see what's happening.
+    #+(or debug-frc-sr)
+    (when (< index (1- in-buffer-length))
+      (fill ibuf 0 :start (1+ index) :end in-buffer-length))
+    
     (setf index (- in-length index))
     
     #+(or debug-frc-sr)
@@ -791,35 +805,84 @@
 			     (funcall (ef-copy-state (fd-stream-external-format stream))
 				      (cdr state)))))
 
+	       #+(or debug-frc-sr)
+	       (format t "slen = ~A~%" slen)
+
 	       ;; Copy the last read character to the beginning of the
 	       ;; buffer to support unreading.
-	       #+(or)
-	       (format t "slen = ~A~%" slen)
 	       (when (plusp slen)
 		 (setf (schar sbuf 0) (schar sbuf (1- slen))))
+
+	       #+(or debug-frc-sr)
+	       (progn
+		 (format t "sbuf[0] = ~S~%" (schar sbuf 0))
+		 (format t "index = ~S~%" index))
 
 
 	       ;; Convert all the octets, including the ones that we
 	       ;; haven't processed yet and the ones we just read in.
-	       (multiple-value-bind (s char-count octet-count new-state)
-		   (stream::octets-to-string-counted
-		    ibuf
-		    (fd-stream-octet-count stream)
-		    :start 0
-		    :end (fd-stream-in-length stream)
-		    :state (fd-stream-oc-state stream)
-		    :string sbuf
-		    :s-start 1
-		    :external-format (fd-stream-external-format stream)
-		    :error (fd-stream-octets-to-char-error stream))
-		 (declare (ignore s))
-		 (setf (fd-stream-oc-state stream) new-state)
-		 (setf (lisp-stream-string-buffer-len stream) char-count)
-		 (setf (lisp-stream-string-index stream) 2)
-		 (setf (lisp-stream-in-index stream) octet-count)
-		 #+(or debug-frc-sr)
-		 (format t "new in-index = ~A~%" (lisp-stream-in-index stream))
-		 (schar sbuf 1))))))))
+	       (flet
+		   ((convert-buffer ()
+		      (multiple-value-bind (s char-count octet-count new-state)
+			  (stream::octets-to-string-counted
+			   ibuf
+			   (fd-stream-octet-count stream)
+			   :start 0
+			   :end (fd-stream-in-length stream)
+			   :state (fd-stream-oc-state stream)
+			   :string sbuf
+			   :s-start 1
+			   :external-format (fd-stream-external-format stream)
+			   :error (fd-stream-octets-to-char-error stream))
+			(declare (ignore s)
+				 (type (integer 0 #.in-buffer-length) char-count octet-count))
+			#+(or debug-frc-sr)
+			(progn
+			  (format t "char-count = ~A~%" char-count)
+			  (format t "octet-count = ~A~%" octet-count)
+			  (format t "in-index = ~A~%" (lisp-stream-in-index stream)))
+			(when (> char-count 0)
+			  (setf (fd-stream-oc-state stream) new-state)
+			  (setf (lisp-stream-string-buffer-len stream) (1+ char-count))
+			  (setf (lisp-stream-string-index stream) 2)
+			  (setf (lisp-stream-in-index stream) octet-count)
+			  #+(or debug-frc-sr)
+			  (progn
+			    (format t "new in-index = ~A~%" (lisp-stream-in-index stream))
+			    (format t "new sbuf = ~S~%" 
+				    (subseq sbuf 0 (1+ char-count))))
+			  (schar sbuf 1)))))
+		 (let ((out (convert-buffer)))
+		   (or out
+		       ;; There weren't enough octets to convert at
+		       ;; least one character.  Try to read some more
+		       ;; octets and try again.  (If we still fail,
+		       ;; what should we do then?  Currently, just
+		       ;; just return NIL and let other parts of Lisp
+		       ;; catch that.)
+		       ;;
+		       ;; The in buffer holds unread octets up to
+		       ;; index in-length.  So start reading octets there.
+		       (let* ((index (fd-stream-in-length stream))
+			      (count (funcall (lisp-stream-n-bin stream) stream
+					     ibuf index
+					     (- in-buffer-length index)
+					     nil)))
+			 (declare (type (integer 0 #.in-buffer-length) count index))
+			 (cond ((zerop count)
+				;; Nothing left in the stream, so update our pointers to
+				;; indicate we've read everything and call the stream-in
+				;; function so that we do the right thing for eof.
+				(setf (lisp-stream-in-index stream) in-buffer-length)
+				(setf (lisp-stream-string-index stream)
+				      (lisp-stream-string-buffer-len stream))
+				(funcall (lisp-stream-in stream) stream eof-errorp eof-value))
+			       (t
+				;; Adjust in-length to the total
+				;; number of octets that are now in
+				;; the buffer.
+				(setf (fd-stream-in-length stream) (+ count index))
+				(convert-buffer)))))))))))))
 
 ;;; FAST-READ-BYTE-REFILL  --  Interface
 ;;;
