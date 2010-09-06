@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.35.4.4 2010/09/02 23:47:31 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.35.4.5 2010/09/06 01:01:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,6 +35,9 @@
   "Hash table mapping an external format alias to the actual external
   format implementation")
 
+;; Each time DEF-EF-MACRO is used to define a new external format
+;; macro, a unique value must be used for the index.  The mapping
+;; between the macro and the index is here.
 (vm::defenum (:prefix "+EF-" :suffix "+" :start 1)
   str					; string length
   cin					; input a character
@@ -47,6 +50,7 @@
   de					; decode
   flush					; flush state
   copy-state				; copy state
+  osc					; octets to string, counted
   max)
 
 ;; Unicode replacement character U+FFFD
@@ -685,7 +689,7 @@ character and illegal outputs are replaced by a question mark.")
 (defun ensure-cache (ef id reqd)
   (let ((base (or (getf *ef-extensions* id)
 		  (setf (getf *ef-extensions* id)
-		      (prog1 *ef-base* (incf *ef-base* reqd))))))
+			(prog1 *ef-base* (incf *ef-base* reqd))))))
     (when (< (length (ef-cache ef)) (+ base reqd))
       (setf (efx-cache (ef-efx ef))
 	  (adjust-array (ef-cache ef) (+ base reqd) :initial-element nil)))
@@ -921,7 +925,7 @@ character and illegal outputs are replaced by a question mark.")
       (values (if stringp string (lisp::shrink-vector string pos)) pos last-octet new-state))))
 
 
-(def-ef-macro ef-octets-to-string-counted (extfmt lisp::lisp +ef-max+ +ef-os+)
+(def-ef-macro ef-octets-to-string-counted (extfmt lisp::lisp +ef-max+ +ef-osc+)
   `(lambda (octets ptr end state ocount string s-start s-end error
 	    &aux (pos s-start) (last-octet 0))
      (declare (optimize (speed 3) (safety 0) #|(space 0) (debug 0)|#)
