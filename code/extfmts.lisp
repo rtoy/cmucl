@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.39 2010/09/04 01:03:12 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.40 2010/09/06 19:01:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,6 +35,9 @@
   "Hash table mapping an external format alias to the actual external
   format implementation")
 
+;; Each time DEF-EF-MACRO is used to define a new external format
+;; macro, a unique value must be used for the index.  The mapping
+;; between the macro and the index is here.
 (vm::defenum (:prefix "+EF-" :suffix "+" :start 1)
   str					; string length
   cin					; input a character
@@ -47,6 +50,7 @@
   de					; decode
   flush					; flush state
   copy-state				; copy state
+  osc					; octets to string, counted
   max)
 
 ;; Unicode replacement character U+FFFD
@@ -685,7 +689,7 @@ character and illegal outputs are replaced by a question mark.")
 (defun ensure-cache (ef id reqd)
   (let ((base (or (getf *ef-extensions* id)
 		  (setf (getf *ef-extensions* id)
-		      (prog1 *ef-base* (incf *ef-base* reqd))))))
+			(prog1 *ef-base* (incf *ef-base* reqd))))))
     (when (< (length (ef-cache ef)) (+ base reqd))
       (setf (efx-cache (ef-efx ef))
 	  (adjust-array (ef-cache ef) (+ base reqd) :initial-element nil)))
@@ -693,7 +697,27 @@ character and illegal outputs are replaced by a question mark.")
 
 ;;; DEF-EF-MACRO  -- Public
 ;;;
-;;; 
+;;; Create an ef-macro (external-format macro).  This creates a
+;;; function named Name that will process an external format in the
+;;; desired way.
+;;;
+;;; Paul Foley says:
+;;;   All the existing ef-macros are provided with the implementation,
+;;;   so they all use lisp::lisp as the id; it's intended for people
+;;;   who want to write their own macros~there are some number of
+;;;   slots (+ef-max+) used by the implementation; the idea is that
+;;;   you can write something like (def-ef-macro foo (ef my-tag 4 1)
+;;;   ...) to implement 1 of a total of 4 new macros in your own
+;;;   "namespace", without having to know how many are implemented by
+;;;   others (e.g., the 10 used by the base implementation...which
+;;;   could change with the next release -- and if several libraries
+;;;   each add their own, the total number, and the position of each
+;;;   one's slots within that total, may change depending on load
+;;;   order, etc.)  When you write the above, it allocates 4 new
+;;;   places and associates the base index with "my-tag", then the
+;;;   "idx" value is relative to that base.  The id lisp:lisp always
+;;;   has its base at 0, so it doesn't need to go through ensure-cache
+;;;   to find that out.
 (defmacro def-ef-macro (name (ef id reqd idx) body)
   (let* ((tmp1 (gensym))
 	 (tmp2 (gensym))
@@ -921,7 +945,7 @@ character and illegal outputs are replaced by a question mark.")
       (values (if stringp string (lisp::shrink-vector string pos)) pos last-octet new-state))))
 
 
-(def-ef-macro ef-octets-to-string-counted (extfmt lisp::lisp +ef-max+ +ef-os+)
+(def-ef-macro ef-octets-to-string-counted (extfmt lisp::lisp +ef-max+ +ef-osc+)
   `(lambda (octets ptr end state ocount string s-start s-end error
 	    &aux (pos s-start) (last-octet 0))
      (declare (optimize (speed 3) (safety 0) #|(space 0) (debug 0)|#)
