@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.34 2010/06/27 13:17:17 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.35 2010/09/07 03:56:38 agoncharov Exp $
  *
  */
 
@@ -307,6 +307,12 @@ os_install_interrupt_handlers(void)
 void *
 os_dlsym(const char *sym_name, lispobj lib_list)
 {
+    static void *program_handle;
+    void *sym_addr = 0;
+
+    if (!program_handle)
+	program_handle = dlopen((void *) 0, RTLD_LAZY | RTLD_GLOBAL);
+
     if (lib_list != NIL) {
 	lispobj lib_list_head;
 
@@ -320,8 +326,7 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 		return sym_addr;
 	}
     }
-
-    return dlsym(RTLD_DEFAULT, sym_name);
+    return dlsym(program_handle, sym_name);
 }
 
 void
