@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.118 2010/08/18 16:42:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.119 2010/09/08 03:04:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -255,10 +255,6 @@
   (co-state nil)
   #+unicode
   (last-char-read-size 0 :type index)
-  ;; Saved state needed for (setf stream-external-format) when the
-  ;; fast string-buffer is used.
-  #+unicode
-  (saved-oc-state nil)
   ;;
   ;; The number of octets in in-buffer.  Normally equal to
   ;; in-buffer-length, but could be less if we reached the

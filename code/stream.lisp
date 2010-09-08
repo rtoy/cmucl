@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.98 2010/09/06 19:01:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.99 2010/09/08 03:04:54 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -795,20 +795,13 @@
 			  (type (integer 0 #.(1+ in-buffer-length)) slen)
 			  (optimize (speed 3)))
 
-		 ;; Update in-length and saved-oc-state.  These are
-		 ;; needed if we change the external-format of the
-		 ;; stream because we need to know how many octets are
-		 ;; valid (in case end-of-file was reached), and what
-		 ;; the state was when originally converting the octets
-		 ;; to characters.
+		 ;; Update in-length.  This is needed if we change the
+		 ;; external-format of the stream because we need to
+		 ;; know how many octets are valid (in case
+		 ;; end-of-file was reached)
 		 (setf (fd-stream-in-length stream) (+ count index))
 		 #+(or debug-frc-sr)
 		 (format t "in-length = ~D~%" (fd-stream-in-length stream))
-		 (let ((state (fd-stream-oc-state stream)))
-		   (setf (fd-stream-saved-oc-state stream)
-			 (cons (car state)
-			       (funcall (ef-copy-state (fd-stream-external-format stream))
-					(cdr state)))))
 
 		 #+(or debug-frc-sr)
 		 (format t "slen = ~A~%" slen)
