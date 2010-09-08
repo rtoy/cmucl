@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $Id: linker-x86.sh,v 1.10 2010/09/08 03:28:08 agoncharov Exp $
+# $Id: linker-x86.sh,v 1.11 2010/09/08 07:08:36 agoncharov Exp $
 
 # This file written by Raymond Toy as part of CMU Common Lisp and is
 # placed in the public domain.
@@ -44,7 +44,6 @@ CMUCLLIB=`dirname $0`
 
 # Name of file where we write the actual initial function address.
 OPT_IFADDR="cmu-ifaddr-$$.c"
-OPT_IFADDR="cmu-ifaddr-alex.c"
 # Names of the core sections from Lisp.
 OPT_CORE="CORRO.o CORSTA.o CORDYN.o"
 
@@ -120,7 +119,7 @@ case $uname_s in
 esac
 
 # Remove the C file when we're done.
-# trap 'rm -f $OUTDIR/$OPT_IFADDR $OUTDIR/CORRO.o $OUTDIR/CORSTA.o $OUTDIR/CORDYN.o' 0
+trap 'rm -f $OUTDIR/$OPT_IFADDR $OUTDIR/CORRO.o $OUTDIR/CORSTA.o $OUTDIR/CORDYN.o' 0
 
 (cd $OUTDIR
 echo "long initial_function_addr = $IFADDR;" > $OPT_IFADDR
