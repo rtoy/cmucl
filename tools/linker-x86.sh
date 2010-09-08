@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $Id: linker-x86.sh,v 1.11 2010/09/08 07:08:36 agoncharov Exp $
+# $Id: linker-x86.sh,v 1.12 2010/09/08 11:01:55 rtoy Exp $
 
 # This file written by Raymond Toy as part of CMU Common Lisp and is
 # placed in the public domain.
@@ -73,7 +73,7 @@ case $uname_s in
 	FreeBSD) OS_LIBS=-lutil;;
       esac
       ;;
-  Darwin*)
+  Darwin)
       # How to specify the starting address for each of the sections.
       # We don't actually need these because map_core_sections sets
       # the addresses itself instead of from the segment address, but
@@ -95,7 +95,7 @@ case $uname_s in
       # See Config.x86_darwin
       OS_LIBS=
       ;;
-  SunOS*)
+  SunOS)
       # A quick test indicates that gcc will accept the following
       # options too, so this will work whether we have Sun C or gcc.
       # Note, that this probably only works if gcc uses Sun ld and not
@@ -118,7 +118,7 @@ case $uname_s in
 
 esac
 
-# Remove the C file when we're done.
+# Remove the C file and core section files when we're done.
 trap 'rm -f $OUTDIR/$OPT_IFADDR $OUTDIR/CORRO.o $OUTDIR/CORSTA.o $OUTDIR/CORDYN.o' 0
 
 (cd $OUTDIR
