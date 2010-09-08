@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $Id: linker-x86.sh,v 1.9 2010/08/02 21:45:36 rtoy Exp $
+# $Id: linker-x86.sh,v 1.10 2010/09/08 03:28:08 agoncharov Exp $
 
 # This file written by Raymond Toy as part of CMU Common Lisp and is
 # placed in the public domain.
@@ -44,11 +44,13 @@ CMUCLLIB=`dirname $0`
 
 # Name of file where we write the actual initial function address.
 OPT_IFADDR="cmu-ifaddr-$$.c"
+OPT_IFADDR="cmu-ifaddr-alex.c"
 # Names of the core sections from Lisp.
 OPT_CORE="CORRO.o CORSTA.o CORDYN.o"
 
-case `uname` in
-  Linux*)
+uname_s=`uname`
+case $uname_s in
+  Linux|FreeBSD)
       # How to specify the starting address for each of the sections
       # These aren't needed for Linux any more.  map_core_sections
       # takes care of getting the addresses.
@@ -57,7 +59,7 @@ case `uname` in
       #STATIC_ADDR="-Wl,--section-start=CORSTA=$5"
       #DYN_ADDR="-Wl,--section-start=CORDYN=$6"
 
-      #OPT_IFADDR="-Wl,--defsym -Wl,initial_function_addr=$IFADDR"
+      #OPT_IF ADDR="-Wl,--defsym -Wl,initial_function_addr=$IFADDR"
 
       # Specify how to link the entire lisp.a library
       OPT_ARCHIVE="-Wl,--whole-archive -Wl,$CMUCLLIB/lisp.a -Wl,--no-whole-archive"
@@ -65,8 +67,12 @@ case `uname` in
       # Extra stuff.
 
       OPT_EXTRA="-rdynamic"
-      # See Config.x86_linux
-      OS_LIBS=-ldl
+
+      # See Config.x86_${uname_s}
+      case $uname_s in
+	Linux) OS_LIBS=-ldl;;
+	FreeBSD) OS_LIBS=-lutil;;
+      esac
       ;;
   Darwin*)
       # How to specify the starting address for each of the sections.
@@ -114,7 +120,7 @@ case `uname` in
 esac
 
 # Remove the C file when we're done.
-trap 'rm -f $OUTDIR/$OPT_IFADDR $OUTDIR/CORRO.o $OUTDIR/CORSTA.o $OUTDIR/CORDYN.o' 0
+# trap 'rm -f $OUTDIR/$OPT_IFADDR $OUTDIR/CORRO.o $OUTDIR/CORSTA.o $OUTDIR/CORDYN.o' 0
 
 (cd $OUTDIR
 echo "long initial_function_addr = $IFADDR;" > $OPT_IFADDR
