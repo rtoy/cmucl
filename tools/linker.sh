@@ -1,140 +1,127 @@
-#!/bin/sh -x
+#!/bin/sh
 
-# $Id: linker.sh,v 1.14 2010/07/29 04:34:10 rtoy Exp $
+# $Id: linker.sh,v 1.15 2010/09/08 12:06:23 rtoy Rel $
 
-# This file was written by Fred Gilham and is placed in the public domain.
-# It comes without warranty of any kind.
+# This file written by Raymond Toy as part of CMU Common Lisp and is
+# placed in the public domain.
+#
+# This script takes parameters specified by the running lisp to create
+# an executable image.
+#
+# Despite the name, it is used for Linux/x86, Darwin/x86, and
+# Solaris/sparc, as specified in src/lisp/elf.h.
 
-if [ $# -ne 4 ]
-    then
-    echo "Usage: `basename $0` <c-compiler> <initial function address> <main> <executable file>"
+OPSYS=`uname`
+
+if [ "X$CMU_DEBUG_LINKER" != "X" ]; then
+    # Enable debugging if CMU_DEBUG_LINKER is defined and not empty.
+    set -x
+fi
+
+# There must be exactly 6 parameters:
+# - the name of the C compiler (sparc supports both Sun cc and GNU gcc).
+# - the address of the initial function (in C hex format)
+# - the path of the executable to be created
+# - the address of the start of the read-only space
+# - the address of the start of the static space
+# - the address of the start of the dynamic space
+if [ $# -ne 6 ]; then
+    echo "Usage: `basename $0` <c-compiler> <initial-func-addr> <executable> <ro-addr> <static-addr> <dyn-addr>"
     exit 1
 fi
 
 CCOMPILER=$1
-shift;
+IFADDR=$2
+EXEC=$3
 
-if [ $CCOMPILER = "cc" ]; then
-    # Sun C compiler
+# Figure out the directory and file name of the executable.
+OUTDIR=`dirname $EXEC`
+OUTNAME=`basename $EXEC`
 
-    # Can't set PATH because we don't really know where the compiler
-    # is.  The user has to have it in his path.
-
-    CC=`which cc`
-    if [ -z "$CC" ]; then
-	echo 'Cannot find Sun C.  Is it available and in $PATH?'
-	exit 1
-    fi
-    CRTPATH=`dirname $CC`/../prod
-    LIBROOT=$CRTPATH/lib
-
-else
-    # Gcc
-    PATH=/bin:/usr/bin:/usr/local/bin
-
-    GCC=`which gcc`
-
-    if [ -z "$GCC" ]; then
-	echo 'Cannot find GCC.  How did you build lisp?'
-	exit 1
-    fi
-
-    # Uniform method for finding GCC C runtime object files suggested by Ray Toy
-    CRTPATH=`$GCC -print-libgcc-file-name`
-    LIBROOT=`dirname $CRTPATH`
-fi
-
-echo "LIBROOT is $LIBROOT"
-
-OPSYS=`uname`
-VER=''
-
-# Default values
-OUTDIR=`dirname $3`
-OUTNAME=`basename $3`
-OUTPUT="-o $OUTNAME"
-CURDIR=`pwd`
-
-LINKER=/usr/bin/ld
+# This tells us where the cmu lisp executable is and also the
+# locations of lisp.a.
 CMUCLLIB=`dirname $0`
-OBJS="--whole-archive $CMUCLLIB/lisp.a --no-whole-archive"
-FLAGS='-export-dynamic'
 
-SCRIPT="-T $CMUCLLIB/$OPSYS$VER-cmucl-linker-script"
+# Name of file where we write the actual initial function address.
+OPT_IFADDR="cmu-ifaddr-$$.c"
+# Names of the core sections from Lisp.
+OPT_CORE="CORRO.o CORSTA.o CORDYN.o"
 
-# This is a hack.
-# These are the default values.
-#
-# BIFLAG flags the executable as having a builtin lisp image.  It should be
-# a valid address because it will be dereferenced.  It should also not point
-# to an integer 0 because that would make the flag false. We use the first
-# address in the process memory image, which should point to the ELF header.
+uname_s=`uname`
+case $uname_s in
+  Linux|FreeBSD)
+      # How to specify the starting address for each of the sections
+      # These aren't needed for Linux any more.  map_core_sections
+      # takes care of getting the addresses.
 
-# XXXX The process image start address can change depending on the OS
-# (at least).
-#BIFLAG="--defsym builtin_image_flag=$2"
+      #RO_ADDR="-Wl,--section-start=CORRO=$4"
+      #STATIC_ADDR="-Wl,--section-start=CORSTA=$5"
+      #DYN_ADDR="-Wl,--section-start=CORDYN=$6"
 
-# IFADDR is the initial function address, needed to start lisp processing.
-IFADDR="--defsym initial_function_addr=$1"
+      #OPT_IF ADDR="-Wl,--defsym -Wl,initial_function_addr=$IFADDR"
 
-# Set OS-specific variables.
-case "$OPSYS" in
-    Linux )
-	# Handle x86_64 version system.  This should be revisited when there's a 64-bit version
-	# of CMUCL on Linux.  Note that -m32 won't work in older versions of GCC which we may
-	# still want to support.
-	ARCH=`uname -m`
-	if [ "$ARCH" = "x86_64" ]
-	then
-	    CRTPATH=`$GCC -m32 -print-libgcc-file-name`
-	    LIBROOT=`dirname $CRTPATH`
-	fi
-	STARTCRT="/usr/lib/crt1.o /usr/lib/crti.o $LIBROOT/crtbegin.o"
-	ENDCRT="$LIBROOT/crtend.o /usr/lib/crtn.o"
-	DLINKER='-dynamic-linker /lib/ld-linux.so.2'
-	LIBS="-L$LIBROOT -ldl -lm -lgcc -lc -lgcc"
-	;;
-    FreeBSD )
-	DLINKER='-dynamic-linker /usr/libexec/ld-elf.so.1'
-	STARTCRT="$LIBROOT/crt1.o $LIBROOT/crti.o $LIBROOT/crtbegin.o"
-	ENDCRT="$LIBROOT/crtend.o $LIBROOT/crtn.o"
-	LIBS='-lm -lgcc -lc -lgcc'
-	;;
-    SunOS )
-	if [ $CCOMPILER = "cc" ]; then
-	    # These values were obtained by running cc -# hello.c and
-	    # looking at the linker command.
-	    STARTCRT="$LIBROOT/crti.o $LIBROOT/crt1.o $LIBROOT/misalign.o $LIBROOT/values-xa.o"
-	    ENDCRT="$LIBROOT/crtn.o"
-	    LIBS="-Y P,$LIBROOT/v8plus:$LIBROOT:/usr/ccs/lib:/lib:/usr/lib -Qy -lm -lc -lsocket -lnsl -ldl"
-	else
-	    STARTCRT="$LIBROOT/crt1.o $LIBROOT/crti.o $LIBROOT/crtbegin.o"
-	    ENDCRT="$LIBROOT/crtend.o $LIBROOT/crtn.o"
-	    LIBS="-L$LIBROOT -lm -lgcc -lc -lgcc -lsocket -lnsl -ldl"
-	fi
-	LINKER="/usr/ccs/bin/ld"
-	OBJS="-z allextract $CMUCLLIB/lisp.a CORRO.o CORSTA.o CORDYN.o -z defaultextract"
-	SCRIPT="$CMUCLLIB/$OPSYS$VER-cmucl-linker-script"
-	# Don't need BIFLAG on Solaris.  The lisp.a archive has the
-	# correct value for it.
-	IFADDR=$1
-	sed -e "s;@IFADDR@;$IFADDR;" $SCRIPT > $OUTDIR/sunos-map-file
-	SCRIPT="-M sunos-map-file"
-	# Remove the sunos-map-file when the script exits.
-	trap 'rm -f $OUTDIR/sunos-map-file' 0
-	echo $PWD
-	FLAGS=
-	BIFLAG=
-	IFADDR=
-	;;
-    * )
-	echo "$0: unknown operating system $OPSYS."
-	exit 1
-	;;
+      # Specify how to link the entire lisp.a library
+      OPT_ARCHIVE="-Wl,--whole-archive -Wl,$CMUCLLIB/lisp.a -Wl,--no-whole-archive"
+
+      # Extra stuff.
+
+      OPT_EXTRA="-rdynamic"
+
+      # See Config.x86_${uname_s}
+      case $uname_s in
+	Linux) OS_LIBS=-ldl;;
+	FreeBSD) OS_LIBS=-lutil;;
+      esac
+      ;;
+  Darwin)
+      # How to specify the starting address for each of the sections.
+      # We don't actually need these because map_core_sections sets
+      # the addresses itself instead of from the segment address, but
+      # if we don't set them up correctly, vmmap complains when run on
+      # the resulting executable.  There's no harm in specifying them
+      # here, though; the addresses are ignored by map_core_sections.
+      RO_ADDR="-segaddr CORRO $4"
+      STATIC_ADDR="-segaddr CORSTA $5"
+      DYN_ADDR="-segaddr CORDYN $6"
+
+      # Specify how to link the entire lisp.a library
+      OPT_ARCHIVE="-all_load $CMUCLLIB/lisp.a"
+
+      # Extra stuff.  For some reason one __LINKEDIT segment is mapped
+      # just past the dynamic space.  This messes things up, so we move it
+      # to another address.  This seems to be free, at least on 10.5.
+
+      OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -rdynamic"
+      # See Config.x86_darwin
+      OS_LIBS=
+      ;;
+  SunOS)
+      # A quick test indicates that gcc will accept the following
+      # options too, so this will work whether we have Sun C or gcc.
+      # Note, that this probably only works if gcc uses Sun ld and not
+      # GNU ld.  Most (all?) prebuilt versions of gcc for Solaris use
+      # Sun ld.
+
+      # We don't need anything special to set the starting address.
+      # map_core_sections does that for us on sparc.
+
+      # Specify how to link the entire lisp.a library
+      OPT_ARCHIVE="-Xlinker -z -Xlinker allextract -Xlinker $CMUCLLIB/lisp.a -Xlinker -z -Xlinker defaultextract"
+
+      # Extra stuff.
+
+      OPT_EXTRA="-Bdynamic"
+
+      # See Config.sparc_sunc
+      OS_LIBS="-lsocket -lnsl -ldl"
+      ;;
+
 esac
 
-cd $OUTDIR
-$LINKER $SCRIPT $DLINKER $OUTPUT $STARTCRT $FLAGS $BIFLAG $IFADDR $OBJS $LIBS $ENDCRT
-cd $CURDIR
+# Remove the C file and core section files when we're done.
+trap 'rm -f $OUTDIR/$OPT_IFADDR $OUTDIR/CORRO.o $OUTDIR/CORSTA.o $OUTDIR/CORDYN.o' 0
 
-exit 0
+(cd $OUTDIR
+echo "long initial_function_addr = $IFADDR;" > $OPT_IFADDR
+$CCOMPILER -m32 -o $OUTNAME $OPT_IFADDR $OPT_ARCHIVE $OPT_CORE $RO_ADDR $STATIC_ADDR $DYN_ADDR $OPT_EXTRA $OS_LIBS -lm)
+
