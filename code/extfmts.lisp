@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.35.4.6 2010/09/06 15:35:28 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.35.4.7 2010/09/09 00:41:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -921,11 +921,13 @@ character and illegal outputs are replaced by a question mark.")
   the length of String).  If the string is not large enough to hold
   all of characters, then some octets will not be converted.  A State
   may also be specified; this is used as the state of the external
-  format.
+  format.  An error method may also be specified by Error, which
+  defaults to NIL to mean the default handling of conversion errors is
+  done.
 
-  Four values are returned: the string, the number of characters read,
-  the number of octets actually consumed and the new state of the
-  external format."
+  Four values are returned: the string, the position of where the next
+  character would be read into the string, the number of octets
+  actually consumed and the new state of the external format."
   (declare (type (simple-array (unsigned-byte 8) (*)) octets)
 	   (type kernel:index start s-start)
 	   (type (or kernel:index null) end)
