@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.29 2010/08/02 21:59:43 rtoy Exp $
+ $Id: elf.c,v 1.29.2.1 2010/09/09 00:16:19 rtoy Exp $
 */
 
 #include <stdio.h>
@@ -358,18 +358,17 @@ obj_run_linker(long init_func_address, char *file)
         }
         
 	if (stat(command, &st) == 0) {
-            extern int main();
-            
 	    free(paths);
 	    printf("\t[%s: linking %s... \n", command, file);
 	    fflush(stdout);
-#if defined(__linux__) || defined(sparc)
+#if defined(__linux__) || defined(__FreeBSD__) || defined(sparc)
             sprintf(command_line, "%s %s 0x%lx '%s' 0x%lx 0x%lx 0x%lx", command,
                     C_COMPILER, init_func_address, file,
                     (unsigned long) READ_ONLY_SPACE_START,
                     (unsigned long) STATIC_SPACE_START,
                     (unsigned long) DYNAMIC_0_SPACE_START);
 #else
+            extern int main();
 	    sprintf(command_line, "%s %s 0x%lx 0x%lx %s", command, C_COMPILER,
                     init_func_address, (unsigned long) &main, file);
 #endif

@@ -1,4 +1,4 @@
-/* $Id: elf.h,v 1.13 2010/07/31 01:07:15 rtoy Exp $ */
+/* $Id: elf.h,v 1.13.2.1 2010/09/09 00:16:19 rtoy Exp $ */
 
 /* This code was written by Fred Gilham and has been placed in the public domain.  It is
    provided "AS-IS" and without warranty of any kind.
@@ -13,16 +13,10 @@
 
 #define _ELF_H_INCLUDED_
 
-#if defined(__linux__) || defined(DARWIN) || defined(sparc)
 /*
- * Yes, it's named badly.  But it works for sparc too, not just x86.
- * If we ever get this fixed on FreeBSD, then we can move
- * linker-x86.sh to linker.sh and be done with it.
+ * Script to use for linking everything to make an executable.
  */
-#define LINKER_SCRIPT "linker-x86.sh"
-#else
 #define LINKER_SCRIPT "linker.sh"
-#endif
 
 #if defined(SOLARIS)
 #include <sys/elf.h>
