@@ -17,8 +17,6 @@ over the Internet, and is mostly in the public domain.
 New in this release:
 
   * Known issues:
-    - CMUCL cannot create working executable images anymore on
-      FreeBSD.
     - Executable images on Linux may not be able to be created on some
       versions of Linux.  The problem is in GNU ld which doesn't
       allocate enough phdrs to create an executable. 
@@ -202,8 +200,8 @@ New in this release:
       X.
     - It is possible to hash NaNs now.  (Previously gave an invalid
       operation exception.)
-    - For SSE2 builds, = no longer signals an error if one operand is NaN.  This
-      matches what happens for x87.
+    - For SSE2 builds, = no longer signals an error if one operand is
+      NaN.  This matches what happens for x87.
     - For SSE2 builds, SIGCONTEXT-FLOAT-REGISTER returned the wrong
       value for single-floats.  Easily noticead when tracing a
       function with single-float arguments.
