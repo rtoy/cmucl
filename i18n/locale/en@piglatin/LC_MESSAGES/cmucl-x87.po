@@ -1,12 +1,10 @@
-# @ cmucl-x87
+#@ cmucl-x87
 # SOME DESCRIPTIVE TITLE
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
 #
 #, fuzzy
 msgid ""
-msgstr ""
-"Project-Id-Version: CMUCL 20A\n"
-"Report-Msgid-Bugs-To: \n"
+msgstr "Project-Id-Version: CMUCL 20A\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: Automatic translation\n"
 "Language-Team: Pig Latin (auto-translated)\n"
@@ -19,3 +17,4 @@ msgstr ""
 #: src/compiler/x86/x87-sap.lisp
 msgid "Unknown SC to SC-Case for ~S:~%  ~S"
 msgstr "Unknownway SC otay SC-Asecay orfay ~S:~%  ~S"
+
