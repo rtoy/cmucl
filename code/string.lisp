@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.24 2010/04/20 17:57:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.25 2010/09/13 21:27:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1684,3 +1684,33 @@
 			    result :start (1+ start) :end next)))
 	  (write-string string result :start end :end offset-slen))))))
 
+
+;; Some utilities
+(defun codepoints-string (seq)
+  "Convert a sequence of codepoints to a string.  Codepoints outside
+  the basic multilingual plane (BMP) are converted into the
+  corresponding surrogate pairs."
+  (with-output-to-string (s)
+    (map nil #'(lambda (c)
+		 (multiple-value-bind (hi lo)
+		     (surrogates c)
+		   (write-char hi s)
+		   (when lo (write-char lo s))))
+	 seq)))
+
+(defun string-codepoints (s)
+  "Convert a string to a list of corresponding code points.  Surrogate
+  pairs in the string are converted into the correspoinding
+  codepoint."
+  (declare (type simple-string s))
+  (let ((len (length s))
+	cp)
+    (do ((idx 0))
+	((>= idx len))
+      (multiple-value-bind (c widep)
+	  (codepoint s idx)
+	(if widep
+	    (incf idx 2)
+	    (incf idx))
+	(push c cp)))
+    (nreverse cp)))
