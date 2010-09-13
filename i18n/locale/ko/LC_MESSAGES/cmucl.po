@@ -2357,6 +2357,10 @@ msgid "~S doesn't have enough elements."
 msgstr ""
 
 #: src/code/array.lisp
+msgid "If non-NIL, print some debugging information when GC'ing static arrays"
+msgstr ""
+
+#: src/code/array.lisp
 msgid "~&Freeing foreign vector at #x~X~%"
 msgstr ""
 
@@ -8941,7 +8945,30 @@ msgid ""
 "  the length of String).  If the string is not large enough to hold\n"
 "  all of characters, then some octets will not be converted.  A State\n"
 "  may also be specified; this is used as the state of the external\n"
+"  format.  An error method may also be specified by Error, which\n"
+"  defaults to NIL to mean the default handling of conversion errors is\n"
+"  done.\n"
+"\n"
+"  Four values are returned: the string, the position of where the next\n"
+"  character would be read into the string, the number of octets\n"
+"  actually consumed and the new state of the external format."
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid ""
+"Octets-to-string converts an array of octets in Octets to a string\n"
+"  according to the specified External-format.  The array of octets is\n"
+"  bounded by Start (defaulting ot 0) and End (defaulting to the end of\n"
+"  the array.  If String is not given, a new string is created.  If\n"
+"  String is given, the converted octets are stored in String, starting\n"
+"  at S-Start (defaulting to the 0) and ending at S-End (defaulting to\n"
+"  the length of String).  If the string is not large enough to hold\n"
+"  all of characters, then some octets will not be converted.  A State\n"
+"  may also be specified; this is used as the state of the external\n"
 "  format.\n"
+"\n"
+"  In Ocount, the number of octets read for each character in the\n"
+"  string is saved\n"
 "\n"
 "  Four values are returned: the string, the number of characters read,\n"
 "  the number of octets actually consumed and the new state of the\n"
@@ -9190,19 +9217,23 @@ msgid ""
 "   :external-format - an external format name\n"
 "   :decoding-error - How to handle decoding errors from the external "
 "format.\n"
-"                       Should be a symbol or function of 3 arguments.  If "
-"it\n"
-"                       returns, it should return a code point to use as the\n"
-"                       replacment.  NIL means use the default replacement "
-"scheme\n"
-"                       specified by the external format.  The function "
-"arguments\n"
-"                       are a format message string, the offending octet, and "
-"the\n"
-"                       number of octets read in the current encoding.   \n"
+"                       If a character, then that character is used as\n"
+"                       the replacment character for all errors.  If T,\n"
+"                       then a continuable error is signaled.  If\n"
+"                       continued, the Unicode replacement character is\n"
+"                       used.  Otherwise, it should be a symbol or\n"
+"                       function of 3 arguments.  If it returns, it\n"
+"                       should return a code point to use as the\n"
+"                       replacment.  The function arguments are a\n"
+"                       format message string, the offending octet, and\n"
+"                       the number of octets read in the current\n"
+"                       encoding.\n"
 "   :encoding-error - Like :decoding-error, but for errors when encoding the\n"
-"                       stream.  The function arguments are a format message\n"
-"                       string and the incorrect codepoint.\n"
+"                       stream.  If a character, that character is used\n"
+"                       as the replacment code point.  Otherwise, it\n"
+"                       should be a symbol or function oof two\n"
+"                       arguments: a format message string and the\n"
+"                       incorrect codepoint.\n"
 "\n"
 "  See the manual for details."
 msgstr ""
@@ -9264,23 +9295,23 @@ msgstr ""
 msgid "Setting external-format on Gray streams not supported."
 msgstr ""
 
-#: src/code/fd-stream-extfmt.lisp
+#: src/code/fd-stream-comp.lisp
 msgid "Surrogate codepoint #x~~4,'0X is illegal for ~A"
 msgstr ""
 
-#: src/code/fd-stream-extfmt.lisp
+#: src/code/fd-stream-comp.lisp
 msgid "Illegal codepoint on input: #x~X"
 msgstr ""
 
-#: src/code/fd-stream-extfmt.lisp
+#: src/code/fd-stream-comp.lisp
 msgid "Cannot output codepoint #x~X to ISO8859-1 stream"
 msgstr ""
 
-#: src/code/fd-stream-extfmt.lisp
+#: src/code/fd-stream-comp.lisp
 msgid "Cannot convert invalid surrogate #x~X to character"
 msgstr ""
 
-#: src/code/fd-stream-extfmt.lisp
+#: src/code/fd-stream-comp.lisp
 msgid "Cannot convert lone trailing surrogate #x~X to character"
 msgstr ""
 
