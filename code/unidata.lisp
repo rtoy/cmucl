@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.8 2010/04/20 17:57:45 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.8.4.1 2010/09/14 05:58:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.8 $")
+(defvar *unidata-version* "$Revision: 1.8.4.1 $")
 
 (defstruct unidata
   range
@@ -635,6 +635,14 @@
 (defvar *reverse-hangul-jungseong*)
 (defvar *reverse-hangul-jongseong*)
 
+(defun valid-cjk-unified-ideograph-code-p (code)
+  ;; Look in UnicodeData.txt to find the range of the CJK Ideograph
+  ;; characters.
+  (or (<= #x3400 code #x4DB5)		; CJK Ideograph Extension A
+      (<= #x4E00 code #x9FC3)		; CJK Ideograph
+      (<= #x20000 code #x2A6D6)		; CJK Ideograph Extension B
+      ))
+
 (defun unicode-name-to-codepoint (name)
   (declare (type string name))
   (cond ((and (> (length name) 22)
@@ -642,8 +650,10 @@
 		  (string= name "CJKUNIFIED" :end1 10)))
 	 (let* ((x (search "IDEOGRAPH" name))
 		(n (and x (position-if (lambda (x) (digit-char-p x 16)) name
-				       :start (+ x 9)))))
-	   (and n (values (parse-integer name :start n :radix 16)))))
+				       :start (+ x 9))))
+		(code (and n (values (parse-integer name :start n :radix 16)))))
+	   (when (and code (valid-cjk-unified-ideograph-code-p code))
+	     code)))
 	((and (> (length name) 15)
 	      (or (string= name "HANGUL SYLLABLE" :end1 15)
 		  (string= name "HANGULSYLLABLE" :end1 14)))
@@ -736,9 +746,7 @@
 	s))))
 
 (defun unicode-name (code)
-  (cond ((or (<= #x3400 code #x4DB5)	; CJK Ideograph Extension A
-	     (<= #x4E00 code #x9FC3)	; CJK Ideograph
-	     (<= #x20000 code #x2A6D6))	; CJK Ideograph Extension B
+  (cond ((valid-cjk-unified-ideograph-code-p code)
 	 (format nil "CJK UNIFIED IDEOGRAPH-~4,'0X" code))
 	((<= #xAC00 code #xD7A3)	; Hangul Syllable
 	 (apply #'concatenate 'string "HANGUL SYLLABLE "
