@@ -32,7 +32,7 @@
 #
 # For more information see src/BUILDING.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.32 2010/08/31 22:24:09 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.33 2010/09/15 23:59:39 rtoy Exp $
 #
 
 ENABLE2="yes"
@@ -86,7 +86,8 @@ usage ()
     echo '               you would give to create-target.sh for the lisp'
     echo '               and motif variant.'
     echo '    -f mode   FPU mode:  x87, sse2, or auto.  Default is auto'
-    echo '    -P        On the last build, generate cmucl.pot'
+    echo '    -P        On the last build, do NOT generate cmucl.pot and do NOT update'
+    echo '               the translations.'
     echo "    -?        This help message"
     echo "    -w        Specify a different build-world.sh script"
     exit 1
@@ -133,6 +134,7 @@ buildit ()
 
 FPU_MODE=
 BUILDWORLD="$TOOLDIR/build-world.sh"
+BUILD_POT="yes"
 
 while getopts "123Po:b:v:uB:C:i:f:w:?" arg
 do
@@ -149,7 +151,7 @@ do
 	B) bootfiles="$bootfiles $OPTARG" ;;
         i) INTERACTIVE_BUILD="$OPTARG" ;;
 	f) FPU_MODE="-fpu $OPTARG" ;;
-        P) BUILD_POT=yes ;;
+        P) BUILD_POT=no ;;
         w) BUILDWORLD="$OPTARG" ;;
 	\?) usage
 	    ;;
@@ -188,13 +190,14 @@ BUILD_WORLD2=
 buildit
 
 TARGET=$BASE-4
-MAKE_TARGET="all translations"
+MAKE_TARGET="all"
 CLEAN_FLAGS="-K all"
 OLDLISP="${BASE}-3/lisp/lisp -noinit $FPU_MODE"
 ENABLE=$ENABLE4
 
 if [ "${BUILD_POT}" = "yes" ]; then
    MAKE_POT=yes
+   MAKE_TARGET="all translations"
    export MAKE_POT
 fi
 
