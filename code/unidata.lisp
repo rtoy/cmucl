@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.9 2010/09/15 21:06:38 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.10 2010/09/15 23:32:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.9 $")
+(defvar *unidata-version* "$Revision: 1.10 $")
 
 (defstruct unidata
   range
@@ -635,6 +635,20 @@
 (defvar *reverse-hangul-jungseong*)
 (defvar *reverse-hangul-jongseong*)
 
+(declaim (inline cjk-ideograph-p hangul-syllable-p))
+(defun cjk-ideograph-p (code)
+  ;; Search src/i18n/UnicodeData.txt for "CJK Ideograph" to find the
+  ;; values here.
+  (or (<= #x3400 code #x4DB5)		; CJK Ideograph Extension A
+      (<= #x4E00 code #x9FCB)		; CJK Ideograph
+      (<= #x20000 code #x2A6D6)		; CJK Ideograph Extension B
+      (<= #X2A700 code #X2B734)))	; CJK Ideograph Extension C
+
+(defun hangul-syllable-p (code)
+  ;; Search src/i18n/UnicodeData.txt for "Hangule Syllable" to find
+  ;; the values here.
+  (<= #xAC00 code #xD7A3))
+
 (defun unicode-name-to-codepoint (name)
   (declare (type string name))
   (cond ((and (> (length name) 22)
@@ -645,11 +659,7 @@
 				       :start (+ x 9))))
 		(code (and n (values (parse-integer name :start n :radix 16)))))
 	   
-	   (when (and code
-		      (or (<= #x3400 code #x4DB5) ; CJK Ideograph Extension A
-			  (<= #x4E00 code #x9FCB) ; CJK Ideograph
-			  (<= #x20000 code #x2A6D6) ; CJK Ideograph Extension B
-			  (<= #X2A700 code #X2B734))) ; CJK Ideograph Extension C
+	   (when (and code (cjk-ideograph-p code))
 	     code)))
 	((and (> (length name) 15)
 	      (or (string= name "HANGUL SYLLABLE" :end1 15)
@@ -743,12 +753,9 @@
 	s))))
 
 (defun unicode-name (code)
-  (cond ((or (<= #x3400 code #x4DB5)	; CJK Ideograph Extension A
-	     (<= #x4E00 code #x9FCB)	; CJK Ideograph
-	     (<= #x20000 code #x2A6D6)	; CJK Ideograph Extension B
-	     (<= #X2A700 code #X2B734))	; CJK Ideograph Extension C
+  (cond ((cjk-ideograph-p code)
 	 (format nil "CJK UNIFIED IDEOGRAPH-~4,'0X" code))
-	((<= #xAC00 code #xD7A3)	; Hangul Syllable
+	((hangul-syllable-p code)	; Hangul Syllable
 	 (apply #'concatenate 'string "HANGUL SYLLABLE "
 		(loop for ch across (unicode-decomp code)
 		       as code = (char-code ch)
@@ -856,7 +863,7 @@
 (defun unicode-decomp (code &optional (compatibility t))
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type codepoint code))
-  (if (<= #xAC00 code #xD7A3)
+  (if (hangule-syllable-p code)
       ;; Hangul syllables.  (See
       ;; http://www.unicode.org/reports/tr15/#Hangul for the
       ;; algorithm.)
