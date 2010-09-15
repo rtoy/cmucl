@@ -77,13 +77,14 @@
 
 
 (defconstant +piglatin-header+
-  "\"Project-Id-Version: CMUCL 20A\\n\"
+  "\"Project-Id-Version: CMUCL ~X\\n\"
 \"PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\\n\"
 \"Last-Translator: Automatic translation\\n\"
 \"Language-Team: Pig Latin (auto-translated)\\n\"
 \"MIME-Version: 1.0\\n\"
 \"Content-Type: text/plain; charset=UTF-8\\n\"
 \"Content-Transfer-Encoding: 8bit\\n\"
+\"Language: Pig Latin\\n\"
 \"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"
 ")
 
@@ -125,7 +126,7 @@
 		     ((eq item 'msgstr)
 		      (write-string "msgstr " po)
 		      (when (equal string '(""))
-			(write-string +piglatin-header+ po)
+			(format po +piglatin-header+ (c::backend-fasl-file-version c::*native-backend*))
 			(setq string nil))
 		      (dolist (x string)
 			(write-char #\" po)
