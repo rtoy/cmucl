@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.119 2010/09/08 03:04:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.120 2010/09/15 11:32:49 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1691,14 +1691,15 @@
 		   (incf posn (- (the index (caddr later))
 				 (the index (cadr later)))))
 		 (incf posn (fd-stream-obuf-tail stream))
+
 		 ;; Adjust for unread input:
 		 ;;  If there is any input read from UNIX but not supplied to
 		 ;; the user of the stream, the *real* file position will
 		 ;; smaller than reported, because we want to look like the
 		 ;; unread stuff is still available.
-		 #-unicode
 		 (decf posn (- (fd-stream-ibuf-tail stream)
 			       (fd-stream-ibuf-head stream)))
+
 		 #+unicode
 		 (if (fd-stream-string-buffer stream)
 		     ;; The string buffer contains Lisp characters,
@@ -1717,8 +1718,18 @@
 			 (loop for k of-type fixnum from (1- (fd-stream-string-index stream))
 			    below (1- (fd-stream-string-buffer-len stream))
 			    do (decf posn (aref ocount k)))))
-		     (decf posn (- (fd-stream-ibuf-tail stream)
-				   (fd-stream-ibuf-head stream))))
+		     (when (fd-stream-in-buffer stream)
+		       ;; When we have an in-buffer (but no
+		       ;; string-buffer!), we need to adjust for the
+		       ;; octets that have not yet been supplied.
+		       ;; This situation (should!) only happens for an
+		       ;; external-format of ISO-8859-1.  If there's
+		       ;; no string-buffer and no in-buffer, then the
+		       ;; ibuf tail and head pointers contain all the
+		       ;; information needed.
+		       (decf posn (- in-buffer-length
+				     (fd-stream-in-index stream)))))
+		 
 		 (when (fd-stream-unread stream) ;;@@
 		   (decf posn))
 		 ;; Divide bytes by element size.
