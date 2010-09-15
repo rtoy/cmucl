@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.25 2010/09/13 21:27:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.26 2010/09/15 21:06:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1319,10 +1319,20 @@
 	      (declare (type (integer 0 256) ch-class))
 	      (cond ((and composite
 			  (or (< last-class ch-class) (zerop last-class)))
-		     ;; Don't have to worry about surrogate pairs here
-		     ;; because the composite is always in the BMP.
-		     (setf (aref target starter-pos) (code-char composite))
-		     (setf starter-ch composite))
+		     ;; Note: As far as I know, there is no pairwise
+		     ;; composition such that the composite character
+		     ;; is outside the BMP but the starter-ch is
+		     ;; inside the BMP.  Hence, it is always safe to
+		     ;; replace the possible surrogate at starter-pos
+		     ;; with another.  We won't accidentally replace
+		     ;; the next character with our trailing surrogate
+		     ;; character.
+		     (multiple-value-bind (hi lo)
+			 (surrogates composite)
+		       (setf (aref target starter-pos) hi)
+		       (when lo
+			 (setf (aref target (1+ starter-pos)) lo))
+		     (setf starter-ch composite)))
 		    (t
 		     (when (zerop ch-class)
 		       (setf starter-pos comp-pos)

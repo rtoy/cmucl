@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.8 2010/04/20 17:57:45 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.9 2010/09/15 21:06:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.8 $")
+(defvar *unidata-version* "$Revision: 1.9 $")
 
 (defstruct unidata
   range
@@ -642,8 +642,15 @@
 		  (string= name "CJKUNIFIED" :end1 10)))
 	 (let* ((x (search "IDEOGRAPH" name))
 		(n (and x (position-if (lambda (x) (digit-char-p x 16)) name
-				       :start (+ x 9)))))
-	   (and n (values (parse-integer name :start n :radix 16)))))
+				       :start (+ x 9))))
+		(code (and n (values (parse-integer name :start n :radix 16)))))
+	   
+	   (when (and code
+		      (or (<= #x3400 code #x4DB5) ; CJK Ideograph Extension A
+			  (<= #x4E00 code #x9FCB) ; CJK Ideograph
+			  (<= #x20000 code #x2A6D6) ; CJK Ideograph Extension B
+			  (<= #X2A700 code #X2B734))) ; CJK Ideograph Extension C
+	     code)))
 	((and (> (length name) 15)
 	      (or (string= name "HANGUL SYLLABLE" :end1 15)
 		  (string= name "HANGULSYLLABLE" :end1 14)))
@@ -737,8 +744,9 @@
 
 (defun unicode-name (code)
   (cond ((or (<= #x3400 code #x4DB5)	; CJK Ideograph Extension A
-	     (<= #x4E00 code #x9FC3)	; CJK Ideograph
-	     (<= #x20000 code #x2A6D6))	; CJK Ideograph Extension B
+	     (<= #x4E00 code #x9FCB)	; CJK Ideograph
+	     (<= #x20000 code #x2A6D6)	; CJK Ideograph Extension B
+	     (<= #X2A700 code #X2B734))	; CJK Ideograph Extension C
 	 (format nil "CJK UNIFIED IDEOGRAPH-~4,'0X" code))
 	((<= #xAC00 code #xD7A3)	; Hangul Syllable
 	 (apply #'concatenate 'string "HANGUL SYLLABLE "
@@ -1007,22 +1015,27 @@
       (unless (<= #xac00 cp #xd7a3)
 	(let ((decomp (unicode-decomp cp nil)))
 	  ;; Also ignore any characters whose canonical decomposition
-	  ;; consists of a sequence of characters, the first of which has a
-	  ;; non-zero combining class
+	  ;; consists of a sequence of characters, the first of which
+	  ;; has a non-zero combining class, or if the decomposition
+	  ;; consists of a single codepoint.
 	  (when (and decomp
-		     (= (length decomp) 2)
-		     (zerop (unicode-combining-class (char-code (aref decomp 0)))))
-	    (let ((c1 (char-code (aref decomp 0)))
-		  (c2 (char-code (aref decomp 1))))
-	      (setf (gethash (logior (ash c1 16) c2) table) cp))))))
+		     (zerop (unicode-combining-class (codepoint decomp 0))))
+	    (multiple-value-bind (c1 widep)
+		(codepoint decomp 0)
+	      (setf widep (if widep 2 1))
+	      (when (> (length decomp) widep)
+		(let ((c2 (codepoint decomp widep)))
+		  (setf (gethash (logior (ash c1 21) c2) table) cp))))))))
     ;; Remove any in the exclusion list
     (loop for cp across (unicode-composition-exclusions)
        do
        (let ((decomp (unicode-decomp cp nil)))
-	 (when (and decomp (= (length decomp) 2))
-	   (let ((c1 (char-code (aref decomp 0)))
-		 (c2 (char-code (aref decomp 1))))
-	     (remhash (logior (ash c1 16) c2) table)))))
+	 (when decomp
+	   (multiple-value-bind (c1 widep)
+	       (codepoint decomp 0)
+	     (when (> (length decomp) (if widep 2 1))
+	       (let ((c2 (codepoint decomp (if widep 2 1))))
+		 (remhash (logior (ash c1 21) c2) table)))))))
     (values table)))
 
 (defvar *composition-pair-table* nil)
@@ -1049,7 +1062,6 @@
 		 (when (and (plusp index-t)
 			    (< index-t 28))
 		   (+ c1 index-t)))))))))
-	     
 
 (defun unicode-pairwise-composition (c1 c2)
   (declare (type codepoint c1 c2)
@@ -1058,9 +1070,7 @@
     (setf *composition-pair-table* (build-composition-table)))
   (cond ((compose-hangul c1 c2))
 	(t
-	 (if (and (< c1 #x10000) (< c2 #x10000))
-	     (gethash (logior (ash c1 16) c2) *composition-pair-table*)
-	     nil))))
+	 (gethash (logior (ash c1 21) c2) *composition-pair-table* nil))))
 
 (defun unicode-word-break-code (code)
   (unless (unidata-word-break *unicode-data*)

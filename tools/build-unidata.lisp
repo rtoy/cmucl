@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.4 2009/09/11 16:22:35 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.5 2010/09/15 21:06:39 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -54,7 +54,7 @@
 
 ;; The expected Unicode version
 (defconstant +unicode-major-version+ 5)
-(defconstant +unicode-minor-version+ 1)
+(defconstant +unicode-minor-version+ 2)
 (defconstant +unicode-update-version+ 0)
 
 ;;; These need to be synched with code/unidata.lisp
