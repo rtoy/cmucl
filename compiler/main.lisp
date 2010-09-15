@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.157 2010/06/01 20:27:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.158 2010/09/15 15:47:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -738,7 +738,8 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
     (make-source-info :files file-info
 		      :current-file file-info
 		      #+unicode :external-format
-		      #+unicode external-format)))
+		      #+unicode (stream::ef-name
+				 (stream::find-external-format external-format)))))
 
 
 ;;; MAKE-LISP-SOURCE-INFO  --  Interface
