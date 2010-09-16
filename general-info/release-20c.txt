@@ -21,11 +21,16 @@ New in this release:
   * Known issues:
 
   * Feature enhancements:
+    - Update to Unicode 5.2.0.
 
   * ANSI compliance fixes:
 
   * Bugfixes:
-
+    - The pairwise composition table is now correctly built.
+      Previously, it skipped over non-BMP codepoints.  This also
+      requires a fix in %COMPOSE to handle non-BMP codepoints
+      correctly.  The normalization test now passes.
+ 
   * Trac Tickets:
 
   * Other changes:
@@ -42,4 +47,3 @@ guidelines on reporting bugs, and mailing list details.
 
 
 We hope you enjoy using this release of CMUCL!
-
