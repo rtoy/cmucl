@@ -32,7 +32,7 @@
 #
 # For more information see src/BUILDING.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.33 2010/09/15 23:59:39 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.34 2010/09/16 00:43:33 rtoy Exp $
 #
 
 ENABLE2="yes"
@@ -190,7 +190,6 @@ BUILD_WORLD2=
 buildit
 
 TARGET=$BASE-4
-MAKE_TARGET="all"
 CLEAN_FLAGS="-K all"
 OLDLISP="${BASE}-3/lisp/lisp -noinit $FPU_MODE"
 ENABLE=$ENABLE4
