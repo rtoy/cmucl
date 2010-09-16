@@ -5688,20 +5688,6 @@ msgstr ""
 "ormalizednay, ethay originalway\n"
 "  ingstray isway eturnedray."
 
-#: src/code/string.lisp
-msgid ""
-"Convert a sequence of codepoints to a string.  Codepoints outside\n"
-"  the basic multilingual plane (BMP) are converted into the\n"
-"  corresponding surrogate pairs."
-msgstr ""
-
-#: src/code/string.lisp
-msgid ""
-"Convert a string to a list of corresponding code points.  Surrogate\n"
-"  pairs in the string are converted into the correspoinding\n"
-"  codepoint."
-msgstr ""
-
 #: src/code/mipsstrops.lisp
 msgid ""
 "Compares the substrings specified by String1 and String2 and returns\n"
