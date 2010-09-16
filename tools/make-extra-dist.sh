@@ -121,12 +121,12 @@ do
     install ${GROUP} ${OWNER} -m 0644 $TARGET/i18n/$f $DESTDIR/lib/cmucl/lib/$DIR
 done
 
-# Install po files
-for f in `(cd src/i18n; find locale -type f -print | egrep -v 'CVS|~.*~|.*~')`
+# Install po files.  (Do we really need to distribute the po files?)
+for f in `(cd $TARGET/i18n; find locale -type f -print | egrep -v 'CVS|~.*~|.*~')`
 do
     FILE=`basename $f`
     DIR=`dirname $f`
-    install ${GROUP} ${OWNER} -m 0644 src/i18n/$f $DESTDIR/lib/cmucl/lib/$DIR
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/i18n/$f $DESTDIR/lib/cmucl/lib/$DIR
 done
 
 if [ -z "$INSTALL_DIR" ]; then

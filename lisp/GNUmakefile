@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.37 2010/07/29 04:28:49 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.38 2010/09/16 02:29:37 rtoy Rel $
 
 all: lisp.nm
 
@@ -74,16 +74,31 @@ LOCALES=en@piglatin ko
 # Convert locale names to the appropriate path where we want the mo files to go.
 LOCALE_DIRS = $(patsubst %, i18n/locale/%/LC_MESSAGES, $(LOCALES))
 
+# When processing the translations, we merge the po file from the src
+# directory with the appropriate pot file.  The result is placed in
+# the build directory.  Then we compare the original po file with the
+# newly generated one (but sorting both before comparing).  If they
+# are different we print out a note so that we know to look into it
+# and decide if the po file in the src directory needs to be updated.
+#
+# The sorting is done so that differences in order of the lines is not
+# important.  In particular, msgmerge on OSX wants to put the
+# Language: line after the Content-Transfer-Encoding line.  But on
+# FreeBSD, it moves the line to after the Language-Team line.  This
+# makes things messy.  Hence, sort and diff.
 translations: 
 	for pot in ../../src/i18n/locale/*.pot; do \
 	  for po in $(LOCALE_DIRS); do \
             d=`dirname $$pot`; \
 	    f=`basename $$pot .pot`; \
-	    touch ../../src/$$po/$$f.po; \
 	    echo ; \
 	    echo '***' Processing $$f.pot:  $$po; \
-	    msgmerge -v ../../src/$$po/$$f.po $$pot -o ../../src/$$po/$$f.po; \
-	    msgfmt -v  ../../src/$$po/$$f.po -o ../$$po/$$f.mo; \
+	    msgmerge -v ../../src/$$po/$$f.po $$pot -o ../$$po/$$f.po; \
+	    msgfmt -v  ../$$po/$$f.po -o ../$$po/$$f.mo; \
+	    sort < ../$$po/$$f.po > /tmp/$$$$-updated-$$f.po; \
+	    sort < ../../src/$$po/$$f.po > /tmp/$$$$-orig-$$f.po; \
+	    diff -uwB /tmp/$$$$-orig-$$f.po /tmp/$$$$-updated-$$f.po || echo "Warning:  $$po/$$f.po changed"; \
+	    rm -f /tmp/$$$$-updated-$$f.po /tmp/$$$$-orig-$$f.po; \
 	  done; done
 
 .PHONY : translations
