@@ -670,3 +670,8 @@ good at this point too.
 
 Some of the details for each command may have changed;  You can get
 help for each command by using the -h argument.
+
+In particular steps 3, 4, and 5 can be combined into one by using the
+-c, -r, and -l options for cross-build-world.sh.  The -c option cleans
+out the targe and cross directories; -r does step 4; and -l does step
+5.
