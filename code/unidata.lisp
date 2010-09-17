@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.10 2010/09/15 23:32:06 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.11 2010/09/17 02:11:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.10 $")
+(defvar *unidata-version* "$Revision: 1.11 $")
 
 (defstruct unidata
   range
@@ -649,6 +649,27 @@
   ;; the values here.
   (<= #xAC00 code #xD7A3))
 
+(defun initialize-reverse-hangul-tables ()
+  (unless (boundp '*reverse-hangul-choseong*)
+    (setq *reverse-hangul-choseong*
+	  (sort (coerce (loop for x across +hangul-choseong+
+			   as i upfrom 0 by 588
+			   collect (cons x i))
+			'vector)
+		#'> :key (lambda (x) (length (car x)))))
+    (setq *reverse-hangul-jungseong*
+	  (sort (coerce (loop for x across +hangul-jungseong+
+			   as i upfrom 0 by 28
+			   collect (cons x i))
+			'vector)
+		#'> :key (lambda (x) (length (car x)))))
+    (setq *reverse-hangul-jongseong*
+	  (sort (coerce (loop for x across +hangul-jongseong+
+			   as i upfrom 1
+			   collect (cons x i))
+			'vector)
+		#'> :key (lambda (x) (length (car x)))))))
+
 (defun unicode-name-to-codepoint (name)
   (declare (type string name))
   (cond ((and (> (length name) 22)
@@ -669,25 +690,7 @@
 				:start (+ x 8)))
 		(ll nil) (vv nil) (tt 0))
 	   (unless n (return-from unicode-name-to-codepoint nil))
-	   (unless (boundp '*reverse-hangul-choseong*)
-	     (setq *reverse-hangul-choseong*
-		   (sort (coerce (loop for x across +hangul-choseong+
-					as i upfrom 0 by 588
-				   collect (cons x i))
-				 'vector)
-			 #'> :key (lambda (x) (length (car x)))))
-	     (setq *reverse-hangul-jungseong*
-		   (sort (coerce (loop for x across +hangul-jungseong+
-					as i upfrom 0 by 28
-				   collect (cons x i))
-				 'vector)
-			 #'> :key (lambda (x) (length (car x)))))
-	     (setq *reverse-hangul-jongseong*
-		   (sort (coerce (loop for x across +hangul-jongseong+
-					as i upfrom 1
-				   collect (cons x i))
-				 'vector)
-			 #'> :key (lambda (x) (length (car x))))))
+	   (initialize-reverse-hangul-tables)
 	   (loop for (x . y) across *reverse-hangul-choseong*
 	     when (and (<= (+ n (length x)) (length name))
 		       (string= name x :start1 n :end1 (+ n (length x))))
@@ -863,7 +866,7 @@
 (defun unicode-decomp (code &optional (compatibility t))
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type codepoint code))
-  (if (hangule-syllable-p code)
+  (if (hangul-syllable-p code)
       ;; Hangul syllables.  (See
       ;; http://www.unicode.org/reports/tr15/#Hangul for the
       ;; algorithm.)
