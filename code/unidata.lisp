@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.12 2010/09/17 15:59:45 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.13 2010/09/17 22:41:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.12 $")
+(defvar *unidata-version* "$Revision: 1.13 $")
 
 (defstruct unidata
   range
@@ -1112,17 +1112,20 @@
 ;;
 ;; Code written by Paul Foley, with some modifications by Raymond Toy.
 ;;
+
+(defvar *hangul-syllable-dictionary* nil
+  "Dictionary of Hangul syllables")
+(defvar *cjk-unified-ideograph-dictionary* nil
+  "Dictionary of CJK Unified ideographs")
+
+;;
 (defun unicode-complete-name (prefix
 			      &optional (dict (unidata-name+
 					       *unicode-data*)))
   "Try to complete the string Prefix using the dictionary in Dict.
   Three values are returned: (1) The best match of prefix, (2) a list
   of possible completions, (3) a boolean indicating whether the best
-  match is a complete unicode name.
-
-  The search is only done in the given dictionary so names that are
-  derived algorithmically like Hangul syllables and CJK Unified
-  Ideographs are not found."
+  match is a complete unicode name. "
 
   (unless dict
     ;; Load the names dictionary, if needed.
@@ -1143,7 +1146,7 @@
 	     ;; The prefix is an exact match to something in the code
 	     ;; book.  Try to find possible completions of this
 	     ;; prefix.
-	     (let ((x (node-next n))
+	     (let ((x (node-next n dict))
 		   (suffix ""))
 	       #+(or debug-uc)
 	       (format t "init x = ~S~%" x)
@@ -1154,7 +1157,7 @@
 		 (format t "extending~%")
 		 (setq suffix (caar x)
 		       n (cdar x)
-		       x (node-next (cdar x))))
+		       x (node-next (cdar x) dict)))
 	       #+(or debug-uc)
 	       (progn
 		 (format t "x = ~S~%" x)
@@ -1172,7 +1175,7 @@
 	    (t
 	     ;; The prefix was not an exact match of some entry in the
 	     ;; codebook. Try to find some completions from there.
-	     (let* ((nodex (node-next n))
+	     (let* ((nodex (node-next n dict))
 		    (x (remove-if-not (lambda (x)
 					(%match (car x) prefix p))
 				      nodex)))
@@ -1186,7 +1189,7 @@
 		      ;; the completions from there.
 		      (setq prefix (concatenate 'string prefix (caar x))
 			    n (cdar x)
-			    x (node-next (cdar x)))
+			    x (node-next (cdar x) dict))
 		      (values (%str prefix)
 			      (sort (mapcar #'%strx x) #'string<)
 			      (> (aref (dictionary-codev dict) n) -1)))
@@ -1195,11 +1198,11 @@
 		      ;; Try to extend each of those completions one
 		      ;; more step.
 		      (let* ((p (mapcan #'(lambda (ex)
-					    (let ((next (node-next (cdr ex))))
+					    (let ((next (node-next (cdr ex) dict)))
 					      (if next
 						  (mapcar #'(lambda (n)
 							      (concatenate 'string (car ex) (car n)))
-							  (node-next (cdr ex)))
+							  (node-next (cdr ex) dict))
 						  (list (car ex)))))
 					x))
 			     (q (%mip p)))
@@ -1223,32 +1226,29 @@
   (let (names)
     (cond ((search "Hangul_Syllable_" prefix)
            (initialize-reverse-hangul-tables)
-           ;; We should probably do something better than return all
-           ;; the possible matches, but this works.  We remove the
-           ;; things that can't possibly match so that slime has less
-           ;; work.
-           (loop for choseong across *reverse-hangul-choseong* do
-                (loop for junseong across *reverse-hangul-jungseong* do
-                     (loop for jongseong across *reverse-hangul-jongseong* do
-                          (push (format nil "Hangul_Syllable_~A~A~A"
-                                        (car choseong)
-                                        (car junseong)
-                                        (car jongseong))
-                                names))))
-	   ;; Remove things that can't have prefix as its prefix.
-	   (setf names (delete-if-not #'(lambda (x)
-					  (search prefix x :test #'char-equal))
-				      names)))
+	   (unless *hangul-syllable-dictionary*
+	     (build-hangul-syllable-dictionary))
+	   (multiple-value-bind (prefix-match next completep)
+	       (unicode-complete-name (subseq prefix 16)
+				      *hangul-syllable-dictionary*)
+	     (loop for x in next
+		do (push (concatenate 'string "Hangul_Syllable_" prefix-match x)
+			 names))
+	     (when completep
+	       (push (concatenate 'string "Hangul_Syllable_" prefix-match)
+		     names))))
           ((search "Cjk_Unified_Ideograph-" prefix)
-	   ;; We should do something better than this!  There are a
-	   ;; lot of completions here.
-           (setf names
-                 (loop for x from #x4e00 upto #x9fff
-                    collect (format nil "Cjk_Unified_Ideograph-~X" x)))
-	   ;; Remove things that can't have prefix as its prefix.
-	   (setf names (delete-if-not #'(lambda (x)
-					  (search prefix x :test #'char-equal))
-				      names))))
+	   (unless *cjk-unified-ideograph-dictionary*
+	     (build-cjk-unified-ideograph-dictionary))
+	   (multiple-value-bind (prefix-match next completep)
+	       (unicode-complete-name (subseq prefix 22)
+				      *cjk-unified-ideograph-dictionary*)
+	     (loop for x in next
+		do (push (concatenate 'string "Cjk_Unified_Ideograph-" prefix-match x)
+			 names))
+	     (when completep
+	       (push (concatenate 'string "Cjk_Unified_Ideograph-" prefix-match)
+		     names)))))
     (multiple-value-bind (prefix-match next completep)
 	(unicode-complete-name prefix dict)
       (loop for x in next
@@ -1260,7 +1260,7 @@
 		 (search "Hangul_Syllable_" prefix-match :end1 (min 16 (length prefix-match))))
 	     ;; Add syllable as possible completion
 	     (push "Hangul_Syllable_" names))
-	    ((or11111 ;;(string= prefix-match "Cjk_")
+	    ((or ;;(string= prefix-match "Cjk_")
 	      (search "Cjk_Unified_Ideograph-" prefix-match :end1 (min 22 (length prefix-match))))
 	     ;; Add Unified
 	     (push "Cjk_Unified_Ideograph-" names)))
@@ -1293,16 +1293,17 @@
       (setq posn (mismatch first string :end1 posn)))
     (subseq first 0 posn)))
 
-(defun node-next (i &aux (dict (unidata-name+ *unicode-data*)))
+(defun node-next (i &optional (dict (unidata-name+ *unicode-data*)))
   (let* ((j (aref (dictionary-nextv dict) i))
 	 (x (ldb (byte 14 18) j))
 	 (y (ldb (byte 18 0) j)))
     (loop for i from 0 below (aref (dictionary-keyl dict) x)
        collect (close-node (cons (aref (dictionary-cdbk dict)
 				       (aref (dictionary-keyv dict) (+ x i)))
-				 (+ y i))))))
+				 (+ y i))
+			   dict))))
 
-(defun close-node (i &aux (dict (unidata-name+ *unicode-data*)))
+(defun close-node (i &optional (dict (unidata-name+ *unicode-data*)))
   (loop
      (if (> (aref (dictionary-codev dict) (cdr i)) -1)
 	 (return i)
@@ -1315,3 +1316,158 @@
 			      (aref (dictionary-keyv dict) x))))
 		 (setf (car i) (concatenate 'string (car i) k)
 		       (cdr i) y)))))))
+
+(defun build-hangul-syllable-dictionary ()
+  "Build the dictionary for Hangul syllables"
+  (initialize-reverse-hangul-tables)
+  (let ((hangul-codebook
+	 (map 'vector #'car
+	      (delete ""
+		      (concatenate 'vector
+				   *reverse-hangul-choseong*
+				   *reverse-hangul-jungseong*
+				   *reverse-hangul-jongseong*)
+		      :test #'string= :key #'car)))
+	(k 0) 
+	names)
+    (loop for choseong across *reverse-hangul-choseong* do
+	 (loop for junseong across *reverse-hangul-jungseong* do
+	      (loop for jongseong across *reverse-hangul-jongseong* do
+		   (push (cons (format nil "~A~A~A"
+				       (car choseong)
+				       (car junseong)
+				       (car jongseong))
+			       k)
+			 names)
+		   (incf k))))
+    (setf *hangul-syllable-dictionary*
+	  (build-dictionary hangul-codebook (nreverse names)))))
+
+(defun build-cjk-unified-ideograph-dictionary ()
+  "Build the dictionary for CJK Unified Ideographs"
+  (let ((codebook (coerce (loop for k from 0 to 15
+			     collect (format nil "~X" k))
+			  'vector))
+	(names (loop for codepoint from 0 below codepoint-limit
+		    when (cjk-ideograph-p codepoint)
+		  collect (cons (format nil "~X" codepoint)
+				codepoint))))
+    (setf *cjk-unified-ideograph-dictionary*
+	  (build-dictionary codebook names))))
+
+;; The definitions of BUILD-DICTIONARY, NAME-LOOKUP, and ENCODE-NAME
+;; were taken from build-unidata.lisp.
+(defun build-dictionary (codebook entries)
+  (let ((khash (make-hash-table :test 'equalp))
+	(thash (make-hash-table))
+	(top 0)
+	(keyl (make-array 0 :element-type '(unsigned-byte 8)))
+	(keyv (make-array 0 :element-type '(unsigned-byte 8)))
+	vec1 vec2 vec3)
+    (labels ((add-to-trie (trie name codepoint)
+	       (loop for ch across (encode-name name codebook) do
+		 (let ((sub (cdr (assoc ch (rest trie)))))
+		   (if sub
+		       (setq trie sub)
+		       (setq trie (cdar (push (cons ch (cons nil nil))
+					      (rest trie)))))))
+	       (unless (or (null (car trie)) (= (car trie) codepoint))
+		 (error "Codepoints #x~4,'0X and #x~4,'0X are both named ~S."
+			(car trie) codepoint name))
+	       (setf (car trie) codepoint))
+	     (key (trie)
+	       (map '(simple-array (unsigned-byte 8) (*)) #'car (rest trie)))
+	     (pass1 (trie depth)
+	       (setf (rest trie) (sort (rest trie) #'< :key #'car))
+	       (setf (gethash trie thash)
+		   (list depth (1- (incf top)) (length (rest trie))))
+	       (setf (gethash (key trie) khash) t)
+	       (mapc (lambda (x) (pass1 (cdr x) (1+ depth))) (rest trie)))
+	     (pass2 (trie)
+	       (let* ((x (gethash (gethash trie thash) thash))
+		      (n (car x)))
+		 (setf (aref vec1 n) (if (first trie) (first trie) -1)
+		       (aref vec2 n) (logior (ash (gethash (key trie) khash)
+						  18)
+					     (cdr x))))
+	       (mapc (lambda (x) (pass2 (cdr x))) (rest trie))))
+      (format t "~&  Initializing...~%")
+      (let ((trie (cons nil nil)))
+	(loop for (name . code) in entries do (add-to-trie trie name code))
+	(format t "~&  Pass 1...~%")
+	(pass1 trie 0)
+	(format t "~&  Sorting...~%")
+	(dolist (key (sort (loop for k being the hash-keys of khash
+			      collect k)
+			   #'> :key #'length))
+	  (let ((pos -1))
+	    (loop
+	      (setq pos (search key keyv :start2 (1+ pos)))
+	      (when (and pos (zerop (aref keyl pos)))
+		(setf (aref keyl pos) (length key)))
+	      (when (and pos (= (aref keyl pos) (length key)))
+		(setf (gethash key khash) pos)
+		(return))
+	      (when (null pos)
+		(setf (gethash key khash) (length keyv))
+		(setf keyl (adjust-array keyl (+ (length keyv) (length key))))
+		(setf (aref keyl (length keyv)) (length key))
+		(setf keyv (concatenate '(simple-array (unsigned-byte 8) (*))
+					keyv key))
+		(return)))))
+	(loop with off = 1
+	      for key in (sort (loop for x being the hash-values of thash
+				  collect x)
+			       (lambda (a b) (if (= (first a) (first b))
+						 (< (second a) (second b))
+						 (< (first a) (first b)))))
+	      as i upfrom 0
+	  do (setf (gethash key thash) (cons i off) off (+ off (third key))))
+	(setq vec1 (make-array top :element-type '(signed-byte 32))
+	      vec2 (make-array top :element-type '(unsigned-byte 32))
+	      vec3 (make-array top :element-type '(unsigned-byte 32)))
+	(format t "~&  Pass 2...~%")
+	(pass2 trie)
+	(format t "~&  Finalizing~%")
+	(dotimes (i top)
+	  (let ((xxx (aref vec2 i)))
+	    (dotimes (j (aref keyl (ash xxx -18)))
+	      (setf (aref vec3 (+ (logand xxx #x3FFFF) j)) i))))
+	(loop for (name . code) in entries do
+	  (let ((n (name-lookup name codebook keyv keyl vec2)))
+	    (unless n (error "Codepoint not found for ~S." name))
+	    (setf (ldb (byte 14 18) (aref vec3 n)) (length name))))))
+    (make-dictionary :cdbk codebook
+		   :keyv keyv :keyl keyl
+		   :codev vec1 :nextv vec2 :namev vec3)))
+
+(defun name-lookup (name codebook keyv keyl nextv)
+  (let* ((current 0)
+	 (posn 0))
+    (loop
+      (let ((keyp (ash (aref nextv current) -18)))
+	(dotimes (i (aref keyl keyp)
+		    (return-from name-lookup nil))  ; shouldn't happen
+	  (let* ((str (aref codebook (aref keyv (+ keyp i))))
+		 (len (length str)))
+	    (when (and (>= (length name) (+ posn len))
+		       (string= name str :start1 posn :end1 (+ posn len)))
+	      (setq current
+		  (+ (logand (aref nextv current) #x3FFFF) i))
+	      (if (= (incf posn len) (length name))
+		  (return-from name-lookup current)
+		  (return)))))))))
+
+(defun encode-name (string codebook)
+  (let ((p 0)
+	(res '()))
+    (loop while (< p (length string)) do
+      (dotimes (i (length codebook)
+		  (error "\"~C\" is not in the codebook." (char string p)))
+	(let ((code (aref codebook i)))
+	  (when (and (<= (length code) (- (length string) p))
+		     (string= string code :start1 p :end1 (+ p (length code))))
+	    (push i res)
+	    (incf p (length code))
+	    (return)))))
+    (nreverse (coerce res 'vector))))
