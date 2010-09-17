@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.11 2010/09/17 02:11:09 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.12 2010/09/17 15:59:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.11 $")
+(defvar *unidata-version* "$Revision: 1.12 $")
 
 (defstruct unidata
   range
@@ -290,42 +290,51 @@
 
 
 
-(defun search-dictionary (string dictionary)
+(defun search-dictionary (string dictionary &optional (current 0) (posn 0))
+  "Search the Unicode name dictionary for the longest entry that
+  matches STRING.  STRING must be in Unicode name format.  That is, it
+  must be upper case with spaces separating each word.
+
+  Two values are returned.  The first value is index into the codebook
+  that continues the string..  The second value is the length of the
+  substring of string that matches the codebook. "
+  
   (declare (optimize (speed 3) (space 0) (safety 0)
 		     (ext:inhibit-warnings 3))
-	   (type string string) (type dictionary dictionary))
+	   (type string string) (type dictionary dictionary)
+	   (type (unsigned-byte 32) current) (type lisp::index posn))
   (let* ((codebook (dictionary-cdbk dictionary))
-	 (current 0)
-	 (posn 0)
 	 (stack '()))
-    (declare (type (unsigned-byte 32) current) (type lisp::index posn))
     (loop
-      (let ((keyv (ash (aref (dictionary-nextv dictionary) current) -18)))
-	(dotimes (i (aref (dictionary-keyl dictionary) keyv)
-		    (if stack
-			(let ((next (pop stack)))
-			  (setq posn (car next) current (cdr next)))
-			(return-from search-dictionary nil)))
-	  (let* ((str (aref codebook (aref (dictionary-keyv dictionary)
-					   (+ keyv i))))
-		 (len (length str)))
-	    (declare (type simple-base-string str))
-	    (when (and (>= (length string) (+ posn len))
-		       (string= string str :start1 posn :end1 (+ posn len)))
-	      (setq current
-		  (+ (logand (aref (dictionary-nextv dictionary) current)
-			     #x3FFFF)
-		     i))
-	      (when (= (incf posn len) (length string))
-		(return-from search-dictionary current))
-	      (return))			; from DOTIMES - loop again
-	    (when (or (string= str " ") (string= str "-"))
-	      (push (cons posn
-			  (+ (logand (aref (dictionary-nextv dictionary)
-					   current)
+       (let ((keyv (ash (aref (dictionary-nextv dictionary) current) -18)))
+	 (dotimes (i (aref (dictionary-keyl dictionary) keyv)
+		   (if stack
+		       (let ((next (pop stack)))
+			 (setq posn (car next) current (cdr next)))
+		       (return-from search-dictionary nil)))
+	   (let* ((str (aref codebook (aref (dictionary-keyv dictionary)
+					    (+ keyv i))))
+		  (len (length str)))
+	     (declare (type simple-base-string str))
+	     (cond ((and (>= (length string) (+ posn len))
+			 (string= string str :start1 posn :end1 (+ posn len)))
+		    (setq current
+			  (+ (logand (aref (dictionary-nextv dictionary) current)
 				     #x3FFFF)
 			     i))
-		    stack))))))))
+		    (when (= (incf posn len) (length string))
+		      (return-from search-dictionary (values current posn)))
+		    (return))		; from DOTIMES - loop again
+		   ((and (< (length string) (+ posn len))
+			 (string= string str :start1 posn :end2 (- (length string) posn)))
+		    (return-from search-dictionary (values current posn))))
+	     (when (or (string= str " ") (string= str "-"))
+	       (push (cons posn
+			   (+ (logand (aref (dictionary-nextv dictionary)
+					    current)
+				      #x3FFFF)
+			      i))
+		     stack))))))))
 
 (defun search-range (code range)
   (declare (optimize (speed 3) (space 0) (safety 0))
@@ -715,20 +724,22 @@
 	       nil)))
 	(t
 	 (unless (unidata-name+ *unicode-data*) (load-names))
-	 (let* ((names (unidata-name+ *unicode-data*))
-		(n (search-dictionary name names)))
-	   (when n
-	     (let ((cp (aref (dictionary-codev names) n)))
-	       (if (minusp cp) nil cp)))))))
+	 (let* ((names (unidata-name+ *unicode-data*)))
+	   (multiple-value-bind (n p)
+	       (search-dictionary name names)
+	     (when (and n (= p (length name)))
+	       (let ((cp (aref (dictionary-codev names) n)))
+		 (if (minusp cp) nil cp))))))))
 
 (defun unicode-1.0-name-to-codepoint (name)
   (declare (type string name))
   (unless (unidata-name1+ *unicode-data*) (load-1.0-names))
-  (let* ((names (unidata-name1+ *unicode-data*))
-	 (n (search-dictionary name names)))
-    (when n
-      (let ((cp (aref (dictionary-codev names) n)))
-	(if (minusp cp) nil cp)))))
+  (let* ((names (unidata-name1+ *unicode-data*)))
+    (multiple-value-bind (n p)
+	(search-dictionary name names)
+      (when (and n (= p (length name)))
+	(let ((cp (aref (dictionary-codev names) n)))
+	  (if (minusp cp) nil cp))))))
 
 
 (defun unicode-name+ (code ntrie dict)
@@ -1096,3 +1107,211 @@
 	  :katakana :aletter :midnumlet :midletter :midnum
 	  :numeric :extendnumlet)
 	(unicode-word-break-code code)))
+
+;; Support for character name completion for slime.
+;;
+;; Code written by Paul Foley, with some modifications by Raymond Toy.
+;;
+(defun unicode-complete-name (prefix
+			      &optional (dict (unidata-name+
+					       *unicode-data*)))
+  "Try to complete the string Prefix using the dictionary in Dict.
+  Three values are returned: (1) The best match of prefix, (2) a list
+  of possible completions, (3) a boolean indicating whether the best
+  match is a complete unicode name.
+
+  The search is only done in the given dictionary so names that are
+  derived algorithmically like Hangul syllables and CJK Unified
+  Ideographs are not found."
+
+  (unless dict
+    ;; Load the names dictionary, if needed.
+    (unless (unidata-name+ *unicode-data*)
+      (load-names))
+    (setf dict (unidata-name+ *unicode-data*)))
+  (let ((prefix (nsubstitute #\Space #\_ (string-upcase prefix)))
+	completep)
+    (multiple-value-bind (n p)
+	(search-dictionary prefix dict)
+      (when n
+	(setq completep (> (aref (dictionary-codev dict) n) -1)))
+      #+(or debug-uc)
+      (format t "n,p,complete = ~S ~S ~S~%" n p completep)
+      (cond ((not p)
+	     (values (%str prefix) nil nil))
+	    ((= p (length prefix))
+	     ;; The prefix is an exact match to something in the code
+	     ;; book.  Try to find possible completions of this
+	     ;; prefix.
+	     (let ((x (node-next n))
+		   (suffix ""))
+	       #+(or debug-uc)
+	       (format t "init x = ~S~%" x)
+	       (when (= (length x) 1)
+		 ;; There was only one possible extension.  Try to
+		 ;; extend from there.
+		 #+(or debug-uc)
+		 (format t "extending~%")
+		 (setq suffix (caar x)
+		       n (cdar x)
+		       x (node-next (cdar x))))
+	       #+(or debug-uc)
+	       (progn
+		 (format t "x = ~S~%" x)
+		 (format t "suffix = ~S~%" suffix))
+	       (when (<= (length x) 1)
+		 (setq prefix (concatenate 'string prefix suffix))
+		 (setf suffix ""))
+	       (values (%str prefix)
+		       (sort (mapcar #'(lambda (e)
+					 (%str (concatenate 'string suffix (car e))))
+				     x)
+			     #'string<)
+		       (or (> (aref (dictionary-codev dict) n) -1)
+			   completep))))
+	    (t
+	     ;; The prefix was not an exact match of some entry in the
+	     ;; codebook. Try to find some completions from there.
+	     (let* ((nodex (node-next n))
+		    (x (remove-if-not (lambda (x)
+					(%match (car x) prefix p))
+				      nodex)))
+	       #+(or debug-uc)
+	       (progn
+		 (format t "nodex = ~S~%" nodex)
+		 (format t "x = ~S~%" x))
+	       (setq prefix (subseq prefix 0 p))
+	       (cond ((= (length x) 1)
+		      ;; Only one possible completion.  Try to extend
+		      ;; the completions from there.
+		      (setq prefix (concatenate 'string prefix (caar x))
+			    n (cdar x)
+			    x (node-next (cdar x)))
+		      (values (%str prefix)
+			      (sort (mapcar #'%strx x) #'string<)
+			      (> (aref (dictionary-codev dict) n) -1)))
+		     (t
+		      ;; There's more than one possible completion.
+		      ;; Try to extend each of those completions one
+		      ;; more step.
+		      (let* ((p (mapcan #'(lambda (ex)
+					    (let ((next (node-next (cdr ex))))
+					      (if next
+						  (mapcar #'(lambda (n)
+							      (concatenate 'string (car ex) (car n)))
+							  (node-next (cdr ex)))
+						  (list (car ex)))))
+					x))
+			     (q (%mip p)))
+			(setq prefix (concatenate 'string prefix q))
+			
+			(do ((tmp p (cdr tmp)))
+			    ((endp tmp))
+			  (setf (car tmp) (subseq (car tmp) (length q))))
+			(values (%str prefix)
+				(sort (mapcar #'%str p) #'string<)
+				nil))))))))))
+
+;; Like unicode-complete-name, but we also try to handle the names
+;; that can be computed algorithmically like the Hangul syllables and
+;; the CJK Unified Ideographs.
+(defun unicode-complete (prefix
+			 &optional (dict (unidata-name+ *unicode-data*)))
+  "Search the dictionary in Dict and return a list of the possible
+  completions starting with Prefix.  If there is no match, NIL is
+  returned."
+  (let (names)
+    (cond ((search "Hangul_Syllable_" prefix)
+           (initialize-reverse-hangul-tables)
+           ;; We should probably do something better than return all
+           ;; the possible matches, but this works.  We remove the
+           ;; things that can't possibly match so that slime has less
+           ;; work.
+           (loop for choseong across *reverse-hangul-choseong* do
+                (loop for junseong across *reverse-hangul-jungseong* do
+                     (loop for jongseong across *reverse-hangul-jongseong* do
+                          (push (format nil "Hangul_Syllable_~A~A~A"
+                                        (car choseong)
+                                        (car junseong)
+                                        (car jongseong))
+                                names))))
+	   ;; Remove things that can't have prefix as its prefix.
+	   (setf names (delete-if-not #'(lambda (x)
+					  (search prefix x :test #'char-equal))
+				      names)))
+          ((search "Cjk_Unified_Ideograph-" prefix)
+	   ;; We should do something better than this!  There are a
+	   ;; lot of completions here.
+           (setf names
+                 (loop for x from #x4e00 upto #x9fff
+                    collect (format nil "Cjk_Unified_Ideograph-~X" x)))
+	   ;; Remove things that can't have prefix as its prefix.
+	   (setf names (delete-if-not #'(lambda (x)
+					  (search prefix x :test #'char-equal))
+				      names))))
+    (multiple-value-bind (prefix-match next completep)
+	(unicode-complete-name prefix dict)
+      (loop for x in next
+	 do (push (concatenate 'string prefix-match x) names))
+      (when completep
+	(push prefix-match names))
+      ;; Match prefix against Hangul and/or Hangul_syllable
+      (cond ((or (string= prefix-match "Hangul_")
+		 (search "Hangul_Syllable_" prefix-match :end1 (min 16 (length prefix-match))))
+	     ;; Add syllable as possible completion
+	     (push "Hangul_Syllable_" names))
+	    ((or11111 ;;(string= prefix-match "Cjk_")
+	      (search "Cjk_Unified_Ideograph-" prefix-match :end1 (min 22 (length prefix-match))))
+	     ;; Add Unified
+	     (push "Cjk_Unified_Ideograph-" names)))
+      (setf names (mapcar #'string-capitalize names))
+      ;;(format t "Final names = ~S~%" names)
+      names)))
+
+;; Convert the string into the form we want for character names.
+(defun %str (x)
+  (nsubstitute #\_ #\Space (string-capitalize x)))
+
+(defun %strx (x)
+  (%str (car x)))
+
+#+(or)
+(defun %match (part prefix posn)
+  (and (>= (length part) (- (length prefix) posn))
+       (string= part prefix :start2 posn :end1 (- (length prefix) posn))))
+
+(defun %match (part prefix posn)
+  (let ((s1 (search part prefix :start2 posn))
+	(s2 (search prefix part :start1 posn)))
+    (or (and s1 (= s1 posn))
+	(and s2 (zerop s2)))))
+
+(defun %mip (strings)
+  (let* ((first (first strings))
+	 (posn (length first)))
+    (dolist (string (rest strings))
+      (setq posn (mismatch first string :end1 posn)))
+    (subseq first 0 posn)))
+
+(defun node-next (i &aux (dict (unidata-name+ *unicode-data*)))
+  (let* ((j (aref (dictionary-nextv dict) i))
+	 (x (ldb (byte 14 18) j))
+	 (y (ldb (byte 18 0) j)))
+    (loop for i from 0 below (aref (dictionary-keyl dict) x)
+       collect (close-node (cons (aref (dictionary-cdbk dict)
+				       (aref (dictionary-keyv dict) (+ x i)))
+				 (+ y i))))))
+
+(defun close-node (i &aux (dict (unidata-name+ *unicode-data*)))
+  (loop
+     (if (> (aref (dictionary-codev dict) (cdr i)) -1)
+	 (return i)
+	 (let* ((j (aref (dictionary-nextv dict) (cdr i)))
+		(x (ldb (byte 14 18) j))
+		(y (ldb (byte 18 0) j)))
+	   (if (> (aref (dictionary-keyl dict) x) 1)
+	       (return i)
+	       (let ((k (aref (dictionary-cdbk dict)
+			      (aref (dictionary-keyv dict) x))))
+		 (setf (car i) (concatenate 'string (car i) k)
+		       (cdr i) y)))))))
