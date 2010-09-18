@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.6 2010/09/18 20:47:51 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.7 2010/09/18 20:58:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -460,6 +460,20 @@
 			  (ntrie1-mvec data)
 			  (ntrie1-lvec data)
 			  stm))
+	   (write-dict (data stm)
+	     (write-byte (1- (length (dictionary-cdbk data))) stm)
+	     (write16 (length (dictionary-keyv data)) stm)
+	     (write32 (length (dictionary-codev data)) stm)
+	     (let ((codebook (dictionary-cdbk data)))
+	       (dotimes (i (length codebook))
+		 (write-byte (length (aref codebook i)) stm)
+		 (dotimes (j (length (aref codebook i)))
+		   (write-byte (char-code (char (aref codebook i) j)) stm))))
+	     (write-vector (dictionary-keyv data) stm :endian-swap :network-order)
+	     (write-vector (dictionary-keyl data) stm :endian-swap :network-order)
+	     (write-vector (dictionary-codev data) stm :endian-swap :network-order)
+	     (write-vector (dictionary-nextv data) stm :endian-swap :network-order)
+	     (write-vector (dictionary-namev data) stm :endian-swap :network-order))
 	   (update-index (val array)
 	     (let ((result (vector-push val array)))
 	       (unless result
@@ -486,21 +500,8 @@
 	  (write32 (length (range-codes data)) stm)
 	  (write-vector (range-codes data) stm :endian-swap :network-order))
 	;; 1. Character name data
-	(let ((data (unidata-name+ *unicode-data*)))
-	  (update-index (file-position stm) index)
-	  (write-byte (1- (length (dictionary-cdbk data))) stm)
-	  (write16 (length (dictionary-keyv data)) stm)
-	  (write32 (length (dictionary-codev data)) stm)
-	  (let ((codebook (dictionary-cdbk data)))
-	    (dotimes (i (length codebook))
-	      (write-byte (length (aref codebook i)) stm)
-	      (dotimes (j (length (aref codebook i)))
-		(write-byte (char-code (char (aref codebook i) j)) stm))))
-	  (write-vector (dictionary-keyv data) stm :endian-swap :network-order)
-	  (write-vector (dictionary-keyl data) stm :endian-swap :network-order)
-	  (write-vector (dictionary-codev data) stm :endian-swap :network-order)
-	  (write-vector (dictionary-nextv data) stm :endian-swap :network-order)
-	  (write-vector (dictionary-namev data) stm :endian-swap :network-order))
+	(update-index (file-position stm) index)
+	(write-dict (unidata-name+ *unicode-data*) stm)
 	;; 2. Codepoint-to-name mapping
 	(let ((data (unidata-name *unicode-data*)))
 	  (update-index (file-position stm) index)
@@ -536,21 +537,8 @@
 	  (write-byte (length (bidi-tabl data)) stm)
 	  (write-vector (bidi-tabl data) stm :endian-swap :network-order))
 	;; 9. Unicode 1.0 names
-	(let ((data (unidata-name1+ *unicode-data*)))
-	  (update-index (file-position stm) index)
-	  (write-byte (1- (length (dictionary-cdbk data))) stm)
-	  (write16 (length (dictionary-keyv data)) stm)
-	  (write32 (length (dictionary-codev data)) stm)
-	  (let ((codebook (dictionary-cdbk data)))
-	    (dotimes (i (length codebook))
-	      (write-byte (length (aref codebook i)) stm)
-	      (dotimes (j (length (aref codebook i)))
-		(write-byte (char-code (char (aref codebook i) j)) stm))))
-	  (write-vector (dictionary-keyv data) stm :endian-swap :network-order)
-	  (write-vector (dictionary-keyl data) stm :endian-swap :network-order)
-	  (write-vector (dictionary-codev data) stm :endian-swap :network-order)
-	  (write-vector (dictionary-nextv data) stm :endian-swap :network-order)
-	  (write-vector (dictionary-namev data) stm :endian-swap :network-order))
+	(update-index (file-position stm) index)
+	(write-dict (unidata-name1+ *unicode-data*) stm)
 	;; 10. Codepoint to unicode-1.0 name
 	(let ((data (unidata-name1 *unicode-data*)))
 	  (update-index (file-position stm) index)
