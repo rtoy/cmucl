@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.15 2010/09/18 20:47:51 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.16 2010/09/18 21:10:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.15 $")
+(defvar *unidata-version* "$Revision: 1.16 $")
 
 (defstruct unidata
   range
@@ -57,7 +57,7 @@
 ;; The expected Unicode version.  This needs to be synced with
 ;; build-unidata.lisp.
 (defconstant +unicode-major-version+ 5)
-(defconstant +unicode-minor-version+ 1)
+(defconstant +unicode-minor-version+ 2)
 (defconstant +unicode-update-version+ 0)
 
 ;;; These need to be synched with tools/build-unidata.lisp
