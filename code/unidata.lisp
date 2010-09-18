@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.14 2010/09/17 23:29:01 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.15 2010/09/18 20:47:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.14 $")
+(defvar *unidata-version* "$Revision: 1.15 $")
 
 (defstruct unidata
   range
@@ -1116,6 +1116,17 @@
 ;; Code written by Paul Foley, with some modifications by Raymond Toy.
 ;;
 
+;; These hold dictionaries for the Hangul syllables and the CJK
+;; unified ideographs.  Note that these could be stored in
+;; unidata.bin, but that adds almost a megabyte to the size of
+;; unidata.bin.  That seems way to much bloat for something that is
+;; probably not used that much.  However, this incurs a runtime cost
+;; the first time it needs to be accessed.  On a 450 MHz sparc, it
+;; takes 55 sec for the cjk dictionary and 9 sec for the Hangul
+;; dictionary.  A bit long but not too bad.  On a 2 GHz mac mini, it
+;; takes 5 sec and .8 sec, respectively.  This seems reasonable,
+;; especially since the intent is for character completion, which
+;; doesn't have to be too fast.
 (defvar *hangul-syllable-dictionary* nil
   "Dictionary of Hangul syllables")
 (defvar *cjk-unified-ideograph-dictionary* nil
@@ -1322,6 +1333,7 @@
 
 (defun build-hangul-syllable-dictionary ()
   "Build the dictionary for Hangul syllables"
+  (format t "~&Building Hangul Syllable dictionary.  Please wait...~%")
   (initialize-reverse-hangul-tables)
   (let ((hangul-codebook
 	 (map 'vector #'car
@@ -1344,10 +1356,13 @@
 			 names)
 		   (incf k))))
     (setf *hangul-syllable-dictionary*
-	  (build-dictionary hangul-codebook (nreverse names)))))
+	  (build-dictionary hangul-codebook (nreverse names)))
+    (format t "~&Done.~%")
+    (values)))
 
 (defun build-cjk-unified-ideograph-dictionary ()
   "Build the dictionary for CJK Unified Ideographs"
+  (format t "~&Building CJK Unified Ideographs dictionary.  Please wait...~%")
   (let ((codebook (coerce (loop for k from 0 to 15
 			     collect (format nil "~X" k))
 			  'vector))
@@ -1356,7 +1371,9 @@
 		  collect (cons (format nil "~X" codepoint)
 				codepoint))))
     (setf *cjk-unified-ideograph-dictionary*
-	  (build-dictionary codebook names))))
+	  (build-dictionary codebook names))
+    (format t "~&Done.~%")
+    (values)))
 
 ;; The definitions of BUILD-DICTIONARY, NAME-LOOKUP, and ENCODE-NAME
 ;; were taken from build-unidata.lisp.

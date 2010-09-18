@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.5 2010/09/15 21:06:39 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.6 2010/09/18 20:47:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -466,6 +466,8 @@
 		 (error "Index array too short for the data being written")))))
     (with-open-file (stm path :direction :io :if-exists :rename-and-delete
 			 :element-type '(unsigned-byte 8))
+      ;; The length of the index array is the number of sections to be
+      ;; written.  See below for each section.
       (let ((index (make-array 19 :fill-pointer 0)))
 	;; File header
 	(write32 +unicode-magic-number+ stm)	; identification "magic"
@@ -478,12 +480,12 @@
 	(dotimes (i (array-dimension index 0))
 	  (write32 0 stm))		; space for indices
 	(write32 0 stm)			; end marker
-	;; Range data
+	;; 0. Range data
 	(let ((data (unidata-range *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write32 (length (range-codes data)) stm)
 	  (write-vector (range-codes data) stm :endian-swap :network-order))
-	;; Character name data
+	;; 1. Character name data
 	(let ((data (unidata-name+ *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write-byte (1- (length (dictionary-cdbk data))) stm)
@@ -499,41 +501,41 @@
 	  (write-vector (dictionary-codev data) stm :endian-swap :network-order)
 	  (write-vector (dictionary-nextv data) stm :endian-swap :network-order)
 	  (write-vector (dictionary-namev data) stm :endian-swap :network-order))
-	;; Codepoint-to-name mapping
+	;; 2. Codepoint-to-name mapping
 	(let ((data (unidata-name *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write-ntrie32 data stm))
-	;; Codepoint-to-category table
+	;; 3. Codepoint-to-category table
 	(let ((data (unidata-category *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write-ntrie8 data stm))
-	;; Simple case mapping table
+	;; 4. Simple case mapping table
 	(let ((data (unidata-scase *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write-ntrie32 data stm)
 	  (write-byte (length (scase-svec data)) stm)
 	  (write-vector (scase-svec data) stm :endian-swap :network-order))
-	;; Numeric data
+	;; 5. Numeric data
 	(let ((data (unidata-numeric *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write-ntrie32 data stm))
-	;; Decomposition data
+	;; 6. Decomposition data
 	(let ((data (unidata-decomp *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write-ntrie32 data stm)
 	  (write16 (length (decomp-tabl data)) stm)
 	  (write-vector (decomp-tabl data) stm :endian-swap :network-order))
-	;; Combining classes
+	;; 7. Combining classes
 	(let ((data (unidata-combining *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write-ntrie8 data stm))
-	;; Bidi data
+	;; 8. Bidi data
 	(let ((data (unidata-bidi *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write-ntrie16 data stm)
 	  (write-byte (length (bidi-tabl data)) stm)
 	  (write-vector (bidi-tabl data) stm :endian-swap :network-order))
-	;; Unicode 1.0 names
+	;; 9. Unicode 1.0 names
 	(let ((data (unidata-name1+ *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write-byte (1- (length (dictionary-cdbk data))) stm)
@@ -549,10 +551,11 @@
 	  (write-vector (dictionary-codev data) stm :endian-swap :network-order)
 	  (write-vector (dictionary-nextv data) stm :endian-swap :network-order)
 	  (write-vector (dictionary-namev data) stm :endian-swap :network-order))
+	;; 10. Codepoint to unicode-1.0 name
 	(let ((data (unidata-name1 *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write-ntrie32 data stm))
-	;; Normalization quick-check data
+	;; 11. Normalization quick-check data
 	(update-index (file-position stm) index)
 	(let ((data (unidata-qc-nfd *unicode-data*)))
 	  (write-ntrie1 data stm))
@@ -562,35 +565,37 @@
 	  (write-ntrie2 data stm))
 	(let ((data (unidata-qc-nfkc *unicode-data*)))
 	  (write-ntrie2 data stm))
-	;; Write composition exclusion table
+	;; 12. Write composition exclusion table
 	(let ((data (unidata-comp-exclusions *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write16 (length data) stm)
 	  (write-vector data stm :endian-swap :network-order))
-	;; Write full-case lower data
 	(flet ((dump-full-case (data)
 		 (update-index (file-position stm) index)
 		 (write-ntrie32 data stm)
 		 (write16 (length (full-case-tabl data)) stm)
 		 (write-vector (full-case-tabl data) stm :endian-swap :network-order)))
+	  ;; 13. Write full-case lower data
 	  (dump-full-case (unidata-full-case-lower *unicode-data*))
+	  ;; 14. Write full-case title data
 	  (dump-full-case (unidata-full-case-title *unicode-data*))
+	  ;; 15. Write full-case upper data
 	  (dump-full-case (unidata-full-case-upper *unicode-data*)))
-	;; Write case folding data
+	;; 16. Write case-folding simple data
 	(let ((data (unidata-case-fold-simple *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write-ntrie32 data stm))
-	;; case-folding full
+	;; 17. Write case-folding full data
 	(let ((data (unidata-case-fold-full *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write-ntrie32 data stm)
 	  (write16 (length (case-folding-tabl data)) stm)
 	  (write-vector (case-folding-tabl data) stm :endian-swap :network-order))
-	;; Word-break
+	;; 18. Word-break
 	(let ((data (unidata-word-break *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write-ntrie4 data stm))
-	;; Patch up index
+	;; All components saved. Patch up index table now.
 	(file-position stm 8)
 	(dotimes (i (length index))
 	  (write32 (aref index i) stm)))))
