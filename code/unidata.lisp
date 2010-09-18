@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.16 2010/09/18 21:10:42 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.17 2010/09/18 21:38:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.16 $")
+(defvar *unidata-version* "$Revision: 1.17 $")
 
 (defstruct unidata
   range
@@ -1343,18 +1343,14 @@
 				   *reverse-hangul-jungseong*
 				   *reverse-hangul-jongseong*)
 		      :test #'string= :key #'car)))
-	(k 0) 
-	names)
-    (loop for choseong across *reverse-hangul-choseong* do
-	 (loop for junseong across *reverse-hangul-jungseong* do
-	      (loop for jongseong across *reverse-hangul-jongseong* do
-		   (push (cons (format nil "~A~A~A"
-				       (car choseong)
-				       (car junseong)
-				       (car jongseong))
-			       k)
-			 names)
-		   (incf k))))
+	(names
+	 (loop for codepoint from 0 below codepoint-limit
+	    when (hangul-syllable-p codepoint)
+	    collect (cons (subseq (format nil "~A"
+					  (string-upcase (char-name (code-char codepoint))))
+				  16)
+			  codepoint))))
+    
     (setf *hangul-syllable-dictionary*
 	  (build-dictionary hangul-codebook (nreverse names)))
     (format t "~&Done.~%")
