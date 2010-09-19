@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.17 2010/09/18 21:38:10 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.18 2010/09/19 02:37:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.17 $")
+(defvar *unidata-version* "$Revision: 1.18 $")
 
 (defstruct unidata
   range
@@ -1304,7 +1304,7 @@
   (let* ((first (first strings))
 	 (posn (length first)))
     (dolist (string (rest strings))
-      (setq posn (mismatch first string :end1 posn)))
+      (setq posn (or (mismatch first string :end1 posn) posn)))
     (subseq first 0 posn)))
 
 (defun node-next (i &optional (dict (unidata-name+ *unicode-data*)))
@@ -1334,15 +1334,23 @@
 (defun build-hangul-syllable-dictionary ()
   "Build the dictionary for Hangul syllables"
   (format t "~&Building Hangul Syllable dictionary.  Please wait...~%")
+  (force-output)
   (initialize-reverse-hangul-tables)
   (let ((hangul-codebook
-	 (map 'vector #'car
-	      (delete ""
-		      (concatenate 'vector
-				   *reverse-hangul-choseong*
-				   *reverse-hangul-jungseong*
-				   *reverse-hangul-jongseong*)
-		      :test #'string= :key #'car)))
+	 ;; For our codebook, combine all the choseong, jungseong, and
+	 ;; jonseong syllables, but removing empty strings (there's at
+	 ;; least one).  Then sort these according to length.  This
+	 ;; ensures that if A is an initial substring of B, then B
+	 ;; must come before A (or A will never be used).  (See
+	 ;; tools/build-unidata.lisp, *codebook*.)
+	 (sort (map 'vector #'car
+		    (delete ""
+			    (concatenate 'vector
+					 *reverse-hangul-choseong*
+					 *reverse-hangul-jungseong*
+					 *reverse-hangul-jongseong*)
+			    :test #'string= :key #'car))
+	       #'> :key #'length))
 	(names
 	 (loop for codepoint from 0 below codepoint-limit
 	    when (hangul-syllable-p codepoint)
@@ -1352,13 +1360,15 @@
 			  codepoint))))
     
     (setf *hangul-syllable-dictionary*
-	  (build-dictionary hangul-codebook (nreverse names)))
+	  (build-dictionary hangul-codebook names))
     (format t "~&Done.~%")
+    (force-output)
     (values)))
 
 (defun build-cjk-unified-ideograph-dictionary ()
   "Build the dictionary for CJK Unified Ideographs"
   (format t "~&Building CJK Unified Ideographs dictionary.  Please wait...~%")
+  (force-output)
   (let ((codebook (coerce (loop for k from 0 to 15
 			     collect (format nil "~X" k))
 			  'vector))
@@ -1369,6 +1379,7 @@
     (setf *cjk-unified-ideograph-dictionary*
 	  (build-dictionary codebook names))
     (format t "~&Done.~%")
+    (force-output)
     (values)))
 
 ;; The definitions of BUILD-DICTIONARY, NAME-LOOKUP, and ENCODE-NAME
