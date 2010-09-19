@@ -205,6 +205,9 @@ New in this release:
     - For SSE2 builds, SIGCONTEXT-FLOAT-REGISTER returned the wrong
       value for single-floats.  Easily noticead when tracing a
       function with single-float arguments.
+    - The table for Unicode 1.0 names was constructed incorrectly.
+      Thus, UNICODE-1.0-NAME would return the wrong names for many
+      (all?) codepoints.
 
   * Trac Tickets:
     #33: get-dispatch-macro-character doesn't signal errors in
