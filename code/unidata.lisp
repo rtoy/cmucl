@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.18 2010/09/19 02:37:10 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.19 2010/09/19 23:07:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.18 $")
+(defvar *unidata-version* "$Revision: 1.19 $")
 
 (defstruct unidata
   range
@@ -1132,7 +1132,43 @@
 (defvar *cjk-unified-ideograph-dictionary* nil
   "Dictionary of CJK Unified ideographs")
 
-;;
+;; Convert the string into the form we want for character names.
+;; Basically the Unicode name has spaces replaced by underscores, and
+;; the result is capitalized.
+(declaim (inline %str %strx))
+(defun %str (x)
+  (nsubstitute #\_ #\Space (string-capitalize x)))
+
+(defun %strx (x)
+  (%str (car x)))
+
+(declaim (inline %match))
+#+(or)
+(defun %match (part prefix posn)
+  (and (>= (length part) (- (length prefix) posn))
+       (string= part prefix :start2 posn :end1 (- (length prefix) posn))))
+
+#+(or)
+(defun %match (part prefix posn)
+  (let ((s1 (search part prefix :start2 posn))
+	(s2 (search prefix part :start1 posn)))
+    (or (and s1 (= s1 posn))
+	(and s2 (zerop s2)))))
+
+;; Test if the string PART matches the string PREFIX starting from
+;; position POSN.  Basically test that the initial parts of the
+;; strings match each other exactly.  For if the prefix is "BO", then
+;; both "B" and "BOX" should match.  (This is needed to get the
+;; completion of "cjk_radical_bo" to match "cjk_radical_box" as well
+;; as "cjk_radical_bone" and others because at one point in the
+;; algorithm the part is "B", which we do want to match "BO" so that
+;; we can get the possible completions BONE" and "BOLT OF CLOTH".
+(defun %match (part prefix posn)
+  (let ((len (min (length part)
+		  (- (length prefix) posn))))
+    (string= part prefix :end1 len :start2 posn :end2 (+ posn len))))
+
+
 (defun unicode-complete-name (prefix
 			      &optional (dict (unidata-name+
 					       *unicode-data*)))
@@ -1270,36 +1306,35 @@
       (when completep
 	(push prefix-match names))
       ;; Match prefix against Hangul and/or Hangul_syllable
-      (cond ((or (string= prefix-match "Hangul_")
-		 (search "Hangul_Syllable_" prefix-match :end1 (min 16 (length prefix-match))))
-	     ;; Add syllable as possible completion
-	     (push "Hangul_Syllable_" names))
+      (cond ((search "Hangul_S" prefix-match
+		     :end1 (min 8 (length prefix-match)))
+	     ;; Add syllable as possible completion, and then try to
+	     ;; complete some more so that we don't end up with slime
+	     ;; saying "Hangul_Syllable_" is the only completion.
+	     (multiple-value-bind (m suffixes)
+		 (unicode-complete-name (subseq prefix-match (min 16 (length prefix-match)))
+					*hangul-syllable-dictionary*)
+	       (declare (ignore m))
+	       (if suffixes
+		   (loop for n in suffixes
+		      do (push (concatenate 'string "Hangul_Syllable_" n) names))
+		   (push "Hangul_Syllable_" names))))
 	    ((or ;;(string= prefix-match "Cjk_")
-	      (search "Cjk_Unified_Ideograph-" prefix-match :end1 (min 22 (length prefix-match))))
-	     ;; Add Unified
-	     (push "Cjk_Unified_Ideograph-" names)))
+	      (search "Cjk_Unified_Ideograph-" prefix-match
+		      :end1 (min 22 (length prefix-match))))
+	     ;; Try to complete the first part so we don't get
+	     ;; "Cjk_Unified_Ideograph-" as the only completion.
+	     (multiple-value-bind (m suffixes)
+		 (unicode-complete-name (subseq prefix-match (min 22 (length prefix-match)))
+					*cjk-unified-ideograph-dictionary*)
+	       (declare (ignore m))
+	       (loop for n in suffixes
+		    do (push (concatenate 'string "Cjk_Unified_Ideograph-" n) names)))))
       (setf names (mapcar #'string-capitalize names))
       ;;(format t "Final names = ~S~%" names)
       names)))
 
-;; Convert the string into the form we want for character names.
-(defun %str (x)
-  (nsubstitute #\_ #\Space (string-capitalize x)))
-
-(defun %strx (x)
-  (%str (car x)))
-
-#+(or)
-(defun %match (part prefix posn)
-  (and (>= (length part) (- (length prefix) posn))
-       (string= part prefix :start2 posn :end1 (- (length prefix) posn))))
-
-(defun %match (part prefix posn)
-  (let ((s1 (search part prefix :start2 posn))
-	(s2 (search prefix part :start1 posn)))
-    (or (and s1 (= s1 posn))
-	(and s2 (zerop s2)))))
-
+;; Find the longest initial substring of the STRINGS.
 (defun %mip (strings)
   (let* ((first (first strings))
 	 (posn (length first)))
