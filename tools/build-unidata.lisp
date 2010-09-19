@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.7 2010/09/18 20:58:28 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.8 2010/09/19 03:31:12 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -973,7 +973,7 @@
       (multiple-value-bind (hvec mvec lvec)
 	  (pack ucd range (lambda (x) (pack-name x t dict)) 0 32 #x54)
       (setf (unidata-name1 *unicode-data*)
-	  (make-ntrie32 :split #x72 :hvec hvec :mvec mvec :lvec lvec))))
+	  (make-ntrie32 :split #x54 :hvec hvec :mvec mvec :lvec lvec))))
 
     (format t "~&Building general category table~%")
     (multiple-value-bind (hvec mvec lvec)
