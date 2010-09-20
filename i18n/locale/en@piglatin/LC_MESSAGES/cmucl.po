@@ -5694,6 +5694,11 @@ msgid ""
 "  the basic multilingual plane (BMP) are converted into the\n"
 "  corresponding surrogate pairs."
 msgstr ""
+"Onvertcay away equencesay ofway odepointscay otay away ingstray.  "
+"Odepointscay outsideway\n"
+"  ethay asicbay ultilingualmay aneplay (BMP) areway onvertedcay intoway "
+"ethay\n"
+"  orrespondingcay urrogatesay airspay."
 
 #: src/code/string.lisp
 msgid ""
@@ -5701,6 +5706,11 @@ msgid ""
 "  pairs in the string are converted into the correspoinding\n"
 "  codepoint."
 msgstr ""
+"Onvertcay away ingstray otay away istlay ofway orrespondingcay odecay "
+"ointspay.  Urrogatesay\n"
+"  airspay inway ethay ingstray areway onvertedcay intoway ethay "
+"orrespoindingcay\n"
+"  odepointcay."
 
 #: src/code/mipsstrops.lisp
 msgid ""
@@ -7451,6 +7461,28 @@ msgid "Unrecognized proclamation: ~S."
 msgstr "Unrecognizedway oclamationpray: ~S."
 
 #: src/code/unidata.lisp
+msgid ""
+"Search the Unicode name dictionary for the longest entry that\n"
+"  matches STRING.  STRING must be in Unicode name format.  That is, it\n"
+"  must be upper case with spaces separating each word.\n"
+"\n"
+"  Two values are returned.  The first value is index into the codebook\n"
+"  that continues the string..  The second value is the length of the\n"
+"  substring of string that matches the codebook. "
+msgstr ""
+"Earchsay ethay Unicodeway amenay ictionaryday orfay ethay ongestlay entryway "
+"atthay\n"
+"  atchesmay STRING.  STRING ustmay ebay inway Unicodeway amenay ormatfay.  "
+"Atthay isway, itway\n"
+"  ustmay ebay upperway asecay ithway acesspay eparatingsay eachway ordway.\n"
+"\n"
+"  Wotay aluesvay areway eturnedray.  Ethay irstfay aluevay isway indexway "
+"intoway ethay odebookcay\n"
+"  atthay ontinuescay ethay ingstray..  Ethay econdsay aluevay isway ethay "
+"engthlay ofway ethay\n"
+"  ubstringsay ofway ingstray atthay atchesmay ethay odebookcay. "
+
+#: src/code/unidata.lisp
 msgid "The Unicode data file is broken."
 msgstr "Ethay Unicodeway ataday ilefay isway okenbray."
 
@@ -7461,6 +7493,49 @@ msgstr "Unicodeway ataday ilefay isway orfay Unicodeway ~D.~D.~D"
 #: src/code/unidata.lisp
 msgid "No data in file."
 msgstr "Onay ataday inway ilefay."
+
+#: src/code/unidata.lisp
+msgid "Dictionary of Hangul syllables"
+msgstr "Ictionaryday ofway Angulhay yllablessay"
+
+#: src/code/unidata.lisp
+msgid "Dictionary of CJK Unified ideographs"
+msgstr "Ictionaryday ofway CJK Unifiedway ideographsway"
+
+#: src/code/unidata.lisp
+msgid ""
+"Try to complete the string Prefix using the dictionary in Dict.\n"
+"  Three values are returned: (1) The best match of prefix, (2) a list\n"
+"  of possible completions, (3) a boolean indicating whether the best\n"
+"  match is a complete unicode name. "
+msgstr ""
+"Ytray otay ompletecay ethay ingstray Efixpray usingway ethay ictionaryday "
+"inway Ictday.\n"
+"  Reethay aluesvay areway eturnedray: (1) Ethay estbay atchmay ofway "
+"efixpray, (2) away istlay\n"
+"  ofway ossiblepay ompletionscay, (3) away ooleanbay indicatingway etherwhay "
+"ethay estbay\n"
+"  atchmay isway away ompletecay unicodeway amenay. "
+
+#: src/code/unidata.lisp
+msgid ""
+"Search the dictionary in Dict and return a list of the possible\n"
+"  completions starting with Prefix.  If there is no match, NIL is\n"
+"  returned."
+msgstr ""
+"Earchsay ethay ictionaryday inway Ictday andway eturnray away istlay ofway "
+"ethay ossiblepay\n"
+"  ompletionscay tartingsay ithway Efixpray.  Ifway erethay isway onay "
+"atchmay, NIL isway\n"
+"  eturnedray."
+
+#: src/code/unidata.lisp
+msgid "Build the dictionary for Hangul syllables"
+msgstr "Uildbay ethay ictionaryday orfay Angulhay yllablessay"
+
+#: src/code/unidata.lisp
+msgid "Build the dictionary for CJK Unified Ideographs"
+msgstr "Uildbay ethay ictionaryday orfay CJK Unifiedway Ideographsway"
 
 #: src/code/char.lisp
 msgid "The upper exclusive bound on values produced by CHAR-CODE."
@@ -18401,7 +18476,10 @@ msgid ""
 "\tsame place as normal output.\n"
 "     :status-hook -\n"
 "        This is a function the system calls whenever the status of the\n"
-"        process changes.  The function takes the process as an argument."
+"        process changes.  The function takes the process as an argument.\n"
+"     :external-format -\n"
+"        This is the external-format used for communication with the "
+"subprocess."
 msgstr ""
 "RUN-PROGRAM eatescray away ewnay ocesspray andway unsray ethay unixway "
 "ogrampray inway ethay\n"
@@ -18487,7 +18565,10 @@ msgstr ""
 "        Isthay isway away unctionfay ethay ystemsay allscay eneverwhay ethay "
 "tatussay ofway ethay\n"
 "        ocesspray angeschay.  Ethay unctionfay akestay ethay ocesspray asway "
-"anway argumentway."
+"anway argumentway.\n"
+"     :externalway-ormatfay -\n"
+"        Isthay isway ethay externalway-ormatfay usedway orfay "
+"ommunicationcay ithway ethay ubprocesayssay."
 
 #: src/code/run-program.lisp
 msgid "All args to program must be simple strings -- ~S."

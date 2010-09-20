@@ -5263,6 +5263,17 @@ msgid "Unrecognized proclamation: ~S."
 msgstr ""
 
 #: src/code/unidata.lisp
+msgid ""
+"Search the Unicode name dictionary for the longest entry that\n"
+"  matches STRING.  STRING must be in Unicode name format.  That is, it\n"
+"  must be upper case with spaces separating each word.\n"
+"\n"
+"  Two values are returned.  The first value is index into the codebook\n"
+"  that continues the string..  The second value is the length of the\n"
+"  substring of string that matches the codebook. "
+msgstr ""
+
+#: src/code/unidata.lisp
 msgid "The Unicode data file is broken."
 msgstr ""
 
@@ -5272,6 +5283,37 @@ msgstr ""
 
 #: src/code/unidata.lisp
 msgid "No data in file."
+msgstr ""
+
+#: src/code/unidata.lisp
+msgid "Dictionary of Hangul syllables"
+msgstr ""
+
+#: src/code/unidata.lisp
+msgid "Dictionary of CJK Unified ideographs"
+msgstr ""
+
+#: src/code/unidata.lisp
+msgid ""
+"Try to complete the string Prefix using the dictionary in Dict.\n"
+"  Three values are returned: (1) The best match of prefix, (2) a list\n"
+"  of possible completions, (3) a boolean indicating whether the best\n"
+"  match is a complete unicode name. "
+msgstr ""
+
+#: src/code/unidata.lisp
+msgid ""
+"Search the dictionary in Dict and return a list of the possible\n"
+"  completions starting with Prefix.  If there is no match, NIL is\n"
+"  returned."
+msgstr ""
+
+#: src/code/unidata.lisp
+msgid "Build the dictionary for Hangul syllables"
+msgstr ""
+
+#: src/code/unidata.lisp
+msgid "Build the dictionary for CJK Unified Ideographs"
 msgstr ""
 
 #: src/code/char.lisp
@@ -12982,7 +13024,10 @@ msgid ""
 "\tsame place as normal output.\n"
 "     :status-hook -\n"
 "        This is a function the system calls whenever the status of the\n"
-"        process changes.  The function takes the process as an argument."
+"        process changes.  The function takes the process as an argument.\n"
+"     :external-format -\n"
+"        This is the external-format used for communication with the "
+"subprocess."
 msgstr ""
 
 #: src/code/run-program.lisp
