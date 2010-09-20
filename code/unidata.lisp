@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.19 2010/09/19 23:07:46 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.20 2010/09/20 00:59:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.19 $")
+(defvar *unidata-version* "$Revision: 1.20 $")
 
 (defstruct unidata
   range
@@ -1274,62 +1274,45 @@
   completions starting with Prefix.  If there is no match, NIL is
   returned."
   (let (names)
-    (cond ((search "Hangul_Syllable_" prefix)
-           (initialize-reverse-hangul-tables)
-	   (unless *hangul-syllable-dictionary*
-	     (build-hangul-syllable-dictionary))
-	   (multiple-value-bind (prefix-match next completep)
-	       (unicode-complete-name (subseq prefix 16)
-				      *hangul-syllable-dictionary*)
-	     (loop for x in next
-		do (push (concatenate 'string "Hangul_Syllable_" prefix-match x)
-			 names))
-	     (when completep
-	       (push (concatenate 'string "Hangul_Syllable_" prefix-match)
-		     names))))
-          ((search "Cjk_Unified_Ideograph-" prefix)
-	   (unless *cjk-unified-ideograph-dictionary*
-	     (build-cjk-unified-ideograph-dictionary))
-	   (multiple-value-bind (prefix-match next completep)
-	       (unicode-complete-name (subseq prefix 22)
-				      *cjk-unified-ideograph-dictionary*)
-	     (loop for x in next
-		do (push (concatenate 'string "Cjk_Unified_Ideograph-" prefix-match x)
-			 names))
-	     (when completep
-	       (push (concatenate 'string "Cjk_Unified_Ideograph-" prefix-match)
-		     names)))))
     (multiple-value-bind (prefix-match next completep)
 	(unicode-complete-name prefix dict)
       (loop for x in next
 	 do (push (concatenate 'string prefix-match x) names))
       (when completep
 	(push prefix-match names))
-      ;; Match prefix against Hangul and/or Hangul_syllable
-      (cond ((search "Hangul_S" prefix-match
-		     :end1 (min 8 (length prefix-match)))
-	     ;; Add syllable as possible completion, and then try to
-	     ;; complete some more so that we don't end up with slime
-	     ;; saying "Hangul_Syllable_" is the only completion.
-	     (multiple-value-bind (m suffixes)
-		 (unicode-complete-name (subseq prefix-match (min 16 (length prefix-match)))
-					*hangul-syllable-dictionary*)
-	       (declare (ignore m))
-	       (if suffixes
-		   (loop for n in suffixes
-		      do (push (concatenate 'string "Hangul_Syllable_" n) names))
-		   (push "Hangul_Syllable_" names))))
-	    ((or ;;(string= prefix-match "Cjk_")
-	      (search "Cjk_Unified_Ideograph-" prefix-match
-		      :end1 (min 22 (length prefix-match))))
-	     ;; Try to complete the first part so we don't get
-	     ;; "Cjk_Unified_Ideograph-" as the only completion.
-	     (multiple-value-bind (m suffixes)
-		 (unicode-complete-name (subseq prefix-match (min 22 (length prefix-match)))
-					*cjk-unified-ideograph-dictionary*)
-	       (declare (ignore m))
-	       (loop for n in suffixes
-		    do (push (concatenate 'string "Cjk_Unified_Ideograph-" n) names)))))
+      (flet ((han-or-cjk-completion (prefix-match prefix dictionary)
+	       (let* ((prefix-tail (subseq prefix-match
+					   (min (length prefix)
+						(length prefix-match))))
+		      (full-prefix (concatenate 'string prefix prefix-tail)))
+		 (multiple-value-bind (m suffixes)
+		     (unicode-complete-name prefix-tail dictionary)
+		   (declare (ignore m))
+		   (if suffixes
+		       (loop for n in suffixes
+			  do (push (concatenate 'string full-prefix n) names))
+		       (push full-prefix names))))))
+	;; Match prefix for Hangul syllables or CJK unified ideographs.
+	(cond ((char= (char prefix-match 0) #\H)
+	       ;; Add "Hangul_Syllable_" as possible completion for
+	       ;; anything beginning with "H".
+	       (push "Hangul_Syllable_" names)
+	       (when (<= (length names) 1)
+		 ;; Hangul_Syllable is the only match, so let's extend it.
+		 (unless *hangul-syllable-dictionary*
+		   (initialize-reverse-hangul-tables)
+		   (build-hangul-syllable-dictionary))
+		 (han-or-cjk-completion prefix-match "Hangul_Syllable_"
+					*hangul-syllable-dictionary*)))
+	      ((char= (char prefix-match 0) #\C)
+	       ;; Add "Cjk_Unified_Ideograph-" as possible completion
+	       ;; for anything beginning with "C".
+	       (push "Cjk_Unified_Ideograph-" names)
+	       (when (<= (length names) 1)
+		 (unless *cjk-unified-ideograph-dictionary*
+		   (build-cjk-unified-ideograph-dictionary))
+		 (han-or-cjk-completion prefix-match "Cjk_Unified_Ideograph-"
+					*cjk-unified-ideograph-dictionary*)))))
       (setf names (mapcar #'string-capitalize names))
       ;;(format t "Final names = ~S~%" names)
       names)))
