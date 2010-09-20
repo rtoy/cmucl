@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.31 2010/04/20 17:57:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.32 2010/09/20 13:50:52 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -325,7 +325,7 @@
 
 ;;; OPEN-PTY -- internal
 ;;;
-(defun open-pty (pty cookie)
+(defun open-pty (pty cookie &optional (external-format :default))
   (when pty
     (multiple-value-bind
 	(master slave name)
@@ -340,7 +340,8 @@
 	  (push new-fd *close-on-error*)
 	  (copy-descriptor-to-stream new-fd pty cookie)))
       (values name
-	      (system:make-fd-stream master :input t :output t)))))
+	      (system:make-fd-stream master :input t :output t
+				     :external-format external-format)))))
 
 
 (defmacro round-bytes-to-words (n)
@@ -454,7 +455,8 @@
 (defun run-program (program args
 		    &key (env *environment-list*) (wait t) pty input
 		    if-input-does-not-exist output (if-output-exists :error)
-		    (error :output) (if-error-exists :error) status-hook)
+		    (error :output) (if-error-exists :error) status-hook
+		    (external-format :default))
   "RUN-PROGRAM creates a new process and runs the unix program in the
    file specified by the simple-string PROGRAM.  ARGS are the standard
    arguments that can be passed to a Unix program, for no arguments
@@ -506,14 +508,16 @@
 	same place as normal output.
      :status-hook -
         This is a function the system calls whenever the status of the
-        process changes.  The function takes the process as an argument."
+        process changes.  The function takes the process as an argument.
+     :external-format -
+        This is the external-format used for communication with the subprocess."
 
   ;; Make sure the interrupt handler is installed.
   (system:enable-interrupt unix:sigchld #'sigchld-handler)
   ;; Make sure all the args are okay.
   (unless (every #'simple-string-p args)
     (error (intl:gettext "All args to program must be simple strings -- ~S.") args))
-  ;; Pre-pend the program to the argument list.
+  ;; Prepend the program to the argument list.
   (push (namestring program) args)
   ;; Clear random specials used by GET-DESCRIPTOR-FOR to communicate cleanup
   ;; info.  Also, establish proc at this level so we can return it.
@@ -526,21 +530,24 @@
 	  (multiple-value-bind
 	      (stdin input-stream)
 	      (get-descriptor-for input cookie :direction :input
-				  :if-does-not-exist if-input-does-not-exist)
+				  :if-does-not-exist if-input-does-not-exist
+				  :external-format external-format)
 	    (multiple-value-bind
 		(stdout output-stream)
 		(get-descriptor-for output cookie :direction :output
                                     :if-does-not-exist :create
-				    :if-exists if-output-exists)
+				    :if-exists if-output-exists
+				    :external-format external-format)
 	      (multiple-value-bind
 		  (stderr error-stream)
 		  (if (eq error :output)
 		      (values stdout output-stream)
 		      (get-descriptor-for error cookie :direction :output
                                           :if-does-not-exist :create
-					  :if-exists if-error-exists))
+					  :if-exists if-error-exists
+					  :external-format external-format))
 		(multiple-value-bind (pty-name pty-stream)
-				     (open-pty pty cookie)
+				     (open-pty pty cookie external-format)
 		  ;; Make sure we are not notified about the child death before
 		  ;; we have installed the process struct in *active-processes*
 		  (system:without-interrupts
@@ -644,6 +651,7 @@
 ;;; second value.
 ;;; 
 (defun get-descriptor-for (object cookie &rest keys &key direction
+							 external-format
 				  &allow-other-keys)
   (cond ((eq object t)
 	 ;; No new descriptor is needed.
@@ -674,12 +682,16 @@
 	     (:input
 	      (push read-fd *close-in-parent*)
 	      (push write-fd *close-on-error*)
-	      (let ((stream (system:make-fd-stream write-fd :output t)))
+	      (let ((stream (system:make-fd-stream write-fd :output t
+						   :external-format
+						   external-format)))
 		(values read-fd stream)))
 	     (:output
 	      (push read-fd *close-on-error*)
 	      (push write-fd *close-in-parent*)
-	      (let ((stream (system:make-fd-stream read-fd :input t)))
+	      (let ((stream (system:make-fd-stream read-fd :input t
+						   :external-format
+						   external-format)))
 		(values write-fd stream)))
 	     (t
 	      (unix:unix-close read-fd)
