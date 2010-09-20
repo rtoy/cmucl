@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.26 2010/09/15 21:06:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.27 2010/09/20 23:01:15 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,7 +40,9 @@
   for.  :High means to test for the high (leading) surrogate; :Low
   tests for the low (trailing surrogate).  A value of :Any or Nil
   tests for any surrogate value (high or low)."
-  (declare (type (or character codepoint) char-or-code))
+  (declare (type (or character codepoint) char-or-code)
+	   (type (or null (member :high :leading :low :trailing :any)) surrogate-type)
+	   (optimize (inhibit-warnings 3)))
   (let ((code (if (characterp char-or-code)
 		  (char-code char-or-code)
 		  char-or-code)))
@@ -74,14 +76,16 @@
     (cond ((and (surrogatep code :high) (< (1+ i) end))
 	   (let ((tmp (char-code (schar string (1+ i)))))
 	     (if (surrogatep tmp :low)
-		 (values (+ (ash (- code #xD800) 10) tmp #x2400) +1)
-		 (values code nil))))
+		 (values (truly-the codepoint (+ (ash (- code #xD800) 10) tmp #x2400))
+			 +1)
+		 (values (truly-the codepoint code) nil))))
 	  ((and (surrogatep code :low) (> i 0))
 	   (let ((tmp (char-code (schar string (1- i)))))
 	     (if (surrogatep tmp :high)
-		 (values (+ (ash (- tmp #xD800) 10) code #x2400) -1)
-		 (values code nil))))
-	  (t (values code nil)))))
+		 (values (truly-the codepoint (+ (ash (- tmp #xD800) 10) code #x2400))
+			 -1)
+		 (values (truly-the codepoint code) nil))))
+	  (t (values (truly-the codepoint code) nil)))))
 
 (defun surrogates (codepoint)
   "Return the high and low surrogate characters for Codepoint.  If
