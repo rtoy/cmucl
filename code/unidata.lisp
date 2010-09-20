@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.20 2010/09/20 00:59:22 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.21 2010/09/20 01:17:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.20 $")
+(defvar *unidata-version* "$Revision: 1.21 $")
 
 (defstruct unidata
   range
@@ -1291,7 +1291,12 @@
 		   (if suffixes
 		       (loop for n in suffixes
 			  do (push (concatenate 'string full-prefix n) names))
-		       (push full-prefix names))))))
+		       ;; No suffixes.  So either the prefix is the
+		       ;; only possible completion or it's not valid.
+		       ;; Figure that out.  If it's valid, add it to
+		       ;; names.
+		       (when (search-dictionary (string-upcase prefix-tail) dictionary)
+			 (push prefix-match names)))))))
 	;; Match prefix for Hangul syllables or CJK unified ideographs.
 	(cond ((char= (char prefix-match 0) #\H)
 	       ;; Add "Hangul_Syllable_" as possible completion for
@@ -1312,7 +1317,8 @@
 		 (unless *cjk-unified-ideograph-dictionary*
 		   (build-cjk-unified-ideograph-dictionary))
 		 (han-or-cjk-completion prefix-match "Cjk_Unified_Ideograph-"
-					*cjk-unified-ideograph-dictionary*)))))
+					*cjk-unified-ideograph-dictionary*)
+		 ))))
       (setf names (mapcar #'string-capitalize names))
       ;;(format t "Final names = ~S~%" names)
       names)))
