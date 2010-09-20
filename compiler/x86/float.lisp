@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.60 2010/04/20 17:57:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.61 2010/09/20 20:22:03 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 ;;;
 
 (in-package :x86)
-(intl:textdomain "cmucl-x86-vm")
+(intl:textdomain "cmucl-x87")
 
 
 
@@ -1708,6 +1708,7 @@
   (frob > #x00 #x01))
 
 ;;; Comparisons with 0 can use the FTST instruction.
+
 
 (define-vop (float-test)
   (:args (x))
