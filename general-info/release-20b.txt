@@ -2,7 +2,7 @@
 
 The CMUCL project is pleased to announce the release of CMUCL 20b.
 This is a major release which contains numerous enhancements and
-bug fixes from the 19f release.
+bug fixes from the 20a release.
 
 CMUCL is a free, high performance implementation of the Common Lisp
 programming language which runs on most major Unix platforms. It
