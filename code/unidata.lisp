@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.21 2010/09/20 01:17:14 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.22 2010/09/21 00:57:29 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.21 $")
+(defvar *unidata-version* "$Revision: 1.22 $")
 
 (defstruct unidata
   range
@@ -1189,7 +1189,9 @@
       (when n
 	(setq completep (> (aref (dictionary-codev dict) n) -1)))
       #+(or debug-uc)
-      (format t "n,p,complete = ~S ~S ~S~%" n p completep)
+      (progn
+	(format t "n,p,complete = ~S ~S ~S~%" n p completep)
+	(when n (format t "match = ~S~%" (subseq prefix 0 p))))
       (cond ((not p)
 	     (values (%str prefix) nil nil))
 	    ((= p (length prefix))
@@ -1246,15 +1248,17 @@
 		     (t
 		      ;; There's more than one possible completion.
 		      ;; Try to extend each of those completions one
-		      ;; more step.
-		      (let* ((p (mapcan #'(lambda (ex)
-					    (let ((next (node-next (cdr ex) dict)))
-					      (if next
-						  (mapcar #'(lambda (n)
-							      (concatenate 'string (car ex) (car n)))
-							  (node-next (cdr ex) dict))
-						  (list (car ex)))))
-					x))
+		      ;; more step, but we still want to keep the
+		      ;; original completions.
+		      (let* ((p (append (mapcar #'car x)
+					(mapcan #'(lambda (ex)
+						    (let ((next (node-next (cdr ex) dict)))
+						      (if next
+							  (mapcar #'(lambda (n)
+								      (concatenate 'string (car ex) (car n)))
+								  (node-next (cdr ex) dict))
+							  (list (car ex)))))
+						x)))
 			     (q (%mip p)))
 			(setq prefix (concatenate 'string prefix q))
 			
