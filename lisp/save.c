@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.28 2010/08/02 21:45:36 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.29 2010/09/24 04:08:39 rtoy Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -29,7 +29,7 @@
 
 #ifdef FEATURE_EXECUTABLE
 #include "elf.h"
-#if !defined(DARWIN)
+#if !(defined(DARWIN) && defined(__ppc__))
 #include <libgen.h>
 #endif
 #endif
