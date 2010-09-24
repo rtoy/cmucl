@@ -20,10 +20,19 @@ New in this release:
 
   * Known issues:
 
-  * Feature enhancements:
+  * Feature enhancements
     - Update to Unicode 5.2.0.
     - Add support for character name completion.  This can be used by
       Slime to do character name completion.
+
+  * Changes
+    - COMPILE-FILE now accepts a :DECODING-ERROR argument that
+      indicates how to handle decoding errors when reading the file.
+      It has the same meaning and effect as the :DECODING-ERROR
+      argument to OPEN.  This defaults to T here so that decoding
+      errors are signaled on invalid sequences instead of silently
+      replacing the bad sequence with some kind of replacement
+      character.
 
   * ANSI compliance fixes:
 
