@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/crlf.lisp,v 1.5 2010/07/12 14:42:11 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/crlf.lisp,v 1.6 2010/09/24 21:45:33 rtoy Rel $")
 
 (in-package "STREAM")
 (intl:textdomain "cmucl")
@@ -17,9 +17,11 @@ end-of-line character sequence.")
   (input (state input unput tmp1 tmp2 tmp3 tmp4)
     `(multiple-value-bind (,tmp1 ,tmp2) 
 	 ,input
+       (declare (type kernel:index ,tmp2))
        (when (= ,tmp1 (char-code #\return))
 	 (multiple-value-bind (,tmp3 ,tmp4)
 	     ,input
+	   (declare (type kernel:index ,tmp4))
 	   ;; @@ tmp3 may be NIL, if file ends in LF
 	   (if (= ,tmp3 (char-code #\newline))
 	       (setq ,tmp1 ,tmp3
