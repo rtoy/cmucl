@@ -32,7 +32,7 @@
 #
 # For more information see src/BUILDING.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.34 2010/09/16 00:43:33 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.35 2010/09/25 18:03:15 rtoy Rel $
 #
 
 ENABLE2="yes"
@@ -120,7 +120,11 @@ buildit ()
     then
 	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET || { echo "Failed: $TOOLDIR/clean-target.sh"; exit 1; }
 	time $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
-	$MAKE -C $TARGET/lisp $MAKE_TARGET || { echo "Failed: $MAKE -C $TARGET/lisp"; exit 1; }
+	# Set the LANG to C.  For whatever reason, if I (rtoy) don't
+        # do this on my openSuSE system, any messages from gcc are
+        # basically garbled.  This should be harmless on other
+        # systems.
+	LANG=C $MAKE -C $TARGET/lisp $MAKE_TARGET || { echo "Failed: $MAKE -C $TARGET/lisp"; exit 1; }
 	if [ "$BUILD_WORLD2" = "yes" ];
 	then
 	    $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
