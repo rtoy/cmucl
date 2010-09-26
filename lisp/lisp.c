@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.77 2010/08/02 03:58:59 agoncharov Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.78 2010/09/26 20:38:45 rtoy Rel $
  *
  */
 
@@ -477,13 +477,12 @@ main(int argc, const char *argv[], const char *envp[])
     argptr = argv;
     while ((arg = *++argptr) != NULL) {
 	if (strcmp(arg, "-core") == 0) {
-#if defined FEATURE_EXECUTABLE
 	    if (builtin_image_flag) {
 		fprintf(stderr,
 			"Cannot specify core file in executable image --- sorry about that.\n");
 		exit(1);
 	    }
-#endif
+
 	    if (core != NULL) {
 		fprintf(stderr, "can only specify one core file.\n");
 		exit(1);
@@ -559,14 +558,19 @@ main(int argc, const char *argv[], const char *envp[])
                 exit(1);
             }
 
-            if (strcmp(str, "auto") == 0) {
-                fpu_mode = AUTO;
-            } else if (strcmp(str, "x87") == 0) {
-                fpu_mode = X87;
-            } else if (strcmp(str, "sse2") == 0) {
-                fpu_mode = SSE2;
+            if (builtin_image_flag != 0) {
+                fprintf(stderr,
+                        "Warning:  -fpu cannot change the fpu mode of an executable image\n");
             } else {
-                fprintf(stderr, "Unknown fpu type: `%s'.  Using auto\n", str);
+                if (strcmp(str, "auto") == 0) {
+                    fpu_mode = AUTO;
+                } else if (strcmp(str, "x87") == 0) {
+                    fpu_mode = X87;
+                } else if (strcmp(str, "sse2") == 0) {
+                    fpu_mode = SSE2;
+                } else {
+                    fprintf(stderr, "Unknown fpu type: `%s'.  Using auto\n", str);
+                }
             }
         }
 #endif
@@ -629,70 +633,63 @@ main(int argc, const char *argv[], const char *envp[])
 	libvar = getenv("CMUCLLIB");
 	if (libvar != NULL) {
 	    cmucllib = strdup(libvar);
-	} else
-#if defined FEATURE_EXECUTABLE
+	} else {
 	    /*
              * The following doesn't make sense for executables.  They
              * need to use the saved library path from the lisp from
              * which they were dumped.
              */
-	    if (builtin_image_flag == 0)
-#endif
-	{
-	    const char *newlib = NULL;
+	    if (builtin_image_flag == 0) {
+                const char *newlib = NULL;
 
-	    /*
-	     * We need to use our default search path.  If a core file
-	     * is given, we prepend the directory of the core file to
-	     * the search path.
-	     */
-	    cmucllib = default_cmucllib(argv[0]);
-	    if (core != NULL) {
-		newlib = prepend_core_path(cmucllib, core);
-	    } else if (getenv("CMUCLCORE") != NULL) {
-		core = getenv("CMUCLCORE");
-		newlib = prepend_core_path(cmucllib, core);
-	    }
+                /*
+                 * We need to use our default search path.  If a core file
+                 * is given, we prepend the directory of the core file to
+                 * the search path.
+                 */
+                cmucllib = default_cmucllib(argv[0]);
+                if (core != NULL) {
+                    newlib = prepend_core_path(cmucllib, core);
+                } else if (getenv("CMUCLCORE") != NULL) {
+                    core = getenv("CMUCLCORE");
+                    newlib = prepend_core_path(cmucllib, core);
+                }
 
-	    if (newlib != NULL) {
-                free((void *) cmucllib);
-		cmucllib = newlib;
-	    }
-	}
+                if (newlib != NULL) {
+                    free((void *) cmucllib);
+                    cmucllib = newlib;
+                }
+            }
+        }
     }
 
 
     /* Only look for a core file if we're not using a built-in image. */
-#if defined FEATURE_EXECUTABLE
     if (builtin_image_flag == 0) {
-#endif
 	/*
 	 * If no core file specified, search for it in CMUCLLIB
 	 */
-        {
-            const char* found_core;
+        const char* found_core;
             
-            found_core = locate_core(cmucllib, core, default_core);
+        found_core = locate_core(cmucllib, core, default_core);
 #ifdef FEATURE_SSE2
-            if ((found_core == NULL) && (fpu_mode == AUTO)) {
-                /*
-                 * If we support SSE2 but couldn't find the SSE2 core, try
-                 * to fall back to the x87 core.
-                 */
-                found_core = locate_core(cmucllib, core, "lisp-x87.core");
-                if (found_core == NULL) {
-                    core_failure(core, argv);
-                }
-                fprintf(stderr, "Warning:  Chip supports SSE2, but could not find SSE2 core.\n");
-                fprintf(stderr, "  Falling back to x87 core.\n");
-            }
-#endif
-            if (!found_core) {
+        if ((found_core == NULL) && (fpu_mode == AUTO)) {
+            /*
+             * If we support SSE2 but couldn't find the SSE2 core, try
+             * to fall back to the x87 core.
+             */
+            found_core = locate_core(cmucllib, core, "lisp-x87.core");
+            if (found_core == NULL) {
                 core_failure(core, argv);
             }
-            core = found_core;
+            fprintf(stderr, "Warning:  Chip supports SSE2, but could not find SSE2 core.\n");
+            fprintf(stderr, "  Falling back to x87 core.\n");
         }
-#if defined FEATURE_EXECUTABLE
+#endif
+        if (!found_core) {
+            core_failure(core, argv);
+        }
+        core = found_core;
     } else {
 	/*
          * The "core file" is the executable.  We have to save the
@@ -701,11 +698,9 @@ main(int argc, const char *argv[], const char *envp[])
 	 */
 	core = argv[0];
     }
-#endif
 
     globals_init();
 
-#if defined FEATURE_EXECUTABLE
     if (builtin_image_flag != 0) {
 	extern int image_dynamic_space_size;
 	long allocation_pointer =
@@ -718,9 +713,6 @@ main(int argc, const char *argv[], const char *envp[])
     } else {
 	initial_function = load_core_file(core, &fpu_type);
     }
-#else
-    initial_function = load_core_file(core, &fpu_type);
-#endif
 
 #ifdef i386
     if ((fpu_type == SSE2) && !arch_support_sse2()) {
@@ -771,15 +763,16 @@ main(int argc, const char *argv[], const char *envp[])
     SetSymbolValue(LISP_ENVIRONMENT_LIST, alloc_str_list(envp));
 
     /* Set cmucllib and cmuclcore appropriately */
-#if defined FEATURE_EXECUTABLE
     /*
      * This test will preserve the library: search list dumped with
      * the executable unless the user specifically overrides it with
      * the -lib flag or by setting the CMUCLLIB environment variable.
      */
-    if (cmucllib)
-#endif
+
+    if (cmucllib) {
 	SetSymbolValue(CMUCL_LIB, alloc_string(cmucllib));
+    }
+    
     SetSymbolValue(CMUCL_CORE_PATH, alloc_string(core));
 
     /*
