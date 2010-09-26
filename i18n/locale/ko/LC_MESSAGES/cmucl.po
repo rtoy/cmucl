@@ -17638,7 +17638,12 @@ msgid ""
 "default\n"
 "      is the value of C:*RECORD-XREF-INFO*\n"
 "   :External-Format\n"
-"      The external format to use when opening the source file"
+"      The external format to use when opening the source file\n"
+"   :Decoding-Error\n"
+"      How to handle decoding errors in the external format when reading the\n"
+"      source file.  Default (T) is to signal an error.  Nil means silently\n"
+"      continue, replacing the invalid sequence with a suitable replacment\n"
+"      character."
 msgstr ""
 
 #: src/compiler/main.lisp
