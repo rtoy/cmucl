@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.157 2010/06/01 20:27:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.159 2010/09/24 12:12:05 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -718,14 +718,19 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
   ;;
   ;; External format to use for the stream if the stream hasn't been opened
   #+unicode
-  (external-format :default))
+  (external-format :default)
+  ;;
+  ;; How to handle decoding errors when reading the source file.
+  ;; Default is T to signal an error.
+  #+unicode
+  (decoding-error t))
 
 
 ;;; Make-File-Source-Info  --  Internal
 ;;;
 ;;;    Given a list of pathnames, return a Source-Info structure.
 ;;;
-(defun make-file-source-info (files external-format)
+(defun make-file-source-info (files external-format decoding-error)
   (declare (list files))
   (let ((file-info
 	 (mapcar #'(lambda (x)
@@ -738,7 +743,10 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
     (make-source-info :files file-info
 		      :current-file file-info
 		      #+unicode :external-format
-		      #+unicode external-format)))
+		      #+unicode (stream::ef-name
+				 (stream::find-external-format external-format))
+		      #+unicode :decoding-error
+		      #+unicode decoding-error)))
 
 
 ;;; MAKE-LISP-SOURCE-INFO  --  Interface
@@ -879,7 +887,9 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	   (setf (source-info-stream info)
 		 (open name :direction :input
 		       #+unicode :external-format
-		       #+unicode (source-info-external-format info)))))))
+		       #+unicode (source-info-external-format info)
+		       #+unicode :decoding-error
+		       #+unicode (source-info-decoding-error info)))))))
 
 ;;; CLOSE-SOURCE-INFO  --  Internal
 ;;;
@@ -1743,6 +1753,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 			    (error-output t)
 			    (load nil)
 			    (external-format :default)
+		            (decoding-error t)
 			    ((:verbose *compile-verbose*) *compile-verbose*)
 			    ((:print *compile-print*) *compile-print*)
 			    ((:progress *compile-progress*) *compile-progress*)
@@ -1795,7 +1806,12 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
       If non-NIL, enable recording of cross-reference information.  The default
       is the value of C:*RECORD-XREF-INFO*
    :External-Format
-      The external format to use when opening the source file"
+      The external format to use when opening the source file
+   :Decoding-Error
+      How to handle decoding errors in the external format when reading the
+      source file.  Default (T) is to signal an error.  Nil means silently
+      continue, replacing the invalid sequence with a suitable replacment
+      character."
   (let* ((fasl-file nil)
 	 (error-file-stream nil)
 	 (output-file-pathname nil)
@@ -1804,7 +1820,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	 (compile-won nil)
 	 (error-severity nil)
 	 (source (verify-source-files source))
-	 (source-info (make-file-source-info source external-format))
+	 (source-info (make-file-source-info source external-format decoding-error))
 	 (default (pathname (first source))))
     (unwind-protect
 	(progn
