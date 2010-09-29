@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.22 2010/09/21 00:57:29 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.23 2010/09/29 20:51:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.22 $")
+(defvar *unidata-version* "$Revision: 1.23 $")
 
 (defstruct unidata
   range
@@ -1031,6 +1031,16 @@
 	  (subseq (case-fold-full-tabl data) off (+ off len))))))
   
 
+(declaim (inline composition-table-key))
+(defun composition-table-key (c1 c2)
+  (declare (type codepoint c1 c2))
+  ;; Compute the key for the composition table from two code points.
+  ;; Note that each codepoint is 21 bits long.  We just cat the
+  ;; codepoints together to create the key.  Based on tests with
+  ;; Unicode 5.2.0 this is good enough because the low 29 bits are
+  ;; unique, so each key will be in its own bucket.
+  (logior (ash c1 21) c2))
+
 ;; Build the composition pair table.
 (defun build-composition-table ()
   (let ((table (make-hash-table)))
@@ -1049,7 +1059,7 @@
 	      (setf widep (if widep 2 1))
 	      (when (> (length decomp) widep)
 		(let ((c2 (codepoint decomp widep)))
-		  (setf (gethash (logior (ash c1 21) c2) table) cp))))))))
+		  (setf (gethash (composition-table-key c1 c2) table) cp))))))))
     ;; Remove any in the exclusion list
     (loop for cp across (unicode-composition-exclusions)
        do
@@ -1059,7 +1069,7 @@
 	       (codepoint decomp 0)
 	     (when (> (length decomp) (if widep 2 1))
 	       (let ((c2 (codepoint decomp (if widep 2 1))))
-		 (remhash (logior (ash c1 21) c2) table)))))))
+		 (remhash (composition-table-key c1 c2) table)))))))
     (values table)))
 
 (defvar *composition-pair-table* nil)
@@ -1094,7 +1104,7 @@
     (setf *composition-pair-table* (build-composition-table)))
   (cond ((compose-hangul c1 c2))
 	(t
-	 (gethash (logior (ash c1 21) c2) *composition-pair-table* nil))))
+	 (gethash (composition-table-key c1 c2) *composition-pair-table* nil))))
 
 (defun unicode-word-break-code (code)
   (unless (unidata-word-break *unicode-data*)
