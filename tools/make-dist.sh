@@ -9,7 +9,7 @@
 # you extracted the two tarballs and the source distribution into that
 # directory.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/make-dist.sh,v 1.16 2010/02/01 15:04:51 rtoy Rel $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/make-dist.sh,v 1.17 2010/09/30 21:21:41 rtoy Exp $
 
 usage() {
     echo "make-dist.sh: [-hbg] [-G group] [-O owner] [-I destdir] [-M mandir] dir version [arch os]"
@@ -22,6 +22,8 @@ usage() {
     echo "  -M mandir    Install manpages in this subdirectory.  Default is man/man1"
     echo "  -S           Create a source distribution (requires GNU tar)"
     echo "                 The compressed tar file is named cmucl-src-<VERSION>.tar.<ext>"
+    echo "                 If -I is also given, the -S means that the sources are "
+    echo "                 installed in the <destdir>/src"
     echo "   dir         Directory where the build is located"
     echo "   version     Version (usually date and/or other version info)"
     echo "   arch        Architecture (x86, sparc, etc.)"
@@ -37,6 +39,9 @@ usage() {
     echo "and cmucl-<version>-<arch>-<os>.extra.tar.<c> where <version>,"
     echo "<arch>, and <os> are given values, and <c> is gz or bz2 depending"
     echo "on the selected compression method."
+    echo ""
+    echo "If arch and os are not given, the script will attempt to figure an"
+    echo "appropriate value for arch and os from the running system."
     echo ""
     echo "Creating a source distribution requires GNU tar.  If 'tar' is not GNU"
     echo "tar, use the environment variable 'GTAR' to specify GNU tar.  You can"
