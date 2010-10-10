@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.26 2010/10/10 12:52:58 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.27 2010/10/10 13:02:10 rtoy Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -385,7 +385,7 @@ brief_otherptr(lispobj obj)
 #else
           {
               char *charptr = (char *) vector->data;
-              int len = (int) (vector->length >> 2);
+              int len = (int) (vector->length >> (logtag_Bits - 1);
               
               while (len-- > 0) {
                   if ((charptr[0] == 0)
@@ -412,7 +412,7 @@ brief_otherptr(lispobj obj)
 #else
           /* FIXME:  Unicode hack! */
           {
-              int len = (((struct vector *) ptr)->length) >> 2;
+              int len = (((struct vector *) ptr)->length) >> (lowtag_Bits - 1);
               unsigned short int *wcharptr = (unsigned short int *) vector->data;
               
               while (len-- > 0) {
@@ -523,7 +523,7 @@ print_otherptr(lispobj obj)
 	}
 
 	header = *ptr++;
-	length = (*ptr) >> 2;
+	length = (*ptr) >> (lowtag_Bits - 1);
 	count = header >> 8;
 	type = TypeOf(header);
 
