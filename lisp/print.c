@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.28 2010/10/10 14:11:47 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.29 2010/10/10 14:55:57 rtoy Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -355,13 +355,38 @@ print_struct(lispobj obj)
 }
 
 static void
+print_string(struct vector* vector)
+{
+#ifndef UNICODE
+    char *charptr;
+    
+    for (charptr = (char *) vector->data; *charptr != '\0'; charptr++) {
+        if (*charptr == '"')
+            putchar('\\');
+        putchar(*charptr);
+    }
+#else
+    uint16_t *charptr = (uint16_t *) vector->data;
+    int len = fixnum_value(vector->length);
+              
+    while (len-- > 0) {
+        if ((*charptr == '"')) {
+            putchar('\\');
+        }
+        /* Just dump out the UTF-16 data */
+        putw(*charptr, stdout);
+        charptr++;
+    }
+#endif
+}
+
+static void
 brief_otherptr(lispobj obj)
 {
     lispobj *ptr, header;
     int type;
     struct symbol *symbol;
     struct vector *vector;
-    char *charptr;
 
     ptr = (lispobj *) PTR(obj);
 
@@ -376,50 +401,13 @@ brief_otherptr(lispobj obj)
       case type_SymbolHeader:
 	  symbol = (struct symbol *) ptr;
 	  vector = (struct vector *) PTR(symbol->name);
-#ifndef UNICODE
-	  for (charptr = (char *) vector->data; *charptr != '\0'; charptr++) {
-	      if (*charptr == '"')
-		  putchar('\\');
-	      putchar(*charptr);
-	  }
-#else
-          {
-              char *charptr = (char *) vector->data;
-              int len = (int) (vector->length >> (lowtag_Bits - 1));
-              
-              while (len-- > 0) {
-                  if ((charptr[0] == 0)
-                      && (charptr[1] = '"')) {
-                      putchar('\\');
-                  }
-                  /* Just dump out the UTF-16 data */
-                  putchar(*charptr++);
-                  putchar(*charptr++);
-              }
-          }
-#endif
+          print_string(vector);
 	  break;
 
       case type_SimpleString:
 	  vector = (struct vector *) ptr;
 	  putchar('"');
-#ifndef UNICODE
-	  for (charptr = (char *) vector->data; *charptr != '\0'; charptr++) {
-	      if (*charptr == '"')
-		  putchar('\\');
-	      putchar(*charptr);
-	  }
-#else
-          /* FIXME:  Unicode hack! */
-          {
-              int len = (((struct vector *) ptr)->length) >> (lowtag_Bits - 1);
-              unsigned short int *wcharptr = (unsigned short int *) vector->data;
-              
-              while (len-- > 0) {
-                  putw(*wcharptr++, stdout);
-              }
-          }
-#endif
+          print_string(vector);
 	  putchar('"');
 	  break;
 
@@ -509,7 +497,7 @@ print_otherptr(lispobj obj)
 	u32 length;
 #endif
 	int count, type, index;
-	char *cptr, buffer[16];
+	char buffer[16];
 
 #ifndef alpha
 	ptr = (unsigned long *) PTR(obj);
@@ -523,7 +511,7 @@ print_otherptr(lispobj obj)
 	}
 
 	header = *ptr++;
-	length = (*ptr) >> (lowtag_Bits - 1);
+	length = fixnum_value(*ptr);
 	count = header >> 8;
 	type = TypeOf(header);
 
@@ -622,16 +610,10 @@ print_otherptr(lispobj obj)
 
 	  case type_SimpleString:
 	      NEWLINE;
-	      cptr = (char *) (ptr + 1);
 	      putchar('\"');
-	      while (length-- > 0) {
-		  putchar(*cptr++);
-#ifdef UNICODE
-                  /* FIXME:  Unicode Hack! */
-		  putchar(*cptr++);
-#endif
-              }
-	      putchar('\"');
+              /* Need to back up one to get the start of the vector */
+              print_string((struct vector*) (ptr - 1));
+              putchar('\"');
 	      break;
 
 	  case type_SimpleVector:
