@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.27 2010/10/10 13:02:10 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.28 2010/10/10 14:11:47 rtoy Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -385,7 +385,7 @@ brief_otherptr(lispobj obj)
 #else
           {
               char *charptr = (char *) vector->data;
-              int len = (int) (vector->length >> (logtag_Bits - 1);
+              int len = (int) (vector->length >> (lowtag_Bits - 1));
               
               while (len-- > 0) {
                   if ((charptr[0] == 0)
