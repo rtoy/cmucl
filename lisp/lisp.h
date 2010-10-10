@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.11 2008/11/12 15:04:24 rtoy Rel $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.12 2010/10/10 14:54:52 rtoy Exp $ */
 
 #ifndef _LISP_H_
 #define _LISP_H_
@@ -28,8 +28,8 @@ typedef signed int s32;
 typedef u32 lispobj;
 #endif
 
-#define make_fixnum(n) ((lispobj)((n)<<2))
-#define fixnum_value(n) (((long)n)>>2)
+#define make_fixnum(n) ((lispobj)((n)<<(lowtag_Bits-1)))
+#define fixnum_value(n) (((long)n)>>(lowtag_Bits-1))
 
 #define boolean int
 #ifndef TRUE
