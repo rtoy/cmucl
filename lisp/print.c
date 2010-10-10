@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.25 2009/06/11 16:04:01 rtoy Rel $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.26 2010/10/10 12:52:58 rtoy Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -376,11 +376,28 @@ brief_otherptr(lispobj obj)
       case type_SymbolHeader:
 	  symbol = (struct symbol *) ptr;
 	  vector = (struct vector *) PTR(symbol->name);
+#ifndef UNICODE
 	  for (charptr = (char *) vector->data; *charptr != '\0'; charptr++) {
 	      if (*charptr == '"')
 		  putchar('\\');
 	      putchar(*charptr);
 	  }
+#else
+          {
+              char *charptr = (char *) vector->data;
+              int len = (int) (vector->length >> 2);
+              
+              while (len-- > 0) {
+                  if ((charptr[0] == 0)
+                      && (charptr[1] = '"')) {
+                      putchar('\\');
+                  }
+                  /* Just dump out the UTF-16 data */
+                  putchar(*charptr++);
+                  putchar(*charptr++);
+              }
+          }
+#endif
 	  break;
 
       case type_SimpleString:
