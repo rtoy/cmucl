@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.34 2010/07/05 03:40:02 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.35 2010/10/12 21:52:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -184,6 +184,9 @@ and also the CMUCL C runtime."
 ;;;
 (defmacro fast-read-char (&optional (eof-errorp t) (eof-value ()))
   `(cond
+     ((/= (lisp-stream-flags %frc-stream%) 1)
+      ;; Call the method if we're doing a read-char on a character stream.
+      (funcall %frc-method% %frc-stream% ,eof-errorp ,eof-value))
      #+unicode
      (%frc-string-buffer%
       (cond ((>= %frc-string-index% %frc-string-length%)
@@ -231,14 +234,17 @@ and also the CMUCL C runtime."
   `(truly-the
     ,(if (and (eq eof-errorp 't) (not any-type)) '(unsigned-byte 8) 't)
     (cond
-     ((not %frc-buffer%)
-      (funcall %frc-method% %frc-stream% ,eof-errorp ,eof-value))
-     ((= %frc-index% in-buffer-length)
-      (prog1 (fast-read-byte-refill %frc-stream% ,eof-errorp ,eof-value)
-	(setq %frc-index% (lisp-stream-in-index %frc-stream%))))
-     (t
-      (prog1 (aref %frc-buffer% %frc-index%)
-	(incf %frc-index%))))))
+      ((or (not %frc-buffer%) (/= (lisp-stream-flags %frc-stream%) #b10))
+       ;; Call the method if we're doing a read-byte on a stream that
+       ;; is has no in-buffer (a binary-text-stream) or is not a
+       ;; binary stream (flags /= #b10).
+       (funcall %frc-method% %frc-stream% ,eof-errorp ,eof-value))
+      ((= %frc-index% in-buffer-length)
+       (prog1 (fast-read-byte-refill %frc-stream% ,eof-errorp ,eof-value)
+	 (setq %frc-index% (lisp-stream-in-index %frc-stream%))))
+      (t
+       (prog1 (aref %frc-buffer% %frc-index%)
+	 (incf %frc-index%))))))
 ;;;
 (defmacro done-with-fast-read-byte ()
   `(progn

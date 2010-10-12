@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.120 2010/09/15 11:32:49 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.121 2010/10/12 21:52:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1402,9 +1402,16 @@
 	(setf (fd-stream-ibuf-sap stream) (next-available-buffer))
 	(setf (fd-stream-ibuf-length stream) bytes-per-buffer)
 	(setf (fd-stream-ibuf-tail stream) 0)
+
+	;; Set the in and bin methods.  Normally put an illegal input
+	;; function in, but if we have a binary text stream, pick an
+	;; appropriate input routine.
 	(if (subtypep type 'character)
 	    (setf (fd-stream-in stream) routine
-		  (fd-stream-bin stream) #'ill-bin)
+		  (fd-stream-bin stream) (if (and binary-stream-p
+						  (eql size 1))
+					     (pick-input-routine '(unsigned-byte 8))
+					     #'ill-bin))
 	    (setf (fd-stream-in stream) (if (and binary-stream-p
 						 (eql size 1))
 					    (pick-input-routine 'character) 
@@ -1423,17 +1430,17 @@
 		      (or (eq 'unsigned-byte (and (consp type) (car type)))
 			  (eq type :default))
 		      (eq type 'character)))
-	    ;; We only create this buffer for streams of type
-	    ;; (unsigned-byte 8) or character streams with an external
-	    ;; format of :iso8859-1.  Because there's no buffer, the
-	    ;; other element-types will dispatch to the appropriate
-	    ;; input (output) routine in fast-read-byte/fast-read-char.
 	    (when *enable-stream-buffer-p*
-	      (setf (lisp-stream-in-buffer stream)
-		    (make-array in-buffer-length
-				:element-type '(unsigned-byte 8)))
+	      (when (and (not binary-stream-p)
+			 (eq type 'character))
+		;; Create the in-buffer for any character (only)
+		;; stream.  Don't want one for binary-text-streams!
+		(setf (lisp-stream-in-buffer stream)
+		      (make-array in-buffer-length
+				  :element-type '(unsigned-byte 8))))
 	      #+unicode
-	      (when (and (eq type 'character)
+	      (when (and (not binary-stream-p)
+			 (eq type 'character)
 			 (not (eq :iso8859-1 (fd-stream-external-format stream))))
 		;; For character streams, we create the string-buffer so
 		;; we can convert all available octets at once instead
@@ -1444,6 +1451,7 @@
 		;; For ISO8859-1, we don't want this because it's very
 		;; easy and quick to convert octets to iso8859-1.  (See
 		;; FAST-READ-CHAR.)
+		
 		(setf (lisp-stream-string-buffer stream)
 		      (make-string (1+ in-buffer-length)))
 		(setf (fd-stream-octet-count stream)
@@ -1464,15 +1472,23 @@
 	(setf (fd-stream-obuf-sap stream) (next-available-buffer))
 	(setf (fd-stream-obuf-length stream) bytes-per-buffer)
 	(setf (fd-stream-obuf-tail stream) 0)
+	;; Normally signal errors for reading from a stream with the
+	;; wrong element type, but allow binary-text-streams to read
+	;; from either.
 	(if (subtypep type 'character)
-	  (setf (fd-stream-out stream) routine
-		(fd-stream-bout stream) #'ill-bout)
-	  (setf (fd-stream-out stream)
-		(or (if (eql size 1)
+	    (setf (fd-stream-out stream) routine
+		  (fd-stream-bout stream)
+		    (if (and binary-stream-p
+			     (eql size 1))
+			(pick-output-routine '(unsigned-byte 8)
+					     (fd-stream-buffering stream))
+			#'ill-bout))
+	    (setf (fd-stream-out stream)
+		  (if (and binary-stream-p (eql size 1))
 		      (pick-output-routine 'base-char
-					   (fd-stream-buffering stream)))
-		    #'ill-out)
-		(fd-stream-bout stream) routine))
+					   (fd-stream-buffering stream))
+		      #'ill-out)
+		  (fd-stream-bout stream) routine))
 	(setf (fd-stream-sout stream)
 	      (if (eql size 1) #'fd-sout #'ill-out))
 	(setf (fd-stream-char-pos stream) 0)
@@ -1880,6 +1896,15 @@
 				       :timeout timeout
 				       :char-to-octets-error e
 				       :octets-to-char-error d)))))
+    ;; Set the lisp-stream flags appropriately for the kind of stream
+    ;; we have (character, binary, binary-text-stream).
+    (cond ((typep stream 'binary-text-stream)
+	   (setf (fd-stream-flags stream) #b100))
+	  ((subtypep element-type 'character)
+	   (setf (fd-stream-flags stream) #b001))
+	  (t
+	   (setf (fd-stream-flags stream) #b010)))
+
     ;; FIXME: setting the external format here should be better
     ;; integrated into set-routines.  We do it before so that
     ;; set-routines can create an in-buffer if appropriate.  But we

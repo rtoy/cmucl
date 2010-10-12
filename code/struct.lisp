@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.25 2010/08/15 12:04:44 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.26 2010/10/12 21:52:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,7 +61,19 @@
   ;; in string-buffer.  This is basically unused, except by
   ;; FILE-POSITION so that we can get the correct file position.
   #+unicode
-  (octet-count nil :type (or null (simple-array (unsigned-byte 8) (*)))))
+  (octet-count nil :type (or null (simple-array (unsigned-byte 8) (*))))
+  ;;
+  ;; Flags indicating if the stream is a character stream, binary
+  ;; stream or binary-text-stream.  This is somewhat redundant because
+  ;; binary-text-stream is its own type (defstruct).  But we can't
+  ;; easily distinguish a character stream from a binary stream.
+  ;;
+  ;; #b001  - character (only) stream
+  ;; #b010  - binary (only) stream
+  ;; #b100  - binary-text-stream (supports character and binary)
+  ;;
+  ;; It is an error if both character and binary bits are set.
+  (flags 0 :type fixnum))
 
 (declaim (inline streamp))
 (defun streamp (stream)

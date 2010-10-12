@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream-extfmt.lisp,v 1.13 2010/09/24 00:36:03 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream-extfmt.lisp,v 1.14 2010/10/12 21:52:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -70,101 +70,113 @@
 	  (stream::ef-name (stream::find-external-format extfmt))
 	  (fd-stream-oc-state stream) nil
 	  (fd-stream-co-state stream) nil)
-    (when (fd-stream-ibuf-sap stream)	; input stream
+    ;; Set fd-stream-in only if we have an input stream for a
+    ;; character stream or binary-text-stream.
+    (when (and (fd-stream-ibuf-sap stream)
+	       (plusp (logand #b101 (lisp-stream-flags stream))))
       (setf (fd-stream-in stream) (ef-cin extfmt)))
-    (when (fd-stream-obuf-sap stream)	; output stream
+    ;; Set fd-stream-in only if we have an input stream for a
+    ;; character stream or binary-text-stream.
+    (when (and (fd-stream-obuf-sap stream)
+	       (plusp (logand #b101 (lisp-stream-flags stream))))
       (setf (fd-stream-out stream) (ef-cout extfmt)
 	    ;;@@ (fd-stream-sout stream) (ef-sout extfmt)
 	    ))
+
     ;; The following handles the case of setting the external format
     ;; for input streams where we need to handle the various buffering
-    ;; strategies.
-    ;;
-    (cond
-      ((eq old-format (fd-stream-external-format stream))
-       ;; Nothing to do if the new and old formats are the same.
-       )
-      ((and lisp::*enable-stream-buffer-p* updatep
-	    (lisp-stream-string-buffer stream))
-       ;; We want to reconvert any octets that haven't been converted
-       ;; yet.  So, we need to figure out which octet to start with.
-       ;; This is done by converting (the previously converted) octets
-       ;; until we've converted the right number of characters.  Or,
-       ;; since we have the octet-count, just sum up them up to figure
-       ;; out how many octets we've already consumed.
-       (let* ((ibuf (lisp-stream-in-buffer stream))
-	      (sindex (lisp-stream-string-index stream))
-	      (octet-count (fd-stream-octet-count stream))
-	      (oc (make-array in-buffer-length :element-type '(unsigned-byte 8)))
-	      (index (loop for k of-type fixnum from 0 below (1- sindex)
-			summing (aref octet-count k))))
-	 ;; We now know the last octet that was used.  Now convert the
-	 ;; rest of the octets using the new format.  The new
-	 ;; characters are placed in the string buffer at the point
-	 ;; just after the last character that we've already read.
-	 (multiple-value-bind (s pos count new-state)
-	     (stream::octets-to-string-counted ibuf
-					       oc
-					       :start index
-					       :end (fd-stream-in-length stream)
-					       :external-format (fd-stream-external-format stream)
-					       :string (lisp-stream-string-buffer stream)
-					       :s-start sindex
-					       :error (fd-stream-octets-to-char-error stream))
-	   (replace octet-count oc :start1 index :end2 pos)
-	   (cond ((eq (fd-stream-external-format stream) :iso8859-1)
-		  ;; ISO8859-1 doesn't use the string-buffer, so we
-		  ;; need to copy the string to the in-buffer and then
-		  ;; set the string-buffer to nil to indicate we're not
-		  ;; using the string buffer anymore.
-		  (let ((index (- in-buffer-length count)))
-		    (dotimes (k count)
-		      (setf (aref ibuf (+ k index))
-			    (char-code (aref s (+ k sindex)))))
-		    (setf (lisp-stream-in-index stream) index)
-		    (setf (lisp-stream-string-buffer stream) nil)
-		    (setf (lisp-stream-string-buffer-len stream) 0)
-		    (setf (lisp-stream-string-index stream) 0)))
-		 (t
-		  (setf (lisp-stream-string-index stream) sindex)
-		  (setf (lisp-stream-string-buffer-len stream) pos)
-		  (setf (lisp-stream-in-index stream) (+ index count))
-		  (setf (fd-stream-oc-state stream) new-state))))))
-      ((and updatep (lisp-stream-in-buffer stream))
-       ;; This means the external format was ISO8859-1 and we're
-       ;; switching to something else.  If so, we need to convert all
-       ;; the octets that haven't been processed yet and place them in
-       ;; the string buffer.  We also need to adjust the in-buffer to
-       ;; put those octets in the expected place at the beginning of
-       ;; in-buffer.
-       (let ((index (lisp-stream-in-index stream))
-	     (ibuf (lisp-stream-in-buffer stream)))
-	 (setf (lisp-stream-string-buffer stream)
-	       (make-string (1+ in-buffer-length)))
-	 (setf (lisp-stream-string-index stream) 1)
-	 ;; Set the unread char to be the last read octet.
-	 (setf (aref (lisp-stream-string-buffer stream) 0)
-	       (code-char (aref ibuf (1- index))))
-	 
-	 (let ((oc (or (fd-stream-octet-count stream)
-		       (setf (fd-stream-octet-count stream)
-			     (make-array in-buffer-length :element-type '(unsigned-byte 8))))))
+    ;; strategies.  But don't change anything if we have a
+    ;; binary-text-stream.  In that case, we don't want to set the
+    ;; lisp-stream-in-buffer or lisp-stream-string-buffer which would
+    ;; cause the FAST-READ-CHAR/FAST-READ-BYTE functions to bypass the
+    ;; methods.
+
+    (unless (typep stream 'binary-text-stream)
+      (cond
+	((eq old-format (fd-stream-external-format stream))
+	 ;; Nothing to do if the new and old formats are the same.
+	 )
+	((and lisp::*enable-stream-buffer-p* updatep
+	      (lisp-stream-string-buffer stream))
+	 ;; We want to reconvert any octets that haven't been converted
+	 ;; yet.  So, we need to figure out which octet to start with.
+	 ;; This is done by converting (the previously converted) octets
+	 ;; until we've converted the right number of characters.  Or,
+	 ;; since we have the octet-count, just sum up them up to figure
+	 ;; out how many octets we've already consumed.
+	 (let* ((ibuf (lisp-stream-in-buffer stream))
+		(sindex (lisp-stream-string-index stream))
+		(octet-count (fd-stream-octet-count stream))
+		(oc (make-array in-buffer-length :element-type '(unsigned-byte 8)))
+		(index (loop for k of-type fixnum from 0 below (1- sindex)
+			  summing (aref octet-count k))))
+	   ;; We now know the last octet that was used.  Now convert the
+	   ;; rest of the octets using the new format.  The new
+	   ;; characters are placed in the string buffer at the point
+	   ;; just after the last character that we've already read.
 	   (multiple-value-bind (s pos count new-state)
 	       (stream::octets-to-string-counted ibuf
 						 oc
 						 :start index
+						 :end (fd-stream-in-length stream)
 						 :external-format (fd-stream-external-format stream)
 						 :string (lisp-stream-string-buffer stream)
-						 :s-start 1
+						 :s-start sindex
 						 :error (fd-stream-octets-to-char-error stream))
-	     (declare (ignore s))
-	     (setf (lisp-stream-string-buffer-len stream) pos)
-	     (setf (fd-stream-oc-state stream) new-state)
-	     ;; Move the octets from the end of the in-buffer to the
-	     ;; beginning.  Set the index to the number of octets we've
-	     ;; processed.
-	     (replace ibuf ibuf :start2 index)
-	     (setf (lisp-stream-in-index stream) count))))))
+	     (replace octet-count oc :start1 index :end2 pos)
+	     (cond ((eq (fd-stream-external-format stream) :iso8859-1)
+		    ;; ISO8859-1 doesn't use the string-buffer, so we
+		    ;; need to copy the string to the in-buffer and then
+		    ;; set the string-buffer to nil to indicate we're not
+		    ;; using the string buffer anymore.
+		    (let ((index (- in-buffer-length count)))
+		      (dotimes (k count)
+			(setf (aref ibuf (+ k index))
+			      (char-code (aref s (+ k sindex)))))
+		      (setf (lisp-stream-in-index stream) index)
+		      (setf (lisp-stream-string-buffer stream) nil)
+		      (setf (lisp-stream-string-buffer-len stream) 0)
+		      (setf (lisp-stream-string-index stream) 0)))
+		   (t
+		    (setf (lisp-stream-string-index stream) sindex)
+		    (setf (lisp-stream-string-buffer-len stream) pos)
+		    (setf (lisp-stream-in-index stream) (+ index count))
+		    (setf (fd-stream-oc-state stream) new-state))))))
+	((and updatep (lisp-stream-in-buffer stream))
+	 ;; This means the external format was ISO8859-1 and we're
+	 ;; switching to something else.  If so, we need to convert all
+	 ;; the octets that haven't been processed yet and place them in
+	 ;; the string buffer.  We also need to adjust the in-buffer to
+	 ;; put those octets in the expected place at the beginning of
+	 ;; in-buffer.
+	 (let ((index (lisp-stream-in-index stream))
+	       (ibuf (lisp-stream-in-buffer stream)))
+	   (setf (lisp-stream-string-buffer stream)
+		 (make-string (1+ in-buffer-length)))
+	   (setf (lisp-stream-string-index stream) 1)
+	   ;; Set the unread char to be the last read octet.
+	   (setf (aref (lisp-stream-string-buffer stream) 0)
+		 (code-char (aref ibuf (1- index))))
+	 
+	   (let ((oc (or (fd-stream-octet-count stream)
+			 (setf (fd-stream-octet-count stream)
+			       (make-array in-buffer-length :element-type '(unsigned-byte 8))))))
+	     (multiple-value-bind (s pos count new-state)
+		 (stream::octets-to-string-counted ibuf
+						   oc
+						   :start index
+						   :external-format (fd-stream-external-format stream)
+						   :string (lisp-stream-string-buffer stream)
+						   :s-start 1
+						   :error (fd-stream-octets-to-char-error stream))
+	       (declare (ignore s))
+	       (setf (lisp-stream-string-buffer-len stream) pos)
+	       (setf (fd-stream-oc-state stream) new-state)
+	       ;; Move the octets from the end of the in-buffer to the
+	       ;; beginning.  Set the index to the number of octets we've
+	       ;; processed.
+	       (replace ibuf ibuf :start2 index)
+	       (setf (lisp-stream-in-index stream) count)))))))
     extfmt))
 
 
