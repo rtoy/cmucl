@@ -33,9 +33,27 @@ New in this release:
       errors are signaled on invalid sequences instead of silently
       replacing the bad sequence with some kind of replacement
       character.
+    - In 19f through 20b, READ-SEQUENCE could read mostly arbitrary
+      data from a stream in to the given sequence.  In this release,
+      READ-SEQUENCE cannot do that unless the stream is a
+      binary-text-stream.   This is an incompatible change from
+      previous releases.
 
   * ANSI compliance fixes:
-
+    - Fixes for signaling errors with READ-CHAR and READ-BYTE
+      o READ-CHAR signals errors if the stream is not a character
+        stream.  This is a change from 20a and 20b, but matches
+        releases before 19f.  (Almost.  19f allowed reading characters
+        from (unsigned-byte 8) streams.  19e did not.)
+      o READ-BYTE signals errors if the stream is not a binary
+        stream.  This is also a change from 20a and 20b, but matches
+        releases before 19f.  (Almost.  19f allowed reading bytes from
+        character streams.  19e did not.) 
+      o But READ-CHAR and READ-BYTE will work if the stream class is
+        'binary-text-stream, an extension for bivalent streams in
+        CMUCL.  READ-CHAR will use the specified external format for
+        such streams.  READ-BYTE reads (unsigned-byte 8) elements from
+        such streams.
   * Bugfixes:
     - The pairwise composition table is now correctly built.
       Previously, it skipped over non-BMP codepoints.  This also
