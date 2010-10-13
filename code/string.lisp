@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.27 2010/09/20 23:01:15 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.28 2010/10/13 18:00:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -990,7 +990,7 @@
 	    (when widep (incf index)))))))
 
 (defun string-left-trim (char-bag string)
-  "Given a set of characters (a list or string) and a string, returns
+  _N"Given a set of characters (a list or string) and a string, returns
   a copy of the string with the characters in the set removed from the
   left end.  If the set of characters is a string, surrogates will be
   properly handled."
@@ -1038,7 +1038,7 @@
 	    (when widep (decf index)))))))
 
 (defun string-right-trim (char-bag string)
-  "Given a set of characters (a list or string) and a string, returns
+  _N"Given a set of characters (a list or string) and a string, returns
   a copy of the string with the characters in the set removed from the
   right end.  If the set of characters is a string, surrogates will be
   properly handled."
@@ -1048,7 +1048,7 @@
       (subseq string start stop))))
 
 (defun string-trim (char-bag string)
-  "Given a set of characters (a list or string) and a string, returns a
+  _N"Given a set of characters (a list or string) and a string, returns a
   copy of the string with the characters in the set removed from both
   ends.  If the set of characters is a string, surrogates will be
   properly handled."
@@ -1352,17 +1352,17 @@
 	(shrink-vector target comp-pos)))))
 
 (defun string-to-nfd (string)
-  "Convert String to Unicode Normalization Form D (NFD) using the
+  _N"Convert String to Unicode Normalization Form D (NFD) using the
   canonical decomposition.  The NFD string is returned"
   (decompose string nil))
 
 (defun string-to-nfkd (string)
-  "Convert String to Unicode Normalization Form KD (NFKD) uisng the
+  _N"Convert String to Unicode Normalization Form KD (NFKD) uisng the
   compatible decomposition form.  The NFKD string is returned."
   (decompose string t))
 
 (defun string-to-nfc (string)
-  "Convert String to Unicode Normalization Form C (NFC).  If the
+  _N"Convert String to Unicode Normalization Form C (NFC).  If the
   string a simple string and is already normalized, the original
   string is returned."
   (if (normalized-form-p string :nfc)
@@ -1373,7 +1373,7 @@
 	      'simple-string)))
 
 (defun string-to-nfkc (string)
-  "Convert String to Unicode Normalization Form KC (NFKC).  If the
+  _N"Convert String to Unicode Normalization Form KC (NFKC).  If the
   string is a simple string and is already normalized, the original
   string is returned."
   (if (normalized-form-p string :nfkc)

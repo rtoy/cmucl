@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.121 2010/10/12 21:52:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.122 2010/10/13 18:00:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1872,17 +1872,14 @@
 			  (d (cond ((characterp decoding-error)
 				    (constantly (char-code decoding-error)))
 				   ((eq t decoding-error)
-				    #+unicode
 				    #'(lambda (&rest args)
 					(apply 'cerror
-					       (intl:gettext "Use Unicode replacement character instead")
+					       #+unicode _"Use Unicode replacement character instead"
+					       #-unicode _"Use question mark character instead"
 					       args)
-					stream:+replacement-character-code+)
-				    #-unicode
-				    #'(lambda (&rest args)
-					(apply 'cerror
-					       (intl:gettext "Use question mark character instead")
-					       args)
+					#+unicode
+					stream:+replacement-character-code+
+					#-unicode
 					#\?))
 				   (t
 				    decoding-error))))

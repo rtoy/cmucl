@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.71 2010/09/26 20:40:51 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.72 2010/10/13 18:00:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -364,14 +364,14 @@
 #+unicode
 (setf (getf *herald-items* :unicode)
       `(,#'(lambda (stream)
-	     (write-string (intl:gettext "    Unicode ") stream))
+	     (write-string _"    Unicode " stream))
 	,(if (and (boundp 'lisp::*unidata-version*)
 		  (>= (length lisp::*unidata-version*) 11))
 	     (subseq lisp::*unidata-version* 11
 		     (1- (length lisp::*unidata-version*)))
 	     " ")
 	,#'(lambda (stream)
-	     (write-string (intl:gettext "with Unicode version ") stream))
+	     (write-string _"with Unicode version " stream))
 	,#'(lambda (stream)
 	     (princ lisp::+unicode-major-version+ stream)
 	     (write-char #\. stream)
