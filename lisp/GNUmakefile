@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.38 2010/09/16 02:29:37 rtoy Rel $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.39 2010/10/14 17:47:12 rtoy Exp $
 
 all: lisp.nm
 
@@ -102,4 +102,20 @@ translations:
 	  done; done
 
 .PHONY : translations
+
+# Like translations, but we don't compute the diff.  We just overwrite
+# the po files in the repository so that we can tell if the
+# translations have changed and need to be updated.  (This is what the
+# old translations used to do.)
+translations-update: 
+	for pot in ../../src/i18n/locale/*.pot; do \
+	  for po in $(LOCALE_DIRS); do \
+            d=`dirname $$pot`; \
+	    f=`basename $$pot .pot`; \
+	    touch ../../src/$$po/$$f.po; \
+	    echo ; \
+	    echo '***' Processing $$f.pot:  $$po; \
+	    msgmerge -v ../../src/$$po/$$f.po $$pot -o ../../src/$$po/$$f.po; \
+	    msgfmt -v  ../../src/$$po/$$f.po -o ../$$po/$$f.mo; \
+	  done; done
 

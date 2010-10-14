@@ -32,7 +32,7 @@
 #
 # For more information see src/BUILDING.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.35 2010/09/25 18:03:15 rtoy Rel $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.36 2010/10/14 17:47:12 rtoy Exp $
 #
 
 ENABLE2="yes"
@@ -66,7 +66,7 @@ fi
 
 usage ()
 {
-    echo "build.sh [-123obvuBC?]"
+    echo "build.sh [-123obvuBCU?]"
     echo "    -1        Skip build 1"
     echo "    -2        Skip build 2"
     echo "    -3        Skip build 3"
@@ -90,6 +90,8 @@ usage ()
     echo '               the translations.'
     echo "    -?        This help message"
     echo "    -w        Specify a different build-world.sh script"
+    echo "    -U        If translations are done, overwrite the CVS files with the"
+    echo "               translations instead of computing and displayin the diffs."
     exit 1
 }
 
@@ -139,8 +141,9 @@ buildit ()
 FPU_MODE=
 BUILDWORLD="$TOOLDIR/build-world.sh"
 BUILD_POT="yes"
+UPDATE_TRANS=
 
-while getopts "123Po:b:v:uB:C:i:f:w:?" arg
+while getopts "123Po:b:v:uB:C:Ui:f:w:?" arg
 do
     case $arg in
 	1) ENABLE2="no" ;;
@@ -157,6 +160,7 @@ do
 	f) FPU_MODE="-fpu $OPTARG" ;;
         P) BUILD_POT=no ;;
         w) BUILDWORLD="$OPTARG" ;;
+        U) UPDATE_TRANS="yes";;
 	\?) usage
 	    ;;
     esac
@@ -200,7 +204,11 @@ ENABLE=$ENABLE4
 
 if [ "${BUILD_POT}" = "yes" ]; then
    MAKE_POT=yes
-   MAKE_TARGET="all translations"
+   if [ "${UPDATE_TRANS}" = "yes" ]; then
+       MAKE_TARGET="all translations-update"
+   else
+       MAKE_TARGET="all translations"
+   fi
    export MAKE_POT
 fi
 
