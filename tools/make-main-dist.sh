@@ -29,6 +29,7 @@ then
 fi
 
 DESTDIR=${INSTALL_DIR:-release-$$}
+DOCDIR=${DOCDIR:-doc/cmucl}
 MANDIR=${MANDIR:-man/man1}
 TARGET="`echo $1 | sed 's:/*$::'`"
 VERSION=$2
@@ -86,11 +87,11 @@ fi
 # set -x
 echo Installing main components
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/bin
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/doc/cmucl
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/subsystems
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/ext-formats
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/${DOCDIR}
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/${MANDIR}
 install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp $DESTDIR/bin/
 if [ "$EXECUTABLE" = "true" ]
@@ -150,11 +151,11 @@ install ${GROUP} ${OWNER} -m 0644 src/general-info/cmucl.1 \
 	$DESTDIR/${MANDIR}/
 install ${GROUP} ${OWNER} -m 0644 src/general-info/lisp.1 \
 	$DESTDIR/${MANDIR}/
-install ${GROUP} ${OWNER} -m 0644 src/general-info/README $DESTDIR/doc/cmucl/
+install ${GROUP} ${OWNER} -m 0644 src/general-info/README $DESTDIR/${DOCDIR}
 if [ -f src/general-info/release-$VERSION.txt ] 
 then
 	install ${GROUP} ${OWNER} -m 0644 src/general-info/release-$VERSION.txt \
-		$DESTDIR/doc/cmucl/
+		$DESTDIR/${DOCDIR}
 fi
 
 if [ -z "$INSTALL_DIR" ]; then
