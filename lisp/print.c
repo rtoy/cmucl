@@ -1,7 +1,8 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.29 2010/10/10 14:55:57 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.30 2010/10/22 04:07:33 rtoy Exp $ */
 
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include "print.h"
 #include "lisp.h"
 #include "internals.h"
