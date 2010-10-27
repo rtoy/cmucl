@@ -5550,11 +5550,15 @@ msgid "Returns a string describing the implementation type."
 msgstr ""
 
 #: src/code/misc.lisp
-msgid "Returns a string describing the implementation version."
+msgid " Unicode"
 msgstr ""
 
 #: src/code/misc.lisp
-msgid " Unicode"
+msgid ""
+msgstr ""
+
+#: src/code/misc.lisp
+msgid "Returns a string describing the implementation version."
 msgstr ""
 
 #: src/code/misc.lisp
@@ -9152,6 +9156,14 @@ msgid "Invalid position given to file-position: ~S"
 msgstr ""
 
 #: src/code/fd-stream.lisp
+msgid "Use Unicode replacement character instead"
+msgstr ""
+
+#: src/code/fd-stream.lisp
+msgid "Use question mark character instead"
+msgstr ""
+
+#: src/code/fd-stream.lisp
 msgid ""
 "Create a stream for the given unix file descriptor.\n"
 "  If input is non-nil, allow input operations.\n"
@@ -9177,10 +9189,6 @@ msgstr ""
 
 #: src/code/fd-stream.lisp
 msgid "** Closed ~A~%"
-msgstr ""
-
-#: src/code/fd-stream.lisp
-msgid "Use Unicode replacement character instead"
 msgstr ""
 
 #: src/code/fd-stream.lisp
