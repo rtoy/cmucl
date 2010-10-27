@@ -38,6 +38,9 @@ New in this release:
       READ-SEQUENCE cannot do that unless the stream is a
       binary-text-stream.   This is an incompatible change from
       previous releases.
+    - RUN-PROGRAM accepts :EXTERNAL-FORMAT parameter to specify the
+      external format to be used for any streams that RUN-PROGRAM
+      needs to create.
 
   * ANSI compliance fixes:
     - Fixes for signaling errors with READ-CHAR and READ-BYTE
