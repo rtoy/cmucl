@@ -35,14 +35,14 @@ usage ()
 
 VERSION="CVS Head `date '+%Y-%m-%d %H:%M:%S'`"
 BASE=build
+CREATE_OPT=""
 
 while getopts "Ub:v:C:o:8:?" arg
 do
     case $arg in
       b) BASE="$OPTARG" ;;
       B) bootfiles="$bootfiles -B $OPTARG" ;;
-      C) CREATE_OPT="-C $OPTARG"
-	 CREATE_DIRS=yes ;;
+      C) CREATE_OPT="$OPTARG" ;;
       o) OLDLISP="$OPTARG" ;;
       8) OLD8="$OPTARG" ;;
       v) VERSION="$OPTARG" ;;
@@ -66,15 +66,15 @@ buildx86 ()
     if [ -n "$OLD8" ]; then
 	# Build non-unicode versions
 	set -x
-	src/tools/build.sh -f x87 -b ${BASE}-8bit $bootfiles -v "$VERSION" ${CREATE_OPT} ${UPDATE_TRANS} -o "$OLD8"
-	src/tools/build.sh -f sse2 -b ${BASE}-8bit $bootfiles -v "$VERSION" ${CREATE_OPT} ${UPDATE_TRANS} -o "$OLD8"
+	src/tools/build.sh -f x87 -b ${BASE}-8bit $bootfiles -v "$VERSION" -C "${CREATE_OPT}" ${UPDATE_TRANS} -o "$OLD8"
+	src/tools/build.sh -f sse2 -b ${BASE}-8bit $bootfiles -v "$VERSION" -C "${CREATE_OPT}" ${UPDATE_TRANS} -o "$OLD8"
 	set +x
     fi
     # Build the unicode versions
     if [ -n "$OLDLISP" ]; then
 	set -x
-	src/tools/build.sh -f x87 -b ${BASE} $bootfiles -v "$VERSION" ${CREATE_OPT} ${UPDATE_TRANS} -o "$OLDLISP"
-	src/tools/build.sh -f sse2 -b ${BASE} $bootfiles -v "$VERSION" ${CREATE_OPT} ${UPDATE_TRANS} -o "$OLDLISP"
+	src/tools/build.sh -f x87 -b ${BASE} $bootfiles -v "$VERSION" -C "${CREATE_OPT}" ${UPDATE_TRANS} -o "$OLDLISP"
+	src/tools/build.sh -f sse2 -b ${BASE} $bootfiles -v "$VERSION" -C "${CREATE_OPT}" ${UPDATE_TRANS} -o "$OLDLISP"
 	set +x
     fi
 }
@@ -84,13 +84,13 @@ buildsun4 ()
     # Build non-unicode versions
     if [ -n "$OLD8" ]; then
 	set -x
-	src/tools/build.sh -b ${BASE}-8bit $bootfiles -v "$VERSION" ${CREATE_OPT} ${UPDATE_TRANS} -o "$OLD8"
+	src/tools/build.sh -b ${BASE}-8bit $bootfiles -v "$VERSION" -C "$CREATE_OPT" ${UPDATE_TRANS} -o "$OLD8"
 	set +x
     fi
     # Build the unicode version.
     if [ -n "$OLDLISP" ]; then
 	set -x
-	src/tools/build.sh -b ${BASE} $bootfiles -v "$VERSION" ${CREATE_OPT} ${UPDATE_TRANS} -o "$OLDLISP"
+	src/tools/build.sh -b ${BASE} $bootfiles -v "$VERSION" -C "$CREATE_OPT" ${UPDATE_TRANS} -o "$OLDLISP"
 	set +x
     fi
 }
