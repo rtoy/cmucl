@@ -41,6 +41,8 @@ New in this release:
     - RUN-PROGRAM accepts :EXTERNAL-FORMAT parameter to specify the
       external format to be used for any streams that RUN-PROGRAM
       needs to create.
+    - Add src/tools/build-all.sh to automate building all of the
+      variants (x87/sse2, unicode/8-bit).
 
   * ANSI compliance fixes:
     - Fixes for signaling errors with READ-CHAR and READ-BYTE
@@ -62,6 +64,8 @@ New in this release:
       Previously, it skipped over non-BMP codepoints.  This also
       requires a fix in %COMPOSE to handle non-BMP codepoints
       correctly.  The normalization test now passes.
+    - REALPART and IMAGPART no longer incorrectly returns 0 instead of
+      the correct part of a complex number.
  
   * Trac Tickets:
 
