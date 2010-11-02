@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.25 2010/07/14 13:19:03 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.26 2010/11/02 18:30:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -93,6 +93,15 @@
 	  (return nil))
 	(push str *command-line-words*))
       (setq str (pop cmd-strings)))
+
+    (when (string= str "--")
+      ;; Handle the special case where -- is the first option.  The
+      ;; code below interprets that incorrectly and I (rtoy) don't
+      ;; want to mess with that, so just set up
+      ;; *command-line-application-arguments* and return.
+      (setf *command-line-application-arguments* cmd-strings)
+      (return-from process-command-strings nil))
+    
     ;; Set command line switches.
     ;; 
     (loop
