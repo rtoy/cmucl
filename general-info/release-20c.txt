@@ -66,6 +66,8 @@ New in this release:
       correctly.  The normalization test now passes.
     - REALPART and IMAGPART no longer incorrectly returns 0 instead of
       the correct part of a complex number.
+    - The command line parser now correctly handles the case where "--
+      is the first command option.
  
   * Trac Tickets:
 
