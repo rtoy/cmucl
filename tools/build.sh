@@ -32,7 +32,7 @@
 #
 # For more information see src/BUILDING.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.36 2010/10/14 17:47:12 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.37 2010/11/03 15:11:57 rtoy Exp $
 #
 
 ENABLE2="yes"
@@ -133,7 +133,7 @@ buildit ()
 	fi
 	$TOOLDIR/load-world.sh $TARGET "$VERSION" || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
 
-	$TARGET/lisp/lisp -batch -noinit $FPU_MODE < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit $FPU_MODE"; exit 1; }
+	$TARGET/lisp/lisp -batch -noinit -nositeinit $FPU_MODE < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit $FPU_MODE"; exit 1; }
 	return 0;
     fi
 }
