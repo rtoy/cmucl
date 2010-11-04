@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.72 2010/10/13 18:00:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.73 2010/11/04 14:05:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -177,12 +177,13 @@
   read-eval-print loop.  If the function returns the lisp will exit.
   
   :load-init-file
-      If true, then look for an init.lisp or init.fasl file when the core
-  file is resumed.
+      If true, then look for an init file when the core file is resumed.
+  Look for home:init first and then home:.cmucl-init.  No error if
+  there is no init file.
 
   :site-init
       If true, then the name of the site init file to load.  The default is
-      library:site-init.  No error if this does not exist.
+  library:site-init.  No error if this does not exist.
 
   :print-herald
       If true (the default), print out the lisp system herald when starting.
