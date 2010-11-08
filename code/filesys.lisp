@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.112 2010/06/07 22:52:17 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.113 2010/11/08 22:28:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -660,18 +660,18 @@
 ;;;; Wildcard matching stuff.
 
 (defmacro enumerate-matches ((var pathname &optional result
-				  &key (verify-existance t) (follow-links t))
+				  &key (verify-existence t) (follow-links t))
 			     &body body)
   (let ((body-name (gensym)))
     `(block nil
        (flet ((,body-name (,var)
 		,@body))
 	 (%enumerate-matches (pathname ,pathname)
-			     ,verify-existance ,follow-links
+			     ,verify-existence ,follow-links
 			     #',body-name)
 	 ,result))))
 
-(defun %enumerate-matches (pathname verify-existance follow-links function)
+(defun %enumerate-matches (pathname verify-existence follow-links function)
   (when (pathname-type pathname)
     (unless (pathname-name pathname)
       (error (intl:gettext "Cannot supply a type without a name:~%  ~S") pathname)))
@@ -680,20 +680,20 @@
 	(ecase (car directory)
 	  (:absolute
 	   (%enumerate-directories "/" (cdr directory) pathname
-				   verify-existance follow-links
+				   verify-existence follow-links
 				   nil function))
 	  (:relative
 	   (%enumerate-directories "" (cdr directory) pathname
-				   verify-existance follow-links
+				   verify-existence follow-links
 				   nil function)))
-	(%enumerate-files "" pathname verify-existance function))))
+	(%enumerate-files "" pathname verify-existence function))))
 
 ;;; %enumerate-directories  --   Internal
 ;;;
 ;;; The directory node and device numbers are maintained for the current path
 ;;; during the search for the detection of path loops upon :wild-inferiors.
 ;;;
-(defun %enumerate-directories (head tail pathname verify-existance
+(defun %enumerate-directories (head tail pathname verify-existence
 			       follow-links nodes function)
   (declare (simple-string head))
   (macrolet ((unix-xstat (name)
@@ -727,11 +727,11 @@
 	       (with-directory-node-noted (head)
 		 (%enumerate-directories (concatenate 'string head "/")
 					 (cdr tail) pathname
-					 verify-existance follow-links
+					 verify-existence follow-links
 					 nodes function))))
 	    ((member :wild-inferiors)
 	     (%enumerate-directories head (rest tail) pathname
-				     verify-existance follow-links
+				     verify-existence follow-links
 				     nodes function)
 	     (do-directory-entries (name head)
 	       (let ((subdir (concatenate 'string head name)))
@@ -746,7 +746,7 @@
 		       (let ((nodes (cons (cons dev ino) nodes))
 			     (subdir (concatenate 'string subdir "/")))
 			 (%enumerate-directories subdir tail pathname
-						 verify-existance follow-links
+						 verify-existence follow-links
 						 nodes function))))))))
 	    ((or pattern (member :wild))
 	     (do-directory-entries (name head)
@@ -760,24 +760,24 @@
 		       (let ((nodes (cons (cons dev ino) nodes))
 			     (subdir (concatenate 'string subdir "/")))
 			 (%enumerate-directories subdir (rest tail) pathname
-						 verify-existance follow-links
+						 verify-existence follow-links
 						 nodes function))))))))
 	    ((member :up)
 	     (let ((head (concatenate 'string head "..")))
 	       (with-directory-node-noted (head)
 		 (%enumerate-directories (concatenate 'string head "/")
 					 (rest tail) pathname
-					 verify-existance follow-links
+					 verify-existence follow-links
 					 nodes function))))))
-	(%enumerate-files head pathname verify-existance function))))
+	(%enumerate-files head pathname verify-existence function))))
 
-(defun %enumerate-files (directory pathname verify-existance function)
+(defun %enumerate-files (directory pathname verify-existence function)
   (declare (simple-string directory))
   (let ((name (%pathname-name pathname))
 	(type (%pathname-type pathname))
 	(version (%pathname-version pathname)))
     (cond ((member name '(nil :unspecific))
-	   (when (or (not verify-existance)
+	   (when (or (not verify-existence)
 		     (unix:unix-file-kind directory))
 	     (funcall function directory)))
 	  ((or (pattern-p name)
@@ -822,7 +822,7 @@
 	       (setf file (concatenate 'string file ".~"
 				       (quick-integer-to-string version)
 				       "~")))
-	     (when (or (not verify-existance)
+	     (when (or (not verify-existence)
 		       (unix:unix-file-kind file t))
 	       (funcall function file)))))))
 
@@ -868,7 +868,7 @@
   (enumerate-search-list
       (pathname path)
     (collect ((names))
-      (enumerate-matches (name pathname nil :verify-existance for-input
+      (enumerate-matches (name pathname nil :verify-existence for-input
 			       :follow-links t)
 	(when (or (not executable-only)
 		  (and (eq (unix:unix-file-kind name) :file)
