@@ -7874,13 +7874,13 @@ msgid "Returns a string describing the implementation type."
 msgstr "Eturnsray away ingstray escribingday ethay implementationway ypetay."
 
 #: src/code/misc.lisp
+msgid " Unicode"
+msgstr " Unicodeway"
+
+#: src/code/misc.lisp
 msgid "Returns a string describing the implementation version."
 msgstr ""
 "Eturnsray away ingstray escribingday ethay implementationway ersionvay."
-
-#: src/code/misc.lisp
-msgid " Unicode"
-msgstr " Unicodeway"
 
 #: src/code/misc.lisp
 msgid "Returns a string giving the name of the local machine."
@@ -9418,12 +9418,13 @@ msgid ""
 "  read-eval-print loop.  If the function returns the lisp will exit.\n"
 "  \n"
 "  :load-init-file\n"
-"      If true, then look for an init.lisp or init.fasl file when the core\n"
-"  file is resumed.\n"
+"      If true, then look for an init file when the core file is resumed.\n"
+"  Look for home:init first and then home:.cmucl-init.  No error if\n"
+"  there is no init file.\n"
 "\n"
 "  :site-init\n"
 "      If true, then the name of the site init file to load.  The default is\n"
-"      library:site-init.  No error if this does not exist.\n"
+"  library:site-init.  No error if this does not exist.\n"
 "\n"
 "  :print-herald\n"
 "      If true (the default), print out the lisp system herald when "
@@ -9481,14 +9482,16 @@ msgstr ""
 "isplay illway exitway.\n"
 "  \n"
 "  :oadlay-initway-ilefay\n"
-"      Ifway uetray, enthay ooklay orfay anway initway.isplay orway initway."
-"aslfay ilefay enwhay ethay orecay\n"
-"  ilefay isway esumedray.\n"
+"      Ifway uetray, enthay ooklay orfay anway initway ilefay enwhay ethay "
+"orecay ilefay isway esumedray.\n"
+"  Ooklay orfay omehay:initway irstfay andway enthay omehay:.muclcay-"
+"initway.  Onay errorway ifway\n"
+"  erethay isway onay initway ilefay.\n"
 "\n"
 "  :itesay-initway\n"
 "      Ifway uetray, enthay ethay amenay ofway ethay itesay initway ilefay "
 "otay oadlay.  Ethay efaultday isway\n"
-"      ibrarylay:itesay-initway.  Onay errorway ifway isthay oesday otnay "
+"  ibrarylay:itesay-initway.  Onay errorway ifway isthay oesday otnay "
 "existway.\n"
 "\n"
 "  :intpray-eraldhay\n"
@@ -13079,6 +13082,14 @@ msgid "Invalid position given to file-position: ~S"
 msgstr "Invalidway ositionpay ivengay otay ilefay-ositionpay: ~S"
 
 #: src/code/fd-stream.lisp
+msgid "Use Unicode replacement character instead"
+msgstr "Useway Unicodeway eplacementray aracterchay insteadway"
+
+#: src/code/fd-stream.lisp
+msgid "Use question mark character instead"
+msgstr "Useway estionquay arkmay aracterchay insteadway"
+
+#: src/code/fd-stream.lisp
 msgid ""
 "Create a stream for the given unix file descriptor.\n"
 "  If input is non-nil, allow input operations.\n"
@@ -13128,10 +13139,6 @@ msgstr ""
 #: src/code/fd-stream.lisp
 msgid "** Closed ~A~%"
 msgstr "** Osedclay ~Away~%"
-
-#: src/code/fd-stream.lisp
-msgid "Use Unicode replacement character instead"
-msgstr "Useway Unicodeway eplacementray aracterchay insteadway"
 
 #: src/code/fd-stream.lisp
 msgid ""

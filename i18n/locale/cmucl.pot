@@ -5554,10 +5554,6 @@ msgid " Unicode"
 msgstr ""
 
 #: src/code/misc.lisp
-msgid ""
-msgstr ""
-
-#: src/code/misc.lisp
 msgid "Returns a string describing the implementation version."
 msgstr ""
 
@@ -6574,12 +6570,13 @@ msgid ""
 "  read-eval-print loop.  If the function returns the lisp will exit.\n"
 "  \n"
 "  :load-init-file\n"
-"      If true, then look for an init.lisp or init.fasl file when the core\n"
-"  file is resumed.\n"
+"      If true, then look for an init file when the core file is resumed.\n"
+"  Look for home:init first and then home:.cmucl-init.  No error if\n"
+"  there is no init file.\n"
 "\n"
 "  :site-init\n"
 "      If true, then the name of the site init file to load.  The default is\n"
-"      library:site-init.  No error if this does not exist.\n"
+"  library:site-init.  No error if this does not exist.\n"
 "\n"
 "  :print-herald\n"
 "      If true (the default), print out the lisp system herald when "
