@@ -32,14 +32,14 @@
 #
 # For more information see src/BUILDING.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.37 2010/11/03 15:11:57 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.38 2010/11/10 19:17:55 rtoy Exp $
 #
 
 ENABLE2="yes"
 ENABLE3="yes"
 ENABLE4="yes"
 
-version=20a
+version=20b
 SRCDIR=src
 TOOLDIR=$SRCDIR/tools
 VERSION="CVS Head `date '+%Y-%m-%d %H:%M:%S'`"
