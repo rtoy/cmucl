@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.301 2010/09/17 23:29:00 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.302 2010/11/10 19:51:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1666,7 +1666,10 @@
 	   "BACKEND-ASSEMBLER-RESOURCES" "BACKEND-BYTE-ORDER"
 	   "BACKEND-DISASSEM-PARAMS" "BACKEND-FASL-FILE-IMPLEMENTATION"
 	   "BACKEND-FASL-FILE-TYPE" "BACKEND-FASL-FILE-VERSION"
-	   "BACKEND-FEATURES" "BACKEND-INFO-ENVIRONMENT"
+	   "BACKEND-FEATURES"
+	   "BACKEND-FOREIGN-LINKAGE-SPACE-START"
+	   "BACKEND-FOREIGN-LINKAGE-ENTRY-SIZE"
+	   "BACKEND-INFO-ENVIRONMENT"
 	   "BACKEND-INSTRUCTION-FLAVORS" "BACKEND-INSTRUCTION-FORMATS"
 	   "BACKEND-NAME" "BACKEND-REGISTER-SAVE-PENALTY"
 	   "BACKEND-SPECIAL-ARG-TYPES" "BACKEND-VERSION" "BIND" "BRANCH"

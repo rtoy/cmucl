@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.88 2010/10/12 21:52:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.89 2010/11/10 19:51:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1634,15 +1634,24 @@
 	   (declare (type (integer 1 #.most-positive-fixnum)
 			  bytes-per-element)
 		    (type unsigned-byte elements))
-	   (dotimes (index elements)
-	     (let ((element (aref data-vector index))
-		   (new-element 0))
-	       (dotimes (i bytes-per-element)
-		 (setf new-element
-		       (logior (ash new-element vm:byte-bits)
-			       (ldb (byte vm:byte-bits 0) element)))
-		 (setf element (ash element (- vm:byte-bits))))
-	       (setf (aref result index) new-element)))
+	   (if (stringp data-vector)
+	       ;; Don't swap string bytes.  We get here only if we're
+	       ;; cross-compiling from one arch to a different endian
+	       ;; arch.  To be able to load the fasls, we need to keep
+	       ;; strings in the native format.  When genesis is done,
+	       ;; genesis will swap string bytes when creating the
+	       ;; core so that the bytes are in the correct order.
+	       (dotimes (index elements)
+		 (setf (aref result index) (char-code (aref data-vector index))))
+	       (dotimes (index elements)
+		 (let ((element (aref data-vector index))
+		       (new-element 0))
+		   (dotimes (i bytes-per-element)
+		     (setf new-element
+			   (logior (ash new-element vm:byte-bits)
+				   (ldb (byte vm:byte-bits 0) element)))
+		     (setf element (ash element (- vm:byte-bits))))
+		   (setf (aref result index) new-element))))
 	   (dump-bytes result bytes file)))
 	(t
 	 (let* ((elements-per-byte (/ vm:byte-bits element-size))

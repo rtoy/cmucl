@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.35 2010/04/20 17:57:46 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.36 2010/11/10 19:51:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,6 +26,8 @@
 	  backend-assembler-resources backend-special-arg-types
 	  backend-disassem-params backend-internal-errors
 	  backend-assembler-params backend-page-size
+	  backend-foreign-linkage-space-start
+	  backend-foreign-linkage-entry-size
 	  
 	  ;; The various backends need to call these support routines
 	  def-vm-support-routine make-stack-pointer-tn primitive-type
@@ -226,7 +228,12 @@
   (assembler-params nil :type t)
 
   ;; The maximum number of bytes per page on this system.  Used by genesis.
-  (page-size 0 :type index))
+  (page-size 0 :type index)
+
+  ;; The foreign linkage space start and size
+
+  (foreign-linkage-space-start 0 :type (unsigned-byte 32))
+  (foreign-linkage-entry-size 0 :type index))
 
 
 (defprinter backend
