@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.90 2010/07/19 23:08:37 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.91 2010/11/11 21:48:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -434,6 +434,13 @@
     ;;(format t "s-t-c: len = ~d, ~S~%" len string)
     (dotimes (k len)
       (setf (aref bytes k) (logand #xffff (char-code (aref string k)))))
+    (unless (eq (c:backend-byte-order c:*backend*)
+		(c:backend-byte-order c:*native-backend*))
+      ;; Swap byte order of unicode strings.
+      (dotimes (k len)
+	(let ((x (aref bytes k)))
+	  (setf (aref bytes k) (+ (ldb (byte 8 8) x)
+				  (ash (ldb (byte 8 0) x) 8))))))
     (copy-to-system-area bytes (* vm:vector-data-offset
 				   ;; the word size of the native backend which
 				   ;; may be different from the target backend
