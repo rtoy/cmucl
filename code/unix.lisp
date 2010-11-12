@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.130 2010/04/20 17:57:45 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.131 2010/11/12 16:53:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -567,19 +567,20 @@
 (def-alien-type nil
   (struct stat64
     (st-dev dev-t)
-    (st-pad1 (array long 3))
+    (st-pad1 (array long 3))		; Pad so ino is 64-bit aligned
     (st-ino ino64-t)
     (st-mode unsigned-long)
     (st-nlink short)
     (st-uid uid-t)
     (st-gid gid-t)
     (st-rdev dev-t)
-    (st-pad2 (array long 2))
+    (st-pad2 (array long 3))		; Pad so size is 64-bit aligned
     (st-size off64-t)
     (st-atime (struct timestruc-t))
     (st-mtime (struct timestruc-t))
     (st-ctime (struct timestruc-t))
     (st-blksize long)
+    (st-pad3 (array long 1))		; Pad so blocks is 64-bit aligned
     (st-blocks blkcnt64-t)
     (st-fstype (array char 16))
     (st-pad4 (array long 8))))
