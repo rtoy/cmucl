@@ -19,7 +19,7 @@
 ;;;
 
 #+cmu
-(ext:file-comment "$Id: display.lisp,v 1.15 2009/07/13 13:54:35 rtoy Rel $")
+(ext:file-comment "$Id: display.lisp,v 1.16 2010/11/16 19:13:55 rtoy Exp $")
 
 (in-package :xlib)
 
@@ -117,7 +117,9 @@
 		 (read-xauth-entry stream)
 	       (unless family (return))
 	       (when (and (eql family protocol)
-			  (equal host-address address)
+			  (or (equal host-address address)
+			      (and (eql family :local)
+				   (equal address "localhost")))
 			  (= number display)
 			  (let ((pos1 (position name *known-authorizations*
 						:test #'string=)))
