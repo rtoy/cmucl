@@ -43,6 +43,8 @@ New in this release:
       needs to create.
     - Add src/tools/build-all.sh to automate building all of the
       variants (x87/sse2, unicode/8-bit).
+    - LISP::ENUMERATE-MATCHES had a keyword arg named
+      :VERIFY-EXISTANCE.  This has been changed to :VERIFY-EXISTENCE. 
 
   * ANSI compliance fixes:
     - Fixes for signaling errors with READ-CHAR and READ-BYTE
@@ -68,6 +70,17 @@ New in this release:
       the correct part of a complex number.
     - The command line parser now correctly handles the case where
       "--" is the first command option.
+    - build.sh was accidenally loading the site-init file, but it
+      shouldn't. 
+    - On sparc, the vops to add a float to a complex were broken,
+      resulting in a complex number with the float as realpart and
+      garbage for the imaginary part.  This is now fixed.
+    - XLIB::GET-BEST-AUTHORIZATION will now return authorization data
+      if the protocol is :local, if the xauth file contains just
+      "localhost/unix:0".  Previously, no authorization data was
+      returned because GET-BEST-AUTHORIZATION was looking for the
+      hostname.
+    - FORMAT signals an warning if ~:; is used inside ~:[.
  
   * Trac Tickets:
 
