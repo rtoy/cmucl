@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.96 2010/04/20 17:57:44 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.97 2010/11/16 19:15:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2384,9 +2384,13 @@
 		   (expand-maybe-conditional (car sublists)))))
 	 (if colonp
 	     (if (= (length sublists) 2)
-		 (expand-bind-defaults () params
-		   (expand-true-false-conditional (car sublists)
-						  (cadr sublists)))
+		 (progn
+		   (when last-semi-with-colon-p
+		     (error 'format-error
+			    :complaint (intl:gettext "~~:; directive not effective in ~~:[")))
+		   (expand-bind-defaults () params
+		     (expand-true-false-conditional (car sublists)
+						    (cadr sublists))))
 		 (error 'format-error
 			:complaint
 			(intl:gettext "Must specify exactly two sections.")))
