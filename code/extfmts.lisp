@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.41 2010/09/08 02:58:06 rtoy Rel $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.42 2010/11/30 04:09:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1102,11 +1102,12 @@ character and illegal outputs are replaced by a question mark.")
   (when filenames
     (unless (find-external-format filenames)
       (error (intl:gettext "Can't find external-format ~S.") filenames))
+    (setq filenames (ef-name (find-external-format filenames)))
     (when (and unix::*filename-encoding*
 	       (not (eq unix::*filename-encoding* filenames)))
       (cerror (intl:gettext "Change it anyway.")
-	      (intl:gettext "The external-format for encoding filenames is already set."))
-      (setq unix::*filename-encoding* filenames)))
+	      (intl:gettext "The external-format for encoding filenames is already set.")))
+    (setq unix::*filename-encoding* filenames))
   t)
 
 
