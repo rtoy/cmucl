@@ -81,6 +81,8 @@ New in this release:
       returned because GET-BEST-AUTHORIZATION was looking for the
       hostname.
     - FORMAT signals an warning if ~:; is used inside ~:[.
+    - SET-SYSTEM-EXTERNAL-FORMAT was not actually setting the filename
+      encoding if given.
  
   * Trac Tickets:
 
