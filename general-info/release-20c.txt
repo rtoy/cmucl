@@ -26,6 +26,7 @@ New in this release:
       Slime to do character name completion.
 
   * Changes
+    - ASDF2 updated to version 2.010.
     - COMPILE-FILE now accepts a :DECODING-ERROR argument that
       indicates how to handle decoding errors when reading the file.
       It has the same meaning and effect as the :DECODING-ERROR
