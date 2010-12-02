@@ -7763,6 +7763,10 @@ msgid "Can only specify one section"
 msgstr ""
 
 #: src/code/format.lisp
+msgid "~~:; directive not effective in ~~:["
+msgstr ""
+
+#: src/code/format.lisp
 msgid "Must specify exactly two sections."
 msgstr ""
 
