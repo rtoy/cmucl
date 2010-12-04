@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.40 2010/07/14 13:14:53 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.41 2010/12/04 17:32:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -62,6 +62,12 @@
 |#
 
 (setf (backend-page-size *target-backend*) 4096)
+
+(setf (c::backend-foreign-linkage-space-start *target-backend*)
+      #+linux #x58000000
+      #-linux #xB0000000
+      (c::backend-foreign-linkage-entry-size *target-backend*)
+      8)
 ); eval-when
 
 
@@ -213,9 +219,9 @@
   #+linux #x58100000
   #-linux #x48000000)
 (defconstant target-foreign-linkage-space-start
-  #+linux #x58000000
-  #-linux #xB0000000)
-(defconstant target-foreign-linkage-entry-size 8) ;In bytes.  Duh.
+  (c:backend-foreign-linkage-space-start *target-backend*))
+(defconstant target-foreign-linkage-entry-size
+  (c:backend-foreign-linkage-entry-size *target-backend*)) ;In bytes.  Duh.
 
 ;;; Given that NIL is the first thing allocated in static space, we
 ;;; know its value at compile time:

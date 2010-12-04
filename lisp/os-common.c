@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.31 2010/02/01 19:27:07 rtoy Rel $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.32 2010/12/04 17:32:34 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -195,6 +195,23 @@ os_foreign_linkage_init(void)
 	 */
 
         convert_lisp_string(c_symbol_name, symbol_name->data, (symbol_name->length >> 2));
+
+#if 0
+        fprintf(stderr, "i =%2d:  %s\n", i, c_symbol_name);
+        {
+            int k;
+            unsigned short int* wide_string;
+                
+            fprintf(stderr, "  symbol_name->data = ");
+
+            wide_string = (unsigned short int *) symbol_name->data;
+                
+            for (k = 0; k < (symbol_name->length >> 2); ++k) {
+                fprintf(stderr, "%4x ", wide_string[k]);
+            }
+            fprintf(stderr, "\n");
+        }
+#endif        
 	if (i == 0) {
 #if defined(sparc)
 	    if (type != LINKAGE_CODE_TYPE || strcmp(c_symbol_name, "call_into_c")) {
@@ -226,6 +243,20 @@ os_foreign_linkage_init(void)
 	    void *target_addr = os_dlsym(c_symbol_name, NIL);
 
 	    if (!target_addr) {
+#if 0
+                int k;
+                unsigned short int* wide_string;
+                
+                fprintf(stderr, "c_symbol_name = `%s'\n", c_symbol_name);
+                fprintf(stderr, "symbol_name->data = \n");
+
+                wide_string = (unsigned short int *) symbol_name->data;
+                
+                for (k = 0; k < (symbol_name->length >> 2); ++k) {
+                    fprintf(stderr, "%4x ", wide_string[k]);
+                }
+                fprintf(stderr, "\n");
+#endif                
 		lose("%s is not defined.\n",  c_symbol_name);
 	    }
 	    arch_make_linkage_entry(i / LINKAGE_DATA_ENTRY_SIZE, target_addr,

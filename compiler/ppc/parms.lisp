@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.19 2009/06/11 16:04:00 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.20 2010/12/04 17:32:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,6 +36,11 @@
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) :big-endian)
 (setf (backend-page-size *target-backend*) 4096)
+
+(setf (c::backend-foreign-linkage-space-start *target-backend*)
+      #x17000000
+      (c::backend-foreign-linkage-entry-size *target-backend*)
+      32)
 
 ); eval-when
 

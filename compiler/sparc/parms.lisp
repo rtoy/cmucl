@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.61 2010/04/19 18:21:31 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.62 2010/12/04 17:32:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,6 +47,13 @@
 (setf (backend-page-size *target-backend*)
       #+mach 4096 #+sunos 8192)
 
+(setf (c::backend-foreign-linkage-space-start *target-backend*)
+      ;; This better match the value in sparc-validate.h!
+      #x0f800000
+      (c::backend-foreign-linkage-entry-size *target-backend*)
+      ;; This better agree with what sparc-arch.c thinks it is!  Right now,
+      ;; it's 4 instructions, so 16 bytes.
+      16)
 ); eval-when
 
 (pushnew :new-assembler *features*)
@@ -213,11 +220,10 @@
 (defconstant target-static-space-start    #x28000000)
 (defconstant target-dynamic-space-start   #x40000000)
 
-;; This better match the value in sparc-validate.h!
-(defconstant target-foreign-linkage-space-start #x0f800000)
-;; This better agree with what sparc-arch.c thinks it is!  Right now,
-;; it's 4 instructions, so 16 bytes.
-(defconstant target-foreign-linkage-entry-size 16)
+(defconstant target-foreign-linkage-space-start
+  (c:backend-foreign-linkage-space-start *target-backend*))
+(defconstant target-foreign-linkage-entry-size
+  (c:backend-foreign-linkage-entry-size *target-backend*))
 
 
 ;;;; Other random constants.

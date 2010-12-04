@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.89 2010/11/10 19:51:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.90 2010/12/04 17:32:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1635,14 +1635,16 @@
 			  bytes-per-element)
 		    (type unsigned-byte elements))
 	   (if (stringp data-vector)
-	       ;; Don't swap string bytes.  We get here only if we're
-	       ;; cross-compiling from one arch to a different endian
-	       ;; arch.  To be able to load the fasls, we need to keep
-	       ;; strings in the native format.  When genesis is done,
-	       ;; genesis will swap string bytes when creating the
-	       ;; core so that the bytes are in the correct order.
-	       (dotimes (index elements)
-		 (setf (aref result index) (char-code (aref data-vector index))))
+	       (progn
+		 ;;(format t "reverse string data: ~S~%" data-vector)
+		 #+(or)
+		 (dotimes (index elements)
+		   (let ((c (char-code (aref data-vector index))))
+		     (setf (aref result index) c)))
+		 (dotimes (index elements)
+		   (let ((c (char-code (aref data-vector index))))
+		     (setf (aref result index) (logior (ash (ldb (byte 8 0) c) 8)
+						       (ldb (byte 8 8) c))))))
 	       (dotimes (index elements)
 		 (let ((element (aref data-vector index))
 		       (new-element 0))

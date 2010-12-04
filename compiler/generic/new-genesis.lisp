@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.91 2010/11/11 21:48:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.92 2010/12/04 17:32:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -431,16 +431,22 @@
 				      vm:simple-string-type))
 	 (bytes (make-array (1+ len) :element-type '(unsigned-byte 16))))
     (write-indexed des vm:vector-length-slot (make-fixnum-descriptor len))
-    ;;(format t "s-t-c: len = ~d, ~S~%" len string)
+    
     (dotimes (k len)
       (setf (aref bytes k) (logand #xffff (char-code (aref string k)))))
     (unless (eq (c:backend-byte-order c:*backend*)
 		(c:backend-byte-order c:*native-backend*))
-      ;; Swap byte order of unicode strings.
+      ;; Swap byte order of unicode strings if the backend and
+      ;; native-backend have different endianness.
+      #+(or)
+      (progn
+	(format t "s-t-c: len = ~d, ~S~%" len string)
+	(format t "     codes = ~{~X~^ ~}~%" (map 'list #'char-code string)))
       (dotimes (k len)
 	(let ((x (aref bytes k)))
-	  (setf (aref bytes k) (+ (ldb (byte 8 8) x)
-				  (ash (ldb (byte 8 0) x) 8))))))
+	  (setf (aref bytes k) (maybe-byte-swap-short x))))
+      #+(or)
+      (format t " new codes = ~{~X~^ ~}~%" (coerce bytes 'list)))
     (copy-to-system-area bytes (* vm:vector-data-offset
 				   ;; the word size of the native backend which
 				   ;; may be different from the target backend
@@ -1324,7 +1330,7 @@
 
 #+unicode
 (defmacro load-char-code ()
-  (ecase (c::backend-byte-order c::*native-backend*)
+  (ecase (c::backend-byte-order c::*backend*)
     (:little-endian
      `(code-char (+ (read-arg 1)
 		    (ash (read-arg 1) 8))))
@@ -1332,13 +1338,33 @@
      `(code-char (+ (ash (read-arg 1) 8)
 		    (read-arg 1))))))
 
+(declaim (inline swap-16))
+(defun swap-16 (n)
+  (declare (type (unsigned-byte 16) n))
+  (logior (ash (ldb (byte 8 0) n) 8)
+	  (ldb (byte 8 8) n)))
+
+;; Destructively byte swap a string, if the backend and the native
+;; backend have different endianness.
+(defun maybe-byte-swap-string (s &optional (len (length s)))
+  (unless (eq (c:backend-byte-order c:*backend*)
+	      (c:backend-byte-order c:*native-backend*))
+    (dotimes (k len)
+      (let ((code (char-code (aref s k))))
+	(setf (aref s k) (code-char (swap-16 code))))))
+  s)
+	  
 #+unicode
 (defun cold-load-symbol (size package)
   (let ((string (make-string size)))
-    #+nil
     (read-n-bytes *fasl-file* string 0 (* 2 size))
-    (dotimes (k size)
-      (setf (aref string k) (load-char-code)))
+    #+(or)
+    (format t "pre swap cold-load-symbol: ~S to package ~S~%" string package)
+    ;; Make the string have the correct byte order for the native
+    ;; backend.
+    (maybe-byte-swap-string string)
+    #+(or)
+    (format t "post swap cold-load-symbol: ~S to package ~S~%" string package)
     (cold-intern (intern string package) package)))
 
 (clone-cold-fop (fop-symbol-save)
@@ -1378,10 +1404,8 @@
 		(fop-uninterned-small-symbol-save)
   (let* ((size (clone-arg))
 	 (name (make-string size)))
-    #+nil
-    (read-n-bytes *fasl-file* name 0 size)
-    (dotimes (k size)
-      (setf (aref name k) (load-char-code)))
+    (read-n-bytes *fasl-file* name 0 (* 2 size))
+    (maybe-byte-swap-string name)
     (let ((symbol (allocate-symbol name)))
       (push-table symbol))))
 
@@ -1448,10 +1472,15 @@
 		(fop-small-string)
   (let* ((len (clone-arg))
 	 (string (make-string len)))
-    #+nil
     (read-n-bytes *fasl-file* string 0 (* 2 len))
-    (dotimes (k len)
-      (setf (aref string k) (load-char-code)))
+    #+(or)
+    (format t "pre fop-string result  = ~{~X~^ ~}~%" (map 'list #'char-code string))
+    ;; Make the string have the correct byte order for the native
+    ;; backend.  (This wouldn't be needed if string-to-core had an
+    ;; option to
+    (maybe-byte-swap-string string)
+    #+(or)
+    (format t "post fop-string result = ~{~X~^ ~}~%" (map 'list #'char-code string))
     (string-to-core string)))
 
 (clone-cold-fop (fop-vector)
@@ -1977,8 +2006,15 @@
     #-unicode
     (read-n-bytes *fasl-file* sym 0 len)
     #+unicode
-    (dotimes (k len)
-      (setf (aref sym k) (load-char-code)))
+    (progn
+      (read-n-bytes *fasl-file* sym 0 (* 2 len))
+      #+(or)
+      (progn
+	(format t "foreign-fixup: ~S~%" sym)
+	(format t " codes: ~{~X~^ ~}~%" (map 'list #'char-code sym)))
+      (maybe-byte-swap-string sym)
+      #+(or)
+      (format t " swaps: ~S~%" sym))
     (let ((offset (read-arg 4))
 	  (value #+linkage-table (cold-register-foreign-linkage sym :code)
 		 #-linkage-table (lookup-foreign-symbol sym)))
@@ -1996,8 +2032,15 @@
     #-unicode
     (read-n-bytes *fasl-file* sym 0 len)
     #+unicode
-    (dotimes (k len)
-      (setf (aref sym k) (load-char-code)))
+    (progn
+      (read-n-bytes *fasl-file* sym 0 (* 2 len))
+      #+(or)
+      (progn
+	(format t "foreign-data-fixup: ~S~%" sym)
+	(format t " codes: ~{~X~^ ~}~%" (map 'list #'char-code sym)))
+      (maybe-byte-swap-string sym)
+      #+(or)
+      (format t " swaps: ~{~X~^ ~}~%" (map 'list #'char-code sym)))
     (let ((offset (read-arg 4))
 	  (value (cold-register-foreign-linkage sym :data)))
       (do-cold-fixup code-object offset value kind))
@@ -2200,8 +2243,8 @@
 					     type
 					     *cold-linkage-table*
 					     *cold-foreign-hash*)))
-    (+ vm:target-foreign-linkage-space-start
-       (* entry-num vm:target-foreign-linkage-entry-size))))
+    (+ (c:backend-foreign-linkage-space-start c:*backend*)
+       (* entry-num (c:backend-foreign-linkage-entry-size c:*backend*)))))
 
 #+linkage-table
 (defun init-foreign-linkage ()
