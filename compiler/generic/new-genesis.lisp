@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.92 2010/12/04 17:32:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.93 2010/12/04 23:17:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1319,25 +1319,6 @@
 
 ;;; Loading symbols...
 
-;;; Cold-Load-Symbol loads a symbol N characters long from the File and interns
-;;; that symbol in the given Package.
-;;;
-#-unicode
-(defun cold-load-symbol (size package)
-  (let ((string (make-string size)))
-    (read-n-bytes *fasl-file* string 0 size)
-    (cold-intern (intern string package) package)))
-
-#+unicode
-(defmacro load-char-code ()
-  (ecase (c::backend-byte-order c::*backend*)
-    (:little-endian
-     `(code-char (+ (read-arg 1)
-		    (ash (read-arg 1) 8))))
-    (:big-endian
-     `(code-char (+ (ash (read-arg 1) 8)
-		    (read-arg 1))))))
-
 (declaim (inline swap-16))
 (defun swap-16 (n)
   (declare (type (unsigned-byte 16) n))
@@ -1346,6 +1327,8 @@
 
 ;; Destructively byte swap a string, if the backend and the native
 ;; backend have different endianness.
+(declaim (inline maybe-byte-swap-string))
+#+unicode
 (defun maybe-byte-swap-string (s &optional (len (length s)))
   (unless (eq (c:backend-byte-order c:*backend*)
 	      (c:backend-byte-order c:*native-backend*))
@@ -1353,18 +1336,20 @@
       (let ((code (char-code (aref s k))))
 	(setf (aref s k) (code-char (swap-16 code))))))
   s)
+#-unicode
+(defun maybe-byte-swap-string (s &optional len)
+  (declare (ignore s len))
+  s)
 	  
-#+unicode
+;;; Cold-Load-Symbol loads a symbol N characters long from the File and interns
+;;; that symbol in the given Package.
+;;;
 (defun cold-load-symbol (size package)
   (let ((string (make-string size)))
-    (read-n-bytes *fasl-file* string 0 (* 2 size))
-    #+(or)
-    (format t "pre swap cold-load-symbol: ~S to package ~S~%" string package)
+    (read-n-bytes *fasl-file* string 0 (* vm:char-bytes size))
     ;; Make the string have the correct byte order for the native
     ;; backend.
     (maybe-byte-swap-string string)
-    #+(or)
-    (format t "post swap cold-load-symbol: ~S to package ~S~%" string package)
     (cold-intern (intern string package) package)))
 
 (clone-cold-fop (fop-symbol-save)
@@ -1390,21 +1375,11 @@
 		(fop-keyword-small-symbol-save)
   (push-table (cold-load-symbol (clone-arg) *keyword-package*)))
 
-#-unicode
 (clone-cold-fop (fop-uninterned-symbol-save)
 		(fop-uninterned-small-symbol-save)
   (let* ((size (clone-arg))
 	 (name (make-string size)))
-    (read-n-bytes *fasl-file* name 0 size)
-    (let ((symbol (allocate-symbol name)))
-      (push-table symbol))))
-
-#+unicode
-(clone-cold-fop (fop-uninterned-symbol-save)
-		(fop-uninterned-small-symbol-save)
-  (let* ((size (clone-arg))
-	 (name (make-string size)))
-    (read-n-bytes *fasl-file* name 0 (* 2 size))
+    (read-n-bytes *fasl-file* name 0 (* vm:char-bytes size))
     (maybe-byte-swap-string name)
     (let ((symbol (allocate-symbol name)))
       (push-table symbol))))
@@ -1459,28 +1434,15 @@
 
 ;;; Loading vectors...
 
-#-unicode
 (clone-cold-fop (fop-string)
 		(fop-small-string)
   (let* ((len (clone-arg))
 	 (string (make-string len)))
-    (read-n-bytes *fasl-file* string 0 len)
-    (string-to-core string)))
-
-#+unicode
-(clone-cold-fop (fop-string)
-		(fop-small-string)
-  (let* ((len (clone-arg))
-	 (string (make-string len)))
-    (read-n-bytes *fasl-file* string 0 (* 2 len))
-    #+(or)
-    (format t "pre fop-string result  = ~{~X~^ ~}~%" (map 'list #'char-code string))
+    (read-n-bytes *fasl-file* string 0 (* vm:char-bytes len))
     ;; Make the string have the correct byte order for the native
     ;; backend.  (This wouldn't be needed if string-to-core had an
-    ;; option to
+    ;; option not to swap bytes.
     (maybe-byte-swap-string string)
-    #+(or)
-    (format t "post fop-string result = ~{~X~^ ~}~%" (map 'list #'char-code string))
     (string-to-core string)))
 
 (clone-cold-fop (fop-vector)
@@ -2003,18 +1965,8 @@
 	 (code-object (pop-stack))
 	 (len (read-arg 1))
 	 (sym (make-string len)))
-    #-unicode
-    (read-n-bytes *fasl-file* sym 0 len)
-    #+unicode
-    (progn
-      (read-n-bytes *fasl-file* sym 0 (* 2 len))
-      #+(or)
-      (progn
-	(format t "foreign-fixup: ~S~%" sym)
-	(format t " codes: ~{~X~^ ~}~%" (map 'list #'char-code sym)))
-      (maybe-byte-swap-string sym)
-      #+(or)
-      (format t " swaps: ~S~%" sym))
+    (read-n-bytes *fasl-file* sym 0 (* vm:char-bytes len))
+    (maybe-byte-swap-string sym)
     (let ((offset (read-arg 4))
 	  (value #+linkage-table (cold-register-foreign-linkage sym :code)
 		 #-linkage-table (lookup-foreign-symbol sym)))
@@ -2029,18 +1981,8 @@
 	 (code-object (pop-stack))
 	 (len (read-arg 1))
 	 (sym (make-string len)))
-    #-unicode
-    (read-n-bytes *fasl-file* sym 0 len)
-    #+unicode
-    (progn
-      (read-n-bytes *fasl-file* sym 0 (* 2 len))
-      #+(or)
-      (progn
-	(format t "foreign-data-fixup: ~S~%" sym)
-	(format t " codes: ~{~X~^ ~}~%" (map 'list #'char-code sym)))
-      (maybe-byte-swap-string sym)
-      #+(or)
-      (format t " swaps: ~{~X~^ ~}~%" (map 'list #'char-code sym)))
+    (read-n-bytes *fasl-file* sym 0 (* vm:char-bytes len))
+    (maybe-byte-swap-string sym)
     (let ((offset (read-arg 4))
 	  (value (cold-register-foreign-linkage sym :data)))
       (do-cold-fixup code-object offset value kind))
