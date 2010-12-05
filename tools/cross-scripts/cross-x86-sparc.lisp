@@ -65,6 +65,7 @@
 ;; big-endian order for sparc.  When we read in a string, we need to
 ;; convert the big-endian string to little-endian for x86 so we can
 ;; process the symbols and such as expected.
+#+unicode
 (progn
 (defun maybe-swap-string (f name &optional (len (length name)))
   (declare (ignorable f))
@@ -90,7 +91,7 @@
 		      (when (> ,n-size *load-symbol-buffer-size*)
 			(setq *load-symbol-buffer*
 			      (make-string (setq *load-symbol-buffer-size*
-						 (* ,n-size 2)))))
+						 (* ,n-size vm:char-bytes)))))
 		      (done-with-fast-read-byte)
 		      (let ((,n-buffer *load-symbol-buffer*))
 			(read-n-bytes *fasl-file* ,n-buffer 0
