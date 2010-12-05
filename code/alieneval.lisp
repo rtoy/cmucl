@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.69 2010/04/20 17:57:43 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.70 2010/12/05 15:55:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2120,25 +2120,26 @@ If so return true; otherwise call ALTERNATIVE."
 #||
 ;;; Example 1:
 
-(defcallback foo (int (arg1 int) (arg2 int))
+(alien:def-callback foo (c-call:int (arg1 c-call:int) (arg2 c-call:int))
   (format t "~&foo: ~S, ~S~%" arg1 arg2)
   (+ arg1 arg2))
 
-(alien-funcall (sap-alien (callback foo) (function int int int))
+(alien:alien-funcall (alien:sap-alien (alien:callback foo)
+				      (function c-call:int c-call:int c-call:int))
 	       555 444444)
 
 ;;; Example 2:
 
-(def-alien-routine qsort void
+(alien:def-alien-routine qsort c-call:void
   (base (* t))
-  (nmemb int)
-  (size int)
-  (compar (* (function int (* t) (* t)))))
+  (nmemb c-call:int)
+  (size c-call:int)
+  (compar (* (function c-call:int (* t) (* t)))))
 
-(defcallback my< (int (arg1 (* double))
-		      (arg2 (* double)))
-  (let ((a1 (deref arg1))
-	(a2 (deref arg2)))
+(alien:def-callback my< (c-call:int (arg1 (* c-call:double))
+		      (arg2 (* c-call:double)))
+  (let ((a1 (alien:deref arg1))
+	(a2 (alien:deref arg2)))
     (cond ((= a1 a2)  0)
 	  ((< a1 a2) -1)
 	  (t         +1))))
@@ -2149,8 +2150,8 @@ If so return true; otherwise call ALTERNATIVE."
   (print a)
   (qsort (sys:vector-sap a)
 	 (length a)
-	 (alien-size double :bytes)
-	 (callback my<))
+	 (alien:alien-size c-call:double :bytes)
+	 (alien:callback my<))
   (print a))
 
 ||#
