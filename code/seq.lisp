@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.58 2010/04/20 17:57:45 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.59 2010/12/09 05:13:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -124,7 +124,7 @@
 
 (defun make-sequence-of-type (type length)
   "Returns a sequence of the given TYPE and LENGTH."
-  (declare (fixnum length))
+  (declare (type index length))
   (case (type-specifier-atom type)
     (list (make-list length))
     ((bit-vector simple-bit-vector) (make-array length :element-type '(mod 2)))
@@ -285,6 +285,8 @@
 (defun vector-subseq* (sequence start &optional end)
   (declare (vector sequence) (fixnum start))
   (when (null end) (setf end (length sequence)))
+  (unless (<= start end)
+    (error "Illegal bounding indices:  ~S ~S" start end))
   (do ((old-index start (1+ old-index))
        (new-index 0 (1+ new-index))
        (copy (make-sequence-like sequence (- end start))))
@@ -294,6 +296,8 @@
 
 (defun list-subseq* (sequence start &optional end)
   (declare (list sequence) (fixnum start))
+  (when (and end (> start (the fixnum end)))
+    (error "Illegal bounding indices:  ~S ~S" start end))
   (if (and end (>= start (the fixnum end)))
       ()
       (let* ((groveled (nthcdr start sequence))

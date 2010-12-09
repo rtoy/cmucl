@@ -85,6 +85,9 @@ New in this release:
     - FORMAT signals an warning if ~:; is used inside ~:[.
     - SET-SYSTEM-EXTERNAL-FORMAT was not actually setting the filename
       encoding if given.
+    - SUBSEQ with an end index less than the start index sometimes
+      crashes CMUCL. Now, signal an error if the boudns are not
+      valid. 
  
   * Trac Tickets:
 
