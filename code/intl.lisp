@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.8 $
+;;; $Revision: 1.9 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,7 +23,7 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.8 2010/07/14 03:13:20 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.9 2010/12/11 22:39:46 rtoy Exp $")
 
 (in-package "INTL")
 
@@ -79,29 +79,49 @@
      (ash (the (unsigned-byte 8) (read-byte stream)) 8)
      (the (unsigned-byte 8) (read-byte stream))))
 
-(defun locate-domain-file (domain locale locale-dir)
-  ;; The default locale-dir includes search lists.  If we get called
-  ;; before the search lists are initialized, we lose.  The search
-  ;; lists are initialized in environment-init, which sets
-  ;; *environment-list-initialized*.  This way, we return NIL to
-  ;; indicate there's no domain file to use.
-  (when lisp::*environment-list-initialized*
-    (flet ((path (locale base)
-	     (merge-pathnames (make-pathname :directory (list :relative locale
-							      "LC_MESSAGES")
-					     :name domain :type "mo")
-			      base)))
-      (let ((locale (or (gethash locale *locale-aliases*) locale)))
-	(dolist (base (if (listp locale-dir) locale-dir (list locale-dir)))
-	  (let ((probe
-		 (or (probe-file (path locale base))
-		     (let ((dot (position #\. locale)))
-		       (and dot (probe-file (path (subseq locale 0 dot) base))))
-		     (let ((at (position #\@ locale)))
-		       (and at (probe-file (path (subseq locale 0 at) base))))
-		     (let ((us (position #\_ locale)))
-		       (and us (probe-file (path (subseq locale 0 us) base)))))))
-	    (when probe (return probe))))))))
+;; If the domain file doesn't exist because the locale isn't
+;; supported, we end up doing a huge number of stats looking for a
+;; non-existent file everytime a translation is needed.  This is
+;; really expensive.  So create a cache to hold the results.
+(let ((domain-file-cache (make-hash-table :test 'equal)))
+  (defun get-domain-file-cache ()
+    ;; Mostly for debugging to let the user get at the cache.
+    domain-file-cache)
+  (defun clear-domain-file-cache ()
+    ;; Mostly for debugging.  But also useful if we now have installed
+    ;; some new translations.
+    (clrhash domain-file-cache))
+  (defun locate-domain-file (domain locale locale-dir)
+    ;; The default locale-dir includes search lists.  If we get called
+    ;; before the search lists are initialized, we lose.  The search
+    ;; lists are initialized in environment-init, which sets
+    ;; *environment-list-initialized*.  This way, we return NIL to
+    ;; indicate there's no domain file to use.
+    (when lisp::*environment-list-initialized*
+      (flet ((path (locale base)
+	       (merge-pathnames (make-pathname :directory (list :relative locale
+								"LC_MESSAGES")
+					       :name domain :type "mo")
+				base))
+	     (memoized-probe-file (p)
+	       ;; Cache the results of probe-file and return the
+	       ;; cached value when possible.
+	       (multiple-value-bind (value foundp)
+		   (gethash p domain-file-cache)
+		 (if foundp
+		     value
+		     (setf (gethash p domain-file-cache) (probe-file p))))))
+	(let ((locale (or (gethash locale *locale-aliases*) locale)))
+	  (dolist (base (if (listp locale-dir) locale-dir (list locale-dir)))
+	    (let ((probe
+		   (or (memoized-probe-file (path locale base))
+		       (let ((dot (position #\. locale)))
+			 (and dot (memoized-probe-file (path (subseq locale 0 dot) base))))
+		       (let ((at (position #\@ locale)))
+			 (and at (memoized-probe-file (path (subseq locale 0 at) base))))
+		       (let ((us (position #\_ locale)))
+			 (and us (memoized-probe-file (path (subseq locale 0 us) base)))))))
+	      (when probe (return probe)))))))))
 
 (defun find-encoding (domain)
   (when (null (domain-entry-encoding domain))
