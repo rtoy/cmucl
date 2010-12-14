@@ -30,9 +30,11 @@
      :double-double			; double-double float support
      :linkage-table
 
-     :solaris :svr4
+     :solaris :svr4 :sunos
      ;; The :sse2 and :x87 features will get set by the compiling
      ;; lisp, so don't set it here!
+     #+x87 :x87
+     #+sse2 :sse2
      )
    ;; Features to remove from current *features* here.  Normally don't
    ;; need to list anything here unless you are trying to remove a
