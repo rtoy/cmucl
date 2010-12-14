@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.17 2010/03/19 15:19:03 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.18 2010/12/14 21:22:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -222,7 +222,7 @@
 	`(defmethod documentation :around ((x t) (doc-type (eql ',dt)))
 	   (let ((doc (call-next-method))
 		 (domain (info ,dt :textdomain x)))
-	     (or (intl:dgettext domain doc)
+	     (or (and doc (intl:dgettext domain doc))
 		 doc)))))
   (frob function)
   (frob setf)
