@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.13 2008/03/18 03:58:45 cshapiro Rel $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.13.32.1 2010/12/14 04:25:11 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -42,13 +42,19 @@ typedef int os_vm_prot_t;
 #define OS_VM_PROT_WRITE PROT_WRITE
 #define OS_VM_PROT_EXECUTE PROT_EXEC
 
+#ifdef i386
+#define OS_VM_DEFAULT_PAGESIZE	4096
+#else
 #define OS_VM_DEFAULT_PAGESIZE	8192
+#endif
 
 #ifdef SOLARIS
 #include <ucontext.h>
 #define HANDLER_ARGS int signal, siginfo_t *code, struct ucontext *context
 #define CODE(code)  ((code) ? code->si_code : 0)
+#ifndef i386
 #define SAVE_CONTEXT() save_context()
+#endif
 
 #ifdef NULL
 #undef NULL

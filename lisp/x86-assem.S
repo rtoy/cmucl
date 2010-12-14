@@ -1,6 +1,6 @@
-### x86-assem.S -*- Mode: Asm; -*-
+/* ### x86-assem.S -*- Mode: Asm; -*- */
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.34 2010/07/19 23:08:37 rtoy Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.34.6.1 2010/12/14 04:25:11 rtoy Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -11,7 +11,7 @@
  *
  */
 
-
+
 #include "x86-validate.h"
 	
 #define LANGUAGE_ASSEMBLY
@@ -19,7 +19,25 @@
 #include "lispregs.h"
 
 /* Minimize conditionalization for different OS naming schemes */
-#ifndef DARWIN	
+#ifdef DARWIN	
+#define GNAME(var) _##var
+#define FUNCDEF(x) \
+	.text			; \
+	.align 2,0x90		; \
+	.globl GNAME(x)		; \
+GNAME(x):			;
+#define ENDFUNC(x)
+#elif defined(SOLARIS)
+#define GNAME(var) var
+#define FUNCDEF(x) \
+	.text			; \
+	.align 16,0x90		; \
+	.globl GNAME(x)		; \
+	.type x,@function	; \
+GNAME(x):			;
+#define ENDFUNC(x) \
+	.size GNAME(x),.-GNAME(x)
+#else
 #define GNAME(var) var
 #define FUNCDEF(x) \
 	.text			; \
@@ -29,16 +47,15 @@
 GNAME(x):			;
 #define ENDFUNC(x) \
 	.size GNAME(x),.-GNAME(x)
-#else
-#define GNAME(var) _##var
-#define FUNCDEF(x) \
-	.text			; \
-	.align 2,0x90		; \
-	.globl GNAME(x)		; \
-GNAME(x):			;
-#define ENDFUNC(x)
 #endif
 
+#ifdef SOLARIS
+#define	INT3	int $3
+
+#else
+#define INT3	int3
+#endif
+								
 /* Get the right type of alignment.  Linux wants alignment in bytes. */
 #if defined (__linux__) || defined (__FreeBSD__)
 #define align_16byte    16
@@ -49,7 +66,7 @@ GNAME(x):			;
 	.text
 	.globl	GNAME(foreign_function_call_active)
 	
-
+
 /*
  * The C function will preserve ebx, esi, edi, and ebp across its
  * function call - ebx is used to save the return lisp address.
@@ -122,7 +139,7 @@ Lfp_rtn_value:
 	jmp	*%ebx
 ENDFUNC(call_into_c)
 
-
+
 
 /* The C conventions require that ebx, esi, edi, and ebp be preserved
 	across function calls. */
@@ -255,7 +272,7 @@ npx_restore_done:
 	movl	%edx,%eax	# c-val
 	ret
 ENDFUNC(call_into_lisp)
-
+
 /* Support for saving and restoring the NPX state from C. */
 FUNCDEF(fpu_save)
 	movl	4(%esp),%eax
@@ -284,7 +301,7 @@ FUNCDEF(sse_restore)
 	fxrstor	(%eax)
 	ret
 ENDFUNC(sse_restore)
-
+
 
 #if 0
 /*
@@ -297,7 +314,7 @@ ENDFUNC(sse_restore)
  * The undefined-function trampoline.
  */
 FUNCDEF(undefined_tramp)
-	int3
+	INT3
 	.byte	trap_Error
         /* Number of argument bytes */
         .byte   2
@@ -339,23 +356,23 @@ multiple_value_return:
 	
 	.globl GNAME(function_end_breakpoint_trap)
 GNAME(function_end_breakpoint_trap):
-	int3
+	INT3
 	.byte 	trap_FunctionEndBreakpoint
 	hlt			# Should never return here.
 
 	.globl GNAME(function_end_breakpoint_end)
 GNAME(function_end_breakpoint_end):
 
-
+
 FUNCDEF(do_pending_interrupt)
-	int3
+	INT3
 	.byte 	trap_PendingInterrupt
 	ret
 ENDFUNC(do_pending_interrupt)
 	
 #ifdef trap_DynamicSpaceOverflowError
 FUNCDEF(do_dynamic_space_overflow_error)
-	int3
+	INT3
 	.byte 	trap_DynamicSpaceOverflowError
 	ret
 ENDFUNC(do_dynamic_space_overflow_error)
@@ -363,13 +380,13 @@ ENDFUNC(do_dynamic_space_overflow_error)
 	
 #ifdef trap_DynamicSpaceOverflowWarning
 FUNCDEF(do_dynamic_space_overflow_warning)
-	int3
+	INT3
 	.byte 	trap_DynamicSpaceOverflowWarning
 	ret
 ENDFUNC(do_dynamic_space_overflow_warning)
 #endif				
 	
-
+
 #ifdef WANT_CGC
 /* A copy function optimized for the Pentium and works ok on
  * 486 as well. This assumes (does not check) that the input
@@ -423,7 +440,7 @@ Lend:
 	ret
 ENDFUNC(fastcopy16)
 #endif
-
+
 
 /*
    Allocate bytes and return the start of the allocated space
@@ -666,7 +683,7 @@ FUNCDEF(alloc_16_to_edi)
 	ret
 ENDFUNC(alloc_16_to_edi)
 
-
+
 #ifdef GENCGC
 
 /* Called from lisp when an inline allocation overflows.
@@ -832,7 +849,7 @@ FUNCDEF(undefined_foreign_symbol_trap)
         movl 8(%ebp),%eax
 
 	/* Now trap to Lisp */
-	int3
+	INT3
 	.byte	trap_Error
         /* Number of argument bytes */
         .byte   2

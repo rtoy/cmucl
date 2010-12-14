@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.31 2010/05/21 19:26:53 rtoy Rel $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.31.8.1 2010/12/14 04:25:11 rtoy Exp $
  *
  */
 
@@ -172,7 +172,7 @@
 #define CONTROL_STACK_START	0x38000000
 #define CONTROL_STACK_SIZE	(0x07fff000 - 8192)
 #define SIGNAL_STACK_START	CONTROL_STACK_END
-#define SIGNAL_STACK_SIZE	8192
+#define SIGNAL_STACK_SIZE	SIGSTKSZ
 
 #define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)
 
@@ -188,6 +188,33 @@
 #endif
 #endif
 
+#ifdef SOLARIS
+#define READ_ONLY_SPACE_START   (SpaceStart_TargetReadOnly)
+#define READ_ONLY_SPACE_SIZE    (0x0ffff000)	/* 256MB - 1 page */
+
+#define STATIC_SPACE_START	(SpaceStart_TargetStatic)
+#define STATIC_SPACE_SIZE	(0x0ffff000)	/* 256MB - 1 page */
+
+#define BINDING_STACK_START	(0x20000000)
+#define BINDING_STACK_SIZE	(0x07fff000)	/* 128MB - 1 page */
+
+#define CONTROL_STACK_START	0x38000000
+#define CONTROL_STACK_SIZE	(0x07fff000 - 8192)
+#define SIGNAL_STACK_SIZE	SIGSTKSZ
+
+#define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)
+
+#ifdef GENCGC
+#define DYNAMIC_SPACE_SIZE	(0x66000000)	/* 1.632GB */
+#else
+#define DYNAMIC_SPACE_SIZE	(0x04000000)	/* 64MB */
+#endif
+#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000)	/* 512MB */
+#ifdef LINKAGE_TABLE
+#define FOREIGN_LINKAGE_SPACE_START (LinkageSpaceStart)
+#define FOREIGN_LINKAGE_SPACE_SIZE (0x100000)	/* 1MB */
+#endif
+#endif
 
 #define CONTROL_STACK_END	(CONTROL_STACK_START + CONTROL_STACK_SIZE)
 

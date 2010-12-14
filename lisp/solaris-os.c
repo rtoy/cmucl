@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.26 2010/11/12 12:57:32 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.26.4.1 2010/12/14 04:25:11 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -138,6 +138,7 @@ os_map(int fd, int offset, os_vm_address_t addr, os_vm_size_t len)
 void
 os_flush_icache(os_vm_address_t address, os_vm_size_t length)
 {
+#ifndef i386
     static int flushit = -1;
 
     /*
@@ -158,6 +159,7 @@ os_flush_icache(os_vm_address_t address, os_vm_size_t length)
 	    fprintf(stderr, ";;;iflush %p - %lx\n", (void *) address, length);
 	flush_icache((unsigned int *) address, length);
     }
+#endif
 }
 
 void
@@ -492,3 +494,36 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 
     return sym_addr;
 }
+
+#ifdef i386
+unsigned long *
+os_sigcontext_reg(ucontext_t *scp, int index)
+{
+    switch (index) {
+    case 0:
+	return (unsigned long *) &scp->uc_mcontext.gregs[EAX];
+    case 2:
+	return (unsigned long *) &scp->uc_mcontext.gregs[ECX];
+    case 4:
+	return (unsigned long *) &scp->uc_mcontext.gregs[EDX];
+    case 6:
+	return (unsigned long *) &scp->uc_mcontext.gregs[EBX];
+    case 8:
+	return (unsigned long *) &scp->uc_mcontext.gregs[ESP];
+    case 10:
+	return (unsigned long *) &scp->uc_mcontext.gregs[EBP];
+    case 12:
+	return (unsigned long *) &scp->uc_mcontext.gregs[ESI];
+    case 14:
+	return (unsigned long *) &scp->uc_mcontext.gregs[EDI];
+    }
+    return NULL;
+}
+
+unsigned long *
+os_sigcontext_pc(ucontext_t *scp)
+{
+    return (unsigned long *) &scp->uc_mcontext.gregs[EIP];
+}
+
+#endif

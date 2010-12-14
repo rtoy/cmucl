@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.41 2010/12/04 17:32:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.41.2.1 2010/12/14 04:25:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -65,7 +65,8 @@
 
 (setf (c::backend-foreign-linkage-space-start *target-backend*)
       #+linux #x58000000
-      #-linux #xB0000000
+      #+solaris #xC0000000
+      #-(or linux solaris) #xB0000000
       (c::backend-foreign-linkage-entry-size *target-backend*)
       8)
 ); eval-when
