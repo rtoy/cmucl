@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.26.4.1 2010/12/14 04:25:11 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.26.4.2 2010/12/15 12:45:51 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -298,6 +298,7 @@ os_install_interrupt_handlers(void)
 
 /* function definitions for register lvalues */
 
+#ifndef i386
 int *
 solaris_register_address(struct ucontext *context, int reg)
 {
@@ -316,6 +317,7 @@ solaris_register_address(struct ucontext *context, int reg)
     } else
 	return 0;
 }
+#endif
 
 /* function defintions for backward compatibilty and static linking */
 
@@ -499,6 +501,8 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 unsigned long *
 os_sigcontext_reg(ucontext_t *scp, int index)
 {
+    fprintf(stderr, "os_sigcontext_reg index = %d\n", index);
+    
     switch (index) {
     case 0:
 	return (unsigned long *) &scp->uc_mcontext.gregs[EAX];
@@ -523,6 +527,7 @@ os_sigcontext_reg(ucontext_t *scp, int index)
 unsigned long *
 os_sigcontext_pc(ucontext_t *scp)
 {
+    fprintf(stderr, "os_sigcontext_pc = %p\n", scp->uc_mcontext.gregs[EIP]);
     return (unsigned long *) &scp->uc_mcontext.gregs[EIP];
 }
 
