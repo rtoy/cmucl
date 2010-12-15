@@ -49,7 +49,7 @@
 (setf *features* (remove :bsd *features*))
 ;; Set up the linkage space stuff appropriately for sparc.
 (setf (c::backend-foreign-linkage-space-start c::*target-backend*)
-      #xC0000000
+      #x30000000
       (c::backend-foreign-linkage-entry-size c::*target-backend*)
       8)
 
