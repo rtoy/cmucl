@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.110 2010/07/26 17:17:13 rtoy Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.110.6.1 2010/12/15 12:53:45 rtoy Exp $
  *
  */
 
@@ -150,6 +150,7 @@
 
 /* Define for activating assertions.  */
 
+#define GC_ASSERTIONS 1
 #if defined(DARWIN)
 #define GC_ASSERTIONS 1
 #endif
@@ -240,7 +241,7 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
  * The verbose level. All non-error messages are disabled at level 0;
  * and only a few rare messages are printed at level 1.
  */
-unsigned gencgc_verbose = 0;
+unsigned gencgc_verbose = 1;
 unsigned counters_verbose = 0;
 
 /*
@@ -266,7 +267,7 @@ int verify_gens = NUM_GENERATIONS;
  * makes GC very, very slow, so don't enable this unless you really
  * need it!)
  */
-boolean pre_verify_gen_0 = FALSE;
+boolean pre_verify_gen_0 = TRUE;
 
 /*
  * Enable checking for bad pointers after gc_free_heap called from purify.
@@ -274,7 +275,7 @@ boolean pre_verify_gen_0 = FALSE;
 #if 0 && defined(DARWIN)
 boolean verify_after_free_heap = TRUE;
 #else
-boolean verify_after_free_heap = FALSE;
+boolean verify_after_free_heap = TRUE;
 #endif
 
 /*
@@ -287,7 +288,7 @@ boolean verify_dynamic_code_check = FALSE;
  * Enable the checking of code objects for fixup errors after they are
  * transported.  (Only used for x86.)
  */
-boolean check_code_fixups = FALSE;
+boolean check_code_fixups = TRUE;
 
 /*
  * To enable unmapping of a page and re-mmaping it to have it zero filled.
@@ -307,8 +308,8 @@ boolean gencgc_unmap_zero = TRUE;
 boolean gencgc_zero_check = TRUE;
 boolean gencgc_enable_verify_zero_fill = TRUE;
 #else
-boolean gencgc_zero_check = FALSE;
-boolean gencgc_enable_verify_zero_fill = FALSE;
+boolean gencgc_zero_check = TRUE;
+boolean gencgc_enable_verify_zero_fill = TRUE;
 #endif
 
 /*
@@ -318,7 +319,7 @@ boolean gencgc_enable_verify_zero_fill = FALSE;
 #if 0 && defined(DARWIN)
 boolean gencgc_zero_check_during_free_heap = TRUE;
 #else
-boolean gencgc_zero_check_during_free_heap = FALSE;
+boolean gencgc_zero_check_during_free_heap = TRUE;
 #endif
 
 /*
