@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.26.4.2 2010/12/15 12:45:51 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.26.4.3 2010/12/18 16:19:39 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -211,6 +211,11 @@ segv_handle_now(HANDLER_ARGS)
     interrupt_handle_now(signal, code, context);
 }
 
+void real_segv_handler(HANDLER_ARGS)
+{
+    segv_handle_now(signal, code, context);
+}
+
 void
 segv_handler(HANDLER_ARGS)
 {
@@ -265,7 +270,7 @@ segv_handler(HANDLER_ARGS)
     fprintf(stderr, "segv_handler: Real protection violation: %p, PC = %p\n",
             addr,
             context->uc_mcontext.gregs[1]);
-    segv_handle_now(signal, code, context);
+    real_segv_handler(signal, code, context);
 }
 #else
 void
