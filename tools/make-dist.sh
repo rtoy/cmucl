@@ -9,7 +9,7 @@
 # you extracted the two tarballs and the source distribution into that
 # directory.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/make-dist.sh,v 1.17 2010/09/30 21:21:41 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/make-dist.sh,v 1.17.4.1 2010/12/18 16:20:05 rtoy Exp $
 
 usage() {
     echo "make-dist.sh: [-hbg] [-G group] [-O owner] [-I destdir] [-M mandir] dir version [arch os]"
@@ -52,11 +52,16 @@ usage() {
 def_arch_os () {
     case `uname -s` in
       SunOS)
-	  ARCH=sparcv9
+	  case `uname -m` in
+	    sun*)
+		ARCH=sparcv9 ;;
+	    i*)
+		ARCH=x86 ;;
+	  esac
 	  uname_r=`uname -r`
 	  case $uname_r in
-	      5.*) rel=`echo $uname_r | sed 's/5\.//'`;;
-	      *) rel=$uname_r;;
+	    5.*) rel=`echo $uname_r | sed 's/5\.//'`;;
+	    *) rel=$uname_r;;
 	  esac
 	  OS=solaris$rel
 	  ;;
