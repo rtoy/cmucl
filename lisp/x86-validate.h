@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.31 2010/05/21 19:26:53 rtoy Rel $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.32 2010/12/18 16:16:47 rtoy Exp $
  *
  */
 
@@ -132,10 +132,21 @@
 #define BINDING_STACK_SIZE	(0x07fff000)	/* 128MB - 1 page */
 
 #define CONTROL_STACK_START	(0x40000000)
+#if defined(DARWIN)
+/*
+ * According to /usr/include/sys/signal.h, MINSIGSTKSZ is 32K and
+ * SIGSTKSZ is 128K.  We should account for that appropriately.
+ */
+#define CONTROL_STACK_SIZE	(0x07fdf000)	/* 128MB - SIGSTKSZ - 1 page */
+
+#define SIGNAL_STACK_START	(0x47fe0000)    /* One page past the end of the control stack */
+#define SIGNAL_STACK_SIZE	SIGSTKSZ
+#else
 #define CONTROL_STACK_SIZE	(0x07fd8000)	/* 128MB - SIGSTKSZ */
 
 #define SIGNAL_STACK_START	(0x47fd8000)
 #define SIGNAL_STACK_SIZE	SIGSTKSZ
+#endif
 
 #define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)
 #ifdef GENCGC
