@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.110.6.2 2010/12/20 04:12:57 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.110.6.3 2010/12/20 13:25:22 rtoy Exp $
  *
  */
 
@@ -3444,7 +3444,7 @@ scav_closure_header(lispobj * where, lispobj object)
 
     closure = (struct closure *) where;
     fun = closure->function - RAW_ADDR_OFFSET;
-#if !(defined(x86) && defined(SOLARIS)
+#if !(defined(i386) && defined(SOLARIS))
     scavenge(&fun, 1);
     /* The function may have moved so update the raw address. But don't
        write unnecessarily. */
