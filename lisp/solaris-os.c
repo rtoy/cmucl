@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.26.4.4 2010/12/20 04:17:28 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.26.4.5 2010/12/20 15:12:26 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -539,6 +539,38 @@ os_sigcontext_pc(ucontext_t *scp)
     fprintf(stderr, "os_sigcontext_pc = %p\n", scp->uc_mcontext.gregs[EIP]);
 #endif
     return (unsigned long *) &scp->uc_mcontext.gregs[EIP];
+}
+
+
+unsigned char *
+os_sigcontext_fpu_reg(ucontext_t *scp, int offset)
+{
+    fpregset_t *fpregs = &scp->uc_mcontext.fpregs;
+    unsigned char *reg = NULL;
+
+    if (offset < 8) {
+        unsigned char *fpustate;
+        unsigned char *stregs;
+
+        /*
+         * Not sure this is right.  There is no structure defined for
+         * the x87 fpu state in /usr/include/sys/regset.h
+         */
+        
+        /* Point to the fpchip_state */
+        fpustate = (unsigned char*) &fpregs->fp_reg_set.fpchip_state.state[0];
+        /* Skip to where the x87 fp registers are */
+        stregs = fpustate + 24;
+    
+        reg = stregs + 16*offset;
+    }
+#ifdef FEATURE_SSE2
+    else {
+        reg = &fpregs->fp_reg_set.fpchip_state.xmm[offset - 8];
+    }
+#endif
+
+    return reg;
 }
 
 unsigned int
