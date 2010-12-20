@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.110.6.1 2010/12/15 12:53:45 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.110.6.2 2010/12/20 04:12:57 rtoy Exp $
  *
  */
 
@@ -150,8 +150,7 @@
 
 /* Define for activating assertions.  */
 
-#define GC_ASSERTIONS 1
-#if defined(DARWIN)
+#if defined(x86) && defined(SOLARIS)
 #define GC_ASSERTIONS 1
 #endif
 
@@ -241,7 +240,7 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
  * The verbose level. All non-error messages are disabled at level 0;
  * and only a few rare messages are printed at level 1.
  */
-unsigned gencgc_verbose = 1;
+unsigned gencgc_verbose = 0;
 unsigned counters_verbose = 0;
 
 /*
@@ -267,7 +266,7 @@ int verify_gens = NUM_GENERATIONS;
  * makes GC very, very slow, so don't enable this unless you really
  * need it!)
  */
-boolean pre_verify_gen_0 = TRUE;
+boolean pre_verify_gen_0 = FALSE;
 
 /*
  * Enable checking for bad pointers after gc_free_heap called from purify.
@@ -275,7 +274,7 @@ boolean pre_verify_gen_0 = TRUE;
 #if 0 && defined(DARWIN)
 boolean verify_after_free_heap = TRUE;
 #else
-boolean verify_after_free_heap = TRUE;
+boolean verify_after_free_heap = FALSE;
 #endif
 
 /*
@@ -288,7 +287,7 @@ boolean verify_dynamic_code_check = FALSE;
  * Enable the checking of code objects for fixup errors after they are
  * transported.  (Only used for x86.)
  */
-boolean check_code_fixups = TRUE;
+boolean check_code_fixups = FALSE;
 
 /*
  * To enable unmapping of a page and re-mmaping it to have it zero filled.
@@ -308,8 +307,8 @@ boolean gencgc_unmap_zero = TRUE;
 boolean gencgc_zero_check = TRUE;
 boolean gencgc_enable_verify_zero_fill = TRUE;
 #else
-boolean gencgc_zero_check = TRUE;
-boolean gencgc_enable_verify_zero_fill = TRUE;
+boolean gencgc_zero_check = FALSE;
+boolean gencgc_enable_verify_zero_fill = FALSE;
 #endif
 
 /*
@@ -319,7 +318,7 @@ boolean gencgc_enable_verify_zero_fill = TRUE;
 #if 0 && defined(DARWIN)
 boolean gencgc_zero_check_during_free_heap = TRUE;
 #else
-boolean gencgc_zero_check_during_free_heap = TRUE;
+boolean gencgc_zero_check_during_free_heap = FALSE;
 #endif
 
 /*
@@ -3445,12 +3444,46 @@ scav_closure_header(lispobj * where, lispobj object)
 
     closure = (struct closure *) where;
     fun = closure->function - RAW_ADDR_OFFSET;
+#if !(defined(x86) && defined(SOLARIS)
     scavenge(&fun, 1);
     /* The function may have moved so update the raw address. But don't
        write unnecessarily. */
     if (closure->function != fun + RAW_ADDR_OFFSET)
 	closure->function = fun + RAW_ADDR_OFFSET;
-
+#else
+    /*
+     * For some reason, on solaris/x86, we get closures (actually, it
+     * appears to be funcallable instances where the closure function
+     * is zero.  I don't know why, but they are.  They don't seem to
+     * be created anywhere and it doesn't seem to be caused by GC
+     * transport.
+     *
+     * Anyway, we check for zero and skip scavenging if so.
+     * (Previously, we'd get a segfault scavenging the object at
+     * address -RAW_ADDR_OFFSET.
+     */
+    if (fun) {
+        scavenge(&fun, 1);
+        /*
+         * The function may have moved so update the raw address. But don't
+         * write unnecessarily.
+         */
+        if (closure->function != fun + RAW_ADDR_OFFSET) {
+#if 0
+            fprintf(stderr, "closure header 0x%04x moved from %p to %p\n",
+                    closure->header, (void*) closure->function, (void*) (fun + RAW_ADDR_OFFSET));
+#endif
+            closure->function = fun + RAW_ADDR_OFFSET;
+        }
+    }
+#if 0
+     else {
+        fprintf(stderr, "Weird closure!\n");
+        fprintf(stderr, " where = %p, object = 0x%04x\n", where, object);
+        fprintf(stderr, " closure->function = %p, fun = %p\n", closure->function, fun);
+    }
+#endif
+#endif
     return 2;
 }
 
