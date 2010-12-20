@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.26.4.3 2010/12/18 16:19:39 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.26.4.4 2010/12/20 04:17:28 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -32,6 +32,8 @@
 
 #if defined(GENCGC)
 #include "lisp.h"
+/* Need struct code defined to get rid of warning from gencgc.h */
+#include "internals.h"
 #include "gencgc.h"
 #endif
 
@@ -506,8 +508,9 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 unsigned long *
 os_sigcontext_reg(ucontext_t *scp, int index)
 {
+#if 0
     fprintf(stderr, "os_sigcontext_reg index = %d\n", index);
-    
+#endif    
     switch (index) {
     case 0:
 	return (unsigned long *) &scp->uc_mcontext.gregs[EAX];
@@ -532,8 +535,44 @@ os_sigcontext_reg(ucontext_t *scp, int index)
 unsigned long *
 os_sigcontext_pc(ucontext_t *scp)
 {
+#if 0
     fprintf(stderr, "os_sigcontext_pc = %p\n", scp->uc_mcontext.gregs[EIP]);
+#endif
     return (unsigned long *) &scp->uc_mcontext.gregs[EIP];
 }
 
+unsigned int
+os_sigcontext_fpu_modes(ucontext_t *scp)
+{
+    unsigned int modes;
+    unsigned short cw, sw;
+    fpregset_t *fpr;
+    unsigned int state;
+        
+    fpr = &scp->uc_mcontext.fpregs;
+
+    state = fpr->fp_reg_set.fpchip_state.state[0];
+        
+    cw = state & 0xffff;
+    sw = (state >> 16) & 0xffff;
+
+    modes = ((cw & 0x3f) << 7) | (sw & 0x3f);
+
+#ifdef FEATURE_SSE2
+    /*
+     * Add in the SSE2 part, if we're running the sse2 core.
+     */
+    if (fpu_mode == SSE2) {
+	unsigned long mxcsr;
+
+        mxcsr = fpr->fp_reg_set.fpchip_state.mxcsr;
+        DPRINTF(0, (stderr, "SSE2 modes = %08lx\n", mxcsr));
+
+	modes |= mxcsr;
+    }
+#endif
+
+    modes ^= (0x3f << 7);
+    return modes;
+}
 #endif
