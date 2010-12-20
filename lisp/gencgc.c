@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.110.6.4 2010/12/20 13:53:40 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.110.6.5 2010/12/20 23:32:55 rtoy Exp $
  *
  */
 
@@ -2906,9 +2906,9 @@ void
 sniff_code_object(struct code *code, unsigned displacement)
 {
     int nheader_words, ncode_words, nwords;
-    void *p;
-    void *constants_start_addr, *constants_end_addr;
-    void *code_start_addr, *code_end_addr;
+    char *p;
+    char *constants_start_addr, *constants_end_addr;
+    char *code_start_addr, *code_end_addr;
     int fixup_found = 0;
 
     if (!check_code_fixups)
@@ -2932,14 +2932,14 @@ sniff_code_object(struct code *code, unsigned displacement)
     nheader_words = HeaderValue(*(lispobj *) code);
     nwords = ncode_words + nheader_words;
 
-    constants_start_addr = (void *) code + 5 * sizeof(lispobj);
-    constants_end_addr = (void *) code + nheader_words * sizeof(lispobj);
-    code_start_addr = (void *) code + nheader_words * sizeof(lispobj);
-    code_end_addr = (void *) code + nwords * sizeof(lispobj);
+    constants_start_addr = (char *) code + 5 * sizeof(lispobj);
+    constants_end_addr = (char *) code + nheader_words * sizeof(lispobj);
+    code_start_addr = (char *) code + nheader_words * sizeof(lispobj);
+    code_end_addr = (char *) code + nwords * sizeof(lispobj);
 
     /* Work through the unboxed code. */
     for (p = code_start_addr; p < code_end_addr; p++) {
-	void *data = *(void **) p;
+	char *data = *(char **) p;
 	unsigned d1 = *((unsigned char *) p - 1);
 	unsigned d2 = *((unsigned char *) p - 2);
 	unsigned d3 = *((unsigned char *) p - 3);
@@ -3113,8 +3113,8 @@ static void
 apply_code_fixups(struct code *old_code, struct code *new_code)
 {
     int nheader_words, ncode_words, nwords;
-    void *constants_start_addr, *constants_end_addr;
-    void *code_start_addr, *code_end_addr;
+    char *constants_start_addr, *constants_end_addr;
+    char *code_start_addr, *code_end_addr;
     lispobj fixups = NIL;
     unsigned long displacement =
 
@@ -3141,10 +3141,10 @@ apply_code_fixups(struct code *old_code, struct code *new_code)
 	    "*** Compiled code object at %x: header_words=%d code_words=%d .\n",
 	    new_code, nheader_words, ncode_words);
 #endif
-    constants_start_addr = (void *) new_code + 5 * sizeof(lispobj);
-    constants_end_addr = (void *) new_code + nheader_words * sizeof(lispobj);
-    code_start_addr = (void *) new_code + nheader_words * sizeof(lispobj);
-    code_end_addr = (void *) new_code + nwords * sizeof(lispobj);
+    constants_start_addr = (char *) new_code + 5 * sizeof(lispobj);
+    constants_end_addr = (char *) new_code + nheader_words * sizeof(lispobj);
+    code_start_addr = (char *) new_code + nheader_words * sizeof(lispobj);
+    code_end_addr = (char *) new_code + nwords * sizeof(lispobj);
 #if 0
     fprintf(stderr,
 	    "*** Const. start = %x; end= %x; Code start = %x; end = %x\n",
