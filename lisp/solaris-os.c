@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.26.4.5 2010/12/20 15:12:26 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.26.4.6 2010/12/20 22:11:52 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -566,7 +566,7 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int offset)
     }
 #ifdef FEATURE_SSE2
     else {
-        reg = &fpregs->fp_reg_set.fpchip_state.xmm[offset - 8];
+        reg = (unsigned char*) &fpregs->fp_reg_set.fpchip_state.xmm[offset - 8];
     }
 #endif
 
@@ -583,13 +583,15 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
         
     fpr = &scp->uc_mcontext.fpregs;
 
-    state = fpr->fp_reg_set.fpchip_state.state[0];
-        
-    cw = state & 0xffff;
-    sw = (state >> 16) & 0xffff;
+    cw = fpr->fp_reg_set.fpchip_state.state[0] & 0xffff;
+    sw = fpr->fp_reg_set.fpchip_state.state[1] & 0xffff;
 
     modes = ((cw & 0x3f) << 7) | (sw & 0x3f);
 
+    DPRINTF(0, (stderr, "cw = 0x%04x\n", cw));
+    DPRINTF(0, (stderr, "sw = 0x%04x\n", sw));
+    DPRINTF(0, (stderr, "modes = 0x%08x\n", modes));
+    
 #ifdef FEATURE_SSE2
     /*
      * Add in the SSE2 part, if we're running the sse2 core.
