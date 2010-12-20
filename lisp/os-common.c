@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.32 2010/12/04 17:32:34 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.32.2.1 2010/12/20 23:35:02 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -235,7 +235,7 @@ os_foreign_linkage_init(void)
 			(char *) c_symbol_name);
 		lose("First element of linkage_data is bogus.\n");
 	    }
-	    arch_make_linkage_entry(i, &resolve_linkage_tramp, 1);
+	    arch_make_linkage_entry(i, (void *) &resolve_linkage_tramp, 1);
 #endif
 	    continue;
 	}
