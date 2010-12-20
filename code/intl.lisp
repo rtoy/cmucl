@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: INTL -*-
 
-;;; $Revision: 1.10 $
+;;; $Revision: 1.10.2.1 $
 ;;; Copyright 1999-2010 Paul Foley (mycroft@actrix.gen.nz)
 ;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining
@@ -23,7 +23,7 @@
 ;;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.10 2010/12/13 00:19:38 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl.lisp,v 1.10.2.1 2010/12/20 13:40:10 rtoy Exp $")
 
 (in-package "INTL")
 
@@ -468,42 +468,42 @@
 (defun domain-lookup-plural (singular plural domain)
   (declare (type string singular plural) (type domain-entry domain)
 	   #+(or)(optimize (speed 3) (space 2) (safety 0)))
-  (or (if (null (domain-entry-encoding domain)) nil)
-      (gethash (cons singular plural) (domain-entry-hash domain))
-      (let* ((octets (let* ((a (string-to-octets singular
-					       (domain-entry-encoding domain)))
-			    (b (string-to-octets plural
-					       (domain-entry-encoding domain)))
-			    (c (make-array (+ (length a) (length b) 1)
-					   :element-type '(unsigned-byte 8))))
-		       (declare (type (simple-array (unsigned-byte 8) (*))
-				      a b c))
-		       (replace c a)
-		       (setf (aref c (length a)) 0)
-		       (replace c b :start1 (+ (length a) 1))
-		       c))
-	     (length (length octets))
-	     (pos (gethash length (domain-entry-hash domain))))
-	(declare (type (simple-array (unsigned-byte 8) (*)) octets)
-		 (type list pos))
-	(multiple-value-bind (tmp entry) (search-domain octets domain pos)
-	  (declare (type (or null (simple-array (unsigned-byte 8) (*))) tmp))
-	  (when tmp
-	    (prog1
-		(setf (gethash (cons (copy-seq singular) (copy-seq plural))
-			       (domain-entry-hash domain))
-		    (loop for i = 0 then (1+ j)
+  (when (domain-entry-encoding domain)
+    (or (gethash (cons singular plural) (domain-entry-hash domain))
+	(let* ((octets (let* ((a (string-to-octets singular
+						   (domain-entry-encoding domain)))
+			      (b (string-to-octets plural
+						   (domain-entry-encoding domain)))
+			      (c (make-array (+ (length a) (length b) 1)
+					     :element-type '(unsigned-byte 8))))
+			 (declare (type (simple-array (unsigned-byte 8) (*))
+					a b c))
+			 (replace c a)
+			 (setf (aref c (length a)) 0)
+			 (replace c b :start1 (+ (length a) 1))
+			 c))
+	       (length (length octets))
+	       (pos (gethash length (domain-entry-hash domain))))
+	  (declare (type (simple-array (unsigned-byte 8) (*)) octets)
+		   (type list pos))
+	  (multiple-value-bind (tmp entry) (search-domain octets domain pos)
+	    (declare (type (or null (simple-array (unsigned-byte 8) (*))) tmp))
+	    (when tmp
+	      (prog1
+		  (setf (gethash (cons (copy-seq singular) (copy-seq plural))
+				 (domain-entry-hash domain))
+			(loop for i = 0 then (1+ j)
 			   as j = (position 0 tmp :start i)
-		      collect (octets-to-string (subseq tmp i j)
-						(domain-entry-encoding domain))
-		      while j))
-	      (let ((temp (delete entry pos :test #'eq)))
-		(if temp
-		    (setf (gethash length (domain-entry-hash domain)) temp)
-		    (remhash length (domain-entry-hash domain))))
-	      (when (null (domain-entry-plurals domain))
-		(setf (domain-entry-plurals domain)
-		    (parse-plurals domain)))))))))
+			   collect (octets-to-string (subseq tmp i j)
+						     (domain-entry-encoding domain))
+			   while j))
+		(let ((temp (delete entry pos :test #'eq)))
+		  (if temp
+		      (setf (gethash length (domain-entry-hash domain)) temp)
+		      (remhash length (domain-entry-hash domain))))
+		(when (null (domain-entry-plurals domain))
+		  (setf (domain-entry-plurals domain)
+			(parse-plurals domain))))))))))
 
 (declaim (inline getenv)
 	 (ftype (function (string) (or null string)) getenv))
