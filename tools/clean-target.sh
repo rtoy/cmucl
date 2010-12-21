@@ -46,7 +46,6 @@ done
 GREP="cat"
 CORE='-o -name "*.core"'
 
-set -x
 if [ -n "$KEEP" ]; then
     case $KEEP in
       lib) GREP='egrep -v'
