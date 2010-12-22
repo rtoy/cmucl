@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.30 2010/09/08 03:28:08 agoncharov Rel $
+ $Id: elf.c,v 1.31 2010/12/22 20:16:29 rtoy Exp $
 */
 
 #include <stdio.h>
@@ -124,7 +124,7 @@ write_elf_header(int fd)
     eh.e_ident[EI_MAG3]		= ELFMAG3;
 
     eh.e_ident[EI_CLASS]	= ELFCLASS32;
-#ifdef SOLARIS
+#if defined(sparc) && defined(SOLARIS)
     eh.e_ident[EI_DATA]		= ELFDATA2MSB;
 #else
     eh.e_ident[EI_DATA]		= ELFDATA2LSB;
@@ -141,7 +141,7 @@ write_elf_header(int fd)
 #else
     eh.e_type		= ET_NONE;	/* ???? */
 #endif
-#ifdef SOLARIS
+#if defined(sparc) && defined(SOLARIS)
     /*
      * We only support 32-bit code right now, and our binaries are
      * v8plus binaries.
@@ -361,7 +361,7 @@ obj_run_linker(long init_func_address, char *file)
 	    free(paths);
 	    printf("\t[%s: linking %s... \n", command, file);
 	    fflush(stdout);
-#if defined(__linux__) || defined(__FreeBSD__) || defined(sparc)
+#if defined(__linux__) || defined(__FreeBSD__) || defined(SOLARIS)
             sprintf(command_line, "%s %s 0x%lx '%s' 0x%lx 0x%lx 0x%lx", command,
                     C_COMPILER, init_func_address, file,
                     (unsigned long) READ_ONLY_SPACE_START,
