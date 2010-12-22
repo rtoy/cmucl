@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.15 2010/04/20 17:57:45 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.16 2010/12/22 02:12:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,11 @@
 (export '(get-system-info get-page-size os-init))
 
 (pushnew :sunos *features*)
+
+#+solaris
+(register-lisp-feature :solaris)
+#+svr4
+(register-lisp-feature :svr4)
 
 #+executable
 (register-lisp-runtime-feature :executable)

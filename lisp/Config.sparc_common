@@ -27,22 +27,34 @@ GENCGC = -DGENCGC
 GC_SRC = gencgc.c
 endif
 
+# Enable support for SSE2.  If FEATURE_X87 is set, we want SSE2
+# support in the C code too so that the same binary is built in both
+# cases.  If neither is set, then we don't want any SSE2 support at
+# all.
+ifdef FEATURE_X87
+SSE2 = -DFEATURE_SSE2
+else
+ifdef FEATURE_SSE2
+SSE2 = -DFEATURE_SSE2
+endif
+endif
+
 # Enable support for Unicode
 ifdef FEATURE_UNICODE
 UNICODE = -DUNICODE
 endif
 
-CPPFLAGS = -I. -I$(PATH1) -DSOLARIS -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC) $(UNICODE)
+CPPFLAGS = -I. -I$(PATH1) -DSOLARIS -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC) $(UNICODE) $(SSE2)
 
 
 CFLAGS = -g $(CC_V8PLUS)
 
 NM = $(PATH1)/solaris-nm
-ASSEM_SRC = sparc-assem.S
-ARCH_SRC = sparc-arch.c
+#ASSEM_SRC = sparc-assem.S
+#ARCH_SRC = sparc-arch.c
 
 DEPEND=$(CC) 
-OS_SRC = solaris-os.c os-common.c undefineds.c elf.c k_rem_pio2.c
+#OS_SRC = solaris-os.c os-common.c undefineds.c elf.c k_rem_pio2.c
 OS_LINK_FLAGS=
-OS_LIBS= -lsocket -lnsl -ldl
+#OS_LIBS= -lsocket -lnsl -ldl
 EXEC_FINAL_OBJ = exec-final.o

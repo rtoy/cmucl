@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.110 2010/07/26 17:17:13 rtoy Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.111 2010/12/22 02:12:52 rtoy Exp $
  *
  */
 
@@ -150,7 +150,7 @@
 
 /* Define for activating assertions.  */
 
-#if defined(DARWIN)
+#if defined(x86) && defined(SOLARIS)
 #define GC_ASSERTIONS 1
 #endif
 
@@ -2906,9 +2906,9 @@ void
 sniff_code_object(struct code *code, unsigned displacement)
 {
     int nheader_words, ncode_words, nwords;
-    void *p;
-    void *constants_start_addr, *constants_end_addr;
-    void *code_start_addr, *code_end_addr;
+    char *p;
+    char *constants_start_addr, *constants_end_addr;
+    char *code_start_addr, *code_end_addr;
     int fixup_found = 0;
 
     if (!check_code_fixups)
@@ -2932,14 +2932,14 @@ sniff_code_object(struct code *code, unsigned displacement)
     nheader_words = HeaderValue(*(lispobj *) code);
     nwords = ncode_words + nheader_words;
 
-    constants_start_addr = (void *) code + 5 * sizeof(lispobj);
-    constants_end_addr = (void *) code + nheader_words * sizeof(lispobj);
-    code_start_addr = (void *) code + nheader_words * sizeof(lispobj);
-    code_end_addr = (void *) code + nwords * sizeof(lispobj);
+    constants_start_addr = (char *) code + 5 * sizeof(lispobj);
+    constants_end_addr = (char *) code + nheader_words * sizeof(lispobj);
+    code_start_addr = (char *) code + nheader_words * sizeof(lispobj);
+    code_end_addr = (char *) code + nwords * sizeof(lispobj);
 
     /* Work through the unboxed code. */
     for (p = code_start_addr; p < code_end_addr; p++) {
-	void *data = *(void **) p;
+	char *data = *(char **) p;
 	unsigned d1 = *((unsigned char *) p - 1);
 	unsigned d2 = *((unsigned char *) p - 2);
 	unsigned d3 = *((unsigned char *) p - 3);
@@ -3113,8 +3113,8 @@ static void
 apply_code_fixups(struct code *old_code, struct code *new_code)
 {
     int nheader_words, ncode_words, nwords;
-    void *constants_start_addr, *constants_end_addr;
-    void *code_start_addr, *code_end_addr;
+    char *constants_start_addr, *constants_end_addr;
+    char *code_start_addr, *code_end_addr;
     lispobj fixups = NIL;
     unsigned long displacement =
 
@@ -3141,10 +3141,10 @@ apply_code_fixups(struct code *old_code, struct code *new_code)
 	    "*** Compiled code object at %x: header_words=%d code_words=%d .\n",
 	    new_code, nheader_words, ncode_words);
 #endif
-    constants_start_addr = (void *) new_code + 5 * sizeof(lispobj);
-    constants_end_addr = (void *) new_code + nheader_words * sizeof(lispobj);
-    code_start_addr = (void *) new_code + nheader_words * sizeof(lispobj);
-    code_end_addr = (void *) new_code + nwords * sizeof(lispobj);
+    constants_start_addr = (char *) new_code + 5 * sizeof(lispobj);
+    constants_end_addr = (char *) new_code + nheader_words * sizeof(lispobj);
+    code_start_addr = (char *) new_code + nheader_words * sizeof(lispobj);
+    code_end_addr = (char *) new_code + nwords * sizeof(lispobj);
 #if 0
     fprintf(stderr,
 	    "*** Const. start = %x; end= %x; Code start = %x; end = %x\n",
@@ -3444,12 +3444,46 @@ scav_closure_header(lispobj * where, lispobj object)
 
     closure = (struct closure *) where;
     fun = closure->function - RAW_ADDR_OFFSET;
+#if !(defined(i386) && defined(SOLARIS))
     scavenge(&fun, 1);
     /* The function may have moved so update the raw address. But don't
        write unnecessarily. */
     if (closure->function != fun + RAW_ADDR_OFFSET)
 	closure->function = fun + RAW_ADDR_OFFSET;
-
+#else
+    /*
+     * For some reason, on solaris/x86, we get closures (actually, it
+     * appears to be funcallable instances where the closure function
+     * is zero.  I don't know why, but they are.  They don't seem to
+     * be created anywhere and it doesn't seem to be caused by GC
+     * transport.
+     *
+     * Anyway, we check for zero and skip scavenging if so.
+     * (Previously, we'd get a segfault scavenging the object at
+     * address -RAW_ADDR_OFFSET.
+     */
+    if (closure->function) {
+        scavenge(&fun, 1);
+        /*
+         * The function may have moved so update the raw address. But don't
+         * write unnecessarily.
+         */
+        if (closure->function != fun + RAW_ADDR_OFFSET) {
+#if 0
+            fprintf(stderr, "closure header 0x%04x moved from %p to %p\n",
+                    closure->header, (void*) closure->function, (void*) (fun + RAW_ADDR_OFFSET));
+#endif
+            closure->function = fun + RAW_ADDR_OFFSET;
+        }
+    }
+#if 0
+     else {
+        fprintf(stderr, "Weird closure!\n");
+        fprintf(stderr, " where = %p, object = 0x%04x\n", where, object);
+        fprintf(stderr, " closure->function = %p, fun = %p\n", closure->function, fun);
+    }
+#endif
+#endif
     return 2;
 }
 

@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.39 2009/01/06 18:18:43 rtoy Rel $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.40 2010/12/22 02:12:52 rtoy Exp $ 
  *
  */
 
@@ -24,6 +24,50 @@
 
 unsigned long fast_random_state = 1;
 
+#if defined(SOLARIS)
+/*
+ * Use the /dev/cpu/self/cpuid interface on Solaris.  We could use the
+ * same method below, but the Sun C compiler miscompiles the inline
+ * assembly.
+ */
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
+
+void cpuid(int level, unsigned int* a, unsigned int* b,
+           unsigned int* c, unsigned int* d)
+{
+    int device;
+    uint32_t regs[4];
+    static const char devname[] = "/dev/cpu/self/cpuid";
+
+        *a = *b = *c = *d = 0;
+    if ((device = open(devname, O_RDONLY)) == -1) {
+        perror(devname);
+        goto exit;
+    }
+
+    if (pread(device, regs, sizeof(regs), 1) != sizeof(regs)) {
+        perror(devname);
+        goto exit;
+    }
+
+    *a = regs[0];
+    *b = regs[1];
+    *c = regs[2];
+    *d = regs[3];
+
+  exit:
+    (void) close(device);
+
+    return;
+}
+
+#else
 #define __cpuid(level, a, b, c, d)			\
   __asm__ ("xchgl\t%%ebx, %1\n\t"			\
 	   "cpuid\n\t"					\
@@ -43,6 +87,7 @@ void cpuid(int level, unsigned int* a, unsigned int* b,
     *c = ecx;
     *d = edx;
 }
+#endif
 
 int
 arch_support_sse2(void)

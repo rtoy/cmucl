@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.26 2010/11/12 12:57:32 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.27 2010/12/22 02:12:52 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -32,6 +32,8 @@
 
 #if defined(GENCGC)
 #include "lisp.h"
+/* Need struct code defined to get rid of warning from gencgc.h */
+#include "internals.h"
 #include "gencgc.h"
 #endif
 
@@ -138,6 +140,7 @@ os_map(int fd, int offset, os_vm_address_t addr, os_vm_size_t len)
 void
 os_flush_icache(os_vm_address_t address, os_vm_size_t length)
 {
+#ifndef i386
     static int flushit = -1;
 
     /*
@@ -158,6 +161,7 @@ os_flush_icache(os_vm_address_t address, os_vm_size_t length)
 	    fprintf(stderr, ";;;iflush %p - %lx\n", (void *) address, length);
 	flush_icache((unsigned int *) address, length);
     }
+#endif
 }
 
 void
@@ -207,6 +211,11 @@ void
 segv_handle_now(HANDLER_ARGS)
 {
     interrupt_handle_now(signal, code, context);
+}
+
+void real_segv_handler(HANDLER_ARGS)
+{
+    segv_handle_now(signal, code, context);
 }
 
 void
@@ -263,7 +272,7 @@ segv_handler(HANDLER_ARGS)
     fprintf(stderr, "segv_handler: Real protection violation: %p, PC = %p\n",
             addr,
             context->uc_mcontext.gregs[1]);
-    segv_handle_now(signal, code, context);
+    real_segv_handler(signal, code, context);
 }
 #else
 void
@@ -296,6 +305,7 @@ os_install_interrupt_handlers(void)
 
 /* function definitions for register lvalues */
 
+#ifndef i386
 int *
 solaris_register_address(struct ucontext *context, int reg)
 {
@@ -314,6 +324,7 @@ solaris_register_address(struct ucontext *context, int reg)
     } else
 	return 0;
 }
+#endif
 
 /* function defintions for backward compatibilty and static linking */
 
@@ -492,3 +503,110 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 
     return sym_addr;
 }
+
+#ifdef i386
+unsigned long *
+os_sigcontext_reg(ucontext_t *scp, int index)
+{
+#if 0
+    fprintf(stderr, "os_sigcontext_reg index = %d\n", index);
+#endif    
+    switch (index) {
+    case 0:
+	return (unsigned long *) &scp->uc_mcontext.gregs[EAX];
+    case 2:
+	return (unsigned long *) &scp->uc_mcontext.gregs[ECX];
+    case 4:
+	return (unsigned long *) &scp->uc_mcontext.gregs[EDX];
+    case 6:
+	return (unsigned long *) &scp->uc_mcontext.gregs[EBX];
+    case 8:
+	return (unsigned long *) &scp->uc_mcontext.gregs[ESP];
+    case 10:
+	return (unsigned long *) &scp->uc_mcontext.gregs[EBP];
+    case 12:
+	return (unsigned long *) &scp->uc_mcontext.gregs[ESI];
+    case 14:
+	return (unsigned long *) &scp->uc_mcontext.gregs[EDI];
+    }
+    return NULL;
+}
+
+unsigned long *
+os_sigcontext_pc(ucontext_t *scp)
+{
+#if 0
+    fprintf(stderr, "os_sigcontext_pc = %p\n", scp->uc_mcontext.gregs[EIP]);
+#endif
+    return (unsigned long *) &scp->uc_mcontext.gregs[EIP];
+}
+
+
+unsigned char *
+os_sigcontext_fpu_reg(ucontext_t *scp, int offset)
+{
+    fpregset_t *fpregs = &scp->uc_mcontext.fpregs;
+    unsigned char *reg = NULL;
+
+    if (offset < 8) {
+        unsigned char *fpustate;
+        unsigned char *stregs;
+
+        /*
+         * Not sure this is right.  There is no structure defined for
+         * the x87 fpu state in /usr/include/sys/regset.h
+         */
+        
+        /* Point to the fpchip_state */
+        fpustate = (unsigned char*) &fpregs->fp_reg_set.fpchip_state.state[0];
+        /* Skip to where the x87 fp registers are */
+        stregs = fpustate + 24;
+    
+        reg = stregs + 16*offset;
+    }
+#ifdef FEATURE_SSE2
+    else {
+        reg = (unsigned char*) &fpregs->fp_reg_set.fpchip_state.xmm[offset - 8];
+    }
+#endif
+
+    return reg;
+}
+
+unsigned int
+os_sigcontext_fpu_modes(ucontext_t *scp)
+{
+    unsigned int modes;
+    unsigned short cw, sw;
+    fpregset_t *fpr;
+    unsigned int state;
+        
+    fpr = &scp->uc_mcontext.fpregs;
+
+    cw = fpr->fp_reg_set.fpchip_state.state[0] & 0xffff;
+    sw = fpr->fp_reg_set.fpchip_state.state[1] & 0xffff;
+
+    modes = ((cw & 0x3f) << 7) | (sw & 0x3f);
+
+    DPRINTF(0, (stderr, "cw = 0x%04x\n", cw));
+    DPRINTF(0, (stderr, "sw = 0x%04x\n", sw));
+    DPRINTF(0, (stderr, "modes = 0x%08x\n", modes));
+    
+#ifdef FEATURE_SSE2
+    /*
+     * Add in the SSE2 part, if we're running the sse2 core.
+     */
+    if (fpu_mode == SSE2) {
+	unsigned long mxcsr;
+
+        mxcsr = fpr->fp_reg_set.fpchip_state.mxcsr;
+        DPRINTF(0, (stderr, "SSE2 modes = %08lx\n", mxcsr));
+
+	modes |= mxcsr;
+    }
+#endif
+
+    modes ^= (0x3f << 7);
+    return modes;
+}
+#endif

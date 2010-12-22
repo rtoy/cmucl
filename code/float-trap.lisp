@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.38 2010/04/20 17:57:44 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.39 2010/12/22 02:12:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -290,6 +290,13 @@
 		    :operation fop
 		    :operands operands))
 	    (t
+	     ;; It looks like the sigcontext on Solaris/x86 doesn't
+	     ;; actually save the status word of the FPU.  The
+	     ;; operands also seem to be missing.  Signal a general
+	     ;; arithmetic error.
+	     #+solaris
+	     (error 'arithmetic-error :operands operands)
+	     #-solaris
 	     (error (intl:gettext "SIGFPE with no exceptions currently enabled?")))))))
 
 ;;; WITH-FLOAT-TRAPS-MASKED  --  Public

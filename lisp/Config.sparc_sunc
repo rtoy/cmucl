@@ -20,6 +20,13 @@ CC_V8PLUS = -m32 -xarch=sparc
 AS_V8PLUS = -m32 -xarch=sparc
 endif
 
+ASSEM_SRC = sparc-assem.S
+ARCH_SRC = sparc-arch.c
+
+OS_SRC = solaris-os.c os-common.c undefineds.c elf.c k_rem_pio2.c
+OS_LINK_FLAGS=
+OS_LIBS= -lsocket -lnsl -ldl
+
 CC = cc -xlibmieee -O
 CPP = cc -E
 DEPEND_FLAGS = -xM
