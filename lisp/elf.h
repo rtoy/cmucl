@@ -1,4 +1,4 @@
-/* $Id: elf.h,v 1.15 2010/09/08 12:06:23 rtoy Rel $ */
+/* $Id: elf.h,v 1.16 2010/12/22 20:17:24 rtoy Exp $ */
 
 /* This code was written by Fred Gilham and has been placed in the public domain.  It is
    provided "AS-IS" and without warranty of any kind.
@@ -32,7 +32,7 @@
  * is used everywhere, except on Solaris/sparc, where we can use
  * either gcc or Sun C.
  */
-#if defined(__SUNPRO_C) && defined(__sparc)
+#if defined(__SUNPRO_C)
 #define C_COMPILER "cc"
 #else
 #define C_COMPILER "gcc"
