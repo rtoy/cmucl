@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.41 2010/12/23 22:23:48 rtoy Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.42 2010/12/23 22:55:31 rtoy Exp $ 
  *
  */
 
@@ -250,7 +250,7 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
      * single-stepping and stop on the next instruction.
      */
 
-    DFPRINTF(0, (stderr, "Installing helper instructions\n"));
+    DPRINTF(0, (stderr, "Installing helper instructions\n"));
     
     single_step_save1 = *(pc - 3);
     single_step_save2 = *(pc - 2);
@@ -268,7 +268,7 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
      * the helper.
      */
     
-    DFPRINTF(0, (stderr, " Setting pc to pushf instruction at %p\n", (void*) ((char*) pc - 9)));
+    DPRINTF(0, (stderr, " Setting pc to pushf instruction at %p\n", (void*) ((char*) pc - 9)));
     SC_PC(context) = (int)((char *) pc - 9);
 #endif
 }
@@ -298,7 +298,7 @@ sigtrap_handler(HANDLER_ARGS)
 	*(single_stepping - 3) = single_step_save1;
 	*(single_stepping - 2) = single_step_save2;
 	*(single_stepping - 1) = single_step_save3;
-        DFPRINTF(0, (stderr, "Uninstalling helper instructions\n"));
+        DPRINTF(0, (stderr, "Uninstalling helper instructions\n"));
 #endif
 
 	/*
