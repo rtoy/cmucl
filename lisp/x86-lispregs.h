@@ -1,5 +1,5 @@
 /* x86-lispregs.h -*- Mode: C; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.14 2010/12/23 22:23:48 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.15 2010/12/23 22:56:26 rtoy Exp $
  */
 
 #ifndef _X86_LISPREGS_H_
@@ -60,6 +60,14 @@
 #define SC_EFLAGS(sc) ((sc)->uc_mcontext.gregs[REG_EFL])
 #elif defined(__NetBSD__)
 #define SC_EFLAGS(sc) ((sc)->uc_mcontext.__gregs[_REG_EFL])
+#elif defined(SOLARIS)
+/*
+ * Solaris/x86 has access the the eflags value, but this doesn't
+ * currently work.  Some more work needs to be done in x86-arch.c to
+ * make this work.  But the default code there works fine on
+ * Solaris/x86.
+ */
+/* #define SC_EFLAGS(sc) ((sc)->uc_mcontext.gregs[EFL])*/
 #endif
 
 #endif /* _X86_LISPREGS_H_ */
