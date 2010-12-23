@@ -9,7 +9,7 @@
 # you extracted the two tarballs and the source distribution into that
 # directory.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/make-dist.sh,v 1.18 2010/12/22 02:12:52 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/make-dist.sh,v 1.19 2010/12/23 03:17:43 rtoy Exp $
 
 usage() {
     echo "make-dist.sh: [-hbg] [-G group] [-O owner] [-I destdir] [-M mandir] dir version [arch os]"
@@ -75,7 +75,10 @@ def_arch_os () {
           case `uname -m` in
 	      i386) ARCH=x86 ;;
 	      *) ARCH=ppc ;;
-	  esac
+	  esac ;;
+      NetBSD)
+	  ARCH=x86
+	  OS=netbsd
       esac
 }
 
