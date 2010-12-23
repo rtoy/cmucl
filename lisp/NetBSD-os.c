@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.17 2010/12/23 04:50:02 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.18 2010/12/23 17:38:05 rtoy Exp $
  *
  */
 
@@ -89,6 +89,8 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
 {
     unsigned char *reg = NULL;
 
+    DPRINTF(0, (stderr, "fpu reg index = %d\n", index));
+    
     if (scp->uc_flags & _UC_FPU) {
 	if (scp->uc_flags & _UC_FXSAVE) {
             /*
@@ -99,10 +101,12 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
              * start of the array, and each XMM register is 16 bytes
              * long.
              */
-            if (index < 8) {
+            if (index >= 8) {
                 reg = &scp->uc_mcontext.__fpregs.__fp_reg_set.__fp_xmm_state.__fp_xmm[160 + 16*(index - 8)];
+                DPRINTF(0, (stderr, " sse2 = %g\n", (double) *(double*) reg));
             } else {
                 reg = &scp->uc_mcontext.__fpregs.__fp_reg_set.__fp_xmm_state.__fp_xmm[32 + 16*index];
+                DPRINTF(0, (stderr, " sse2 x87 = %g\n", (double) *(long double*) reg));
             }
             
 	} else {
@@ -112,6 +116,7 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
              * each.
              */
 	    reg = &scp->uc_mcontext.__fpregs.__fp_reg_set.__fpchip_state.__fp_state[28 + 10*index];
+            DPRINTF(0, (stderr, " x87 = %g\n", (double) *(long double*) reg));
 	}
     } else {
 	reg = NULL;
