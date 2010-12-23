@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.27 2010/12/22 02:12:52 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.28 2010/12/23 23:02:58 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -560,9 +560,9 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int offset)
         /* Point to the fpchip_state */
         fpustate = (unsigned char*) &fpregs->fp_reg_set.fpchip_state.state[0];
         /* Skip to where the x87 fp registers are */
-        stregs = fpustate + 24;
+        stregs = fpustate + 28;
     
-        reg = stregs + 16*offset;
+        reg = stregs + 10*offset;
     }
 #ifdef FEATURE_SSE2
     else {
