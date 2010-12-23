@@ -4,7 +4,7 @@ include Config.sparc_common
 CC = cc -xlibmieee -g
 CFLAGS += -Di386
 CPP = cc -E
-DEPEND_FLAGS = -xM
+DEPEND_FLAGS = -xM1
 
 ASSEM_SRC = x86-assem.S
 ARCH_SRC = x86-arch.c
