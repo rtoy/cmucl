@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $Id: linker.sh,v 1.15 2010/09/08 12:06:23 rtoy Rel $
+# $Id: linker.sh,v 1.16 2010/12/23 03:16:56 rtoy Exp $
 
 # This file written by Raymond Toy as part of CMU Common Lisp and is
 # placed in the public domain.
@@ -49,7 +49,7 @@ OPT_CORE="CORRO.o CORSTA.o CORDYN.o"
 
 uname_s=`uname`
 case $uname_s in
-  Linux|FreeBSD)
+  Linux|FreeBSD|NetBSD)
       # How to specify the starting address for each of the sections
       # These aren't needed for Linux any more.  map_core_sections
       # takes care of getting the addresses.
