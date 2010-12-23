@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.16 2010/06/27 15:14:54 rswindells Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.17 2010/12/23 04:50:02 rtoy Exp $
  *
  */
 
@@ -91,9 +91,27 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
 
     if (scp->uc_flags & _UC_FPU) {
 	if (scp->uc_flags & _UC_FXSAVE) {
-	    reg = &scp->uc_mcontext.__fpregs.__fp_reg_set.__fp_xmm_state.__fp_xmm[index];
+            /*
+             * fp_xmm is an array of bytes in the format of the FXSAVE
+             * instruction.  The x87 registers are at offset 32 from
+             * the start and each entry takes 16 bytes (only 10
+             * needed).  The XMM registers are at offset 160 from the
+             * start of the array, and each XMM register is 16 bytes
+             * long.
+             */
+            if (index < 8) {
+                reg = &scp->uc_mcontext.__fpregs.__fp_reg_set.__fp_xmm_state.__fp_xmm[160 + 16*(index - 8)];
+            } else {
+                reg = &scp->uc_mcontext.__fpregs.__fp_reg_set.__fp_xmm_state.__fp_xmm[32 + 16*index];
+            }
+            
 	} else {
-	    reg = &scp->uc_mcontext.__fpregs.__fp_reg_set.__fpchip_state.__fp_state[index];
+            /*
+             * In this case, we have the FNSAVE format.  The x87
+             * registers are located at offset 28 and take 10 bytes
+             * each.
+             */
+	    reg = &scp->uc_mcontext.__fpregs.__fp_reg_set.__fpchip_state.__fp_state[28 + 10*index];
 	}
     } else {
 	reg = NULL;
