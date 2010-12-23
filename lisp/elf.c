@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.31 2010/12/22 20:16:29 rtoy Exp $
+ $Id: elf.c,v 1.32 2010/12/23 03:20:27 rtoy Exp $
 */
 
 #include <stdio.h>
@@ -361,7 +361,7 @@ obj_run_linker(long init_func_address, char *file)
 	    free(paths);
 	    printf("\t[%s: linking %s... \n", command, file);
 	    fflush(stdout);
-#if defined(__linux__) || defined(__FreeBSD__) || defined(SOLARIS)
+#if defined(__linux__) || defined(__FreeBSD__) || defined(SOLARIS) || defined(__NetBSD__)
             sprintf(command_line, "%s %s 0x%lx '%s' 0x%lx 0x%lx 0x%lx", command,
                     C_COMPILER, init_func_address, file,
                     (unsigned long) READ_ONLY_SPACE_START,
