@@ -1,5 +1,5 @@
 /* x86-lispregs.h -*- Mode: C; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.13 2008/12/29 14:40:34 rtoy Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.14 2010/12/23 22:23:48 rtoy Exp $
  */
 
 #ifndef _X86_LISPREGS_H_
@@ -58,6 +58,8 @@
 #endif
 #elif defined(__linux__)
 #define SC_EFLAGS(sc) ((sc)->uc_mcontext.gregs[REG_EFL])
+#elif defined(__NetBSD__)
+#define SC_EFLAGS(sc) ((sc)->uc_mcontext.__gregs[_REG_EFL])
 #endif
 
 #endif /* _X86_LISPREGS_H_ */
