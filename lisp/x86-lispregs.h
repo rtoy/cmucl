@@ -1,5 +1,5 @@
 /* x86-lispregs.h -*- Mode: C; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.15 2010/12/23 22:56:26 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.16 2010/12/24 06:01:34 rtoy Exp $
  */
 
 #ifndef _X86_LISPREGS_H_
@@ -63,9 +63,12 @@
 #elif defined(SOLARIS)
 /*
  * Solaris/x86 has access the the eflags value, but this doesn't
- * currently work.  Some more work needs to be done in x86-arch.c to
- * make this work.  But the default code there works fine on
- * Solaris/x86.
+ * currently work.  It seems that when we set the EFLAG to enable
+ * single-stepping, we never actually step the new instruction but we
+ * stop at exactly the same place.  This is not how it works on other
+ * OSes where we do step an instruction.  I (rtoy) do not know why.
+ * Some more work needs to be done in x86-arch.c to make this work.
+ * But the default code there works fine on Solaris/x86.
  */
 /* #define SC_EFLAGS(sc) ((sc)->uc_mcontext.gregs[EFL])*/
 #endif
