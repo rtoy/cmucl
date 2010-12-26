@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.80 2010/04/20 17:57:45 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.81 2010/12/26 14:03:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1444,8 +1444,8 @@
 	    (remove symbol shadowing-symbols)))
 
     (multiple-value-bind (s w) (find-symbol name package)
-      (declare (ignore s))
-      (cond ((or (eq w :internal) (eq w :external))
+      (cond ((not (eq symbol s)) nil)
+	    ((or (eq w :internal) (eq w :external))
 	     (nuke-symbol (if (eq w :internal)
 			      (package-internal-symbols package)
 			      (package-external-symbols package))
