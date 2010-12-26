@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.36 2010/09/08 03:28:08 agoncharov Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.37 2010/12/26 16:04:43 rswindells Exp $
  *
  */
 
@@ -356,3 +356,12 @@ restore_fpu(ucontext_t *scp)
     }
 #endif
 }
+
+#ifdef i386
+boolean
+os_support_sse2()
+{
+    return TRUE;
+}
+#endif
+

@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.18 2010/12/23 17:38:05 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.19 2010/12/26 16:04:43 rswindells Exp $
  *
  */
 
@@ -36,6 +36,7 @@
 /* #include <sys/sysinfo.h> */
 #include <sys/proc.h>
 #include <dlfcn.h>
+#include <sys/sysctl.h>
 #include "validate.h"
 size_t os_vm_page_size;
 
@@ -409,3 +410,18 @@ restore_fpu(ucontext_t *scp)
 	__asm__ __volatile__ ("ldmxcsr %0"::"m"(*&mxcsr));
     }
 }
+
+#ifdef i386
+boolean
+os_support_sse2()
+{
+    int support_sse2;
+    size_t len;
+
+    if (sysctlbyname("machdep.sse2", &support_sse2, &len,
+		     NULL, 0) == 0 && support_sse2 != 0)
+	return TRUE;
+    else
+	return FALSE;
+}
+#endif

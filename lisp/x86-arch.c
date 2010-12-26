@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.42 2010/12/23 22:55:31 rtoy Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.43 2010/12/26 16:04:43 rswindells Exp $ 
  *
  */
 
@@ -105,7 +105,7 @@ arch_init(fpu_mode_t mode)
 {
     int have_sse2;
 
-    have_sse2 = arch_support_sse2();
+    have_sse2 = arch_support_sse2() && os_support_sse2();
     
     switch (mode) {
       case AUTO:

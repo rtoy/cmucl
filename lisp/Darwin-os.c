@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.30 2010/06/22 16:55:17 rtoy Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.31 2010/12/26 16:04:43 rswindells Exp $
  *
  */
 
@@ -523,3 +523,11 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 
     return sym_addr;
 }
+
+#ifdef i386
+boolean
+os_support_sse2()
+{
+    return TRUE;
+}
+#endif

@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.50 2010/06/22 16:55:17 rtoy Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.51 2010/12/26 16:04:43 rswindells Exp $
  *
  */
 
@@ -537,3 +537,11 @@ restore_fpu(ucontext_t *context)
 #endif        
     }
 }
+
+#ifdef i386
+boolean
+os_support_sse2()
+{
+    return TRUE;
+}
+#endif

@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.28 2010/12/23 23:02:58 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.29 2010/12/26 16:04:43 rswindells Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -608,5 +608,11 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
 
     modes ^= (0x3f << 7);
     return modes;
+}
+
+boolean
+os_support_sse2()
+{
+    return TRUE;
 }
 #endif

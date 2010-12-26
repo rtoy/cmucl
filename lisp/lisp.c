@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.80 2010/12/23 03:20:27 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.81 2010/12/26 16:04:43 rswindells Exp $
  *
  */
 
@@ -715,8 +715,8 @@ main(int argc, const char *argv[], const char *envp[])
     }
 
 #ifdef i386
-    if ((fpu_type == SSE2) && !arch_support_sse2()) {
-	fprintf(stderr, "Core uses SSE2, but CPU doesn't support SSE2.  Exiting\n");
+    if ((fpu_type == SSE2) && (!arch_support_sse2() || !os_support_sse2())) {
+	fprintf(stderr, "Core uses SSE2, but CPU/OS doesn't support SSE2.  Exiting\n");
 	exit(1);
     }
     fpu_mode = fpu_type;
