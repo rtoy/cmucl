@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.102 2010/04/23 13:23:29 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.103 2010/12/26 14:54:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1120,7 +1120,7 @@
 	  (res (create-keyword-constructor defstruct creator))
 	  (dolist (other-name (rest defaults))
 	    (res `(setf (fdefinition ',other-name) (fdefinition ',cname)))
-	    (res `(declaim (ftype function ',other-name))))))
+	    (res `(declaim (ftype function ,other-name))))))
       
       (dolist (boa boas)
 	(res (create-boa-constructor defstruct boa creator)))
