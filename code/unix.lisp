@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.133 2010/12/22 02:15:39 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.134 2011/01/07 03:46:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3391,7 +3391,7 @@
 
 (defun unix-uname ()
   (with-alien ((names (struct utsname)))
-    (syscall* (#-(or freebsd solaris) "uname"
+    (syscall* (#-(or freebsd (and x86 solaris)) "uname"
 	       #+(and x86 solaris) "nuname"	; See /usr/include/sys/utsname.h
 	       #+freebsd "__xuname" #+freebsd int
 	       (* (struct utsname)))
