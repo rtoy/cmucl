@@ -37,7 +37,7 @@ VERSION="CVS Head `date '+%Y-%m-%d %H:%M:%S'`"
 BASE=build
 CREATE_OPT=""
 
-while getopts "Ub:v:C:o:8:?" arg
+while getopts "UB:b:v:C:o:8:?" arg
 do
     case $arg in
       b) BASE="$OPTARG" ;;
