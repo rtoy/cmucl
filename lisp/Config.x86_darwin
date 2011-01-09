@@ -5,7 +5,7 @@ include Config.x86_common
 # Compile code that will run on OSX 10.4 (Tiger)
 MIN_VER = -mmacosx-version-min=10.4
 
-CPPFLAGS += -DDARWIN $(MIN_VER)
+CPPFLAGS += -DDARWIN $(MIN_VER) -m32
 CFLAGS += -g3
 ASFLAGS += -g3 $(MIN_VER)
 
@@ -13,7 +13,7 @@ ASFLAGS += -g3 $(MIN_VER)
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 
 OS_SRC += Darwin-os.c mach-o.c
-OS_LINK_FLAGS = $(MIN_VER)
+OS_LINK_FLAGS = -m32 $(MIN_VER)
 OS_LIBS =
 
 EXEC_FINAL_OBJ = exec-final.o

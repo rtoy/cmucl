@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.h,v 1.7 2008/01/03 11:41:54 cshapiro Rel $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.h,v 1.8 2011/01/09 00:12:36 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -14,7 +14,7 @@
 #include <sys/mman.h>
 #include <sys/signal.h>
 #include <signal.h>
-#include <ucontext.h>
+#include <sys/ucontext.h>
 #include <mach/vm_types.h>
 
 typedef caddr_t os_vm_address_t;
