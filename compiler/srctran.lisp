@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.173 2010/04/20 17:57:46 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.174 2011/01/12 00:41:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2944,6 +2944,29 @@
 (dolist (x '(= char= + * logior logand logxor))
   (%deftransform x '(function * *) #'commutative-arg-swap
 		 "place constant arg last."))
+
+;;; Convert (EQ foo NIL) and (EQ NIL foo) into the equivalent (if foo
+;;; nil t), like we do for NULL and NOT so that IF optimizations will
+;;; eliminate redundant negations.
+(deftransform eq ((x y) (t t) * :when :both)
+  ;; It would be nice to use commutative-arg-swap above for this.
+  ;; Then we only need to handle one case.  But if we do that
+  ;; commutative-arg-swap converts (eq 'declare x) to (eq x declare),
+  ;; losing the quote on declare.  I'm too lazy to fix that in
+  ;; commutative-arg-swap, so we do everything here.
+  (cond ((and (constant-continuation-p x)
+	      (not (constant-continuation-p y))
+	      (eq nil (continuation-value x)))
+	 ;; (EQ NIL foo) case
+	 `(if y nil t))
+	((and (constant-continuation-p y)
+	      (not (constant-continuation-p x))
+	      (eq nil (continuation-value y)))
+	 ;; (EQ foo NIL) case
+	 `(if x nil t))
+	(t
+	 ;; Give up on all others.
+	 (give-up))))
 
 ;;; Handle the case of a constant boole-code.
 ;;;
