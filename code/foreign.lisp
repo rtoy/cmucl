@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.59 2010/04/20 17:57:44 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.60 2011/01/21 15:44:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -881,6 +881,8 @@ environment passed to Lisp."
 		  #+(or solaris linux) "-G"
 		  #+(or freebsd OpenBSD NetBSD irix) "-shared"
 		  #+darwin "-dylib"
+		  #+darwin "-arch"
+		  #+darwin "i386"
 		  "-o"
 		  output-file
 		  ;; Cause all specified libs to be loaded in full
