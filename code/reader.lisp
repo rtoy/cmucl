@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.67 2010/04/20 17:57:45 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.68 2011/01/27 00:49:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -275,8 +275,14 @@
 	(setf (elt (the simple-vector (character-macro-table rt))
 		   code)
 	      (coerce newvalue 'function))
-	(setf (gethash code (character-macro-hash-table rt))
-	      (coerce newvalue 'function)))))
+	(let ((f (coerce newvalue 'function)))
+	  ;; Don't add an entry if the function would be the same as
+	  ;; the default.  This needs to be coordinated with
+	  ;; GET-CMT-ENTRY above.
+	  (if (eq f #'read-token)
+	      f
+	      (setf (gethash code (character-macro-hash-table rt))
+		    f))))))
 
 (defun undefined-macro-char (stream char)
   (unless *read-suppress*
