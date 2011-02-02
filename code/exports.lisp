@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.303 2010/12/09 14:01:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.304 2011/02/02 12:51:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1508,7 +1508,7 @@
 		"DESCRIBE-EXTERNAL-FORMAT")
   ;; Unicode
   (:export "STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
-	   "DESCRIBE-EXTERNAL-FORMATS"
+	   "DESCRIBE-EXTERNAL-FORMAT"
 	   "LIST-ALL-EXTERNAL-FORMATS"
 	   "STRING-ENCODE" "STRING-DECODE"
 	   "SET-SYSTEM-EXTERNAL-FORMAT"))
