@@ -25,7 +25,8 @@ New in this release:
     - Add support for character name completion.  This can be used by
       Slime to do character name completion.
     - Initial support for Solaris/x86.  CMUCL will run on Solaris/x86
-      with all features available.
+      with all features available, except only Unicode and SSE2 is
+      supported. 
 
   * Changes
     - ASDF2 updated to version 2.010.
@@ -106,6 +107,14 @@ New in this release:
     - On NetBSD, display of FP numbers (sse2 and x87) during tracing
       has been corrected.  Previously, random values were displayed.
     - Executables images can now be created on NetBSD again.
+    - EXT::DESCRIBE-EXTERNAL-FORMAT was not exported.
+    - TRACE was erroneously allowing encapsulation when tracing local
+      flet/labels functions.  This doesn't actually trace anything.
+      An error is now signaled in this case.  This usually happens
+      because the function is in one of CMUCL's internal
+      implementation packages.  If you know what you're doing, you can
+      use the trace option :encapsulate nil to trace them.  Tracing
+      functions used by TRACE can cause bad things.
 
   * Trac Tickets:
 
