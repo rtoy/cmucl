@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.91 2010/12/04 23:21:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.92 2011/02/02 13:07:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -649,7 +649,13 @@
     (dump-fop 'lisp::fop-function-entry file)
     (dump-unsigned-32 (label-position (entry-info-offset entry)) file)
     (let ((handle (dump-pop file)))
-      (when (and name (or (symbolp name) (listp name)))
+      (when (and name (or (symbolp name)
+			  (and (listp name)
+			       ;; Skip over any entries for
+			       ;; flet/labels functions.  We don't
+			       ;; need them stored because we can't
+			       ;; really do anything with them.
+			       (not (member (car name) '(flet labels) :test 'eq) ))))
 	(dump-object name file)
 	(dump-push handle file)
 	(dump-fop 'lisp::fop-fset file))
