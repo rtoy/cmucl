@@ -71,6 +71,8 @@ New in this release:
     - DEFSTRUCT allows multiple keyword constructors as required by
       the spec..
     - In COMPILE-FILE, the :OUTPUT-FILE can also be a stream.
+    - (OPEN f :DIRECTION :IO :IF-DOES-NOT-EXIST NIL) no longer signals
+      an error if f does not exist.  It returns NIL now.
 
   * Bugfixes:
     - The pairwise composition table is now correctly built.
