@@ -70,6 +70,7 @@ New in this release:
       it should not.
     - DEFSTRUCT allows multiple keyword constructors as required by
       the spec..
+    - In COMPILE-FILE, the :OUTPUT-FILE can also be a stream.
 
   * Bugfixes:
     - The pairwise composition table is now correctly built.

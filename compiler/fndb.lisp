@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.147 2010/09/24 12:12:05 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.148 2011/02/17 02:47:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1144,7 +1144,7 @@
 (deftype optional-filename () '(or filename (member t nil)))
 
 (defknown compile-file
-  ((or optional-filename stream list) &key (:output-file optional-filename)
+  ((or optional-filename stream list) &key (:output-file (or optional-filename stream))
    (:error-file optional-filename)
    (:trace-file optional-filename) (:error-output t) (:load t) (:verbose t)
    (:print t) (:progress t)
