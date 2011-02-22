@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.47 2011/02/01 15:35:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.48 2011/02/22 22:56:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -515,7 +515,8 @@
 	(unless named
 	  (error (intl:gettext "Can't use encapsulation to trace anonymous function ~S.")
 		 fun))
-	(when (listp function-or-name)
+	(when (and (listp function-or-name)
+		   (member function-or-name '(flet labels)))
 	  (error (intl:gettext "Can't use encapsulation to trace local flet/labels function ~S.")
 		 function-or-name))
 	(fwrap function-or-name #'trace-fwrapper :type 'trace
