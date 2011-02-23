@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.23 2010/09/29 20:51:19 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.24 2011/02/23 03:02:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.23 $")
+(defvar *unidata-version* "$Revision: 1.24 $")
 
 (defstruct unidata
   range
@@ -338,6 +338,45 @@
 				      #x3FFFF)
 			      i))
 		     stack))))))))
+
+;; Like SEARCH-DICTIONARY, but we don't try to do partial matches.  We
+;; do an exact match on the given string.
+(defun exact-match-dictionary (string dictionary)
+  (declare (optimize (speed 3) (space 0) (safety 0)
+		     (ext:inhibit-warnings 3))
+	   (type string string) (type dictionary dictionary))
+  (let* ((codebook (dictionary-cdbk dictionary))
+	 (current 0)
+	 (posn 0)
+	 (stack '()))
+    (declare (type (unsigned-byte 32) current) (type lisp::index posn))
+    (loop
+      (let ((keyv (ash (aref (dictionary-nextv dictionary) current) -18)))
+	(dotimes (i (aref (dictionary-keyl dictionary) keyv)
+		    (if stack
+			(let ((next (pop stack)))
+			  (setq posn (car next) current (cdr next)))
+			(return-from exact-match-dictionary nil)))
+	  (let* ((str (aref codebook (aref (dictionary-keyv dictionary)
+					   (+ keyv i))))
+		 (len (length str)))
+	    (declare (type simple-base-string str))
+	    (when (and (>= (length string) (+ posn len))
+		       (string= string str :start1 posn :end1 (+ posn len)))
+	      (setq current
+		  (+ (logand (aref (dictionary-nextv dictionary) current)
+			     #x3FFFF)
+		     i))
+	      (when (= (incf posn len) (length string))
+		(return-from exact-match-dictionary current))
+	      (return))			; from DOTIMES - loop again
+	    (when (or (string= str " ") (string= str "-"))
+	      (push (cons posn
+			  (+ (logand (aref (dictionary-nextv dictionary)
+					   current)
+				     #x3FFFF)
+			     i))
+		    stack))))))))
 
 (defun search-range (code range)
   (declare (optimize (speed 3) (space 0) (safety 0))
@@ -727,20 +766,18 @@
 	       nil)))
 	(t
 	 (unless (unidata-name+ *unicode-data*) (load-names))
-	 (let* ((names (unidata-name+ *unicode-data*)))
-	   (multiple-value-bind (n p)
-	       (search-dictionary name names)
-	     (when (and n (= p (length name)))
-	       (let ((cp (aref (dictionary-codev names) n)))
-		 (if (minusp cp) nil cp))))))))
+	 (let* ((names (unidata-name+ *unicode-data*))
+		(n (exact-match-dictionary name names)))
+	   (when n
+	     (let ((cp (aref (dictionary-codev names) n)))
+	       (if (minusp cp) nil cp)))))))
 
 (defun unicode-1.0-name-to-codepoint (name)
   (declare (type string name))
   (unless (unidata-name1+ *unicode-data*) (load-1.0-names))
-  (let* ((names (unidata-name1+ *unicode-data*)))
-    (multiple-value-bind (n p)
-	(search-dictionary name names)
-      (when (and n (= p (length name)))
+  (let* ((names (unidata-name1+ *unicode-data*))
+	 (n (exact-match-dictionary name names)))
+      (when n
 	(let ((cp (aref (dictionary-codev names) n)))
 	  (if (minusp cp) nil cp))))))
 
