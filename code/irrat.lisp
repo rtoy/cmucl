@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.63 2010/04/20 17:57:44 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.64 2011/02/28 17:14:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -179,7 +179,7 @@
 
 ;; As above for x86.  It also seems to be needed to handle
 ;; constant-folding in the compiler.
-#+sparc
+#+(or sparc (and x86 sse2))
 (progn
   (defun %sqrt (x)
     (declare (double-float x)
