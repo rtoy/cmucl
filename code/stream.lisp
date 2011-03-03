@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.99 2010/09/08 03:04:54 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.100 2011/03/03 16:43:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -723,6 +723,13 @@
 	   (setf (lisp-stream-in-index stream) (1+ start))
 	   (code-char (aref ibuf start))))))
 
+;;; FAST-READ-CHAR-STRING-REFILL  --  Interface
+;;;
+;;;    This function is called by the fast-read-char expansion to refill the
+;;; string-buffer for text streams.  There is definitely a
+;;; string-buffer and an in-buffer, which implies there must be an
+;;; n-bin method.
+;;;
 #+unicode
 (defun fast-read-char-string-refill (stream eof-errorp eof-value)
   ;; Like fast-read-char-refill, but we don't need or want the
@@ -844,6 +851,11 @@
 			    (setf (lisp-stream-string-buffer-len stream) (1+ char-count))
 			    (setf (lisp-stream-string-index stream) 2)
 			    (setf (lisp-stream-in-index stream) octet-count)
+			    ;; If we didn't convert all the octets,
+			    ;; adjust the head pointer to indicate
+			    ;; that we have unread octets left.
+			    (decf (lisp::fd-stream-ibuf-head stream)
+				  (- (fd-stream-in-length stream) octet-count))
 			    #+(or debug-frc-sr)
 			    (progn
 			      (format t "new in-index = ~A~%" (lisp-stream-in-index stream))
