@@ -122,6 +122,8 @@ New in this release:
       Fix this.
 
   * Trac Tickets:
+    - #43: unread-char doesn't change file-position
+      Fixed.
 
   * Other changes:
 
