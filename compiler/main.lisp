@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.159 2010/09/24 12:12:05 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.160 2011/03/28 12:07:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1907,8 +1907,12 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		;; Hack around filesystem race condition...
 		(or (probe-file output-file-pathname) output-file-pathname)
 		nil)
-            (if (member error-severity '(:warning :error)) t nil)
-            ;; FIXME in the following we should not return t for a STYLE-WARNING
+	    ;; CLHS says the second return value "is false if no
+	    ;; conditions of type error or warning were detected by
+	    ;; the compiler".  This should include style-warnings.
+            (not (null error-severity))
+            ;; FIXME in the following we should not return t for a
+            ;; STYLE-WARNING
 	    (if (member error-severity '(:warning :error)) t nil))))
 
 ;;;; COMPILE and UNCOMPILE:
