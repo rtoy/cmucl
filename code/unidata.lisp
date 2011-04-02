@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.24 2011/02/23 03:02:33 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.25 2011/04/02 20:11:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (defconstant +unidata-path+ #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.24 $")
+(defvar *unidata-version* "$Revision: 1.25 $")
 
 (defstruct unidata
   range
@@ -779,8 +779,7 @@
 	 (n (exact-match-dictionary name names)))
       (when n
 	(let ((cp (aref (dictionary-codev names) n)))
-	  (if (minusp cp) nil cp))))))
-
+	  (if (minusp cp) nil cp)))))
 
 (defun unicode-name+ (code ntrie dict)
   (declare (optimize (speed 3) (space 0) (safety 0)
