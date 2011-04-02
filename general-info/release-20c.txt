@@ -28,7 +28,7 @@ New in this release:
       with all features available, except only Unicode is supported.
 
   * Changes
-    - ASDF2 updated to version 2.010.
+    - ASDF2 updated to version 2.014.1.
     - COMPILE-FILE now accepts a :DECODING-ERROR argument that
       indicates how to handle decoding errors when reading the file.
       It has the same meaning and effect as the :DECODING-ERROR
@@ -72,6 +72,8 @@ New in this release:
     - In COMPILE-FILE, the :OUTPUT-FILE can also be a stream.
     - (OPEN f :DIRECTION :IO :IF-DOES-NOT-EXIST NIL) no longer signals
       an error if f does not exist.  It returns NIL now.
+    - The second value returned by COMPLE-FILE is now T when there are
+      style warnings.
 
   * Bugfixes:
     - The pairwise composition table is now correctly built.
@@ -119,7 +121,7 @@ New in this release:
       functions used by TRACE can cause bad things.
     - In some situations the compiler could not constant fold SQRT
       calls because KERNEL:%SQRT was not defined on x86 with SSE2.
-      Fix this.
+      Fix this by making sure KERNEL:%SQRT is defined.
 
   * Trac Tickets:
     - #43: unread-char doesn't change file-position
