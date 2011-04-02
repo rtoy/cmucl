@@ -11,10 +11,10 @@ msgstr ""
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: Korean\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: Korean\n"
 
 #: src/code/struct.lisp
 msgid "The size of a stream in-buffer."
@@ -7780,6 +7780,10 @@ msgid "Can only specify one section"
 msgstr ""
 
 #: src/code/format.lisp
+msgid "~~:; directive not effective in ~~:["
+msgstr ""
+
+#: src/code/format.lisp
 msgid "Must specify exactly two sections."
 msgstr ""
 
@@ -10750,8 +10754,8 @@ msgstr ""
 msgid ""
 "~2&~@<Imminent dynamic space overflow has occurred:~%~\n"
 "            Only a small amount of dynamic space is available now.~%~\n"
-"            Please note that you will be returned to the Top-Level without~%"
-"~\n"
+"            Please note that you will be returned to the Top-Level without~"
+"%~\n"
 "            warning if you run out of space while debugging.~@:>~%"
 msgstr ""
 
