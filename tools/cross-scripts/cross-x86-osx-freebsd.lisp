@@ -40,7 +40,10 @@
    '(:x86-bootstrap
      ;; :alpha :osf1 :mips
      :propagate-fun-type :propagate-float-type :constrain-float-type
-     ;; :openbsd :freebsd :glibc2 :linux
+     ;; :openbsd :freebsd :glibc2
+     :openbsd
+     :glibc2
+     :linux
      :mach-o :darwin
      :long-float :new-random :small))
 
