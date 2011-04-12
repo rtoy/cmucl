@@ -42,12 +42,12 @@
    '(:x86-bootstrap
      ;; :alpha :osf1 :mips
      :propagate-fun-type :propagate-float-type :constrain-float-type
-     ;; :openbsd :freebsd :glibc2 :linux
+     :openbsd :freebsd :glibc2 :linux
      :mach-o :darwin
      :long-float :new-random :small))
 ;;;
 (setf *features* (remove :bsd *features*))
-;; Set up the linkage space stuff appropriately for sparc.
+;; Set up the linkage space stuff appropriately for x86-solaris.
 (setf (c::backend-foreign-linkage-space-start c::*target-backend*)
       #x30000000
       (c::backend-foreign-linkage-entry-size c::*target-backend*)
