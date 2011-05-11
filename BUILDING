@@ -245,6 +245,12 @@ the scripts included with this little text?
 Overview of the included build scripts
 --------------------------------------
 
+* src/tools/build.sh [-123obvuBCU?]
+
+This is the main build script.  It essentially calls the other build
+scripts described below in the proper sequence to build cmucl from an
+existing binary of cmucl.
+
 * src/tools/create-target.sh target-directory [lisp-variant [motif-variant]]
 
 This script creates a new target directory, which is a shadow of the
