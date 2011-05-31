@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.26 2010/11/02 18:30:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.27 2011/05/31 13:26:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -300,6 +300,10 @@
 (defswitch "debug-lisp-search" nil
   "Enables printing of messages indication how CMUCL is searching for
   its default core file.")
+
+(defswitch "unidata" nil
+  "Specify the unidata.bin file to be used."
+  "filename")
 
 #+x86
 (intl:with-textdomain ("cmucl" "cmucl-x86-vm")

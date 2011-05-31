@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.25 2011/04/02 20:11:31 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.26 2011/05/31 13:26:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,9 +16,9 @@
 (export '(string-to-nfd string-to-nfkc string-to-nfkd string-to-nfc
 	  unicode-complete unicode-complete-name))
 
-(defconstant +unidata-path+ #p"ext-formats:unidata.bin")
+(defvar *unidata-path* "ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.25 $")
+(defvar *unidata-version* "$Revision: 1.26 $")
 
 (defstruct unidata
   range
@@ -495,7 +495,7 @@
 		  (read-vector lvec stm :endian-swap :network-order)
 		  (values split hvec mvec lvec))))
        (declare (ignorable #'read16 #'read32 #'read-ntrie))
-       (with-open-file (,stm +unidata-path+ :direction :input
+       (with-open-file (,stm *unidata-path* :direction :input
 			     :element-type '(unsigned-byte 8))
 	 (unless (unidata-locate ,stm ,locn)
 	   (error (intl:gettext "No data in file.")))

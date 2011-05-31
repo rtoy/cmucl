@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.81 2010/12/26 16:04:43 rswindells Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.82 2011/05/31 13:26:41 rtoy Exp $
  *
  */
 
@@ -446,6 +446,7 @@ main(int argc, const char *argv[], const char *envp[])
     const char *default_core;
     const char *lib = NULL;
     const char *cmucllib = NULL;
+    const char *unidata = NULL;
     
     fpu_mode_t fpu_type = AUTO;
     boolean monitor;
@@ -547,6 +548,8 @@ main(int argc, const char *argv[], const char *envp[])
 	    monitor = TRUE;
 	} else if (strcmp(arg, "-debug-lisp-search") == 0) {
 	    debug_lisp_search = TRUE;
+        } else if (strcmp(arg, "-unidata") == 0) {
+          unidata = *++argptr;
         }
 #ifdef i386
 	else if (strcmp(arg, "-fpu") == 0) {
@@ -786,6 +789,10 @@ main(int argc, const char *argv[], const char *envp[])
 	    SetSymbolValue(BATCH_MODE, T);
     }
 
+    if (unidata) {
+      SetSymbolValue(UNIDATA_PATH, alloc_string(unidata));
+    }
+    
     /*
      * Pick off sigint until the lisp system gets far enough along to
      * install it's own.

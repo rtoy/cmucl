@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.131 2010/04/20 17:57:45 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.132 2011/05/31 13:26:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2164,9 +2164,9 @@ radix-R.  If you have a power-list then pass it in as PL."
 ;;; is initialized.
 #+unicode
 (defun reinit-char-attributes ()
-  (unless (probe-file +unidata-path+)
+  (unless (probe-file *unidata-path*)
     (cerror _"Continue anyway" _"Cannot find ~S, so unicode support is not available"
-	    +unidata-path+)
+	    *unidata-path*)
     (return-from reinit-char-attributes nil))
   (flet ((set-bit (char bit)
 	   (let ((code (char-code char)))

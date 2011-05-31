@@ -6010,6 +6010,10 @@ msgid ""
 msgstr ""
 
 #: src/code/commandline.lisp
+msgid "Specify a new path to the unidata.bin file to be used."
+msgstr ""
+
+#: src/code/commandline.lisp
 msgid "~&Usage: ~A <options>~2%"
 msgstr ""
 

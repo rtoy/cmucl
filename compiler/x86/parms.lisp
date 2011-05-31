@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.42 2010/12/22 02:12:52 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.43 2011/05/31 13:26:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -351,6 +351,15 @@
       ;; common slot unbound check.
       pcl::..slot-unbound..
 
+      ;; Used by CGC.
+      *x86-cgc-active-p*
+      ;; Foreign linkage stuff
+      lisp::*linkage-table-data*
+      system::*global-table*
+
+      *current-region-free-pointer*
+      *current-region-end-addr*
+
       ;; These are filled in the C run-time.
       lisp::*cmucl-lib*
       lisp::*cmucl-core-path*
@@ -361,8 +370,10 @@
       :key-and-value
       :key-or-value
 
+      lisp::*unidata-path*
       ;; Spare symbols.  Rename these when you need to add some static
       ;; symbols and don't want to do a cross-compile.
+      spare-9
       spare-8
       spare-7
       spare-6
@@ -372,16 +383,7 @@
       spare-2
       spare-1
       
-      ;; Used by CGC.
-      *x86-cgc-active-p*
-      ;; Foreign linkage stuff
-      lisp::*linkage-table-data*
-      system::*global-table*
-      *current-region-free-pointer*
-      *current-region-end-addr*
       *static-blue-bag*		; Must be last or change C code
-
-      
       ))
 
 (defparameter static-functions
