@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.123 2011/02/17 02:55:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.124 2011/05/31 13:14:39 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1948,7 +1948,8 @@
 ;;;
 (defun next-version (name)
   (declare (type simple-string name))
-  (let* ((sep (position #\/ name :from-end t))
+  (let* ((*ignore-wildcards* t)
+	 (sep (position #\/ name :from-end t))
 	 (base (if sep (subseq name 0 (1+ sep)) ""))
 	 (dir (unix:open-dir base)))
     (multiple-value-bind (name type version)
