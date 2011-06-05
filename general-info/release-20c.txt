@@ -48,6 +48,9 @@ New in this release:
       variants (x87/sse2, unicode/8-bit).
     - LISP::ENUMERATE-MATCHES had a keyword arg named
       :VERIFY-EXISTANCE.  This has been changed to :VERIFY-EXISTENCE. 
+    - Added -unidata command line option to allow user to specify the
+      unidata.bin file to be used instead of the default one.
+    - :CMUCL is now in *FEATURES*.
 
   * ANSI compliance fixes:
     - Fixes for signaling errors with READ-CHAR and READ-BYTE
@@ -99,7 +102,7 @@ New in this release:
     - SET-SYSTEM-EXTERNAL-FORMAT was not actually setting the filename
       encoding if given.
     - SUBSEQ with an end index less than the start index sometimes
-      crashes CMUCL. Now, signal an error if the boudns are not
+      crashes CMUCL. Now, signal an error if the bounds are not
       valid. 
     - Localization support was causing many calls to stat trying to
       find non-existent translation files.  This has been fixed so
@@ -118,10 +121,13 @@ New in this release:
       because the function is in one of CMUCL's internal
       implementation packages.  If you know what you're doing, you can
       use the trace option :encapsulate nil to trace them.  Tracing
-      functions used by TRACE can cause bad things.
+      functions used by TRACE can cause bad things to happen.
     - In some situations the compiler could not constant fold SQRT
       calls because KERNEL:%SQRT was not defined on x86 with SSE2.
       Fix this by making sure KERNEL:%SQRT is defined.
+    - Opening a file whose name contains "[" with :IF-EXISTS
+      :NEW-VERSION no longer causes an error.
+
 
   * Trac Tickets:
     - #43: unread-char doesn't change file-position
