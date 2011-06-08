@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.16 2010/05/12 02:50:11 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.17 2011/06/08 15:56:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -140,6 +140,10 @@
 (defmodule :defsystem
     "modules:defsystem/defsystem")
 
+;; Allow user to load asdf using either (require :asdf) or (require
+;; "asdf")
 (defmodule :asdf
     "modules:asdf/asdf")
 
+(defmodule "asdf"
+    "modules:asdf/asdf")
