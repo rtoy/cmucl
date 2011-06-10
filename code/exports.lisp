@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.304 2011/02/02 12:51:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.305 2011/06/10 17:38:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -910,7 +910,8 @@
   #+unicode
   (:export "STRING-TO-NFC" "STRING-TO-NFD"
 	   "STRING-TO-NFKC" "STRING-TO-NFKD"
-	   "UNICODE-COMPLETE" "UNICODE-COMPLETE-NAME"))
+	   "UNICODE-COMPLETE" "UNICODE-COMPLETE-NAME"
+	   "LOAD-ALL-UNICODE-DATA"))
 
 (defpackage "EVAL"
   (:export "*EVAL-STACK-TRACE*" "*INTERNAL-APPLY-NODE-TRACE*"

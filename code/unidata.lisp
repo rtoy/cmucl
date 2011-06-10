@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.26 2011/05/31 13:26:40 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.27 2011/06/10 17:38:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,11 +14,12 @@
 (intl:textdomain "cmucl")
 
 (export '(string-to-nfd string-to-nfkc string-to-nfkd string-to-nfc
-	  unicode-complete unicode-complete-name))
+	  unicode-complete unicode-complete-name
+	  load-all-unicode-data))
 
 (defvar *unidata-path* "ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.26 $")
+(defvar *unidata-version* "$Revision: 1.27 $")
 
 (defstruct unidata
   range
@@ -473,33 +474,38 @@
     (let ((n (read32 stream)))
       (and (plusp n) (file-position stream n)))))
 
+;; List of all defined defloaders
+(defvar *defloaders* nil)
+
 (defmacro defloader (name (stm locn) &body body)
-  `(defun ,name ()
-     (labels ((read16 (stm)
-		(logior (ash (read-byte stm) 8) (read-byte stm)))
-	      (read32 (stm)
-		(logior (ash (read16 stm) 16) (read16 stm)))
-	      (read-ntrie (bits stm)
-		(let* ((split (read-byte stm))
-		       (hlen (read16 stm))
-		       (mlen (read16 stm))
-		       (llen (read16 stm))
-		       (hvec (make-array hlen
-				   :element-type '(unsigned-byte 16)))
-		       (mvec (make-array mlen
-				   :element-type '(unsigned-byte 16)))
-		       (lvec (make-array llen
-				   :element-type (list 'unsigned-byte bits))))
-		  (read-vector hvec stm :endian-swap :network-order)
-		  (read-vector mvec stm :endian-swap :network-order)
-		  (read-vector lvec stm :endian-swap :network-order)
-		  (values split hvec mvec lvec))))
-       (declare (ignorable #'read16 #'read32 #'read-ntrie))
-       (with-open-file (,stm *unidata-path* :direction :input
-			     :element-type '(unsigned-byte 8))
-	 (unless (unidata-locate ,stm ,locn)
-	   (error (intl:gettext "No data in file.")))
-	 ,@body))))
+  `(progn
+     (push ',name *defloaders*)
+     (defun ,name ()
+       (labels ((read16 (stm)
+		  (logior (ash (read-byte stm) 8) (read-byte stm)))
+		(read32 (stm)
+		  (logior (ash (read16 stm) 16) (read16 stm)))
+		(read-ntrie (bits stm)
+		  (let* ((split (read-byte stm))
+			 (hlen (read16 stm))
+			 (mlen (read16 stm))
+			 (llen (read16 stm))
+			 (hvec (make-array hlen
+					   :element-type '(unsigned-byte 16)))
+			 (mvec (make-array mlen
+					   :element-type '(unsigned-byte 16)))
+			 (lvec (make-array llen
+					   :element-type (list 'unsigned-byte bits))))
+		    (read-vector hvec stm :endian-swap :network-order)
+		    (read-vector mvec stm :endian-swap :network-order)
+		    (read-vector lvec stm :endian-swap :network-order)
+		    (values split hvec mvec lvec))))
+	 (declare (ignorable #'read16 #'read32 #'read-ntrie))
+	 (with-open-file (,stm *unidata-path* :direction :input
+			       :element-type '(unsigned-byte 8))
+	   (unless (unidata-locate ,stm ,locn)
+	     (error (intl:gettext "No data in file.")))
+	   ,@body)))))
 
 (defloader load-range (stm 0)
   (let* ((n (read32 stm))
@@ -1572,3 +1578,44 @@
 	    (incf p (length code))
 	    (return)))))
     (nreverse (coerce res 'vector))))
+
+;; This is primarily intended for users who what to create a core
+;; image that contains all of the unicode data.  By doing this, the
+;; resulting image no longer needs unidata.bin anymore.  This is
+;; useful for an executable image.
+(defun load-all-unicode-data ()
+  "Load all unicode data and set *UNIDATA-PATH* to NIL.
+Normally, the unicode data is loaded as needed.  This loads all of the
+data, which is useful for creating a core that no longer needs
+unidata.bin."
+  (dolist (loader (reverse *defloaders*))
+    (funcall loader))
+  t)
+
+;; CHeck to see if all of the unicode data has been loaded.
+(defun unicode-data-loaded-p ()
+  ;; FIXME: Would be nice to be able to do this automatically from the
+  ;; structure without having to list every slot here.
+  (and (unidata-range *unicode-data*)
+       (unidata-name+ *unicode-data*)
+       (unidata-name *unicode-data*)
+       (unidata-category *unicode-data*)
+       (unidata-scase *unicode-data*)
+       (unidata-numeric *unicode-data*)
+       (unidata-decomp *unicode-data*)
+       (unidata-combining *unicode-data*)
+       (unidata-bidi *unicode-data*)
+       (unidata-name1+ *unicode-data*)
+       (unidata-name1 *unicode-data*)
+       (unidata-qc-nfd *unicode-data*)
+       (unidata-qc-nfkd *unicode-data*)
+       (unidata-qc-nfc *unicode-data*)
+       (unidata-qc-nfkc *unicode-data*)
+       (unidata-comp-exclusions *unicode-data*)
+       (unidata-full-case-lower *unicode-data*)
+       (unidata-full-case-title *unicode-data*)
+       (unidata-full-case-upper *unicode-data*)
+       (unidata-case-fold-simple *unicode-data*)
+       (unidata-case-fold-full *unicode-data*)
+       (unidata-word-break *unicode-data*)
+       t))

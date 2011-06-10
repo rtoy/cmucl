@@ -51,6 +51,9 @@ New in this release:
     - Added -unidata command line option to allow user to specify the
       unidata.bin file to be used instead of the default one.
     - :CMUCL is now in *FEATURES*.
+    - Add LISP:LOAD-ALL-UNICODE-DATA to load all the Unicode
+      information into core.  This is useful for creating an
+      executable image that does not need unidata.bin.
 
   * ANSI compliance fixes:
     - Fixes for signaling errors with READ-CHAR and READ-BYTE
