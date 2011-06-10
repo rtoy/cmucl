@@ -28,7 +28,7 @@ New in this release:
       with all features available, except only Unicode is supported.
 
   * Changes
-    - ASDF2 updated to version 2.014.1.
+    - ASDF2 updated to version 2.016.
     - COMPILE-FILE now accepts a :DECODING-ERROR argument that
       indicates how to handle decoding errors when reading the file.
       It has the same meaning and effect as the :DECODING-ERROR
@@ -54,6 +54,9 @@ New in this release:
     - Add LISP:LOAD-ALL-UNICODE-DATA to load all the Unicode
       information into core.  This is useful for creating an
       executable image that does not need unidata.bin.
+    - CMUCL no longer exits if you specify a core file with an
+      executable image.  A warning is printed instead and the core
+      file is used.
 
   * ANSI compliance fixes:
     - Fixes for signaling errors with READ-CHAR and READ-BYTE
