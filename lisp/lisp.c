@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.82 2011/05/31 13:26:41 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.83 2011/06/10 19:32:31 rtoy Exp $
  *
  */
 
@@ -480,8 +480,8 @@ main(int argc, const char *argv[], const char *envp[])
 	if (strcmp(arg, "-core") == 0) {
 	    if (builtin_image_flag) {
 		fprintf(stderr,
-			"Cannot specify core file in executable image --- sorry about that.\n");
-		exit(1);
+			"Warning:  specifying a core file with an executable image is unusual,\nbut should work.\n");
+                builtin_image_flag = 0;
 	    }
 
 	    if (core != NULL) {
