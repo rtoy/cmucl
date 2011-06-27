@@ -1,5 +1,17 @@
 #!/bin/sh
 
+usage() {
+    echo "make-src-dist.sh: [-bgh] [-t gnutar] [-I destdir] version"
+    echo "  -h           This help"
+    echo "  -b           Use bzip2 compression"
+    echo "  -g           Use gzip compression"
+    echo "  -t tar       Name/path to GNU tar"
+    echo "  -I destdir   Install directly to given directory instead of creating a tarball"
+    echo ""
+    echo 'Create a tar ball of the cmucl sources.  The tarball is named '
+    echo 'cmucl-src-$version.tar.bz2  (or gz if using gzip compression)'
+}
+
 while getopts "bgh?t:I:" arg
 do
     case $arg in
@@ -25,10 +37,11 @@ if [ -n "$ENABLE_BZIP" ]; then
     ZIPEXT="bz2"
 fi
 
+GTAR_OPTIONS="--exclude=CVS --exclude='*.pot.~*~'"
 if [ -z "$INSTALL_DIR" ]; then
     echo "  Compressing with $ZIP"
-    ${GTAR:-tar} --exclude=CVS -cf - src | ${ZIP} > cmucl-src-$VERSION.tar.$ZIPEXT
+    ${GTAR:-tar} ${GTAR_OPTIONS} -cf - src | ${ZIP} > cmucl-src-$VERSION.tar.$ZIPEXT
 else
     # Install in the specified directory
-    ${GTAR:-tar} --exclude=CVS -cf - src | (cd $INSTALL_DIR; ${GTAR:-tar} xf -)
+    ${GTAR:-tar} ${GTAR_OPTIONS} -cf - src | (cd $INSTALL_DIR; ${GTAR:-tar} xf -)
 fi
