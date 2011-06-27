@@ -4,11 +4,14 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.27 2011/06/10 17:38:27 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unidata.lisp,v 1.28 2011/06/27 15:11:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Unicode Database access
+;;;
+;;; See tools/build-unidata.lisp for the instructions and code to
+;;; create the unicode database.
 
 (in-package "LISP")
 (intl:textdomain "cmucl")
@@ -19,7 +22,7 @@
 
 (defvar *unidata-path* "ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.27 $")
+(defvar *unidata-version* "$Revision: 1.28 $")
 
 (defstruct unidata
   range
@@ -57,8 +60,8 @@
 
 ;; The expected Unicode version.  This needs to be synced with
 ;; build-unidata.lisp.
-(defconstant +unicode-major-version+ 5)
-(defconstant +unicode-minor-version+ 2)
+(defconstant +unicode-major-version+ 6)
+(defconstant +unicode-minor-version+ 0)
 (defconstant +unicode-update-version+ 0)
 
 ;;; These need to be synched with tools/build-unidata.lisp

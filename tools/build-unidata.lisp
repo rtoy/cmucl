@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.8 2010/09/19 03:31:12 rtoy Rel $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.9 2011/06/27 15:11:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,8 +53,8 @@
 (defconstant +unicode-magic-number+ #x2A554344)
 
 ;; The expected Unicode version
-(defconstant +unicode-major-version+ 5)
-(defconstant +unicode-minor-version+ 2)
+(defconstant +unicode-major-version+ 6)
+(defconstant +unicode-minor-version+ 0)
 (defconstant +unicode-update-version+ 0)
 
 ;;; These need to be synched with code/unidata.lisp
@@ -947,7 +947,7 @@
 ;; ucd-directory should be the directory where UnicodeData.txt is
 ;; located.
 (defun build-unidata (&optional (ucd-directory "target:i18n/"))
-  (format t "~&Reading data~%")
+  (format t "~&Reading data from ~S~%" (probe-file ucd-directory))
   (multiple-value-bind (ucd range) (read-data ucd-directory)
     (setf (unidata-range *unicode-data*) range)
     (format t "~&Building character name tables~%")
