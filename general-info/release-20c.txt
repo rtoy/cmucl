@@ -21,7 +21,7 @@ New in this release:
   * Known issues:
 
   * Feature enhancements
-    - Update to Unicode 5.2.0.
+    - Update to Unicode 6.0.0.
     - Add support for character name completion.  This can be used by
       Slime to do character name completion.
     - Initial support for Solaris/x86.  CMUCL will run on Solaris/x86
@@ -136,8 +136,6 @@ New in this release:
 
 
   * Trac Tickets:
-    - #43: unread-char doesn't change file-position
-      Fixed.
 
   * Other changes:
 
