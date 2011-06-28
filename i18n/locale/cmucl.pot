@@ -5318,6 +5318,14 @@ msgstr ""
 msgid "Build the dictionary for CJK Unified Ideographs"
 msgstr ""
 
+#: src/code/unidata.lisp
+msgid ""
+"Load all unicode data and set *UNIDATA-PATH* to NIL.\n"
+"Normally, the unicode data is loaded as needed.  This loads all of the\n"
+"data, which is useful for creating a core that no longer needs\n"
+"unidata.bin."
+msgstr ""
+
 #: src/code/char.lisp
 msgid "The upper exclusive bound on values produced by CHAR-CODE."
 msgstr ""
