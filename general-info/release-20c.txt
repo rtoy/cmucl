@@ -136,12 +136,18 @@ New in this release:
 
 
   * Trac Tickets:
+    - #43: unread-char doesn't change file-position
+      Fixed.
 
   * Other changes:
 
   * Improvements to the PCL implementation of CLOS:
 
   * Changes to building procedure:
+    - A new script, src/tools/build-all.sh, has been added.  This will
+      compile all variants for a given OS and architecture.  That is,
+      both x87 and sse2 binaries are built (if available) as well as
+      unicode and non-unicode versions.
 
 This release is not binary compatible with code compiled using CMUCL
 20b; you will need to recompile FASL files. 
