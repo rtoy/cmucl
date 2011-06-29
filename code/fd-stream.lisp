@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.124 2011/05/31 13:14:39 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.125 2011/06/29 00:55:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1717,35 +1717,50 @@
 			       (fd-stream-ibuf-head stream)))
 
 		 #+unicode
-		 (if (fd-stream-string-buffer stream)
-		     ;; The string buffer contains Lisp characters,
-		     ;; not octets!  To figure out how many octets
-		     ;; have not been already supplied, we need to
-		     ;; count how many octets were consumed for all
-		     ;; the characters in the string bbuffer that have
-		     ;; not been supplied.
-		     (let ((ocount (fd-stream-octet-count stream)))
-		       (when ocount
-			 ;; Note: string-index starts at 1 (because
-			 ;; index 0 is for the unread-char), but
-			 ;; octet-count doesn't use that.  Hence,
-			 ;; subtract one from string-index and
-			 ;; string-buffer-len.
-			 (loop for k of-type fixnum from (1- (fd-stream-string-index stream))
-			    below (1- (fd-stream-string-buffer-len stream))
-			    do (decf posn (aref ocount k)))))
-		     (when (fd-stream-in-buffer stream)
-		       ;; When we have an in-buffer (but no
-		       ;; string-buffer!), we need to adjust for the
-		       ;; octets that have not yet been supplied.
-		       ;; This situation (should!) only happens for an
-		       ;; external-format of ISO-8859-1.  If there's
-		       ;; no string-buffer and no in-buffer, then the
-		       ;; ibuf tail and head pointers contain all the
-		       ;; information needed.
-		       (decf posn (- in-buffer-length
-				     (fd-stream-in-index stream)))))
-		 
+		 (when (fd-stream-string-buffer stream)
+		   ;; The string buffer contains Lisp characters,
+		   ;; not octets!  To figure out how many octets
+		   ;; have not been already supplied, we need to
+		   ;; count how many octets were consumed for all
+		   ;; the characters in the string bbuffer that have
+		   ;; not been supplied.
+		   (let ((ocount (fd-stream-octet-count stream)))
+		     (when ocount
+		       ;; Note: string-index starts at 1 (because
+		       ;; index 0 is for the unread-char), but
+		       ;; octet-count doesn't use that.  Hence,
+		       ;; subtract one from string-index and
+		       ;; string-buffer-len.
+		       #+nil
+		       (progn
+			 (format t "~&ocount = ~D~%" ocount)
+			 (format t "posn = ~D~%" posn))
+		       (loop for k of-type fixnum from (1- (fd-stream-string-index stream))
+			       below (1- (fd-stream-string-buffer-len stream))
+			     do (decf posn (aref ocount k)))
+		       #+nil
+		       (progn
+			 (format t "new posn = ~D~%" posn)
+			 (format t "in-buffer-length = ~D~%" in-buffer-length)
+			 (format t "fd-stream-in-index = ~D~%" (fd-stream-in-index stream))))))
+		 (when (fd-stream-in-buffer stream)
+		   ;; When we have an in-buffer (whether we have a
+		   ;; string-buffer or not!), we need to adjust for
+		   ;; the octets that have not yet been supplied.
+		   ;; (This case happens with string-buffer when the
+		   ;; in-buffer does not have enough octets to form a
+		   ;; complete character.)  If there's no
+		   ;; string-buffer and no in-buffer, then the ibuf
+		   ;; tail and head pointers contain all the
+		   ;; information needed.
+		   #+nil
+		   (progn
+		     (format t "in-buffer-length = ~D~%" in-buffer-length)
+		     (format t "fd-stream-in-index = ~D~%" (fd-stream-in-index stream)))
+		   (decf posn (- in-buffer-length
+				 (fd-stream-in-index stream))))
+		 #+nil
+		 (format t "fd-stream-unread = ~S~%" (fd-stream-unread stream))
 		 (when (fd-stream-unread stream) ;;@@
 		   (decf posn))
 		 ;; Divide bytes by element size.

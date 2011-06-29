@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.101 2011/06/27 15:05:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.102 2011/06/29 00:55:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -851,12 +851,6 @@
 			    (setf (lisp-stream-string-buffer-len stream) (1+ char-count))
 			    (setf (lisp-stream-string-index stream) 2)
 			    (setf (lisp-stream-in-index stream) octet-count)
-			    ;; If we didn't convert all the octets,
-			    ;; adjust the head pointer to indicate
-			    ;; that we have unread octets left.
-			    #+nil
-			    (decf (lisp::fd-stream-ibuf-head stream)
-				  (- (fd-stream-in-length stream) octet-count))
 			    #+(or debug-frc-sr)
 			    (progn
 			      (format t "new in-index = ~A~%" (lisp-stream-in-index stream))
