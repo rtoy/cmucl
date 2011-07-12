@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.18 2010/12/14 21:22:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.19 2011/07/12 17:19:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -237,7 +237,7 @@
 		       (values (info typed-structure textdomain x)))
 		      (t
 		       nil))))
-    (or (intl:dgettext domain doc)
+    (or (and doc (intl:dgettext domain doc))
 	doc)))
 
   
