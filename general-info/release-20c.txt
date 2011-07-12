@@ -133,6 +133,9 @@ New in this release:
       Fix this by making sure KERNEL:%SQRT is defined.
     - Opening a file whose name contains "[" with :IF-EXISTS
       :NEW-VERSION no longer causes an error.
+    - Getting documentation of a structure via DOCUMENTATION no longer
+      signals an error in DGETTEXT trying to translate the null
+      documentation string.
 
 
   * Trac Tickets:
