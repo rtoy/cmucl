@@ -57,6 +57,7 @@ New in this release:
     - CMUCL no longer exits if you specify a core file with an
       executable image.  A warning is printed instead and the core
       file is used.
+    - Improve type propagation for LOAD-TIME-VALUE.
 
   * ANSI compliance fixes:
     - Fixes for signaling errors with READ-CHAR and READ-BYTE

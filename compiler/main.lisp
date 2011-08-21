@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.160 2011/03/28 12:07:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.161 2011/08/21 15:16:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1246,10 +1246,13 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
   (let ((lambda (compile-load-time-stuff form name t)))
     (values
      (fasl-dump-load-time-value-lambda lambda *compile-object*)
-     (let ((type (leaf-type lambda)))
-       (if (function-type-p type)
-	   (single-value-type (function-type-returns type))
-	   *wild-type*)))))
+     (or (let ((return (lambda-return lambda)))
+	   (if return
+	       (single-value-type (return-result-type return))))
+	 (let ((type (leaf-type lambda)))
+	   (if (function-type-p type)
+	       (single-value-type (function-type-returns type))))
+	 *wild-type*))))
 
 ;;; COMPILE-MAKE-LOAD-FORM-INIT-FORMS  --  internal.
 ;;;

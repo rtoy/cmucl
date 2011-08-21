@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltv.lisp,v 1.4 2010/04/19 15:08:20 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltv.lisp,v 1.5 2011/08/21 15:16:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,10 +35,10 @@
 	  (compile-load-time-value (if read-only-p
 				       form
 				       `(make-value-cell ,form)))
-	(declare (ignore type))
 	(ir1-convert start cont
 		     (if read-only-p
-			 `(%load-time-value ',handle)
+			 `(truly-the ,(type-specifier type)
+				     (%load-time-value ',handle))
 			 `(value-cell-ref (%load-time-value ',handle)))))
       (let ((value
 	     (handler-case (eval form)
