@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.40 2010/04/20 17:57:45 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.41 2011/08/21 07:43:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -368,7 +368,7 @@
 			 (fixnum (sap+ current size))
 			 (memory-size (sap+ current size)))))
 		(setf current c))))
-	 (declare (inline next))
+	 (declare (inline next maybe-finish-mapping))
 	 (loop
 	    (maybe-finish-mapping)
 	    (maybe-skip-page)
