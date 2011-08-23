@@ -28,7 +28,7 @@ New in this release:
       with all features available, except only Unicode is supported.
 
   * Changes
-    - ASDF2 updated to version 2.016.
+    - ASDF2 updated to version 2.017.
     - COMPILE-FILE now accepts a :DECODING-ERROR argument that
       indicates how to handle decoding errors when reading the file.
       It has the same meaning and effect as the :DECODING-ERROR
