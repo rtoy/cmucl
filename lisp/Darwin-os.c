@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.31 2010/12/26 16:04:43 rswindells Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.32 2011/09/01 04:39:56 rtoy Exp $
  *
  */
 
@@ -453,6 +453,23 @@ valid_addr(os_vm_address_t addr)
     return FALSE;
 }
 
+static void
+sigbus_handle_now(HANDLER_ARGS)
+{
+    interrupt_handle_now(signal, code, context);
+}
+
+
+static int tramp_signal;
+static siginfo_t tramp_code;
+static ucontext_t tramp_context;
+
+static void
+sigbus_handler_tramp(void)
+{
+  sigbus_handle_now(tramp_signal, &tramp_code, &tramp_context);
+}
+
 
 static void
 sigbus_handler(HANDLER_ARGS)
@@ -461,6 +478,11 @@ sigbus_handler(HANDLER_ARGS)
     caddr_t fault_addr = code->si_addr;
 #endif
     
+#ifdef RED_ZONE_HIT
+    if (os_control_stack_overflow((void *) fault_addr, context))
+	return;
+#endif
+
 #ifdef __ppc__
     DPRINTF(0, (stderr, "sigbus:\n"));
     DPRINTF(0, (stderr, " PC       = %p\n", SC_PC(context)));
@@ -472,6 +494,21 @@ sigbus_handler(HANDLER_ARGS)
     DPRINTF(0, (stderr, " foreign_function_call = %d\n", foreign_function_call_active));
 #endif
     
+#ifdef RED_ZONE_HIT
+    {
+        /*
+         * Switch back to the normal stack and invoke the Lisp signal
+         * handler there.  Global variables are used to pass the
+         * context * to the other stack.
+         */
+	tramp_signal = signal;
+	tramp_code = *code;
+	tramp_context = *context;
+	SC_PC(context) = sigbus_handler_tramp;
+	return;
+    }
+#endif
+
 #if defined(GENCGC)
 #if defined(SIGSEGV_VERBOSE)
     fprintf(stderr, "Signal %d, fault_addr=%x, page_index=%d:\n",
@@ -485,7 +522,7 @@ sigbus_handler(HANDLER_ARGS)
 #endif
     /* a *real* protection fault */
     fprintf(stderr, "sigbus_handler: Real protection violation: %p\n", fault_addr);
-    interrupt_handle_now(signal, code, context);
+    sigbus_handle_now(signal, code, context);
 #ifdef __ppc__
     /* Work around G5 bug; fix courtesy gbyers via chandler */
     sigreturn(context);

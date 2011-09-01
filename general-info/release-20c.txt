@@ -138,6 +138,9 @@ New in this release:
       signals an error in DGETTEXT trying to translate the null
       documentation string.
     - Reduce unnecessary consing of SAPs in ROOM.
+    - Make stack overflow checking actually work on Mac OS X.  The
+      implementation had the :stack-checking feature, but it didn't
+      actually prevent stack overflows from crashing lisp.
 
 
   * Trac Tickets:
