@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.33 2011/09/01 05:18:26 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.34 2011/09/01 16:16:49 rtoy Exp $
  *
  */
 
@@ -497,6 +497,17 @@ sigbus_handler(HANDLER_ARGS)
     DPRINTF(0, (stderr, " foreign_function_call = %d\n", foreign_function_call_active));
 #endif
     
+#if defined(GENCGC)
+#if defined(SIGSEGV_VERBOSE)
+    fprintf(stderr, "Signal %d, fault_addr=%x\n",
+	    signal, fault_addr);
+#endif
+    if (gc_write_barrier(code->si_addr))
+	 return;
+#else
+    if (interrupt_maybe_gc(signal, code, context))
+	return;
+#endif
 #ifdef RED_ZONE_HIT
     {
         /*
@@ -504,6 +515,7 @@ sigbus_handler(HANDLER_ARGS)
          * handler there.  Global variables are used to pass the
          * context * to the other stack.
          */
+      
 	tramp_signal = signal;
 	tramp_code = *code;
 	tramp_context = *context;
@@ -512,17 +524,6 @@ sigbus_handler(HANDLER_ARGS)
     }
 #endif
 
-#if defined(GENCGC)
-#if defined(SIGSEGV_VERBOSE)
-    fprintf(stderr, "Signal %d, fault_addr=%x, page_index=%d:\n",
-	    signal, fault_addr, page_index);
-#endif
-    if (gc_write_barrier(code->si_addr))
-	 return;
-#else
-    if (interrupt_maybe_gc(signal, code, context))
-	return;
-#endif
     /* a *real* protection fault */
     fprintf(stderr, "sigbus_handler: Real protection violation: %p\n", fault_addr);
     sigbus_handle_now(signal, code, context);
