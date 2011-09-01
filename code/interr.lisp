@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.50 2010/04/20 17:57:44 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.51 2011/09/01 16:53:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -666,9 +666,9 @@
 (defun yellow-zone-hit ()
   (let ((debug:*stack-top-hint* nil))
     (format *error-output*
-	    (intl:gettext "~2&~@<A control stack overflow has occurred: ~
-            the program has entered the yellow control stack guard zone.  ~
-            Please note that you will be returned to the Top-Level if you ~
+	    (intl:gettext "~2&~@<A control stack overflow has occurred:~%~
+            the program has entered the yellow control stack guard zone.~%~
+            Please note that you will be returned to the Top-Level if you~%~
             enter the red control stack guard zone while debugging.~@:>~2%"))
     (infinite-error-protect (error 'stack-overflow))))
 
