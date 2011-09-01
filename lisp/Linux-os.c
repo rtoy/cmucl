@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.51 2010/12/26 16:04:43 rswindells Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.52 2011/09/01 05:18:26 rtoy Exp $
  *
  */
 
@@ -132,6 +132,15 @@ check_personality(struct utsname *name, const char *argv[], const char *envp[])
 }
 
 void
+os_init0(const char *argv[], const char *envp[])
+{
+    struct utsname name;
+
+    uname(&name);
+    check_personality(&name, argv, envp);
+}
+
+void
 os_init(const char *argv[], const char *envp[])
 {
     struct utsname name;
@@ -146,8 +155,6 @@ os_init(const char *argv[], const char *envp[])
     }
 
     os_vm_page_size = getpagesize();
-
-    check_personality(&name, argv, envp);
 }
 
 #ifdef __i386

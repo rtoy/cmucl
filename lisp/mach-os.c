@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mach-os.c,v 1.8 2010/02/01 16:04:43 rtoy Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mach-os.c,v 1.9 2011/09/01 05:18:26 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -36,6 +36,10 @@ task_self(void)
     return mach_task_self();
 }
 #endif
+
+void
+os_init0(const char *argv[], const char *envp[])
+{}
 
 void
 os_init(const char *argv[], const char *envp[])

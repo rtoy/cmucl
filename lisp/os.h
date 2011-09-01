@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.27 2010/12/26 16:04:43 rswindells Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.28 2011/09/01 05:18:26 rtoy Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -72,6 +72,7 @@
 
 extern os_vm_size_t os_vm_page_size;
 
+extern void os_init0(const char *argv[], const char *envp[]);
 extern void os_init(const char *argv[], const char *envp[]);
 extern void os_install_interrupt_handlers(void);
 

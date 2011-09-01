@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.32 2011/09/01 04:39:56 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.33 2011/09/01 05:18:26 rtoy Exp $
  *
  */
 
@@ -99,6 +99,9 @@ timebase_init(void)
 }
 #endif
 
+void
+os_init0(const char *argv[], const char *envp[])
+{}
 
 void
 os_init(const char *argv[], const char *envp[])

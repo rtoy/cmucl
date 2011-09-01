@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/irix-os.c,v 1.6 2010/02/01 16:04:43 rtoy Rel $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/irix-os.c,v 1.7 2011/09/01 05:18:26 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -28,6 +28,10 @@
 os_vm_size_t os_vm_page_size = (-1);
 
 int zero_fd;
+
+void
+os_init0(const char *argv[], const char *envp[])
+{}
 
 void
 os_init(const char *argv[], const char *envp[])

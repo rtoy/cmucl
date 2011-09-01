@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.19 2010/12/26 16:04:43 rswindells Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.20 2011/09/01 05:18:26 rtoy Exp $
  *
  */
 
@@ -44,6 +44,10 @@ size_t os_vm_page_size;
 #include "gencgc.h"
 #endif
 
+
+void
+os_init0(const char *argv[], const char *envp[])
+{}
 
 void
 os_init(const char *argv[], const char *envp[])

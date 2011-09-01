@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.83 2011/06/10 19:32:31 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.84 2011/09/01 05:18:26 rtoy Exp $
  *
  */
 
@@ -461,6 +461,16 @@ main(int argc, const char *argv[], const char *envp[])
     }
     
 
+    /*
+     * Do any special OS initialization that needs to be done early.
+     * In particular, on Linux, we might re-exec ourselves to set our
+     * personality correctly.  Not normally a problem, but this does
+     * cause any output to happen twice.  That can be confusing.
+     *
+     * So make sure we don't do any output before this point!
+     */
+    
+    os_init0(argv, envp);
 #if defined(SVR4)
     tzset();
 #endif
