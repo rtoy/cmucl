@@ -141,6 +141,8 @@ New in this release:
     - Make stack overflow checking actually work on Mac OS X.  The
       implementation had the :stack-checking feature, but it didn't
       actually prevent stack overflows from crashing lisp.
+    - Fix rounding of numbers larger than a fixnum.  (See Trac #10 for
+      a related issue.)
 
 
   * Trac Tickets:

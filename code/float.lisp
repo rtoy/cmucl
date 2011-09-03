@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.48 2010/04/20 17:57:44 rtoy Rel $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.49 2011/09/03 05:19:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1257,40 +1257,45 @@ rounding modes & do ieee round-to-integer.
 ;;; represented by an integer.]
 ;;;
 (defun %unary-round (number)
-  (number-dispatch ((number real))
-    ((integer) number)
-    ((ratio) (values (round (numerator number) (denominator number))))
-    (((foreach single-float double-float #+long-float long-float))
-     (if (< (float most-negative-fixnum number)
-	    number
-	    (float most-positive-fixnum number))
-	 (truly-the fixnum (%unary-round number))
-	 (multiple-value-bind (bits exp)
-	     (integer-decode-float number)
+  (flet ((round-integer (bits exp sign)
 	   (let* ((shifted (ash bits exp))
-		  (rounded (if (and (minusp exp)
-				    (oddp shifted)
-				    (not (zerop (logand bits
-							(ash 1 (- -1 exp))))))
+		  (roundup-p 
+		    ;; Round if the are fraction bits (exp is
+		    ;; negative).
+		    (when (minusp exp)
+		      (let ((fraction (ldb (byte (- exp) 0) bits))
+			    (half (ash 1 (- -1 exp))))
+			;; If the fraction is less than half, then no
+			;; rounding.  Otherwise, round up if the
+			;; fraction is greater than half or the
+			;; integer part is odd (for round-to-even).
+			(cond ((> fraction half) t)
+			      ((< fraction half) nil)
+			      ((oddp shifted)
+			       t)))))
+		  (rounded (if roundup-p
 			       (1+ shifted)
 			       shifted)))
-	     (if (minusp number)
+	     
+	     (if (minusp sign)
 		 (- rounded)
-		 rounded)))))
-    #+double-double
-    ((double-double-float)
-     (multiple-value-bind (bits exp)
-	 (integer-decode-float number)
-       (let* ((shifted (ash bits exp))
-	      (rounded (if (and (minusp exp)
-				(oddp shifted)
-				(not (zerop (logand bits
-						    (ash 1 (- -1 exp))))))
-			   (1+ shifted)
-			   shifted)))
-	 (if (minusp number)
-	     (- rounded)
-	     rounded))))))
+		 rounded))))
+    (number-dispatch ((number real))
+      ((integer) number)
+      ((ratio) (values (round (numerator number) (denominator number))))
+      (((foreach single-float double-float #+long-float long-float))
+       (if (< (float most-negative-fixnum number)
+	      number
+	      (float most-positive-fixnum number))
+	   (truly-the fixnum (%unary-round number))
+	   (multiple-value-bind (bits exp sign)
+	       (integer-decode-float number)
+	     (round-integer bits exp sign))))
+      #+double-double
+      ((double-double-float)
+       (multiple-value-bind (bits exp sign)
+	   (integer-decode-float number)
+	 (round-integer bits exp sign))))))
 
 (declaim (maybe-inline %unary-ftruncate/single-float
 		       %unary-ftruncate/double-float))
