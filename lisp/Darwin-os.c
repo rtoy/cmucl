@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.34 2011/09/01 16:16:49 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.35 2011/09/03 04:46:34 rtoy Exp $
  *
  */
 
@@ -462,18 +462,6 @@ sigbus_handle_now(HANDLER_ARGS)
     interrupt_handle_now(signal, code, context);
 }
 
-
-static int tramp_signal;
-static siginfo_t tramp_code;
-static ucontext_t tramp_context;
-
-static void
-sigbus_handler_tramp(void)
-{
-  sigbus_handle_now(tramp_signal, &tramp_code, &tramp_context);
-}
-
-
 static void
 sigbus_handler(HANDLER_ARGS)
 {
@@ -508,24 +496,10 @@ sigbus_handler(HANDLER_ARGS)
     if (interrupt_maybe_gc(signal, code, context))
 	return;
 #endif
-#ifdef RED_ZONE_HIT
-    {
-        /*
-         * Switch back to the normal stack and invoke the Lisp signal
-         * handler there.  Global variables are used to pass the
-         * context * to the other stack.
-         */
-      
-	tramp_signal = signal;
-	tramp_code = *code;
-	tramp_context = *context;
-	SC_PC(context) = sigbus_handler_tramp;
-	return;
-    }
-#endif
 
     /* a *real* protection fault */
-    fprintf(stderr, "sigbus_handler: Real protection violation: %p\n", fault_addr);
+    fprintf(stderr, "sigbus_handler: Real protection violation at %p, PC = %p\n",
+            fault_addr, SC_PC(context));
     sigbus_handle_now(signal, code, context);
 #ifdef __ppc__
     /* Work around G5 bug; fix courtesy gbyers via chandler */
