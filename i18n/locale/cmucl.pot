@@ -10725,9 +10725,10 @@ msgstr ""
 
 #: src/code/interr.lisp
 msgid ""
-"~2&~@<A control stack overflow has occurred: ~\n"
-"            the program has entered the yellow control stack guard zone.  ~\n"
-"            Please note that you will be returned to the Top-Level if you ~\n"
+"~2&~@<A control stack overflow has occurred:~%~\n"
+"            the program has entered the yellow control stack guard zone.~%~\n"
+"            Please note that you will be returned to the Top-Level if "
+"you~%~\n"
 "            enter the red control stack guard zone while debugging.~@:>~2%"
 msgstr ""
 
