@@ -34,7 +34,7 @@ c) GNU make
 d) The CMU CL source code
 
    Here you can either use one of the release source tarballs, or
-   check out the source code directly from the public CMUCL CVS
+   check out the source code directly from the public CMUCL git
    repository.
 
 If you want to build CMU CL's Motif interface/toolkit, you'll need a
@@ -53,11 +53,13 @@ Setting up a build environment
 
     tar xzf /tmp/cmucl-source.tar.gz
 
-    or, if you want to use the CVS sources directly:
+    or, if you want to use the git sources directly:
 
-    export CVSROOT=:pserver:anonymous@common-lisp.net:/project/cmucl/cvsroot
-    cvs login  (password is `anonymous')
-    cvs co src
+    git clone git://common-lisp.net/projects/cmucl/cmucl.git src
+
+    (The "src" is important to keep everything the same with git as it
+    was with cvs.  If you use a different name, adjust the directions
+    below accordingly.)
 
     Whatever you do, the sources must be in a directory named src
     inside the base directory.  Since the build tools keep all
