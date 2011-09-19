@@ -58,8 +58,7 @@ Setting up a build environment
     git clone git://common-lisp.net/projects/cmucl/cmucl.git src
 
     (The "src" is important to keep everything the same with git as it
-    was with cvs.  If you use a different name, adjust the directions
-    below accordingly.)
+    was with cvs.)
 
     Whatever you do, the sources must be in a directory named src
     inside the base directory.  Since the build tools keep all
