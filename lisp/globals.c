@@ -24,6 +24,7 @@ lispobj *dynamic_1_space;
 unsigned dynamic_space_size;
 lispobj *control_stack;
 
+
 #if (defined(i386) || defined(__x86_64))
 lispobj *control_stack_end;
 #endif
@@ -37,6 +38,12 @@ lispobj *current_dynamic_space_free_pointer;
 #ifndef INTERNAL_GC_TRIGGER
 lispobj *current_auto_gc_trigger;
 #endif
+
+unsigned long read_only_space_size;
+unsigned long binding_stack_size;
+unsigned long static_space_size;
+unsigned long control_stack_size;
+
 
 void
 globals_init(void)

@@ -37,6 +37,11 @@
 #include "elf.h"
 #endif
 #endif
+
+#ifdef __linux__
+#include <sys/utsname.h>
+#endif
+
 
 
 /* SIGINT handler that invokes the monitor. */
@@ -484,6 +489,26 @@ main(int argc, const char *argv[], const char *envp[])
 #else
     dynamic_space_size = DYNAMIC_SPACE_SIZE;
 #endif
+#ifdef DEFAULT_READ_ONLY_SIZE
+    read_only_space_size = DEFAULT_READ_ONLY_SIZE;
+#else
+    read_only_space_size = READ_ONLY_SPACE_SIZE;
+#endif
+#ifdef DEFAULT_STATIC_SIZE
+    static_space_size = DEFAULT_STATIC_SIZE;
+#else
+    static_space_size = STATIC_SPACE_SIZE;
+#endif
+#ifdef DEFAULT_BINDING_SIZE
+    binding_stack_size = DEFAULT_BINDING_SIZE;
+#else
+    binding_stack_size = BINDING_STACK_SIZE;
+#endif    
+#ifdef DEFAULT_CONTROL_SIZE
+    control_stack_size = DEFAULT_CONTROL_SIZE;
+#else
+    control_stack_size = CONTROL_STACK_SIZE;
+#endif
 
     argptr = argv;
     while ((arg = *++argptr) != NULL) {
@@ -511,6 +536,70 @@ main(int argc, const char *argv[], const char *envp[])
 			"-lib must be followed by a string denoting the CMUCL library path.\n");
 		exit(1);
 	    }
+        } else if (strcmp(arg, "-read-only-space-size") == 0) {
+            const char *str = *++argptr;
+
+            if (str == NULL) {
+                fprintf(stderr,
+                        "-read-only-space-size must be followed by the size in MBytes.\n");
+                exit(1);
+            }
+            read_only_space_size = atoi(str) * 1024 * 1024;
+            if (read_only_space_size > READ_ONLY_SPACE_SIZE) {
+                fprintf(stderr,
+                        "-read-only-space-size must be no greater than %lu MBytes.\n",
+                        READ_ONLY_SPACE_SIZE / (1024 * 1024UL));
+                fprintf(stderr, "  Continuing with default size.\n");
+                read_only_space_size = READ_ONLY_SPACE_SIZE;
+            }
+        } else if (strcmp(arg, "-static-space-size") == 0) {
+            const char *str = *++argptr;
+
+            if (str == NULL) {
+                fprintf(stderr,
+                        "-static-space-size must be followed by the size in MBytes.\n");
+                exit(1);
+            }
+            static_space_size = atoi(str) * 1024 * 1024;
+            if (static_space_size > STATIC_SPACE_SIZE) {
+                fprintf(stderr,
+                        "-static-space-size must be no greater than %lu MBytes.\n",
+                        STATIC_SPACE_SIZE / (1024 * 1024UL));
+                fprintf(stderr, "  Continuing with default size.\n");
+                static_space_size = STATIC_SPACE_SIZE;
+            }
+        } else if (strcmp(arg, "-binding-stack-size") == 0) {
+            const char *str = *++argptr;
+
+            if (str == NULL) {
+                fprintf(stderr,
+                        "-binding-stack-size must be followed by the size in MBytes.\n");
+                exit(1);
+            }
+            binding_stack_size = atoi(str) * 1024 * 1024;
+            if (binding_stack_size > BINDING_STACK_SIZE) {
+                fprintf(stderr,
+                        "-binding-stack-size must be no greater than %lu MBytes.\n",
+                        BINDING_STACK_SIZE / (1024 * 1024UL));
+                fprintf(stderr, "  Continuing with default size.\n");
+                binding_stack_size = BINDING_STACK_SIZE;
+            }
+        } else if (strcmp(arg, "-control-stack-size") == 0) {
+            const char *str = *++argptr;
+
+            if (str == NULL) {
+                fprintf(stderr,
+                        "-control-stack-size must be followed by the size in MBytes.\n");
+                exit(1);
+            }
+            control_stack_size = atoi(str) * 1024 * 1024;
+            if (control_stack_size > CONTROL_STACK_SIZE) {
+                fprintf(stderr,
+                        "-control-stack-size must be no greater than %lu MBytes.\n",
+                        CONTROL_STACK_SIZE / (1024 * 1024UL));
+                fprintf(stderr, "  Continuing with default size.\n");
+                control_stack_size = CONTROL_STACK_SIZE;
+            }
 	} else if (strcmp(arg, "-dynamic-space-size") == 0) {
 	    const char *str;
 

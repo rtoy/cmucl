@@ -69,6 +69,10 @@ static int zero_fd = (-1), empty_fd = (-1);
 static os_vm_address_t last_fault = 0;
 static os_vm_size_t real_page_size_difference = 0;
 
+void
+os_init0(const char *argv[], const char *envp[])
+{}
+
 static void
 os_init_bailout(arg)
      char *arg;

@@ -444,14 +444,14 @@ valid_addr(os_vm_address_t addr)
 
     newaddr = os_trunc_to_page(addr);
 
-    if (in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
-	|| in_range_p(addr, STATIC_SPACE_START, STATIC_SPACE_SIZE)
+    if (in_range_p(addr, READ_ONLY_SPACE_START, read_only_space_size)
+	|| in_range_p(addr, STATIC_SPACE_START, static_space_size)
 	|| in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)
 #ifndef GENCGC
 	|| in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
 #endif
-	|| in_range_p(addr, CONTROL_STACK_START, CONTROL_STACK_SIZE)
-	|| in_range_p(addr, BINDING_STACK_START, BINDING_STACK_SIZE))
+	|| in_range_p(addr, CONTROL_STACK_START, control_stack_size)
+	|| in_range_p(addr, BINDING_STACK_START, binding_stack_size))
 	return TRUE;
     return FALSE;
 }

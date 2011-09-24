@@ -149,6 +149,11 @@ New in this release:
     - #43: unread-char doesn't change file-position
       Fixed.
 
+    - #47: Added command line flags -read-only-space-size,
+      -static-space-size, -control-stack-size, and -binding-stack-size
+      to control the size of the each region.  The default size for
+      each is unchanged.
+
   * Other changes:
 
   * Improvements to the PCL implementation of CLOS:

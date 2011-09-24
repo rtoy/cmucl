@@ -55,8 +55,30 @@ most unnecessary noise, like GC messages, load messages, etc. to be suppressed.
 Requires an argument that should be the number of megabytes (1048576 bytes)
 that should be allocated to the heap.  If not specified, a platform-specific
 default is used.  The actual maximum allowed heap size is platform-specific.
-Currently, this option is only available for the x86 and sparc platforms. 
 .TP
+.TP
+.BR \-read-only-space-size
+Requires an argument that should be the number of megabytes (1048576 bytes)
+that should be allocated to the read-only space.  If not specified, a platform-specific
+default is used.
+.TP
+.TP
+.BR \-static-space-size
+Requires an argument that should be the number of megabytes (1048576 bytes)
+that should be allocated to the static-space.  If not specified, a platform-specific
+default is used.  The actual maximum allowed heap size is platform-specific.
+.TP
+.TP
+.BR \-control-stack-size
+Requires an argument that should be the number of megabytes (1048576 bytes)
+that should be allocated for the control stack.  If not specified, a platform-specific
+default is used.  The actual maximum allowed heap size is platform-specific.
+.TP
+.TP
+.BR \-binding-stack-size
+Requires an argument that should be the number of megabytes (1048576 bytes)
+that should be allocated for the binding stack.  If not specified, a platform-specific
+default is used.  The actual maximum allowed heap size is platform-specific.
 .BR \-edit
 Causes Lisp to enter the 
 .I Hemlock

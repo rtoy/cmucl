@@ -283,8 +283,36 @@
 
 (defswitch "dynamic-space-size" nil
   "Specifies the number of megabytes that should be allocated to the
-  heap.  If not specified, a platform- specific default is used.  The
+  heap.  If not specified, a platform-specific default is used.  The
   actual maximum allowed heap size is platform-specific."
+  "megabytes")
+
+(defswitch "read-only-space-size" nil
+  "Specifies the number of megabytes that should be allocated for the
+  read-only space.  If not specified, a platform-specific default is
+  used.  The actual maximum allowed read-only size is
+  platform-specific."
+  "megabytes")
+
+(defswitch "static-space-size" nil
+  "Specifies the number of megabytes that should be allocated for the
+  static space.  If not specified, a platform-specific default is
+  used.  The actual maximum allowed static space size is
+  platform-specific."
+  "megabytes")
+
+(defswitch "control-stack-size" nil
+  "Specifies the number of megabytes that should be allocated for the
+  control stack.  If not specified, a platform-specific default is
+  used.  The actual maximum allowed control stack size is
+  platform-specific."
+  "megabytes")
+
+(defswitch "binding-stack-size" nil
+  "Specifies the number of megabytes that should be allocated for the
+  binding stack.  If not specified, a platform-specific default is
+  used.  The actual maximum allowed binding stack size is
+  platform-specific."
   "megabytes")
 
 (defswitch "lib" nil

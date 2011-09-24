@@ -1531,7 +1531,7 @@ flip_spaces(void)
  * to just the assigned lisp stack area.
  */
 #if defined i386
-#define BOS (CONTROL_STACK_START+CONTROL_STACK_SIZE)	/* x86-validate.h */
+#define BOS (CONTROL_STACK_START+control_stack_size)	/* x86-validate.h */
 /* Traverse stack in same direction as it was loaded to try and
  * preserve original ordering of pages. Good for the VM system I hope.
  */

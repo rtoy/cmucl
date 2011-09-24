@@ -50,13 +50,13 @@ static lispobj *current_dynamic_space_free_pointer;
 
 
 #define assert_static_space_bounds(ptr) do { \
-   if (!((lispobj*)STATIC_SPACE_START <= ptr && ptr < (lispobj*)(STATIC_SPACE_START + STATIC_SPACE_SIZE))) \
+   if (!((lispobj*)STATIC_SPACE_START <= ptr && ptr < (lispobj*)(STATIC_SPACE_START + static_space_size))) \
       lose ("static-space overflow!  File \"%s\", line %d\n", \
 			__FILE__, __LINE__); \
 } while (0)
 
 #define assert_readonly_space_bounds(ptr) do { \
-   if (!((lispobj*)READ_ONLY_SPACE_START <= ptr && ptr < (lispobj*)(READ_ONLY_SPACE_START + READ_ONLY_SPACE_SIZE))) \
+   if (!((lispobj*)READ_ONLY_SPACE_START <= ptr && ptr < (lispobj*)(READ_ONLY_SPACE_START + read_only_space_size))) \
       lose ("readonly-space overflow!  File \"%s\", line %d\n", \
 			__FILE__, __LINE__); \
 } while (0)
@@ -1751,7 +1751,7 @@ purify(lispobj static_roots, lispobj read_only_roots)
      */
 #if !(defined(i386) || defined(__x86_64))
     os_zero((os_vm_address_t) current_control_stack_pointer,
-	    (os_vm_size_t) (CONTROL_STACK_SIZE -
+	    (os_vm_size_t) (control_stack_size -
 			    ((current_control_stack_pointer - control_stack) *
 			     sizeof(lispobj))));
 #endif

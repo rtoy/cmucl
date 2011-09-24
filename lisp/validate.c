@@ -18,11 +18,6 @@
 #include "validate.h"
 #include "internals.h"
 
-unsigned long read_only_space_size = READ_ONLY_SPACE_SIZE;
-unsigned long binding_stack_size = BINDING_STACK_SIZE;
-unsigned long static_space_size = STATIC_SPACE_SIZE;
-unsigned long control_stack_size = CONTROL_STACK_SIZE;
-
 #ifdef sparc
 extern void make_holes(void);
 #endif
@@ -61,7 +56,7 @@ validate(void)
        FMG
     */
     ensure_space((lispobj *)((int)read_only_space + image_read_only_space_size),
-		 READ_ONLY_SPACE_SIZE - image_read_only_space_size);
+		 read_only_space_size - image_read_only_space_size);
 
     /* Static Space */
     static_space = (lispobj *) STATIC_SPACE_START;
@@ -71,7 +66,7 @@ validate(void)
        FMG
     */
     ensure_space((lispobj *)((int)static_space + image_static_space_size),
-		 STATIC_SPACE_SIZE - image_static_space_size);
+		 static_space_size - image_static_space_size);
 
     /* Dynamic-0 Space */
     dynamic_0_space = (lispobj *) DYNAMIC_0_SPACE_START;
@@ -102,9 +97,9 @@ validate(void)
     /* Control Stack */
     control_stack = (lispobj *) CONTROL_STACK_START;
 #if (defined(i386) || defined(__x86_64))
-    control_stack_end = (lispobj *) (CONTROL_STACK_START + CONTROL_STACK_SIZE);
+    control_stack_end = (lispobj *) (CONTROL_STACK_START + control_stack_size);
 #endif
-    ensure_space(control_stack, CONTROL_STACK_SIZE);
+    ensure_space(control_stack, control_stack_size);
 
 #ifdef SIGNAL_STACK_START
     ensure_space((lispobj *) SIGNAL_STACK_START, SIGNAL_STACK_SIZE);
@@ -112,7 +107,7 @@ validate(void)
 
     /* Binding Stack */
     binding_stack = (lispobj *) BINDING_STACK_START;
-    ensure_space(binding_stack, BINDING_STACK_SIZE);
+    ensure_space(binding_stack, binding_stack_size);
 #ifdef LINKAGE_TABLE
     ensure_space((lispobj *) FOREIGN_LINKAGE_SPACE_START,
 		 FOREIGN_LINKAGE_SPACE_SIZE);

@@ -194,14 +194,14 @@ boolean valid_addr(os_vm_address_t addr)
 
     /* Just assume address is valid if it lies within one of the known
        spaces.  (Unlike sunos-os which keeps track of every valid page.) */
-    return (in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
-	    || in_range_p(addr, STATIC_SPACE_START, STATIC_SPACE_SIZE)
+    return (in_range_p(addr, READ_ONLY_SPACE_START, read_only_space_size)
+	    || in_range_p(addr, STATIC_SPACE_START, static_space_size)
 	    || in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)
 #ifndef GENCGC
 	    || in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
 #endif
-	    || in_range_p(addr, CONTROL_STACK_START, CONTROL_STACK_SIZE)
-	    || in_range_p(addr, BINDING_STACK_START, BINDING_STACK_SIZE));
+	    || in_range_p(addr, CONTROL_STACK_START, control_stack_size)
+	    || in_range_p(addr, BINDING_STACK_START, binding_stack_size));
 }
 
 /* ---------------------------------------------------------------- */
@@ -422,9 +422,9 @@ static os_vm_address_t spaces[] = {
  * SPARSE_BLOCK_SIZE boundaries.
  
  */
-static unsigned long space_size[] = {
-    READ_ONLY_SPACE_SIZE, STATIC_SPACE_SIZE,
-    BINDING_STACK_SIZE, CONTROL_STACK_SIZE
+static unsigned long *space_size[] = {
+    &read_only_space_size, &static_space_size,
+    &binding_stack_size, &control_stack_size
 };
 
 /*
@@ -444,7 +444,7 @@ make_holes(void)
 
     for (k = 0; k < sizeof(spaces) / sizeof(spaces[0]); ++k) {
 
-	hole = spaces[k] + space_size[k];
+	hole = spaces[k] + *space_size[k];
 
 	if (os_validate(hole, HOLE_SIZE) == NULL) {
 	    fprintf(stderr,

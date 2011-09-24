@@ -169,20 +169,20 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
     if (Pointerp(obj)
 	&& (p = (void *) PTR(obj),
 	    (p >= (void *) CONTROL_STACK_START
-	     && p < (void *) CONTROL_STACK_END))) {
+	     && p < (void *) control_stack_end))) {
 	char *space;
 
 	if (where >= (lispobj *) DYNAMIC_0_SPACE_START
-	    && where < (lispobj *) (DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE))
+	    && where < (lispobj *) (DYNAMIC_0_SPACE_START + dynamic_space_size))
 	    space = "dynamic space";
 	else if (where >= (lispobj *) STATIC_SPACE_START
 		 && where <
-		 (lispobj *) (STATIC_SPACE_START + STATIC_SPACE_SIZE)) space =
+		 (lispobj *) (STATIC_SPACE_START + static_space_size)) space =
 		"static space";
 	else if (where >= (lispobj *) READ_ONLY_SPACE_START
 		 && where <
 		 (lispobj *) (READ_ONLY_SPACE_START +
-			      READ_ONLY_SPACE_SIZE)) space = "read-only space";
+			      read_only_space_size)) space = "read-only space";
 	else
 	    space = NULL;
 
@@ -198,7 +198,7 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
 		 (unsigned long) obj, where, space);
 #ifndef i386
 	else if ((where >= (lispobj *) CONTROL_STACK_START
-		  && where < (lispobj *) (CONTROL_STACK_END))
+		  && where < (lispobj *) (control_stack_end))
 		 || (space == NULL)) {
 	    /* Do nothing if it the reference is from the control stack,
 	       because that will happen, and that's ok.  Or if it's from
@@ -2003,7 +2003,7 @@ read_only_space_p(lispobj obj)
 static inline boolean
 control_stack_space_p(lispobj obj)
 {
-    lispobj end = CONTROL_STACK_START + CONTROL_STACK_SIZE;
+    lispobj end = CONTROL_STACK_START + control_stack_size;
 
     return (obj >= CONTROL_STACK_START) && (obj < end);
 }
@@ -2011,7 +2011,7 @@ control_stack_space_p(lispobj obj)
 static inline boolean
 binding_stack_space_p(lispobj obj)
 {
-    lispobj end = BINDING_STACK_START + BINDING_STACK_SIZE;
+    lispobj end = BINDING_STACK_START + binding_stack_size;
 
     return (obj >= BINDING_STACK_START) && (obj < end);
 }
@@ -7321,7 +7321,7 @@ garbage_collect_generation(int generation, int raise)
     invalid_stack_end = (void *) &raise;
 #else /* not i386 */
     invalid_stack_start = (void *) &raise;
-    invalid_stack_end = (void *) CONTROL_STACK_END;
+    invalid_stack_end = (void *) control_stack_end;
 #endif /* not i386 */
 #endif /* GC_ASSERTIONS */
 
@@ -7381,7 +7381,7 @@ garbage_collect_generation(int generation, int raise)
     {
 	lispobj **ptr;
 
-	for (ptr = (lispobj **) CONTROL_STACK_END - 1;
+	for (ptr = (lispobj **) control_stack_end - 1;
 	     ptr > (lispobj **) (void *) &raise; ptr--)
 	    preserve_pointer(*ptr);
     }

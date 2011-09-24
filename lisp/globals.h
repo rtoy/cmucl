@@ -23,8 +23,14 @@ extern lispobj *static_space;
 extern lispobj *dynamic_0_space;
 extern lispobj *dynamic_1_space;
 extern unsigned dynamic_space_size;
+extern unsigned static_size;
 extern lispobj *control_stack;
 extern lispobj *binding_stack;
+
+extern unsigned long read_only_space_size;
+extern unsigned long binding_stack_size;
+extern unsigned long static_space_size;
+extern unsigned long control_stack_size;
 
 #if (defined(i386) || defined(__x86_64))
 extern lispobj *control_stack_end;

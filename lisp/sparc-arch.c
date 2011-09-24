@@ -45,7 +45,7 @@ arch_get_bad_addr(HANDLER_ARGS)
     /* that caused the fault. */
     if ((SC_PC(context) & 3) != 0 ||
 	((SC_PC(context) < READ_ONLY_SPACE_START ||
-	  SC_PC(context) >= READ_ONLY_SPACE_START + READ_ONLY_SPACE_SIZE) &&
+	  SC_PC(context) >= READ_ONLY_SPACE_START + read_only_space_size) &&
 	 ((lispobj *) SC_PC(context) < current_dynamic_space &&
 	  (lispobj *) SC_PC(context) >=
 	  current_dynamic_space + dynamic_space_size))) return 0;

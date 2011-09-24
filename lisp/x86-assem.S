@@ -207,12 +207,12 @@ npx_save_done:
 	movl	%esp,%ebx	# remember current stack
 	cmpl	$CONTROL_STACK_START,%esp
 	jbe	ChangeToLispStack
-	cmpl	$CONTROL_STACK_END,%esp
+	cmpl	GNAME(control_stack_end), %esp
 	jbe	OnLispStack
 ChangeToLispStack:
 	/* Setup the *alien-stack* pointer */
 	movl	%esp,ALIEN_STACK + SYMBOL_VALUE_OFFSET
-	movl	$CONTROL_STACK_END,%esp		# New stack
+	movl	GNAME(control_stack_end), %esp		# New stack
 OnLispStack:
 	pushl	%ebx		# save entry stack on (maybe) new stack
 

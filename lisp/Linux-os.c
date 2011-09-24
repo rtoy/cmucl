@@ -131,12 +131,20 @@ check_personality(struct utsname *name, const char *argv[], const char *envp[])
 #endif
 }
 
+/*
+ * Check personality here, before we start processing command line
+ * args.  (Previously it was done in os_init.)  check_personality
+ * can re-exec us, so we end up parsing the command line args
+ * twice.  Not usually a problem unless the processing causes
+ * output, which can be confusing.
+ */
+
 void
 os_init0(const char *argv[], const char *envp[])
 {
     struct utsname name;
-
     uname(&name);
+        
     check_personality(&name, argv, envp);
 }
 
@@ -365,12 +373,12 @@ valid_addr(os_vm_address_t addr)
 
     newaddr = os_trunc_to_page(addr);
 
-    if (in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
-	|| in_range_p(addr, STATIC_SPACE_START, STATIC_SPACE_SIZE)
+    if (in_range_p(addr, READ_ONLY_SPACE_START, read_only_space_size)
+	|| in_range_p(addr, STATIC_SPACE_START, static_space_size)
 	|| in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)
 	|| in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
-	|| in_range_p(addr, CONTROL_STACK_START, CONTROL_STACK_SIZE)
-	|| in_range_p(addr, BINDING_STACK_START, BINDING_STACK_SIZE))
+	|| in_range_p(addr, CONTROL_STACK_START, control_stack_size)
+	|| in_range_p(addr, BINDING_STACK_START, binding_stack_size))
 	return TRUE;
     return FALSE;
 }
@@ -437,7 +445,7 @@ sigsegv_handler(HANDLER_ARGS)
 #ifdef i386
     interrupt_handle_now(signal, contextstruct);
 #else
-#define CONTROL_STACK_TOP (((char*) CONTROL_STACK_START) + CONTROL_STACK_SIZE)
+#define CONTROL_STACK_TOP (((char*) CONTROL_STACK_START) + control_stack_size)
 
     addr = arch_get_bad_addr(signal, code, context);
 
