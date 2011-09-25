@@ -4772,10 +4772,6 @@ msgid ""
 msgstr ""
 
 #: src/code/float-trap.lisp
-msgid "SIGFPE with no exceptions currently enabled?"
-msgstr ""
-
-#: src/code/float-trap.lisp
 msgid ""
 "Execute BODY with the floating point exceptions listed in TRAPS\n"
 "  masked (disabled).  TRAPS should be a list of possible exceptions\n"
@@ -5986,12 +5982,44 @@ msgstr ""
 #: src/code/commandline.lisp
 msgid ""
 "Specifies the number of megabytes that should be allocated to the\n"
-"  heap.  If not specified, a platform- specific default is used.  The\n"
+"  heap.  If not specified, a platform-specific default is used.  The\n"
 "  actual maximum allowed heap size is platform-specific."
 msgstr ""
 
 #: src/code/commandline.lisp
 msgid "megabytes"
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"Specifies the number of megabytes that should be allocated for the\n"
+"  read-only space.  If not specified, a platform-specific default is\n"
+"  used.  The actual maximum allowed read-only size is\n"
+"  platform-specific."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"Specifies the number of megabytes that should be allocated for the\n"
+"  static space.  If not specified, a platform-specific default is\n"
+"  used.  The actual maximum allowed static space size is\n"
+"  platform-specific."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"Specifies the number of megabytes that should be allocated for the\n"
+"  control stack.  If not specified, a platform-specific default is\n"
+"  used.  The actual maximum allowed control stack size is\n"
+"  platform-specific."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid ""
+"Specifies the number of megabytes that should be allocated for the\n"
+"  binding stack.  If not specified, a platform-specific default is\n"
+"  used.  The actual maximum allowed binding stack size is\n"
+"  platform-specific."
 msgstr ""
 
 #: src/code/commandline.lisp
