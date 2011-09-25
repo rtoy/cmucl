@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/values.lisp,v 1.7 2003/10/27 18:30:27 toy Rel $")
+  "$Header: src/compiler/sparc/values.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

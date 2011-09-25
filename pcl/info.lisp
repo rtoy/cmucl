@@ -36,7 +36,7 @@
 ;;; GF is actually non-accessor GF.  Clean this up.
 ;;; (setf symbol-value) should be handled like (setf fdefinition)
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.12 2010/03/19 15:19:03 rtoy Rel $")
+(file-comment "$Header: src/pcl/info.lisp $")
 
 (in-package "PCL")
 (intl:textdomain "cmucl")

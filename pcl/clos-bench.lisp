@@ -55,7 +55,7 @@
 ;;; jmorrill@bbn.com
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/clos-bench.lisp,v 1.4 2010/03/19 15:19:03 rtoy Rel $")
+(ext:file-comment "$Header: src/pcl/clos-bench.lisp $")
  
 #+cmu
 (eval-when (:compile-toplevel :load-toplevel :execute)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.161 2011/08/21 15:16:01 rtoy Exp $")
+  "$Header: src/compiler/main.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

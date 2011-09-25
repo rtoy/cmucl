@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.9 2010/07/19 23:08:37 rtoy Rel $")
+ "$Header: src/assembly/x86/assem-rtns.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;; 

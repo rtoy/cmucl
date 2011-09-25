@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.11 2009/06/11 16:03:56 rtoy Rel $")
+  "$Header: src/assembly/sparc/array.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.11 2009/06/11 16:03:56 rtoy Rel $
+;;; $Header: src/assembly/sparc/array.lisp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;

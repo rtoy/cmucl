@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/system.lisp,v 1.8 1994/10/31 04:45:41 ram Rel $")
+  "$Header: src/compiler/rt/system.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/system.lisp,v 1.8 1994/10/31 04:45:41 ram Rel $
+;;; $Header: src/compiler/rt/system.lisp $
 ;;;
 ;;; IBM RT VM definitions of various system hacking operations.
 ;;;

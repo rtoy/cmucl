@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.40 2010/04/20 17:57:44 rtoy Rel $")
+  "$Header: src/code/defmacro.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.40 2004/07/25 18:25:16 pmai Rel $")
+  "$Header: src/tools/setup.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

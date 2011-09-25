@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.21 2009/08/24 16:04:26 rtoy Rel $")
+ "$Header: src/pcl/simple-streams/strategy.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

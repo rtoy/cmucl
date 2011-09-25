@@ -1,6 +1,6 @@
 ;;; -*- Mode: CLtL -*-
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/timer-support.lisp,v 1.3 1994/10/28 22:35:00 ram Rel $")
+(ext:file-comment "$Header: src/motif/lisp/timer-support.lisp $")
 
 ;;; timers-support.lisp --
 ;;; Extension to CMUCL Motif Interface. Adding missing call for

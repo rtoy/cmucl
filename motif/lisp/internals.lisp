@@ -7,7 +7,7 @@
 ;;; contact Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/internals.lisp,v 1.9 2004/03/23 12:16:49 emarsden Rel $")
+  "$Header: src/motif/lisp/internals.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

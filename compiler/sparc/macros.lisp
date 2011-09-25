@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.37 2010/04/20 17:57:47 rtoy Rel $")
+  "$Header: src/compiler/sparc/macros.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.37 2010/04/20 17:57:47 rtoy Rel $
+;;; $Header: src/compiler/sparc/macros.lisp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;

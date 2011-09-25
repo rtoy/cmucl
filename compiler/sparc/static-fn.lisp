@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/static-fn.lisp,v 1.9 2010/04/20 17:57:47 rtoy Rel $")
+  "$Header: src/compiler/sparc/static-fn.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/static-fn.lisp,v 1.9 2010/04/20 17:57:47 rtoy Rel $
+;;; $Header: src/compiler/sparc/static-fn.lisp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.

@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.17 1997/04/26 20:04:59 dtc Rel $")
+  "$Header: src/compiler/rt/sap.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.17 1997/04/26 20:04:59 dtc Rel $
+;;; $Header: src/compiler/rt/sap.lisp $
 ;;;
 ;;; This file contains the IBM RT VM definition of SAP operations.
 ;;;

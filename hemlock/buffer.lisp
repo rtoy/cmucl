@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/buffer.lisp,v 1.5 2001/03/13 15:49:51 pw Rel $")
+  "$Header: src/hemlock/buffer.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

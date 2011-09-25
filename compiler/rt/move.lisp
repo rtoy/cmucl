@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/move.lisp,v 1.7 2003/08/03 11:27:47 gerd Rel $")
+  "$Header: src/compiler/rt/move.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/move.lisp,v 1.7 2003/08/03 11:27:47 gerd Rel $
+;;; $Header: src/compiler/rt/move.lisp $
 ;;;
 ;;; This file contains the IBM RT VM definition of operand loading/saving and the
 ;;; Move VOP.

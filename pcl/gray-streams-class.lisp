@@ -5,7 +5,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams-class.lisp,v 1.6 2010/03/19 15:19:03 rtoy Rel $")
+  "$Header: src/pcl/gray-streams-class.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

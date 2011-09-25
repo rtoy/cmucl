@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.11 2003/08/03 11:27:50 gerd Rel $")
+ "$Header: src/assembly/x86/arith.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

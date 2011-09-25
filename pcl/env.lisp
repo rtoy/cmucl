@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.27 2010/03/19 15:19:03 rtoy Rel $")
+  "$Header: src/pcl/env.lisp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;

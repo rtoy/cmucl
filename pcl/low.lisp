@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.37 2010/04/19 02:31:14 rtoy Rel $")
+  "$Header: src/pcl/low.lisp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.

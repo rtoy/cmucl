@@ -1,7 +1,7 @@
 ;;; -*- Mode: LISP; Syntax: ANSI-Common-Lisp; Package: STREAM -*-
 ;;;
 ;;; **********************************************************************
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16.lisp,v 1.14 2010/08/14 23:18:04 rtoy Rel $")
+(ext:file-comment "$Header: src/pcl/simple-streams/external-formats/utf-16.lisp $")
 
 (in-package "STREAM")
 (intl:textdomain "cmucl")

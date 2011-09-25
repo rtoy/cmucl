@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/alloc.lisp,v 1.10 2009/06/11 16:03:55 rtoy Rel $")
+  "$Header: src/assembly/mips/alloc.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

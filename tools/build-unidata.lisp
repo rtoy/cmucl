@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;; 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build-unidata.lisp,v 1.9 2011/06/27 15:11:30 rtoy Exp $")
+(ext:file-comment "$Header: src/tools/build-unidata.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

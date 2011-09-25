@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/inline-access.lisp,v 1.3 2003/05/20 20:21:26 gerd Rel $")
+(ext:file-comment "$Header: src/pcl/rt/inline-access.lisp $")
 
 (in-package "PCL-TEST")
 

@@ -27,7 +27,7 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/seal.lisp,v 1.4 2010/03/19 15:19:03 rtoy Rel $")
+(file-comment "$Header: src/pcl/seal.lisp $")
 
 (in-package "PCL")
 (intl:textdomain "cmucl")

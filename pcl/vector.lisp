@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.30 2010/03/19 15:19:03 rtoy Rel $")
+  "$Header: src/pcl/vector.lisp $")
 
 (in-package :pcl)
 (intl:textdomain "cmucl")

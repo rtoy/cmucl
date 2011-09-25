@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/debug.lisp,v 1.5 1994/10/31 04:45:41 ram Rel $")
+  "$Header: src/compiler/rt/debug.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/debug.lisp,v 1.5 1994/10/31 04:45:41 ram Rel $
+;;; $Header: src/compiler/rt/debug.lisp $
 ;;;
 ;;; Compiler support for the new whizzy debugger.
 ;;;

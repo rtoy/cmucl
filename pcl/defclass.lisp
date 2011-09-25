@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.32 2010/04/17 15:57:04 rtoy Rel $")
+  "$Header: src/pcl/defclass.lisp $")
 ;;;
 
 (in-package :pcl)

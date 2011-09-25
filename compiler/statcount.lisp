@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.7 2010/03/19 15:19:01 rtoy Rel $")
+  "$Header: src/compiler/statcount.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.7 2010/03/19 15:19:01 rtoy Rel $
+;;; $Header: src/compiler/statcount.lisp $
 ;;;
 ;;; Functions and utilities for collecting statistics on static vop usages.
 ;;;

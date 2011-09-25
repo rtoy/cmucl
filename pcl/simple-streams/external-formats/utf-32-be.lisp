@@ -4,7 +4,7 @@
 ;;; This code was written by Raymond Toy and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-32-be.lisp,v 1.11 2010/08/14 23:18:04 rtoy Rel $")
+(ext:file-comment "$Header: src/pcl/simple-streams/external-formats/utf-32-be.lisp $")
 
 (in-package "STREAM")
 (intl:textdomain "cmucl")

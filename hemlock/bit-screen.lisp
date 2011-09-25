@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.18 2001/12/11 00:56:51 pmai Rel $")
+  "$Header: src/hemlock/bit-screen.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

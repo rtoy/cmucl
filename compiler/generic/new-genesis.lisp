@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.95 2010/12/14 00:26:43 rtoy Exp $")
+  "$Header: src/compiler/generic/new-genesis.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

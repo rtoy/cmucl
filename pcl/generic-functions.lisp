@@ -1,7 +1,7 @@
 ;;;-*-Mode:LISP; Package:PCL; Base:10; Syntax:Common-lisp -*-
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.29 2010/03/19 15:19:03 rtoy Rel $")
+  "$Header: src/pcl/generic-functions.lisp $")
 ;;;
 
 (in-package :pcl)

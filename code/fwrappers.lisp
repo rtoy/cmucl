@@ -27,7 +27,7 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fwrappers.lisp,v 1.8 2010/04/20 17:57:44 rtoy Rel $")
+(ext:file-comment "$Header: src/code/fwrappers.lisp $")
 
 (in-package :fwrappers)
 

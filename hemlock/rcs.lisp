@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.29 1995/03/24 13:06:58 ram Rel $
+;;; $Header: src/hemlock/rcs.lisp $
 ;;;
 ;;; Various commands for dealing with RCS under Hemlock.
 ;;;

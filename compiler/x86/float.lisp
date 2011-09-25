@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.61 2010/09/20 20:22:03 rtoy Rel $")
+  "$Header: src/compiler/x86/float.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

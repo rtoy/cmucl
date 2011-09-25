@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.112 2010/07/20 21:34:30 rtoy Rel $
+;;; $Header: src/tools/worldload.lisp $
 ;;;
 ;;; **********************************************************************
 ;;;

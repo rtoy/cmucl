@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.57 2010/04/23 13:23:29 rtoy Rel $")
+  "$Header: src/compiler/globaldb.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

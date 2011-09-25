@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/iso8859-5.lisp,v 1.4 2010/07/12 14:42:11 rtoy Rel $")
+(ext:file-comment "$Header: src/pcl/simple-streams/external-formats/iso8859-5.lisp $")
 
 (in-package "STREAM")
 (intl:textdomain "cmucl")

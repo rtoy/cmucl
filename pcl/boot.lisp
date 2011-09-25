@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.78 2010/04/19 02:31:13 rtoy Rel $")
+ "$Header: src/pcl/boot.lisp $")
 
 (in-package :pcl)
 (intl:textdomain "cmucl")

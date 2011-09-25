@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.34 2009/06/17 21:08:21 rtoy Rel $")
+  "$Header: src/tools/pclcom.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

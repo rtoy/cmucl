@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/static-fn.lisp,v 1.5 2005/12/11 18:30:47 rtoy Rel $
+;;; $Header: src/compiler/ppc/static-fn.lisp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.

@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/hemload.lisp,v 1.3 1991/07/29 08:56:59 chiles Rel $")
+  "$Header: src/tools/hemload.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

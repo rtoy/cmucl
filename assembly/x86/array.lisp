@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.11 2009/06/11 16:03:56 rtoy Rel $")
+ "$Header: src/assembly/x86/array.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

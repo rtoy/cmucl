@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.36 2010/03/19 15:19:03 rtoy Rel $")
+  "$Header: src/pcl/cache.lisp $")
 
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.

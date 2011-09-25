@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/vm.lisp,v 1.4 2010/03/19 15:19:00 rtoy Rel $")
+  "$Header: src/code/vm.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/vm.lisp,v 1.4 2010/03/19 15:19:00 rtoy Rel $
+;;; $Header: src/code/vm.lisp $
 ;;;
 ;;; This file contains stubs for interfacing MACH's vm primitives.
 ;;;

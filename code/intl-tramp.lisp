@@ -4,7 +4,7 @@
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/intl-tramp.lisp,v 1.2 2010/03/19 15:18:59 rtoy Rel $")
+(ext:file-comment "$Header: src/code/intl-tramp.lisp $")
 
 ;;;
 ;;; **********************************************************************

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/array.lisp,v 1.8 2009/06/11 16:03:55 rtoy Rel $
+;;; $Header: src/assembly/ppc/array.lisp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/sap.lisp,v 1.4 1998/03/04 14:56:38 dtc Rel $")
+  "$Header: src/compiler/alpha/sap.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

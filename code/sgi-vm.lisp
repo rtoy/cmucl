@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sgi-vm.lisp,v 1.3 2010/03/19 15:18:59 rtoy Rel $")
+  "$Header: src/code/sgi-vm.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sgi-vm.lisp,v 1.3 2010/03/19 15:18:59 rtoy Rel $
+;;; $Header: src/code/sgi-vm.lisp $
 ;;;
 ;;; This file contains the SGI specific runtime stuff.
 ;;;

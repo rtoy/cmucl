@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.13 2007/03/05 01:55:22 rtoy Rel $
+;;; $Header: src/compiler/ppc/macros.lisp $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;

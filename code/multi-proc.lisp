@@ -5,7 +5,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.46 2010/04/19 02:18:04 rtoy Rel $")
+  "$Header: src/code/multi-proc.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

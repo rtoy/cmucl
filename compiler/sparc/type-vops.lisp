@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.25 2006/06/30 18:41:32 rtoy Rel $")
+  "$Header: src/compiler/sparc/type-vops.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;; 

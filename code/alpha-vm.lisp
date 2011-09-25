@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.8 2010/04/20 17:57:43 rtoy Rel $")
+  "$Header: src/code/alpha-vm.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.8 2010/04/20 17:57:43 rtoy Rel $
+;;; $Header: src/code/alpha-vm.lisp $
 ;;;
 ;;; This file contains the Alpha specific runtime stuff.
 ;;;

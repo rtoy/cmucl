@@ -16,7 +16,7 @@
 ;;; express or implied warranty.
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/doc.lisp,v 1.4 1998/12/19 15:21:16 dtc Rel $")
+  "$Header: src/clx/doc.lisp $")
 
 ;; Version 4
 

@@ -27,7 +27,7 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/slot-type.lisp,v 1.3 2008/12/02 18:18:34 rtoy Rel $")
+(ext:file-comment "$Header: src/pcl/rt/slot-type.lisp $")
  
 (in-package "PCL-TEST")
 

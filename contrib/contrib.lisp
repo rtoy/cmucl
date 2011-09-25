@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/contrib/contrib.lisp,v 1.4 2009/09/09 15:51:27 rtoy Rel $")
+  "$Header: src/contrib/contrib.lisp $")
 
 ;;; Define the various contrib modules.  We use defmodule for now
 ;;; because it's easy for the contribs.

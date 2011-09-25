@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/alloc.lisp,v 1.7 2003/08/03 11:27:50 gerd Rel $")
+  "$Header: src/assembly/rt/alloc.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/alloc.lisp,v 1.7 2003/08/03 11:27:50 gerd Rel $
+;;; $Header: src/assembly/rt/alloc.lisp $
 ;;;
 ;;; Stuff to handle allocating simple objects.
 ;;;

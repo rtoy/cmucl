@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.20 2006/01/20 04:38:20 rtoy Rel $")
+  "$Header: src/compiler/ppc/c-call.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

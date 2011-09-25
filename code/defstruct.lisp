@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.103 2010/12/26 14:54:33 rtoy Exp $")
+  "$Header: src/code/defstruct.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

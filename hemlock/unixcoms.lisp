@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/unixcoms.lisp,v 1.10 1994/10/31 04:50:12 ram Rel $")
+  "$Header: src/hemlock/unixcoms.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

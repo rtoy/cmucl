@@ -6,7 +6,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/env-access.lisp,v 1.8 2010/04/20 17:57:44 rtoy Rel $")
+ "$Header: src/code/env-access.lisp $")
 
 ;;;
 ;;; **********************************************************************

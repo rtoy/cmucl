@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/char.lisp,v 1.14 1994/10/31 04:44:16 ram Rel $")
+  "$Header: src/compiler/mips/char.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/char.lisp,v 1.14 1994/10/31 04:44:16 ram Rel $
+;;; $Header: src/compiler/mips/char.lisp $
 ;;; 
 ;;; This file contains the RT VM definition of character operations.
 ;;;

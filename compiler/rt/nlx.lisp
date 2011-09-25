@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/nlx.lisp,v 1.6 2003/08/03 11:27:47 gerd Rel $")
+  "$Header: src/compiler/rt/nlx.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/nlx.lisp,v 1.6 2003/08/03 11:27:47 gerd Rel $
+;;; $Header: src/compiler/rt/nlx.lisp $
 ;;;
 ;;; This file contains the definitions of VOPs used for non-local exit (throw,
 ;;; lexical exit, etc.)

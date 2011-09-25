@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.27 2010/04/19 02:18:03 rtoy Rel $")
+  "$Header: src/code/bit-bash.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

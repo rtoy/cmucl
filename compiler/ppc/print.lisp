@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/print.lisp,v 1.2 2004/07/25 18:15:52 pmai Rel $
+;;; $Header: src/compiler/ppc/print.lisp $
 ;;;
 ;;; This file contains VOPs for things like printing during %initial-function
 ;;; before the world is initialized.

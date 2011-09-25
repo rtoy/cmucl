@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/assem-rtns.lisp,v 1.6 2006/11/03 03:29:34 rtoy Rel $
+;;; $Header: src/assembly/ppc/assem-rtns.lisp $
 ;;;
 ;;;
 (in-package "PPC")

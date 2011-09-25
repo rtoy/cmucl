@@ -46,7 +46,7 @@
 ;;; is called.
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.19 2010/03/19 15:19:03 rtoy Rel $")
+ "$Header: src/pcl/ctor.lisp $")
 
 (in-package "PCL")
 (intl:textdomain "cmucl")

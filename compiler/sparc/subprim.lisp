@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/subprim.lisp,v 1.4 2003/08/03 11:27:46 gerd Rel $")
+  "$Header: src/compiler/sparc/subprim.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

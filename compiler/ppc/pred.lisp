@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/pred.lisp,v 1.1 2001/02/11 14:22:05 dtc Rel $
+;;; $Header: src/compiler/ppc/pred.lisp $
 ;;;
 ;;;    This file contains the VM definition of predicate VOPs for the SPARC.
 ;;;

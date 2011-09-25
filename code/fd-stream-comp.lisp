@@ -4,7 +4,7 @@
 ;;; This has been placed in the public domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream-comp.lisp,v 1.1 2010/07/20 21:34:29 rtoy Rel $")
+ "$Header: src/code/fd-stream-comp.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

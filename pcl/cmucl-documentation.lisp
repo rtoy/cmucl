@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.19 2011/07/12 17:19:50 rtoy Exp $")
+  "$Header: src/pcl/cmucl-documentation.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

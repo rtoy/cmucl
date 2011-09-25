@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.28 2010/04/19 17:49:02 rtoy Rel $")
+ "$Header: src/compiler/x86/macros.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

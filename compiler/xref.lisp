@@ -3,7 +3,7 @@
 ;;; Author: Eric Marsden <emarsden@laas.fr>
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/xref.lisp,v 1.7 2010/03/19 15:19:01 rtoy Rel $")
+  "$Header: src/compiler/xref.lisp $")
 ;;
 ;; This code was written as part of the CMUCL project and has been
 ;; placed in the public domain.

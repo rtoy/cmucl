@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/slot-missing.lisp,v 1.3 2003/06/17 11:08:00 gerd Rel $")
+(ext:file-comment "$Header: src/pcl/rt/slot-missing.lisp $")
 
 (in-package "PCL-TEST")
 
