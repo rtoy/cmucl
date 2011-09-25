@@ -1101,13 +1101,46 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
   (unless (and (= (length form) 2) (stringp (second form)))
     (compiler-error _N"Bad FILE-COMMENT form: ~S." form))
   (let ((file (first (source-info-current-file *source-info*))))
-    (cond ((file-info-comment file)
-	   (compiler-warning _N"Ignoring extra file comment:~%  ~S." form))
-	  (t
-	   (let ((comment (coerce (second form) 'simple-string)))
-	     (setf (file-info-comment file) comment)
-	     (when *compile-verbose*
-	       (compiler-mumble (intl:gettext "~&; Comment: ~A~2&") comment)))))))
+    (labels
+	((run-git (path)
+	   (let ((cwd (default-directory))
+		 (new (make-pathname :directory (pathname-directory path))))
+	     (unwind-protect
+		  (progn
+		    ;; Cd to the directory containing the file so that
+		    ;; git can find the git repo, if available.
+		    (setf (default-directory) new)
+		    ;; Run git to get the info.  Don't signal any
+		    ;; errors if we can't find git and discard any
+		    ;; error messages from git.  We only use the
+		    ;; result if git returns a zero exit code, anyway.
+		    (handler-case
+			(run-program "git"
+				     (list "log"
+					   "-1"
+					   "--pretty=format:%h %ai %an"
+					   (namestring path))
+				     :output :stream
+				     :error nil)
+		      (error ()
+			nil)))
+	       (setf (default-directory) cwd))))
+	 (generate-comment (file-info)
+	   (let* ((name (pathname (source-info-stream file-info)))
+		  (proc (run-git name)))
+	     (if (and proc (zerop (process-exit-code proc)))
+		 (format nil "$Header: ~A ~A $"
+			 (enough-namestring name)
+			 (read-line (process-output proc)))
+		 (second form)))))
+      (cond ((file-info-comment file)
+	     (compiler-warning _N"Ignoring extra file comment:~%  ~S." form))
+	    (t
+	     (let ((comment (coerce (generate-comment *source-info*)
+				    'simple-string)))
+	       (setf (file-info-comment file) comment)
+	       (when *compile-verbose*
+		 (compiler-mumble (intl:gettext "~&; Comment: ~A~2&") comment))))))))
 
 
 ;;; PROCESS-COLD-LOAD-FORM  --  Internal
