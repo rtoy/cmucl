@@ -33,7 +33,7 @@ usage ()
     echo "    -U        Update and overwite the CVS translations files."
 }
 
-VERSION="CVS Head `date '+%Y-%m-%d %H:%M:%S'`"
+VERSION="`date '+%Y-%m-%d %H:%M:%S'`"
 BASE=build
 CREATE_OPT=""
 
