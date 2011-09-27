@@ -148,11 +148,16 @@ New in this release:
   * Trac Tickets:
     - #43: unread-char doesn't change file-position
       Fixed.
-
     - #47: Added command line flags -read-only-space-size,
       -static-space-size, -control-stack-size, and -binding-stack-size
       to control the size of the each region.  The default size for
       each is unchanged.
+    - #48: RCS keywords in git. The RCS $Header$ keyword has been
+      changed so that file compiler generates the appropriate
+      replacement, which is stored in the fasl.
+    - #49:  RCS keywords need to be updated.  The $Header$ keywords
+      have been replaced with just the file path---the revision, date,
+      and author have been removed.
 
   * Other changes:
 
