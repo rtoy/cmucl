@@ -42,7 +42,10 @@ ENABLE4="yes"
 version=20b
 SRCDIR=src
 TOOLDIR=$SRCDIR/tools
-VERSION="CVS Head `date '+%Y-%m-%d %H:%M:%S'`"
+VERSION="`date '+%Y-%m-%d %H:%M:%S'`"
+GIT_HASH="`(cd src; git log -1 --pretty=format:%t 2>/dev/null)`"
+# Add the tree hash to the version
+VERSION="$VERSION $GIT_HASH"
 BASE=build
 OLDLISP="cmulisp -noinit"
 
@@ -151,7 +154,7 @@ do
 	3) ENABLE4="no" ;;
 	o) OLDLISP=$OPTARG ;;
 	b) BASE=$OPTARG ;;
-	v) VERSION="$OPTARG" ;;
+	v) VERSION="$OPTARG $GIT_HASH" ;;
 	u) SKIPUTILS="yes" ;;
 	C) CREATE_OPT="$OPTARG"
 	   CREATE_DIRS=yes ;;
