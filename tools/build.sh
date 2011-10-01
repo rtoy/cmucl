@@ -47,7 +47,8 @@ GIT_HASH="`(cd src; git log -1 --pretty=format:%t 2>/dev/null)`"
 # Add the tree hash to the version
 VERSION="$VERSION $GIT_HASH"
 BASE=build
-OLDLISP="cmulisp -noinit"
+OLDLISPFLAGS="-noinit -nositeinit"
+OLDLISP="cmulisp"
 
 SKIPUTILS=no
 
@@ -94,7 +95,9 @@ usage ()
     echo "    -?        This help message"
     echo "    -w        Specify a different build-world.sh script"
     echo "    -U        If translations are done, overwrite the CVS files with the"
-    echo "               translations instead of computing and displayin the diffs."
+    echo "               translations instead of computing and displaying the diffs."
+    echo "    -O opt    Any additional command-line flags to use when building."
+    echo "               The flags always include -noinit -nositeinit"
     exit 1
 }
 
@@ -146,7 +149,7 @@ BUILDWORLD="$TOOLDIR/build-world.sh"
 BUILD_POT="yes"
 UPDATE_TRANS=
 
-while getopts "123Po:b:v:uB:C:Ui:f:w:?" arg
+while getopts "123Po:b:v:uB:C:Ui:f:w:O:?" arg
 do
     case $arg in
 	1) ENABLE2="no" ;;
@@ -164,6 +167,7 @@ do
         P) BUILD_POT=no ;;
         w) BUILDWORLD="$OPTARG" ;;
         U) UPDATE_TRANS="yes";;
+	O) OLDLISPFLAGS="$OLDLISPFLAGS $OPTARG" ;;
 	\?) usage
 	    ;;
     esac
@@ -185,13 +189,13 @@ MAKE_TARGET=all
 export INTERACTIVE
 
 BUILD=1
-OLDLISP="$OLDLISP $FPU_MODE"
+OLDLISP="$OLDLISP $OLDLISPFLAGS $FPU_MODE"
 buildit
 
 bootfiles=
 
 TARGET=$BASE-3
-OLDLISP="${BASE}-2/lisp/lisp -noinit $FPU_MODE"
+OLDLISP="${BASE}-2/lisp/lisp $OLDLISPFLAGS $FPU_MODE"
 ENABLE=$ENABLE3
 
 BUILD=2
@@ -202,7 +206,7 @@ buildit
 
 TARGET=$BASE-4
 CLEAN_FLAGS="-K all"
-OLDLISP="${BASE}-3/lisp/lisp -noinit $FPU_MODE"
+OLDLISP="${BASE}-3/lisp/lisp $OLDLISPFLAGS $FPU_MODE"
 ENABLE=$ENABLE4
 
 if [ "${BUILD_POT}" = "yes" ]; then
@@ -220,7 +224,7 @@ buildit
 
 if [ "$SKIPUTILS" = "no" ];
 then
-    OLDLISP="${BASE}-4/lisp/lisp -noinit $FPU_MODE"
+    OLDLISP="${BASE}-4/lisp/lisp $OLDLISPFLAGS $FPU_MODE"
     time $TOOLDIR/build-utils.sh $TARGET $FPU_MODE
 fi
 
