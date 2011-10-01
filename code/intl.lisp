@@ -802,8 +802,7 @@
 							      :type "pot")
 					       output-directory)
 			      :direction :output
-			      :if-exists :new-version
-			      ;;:external-format :utf8
+			      :if-exists :supersede
 			      :external-format :iso8859-1
 			      )
 	       (format t "~&#@ ~A~2%" domain)
