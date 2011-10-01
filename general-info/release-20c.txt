@@ -58,6 +58,8 @@ New in this release:
       executable image.  A warning is printed instead and the core
       file is used.
     - Improve type propagation for LOAD-TIME-VALUE.
+    - Add -O option to build.sh to allow specifying options to lisp
+      when doing the builds.
 
   * ANSI compliance fixes:
     - Fixes for signaling errors with READ-CHAR and READ-BYTE
