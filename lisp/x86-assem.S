@@ -205,7 +205,11 @@ npx_save_done:
 	movl	%eax, GNAME(foreign_function_call_active)
 
 	movl	%esp,%ebx	# remember current stack
+#if defined(CONTROL_STACK_START)
 	cmpl	$CONTROL_STACK_START,%esp
+#else
+	cmpl	GNAME(control_stack),%esp
+#endif
 	jbe	ChangeToLispStack
 	cmpl	GNAME(control_stack_end), %esp
 	jbe	OnLispStack

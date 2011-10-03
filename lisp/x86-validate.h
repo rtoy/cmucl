@@ -131,7 +131,9 @@
 #define BINDING_STACK_START	(0x38000000)
 #define BINDING_STACK_SIZE	(0x07fff000)	/* 128MB - 1 page */
 
+#if !defined(DARWIN)
 #define CONTROL_STACK_START	(0x40000000)
+#endif
 #if defined(DARWIN)
 /*
  * According to /usr/include/sys/signal.h, MINSIGSTKSZ is 32K and
@@ -139,7 +141,9 @@
  */
 #define CONTROL_STACK_SIZE	(0x07fdf000)	/* 128MB - SIGSTKSZ - 1 page */
 
+#if 0
 #define SIGNAL_STACK_START	(0x47fe0000)    /* One page past the end of the control stack */
+#endif
 #define SIGNAL_STACK_SIZE	SIGSTKSZ
 #else
 #define CONTROL_STACK_SIZE	(0x07fd8000)	/* 128MB - SIGSTKSZ */

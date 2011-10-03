@@ -168,7 +168,7 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
 
     if (Pointerp(obj)
 	&& (p = (void *) PTR(obj),
-	    (p >= (void *) CONTROL_STACK_START
+	    (p >= (void *) control_stack
 	     && p < (void *) control_stack_end))) {
 	char *space;
 
@@ -197,7 +197,7 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
 	    lose("Escaped stack-allocated object 0x%08lx at %p in %s\n",
 		 (unsigned long) obj, where, space);
 #ifndef i386
-	else if ((where >= (lispobj *) CONTROL_STACK_START
+	else if ((where >= (lispobj *) control_stack
 		  && where < (lispobj *) (control_stack_end))
 		 || (space == NULL)) {
 	    /* Do nothing if it the reference is from the control stack,
@@ -2003,9 +2003,9 @@ read_only_space_p(lispobj obj)
 static inline boolean
 control_stack_space_p(lispobj obj)
 {
-    lispobj end = CONTROL_STACK_START + control_stack_size;
+    lispobj end = (char*) control_stack + control_stack_size;
 
-    return (obj >= CONTROL_STACK_START) && (obj < end);
+    return (obj >= control_stack) && (obj < end);
 }
 
 static inline boolean

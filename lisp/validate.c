@@ -95,12 +95,17 @@ validate(void)
 #endif
 
     /* Control Stack */
-    control_stack = (lispobj *) CONTROL_STACK_START;
-#if (defined(i386) || defined(__x86_64))
-    control_stack_end = (lispobj *) (CONTROL_STACK_START + control_stack_size);
-#endif
-    ensure_space(control_stack, control_stack_size);
 
+#if defined(CONTROL_STACK_START)
+    control_stack = (lispobj *) CONTROL_STACK_START;
+    ensure_space(control_stack, control_stack_size);
+#else
+    control_stack = (lispobj *) os_allocate(control_stack_size);
+#endif
+#if (defined(i386) || defined(__x86_64))
+    control_stack_end = (lispobj *) ((char*) control_stack + control_stack_size);
+#endif
+    
 #ifdef SIGNAL_STACK_START
     ensure_space((lispobj *) SIGNAL_STACK_START, SIGNAL_STACK_SIZE);
 #endif

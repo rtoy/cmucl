@@ -426,12 +426,12 @@ guard_zones(char **yellow_start, char **red_start)
 {
 #if (defined(i386) || defined(__x86_64))
     if (os_stack_grows_down()) {
-	char *end = (char *) CONTROL_STACK_START;
+	char *end = (char *) control_stack;
 
 	*red_start = end;
 	*yellow_start = *red_start + RED_ZONE_SIZE;
     } else {
-	char *end = (char *) CONTROL_STACK_START + control_stack_size;
+	char *end = (char *) control_stack + control_stack_size;
 
 	*red_start = end - RED_ZONE_SIZE;
 	*yellow_start = *red_start - YELLOW_ZONE_SIZE;
@@ -443,7 +443,7 @@ guard_zones(char **yellow_start, char **red_start)
      * control stack area.
      */
 
-    char *end = (char *) CONTROL_STACK_START + control_stack_size;
+    char *end = (char *) control_stack + control_stack_size;
 
     *red_start = end - RED_ZONE_SIZE;
     *yellow_start = *red_start - YELLOW_ZONE_SIZE;

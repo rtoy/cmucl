@@ -253,7 +253,7 @@ backtrace(int nframes)
 static int
 stack_pointer_p(unsigned long p)
 {
-    return (p < CONTROL_STACK_START + control_stack_size
+    return (p < (unsigned long) ((char *) control_stack + control_stack_size)
 	    && p > (unsigned long) &p && (p & 3) == 0);
 }
 
