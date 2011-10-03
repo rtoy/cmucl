@@ -184,10 +184,14 @@
 #define BINDING_STACK_START	(0x20000000)
 #define BINDING_STACK_SIZE	(0x07fff000)	/* 128MB - 1 page */
 
+#if 0
 #define CONTROL_STACK_START	0x38000000
+#endif
 #define CONTROL_STACK_SIZE	(0x07fff000 - 8192)
 
+#if 0
 #define SIGNAL_STACK_START	CONTROL_STACK_END
+#endif
 #define SIGNAL_STACK_SIZE	SIGSTKSZ
 
 #define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)

@@ -377,7 +377,7 @@ valid_addr(os_vm_address_t addr)
 	|| in_range_p(addr, STATIC_SPACE_START, static_space_size)
 	|| in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)
 	|| in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
-	|| in_range_p(addr, CONTROL_STACK_START, control_stack_size)
+	|| in_range_p(addr, control_stack, control_stack_size)
 	|| in_range_p(addr, BINDING_STACK_START, binding_stack_size))
 	return TRUE;
     return FALSE;
@@ -445,7 +445,7 @@ sigsegv_handler(HANDLER_ARGS)
 #ifdef i386
     interrupt_handle_now(signal, contextstruct);
 #else
-#define CONTROL_STACK_TOP (((char*) CONTROL_STACK_START) + control_stack_size)
+#define CONTROL_STACK_TOP (((char*) control_stack) + control_stack_size)
 
     addr = arch_get_bad_addr(signal, code, context);
 
@@ -455,7 +455,7 @@ sigsegv_handler(HANDLER_ARGS)
     } else if (addr > CONTROL_STACK_TOP && addr < BINDING_STACK_START) {
 	fprintf(stderr, "Possible stack overflow at 0x%08lX!\n", addr);
 	/* try to fix control frame pointer */
-	while (!(CONTROL_STACK_START <= *current_control_frame_pointer &&
+	while (!(control_stack <= *current_control_frame_pointer &&
 		 *current_control_frame_pointer <= CONTROL_STACK_TOP))
 	    ((char *) current_control_frame_pointer) -= sizeof(lispobj);
 	ldb_monitor();
