@@ -200,7 +200,7 @@ boolean valid_addr(os_vm_address_t addr)
 #ifndef GENCGC
 	    || in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
 #endif
-	    || in_range_p(addr, CONTROL_STACK_START, control_stack_size)
+	    || in_range_p(addr, control_stack, control_stack_size)
 	    || in_range_p(addr, BINDING_STACK_START, binding_stack_size));
 }
 
@@ -410,9 +410,11 @@ os_vm_address_t round_up_sparse_size(os_vm_address_t addr)
  * after them.  Must not include the dynamic spaces because the size
  * of the dynamic space can be controlled from the command line.
  */
-static os_vm_address_t spaces[] = {
-    READ_ONLY_SPACE_START, STATIC_SPACE_START,
-    BINDING_STACK_START, CONTROL_STACK_START
+static os_vm_address_t *spaces[] = {
+    (os_vm_address_t*) &read_only_space,
+    (os_vm_address_t*) &static_space,
+    (os_vm_address_t*) &binding_stack,
+    (os_vm_address_t*) &control_stack
 };
 
 /*
@@ -444,7 +446,7 @@ make_holes(void)
 
     for (k = 0; k < sizeof(spaces) / sizeof(spaces[0]); ++k) {
 
-	hole = spaces[k] + *space_size[k];
+	hole = *spaces[k] + *space_size[k];
 
 	if (os_validate(hole, HOLE_SIZE) == NULL) {
 	    fprintf(stderr,
