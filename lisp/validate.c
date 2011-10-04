@@ -94,6 +94,10 @@ validate(void)
     */
 #endif
 
+#ifdef LINKAGE_TABLE
+    ensure_space((lispobj *) FOREIGN_LINKAGE_SPACE_START,
+		 FOREIGN_LINKAGE_SPACE_SIZE);
+#endif
     /* Control Stack */
 
 #if defined(CONTROL_STACK_START)
@@ -113,10 +117,6 @@ validate(void)
     /* Binding Stack */
     binding_stack = (lispobj *) BINDING_STACK_START;
     ensure_space(binding_stack, binding_stack_size);
-#ifdef LINKAGE_TABLE
-    ensure_space((lispobj *) FOREIGN_LINKAGE_SPACE_START,
-		 FOREIGN_LINKAGE_SPACE_SIZE);
-#endif
 #ifdef sparc
     make_holes();
 #endif
