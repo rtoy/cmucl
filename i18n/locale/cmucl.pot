@@ -4772,6 +4772,10 @@ msgid ""
 msgstr ""
 
 #: src/code/float-trap.lisp
+msgid "SIGFPE with no exceptions currently enabled?"
+msgstr ""
+
+#: src/code/float-trap.lisp
 msgid ""
 "Execute BODY with the floating point exceptions listed in TRAPS\n"
 "  masked (disabled).  TRAPS should be a list of possible exceptions\n"
