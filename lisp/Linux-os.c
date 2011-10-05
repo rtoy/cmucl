@@ -378,7 +378,7 @@ valid_addr(os_vm_address_t addr)
 	|| in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)
 	|| in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
 	|| in_range_p(addr, control_stack, control_stack_size)
-	|| in_range_p(addr, BINDING_STACK_START, binding_stack_size))
+	|| in_range_p(addr, binding_stack, binding_stack_size))
 	return TRUE;
     return FALSE;
 }
@@ -452,7 +452,7 @@ sigsegv_handler(HANDLER_ARGS)
     if (addr != NULL && context->sc_regs[reg_ALLOC] & (1 << 63)) {
 	context->sc_regs[reg_ALLOC] -= (1 << 63);
 	interrupt_handle_pending(context);
-    } else if (addr > CONTROL_STACK_TOP && addr < BINDING_STACK_START) {
+    } else if (addr > CONTROL_STACK_TOP && addr < binding_stack) {
 	fprintf(stderr, "Possible stack overflow at 0x%08lX!\n", addr);
 	/* try to fix control frame pointer */
 	while (!(control_stack <= *current_control_frame_pointer &&

@@ -115,8 +115,14 @@ validate(void)
 #endif
 
     /* Binding Stack */
+#if defined(BINDING_STACK_START)
     binding_stack = (lispobj *) BINDING_STACK_START;
     ensure_space(binding_stack, binding_stack_size);
+#else
+    binding_stack = (lispobj *) os_allocate(binding_stack_size);
+    
+#endif
+
 #ifdef sparc
     make_holes();
 #endif
