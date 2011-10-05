@@ -11,8 +11,9 @@ usage()
 
 SKIP_PCL=
 NO_PCL_FEATURE=
-# Default version is the date.
-VERSION="CVS Head `date '+%Y-%m-%d %H:%M:%S'`"
+# Default version is the date and the git hash
+GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
+VERSION="`date '+%Y-%m-%d %H:%M:%S'`"
 
 while getopts "p" arg
 do
@@ -57,6 +58,6 @@ $TARGET/lisp/lisp -core $TARGET/lisp/kernel.core <<EOF
 $NO_PCL_FEATURE
 
 (load "target:tools/worldload")
-$2
+$VERSION $GIT_HASH
 
 EOF
