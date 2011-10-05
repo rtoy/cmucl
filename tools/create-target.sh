@@ -17,14 +17,16 @@ usage() {
     ( cd src/lisp/ ; ls -1 Config.* ) | sed 's;^Config[.];;g' | \
 	    pr -3at -o 8
     echo "Possible Motif-variants:"
-    ( cd src/motif/server/ ; ls -1 Config.* ) | sed 's;^Config[.];;g' | \
-	    pr -3at -o 8
+    ( cd src/motif/server/ && ls -1 Config.* ) | sed 's;^Config[.];;g' | pr -3at -o 8
     exit 1
 }
 
+TARGET_DIR="$1"
+case $TARGET_DIR in build-*) :;; *) usage; exit 2;; esac
+[ -d $ "$TARGET_DIR" ] && echo "Error: Directory $1 exists already -- better remove it..." # && exit 2
+
 if [ $# = 1 ]; then
     # Only target directory given.  Try to deduce the lisp-variant
-    TARGET_DIR="$1"
     case `uname -s` in
     SunOS) 
 	case `uname -m` in
@@ -45,20 +47,15 @@ if [ $# = 1 ]; then
     esac
 elif [ $# = 2 ]; then
     # Target directory and lisp-variant given 
-    TARGET_DIR="$1"
     LISP_VARIANT="$2"
 elif [ $# = 3 ]; then
     # Target directory, lisp-variant, and motif variant given 
-    TARGET_DIR="$1"
     LISP_VARIANT="$2"
     MOTIF_VARIANT="$3"
 else
     usage
 fi
 
-[ -d $1 ] && echo "Error: Directory $1 exists already!" && exit 2
-
-TARGET="`echo $TARGET_DIR | sed 's:/*$::'`"
 
 # Make sure the given variants exist
 if [ ! -f src/lisp/Config.$LISP_VARIANT ]; then
@@ -93,14 +90,15 @@ echo "Lisp = $LISP_VARIANT"
 echo "Motif = $MOTIF_VARIANT"
 
 # Create a directory tree that mirrors the source directory tree
-find src -name 'CVS' -prune -o -type d -print \
-	| sed "s:^src:$TARGET:g" | xargs mkdir
+TARGET="`echo $TARGET_DIR | sed 's:/*$::'`"
+echo TARGET_DIR=$TARGET_DIR TARGET=$TARGET
+find -L src -type d -print | sed "s:^src:$TARGET:g" | xargs -t mkdir -p
 
 # Link Makefile and Config files
- 
-(cd $TARGET/lisp
- ln -s ../../src/lisp/GNUmakefile ../../src/lisp/Config.$LISP_VARIANT ../../src/lisp/Config.*_common .
- ln -s Config.$LISP_VARIANT Config
+(cd $TARGET/lisp && {
+	ln -s ../../src/lisp/GNUmakefile ../../src/lisp/Config.$LISP_VARIANT ../../src/lisp/Config.*_common .
+	ln -s Config.$LISP_VARIANT Config
+    } || { echo "Can't cd $TARGET/lisp"; exit 1; }
 )
 
 # Create empty initial map file
