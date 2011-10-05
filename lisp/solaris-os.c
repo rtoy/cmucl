@@ -201,7 +201,7 @@ boolean valid_addr(os_vm_address_t addr)
 	    || in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
 #endif
 	    || in_range_p(addr, control_stack, control_stack_size)
-	    || in_range_p(addr, BINDING_STACK_START, binding_stack_size));
+	    || in_range_p(addr, binding_stack, binding_stack_size));
 }
 
 /* ---------------------------------------------------------------- */
