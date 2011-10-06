@@ -63,16 +63,16 @@ process_directory(int fd, long *ptr, int count)
 	  case STATIC_SPACE_ID:
 	      static_space = (lispobj *) addr;
               if (len >= static_space_size) {
-                  fprintf(stderr, "Error:  Static space size (%d) exceeds allocated space (%d)!\n",
-                          len, static_space_size);
+                  fprintf(stderr, "Error:  Static space size (%ld) exceeds allocated space (%lu)!\n",
+                          (long) len, (unsigned long) static_space_size);
                   exit(1);
               }
 	      break;
 	  case READ_ONLY_SPACE_ID:
 	      /* Don't care about read only space */
               if (len >= read_only_space_size) {
-                  fprintf(stderr, "Error:  Read only space size (%d) exceeds allocated space (%d)!\n",
-                          len, read_only_space_size);
+                  fprintf(stderr, "Error:  Read only space size (%ld) exceeds allocated space (%lu)!\n",
+                          (long) len, (unsigned long) read_only_space_size);
                   exit(1);
               }
 	      break;

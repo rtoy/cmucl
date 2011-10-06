@@ -10,13 +10,13 @@
 #ifndef _FREEBSD_OS_H_
 #define _FREEBSD_OS_H_
 
+#include <sys/types.h>
 #include <sys/mman.h>
-
 #include <osreldate.h>
 #include <signal.h>
 #include <ucontext.h>
 
-typedef void *os_vm_address_t;
+typedef caddr_t os_vm_address_t;
 typedef size_t os_vm_size_t;
 typedef off_t os_vm_offset_t;
 typedef int os_vm_prot_t;

@@ -208,7 +208,8 @@ os_protect(os_vm_address_t address, os_vm_size_t length, os_vm_prot_t prot)
 
 
 static boolean
-in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
+/* in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen) */
+in_range_p(os_vm_address_t a, os_vm_address_t sbeg, size_t slen)
 {
     char *beg = (char *) sbeg;
     char *end = (char *) sbeg + slen;
@@ -220,20 +221,14 @@ in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
 boolean
 valid_addr(os_vm_address_t addr)
 {
-    os_vm_address_t newaddr;
-
-    newaddr = os_trunc_to_page(addr);
-
-    if (in_range_p(addr, READ_ONLY_SPACE_START, read_only_space_size)
-	|| in_range_p(addr, STATIC_SPACE_START, static_space_size)
-	|| in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)
+    return (in_range_p(addr, READ_ONLY_SPACE_START, read_only_space_size) ||
+            in_range_p(addr, STATIC_SPACE_START, static_space_size) ||
+            in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size) ||
 #ifndef GENCGC
-	|| in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
+            in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size) ||
 #endif
-	|| in_range_p(addr, control_stack, control_stack_size)
-	|| in_range_p(addr, binding_stack, binding_stack_size))
-	return TRUE;
-    return FALSE;
+            in_range_p(addr, (os_vm_address_t) control_stack, control_stack_size) ||
+            in_range_p(addr, (os_vm_address_t) binding_stack, binding_stack_size));
 }
 
 

@@ -39,14 +39,11 @@ typedef u32 lispobj;
 #define FALSE 0
 #endif
 
-#define SymbolValue(sym) \
-    (((struct symbol *)((sym)-type_OtherPointer))->value)
-#define SetSymbolValue(sym,val) \
-    (((struct symbol *)((sym)-type_OtherPointer))->value = (val))
+#define SymbolValue(sym) (((struct symbol *)((sym)-type_OtherPointer))->value)
+#define SetSymbolValue(sym,val) (((struct symbol *)((sym)-type_OtherPointer))->value = (val))
 
 /* This only words for static symbols. */
-#define SymbolFunction(sym) \
-    (((struct fdefn *)(SymbolValue(sym)-type_OtherPointer))->function)
+#define SymbolFunction(sym) (((struct fdefn *)(SymbolValue(sym)-type_OtherPointer))->function)
 
 typedef enum {AUTO, X87, SSE2} fpu_mode_t;
 

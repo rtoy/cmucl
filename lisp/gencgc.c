@@ -1979,9 +1979,8 @@ new_space_p(lispobj obj)
 static inline boolean
 dynamic_space_p(lispobj obj)
 {
-    lispobj end = DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE;
-
-    return (obj >= DYNAMIC_0_SPACE_START) && (obj < end);
+  lispobj end = (lispobj) DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE;
+  return (obj >= (lispobj) DYNAMIC_0_SPACE_START) && (obj < end);
 }
 
 static inline boolean
@@ -1989,7 +1988,7 @@ static_space_p(lispobj obj)
 {
     lispobj end = SymbolValue(STATIC_SPACE_FREE_POINTER);
 
-    return (obj >= STATIC_SPACE_START) && (obj < end);
+    return (obj >= (lispobj) STATIC_SPACE_START) && (obj < end);
 }
 
 static inline boolean
@@ -1997,23 +1996,25 @@ read_only_space_p(lispobj obj)
 {
     lispobj end = SymbolValue(READ_ONLY_SPACE_FREE_POINTER);
 
-    return (obj >= READ_ONLY_SPACE_START) && (obj < end);
+    return (obj >= (lispobj) READ_ONLY_SPACE_START) && (obj < end);
 }
 
 static inline boolean
 control_stack_space_p(lispobj obj)
 {
-    lispobj end = (char*) control_stack + control_stack_size;
+    lispobj *ptr = (lispobj *) obj;
+    char *end = (char*) control_stack + control_stack_size;
 
-    return (obj >= control_stack) && (obj < end);
+    return (ptr >= control_stack) && (ptr < (lispobj *) end);
 }
 
 static inline boolean
 binding_stack_space_p(lispobj obj)
 {
-    lispobj end = (char*) binding_stack + binding_stack_size;
+    lispobj *ptr = (lispobj *) obj;
+    char *end = (char*) binding_stack + binding_stack_size;
 
-    return (obj >= binding_stack) && (obj < end);
+    return (ptr >= binding_stack) && (ptr < (lispobj *) end);
 }
     
 static inline boolean
@@ -6867,9 +6868,8 @@ void
 verify_space(lispobj * start, size_t words)
 {
     int dynamic_space = (find_page_index((void *) start) != -1);
-    unsigned long readonly_space =
-	(READ_ONLY_SPACE_START <= (unsigned long) start
-	 && (unsigned long) start < SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
+    unsigned long readonly_space = ((unsigned long) READ_ONLY_SPACE_START <= (unsigned long) start &&
+                                    (unsigned long) start < (unsigned long) SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
 
     while (words > 0) {
 	size_t count = 1;
@@ -6877,10 +6877,8 @@ verify_space(lispobj * start, size_t words)
 
 	if (Pointerp(thing)) {
 	    int page_index = find_page_index((void *) thing);
-	    int to_readonly_space = (READ_ONLY_SPACE_START <= thing &&
-				     thing <
-
-				     SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
+	    int to_readonly_space = ((unsigned long) READ_ONLY_SPACE_START <= thing &&
+				     (unsigned long) thing < (unsigned long) SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
 	    unsigned long to_static_space =
 		((unsigned long) static_space <= thing
 
@@ -7924,7 +7922,7 @@ void
 gencgc_pickup_dynamic(void)
 {
     int page = 0;
-    unsigned long addr = DYNAMIC_0_SPACE_START;
+    unsigned long addr = (unsigned long) DYNAMIC_0_SPACE_START;
     unsigned long alloc_ptr = (unsigned long) get_alloc_pointer();
 
     /* Initialise the first region. */

@@ -30,7 +30,7 @@ extern lispobj *binding_stack;
 extern unsigned long read_only_space_size;
 extern unsigned long binding_stack_size;
 extern unsigned long static_space_size;
-extern unsigned long control_stack_size;
+extern unsigned long control_stack_size; /* in characters */
 
 #if (defined(i386) || defined(__x86_64))
 extern lispobj *control_stack_end;

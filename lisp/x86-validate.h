@@ -21,8 +21,6 @@
  *	0x10000000->0x20000000  256M Read-Only Space.
  *	0x20000000->0x28000000  128M Reserved for shared libraries.
  *	0x28000000->0x38000000  256M Static Space.
- *	0x38000000->0x40000000  128M Binding stack growing up.
- *	0x40000000->0x48000000  128M Control stack growing down.
  *	0x48000000->0xB0000000 1664M Dynamic Space.
  *      0xB0000000->0xB1000000       Foreign Linkage Table
  *	0xE0000000->            256M C stack - Alien stack.
@@ -68,27 +66,25 @@
  */
 
 #ifdef __FreeBSD__
-#define READ_ONLY_SPACE_START   (0x10000000)
-#define READ_ONLY_SPACE_SIZE    (0x0ffff000)	/* 256MB - 1 page */
+#define READ_ONLY_SPACE_START	((os_vm_address_t) 0x10000000)
+#define READ_ONLY_SPACE_SIZE    ((os_vm_size_t) 0x0ffff000)	/* 256MB - 1 page */
 
-#define STATIC_SPACE_START	(0x28f00000)
-#define STATIC_SPACE_SIZE	(0x0f0ff000)	/* 241MB - 1 page */
+#define STATIC_SPACE_START	((os_vm_address_t) 0x28f00000)
+#define STATIC_SPACE_SIZE	((os_vm_size_t) 0x0f0ff000)	/* 241MB - 1 page */
 
-#define BINDING_STACK_SIZE	(0x07fff000)	/* 128MB - 1 page */
-#define CONTROL_STACK_SIZE	0x07fd8000	/* 128MB - SIGSTKSZ */
-#define SIGNAL_STACK_START	0x47fd8000
-#define SIGNAL_STACK_SIZE	SIGSTKSZ
+#define BINDING_STACK_SIZE	((os_vm_size_t) 0x07fff000)	/* 128MB - 1 page */
+#define CONTROL_STACK_SIZE	((os_vm_size_t) 0x07fd8000)	/* 128MB - SIGSTKSZ */
 
-#define DYNAMIC_0_SPACE_START	(0x48000000UL)
+#define DYNAMIC_0_SPACE_START	((os_vm_address_t) 0x48000000UL)
 #ifdef GENCGC
-#define DYNAMIC_SPACE_SIZE	(0x78000000UL)	/* May be up to 1.7 GB */
+#define DYNAMIC_SPACE_SIZE	((os_vm_size_t) 0x78000000UL)	/* May be up to 1.7 GB */
 #else
-#define DYNAMIC_SPACE_SIZE	(0x04000000UL)	/* 64MB */
+#define DYNAMIC_SPACE_SIZE	((os_vm_size_t) 0x04000000UL)	/* 64MB */
 #endif
-#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000UL)	/* 512MB */
+#define DEFAULT_DYNAMIC_SPACE_SIZE	((os_vm_size_t) 0x20000000UL)	/* 512MB */
 #ifdef LINKAGE_TABLE
-#define FOREIGN_LINKAGE_SPACE_START ((unsigned long) LinkageSpaceStart)
-#define FOREIGN_LINKAGE_SPACE_SIZE (0x100000UL)	/* 1MB */
+#define FOREIGN_LINKAGE_SPACE_START	((os_vm_address_t) LinkageSpaceStart)
+#define FOREIGN_LINKAGE_SPACE_SIZE	((os_vm_size_t) 0x100000UL)	/* 1MB */
 #endif
 #endif /* __FreeBSD__ */
 

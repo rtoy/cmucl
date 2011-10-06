@@ -520,7 +520,11 @@ arch_make_lazy_linkage(long linkage_entry)
 long
 arch_linkage_entry(unsigned long retaddr)
 {
+#if defined __FreeBSD__  
+  return (((os_vm_address_t) retaddr - 5) - FOREIGN_LINKAGE_SPACE_START) / LinkageEntrySize;
+#else    
     return ((retaddr - 5) - FOREIGN_LINKAGE_SPACE_START) / LinkageEntrySize;
+#endif    
 }
 #endif /* LINKAGE_TABLE */
 
