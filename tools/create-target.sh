@@ -107,4 +107,4 @@ echo '#error You need to run genesis (via build-world.sh) before compiling the s
 	solaris) cat $setenv_dir/solaris-features.lisp;;
 	*) sed "s;@@LISP@@;$lisp_variant;" $setenv_dir/unknown.lisp;;
     esac
-) > setenv.lisp || quit "Failed create setenv.lisp"
+) > ../setenv.lisp || quit "Failed create setenv.lisp"
