@@ -1,24 +1,27 @@
 #!/bin/sh
 
-quit() { echo "$@" >&2; exit 1; }
+diag() { echo "($prgm_name) $@" >&2; }
+quit() { diag "not OK: $@"; exit 1; }
 usage() {
-    echo "Usage: `basename $0` TARGET-DIR [LISP-VARIANT [MOTIF-VARIANT]]"
+    echo "Usage: $prgm_name TARGET-DIR [LISP-VARIANT [MOTIF-VARIANT]]"
     echo ""
     echo "Creates a directory structure in TARGET-DIR for use in building CMUCL."
     echo "A simple logic is used to find the optional -VARIANT parameters."
     echo ""
     # List possible values for lisp-variant and motif-variant
-    echo "Possible LISP-VARIANTs (don't trust what you see):"
+    echo "Possible LISP-VARIANTs:"
     ( cd src/lisp/ && ls -1 Config.* ) | sed 's;^Config[.];;g' | pr -3at -o 8 || quit "Can't list lisp-variants"
-    echo "Possible MOTIF-VARIANTs (don't trust what you see):"
+    echo "Possible MOTIF-VARIANTs:"
     ( cd src/motif/server/ && ls -1 Config.* ) | sed 's;^Config[.];;g' | pr -3at -o 8 || quit "Can't list lisp-variants"
     exit 2
 }
 
-bld_dir=$1 lisp_variant=$2 motif_variant=$3
+##--
+prgm_name=`basename $0` bld_dir=$1 lisp_variant=$2 motif_variant=$3
 exec 2>&1
 
-case $bld_dir in build-*) :;; *) usage;; esac
+[ -n "$bld_dir" ] || usage
+
 uname_s=`uname -s`
 uname_m=`uname -m 2>/dev/null`
 [ -n "$lisp_variant" ] || {
@@ -74,10 +77,10 @@ case $uname_s in
 esac
 
 # Tell user what's we've configured
-echo "bld_dir=$bld_dir lisp_variant=$lisp_variant ${motif_variant:+motif_variant=$motif_variant}"
+diag "Settings: bld_dir=$bld_dir lisp_variant=$lisp_variant ${motif_variant:+motif_variant=$motif_variant}"
 
 # Create a directory tree that mirrors the source directory tree
-[ -e "$bld_dir" ] && quit "delete this: `ls -ld $bld_dir`"
+[ -e "$bld_dir" ] && quit "Exists: `ls -ld $bld_dir`"
 mkdir -p "$bld_dir"
 (cd src && find . -name .git -prune -o -type d -print) | (cd $bld_dir && xargs mkdir -p) ||
 quit "Can't create target directories"
