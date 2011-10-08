@@ -43,7 +43,7 @@ uname_m=`uname -m 2>/dev/null`
 	*) quit "Unsupported OS: $uname_s";;
     esac
 }
-[ -n "$lisp_variant" ] || quit "Failed to determine lisp_variant"
+[ -n "$lisp_variant" ] || quit "Can't determine lisp_variant"
 [ -f src/lisp/Config.$lisp_variant ] || quit "Config.$lisp_variant not found"
 
 case $lisp_variant in
@@ -107,4 +107,4 @@ echo '#error You need to run genesis (via build-world.sh) before compiling the s
 	solaris) cat $setenv_dir/solaris-features.lisp;;
 	*) sed "s;@@LISP@@;$lisp_variant;" $setenv_dir/unknown.lisp;;
     esac
-) > ../setenv.lisp || quit "Failed create setenv.lisp"
+) > ../setenv.lisp || quit "Can't create setenv.lisp"
