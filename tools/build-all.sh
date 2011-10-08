@@ -34,6 +34,8 @@ usage ()
 }
 
 VERSION="`date '+%Y-%m-%d %H:%M:%S'`"
+GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
+VERSION="`date '+%Y-%m-%d %H:%M:%S'` $GIT_HASH"
 BASE=build
 CREATE_OPT=""
 
