@@ -29,7 +29,7 @@ usage ()
     echo "               (only applicable for build 1)"
     echo "    -8 x      Use specified Lisp to build 8-bit version."
     echo "               (only applicable for build 1)"
-    echo "    -U        Update and overwite the CVS translations files."
+    echo "    -U        Update and overwite the translations files."
     echo "    -P        On the last build, (re)generate cmucl.pot and the"
     echo "               translations"
 }
