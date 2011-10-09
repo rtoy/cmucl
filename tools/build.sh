@@ -43,7 +43,7 @@ version=20b
 SRCDIR=src
 TOOLDIR=$SRCDIR/tools
 VERSION="`date '+%Y-%m-%d %H:%M:%S'`"
-GIT_HASH="`(cd src; git log -1 --pretty=format:%t 2>/dev/null)`"
+GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
 # Add the tree hash to the version
 VERSION="$VERSION $GIT_HASH"
 BASE=build

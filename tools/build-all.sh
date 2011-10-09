@@ -6,7 +6,7 @@
 
 usage ()
 {
-    echo "build-all.sh [bBCvU] [-o old] [-8 old8bit]"
+    echo "build-all.sh [-bBCvUP] [-o old] [-8 old8bit]"
     echo ""
     echo "Build all variants of cmucl for a specific architecture."
     echo "This means build the unicode and non-unicode variants."
@@ -24,22 +24,21 @@ usage ()
     echo '    -C [l m]  Create the build directories.  The args are what'
     echo '               you would give to create-target.sh for the lisp'
     echo '               and motif variant.'
-    echo '    -v v      Use the given string as the version.  Default is'
-    echo "               today's date"
+    echo '    -v v      Use the given string as the version.'
     echo "    -o x      Use specified Lisp to build unicode version."
     echo "               (only applicable for build 1)"
     echo "    -8 x      Use specified Lisp to build 8-bit version."
     echo "               (only applicable for build 1)"
-    echo "    -U        Update and overwite the CVS translations files."
+    echo "    -U        Update and overwite the translations files."
+    echo "    -P        On the last build, (re)generate cmucl.pot and the"
+    echo "               translations"
 }
 
-VERSION="`date '+%Y-%m-%d %H:%M:%S'`"
-GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
-VERSION="`date '+%Y-%m-%d %H:%M:%S'` $GIT_HASH"
 BASE=build
 CREATE_OPT=""
+UPDATE_POT="-P"
 
-while getopts "UB:b:v:C:o:8:?" arg
+while getopts "PUB:b:v:C:o:8:?" arg
 do
     case $arg in
       b) BASE="$OPTARG" ;;
@@ -49,6 +48,7 @@ do
       8) OLD8="$OPTARG" ;;
       v) VERSION="$OPTARG" ;;
       U) UPDATE_TRANS="-U" ;;
+      P) UPDATE_POT="" ;;
       \?) usage ;;
     esac
 done
@@ -63,20 +63,21 @@ if [ "$OLDLISP" = "" -a "$OLD8" = "" ]; then
     exit 1
 fi
 
+VERSION=${VERSION:+-v "$VERSION"}
 buildx86 ()
 {
     if [ -n "$OLD8" ]; then
 	# Build non-unicode versions
 	set -x
-	src/tools/build.sh -f x87 -b ${BASE}-8bit $bootfiles -v "$VERSION" -C "${CREATE_OPT}" ${UPDATE_TRANS} -o "$OLD8"
-	src/tools/build.sh -f sse2 -b ${BASE}-8bit $bootfiles -v "$VERSION" -C "${CREATE_OPT}" ${UPDATE_TRANS} -o "$OLD8"
+	src/tools/build.sh -f x87 -b ${BASE}-8bit $bootfiles "$VERSION" -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
+	src/tools/build.sh -f sse2 -b ${BASE}-8bit $bootfiles "$VERSION" -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
 	set +x
     fi
     # Build the unicode versions
     if [ -n "$OLDLISP" ]; then
 	set -x
-	src/tools/build.sh -f x87 -b ${BASE} $bootfiles -v "$VERSION" -C "${CREATE_OPT}" ${UPDATE_TRANS} -o "$OLDLISP"
-	src/tools/build.sh -f sse2 -b ${BASE} $bootfiles -v "$VERSION" -C "${CREATE_OPT}" ${UPDATE_TRANS} -o "$OLDLISP"
+	src/tools/build.sh -f x87 -b ${BASE} $bootfiles "$VERSION" -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
+	src/tools/build.sh -f sse2 -b ${BASE} $bootfiles "$VERSION" -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
 	set +x
     fi
 }
@@ -86,13 +87,13 @@ buildsun4 ()
     # Build non-unicode versions
     if [ -n "$OLD8" ]; then
 	set -x
-	src/tools/build.sh -b ${BASE}-8bit $bootfiles -v "$VERSION" -C "$CREATE_OPT" ${UPDATE_TRANS} -o "$OLD8"
+	src/tools/build.sh -b ${BASE}-8bit $bootfiles "$VERSION" -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
 	set +x
     fi
     # Build the unicode version.
     if [ -n "$OLDLISP" ]; then
 	set -x
-	src/tools/build.sh -b ${BASE} $bootfiles -v "$VERSION" -C "$CREATE_OPT" ${UPDATE_TRANS} -o "$OLDLISP"
+	src/tools/build.sh -b ${BASE} $bootfiles "$VERSION" -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
 	set +x
     fi
 }
