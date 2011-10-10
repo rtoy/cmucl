@@ -1807,8 +1807,8 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
    :Output-File
       The name of the fasl to output, NIL for none, T for the default.
    :Load
-      Load the compiled file; T here requires :Output-File to be T, as well.
-      The default is NIL.
+      Load the compiled file; T here requires :Output-File to be non-NIL, as well.
+      The default for :Load is NIL.
    :Error-File
       The name of the error listing file, NIL for none (the default), T for
       .err.
