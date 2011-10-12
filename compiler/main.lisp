@@ -4,8 +4,7 @@
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
-(ext:file-comment
-  "$Header: src/compiler/main.lisp $")
+(ext:file-comment "$Header: src/compiler/main.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -54,8 +53,8 @@
 ;;; Exported:
 (defvar *byte-compile-top-level* t
   "Similar to *BYTE-COMPILE-DEFAULT*, but controls the compilation of top-level
-   forms (evaluated at load-time) when the :BYTE-COMPILE argument is :MAYBE
-   (the default.)  When true, we decide to byte-compile.")
+  forms (evaluated at load-time) when the :BYTE-COMPILE argument is :MAYBE
+  (the default.)  When true, we decide to byte-compile.")
 
 ;;; Exported:
 (defvar *loop-analyze* nil
@@ -139,9 +138,9 @@
 
 (defvar *user-source-info* nil
   "The user supplied source-info for the current compilation.  
-This is the :source-info argument to COMPILE-FROM-STREAM and will be
-stored in the INFO slot of the DEBUG-SOURCE in code components and 
-in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
+  This is the :source-info argument to COMPILE-FROM-STREAM and will be
+  stored in the INFO slot of the DEBUG-SOURCE in code components and 
+  in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 
 ;;; Maybe-Mumble  --  Internal
 ;;;
@@ -1801,56 +1800,55 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		            ((:xref *record-xref-info*)
 			     *record-xref-info*))
   "Compiles Source, producing a corresponding .FASL file.  Source may be a list
-   of files, in which case the files are compiled as a unit, producing a single
-   .FASL file.  The output file names are defaulted from the first (or only)
-   input file name.  Other options available via keywords:
-   :Output-File
-      The name of the fasl to output, NIL for none, T for the default.
-   :Load
-      Load the compiled file; T here requires :Output-File to be non-NIL, as well.
-      The default for :Load is NIL.
-   :Error-File
-      The name of the error listing file, NIL for none (the default), T for
-      .err.
-   :Trace-File
-      If specified, internal data structures are dumped to this file.  T for
-      the .trace default.
-   :Error-Output
-      If a stream, then error output is sent there as well as to the listing
-      file.  NIL suppresses this additional error output.  The default is T,
-      which means use *ERROR-OUTPUT*.
-   :Block-Compile {NIL | :SPECIFIED | T}
-      Determines whether multiple functions are compiled together as a unit,
-      resolving function references at compile time.  NIL means that global
-      function names are never resolved at compilation time.  :SPECIFIED means
-      that names are resolved at compile-time when convenient (as in a
-      self-recursive call), but the compiler doesn't combine top-level DEFUNs.
-      With :SPECIFIED, an explicit START-BLOCK declaration will enable block
-      compilation.  A value of T indicates that all forms in the file(s) should
-      be compiled as a unit.  The default is the value of
-      EXT:*BLOCK-COMPILE-DEFAULT*, which is initially :SPECIFIED.
-   :Entry-Points
-      This specifies a list of function names for functions in the file(s) that
-      must be given global definitions.  This only applies to block
-      compilation, and is useful mainly when :BLOCK-COMPILE T is specified on a
-      file that lacks START-BLOCK declarations.  If the value is NIL (the
-      default) then all functions will be globally defined.
-   :Byte-Compile {T | NIL | :MAYBE}
-      Determines whether to compile into interpreted byte code instead of
-      machine instructions.  Byte code is several times smaller, but much
-      slower.  If :MAYBE, then only byte-compile when SPEED is 0 and
-      DEBUG <= 1.  The default is the value of EXT:*BYTE-COMPILE-DEFAULT*,
-      which is initially :MAYBE.
-   :Xref
-      If non-NIL, enable recording of cross-reference information.  The default
-      is the value of C:*RECORD-XREF-INFO*
-   :External-Format
-      The external format to use when opening the source file
-   :Decoding-Error
-      How to handle decoding errors in the external format when reading the
-      source file.  Default (T) is to signal an error.  Nil means silently
-      continue, replacing the invalid sequence with a suitable replacment
-      character."
+  of files, in which case the files are compiled as a unit, producing a single
+  .FASL file.  The output file names are defaulted from the first (or only)
+  input file name.  Other options available via keywords:
+  :Output-File
+     The name of the fasl to output, NIL for none, T for the default.
+  :Load
+     Load the compiled file; T here requires :Output-File to be non-NIL, as well.
+     The default for :Load is NIL.
+  :Error-File
+     The name of the error listing file, NIL for none (the default), T for .err.
+  :Trace-File
+     If specified, internal data structures are dumped to this file.  T for
+     the .trace default.
+  :Error-Output
+     If a stream, then error output is sent there as well as to the listing
+     file.  NIL suppresses this additional error output.  The default is T,
+     which means use *ERROR-OUTPUT*.
+  :Block-Compile {NIL | :SPECIFIED | T}
+     Determines whether multiple functions are compiled together as a unit,
+     resolving function references at compile time.  NIL means that global
+     function names are never resolved at compilation time.  :SPECIFIED means
+     that names are resolved at compile-time when convenient (as in a
+     self-recursive call), but the compiler doesn't combine top-level DEFUNs.
+     With :SPECIFIED, an explicit START-BLOCK declaration will enable block
+     compilation.  A value of T indicates that all forms in the file(s) should
+     be compiled as a unit.  The default is the value of
+     EXT:*BLOCK-COMPILE-DEFAULT*, which is initially :SPECIFIED.
+  :Entry-Points
+     This specifies a list of function names for functions in the file(s) that
+     must be given global definitions.  This only applies to block
+     compilation, and is useful mainly when :BLOCK-COMPILE T is specified on a
+     file that lacks START-BLOCK declarations.  If the value is NIL (the
+     default) then all functions will be globally defined.
+  :Byte-Compile {T | NIL | :MAYBE}
+     Determines whether to compile into interpreted byte code instead of
+     machine instructions.  Byte code is several times smaller, but much
+     slower.  If :MAYBE, then only byte-compile when SPEED is 0 and
+     DEBUG <= 1.  The default is the value of EXT:*BYTE-COMPILE-DEFAULT*,
+     which is initially :MAYBE.
+  :Xref
+     If non-NIL, enable recording of cross-reference information.  The default
+     is the value of C:*RECORD-XREF-INFO*
+  :External-Format
+     The external format to use when opening the source file.
+  :Decoding-Error
+     How to handle decoding errors in the external format when reading the
+     source file.  Default (T) is to signal an error.  Nil means silently
+     continue, replacing the invalid sequence with a suitable replacment
+     character."
   (let* ((fasl-file nil)
 	 (error-file-stream nil)
 	 (output-file-pathname nil)
@@ -2129,7 +2127,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 			      (output-file t output-file-supplied-p)
 			      &allow-other-keys)
   "Return a pathname describing what file COMPILE-FILE would write to given
-   these arguments."
+  these arguments."
   (declare (type (or string pathname stream) input-file)
 	   (type (or string pathname stream (member t)) output-file)
 	   (values (or null pathname)))
