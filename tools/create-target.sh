@@ -92,7 +92,7 @@ cd $bld_dir/lisp || quit "Can't cd $bld_dir/lisp"
 ln -s ../../src/lisp/GNUmakefile ../../src/lisp/Config.$lisp_variant ../../src/lisp/Config.*_common .
 ln -s Config.$lisp_variant Config
 [ -n "$motif_variant" ] && (
-    cd motif/server || quit "Can't cd motif/server" # We will still continue in the outer shell
+    cd ../motif/server || quit "Can't cd motif/server" # We will still continue in the outer shell
     ln -s ../../../src/motif/server/GNUmakefile ./Makefile
     ln -s ../../../src/motif/server/Config.$motif_variant ./Config
 )
