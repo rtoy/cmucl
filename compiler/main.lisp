@@ -1810,13 +1810,14 @@
   These keywords are supported:
 
   :Output-File
-     The name of the FASL to output, NIL for none, T for the default.  (Note the
-     difference between the treatment of NIL :Output-File here and in COMPILE-FILE-PATHNAME.)
-     The returned pathname of the output file may differ from the pathname of the
-     :Output-File parameter, e.g. when the latter is a designator for a directory.
+     The name of the FASL to output, NIL for none, T for the default.
+     (Note the difference between the treatment of NIL :Output-File
+     here and in COMPILE-FILE-PATHNAME.)  The returned pathname of the
+     output file may differ from the pathname of the :Output-File
+     parameter, e.g. when the latter is a designator for a directory.
   :Load
-     Load the compiled file; T here requires :Output-File to be non-NIL, as well.
-     The default for :Load is NIL.
+     Load the compiled file; T here requires :Output-File to be
+     non-NIL, as well.  The default for :Load is NIL.
   :Error-File
      The name of the error listing file, NIL for none (the default), T for .err.
   :Trace-File
@@ -2135,10 +2136,12 @@
 			      (byte-compile *byte-compile-default*)
 			      (output-file t output-file-supplied-p)
 			      &allow-other-keys)
-  "Return a pathname describing what file COMPILE-FILE would write to given these arguments.
-  The returned pathname of the output file may differ from the pathname of the :Output-File
-  parameter, e.g. when the latter is a designator for a directory. The CMUCL caveat: NIL is
-  accepted for :Output-File there but not here, which is probably not in line with CLHS."
+  "Return a pathname describing what file COMPILE-FILE would write to
+  given these arguments.  The returned pathname of the output file may
+  differ from the pathname of the :Output-File parameter, e.g. when
+  the latter is a designator for a directory. The CMUCL caveat: NIL is
+  accepted for :Output-File there but not here, which is probably not
+  in line with CLHS."
   (declare (type (or string pathname stream) input-file)
 	   (type (or string pathname stream (member t)) output-file)
 	   (values (or null pathname)))
