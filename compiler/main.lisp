@@ -1801,12 +1801,19 @@
 			     *byte-compile-default*)
 		            ((:xref *record-xref-info*)
 			     *record-xref-info*))
-  "Compiles Source, producing a corresponding .FASL file.  Source may be a list
+  "Compiles Source, producing a corresponding FASL file.  Source may be a list
   of files, in which case the files are compiled as a unit, producing a single
-  .FASL file.  The output file names are defaulted from the first (or only)
-  input file name.  Other options available via keywords:
+  FASL file.  The output file names are defaulted from the first (or only)
+  input file name.  (The use of a list for Source is a CMUCL extension, not
+  specified in CLHS.)
+
+  These keywords are supported:
+
   :Output-File
-     The name of the fasl to output, NIL for none, T for the default.
+     The name of the FASL to output, NIL for none, T for the default.  (Note the
+     difference between the treatment of NIL :Output-File here and in COMPILE-FILE-PATHNAME.)
+     The returned pathname of the output file may differ from the pathname of the
+     :Output-File parameter, e.g. when the latter is a designator for a directory.
   :Load
      Load the compiled file; T here requires :Output-File to be non-NIL, as well.
      The default for :Load is NIL.
@@ -1848,7 +1855,7 @@
      The external format to use when opening the source file.
   :Decoding-Error
      How to handle decoding errors in the external format when reading the
-     source file.  Default (T) is to signal an error.  Nil means silently
+     source file.  Default (T) is to signal an error.  NIL means silently
      continue, replacing the invalid sequence with a suitable replacment
      character."
   (let* ((fasl-file nil)
@@ -2001,7 +2008,7 @@
   be compiled.  IF NAME names a macro, then the compiled expression
   replaces the existing macro-function.  If NAME names a function, the
   compiled expression is placed in the function cell of NAME.  If NAME
-  is Nil, the compiled code object is returned."
+  is NIL, the compiled code object is returned."
   (with-compilation-unit ()
     (with-ir1-namespace
       (let* ((*backend* *native-backend*)
@@ -2128,8 +2135,10 @@
 			      (byte-compile *byte-compile-default*)
 			      (output-file t output-file-supplied-p)
 			      &allow-other-keys)
-  "Return a pathname describing what file COMPILE-FILE would write to given
-  these arguments."
+  "Return a pathname describing what file COMPILE-FILE would write to given these arguments.
+  The returned pathname of the output file may differ from the pathname of the :Output-File
+  parameter, e.g. when the latter is a designator for a directory. The CMUCL caveat: NIL is
+  accepted for :Output-File there but not here, which is probably not in line with CLHS."
   (declare (type (or string pathname stream) input-file)
 	   (type (or string pathname stream (member t)) output-file)
 	   (values (or null pathname)))
