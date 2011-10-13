@@ -1127,9 +1127,9 @@
 	 (generate-comment (file-info)
 	   (let* ((name (pathname (source-info-stream file-info)))
 		  (proc (run-git name))
-		  comment)
-	     (if (and proc (zerop (process-exit-code proc))
-		      (setf comment (read-line (process-output proc) nil nil)))
+		  (comment (and proc (zerop (process-exit-code proc))
+				(read-line (process-output proc) nil nil))))
+	     (if comment
 		 (format nil "$Header: ~A ~A $"
 			 (enough-namestring name)
 			 comment)
