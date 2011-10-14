@@ -11,9 +11,9 @@ usage()
 
 SKIP_PCL=
 NO_PCL_FEATURE=
-# Default version is the date and the git hash
+# Default version is the date with the git hash.
 GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
-VERSION="`date '+%Y-%m-%d %H:%M:%S'`"
+VERSION="`date '+%Y-%m-%d %H:%M:%S'`${GIT_HASH:+ $GIT_HASH}"
 
 while getopts "p" arg
 do
@@ -41,7 +41,7 @@ fi
 
 # If version string give, use it, otherwise use the default.
 if [ -n "$2" ]; then
-    VERSION=$2
+    VERSION="$2"
 fi
 
 $TARGET/lisp/lisp -core $TARGET/lisp/kernel.core <<EOF
@@ -58,6 +58,6 @@ $TARGET/lisp/lisp -core $TARGET/lisp/kernel.core <<EOF
 $NO_PCL_FEATURE
 
 (load "target:tools/worldload")
-$VERSION $GIT_HASH
+$VERSION
 
 EOF
