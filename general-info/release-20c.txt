@@ -145,7 +145,7 @@ New in this release:
       actually prevent stack overflows from crashing lisp.
     - Fix rounding of numbers larger than a fixnum.  (See Trac #10 for
       a related issue.)
-
+    - Properly handle the denormal operand trap on x86es.
 
   * Trac Tickets:
     - #43: unread-char doesn't change file-position

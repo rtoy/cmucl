@@ -53,7 +53,8 @@
 	  arithmetic-error arithmetic-error-operation arithmetic-error-operands
 	  package-error package-error-package division-by-zero
 	  floating-point-overflow floating-point-underflow
-	  floating-point-inexact floating-point-invalid-operation))
+	  floating-point-inexact floating-point-invalid-operation
+	  #+x86 floating-point-denormal-operand))
 
 (in-package "CONDITIONS")
 
@@ -1129,6 +1130,8 @@
 (define-condition floating-point-underflow (arithmetic-error) ())
 (define-condition floating-point-inexact   (arithmetic-error) ())
 (define-condition floating-point-invalid-operation   (arithmetic-error) ())
+#+x86
+(define-condition floating-point-denormal-operand    (arithmetic-error) ())
 
 ;;; This condition is signalled whenever we make a UNKNOWN-TYPE so that
 ;;; compiler warnings can be emitted as appropriate.

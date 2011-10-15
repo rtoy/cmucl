@@ -289,6 +289,11 @@
 	     (error 'floating-point-inexact
 		    :operation fop
 		    :operands operands))
+	    #+x86
+	    ((not (zerop (logand float-denormal-trap-bit traps)))
+	     (error 'floating-point-denormal-operand
+		    :operation fop
+		    :operands operands))
 	    (t
 	     ;; It looks like the sigcontext on Solaris/x86 doesn't
 	     ;; actually save the status word of the FPU.  The
