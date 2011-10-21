@@ -1116,7 +1116,7 @@
 
 (defknown load
   ((or filename stream)
-   &key (:verbose t) (:print t) (:if-does-not-exist (member :error :create nil))
+   &key (:verbose t) (:print t) (:if-does-not-exist (member :error nil))
    (:if-source-newer (member :load-source :load-object :query :compile))
    (:contents (or null (member :source :binary)))
    (:external-format t))
