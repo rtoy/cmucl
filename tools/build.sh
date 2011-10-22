@@ -94,7 +94,7 @@ usage ()
     echo '               the translations.'
     echo "    -?        This help message"
     echo "    -w        Specify a different build-world.sh script"
-    echo "    -U        If translations are done, overwrite the CVS files with the"
+    echo "    -U        If translations are done, overwrite the files with the"
     echo "               translations instead of computing and displaying the diffs."
     echo "    -O opt    Any additional command-line flags to use when building."
     echo "               The flags always include -noinit -nositeinit"
