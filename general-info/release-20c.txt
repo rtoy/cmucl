@@ -1,7 +1,5 @@
 ========================== C M U C L  20 c =============================
 
-[--- WORK IN PROGRESS ---]
-
 The CMUCL project is pleased to announce the release of CMUCL 20c.
 This is a major release which contains numerous enhancements and
 bug fixes from the 20b release.
@@ -60,6 +58,7 @@ New in this release:
     - Improve type propagation for LOAD-TIME-VALUE.
     - Add -O option to build.sh to allow specifying options to lisp
       when doing the builds.
+    - (format t "a~0&b") should not output a newline between a and b.
 
   * ANSI compliance fixes:
     - Fixes for signaling errors with READ-CHAR and READ-BYTE
