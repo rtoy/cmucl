@@ -34,12 +34,20 @@
 
 ;;;; Fasl file format:
 
-(defconstant byte-fasl-file-version #x20b)
+;; The fasl file version should be a series of hex digits in the range
+;; 0-9 followed by a single hex digit in the range a-f.  Then the
+;; version looks like a decimal number followed by a minor release
+;; letter of a to f.
+(defconstant byte-fasl-file-version #x20c)
 
 (let* ((version-string (format nil "~X" byte-fasl-file-version)))
-  (sys:register-lisp-feature (intern (concatenate 'string "CMU" version-string) :keyword))
+  ;; Add :cmu<n> to *features*
+  (sys:register-lisp-feature (intern (concatenate 'string "CMU" version-string)
+				     :keyword))
+  ;; Same as above, except drop the trailing a-f character.
   (sys:register-lisp-feature (intern (concatenate 'string "CMU"
-						  (subseq version-string 0 (1- (length version-string))))
+						  (subseq version-string 0
+							  (1- (length version-string))))
 				     :keyword)))
 
 (defun backend-byte-fasl-file-type (backend)
