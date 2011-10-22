@@ -4546,36 +4546,51 @@ msgstr ""
 "  unctionfay andway accumulatingway esultsray asway esiredday."
 
 #: src/code/list.lisp
+#, fuzzy
 msgid ""
-"Applies fn to successive elements of lists, returns its second argument."
+"Applies Function to successive elements of each List, and returns\n"
+"  its second argument."
 msgstr ""
 "Appliesway nfay otay uccessivesay elementsway ofway istslay, eturnsray "
 "itsway econdsay argumentway."
 
 #: src/code/list.lisp
-msgid "Applies fn to successive elements of list, returns list of results."
+#, fuzzy
+msgid ""
+"Applies Function to successive elements of each List, and returns a\n"
+"  list of results."
 msgstr ""
 "Appliesway nfay otay uccessivesay elementsway ofway istlay, eturnsray istlay "
 "ofway esultsray."
 
 #: src/code/list.lisp
-msgid "Applies fn to successive elements of list, returns NCONC of results."
+#, fuzzy
+msgid ""
+"Applies Function to successive elements of each List, and returns\n"
+"  NCONC of results."
 msgstr ""
 "Appliesway nfay otay uccessivesay elementsway ofway istlay, eturnsray NCONC "
 "ofway esultsray."
 
 #: src/code/list.lisp
-msgid "Applies fn to successive CDRs of list, returns ()."
+#, fuzzy
+msgid "Applies Function to successive CDRs of each List, and returns ()."
 msgstr "Appliesway nfay otay uccessivesay Drscay ofway istlay, eturnsray ()."
 
 #: src/code/list.lisp
-msgid "Applies fn to successive CDRs of list, returns list of results."
+#, fuzzy
+msgid ""
+"Applies Function to successive CDRs of each List, and returns list\n"
+"  of results."
 msgstr ""
 "Appliesway nfay otay uccessivesay Drscay ofway istlay, eturnsray istlay "
 "ofway esultsray."
 
 #: src/code/list.lisp
-msgid "Applies fn to successive CDRs of lists, returns NCONC of results."
+#, fuzzy
+msgid ""
+"Applies Function to successive CDRs of each List, and returns NCONC\n"
+"  of results."
 msgstr ""
 "Appliesway nfay otay uccessivesay Drscay ofway istslay, eturnsray NCONC "
 "ofway esultsray."

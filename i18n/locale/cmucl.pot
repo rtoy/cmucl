@@ -3294,27 +3294,36 @@ msgstr ""
 
 #: src/code/list.lisp
 msgid ""
-"Applies fn to successive elements of lists, returns its second argument."
+"Applies Function to successive elements of each List, and returns\n"
+"  its second argument."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Applies fn to successive elements of list, returns list of results."
+msgid ""
+"Applies Function to successive elements of each List, and returns a\n"
+"  list of results."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Applies fn to successive elements of list, returns NCONC of results."
+msgid ""
+"Applies Function to successive elements of each List, and returns\n"
+"  NCONC of results."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Applies fn to successive CDRs of list, returns ()."
+msgid "Applies Function to successive CDRs of each List, and returns ()."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Applies fn to successive CDRs of list, returns list of results."
+msgid ""
+"Applies Function to successive CDRs of each List, and returns list\n"
+"  of results."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Applies fn to successive CDRs of lists, returns NCONC of results."
+msgid ""
+"Applies Function to successive CDRs of each List, and returns NCONC\n"
+"  of results."
 msgstr ""
 
 #: src/code/list.lisp
