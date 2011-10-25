@@ -1056,27 +1056,32 @@
 
 
 (defun mapc (function list &rest more-lists)
-  "Applies fn to successive elements of lists, returns its second argument."
+  "Applies Function to successive elements of each List, and returns
+  its second argument."
   (map1 function (cons list more-lists) nil t))
 
 (defun mapcar (function list &rest more-lists)
-  "Applies fn to successive elements of list, returns list of results."
+  "Applies Function to successive elements of each List, and returns a
+  list of results."
   (map1 function (cons list more-lists) :list t))
 
 (defun mapcan (function list &rest more-lists)
-  "Applies fn to successive elements of list, returns NCONC of results."
+  "Applies Function to successive elements of each List, and returns
+  NCONC of results."
   (map1 function (cons list more-lists) :nconc t))
 
 (defun mapl (function list &rest more-lists)
-  "Applies fn to successive CDRs of list, returns ()."
+  "Applies Function to successive CDRs of each List, and returns ()."
   (map1 function (cons list more-lists) nil nil))
 
 (defun maplist (function list &rest more-lists)
-  "Applies fn to successive CDRs of list, returns list of results."
+  "Applies Function to successive CDRs of each List, and returns list
+  of results."
   (map1 function (cons list more-lists) :list nil))
 
 (defun mapcon (function list &rest more-lists)
-  "Applies fn to successive CDRs of lists, returns NCONC of results."
+  "Applies Function to successive CDRs of each List, and returns NCONC
+  of results."
   (map1 function (cons list more-lists) :nconc nil))
 
 
