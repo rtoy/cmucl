@@ -81,7 +81,7 @@ esac
 diag "Settings: bld_dir=$bld_dir lisp_variant=$lisp_variant ${motif_variant:+motif_variant=$motif_variant}"
 
 # Create a directory tree that mirrors the source directory tree
-[ -e "$bld_dir" ] && quit "Exists: `ls -ld $bld_dir`"
+[ -d "$bld_dir" ] && quit "Exists: `ls -ld $bld_dir`"
 mkdir -p "$bld_dir"
 (cd src && find . -name .git -prune -o -type d -print) | (cd $bld_dir && xargs mkdir -p) ||
 quit "Can't create target directories"
