@@ -40,6 +40,7 @@ uname_m=`uname -m 2>/dev/null`
 		i386) lisp_variant=x86_darwin ;;
 	    esac
 	    ;;
+        NetBSD) lisp_variant=x86_netbsd ;;
 	*) quit "Unsupported OS: $uname_s";;
     esac
 }
