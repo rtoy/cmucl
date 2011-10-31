@@ -22,8 +22,8 @@ New in this release:
     - Update to Unicode 6.0.0.
     - Add support for character name completion.  This can be used by
       Slime to do character name completion.
-    - Initial support for Solaris/x86.  CMUCL will run on Solaris/x86
-      with all features available, except only Unicode is supported.
+    - Support for Solaris/x86.  CMUCL will run on Solaris/x86 with all
+      features available, except only Unicode is supported.
 
   * Changes
     - ASDF2 updated to version 2.017.
