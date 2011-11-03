@@ -1945,7 +1945,8 @@ When annotations are present, invoke them at the right positions."
     (new-assem:without-scheduling pprint-with-like)
     (vm::with-fixed-allocation pprint-with-like)
     (kernel::number-dispatch pprint-with-like)
-    (stream::with-stream-class pprint-with-like)))
+    (stream::with-stream-class pprint-with-like)
+    (lisp::with-array-data pprint-with-like)))
 
 (defun pprint-init ()
   (setf *initial-pprint-dispatch* (make-pprint-dispatch-table))
