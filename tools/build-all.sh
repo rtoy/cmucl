@@ -46,7 +46,7 @@ do
       C) CREATE_OPT="$OPTARG" ;;
       o) OLDLISP="$OPTARG" ;;
       8) OLD8="$OPTARG" ;;
-      v) VERSION="$OPTARG" ;;
+      v) VERSION="$OPTARG"; VERSION_SET=true ;;
       U) UPDATE_TRANS="-U" ;;
       P) UPDATE_POT="" ;;
       \?) usage ;;
@@ -83,16 +83,19 @@ buildx86 ()
 
 buildsun4 ()
 {
+    if [ "$VERSION_SET" = true ]; then
+      VERS="-v '"$VERSION"'"
+    fi
     # Build non-unicode versions
     if [ -n "$OLD8" ]; then
 	set -x
-	src/tools/build.sh -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
+	src/tools/build.sh -b ${BASE}-8bit $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
 	set +x
     fi
     # Build the unicode version.
     if [ -n "$OLDLISP" ]; then
 	set -x
-	src/tools/build.sh -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
+	src/tools/build.sh -b ${BASE} $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
 	set +x
     fi
 }
