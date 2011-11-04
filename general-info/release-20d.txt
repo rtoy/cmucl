@@ -23,7 +23,13 @@ New in this release:
   * Feature enhancements
 
   * Changes
-
+    * ASDF2 updated to version 2.018.
+    * Behavior of STRING-TO-OCTETS has changed.  This is an
+      incompatible change from the previous version but should be more
+      useful when a buffer is given which is not large enough to hold
+      all the octets for the given string.  See docstring for more
+      details.
+      
   * ANSI compliance fixes:
 
   * Bugfixes:
