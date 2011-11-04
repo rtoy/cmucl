@@ -851,39 +851,66 @@ character and illegal outputs are replaced by a question mark.")
       (funcall f state))))
 
 (def-ef-macro ef-string-to-octets (extfmt lisp::lisp +ef-max+ +ef-so+)
-  `(lambda (string start end buffer error &aux (ptr 0) (state nil))
+  `(lambda (string start end buffer buffer-start buffer-end error bufferp
+	    &aux (ptr buffer-start) (state nil) (last-octet buffer-start))
      (declare #|(optimize (speed 3) (safety 0) (space 0) (debug 0))|#
 	      (type simple-string string)
 	      (type kernel:index start end ptr)
 	      (type (simple-array (unsigned-byte 8) (*)) buffer)
 	      (ignorable state))
-    (dotimes (i (- end start) (values buffer ptr))
-      (declare (type kernel:index i))
-      (char-to-octets ,extfmt (schar string (+ start i)) state
-		      (lambda (b)
-			(when (= ptr (length buffer))
-			  (setq buffer (adjust-array buffer (* 2 ptr))))
-			(setf (aref buffer (1- (incf ptr))) b))
-		      error))))
+     (if bufferp
+	 (block ef-string-done
+	   (dotimes (i (- end start) (values buffer ptr i))
+	     (declare (type kernel:index i))
+	     (char-to-octets ,extfmt (schar string (+ start i)) state
+			     (lambda (b)
+			       (when (= ptr buffer-end)
+				 (return-from ef-string-done
+				   (values buffer last-octet i)))
+			       (setf (aref buffer (1- (incf ptr))) b))
+			     error)
+	     (setf last-octet ptr)))
+	 (dotimes (i (- end start) (values buffer ptr i))
+	   (declare (type kernel:index i))
+	   (char-to-octets ,extfmt (schar string (+ start i)) state
+			   (lambda (b)
+			     (when (= ptr (length buffer))
+			       (setq buffer (adjust-array buffer (* 2 ptr))))
+			     (setf (aref buffer (1- (incf ptr))) b))
+			   error)))))
 
 (defun string-to-octets (string &key (start 0) end (external-format :default)
 				     (buffer nil bufferp)
+				     (buffer-start 0)
 			             error)
   "Convert String to octets using the specified External-format.  The
   string is bounded by Start (defaulting to 0) and End (defaulting to
   the end of the string.  If Buffer is given, the octets are stored
-  there.  If not, a new buffer is created."
+  there.  If not, a new buffer is created.  Buffer-start specifies
+  where in the buffer the first octet will be placed.
+
+  Three values are returned: The buffer, the number of valid octets
+  written, and the number of characters converted.  Note that the
+  actual number of octets written may be greater than the returned
+  value, These represent the partial octets of the next character to
+  be converted, but there was not enough room to hold the complete set
+  of octets."
   (declare (type string string)
 	   (type kernel:index start)
 	   (type (or kernel:index null) end)
-	   (type (or (simple-array (unsigned-byte 8) (*)) null) buffer))
+	   (type (or (array (unsigned-byte 8) (*)) null) buffer))
   (let* ((buffer (or buffer (make-array (length string)
 					:element-type '(unsigned-byte 8)))))
-    (multiple-value-bind (buffer ptr)
-	(lisp::with-array-data ((string string) (start start) (end end))
-	  (funcall (ef-string-to-octets external-format)
-		   string start end buffer error))
-      (values (if bufferp buffer (lisp::shrink-vector buffer ptr)) ptr))))
+    (lisp::with-array-data ((b buffer) (b-start)
+			    (b-end))
+      (multiple-value-bind (result ptr octets)
+	  (lisp::with-array-data ((string string) (start start) (end end))
+	    (funcall (ef-string-to-octets external-format)
+		     string start end b
+		     (+ b-start buffer-start) b-end
+		     error bufferp))
+	(values (if bufferp buffer (lisp::shrink-vector result ptr))
+		(- ptr b-start buffer-start) octets)))))
 
 (def-ef-macro ef-octets-to-string (extfmt lisp::lisp +ef-max+ +ef-os+)
   `(lambda (octets ptr end state string s-start s-end error
