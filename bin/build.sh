@@ -41,7 +41,8 @@ ENABLE4="yes"
 
 version=20c
 SRCDIR=src
-TOOLDIR=$SRCDIR/tools
+BINDIR=bin
+TOOLDIR=$BINDIR
 VERSION="`date '+%Y-%m-%d %H:%M:%S'`"
 GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
 # Add the tree hash to the version

@@ -63,20 +63,21 @@ if [ "$OLDLISP" = "" -a "$OLD8" = "" ]; then
     exit 1
 fi
 
+BINDIR=bin
 buildx86 ()
 {
     if [ -n "$OLD8" ]; then
 	# Build non-unicode versions
 	set -x
-	src/tools/build.sh -f x87 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
-	src/tools/build.sh -f sse2 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
+	$BINDIR/build.sh -f x87 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
+	$BINDIR/build.sh -f sse2 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
 	set +x
     fi
     # Build the unicode versions
     if [ -n "$OLDLISP" ]; then
 	set -x
-	src/tools/build.sh -f x87 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
-	src/tools/build.sh -f sse2 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
+	$BINDIR/build.sh -f x87 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
+	$BINDIR/build.sh -f sse2 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
 	set +x
     fi
 }
@@ -89,13 +90,13 @@ buildsun4 ()
     # Build non-unicode versions
     if [ -n "$OLD8" ]; then
 	set -x
-	src/tools/build.sh -b ${BASE}-8bit $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
+	$BINDIR/build.sh -b ${BASE}-8bit $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
 	set +x
     fi
     # Build the unicode version.
     if [ -n "$OLDLISP" ]; then
 	set -x
-	src/tools/build.sh -b ${BASE} $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
+	$BINDIR/build.sh -b ${BASE} $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
 	set +x
     fi
 }
