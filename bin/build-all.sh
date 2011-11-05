@@ -50,7 +50,7 @@ do
       v) VERSION="$OPTARG"; VERSION_SET=true ;;
       U) UPDATE_TRANS="-U" ;;
       P) UPDATE_POT="" ;;
-      \?) usage ;;
+      \?) usage; exit 1 ;;
     esac
 done
 
