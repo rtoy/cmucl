@@ -25,7 +25,18 @@ done
 
 shift `expr $OPTIND - 1`
 
-VERSION=$1
+# If no compression given, default to gzip (on the assumption that
+# that is available everywhere.)
+if [ -z "$ENABLE_BZIP" -a -z "$ENABLE_GZIP" ]; then
+    ENABLE_GZIP=-b
+fi
+
+# If no version is given, default to today's date
+if [ -n "$1" ]; then
+    VERSION=$1
+else
+    VERSION="`date '+%Y-%m-%d-%H:%M:%S'`"
+fi
 
 echo Creating source distribution
 if [ -n "$ENABLE_GZIP" ]; then
@@ -37,7 +48,7 @@ if [ -n "$ENABLE_BZIP" ]; then
     ZIPEXT="bz2"
 fi
 
-GTAR_OPTIONS="--exclude=CVS --exclude='*.pot.~*~'"
+GTAR_OPTIONS="--exclude=.git --exclude='*.pot.~*~'"
 if [ -z "$INSTALL_DIR" ]; then
     echo "  Compressing with $ZIP"
     ${GTAR:-tar} ${GTAR_OPTIONS} -cf - src | ${ZIP} > cmucl-src-$VERSION.tar.$ZIPEXT
