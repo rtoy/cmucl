@@ -39,7 +39,7 @@ ENABLE2="yes"
 ENABLE3="yes"
 ENABLE4="yes"
 
-version=20b
+version=20c
 SRCDIR=src
 TOOLDIR=$SRCDIR/tools
 VERSION="`date '+%Y-%m-%d %H:%M:%S'`"
