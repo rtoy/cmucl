@@ -18,6 +18,8 @@ usage ()
     echo ""
     echo "    -b d      Basename of the different build directories."
     echo "               ${d}-2, ${d}-3, ${d}-4 for unicode"
+    echo "               If -b is not given, a suitable name is chosen"
+    echo "               based on the OS."
     echo "               ${d}-8bit-2, ${d}-8bit-3, ${d}-8bit-4 for non-unicode"
     echo "    -B file   Use file as a boot file.  Maybe be specified more than once"
     echo "               The file is relative to the bootfiles/<version> directory"
@@ -34,7 +36,6 @@ usage ()
     echo "               translations"
 }
 
-BASE=build
 CREATE_OPT=""
 UPDATE_POT="-P"
 
@@ -49,13 +50,24 @@ do
       v) VERSION="$OPTARG"; VERSION_SET=true ;;
       U) UPDATE_TRANS="-U" ;;
       P) UPDATE_POT="" ;;
-      \?) usage ;;
+      \?) usage; exit 1 ;;
     esac
 done
 
-if [ "$BASE" = "" ]; then
-    echo "-b option required"
-    exit 1
+# If -b not given, try to derive one instead of just using "build".
+if [ -z "$BASE" ]; then
+    case `uname -s` in
+      Darwin) # We only support darwin-x86 now.  No ppc available anymore.
+	  BASE=darwin ;;
+      SunOS)
+	  case `uname -m` in
+	    sun4u) BASE=sparc ;;
+	    i86pc) BASE=sol-x86 ;;
+	  esac ;;
+      Linux) BASE=linux ;;
+      # Add support for FreeBSD and NetBSD?  Otherwise default to just build.
+      *) BASE=build ;;
+    esac
 fi
 
 if [ "$OLDLISP" = "" -a "$OLD8" = "" ]; then
@@ -63,20 +75,21 @@ if [ "$OLDLISP" = "" -a "$OLD8" = "" ]; then
     exit 1
 fi
 
+BINDIR=bin
 buildx86 ()
 {
     if [ -n "$OLD8" ]; then
 	# Build non-unicode versions
 	set -x
-	src/tools/build.sh -f x87 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
-	src/tools/build.sh -f sse2 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
+	$BINDIR/build.sh -f x87 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
+	$BINDIR/build.sh -f sse2 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
 	set +x
     fi
     # Build the unicode versions
     if [ -n "$OLDLISP" ]; then
 	set -x
-	src/tools/build.sh -f x87 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
-	src/tools/build.sh -f sse2 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
+	$BINDIR/build.sh -f x87 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
+	$BINDIR/build.sh -f sse2 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
 	set +x
     fi
 }
@@ -89,13 +102,13 @@ buildsun4 ()
     # Build non-unicode versions
     if [ -n "$OLD8" ]; then
 	set -x
-	src/tools/build.sh -b ${BASE}-8bit $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
+	$BINDIR/build.sh -b ${BASE}-8bit $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
 	set +x
     fi
     # Build the unicode version.
     if [ -n "$OLDLISP" ]; then
 	set -x
-	src/tools/build.sh -b ${BASE} $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
+	$BINDIR/build.sh -b ${BASE} $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
 	set +x
     fi
 }

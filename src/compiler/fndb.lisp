@@ -306,7 +306,9 @@
 (defknown decode-float (float)
   (values (float 0.5d0 (1d0))
 	  float-exponent
-	  (member 1f0 -1f0 -1d0 1d0))
+	  (member 1f0 -1f0 -1d0 1d0
+		  #+double-double -1w0
+		  #+double-double 1w0))
   (movable foldable flushable explicit-check))
 (defknown scale-float (float float-exponent) float
   (movable foldable flushable explicit-check))

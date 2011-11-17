@@ -41,12 +41,12 @@ ENABLE4="yes"
 
 version=20c
 SRCDIR=src
-TOOLDIR=$SRCDIR/tools
+BINDIR=bin
+TOOLDIR=$BINDIR
 VERSION="`date '+%Y-%m-%d %H:%M:%S'`"
 GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
 # Add the tree hash to the version
 VERSION="$VERSION $GIT_HASH"
-BASE=build
 OLDLISPFLAGS="-noinit -nositeinit"
 OLDLISP="cmulisp"
 
@@ -77,7 +77,7 @@ usage ()
     echo "    -o x      Use specified Lisp to build.  Default is cmulisp"
     echo "               (only applicable for build 1)"
     echo '    -b d      The different build directories are named ${d}-2, ${d}-3 ${d}-4'
-    echo '               with a default of "build"'
+    echo '               If -b is not given, a suitable name based on the OS is used.' 
     echo '    -v v      Use the given string as the version.  Default is'
     echo "               today's date"
     echo "    -u        Don't build CLX, CLM, or Hemlock"
@@ -172,6 +172,24 @@ do
 	    ;;
     esac
 done
+
+# If -b not given, try to derive one instead of just using "build".
+if [ -z "$BASE" ]; then
+    case `uname -s` in
+      Darwin) # We only support darwin-x86 now.  No ppc available anymore.
+	  BASE=darwin ;;
+      SunOS)
+	  case `uname -m` in
+	    sun4u) BASE=sparc ;;
+	    i86pc) BASE=sol-x86 ;;
+	  esac ;;
+      Linux) BASE=linux ;;
+      # Add support for FreeBSD and NetBSD?  Otherwise default to just build.
+      *) BASE=build ;;
+    esac
+fi
+
+echo base = $BASE
 
 bootfiles_dir=$SRCDIR/bootfiles/$version
 if [ -n "$bootfiles" ]; then
