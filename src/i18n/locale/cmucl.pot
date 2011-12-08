@@ -9026,7 +9026,15 @@ msgid ""
 "Convert String to octets using the specified External-format.  The\n"
 "  string is bounded by Start (defaulting to 0) and End (defaulting to\n"
 "  the end of the string.  If Buffer is given, the octets are stored\n"
-"  there.  If not, a new buffer is created."
+"  there.  If not, a new buffer is created.  Buffer-start specifies\n"
+"  where in the buffer the first octet will be placed.\n"
+"\n"
+"  Three values are returned: The buffer, the number of valid octets\n"
+"  written, and the number of characters converted.  Note that the\n"
+"  actual number of octets written may be greater than the returned\n"
+"  value, These represent the partial octets of the next character to\n"
+"  be converted, but there was not enough room to hold the complete set\n"
+"  of octets."
 msgstr ""
 
 #: src/code/extfmts.lisp
@@ -9804,6 +9812,14 @@ msgstr ""
 
 #: src/code/filesys.lisp
 msgid ":BACK cannot be represented in namestrings."
+msgstr ""
+
+#: src/code/filesys.lisp
+msgid "Cannot represent \"\" in namestrings."
+msgstr ""
+
+#: src/code/filesys.lisp
+msgid "Cannot represent an explicit directory separator in namestrings."
 msgstr ""
 
 #: src/code/filesys.lisp
