@@ -488,7 +488,14 @@
 	   (error (intl:gettext ":BACK cannot be represented in namestrings.")))
 	  ((member :wild-inferiors)
 	   (pieces "**/"))
-	  ((or simple-string pattern (eql :wild))
+	  (simple-string
+	   (when (zerop (length dir))
+	     (error (intl:gettext "Cannot represent \"\" in namestrings.")))
+	   (when (string-equal dir "/")
+	     (error (intl:gettext "Cannot represent an explicit directory separator in namestrings.")))
+	   (pieces (unparse-unix-piece dir))
+	   (pieces "/"))
+	  ((or pattern (eql :wild))
 	   (pieces (unparse-unix-piece dir))
 	   (pieces "/"))
 	  (t
