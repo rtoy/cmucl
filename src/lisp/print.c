@@ -552,7 +552,7 @@ print_otherptr(lispobj obj)
 
 	  case type_DoubleFloat:
 	      NEWLINE;
-	      printf("%g", ((struct double_float *) PTR(obj))->value);
+	      printf("%.15lg", ((struct double_float *) PTR(obj))->value);
 	      break;
 
 #ifdef type_LongFloat
@@ -565,7 +565,7 @@ print_otherptr(lispobj obj)
 #ifdef type_DoubleDoubleFloat
           case type_DoubleDoubleFloat:
               NEWLINE;
-              printf("%g %g", ((struct double_double_float *) PTR(obj))->hi,
+              printf("%.15lg %.15lg", ((struct double_double_float *) PTR(obj))->hi,
                      ((struct double_double_float *) PTR(obj))->lo);
               break;
 #endif              
@@ -582,9 +582,9 @@ print_otherptr(lispobj obj)
 #ifdef type_ComplexDoubleFloat
 	  case type_ComplexDoubleFloat:
 	      NEWLINE;
-	      printf("%g", ((struct complex_double_float *) PTR(obj))->real);
+	      printf("%.15lg", ((struct complex_double_float *) PTR(obj))->real);
 	      NEWLINE;
-	      printf("%g", ((struct complex_double_float *) PTR(obj))->imag);
+	      printf("%.15lg", ((struct complex_double_float *) PTR(obj))->imag);
 	      break;
 #endif
 
@@ -600,10 +600,10 @@ print_otherptr(lispobj obj)
 #ifdef type_ComplexDoubleDoubleFloat
 	  case type_ComplexDoubleDoubleFloat:
 	      NEWLINE;
-	      printf("%g %g", ((struct complex_double_double_float *) PTR(obj))->real_hi,
+	      printf("%.15lg %.15lg", ((struct complex_double_double_float *) PTR(obj))->real_hi,
                      ((struct complex_double_double_float *) PTR(obj))->real_lo);
 	      NEWLINE;
-	      printf("%g %g", ((struct complex_double_double_float *) PTR(obj))->imag_hi,
+	      printf("%.15lg %.15lg", ((struct complex_double_double_float *) PTR(obj))->imag_hi,
                      ((struct complex_double_double_float *) PTR(obj))->imag_lo);
 	      break;
 #endif
