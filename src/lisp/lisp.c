@@ -33,9 +33,7 @@
 #include "save.h"
 #include "lispregs.h"
 #if defined(FEATURE_EXECUTABLE)
-#if !defined(DARWIN)
 #include "elf.h"
-#endif
 #endif
 
 #ifdef __linux__
