@@ -499,7 +499,7 @@ sigbus_handler(HANDLER_ARGS)
 
     /* a *real* protection fault */
     fprintf(stderr, "sigbus_handler: Real protection violation at %p, PC = %p\n",
-            fault_addr, SC_PC(context));
+            fault_addr, (void *) SC_PC(context));
     sigbus_handle_now(signal, code, context);
 #ifdef __ppc__
     /* Work around G5 bug; fix courtesy gbyers via chandler */
