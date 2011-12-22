@@ -63,6 +63,22 @@ GNAME(x):			;
 #define	align_16byte	4	
 #endif			
 
+/*
+ * Allocate |bytes| on the stack, and make sure the stack pointer is
+ * aligned on a 16-byte boundary.  (Needed on Darwin, and harmless on 
+ * others that don't need such alignment.)
+ */		
+#define STACK_PROLOGUE(bytes) \
+	pushl	%ebp		; \
+	mov	%esp, %ebp	; \
+	subl	$##bytes, %esp	; \
+	andl	$-16, %esp	; 
+
+/* Undo STACK_PROLOGUE */
+#define STACK_EPILOGUE \
+	movl	%ebp, %esp	; \
+	popl	%ebp		; 
+	
 	.text
 	.globl	GNAME(foreign_function_call_active)
 	
@@ -453,13 +469,14 @@ ENDFUNC(fastcopy16)
    So only eax, ecx, and edx need special care here. */
 		
 FUNCDEF(alloc_to_eax)
-	pushl	%ecx	# Save ecx and edx as C could destroy them.
-	pushl	%edx
-	pushl	%eax	# Push the size
+	STACK_PROLOGUE(12)
+	movl	%ecx, 8(%esp)	# Save ecx and edx as C could destroy them.
+	movl	%edx, 4(%esp)
+	movl	%eax, (%esp)	# Push the size
 	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
-	popl	%edx	# Restore ecx and edx.
-	popl	%ecx
+	movl	4(%esp), %edx	# Restore ecx and edx.
+	movl	8(%esp), %ecx
+	STACK_EPILOGUE
 	ret
 ENDFUNC(alloc_to_eax)
 
@@ -473,7 +490,7 @@ FUNCDEF(alloc_8_to_eax)
 	popl	%ecx
 	ret
 ENDFUNC(alloc_8_to_eax)
-
+	
 FUNCDEF(alloc_16_to_eax)
 	pushl	%ecx	# Save ecx and edx as C could destroy them.
 	pushl	%edx
@@ -486,14 +503,15 @@ FUNCDEF(alloc_16_to_eax)
 ENDFUNC(alloc_16_to_eax)
 
 FUNCDEF(alloc_to_ecx)
-	pushl	%eax	# Save eax and edx as C could destroy them.
-	pushl	%edx
-	pushl	%ecx	# Push the size
+	STACK_PROLOGUE(12)
+	movl	%eax, 8(%esp)	# Save eax and edx as C could destroy them.
+	movl	%edx, 4(%esp)
+	movl	%ecx, (%esp)	# Push the size
 	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
 	movl	%eax,%ecx	# setup the destination.
-	popl	%edx	# Restore eax and edx.
-	popl	%eax
+	movl	4(%esp), %edx	# Restore eax and edx.
+	movl	8(%esp), %eax
+	STACK_EPILOGUE
 	ret
 ENDFUNC(alloc_to_ecx)
 
@@ -522,14 +540,15 @@ FUNCDEF(alloc_16_to_ecx)
 ENDFUNC(alloc_16_to_ecx)
 
 FUNCDEF(alloc_to_edx)
-	pushl	%eax	# Save eax and ecx as C could destroy them.
-	pushl	%ecx
-	pushl	%edx	# Push the size
+	STACK_PROLOGUE(12)
+	movl	%eax, 8(%esp)	# Save eax and ecx as C could destroy them.
+	movl	%ecx, 4(%esp)
+	movl	%edx, (%esp)	# Push the size
 	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
 	movl	%eax,%edx	# setup the destination.
-	popl	%ecx	# Restore eax and ecx.
-	popl	%eax
+	movl	4(%esp), %ecx	# Restore eax and ecx.
+	movl	8(%esp), %eax
+	STACK_EPILOGUE
 	ret
 ENDFUNC(alloc_to_edx)
 
@@ -558,16 +577,17 @@ FUNCDEF(alloc_16_to_edx)
 ENDFUNC(alloc_16_to_edx)
 
 FUNCDEF(alloc_to_ebx)
-	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
-	pushl	%ecx
-	pushl	%edx
-	pushl	%ebx	# Push the size
+	STACK_PROLOGUE(16)
+	movl	%eax, 12(%esp)	# Save eax, ecx, and edx as C could destroy them.
+	movl	%ecx, 8(%esp)
+	movl	%edx, 4(%esp)
+	movl	%ebx, (%esp)	# Push the size
 	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
 	movl	%eax,%ebx	# setup the destination.
-	popl	%edx	# Restore eax, ecx and edx.
-	popl	%ecx
-	popl	%eax
+	movl	4(%esp), %edx	# Restore eax, ecx and edx.
+	movl	8(%esp), %ecx
+	movl	12(%esp), %eax
+	STACK_EPILOGUE
 	ret
 ENDFUNC(alloc_to_ebx)
 
@@ -600,16 +620,17 @@ FUNCDEF(alloc_16_to_ebx)
 ENDFUNC(alloc_16_to_ebx)
 
 FUNCDEF(alloc_to_esi)
-	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
-	pushl	%ecx
-	pushl	%edx
-	pushl	%esi	# Push the size
+	STACK_PROLOGUE(16)
+	movl	%eax, 12(%esp)	# Save eax, ecx, and edx as C could destroy them.
+	movl	%ecx, 8(%esp)
+	movl	%edx, 4(%esp)
+	movl	%esi, (%esp)	# Push the size
 	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
 	movl	%eax,%esi	# setup the destination.
-	popl	%edx	# Restore eax, ecx and edx.
-	popl	%ecx
-	popl	%eax
+	movl	4(%esp), %edx	# Restore eax, ecx and edx.
+	movl	8(%esp), %ecx
+	movl	12(%esp), %eax
+	STACK_EPILOGUE
 	ret
 ENDFUNC(alloc_to_esi)
 
@@ -642,16 +663,17 @@ FUNCDEF(alloc_16_to_esi)
 ENDFUNC(alloc_16_to_esi)
 
 FUNCDEF(alloc_to_edi)
-	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
-	pushl	%ecx
-	pushl	%edx
-	pushl	%edi	# Push the size
+	STACK_PROLOGUE(16)
+	movl	%eax, 12(%esp)	# Save eax, ecx, and edx as C could destroy them.
+	movl	%ecx, 8(%esp)
+	movl	%edx, 4(%esp)
+	movl	%edi, (%esp)	# Push the size
 	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
 	movl	%eax,%edi	# setup the destination.
-	popl	%edx	# Restore eax, ecx and edx.
-	popl	%ecx
-	popl	%eax
+	movl	4(%esp), %edx	# Restore eax, ecx and edx.
+	movl	8(%esp), %ecx
+	movl	12(%esp), %eax
+	STACK_EPILOGUE
 	ret
 ENDFUNC(alloc_to_edi)
 
@@ -683,7 +705,6 @@ FUNCDEF(alloc_16_to_edi)
 	ret
 ENDFUNC(alloc_16_to_edi)
 
-
 #ifdef GENCGC
 
 /* Called from lisp when an inline allocation overflows.
@@ -694,15 +715,16 @@ ENDFUNC(alloc_16_to_edi)
 /* This routine handles an overflow with eax=crfp+size. So the
    size=eax-crfp. */
 FUNCDEF(alloc_overflow_eax)
-	pushl	%ecx		# Save ecx
-	pushl	%edx		# Save edx
+	STACK_PROLOGUE(12)
+	movl	%ecx, 8(%esp)	# Save ecx
+	movl	%edx, 4(%esp)	# Save edx
 	/* Calculate the size for the allocation. */
 	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%eax
-	pushl	%eax		# Push the size
+	movl	%eax, (%esp)	# Push the size
 	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
-	popl	%edx	# Restore edx.
-	popl	%ecx	# Restore ecx.
+	movl	4(%esp), %edx	# Restore edx.
+	movl	8(%esp), %ecx	# Restore ecx.
+	STACK_EPILOGUE
 	addl	$6,(%esp) # Adjust the return address to skip the next inst.
 	ret
 ENDFUNC(alloc_overflow_eax)
@@ -710,16 +732,17 @@ ENDFUNC(alloc_overflow_eax)
 /* This routine handles an overflow with ecx=crfp+size. So the
    size=ecx-crfp. */
 FUNCDEF(alloc_overflow_ecx)
-	pushl	%eax		# Save eax
-	pushl	%edx		# Save edx
+	STACK_PROLOGUE(12)
+	movl	%eax, 8(%esp)	# Save eax
+	movl	%edx, 4(%esp)	# Save edx
 	/* Calculate the size for the allocation. */
 	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%ecx
-	pushl	%ecx		# Push the size
+	movl	%ecx, (%esp)	# Push the size
 	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
 	movl	%eax,%ecx	# setup the destination.
-	popl	%edx	# Restore edx.
-	popl	%eax	# Restore eax.
+	movl	4(%esp), %edx	# Restore edx.
+	movl	8(%esp), %eax	# Restore eax.
+	STACK_EPILOGUE
 	addl	$6,(%esp) # Adjust the return address to skip the next inst.
 	ret
 ENDFUNC(alloc_overflow_ecx)
@@ -727,16 +750,17 @@ ENDFUNC(alloc_overflow_ecx)
 /* This routine handles an overflow with edx=crfp+size. So the
    size=edx-crfp. */
 FUNCDEF(alloc_overflow_edx)
-	pushl	%eax		# Save eax
-	pushl	%ecx		# Save ecx
+	STACK_PROLOGUE(12)
+	movl	%eax, 8(%esp)	# Save eax
+	movl	%ecx, 4(%esp)	# Save ecx
 	/* Calculate the size for the allocation. */
 	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%edx
-	pushl	%edx		# Push the size
+	movl	%edx, (%esp)	# Push the size
 	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
 	movl	%eax,%edx	# setup the destination.
-	popl	%ecx	# Restore ecx.
-	popl	%eax	# Restore eax.
+	movl	4(%esp), %ecx	# Restore ecx.
+	movl	8(%esp), %eax	# Restore eax.
+	STACK_EPILOGUE
 	addl	$6,(%esp) # Adjust the return address to skip the next inst.
 	ret
 ENDFUNC(alloc_overflow_edx)
@@ -744,18 +768,19 @@ ENDFUNC(alloc_overflow_edx)
 /* This routine handles an overflow with ebx=crfp+size. So the
    size=ebx-crfp. */
 FUNCDEF(alloc_overflow_ebx)
-	pushl	%eax		# Save eax
-	pushl	%ecx		# Save ecx
-	pushl	%edx		# Save edx
+	STACK_PROLOGUE(16)
+	movl	%eax, 12(%esp)	# Save eax
+	movl	%ecx, 8(%esp)	# Save ecx
+	movl	%edx, 4(%esp)	# Save edx
 	/* Calculate the size for the allocation. */
 	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%ebx
-	pushl	%ebx		# Push the size
+	movl	%ebx, (%esp)		# Push the size
 	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
 	movl	%eax,%ebx	# setup the destination.
-	popl	%edx	# Restore edx.
-	popl	%ecx	# Restore ecx.
-	popl	%eax	# Restore eax.
+	movl	4(%esp), %edx	# Restore edx.
+	movl	8(%esp), %ecx	# Restore ecx.
+	movl	12(%esp), %eax	# Restore eax.
+	STACK_EPILOGUE
 	addl	$6,(%esp) # Adjust the return address to skip the next inst.
 	ret
 ENDFUNC(alloc_overflow_ebx)
@@ -763,18 +788,19 @@ ENDFUNC(alloc_overflow_ebx)
 /* This routine handles an overflow with esi=crfp+size. So the
    size=esi-crfp. */
 FUNCDEF(alloc_overflow_esi)
-	pushl	%eax		# Save eax
-	pushl	%ecx		# Save ecx
-	pushl	%edx		# Save edx
+	STACK_PROLOGUE(16)
+	movl	%eax, 12(%esp)	# Save eax
+	movl	%ecx, 8(%esp)	# Save ecx
+	movl	%edx, 4(%esp)	# Save edx
 	/* Calculate the size for the allocation. */
 	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%esi
-	pushl	%esi		# Push the size
+	movl	%esi, (%esp)	# Push the size
 	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
 	movl	%eax,%esi	# setup the destination.
-	popl	%edx	# Restore edx.
-	popl	%ecx	# Restore ecx.
-	popl	%eax	# Restore eax.
+	movl	4(%esp), %edx	# Restore edx.
+	movl	8(%esp), %ecx	# Restore ecx.
+	movl	12(%esp), %eax	# Restore eax.
+	STACK_EPILOGUE
 	addl	$6,(%esp) # Adjust the return address to skip the next inst.
 	ret
 ENDFUNC(alloc_overflow_esi)
@@ -782,18 +808,19 @@ ENDFUNC(alloc_overflow_esi)
 /* This routine handles an overflow with edi=crfp+size. So the
    size=edi-crfp. */
 FUNCDEF(alloc_overflow_edi)
-	pushl	%eax		# Save eax
-	pushl	%ecx		# Save ecx
-	pushl	%edx		# Save edx
+	STACK_PROLOGUE(16)
+	movl	%eax, 12(%esp)	# Save eax
+	movl	%ecx, 8(%esp)	# Save ecx
+	movl	%edx, 4(%esp)	# Save edx
 	/* Calculate the size for the allocation. */
 	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%edi
-	pushl	%edi		# Push the size
+	movl	%edi, (%esp)	# Push the size
 	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
 	movl	%eax,%edi	# setup the destination.
-	popl	%edx	# Restore edx.
-	popl	%ecx	# Restore ecx.
-	popl	%eax	# Restore eax.
+	movl	4(%esp), %edx	# Restore edx.
+	movl	8(%esp), %ecx	# Restore ecx.
+	movl	12(%esp), %eax	# Restore eax.
+	STACK_EPILOGUE
 	addl	$6,(%esp) # Adjust the return address to skip the next inst.
 	ret
 ENDFUNC(alloc_overflow_edi)
