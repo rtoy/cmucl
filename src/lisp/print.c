@@ -154,12 +154,13 @@ continue_p(boolean newline)
 	    putchar('\n');
 
 	if (cur_lines >= max_lines) {
+            char *result;
 	    printf("More? [y] ");
 	    fflush(stdout);
 
-	    fgets(buffer, sizeof(buffer), stdin);
+	    result = fgets(buffer, sizeof(buffer), stdin);
 
-	    if (buffer[0] == 'n' || buffer[0] == 'N')
+	    if (result == NULL || buffer[0] == 'n' || buffer[0] == 'N')
 		throw_to_monitor();
 	    else
 		cur_lines = 0;

@@ -312,12 +312,14 @@ static void
 quit(char **ptr)
 {
     char buf[10];
+    char *result; 
 
     printf("Really quit? [y] ");
     fflush(stdout);
-    fgets(buf, sizeof(buf), stdin);
-    if (buf[0] == 'y' || buf[0] == 'Y' || buf[0] == '\n')
+    result = fgets(buf, sizeof(buf), stdin);
+    if (result && (buf[0] == 'y' || buf[0] == 'Y' || buf[0] == '\n')) {
 	exit(0);
+    }
 }
 
 static void
@@ -467,7 +469,14 @@ sub_monitor(void)
 	if (line == NULL) {
 	    if (isatty(0)) {
 		putchar('\n');
-		continue;
+                /*
+                    * We can no longer read anything from stdin, so
+                    * just exit this loop instead of spewing an
+                    * endless stream of prompts.  This also means we
+                    * can't use ldb anymore because stdin is
+                    * unreadable.
+                    */
+                break;
 	    } else {
 		fprintf(stderr, "\nEOF on something other than a tty.\n");
 		exit(1);
