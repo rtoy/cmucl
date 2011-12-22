@@ -312,12 +312,14 @@ static void
 quit(char **ptr)
 {
     char buf[10];
+    char *result; 
 
     printf("Really quit? [y] ");
     fflush(stdout);
-    fgets(buf, sizeof(buf), stdin);
-    if (buf[0] == 'y' || buf[0] == 'Y' || buf[0] == '\n')
+    result = fgets(buf, sizeof(buf), stdin);
+    if (result && (buf[0] == 'y' || buf[0] == 'Y' || buf[0] == '\n')) {
 	exit(0);
+    }
 }
 
 static void
