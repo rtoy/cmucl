@@ -65,7 +65,7 @@ int personality (unsigned long);
 #endif
 
 void
-check_personality(struct utsname *name, const char *argv[], const char *envp[])
+check_personality(struct utsname *name, char *const *argv, char *const *envp)
 {
     /* KLUDGE: Disable memory randomization on new Linux kernels
      * by setting a personality flag and re-executing. (We need
@@ -428,7 +428,7 @@ sigsegv_handler(HANDLER_ARGS)
 	tramp_signal = signal;
 	tramp_code = *code;
 	tramp_context = *context;
-	SC_PC(context) = sigsegv_handler_tramp;
+	SC_PC(context) = (unsigned long) sigsegv_handler_tramp;
 	return;
     }
 #endif
