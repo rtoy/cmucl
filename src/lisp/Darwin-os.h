@@ -28,7 +28,7 @@ typedef int os_vm_prot_t;
 
 #define OS_VM_DEFAULT_PAGESIZE	4096
 
-#define HANDLER_ARGS int signal, siginfo_t *code, os_context_t *context
+#define HANDLER_ARGS int signal, siginfo_t *code, void *context
 #define CODE(code)  ((code) ? code->si_code : 0)
 #define os_context_t ucontext_t
 #ifdef __i386__
