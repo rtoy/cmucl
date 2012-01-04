@@ -110,7 +110,10 @@ void greet_client(int socket) {
   /* Read byte-swap thing */
   result = read(socket,&byte,2);
   if( !result )  fatal_error("greet_client:  Unable to read initial data.");
-  else if( result == 1 )  read(socket,&byte+1,1);
+  else if( result == 1 ) {
+      result = read(socket, ((char *) &byte)+1,1);
+      fatal_error("greet_client:  Unable to read initial data.");
+  }
 
   swap_bytes = (byte!=1);
   if( global_will_trace ) {
