@@ -40,6 +40,10 @@
 #include <sys/utsname.h>
 #endif
 
+#if defined(__linux__)
+#include <time.h>
+#endif
+
 
 
 /* SIGINT handler that invokes the monitor. */
@@ -94,6 +98,16 @@ static char *cmucllib_search_list[] = {
     NULL
 };
 
+void
+getcwd_or_die(char* buf, size_t size)
+{
+    char *result = getcwd(buf, size);
+
+    if (result == NULL) {
+        perror("Cannot get cwd");
+        exit(1);
+    }
+}
 
 /* Set this to see how we're doing our search */
 int debug_lisp_search = FALSE;
@@ -154,7 +168,7 @@ default_cmucllib(const char *argv0arg)
 	 * append argv[0], after stripping off the executable name.
 	 */
 	cwd = malloc(FILENAME_MAX + strlen(argv0_dir) + 100);
-	getcwd(cwd, FILENAME_MAX);
+	getcwd_or_die(cwd, FILENAME_MAX);
 	strcat(cwd, "/");
 	if (*argv0_dir != '\0') {
 	    strcat(cwd, argv0_dir);
@@ -353,7 +367,7 @@ prepend_core_path(const char *lib, const char *corefile)
 	 * We have a relative path for the corefile.  Prepend our current
 	 * directory to get the full path.
 	 */
-	getcwd(cwd, FILENAME_MAX);
+	getcwd_or_die(cwd, FILENAME_MAX);
 	path = malloc(FILENAME_MAX + strlen(corefile) + 2);
 	strcpy(path, cwd);
 	strcat(path, "/");
