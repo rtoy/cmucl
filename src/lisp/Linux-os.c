@@ -406,18 +406,19 @@ sigsegv_handler_tramp(void)
 void
 sigsegv_handler(HANDLER_ARGS)
 {
-    int fault_addr = context->uc_mcontext.cr2;
+    os_context_t *os_context = (os_context_t *) context;
+    int fault_addr = os_context->uc_mcontext.cr2;
 
 #ifdef RED_ZONE_HIT
-    if (os_control_stack_overflow((void *) fault_addr, context))
+    if (os_control_stack_overflow((void *) fault_addr, os_context))
 	return;
 #endif
     if (gc_write_barrier(code->si_addr))
 	return;
 #if defined(__x86_64)
-    DPRINTF(0, (stderr, "sigsegv: rip: %p\n", context->uc_mcontext.gregs[REG_RIP]));
+    DPRINTF(0, (stderr, "sigsegv: rip: %p\n", os_context->uc_mcontext.gregs[REG_RIP]));
 #else
-    DPRINTF(0, (stderr, "sigsegv: eip: %x\n", context->uc_mcontext.gregs[REG_EIP]));
+    DPRINTF(0, (stderr, "sigsegv: eip: %x\n", os_context->uc_mcontext.gregs[REG_EIP]));
 #endif
 
 #ifdef RED_ZONE_HIT
@@ -427,13 +428,13 @@ sigsegv_handler(HANDLER_ARGS)
 	   to the other stack. */
 	tramp_signal = signal;
 	tramp_code = *code;
-	tramp_context = *context;
-	SC_PC(context) = (unsigned long) sigsegv_handler_tramp;
+	tramp_context = *os_context;
+	SC_PC(os_context) = (unsigned long) sigsegv_handler_tramp;
 	return;
     }
 #endif
 
-    sigsegv_handle_now(signal, code, context);
+    sigsegv_handle_now(signal, code, os_context);
 }
 #else
 static void

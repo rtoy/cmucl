@@ -406,7 +406,7 @@ interrupt_install_low_level_handler(int signal, void handler(HANDLER_ARGS))
 {
     struct sigaction sa;
 
-    sa.sa_sigaction = handler;
+    sa.sa_sigaction = (void (*)(HANDLER_ARGS)) handler;
     sigemptyset(&sa.sa_mask);
     FILLBLOCKSET(&sa.sa_mask);
     sa.sa_flags = SA_RESTART | SA_SIGINFO;
@@ -461,12 +461,12 @@ install_handler(int signal, void handler(HANDLER_ARGS))
     if (interrupt_low_level_handlers[signal] == 0) {
 	if (handler == (void (*)(HANDLER_ARGS)) SIG_DFL
 	    || handler == (void (*)(HANDLER_ARGS)) SIG_IGN)
-	    sa.sa_sigaction = handler;
+            sa.sa_sigaction = (void (*)(HANDLER_ARGS)) handler;
 	else if (sigismember(&new, signal))
-	    sa.sa_sigaction = maybe_now_maybe_later;
+	    sa.sa_sigaction = (void (*)(HANDLER_ARGS)) maybe_now_maybe_later;
 	else
-	    sa.sa_sigaction = interrupt_handle_now_handler;
-
+	    sa.sa_sigaction = (void (*)(HANDLER_ARGS)) interrupt_handle_now_handler;
+        
 	sigemptyset(&sa.sa_mask);
 	FILLBLOCKSET(&sa.sa_mask);
 	sa.sa_flags = SA_SIGINFO | SA_RESTART;

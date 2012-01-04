@@ -44,7 +44,7 @@ typedef int os_vm_prot_t;	/* like hpux */
 
 void restore_fpu(ucontext_t *);
 
-#define HANDLER_ARGS int signal, siginfo_t *code, ucontext_t *context
+#define HANDLER_ARGS int signal, siginfo_t *code, void *context
 #define CODE(code) ((code) ? code->si_code : 0)
 #define RESTORE_FPU(context) restore_fpu(context)
 

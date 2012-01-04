@@ -278,11 +278,11 @@ void
 sigtrap_handler(HANDLER_ARGS)
 {
     unsigned int trap;
-
+    os_context_t* os_context = (os_context_t *) context;
 #if 0
     fprintf(stderr, "x86sigtrap: %8x %x\n",
-            SC_PC(context), *(unsigned char *) (SC_PC(context) - 1));
-    fprintf(stderr, "sigtrap(%d %d %x)\n", signal, CODE(code), context);
+            SC_PC(os_os_context), *(unsigned char *) (SC_PC(os_context) - 1));
+    fprintf(stderr, "sigtrap(%d %d %x)\n", signal, CODE(code), os_context);
 #endif
 
     if (single_stepping && (signal == SIGTRAP)) {
@@ -292,7 +292,7 @@ sigtrap_handler(HANDLER_ARGS)
 
 #ifdef SC_EFLAGS
 	/* Disable single-stepping */
-	SC_EFLAGS(context) ^= 0x100;
+	SC_EFLAGS(os_context) ^= 0x100;
 #else
 	/* Un-install single step helper instructions. */
 	*(single_stepping - 3) = single_step_save1;
@@ -304,7 +304,7 @@ sigtrap_handler(HANDLER_ARGS)
 	/*
 	 * Re-install the breakpoint if possible.
 	 */
-	if ((int) SC_PC(context) == (int) single_stepping + 1)
+	if ((int) SC_PC(os_context) == (int) single_stepping + 1)
 	    fprintf(stderr, "* Breakpoint not re-install\n");
 	else {
 	    char *ptr = (char *) single_stepping;
@@ -318,9 +318,9 @@ sigtrap_handler(HANDLER_ARGS)
     }
 
     /* This is just for info in case monitor wants to print an approx */
-    current_control_stack_pointer = (unsigned long *) SC_SP(context);
+    current_control_stack_pointer = (unsigned long *) SC_SP(os_context);
 
-    RESTORE_FPU(context);
+    RESTORE_FPU(os_context);
 
     /*
      * On entry %eip points just after the INT3 byte and aims at the
@@ -329,13 +329,13 @@ sigtrap_handler(HANDLER_ARGS)
      * arguments to follow.
      */
 
-    trap = *(unsigned char *) SC_PC(context);
+    trap = *(unsigned char *) SC_PC(os_context);
 
     switch (trap) {
       case trap_PendingInterrupt:
 	  DPRINTF(0, (stderr, "<trap Pending Interrupt.>\n"));
-	  arch_skip_instruction(context);
-	  interrupt_handle_pending(context);
+	  arch_skip_instruction(os_context);
+	  interrupt_handle_pending(os_context);
 	  break;
 
       case trap_Halt:
@@ -345,59 +345,59 @@ sigtrap_handler(HANDLER_ARGS)
 
 	      fpu_save(fpu_state);
 #endif
-	      fake_foreign_function_call(context);
+	      fake_foreign_function_call(os_context);
 	      lose("%%primitive halt called; the party is over.\n");
-	      undo_fake_foreign_function_call(context);
+	      undo_fake_foreign_function_call(os_context);
 #ifndef __linux__
 	      fpu_restore(fpu_state);
 #endif
-	      arch_skip_instruction(context);
+	      arch_skip_instruction(os_context);
 	      break;
 	  }
 
       case trap_Error:
       case trap_Cerror:
 	  DPRINTF(0, (stderr, "<trap Error %x>\n", CODE(code)));
-	  interrupt_internal_error(signal, code, context, CODE(code) == trap_Cerror);
+	  interrupt_internal_error(signal, code, os_context, CODE(code) == trap_Cerror);
 	  break;
 
       case trap_Breakpoint:
 #if 0
 	  fprintf(stderr, "*C break\n");
 #endif
-	  SC_PC(context) -= 1;
+	  SC_PC(os_context) -= 1;
 
-	  handle_breakpoint(signal, CODE(code), context);
+	  handle_breakpoint(signal, CODE(code), os_context);
 #if 0
 	  fprintf(stderr, "*C break return\n");
 #endif
 	  break;
 
       case trap_FunctionEndBreakpoint:
-	  SC_PC(context) -= 1;
-	  SC_PC(context) =
-	      (int) handle_function_end_breakpoint(signal, CODE(code), context);
+	  SC_PC(os_context) -= 1;
+	  SC_PC(os_context) =
+	      (int) handle_function_end_breakpoint(signal, CODE(code), os_context);
 	  break;
 
 #ifdef trap_DynamicSpaceOverflowWarning
       case trap_DynamicSpaceOverflowWarning:
 	  interrupt_handle_space_overflow(SymbolFunction
 					  (DYNAMIC_SPACE_OVERFLOW_WARNING_HIT),
-					  context);
+					  os_context);
 	  break;
 #endif
 #ifdef trap_DynamicSpaceOverflowError
       case trap_DynamicSpaceOverflowError:
 	  interrupt_handle_space_overflow(SymbolFunction
 					  (DYNAMIC_SPACE_OVERFLOW_ERROR_HIT),
-					  context);
+					  os_context);
 	  break;
 #endif
       default:
 	  DPRINTF(0,
 		  (stderr, "[C--trap default %d %d %p]\n", signal, CODE(code),
-		   context));
-	  interrupt_handle_now(signal, code, context);
+		   os_context));
+	  interrupt_handle_now(signal, code, os_context);
 	  break;
     }
 }
