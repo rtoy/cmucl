@@ -299,10 +299,10 @@
 	     ;; actually save the status word of the FPU.  The
 	     ;; operands also seem to be missing.  Signal a general
 	     ;; arithmetic error.
-	     #+solaris
+	     #+(and x86 solaris)
 	     (error 'arithmetic-error :operands operands)
-	     #-solaris
-	     (error (intl:gettext "SIGFPE with no exceptions currently enabled?")))))))
+	     #-(and x86 solaris)
+	     (error _"SIGFPE with no exceptions currently enabled?"))))))
 
 ;;; WITH-FLOAT-TRAPS-MASKED  --  Public
 ;;;
