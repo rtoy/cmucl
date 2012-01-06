@@ -71,7 +71,7 @@ GNAME(x):			;
 #define STACK_PROLOGUE(bytes) \
 	pushl	%ebp		; \
 	mov	%esp, %ebp	; \
-	subl	$##bytes, %esp	; \
+	subl	$bytes, %esp	; \
 	andl	$-16, %esp	; 
 
 /* Undo STACK_PROLOGUE */
