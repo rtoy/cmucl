@@ -225,6 +225,8 @@ void real_segv_handler(HANDLER_ARGS)
 void
 segv_handler(HANDLER_ARGS)
 {
+    os_context_t *os_context = (os_context_t *) context;
+    
     caddr_t addr = code->si_addr;
 
     SAVE_CONTEXT();
@@ -275,7 +277,7 @@ segv_handler(HANDLER_ARGS)
     /* a *real* protection fault */
     fprintf(stderr, "segv_handler: Real protection violation: %p, PC = %p\n",
             addr,
-            context->uc_mcontext.gregs[1]);
+            os_context->uc_mcontext.gregs[1]);
     real_segv_handler(signal, code, context);
 }
 #else

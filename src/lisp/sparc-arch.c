@@ -38,19 +38,20 @@ arch_get_bad_addr(HANDLER_ARGS)
 {
     unsigned int badinst;
     int rs1;
-
+    os_context_t *os_context = (os_context_t *) context;
+    
     /* On the sparc, we have to decode the instruction. */
 
     /* Make sure it's not the pc thats bogus, and that it was lisp code */
     /* that caused the fault. */
-    if ((SC_PC(context) & 3) != 0 ||
-	((SC_PC(context) < READ_ONLY_SPACE_START ||
-	  SC_PC(context) >= READ_ONLY_SPACE_START + read_only_space_size) &&
-	 ((lispobj *) SC_PC(context) < current_dynamic_space &&
-	  (lispobj *) SC_PC(context) >=
+    if ((SC_PC(os_context) & 3) != 0 ||
+	((SC_PC(os_context) < READ_ONLY_SPACE_START ||
+	  SC_PC(os_context) >= READ_ONLY_SPACE_START + read_only_space_size) &&
+	 ((lispobj *) SC_PC(os_context) < current_dynamic_space &&
+	  (lispobj *) SC_PC(os_context) >=
 	  current_dynamic_space + dynamic_space_size))) return 0;
 
-    badinst = *(unsigned int *) SC_PC(context);
+    badinst = *(unsigned int *) SC_PC(os_context);
 
     if ((badinst >> 30) != 3)
 	/* All load/store instructions have op = 11 (binary) */
@@ -65,19 +66,18 @@ arch_get_bad_addr(HANDLER_ARGS)
 	if (simm13 & (1 << 12))
 	    simm13 |= -1 << 13;
 
-	return (os_vm_address_t) (SC_REG(context, rs1) + simm13);
+	return (os_vm_address_t) (SC_REG(os_context, rs1) + simm13);
     } else {
 	/* r[rs1] + r[rs2] */
 	int rs2 = badinst & 0x1f;
 
-	return (os_vm_address_t) (SC_REG(context, rs1) + SC_REG(context, rs2));
+	return (os_vm_address_t) (SC_REG(os_context, rs1) + SC_REG(os_context, rs2));
     }
 
 }
 
 void
-arch_skip_instruction(context)
-     struct sigcontext *context;
+arch_skip_instruction(os_context_t *context)
 {
     /* Skip the offending instruction */
     SC_PC(context) = SC_NPC(context);
@@ -425,6 +425,8 @@ handle_allocation_trap(struct sigcontext *context)
 static void
 sigill_handler(HANDLER_ARGS)
 {
+    os_context_t *os_context = (os_context_t *) context;
+    
     SAVE_CONTEXT();
 
     /*
@@ -441,13 +443,13 @@ sigill_handler(HANDLER_ARGS)
      * a bad idea to have interrupts enabled here.)
      */
 #if 0
-    sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+    sigprocmask(SIG_SETMASK, &os_context->uc_sigmask, 0);
 #endif
 
     if (CODE(code) == ILLTRAP_INST) {
 	int illtrap_code;
 	unsigned int inst;
-	unsigned int *pc = (unsigned int *) (SC_PC(context));
+	unsigned int *pc = (unsigned int *) (SC_PC(os_context));
 
 	inst = *pc;
 
@@ -455,88 +457,88 @@ sigill_handler(HANDLER_ARGS)
 
 	switch (illtrap_code) {
 	  case trap_PendingInterrupt:
-	      arch_skip_instruction(context);
-	      interrupt_handle_pending(context);
+	      arch_skip_instruction(os_context);
+	      interrupt_handle_pending(os_context);
 	      break;
 
 	  case trap_Halt:
-	      fake_foreign_function_call(context);
+	      fake_foreign_function_call(os_context);
 	      lose("%%primitive halt called; the party is over.\n");
 
 	  case trap_Error:
 	  case trap_Cerror:
-	      interrupt_internal_error(signal, code, context,
+	      interrupt_internal_error(signal, code, os_context,
 				       illtrap_code == trap_Cerror);
 	      break;
 
 	  case trap_Breakpoint:
 	      enable_some_signals();
-	      handle_breakpoint(signal, CODE(code), context);
+	      handle_breakpoint(signal, CODE(code), os_context);
 	      break;
 
 	  case trap_FunctionEndBreakpoint:
 	      enable_some_signals();
-	      SC_PC(context) =
+	      SC_PC(os_context) =
 		  (long) handle_function_end_breakpoint(signal, CODE(code),
-							context);
-	      SC_NPC(context) = SC_PC(context) + 4;
+							os_context);
+	      SC_NPC(os_context) = SC_PC(os_context) + 4;
 	      break;
 
 	  case trap_AfterBreakpoint:
 	      *skipped_break_addr = trap_Breakpoint;
 	      skipped_break_addr = NULL;
-	      *(unsigned long *) SC_PC(context) = displaced_after_inst;
-	      context->uc_sigmask = orig_sigmask;
-	      os_flush_icache((os_vm_address_t) SC_PC(context),
+	      *(unsigned long *) SC_PC(os_context) = displaced_after_inst;
+	      os_context->uc_sigmask = orig_sigmask;
+	      os_flush_icache((os_vm_address_t) SC_PC(os_context),
 
 			      sizeof(unsigned long));
 	      break;
 
 #ifdef trap_DynamicSpaceOverflowWarning
 	  case trap_DynamicSpaceOverflowWarning:
-	      arch_skip_instruction(context);
+	      arch_skip_instruction(os_context);
 	      enable_some_signals();
 	      interrupt_handle_space_overflow(SymbolFunction
 					      (DYNAMIC_SPACE_OVERFLOW_WARNING_HIT),
-					      context);
+					      os_context);
 	      break;
 #endif
 #ifdef trap_DynamicSpaceOverflowError
 	  case trap_DynamicSpaceOverflowError:
-	      arch_skip_instruction(context);
+	      arch_skip_instruction(os_context);
 	      enable_some_signals();
 	      interrupt_handle_space_overflow(SymbolFunction
 					      (DYNAMIC_SPACE_OVERFLOW_ERROR_HIT),
-					      context);
+					      os_context);
 	      break;
 #endif
 	  default:
-	      interrupt_handle_now(signal, code, context);
+	      interrupt_handle_now(signal, code, os_context);
 	      break;
 	}
     } else if (TRAP_INST(code)) {
-	if (pseudo_atomic_trap_p(context)) {
+	if (pseudo_atomic_trap_p(os_context)) {
 	    /* A trap instruction from a pseudo-atomic.  We just need
 	       to fixup up alloc-tn to remove the interrupted flag,
 	       skip over the trap instruction, and then handle the
 	       pending interrupt(s). */
-	    SC_REG(context, reg_ALLOC) &= ~lowtag_Mask;
-	    arch_skip_instruction(context);
-	    interrupt_handle_pending(context);
+	    SC_REG(os_context, reg_ALLOC) &= ~lowtag_Mask;
+	    arch_skip_instruction(os_context);
+	    interrupt_handle_pending(os_context);
 	}
 #ifdef GENCGC
-	else if (allocation_trap_p(context)) {
+	else if (allocation_trap_p(os_context)) {
 	    /* An allocation trap. Call the trap handler and then skip
 	       this instruction */
-	    handle_allocation_trap(context);
-	    arch_skip_instruction(context);
+	    handle_allocation_trap(os_context);
+	    arch_skip_instruction(os_context);
 	}
 #endif
 	else {
-	    interrupt_internal_error(signal, code, context, FALSE);
+	    interrupt_internal_error(signal, code, os_context, FALSE);
 	}
     } else {
-	interrupt_handle_now(signal, code, context);
+	interrupt_handle_now(signal, code, os_context);
     }
 }
 

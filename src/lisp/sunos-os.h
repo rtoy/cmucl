@@ -50,8 +50,10 @@ typedef int os_vm_prot_t;
 
 #ifdef SOLARIS
 #include <ucontext.h>
-#define HANDLER_ARGS int signal, siginfo_t *code, struct ucontext *context
+#define HANDLER_ARGS int signal, siginfo_t *code, void *context
 #define CODE(code)  ((code) ? code->si_code : 0)
+typedef struct ucontext os_context_t__;
+#define os_context_t os_context_t__
 #ifndef i386
 #define SAVE_CONTEXT() save_context()
 #endif

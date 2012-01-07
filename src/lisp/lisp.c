@@ -51,9 +51,11 @@
 static void
 sigint_handler(HANDLER_ARGS)
 {
+    os_context_t *os_context = (os_context_t *) context;
+    
     SAVE_CONTEXT();
 
-    printf("\nSIGINT hit at 0x%08lX\n", (unsigned long) SC_PC(context));
+    printf("\nSIGINT hit at 0x%08lX\n", (unsigned long) SC_PC(os_context));
     ldb_monitor();
 }
 
