@@ -31,14 +31,25 @@ New in this release:
       details.
       
   * ANSI compliance fixes:
+    * CMUCL was not printing pathnames like (make-pathname :directory
+      '(:absolute "tmp" "" "/")) correctly.  This is now printed using
+      #P(...).
 
   * Bugfixes:
     * DECODE-FLOAT was not correctly declared and could not be
       compiled to handle double-double-floats.
+    * The source distribution now includes the scripts from the bin
+      directory, which was previously missing.
+    * The stack needs to be 16-byte aligned on Darwin.
+    * ldb no longer prints prompts forever when EOF is reached.
 
   * Trac Tickets:
 
   * Other changes:
+    * The layout of the cmucl directories has been changed.
+    * On darwin/x86, gcc-4.2 is explicitly used in case Xcode 4 is
+      installed.  CMUCL doesn't run correctly when built with gcc/llvm
+      in Xcode 4.
 
   * Improvements to the PCL implementation of CLOS:
 
