@@ -480,28 +480,6 @@ FUNCDEF(alloc_to_eax)
 	ret
 ENDFUNC(alloc_to_eax)
 
-FUNCDEF(alloc_8_to_eax)
-	pushl	%ecx	# Save ecx and edx as C could destroy them.
-	pushl	%edx
-	pushl	$8	# Push the size
-	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
-	popl	%edx	# Restore ecx and edx.
-	popl	%ecx
-	ret
-ENDFUNC(alloc_8_to_eax)
-	
-FUNCDEF(alloc_16_to_eax)
-	pushl	%ecx	# Save ecx and edx as C could destroy them.
-	pushl	%edx
-	pushl	$16	# Push the size
-	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
-	popl	%edx	# Restore ecx and edx.
-	popl	%ecx
-	ret
-ENDFUNC(alloc_16_to_eax)
-
 FUNCDEF(alloc_to_ecx)
 	STACK_PROLOGUE(12)
 	movl	%eax, 8(%esp)	# Save eax and edx as C could destroy them.
@@ -515,30 +493,6 @@ FUNCDEF(alloc_to_ecx)
 	ret
 ENDFUNC(alloc_to_ecx)
 
-FUNCDEF(alloc_8_to_ecx)
-	pushl	%eax	# Save eax and edx as C could destroy them.
-	pushl	%edx
-	pushl	$8	# Push the size
-	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
-	movl	%eax,%ecx	# setup the destination.
-	popl	%edx	# Restore eax and edx.
-	popl	%eax
-	ret
-ENDFUNC(alloc_8_to_ecx)
-
-FUNCDEF(alloc_16_to_ecx)
-	pushl	%eax	# Save eax and edx as C could destroy them.
-	pushl	%edx
-	pushl	$16	# Push the size
-	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
-	movl	%eax,%ecx	# setup the destination.
-	popl	%edx	# Restore eax and edx.
-	popl	%eax
-	ret
-ENDFUNC(alloc_16_to_ecx)
-
 FUNCDEF(alloc_to_edx)
 	STACK_PROLOGUE(12)
 	movl	%eax, 8(%esp)	# Save eax and ecx as C could destroy them.
@@ -551,30 +505,6 @@ FUNCDEF(alloc_to_edx)
 	STACK_EPILOGUE
 	ret
 ENDFUNC(alloc_to_edx)
-
-FUNCDEF(alloc_8_to_edx)
-	pushl	%eax	# Save eax and ecx as C could destroy them.
-	pushl	%ecx
-	pushl	$8	# Push the size
-	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
-	movl	%eax,%edx	# setup the destination.
-	popl	%ecx	# Restore eax and ecx.
-	popl	%eax
-	ret
-ENDFUNC(alloc_8_to_edx)
-
-FUNCDEF(alloc_16_to_edx)
-	pushl	%eax	# Save eax and ecx as C could destroy them.
-	pushl	%ecx
-	pushl	$16	# Push the size
-	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
-	movl	%eax,%edx	# setup the destination.
-	popl	%ecx	# Restore eax and ecx.
-	popl	%eax
-	ret
-ENDFUNC(alloc_16_to_edx)
 
 FUNCDEF(alloc_to_ebx)
 	STACK_PROLOGUE(16)
@@ -591,34 +521,6 @@ FUNCDEF(alloc_to_ebx)
 	ret
 ENDFUNC(alloc_to_ebx)
 
-FUNCDEF(alloc_8_to_ebx)
-	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
-	pushl	%ecx
-	pushl	%edx
-	pushl	$8	# Push the size
-	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
-	movl	%eax,%ebx	# setup the destination.
-	popl	%edx	# Restore eax, ecx and edx.
-	popl	%ecx
-	popl	%eax
-	ret
-ENDFUNC(alloc_8_to_ebx)
-
-FUNCDEF(alloc_16_to_ebx)
-	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
-	pushl	%ecx
-	pushl	%edx
-	pushl	$16	# Push the size
-	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
-	movl	%eax,%ebx	# setup the destination.
-	popl	%edx	# Restore eax, ecx and edx.
-	popl	%ecx
-	popl	%eax
-	ret
-ENDFUNC(alloc_16_to_ebx)
-
 FUNCDEF(alloc_to_esi)
 	STACK_PROLOGUE(16)
 	movl	%eax, 12(%esp)	# Save eax, ecx, and edx as C could destroy them.
@@ -634,34 +536,6 @@ FUNCDEF(alloc_to_esi)
 	ret
 ENDFUNC(alloc_to_esi)
 
-FUNCDEF(alloc_8_to_esi)
-	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
-	pushl	%ecx
-	pushl	%edx
-	pushl	$8	# Push the size
-	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
-	movl	%eax,%esi	# setup the destination.
-	popl	%edx	# Restore eax, ecx and edx.
-	popl	%ecx
-	popl	%eax
-	ret
-ENDFUNC(alloc_8_to_esi)
-
-FUNCDEF(alloc_16_to_esi)
-	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
-	pushl	%ecx
-	pushl	%edx
-	pushl	$16	# Push the size
-	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
-	movl	%eax,%esi	# setup the destination.
-	popl	%edx	# Restore eax, ecx and edx.
-	popl	%ecx
-	popl	%eax
-	ret
-ENDFUNC(alloc_16_to_esi)
-
 FUNCDEF(alloc_to_edi)
 	STACK_PROLOGUE(16)
 	movl	%eax, 12(%esp)	# Save eax, ecx, and edx as C could destroy them.
@@ -676,34 +550,6 @@ FUNCDEF(alloc_to_edi)
 	STACK_EPILOGUE
 	ret
 ENDFUNC(alloc_to_edi)
-
-FUNCDEF(alloc_8_to_edi)
-	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
-	pushl	%ecx
-	pushl	%edx
-	pushl	$8	# Push the size
-	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
-	movl	%eax,%edi	# setup the destination.
-	popl	%edx	# Restore eax, ecx and edx.
-	popl	%ecx
-	popl	%eax
-	ret
-ENDFUNC(alloc_8_to_edi)
-
-FUNCDEF(alloc_16_to_edi)
-	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
-	pushl	%ecx
-	pushl	%edx
-	pushl	$16	# Push the size
-	call	GNAME(alloc)
-	addl	$4,%esp	# pop the size arg.
-	movl	%eax,%edi	# setup the destination.
-	popl	%edx	# Restore eax, ecx and edx.
-	popl	%ecx
-	popl	%eax
-	ret
-ENDFUNC(alloc_16_to_edi)
 
 #ifdef GENCGC
 
