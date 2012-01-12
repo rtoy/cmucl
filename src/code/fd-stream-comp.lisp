@@ -27,3 +27,11 @@
 (stream::precompile-ef-slot :iso8859-1 #.stream::+ef-en+)
 (stream::precompile-ef-slot :iso8859-1 #.stream::+ef-de+)
 
+(stream::precompile-ef-slot :utf-8 #.stream::+ef-cin+)
+(stream::precompile-ef-slot :utf-8 #.stream::+ef-cout+)
+(stream::precompile-ef-slot :utf-8 #.stream::+ef-sout+)
+(stream::precompile-ef-slot :utf-8 #.stream::+ef-os+)
+(stream::precompile-ef-slot :utf-8 #.stream::+ef-so+)
+(stream::precompile-ef-slot :utf-8 #.stream::+ef-en+)
+(stream::precompile-ef-slot :utf-8 #.stream::+ef-de+)
+

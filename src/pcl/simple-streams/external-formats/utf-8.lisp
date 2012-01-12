@@ -9,8 +9,13 @@
 (in-package "STREAM")
 (intl:textdomain "cmucl")
 
+;; This is actually implemented in the external-formats code
+;; It appears here only for reference, and will never get loaded
+
+
 ;; A safe UTF-8 external format.  Any illegal UTF-8 sequences on input
-;; are replaced with the Unicode REPLACEMENT CHARACTER (U+FFFD).
+;; are replaced with the Unicode REPLACEMENT CHARACTER (U+FFFD), or
+;; signals an error as appropriate.
 ;;
 ;; See Table 3-7, Ch 3.9 in the Unicode book.
 
