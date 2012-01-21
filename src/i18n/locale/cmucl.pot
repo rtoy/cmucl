@@ -9117,6 +9117,13 @@ msgstr ""
 msgid "The external-format for encoding filenames is already set."
 msgstr ""
 
+#: src/code/extfmts.lisp
+msgid ""
+"UTF-8 is a variable-length character encoding for Unicode.  By\n"
+"default, illegal input sequences are replaced by the Unicode\n"
+"replacement character."
+msgstr ""
+
 #: src/code/fd-stream.lisp
 msgid ""
 "List of available buffers.  Each buffer is an sap pointing to\n"
@@ -21244,11 +21251,5 @@ msgid ""
 "\n"
 "By default, illegal inputs and illegal outputs are replaced by the\n"
 "Unicode replacement character."
-msgstr ""
-
-msgid ""
-"UTF-8 is a variable-length character encoding for Unicode.  By\n"
-"default, illegal input sequences are replaced by the Unicode\n"
-"replacement character."
 msgstr ""
 
