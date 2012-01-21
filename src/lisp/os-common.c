@@ -368,23 +368,6 @@ lazy_resolve_linkage(unsigned long retaddr)
 #endif /* LINKAGE_TABLE */
 }
 
-static int
-os_stack_grows_down_1(int *local_var_address)
-{
-    int dummy;
-
-    return &dummy < local_var_address;
-}
-
-/* Value is true if the processor stack grows down.  */
-
-int
-os_stack_grows_down(void)
-{
-    int dummy;
-
-    return os_stack_grows_down_1(&dummy);
-}
 
 
 #ifdef RED_ZONE_HIT
@@ -425,17 +408,13 @@ static void
 guard_zones(char **yellow_start, char **red_start)
 {
 #if (defined(i386) || defined(__x86_64))
-    if (os_stack_grows_down()) {
-	char *end = (char *) CONTROL_STACK_START;
+    /*
+     * All x86's have a control stack (aka C stack) that grows down.
+     */
+    char *end = (char *) CONTROL_STACK_START;
 
-	*red_start = end;
-	*yellow_start = *red_start + RED_ZONE_SIZE;
-    } else {
-	char *end = (char *) CONTROL_STACK_START + control_stack_size;
-
-	*red_start = end - RED_ZONE_SIZE;
-	*yellow_start = *red_start - YELLOW_ZONE_SIZE;
-    }
+    *red_start = end;
+    *yellow_start = *red_start + RED_ZONE_SIZE;
 #else
     /*
      * On Solaris/sparc, the C stack grows down, but the Lisp control
