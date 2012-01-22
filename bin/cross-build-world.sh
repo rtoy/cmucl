@@ -67,7 +67,7 @@ fi
 
 if [ "$CLEAN_DIR" = "yes" ]; then
     echo "Cleaning directories:  $TARGET $CROSS"
-    src/tools/clean-target.sh $TARGET $CROSS
+    bin/clean-target.sh $TARGET $CROSS
 fi
 
 if [ ! -d "$CROSS" ]
