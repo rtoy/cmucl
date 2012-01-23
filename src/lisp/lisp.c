@@ -902,9 +902,11 @@ main(int argc, const char *argv[], const char *envp[])
 	    SetSymbolValue(BATCH_MODE, T);
     }
 
+#ifdef UNIDATA_PATH
     if (unidata) {
       SetSymbolValue(UNIDATA_PATH, alloc_string(unidata));
     }
+#endif
     
     /*
      * Pick off sigint until the lisp system gets far enough along to
