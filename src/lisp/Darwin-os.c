@@ -101,6 +101,10 @@ timebase_init(void)
 
 
 void
+os_init0(const char *argv[], const char *envp[])
+{}
+
+void
 os_init(const char *argv[], const char *envp[])
 {
     os_vm_page_size = OS_VM_DEFAULT_PAGESIZE;
@@ -223,6 +227,16 @@ sc_reg(os_context_t * context, int offset)
 #define __fpu_fcw   fpu_fcw
 #define __fpu_fsw   fpu_fsw
 #define __fpu_mxcsr fpu_mxcsr
+#ifdef FEATURE_SSE2
+#define __fpu_xmm0 fpu_xmm0
+#define __fpu_xmm1 fpu_xmm1
+#define __fpu_xmm2 fpu_xmm2
+#define __fpu_xmm3 fpu_xmm3
+#define __fpu_xmm4 fpu_xmm4
+#define __fpu_xmm5 fpu_xmm5
+#define __fpu_xmm6 fpu_xmm6
+#define __fpu_xmm7 fpu_xmm7
+#endif
 #endif
 
 unsigned long *
@@ -275,6 +289,24 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
 	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm6;
     case 7:
 	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm7;
+#ifdef FEATURE_SSE2
+    case 8:
+       return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm0;
+    case 9:
+       return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm1;
+    case 10:
+       return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm2;
+    case 11:
+       return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm3;
+    case 12:
+       return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm4;
+    case 13:
+       return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm5;
+    case 14:
+       return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm6;
+    case 15:
+       return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm7;
+#endif
     }
     return NULL;
 }
@@ -413,18 +445,23 @@ valid_addr(os_vm_address_t addr)
 
     newaddr = os_trunc_to_page(addr);
 
-    if (in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
-	|| in_range_p(addr, STATIC_SPACE_START, STATIC_SPACE_SIZE)
+    if (in_range_p(addr, READ_ONLY_SPACE_START, read_only_space_size)
+	|| in_range_p(addr, STATIC_SPACE_START, static_space_size)
 	|| in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)
 #ifndef GENCGC
 	|| in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
 #endif
-	|| in_range_p(addr, CONTROL_STACK_START, CONTROL_STACK_SIZE)
-	|| in_range_p(addr, BINDING_STACK_START, BINDING_STACK_SIZE))
+	|| in_range_p(addr, CONTROL_STACK_START, control_stack_size)
+	|| in_range_p(addr, BINDING_STACK_START, binding_stack_size))
 	return TRUE;
     return FALSE;
 }
 
+static void
+sigbus_handle_now(HANDLER_ARGS)
+{
+    interrupt_handle_now(signal, code, context);
+}
 
 static void
 sigbus_handler(HANDLER_ARGS)
@@ -433,6 +470,11 @@ sigbus_handler(HANDLER_ARGS)
     caddr_t fault_addr = code->si_addr;
 #endif
     
+#ifdef RED_ZONE_HIT
+    if (os_control_stack_overflow((void *) fault_addr, context))
+       return;
+#endif
+
 #ifdef __ppc__
     DPRINTF(0, (stderr, "sigbus:\n"));
     DPRINTF(0, (stderr, " PC       = %p\n", SC_PC(context)));
@@ -456,8 +498,9 @@ sigbus_handler(HANDLER_ARGS)
 	return;
 #endif
     /* a *real* protection fault */
-    fprintf(stderr, "sigbus_handler: Real protection violation: %p\n", fault_addr);
-    interrupt_handle_now(signal, code, context);
+    fprintf(stderr, "sigbus_handler: Real protection violation at %p, PC = %p\n",
+            fault_addr, (void *) SC_PC(context));
+    sigbus_handle_now(signal, code, context);
 #ifdef __ppc__
     /* Work around G5 bug; fix courtesy gbyers via chandler */
     sigreturn(context);
@@ -495,3 +538,11 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 
     return sym_addr;
 }
+
+#ifdef i386
+boolean
+os_support_sse2()
+{
+    return TRUE;
+}
+#endif

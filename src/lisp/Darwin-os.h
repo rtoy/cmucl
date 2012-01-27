@@ -14,7 +14,7 @@
 #include <sys/mman.h>
 #include <sys/signal.h>
 #include <signal.h>
-#include <ucontext.h>
+#include <sys/ucontext.h>
 #include <mach/vm_types.h>
 
 typedef caddr_t os_vm_address_t;
@@ -28,14 +28,18 @@ typedef int os_vm_prot_t;
 
 #define OS_VM_DEFAULT_PAGESIZE	4096
 
-#define HANDLER_ARGS int signal, siginfo_t *code, os_context_t *context
+#define HANDLER_ARGS int signal, siginfo_t *code, void *context
 #define CODE(code)  ((code) ? code->si_code : 0)
 #define os_context_t ucontext_t
 #ifdef __i386__
 #define RESTORE_FPU(context) restore_fpu(context)
 #endif
 
+#ifdef __ppc__
 unsigned long *sc_reg(os_context_t *, int);
+#else
+int *sc_reg(os_context_t *, int);
+#endif
 void restore_fpu(ucontext_t *);
 
 #define PROTECTION_VIOLATION_SIGNAL SIGBUS
