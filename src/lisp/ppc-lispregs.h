@@ -107,7 +107,12 @@
 #ifndef LANGUAGE_ASSEMBLY
 #if defined DARWIN
 #define SC_REG(sc,reg) (*sc_reg(sc,reg))
+#if __DARWIN_UNIX03
+/* For 10.5 */
 #define SC_PC(sc) (sc->uc_mcontext->__ss.__srr0)
+#else
+#define SC_PC(sc) (sc->uc_mcontext->ss.srr0)
+#endif
 #else
 #define SC_REG(sc,reg) (((unsigned long *)(sc->regs))[(reg)])
 #define SC_PC(sc) (((unsigned long *)(sc->regs))[PT_NIP])

@@ -113,7 +113,52 @@ os_init(const char *argv[], const char *envp[])
 #endif
 }
 
+
 #if defined(__ppc__)
+#if __DARWIN_UNIX03
+  /* Nothing needed for 10.5 */
+#else
+/* For 10.4 */
+#define __ss ss
+#define __r0 r0
+#define __r1 r1
+#define __r2 r2
+#define __r3 r3
+#define __r4 r4
+#define __r5 r5
+#define __r6 r6
+#define __r7 r7
+#define __r8 r8
+#define __r9 r9
+#define __r10 r10
+#define __r11 r11
+#define __r12 r12
+#define __r13 r13
+#define __r14 r14
+#define __r15 r15
+#define __r16 r16
+#define __r17 r17
+#define __r18 r18
+#define __r19 r19
+#define __r20 r20
+#define __r21 r21
+#define __r22 r22
+#define __r23 r23
+#define __r24 r24
+#define __r25 r25
+#define __r26 r26
+#define __r27 r27
+#define __r28 r28
+#define __r29 r29
+#define __r30 r30
+#define __r31 r31
+#define __lr lr
+#define __ctr ctr
+#define __es es
+#define __dar dar
+#define __dsisr dsisr
+#endif
+
 unsigned long *
 sc_reg(os_context_t * context, int offset)
 {
@@ -466,23 +511,24 @@ sigbus_handle_now(HANDLER_ARGS)
 static void
 sigbus_handler(HANDLER_ARGS)
 {
+    os_context_t *os_context = (os_context_t *) context;
 #if defined(GENCGC)
     caddr_t fault_addr = code->si_addr;
 #endif
     
 #ifdef RED_ZONE_HIT
-    if (os_control_stack_overflow((void *) fault_addr, context))
+    if (os_control_stack_overflow((void *) fault_addr, os_context))
        return;
 #endif
 
 #ifdef __ppc__
     DPRINTF(0, (stderr, "sigbus:\n"));
-    DPRINTF(0, (stderr, " PC       = %p\n", SC_PC(context)));
-    DPRINTF(0, (stderr, " ALLOC-TN = %p\n", SC_REG(context, reg_ALLOC)));
-    DPRINTF(0, (stderr, " CODE-TN  = %p\n", SC_REG(context, reg_CODE)));
-    DPRINTF(0, (stderr, " LRA-TN   = %p\n", SC_REG(context, reg_LRA)));
-    DPRINTF(0, (stderr, " CFP-TN   = %p\n", SC_REG(context, reg_CFP)));
-    DPRINTF(0, (stderr, " FDEFN-TN = %p\n", SC_REG(context, reg_FDEFN)));
+    DPRINTF(0, (stderr, " PC       = %p\n", SC_PC(os_context)));
+    DPRINTF(0, (stderr, " ALLOC-TN = %p\n", SC_REG(os_context, reg_ALLOC)));
+    DPRINTF(0, (stderr, " CODE-TN  = %p\n", SC_REG(os_context, reg_CODE)));
+    DPRINTF(0, (stderr, " LRA-TN   = %p\n", SC_REG(os_context, reg_LRA)));
+    DPRINTF(0, (stderr, " CFP-TN   = %p\n", SC_REG(os_context, reg_CFP)));
+    DPRINTF(0, (stderr, " FDEFN-TN = %p\n", SC_REG(os_context, reg_FDEFN)));
     DPRINTF(0, (stderr, " foreign_function_call = %d\n", foreign_function_call_active));
 #endif
     
@@ -494,16 +540,16 @@ sigbus_handler(HANDLER_ARGS)
     if (gc_write_barrier(code->si_addr))
 	 return;
 #else
-    if (interrupt_maybe_gc(signal, code, context))
+    if (interrupt_maybe_gc(signal, code, os_context))
 	return;
 #endif
     /* a *real* protection fault */
     fprintf(stderr, "sigbus_handler: Real protection violation at %p, PC = %p\n",
-            fault_addr, (void *) SC_PC(context));
-    sigbus_handle_now(signal, code, context);
+            fault_addr, (void *) SC_PC(os_context));
+    sigbus_handle_now(signal, code, os_context);
 #ifdef __ppc__
     /* Work around G5 bug; fix courtesy gbyers via chandler */
-    sigreturn(context);
+    sigreturn(os_context);
 #endif
 }
 

@@ -59,9 +59,10 @@ arch_init(fpu_mode_t mode)
 
 os_vm_address_t arch_get_bad_addr(HANDLER_ARGS)
 {
+    os_context_t *os_context = (os_context_t *) context;
     os_vm_address_t addr;
 
-    addr = (os_vm_address_t) SC_REG(context, PT_DAR);
+    addr = (os_vm_address_t) SC_REG(os_context, PT_DAR);
     return addr;
 }
 
@@ -372,11 +373,12 @@ handle_allocation_trap(os_context_t * context)
 static void
 sigill_handler(HANDLER_ARGS)
 {
+    os_context_t *os_context = (os_context_t *) context;
     int badinst;
     int opcode;
 
-    sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
-    opcode = *((int *) SC_PC(context));
+    sigprocmask(SIG_SETMASK, &os_context->uc_sigmask, 0);
+    opcode = *((int *) SC_PC(os_context));
 
 #if 0
     printf("SIGILL entry:  opcode = 0x%08x\n", opcode);
@@ -387,26 +389,26 @@ sigill_handler(HANDLER_ARGS)
 	/* Got a twnei reg_NL3,0 - check for deferred interrupt */
 #if 1
 	/* Clear the pseudo-atomic-interrupted bit */
-	SC_REG(context, reg_ALLOC) &= ~1;
+	SC_REG(os_context, reg_ALLOC) &= ~1;
 #else
-	(SC_REG(context, reg_ALLOC) -= PSEUDO_ATOMIC_INTERRUPTED_BIAS);
+	(SC_REG(os_context, reg_ALLOC) -= PSEUDO_ATOMIC_INTERRUPTED_BIAS);
 #endif
-	arch_skip_instruction(context);
-	interrupt_handle_pending(context);
+	arch_skip_instruction(os_context);
+	interrupt_handle_pending(os_context);
 #ifdef DARWIN
 	/* Work around G5 bug; fix courtesy gbyers via chandler */
-	sigreturn(context);
+	sigreturn(os_context);
 #endif
 	return;
     }
 
     /* Is this an allocation trap? */
 #ifdef GENCGC
-    if (allocation_trap_p(context)) {
-	handle_allocation_trap(context);
-	arch_skip_instruction(context);
+    if (allocation_trap_p(os_context)) {
+	handle_allocation_trap(os_context);
+	arch_skip_instruction(os_context);
 #ifdef DARWIN
-	sigreturn(context);
+	sigreturn(os_context);
 #endif
 	return;
     }
@@ -423,18 +425,18 @@ sigill_handler(HANDLER_ARGS)
 
 	switch (trap) {
 	  case trap_Halt:
-	      fake_foreign_function_call(context);
+	      fake_foreign_function_call(os_context);
 	      lose("%%primitive halt called; the party is over.\n");
 
 	  case trap_Error:
 	  case trap_Cerror:
-	      interrupt_internal_error(signal, code, context,
+	      interrupt_internal_error(signal, code, os_context,
 				       trap == trap_Cerror);
 	      break;
 
 	  case trap_PendingInterrupt:
-	      arch_skip_instruction(context);
-	      interrupt_handle_pending(context);
+	      arch_skip_instruction(os_context);
+	      interrupt_handle_pending(os_context);
 	      break;
 
 	  case trap_Breakpoint:
@@ -442,7 +444,7 @@ sigill_handler(HANDLER_ARGS)
 	      printf("trap_Breakpoint\n");
 	      fflush(stdout);
 #endif
-	      handle_breakpoint(signal, code, context);
+	      handle_breakpoint(signal, code, os_context);
 	      break;
 
 	  case trap_FunctionEndBreakpoint:
@@ -450,8 +452,8 @@ sigill_handler(HANDLER_ARGS)
 	      printf("trap_FunctionEndBreakpoint\n");
 	      fflush(stdout);
 #endif
-	      SC_PC(context) =
-		  (int) handle_function_end_breakpoint(signal, code, context);
+	      SC_PC(os_context) =
+		  (int) handle_function_end_breakpoint(signal, code, os_context);
 	      break;
 
 	  case trap_AfterBreakpoint:
@@ -459,45 +461,45 @@ sigill_handler(HANDLER_ARGS)
 	      fprintf(stderr, "trap_AfterBreakpoint: break_addr = %p\n",
 		      skipped_break_addr);
 	      fprintf(stderr, " CSP  = %p\n",
-		      (void *) SC_REG(context, reg_CSP));
+		      (void *) SC_REG(os_context, reg_CSP));
 	      fprintf(stderr, " CFP  = %p\n",
-		      (void *) SC_REG(context, reg_CFP));
+		      (void *) SC_REG(os_context, reg_CFP));
 	      fprintf(stderr, " OCFP = %p\n",
-		      (void *) SC_REG(context, reg_OCFP));
+		      (void *) SC_REG(os_context, reg_OCFP));
 #endif
 	      /* Put our breakpoint instruction back in */
 	      *skipped_break_addr = TWLLEI_R0(trap_Breakpoint);
 	      skipped_break_addr = NULL;
-	      *(unsigned long *) SC_PC(context) = displaced_after_inst;
-	      context->uc_sigmask = orig_sigmask;
+	      *(unsigned long *) SC_PC(os_context) = displaced_after_inst;
+	      os_context->uc_sigmask = orig_sigmask;
 
-	      os_flush_icache((os_vm_address_t) SC_PC(context),
+	      os_flush_icache((os_vm_address_t) SC_PC(os_context),
 			      sizeof(unsigned long));
 	      break;
 
 	  default:
-	      interrupt_handle_now(signal, code, context);
+	      interrupt_handle_now(signal, code, os_context);
 	      break;
 	}
 #ifdef DARWIN
 	/* Work around G5 bug; fix courtesy gbyers via chandler */
-	sigreturn(context);
+	sigreturn(os_context);
 #endif
 	return;
     }
     if (((opcode >> 26) == 3) && (((opcode >> 21) & 31) == 24)) {
-	interrupt_internal_error(signal, code, context, 0);
+	interrupt_internal_error(signal, code, os_context, 0);
 #ifdef DARWIN
 	/* Work around G5 bug; fix courtesy gbyers via chandler */
-	sigreturn(context);
+	sigreturn(os_context);
 #endif
 	return;
     }
 
-    interrupt_handle_now(signal, code, context);
+    interrupt_handle_now(signal, code, os_context);
 #ifdef DARWIN
     /* Work around G5 bug; fix courtesy gbyers via chandler */
-    sigreturn(context);
+    sigreturn(os_context);
 #endif
 }
 

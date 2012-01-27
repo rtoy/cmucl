@@ -12,7 +12,7 @@ CPPFLAGS = -I. -I$(PATH1)
 # concatenate tokens which reguires the -traditional flag.
 
 # Build for OSX 10.2.8 or later.  (Is this what we want?)
-#OSX_VERSION=-mmacosx-version-min=10.2
+OSX_VERSION=-mmacosx-version-min=10.4
 CC = gcc
 LD = ld
 NM = $(PATH1)/darwin-nm
