@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.35 2011/09/03 04:46:34 rtoy Exp $
+ * $Header: /project/cmucl/cvsroot/src/lisp/Darwin-os.c,v 1.16.4.3 2009-03-18 15:37:29 rtoy Exp $
  *
  */
 
@@ -99,9 +99,6 @@ timebase_init(void)
 }
 #endif
 
-void
-os_init0(const char *argv[], const char *envp[])
-{}
 
 void
 os_init(const char *argv[], const char *envp[])
@@ -113,91 +110,91 @@ os_init(const char *argv[], const char *envp[])
 }
 
 #if defined(__ppc__)
-int *
+unsigned long *
 sc_reg(os_context_t * context, int offset)
 {
-    ppc_saved_state_t *state = &context->uc_mcontext->ss;
+    _STRUCT_PPC_THREAD_STATE *state = &context->uc_mcontext->__ss;
 
     switch (offset) {
       case 0:
-	  return &state->r0;
+	  return &state->__r0;
       case 1:
-	  return &state->r1;
+	  return &state->__r1;
       case 2:
-	  return &state->r2;
+	  return &state->__r2;
       case 3:
-	  return &state->r3;
+	  return &state->__r3;
       case 4:
-	  return &state->r4;
+	  return &state->__r4;
       case 5:
-	  return &state->r5;
+	  return &state->__r5;
       case 6:
-	  return &state->r6;
+	  return &state->__r6;
       case 7:
-	  return &state->r7;
+	  return &state->__r7;
       case 8:
-	  return &state->r8;
+	  return &state->__r8;
       case 9:
-	  return &state->r9;
+	  return &state->__r9;
       case 10:
-	  return &state->r10;
+	  return &state->__r10;
       case 11:
-	  return &state->r11;
+	  return &state->__r11;
       case 12:
-	  return &state->r12;
+	  return &state->__r12;
       case 13:
-	  return &state->r13;
+	  return &state->__r13;
       case 14:
-	  return &state->r14;
+	  return &state->__r14;
       case 15:
-	  return &state->r15;
+	  return &state->__r15;
       case 16:
-	  return &state->r16;
+	  return &state->__r16;
       case 17:
-	  return &state->r17;
+	  return &state->__r17;
       case 18:
-	  return &state->r18;
+	  return &state->__r18;
       case 19:
-	  return &state->r19;
+	  return &state->__r19;
       case 20:
-	  return &state->r20;
+	  return &state->__r20;
       case 21:
-	  return &state->r21;
+	  return &state->__r21;
       case 22:
-	  return &state->r22;
+	  return &state->__r22;
       case 23:
-	  return &state->r23;
+	  return &state->__r23;
       case 24:
-	  return &state->r24;
+	  return &state->__r24;
       case 25:
-	  return &state->r25;
+	  return &state->__r25;
       case 26:
-	  return &state->r26;
+	  return &state->__r26;
       case 27:
-	  return &state->r27;
+	  return &state->__r27;
       case 28:
-	  return &state->r28;
+	  return &state->__r28;
       case 29:
-	  return &state->r29;
+	  return &state->__r29;
       case 30:
-	  return &state->r30;
+	  return &state->__r30;
       case 31:
-	  return &state->r31;
+	  return &state->__r31;
       case 34:
 	  /*
 	   * Not sure if this is really defined anywhere, but after
 	   * r31 is cr, xer, lr, and ctr.  So we let 34 be lr.
 	   */
-	  return &state->lr;
+	  return &state->__lr;
       case 35:
-	  return &state->ctr;
+	  return &state->__ctr;
       case 41:
-	  return &context->uc_mcontext->es.dar;
+	  return &context->uc_mcontext->__es.__dar;
       case 42:
-	  return &context->uc_mcontext->es.dsisr;
+	  return &context->uc_mcontext->__es.__dsisr;
     }
 
-    return (int *) 0;
+    return (unsigned long *) 0;
 }
 #elif defined(__i386__)
 #if __DARWIN_UNIX03
@@ -226,16 +223,6 @@ sc_reg(os_context_t * context, int offset)
 #define __fpu_fcw   fpu_fcw
 #define __fpu_fsw   fpu_fsw
 #define __fpu_mxcsr fpu_mxcsr
-#ifdef FEATURE_SSE2
-#define __fpu_xmm0 fpu_xmm0
-#define __fpu_xmm1 fpu_xmm1
-#define __fpu_xmm2 fpu_xmm2
-#define __fpu_xmm3 fpu_xmm3
-#define __fpu_xmm4 fpu_xmm4
-#define __fpu_xmm5 fpu_xmm5
-#define __fpu_xmm6 fpu_xmm6
-#define __fpu_xmm7 fpu_xmm7
-#endif
 #endif
 
 unsigned long *
@@ -288,24 +275,6 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
 	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm6;
     case 7:
 	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm7;
-#ifdef FEATURE_SSE2
-    case 8:
-	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm0;
-    case 9:
-	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm1;
-    case 10:
-	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm2;
-    case 11:
-	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm3;
-    case 12:
-	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm4;
-    case 13:
-	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm5;
-    case 14:
-	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm6;
-    case 15:
-	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm7;
-#endif
     }
     return NULL;
 }
@@ -444,23 +413,18 @@ valid_addr(os_vm_address_t addr)
 
     newaddr = os_trunc_to_page(addr);
 
-    if (in_range_p(addr, READ_ONLY_SPACE_START, read_only_space_size)
-	|| in_range_p(addr, STATIC_SPACE_START, static_space_size)
+    if (in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
+	|| in_range_p(addr, STATIC_SPACE_START, STATIC_SPACE_SIZE)
 	|| in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)
 #ifndef GENCGC
 	|| in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
 #endif
-	|| in_range_p(addr, CONTROL_STACK_START, control_stack_size)
-	|| in_range_p(addr, BINDING_STACK_START, binding_stack_size))
+	|| in_range_p(addr, CONTROL_STACK_START, CONTROL_STACK_SIZE)
+	|| in_range_p(addr, BINDING_STACK_START, BINDING_STACK_SIZE))
 	return TRUE;
     return FALSE;
 }
 
-static void
-sigbus_handle_now(HANDLER_ARGS)
-{
-    interrupt_handle_now(signal, code, context);
-}
 
 static void
 sigbus_handler(HANDLER_ARGS)
@@ -469,11 +433,6 @@ sigbus_handler(HANDLER_ARGS)
     caddr_t fault_addr = code->si_addr;
 #endif
     
-#ifdef RED_ZONE_HIT
-    if (os_control_stack_overflow((void *) fault_addr, context))
-	return;
-#endif
-
 #ifdef __ppc__
     DPRINTF(0, (stderr, "sigbus:\n"));
     DPRINTF(0, (stderr, " PC       = %p\n", SC_PC(context)));
@@ -487,8 +446,8 @@ sigbus_handler(HANDLER_ARGS)
     
 #if defined(GENCGC)
 #if defined(SIGSEGV_VERBOSE)
-    fprintf(stderr, "Signal %d, fault_addr=%x\n",
-	    signal, fault_addr);
+    fprintf(stderr, "Signal %d, fault_addr=%x, page_index=%d:\n",
+	    signal, fault_addr, page_index);
 #endif
     if (gc_write_barrier(code->si_addr))
 	 return;
@@ -496,11 +455,9 @@ sigbus_handler(HANDLER_ARGS)
     if (interrupt_maybe_gc(signal, code, context))
 	return;
 #endif
-
     /* a *real* protection fault */
-    fprintf(stderr, "sigbus_handler: Real protection violation at %p, PC = %p\n",
-            fault_addr, (void *) SC_PC(context));
-    sigbus_handle_now(signal, code, context);
+    fprintf(stderr, "sigbus_handler: Real protection violation: %p\n", fault_addr);
+    interrupt_handle_now(signal, code, context);
 #ifdef __ppc__
     /* Work around G5 bug; fix courtesy gbyers via chandler */
     sigreturn(context);
@@ -538,11 +495,3 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 
     return sym_addr;
 }
-
-#ifdef i386
-boolean
-os_support_sse2()
-{
-    return TRUE;
-}
-#endif

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/code/debug-int.lisp $")
+  "$Header: /project/cmucl/cvsroot/src/code/debug-int.lisp,v 1.142 2010-07-14 23:08:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1180,7 +1180,7 @@
 	      frame)))))
 
 
-#+(or sparc (and x86 (or darwin solaris netbsd)) (and (or x86 amd64) linux))
+#+(or sparc (and x86 darwin) (and (or x86 amd64) linux))
 (defun find-foreign-function-name (address)
   "Return a string describing the foreign function near ADDRESS"
   (let ((addr (sys:sap-int address)))
@@ -1203,7 +1203,7 @@
 		       (alien:slot info 'filename)
 		       )))))))
 
-#-(or sparc (and x86 (or darwin solaris netbsd)) (and (or x86 amd64) linux))
+#-(or sparc (and x86 darwin) (and (or x86 amd64) linux))
 (defun find-foreign-function-name (ra)
   (declare (ignore ra))
   "Foreign function call land")
@@ -1253,7 +1253,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; LRA, and the LRA is the word offset.
 ;;;
 #-(or gengc x86 amd64)
-(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-svr4")
+(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-svr4" #+ppc "cmucl-ppc")
 (defun compute-calling-frame (caller lra up-frame)
   (declare (type system:system-area-pointer caller))
   (when (cstack-pointer-valid-p caller)
@@ -1362,7 +1362,7 @@ The result is a symbol or nil if the routine cannot be found."
 			       escaped))))))
 
 #-(or gengc x86 amd64)
-(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-svr4")
+(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-svr4" #+ppc "cmucl-ppc")
 (defun find-escaped-frame (frame-pointer)
   (declare (type system:system-area-pointer frame-pointer))
   (dotimes (index lisp::*free-interrupt-context-index* (values nil 0 nil))
@@ -1455,7 +1455,7 @@ The result is a symbol or nil if the routine cannot be found."
 		 (values code pc-offset scp)))))))))))
 
 #-(or gengc x86 amd64)
-(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-svr4")
+(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-svr4" #+ppc "cmucl-ppc")
 (defun find-pc-from-assembly-fun (code scp)
   "find the PC"
   (let ((return-machine-address
@@ -3079,7 +3079,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; SUB-ACCESS-DEBUG-VAR-SLOT -- Internal.
 ;;;
 #-(or x86 amd64)
-(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-svr4")
+(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-svr4" #+ppc "cmucl-ppc")
 (defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
   (macrolet ((with-escaped-value ((var) &body forms)
 	       `(if escaped
@@ -3505,7 +3505,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; SUB-SET-DEBUG-VAR-SLOT -- Internal.
 ;;;
 #-(or x86 amd64)
-(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-svr4")
+(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-svr4" #+ppc "cmucl-ppc")
 (defun sub-set-debug-var-slot (fp sc-offset value &optional escaped)
   (macrolet ((set-escaped-value (val)
 	       `(if escaped
@@ -4501,7 +4501,8 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; This handles code-location and debug-function :function-start breakpoints.
 ;;;
 (intl:with-textdomain ("cmucl" #+(or x86 amd64) "cmucl-x86-vm"
-			       #+sparc "cmucl-sparc-svr4")
+			       #+sparc "cmucl-sparc-svr4"
+			       #+ppc "cmucl-ppc")
 (defun handle-breakpoint-aux (breakpoints data offset component signal-context)
   (unless breakpoints
     (error (intl:gettext "Breakpoint that nobody wants?")))

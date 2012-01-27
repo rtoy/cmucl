@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.112 2011/01/09 00:12:36 rtoy Exp $
+ * $Header: /project/cmucl/cvsroot/src/lisp/gencgc.c,v 1.112 2011-01-09 00:12:36 rtoy Exp $
  *
  */
 
@@ -169,20 +169,20 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
     if (Pointerp(obj)
 	&& (p = (void *) PTR(obj),
 	    (p >= (void *) CONTROL_STACK_START
-	     && p < (void *) control_stack_end))) {
+	     && p < (void *) CONTROL_STACK_END))) {
 	char *space;
 
 	if (where >= (lispobj *) DYNAMIC_0_SPACE_START
-	    && where < (lispobj *) (DYNAMIC_0_SPACE_START + dynamic_space_size))
+	    && where < (lispobj *) (DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE))
 	    space = "dynamic space";
 	else if (where >= (lispobj *) STATIC_SPACE_START
 		 && where <
-		 (lispobj *) (STATIC_SPACE_START + static_space_size)) space =
+		 (lispobj *) (STATIC_SPACE_START + STATIC_SPACE_SIZE)) space =
 		"static space";
 	else if (where >= (lispobj *) READ_ONLY_SPACE_START
 		 && where <
 		 (lispobj *) (READ_ONLY_SPACE_START +
-			      read_only_space_size)) space = "read-only space";
+			      READ_ONLY_SPACE_SIZE)) space = "read-only space";
 	else
 	    space = NULL;
 
@@ -198,7 +198,7 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
 		 (unsigned long) obj, where, space);
 #ifndef i386
 	else if ((where >= (lispobj *) CONTROL_STACK_START
-		  && where < (lispobj *) (control_stack_end))
+		  && where < (lispobj *) (CONTROL_STACK_END))
 		 || (space == NULL)) {
 	    /* Do nothing if it the reference is from the control stack,
 	       because that will happen, and that's ok.  Or if it's from
@@ -2003,7 +2003,7 @@ read_only_space_p(lispobj obj)
 static inline boolean
 control_stack_space_p(lispobj obj)
 {
-    lispobj end = CONTROL_STACK_START + control_stack_size;
+    lispobj end = CONTROL_STACK_START + CONTROL_STACK_SIZE;
 
     return (obj >= CONTROL_STACK_START) && (obj < end);
 }
@@ -2011,7 +2011,7 @@ control_stack_space_p(lispobj obj)
 static inline boolean
 binding_stack_space_p(lispobj obj)
 {
-    lispobj end = BINDING_STACK_START + binding_stack_size;
+    lispobj end = BINDING_STACK_START + BINDING_STACK_SIZE;
 
     return (obj >= BINDING_STACK_START) && (obj < end);
 }
@@ -2075,6 +2075,12 @@ other_space_p(lispobj obj)
      * Is there anything else?
      */
     if (obj == (lispobj) 0xffffffe9) {
+        in_space = TRUE;
+    }
+#elif defined(__ppc__)
+     /*
+    */
+    if (obj <= (lispobj) &fpu_restore) {
         in_space = TRUE;
     }
 #endif
@@ -2710,11 +2716,11 @@ scavenge_interrupt_context(os_context_t * context)
 #endif    
 
 #ifdef reg_LR
-    PAIR_INTERIOR_POINTER(pc, SC_REG(context, reg_LR));
+    PAIR_INTERIOR_POINTER(lr, SC_REG(context, reg_LR));
 #endif
 
 #ifdef reg_CTR
-    PAIR_INTERIOR_POINTER(pc, SC_REG(context, reg_CTR));
+    PAIR_INTERIOR_POINTER(ctr, SC_REG(context, reg_CTR));
 #endif    
     
     /* Scanvenge all boxed registers in the context. */
@@ -7321,7 +7327,7 @@ garbage_collect_generation(int generation, int raise)
     invalid_stack_end = (void *) &raise;
 #else /* not i386 */
     invalid_stack_start = (void *) &raise;
-    invalid_stack_end = (void *) control_stack_end;
+    invalid_stack_end = (void *) CONTROL_STACK_END;
 #endif /* not i386 */
 #endif /* GC_ASSERTIONS */
 
@@ -7381,7 +7387,7 @@ garbage_collect_generation(int generation, int raise)
     {
 	lispobj **ptr;
 
-	for (ptr = (lispobj **) control_stack_end - 1;
+	for (ptr = (lispobj **) CONTROL_STACK_END - 1;
 	     ptr > (lispobj **) (void *) &raise; ptr--)
 	    preserve_pointer(*ptr);
     }
