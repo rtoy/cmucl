@@ -1180,7 +1180,7 @@
 	      frame)))))
 
 
-#+(or sparc (and x86 darwin) (and (or x86 amd64) linux))
+#+(or sparc (and x86 (or darwin solaris netbsd)) (and (or x86 amd64) linux))
 (defun find-foreign-function-name (address)
   "Return a string describing the foreign function near ADDRESS"
   (let ((addr (sys:sap-int address)))
@@ -1203,7 +1203,7 @@
 		       (alien:slot info 'filename)
 		       )))))))
 
-#-(or sparc (and x86 darwin) (and (or x86 amd64) linux))
+#-(or sparc (and x86 (or darwin solaris netbsd)) (and (or x86 amd64) linux))
 (defun find-foreign-function-name (ra)
   (declare (ignore ra))
   "Foreign function call land")
