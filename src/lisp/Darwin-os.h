@@ -36,7 +36,7 @@ typedef int os_vm_prot_t;
 #endif
 
 #ifdef __ppc__
-unsigned long *sc_reg(os_context_t *, int);
+unsigned int *sc_reg(os_context_t *, int);
 #else
 int *sc_reg(os_context_t *, int);
 #endif

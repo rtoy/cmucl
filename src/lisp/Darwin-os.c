@@ -159,7 +159,7 @@ os_init(const char *argv[], const char *envp[])
 #define __dsisr dsisr
 #endif
 
-unsigned long *
+unsigned int *
 sc_reg(os_context_t * context, int offset)
 {
     _STRUCT_PPC_THREAD_STATE *state = &context->uc_mcontext->__ss;
@@ -243,7 +243,7 @@ sc_reg(os_context_t * context, int offset)
 	  return &context->uc_mcontext->__es.__dsisr;
     }
 
-    return (unsigned long *) 0;
+    return (unsigned int *) 0;
 }
 #elif defined(__i386__)
 #if __DARWIN_UNIX03
