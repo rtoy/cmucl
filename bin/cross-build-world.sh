@@ -132,5 +132,5 @@ fi
 
 if [ "$LOAD_KERNEL" = "yes" ]; then
     echo Load kernel.core
-    src/tools/load-world.sh -p $TARGET cross-compiled
+    bin/load-world.sh -p $TARGET cross-compiled
 fi
