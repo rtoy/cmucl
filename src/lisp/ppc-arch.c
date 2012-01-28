@@ -125,7 +125,7 @@ static sigset_t orig_sigmask;
 void
 arch_do_displaced_inst(os_context_t * scp, unsigned long orig_inst)
 {
-    unsigned int *pc = (unsigned long *) SC_PC(scp);
+    unsigned int *pc = (unsigned int *) SC_PC(scp);
 
     orig_sigmask = scp->uc_sigmask;
     sigemptyset(&scp->uc_sigmask);
@@ -135,7 +135,7 @@ arch_do_displaced_inst(os_context_t * scp, unsigned long orig_inst)
     *pc = orig_inst;
     os_flush_icache((os_vm_address_t) pc, sizeof(unsigned int));
 
-    skipped_break_addr = pc;
+    skipped_break_addr = (unsigned long) pc;
 
     /*
      * Replace the next instruction with a 
