@@ -2606,14 +2606,16 @@
 		   vm:other-pointer-type
 		   (if symbol (vm:static-symbol-offset symbol) 0)))))
   ;;
-  ;; Write out features.
+  ;; Write out the runtime features, but only if they are also target
+  ;; features.
   (format t "~%/* Runtime features when built. */~2%")
   (dolist (feature sys:*runtime-features*)
-    (format t "#define FEATURE_~a 1~%"
-	    (nsubstitute #\_ #\-
-			 (remove-if #'(lambda (char)
-					(member char '(#\% #\* #\.)))
-				    (symbol-name feature)))))
+    (when (c::target-featurep feature)
+      (format t "#define FEATURE_~a 1~%"
+	      (nsubstitute #\_ #\-
+			   (remove-if #'(lambda (char)
+					  (member char '(#\% #\* #\.)))
+				      (symbol-name feature))))))
   ;;
   (format t "~%#endif~%"))
 
