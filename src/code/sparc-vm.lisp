@@ -15,7 +15,7 @@
 (use-package "SYSTEM")
 (use-package "UNIX")
 
-(intl:textdomain "cmucl")
+(intl:textdomain "cmucl-sparc-vm")
 
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register
