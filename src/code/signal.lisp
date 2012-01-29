@@ -104,7 +104,7 @@
 (def-unix-signal :SIGIOT 6 "Iot instruction") ; Compatibility
 (def-unix-signal :SIGABRT 6 "C abort()")
 (intl::with-textdomain ("cmucl" #+linux "cmucl-linux-os"
-				#+(or sparc solaris) "cmucl-sparc-svr4"
+				#+(or sparc solaris) "cmucl-sparc-vm"
 				#+bsd "cmucl-bsd-os")
 #-linux
 (def-unix-signal :SIGEMT 7 "Emt instruction"))
@@ -115,7 +115,7 @@
 (def-unix-signal :SIGBUS #-linux 10 #+linux 7 "Bus error")
 (def-unix-signal :SIGSEGV 11 "Segmentation violation")
 (intl::with-textdomain ("cmucl" #+linux "cmucl-linux-os"
-				#+(or sparc solaris) "cmucl-sparc-svr4"
+				#+(or sparc solaris) "cmucl-sparc-vm"
 				#+bsd "cmucl-bsd-os")
 #-linux
 (def-unix-signal :SIGSYS 12 "Bad argument to system call"))
@@ -124,7 +124,7 @@
 (def-unix-signal :SIGALRM 14 "Alarm clock")
 (def-unix-signal :SIGTERM 15 "Software termination signal")
 (intl::with-textdomain ("cmucl" #+linux "cmucl-linux-os"
-				#+(or sparc solaris) "cmucl-sparc-svr4"
+				#+(or sparc solaris) "cmucl-sparc-vm"
 				#+bsd "cmucl-bsd-os")
 #+linux
 (def-unix-signal :SIGSTKFLT 16 "Stack fault on coprocessor"))
@@ -163,7 +163,7 @@
 
 ;;; SVR4 (or Solaris?) specific signals
 (intl::with-textdomain ("cmucl" #+linux "cmucl-linux-os"
-				#+(or sparc solaris) "cmucl-sparc-svr4"
+				#+(or sparc solaris) "cmucl-sparc-vm"
 				#+bsd "cmucl-bsd-os")
 #+svr4
 (def-unix-signal :SIGWAITING 32 "Process's lwps are blocked"))
