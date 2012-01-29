@@ -69,7 +69,17 @@
 ;;; double.  That way, C programs can get subtle rounding errors
 ;;; when unrelated arguments are introduced.
 
-#-darwin
+;; The ABI for ppc says that float arguments are stored in float
+;; registers and also in integer registers.  This is mostly needed for
+;; varargs functions.  It seems that regular functions know to get the
+;; value out of the float registers.
+;;
+;; However, when bootstrapping (for cross-compiling), this can cause a
+;; compile error about %nl1 conflicting with a wired tn.  I (rtoy) do
+;; not know why that happens, but we don't need to have float values
+;; stored in the integer registers when compiling cmucl.  (We con't
+;; call any vararg C functions.)  So, use the old vops in this case.
+#-(and darwin (not bootstrap))
 (def-alien-type-method (single-float :arg-tn) (type state)
   (declare (ignore type))
   (let* ((fprs (arg-state-fpr-args state)))
@@ -84,7 +94,7 @@
 	     (setf (arg-state-stack-frame-size state) (+ stack-offset 2))
 	     (my-make-wired-tn 'double-float 'double-stack stack-offset))))))
 
-#+darwin
+#+(and darwin (not bootstrap))
 (def-alien-type-method (single-float :arg-tn) (type state)
   (declare (ignore type))
   (let* ((fprs (arg-state-fpr-args state))
@@ -114,7 +124,7 @@
 	     (incf (arg-state-stack-frame-size state))
 	     (my-make-wired-tn 'single-float 'single-stack stack-offset))))))
 
-#-darwin
+#-(and darwin (not bootstrap))
 (def-alien-type-method (double-float :arg-tn) (type state)
   (declare (ignore type))
   (let* ((fprs (arg-state-fpr-args state)))
@@ -129,7 +139,7 @@
 	     (setf (arg-state-stack-frame-size state) (+ stack-offset 2))
 	     (my-make-wired-tn 'double-float 'double-stack stack-offset))))))
 	   
-#+darwin
+#+(and darwin (not bootstrap))
 (def-alien-type-method (double-float :arg-tn) (type state)
   (declare (ignore type))
   (let ((fprs (arg-state-fpr-args state))

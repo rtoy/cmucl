@@ -2,7 +2,7 @@
 
 ;;; Rename the X86 package and backend so that new-backend does the
 ;;; right thing.
-(rename-package "X86" "OLD-X86")
+(rename-package "X86" "OLD-X86" '("OLD-VM"))
 (setf (c:backend-name c:*native-backend*) "OLD-X86")
 
 (c::new-backend "PPC"
@@ -11,14 +11,135 @@
      :conservative-float-type
      :hash-new :random-mt19937
      :darwin :bsd
-     :cmu :cmu18 :cmu18e
+     :cmu :cmu20 :cmu20a
+     :gencgc
+     :relative-package-names
+     :modular-arith
+     :double-double
+     :linkage-table
      )
    ;; Features to remove from current *features* here
-   '(:x86-bootstrap :alpha :osf1 :mips :x86 :i486 :pentium :ppro
+   '(
+     ;; Other architectures we aren't using.  Particularly important
+     ;; to get rid of sse2 and x87 so we don't accidentally try to
+     ;; compile the x87/sse2 float support on sparc, which won't work.
+     :x86 :x86-bootstrap :sse2 :x87 :i486
+     :alpha :osf1 :mips
+     ;; Really old stuff that should have been removed long ago.
      :propagate-fun-type :propagate-float-type :constrain-float-type
-     :openbsd :freebsd :glibc2 :linux :pentium :linkage-table :elf :mp
-     :stack-checking :heap-overflow-check
-     :gencgc :cgc :long-float :new-random :small))
+     ;; Other OSes were not using
+     :openbsd :freebsd :glibc2 :linux :mach-o :darwin :bsd
+     
+     :pentium
+     :long-float
+     :new-random
+     :small
+     :mp
+     ;; ppc currently doesn't support these.
+     :executable
+     :heap-overflow-check
+     :stack-checking
+     :complex-fp-vops))
+
+;;; Changes needed to bootstrap cross-compiling from x86 to ppc
+
+;; ppc doesn't have these features yet.  Remove them.  It is a bug in
+;; cross-compiling that these features leak through to the target.
+(setf *features* (remove :executable *features*))
+(setf *features* (remove :heap-overflow-check *features*))
+(setf *features* (remove :stack-checking *features*))
+(setf *features* (remove :complex-fp-vops *features*))
+
+;; Set up the linkage space stuff appropriately for ppc.
+#+nil
+(setf (c::backend-foreign-linkage-space-start c::*target-backend*)
+      #x17000000
+      (c::backend-foreign-linkage-entry-size c::*target-backend*)
+      32)
+
+(in-package "LISP")
+;; We need the the fops because the cross-compiled fasl file is in
+;; big-endian order for sparc.  When we read in a string, we need to
+;; convert the big-endian string to little-endian for x86 so we can
+;; process the symbols and such as expected.
+
+#+unicode
+(progn
+(defconstant ppc::char-bytes 2)  
+(defun maybe-swap-string (f name &optional (len (length name)))
+  (declare (ignorable f))
+  (unless (eq (c:backend-byte-order c:*backend*)
+	      (c:backend-byte-order c:*native-backend*))
+    (dotimes (k len)
+      (let ((code (char-code (aref name k))))
+	(setf (aref name k)
+	      (code-char (logior (ash (ldb (byte 8 0) code) 8)
+				 (ldb (byte 8 8) code))))))
+    ;;(format t "~S: new name = ~S~%" f (subseq name 0 len))
+    name))
+
+(macrolet ((frob (name code name-size package)
+	     (let ((n-package (gensym "PACKAGE-"))
+		   (n-size (gensym "SIZE-"))
+		   (n-buffer (gensym "BUFFER-"))
+		   (k (gensym "IDX-")))
+	       `(define-fop (,name ,code)
+		  (prepare-for-fast-read-byte *fasl-file*
+		    (let ((,n-package ,package)
+			  (,n-size (fast-read-u-integer ,name-size)))
+		      (when (> ,n-size *load-symbol-buffer-size*)
+			(setq *load-symbol-buffer*
+			      (make-string (setq *load-symbol-buffer-size*
+						 (* ,n-size vm::char-bytes)))))
+		      (done-with-fast-read-byte)
+		      (let ((,n-buffer *load-symbol-buffer*))
+			(read-n-bytes *fasl-file* ,n-buffer 0
+				      (* old-vm:char-bytes ,n-size))
+			(maybe-swap-string ',name ,n-buffer ,n-size)
+			(push-table (intern* ,n-buffer ,n-size ,n-package)))))))))
+  (frob fop-symbol-save 6 4 *package*)
+  (frob fop-small-symbol-save 7 1 *package*)
+  (frob fop-lisp-symbol-save 75 4 *lisp-package*)
+  (frob fop-lisp-small-symbol-save 76 1 *lisp-package*)
+  (frob fop-keyword-symbol-save 77 4 *keyword-package*)
+  (frob fop-keyword-small-symbol-save 78 1 *keyword-package*)
+
+  (frob fop-symbol-in-package-save 8 4
+    (svref *current-fop-table* (fast-read-u-integer 4)))
+  (frob fop-small-symbol-in-package-save 9 1
+    (svref *current-fop-table* (fast-read-u-integer 4)))
+  (frob fop-symbol-in-byte-package-save 10 4
+    (svref *current-fop-table* (fast-read-u-integer 1)))
+  (frob fop-small-symbol-in-byte-package-save 11 1
+    (svref *current-fop-table* (fast-read-u-integer 1))))
+
+(define-fop (fop-package 14)
+  (let ((name (pop-stack)))
+    ;;(format t "xfop-package: ~{~X~^ ~}~%" (map 'list #'char-code name))
+    (or (find-package name)
+	(error (intl:gettext "The package ~S does not exist.") name))))
+
+(clone-fop (fop-string 37)
+	   (fop-small-string 38)
+  (let* ((arg (clone-arg))
+	 (res (make-string arg)))
+    (read-n-bytes *fasl-file* res 0
+		  (* old-vm:char-bytes arg))
+    (maybe-swap-string 'fop-string res)
+    res))
+
+#+unicode
+(defun cold-load-symbol (size package)
+  (let ((string (make-string size)))
+    (read-n-bytes *fasl-file* string 0 (* 2 size))
+    ;;(format t "xpre swap cold-load-symbol: ~S to package ~S~%" string package)
+    (maybe-swap-string 'cold-load-symbol string)
+    ;;(format t "xpost swap cold-load-symbol: ~S to package ~S~%" string package)
+    (cold-intern (intern string package) package)))
+)
+
+;;; End changes needed to bootstrap cross-compiling from x86 to ppc
+
 
 ;;; Extern-alien-name for the new backend.
 (in-package :vm)
@@ -109,26 +230,55 @@
 				       (find-symbol ,(symbol-name sym)
 						    :vm))))
 			       syms))))
-  (frob OLD-X86:BYTE-BITS OLD-X86:WORD-BITS
-	#+long-float OLD-X86:SIMPLE-ARRAY-LONG-FLOAT-TYPE 
-	OLD-X86:SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE 
-	OLD-X86:SIMPLE-ARRAY-SINGLE-FLOAT-TYPE
-	#+long-float OLD-X86:SIMPLE-ARRAY-COMPLEX-LONG-FLOAT-TYPE 
-	OLD-X86:SIMPLE-ARRAY-COMPLEX-DOUBLE-FLOAT-TYPE 
-	OLD-X86:SIMPLE-ARRAY-COMPLEX-SINGLE-FLOAT-TYPE
-	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-2-TYPE 
-	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-4-TYPE
-	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-8-TYPE 
-	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-16-TYPE 
-	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-32-TYPE 
-	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-8-TYPE 
-	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-16-TYPE
-	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-30-TYPE 
-	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-32-TYPE
-	OLD-X86:SIMPLE-BIT-VECTOR-TYPE
-	OLD-X86:SIMPLE-STRING-TYPE OLD-X86:SIMPLE-VECTOR-TYPE 
-	OLD-X86:SIMPLE-ARRAY-TYPE OLD-X86:VECTOR-DATA-OFFSET
-	))
+  (frob OLD-VM:BYTE-BITS OLD-VM:WORD-BITS
+	OLD-VM:CHAR-BITS
+	OLD-VM:LOWTAG-BITS
+	#+long-float OLD-VM:SIMPLE-ARRAY-LONG-FLOAT-TYPE 
+	OLD-VM:SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE 
+	OLD-VM:SIMPLE-ARRAY-SINGLE-FLOAT-TYPE
+	#+long-float OLD-VM:SIMPLE-ARRAY-COMPLEX-LONG-FLOAT-TYPE 
+	OLD-VM:SIMPLE-ARRAY-COMPLEX-DOUBLE-FLOAT-TYPE 
+	OLD-VM:SIMPLE-ARRAY-COMPLEX-SINGLE-FLOAT-TYPE
+	OLD-VM:SIMPLE-ARRAY-UNSIGNED-BYTE-2-TYPE 
+	OLD-VM:SIMPLE-ARRAY-UNSIGNED-BYTE-4-TYPE
+	OLD-VM:SIMPLE-ARRAY-UNSIGNED-BYTE-8-TYPE 
+	OLD-VM:SIMPLE-ARRAY-UNSIGNED-BYTE-16-TYPE 
+	OLD-VM:SIMPLE-ARRAY-UNSIGNED-BYTE-32-TYPE 
+	OLD-VM:SIMPLE-ARRAY-SIGNED-BYTE-8-TYPE 
+	OLD-VM:SIMPLE-ARRAY-SIGNED-BYTE-16-TYPE
+	OLD-VM:SIMPLE-ARRAY-SIGNED-BYTE-30-TYPE 
+	OLD-VM:SIMPLE-ARRAY-SIGNED-BYTE-32-TYPE
+	OLD-VM:SIMPLE-BIT-VECTOR-TYPE
+	OLD-VM:SIMPLE-STRING-TYPE OLD-VM:SIMPLE-VECTOR-TYPE 
+	OLD-VM:SIMPLE-ARRAY-TYPE OLD-VM:VECTOR-DATA-OFFSET
+	OLD-VM:DOUBLE-FLOAT-DIGITS
+	old-vm:single-float-digits
+	OLD-VM:DOUBLE-FLOAT-EXPONENT-BYTE
+	OLD-VM:DOUBLE-FLOAT-NORMAL-EXPONENT-MAX
+	OLD-VM:DOUBLE-FLOAT-SIGNIFICAND-BYTE
+	OLD-VM:SINGLE-FLOAT-EXPONENT-BYTE
+	OLD-VM:SINGLE-FLOAT-NORMAL-EXPONENT-MAX
+	OLD-VM:SINGLE-FLOAT-SIGNIFICAND-BYTE)
+  #+double-double
+  (frob OLD-VM:SIMPLE-ARRAY-COMPLEX-DOUBLE-DOUBLE-FLOAT-TYPE
+	OLD-VM:SIMPLE-ARRAY-DOUBLE-DOUBLE-FLOAT-TYPE))
+
+;; Modular arith hacks
+(setf (fdefinition 'vm::ash-left-mod32) #'old-vm::ash-left-mod32)
+(setf (fdefinition 'vm::lognot-mod32) #'old-vm::lognot-mod32)
+;; End arith hacks
+
+;; Hack to define fused-multiply-add and subtract.  Doesn't need to be
+;; correct; just needs to exist.
+(defun ppc::fused-multiply-subtract (x y z)
+  "Compute x*y-z with only one rounding operation"
+  (declare (double-float x y z))
+  (- (* x y) z))
+
+(defun ppc::fused-multiply-add (x y z)
+  "Compute x*y+z with only one rounding operation"
+  (declare (double-float x y z))
+  (+ (* x y) z))
 
 (let ((function (symbol-function 'kernel:error-number-or-lose)))
   (let ((*info-environment* (c:backend-info-environment c:*target-backend*)))
@@ -175,5 +325,5 @@
 ;; to the hash table with the same value as x86::any-reg.
      
 (let ((ht (c::backend-sc-names c::*target-backend*)))
-  (setf (gethash 'old-x86::any-reg ht)
-	(gethash 'ppc::any-reg ht)))
+  (setf (gethash 'old-vm::any-reg ht)
+	(gethash 'vm::any-reg ht)))
