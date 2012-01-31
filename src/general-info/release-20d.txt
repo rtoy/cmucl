@@ -44,12 +44,16 @@ New in this release:
     * ldb no longer prints prompts forever when EOF is reached.
 
   * Trac Tickets:
+    * #50: Print/read error with make-pathname.
+    * #53: UTF-8 in core.
 
   * Other changes:
     * The layout of the cmucl directories has been changed.
     * On darwin/x86, gcc-4.2 is explicitly used in case Xcode 4 is
       installed.  CMUCL doesn't run correctly when built with gcc/llvm
       in Xcode 4.
+    * The PowerPC port of CMUCL has been revived and is up-to-date.
+      However, only the Unicode build is supported.
 
   * Improvements to the PCL implementation of CLOS:
 
