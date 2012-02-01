@@ -29,6 +29,9 @@ New in this release:
       useful when a buffer is given which is not large enough to hold
       all the octets for the given string.  See docstring for more
       details.
+    * The PowerPC port of CMUCL on Darwin (Mac OS X) has been revived
+      and is up-to-date.  It will run on OSX 10.4 and 10.5.  However,
+      only the Unicode build is supported.
       
   * ANSI compliance fixes:
     * CMUCL was not printing pathnames like (make-pathname :directory
@@ -46,14 +49,13 @@ New in this release:
   * Trac Tickets:
     * #50: Print/read error with make-pathname.
     * #53: UTF-8 in core.
+    * #52: UNICODE-COMPLETE-NAME misses a completion.
 
   * Other changes:
     * The layout of the cmucl directories has been changed.
     * On darwin/x86, gcc-4.2 is explicitly used in case Xcode 4 is
       installed.  CMUCL doesn't run correctly when built with gcc/llvm
       in Xcode 4.
-    * The PowerPC port of CMUCL has been revived and is up-to-date.
-      However, only the Unicode build is supported.
 
   * Improvements to the PCL implementation of CLOS:
 
