@@ -1286,7 +1286,7 @@
       (let* ((base (mip result))
 	     (node (search-dictionary base dict)))
 	(values (str base)
-		(sort (mapcar (lambda (x) (str (subseq x (length base))))
+		(sort (mapcar (lambda (x) (subseq (str x) (length base)))
 			      (delete base result :test #'string=))
 		      #'string<)
 		(and node (completep node)))))))
