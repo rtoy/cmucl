@@ -1,3 +1,6 @@
+;;; Cross-compile script to build a ppc core using x86 as the
+;;; compiling system.  This needs work!
+
 (in-package :cl-user)
 
 ;;; Rename the X86 package and backend so that new-backend does the
@@ -9,32 +12,35 @@
    ;; Features to add here
    '(:ppc
      :conservative-float-type
-     :hash-new :random-mt19937
-     :darwin :bsd
-     :cmu :cmu20 :cmu20a
-     :gencgc
+     :hash-new
+     :random-mt19937			; MT-19937 rng
+     :darwin				; Darwin OS (Mac OS X)
+     :bsd				; We're a BSD-type OS
+     :cmu				; Announce this is CMUCL
+     :cmu20 :cmu20a			; (Mostly) current version identifier
+     :gencgc				; Generational GC is supported on ppc.
      :relative-package-names
-     :modular-arith
-     :double-double
+     :modular-arith			; Modular arithmetic
+     :double-double			; Double-double float support
      :linkage-table
      )
    ;; Features to remove from current *features* here
    '(
      ;; Other architectures we aren't using.  Particularly important
      ;; to get rid of sse2 and x87 so we don't accidentally try to
-     ;; compile the x87/sse2 float support on sparc, which won't work.
-     :x86 :x86-bootstrap :sse2 :x87 :i486
+     ;; compile the x87/sse2 float support on ppc, which won't work.
+     :x86 :x86-bootstrap :sse2 :x87 :i486 :pentium
      :alpha :osf1 :mips
      ;; Really old stuff that should have been removed long ago.
      :propagate-fun-type :propagate-float-type :constrain-float-type
      ;; Other OSes were not using
      :openbsd :freebsd :glibc2 :linux :mach-o :darwin :bsd
      
-     :pentium
+
      :long-float
-     :new-random
-     :small
-     :mp
+     :new-random			; The rng before mt-19937
+     :small				; Don't build small(er) cores on ppc.
+     :mp				; No multi-processing on ppc.
      ;; ppc currently doesn't support these.
      :executable
      :heap-overflow-check
@@ -43,13 +49,6 @@
 
 ;;; Changes needed to bootstrap cross-compiling from x86 to ppc
 
-;; ppc doesn't have these features yet.  Remove them.  It is a bug in
-;; cross-compiling that these features leak through to the target.
-(setf *features* (remove :executable *features*))
-(setf *features* (remove :heap-overflow-check *features*))
-(setf *features* (remove :stack-checking *features*))
-(setf *features* (remove :complex-fp-vops *features*))
-
 ;; Set up the linkage space stuff appropriately for ppc.
 #+nil
 (setf (c::backend-foreign-linkage-space-start c::*target-backend*)
@@ -57,86 +56,15 @@
       (c::backend-foreign-linkage-entry-size c::*target-backend*)
       32)
 
-(in-package "LISP")
-;; We need the the fops because the cross-compiled fasl file is in
-;; big-endian order for sparc.  When we read in a string, we need to
-;; convert the big-endian string to little-endian for x86 so we can
-;; process the symbols and such as expected.
+(in-package "PPC")
+(defconstant char-bytes #+unicode 2 #-unicode 1)
+(export 'char-bytes)
+(in-package "CL-USER")
 
+;; Get new fops so we can process fasls with big-endian unicode
+;; strings on our little-endian compiling system.
 #+unicode
-(progn
-(defconstant ppc::char-bytes 2)  
-(defun maybe-swap-string (f name &optional (len (length name)))
-  (declare (ignorable f))
-  (unless (eq (c:backend-byte-order c:*backend*)
-	      (c:backend-byte-order c:*native-backend*))
-    (dotimes (k len)
-      (let ((code (char-code (aref name k))))
-	(setf (aref name k)
-	      (code-char (logior (ash (ldb (byte 8 0) code) 8)
-				 (ldb (byte 8 8) code))))))
-    ;;(format t "~S: new name = ~S~%" f (subseq name 0 len))
-    name))
-
-(macrolet ((frob (name code name-size package)
-	     (let ((n-package (gensym "PACKAGE-"))
-		   (n-size (gensym "SIZE-"))
-		   (n-buffer (gensym "BUFFER-"))
-		   (k (gensym "IDX-")))
-	       `(define-fop (,name ,code)
-		  (prepare-for-fast-read-byte *fasl-file*
-		    (let ((,n-package ,package)
-			  (,n-size (fast-read-u-integer ,name-size)))
-		      (when (> ,n-size *load-symbol-buffer-size*)
-			(setq *load-symbol-buffer*
-			      (make-string (setq *load-symbol-buffer-size*
-						 (* ,n-size vm::char-bytes)))))
-		      (done-with-fast-read-byte)
-		      (let ((,n-buffer *load-symbol-buffer*))
-			(read-n-bytes *fasl-file* ,n-buffer 0
-				      (* old-vm:char-bytes ,n-size))
-			(maybe-swap-string ',name ,n-buffer ,n-size)
-			(push-table (intern* ,n-buffer ,n-size ,n-package)))))))))
-  (frob fop-symbol-save 6 4 *package*)
-  (frob fop-small-symbol-save 7 1 *package*)
-  (frob fop-lisp-symbol-save 75 4 *lisp-package*)
-  (frob fop-lisp-small-symbol-save 76 1 *lisp-package*)
-  (frob fop-keyword-symbol-save 77 4 *keyword-package*)
-  (frob fop-keyword-small-symbol-save 78 1 *keyword-package*)
-
-  (frob fop-symbol-in-package-save 8 4
-    (svref *current-fop-table* (fast-read-u-integer 4)))
-  (frob fop-small-symbol-in-package-save 9 1
-    (svref *current-fop-table* (fast-read-u-integer 4)))
-  (frob fop-symbol-in-byte-package-save 10 4
-    (svref *current-fop-table* (fast-read-u-integer 1)))
-  (frob fop-small-symbol-in-byte-package-save 11 1
-    (svref *current-fop-table* (fast-read-u-integer 1))))
-
-(define-fop (fop-package 14)
-  (let ((name (pop-stack)))
-    ;;(format t "xfop-package: ~{~X~^ ~}~%" (map 'list #'char-code name))
-    (or (find-package name)
-	(error (intl:gettext "The package ~S does not exist.") name))))
-
-(clone-fop (fop-string 37)
-	   (fop-small-string 38)
-  (let* ((arg (clone-arg))
-	 (res (make-string arg)))
-    (read-n-bytes *fasl-file* res 0
-		  (* old-vm:char-bytes arg))
-    (maybe-swap-string 'fop-string res)
-    res))
-
-#+unicode
-(defun cold-load-symbol (size package)
-  (let ((string (make-string size)))
-    (read-n-bytes *fasl-file* string 0 (* 2 size))
-    ;;(format t "xpre swap cold-load-symbol: ~S to package ~S~%" string package)
-    (maybe-swap-string 'cold-load-symbol string)
-    ;;(format t "xpost swap cold-load-symbol: ~S to package ~S~%" string package)
-    (cold-intern (intern string package) package)))
-)
+(load "target:tools/cross-scripts/cross-unicode-big-endian.lisp")
 
 ;;; End changes needed to bootstrap cross-compiling from x86 to ppc
 
