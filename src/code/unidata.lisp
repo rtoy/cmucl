@@ -1231,98 +1231,65 @@
   Three values are returned: (1) The best match of prefix, (2) a list
   of possible completions, (3) a boolean indicating whether the best
   match is a complete unicode name. "
-
   (unless dict
-    ;; Load the names dictionary, if needed.
-    (unless (unidata-name+ *unicode-data*)
-      (load-names))
+    (load-names)
     (setf dict (unidata-name+ *unicode-data*)))
-  (let ((prefix (nsubstitute #\Space #\_ (string-upcase prefix)))
-	completep)
-    (multiple-value-bind (n p)
-	(search-dictionary prefix dict)
-      (when n
-	(setq completep (> (aref (dictionary-codev dict) n) -1)))
-      #+(or debug-uc)
-      (progn
-	(format t "n,p,complete = ~S ~S ~S~%" n p completep)
-	(when n (format t "match = ~S~%" (subseq prefix 0 p))))
-      (cond ((not p)
-	     (values (%str prefix) nil nil))
-	    ((= p (length prefix))
-	     ;; The prefix is an exact match to something in the code
-	     ;; book.  Try to find possible completions of this
-	     ;; prefix.
-	     (let ((x (node-next n dict))
-		   (suffix ""))
-	       #+(or debug-uc)
-	       (format t "init x = ~S~%" x)
-	       (when (= (length x) 1)
-		 ;; There was only one possible extension.  Try to
-		 ;; extend from there.
-		 #+(or debug-uc)
-		 (format t "extending~%")
-		 (setq suffix (caar x)
-		       n (cdar x)
-		       x (node-next (cdar x) dict)))
-	       #+(or debug-uc)
-	       (progn
-		 (format t "x = ~S~%" x)
-		 (format t "suffix = ~S~%" suffix))
-	       (when (<= (length x) 1)
-		 (setq prefix (concatenate 'string prefix suffix))
-		 (setf suffix ""))
-	       (values (%str prefix)
-		       (sort (mapcar #'(lambda (e)
-					 (%str (concatenate 'string suffix (car e))))
-				     x)
-			     #'string<)
-		       (or (> (aref (dictionary-codev dict) n) -1)
-			   completep))))
-	    (t
-	     ;; The prefix was not an exact match of some entry in the
-	     ;; codebook. Try to find some completions from there.
-	     (let* ((nodex (node-next n dict))
-		    (x (remove-if-not (lambda (x)
-					(%match (car x) prefix p))
-				      nodex)))
-	       #+(or debug-uc)
-	       (progn
-		 (format t "nodex = ~S~%" nodex)
-		 (format t "x = ~S~%" x))
-	       (setq prefix (subseq prefix 0 p))
-	       (cond ((= (length x) 1)
-		      ;; Only one possible completion.  Try to extend
-		      ;; the completions from there.
-		      (setq prefix (concatenate 'string prefix (caar x))
-			    n (cdar x)
-			    x (node-next (cdar x) dict))
-		      (values (%str prefix)
-			      (sort (mapcar #'%strx x) #'string<)
-			      (> (aref (dictionary-codev dict) n) -1)))
-		     (t
-		      ;; There's more than one possible completion.
-		      ;; Try to extend each of those completions one
-		      ;; more step, but we still want to keep the
-		      ;; original completions.
-		      (let* ((p (append (mapcar #'car x)
-					(mapcan #'(lambda (ex)
-						    (let ((next (node-next (cdr ex) dict)))
-						      (if next
-							  (mapcar #'(lambda (n)
-								      (concatenate 'string (car ex) (car n)))
-								  (node-next (cdr ex) dict))
-							  (list (car ex)))))
-						x)))
-			     (q (%mip p)))
-			(setq prefix (concatenate 'string prefix q))
-			
-			(do ((tmp p (cdr tmp)))
-			    ((endp tmp))
-			  (setf (car tmp) (subseq (car tmp) (length q))))
-			(values (%str prefix)
-				(sort (mapcar #'%str p) #'string<)
-				nil))))))))))
+  (let* ((prefix (nsubstitute #\Space #\_ (string-upcase prefix)))
+	 (result nil))
+    (labels ((keybase (node)
+	       (ash (aref (dictionary-nextv dict) node) -18))
+	     (keylen (base)
+	       (aref (dictionary-keyl dict) base))
+	     (keystr (base offset)
+	       (aref (dictionary-cdbk dict)
+		     (aref (dictionary-keyv dict) (+ base offset))))
+	     (next (node keypos)
+	       (+ (logand (aref (dictionary-nextv dict) node) #x3FFFF)
+		  keypos))
+	     (completep (node)
+	       (> (aref (dictionary-codev dict) node) -1))
+	     (match (part prefix posn)
+	       (let ((s1 (search part prefix :start2 posn))
+		     (s2 (search prefix part :start1 posn)))
+		 (or (and s1 (= s1 posn))
+		     (and s2 (zerop s2)))))
+	     (rec (node posn)
+	       (let ((keyv (keybase node)))
+		 (dotimes (i (keylen keyv))
+		   (let* ((str (keystr keyv i)) (len (length str)))
+		     (when (match str prefix posn)
+		       (cond ((<= (+ len posn) (length prefix))
+			      (rec (next node i) (+ posn len)))
+			     (t
+			      (push (fillout (concatenate 'string (subseq prefix 0 posn)
+							  str)
+					     (next node i))
+				    result))))))))
+	     (fillout (string node)
+	       (let ((keyv (keybase node)))
+		 (if (and (= (keylen keyv) 1) (not (completep node)))
+		     (fillout (concatenate 'string string (keystr keyv 0))
+			      (next node 0))
+		     string)))
+	     (mip (strings)
+	       (let* ((first (first strings))
+		      (posn (length first)))
+		 (dolist (string (rest strings))
+		   (let ((n (mismatch first string :end1 posn)))
+		     (when n (setq posn n))))
+		 (subseq first 0 posn)))
+	     (str (x) (nsubstitute #\_ #\Space (string-capitalize x))))
+      (rec 0 0)
+      (unless (cdr result)
+	(setq prefix (car result))
+	(rec 0 0))
+      (let* ((base (mip result))
+	     (node (search-dictionary base dict)))
+	(values (str base)
+		(sort (mapcar (lambda (x) (str (subseq x (length base))))
+			      (delete base result :test #'string=))
+		      #'string<)
+		(and node (completep node)))))))
 
 ;; Like unicode-complete-name, but we also try to handle the names
 ;; that can be computed algorithmically like the Hangul syllables and
