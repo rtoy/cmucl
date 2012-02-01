@@ -176,8 +176,11 @@ done
 # If -b not given, try to derive one instead of just using "build".
 if [ -z "$BASE" ]; then
     case `uname -s` in
-      Darwin) # We only support darwin-x86 now.  No ppc available anymore.
-	  BASE=darwin ;;
+      Darwin)
+          case `uname -p` in
+            powerpc) BASE=ppc ;;
+            i386) BASE=darwin ;;
+          esac ;;
       SunOS)
 	  case `uname -m` in
 	    sun4u) BASE=sparc ;;
