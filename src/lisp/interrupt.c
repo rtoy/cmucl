@@ -175,7 +175,7 @@ copy_sigmask(sigset_t *dst, sigset_t *src)
 #ifndef __linux__
     *dst = *src;
 #else
-    memcpy(dst, src, NSIG / 8);
+    memcpy(dst, src, NSIG / CHAR_BIT);
 #endif
 }
 
