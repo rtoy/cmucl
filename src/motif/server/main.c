@@ -88,9 +88,9 @@ void close_sockets()
   unlink(socket_path);
 }
 
-void server_shutdown()
+void server_shutdown(int signal)
 {
-  fprintf(stderr,"Caught signal.\n");
+  fprintf(stderr,"Caught signal %d.\n", signal);
   close_sockets();
   exit(0);
 }
