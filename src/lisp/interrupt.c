@@ -169,6 +169,16 @@ interrupt_internal_error(HANDLER_ARGS, boolean continuable)
 	arch_skip_instruction(context);
 }
 
+static void
+copy_sigmask(sigset_t *dst, sigset_t *src)
+{
+#ifndef __linux__
+    *dst = *src;
+#else
+    memcpy(dst, src, NSIG / 8);
+#endif
+}
+
 void
 interrupt_handle_pending(os_context_t * context)
 {
@@ -190,11 +200,8 @@ interrupt_handle_pending(os_context_t * context)
 #endif
 	    undo_fake_foreign_function_call(context);
     }
-#ifndef __linux__
-    context->uc_sigmask = pending_mask;
-#else
-    memcpy(&context->uc_sigmask, &pending_mask, NSIG / LONG_BIT);
-#endif
+
+    copy_sigmask(&context->uc_sigmask, &pending_mask);
     sigemptyset(&pending_mask);
 
     if (pending_signal) {
@@ -300,7 +307,7 @@ setup_pending_signal(HANDLER_ARGS)
      *
      */
     pending_code.si_code = CODE(code);
-    pending_mask = ucontext->uc_sigmask;
+    copy_sigmask(&pending_mask, &ucontext->uc_sigmask);
     FILLBLOCKSET(&ucontext->uc_sigmask);
 }
 
@@ -372,11 +379,7 @@ interrupt_maybe_gc(HANDLER_ARGS)
 	if (arch_pseudo_atomic_atomic(context)) {
 	    maybe_gc_pending = TRUE;
 	    if (pending_signal == 0) {
-#ifndef __linux__
-		pending_mask = context->uc_sigmask;
-#else
-		memcpy(&pending_mask, &context->uc_sigmask, NSIG / LONG_BIT);
-#endif
+		copy_sigmask(&pending_mask, &context->uc_sigmask);
 		FILLBLOCKSET(&context->uc_sigmask);
 	    }
 	    arch_set_pseudo_atomic_interrupted(context);
