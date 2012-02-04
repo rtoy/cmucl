@@ -1,0 +1,39 @@
+#: src/code/ppc-vm.lisp
+msgid "Returns a string describing the type of the local machine."
+msgstr ""
+
+#: src/code/ppc-vm.lisp
+msgid "Returns a string describing the version of the local machine."
+msgstr ""
+
+#: src/code/ppc-vm.lisp
+msgid "Compute x*y-z with only one rounding operation"
+msgstr ""
+
+#: src/code/ppc-vm.lisp
+msgid "Compute x*y+z with only one rounding operation"
+msgstr ""
+
+#: src/code/debug-int.lisp
+msgid "no debug info: ~A:~A"
+msgstr ""
+
+#: src/code/debug-int.lisp
+msgid "find the PC"
+msgstr ""
+
+#: src/code/debug-int.lisp
+msgid "Local non-descriptor register access?"
+msgstr ""
+
+#: src/code/debug-int.lisp
+msgid "Local interior register access?"
+msgstr ""
+
+#: src/code/debug-int.lisp
+msgid "Breakpoint that nobody wants?"
+msgstr ""
+
+#: src/code/debug-int.lisp
+msgid "BREAKPOINT-DO-DISPLACED-INST returned?"
+msgstr ""
