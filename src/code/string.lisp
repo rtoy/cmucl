@@ -855,10 +855,12 @@
   #+unicode
   _N"Given a string, returns a copy of the string with the first
   character of each ``word'' converted to upper-case, and remaining
-  chars in the word converted to lower case. A ``word'' is defined
-  to be a string of case-modifiable characters delimited by
-  non-case-modifiable chars.  Casing is :simple or :full for
-  simple or full case conversion, respectively."
+  chars in the word converted to lower case. Casing is :simple or
+  :full for simple or full case conversion, respectively.  If
+  Unicode-Word-Break is non-Nil, then the Unicode word-breaking
+  algorithm is used to determine the word boundaries.  Otherwise, A
+  ``word'' is defined to be a string of case-modifiable characters
+  delimited by non-case-modifiable chars.  "
   
   (declare (fixnum start))
   #-unicode
