@@ -130,7 +130,10 @@ write_mach_o_header(int fd)
 
     /* Ident array. */
     eh.magic = MH_MAGIC;
-    /* Currently only support x86's */
+#if defined(__ppc__)
+    eh.cputype = CPU_TYPE_POWERPC;
+    eh.cpusubtype = CPU_SUBTYPE_POWERPC_ALL;
+#else
     eh.cputype = CPU_TYPE_I386;
     /*
      * Support any kind x86.  Should we be more specific?  We need at
@@ -139,6 +142,7 @@ write_mach_o_header(int fd)
      * Pentium 4?
      */
     eh.cpusubtype = CPU_SUBTYPE_I386_ALL;
+#endif
 
     eh.filetype = MH_OBJECT;
 
