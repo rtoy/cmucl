@@ -61,7 +61,7 @@
 ;; The expected Unicode version.  This needs to be synced with
 ;; build-unidata.lisp.
 (defconstant +unicode-major-version+ 6)
-(defconstant +unicode-minor-version+ 0)
+(defconstant +unicode-minor-version+ 1)
 (defconstant +unicode-update-version+ 0)
 
 ;;; These need to be synched with tools/build-unidata.lisp

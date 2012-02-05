@@ -54,7 +54,7 @@
 
 ;; The expected Unicode version
 (defconstant +unicode-major-version+ 6)
-(defconstant +unicode-minor-version+ 0)
+(defconstant +unicode-minor-version+ 1)
 (defconstant +unicode-update-version+ 0)
 
 ;;; These need to be synched with code/unidata.lisp
@@ -726,7 +726,7 @@
     
       (foreach-ucd "NameAliases"
 	  ucd-directory
-	(lambda (min max alias)
+	(lambda (min max alias &rest type)
 	  (declare (ignore max))
 	  (push alias (ucdent-aliases (find-ucd min)))))
 

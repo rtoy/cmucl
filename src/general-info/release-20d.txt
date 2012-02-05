@@ -32,6 +32,7 @@ New in this release:
     * The PowerPC port of CMUCL on Darwin (Mac OS X) has been revived
       and is up-to-date.  It will run on OSX 10.4 and 10.5.  However,
       only the Unicode build is supported.
+    * Updated to Unicode 6.1.0.
       
   * ANSI compliance fixes:
     * CMUCL was not printing pathnames like (make-pathname :directory
