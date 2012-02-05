@@ -33,10 +33,10 @@ lisp: ${OBJS} version.o
 	mv -f ,lisp lisp
 
 # Create a library out of all the object files so we can build an
-# executable.  However, for Solaris, we need to remove exec-init.o
-# because the linker will define symbols with the correct addresses.
-# Also, we need to add EXEC_FINAL on Solaris to define
-# builtin_image_flag with the correct value.
+# executable.  However, we need to remove exec-init.o from the library
+# and replace it with exec-final.o because exec-final.o sets the
+# builtin_image_flag to 1 so that the runtime knows the runtime
+# contains the core sections.
 lisp.a:	version.o ${OBJS} ${EXEC_FINAL_OBJ}
 	ar crs lisp.a ${OBJS} version.o
 ifneq (${EXEC_FINAL_OBJ},)
