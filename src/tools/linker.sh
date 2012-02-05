@@ -8,8 +8,8 @@
 # This script takes parameters specified by the running lisp to create
 # an executable image.
 #
-# Despite the name, it is used for Linux/x86, Darwin/x86, and
-# Solaris/sparc, as specified in src/lisp/elf.h.
+# This is used for Linux/x86, Darwin/x86, and Solaris/sparc, as
+# specified in src/lisp/elf.h.
 
 OPSYS=`uname`
 
@@ -87,11 +87,20 @@ case $uname_s in
       # Specify how to link the entire lisp.a library
       OPT_ARCHIVE="-all_load $CMUCLLIB/lisp.a"
 
-      # Extra stuff.  For some reason one __LINKEDIT segment is mapped
-      # just past the dynamic space.  This messes things up, so we move it
-      # to another address.  This seems to be free, at least on 10.5.
+      case `uname -p` in
+	i386)
+	    # Extra stuff.  For some reason one __LINKEDIT segment is
+	    # mapped just past the dynamic space.  This messes things
+	    # up, so we move it to another address.  This seems to be
+	    # free, at least on 10.5.
 
-      OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -rdynamic"
+	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -rdynamic"
+	    ;;
+	powerpc)
+	    # Nothing needed for ppc?
+	    ;;
+      esac
+
       # See Config.x86_darwin
       OS_LIBS=
       ;;
