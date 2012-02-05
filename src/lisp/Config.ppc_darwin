@@ -42,6 +42,12 @@ ASSEM_SRC = ppc-assem.S linux-stubs.S
 ARCH_SRC = ppc-arch.c
 OS_SRC = ppc-darwin-dlshim.c os-common.c Darwin-os.c e_rem_pio2.c k_rem_pio2.c
 
+
+ifdef FEATURE_EXECUTABLE
+OS_SRC += mach-o.c
+EXEC_FINAL_OBJ = exec-final.o
+endif
+
 # I (rtoy) am not exactly sure what these values are, but it seems
 # that the segaddr for CMUCLRO should be the READ_ONLY_SPACE_START.
 # The seg1addr should be somewhere above our spaces.  This is where
