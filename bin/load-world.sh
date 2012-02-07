@@ -13,7 +13,13 @@ SKIP_PCL=
 NO_PCL_FEATURE=
 # Default version is the date with the git hash.
 GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
-VERSION="`date '+%Y-%m-%d %H:%M:%S'`${GIT_HASH:+ $GIT_HASH}"
+
+# If the git hash looks like a snapshot tag, don't add the date.
+if expr "X${GIT_HASH}" : '^Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]' > /dev/null; then
+    VERSION="${GIT_HASH}"
+else
+    VERSION="`date '+%Y-%m-%d %H:%M:%S'`${GIT_HASH:+ $GIT_HASH}"
+fi
 echo $VERSION
 
 while getopts "p" arg
@@ -40,7 +46,7 @@ if [ -n "$SKIP_PCL" ]; then
     NO_PCL_FEATURE="(pushnew :no-pcl *features*)"
 fi
 
-# If version string give, use it, otherwise use the default.
+# If version string given, use it, otherwise use the default.
 if [ -n "$2" ]; then
     VERSION="$2"
 fi
