@@ -108,7 +108,6 @@ esac
 
 buildit ()
 {
-    set -x
     if echo $INTERACTIVE_BUILD | grep $BUILD > /dev/null; then
 	INTERACTIVE=t
     else
@@ -139,7 +138,6 @@ buildit ()
 	$TARGET/lisp/lisp -batch -noinit -nositeinit $FPU_MODE < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit $FPU_MODE"; exit 1; }
 	return 0;
     fi
-    set +x
 }
 
 FPU_MODE=
