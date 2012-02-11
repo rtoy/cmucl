@@ -560,15 +560,31 @@ utility functions are provided to make access easier.
 \end{defun}
 
 \begin{defun}{}{string-to-octets}{\args \var{string} \keys{\kwd{start}
-      \kwd{end} \kwd{external-format} \kwd{buffer}}}
+      \kwd{end} \kwd{external-format} \kwd{buffer} \kwd{buffer-start}
+      \kwd{error}}}
   \code{string-to-octets} converts \var{string} to a sequence of
   octets according to the external format specified by
   \var{external-format}.  The string to be converted is bounded by
   \var{start}, which defaults to 0, and \var{end}, which defaults to
   the length of the string.  If \var{buffer} is specified, the octets
   are placed in \var{buffer}.  If \var{buffer} is not specified, a new
-  array is allocated to hold the octets.  In all cases the buffer is
-  returned.
+  array is allocated to hold the octets.  \var{buffer-start} specifies
+  where in the buffer the first octet will be placed.
+
+  An error method may also be specified by \var{error}.  Any errors
+  encountered while converting the string to octets will be handled
+  according to error.  If \nil{}, a replacement character is converted
+  to octets in place of the error.  Otherwise, \var{error} should be a
+  symbol or function that will be called when the error occurs.  The
+  function takes two arguments:  an error string and the character
+  that caused the error.  It should return a replacement character.
+  
+  Three values are returned: The buffer, the number of valid octets
+  written, and the number of characters converted.  Note that the
+  actual number of octets written may be greater than the returned
+  value, These represent the partial octets of the next character to
+  be converted, but there was not enough room to hold the complete set
+  of octets.
 \end{defun}
 
 \begin{defun}{}{octets-to-string}{\args \var{octets} \keys{\kwd{start}
