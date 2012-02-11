@@ -178,16 +178,14 @@ debug_print(lispobj object)
 
             len = lisp_string->length >> 2;
             lisp_chars = (unsigned short int*) lisp_string->data;
-    
-            for (k = 0; k < len; ++k) {
-		/*
-		 * Do we really want to dump out 4 bytes?  Should we
-		 * just print out the low 8 bits of each Lisp
-		 * character? 
-		 */
-                putw(*lisp_chars, stdout);
-                ++lisp_chars;
-            }
+
+            /*
+             * Do we really want to dump out the entire contents of
+             * the utf-16 string?  Should we just print out the low 8
+             * bits of each Lisp character?  Or maybe convert the
+             * utf-16 string to some more suitable encoding?
+             */
+            fwrite(lisp_chars, sizeof(*lisp_chars), len, stdout);
             putchar('\n');
     
             fflush(stdout);
