@@ -2925,9 +2925,22 @@
       ;; Write the Version entry.
       ;; 
       (write-long version-entry-type-code)
-      (write-long 3)
-      (write-long version)
 
+      ;; For x86, identify the core as using either x87 or sse2
+      ;; instructions.
+      (cond ((and (eql (c:backend-fasl-file-implementation c:*backend*)
+		       c:x86-fasl-file-implementation)
+		  (c:backend-featurep :sse2))
+	     (write-long 4)
+	     (write-long version)
+	     ;; See the definition of fpu_mode_t in lisp.h for correct
+	     ;; values to use here.
+	     (write-long (if (c:backend-featurep :sse2)
+			     2		; fpu_mode_t = SSE2
+			     1)))
+	    (t
+	     (write-long 3)
+	     (write-long version)))
       ;; Write the New Directory entry header.
       ;; 
       (write-long new-directory-entry-type-code)
