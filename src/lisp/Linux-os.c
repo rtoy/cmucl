@@ -145,7 +145,7 @@ os_init0(const char *argv[], const char *envp[])
     struct utsname name;
     uname(&name);
         
-    check_personality(&name, argv, envp);
+    check_personality(&name, (char *const *) argv, (char *const *) envp);
 }
 
 void
