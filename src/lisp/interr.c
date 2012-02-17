@@ -174,7 +174,6 @@ debug_print(lispobj object)
         if ((unsigned long) lisp_string->header == type_SimpleString) {
             unsigned short int* lisp_chars;
             int len;
-            int k;
 
             len = lisp_string->length >> 2;
             lisp_chars = (unsigned short int*) lisp_string->data;
