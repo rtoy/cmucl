@@ -372,11 +372,11 @@ print_string(struct vector* vector)
     int len = fixnum_value(vector->length);
               
     while (len-- > 0) {
-        if ((*charptr == '"')) {
+        if (*charptr == '"') {
             putchar('\\');
         }
         /* Just dump out the UTF-16 data */
-        putw(*charptr, stdout);
+        fwrite(charptr, sizeof(*charptr), 1,  stdout);
         charptr++;
     }
 #endif
