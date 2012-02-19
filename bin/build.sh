@@ -94,6 +94,8 @@ usage ()
     echo "               translations instead of computing and displaying the diffs."
     echo "    -O opt    Any additional command-line flags to use when building."
     echo "               The flags always include -noinit -nositeinit"
+    echo "    -R        Force recompiling the C runtime.  Normally, just runs make to "
+    echo "               recompile anything that has changed."
     exit 1
 }
 
@@ -124,11 +126,16 @@ buildit ()
     then
 	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET || { echo "Failed: $TOOLDIR/clean-target.sh"; exit 1; }
 	time $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
-	# Set the LANG to C.  For whatever reason, if I (rtoy) don't
-        # do this on my openSuSE system, any messages from gcc are
-        # basically garbled.  This should be harmless on other
-        # systems.
-	LANG=C $MAKE -C $TARGET/lisp $MAKE_TARGET || { echo "Failed: $MAKE -C $TARGET/lisp"; exit 1; }
+	if [ "$REBUILD_LISP" = "yes" ]; then
+	    $TOOLDIR/rebuild-lisp.sh $TARGET
+	else
+	    # Set the LANG to C.  For whatever reason, if I (rtoy) don't
+	    # do this on my openSuSE system, any messages from gcc are
+	    # basically garbled.  This should be harmless on other
+	    # systems.
+	    LANG=C $MAKE -C $TARGET/lisp $MAKE_TARGET || { echo "Failed: $MAKE -C $TARGET/lisp"; exit 1; }
+        fi
+
 	if [ "$BUILD_WORLD2" = "yes" ];
 	then
 	    $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
@@ -145,7 +152,7 @@ BUILDWORLD="$TOOLDIR/build-world.sh"
 BUILD_POT="yes"
 UPDATE_TRANS=
 
-while getopts "123Po:b:v:uB:C:Ui:f:w:O:?" arg
+while getopts "123PRo:b:v:uB:C:Ui:f:w:O:?" arg
 do
     case $arg in
 	1) ENABLE2="no" ;;
@@ -164,6 +171,7 @@ do
         w) BUILDWORLD="$OPTARG" ;;
         U) UPDATE_TRANS="yes";;
 	O) OLDLISPFLAGS="$OLDLISPFLAGS $OPTARG" ;;
+        R) REBUILD_LISP="yes";;
 	\?) usage
 	    ;;
     esac
