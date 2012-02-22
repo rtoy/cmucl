@@ -55,17 +55,14 @@ Setting up a build environment
 
     or, if you want to use the git sources directly:
 
-    git clone git://common-lisp.net/projects/cmucl/cmucl.git src
-
-    (The "src" is important to keep everything the same with git as it
-    was with cvs.)
+    git clone git://common-lisp.net/projects/cmucl/cmucl.git
 
     Whatever you do, the sources must be in a directory named src
     inside the base directory.  Since the build tools keep all
     generated files in separate target directories, the src directory
     can be read-only (e.g. mounted read-only via NFS, etc.)
 
-    The build tools are all in the src/tools directory.
+    The build tools are all in the bin directory.
 
 That's it, you are now ready to build CMU CL.
 
@@ -82,7 +79,7 @@ a) Simple builds
    Use this to build from a version of CMUCL that is very close to the
    sources you are trying to build now:
 
-   src/tools/build.sh -C "" -o "<name-of-old-lisp> <options-to-lisp>"
+   bin/build.sh -C "" -o "<name-of-old-lisp> <options-to-lisp>"
 
    This will build CMUCL 3 times, each time with the result of the
    previous build.  The last time, the additional libraries like CLX,
@@ -101,7 +98,7 @@ b) Slightly more complicated builds
 
    For these, you can use this:
 
-   src/tools/build.sh -C "" -o "<old-lisp>" -B boot1.lisp -B boot2.lisp
+   bin/build.sh -C "" -o "<old-lisp>" -B boot1.lisp -B boot2.lisp
 
    The bootstrap files listed with the -B option (as many as needed)
    are loaded in order, so be sure to get them right.
@@ -124,8 +121,8 @@ read the bootfiles for additional instructions, if any.
 
 If there are no bootfiles, then you can use a) above.
 
-The build.sh script supports other options, and src/tools/build.sh -?
-will give a quick summary.  Read src/tools/build.sh for more
+The build.sh script supports other options, and bin/build.sh -?
+will give a quick summary.  Read bin/build.sh for more
 information. 
 
 A general outline of the build process
@@ -219,10 +216,10 @@ To complete the build so that you something similar to what the
 releases of CMUCL do, there are a few more steps:
 
 e) Build the utilities like Gray streams, simple streams, CLX, CLM,
-   and Hemlock.  Use the src/tools/build-utils.sh script for this, as
+   and Hemlock.  Use the bin/build-utils.sh script for this, as
    described below
 
-f) Create tarfiles using the src/tools/make-dist.sh script, as
+f) Create tarfiles using the bin/make-dist.sh script, as
    explained below.
 
 With these tarfiles, you can install them anywhere.  The contents of
@@ -246,13 +243,13 @@ the scripts included with this little text?
 Overview of the included build scripts
 --------------------------------------
 
-* src/tools/build.sh [-123obvuBCU?]
+* bin/build.sh [-123obvuBCU?]
 
 This is the main build script.  It essentially calls the other build
 scripts described below in the proper sequence to build cmucl from an
 existing binary of cmucl.
 
-* src/tools/create-target.sh target-directory [lisp-variant [motif-variant]]
+* bin/create-target.sh target-directory [lisp-variant [motif-variant]]
 
 This script creates a new target directory, which is a shadow of the
 source directory, that will contain all the files that are created by
@@ -290,7 +287,7 @@ sample setenv.lisp includes a set of features that should work for the
 intended configuration.  Note also that some adding or removing some
 features may require a cross-compile instead of a normal compile.
 
-* src/tools/clean-target.sh [-l] target-directory [more dirs]
+* bin/clean-target.sh [-l] target-directory [more dirs]
 
 Cleans the given target directory, so that all created files will be
 removed.  This is useful to force recompilation.  If the -l flag is
@@ -298,7 +295,7 @@ given, then the C runtime is also removed, including all the lisp
 executable, any lisp cores, all object files, lisp.nm, internals.h,
 and the config file.
 
-* src/tools/build-world.sh target-directory [build-binary] [build-flags...]
+* bin/build-world.sh target-directory [build-binary] [build-flags...]
 
 Starts a complete world build for the given target, using the lisp
 binary/core specified as a build host.  The recompilation step will
@@ -309,13 +306,13 @@ step of the world build will inform you of that fact.  In that case,
 you'll have to use the rebuild-lisp.sh script, and then restart the
 world build process with build-world.sh
 
-* src/tools/rebuild-lisp.sh target-directory
+* bin/rebuild-lisp.sh target-directory
 
 This script will force a complete recompilation of the C runtime code
 of CMU CL (aka the lisp executable).  Doing this will necessitate
 building a new kernel.core file, using build-world.sh.
 
-* src/tools/load-world.sh target-directory version
+* bin/load-world.sh target-directory version
 
 This will finish the CMU CL rebuilding process, by loading the
 remaining compiled files generated in the world build process into the
@@ -330,14 +327,14 @@ ISO8601 format is often a good idea, e.g. "18d+ 2002-05-06" for a
 binary that is based on sources current on the 6th May, 2002, which is
 post the 18d release.
 
-* src/tools/build-utils.sh target-directory
+* bin/build-utils.sh target-directory
 
 This script will build auxiliary libraries packaged with CMU CL,
 including CLX, CMUCL/Motif, the Motif debugger, inspector, and control
 panel, and the Hemlock editor.  It will use the lisp executable and
 core of the given target.
 
-* src/tools/make-dist.sh [-bg] [-G group] [-O owner] target-directory version arch os
+* bin/make-dist.sh [-bg] [-G group] [-O owner] target-directory version arch os
 
 This script creates both main and extra distribution tarballs from the
 given target directory, using the make-main-dist.sh and
@@ -369,7 +366,7 @@ names will have the form:
 Of course, the "bz2" will be "gz" if you specified gzip compression
 instead of bzip.
 
-* /src/tools/make-main-dist.sh target-directory version arch os
+* /bin/make-main-dist.sh target-directory version arch os
 
 This is script is not normally invoked by the user; make-dist will do
 it appropriately.
@@ -382,7 +379,7 @@ simple streams.
 
 This is intended to be run from make-dist.sh.
 
-* src/tools/make-extra-dist.sh target-directory version arch os
+* bin/make-extra-dist.sh target-directory version arch os
 
 This is script is not normally invoked by the user; make-dist will do
 it appropriately.
@@ -426,7 +423,7 @@ Set up everything as described in the setup section above. Then
 execute:
 
 # Create a new target directory structure/config for OpenBSD:
-src/tools/create-target.sh openbsd OpenBSD_gencgc OpenBSD
+bin/create-target.sh openbsd OpenBSD_gencgc OpenBSD
 
 # edit openbsd/setenv.lisp to contain what we want:
 cat <<EOF > openbsd/setenv.lisp
@@ -452,7 +449,7 @@ cat <<EOF > openbsd/setenv.lisp
 EOF
 
 # Recompile the lisp world, and dump a new kernel.core:
-src/tools/build-world.sh openbsd lisp # Or whatever you need to invoke your 
+bin/build-world.sh openbsd lisp # Or whatever you need to invoke your 
                               # current lisp binary+core
 
 # If build-world tells you (as it will the first time) that:
@@ -462,15 +459,15 @@ src/tools/build-world.sh openbsd lisp # Or whatever you need to invoke your
 # build-world.sh:
 
 # Recompile lisp binary itself:
-src/tools/rebuild-lisp.sh openbsd
+bin/rebuild-lisp.sh openbsd
 
 # Restart build-world.sh now:
-src/tools/build-world.sh openbsd lisp
+bin/build-world.sh openbsd lisp
 
 # Now we populate the kernel.core with further compiled files,
 # and dump the final lisp.core file:
 
-src/tools/load-world.sh openbsd "18d+ 2002-05-06"
+bin/load-world.sh openbsd "18d+ 2002-05-06"
 
 # The second argument above is the version number that the built
 # core will announce.  Please always put the build-date and some
@@ -555,8 +552,8 @@ up-to-date with the current sources.
 	Create a cross-compiler directory to hold the cross-compiler
 	and a target directory to hold the result:
 
-	       src/tools/create-target.sh xcross
-	       src/tools/create-target.sh xtarget
+	       bin/create-target.sh xcross
+	       bin/create-target.sh xtarget
 
 2.  Adjust cross-compilation script
 
@@ -592,13 +589,13 @@ up-to-date with the current sources.
 3.  Build the cross compiler and target
 	Now compile the result:
 
-	    src/tools/cross-build-world.sh xtarget xcross xtarget/cross.lisp [v9 binary]
+	    bin/cross-build-world.sh xtarget xcross xtarget/cross.lisp [v9 binary]
 
 4.  Rebuild the lisp files:
 
 	When this finishes, you need to compile the C code:
 
-		src/tools/rebuild-lisp.sh xtarget
+		bin/rebuild-lisp.sh xtarget
 
 	At this point, you may want to run cross-build-world.sh again
 	to generate a new kernel.core.  It shouldn't build anything;
@@ -608,7 +605,7 @@ up-to-date with the current sources.
 
 	With the new kernel.core, we need to create a lisp.core:
 
-		src/tools/load-world.sh xtarget "new lisp"
+		bin/load-world.sh xtarget "new lisp"
 
 	Test the result with
 
@@ -635,8 +632,8 @@ same file system, via NFS or something else.
    compiled target.  We assume we are on ppc/darwin.  So, when running
    create-target.sh we need to specify the target:
 
-        src/tools/create-target.sh x86-cross x86
-        src/tools/create-target.sh x86-target x86
+        bin/create-target.sh x86-cross x86
+        bin/create-target.sh x86-target x86
 
 2. Adjust the cross-compilation script.  An example for ppc/darwin to
    x86/linux is in src/tools/cross-scripts/cross-ppc-x86.lisp.
@@ -644,7 +641,7 @@ same file system, via NFS or something else.
 3. Build the cross compiler and target, as above, using the specified
    cross-compile script:
 
-        src/tools/cross-build-world.sh x86-target x86-cross cross.lisp [ppc binary]
+        bin/cross-build-world.sh x86-target x86-cross cross.lisp [ppc binary]
 
    where cross.lisp is the cross-compile script from 2) above.
 
@@ -661,13 +658,13 @@ same file system, via NFS or something else.
 
    Compile the lisp code:
 
-        src/tools/rebuild-lisp.sh x86-target   
+        bin/rebuild-lisp.sh x86-target   
 
 5. Now run load-world.sh to create the desired lisp.core from lisp and
    kernel.core.  As above, PCL has not been compiled, so select
    restart 3 (return nil from pclload) to create lisp.core
 
-        src/tools/load-world.sh x86-target "new x86"
+        bin/load-world.sh x86-target "new x86"
 
 At this point, you will have a shiny new lisp on the new platform.
 Since it's missing PCL, you will need to do at least one normal build

@@ -1,0 +1,35 @@
+# @ cmucl-linux-os
+# SOME DESCRIPTIVE TITLE
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: CMUCL 20B\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
+"Last-Translator: Automatic translation\n"
+"Language-Team: Pig Latin (auto-translated)\n"
+"Language: Pig Latin\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: src/code/linux-os.lisp
+msgid "Returns a string describing version of the supporting software."
+msgstr ""
+"Eturnsray away ingstray escribingday ersionvay ofway ethay upportingsay "
+"oftwaresay."
+
+#: src/code/linux-os.lisp
+msgid "Unix system call getrusage failed: ~A."
+msgstr "Unixway ystemsay allcay etrusagegay ailedfay: ~Away."
+
+#: src/code/linux-os.lisp
+msgid "Getpagesize failed: ~A"
+msgstr "Etpagesizegay ailedfay: ~Away"
+
+#: src/code/signal.lisp
+msgid "Stack fault on coprocessor"
+msgstr "Tacksay aultfay onway oprocessorcay"

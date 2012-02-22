@@ -1,0 +1,180 @@
+========================== C M U C L  20 c =============================
+
+The CMUCL project is pleased to announce the release of CMUCL 20c.
+This is a major release which contains numerous enhancements and
+bug fixes from the 20b release.
+
+CMUCL is a free, high performance implementation of the Common Lisp
+programming language which runs on most major Unix platforms. It
+mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
+sophisticated native code compiler; a powerful foreign function
+interface; an implementation of CLOS, the Common Lisp Object System,
+which includes multi-methods and a meta-object protocol; a source-level
+debugger and code profiler; and an Emacs-like editor implemented in
+Common Lisp. CMUCL is maintained by a team of volunteers collaborating
+over the Internet, and is mostly in the public domain.
+
+New in this release:
+
+  * Known issues:
+
+  * Feature enhancements
+    - Update to Unicode 6.0.0.
+    - Add support for character name completion.  This can be used by
+      Slime to do character name completion.
+    - Support for Solaris/x86.  CMUCL will run on Solaris/x86 with all
+      features available, except only Unicode is supported.
+
+  * Changes
+    - ASDF2 updated to version 2.017.
+    - COMPILE-FILE now accepts a :DECODING-ERROR argument that
+      indicates how to handle decoding errors when reading the file.
+      It has the same meaning and effect as the :DECODING-ERROR
+      argument to OPEN.  This defaults to T here so that decoding
+      errors are signaled on invalid sequences instead of silently
+      replacing the bad sequence with some kind of replacement
+      character.
+    - In 19f through 20b, READ-SEQUENCE could read mostly arbitrary
+      data from a stream in to the given sequence.  In this release,
+      READ-SEQUENCE cannot do that unless the stream is a
+      binary-text-stream.   This is an incompatible change from
+      previous releases.
+    - RUN-PROGRAM accepts :EXTERNAL-FORMAT parameter to specify the
+      external format to be used for any streams that RUN-PROGRAM
+      needs to create.
+    - Add src/tools/build-all.sh to automate building all of the
+      variants (x87/sse2, unicode/8-bit).
+    - LISP::ENUMERATE-MATCHES had a keyword arg named
+      :VERIFY-EXISTANCE.  This has been changed to :VERIFY-EXISTENCE. 
+    - Added -unidata command line option to allow user to specify the
+      unidata.bin file to be used instead of the default one.
+    - :CMUCL is now in *FEATURES*.
+    - Add LISP:LOAD-ALL-UNICODE-DATA to load all the Unicode
+      information into core.  This is useful for creating an
+      executable image that does not need unidata.bin.
+    - CMUCL no longer exits if you specify a core file with an
+      executable image.  A warning is printed instead and the core
+      file is used.
+    - Improve type propagation for LOAD-TIME-VALUE.
+    - Add -O option to build.sh to allow specifying options to lisp
+      when doing the builds.
+    - (format t "a~0&b") should not output a newline between a and b.
+
+  * ANSI compliance fixes:
+    - Fixes for signaling errors with READ-CHAR and READ-BYTE
+      o READ-CHAR signals errors if the stream is not a character
+        stream.  This is a change from 20a and 20b, but matches
+        releases before 19f.  (Almost.  19f allowed reading characters
+        from (unsigned-byte 8) streams.  19e did not.)
+      o READ-BYTE signals errors if the stream is not a binary
+        stream.  This is also a change from 20a and 20b, but matches
+        releases before 19f.  (Almost.  19f allowed reading bytes from
+        character streams.  19e did not.) 
+      o But READ-CHAR and READ-BYTE will work if the stream class is
+        'binary-text-stream, an extension for bivalent streams in
+        CMUCL.  READ-CHAR will use the specified external format for
+        such streams.  READ-BYTE reads (unsigned-byte 8) elements from
+        such streams.
+    - UNINTERN no longer removes the wrong symbol.  UNINTERN would
+      remove the symbol when inherited from another package although
+      it should not.
+    - DEFSTRUCT allows multiple keyword constructors as required by
+      the spec..
+    - In COMPILE-FILE, the :OUTPUT-FILE can also be a stream.
+    - (OPEN f :DIRECTION :IO :IF-DOES-NOT-EXIST NIL) no longer signals
+      an error if f does not exist.  It returns NIL now.
+    - The second value returned by COMPLE-FILE is now T when there are
+      style warnings.
+
+  * Bugfixes:
+    - The pairwise composition table is now correctly built.
+      Previously, it skipped over non-BMP codepoints.  This also
+      requires a fix in %COMPOSE to handle non-BMP codepoints
+      correctly.  The normalization test now passes.
+    - On x86, REALPART and IMAGPART no longer incorrectly returns 0
+      instead of the correct part of a complex number in some
+      situations.
+    - The command line parser now correctly handles the case where
+      "--" is the first command option.
+    - build.sh was accidenally loading the site-init file, but it
+      shouldn't. 
+    - On sparc, the vops to add a float to a complex were broken,
+      resulting in a complex number with the float as realpart and
+      garbage for the imaginary part.  This is now fixed.
+    - XLIB::GET-BEST-AUTHORIZATION will now return authorization data
+      if the protocol is :local, if the xauth file contains just
+      "localhost/unix:0".  Previously, no authorization data was
+      returned because GET-BEST-AUTHORIZATION was looking for the
+      hostname.
+    - FORMAT signals an warning if ~:; is used inside ~:[.
+    - SET-SYSTEM-EXTERNAL-FORMAT was not actually setting the filename
+      encoding if given.
+    - SUBSEQ with an end index less than the start index sometimes
+      crashes CMUCL. Now, signal an error if the bounds are not
+      valid. 
+    - Localization support was causing many calls to stat trying to
+      find non-existent translation files.  This has been fixed so
+      that the results are cached.  (If new translations are added,
+      the cache will need to be cleared or cmucl restarted.)  This
+      change cuts building time by half on Solaris/sparc.
+    - On NetBSD, function-end breakpoints, especially for
+      tail-recursive functions, are working now.
+    - On NetBSD, display of FP numbers (sse2 and x87) during tracing
+      has been corrected.  Previously, random values were displayed.
+    - Executables images can now be created on NetBSD again.
+    - EXT::DESCRIBE-EXTERNAL-FORMAT was not exported.
+    - TRACE was erroneously allowing encapsulation when tracing local
+      flet/labels functions.  This doesn't actually trace anything.
+      An error is now signaled in this case.  This usually happens
+      because the function is in one of CMUCL's internal
+      implementation packages.  If you know what you're doing, you can
+      use the trace option :encapsulate nil to trace them.  Tracing
+      functions used by TRACE can cause bad things to happen.
+    - In some situations the compiler could not constant fold SQRT
+      calls because KERNEL:%SQRT was not defined on x86 with SSE2.
+      Fix this by making sure KERNEL:%SQRT is defined.
+    - Opening a file whose name contains "[" with :IF-EXISTS
+      :NEW-VERSION no longer causes an error.
+    - Getting documentation of a structure via DOCUMENTATION no longer
+      signals an error in DGETTEXT trying to translate the null
+      documentation string.
+    - Reduce unnecessary consing of SAPs in ROOM.
+    - Make stack overflow checking actually work on Mac OS X.  The
+      implementation had the :stack-checking feature, but it didn't
+      actually prevent stack overflows from crashing lisp.
+    - Fix rounding of numbers larger than a fixnum.  (See Trac #10 for
+      a related issue.)
+    - Properly handle the denormal operand trap on x86es.
+
+  * Trac Tickets:
+    - #43: unread-char doesn't change file-position
+      Fixed.
+    - #47: Added command line flags -read-only-space-size,
+      -static-space-size, -control-stack-size, and -binding-stack-size
+      to control the size of the each region.  The default size for
+      each is unchanged.
+    - #48: RCS keywords in git. The RCS $Header$ keyword has been
+      changed so that file compiler generates the appropriate
+      replacement, which is stored in the fasl.
+    - #49:  RCS keywords need to be updated.  The $Header$ keywords
+      have been replaced with just the file path---the revision, date,
+      and author have been removed.
+
+  * Other changes:
+
+  * Improvements to the PCL implementation of CLOS:
+
+  * Changes to building procedure:
+    - A new script, src/tools/build-all.sh, has been added.  This will
+      compile all variants for a given OS and architecture.  That is,
+      both x87 and sse2 binaries are built (if available) as well as
+      unicode and non-unicode versions.
+
+This release is not binary compatible with code compiled using CMUCL
+20b; you will need to recompile FASL files. 
+
+See <URL:http://www.cons.org/cmucl/> for download information,
+guidelines on reporting bugs, and mailing list details.
+
+
+We hope you enjoy using this release of CMUCL!
