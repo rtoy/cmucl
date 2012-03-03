@@ -1306,6 +1306,9 @@
 	 do (push (concatenate 'string prefix-match x) names))
       (when completep
 	(push prefix-match names))
+      (when (zerop (length prefix-match))
+	;; The prefix isn't a prefix for anything, so return nil
+	(return-from unicode-complete nil))
       (flet ((han-or-cjk-completion (prefix-match prefix dictionary)
 	       (let* ((prefix-tail (subseq prefix-match
 					   (min (length prefix)
