@@ -46,6 +46,9 @@ New in this release:
       directory, which was previously missing.
     * The stack needs to be 16-byte aligned on Darwin.
     * ldb no longer prints prompts forever when EOF is reached.
+    * LISP:UNICODE-COMPLETE now longer signals an error if the prefix
+      isn't a prefix of the name of any unicode character.  Nil is
+      returned instead.
 
   * Trac Tickets:
     * #50: Print/read error with make-pathname.
@@ -58,6 +61,8 @@ New in this release:
     * On darwin/x86, gcc-4.2 is explicitly used in case Xcode 4 is
       installed.  CMUCL doesn't run correctly when built with gcc/llvm
       in Xcode 4.
+    * Add -R option to build.sh to force recompiling the C
+      runtime. (Default it to compile only what is changed.)
 
   * Improvements to the PCL implementation of CLOS:
 
