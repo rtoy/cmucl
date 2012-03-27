@@ -2149,7 +2149,7 @@
   (:policy :fast-safe)
   (:temporary (:scs (complex-double-reg)) t1 t2)
   (:guard (backend-featurep :sse3))
-  (:generator 1
+  (:generator 8
     ;; Basic algorithm from the paper "The Microarchitecture of the
     ;; Intel Pentium 4 Processor on 90nm Technololgy"
     ;;
@@ -2176,7 +2176,7 @@
   (:policy :fast-safe)
   (:temporary (:scs (complex-double-reg)) t0 t1 t2)
   (:temporary (:scs (unsigned-reg)) tmp)
-  (:generator 1
+  (:generator 13
     ;; Basic algorithm from the paper "The Microarchitecture of the
     ;; Intel Pentium 4 Processor on 90nm Technololgy"
 
@@ -2208,7 +2208,7 @@
   (:policy :fast-safe)
   (:temporary (:scs (complex-single-reg)) t0 t1 t2)
   (:temporary (:scs (unsigned-reg)) tmp)
-  (:generator 1
+  (:generator 14
     ;; Basic algorithm from the paper "The Microarchitecture of the
     ;; Intel Pentium 4 Processor on 90nm Technololgy"
 
