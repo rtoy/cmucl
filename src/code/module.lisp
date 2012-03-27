@@ -147,3 +147,10 @@
 
 (defmodule "asdf"
     "modules:asdf/asdf")
+
+;; Allow user to specify "cmu-contribs" or :cmu-contribs.
+(defmodule "cmu-contribs"
+    "modules:contrib")
+
+(defmodule :cmu-contribs
+    "modules:contrib")
