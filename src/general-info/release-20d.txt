@@ -21,7 +21,13 @@ New in this release:
   * Known issues:
 
   * Feature enhancements
-
+    * Added a new contrib, "contrib-packed-sse2" to allow packed
+      operations ala SSE2.  Support for some packed sse2 operations
+      like multiply, divide, and shuffle for both packed singles and
+      doubles.  All operatios are done on top of (complex
+      double-float) numbers.  Utility functions are provided to set
+      and access these packed numbers.
+ 
   * Changes
     * ASDF2 updated to version 2.019.
     * Behavior of STRING-TO-OCTETS has changed.  This is an
@@ -49,6 +55,8 @@ New in this release:
     * LISP:UNICODE-COMPLETE now longer signals an error if the prefix
       isn't a prefix of the name of any unicode character.  Nil is
       returned instead.
+    * Some VOP costs were incorrect which prevented the fast complex
+      double-float multiplier from being used when sse3 is available. 
 
   * Trac Tickets:
     * #50: Print/read error with make-pathname.
