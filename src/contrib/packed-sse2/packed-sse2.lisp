@@ -9,7 +9,11 @@
 
 ;; SSE2 Packed operations.
 ;;
-;; We use (complex double-float) variables to hold the packed values.
+;; We use (complex double-float) variables to hold the packed values,
+;; including packed doubles and packed singles.  For convenience, use
+;; sse2-setpd or sse2-setps to initialize the packed variables with
+;; the given scalar values.  To extract the individual components of
+;; the packed values, use sse2-getpd or sse2-getps.
 
 (in-package #:vm)
 
@@ -128,47 +132,51 @@
 
 (declaim (inline sse2-shufpd sse2-shufps))
 
-(defun sse2-shufpd (x y i)
+;; This needs better documentation.  I (rtoy) can never remember what
+;; the magic I values actually do.
+(defun sse2-shufpd (dst src i)
   "Shuffle packed doubles in X and Y according to I."
-  (declare (type (complex double-float) x y)
+  (declare (type (complex double-float) dst src)
 	   (type (unsigned-byte 2) i))
   (ecase i
     (0
-     (%sse2-shufpd x y 0))
+     (%sse2-shufpd dst src 0))
     (1
-     (%sse2-shufpd x y 1))
+     (%sse2-shufpd dst src 1))
     (2
-     (%sse2-shufpd x y 2))
+     (%sse2-shufpd dst src 2))
     (3
-     (%sse2-shufpd x y 3))))
+     (%sse2-shufpd dst src 3))))
 
-(defun sse2-shufps (x y i)
+(defun sse2-shufps (dst src i)
   "Shuffle packed singles in X and Y according to I."
-  (declare (type (complex double-float) x y)
+  (declare (type (complex double-float) dst src)
 	   (type (unsigned-byte 4) i))
   (ecase i
     (0
-     (%sse2-shufps x y 0))
+     (%sse2-shufps dst src 0))
     (1
-     (%sse2-shufps x y 1))
+     (%sse2-shufps dst src 1))
     (2
-     (%sse2-shufps x y 2))
+     (%sse2-shufps dst src 2))
     (3
-     (%sse2-shufps x y 3))
+     (%sse2-shufps dst src 3))
     (4
-     (%sse2-shufps x y 4))
+     (%sse2-shufps dst src 4))
     (5
-     (%sse2-shufps x y 5))
+     (%sse2-shufps dst src 5))
     (6
-     (%sse2-shufps x y 6))
+     (%sse2-shufps dst src 6))
     (7
-     (%sse2-shufps x y 7))))
+     (%sse2-shufps dst src 7))))
 
 ;; x is the high part and y is the low part.
 (declaim (inline sse2-setpd sse2-getpd sse2-setps sse2-getps))
 (defun sse2-setpd (x y)
   "Create a packed double with X in the high part and Y in the low part"
   (declare (type double-float x y))
+  ;; Complex double-floats store the real part in the low half of the
+  ;; sse2 register.
   (complex y x))
 
 (defun sse2-getpd (pd)
@@ -185,7 +193,12 @@
   (flet ((pack-singles-to-double (hi lo)
 	   (let ((hi-bits (single-float-bits hi))
 		 (lo-bits (single-float-bits lo)))
+	     ;; Create a double-float where the most significant 32
+	     ;; bits contain the hi float and the low 32-bits contain
+	     ;; the low float.
 	     (make-double-float hi-bits (logand #xffffffff lo-bits)))))
+    ;; Pack the singles into a double and the pack the two doubles
+    ;; into a (complex double-float).
     (sse2-setpd (pack-singles-to-double x3 x2)
 		(pack-singles-to-double x1 x0))))
 
