@@ -348,8 +348,18 @@
 (define-vop (fast-logand-c/signed-unsigned=>unsigned
 	     fast-logand-c/unsigned=>unsigned)
   (:args (x :target r :scs (signed-reg signed-stack)))
-  (:arg-types signed-num (:constant (unsigned-byte 32))))
-
+  (:arg-types signed-num (:constant (unsigned-byte 32)))
+  (:generator 1
+    (cond ((and (= y #xffffffff)
+		(sc-is x signed-reg))
+	   ;; Just move x to the result if we're and'ing with all
+	   ;; ones, which doesn't change the bits.
+	   (unless (location= x r)
+	     (move r x)))
+	  (t
+	   (move r x)
+	   (inst and r y)))))
+	   
 (define-vop (fast-logand/unsigned-signed=>unsigned
 	     fast-logand/unsigned=>unsigned)
   (:args (x :target r :scs (unsigned-reg)
