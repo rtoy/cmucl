@@ -201,7 +201,9 @@
 
 ;; This vop is intended to handle the case (logand x #xffffffff) when
 ;; x is a (signed-byte 32).  We can just do a register move instead of
-;; and'ing with #xffffffff.
+;; and'ing with #xffffffff.  Some other special cases are handled too
+;; when the constant can fit inside the immediate operaand of the and
+;; instruction.
 (define-vop (fast-logand-c/signed-unsigned=>unsigned fast-unsigned-binop-c)
   (:args (x :scs (signed-reg)))
   (:translate logand)
@@ -214,7 +216,7 @@
 	  ((typep y '(unsigned-byte 13))
 	   (inst and r x y))
 	  (t
-	   ;; The constant is really a (signed-byte 13), so convert it
+	   ;; The constant operand is really a (signed-byte 13), so convert it
 	   ;; to a negative number so the immediate operand gets
 	   ;; signed extended to the right bits.
 	   (inst and r x (- y #x100000000))
