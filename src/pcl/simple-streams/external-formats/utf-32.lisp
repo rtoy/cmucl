@@ -38,7 +38,7 @@ By default, illegal inputs and illegal outputs are replaced by the
 Unicode replacement character.")
   ()
 
-  (octets-to-code (state input unput code error c1 c2 c3 c4 st wd)
+  (octets-to-code (state input unput error code c1 c2 c3 c4 st wd)
     `(block nil
        (when (null ,state) (setf ,state 0))
        (tagbody

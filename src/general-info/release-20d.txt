@@ -57,6 +57,8 @@ New in this release:
       returned instead.
     * Some VOP costs were incorrect which prevented the fast complex
       double-float multiplier from being used when sse3 is available. 
+    * External format for UTF-32 was generating an error when
+      converting octets to a string.
 
   * Trac Tickets:
     * #50: Print/read error with make-pathname.
