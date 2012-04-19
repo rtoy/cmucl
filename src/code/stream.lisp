@@ -828,35 +828,70 @@
 		 ;; haven't processed yet and the ones we just read in.
 		 (flet
 		     ((convert-buffer ()
-			(multiple-value-bind (s char-count octet-count new-state)
-			    (stream::octets-to-string-counted
-			     ibuf
-			     (fd-stream-octet-count stream)
-			     :start 0
-			     :end (fd-stream-in-length stream)
-			     :state (fd-stream-oc-state stream)
-			     :string sbuf
-			     :s-start 1
-			     :external-format (fd-stream-external-format stream)
-			     :error (fd-stream-octets-to-char-error stream))
-			  (declare (ignore s)
-				   (type (integer 0 #.in-buffer-length) char-count octet-count))
-			  #+(or debug-frc-sr)
-			  (progn
-			    (format t "char-count = ~A~%" char-count)
-			    (format t "octet-count = ~A~%" octet-count)
-			    (format t "in-index = ~A~%" (lisp-stream-in-index stream)))
-			  (when (> char-count 0)
-			    (setf (fd-stream-oc-state stream) new-state)
-			    (setf (lisp-stream-string-buffer-len stream) (1+ char-count))
-			    (setf (lisp-stream-string-index stream) 2)
-			    (setf (lisp-stream-in-index stream) octet-count)
+			(let ((old-state (fd-stream-oc-state stream)))
+			  (multiple-value-bind (s char-count octet-count new-state)
+			      (stream::octets-to-string-counted
+			       ibuf
+			       (fd-stream-octet-count stream)
+			       :start 0
+			       :end (fd-stream-in-length stream)
+			       :state (fd-stream-oc-state stream)
+			       :string sbuf
+			       :s-start 1
+			       :external-format (fd-stream-external-format stream)
+			       :error (fd-stream-octets-to-char-error stream))
+			    (declare (ignore s)
+				     (type (integer 0 #.in-buffer-length) char-count octet-count))
 			    #+(or debug-frc-sr)
 			    (progn
-			      (format t "new in-index = ~A~%" (lisp-stream-in-index stream))
-			      (format t "new sbuf = ~S~%" 
-				      (subseq sbuf 0 (1+ char-count))))
-			    (schar sbuf 1)))))
+			      (format t "char-count = ~A~%" char-count)
+			      (format t "octet-count = ~A~%" octet-count)
+			      (format t "in-index = ~A~%" (lisp-stream-in-index stream))
+			      (format t "old state = ~S~%" old-state)
+			      (format t "new state = ~S~%" new-state))
+			    ;; FIXME: We need to know if a BOM
+			    ;; character was read so that we can
+			    ;; adjust the octet count correctly
+			    ;; because OCTETS-TO-CHAR does not include
+			    ;; the BOM in the number of octets
+			    ;; processed.  To do that, we look into
+			    ;; the state, and thus is very fragile.
+			    ;; OCTETS-TO-CHAR and thus
+			    ;; OCTETS-TO-STRING-COUNTED should
+			    ;; indicate that instead of doing it here.
+			    ;;
+			    ;; So far, only utf-16 and utf-32 needs to
+			    ;; handle BOM specially.  In both of these
+			    ;; cases, (cadr state) contains
+			    ;; information about whether a BOM
+			    ;; character was read or not.  If a BOM
+			    ;; was read, then we need to increment the
+			    ;; octet-count by 2 for the BOM because
+			    ;; OCTETS-TO-STRING doesn't include that
+			    ;; in its count.
+			    (when (not (eql (cadr old-state)
+					    (cadr new-state)))
+			      #+debug-frc-sr
+			      (format t "state changed from ~S to ~S~%" old-state new-state)
+			      ;; See utf-16.lisp and utf-32.lisp to
+			      ;; see where the 1 and 2 come from.
+			      ;; They indicate that the BOM was read,
+			      ;; and whether we're reading big-endian
+			      ;; or little-endian data.
+			      (when (member (cadr new-state) '(1 2))
+				;; We read a BOM.
+				(incf octet-count 2)))
+			    (when (> char-count 0)
+			      (setf (fd-stream-oc-state stream) new-state)
+			      (setf (lisp-stream-string-buffer-len stream) (1+ char-count))
+			      (setf (lisp-stream-string-index stream) 2)
+			      (setf (lisp-stream-in-index stream) octet-count)
+			      #+(or debug-frc-sr)
+			      (progn
+				(format t "new in-index = ~A~%" (lisp-stream-in-index stream))
+				(format t "new sbuf = ~S~%" 
+					(subseq sbuf 0 (1+ char-count))))
+			      (schar sbuf 1))))))
 		   (let ((out (convert-buffer)))
 		     (or out
 			 ;; There weren't enough octets to convert at

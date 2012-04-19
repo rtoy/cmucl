@@ -67,6 +67,7 @@ New in this release:
     * #53: UTF-8 in core.
     * #52: UNICODE-COMPLETE-NAME misses a completion.
     * #55: blocked signals.
+    * #58: UTF-16 buffering problem.
 
   * Other changes:
     * The layout of the cmucl directories has been changed.
