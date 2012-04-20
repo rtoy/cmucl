@@ -829,6 +829,7 @@
 		 (flet
 		     ((convert-buffer ()
 			(let ((old-state (fd-stream-oc-state stream)))
+			  (format t "old-state = ~S~%" old-state)
 			  (multiple-value-bind (s char-count octet-count new-state)
 			      (stream::octets-to-string-counted
 			       ibuf
@@ -847,7 +848,6 @@
 			      (format t "char-count = ~A~%" char-count)
 			      (format t "octet-count = ~A~%" octet-count)
 			      (format t "in-index = ~A~%" (lisp-stream-in-index stream))
-			      (format t "old state = ~S~%" old-state)
 			      (format t "new state = ~S~%" new-state))
 			    ;; FIXME: We need to know if a BOM
 			    ;; character was read so that we can
@@ -869,8 +869,9 @@
 			    ;; octet-count by 2 for the BOM because
 			    ;; OCTETS-TO-STRING doesn't include that
 			    ;; in its count.
-			    (when (not (eql (cadr old-state)
-					    (cadr new-state)))
+			    (when (and (consp (cdr new-state))
+				       (not (eql (cadr old-state)
+						 (cadr new-state))))
 			      #+debug-frc-sr
 			      (format t "state changed from ~S to ~S~%" old-state new-state)
 			      ;; See utf-16.lisp and utf-32.lisp to
