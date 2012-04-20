@@ -829,6 +829,7 @@
 		 (flet
 		     ((convert-buffer ()
 			(let ((old-state (fd-stream-oc-state stream)))
+			  #+(or debug-frc-sr)
 			  (format t "old-state = ~S~%" old-state)
 			  (multiple-value-bind (s char-count octet-count new-state)
 			      (stream::octets-to-string-counted
