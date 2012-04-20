@@ -22,10 +22,11 @@ By default, illegal inputs and illegal outputs are replaced by the
 Unicode replacement character.")
   ()
 
-  (octets-to-code (state input unput error c1 c2 code next)
+  (octets-to-code (state input unput error c1 c2 code wd next)
     `(let* ((,c1 ,input)
 	    (,c2 ,input)
-	    (,code (+ (* 256 ,c2) ,c1)))
+	    (,code (+ (* 256 ,c2) ,c1))
+	    (,wd 2))
        (declare (type lisp:codepoint ,code))
        (cond ((lisp::surrogatep ,code :low)
 	      ;; If possible combine this low surrogate with the
@@ -56,14 +57,15 @@ Unicode replacement character.")
 		;; unput 2 so it'll be read as another character
 		;; next time around?
 		(if (lisp::surrogatep ,next :low)
-		    (setq ,code (+ (ash (- ,code #xD800) 10) ,next #x2400))
+		    (setq ,code (+ (ash (- ,code #xD800) 10) ,next #x2400)
+			  ,wd 4)
 		    (setq ,code
 			  (if ,error
 			      (locally
 				  ;; No warnings about fdefinition
 				  (declare (optimize (ext:inhibit-warnings 3)))
 				(funcall ,error "High surrogate followed by #x~4,'0X ~
-                                                 instead of low surrogate" ,next 2))
+                                                 instead of low surrogate" ,next ,wd))
 			      +replacement-character-code+)))))
 	     ((= ,code #xFFFE)
 	      ;; replace with REPLACEMENT CHARACTER.
@@ -75,7 +77,7 @@ Unicode replacement character.")
 			  (funcall ,error "BOM is not valid within a UTF-16 stream" ,code 2))
 			+replacement-character-code+)))
 	     (t (setf ,state nil)))
-      (values ,code 2)))
+      (values ,code ,wd)))
   (code-to-octets (code state output error c c1 c2)
     `(flet ((output (code)
 	      (,output (ldb (byte 8 0) code))

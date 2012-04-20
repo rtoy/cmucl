@@ -61,6 +61,9 @@ New in this release:
       double-float multiplier from being used when sse3 is available. 
     * External format for UTF-32 was generating an error when
       converting octets to a string.
+    * The UTF-16-BE and UTF-16-LE external formats were returning the
+      incorrect number of octets when surrogates pairs were decoded.
+      This confuses the stream buffering code.
 
   * Trac Tickets:
     * #50: Print/read error with make-pathname.
