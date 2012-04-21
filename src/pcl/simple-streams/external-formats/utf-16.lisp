@@ -13,15 +13,19 @@
 ;; one here, anyway.  This should be compatible with the Unicode spec.
 
 ;; The state is a cons.  The car is an integer:
-;;  0 = initial state, nothing has been read yet
-;;  1 = BOM has been read, little-endian
-;;  2 = BOM has been read, big-endian, or non-BOM char has been read
+;;   0 = initial state, nothing has been read yet
+;;  -2 = BOM has been read, little-endian
+;;   2 = BOM has been read, big-endian, or non-BOM char has been read
+;;
+;; The absolute value of car specifies the size of the BOM in octets.
+;; This is used in stream.lisp to account for the BOM.
 ;;
 ;; The cdr is either NIL or a codepoint which is used for converting
 ;; surrogate pairs into codepoints.  If the cdr is non-NIL, then it is
 ;; the leading (high) surrogate of a surrogate pair.
 ;;
-;; When writing, never output a BOM.
+;;
+;; When writing, always output a BOM.
 
 (define-external-format :utf-16 (:size 2 :documentation
 "UTF-16 is a variable length character encoding for Unicode.  On
@@ -42,8 +46,10 @@ Unicode replacement character.")
 	  (let* ((,st (car ,state))
 		 (,c1 ,input)
 		 (,c2 ,input)
-		 (,code (if (oddp ,st)
+		 (,code (if (minusp ,st)
+			    ;; Little endian
 			    (+ (* 256 ,c2) ,c1)
+			    ;; Big endian (including BOM, if any)
 			    (+ (* 256 ,c1) ,c2)))
 		 (,wd 2))
 	    (declare (type (integer 0 2) ,st)
@@ -79,9 +85,9 @@ Unicode replacement character.")
 		   (setf (cdr ,state) ,code)
 		   (let* ((,c1 ,input)
 			  (,c2 ,input)
-			  (,next (if (oddp ,st)
-				     (+ (* 256 ,c2) ,c1)
-				     (+ (* 256 ,c1) ,c2))))
+			  (,next (if (plusp ,st)
+				     (+ (* 256 ,c1) ,c2)
+				     (+ (* 256 ,c2) ,c1))))
 		     ;; We read the trailing surrogate, so clear the state.
 		     (setf (cdr ,state) nil)
 		     ;; If we don't have a high and low surrogate,
@@ -99,8 +105,10 @@ Unicode replacement character.")
 				     (funcall ,error "High surrogate followed by #x~4,'0X instead of low surrogate" ,next ,wd))
 				   +replacement-character-code+)))))
 		  ((and (= ,code #xFFFE) (zerop ,st))
-		   (setf (car ,state) 1) (go :again))
+		   ;; BOM for little-endian order
+		   (setf (car ,state) -2) (go :again))
 		  ((and (= ,code #xFEFF) (zerop ,st))
+		   ;; BOM for big-endian order
 		   (setf (car ,state) 2) (go :again))
 		  ((= ,code #xFFFE)
 		   ;; Replace with REPLACEMENT CHARACTER.  

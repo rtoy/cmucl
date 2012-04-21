@@ -17,15 +17,17 @@
 ;;
 ;; This is modeled after the utf-16 format.
 
-;; make state an integer:
-;;  or (or state 0) to cope with NIL case
-;;  0 = initial state, nothing has been read yet
-;;  1 = BOM has been read, little-endian
-;;  2 = BOM has been read, big-endian, or non-BOM char has been read
+;; The state is a cons.  The car is an integer:
+;;   0 = initial state, nothing has been read yet
+;;  -4 = BOM has been read, little-endian
+;;   4 = BOM has been read, big-endian, or non-BOM char has been read
 ;;
-;; (oddp state) = little-endian
-;; (evenp state) = big-endian
+;; (minusp state) = little-endian
+;; (plusp state) = big-endian
 ;; (zerop state) = #xFEFF/#xFFFE is BOM (to be skipped)
+;;
+;; The absolute value of the car specifies the size of the BOM in
+;; octets.  This is used in stream.lisp to account for the BOM.
 ;;
 (define-external-format :utf-32 (:size 4 :documentation
 "UTF-32 is a fixed-length character encoding of 4 octets for Unicode.
@@ -40,21 +42,21 @@ Unicode replacement character.")
 
   (octets-to-code (state input unput error code c1 c2 c3 c4 st wd)
     `(block nil
-       (when (null ,state) (setf ,state 0))
+       (when (null ,state) (setf ,state (cons 0 nil)))
        (tagbody
 	:again
-	  (let* ((,st ,state)
+	  (let* ((,st (car ,state))
 		 (,c1 ,input)
 		 (,c2 ,input)
 		 (,c3 ,input)
 		 (,c4 ,input)
-		 (,code (if (oddp ,st)
+		 (,code (if (minusp ,st)
 			    ;; Little-endian
 			    (+ ,c1
 			       (ash ,c2 8)
 			       (ash ,c3 16)
 			       (ash ,c4 24))
-			    ;; Big-endian
+			    ;; Big-endian (including BOM, if any)
 			    (+ (ash ,c1 24)
 			       (ash ,c2 16)
 			       (ash ,c3  8)
@@ -80,11 +82,11 @@ Unicode replacement character.")
 			     +replacement-character-code+)))
 		  ((and  (zerop ,st) (= ,code #xFFFE0000))
 		   ;; BOM for little-endian
-		   (setf ,state 1)
+		   (setf (car ,state) -4)
 		   (go :again))
 		  ((and (zerop ,st) (= ,code #xFEFF))
 		   ;; BOM for big-endian
-		   (setf ,state 2)
+		   (setf (car ,state) 4)
 		   (go :again)))
 	    (return (values ,code ,wd))))))
 

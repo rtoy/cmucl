@@ -850,39 +850,34 @@
 			      (format t "octet-count = ~A~%" octet-count)
 			      (format t "in-index = ~A~%" (lisp-stream-in-index stream))
 			      (format t "new state = ~S~%" new-state))
-			    ;; FIXME: We need to know if a BOM
-			    ;; character was read so that we can
-			    ;; adjust the octet count correctly
-			    ;; because OCTETS-TO-CHAR does not include
-			    ;; the BOM in the number of octets
-			    ;; processed.  To do that, we look into
-			    ;; the state, and thus is very fragile.
-			    ;; OCTETS-TO-CHAR and thus
-			    ;; OCTETS-TO-STRING-COUNTED should
-			    ;; indicate that instead of doing it here.
+			    ;; FIXME: We need to know if a BOM character was read so that
+			    ;; we can adjust the octet count correctly because
+			    ;; OCTETS-TO-CHAR does not include the BOM in the number of
+			    ;; octets processed.  To do that, we look into the state, and
+			    ;; thus is very fragile.  OCTETS-TO-CHAR and thus
+			    ;; OCTETS-TO-STRING-COUNTED should indicate that instead of
+			    ;; doing it here.
 			    ;;
-			    ;; So far, only utf-16 and utf-32 needs to
-			    ;; handle BOM specially.  In both of these
-			    ;; cases, (cadr state) contains
-			    ;; information about whether a BOM
-			    ;; character was read or not.  If a BOM
-			    ;; was read, then we need to increment the
-			    ;; octet-count by 2 for the BOM because
-			    ;; OCTETS-TO-STRING doesn't include that
-			    ;; in its count.
+			    ;; So far, only utf-16 and utf-32 needs to handle BOM
+			    ;; specially.  In both of these cases, (cadr state) contains
+			    ;; information about whether a BOM character was read or not.
+			    ;; If a BOM was read, then we need to increment the
+			    ;; octet-count by 2 for the BOM because OCTETS-TO-STRING
+			    ;; doesn't include that in its count.
+			    ;;
+			    ;; But we could have a composing external format too, like
+			    ;; :crlf, so what we really want to look at is the last
+			    ;; element of the state.
 			    (when (and (consp (cdr new-state))
-				       (not (eql (cadr old-state)
-						 (cadr new-state))))
+				       (not (eq (car (last old-state))
+						(car (last new-state)))))
 			      #+debug-frc-sr
 			      (format t "state changed from ~S to ~S~%" old-state new-state)
-			      ;; See utf-16.lisp and utf-32.lisp to
-			      ;; see where the 1 and 2 come from.
-			      ;; They indicate that the BOM was read,
-			      ;; and whether we're reading big-endian
-			      ;; or little-endian data.
-			      (when (member (cadr new-state) '(1 2))
-				;; We read a BOM.
-				(incf octet-count 2)))
+			      ;; See utf-16.lisp and utf-32.lisp.  The part of the state
+			      ;; we're interested in encodes the endianness and the size
+			      ;; of the BOM in octets.
+			      (incf octet-count (abs (the (integer -4 4)
+						       (car (last new-state))))))
 			    (when (> char-count 0)
 			      (setf (fd-stream-oc-state stream) new-state)
 			      (setf (lisp-stream-string-buffer-len stream) (1+ char-count))
