@@ -24,7 +24,7 @@ New in this release:
     * Added a new contrib, "contrib-packed-sse2" to allow packed
       operations ala SSE2.  Support for some packed sse2 operations
       like multiply, divide, and shuffle for both packed singles and
-      doubles.  All operatios are done on top of (complex
+      doubles.  All operations are done on top of (complex
       double-float) numbers.  Utility functions are provided to set
       and access these packed numbers.
  
@@ -53,9 +53,9 @@ New in this release:
     * The source distribution now includes the scripts from the bin
       directory, which was previously missing.
     * The stack needs to be 16-byte aligned on Darwin.
-    * ldb no longer prints prompts forever when EOF is reached.
+    * LDB no longer prints prompts forever when EOF is reached.
     * LISP:UNICODE-COMPLETE now longer signals an error if the prefix
-      isn't a prefix of the name of any unicode character.  Nil is
+      isn't a prefix of the name of any Unicode character.  Nil is
       returned instead.
     * Some VOP costs were incorrect which prevented the fast complex
       double-float multiplier from being used when sse3 is available. 
@@ -87,7 +87,8 @@ New in this release:
 This release is not binary compatible with code compiled using CMUCL
 20c; you will need to recompile FASL files. 
 
-See <URL:http://www.cons.org/cmucl/> for download information,
+See <URL:http://www.cmucl.org> or
+<URL:http://trac.common-lisp.net/cmucl> for download information,
 guidelines on reporting bugs, and mailing list details.
 
 
