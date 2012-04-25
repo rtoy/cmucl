@@ -52,7 +52,7 @@ Unicode replacement character.")
 			    ;; Big endian (including BOM, if any)
 			    (+ (* 256 ,c1) ,c2)))
 		 (,wd 2))
-	    (declare (type (integer 0 2) ,st)
+	    (declare (type (member 0 -2 2) ,st)
 		     (type lisp:codepoint ,code))
 	    ;; Note that if BOM is read, WD will be 2 but 4 octets have
 	    ;; actually been read: this is intentional - the returned
