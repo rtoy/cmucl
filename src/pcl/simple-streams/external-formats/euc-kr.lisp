@@ -975,15 +975,13 @@ character and illegal outputs are replaced by a question mark.")
        (cond ((null ,c) (values nil 0))
 	     ((<= ,c #x7f) (values ,c 1))
 	     ((<= #xa1 ,c #xfd)
+	      ;; Remember first octet in case we bail out reading the
+	      ;; second octet (for octets-to-string).
+	      (setf ,state ,c)
 	      (let ((,c2 ,input))
-		(cond ((null ,c2)
-		       (,unput 1)
-		       (values 
-			(if ,error
-			    (funcall ,error "Invalid second octet: #x~X 1" ,c2 1)
-			    +replacement-character-code+)
-			1))
-		      ((<= #xa1 ,c2 #xfe)
+		(cond ((<= #xa1 ,c2 #xfe)
+		       ;; Read the second octet, so clear the state
+		       (setf ,state nil)
 		       (values (aref ,table (- ,c2 #xa1) (- ,c #xa1)) 2))
 		      (t
 		       (values
