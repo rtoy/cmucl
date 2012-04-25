@@ -64,6 +64,9 @@ New in this release:
     * The UTF-16-BE and UTF-16-LE external formats were returning the
       incorrect number of octets when surrogates pairs were decoded.
       This confuses the stream buffering code.
+    * Fix typo in ISO8859-2 external format that caused it not to work
+      correctly.  This type potentially also caused failures for all other
+      external formats that were based on ISO8859-2.
 
   * Trac Tickets:
     * #50: Print/read error with make-pathname.

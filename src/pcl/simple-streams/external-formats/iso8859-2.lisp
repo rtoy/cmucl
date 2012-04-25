@@ -39,7 +39,7 @@ character and illegal outputs are replaced by a question mark.")
     `(,output (if (< ,code 160)
 		  ,code
 		  (let ((,present (get-inverse ,itable ,code)))
-		    (if ,code
+		    (if ,present
 			(+ (the (unsigned-byte 7) ,present) 160)
 			(if ,error
 			    (locally
