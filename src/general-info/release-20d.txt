@@ -29,7 +29,7 @@ New in this release:
       and access these packed numbers.
  
   * Changes
-    * ASDF2 updated to version 2.019.
+    * ASDF2 updated to version 2.21.
     * Behavior of STRING-TO-OCTETS has changed.  This is an
       incompatible change from the previous version but should be more
       useful when a buffer is given which is not large enough to hold
