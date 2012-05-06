@@ -25,7 +25,7 @@
   (rplaca
    (cdr (member :bugs *herald-items*))
    '("Send questions and bug reports to your local CMUCL maintainer, " terpri
-     "or see <http://www.cons.org/cmucl/support.html>." terpri
+     "or see <http://www.cmucl.org/support.html>." terpri
      "Loaded subsystems:" terpri)))
 
 ;;; If you have sources installed on your system, un-comment the following form
@@ -39,6 +39,9 @@
 ;;; top
 ;;;   bin/
 ;;;   lib/
+;;;    cmucl/
+;;;     lib/
+;;;      lisp*.coore
 ;;;   man/
 ;;;   src/
 ;;;
