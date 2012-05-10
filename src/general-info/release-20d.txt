@@ -42,6 +42,7 @@ New in this release:
     * Updated to Unicode 6.1.0.
     * Many additional aliases for external formats added that match
       the glibc iconv aliases.
+    * Implement faster LOGCOUNT function, if :SSE3 feature is available.
       
   * ANSI compliance fixes:
     * CMUCL was not printing pathnames like (make-pathname :directory

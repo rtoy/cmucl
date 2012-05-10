@@ -3091,6 +3091,17 @@
                                 :type 'sized-xmmreg/mem)
   (reg     :field (byte 3 27)   :type 'reg))
 
+;;; Like ext-reg-xmm/mem, but both are registers
+(disassem:define-instruction-format (ext-reg-reg/mem 32
+                                     :default-printer
+                                     '(:name :tab reg ", " reg/mem))
+  (prefix  :field (byte 8 0))
+  (x0f     :field (byte 8 8)    :value #x0f)
+  (op      :field (byte 8 16))
+  (reg/mem :fields (list (byte 2 30) (byte 3 24))
+                                :type 'reg/mem)
+  (reg     :field (byte 3 27)   :type 'reg))
+
 (disassem:define-instruction-format
     (ext-xmm-xmm/mem-imm 32
 			 :include 'ext-xmm-xmm/mem
@@ -3182,9 +3193,12 @@
   ;; dst[63:0] = dst[63:0]
   ;; dst[127:64] = src[63:0]
   (define-regular-sse-inst unpcklpd #x66 #x14 t)
-  (define-regular-sse-inst unpcklps nil  #x14 t)
+  (define-regular-sse-inst unpcklps nil  #x14 t))
 
-  )
+(define-instruction popcnt (segment dst src)
+  (:printer ext-reg-reg/mem
+	    ((prefix #xf3) (op #xb8)))
+  (:emitter (emit-sse-inst segment dst src #xf3 #xb8)))
 
 ;;; MOVSD, MOVSS
 (macrolet ((define-movsd/ss-sse-inst (name prefix op)

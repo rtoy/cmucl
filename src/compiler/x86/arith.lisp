@@ -900,6 +900,18 @@
     (inst and temp #x0000ffff)
     (inst add result temp)))
 
+(define-vop (sse3-unsigned-byte-32-count)
+  (:translate logcount)
+  (:note _N"inline (unsigned-byte 32) logcount")
+  (:policy :fast-safe)
+  (:args (arg :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:results (result :scs (unsigned-reg)))
+  (:result-types positive-fixnum)
+  (:temporary (:sc unsigned-reg :from (:argument 0)) temp)
+  (:guard (backend-featurep :sse3))
+  (:generator 2
+    (inst popcnt result arg)))
 
 
 ;;;; Binary conditional VOPs:
