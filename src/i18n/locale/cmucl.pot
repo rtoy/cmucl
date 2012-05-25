@@ -9187,6 +9187,16 @@ msgid "Error reading ~S: ~A"
 msgstr ""
 
 #: src/code/fd-stream.lisp
+msgid ""
+"List of coding translations used by 'stream-encoding-file-attribute to map\n"
+"  the read file coding into a native external-format.  Each element is a "
+"list of\n"
+"  a native external-format followed byte a list of coding strings that are "
+"to be\n"
+"  mapped to this native format."
+msgstr ""
+
+#: src/code/fd-stream.lisp
 msgid "Could not find any input routine for ~S"
 msgstr ""
 
@@ -9260,6 +9270,10 @@ msgstr ""
 
 #: src/code/fd-stream.lisp
 msgid "** Closed ~A~%"
+msgstr ""
+
+#: src/code/fd-stream.lisp
+msgid "The ~A external-format requires a file stream."
 msgstr ""
 
 #: src/code/fd-stream.lisp
@@ -10064,6 +10078,14 @@ msgid ""
 msgstr ""
 
 #: src/code/load.lisp
+msgid ""
+"The external-format that 'load and 'compile-file use when given an\n"
+"  external-format of :default.  The default value is :default which will "
+"open\n"
+"  the file using the 'ext:*default-external-format*"
+msgstr ""
+
+#: src/code/load.lisp
 msgid "List of free fop tables for the fasloader."
 msgstr ""
 
@@ -10132,6 +10154,10 @@ msgid ""
 "       of guessing based on the file type.  This also inhibits file type\n"
 "       defaulting.  Probably only necessary if you have source files with a\n"
 "       \"fasl\" type. \n"
+"\n"
+"   :EXTERNAL-FORMAT\n"
+"       The external-format to use when opening the FILENAME. The default is\n"
+"       :default which uses the EXT:*DEFAULT-SOURCE-EXTERNAL-FORMAT*.\n"
 "\n"
 "   The variables *LOAD-VERBOSE*, *LOAD-PRINT* and EXT:*LOAD-IF-SOURCE-NEWER"
 "*\n"
