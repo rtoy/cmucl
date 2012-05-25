@@ -155,7 +155,19 @@
    currently in effect."
   (let ((modes (floating-point-modes)))
     (when traps-p
-      (setf (ldb float-traps-byte modes) (float-trap-mask traps)))
+      (let ((trap-mask-bits (float-trap-mask traps)))
+	(setf (ldb float-traps-byte modes) trap-mask-bits)
+	#+(and x86 sse2)
+	(progn
+	  ;; Clear out any current or accrued exceptions that match
+	  ;; the traps that we are enabling.  If we don't then
+	  ;; enabling the traps causes the exceptions to be signaled
+	  ;; immediately.  This is a bit annoying.  If the user really
+	  ;; wants to resignal the exceptions, he can do that himself.
+	  (setf (ldb float-sticky-bits modes)
+		(logandc2 (ldb float-sticky-bits modes) trap-mask-bits))
+	  (setf (ldb float-exceptions-byte modes)
+		(logandc2 (ldb float-exceptions-byte modes) trap-mask-bits)))))
     (when round-p
       (setf (ldb float-rounding-mode modes)
 	    (or (cdr (assoc rounding-mode rounding-mode-alist))
@@ -175,6 +187,7 @@
       (when (member :invalid current-exceptions)
  	;; Clear out the bits for the detected invalid operation
  	(setf (ldb vm:float-invalid-op-1-byte modes) 0)))
+
     (when fast-mode-p
       (if fast-mode
 	  (setq modes (logior float-fast-bit modes))

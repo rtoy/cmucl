@@ -42,7 +42,14 @@ New in this release:
     * Updated to Unicode 6.1.0.
     * Many additional aliases for external formats added that match
       the glibc iconv aliases.
-    * Implement faster LOGCOUNT function, if :SSE3 feature is available.
+    * Implement faster LOGCOUNT function on x86, if :SSE3 feature is
+      available.  (Only applies to new uses of LOGCOUNT.  The core
+      uses the default version.)
+    * On x86, SET-FLOATING-POINT-MODES clears any current and accrued
+      exceptions that match exceptions in :TRAPS.  Previously,
+      enabling a trap when the current exception also listed that trap
+      caused the exception to be immediately signaled.  This no longer
+      happens and now matches how ppc and sparc behave.
       
   * ANSI compliance fixes:
     * CMUCL was not printing pathnames like (make-pathname :directory
