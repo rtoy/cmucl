@@ -1362,6 +1362,238 @@
 
 ;;;; Utility functions (misc routines, etc)
 
+(defparameter *stream-encoding-file-attribute-translations*
+  '(;; Emacs specific codings.
+    ((:iso-8859-1 :unix)
+     "latin-1" "latin-1-unix" "iso-latin-1-unix" "iso-8859-1-unix")
+    ((:iso-8859-1 :dos)
+     "latin-1" "latin-1-dos" "iso-latin-1-dos" "iso-8859-1-dos")
+    ((:iso-8859-1 :max)
+     "latin-1" "latin-1-mac" "iso-latin-1-mac" "iso-8859-1-mac")
+    ((:utf-8 :unix) "utf-8-unix")
+    ((:utf-8 :dos) "utf-8-dos")
+    ((:utf-8 :mac) "utf-8-mac")
+    ((:euc-jp :unix) "euc-jp-unix")
+    ((:euc-jp :dos) "euc-jp-dos")
+    ((:euc-jp :mac) "euc-jp-mac")
+    )
+  "List of coding translations used by 'stream-encoding-file-attribute to map
+  the read file coding into a native external-format.  Each element is a list of
+  a native external-format followed by a list of coding strings that are to be
+  mapped to this native format.  The first element is the target encoding,
+  may be a list with the first element being the encoding and the second the
+  line termination style: :unix (linefeed), :dos (CR-LF), or :mac (CR).")
+
+
+;;; stream-encoding-file-attribute  --  Internal
+;;;
+;;; Read the encoding file option from the stream 's which is expected to be a
+;;; character stream with an external-format of :iso8859-1.
+;;;
+(defun stream-encoding-file-attribute (s)
+  (let* ((initial-encoding nil)
+	 (declared-encoding nil)
+	 (eol-mode nil)
+	 (buffer (make-array 1024 :element-type '(unsigned-byte 8)))
+	 (available (do ((i 0 (1+ i)))
+			((>= i 1024) i)
+		      (declare (fixnum i))
+		      (let ((ch (read-char s nil nil)))
+			(unless ch (return i))
+			(setf (aref buffer i) (char-code ch))))))
+    (labels ((decode-ascii (start size offset)
+	       (declare (type fixnum start)
+			(type (integer 1 4) size)
+			(type (integer 0 3) offset))
+	       (let ((ascii (make-array 64 :element-type 'character
+					:adjustable t :fill-pointer 0)))
+		 (do ()
+		     ((< available (+ start size)))
+		   (let* ((code (ecase size
+				  (1 (aref buffer start))
+				  (2 (let ((b0 (aref buffer start))
+					   (b1 (aref buffer (1+ start))))
+				       (ecase offset
+					 (0 (logior (ash b1 8) b0))
+					 (1 (logior (ash b0 8) b1)))))
+				  (4
+				   (let ((b0 (aref buffer start))
+					 (b1 (aref buffer (+ start 1)))
+					 (b2 (aref buffer (+ start 2)))
+					 (b3 (aref buffer (+ start 3))))
+				     (ecase offset
+				       (0 (logior (ash b3 24) (ash b2 16) (ash b1 8) b0))
+				       (1 (logior (ash b1 24) (ash b0 16) (ash b3 8) b2))
+				       (2 (logior (ash b2 24) (ash b3 16) (ash b0 8) b1))
+				       (3 (logior (ash b0 24) (ash b1 16) (ash b2 8) b3))))))))
+		     (incf start size)
+		     (let ((ch (if (< 0 code #x80) (code-char code) #\?)))
+		       (vector-push-extend ch ascii))))
+		 ascii))
+	     (parse-file-option (ascii)
+	       ;; Parse the file options.
+	       (let ((found (search "-*-" ascii))
+		     (options nil))
+		 (when found
+		   (block do-file-options
+		     (let* ((start (+ found 3))
+			    (end (search "-*-" ascii :start2 start)))
+		       (unless end
+			 (return-from do-file-options))
+		       (unless (find #\: ascii :start start :end end)
+			 (return-from do-file-options))
+		       (do ((opt-start start (1+ semi)) colon semi)
+			   (nil)
+			 (setf colon (position #\: ascii :start opt-start :end end))
+			 (unless colon
+			   (return-from do-file-options))
+			 (setf semi (or (position #\; ascii :start colon :end end) end))
+			 (let ((option (string-trim '(#\space #\tab)
+						    (subseq ascii opt-start colon)))
+			       (value (string-trim '(#\space #\tab)
+						   (subseq ascii (1+ colon) semi))))
+			   (push (cons option value) options)
+			   (when (= semi end) (return nil)))))))
+		 (setf declared-encoding
+		       (cond ((cdr (assoc "external-format" options :test 'equalp)))
+			     ((cdr (assoc "encoding" options :test 'equalp)))
+			     ((cdr (assoc "coding" options :test 'equalp)))))))
+	     (detect-line-termination (ascii)
+	       ;; Look for the first line termination and check the style.
+	       (let ((p (position-if #'(lambda (c) (member c '(#\linefeed #\return)))
+				     ascii)))
+		 (when p
+		   (let ((c1 (char ascii p)))
+		     (cond ((char= c1 #\linefeed)
+			    (setf eol-mode :unix))
+			   ((< (1+ p) (length ascii))
+			    (assert (char= c1 #\return))
+			    (let ((c2 (char ascii (1+ p))))
+			      (cond ((eql c2 #\linefeed)
+				     (setf eol-mode :dos))
+				    (t
+				     (setf eol-mode :mac)))))))))))
+      (cond ((>= available 4)
+	     (let ((b1 (aref buffer 0))
+		   (b2 (aref buffer 1))
+		   (b3 (aref buffer 2))
+		   (b4 (aref buffer 3)))
+	       (cond ((and (= b1 #x00) (= b2 #x00) (= b3 #xFE) (= b4 #xFF))
+		      (setf initial-encoding :ucs-4be)
+		      (let ((ascii (decode-ascii 4 4 3)))
+			(parse-file-option ascii)
+			(detect-line-termination ascii)))
+		     ((and (= b1 #xff) (= b2 #xfe))
+		      (cond ((and (= b3 #x00) (= b4 #x00))
+			     (setf initial-encoding :ucs-4le)
+			     (let ((ascii (decode-ascii 4 4 0)))
+			       (parse-file-option ascii)
+			       (detect-line-termination ascii)))
+			    (t
+			     (setf initial-encoding :utf-16)
+			     (let ((ascii (decode-ascii 2 2 0)))
+			       (parse-file-option ascii)
+			       (detect-line-termination ascii)))))
+		     ((and (= b1 #x00) (= b2 #x00) (= b3 #xFF) (= b4 #xFE))
+		      (let ((ascii (decode-ascii 4 4 2)))
+			(parse-file-option ascii)
+			(detect-line-termination ascii)))
+		     ((and (= b1 #xfe) (= b2 #xff))
+		      (cond ((and (= b3 #x00) (= b4 #x00))
+			     (let ((ascii (decode-ascii 4 4 1)))
+			       (parse-file-option ascii)
+			       (detect-line-termination ascii)))
+			    (t
+			     (setf initial-encoding :utf-16)
+			     (let ((ascii (decode-ascii 2 2 1)))
+			       (parse-file-option ascii)
+			       (detect-line-termination ascii)))))
+		     ;;
+		     ((and (= b1 #xEF) (= b2 #xBB) (= b3 #xBF))
+		      (setf initial-encoding :utf-8)
+		      (let ((ascii (decode-ascii 3 1 0)))
+			(parse-file-option ascii)
+			(detect-line-termination ascii)))
+		     ;;
+		     ((and (> b1 0) (= b2 0) (= b3 0) (= b4 0))
+		      (setf initial-encoding :ucs-4le)
+		      (let ((ascii (decode-ascii 0 4 0)))
+			(parse-file-option ascii)
+			(detect-line-termination ascii)))
+		     ((and (= b1 0) (> b2 0) (= b3 0) (= b4 0))
+		      (let ((ascii (decode-ascii 0 4 1)))
+			(parse-file-option ascii)
+			(detect-line-termination ascii)))
+		     ((and (= b1 0) (= b2 0) (> b3 0) (= b4 0))
+		      (let ((ascii (decode-ascii 0 4 2)))
+			(parse-file-option ascii)
+			(detect-line-termination ascii)))
+		     ((and (= b1 0) (= b2 0) (= b3 0) (> b4 0))
+		      (setf initial-encoding :ucs-4be)
+		      (let ((ascii (decode-ascii 0 4 3)))
+			(parse-file-option ascii)
+			(detect-line-termination ascii)))
+		     ;;
+		     ((and (> b1 0) (= b2 0) (> b3 0) (= b4 0))
+		      (setf initial-encoding :utf-16le)
+		      (let ((ascii (decode-ascii 0 2 0)))
+			(parse-file-option ascii)
+			(detect-line-termination ascii)))
+		     ((and (= b1 0) (> b2 0) (= b3 0) (> b4 0))
+		      (setf initial-encoding :utf-16be)
+		      (let ((ascii (decode-ascii 0 2 1)))
+			(parse-file-option ascii)
+			(detect-line-termination ascii)))
+		     ;;
+		     ((and (= b1 #x2B) (= b2 #x41)
+			   (or (= b3 #x43) (= b3 #x44)))
+		      (setf initial-encoding :utf-7)
+		      (let ((ascii (decode-ascii 0 1 0)))
+			(detect-line-termination ascii)))
+		     ((and (= b1 #x2F) (= b2 #x2B) (= b3 #x41))
+		      (setf initial-encoding :utf-7)
+		      (let ((ascii (decode-ascii 0 1 0)))
+			(detect-line-termination ascii)))
+		     (t
+		      (let ((ascii (decode-ascii 0 1 0)))
+			(when (parse-file-option ascii)
+			  (detect-line-termination ascii)))))))
+	    ((= available 3)
+	     (when (and (= (aref buffer 0) #xEF)
+			(= (aref buffer 1) #xBB)
+			(= (aref buffer 2) #xBF))
+	       (setf initial-encoding :utf-8)))
+	    ((= available 2)
+	     (let ((b1 (aref buffer 0))
+		   (b2 (aref buffer 1)))
+	       (cond ((or (and (= b1 #xff) (= b2 #xfe))
+			  (and (= b1 #xfe) (= b2 #xff)))
+		      (setf initial-encoding :utf-16)))))))
+    ;;
+    ;;
+    (cond ((and (not initial-encoding) (not declared-encoding))
+	   (values :default eol-mode))
+	  (t
+	   (let ((encoding (or declared-encoding initial-encoding)))
+	     (when (stringp encoding)
+	       (setf encoding (string-upcase encoding))
+	       (dolist (translations *stream-encoding-file-attribute-translations*)
+		 (when (member encoding (rest translations) :test 'equalp)
+		   (let ((target (first translations)))
+		     (cond ((consp target)
+			    (setf encoding (first target))
+			    (setf eol-mode (second target)))
+			   (t
+			    (setf encoding (first translations)))))
+		   (return))))
+	     (let ((external-format
+		    (cond ((eq encoding :default) :default)
+			  ((stringp encoding)
+			   (intern encoding :keyword))
+			  (t
+			   encoding))))
+	       (values external-format eol-mode)))))))
+
 ;;; SET-ROUTINES -- internal
 ;;;
 ;;;   Fill in the various routine slots for the given type. Input-p and
@@ -1916,7 +2148,15 @@
 	   (setf (fd-stream-flags stream) #b001))
 	  (t
 	   (setf (fd-stream-flags stream) #b010)))
-
+    ;;
+    (when (and auto-close (fboundp 'finalize))
+      (finalize stream
+		#'(lambda ()
+		    (unix:unix-close fd)
+		    (format *terminal-io* (intl:gettext "** Closed ~A~%") name)
+		    (when original
+		      (revert-file file original)))))
+    ;;
     ;; FIXME: setting the external format here should be better
     ;; integrated into set-routines.  We do it before so that
     ;; set-routines can create an in-buffer if appropriate.  But we
@@ -1925,18 +2165,43 @@
     ;;
     ;;#-unicode-bootstrap ; fails in stream-reinit otherwise
     #+(and unicode (not unicode-bootstrap))
-    (%set-fd-stream-external-format stream external-format nil)
-    (set-routines stream element-type input output input-buffer-p
-		  :binary-stream-p binary-stream-p)
-    #+(and unicode (not unicode-bootstrap))
-    (%set-fd-stream-external-format stream external-format nil)
-    (when (and auto-close (fboundp 'finalize))
-      (finalize stream
-		#'(lambda ()
-		    (unix:unix-close fd)
-		    (format *terminal-io* (intl:gettext "** Closed ~A~%") name)
-		    (when original
-		      (revert-file file original)))))
+    (cond ((and (eq external-format :file-attribute) input)
+	   ;; Read the encoding file option with the external-format set to
+	   ;; :iso8859-1, and then change the external-format if necessary.
+	   #+(and unicode (not unicode-bootstrap))
+	   (%set-fd-stream-external-format stream :iso8859-1 nil)
+	   (set-routines stream element-type input output input-buffer-p
+			 :binary-stream-p binary-stream-p)
+	   #+(and unicode (not unicode-bootstrap))
+	   (%set-fd-stream-external-format stream :iso8859-1 nil)
+	   (multiple-value-bind (encoding eol-mode)
+	       (stream-encoding-file-attribute stream)
+	     (unless (file-position stream :start)
+	       (error (intl:gettext "The ~A external-format requires a file stream.")
+		      external-format))
+	     (unless (and (member encoding '(:iso8859-1 :iso-8859-1))
+			  (member eol-mode '(nil :unix)))
+	       (setf (stream-external-format stream)
+		     (cond ((member eol-mode '(nil :unix))
+			    (or encoding :default))
+			   (t
+			    (list (or encoding :default) eol-mode)))))))
+	  ((eq external-format :file-attribute)
+	   ;; Non-input stream, so can not read the file attributes, so use the
+	   ;; :default.
+	   #+(and unicode (not unicode-bootstrap))
+	   (%set-fd-stream-external-format stream :default nil)
+	   (set-routines stream element-type input output input-buffer-p
+			 :binary-stream-p binary-stream-p)
+	   #+(and unicode (not unicode-bootstrap))
+	   (%set-fd-stream-external-format stream :default nil))
+	  (t
+	   #+(and unicode (not unicode-bootstrap))
+	   (%set-fd-stream-external-format stream external-format nil)
+	   (set-routines stream element-type input output input-buffer-p
+			 :binary-stream-p binary-stream-p)
+	   #+(and unicode (not unicode-bootstrap))
+	   (%set-fd-stream-external-format stream external-format nil)))
     stream))
 
 
