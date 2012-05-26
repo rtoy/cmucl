@@ -1153,7 +1153,7 @@
    (:block-compile (member t nil :specified))
    (:entry-points list)
    (:byte-compile (member t nil :maybe))
-   (:external-format symbol)
+   (:external-format (or symbol list))
    (:decoding-error (or null symbol function))
    (:xref t))
   (values (or pathname null) boolean boolean))

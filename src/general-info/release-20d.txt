@@ -76,6 +76,9 @@ New in this release:
     * Fix typo in ISO8859-2 external format that caused it not to work
       correctly.  This type potentially also caused failures for all other
       external formats that were based on ISO8859-2.
+    * COMPILE-FILE should not signal an error when given a list for
+      :EXTERNAL-FORMAT.  Lists are needed to specify a composing
+      external format like :DOS or :MAC.
 
   * Trac Tickets:
     * #50: Print/read error with make-pathname.
