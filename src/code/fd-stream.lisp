@@ -2136,6 +2136,12 @@
 
 ;;;; Creation routines (MAKE-FD-STREAM and OPEN)
 
+;; The unicode version of this is in fd-stream-extfmt.lisp
+#-(and unicode (not unicode-boootstrap))
+(defun %set-fd-stream-external-format (stream extfmt &optional (updatep t))
+  (declare (ignore stream extfmt updatep))
+  (values))
+
 ;;; MAKE-FD-STREAM -- Public.
 ;;;
 ;;; Returns a FD-STREAM on the given file.
@@ -2246,15 +2252,12 @@
     ;; external format.
     ;;
     ;;#-unicode-bootstrap ; fails in stream-reinit otherwise
-    #+(and unicode (not unicode-bootstrap))
     (cond ((and (eq external-format :file-attribute) input)
 	   ;; Read the encoding file option with the external-format set to
 	   ;; :iso8859-1, and then change the external-format if necessary.
-	   #+(and unicode (not unicode-bootstrap))
 	   (%set-fd-stream-external-format stream :iso8859-1 nil)
 	   (set-routines stream element-type input output input-buffer-p
 			 :binary-stream-p binary-stream-p)
-	   #+(and unicode (not unicode-bootstrap))
 	   (%set-fd-stream-external-format stream :iso8859-1 nil)
 	   (multiple-value-bind (encoding eol-mode)
 	       (stream-encoding-file-attribute stream)
@@ -2271,18 +2274,14 @@
 	  ((eq external-format :file-attribute)
 	   ;; Non-input stream, so can not read the file attributes, so use the
 	   ;; :default.
-	   #+(and unicode (not unicode-bootstrap))
 	   (%set-fd-stream-external-format stream :default nil)
 	   (set-routines stream element-type input output input-buffer-p
 			 :binary-stream-p binary-stream-p)
-	   #+(and unicode (not unicode-bootstrap))
 	   (%set-fd-stream-external-format stream :default nil))
 	  (t
-	   #+(and unicode (not unicode-bootstrap))
 	   (%set-fd-stream-external-format stream external-format nil)
 	   (set-routines stream element-type input output input-buffer-p
 			 :binary-stream-p binary-stream-p)
-	   #+(and unicode (not unicode-bootstrap))
 	   (%set-fd-stream-external-format stream external-format nil)))
     stream))
 
