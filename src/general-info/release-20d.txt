@@ -76,6 +76,12 @@ New in this release:
     * Fix typo in ISO8859-2 external format that caused it not to work
       correctly.  This type potentially also caused failures for all other
       external formats that were based on ISO8859-2.
+    * COMPILE-FILE should not signal an error when given a list for
+      :EXTERNAL-FORMAT.  Lists are needed to specify a composing
+      external format like :DOS or :MAC.
+    * EXPORT and friends should not EVAL the form when compiling.
+      This was probably a leftover from the time when CMUCL did not
+      have DEFPACKAGE.  (See ticket:60.)
 
   * Trac Tickets:
     * #50: Print/read error with make-pathname.
@@ -83,6 +89,7 @@ New in this release:
     * #52: UNICODE-COMPLETE-NAME misses a completion.
     * #55: blocked signals.
     * #58: UTF-16 buffering problem.
+    * #60: compile-file and export problem
 
   * Other changes:
     * The layout of the cmucl directories has been changed.
