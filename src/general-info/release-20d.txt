@@ -28,10 +28,6 @@ New in this release:
       double-float) numbers.  Utility functions are provided to set
       and access these packed numbers.
     * Added external format for EUC-KR.
-    * Added new external format, :FILE-ATTRIBUTE, which looks for an
-      emacs mode-line to determine the encoding to use for reading a
-      file.  The end-of-line sequence is also determined from reading
-      the file.
  
   * Changes
     * ASDF2 updated to version 2.21.
@@ -54,11 +50,6 @@ New in this release:
       enabling a trap when the current exception also listed that trap
       caused the exception to be immediately signaled.  This no longer
       happens and now matches how ppc and sparc behave.
-    * The default external-format for COMPILE-FILE and LOAD is now
-      given by *DEFAULT-SOURCE-EXTERNAL-FORMAT*, instead of
-      *DEFAULT-EXTERNAL-FORMAT*.  However, the default value of
-      *DEFAULT-SOURCE-EXTERNAL-FORMAT* is :DEFAULT, which means the
-      value of *DEFAULT-EXTERNAL-FORMAT* will be used.
       
   * ANSI compliance fixes:
     * CMUCL was not printing pathnames like (make-pathname :directory
