@@ -95,11 +95,6 @@
 	     (invalid-fasl-version condition)
 	     (invalid-fasl-expected-version condition)))))
 
-(defvar *default-source-external-format* :default
-  "The external-format that 'load and 'compile-file use when given an
-  external-format of :default.  The default value is :default which will open
-  the file using the 'ext:*default-external-format*")
-
 
 ;;; LOAD-FRESH-LINE -- internal.
 ;;;
@@ -531,7 +526,7 @@
 
    :EXTERNAL-FORMAT
        The external-format to use when opening the FILENAME. The default is
-       :default which uses the EXT:*DEFAULT-SOURCE-EXTERNAL-FORMAT*.
+       :default which uses the EXT:*DEFAULT-EXTERNAL-FORMAT*.
 
    The variables *LOAD-VERBOSE*, *LOAD-PRINT* and EXT:*LOAD-IF-SOURCE-NEWER*
    determine the defaults for the corresponding keyword arguments.  These
@@ -614,8 +609,6 @@
 	(*load-pathname* pathname))
     (case contents
       (:source
-       (when (eq external-format :default)
-	 (setf external-format *default-source-external-format*))
        (with-open-file (file truename :external-format external-format
 			     :direction :input
 			     :if-does-not-exist if-does-not-exist)

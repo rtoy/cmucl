@@ -738,8 +738,6 @@
 				     :write-date (file-write-date x)
 				     :language :lisp))
 		 files)))
-    (when (eq external-format :default)
-      (setf external-format *default-source-external-format*))
     (make-source-info :files file-info
 		      :current-file file-info
 		      #+unicode :external-format
