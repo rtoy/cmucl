@@ -88,6 +88,3 @@ DEPEND_FLAGS =
 e_rem_pio2.o : e_rem_pio2.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $<
 
-# 
-gencgc.o : gencgc.c
-	$(CC) -c -mno-sse $(CFLAGS) $(CPPFLAGS) $<
