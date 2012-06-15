@@ -46,6 +46,12 @@
 (export 'vm::fixup-code-object "VM")
 (export 'vm::sanctify-for-execution "VM")
 
+;; 
+(unless (find "CALLING-CONVENTION"
+	      (c::class-info-types (gethash "FUNCTION" c::*info-classes*))
+	      :key #'c::type-info-name :test #'equal)
+  (c::define-info-type function c::calling-convention symbol nil))
+
 (comf "target:code/exports")
 
 (load "target:tools/comcom")
@@ -217,3 +223,4 @@
 (let ((ht (c::backend-sc-names c::*target-backend*)))
   (setf (gethash 'old-vm::any-reg ht)
 	(gethash 'vm::any-reg ht)))
+
