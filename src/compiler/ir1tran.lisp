@@ -142,6 +142,19 @@
            (member (car y) '(flet labels))
            (equal x (cadr y)))))
 
+(declaim (declaration calling-convention))
+(declaim (declaration entry-point))
+
+(defun find-declaration (name declarations &optional argcount nth)
+  (loop for (nil . decls) in declarations do 
+	(loop for d in decls
+	      for (decl-name . values) = d
+	      do (when (eq decl-name name)
+		   (when argcount
+		     (assert (= (length values) argcount)))
+		   (return-from find-declaration
+		     (cond (nth (nth nth values))
+			   (t d)))))))
 
 ;;; *ALLOW-DEBUG-CATCH-TAG* controls whether we should allow the
 ;;; insertion a (CATCH ...) around code to allow the debugger
@@ -1570,6 +1583,9 @@
 	      (process-declarations (append context-decls decls)
 				    (append aux-vars vars)
 				    nil cont))
+	     (calling-convention (find-declaration 'calling-convention decls
+						   1 0))
+	     (entry-point (find-declaration 'entry-point decls 1 0))
 	     (res (if (or (find-if #'lambda-var-arg-info vars) keyp)
 		      (ir1-convert-hairy-lambda new-body vars keyp
 						allow-other-keys
@@ -1590,6 +1606,11 @@
 		    (and decl
 			 (eq 'declare (first decl))
 			 (cons 'pcl::method (cadadr decl))))))
+	(when calling-convention
+	  (setf (getf (lambda-plist res) :calling-convention) 
+		calling-convention))
+	(when entry-point
+	  (setf (getf (lambda-plist res) :entry-point) entry-point))
 	res))))
 
 
