@@ -215,7 +215,7 @@
 	     (cond ((<= (getf state :reg-args) register-arg-count)
 		    (let ((n (getf state :reg-args)))
 		      (incf (getf state :reg-args))
-		      (standard-argument-location n)))
+		      (x86-standard-argument-location n)))
 		   (t
 		    (make-wired-tn (ptype 't)
 				   control-stack-sc-number
@@ -244,10 +244,10 @@
 	     collect (arg-tn type arg-state))
        (loop for type in rtypes
 	     collect (ret-tn type ret-state))
-       (make-stack-pointer-tn)
+       (x86-make-stack-pointer-tn)
        (max (getf arg-state :frame-size)
 	    (getf ret-state :frame-size))
-       (make-number-stack-pointer-tn)
+       (x86-make-number-stack-pointer-tn)
        0))))
 
 
