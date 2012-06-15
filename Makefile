@@ -68,7 +68,6 @@ XSETUP='							\
 (intl::install)							\
 (setf (ext:search-list "target:")				\
       (quote ("$(1)/" "src/")))					\
-(load "target:code/exports")					\
 (load "target:tools/setup" :if-source-newer :load-source)	\
 (comf "target:tools/setup" :load t)				\
 (setq *gc-verbose* nil *interactive* nil)			\
@@ -169,13 +168,12 @@ xcompiler: $(CROSSCORE)
 
 $(BUILDDIR)/xcompiler/cross-%.core:
 	$(MAKE) sanity
-	rm -rf $(XCOMPILERDIR)  # yes, sucks, but that's the way it is
+	rm -rf $(XCOMPILERDIR)
 	mkdir -vp $(BUILDDIR)
 	if [ ! -e $(BUILDDIR)/src ] ; then		\
 		ln -s $(TOPDIR)/src $(BUILDDIR)/src ;	\
 	fi
 	$(BINDIR)/create-target.sh $(XCOMPILERDIR)
-	mkdir -vp $(XCOMPILERDIR)/compiler/jvm
 	cp -v $(TOOLSDIR)/cross-scripts/$(subst .core,.lisp,$(notdir $@)) \
 	   $(XCOMPILERDIR)/cross.lisp
 	$(BOOTCMUCL) -noinit -nositeinit  				\
@@ -183,7 +181,6 @@ $(BUILDDIR)/xcompiler/cross-%.core:
 -eval '(setf lisp::*enable-package-locked-errors* nil)'			\
 -eval '(intl::install)'							\
 -eval '$(call SET_TARGET_SEARCH_LIST, "$(XCOMPILERDIR)/")'		\
--eval '(load "target:code/exports")'					\
 -eval '(load "target:tools/setup" :if-source-newer :load-source)'	\
 -eval '(comf "target:tools/setup" :load t)'				\
 -eval '(setq *gc-verbose* nil *interactive* nil)'			\
