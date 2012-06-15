@@ -187,6 +187,70 @@
   (undefined-value))
 
 
+;; make-typed-call-tns chooses the representation for a function type.
+;; This is similar to c::make-call-out-tns and should probably also be
+;; a vm-support-routine.
+;;
+;; The current convention passes double-floats unboxed and all other
+;; types remain boxed.  Registers XMM4-XMM7 are used for the first 4
+;; double arguments.  Boxed values are passed in standard locations.
+;;
+;; Returning values on the stack is currenlty not implemented, so all
+;; return values must fit in registers.
+(def-vm-support-routine make-typed-call-tns (ftype)
+  (declare (type function-type ftype))
+  (labels ((ptype (name) (primitive-type-or-lose name *backend*))
+	   (double-float-arg (state)
+	     (cond ((<= (getf state :xmms-reg) xmm7-offset)
+		    (make-wired-tn (ptype 'double-float)
+				   double-reg-sc-number 
+				   (prog1 (getf state :xmms-reg)
+				     (incf (getf state :xmms-reg)))))
+		   (t
+		    (make-wired-tn (ptype 'double-float)
+				   double-stack-sc-number
+				   (prog1 (getf state :frame-size)
+				     (incf (getf state :frame-size) 2))))))
+	   (boxed-arg (state)
+	     (cond ((<= (getf state :reg-args) register-arg-count)
+		    (let ((n (getf state :reg-args)))
+		      (incf (getf state :reg-args))
+		      (standard-argument-location n)))
+		   (t 
+		    (make-wired-tn (ptype 't)
+				   control-stack-sc-number
+				   (prog1 (getf state :frame-size)
+				     (incf (getf state :frame-size) 1))))))
+	   (double-float-type-p (type)
+	     (and (numeric-type-p type)
+		  (eq (numeric-type-class type) 'float)
+		  (eq (numeric-type-format type) 'double-float)))
+	   (arg-tn (type state)
+	     (cond ((double-float-type-p type) (double-float-arg state))
+		   (t (boxed-arg state))))
+	   (ret-tn (type state)
+	     (let ((tn (arg-tn type state)))
+	       (assert (member (sc-name (tn-sc tn)) 
+			       '(double-reg descriptor-reg)))
+	       tn)))
+    (let* ((arg-state (list :frame-size 2 :xmms-reg xmm4-offset :reg-args 0))
+	   (ret-state (list :frame-size 2 :xmms-reg xmm4-offset :reg-args 0))
+	   (returns (function-type-returns ftype))
+	   (rtypes (typecase returns
+		     (values-type (values-type-required returns))
+		     (t (list returns)))))
+      (values
+       (loop for type in (function-type-required ftype)
+	     collect (arg-tn type arg-state))
+       (loop for type in rtypes
+	     collect (ret-tn type ret-state))
+       (make-stack-pointer-tn)
+       (max (getf arg-state :frame-size)
+	    (getf ret-state :frame-size))
+       (make-number-stack-pointer-tn)
+       0))))
+
+
 ;;;; Frame hackery:
 
 ;;; Used for setting up the Old-FP in local call.
