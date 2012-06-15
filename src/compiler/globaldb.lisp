@@ -1058,6 +1058,8 @@
 
 (define-info-type function definition t nil)
 
+(define-info-type function calling-convention symbol nil)
+
 
 ); defun function-info-init
 

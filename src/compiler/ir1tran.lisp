@@ -3990,7 +3990,14 @@
 	 (lambda (second def))
 	 (*current-path* (revert-source-path 'defun))
 	 (expansion (unless (eq (info function inlinep name) :notinline)
-		      (inline-syntactic-closure-lambda lambda))))
+		      (inline-syntactic-closure-lambda lambda)))
+	 (decls (nth-value 1 (system:parse-body (cddr lambda)
+						*lexical-environment* t)))
+	 (convention (find-declaration 'calling-convention decls 1 0)))
+    (cond (convention
+	   (setf (info function calling-convention name) convention))
+	  (t
+	   (clear-info function calling-convention name)))
     ;;
     ;; If not in a simple environment or :notinline, then discard any forward
     ;; references to this function.
