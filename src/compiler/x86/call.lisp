@@ -203,7 +203,7 @@
 	   (double-float-arg (state)
 	     (cond ((<= (getf state :xmms-reg) xmm7-offset)
 		    (make-wired-tn (ptype 'double-float)
-				   double-reg-sc-number 
+				   double-reg-sc-number
 				   (prog1 (getf state :xmms-reg)
 				     (incf (getf state :xmms-reg)))))
 		   (t
@@ -216,7 +216,7 @@
 		    (let ((n (getf state :reg-args)))
 		      (incf (getf state :reg-args))
 		      (standard-argument-location n)))
-		   (t 
+		   (t
 		    (make-wired-tn (ptype 't)
 				   control-stack-sc-number
 				   (prog1 (getf state :frame-size)
@@ -230,7 +230,7 @@
 		   (t (boxed-arg state))))
 	   (ret-tn (type state)
 	     (let ((tn (arg-tn type state)))
-	       (assert (member (sc-name (tn-sc tn)) 
+	       (assert (member (sc-name (tn-sc tn))
 			       '(double-reg descriptor-reg)))
 	       tn)))
     (let* ((arg-state (list :frame-size 2 :xmms-reg xmm4-offset :reg-args 0))
@@ -296,6 +296,34 @@
 	    (make-ea :dword :base ebp-tn
 		     :disp (- (* vm:word-bytes
 				 (max 3 (sb-allocated-size 'stack)))))))
+
+    (trace-table-entry trace-table-normal)))
+
+(define-vop (typed-entry-point-allocate-frame)
+  (:info start-label code-label)
+  (:vop-var vop)
+  (:generator 1
+    ;; Make sure the function is aligned (using NOPs), and drop a
+    ;; label pointing to this function header.
+    (align lowtag-bits #x90)
+    (trace-table-entry trace-table-function-prologue)
+    (emit-label start-label)
+    ;; Skip space for the function header.
+    (inst function-header-word)
+    (dotimes (i (1- vm:function-code-offset))
+      (inst dword 0))
+
+    ;; The start of the actual code.
+    (emit-label code-label)
+
+    ;; Save the return-pc.
+    (popw ebp-tn (- (1+ return-pc-save-offset)))
+
+    ;; The args fit within the frame so just allocate the frame.
+    (inst lea esp-tn
+	  (make-ea :dword :base ebp-tn
+		   :disp (- (* vm:word-bytes
+			       (sb-allocated-size 'stack)))))
 
     (trace-table-entry trace-table-normal)))
 
@@ -732,6 +760,38 @@
     RETURN
     (note-this-location vop :known-return)
     (trace-table-entry trace-table-normal)))
+
+
+(define-vop (typed-call-local)
+  (:args (new-fp)
+	 (new-nfp)
+	 (args :more t))
+  (:results (results :more t))
+  (:save-p t)
+  (:move-args :local-call)
+  (:vop-var vop)
+  (:info arg-locs real-frame-size target)
+  (:ignore new-nfp args arg-locs results)
+  (:generator 30
+    ;; FIXME: allocate the real frame size here. We had to emit
+    ;; ALLOCATE-FRAME before this vop so that we can use the
+    ;; (:move-args :local-call) option here.  Without the
+    ;; ALLOCATE-FRAME vop we get a failed assertion.
+    (inst lea esp-tn (make-ea :dword :base new-fp
+			      :disp (- (* real-frame-size word-bytes))))
+
+    ;; Write old frame pointer (epb) into new frame.
+    (storew ebp-tn new-fp (- (1+ ocfp-save-offset)))
+
+    ;; Switch to new frame.
+    (move ebp-tn new-fp)
+
+    (note-this-location vop :call-site)
+
+    (inst call target)
+
+    ))
+
 
 ;;; Return from known values call.  We receive the return locations as
 ;;; arguments to terminate their lifetimes in the returning function.  We

@@ -903,6 +903,25 @@ compilation policy")
 	    (move-continuation-result node block locs cont)))))
   (undefined-value))
 
+(defun ir2-convert-local-typed-call (node block fun cont)
+  (declare (type node node) (type ir2-block block) (type clambda fun)
+	   (type continuation cont))
+  (let ((ftype (the function-type (lambda-type fun)))
+	(args (basic-combination-args node))
+	(start (getf (lambda-plist fun) :code-start)))
+    (multiple-value-bind (arg-tns result-tns
+				  fp stack-frame-size
+				  nfp number-stack-frame-size)
+	(make-typed-call-tns ftype)
+      (declare (ignore number-stack-frame-size))
+      (let ((cont-tns  (loop for arg in args
+			     collect (continuation-tn node block arg))))
+	(vop allocate-frame node block nil fp nfp)
+	(vop* typed-call-local node block
+	      (fp nfp (reference-tn-list cont-tns nil))
+	      ((reference-tn-list result-tns t))
+	      arg-tns stack-frame-size start)
+	(move-continuation-result node block result-tns cont)))))
 
 ;;; IR2-Convert-Local-Call  --  Internal
 ;;;
@@ -931,8 +950,13 @@ compilation policy")
 	       (:unknown
 		(ir2-convert-local-unknown-call node block fun cont start))
 	       (:fixed
-		(ir2-convert-local-known-call node block fun returns
-					      cont start)))))))
+		(ecase (getf (lambda-plist fun) :entry-point)
+		  ((nil)
+		   (ir2-convert-local-known-call node block fun returns
+						 cont start))
+		  (:typed
+		   (assert (external-entry-point-p (node-home-lambda node)))
+		   (ir2-convert-local-typed-call node block fun cont)))))))))
   (undefined-value))
 
 
@@ -1178,6 +1202,18 @@ compilation policy")
   
   (undefined-value))
 
+;; arguments are wired to specific locations in gtn so we should have
+;; to move them here.
+(defun init-typed-entry-point-environment (node block fun)
+  (declare (type bind node) (type ir2-block block) (type clambda fun))
+  (let ((start-label (entry-info-offset (leaf-info fun)))
+	(code-label (getf (lambda-plist fun) :code-start))
+	(env (environment-info (node-environment node))))
+    (vop typed-entry-point-allocate-frame node block
+	 start-label code-label)
+    (vop setup-environment node block start-label)
+    (emit-move node block (make-old-fp-passing-location t)
+	       (ir2-environment-old-fp env))))
 
 ;;; IR2-Convert-Bind  --  Internal
 ;;;
@@ -1201,6 +1237,9 @@ compilation policy")
       (when *collect-dynamic-statistics*
 	(vop count-me node block *dynamic-counts-tn*
 	     (block-number (ir2-block-block block)))))
+
+    (when (getf (lambda-plist fun) :entry-point)
+      (init-typed-entry-point-environment node block fun))
 
     (emit-move node block (ir2-environment-return-pc-pass env)
 	       (ir2-environment-return-pc env))
