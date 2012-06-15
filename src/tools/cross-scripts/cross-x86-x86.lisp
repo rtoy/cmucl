@@ -46,6 +46,8 @@
 (export 'vm::fixup-code-object "VM")
 (export 'vm::sanctify-for-execution "VM")
 
+(comf "target:code/exports")
+
 (load "target:tools/comcom")
 
 ;;; Load the new backend.
