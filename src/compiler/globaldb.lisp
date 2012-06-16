@@ -1060,6 +1060,7 @@
 
 (define-info-type function calling-convention symbol nil)
 
+(define-info-type function lisp::linkage lisp::linkage nil)
 
 ); defun function-info-init
 

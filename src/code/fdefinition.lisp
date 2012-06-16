@@ -255,3 +255,244 @@
       (fdefn-makunbound fdefn)))
   (kernel:undefine-function-name name)
   name)
+
+
+
+(defstruct callsite
+  (type (ext:required-argument) :type kernel:function-type :read-only t)
+  (fdefn (ext:required-argument) :type kernel:fdefn :read-only t))
+
+(defstruct linkage
+  (callsites nil :type (or callsite list))
+  (adapters nil :type (or function list)))
+
+(defun listify (x)
+  (if (listp x) x (list x)))
+
+(defmacro push-unlistified (new-value (reader object))
+  `(let ((new-value ,new-value) (object ,object))
+     (let ((old-value (,reader ,object)))
+       (setf (,reader object)
+	     (typecase old-value
+	       (null new-value)
+	       (cons (cons new-value old-value))
+	       (t (list new-value old-value)))))))
+
+(defun find-typed-entry-point-in-code (code name)
+  (loop for ep = (%code-entry-points code) then (%function-next ep)
+	while ep do
+	(let ((fname (%function-name ep)))
+	  (when (and (consp fname)
+		     (eq (car fname) :typed-entry-point)
+		     (consp (cdr fname))
+		     (equal (cadr fname) name))
+	    (return ep)))))
+
+(defun find-typed-entry-point-for-fdefn (fdefn)
+  (let ((xep (fdefn-function fdefn)))
+    (let ((code (function-code-header xep)))
+      (find-typed-entry-point-in-code code (fdefn-name fdefn)))))
+
+;; find-typed-entry-point is called at load-time and returns the
+;; fdefn that should be called.
+;;
+;; 1. We go through the list of existing callsites to see if we
+;; already have one with the same type and reuse it if possible.
+;;
+;; 2. We look at the current definition.  If the types match, we
+;; create a callsite object, store it in the info db, and return the
+;; fdefn.
+;;
+;; 3. Now we know that the types don't match we need to use adapters.
+;; First again, we look at existing adapters and reuse them if possible.
+;;
+;; 4. An adapter is created that boxes the arguments and forwards the
+;; call to the "normal" entry point.
+;;
+;; 5. If we are not allowed to create adapters, we look again at the
+;; current definition to handle the case where no current definition
+;; exists.  If so, we return an empty fdefn object that will call the
+;; undefined-tramp assembly routine.
+;;
+;; 6. If all else fails we link the callsite to our error handler.
+;;
+(declaim (ftype (function (t t) kernel:fdefn) find-typed-entry-point))
+(defun find-typed-entry-point (name callsite-typespec)
+  (let* ((cs-type (kernel:specifier-type callsite-typespec))
+	 (linkage (multiple-value-bind (info foundp)
+		      (ext:info function linkage name)
+		    (cond (foundp info)
+			  (t (setf (ext:info function linkage name)
+				   (make-linkage)))))))
+    (cond ((and nil (dolist (cs (listify (linkage-callsites linkage)))
+	     (let* ((ep-type (callsite-type cs)))
+	       (when (function-types-compatible-p cs-type ep-type)
+		 (return (callsite-fdefn cs)))))))
+	  ((let ((fdefn (fdefinition-object name nil)))
+	     (when fdefn
+	       (let ((fun (find-typed-entry-point-for-fdefn fdefn)))
+		 (when fun
+		   (let ((ep-type (kernel:extract-function-type fun)))
+		     (when (function-types-compatible-p cs-type ep-type)
+		       (let* ((aname (kernel:%function-name fun))
+			      (fdefn (kernel:make-fdefn aname))
+			      (cs (make-callsite :type cs-type :fdefn fdefn)))
+			 (setf (kernel:fdefn-function fdefn) fun)
+			 (push-unlistified cs (linkage-callsites linkage))
+			 fdefn))))))))
+	  ((or (not (lisp::fdefinition-object name nil))
+	       (not (kernel:fdefn-function
+		     (lisp::fdefinition-object name nil))))
+	   (let* ((aname `(:typed-entry-point #:undefined))
+		  (fdefn (kernel:make-fdefn aname))
+		  (cs (make-callsite :type cs-type :fdefn fdefn)))
+	     (push-unlistified cs (linkage-callsites linkage))
+	     fdefn))
+	  ((dolist (fun (listify (linkage-adapters linkage)))
+	     (let ((ep-type (kernel:extract-function-type fun)))
+	       (when (function-types-compatible-p cs-type ep-type)
+		 (let* ((aname (kernel:%function-name fun))
+			(fdefn (kernel:make-fdefn aname))
+			(cs (make-callsite :type cs-type :fdefn fdefn)))
+		   (setf (kernel:fdefn-function fdefn) fun)
+		   (push-unlistified cs (linkage-callsites linkage))
+		   (return fdefn))))))
+	  (t
+	   (let* ((fun (generate-adapter-function cs-type name))
+		  (fdefn (kernel:make-fdefn (kernel:%function-name fun)))
+		  (cs (make-callsite :type cs-type :fdefn fdefn)))
+	     (setf (kernel:fdefn-function fdefn) fun)
+	     (push-unlistified fun (linkage-adapters linkage))
+	     (push-unlistified cs (linkage-callsites linkage))
+	     fdefn)))))
+
+(defun linkage-error (&rest args)
+  (declare (ignore args))
+  (error "Linking callsite to typed-entry-point failed"))
+
+;; Generate an adapter function that changes the representation of the
+;; arguments (specified with FTYPE) and forwards the call to NAME.
+;; The adapter has also a typed entry point.  It should also check
+;; that the values returned by NAME match FTYPE.
+;;
+;; In practice, the compiler infered type may not match exactly FTYPE,
+;; even if we add lotso declarations.  This is annyoingly brittle.
+(defun generate-adapter-function (ftype name)
+  (let* ((atypes (kernel:function-type-required ftype))
+	 (tmps (loop for nil in atypes collect (gensym)))
+	 (fname `(:typed-entry-point
+		  :boxing-adapter ,(make-symbol (string name))))
+	 (ftypespec (kernel:type-specifier ftype)))
+    (proclaim `(ftype ,ftypespec ,fname))
+    (compile fname
+	     `(lambda ,tmps
+		(declare
+		 ,@(loop for tmp in tmps
+			 for type in atypes
+			 collect `(type ,(kernel:type-specifier type) ,tmp)))
+		(the ,(kernel:type-specifier
+		       (kernel:function-type-returns ftype))
+		   (funcall (function ,name) . ,tmps))))
+    (let ((fun (fdefinition fname)))
+      (unless (eq name 'linkage-error)
+	(fix-ftype fun ftype))
+      fun)))
+
+(defun fix-ftype (fun ftype)
+  (let ((etype (kernel:extract-function-type fun)))
+    (unless (function-types-compatible-p ftype etype t)
+      (break)))
+  fun)
+
+;; This is our rule to decide when a type at a callsite matches the
+;; type of the entry point.
+;;
+;; 1. The arguments at the callsite should be subtypes of the
+;; arguments at the entry point.
+;;
+;; 2. The return value at the callsite should be supertypes of the
+;; return values at the entry point.
+;;
+;; 3. The representations must agree.  Representations should probably
+;; decided in the backend, but for now we assume only double-floats
+;; are unboxed.
+(defun function-types-compatible-p (callsite-type entrypoint-type
+				    &optional ignore-representation)
+  (flet ((return-types (ftype)
+	   (let ((type (kernel:function-type-returns ftype)))
+	     (cond ((kernel:values-type-p type)
+		    (assert (and (not (kernel:values-type-rest type))
+				 (not (kernel:values-type-keyp type))))
+		    (kernel:values-type-required type))
+		   (t
+		    (list type)))))
+	 (ptype= (type1 type2)
+	   (let ((double-float (kernel:specifier-type 'double-float)))
+	     (cond (ignore-representation t)
+		   ((kernel:type= type1 double-float)
+		    (kernel:type= type2 double-float))
+		   ((kernel:type= type2 double-float)
+		    nil)
+		   (t t)))))
+    (and (every #'kernel:csubtypep
+		(kernel:function-type-required callsite-type)
+		(kernel:function-type-required entrypoint-type))
+	 (every #'ptype=
+		(kernel:function-type-required callsite-type)
+		(kernel:function-type-required entrypoint-type))
+	 (or
+	  (and (every #'kernel:csubtypep
+		      (return-types entrypoint-type)
+		      (return-types callsite-type))
+	       (every #'ptype=
+		      (return-types entrypoint-type)
+		      (return-types callsite-type)))
+	  (kernel:type= (kernel:function-type-returns entrypoint-type)
+			(kernel:specifier-type 'nil))))))
+
+
+;; check-function-redefinition is used as setf-fdefinition-hook.
+;; We go through all existing callsites and
+;;
+;; 1. If the new type matches, we patch the callsite with the new function.
+;;
+;; 2. If the types don't match and if allowed, we redirect the
+;; callsite to and adapter.
+;;
+;; 3. If the callsites doesn't want adapters we link the callsite to
+;; an error handler.
+(defun check-function-redefinition (name new-fun)
+  (multiple-value-bind (linkage foundp) (ext:info function linkage name)
+    (when foundp
+      (let* ((new-code (function-code-header new-fun))
+	     (new-tep (find-typed-entry-point-in-code new-code name))
+	     (new-type (extract-function-type new-tep)))
+	(dolist (cs (listify (linkage-callsites linkage)))
+	  (let ((cs-type (callsite-type cs))
+		(fdefn (callsite-fdefn cs)))
+	    (cond ((function-types-compatible-p cs-type new-type)
+		   (patch-fdefn fdefn new-tep))
+		  ((dolist (fun (listify (linkage-adapters linkage)))
+		     (let ((ep-type (kernel:extract-function-type fun)))
+		       (when (function-types-compatible-p cs-type ep-type)
+			 (patch-fdefn fdefn fun)
+			 (return t)))))
+		  (t
+		   (let ((fun (generate-adapter-function cs-type name)))
+		     (push-unlistified fun (linkage-adapters linkage))
+		     (patch-fdefn fdefn fun))))))))))
+
+;; This lets us set the name in fdefn objects.  We use that for
+;; debugging.
+#-bootstrap
+(eval-when (:compile-toplevel)
+  (c:defknown set-fdefn-name (kernel:fdefn t) t)
+  (c:def-setter set-fdefn-name vm:fdefn-name-slot vm:other-pointer-type))
+
+(defun patch-fdefn (fdefn new-fun)
+  (setf (kernel:fdefn-function fdefn) new-fun)
+  (let ((name (kernel:%function-name new-fun)))
+    (set-fdefn-name fdefn name))
+  fdefn)
+
+(pushnew 'check-function-redefinition ext:*setf-fdefinition-hook*)
