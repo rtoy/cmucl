@@ -1768,6 +1768,35 @@ compilation policy")
     (move-continuation-result node block (list val) (node-cont node))))
 
 
+(defun typed-entry-point-continuation-tn (fun ftype)
+  (declare (type continuation fun) (type function-type ftype))
+  (let ((2cont (continuation-info fun)))
+    (assert (eq (ir2-continuation-kind 2cont) :delayed))
+    (let ((name (continuation-function-name fun t)))
+      (assert name)
+      (make-load-time-constant-tn :typed-entry-point (list name ftype)))))
+
+(defoptimizer (%typed-call ir2-convert) ((&rest args) node block)
+  (let* ((fun (combination-fun node))
+	 (ftype (continuation-derived-type fun))
+	 (cont (node-cont node)))
+    (check-type ftype function-type)
+    (multiple-value-bind (arg-tns result-tns
+				  fp stack-frame-size
+				  nfp number-stack-frame-size)
+	(make-typed-call-tns ftype)
+      (declare (ignore number-stack-frame-size))
+      (let ((fdefn-tn (typed-entry-point-continuation-tn fun ftype))
+	    (cont-tns  (loop for arg in args
+			     collect (continuation-tn node block arg))))
+	(vop allocate-frame node block nil fp nfp)
+	(vop* typed-call-named node block
+	      (fp nfp fdefn-tn (reference-tn-list cont-tns nil))
+	      ((reference-tn-list result-tns t))
+	      arg-tns stack-frame-size)
+	(move-continuation-result node block result-tns cont)))))
+
+
 ;;; IR2-Convert  --  Interface
 ;;;
 ;;;    Convert the code in a component into VOPs.

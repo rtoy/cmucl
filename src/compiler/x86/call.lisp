@@ -1149,6 +1149,46 @@
     (inst jmp (make-fixup 'tail-call-variable :assembly-routine))))
 
 
+(define-vop (typed-call-named)
+  (:args (new-fp)
+	 (new-nfp)
+	 (fdefn :scs (descriptor-reg control-stack)
+		:target eax)
+	 (args :more t :scs (descriptor-reg)))
+  (:results (results :more t))
+  (:save-p t)
+  (:move-args :local-call)
+  (:vop-var vop)
+  (:info arg-locs real-frame-size)
+  (:ignore new-nfp args arg-locs results)
+  (:temporary (:sc descriptor-reg :offset eax-offset)
+	      eax)
+  (:generator 30
+    ;; FIXME: allocate the real frame size here. We had to emit
+    ;; ALLOCATE-FRAME before this vop so that we can use the
+    ;; (:move-args :local-call) option here.  Without the
+    ;; ALLOCATE-FRAME vop we get a failed assertion.
+    (inst lea esp-tn (make-ea :dword :base new-fp
+			      :disp (- (* real-frame-size word-bytes))))
+
+    ;; Move fdefn to eax before switching frames.
+    (move eax fdefn)
+
+    ;; Write old frame pointer (epb) into new frame.
+    (storew ebp-tn new-fp (- (1+ ocfp-save-offset)))
+
+    ;; Switch to new frame.
+    (move ebp-tn new-fp)
+
+    (note-this-location vop :call-site)
+
+    ;; Load address out of fdefn and call it.
+    (inst call (make-ea :dword :base eax
+			:disp (- (* fdefn-raw-addr-slot word-bytes)
+				 other-pointer-type)))
+
+    ))
+
 ;;;; Unknown values return:
 
 ;;; Return a single-value using the Unknown-Values convention.  Specifically,
