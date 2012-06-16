@@ -7,6 +7,7 @@ BUILDDIR  := $(TOPDIR)/build
 BOOTCMUCL := cmucl
 XHOST	  := x86
 XTARGET	  := x86
+XBOOTFILE :=
 BOOTFILE  :=
 
 help:
@@ -33,14 +34,15 @@ BUILDDIR   build directory ($(BUILDDIR))\n\
 BOOTCMUCL  compiler used for bootstrap ($(BOOTCMUCL))\n\
 XHOST	   host system ($(XHOST))\n\
 XTARGET	   target system ($(XTARGET))\n\
-BOOTFILE   file for bootstrap hacks (default: none)\
+XBOOTFILE  file to execute before building cross-compiler (default: none)\n\
+BOOTFILE   file to initialize compiler (default: none)\
 "
 
 help-other:
 	@echo -e "\
-xcompile-world     -- cross-compile library \n\
+xcompile-world     -- cross-compile core components (no compiler) \n\
 xcompile-compiler  -- cross-compile compiler \n\
-xdump-world        -- cold-load library and cross-dump (genesis)\n\
+xdump-world        -- genesis (emulate loading then dump the emulated heap)\n\
 clean-world        -- remove the build/world directory\n\
 sanity-clean       -- remove fasl files in source directory\n\
 run-xcompiler      -- open a REPL with the cross-compiler\
@@ -89,6 +91,12 @@ SETUP2='							\
 
 LOAD_BOOTFILE='					\
 (let ((bootfile "$(BOOTFILE)"))			\
+  (unless (equal bootfile "")			\
+    (load bootfile)))				\
+'
+
+LOAD_XBOOTFILE='				\
+(let ((bootfile "$(XBOOTFILE)"))		\
   (unless (equal bootfile "")			\
     (load bootfile)))				\
 '
@@ -184,6 +192,7 @@ $(BUILDDIR)/xcompiler/cross-%.core:
 -eval '(load "target:tools/setup" :if-source-newer :load-source)'	\
 -eval '(comf "target:tools/setup" :load t)'				\
 -eval '(setq *gc-verbose* nil *interactive* nil)'			\
+-eval $(LOAD_XBOOTFILE)							\
 -eval '(load "$(XCOMPILERDIR)/cross.lisp")'				\
 -eval '(remf ext::*herald-items* :python)'				\
 -eval '(ext:save-lisp "$@" :purify nil)'				\
