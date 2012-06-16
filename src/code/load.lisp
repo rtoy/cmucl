@@ -1519,4 +1519,10 @@
     code-object))
 
 
+(define-fop (fop-typed-entry-point 151)
+  (let ((type (pop-stack))
+	(name (pop-stack)))
+    (find-typed-entry-point name type)))
+
+
 (declaim (maybe-inline read-byte))

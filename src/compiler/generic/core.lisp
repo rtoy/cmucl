@@ -203,7 +203,13 @@
 					 (cdr const) object))
 	       (:fdefinition
 		(setf (code-header-ref code-obj index)
-		      (lisp::fdefinition-object (cdr const) t))))))))))
+		      (lisp::fdefinition-object (cdr const) t)))
+	       (:typed-entry-point
+		(destructuring-bind (name ftype) (cdr const)
+		  (let ((typespec (type-specifier ftype)))
+		    (setf (code-header-ref code-obj index)
+			  (lisp::find-typed-entry-point name typespec)))))
+	       )))))))
   (undefined-value))
 
 
