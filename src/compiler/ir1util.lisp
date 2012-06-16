@@ -1531,7 +1531,10 @@
 (defun main-entry (functional)
   (declare (type functional functional) (values clambda))
   (etypecase functional
-    (clambda functional)
+    (clambda 
+     (cond ((typed-entry-point-p functional)
+	    (lambda-entry-function functional))
+	   (t functional)))
     (optional-dispatch
      (optional-dispatch-main-entry functional))))
 
@@ -1567,7 +1570,6 @@
 (defun external-entry-point-p (fun)
   (declare (type functional fun))
   (not (null (member (functional-kind fun) '(:external :top-level)))))
-
 
 ;;; Continuation-Function-Name  --  Interface
 ;;;
