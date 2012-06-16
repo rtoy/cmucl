@@ -82,6 +82,9 @@
   ;;
   ;; Safe to stack-allocate function args that are closures.
   dynamic-extent-closure-safe
+  ;;
+  ;;
+  typed-calling-convention
   )
 
 (defstruct (function-info
