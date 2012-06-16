@@ -1518,6 +1518,11 @@
 
 ;;;; Functional hackery:
 
+(defun typed-entry-point-p (fun)
+  (and (lambda-p fun) 
+       (eq (getf (lambda-plist fun) :entry-point)
+	   :typed)))
+
 ;;; Main-Entry  --  Interface
 ;;;
 ;;;    If Functional is a Lambda, just return it; if it is an
