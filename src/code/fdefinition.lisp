@@ -482,17 +482,10 @@
 		     (push-unlistified fun (linkage-adapters linkage))
 		     (patch-fdefn fdefn fun))))))))))
 
-;; This lets us set the name in fdefn objects.  We use that for
-;; debugging.
-#-bootstrap
-(eval-when (:compile-toplevel)
-  (c:defknown set-fdefn-name (kernel:fdefn t) t)
-  (c:def-setter set-fdefn-name vm:fdefn-name-slot vm:other-pointer-type))
-
 (defun patch-fdefn (fdefn new-fun)
   (setf (kernel:fdefn-function fdefn) new-fun)
   (let ((name (kernel:%function-name new-fun)))
-    (set-fdefn-name fdefn name))
+    (kernel:%set-fdefn-name fdefn name))
   fdefn)
 
 (pushnew 'check-function-redefinition ext:*setf-fdefinition-hook*)

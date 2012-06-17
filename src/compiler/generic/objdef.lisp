@@ -306,7 +306,7 @@
 (define-primitive-object (fdefn :type fdefn
 				:lowtag other-pointer-type
 				:header fdefn-type)
-  (name :ref-trans fdefn-name)
+  (name :ref-trans fdefn-name :set-trans %set-fdefn-name :set-known (unsafe))
   (function :type (or function null) :ref-trans fdefn-function)
   (raw-addr :c-type #-alpha "char *" #+alpha "u32"))
 
