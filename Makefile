@@ -349,7 +349,13 @@ cross-build:
 	bin/create-target.sh xcross
 	bin/create-target.sh xtarget
 	cp src/tools/cross-scripts/cross-x86-x86.lisp xtarget/cross.lisp
-	bin/cross-build-world.sh xtarget xcross xtarget/cross.lisp $(BOOTCMUCL)
+ifeq ($(XBOOTFILE),)
+	bin/cross-build-world.sh -crl \
+		xtarget xcross xtarget/cross.lisp $(BOOTCMUCL)
+else
+	bin/cross-build-world.sh -crl \
+		-B $(XBOOTFILE) xtarget xcross xtarget/cross.lisp $(BOOTCMUCL)
+endif
 	bin/rebuild-lisp.sh xtarget
 	bin/load-world.sh -p xtarget "newlisp"
 
