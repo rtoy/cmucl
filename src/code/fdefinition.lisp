@@ -290,8 +290,9 @@
 
 (defun find-typed-entry-point-for-fdefn (fdefn)
   (let ((xep (fdefn-function fdefn)))
-    (let ((code (function-code-header xep)))
-      (find-typed-entry-point-in-code code (fdefn-name fdefn)))))
+    (when xep
+      (let ((code (function-code-header xep)))
+	(find-typed-entry-point-in-code code (fdefn-name fdefn))))))
 
 ;; find-typed-entry-point is called at load-time and returns the
 ;; fdefn that should be called.
@@ -370,6 +371,12 @@
   (declare (ignore args))
   (error "Linking callsite to typed-entry-point failed"))
 
+(defun validate-adapter-type (fun ftype)
+  (let ((etype (extract-function-type fun)))
+    (unless (function-types-compatible-p ftype etype t)
+      (break)))
+  fun)
+
 ;; Generate an adapter function that changes the representation of the
 ;; arguments (specified with FTYPE) and forwards the call to NAME.
 ;; The adapter has also a typed entry point.  It should also check
@@ -378,31 +385,22 @@
 ;; In practice, the compiler infered type may not match exactly FTYPE,
 ;; even if we add lotso declarations.  This is annyoingly brittle.
 (defun generate-adapter-function (ftype name)
-  (let* ((atypes (kernel:function-type-required ftype))
+  (declare (type function-type ftype))
+  (let* ((atypes (function-type-required ftype))
 	 (tmps (loop for nil in atypes collect (gensym)))
-	 (fname `(:typed-entry-point
-		  :boxing-adapter ,(make-symbol (string name))))
-	 (ftypespec (kernel:type-specifier ftype)))
-    (proclaim `(ftype ,ftypespec ,fname))
-    (compile fname
-	     `(lambda ,tmps
-		(declare
-		 ,@(loop for tmp in tmps
-			 for type in atypes
-			 collect `(type ,(kernel:type-specifier type) ,tmp)))
-		(the ,(kernel:type-specifier
-		       (kernel:function-type-returns ftype))
-		   (funcall (function ,name) . ,tmps))))
-    (let ((fun (fdefinition fname)))
-      (unless (eq name 'linkage-error)
-	(fix-ftype fun ftype))
-      fun)))
-
-(defun fix-ftype (fun ftype)
-  (let ((etype (kernel:extract-function-type fun)))
-    (unless (function-types-compatible-p ftype etype t)
-      (break)))
-  fun)
+	 (fun (compile 
+	       nil
+	       `(lambda ,tmps
+		  (declare
+		   (c::calling-convention :typed-no-xep)
+		   ,@(loop for tmp in tmps
+			   for type in atypes
+			   collect `(type ,(kernel:type-specifier type) ,tmp)))
+		  (the ,(kernel:type-specifier
+			 (kernel:function-type-returns ftype))
+		    (funcall (function ,name) . ,tmps))))))
+    (validate-adapter-type fun ftype)
+    fun))
 
 ;; This is our rule to decide when a type at a callsite matches the
 ;; type of the entry point.
