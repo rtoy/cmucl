@@ -952,9 +952,10 @@
 	     (cc (info function calling-convention name))
 	     (info (ecase cc
 		     ((nil) info)
-		     (:typed (cond ((not info)
-				    (info function info '%typed-call))
-				   (t (error "nyi")))))))
+		     ((:typed :typed-no-xep)
+		      (cond ((not info)
+			     (info function info '%typed-call))
+			    (t (error "nyi")))))))
 	(if info
 	    (values leaf (setf (basic-combination-kind call) info))
 	    (values leaf nil)))))))
