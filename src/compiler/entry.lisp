@@ -38,7 +38,7 @@
 			(setf (leaf-info fun) (make-entry-info)))))
 	  (compute-entry-info fun info)
 	  (push info (ir2-component-entries 2comp))
-	  (when (getf (lambda-plist fun) :entry-point)
+	  (when (typed-entry-point-p fun)
 	    (setf (getf (lambda-plist fun) :code-start) (gen-label)))))))
 
   (select-component-format component)

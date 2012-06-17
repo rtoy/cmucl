@@ -1232,13 +1232,14 @@ compilation policy")
     (assert (member (functional-kind fun)
 		    '(nil :external :optional :top-level :cleanup)))
 
-    (when (external-entry-point-p fun)
+    (when (and (external-entry-point-p fun)
+	       (not (typed-entry-point-p fun)))
       (init-xep-environment node block fun)
       (when *collect-dynamic-statistics*
 	(vop count-me node block *dynamic-counts-tn*
 	     (block-number (ir2-block-block block)))))
 
-    (when (getf (lambda-plist fun) :entry-point)
+    (when (typed-entry-point-p fun)
       (init-typed-entry-point-environment node block fun))
 
     (emit-move node block (ir2-environment-return-pc-pass env)
