@@ -161,7 +161,22 @@
 						       ,tmp)))
 				    (%funcall ,fun . ,temps)))))
 		      (setf (lambda-entry-function fun) fun2)
-		      fun2)))))
+		      fun2))
+		   (:typed-no-xep
+		    (return-from make-xep-lambda
+		      `(lambda ,temps
+			 (declare (entry-point :typed)
+				  ,@(loop for tmp in temps
+					  for var in (lambda-vars fun)
+					  collect 
+					  `(type ,(type-specifier
+						   (lambda-var-type var))
+						 ,tmp)))
+			 (the ,(type-specifier
+				(continuation-asserted-type
+				 (return-result
+				  (lambda-return fun))))
+			   (%funcall ,fun . ,temps))))))))
        `(lambda (,n-supplied . ,temps)
 	  (declare (type index ,n-supplied))
 	  ,(if (policy nil (zerop safety))
