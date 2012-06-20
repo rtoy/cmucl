@@ -350,14 +350,18 @@ cross-build:
 	bin/create-target.sh xtarget
 	cp src/tools/cross-scripts/cross-x86-x86.lisp xtarget/cross.lisp
 ifeq ($(XBOOTFILE),)
-	bin/cross-build-world.sh -crl \
+	bin/cross-build-world.sh -cr \
 		xtarget xcross xtarget/cross.lisp $(BOOTCMUCL)
 else
-	bin/cross-build-world.sh -crl \
+	bin/cross-build-world.sh -cr \
 		-B $(XBOOTFILE) xtarget xcross xtarget/cross.lisp $(BOOTCMUCL)
 endif
 	bin/rebuild-lisp.sh xtarget
 	bin/load-world.sh -p xtarget "newlisp"
+	bin/create-target.sh xstage2
+	bin/build-world.sh xstage2 xtarget/lisp/lisp
+	bin/rebuild-lisp.sh xstage2
+	bin/load-world.sh xstage2 "newlisp2"
 
 sanity:
 	@if [ `echo $(TOPDIR) | egrep -c '^/'` -ne 1 ]; then		\
