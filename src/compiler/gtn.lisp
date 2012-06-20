@@ -240,10 +240,14 @@
   (declare (type clambda fun))
   (let* ((ftype (typed-entry-point-type fun))
 	 (tns (nth-value 1 (make-typed-call-tns ftype))))
-    (make-return-info :kind :fixed
-		      :count (length tns)
-		      :types (mapcar #'tn-primitive-type tns)
-		      :locations tns)))
+    (etypecase tns
+      ((eql :unknown)
+       (return-info-for-set (lambda-tail-set fun)))
+      (list
+       (make-return-info :kind :fixed
+			 :count (length tns)
+			 :types (mapcar #'tn-primitive-type tns)
+			 :locations tns)))))
 
 ;;; Assign-Return-Locations  --  Internal
 ;;;
