@@ -325,10 +325,10 @@
 		    (cond (foundp info)
 			  (t (setf (ext:info function linkage name)
 				   (make-linkage)))))))
-    (cond ((and nil (dolist (cs (listify (linkage-callsites linkage)))
+    (cond ((dolist (cs (listify (linkage-callsites linkage)))
 	     (let* ((ep-type (callsite-type cs)))
 	       (when (function-types-compatible-p cs-type ep-type)
-		 (return (callsite-fdefn cs)))))))
+		 (return (callsite-fdefn cs))))))
 	  ((let ((fdefn (fdefinition-object name nil)))
 	     (when fdefn
 	       (let ((fun (find-typed-entry-point-for-fdefn fdefn)))
@@ -388,6 +388,7 @@
   (declare (type function-type ftype))
   (let* ((atypes (function-type-required ftype))
 	 (tmps (loop for nil in atypes collect (gensym)))
+	 (*derive-function-types* nil)
 	 (fun (compile 
 	       nil
 	       `(lambda ,tmps
@@ -464,7 +465,9 @@
     (when foundp
       (let* ((new-code (function-code-header new-fun))
 	     (new-tep (find-typed-entry-point-in-code new-code name))
-	     (new-type (extract-function-type new-tep)))
+	     (new-type (if new-tep 
+			   (extract-function-type new-tep)
+			   (specifier-type '(function * *)))))
 	(dolist (cs (listify (linkage-callsites linkage)))
 	  (let ((cs-type (callsite-type cs))
 		(fdefn (callsite-fdefn cs)))
@@ -473,16 +476,16 @@
 		  ((dolist (fun (listify (linkage-adapters linkage)))
 		     (let ((ep-type (kernel:extract-function-type fun)))
 		       (when (function-types-compatible-p cs-type ep-type)
-			 (patch-fdefn fdefn fun)
+			 (patch-fdefn fdefn fun `(:adapter ,name))
 			 (return t)))))
 		  (t
 		   (let ((fun (generate-adapter-function cs-type name)))
 		     (push-unlistified fun (linkage-adapters linkage))
-		     (patch-fdefn fdefn fun))))))))))
+		     (patch-fdefn fdefn fun `(:adapter ,name)))))))))))
 
-(defun patch-fdefn (fdefn new-fun)
+(defun patch-fdefn (fdefn new-fun &optional name)
   (setf (kernel:fdefn-function fdefn) new-fun)
-  (let ((name (kernel:%function-name new-fun)))
+  (let ((name (or name (kernel:%function-name new-fun))))
     (kernel:%set-fdefn-name fdefn name))
   fdefn)
 
