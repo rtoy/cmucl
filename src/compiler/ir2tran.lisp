@@ -914,13 +914,16 @@ compilation policy")
 				  nfp number-stack-frame-size)
 	(make-typed-call-tns ftype)
       (declare (ignore number-stack-frame-size))
-      (let ((cont-tns  (loop for arg in args
-			     collect (continuation-tn node block arg))))
+      (collect ((actuals) (arg-locs))
+	(loop for arg in args  for loc in arg-tns  do
+	      (when arg 
+		(actuals (continuation-tn node block arg))
+		(arg-locs loc)))
 	(vop allocate-frame node block nil fp nfp)
 	(vop* typed-call-local node block
-	      (fp nfp (reference-tn-list cont-tns nil))
+	      (fp nfp (reference-tn-list (actuals) nil))
 	      ((reference-tn-list result-tns t))
-	      arg-tns stack-frame-size start)
+	      (arg-locs) stack-frame-size start)
 	(move-continuation-result node block result-tns cont)))))
 
 ;;; IR2-Convert-Local-Call  --  Internal
