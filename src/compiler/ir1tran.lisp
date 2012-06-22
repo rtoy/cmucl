@@ -3994,7 +3994,9 @@
 	 (decls (nth-value 1 (system:parse-body (cddr lambda)
 						*lexical-environment* t)))
 	 (convention (find-declaration 'calling-convention decls 1 0)))
-    (cond (convention
+    (cond ((and convention
+		(not (info function info name))
+		(and (null (lexenv-variables *lexical-environment*))))
 	   (setf (info function calling-convention name) convention))
 	  (t
 	   (clear-info function calling-convention name)))
@@ -4002,7 +4004,7 @@
     ;; If not in a simple environment or :notinline, then discard any forward
     ;; references to this function.
     (unless expansion (remhash name *free-functions*))
-    
+
     (let* ((var (get-defined-function name))
 	   (save-expansion (and (member (defined-function-inlinep var)
 					'(:inline :maybe-inline))
@@ -4014,7 +4016,7 @@
       ;; obsolete.
       (when (eq (leaf-where-from var) :defined)
 	(setf (leaf-type var) (specifier-type 'function)))
-      
+
       (let ((fun (ir1-convert-lambda-for-defun lambda var expansion
 					       #'ir1-convert-lambda
 					       'defun)))
