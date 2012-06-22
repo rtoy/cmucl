@@ -660,7 +660,9 @@
 			       ;; flet/labels functions.  We don't
 			       ;; need them stored because we can't
 			       ;; really do anything with them.
-			       (not (member (car name) '(flet labels) :test 'eq) ))))
+			       (not (member (car name) 
+					    '(flet labels :typed-entry-point)
+					    :test 'eq) ))))
 	(dump-object name file)
 	(dump-push handle file)
 	(dump-fop 'lisp::fop-fset file))
