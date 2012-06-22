@@ -362,7 +362,9 @@
 ;;;
 (defun maybe-expand-local-inline (fun ref call)
   (if (and (policy call (>= speed space) (>= speed cspeed))
-	   (not (eq (functional-kind (node-home-lambda call)) :external))
+	   (not (let ((home (node-home-lambda call)))
+		  (or (external-entry-point-p home)
+		      (typed-entry-point-p home))))
 	   (not *converting-for-interpreter*)
 	   (inline-expansion-ok call))
       (with-ir1-environment call
