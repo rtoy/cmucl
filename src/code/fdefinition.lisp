@@ -288,11 +288,16 @@
 		     (equal (cadr fname) name))
 	    (return ep)))))
 
+(defun find-typed-entry-point-for-function (xep name)
+  (declare (type function xep))
+  (when (= (kernel:get-type xep) vm:function-header-type)
+    (let ((code (function-code-header xep)))
+      (find-typed-entry-point-in-code code name))))
+
 (defun find-typed-entry-point-for-fdefn (fdefn)
   (let ((xep (fdefn-function fdefn)))
-    (when xep
-      (let ((code (function-code-header xep)))
-	(find-typed-entry-point-in-code code (fdefn-name fdefn))))))
+    (when (functionp xep)
+      (find-typed-entry-point-for-function xep (fdefn-name fdefn)))))
 
 ;; find-typed-entry-point is called at load-time and returns the
 ;; fdefn that should be called.
@@ -463,9 +468,8 @@
 (defun check-function-redefinition (name new-fun)
   (multiple-value-bind (linkage foundp) (ext:info function linkage name)
     (when foundp
-      (let* ((new-code (function-code-header new-fun))
-	     (new-tep (find-typed-entry-point-in-code new-code name))
-	     (new-type (if new-tep 
+      (let* ((new-tep (find-typed-entry-point-for-function new-fun name))
+	     (new-type (if new-tep
 			   (extract-function-type new-tep)
 			   (specifier-type '(function * *)))))
 	(dolist (cs (listify (linkage-callsites linkage)))
