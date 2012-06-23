@@ -398,13 +398,14 @@
 	       nil
 	       `(lambda ,tmps
 		  (declare
-		   (c::calling-convention :typed-no-xep)
+		   (c::calling-convention :typed)
 		   ,@(loop for tmp in tmps
 			   for type in atypes
 			   collect `(type ,(kernel:type-specifier type) ,tmp)))
 		  (the ,(kernel:type-specifier
 			 (kernel:function-type-returns ftype))
-		    (funcall (function ,name) . ,tmps))))))
+		    (funcall ',name . ,tmps)))))
+	 (fun (find-typed-entry-point-for-function fun nil)))
     (validate-adapter-type fun ftype)
     fun))
 
@@ -475,7 +476,8 @@
 	(dolist (cs (listify (linkage-callsites linkage)))
 	  (let ((cs-type (callsite-type cs))
 		(fdefn (callsite-fdefn cs)))
-	    (cond ((function-types-compatible-p cs-type new-type)
+	    (cond ((and new-tep
+			(function-types-compatible-p cs-type new-type))
 		   (patch-fdefn fdefn new-tep))
 		  ((dolist (fun (listify (linkage-adapters linkage)))
 		     (let ((ep-type (kernel:extract-function-type fun)))
