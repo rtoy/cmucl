@@ -50,14 +50,6 @@
 ;;;
 (defun assign-lambda-var-tns (fun let-p)
   (declare (type clambda fun))
-  (cond ((typed-entry-point-p fun)
-	 (assign-typed-lambda-var-tns fun))
-	(t
-	 (assign-normal-lambda-var-tns fun let-p)))
-  (undefined-value))
-
-(defun assign-normal-lambda-var-tns (fun let-p)
-  (declare (type clambda fun))
   (dolist (var (lambda-vars fun))
     (when (leaf-refs var)
       (let* ((type (if (lambda-var-indirect var)
@@ -72,16 +64,8 @@
 		      (environment-debug-live-tn temp
 						 (lambda-environment fun)))))
 	(setf (tn-leaf res) var)
-	(setf (leaf-info var) res)))))
-
-(defun assign-typed-lambda-var-tns (fun)
-  (declare (type clambda fun))
-  (let ((ftype (typed-entry-point-type fun)))
-    (loop for var in (lambda-vars fun)
-	  for tn in (make-typed-call-tns ftype)
-	  do (when (leaf-refs var)
-	       (setf (tn-leaf tn) var)
-	       (setf (leaf-info var) tn)))))
+	(setf (leaf-info var) res))))
+  (undefined-value))
 
 ;;; Assign-IR2-Environment  --  Internal
 ;;;
@@ -233,8 +217,12 @@
 	   :locations (mapcar #'make-normal-tn ptypes))))))
 
 (defun typed-entry-point-type (fun)
-  (declare (type clambda fun))
-  (lambda-type (lambda-entry-function fun)))
+  (declare (type clambda fun) (values function-type))
+  (let* ((opt (lambda-optional-dispatch fun))
+	 (type1 (optional-dispatch-type opt)))
+    (typecase type1
+      (function-type type1)
+      (t (lambda-type (optional-dispatch-main-entry opt))))))
 
 (defun return-info-for-typed-entry-point (fun)
   (declare (type clambda fun))

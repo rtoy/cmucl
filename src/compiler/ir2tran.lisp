@@ -1205,16 +1205,21 @@ compilation policy")
   
   (undefined-value))
 
-;; arguments are wired to specific locations in gtn so we should have
-;; to move them here.
 (defun init-typed-entry-point-environment (node block fun)
   (declare (type bind node) (type ir2-block block) (type clambda fun))
-  (let ((start-label (entry-info-offset (leaf-info fun)))
-	(code-label (getf (lambda-plist fun) :code-start))
-	(env (environment-info (node-environment node))))
+  (let* ((start-label (entry-info-offset (leaf-info fun)))
+	 (code-label (getf (lambda-plist fun) :code-start))
+	 (env (environment-info (node-environment node)))
+	 (ftype (typed-entry-point-type fun))
+	 (arg-tns (make-typed-call-tns ftype)))
     (vop typed-entry-point-allocate-frame node block
 	 start-label code-label)
     (vop setup-environment node block start-label)
+    (loop for var in (lambda-vars fun)
+	  for pass in arg-tns do
+	  (when (leaf-refs var)
+	    (let ((home (leaf-info var)))
+	      (emit-move node block pass home))))
     (emit-move node block (make-old-fp-passing-location t)
 	       (ir2-environment-old-fp env))))
 
