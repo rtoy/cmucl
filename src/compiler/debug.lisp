@@ -235,7 +235,8 @@
        (check-function-reached ef functional)
        (unless (or (member functional (optional-dispatch-entry-points ef))
 		   (eq functional (optional-dispatch-more-entry ef))
-		   (eq functional (optional-dispatch-main-entry ef)))
+		   (eq functional (optional-dispatch-main-entry ef))
+		   (eq functional (optional-dispatch-typed-entry ef)))
 	 (barf ":Optional ~S not an e-p for its OPTIONAL-DISPATCH ~S." 
 	       functional ef))))
     (:top-level
@@ -927,7 +928,8 @@
 	  (unless (or (eq (global-conflicts-kind conf) :write)
 		      (eq tn pc)
 		      (eq tn fp)
-		      (and (external-entry-point-p fun)
+		      (and (or (external-entry-point-p fun)
+			       (typed-entry-point-p fun))
 			   (tn-offset tn))
 		      (member (tn-kind tn) '(:environment :debug-environment))
 		      (member tn vars :key #'leaf-info)
