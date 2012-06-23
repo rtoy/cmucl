@@ -1150,7 +1150,7 @@
 
 
 (define-vop (typed-call-named)
-  (:args (new-fp)
+  (:args (new-fp :scs (any-reg) :to (:argument 1))
 	 (new-nfp)
 	 (fdefn :scs (descriptor-reg control-stack)
 		:target eax)
