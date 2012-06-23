@@ -145,38 +145,7 @@
     (clambda
      (let* ((nargs (length (lambda-vars fun)))
 	    (n-supplied (gensym))
-	    (temps (loop repeat nargs collect (gensym)))
-	    (fun (ecase (getf (lambda-plist fun) :calling-convention)
-		   ((nil) fun)
-		   (:typed
-		    (let ((fun2 (ir1-convert-lambda
-				 `(lambda ,temps
-				    (declare (entry-point :typed))
-				    ,@(loop for tmp in temps
-					    for var in (lambda-vars fun)
-					    collect
-					    `(declare (type
-						       ,(type-specifier
-							 (lambda-var-type var))
-						       ,tmp)))
-				    (%funcall ,fun . ,temps)))))
-		      (setf (lambda-entry-function fun) fun2)
-		      fun2))
-		   (:typed-no-xep
-		    (return-from make-xep-lambda
-		      `(lambda ,temps
-			 (declare (entry-point :typed)
-				  ,@(loop for tmp in temps
-					  for var in (lambda-vars fun)
-					  collect 
-					  `(type ,(type-specifier
-						   (lambda-var-type var))
-						 ,tmp)))
-			 (the ,(type-specifier
-				(continuation-asserted-type
-				 (return-result
-				  (lambda-return fun))))
-			   (%funcall ,fun . ,temps))))))))
+	    (temps (loop repeat nargs collect (gensym))))
        `(lambda (,n-supplied . ,temps)
 	  (declare (type index ,n-supplied))
 	  ,(if (policy nil (zerop safety))
@@ -215,6 +184,26 @@
 	      (%argument-count-error ,n-supplied)))))))))
 
 
+(defun generate-typed-entry (fun)
+  (declare (type optional-dispatch fun))
+  (let* ((main (optional-dispatch-main-entry fun))
+	 (temps (loop for nil in (lambda-vars main)
+		      collect (gensym)))
+	 (tep (ir1-convert-lambda
+	       `(lambda ,temps
+		  (declare (entry-point :typed))
+		  ,@(loop for tmp in temps  for var in (lambda-vars main)
+			  collect `(declare
+				    (type 
+				     ,(type-specifier (lambda-var-type var))
+				     ,tmp)))
+		  (%funcall ,main . ,temps)))))
+    (setf (optional-dispatch-typed-entry fun) tep)
+    (setf (functional-kind tep) :optional)
+    (setf (leaf-ever-used tep) t)
+    (setf (lambda-optional-dispatch tep) fun)))
+    
+
 ;;; Make-External-Entry-Point  --  Internal
 ;;;
 ;;;    Make an external entry point (XEP) for Fun and return it.  We convert
@@ -237,21 +226,19 @@
 	   (res (ir1-convert-lambda (make-xep-lambda fun))))
       (setf (functional-kind res) :external)
       (setf (leaf-ever-used res) t)
-      (cond ((functional-entry-function fun)
-	     (let ((ep (functional-entry-function fun)))
-	       (setf (functional-entry-function ep) fun)
-	       (setf (functional-entry-function fun) ep)
-	       (setf (functional-entry-function res) ep)))
-	    (t
-	     (setf (functional-entry-function res) fun)
-	     (setf (functional-entry-function fun) res)))
+      (setf (functional-entry-function res) fun)
+      (setf (functional-entry-function fun) res)
       (setf (component-reanalyze *current-component*) t)
       (setf (component-reoptimize *current-component*) t)
       (etypecase fun
 	(clambda (local-call-analyze-1 fun))
 	(optional-dispatch
+	 (when (optional-dispatch-typedp fun)
+	   (generate-typed-entry fun))
 	 (dolist (ep (optional-dispatch-entry-points fun))
 	   (local-call-analyze-1 ep))
+	 (when (optional-dispatch-typed-entry fun)
+	   (local-call-analyze-1 (optional-dispatch-typed-entry fun)))
 	 (when (optional-dispatch-more-entry fun)
 	   (local-call-analyze-1 (optional-dispatch-more-entry fun)))))
       res)))
