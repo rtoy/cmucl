@@ -903,29 +903,6 @@ compilation policy")
 	    (move-continuation-result node block locs cont)))))
   (undefined-value))
 
-(defun ir2-convert-local-typed-call (node block fun cont)
-  (declare (type node node) (type ir2-block block) (type clambda fun)
-	   (type continuation cont))
-  (let ((ftype (the function-type (lambda-type fun)))
-	(args (basic-combination-args node))
-	(start (getf (lambda-plist fun) :code-start)))
-    (multiple-value-bind (arg-tns result-tns
-				  fp stack-frame-size
-				  nfp number-stack-frame-size)
-	(make-typed-call-tns ftype)
-      (declare (ignore number-stack-frame-size))
-      (collect ((actuals) (arg-locs))
-	(loop for arg in args  for loc in arg-tns  do
-	      (when arg 
-		(actuals (continuation-tn node block arg))
-		(arg-locs loc)))
-	(vop allocate-frame node block nil fp nfp)
-	(vop* typed-call-local node block
-	      (fp nfp (reference-tn-list (actuals) nil))
-	      ((reference-tn-list result-tns t))
-	      (arg-locs) stack-frame-size start)
-	(move-continuation-result node block result-tns cont)))))
-
 ;;; IR2-Convert-Local-Call  --  Internal
 ;;;
 ;;;    Dispatch to the appropriate function, depending on whether we have a
@@ -953,13 +930,8 @@ compilation policy")
 	       (:unknown
 		(ir2-convert-local-unknown-call node block fun cont start))
 	       (:fixed
-		(ecase (getf (lambda-plist fun) :entry-point)
-		  ((nil)
-		   (ir2-convert-local-known-call node block fun returns
-						 cont start))
-		  (:typed
-		   (assert (external-entry-point-p (node-home-lambda node)))
-		   (ir2-convert-local-typed-call node block fun cont)))))))))
+		(ir2-convert-local-known-call node block fun returns
+					      cont start)))))))
   (undefined-value))
 
 
