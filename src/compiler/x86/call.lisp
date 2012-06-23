@@ -212,7 +212,7 @@
 				   (prog1 (getf state :frame-size)
 				     (incf (getf state :frame-size) 2))))))
 	   (boxed-arg (state)
-	     (cond ((<= (getf state :reg-args) register-arg-count)
+	     (cond ((< (getf state :reg-args) register-arg-count)
 		    (let ((n (getf state :reg-args)))
 		      (incf (getf state :reg-args))
 		      (x86-standard-argument-location n)))
