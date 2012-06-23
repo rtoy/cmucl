@@ -50,6 +50,14 @@
 ;;;
 (defun assign-lambda-var-tns (fun let-p)
   (declare (type clambda fun))
+  (cond ((typed-entry-point-p fun)
+	 (assign-typed-lambda-var-tns fun))
+	(t
+	 (assign-normal-lambda-var-tns fun let-p)))
+  (undefined-value))
+
+(defun assign-normal-lambda-var-tns (fun let-p)
+  (declare (type clambda fun))
   (dolist (var (lambda-vars fun))
     (when (leaf-refs var)
       (let* ((type (if (lambda-var-indirect var)
@@ -64,9 +72,16 @@
 		      (environment-debug-live-tn temp
 						 (lambda-environment fun)))))
 	(setf (tn-leaf res) var)
-	(setf (leaf-info var) res))))
-  (undefined-value))
+	(setf (leaf-info var) res)))))
 
+(defun assign-typed-lambda-var-tns (fun)
+  (declare (type clambda fun))
+  (let ((ftype (typed-entry-point-type fun)))
+    (loop for var in (lambda-vars fun)
+	  for tn in (make-typed-call-tns ftype)
+	  do (when (leaf-refs var)
+	       (setf (tn-leaf tn) var)
+	       (setf (leaf-info var) tn)))))
 
 ;;; Assign-IR2-Environment  --  Internal
 ;;;
@@ -95,7 +110,7 @@
 	      (make-old-fp-save-location env))
 	(setf (ir2-environment-return-pc res)
 	      (make-return-pc-save-location env)))))
-  
+
   (undefined-value))
 
 
@@ -188,6 +203,19 @@
 ;;; reason.  Otherwise we allocate passing locations for a fixed number of
 ;;; values.
 ;;;
+(defun choose-return-locations (fun)
+  (declare (type clambda fun))
+  (cond ((typed-entry-point-p fun)
+	 (return-info-for-typed-entry-point fun))
+	(t
+	 (let* ((tails (lambda-tail-set fun))
+		(ep (find-if #'typed-entry-point-p
+			     (tail-set-functions tails))))
+	   (cond (ep
+		  (return-info-for-typed-entry-point ep))
+		 (t
+		  (return-info-for-set tails)))))))
+
 (defun return-info-for-set (tails)
   (declare (type tail-set tails))
   (multiple-value-bind (types count)
@@ -204,6 +232,18 @@
 	   :types ptypes
 	   :locations (mapcar #'make-normal-tn ptypes))))))
 
+(defun typed-entry-point-type (fun)
+  (declare (type clambda fun))
+  (lambda-type (lambda-entry-function fun)))
+
+(defun return-info-for-typed-entry-point (fun)
+  (declare (type clambda fun))
+  (let* ((ftype (typed-entry-point-type fun))
+	 (tns (nth-value 1 (make-typed-call-tns ftype))))
+    (make-return-info :kind :fixed
+		      :count (length tns)
+		      :types (mapcar #'tn-primitive-type tns)
+		      :locations tns)))
 
 ;;; Assign-Return-Locations  --  Internal
 ;;;
@@ -217,15 +257,15 @@
   (let* ((tails (lambda-tail-set fun))
 	 (returns (or (tail-set-info tails)
 		      (setf (tail-set-info tails)
-			    (return-info-for-set tails))))
+			    (choose-return-locations fun))))
 	 (return (lambda-return fun)))
     (when (and return
 	       (not (eq (return-info-kind returns) :unknown))
-	       (external-entry-point-p fun))
+	       (external-entry-point-p fun)
+	       (not (typed-entry-point-p fun)))
       (do-uses (use (return-result return))
 	(setf (node-tail-p use) nil))))
   (undefined-value))
-
 
 ;;; Assign-IR2-NLX-Info  --  Internal
 ;;;

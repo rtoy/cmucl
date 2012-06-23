@@ -1332,3 +1332,6 @@
 (defknown (compiler-warning compiler-note compiler-mumble)
     (string &rest t) (values) ())
 
+
+(defknown %typed-call (&rest t) *
+    (typed-calling-convention))

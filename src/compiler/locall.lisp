@@ -143,17 +143,46 @@
   (declare (type functional fun))
   (etypecase fun
     (clambda
-     (let ((nargs (length (lambda-vars fun)))
-	   (n-supplied (gensym)))
-       (collect ((temps))
-	 (dotimes (i nargs)
-	   (temps (gensym)))
-	 `(lambda (,n-supplied ,@(temps))
-	    (declare (type index ,n-supplied))
-	    ,(if (policy nil (zerop safety))
-		 `(declare (ignore ,n-supplied))
-		 `(%verify-argument-count ,n-supplied ,nargs))
-	    (%funcall ,fun ,@(temps))))))
+     (let* ((nargs (length (lambda-vars fun)))
+	    (n-supplied (gensym))
+	    (temps (loop repeat nargs collect (gensym)))
+	    (fun (ecase (getf (lambda-plist fun) :calling-convention)
+		   ((nil) fun)
+		   (:typed
+		    (let ((fun2 (ir1-convert-lambda
+				 `(lambda ,temps
+				    (declare (entry-point :typed))
+				    ,@(loop for tmp in temps
+					    for var in (lambda-vars fun)
+					    collect
+					    `(declare (type
+						       ,(type-specifier
+							 (lambda-var-type var))
+						       ,tmp)))
+				    (%funcall ,fun . ,temps)))))
+		      (setf (lambda-entry-function fun) fun2)
+		      fun2))
+		   (:typed-no-xep
+		    (return-from make-xep-lambda
+		      `(lambda ,temps
+			 (declare (entry-point :typed)
+				  ,@(loop for tmp in temps
+					  for var in (lambda-vars fun)
+					  collect 
+					  `(type ,(type-specifier
+						   (lambda-var-type var))
+						 ,tmp)))
+			 (the ,(type-specifier
+				(continuation-asserted-type
+				 (return-result
+				  (lambda-return fun))))
+			   (%funcall ,fun . ,temps))))))))
+       `(lambda (,n-supplied . ,temps)
+	  (declare (type index ,n-supplied))
+	  ,(if (policy nil (zerop safety))
+	       `(declare (ignore ,n-supplied))
+	       `(%verify-argument-count ,n-supplied ,nargs))
+	  (%funcall ,fun . ,temps))))
     (optional-dispatch
      (let* ((min (optional-dispatch-min-args fun))
 	    (max (optional-dispatch-max-args fun))
@@ -208,8 +237,14 @@
 	   (res (ir1-convert-lambda (make-xep-lambda fun))))
       (setf (functional-kind res) :external)
       (setf (leaf-ever-used res) t)
-      (setf (functional-entry-function res) fun)
-      (setf (functional-entry-function fun) res)
+      (cond ((functional-entry-function fun)
+	     (let ((ep (functional-entry-function fun)))
+	       (setf (functional-entry-function ep) fun)
+	       (setf (functional-entry-function fun) ep)
+	       (setf (functional-entry-function res) ep)))
+	    (t
+	     (setf (functional-entry-function res) fun)
+	     (setf (functional-entry-function fun) res)))
       (setf (component-reanalyze *current-component*) t)
       (setf (component-reoptimize *current-component*) t)
       (etypecase fun

@@ -96,7 +96,11 @@
 
   ;; For use with scheduler.
   emit-nop
-  location-number)
+  location-number
+
+  make-typed-call-tns
+
+)
 
 (defprinter vm-support-routines)
 

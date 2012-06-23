@@ -37,14 +37,16 @@
 (pushnew :bootstrap *features*)
 (pushnew :building-cross-compiler *features*)
 
-;; Make fixup-code-object and sanctify-for-execution in the VM package
-;; be the same as the original.  Needed to get rid of a compiler error
-;; in generic/core.lisp.  (This halts cross-compilations if the
-;; compiling lisp uses the -batch flag.
-(import 'old-vm::fixup-code-object "VM")
-(import 'old-vm::sanctify-for-execution "VM")
-(export 'vm::fixup-code-object "VM")
-(export 'vm::sanctify-for-execution "VM")
+;;;; Make fixup-code-object and sanctify-for-execution in the VM package
+;;;; be the same as the original.  Needed to get rid of a compiler error
+;;;; in generic/core.lisp.  (This halts cross-compilations if the
+;;;; compiling lisp uses the -batch flag.
+;;(import 'old-vm::fixup-code-object "VM")
+;;(import 'old-vm::sanctify-for-execution "VM")
+;;(export 'vm::fixup-code-object "VM")
+;;(export 'vm::sanctify-for-execution "VM")
+
+(comf "target:code/exports")
 
 (load "target:tools/comcom")
 
@@ -215,3 +217,5 @@
 (let ((ht (c::backend-sc-names c::*target-backend*)))
   (setf (gethash 'old-vm::any-reg ht)
 	(gethash 'vm::any-reg ht)))
+
+(delete-package "OLD-X86")

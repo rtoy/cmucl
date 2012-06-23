@@ -1518,6 +1518,11 @@
 
 ;;;; Functional hackery:
 
+(defun typed-entry-point-p (fun)
+  (and (lambda-p fun) 
+       (eq (getf (lambda-plist fun) :entry-point)
+	   :typed)))
+
 ;;; Main-Entry  --  Interface
 ;;;
 ;;;    If Functional is a Lambda, just return it; if it is an
@@ -1526,7 +1531,10 @@
 (defun main-entry (functional)
   (declare (type functional functional) (values clambda))
   (etypecase functional
-    (clambda functional)
+    (clambda 
+     (cond ((typed-entry-point-p functional)
+	    (lambda-entry-function functional))
+	   (t functional)))
     (optional-dispatch
      (optional-dispatch-main-entry functional))))
 
@@ -1562,7 +1570,6 @@
 (defun external-entry-point-p (fun)
   (declare (type functional fun))
   (not (null (member (functional-kind fun) '(:external :top-level)))))
-
 
 ;;; Continuation-Function-Name  --  Interface
 ;;;

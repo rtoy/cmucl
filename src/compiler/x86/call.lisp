@@ -187,6 +187,70 @@
   (undefined-value))
 
 
+;; make-typed-call-tns chooses the representation for a function type.
+;; This is similar to c::make-call-out-tns and should probably also be
+;; a vm-support-routine.
+;;
+;; The current convention passes double-floats unboxed and all other
+;; types remain boxed.  Registers XMM4-XMM7 are used for the first 4
+;; double arguments.  Boxed values are passed in standard locations.
+;;
+;; Returning values on the stack is currenlty not implemented, so all
+;; return values must fit in registers.
+(def-vm-support-routine make-typed-call-tns (ftype)
+  (declare (type function-type ftype))
+  (labels ((ptype (name) (primitive-type-or-lose name *backend*))
+	   (double-float-arg (state)
+	     (cond ((<= (getf state :xmms-reg) xmm7-offset)
+		    (make-wired-tn (ptype 'double-float)
+				   double-reg-sc-number
+				   (prog1 (getf state :xmms-reg)
+				     (incf (getf state :xmms-reg)))))
+		   (t
+		    (make-wired-tn (ptype 'double-float)
+				   double-stack-sc-number
+				   (prog1 (getf state :frame-size)
+				     (incf (getf state :frame-size) 2))))))
+	   (boxed-arg (state)
+	     (cond ((<= (getf state :reg-args) register-arg-count)
+		    (let ((n (getf state :reg-args)))
+		      (incf (getf state :reg-args))
+		      (x86-standard-argument-location n)))
+		   (t
+		    (make-wired-tn (ptype 't)
+				   control-stack-sc-number
+				   (prog1 (getf state :frame-size)
+				     (incf (getf state :frame-size) 1))))))
+	   (double-float-type-p (type)
+	     (and (numeric-type-p type)
+		  (eq (numeric-type-class type) 'float)
+		  (eq (numeric-type-format type) 'double-float)))
+	   (arg-tn (type state)
+	     (cond ((double-float-type-p type) (double-float-arg state))
+		   (t (boxed-arg state))))
+	   (ret-tn (type state)
+	     (let ((tn (arg-tn type state)))
+	       (assert (member (sc-name (tn-sc tn))
+			       '(double-reg descriptor-reg)))
+	       tn)))
+    (let* ((arg-state (list :frame-size 2 :xmms-reg xmm4-offset :reg-args 0))
+	   (ret-state (list :frame-size 2 :xmms-reg xmm4-offset :reg-args 0))
+	   (returns (function-type-returns ftype))
+	   (rtypes (typecase returns
+		     (values-type (values-type-required returns))
+		     (t (list returns)))))
+      (values
+       (loop for type in (function-type-required ftype)
+	     collect (arg-tn type arg-state))
+       (loop for type in rtypes
+	     collect (ret-tn type ret-state))
+       (x86-make-stack-pointer-tn)
+       (max (getf arg-state :frame-size)
+	    (getf ret-state :frame-size))
+       (x86-make-number-stack-pointer-tn)
+       0))))
+
+
 ;;;; Frame hackery:
 
 ;;; Used for setting up the Old-FP in local call.
@@ -232,6 +296,34 @@
 	    (make-ea :dword :base ebp-tn
 		     :disp (- (* vm:word-bytes
 				 (max 3 (sb-allocated-size 'stack)))))))
+
+    (trace-table-entry trace-table-normal)))
+
+(define-vop (typed-entry-point-allocate-frame)
+  (:info start-label code-label)
+  (:vop-var vop)
+  (:generator 1
+    ;; Make sure the function is aligned (using NOPs), and drop a
+    ;; label pointing to this function header.
+    (align lowtag-bits #x90)
+    (trace-table-entry trace-table-function-prologue)
+    (emit-label start-label)
+    ;; Skip space for the function header.
+    (inst function-header-word)
+    (dotimes (i (1- vm:function-code-offset))
+      (inst dword 0))
+
+    ;; The start of the actual code.
+    (emit-label code-label)
+
+    ;; Save the return-pc.
+    (popw ebp-tn (- (1+ return-pc-save-offset)))
+
+    ;; The args fit within the frame so just allocate the frame.
+    (inst lea esp-tn
+	  (make-ea :dword :base ebp-tn
+		   :disp (- (* vm:word-bytes
+			       (sb-allocated-size 'stack)))))
 
     (trace-table-entry trace-table-normal)))
 
@@ -668,6 +760,38 @@
     RETURN
     (note-this-location vop :known-return)
     (trace-table-entry trace-table-normal)))
+
+
+(define-vop (typed-call-local)
+  (:args (new-fp)
+	 (new-nfp)
+	 (args :more t))
+  (:results (results :more t))
+  (:save-p t)
+  (:move-args :local-call)
+  (:vop-var vop)
+  (:info arg-locs real-frame-size target)
+  (:ignore new-nfp args arg-locs results)
+  (:generator 30
+    ;; FIXME: allocate the real frame size here. We had to emit
+    ;; ALLOCATE-FRAME before this vop so that we can use the
+    ;; (:move-args :local-call) option here.  Without the
+    ;; ALLOCATE-FRAME vop we get a failed assertion.
+    (inst lea esp-tn (make-ea :dword :base new-fp
+			      :disp (- (* real-frame-size word-bytes))))
+
+    ;; Write old frame pointer (epb) into new frame.
+    (storew ebp-tn new-fp (- (1+ ocfp-save-offset)))
+
+    ;; Switch to new frame.
+    (move ebp-tn new-fp)
+
+    (note-this-location vop :call-site)
+
+    (inst call target)
+
+    ))
+
 
 ;;; Return from known values call.  We receive the return locations as
 ;;; arguments to terminate their lifetimes in the returning function.  We
@@ -1024,6 +1148,46 @@
     ;; And jump to the assembly routine.
     (inst jmp (make-fixup 'tail-call-variable :assembly-routine))))
 
+
+(define-vop (typed-call-named)
+  (:args (new-fp)
+	 (new-nfp)
+	 (fdefn :scs (descriptor-reg control-stack)
+		:target eax)
+	 (args :more t :scs (descriptor-reg)))
+  (:results (results :more t))
+  (:save-p t)
+  (:move-args :local-call)
+  (:vop-var vop)
+  (:info arg-locs real-frame-size)
+  (:ignore new-nfp args arg-locs results)
+  (:temporary (:sc descriptor-reg :offset eax-offset)
+	      eax)
+  (:generator 30
+    ;; FIXME: allocate the real frame size here. We had to emit
+    ;; ALLOCATE-FRAME before this vop so that we can use the
+    ;; (:move-args :local-call) option here.  Without the
+    ;; ALLOCATE-FRAME vop we get a failed assertion.
+    (inst lea esp-tn (make-ea :dword :base new-fp
+			      :disp (- (* real-frame-size word-bytes))))
+
+    ;; Move fdefn to eax before switching frames.
+    (move eax fdefn)
+
+    ;; Write old frame pointer (epb) into new frame.
+    (storew ebp-tn new-fp (- (1+ ocfp-save-offset)))
+
+    ;; Switch to new frame.
+    (move ebp-tn new-fp)
+
+    (note-this-location vop :call-site)
+
+    ;; Load address out of fdefn and call it.
+    (inst call (make-ea :dword :base eax
+			:disp (- (* fdefn-raw-addr-slot word-bytes)
+				 other-pointer-type)))
+
+    ))
 
 ;;;; Unknown values return:
 

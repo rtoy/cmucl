@@ -62,6 +62,9 @@
 ;;;
 (defun finalize-xep-definition (fun)
   (let* ((leaf (functional-entry-function fun))
+	 (leaf (if (typed-entry-point-p leaf)
+		   (functional-entry-function leaf)
+		   leaf))
 	 (name (leaf-name leaf))
 	 (dtype (definition-type leaf)))
     (setf (leaf-type leaf) dtype)

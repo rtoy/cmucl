@@ -282,6 +282,7 @@
 				(error (condition)
 				       (declare (ignore condition))
 				       (format t "Error in backtrace!~%")))
+			      (break condition)
 			      (format t "Error abort.~%")
 			      (return-from comf)))))
 	      (if assem

@@ -568,6 +568,14 @@
   (annotate-ordinary-continuation value policy))
 
 
+
+(defoptimizer (%typed-call ltn-annotate) ((&rest args) node policy)
+  (let ((fdefn (combination-fun node)))
+    (annotate-function-continuation fdefn policy t)
+    (dolist (arg args)
+      (annotate-ordinary-continuation arg policy))))
+
+
 ;;;; Known call annotation:
 
 ;;; OPERAND-RESTRICTION-OK  --  Interface

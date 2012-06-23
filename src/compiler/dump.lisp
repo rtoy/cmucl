@@ -521,7 +521,12 @@
 		(dump-push (cdr entry) file))
 	       (:fdefinition
 		(dump-object (cdr entry) file)
-		(dump-fop 'lisp::fop-fdefinition file))))
+		(dump-fop 'lisp::fop-fdefinition file))
+	       (:typed-entry-point
+		(destructuring-bind (name ftype) (cdr entry)
+		  (dump-object name file)
+		  (dump-object (type-specifier ftype) file)
+		  (dump-fop 'lisp::fop-typed-entry-point file)))))
 	    (null
 	     (dump-fop 'lisp::fop-misc-trap file)))))
 

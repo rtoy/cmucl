@@ -379,7 +379,12 @@
 	   (let ((kind (basic-combination-kind dest)))
 	     (cond ((eq cont (basic-combination-fun dest)) t)
 		   ((eq kind :local) t)
-		   ((member kind '(:full :error)) nil)
+		   ((member kind '(:full :error))
+		    (let ((name (continuation-function-name 
+				 (combination-fun dest))))
+		      (cond ((info function calling-convention name)
+			     t)
+			    (t nil))))
 		   ((function-info-ir2-convert kind) t)
 		   (t
 		    (dolist (template (function-info-templates kind) nil)
