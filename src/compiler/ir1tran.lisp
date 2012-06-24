@@ -1586,10 +1586,11 @@
 	     (calling-convention (find-declaration 'calling-convention decls
 						   1 0))
 	     (entry-point (find-declaration 'entry-point decls 1 0))
-	     (res (if (or (find-if #'lambda-var-arg-info vars) keyp)
+	     (typed (eq calling-convention :typed))
+	     (res (if (or (find-if #'lambda-var-arg-info vars) keyp typed)
 		      (ir1-convert-hairy-lambda new-body vars keyp
 						allow-other-keys
-						aux-vars aux-vals cont)
+						aux-vars aux-vals cont typed)
 		      (ir1-convert-lambda-body new-body vars aux-vars aux-vals
 					       t cont))))
 	(setf (functional-inline-expansion res) form)
@@ -1607,7 +1608,7 @@
 			 (eq 'declare (first decl))
 			 (cons 'pcl::method (cadadr decl))))))
 	(when calling-convention
-	  (setf (getf (lambda-plist res) :calling-convention) 
+	  (setf (getf (functional-plist res) :calling-convention)
 		calling-convention))
 	(when entry-point
 	  (setf (getf (lambda-plist res) :entry-point) entry-point))
@@ -1970,7 +1971,7 @@
 		  (cons arg entry-vars)
 		  (list* t arg-name entry-vals)
 		  (rest vars) t body aux-vars aux-vals cont)
-		 (ir1-convert-hairy-args 
+		 (ir1-convert-hairy-args
 		  res
 		  (cons arg default-vars)
 		  (cons arg-name default-vals)
@@ -2303,18 +2304,18 @@
 				nil nil nil vars supplied-p-p body aux-vars
 				aux-vals cont)))))))
 
-
 ;;; IR1-Convert-Hairy-Lambda  --  Internal
 ;;;
 ;;;     This function deals with the case where we have to make an
 ;;; Optional-Dispatch to represent a lambda.  We cons up the result and call
 ;;; IR1-Convert-Hairy-Args to do the work.  When it is done, we figure out the
-;;; min-args and max-args. 
+;;; min-args and max-args.
 ;;;
-(defun ir1-convert-hairy-lambda (body vars keyp allowp aux-vars aux-vals cont)
+(defun ir1-convert-hairy-lambda (body vars keyp allowp aux-vars aux-vals cont
+				 typedp)
   (declare (list body vars aux-vars aux-vals) (type continuation cont))
   (let ((res (make-optional-dispatch :arglist vars  :allowp allowp
-				     :keyp keyp))
+				     :keyp keyp :typedp typedp))
 	(min (or (position-if #'lambda-var-arg-info vars) (length vars))))
     (push res (component-new-functions *current-component*))
     (ir1-convert-hairy-args res () () () () vars nil body aux-vars aux-vals
@@ -2331,10 +2332,9 @@
       (dolist (ep (optional-dispatch-entry-points res)) (frob ep))
       (frob (optional-dispatch-more-entry res))
       (frob (optional-dispatch-main-entry res)))
-      
+
     res))
 
-    
 
 (declaim (end-block))
 
@@ -3994,7 +3994,9 @@
 	 (decls (nth-value 1 (system:parse-body (cddr lambda)
 						*lexical-environment* t)))
 	 (convention (find-declaration 'calling-convention decls 1 0)))
-    (cond (convention
+    (cond ((and convention
+		(not (info function info name))
+		(and (null (lexenv-variables *lexical-environment*))))
 	   (setf (info function calling-convention name) convention))
 	  (t
 	   (clear-info function calling-convention name)))
@@ -4002,7 +4004,7 @@
     ;; If not in a simple environment or :notinline, then discard any forward
     ;; references to this function.
     (unless expansion (remhash name *free-functions*))
-    
+
     (let* ((var (get-defined-function name))
 	   (save-expansion (and (member (defined-function-inlinep var)
 					'(:inline :maybe-inline))
@@ -4014,7 +4016,7 @@
       ;; obsolete.
       (when (eq (leaf-where-from var) :defined)
 	(setf (leaf-type var) (specifier-type 'function)))
-      
+
       (let ((fun (ir1-convert-lambda-for-defun lambda var expansion
 					       #'ir1-convert-lambda
 					       'defun)))

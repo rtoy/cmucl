@@ -916,6 +916,8 @@
 	  (frob ep))
 	(when (optional-dispatch-more-entry leaf)
 	  (frob (optional-dispatch-more-entry leaf)))
+	(when (optional-dispatch-typed-entry leaf)
+	  (frob (optional-dispatch-typed-entry leaf)))
 	(let ((main (optional-dispatch-main-entry leaf)))
 	  (when (eq (functional-kind main) :optional)
 	    (frob main))))))

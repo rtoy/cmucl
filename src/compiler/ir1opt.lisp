@@ -953,9 +953,16 @@
 	     (info (ecase cc
 		     ((nil) info)
 		     ((:typed :typed-no-xep)
-		      (cond ((not info)
+		      (cond ((and (not info)
+				  (let ((ftype (continuation-derived-type
+						(combination-fun call))))
+				    (and (function-type-p ftype)
+					 (not (function-type-wild-args
+					       ftype)))))
 			     (info function info '%typed-call))
-			    (t (error "nyi")))))))
+			    (t 
+			     ;;(error "nyi")
+			     info))))))
 	(if info
 	    (values leaf (setf (basic-combination-kind call) info))
 	    (values leaf nil)))))))

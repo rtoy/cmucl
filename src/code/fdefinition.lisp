@@ -288,11 +288,16 @@
 		     (equal (cadr fname) name))
 	    (return ep)))))
 
+(defun find-typed-entry-point-for-function (xep name)
+  (declare (type function xep))
+  (when (= (kernel:get-type xep) vm:function-header-type)
+    (let ((code (function-code-header xep)))
+      (find-typed-entry-point-in-code code name))))
+
 (defun find-typed-entry-point-for-fdefn (fdefn)
   (let ((xep (fdefn-function fdefn)))
-    (when xep
-      (let ((code (function-code-header xep)))
-	(find-typed-entry-point-in-code code (fdefn-name fdefn))))))
+    (when (functionp xep)
+      (find-typed-entry-point-for-function xep (fdefn-name fdefn)))))
 
 ;; find-typed-entry-point is called at load-time and returns the
 ;; fdefn that should be called.
@@ -325,10 +330,10 @@
 		    (cond (foundp info)
 			  (t (setf (ext:info function linkage name)
 				   (make-linkage)))))))
-    (cond ((and nil (dolist (cs (listify (linkage-callsites linkage)))
+    (cond ((dolist (cs (listify (linkage-callsites linkage)))
 	     (let* ((ep-type (callsite-type cs)))
 	       (when (function-types-compatible-p cs-type ep-type)
-		 (return (callsite-fdefn cs)))))))
+		 (return (callsite-fdefn cs))))))
 	  ((let ((fdefn (fdefinition-object name nil)))
 	     (when fdefn
 	       (let ((fun (find-typed-entry-point-for-fdefn fdefn)))
@@ -388,17 +393,19 @@
   (declare (type function-type ftype))
   (let* ((atypes (function-type-required ftype))
 	 (tmps (loop for nil in atypes collect (gensym)))
+	 (*derive-function-types* nil)
 	 (fun (compile 
 	       nil
 	       `(lambda ,tmps
 		  (declare
-		   (c::calling-convention :typed-no-xep)
+		   (c::calling-convention :typed)
 		   ,@(loop for tmp in tmps
 			   for type in atypes
 			   collect `(type ,(kernel:type-specifier type) ,tmp)))
 		  (the ,(kernel:type-specifier
 			 (kernel:function-type-returns ftype))
-		    (funcall (function ,name) . ,tmps))))))
+		    (funcall ',name . ,tmps)))))
+	 (fun (find-typed-entry-point-for-function fun nil)))
     (validate-adapter-type fun ftype)
     fun))
 
@@ -462,27 +469,29 @@
 (defun check-function-redefinition (name new-fun)
   (multiple-value-bind (linkage foundp) (ext:info function linkage name)
     (when foundp
-      (let* ((new-code (function-code-header new-fun))
-	     (new-tep (find-typed-entry-point-in-code new-code name))
-	     (new-type (extract-function-type new-tep)))
+      (let* ((new-tep (find-typed-entry-point-for-function new-fun name))
+	     (new-type (if new-tep
+			   (extract-function-type new-tep)
+			   (specifier-type '(function * *)))))
 	(dolist (cs (listify (linkage-callsites linkage)))
 	  (let ((cs-type (callsite-type cs))
 		(fdefn (callsite-fdefn cs)))
-	    (cond ((function-types-compatible-p cs-type new-type)
+	    (cond ((and new-tep
+			(function-types-compatible-p cs-type new-type))
 		   (patch-fdefn fdefn new-tep))
 		  ((dolist (fun (listify (linkage-adapters linkage)))
 		     (let ((ep-type (kernel:extract-function-type fun)))
 		       (when (function-types-compatible-p cs-type ep-type)
-			 (patch-fdefn fdefn fun)
+			 (patch-fdefn fdefn fun `(:adapter ,name))
 			 (return t)))))
 		  (t
 		   (let ((fun (generate-adapter-function cs-type name)))
 		     (push-unlistified fun (linkage-adapters linkage))
-		     (patch-fdefn fdefn fun))))))))))
+		     (patch-fdefn fdefn fun `(:adapter ,name)))))))))))
 
-(defun patch-fdefn (fdefn new-fun)
+(defun patch-fdefn (fdefn new-fun &optional name)
   (setf (kernel:fdefn-function fdefn) new-fun)
-  (let ((name (kernel:%function-name new-fun)))
+  (let ((name (or name (kernel:%function-name new-fun))))
     (kernel:%set-fdefn-name fdefn name))
   fdefn)
 

@@ -1037,7 +1037,11 @@
   ;; including keywords as fixed arguments.  The format of the arguments must
   ;; be determined by examining the arglist.  This may be used by callers that
   ;; supply at least Max-Args arguments and know what they are doing.
-  (main-entry nil :type (or clambda null)))
+  (main-entry nil :type (or clambda null))
+  ;;
+  ;; True if a typed entry point should be generated.
+  (typedp nil :type boolean :read-only t)
+  (typed-entry nil :type (or clambda null)))
 
 
 (defprinter optional-dispatch

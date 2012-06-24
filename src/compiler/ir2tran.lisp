@@ -903,26 +903,6 @@ compilation policy")
 	    (move-continuation-result node block locs cont)))))
   (undefined-value))
 
-(defun ir2-convert-local-typed-call (node block fun cont)
-  (declare (type node node) (type ir2-block block) (type clambda fun)
-	   (type continuation cont))
-  (let ((ftype (the function-type (lambda-type fun)))
-	(args (basic-combination-args node))
-	(start (getf (lambda-plist fun) :code-start)))
-    (multiple-value-bind (arg-tns result-tns
-				  fp stack-frame-size
-				  nfp number-stack-frame-size)
-	(make-typed-call-tns ftype)
-      (declare (ignore number-stack-frame-size))
-      (let ((cont-tns  (loop for arg in args
-			     collect (continuation-tn node block arg))))
-	(vop allocate-frame node block nil fp nfp)
-	(vop* typed-call-local node block
-	      (fp nfp (reference-tn-list cont-tns nil))
-	      ((reference-tn-list result-tns t))
-	      arg-tns stack-frame-size start)
-	(move-continuation-result node block result-tns cont)))))
-
 ;;; IR2-Convert-Local-Call  --  Internal
 ;;;
 ;;;    Dispatch to the appropriate function, depending on whether we have a
@@ -950,13 +930,8 @@ compilation policy")
 	       (:unknown
 		(ir2-convert-local-unknown-call node block fun cont start))
 	       (:fixed
-		(ecase (getf (lambda-plist fun) :entry-point)
-		  ((nil)
-		   (ir2-convert-local-known-call node block fun returns
-						 cont start))
-		  (:typed
-		   (assert (external-entry-point-p (node-home-lambda node)))
-		   (ir2-convert-local-typed-call node block fun cont)))))))))
+		(ir2-convert-local-known-call node block fun returns
+					      cont start)))))))
   (undefined-value))
 
 
@@ -1202,16 +1177,21 @@ compilation policy")
   
   (undefined-value))
 
-;; arguments are wired to specific locations in gtn so we should have
-;; to move them here.
 (defun init-typed-entry-point-environment (node block fun)
   (declare (type bind node) (type ir2-block block) (type clambda fun))
-  (let ((start-label (entry-info-offset (leaf-info fun)))
-	(code-label (getf (lambda-plist fun) :code-start))
-	(env (environment-info (node-environment node))))
+  (let* ((start-label (entry-info-offset (leaf-info fun)))
+	 (code-label (getf (lambda-plist fun) :code-start))
+	 (env (environment-info (node-environment node)))
+	 (ftype (typed-entry-point-type fun))
+	 (arg-tns (make-typed-call-tns ftype)))
     (vop typed-entry-point-allocate-frame node block
 	 start-label code-label)
     (vop setup-environment node block start-label)
+    (loop for var in (lambda-vars fun)
+	  for pass in arg-tns do
+	  (when (leaf-refs var)
+	    (let ((home (leaf-info var)))
+	      (emit-move node block pass home))))
     (emit-move node block (make-old-fp-passing-location t)
 	       (ir2-environment-old-fp env))))
 
@@ -1780,22 +1760,38 @@ compilation policy")
 (defoptimizer (%typed-call ir2-convert) ((&rest args) node block)
   (let* ((fun (combination-fun node))
 	 (ftype (continuation-derived-type fun))
-	 (cont (node-cont node)))
+	 (cont (node-cont node))
+	 (2cont (continuation-info cont)))
     (check-type ftype function-type)
     (multiple-value-bind (arg-tns result-tns
 				  fp stack-frame-size
 				  nfp number-stack-frame-size)
 	(make-typed-call-tns ftype)
       (declare (ignore number-stack-frame-size))
-      (let ((fdefn-tn (typed-entry-point-continuation-tn fun ftype))
-	    (cont-tns  (loop for arg in args
-			     collect (continuation-tn node block arg))))
+      (let* ((fdefn-tn (typed-entry-point-continuation-tn fun ftype))
+	     (cont-tns  (loop for arg in args
+			      collect (continuation-tn node block arg)))
+	     (arg-refs (reference-tn-list cont-tns nil)))
 	(vop allocate-frame node block nil fp nfp)
-	(vop* typed-call-named node block
-	      (fp nfp fdefn-tn (reference-tn-list cont-tns nil))
-	      ((reference-tn-list result-tns t))
-	      arg-tns stack-frame-size)
-	(move-continuation-result node block result-tns cont)))))
+	(cond ((and 2cont (eq (ir2-continuation-kind 2cont) :unknown)
+		    (eq result-tns :unknown))
+	       (vop* x86::multiple-typed-call-named node block
+		     (fp nfp fdefn-tn arg-refs)
+		     ((reference-tn-list (ir2-continuation-locs 2cont) t))
+		     arg-tns stack-frame-size))
+	      ((eq result-tns :unknown)
+	       (let ((locs (standard-result-tns cont)))
+		 (vop* typed-call-named node block
+		       (fp nfp fdefn-tn arg-refs)
+		       ((reference-tn-list locs t))
+		       arg-tns stack-frame-size (length locs))
+		 (move-continuation-result node block locs cont)))
+	      (t
+	       (vop* typed-call-named node block
+		     (fp nfp fdefn-tn arg-refs)
+		     ((reference-tn-list result-tns t))
+		     arg-tns stack-frame-size nil)
+	       (move-continuation-result node block result-tns cont)))))))
 
 
 ;;; IR2-Convert  --  Interface

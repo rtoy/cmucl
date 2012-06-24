@@ -212,7 +212,7 @@
 				   (prog1 (getf state :frame-size)
 				     (incf (getf state :frame-size) 2))))))
 	   (boxed-arg (state)
-	     (cond ((<= (getf state :reg-args) register-arg-count)
+	     (cond ((< (getf state :reg-args) register-arg-count)
 		    (let ((n (getf state :reg-args)))
 		      (incf (getf state :reg-args))
 		      (x86-standard-argument-location n)))
@@ -228,22 +228,22 @@
 	   (arg-tn (type state)
 	     (cond ((double-float-type-p type) (double-float-arg state))
 		   (t (boxed-arg state))))
-	   (ret-tn (type state)
-	     (let ((tn (arg-tn type state)))
-	       (assert (member (sc-name (tn-sc tn))
-			       '(double-reg descriptor-reg)))
-	       tn)))
+	   (ret-tn (type state) (arg-tn type state)))
     (let* ((arg-state (list :frame-size 2 :xmms-reg xmm4-offset :reg-args 0))
-	   (ret-state (list :frame-size 2 :xmms-reg xmm4-offset :reg-args 0))
-	   (returns (function-type-returns ftype))
-	   (rtypes (typecase returns
-		     (values-type (values-type-required returns))
-		     (t (list returns)))))
+	   (ret-state (list :frame-size 2 :xmms-reg xmm4-offset :reg-args 0)))
       (values
-       (loop for type in (function-type-required ftype)
-	     collect (arg-tn type arg-state))
-       (loop for type in rtypes
-	     collect (ret-tn type ret-state))
+       (multiple-value-bind (min max) (function-type-nargs ftype)
+	 (assert (and min max (= min max)) () 
+		 "Only fixed number of arguments supported (currently)")
+	 (assert (not (function-type-wild-args ftype)))
+	 (loop for type in (function-type-required ftype)
+	       collect (arg-tn type arg-state)))
+       (multiple-value-bind (types count)
+	   (values-types (function-type-returns ftype))
+	 (cond ((eq count :unknown) :unknown)
+	       (t 
+		(loop for type in types
+		      collect (ret-tn type ret-state)))))
        (x86-make-stack-pointer-tn)
        (max (getf arg-state :frame-size)
 	    (getf ret-state :frame-size))
@@ -761,37 +761,6 @@
     (note-this-location vop :known-return)
     (trace-table-entry trace-table-normal)))
 
-
-(define-vop (typed-call-local)
-  (:args (new-fp)
-	 (new-nfp)
-	 (args :more t))
-  (:results (results :more t))
-  (:save-p t)
-  (:move-args :local-call)
-  (:vop-var vop)
-  (:info arg-locs real-frame-size target)
-  (:ignore new-nfp args arg-locs results)
-  (:generator 30
-    ;; FIXME: allocate the real frame size here. We had to emit
-    ;; ALLOCATE-FRAME before this vop so that we can use the
-    ;; (:move-args :local-call) option here.  Without the
-    ;; ALLOCATE-FRAME vop we get a failed assertion.
-    (inst lea esp-tn (make-ea :dword :base new-fp
-			      :disp (- (* real-frame-size word-bytes))))
-
-    ;; Write old frame pointer (epb) into new frame.
-    (storew ebp-tn new-fp (- (1+ ocfp-save-offset)))
-
-    ;; Switch to new frame.
-    (move ebp-tn new-fp)
-
-    (note-this-location vop :call-site)
-
-    (inst call target)
-
-    ))
-
 
 ;;; Return from known values call.  We receive the return locations as
 ;;; arguments to terminate their lifetimes in the returning function.  We
@@ -1150,7 +1119,7 @@
 
 
 (define-vop (typed-call-named)
-  (:args (new-fp)
+  (:args (new-fp :scs (any-reg) :to (:argument 1))
 	 (new-nfp)
 	 (fdefn :scs (descriptor-reg control-stack)
 		:target eax)
@@ -1159,8 +1128,8 @@
   (:save-p t)
   (:move-args :local-call)
   (:vop-var vop)
-  (:info arg-locs real-frame-size)
-  (:ignore new-nfp args arg-locs results)
+  (:info arg-locs real-frame-size nresults)
+  (:ignore new-nfp args arg-locs)
   (:temporary (:sc descriptor-reg :offset eax-offset)
 	      eax)
   (:generator 30
@@ -1186,8 +1155,52 @@
     (inst call (make-ea :dword :base eax
 			:disp (- (* fdefn-raw-addr-slot word-bytes)
 				 other-pointer-type)))
+    (when nresults
+      (default-unknown-values vop results nresults))
 
     ))
+
+(define-vop (multiple-typed-call-named unknown-values-receiver)
+  (:args (new-fp)
+	 (new-nfp)
+	 (fdefn :scs (descriptor-reg control-stack)
+		:target eax)
+	 (args :more t :scs (descriptor-reg)))
+  (:temporary (:sc descriptor-reg :offset eax-offset)
+	      eax)
+  (:save-p t)
+  (:move-args :local-call)
+  (:info arg-locs real-frame-size)
+  (:ignore new-nfp args arg-locs)
+  (:vop-var vop)
+  (:generator 30
+    ;; FIXME: allocate the real frame size here. We had to emit
+    ;; ALLOCATE-FRAME before this vop so that we can use the
+    ;; (:move-args :local-call) option here.  Without the
+    ;; ALLOCATE-FRAME vop we get a failed assertion.
+    (inst lea esp-tn (make-ea :dword :base new-fp
+			      :disp (- (* real-frame-size word-bytes))))
+
+    ;; Move fdefn to eax before switching frames.
+    (move eax fdefn)
+
+    ;; Write old frame pointer (epb) into new frame.
+    (storew ebp-tn new-fp (- (1+ ocfp-save-offset)))
+
+    ;; Switch to new frame.
+    (move ebp-tn new-fp)
+
+    (note-this-location vop :call-site)
+
+    ;; Load address out of fdefn and call it.
+    (inst call (make-ea :dword :base eax
+			:disp (- (* fdefn-raw-addr-slot word-bytes)
+				 other-pointer-type)))
+
+    (note-this-location vop :unknown-return)
+    (receive-unknown-values values-start nvals start count)
+    (trace-table-entry trace-table-normal)))
+
 
 ;;;; Unknown values return:
 
