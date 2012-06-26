@@ -1210,11 +1210,10 @@
       (if (atom form)
 	  (convert-and-maybe-compile form path)
 	  (case (car form)
-	    ((make-package shadow shadowing-import export
-	      unexport use-package unuse-package import
-	      old-in-package %in-package %defpackage)
+	    ((%in-package %defpackage)
 	     (process-cold-load-form form path t))
-	    ((error cerror break signal)
+	    ((error cerror break signal make-package use-package unuse-package shadow
+	      shadowing-import export unexport import)
 	     (process-cold-load-form form path nil))
 	    (kernel:%compiler-defstruct
 	     (convert-and-maybe-compile form path)

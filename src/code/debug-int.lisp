@@ -4944,7 +4944,7 @@ The result is a symbol or nil if the routine cannot be found."
 			   (error (intl:gettext "Cannot set breakpoints for editor when ~
 				   there is no start positions map.")))
 		       local-tlf-offset)))
-	   (with-open-file (f name)
+	   (with-open-file (f name :external-format (c::debug-source-info d-source))
 	     (cond
 	      ((= (debug-source-created d-source) (file-write-date name))
 	       (file-position f char-offset))

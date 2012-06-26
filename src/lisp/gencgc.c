@@ -451,6 +451,9 @@ gc_write_barrier(void *addr)
 /*
  * A structure to hold the state of a generation.
  */
+#define MEM_AGE_SHIFT 16
+#define MEM_AGE_SCALE (1 << MEM_AGE_SHIFT)
+
 struct generation {
 
     /* The first page that gc_alloc checks on its next call. */
@@ -502,8 +505,11 @@ struct generation {
      * A minimum average memory age before a GC will occur helps prevent
      * a GC when a large number of new live objects have been added, in
      * which case a GC could be a waste of time.
+     *
+     * The age is represented as an integer between 0 and 32767
+     * corresponding to an age of 0 to (just less than) 1.
      */
-    double min_av_mem_age;
+    int min_av_mem_age;
 };
 
 /*
@@ -524,7 +530,7 @@ struct generation_stats {
     int num_gc;
     int trigger_age;
     int cum_sum_bytes_allocated;
-    double min_av_mem_age;
+    int min_av_mem_age;
 };
 
 
@@ -647,14 +653,14 @@ generation_bytes_allocated(int generation)
 /*
  * Return the average age of the memory in a generation.
  */
-static double
+static int
 gen_av_mem_age(int gen)
 {
     if (generations[gen].bytes_allocated == 0)
-	return 0.0;
+	return 0;
 
-    return (double) generations[gen].cum_sum_bytes_allocated /
-	(double) generations[gen].bytes_allocated;
+    return (((long) generations[gen].cum_sum_bytes_allocated) << MEM_AGE_SHIFT) /
+	generations[gen].bytes_allocated;
 }
 
 /*
@@ -753,7 +759,7 @@ print_generation_stats(int verbose)
 		GC_PAGE_SIZE * count_generation_pages(i) -
 		generations[i].bytes_allocated, generations[i].gc_trigger,
 		count_write_protect_generation_pages(i), generations[i].num_gc,
-		gen_av_mem_age(i));
+		(double)gen_av_mem_age(i) / MEM_AGE_SCALE);
     }
     fprintf(stderr, "   Total bytes alloc=%ld\n", bytes_allocated);
 
@@ -804,7 +810,7 @@ void
 set_min_mem_age(int gen, double min_mem_age)
 {
     if (gen <= NUM_GENERATIONS) {
-	generations[gen].min_av_mem_age = min_mem_age;
+	generations[gen].min_av_mem_age = min_mem_age * MEM_AGE_SCALE;
     }
 }
 
@@ -4532,7 +4538,20 @@ scav_hash_vector(lispobj * where, lispobj object)
         fprintf(stderr, "scav_hash_vector: scavenge table %p\n", hash_table);
     }
 #endif
-
+    
+#ifdef GC_ASSERTIONS
+    {
+        /*
+         * Check to see that hash-table-rehash-threshold is a single
+         * float in the range (0, 1]
+         */
+        lispobj threshold_obj = (lispobj) hash_table->rehash_threshold;
+        float* raw_slots = PTR(threshold_obj);
+        float threshold = raw_slots[2];
+        gc_assert(threshold > 0 && threshold <= 1);
+    }
+#endif
+    
     scavenge((lispobj *) hash_table, HASH_TABLE_SIZE);
 
     if (hash_table->weak_p == NIL) {
@@ -7325,7 +7344,7 @@ garbage_collect_generation(int generation, int raise)
 
 #ifdef GC_ASSERTIONS
 #if defined(i386) || defined(__x86_64)
-    invalid_stack_start = (void *) control_stack_start;
+    invalid_stack_start = (void *) CONTROL_STACK_START;
     invalid_stack_end = (void *) &raise;
 #else /* not i386 */
     invalid_stack_start = (void *) &raise;
@@ -7897,7 +7916,7 @@ gc_init(void)
 	/* The tune-able parameters */
 	generations[i].bytes_consed_between_gc = 2000000;
 	generations[i].trigger_age = 1;
-	generations[i].min_av_mem_age = 0.75;
+	generations[i].min_av_mem_age = 24508; /* 0.75 * MEM_AGE_SCALE */
     }
 
     /* Initialise gc_alloc */

@@ -1035,7 +1035,10 @@
 ;;; Here I add the proper defpackage for CMU
 #+:CMU
 (defpackage "MAKE" (:use "COMMON-LISP" "CONDITIONS")
-  (:nicknames "MK"))
+  (:nicknames "MK")
+  (:export "DEFSYSTEM" "COMPILE-SYSTEM" "LOAD-SYSTEM"
+	   "DEFINE-LANGUAGE" "*MULTIPLE-LISP-SUPPORT*"
+	   "FIND-SYSTEM"))
 
 #+:sbcl
 (defpackage "MAKE" (:use "COMMON-LISP")

@@ -1486,7 +1486,7 @@ See the CMU Common Lisp User's Manual for more information.
 	(when *cached-source-stream* (close *cached-source-stream*))
 	(setq *cached-source-stream*
 	      (open name :if-does-not-exist nil
-		    :external-format (or (c::debug-source-info d-source) :default)))
+		    :external-format (c::debug-source-info d-source)))
 	(unless *cached-source-stream*
 	  (error (intl:gettext "Source file no longer exists:~%  ~A.") (namestring name)))
 	(format t (intl:gettext "~%; File: ~A~%") (namestring name)))

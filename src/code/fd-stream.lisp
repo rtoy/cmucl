@@ -1985,6 +1985,12 @@
 
 ;;;; Creation routines (MAKE-FD-STREAM and OPEN)
 
+;; The unicode version of this is in fd-stream-extfmt.lisp
+#-(and unicode (not unicode-boootstrap))
+(defun %set-fd-stream-external-format (stream extfmt &optional (updatep t))
+  (declare (ignore stream extfmt updatep))
+  (values))
+
 ;;; MAKE-FD-STREAM -- Public.
 ;;;
 ;;; Returns a FD-STREAM on the given file.
