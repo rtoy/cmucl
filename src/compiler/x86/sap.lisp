@@ -44,6 +44,7 @@
   (:results (res :scs (descriptor-reg) :from :argument))
   (:note "SAP to pointer coercion") 
   (:node-var node)
+  (:save-p t)
   (:generator 20
     (with-fixed-allocation (res sap-type sap-size node)
       (storew sap res sap-pointer-slot other-pointer-type))))

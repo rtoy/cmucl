@@ -300,6 +300,7 @@
   (:results (y :scs (any-reg descriptor-reg) :from :argument))
   (:note _N"signed word to integer coercion")
   (:node-var node)
+  (:save-p t)
   (:generator 20
      (assert (not (location= x y)))
      (let ((bignum (gen-label))
@@ -348,6 +349,7 @@
   (:results (y :scs (any-reg descriptor-reg)))
   (:node-var node)
   (:note _N"unsigned word to integer coercion")
+  (:save-p t)
   (:generator 20
     (assert (not (location= x y)))
     (assert (not (location= x alloc)))

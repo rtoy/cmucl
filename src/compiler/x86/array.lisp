@@ -35,6 +35,7 @@
   (:temporary (:sc any-reg :to :result) header)
   (:results (result :scs (descriptor-reg) :from :eval))
   (:node-var node)
+  (:save-p t)
   (:generator 13
     (inst lea bytes
 	  (make-ea :dword :base rank
