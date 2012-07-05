@@ -664,14 +664,9 @@ gen_av_mem_age(int gen)
 }
 
 /*
- * The verbose argument controls how much to print out:
- * 0 for normal level of detail; 1 for debugging.
+ * Define macro to allocate a local array of the appropriate size
+ * where the fpu state can be stored.
  */
-void
-print_generation_stats(int verbose)
-{
-    int i, gens;
-
 #if defined(i386) || defined(__x86_64)
 #define FPU_STATE_SIZE 27
     /* 
@@ -680,36 +675,73 @@ print_generation_stats(int verbose)
      * appropriate alignment.
      */
 #define SSE_STATE_SIZE ((512+16)/4)
-    int fpu_state[FPU_STATE_SIZE];
-    int sse_state[SSE_STATE_SIZE];
 
-    extern void sse_save(void *);
-    extern void sse_restore(void *);
+/*
+ * Just use the SSE size for both x87 and sse2 since the SSE size is
+ * enough for either.
+ */
+#define FPU_STATE(name)    int name[SSE_STATE_SIZE];
+
 #elif defined(sparc)
-    /*
-     * 32 (single-precision) FP registers, and the FP state register.
-     * But Sparc V9 has 32 double-precision registers (equivalent to 64
-     * single-precision, but can't be accessed), so we leave enough room
-     * for that.
-     */
+/*
+ * 32 (single-precision) FP registers, and the FP state register.
+ * But Sparc V9 has 32 double-precision registers (equivalent to 64
+ * single-precision, but can't be accessed), so we leave enough room
+ * for that.
+ */
 #define FPU_STATE_SIZE (((32 + 32 + 1) + 1)/2)
-    long long fpu_state[FPU_STATE_SIZE];
+#define FPU_STATE(name)    long long name[FPU_STATE_SIZE];
 #elif defined(DARWIN) && defined(__ppc__)
 #define FPU_STATE_SIZE 32
-    long long fpu_state[FPU_STATE_SIZE];
+#define FPU_STATE(name0    long long name[FPU_STATE_SIZE];
 #endif
 
+void
+save_fpu_state(void* state)
+{
+#if defined(i386) || defined(__x86_64)
+    if (fpu_mode == SSE2) {
+        sse_save(state);
+    } else {
+        fpu_save(state);
+    }
+#else
+    fpu_save(state);
+#endif    
+}
+
+void
+restore_fpu_state(void* state)
+{
+#if defined(i386) || defined(__x86_64)
+    if (fpu_mode == SSE2) {
+        sse_restore(state);
+    } else {
+        fpu_restore(state);
+    }
+#else
+    fpu_restore(state);
+#endif
+}
+
+
+/*
+ * The verbose argument controls how much to print out:
+ * 0 for normal level of detail; 1 for debugging.
+ */
+void
+print_generation_stats(int verbose)
+{
+    int i, gens;
+
+    FPU_STATE(fpu_state);
+    
     /*
      * This code uses the FP instructions which may be setup for Lisp so
      * they need to the saved and reset for C.
      */
 
-    fpu_save(fpu_state);
-#if defined(i386) || defined(__x86_64)
-    if (fpu_mode == SSE2) {
-      sse_save(sse_state);
-    }
-#endif    
+    save_fpu_state(fpu_state);
 
     /* Number of generations to print out. */
     if (verbose)
@@ -763,12 +795,7 @@ print_generation_stats(int verbose)
     }
     fprintf(stderr, "   Total bytes alloc=%ld\n", bytes_allocated);
 
-    fpu_restore(fpu_state);
-#if defined(i386) || defined(__x86_64)
-    if (fpu_mode == SSE2) {
-      sse_restore(sse_state);
-    }
-#endif
+    restore_fpu_state(fpu_state);
 }
 
 /* Get statistics that are kept "on the fly" out of the generation

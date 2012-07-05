@@ -32,6 +32,8 @@ extern lispobj funcall3(lispobj function, lispobj arg0, lispobj arg1,
 
 extern void fpu_save(void *);
 extern void fpu_restore(void *);
+extern void sse_save(void *);
+extern void sse_restore(void *);
 
 extern void arch_make_linkage_entry(long, void *, long);
 extern long arch_linkage_entry(unsigned long);
