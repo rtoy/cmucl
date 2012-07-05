@@ -659,7 +659,7 @@ gen_av_mem_age(int gen)
     if (generations[gen].bytes_allocated == 0)
 	return 0;
 
-    return (((long) generations[gen].cum_sum_bytes_allocated) << MEM_AGE_SHIFT) /
+    return (((long long) generations[gen].cum_sum_bytes_allocated) << MEM_AGE_SHIFT) /
 	generations[gen].bytes_allocated;
 }
 
