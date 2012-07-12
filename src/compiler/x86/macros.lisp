@@ -137,6 +137,7 @@
   (unless (and (tn-p size) (location= alloc-tn size))
     (inst mov dst-tn size)))
 
+#+nil
 (defun inline-allocation (alloc-tn size)
   (let ((ok (gen-label)))
     ;;
@@ -174,6 +175,50 @@
     (emit-label ok)
     (inst xchg (make-symbol-value-ea '*current-region-free-pointer*)
 	  alloc-tn))
+  (values))
+
+;;#+nil
+(defun inline-allocation (alloc-tn size)
+  (let ((ok (gen-label))
+	(done (gen-label)))
+    ;;
+    ;; Load the size first so that the size can be in the same
+    ;; register as alloc-tn.
+    (load-size alloc-tn alloc-tn size)
+    ;;
+    (inst add alloc-tn
+	  (make-symbol-value-ea '*current-region-free-pointer*))
+    (inst cmp alloc-tn
+	  (make-symbol-value-ea '*current-region-end-addr*))
+    (inst jmp :be OK)
+
+    ;; Inline allocation didn't work so we need to call alloc, carefully.
+
+    ;; Recompute the size.  Can't just reload size because it might
+    ;; have already been destroyed if size = alloc-tn (which does
+    ;; happen).
+    (inst sub alloc-tn (make-symbol-value-ea '*current-region-free-pointer*))
+    (case (tn-offset alloc-tn)
+      (#.eax-offset
+       (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
+						 #+sse2 "alloc_overflow_sse2")
+			      :foreign))
+       (inst jmp done))
+      (t
+       (inst push eax-tn)		; Save any value in eax
+       (inst mov eax-tn alloc-tn)
+       (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
+						 #+sse2 "alloc_overflow_sse2")
+			      :foreign))
+       (inst mov alloc-tn eax-tn) ; Save allocated address in alloc-tn
+       (inst pop eax-tn)		; Restore old value of eax
+       (inst jmp done)))
+			       
+    (emit-label ok)
+    (inst xchg (make-symbol-value-ea '*current-region-free-pointer*)
+	  alloc-tn)
+    (emit-label done))
+  
   (values))
 
 (defun not-inline-allocation (alloc-tn size)
@@ -240,7 +285,7 @@
    Result-TN."
   `(pseudo-atomic
     (allocation ,result-tn (pad-data-block ,size) ,inline)
-    (storew (logior (ash (1- ,size) vm:type-bits) ,type-code) ,result-tn)
+    (storew (logior (ash (1- ,size) vm::type-bits) ,type-code) ,result-tn)
     (inst lea ,result-tn
      (make-ea :byte :base ,result-tn :disp other-pointer-type))
     ,@forms))

@@ -46,6 +46,9 @@
 (export 'vm::fixup-code-object "VM")
 (export 'vm::sanctify-for-execution "VM")
 
+(do-external-symbols (sym "OLD-VM")
+  (export (intern (symbol-name sym) "VM") "VM"))
+
 (load "target:tools/comcom")
 
 ;;; Load the new backend.

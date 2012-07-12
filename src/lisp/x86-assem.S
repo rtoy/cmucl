@@ -671,7 +671,47 @@ FUNCDEF(alloc_overflow_edi)
 	ret
 ENDFUNC(alloc_overflow_edi)
 
-#endif
+/*
+ * alloc_overflow_x87 and alloc_overflow_sse2 must not be called from
+ * C because it doesn't follow C conventions.
+ *
+ * On entry:
+ * %eax = bytes to allocate
+ * On exit:
+ * %eax = address
+ */
+FUNCDEF(alloc_overflow_x87)
+	STACK_PROLOGUE(12)
+	movl	%ecx, 8(%esp)	# Save ecx and edx registers
+	movl	%edx, 4(%esp)
+	movl	%eax, (%esp)	# Put size on stack for first arg to alloc()
+	call	GNAME(alloc)
+	movl	4(%esp), %edx	# Restore edx and ecx registers.  eax has the return value.
+	movl	8(%esp), %ecx
+	STACK_EPILOGUE
+	ret
+ENDFUNC(alloc_overflow_x87)	
+
+FUNCDEF(alloc_overflow_sse2)
+	STACK_PROLOGUE(20)
+	movl	%ecx, 8(%esp)	# Save ecx and edx registers
+	movl	%edx, 4(%esp)
+	stmxcsr 12(%esp)	# Save MXCSR
+	/* Clear the exceptions that might occurred */
+	movl	12(%esp), %edx
+	and	$-64, %edx	# Clear the exceptions
+	movl	%edx, 16(%esp)
+	ldmxcsr 16(%esp)	# Get new mxcsr value
+	movl	%eax, (%esp)	# Put size on stack for first arg to alloc()
+	call	GNAME(alloc)
+	movl	4(%esp), %edx	# Restore edx and ecx registers.  eax has the return value.
+	movl	8(%esp), %ecx
+	ldmxcsr	12(%esp)
+	STACK_EPILOGUE
+	ret
+ENDFUNC(alloc_overflow_sse2)	
+		
+#endif /* GENCGC */
 
 #ifdef LINKAGE_TABLE
 
