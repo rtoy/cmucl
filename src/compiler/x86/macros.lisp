@@ -137,47 +137,6 @@
   (unless (and (tn-p size) (location= alloc-tn size))
     (inst mov dst-tn size)))
 
-#+nil
-(defun inline-allocation (alloc-tn size)
-  (let ((ok (gen-label)))
-    ;;
-    ;; Load the size first so that the size can be in the same
-    ;; register as alloc-tn.
-    (load-size alloc-tn alloc-tn size)
-    ;;
-    (inst add alloc-tn
-	  (make-symbol-value-ea '*current-region-free-pointer*))
-    (inst cmp alloc-tn
-	  (make-symbol-value-ea '*current-region-end-addr*))
-    (inst jmp :be OK)
-    ;;
-    ;; Dispatch to the appropriate overflow routine. There is a
-    ;; routine for each destination.
-    (ecase (tn-offset alloc-tn)
-      (#.eax-offset
-       (inst call (make-fixup (extern-alien-name "alloc_overflow_eax")
-			      :foreign)))
-      (#.ecx-offset
-       (inst call (make-fixup (extern-alien-name "alloc_overflow_ecx")
-			      :foreign)))
-      (#.edx-offset
-       (inst call (make-fixup (extern-alien-name "alloc_overflow_edx")
-			      :foreign)))
-      (#.ebx-offset
-       (inst call (make-fixup (extern-alien-name "alloc_overflow_ebx")
-			      :foreign)))
-      (#.esi-offset
-       (inst call (make-fixup (extern-alien-name "alloc_overflow_esi")
-			      :foreign)))
-      (#.edi-offset
-       (inst call (make-fixup (extern-alien-name "alloc_overflow_edi")
-			      :foreign))))
-    (emit-label ok)
-    (inst xchg (make-symbol-value-ea '*current-region-free-pointer*)
-	  alloc-tn))
-  (values))
-
-;;#+nil
 (defun inline-allocation (alloc-tn size)
   (let ((ok (gen-label))
 	(done (gen-label)))
