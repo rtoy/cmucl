@@ -459,101 +459,6 @@ ENDFUNC(fastcopy16)
 
 
 /*
-   Allocate bytes and return the start of the allocated space
-   in the specified destination register.
-
-   In the general case the size will be in the destination register.
-
-   All registers must be preserved except the destination.
-   The C conventions will preserve ebx, esi, edi, and ebp.
-   So only eax, ecx, and edx need special care here. */
-		
-FUNCDEF(alloc_to_eax)
-	STACK_PROLOGUE(12)
-	movl	%ecx, 8(%esp)	# Save ecx and edx as C could destroy them.
-	movl	%edx, 4(%esp)
-	movl	%eax, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	4(%esp), %edx	# Restore ecx and edx.
-	movl	8(%esp), %ecx
-	STACK_EPILOGUE
-	ret
-ENDFUNC(alloc_to_eax)
-
-FUNCDEF(alloc_to_ecx)
-	STACK_PROLOGUE(12)
-	movl	%eax, 8(%esp)	# Save eax and edx as C could destroy them.
-	movl	%edx, 4(%esp)
-	movl	%ecx, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	%eax,%ecx	# setup the destination.
-	movl	4(%esp), %edx	# Restore eax and edx.
-	movl	8(%esp), %eax
-	STACK_EPILOGUE
-	ret
-ENDFUNC(alloc_to_ecx)
-
-FUNCDEF(alloc_to_edx)
-	STACK_PROLOGUE(12)
-	movl	%eax, 8(%esp)	# Save eax and ecx as C could destroy them.
-	movl	%ecx, 4(%esp)
-	movl	%edx, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	%eax,%edx	# setup the destination.
-	movl	4(%esp), %ecx	# Restore eax and ecx.
-	movl	8(%esp), %eax
-	STACK_EPILOGUE
-	ret
-ENDFUNC(alloc_to_edx)
-
-FUNCDEF(alloc_to_ebx)
-	STACK_PROLOGUE(16)
-	movl	%eax, 12(%esp)	# Save eax, ecx, and edx as C could destroy them.
-	movl	%ecx, 8(%esp)
-	movl	%edx, 4(%esp)
-	movl	%ebx, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	%eax,%ebx	# setup the destination.
-	movl	4(%esp), %edx	# Restore eax, ecx and edx.
-	movl	8(%esp), %ecx
-	movl	12(%esp), %eax
-	STACK_EPILOGUE
-	ret
-ENDFUNC(alloc_to_ebx)
-
-FUNCDEF(alloc_to_esi)
-	STACK_PROLOGUE(16)
-	movl	%eax, 12(%esp)	# Save eax, ecx, and edx as C could destroy them.
-	movl	%ecx, 8(%esp)
-	movl	%edx, 4(%esp)
-	movl	%esi, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	%eax,%esi	# setup the destination.
-	movl	4(%esp), %edx	# Restore eax, ecx and edx.
-	movl	8(%esp), %ecx
-	movl	12(%esp), %eax
-	STACK_EPILOGUE
-	ret
-ENDFUNC(alloc_to_esi)
-
-FUNCDEF(alloc_to_edi)
-	STACK_PROLOGUE(16)
-	movl	%eax, 12(%esp)	# Save eax, ecx, and edx as C could destroy them.
-	movl	%ecx, 8(%esp)
-	movl	%edx, 4(%esp)
-	movl	%edi, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	%eax,%edi	# setup the destination.
-	movl	4(%esp), %edx	# Restore eax, ecx and edx.
-	movl	8(%esp), %ecx
-	movl	12(%esp), %eax
-	STACK_EPILOGUE
-	ret
-ENDFUNC(alloc_to_edi)
-
-#ifdef GENCGC
-
-/*
  * alloc_overflow_x87 and alloc_overflow_sse2 must not be called from
  * C because it doesn't follow C conventions.
  *
@@ -595,8 +500,6 @@ FUNCDEF(alloc_overflow_sse2)
 	ret
 ENDFUNC(alloc_overflow_sse2)	
 		
-#endif /* GENCGC */
-
 #ifdef LINKAGE_TABLE
 
 /* Call into C code to resolve a linkage entry.  The initial code in the 

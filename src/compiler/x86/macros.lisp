@@ -183,31 +183,20 @@
 (defun not-inline-allocation (alloc-tn size)
   ;; C call to allocate via dispatch routines. Each destination has a
   ;; special entry point. The size may be a register or a constant.
-  (ecase (tn-offset alloc-tn)
+  (load-size alloc-tn alloc-tn size)
+  (case (tn-offset alloc-tn)
     (#.eax-offset
-     (load-size alloc-tn eax-tn size)
-     (inst call (make-fixup (extern-alien-name "alloc_to_eax")
+     (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
+					       #+sse2 "alloc_overflow_sse2")
 			    :foreign)))
-    (#.ecx-offset
-     (load-size alloc-tn ecx-tn size)
-     (inst call (make-fixup (extern-alien-name "alloc_to_ecx")
-			    :foreign)))
-    (#.edx-offset
-     (load-size alloc-tn edx-tn size)
-     (inst call (make-fixup (extern-alien-name "alloc_to_edx")
-			    :foreign)))
-    (#.ebx-offset
-     (load-size alloc-tn ebx-tn size)
-     (inst call (make-fixup (extern-alien-name "alloc_to_ebx") 
-			    :foreign)))
-    (#.esi-offset
-     (load-size alloc-tn esi-tn size)
-     (inst call (make-fixup (extern-alien-name "alloc_to_esi")
-			    :foreign)))
-    (#.edi-offset
-     (load-size alloc-tn edi-tn size)
-     (inst call (make-fixup (extern-alien-name "alloc_to_edi")
-			    :foreign))))
+    (t
+     (inst push eax-tn)			; Save any value in eax
+     (inst mov eax-tn alloc-tn)
+     (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
+					       #+sse2 "alloc_overflow_sse2")
+			    :foreign))
+     (inst mov alloc-tn eax-tn)	  ; Save allocated address in alloc-tn
+     (inst pop eax-tn)))
   (values))
 
 ;;;
