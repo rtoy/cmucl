@@ -45,23 +45,9 @@ ifdef FEATURE_UNICODE
 CPP_DEFINE_OPTIONS += -DUNICODE
 endif
 
-# Default to using gcc
+# Default to using gcc.  But clang also works.
 CC = gcc
 
-# But we can use clang.
-#
-# However, clang seems to want to use SSE instructions in various
-# places, but we DON'T want that because we need a lisp that will run
-# on chips without sse.
-#
-# But on Mac, every machine has SSE2 so we can use SSE2.  However,
-# there's some code path through GC or allocation where we aren't
-# saving the FPU state so after GC or allocation, some XMM FP
-# registers are corrupted.  
-#
-# Got that?
-
-#CC = clang -mno-sse
 
 LD = ld
 
