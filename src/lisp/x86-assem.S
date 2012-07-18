@@ -172,7 +172,11 @@ FUNCDEF(call_into_lisp)
 	cmp	$2, %eax	# SSE2 mode?
 	jne	x87_save
 	movl	%esp, %eax	# Remember the current stack pointer
-	subl	$512,%esp	# Make room for the SSE state
+	/*
+	 * The SSE state is 512 bytes, but we need 16 more because we
+	 * need 16-byte alignment.
+	 */
+	subl	$512+16,%esp
 	andl	$-16, %esp	# fxsave needs 16-byte alignment
 	fxsave	(%esp)		
 	pushl	%eax		# Save the old stack pointer
@@ -194,7 +198,7 @@ x87_save:
 	fldcw	(%esp)		# Recover modes
 	popl	%eax
 npx_save_done:			
-
+	/* Is this still necessary with sse2? */
 	fldz			# insure no FP regs are empty
 	fldz
 	fldz
