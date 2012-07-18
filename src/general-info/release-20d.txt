@@ -94,6 +94,7 @@ New in this release:
     * #55: blocked signals.
     * #58: UTF-16 buffering problem.
     * #60: compile-file and export problem
+    * #61: Darwin+clang doesn't produce a working lisp
 
   * Other changes:
     * The layout of the cmucl directories has been changed.

@@ -498,7 +498,6 @@
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
   (:note _N"float to pointer coercion")
-  (:save-p t)
   (:generator 13
      (with-fixed-allocation (y vm:single-float-type vm:single-float-size node)
        (with-tn@fp-top(x)
@@ -511,7 +510,6 @@
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
   (:note _N"float to pointer coercion")
-  (:save-p t)
   (:generator 13
      (with-fixed-allocation (y vm:double-float-type vm:double-float-size node)
        (with-tn@fp-top(x)
@@ -525,7 +523,6 @@
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
   (:note _N"float to pointer coercion")
-  (:save-p t)
   (:generator 13
      (with-fixed-allocation (y vm:long-float-type vm:long-float-size node)
        (with-tn@fp-top(x)
@@ -604,7 +601,6 @@
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
   (:note _N"complex float to pointer coercion")
-  (:save-p t)
   (:generator 13
      (with-fixed-allocation (y vm:complex-single-float-type
 			       vm:complex-single-float-size node)
@@ -622,7 +618,6 @@
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
   (:note _N"complex float to pointer coercion")
-  (:save-p t)
   (:generator 13
      (with-fixed-allocation (y vm:complex-double-float-type
 			       vm:complex-double-float-size node)
@@ -641,7 +636,6 @@
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
   (:note _N"complex float to pointer coercion")
-  (:save-p t)
   (:generator 13
      (with-fixed-allocation (y vm:complex-long-float-type
 			       vm:complex-long-float-size node)
@@ -661,7 +655,6 @@
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
   (:note _N"complex double-double float to pointer coercion")
-  (:save-p t)
   (:generator 13
      (with-fixed-allocation (y vm::complex-double-double-float-type
 			       vm::complex-double-double-float-size node)
@@ -5061,7 +5054,6 @@
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
   (:note _N"double double float to pointer coercion")
-  (:save-p t)
   (:generator 13
      (with-fixed-allocation (y vm:double-double-float-type
 			       vm:double-double-float-size node)

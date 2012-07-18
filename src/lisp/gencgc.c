@@ -8027,6 +8027,7 @@ void do_pending_interrupt(void);
 char *
 alloc(int nbytes)
 {
+    void *new_obj;
 #if !(defined(sparc) || (defined(DARWIN) && defined(__ppc__)))
     /*
      * *current-region-free-pointer* is the same as alloc-tn (=
@@ -8041,24 +8042,44 @@ alloc(int nbytes)
     bytes_allocated_sum += nbytes;
 
     for (;;) {
-	void *new_obj;
 	char *new_free_pointer = (void *) (get_current_region_free() + nbytes);
 
 	if (new_free_pointer <= boxed_region.end_addr) {
 	    /* Allocate from the current region. */
 	    new_obj = (void *) get_current_region_free();
 	    set_current_region_free((lispobj) new_free_pointer);
-	    return new_obj;
+            break;
 	} else if (bytes_allocated <= auto_gc_trigger) {
+#if defined(i386) || defined(__x86_64)
+            /*
+             * Need to save and restore the FPU registers on x86, but only for
+             * sse2.  See Ticket #61.
+             *
+             * Not needed by sparc or ppc because we never call alloc from
+             * Lisp directly to do allocation.
+             */
+            FPU_STATE(fpu_state);
+
+            if (fpu_mode == SSE2) {
+                save_fpu_state(fpu_state);
+            }
+#endif
 	    /* Call gc_alloc.  */
 	    boxed_region.free_pointer = (void *) get_current_region_free();
 	    boxed_region.end_addr =
 		(void *) SymbolValue(CURRENT_REGION_END_ADDR);
 
 	    new_obj = gc_alloc(nbytes);
+
 	    set_current_region_free((lispobj) boxed_region.free_pointer);
 	    set_current_region_end((lispobj) boxed_region.end_addr);
-	    return new_obj;
+
+#if defined(i386) || defined(__x86_64)
+            if (fpu_mode == SSE2) {
+                restore_fpu_state(fpu_state);
+            }
+#endif
+            break;
 	} else {
 	    /* Run GC and try again.  */
 	    auto_gc_trigger *= 2;
@@ -8070,6 +8091,8 @@ alloc(int nbytes)
 	    set_pseudo_atomic_atomic();
 	}
     }
+
+    return new_obj;
 }
 
 char *

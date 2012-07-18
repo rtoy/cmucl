@@ -1365,7 +1365,6 @@
   (:temporary (:sc unsigned-reg) dst)
   (:results (result :scs (descriptor-reg)))
   (:node-var node)
-  (:save-p t)
   (:generator 20
     (let ((enter (gen-label))
 	  (loop (gen-label))

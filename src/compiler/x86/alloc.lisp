@@ -53,7 +53,6 @@
   (:variant-vars star)
   (:policy :safe)
   (:node-var node)
-  (:save-p t)
   (:generator 0
     (cond ((zerop num)
 	   ;; (move result nil-value)
@@ -142,7 +141,6 @@
   (:temporary (:sc unsigned-reg :from (:argument 0)) boxed)
   (:temporary (:sc unsigned-reg :from (:argument 1)) unboxed)
   (:node-var node)
-  (:save-p t)
   (:generator 100
     (move boxed boxed-arg)
     (inst add boxed (fixnumize (1+ code-trace-table-offset-slot)))
@@ -171,7 +169,6 @@
   (:args (name :scs (descriptor-reg) :to :eval))
   (:results (result :scs (descriptor-reg) :from :argument))
   (:node-var node)
-  (:save-p t)
   (:generator 37
     (with-fixed-allocation (result fdefn-type fdefn-size node)
       (storew name result fdefn-name-slot other-pointer-type)
@@ -185,7 +182,6 @@
   (:args (name :scs (descriptor-reg) :to :eval))
   (:results (result :scs (descriptor-reg) :from :argument))
   (:node-var node)
-  (:save-p t)
   (:generator 37
     (with-fixed-allocation (result fdefn-type fdefn-size node)
       (storew name result fdefn-name-slot other-pointer-type)
@@ -200,7 +196,6 @@
   (:temporary (:sc any-reg) temp)
   (:results (result :scs (descriptor-reg)))
   (:node-var node)
-  (:save-p t)
   (:generator 10
    (let ((*enable-pseudo-atomic* (unless dynamic-extent
 				   *enable-pseudo-atomic*)))
@@ -220,7 +215,6 @@
   (:args (value :scs (descriptor-reg any-reg) :to :result))
   (:results (result :scs (descriptor-reg) :from :eval))
   (:node-var node)
-  (:save-p t)
   (:generator 10
     (with-fixed-allocation
 	(result value-cell-header-type value-cell-size node)
@@ -242,7 +236,6 @@
   (:ignore name)
   (:results (result :scs (descriptor-reg)))
   (:node-var node)
-  (:save-p t)
   (:generator 50
     (let ((*enable-pseudo-atomic* (unless dynamic-extent
 				    *enable-pseudo-atomic*)))
@@ -261,7 +254,6 @@
   (:temporary (:sc any-reg :from :eval :to (:eval 1)) bytes)
   (:temporary (:sc any-reg :from :eval :to :result) header)
   (:node-var node)
-  (:save-p t)
   (:generator 50
     (inst lea bytes
 	  (make-ea :dword :base extra :disp (* (1+ words) word-bytes)))
@@ -287,7 +279,6 @@
   (:temporary (:sc unsigned-reg :from :eval) state-addr)
   (:results (result :scs (descriptor-reg) :from :argument))
   (:node-var node)
-  (:save-p t)
   (:generator 37
     (with-fixed-allocation (result symbol-header-type symbol-size node)
       (storew name result symbol-name-slot other-pointer-type)
