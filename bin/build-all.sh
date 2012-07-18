@@ -34,12 +34,13 @@ usage ()
     echo "    -U        Update and overwite the translations files."
     echo "    -P        On the last build, (re)generate cmucl.pot and the"
     echo "               translations"
+    echo "    -R        Force recompilation of C runtime"
 }
 
 CREATE_OPT=""
 UPDATE_POT="-P"
 
-while getopts "PUB:b:v:C:o:8:?" arg
+while getopts "PRUB:b:v:C:o:8:?" arg
 do
     case $arg in
       b) BASE="$OPTARG" ;;
@@ -50,6 +51,7 @@ do
       v) VERSION="$OPTARG"; VERSION_SET=true ;;
       U) UPDATE_TRANS="-U" ;;
       P) UPDATE_POT="" ;;
+      R) RECOMPILEC="-R" ;;
       \?) usage; exit 1 ;;
     esac
 done
@@ -81,15 +83,15 @@ buildx86 ()
     if [ -n "$OLD8" ]; then
 	# Build non-unicode versions
 	set -x
-	$BINDIR/build.sh -f x87 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
-	$BINDIR/build.sh -f sse2 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
+	$BINDIR/build.sh -f x87 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} -o "$OLD8"
+	$BINDIR/build.sh -f sse2 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} -o "$OLD8"
 	set +x
     fi
     # Build the unicode versions
     if [ -n "$OLDLISP" ]; then
 	set -x
-	$BINDIR/build.sh -f x87 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
-	$BINDIR/build.sh -f sse2 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
+	$BINDIR/build.sh -f x87 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} -o "$OLDLISP"
+	$BINDIR/build.sh -f sse2 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} -o "$OLDLISP"
 	set +x
     fi
 }
@@ -102,13 +104,13 @@ buildsun4 ()
     # Build non-unicode versions
     if [ -n "$OLD8" ]; then
 	set -x
-	$BINDIR/build.sh -b ${BASE}-8bit $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
+	$BINDIR/build.sh -b ${BASE}-8bit $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} -o "$OLD8"
 	set +x
     fi
     # Build the unicode version.
     if [ -n "$OLDLISP" ]; then
 	set -x
-	$BINDIR/build.sh -b ${BASE} $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
+	$BINDIR/build.sh -b ${BASE} $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} -o "$OLDLISP"
 	set +x
     fi
 }

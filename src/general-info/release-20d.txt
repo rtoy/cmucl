@@ -102,6 +102,8 @@ New in this release:
       in Xcode 4.
     * Add -R option to build.sh to force recompiling the C
       runtime. (Default it to compile only what is changed.)
+    * Add -R option to build-all.sh to force recompiling the C
+      runtime.
 
   * Improvements to the PCL implementation of CLOS:
 
