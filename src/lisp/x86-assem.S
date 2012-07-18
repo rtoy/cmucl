@@ -484,7 +484,7 @@ FUNCDEF(alloc_overflow_sse2)
 	movl	%ecx, 8(%esp)	# Save ecx and edx registers
 	movl	%edx, 4(%esp)
 	stmxcsr 12(%esp)	# Save MXCSR
-	/* Clear the exceptions that might occurred */
+	/* Clear the exceptions that might have occurred */
 	movl	12(%esp), %edx
 	and	$-64, %edx	# Clear the exceptions
 	movl	%edx, 16(%esp)

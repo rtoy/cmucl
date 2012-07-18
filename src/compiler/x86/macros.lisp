@@ -140,22 +140,25 @@
 (defun inline-allocation (alloc-tn size)
   (let ((ok (gen-label))
 	(done (gen-label)))
-    ;;
+
     ;; Load the size first so that the size can be in the same
     ;; register as alloc-tn.
     (load-size alloc-tn alloc-tn size)
-    ;;
+
+    ;; Try inline allocation, incrementing the
+    ;; current-region-free-pointer by the size.  If we didn't pass the
+    ;; end of the region, then inline allocation succeeded, and we're
+    ;; done.
     (inst add alloc-tn
 	  (make-symbol-value-ea '*current-region-free-pointer*))
     (inst cmp alloc-tn
 	  (make-symbol-value-ea '*current-region-end-addr*))
     (inst jmp :be OK)
 
-    ;; Inline allocation didn't work so we need to call alloc, carefully.
-
-    ;; Recompute the size.  Can't just reload size because it might
-    ;; have already been destroyed if size = alloc-tn (which does
-    ;; happen).
+    ;; Inline allocation didn't work so we need to call alloc,
+    ;; carefully.  Need to recompute the size because we can't just
+    ;; reload size because it might have already been destroyed if
+    ;; size = alloc-tn (which does happen).
     (inst sub alloc-tn (make-symbol-value-ea '*current-region-free-pointer*))
     (case (tn-offset alloc-tn)
       (#.eax-offset
@@ -169,7 +172,7 @@
        (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
 						 #+sse2 "alloc_overflow_sse2")
 			      :foreign))
-       (inst mov alloc-tn eax-tn) ; Save allocated address in alloc-tn
+       (inst mov alloc-tn eax-tn)  	; Put allocated address in alloc-tn
        (inst pop eax-tn)		; Restore old value of eax
        (inst jmp done)))
 			       
@@ -181,8 +184,7 @@
   (values))
 
 (defun not-inline-allocation (alloc-tn size)
-  ;; C call to allocate via dispatch routines. Each destination has a
-  ;; special entry point. The size may be a register or a constant.
+  ;; C call to allocate. The size may be a register or a constant.
   (load-size alloc-tn alloc-tn size)
   (case (tn-offset alloc-tn)
     (#.eax-offset
