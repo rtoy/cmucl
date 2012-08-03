@@ -2,14 +2,8 @@
 
 include Config.x86_common
 
-# Use gcc-4.2 on Darwin in case someone has Xcode 4 installed.
-# Currently there are bugs in cmucl that cause errors when using gcc
-# from Xcode 4.  Xcode 3 (for OSX 10.5 and 10.6) has gcc-4.2, so this
-# shouldn't be a problem.
-CC = gcc-4.2
-
-# Compile code that will run on OSX 10.4 (Tiger)
-MIN_VER = -mmacosx-version-min=10.4
+# Compile code that will run on OSX 10.5 (Tiger)
+MIN_VER = -mmacosx-version-min=10.5
 
 CPPFLAGS += -DDARWIN $(MIN_VER) -m32
 CFLAGS += -g3
