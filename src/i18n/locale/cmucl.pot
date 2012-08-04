@@ -6698,7 +6698,7 @@ msgid " on "
 msgstr ""
 
 #: src/code/save.lisp
-msgid "See <http://www.cons.org/cmucl/> for support information."
+msgid "See <http://www.cmucl.org/> for support information."
 msgstr ""
 
 #: src/code/save.lisp
