@@ -37,7 +37,7 @@ uname_m=`uname -m 2>/dev/null`
 	Darwin)
 	    case $uname_m in
 		ppc) lisp_variant=ppc_darwin ;;
-		i386) lisp_variant=x86_darwin ;;
+		i386|x86_64) lisp_variant=x86_darwin ;;
 	    esac
 	    ;;
         NetBSD) lisp_variant=x86_netbsd ;;
