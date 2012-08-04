@@ -50,6 +50,7 @@ New in this release:
       enabling a trap when the current exception also listed that trap
       caused the exception to be immediately signaled.  This no longer
       happens and now matches how ppc and sparc behave.
+    * OSX Lion and XCode 4 can now compile cmucl without problems.
       
   * ANSI compliance fixes:
     * CMUCL was not printing pathnames like (make-pathname :directory
