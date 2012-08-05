@@ -73,7 +73,7 @@ def_arch_os () {
           OS=darwin
           # x86 or ppc?
           case `uname -m` in
-	      i386) ARCH=x86 ;;
+	      i386|x86_64) ARCH=x86 ;;
 	      *) ARCH=ppc ;;
 	  esac ;;
       NetBSD)
