@@ -116,45 +116,6 @@ unsigned long *os_sigcontext_pc(ucontext_t *);
 unsigned char *os_sigcontext_fpu_reg(ucontext_t *, int);
 unsigned int os_sigcontext_fpu_modes(ucontext_t *);
 
-#ifdef i386
-extern boolean os_support_sse2(void);
-#endif
-
 char* convert_lisp_string(char* c_string, void* lisp_string, int len);
-
-/*
- * Define macro to allocate a local array of the appropriate size
- * where the fpu state can be stored.
- */
-#if defined(i386) || defined(__x86_64)
-#define FPU_STATE_SIZE 27
-    /* 
-     * Need 512 byte area, aligned on a 16-byte boundary.  So allocate
-     * 512+16 bytes of space and let the routine adjust use the
-     * appropriate alignment.
-     */
-#define SSE_STATE_SIZE ((512+16)/4)
-
-/*
- * Just use the SSE size for both x87 and sse2 since the SSE size is
- * enough for either.
- */
-#define FPU_STATE(name)    int name[SSE_STATE_SIZE];
-
-#elif defined(sparc)
-/*
- * 32 (single-precision) FP registers, and the FP state register.
- * But Sparc V9 has 32 double-precision registers (equivalent to 64
- * single-precision, but can't be accessed), so we leave enough room
- * for that.
- */
-#define FPU_STATE_SIZE (((32 + 32 + 1) + 1)/2)
-#define FPU_STATE(name)    long long name[FPU_STATE_SIZE];
-#elif defined(DARWIN) && defined(__ppc__)
-#define FPU_STATE_SIZE 32
-#define FPU_STATE(name)    long long name[FPU_STATE_SIZE];
-#endif
-extern void save_fpu_state(void*);
-extern void restore_fpu_state(void*);
 
 #endif /* _OS_H_ */

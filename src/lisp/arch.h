@@ -30,18 +30,28 @@ extern lispobj funcall2(lispobj function, lispobj arg0, lispobj arg1);
 extern lispobj funcall3(lispobj function, lispobj arg0, lispobj arg1,
 			lispobj arg2);
 
-extern void fpu_save(void *);
-extern void fpu_restore(void *);
-extern void sse_save(void *);
-extern void sse_restore(void *);
-
 extern void arch_make_linkage_entry(long, void *, long);
 extern long arch_linkage_entry(unsigned long);
 void arch_make_lazy_linkage(long linkage_entry);
 long arch_linkage_entry(unsigned long retaddr);
 
-#ifdef i386
-extern int arch_support_sse2(void);
+
+extern void fpu_save(void *);
+extern void fpu_restore(void *);
+extern void sse_save(void *);
+extern void sse_restore(void *);
+extern void save_fpu_state(void*);
+extern void restore_fpu_state(void*);
+
+#if defined(i386) || defined(__x86_64)
+#include "x86-arch.h"
 #endif
 
+#if defined(DARWIN) && defined(__ppc__)
+#include "ppc-arch.h"
+#endif
+
+#if defined(sparc)
+#include "sparc-arch.h"
+#endif
 #endif /* __ARCH_H__ */
