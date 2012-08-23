@@ -15,7 +15,8 @@
 ;;;
 
 (in-package "DEBUG")
-(use-package '("TOOLKIT" "INTERFACE"))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (use-package '("TOOLKIT" "INTERFACE")))
 
 ;;; We need to record three things globally:
 ;;;    - The structure decribing the current debugger display
