@@ -160,6 +160,152 @@ internal_error(os_context_t * context)
 
 /* Utility routines used by random pieces of code. */
 
+#if defined(UNICODE)
+/*
+ * Convert a unicode code point to a set of utf8-encoded octets to
+ * standard output.  This is the algorithm used by the Lisp utf8
+ * encoder in src/code/extfmts.lisp.
+ */
+static void
+utf8(int code, int len)
+{
+    int k;
+    int j = 6 - len;
+    int p = 6 * len;
+    int init = 0xff & (0x7e << j);
+    int c;
+
+    /*
+     * (ldb (byte j p) code): Extract j bits from position p of the code
+     */
+    c = (code >> p) & ((1 << j) - 1);
+    
+    putchar(init | c);
+
+    for (k = 0; k < len; ++k) {
+        p -= 6;
+        /* (ldb (byte 6 p) code) */
+        c = (code >> p) & ((1 << 6) - 1);
+        putchar(128 | c);
+    }
+}
+
+/*
+ * Test if code is a surrogate.  Returns true if so. If the code is a
+ * surrogate, then type indicates if it is a high (0) or low (1)
+ * surrogate.  If not a surrogate, type is not modified.  If type is
+ * NULL, then no type is returned.
+ */
+boolean
+surrogatep(int code, int *type)
+{
+    boolean result;
+
+    if ((code >> 11) == 0x1b) {
+        result = 1;
+        if (type) {
+            *type = (code >> 10) & 1;
+        }
+    } else {
+        result = 0;
+    }
+
+    return result;
+}
+
+/*
+ * Convert one or two utf16 code units into a code point.  utf16
+ * points to the string, len is the length of the string.  The
+ * codepoint is returned and the number of code units consumed is
+ * returned in consumed.
+ */
+int
+utf16_codepoint(unsigned short int* utf16, int len, int* consumed)
+{
+    int code = *utf16;
+    int read = 1;
+    
+    int code_type;
+
+    /*
+     * If the current code unit is not a surrogate, we're done.
+     * Otherwise process the surrogate
+     */
+    
+    if (surrogatep(code, &code_type)) {
+        /*
+         * Try to get the following surrogate, if there are still code
+         * units left.  If not, we have a bare surrogate, so just
+         * return the replacement character.
+         */
+        if (len > 0) {
+            int next = utf16[1];
+            int next_type;
+            if (surrogatep(next, &next_type)) {
+                /* Got the following surrogate, so combine them if possible */
+                if ((code_type == 0) && (next_type == 1)) {
+                    /* High followed by low surrogate */
+                    code = ((code - 0xd800) << 10) + next + 0x2400;
+                    ++read;
+                } else if ((code_type == 1) && (next_type == 0)) {
+                    /* Low followed by high surrogate */
+                    code = ((code - 0xd800) << 10) + next + 0x2400;;
+                    ++read;
+                } else {
+                    /* Give up */
+                    code = 0xfffd;
+                }
+            } else {
+                /* Surrogate followed by non-surrogate. Give up */
+                code = 0xfffd;
+            }
+        } else {
+            code = 0xfffd;
+        }
+    }
+
+    *consumed = read;
+    return code;
+}
+
+/*
+ * Send the utf-16 Lisp unicode string to standard output as a
+ * utf8-encoded sequence of octets.
+ */
+static void
+utf16_output(unsigned short int* utf16, int len)
+{
+    while (len) {
+        int consumed;
+        int code = utf16_codepoint(utf16, len, &consumed);
+
+        /* Output the codepoint */
+        if (code < 0x80) {
+            putchar(code);
+        } else if (code < 0x800) {
+            utf8(code, 1);
+        } else if (code < 0x10000) {
+            utf8(code, 2);
+        } else if (code < 0x110000) {
+            utf8(code, 3);
+        } else {
+            /*
+             * This shouldn't happen, but if it does we don't want to
+             * signal any kind of error so just output a question mark
+             * so we can continue.
+             */
+            putchar('?');
+        }
+
+        len -= consumed;
+        utf16 += consumed;
+    }
+}
+#endif
+
+/*
+ * debug_print is used by %primitive print to output a string.
+ */
 lispobj
 debug_print(lispobj object)
 {
@@ -178,13 +324,7 @@ debug_print(lispobj object)
             len = lisp_string->length >> 2;
             lisp_chars = (unsigned short int*) lisp_string->data;
 
-            /*
-             * Do we really want to dump out the entire contents of
-             * the utf-16 string?  Should we just print out the low 8
-             * bits of each Lisp character?  Or maybe convert the
-             * utf-16 string to some more suitable encoding?
-             */
-            fwrite(lisp_chars, sizeof(*lisp_chars), len, stdout);
+            utf16_output(lisp_chars, len);
             putchar('\n');
     
             fflush(stdout);
@@ -192,6 +332,11 @@ debug_print(lispobj object)
             print(object);
         }
     } else {
+        /*
+         * We should actually ever get here because %primitive print
+         * is only supposed to take strings.  But if we do, it's
+         * useful to print something out anyway.
+         */
 #if 1
 	printf("obj @0x%lx: ", (unsigned long) object);
 #endif
