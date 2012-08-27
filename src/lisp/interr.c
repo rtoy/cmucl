@@ -161,6 +161,10 @@ internal_error(os_context_t * context)
 /* Utility routines used by random pieces of code. */
 
 #if defined(UNICODE)
+
+/* The Unicode replacement character code */
+#define REPLACEMENT_CODE 0xfffd
+
 /*
  * Convert a unicode code point to a set of utf8-encoded octets to
  * standard output.  This is the algorithm used by the Lisp utf8
@@ -196,7 +200,7 @@ utf8(int code, int len)
  * surrogate.  If not a surrogate, type is not modified.  If type is
  * NULL, then no type is returned.
  */
-boolean
+static boolean
 surrogatep(int code, int *type)
 {
     boolean result;
@@ -219,7 +223,7 @@ surrogatep(int code, int *type)
  * codepoint is returned and the number of code units consumed is
  * returned in consumed.
  */
-int
+static int
 utf16_codepoint(unsigned short int* utf16, int len, int* consumed)
 {
     int code = *utf16;
@@ -229,7 +233,7 @@ utf16_codepoint(unsigned short int* utf16, int len, int* consumed)
 
     /*
      * If the current code unit is not a surrogate, we're done.
-     * Otherwise process the surrogate
+     * Otherwise process the surrogate.
      */
     
     if (surrogatep(code, &code_type)) {
@@ -248,19 +252,22 @@ utf16_codepoint(unsigned short int* utf16, int len, int* consumed)
                     code = ((code - 0xd800) << 10) + next + 0x2400;
                     ++read;
                 } else if ((code_type == 1) && (next_type == 0)) {
-                    /* Low followed by high surrogate */
+                    /*
+                     * Low followed by high surrogate.  Not sure if we
+                     * really need to handle this case.
+                     */
                     code = ((code - 0xd800) << 10) + next + 0x2400;;
                     ++read;
                 } else {
                     /* Give up */
-                    code = 0xfffd;
+                    code = REPLACEMENT_CODE;
                 }
             } else {
                 /* Surrogate followed by non-surrogate. Give up */
-                code = 0xfffd;
+                code = REPLACEMENT_CODE;
             }
         } else {
-            code = 0xfffd;
+            code = REPLACEMENT_CODE;
         }
     }
 
