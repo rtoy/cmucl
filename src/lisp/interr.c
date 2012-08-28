@@ -226,53 +226,38 @@ surrogatep(int code, int *type)
 static int
 utf16_codepoint(unsigned short int* utf16, int len, int* consumed)
 {
-    int code = *utf16;
-    int read = 1;
-    
+    int codepoint = REPLACEMENT_CODE;
+    int code_unit = *utf16;
     int code_type;
+    int read = 1;
 
     /*
      * If the current code unit is not a surrogate, we're done.
-     * Otherwise process the surrogate.
+     * Otherwise process the surrogate.  If this is a high (leading)
+     * surrogate and the next code unit is a low (trailing) surrogate,
+     * compute the code point.  Otherwise we have a bare surrogate or
+     * an invalid surrogate sequence, so just return the replacement
+     * character.
      */
     
-    if (surrogatep(code, &code_type)) {
-        /*
-         * Try to get the following surrogate, if there are still code
-         * units left.  If not, we have a bare surrogate, so just
-         * return the replacement character.
-         */
-        if (len > 0) {
-            int next = utf16[1];
+    if (surrogatep(code_unit, &code_type)) {
+        if (code_type == 0 && len > 0) {
+            int next_unit = utf16[1];
             int next_type;
-            if (surrogatep(next, &next_type)) {
-                /* Got the following surrogate, so combine them if possible */
-                if ((code_type == 0) && (next_type == 1)) {
+            if (surrogatep(next_unit, &next_type)) {
+                if (next_type == 1) {
                     /* High followed by low surrogate */
-                    code = ((code - 0xd800) << 10) + next + 0x2400;
+                    codepoint = ((code_unit - 0xd800) << 10) + next_unit + 0x2400;
                     ++read;
-                } else if ((code_type == 1) && (next_type == 0)) {
-                    /*
-                     * Low followed by high surrogate.  Not sure if we
-                     * really need to handle this case.
-                     */
-                    code = ((code - 0xd800) << 10) + next + 0x2400;;
-                    ++read;
-                } else {
-                    /* Give up */
-                    code = REPLACEMENT_CODE;
                 }
-            } else {
-                /* Surrogate followed by non-surrogate. Give up */
-                code = REPLACEMENT_CODE;
             }
-        } else {
-            code = REPLACEMENT_CODE;
         }
+    } else {
+        codepoint = code_unit;
     }
 
     *consumed = read;
-    return code;
+    return codepoint;
 }
 
 /*
@@ -340,8 +325,8 @@ debug_print(lispobj object)
         }
     } else {
         /*
-         * We should actually ever get here because %primitive print
-         * is only supposed to take strings.  But if we do, it's
+         * We shouldn't actually ever get here because %primitive
+         * print is only supposed to take strings.  But if we do, it's
          * useful to print something out anyway.
          */
 #if 1
