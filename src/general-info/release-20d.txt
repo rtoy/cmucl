@@ -52,7 +52,9 @@ New in this release:
       happens and now matches how ppc and sparc behave.
     * OSX Lion and XCode 4 can now compile cmucl without problems.
     * OSX 10.4 is no longer supported.
-      
+    * Micro optimizations for floats: 2*x -> x+x and x/2^n ->
+      (2^(n))*x.
+
   * ANSI compliance fixes:
     * CMUCL was not printing pathnames like (make-pathname :directory
       '(:absolute "tmp" "" "/")) correctly.  This is now printed using
@@ -88,6 +90,8 @@ New in this release:
       external format.  It defaulted to using
       *DEFAULT-EXTERNAL-FORMAT* instead of the format used when
       compiling the file.
+    * Minor build issue in CLM debugger interface due to USE-PACKAGE
+      no longer having special compiler treatment.
 
   * Trac Tickets:
     * #50: Print/read error with make-pathname.
@@ -100,9 +104,6 @@ New in this release:
 
   * Other changes:
     * The layout of the cmucl directories has been changed.
-    * On darwin/x86, gcc-4.2 is explicitly used in case Xcode 4 is
-      installed.  CMUCL doesn't run correctly when built with gcc/llvm
-      in Xcode 4.
     * Add -R option to build.sh to force recompiling the C
       runtime. (Default it to compile only what is changed.)
     * Add -R option to build-all.sh to force recompiling the C
