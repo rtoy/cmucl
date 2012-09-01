@@ -8,6 +8,14 @@
 #ifndef _X86_VALIDATE_H_
 #define _X86_VALIDATE_H_
 
+#if defined(__linux__)
+#include "x86-validate-linux.h"
+#endif
+
+#if defined(DARWIN)
+#include "x86-validate-darwin.h"
+#endif
+
 /*
  * Also look in compiler/x86/parms.lisp for some of the parameters.
  *
@@ -119,7 +127,7 @@
 #define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000)	/* 512MB */
 #endif
 
-#if defined(__NetBSD__) || defined(DARWIN)
+#if defined(__NetBSD__)
 #define READ_ONLY_SPACE_START   (SpaceStart_TargetReadOnly)
 #define READ_ONLY_SPACE_SIZE    (0x0ffff000)	/* 256MB - 1 page */
 
@@ -130,73 +138,26 @@
 #define BINDING_STACK_SIZE	(0x07fff000)	/* 128MB - 1 page */
 
 #define CONTROL_STACK_START	(0x40000000)
-#if defined(DARWIN)
-/*
- * According to /usr/include/sys/signal.h, MINSIGSTKSZ is 32K and
- * SIGSTKSZ is 128K.  We should account for that appropriately.
- */
-#define CONTROL_STACK_SIZE	(0x07fdf000)	/* 128MB - SIGSTKSZ - 1 page */
 
-#define SIGNAL_STACK_START	(0x47fe0000)    /* One page past the end of the control stack */
-#define SIGNAL_STACK_SIZE	SIGSTKSZ
-#else
 #define CONTROL_STACK_SIZE	(0x07fd8000)	/* 128MB - SIGSTKSZ */
 
 #define SIGNAL_STACK_START	(0x47fd8000)
 #define SIGNAL_STACK_SIZE	SIGSTKSZ
-#endif
 
 #define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)
 #ifdef GENCGC
-#if defined(DARWIN)
-/*
- * On Darwin, /usr/lib/dyld appears to always be loaded at address
- * #x8fe2e000.  Hence, the maximum dynamic space size is 1206050816
- * bytes, or just over 1.150 GB.  Set the limit to 1.150 GB.
- */
-#define DYNAMIC_SPACE_SIZE	(0x47E00000U)	/* 1.150GB */
-#else
 #define DYNAMIC_SPACE_SIZE	(0x67800000U)	/* 1.656GB */
-#endif
 #else
 #define DYNAMIC_SPACE_SIZE	(0x04000000U)	/* 64MB */
 #endif
+
 #define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000U)	/* 512MB */
 #ifdef LINKAGE_TABLE
 #define FOREIGN_LINKAGE_SPACE_START (LinkageSpaceStart)
 #define FOREIGN_LINKAGE_SPACE_SIZE (0x100000)	/* 1MB */
 #endif
+
 #endif /* __NetBSD__ || DARWIN */
-
-#ifdef __linux__
-#define READ_ONLY_SPACE_START   (SpaceStart_TargetReadOnly)
-#define READ_ONLY_SPACE_SIZE    (0x0ffff000)	/* 256MB - 1 page */
-
-#define STATIC_SPACE_START	(SpaceStart_TargetStatic)
-#define STATIC_SPACE_SIZE	(0x0ffff000)	/* 256MB - 1 page */
-
-#define BINDING_STACK_START	(0x20000000)
-#define BINDING_STACK_SIZE	(0x07fff000)	/* 128MB - 1 page */
-
-#define CONTROL_STACK_START	0x38000000
-#define CONTROL_STACK_SIZE	(0x07fff000 - 8192)
-
-#define SIGNAL_STACK_START	CONTROL_STACK_END
-#define SIGNAL_STACK_SIZE	SIGSTKSZ
-
-#define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)
-
-#ifdef GENCGC
-#define DYNAMIC_SPACE_SIZE	(0x66000000)	/* 1.632GB */
-#else
-#define DYNAMIC_SPACE_SIZE	(0x04000000)	/* 64MB */
-#endif
-#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000)	/* 512MB */
-#ifdef LINKAGE_TABLE
-#define FOREIGN_LINKAGE_SPACE_START (LinkageSpaceStart)
-#define FOREIGN_LINKAGE_SPACE_SIZE (0x100000)	/* 1MB */
-#endif
-#endif
 
 #ifdef SOLARIS
 /*
