@@ -1,6 +1,4 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.28 2011/09/01 05:18:26 rtoy Exp $
- *
  * Common interface for os-dependent functions.
  *
  */

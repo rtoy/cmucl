@@ -1,5 +1,4 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mach-o.c,v 1.7 2010/08/02 21:59:43 rtoy Rel $
  *
  * This code was written by Raymond Toy as part of CMU Common Lisp and
  * has been placed in the public domain.

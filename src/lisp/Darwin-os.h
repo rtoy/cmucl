@@ -1,7 +1,5 @@
 /*
 
- $Header: /project/cmucl/cvsroot/src/lisp/Darwin-os.h,v 1.7 2008-01-03 11:41:54 cshapiro Exp $
-
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 

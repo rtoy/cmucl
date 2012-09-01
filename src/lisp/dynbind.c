@@ -1,6 +1,4 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/dynbind.c,v 1.4 2005/09/15 18:26:51 rtoy Rel $
- * 
  * Support for dynamic binding from C.
  */
 

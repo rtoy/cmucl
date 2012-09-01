@@ -14,8 +14,6 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /project/cmucl/cvsroot/src/lisp/Darwin-os.c,v 1.16.4.3 2009-03-18 15:37:29 rtoy Exp $
- *
  */
 
 #include <stdio.h>

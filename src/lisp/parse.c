@@ -1,4 +1,10 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.12 2008/03/19 09:17:13 cshapiro Rel $ */
+/*
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
+
 #include <stdio.h>
 #include <ctype.h>
 #include <signal.h>

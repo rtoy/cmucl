@@ -1,8 +1,6 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.84 2011/09/01 05:18:26 rtoy Exp $
- *
  */
 
 #include <stdio.h>

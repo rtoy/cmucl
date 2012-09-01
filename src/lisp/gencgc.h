@@ -7,7 +7,6 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.17 2011/01/09 00:12:36 rtoy Exp $
  *
  */
 

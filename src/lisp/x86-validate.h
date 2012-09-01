@@ -3,8 +3,6 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.34 2010/12/22 05:55:22 rtoy Exp $
- *
  */
 
 #ifndef _X86_VALIDATE_H_

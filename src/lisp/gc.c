@@ -1,8 +1,6 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.26 2007/01/01 11:53:03 cshapiro Rel $
- * 
  * Written by Christopher Hoover.
  */
 

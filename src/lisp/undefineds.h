@@ -1,5 +1,4 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.41 2008/10/07 20:32:03 rtoy Rel $ */
 
 /*
  * Do not wrap this inside an #ifndef/#endif!

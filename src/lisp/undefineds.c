@@ -1,5 +1,10 @@
+/*
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.c,v 1.7 2005/09/15 18:26:53 rtoy Rel $ */
 
 #ifdef sun
 #ifndef MACH

@@ -1,8 +1,9 @@
-/* x86-arch.c -*- Mode: C; comment-column: 40 -*-
- *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.43 2010/12/26 16:04:43 rswindells Exp $ 
- *
- */
+/*
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
 
 #include <stdio.h>
 #include <stdlib.h>

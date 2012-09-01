@@ -7,8 +7,6 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /project/cmucl/cvsroot/src/lisp/gencgc.c,v 1.112 2011-01-09 00:12:36 rtoy Exp $
- *
  */
 
 #include <limits.h>

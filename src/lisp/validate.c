@@ -1,6 +1,4 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.25 2007/07/09 16:04:12 fgilham Rel $
- *
  * Memory Validation
  */
 

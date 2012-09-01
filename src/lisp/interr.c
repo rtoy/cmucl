@@ -1,6 +1,4 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.10 2009/06/11 16:04:01 rtoy Rel $
- *
  * Stuff to handle internal errors.
  *
  */

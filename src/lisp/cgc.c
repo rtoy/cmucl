@@ -1,5 +1,4 @@
 /* cgc.c -*- Mode: C; comment-column: 40; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.14 2008/03/19 09:17:10 cshapiro Rel $
  *
  * Conservative Garbage Collector for CMUCL x86.
  *
