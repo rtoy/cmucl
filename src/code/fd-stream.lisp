@@ -114,10 +114,6 @@
     ((simple-array double-float (*)) 8)
     ((simple-array (complex single-float) (*)) 8)
     ((simple-array (complex double-float) (*)) 16)
-    #+long-float
-    ((simple-array long-float (*)) 10)
-    #+long-float
-    ((simple-array (complex long-float) (*)) 20)
     #+double-double
     ((simple-array double-double-float (*)) 16)
     #+double-double

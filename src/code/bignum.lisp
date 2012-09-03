@@ -1863,17 +1863,6 @@ down to individual words.")
 	 hi
 	 (logior hi (ash -1 vm:float-sign-shift)))
      (%bignum-ref bits 1))))
-;;;
-#+(and long-float x86)
-(defun long-float-from-bits (bits exp plusp)
-  (declare (fixnum exp))
-  (declare (optimize (ext:inhibit-warnings 3)))
-  (make-long-float
-   (if plusp
-       exp
-       (logior exp (ash 1 15)))
-   (%bignum-ref bits 2)
-   (%bignum-ref bits 1)))
 
 ;;;
 #+nil

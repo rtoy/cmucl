@@ -69,11 +69,6 @@
   (declare (type index index))
   (%raw-ref-double vec index))
 
-#+long-float
-(defun %raw-ref-long (vec index)
-  (declare (type index index))
-  (%raw-ref-long vec index))
-
 (defun %raw-set-single (vec index val)
   (declare (type index index))
   (%raw-set-single vec index val))
@@ -81,11 +76,6 @@
 (defun %raw-set-double (vec index val)
   (declare (type index index))
   (%raw-set-double vec index val))
-
-#+long-float
-(defun %raw-set-long (vec index val)
-  (declare (type index index))
-  (%raw-set-long vec index val))
 
 (defun %raw-ref-complex-single (vec index)
   (declare (type index index))
@@ -95,11 +85,6 @@
   (declare (type index index))
   (%raw-ref-complex-double vec index))
 
-#+long-float
-(defun %raw-ref-complex-long (vec index)
-  (declare (type index index))
-  (%raw-ref-complex-long vec index))
-
 (defun %raw-set-complex-single (vec index val)
   (declare (type index index))
   (%raw-set-complex-single vec index val))
@@ -107,11 +92,6 @@
 (defun %raw-set-complex-double (vec index val)
   (declare (type index index))
   (%raw-set-complex-double vec index val))
-
-#+long-float
-(defun %raw-set-complex-long (vec index val)
-  (declare (type index index))
-  (%raw-set-complex-long vec index val))
 
 (defun %instance-layout (instance)
   (%instance-layout instance))
@@ -168,12 +148,8 @@
 (defsetf %instance-ref %instance-set)
 (defsetf %raw-ref-single %raw-set-single)
 (defsetf %raw-ref-double %raw-set-double)
-#+long-float
-(defsetf %raw-ref-long %raw-set-long)
 (defsetf %raw-ref-complex-single %raw-set-complex-single)
 (defsetf %raw-ref-complex-double %raw-set-complex-double)
-#+long-float
-(defsetf %raw-ref-complex-long %raw-set-complex-long)
 (defsetf %instance-layout %set-instance-layout)
 (defsetf %funcallable-instance-info %set-funcallable-instance-info)
 
@@ -294,9 +270,8 @@
   (type t)			; declared type specifier
   ;;
   ;; If a raw slot, what it holds.  T means not raw.
-  (raw-type t :type (member t single-float double-float #+long-float long-float
+  (raw-type t :type (member t single-float double-float
 			    complex-single-float complex-double-float
-			    #+long-float complex-long-float
 			    unsigned-byte))
   (read-only nil :type (member t nil)))
 
@@ -737,16 +712,10 @@
 	       (values 'single-float 1))
 	      ((subtypep type 'double-float)
 	       (values 'double-float 2))
-	      #+long-float
-	      ((subtypep type 'long-float)
-	       (values 'long-float #+x86 3 #+sparc 4))
 	      ((subtypep type '(complex single-float))
 	       (values 'complex-single-float 2))
 	      ((subtypep type '(complex double-float))
 	       (values 'complex-double-float 4))
-	      #+long-float
-	      ((subtypep type '(complex long-float))
-	       (values 'complex-long-float #+x86 6 #+sparc 8))
 	      (t (values nil nil)))
 
       (cond ((not raw-type)
@@ -1147,24 +1116,14 @@
      (ecase rtype
        (single-float '%raw-ref-single)
        (double-float '%raw-ref-double)
-       #+long-float
-       (long-float '%raw-ref-long)
        (complex-single-float '%raw-ref-complex-single)
        (complex-double-float '%raw-ref-complex-double)
-       #+long-float
-       (complex-long-float '%raw-ref-complex-long)
        (unsigned-byte 'aref)
        ((t)
 	(if (eq (dd-type defstruct) 'funcallable-structure)
 	    '%funcallable-instance-info
 	    '%instance-ref)))
      (case rtype
-       #+long-float
-       (complex-long-float
-	(truncate (dsd-index slot) #+x86 6 #+sparc 8))
-       #+long-float
-       (long-float
-	(truncate (dsd-index slot) #+x86 3 #+sparc 4))
        (double-float
 	(ash (dsd-index slot) -1))
        (complex-double-float

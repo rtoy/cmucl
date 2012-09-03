@@ -767,14 +767,6 @@
 	   :inherits (vector simple-array array sequence generic-vector
 		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
-	  #+long-float
-	  (simple-array-long-float
-	   :translation (simple-array long-float (*))
-	   :codes (#.vm:simple-array-long-float-type)
-	   :direct-superclasses (vector simple-array)
-	   :inherits (vector simple-array array sequence generic-vector
-		      generic-array mutable-sequence mutable-collection
-		      generic-sequence collection))
 	  #+double-double
 	  (simple-array-double-double-float
 	   :translation (simple-array double-double-float (*))
@@ -793,14 +785,6 @@
 	  (simple-array-complex-double-float
 	   :translation (simple-array (complex double-float) (*))
 	   :codes (#.vm:simple-array-complex-double-float-type)
-	   :direct-superclasses (vector simple-array)
-	   :inherits (vector simple-array array sequence generic-vector
-		      generic-array mutable-sequence mutable-collection
-		      generic-sequence collection))
-	  #+long-float
-	  (simple-array-complex-long-float
-	   :translation (simple-array (complex long-float) (*))
-	   :codes (#.vm:simple-array-complex-long-float-type)
 	   :direct-superclasses (vector simple-array)
 	   :inherits (vector simple-array array sequence generic-vector
 		      generic-array mutable-sequence mutable-collection
@@ -842,11 +826,6 @@
 	   :translation (complex double-float)
 	   :inherits (complex number generic-number)
 	   :codes (#.vm:complex-double-float-type))
-	  #+long-float
-	  (complex-long-float
-	   :translation (complex long-float)
-	   :inherits (complex number generic-number)
-	   :codes (#.vm:complex-long-float-type))
 	  #+double-double
 	  (complex-double-double-float
 	   :translation (complex double-double-float)
@@ -862,11 +841,6 @@
 	   :translation double-float
 	   :inherits (float real number generic-number)
 	   :codes (#.vm:double-float-type))
-	  #+long-float
-	  (long-float
-	   :translation long-float
-	   :inherits (float real number generic-number)
-	   :codes (#.vm:long-float-type))
 	  #+double-double
 	  (double-double-float
 	   :translation double-double-float

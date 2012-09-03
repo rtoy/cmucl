@@ -19,7 +19,7 @@
 (intl:textdomain "cmucl")
 
 (export '(alien * array struct union enum function integer signed unsigned
-	  boolean values single-float double-float long-float
+	  boolean values single-float double-float
 	  system-area-pointer def-alien-type def-alien-variable sap-alien
 	  extern-alien with-alien slot deref addr cast alien-sap alien-size
 	  alien-funcall def-alien-routine make-alien free-alien
@@ -43,7 +43,6 @@
 	  alien-float-type alien-float-type-p
 	  alien-single-float-type alien-single-float-type-p
 	  alien-double-float-type alien-double-float-type-p
-	  alien-long-float-type alien-long-float-type-p
 	  alien-pointer-type alien-pointer-type-p alien-pointer-type-to
 	  make-alien-pointer-type
 	  alien-array-type alien-array-type-p alien-array-type-element-type
@@ -89,7 +88,6 @@
 	  alien-float-type alien-float-type-p
 	  alien-single-float-type alien-single-float-type-p
 	  alien-double-float-type alien-double-float-type-p
-	  alien-long-float-type alien-long-float-type-p
 	  alien-pointer-type alien-pointer-type-p alien-pointer-type-to
 	  make-alien-pointer-type
 	  alien-array-type alien-array-type-p alien-array-type-element-type
@@ -900,19 +898,6 @@
   (declare (ignore type))
   `(sap-ref-double ,sap (/ ,offset vm:byte-bits)))
 
-
-#+long-float
-(def-alien-type-class (long-float :include (float (:bits #+x86 96 #+sparc 128))
-				  :include-args (type)))
-
-#+long-float
-(def-alien-type-translator long-float ()
-  (make-alien-long-float-type :type 'long-float))
-
-#+long-float
-(def-alien-type-method (long-float :extract-gen) (type sap offset)
-  (declare (ignore type))
-  `(sap-ref-long ,sap (/ ,offset vm:byte-bits)))
 
 
 ;;;; The SAP type

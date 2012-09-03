@@ -3137,9 +3137,6 @@ The result is a symbol or nil if the routine cannot be found."
        (escaped-float-value single-float))
       (#.vm:double-reg-sc-number
        (escaped-float-value double-float))
-      #+long-float
-      (#.vm:long-reg-sc-number
-       (escaped-float-value long-float))
       #+double-double
       (#.vm:double-double-reg-sc-number
        (if escaped
@@ -3167,16 +3164,6 @@ The result is a symbol or nil if the routine cannot be found."
 	     escaped (+ (c:sc-offset-offset sc-offset) #+sparc 2 #-sparc 1)
 	     'double-float))
 	   :invalid-value-for-unescaped-register-storage))
-      #+long-float
-      (#.vm:complex-long-reg-sc-number
-       (if escaped
-	   (complex
-	    (vm:sigcontext-float-register
-	     escaped (c:sc-offset-offset sc-offset) 'long-float)
-	    (vm:sigcontext-float-register
-	     escaped (+ (c:sc-offset-offset sc-offset) #+sparc 4)
-	     'long-float))
-	   :invalid-value-for-unescaped-register-storage))
       #+double-double
       (#.vm:complex-double-double-reg-sc-number
        (if escaped
@@ -3203,11 +3190,6 @@ The result is a symbol or nil if the routine cannot be found."
        (with-nfp (nfp)
 	 (system:sap-ref-double nfp (* (c:sc-offset-offset sc-offset)
 				       vm:word-bytes))))
-      #+long-float
-      (#.vm:long-stack-sc-number
-       (with-nfp (nfp)
-	 (system:sap-ref-long nfp (* (c:sc-offset-offset sc-offset)
-				     vm:word-bytes))))
       #+double-double
       (#.vm:double-double-stack-sc-number
        (with-nfp (nfp)
@@ -3248,15 +3230,6 @@ The result is a symbol or nil if the routine cannot be found."
 	   (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset)
 					    6)
 					 vm:word-bytes))))))
-      #+long-float
-      (#.vm:complex-long-stack-sc-number
-       (with-nfp (nfp)
-	 (complex
-	  (system:sap-ref-long nfp (* (c:sc-offset-offset sc-offset)
-				      vm:word-bytes))
-	  (system:sap-ref-long nfp (* (+ (c:sc-offset-offset sc-offset)
-					 #+sparc 4)
-				      vm:word-bytes)))))
       (#.vm:control-stack-sc-number
        (kernel:stack-ref fp (c:sc-offset-offset sc-offset)))
       (#.vm:base-char-stack-sc-number
@@ -3349,9 +3322,6 @@ The result is a symbol or nil if the routine cannot be found."
        (escaped-float-value single-float))
       (#.vm:double-reg-sc-number
        (escaped-float-value double-float))
-      #+long-float
-      (#.vm:long-reg-sc-number
-       (escaped-float-value long-float))
       #+double-double
       (#.vm:double-double-reg-sc-number
        (if escaped
@@ -3366,19 +3336,12 @@ The result is a symbol or nil if the routine cannot be found."
        (escaped-complex-float-value single-float))
       (#.vm:complex-double-reg-sc-number
        (escaped-complex-float-value double-float))
-      #+long-float
-      (#.vm:complex-long-reg-sc-number
-       (escaped-complex-float-value long-float))
       (#.vm:single-stack-sc-number
        (system:sap-ref-single fp (- (* (1+ (c:sc-offset-offset sc-offset))
 				       vm:word-bytes))))
       (#.vm:double-stack-sc-number
        (system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 2)
 				       vm:word-bytes))))
-      #+long-float
-      (#.vm:long-stack-sc-number
-       (system:sap-ref-long fp (- (* (+ (c:sc-offset-offset sc-offset) 3)
-				     vm:word-bytes))))
       #+double-double
       (#.vm:complex-double-double-reg-sc-number
        (if escaped
@@ -3409,13 +3372,6 @@ The result is a symbol or nil if the routine cannot be found."
 					vm:word-bytes)))
 	(system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 4)
 					vm:word-bytes)))))
-      #+long-float
-      (#.vm:complex-long-stack-sc-number
-       (complex
-	(system:sap-ref-long fp (- (* (+ (c:sc-offset-offset sc-offset) 3)
-				      vm:word-bytes)))
-	(system:sap-ref-long fp (- (* (+ (c:sc-offset-offset sc-offset) 6)
-				      vm:word-bytes)))))
       #+double-double
       (#.vm:complex-double-double-stack-sc-number
        (if escaped
@@ -3560,9 +3516,6 @@ The result is a symbol or nil if the routine cannot be found."
        (set-escaped-float-value single-float value))
       (#.vm:double-reg-sc-number
        (set-escaped-float-value double-float value))
-      #+long-float
-      (#.vm:long-reg-sc-number
-       (set-escaped-float-value long-float value))
       (#.vm:complex-single-reg-sc-number
        (when escaped
 	 (setf (vm:sigcontext-float-register
@@ -3584,18 +3537,6 @@ The result is a symbol or nil if the routine cannot be found."
 		'double-float)
 	       (imagpart value)))
        value)
-      #+long-float
-      (#.vm:complex-long-reg-sc-number
-       (when escaped
-	 (setf (vm:sigcontext-float-register
-		escaped (c:sc-offset-offset sc-offset) 'long-float)
-	       (realpart value))
-	 (setf (vm:sigcontext-float-register
-		escaped
-		(+ (c:sc-offset-offset sc-offset) #+sparc 4)
-		'long-float)
-	       (imagpart value)))
-       value)
       (#.vm:single-stack-sc-number
        (with-nfp (nfp)
 	 (setf (system:sap-ref-single nfp (* (c:sc-offset-offset sc-offset)
@@ -3606,12 +3547,6 @@ The result is a symbol or nil if the routine cannot be found."
 	 (setf (system:sap-ref-double nfp (* (c:sc-offset-offset sc-offset)
 					     vm:word-bytes))
 	       (the double-float value))))
-      #+long-float
-      (#.vm:long-stack-sc-number
-       (with-nfp (nfp)
-	 (setf (system:sap-ref-long nfp (* (c:sc-offset-offset sc-offset)
-					   vm:word-bytes))
-	       (the long-float value))))
       (#.vm:complex-single-stack-sc-number
        (with-nfp (nfp)
 	 (setf (system:sap-ref-single
@@ -3628,16 +3563,6 @@ The result is a symbol or nil if the routine cannot be found."
 	 (setf (system:sap-ref-double
 		nfp (* (+ (c:sc-offset-offset sc-offset) 2) vm:word-bytes))
 	       (the double-float (realpart value)))))
-      #+long-float
-      (#.vm:complex-long-stack-sc-number
-       (with-nfp (nfp)
-	 (setf (system:sap-ref-long
-		nfp (* (c:sc-offset-offset sc-offset) vm:word-bytes))
-	       (the long-float (realpart value)))
-	 (setf (system:sap-ref-long
-		nfp (* (+ (c:sc-offset-offset sc-offset) #+sparc 4)
-		       vm:word-bytes))
-	       (the long-float (realpart value)))))
       (#.vm:control-stack-sc-number
        (setf (kernel:stack-ref fp (c:sc-offset-offset sc-offset)) value))
       (#.vm:base-char-stack-sc-number
@@ -3690,10 +3615,6 @@ The result is a symbol or nil if the routine cannot be found."
       (#.vm:double-reg-sc-number
 	#+nil ;;  don't have escaped floats -- still in npx?
        (set-escaped-float-value double-float value))
-      #+long-float
-      (#.vm:long-reg-sc-number
-	#+nil ;;  don't have escaped floats -- still in npx?
-       (set-escaped-float-value long-float value))
       (#.vm:single-stack-sc-number
        (setf (system:sap-ref-single
 	      fp (- (* (1+ (c:sc-offset-offset sc-offset)) vm:word-bytes)))
@@ -3702,11 +3623,6 @@ The result is a symbol or nil if the routine cannot be found."
        (setf (system:sap-ref-double
 	      fp (- (* (+ (c:sc-offset-offset sc-offset) 2) vm:word-bytes)))
 	     (the double-float value)))
-      #+long-float
-      (#.vm:long-stack-sc-number
-       (setf (system:sap-ref-long
-	      fp (- (* (+ (c:sc-offset-offset sc-offset) 3) vm:word-bytes)))
-	     (the long-float value)))
       (#.vm:complex-single-stack-sc-number
        (setf (system:sap-ref-single
 	      fp (- (* (1+ (c:sc-offset-offset sc-offset)) vm:word-bytes)))
@@ -3721,14 +3637,6 @@ The result is a symbol or nil if the routine cannot be found."
        (setf (system:sap-ref-double
 	      fp (- (* (+ (c:sc-offset-offset sc-offset) 4) vm:word-bytes)))
 	     (imagpart (the (complex double-float) value))))
-      #+long-float
-      (#.vm:complex-long-stack-sc-number
-       (setf (system:sap-ref-long
-	      fp (- (* (+ (c:sc-offset-offset sc-offset) 3) vm:word-bytes)))
-	     (realpart (the (complex long-float) value)))
-       (setf (system:sap-ref-long
-	      fp (- (* (+ (c:sc-offset-offset sc-offset) 6) vm:word-bytes)))
-	     (imagpart (the (complex long-float) value))))
       (#.vm:control-stack-sc-number
        (setf (kernel:stack-ref fp (c:sc-offset-offset sc-offset)) value))
       (#.vm:base-char-stack-sc-number
