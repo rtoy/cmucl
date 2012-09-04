@@ -1052,7 +1052,7 @@
 (eval-when (compile load eval)
   (in-package "MAKE"))
 
-#+ecl
+#+(or ecl cmu)
 (in-package "MAKE")
 
 ;;; *** Marco Antoniotti <marcoxa@icsi.berkeley.edu> 19970105
