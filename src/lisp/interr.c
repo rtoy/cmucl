@@ -262,7 +262,7 @@ utf16_codepoint(unsigned short int* utf16, int len, int* consumed)
  * Send the utf-16 Lisp unicode string to standard output as a
  * utf8-encoded sequence of octets.
  */
-static void
+void
 utf16_output(unsigned short int* utf16, int len)
 {
     while (len) {

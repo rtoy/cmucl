@@ -376,14 +376,7 @@ print_string(struct vector* vector)
     uint16_t *charptr = (uint16_t *) vector->data;
     int len = fixnum_value(vector->length);
               
-    while (len-- > 0) {
-        if (*charptr == '"') {
-            putchar('\\');
-        }
-        /* Just dump out the UTF-16 data */
-        fwrite(charptr, sizeof(*charptr), 1,  stdout);
-        charptr++;
-    }
+    utf16_output(charptr, len);
 #endif
 }
 

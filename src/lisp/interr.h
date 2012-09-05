@@ -14,6 +14,7 @@ extern void lose(char *fmt, ...);
 extern void set_lossage_handler(void fun(void));
 extern void internal_error(os_context_t * context);
 
+extern void utf16_output(unsigned short int* utf16, int len);
 extern lispobj debug_print(lispobj string);
 
 #endif /* _INTERR_H_ */
