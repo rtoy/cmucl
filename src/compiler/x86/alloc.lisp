@@ -48,6 +48,7 @@
   (:args (things :more t))
   (:temporary (:sc unsigned-reg) ptr temp)
   (:temporary (:sc unsigned-reg :to (:result 0) :target result) res)
+  (:temporary (:sc unsigned-reg) temp)
   (:info num dynamic-extent)
   (:results (result :scs (descriptor-reg)))
   (:variant-vars star)
@@ -74,6 +75,7 @@
 					     *enable-pseudo-atomic*)))
 	       (pseudo-atomic
 		(allocation res (* (pad-data-block cons-size) cons-cells)
+			    temp
 			    :node node
 			    :dynamic-extent dynamic-extent)
 		(inst lea res
@@ -140,7 +142,7 @@
 	 (unboxed-arg :scs (any-reg) :target unboxed))
   (:results (result :scs (descriptor-reg) :from :eval))
   (:temporary (:sc unsigned-reg :from (:argument 0)) boxed)
-  (:temporary (:sc unsigned-reg :from (:argument 1)) unboxed)
+  (:temporary (:sc unsigned-reg :from (:argument 1)) unboxed temp)
   (:node-var node)
   (:generator 100
     (move boxed boxed-arg)
@@ -153,7 +155,7 @@
     (inst mov result boxed)
     (inst add result unboxed)
     (pseudo-atomic
-     (allocation result result :node node)
+     (allocation result result temp :node node)
      (inst lea result (make-ea :byte :base result :disp other-pointer-type))
      (inst shl boxed (- type-bits word-shift))
      (inst or boxed code-header-type)
@@ -182,9 +184,10 @@
   (:translate make-fdefn)
   (:args (name :scs (descriptor-reg) :to :eval))
   (:results (result :scs (descriptor-reg) :from :argument))
+  (:temporary (:sc unsigned-reg) temp)
   (:node-var node)
   (:generator 37
-    (with-fixed-allocation (result fdefn-type fdefn-size :node node)
+    (with-fixed-allocation (result fdefn-type fdefn-size temp :node node)
       (storew name result fdefn-name-slot other-pointer-type)
       (storew nil-value result fdefn-function-slot other-pointer-type)
       (storew (make-fixup 'undefined-tramp :assembly-routine)
@@ -195,6 +198,7 @@
   (:args (function :to :save :scs (descriptor-reg)))
   (:info length dynamic-extent)
   (:temporary (:sc any-reg) temp)
+  (:temporary (:sc unsigned-reg) temp2)
   (:results (result :scs (descriptor-reg)))
   (:node-var node)
   (:generator 10
@@ -202,7 +206,7 @@
 				   *enable-pseudo-atomic*)))
      (pseudo-atomic
       (let ((size (+ length closure-info-offset)))
-	(allocation result (pad-data-block size) :node node :dynamic-extent dynamic-extent)
+	(allocation result (pad-data-block size) temp2 :node node :dynamic-extent dynamic-extent)
 	(inst lea result
 	      (make-ea :byte :base result :disp function-pointer-type))
 	(storew (logior (ash (1- size) type-bits) closure-header-type)
@@ -215,10 +219,11 @@
 (define-vop (make-value-cell)
   (:args (value :scs (descriptor-reg any-reg) :to :result))
   (:results (result :scs (descriptor-reg) :from :eval))
+  (:temporary (:sc unsigned-reg) temp)
   (:node-var node)
   (:generator 10
     (with-fixed-allocation
-	(result value-cell-header-type value-cell-size :node node)
+	(result value-cell-header-type value-cell-size temp :node node)
       (storew value result value-cell-value-slot other-pointer-type))))
 
 
@@ -236,12 +241,13 @@
   (:info name words type lowtag dynamic-extent)
   (:ignore name)
   (:results (result :scs (descriptor-reg)))
+  (:temporary (:sc unsigned-reg) temp)
   (:node-var node)
   (:generator 50
     (let ((*enable-pseudo-atomic* (unless dynamic-extent
 				    *enable-pseudo-atomic*)))
       (pseudo-atomic
-       (allocation result (pad-data-block words) :node node :dynamic-extent dynamic-extent)
+       (allocation result (pad-data-block words) temp :node node :dynamic-extent dynamic-extent)
        (inst lea result (make-ea :byte :base result :disp lowtag))
        (when type
 	 (storew (logior (ash (1- words) type-bits) type) result 0 lowtag))))))
@@ -254,6 +260,7 @@
   (:results (result :scs (descriptor-reg) :from (:eval 1)))
   (:temporary (:sc any-reg :from :eval :to (:eval 1)) bytes)
   (:temporary (:sc any-reg :from :eval :to :result) header)
+  (:temporary (:sc unsigned-reg) temp)
   (:node-var node)
   (:generator 50
     (inst lea bytes
@@ -265,7 +272,7 @@
 	  (make-ea :dword :base header :disp (+ (ash -2 type-bits) type)))
     (inst and bytes (lognot lowtag-mask))
     (pseudo-atomic
-     (allocation result bytes :node node)
+     (allocation result bytes temp :node node)
      (inst lea result (make-ea :byte :base result :disp lowtag))
      (storew header result 0 lowtag))))
 

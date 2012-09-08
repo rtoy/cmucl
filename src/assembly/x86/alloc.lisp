@@ -26,7 +26,8 @@
 (define-assembly-routine
     (move-from-signed)
     ((:temp eax unsigned-reg eax-offset)
-     (:temp ebx unsigned-reg ebx-offset))
+     (:temp ebx unsigned-reg ebx-offset)
+     (:temp ecx unsigned-reg ecx-offset))
   (inst mov ebx eax)
   (inst shl ebx 1)
   (inst jmp :o bignum)
@@ -35,7 +36,7 @@
   (inst ret)
   BIGNUM
 
-  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 1))
+  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 1) ecx)
     (storew eax ebx bignum-digits-offset other-pointer-type))
 
   (inst ret))
@@ -44,7 +45,8 @@
 (define-assembly-routine
   (move-from-unsigned)
   ((:temp eax unsigned-reg eax-offset)
-   (:temp ebx unsigned-reg ebx-offset))
+   (:temp ebx unsigned-reg ebx-offset)
+   (:temp ecx unsigned-reg ecx-offset))
 
   (inst test eax #xe0000000)
   (inst jmp :nz bignum)
@@ -61,14 +63,13 @@
   ;;; the same approach, but here we save garbage and allocate the
   ;;; smallest possible bignum.
   (inst jmp :ns one-word-bignum)
-  (inst mov ebx eax)
 
   ;; Two word bignum
-  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 2))
+  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 2) ecx)
     (storew eax ebx bignum-digits-offset other-pointer-type))
   (inst ret)
   
   ONE-WORD-BIGNUM
-  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 1))
+  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 1) ecx)
     (storew eax ebx bignum-digits-offset other-pointer-type))
   (inst ret))

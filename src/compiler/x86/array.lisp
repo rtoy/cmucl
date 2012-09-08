@@ -33,6 +33,7 @@
   (:arg-types positive-fixnum positive-fixnum)
   (:temporary (:sc any-reg :to :eval) bytes)
   (:temporary (:sc any-reg :to :result) header)
+  (:temporary (:sc unsigned-reg) temp)
   (:results (result :scs (descriptor-reg) :from :eval))
   (:node-var node)
   (:generator 13
@@ -47,7 +48,7 @@
     (inst or  header type)
     (inst shr header 2)
     (pseudo-atomic
-     (allocation result bytes :node node)
+     (allocation result bytes temp :node node)
      (inst lea result (make-ea :dword :base result :disp other-pointer-type))
      (storew header result 0 other-pointer-type))))
 

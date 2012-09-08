@@ -42,10 +42,11 @@
 (define-vop (move-from-sap)
   (:args (sap :scs (sap-reg) :to :result))
   (:results (res :scs (descriptor-reg) :from :argument))
+  (:temporary (:sc unsigned-reg) temp)
   (:note "SAP to pointer coercion") 
   (:node-var node)
   (:generator 20
-    (with-fixed-allocation (res sap-type sap-size :node node)
+    (with-fixed-allocation (res sap-type sap-size temp :node node)
       (storew sap res sap-pointer-slot other-pointer-type))))
 	   
 ;;;

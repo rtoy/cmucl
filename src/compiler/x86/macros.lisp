@@ -137,7 +137,8 @@
   (unless (and (tn-p size) (location= alloc-tn size))
     (inst mov dst-tn size)))
 
-(defun inline-allocation (alloc-tn size)
+(defun inline-allocation (alloc-tn size temp)
+  (declare (ignore temp))
   (let ((ok (gen-label))
 	(done (gen-label)))
 
@@ -183,7 +184,8 @@
   
   (values))
 
-(defun not-inline-allocation (alloc-tn size)
+(defun not-inline-allocation (alloc-tn size temp)
+  (declare (ignore temp))
   ;; C call to allocate. The size may be a register or a constant.
   (load-size alloc-tn alloc-tn size)
   (case (tn-offset alloc-tn)
@@ -211,7 +213,7 @@
   (inst mov alloc-tn esp-tn)
   (values))
 
-(defun allocation (alloc-tn size &key node dynamic-extent)
+(defun allocation (alloc-tn size temp &key node dynamic-extent)
   "Allocate an object with a size in bytes given by Size.
    The size may be an integer or a TN.
    If Inline is a VOP node-var then it is used to make an appropriate
@@ -223,18 +225,18 @@
 	      (or (null node)
 		  (policy node (>= speed space)))
 	      (backend-featurep :gencgc))
-	 (inline-allocation alloc-tn size))
+	 (inline-allocation alloc-tn size temp))
 	(t
-	 (not-inline-allocation alloc-tn size)))
+	 (not-inline-allocation alloc-tn size temp)))
   (values))
 
-(defmacro with-fixed-allocation ((result-tn type-code size &key node)
+(defmacro with-fixed-allocation ((result-tn type-code size temp &key node)
 				 &rest forms)
   "Allocate an other-pointer object of fixed Size with a single
    word header having the specified Type-Code.  The result is placed in
    Result-TN."
   `(pseudo-atomic
-    (allocation ,result-tn (pad-data-block ,size) :node ,node)
+    (allocation ,result-tn (pad-data-block ,size) ,temp :node ,node)
     (storew (logior (ash (1- ,size) vm::type-bits) ,type-code) ,result-tn)
     (inst lea ,result-tn
      (make-ea :byte :base ,result-tn :disp other-pointer-type))

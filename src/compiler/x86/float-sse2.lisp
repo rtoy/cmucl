@@ -411,10 +411,11 @@
 (define-vop (move-from-single)
   (:args (x :scs (single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
+  (:temporary (:sc unsigned-reg) temp)
   (:node-var node)
   (:note _N"float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y vm:single-float-type vm:single-float-size :node node)
+     (with-fixed-allocation (y vm:single-float-type vm:single-float-size temp :node node)
        (inst movss (ea-for-sf-desc y) x))))
 (define-move-vop move-from-single :move
   (single-reg) (descriptor-reg))
@@ -422,10 +423,11 @@
 (define-vop (move-from-double)
   (:args (x :scs (double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
+  (:temporary (:sc unsigned-reg) temp)
   (:node-var node)
   (:note _N"float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y vm:double-float-type vm:double-float-size :node node)
+     (with-fixed-allocation (y vm:double-float-type vm:double-float-size temp :node node)
        (inst movsd (ea-for-df-desc y) x))))
 (define-move-vop move-from-double :move
   (double-reg) (descriptor-reg))
@@ -496,11 +498,13 @@
 (define-vop (move-from-complex-single)
   (:args (x :scs (complex-single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
+  (:temporary (:sc unsigned-reg) temp)
   (:node-var node)
   (:note _N"complex float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:complex-single-float-type
 			       vm:complex-single-float-size
+			       temp
 			       :node  node)
        (inst movlps (ea-for-csf-real-desc y) x))))
 (define-move-vop move-from-complex-single :move
@@ -509,11 +513,13 @@
 (define-vop (move-from-complex-double)
   (:args (x :scs (complex-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
+  (:temporary (:sc unsigned-reg) temp)
   (:node-var node)
   (:note _N"complex float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:complex-double-float-type
 			       vm:complex-double-float-size
+			       temp
 			       :node node)
        (inst movupd (ea-for-cdf-real-desc y) x))))
 
@@ -543,11 +549,13 @@
 (define-vop (move-from-complex-double-double)
   (:args (x :scs (complex-double-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
+  (:temporary (:sc unsigned-reg) temp)
   (:node-var node)
   (:note _N"complex double-double float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm::complex-double-double-float-type
 			       vm::complex-double-double-float-size
+			       temp
 			       :node node)
        (let ((real-tn (complex-double-double-reg-real-hi-tn x)))
 	 (inst movsd (ea-for-cddf-real-hi-desc y) real-tn))
@@ -1564,11 +1572,13 @@
 (define-vop (move-from-double-double)
   (:args (x :scs (double-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
+  (:temporary (:sc unsigned-reg) temp)
   (:node-var node)
   (:note _N"double double float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:double-double-float-type
 			       vm:double-double-float-size
+			       temp
 			       :node node)
        (let ((real-tn (double-double-reg-hi-tn x)))
 	 (inst movsd (ea-for-cdf-real-desc y) real-tn))
