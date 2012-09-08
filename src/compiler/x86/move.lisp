@@ -342,6 +342,7 @@
     (move y ebx)))
 ;;;
 ;;; Faster inline version.
+#+nil
 (define-vop (move-from-unsigned)
   (:args (x :scs (signed-reg unsigned-reg) :to :save))
   (:temporary (:sc unsigned-reg) alloc)
@@ -383,6 +384,45 @@
 	  (storew y alloc)
 	  (inst lea y (make-ea :byte :base alloc :disp other-pointer-type))
 	  (storew x y bignum-digits-offset other-pointer-type))
+	 (inst jmp done)))))
+
+(define-vop (move-from-unsigned)
+  (:args (x :scs (signed-reg unsigned-reg) :to :save))
+  (:temporary (:sc unsigned-reg) temp)
+  (:results (y :scs (any-reg descriptor-reg)))
+  (:node-var node)
+  (:note _N"unsigned word to integer coercion")
+  (:generator 20
+    (assert (not (location= x y)))
+    (let ((bignum (gen-label))
+	  (done (gen-label))
+	  (one-word-bignum (gen-label))
+	  (l1 (gen-label)))
+      (inst test x #xe0000000)
+      (inst jmp :nz bignum)
+      ;; Fixnum.
+      (inst lea y (make-ea :dword :index x :scale 4)) ; Faster but bigger.
+      ;(inst mov y x)
+      ;(inst shl y 2)
+      (emit-label done)
+
+      (assemble (*elsewhere*)
+         (emit-label bignum)
+	 ;; Note: As on the mips port, space for a two word bignum is
+	 ;; always allocated and the header size is set to either one
+	 ;; or two words as appropriate.
+	 (with-fixed-allocation
+	     (y bignum-type (+ 2 bignum-digits-offset) node)
+	   (inst test x x)
+	   (inst jmp :ns one-word-bignum)
+	   ;; Two word bignum.
+	   (inst mov temp (logior (ash 2 vm:type-bits) bignum-type))
+	   (inst jmp l1)
+	   (emit-label one-word-bignum)
+	   (inst mov temp (logior (ash 1 vm:type-bits) bignum-type))
+	   (emit-label l1)
+	   (storew temp y 0 other-pointer-type)
+	   (storew x y bignum-digits-offset other-pointer-type))
 	 (inst jmp done)))))
 ;;;
 (define-move-vop move-from-unsigned :move
