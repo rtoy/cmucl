@@ -45,7 +45,7 @@
   (:note "SAP to pointer coercion") 
   (:node-var node)
   (:generator 20
-    (with-fixed-allocation (res sap-type sap-size node)
+    (with-fixed-allocation (res sap-type sap-size :node node)
       (storew sap res sap-pointer-slot other-pointer-type))))
 	   
 ;;;

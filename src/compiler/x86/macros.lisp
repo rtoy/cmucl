@@ -211,7 +211,7 @@
   (inst mov alloc-tn esp-tn)
   (values))
 
-(defun allocation (alloc-tn size &optional inline dynamic-extent)
+(defun allocation (alloc-tn size &key node dynamic-extent)
   "Allocate an object with a size in bytes given by Size.
    The size may be an integer or a TN.
    If Inline is a VOP node-var then it is used to make an appropriate
@@ -220,21 +220,21 @@
   (cond (dynamic-extent
 	 (dynamic-extent-allocation alloc-tn size))
 	((and *maybe-use-inline-allocation*
-	      (or (null inline)
-		  (policy inline (>= speed space)))
+	      (or (null node)
+		  (policy node (>= speed space)))
 	      (backend-featurep :gencgc))
 	 (inline-allocation alloc-tn size))
 	(t
 	 (not-inline-allocation alloc-tn size)))
   (values))
 
-(defmacro with-fixed-allocation ((result-tn type-code size &optional inline)
+(defmacro with-fixed-allocation ((result-tn type-code size &key node)
 				 &rest forms)
   "Allocate an other-pointer object of fixed Size with a single
    word header having the specified Type-Code.  The result is placed in
    Result-TN."
   `(pseudo-atomic
-    (allocation ,result-tn (pad-data-block ,size) ,inline)
+    (allocation ,result-tn (pad-data-block ,size) :node ,node)
     (storew (logior (ash (1- ,size) vm::type-bits) ,type-code) ,result-tn)
     (inst lea ,result-tn
      (make-ea :byte :base ,result-tn :disp other-pointer-type))

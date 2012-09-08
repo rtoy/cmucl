@@ -314,7 +314,7 @@
        (assemble (*elsewhere*)
           (emit-label bignum)
 	  (with-fixed-allocation
-	      (y bignum-type (+ bignum-digits-offset 1) node)
+	      (y bignum-type (+ bignum-digits-offset 1) :node node)
 	    (storew x y bignum-digits-offset other-pointer-type))
 	  (inst jmp done)))))
 ;;;
@@ -412,7 +412,7 @@
 	 ;; always allocated and the header size is set to either one
 	 ;; or two words as appropriate.
 	 (with-fixed-allocation
-	     (y bignum-type (+ 2 bignum-digits-offset) node)
+	     (y bignum-type (+ 2 bignum-digits-offset) :node node)
 	   (inst test x x)
 	   (inst jmp :ns one-word-bignum)
 	   ;; Two word bignum.

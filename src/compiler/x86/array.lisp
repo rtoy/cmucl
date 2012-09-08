@@ -47,7 +47,7 @@
     (inst or  header type)
     (inst shr header 2)
     (pseudo-atomic
-     (allocation result bytes node)
+     (allocation result bytes :node node)
      (inst lea result (make-ea :dword :base result :disp other-pointer-type))
      (storew header result 0 other-pointer-type))))
 

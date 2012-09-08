@@ -499,7 +499,7 @@
   (:node-var node)
   (:note _N"float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y vm:single-float-type vm:single-float-size node)
+     (with-fixed-allocation (y vm:single-float-type vm:single-float-size :node node)
        (with-tn@fp-top(x)
 	 (inst fst (ea-for-sf-desc y))))))
 (define-move-vop move-from-single :move
@@ -511,7 +511,7 @@
   (:node-var node)
   (:note _N"float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y vm:double-float-type vm:double-float-size node)
+     (with-fixed-allocation (y vm:double-float-type vm:double-float-size :node node)
        (with-tn@fp-top(x)
 	 (inst fstd (ea-for-df-desc y))))))
 (define-move-vop move-from-double :move
@@ -603,7 +603,8 @@
   (:note _N"complex float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:complex-single-float-type
-			       vm:complex-single-float-size node)
+			       vm:complex-single-float-size
+			       :node node)
        (let ((real-tn (complex-single-reg-real-tn x)))
 	 (with-tn@fp-top(real-tn)
 	   (inst fst (ea-for-csf-real-desc y))))
@@ -620,7 +621,8 @@
   (:note _N"complex float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:complex-double-float-type
-			       vm:complex-double-float-size node)
+			       vm:complex-double-float-size
+			       :node node)
        (let ((real-tn (complex-double-reg-real-tn x)))
 	 (with-tn@fp-top(real-tn)
 	   (inst fstd (ea-for-cdf-real-desc y))))
@@ -657,7 +659,8 @@
   (:note _N"complex double-double float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm::complex-double-double-float-type
-			       vm::complex-double-double-float-size node)
+			       vm::complex-double-double-float-size
+			       :node node)
        (let ((real-tn (complex-double-double-reg-real-hi-tn x)))
 	 (with-tn@fp-top(real-tn)
 	   (inst fstd (ea-for-cddf-real-hi-desc y))))
@@ -5056,7 +5059,8 @@
   (:note _N"double double float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm:double-double-float-type
-			       vm:double-double-float-size node)
+			       vm:double-double-float-size
+			       :node node)
        (let ((real-tn (double-double-reg-hi-tn x)))
 	 (with-tn@fp-top(real-tn)
 	   (inst fstd (ea-for-cdf-real-desc y))))
