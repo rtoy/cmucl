@@ -74,7 +74,7 @@
 
   (move ecx res)
 
-  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) temp)
+  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) nil)
     (storew ecx res bignum-digits-offset other-pointer-type))
   
   OKAY)
@@ -94,7 +94,7 @@
   
   (move ecx res)
   
-  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) temp)
+  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) nil)
     (storew ecx res bignum-digits-offset other-pointer-type))
   OKAY)
 
@@ -115,14 +115,14 @@
   (inst cmp x ecx)
   (inst jmp :e SINGLE-WORD-BIGNUM)
 
-  (with-fixed-allocation (res bignum-type (+ bignum-digits-offset 2) temp)
+  (with-fixed-allocation (res bignum-type (+ bignum-digits-offset 2) nil)
     (storew eax res bignum-digits-offset other-pointer-type)
     (storew ecx res (1+ bignum-digits-offset) other-pointer-type))
   (inst jmp DONE)
 
   SINGLE-WORD-BIGNUM
   
-  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) temp)
+  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) nil)
     (storew eax res bignum-digits-offset other-pointer-type))
   (inst jmp DONE)
 
@@ -161,7 +161,7 @@
   (inst shr res 2)			; sign bit is data - remove type bits
   (move ecx res)
 
-  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) temp)
+  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) nil)
     (storew ecx res bignum-digits-offset other-pointer-type))
   
   OKAY)

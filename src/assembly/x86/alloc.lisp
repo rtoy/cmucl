@@ -36,7 +36,7 @@
   (inst ret)
   BIGNUM
 
-  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 1) ecx)
+  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 1) nil)
     (storew eax ebx bignum-digits-offset other-pointer-type))
 
   (inst ret))
@@ -65,11 +65,11 @@
   (inst jmp :ns one-word-bignum)
 
   ;; Two word bignum
-  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 2) ecx)
+  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 2) nil)
     (storew eax ebx bignum-digits-offset other-pointer-type))
   (inst ret)
   
   ONE-WORD-BIGNUM
-  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 1) ecx)
+  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 1) nil)
     (storew eax ebx bignum-digits-offset other-pointer-type))
   (inst ret))

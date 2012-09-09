@@ -39,7 +39,7 @@
   (inst add result words)
   (inst and result (lognot vm:lowtag-mask))
   (pseudo-atomic
-   (allocation result result temp)
+   (allocation result result nil)
    (inst lea result (make-ea :byte :base result :disp other-pointer-type))
    (storew type result 0 other-pointer-type)
    (storew length result vector-length-slot other-pointer-type))

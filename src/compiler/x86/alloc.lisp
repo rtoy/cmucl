@@ -75,7 +75,7 @@
 					     *enable-pseudo-atomic*)))
 	       (pseudo-atomic
 		(allocation res (* (pad-data-block cons-size) cons-cells)
-			    temp
+			    nil
 			    :node node
 			    :dynamic-extent dynamic-extent)
 		(inst lea res
@@ -155,7 +155,7 @@
     (inst mov result boxed)
     (inst add result unboxed)
     (pseudo-atomic
-     (allocation result result temp :node node)
+     (allocation result result nil :node node)
      (inst lea result (make-ea :byte :base result :disp other-pointer-type))
      (inst shl boxed (- type-bits word-shift))
      (inst or boxed code-header-type)
@@ -187,7 +187,7 @@
   (:temporary (:sc unsigned-reg) temp)
   (:node-var node)
   (:generator 37
-    (with-fixed-allocation (result fdefn-type fdefn-size temp :node node)
+    (with-fixed-allocation (result fdefn-type fdefn-size nil :node node)
       (storew name result fdefn-name-slot other-pointer-type)
       (storew nil-value result fdefn-function-slot other-pointer-type)
       (storew (make-fixup 'undefined-tramp :assembly-routine)
@@ -206,7 +206,7 @@
 				   *enable-pseudo-atomic*)))
      (pseudo-atomic
       (let ((size (+ length closure-info-offset)))
-	(allocation result (pad-data-block size) temp2 :node node :dynamic-extent dynamic-extent)
+	(allocation result (pad-data-block size) nil :node node :dynamic-extent dynamic-extent)
 	(inst lea result
 	      (make-ea :byte :base result :disp function-pointer-type))
 	(storew (logior (ash (1- size) type-bits) closure-header-type)
@@ -223,7 +223,7 @@
   (:node-var node)
   (:generator 10
     (with-fixed-allocation
-	(result value-cell-header-type value-cell-size temp :node node)
+	(result value-cell-header-type value-cell-size nil :node node)
       (storew value result value-cell-value-slot other-pointer-type))))
 
 
@@ -247,7 +247,7 @@
     (let ((*enable-pseudo-atomic* (unless dynamic-extent
 				    *enable-pseudo-atomic*)))
       (pseudo-atomic
-       (allocation result (pad-data-block words) temp :node node :dynamic-extent dynamic-extent)
+       (allocation result (pad-data-block words) nil :node node :dynamic-extent dynamic-extent)
        (inst lea result (make-ea :byte :base result :disp lowtag))
        (when type
 	 (storew (logior (ash (1- words) type-bits) type) result 0 lowtag))))))
@@ -272,7 +272,7 @@
 	  (make-ea :dword :base header :disp (+ (ash -2 type-bits) type)))
     (inst and bytes (lognot lowtag-mask))
     (pseudo-atomic
-     (allocation result bytes temp :node node)
+     (allocation result bytes nil :node node)
      (inst lea result (make-ea :byte :base result :disp lowtag))
      (storew header result 0 lowtag))))
 

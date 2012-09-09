@@ -1378,7 +1378,7 @@
       (let ((*enable-pseudo-atomic* (unless dynamic-extent
 				      *enable-pseudo-atomic*)))
 	(pseudo-atomic
-	 (allocation dst dst eax :node node :dynamic-extent dynamic-extent)
+	 (allocation dst dst nil :node node :dynamic-extent dynamic-extent)
 	 (inst lea dst (make-ea :byte :base dst :disp list-pointer-type))
 	 ;; Convert the count into a raw value, so we can use the LOOP inst.
 	 (inst shr ecx 2)

@@ -500,7 +500,7 @@
   (:node-var node)
   (:note _N"float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y vm:single-float-type vm:single-float-size temp :node node)
+     (with-fixed-allocation (y vm:single-float-type vm:single-float-size nil :node node)
        (with-tn@fp-top(x)
 	 (inst fst (ea-for-sf-desc y))))))
 (define-move-vop move-from-single :move
@@ -513,7 +513,7 @@
   (:node-var node)
   (:note _N"float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y vm:double-float-type vm:double-float-size temp :node node)
+     (with-fixed-allocation (y vm:double-float-type vm:double-float-size nil :node node)
        (with-tn@fp-top(x)
 	 (inst fstd (ea-for-df-desc y))))))
 (define-move-vop move-from-double :move
@@ -607,7 +607,7 @@
   (:generator 13
      (with-fixed-allocation (y vm:complex-single-float-type
 			       vm:complex-single-float-size
-			       temp
+			       nil
 			       :node node)
        (let ((real-tn (complex-single-reg-real-tn x)))
 	 (with-tn@fp-top(real-tn)
@@ -627,7 +627,7 @@
   (:generator 13
      (with-fixed-allocation (y vm:complex-double-float-type
 			       vm:complex-double-float-size
-			       temp
+			       nil
 			       :node node)
        (let ((real-tn (complex-double-reg-real-tn x)))
 	 (with-tn@fp-top(real-tn)
@@ -667,7 +667,7 @@
   (:generator 13
      (with-fixed-allocation (y vm::complex-double-double-float-type
 			       vm::complex-double-double-float-size
-			       temp
+			       nil
 			       :node node)
        (let ((real-tn (complex-double-double-reg-real-hi-tn x)))
 	 (with-tn@fp-top(real-tn)
@@ -5069,7 +5069,7 @@
   (:generator 13
      (with-fixed-allocation (y vm:double-double-float-type
 			       vm:double-double-float-size
-			       temp
+			       nil
 			       :node node)
        (let ((real-tn (double-double-reg-hi-tn x)))
 	 (with-tn@fp-top(real-tn)

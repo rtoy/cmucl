@@ -163,6 +163,10 @@
     (inst sub alloc-tn (make-symbol-value-ea '*current-region-free-pointer*))
     (case (tn-offset alloc-tn)
       (#.eax-offset
+       (when temp
+	 (inst lea temp (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
+						       #+sse2 "alloc_overflow_sse2")
+				    :foreign)))
        (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
 						 #+sse2 "alloc_overflow_sse2")
 			      :foreign))
@@ -170,6 +174,10 @@
       (t
        (inst push eax-tn)		; Save any value in eax
        (inst mov eax-tn alloc-tn)
+       (when temp
+	 (inst lea temp (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
+						       #+sse2 "alloc_overflow_sse2")
+				    :foreign)))
        (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
 						 #+sse2 "alloc_overflow_sse2")
 			      :foreign))
@@ -190,12 +198,20 @@
   (load-size alloc-tn alloc-tn size)
   (case (tn-offset alloc-tn)
     (#.eax-offset
+     (when temp
+       (inst lea temp (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
+						     #+sse2 "alloc_overflow_sse2")
+				  :foreign)))
      (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
 					       #+sse2 "alloc_overflow_sse2")
 			    :foreign)))
     (t
      (inst push eax-tn)			; Save any value in eax
      (inst mov eax-tn alloc-tn)
+     (when temp
+       (inst lea temp (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
+						     #+sse2 "alloc_overflow_sse2")
+				  :foreign)))
      (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
 					       #+sse2 "alloc_overflow_sse2")
 			    :foreign))
