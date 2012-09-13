@@ -143,13 +143,10 @@
      (unless (= (tn-offset ,alloc-tn) #.eax-offset)
        (inst push eax-tn)		; Save any value in eax
        (inst mov eax-tn ,alloc-tn))
-     (when ,temp-tn
-       (inst lea ,temp-tn (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
-							 #+sse2 "alloc_overflow_sse2")
-				      :foreign)))
-     (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
-					       #+sse2 "alloc_overflow_sse2")
-			    :foreign))
+     (inst lea ,temp-tn (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
+						       #+sse2 "alloc_overflow_sse2")
+				    :foreign))
+     (inst call ,temp-tn)
 
      (unless (= (tn-offset ,alloc-tn) #.eax-offset)
        (inst mov ,alloc-tn eax-tn) ; Put allocated address in alloc-tn
@@ -227,15 +224,16 @@
    If Inline is a VOP node-var then it is used to make an appropriate
    speed vs size decision.  If Dynamic-Extent is true, and otherwise
    appropriate, allocate from the stack."
+  (declare (ignore temp))
   (cond (dynamic-extent
 	 (dynamic-extent-allocation alloc-tn size))
 	((and *maybe-use-inline-allocation*
 	      (or (null node)
 		  (policy node (>= speed space)))
 	      (backend-featurep :gencgc))
-	 (inline-allocation alloc-tn size temp))
+	 (inline-allocation alloc-tn size))
 	(t
-	 (not-inline-allocation alloc-tn size temp)))
+	 (not-inline-allocation alloc-tn size)))
   (values))
 
 (defmacro with-fixed-allocation ((result-tn type-code size temp &key node)
