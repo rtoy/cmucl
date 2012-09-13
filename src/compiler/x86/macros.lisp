@@ -154,8 +154,7 @@
      (unless (= (tn-offset ,alloc-tn) #.eax-offset)
        (inst mov ,alloc-tn eax-tn) ; Put allocated address in alloc-tn
        (inst pop eax-tn))		; Restore old value of eax
-     (inst pop ,temp-tn)
-     (inst jmp done)))
+     (inst pop ,temp-tn)))
     
 (defun inline-allocation (alloc-tn size temp)
   (declare (ignore temp))
@@ -183,36 +182,13 @@
     (inst sub alloc-tn (make-symbol-value-ea '*current-region-free-pointer*))
     (case (tn-offset alloc-tn)
       (#.eax-offset
-       (inst push ebx-tn)
-       (inst lea ebx-tn (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
-						       #+sse2 "alloc_overflow_sse2")
-				    :foreign))
-       (inst call ebx-tn)
-       (inst pop ebx-tn)
+       (slow-allocation-path alloc-tn ebx-tn)
        (inst jmp done))
       (#.ebx-offset
-       (inst push ecx-tn)
-       (inst push eax-tn)		; Save any value in eax
-       (inst mov eax-tn alloc-tn)
-       (inst lea ecx-tn (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
-						       #+sse2 "alloc_overflow_sse2")
-				    :foreign))
-       (inst call ecx-tn)
-       (inst mov alloc-tn eax-tn)  	; Put allocated address in alloc-tn
-       (inst pop eax-tn)		; Restore old value of eax
-       (inst pop ecx-tn)
+       (slow-allocation-path alloc-tn ecx-tn)
        (inst jmp done))
       (t
-       (inst push ebx-tn)
-       (inst push eax-tn)		; Save any value in eax
-       (inst mov eax-tn alloc-tn)
-       (inst lea ebx-tn (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
-						       #+sse2 "alloc_overflow_sse2")
-				    :foreign))
-       (inst call ebx-tn)
-       (inst mov alloc-tn eax-tn)  	; Put allocated address in alloc-tn
-       (inst pop eax-tn)		; Restore old value of eax
-       (inst pop ebx-tn)
+       (slow-allocation-path alloc-tn ebx-tn)
        (inst jmp done)))
 			       
     (emit-label ok)
@@ -228,43 +204,11 @@
   (load-size alloc-tn alloc-tn size)
   (case (tn-offset alloc-tn)
     (#.eax-offset
-     (inst push ebx-tn)
-     (when temp
-       (inst ebx-tn temp (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
-							#+sse2 "alloc_overflow_sse2")
-				     :foreign)))
-     (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
-					       #+sse2 "alloc_overflow_sse2")
-			    :foreign))
-     (inst pop ebx-tn))
+     (slow-allocation-path alloc-tn ebx-tn))
     (#.ebx-offset
-     (inst push ecx-tn)
-     (inst push eax-tn)			; Save any value in eax
-     (inst mov eax-tn alloc-tn)
-     (when temp
-       (inst lea ecx-tn (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
-						       #+sse2 "alloc_overflow_sse2")
-				    :foreign)))
-     (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
-					       #+sse2 "alloc_overflow_sse2")
-			    :foreign))
-     (inst mov alloc-tn eax-tn)	  ; Save allocated address in alloc-tn
-     (inst pop eax-tn)
-     (inst pop ecx-tn))
+     (slow-allocation-path alloc-tn ecx-tn))
     (t
-     (inst push ebx-tn)
-     (inst push eax-tn)			; Save any value in eax
-     (inst mov eax-tn alloc-tn)
-     (when temp
-       (inst lea ebx-tn (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
-						       #+sse2 "alloc_overflow_sse2")
-				    :foreign)))
-     (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
-					       #+sse2 "alloc_overflow_sse2")
-			    :foreign))
-     (inst mov alloc-tn eax-tn)	  ; Save allocated address in alloc-tn
-     (inst pop eax-tn)
-     (inst pop ebx-tn)))
+     (slow-allocation-path alloc-tn ebx-tn)))
   (values))
 
 ;;;
