@@ -298,7 +298,6 @@
 (define-vop (move-from-signed)
   (:args (x :scs (signed-reg unsigned-reg) :to :result))
   (:results (y :scs (any-reg descriptor-reg) :from :argument))
-  (:temporary (:sc unsigned-reg) temp)
   (:note _N"signed word to integer coercion")
   (:node-var node)
   (:generator 20
@@ -315,7 +314,7 @@
        (assemble (*elsewhere*)
           (emit-label bignum)
 	  (with-fixed-allocation
-	      (y bignum-type (+ bignum-digits-offset 1) t :node node)
+	      (y bignum-type (+ bignum-digits-offset 1) :node node)
 	    (storew x y bignum-digits-offset other-pointer-type))
 	  (inst jmp done)))))
 ;;;
@@ -391,7 +390,6 @@
   (:args (x :scs (signed-reg unsigned-reg) :to :save))
   (:temporary (:sc unsigned-reg) temp)
   (:results (y :scs (any-reg descriptor-reg)))
-  (:temporary (:sc unsigned-reg) temp)
   (:node-var node)
   (:note _N"unsigned word to integer coercion")
   (:generator 20
@@ -414,7 +412,7 @@
 	 ;; always allocated and the header size is set to either one
 	 ;; or two words as appropriate.
 	 (with-fixed-allocation
-	     (y bignum-type (+ 2 bignum-digits-offset) t :node node)
+	     (y bignum-type (+ 2 bignum-digits-offset) :node node)
 	   (inst test x x)
 	   (inst jmp :ns one-word-bignum)
 	   ;; Two word bignum.
