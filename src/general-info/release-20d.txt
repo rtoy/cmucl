@@ -54,6 +54,8 @@ New in this release:
     * OSX 10.4 is no longer supported.
     * Micro optimizations for floats: 2*x -> x+x and x/2^n ->
       (2^(n))*x.
+    * Add VM::WITH-CYCLE-COUNTER to return the number of cycles elapsed
+      when executing the body, as measured by the CPU cycle/tick counter.
 
   * ANSI compliance fixes:
     * CMUCL was not printing pathnames like (make-pathname :directory

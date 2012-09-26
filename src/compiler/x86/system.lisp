@@ -562,7 +562,7 @@
     (inst ret)))
 
 
-;; the RDTSC instruction (present on Pentium processors and
+;; The RDTSC instruction (present on Pentium processors and
 ;; successors) allows you to access the time-stamp counter, a 64-bit
 ;; model-specific register that counts executed cycles. The
 ;; instruction returns the low cycle count in EAX and high cycle count
@@ -676,3 +676,21 @@
 (defun cpuid (level)
   (declare (type (unsigned-byte 32) level))
   (cpuid level))
+
+(defmacro with-cycle-counter (&body body)
+  "Returns the primary value of BODY as the primary value, and the
+ number of CPU cycles elapsed as secondary value."
+  (let ((hi0 (gensym))
+	(hi1 (gensym))
+	(lo0 (gensym))
+	(lo1 (gensym)))
+    `(multiple-value-bind (,lo0 ,hi0)
+	 (read-cycle-counter)
+       (values (locally ,@body)
+               (multiple-value-bind (,lo1 ,hi1)
+		   (read-cycle-counter)
+		 ;; Can't do anything about the notes about generic
+		 ;; arithmetic, so silence the notes..
+		 (declare (optimize (inhibit-warnings 3))
+                 (+ (ash (- ,hi1 ,hi0) 32)
+                    (- ,lo1 ,lo0)))))))

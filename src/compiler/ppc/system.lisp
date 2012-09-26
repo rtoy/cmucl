@@ -275,3 +275,22 @@
 
 (defun read-cycle-counter ()
   (read-time-base))
+
+(defmacro with-cycle-counter (&body body)
+  "Returns the primary value of BODY as the primary value, and the
+ number of tick cycles elapsed as secondary value.  To get the number
+ of cycles, multiply by *cycles-per-tick*"
+  (let ((hi0 (gensym))
+	(hi1 (gensym))
+	(lo0 (gensym))
+	(lo1 (gensym)))
+    `(multiple-value-bind (,lo0 ,hi0)
+	 (read-cycle-counter)
+       (values (locally ,@body)
+               (multiple-value-bind (,lo1 ,hi1)
+		   (read-cycle-counter)
+		 ;; Can't do anything about the notes about generic
+		 ;; arithmetic, so silence the notes..
+		 (declare (optimize (inhibit-warnings 3))
+                 (+ (ash (- ,hi1 ,hi0) 32)
+                    (- ,lo1 ,lo0)))))))
