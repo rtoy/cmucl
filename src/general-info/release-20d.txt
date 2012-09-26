@@ -92,6 +92,8 @@ New in this release:
       compiling the file.
     * Minor build issue in CLM debugger interface due to USE-PACKAGE
       no longer having special compiler treatment.
+    * READ-CYCLE-COUNTER no longer destroys any live values in the EBX
+      and ECX registers.
 
   * Trac Tickets:
     * #50: Print/read error with make-pathname.
