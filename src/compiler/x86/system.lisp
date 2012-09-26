@@ -1,4 +1,4 @@
-;;; -*- Mode: LISP; Syntax: Common-Lisp; Base: 10; Package: x86 -*-
+4;;; -*- Mode: LISP; Syntax: Common-Lisp; Base: 10; Package: x86 -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -598,11 +598,21 @@
   (:result-types unsigned-num unsigned-num)
   (:temporary (:sc unsigned-reg :offset eax-offset :target lo) eax)
   (:temporary (:sc unsigned-reg :offset edx-offset :target hi) edx)
+  ;; CPUID writes to eax, ebx, ecx, and edx.  We need temporaries for
+  ;; ebx and ecx so we don't destroy any live uses of ebx and ecx.
+  (:temporary (:sc unsigned-reg :offset ebx-offset
+		   :from (:eval 0) :to (:result 1))
+	      ebx)
+  (:temporary (:sc unsigned-reg :offset ecx-offset
+		   :from (:eval 0) :to (:result 2))
+	      ecx)
+  (:ignore ebx ecx)
   (:generator 1
-     (inst cpuid)
-     (inst rdtsc)
-     (move hi edx)
-     (move lo eax)))
+    (inst mov eax 0)
+    (inst cpuid)
+    (inst rdtsc)
+    (move hi edx)
+    (move lo eax)))
 
 #+pentium
 (defun read-cycle-counter ()
