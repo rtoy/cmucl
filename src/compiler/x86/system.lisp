@@ -691,6 +691,6 @@
 		   (read-cycle-counter)
 		 ;; Can't do anything about the notes about generic
 		 ;; arithmetic, so silence the notes..
-		 (declare (optimize (inhibit-warnings 3))
+		 (declare (optimize (inhibit-warnings 3)))
                  (+ (ash (- ,hi1 ,hi0) 32)
                     (- ,lo1 ,lo0)))))))
