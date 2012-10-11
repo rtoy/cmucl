@@ -30,7 +30,7 @@ New in this release:
     * Added external format for EUC-KR.
  
   * Changes
-    * ASDF2 updated to version 2.24.
+    * ASDF2 updated to version 2.25.
     * Behavior of STRING-TO-OCTETS has changed.  This is an
       incompatible change from the previous version but should be more
       useful when a buffer is given which is not large enough to hold
