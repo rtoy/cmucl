@@ -10,10 +10,10 @@ msgstr ""
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: Automatic translation\n"
 "Language-Team: Pig Latin (auto-translated)\n"
-"Language: Pig Latin\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Language: Pig Latin\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: src/code/sparc-svr4-vm.lisp
@@ -698,6 +698,12 @@ msgstr ""
 "64-itbay ountercay isway eturnedray asway wotay 32-itbay unsignedway "
 "integersway.  Ethay owlay 32-itbay\n"
 "esultray isway ethay irstfay aluevay."
+
+#: src/compiler/sparc/system.lisp
+msgid ""
+"Returns the primary value of BODY as the primary value, and the\n"
+" number of CPU cycles elapsed as secondary value."
+msgstr ""
 
 #: src/compiler/sparc/char.lisp
 msgid "character untagging"
