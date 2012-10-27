@@ -16,11 +16,11 @@ GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
 
 # If the git hash looks like a snapshot tag or release, don't add the date.
 VERSION="`date '+%Y-%m-%d %H:%M:%S'`${GIT_HASH:+ $GIT_HASH}"
-if expr "X${GIT_HASH}" : '^Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]' > /dev/null; then
+if expr "X${GIT_HASH}" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]' > /dev/null; then
     VERSION="${GIT_HASH}"
 fi
 
-if expr "X${GIT_HASH}" : '^X[0-9][0-9][a-f]' > /dev/null; then
+if expr "X${GIT_HASH}" : 'X[0-9][0-9][a-f]' > /dev/null; then
     VERSION="${GIT_HASH}"
 fi
 echo $VERSION
