@@ -238,6 +238,12 @@ msgstr ""
 msgid "word integer argument move"
 msgstr ""
 
+#: src/compiler/x86/system.lisp
+msgid ""
+"Returns the primary value of BODY as the primary value, and the\n"
+" number of CPU cycles elapsed as secondary value."
+msgstr ""
+
 #: src/compiler/x86/char.lisp
 msgid "character untagging"
 msgstr ""

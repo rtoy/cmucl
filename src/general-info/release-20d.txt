@@ -1,7 +1,5 @@
 ========================== C M U C L  20 d =============================
 
-[Not yet released]
-
 The CMUCL project is pleased to announce the release of CMUCL 20d.
 This is a major release which contains numerous enhancements and
 bug fixes from the 20c release.
@@ -37,8 +35,8 @@ New in this release:
       all the octets for the given string.  See docstring for more
       details.
     * The PowerPC port of CMUCL on Darwin (Mac OS X) has been revived
-      and is up-to-date.  It will run on OSX 10.4 and 10.5.  However,
-      only the Unicode build is supported.
+      and is roughly up-to-date.  It will run on OSX 10.4 and 10.5.
+      However, only the Unicode build is supported.
     * Updated to Unicode 6.1.0.
     * Many additional aliases for external formats added that match
       the glibc iconv aliases.
