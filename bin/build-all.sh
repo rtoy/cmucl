@@ -29,7 +29,7 @@ usage ()
     echo '    -v v      Use the given string as the version.'
     echo "    -o x      Use specified Lisp to build unicode version."
     echo "               (only applicable for build 1)"
-    echo "    -8 x      Use specified Lisp to build 8-bit version."
+    echo "    -8 x      DEPRECATED: Use specified Lisp to build 8-bit version."
     echo "               (only applicable for build 1)"
     echo "    -U        Update and overwite the translations files."
     echo "    -P        On the last build, (re)generate cmucl.pot and the"
@@ -47,7 +47,8 @@ do
       B) bootfiles="$bootfiles -B $OPTARG" ;;
       C) CREATE_OPT="$OPTARG" ;;
       o) OLDLISP="$OPTARG" ;;
-      8) OLD8="$OPTARG" ;;
+      8) OLD8="$OPTARG" 
+	  echo "WARNING: -8 is deprecated";;
       v) VERSION="$OPTARG"; VERSION_SET=true ;;
       U) UPDATE_TRANS="-U" ;;
       P) UPDATE_POT="" ;;
