@@ -30,8 +30,11 @@ New in this release:
   * Bugfixes:
 
   * Trac Tickets:
+    * Ticket #52 reopened.
 
   * Other changes:
+    * -8 option for build-all.sh is deprecated since we don't
+      officially support 8-bit builds anymore.
 
   * Improvements to the PCL implementation of CLOS:
 
