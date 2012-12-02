@@ -238,7 +238,8 @@
 	  alpha-fasl-file-implementation
 	  sgi-fasl-file-implementation
 	  ppc-fasl-file-implementation
-	  amd64-fasl-file-implementation))
+	  amd64-fasl-file-implementation
+	  arm-fasl-file-implementation))
 
 ;;; Constants for the different implementations.  These are all defined in
 ;;; one place to make sure they are all unique.
