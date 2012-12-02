@@ -1614,7 +1614,7 @@
 				,arg)
 			  (svref bytes end-byte))))))))))
       (unless (= overall-mask -1)
-	(error (intl:gettext "There are holes.")))
+	(error (intl:gettext "There are holes in emitter ~S.") name))
       (let ((forms nil))
 	(dotimes (i num-bytes)
 	  (let ((pieces (svref bytes i)))
