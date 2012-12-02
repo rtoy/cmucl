@@ -166,7 +166,13 @@
   (if (member :s options-list)
       1
       0))
-      
+
+(defun shift-encoding (shift-type)
+  (if (eq shift-type :rrx)
+      3
+      (or (position shift-type shift-types)
+	  (error "Unknown shift type: ~S" shift-type))))
+
 (defconstant condition-true
   #b1111)
 
@@ -386,18 +392,19 @@
 	   (unless rot
 	     (error "Cannot encode the immediate value ~S~%" src2))
 	   (emit-format-1-immed segment
-				  (inst-condition-code opts)
-				  ,opcode
-				  ,(if force-set-p
-				       1
-				       `(inst-set-flags opts))
-				  (reg-tn-encoding src1)
-				  (reg-tn-encoding dst)
-				  rot
-				  val)))
+				(inst-condition-code opts)
+				#b001
+				,opcode
+				,(if force-set-p
+				     1
+				     `(inst-set-flags opts))
+				(reg-tn-encoding src1)
+				(reg-tn-encoding dst)
+				(logior (ash rot 8) val))))
 	(reg
 	 (emit-format-1-reg segment
 			    (inst-condition-code opts)
+			    #b000
 			    ,opcode
 			    ,(if force-set-p
 				 1
@@ -405,13 +412,15 @@
 			    (reg-tn-encoding src1)
 			    (reg-tn-encoding dst)
 			    0
-			    :lsl
+			    (shift-encoding :lsl)
+			    #b0
 			    (reg-tn-encoding src2)))
 	(flex-operand
 	 (ecase (flex-operand-type src2)
 	   (:reg-shift-imm
 	    (emit-format-1-reg segment
 			       (inst-condition-code opts)
+			       #b000
 			       ,opcode
 			       ,(if force-set-p
 				    1
@@ -419,19 +428,23 @@
 			       (reg-tn-encoding src1)
 			       (reg-tn-encoding dst)
 			       (flex-operand-shift-reg-or-imm src2)
-			       (flex-operand-shift-type src2)
-			       (flex-operand-reg src2)))
+			       (shift-encoding (flex-operand-shift-type src2))
+			       #b0
+			       (reg-tn-encoding (flex-operand-reg src2))))
 	   (:reg-shift-reg
 	    (emit-format-1-reg-shift segment
 				     (inst-condition-code opts)
+				     #b000
 				     ,opcode
 				     ,(if force-set-p
 					  1
 					  `(inst-set-flags opts))
 				     (reg-tn-encoding src1)
 				     (reg-tn-encoding dst)
-				     (flex-operand-shift-reg-or-imm src2)
-				     (flex-operand-shift-type src2)
+				     (reg-tn-encoding (flex-operand-shift-reg-or-imm src2))
+				     #b0
+				     (shift-encoding (flex-operand-shift-type src2))
+				     #b1
 				     (reg-tn-encoding (flex-operand-reg src2))))))))))
 
 
@@ -482,7 +495,7 @@
 
 (define-emitter emit-format-2-immed 32
   (byte 4 28) (byte 3 25) (byte 1 24) (byte 1 23) (byte 1 22) (byte 1 21)
-  (byte 1 20) (byte 4 16) (byte 4 12) (byte 0 12))
+  (byte 1 20) (byte 4 16) (byte 4 12) (byte 12 0))
 
   
 (disassem:define-instruction-format
@@ -496,7 +509,7 @@
   (ld    :field (byte 1 20))		; ldr (1) or str (0)
   (src1  :field (byte 4 16) :type 'reg)
   (dst   :field (byte 4 12) :type 'reg)
-  (immed :field (byte 0 12)))
+  (immed :field (byte 12 0)))
 
 ;; See A8.8.66
 ;; LDR/STR (register)
@@ -517,7 +530,7 @@
 		  ", "
 		  type
 		  " "
-		  imm
+		  imm5
 		  "]"
 		  (:unless (w :constant 1) "!"))
 		 (t
@@ -526,9 +539,9 @@
 		  ", "
 		  type
 		  " "
-		  imm))))
+		  imm5))))
   
-(define-emitter emit-format-2-immed 32
+(define-emitter emit-format-2-reg 32
   (byte 4 28) (byte 3 25) (byte 1 24) (byte 1 23) (byte 1 22) (byte 1 21)
   (byte 1 20) (byte 4 16) (byte 4 12) (byte 5 7) (byte 2 5) (byte 1 4) (byte 4 0))
 
@@ -568,6 +581,10 @@
 		  "]"
 		  (:unless (w :constant 0) "!")))))
 
+(define-emitter emit-format-2-halfword-reg 32
+  (byte 4 28) (byte 3 25) (byte 1 24) (byte 1 23) (byte 1 22) (byte 1 21)
+  (byte 1 20) (byte 4 16) (byte 4 12) (byte 4 8) (byte 4 4) (byte 4 0))
+  
 (disassem:define-instruction-format
     (format-2-halfword-reg 32 :default-printer format-2-halfword-reg-printer)
   (cond  :field (byte 4 28) :type 'condition-code)
@@ -580,7 +597,7 @@
   (src1  :field (byte 4 16) :type 'reg)
   (dst   :field (byte 4 12) :type 'reg)
   (z     :field (byte 4 8) :value 0)
-  (halfp :field (byte 2 5))
+  (halfp :field (byte 4 4))
   (src2  :field (byte 4 0) :type 'reg))
 
 ;; LDRH/STRH (register)
@@ -603,7 +620,11 @@
 		  imm8
 		  "]"
 		  (:unless (w :constant 0) "!")))))
-	  
+
+(define-emitter emit-format-2-halfword-imm 32
+  (byte 4 28) (byte 3 25) (byte 1 24) (byte 1 23) (byte 1 22) (byte 1 21)
+  (byte 1 20) (byte 4 16) (byte 4 12) (byte 4 8) (byte 4 4) (byte 4 0))
+  
 (disassem:define-instruction-format
     (format-2-halfword-imm 32 :default-printer format-2-halfword-imm-printer)
   (cond  :field (byte 4 28) :type 'condition-code)
@@ -615,8 +636,8 @@
   (ld    :field (byte 1 20))
   (src1  :field (byte 4 16) :type 'reg)
   (dst   :field (byte 4 12) :type 'reg)
-  (imm8  :fields (list (byte 4 8) (byte 0 4)))
-  (halfp :field (byte 2 5) :value #b1011))
+  (imm8  :fields (list (byte 4 8) (byte 4 0)))
+  (halfp :field (byte 4 4) :value #b1011))
 
 (defstruct load-store-index
   (type (required-argument) :type '(member :reg :immediate))
@@ -627,16 +648,6 @@
   add
   update
   post-indexed)
-
-(defun make-ea-imm (base-reg &key (imm 0) update)
-  (let ((mag (abs imm))
-	(add (not (minusp imm))))
-    (assert (typep mag '(unsigned-byte 12)))
-    (make-load-store-index :type :immediate
-			   :base-reg base-reg
-			   :offset mag
-			   :add add
-			   :update update)))
 
 (defun make-ea (base-reg &key (offset 0) update
 			   (add t addp) 
@@ -677,107 +688,117 @@
 	  (if (load-store-index-update index) 1 0)))
 
 (defmacro define-load/store (name loadp &optional bytep)
-  `(define-instruction ,name (segment dst src1 &rest opts)
-     (:declare (type tn dst src1)
-	       (type load-store-index src2))
+  `(define-instruction ,name (segment reg address &optional (cond :al))
+     (:declare (type tn reg)
+	       (type load-store-index address))
      (:dependencies
-      (reads src1)
-      (writes dst))
+      (reads address)
+      (writes reg))
      (:printer format-2-immed
 	       ((opc #b010)))
      (:printer format-2-reg
 	       ((opc #b011)))
      (:emitter
-      (etype (load-store-index-type src2)
+      (ecase (load-store-index-type address)
 	(:reg
 	 (multiple-value-bind (p u w)
-	     (decode-load-store-index src2)
+	     (decode-load-store-index address)
 	   (emit-format-2-reg segment
 			      (inst-condition-code opts)
+			      #b011
 			      p
 			      u
-			      ,bytep
+			      ,(if bytep 1 0)
 			      w
-			      ,loadp
-			      (load-store-index-base-reg src1)
-			      (reg-tn-encoding dst)
-			      (load-store-index-shift-amount src1)
-			      (load-store-index-shift-type src1)
-			      (load-store-index-offset src1))))
+			      ,(if loadp 1 0)
+			      (reg-tn-encoding (load-store-index-base-reg address))
+			      (reg-tn-encoding reg)
+			      (load-store-index-shift-amount address)
+			      (load-store-index-shift-type address)
+			      0
+			      (reg-tn-encoding (load-store-index-offset address)))))
 	(:immediate
 	 (multiple-value-bind (p u w)
-	     (decode-load-store-index src2)
+	     (decode-load-store-index address)
 	   (emit-format-2-immed segment
 				(inst-condition-code opts)
+				#b010
 				p
 				u
-				,bytep
+				,(if bytep 1 0)
 				w
-				,loadp
-				(reg-tn-encoding (load-store-index-base-reg src1))
-				(reg-tn-encoding dst)
-				(load-store-index-offset src1))))))))
+				,(if loadp 1 0)
+				(reg-tn-encoding (load-store-index-base-reg address))
+				(reg-tn-encoding reg)
+				(load-store-index-offset address))))))))
 
 (define-load/store ldr t)
 (define-load/store ldrb t t)
 (define-load/store str nil)
 (define-load/store strb nil t)
 
-(defmacro define-load/store-extra (name &optional loadp signedp bytep)
-  `(disassem:define-instruction ,name (segment dst src1 &rest opts)
-     (:declare (type tn dst src1)
-	       (type load-store-index src2))
+(defmacro define-load/store-extra (name &optional loadp bytep signedp)
+  `(define-instruction ,name (segment reg address &optional (cond :al))
+     (:declare (type tn reg)
+	       (type load-store-index address))
      (:dependencies
-      (reads src1)
-      (writes dst))
+      ,(if loadp
+	   `(writes reg)
+	   `(reads reg)))
      (:printer format-2-halfword-imm
 	       ((opc #b010)))
      (:printer format-2-halfword-reg
 	       ((opc #b011)))
      (:emitter
       (let ((op (cond (,bytep
-		       (when ,signedp
-			 #b1101))
+		       ;; bytep implies signed.  The unsigned byte
+		       ;; instruction is handled elsewhere.
+		       #b1101)
 		      (t
 		       (if ,signedp
 			   #b1111
 			   #b1011)))))
 			      
-	(ecase (load-store-index-type src2)
+	(ecase (load-store-index-type address)
 	  (:reg
 	   (multiple-value-bind (p u w)
-	       (decode-load-store-index src2)
+	       (decode-load-store-index address)
 	     (emit-format-2-halfword-reg segment
 					 (inst-condition-code opts)
+					 #b000
 					 p
 					 u
+					 0
 					 w
 					 ,(if loadp 1 0)
-					 (load-store-index-base-reg src1)
-					 (reg-tn-encoding dst)
-					 (load-store-index-shift-amount src1)
+					 (reg-tn-encoding (load-store-index-base-reg address))
+					 (reg-tn-encoding reg)
+					 0
 					 op
-					 (load-store-index-offset src1))))
+					 (reg-tn-encoding (load-store-index-offset address)))))
 	  (:immediate
 	   (multiple-value-bind (p u w)
 	       (decode-load-store-index src2)
 	     (emit-format-2-halfword-imm segment
 					 (inst-condition-code opts)
+					 #b000
 					 p
 					 u
+					 1
 					 w
 					 ,(if loadp 1 0)
-					 (reg-tn-encoding (load-store-index-base-reg src1))
-					 (reg-tn-encoding dst)
-					 (load-store-index-offset src1)
-					 op))))))))
+					 (reg-tn-encoding (load-store-index-base-reg address))
+					 (reg-tn-encoding reg)
+					 (ldb (byte 4 4) (load-store-index-offset address))
+					 op
+					 (ldb (byte 4 0) (load-store-index-offset address))))))))))
 
 (define-load/store-extra ldrh t)
 (define-load/store-extra strh nil)
-(define-load/store-extra ldrsh t t)
-(define-load/store-extra strsh nil t)
-(define-load/store-extra ldrsb t t t)
-(define-load/store-extra strsb nil t t)
+(define-load/store-extra ldrsh t nil t)
+(define-load/store-extra strsh nil nil t)
+(define-load/store-extra ldrsb t t)
+(define-load/store-extra strsb nil t)
 
 
 (disassem:define-argument-type relative-label
@@ -787,62 +808,79 @@
 			  (type disassem:disassem-state dstate))
 		 (+ (ash value 2) (disassem:dstate-cur-addr dstate))))
 
+(defconstant branch-imm-printer
+  `(:name (:unless (:constant ,condition-true) cond)
+	  :tab
+	  imm24))
+
 (define-emitter emit-branch-imm 32
-  (byte 4 28) (byte 4 24) (byte 0 24))
+  (byte 4 28) (byte 4 24) (byte 24 0))
 
 (disassem:define-instruction-format
-    (branch-imm 32)
+    (branch-imm 32 :default-printer branch-imm-printer)
   (cond  :field (byte 4 28) :type 'condition-code)
   (op    :field (byte 4 24))
-  (imm24 :field (byte 0 24) :type 'relative-label))
+  (imm24 :field (byte 24 0) :type 'relative-label))
+
+(defconstant branch-reg-printer
+  `(:name (:unless (:constant ,condition-true) cond)
+	  :tab
+	  src1))
 
 (define-emitter emit-branch-reg 32
-  (byte 4 28) (byte 8 20) (byte 12 8) (byte 4 4) (byte 0 4))
+  (byte 4 28) (byte 8 20) (byte 12 8) (byte 4 4) (byte 4 0))
   
 (disassem:define-instruction-format
-    (branch-reg 32)
+    (branch-reg 32 :default-printer branch-reg-printer)
   (cond  :field (byte 4 28) :type 'condition-code)
   (op    :field (byte 8 20) :value #b00010010)
   (op0   :field (byte 12 8) :value #b111111111111)
   (op1   :field (byte 4 4) :value #b0011)
-  (src1  :field (byte 0 4) :type 'reg))
+  (src1  :field (byte 4 0) :type 'reg))
 
 (defun emit-relative-branch (segment op cond target)
   (emit-back-patch segment 4
      #'(lambda (segment posn)
 	 (emit-branch-imm segment
-			  (inst-condition-code code)
+			  (inst-condition-code cond)
 			  op
-			  (offset (ash (- (label-position target) posn) -2))))))
+			  (ash (- (label-position target) posn) -2)))))
 
 ;; For these branch instructions, should we still keep the condition
 ;; at the end, like for other instructions?  Or can we have it
 ;; (optionally) first, like on sparc and x86?  This latter option
 ;; appeals to me (rtoy).
 
-(define-instruction b (segment target &optional (cond :al))
-  (:declare (type label) target
-	    (type condition-code cond))
-  (:attributes branch)
-  (:emitter
-   (emit-relative-branch segment #b1010 cond target)))
-
-(define-instruction bl (segment target &optional (cond :al))
+(define-instruction b (segment target &optional cond)
   (:declare (type label target)
 	    (type condition-code cond))
+  (:printer branch-imm ((op #b1010)))
   (:attributes branch)
   (:emitter
-   (emit-relative-branch segment #b1011 cond target)))
+   (emit-relative-branch segment #b1010 (or cond :al) target)))
+
+(define-instruction bl (segment target &optional cond)
+  (:declare (type label target)
+	    (type condition-code cond))
+  (:printer branch-imm ((op #b1011)))
+  (:attributes branch)
+  (:emitter
+   (emit-relative-branch segment #b1011 (or cond :al) target)))
 
 (define-instruction blx (segment target)
   (:declare (type (or label reg) target))
+  (:printer branch-imm ((op #b1010)))
+  (:printer branch-reg ((op #b00010010)))
   (:attributes branch)
   (:emitter
    (etypecase target
      (label
       (emit-relative-branch segment #b1010 :al target))
      (reg
-      (emit-branch-reg setment
+      (emit-branch-reg segment
 		       (inst-condition-code cond)
+		       #b00010010
+		       #b111111111111
+		       #b011
 		       (reg-tn-encooding target))))))
   
