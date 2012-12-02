@@ -56,15 +56,9 @@
 (defreg ocfp 12)			; Lisp old cfp
 (defreg nsp 13)				; ARM SP register
 (defreg lip 14)				; ARM LR register
-
-;; Don't even think about using this since it's the PC.
-;; (defreg pc 15)
-
-(eval-when (compile load eval)
-  ;; Register PC is not defined above so we can't
-  ;; access it by accident. However, it's useful to be able to
-  ;; disassemble code that uses this.
-  (setf (aref *register-names* 15) "PC"))
+;; Shouldn't normally be touched, but might be needed for PC-relative
+;; addressing.
+(defreg pc 15)				; ARM PC
 
 (defregset non-descriptor-regs
   nl0 cfunc nargs)
@@ -79,16 +73,16 @@
 
 ;;;; SB and SC definition:
 
+;; How many double-float registers are available?
+(defconstant double-float-registers
+  #+vfpv3-d16 16 #-vfpv3-d16 32)
+
 (define-storage-base registers :finite :size 16)
-(define-storage-base float-registers :finite :size 32)
+(define-storage-base float-registers :finite :size #.(* 2 double-float-registers))
 (define-storage-base control-stack :unbounded :size 8)
 (define-storage-base non-descriptor-stack :unbounded :size 0)
 (define-storage-base constant :non-packed)
 (define-storage-base immediate-constant :non-packed)
-
-;; How many double-float registers are available?
-(defconstant double-float-registers
-  #+vfpv3-d16 16 #-vfpv3-d16 32)
 
 ;;;
 ;;; Handy macro so we don't have to keep changing all the numbers whenever
@@ -211,10 +205,10 @@
 
   ;; Non-Descriptor double-floats.
   (double-reg float-registers
-   :locations #.(loop for i from 0 below double-float-registers
-		      collect i)
+   :locations #.(loop for i from 0 below (* 2 double-float-registers)
+			by 2 collect i)
    :element-size 2 :alignment 2
-   :reserve-locations (list (- double-float-registers 2) (- double-float-registers 1))
+   :reserve-locations #.(list (- double-float-registers 4) (- double-float-registers 2))
    :constant-scs ()
    :save-p t
    :alternate-scs (double-stack))
@@ -222,8 +216,8 @@
   ;; Non-descriptor double-double floats
   #+double-double
   (double-double-reg float-registers
-   :locations #.(loop for i from 0 below double-float-registers
-		   by 2 collect i)
+   :locations #.(loop for i from 0 below (* 2 double-float-registers)
+		   by 4 collect i)
    :element-size 4 :alignment 4
    :constant-scs ()
    :save-p t
@@ -238,18 +232,18 @@
    :alternate-scs (complex-single-stack))
 
   (complex-double-reg float-registers
-   :locations #.(loop for i from 0 below double-float-registers
-		      by 2 collect i)
+   :locations #.(loop for i from 0 below (* 2 double-float-registers)
+		      by 4 collect i)
    :element-size 4 :alignment 4
-   :reserve-locations (list (- double-float-registers 1))
+   ;;:reserve-locations (list (- double-float-registers 2))
    :constant-scs ()
    :save-p t
    :alternate-scs (complex-double-stack))
 
   #+double-double
   (complex-double-double-reg float-registers
-   :locations #.(loop for i from 0 below double-float-registers 
-		      by 4 collect i)
+   :locations #.(loop for i from 0 below (* 2 double-float-registers)
+		      by 8 collect i)
    :element-size 8 :alignment 8
    :constant-scs ()
    :save-p t
@@ -361,6 +355,7 @@
     (ecase sb
       (registers (or (svref *register-names* offset)
 		     (format nil "R~D" offset)))
+      ;; How do we distingish single floats from doubles?
       (float-registers (format nil "F~D" offset))
       (control-stack (format nil "CS~D" offset))
       (non-descriptor-stack (format nil "NS~D" offset))
