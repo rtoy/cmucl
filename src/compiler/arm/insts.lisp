@@ -851,21 +851,21 @@
 ;; (optionally) first, like on sparc and x86?  This latter option
 ;; appeals to me (rtoy).
 
-(define-instruction b (segment target &optional cond)
+(define-instruction b (segment target &optional (cond :al))
   (:declare (type label target)
 	    (type condition-code cond))
   (:printer branch-imm ((op #b1010)))
   (:attributes branch)
   (:emitter
-   (emit-relative-branch segment #b1010 (or cond :al) target)))
+   (emit-relative-branch segment #b1010 cond target)))
 
-(define-instruction bl (segment target &optional cond)
+(define-instruction bl (segment target &optional (cond :al))
   (:declare (type label target)
 	    (type condition-code cond))
   (:printer branch-imm ((op #b1011)))
   (:attributes branch)
   (:emitter
-   (emit-relative-branch segment #b1011 (or cond :al) target)))
+   (emit-relative-branch segment #b1011 cond target)))
 
 (define-instruction blx (segment target)
   (:declare (type (or label reg) target))
