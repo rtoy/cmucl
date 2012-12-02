@@ -304,6 +304,7 @@
 	  ((c:target-featurep :sgi) "mips/")
 	  ((c:target-featurep :ppc) "ppc/")
 	  ((c:target-featurep :amd64) "amd64/")
+	  ((c:target-featurep :arm) "arm/")
 	  (t
 	   (error "What machine is this?")))
     (make-pathname :directory (pathname-directory f)))))
