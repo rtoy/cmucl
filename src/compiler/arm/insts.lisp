@@ -468,7 +468,94 @@
 (define-data-proc bic #b1110)
 (define-data-proc mvn #b1111)		; aka bitwise not
 
+
+;; A5.2.5 Multiply and Accumulate
 
+(define-emitter emit-format-mul 32
+  (byte 4 28) (byte 3 25) (byte 4 21) (byte 1 20) (byte 4 16) (byte 4 12)
+  (byte 4 8) (byte 4 4) (byte 4 0))
+  
+(disassem:define-instruction-format
+    (format-mul 32)
+  (cond  :field (byte 4 28) :type 'condition-code)
+  (op0   :field (byte 3 25) :value #b000)
+  (op    :field (byte 4 21) :value #b0000)
+  (s     :field (byte 1 20))
+  (dst   :field (byte 4 16) :type 'reg)
+  (src3  :field (byte 4 12))
+  (src2  :field (byte 4 8) :type 'reg)
+  (op1   :field (byte 4 4))
+  (src1  :field (byte 4 0) :type 'reg))
+
+(define-instruction mul (segment dst src1 src2 &rest opts)
+  (:declare (type tn dst src1 src2)
+	    (type condition-code cond))
+  (:printer format-mul
+	    ((op0 #b000) (op #b0000) (op1 #b1001))
+	    `(:name (:unless (s :constant 0) 's)
+		    (:unless (:constant ,condition-true) cond)
+		    :tab
+		    dst ", " src1 ", " src2))
+  (:dependencies
+   (reads src1)
+   (reads src2)
+   (writes dst))
+  (:emitter
+   (emit-format-mul segment
+		    (inst-condition-code cond)
+		    #b000
+		    #b0000
+		    (inst-set-flags opts)
+		    (reg-tn-encoding dst)
+		    #b0000
+		    (reg-tn-encoding src2)
+		    #b1001
+		    (reg-tn-encoding src1))))
+
+(defmacro define-4-arg-mul (name op &optional two-outputs setflags0)
+  `(define-instruction ,name (segment dst dst2-or-src src2 src3 &rest opts)
+     (:declare (type tn dst dst2-or-src src2))
+     (:printer format-mul
+	       ((op0 #b000) (op ,op) (op1 #b1001))
+	       ',(if two-outputs
+		     `(:name (:unless (s :constant 0) 's)
+			     (:unless (:constant ,condition-true) cond)
+			     :tab
+			     src3 ", " dst ", " src2 ", " src3)
+		     `(:name (:unless (s :constant 0) 's)
+			     (:unless (:constant ,condition-true) cond)
+			     :tab
+			     dst ", " src1 ", " src2 ", " src3)))
+     (:dependencies
+      (reads src2)
+      (reads src3)
+      ,(if two-outputs
+	   `(writes dst2-or-src)
+	   `(reads dst2-or-src))
+      (writes dst))
+     (:emitter
+      (emit-format-mul segment
+		       (inst-condition-code opts)
+		       #b000
+		       ,op
+		       ,(if setflags0
+			    0
+			    `(inst-set-flags opts))
+		       (reg-tn-encoding dst)
+		       (reg-tn-encoding src3)
+		       (reg-tn-encoding src2)
+		       #b1001
+		       (reg-tn-encoding dst2-or-src)))))
+
+(define-4-arg-mul mla   #b0001)
+(define-4-arg-mul umaal #b0010 t t)
+(define-4-arg-mul mls   #b0011)
+(define-4-arg-mul umull #b0100 t)
+(define-4-arg-mul umlal #b0101 t)
+(define-4-arg-mul smull #b0110 t)
+(define-4-arg-mul smlal #b0111 t)
+
+		     
 ;; See A8.8.63
 ;; LDR/STR (immediate)
 ;;
