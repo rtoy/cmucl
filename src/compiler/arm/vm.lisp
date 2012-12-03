@@ -57,8 +57,8 @@
 (defreg nsp 13)				; ARM SP register
 (defreg lip 14)				; ARM LR register
 ;; Shouldn't normally be touched, but might be needed for PC-relative
-;; addressing.
-(defreg pc 15)				; ARM PC
+;; addressing and control transfers.
+(defreg pc 15)
 
 (defregset non-descriptor-regs
   nl0 cfunc nargs)
@@ -208,7 +208,8 @@
    :locations #.(loop for i from 0 below (* 2 double-float-registers)
 			by 2 collect i)
    :element-size 2 :alignment 2
-   :reserve-locations #.(list (- double-float-registers 4) (- double-float-registers 2))
+   :reserve-locations #.(list (- (* 2 double-float-registers) 4)
+			      (- (* 2 double-float-registers) 2))
    :constant-scs ()
    :save-p t
    :alternate-scs (double-stack))
@@ -235,7 +236,7 @@
    :locations #.(loop for i from 0 below (* 2 double-float-registers)
 		      by 4 collect i)
    :element-size 4 :alignment 4
-   ;;:reserve-locations (list (- double-float-registers 2))
+   :reserve-locations #.(list (- (* 2 double-float-registers) 4))
    :constant-scs ()
    :save-p t
    :alternate-scs (complex-double-stack))
@@ -355,7 +356,6 @@
     (ecase sb
       (registers (or (svref *register-names* offset)
 		     (format nil "R~D" offset)))
-      ;; How do we distingish single floats from doubles?
       (float-registers (format nil "F~D" offset))
       (control-stack (format nil "CS~D" offset))
       (non-descriptor-stack (format nil "NS~D" offset))
