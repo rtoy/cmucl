@@ -17389,15 +17389,15 @@ msgstr ""
 #: src/compiler/new-assem.lisp
 msgid ""
 "Byte spec ~S either overlaps another byte spec, or ~\n"
-"		    extends past the end."
+"		    extends past the end in emitter ~S."
 msgstr ""
 
 #: src/compiler/new-assem.lisp
-msgid "There are holes."
+msgid "There are holes in emitter ~S."
 msgstr ""
 
 #: src/compiler/new-assem.lisp
-msgid "~D isn't an even multiple of ~D"
+msgid "~D isn't an even multiple of ~D in emitter ~S"
 msgstr ""
 
 #: src/compiler/new-assem.lisp
