@@ -11,6 +11,11 @@
 ;;;
 ;;; Description of the ARM architecture,
 ;;;
+;;; Written by Raymond Toy
+;;;
+;;; Reference: ARM Architecture Reference Manual, ARMv7-A and ARMv7-R,
+;;; http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0406c/index.html
+;;;
 (in-package "ARM")
 
 (use-package "NEW-ASSEM")
@@ -33,21 +38,16 @@
 	 (tn-offset tn)
 	 (error (intl:gettext "~S isn't a register.") tn)))))
 
-#+nil
-(defun fp-reg-tn-encoding (tn)
+(defun fp-reg-tn-encoding (tn &optional doublep)
   (declare (type tn tn))
   (unless (eq (sb-name (sc-sb (tn-sc tn))) 'float-registers)
     (error (intl:gettext "~S isn't a floating-point register.") tn))
   (let ((offset (tn-offset tn)))
-    (cond ((> offset 31)
-	   ;; Use the sparc v9 double float register encoding.
-	   (assert (backend-featurep :sparc-v9))
-	   ;; No single register encoding greater than reg 31.
-	   (assert (zerop (mod offset 2)))
-	   ;; Upper bit of the register number is encoded in the low bit.
-	   (1+ (- offset 32)))
-	  (t
-	   (tn-offset tn)))))
+    ;; FP registers are numbered 0 to 31 (or 63, if we have 32 double
+    ;; regs).  But the instruction encodings want to split that into a
+    ;; 1 bit chunk and a 4 bit chunk, so we do that here.
+    (values (ldb (byte 1 4) offset)
+	    (ldb (byte 4 0) offset))))
 
 (disassem:set-disassem-params :instruction-alignment 32
 			      :opcode-column-width 11)
@@ -113,15 +113,25 @@
 
 ;; Do we need a separate set for single-float and double-float regs? 
 ;; The ARM names are s<n> and d<n>.
-(defparameter float-reg-symbols
+(defparameter single-float-reg-symbols
   (coerce 
-   (loop for n from 0 to 63 collect (make-symbol (format nil "%F~d" n)))
+   (loop for n from 0 below 32 collect (make-symbol (format nil "S~d" n)))
    'vector))
 
-(disassem:define-argument-type fp-reg
-  :printer #'(lambda (value stream dstate)
-	       (declare (stream stream) (fixnum value))
-	       (let ((regname (aref float-reg-symbols value)))
+(defparameter double-float-reg-symbols
+  (coerce 
+   (loop for n from 0 below double-float-registers
+	 collect (make-symbol (format nil "D~d" n)))
+   'vector))
+
+(disassem:define-argument-type fp-single-reg
+  :printer #'(lambda (vlist stream dstate)
+	       (declare (stream stream))
+	       ;; The fp-reg fields are always split into two parts,
+	       ;; so we get a list of values from the two parts.
+	       (let* ((value (logior (ash (first vlist) 4)
+				     (second vlist)))
+		      (regname (aref single-float-reg-symbols value)))
 		 (princ regname stream)
 		 (disassem:maybe-note-associated-storage-ref
 		  value
@@ -129,8 +139,21 @@
 		  regname
 		  dstate))))
 
-;; Reference: ARM Architecture Reference Manual, ARMv7-A and ARMv7-R,
-;; http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0406c/index.html
+(disassem:define-argument-type fp-double-reg
+  :printer #'(lambda (vlist stream dstate)
+	       (declare (stream stream))
+	       ;; The fp-reg fields are always split into two parts,
+	       ;; so we get a list of values from the two parts.
+	       (let* ((value (logior (ash (first vlist) 4)
+				     (second vlist)))
+		      (regname (aref double-float-reg-symbols value)))
+		 (princ regname stream)
+		 (disassem:maybe-note-associated-storage-ref
+		  value
+		  'float-registers
+		  regname
+		  dstate))))
+
 ;;
 ;; Table A8-1
 (defconstant condition-codes
@@ -154,6 +177,9 @@
 (deftype shift-type ()
   `(member ,@shift-types))
 
+
+;; Look through OPTIONS-LIST and find a condition code and return the
+;; corresponding value for the COND field of an instruction.
 (defun inst-condition-code (options-list)
   (let ((c (remove :s options-list)))
     (unless (cdr c)
@@ -162,11 +188,14 @@
       (or position
 	  #b1111))))
 
+;; Look through OPTIONS-LIST to find :S, which means the instruction
+;; should set the flags.
 (defun inst-set-flags (options-list)
   (if (member :s options-list)
       1
       0))
 
+;; Convert SHIFT-TYPE to the value for an instruction field.
 (defun shift-encoding (shift-type)
   (if (eq shift-type :rrx)
       3
@@ -555,7 +584,88 @@
 (define-4-arg-mul smull #b0110 t)
 (define-4-arg-mul smlal #b0111 t)
 
-		     
+;; Divide and friends
+;; A5.4.4
+
+(define-emitter emit-format-div 32
+  (byte 4 28) (byte 6 22) (byte 2 20) (byte 4 16) (byte 4 12) (byte 4 8)
+  (byte 3 5) (byte 1 4) (byte 4 0))
+
+(defconstant format-div-printer
+  `(:name (:unless (:constant ,condition-true) cond)
+          :tab
+          dst "," src1 ", " src2))    
+
+(disassem:define-instruction-format
+    (format-div 32 :default-printer format-div-printer)
+  (cond  :field (byte 4 28) :type 'condition-code)
+  (op0   :field (byte 5 22) :value #b01110)
+  (op1   :field (byte 2 20))
+  (dst   :field (byte 4 16) :type 'reg)
+  (a     :field (byte 4 12))
+  (src2  :field (byte 4 8) :type 'reg)
+  (op2   :field (byte 3 5))
+  (one   :field (byte 1 4))
+  (src1  :field (byte 4 0) :type 'reg))
+
+(defmacro define-div (name op1 op2)
+  `(define-instruction ,name (segment dst src1 src2 &optional (cond :al))
+     (:declare (type tn dst src1 src2)
+	       (type condition-code cond))
+     (:printer format-div
+	       ((op1 ,op1) (op2 ,op2)))
+     (:dependencies
+      (reads src1)
+      (reads src2)
+      (writes dst))
+     (:emitter
+      (emit-format-div segment
+		       (inst-condition-code (list cond))
+		       #b01110
+		       ,op1
+		       (reg-tn-encoding dst)
+		       #b1111
+		       (reg-tn-encoding src2)
+		       ,op2
+		       #b1
+		       (reg-tn-encoding src1)))))
+
+(define-div sdiv #b001 #b000)
+(define-div udiv #b011 #b000)
+
+;; Misc instructions
+;; A5.2.12
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+(defun split-imm16-printer (value stream dstate)
+  (declare (ignore dstate))
+  (format stream "#~D" (logior (ash (first value) 8)
+			       (second value)))))
+
+(define-emitter emit-format-bkpt 32
+  (byte 4 28) (byte 8 20) (byte 12 8) (byte 4 4) (byte 4 0))
+
+(disassem:define-instruction-format
+    (format-bkpt 32
+		 :default-printer `(:name (:unless (:constant ,condition-true) cond)17947
+					  :tab
+					  imm16))
+  (cond  :field (byte 4 28) :type 'condition-code)
+  (op0   :field (byte 8 20) :value #b00010010)
+  (imm16 :fields (list (byte 12 8) (byte 4 0)) :printer #'split-imm16-printer)
+  (op1   :field (byte 4 4) :value #b0111))
+
+(define-instruction bkpt (segment value &optional (cond :al))
+  (:declare (type (unsigned-byte 16) value))
+  (:printer format-bkpt
+	    ((op0 #b00010010) (op1 #b0111)))
+  (:emitter
+   (emit-format-bkpt segment
+		     (inst-condition-code (list cond))
+		     #b00010010
+		     (ldb (byte 12 4) value)
+		     #b0111
+		     (ldb (byte 4 0) value))))
 ;; See A8.8.63
 ;; LDR/STR (immediate)
 ;;
@@ -613,20 +723,10 @@
 		  ", "
 		  (:cond ((u :constant 0) "-")
 			 (t "+"))
-		  rs
-		  ", "
-		  type
-		  " "
-		  imm5
-		  "]"
+		  rs ", " type " " imm5 "]"
 		  (:unless (w :constant 1) "!"))
 		 (t
-		  "], "
-		  rs
-		  ", "
-		  type
-		  " "
-		  imm5))))
+		  "], " rs ", " type " " imm5))))
   
 (define-emitter emit-format-2-reg 32
   (byte 4 28) (byte 3 25) (byte 1 24) (byte 1 23) (byte 1 22) (byte 1 21)
@@ -708,6 +808,11 @@
 		  "]"
 		  (:unless (w :constant 0) "!")))))
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+(defun split-imm8-printer (value stream dstate)
+  (declare (ignore dstate))
+  (format stream "~D" (logior (ash (first value) 4) (second value)))))
+
 (define-emitter emit-format-2-halfword-imm 32
   (byte 4 28) (byte 3 25) (byte 1 24) (byte 1 23) (byte 1 22) (byte 1 21)
   (byte 1 20) (byte 4 16) (byte 4 12) (byte 4 8) (byte 4 4) (byte 4 0))
@@ -723,7 +828,7 @@
   (ld    :field (byte 1 20))
   (src1  :field (byte 4 16) :type 'reg)
   (dst   :field (byte 4 12) :type 'reg)
-  (imm8  :fields (list (byte 4 8) (byte 4 0)))
+  (imm8  :fields (list (byte 4 8) (byte 4 0)) :printer #'split-imm8-printer)
   (halfp :field (byte 4 4) :value #b1011))
 
 (defstruct load-store-index
@@ -971,3 +1076,300 @@
 		       #b011
 		       (reg-tn-encooding target))))))
   
+
+;; Floating-point instructions
+;; A7.5
+
+(define-emitter format-vfp-3-arg 32
+  (byte 4 28) (byte 5 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
+  (byte 3 9) (byte 1 8) (byte 1 7) (byte 1 6) (byte 1 5) (byte 1 4) (byte 4 0))
+
+(defconstant format-vfp-3-arg-printer
+   `(:name (:unless (:constant ,condition-true) cond)
+     :tab
+     (:cond ((sz :constant 0) '|.F32|)
+	    (t '|.F64|))
+     dst ", "
+     src1 ", "
+     src2 ", "))
+
+(disassem:define-instruction-format
+    (format-vfp-3 32 :default-printer format-vfp-3-arg-printer)
+  (cond  :field (byte 4 28) :type 'condition-code)
+  (op0   :field (byte 5 23))
+  (src1  :fields (list (byte 1 7) (byte 4 16)) :type 'fp-single-reg)
+  (dst   :fields (list (byte 1 22) (byte 4 12)) :type 'fp-single-reg)
+  (src2  :fields (list (byte 1 5) (byte 4 0)) :type 'fp-single-reg)
+  (op1   :field (byte 2 20) :value #b11)
+  (op2   :field (byte 3 9) :value #b101)
+  (sz    :field (byte 1 8))
+  (opb0  :field (byte 1 6))
+  (opb1  :field (byte 1 4)))
+
+(defmacro define-vfp-3 (name op0 op1 opb0 opb1 &optional doublep)
+  (let ((full-name (symbolicate name (if doublep ".F64" ".F32"))))
+    `(define-instruction ,full-name (segment dst src1 src2 &optional (cond :al))
+       (:declare)
+       (:printer format-vfp-3
+		 ((op0 ,op0) (op1 ,op1) (op2 #b101)
+		  (opb0 ,opb0) (opb1 ,opb1)
+		  ,@(if doublep `((dst nil :type 'fp-double-reg)
+				  (src1 nil :type 'fp-double-reg)
+				  (src2 nil :type 'fp-double-reg))))
+		 :default
+		 :print-name ',name)
+       (:emitter
+	(multiple-value-bind (d vd)
+	    (fp-reg-tn-encoding dst)
+	  (multiple-value-bind (n vn)
+	      (fp-reg-tn-encoding src1)
+	    (multiple-value-bind (m vm)
+		(fp-reg-tn-encoding src2)
+	      (emit-format-vfp-3-arg segment
+				     (inst-condition-code (list cond))
+				     ,op0
+				     d
+				     ,op1
+				     vn
+				     vd
+				     #b101
+				     ,(if doublep 1 0)
+				     n
+				     ,opb0
+				     m
+				     ,opb1
+				     vm))))))))
+
+(define-vfp-3 vadd.f32  #b11100 #b11 0 0)
+(define-vfp-3 vadd.f64  #b11100 #b11 0 0 t)
+(define-vfp-3 vsub.f32  #b11000 #b11 1 0)
+(define-vfp-3 vsub.f64  #b11000 #b11 1 0 t)
+(define-vfp-3 vmul.f32  #b11100 #b10 0 0)
+(define-vfp-3 vmul.f64  #b11100 #b10 0 0 t)
+(define-vfp-3 vdiv.f32  #b11101 #b00 0 0)
+(define-vfp-3 vdiv.f64  #b11101 #b00 0 0 t)
+
+(define-emitter emit-format-vfp-2-arg 32
+  (byte 4 28) (byte 5 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
+  (byte 3 9) (byte 1 8) (byte 2 6) (byte 1 5) (byte 1 4) (byte 4 0))
+
+(defconstant format-vfp-2-arg-printer
+  `(:name (:unless (:constant ,condition-true) cond)
+    :tab
+    (:cond ((sz :constant 0) '|.F32|)
+	   (t '|.F64|))
+    dst ", "
+    src))
+
+(disassem:define-instruction-format
+    (format-vfp-2-arg 32 :default-printer format-vfp-2-arg-printer)
+  (cond  :field (byte 4 28) :type 'condition-code)
+  (op0   :field (byte 5 23) :value #b11101)
+  (op    :field (byte 2 20))
+  (op1   :field (byte 4 16))
+  (dst   :fields (list (byte 1 22) (byte 4 12)) :type 'fp-single-reg)
+  (src   :fields (list (byte 1 5) (byte 4 0)) :type 'fp-single-reg)
+  (op2   :field (byte 3 9) :value #b101)
+  (sz    :field (byte 1 8))
+  (opc3  :field (byte 2 6))
+  (opc4  :field (byte 1 4)))
+   
+(defmacro define-vfp-2 (name op op1 opc3 opc4 &key doublep ext
+						(dst-type 'fp-single-reg)
+						(src-type 'fp-single-reg))
+  (let ((full-name (symbolicate name (if doublep
+					 (or ext ".F64")
+					 (or ext ".F32")))))
+  `(define-instruction ,full-name (segment dst src &optional (cond :al))
+     (:declare (type tn dst src))
+     (:printer format-vfp-2-arg
+	       ((op0 #b11101) (op ,op) (op1 ,op1) (op2 #b101)
+		(opc3 ,opc3) (opc4 ,opc4)
+		(dst nil :type ',dst-type)
+		(src nil :type ',src-type))
+	       :default
+	       :print-name ',name)
+     (:emitter
+      (multiple-value-bind (d vd)
+	  (fp-reg-tn-encoding dst)
+	(multiple-value-bind (m vm)
+	    (fp-reg-tn-encoding src)
+	  (emit-format-vfp-2-arg segment
+				 (inst-condition-code (list cond))
+				 #b11101
+				 d
+				 ,op
+				 ,op1
+				 vd
+				 #b101
+				 ,(if doublep 1 0)
+				 ,opc3
+				 m
+				 ,opc4
+				 vm)))))))
+
+(define-vfp-2 vabs  #b11 #b0000 #b11 0)
+(define-vfp-2 vabs  #b11 #b0000 #b11 0 :doublep t
+  :dst-type fp-double-reg :src-type fp-double-reg)
+(define-vfp-2 vneg  #b11 #b0001 #b01 0)
+(define-vfp-2 vneg  #b11 #b0001 #b01 0 :doublep t
+  :dst-type fp-double-reg :src-type fp-double-reg)
+(define-vfp-2 vsqrt #b11 #b0001 #b11 0)
+(define-vfp-2 vsqrt #b11 #b0001 #b11 0 :doublep t
+  :dst-type fp-double-reg :src-type fp-double-reg)
+
+
+;; Convert between double and single
+(define-vfp-2 vcvt  #b11 #b0111 #b11 0 :ext ".F64.F32"
+  :dst-type fp-double-reg)
+(define-vfp-2 vcvt  #b11 #b0111 #b11 0 :doublep t :ext ".F32.F64"
+  :src-type fp-double-reg)
+
+;; Convert between float and integer
+(define-vfp-2 vcvt  #b11 #b1101 #b11 0 :ext "S32.F32"
+  :dst-type reg)
+(define-vfp-2 vcvt  #b11 #b1101 #b11 0 :doublep t :ext "S32.F64"
+  :dst-type reg :src-type fp-double-reg)
+(define-vfp-2 vcvt  #b11 #b1100 #b11 0 :ext "U32.F32"
+  :dst-type reg)
+(define-vfp-2 vcvt  #b11 #b1100 #b11 0 :doublep t :ext "U32.F64"
+  :dst-type reg :src-type fp-double-reg)
+
+(define-vfp-2 vcvtr #b11 #b1101 #b01 0 :ext "S32.F32"
+  :dst-type reg)
+(define-vfp-2 vcvtr #b11 #b1101 #b01 0 :doublep t :ext "S32.F64"
+  :dst-type reg :src-type fp-double-reg)
+(define-vfp-2 vcvtr #b11 #b1100 #b01 0 :ext "U32.F32"
+  :dst-type reg)
+(define-vfp-2 vcvtr #b11 #b1100 #b01 0 :doublep t :ext "U32.F64"
+  :dst-type reg :src-type fp-double-reg)
+
+(define-vfp-2 vcvt  #b11 #b1000 #b01 0 :ext "F32.U32"
+  :src-type reg)
+(define-vfp-2 vcvt  #b11 #b1000 #b01 0 :doublep t :ext "F64.U32"
+  :dst-type fp-double-reg :src-type reg)
+(define-vfp-2 vcvt  #b11 #b1000 #b11 0 :ext "F32.S32"
+  :src-type reg)
+(define-vfp-2 vcvt  #b11 #b1000 #b11 0 :doublep t :ext "F64.S32"
+  :dst-type fp-double-reg :src-type reg)
+
+;; Convert a float to the floating-point modified immediate constant.
+;; See Table A7-18
+(defun fp-immed-or-lose (f)
+  (declare (type float f))
+  ;; Convert to double which is exact.
+  (multiple-value-bind (bits lo)
+      (kernel:double-float-bits (coerce f 'double-float))
+    (let ((sign-bit (ldb (byte 1 31) bits))
+	  (exp (ldb (byte 3 20) bits))
+	  (e (ldb (byte 8 23) bits))
+	  (frac (ldb (byte 4 16) bits)))
+      (if (and (or (= e #b01111111) (= e #b10000000))
+	       (zerop (ldb (byte 16 0) bits))
+	       (zerop lo))
+	  (logior (ash sign-bit 7)
+		  (ash exp 4)
+		  frac)
+	  (error "Invalid floating-point immediate: ~S" f)))))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+(defun packed-float-immed-printer (value stream dstate)
+  (declare (ignore dstate))
+  (let ((sign (ldb (byte 1 3) (first value)))
+	(exp (ldb (byte 3 0) (first value)))
+	(frac (second value))
+	(word 0))
+    (setf word (dpb frac (byte 4 19) word))
+    (setf word (dpb exp (byte 3 23) word))
+    (setf word
+	  (dpb (if (zerop (ldb (byte 1 2) exp))
+		   #b10000
+		   #b01111)
+	       (byte 5 26)
+	       word))
+    (format stream "~S" (if (zerop sign)
+			    (kernel:make-single-float word)
+			    (- (kernel:make-single-float word)))))))
+
+(define-emitter emit-format-vfp-vmov-immed 32
+  (byte 4 28) (byte 5 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
+  (byte 3 9) (byte 1 8) (byte 4 4) (byte 4 0))
+
+(disassem:define-instruction-format
+    (format-vfp-vmov-immed 32)
+  (cond  :field (byte 4 28) :type 'condition-code)
+  (op0   :field (byte 5 23) :value #b11101)
+  (op    :field (byte 2 20) :value #b11)
+  (imm8  :fields (list (byte 4 16) (byte 4 0)) :printer #'packed-float-immed-printer)
+  (dst   :fields (list (byte 1 22) (byte 4 12)) :type 'fp-single-reg)
+  (op2   :field (byte 3 9) :value #b101)
+  (sz    :field (byte 1 8))
+  (z     :field (byte 4 4) :value 0))
+
+(define-emitter emit-format-vfp-vmov-reg 32
+  (byte 4 28) (byte 5 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
+  (byte 3 9) (byte 1 8) (byte 2 6) (byte 1 5) (byte 1 4) (byte 4 0))
+
+(define-constant format-vfp-vmov-reg
+  `(:name  (:unless (:constant ,condition-true) cond)
+    :tab
+    (:cond ((sz :constant 0) '|.F32|)
+	   (t '|.F64|))
+	   dst ", " src))
+
+(disassem:define-instruction-format
+    (format-vfp-vmov-reg 32)
+  (cond  :field (byte 4 28) :type 'condition-code)
+  (op0   :field (byte 5 23) :value #b11101)
+  (op    :field (byte 2 20) :value #b11)
+  (z     :field (byte 4 16) :value 0)
+  (dst   :fields (list (byte 1 22) (byte 4 12)) :type 'fp-single-reg)
+  (src   :fields (list (byte 1 5) (byte 4 0)) :type 'fp-single-reg)
+  (op2   :field (byte 3 9) :value #b101)
+  (sz    :field (byte 1 8))
+  (op3   :field (byte 2 6) :value #b01)
+  (z2    :field (byte 1 4) :value 0))
+
+(define-instruction vmov (dst src &optional (cond :al))
+  (:declare (type tn dst)
+	    (type (or float tn) src))
+  (:printer format-vfp-vmov-immed
+	    ((op0 #b11101) (op #b11) (op2 #b101) (z 0)))
+  (:printer format-vfp-vmov-reg
+	    ((op0 #b11101) (op #b11) (op2 #b101) (op3 #b01)
+	     (z 0) (z2 0)))
+  (:emitter
+   (etypecase src
+     (tn
+      (multiple-value-bind (d vd)
+	  (fp-single-reg-tn-encoding dst)
+	(multiple-value-bind (m vm)
+	    (fp-single-reg-tn-encoding src)
+	  (emit-format-vfp-vmov-reg segment
+				    (inst-condition-code (list cond))
+				    #b11101
+				    d
+				    #b11
+				    #b0000
+				    vd
+				    #b101
+				    sz
+				    #b01
+				    m
+				    0
+				    vm))))
+     (float
+      (multiple-value-bind (d vd)
+	  (fp-single-reg-tn-encoding dst)
+	(let ((value (fp-immed-or-lose src)))
+	  (emit-format-vfp-vmov-immed segment
+				      (inst-condition-code (list cond))
+				      #b11101
+				      d
+				      #b11
+				      (ldb (byte 4 4) value)
+				      vd
+				      #b101
+				      sz
+				      #b0000
+				      (ldb (byte 4 0) value))))))))
