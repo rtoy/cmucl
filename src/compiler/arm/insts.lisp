@@ -38,11 +38,15 @@
 	 (tn-offset tn)
 	 (error (intl:gettext "~S isn't a register.") tn)))))
 
-(defun fp-reg-tn-encoding (tn &optional doublep)
+;; If the tn is a double-float, we need to divide the offset by 2 to
+;; get the actual encoding for the instruction.  
+(defun fp-reg-tn-encoding (tn doublep)
   (declare (type tn tn))
   (unless (eq (sb-name (sc-sb (tn-sc tn))) 'float-registers)
     (error (intl:gettext "~S isn't a floating-point register.") tn))
-  (let ((offset (tn-offset tn)))
+  (let ((offset (if doublep
+		    (ash (tn-offset tn) -1)
+		    (tn-offset tn))))
     ;; FP registers are numbered 0 to 31 (or 63, if we have 32 double
     ;; regs).  But the instruction encodings want to split that into a
     ;; 1 bit chunk and a 4 bit chunk, so we do that here.
@@ -113,17 +117,14 @@
 
 ;; Do we need a separate set for single-float and double-float regs? 
 ;; The ARM names are s<n> and d<n>.
-(defparameter single-float-reg-symbols
+(defparameter float-reg-symbols
   (coerce 
-   (loop for n from 0 below 32 collect (make-symbol (format nil "S~d" n)))
+   (loop for n from 0 below (* 2 double-float-registers)
+	 collect (make-symbol (format nil "F~d" n)))
    'vector))
 
-(defparameter double-float-reg-symbols
-  (coerce 
-   (loop for n from 0 below double-float-registers
-	 collect (make-symbol (format nil "D~d" n)))
-   'vector))
-
+;; We need separate types for single and double float because ARM uses
+;; the same numbering scheme for both.
 (disassem:define-argument-type fp-single-reg
   :printer #'(lambda (vlist stream dstate)
 	       (declare (stream stream))
@@ -131,7 +132,7 @@
 	       ;; so we get a list of values from the two parts.
 	       (let* ((value (logior (ash (first vlist) 4)
 				     (second vlist)))
-		      (regname (aref single-float-reg-symbols value)))
+		      (regname (aref float-reg-symbols value)))
 		 (princ regname stream)
 		 (disassem:maybe-note-associated-storage-ref
 		  value
@@ -143,10 +144,12 @@
   :printer #'(lambda (vlist stream dstate)
 	       (declare (stream stream))
 	       ;; The fp-reg fields are always split into two parts,
-	       ;; so we get a list of values from the two parts.
-	       (let* ((value (logior (ash (first vlist) 4)
-				     (second vlist)))
-		      (regname (aref double-float-reg-symbols value)))
+	       ;; so we get a list of values from the two parts.  And
+	       ;; the value needs to be doubled to match our register
+	       ;; numbering.
+	       (let* ((value (* 2 (logior (ash (first vlist) 4)
+					  (second vlist))))
+		      (regname (aref float-reg-symbols value)))
 		 (princ regname stream)
 		 (disassem:maybe-note-associated-storage-ref
 		  value
@@ -522,7 +525,7 @@
   (:printer format-mul
 	    ((op0 #b000) (op #b0000) (op1 #b1001))
 	    `(:name (:unless (s :constant 0) 's)
-		    (:unless (:constant ,condition-true) cond)
+		    (:unless (cond :constant ,condition-true) cond)
 		    :tab
 		    dst ", " src1 ", " src2))
   (:dependencies
@@ -548,7 +551,7 @@
 	       ((op0 #b000) (op ,op) (op1 #b1001))
 	       ',(if two-outputs
 		     `(:name (:unless (s :constant 0) 's)
-			     (:unless (:constant ,condition-true) cond)
+			     (:unless (cond :constant ,condition-true) cond)
 			     :tab
 			     src3 ", " dst ", " src2 ", " src3)
 		     `(:name (:unless (s :constant 0) 's)
@@ -592,7 +595,7 @@
   (byte 3 5) (byte 1 4) (byte 4 0))
 
 (defconstant format-div-printer
-  `(:name (:unless (:constant ,condition-true) cond)
+  `(:name (:unless (cond :constant ,condition-true) cond)
           :tab
           dst "," src1 ", " src2))    
 
@@ -647,7 +650,7 @@
 
 (disassem:define-instruction-format
     (format-bkpt 32
-		 :default-printer `(:name (:unless (:constant ,condition-true) cond)17947
+		 :default-printer `(:name (:unless (cond :constant ,condition-true) cond)
 					  :tab
 					  imm16))
   (cond  :field (byte 4 28) :type 'condition-code)
@@ -673,7 +676,7 @@
 ;; ldr<c> dst, [src1, #+/-<imm>]!
 ;; ldr<c> dst, [src1], #+/-<imm>
 (defconstant format-2-immed-printer
-  `(:name (:unless (:constant ,condition-true) cond)
+  `(:name (:unless (cond :constant ,condition-true) cond)
           :tab
 	  dst
 	  ", ["
@@ -714,7 +717,7 @@
 ;; ldr<c> dst, [src1, +/-src2, shift]<!>
 ;; ldr<c> dst, [src1], +/-src2, shift
 (defconstant format-2-reg-printer
-  `(:name (:unless (:constant ,condition-true) cond)
+  `(:name (:unless (cond :constant ,condition-true) cond)
           :tab
 	  dst
 	  ", ["
@@ -750,7 +753,7 @@
 
 ;; LDRH/STRH (register)
 (defconstant format-2-halfword-reg-printer
-  `(:name (:unless (:constant ,condition-true) cond)
+  `(:name (:unless (cond :constant ,condition-true) cond)
           :tab
 	  dst
 	  ", ["
@@ -790,7 +793,7 @@
 ;; LDRH/STRH (register)
 
 (defconstant format-2-halfword-imm-printer
-  `(:name (:unless (:constant ,condition-true) cond)
+  `(:name (:unless (cond :constant ,condition-true) cond)
           :tab
 	  dst
 	  ", ["
@@ -1001,7 +1004,7 @@
 		 (+ (ash value 2) (disassem:dstate-cur-addr dstate))))
 
 (defconstant branch-imm-printer
-  `(:name (:unless (:constant ,condition-true) cond)
+  `(:name (:unless (cond :constant ,condition-true) cond)
 	  :tab
 	  imm24))
 
@@ -1015,7 +1018,7 @@
   (imm24 :field (byte 24 0) :type 'relative-label))
 
 (defconstant branch-reg-printer
-  `(:name (:unless (:constant ,condition-true) cond)
+  `(:name (:unless (cond :constant ,condition-true) cond)
 	  :tab
 	  src1))
 
@@ -1085,7 +1088,7 @@
   (byte 3 9) (byte 1 8) (byte 1 7) (byte 1 6) (byte 1 5) (byte 1 4) (byte 4 0))
 
 (defconstant format-vfp-3-arg-printer
-   `(:name (:unless (:constant ,condition-true) cond)
+   `(:name (:unless (cond :constant ,condition-true) cond)
      :tab
      (:cond ((sz :constant 0) '|.F32|)
 	    (t '|.F64|))
@@ -1120,11 +1123,11 @@
 		 :print-name ',name)
        (:emitter
 	(multiple-value-bind (d vd)
-	    (fp-reg-tn-encoding dst)
+	    (fp-reg-tn-encoding dst doublep)
 	  (multiple-value-bind (n vn)
-	      (fp-reg-tn-encoding src1)
+	      (fp-reg-tn-encoding src1 doublep)
 	    (multiple-value-bind (m vm)
-		(fp-reg-tn-encoding src2)
+		(fp-reg-tn-encoding src2 doublep)
 	      (emit-format-vfp-3-arg segment
 				     (inst-condition-code (list cond))
 				     ,op0
@@ -1154,10 +1157,10 @@
   (byte 3 9) (byte 1 8) (byte 2 6) (byte 1 5) (byte 1 4) (byte 4 0))
 
 (defconstant format-vfp-2-arg-printer
-  `(:name (:unless (:constant ,condition-true) cond)
-    :tab
+  `(:name (:unless (cond :constant ,condition-true) cond)
     (:cond ((sz :constant 0) '|.F32|)
 	   (t '|.F64|))
+    :tab
     dst ", "
     src))
 
@@ -1168,45 +1171,51 @@
   (op    :field (byte 2 20))
   (op1   :field (byte 4 16))
   (dst   :fields (list (byte 1 22) (byte 4 12)) :type 'fp-single-reg)
-  (src   :fields (list (byte 1 5) (byte 4 0)) :type 'fp-single-reg)
+  (src   :fields (list (byte 1 5) (byte 4 0)))
   (op2   :field (byte 3 9) :value #b101)
   (sz    :field (byte 1 8))
   (opc3  :field (byte 2 6))
   (opc4  :field (byte 1 4)))
-   
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun fp-reg-as-reg-printer (value stream dstate)
+    (reg-arg-printer (second value) stream dstate)))
+
 (defmacro define-vfp-2 (name op op1 opc3 opc4 &key doublep ext
 						(dst-type 'fp-single-reg)
 						(src-type 'fp-single-reg))
-  (let ((full-name (symbolicate name (if doublep
-					 (or ext ".F64")
-					 (or ext ".F32")))))
-  `(define-instruction ,full-name (segment dst src &optional (cond :al))
-     (:declare (type tn dst src))
-     (:printer format-vfp-2-arg
-	       ((op0 #b11101) (op ,op) (op1 ,op1) (op2 #b101)
-		(opc3 ,opc3) (opc4 ,opc4)
-		(dst nil :type ',dst-type)
-		(src nil :type ',src-type))
-	       :default
-	       :print-name ',name)
-     (:emitter
-      (multiple-value-bind (d vd)
-	  (fp-reg-tn-encoding dst)
-	(multiple-value-bind (m vm)
-	    (fp-reg-tn-encoding src)
-	  (emit-format-vfp-2-arg segment
-				 (inst-condition-code (list cond))
-				 #b11101
-				 d
-				 ,op
-				 ,op1
-				 vd
-				 #b101
-				 ,(if doublep 1 0)
-				 ,opc3
-				 m
-				 ,opc4
-				 vm)))))))
+  (let ((full-name (symbolicate name "." (if doublep
+					     (or ext ".F64")
+					     (or ext ".F32")))))
+    `(define-instruction ,full-name (segment dst src &optional (cond :al))
+       (:declare (type tn dst src))
+       (:printer format-vfp-2-arg
+		 ((op0 #b11101) (op ,op) (op1 ,op1) (op2 #b101)
+		  (opc3 ,opc3) (opc4 ,opc4)
+		  (dst nil :type ',dst-type)
+		  (src nil :type ',src-type
+		       ,@(when (eq src-type 'reg)
+			     `(:printer #'fp-reg-as-reg-printer))))
+		 :default
+		 :print-name ',name)
+       (:emitter
+	(multiple-value-bind (d vd)
+	    (fp-reg-tn-encoding dst doublep)
+	  (multiple-value-bind (m vm)
+	      (fp-reg-tn-encoding src doublep)
+	    (emit-format-vfp-2-arg segment
+				   (inst-condition-code (list cond))
+				   #b11101
+				   d
+				   ,op
+				   ,op1
+				   vd
+				   #b101
+				   ,(if doublep 1 0)
+				   ,opc3
+				   m
+				   ,opc4
+				   vm)))))))
 
 (define-vfp-2 vabs  #b11 #b0000 #b11 0)
 (define-vfp-2 vabs  #b11 #b0000 #b11 0 :doublep t
@@ -1218,11 +1227,10 @@
 (define-vfp-2 vsqrt #b11 #b0001 #b11 0 :doublep t
   :dst-type fp-double-reg :src-type fp-double-reg)
 
-
 ;; Convert between double and single
-(define-vfp-2 vcvt  #b11 #b0111 #b11 0 :ext ".F64.F32"
+(define-vfp-2 vcvt  #b11 #b0111 #b11 0 :ext "F64.F32"
   :dst-type fp-double-reg)
-(define-vfp-2 vcvt  #b11 #b0111 #b11 0 :doublep t :ext ".F32.F64"
+(define-vfp-2 vcvt  #b11 #b0111 #b11 0 :doublep t :ext "F32.F64"
   :src-type fp-double-reg)
 
 ;; Convert between float and integer
@@ -1252,6 +1260,78 @@
   :src-type reg)
 (define-vfp-2 vcvt  #b11 #b1000 #b11 0 :doublep t :ext "F64.S32"
   :dst-type fp-double-reg :src-type reg)
+
+(defmacro define-vfp-cmp (name op1 opc3 &key doublep printer)
+  (let ((full-name (symbolicate name (if doublep ".F64" ".F32")))
+	(stype (if printer
+		   nil
+		   (if doublep 'fp-double-reg 'fp-single-reg))))
+    `(define-instruction ,full-name (segment dst src &optional (cc :al))
+       (:declare (type dst tn)
+		 (type (or tn (float 0.0 0.0)) src))
+       (:printer format-vfp-2-arg
+		 ((op0 #b11101) (op #b11) (op1 ,op1) (op2 #b101)
+		  (opc3 ,opc3) (opc4 0)
+		  (dst nil :type ',(if doublep 'fp-double-reg 'fp-single-reg))
+		  ,(if printer
+		       `(src (list 0 0))
+		       `(src nil :type ',stype)))
+		 ,(or printer :default)
+		 :print-name ',name)
+       (:emitter
+	(etypecase src
+	  (tn
+	   (multiple-value-bind (d vd)
+	       (fp-reg-tn-encoding dst doublep)
+	     (multiple-value-bind (m vm)
+		 (fp-reg-tn-encoding src doublep)
+	       (emit-format-vfp-2-reg segment
+				      (inst-condition-code (list cc))
+				      #b11101
+				      d
+				      #b11
+				      ,op1
+				      vd
+				      #b101
+				      ,(if doublep 1 0)
+				      ,opc3
+				      m
+				      0
+				      vm))))
+	  (float
+	   (assert (zerop src))
+	   (multiple-value-bind (d vd)
+	       (fp-reg-tn-encoding dst doublep)
+	     (emit-format-vfp-2-arg segment
+				    (inst-condition-code (list cond))
+				    #b11101
+				    d
+				    #b11
+				    ,op1
+				    vd
+				    #b101
+				    ,(if doublep 1 0)
+				    ,opc3
+				    0
+				    0
+				    0))))))))
+
+(defconstant format-vfp-cmp-0-printer
+  `(:name (:unless (cond :constant ,condition-true) cond)
+	  (:cond ((sz :constant 0) '|.F32|)
+		 (t '|.F64|))
+	  :tab
+	  dst ", #0.0"))
+
+(define-vfp-cmp vcmp  #b0100 #b01)
+(define-vfp-cmp vcmpe #b0100 #b11)
+(define-vfp-cmp vcmp  #b0100 #b01 :doublep t)
+(define-vfp-cmp vcmpe #b0100 #b11 :doublep t)
+(define-vfp-cmp vcmp  #b0100 #b01 :printer format-vfp-cmp-0-printer)
+(define-vfp-cmp vcmpe #b0100 #b11 :printer format-vfp-cmp-0-printer)
+(define-vfp-cmp vcmp  #b0100 #b01 :doublep t :printer format-vfp-cmp-0-printer)
+(define-vfp-cmp vcmpe #b0100 #b11 :doublep t :printer format-vfp-cmp-0-printer)
+
 
 ;; Convert a float to the floating-point modified immediate constant.
 ;; See Table A7-18
@@ -1310,8 +1390,8 @@
   (byte 4 28) (byte 5 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
   (byte 3 9) (byte 1 8) (byte 2 6) (byte 1 5) (byte 1 4) (byte 4 0))
 
-(define-constant format-vfp-vmov-reg
-  `(:name  (:unless (:constant ,condition-true) cond)
+(defconstant format-vfp-vmov-reg-printer
+  `(:name  (:unless (cond :constant ,condition-true) cond)
     :tab
     (:cond ((sz :constant 0) '|.F32|)
 	   (t '|.F64|))
@@ -1330,7 +1410,7 @@
   (op3   :field (byte 2 6) :value #b01)
   (z2    :field (byte 1 4) :value 0))
 
-(define-instruction vmov (dst src &optional (cond :al))
+(define-instruction vmov (segment dst src &optional (cond :al))
   (:declare (type tn dst)
 	    (type (or float tn) src))
   (:printer format-vfp-vmov-immed
