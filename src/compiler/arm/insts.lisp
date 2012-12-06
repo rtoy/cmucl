@@ -571,9 +571,7 @@
   (byte 4 8) (byte 4 4) (byte 4 0))
   
 (disassem:define-instruction-format
-    (format-mul 32)
-  (cond  :field (byte 4 28) :type 'condition-code)
-  (op0   :field (byte 3 25) :value #b000)
+    (format-0-mul 32 :include 'format-base)
   (op    :field (byte 4 21) :value #b0000)
   (s     :field (byte 1 20))
   (dst   :field (byte 4 16) :type 'reg)
@@ -585,8 +583,8 @@
 (define-instruction mul (segment dst src1 src2 &rest opts)
   (:declare (type tn dst src1 src2)
 	    (type condition-code cond))
-  (:printer format-mul
-	    ((op0 #b000) (op #b0000) (op1 #b1001))
+  (:printer format-0-mul
+	    ((opb0 #b000) (op #b0000) (op1 #b1001))
 	    `(:name (:unless (s :constant 0) 's)
 		    (:unless (cond :constant ,condition-true) cond)
 		    :tab
@@ -596,22 +594,22 @@
    (reads src2)
    (writes dst))
   (:emitter
-   (emit-format-mul segment
-		    (inst-condition-code cond)
-		    #b000
-		    #b0000
-		    (inst-set-flags opts)
-		    (reg-tn-encoding dst)
-		    #b0000
-		    (reg-tn-encoding src2)
-		    #b1001
-		    (reg-tn-encoding src1))))
+   (emit-format-0-mul segment
+		      (inst-condition-code cond)
+		      #b000
+		      #b0000
+		      (inst-set-flags opts)
+		      (reg-tn-encoding dst)
+		      #b0000
+		      (reg-tn-encoding src2)
+		      #b1001
+		      (reg-tn-encoding src1))))
 
 (defmacro define-4-arg-mul (name op &optional two-outputs setflags0)
   `(define-instruction ,name (segment dst dst2-or-src src2 src3 &rest opts)
      (:declare (type tn dst dst2-or-src src2))
-     (:printer format-mul
-	       ((op0 #b000) (op ,op) (op1 #b1001))
+     (:printer format-0-mul
+	       ((opb0 #b000) (op ,op) (op1 #b1001))
 	       ',(if two-outputs
 		     `(:name (:unless (s :constant 0) 's)
 			     (:unless (cond :constant ,condition-true) cond)
@@ -629,18 +627,18 @@
 	   `(reads dst2-or-src))
       (writes dst))
      (:emitter
-      (emit-format-mul segment
-		       (inst-condition-code opts)
-		       #b000
-		       ,op
-		       ,(if setflags0
-			    0
-			    `(inst-set-flags opts))
-		       (reg-tn-encoding dst)
-		       (reg-tn-encoding src3)
-		       (reg-tn-encoding src2)
-		       #b1001
-		       (reg-tn-encoding dst2-or-src)))))
+      (emit-format-0-mul segment
+			 (inst-condition-code opts)
+			 #b000
+			 ,op
+			 ,(if setflags0
+			      0
+			      `(inst-set-flags opts))
+			 (reg-tn-encoding dst)
+			 (reg-tn-encoding src3)
+			 (reg-tn-encoding src2)
+			 #b1001
+			 (reg-tn-encoding dst2-or-src)))))
 
 (define-4-arg-mul mla   #b0001)
 (define-4-arg-mul umaal #b0010 t t)
@@ -702,30 +700,31 @@
 ;; Misc instructions
 ;; A5.2.12
 
-(define-emitter emit-format-bkpt 32
+(define-emitter emit-format-0-bkpt 32
   (byte 4 28) (byte 8 20) (byte 12 8) (byte 4 4) (byte 4 0))
 
 (disassem:define-instruction-format
-    (format-bkpt 32
+    (format-0-bkpt 32
+		 :include 'format-base
 		 :default-printer `(:name (:unless (cond :constant ,condition-true) cond)
 					  :tab
 					  imm16))
-  (cond  :field (byte 4 28) :type 'condition-code)
-  (op0   :field (byte 8 20) :value #b00010010)
+  (op0   :field (byte 5 20) :value #b10010)
   (imm16 :fields (list (byte 12 8) (byte 4 0)) :printer #'split-imm16-printer)
   (op1   :field (byte 4 4) :value #b0111))
 
 (define-instruction bkpt (segment value &optional (cond :al))
   (:declare (type (unsigned-byte 16) value))
-  (:printer format-bkpt
-	    ((op0 #b00010010) (op1 #b0111)))
+  (:printer format-0-bkpt
+	    ((opb0 #b000) (op0 #b10010) (op1 #b0111)))
   (:emitter
-   (emit-format-bkpt segment
-		     (inst-condition-code (list cond))
-		     #b00010010
-		     (ldb (byte 12 4) value)
-		     #b0111
-		     (ldb (byte 4 0) value))))
+   (emit-format-0-bkpt segment
+		       (inst-condition-code (list cond))
+		       #b000
+		       #b10010
+		       (ldb (byte 12 4) value)
+		       #b0111
+		       (ldb (byte 4 0) value))))
 ;; See A8.8.63
 ;; LDR/STR (immediate)
 ;;
