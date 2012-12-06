@@ -808,7 +808,7 @@
   (rs    :field (byte 4 0) :type 'reg))
 
 ;; LDRH/STRH (register)
-(defconstant format-2-halfword-reg-printer
+(defconstant format-0-halfword-reg-printer
   `(:name (:unless (cond :constant ,condition-true) cond)
           :tab
 	  dst
@@ -827,14 +827,14 @@
 		  "]"
 		  (:unless (w :constant 0) "!")))))
 
-(define-emitter emit-format-2-halfword-reg 32
+(define-emitter emit-format-0-halfword-reg 32
   (byte 4 28) (byte 3 25) (byte 1 24) (byte 1 23) (byte 1 22) (byte 1 21)
   (byte 1 20) (byte 4 16) (byte 4 12) (byte 4 8) (byte 4 4) (byte 4 0))
   
 (disassem:define-instruction-format
-    (format-2-halfword-reg 32 :default-printer format-2-halfword-reg-printer)
-  (cond  :field (byte 4 28) :type 'condition-code)
-  (op0   :field (byte 3 25) :value #b000)
+    (format-0-halfword-reg 32
+			   :include 'format-base
+			   :default-printer format-0-halfword-reg-printer)
   (p     :field (byte 1 24))
   (u     :field (byte 1 23))
   (imm   :field (byte 1 22) :value 0)
@@ -850,7 +850,7 @@
 
 ;; LDRH/STRH (register)
 
-(defconstant format-2-halfword-imm-printer
+(defconstant format-0-halfword-imm-printer
   `(:name (:unless (cond :constant ,condition-true) cond)
           :tab
 	  dst
@@ -874,14 +874,14 @@
   (declare (ignore dstate))
   (format stream "~D" (logior (ash (first value) 4) (second value)))))
 
-(define-emitter emit-format-2-halfword-imm 32
+(define-emitter emit-format-0-halfword-imm 32
   (byte 4 28) (byte 3 25) (byte 1 24) (byte 1 23) (byte 1 22) (byte 1 21)
   (byte 1 20) (byte 4 16) (byte 4 12) (byte 4 8) (byte 4 4) (byte 4 0))
   
 (disassem:define-instruction-format
-    (format-2-halfword-imm 32 :default-printer format-2-halfword-imm-printer)
-  (cond   :field (byte 4 28) :type 'condition-code)
-  (op0    :field (byte 3 25) :value #b000)
+    (format-0-halfword-imm 32
+			   :include 'format-base
+			   :default-printer format-0-halfword-imm-printer)
   (p      :field (byte 1 24))
   (u      :field (byte 1 23))
   (imm    :field (byte 1 22) :value 1)
@@ -1004,22 +1004,21 @@
       ,(if loadp
 	   `(writes reg)
 	   `(reads reg)))
-     (:printer format-2-halfword-imm
-	       ((op0  #b000)
-		(opc #b010)
+     (:printer format-0-halfword-imm
+	       ((opb0  #b000)
 		(ld ,(if loadp 1 0))
 		(one 1)
-		(sign ,(if (or signedp bytep) 1 0))
+		(signed ,(if (or signedp bytep) 1 0))
 		(op2 ,(if bytep #b01 #b11))
 		(imm 1)))
-     (:printer format-2-halfword-reg
-	       ((op0  #b000)
-		(opc #b011)
+     (:printer format-0-halfword-reg
+	       ((opb0  #b000)
 		(ld ,(if loadp 1 0))
 		(one 1)
-		(sign ,(if (or signedp bytep) 1 0))
+		(signed ,(if (or signedp bytep) 1 0))
 		(op2 ,(if bytep #b01 #b11))
-		(z 0)))
+		(z 0)
+		(imm 0)))
      (:emitter
       (multiple-value-bind (sign op2)
 	  (cond (,bytep
@@ -1034,7 +1033,7 @@
 	  (:reg
 	   (multiple-value-bind (p u w)
 	       (decode-load-store-index address)
-	     (emit-format-2-halfword-reg segment
+	     (emit-format-0-halfword-reg segment
 					 (inst-condition-code opts)
 					 #b000
 					 p
@@ -1050,7 +1049,7 @@
 	  (:immediate
 	   (multiple-value-bind (p u w)
 	       (decode-load-store-index src2)
-	     (emit-format-2-halfword-imm segment
+	     (emit-format-0-halfword-imm segment
 					 (inst-condition-code opts)
 					 #b000
 					 p
@@ -1199,6 +1198,7 @@
        (:printer format-vfp-3
 		 ((op0 ,op0) (op1 ,op1) (op2 #b101)
 		  (opb0 ,opb0) (opb1 ,opb1)
+		  (sz ,(if doublep 1 0))
 		  ,@(if doublep `((dst nil :type 'fp-double-reg)
 				  (src1 nil :type 'fp-double-reg)
 				  (src2 nil :type 'fp-double-reg))))
@@ -1268,13 +1268,14 @@
 						(dst-type 'fp-single-reg)
 						(src-type 'fp-single-reg))
   (let ((full-name (symbolicate name "." (if doublep
-					     (or ext ".F64")
-					     (or ext ".F32")))))
+					     (or ext "F64")
+					     (or ext "F32")))))
     `(define-instruction ,full-name (segment dst src &optional (cond :al))
        (:declare (type tn dst src))
        (:printer format-vfp-2-arg
 		 ((op0 #b11101) (op ,op) (op1 ,op1) (op2 #b101)
 		  (opc3 ,opc3) (opc4 ,opc4)
+		  (sz ,(if doublep 1 0))
 		  (dst nil :type ',dst-type)
 		  (src nil :type ',src-type
 		       ,@(when (eq src-type 'reg)
@@ -1355,6 +1356,7 @@
        (:printer format-vfp-2-arg
 		 ((op0 #b11101) (op #b11) (op1 ,op1) (op2 #b101)
 		  (opc3 ,opc3) (opc4 0)
+		  (sz ,(if doublep 1 0))
 		  (dst nil :type ',(if doublep 'fp-double-reg 'fp-single-reg))
 		  ,(if printer
 		       `(src (list 0 0))
@@ -1493,46 +1495,53 @@
   (op3   :field (byte 2 6) :value #b01)
   (z2    :field (byte 1 4) :value 0))
 
-(define-instruction vmov (segment dst src &optional (cond :al))
-  (:declare (type tn dst)
-	    (type (or float tn) src))
-  (:printer format-vfp-vmov-immed
-	    ((op0 #b11101) (op #b11) (op2 #b101) (z 0)))
-  (:printer format-vfp-vmov-reg
-	    ((op0 #b11101) (op #b11) (op2 #b101) (op3 #b01)
-	     (z 0) (z2 0)))
-  (:emitter
-   (etypecase src
-     (tn
-      (multiple-value-bind (d vd)
-	  (fp-single-reg-tn-encoding dst)
-	(multiple-value-bind (m vm)
-	    (fp-single-reg-tn-encoding src)
-	  (emit-format-vfp-vmov-reg segment
-				    (inst-condition-code (list cond))
-				    #b11101
-				    d
-				    #b11
-				    #b0000
-				    vd
-				    #b101
-				    sz
-				    #b01
-				    m
-				    0
-				    vm))))
-     (float
-      (multiple-value-bind (d vd)
-	  (fp-single-reg-tn-encoding dst)
-	(let ((value (fp-immed-or-lose src)))
-	  (emit-format-vfp-vmov-immed segment
-				      (inst-condition-code (list cond))
-				      #b11101
-				      d
-				      #b11
-				      (ldb (byte 4 4) value)
-				      vd
-				      #b101
-				      sz
-				      #b0000
-				      (ldb (byte 4 0) value))))))))
+(defmacro define-vmov (doublep)
+  (let ((full-name (symbolicate 'vmov (if doublep ".F64" ".F32"))))
+    `(define-instruction ,full-name (segment dst src &optional (cond :al))
+       (:declare (type tn dst)
+		 (type (or float tn) src))
+       (:printer format-vfp-vmov-immed
+		 ((op0 #b11101) (op #b11) (op2 #b101) (z 0)
+		  (sz ,(if doublep 1 0))))
+       (:printer format-vfp-vmov-reg
+		 ((op0 #b11101) (op #b11) (op2 #b101) (op3 #b01)
+		  (z 0) (z2 0)
+		  (sz ,(if doublep 1 0))))
+       (:emitter
+	(etypecase src
+	  (tn
+	   (multiple-value-bind (d vd)
+	       (fp-single-reg-tn-encoding dst)
+	     (multiple-value-bind (m vm)
+		 (fp-single-reg-tn-encoding src)
+	       (emit-format-vfp-vmov-reg segment
+					 (inst-condition-code (list cond))
+					 #b11101
+					 d
+					 #b11
+					 #b0000
+					 vd
+					 #b101
+					 ,(if doublep 1 0)
+					 #b01
+					 m
+					 0
+					 vm))))
+	  (float
+	   (multiple-value-bind (d vd)
+	       (fp-single-reg-tn-encoding dst)
+	     (let ((value (fp-immed-or-lose src)))
+	       (emit-format-vfp-vmov-immed segment
+					   (inst-condition-code (list cond))
+					   #b11101
+					   d
+					   #b11
+					   (ldb (byte 4 4) value)
+					   vd
+					   #b101
+					   ,(if doublep 1 0)
+					   #b0000
+					   (ldb (byte 4 0) value))))))))))
+
+(define-vmov nil)
+(define-vmov t)
