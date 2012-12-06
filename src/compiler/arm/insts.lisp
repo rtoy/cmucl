@@ -253,6 +253,19 @@
 
 
 ;;; Define instruction formats. See DDI0406C_b, section A5 for details.
+
+;; Section A5.1 describes the basic forma of an instruction.
+;; tHowever, the manual makes a mess of it when describing
+;; instructions; the descriptions don't follow this basic format and
+;; arbitrarily combines or splits fields.
+;;
+;; Section A5.1.  This is the basic encoding form, not including the
+;; op field (byte 1 4).  That is sometimes used for other things.
+(disassem:define-instruction-format
+    (format-base 32)
+  (cond  :field (byte 4 28) :type 'condition-code)
+  (opb0  :field (byte 3 25)))
+
 (defconstant format-1-immed-printer
   `(:name (:unless (s :constant 0) 's)
 	  (:unless (:constant ,condition-true) cond)
@@ -275,16 +288,15 @@
   (byte 4 28) (byte 3 25) (byte 4 21) (byte 1 20) (byte 4 16) (byte 4 12) (byte 12 0))
 
 (disassem:define-instruction-format
-    (format-1-immed 32 :default-printer format-1-immed-printer)
-  (cond  :field (byte 4 28) :type 'condition-code)
-  (op0   :field (byte 3 25) :value #b001)
+    (format-1-immed 32 :include 'format-base
+		       :default-printer format-1-immed-printer)
   (op    :field (byte 4 21))
   (s     :field (byte 1 20))
   (src1  :field (byte 4 16) :type 'reg)
   (dst   :field (byte 4 12) :type 'reg)
   (immed :field (byte 12 0) :printer #'modified-immed-printer))
 
-(defconstant format-1-reg-printer
+(defconstant format-0-reg-printer
   `(:name (:unless (s :constant 0) 's)
 	  (:unless (:constant ,condition-true) cond)
 	  :tab
@@ -305,14 +317,12 @@
 		    " "
 		    shift)))))
 
-(define-emitter emit-format-1-reg 32
+(define-emitter emit-format-0-reg 32
   (byte 4 28) (byte 3 25) (byte 4 21) (byte 1 20) (byte 4 16) (byte 4 12) (byte 5 7)
   (byte 2 5) (byte 1 4) (byte 4 0))
   
 (disassem:define-instruction-format
-    (format-1-reg 32 :default-printer format-1-reg-printer)
-  (cond  :field (byte 4 28) :type 'condition-code)
-  (op0   :field (byte 3 25) :value #b000)
+    (format-0-reg 32 :include 'format-base :default-printer format-0-reg-printer)
   (op    :field (byte 4 21))
   (s     :field (byte 1 20))
   (src1  :field (byte 4 16) :type 'reg)
@@ -322,7 +332,7 @@
   (rs    :field (byte 1 4) :value 0)
   (src2  :field (byte 4 0) :type 'reg))
 
-(defconstant format-1-reg-shifted-printer
+(defconstant format-0-reg-shifted-printer
   `(:name (:unless (s :constant 0) 's)
 	  (:unless (:constant ,condition-true) cond)
 	  :tab
@@ -336,14 +346,13 @@
 	  ", "
 	  sreg))
 
-(define-emitter emit-format-1-reg-shifted 32
+(define-emitter emit-format-0-reg-shifted 32
   (byte 4 28) (byte 3 25) (byte 4 21) (byte 1 20) (byte 4 16) (byte 4 12) (byte 4 8)
   (byte 1 7) (byte 2 5) (byte 1 4) (byte 4 0))
   
 (disassem:define-instruction-format
-    (format-1-reg-shifted 32 :default-printer format-1-reg-shifted-printer)
-  (cond  :field (byte 4 28) :type 'condition-code)
-  (op0   :field (byte 3 25) :value #b000)
+    (format-0-reg-shifted 32 :include 'format-base
+			     :default-printer format-0-reg-shifted-printer)
   (op    :field (byte 4 21))
   (s     :field (byte 1 20))
   (src1  :field (byte 4 16) :type 'reg)
@@ -407,11 +416,11 @@
 			 flex-operand)
 		     src2))
      (:printer format-1-immed
-	       ((op0 #b001) (op ,opcode)))
-     (:printer format-1-reg
-	       ((op0 #b000) (op ,opcode) (rs 0)))
-     (:printer format-1-reg-shifted
-	       ((op0 #b000) (op ,opcode) (rs 1)))
+	       ((opb0 #b001) (op ,opcode)))
+     (:printer format-0-reg
+	       ((opb0 #b000) (op ,opcode) (rs 0)))
+     (:printer format-0-reg-shifted
+	       ((opb0 #b000) (op ,opcode) (rs 1)))
      (:dependencies
       (reads src1)
       (writes dst))
@@ -434,7 +443,7 @@
 				(reg-tn-encoding dst)
 				(logior (ash rot 8) val))))
 	(reg
-	 (emit-format-1-reg segment
+	 (emit-format-0-reg segment
 			    (inst-condition-code opts)
 			    #b000
 			    ,opcode
@@ -450,7 +459,7 @@
 	(flex-operand
 	 (ecase (flex-operand-type src2)
 	   (:reg-shift-imm
-	    (emit-format-1-reg segment
+	    (emit-format-0-reg segment
 			       (inst-condition-code opts)
 			       #b000
 			       ,opcode
@@ -464,7 +473,7 @@
 			       #b0
 			       (reg-tn-encoding (flex-operand-reg src2))))
 	   (:reg-shift-reg
-	    (emit-format-1-reg-shift segment
+	    (emit-format-0-reg-shift segment
 				     (inst-condition-code opts)
 				     #b000
 				     ,opcode
@@ -591,7 +600,7 @@
 ;; A5.4.4
 
 (define-emitter emit-format-div 32
-  (byte 4 28) (byte 6 22) (byte 2 20) (byte 4 16) (byte 4 12) (byte 4 8)
+  (byte 4 28) (byte 3 25) (byte 2 23) (byte 3 20) (byte 4 16) (byte 4 12) (byte 4 8)
   (byte 3 5) (byte 1 4) (byte 4 0))
 
 (defconstant format-div-printer
@@ -600,15 +609,14 @@
           dst "," src1 ", " src2))    
 
 (disassem:define-instruction-format
-    (format-div 32 :default-printer format-div-printer)
-  (cond  :field (byte 4 28) :type 'condition-code)
-  (op0   :field (byte 5 22) :value #b01110)
+    (format-div 32 :include 'format-base :default-printer format-div-printer)
+  (op0   :field (byte 2 23) :value #b10)
   (op1   :field (byte 2 20))
   (dst   :field (byte 4 16) :type 'reg)
-  (a     :field (byte 4 12))
+  (a     :field (byte 4 12) :value #b1111)
   (src2  :field (byte 4 8) :type 'reg)
   (op2   :field (byte 3 5))
-  (one   :field (byte 1 4))
+  (one   :field (byte 1 4) :value #b1)
   (src1  :field (byte 4 0) :type 'reg))
 
 (defmacro define-div (name op1 op2)
@@ -616,7 +624,7 @@
      (:declare (type tn dst src1 src2)
 	       (type condition-code cond))
      (:printer format-div
-	       ((op1 ,op1) (op2 ,op2)))
+	       ((opb0 #b011) (op1 ,op1) (a #b1111) (op2 ,op2) (one #b1)))
      (:dependencies
       (reads src1)
       (reads src2)
@@ -624,7 +632,8 @@
      (:emitter
       (emit-format-div segment
 		       (inst-condition-code (list cond))
-		       #b01110
+		       #b011
+		       #b10
 		       ,op1
 		       (reg-tn-encoding dst)
 		       #b1111
@@ -787,7 +796,9 @@
   (src1  :field (byte 4 16) :type 'reg)
   (dst   :field (byte 4 12) :type 'reg)
   (z     :field (byte 4 8) :value 0)
-  (halfp :field (byte 4 4))
+  (one    :field (byte 1 7) :value 1)
+  (signed :field (byte 1 6))
+  (op2    :field (byte 2 4))
   (src2  :field (byte 4 0) :type 'reg))
 
 ;; LDRH/STRH (register)
@@ -822,17 +833,19 @@
   
 (disassem:define-instruction-format
     (format-2-halfword-imm 32 :default-printer format-2-halfword-imm-printer)
-  (cond  :field (byte 4 28) :type 'condition-code)
-  (op0   :field (byte 3 25) :value #b000)
-  (p     :field (byte 1 24))
-  (u     :field (byte 1 23))
-  (imm   :field (byte 1 22) :value 1)
-  (w     :field (byte 1 21))
-  (ld    :field (byte 1 20))
-  (src1  :field (byte 4 16) :type 'reg)
-  (dst   :field (byte 4 12) :type 'reg)
-  (imm8  :fields (list (byte 4 8) (byte 4 0)) :printer #'split-imm8-printer)
-  (halfp :field (byte 4 4) :value #b1011))
+  (cond   :field (byte 4 28) :type 'condition-code)
+  (op0    :field (byte 3 25) :value #b000)
+  (p      :field (byte 1 24))
+  (u      :field (byte 1 23))
+  (imm    :field (byte 1 22) :value 1)
+  (w      :field (byte 1 21))
+  (ld     :field (byte 1 20))
+  (src1   :field (byte 4 16) :type 'reg)
+  (dst    :field (byte 4 12) :type 'reg)
+  (imm8   :fields (list (byte 4 8) (byte 4 0)) :printer #'split-imm8-printer)
+  (one    :field (byte 1 7) :value 1)
+  (signed :field (byte 1 6))
+  (op2    :field (byte 2 4)))
 
 (defstruct load-store-index
   (type (required-argument) :type '(member :reg :immediate))
@@ -890,9 +903,13 @@
       (reads address)
       (writes reg))
      (:printer format-2-immed
-	       ((opc #b010)))
+	       ((opc #b010)
+		(byte ,(if bytep 1 0))
+		(ld ,(if loadp 1 0))))
      (:printer format-2-reg
-	       ((opc #b011)))
+	       ((opc #b011)
+		(byte ,(if bytep 1 0))
+		(ld ,(if loadp 1 0))))
      (:emitter
       (ecase (load-store-index-type address)
 	(:reg
@@ -941,19 +958,31 @@
 	   `(writes reg)
 	   `(reads reg)))
      (:printer format-2-halfword-imm
-	       ((opc #b010)))
+	       ((op0  #b000)
+		(opc #b010)
+		(ld ,(if loadp 1 0))
+		(one 1)
+		(sign ,(if (or signedp bytep) 1 0))
+		(op2 ,(if bytep #b01 #b11))
+		(imm 1)))
      (:printer format-2-halfword-reg
-	       ((opc #b011)))
+	       ((op0  #b000)
+		(opc #b011)
+		(ld ,(if loadp 1 0))
+		(one 1)
+		(sign ,(if (or signedp bytep) 1 0))
+		(op2 ,(if bytep #b01 #b11))
+		(z 0)))
      (:emitter
-      (let ((op (cond (,bytep
-		       ;; bytep implies signed.  The unsigned byte
-		       ;; instruction is handled elsewhere.
-		       #b1101)
-		      (t
-		       (if ,signedp
-			   #b1111
-			   #b1011)))))
-			      
+      (multiple-value-bind (sign op2)
+	  (cond (,bytep
+		 ;; bytep implies signed.  The unsigned byte
+		 ;; instruction is handled elsewhere.
+		 (values #b1 #b01)
+		 (t
+		  (if ,signedp
+		      (values #b1 #b11)
+		      (values #b0 #b11)))))
 	(ecase (load-store-index-type address)
 	  (:reg
 	   (multiple-value-bind (p u w)
@@ -985,7 +1014,9 @@
 					 (reg-tn-encoding (load-store-index-base-reg address))
 					 (reg-tn-encoding reg)
 					 (ldb (byte 4 4) (load-store-index-offset address))
-					 op
+					 1
+					 sign
+					 op2
 					 (ldb (byte 4 0) (load-store-index-offset address))))))))))
 
 (define-load/store-extra ldrh t)
@@ -1012,9 +1043,8 @@
   (byte 4 28) (byte 4 24) (byte 24 0))
 
 (disassem:define-instruction-format
-    (branch-imm 32 :default-printer branch-imm-printer)
-  (cond  :field (byte 4 28) :type 'condition-code)
-  (op    :field (byte 4 24))
+    (branch-imm 32 :include 'format-base :default-printer branch-imm-printer)
+  (op :field (byte 1 24) :value 1)
   (imm24 :field (byte 24 0) :type 'relative-label))
 
 (defconstant branch-reg-printer
@@ -1033,11 +1063,12 @@
   (op1   :field (byte 4 4) :value #b0011)
   (src1  :field (byte 4 0) :type 'reg))
 
-(defun emit-relative-branch (segment op cond target)
+(defun emit-relative-branch (segment opb0 op cond target)
   (emit-back-patch segment 4
      #'(lambda (segment posn)
 	 (emit-branch-imm segment
 			  (inst-condition-code cond)
+			  opb0
 			  op
 			  (ash (- (label-position target) posn) -2)))))
 
@@ -1049,28 +1080,33 @@
 (define-instruction b (segment target &optional (cond :al))
   (:declare (type label target)
 	    (type condition-code cond))
-  (:printer branch-imm ((op #b1010)))
+  (:printer branch-imm
+	    ((opb0 #b101)
+	     (op #b0)))
   (:attributes branch)
   (:emitter
-   (emit-relative-branch segment #b1010 cond target)))
+   (emit-relative-branch segment #b101 #b0 cond target)))
 
 (define-instruction bl (segment target &optional (cond :al))
   (:declare (type label target)
 	    (type condition-code cond))
-  (:printer branch-imm ((op #b1011)))
+  (:printer branch-imm
+	    ((opb0 #b101)
+	     (op #b1)))
   (:attributes branch)
   (:emitter
-   (emit-relative-branch segment #b1011 cond target)))
+   (emit-relative-branch segment #b101 #b1 cond target)))
 
 (define-instruction blx (segment target)
   (:declare (type (or label reg) target))
-  (:printer branch-imm ((op #b1010)))
+  (:printer branch-imm
+	    ((cond #b1111) (opb0 #b101) (op #b1)))
   (:printer branch-reg ((op #b00010010)))
   (:attributes branch)
   (:emitter
    (etypecase target
      (label
-      (emit-relative-branch segment #b1010 :al target))
+      (emit-relative-branch segment #b101 #b0 :al target))
      (reg
       (emit-branch-reg segment
 		       (inst-condition-code cond)
