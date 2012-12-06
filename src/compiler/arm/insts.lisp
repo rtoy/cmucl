@@ -755,9 +755,9 @@
 
   
 (disassem:define-instruction-format
-    (format-2-immed 32 :default-printer format-2-immed-printer)
-  (cond  :field (byte 4 28) :type 'condition-code)
-  (opc   :field (byte 3 25) :value #b010)
+    (format-2-immed 32
+		    :include 'format-base
+		    :default-printer format-2-immed-printer)
   (p     :field (byte 1 24))
   (u     :field (byte 1 23))
   (byte  :field (byte 1 22))		; byte (1) or word (0)
@@ -772,7 +772,7 @@
 ;;
 ;; ldr<c> dst, [src1, +/-src2, shift]<!>
 ;; ldr<c> dst, [src1], +/-src2, shift
-(defconstant format-2-reg-printer
+(defconstant format-3-reg-printer
   `(:name (:unless (cond :constant ,condition-true) cond)
           :tab
 	  dst
@@ -787,14 +787,14 @@
 		 (t
 		  "], " rs ", " type " " imm5))))
   
-(define-emitter emit-format-2-reg 32
+(define-emitter emit-format-3-reg 32
   (byte 4 28) (byte 3 25) (byte 1 24) (byte 1 23) (byte 1 22) (byte 1 21)
   (byte 1 20) (byte 4 16) (byte 4 12) (byte 5 7) (byte 2 5) (byte 1 4) (byte 4 0))
 
 (disassem:define-instruction-format
-    (format-2-reg 32 :default-printer format-2-reg-printer)
-  (cond  :field (byte 4 28) :type 'condition-code)
-  (opc   :field (byte 3 25) :value #b011)
+    (format-3-reg 32
+		  :include 'format-base
+		  :default-printer format-3-reg-printer)
   (p     :field (byte 1 24))
   (u     :field (byte 1 23))
   (byte  :field (byte 1 22))
@@ -950,11 +950,11 @@
       (reads address)
       (writes reg))
      (:printer format-2-immed
-	       ((opc #b010)
+	       ((opb0 #b010)
 		(byte ,(if bytep 1 0))
 		(ld ,(if loadp 1 0))))
-     (:printer format-2-reg
-	       ((opc #b011)
+     (:printer format-3-reg
+	       ((opb0 #b011)
 		(byte ,(if bytep 1 0))
 		(ld ,(if loadp 1 0))))
      (:emitter
@@ -962,7 +962,7 @@
 	(:reg
 	 (multiple-value-bind (p u w)
 	     (decode-load-store-index address)
-	   (emit-format-2-reg segment
+	   (emit-format-3-reg segment
 			      (inst-condition-code opts)
 			      #b011
 			      p
