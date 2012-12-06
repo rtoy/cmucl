@@ -509,6 +509,60 @@
 (define-data-proc bic #b1110)
 (define-data-proc mvn #b1111)		; aka bitwise not
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+(defun split-imm16-printer (value stream dstate)
+  (declare (ignore dstate))
+  (format stream "#~D" (logior (ash (first value) 8)
+			       (second value)))))
+
+(define-emitter emit-format-mov16 32
+  (byte 4 28) (byte 3 25) (byte 5 20) (byte 4 16) (byte 4 12) (byte 12 0))
+
+(disassem:define-instruction-format
+    (format-mov16 32 :include 'format-base
+		     :default-printer `(:name (:unless (cond :constant ,condition-true)
+						cond)
+					      dst ", " imm16))
+  (op    :field (byte 5 20))
+  (imm16 :fields (list (byte 4 16) (byte 12 0)) :printer #'split-imm16-printer)
+  (dst   :field (byte 4 12) :type 'reg))
+
+;; FIXME: Probably need to make movt and movw support fixups!
+(define-instruction movt (segment dst imm16 &optional (cc :al))
+  (:declare (type tn dst)
+	    (type (unsigned-byte 16) imm16)
+	    (type condition-code cc))
+  (:printer format-mov16
+	    ((opb0 #b001)
+	     (op #b10100)))
+  (:dependencies
+   (writes dst))
+  (:emitter
+   (emit-format-mov16 segment
+		      (inst-condition-code (list cc))
+		      #b001
+		      #b10100
+		      (ldb (byte 4 12) imm16)
+		      (reg-tn-encoding dst)
+		      (ldb (byte 12 0) imm16))))
+
+(define-instruction movw (segment dst imm16 &optional (cc :al))
+  (:declare (type tn dst)
+	    (type (unsigned-byte 16) imm16)
+	    (type condition-code cc))
+  (:printer format-mov16
+	    ((opb0 #b001)
+	     (op #b10000)))
+  (:dependencies
+   (writes dst))
+  (:emitter
+   (emit-format-mov16 segment
+		      (inst-condition-code (list cc))
+		      #b001
+		      #b10000
+		      (ldb (byte 4 12) imm16)
+		      (reg-tn-encoding dst)
+		      (ldb (byte 12 0) imm16))))
 
 ;; A5.2.5 Multiply and Accumulate
 
@@ -647,12 +701,6 @@
 
 ;; Misc instructions
 ;; A5.2.12
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
-(defun split-imm16-printer (value stream dstate)
-  (declare (ignore dstate))
-  (format stream "#~D" (logior (ash (first value) 8)
-			       (second value)))))
 
 (define-emitter emit-format-bkpt 32
   (byte 4 28) (byte 8 20) (byte 12 8) (byte 4 4) (byte 4 0))
