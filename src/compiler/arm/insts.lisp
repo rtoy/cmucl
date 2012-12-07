@@ -174,8 +174,13 @@
 (defconstant condition-code-name-vec
   (coerce condition-codes 'vector))
 
+(defconstant condition-true
+  #b1111)
+
 (disassem:define-argument-type condition-code
-  :printer condition-code-name-vec)
+  :printer #'(lambda (value stream dstate)
+	       (unless (= value condition-true)
+		 (princ (aref condition-code-name-vec value) stream))))
 
 (deftype shift-type ()
   `(member ,@shift-types))
@@ -204,9 +209,6 @@
       3
       (or (position shift-type shift-types)
 	  (error "Unknown shift type: ~S" shift-type))))
-
-(defconstant condition-true
-  #b1111)
 
 (defun rotate-right2 (value amount)
   "Rotate VALUE right by 2*AMOUNT bits in a register of length 32 bits."
@@ -298,7 +300,7 @@
 
 (defconstant format-0-reg-printer
   `(:name (:unless (s :constant 0) 's)
-	  (:unless (:constant ,condition-true) cond)
+	  cond
 	  :tab
 	  dst
 	  ", "
@@ -334,7 +336,7 @@
 
 (defconstant format-0-reg-shifted-printer
   `(:name (:unless (s :constant 0) 's)
-	  (:unless (:constant ,condition-true) cond)
+	  cond
 	  :tab
 	  dst
 	  ", "
@@ -520,9 +522,7 @@
 
 (disassem:define-instruction-format
     (format-mov16 32 :include 'format-base
-		     :default-printer `(:name (:unless (cond :constant ,condition-true)
-						cond)
-					      dst ", " imm16))
+		     :default-printer `(:name cond :tab dst ", " imm16))
   (op    :field (byte 5 20))
   (imm16 :fields (list (byte 4 16) (byte 12 0)) :printer #'split-imm16-printer)
   (dst   :field (byte 4 12) :type 'reg))
@@ -586,7 +586,7 @@
   (:printer format-0-mul
 	    ((opb0 #b000) (op #b0000) (op1 #b1001))
 	    `(:name (:unless (s :constant 0) 's)
-		    (:unless (cond :constant ,condition-true) cond)
+		    cond
 		    :tab
 		    dst ", " src1 ", " src2))
   (:dependencies
@@ -612,11 +612,11 @@
 	       ((opb0 #b000) (op ,op) (op1 #b1001))
 	       ',(if two-outputs
 		     `(:name (:unless (s :constant 0) 's)
-			     (:unless (cond :constant ,condition-true) cond)
+			     cond
 			     :tab
 			     src3 ", " dst ", " src2 ", " src3)
 		     `(:name (:unless (s :constant 0) 's)
-			     (:unless (:constant ,condition-true) cond)
+			     cond
 			     :tab
 			     dst ", " src1 ", " src2 ", " src3)))
      (:dependencies
@@ -656,7 +656,7 @@
   (byte 3 5) (byte 1 4) (byte 4 0))
 
 (defconstant format-div-printer
-  `(:name (:unless (cond :constant ,condition-true) cond)
+  `(:name cond
           :tab
           dst "," src1 ", " src2))    
 
@@ -706,9 +706,7 @@
 (disassem:define-instruction-format
     (format-0-bkpt 32
 		 :include 'format-base
-		 :default-printer `(:name (:unless (cond :constant ,condition-true) cond)
-					  :tab
-					  imm16))
+		 :default-printer `(:name cond :tab imm16))
   (op0   :field (byte 5 20) :value #b10010)
   (imm16 :fields (list (byte 12 8) (byte 4 0)) :printer #'split-imm16-printer)
   (op1   :field (byte 4 4) :value #b0111))
@@ -732,7 +730,7 @@
 ;; ldr<c> dst, [src1, #+/-<imm>]!
 ;; ldr<c> dst, [src1], #+/-<imm>
 (defconstant format-2-immed-printer
-  `(:name (:unless (cond :constant ,condition-true) cond)
+  `(:name cond
           :tab
 	  dst
 	  ", ["
@@ -773,7 +771,7 @@
 ;; ldr<c> dst, [src1, +/-src2, shift]<!>
 ;; ldr<c> dst, [src1], +/-src2, shift
 (defconstant format-3-reg-printer
-  `(:name (:unless (cond :constant ,condition-true) cond)
+  `(:name cond
           :tab
 	  dst
 	  ", ["
@@ -809,7 +807,7 @@
 
 ;; LDRH/STRH (register)
 (defconstant format-0-halfword-reg-printer
-  `(:name (:unless (cond :constant ,condition-true) cond)
+  `(:name cond
           :tab
 	  dst
 	  ", ["
@@ -851,7 +849,7 @@
 ;; LDRH/STRH (register)
 
 (defconstant format-0-halfword-imm-printer
-  `(:name (:unless (cond :constant ,condition-true) cond)
+  `(:name cond
           :tab
 	  dst
 	  ", ["
@@ -1081,7 +1079,7 @@
 		 (+ (ash value 2) (disassem:dstate-cur-addr dstate))))
 
 (defconstant branch-imm-printer
-  `(:name (:unless (cond :constant ,condition-true) cond)
+  `(:name cond
 	  :tab
 	  imm24))
 
@@ -1094,7 +1092,7 @@
   (imm24 :field (byte 24 0) :type 'relative-label))
 
 (defconstant branch-reg-printer
-  `(:name (:unless (cond :constant ,condition-true) cond)
+  `(:name cond
 	  :tab
 	  src1))
 
@@ -1170,13 +1168,13 @@
   (byte 3 9) (byte 1 8) (byte 1 7) (byte 1 6) (byte 1 5) (byte 1 4) (byte 4 0))
 
 (defconstant format-vfp-3-arg-printer
-   `(:name (:unless (cond :constant ,condition-true) cond)
-     :tab
-     (:cond ((sz :constant 0) '|.F32|)
-	    (t '|.F64|))
-     dst ", "
-     src1 ", "
-     src2 ", "))
+  `(:name cond
+    :tab
+    (:cond ((sz :constant 0) '|.F32|)
+	   (t '|.F64|))
+    dst ", "
+    src1 ", "
+    src2 ", "))
 
 (disassem:define-instruction-format
     (format-vfp-3 32 :default-printer format-vfp-3-arg-printer)
@@ -1226,21 +1224,21 @@
 				     ,opb1
 				     vm))))))))
 
-(define-vfp-3 vadd.f32  #b11100 #b11 0 0)
-(define-vfp-3 vadd.f64  #b11100 #b11 0 0 t)
-(define-vfp-3 vsub.f32  #b11000 #b11 1 0)
-(define-vfp-3 vsub.f64  #b11000 #b11 1 0 t)
-(define-vfp-3 vmul.f32  #b11100 #b10 0 0)
-(define-vfp-3 vmul.f64  #b11100 #b10 0 0 t)
-(define-vfp-3 vdiv.f32  #b11101 #b00 0 0)
-(define-vfp-3 vdiv.f64  #b11101 #b00 0 0 t)
+(define-vfp-3 vadd #b11100 #b11 0 0)
+(define-vfp-3 vadd #b11100 #b11 0 0 t)
+(define-vfp-3 vsub #b11000 #b11 1 0)
+(define-vfp-3 vsub #b11000 #b11 1 0 t)
+(define-vfp-3 vmul #b11100 #b10 0 0)
+(define-vfp-3 vmul #b11100 #b10 0 0 t)
+(define-vfp-3 vdiv #b11101 #b00 0 0)
+(define-vfp-3 vdiv #b11101 #b00 0 0 t)
 
 (define-emitter emit-format-vfp-2-arg 32
   (byte 4 28) (byte 5 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
   (byte 3 9) (byte 1 8) (byte 2 6) (byte 1 5) (byte 1 4) (byte 4 0))
 
 (defconstant format-vfp-2-arg-printer
-  `(:name (:unless (cond :constant ,condition-true) cond)
+  `(:name cond
     (:cond ((sz :constant 0) '|.F32|)
 	   (t '|.F64|))
     :tab
@@ -1402,7 +1400,7 @@
 				    0))))))))
 
 (defconstant format-vfp-cmp-0-printer
-  `(:name (:unless (cond :constant ,condition-true) cond)
+  `(:name cond
 	  (:cond ((sz :constant 0) '|.F32|)
 		 (t '|.F64|))
 	  :tab
@@ -1476,7 +1474,7 @@
   (byte 3 9) (byte 1 8) (byte 2 6) (byte 1 5) (byte 1 4) (byte 4 0))
 
 (defconstant format-vfp-vmov-reg-printer
-  `(:name  (:unless (cond :constant ,condition-true) cond)
+  `(:name  cond
     :tab
     (:cond ((sz :constant 0) '|.F32|)
 	   (t '|.F64|))
