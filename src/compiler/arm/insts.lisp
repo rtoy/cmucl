@@ -38,20 +38,26 @@
 	 (tn-offset tn)
 	 (error (intl:gettext "~S isn't a register.") tn)))))
 
-;; If the tn is a double-float, we need to divide the offset by 2 to
-;; get the actual encoding for the instruction.  
+;; The encoding of a register number is different between a single-reg
+;; and a double-reg.
 (defun fp-reg-tn-encoding (tn doublep)
   (declare (type tn tn))
   (unless (eq (sb-name (sc-sb (tn-sc tn))) 'float-registers)
     (error (intl:gettext "~S isn't a floating-point register.") tn))
-  (let ((offset (if doublep
+  ;; The double regs have even values 0 to 62, but ARM numbers them
+  ;; from 0 to 31.  Map them the the ARM numbering scheme.
+  (let ((regnum (if doublep
 		    (ash (tn-offset tn) -1)
 		    (tn-offset tn))))
-    ;; FP registers are numbered 0 to 31 (or 63, if we have 32 double
-    ;; regs).  But the instruction encodings want to split that into a
-    ;; 1 bit chunk and a 4 bit chunk, so we do that here.
-    (values (ldb (byte 1 4) offset)
-	    (ldb (byte 4 0) offset))))
+    ;; The instruction encodings want to split that into a 1 bit chunk
+    ;; and a 4 bit chunk.  But which chunk is which depends on whether
+    ;; it's a single or double reg.  See, for example the instruction
+    ;; description for VADD.
+    (if doublep
+	(values (ldb (byte 1 4) regnum)
+		(ldb (byte 4 0) regnum))
+	(values (ldb (byte 1 0) regnum)
+		(ldb (byte 4 1) regnum)))))
 
 (disassem:set-disassem-params :instruction-alignment 32
 			      :opcode-column-width 11)
@@ -130,8 +136,8 @@
 	       (declare (stream stream))
 	       ;; The fp-reg fields are always split into two parts,
 	       ;; so we get a list of values from the two parts.
-	       (let* ((value (logior (ash (first vlist) 4)
-				     (second vlist)))
+	       (let* ((value (logior (ash (second vlist) 4)
+				     (first vlist)))
 		      (regname (aref float-reg-symbols value)))
 		 (princ regname stream)
 		 (disassem:maybe-note-associated-storage-ref
