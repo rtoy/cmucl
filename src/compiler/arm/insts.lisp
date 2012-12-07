@@ -1107,7 +1107,7 @@
   
 (disassem:define-instruction-format
     (branch-reg 32 :default-printer branch-reg-printer)
-  (cond  :field (byte 4 28) :type 'condition-code)
+  (cond  :field (byte 4 28))
   (op    :field (byte 8 20) :value #b00010010)
   (op0   :field (byte 12 8) :value #b111111111111)
   (op1   :field (byte 4 4) :value #b0011)
@@ -1150,8 +1150,11 @@
 (define-instruction blx (segment target)
   (:declare (type (or label reg) target))
   (:printer branch-imm
-	    ((cond #b1111) (opb0 #b101) (op #b1)))
-  (:printer branch-reg ((op #b00010010)))
+	    ((cond #b1111) (opb0 #b101) (op #b0))
+	    '(:name :tab imm24))
+  (:printer branch-reg
+	    ((cond nil :type 'condition-code)
+	     (op #b00010010)))
   (:attributes branch)
   (:emitter
    (etypecase target
@@ -1442,6 +1445,9 @@
 	  (error "Invalid floating-point immediate: ~S" f)))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
+;; Print the encoded floating-point immediate value.  We only return a
+;; single-float since the bits have way less than single-float
+;; accuracy and range anyway.
 (defun packed-float-immed-printer (value stream dstate)
   (declare (ignore dstate))
   (let ((sign (ldb (byte 1 3) (first value)))
@@ -1549,3 +1555,92 @@
 
 (define-vmov nil)
 (define-vmov t)
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun imm8-offset-printer (value stream dstate)
+    (declare (ignore dstate))
+    (format stream "~D" (ash value 2))))
+
+(defconstant format-6-vfp-load/store-printer
+  '(:name cond :tab dst
+    ", [" src
+    (:cond ((imm8 :constant 0) "]")
+	   ((u :constant 1)
+	    "#+" imm8 "]")
+	   (t
+	    "#-" imm8 "]"))))
+
+(define-emitter emit-format-6-vfp-load/store 32
+  (byte 4 28) (byte 3 25) (byte 1 24) (byte 1 23) (byte 1 22) (byte 2 20)
+  (byte 4 16) (byte 4 12) (byte 3 9) (byte 1 8) (byte 8 0))
+
+(disassem:define-instruction-format
+    (format-6-vfp-load/store 32
+			     :include 'format-base
+			     :default-printer format-6-vfp-load/store-printer)
+  (one   :field (byte 1 24) :value 1)
+  (u     :field (byte 1 23))
+  (dst   :fields (list (byte 1 22) (byte 4 12)))
+  (op0   :field (byte 2 20))
+  (src   :field (byte 4 16) :type 'reg)
+  (op1   :field (byte 3 9) :value #b101)
+  (sz    :field (byte 1 8))
+  (imm8  :field (byte 8 0)))
+
+(defmacro define-fp-load/store (name op0 &optional doublep)
+  (let ((full-name (symbolicate name (if doublep ".64" ".32"))))
+    `(define-instruction ,full-name (segment dst src &optional (cond :al))
+       (:declare (type tn dst)
+		 (type (or tn load-store-index) dst))
+       (:printer format-6-vfp-load/store
+		 ((opb0 #b110)
+		  (one 1)
+		  (op0 ,op0)
+		  (op1 #b101)
+		  (sz ,(if doublep 1 0))
+		  (dst nil :type ',(if doublep
+				       'fp-double-reg
+				       'fp-single-reg))))
+       (:emitter
+	(etypecase src
+	  (tn
+	   (emit-format-6-vfp-load/store segment
+					 (inst-condition-code (list cond))
+					 #b110
+					 #b1
+					 1
+					 d
+					 ,op0
+					 (reg-tn-encoding base)
+					 vd
+					 #b101
+					 ,(if doublep 1 0)
+					 0))
+	  (load-store-index
+	   ;; Only certain forms of indexing are allowed here!  Verify
+	   ;; them.
+	   (assert (eq :immediate (load-store-index-type src)))
+	   (assert (and (null shift-type)
+			(null shift-amount)
+			(null update)
+			(null post-indexed)))
+	   (let ((offset (load-store-index-offset src))
+		 (add (load-store-index-add src)))
+	     (assert (zerop (ldb (byte 2 0) offset)))
+	     (emit-format-6-vfp-load/store segment
+					   (inst-condition-code (list cond))
+					   #b110
+					   #b1
+					   (if add 1 0)
+					   d
+					   ,op0
+					   (reg-tn-encoding base)
+					   vd
+					   #b101
+					   ,(if doublep 1 0)
+					   offset))))))))
+
+(define-fp-load/store vldr #b01)
+(define-fp-load/store vldr #b01 t)
+(define-fp-load/store vstr #b00)
+(define-fp-load/store vstr #b00 t)
