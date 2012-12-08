@@ -308,7 +308,7 @@
 		       :default-printer format-1-immed-printer)
   (op    :field (byte 4 21))
   (s     :field (byte 1 20))
-  (src1  :field (byte 4 16) :type 'reg)
+  (src1  :field (byte 4 16))
   (dst   :field (byte 4 12) :type 'reg)
   (immed :field (byte 12 0) :printer #'modified-immed-printer))
 
@@ -424,7 +424,7 @@
 			:shift-type shift-type))))
 
 
-(defmacro define-data-proc (name opcode &optional force-set-p)
+(defmacro define-data-proc (name opcode &key force-set-p one-arg-p)
   `(define-instruction ,name (segment dst src1 src2 &rest opts)
      (:declare (type tn dst)
 	       (type tn src1)
@@ -434,11 +434,26 @@
 			 flex-operand)
 		     src2))
      (:printer format-1-immed
-	       ((opb0 #b001) (op ,opcode)))
+	       ((opb0 #b001) (op ,opcode)
+		,(if force-set-p
+		     '(s 1))
+		,@(if one-arg-p
+		      '((src1 0))
+		      '((src1 nil :type 'reg))))
+	       ,@(when one-arg-p
+		   `('(:name (:unless (s :constant 0) 's)
+		       cond
+		       :tab dst ", " immed))))
      (:printer format-0-reg
-	       ((opb0 #b000) (op ,opcode) (rs 0)))
+	       ((opb0 #b000) (op ,opcode) (rs 0)
+		,@(if one-arg-p
+		      '((src1 0))
+		      '((src1 nil :type 'reg))))))
      (:printer format-0-reg-shifted
-	       ((opb0 #b000) (op ,opcode) (rs 1)))
+	       ((opb0 #b000) (op ,opcode) (rs 1)
+		,@(if one-arg-p
+		      '((src1 0))
+		      '((src1 nil :type 'reg)))))
      (:dependencies
       (reads src1)
       (writes dst))
@@ -518,14 +533,17 @@
 (define-data-proc sbc #b0110)
 (define-data-proc rsc #b0111)
 ;; #b10xx is data processing and miscellaneous instructions
-(define-data-proc tst #b1000 t)
-(define-data-proc teq #b1001 t)
-(define-data-proc cmp #b1010 t)
-(define-data-proc cmn #b1011 t)
+(define-data-proc tst #b1000 :force-set-p t)
+(define-data-proc teq #b1001 :force-set-p t)
+(define-data-proc cmp #b1010 :force-set-p t)
+(define-data-proc cmn #b1011 :force-set-p t)
 (define-data-proc orr #b1100)
-(define-data-proc mov #b1101)
+;; See A8.8.105.  Do we want to define this mov instruction and make
+;; aliases for the equivalent asr, lsl, lsr, ror , rrx instructions?
+;; That's probably easiest.
+(define-data-proc mov #b1101 :one-arg-p t)
 (define-data-proc bic #b1110)
-(define-data-proc mvn #b1111)		; aka bitwise not
+(define-data-proc mvn #b1111 :one-arg-p t)		; aka bitwise not
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 (defun split-imm16-printer (value stream dstate)
@@ -588,10 +606,10 @@
   
 (disassem:define-instruction-format
     (format-0-mul 32 :include 'format-base)
-  (op    :field (byte 4 21) :value #b0000)
+  (op    :field (byte 4 21))
   (s     :field (byte 1 20))
   (dst   :field (byte 4 16) :type 'reg)
-  (src3  :field (byte 4 12) :type 'reg)
+  (src3  :field (byte 4 12))
   (src2  :field (byte 4 8) :type 'reg)
   (op1   :field (byte 4 4))
   (src1  :field (byte 4 0) :type 'reg))
@@ -600,7 +618,10 @@
   (:declare (type tn dst src1 src2)
 	    (type condition-code cond))
   (:printer format-0-mul
-	    ((opb0 #b000) (op #b0000) (op1 #b1001))
+	    ((opb0 #b000)
+	     (op #b0000)
+	     (op1 #b1001)
+	     (src3 0))
 	    `(:name (:unless (s :constant 0) 's)
 		    cond
 		    :tab
@@ -625,7 +646,9 @@
   `(define-instruction ,name (segment dst dst2-or-src src2 src3 &rest opts)
      (:declare (type tn dst dst2-or-src src2))
      (:printer format-0-mul
-	       ((opb0 #b000) (op ,op) (op1 #b1001))
+	       ((opb0 #b000) (op ,op) (op1 #b1001)
+		(src3 nil :type 'reg)
+		,(if setflags0 '(s 0)))
 	       ',(if two-outputs
 		     `(:name (:unless (s :constant 0) 's)
 			     cond
@@ -650,11 +673,17 @@
 			 ,(if setflags0
 			      0
 			      `(inst-set-flags opts))
-			 (reg-tn-encoding dst)
-			 (reg-tn-encoding src3)
-			 (reg-tn-encoding src2)
-			 #b1001
-			 (reg-tn-encoding dst2-or-src)))))
+			 ,@(if two-outputs
+			      `((reg-tn-encoding dst2-or-src)
+				(reg-tn-encoding dst)
+				(reg-tn-encoding src3)
+				#b1001
+				(reg-tn-encoding src3))
+			      `((reg-tn-encoding dst)
+				(reg-tn-encoding src3)
+				(reg-tn-encoding src1)
+				#b1001
+				(reg-tn-encoding dst2-or-src)))))))
 
 (define-4-arg-mul mla   #b0001)
 (define-4-arg-mul umaal #b0010 t t)
@@ -679,7 +708,7 @@
 (disassem:define-instruction-format
     (format-div 32 :include 'format-base :default-printer format-div-printer)
   (op0   :field (byte 2 23) :value #b10)
-  (op1   :field (byte 2 20))
+  (op1   :field (byte 3 20))
   (dst   :field (byte 4 16) :type 'reg)
   (a     :field (byte 4 12) :value #b1111)
   (src2  :field (byte 4 8) :type 'reg)
@@ -717,7 +746,7 @@
 ;; A5.2.12
 
 (define-emitter emit-format-0-bkpt 32
-  (byte 4 28) (byte 8 20) (byte 12 8) (byte 4 4) (byte 4 0))
+  (byte 4 28) (byte 3 25) (byte 5 20) (byte 12 8) (byte 4 4) (byte 4 0))
 
 (disassem:define-instruction-format
     (format-0-bkpt 32
@@ -1277,16 +1306,18 @@
   (src   :fields (list (byte 1 5) (byte 4 0)))
   (op2   :field (byte 3 9) :value #b101)
   (sz    :field (byte 1 8))
-  (opc3  :field (byte 2 6))
+  (ops   :field (byte 1 7))
+  (opc3  :field (byte 1 6))
   (opc4  :field (byte 1 4)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun fp-reg-as-reg-printer (value stream dstate)
     (reg-arg-printer (second value) stream dstate)))
 
-(defmacro define-vfp-2 (name op op1 opc3 opc4 &key doublep ext
-						(dst-type 'fp-single-reg)
-						(src-type 'fp-single-reg))
+(defmacro define-vfp-2 (name op op1 ops opc3 opc4 &key doublep ext
+						    (dst-type 'fp-single-reg)
+						    (src-type 'fp-single-reg)
+						    printer)
   (let ((full-name (symbolicate name "." (if doublep
 					     (or ext "F64")
 					     (or ext "F32")))))
@@ -1294,13 +1325,13 @@
        (:declare (type tn dst src))
        (:printer format-vfp-2-arg
 		 ((op0 #b11101) (op ,op) (op1 ,op1) (op2 #b101)
-		  (opc3 ,opc3) (opc4 ,opc4)
+		  (ops ,ops) (opc3 ,opc3) (opc4 ,opc4)
 		  (sz ,(if doublep 1 0))
 		  (dst nil :type ',dst-type)
 		  (src nil :type ',src-type
 		       ,@(when (eq src-type 'reg)
 			     `(:printer #'fp-reg-as-reg-printer))))
-		 :default
+		 ,(or printer :default)
 		 :print-name ',name)
        (:emitter
 	(multiple-value-bind (d vd)
@@ -1321,51 +1352,82 @@
 				   ,opc4
 				   vm)))))))
 
-(define-vfp-2 vabs  #b11 #b0000 #b11 0)
-(define-vfp-2 vabs  #b11 #b0000 #b11 0 :doublep t
+(define-vfp-2 vabs  #b11 #b0000 #b1 #b1 0)
+(define-vfp-2 vabs  #b11 #b0000 #b1 #b1 0 :doublep t
   :dst-type fp-double-reg :src-type fp-double-reg)
-(define-vfp-2 vneg  #b11 #b0001 #b01 0)
-(define-vfp-2 vneg  #b11 #b0001 #b01 0 :doublep t
+(define-vfp-2 vneg  #b11 #b0001 #b0 #b1 0)
+(define-vfp-2 vneg  #b11 #b0001 #b0 #b1 0 :doublep t
   :dst-type fp-double-reg :src-type fp-double-reg)
-(define-vfp-2 vsqrt #b11 #b0001 #b11 0)
-(define-vfp-2 vsqrt #b11 #b0001 #b11 0 :doublep t
+(define-vfp-2 vsqrt #b11 #b0001 #b1 #b1 0)
+(define-vfp-2 vsqrt #b11 #b0001 #b1 #b1 0 :doublep t
   :dst-type fp-double-reg :src-type fp-double-reg)
 
+;; Conversions
+
+(defconstant vcvt-printer
+  '(:name cond
+    (:cond ((op1 :constant #b1101)
+	    (:cond ((sz :constant 1) '|.S32.F64|)
+		   (t '|.S32.F32|)))
+	   ((op1 :constant #b1100)
+	    (:cond ((sz :constant 1) '|.U32.F64|)
+		   (t '|.U32.F32|)))
+	   ((op1 :constant #b1000)
+	    (:cond ((sz :constant 1) '|.F64|
+		    (:cond ((op :constant 1) '|.S32|)
+			   (t '|.U32|)))
+		   (t '|.F32|
+		      (:cond ((op :constant 1) '|.S32|)
+			     (t '|.U32|))))))
+    :tab
+    dst ", " src))
+	   
 ;; Convert between double and single
-(define-vfp-2 vcvt  #b11 #b0111 #b11 0 :ext "F64.F32"
+(define-vfp-2 vcvt  #b11 #b0111 #b1 #b1 0 :ext "F64.F32"
   :dst-type fp-double-reg)
-(define-vfp-2 vcvt  #b11 #b0111 #b11 0 :doublep t :ext "F32.F64"
+(define-vfp-2 vcvt  #b11 #b0111 #b1 #b1 0 :doublep t :ext "F32.F64"
   :src-type fp-double-reg)
 
 ;; Convert between float and integer
-(define-vfp-2 vcvt  #b11 #b1101 #b11 0 :ext "S32.F32"
-  :dst-type reg)
-(define-vfp-2 vcvt  #b11 #b1101 #b11 0 :doublep t :ext "S32.F64"
-  :dst-type reg :src-type fp-double-reg)
-(define-vfp-2 vcvt  #b11 #b1100 #b11 0 :ext "U32.F32"
-  :dst-type reg)
-(define-vfp-2 vcvt  #b11 #b1100 #b11 0 :doublep t :ext "U32.F64"
-  :dst-type reg :src-type fp-double-reg)
+(define-vfp-2 vcvt  #b11 #b1101 #b1 #b1 0 :ext "S32.F32"
+					  :dst-type reg
+  :printer vcvt-printer)
+(define-vfp-2 vcvt  #b11 #b1101 #b1 #b1 0 :doublep t :ext "S32.F64"
+					  :dst-type reg :src-type fp-double-reg
+  :printer vcvt-printer)
+(define-vfp-2 vcvt  #b11 #b1100 #b1 #b1 0 :ext "U32.F32"
+					  :dst-type reg
+  :printer vcvt-printer)
+(define-vfp-2 vcvt  #b11 #b1100 #b1 #b1 0 :doublep t :ext "U32.F64"
+					  :dst-type reg :src-type fp-double-reg
+  :printer vcvt-printer)
 
-(define-vfp-2 vcvtr #b11 #b1101 #b01 0 :ext "S32.F32"
-  :dst-type reg)
-(define-vfp-2 vcvtr #b11 #b1101 #b01 0 :doublep t :ext "S32.F64"
+(define-vfp-2 vcvtr #b11 #b1101 #b0 #b1 0 :ext "S32.F32"
+					  :dst-type reg
+  :printer vcvt-printer)
+(define-vfp-2 vcvtr #b11 #b1101 #b0 #b1 0 :doublep t :ext "S32.F64"
   :dst-type reg :src-type fp-double-reg)
-(define-vfp-2 vcvtr #b11 #b1100 #b01 0 :ext "U32.F32"
-  :dst-type reg)
-(define-vfp-2 vcvtr #b11 #b1100 #b01 0 :doublep t :ext "U32.F64"
-  :dst-type reg :src-type fp-double-reg)
+(define-vfp-2 vcvtr #b11 #b1100 #b0 #b1 0 :ext "U32.F32"
+					  :dst-type reg
+  :printer vcvt-printer)
+(define-vfp-2 vcvtr #b11 #b1100 #b0 #b1 0 :doublep t :ext "U32.F64"
+					  :dst-type reg :src-type fp-double-reg
+  :printer vcvt-printer)
 
-(define-vfp-2 vcvt  #b11 #b1000 #b01 0 :ext "F32.U32"
-  :src-type reg)
-(define-vfp-2 vcvt  #b11 #b1000 #b01 0 :doublep t :ext "F64.U32"
-  :dst-type fp-double-reg :src-type reg)
-(define-vfp-2 vcvt  #b11 #b1000 #b11 0 :ext "F32.S32"
-  :src-type reg)
-(define-vfp-2 vcvt  #b11 #b1000 #b11 0 :doublep t :ext "F64.S32"
-  :dst-type fp-double-reg :src-type reg)
+(define-vfp-2 vcvt  #b11 #b1000 #b0 #b1 0 :ext "F32.U32"
+					  :src-type reg
+  :printer vcvt-printer)
+(define-vfp-2 vcvt  #b11 #b1000 #b0 #b1 0 :doublep t :ext "F64.U32"
+					  :dst-type fp-double-reg :src-type reg
+  :printer vcvt-printer)
+(define-vfp-2 vcvt  #b11 #b1000 #b1 #b1 0 :ext "F32.S32"
+					  :src-type reg
+  :printer vcvt-printer)
+(define-vfp-2 vcvt  #b11 #b1000 #b1 #b1 0 :doublep t :ext "F64.S32"
+					  :dst-type fp-double-reg :src-type reg
+  :printer vcvt-printer)
 
-(defmacro define-vfp-cmp (name op1 opc3 &key doublep printer)
+(defmacro define-vfp-cmp (name op1 ops opc3 &key doublep printer)
   (let ((full-name (symbolicate name (if doublep ".F64" ".F32")))
 	(stype (if printer
 		   nil
@@ -1375,7 +1437,7 @@
 		 (type (or tn (float 0.0 0.0)) src))
        (:printer format-vfp-2-arg
 		 ((op0 #b11101) (op #b11) (op1 ,op1) (op2 #b101)
-		  (opc3 ,opc3) (opc4 0)
+		  (ops ,ops) (opc3 ,opc3) (opc4 0)
 		  (sz ,(if doublep 1 0))
 		  (dst nil :type ',(if doublep 'fp-double-reg 'fp-single-reg))
 		  ,(if printer
@@ -1399,6 +1461,7 @@
 				      vd
 				      #b101
 				      ,(if doublep 1 0)
+				      ,ops
 				      ,opc3
 				      m
 				      0
@@ -1416,6 +1479,7 @@
 				    vd
 				    #b101
 				    ,(if doublep 1 0)
+				    ,ops
 				    ,opc3
 				    0
 				    0
@@ -1428,14 +1492,14 @@
 	  :tab
 	  dst ", #0.0"))
 
-(define-vfp-cmp vcmp  #b0100 #b01)
-(define-vfp-cmp vcmpe #b0100 #b11)
-(define-vfp-cmp vcmp  #b0100 #b01 :doublep t)
-(define-vfp-cmp vcmpe #b0100 #b11 :doublep t)
-(define-vfp-cmp vcmp  #b0100 #b01 :printer format-vfp-cmp-0-printer)
-(define-vfp-cmp vcmpe #b0100 #b11 :printer format-vfp-cmp-0-printer)
-(define-vfp-cmp vcmp  #b0100 #b01 :doublep t :printer format-vfp-cmp-0-printer)
-(define-vfp-cmp vcmpe #b0100 #b11 :doublep t :printer format-vfp-cmp-0-printer)
+(define-vfp-cmp vcmp  #b0100 #b0 #b1)
+(define-vfp-cmp vcmpe #b0100 #b1 #b1)
+(define-vfp-cmp vcmp  #b0100 #b0 #b1 :doublep t)
+(define-vfp-cmp vcmpe #b0100 #b1 #b1 :doublep t)
+(define-vfp-cmp vcmp  #b0101 #b0 #b1 :printer format-vfp-cmp-0-printer)
+(define-vfp-cmp vcmpe #b0101 #b1 #b1 :printer format-vfp-cmp-0-printer)
+(define-vfp-cmp vcmp  #b0101 #b0 #b1 :doublep t :printer format-vfp-cmp-0-printer)
+(define-vfp-cmp vcmpe #b0101 #b1 #b1 :doublep t :printer format-vfp-cmp-0-printer)
 
 
 ;; Convert a float to the floating-point modified immediate constant.
@@ -1622,7 +1686,7 @@
 				       'fp-double-reg
 				       'fp-single-reg)))
 		 :default
-		 :print-name ,name)
+		 :print-name ',name)
        (:emitter
 	(etypecase src
 	  (tn
