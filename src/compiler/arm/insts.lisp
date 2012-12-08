@@ -106,6 +106,10 @@
 (defun get-reg-name (index)
   (aref reg-symbols index))
 
+(defun maybe-add-notes (value dstate)
+  (declare (ignore value dstate))
+  )
+
 (eval-when (compile load eval)
 (defun reg-arg-printer (value stream dstate)
   (declare (stream stream) (fixnum value))
@@ -181,16 +185,21 @@
   (coerce condition-codes 'vector))
 
 (defconstant condition-true
-  #b1111)
+  #b1110)
 
 (disassem:define-argument-type condition-code
   :printer #'(lambda (value stream dstate)
+	       (declare (ignore dstate))
 	       (unless (= value condition-true)
 		 (princ (aref condition-code-name-vec value) stream))))
 
 (deftype shift-type ()
   `(member ,@shift-types))
 
+(disassem:define-argument-type shift-type
+  :printer #'(lambda (value stream dstate)
+	       (declare (ignore dstate))
+	       (princ (elt shift-types value))))
 
 ;; Look through OPTIONS-LIST and find a condition code and return the
 ;; corresponding value for the COND field of an instruction.
@@ -289,7 +298,7 @@
   (declare (ignore dstate))
   (let ((rot (ldb (byte 4 8) value))
 	(v (ldb (byte 8 0) value)))
-    (format stream "#~X" (rotate-right2 v rot))))
+    (format stream "#~D" (rotate-right2 v rot))))
 )
 
 (define-emitter emit-format-1-immed 32
@@ -315,14 +324,16 @@
 	  src2
 	  (:unless (shift :constant 0)
 	    (:cond ((type :constant #b11) ; ror or rrx
-		    (:cond ((shift :constant 0) 'rrx)
+		    (:cond ((shift :constant 0) " " 'rrx)
 			   (t
+			    " "
 			    'ror
 			    " "
 			    shift)))
 		   (t
-		    type
 		    " "
+		    type
+		    " #"
 		    shift)))))
 
 (define-emitter emit-format-0-reg 32
@@ -336,7 +347,7 @@
   (src1  :field (byte 4 16) :type 'reg)
   (dst   :field (byte 4 12) :type 'reg)
   (shift :field (byte 5 7))
-  (type  :field (byte 2 5))
+  (type  :field (byte 2 5) :type 'shift-type)
   (rs    :field (byte 1 4) :value 0)
   (src2  :field (byte 4 0) :type 'reg))
 
@@ -349,9 +360,9 @@
 	  src1
 	  ", "
 	  src2
-	  ", "
+	  " "
 	  type
-	  ", "
+	  " "
 	  sreg))
 
 (define-emitter emit-format-0-reg-shifted 32
@@ -367,7 +378,7 @@
   (dst   :field (byte 4 12) :type 'reg)
   (sreg  :field (byte 4 8) :type 'reg)
   (z     :field (byte 1 7) :value 0)
-  (type  :field (byte 2 5))
+  (type  :field (byte 2 5) :type 'shift-type)
   (rs    :field (byte 1 4) :value 1)
   (src2  :field (byte 4 0) :type 'reg))
 
@@ -581,7 +592,7 @@
   (op    :field (byte 4 21) :value #b0000)
   (s     :field (byte 1 20))
   (dst   :field (byte 4 16) :type 'reg)
-  (src3  :field (byte 4 12))
+  (src3  :field (byte 4 12) :type 'reg)
   (src2  :field (byte 4 8) :type 'reg)
   (op1   :field (byte 4 4))
   (src1  :field (byte 4 0) :type 'reg))
@@ -664,7 +675,7 @@
 (defconstant format-div-printer
   `(:name cond
           :tab
-          dst "," src1 ", " src2))    
+          dst ", " src1 ", " src2))    
 
 (disassem:define-instruction-format
     (format-div 32 :include 'format-base :default-printer format-div-printer)
@@ -786,10 +797,13 @@
 		  ", "
 		  (:cond ((u :constant 0) "-")
 			 (t "+"))
-		  rs ", " type " " imm5 "]"
+		  rs ", " type " #" imm5 "]"
 		  (:unless (w :constant 1) "!"))
 		 (t
-		  "], " rs ", " type " " imm5))))
+		  "], "
+		  (:cond ((u :constant 0) "-")
+			 (t "+"))
+		  rs ", " type " #" imm5))))
   
 (define-emitter emit-format-3-reg 32
   (byte 4 28) (byte 3 25) (byte 1 24) (byte 1 23) (byte 1 22) (byte 1 21)
@@ -807,7 +821,7 @@
   (src1  :field (byte 4 16) :type 'reg)
   (dst   :field (byte 4 12) :type 'reg)
   (imm5  :field (byte 5 7))
-  (type  :field (byte 2 5))
+  (type  :field (byte 2 5) :type 'shift-type)
   (z     :field (byte 1 4) :value 0)
   (rs    :field (byte 4 0) :type 'reg))
 
@@ -1178,9 +1192,9 @@
 
 (defconstant format-vfp-3-arg-printer
   `(:name cond
-    :tab
     (:cond ((sz :constant 0) '|.F32|)
 	   (t '|.F64|))
+    :tab
     dst ", "
     src1 ", "
     src2 ", "))
