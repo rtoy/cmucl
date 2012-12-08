@@ -715,7 +715,7 @@
 	       '(:name (:unless (s :constant 0) 's)
 		 cond
 		 :tab
-		 dst ", " src2 " " type " " sreg))
+		 dst ", " src2 ", " sreg))
      (:dependencies
       (reads src1)
       (writes dst))
