@@ -218,11 +218,12 @@
       0))
 
 ;; Convert SHIFT-TYPE to the value for an instruction field.
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (defun shift-encoding (shift-type)
   (if (eq shift-type :rrx)
       3
       (or (position shift-type shift-types)
-	  (error "Unknown shift type: ~S" shift-type))))
+	  (error "Unknown shift type: ~S" shift-type)))))
 
 (defun rotate-right2 (value amount)
   "Rotate VALUE right by 2*AMOUNT bits in a register of length 32 bits."
@@ -292,6 +293,13 @@
 	  ", "
 	  immed))
 
+(defconstant format-1-immed-set-printer
+  `(:name (:unless (:constant ,condition-true) cond)
+	  :tab
+	  src1
+	  ", "
+	  immed))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
 (defun modified-immed-printer (value stream dstate)
   (declare (ignore dstate))
@@ -309,7 +317,7 @@
   (op    :field (byte 4 21))
   (s     :field (byte 1 20))
   (src1  :field (byte 4 16))
-  (dst   :field (byte 4 12) :type 'reg)
+  (dst   :field (byte 4 12))
   (immed :field (byte 12 0) :printer #'modified-immed-printer))
 
 (defconstant format-0-reg-printer
@@ -335,6 +343,26 @@
 		    " #"
 		    shift)))))
 
+(defconstant format-0-reg-set-printer
+  `(:name cond
+	  :tab
+	  src1
+	  ", "
+	  src2
+	  (:unless (shift :constant 0)
+	    (:cond ((type :constant #b11) ; ror or rrx
+		    (:cond ((shift :constant 0) " " 'rrx)
+			   (t
+			    " "
+			    'ror
+			    " "
+			    shift)))
+		   (t
+		    " "
+		    type
+		    " #"
+		    shift)))))
+
 (define-emitter emit-format-0-reg 32
   (byte 4 28) (byte 3 25) (byte 4 21) (byte 1 20) (byte 4 16) (byte 4 12) (byte 5 7)
   (byte 2 5) (byte 1 4) (byte 4 0))
@@ -343,8 +371,8 @@
     (format-0-reg 32 :include 'format-base :default-printer format-0-reg-printer)
   (op    :field (byte 4 21))
   (s     :field (byte 1 20))
-  (src1  :field (byte 4 16) :type 'reg)
-  (dst   :field (byte 4 12) :type 'reg)
+  (src1  :field (byte 4 16))
+  (dst   :field (byte 4 12))
   (shift :field (byte 5 7))
   (type  :field (byte 2 5) :type 'shift-type)
   (rs    :field (byte 1 4) :value 0)
@@ -364,6 +392,17 @@
 	  " "
 	  sreg))
 
+(defconstant format-0-reg-shifted-set-printer
+  `(:name cond
+	  :tab
+	  src1
+	  ", "
+	  src2
+	  " "
+	  type
+	  " "
+	  sreg))
+
 (define-emitter emit-format-0-reg-shifted 32
   (byte 4 28) (byte 3 25) (byte 4 21) (byte 1 20) (byte 4 16) (byte 4 12) (byte 4 8)
   (byte 1 7) (byte 2 5) (byte 1 4) (byte 4 0))
@@ -373,7 +412,7 @@
 			     :default-printer format-0-reg-shifted-printer)
   (op    :field (byte 4 21))
   (s     :field (byte 1 20))
-  (src1  :field (byte 4 16) :type 'reg)
+  (src1  :field (byte 4 16))
   (dst   :field (byte 4 12) :type 'reg)
   (sreg  :field (byte 4 8) :type 'reg)
   (z     :field (byte 1 7) :value 0)
@@ -424,7 +463,10 @@
 			:shift-type shift-type))))
 
 
-(defmacro define-data-proc (name opcode &key force-set-p one-arg-p)
+(defmacro define-data-proc (name opcode &key (src1-type 'reg) force-set-p)
+  ;; For compare-type instructions, force-set-p should be true.  This
+  ;; means the S bit is set in the instruction and that there is no
+  ;; dst register.
   `(define-instruction ,name (segment dst src1 src2 &rest opts)
      (:declare (type tn dst)
 	       (type tn src1)
@@ -437,23 +479,38 @@
 	       ((opb0 #b001) (op ,opcode)
 		,(if force-set-p
 		     '(s 1))
-		,@(if one-arg-p
-		      '((src1 0))
-		      '((src1 nil :type 'reg))))
-	       ,@(when one-arg-p
-		   `('(:name (:unless (s :constant 0) 's)
-		       cond
-		       :tab dst ", " immed))))
+		,@(if src1-type
+		      `((src1 nil :type ',src1-type))
+		      '((src1 0)))
+		,@(if force-set-p
+		      '((dst 0))
+		      '((dst nil :type 'reg))))
+	       ,@(when force-set-p
+		    `(format-1-immed-set-printer)))
      (:printer format-0-reg
 	       ((opb0 #b000) (op ,opcode) (rs 0)
-		,@(if one-arg-p
-		      '((src1 0))
-		      '((src1 nil :type 'reg))))))
+		,(if force-set-p
+		     '(s 1))
+		,@(if src1-type
+		      `((src1 nil :type ',src1-type))
+		      '((src1 0)))
+		,@(if force-set-p
+		      '((dst 0))
+		      '((dst nil :type 'reg))))
+	       ,@(when force-set-p
+		   `(format-0-reg-set-printer)))
      (:printer format-0-reg-shifted
 	       ((opb0 #b000) (op ,opcode) (rs 1)
-		,@(if one-arg-p
-		      '((src1 0))
-		      '((src1 nil :type 'reg)))))
+		,(if force-set-p
+		     '(s 1))
+		,@(if src1-type
+		      `((src1 nil :type ',src1-type))
+		      '((src1 0)))
+		,@(if force-set-p
+		      '((dst 0))
+		      '((dst nil :type 'reg))))
+	       ,@(when force-set-p
+		  `(format-0-reg-shifted-set-printer)))
      (:dependencies
       (reads src1)
       (writes dst))
@@ -538,12 +595,198 @@
 (define-data-proc cmp #b1010 :force-set-p t)
 (define-data-proc cmn #b1011 :force-set-p t)
 (define-data-proc orr #b1100)
-;; See A8.8.105.  Do we want to define this mov instruction and make
-;; aliases for the equivalent asr, lsl, lsr, ror , rrx instructions?
-;; That's probably easiest.
-(define-data-proc mov #b1101 :one-arg-p t)
 (define-data-proc bic #b1110)
-(define-data-proc mvn #b1111 :one-arg-p t)		; aka bitwise not
+(define-data-proc mvn #b1111)		; aka bitwise not
+
+;; See A8.8.105.  It's easy to define this general MOV instruction.
+;; Is that good enough for users?  They'll have to remember that a
+;; shift is a move inst with a hairy flex operand 2.
+(define-instruction mov (segment dst src2 &rest opts)
+  (:declare (type tn dst)
+	    (type (or (signed-byte 32)
+		      (unsigned-byte 32)
+		      reg
+		      flex-operand)
+		  src2))
+  (:printer format-1-immed
+	    ((opb0 #b001)
+	     (op #b1101)
+	     (src1 0)
+	     (dst nil :type 'reg))
+	    '(:name (:unless (s :constant 0) 's)
+		    cond
+		    :tab
+		    dst ", " immed))
+  (:printer format-0-reg
+	    ((opb0 #b000)
+	     (op #b1101)
+	     (rs 0)
+	     (src1 0)
+	     (dst nil :type 'reg)
+	     (shift 0)
+	     (type 0)
+	     (rs 0))
+	    '(:name (:unless (s :constant 0) 's)
+		    cond
+		    :tab
+		    dst
+		    ", "
+		    src2
+		    (:unless (shift :constant 0)
+		      (:cond ((type :constant #b11) ; ror or rrx
+			      (:cond ((shift :constant 0) " " 'rrx)
+				     (t
+				      " " 'ror " " shift)))
+			     (t
+			      " " type " #" shift)))))
+  (:dependencies
+   (reads src1)
+   (writes dst))
+  (:delay 0)
+  (:emitter
+   (etypecase src2
+     (integer
+      (multiple-value-bind (rot val)
+	  (find-encoding src2)
+	(unless rot
+	  (error "Cannot encode the immediate value ~S~%" src2))
+	(emit-format-1-immed segment
+			     (inst-condition-code opts)
+			     #b001
+			     #b1101
+			     (inst-set-flags opts)
+			     0
+			     (reg-tn-encoding dst)
+			     (logior (ash rot 8) val))))
+     (reg
+      (emit-format-0-reg segment
+			 (inst-condition-code opts)
+			 #b000
+			 #b1101
+			 (inst-set-flags opts)
+			 (reg-tn-encoding src1)
+			 (reg-tn-encoding dst)
+			 0
+			 (shift-encoding :lsl)
+			 #b0
+			 (reg-tn-encoding src2)))
+     (flex-operand
+      (ecase (flex-operand-type src2)
+	(:reg-shift-imm
+	 (emit-format-0-reg segment
+			    (inst-condition-code opts)
+			    #b000
+			    #b1101
+			    (inst-set-flags opts)
+			    0
+			    (reg-tn-encoding dst)
+			    (flex-operand-shift-reg-or-imm src2)
+			    (shift-encoding (flex-operand-shift-type src2))
+			    #b0
+			    (reg-tn-encoding (flex-operand-reg src2))))
+	(:reg-shift-reg
+	 (error "Use the shift instructions instead of MOV with a shifted register")))))))
+
+(defmacro define-shift (name)
+  `(define-instruction ,(symbolicate (string name)) (segment dst src2 shift &rest opts)
+     (:declare (type tn dst src2)
+	       (type (or (signed-byte 32)
+			 (unsigned-byte 32)
+			 reg)
+		     shift))
+     (:printer format-0-reg
+	       ((opb0 #b000)
+		(op #b1101)
+		(rs 0)
+		(src1 0)
+		(dst nil :type 'reg)
+		(type ,(shift-encoding name)))
+	       '(:name (:unless (s :constant 0) 's)
+		 cond
+		 :tab
+		 dst ", " src2 ", #" shift))
+     (:printer format-0-reg-shifted
+	       ((opb0 #b000)
+		(op #b1101)
+		(rs 1)
+		(src1 0)
+		(dst nil :type 'reg)
+		(type ,(shift-encoding name)))
+	       '(:name (:unless (s :constant 0) 's)
+		 cond
+		 :tab
+		 dst ", " src2 " " type " " sreg))
+     (:dependencies
+      (reads src1)
+      (writes dst))
+     (:delay 0)
+     (:emitter
+      (etypecase shift
+	(integer
+	 (emit-format-0-reg segment
+			    (inst-condition-code opts)
+			    #b000
+			    #b1101
+			    (inst-set-flags opts)
+			    0
+			    (reg-tn-encoding dst)
+			    shift
+			    (shift-encoding ,name)
+			    #b0
+			    (reg-tn-encoding src2)))
+	(reg
+	 (emit-format-0-reg-shift segment
+				  (inst-condition-code opts)
+				  #b000
+				  #b1101
+				  (inst-set-flags opts)
+				  0
+				  (reg-tn-encoding dst)
+				  (reg-tn-encoding shift)
+				  #b0
+				  (shift-encoding ,name)
+				  #b1
+				  (reg-tn-encoding src2)))))))
+
+(define-shift :asr)
+(define-shift :lsl)
+(define-shift :lsr)
+(define-shift :ror)
+
+(define-instruction rrx (segment dst src2 &rest opts)
+  (:declare (type tn dst src2)
+	    (type (or (signed-byte 32)
+		      (unsigned-byte 32)
+		      reg)
+		  shift))
+  (:printer format-0-reg
+	    ((opb0 #b000)
+	     (op #b1101)
+	     (rs 0)
+	     (src1 0)
+	     (dst nil :type 'reg)
+	     (type (shift-encoding :ror))
+	     (shift 0))
+	    '(:name (:unless (s :constant 0) 's)
+	      cond
+	      :tab
+	      dst ", " src2))
+  (:dependencies
+   (reads src2)
+   (writes dst))
+  (:delay 0)
+  (:emitter
+   (emit-format-0-reg segment
+		      (inst-condition-code opts)
+		      #b000
+		      #b1101
+		      (inst-set-flags opts)
+		      0
+		      (reg-tn-encoding dst)
+		      0
+		      (shift-encoding :ror)
+		      #b0
+		      (reg-tn-encoding src2))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 (defun split-imm16-printer (value stream dstate)
