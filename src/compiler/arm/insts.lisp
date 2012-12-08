@@ -1670,24 +1670,32 @@
 					  :dst-type fp-double-reg :src-type reg
   :printer vcvt-printer)
 
-(defmacro define-vfp-cmp (name op1 ops opc3 &key doublep printer)
+(defmacro define-vfp-cmp (name ops opc3 &key doublep)
   (let ((full-name (symbolicate name (if doublep ".F64" ".F32")))
-	(stype (if printer
-		   nil
-		   (if doublep 'fp-double-reg 'fp-single-reg))))
+	(rtype (if doublep 'fp-double-reg 'fp-single-reg)))
     `(define-instruction ,full-name (segment dst src &optional (cc :al))
        (:declare (type dst tn)
 		 (type (or tn (float 0.0 0.0)) src))
        (:printer format-vfp-2-arg
-		 ((op0 #b11101) (op #b11) (op1 ,op1) (op2 #b101)
+		 ((op0 #b11101) (op #b11) (op1 #b0100) (op2 #b101)
 		  (ops ,ops) (opc3 ,opc3) (opc4 0)
 		  (sz ,(if doublep 1 0))
-		  (dst nil :type ',(if doublep 'fp-double-reg 'fp-single-reg))
-		  ,(if printer
-		       `(src (list 0 0))
-		       `(src nil :type ',stype)))
-		 ,(or printer :default)
-		 :print-name ',name)
+		  (dst nil :type ',rtype)
+		  (src nil :type ',rtype))
+		 :default
+	         :print-name ',name)
+       (:printer format-vfp-2-arg
+		 ((op0 #b11101) (op #b11) (op1 #b0101) (op2 #b101)
+		  (ops ,ops) (opc3 ,opc3) (opc4 0)
+		  (sz ,(if doublep 1 0))
+		  (dst nil :type ',rtype)
+		  (src (list 0 0)))
+		 '(:name cond
+		   (:cond ((sz :constant 0) '|.F32|)
+			  (t '|.F64|))
+		   :tab
+		   dst ", #0.0")
+	         :print-name ',name)
        (:emitter
 	(etypecase src
 	  (tn
@@ -1700,7 +1708,7 @@
 				      #b11101
 				      d
 				      #b11
-				      ,op1
+				      #b0100
 				      vd
 				      #b101
 				      ,(if doublep 1 0)
@@ -1718,7 +1726,7 @@
 				    #b11101
 				    d
 				    #b11
-				    ,op1
+				    #b0101
 				    vd
 				    #b101
 				    ,(if doublep 1 0)
@@ -1728,21 +1736,10 @@
 				    0
 				    0))))))))
 
-(defconstant format-vfp-cmp-0-printer
-  `(:name cond
-	  (:cond ((sz :constant 0) '|.F32|)
-		 (t '|.F64|))
-	  :tab
-	  dst ", #0.0"))
-
-(define-vfp-cmp vcmp  #b0100 #b0 #b1)
-(define-vfp-cmp vcmpe #b0100 #b1 #b1)
-(define-vfp-cmp vcmp  #b0100 #b0 #b1 :doublep t)
-(define-vfp-cmp vcmpe #b0100 #b1 #b1 :doublep t)
-(define-vfp-cmp vcmp  #b0101 #b0 #b1 :printer format-vfp-cmp-0-printer)
-(define-vfp-cmp vcmpe #b0101 #b1 #b1 :printer format-vfp-cmp-0-printer)
-(define-vfp-cmp vcmp  #b0101 #b0 #b1 :doublep t :printer format-vfp-cmp-0-printer)
-(define-vfp-cmp vcmpe #b0101 #b1 #b1 :doublep t :printer format-vfp-cmp-0-printer)
+(define-vfp-cmp vcmp  #b0 #b1)
+(define-vfp-cmp vcmpe #b1 #b1)
+(define-vfp-cmp vcmp  #b0 #b1 :doublep t)
+(define-vfp-cmp vcmpe #b1 #b1 :doublep t)
 
 
 ;; Convert a float to the floating-point modified immediate constant.
