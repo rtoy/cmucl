@@ -140,9 +140,9 @@
 	       (declare (stream stream))
 	       ;; The fp-reg fields are always split into two parts,
 	       ;; so we get a list of values from the two parts.
-	       (let* ((value (logior (ash (second vlist) 4)
+	       (let* ((value (logior (ash (second vlist) 1)
 				     (first vlist)))
-		      (regname (aref float-reg-symbols value)))
+		      (regname (format nil "S~D" value)))
 		 (princ regname stream)
 		 (disassem:maybe-note-associated-storage-ref
 		  value
@@ -154,12 +154,11 @@
   :printer #'(lambda (vlist stream dstate)
 	       (declare (stream stream))
 	       ;; The fp-reg fields are always split into two parts,
-	       ;; so we get a list of values from the two parts.  And
-	       ;; the value needs to be doubled to match our register
-	       ;; numbering.
-	       (let* ((value (* 2 (logior (ash (first vlist) 4)
-					  (second vlist))))
-		      (regname (aref float-reg-symbols value)))
+	       ;; so we get a list of values from the two parts.  We
+	       ;; use the ARM syntax and numbering for the register.
+	       (let* ((value (logior (ash (first vlist) 4)
+					  (second vlist)))
+		      (regname (format nil "D~D" value)))
 		 (princ regname stream)
 		 (disassem:maybe-note-associated-storage-ref
 		  value
@@ -1197,7 +1196,7 @@
     :tab
     dst ", "
     src1 ", "
-    src2 ", "))
+    src2))
 
 (disassem:define-instruction-format
     (format-vfp-3 32 :default-printer format-vfp-3-arg-printer)
@@ -1526,11 +1525,15 @@
 		 (type (or float tn) src))
        (:printer format-vfp-vmov-immed
 		 ((op0 #b11101) (op #b11) (op2 #b101) (z 0)
-		  (sz ,(if doublep 1 0))))
+		  (sz ,(if doublep 1 0)))
+		 :default
+		 :print-name 'vmov)
        (:printer format-vfp-vmov-reg
 		 ((op0 #b11101) (op #b11) (op2 #b101) (op3 #b01)
 		  (z 0) (z2 0)
-		  (sz ,(if doublep 1 0))))
+		  (sz ,(if doublep 1 0)))
+		 :default
+		 :print-name 'vmov)
        (:emitter
 	(etypecase src
 	  (tn
@@ -1576,7 +1579,10 @@
     (format stream "~D" (ash value 2))))
 
 (defconstant format-6-vfp-load/store-printer
-  '(:name cond :tab dst
+  '(:name cond
+    (:cond ((sz :constant 0) '|.32|)
+	   (t '|.64|))
+    :tab dst
     ", [" src
     (:cond ((imm8 :constant 0) "]")
 	   ((u :constant 1)
@@ -1614,7 +1620,9 @@
 		  (sz ,(if doublep 1 0))
 		  (dst nil :type ',(if doublep
 				       'fp-double-reg
-				       'fp-single-reg))))
+				       'fp-single-reg)))
+		 :default
+		 :print-name ,name)
        (:emitter
 	(etypecase src
 	  (tn
