@@ -1481,7 +1481,7 @@
     (branch-imm 32 :include 'format-base
 		   :default-printer branch-imm-printer)
   (op :field (byte 1 24) :value 1)
-  (imm24 :field (byte 24 0) :type 'relative-label))
+  (imm24 :field (byte 24 0)))
 
 (defconstant branch-reg-printer
   `(:name cond
@@ -1491,15 +1491,6 @@
 (define-emitter emit-branch-reg 32
   (byte 4 28) (byte 3 25) (byte 5 20) (byte 12 8) (byte 4 4) (byte 4 0))
   
-#+nil
-(disassem:define-instruction-format
-    (branch-reg 32 :default-printer branch-reg-printer)
-  (cond  :field (byte 4 28))
-  (op    :field (byte 8 20) :value #b00010010)
-  (op0   :field (byte 12 8) :value #b111111111111)
-  (op1   :field (byte 4 4) :value #b0011)
-  (src1  :field (byte 4 0) :type 'reg))
-
 (disassem:define-instruction-format
     (branch-reg 32 :include 'format-base
 		   :default-printer branch-reg-printer)
@@ -1515,7 +1506,6 @@
 			  (inst-condition-code cond)
 			  opb0
 			  op
-			  1
 			  (ash (- (label-position target) posn) -2)))))
 
 ;; For these branch instructions, should we still keep the condition
@@ -1528,7 +1518,8 @@
 	    (type condition-code cond))
   (:printer branch-imm
 	    ((opb0 #b101)
-	     (op #b0)))
+	     (op #b0)
+	     (imm24 nil :type 'relative-label)))
   (:attributes branch)
   (:emitter
    (emit-relative-branch segment #b101 #b0 cond target)))
@@ -1538,7 +1529,8 @@
 	    (type condition-code cond))
   (:printer branch-imm
 	    ((opb0 #b101)
-	     (op #b1)))
+	     (op #b1)
+	     (imm24 nil :type 'relative-label)))
   (:attributes branch)
   (:emitter
    (emit-relative-branch segment #b101 #b1 cond target)))
@@ -1546,7 +1538,10 @@
 (define-instruction blx (segment target)
   (:declare (type (or label reg) target))
   (:printer branch-imm
-	    ((cond #b1111) (opb0 #b101) (op #b0))
+	    ((cond #b1111)
+	     (opb0 #b101)
+	     (op #b0)
+	     (imm24 nil :type 'relative-label))
 	    '(:name :tab imm24))
   (:printer branch-reg
 	    ((opb0 #b000)
@@ -1566,6 +1561,73 @@
 		       #b111111111111
 		       #b0011
 		       (reg-tn-encooding target))))))
+
+
+;; Miscellaneous instructions
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+(defun udf-imm-printer (value stream dstate)
+  (declare (ignore dstate))
+  (format stream "#~D" (logior (ash (first value) 4)
+			       (second value)))))
+
+(define-emitter emit-format-udf 32
+  (byte 4 28) (byte 3 25) (byte 5 20) (byte 12 8) (byte 4 4) (byte 4 0))
+
+(disassem:define-instruction-format
+    (format-udf 32 :include 'format-base
+		:default-printer '(:name :tab imm))
+  (op0 :field (byte 5 20) :value #b11111)
+  (imm :fields (list (byte 12 8) (byte 4 0)) :printer #'udf-imm-printer)
+  (op1 :field (byte 4 4) :value #b1111))
+
+(define-instruction udf (segment imm)
+  (:declare (type (unsigned-byte 16) imm))
+  (:printer format-udf
+	    ((cond #b1110)
+	     (opb0 #b011)
+	     (op0 #b11111)
+	     (op1 #b1111)))
+  (:emitter
+   (emit-format-udf eegment
+		    #b1110
+		    #b011
+		    #b11111
+		    (ldb (byte 12 4) imm)
+		    #b1111
+		    (ldb (byte 4 0) imm))))
+
+(define-instruction svc (segment imm24 &optional (cond :al))
+  (:declare (type (unsigned-byte 24)))
+  (:printer branch-imm
+	    ((opb0 #b111)
+	     (op #b1)))
+  (:emitter
+   (emit-branch segment
+		(inst-condition-codes (list cond))
+		#b111
+		#b1
+		imm24)))
+
+(define-instruction nop (segment &optional (cc :al))
+  (:declare)
+  (:printer format-1-immed
+	    ((opb0 #b001)
+	     (op #b1001)
+	     (s 0)
+	     (src1 0)
+	     (dst #b1111)
+	     (immed 0))
+	    '(:name))
+  (:emitter
+   (emit-format-1-immed segment
+			(inst-condition-codes (list cc))
+			#b001
+			#b1001
+			#b0
+			#b0000
+			#b1111
+			0)))
   
 
 ;; Floating-point instructions
@@ -2090,3 +2152,4 @@
 (define-fp-load/store vldr #b01 t)
 (define-fp-load/store vstr #b00)
 (define-fp-load/store vstr #b00 t)
+
