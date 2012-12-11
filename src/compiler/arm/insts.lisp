@@ -89,9 +89,7 @@
      (ecase loc
        (:memory 0)
        (:psr 97)
-       (:fsr 98)
-       (:y 99)
-       (:tick 100)))))
+       (:fpscr 98)))))
 
 ;;; symbols used for disassembly printing
 ;;;
@@ -2153,3 +2151,93 @@
 (define-fp-load/store vstr #b00)
 (define-fp-load/store vstr #b00 t)
 
+;; A7.8
+(disassem:define-instruction-format
+    (format-vfp-xfer-base 32 :include 'format-base)
+  (k0   :field (byte 1 24))
+  (a    :field (byte 3 21) :value 0)
+  (el   :field (byte 1 20))
+  (k1   :field (byte 3 9) :value #b101)
+  (c    :field (byte 1 8))
+  (b    :field (byte 2 5))
+  (k2   :field (byte 1 4) :value 0))
+
+(define-emitter emit-format-vfp-fpscr 32
+  (byte 4 28) (byte 3 25) (byte 1 24) (byte 3 21) (byte 1 20) (byte 4 16)
+  (byte 4 12) (byte 3 9) (byte 1 8) (byte 1 7) (byte 2 5) (byte 1 4) (byte 4 0))
+
+(disassem:define-instruction-format
+    (format-vfp-fpscr 32 :include 'format-base)
+  (k0   :field (byte 1 24))
+  (a    :field (byte 3 21) :value 0)
+  (el   :field (byte 1 20))
+  (src1 :field (byte 4 16) :value #b0001)
+  (reg  :field (byte 4 12) :type 'reg)
+  (k1   :field (byte 3 9) :value #b101)
+  (c    :field (byte 1 8))
+  (k2   :field (byte 1 7) :value 0)
+  (b    :field (byte 2 5))
+  (k3   :field (byte 1 4) :value 0)
+  (src2 :field (byte 4 0) :value 0))
+
+(define-instruction vmrs (segment fpscr reg &optional (cc :al))
+  (:declare (type tn reg)
+	    (type (member 'fpscr) fpscr))
+  (:printer format-vfp-fpscr
+	    ((opb0 #b111)
+	     (k0 0)
+	     (a #b111)
+	     (el #b1)
+	     (src1 #b0001)
+	     (k1 #b101)
+	     (c 0)
+	     (k2 0)
+	     (b #b00)
+	     (k3 1)
+	     (src 0))
+	    '(:name :tab 'fpscr ", " reg))
+  (:emitter
+   (emit-format-vfp-fpscr segment
+		      (inst-condition-code (list cc))
+		      #b111
+		      #b0
+		      #b111
+		      #b1
+		      #b0001
+		      (reg-tn-encoding reg)
+		      #b101
+		      #b0
+		      #b00
+		      #b1
+		      #b0000)))
+
+(define-instruction vmsr (segment fpscr reg &optional (cc :al))
+  (:declare (type tn reg)
+	    (type (member 'fpscr) fpscr))
+  (:printer format-vfp-fpscr
+	    ((opb0 #b111)
+	     (k0 0)
+	     (a #b111)
+	     (el #b0)
+	     (src1 #b0001)
+	     (k1 #b101)
+	     (c 0)
+	     (k2 0)
+	     (b #b00)
+	     (k3 1)
+	     (src 0))
+	    '(:name :tab 'fpscr ", " reg))
+  (:emitter
+   (emit-format-vfp-fpscr segment
+		      (inst-condition-code (list cc))
+		      #b111
+		      #b0
+		      #b111
+		      #b0
+		      #b0001
+		      (reg-tn-encoding reg)
+		      #b101
+		      #b0
+		      #b00
+		      #b1
+			  #b0000)))
