@@ -88,7 +88,7 @@
     (symbol
      (ecase loc
        (:memory 0)
-       (:psr 97)
+       (:apsr 97)
        (:fpscr 98)))))
 
 ;;; symbols used for disassembly printing
@@ -1626,6 +1626,37 @@
 			#b0000
 			#b1111
 			0)))
+
+;; MRS
+(define-emitter emit-format-0-mrs 32
+  (byte 4 28) (byte 3 25) (byte 5 20) (byte 4 16) (byte 4 12) (byte 12 0))
+
+(disassem:define-instruction-format
+    (format-0-mrs 32 :include 'format-base)
+  (op0  :field (byte 5 20) :value #b10000)
+  (op1  :field (byte 4 16) :value #b1111)
+  (dst  :field (byte 4 12) :type 'reg)
+  (op2  :field (byte 12 0) :value 0))
+
+(define-instruction mrs (segment dst spec-reg &optional (cc :al))
+  (:declare (type tn dst)
+	    (type (member 'apsr) spec-reg)
+	    (type condition-codes cc))
+  (:printer format-0-mrs
+	    ((opb0 #b000)
+	     (op0 #b10000)
+	     (op1 #b1111)
+	     (op2 0))
+	    '(:name cond :tab dst ", " 'apsr))
+  (:emitter
+   (emit-format-0-mrs segment
+		      (inst-condition-codes (list cc))
+		      #b000
+		      #b10000
+		      #b1111
+		      (reg-tn-encoding dst)
+		      0)))
+
   
 
 ;; Floating-point instructions
@@ -1963,6 +1994,8 @@
 			    (kernel:make-single-float word)
 			    (- (kernel:make-single-float word)))))))
 
+;; A8.8.339 VMOV: Move float immediate to a float register
+;; A8.8.340 VMOV: Move float reg to another float register
 (define-emitter emit-format-vfp-vmov-immed 32
   (byte 4 28) (byte 3 25) (byte 2 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
   (byte 3 9) (byte 1 8) (byte 4 4) (byte 4 0))
@@ -2056,6 +2089,62 @@
 
 (define-vmov nil)
 (define-vmov t)
+
+;; A8.8.343 VMOV between ARM reg to single-precision register
+
+(define-emitter emit-format-7-vfp-vmov-core 32
+  (byte 4 28) (byte 3 25) (byte 4 21) (byte 1 20) (byte 4 16) (byte 4 12)
+  (byte 4 8) (byte 1 7) (byte 7 0))
+
+(disassem::define-instruction-format
+    (format-7-vfp-vmov-core 32 :include 'format-base)
+  (op0   :field (byte 4 21) :value #b0000)
+  (op    :field (byte 1 20))
+  (vn    :fields (list (byte 1 7) (byte 4 16)) :type 'fp-single-reg)
+  (reg   :field (byte 4 12) :type 'reg)
+  (op1   :field (byte 4 8) :value #b1010)
+  (op2   :field (byte 7 0) :value #b0010000))
+
+(define-instruction vmov (segment dst src &optional (cc :al))
+  (:declare (type tn dst src))
+  (:printer format-7-vfp-vmov-core
+	    ((opb0 #b111)
+	     (op0 #b0000)
+	     (op1 #b1010)
+	     (op2 #b0010000)
+	     (op 1))
+	    '(:name cond :tab reg ", " vn))
+  (:printer format-7-vfp-vmov-core
+	    ((opb0 #b111)
+	     (op0 #b0000)
+	     (op1 #b1010)
+	     (op2 #b0010000)
+	     (op 0))
+	    '(:name cond :tab vn ", " reg))
+  (:emitter
+   (multiple-value-bind (op r fp)
+       (cond ((and (typep (sc-case dst) 'reg)
+		   (typep (sc-case src) 'single-reg))
+	      ;; Move to arm reg
+	      (values 1 dst src))
+	     ((and (typep (sc-case src) 'reg)
+		   (typep (sc-case dst) 'single-reg))
+	      ;; Move to float reg
+	      (values 0 src dst))
+	     (t
+	      (error "VMOV requires one ARM reg and one single-float reg")))
+     (multiple-value-bind (n vn)
+	 (fp-reg-tn-encoding fp nil)
+       (emit-format-7-vfp-vmov-core segment
+				    #b111
+				    #b0000
+				    op
+				    vn
+				    (reg-tn-encoding r)
+				    #b1010
+				    n
+				    #b0010000)))))
+
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun imm8-offset-printer (value stream dstate)
