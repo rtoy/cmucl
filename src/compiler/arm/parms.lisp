@@ -5,21 +5,19 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/parms.lisp $")
+  "$Header: src/compiler/arm/parms.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    This file contains some parameterizations of various VM
-;;; attributes for the SPARC.  This file is separate from other stuff so 
+;;; attributes for ARM.  This file is separate from other stuff so 
 ;;; that it can be compiled and loaded earlier. 
 ;;;
-;;; Written by Rob MacLachlan
-;;;
-;;; Converted to MIPS by William Lott.
+;;; Converted from SPARC to ARM.
 ;;;
 
-(in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(in-package "ARM")
+;;(intl:textdomain "cmucl-sparc-vm")
 (use-package "C")
 
 
@@ -27,32 +25,28 @@
 
 (eval-when (compile eval load)
 
-#+svr4
-(adjoin :svr4 (backend-features *target-backend*))
-#+svr4
-(adjoin :solaris (backend-features *target-backend*))
-(setf (backend-name *target-backend*) "SPARC")
-#+svr4
+(adjoin :linux (backend-features *target-backend*))
+(setf (backend-name *target-backend*) "ARM")
+;; FIXME:  Choose a better version name?
 (setf (backend-version *target-backend*)
-      #-sparc-v9 "SPARCstation/Solaris 2.x"
-      #+sparc-v9 "UltraSPARC/Solaris")
-#-svr4
-(setf (backend-version *target-backend*) "SPARCstation/Sun 4")
-(setf (backend-fasl-file-type *target-backend*) "sparcf")
+      "ARMv7/Linux")
+;; FIXME:  Is armf ok?
+(setf (backend-fasl-file-type *target-backend*) "armf")
 (setf (backend-fasl-file-implementation *target-backend*)
-      sparc-fasl-file-implementation)
+      arm-fasl-file-implementation)
 (setf (backend-fasl-file-version *target-backend*) byte-fasl-file-version)
 (setf (backend-register-save-penalty *target-backend*) 3)
-(setf (backend-byte-order *target-backend*) :big-endian)
-(setf (backend-page-size *target-backend*)
-      #+mach 4096 #+sunos 8192)
+
+;; Only supporting little-endian ARM for now.
+(setf (backend-byte-order *target-backend*) :little-endian)
+;; FIXME:  What is the page size on ARM?
+(setf (backend-page-size *target-backend*) 4096)
 
 (setf (c::backend-foreign-linkage-space-start *target-backend*)
-      ;; This better match the value in sparc-validate.h!
-      #x0f800000
+      #x0f000000
       (c::backend-foreign-linkage-entry-size *target-backend*)
-      ;; This better agree with what sparc-arch.c thinks it is!  Right now,
-      ;; it's 4 instructions, so 16 bytes.
+      ;; FIXME: Update this when we figure out how to do
+      ;; linkage-tables on arm.
       16)
 ); eval-when
 
@@ -130,6 +124,9 @@
 (defconstant positive-fixnum-bits (- word-bits fixnum-tag-bits 1)
   "Maximum number of bits in a positive fixnum")
 
+;; FIXME: All of the IEEE-754 float parms should probably be split
+;; into a separate file to be shared by all platforms using standard
+;; IEEE-754 single and double precision floats.
 (defconstant float-sign-shift 31)
 
 (defconstant single-float-bytes 4)	; Bytes to hold a single-float
@@ -150,16 +147,6 @@
 (defconstant double-float-hidden-bit (ash 1 20))
 (defconstant double-float-trapping-nan-bit (ash 1 19))
 
-;;; X These values are for the x86 80 bit format and are no doubt
-;;; incorrect for the sparc.
-(defconstant long-float-bias 16382)
-(defconstant long-float-exponent-byte (byte 15 0))
-(defconstant long-float-significand-byte (byte 31 0))
-(defconstant long-float-normal-exponent-min 1)
-(defconstant long-float-normal-exponent-max #x7FFE)
-(defconstant long-float-hidden-bit (ash 1 31))
-(defconstant long-float-trapping-nan-bit (ash 1 30))
-
 (defconstant single-float-digits
   (+ (byte-size single-float-significand-byte) 1))
 
@@ -173,37 +160,39 @@
 (defconstant double-double-float-digits
   (* 2 double-float-digits))
 
-(defconstant float-inexact-trap-bit (ash 1 0))
-(defconstant float-divide-by-zero-trap-bit (ash 1 1))
-(defconstant float-underflow-trap-bit (ash 1 2))
-(defconstant float-overflow-trap-bit (ash 1 3))
-(defconstant float-invalid-trap-bit (ash 1 4))
+;; ARM specific information
+;; See B6.1.39: FPSCR, Floating-point Status and Control Regiser, PMSA
+(defconstant float-inexact-trap-bit (ash 1 12))
+(defconstant float-underflow-trap-bit (ash 1 11))
+(defconstant float-overflow-trap-bit (ash 1 10))
+(defconstant float-divide-by-zero-trap-bit (ash 1 9))
+(defconstant float-invalid-trap-bit (ash 1 8))
 
 (defconstant float-round-to-nearest 0)
-(defconstant float-round-to-zero 1)
-(defconstant float-round-to-positive 2)
-(defconstant float-round-to-negative 3)
+(defconstant float-round-to-positive 1)
+(defconstant float-round-to-negative 2)
+(defconstant float-round-to-zero 3)
 
-(defconstant float-rounding-mode (byte 2 30))	  ; RD 
-(defconstant float-sticky-bits (byte 5 5))	  ; aexc
-(defconstant float-traps-byte (byte 5 23))	  ; TEM
-(defconstant float-exceptions-byte (byte 5 0))	  ; cexc
+(defconstant float-rounding-mode (byte 2 22))	  ; RMode
+(defconstant float-traps-byte (byte 5 8))	  ; Trap enable bits
+;; There doesn't appear to be separate accrued (sticky) and current
+;; exceptions.
+(defconstant float-sticky-bits (byte 5 0))	  ; 
+(defconstant float-exceptions-byte (byte 5 0))	  ; 
 
-;;; According to the SPARC doc (as opposed to FPU doc), the fast mode
-;;; bit (EFM) is "reserved", and should always be zero.  However, for
-;;; sparc-V8 and sparc-V9, it appears to work, causing denormals to
-;;; be truncated to 0 silently.
-(defconstant float-fast-bit (ash 1 22))
+;; Flush-to-zero bit
+(defconstant float-fast-bit (ash 1 24))
 
 ); eval-when
 
 ;;; NUMBER-STACK-DISPLACEMENT
 ;;;
-;;; The number of bytes reserved above the number stack pointer.  These
-;;; slots are required by architecture for a place to spill register windows.
+;;; The number of bytes reserved above the number stack pointer.  I
+;;; (rtoy) think the architecture doesn't require any, but we need
+;;; space for arguments to C routines.  See c-call.lisp
 ;;; 
 (defconstant number-stack-displacement
-  (* 16 vm:word-bytes))
+  (* 4 vm:word-bytes))
 
 
 ;;;; Description of the target address space.
@@ -217,7 +206,7 @@
 ;;; Where to put the different spaces.  Must match the C code!
 ;;; 
 (defconstant target-read-only-space-start #x10000000)
-(defconstant target-static-space-start    #x28000000)
+(defconstant target-static-space-start    #x30000000)
 (defconstant target-dynamic-space-start   #x40000000)
 
 (defconstant target-foreign-linkage-space-start
@@ -312,6 +301,8 @@
     lisp::*free-interrupt-context-index*
     unix::*interrupts-enabled*
     unix::*interrupt-pending*
+    lisp::*pseudo-atomic-atomic*
+    lisp::*pseudo-atomic-interrupted*
 
     ;; Foreign linkage stuff
     #+linkage-table
@@ -321,18 +312,12 @@
     lisp::*cmucl-lib*
     lisp::*cmucl-core-path*
 
-    ;; Gencgc
-    ;;
-    ;; Sparc doesn't use current-region-free-pointer, but we leave it
-    ;; here anyway.
-    #+gencgc
+    *binding-stack-pointer*
+
+    *allocation-pointer*
     *current-region-free-pointer*
-    ;; current-region-end-addr is a 32-bit physical address, but when
-    ;; printed from Lisp, it's a fixnum, so it's too small by a factor
-    ;; of 4.  Remember to multiply by 4 to get the actual region end
-    ;; address.
-    #+gencgc
     *current-region-end-addr*
+
     #+gencgc
     *scavenge-read-only-space*
 
@@ -364,6 +349,8 @@
     ))
 
 (defparameter static-functions
+  ;; FIXME: Correct this list.  This is based on the sparc port which
+  ;; has a different list from x86
   '(length
     two-arg-+ two-arg-- two-arg-* two-arg-/ two-arg-< two-arg-> two-arg-=
     two-arg-<= two-arg->= two-arg-/= eql %negate
@@ -378,38 +365,3 @@
 ;;; The number of bits per element in the assemblers code vector.
 ;;;
 (defparameter *assembly-unit-length* 8)
-
-
-(export '(pseudo-atomic-trap allocation-trap
-	  pseudo-atomic-value pseudo-atomic-interrupted-value))
-;;;; Pseudo-atomic trap number.
-;;;;
-;;;; This is the trap number to use when a pseudo-atomic section has
-;;;; been interrupted.
-;;;;
-;;;; This should be any valid trap number. According to the Sparc
-;;;; Compliance Definition 2.4.1, only traps 16-31 are allowed for
-;;;; user applications.  All others are reserved.  It's ok if this
-;;;; number matches any of the other trap enums above because those
-;;;; are only used in an illtrap instruction, not the trap
-;;;; instruction.  This needs to be coordinated with the C code.
-(defconstant pseudo-atomic-trap 16)
-
-;;;; Allocation trap number.
-;;;;
-;;;; This is the trap number to use when we need to allocate memory.
-;;;; This must match the C runtime code
-(defconstant allocation-trap 31)
-
-;;;; Pseudo-atomic flag
-;;;;
-;;;; This value is added to alloc-tn to indicate a pseudo-atomic
-;;;; section.
-(defconstant pseudo-atomic-value (ash 1 (1- vm::lowtag-bits)))
-
-;;;; Pseudo-atomic-interrupted-mask
-;;;;
-;;;; This is a mask used to check if a pseudo-atomic section was
-;;;; interrupted.  On sparc, this is indicated by least-significant
-;;;; bit of alloc-tn being 1.
-(defconstant pseudo-atomic-interrupted-value 1)
