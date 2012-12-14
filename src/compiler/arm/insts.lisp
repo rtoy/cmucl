@@ -902,10 +902,9 @@
   (imm16 :fields (list (byte 4 16) (byte 12 0)) :printer #'split-imm16-printer)
   (dst   :field (byte 4 12) :type 'reg))
 
-;; FIXME: Probably need to make movt and movw support fixups!
-(define-instruction movt (segment dst imm16 &optional (cc :al))
+(define-instruction movt (segment dst src &optional (cc :al))
   (:declare (type tn dst)
-	    (type (unsigned-byte 16) imm16)
+	    (type (or (unsigned-byte 16) fixup) src)
 	    (type condition-code cc))
   (:printer format-mov16
 	    ((opb0 #b001)
@@ -913,17 +912,28 @@
   (:dependencies
    (writes dst))
   (:emitter
-   (emit-format-mov16 segment
-		      (inst-condition-code (list cc))
-		      #b001
-		      #b10100
-		      (ldb (byte 4 12) imm16)
-		      (reg-tn-encoding dst)
-		      (ldb (byte 12 0) imm16))))
+   (etypecase src
+     (integer
+      (emit-format-mov16 segment
+			 (inst-condition-code (list cc))
+			 #b001
+			 #b10100
+			 (ldb (byte 4 12) src)
+			 (reg-tn-encoding dst)
+			 (ldb (byte 12 0) src)))
+     (fixup
+      (note-fixup segment :movt src)
+      (emit-format-mov16 segment
+			 (inst-condition-code (list cc))
+			 #b001
+			 #b10110
+			 0
+			 (reg-tn-encoding dst)
+			 0)))))
 
-(define-instruction movw (segment dst imm16 &optional (cc :al))
+(define-instruction movw (segment dst src &optional (cc :al))
   (:declare (type tn dst)
-	    (type (unsigned-byte 16) imm16)
+	    (type (or (unsigned-byte 16) fixup) src)
 	    (type condition-code cc))
   (:printer format-mov16
 	    ((opb0 #b001)
@@ -931,13 +941,24 @@
   (:dependencies
    (writes dst))
   (:emitter
-   (emit-format-mov16 segment
-		      (inst-condition-code (list cc))
-		      #b001
-		      #b10000
-		      (ldb (byte 4 12) imm16)
-		      (reg-tn-encoding dst)
-		      (ldb (byte 12 0) imm16))))
+   (etypecase src
+     (integer
+      (emit-format-mov16 segment
+			 (inst-condition-code (list cc))
+			 #b001
+			 #b10000
+			 (ldb (byte 4 12) imm16)
+			 (reg-tn-encoding dst)
+			 (ldb (byte 12 0) imm16)))
+     (fixup
+      (note-fixup segment :mov3 src)
+      (emit-format-mov16 segment
+			 (inst-condition-code (list cc))
+			 #b001
+			 #b10000
+			 0
+			 (reg-tn-encoding dst)
+			 0)))))
 
 ;; A5.2.5 Multiply and Accumulate
 
