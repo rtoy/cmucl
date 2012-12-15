@@ -49,6 +49,8 @@
   (let ((regnum (if doublep
 		    (ash (tn-offset tn) -1)
 		    (tn-offset tn))))
+    ;; See A7.3
+    ;;
     ;; The instruction encodings want to split that into a 1 bit chunk
     ;; and a 4 bit chunk.  But which chunk is which depends on whether
     ;; it's a single or double reg.  See, for example the instruction
@@ -138,10 +140,10 @@
 	       (declare (stream stream))
 	       ;; The fp-reg fields are always split into two parts,
 	       ;; so we get a list of values from the two parts.
-	       (let* ((value (logior (ash (second vlist) 1)
-				     (first vlist)))
-		      (regname (format nil "S~D" value)))
-		 (princ regname stream)
+	       (let ((value (logior (ash (second vlist) 1)
+				    (first vlist))))
+		 (princ 'S stream)
+		 (princ value stream)
 		 (disassem:maybe-note-associated-storage-ref
 		  value
 		  'float-registers
@@ -154,10 +156,10 @@
 	       ;; The fp-reg fields are always split into two parts,
 	       ;; so we get a list of values from the two parts.  We
 	       ;; use the ARM syntax and numbering for the register.
-	       (let* ((value (logior (ash (first vlist) 4)
-					  (second vlist)))
-		      (regname (format nil "D~D" value)))
-		 (princ regname stream)
+	       (let ((value (logior (ash (first vlist) 4)
+				    (second vlist))))
+		 (princ 'D stream)
+		 (princ value stream)
 		 (disassem:maybe-note-associated-storage-ref
 		  value
 		  'float-registers
@@ -285,18 +287,12 @@
   `(:name (:unless (s :constant 0) 's)
 	  (:unless (:constant ,condition-true) cond)
 	  :tab
-	  dst
-	  ", "
-	  src1
-	  ", "
-	  immed))
+	  dst ", " src1 ", " immed))
 
 (defconstant format-1-immed-set-printer
   `(:name (:unless (:constant ,condition-true) cond)
 	  :tab
-	  src1
-	  ", "
-	  immed))
+	  src1 ", " immed))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 (defun modified-immed-printer (value stream dstate)
@@ -322,11 +318,7 @@
   `(:name (:unless (s :constant 0) 's)
 	  cond
 	  :tab
-	  dst
-	  ", "
-	  src1
-	  ", "
-	  src2
+	  dst ", " src1 ", " src2
 	  (:unless (shift :constant 0)
 	    (:cond ((type :constant #b11) ; ror or rrx
 		    (:cond ((shift :constant 0) " " 'rrx)
@@ -344,22 +336,14 @@
 (defconstant format-0-reg-set-printer
   `(:name cond
 	  :tab
-	  src1
-	  ", "
-	  src2
+	  src1 ", " src2
 	  (:unless (shift :constant 0)
 	    (:cond ((type :constant #b11) ; ror or rrx
 		    (:cond ((shift :constant 0) " " 'rrx)
 			   (t
-			    " "
-			    'ror
-			    " "
-			    shift)))
+			    " " 'ror " " shift)))
 		   (t
-		    " "
-		    type
-		    " #"
-		    shift)))))
+		    " " type " #" shift)))))
 
 (define-emitter emit-format-0-reg 32
   (byte 4 28) (byte 3 25) (byte 4 21) (byte 1 20) (byte 4 16) (byte 4 12) (byte 5 7)
@@ -380,26 +364,12 @@
   `(:name (:unless (s :constant 0) 's)
 	  cond
 	  :tab
-	  dst
-	  ", "
-	  src1
-	  ", "
-	  src2
-	  " "
-	  type
-	  " "
-	  sreg))
+	  dst ", " src1 ", " src2 " " type " " sreg))
 
 (defconstant format-0-reg-shifted-set-printer
   `(:name cond
 	  :tab
-	  src1
-	  ", "
-	  src2
-	  " "
-	  type
-	  " "
-	  sreg))
+	  src1 ", " src2 " " type " " sreg))
 
 (define-emitter emit-format-0-reg-shifted 32
   (byte 4 28) (byte 3 25) (byte 4 21) (byte 1 20) (byte 4 16) (byte 4 12) (byte 4 8)
@@ -577,6 +547,7 @@
 				     (reg-tn-encoding (flex-operand-reg src2))))))))))
 
 
+;; See A5.2 and Table A5-2.
 (define-data-proc and #b0000)
 (define-data-proc eor #b0001)
 ;; #b0010 is sub and adr (immediate operand)
@@ -595,6 +566,8 @@
 (define-data-proc orr #b1100)
 (define-data-proc bic #b1110)
 
+;; A8.8.115, A8.8.116, A8.8.117
+;;
 ;; MVN Aka bitnot
 (define-instruction mvn (segment dst src2 &rest opts)
   (:declare (type tn dst)
@@ -695,9 +668,11 @@
 				  #b1
 				  (reg-tn-encoding (flex-operand-reg src2)))))))))
 
-;; See A8.8.105.  It's easy to define this general MOV instruction.
-;; Is that good enough for users?  They'll have to remember that a
-;; shift is a move inst with a hairy flex operand 2.
+;; See A8.8.105.
+;;
+;; We don't support the pseudo-op with a flexible operand 2 denoting
+;; register shifted register, which are basically synonyms for the
+;; shift instructions.
 (define-instruction mov (segment dst src2 &rest opts)
   (:declare (type tn dst)
 	    (type (or (signed-byte 32)
@@ -902,6 +877,7 @@
   (imm16 :fields (list (byte 4 16) (byte 12 0)) :printer #'split-imm16-printer)
   (dst   :field (byte 4 12) :type 'reg))
 
+;; A8.8.106
 (define-instruction movt (segment dst src &optional (cc :al))
   (:declare (type tn dst)
 	    (type (or (unsigned-byte 16) fixup) src)
@@ -931,6 +907,7 @@
 			 (reg-tn-encoding dst)
 			 0)))))
 
+;; A8.8.102
 (define-instruction movw (segment dst src &optional (cc :al))
   (:declare (type tn dst)
 	    (type (or (unsigned-byte 16) fixup) src)
@@ -976,6 +953,9 @@
   (op1   :field (byte 4 4))
   (src1  :field (byte 4 0) :type 'reg))
 
+;; A8.8.114
+;;
+;; Basic multiply, returning the bottom 32 bits of a 32x32 multiply.
 (define-instruction mul (segment dst src1 src2 &rest opts)
   (:declare (type tn dst src1 src2)
 	    (type condition-code cond))
@@ -1047,13 +1027,23 @@
 				#b1001
 				(reg-tn-encoding dst2-or-src)))))))
 
-(define-4-arg-mul mla   #b0001)
-(define-4-arg-mul umaal #b0010 :two-outputs t :setflags0 t)
-(define-4-arg-mul mls   #b0011 :setflags0 t)
+;; A8.8.257; unsigned 32x32->64 multiply 
 (define-4-arg-mul umull #b0100 :two-outputs t)
-(define-4-arg-mul umlal #b0101 :two-outputs t)
+;; A8.8.189; signed 32x32->64 multiply
 (define-4-arg-mul smull #b0110 :two-outputs t)
+
+;; A8.8.100:  Multiply-add
+(define-4-arg-mul mla   #b0001)
+;; A8.8.101; Multiply-subtract
+(define-4-arg-mul mls   #b0011 :setflags0 t)
+
+;; A8.8.256; unsiged 64-bit multiply-add
+(define-4-arg-mul umlal #b0101 :two-outputs t)
+;; A8.8.178; 64-bit signed multiply-add
 (define-4-arg-mul smlal #b0111 :two-outputs t)
+
+;; A8.8.255; 64-bit unsigned multiply-add, adding 2 32-bit values
+(define-4-arg-mul umaal #b0010 :two-outputs t :setflags0 t)
 
 ;; Divide and friends
 ;; A5.4.4
@@ -1139,9 +1129,7 @@
 (defconstant format-2-immed-printer
   `(:name cond
           :tab
-	  dst
-	  ", ["
-	  src1
+	  dst ", [" src1
 	  (:cond ((p :constant 1)
 		  ", #"
 		  (:unless (u :constant 0) "-")
@@ -1180,9 +1168,7 @@
 (defconstant format-3-reg-printer
   `(:name cond
           :tab
-	  dst
-	  ", ["
-	  src1
+	  dst ", [" src1
 	  (:cond ((p :constant 1)
 		  ", "
 		  (:cond ((u :constant 0) "-")
@@ -1219,9 +1205,7 @@
 (defconstant format-0-halfword-reg-printer
   `(:name cond
           :tab
-	  dst
-	  ", ["
-	  src1
+	  dst ", [" src1
 	  (:cond ((p :constant 0)
 		  "], "
 		  (:cond ((u :constant 0) "-")
@@ -1244,27 +1228,25 @@
     (format-0-halfword-reg 32
 			   :include 'format-base
 			   :default-printer format-0-halfword-reg-printer)
-  (p     :field (byte 1 24))
-  (u     :field (byte 1 23))
-  (imm   :field (byte 1 22) :value 0)
-  (w     :field (byte 1 21))
-  (ld    :field (byte 1 20))
-  (src1  :field (byte 4 16) :type 'reg)
-  (dst   :field (byte 4 12) :type 'reg)
-  (z     :field (byte 4 8) :value 0)
+  (p      :field (byte 1 24))
+  (u      :field (byte 1 23))
+  (imm    :field (byte 1 22) :value 0)
+  (w      :field (byte 1 21))
+  (ld     :field (byte 1 20))
+  (src1   :field (byte 4 16) :type 'reg)
+  (dst    :field (byte 4 12) :type 'reg)
+  (z      :field (byte 4 8) :value 0)
   (one    :field (byte 1 7) :value 1)
   (signed :field (byte 1 6))
   (op2    :field (byte 2 4))
-  (src2  :field (byte 4 0) :type 'reg))
+  (src2   :field (byte 4 0) :type 'reg))
 
 ;; LDRH/STRH (register)
 
 (defconstant format-0-halfword-imm-printer
   `(:name cond
           :tab
-	  dst
-	  ", ["
-	  src1
+	  dst ", [" src1
 	  (:cond ((p :constant 0)
 		  "], #"
 		  (:cond ((u :constant 0) "-")
@@ -1352,6 +1334,8 @@
 	  (if (load-store-index-add index) 1 0)
 	  (if (load-store-index-update index) 1 0)))
 
+;; A5.3 and table A5-15
+;; Load/store for words and unsigned bytes
 (defmacro define-load/store (name loadp &optional bytep)
   `(define-instruction ,name (segment reg address &optional (cond :al))
      (:declare (type tn reg)
@@ -1406,6 +1390,8 @@
 (define-load/store str nil)
 (define-load/store strb nil t)
 
+;; A5.2.8; extra load/store instructions for halfwords (16-bit signed
+;; and unsigned) and signed bytes.
 (defmacro define-load/store-extra (name &optional loadp bytep signedp)
   `(define-instruction ,name (segment reg address &optional (cond :al))
      (:declare (type tn reg)
@@ -1466,13 +1452,16 @@
 					 1
 					 w
 					 ,(if loadp 1 0)
-					 (reg-tn-encoding (load-store-index-base-reg address))
+					 (reg-tn-encoding
+					  (load-store-index-base-reg address))
 					 (reg-tn-encoding reg)
-					 (ldb (byte 4 4) (load-store-index-offset address))
+					 (ldb (byte 4 4)
+					      (load-store-index-offset address))
 					 1
 					 sign
 					 op2
-					 (ldb (byte 4 0) (load-store-index-offset address))))))))))
+					 (ldb (byte 4 0)
+					      (load-store-index-offset address))))))))))
 
 (define-load/store-extra ldrh t)
 (define-load/store-extra strh nil)
@@ -1481,6 +1470,7 @@
 
 
 
+;;; Branch instructions
 (disassem:define-argument-type relative-label
   :sign-extend t
   :use-label #'(lambda (value dstate)
@@ -1489,9 +1479,7 @@
 		 (+ (ash value 2) (disassem:dstate-cur-addr dstate))))
 
 (defconstant branch-imm-printer
-  `(:name cond
-	  :tab
-	  imm24))
+  `(:name cond :tab imm24))
 
 (define-emitter emit-branch-imm 32
   (byte 4 28) (byte 3 25) (byte 1 24) (byte 24 0))
@@ -1503,9 +1491,7 @@
   (imm24 :field (byte 24 0)))
 
 (defconstant branch-reg-printer
-  `(:name cond
-	  :tab
-	  src1))
+  `(:name cond :tab src1))
 
 (define-emitter emit-branch-reg 32
   (byte 4 28) (byte 3 25) (byte 5 20) (byte 12 8) (byte 4 4) (byte 4 0))
@@ -1525,6 +1511,8 @@
 			  (inst-condition-code cond)
 			  opb0
 			  op
+			  ;; The offset in the instruction is a word
+			  ;; offset, not byte.
 			  (ash (- (label-position target) posn) -2)))))
 
 ;; For these branch instructions, should we still keep the condition
@@ -1532,7 +1520,7 @@
 ;; (optionally) first, like on sparc and x86?  This latter option
 ;; appeals to me (rtoy).
 
-(define-instruction b (segment target &optional (cond :al))
+(define-instruction b (segment target &optional (cc :al))
   (:declare (type label target)
 	    (type condition-code cond))
   (:printer branch-imm
@@ -1541,9 +1529,9 @@
 	     (imm24 nil :type 'relative-label)))
   (:attributes branch)
   (:emitter
-   (emit-relative-branch segment #b101 #b0 cond target)))
+   (emit-relative-branch segment #b101 #b0 (inst-condition-code cc) target)))
 
-(define-instruction bl (segment target &optional (cond :al))
+(define-instruction bl (segment target &optional (cc :al))
   (:declare (type label target)
 	    (type condition-code cond))
   (:printer branch-imm
@@ -1552,7 +1540,7 @@
 	     (imm24 nil :type 'relative-label)))
   (:attributes branch)
   (:emitter
-   (emit-relative-branch segment #b101 #b1 cond target)))
+   (emit-relative-branch segment #b101 #b1 (inst-condition-code cc) target)))
 
 (define-instruction blx (segment target)
   (:declare (type (or label reg) target))
@@ -1571,10 +1559,10 @@
   (:emitter
    (etypecase target
      (label
-      (emit-relative-branch segment #b101 #b0 :al target))
+      (emit-relative-branch segment #b101 #b0 (inst-condition-code (list :al)) target))
      (reg
       (emit-branch-reg segment
-		       (inst-condition-code cond)
+		       (inst-condition-code cc)
 		       #b000
 		       #b10010
 		       #b111111111111
@@ -1600,6 +1588,8 @@
   (imm :fields (list (byte 12 8) (byte 4 0)) :printer #'udf-imm-printer)
   (op1 :field (byte 4 4) :value #b1111))
 
+;; A8.8.247
+;; Undefined instruction
 (define-instruction udf (segment imm)
   (:declare (type (unsigned-byte 16) imm))
   (:printer format-udf
@@ -1616,6 +1606,7 @@
 		    #b1111
 		    (ldb (byte 4 0) imm))))
 
+;; A8.8.228
 (define-instruction svc (segment imm24 &optional (cond :al))
   (:declare (type (unsigned-byte 24)))
   (:printer branch-imm
@@ -1628,6 +1619,11 @@
 		#b1
 		imm24)))
 
+;; A8.8.119.  Note this introduced in ARMv6K and ARMv6T2. If you want
+;; one that works eveyrwhere, use MOV R0, R0 (ARM) or MOV R8, R8
+;; (Thumb).
+;;
+;; FIXME: should we make is a pseudo instruction that maps to a mov?
 (define-instruction nop (segment &optional (cc :al))
   (:declare)
   (:printer format-1-immed
@@ -1648,7 +1644,7 @@
 			#b1111
 			0)))
 
-;; MRS
+;; A8.8.109: MRS
 (define-emitter emit-format-0-mrs 32
   (byte 4 28) (byte 3 25) (byte 5 20) (byte 4 16) (byte 4 12) (byte 12 0))
 
@@ -1659,6 +1655,8 @@
   (dst  :field (byte 4 12) :type 'reg)
   (op2  :field (byte 12 0) :value 0))
 
+;; A8.8.109 says spec-reg can be either APSR or CPSR; we only support
+;; APSR.
 (define-instruction mrs (segment dst spec-reg &optional (cc :al))
   (:declare (type tn dst)
 	    (type (member 'apsr) spec-reg)
@@ -1689,12 +1687,10 @@
 
 (defconstant format-vfp-3-arg-printer
   `(:name cond
-    (:cond ((sz :constant 0) '|.F32|)
-	   (t '|.F64|))
-    :tab
-    dst ", "
-    src1 ", "
-    src2))
+	  (:cond ((sz :constant 0) '|.F32|)
+		 (t '|.F64|))
+	  :tab
+	  dst ", " src1 ", " src2))
 
 (disassem:define-instruction-format
     (format-vfp-3 32 :include 'format-base
@@ -1764,8 +1760,7 @@
     (:cond ((sz :constant 0) '|.F32|)
 	   (t '|.F64|))
     :tab
-    dst ", "
-    src))
+    dst ", " src))
 
 (disassem:define-instruction-format
     (format-vfp-2-arg 32 :include 'format-base
@@ -1838,23 +1833,23 @@
 ;; Conversions
 
 (defconstant vcvt-printer
-  '(:name cond
-    (:cond ((op1 :constant #b1101)
-	    (:cond ((sz :constant 1) '|.S32.F64|)
-		   (t '|.S32.F32|)))
-	   ((op1 :constant #b1100)
-	    (:cond ((sz :constant 1) '|.U32.F64|)
-		   (t '|.U32.F32|)))
-	   ((op1 :constant #b1000)
-	    (:cond ((sz :constant 1) '|.F64|
-		    (:cond ((op :constant 1) '|.S32|)
-			   (t '|.U32|)))
-		   (t '|.F32|
-		      (:cond ((op :constant 1) '|.S32|)
-			     (t '|.U32|))))))
-    :tab
-    dst ", " src))
-	   
+  `(:name cond
+	  (:cond ((op1 :constant #b1101)
+		  (:cond ((sz :constant 1) '|.S32.F64|)
+			 (t '|.S32.F32|)))
+		 ((op1 :constant #b1100)
+		  (:cond ((sz :constant 1) '|.U32.F64|)
+			 (t '|.U32.F32|)))
+		 ((op1 :constant #b1000)
+		  (:cond ((sz :constant 1) '|.F64|
+			  (:cond ((op :constant 1) '|.S32|)
+				 (t '|.U32|)))
+			 (t '|.F32|
+			    (:cond ((op :constant 1) '|.S32|)
+				   (t '|.U32|))))))
+	  :tab
+	  dst ", " src))
+
 ;; Convert between double and single
 (define-vfp-2 vcvt  #b11 #b0111 #b1 #b1 0 :ext "F64.F32"
   :dst-type fp-double-reg)
@@ -2037,9 +2032,9 @@
 
 (defconstant format-vfp-vmov-reg-printer
   `(:name  cond
-    :tab
-    (:cond ((sz :constant 0) '|.F32|)
-	   (t '|.F64|))
+	   (:cond ((sz :constant 0) '|.F32|)
+		  (t '|.F64|))
+	   :tab
 	   dst ", " src))
 
 (disassem:define-instruction-format
@@ -2291,7 +2286,7 @@
   (src2 :field (byte 4 0) :value 0))
 
 (define-instruction vmrs (segment fpscr reg &optional (cc :al))
-  (:declare (type tn reg)
+  (:declare (type (or tn (member 'apsr)) reg)
 	    (type (member 'fpscr) fpscr))
   (:printer format-vfp-fpscr
 	    ((opb0 #b111)
@@ -2305,21 +2300,26 @@
 	     (b #b00)
 	     (k3 1)
 	     (src 0))
-	    '(:name :tab 'fpscr ", " reg))
+	    '(:name :tab (:cond ((reg :constant 15) 'apsr)
+				(t reg))
+	      ", " 'fpscr))
   (:emitter
-   (emit-format-vfp-fpscr segment
-		      (inst-condition-code (list cc))
-		      #b111
-		      #b0
-		      #b111
-		      #b1
-		      #b0001
-		      (reg-tn-encoding reg)
-		      #b101
-		      #b0
-		      #b00
-		      #b1
-		      #b0000)))
+   (let ((rt (if (typep reg 'tn)
+		 (reg-tn-encoding reg)
+		 15)))
+     (emit-format-vfp-fpscr segment
+			    (inst-condition-code (list cc))
+			    #b111
+			    #b0
+			    #b111
+			    #b1
+			    #b0001
+			    rt
+			    #b101
+			    #b0
+			    #b00
+			    #b1
+			    #b0000))))
 
 (define-instruction vmsr (segment fpscr reg &optional (cc :al))
   (:declare (type tn reg)
