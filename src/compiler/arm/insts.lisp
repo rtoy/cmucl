@@ -147,7 +147,7 @@
 		 (disassem:maybe-note-associated-storage-ref
 		  value
 		  'float-registers
-		  regname
+		  (symbolicate "S" (format nil "~D~%" value))
 		  dstate))))
 
 (disassem:define-argument-type fp-double-reg
@@ -163,7 +163,7 @@
 		 (disassem:maybe-note-associated-storage-ref
 		  value
 		  'float-registers
-		  regname
+		  (symbolicate "D" (format nil "~D~%" value))
 		  dstate))))
 
 ;;
@@ -1428,18 +1428,20 @@
 	   (multiple-value-bind (p u w)
 	       (decode-load-store-index address)
 	     (emit-format-0-halfword-reg segment
-					 (inst-condition-code opts)
+					 (inst-condition-code (list cond))
 					 #b000
 					 p
 					 u
 					 0
 					 w
 					 ,(if loadp 1 0)
-					 (reg-tn-encoding (load-store-index-base-reg address))
+					 (reg-tn-encoding
+					  (load-store-index-base-reg address))
 					 (reg-tn-encoding reg)
 					 1
 					 0
-					 #b11
+					 sign
+					 op2
 					 (reg-tn-encoding (load-store-index-offset address)))))
 	  (:immediate
 	   (multiple-value-bind (p u w)
@@ -1675,6 +1677,45 @@
 		      #b1111
 		      (reg-tn-encoding dst)
 		      0)))
+
+(define-emitter emit-formt-0-msr 32
+  (byte 4 28) (byte 3 25) (byte 5 20) (byte 2 18) (byte 14 4) (byte 4 0))
+
+(disassem:define-instruction-format
+    (format-0-msr 32 :include 'format-base)
+  (op0  :field (byte 5 20) :value #b10010)
+  (mask :field (byte 2 18))
+  (op1  :field (byte 14 4) :value #b00111100000000)
+  (src  :field (byte 4 0) :type 'reg))
+
+(define-instruction msr (segment spec-reg reg &optional (cc :al))
+  (:declare (type tn reg)
+	    (type (member apsr-nzcvq apsr-g apsr-nzcvqg) spec-reg))
+  (:printer format-0-msr
+	    ((opb0 #b000)
+	     (op0 #b10010)
+	     (op1 #b00111100000000))
+	    `(:name cond :tab
+		    (:cond ((mask :constant #b10)
+			    'apsr-nzcvq)
+			   ((mask :constant #b01)
+			    'apsr-g)
+			   ((mask :constant #b11)
+			    'apsr-nzcvqg))
+		    ", " src))
+  (:emitter
+   (let ((mask (ecase spec-reg
+		 (apsr-nzcvq  #b10)
+		 (apsr-g      #b01)
+		 (apsr-nzcvqg #b11))))
+     (emit-format-0-msr segment
+			(inst-condition-code (list cc))
+			#b000
+			#b10010
+			mask
+			#b00111100000000
+			(reg-tn-encoding reg)))))
+
 
   
 
@@ -2139,16 +2180,18 @@
 	    '(:name cond :tab vn ", " reg))
   (:emitter
    (multiple-value-bind (op r fp)
-       (cond ((and (typep (sc-case dst) 'reg)
-		   (typep (sc-case src) 'single-reg))
-	      ;; Move to arm reg
-	      (values 1 dst src))
-	     ((and (typep (sc-case src) 'reg)
-		   (typep (sc-case dst) 'single-reg))
-	      ;; Move to float reg
-	      (values 0 src dst))
-	     (t
-	      (error "VMOV requires one ARM reg and one single-float reg")))
+       (let ((dst-sc (tn-sc dst))
+	     (src-sc (tn-sc src)))
+	 (cond ((and (typep (sc-case dst-sc) 'reg)
+		     (typep (sc-case src-sc) 'single-reg))
+		;; Move to arm reg
+		(values 1 dst src))
+	       ((and (typep (sc-case src-sc) 'reg)
+		     (typep (sc-case dst-sc) 'single-reg))
+		;; Move to float reg
+		(values 0 src dst))
+	       (t
+		(error "VMOV requires one ARM reg and one single-float reg"))))
      (multiple-value-bind (n vn)
 	 (fp-reg-tn-encoding fp nil)
        (emit-format-7-vfp-vmov-core segment
@@ -2339,15 +2382,16 @@
 	    '(:name :tab 'fpscr ", " reg))
   (:emitter
    (emit-format-vfp-fpscr segment
-		      (inst-condition-code (list cc))
-		      #b111
-		      #b0
-		      #b111
-		      #b0
-		      #b0001
-		      (reg-tn-encoding reg)
-		      #b101
-		      #b0
-		      #b00
-		      #b1
+			  (inst-condition-code (list cc))
+			  #b111
+			  #b0
+			  #b111
+			  #b0
+			  #b0001
+			  (reg-tn-encoding reg)
+			  #b101
+			  #b0
+			  #b0
+			  #b00
+			  #b1
 			  #b0000)))
