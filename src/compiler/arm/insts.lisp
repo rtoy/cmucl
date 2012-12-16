@@ -198,7 +198,7 @@
 (disassem:define-argument-type shift-type
   :printer #'(lambda (value stream dstate)
 	       (declare (ignore dstate))
-	       (princ (elt shift-types value))))
+	       (princ (elt shift-types value) stream)))
 
 ;; Look through OPTIONS-LIST and find a condition code and return the
 ;; corresponding value for the COND field of an instruction.
@@ -1645,6 +1645,38 @@
 			#b0000
 			#b1111
 			0)))
+
+;; A8.8.33
+
+(define-emitter emit-format-0-clz 32
+  (byte 4 28) (byte 3 25) (byte 5 20) (byte 4 16) (byte 4 12)
+  (byte 8 4) (byte 4 0))
+
+(disassem::define-instruction-format
+    (format-0-clz 32 :include 'format-base
+		     :default-printer '(:name cond :tab dst ", " src2))
+  (op0  :field (byte 5 20) :value #b10110)
+  (src  :field (byte 4 16) :value #b1111)
+  (dst  :field (byte 4 12) :type 'reg)
+  (op1  :field (byte 8 4) :value #b11110000)
+  (src2 :field (byte 4 0) :type 'reg))
+
+(define-instruction clz (segment dst src &optional (cc :al))
+  (:declare (type tn dst src))
+  (:printer format-0-clz
+	    ((opb0 #b000)
+	     (op0 #b10110)
+	     (src #b1111)
+	     (op1 #b11110000)))
+  (:emitter
+   (emit-format-0-clz segment
+		      (inst-condition-code (list cc))
+		      #b000
+		      #b10110
+		      #b1111
+		      (reg-tn-encoding dst)
+		      #b11110000
+		      (reg-tn-encoding src))))
 
 ;; A8.8.109: MRS
 (define-emitter emit-format-0-mrs 32
