@@ -62,7 +62,7 @@
 		(ldb (byte 4 1) regnum)))))
 
 (disassem:set-disassem-params :instruction-alignment 32
-			      :opcode-column-width 11)
+			      :opcode-column-width 16)
 
 
 (def-vm-support-routine location-number (loc)
@@ -1882,59 +1882,93 @@
 		  (:cond ((sz :constant 1) '|.U32.F64|)
 			 (t '|.U32.F32|)))
 		 ((op1 :constant #b1000)
-		  (:cond ((sz :constant 1) '|.F64|
+		  (:cond ((sz :constant 1)
+			  '|.F64|
 			  (:cond ((op :constant 1) '|.S32|)
 				 (t '|.U32|)))
-			 (t '|.F32|
+			 (t
+			  '|.F32|
 			    (:cond ((op :constant 1) '|.S32|)
-				   (t '|.U32|))))))
+				   (t '|.U32|)))))
+		 ((op1 :constant #b0111)
+		  (:cond ((sz :constant 1)
+			  '|.F32.F64|)
+			 (t
+			  '|.F64.F32|))))
 	  :tab
 	  dst ", " src))
 
 ;; Convert between double and single
 (define-vfp-2 vcvt  #b11 #b0111 #b1 #b1 0 :ext "F64.F32"
-  :dst-type fp-double-reg)
+  :dst-type fp-double-reg
+  :printer vcvt-printer)
 (define-vfp-2 vcvt  #b11 #b0111 #b1 #b1 0 :doublep t :ext "F32.F64"
-  :src-type fp-double-reg)
-
-;; Convert between float and integer
-(define-vfp-2 vcvt  #b11 #b1101 #b1 #b1 0 :ext "S32.F32"
-					  :dst-type reg
-  :printer vcvt-printer)
-(define-vfp-2 vcvt  #b11 #b1101 #b1 #b1 0 :doublep t :ext "S32.F64"
-					  :dst-type reg :src-type fp-double-reg
-  :printer vcvt-printer)
-(define-vfp-2 vcvt  #b11 #b1100 #b1 #b1 0 :ext "U32.F32"
-					  :dst-type reg
-  :printer vcvt-printer)
-(define-vfp-2 vcvt  #b11 #b1100 #b1 #b1 0 :doublep t :ext "U32.F64"
-					  :dst-type reg :src-type fp-double-reg
+  :src-type fp-double-reg
   :printer vcvt-printer)
 
-(define-vfp-2 vcvtr #b11 #b1101 #b0 #b1 0 :ext "S32.F32"
-					  :dst-type reg
-  :printer vcvt-printer)
-(define-vfp-2 vcvtr #b11 #b1101 #b0 #b1 0 :doublep t :ext "S32.F64"
-  :dst-type reg :src-type fp-double-reg)
-(define-vfp-2 vcvtr #b11 #b1100 #b0 #b1 0 :ext "U32.F32"
-					  :dst-type reg
-  :printer vcvt-printer)
-(define-vfp-2 vcvtr #b11 #b1100 #b0 #b1 0 :doublep t :ext "U32.F64"
-					  :dst-type reg :src-type fp-double-reg
-  :printer vcvt-printer)
+;; A8.8.306
 
-(define-vfp-2 vcvt  #b11 #b1000 #b0 #b1 0 :ext "F32.U32"
-					  :src-type reg
+;; Convert between float and integer (truncating)
+(define-vfp-2 vcvt  #b11 #b1101 #b1 #b1 0
+  :ext "S32.F32"
+  :dst-type fp-single-reg
   :printer vcvt-printer)
-(define-vfp-2 vcvt  #b11 #b1000 #b0 #b1 0 :doublep t :ext "F64.U32"
-					  :dst-type fp-double-reg :src-type reg
+(define-vfp-2 vcvt  #b11 #b1101 #b1 #b1 0
+  :ext "S32.F64"
+  :dst-type fp-single-reg :src-type fp-double-reg
+  :printer vcvt-printer
+  :doublep t)
+
+(define-vfp-2 vcvt  #b11 #b1100 #b1 #b1 0
+  :ext "U32.F32"
+  :dst-type fp-single-reg
   :printer vcvt-printer)
-(define-vfp-2 vcvt  #b11 #b1000 #b1 #b1 0 :ext "F32.S32"
-					  :src-type reg
+(define-vfp-2 vcvt  #b11 #b1100 #b1 #b1 0
+  :ext "U32.F64"
+  :dst-type fp-single-reg :src-type fp-double-reg
+  :printer vcvt-printer
+  :doublep t)
+
+;; Convert between float and integer (rounding)
+(define-vfp-2 vcvtr #b11 #b1101 #b0 #b1 0
+  :ext "S32.F32"
+  :dst-type fp-single-reg
   :printer vcvt-printer)
-(define-vfp-2 vcvt  #b11 #b1000 #b1 #b1 0 :doublep t :ext "F64.S32"
-					  :dst-type fp-double-reg :src-type reg
+(define-vfp-2 vcvtr #b11 #b1101 #b0 #b1 0
+  :ext "S32.F64"
+  :dst-type fp-single-reg :src-type fp-double-reg
+  :printer vcvt-printer
+  :doublep t)
+
+(define-vfp-2 vcvtr #b11 #b1100 #b0 #b1 0
+  :ext "U32.F32"
+  :dst-type fp-single-reg
   :printer vcvt-printer)
+(define-vfp-2 vcvtr #b11 #b1100 #b0 #b1 0
+  :ext "U32.F64"
+  :dst-type fp-single-reg :src-type fp-double-reg
+  :printer vcvt-printer
+  :doublep t)
+
+;; Convert int to float
+(define-vfp-2 vcvt  #b11 #b1000 #b1 #b1 0
+  :ext "F32.S32"
+  :src-type fp-single-reg
+  :printer vcvt-printer)
+(define-vfp-2 vcvt  #b11 #b1000 #b0 #b1 0
+  :ext "F32.U32"
+  :src-type fp-single-reg
+  :printer vcvt-printer)
+(define-vfp-2 vcvt  #b11 #b1000 #b1 #b1 0
+  :ext "F64.S32"
+  :dst-type fp-double-reg :src-type fp-single-reg
+  :printer vcvt-printer
+  :doublep t)
+(define-vfp-2 vcvt  #b11 #b1000 #b0 #b1 0
+  :ext "F64.U32"
+  :dst-type fp-double-reg :src-type fp-single-reg
+  :printer vcvt-printer
+  :doublep t)
 
 (defmacro define-vfp-cmp (name ops opc3 &key doublep)
   (let ((full-name (symbolicate name (if doublep ".F64" ".F32")))
