@@ -103,8 +103,16 @@
        *register-names*)
   "The Lisp names for the ARM integer registers")
 
+(defparameter reg-symbols-arm
+  #(r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15))
+
+(defvar *use-lisp-register-names* t)
+  
 (defun get-reg-name (index)
-  (aref reg-symbols index))
+  (aref (if *use-lisp-register-names*
+	    reg-symbols
+	    reg-symbols-arm)
+	index))
 
 (defun maybe-add-notes (value dstate)
   (declare (ignore value dstate))
@@ -323,15 +331,9 @@
 	    (:cond ((type :constant #b11) ; ror or rrx
 		    (:cond ((shift :constant 0) " " 'rrx)
 			   (t
-			    " "
-			    'ror
-			    " "
-			    shift)))
+			    " " 'ror " #" shift)))
 		   (t
-		    " "
-		    type
-		    " #"
-		    shift)))))
+		    " " type " #" shift)))))
 
 (defconstant format-0-reg-set-printer
   `(:name cond
@@ -341,7 +343,7 @@
 	    (:cond ((type :constant #b11) ; ror or rrx
 		    (:cond ((shift :constant 0) " " 'rrx)
 			   (t
-			    " " 'ror " " shift)))
+			    " " 'ror " #" shift)))
 		   (t
 		    " " type " #" shift)))))
 
@@ -469,6 +471,7 @@
 		   `(format-0-reg-set-printer)))
      (:printer format-0-reg-shifted
 	       ((opb0 #b000) (op ,opcode) (rs 1)
+		(z 0)
 		,(if force-set-p
 		     '(s 1))
 		,@(if src1-type
