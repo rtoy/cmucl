@@ -1755,6 +1755,24 @@
 			#b00111100000000
 			(reg-tn-encoding reg)))))
 
+(defun %li (reg value)
+  (etypecase value
+    ((or (signed-byte 32) (unsigned-byte 32))
+     (cond ((find-encoding value)
+	    (inst mov reg value))
+	   (t
+	    (let ((hi (ldb (byte 16 16) value))
+		  (lo (ldb (byte 16 0) value)))
+	      (unless (zerop hi)
+		(inst movt reg hi))
+	      (unless (zerop lo)
+		(inst movw reg lo))))))
+    (fixup
+     (inst movt reg value)
+     (inst movw reg value))))
+
+(define-instruction-macro li (reg value)
+  `(%li ,reg, value))
 
   
 
