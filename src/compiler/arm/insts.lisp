@@ -1114,8 +1114,12 @@
 (define-instruction bkpt (segment value &optional (cond :al))
   (:declare (type (unsigned-byte 16) value))
   (:printer format-0-bkpt
-	    ((opb0 #b000) (op0 #b10010) (op1 #b0111)))
+	    ((opb0 #b000)
+	     (op0 #b10010)
+	     (op1 #b0111)))
   (:emitter
+   (unless (eq cond :el)
+     (warn "BPKT is undefined if the condition is not :AL (always)"))
    (emit-format-0-bkpt segment
 		       (inst-condition-code (list cond))
 		       #b000
