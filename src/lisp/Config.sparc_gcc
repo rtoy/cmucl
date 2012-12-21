@@ -26,5 +26,5 @@ endif
 
 CC = gcc -O -Wall
 CPP = gcc -E
-DEPEND_FLAGS = -MM -traditional-cpp
+DEPEND_FLAGS = -MM
 ASFLAGS = -g -traditional-cpp $(AS_V8PLUS)
