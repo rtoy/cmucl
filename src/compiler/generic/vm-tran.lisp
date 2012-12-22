@@ -240,22 +240,34 @@
 (deftransform replace ((string1 string2 &key (start1 0) (start2 0)
 				end1 end2)
 		       (simple-string simple-string &rest t))
-   '(locally (declare (optimize (safety 0)))
-      (bit-bash-copy string2
-		     (the vm::offset
-			  (+ (the vm::offset (* start2 vm:char-bits))
-			     vector-data-bit-offset))
-		     string1
-		     (the vm::offset
-			  (+ (the vm::offset (* start1 vm:char-bits))
-			     vector-data-bit-offset))
-		     (the vm::offset
-			  (* (min (the vm::offset (- (or end1 (length string1))
-						     start1))
-				  (the vm::offset (- (or end2 (length string2))
-						     start2)))
-			     vm:char-bits)))
-      string1))
+   '(progn
+      ;; Make sure the indices make sense before we go bashing bits
+      ;; around!
+      (assert (<= 0 start1))
+      (assert (<= start1 (or end1 (length string1))))
+      (assert (<= (or end1 (length string1)) (length string1)))
+
+      (assert (<= 0 start2))
+      (assert (<= start2 (or end2 (length string2))))
+      (assert (<= (or end2 (length string2)) (length string2)))
+
+      (locally
+	  (declare (optimize (safety 0)))
+	(bit-bash-copy string2
+		       (the vm::offset
+			    (+ (the vm::offset (* start2 vm:char-bits))
+			       vector-data-bit-offset))
+		       string1
+		       (the vm::offset
+			    (+ (the vm::offset (* start1 vm:char-bits))
+			       vector-data-bit-offset))
+		       (the vm::offset
+			    (* (min (the vm::offset (- (or end1 (length string1))
+						       start1))
+				    (the vm::offset (- (or end2 (length string2))
+						       start2)))
+			       vm:char-bits)))
+	string1)))
 
 ;; The original version of this deftransform seemed to cause the
 ;; compiler to spend huge amounts of time deriving the type of the
