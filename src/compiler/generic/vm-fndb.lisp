@@ -307,8 +307,8 @@
   ())
 
 (defknown bit-bash-copy
-	  ((simple-unboxed-array (*)) index
-	   (simple-unboxed-array (*)) index index)
+	  ((simple-unboxed-array (*)) vm::offset
+	   (simple-unboxed-array (*)) vm::offset vm::offset)
   t
   ())
 
