@@ -640,11 +640,9 @@
   (unless (constant-continuation-p y)
     (give-up))
   (let ((val (continuation-value y)))
-    (multiple-value-bind (frac exp sign)
-	(decode-float val)
-      (unless (= frac 0.5)
-	(give-up))
-      `(* x (float (/ ,val) x)))))
+    (unless (= (decode-float val) 0.5)
+      (give-up))
+    `(* x (float (/ ,val) x))))
 
 ;; Convert 2*x to x+x.
 (deftransform * ((x y) (float real) * :when :both)

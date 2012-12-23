@@ -908,7 +908,6 @@
   (:arg-types unsigned-num)
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
-  (:temporary (:sc unsigned-reg :from (:argument 0)) temp)
   (:guard (backend-featurep :sse3))
   (:generator 2
     (inst popcnt result arg)))
