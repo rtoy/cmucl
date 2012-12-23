@@ -218,25 +218,25 @@
 	  (size (- end start))
 	  (result (make-string size)))
      (declare (optimize (safety 0)))
-     (bit-bash-copy string
-		    (the index
-			 (+ (the index (* start vm:char-bits))
-			    vector-data-bit-offset))
-		    result
-		    vector-data-bit-offset
-		    (the index (* size vm:char-bits)))
-    result))
+     (byte-bash-copy string
+		     (the vm::offset
+			  (+ (the vm::offset (* start vm:char-bytes))
+			     vector-data-byte-offset))
+		     result
+		     vector-data-byte-offset
+		     (the vm::offset (* size vm:char-bytes)))
+     result))
 
 (deftransform copy-seq ((seq) (simple-string))
   '(let* ((len (length seq))
 	  (res (make-string len)))
      (declare (optimize (safety 0)))
      (bit-bash-copy seq
-		    vector-data-bit-offset
+		    vector-data-byte-offset
 		    res
-		    vector-data-bit-offset
-		    (the index (* len vm:char-bits)))
-    res))
+		    vector-data-byte-offset
+		    (the vm::offset (* len vm:char-bytes)))
+     res))
 
 (deftransform replace ((string1 string2 &key (start1 0) (start2 0)
 				end1 end2)
@@ -254,7 +254,7 @@
 
       (locally
 	  (declare (optimize (safety 0)))
-	(byte-bash-copy string2
+	(vm::byte-bash-copy string2
 		       (the vm::offset
 			    (+ (the vm::offset (* start2 vm:char-bytes))
 			       vector-data-byte-offset))
