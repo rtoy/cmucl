@@ -197,6 +197,7 @@
 	    (vmdir "target:compiler/sse2-c-call")
 	    (vmdir "target:compiler/x87-c-call"))
 	:byte-compile *byte-compile*))
+(comf (vmdir "target:compiler/c-callback"))
 (comf (vmdir "target:compiler/cell"))
 (comf (vmdir "target:compiler/values") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/alloc"))
