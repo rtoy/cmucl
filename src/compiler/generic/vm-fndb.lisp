@@ -306,7 +306,7 @@
   t
   ())
 
-(defknown bit-bash-copy
+(defknown (bit-bash-copy byte-bash-copy)
 	  ((simple-unboxed-array (*)) vm::offset
 	   (simple-unboxed-array (*)) vm::offset vm::offset)
   t

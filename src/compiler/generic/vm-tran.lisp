@@ -208,6 +208,7 @@
 ;;;; Simple string transforms:
 
 (defconstant vector-data-bit-offset (* vm:vector-data-offset vm:word-bits))
+(defconstant vector-data-byte-offset (* vm:vector-data-offset vm:word-bytes))
 
 (deftransform subseq ((string start &optional (end nil))
 		      (simple-string t &optional t))
@@ -253,20 +254,20 @@
 
       (locally
 	  (declare (optimize (safety 0)))
-	(bit-bash-copy string2
+	(byte-bash-copy string2
 		       (the vm::offset
-			    (+ (the vm::offset (* start2 vm:char-bits))
-			       vector-data-bit-offset))
+			    (+ (the vm::offset (* start2 vm:char-bytes))
+			       vector-data-byte-offset))
 		       string1
 		       (the vm::offset
-			    (+ (the vm::offset (* start1 vm:char-bits))
-			       vector-data-bit-offset))
+			    (+ (the vm::offset (* start1 vm:char-bytes))
+			       vector-data-byte-offset))
 		       (the vm::offset
 			    (* (min (the vm::offset (- (or end1 (length string1))
 						       start1))
 				    (the vm::offset (- (or end2 (length string2))
 						       start2)))
-			       vm:char-bits)))
+			       vm:char-bytes)))
 	string1)))
 
 ;; The original version of this deftransform seemed to cause the
