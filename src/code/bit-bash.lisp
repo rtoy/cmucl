@@ -466,33 +466,13 @@
 				(32bit-logical-andc2 orig mask)))))))))))))))
   (undefined-value))
 
-
-;;;; The actual bashers.
+;;;; DO-UNARY-BYTE-BASH
 
-(defun bit-bash-fill (value dst dst-offset length)
-  (declare (type unit value) (type offset dst-offset length))
-  (locally
-   (declare (optimize (speed 3) (safety 0)))
-   (do-constant-bit-bash dst dst-offset length value
-			 #'%raw-bits #'%set-raw-bits)))
+;;;; Like DO-UNARY-BIT-BASH, but we only handle objects that are at
+;;;; least byte in size.  The offsets and lengths are byte offsets and
+;;;; lengths, instead of bits.
 
-(defun system-area-fill (value dst dst-offset length)
-  (declare (type unit value) (type offset dst-offset length))
-  (locally
-   (declare (optimize (speed 3) (safety 0)))
-   (multiple-value-bind (dst dst-offset)
-			(fix-sap-and-offset dst dst-offset)
-     (do-constant-bit-bash dst dst-offset length value
-			   #'word-sap-ref #'%set-word-sap-ref))))
-
-(defun bit-bash-copy (src src-offset dst dst-offset length)
-  (declare (type offset src-offset dst-offset length))
-  (locally
-   (declare (optimize (speed 3) (safety 0))
-	    (inline do-unary-bit-bash))
-   (do-unary-bit-bash src src-offset dst dst-offset length
-		      #'%raw-bits #'%set-raw-bits #'%raw-bits)))
-
+(declaim (inline do-unary-byte-bash))
 (defun do-unary-byte-bash (src src-offset dst dst-offset length
 			   dst-ref-fn dst-set-fn src-ref-fn)
   (declare (type offset src-offset dst-offset length)
@@ -507,17 +487,14 @@
 	       (type byte-offset src-byte-offset))
       (cond
 	((<= (+ dst-byte-offset length) unit-bytes)
-	 #+nil(format t "case 1, one word~%")
 	 ;; We are only writing one word, so it doesn't matter what order
 	 ;; we do it in.  But we might be reading from multiple words, so take
 	 ;; care.
 	 (cond
 	   ((zerop length)
-	    #+nil(format t "case 1a: 0 length~%")
 	    ;; Actually, we aren't even writing one word.  This is real easy.
 	    )
 	   ((= length unit-bytes)
-	    #+nil(format t "case 1b~%")
 	    ;; dst-byte-offset must be equal to zero, or we would be writing
 	    ;; multiple words.  If src-byte-offset is also zero, then we
 	    ;; just transfer the single word.  Otherwise we have to extract bits
@@ -533,7 +510,6 @@
 			   (funcall src-ref-fn src (1+ src-word-offset))
 			   (* vm:byte-bits (- src-byte-offset)))))))
 	   (t
-	    #+nil(format t "case 1c~%")
 	    ;; We are only writing some portion of the dst word, so we need to
 	    ;; preserve the extra bits.  Also, we still don't know if we need
 	    ;; one or two source words.
@@ -572,7 +548,6 @@
 			(32bit-logical-and value mask)
 			(32bit-logical-andc2 orig mask)))))))
 	((= src-byte-offset dst-byte-offset)
-	 #+nil(format t "case 2, aligned~%")
 	 ;; The source and dst are aligned, so we don't need to shift
 	 ;; anything.  But we have to pick the direction of the loop
 	 ;; in case the source and dst are really the same thing.
@@ -583,10 +558,8 @@
 	     (declare (type word-offset interior))
 	     (cond
 	       ((<= dst-offset src-offset)
-		#+nil(format t " case 2a: L-R~%")
 		;; We need to loop from left to right
 		(unless (zerop dst-byte-offset)
-		  #+nil(format t "  case 2a1: dst-byte-offset = ~D~%" dst-byte-offset)
 		  ;; We are only writing part of the first word, so mask off the
 		  ;; bits we want to preserve.
 		  (let ((mask (end-mask (- dst-byte-offset)))
@@ -605,7 +578,6 @@
 		  (incf src-word-offset)
 		  (incf dst-word-offset))
 		(unless (zerop final-bytes)
-		  #+nil(format t "  case 2a2: final-bytes = ~D~%" final-bytes)
 		  ;; We are only writing part of the last word.
 		  (let ((mask (start-mask (* vm:byte-bits final-bytes)))
 			(orig (funcall dst-ref-fn dst dst-word-offset))
@@ -616,12 +588,10 @@
 			      (32bit-logical-and value mask)
 			      (32bit-logical-andc2 orig mask))))))
 	       (t
-		#+nil(format t " case 2b: R-L~%")
 		;; We need to loop from right to left.
 		(incf dst-word-offset words)
 		(incf src-word-offset words)
 		(unless (zerop final-bytes)
-		  #+nil(format t "  case 2b1: R-L final-bytes = ~D~%" final-bytes)
 		  (let ((mask (start-mask (* vm:byte-bits final-bytes)))
 			(orig (funcall dst-ref-fn dst dst-word-offset))
 			(value (funcall src-ref-fn src src-word-offset)))
@@ -636,7 +606,6 @@
 		  (funcall dst-set-fn dst dst-word-offset
 			   (funcall src-ref-fn src src-word-offset)))
 		(unless (zerop dst-byte-offset)
-		  #+nil(format t "  case 2b2: R-L dst-byte-offset = ~D~%" dst-byte-offset)
 		  (decf src-word-offset)
 		  (decf dst-word-offset)
 		  (let ((mask (end-mask (* vm:byte-bits (- dst-byte-offset))))
@@ -648,7 +617,6 @@
 			      (32bit-logical-and value mask)
 			      (32bit-logical-andc2 orig mask))))))))))
 	(t
-	 #+nil(format t "case 3, unaligned~%")
 	 ;; They aren't aligned.
 	 (multiple-value-bind (words final-bytes)
 	     (floor (+ dst-byte-offset length) unit-bytes)
@@ -659,7 +627,6 @@
 		      (type word-offset interior))
 	     (cond
 	       ((<= dst-offset src-offset)
-		#+nil(format t "case 3a: L-R~%")
 		;; We need to loop from left to right
 		(let ((prev 0)
 		      (next (funcall src-ref-fn src src-word-offset)))
@@ -708,7 +675,6 @@
 				  (32bit-logical-and value mask)
 				  (32bit-logical-andc2 orig mask))))))))
 	       (t
-		#+nil(format t "case 3b: L-R~%")
 		;; We need to loop from right to left.
 		(incf dst-word-offset words)
 		(incf src-word-offset
@@ -758,6 +724,33 @@
 				  (32bit-logical-and value mask)
 				  (32bit-logical-andc2 orig mask)))))))))))))))
   (undefined-value))
+
+
+;;;; The actual bashers.
+
+(defun bit-bash-fill (value dst dst-offset length)
+  (declare (type unit value) (type offset dst-offset length))
+  (locally
+   (declare (optimize (speed 3) (safety 0)))
+   (do-constant-bit-bash dst dst-offset length value
+			 #'%raw-bits #'%set-raw-bits)))
+
+(defun system-area-fill (value dst dst-offset length)
+  (declare (type unit value) (type offset dst-offset length))
+  (locally
+   (declare (optimize (speed 3) (safety 0)))
+   (multiple-value-bind (dst dst-offset)
+			(fix-sap-and-offset dst dst-offset)
+     (do-constant-bit-bash dst dst-offset length value
+			   #'word-sap-ref #'%set-word-sap-ref))))
+
+(defun bit-bash-copy (src src-offset dst dst-offset length)
+  (declare (type offset src-offset dst-offset length))
+  (locally
+   (declare (optimize (speed 3) (safety 0))
+	    (inline do-unary-bit-bash))
+   (do-unary-bit-bash src src-offset dst dst-offset length
+		      #'%raw-bits #'%set-raw-bits #'%raw-bits)))
 
 (defun byte-bash-copy (src src-offset dst dst-offset length)
   (declare (type offset src-offset dst-offset length))
