@@ -29,8 +29,8 @@
 (setf (backend-name *target-backend*) "ARM")
 ;; FIXME:  Choose a better version name?
 (setf (backend-version *target-backend*)
-      "ARMv7/Linux")
-;; FIXME:  Is armf ok?
+      "ARM/Linux")
+
 (setf (backend-fasl-file-type *target-backend*) "armf")
 (setf (backend-fasl-file-implementation *target-backend*)
       arm-fasl-file-implementation)
@@ -39,7 +39,6 @@
 
 ;; Only supporting little-endian ARM for now.
 (setf (backend-byte-order *target-backend*) :little-endian)
-;; FIXME:  What is the page size on ARM?
 (setf (backend-page-size *target-backend*) 4096)
 
 (setf (c::backend-foreign-linkage-space-start *target-backend*)
@@ -162,37 +161,33 @@
 
 ;; ARM specific information
 ;; See B6.1.39: FPSCR, Floating-point Status and Control Regiser, PMSA
-(defconstant float-inexact-trap-bit (ash 1 12))
-(defconstant float-underflow-trap-bit (ash 1 11))
-(defconstant float-overflow-trap-bit (ash 1 10))
-(defconstant float-divide-by-zero-trap-bit (ash 1 9))
-(defconstant float-invalid-trap-bit (ash 1 8))
+(defconstant float-denormal-trap-bit (ash 1 15)          ; IDE bit[15]
+(defconstant float-inexact-trap-bit (ash 1 12))	         ; IXE bit[12]
+(defconstant float-underflow-trap-bit (ash 1 11))        ; UFE bit[11]
+(defconstant float-overflow-trap-bit (ash 1 10))         ; OFE bit[10]
+(defconstant float-divide-by-zero-trap-bit (ash 1 9))    ; DZE bit[9]
+(defconstant float-invalid-trap-bit (ash 1 8))           ; IOE bit[8]
 
-(defconstant float-round-to-nearest 0)
-(defconstant float-round-to-positive 1)
-(defconstant float-round-to-negative 2)
-(defconstant float-round-to-zero 3)
+(defconstant float-round-to-nearest 0)	; #b00 Round to Nearest
+(defconstant float-round-to-positive 1)	; #b01 Round towards Plus Infinity
+(defconstant float-round-to-negative 2)	; #b10 Round towards Minus Infinity
+(defconstant float-round-to-zero 3)	; #b11 Round towards Zero
 
-(defconstant float-rounding-mode (byte 2 22))	  ; RMode
+(defconstant float-rounding-mode (byte 2 22))	  ; RMode bits[23:22]
+
+;; The trap enable bits are split with the IDE bit separate from the
+;; rest of the enable bits.  We're ignoring the IDE bit for now until
+;; float-traps support it.
 (defconstant float-traps-byte (byte 5 8))	  ; Trap enable bits
 ;; There doesn't appear to be separate accrued (sticky) and current
-;; exceptions.
-(defconstant float-sticky-bits (byte 5 0))	  ; 
-(defconstant float-exceptions-byte (byte 5 0))	  ; 
+;; exceptions.  We also ignore the IDC bit
+(defconstant float-sticky-bits (byte 5 0))	  ; Cumulative excection bits Bits[4:0]
+(defconstant float-exceptions-byte (byte 5 0))	  ; Same as cumulative
 
 ;; Flush-to-zero bit
 (defconstant float-fast-bit (ash 1 24))
 
 ); eval-when
-
-;;; NUMBER-STACK-DISPLACEMENT
-;;;
-;;; The number of bytes reserved above the number stack pointer.  I
-;;; (rtoy) think the architecture doesn't require any, but we need
-;;; space for arguments to C routines.  See c-call.lisp
-;;; 
-(defconstant number-stack-displacement
-  (* 4 vm:word-bytes))
 
 
 ;;;; Description of the target address space.
@@ -349,8 +344,6 @@
     ))
 
 (defparameter static-functions
-  ;; FIXME: Correct this list.  This is based on the sparc port which
-  ;; has a different list from x86
   '(length
     two-arg-+ two-arg-- two-arg-* two-arg-/ two-arg-< two-arg-> two-arg-=
     two-arg-<= two-arg->= two-arg-/= eql %negate
