@@ -25,6 +25,8 @@ endif
 ifdef FEATURE_GENCGC
 GENCGC = -DGENCGC
 GC_SRC = gencgc.c
+else
+GC_SRC = gc.c
 endif
 
 # Enable support for SSE2.  If FEATURE_X87 is set, we want SSE2
