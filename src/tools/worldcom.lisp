@@ -138,7 +138,8 @@
 (setf (fdefinition 'lisp::%deftype) *original-%deftype*)
 
 (comf "target:code/alieneval")
-(comf "target:code/alien-callback")
+(when (c:target-featurep :alien-callback)
+  (comf "target:code/alien-callback"))
 (comf "target:code/c-call")
 (comf "target:code/sap")
 

@@ -39,11 +39,15 @@
 #+stack-checking
 (sys:register-lisp-runtime-feature :stack-checking)
 
-#+heap-overflow-check
+;; Currently, heap-overflow-check depends on gencgc.
+#+(and heap-overflow-check gencgc)
 (sys:register-lisp-runtime-feature :heap-overflow-check)
 
 #+double-double
 (sys:register-lisp-feature :double-double)
+
+#+alien-callback
+(sys:register-lisp-feature :alien-callback)
 
 ;;; Make the error system enable interrupts.
 
