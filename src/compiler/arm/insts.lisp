@@ -23,7 +23,7 @@
 (use-package "C")
 
 (def-assembler-params
-    :scheduler-p t
+    :scheduler-p nil
   :max-locations 101)			; TODO: How many locations?
 
 
@@ -392,7 +392,7 @@
 
 
 ;; Structure for hold the flexible operand used in data processing
-;; instructions.
+;; instructions.  Use MAKE-SHIFT to specify the flexible operand.
 (defstruct flex-operand
   ;; Indicates if the shift is an immediate or register value
   (type (required-argument)
@@ -484,7 +484,9 @@
 		  `(format-0-reg-shifted-set-printer)))
      (:dependencies
       (reads src1)
-      (writes dst))
+      (writes dst)
+      ;; FIXME: Specify dependencies correctly for flexible operand 2.
+      )
      (:delay 0)
      (:emitter
       (etypecase src2
@@ -614,7 +616,9 @@
 		    dst ", " src2 " " type " " sreg))
   (:dependencies
    (reads src1)
-   (writes dst))
+   (writes dst)
+   ;; FIXME: Specify dependencies correctly for flexible operand 2.
+   )
   (:delay 0)
   (:emitter
    (etypecase src2
@@ -716,7 +720,9 @@
 			      " " type " #" shift)))))
   (:dependencies
    (reads src1)
-   (writes dst))
+   (writes dst)
+   ;; FIXME: Specify dependencies correctly for flexible operand 2.
+   )
   (:delay 0)
   (:emitter
    (etypecase src2
@@ -794,6 +800,8 @@
 		 dst ", " src2 ", " sreg))
      (:dependencies
       (reads src1)
+      (reads src2)
+      (reads apsr)
       (writes dst))
      (:delay 0)
      (:emitter
@@ -889,6 +897,7 @@
 	    ((opb0 #b001)
 	     (op #b10100)))
   (:dependencies
+   (reads src)
    (writes dst))
   (:emitter
    (etypecase src
@@ -919,6 +928,7 @@
 	    ((opb0 #b001)
 	     (op #b10000)))
   (:dependencies
+   (reads src)
    (writes dst))
   (:emitter
    (etypecase src
