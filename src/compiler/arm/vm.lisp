@@ -56,9 +56,7 @@
 (defreg ocfp 12)			; Lisp old cfp
 (defreg nsp 13)				; ARM SP register
 (defreg lip 14)				; ARM LR register
-;; Shouldn't normally be touched, but might be needed for PC-relative
-;; addressing.
-(defreg pc 15)				; ARM PC
+(defreg pc 15)
 
 (defregset non-descriptor-regs
   nl0 cfunc nargs)
