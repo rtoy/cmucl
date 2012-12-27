@@ -24,13 +24,27 @@ New in this release:
  
   * Changes
     * ASDF2 updated to version 2.26.
+    * DEFINE-COMPILER-MACRO now has source-locationinformation for the
+      macro definition.
+    * :ALIEN-CALLBACK added to *FEATURES* for platforms that support
+      alien callbacks.
+    * The sparc port can be built using gcc once again.
+    * The old Cheney stop-and-copy GC supported on sparc once again.
+      However, there are no plans on supplying sparc binaries with
+      this GC. 
 
   * ANSI compliance fixes:
 
   * Bugfixes:
+    * REPLACE and friends on strings was limited to strings less than
+      the maximum possible size. This has been fixed so strings of any
+      supported length can be handled.  (See ticket #66 and #68.)
 
   * Trac Tickets:
     * Ticket #52 reopened.
+    * Ticket #66 fixed.
+    * Ticket #67 fixed.
+    * Ticket #68 fixed.
 
   * Other changes:
     * -8 option for build-all.sh is deprecated since we don't
