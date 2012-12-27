@@ -958,7 +958,7 @@
 	    #+sgi "SGI"
 	    #+ppc "PPC"
             #+arm "ARM"
-            (:nicknames "VM" #+(or pmax sgi) "MIPS")
+            ;;(:nicknames "VM" #+(or pmax sgi) "MIPS")
             (:import-from "LISP" "%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET"
              "%PUT" "%RPLACA" "%RPLACD" "%SBITSET" "%SCHARSET"
              "%SET-FDEFINITION" "%SET-FILL-POINTER"
