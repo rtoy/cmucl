@@ -315,8 +315,17 @@
 
     *binding-stack-pointer*
 
+    ;; Gc
+    #-gencgc
     *allocation-pointer*
+    #-gencgc
+    *pseudo-atomic-atomic*
+    
+    ;; Gencgc
+    ;;
+    #+gencgc
     *current-region-free-pointer*
+    #+gencgc
     *current-region-end-addr*
 
     #+gencgc
@@ -366,7 +375,6 @@
 (defparameter *assembly-unit-length* 8)
 
 
-#||
 (export '(pseudo-atomic-trap allocation-trap
 	  pseudo-atomic-value pseudo-atomic-interrupted-value))
 ;;;; Pseudo-atomic trap number.
@@ -382,12 +390,6 @@
 ;;;; instruction.  This needs to be coordinated with the C code.
 (defconstant pseudo-atomic-trap 16)
 
-;;;; Allocation trap number.
-;;;;
-;;;; This is the trap number to use when we need to allocate memory.
-;;;; This must match the C runtime code
-(defconstant allocation-trap 31)
-
 ;;;; Pseudo-atomic flag
 ;;;;
 ;;;; This value is added to alloc-tn to indicate a pseudo-atomic
@@ -400,4 +402,3 @@
 ;;;; interrupted.  On sparc, this is indicated by least-significant
 ;;;; bit of alloc-tn being 1.
 (defconstant pseudo-atomic-interrupted-value 1)
-||#
