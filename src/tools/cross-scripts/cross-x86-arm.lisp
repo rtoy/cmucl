@@ -1,5 +1,7 @@
 ;;; Cross-compile script to build an ARM core using x86 as the
-;;; compiling system.  This needs work!
+;;; compiling system.  This is based on the x86 to sparc script.
+;;;
+;;; This needs work!
 
 (in-package :cl-user)
 
@@ -11,7 +13,7 @@
 (c::new-backend "ARM"
    ;; Features to add here
    '(:arm
-     :vfpv3
+     :vfpv3				; 32 double-float regs
      :linkage-table
      ;;:gencgc				; Generational GC
      :relative-package-names		; Relative package names from Allegro
