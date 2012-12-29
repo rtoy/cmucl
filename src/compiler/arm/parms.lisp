@@ -28,7 +28,8 @@
 (adjoin :linux (backend-features *target-backend*))
 (setf (backend-name *target-backend*) "ARM")
 (setf (backend-version *target-backend*)
-      "ARMv7/Linux")
+      "ARM/Linux")
+
 (setf (backend-fasl-file-type *target-backend*) "armf")
 (setf (backend-fasl-file-implementation *target-backend*)
       arm-fasl-file-implementation)
@@ -37,14 +38,13 @@
 
 ;; Only supporting little-endian ARM for now.
 (setf (backend-byte-order *target-backend*) :little-endian)
-;; FIXME:  What is the page size on ARM?
 (setf (backend-page-size *target-backend*) 4096)
 
 (setf (c::backend-foreign-linkage-space-start *target-backend*)
       #x0f000000
       (c::backend-foreign-linkage-entry-size *target-backend*)
       ;; FIXME: Update this when we figure out how to do
-      ;; linkage-tables on arm.
+      ;; linkage-tables on ARM.
       16)
 ); eval-when
 
@@ -122,6 +122,9 @@
 (defconstant positive-fixnum-bits (- word-bits fixnum-tag-bits 1)
   "Maximum number of bits in a positive fixnum")
 
+;; FIXME: All of the IEEE-754 float parms should probably be split
+;; into a separate file to be shared by all platforms using standard
+;; IEEE-754 single and double precision floats.
 (defconstant float-sign-shift 31)
 
 (defconstant single-float-bytes 4)	; Bytes to hold a single-float
@@ -142,15 +145,6 @@
 (defconstant double-float-hidden-bit (ash 1 20))
 (defconstant double-float-trapping-nan-bit (ash 1 19))
 
-;;; FIXME:  These need to go away.
-(defconstant long-float-bias 16382)
-(defconstant long-float-exponent-byte (byte 15 0))
-(defconstant long-float-significand-byte (byte 31 0))
-(defconstant long-float-normal-exponent-min 1)
-(defconstant long-float-normal-exponent-max #x7FFE)
-(defconstant long-float-hidden-bit (ash 1 31))
-(defconstant long-float-trapping-nan-bit (ash 1 30))
-
 (defconstant single-float-digits
   (+ (byte-size single-float-significand-byte) 1))
 
@@ -164,38 +158,35 @@
 (defconstant double-double-float-digits
   (* 2 double-float-digits))
 
+;; ARM specific information
 ;; See B6.1.39: FPSCR, Floating-point Status and Control Regiser, PMSA
-(defconstant float-inexact-trap-bit (ash 1 12))
-(defconstant float-underflow-trap-bit (ash 1 11))
-(defconstant float-overflow-trap-bit (ash 1 10))
-(defconstant float-divide-by-zero-trap-bit (ash 1 9))
-(defconstant float-invalid-trap-bit (ash 1 8))
+(defconstant float-denormal-trap-bit (ash 1 15)          ; IDE bit[15]
+(defconstant float-inexact-trap-bit (ash 1 12))	         ; IXE bit[12]
+(defconstant float-underflow-trap-bit (ash 1 11))        ; UFE bit[11]
+(defconstant float-overflow-trap-bit (ash 1 10))         ; OFE bit[10]
+(defconstant float-divide-by-zero-trap-bit (ash 1 9))    ; DZE bit[9]
+(defconstant float-invalid-trap-bit (ash 1 8))           ; IOE bit[8]
 
-(defconstant float-round-to-nearest 0)
-(defconstant float-round-to-positive 1)
-(defconstant float-round-to-negative 2)
-(defconstant float-round-to-zero 3)
+(defconstant float-round-to-nearest 0)  ; #b00 Round to Nearest
+(defconstant float-round-to-positive 1) ; #b01 Round towards Plus Infinity
+(defconstant float-round-to-negative 2) ; #b10 Round towards Minus Infinity
+(defconstant float-round-to-zero 3)     ; #b11 Round towards Zero
 
-(defconstant float-rounding-mode (byte 2 22))	  ; RMode
+(defconstant float-rounding-mode (byte 2 22))	  ; RMode bits[23:22]
+
+;; The trap enable bits are split with the IDE bit separate from the
+;; rest of the enable bits.  We're ignoring the IDE bit for now until
+;; float-traps support it.
 (defconstant float-traps-byte (byte 5 8))	  ; Trap enable bits
 ;; There doesn't appear to be separate accrued (sticky) and current
-;; exceptions.
-(defconstant float-sticky-bits (byte 5 0))	  ; 
-(defconstant float-exceptions-byte (byte 5 0))	  ; 
+;; exceptions.  We also ignore the IDC bit.
+(defconstant float-sticky-bits (byte 5 0))	  ; Cumulative excection bits Bits[4:0]
+(defconstant float-exceptions-byte (byte 5 0))	  ; Same as cumulative
 
 ;; Flush-to-zero bit
 (defconstant float-fast-bit (ash 1 24))
 
 ); eval-when
-
-;;; NUMBER-STACK-DISPLACEMENT
-;;;
-;;; The number of bytes reserved above the number stack pointer.  I
-;;; (rtoy) think the architecture doesn't require any, but we need
-;;; space for arguments to C routines.  See c-call.lisp
-;;; 
-(defconstant number-stack-displacement
-  (* 4 vm:word-bytes))
 
 
 ;;;; Description of the target address space.
@@ -304,6 +295,8 @@
     lisp::*free-interrupt-context-index*
     unix::*interrupts-enabled*
     unix::*interrupt-pending*
+    lisp::*pseudo-atomic-atomic*
+    lisp::*pseudo-atomic-interrupted*
 
     ;; Foreign linkage stuff
     #+linkage-table
@@ -364,40 +357,3 @@
 ;;; The number of bits per element in the assemblers code vector.
 ;;;
 (defparameter *assembly-unit-length* 8)
-
-
-#||
-(export '(pseudo-atomic-trap allocation-trap
-	  pseudo-atomic-value pseudo-atomic-interrupted-value))
-;;;; Pseudo-atomic trap number.
-;;;;
-;;;; This is the trap number to use when a pseudo-atomic section has
-;;;; been interrupted.
-;;;;
-;;;; This should be any valid trap number. According to the Sparc
-;;;; Compliance Definition 2.4.1, only traps 16-31 are allowed for
-;;;; user applications.  All others are reserved.  It's ok if this
-;;;; number matches any of the other trap enums above because those
-;;;; are only used in an illtrap instruction, not the trap
-;;;; instruction.  This needs to be coordinated with the C code.
-(defconstant pseudo-atomic-trap 16)
-
-;;;; Allocation trap number.
-;;;;
-;;;; This is the trap number to use when we need to allocate memory.
-;;;; This must match the C runtime code
-(defconstant allocation-trap 31)
-
-;;;; Pseudo-atomic flag
-;;;;
-;;;; This value is added to alloc-tn to indicate a pseudo-atomic
-;;;; section.
-(defconstant pseudo-atomic-value (ash 1 (1- vm::lowtag-bits)))
-
-;;;; Pseudo-atomic-interrupted-mask
-;;;;
-;;;; This is a mask used to check if a pseudo-atomic section was
-;;;; interrupted.  On sparc, this is indicated by least-significant
-;;;; bit of alloc-tn being 1.
-(defconstant pseudo-atomic-interrupted-value 1)
-||#
