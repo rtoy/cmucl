@@ -27,7 +27,6 @@
 
 (adjoin :linux (backend-features *target-backend*))
 (setf (backend-name *target-backend*) "ARM")
-;; FIXME:  Choose a better version name?
 (setf (backend-version *target-backend*)
       "ARM/Linux")
 
@@ -45,7 +44,7 @@
       #x0f000000
       (c::backend-foreign-linkage-entry-size *target-backend*)
       ;; FIXME: Update this when we figure out how to do
-      ;; linkage-tables on arm.
+      ;; linkage-tables on ARM.
       16)
 ); eval-when
 
@@ -168,10 +167,10 @@
 (defconstant float-divide-by-zero-trap-bit (ash 1 9))    ; DZE bit[9]
 (defconstant float-invalid-trap-bit (ash 1 8))           ; IOE bit[8]
 
-(defconstant float-round-to-nearest 0)	; #b00 Round to Nearest
-(defconstant float-round-to-positive 1)	; #b01 Round towards Plus Infinity
-(defconstant float-round-to-negative 2)	; #b10 Round towards Minus Infinity
-(defconstant float-round-to-zero 3)	; #b11 Round towards Zero
+(defconstant float-round-to-nearest 0)  ; #b00 Round to Nearest
+(defconstant float-round-to-positive 1) ; #b01 Round towards Plus Infinity
+(defconstant float-round-to-negative 2) ; #b10 Round towards Minus Infinity
+(defconstant float-round-to-zero 3)     ; #b11 Round towards Zero
 
 (defconstant float-rounding-mode (byte 2 22))	  ; RMode bits[23:22]
 
@@ -180,7 +179,7 @@
 ;; float-traps support it.
 (defconstant float-traps-byte (byte 5 8))	  ; Trap enable bits
 ;; There doesn't appear to be separate accrued (sticky) and current
-;; exceptions.  We also ignore the IDC bit
+;; exceptions.  We also ignore the IDC bit.
 (defconstant float-sticky-bits (byte 5 0))	  ; Cumulative excection bits Bits[4:0]
 (defconstant float-exceptions-byte (byte 5 0))	  ; Same as cumulative
 
