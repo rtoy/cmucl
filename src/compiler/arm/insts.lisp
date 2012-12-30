@@ -216,7 +216,7 @@
       (error "invalid condition code: ~S" c))
     (let ((position (position (car c) condition-codes)))
       (or position
-	  #b1111))))
+	  condition-true))))
 
 ;; Look through OPTIONS-LIST to find :S, which means the instruction
 ;; should set the flags.
