@@ -152,8 +152,8 @@
 
 ;; ARM specific information
 ;; See B6.1.39: FPSCR, Floating-point Status and Control Regiser, PMSA
-(defconstant float-denormal-trap-bit (ash 1 15))          ; IDE bit[15]
-(defconstant float-inexact-trap-bit (ash 1 12))	         ; IXE bit[12]
+(defconstant float-denormal-trap-bit (ash 1 15))         ; IDE bit[15]
+(defconstant float-inexact-trap-bit (ash 1 12))          ; IXE bit[12]
 (defconstant float-underflow-trap-bit (ash 1 11))        ; UFE bit[11]
 (defconstant float-overflow-trap-bit (ash 1 10))         ; OFE bit[10]
 (defconstant float-divide-by-zero-trap-bit (ash 1 9))    ; DZE bit[9]
