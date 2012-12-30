@@ -70,11 +70,6 @@
 	  double-float-normal-exponent-max double-float-hidden-bit
 	  double-float-trapping-nan-bit double-float-digits
 
-	  long-float-bias long-float-exponent-byte
-	  long-float-significand-byte long-float-normal-exponent-min
-	  long-float-normal-exponent-max long-float-hidden-bit
-	  long-float-trapping-nan-bit long-float-digits
-
 	  float-underflow-trap-bit float-overflow-trap-bit
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit))
@@ -151,16 +146,13 @@
 (defconstant double-float-digits
   (+ (byte-size double-float-significand-byte) word-bits 1))
 
-(defconstant long-float-digits
-  (+ (byte-size long-float-significand-byte) word-bits 1))
-
 #+double-double
 (defconstant double-double-float-digits
   (* 2 double-float-digits))
 
 ;; ARM specific information
 ;; See B6.1.39: FPSCR, Floating-point Status and Control Regiser, PMSA
-(defconstant float-denormal-trap-bit (ash 1 15)          ; IDE bit[15]
+(defconstant float-denormal-trap-bit (ash 1 15))          ; IDE bit[15]
 (defconstant float-inexact-trap-bit (ash 1 12))	         ; IXE bit[12]
 (defconstant float-underflow-trap-bit (ash 1 11))        ; UFE bit[11]
 (defconstant float-overflow-trap-bit (ash 1 10))         ; OFE bit[10]
