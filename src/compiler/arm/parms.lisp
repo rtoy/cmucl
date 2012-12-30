@@ -367,23 +367,25 @@
 ;;;; This is the trap number to use when a pseudo-atomic section has
 ;;;; been interrupted.
 ;;;;
-;;;; This should be any valid trap number. According to the Sparc
-;;;; Compliance Definition 2.4.1, only traps 16-31 are allowed for
-;;;; user applications.  All others are reserved.  It's ok if this
-;;;; number matches any of the other trap enums above because those
-;;;; are only used in an illtrap instruction, not the trap
-;;;; instruction.  This needs to be coordinated with the C code.
+;;;; FIXME: Choose an appropriate value once the C code has
+;;;; implemented.
 (defconstant pseudo-atomic-trap 16)
 
 ;;;; Pseudo-atomic flag
 ;;;;
-;;;; This value is added to alloc-tn to indicate a pseudo-atomic
-;;;; section.
+;;;; This value is added to *pseudo-atomic-atomic* to indicate a
+;;;; pseudo-atomic section.
 (defconstant pseudo-atomic-value (ash 1 (1- vm::lowtag-bits)))
 
 ;;;; Pseudo-atomic-interrupted-mask
 ;;;;
 ;;;; This is a mask used to check if a pseudo-atomic section was
-;;;; interrupted.  On sparc, this is indicated by least-significant
-;;;; bit of alloc-tn being 1.
+;;;; interrupted.  This is indicated by least-significant bit of
+;;;; *pseudo-atomic-atomic* being 1.
+;;;;
+;;;; FIXME: This is based on the sparc port where the pseudo-atomic
+;;;; stuff is implemented as bits on the alloc-tn.  We don't have an
+;;;; alloc-tn on ARM.  So should we emulate that using
+;;;; *pseudo-atomic-atomic* or use *pseudo-atomic-interrupted* as on
+;;;; x86?
 (defconstant pseudo-atomic-interrupted-value 1)
