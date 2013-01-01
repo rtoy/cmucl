@@ -260,8 +260,7 @@
       ;; Frode Vatvedt Fjeld: (zerop (logand #b110 (1+ temp)))
       (inst srln temp x positive-fixnum-bits)
       (inst add temp 1)
-      (inst and temp #b110)
-      (inst cmp temp)
+      (inst andcc temp #b110)
       (inst b :eq done)
       (inst slln y x fixnum-tag-bits)
       
