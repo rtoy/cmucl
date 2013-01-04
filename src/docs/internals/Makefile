@@ -41,12 +41,21 @@ firsttime: $(MASTERFILE).dvi
 
 
 %.dvi : %.tex
+	$(LATEX) $<
+	@while ( grep Rerun $*.log > /dev/null ); do \
+	   $(LATEX) $<; \
+	done
+	$(LATEX) $<
 
 %.eps :	%.fig
 	fig2dev -L ps $^ $@
 
 %.pdf : %.tex
 	$(PDFLATEX) $^
+	@while ( grep -v 'Package: rerunfilecheck' $*.log | grep Rerun > /dev/null ); do \
+	   $(PDFLATEX) $<; \
+	done
+	$(PDFLATEX) $<
 
 %.ps : %.dvi
 	$(DVIPS) $(DVIPSOPTS) -o $@ $*
