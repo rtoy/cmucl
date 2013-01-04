@@ -62,7 +62,7 @@ all: cmu-user.ps
 
 %.pdf : %.tex $(FILES)
 	$(PDFLATEX) $<
-	@while ( grep Rerun $*.log > /dev/null ); do \
+	@while ( grep -v 'Package: rerunfilecheck' $*.log | grep Rerun > /dev/null ); do \
 	   $(PDFLATEX) $<; \
 	done
 	if [ "$<" = "cmu-user.tex" ]; then $(MAKE) index; else $(MAKE) index-letter; fi
@@ -102,7 +102,7 @@ cmu-user-letter.tex: cmu-user.tex
 
 
 clean:
-	rm -f *.log *.bbl *.blg *.ps *.pdf *.aux *.lof *.toc *.gif *.out *.ilg
+	rm -f *.log *.bbl *.blg *.ps *.pdf *.aux *.lof *.toc *.out *.ilg
 	rm -f *.vdx *.cdx *.tdx *.fdx *.idx *.cnd *.fnd *.tnd *.vnd *.haux
 	rm -f *.html *.hcnd *.htnd *.hvnd *.hfnd *.htoc
 
