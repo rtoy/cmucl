@@ -19,11 +19,9 @@
 (in-package "ARM")
 
 (use-package "NEW-ASSEM")
-(use-package "EXT")
-(use-package "C")
 
 (def-assembler-params
-    :scheduler-p nil
+  :scheduler-p nil
   :max-locations 101)			; TODO: How many locations?
 
 
@@ -62,7 +60,7 @@
 		(ldb (byte 4 1) regnum)))))
 
 (disassem:set-disassem-params :instruction-alignment 32
-			      :opcode-column-width 16)
+                              :opcode-column-width 16)
 
 
 (def-vm-support-routine location-number (loc)
@@ -1861,7 +1859,7 @@
 
 (define-emitter emit-format-vfp-2-arg 32
   (byte 4 28) (byte 3 25) (byte 2 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
-  (byte 3 9) (byte 1 8) (byte 2 6) (byte 1 5) (byte 1 4) (byte 4 0))
+  (byte 3 9) (byte 1 8) (byte 1 7) (byte 1 6) (byte 1 5) (byte 1 4) (byte 4 0))
 
 (defconstant format-vfp-2-arg-printer
   `(:name cond
@@ -1873,6 +1871,7 @@
 (disassem:define-instruction-format
     (format-vfp-2-arg 32 :include 'format-base
 			 :default-printer format-vfp-2-arg-printer)
+  (opb0  :field (byte 3 25))  
   (op0   :field (byte 2 23) :value #b01)
   (op    :field (byte 2 20))
   (op1   :field (byte 4 16))
@@ -1923,6 +1922,7 @@
 				   vd
 				   #b101
 				   ,(if doublep 1 0)
+				   #b1
 				   ,opc3
 				   m
 				   ,opc4
@@ -2296,6 +2296,7 @@
      (multiple-value-bind (n vn)
 	 (fp-reg-tn-encoding fp nil)
        (emit-format-7-vfp-vmov-core segment
+				    (inst-condition-code (list cc))
 				    #b111
 				    #b0000
 				    op
@@ -2417,6 +2418,7 @@
 
 (disassem:define-instruction-format
     (format-vfp-fpscr 32 :include 'format-base)
+  (opb0 :field (byte 3 25))
   (k0   :field (byte 1 24))
   (a    :field (byte 3 21) :value 0)
   (el   :field (byte 1 20))
@@ -2460,6 +2462,7 @@
 			    #b0001
 			    rt
 			    #b101
+			    #b0
 			    #b0
 			    #b00
 			    #b1
