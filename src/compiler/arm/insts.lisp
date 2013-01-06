@@ -2281,18 +2281,16 @@
 	    '(:name cond :tab vn ", " reg))
   (:emitter
    (multiple-value-bind (op r fp)
-       (let ((dst-sc (tn-sc dst))
-	     (src-sc (tn-sc src)))
-	 (cond ((and (typep (sc-case dst-sc) 'reg)
-		     (typep (sc-case src-sc) 'single-reg))
-		;; Move to arm reg
-		(values 1 dst src))
-	       ((and (typep (sc-case src-sc) 'reg)
-		     (typep (sc-case dst-sc) 'single-reg))
-		;; Move to float reg
-		(values 0 src dst))
-	       (t
-		(error "VMOV requires one ARM reg and one single-float reg"))))
+       (cond ((and (sc-is dst unsigned-reg signed-reg)
+		   (sc-is src single-reg))
+	      ;; Move to arm reg
+	      (values 1 dst src))
+	     ((and (sc-is src unsigned-reg signed-reg)
+		   (sc-is dst single-reg))
+	      ;; Move to float reg
+	      (values 0 src dst))
+	     (t
+	      (error "VMOV requires one ARM reg and one single-float reg")))
      (multiple-value-bind (n vn)
 	 (fp-reg-tn-encoding fp nil)
        (emit-format-7-vfp-vmov-core segment
