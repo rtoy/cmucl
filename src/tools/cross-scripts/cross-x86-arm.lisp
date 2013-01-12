@@ -16,8 +16,6 @@
      :conservative-float-type
      :hash-new
      :random-mt19937			; MT-19937 generator
-     :cmu				; Announce this is CMUCL
-     :cmu20 :cmu20d			; Current version identifier
      :modular-arith			; Modular arithmetic
      :double-double			; Double-double float support
      :unicode
@@ -35,17 +33,19 @@
      :alpha :osf1 :mips
      ;; Really old stuff that should have been removed long ago.
      :propagate-fun-type :propagate-float-type :constrain-float-type
-     ;; Other OSes were not using
-     :openbsd :freebsd :linux :mach-o :darwin :bsd
+     :pentium :long-float :new-random
 
+     ;; Other OSes we're not using
+     :openbsd :freebsd :mach-o :darwin :bsd
+
+     ;; We're not building a small core
+     :small
+
+     ;; Other features not yet supported by the ARM port.
+     :mp
      :gencgc
      :heap-overflow-check
-     :stack-checking
-     :pentium
-     :long-float
-     :new-random
-     :small
-     :mp))
+     :stack-checking))
 
 ;;; Changes needed to bootstrap cross-compiling from x86 to arm
 
