@@ -2443,8 +2443,8 @@
 	     (b #b00)
 	     (k3 1)
 	     (src 0))
-	    '(:name :tab (:cond ((reg :constant 15) 'apsr)
-				(t reg))
+	    '(:name cond :tab (:cond ((reg :constant 15) 'apsr)
+				     (t reg))
 	      ", " 'fpscr))
   (:emitter
    (let ((rt (if (typep reg 'tn)
@@ -2480,7 +2480,7 @@
 	     (b #b00)
 	     (k3 1)
 	     (src 0))
-	    '(:name :tab 'fpscr ", " reg))
+	    '(:name cond :tab 'fpscr ", " reg))
   (:emitter
    (emit-format-vfp-fpscr segment
 			  (inst-condition-code (list cc))
