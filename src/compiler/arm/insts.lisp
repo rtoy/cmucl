@@ -21,8 +21,7 @@
 (use-package "NEW-ASSEM")
 
 (def-assembler-params
-  :scheduler-p nil
-  :max-locations 101)			; TODO: How many locations?
+  :scheduler-p nil)
 
 
 ;;;; Constants, types, conversion functions, some disassembler stuff.
@@ -101,20 +100,21 @@
        *register-names*)
   "The Lisp names for the ARM integer registers")
 
-(defparameter reg-symbols-arm
-  #(r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15))
+(defparameter arm-reg-symbols
+  #(r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15)
+  "The ARM names for the integer registers.")
 
 (defvar *use-lisp-register-names* t)
   
 (defun get-reg-name (index)
   (aref (if *use-lisp-register-names*
 	    reg-symbols
-	    reg-symbols-arm)
+	    arm-reg-symbols)
 	index))
 
 (defun maybe-add-notes (value dstate)
   (declare (ignore value dstate))
-  )
+  (error "Not yet implemented"))
 
 (eval-when (compile load eval)
 (defun reg-arg-printer (value stream dstate)
@@ -124,8 +124,7 @@
     (disassem:maybe-note-associated-storage-ref value
 						'registers
 						regname
-						dstate)
-    (maybe-add-notes value dstate)))
+						dstate)))
 ) ; eval-when
       
 (disassem:define-argument-type reg
@@ -177,11 +176,10 @@
 (defconstant condition-codes
   '(:eq :ne :cs :cc :mi :pl :vs :vc :hi :ls :ge :lt :gt :le :al))
 
-;; Hmm.  The only way to distinguish :ror from :rrx is the value of
-;; the shift.  If the shift is 0, then it's :rrx.  Otherwise it's
-;; :ror.  What should we do here?
+;; The possible shift types.  We don't include :rrx; that needs to be
+;; handled specially since it is encoded as :ror with a shift of 0.
 (defconstant shift-types
-  '(:lsl :lsr :asr :ror :rrx))
+  '(:lsl :lsr :asr :ror))
 
 (deftype condition-code ()
   `(member ,@condition-codes))
@@ -189,13 +187,13 @@
 (defconstant condition-code-name-vec
   (coerce condition-codes 'vector))
 
-(defconstant condition-true
+(defconstant condition-always
   #b1110)
 
 (disassem:define-argument-type condition-code
   :printer #'(lambda (value stream dstate)
 	       (declare (ignore dstate))
-	       (unless (= value condition-true)
+	       (unless (= value condition-always)
 		 (princ (aref condition-code-name-vec value) stream))))
 
 (deftype shift-type ()
@@ -214,7 +212,7 @@
       (error "invalid condition code: ~S" c))
     (let ((position (position (car c) condition-codes)))
       (or position
-	  condition-true))))
+	  condition-always))))
 
 ;; Look through OPTIONS-LIST to find :S, which means the instruction
 ;; should set the flags.
@@ -225,11 +223,12 @@
 
 ;; Convert SHIFT-TYPE to the value for an instruction field.
 (eval-when (:compile-toplevel :load-toplevel :execute)
-(defun shift-encoding (shift-type)
+(defun encode-shift (shift-type)
   (if (eq shift-type :rrx)
       3
       (or (position shift-type shift-types)
-	  (error "Unknown shift type: ~S" shift-type)))))
+	  (error "Unknown shift type: ~S" shift-type))))
+) ; eval-when
 
 (defun rotate-right2 (value amount)
   "Rotate VALUE right by 2*AMOUNT bits in a register of length 32 bits."
@@ -248,7 +247,7 @@
     (logior out
 	    (ash (ldb (byte (- 32 amount) 0) value) amount))))
 
-(defun find-encoding (value)
+(defun encode-immediate (value)
   "Find a V and N such that VALUE = rotate_right(V, 2*N)
   The values N and V are returned as multiple values, in that order.
   If no such values of N and V exist, then NIL is returned."
@@ -270,7 +269,7 @@
 	 (let ((new (rotate-left value 8)))
 	   (when (zerop (ldb (byte 8 24) new))
 	     (multiple-value-bind (rot val)
-		 (find-encoding new)
+		 (encode-immediate new)
 	       (when rot
 		 (values (mod (+ 4 rot) 16) val))))))))
 
@@ -284,6 +283,8 @@
 ;;
 ;; Section A5.1.  This is the basic encoding form, not including the
 ;; op field (byte 1 4).  That is sometimes used for other things.
+;; Also, The names of all the formats below are numbered based on the
+;; value of the 3-bit opb0 field.
 (disassem:define-instruction-format
     (format-base 32)
   (cond  :field (byte 4 28) :type 'condition-code)
@@ -291,12 +292,12 @@
 
 (defconstant format-1-immed-printer
   `(:name (:unless (s :constant 0) 's)
-	  (:unless (:constant ,condition-true) cond)
+	  (:unless (:constant ,condition-always) cond)
 	  :tab
 	  dst ", " src1 ", " immed))
 
 (defconstant format-1-immed-set-printer
-  `(:name (:unless (:constant ,condition-true) cond)
+  `(:name (:unless (:constant ,condition-always) cond)
 	  :tab
 	  src1 ", " immed))
 
@@ -490,7 +491,7 @@
       (etypecase src2
 	(integer
 	 (multiple-value-bind (rot val)
-	     (find-encoding src2)
+	     (encode-immediate src2)
 	   (unless rot
 	     (error "Cannot encode the immediate value ~S~%" src2))
 	   (emit-format-1-immed segment
@@ -514,7 +515,7 @@
 			    (reg-tn-encoding src1)
 			    (reg-tn-encoding dst)
 			    0
-			    (shift-encoding :lsl)
+			    (encode-shift :lsl)
 			    #b0
 			    (reg-tn-encoding src2)))
 	(flex-operand
@@ -530,7 +531,7 @@
 			       (reg-tn-encoding src1)
 			       (reg-tn-encoding dst)
 			       (flex-operand-shift-reg-or-imm src2)
-			       (shift-encoding (flex-operand-shift-type src2))
+			       (encode-shift (flex-operand-shift-type src2))
 			       #b0
 			       (reg-tn-encoding (flex-operand-reg src2))))
 	   (:reg-shift-reg
@@ -545,7 +546,7 @@
 				     (reg-tn-encoding dst)
 				     (reg-tn-encoding (flex-operand-shift-reg-or-imm src2))
 				     #b0
-				     (shift-encoding (flex-operand-shift-type src2))
+				     (encode-shift (flex-operand-shift-type src2))
 				     #b1
 				     (reg-tn-encoding (flex-operand-reg src2))))))))))
 
@@ -622,7 +623,7 @@
    (etypecase src2
      (integer
       (multiple-value-bind (rot val)
-	  (find-encoding src2)
+	  (encode-immediate src2)
 	(unless rot
 	  (error "Cannot encode the immediate value ~S~%" src2))
 	(emit-format-1-immed segment
@@ -642,7 +643,7 @@
 			 (reg-tn-encoding src1)
 			 (reg-tn-encoding dst)
 			 0
-			 (shift-encoding :lsl)
+			 (encode-shift :lsl)
 			 #b0
 			 (reg-tn-encoding src2)))
      (flex-operand
@@ -656,7 +657,7 @@
 			    (reg-tn-encoding src1)
 			    (reg-tn-encoding dst)
 			    (flex-operand-shift-reg-or-imm src2)
-			    (shift-encoding (flex-operand-shift-type src2))
+			    (encode-shift (flex-operand-shift-type src2))
 			    #b0
 			    (reg-tn-encoding (flex-operand-reg src2))))
 	(:reg-shift-reg
@@ -669,7 +670,7 @@
 				  (reg-tn-encoding dst)
 				  (reg-tn-encoding (flex-operand-shift-reg-or-imm src2))
 				  #b0
-				  (shift-encoding (flex-operand-shift-type src2))
+				  (encode-shift (flex-operand-shift-type src2))
 				  #b1
 				  (reg-tn-encoding (flex-operand-reg src2)))))))))
 
@@ -726,7 +727,7 @@
    (etypecase src2
      (integer
       (multiple-value-bind (rot val)
-	  (find-encoding src2)
+	  (encode-immediate src2)
 	(unless rot
 	  (error "Cannot encode the immediate value ~S~%" src2))
 	(emit-format-1-immed segment
@@ -746,7 +747,7 @@
 			 (reg-tn-encoding src1)
 			 (reg-tn-encoding dst)
 			 0
-			 (shift-encoding :lsl)
+			 (encode-shift :lsl)
 			 #b0
 			 (reg-tn-encoding src2)))
      (flex-operand
@@ -760,7 +761,7 @@
 			    0
 			    (reg-tn-encoding dst)
 			    (flex-operand-shift-reg-or-imm src2)
-			    (shift-encoding (flex-operand-shift-type src2))
+			    (encode-shift (flex-operand-shift-type src2))
 			    #b0
 			    (reg-tn-encoding (flex-operand-reg src2))))
 	(:reg-shift-reg
@@ -779,7 +780,7 @@
 		(rs 0)
 		(src1 0)
 		(dst nil :type 'reg)
-		(type ,(shift-encoding name))
+		(type ,(encode-shift name))
 		(rs 0))
 	       '(:name (:unless (s :constant 0) 's)
 		 cond
@@ -791,7 +792,7 @@
 		(rs 1)
 		(src1 0)
 		(dst nil :type 'reg)
-		(type ,(shift-encoding name)))
+		(type ,(encode-shift name)))
 	       '(:name (:unless (s :constant 0) 's)
 		 cond
 		 :tab
@@ -813,7 +814,7 @@
 			    #b0000
 			    (reg-tn-encoding dst)
 			    shift
-			    (shift-encoding ,name)
+			    (encode-shift ,name)
 			    #b0
 			    (reg-tn-encoding src2)))
 	(reg
@@ -826,7 +827,7 @@
 				  (reg-tn-encoding dst)
 				  (reg-tn-encoding shift)
 				  #b0
-				  (shift-encoding ,name)
+				  (encode-shift ,name)
 				  #b1
 				  (reg-tn-encoding src2)))))))
 
@@ -847,7 +848,7 @@
 	     (rs 0)
 	     (src1 0)
 	     (dst nil :type 'reg)
-	     (type (shift-encoding :ror))
+	     (type (encode-shift :ror))
 	     (shift 0))
 	    '(:name (:unless (s :constant 0) 's)
 	      cond
@@ -866,7 +867,7 @@
 		      0
 		      (reg-tn-encoding dst)
 		      0
-		      (shift-encoding :ror)
+		      (encode-shift :ror)
 		      #b0
 		      (reg-tn-encoding src2))))
 
@@ -1766,7 +1767,7 @@
 (defun %li (reg value)
   (etypecase value
     ((or (signed-byte 32) (unsigned-byte 32))
-     (cond ((find-encoding value)
+     (cond ((encode-immediate value)
 	    (inst mov reg value))
 	   (t
 	    (let ((hi (ldb (byte 16 16) value))
@@ -1871,7 +1872,6 @@
 (disassem:define-instruction-format
     (format-vfp-2-arg 32 :include 'format-base
 			 :default-printer format-vfp-2-arg-printer)
-  (opb0  :field (byte 3 25))  
   (op0   :field (byte 2 23) :value #b01)
   (op    :field (byte 2 20))
   (op1   :field (byte 4 16))
@@ -2416,7 +2416,6 @@
 
 (disassem:define-instruction-format
     (format-vfp-fpscr 32 :include 'format-base)
-  (opb0 :field (byte 3 25))
   (k0   :field (byte 1 24))
   (a    :field (byte 3 21) :value 0)
   (el   :field (byte 1 20))
