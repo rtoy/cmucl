@@ -438,6 +438,69 @@
 			:shift-reg-or-imm amount
 			:shift-type shift-type))))
 
+(defun emit-data-proc-format (segment dst src1 src2 cc
+			      &key opcode set-flags-bit)
+  (declare (type tn dst src1)
+	   (type (or (signed-byte 32)
+		     (unsigned-byte 32)
+		     reg
+		     flex-operand)
+		 src2)
+	   (type (or null (unsigned-byte 4)) opcode)
+	   (type (or null bit) set-flags-bit))
+  (etypecase src2
+    (integer
+     (multiple-value-bind (rot val)
+	 (encode-immediate src2)
+       (unless rot
+	 (error "Cannot encode the immediate value ~S~%" src2))
+       (emit-format-1-immed segment
+			    (condition-code-encoding cc)
+			    #b001
+			    opcode
+			    set-flags-p
+			    (reg-tn-encoding src1)
+			    (reg-tn-encoding dst)
+			    (logior (ash rot 8) val))))
+    (reg
+     (emit-format-0-reg segment
+			(condition-code-encoding cc)
+			#b000
+			opcode
+			set-flags-bit
+			(reg-tn-encoding src1)
+			(reg-tn-encoding dst)
+			0
+			(encode-shift :lsl)
+			#b0
+			(reg-tn-encoding src2)))
+    (flex-operand
+     (ecase (flex-operand-type src2)
+       (:reg-shift-imm
+	(emit-format-0-reg segment
+			   (condition-code-encoding cc)
+			   #b000
+			   opcode
+			   set-flags-bit
+			   (reg-tn-encoding src1)
+			   (reg-tn-encoding dst)
+			   (flex-operand-shift-reg-or-imm src2)
+			   (encode-shift (flex-operand-shift-type src2))
+			   #b0
+			   (reg-tn-encoding (flex-operand-reg src2))))
+       (:reg-shift-reg
+	(emit-format-0-reg-shift segment
+				 (condition-code-encoding cc)
+				 #b000
+				 opcode
+				 set-flags-bit
+				 (reg-tn-encoding src1)
+				 (reg-tn-encoding dst)
+				 (reg-tn-encoding (flex-operand-shift-reg-or-imm src2))
+				 #b0
+				 (encode-shift (flex-operand-shift-type src2))
+				 #b1
+				 (reg-tn-encoding (flex-operand-reg src2))))))))
 
 (defmacro define-one-data-proc-inst (name opcode set-flags-p)
   (let ((set-flags-bit (if set-flags-p 1 0)))
@@ -472,59 +535,9 @@
 	)
        (:delay 0)
        (:emitter
-	(etypecase src2
-	  (integer
-	   (multiple-value-bind (rot val)
-	       (encode-immediate src2)
-	     (unless rot
-	       (error "Cannot encode the immediate value ~S~%" src2))
-	     (emit-format-1-immed segment
-				  (condition-code-encoding cond)
-				  #b001
-				  ,opcode
-				  ,set-flags-p
-				  (reg-tn-encoding src1)
-				  (reg-tn-encoding dst)
-				  (logior (ash rot 8) val))))
-	  (reg
-	   (emit-format-0-reg segment
-			      (condition-code-encoding cond)
-			      #b000
-			      ,opcode
-			      ,set-flags-bit
-			      (reg-tn-encoding src1)
-			      (reg-tn-encoding dst)
-			      0
-			      (encode-shift :lsl)
-			      #b0
-			      (reg-tn-encoding src2)))
-	  (flex-operand
-	   (ecase (flex-operand-type src2)
-	     (:reg-shift-imm
-	      (emit-format-0-reg segment
-				 (condition-code-encoding cond)
-				 #b000
-				 ,opcode
-				 ,set-flags-bit
-				 (reg-tn-encoding src1)
-				 (reg-tn-encoding dst)
-				 (flex-operand-shift-reg-or-imm src2)
-				 (encode-shift (flex-operand-shift-type src2))
-				 #b0
-				 (reg-tn-encoding (flex-operand-reg src2))))
-	     (:reg-shift-reg
-	      (emit-format-0-reg-shift segment
-				       (condition-code-encoding cond)
-				       #b000
-				       ,opcode
-				       ,set-flags-bit
-				       (reg-tn-encoding src1)
-				       (reg-tn-encoding dst)
-				       (reg-tn-encoding (flex-operand-shift-reg-or-imm src2))
-				       #b0
-				       (encode-shift (flex-operand-shift-type src2))
-				       #b1
-				       (reg-tn-encoding (flex-operand-reg src2)))))))))))
+	(emit-data-proc-format segment dst src1 src2 cond
+			       :opcode ,opcode
+			       :set-flags-bit ,set-flags-bit)))))
 
 
 (defmacro define-data-proc-inst (basename opcode)
