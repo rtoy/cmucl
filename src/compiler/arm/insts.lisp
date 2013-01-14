@@ -1314,7 +1314,7 @@
   shift-amount
   add
   update
-  post-indexed)
+  indexed)
 
 (defun make-ea (base-reg &key (offset 0) update
 			   (add t addp) 
@@ -1339,8 +1339,8 @@
   :Amount
      Amount of the shift
 
-  Note that if the offset is an integer, the :shift-type, and :amount
-  options are not allowed.  The :add option is ignored.
+  Note that if the offset is an integer, the :shift-type, :add and
+  :amount options are not allowed.
 
   If the offset is a register, all options are allowed.
 "
@@ -1355,7 +1355,7 @@
 			    :shift-type shift-type
 			    :shift-amount amount
 			    :update update
-			    :post-indexed post-indexed))
+			    :indexed indexed))
     ((or (unsigned-byte 12) (signed-byte 12))
      (let ((mag (abs imm))
 	   (add (not (minusp imm))))
@@ -1369,7 +1369,7 @@
 			      :offset mag
 			      :add add
 			      :update update
-			      :post-indexed post-indexed)))))
+			      :indexed indexed)))))
 
 (defun decode-load-store-index (index)
   "Determine the P, U, and W bits from the load-store-index"
