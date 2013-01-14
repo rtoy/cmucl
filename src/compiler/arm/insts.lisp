@@ -419,6 +419,13 @@
 ;; src2 = reg SFT amount, where SFT is LSL, LSR, ASR, ROR, RRX and
 ;; amount is either a number or a register.
 (defun make-shift (reg shift-type &optional amount)
+  "Specifies the shift that is to be applied.
+
+  Reg is the register to be shifted.  Shift-type specifies the type of
+  shift and should be one of :lsl, :lsr, :asr, :ror, or :rrx.  The
+  Amound is optional and is the amount of the shift, which is a small
+  positive integer or a register.  If the shift type is :rrx, the
+  amount cannot be specified."
   (declare (type shift-type shift-type))
   (typecase amount
     ((unsigned-byte 5)
@@ -1313,7 +1320,30 @@
 			   (add t addp) 
 			   (shift-type :lsl shift-type-p)
 			   (amount 0 amountp)
-			   post-indexed)
+			   indexed)
+  "Create effective address for load/store instructions.
+  Base-reg specifies the base register with the following options:
+
+  :Offset
+     The offset from the base register.  This can be either a integer
+     or a register
+  :Update
+     Non-nil means the base register is updated from the offset
+  :Add
+     Non-nil means the offset is added.  Default is to add.
+  :Indexed
+     Non-nil means the base register plus the offset is the address.
+     Otherwise, the base-register is the address.
+  :Shift-type
+     The shift type to be applied to the offset register
+  :Amount
+     Amount of the shift
+
+  Note that if the offset is an integer, the :shift-type, and :amount
+  options are not allowed.  The :add option is ignored.
+
+  If the offset is a register, all options are allowed.
+"
   (assert (typep amount '(unsigned-byte 5)))
   (assert (typep shift-type shift-types))
   (etypecase offset
