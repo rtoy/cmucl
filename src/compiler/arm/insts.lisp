@@ -440,7 +440,8 @@
 
 (defun emit-data-proc-format (segment dst src1 src2 cc
 			      &key opcode set-flags-bit)
-  (declare (type tn dst src1)
+  (declare (type tn dst)
+	   (type (or tn (member 0)) src1)
 	   (type (or (signed-byte 32)
 		     (unsigned-byte 32)
 		     reg
@@ -459,7 +460,9 @@
 			    #b001
 			    opcode
 			    set-flags-p
-			    (reg-tn-encoding src1)
+			    (if (typep src1 'tn)
+				(reg-tn-encoding src1)
+				src1)
 			    (reg-tn-encoding dst)
 			    (logior (ash rot 8) val))))
     (reg
@@ -468,7 +471,9 @@
 			#b000
 			opcode
 			set-flags-bit
-			(reg-tn-encoding src1)
+			(if (typep src1 'tn)
+			    (reg-tn-encoding src1)
+			    src1)
 			(reg-tn-encoding dst)
 			0
 			(encode-shift :lsl)
@@ -482,7 +487,9 @@
 			   #b000
 			   opcode
 			   set-flags-bit
-			   (reg-tn-encoding src1)
+			   (if (typep src1 'tn)
+			       (reg-tn-encoding src1)
+			       src1)
 			   (reg-tn-encoding dst)
 			   (flex-operand-shift-reg-or-imm src2)
 			   (encode-shift (flex-operand-shift-type src2))
@@ -494,7 +501,9 @@
 				 #b000
 				 opcode
 				 set-flags-bit
-				 (reg-tn-encoding src1)
+				 (if (typep src1 'tn)
+				     (reg-tn-encoding src1)
+				     src1)
 				 (reg-tn-encoding dst)
 				 (reg-tn-encoding (flex-operand-shift-reg-or-imm src2))
 				 #b0
@@ -592,59 +601,9 @@
       )
      (:delay 0)
      (:emitter
-      (etypecase src2
-	(integer
-	 (multiple-value-bind (rot val)
-	     (encode-immediate src2)
-	   (unless rot
-	     (error "Cannot encode the immediate value ~S~%" src2))
-	   (emit-format-1-immed segment
-				(condition-code-encoding cond)
-				#b001
-				,opcode
-				1
-				(reg-tn-encoding src1)
-				(reg-tn-encoding dst)
-				(logior (ash rot 8) val))))
-	(reg
-	 (emit-format-0-reg segment
-			    (condition-code-encoding cond)
-			    #b000
-			    ,opcode
-			    1
-			    (reg-tn-encoding src1)
-			    (reg-tn-encoding dst)
-			    0
-			    (encode-shift :lsl)
-			    #b0
-			    (reg-tn-encoding src2)))
-	(flex-operand
-	 (ecase (flex-operand-type src2)
-	   (:reg-shift-imm
-	    (emit-format-0-reg segment
-			       (condition-code-encoding cond)
-			       #b000
-			       ,opcode
-			       1
-			       (reg-tn-encoding src1)
-			       (reg-tn-encoding dst)
-			       (flex-operand-shift-reg-or-imm src2)
-			       (encode-shift (flex-operand-shift-type src2))
-			       #b0
-			       (reg-tn-encoding (flex-operand-reg src2))))
-	   (:reg-shift-reg
-	    (emit-format-0-reg-shift segment
-				     (condition-code-encoding cond)
-				     #b000
-				     ,opcode
-				     1
-				     (reg-tn-encoding src1)
-				     (reg-tn-encoding dst)
-				     (reg-tn-encoding (flex-operand-shift-reg-or-imm src2))
-				     #b0
-				     (encode-shift (flex-operand-shift-type src2))
-				     #b1
-				     (reg-tn-encoding (flex-operand-reg src2))))))))))
+      (emit-data-proc-format segment dst src1 src2 cond
+			     :opcode ,opcode
+			     :set-flags-bit 1))))
 
 (define-compare-inst tst #b1000)
 (define-compare-inst teq #b1001)
@@ -704,59 +663,9 @@
 	)
        (:delay 0)
        (:emitter
-	(etypecase src2
-	  (integer
-	   (multiple-value-bind (rot val)
-	       (encode-immediate src2)
-	     (unless rot
-	       (error "Cannot encode the immediate value ~S~%" src2))
-	     (emit-format-1-immed segment
-				  (condition-code-encoding cond)
-				  #b001
-				  #b1111
-				  ,set-flags-bit
-				  (reg-tn-encoding src1)
-				  (reg-tn-encoding dst)
-				  (logior (ash rot 8) val))))
-	  (reg
-	   (emit-format-0-reg segment
-			      (condition-code-encoding cond)
-			      #b000
-			      #b1111
-			      ,set-flags-bit
-			      (reg-tn-encoding src1)
-			      (reg-tn-encoding dst)
-			      0
-			      (encode-shift :lsl)
-			      #b0
-			      (reg-tn-encoding src2)))
-	  (flex-operand
-	   (ecase (flex-operand-type src2)
-	     (:reg-shift-imm
-	      (emit-format-0-reg segment
-				 (condition-code-encoding cond)
-				 #b000
-				 #b1111
-				 ,set-flags-bit
-				 (reg-tn-encoding src1)
-				 (reg-tn-encoding dst)
-				 (flex-operand-shift-reg-or-imm src2)
-				 (encode-shift (flex-operand-shift-type src2))
-				 #b0
-				 (reg-tn-encoding (flex-operand-reg src2))))
-	     (:reg-shift-reg
-	      (emit-format-0-reg-shift segment
-				       (condition-code-encoding cond)
-				       #b000
-				       #b1111
-				       ,set-flags-bit
-				       (reg-tn-encoding src1)
-				       (reg-tn-encoding dst)
-				       (reg-tn-encoding (flex-operand-shift-reg-or-imm src2))
-				       #b0
-				       (encode-shift (flex-operand-shift-type src2))
-				       #b1
-				       (reg-tn-encoding (flex-operand-reg src2)))))))))))
+	(emit-data-proc-format segment dst 0 src2 cond
+			       :opcode #b1111
+			       :set-flags-bit ,set-flags-bit)))))
 
 (define-mvn-inst mvn nil)
 (define-mvn-inst mvns t)
