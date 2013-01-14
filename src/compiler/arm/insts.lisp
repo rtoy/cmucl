@@ -438,10 +438,10 @@
 			:shift-reg-or-imm amount
 			:shift-type shift-type))))
 
+;; Handle emitting data processing instruction.
 (defun emit-data-proc-format (segment dst src1 src2 cc
 			      &key opcode set-flags-bit)
-  (declare (type tn dst)
-	   (type (or tn (member 0)) src1)
+  (declare (type (or tn (member 0)) dst src1)
 	   (type (or (signed-byte 32)
 		     (unsigned-byte 32)
 		     reg
@@ -449,67 +449,63 @@
 		 src2)
 	   (type (or null (unsigned-byte 4)) opcode)
 	   (type (or null bit) set-flags-bit))
-  (etypecase src2
-    (integer
-     (multiple-value-bind (rot val)
-	 (encode-immediate src2)
-       (unless rot
-	 (error "Cannot encode the immediate value ~S~%" src2))
-       (emit-format-1-immed segment
-			    (condition-code-encoding cc)
-			    #b001
-			    opcode
-			    set-flags-p
-			    (if (typep src1 'tn)
-				(reg-tn-encoding src1)
-				src1)
-			    (reg-tn-encoding dst)
-			    (logior (ash rot 8) val))))
-    (reg
-     (emit-format-0-reg segment
-			(condition-code-encoding cc)
-			#b000
-			opcode
-			set-flags-bit
-			(if (typep src1 'tn)
-			    (reg-tn-encoding src1)
-			    src1)
-			(reg-tn-encoding dst)
-			0
-			(encode-shift :lsl)
-			#b0
-			(reg-tn-encoding src2)))
-    (flex-operand
-     (ecase (flex-operand-type src2)
-       (:reg-shift-imm
-	(emit-format-0-reg segment
-			   (condition-code-encoding cc)
-			   #b000
-			   opcode
-			   set-flags-bit
-			   (if (typep src1 'tn)
-			       (reg-tn-encoding src1)
-			       src1)
-			   (reg-tn-encoding dst)
-			   (flex-operand-shift-reg-or-imm src2)
-			   (encode-shift (flex-operand-shift-type src2))
-			   #b0
-			   (reg-tn-encoding (flex-operand-reg src2))))
-       (:reg-shift-reg
-	(emit-format-0-reg-shift segment
-				 (condition-code-encoding cc)
-				 #b000
-				 opcode
-				 set-flags-bit
-				 (if (typep src1 'tn)
-				     (reg-tn-encoding src1)
-				     src1)
-				 (reg-tn-encoding dst)
-				 (reg-tn-encoding (flex-operand-shift-reg-or-imm src2))
-				 #b0
-				 (encode-shift (flex-operand-shift-type src2))
-				 #b1
-				 (reg-tn-encoding (flex-operand-reg src2))))))))
+  (flet ((reg-encoding (r)
+	   (if (typep r 'tn)
+	       (reg-tn-encoding r)
+	       r)))
+    (etypecase src2
+      (integer
+       (multiple-value-bind (rot val)
+	   (encode-immediate src2)
+	 (unless rot
+	   (error "Cannot encode the immediate value ~S~%" src2))
+	 (emit-format-1-immed segment
+			      (condition-code-encoding cc)
+			      #b001
+			      opcode
+			      set-flags-p
+			      (reg-encoding src1)
+			      (reg-encoding dst)
+			      (logior (ash rot 8) val))))
+      (reg
+       (emit-format-0-reg segment
+			  (condition-code-encoding cc)
+			  #b000
+			  opcode
+			  set-flags-bit
+			  (reg-encoding src1)
+			  (reg-encoding dst)
+			  0
+			  (encode-shift :lsl)
+			  #b0
+			  (reg-tn-encoding src2)))
+      (flex-operand
+       (ecase (flex-operand-type src2)
+	 (:reg-shift-imm
+	  (emit-format-0-reg segment
+			     (condition-code-encoding cc)
+			     #b000
+			     opcode
+			     set-flags-bit
+			     (reg-encoding src1)
+			     (reg-encoding dst)
+			     (flex-operand-shift-reg-or-imm src2)
+			     (encode-shift (flex-operand-shift-type src2))
+			     #b0
+			     (reg-tn-encoding (flex-operand-reg src2))))
+	 (:reg-shift-reg
+	  (emit-format-0-reg-shift segment
+				   (condition-code-encoding cc)
+				   #b000
+				   opcode
+				   set-flags-bit
+				   (reg-encoding src1)
+				   (reg-encoding dst)
+				   (reg-tn-encoding (flex-operand-shift-reg-or-imm src2))
+				   #b0
+				   (encode-shift (flex-operand-shift-type src2))
+				   #b1
+				   (reg-tn-encoding (flex-operand-reg src2))))))))
 
 (defmacro define-one-data-proc-inst (name opcode set-flags-p)
   (let ((set-flags-bit (if set-flags-p 1 0)))
@@ -548,7 +544,6 @@
 			       :opcode ,opcode
 			       :set-flags-bit ,set-flags-bit)))))
 
-
 (defmacro define-data-proc-inst (basename opcode)
   `(progn
      (define-one-data-proc-inst ,basename ,opcode nil)
@@ -569,6 +564,8 @@
 (define-data-proc-inst orr #b1100)
 (define-data-proc-inst bic #b1110)
 
+;; Compare type instructions need to be handled separately from the
+;; above data processing instructions because the src1 isn't used.
 (defmacro define-compare-inst (name opcode)
   `(define-instruction ,name (segment dst src1 src2 &optional (cond :al))
      (:declare (type tn dst)
@@ -581,17 +578,20 @@
      (:printer format-1-immed
 	       ((opb0 #b001) (op ,opcode)
 		(s 1)
+		(src1 nil :type 'reg)
 		(dst 0))
 	       format-1-immed-set-printer)
      (:printer format-0-reg
 	       ((opb0 #b000) (op ,opcode) (rs 0)
 		(s 1)
+		(src1 nil :type 'reg)
 		(dst 0))
 	       format-0-reg-set-printer)
      (:printer format-0-reg-shifted
 	       ((opb0 #b000) (op ,opcode) (rs 1)
 		(z 0)
 		(s 1)
+		(src1 nil :type 'reg)
 		(dst 0))
 	       format-0-reg-shifted-set-printer)
      (:dependencies
@@ -601,7 +601,7 @@
       )
      (:delay 0)
      (:emitter
-      (emit-data-proc-format segment dst src1 src2 cond
+      (emit-data-proc-format segment 0 src1 src2 cond
 			     :opcode ,opcode
 			     :set-flags-bit 1))))
 
