@@ -1,8 +1,16 @@
-;; Simple tests for disassembly of instructions.
+;; Simple tests for disassembly of instructions.  The inst-space is
+;; dumped to /tmp/disassem.  You can then enter various calls to
+;; TEST-PATTERN to test the disassembly on certain patterns of
+;; instructions.
 
 ;; Currently, this file can be loaded during cross-compile, after
-;; insts.lisp has been compiled.  For this to work, we need to load
-;; insts.lisp to define the instructions.
+;; insts.lisp has been compiled.  If this is done from the debugger,
+;; enter FLUSH so that errors in the debugger are not flushed.
+;;
+;; For this to work, we need to load insts.lisp to define the
+;; instructions, if we haven't loaded insts.lisp yet.  This might
+;; cause an error about a structure being redefined.  Select the
+;; clobber-it restart.
 (load "target:compiler/arm/insts")
 
 (defvar *mem* (make-array 1 :element-type '(unsigned-byte 32)))
