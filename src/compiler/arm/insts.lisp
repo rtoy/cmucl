@@ -508,7 +508,7 @@
 				   #b0
 				   (encode-shift (flex-operand-shift-type src2))
 				   #b1
-				   (reg-tn-encoding (flex-operand-reg src2))))))))
+				   (reg-tn-encoding (flex-operand-reg src2)))))))))
 
 (defmacro define-one-data-proc-inst (name opcode set-flags-p)
   (let ((set-flags-bit (if set-flags-p 1 0)))
