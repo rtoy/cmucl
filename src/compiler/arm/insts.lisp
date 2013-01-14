@@ -301,8 +301,7 @@
   (opb0  :field (byte 3 25)))
 
 (defconstant format-1-immed-printer
-  `(:name (:unless (s :constant 0) 's)
-	  (:unless (:constant ,condition-always) cond)
+  `(:name (:unless (:constant ,condition-always) cond)
 	  :tab
 	  dst ", " src1 ", " immed))
 
@@ -332,8 +331,7 @@
   (immed :field (byte 12 0) :printer #'modified-immed-printer))
 
 (defconstant format-0-reg-printer
-  `(:name (:unless (s :constant 0) 's)
-	  cond
+  `(:name cond
 	  :tab
 	  dst ", " src1 ", " src2
 	  (:unless (shift :constant 0)
@@ -372,8 +370,7 @@
   (src2  :field (byte 4 0) :type 'reg))
 
 (defconstant format-0-reg-shifted-printer
-  `(:name (:unless (s :constant 0) 's)
-	  cond
+  `(:name cond
 	  :tab
 	  dst ", " src1 ", " src2 " " type " " sreg))
 
@@ -510,7 +507,7 @@
 				   #b1
 				   (reg-tn-encoding (flex-operand-reg src2)))))))))
 
-(defmacro define-one-data-proc-inst (name opcode set-flags-p)
+(defmacro define-basic-data-proc-inst (name opcode set-flags-p)
   (let ((set-flags-bit (if set-flags-p 1 0)))
     `(define-instruction ,name (segment dst src1 src2 &optional (cond :al))
        (:declare (type tn dst)
@@ -549,8 +546,8 @@
 
 (defmacro define-data-proc-inst (basename opcode)
   `(progn
-     (define-one-data-proc-inst ,basename ,opcode nil)
-     (define-one-data-proc-inst ,(symbolicate (string basename) "S") ,opcode t)))
+     (define-basic-data-proc-inst ,basename ,opcode nil)
+     (define-basic-data-proc-inst ,(symbolicate (string basename) "S") ,opcode t)))
 
 ;; See A5.2 and Table A5-3.
 (define-data-proc-inst and #b0000)
@@ -748,7 +745,7 @@
 (define-mov-inst mov nil)
 (define-mov-inst movs t)
 
-(defmacro define-shift-inst (name set-flags-p)
+(defmacro define-basic-shift-inst (name set-flags-p)
   (let ((inst-name (symbolicate (string name) (if set-flags-p "S" "")))
 	(set-flags-bit (if set-flags-p 1 0)))
     `(define-instruction ,inst-name
@@ -767,7 +764,7 @@
 		  (s ,set-flags-bit)
 		  (type ,(encode-shift name)))
 		 '(:name cond :tab
-		   dst ", " src2 ", #" shift))
+			 dst ", " src2 ", #" shift))
        (:printer format-0-reg-shifted
 		 ((opb0 #b000)
 		  (op #b1101)
@@ -777,7 +774,7 @@
 		  (s ,set-flags-bit)
 		  (type ,(encode-shift name)))
 		 '(:name cond :tab
-		   dst ", " src2 ", " sreg))
+			 dst ", " src2 ", " sreg))
        (:dependencies
 	(reads src1)
 	(reads src2)
@@ -812,16 +809,16 @@
 				    #b1
 				    (reg-tn-encoding src2))))))))
 
+(defmacro define-shift-inst (basename)
+  `(progn
+     (define-basic-shift-inst ,basename nil)
+     (define-basic-shift-inst ,basename t)))
+
 ;; Shift instructions
-(define-shift-inst :asr nil)
-(define-shift-inst :lsl nil)
-(define-shift-inst :lsr nil)
-(define-shift-inst :ror nil)
-;; Shift instructions, setting flags
-(define-shift-inst :asr t)
-(define-shift-inst :lsl t)
-(define-shift-inst :lsr t)
-(define-shift-inst :ror t)
+(define-shift-inst :asr)
+(define-shift-inst :lsl)
+(define-shift-inst :lsr)
+(define-shift-inst :ror)
 
 (defmacro define-rrx-inst (name set-flags-p)
   (let ((inst-name (symbolicate (string name) (if set-flags-p "S" "")))
@@ -841,10 +838,8 @@
 		  (type (encode-shift :ror))
 		  (s ,set-flags-bit)
 		  (shift 0))
-		 '(:name (:unless (s :constant 0) 's)
-		   cond
-		   :tab
-		   dst ", " src2))
+		 '(:name cond :tab
+			 dst ", " src2))
        (:dependencies
 	(reads src2)
 	(writes dst))
@@ -896,7 +891,7 @@
    (etypecase src
      (integer
       (emit-format-mov16 segment
-			 (inst-condition-code (list cc))
+			 (condition-code-encoding cc)
 			 #b001
 			 #b10100
 			 (ldb (byte 4 12) src)
@@ -905,7 +900,7 @@
      (fixup
       (note-fixup segment :movt src)
       (emit-format-mov16 segment
-			 (inst-condition-code (list cc))
+			 (condition-code-encoding cc)
 			 #b001
 			 #b10110
 			 0
@@ -927,7 +922,7 @@
    (etypecase src
      (integer
       (emit-format-mov16 segment
-			 (inst-condition-code (list cc))
+			 (condition-code-encoding cc)
 			 #b001
 			 #b10000
 			 (ldb (byte 4 12) imm16)
@@ -936,7 +931,7 @@
      (fixup
       (note-fixup segment :mov3 src)
       (emit-format-mov16 segment
-			 (inst-condition-code (list cc))
+			 (condition-code-encoding cc)
 			 #b001
 			 #b10000
 			 0
@@ -962,76 +957,84 @@
 ;; A8.8.114
 ;;
 ;; Basic multiply, returning the bottom 32 bits of a 32x32 multiply.
-(define-instruction mul (segment dst src1 src2 &rest opts)
-  (:declare (type tn dst src1 src2)
-	    (type condition-code cond))
-  (:printer format-0-mul
-	    ((opb0 #b000)
-	     (op #b0000)
-	     (op1 #b1001)
-	     (src3 0))
-	    `(:name (:unless (s :constant 0) 's)
-		    cond
-		    :tab
-		    dst ", " src1 ", " src2))
-  (:dependencies
-   (reads src1)
-   (reads src2)
-   (writes dst))
-  (:emitter
-   (emit-format-0-mul segment
-		      (inst-condition-code cond)
-		      #b000
-		      #b0000
-		      (inst-set-flags opts)
-		      (reg-tn-encoding dst)
-		      #b0000
-		      (reg-tn-encoding src2)
-		      #b1001
-		      (reg-tn-encoding src1))))
+(defmacro define-mul-inst (set-flags-p)
+  (let ((set-flags-bit (if set-flags-p 1 0)))
+    `(define-instruction ,(if set-flags-p 'mul 'muls)
+	 (segment dst src1 src2 &optional (cond :al))
+       (:declare (type tn dst src1 src2)
+		 (type condition-code cond))
+       (:printer format-0-mul
+		 ((opb0 #b000)
+		  (op #b0000)
+		  (s ,set-flags-bit)
+		  (op1 #b1001)
+		  (src3 0))
+		 `(:name cond :tab
+			 dst ", " src1 ", " src2))
+       (:dependencies
+	(reads src1)
+	(reads src2)
+	(writes dst))
+       (:emitter
+	(emit-format-0-mul segment
+			   (condition-code-encoding cond)
+			   #b000
+			   #b0000
+			   ,set-flags-bit
+			   (reg-tn-encoding dst)
+			   #b0000
+			   (reg-tn-encoding src2)
+			   #b1001
+			   (reg-tn-encoding src1))))))
 
-(defmacro define-4-arg-mul (name op &key two-outputs setflags0)
-  `(define-instruction ,name (segment dst dst2-or-src src2 src3 &rest opts)
-     (:declare (type tn dst dst2-or-src src2))
-     (:printer format-0-mul
-	       ((opb0 #b000) (op ,op) (op1 #b1001)
-		(src3 nil :type 'reg)
-		,(if setflags0 '(s 0)))
-	       ',(if two-outputs
-		     `(:name (:unless (s :constant 0) 's)
-			     cond
-			     :tab
-			     src3 ", " dst ", " src2 ", " src3)
-		     `(:name (:unless (s :constant 0) 's)
-			     cond
-			     :tab
-			     dst ", " src1 ", " src2 ", " src3)))
-     (:dependencies
-      (reads src2)
-      (reads src3)
-      ,(if two-outputs
-	   `(writes dst2-or-src)
-	   `(reads dst2-or-src))
-      (writes dst))
-     (:emitter
-      (emit-format-0-mul segment
-			 (inst-condition-code opts)
-			 #b000
-			 ,op
-			 ,(if setflags0
-			      0
-			      `(inst-set-flags opts))
-			 ,@(if two-outputs
-			      `((reg-tn-encoding dst2-or-src)
-				(reg-tn-encoding dst)
-				(reg-tn-encoding src3)
-				#b1001
-				(reg-tn-encoding src3))
-			      `((reg-tn-encoding dst)
-				(reg-tn-encoding src3)
-				(reg-tn-encoding src1)
-				#b1001
-				(reg-tn-encoding dst2-or-src)))))))
+(define-mul-inst nil)
+(define-mul-inst t)
+
+(defmacro define-basic-4-arg-mul (name op &key two-outputs set-flags-p)
+  (let ((set-flags-bit (if set-flags-p 1 0))
+	(inst-name (symbolicate (string name) (if set-flags-p "S" ""))))
+    `(define-instruction ,inst-name
+	 (segment dst dst2-or-src src2 src3 &optional (cond :al))
+       (:declare (type tn dst dst2-or-src src2))
+       (:printer format-0-mul
+		 ((opb0 #b000) (op ,op)
+		  (s ,set-flags-bit)
+		  (op1 #b1001)
+		  (src3 nil :type 'reg))
+		 ',(if two-outputs
+		       `(:name cond :tab
+			       src3 ", " dst ", " src2 ", " src3)
+		       `(:name cond :tab
+			       dst ", " src1 ", " src2 ", " src3)))
+       (:dependencies
+	(reads src2)
+	(reads src3)
+	,(if two-outputs
+	     `(writes dst2-or-src)
+	     `(reads dst2-or-src))
+	(writes dst))
+       (:emitter
+	(emit-format-0-mul segment
+			   (condition-code-encoding cond)
+			   #b000
+			   ,op
+			   ,set-flags-bit
+			   ,@(if two-outputs
+				 `((reg-tn-encoding dst2-or-src)
+				   (reg-tn-encoding dst)
+				   (reg-tn-encoding src3)
+				   #b1001
+				   (reg-tn-encoding src3))
+				 `((reg-tn-encoding dst)
+				   (reg-tn-encoding src3)
+				   (reg-tn-encoding src1)
+				   #b1001
+				   (reg-tn-encoding dst2-or-src))))))))
+
+(defmacro define-4-arg-mul (name opcode &key two-outputs)
+  `(progn
+     (define-basic-4-arg-mul ,name ,opcode :two-outputs ,two-outputs)
+     (define-basic-4-arg-mul ,name ,opcode :two-outputs ,two-outputs :set-flags-p t)))
 
 ;; A8.8.257; unsigned 32x32->64 multiply 
 (define-4-arg-mul umull #b0100 :two-outputs t)
@@ -1041,7 +1044,7 @@
 ;; A8.8.100:  Multiply-add
 (define-4-arg-mul mla   #b0001)
 ;; A8.8.101; Multiply-subtract
-(define-4-arg-mul mls   #b0011 :setflags0 t)
+(define-basic-4-arg-mul mls   #b0011)
 
 ;; A8.8.256; unsiged 64-bit multiply-add
 (define-4-arg-mul umlal #b0101 :two-outputs t)
@@ -1049,7 +1052,7 @@
 (define-4-arg-mul smlal #b0111 :two-outputs t)
 
 ;; A8.8.255; 64-bit unsigned multiply-add, adding 2 32-bit values
-(define-4-arg-mul umaal #b0010 :two-outputs t :setflags0 t)
+(define-basic-4-arg-mul umaal #b0010 :two-outputs t)
 
 ;; Divide and friends
 ;; A5.4.4
