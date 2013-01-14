@@ -58,8 +58,11 @@
 	(values (ldb (byte 1 0) regnum)
 		(ldb (byte 4 1) regnum)))))
 
+;; What is the appropriate column width?  Most ARM instructions are
+;; less than 8 characters long (3 for the mnemonic, 1 for S, 2 for the
+;; condition), but some are longer, like VCVT.F32.F64.
 (disassem:set-disassem-params :instruction-alignment 32
-                              :opcode-column-width 16)
+                              :opcode-column-width 8)
 
 
 (def-vm-support-routine location-number (loc)
