@@ -1003,7 +1003,7 @@
 		  (src3 nil :type 'reg))
 		 ',(if two-outputs
 		       `(:name cond :tab
-			       src3 ", " dst ", " src2 ", " src3)
+			       src3 ", " dst ", " src1 ", " src2)
 		       `(:name cond :tab
 			       dst ", " src1 ", " src2 ", " src3)))
        (:dependencies
@@ -1024,10 +1024,10 @@
 				   (reg-tn-encoding dst)
 				   (reg-tn-encoding src3)
 				   #b1001
-				   (reg-tn-encoding src3))
+				   (reg-tn-encoding src2))
 				 `((reg-tn-encoding dst)
 				   (reg-tn-encoding src3)
-				   (reg-tn-encoding src1)
+				   (reg-tn-encoding src2)
 				   #b1001
 				   (reg-tn-encoding dst2-or-src))))))))
 
@@ -1044,7 +1044,7 @@
 ;; A8.8.100:  Multiply-add
 (define-4-arg-mul mla   #b0001)
 ;; A8.8.101; Multiply-subtract
-(define-basic-4-arg-mul mls   #b0011)
+(define-basic-4-arg-mul mls #b0011)
 
 ;; A8.8.256; unsiged 64-bit multiply-add
 (define-4-arg-mul umlal #b0101 :two-outputs t)
