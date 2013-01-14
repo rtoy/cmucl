@@ -1089,7 +1089,7 @@
       (writes dst))
      (:emitter
       (emit-format-div segment
-		       (inst-condition-code (list cond))
+		       (condition-code-encoding cond)
 		       #b011
 		       #b10
 		       ,op1
@@ -1634,11 +1634,11 @@
 		#b1
 		imm24)))
 
-;; A8.8.119.  Note this introduced in ARMv6K and ARMv6T2. If you want
-;; one that works eveyrwhere, use MOV R0, R0 (ARM) or MOV R8, R8
+;; A8.8.119.  Note this was introduced in ARMv6K and ARMv6T2. If you
+;; want one that works eveyrwhere, use MOV R0, R0 (ARM) or MOV R8, R8
 ;; (Thumb).
 ;;
-;; FIXME: should we make is a pseudo instruction that maps to a mov?
+;; FIXME: should we make this a pseudo instruction that maps to a mov?
 (define-instruction nop (segment &optional (cc :al))
   (:declare)
   (:printer format-1-immed
@@ -1648,7 +1648,7 @@
 	     (src1 0)
 	     (dst #b1111)
 	     (immed 0))
-	    '(:name))
+	    '(:name cond))
   (:emitter
    (emit-format-1-immed segment
 			(inst-condition-codes (list cc))
