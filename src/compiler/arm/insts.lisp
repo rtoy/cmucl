@@ -207,16 +207,9 @@
 	       (declare (ignore dstate))
 	       (princ (elt shift-types value) stream)))
 
-;; Look through OPTIONS-LIST and find a condition code and return the
-;; corresponding value for the COND field of an instruction.
-(defun inst-condition-code (options-list)
-  (let ((c (remove :s options-list)))
-    (unless (cdr c)
-      (error "invalid condition code: ~S" c))
-    (let ((position (position (car c) condition-codes)))
-      (or position
-	  condition-always))))
-
+;; Convert the specified condition code to corresponding instruction
+;; encoding.  Nil means the same as always.  Signal an error for
+;; unknown conditions.
 (defun condition-code-encoding (c)
   (if (null c)
       condition-always
@@ -224,16 +217,9 @@
 	(or position
 	    (error "Unknown condition code ~S" c)))))
 
-;; Look through OPTIONS-LIST to find :S, which means the instruction
-;; should set the flags.
-(defun inst-set-flags (options-list)
-  (if (member :s options-list)
-      1
-      0))
-
 ;; Convert SHIFT-TYPE to the value for an instruction field.
 (eval-when (:compile-toplevel :load-toplevel :execute)
-(defun encode-shift (shift-type)
+(defun shift-type-encoding (shift-type)
   (if (eq shift-type :rrx)
       3
       (or (position shift-type shift-types)
@@ -483,7 +469,7 @@
 			  (reg-encoding src1)
 			  (reg-encoding dst)
 			  0
-			  (encode-shift :lsl)
+			  (shift-type-encoding :lsl)
 			  #b0
 			  (reg-tn-encoding src2)))
       (flex-operand
@@ -497,7 +483,7 @@
 			     (reg-encoding src1)
 			     (reg-encoding dst)
 			     (flex-operand-shift-reg-or-imm src2)
-			     (encode-shift (flex-operand-shift-type src2))
+			     (shift-type-encoding (flex-operand-shift-type src2))
 			     #b0
 			     (reg-tn-encoding (flex-operand-reg src2))))
 	 (:reg-shift-reg
@@ -510,7 +496,7 @@
 				   (reg-encoding dst)
 				   (reg-tn-encoding (flex-operand-shift-reg-or-imm src2))
 				   #b0
-				   (encode-shift (flex-operand-shift-type src2))
+				   (shift-type-encoding (flex-operand-shift-type src2))
 				   #b1
 				   (reg-tn-encoding (flex-operand-reg src2)))))))))
 
@@ -729,7 +715,7 @@
 			      (reg-tn-encoding src1)
 			      (reg-tn-encoding dst)
 			      0
-			      (encode-shift :lsl)
+			      (shift-type-encoding :lsl)
 			      #b0
 			      (reg-tn-encoding src2)))
 	  (flex-operand
@@ -739,11 +725,11 @@
 				 (condition-code-encoding cond)
 				 #b000
 				 #b1101
-				 (inst-set-flags opts)
+				 ,set-flags-bit
 				 0
 				 (reg-tn-encoding dst)
 				 (flex-operand-shift-reg-or-imm src2)
-				 (encode-shift (flex-operand-shift-type src2))
+				 (shift-type-encoding (flex-operand-shift-type src2))
 				 #b0
 				 (reg-tn-encoding (flex-operand-reg src2))))
 	     (:reg-shift-reg
@@ -769,7 +755,7 @@
 		  (src1 0)
 		  (dst nil :type 'reg)
 		  (s ,set-flags-bit)
-		  (type ,(encode-shift name)))
+		  (type ,(shift-type-encoding name)))
 		 '(:name cond :tab
 			 dst ", " src2 ", #" shift))
        (:printer format-0-reg-shifted
@@ -779,7 +765,7 @@
 		  (src1 0)
 		  (dst nil :type 'reg)
 		  (s ,set-flags-bit)
-		  (type ,(encode-shift name)))
+		  (type ,(shift-type-encoding name)))
 		 '(:name cond :tab
 			 dst ", " src2 ", " sreg))
        (:dependencies
@@ -799,7 +785,7 @@
 			      #b0000
 			      (reg-tn-encoding dst)
 			      shift
-			      (encode-shift ,name)
+			      (shift-type-encoding ,name)
 			      #b0
 			      (reg-tn-encoding src2)))
 	  (reg
@@ -812,7 +798,7 @@
 				    (reg-tn-encoding dst)
 				    (reg-tn-encoding shift)
 				    #b0
-				    (encode-shift ,name)
+				    (shift-type-encoding ,name)
 				    #b1
 				    (reg-tn-encoding src2))))))))
 
@@ -842,7 +828,7 @@
 		  (rs 0)
 		  (src1 0)
 		  (dst nil :type 'reg)
-		  (type (encode-shift :ror))
+		  (type (shift-type-encoding :ror))
 		  (s ,set-flags-bit)
 		  (shift 0))
 		 '(:name cond :tab
@@ -860,7 +846,7 @@
 			   0
 			   (reg-tn-encoding dst)
 			   0
-			   (encode-shift :ror)
+			   (shift-type-encoding :ror)
 			   #b0
 			   (reg-tn-encoding src2))))))
 
@@ -1134,7 +1120,7 @@
    (unless (eq cond :al)
      (error "BPKT is undefined if the condition is not :AL (always)"))
    (emit-format-0-bkpt segment
-		       (inst-condition-code (list cond))
+		       (condition-code-encoding cond)
 		       #b000
 		       #b10010
 		       (ldb (byte 12 4) value)
@@ -1400,7 +1386,7 @@
 	 (multiple-value-bind (p u w)
 	     (decode-load-store-index address)
 	   (emit-format-3-reg segment
-			      (inst-condition-code opts)
+			      (condition-code-encoding cond)
 			      #b011
 			      p
 			      u
@@ -1417,7 +1403,7 @@
 	 (multiple-value-bind (p u w)
 	     (decode-load-store-index address)
 	   (emit-format-2-immed segment
-				(inst-condition-code opts)
+				(condition-code-encoding cond)
 				#b010
 				p
 				u
@@ -1471,7 +1457,7 @@
 	   (multiple-value-bind (p u w)
 	       (decode-load-store-index address)
 	     (emit-format-0-halfword-reg segment
-					 (inst-condition-code (list cond))
+					 (condition-code-encoding cond)
 					 #b000
 					 p
 					 u
@@ -1490,7 +1476,7 @@
 	   (multiple-value-bind (p u w)
 	       (decode-load-store-index src2)
 	     (emit-format-0-halfword-imm segment
-					 (inst-condition-code opts)
+					 (condition-code-encoding cond)
 					 #b000
 					 p
 					 u
@@ -1553,7 +1539,7 @@
   (emit-back-patch segment 4
      #'(lambda (segment posn)
 	 (emit-branch-imm segment
-			  (inst-condition-code cond)
+			  (condition-code-encoding cond)
 			  opb0
 			  op
 			  ;; The offset in the instruction is a word
@@ -1574,7 +1560,7 @@
 	     (imm24 nil :type 'relative-label)))
   (:attributes branch)
   (:emitter
-   (emit-relative-branch segment #b101 #b0 (inst-condition-code cc) target)))
+   (emit-relative-branch segment #b101 #b0 cc target)))
 
 (define-instruction bl (segment target &optional (cc :al))
   (:declare (type label target)
@@ -1585,7 +1571,7 @@
 	     (imm24 nil :type 'relative-label)))
   (:attributes branch)
   (:emitter
-   (emit-relative-branch segment #b101 #b1 (inst-condition-code cc) target)))
+   (emit-relative-branch segment #b101 #b1 cc target)))
 
 (define-instruction blx (segment target)
   (:declare (type (or label reg) target))
@@ -1604,10 +1590,10 @@
   (:emitter
    (etypecase target
      (label
-      (emit-relative-branch segment #b101 #b0 (inst-condition-code (list :al)) target))
+      (emit-relative-branch segment #b101 #b0 :al target))
      (reg
       (emit-branch-reg segment
-		       (inst-condition-code cc)
+		       (condition-code-encoding :al)
 		       #b000
 		       #b10010
 		       #b111111111111
@@ -1659,7 +1645,7 @@
 	     (op #b1)))
   (:emitter
    (emit-branch segment
-		(inst-condition-codes (list cond))
+		(condition-code-encoding cond)
 		#b111
 		#b1
 		imm24)))
@@ -1681,7 +1667,7 @@
 	    '(:name cond))
   (:emitter
    (emit-format-1-immed segment
-			(inst-condition-codes (list cc))
+			(condition-code-encoding cc)
 			#b001
 			#b1001
 			#b0
@@ -1713,7 +1699,7 @@
 	     (op1 #b11110000)))
   (:emitter
    (emit-format-0-clz segment
-		      (inst-condition-code (list cc))
+		      (condition-code-encoding cc)
 		      #b000
 		      #b10110
 		      #b1111
@@ -1746,7 +1732,7 @@
 	    '(:name cond :tab dst ", " 'apsr))
   (:emitter
    (emit-format-0-mrs segment
-		      (inst-condition-codes (list cc))
+		      (condition-code-encoding cc)
 		      #b000
 		      #b10000
 		      #b1111
@@ -1784,7 +1770,7 @@
 		 (apsr-g      #b01)
 		 (apsr-nzcvqg #b11))))
      (emit-format-0-msr segment
-			(inst-condition-code (list cc))
+			(condition-code-encoding cc)
 			#b000
 			#b10010
 			mask
@@ -1861,7 +1847,7 @@
 	    (multiple-value-bind (m vm)
 		(fp-reg-tn-encoding src2 doublep)
 	      (emit-format-vfp-3-arg segment
-				     (inst-condition-code (list cond))
+				     (condition-code-encoding cond)
 				     #b111
 				     ,op0
 				     d
@@ -1940,7 +1926,7 @@
 	  (multiple-value-bind (m vm)
 	      (fp-reg-tn-encoding src doublep)
 	    (emit-format-vfp-2-arg segment
-				   (inst-condition-code (list cond))
+				   (condition-code-encoding cond)
 				   #b111
 				   #b01
 				   d
@@ -2098,7 +2084,7 @@
 	     (multiple-value-bind (m vm)
 		 (fp-reg-tn-encoding src doublep)
 	       (emit-format-vfp-2-reg segment
-				      (inst-condition-code (list cc))
+				      (condition-code-encoding cc)
 				      #b111
 				      #b01
 				      d
@@ -2117,7 +2103,7 @@
 	   (multiple-value-bind (d vd)
 	       (fp-reg-tn-encoding dst doublep)
 	     (emit-format-vfp-2-arg segment
-				    (inst-condition-code (list cond))
+				    (condition-code-encoding cond)
 				    #b111
 				    #b01
 				    d
@@ -2242,7 +2228,7 @@
 	     (multiple-value-bind (m vm)
 		 (fp-single-reg-tn-encoding src)
 	       (emit-format-vfp-vmov-reg segment
-					 (inst-condition-code (list cond))
+					 (condition-code-encoding cond)
 					 #b111
 					 #b01
 					 d
@@ -2260,7 +2246,7 @@
 	       (fp-single-reg-tn-encoding dst)
 	     (let ((value (fp-immed-or-lose src)))
 	       (emit-format-vfp-vmov-immed segment
-					   (inst-condition-code (list cond))
+					   (condition-code-encoding cond)
 					   #b111
 					   #b01
 					   d
@@ -2321,7 +2307,7 @@
      (multiple-value-bind (n vn)
 	 (fp-reg-tn-encoding fp nil)
        (emit-format-7-vfp-vmov-core segment
-				    (inst-condition-code (list cc))
+				    (condition-code-encoding cc)
 				    #b111
 				    #b0000
 				    op
@@ -2386,7 +2372,7 @@
 	(etypecase src
 	  (tn
 	   (emit-format-6-vfp-load/store segment
-					 (inst-condition-code (list cond))
+					 (condition-code-encoding cond)
 					 #b110
 					 #b1
 					 1
@@ -2409,7 +2395,7 @@
 		 (add (load-store-index-add src)))
 	     (assert (zerop (ldb (byte 2 0) offset)))
 	     (emit-format-6-vfp-load/store segment
-					   (inst-condition-code (list cond))
+					   (condition-code-encoding cond)
 					   #b110
 					   #b1
 					   (if add 1 0)
@@ -2478,7 +2464,7 @@
 		 (reg-tn-encoding reg)
 		 15)))
      (emit-format-vfp-fpscr segment
-			    (inst-condition-code (list cc))
+			    (condition-code-encoding cc)
 			    #b111
 			    #b0
 			    #b111
@@ -2510,7 +2496,7 @@
 	    '(:name cond :tab 'fpscr ", " reg))
   (:emitter
    (emit-format-vfp-fpscr segment
-			  (inst-condition-code (list cc))
+			  (condition-code-encoding cc)
 			  #b111
 			  #b0
 			  #b111
