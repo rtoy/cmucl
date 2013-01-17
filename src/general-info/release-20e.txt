@@ -45,10 +45,13 @@ New in this release:
     * Ticket #66 fixed.
     * Ticket #67 fixed.
     * Ticket #68 fixed.
+    * Ticket #69 fixed.
 
   * Other changes:
     * -8 option for build-all.sh is deprecated since we don't
       officially support 8-bit builds anymore.
+    * Some small updates to the User Manual and CMU Internals
+      documents to generate pdf files by default.
 
   * Improvements to the PCL implementation of CLOS:
 
