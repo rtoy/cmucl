@@ -18,7 +18,7 @@ FILES=architecture.tex back.tex compiler-overview.tex compiler.tex debugger.tex 
 
 FIGURES=
 
-all : $(MASTERFILE).dvi
+all : $(MASTERFILE).pdf
 
 $(MASTERFILE).dvi : $(FILES) $(FIGURES)
 	$(LATEX) $(MASTERFILE).tex
@@ -52,7 +52,7 @@ firsttime: $(MASTERFILE).dvi
 
 %.pdf : %.tex
 	$(PDFLATEX) $^
-	@while ( grep -v 'Package: rerunfilecheck' $*.log | grep Rerun > /dev/null ); do \
+	@while ( grep 'Rerun to get cross' $*.log > /dev/null ); do \
 	   $(PDFLATEX) $<; \
 	done
 	$(PDFLATEX) $<
