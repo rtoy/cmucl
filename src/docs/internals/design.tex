@@ -2,22 +2,11 @@
 %\documentstyle{report} % -*- Dictionary: design -*-
 
 \documentclass{report}
+\usepackage{ifpdf}
 \usepackage{ifthen}
 \usepackage{calc}
 \usepackage{palatino}
 \usepackage[hyperindex=false,colorlinks=false,urlcolor=blue]{hyperref}
-
-% define a new conditional statement which allows us to include
-% stuff conditionally when compiling to PDF. 
-\newif\ifpdf
-\ifx\pdfoutput\undefined
-   \pdffalse
-\else
-   \pdfoutput=1
-   \pdftrue
-\fi
-
-
 
 \title{Design of CMU Common Lisp}
 \date{January 15, 2003}
