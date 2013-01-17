@@ -1503,6 +1503,14 @@ a host-structure or string."
 ;;; The SEARCH-LIST structure.
 ;;; 
 (defstruct (search-list
+	    (:include host
+	     (:parse #'parse-search-list-namestring)
+	     (:unparse #'unparse-search-list-namestring)
+	     (:unparse-host #'unparse-search-list-host)
+	     (:unparse-directory #'unparse-search-list-directory)
+	     (:unparse-file #'unparse-unix-file)
+	     (:unparse-enough #'unparse-unix-enough)
+	     (:customary-case :lower))
 	    (:print-function %print-search-list)
 	    (:make-load-form-fun
 	     (lambda (search-list)
@@ -1523,6 +1531,37 @@ a host-structure or string."
   (declare (ignore depth))
   (print-unreadable-object (sl stream :type t)
     (write-string (search-list-name sl) stream)))
+
+(defun unparse-search-list-namestring (pathname)
+  (declare (type pathname pathname))
+  (concatenate 'simple-string
+	       (unparse-search-list-directory pathname)
+	       (unparse-unix-file pathname)))
+
+(defun unparse-search-list-host (pathname)
+  (declare (type pathname pathname))
+  (search-list-name (%pathname-host pathname)))
+
+(defun unparse-search-list-directory (pathname)
+  (declare (type pathname pathname))
+  ;; FIXME: This is a hack!
+  (unparse-unix-directory-list (list* :absolute
+				      (%pathname-host pathname)
+				      (cdr (%pathname-directory pathname)))))
+
+(defun parse-search-list-namestring (pathname start end)
+  (declare (type simple-base-string namestr)
+	   (type index start end))
+  (multiple-value-bind (host device dirs name type version)
+      (parse-unix-namestring pathname start end)
+    (unless (typep (second dirs) 'search-list)
+      (error 'parse-error))
+    (values (second dirs)
+	    nil
+	    (list* :absolute (cddr dirs))
+	    name
+	    type
+	    version)))
 
 ;;; *SEARCH-LISTS* -- internal.
 ;;;
@@ -1589,6 +1628,7 @@ a host-structure or string."
 ;;; doesn't start with a search-list, then either error (if FLAME-IF-NONE
 ;;; is true) or return NIL (if FLAME-IF-NONE is false).
 ;;; 
+#+nil
 (defun extract-search-list (pathname flame-if-none)
   (with-pathname (pathname pathname)
     (let* ((directory (%pathname-directory pathname))
@@ -1597,6 +1637,28 @@ a host-structure or string."
 	     search-list)
 	    (flame-if-none
 	     (error (intl:gettext "~S doesn't start with a search-list.") pathname))
+	    (t
+	     nil)))))
+
+(defun extract-search-list (search-pathname flame-if-none)
+  (with-pathname (pathname search-pathname)
+    (let* ((search-list (%pathname-host pathname)))
+      (when search-list
+	(sys::%primitive print "search list found")
+	(typecase search-list
+	  (string
+	   (sys::%primitive print "search list is a string!"))
+	  (search-list
+	   (sys::%primitive print "search list is a search-list object"))
+	  (t
+	   (sys::%primitive print "search list unknown type!"))))
+      (cond ((search-list-p search-list)
+	     search-list)
+	    (flame-if-none
+	     (sys::%primitive print "flame on!")
+	     (sys::%primitive print search-pathname)
+	     nil
+	     #+nil(error (intl:gettext "~S doesn't start with a search-list.") pathname))
 	    (t
 	     nil)))))
 

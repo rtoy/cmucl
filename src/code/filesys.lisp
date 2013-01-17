@@ -358,11 +358,12 @@
 			    name))
 	  (error 'parse-error))
 	;; Now we have everything we want.  So return it.
-	(values nil ; no host for unix namestrings.
+	(values (if search-list
+		    (intern-search-list search-list)
+		    ;; no host for unix namestrings.
+		    nil)
 		nil ; no devices for unix namestrings.
 		(collect ((dirs))
-		  (when search-list
-		    (dirs (intern-search-list search-list)))
 		  (dolist (piece pieces)
 		    (let ((piece-start (car piece))
 			  (piece-end (cdr piece)))
