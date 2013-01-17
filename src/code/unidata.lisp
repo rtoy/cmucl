@@ -20,7 +20,7 @@
 	  unicode-complete unicode-complete-name
 	  load-all-unicode-data))
 
-(defvar *unidata-path* "ext-formats:unidata.bin")
+(defvar *unidata-path* #p"ext-formats:unidata.bin")
 
 (defvar *unidata-version* "$Revision: 1.28 $")
 
