@@ -2004,62 +2004,6 @@ msgstr ""
 msgid "Can't use :out or :in-out on pointer-like type:~%  ~S"
 msgstr ""
 
-#: src/code/alien-callback.lisp
-msgid "Vector of all callbacks."
-msgstr ""
-
-#: src/compiler/tn.lisp src/compiler/main.lisp src/code/describe.lisp
-#: src/code/debug-int.lisp src/code/debug-info.lisp
-#: src/code/foreign-linkage.lisp src/code/reader.lisp src/code/stream.lisp
-#: src/code/hash-new.lisp src/code/array.lisp src/code/alien-callback.lisp
-msgid "~S is not an array with a fill-pointer."
-msgstr ""
-
-#: src/code/alien-callback.lisp
-msgid "Unable to mprotect ~S bytes (~S) at ~S (~S).  Callbacks may not work."
-msgstr ""
-
-#: src/code/alien-callback.lisp
-msgid "Return the trampoline pointer for the callback NAME."
-msgstr ""
-
-#: src/code/alien-callback.lisp
-msgid ""
-"~\n"
-"Attempt to redefine callback with incompatible return type.\n"
-"   Old type was: ~A \n"
-"    New type is: ~A"
-msgstr ""
-
-#: src/code/alien-callback.lisp
-msgid "~\n"
-"Create new trampoline (old trampoline calls old lisp function)."
-msgstr ""
-
-#: src/code/alien-callback.lisp
-msgid "Unsupported argument type: ~A"
-msgstr ""
-
-#: src/code/alien-callback.lisp
-msgid "Unsupported return type: ~A"
-msgstr ""
-
-#: src/code/alien-callback.lisp
-msgid ""
-"(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*)\n"
-"     {doc-string} {decls}* {FORM}*)\n"
-"\n"
-"Define a function which can be called by foreign code.  The pointer\n"
-"returned by (callback NAME), when called by foreign code, invokes the\n"
-"lisp function.  The lisp function expects alien arguments of the\n"
-"specified ARG-TYPEs and returns an alien of type RETURN-TYPE.\n"
-"\n"
-"If (callback NAME) is already a callback function pointer, its value\n"
-"is not changed (though it's arranged that an updated version of the\n"
-"lisp callback function will be called).  This feature allows for\n"
-"incremental redefinition of callback functions."
-msgstr ""
-
 #: src/code/sap.lisp
 msgid "Return T iff the SAP X points to a smaller address then the SAP Y."
 msgstr ""
@@ -2499,6 +2443,13 @@ msgstr ""
 
 #: src/code/array.lisp
 msgid "Returns the Fill-Pointer of the given Vector."
+msgstr ""
+
+#: src/compiler/tn.lisp src/compiler/main.lisp src/code/describe.lisp
+#: src/code/debug-int.lisp src/code/debug-info.lisp
+#: src/code/foreign-linkage.lisp src/code/reader.lisp src/code/stream.lisp
+#: src/code/hash-new.lisp src/code/array.lisp
+msgid "~S is not an array with a fill-pointer."
 msgstr ""
 
 #: src/code/array.lisp
@@ -9907,8 +9858,13 @@ msgstr ""
 
 #: src/code/filesys.lisp
 msgid ""
-"Rename File to have the specified New-Name.  If file is a stream open to a\n"
-"  file, then the associated file is renamed."
+"Rename File to have the specified New-Name.  If file is a stream\n"
+"  open to a file, then the associated file is renamed.\n"
+"\n"
+"  Three values are returned if successful: the defaulted new name\n"
+"  composed of New-Name with missing components filled in from File;\n"
+"  the truename of File before it was renamed; the new truename of the\n"
+"  File after it was renamed."
 msgstr ""
 
 #: src/code/filesys.lisp
