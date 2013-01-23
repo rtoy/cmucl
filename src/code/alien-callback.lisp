@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/code/alieneval.lisp $")
+  "$Header: src/code/alien-callback.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;

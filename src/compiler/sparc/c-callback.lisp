@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/c-call.lisp $")
+  "$Header: src/compiler/sparc/c-callback.lisp $")
 
 (in-package "SPARC")
 (intl:textdomain "cmucl-sparc-vm")

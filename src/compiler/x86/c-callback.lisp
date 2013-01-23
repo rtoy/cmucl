@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: src/compiler/x86/c-call.lisp $")
+ "$Header: src/compiler/x86/c-callback.lisp $")
 
 (in-package :x86)
 (use-package :alien)

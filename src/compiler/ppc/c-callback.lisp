@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/ppc/c-call.lisp $")
+  "$Header: src/compiler/ppc/c-callback.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
