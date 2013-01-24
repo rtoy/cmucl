@@ -46,6 +46,8 @@ New in this release:
     * Ticket #67 fixed.
     * Ticket #68 fixed.
     * Ticket #69 fixed.
+    * Ticket #70 fixed.
+    * Ticket #65 fixed.
 
   * Other changes:
     * -8 option for build-all.sh is deprecated since we don't
