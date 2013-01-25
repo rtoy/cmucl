@@ -3189,9 +3189,9 @@
 		      (ecase format2
 			((nil short-float single-float)
 			 (member format1 '(short-float single-float)))
-			#-long-float
+			#-double-double
 			((double-float long-float) 'T)
-			#+(or long-float double-double)
+			#+double-double
 			(double-float
 			 (member format1 '(short-float single-float
 					   double-float)))
