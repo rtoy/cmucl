@@ -98,8 +98,7 @@
 (defparameter reg-symbols
   (map 'vector
        #'(lambda (name)
-	   (cond ((null name) nil)
-		 (t (make-symbol name))))
+	   (make-symbol name))
        *register-names*)
   "The Lisp names for the ARM integer registers")
 
@@ -211,11 +210,9 @@
 ;; encoding.  Nil means the same as always.  Signal an error for
 ;; unknown conditions.
 (defun condition-code-encoding (c)
-  (if (null c)
-      condition-always
-      (let ((position (position  c condition-codes)))
-	(or position
-	    (error "Unknown condition code ~S" c)))))
+  (let ((position (position  c condition-codes)))
+    (or position
+	(error "Unknown condition code ~S" c))))
 
 ;; Convert SHIFT-TYPE to the value for an instruction field.
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -500,62 +497,69 @@
 				   #b1
 				   (reg-tn-encoding (flex-operand-reg src2)))))))))
 
-(defmacro define-basic-data-proc-inst (name opcode set-flags-p)
-  (let ((set-flags-bit (if set-flags-p 1 0)))
-    `(define-instruction ,name (segment dst src1 src2 &optional (cond :al))
-       (:declare (type tn dst)
-		 (type tn src1)
-		 (type (or (signed-byte 32)
-			   (unsigned-byte 32)
-			   reg
-			   flex-operand)
-		       src2))
-       (:printer format-1-immed
-		 ((opb0 #b001) (op ,opcode)
-		  (s ,set-flags-bit)
-		  (src1 nil :type 'reg)
-		  (dst nil :type 'reg)))
-       (:printer format-0-reg
-		 ((opb0 #b000) (op ,opcode) (rs 0)
-		  (s ,set-flags-bit)
-		  (src1 nil :type 'reg)
-		  (dst nil :type 'reg)))
-       (:printer format-0-reg-shifted
-		 ((opb0 #b000) (op ,opcode) (rs 1)
-		  (z 0)
-		  (s ,set-flags-bit)
-		  (src1 nil :type 'reg)
-		  (dst nil :type 'reg)))
-       (:dependencies
-	(reads src1)
-	(writes dst)
-	;; FIXME: Specify dependencies correctly for flexible operand 2.
-	)
-       (:delay 0)
-       (:emitter
-	(emit-data-proc-format segment dst src1 src2 cond
-			       :opcode ,opcode
-			       :set-flags-bit ,set-flags-bit)))))
+(defmacro define-basic-data-proc-inst (name set-flags-bit opcode)
+  `(define-instruction ,name (segment dst src1 src2 &optional (cond :al))
+     (:declare (type tn dst)
+	       (type tn src1)
+	       (type (or (signed-byte 32)
+			 (unsigned-byte 32)
+			 reg
+			 flex-operand)
+		     src2))
+     (:printer format-1-immed
+	       ((opb0 #b001) (op ,opcode)
+		(s ,set-flags-bit)
+		(src1 nil :type 'reg)
+		(dst nil :type 'reg)))
+     (:printer format-0-reg
+	       ((opb0 #b000) (op ,opcode) (rs 0)
+		(s ,set-flags-bit)
+		(src1 nil :type 'reg)
+		(dst nil :type 'reg)))
+     (:printer format-0-reg-shifted
+	       ((opb0 #b000) (op ,opcode) (rs 1)
+		(z 0)
+		(s ,set-flags-bit)
+		(src1 nil :type 'reg)
+		(dst nil :type 'reg)))
+     (:dependencies
+      (reads src1)
+      (writes dst)
+      ;; FIXME: Specify dependencies correctly for flexible operand 2.
+      )
+     (:delay 0)
+     (:emitter
+      (emit-data-proc-format segment dst src1 src2 cond
+			     :opcode ,opcode
+			     :set-flags-bit ,set-flags-bit))))
 
-(defmacro define-data-proc-inst (basename opcode)
+;; Define two instructions: one that does not set the condition codes
+;; and one that does.  INST-DEF is the instruction definer to use and
+;; the basic name of the instruction is NAME.  ARGS is for any
+;; additional options needed by INST-DEF.
+(defmacro define-conditional-insts (inst-def name &rest args)
   `(progn
-     (define-basic-data-proc-inst ,basename ,opcode nil)
-     (define-basic-data-proc-inst ,(symbolicate (string basename) "S") ,opcode t)))
+     (,inst-def ,name 0 ,@args)
+     (,inst-def ,(symbolicate name "S") 1 ,@args)))
+
+
+(defmacro define-data-proc-insts (basename opcode)
+  `(define-conditional-insts define-basic-data-proc-inst ,basename ,opcode))
 
 ;; See A5.2 and Table A5-3.
-(define-data-proc-inst and #b0000)
-(define-data-proc-inst eor #b0001)
+(define-data-proc-insts and #b0000)
+(define-data-proc-insts eor #b0001)
 ;; #b0010 is sub and adr (immediate operand)
-(define-data-proc-inst sub #b0010)
-(define-data-proc-inst rsb #b0011)
+(define-data-proc-insts sub #b0010)
+(define-data-proc-insts rsb #b0011)
 ;; #b0100 is add and adr (immediate operand)
-(define-data-proc-inst add #b0100)
-(define-data-proc-inst adc #b0101)
-(define-data-proc-inst sbc #b0110)
-(define-data-proc-inst rsc #b0111)
+(define-data-proc-insts add #b0100)
+(define-data-proc-insts adc #b0101)
+(define-data-proc-insts sbc #b0110)
+(define-data-proc-insts rsc #b0111)
 ;; #b10xx is data processing and miscellaneous instructions
-(define-data-proc-inst orr #b1100)
-(define-data-proc-inst bic #b1110)
+(define-data-proc-insts orr #b1100)
+(define-data-proc-insts bic #b1110)
 
 ;; Compare type instructions need to be handled separately from the
 ;; above data processing instructions because the src1 isn't used.
@@ -607,251 +611,237 @@
 ;; A8.8.115, A8.8.116, A8.8.117
 ;;
 ;; MVN Aka bitnot
-(defmacro define-mvn-inst (name set-flags-p)
-  (let ((set-flags-bit (if set-flags-p 1 0)))
-    `(define-instruction ,name (segment dst src2 &optional (cond :al))
-       (:declare (type tn dst)
-		 (type (or (signed-byte 32)
-			   (unsigned-byte 32)
-			   reg
-			   flex-operand)
-		       src2))
-       (:printer format-1-immed
-		 ((opb0 #b001) (op #b1111)
-		  (s ,set-flags-bit)
-		  (src1 0)
-		  (dst nil :type 'reg))
-		 `(:name cond
-			 :tab
-			 dst ", " immed))
-       (:printer format-0-reg
-		 ((opb0 #b000) (op #b1111)
-		  (s ,set-flags-bit)
-		  (rs 0)
-		  (src1 0)
-		  (dst nil :type 'reg))
-		 `(:name cond :tab
-			 dst
-			 ", "
-			 src2
-			 (:unless (shift :constant 0)
-			   (:cond ((type :constant #b11) ; ror or rrx
-				   (:cond ((shift :constant 0) " " 'rrx)
-					  (t
-					   " " 'ror " " shift)))
-				  (t
-				   " " type " #" shift)))))
-       (:printer format-0-reg-shifted
-		 ((opb0 #b000) (op #b1111)
-		  (s ,set-flags-bit)
-		  (rs 1)
-		  (src1 0)
-		  (dst nil :type 'reg))
-		 `(:name cond :tab
-			 dst ", " src2 " " type " " sreg))
-       (:dependencies
-	(reads src1)
-	(writes dst)
-	;; FIXME: Specify dependencies correctly for flexible operand 2.
-	)
-       (:delay 0)
-       (:emitter
-	(emit-data-proc-format segment dst 0 src2 cond
-			       :opcode #b1111
-			       :set-flags-bit ,set-flags-bit)))))
+(defmacro define-mvn-inst (name set-flags-bit)
+  `(define-instruction ,name (segment dst src2 &optional (cond :al))
+     (:declare (type tn dst)
+	       (type (or (signed-byte 32)
+			 (unsigned-byte 32)
+			 reg
+			 flex-operand)
+		     src2))
+     (:printer format-1-immed
+	       ((opb0 #b001) (op #b1111)
+		(s ,set-flags-bit)
+		(src1 0)
+		(dst nil :type 'reg))
+	       `(:name cond
+		       :tab
+		       dst ", " immed))
+     (:printer format-0-reg
+	       ((opb0 #b000) (op #b1111)
+		(s ,set-flags-bit)
+		(rs 0)
+		(src1 0)
+		(dst nil :type 'reg))
+	       `(:name cond :tab
+		       dst
+		       ", "
+		       src2
+		       (:unless (shift :constant 0)
+			 (:cond ((type :constant #b11) ; ror or rrx
+				 (:cond ((shift :constant 0) " " 'rrx)
+					(t
+					 " " 'ror " " shift)))
+				(t
+				 " " type " #" shift)))))
+     (:printer format-0-reg-shifted
+	       ((opb0 #b000) (op #b1111)
+		(s ,set-flags-bit)
+		(rs 1)
+		(src1 0)
+		(dst nil :type 'reg))
+	       `(:name cond :tab
+		       dst ", " src2 " " type " " sreg))
+     (:dependencies
+      (reads src1)
+      (writes dst)
+      ;; FIXME: Specify dependencies correctly for flexible operand 2.
+      )
+     (:delay 0)
+     (:emitter
+      (emit-data-proc-format segment dst 0 src2 cond
+			     :opcode #b1111
+			     :set-flags-bit ,set-flags-bit))))
 
-(define-mvn-inst mvn nil)
-(define-mvn-inst mvns t)
+(define-conditional-insts define-mvn-inst mvn)
 
 ;; See A8.8.105.
 ;;
 ;; We don't support the pseudo-op with a flexible operand 2 denoting
 ;; register shifted register, which are basically synonyms for the
 ;; shift instructions.
-(defmacro define-mov-inst (name set-flags-p)
-  (let ((set-flags-bit (if set-flags-p 1 0)))
-    `(define-instruction ,name (segment dst src2 &optional (cond :al))
-       (:declare (type tn dst)
-		 (type (or (signed-byte 32)
-			   (unsigned-byte 32)
-			   reg
-			   flex-operand)
-		       src2))
-       (:printer format-1-immed
-		 ((opb0 #b001)
-		  (op #b1101)
-		  (s ,set-flags-bit)
-		  (src1 0)
-		  (dst nil :type 'reg))
-		 '(:name cond :tab
-		   dst ", " immed))
-       (:dependencies
-	(reads src1)
-	(writes dst)
-	;; FIXME: Specify dependencies correctly for flexible operand 2.
-	)
-       (:delay 0)
-       (:emitter
-	(etypecase src2
-	  (integer
-	   (multiple-value-bind (rot val)
-	       (encode-immediate src2)
-	     (unless rot
-	       (error "Cannot encode the immediate value ~S~%" src2))
-	     (emit-format-1-immed segment
-				  (condition-code-encoding cond)
-				  #b001
+(defmacro define-mov-inst (name set-flags-bit)
+  `(define-instruction ,name (segment dst src2 &optional (cond :al))
+     (:declare (type tn dst)
+	       (type (or (signed-byte 32)
+			 (unsigned-byte 32)
+			 reg
+			 flex-operand)
+		     src2))
+     (:printer format-1-immed
+	       ((opb0 #b001)
+		(op #b1101)
+		(s ,set-flags-bit)
+		(src1 0)
+		(dst nil :type 'reg))
+	       '(:name cond :tab
+		 dst ", " immed))
+     (:dependencies
+      (reads src1)
+      (writes dst)
+      ;; FIXME: Specify dependencies correctly for flexible operand 2.
+      )
+     (:delay 0)
+     (:emitter
+      (etypecase src2
+	(integer
+	 (multiple-value-bind (rot val)
+	     (encode-immediate src2)
+	   (unless rot
+	     (error "Cannot encode the immediate value ~S~%" src2))
+	   (emit-format-1-immed segment
+				(condition-code-encoding cond)
+				#b001
+				#b1101
+				,set-flags-bit
+				0
+				(reg-tn-encoding dst)
+				(logior (ash rot 8) val))))
+	(reg
+	 (emit-format-0-reg segment
+			    (condition-code-encoding cond)
+			    #b000
+			    #b1101
+			    ,set-flags-bit
+			    (reg-tn-encoding src1)
+			    (reg-tn-encoding dst)
+			    0
+			    (shift-type-encoding :lsl)
+			    #b0
+			    (reg-tn-encoding src2)))
+	(flex-operand
+	 (ecase (flex-operand-type src2)
+	   (:reg-shift-imm
+	    (emit-format-0-reg segment
+			       (condition-code-encoding cond)
+			       #b000
+			       #b1101
+			       ,set-flags-bit
+			       0
+			       (reg-tn-encoding dst)
+			       (flex-operand-shift-reg-or-imm src2)
+			       (shift-type-encoding (flex-operand-shift-type src2))
+			       #b0
+			       (reg-tn-encoding (flex-operand-reg src2))))
+	   (:reg-shift-reg
+	    (error "Use the shift instructions instead of MOV with a shifted register"))))))))
+
+(define-conditional-insts define-mov-inst mov)
+
+(defmacro define-basic-shift-inst (name set-flags-bit shift-type)
+  `(define-instruction ,name
+       (segment dst src2 shift &optional (cond :al))
+     (:declare (type tn dst src2)
+	       (type (or (signed-byte 32)
+			 (unsigned-byte 32)
+			 reg)
+		     shift))
+     (:printer format-0-reg
+	       ((opb0 #b000)
+		(op #b1101)
+		(rs 0)
+		(src1 0)
+		(dst nil :type 'reg)
+		(s ,set-flags-bit)
+		(type ,(shift-type-encoding shift-type)))
+	       '(:name cond :tab
+		 dst ", " src2 ", #" shift))
+     (:printer format-0-reg-shifted
+	       ((opb0 #b000)
+		(op #b1101)
+		(rs 1)
+		(src1 0)
+		(dst nil :type 'reg)
+		(s ,set-flags-bit)
+		(type ,(shift-type-encoding shift-type)))
+	       '(:name cond :tab
+		 dst ", " src2 ", " sreg))
+     (:dependencies
+      (reads src1)
+      (reads src2)
+      (reads apsr)
+      (writes dst))
+     (:delay 0)
+     (:emitter
+      (etypecase shift
+	(integer
+	 (emit-format-0-reg segment
+			    (condition-code-encoding cond)
+			    #b000
+			    #b1101
+			    ,set-flags-bit
+			    #b0000
+			    (reg-tn-encoding dst)
+			    shift
+			    (shift-type-encoding ,shift-type)
+			    #b0
+			    (reg-tn-encoding src2)))
+	(reg
+	 (emit-format-0-reg-shift segment
+				  (condition-code-encoding opts)
+				  #b000
 				  #b1101
 				  ,set-flags-bit
-				  0
+				  #b0000
 				  (reg-tn-encoding dst)
-				  (logior (ash rot 8) val))))
-	  (reg
-	   (emit-format-0-reg segment
-			      (condition-code-encoding cond)
-			      #b000
-			      #b1101
-			      ,set-flags-bit
-			      (reg-tn-encoding src1)
-			      (reg-tn-encoding dst)
-			      0
-			      (shift-type-encoding :lsl)
-			      #b0
-			      (reg-tn-encoding src2)))
-	  (flex-operand
-	   (ecase (flex-operand-type src2)
-	     (:reg-shift-imm
-	      (emit-format-0-reg segment
-				 (condition-code-encoding cond)
-				 #b000
-				 #b1101
-				 ,set-flags-bit
-				 0
-				 (reg-tn-encoding dst)
-				 (flex-operand-shift-reg-or-imm src2)
-				 (shift-type-encoding (flex-operand-shift-type src2))
-				 #b0
-				 (reg-tn-encoding (flex-operand-reg src2))))
-	     (:reg-shift-reg
-	      (error "Use the shift instructions instead of MOV with a shifted register")))))))))
-
-(define-mov-inst mov nil)
-(define-mov-inst movs t)
-
-(defmacro define-basic-shift-inst (name set-flags-p)
-  (let ((inst-name (symbolicate (string name) (if set-flags-p "S" "")))
-	(set-flags-bit (if set-flags-p 1 0)))
-    `(define-instruction ,inst-name
-	 (segment dst src2 shift &optional (cond :al))
-       (:declare (type tn dst src2)
-		 (type (or (signed-byte 32)
-			   (unsigned-byte 32)
-			   reg)
-		       shift))
-       (:printer format-0-reg
-		 ((opb0 #b000)
-		  (op #b1101)
-		  (rs 0)
-		  (src1 0)
-		  (dst nil :type 'reg)
-		  (s ,set-flags-bit)
-		  (type ,(shift-type-encoding name)))
-		 '(:name cond :tab
-			 dst ", " src2 ", #" shift))
-       (:printer format-0-reg-shifted
-		 ((opb0 #b000)
-		  (op #b1101)
-		  (rs 1)
-		  (src1 0)
-		  (dst nil :type 'reg)
-		  (s ,set-flags-bit)
-		  (type ,(shift-type-encoding name)))
-		 '(:name cond :tab
-			 dst ", " src2 ", " sreg))
-       (:dependencies
-	(reads src1)
-	(reads src2)
-	(reads apsr)
-	(writes dst))
-       (:delay 0)
-       (:emitter
-	(etypecase shift
-	  (integer
-	   (emit-format-0-reg segment
-			      (condition-code-encoding cond)
-			      #b000
-			      #b1101
-			      ,set-flags-bit
-			      #b0000
-			      (reg-tn-encoding dst)
-			      shift
-			      (shift-type-encoding ,name)
-			      #b0
-			      (reg-tn-encoding src2)))
-	  (reg
-	   (emit-format-0-reg-shift segment
-				    (condition-code-encoding opts)
-				    #b000
-				    #b1101
-				    ,set-flags-bit
-				    #b0000
-				    (reg-tn-encoding dst)
-				    (reg-tn-encoding shift)
-				    #b0
-				    (shift-type-encoding ,name)
-				    #b1
-				    (reg-tn-encoding src2))))))))
-
-(defmacro define-shift-inst (basename)
-  `(progn
-     (define-basic-shift-inst ,basename nil)
-     (define-basic-shift-inst ,basename t)))
+				  (reg-tn-encoding shift)
+				  #b0
+				  (shift-type-encoding ,shift-type)
+				  #b1
+				  (reg-tn-encoding src2)))))))
 
 ;; Shift instructions
-(define-shift-inst :asr)
-(define-shift-inst :lsl)
-(define-shift-inst :lsr)
-(define-shift-inst :ror)
+(define-conditional-insts define-basic-shift-inst asr :asr)
+(define-conditional-insts define-basic-shift-inst lsl :lsl)
+(define-conditional-insts define-basic-shift-inst lsr :lsr)
+(define-conditional-insts define-basic-shift-inst ror :ror)
 
-(defmacro define-rrx-inst (name set-flags-p)
-  (let ((inst-name (symbolicate (string name) (if set-flags-p "S" "")))
-	(set-flags-bit (if set-flags-p 1 0)))
-    `(define-instruction ,inst-name (segment dst src2 &optional (cond :al))
-       (:declare (type tn dst src2)
-		 (type (or (signed-byte 32)
-			   (unsigned-byte 32)
-			   reg)
-		       shift))
-       (:printer format-0-reg
-		 ((opb0 #b000)
-		  (op #b1101)
-		  (rs 0)
-		  (src1 0)
-		  (dst nil :type 'reg)
-		  (type (shift-type-encoding :ror))
-		  (s ,set-flags-bit)
-		  (shift 0))
-		 '(:name cond :tab
-			 dst ", " src2))
-       (:dependencies
-	(reads src2)
-	(writes dst))
-       (:delay 0)
-       (:emitter
-	(emit-format-0-reg segment
-			   (condition-code-encoding cond)
-			   #b000
-			   #b1101
-			   ,set-flags-bit
-			   0
-			   (reg-tn-encoding dst)
-			   0
-			   (shift-type-encoding :ror)
-			   #b0
-			   (reg-tn-encoding src2))))))
+(defmacro define-rrx-inst (name set-flags-bit)
+  `(define-instruction ,name (segment dst src2 &optional (cond :al))
+     (:declare (type tn dst src2)
+	       (type (or (signed-byte 32)
+			 (unsigned-byte 32)
+			 reg)
+		     shift))
+     (:printer format-0-reg
+	       ((opb0 #b000)
+		(op #b1101)
+		(rs 0)
+		(src1 0)
+		(dst nil :type 'reg)
+		(type (shift-type-encoding :ror))
+		(s ,set-flags-bit)
+		(shift 0))
+	       '(:name cond :tab
+		 dst ", " src2))
+     (:dependencies
+      (reads src2)
+      (writes dst))
+     (:delay 0)
+     (:emitter
+      (emit-format-0-reg segment
+			 (condition-code-encoding cond)
+			 #b000
+			 #b1101
+			 ,set-flags-bit
+			 0
+			 (reg-tn-encoding dst)
+			 0
+			 (shift-type-encoding :ror)
+			 #b0
+			 (reg-tn-encoding src2)))))
 
-(define-rrx-inst :rrx nil)
-(define-rrx-inst :rrx t)
+(define-conditional-insts define-rrx-inst rrx)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 (defun split-imm16-printer (value stream dstate)
@@ -950,40 +940,38 @@
 ;; A8.8.114
 ;;
 ;; Basic multiply, returning the bottom 32 bits of a 32x32 multiply.
-(defmacro define-mul-inst (set-flags-p)
-  (let ((set-flags-bit (if set-flags-p 1 0)))
-    `(define-instruction ,(if set-flags-p 'mul 'muls)
-	 (segment dst src1 src2 &optional (cond :al))
-       (:declare (type tn dst src1 src2)
-		 (type condition-code cond))
-       (:printer format-0-mul
-		 ((opb0 #b000)
-		  (op #b0000)
-		  (s ,set-flags-bit)
-		  (op1 #b1001)
-		  (src3 0))
-		 `(:name cond :tab
-			 dst ", " src1 ", " src2))
-       (:dependencies
-	(reads src1)
-	(reads src2)
-	(writes dst))
-       (:emitter
-	(emit-format-0-mul segment
-			   (condition-code-encoding cond)
-			   #b000
-			   #b0000
-			   ,set-flags-bit
-			   (reg-tn-encoding dst)
-			   #b0000
-			   (reg-tn-encoding src2)
-			   #b1001
-			   (reg-tn-encoding src1))))))
+(defmacro define-mul-inst (name set-flags-bit)
+  `(define-instruction ,name
+       (segment dst src1 src2 &optional (cond :al))
+     (:declare (type tn dst src1 src2)
+	       (type condition-code cond))
+     (:printer format-0-mul
+	       ((opb0 #b000)
+		(op #b0000)
+		(s ,set-flags-bit)
+		(op1 #b1001)
+		(src3 0))
+	       `(:name cond :tab
+		       dst ", " src1 ", " src2))
+     (:dependencies
+      (reads src1)
+      (reads src2)
+      (writes dst))
+     (:emitter
+      (emit-format-0-mul segment
+			 (condition-code-encoding cond)
+			 #b000
+			 #b0000
+			 ,set-flags-bit
+			 (reg-tn-encoding dst)
+			 #b0000
+			 (reg-tn-encoding src2)
+			 #b1001
+			 (reg-tn-encoding src1)))))
 
-(define-mul-inst nil)
-(define-mul-inst t)
+(define-conditional-insts define-mul-inst mul)
 
-(defmacro define-basic-4-arg-mul (name op &key two-outputs set-flags-p)
+(defmacro define-basic-4-arg-mul-inst (name op &key two-outputs set-flags-p)
   (let ((set-flags-bit (if set-flags-p 1 0))
 	(inst-name (symbolicate (string name) (if set-flags-p "S" ""))))
     `(define-instruction ,inst-name
@@ -1024,28 +1012,28 @@
 				   #b1001
 				   (reg-tn-encoding dst2-or-src))))))))
 
-(defmacro define-4-arg-mul (name opcode &key two-outputs)
+(defmacro define-4-arg-mul-inst (name opcode &key two-outputs)
   `(progn
-     (define-basic-4-arg-mul ,name ,opcode :two-outputs ,two-outputs)
-     (define-basic-4-arg-mul ,name ,opcode :two-outputs ,two-outputs :set-flags-p t)))
+     (define-basic-4-arg-mul-inst ,name ,opcode :two-outputs ,two-outputs)
+     (define-basic-4-arg-mul-inst ,name ,opcode :two-outputs ,two-outputs :set-flags-p t)))
 
 ;; A8.8.257; unsigned 32x32->64 multiply 
-(define-4-arg-mul umull #b0100 :two-outputs t)
+(define-4-arg-mul-inst umull #b0100 :two-outputs t)
 ;; A8.8.189; signed 32x32->64 multiply
-(define-4-arg-mul smull #b0110 :two-outputs t)
+(define-4-arg-mul-inst smull #b0110 :two-outputs t)
 
 ;; A8.8.100:  Multiply-add
-(define-4-arg-mul mla   #b0001)
+(define-4-arg-mul-inst mla #b0001)
 ;; A8.8.101; Multiply-subtract
-(define-basic-4-arg-mul mls #b0011)
+(define-basic-4-arg-mul-inst mls #b0011)
 
 ;; A8.8.256; unsiged 64-bit multiply-add
-(define-4-arg-mul umlal #b0101 :two-outputs t)
+(define-4-arg-mul-inst umlal #b0101 :two-outputs t)
 ;; A8.8.178; 64-bit signed multiply-add
-(define-4-arg-mul smlal #b0111 :two-outputs t)
+(define-4-arg-mul-inst smlal #b0111 :two-outputs t)
 
 ;; A8.8.255; 64-bit unsigned multiply-add, adding 2 32-bit values
-(define-basic-4-arg-mul umaal #b0010 :two-outputs t)
+(define-basic-4-arg-mul-inst umaal #b0010 :two-outputs t)
 
 ;; Divide and friends
 ;; A5.4.4
@@ -1070,7 +1058,7 @@
   (one   :field (byte 1 4) :value #b1)
   (src1  :field (byte 4 0) :type 'reg))
 
-(defmacro define-div (name op1 op2)
+(defmacro define-div-inst (name op1 op2)
   `(define-instruction ,name (segment dst src1 src2 &optional (cond :al))
      (:declare (type tn dst src1 src2)
 	       (type condition-code cond))
@@ -1093,8 +1081,8 @@
 		       #b1
 		       (reg-tn-encoding src1)))))
 
-(define-div sdiv #b001 #b000)
-(define-div udiv #b011 #b000)
+(define-div-inst sdiv #b001 #b000)
+(define-div-inst udiv #b011 #b000)
 
 ;; Misc instructions
 ;; A5.2.12
@@ -1365,7 +1353,7 @@
 
 ;; A5.3 and table A5-15
 ;; Load/store for words and unsigned bytes
-(defmacro define-load/store (name loadp &optional bytep)
+(defmacro define-load/store-inst (name loadp &optional bytep)
   `(define-instruction ,name (segment reg address &optional (cond :al))
      (:declare (type tn reg)
 	       (type load-store-index address))
@@ -1414,14 +1402,14 @@
 				(reg-tn-encoding reg)
 				(load-store-index-offset address))))))))
 
-(define-load/store ldr t)
-(define-load/store ldrb t t)
-(define-load/store str nil)
-(define-load/store strb nil t)
+(define-load/store-inst ldr t)
+(define-load/store-inst ldrb t t)
+(define-load/store-inst str nil)
+(define-load/store-inst strb nil t)
 
 ;; A5.2.8; extra load/store instructions for halfwords (16-bit signed
 ;; and unsigned) and signed bytes.
-(defmacro define-load/store-extra (name &optional loadp bytep signedp)
+(defmacro define-load/store-extra-inst (name &optional loadp bytep signedp)
   `(define-instruction ,name (segment reg address &optional (cond :al))
      (:declare (type tn reg)
 	       (type load-store-index address))
@@ -1494,10 +1482,10 @@
 					 (ldb (byte 4 0)
 					      (load-store-index-offset address))))))))))
 
-(define-load/store-extra ldrh t)
-(define-load/store-extra strh nil)
-(define-load/store-extra ldrsh t nil t)
-(define-load/store-extra ldrsb t t)
+(define-load/store-extra-inst ldrh t)
+(define-load/store-extra-inst strh nil)
+(define-load/store-extra-inst ldrsh t nil t)
+(define-load/store-extra-inst ldrsb t t)
 
 
 
@@ -1654,8 +1642,7 @@
 ;; want one that works eveyrwhere, use MOV R0, R0 (ARM) or MOV R8, R8
 ;; (Thumb).
 ;;
-;; FIXME: should we make this a pseudo instruction that maps to a mov?
-(define-instruction nop (segment &optional (cc :al))
+(define-instruction real-nop (segment &optional (cc :al))
   (:declare)
   (:printer format-1-immed
 	    ((opb0 #b001)
@@ -1664,7 +1651,8 @@
 	     (src1 0)
 	     (dst #b1111)
 	     (immed 0))
-	    '(:name cond))
+	    '(:name cond)
+	    :print-name 'nop)
   (:emitter
    (emit-format-1-immed segment
 			(condition-code-encoding cc)
@@ -1674,6 +1662,14 @@
 			#b0000
 			#b1111
 			0)))
+
+;; NOP instruction macro, instead of the real NOP instruction.
+(define-instruction-macro nop ()
+  (let ((r0 (gensym "R0-")))
+    `(let ((,r0 (make-random-tn :kind :normal
+				:sc (sc-or-lose 'vm::unsigned-reg)
+				:offset 0)))
+       (inst mov ,r0 ,r0))))
 
 ;; A8.8.33
 
@@ -1825,7 +1821,7 @@
   (opa0  :field (byte 1 6))
   (opa1  :field (byte 1 4)))
 
-(defmacro define-vfp-3 (name op0 op1 opa0 opa1 &optional doublep)
+(defmacro define-vfp-3-inst (name op0 op1 opa0 opa1 &optional doublep)
   (let ((full-name (symbolicate name (if doublep ".F64" ".F32"))))
     `(define-instruction ,full-name (segment dst src1 src2 &optional (cond :al))
        (:declare)
@@ -1862,14 +1858,14 @@
 				     ,opa1
 				     vm))))))))
 
-(define-vfp-3 vadd #b00 #b11 0 0)
-(define-vfp-3 vadd #b00 #b11 0 0 t)
-(define-vfp-3 vsub #b00 #b11 1 0)
-(define-vfp-3 vsub #b00 #b11 1 0 t)
-(define-vfp-3 vmul #b00 #b10 0 0)
-(define-vfp-3 vmul #b00 #b10 0 0 t)
-(define-vfp-3 vdiv #b01 #b00 0 0)
-(define-vfp-3 vdiv #b01 #b00 0 0 t)
+(define-vfp-3-inst vadd #b00 #b11 0 0)
+(define-vfp-3-inst vadd #b00 #b11 0 0 t)
+(define-vfp-3-inst vsub #b00 #b11 1 0)
+(define-vfp-3-inst vsub #b00 #b11 1 0 t)
+(define-vfp-3-inst vmul #b00 #b10 0 0)
+(define-vfp-3-inst vmul #b00 #b10 0 0 t)
+(define-vfp-3-inst vdiv #b01 #b00 0 0)
+(define-vfp-3-inst vdiv #b01 #b00 0 0 t)
 
 (define-emitter emit-format-vfp-2-arg 32
   (byte 4 28) (byte 3 25) (byte 2 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
@@ -1900,7 +1896,7 @@
   (defun fp-reg-as-reg-printer (value stream dstate)
     (reg-arg-printer (second value) stream dstate)))
 
-(defmacro define-vfp-2 (name op op1 ops opc3 opc4 &key doublep ext
+(defmacro define-vfp-2-inst (name op op1 ops opc3 opc4 &key doublep ext
 						    (dst-type 'fp-single-reg)
 						    (src-type 'fp-single-reg)
 						    printer)
@@ -1941,14 +1937,14 @@
 				   ,opc4
 				   vm)))))))
 
-(define-vfp-2 vabs  #b11 #b0000 #b1 #b1 0)
-(define-vfp-2 vabs  #b11 #b0000 #b1 #b1 0 :doublep t
+(define-vfp-2-inst vabs  #b11 #b0000 #b1 #b1 0)
+(define-vfp-2-inst vabs  #b11 #b0000 #b1 #b1 0 :doublep t
   :dst-type fp-double-reg :src-type fp-double-reg)
-(define-vfp-2 vneg  #b11 #b0001 #b0 #b1 0)
-(define-vfp-2 vneg  #b11 #b0001 #b0 #b1 0 :doublep t
+(define-vfp-2-inst vneg  #b11 #b0001 #b0 #b1 0)
+(define-vfp-2-inst vneg  #b11 #b0001 #b0 #b1 0 :doublep t
   :dst-type fp-double-reg :src-type fp-double-reg)
-(define-vfp-2 vsqrt #b11 #b0001 #b1 #b1 0)
-(define-vfp-2 vsqrt #b11 #b0001 #b1 #b1 0 :doublep t
+(define-vfp-2-inst vsqrt #b11 #b0001 #b1 #b1 0)
+(define-vfp-2-inst vsqrt #b11 #b0001 #b1 #b1 0 :doublep t
   :dst-type fp-double-reg :src-type fp-double-reg)
 
 ;; Conversions
@@ -1979,78 +1975,78 @@
 	  dst ", " src))
 
 ;; Convert between double and single
-(define-vfp-2 vcvt  #b11 #b0111 #b1 #b1 0 :ext "F64.F32"
+(define-vfp-2-inst vcvt  #b11 #b0111 #b1 #b1 0 :ext "F64.F32"
   :dst-type fp-double-reg
   :printer vcvt-printer)
-(define-vfp-2 vcvt  #b11 #b0111 #b1 #b1 0 :doublep t :ext "F32.F64"
+(define-vfp-2-inst vcvt  #b11 #b0111 #b1 #b1 0 :doublep t :ext "F32.F64"
   :src-type fp-double-reg
   :printer vcvt-printer)
 
 ;; A8.8.306
 
 ;; Convert between float and integer (truncating)
-(define-vfp-2 vcvt  #b11 #b1101 #b1 #b1 0
+(define-vfp-2-inst vcvt  #b11 #b1101 #b1 #b1 0
   :ext "S32.F32"
   :dst-type fp-single-reg
   :printer vcvt-printer)
-(define-vfp-2 vcvt  #b11 #b1101 #b1 #b1 0
+(define-vfp-2-inst vcvt  #b11 #b1101 #b1 #b1 0
   :ext "S32.F64"
   :dst-type fp-single-reg :src-type fp-double-reg
   :printer vcvt-printer
   :doublep t)
 
-(define-vfp-2 vcvt  #b11 #b1100 #b1 #b1 0
+(define-vfp-2-inst vcvt  #b11 #b1100 #b1 #b1 0
   :ext "U32.F32"
   :dst-type fp-single-reg
   :printer vcvt-printer)
-(define-vfp-2 vcvt  #b11 #b1100 #b1 #b1 0
+(define-vfp-2-inst vcvt  #b11 #b1100 #b1 #b1 0
   :ext "U32.F64"
   :dst-type fp-single-reg :src-type fp-double-reg
   :printer vcvt-printer
   :doublep t)
 
 ;; Convert between float and integer (rounding)
-(define-vfp-2 vcvtr #b11 #b1101 #b0 #b1 0
+(define-vfp-2-inst vcvtr #b11 #b1101 #b0 #b1 0
   :ext "S32.F32"
   :dst-type fp-single-reg
   :printer vcvt-printer)
-(define-vfp-2 vcvtr #b11 #b1101 #b0 #b1 0
+(define-vfp-2-inst vcvtr #b11 #b1101 #b0 #b1 0
   :ext "S32.F64"
   :dst-type fp-single-reg :src-type fp-double-reg
   :printer vcvt-printer
   :doublep t)
 
-(define-vfp-2 vcvtr #b11 #b1100 #b0 #b1 0
+(define-vfp-2-inst vcvtr #b11 #b1100 #b0 #b1 0
   :ext "U32.F32"
   :dst-type fp-single-reg
   :printer vcvt-printer)
-(define-vfp-2 vcvtr #b11 #b1100 #b0 #b1 0
+(define-vfp-2-inst vcvtr #b11 #b1100 #b0 #b1 0
   :ext "U32.F64"
   :dst-type fp-single-reg :src-type fp-double-reg
   :printer vcvt-printer
   :doublep t)
 
 ;; Convert int to float
-(define-vfp-2 vcvt  #b11 #b1000 #b1 #b1 0
+(define-vfp-2-inst vcvt  #b11 #b1000 #b1 #b1 0
   :ext "F32.S32"
   :src-type fp-single-reg
   :printer vcvt-printer)
-(define-vfp-2 vcvt  #b11 #b1000 #b0 #b1 0
+(define-vfp-2-inst vcvt  #b11 #b1000 #b0 #b1 0
   :ext "F32.U32"
   :src-type fp-single-reg
   :printer vcvt-printer)
-(define-vfp-2 vcvt  #b11 #b1000 #b1 #b1 0
+(define-vfp-2-inst vcvt  #b11 #b1000 #b1 #b1 0
   :ext "F64.S32"
   :dst-type fp-double-reg :src-type fp-single-reg
   :printer vcvt-printer
   :doublep t)
-(define-vfp-2 vcvt  #b11 #b1000 #b0 #b1 0
+(define-vfp-2-inst vcvt  #b11 #b1000 #b0 #b1 0
   :ext "F64.U32"
   :dst-type fp-double-reg :src-type fp-single-reg
   :printer vcvt-printer
   :doublep t)
 
-(defmacro define-vfp-cmp (name ops opc3 &key doublep)
+(defmacro define-vfp-cmp-inst (name ops opc3 &key doublep)
   (let ((full-name (symbolicate name (if doublep ".F64" ".F32")))
 	(rtype (if doublep 'fp-double-reg 'fp-single-reg)))
     `(define-instruction ,full-name (segment dst src &optional (cc :al))
@@ -2118,10 +2114,10 @@
 				    0
 				    0))))))))
 
-(define-vfp-cmp vcmp  #b0 #b1)
-(define-vfp-cmp vcmpe #b1 #b1)
-(define-vfp-cmp vcmp  #b0 #b1 :doublep t)
-(define-vfp-cmp vcmpe #b1 #b1 :doublep t)
+(define-vfp-cmp-inst vcmp  #b0 #b1)
+(define-vfp-cmp-inst vcmpe #b1 #b1)
+(define-vfp-cmp-inst vcmp  #b0 #b1 :doublep t)
+(define-vfp-cmp-inst vcmpe #b1 #b1 :doublep t)
 
 
 ;; Convert a float to the floating-point modified immediate constant.
@@ -2204,7 +2200,7 @@
   (op3   :field (byte 2 6) :value #b01)
   (z2    :field (byte 1 4) :value 0))
 
-(defmacro define-vmov (doublep)
+(defmacro define-vmov-inst (doublep)
   (let ((full-name (symbolicate 'vmov (if doublep ".F64" ".F32"))))
     `(define-instruction ,full-name (segment dst src &optional (cond :al))
        (:declare (type tn dst)
@@ -2258,8 +2254,8 @@
 					   #b0000
 					   (ldb (byte 4 0) value))))))))))
 
-(define-vmov nil)
-(define-vmov t)
+(define-vmov-inst nil)
+(define-vmov-inst t)
 
 ;; A8.8.343 VMOV between ARM reg to single-precision register
 
@@ -2352,7 +2348,7 @@
   (sz    :field (byte 1 8))
   (imm8  :field (byte 8 0)))
 
-(defmacro define-fp-load/store (name op0 &optional doublep)
+(defmacro define-fp-load/store-inst (name op0 &optional doublep)
   (let ((full-name (symbolicate name (if doublep ".64" ".32"))))
     `(define-instruction ,full-name (segment dst src &optional (cond :al))
        (:declare (type tn dst)
@@ -2407,10 +2403,10 @@
 					   ,(if doublep 1 0)
 					   offset))))))))
 
-(define-fp-load/store vldr #b01)
-(define-fp-load/store vldr #b01 t)
-(define-fp-load/store vstr #b00)
-(define-fp-load/store vstr #b00 t)
+(define-fp-load/store-inst vldr #b01)
+(define-fp-load/store-inst vldr #b01 t)
+(define-fp-load/store-inst vstr #b00)
+(define-fp-load/store-inst vstr #b00 t)
 
 ;; A7.8
 (disassem:define-instruction-format
