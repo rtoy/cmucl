@@ -131,49 +131,57 @@
 ;; it's not really interesting to test all of those.  Just test a few
 ;; of them.
 
-;; MOV[s][ne]  [lra,null], [#129, #1073741856]
+;; [MOV(FORMAT-1-IMMED)                    xxxx0011|10100000|xxxxxxxx|xxxxxxxx]
+;; [MOVS(FORMAT-1-IMMED)                   xxxx0011|10110000|xxxxxxxx|xxxxxxxx]
+;; MOV[s][ne]  [r8,r9], [#129, #1073741856]
 (test-pattern "MOV(FORMAT-1-IMMED)" "0011|101x0000|100x000x|10000001")
 
 ;; [MVN(FORMAT-1-IMMED)                    xxxx0011|111x0000|xxxxxxxx|xxxxxxxx
-;; MVN[s][ne]  [a0,nl0], [#129, #1073741856]
+;; [MVNS(FORMAT-1-IMMED)                   xxxx0011|11110000|xxxxxxxx|xxxxxxxx]
+;; MVN[s][ne]  [r0, r4], [#129, #1073741856]
 (test-pattern "MVN(FORMAT-1-IMMED)" "0011|111x0000|0x00000x|10000001")
 
 ;; [BIC(FORMAT-1-IMMED)                    xxxx0011|110xxxxx|xxxxxxxx|xxxxxxxx]
-;; BIC[s][ne] [a0, a1], [a2,nargs], [#129, #8454144]
+;; [BICS(FORMAT-1-IMMED)                   xxxx0011|1101xxxx|xxxxxxxx|xxxxxxxx]
+;; BIC[s][ne] [r0,r1], [r2,r3], [#129, #8454144]
 (test-pattern "BIC(FORMAT-1-IMMED)" "0011|110x001x|000xx000|10000001")
 
-;; BIC(FORMAT-0-REG)                  xxxx0001|110xxxxx|xxxxxxxx|xxx0xxxx
-;;BIC[s][ne] [a0,a1], [a2,nargs], [csp, cfp] ["", lsl, asr, lsr, ror] [#1]
+;; [BIC(FORMAT-0-REG)                  xxxx0001|110xxxxx|xxxxxxxx|xxx0xxxx]
+;; [BICS(FORMAT-0-REG)                 xxxx0001|1101xxxx|xxxxxxxx|xxx0xxxx]
+;;BIC[s][ne] [r0,r1], [r2,r3], [csp, cfp] ["", lsl, asr, lsr, ror] [#1]
 (test-pattern "BIC(FORMAT-0-REG)" "0001|110x001x|000x0000|xxx0101x")
 
-;; ADC(FORMAT-0-REG-SHIFTED)      xxxx0000|101xxxxx|xxxxxxxx|0xx1xxxx
-;; ADC[s][ne] [a0,a1], [a2,nargs], [a0,nl0] [shift-type] [a0, lra]
+;; [ADC(FORMAT-0-REG-SHIFTED)      xxxx0000|101xxxxx|xxxxxxxx|0xx1xxxx]
+;; [ADCS(FORMAT-0-REG-SHIFTED)     xxxx0000|1011xxxx|xxxxxxxx|0xx1xxxx]
+;; ADC[s][ne] [r0,r1], [r2,r3], [r0,r4] [shift-type] [r0,r8]
 (test-pattern "ADC(FORMAT-0-REG-SHIFTED)" "0000|101x001x|000xx000|0xx10x00")
 
-;; BIC(FORMAT-0-REG-SHIFTED)      xxxx0001|110xxxxx|xxxxxxxx|0xx1xxxx
-;; BIC[s][ne] [a0,a1], [a2,nargs], [a0,nl0] [shift-type] [a0,lra]
+;; [BIC(FORMAT-0-REG-SHIFTED)      xxxx0001|110xxxxx|xxxxxxxx|0xx1xxxx[
+;; [BIC(FORMAT-0-REG-SHIFTED)      xxxx0001|1100xxxx|xxxxxxxx|0xx1xxxx]
+;; BIC[s][ne] [r0,r1], [r2,r3], [r0,r4] [shift-type] [r0,r8]
 (test-pattern "BIC(FORMAT-0-REG-SHIFTED)" "0001|110x001x|000xx000|0xx10x00")
 
 ;; [CMN(FORMAT-1-IMMED)                    xxxx0011|0111xxxx|0000xxxx|xxxxxxxx]
-;; CMN[ne] [a0, a1], [#129, #8454144]
+;; CMN[ne] [r0, r1], [#129, #8454144]
 (test-pattern "CMN(FORMAT-1-IMMED)" "0011|0111000x|0000x000|10000001")
 
 ;; [ORR(FORMAT-1-IMMED)                    xxxx0011|100xxxxx|xxxxxxxx|xxxxxxxx]
-;; ORR[s][ne] [a0, a1], [a2,nargs], [#129, #8454144]
+;; [ORRS(FORMAT-1-IMMED)                   xxxx0011|1001xxxx|xxxxxxxx|xxxxxxxx]
+;; ORR[s][ne] [r0, r1], [r2,r3], [#129, #8454144]
 (test-pattern "ORR(FORMAT-1-IMMED)" "0011|100x001x|000xx000|10000001")
 
 ;; MOVT(FORMAT-MOV16)                 xxxx0011|0100xxxx|xxxxxxxx|xxxxxxxx
 ;; The low 16 bits are an immediate which isn't that interesting.
-;; MOVT[ne] [a0,nl0], [#2730, #2731]
+;; MOVT[ne] [r0,r4], [#2730, #2731]
 (test-pattern "MOVT(FORMAT-MOV16)" "0011|01001010|0x001010|1010101x")
 
-;; ROR(FORMAT-0-REG)              xxxx0001|101x0000|xxxxxxxx|x110xxxx
-;; :RRX                           xxxx0001|101x0000|xxxx0000|0110xxxx
-;; ROR[s][ne] [a0,a1], [a0,a2], [#16, #17]
+;; [ROR(FORMAT-0-REG)              xxxx0001|101x0000|xxxxxxxx|x110xxxx
+;; :RRX                            xxxx0001|101x0000|xxxx0000|0110xxxx]
+;; [RORS(FORMAT-0-REG)             xxxx0001|10110000|xxxxxxxx|x110xxxx
+;; :RRXS                           xxxx0001|10110000|xxxx0000|0110xxxx]
+;; ROR[s][ne] [r0,r1], [r0,r2], [r8,r9]
 (test-pattern "ROR(FORMAT-0-REG)" "0001|101x0000|000x1000|x11000x0")
-;; ROR[s][ne] [a0,a1], [a0,a2], [LRA, NULL]
-(test-pattern "ROR(FORMAT-0-REG)" "0001|101x0000|000x100x|011100x0")
-;; RRX[s][ne] [a0,a1], [a0,a2]
+;; RRX[s][ne] [r0,r1], [r0,r2]
 (test-pattern ":RRX" "0001|101x0000|000x0000|011000x0")
 
 ;; [STRB(FORMAT-2-IMMED)                   xxxx010x|x1x0xxxx|xxxxxxxx|xxxxxxxx]
@@ -325,5 +333,7 @@
 ;; clz[ne] [r0, r1], [r10, r11]
 (test-pattern "[CLZ(FORMAT-0-CLZ)" "0001|01101111|000x1111|0000101x")
 
+;; [VMOV.F64(FORMAT-VFP-VMOV-IMMED)    xxxx1110|1x11xxxx|xxxx1011|0000xxxx]
+(test-pattern "VMOV.F64(FORMAT-VFP-VMOV-IMMED)" "1110|1x11xxxx|00011011|0000xxxx")
 ||#
 
