@@ -334,6 +334,11 @@
 (test-pattern "[CLZ(FORMAT-0-CLZ)" "0001|01101111|000x1111|0000101x")
 
 ;; [VMOV.F64(FORMAT-VFP-VMOV-IMMED)    xxxx1110|1x11xxxx|xxxx1011|0000xxxx]
+;; vmov[ne] [d1, d17], <float-immed>
 (test-pattern "VMOV.F64(FORMAT-VFP-VMOV-IMMED)" "1110|1x11xxxx|00011011|0000xxxx")
+
+;; [VMOV.F32(FORMAT-VFP-VMOV-REG)  xxxx1110|1x110000|xxxx1010|01x0xxxx]
+;; vmov[ne].f32 [s0,s1], [s0,s2]
+(test-pattern "VMOV.F32(FORMAT-VFP-VMOV-REG)" "1110|1x110000|00001010|0100000x")
 ||#
 

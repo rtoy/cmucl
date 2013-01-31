@@ -1733,9 +1733,8 @@
   (opa0  :field (byte 1 6))
   (opa1  :field (byte 1 4)))
 
-(defmacro define-vfp-3-inst (name op0 op1 opa0 opa1 &optional doublep)
-  (let ((full-name (symbolicate name (if doublep ".F64" ".F32"))))
-    `(define-instruction ,full-name (segment dst src1 src2 &optional (cond :al))
+(defmacro define-vfp-3-inst (name inst-name op0 op1 opa0 opa1 &optional doublep)
+  `(define-instruction ,inst-name (segment dst src1 src2 &optional (cond :al))
        (:declare (type tn dst src1 src2)
 		 (type condition-code cond))
        (:printer format-vfp-3
@@ -1769,16 +1768,20 @@
 				     ,opa0
 				     m
 				     ,opa1
-				     vm))))))))
+				     vm)))))))
 
-(define-vfp-3-inst vadd #b00 #b11 0 0)
-(define-vfp-3-inst vadd #b00 #b11 0 0 t)
-(define-vfp-3-inst vsub #b00 #b11 1 0)
-(define-vfp-3-inst vsub #b00 #b11 1 0 t)
-(define-vfp-3-inst vmul #b00 #b10 0 0)
-(define-vfp-3-inst vmul #b00 #b10 0 0 t)
-(define-vfp-3-inst vdiv #b01 #b00 0 0)
-(define-vfp-3-inst vdiv #b01 #b00 0 0 t)
+(macrolet
+    ((frob (name op0 op1 opa0 opa1)
+       `(progn
+	  (define-vfp-3-inst ,name ,(symbolicate name ".F32")
+	    ,op0 ,op1 ,opa0 ,opa1)
+	  (define-vfp-3-inst ,name ,(symbolicate name ".F64")
+	    ,op0 ,op1 ,opa0 ,opa1 t))))
+  (frob vadd #b00 #b11 0 0)
+  (frob vsub #b00 #b11 1 0)
+  (frob vmul #b00 #b10 0 0)
+  (frob vdiv #b01 #b00 0 0))
+
 
 (define-emitter emit-format-vfp-2-arg 32
   (byte 4 28) (byte 3 25) (byte 2 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
@@ -1805,60 +1808,57 @@
   (opc3  :field (byte 1 6))
   (opc4  :field (byte 1 4)))
 
-(defmacro define-vfp-2-inst (name op op1 ops opc3 opc4 &key (size-bit 0)
-							 (ext (required-argument))
-							 (dst-type 'fp-single-reg)
-							 (src-type 'fp-single-reg)
-							 printer)
+(defmacro define-vfp-2-inst (name inst-name op op1 ops opc3 opc4
+			     &key (size-bit 0)
+			       (dst-type 'fp-single-reg)
+			       (src-type 'fp-single-reg)
+			       printer)
   (check-type size-bit bit)
   (check-type dst-type (member fp-single-reg fp-double-reg))
   (check-type src-type (member fp-single-reg fp-double-reg))
-  (let ((inst-name (symbolicate name "." ext)))
-    `(define-instruction ,inst-name (segment dst src &optional (cond :al))
-       (:declare (type tn dst src)
-		 (type condition-code cond))
-       (:printer format-vfp-2-arg
-		 ((opb0 #b111)
-		  (op0 #b01) (op ,op) (op1 ,op1) (op2 #b101)
-		  (ops ,ops) (opc3 ,opc3) (opc4 ,opc4)
-		  (sz ,size-bit)
-		  (dst nil :type ',dst-type)
-		  (src nil :type ',src-type))
-		 ,(or printer :default)
-		 :print-name ',name)
-       (:emitter
-	(multiple-value-bind (d vd)
-	    (fp-reg-tn-encoding dst (eq dst-type 'fp-double-reg))
-	  (multiple-value-bind (m vm)
-	      (fp-reg-tn-encoding src (eq src-type 'fp-double-reg)))
-	    (emit-format-vfp-2-arg segment
-				   (condition-code-encoding cond)
-				   #b111
-				   #b01
-				   d
-				   ,op
-				   ,op1
-				   vd
-				   #b101
-				   ,size-bit
-				   #b1
-				   ,opc3
-				   m
-				   ,opc4
-				   vm)))))))
+  `(define-instruction ,inst-name (segment dst src &optional (cond :al))
+     (:declare (type tn dst src)
+	       (type condition-code cond))
+     (:printer format-vfp-2-arg
+	       ((opb0 #b111)
+		(op0 #b01) (op ,op) (op1 ,op1) (op2 #b101)
+		(ops ,ops) (opc3 ,opc3) (opc4 ,opc4)
+		(sz ,size-bit)
+		(dst nil :type ',dst-type)
+		(src nil :type ',src-type))
+	       ,(or printer :default)
+	       :print-name ',name)
+     (:emitter
+      (multiple-value-bind (d vd)
+	  (fp-reg-tn-encoding dst (eq dst-type 'fp-double-reg))
+	(multiple-value-bind (m vm)
+	    (fp-reg-tn-encoding src (eq src-type 'fp-double-reg)))
+	(emit-format-vfp-2-arg segment
+			       (condition-code-encoding cond)
+			       #b111
+			       #b01
+			       d
+			       ,op
+			       ,op1
+			       vd
+			       #b101
+			       ,size-bit
+			       #b1
+			       ,opc3
+			       m
+			       ,opc4
+			       vm)))))
 
 (macrolet
     ((double-inst (name op op1 ops opc3)
-       `(define-vfp-2-inst ,name
+       `(define-vfp-2-inst ,name ,(symbolicate name ".F64")
 	  ,op ,op1 ,ops, opc3 0
-	  :ext "F64"
 	  :size-bit 1
 	  :dst-type fp-double-reg
 	  :src-type fp-double-reg))
      (single-inst (name op op1 ops opc3)
-       `(define-vfp-2-inst ,name
-	  ,op ,op1 ,ops, opc3 0
-	  :ext "F32"))
+       `(define-vfp-2-inst ,name ,(symbolicate name ".F32")
+	  ,op ,op1 ,ops, opc3 0))
      (frob (name op1 ops)
        `(progn
 	  (double-inst ,name #b11, op1, ops #b1)
@@ -1900,8 +1900,7 @@
 			       (size-bit 0) 
 			       (dst-type 'fp-single-reg)
 			       (src-type 'fp-single-reg))
-       `(define-vfp-2-inst ,name #b11 ,op1 ,ops ,opc3 0
-	  :ext ,ext
+       `(define-vfp-2-inst ,name ,(symbolicate name "." ext)  #b11 ,op1 ,ops ,opc3 0
 	  :size-bit ,size-bit
 	  :dst-type ,dst-type
 	  :src-type ,src-type
@@ -1945,11 +1944,10 @@
 	:dst-type fp-double-reg
 	:size-bit 1))
 
-(defmacro define-vfp-cmp-inst (name ops opc3 &key doublep)
-  (let ((full-name (symbolicate name (if doublep ".F64" ".F32")))
-	(rtype (if doublep 'fp-double-reg 'fp-single-reg))
+(defmacro define-vfp-cmp-inst (name inst-name ops opc3 &key doublep)
+  (let ((rtype (if doublep 'fp-double-reg 'fp-single-reg))
 	(size-bit (if doublep 1 0)))
-    `(define-instruction ,full-name (segment dst src &optional (cond :al))
+    `(define-instruction ,inst-name (segment dst src &optional (cond :al))
        (:declare (type dst tn)
 		 (type (or tn (float 0.0 0.0)) src)
 		 (type condition-code cond))
@@ -2018,8 +2016,8 @@
 (macrolet
     ((frob (name op)
        `(progn
-	  (define-vfp-cmp-inst ,name ,op #b1)
-	  (define-vfp-cmp-inst ,name ,op #b1 :doublep t))))
+	  (define-vfp-cmp-inst ,name ,(symbolicate name ".F32") ,op #b1)
+	  (define-vfp-cmp-inst ,name ,(symbolicate name ".F64") ,op #b1 :doublep t))))
   (frob vcmp  #b0)
   (frob vcmpe #b1))
 
@@ -2072,8 +2070,18 @@
   (byte 4 28) (byte 3 25) (byte 2 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
   (byte 3 9) (byte 1 8) (byte 4 4) (byte 4 0))
 
+(defconstant format-vfp-vmov-immed-printer
+  `(:name  cond
+	   (:cond ((sz :constant 0) '|.F32|)
+		  (t '|.F64|))
+	   :tab
+	   dst ", " imm8))
+
+
 (disassem:define-instruction-format
-    (format-vfp-vmov-immed 32 :include 'format-base)
+    (format-vfp-vmov-immed 32
+			   :include 'format-base
+			   :default-printer format-vfp-vmov-immed-printer)
   (op0   :field (byte 2 23) :value #b01)
   (op    :field (byte 2 20) :value #b11)
   (imm8  :fields (list (byte 4 16) (byte 4 0)) :printer #'packed-float-immed-printer)
@@ -2094,7 +2102,9 @@
 	   dst ", " src))
 
 (disassem:define-instruction-format
-    (format-vfp-vmov-reg 32 :include 'format-base)
+    (format-vfp-vmov-reg 32
+			 :include 'format-base
+			 :default-printer format-vfp-vmov-reg-printer)
   (op0   :field (byte 2 23) :value #b01)
   (op    :field (byte 2 20) :value #b11)
   (z     :field (byte 4 16) :value 0)
@@ -2106,58 +2116,62 @@
   (z2    :field (byte 1 4) :value 0))
 
 (defmacro define-vmov-inst (inst-name doublep)
-  `(define-instruction ,inst-name (segment dst src &optional (cond :al))
-     (:declare (type tn dst)
-	       (type (or float tn) src)
-	       (type condition-code cond))
-     (:printer format-vfp-vmov-immed
-	       ((opb0 #b111) (op0 #b01) (op #b11) (op2 #b101) (z 0)
-		(sz ,(if doublep 1 0)))
-	       :default
-	       :print-name 'vmov)
-     (:printer format-vfp-vmov-reg
-	       ((opb0 #b111) (op0 #b01) (op #b11) (op2 #b101) (op3 #b01)
-		(z 0) (z2 0)
-		(sz ,(if doublep 1 0)))
-	       :default
-	       :print-name 'vmov)
-     (:emitter
-      (etypecase src
-	(tn
-	 (multiple-value-bind (d vd)
-	     (fp-reg-tn-encoding dst doublep)
-	   (multiple-value-bind (m vm)
-	       (fp-reg-tn-encoding src doublep)
-	     (emit-format-vfp-vmov-reg segment
-				       (condition-code-encoding cond)
-				       #b111
-				       #b01
-				       d
-				       #b11
-				       #b0000
-				       vd
-				       #b101
-				       ,(if doublep 1 0)
-				       #b01
-				       m
-				       0
-				       vm))))
-	(float
-	 (multiple-value-bind (d vd)
-	     (fp-reg-tn-encoding dst doublep)
-	   (let ((value (fp-immed-or-lose src)))
-	     (emit-format-vfp-vmov-immed segment
+  (let ((reg-type (if doublep 'fp-double-reg 'fp-single-reg)))
+    `(define-instruction ,inst-name (segment dst src &optional (cond :al))
+       (:declare (type tn dst)
+		 (type (or float tn) src)
+		 (type condition-code cond))
+       (:printer format-vfp-vmov-immed
+		 ((opb0 #b111) (op0 #b01) (op #b11) (op2 #b101) (z 0)
+		  (sz ,(if doublep 1 0))
+		  (dst nil :type ',reg-type))
+		 :default
+		 :print-name 'vmov)
+       (:printer format-vfp-vmov-reg
+		 ((opb0 #b111) (op0 #b01) (op #b11) (op2 #b101) (op3 #b01)
+		  (z 0) (z2 0)
+		  (sz ,(if doublep 1 0))
+		  (dst nil :type ',reg-type)
+		  (src nil :type ',reg-type))
+		 :default
+		 :print-name 'vmov)
+       (:emitter
+	(etypecase src
+	  (tn
+	   (multiple-value-bind (d vd)
+	       (fp-reg-tn-encoding dst doublep)
+	     (multiple-value-bind (m vm)
+		 (fp-reg-tn-encoding src doublep)
+	       (emit-format-vfp-vmov-reg segment
 					 (condition-code-encoding cond)
 					 #b111
 					 #b01
 					 d
 					 #b11
-					 (ldb (byte 4 4) value)
+					 #b0000
 					 vd
 					 #b101
 					 ,(if doublep 1 0)
-					 #b0000
-					 (ldb (byte 4 0) value)))))))))
+					 #b01
+					 m
+					 0
+					 vm))))
+	  (float
+	   (multiple-value-bind (d vd)
+	       (fp-reg-tn-encoding dst doublep)
+	     (let ((value (fp-immed-or-lose src)))
+	       (emit-format-vfp-vmov-immed segment
+					   (condition-code-encoding cond)
+					   #b111
+					   #b01
+					   d
+					   #b11
+					   (ldb (byte 4 4) value)
+					   vd
+					   #b101
+					   ,(if doublep 1 0)
+					   #b0000
+					   (ldb (byte 4 0) value))))))))))
 
 (define-vmov-inst vmov.f32 nil)
 (define-vmov-inst vmov.f64 t)
@@ -2255,9 +2269,8 @@
   (sz    :field (byte 1 8))
   (imm8  :field (byte 8 0)))
 
-(defmacro define-fp-load/store-inst (name op0 &optional doublep)
-  (let ((full-name (symbolicate name (if doublep ".64" ".32"))))
-    `(define-instruction ,full-name (segment dst src &optional (cond :al))
+(defmacro define-fp-load/store-inst (name inst-name op0 &optional doublep)
+  `(define-instruction ,inst-name (segment dst src &optional (cond :al))
        (:declare (type tn dst)
 		 (type (or tn load-store-index) dst)
 		 (type condition-code cond))
@@ -2309,12 +2322,15 @@
 					   vd
 					   #b101
 					   ,(if doublep 1 0)
-					   offset))))))))
+					   offset)))))))
 
-(define-fp-load/store-inst vldr #b01)
-(define-fp-load/store-inst vldr #b01 t)
-(define-fp-load/store-inst vstr #b00)
-(define-fp-load/store-inst vstr #b00 t)
+(macrolet
+    ((frob (name op)
+       `(progn
+	  (define-fp-load/store-inst ,name ,(symbolicate name ".32") ,op)
+	  (define-fp-load/store-inst ,name ,(symbolicate name ".64") ,op t))))
+  (frob vldr #b01)
+  (frob vstr #b00))
 
 ;; A7.8
 (disassem:define-instruction-format
