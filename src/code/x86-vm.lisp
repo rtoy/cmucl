@@ -539,9 +539,11 @@
 
 (defun get-fp-operation (scp)
   (declare (type (alien (* sigcontext)) scp))
-  ;; Get the offending FP instruction from the context.  We return the
-  ;; operation associated with the FP instruction, the precision of
-  ;; the operation, and the operands of the instruction.
+  ;; Get the instruction that caused the SIGFPE from the context.  The
+  ;; SIGFPE can be caused by either a floating-point operation or an
+  ;; integer division (overflow).  We return the operation associated
+  ;; with the instruction, and the the operands of the instruction, if
+  ;; possible.
 
   ;; For SSE2, the PC should be at the offending SSE2 instruction
   (let ((pc (sigcontext-program-counter scp)))
@@ -580,9 +582,10 @@
 		     (when (= mod #b11)
 		       (sigcontext-float-register scp (+ 8 r/m) format))))))
       ;; Look at the instruction and see if it's one of the arithmetic
-      ;; SSE2 instructions.  If so, figure out the operation and try
-      ;; to get the operands.  Currently, if an operand is in memory,
-      ;; we don't try to fetch it.
+      ;; SSE2 instructions or an integer division instruction.  If so,
+      ;; figure out the operation and try to get the operands.
+      ;; Currently, if an operand is in memory, we don't try to fetch
+      ;; it.
       ;;
       ;; Also, for the packed operations that hold complex numbers,
       ;; it's not exactly clear what to do.  The main issue is that
@@ -644,8 +647,38 @@
 		       (when src
 			 (list (realpart src)
 			       (imagpart src))))))
+	    ((or (= (sys:sap-ref-8 pc 0) #xf7))
+	     ;; DIV or IDIV.  We don't support 8-bit division
+	     (multiple-value-bind (mod r/m v)
+		 (decode-mod-r/m (sys:sap-ref-8 pc 1))
+	       #+(or)
+	       (format t "DIV: #X~X: mod, r/m v = ~X ~X ~X~%"
+		       (sys:sap-ref-8 pc 0)
+		       mod r/m v)
+	       ;; r/m tells us the divisor reg
+	       (flet ((maybe-adjust-sign (x 64bit-p)
+			;; Maybe convert unsigned integer X to a
+			;; signed integer.  64BIT-P is set if X is
+			;; supposed to be a 64-bit integer.
+			(if (= v 7)
+			    (- x (if 64bit-p
+				     #x10000000000000000
+				     #x100000000))
+			    x)))
+		 ;; For the div instructions, the dividend is always
+		 ;; in EDX:EAX
+		 (let ((dividend (maybe-adjust-sign
+				  (+ (ash (sigcontext-register scp 4) 32)
+				     (sigcontext-register scp 0))
+				  t))
+		       (divisor (maybe-adjust-sign
+				 (sigcontext-register scp (ash r/m 1))
+				 nil)))
+		   (values '/
+			   dividend
+			   divisor)))))
 	    (t
-	     (values nil nil nil nil))))))
+	     (values nil nil nil))))))
 
 (defun get-fp-operands (scp modes)
   (declare (type (alien (* sigcontext)) scp)
