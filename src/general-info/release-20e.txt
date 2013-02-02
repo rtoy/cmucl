@@ -60,6 +60,9 @@ New in this release:
   * Improvements to the PCL implementation of CLOS:
 
   * Changes to building procedure:
+    * In make-dist.sh, the version is now optional.  If not given, a
+      version is derived from the git hash returned by "git
+      describe". 
 
 This release is not binary compatible with code compiled using CMUCL
 20d; you will need to recompile FASL files. 
