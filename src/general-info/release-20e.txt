@@ -24,8 +24,8 @@ New in this release:
  
   * Changes
     * ASDF2 updated to version 2.26.
-    * DEFINE-COMPILER-MACRO now has source-locationinformation for the
-      macro definition.
+    * DEFINE-COMPILER-MACRO now has source-location information for
+      the macro definition.
     * :ALIEN-CALLBACK added to *FEATURES* for platforms that support
       alien callbacks.
     * The sparc port can be built using gcc once again.
@@ -48,6 +48,8 @@ New in this release:
     * Ticket #69 fixed.
     * Ticket #70 fixed.
     * Ticket #65 fixed.
+    * Ticket #71 fixed.
+    * Ticket #72 fixed.
 
   * Other changes:
     * -8 option for build-all.sh is deprecated since we don't
