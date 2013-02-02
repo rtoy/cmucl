@@ -4787,7 +4787,7 @@ msgid ""
 msgstr ""
 
 #: src/code/float-trap.lisp
-msgid "SIGFPE with no exceptions currently enabled?"
+msgid "SIGFPE with no exceptions currently enabled? (si-code = ~D)"
 msgstr ""
 
 #: src/code/float-trap.lisp
