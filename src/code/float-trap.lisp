@@ -331,7 +331,7 @@
 		 (error 'arithmetic-error
 			:operation fop
 			:operands operands)
-		 (error _"SIGFPE with no exceptions currently enabled? (si-code = ~D"
+		 (error _"SIGFPE with no exceptions currently enabled? (si-code = ~D)"
 			code)))))))
 
 ;;; WITH-FLOAT-TRAPS-MASKED  --  Public
