@@ -75,6 +75,7 @@
 ;;;; Machine Architecture parameters:
 
 (export '(word-bits byte-bits char-bits word-shift word-bytes char-bytes
+	  fixnum-tag-bits fixnum-tag-mask positive-fixnum-bits
 	  float-sign-shift
 
 	  single-float-bias single-float-exponent-byte
@@ -119,6 +120,25 @@
 
 (defconstant word-bytes (/ word-bits byte-bits)
   "Number of bytes in a word.")
+
+(defconstant lowtag-bits 3
+  "Number of bits at the low end of a pointer used for type information.")
+
+(defconstant lowtag-mask (1- (ash 1 lowtag-bits))
+  "Mask to extract the low tag bits from a pointer.")
+  
+(defconstant lowtag-limit (ash 1 lowtag-bits)
+  "Exclusive upper bound on the value of the low tag bits from a
+  pointer.")
+
+(defconstant fixnum-tag-bits (1- lowtag-bits)
+  "Number of tag bits used for a fixnum")
+
+(defconstant fixnum-tag-mask (1- (ash 1 fixnum-tag-bits))
+  "Mask to get the fixnum tag")
+
+(defconstant positive-fixnum-bits (- word-bits fixnum-tag-bits 1)
+  "Maximum number of bits in a positive fixnum")
 ) ; eval-when
 
 (eval-when (compile load eval)
