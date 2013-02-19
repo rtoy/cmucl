@@ -1713,3 +1713,115 @@
     (cut-to-width integer width)
     'vm::ash-left-mod32))
 )
+
+(in-package :x86)
+
+(defknown ash-right-signed ((signed-byte #.vm:word-bits)
+			    (and fixnum unsigned-byte))
+  (signed-byte #.vm:word-bits)
+  (movable foldable flushable))
+
+(defknown ash-right-unsigned ((unsigned-byte #.vm:word-bits)
+			      (and fixnum unsigned-byte))
+  (unsigned-byte #.vm:word-bits)
+  (movable foldable flushable))
+
+(macrolet
+    ((frob (trans name sc-type type shift-inst cost)
+       `(define-vop (,name)
+	  (:note _N"inline right ASH")
+	  (:translate ,trans)
+	  (:args (number :scs (,sc-type))
+		 (amount :scs (signed-reg unsigned-reg immediate)))
+	  (:arg-types ,type positive-fixnum)
+	  (:results (result :scs (,sc-type)))
+	  (:result-types ,type)
+	  (:policy :fast-safe)
+	  (:temporary (:sc unsigned-reg :offset ecx-offset) cl)
+	  (:generator ,cost
+	    (sc-case amount
+	      ((signed-reg unsigned-reg)
+	       (move cl amount)
+	       (move result number)
+	       (inst ,shift-inst result :cl))
+	      (immediate
+	       (let ((amt (tn-value amount)))
+		 (move result number)
+		 (inst ,shift-inst result amt))))))))
+  (frob ash-right-signed fast-ash-right/signed=>signed
+	signed-reg signed-num sar 4)
+  (frob ash-right-unsigned fast-ash-right/unsigned=>unsigned
+	unsigned-reg unsigned-num shr 4))
+
+;; Constant right shift.
+(macrolet
+    ((frob (trans name sc-type type shift-inst cost max-shift)
+       `(define-vop (,name)
+	  (:note _N"inline right ASH")
+	  (:translate ,trans)
+	  (:args (number :target result :scs (,sc-type)))
+	  (:info amount)
+	  (:arg-types ,type
+		      (:constant (integer 0 ,max-shift)))
+	  (:results (result :scs (,sc-type)))
+	  (:result-types ,type)
+	  (:policy :fast-safe)
+	  (:generator 4
+	    (cond ((zerop amount)
+		   (move result number))
+		  (t
+		   (move result number)
+		   (inst ,shift-inst result amount)))))))
+  (frob ash-right-signed fast-ash-right-c/signed=>signed
+	signed-reg signed-num sar 1 31)
+  (frob ash-right-unsigned fast-ash-right-c/unsigned=>unsigned
+	unsigned-reg unsigned-num shr 1 31))
+
+;; FIXME: The following stuff for right shifts should be moved to
+;; vm-tran (or somewhere common), once we make it the same on sparc
+;; and ppc.
+
+;; Need these so constant folding works with the deftransform.
+
+(defun ash-right-signed (num shift)
+  (declare (type (signed-byte #.vm:word-bits) num)
+	   (type (integer 0 #.(1- vm:word-bits)) shift))
+  (ash num (- shift)))
+
+(defun ash-right-unsigned (num shift)
+  (declare (type (unsigned-byte #.vm:word-bits) num)
+	   (type (integer 0 #.(1- vm:word-bits)) shift))
+  (ash num (- shift)))
+
+;; If we can prove that we have a right shift, just do the right shift
+;; instead of calling the inline ASH which has to check for the
+;; direction of the shift at run-time.
+(in-package "C")
+
+(deftransform ash ((num shift) (integer integer))
+  (let ((num-type (continuation-type num))
+	(shift-type (continuation-type shift)))
+    ;; Can only handle right shifts
+    (unless (csubtypep shift-type (specifier-type '(integer * 0)))
+      (give-up))
+
+    ;; If we can prove the shift is so large that all bits are shifted
+    ;; out, return the appropriate constant.  If the shift is small
+    ;; enough, call the VOP.  Otherwise, check for the shift size and
+    ;; do the appropriate thing.  (Hmm, could we just leave the IF
+    ;; s-expr and depend on other parts of the compiler to delete the
+    ;; unreachable parts, if any?)
+    (cond ((csubtypep num-type (specifier-type '(signed-byte #.vm:word-bits)))
+	   ;; A right shift by 31 is the same as a right shift by
+	   ;; larger amount.  We get just the sign.
+	   (if (csubtypep shift-type (specifier-type '(integer #.(- 1 vm:word-bits) 0)))
+	       `(vm::ash-right-signed num (- shift))
+	       `(vm::ash-right-signed num (min (- shift) #.(1- vm:word-bits)))))
+	  ((csubtypep num-type (specifier-type '(unsigned-byte #.vm:word-bits)))
+	   (if (csubtypep shift-type (specifier-type '(integer #.(- 1 vm:word-bits) 0)))
+	       `(vm::ash-right-unsigned num (- shift))
+	       `(if (<= shift #.(- vm:word-bits))
+		 0
+		 (vm::ash-right-unsigned num (- shift)))))
+	  (t
+	   (give-up)))))
