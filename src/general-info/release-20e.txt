@@ -31,7 +31,9 @@ New in this release:
     * The sparc port can be built using gcc once again.
     * The old Cheney stop-and-copy GC supported on sparc once again.
       However, there are no plans on supplying sparc binaries with
-      this GC. 
+      this GC.
+    * For x86, optimize TRUNCATE when the second arg is a compile-time
+      constant.  (Sparc and ppc already had this optimization)
 
   * ANSI compliance fixes:
 
