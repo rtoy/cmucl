@@ -528,31 +528,6 @@
     (move quo eax)
     (move rem edx)))
 
-#+nil
-(define-vop (fast-truncate-c/unsigned=>unsigned fast-safe-arith-op)
-  (:translate truncate)
-  (:args (x :scs (unsigned-reg) :target eax))
-  (:info y)
-  (:arg-types unsigned-num (:constant (unsigned-byte 32)))
-  (:temporary (:sc unsigned-reg :offset eax-offset :target quo
-		   :from :argument :to (:result 0)) eax)
-  (:temporary (:sc unsigned-reg :offset edx-offset :target rem
-		   :from :eval :to (:result 1)) edx)
-  (:temporary (:sc unsigned-reg :from :eval :to :result) y-arg)
-  (:results (quo :scs (unsigned-reg))
-	    (rem :scs (unsigned-reg)))
-  (:result-types unsigned-num unsigned-num)
-  (:note _N"inline (unsigned-byte 32) arithmetic")
-  (:vop-var vop)
-  (:save-p :compute-only)
-  (:generator 32
-    (move eax x)
-    (inst xor edx edx)
-    (inst mov y-arg y)
-    (inst div eax y-arg)
-    (move quo eax)
-    (move rem edx)))
-
 (define-vop (fast-truncate-c/unsigned=>unsigned fast-unsigned-binop-c)
   (:translate truncate)
   (:args (x :scs (unsigned-reg)))
@@ -615,31 +590,6 @@
     (move eax x)
     (inst cdq)
     (inst idiv eax y)
-    (move quo eax)
-    (move rem edx)))
-
-#+nil
-(define-vop (fast-truncate-c/signed=>signed fast-safe-arith-op)
-  (:translate truncate)
-  (:args (x :scs (signed-reg) :target eax))
-  (:info y)
-  (:arg-types signed-num (:constant (signed-byte 32)))
-  (:temporary (:sc signed-reg :offset eax-offset :target quo
-		   :from :argument :to (:result 0)) eax)
-  (:temporary (:sc signed-reg :offset edx-offset :target rem
-		   :from :eval :to (:result 1)) edx)
-  (:temporary (:sc signed-reg :from :eval :to :result) y-arg)
-  (:results (quo :scs (signed-reg))
-	    (rem :scs (signed-reg)))
-  (:result-types signed-num signed-num)
-  (:note _N"inline (signed-byte 32) arithmetic")
-  (:vop-var vop)
-  (:save-p :compute-only)
-  (:generator 32
-    (move eax x)
-    (inst cdq)
-    (inst mov y-arg y)
-    (inst idiv eax y-arg)
     (move quo eax)
     (move rem edx)))
 
