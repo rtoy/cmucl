@@ -34,6 +34,10 @@ New in this release:
       this GC.
     * For x86, optimize TRUNCATE when the second arg is a compile-time
       constant.  (Sparc and ppc already had this optimization)
+    * The following *FEATURES* have been removed:
+      * :COMMON (not used)
+      * :CONSERVATIVE-FLOAT-TYPE (Always default to this in type
+        derivation.)
 
   * ANSI compliance fixes:
 
