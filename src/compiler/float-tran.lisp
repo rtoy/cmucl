@@ -553,7 +553,7 @@
 ;;;
 (defoptimizer (scale-float derive-type) ((f ex))
   (two-arg-derive-type f ex #'scale-float-derive-type-aux
-		       #'scale-float t))
+		       #'scale-float))
 	     
 ;;; toy@rtp.ericsson.se:
 ;;;
