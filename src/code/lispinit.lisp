@@ -20,7 +20,7 @@
 (export '(most-positive-fixnum most-negative-fixnum sleep
 	  ++ +++ ** *** // ///))
 
-(defvar *features* '(:common :common-lisp :ansi-cl :ieee-floating-point :cmu)
+(defvar *features* '(:common-lisp :ansi-cl :ieee-floating-point :cmu)
   "Holds a list of symbols that describe features provided by the
    implementation.")
 
