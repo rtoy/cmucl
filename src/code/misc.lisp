@@ -134,9 +134,6 @@
 
 
 ;;; Register various Lisp features
-#+i486
-(sys:register-lisp-runtime-feature :i486)
-
 #+pentium
 (sys:register-lisp-runtime-feature :pentium)
 

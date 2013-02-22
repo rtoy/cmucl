@@ -1886,10 +1886,10 @@
   (process-wait whostate
 		#'(lambda ()
 		    (declare (optimize (speed 3)))
-		    #-i486
+		    #-x86
 		    (unless (lock-process lock)
 		      (setf (lock-process lock) *current-process*))
-		    #+i486
+		    #+x86
 		    (null (kernel:%instance-set-conditional
 			   lock 2 nil *current-process*)))))
 
@@ -1904,10 +1904,10 @@
    whostate timeout
    #'(lambda ()
        (declare (optimize (speed 3)))
-       #-i486
+       #-x86
        (unless (lock-process lock)
 	 (setf (lock-process lock) *current-process*))
-       #+i486
+       #+x86
        (null (kernel:%instance-set-conditional
 	      lock 2 nil *current-process*)))))
 
@@ -1915,7 +1915,7 @@
 ;;;
 ;;; Atomically seize a lock if it's free.
 ;;;
-#-i486
+#-x86
 (defun seize-lock (lock)
   (declare (type lock lock)
 	   (optimize (speed 3)))
@@ -1943,9 +1943,9 @@
 		      (when (and (error-check-lock-p ,lock) ,have-lock)
 			(error "Dead lock"))
 		      (when (or ,have-lock
-				 #+i486 (null (kernel:%instance-set-conditional
+				 #+x86 (null (kernel:%instance-set-conditional
 					       ,lock 2 nil *current-process*))
-				 #-i486 (seize-lock ,lock)
+				 #-x86 (seize-lock ,lock)
 				 (if ,timeout
 				     (lock-wait-with-timeout
 				      ,lock ,whostate ,timeout)
@@ -1956,19 +1956,19 @@
 		      (when (and (error-check-lock-p ,lock) ,have-lock)
 		        (error "Dead lock"))
 		      (unless (or ,have-lock
-				 #+i486 (null (kernel:%instance-set-conditional
+				 #+x86 (null (kernel:%instance-set-conditional
 					       ,lock 2 nil *current-process*))
-				 #-i486 (seize-lock ,lock))
+				 #-x86 (seize-lock ,lock))
 			(lock-wait ,lock ,whostate))
 		      ,@body))
 		  (t
 		   `(when (or (and (recursive-lock-p ,lock) ,have-lock)
-			      #+i486 (null (kernel:%instance-set-conditional
+			      #+x86 (null (kernel:%instance-set-conditional
 					    ,lock 2 nil *current-process*))
-			      #-i486 (seize-lock ,lock))
+			      #-x86 (seize-lock ,lock))
 		      ,@body)))
 	(unless ,have-lock
-	  #+i486 (kernel:%instance-set-conditional
+	  #+x86 (kernel:%instance-set-conditional
 		  ,lock 2 *current-process* nil)
-	  #-i486 (when (eq (lock-process ,lock) *current-process*)
+	  #-x86 (when (eq (lock-process ,lock) *current-process*)
 		   (setf (lock-process ,lock) nil)))))))
