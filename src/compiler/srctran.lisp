@@ -21,9 +21,6 @@
 (in-package "C")
 (intl:textdomain "cmucl")
 
-#+conservative-float-type
-(sys:register-lisp-feature :conservative-float-type)
-
 ;;; Source transform for Not, Null  --  Internal
 ;;;
 ;;;    Convert into an IF so that IF optimizations will eliminate redundant
@@ -1253,15 +1250,12 @@
 ;;;
 (defun two-arg-derive-type (arg1 arg2 derive-fcn fcn
 				 &optional (convert-type t))
-  #-conservative-float-type
-  (declare (ignore fcn))
   (labels ((maybe-convert-numeric-type (type)
 	     (if convert-type (convert-numeric-type type) type))
 	   (maybe-convert-back-type-list (type)
 	     (if convert-type (convert-back-numeric-type-list type) type))
 	   (deriver (x y same-arg)
-	     (cond #+conservative-float-type
-		   ((and (member-type-p x) (member-type-p y))
+	     (cond ((and (member-type-p x) (member-type-p y))
 		    (let* ((x (first (member-type-members x)))
 			   (y (first (member-type-members y)))
 			   (result (with-float-traps-masked
@@ -1275,12 +1269,6 @@
 						:complexp :real))
 			    (t
 			     (specifier-type `(eql ,result))))))
-		   #-conservative-float-type
-		   ((and (member-type-p x) (member-type-p y))
-		    (let* ((x (convert-member-type x))
-			   (y (convert-member-type y))
-			   (result (funcall derive-fcn x y same-arg)))
-		      (maybe-convert-back-type-list result)))
 		   ((and (member-type-p x) (numeric-type-p y))
 		    (let* ((x (convert-member-type x))
 			   (y (maybe-convert-numeric-type y))
