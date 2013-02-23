@@ -33,11 +33,14 @@ New in this release:
       However, there are no plans on supplying sparc binaries with
       this GC.
     * For x86, optimize TRUNCATE when the second arg is a compile-time
-      constant.  (Sparc and ppc already had this optimization)
+      constant and use a multiplication instead of a division.  (Sparc
+      and ppc already had this optimization)
     * The following *FEATURES* have been removed:
       * :COMMON (not used)
       * :CONSERVATIVE-FLOAT-TYPE (Always default to this in type
         derivation.)
+      * :I486 and :PENTIUM (Always assume we're running on at least a
+        Pentium.)
 
   * ANSI compliance fixes:
 
