@@ -1815,64 +1815,133 @@
   (opc3  :field (byte 1 6))
   (opc4  :field (byte 1 4)))
 
-(defmacro define-vfp-2-inst (name inst-name op op1 ops opc3 opc4
-			     &key (size-bit 0)
-			       (dst-type 'fp-single-reg)
-			       (src-type 'fp-single-reg)
-			       printer)
-  (check-type size-bit bit)
-  (check-type dst-type (member fp-single-reg fp-double-reg))
-  (check-type src-type (member fp-single-reg fp-double-reg))
-  `(define-instruction ,inst-name (segment dst src &optional (cond :al))
+(defmacro define-vfp-3-inst (name op0 op1 opa0 opa1)
+  `(define-instruction ,name (segment dst src1 src2 &optional (cond :al))
+       (:declare (type tn dst src1 src2)
+		 (type condition-code cond))
+       (:printer format-vfp-3
+		 ((opb0 #b111)
+		  (op0 ,op0) (op1 ,op1) (op2 #b101)
+		  (opa0 ,opa0) (opa1 ,opa1)
+		  (sz 0)))
+       (:printer format-vfp-3
+		 ((opb0 #b111)
+		  (op0 ,op0) (op1 ,op1) (op2 #b101)
+		  (opa0 ,opa0) (opa1 ,opa1)
+		  (sz 1)
+		  (dst nil :type 'fp-double-reg)
+		  (src1 nil :type 'fp-double-reg)
+		  (src2 nil :type 'fp-double-reg)))
+       (:emitter
+	;; All three register types must be the same type---either
+	;; single-reg or double-reg.
+	(assert (or (and (sc-is dst single-reg)
+			 (sc-is src1 single-reg)
+			 (sc-is src2 single-reg))
+		    (and (sc-is dst double-reg)
+			 (sc-is src1 double-reg)
+			 (sc-is src2 double-reg))))
+	(let ((doublep (sc-is dst double-reg)))
+	  (multiple-value-bind (d vd)
+	      (fp-reg-tn-encoding dst doublep)
+	    (multiple-value-bind (n vn)
+		(fp-reg-tn-encoding src1 doublep)
+	      (multiple-value-bind (m vm)
+		  (fp-reg-tn-encoding src2 doublep)
+		(emit-format-vfp-3-arg segment
+				       (condition-code-encoding cond)
+				       #b111
+				       ,op0
+				       d
+				       ,op1
+				       vn
+				       vd
+				       #b101
+				       ,(if doublep 1 0)
+				       n
+				       ,opa0
+				       m
+				       ,opa1
+				       vm))))))))
+
+(define-vfp-3-inst vadd #b00 #b11 0 0)
+(define-vfp-3-inst vsub #b00 #b11 1 0)
+(define-vfp-3-inst vmul #b00 #b10 0 0)
+(define-vfp-3-inst vdiv #b01 #b00 0 0)
+
+
+(define-emitter emit-format-vfp-2-arg 32
+  (byte 4 28) (byte 3 25) (byte 2 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
+  (byte 3 9) (byte 1 8) (byte 1 7) (byte 1 6) (byte 1 5) (byte 1 4) (byte 4 0))
+
+(defconstant format-vfp-2-arg-printer
+  `(:name cond
+    (:cond ((sz :constant 0) '|.F32|)
+	   (t '|.F64|))
+    :tab
+    dst ", " src))
+
+(disassem:define-instruction-format
+    (format-vfp-2-arg 32 :include 'format-base
+			 :default-printer format-vfp-2-arg-printer)
+  (op0   :field (byte 2 23) :value #b01)
+  (op    :field (byte 2 20))
+  (op1   :field (byte 4 16))
+  (dst   :fields (list (byte 1 22) (byte 4 12)) :type 'fp-single-reg)
+  (src   :fields (list (byte 1 5) (byte 4 0)))
+  (op2   :field (byte 3 9) :value #b101)
+  (sz    :field (byte 1 8))
+  (ops   :field (byte 1 7))
+  (opc3  :field (byte 1 6))
+  (opc4  :field (byte 1 4)))
+
+(defmacro define-vfp-2-inst (name op op1 ops opc3 opc4)
+  `(define-instruction ,name (segment dst src &optional (cond :al))
      (:declare (type tn dst src)
 	       (type condition-code cond))
      (:printer format-vfp-2-arg
 	       ((opb0 #b111)
 		(op0 #b01) (op ,op) (op1 ,op1) (op2 #b101)
 		(ops ,ops) (opc3 ,opc3) (opc4 ,opc4)
-		(sz ,size-bit)
-		(dst nil :type ',dst-type)
-		(src nil :type ',src-type))
-	       ,(or printer :default)
-	       :print-name ',name)
+		(sz 0)
+		(src nil :type 'fp-single-reg)))
+     (:printer format-vfp-2-arg
+	       ((opb0 #b111)
+		(op0 #b01) (op ,op) (op1 ,op1) (op2 #b101)
+		(ops ,ops) (opc3 ,opc3) (opc4 ,opc4)
+		(sz 1)
+		(dst nil :type 'fp-double-reg)
+		(src nil :type 'fp-double-reg)))
      (:emitter
-      (multiple-value-bind (d vd)
-	  (fp-reg-tn-encoding dst (eq dst-type 'fp-double-reg))
-	(multiple-value-bind (m vm)
-	    (fp-reg-tn-encoding src (eq src-type 'fp-double-reg)))
-	(emit-format-vfp-2-arg segment
-			       (condition-code-encoding cond)
-			       #b111
-			       #b01
-			       d
-			       ,op
-			       ,op1
-			       vd
-			       #b101
-			       ,size-bit
-			       #b1
-			       ,opc3
-			       m
-			       ,opc4
-			       vm)))))
+      ;; dst and src regs must be the same type of float register.
+      (assert (or (and (sc-is dst single-reg)
+		       (sc-is src single-reg))
+		  (and (sc-is dst double-reg)
+		       (sc-is src double-reg))))
+      (let ((doublep (sc-is dst double-reg)))
+	(multiple-value-bind (d vd)
+	    (fp-reg-tn-encoding dst doublep)
+	  (multiple-value-bind (m vm)
+	      (fp-reg-tn-encoding src doublep)
+	    (emit-format-vfp-2-arg segment
+				   (condition-code-encoding cond)
+				   #b111
+				   #b01
+				   d
+				   ,op
+				   ,op1
+				   vd
+				   #b101
+				   (if doublep 1 0)
+				   #b1
+				   ,opc3
+				   m
+				   ,opc4
+				   vm)))))))
 
-(macrolet
-    ((double-inst (name op op1 ops opc3)
-       `(define-vfp-2-inst ,name ,(symbolicate name ".F64")
-	  ,op ,op1 ,ops, opc3 0
-	  :size-bit 1
-	  :dst-type fp-double-reg
-	  :src-type fp-double-reg))
-     (single-inst (name op op1 ops opc3)
-       `(define-vfp-2-inst ,name ,(symbolicate name ".F32")
-	  ,op ,op1 ,ops, opc3 0))
-     (frob (name op1 ops)
-       `(progn
-	  (double-inst ,name #b11, op1, ops #b1)
-	  (single-inst ,name #b11, op1, ops #b1))))
-  (frob vabs  #b0000 #b1)
-  (frob vneg  #b0001 #b0)
-  (frob vsqrt #b0001 #b1))
+(define-vfp-2-inst vabs  #b11 #b0000 #b1 #b1 0)
+(define-vfp-2-inst vneg  #b11 #b0001 #b0 #b1 0)
+(define-vfp-2-inst vsqrt #b11 #b0001 #b1 #b1 0)
 
 ;; Conversions
 
@@ -1901,17 +1970,56 @@
 	  :tab
 	  dst ", " src))
 
+(defmacro define-vcvt-inst (name inst-name op op1 ops opc3 opc4
+			    &key (size-bit 0)
+			      (dst-type 'fp-single-reg)
+			      (src-type 'fp-single-reg))
+  (check-type size-bit bit)
+  (check-type dst-type (member fp-single-reg fp-double-reg))
+  (check-type src-type (member fp-single-reg fp-double-reg))
+  `(define-instruction ,inst-name (segment dst src &optional (cond :al))
+     (:declare (type tn dst src)
+	       (type condition-code cond))
+     (:printer format-vfp-2-arg
+	       ((opb0 #b111)
+		(op0 #b01) (op ,op) (op1 ,op1) (op2 #b101)
+		(ops ,ops) (opc3 ,opc3) (opc4 ,opc4)
+		(sz ,size-bit)
+		(dst nil :type ',dst-type)
+		(src nil :type ',src-type))
+	       'vcvt-printer
+	       :print-name ,name)
+     (:emitter
+      (multiple-value-bind (d vd)
+	  (fp-reg-tn-encoding dst (eq dst-type 'fp-double-reg))
+	(multiple-value-bind (m vm)
+	    (fp-reg-tn-encoding src (eq src-type 'fp-double-reg))
+	  (emit-format-vfp-2-arg segment
+				 (condition-code-encoding cond)
+				 #b111
+				 #b01
+				 d
+				 ,op
+				 ,op1
+				 vd
+				 #b101
+				 ,size-bit
+				 #b1
+				 ,opc3
+				 m
+				 ,opc4
+				 vm))))))
+
 (macrolet
     ((frob (ext op1 ops opc3 &key
 			       (name 'vcvt)
 			       (size-bit 0) 
 			       (dst-type 'fp-single-reg)
 			       (src-type 'fp-single-reg))
-       `(define-vfp-2-inst ,name ,(symbolicate name "." ext)  #b11 ,op1 ,ops ,opc3 0
+       `(define-vcvt-inst ,name ,(symbolicate name "." ext)  #b11 ,op1 ,ops ,opc3 0
 	  :size-bit ,size-bit
 	  :dst-type ,dst-type
-	  :src-type ,src-type
-	  :printer vcvt-printer)))
+	  :src-type ,src-type)))
   ;; Convert between double and single
   (frob "F64.F32" #b0111 #b1 #b1
 	:dst-type fp-double-reg)
@@ -1951,36 +2059,51 @@
 	:dst-type fp-double-reg
 	:size-bit 1))
 
-(defmacro define-vfp-cmp-inst (name inst-name ops opc3 &key doublep)
-  (let ((rtype (if doublep 'fp-double-reg 'fp-single-reg))
-	(size-bit (if doublep 1 0)))
-    `(define-instruction ,inst-name (segment dst src &optional (cond :al))
-       (:declare (type dst tn)
-		 (type (or tn (float 0.0 0.0)) src)
-		 (type condition-code cond))
-       (:printer format-vfp-2-arg
-		 ((opb0 #b111) (op0 #b01) (op #b11) (op1 #b0100) (op2 #b101)
-		  (ops ,ops) (opc3 ,opc3) (opc4 0)
-		  (sz ,size-bit)
-		  (dst nil :type ',rtype)
-		  (src nil :type ',rtype))
-		 :default
-	         :print-name ',name)
-       (:printer format-vfp-2-arg
-		 ((opb0 #b111) (op0 #b01) (op #b11) (op1 #b0101) (op2 #b101)
-		  (ops ,ops) (opc3 ,opc3) (opc4 0)
-		  (sz ,size-bit)
-		  (dst nil :type ',rtype)
-		  (src (list 0 0)))
-		 '(:name cond
-		   (:cond ((sz :constant 0) '|.F32|)
-			  (t '|.F64|))
-		   :tab
-		   dst ", #0.0")
-	         :print-name ',name)
-       (:emitter
+(defmacro define-vfp-cmp-inst (name ops opc3)
+  `(define-instruction ,name (segment dst src &optional (cond :al))
+     (:declare (type dst tn)
+	       (type (or tn (float 0.0 0.0)) src)
+	       (type condition-code cond))
+     ;; Compare two single-regs
+     (:printer format-vfp-2-arg
+	       ((opb0 #b111) (op0 #b01) (op #b11) (op1 #b0100) (op2 #b101)
+		(ops ,ops) (opc3 ,opc3) (opc4 0)
+		(sz 0)))
+     ;; Compare two double-regs
+     (:printer format-vfp-2-arg
+	       ((opb0 #b111) (op0 #b01) (op #b11) (op1 #b0100) (op2 #b101)
+		(ops ,ops) (opc3 ,opc3) (opc4 0)
+		(sz 1)
+		(dst nil :type 'fp-double-reg)
+		(src nil :type 'fp-double-reg)))
+     ;; Compare single-reg with 0
+     (:printer format-vfp-2-arg
+	       ((opb0 #b111) (op0 #b01) (op #b11) (op1 #b0101) (op2 #b101)
+		(ops ,ops) (opc3 ,opc3) (opc4 0)
+		(sz 0)
+		(src (list 0 0)))
+	       '(:name cond '|.F32|
+		 :tab
+		 dst ", #0.0"))
+     ;; Compare double-reg with 0
+     (:printer format-vfp-2-arg
+	       ((opb0 #b111) (op0 #b01) (op #b11) (op1 #b0101) (op2 #b101)
+		(ops ,ops) (opc3 ,opc3) (opc4 0)
+		(sz 1)
+		(dst nil :type 'fp-double-reg)
+		(src (list 0 0)))
+	       '(:name cond '|.F64|
+		 :tab
+		 dst ", #0.0"))
+     (:emitter
+      (let* ((doublep (sc-is dst double-reg))
+	     (size-bit (if doublep 1 0)))
 	(etypecase src
 	  (tn
+	   (assert (or (and (sc-is dst double-reg)
+			    (sc-is src double-reg))
+		       (and (sc-is dst single-reg)
+			    (sc-is src single-reg))))
 	   (multiple-value-bind (d vd)
 	       (fp-reg-tn-encoding dst doublep)
 	     (multiple-value-bind (m vm)
@@ -1994,7 +2117,7 @@
 				      #b0100
 				      vd
 				      #b101
-				      ,size-bit
+				      size-bit
 				      ,ops
 				      ,opc3
 				      m
@@ -2013,20 +2136,15 @@
 				    #b0101
 				    vd
 				    #b101
-				    ,size-bit
+				    size-bit
 				    ,ops
 				    ,opc3
 				    0
 				    0
 				    0))))))))
 
-(macrolet
-    ((frob (name op)
-       `(progn
-	  (define-vfp-cmp-inst ,name ,(symbolicate name ".F32") ,op #b1)
-	  (define-vfp-cmp-inst ,name ,(symbolicate name ".F64") ,op #b1 :doublep t))))
-  (frob vcmp  #b0)
-  (frob vcmpe #b1))
+(define-vfp-cmp-inst vcmp  #b0 #b1)
+(define-vfp-cmp-inst vcmpe #b1 #b1)
 
 
 ;; Convert a float to the floating-point modified immediate constant.
