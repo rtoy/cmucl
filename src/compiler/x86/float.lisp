@@ -3290,59 +3290,6 @@
      (unless (zerop (tn-offset r))
 	     (inst fstd r))))
 
-(define-vop (flog1p)
-  (:translate %log1p)
-  (:args (x :scs (double-reg) :to :result))
-  (:temporary (:sc double-reg :offset fr0-offset
-		   :from :argument :to :result) fr0)
-  (:temporary (:sc double-reg :offset fr1-offset
-		   :from :argument :to :result) fr1)
-  (:temporary (:sc word-reg :offset eax-offset :from :eval) temp)
-  (:results (y :scs (double-reg)))
-  (:arg-types double-float)
-  (:result-types double-float)
-  (:policy :fast-safe)
-  (:guard (not (backend-featurep :sse2)))
-  (:note _N"inline log1p function")
-  (:ignore temp)
-  (:generator 5
-     ;; x is in a FP reg, not fr0, fr1.
-     (fp-pop)
-     (fp-pop)
-     (inst fldd (make-random-tn :kind :normal
-				:sc (sc-or-lose 'double-reg *backend*)
-				:offset (- (tn-offset x) 2)))
-     ;; Check the range
-     (inst push #x3e947ae1)	; Constant 0.29
-     (inst fabs)
-     (inst fld (make-ea :dword :base esp-tn))
-     (inst fcompp)
-     (inst add esp-tn 4)
-     (inst fnstsw)			; status word to ax
-     (inst and ah-tn #x45)
-     (inst jmp :z WITHIN-RANGE)
-     ;; Out of range for fyl2xp1.
-     (inst fld1)
-     (inst faddd (make-random-tn :kind :normal
-				 :sc (sc-or-lose 'double-reg *backend*)
-				 :offset (- (tn-offset x) 1)))
-     (inst fldln2)
-     (inst fxch fr1)
-     (inst fyl2x)
-     (inst jmp DONE)
-
-     WITHIN-RANGE
-     (inst fldln2)
-     (inst fldd (make-random-tn :kind :normal
-				:sc (sc-or-lose 'double-reg *backend*)
-				:offset (- (tn-offset x) 1)))
-     (inst fyl2xp1)
-     DONE
-     (inst fld fr0)
-     (case (tn-offset y)
-       ((0 1))
-       (t (inst fstd y)))))
-
 ;;; The Pentium has a less restricted implementation of the fyl2xp1
 ;;; instruction and a range check can be avoided.
 (define-vop (flog1p-pentium)
