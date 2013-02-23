@@ -1733,19 +1733,19 @@
   (opa0  :field (byte 1 6))
   (opa1  :field (byte 1 4)))
 
-(defmacro define-vfp-3-inst (name op0 op1 opa0 opa1 &optional doublep)
+(defmacro define-vfp-3-inst (name op0 op1 opa0)
   `(define-instruction ,name (segment dst src1 src2 &optional (cond :al))
        (:declare (type tn dst src1 src2)
 		 (type condition-code cond))
        (:printer format-vfp-3
 		 ((opb0 #b111)
 		  (op0 ,op0) (op1 ,op1) (op2 #b101)
-		  (opa0 ,opa0) (opa1 ,opa1)
+		  (opa0 ,opa0) (opa1 0)
 		  (sz 0)))
        (:printer format-vfp-3
 		 ((opb0 #b111)
 		  (op0 ,op0) (op1 ,op1) (op2 #b101)
-		  (opa0 ,opa0) (opa1 ,opa1)
+		  (opa0 ,opa0) (opa1 0)
 		  (sz 1)
 		  (dst nil :type 'fp-double-reg)
 		  (src1 nil :type 'fp-double-reg)
@@ -1775,17 +1775,17 @@
 				       vn
 				       vd
 				       #b101
-				       ,(if doublep 1 0)
+				       (if doublep 1 0)
 				       n
 				       ,opa0
 				       m
-				       ,opa1
+				       0
 				       vm))))))))
 
-(define-vfp-3-inst vadd #b00 #b11 0 0)
-(define-vfp-3-inst vsub #b00 #b11 1 0)
-(define-vfp-3-inst vmul #b00 #b10 0 0)
-(define-vfp-3-inst vdiv #b01 #b00 0 0)
+(define-vfp-3-inst vadd #b00 #b11 0)
+(define-vfp-3-inst vsub #b00 #b11 1)
+(define-vfp-3-inst vmul #b00 #b10 0)
+(define-vfp-3-inst vdiv #b01 #b00 0)
 
 (define-emitter emit-format-vfp-2-arg 32
   (byte 4 28) (byte 3 25) (byte 2 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
@@ -1837,20 +1837,20 @@
   (opc3  :field (byte 1 6))
   (opc4  :field (byte 1 4)))
 
-(defmacro define-vfp-2-inst (name op op1 ops opc3 opc4)
+(defmacro define-vfp-2-inst (name op op1 ops opc3)
   `(define-instruction ,name (segment dst src &optional (cond :al))
      (:declare (type tn dst src)
 	       (type condition-code cond))
      (:printer format-vfp-2-arg
 	       ((opb0 #b111)
 		(op0 #b01) (op ,op) (op1 ,op1) (op2 #b101)
-		(ops ,ops) (opc3 ,opc3) (opc4 ,opc4)
+		(ops ,ops) (opc3 ,opc3) (opc4 0)
 		(sz 0)
 		(src nil :type 'fp-single-reg)))
      (:printer format-vfp-2-arg
 	       ((opb0 #b111)
 		(op0 #b01) (op ,op) (op1 ,op1) (op2 #b101)
-		(ops ,ops) (opc3 ,opc3) (opc4 ,opc4)
+		(ops ,ops) (opc3 ,opc3) (opc4 0)
 		(sz 1)
 		(dst nil :type 'fp-double-reg)
 		(src nil :type 'fp-double-reg)))
@@ -1878,12 +1878,12 @@
 				   #b1
 				   ,opc3
 				   m
-				   ,opc4
+				   0
 				   vm)))))))
 
-(define-vfp-2-inst vabs  #b11 #b0000 #b1 #b1 0)
-(define-vfp-2-inst vneg  #b11 #b0001 #b0 #b1 0)
-(define-vfp-2-inst vsqrt #b11 #b0001 #b1 #b1 0)
+(define-vfp-2-inst vabs  #b11 #b0000 #b1 #b1)
+(define-vfp-2-inst vneg  #b11 #b0001 #b0 #b1)
+(define-vfp-2-inst vsqrt #b11 #b0001 #b1 #b1)
 
 ;; Conversions
 
@@ -1929,8 +1929,8 @@
 		(sz ,size-bit)
 		(dst nil :type ',dst-type)
 		(src nil :type ',src-type))
-	       'vcvt-printer
-	       :print-name ,name)
+	       vcvt-printer
+	       :print-name ',name)
      (:emitter
       (multiple-value-bind (d vd)
 	  (fp-reg-tn-encoding dst (eq dst-type 'fp-double-reg))
@@ -2001,7 +2001,7 @@
 	:dst-type fp-double-reg
 	:size-bit 1))
 
-(defmacro define-vfp-cmp-inst (name ops opc3)
+(defmacro define-vfp-cmp-inst (name ops)
   `(define-instruction ,name (segment dst src &optional (cond :al))
      (:declare (type dst tn)
 	       (type (or tn (float 0.0 0.0)) src)
@@ -2009,19 +2009,19 @@
      ;; Compare two single-regs
      (:printer format-vfp-2-arg
 	       ((opb0 #b111) (op0 #b01) (op #b11) (op1 #b0100) (op2 #b101)
-		(ops ,ops) (opc3 ,opc3) (opc4 0)
+		(ops ,ops) (opc3 1) (opc4 0)
 		(sz 0)))
      ;; Compare two double-regs
      (:printer format-vfp-2-arg
 	       ((opb0 #b111) (op0 #b01) (op #b11) (op1 #b0100) (op2 #b101)
-		(ops ,ops) (opc3 ,opc3) (opc4 0)
+		(ops ,ops) (opc3 1) (opc4 0)
 		(sz 1)
 		(dst nil :type 'fp-double-reg)
 		(src nil :type 'fp-double-reg)))
      ;; Compare single-reg with 0
      (:printer format-vfp-2-arg
 	       ((opb0 #b111) (op0 #b01) (op #b11) (op1 #b0101) (op2 #b101)
-		(ops ,ops) (opc3 ,opc3) (opc4 0)
+		(ops ,ops) (opc3 1) (opc4 0)
 		(sz 0)
 		(src (list 0 0)))
 	       '(:name cond '|.F32|
@@ -2030,7 +2030,7 @@
      ;; Compare double-reg with 0
      (:printer format-vfp-2-arg
 	       ((opb0 #b111) (op0 #b01) (op #b11) (op1 #b0101) (op2 #b101)
-		(ops ,ops) (opc3 ,opc3) (opc4 0)
+		(ops ,ops) (opc3 1) (opc4 0)
 		(sz 1)
 		(dst nil :type 'fp-double-reg)
 		(src (list 0 0)))
@@ -2061,7 +2061,7 @@
 				      #b101
 				      size-bit
 				      ,ops
-				      ,opc3
+				      1
 				      m
 				      0
 				      vm))))
@@ -2080,13 +2080,13 @@
 				    #b101
 				    size-bit
 				    ,ops
-				    ,opc3
+				    1
 				    0
 				    0
 				    0))))))))
 
-(define-vfp-cmp-inst vcmp  #b0 #b1)
-(define-vfp-cmp-inst vcmpe #b1 #b1)
+(define-vfp-cmp-inst vcmp  #b0)
+(define-vfp-cmp-inst vcmpe #b1)
 
 
 ;; Convert a float to the floating-point modified immediate constant.
