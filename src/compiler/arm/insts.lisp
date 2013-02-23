@@ -376,7 +376,7 @@
   Amound is optional and is the amount of the shift, which is a small
   positive integer or a register.  If the shift type is :rrx, the
   amount cannot be specified."
-  (declare (type shift-type shift-type))
+  (declare (type (or shift-type (member :rrx)) shift-type))
   (typecase amount
     ((unsigned-byte 5)
      (when (and (eq shift-type :rrx)
@@ -1733,54 +1733,61 @@
   (opa0  :field (byte 1 6))
   (opa1  :field (byte 1 4)))
 
-(defmacro define-vfp-3-inst (name inst-name op0 op1 opa0 opa1 &optional doublep)
-  `(define-instruction ,inst-name (segment dst src1 src2 &optional (cond :al))
+(defmacro define-vfp-3-inst (name op0 op1 opa0 opa1 &optional doublep)
+  `(define-instruction ,name (segment dst src1 src2 &optional (cond :al))
        (:declare (type tn dst src1 src2)
 		 (type condition-code cond))
        (:printer format-vfp-3
 		 ((opb0 #b111)
 		  (op0 ,op0) (op1 ,op1) (op2 #b101)
 		  (opa0 ,opa0) (opa1 ,opa1)
-		  (sz ,(if doublep 1 0))
-		  ,@(if doublep `((dst nil :type 'fp-double-reg)
-				  (src1 nil :type 'fp-double-reg)
-				  (src2 nil :type 'fp-double-reg))))
-		 :default
-		 :print-name ',name)
+		  (sz 0)))
+       (:printer format-vfp-3
+		 ((opb0 #b111)
+		  (op0 ,op0) (op1 ,op1) (op2 #b101)
+		  (opa0 ,opa0) (opa1 ,opa1)
+		  (sz 1)
+		  (dst nil :type 'fp-double-reg)
+		  (src1 nil :type 'fp-double-reg)
+		  (src2 nil :type 'fp-double-reg)))
        (:emitter
-	(multiple-value-bind (d vd)
-	    (fp-reg-tn-encoding dst doublep)
-	  (multiple-value-bind (n vn)
-	      (fp-reg-tn-encoding src1 doublep)
-	    (multiple-value-bind (m vm)
-		(fp-reg-tn-encoding src2 doublep)
-	      (emit-format-vfp-3-arg segment
-				     (condition-code-encoding cond)
-				     #b111
-				     ,op0
-				     d
-				     ,op1
-				     vn
-				     vd
-				     #b101
-				     ,(if doublep 1 0)
-				     n
-				     ,opa0
-				     m
-				     ,opa1
-				     vm)))))))
+	;; All three register types must be the same type---either
+	;; single-reg or double-reg.
+	(assert (or (and (sc-is dst single-reg)
+			 (sc-is src1 single-reg)
+			 (sc-is src2 single-reg))
+		    (and (sc-is dst double-reg)
+			 (sc-is src1 double-reg)
+			 (sc-is src2 double-reg))))
+	(let ((doublep (sc-is dst double-reg)))
+	  (multiple-value-bind (d vd)
+	      (fp-reg-tn-encoding dst doublep)
+	    (multiple-value-bind (n vn)
+		(fp-reg-tn-encoding src1 doublep)
+	      (multiple-value-bind (m vm)
+		  (fp-reg-tn-encoding src2 doublep)
+		(emit-format-vfp-3-arg segment
+				       (condition-code-encoding cond)
+				       #b111
+				       ,op0
+				       d
+				       ,op1
+				       vn
+				       vd
+				       #b101
+				       ,(if doublep 1 0)
+				       n
+				       ,opa0
+				       m
+				       ,opa1
+				       vm))))))))
 
-(macrolet
-    ((frob (name op0 op1 opa0 opa1)
-       `(progn
-	  (define-vfp-3-inst ,name ,(symbolicate name ".F32")
-	    ,op0 ,op1 ,opa0 ,opa1)
-	  (define-vfp-3-inst ,name ,(symbolicate name ".F64")
-	    ,op0 ,op1 ,opa0 ,opa1 t))))
-  (frob vadd #b00 #b11 0 0)
-  (frob vsub #b00 #b11 1 0)
-  (frob vmul #b00 #b10 0 0)
-  (frob vdiv #b01 #b00 0 0))
+(define-vfp-3-inst vadd #b00 #b11 0 0)
+(define-vfp-3-inst vsub #b00 #b11 1 0)
+(define-vfp-3-inst vmul #b00 #b10 0 0)
+(define-vfp-3-inst vdiv #b01 #b00 0 0)
+
+
 
 
 (define-emitter emit-format-vfp-2-arg 32
