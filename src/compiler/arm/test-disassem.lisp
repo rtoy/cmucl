@@ -203,6 +203,12 @@
 ;; VMSR fpscr, [r0,r4]
 (test-pattern "VMSR(FORMAT-VFP-FPSCR)" "1110|11100001|0x001010|00010000")
 
+;; VADD(FORMAT-VFP-3)                 xxxx1110|0x11xxxx|xxxx1010|x0x0xxxx
+;; vadd[ne].f64 [d1,d17], [d0,d2], [d16,d17]
+(test-pattern "VADD(FORMAT-VFP-3)" "1110|0x1100x0|00011011|0010000x")
+;; vadd[ne].f32 [s2,s3], [s0,s4], [s1,s3]
+(test-pattern "VADD(FORMAT-VFP-3)" "1110|0x1100x0|00011010|0010000x")
+
 ;; VABS.F32(FORMAT-VFP-2-ARG)     xxxx1110|1x110000|xxxx1010|11x0xxxx
 ;; This test verifies that the encoded register is what we expected.
 ;; The intended instruction is VABS.F32 S17, S9
@@ -227,7 +233,7 @@
 
 ;; VCVT.F32.U32(FORMAT-VFP-2-ARG) xxxx1110|1x111000|xxxx1010|01x0xxxx
 ;; VCVT.F32.U32 [s17,s19],[s0,s2]
-(test-pattern "VCVT.F32.U32(FORMAT-VFP-2-ARG)" "1110|11111000|100x1010|0100000x")
+(test-pattern "VCVT.F32.U32(FORMAT-VFP-2-ARG)" "1110|11111000|100x1010|0100000xCVT")
 
 ;; VCVT.F32.S32(FORMAT-VFP-2-ARG) xxxx1110|1x111000|xxxx1010|11x0xxxx
 ;; VCVT.F32.S32 [s17,s19],[s0,s2]
