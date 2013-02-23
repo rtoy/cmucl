@@ -1787,9 +1787,6 @@
 (define-vfp-3-inst vmul #b00 #b10 0 0)
 (define-vfp-3-inst vdiv #b01 #b00 0 0)
 
-
-
-
 (define-emitter emit-format-vfp-2-arg 32
   (byte 4 28) (byte 3 25) (byte 2 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
   (byte 3 9) (byte 1 8) (byte 1 7) (byte 1 6) (byte 1 5) (byte 1 4) (byte 4 0))
@@ -1814,61 +1811,6 @@
   (ops   :field (byte 1 7))
   (opc3  :field (byte 1 6))
   (opc4  :field (byte 1 4)))
-
-(defmacro define-vfp-3-inst (name op0 op1 opa0 opa1)
-  `(define-instruction ,name (segment dst src1 src2 &optional (cond :al))
-       (:declare (type tn dst src1 src2)
-		 (type condition-code cond))
-       (:printer format-vfp-3
-		 ((opb0 #b111)
-		  (op0 ,op0) (op1 ,op1) (op2 #b101)
-		  (opa0 ,opa0) (opa1 ,opa1)
-		  (sz 0)))
-       (:printer format-vfp-3
-		 ((opb0 #b111)
-		  (op0 ,op0) (op1 ,op1) (op2 #b101)
-		  (opa0 ,opa0) (opa1 ,opa1)
-		  (sz 1)
-		  (dst nil :type 'fp-double-reg)
-		  (src1 nil :type 'fp-double-reg)
-		  (src2 nil :type 'fp-double-reg)))
-       (:emitter
-	;; All three register types must be the same type---either
-	;; single-reg or double-reg.
-	(assert (or (and (sc-is dst single-reg)
-			 (sc-is src1 single-reg)
-			 (sc-is src2 single-reg))
-		    (and (sc-is dst double-reg)
-			 (sc-is src1 double-reg)
-			 (sc-is src2 double-reg))))
-	(let ((doublep (sc-is dst double-reg)))
-	  (multiple-value-bind (d vd)
-	      (fp-reg-tn-encoding dst doublep)
-	    (multiple-value-bind (n vn)
-		(fp-reg-tn-encoding src1 doublep)
-	      (multiple-value-bind (m vm)
-		  (fp-reg-tn-encoding src2 doublep)
-		(emit-format-vfp-3-arg segment
-				       (condition-code-encoding cond)
-				       #b111
-				       ,op0
-				       d
-				       ,op1
-				       vn
-				       vd
-				       #b101
-				       ,(if doublep 1 0)
-				       n
-				       ,opa0
-				       m
-				       ,opa1
-				       vm))))))))
-
-(define-vfp-3-inst vadd #b00 #b11 0 0)
-(define-vfp-3-inst vsub #b00 #b11 1 0)
-(define-vfp-3-inst vmul #b00 #b10 0 0)
-(define-vfp-3-inst vdiv #b01 #b00 0 0)
-
 
 (define-emitter emit-format-vfp-2-arg 32
   (byte 4 28) (byte 3 25) (byte 2 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
