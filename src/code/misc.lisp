@@ -134,9 +134,6 @@
 
 
 ;;; Register various Lisp features
-#+pentium
-(sys:register-lisp-runtime-feature :pentium)
-
 #+sparc-v7
 (sys:register-lisp-runtime-feature :sparc-v7)
 
