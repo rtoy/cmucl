@@ -1735,52 +1735,52 @@
 
 (defmacro define-vfp-3-inst (name op0 op1 opa0)
   `(define-instruction ,name (segment dst src1 src2 &optional (cond :al))
-       (:declare (type tn dst src1 src2)
-		 (type condition-code cond))
-       (:printer format-vfp-3
-		 ((opb0 #b111)
-		  (op0 ,op0) (op1 ,op1) (op2 #b101)
-		  (opa0 ,opa0) (opa1 0)
-		  (sz 0)))
-       (:printer format-vfp-3
-		 ((opb0 #b111)
-		  (op0 ,op0) (op1 ,op1) (op2 #b101)
-		  (opa0 ,opa0) (opa1 0)
-		  (sz 1)
-		  (dst nil :type 'fp-double-reg)
-		  (src1 nil :type 'fp-double-reg)
-		  (src2 nil :type 'fp-double-reg)))
-       (:emitter
-	;; All three register types must be the same type---either
-	;; single-reg or double-reg.
-	(assert (or (and (sc-is dst single-reg)
-			 (sc-is src1 single-reg)
-			 (sc-is src2 single-reg))
-		    (and (sc-is dst double-reg)
-			 (sc-is src1 double-reg)
-			 (sc-is src2 double-reg))))
-	(let ((doublep (sc-is dst double-reg)))
-	  (multiple-value-bind (d vd)
-	      (fp-reg-tn-encoding dst doublep)
-	    (multiple-value-bind (n vn)
-		(fp-reg-tn-encoding src1 doublep)
-	      (multiple-value-bind (m vm)
-		  (fp-reg-tn-encoding src2 doublep)
-		(emit-format-vfp-3-arg segment
-				       (condition-code-encoding cond)
-				       #b111
-				       ,op0
-				       d
-				       ,op1
-				       vn
-				       vd
-				       #b101
-				       (if doublep 1 0)
-				       n
-				       ,opa0
-				       m
-				       0
-				       vm))))))))
+     (:declare (type tn dst src1 src2)
+	       (type condition-code cond))
+     (:printer format-vfp-3
+	       ((opb0 #b111)
+		(op0 ,op0) (op1 ,op1) (op2 #b101)
+		(opa0 ,opa0) (opa1 0)
+		(sz 0)))
+     (:printer format-vfp-3
+	       ((opb0 #b111)
+		(op0 ,op0) (op1 ,op1) (op2 #b101)
+		(opa0 ,opa0) (opa1 0)
+		(sz 1)
+		(dst nil :type 'fp-double-reg)
+		(src1 nil :type 'fp-double-reg)
+		(src2 nil :type 'fp-double-reg)))
+     (:emitter
+      ;; All three register types must be the same type---either
+      ;; single-reg or double-reg.
+      (assert (or (and (sc-is dst single-reg)
+		       (sc-is src1 single-reg)
+		       (sc-is src2 single-reg))
+		  (and (sc-is dst double-reg)
+		       (sc-is src1 double-reg)
+		       (sc-is src2 double-reg))))
+      (let ((doublep (sc-is dst double-reg)))
+	(multiple-value-bind (d vd)
+	    (fp-reg-tn-encoding dst doublep)
+	  (multiple-value-bind (n vn)
+	      (fp-reg-tn-encoding src1 doublep)
+	    (multiple-value-bind (m vm)
+		(fp-reg-tn-encoding src2 doublep)
+	      (emit-format-vfp-3-arg segment
+				     (condition-code-encoding cond)
+				     #b111
+				     ,op0
+				     d
+				     ,op1
+				     vn
+				     vd
+				     #b101
+				     (if doublep 1 0)
+				     n
+				     ,opa0
+				     m
+				     0
+				     vm))))))))
 
 (define-vfp-3-inst vadd #b00 #b11 0)
 (define-vfp-3-inst vsub #b00 #b11 1)
@@ -1888,7 +1888,7 @@
 ;; Conversions
 
 (defconstant vcvt-printer
-  `(:name cond
+  '(:name cond
 	  (:cond ((op1 :constant #b1101)
 		  (:cond ((sz :constant 1) '|.S32.F64|)
 			 (t '|.S32.F32|)))
@@ -2138,11 +2138,11 @@
   (byte 3 9) (byte 1 8) (byte 4 4) (byte 4 0))
 
 (defconstant format-vfp-vmov-immed-printer
-  `(:name  cond
-	   (:cond ((sz :constant 0) '|.F32|)
-		  (t '|.F64|))
-	   :tab
-	   dst ", " imm8))
+  `(:name cond
+	  (:cond ((sz :constant 0) '|.F32|)
+		 (t '|.F64|))
+	  :tab
+	  dst ", " imm8))
 
 
 (disassem:define-instruction-format
@@ -2308,16 +2308,16 @@
     (format stream "~D" (ash value 2))))
 
 (defconstant format-6-vfp-load/store-printer
-  '(:name cond
-    (:cond ((sz :constant 0) '|.32|)
-	   (t '|.64|))
-    :tab dst
-    ", [" src
-    (:cond ((imm8 :constant 0) "]")
-	   ((u :constant 1)
-	    "#+" imm8 "]")
-	   (t
-	    "#-" imm8 "]"))))
+  `(:name cond
+	  (:cond ((sz :constant 0) '|.32|)
+		 (t '|.64|))
+	  :tab dst
+	  ", [" src
+	  (:cond ((imm8 :constant 0) "]")
+		 ((u :constant 1)
+		  ", #+" imm8 "]")
+		 (t
+		  ", #-" imm8 "]"))))
 
 (define-emitter emit-format-6-vfp-load/store 32
   (byte 4 28) (byte 3 25) (byte 1 24) (byte 1 23) (byte 1 22) (byte 2 20)
@@ -2336,68 +2336,69 @@
   (sz    :field (byte 1 8))
   (imm8  :field (byte 8 0)))
 
-(defmacro define-fp-load/store-inst (name inst-name op0 &optional doublep)
-  `(define-instruction ,inst-name (segment dst src &optional (cond :al))
-       (:declare (type tn dst)
-		 (type (or tn load-store-index) dst)
-		 (type condition-code cond))
-       (:printer format-6-vfp-load/store
-		 ((opb0 #b110)
-		  (one 1)
-		  (op0 ,op0)
-		  (op1 #b101)
-		  (sz ,(if doublep 1 0))
-		  (dst nil :type ',(if doublep
-				       'fp-double-reg
-				       'fp-single-reg)))
-		 :default
-		 :print-name ',name)
-       (:emitter
-	(etypecase src
-	  (tn
-	   (emit-format-6-vfp-load/store segment
-					 (condition-code-encoding cond)
-					 #b110
-					 #b1
-					 1
-					 d
-					 ,op0
-					 (reg-tn-encoding base)
-					 vd
-					 #b101
-					 ,(if doublep 1 0)
-					 0))
-	  (load-store-index
-	   ;; Only certain forms of indexing are allowed here!  Verify
-	   ;; them.
-	   (assert (eq :immediate (load-store-index-type src)))
-	   (assert (and (null shift-type)
-			(null shift-amount)
-			(null update)
-			(null post-indexed)))
-	   (let ((offset (load-store-index-offset src))
-		 (add (load-store-index-add src)))
-	     (assert (zerop (ldb (byte 2 0) offset)))
+(defmacro define-fp-load/store-inst (name op0)
+  `(define-instruction ,name (segment dst src &optional (cond :al))
+     (:declare (type tn dst)
+	       (type (or tn load-store-index) dst)
+	       (type condition-code cond))
+     (:printer format-6-vfp-load/store
+	       ((opb0 #b110)
+		(one 1)
+		(op0 ,op0)
+		(op1 #b101)
+		(sz 0)
+		(dst nil :type 'fp-single-reg)))
+     (:printer format-6-vfp-load/store
+	       ((opb0 #b110)
+		(one 1)
+		(op0 ,op0)
+		(op1 #b101)
+		(sz 1)
+		(dst nil :type 'fp-double-reg)))
+     (:emitter
+      (let ((doublep (sc-is dst double-reg)))
+	(multiple-value-bind (d vd)
+	    (fp-reg-tn-encoding dst doublep)
+	  (etypecase src
+	    (tn
 	     (emit-format-6-vfp-load/store segment
 					   (condition-code-encoding cond)
 					   #b110
 					   #b1
-					   (if add 1 0)
+					   1
 					   d
 					   ,op0
 					   (reg-tn-encoding base)
 					   vd
 					   #b101
-					   ,(if doublep 1 0)
-					   offset)))))))
+					   (if doublep 1 0)
+					   0))
+	    (load-store-index
+	     ;; Only certain forms of indexing are allowed here!  Verify
+	     ;; them.
+	     (assert (eq :immediate (load-store-index-type src)))
+	     (assert (and (null shift-type)
+			  (null shift-amount)
+			  (null update)
+			  (null post-indexed)))
+	     (let ((offset (load-store-index-offset src))
+		   (add (load-store-index-add src)))
+	       (assert (zerop (ldb (byte 2 0) offset)))
+	       (emit-format-6-vfp-load/store segment
+					     (condition-code-encoding cond)
+					     #b110
+					     #b1
+					     (if add 1 0)
+					     d
+					     ,op0
+					     (reg-tn-encoding base)
+					     vd
+					     #b101
+					     (if doublep 1 0)
+					     offset)))))))))
 
-(macrolet
-    ((frob (name op)
-       `(progn
-	  (define-fp-load/store-inst ,name ,(symbolicate name ".32") ,op)
-	  (define-fp-load/store-inst ,name ,(symbolicate name ".64") ,op t))))
-  (frob vldr #b01)
-  (frob vstr #b00))
+(define-fp-load/store-inst vldr #b01)
+(define-fp-load/store-inst vstr #b00)
 
 ;; A7.8
 (disassem:define-instruction-format
