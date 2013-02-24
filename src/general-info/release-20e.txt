@@ -41,11 +41,13 @@ New in this release:
         derivation.)
       * :I486 and :PENTIUM (Always assume we're running on at least a
         Pentium.)
+    * Attempts to modify the standard readtable or the standard pprint
+      dispatch table will now signal a continuable error.
 
   * ANSI compliance fixes:
 
   * Bugfixes:
-    * REPLACE and friends on strings was limited to strings less than
+    * REPLACE and friends on strings were limited to strings less than
       the maximum possible size. This has been fixed so strings of any
       supported length can be handled.  (See ticket #66 and #68.)
 
@@ -59,6 +61,7 @@ New in this release:
     * Ticket #65 fixed.
     * Ticket #71 fixed.
     * Ticket #72 fixed.
+    * Ticket #73 fixed.
 
   * Other changes:
     * -8 option for build-all.sh is deprecated since we don't
