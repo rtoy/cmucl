@@ -115,7 +115,7 @@
 	(*print-level* nil)
 	(*print-lines* nil)
 	(*print-miser-width* nil)
-	(*print-pprint-dispatch* (copy-pprint-dispatch nil))
+	(*print-pprint-dispatch* pp::*initial-pprint-dispatch*)
 	(*print-pretty* nil)
 	(*print-radix* nil)
 	(*print-readably* t)
