@@ -144,7 +144,7 @@
   ;; vectors of CHAR-CODE-LIMIT functions, for use in defining dispatching
   ;; macros (like #-macro).
   (dispatch-tables () :type list)
-  (readtable-case :upcase :type (member :upcase :downcase :preserve :invert))
+  (%readtable-case :upcase :type (member :upcase :downcase :preserve :invert))
   ;;
   ;; The CHARACTER-ATTRIBUTE-HASH-TABLE handles the case of char codes
   ;; above ATTRIBUTE-TABLE-LIMIT, since we expect these to be
@@ -465,6 +465,13 @@
   (when (eq readtable std-lisp-readtable)
     (cerror "Modify it anyway." 'kernel:standard-readtable-modified-error
 	    :operation operation)))
+
+(defun readtable-case (table)
+  (%readtable-case table))
+
+(defun (setf readtable-case) (new-case table)
+  (assert-not-standard-readtable table '(setf readtable-case))
+  (setf (%readtable-case table) new-case))
 
 (defun copy-readtable (&optional (from-readtable *readtable*) to-readtable)
   "A copy is made of from-readtable and place into to-readtable."
