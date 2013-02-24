@@ -346,5 +346,25 @@
 ;; [VMOV.F32(FORMAT-VFP-VMOV-REG)  xxxx1110|1x110000|xxxx1010|01x0xxxx]
 ;; vmov[ne].f32 [s0,s1], [s0,s2]
 (test-pattern "VMOV.F32(FORMAT-VFP-VMOV-REG)" "1110|1x110000|00001010|0100000x")
+
+;; [VLDR(FORMAT-6-VFP-LOAD/STORE)          xxxx1101|xx01xxxx|xxxx1011|xxxxxxxx]
+;; [VLDR(FORMAT-6-VFP-LOAD/STORE)          xxxx1101|xx01xxxx|xxxx1010|xxxxxxxx]
+;; vldr.64 [d0], [r1, #+7]
+;; vldr.64 [d8], [r1, #+7]
+(test-pattern "VLDR(FORMAT-6-VFP-LOAD/STORE)" "1101|10010001|x0001011|00000111")
+;; vldr.32 [s0], [r1, #-7]
+;; vldr.32 [s16], [r1, #-7]
+(test-pattern "VLDR(FORMAT-6-VFP-LOAD/STORE)" "1101|00010001|x0001010|00000111")
+
+;; [VSTR(FORMAT-6-VFP-LOAD/STORE)          xxxx1101|xx00xxxx|xxxx1011|xxxxxxxx]
+;; [VSTR(FORMAT-6-VFP-LOAD/STORE)          xxxx1101|xx00xxxx|xxxx1010|xxxxxxxx]
+;; vstr.64 [d0], [r1, #+7]
+;; vstr.64 [d8], [r1, #+7]
+(test-pattern "VSTR(FORMAT-6-VFP-LOAD/STORE)" "1101|10000001|x0001011|00000111")
+
+;; [VSTR(FORMAT-6-VFP-LOAD/STORE)          xxxx1101|xx00xxxx|xxxx1010|xxxxxxxx]
+;; vstr.32 [s0], [r1, #-7]
+;; vstr.32 [s16], [r1, #-7]
+(test-pattern "VSTR(FORMAT-6-VFP-LOAD/STORE)" "1101|00000001|x0001010|00000111")
 ||#
 
