@@ -2182,67 +2182,6 @@
   (op3   :field (byte 2 6) :value #b01)
   (z2    :field (byte 1 4) :value 0))
 
-(defmacro define-vmov-inst (inst-name doublep)
-  (let ((reg-type (if doublep 'fp-double-reg 'fp-single-reg)))
-    `(define-instruction ,inst-name (segment dst src &optional (cond :al))
-       (:declare (type tn dst)
-		 (type (or float tn) src)
-		 (type condition-code cond))
-       (:printer format-vfp-vmov-immed
-		 ((opb0 #b111) (op0 #b01) (op #b11) (op2 #b101) (z 0)
-		  (sz ,(if doublep 1 0))
-		  (dst nil :type ',reg-type))
-		 :default
-		 :print-name 'vmov)
-       (:printer format-vfp-vmov-reg
-		 ((opb0 #b111) (op0 #b01) (op #b11) (op2 #b101) (op3 #b01)
-		  (z 0) (z2 0)
-		  (sz ,(if doublep 1 0))
-		  (dst nil :type ',reg-type)
-		  (src nil :type ',reg-type))
-		 :default
-		 :print-name 'vmov)
-       (:emitter
-	(etypecase src
-	  (tn
-	   (multiple-value-bind (d vd)
-	       (fp-reg-tn-encoding dst doublep)
-	     (multiple-value-bind (m vm)
-		 (fp-reg-tn-encoding src doublep)
-	       (emit-format-vfp-vmov-reg segment
-					 (condition-code-encoding cond)
-					 #b111
-					 #b01
-					 d
-					 #b11
-					 #b0000
-					 vd
-					 #b101
-					 ,(if doublep 1 0)
-					 #b01
-					 m
-					 0
-					 vm))))
-	  (float
-	   (multiple-value-bind (d vd)
-	       (fp-reg-tn-encoding dst doublep)
-	     (let ((value (fp-immed-or-lose src)))
-	       (emit-format-vfp-vmov-immed segment
-					   (condition-code-encoding cond)
-					   #b111
-					   #b01
-					   d
-					   #b11
-					   (ldb (byte 4 4) value)
-					   vd
-					   #b101
-					   ,(if doublep 1 0)
-					   #b0000
-					   (ldb (byte 4 0) value))))))))))
-
-(define-vmov-inst vmov.f32 nil)
-(define-vmov-inst vmov.f64 t)
-
 ;; A8.8.343 VMOV between ARM reg to single-precision register
 
 (define-emitter emit-format-7-vfp-vmov-core 32
@@ -2258,9 +2197,55 @@
   (op1   :field (byte 4 8) :value #b1010)
   (op2   :field (byte 7 0) :value #b0010000))
 
-(define-instruction vmov (segment dst src &optional (cond :al))
-  (:declare (type tn dst src)
-	    (type condition-code cond))
+;; A8.8.345 VMOV between 2 ARM regs and a double-precision register
+
+(define-emitter emit-format-6-vfp-vmov-core-double 32
+  (byte 4 28) (byte 3 25) (byte 4 21) (byte 1 20) (byte 4 16) (byte 4 12) (byte 4 8)
+  (byte 2 6) (byte 1 5) (byte 1 4) (byte 4 0))
+
+(disassem:define-instruction-format
+    (format-6-vfp-vmov-core-double 32 :include 'format-base)
+  (op0  :field (byte 3 25) :value #b110)
+  (op1  :field (byte 4 21) :value #b0010)
+  (op   :field (byte 1 20))
+  (rt2  :field (byte 4 16) :type 'reg)
+  (rt   :field (byte 4 12) :type 'reg)
+  (op2  :field (byte 4 8) :value #b1011)
+  (op3  :field (byte 2 6) :value 0)
+  (vm   :fields (list (byte 1 5) (byte 4 0)) :type 'fp-double-reg)
+  (op4  :field (byte 1 4) :value 0))
+
+;; Handle various types of vmov instructions.  However, we don't
+;; currently support moving 2 ARM registers to or from two
+;; single-precision registers.
+(define-instruction vmov (segment dst dst-or-src &optional src cond)
+  (:declare (type tn dst)
+	    (type (or real tn) dst-or-src)
+	    (type (or null tn condition-code) src)
+	    (type (or null condition-code) cond))
+  ;; vmov float, immed
+  (:printer format-vfp-vmov-immed
+	    ((opb0 #b111) (op0 #b01) (op #b11) (op2 #b101) (z 0)
+	     (sz 0)
+	     (dst nil :type 'fp-single-reg)))
+  (:printer format-vfp-vmov-immed
+	    ((opb0 #b111) (op0 #b01) (op #b11) (op2 #b101) (z 0)
+	     (sz 1)
+	     (dst nil :type 'fp-double-reg)))
+  ;; vmov float, float
+  (:printer format-vfp-vmov-reg
+	    ((opb0 #b111) (op0 #b01) (op #b11) (op2 #b101) (op3 #b01)
+	     (z 0) (z2 0)
+	     (sz 0)
+	     (dst nil :type 'fp-single-reg)
+	     (src nil :type 'fp-single-reg)))
+  (:printer format-vfp-vmov-reg
+	    ((opb0 #b111) (op0 #b01) (op #b11) (op2 #b101) (op3 #b01)
+	     (z 0) (z2 0)
+	     (sz 1)
+	     (dst nil :type 'fp-double-reg)
+	     (src nil :type 'fp-double-reg)))
+  ;; vmov reg, single
   (:printer format-7-vfp-vmov-core
 	    ((opb0 #b111)
 	     (op0 #b0000)
@@ -2268,6 +2253,7 @@
 	     (op2 #b0010000)
 	     (op 1))
 	    '(:name cond :tab reg ", " vn))
+  ;; vmov single, reg
   (:printer format-7-vfp-vmov-core
 	    ((opb0 #b111)
 	     (op0 #b0000)
@@ -2275,31 +2261,156 @@
 	     (op2 #b0010000)
 	     (op 0))
 	    '(:name cond :tab vn ", " reg))
+  ;; vmov d, rt, rt2
+  (:printer format-6-vfp-vmov-core-double
+	    ((op0 #b110)
+	     (op1 #b0010)
+	     (op 0)
+	     (op2 #b1011)
+	     (op3 0)
+	     (op4 0))
+	    '(:name cond :tab vm ", " rt ", " rt2))
+  ;; vmov rt, rt2, d
+  (:printer format-6-vfp-vmov-core-double
+	    ((op0 #b110)
+	     (op1 #b0010)
+	     (op 1)
+	     (op2 #b1011)
+	     (op3 0)
+	     (op4 0))
+	    '(:name cond :tab rt ", " rt2 ", " vm))
   (:emitter
-   (multiple-value-bind (op r fp)
-       (cond ((and (sc-is dst unsigned-reg signed-reg)
-		   (sc-is src single-reg))
-	      ;; Move to arm reg
-	      (values 1 dst src))
-	     ((and (sc-is src unsigned-reg signed-reg)
-		   (sc-is dst single-reg))
-	      ;; Move to float reg
-	      (values 0 src dst))
-	     (t
-	      (error "VMOV requires one ARM reg and one single-float reg")))
-     (multiple-value-bind (n vn)
-	 (fp-reg-tn-encoding fp nil)
-       (emit-format-7-vfp-vmov-core segment
-				    (condition-code-encoding cond)
-				    #b111
-				    #b0000
-				    op
-				    vn
-				    (reg-tn-encoding r)
-				    #b1010
-				    n
-				    #b0010000)))))
-
+   ;; Look through the arg types to figure out what kind of vmov
+   ;; instruction we have.
+   (typecase src
+     (tn
+      ;; If SRC is a TN, then at least 3 args were given so this must
+      ;; be a move of 2 ARM registers to/from a double reg.
+      (let ((cc (or cond :al)))
+	(sc-case dst
+	  (double-reg
+	   ;; Moving 2 ARM regs to a double.  Make sure the two src
+	   ;; regs are ARM registers
+	   (assert (and (sc-is dst-or-src signed-reg unsigned-reg)
+			(sc-is src  signed-reg unsigned-reg)))
+	   (multiple-value-bind (m vm)
+	       (fp-reg-tn-encoding dst t)
+	     (emit-format-6-vfp-vmov-core-double segment
+						 (condition-code-encoding cc)
+						 #b110
+						 #b0010
+						 0
+						 (reg-tn-encoding dst-or-src)
+						 (reg-tn-encoding src)
+						 #b1011
+						 0
+						 m
+						 0
+						 vm)))
+	  ((signed-reg unsigned-reg)
+	   ;; Moving double to 2 ARM regs.  Make sure the other args
+	   ;; are valid.
+	   (assert (and (sc-is dst-or-src signed-reg unsigned-reg)
+			(sc-is src double-reg)))
+	   ;; The two destination regs must be different.
+	   (assert (/= (tn-offset dst) (tn-offset dst-or-src)))
+	   (multiple-value-bind (m vm)
+	       (fp-reg-tn-encoding src t)
+	     (emit-format-6-vfp-vmov-core-double segment
+						 (condition-code-encoding cc)
+						 #b110
+						 #b0010
+						 1
+						 (reg-tn-encoding dst-or-src)
+						 (reg-tn-encoding dst)
+						 #b1011
+						 0
+						 m
+						 0
+						 vm))))))
+     (otherwise
+      ;; SRC is not a TN, so we have the two arg case.
+      (let ((cc (or src :al)))
+	(cond ((and (sc-is dst signed-reg unsigned-reg)
+		    (sc-is dst-or-src single-reg))
+	       ;; Move to ARM reg from single float reg
+	       (multiple-value-bind (n vn)
+		   (fp-reg-tn-encoding dst-or-src nil)
+		 (emit-format-7-vfp-vmov-core segment
+					      (condition-code-encoding cc)
+					      #b111
+					      #b0000
+					      1
+					      vn
+					      (reg-tn-encoding dst)
+					      #b1010
+					      n
+					      #b0010000)))
+	      ((and (sc-is dst single-reg)
+		    (sc-is dst-or-src signed-reg unsigned-reg))
+	       ;; Move to float reg from ARM reg
+	       (multiple-value-bind (n vn)
+		   (fp-reg-tn-encoding dst nil)
+		 (emit-format-7-vfp-vmov-core segment
+					      (condition-code-encoding cc)
+					      #b111
+					      #b0000
+					      0
+					      vn
+					      (reg-tn-encoding dst-or-src)
+					      #b1010
+					      n
+					      #b0010000)))
+	      ((and (sc-is dst single-reg double-reg)
+		    (sc-is dst-or-src single-reg double-reg))
+	       ;; Moving between float regs.  They have to be the same type.
+	       (assert (or (and (sc-is dst single-reg)
+				(sc-is dst-or-src single-reg))
+			   (and (sc-is dst double-reg)
+				(sc-is dst-or-src double-reg))))
+	       (let ((doublep (sc-is dst double-reg)))
+		 (multiple-value-bind (d vd)
+		     (fp-reg-tn-encoding dst doublep)
+		   (multiple-value-bind (m vm)
+		       (fp-reg-tn-encoding dst-or-src doublep)
+		     (emit-format-vfp-vmov-reg segment
+					       (condition-code-encoding cc)
+					       #b111
+					       #b01
+					       d
+					       #b11
+					       #b0000
+					       vd
+					       #b101
+					       (if doublep 1 0)
+					       #b01
+					       m
+					       0
+					       vm)))))
+	      ((and (sc-is dst single-reg double-reg)
+		    (realp dst-or-src))
+	       ;; Move immediate value to float.
+	       (let ((doublep (sc-is dst double-reg)))
+		 (multiple-value-bind (d vd)
+		     (fp-reg-tn-encoding dst doublep)
+		   (multiple-value-bind (m vm)
+		       (fp-reg-tn-encoding dst-or-src doublep)
+		     (emit-format-vfp-vmov-reg segment
+					       (condition-code-encoding cond)
+					       #b111
+					       #b01
+					       d
+					       #b11
+					       #b0000
+					       vd
+					       #b101
+					       (if doublep 1 0)
+					       #b01
+					       m
+					       0
+					       vm)))))
+	      (t
+	       (error "Unknown or unsupported argument types for VMOV"))))))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun imm8-offset-printer (value stream dstate)
