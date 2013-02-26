@@ -1793,10 +1793,10 @@
 
 (defconstant format-vfp-2-arg-printer
   `(:name cond
-    (:cond ((sz :constant 0) '|.F32|)
-	   (t '|.F64|))
-    :tab
-    dst ", " src))
+	  (:cond ((sz :constant 0) '|.F32|)
+		 (t '|.F64|))
+	  :tab
+	  dst ", " src))
 
 (disassem:define-instruction-format
     (format-vfp-2-arg 32 :include 'format-base
@@ -1818,10 +1818,10 @@
 
 (defconstant format-vfp-2-arg-printer
   `(:name cond
-    (:cond ((sz :constant 0) '|.F32|)
-	   (t '|.F64|))
-    :tab
-    dst ", " src))
+	  (:cond ((sz :constant 0) '|.F32|)
+		 (t '|.F64|))
+	  :tab
+	  dst ", " src))
 
 (disassem:define-instruction-format
     (format-vfp-2-arg 32 :include 'format-base
@@ -1888,7 +1888,7 @@
 ;; Conversions
 
 (defconstant vcvt-printer
-  '(:name cond
+  `(:name cond
 	  (:cond ((op1 :constant #b1101)
 		  (:cond ((sz :constant 1) '|.S32.F64|)
 			 (t '|.S32.F32|)))
@@ -1902,8 +1902,8 @@
 				 (t '|.U32|)))
 			 (t
 			  '|.F32|
-			    (:cond ((op :constant 1) '|.S32|)
-				   (t '|.U32|)))))
+			  (:cond ((op :constant 1) '|.S32|)
+				 (t '|.U32|)))))
 		 ((op1 :constant #b0111)
 		  (:cond ((sz :constant 1)
 			  '|.F32.F64|)
@@ -2356,6 +2356,7 @@
 		(sz 1)
 		(dst nil :type 'fp-double-reg)))
      (:emitter
+      (assert (sc-is dst single-reg double-reg))
       (let ((doublep (sc-is dst double-reg)))
 	(multiple-value-bind (d vd)
 	    (fp-reg-tn-encoding dst doublep)
