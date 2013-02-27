@@ -1756,8 +1756,9 @@
 		   #+nil
 		   (progn
 		     (format t "in-buffer-length = ~D~%" in-buffer-length)
+		     (format t "in-length = ~D~%" (fd-stream-in-length stream))
 		     (format t "fd-stream-in-index = ~D~%" (fd-stream-in-index stream)))
-		   (decf posn (- in-buffer-length
+		   (decf posn (- (fd-stream-in-length stream)
 				 (fd-stream-in-index stream))))
 		 #+nil
 		 (format t "fd-stream-unread = ~S~%" (fd-stream-unread stream))
