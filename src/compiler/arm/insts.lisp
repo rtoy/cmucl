@@ -2004,7 +2004,7 @@
 (defmacro define-vfp-cmp-inst (name ops)
   `(define-instruction ,name (segment dst src &optional (cond :al))
      (:declare (type dst tn)
-	       (type (or tn (float 0.0 0.0)) src)
+	       (type (or tn (member 0f0 0d0)) src)
 	       (type condition-code cond))
      ;; Compare two single-regs
      (:printer format-vfp-2-arg
@@ -2087,7 +2087,6 @@
 
 (define-vfp-cmp-inst vcmp  #b0)
 (define-vfp-cmp-inst vcmpe #b1)
-
 
 ;; Convert a float to the floating-point modified immediate constant.
 ;; See Table A7-18
@@ -2205,7 +2204,6 @@
 
 (disassem:define-instruction-format
     (format-6-vfp-vmov-core-double 32 :include 'format-base)
-  (op0  :field (byte 3 25) :value #b110)
   (op1  :field (byte 4 21) :value #b0010)
   (op   :field (byte 1 20))
   (rt2  :field (byte 4 16) :type 'reg)
@@ -2218,10 +2216,10 @@
 ;; Handle various types of vmov instructions.  However, we don't
 ;; currently support moving 2 ARM registers to or from two
 ;; single-precision registers.
-(define-instruction vmov (segment dst dst-or-src &optional src cond)
+(define-instruction vmov (segment dst dst-or-src &optional src-or-cond cond)
   (:declare (type tn dst)
 	    (type (or real tn) dst-or-src)
-	    (type (or null tn condition-code) src)
+	    (type (or null tn condition-code) src-or-cond)
 	    (type (or null condition-code) cond))
   ;; vmov float, immed
   (:printer format-vfp-vmov-immed
@@ -2263,7 +2261,7 @@
 	    '(:name cond :tab vn ", " reg))
   ;; vmov d, rt, rt2
   (:printer format-6-vfp-vmov-core-double
-	    ((op0 #b110)
+	    ((opb0 #b110)
 	     (op1 #b0010)
 	     (op 0)
 	     (op2 #b1011)
@@ -2272,7 +2270,7 @@
 	    '(:name cond :tab vm ", " rt ", " rt2))
   ;; vmov rt, rt2, d
   (:printer format-6-vfp-vmov-core-double
-	    ((op0 #b110)
+	    ((opb0 #b110)
 	     (op1 #b0010)
 	     (op 1)
 	     (op2 #b1011)
@@ -2282,17 +2280,17 @@
   (:emitter
    ;; Look through the arg types to figure out what kind of vmov
    ;; instruction we have.
-   (typecase src
+   (typecase src-or-cond
      (tn
-      ;; If SRC is a TN, then at least 3 args were given so this must
-      ;; be a move of 2 ARM registers to/from a double reg.
+      ;; If SRC-OR-COND is a TN, then at least 3 args were given so
+      ;; this must be a move of 2 ARM registers to/from a double reg.
       (let ((cc (or cond :al)))
 	(sc-case dst
 	  (double-reg
 	   ;; Moving 2 ARM regs to a double.  Make sure the two src
 	   ;; regs are ARM registers
 	   (assert (and (sc-is dst-or-src signed-reg unsigned-reg)
-			(sc-is src  signed-reg unsigned-reg)))
+			(sc-is src-or-cond  signed-reg unsigned-reg)))
 	   (multiple-value-bind (m vm)
 	       (fp-reg-tn-encoding dst t)
 	     (emit-format-6-vfp-vmov-core-double segment
@@ -2301,7 +2299,7 @@
 						 #b0010
 						 0
 						 (reg-tn-encoding dst-or-src)
-						 (reg-tn-encoding src)
+						 (reg-tn-encoding src-or-cond)
 						 #b1011
 						 0
 						 m
@@ -2311,11 +2309,11 @@
 	   ;; Moving double to 2 ARM regs.  Make sure the other args
 	   ;; are valid.
 	   (assert (and (sc-is dst-or-src signed-reg unsigned-reg)
-			(sc-is src double-reg)))
+			(sc-is src-or-cond double-reg)))
 	   ;; The two destination regs must be different.
 	   (assert (/= (tn-offset dst) (tn-offset dst-or-src)))
 	   (multiple-value-bind (m vm)
-	       (fp-reg-tn-encoding src t)
+	       (fp-reg-tn-encoding src-or-cond t)
 	     (emit-format-6-vfp-vmov-core-double segment
 						 (condition-code-encoding cc)
 						 #b110
@@ -2329,13 +2327,13 @@
 						 0
 						 vm))))))
      (otherwise
-      ;; SRC is not a TN, so we have the two arg case.
-      (let ((cc (or src :al)))
+      ;; SRC-OR-COND is not a TN, so we have the two arg case.
+      (let ((cc (or src-or-cond :al)))
 	(cond ((and (sc-is dst signed-reg unsigned-reg)
 		    (sc-is dst-or-src single-reg))
 	       ;; Move to ARM reg from single float reg
 	       (multiple-value-bind (n vn)
-		   (fp-reg-tn-encoding dst-or-src nil)
+		   (fp-reg-tn-encoding dst-or-src-or-cond nil)
 		 (emit-format-7-vfp-vmov-core segment
 					      (condition-code-encoding cc)
 					      #b111
