@@ -203,6 +203,12 @@
 ;; VMSR fpscr, [r0,r4]
 (test-pattern "VMSR(FORMAT-VFP-FPSCR)" "1110|11100001|0x001010|00010000")
 
+;; VADD(FORMAT-VFP-3)                 xxxx1110|0x11xxxx|xxxx1010|x0x0xxxx
+;; vadd[ne].f64 [d1,d17], [d0,d2], [d16,d17]
+(test-pattern "VADD(FORMAT-VFP-3)" "1110|0x1100x0|00011011|0010000x")
+;; vadd[ne].f32 [s2,s3], [s0,s4], [s1,s3]
+(test-pattern "VADD(FORMAT-VFP-3)" "1110|0x1100x0|00011010|0010000x")
+
 ;; VABS.F32(FORMAT-VFP-2-ARG)     xxxx1110|1x110000|xxxx1010|11x0xxxx
 ;; This test verifies that the encoded register is what we expected.
 ;; The intended instruction is VABS.F32 S17, S9
@@ -220,6 +226,13 @@
 (test-pattern "VMOV(FORMAT-7-VFP-VMOV-CORE)" "1110|00011000|11111010|10010000")
 ;; vmov[ne] s17, r15
 (test-pattern "VMOV(FORMAT-7-VFP-VMOV-CORE)" "1110|00001000|11111010|10010000")
+
+;; VMOV(FORMAT-6-VFP-VMOV-CORE-DOUBLE)    xxxx1100|0101xxxx|xxxx1011|00x0xxxx
+;; vmov[ne] r8, r3, [d0, d1, d16, d17]
+(test-pattern "VMOV(FORMAT-6-VFP-VMOV-CORE-DOUBLE)" "1100|01010011|10001011|00x0000x")
+;; VMOV(FORMAT-6-VFP-VMOV-CORE-DOUBLE)    xxxx1100|0100xxxx|xxxx1011|00x0xxxx
+;; vmov[ne] [d0, d1, d16, d17], r8, r3
+(test-pattern "VMOV(FORMAT-6-VFP-VMOV-CORE-DOUBLE)" "1100|01000011|10001011|00x0000x")
 
 ;; VCVT.S32.F32(FORMAT-VFP-2-ARG) xxxx1110|1x111101|xxxx1010|11x0xxxx
 ;; VCVT.S32.F32  [s17,s19], [s0,s2]
@@ -334,6 +347,31 @@
 (test-pattern "[CLZ(FORMAT-0-CLZ)" "0001|01101111|000x1111|0000101x")
 
 ;; [VMOV.F64(FORMAT-VFP-VMOV-IMMED)    xxxx1110|1x11xxxx|xxxx1011|0000xxxx]
+;; vmov[ne] [d1, d17], <float-immed>
 (test-pattern "VMOV.F64(FORMAT-VFP-VMOV-IMMED)" "1110|1x11xxxx|00011011|0000xxxx")
+
+;; [VMOV.F32(FORMAT-VFP-VMOV-REG)  xxxx1110|1x110000|xxxx1010|01x0xxxx]
+;; vmov[ne].f32 [s0,s1], [s0,s2]
+(test-pattern "VMOV.F32(FORMAT-VFP-VMOV-REG)" "1110|1x110000|00001010|0100000x")
+
+;; [VLDR(FORMAT-6-VFP-LOAD/STORE)          xxxx1101|xx01xxxx|xxxx1011|xxxxxxxx]
+;; [VLDR(FORMAT-6-VFP-LOAD/STORE)          xxxx1101|xx01xxxx|xxxx1010|xxxxxxxx]
+;; vldr.64 [d0], [r1, #+7]
+;; vldr.64 [d8], [r1, #+7]
+(test-pattern "VLDR(FORMAT-6-VFP-LOAD/STORE)" "1101|10010001|x0001011|00000111")
+;; vldr.32 [s0], [r1, #-7]
+;; vldr.32 [s16], [r1, #-7]
+(test-pattern "VLDR(FORMAT-6-VFP-LOAD/STORE)" "1101|00010001|x0001010|00000111")
+
+;; [VSTR(FORMAT-6-VFP-LOAD/STORE)          xxxx1101|xx00xxxx|xxxx1011|xxxxxxxx]
+;; [VSTR(FORMAT-6-VFP-LOAD/STORE)          xxxx1101|xx00xxxx|xxxx1010|xxxxxxxx]
+;; vstr.64 [d0], [r1, #+7]
+;; vstr.64 [d8], [r1, #+7]
+(test-pattern "VSTR(FORMAT-6-VFP-LOAD/STORE)" "1101|10000001|x0001011|00000111")
+
+;; [VSTR(FORMAT-6-VFP-LOAD/STORE)          xxxx1101|xx00xxxx|xxxx1010|xxxxxxxx]
+;; vstr.32 [s0], [r1, #-7]
+;; vstr.32 [s16], [r1, #-7]
+(test-pattern "VSTR(FORMAT-6-VFP-LOAD/STORE)" "1101|00000001|x0001010|00000111")
 ||#
 
