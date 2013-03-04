@@ -41,10 +41,12 @@ New in this release:
         derivation.)
       * :I486 and :PENTIUM (Always assume we're running on at least a
         Pentium.)
-    * Attempts to modify the standard readtable or the standard pprint
-      dispatch table will now signal a continuable error.
+    * A serious error in FILE-POSITION on streams using an encoding
+      other than latin1 has been fixed.  See ticket #74.
 
   * ANSI compliance fixes:
+    * Attempts to modify the standard readtable or the standard pprint
+      dispatch table will now signal a continuable error.
 
   * Bugfixes:
     * REPLACE and friends on strings were limited to strings less than
