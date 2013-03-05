@@ -22,7 +22,7 @@
 
 (defvar *unidata-path* #p"ext-formats:unidata.bin")
 
-(defvar *unidata-version* "$Revision: 1.28 $")
+(defvar *unidata-version* "$Revision: 1.29 $")
 
 (defstruct unidata
   range
@@ -61,7 +61,7 @@
 ;; The expected Unicode version.  This needs to be synced with
 ;; build-unidata.lisp.
 (defconstant +unicode-major-version+ 6)
-(defconstant +unicode-minor-version+ 1)
+(defconstant +unicode-minor-version+ 2)
 (defconstant +unicode-update-version+ 0)
 
 ;;; These need to be synched with tools/build-unidata.lisp
@@ -1163,7 +1163,7 @@
   ;; pack-word-break in tools/build-unidata.lisp!
   (aref #(:other :cr :lf :newline :extend :format
 	  :katakana :aletter :midnumlet :midletter :midnum
-	  :numeric :extendnumlet)
+	  :numeric :extendnumlet :regional_indicator)
 	(unicode-word-break-code code)))
 
 ;; Support for character name completion for slime.

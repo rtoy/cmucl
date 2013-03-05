@@ -33,7 +33,11 @@
 		(let ((c (read s nil nil)))
 		  (unless c
 		    (return))
-		  (vector-push-extend (code-char c) string)
+		  (if (> c #xffff)
+		      (let ((s (lisp::codepoints-string (list c))))
+			(vector-push-extend (aref s 0) string)
+			(vector-push-extend (aref s 1) string))
+		      (vector-push-extend (code-char c) string))
 		  (let ((c (read s)))
 		    (handle-break c))
 		  (incf count)))))
