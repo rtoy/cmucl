@@ -104,7 +104,6 @@ do
     esac
 done
 
-echo $@	
 shift `expr $OPTIND - 1`
 
 # Figure out the architecture and OS

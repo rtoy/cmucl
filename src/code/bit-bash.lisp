@@ -562,7 +562,7 @@
 		(unless (zerop dst-byte-offset)
 		  ;; We are only writing part of the first word, so mask off the
 		  ;; bits we want to preserve.
-		  (let ((mask (end-mask (- dst-byte-offset)))
+		  (let ((mask (end-mask (* vm:byte-bits (- dst-byte-offset))))
 			(orig (funcall dst-ref-fn dst dst-word-offset))
 			(value (funcall src-ref-fn src src-word-offset)))
 		    (declare (type unit mask orig value))
