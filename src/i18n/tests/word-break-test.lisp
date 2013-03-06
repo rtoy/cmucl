@@ -33,8 +33,12 @@
 		(let ((c (read s nil nil)))
 		  (unless c
 		    (return))
+		  ;; Handle codepoints outside the BMP carefully.
 		  (if (> c #xffff)
 		      (let ((s (lisp::codepoints-string (list c))))
+			;; Need to increment the count because of our
+			;; UTF-16 encoding of strings.
+			(incf count)
 			(vector-push-extend (aref s 0) string)
 			(vector-push-extend (aref s 1) string))
 		      (vector-push-extend (code-char c) string))
