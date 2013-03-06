@@ -1586,80 +1586,80 @@
 			     2
 			     1))
 			(cat (char-word-break-category c)))
-		 (case cat
-		   ((:extend-or-format)
-		    (case context
-		      ((:cr :sep) j)
-		      (otherwise (lookup (+ j next-j) context))))
-		   (otherwise
-		    (case context
-		      ((:cr)
-		       (if (= c (char-code #\linefeed))
-			   ;; Rule WB3:  Don't break CRLF, continue looking
-			   (lookup (+ j next-j) cat)
-			   j))
-		      ((:aletter)
-		       (case cat
-			 ((:aletter :numeric :extendnumlet)
-			  ;; Rules WB5, WB9, ?
-			  (lookup (+ j next-j) cat))
-			 ((:midletter :midnumlet)
-			  ;; Rule WB6, need to keep looking
-			  (lookup (+ j next-j) :aletter-midletter))
-			 (otherwise j)))
-		      ((:aletter-midletter)
-		       (case cat
-			 ((:aletter)
-			  ;; Rule WB7
-			  (lookup (+ j next-j) cat))
-			 (otherwise
-			  ;; Rule WB6 and WB7 were extended, but the
-			  ;; region didn't end with :aletter.  So
-			  ;; backup and break at that point.
-			  (let ((j2 (index-of-previous-non-ignored j)))
-			    (if (< i j2) j2 j)))))
-		      ((:numeric)
-		       (case cat
-			 ((:numeric :aletter :extendnumlet)
-			  ;; Rules WB8, WB10, ?
-			  (lookup (+ j next-j) cat))
-			 ((:midnum :midnumlet)
-			  ;; Rules WB11, need to keep looking
-			  (lookup (+ j next-j) :numeric-midnum))
-			 (otherwise j)))
-		      ((:numeric-midnum)
-		       (case cat
-			 ((:numeric)
-			  ;; Rule WB11, keep looking
-			  (lookup (+ j next-j) cat))
-			 (otherwise
-			  ;; Rule WB11, WB12 were extended, but the
-			  ;; region didn't end with :numeric, so
-			  ;; backup and break at that point.
-			  (let ((j2 (index-of-previous-non-ignored j)))
-			    (if (< i j2) j2 j)))))
-		      ((:midletter :midnum :midnumlet)
-		       ;; Rule WB14
-		       j)
-		      ((:katakana)
-		       (case cat
-			 ((:katakana :extendnumlet)
-			  ;; Rule WB13, WB13a
-			  (lookup (+ j next-j) cat))
-			 (otherwise j)))
-		      ((:extendnumlet)
-		       (case cat
-			 ((:extendnumlet :aletter :numeric :katakana)
-			  ;; Rule WB13a, WB13b
-			  (lookup (+ j next-j) cat))
-			 (otherwise j)))
-		      ((:regional_indicator)
-		       (case cat
-			 ((:regional_indicator)
-			  ;; Rule WB13c
-			  (lookup (+ j next-j) cat))
-			 (otherwise j)))
-		      (otherwise j)))))))))
+		   (case cat
+		     ((:extend-or-format)
+		      (case context
+			((:cr :sep) j)
+			(otherwise (lookup (+ j next-j) context))))
+		     (otherwise
+		      (case context
+			((:cr)
+			 (if (= c (char-code #\linefeed))
+			     ;; Rule WB3:  Don't break CRLF, continue looking
+			     (lookup (+ j next-j) cat)
+			     j))
+			((:aletter)
+			 (case cat
+			   ((:aletter :numeric :extendnumlet)
+			    ;; Rules WB5, WB9, ?
+			    (lookup (+ j next-j) cat))
+			   ((:midletter :midnumlet)
+			    ;; Rule WB6, need to keep looking
+			    (lookup (+ j next-j) :aletter-midletter))
+			   (otherwise j)))
+			((:aletter-midletter)
+			 (case cat
+			   ((:aletter)
+			    ;; Rule WB7
+			    (lookup (+ j next-j) cat))
+			   (otherwise
+			    ;; Rule WB6 and WB7 were extended, but the
+			    ;; region didn't end with :aletter.  So
+			    ;; backup and break at that point.
+			    (let ((j2 (index-of-previous-non-ignored j)))
+			      (if (< i j2) j2 j)))))
+			((:numeric)
+			 (case cat
+			   ((:numeric :aletter :extendnumlet)
+			    ;; Rules WB8, WB10, ?
+			    (lookup (+ j next-j) cat))
+			   ((:midnum :midnumlet)
+			    ;; Rules WB11, need to keep looking
+			    (lookup (+ j next-j) :numeric-midnum))
+			   (otherwise j)))
+			((:numeric-midnum)
+			 (case cat
+			   ((:numeric)
+			    ;; Rule WB11, keep looking
+			    (lookup (+ j next-j) cat))
+			   (otherwise
+			    ;; Rule WB11, WB12 were extended, but the
+			    ;; region didn't end with :numeric, so
+			    ;; backup and break at that point.
+			    (let ((j2 (index-of-previous-non-ignored j)))
+			      (if (< i j2) j2 j)))))
+			((:midletter :midnum :midnumlet)
+			 ;; Rule WB14
+			 j)
+			((:katakana)
+			 (case cat
+			   ((:katakana :extendnumlet)
+			    ;; Rule WB13, WB13a
+			    (lookup (+ j next-j) cat))
+			   (otherwise j)))
+			((:extendnumlet)
+			 (case cat
+			   ((:extendnumlet :aletter :numeric :katakana)
+			    ;; Rule WB13a, WB13b
+			    (lookup (+ j next-j) cat))
+			   (otherwise j)))
+			((:regional_indicator)
+			 (case cat
+			   ((:regional_indicator)
+			    ;; Rule WB13c
+			    (lookup (+ j next-j) cat))
+			   (otherwise j)))
+			(otherwise j)))))))))
       (declare (notinline lookup left-context))
       (cond ((< i 0)
 	     ;; Rule WB1
