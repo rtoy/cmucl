@@ -52,7 +52,6 @@ New in this release:
     * A serious error in FILE-POSITION on streams using an encoding
       other than latin1 has been fixed.  See ticket #74.
 
-
   * Trac Tickets:
     * Ticket #52 reopened.
     * Ticket #66 fixed.
@@ -65,6 +64,7 @@ New in this release:
     * Ticket #72 fixed.
     * Ticket #73 fixed.
     * Ticket #74 fixed.
+    * Ticket #76 fixed.
 
   * Other changes:
     * -8 option for build-all.sh is deprecated since we don't
