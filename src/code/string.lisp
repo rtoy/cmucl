@@ -1653,6 +1653,12 @@
 			  ;; Rule WB13a, WB13b
 			  (lookup (+ j next-j) cat))
 			 (otherwise j)))
+		      ((:regional_indicator)
+		       (case cat
+			 ((:regional_indicator)
+			  ;; Rule WB13c
+			  (lookup (+ j next-j) cat))
+			 (otherwise j)))
 		      (otherwise j)))))))))
       (declare (notinline lookup left-context))
       (cond ((< i 0)
