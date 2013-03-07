@@ -41,6 +41,8 @@ New in this release:
         derivation.)
       * :I486 and :PENTIUM (Always assume we're running on at least a
         Pentium.)
+    * Update unicode to support Unicode 6.2.
+
   * ANSI compliance fixes:
     * Attempts to modify the standard readtable or the standard pprint
       dispatch table will now signal a continuable error.
