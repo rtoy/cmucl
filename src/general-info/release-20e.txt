@@ -53,6 +53,8 @@ New in this release:
       supported length can be handled.  (See ticket #66 and #68.)
     * A serious error in FILE-POSITION on streams using an encoding
       other than latin1 has been fixed.  See ticket #74.
+    * Fix startup crashes on some Debian Linux versions.  This was
+      caused by the release string not having a patch version.
 
   * Trac Tickets:
     * Ticket #52 reopened.
@@ -67,6 +69,7 @@ New in this release:
     * Ticket #73 fixed.
     * Ticket #74 fixed.
     * Ticket #76 fixed.
+    * Ticket #79 fixed.
 
   * Other changes:
     * -8 option for build-all.sh is deprecated since we don't
