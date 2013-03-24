@@ -42,6 +42,7 @@ New in this release:
       * :I486 and :PENTIUM (Always assume we're running on at least a
         Pentium.)
     * Update unicode to support Unicode 6.2.
+    * Add MP:JOIN-THREAD, as given in ticket #77.
 
   * ANSI compliance fixes:
     * Attempts to modify the standard readtable or the standard pprint
@@ -70,6 +71,7 @@ New in this release:
     * Ticket #74 fixed.
     * Ticket #76 fixed.
     * Ticket #79 fixed.
+    * Ticket #77 fixed.
 
   * Other changes:
     * -8 option for build-all.sh is deprecated since we don't

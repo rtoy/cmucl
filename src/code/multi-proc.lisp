@@ -1972,3 +1972,20 @@
 		  ,lock 2 *current-process* nil)
 	  #-x86 (when (eq (lock-process ,lock) *current-process*)
 		   (setf (lock-process ,lock) nil)))))))
+
+(defun %make-thread (function name)
+  (mp:make-process (lambda ()
+                     (let ((return-values
+                             (multiple-value-list (funcall function))))
+                       (setf (getf (mp:process-property-list mp:*current-process*)
+                                   'return-values)
+                             return-values)
+                       (values-list return-values)))
+                   :name name))
+
+(defun join-thread (thread)
+  (mp:process-wait (format nil "Waiting for thread ~A to complete" thread)
+                   (lambda () (not (mp:process-alive-p thread))))
+  (let ((return-values
+          (getf (mp:process-property-list thread) 'return-values)))
+    (values-list return-values)))
