@@ -298,6 +298,7 @@
   (%real-time 0d0 :type double-float)
   (%run-time 0d0 :type double-float)
   (property-list nil :type list)
+  (%return-values nil :type list)
   (initial-bindings nil :type list))
 
 
@@ -956,9 +957,11 @@
 				     (with-simple-restart
 					 (destroy "Destroy the process")
 				       (setf *inhibit-scheduling* nil)
-				       (apply-with-bindings function
-							    nil
-							    initial-bindings))
+				       (setf (process-%return-values *current-process*)
+					     (multiple-value-list
+					      (apply-with-bindings function
+								   nil
+								   initial-bindings))))
 				     ;; Normal exit.
 				     (throw '%end-of-the-process nil))))
 			(setf *inhibit-scheduling* t)
@@ -1973,19 +1976,7 @@
 	  #-x86 (when (eq (lock-process ,lock) *current-process*)
 		   (setf (lock-process ,lock) nil)))))))
 
-(defun %make-thread (function name)
-  (mp:make-process (lambda ()
-                     (let ((return-values
-                             (multiple-value-list (funcall function))))
-                       (setf (getf (mp:process-property-list mp:*current-process*)
-                                   'return-values)
-                             return-values)
-                       (values-list return-values)))
-                   :name name))
-
-(defun join-thread (thread)
+(defun process-join (process)
   (mp:process-wait (format nil "Waiting for thread ~A to complete" thread)
                    (lambda () (not (mp:process-alive-p thread))))
-  (let ((return-values
-          (getf (mp:process-property-list thread) 'return-values)))
-    (values-list return-values)))
+  (values-list (process-%return-values process)))

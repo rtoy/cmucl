@@ -42,7 +42,7 @@ New in this release:
       * :I486 and :PENTIUM (Always assume we're running on at least a
         Pentium.)
     * Update unicode to support Unicode 6.2.
-    * Add MP:JOIN-THREAD, as given in ticket #77.
+    * Add MP:PROCESS-JOIN, as given in ticket #77.
 
   * ANSI compliance fixes:
     * Attempts to modify the standard readtable or the standard pprint
