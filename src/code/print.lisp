@@ -1837,12 +1837,12 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 ;; Exact powers of ten.  Must be large enough to cover the range from
 ;; least-positive-double-float to most-positive-double-float
-(declaim (type (simple-array integer (326)) *powers-of-ten*))
+(declaim (type (simple-array integer (400)) *powers-of-ten*))
 (defparameter *powers-of-ten*
-  (make-array 326
+  (make-array 400
 	      :initial-contents
 	      (let (p)
-		(dotimes (k 326 (nreverse p))
+		(dotimes (k 400 (nreverse p))
 		  (push (expt 10 k) p)))))
 
 ;;; Implementation of Figure 1 from "Printing Floating-Point Numbers
@@ -1957,9 +1957,11 @@ radix-R.  If you have a power-list then pass it in as PL."
 			  m- 1)))
 	    (when position
 	      (flet ((expt-ten (e)
-		       (if (minusp e)
-			   (/ (aref *powers-of-ten* (- e)))
-			   (aref *powers-of-ten* e))))
+		       (if (> (abs e) (length *powers-of-ten*))
+			   (expt 10 e)
+			   (if (minusp e)
+			       (/ (aref *powers-of-ten* (- e)))
+			       (aref *powers-of-ten* e)))))
 		(when relativep
 		  (let ((r+m (+ r m+)))
 		    ;;(format t "r, s = ~A, ~A~%" r s)
