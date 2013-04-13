@@ -56,6 +56,9 @@ New in this release:
       other than latin1 has been fixed.  See ticket #74.
     * Fix startup crashes on some Debian Linux versions.  This was
       caused by the release string not having a patch version.
+    * FILE-POSITION no longer returns incorrect values.  See ticket
+      #79.
+
 
   * Trac Tickets:
     * Ticket #52 reopened.
@@ -86,6 +89,9 @@ New in this release:
     * In make-dist.sh, the version is now optional.  If not given, a
       version is derived from the git hash returned by "git
       describe". 
+    * build.sh -u used to disable building of asdf and friends.  This
+      is incorrect.  Asdf is always built now (during the last stage).
+
 
 This release is not binary compatible with code compiled using CMUCL
 20d; you will need to recompile FASL files. 
