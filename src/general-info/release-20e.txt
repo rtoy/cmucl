@@ -58,6 +58,7 @@ New in this release:
       caused by the release string not having a patch version.
     * FILE-POSITION no longer returns incorrect values.  See ticket
       #79.
+    * Fix error in (format t "~ve" 21 5d-324).  (See ticket #80).
 
 
   * Trac Tickets:
