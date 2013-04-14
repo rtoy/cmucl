@@ -247,23 +247,24 @@ fi
 BUILD=3
 buildit
 
+# Asdf and friends are part of the base install, so we need to build
+# them now.
+$TARGET/lisp/lisp $FPU_MODE -noinit -nositeinit -batch "$@" << EOF || exit 3
+(in-package :cl-user)
+(setf (ext:search-list "target:")
+      '("$TARGET/" "src/"))
+(setf (ext:search-list "modules:")
+      '("target:contrib/"))
+
+(compile-file "modules:asdf/asdf")
+(compile-file "modules:defsystem/defsystem")
+EOF
+
+
 if [ "$SKIPUTILS" = "no" ];
 then
     OLDLISP="${BASE}-4/lisp/lisp $OLDLISPFLAGS $FPU_MODE"
     time $TOOLDIR/build-utils.sh $TARGET $FPU_MODE
-else
-# But asdf and friends are part of the base install, so we need to build them.
-    $TARGET/lisp/lisp -noinit -nositeinit -batch "$@" << EOF || exit 3
-    (in-package :cl-user)
-    (setf (ext:search-list "target:")
-	  '("$TARGET/" "src/"))
-    (setf (ext:search-list "modules:")
-	  '("target:contrib/"))
-
-    (compile-file "modules:asdf/asdf")
-    (compile-file "modules:defsystem/defsystem")
-EOF
-
 fi
 
 build_finished=`date`
