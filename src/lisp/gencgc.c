@@ -922,24 +922,36 @@ handle_heap_overflow(const char *msg, int size)
 #endif
 }
 
+boolean gencgc_debug_madvise = TRUE;
+
 static void
 handle_madvise_first_page(int first_page)
 {
     int flags = page_table[first_page].flags;
         
-    fprintf(stderr, "first_page = %d, FLAGS = %x, orig = %d",
-            first_page, flags, page_table[first_page].bytes_used);
+    if (gencgc_debug_madvise) {
+        fprintf(stderr, "first_page = %d, FLAGS = %x, orig = %d",
+                first_page, flags, page_table[first_page].bytes_used);
+    }
+    
     if ((flags & PAGE_MADVISE) && !PAGE_ALLOCATED(first_page)) {
         int *page_start = (int *) page_address(first_page);
         if (*page_start != 0) {
-            fprintf(stderr, ": memset %x", *page_start);
+            if (gencgc_debug_madvise) {
+                fprintf(stderr, ": memset %x", *page_start);
+            }
+            
             memset(page_start, 0, GC_PAGE_SIZE);
             page_table[first_page].flags &= ~PAGE_MADVISE;
         } else {
-            fprintf(stderr, ":pre cleared");
+            if (gencgc_debug_madvise) {
+                fprintf(stderr, ":pre cleared");
+            }
         }
     }
-    fprintf(stderr, "\n");
+    if (gencgc_debug_madvise) {
+        fprintf(stderr, "\n");
+    }
 }
 
 static void
@@ -953,13 +965,18 @@ handle_madvise_other_pages(int first_page, int last_page)
             int *page_start = (int *) page_address(i);
 
             if (*page_start != 0) {
-                fprintf(stderr, "MADVISE page %d, FLAGS = %x: memset %x\n",
-                        i, page_table[i].flags, *page_start);
+                if (gencgc_debug_madvise) {
+                    fprintf(stderr, "MADVISE page %d, FLAGS = %x: memset %x\n",
+                            i, page_table[i].flags, *page_start);
+                }
+                
                 memset(page_start, 0, GC_PAGE_SIZE);
                 page_table[i].flags &= ~PAGE_MADVISE;
             } else {
-                fprintf(stderr, "MADVISE page %d, FLAGS = %x:  pre-cleared\n",
-                        i, page_table[i].flags);
+                if (gencgc_debug_madvise) {
+                    fprintf(stderr, "MADVISE page %d, FLAGS = %x:  pre-cleared\n",
+                            i, page_table[i].flags);
+                }
             }
         }
     }
@@ -6967,8 +6984,10 @@ free_oldspace(void)
               int page;
               int *page_start;
 
-              fprintf(stderr, "ADVISING pages %d-%d\n", first_page, last_page - 1);
-#if 0
+              if (gencgc_debug_madvise) {
+                  fprintf(stderr, "ADVISING pages %d-%d\n", first_page, last_page - 1);
+              }
+#if 1
               madvise(page_start, GC_PAGE_SIZE * (last_page - first_page), MADV_ZERO_WIRED_PAGES);
 #else
               page_start = (int *) page_address(first_page);
