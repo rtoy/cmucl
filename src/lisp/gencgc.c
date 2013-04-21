@@ -6987,8 +6987,15 @@ free_oldspace(void)
               if (gencgc_debug_madvise) {
                   fprintf(stderr, "ADVISING pages %d-%d\n", first_page, last_page - 1);
               }
-#if 1
-              madvise(page_start, GC_PAGE_SIZE * (last_page - first_page), MADV_ZERO_WIRED_PAGES);
+
+#if defined(__linux__)
+#define GENCGC_MADVISE	MADV_DONTNEED
+#else
+#define GENCGC_MADVISE	MADV_FREE              
+#endif
+
+#if 1 || !defined(__linux__)
+              madvise(page_start, GC_PAGE_SIZE * (last_page - first_page), GENCGC_MADVISE);
 #else
               page_start = (int *) page_address(first_page);
               memset(page_start, 0, GC_PAGE_SIZE * (last_page - first_page));
