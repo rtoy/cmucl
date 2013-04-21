@@ -77,7 +77,7 @@ int gc_write_barrier(void *);
 #define PAGE_LARGE_OBJECT_VAL(page) \
 	(PAGE_LARGE_OBJECT(page) >> PAGE_LARGE_OBJECT_SHIFT)
 
-#define PAGE_MADVISE	0x00000400
+#define PAGE_MADVISE_MASK	0x00000400
 
 /*
  * The generation that this page belongs to. This should be valid for

@@ -290,23 +290,41 @@ boolean check_code_fixups = FALSE;
 
 /* How have a page zero-filled. */
 enum gencgc_unmap_mode {
-    MODE_MAP,                   /* Remap the page */
-    MODE_MEMSET,                /* Manually zero fill */
-    MODE_MADVISE                /* madvise */
+    /* Unmap and mmap the region to get it zeroed */
+    MODE_MAP,
+
+    /* Memset the region to 0 */
+    MODE_MEMSET,
+
+    /*
+     * Call madvise to allow the kernel to free the memory if needed.
+     * But when the region needs to be used, we will zero it if
+     * necessary
+     */
+    MODE_MADVISE,
+
+    /*
+     * Like madvise, except we don't actually call madvize and lazily
+     * zero the region when needed.
+     */
+    MODE_LAZY,
 };
   
     
 /*
+ * Control how freed regions should be zeroed.  Default to MODE_MEMSET
+ * for all systems since tests indicate that it is much faster than
+ * unmapping and re-mapping it to zero the region.  See enum
+ * gencgc_unmap_made for other ossible options.
+ *
+ * XXX: Choose the appopriate mode for each OS/arch.
+ * 
  * To enable unmapping of a page and re-mmaping it to have it zero filled.
  * Note: this can waste a lot of swap on FreeBSD and Open/NetBSD(?) so
  * don't unmap.
  */
 
-#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
 enum gencgc_unmap_mode gencgc_unmap_zero = MODE_MEMSET;
-#else
-enum gencgc_unmap_mode  gencgc_unmap_zero = MODE_MAP;
-#endif
 
 /*
  * Enable checking that newly allocated regions are zero filled.
@@ -924,7 +942,7 @@ handle_heap_overflow(const char *msg, int size)
 
 boolean gencgc_debug_madvise = TRUE;
 
-static void
+static inline void
 handle_madvise_first_page(int first_page)
 {
     int flags = page_table[first_page].flags;
@@ -934,19 +952,15 @@ handle_madvise_first_page(int first_page)
                 first_page, flags, page_table[first_page].bytes_used);
     }
     
-    if ((flags & PAGE_MADVISE) && !PAGE_ALLOCATED(first_page)) {
+    if ((flags & PAGE_MADVISE_MASK) && !PAGE_ALLOCATED(first_page)) {
         int *page_start = (int *) page_address(first_page);
+        
+        if (gencgc_debug_madvise) {
+            fprintf(stderr, ": marker = %x", *page_start);
+        }
         if (*page_start != 0) {
-            if (gencgc_debug_madvise) {
-                fprintf(stderr, ": memset %x", *page_start);
-            }
-            
             memset(page_start, 0, GC_PAGE_SIZE);
-            page_table[first_page].flags &= ~PAGE_MADVISE;
-        } else {
-            if (gencgc_debug_madvise) {
-                fprintf(stderr, ":pre cleared");
-            }
+            page_table[first_page].flags &= ~PAGE_MADVISE_MASK;
         }
     }
     if (gencgc_debug_madvise) {
@@ -960,23 +974,16 @@ handle_madvise_other_pages(int first_page, int last_page)
     int i;
     
     for (i = first_page + 1; i <= last_page; ++i) {
-        if ((gencgc_unmap_zero == MODE_MADVISE)
-            && (page_table[i].flags & PAGE_MADVISE)) {
+        if (page_table[i].flags & PAGE_MADVISE_MASK) {
             int *page_start = (int *) page_address(i);
 
+            if (gencgc_debug_madvise) {
+                fprintf(stderr, "MADVISE page %d, FLAGS = %x: marker %x\n",
+                        i, page_table[i].flags, *page_start);
+            }
             if (*page_start != 0) {
-                if (gencgc_debug_madvise) {
-                    fprintf(stderr, "MADVISE page %d, FLAGS = %x: memset %x\n",
-                            i, page_table[i].flags, *page_start);
-                }
-                
                 memset(page_start, 0, GC_PAGE_SIZE);
-                page_table[i].flags &= ~PAGE_MADVISE;
-            } else {
-                if (gencgc_debug_madvise) {
-                    fprintf(stderr, "MADVISE page %d, FLAGS = %x:  pre-cleared\n",
-                            i, page_table[i].flags);
-                }
+                page_table[i].flags &= ~PAGE_MADVISE_MASK;
             }
         }
     }
@@ -1142,7 +1149,8 @@ gc_alloc_new_region(int nbytes, int unboxed, struct alloc_region *alloc_region)
     alloc_region->free_pointer = alloc_region->start_addr;
     alloc_region->end_addr = alloc_region->start_addr + bytes_found;
 
-    if (gencgc_unmap_zero == MODE_MADVISE) {
+    if ((gencgc_unmap_zero == MODE_MADVISE)
+        || (gencgc_unmap_zero == MODE_LAZY)) {
         handle_madvise_first_page(first_page);
         handle_madvise_other_pages(first_page, last_page);
     }
@@ -1607,26 +1615,9 @@ gc_alloc_large(int nbytes, int unboxed, struct alloc_region *alloc_region)
     /* Setup the pages. */
     orig_first_page_bytes_used = page_table[first_page].bytes_used;
 
-    if (gencgc_unmap_zero == MODE_MADVISE) {
-#if 1
+    if ((gencgc_unmap_zero == MODE_MADVISE)
+        || (gencgc_unmap_zero == MODE_LAZY)) {
         handle_madvise_first_page(first_page);
-#else        
-        int flags = page_table[first_page].flags;
-        
-        fprintf(stderr, "first_page = %d, FLAGS = %x, orig = %d",
-                first_page, flags, orig_first_page_bytes_used);
-        if ((flags & PAGE_MADVISE) && !PAGE_ALLOCATED(first_page)) {
-            int *page_start = (int *) page_address(first_page);
-            if (*page_start != 0) {
-                fprintf(stderr, ": memset %x", *page_start);
-                memset(page_start, 0, GC_PAGE_SIZE);
-                page_table[first_page].flags &= ~PAGE_MADVISE;
-            } else {
-                fprintf(stderr, ":pre cleared");
-            }
-        }
-        fprintf(stderr, "\n");
-#endif
     }
     
     
@@ -1677,24 +1668,11 @@ gc_alloc_large(int nbytes, int unboxed, struct alloc_region *alloc_region)
 	gc_assert(!PAGE_ALLOCATED(next_page));
 	gc_assert(page_table[next_page].bytes_used == 0);
 
-#if 0
         if ((gencgc_unmap_zero == MODE_MADVISE)
-            && (page_table[next_page].flags & PAGE_MADVISE)) {
-            int *page_start = (int *) page_address(next_page);
-
-            if (*page_start != 0) {
-                fprintf(stderr, "MADVISE page %d, FLAGS = %x: memset %x\n",
-                        next_page, page_table[next_page].flags, *page_start);
-                memset(page_start, 0, GC_PAGE_SIZE);
-                page_table[next_page].flags &= ~PAGE_MADVISE;
-            } else {
-                fprintf(stderr, "MADVISE page %d, FLAGS = %x:  pre-cleared\n",
-                        next_page, page_table[next_page].flags);
-            }
+            || (gencgc_unmap_zero == MODE_LAZY)) {
+            handle_madvise_other_pages(next_page - 1, next_page);
         }
-#else
-        handle_madvise_other_pages(next_page - 1, next_page);
-#endif        
+
 	PAGE_FLAGS_UPDATE(next_page, mmask, mflags);
 
 	page_table[next_page].first_object_offset =
@@ -6994,14 +6972,28 @@ free_oldspace(void)
 #define GENCGC_MADVISE	MADV_FREE              
 #endif
 
-#if 1 || !defined(__linux__)
-              madvise(page_start, GC_PAGE_SIZE * (last_page - first_page), GENCGC_MADVISE);
-#else
               page_start = (int *) page_address(first_page);
-              memset(page_start, 0, GC_PAGE_SIZE * (last_page - first_page));
-#endif
+
+              madvise(page_start, GC_PAGE_SIZE * (last_page - first_page), GENCGC_MADVISE);
               for (page = first_page; page < last_page; ++page) {
-                  page_table[page].flags |= PAGE_MADVISE;
+                  page_table[page].flags |= PAGE_MADVISE_MASK;
+                  page_start = (int *) page_address(page);
+                  *page_start = 0xdead0000;
+              }
+              
+              break;
+          }
+          case MODE_LAZY:
+          {
+              int page;
+              int *page_start;
+
+              if (gencgc_debug_madvise) {
+                  fprintf(stderr, "ADVISING pages %d-%d\n", first_page, last_page - 1);
+              }
+
+              for (page = first_page; page < last_page; ++page) {
+                  page_table[page].flags |= PAGE_MADVISE_MASK;
                   page_start = (int *) page_address(page);
                   *page_start = 0xdead0000;
               }
