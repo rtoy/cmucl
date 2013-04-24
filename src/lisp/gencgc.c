@@ -324,7 +324,11 @@ enum gencgc_unmap_mode {
  * don't unmap.
  */
 
+#if defined(DARWIN) || defined(__linux__) || defined(sparc)
+enum gencgc_unmap_mode gencgc_unmap_zero = MODE_LAZY;
+#else
 enum gencgc_unmap_mode gencgc_unmap_zero = MODE_MEMSET;
+#endif
 
 /*
  * Enable checking that newly allocated regions are zero filled.
@@ -940,7 +944,10 @@ handle_heap_overflow(const char *msg, int size)
 #endif
 }
 
-boolean gencgc_debug_madvise = TRUE;
+/*
+ * Enable debug messages for MODE_MADVISE and MODE_LAZY
+ */
+boolean gencgc_debug_madvise = FALSE;
 
 static inline void
 handle_madvise_first_page(int first_page)
