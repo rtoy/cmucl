@@ -352,6 +352,15 @@ boolean gencgc_zero_check_during_free_heap = FALSE;
 #endif
 
 /*
+ * For now, enable the gencgc_zero_check if gencgc_unmap_zero is lazy.
+ * XXX: Remove this additional condition when we feel that
+ * gencgc_unmap_zero is good enough.
+ */
+
+#define DO_GENCGC_ZERO_CHECK	(gencgc_zero_check || (gencgc_unmap_zero == MODE_LAZY))
+#define DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP	(gencgc_zero_check_during_free_heap || (gencgc_unmap_zero == MODE_LAZY))
+
+/*
  * The minimum size for a large object.
  */
 unsigned large_object_size = 4 * GC_PAGE_SIZE;
@@ -959,7 +968,11 @@ handle_madvise_first_page(int first_page)
                 first_page, flags, page_table[first_page].bytes_used);
     }
     
+#if 0
     if ((flags & PAGE_MADVISE_MASK) && !PAGE_ALLOCATED(first_page)) {
+#else
+    if (!PAGE_ALLOCATED(first_page)) {
+#endif
         int *page_start = (int *) page_address(first_page);
         
         if (gencgc_debug_madvise) {
@@ -967,7 +980,10 @@ handle_madvise_first_page(int first_page)
         }
         if (*page_start != 0) {
             memset(page_start, 0, GC_PAGE_SIZE);
+#if 0
             page_table[first_page].flags &= ~PAGE_MADVISE_MASK;
+#else
+#endif
         }
     }
     if (gencgc_debug_madvise) {
@@ -981,7 +997,11 @@ handle_madvise_other_pages(int first_page, int last_page)
     int i;
     
     for (i = first_page + 1; i <= last_page; ++i) {
+#if 0
         if (page_table[i].flags & PAGE_MADVISE_MASK) {
+#else
+            if (!PAGE_ALLOCATED(i)) {
+#endif
             int *page_start = (int *) page_address(i);
 
             if (gencgc_debug_madvise) {
@@ -990,7 +1010,9 @@ handle_madvise_other_pages(int first_page, int last_page)
             }
             if (*page_start != 0) {
                 memset(page_start, 0, GC_PAGE_SIZE);
+#if 0
                 page_table[i].flags &= ~PAGE_MADVISE_MASK;
+#endif
             }
         }
     }
@@ -1162,7 +1184,7 @@ gc_alloc_new_region(int nbytes, int unboxed, struct alloc_region *alloc_region)
         handle_madvise_other_pages(first_page, last_page);
     }
 
-    if (gencgc_zero_check) {
+    if (DO_GENCGC_ZERO_CHECK) {
 	int *p;
 
 	for (p = (int *) alloc_region->start_addr;
@@ -7000,7 +7022,11 @@ free_oldspace(void)
               }
 
               for (page = first_page; page < last_page; ++page) {
-                  page_table[page].flags |= PAGE_MADVISE_MASK;
+                  if (PAGE_ALLOCATED(page)) {
+                      fprintf(stderr, "Page %d is allocated!\n", page);
+
+                  }
+                  
                   page_start = (int *) page_address(page);
                   *page_start = 0xdead0000;
               }
@@ -7956,7 +7982,7 @@ gc_free_heap(void)
 	    if (addr == NULL || addr != page_start)
 		fprintf(stderr, "gc_zero: page moved, 0x%08lx ==> 0x%08lx!\n",
 			(unsigned long) page_start, (unsigned long) addr);
-	} else if (gencgc_zero_check_during_free_heap && page < 16384) {
+	} else if (DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP && page < 16384) {
 	    int *page_start;
 	    unsigned i;
 
