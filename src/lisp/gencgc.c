@@ -288,34 +288,43 @@ boolean verify_dynamic_code_check = FALSE;
 boolean check_code_fixups = FALSE;
 
 
-/* How have a page zero-filled. */
+/*
+ * How to have a page zero-filled.  When a page is freed, we need to
+ * either zero it immediately or mark it as needing to be zero-filled
+ * when it is allocated later.
+ */
 enum gencgc_unmap_mode {
-    /* Unmap and mmap the region to get it zeroed */
+    /*
+     * Unmap and mmap the region to get it zeroed when the page
+     * is freed..
+     */
     MODE_MAP,
 
-    /* Memset the region to 0 */
+    /*
+     * Memset the region to 0 when it is freed.
+     */
     MODE_MEMSET,
 
     /*
      * Call madvise to allow the kernel to free the memory if needed.
-     * But when the region needs to be used, we will zero it if
-     * necessary
+     * But when the region needs to be allocated, we will zero it if
+     * necessary.
      */
     MODE_MADVISE,
 
     /*
      * Like madvise, except we don't actually call madvize and lazily
-     * zero the region when needed.
+     * zero the region when it is allocated.
      */
     MODE_LAZY,
 };
   
     
 /*
- * Control how freed regions should be zeroed.  Default to MODE_MEMSET
+ * Control how freed regions should be zeroed.  Default to MODE_LAZY
  * for all systems since tests indicate that it is much faster than
  * unmapping and re-mapping it to zero the region.  See enum
- * gencgc_unmap_made for other ossible options.
+ * gencgc_unmap_made for other possible options.
  *
  * XXX: Choose the appopriate mode for each OS/arch.
  * 
@@ -352,13 +361,13 @@ boolean gencgc_zero_check_during_free_heap = FALSE;
 #endif
 
 /*
- * For now, enable the gencgc_zero_check if gencgc_unmap_zero is lazy.
- * XXX: Remove this additional condition when we feel that
- * gencgc_unmap_zero is good enough.
+ * For now, enable the gencgc_zero_check if gencgc_unmap_zero is lazy
+ * or madvise.  XXX: Remove this additional condition when we feel
+ * that gencgc_unmap_zero is good enough.
  */
 
-#define DO_GENCGC_ZERO_CHECK	(gencgc_zero_check || (gencgc_unmap_zero == MODE_LAZY))
-#define DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP	(gencgc_zero_check_during_free_heap || (gencgc_unmap_zero == MODE_LAZY))
+#define DO_GENCGC_ZERO_CHECK	(gencgc_zero_check || (gencgc_unmap_zero == MODE_LAZY) || (gencgc_unmap_zero == MODE_MADVISE))
+#define DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP	(gencgc_zero_check_during_free_heap || (gencgc_unmap_zero == MODE_LAZY) || (gencgc_unmap_zero == MODE_MADVISE))
 
 /*
  * The minimum size for a large object.
@@ -954,7 +963,7 @@ handle_heap_overflow(const char *msg, int size)
 }
 
 /*
- * Enable debug messages for MODE_MADVISE and MODE_LAZY
+ * Enables debug messages for MODE_MADVISE and MODE_LAZY
  */
 boolean gencgc_debug_madvise = FALSE;
 
@@ -968,11 +977,7 @@ handle_madvise_first_page(int first_page)
                 first_page, flags, page_table[first_page].bytes_used);
     }
     
-#if 0
-    if ((flags & PAGE_MADVISE_MASK) && !PAGE_ALLOCATED(first_page)) {
-#else
     if (!PAGE_ALLOCATED(first_page)) {
-#endif
         int *page_start = (int *) page_address(first_page);
         
         if (gencgc_debug_madvise) {
@@ -980,10 +985,6 @@ handle_madvise_first_page(int first_page)
         }
         if (*page_start != 0) {
             memset(page_start, 0, GC_PAGE_SIZE);
-#if 0
-            page_table[first_page].flags &= ~PAGE_MADVISE_MASK;
-#else
-#endif
         }
     }
     if (gencgc_debug_madvise) {
@@ -997,11 +998,7 @@ handle_madvise_other_pages(int first_page, int last_page)
     int i;
     
     for (i = first_page + 1; i <= last_page; ++i) {
-#if 0
-        if (page_table[i].flags & PAGE_MADVISE_MASK) {
-#else
-            if (!PAGE_ALLOCATED(i)) {
-#endif
+        if (!PAGE_ALLOCATED(i)) {
             int *page_start = (int *) page_address(i);
 
             if (gencgc_debug_madvise) {
@@ -1010,9 +1007,6 @@ handle_madvise_other_pages(int first_page, int last_page)
             }
             if (*page_start != 0) {
                 memset(page_start, 0, GC_PAGE_SIZE);
-#if 0
-                page_table[i].flags &= ~PAGE_MADVISE_MASK;
-#endif
             }
         }
     }
@@ -6995,19 +6989,12 @@ free_oldspace(void)
                   fprintf(stderr, "ADVISING pages %d-%d\n", first_page, last_page - 1);
               }
 
-#if defined(__linux__)
-#define GENCGC_MADVISE	MADV_DONTNEED
-#else
-#define GENCGC_MADVISE	MADV_FREE              
-#endif
-
               page_start = (int *) page_address(first_page);
 
               madvise(page_start, GC_PAGE_SIZE * (last_page - first_page), GENCGC_MADVISE);
               for (page = first_page; page < last_page; ++page) {
-                  page_table[page].flags |= PAGE_MADVISE_MASK;
                   page_start = (int *) page_address(page);
-                  *page_start = 0xdead0000;
+                  *page_start = PAGE_NEEDS_ZEROING_MARKER;
               }
               
               break;
@@ -7028,7 +7015,7 @@ free_oldspace(void)
                   }
                   
                   page_start = (int *) page_address(page);
-                  *page_start = 0xdead0000;
+                  *page_start = PAGE_NEEDS_ZEROING_MARKER;
               }
               
               break;
