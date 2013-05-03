@@ -361,13 +361,21 @@ boolean gencgc_zero_check_during_free_heap = FALSE;
 #endif
 
 /*
- * For now, enable the gencgc_zero_check if gencgc_unmap_zero is lazy
- * or madvise.  XXX: Remove this additional condition when we feel
- * that gencgc_unmap_zero is good enough.
+ * For now, enable the zero check if gencgc_zero_check is true or if
+ * gencgc_unmap_zero is MODE_LAZY or MODE_MADVISE.  XXX: Remove this
+ * additional condition when we feel that gencgc_unmap_zero is good
+ * enough.
  */
 
 #define DO_GENCGC_ZERO_CHECK	(gencgc_zero_check || (gencgc_unmap_zero == MODE_LAZY) || (gencgc_unmap_zero == MODE_MADVISE))
-#define DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP	(gencgc_zero_check_during_free_heap || (gencgc_unmap_zero == MODE_LAZY) || (gencgc_unmap_zero == MODE_MADVISE))
+
+/*
+ * Only to the zero check during free_heap if both
+ * gencgc_zero_check_during_free_heap is true and gencgc_unmap_zero is
+ * MODE_MAP or MODE_MEMSET because in all other modes, unallocated
+ * pages are known not to contain zeroes.
+ */
+#define DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP	(gencgc_zero_check_during_free_heap && ((gencgc_unmap_zero == MODE_MAP) || (gencgc_unmap_zero == MODE_MEMSET)))
 
 /*
  * The minimum size for a large object.
@@ -7942,7 +7950,7 @@ gc_free_heap(void)
     if (gencgc_verbose > 1)
 	fprintf(stderr, "Free heap\n");
 
-    for (page = 0; page < dynamic_space_pages; page++)
+    for (page = 0; page < dynamic_space_pages; page++) {
 	/* Skip Free pages which should already be zero filled. */
 	if (PAGE_ALLOCATED(page)) {
 	    char *page_start, *addr;
@@ -7963,27 +7971,46 @@ gc_free_heap(void)
 	    os_protect((os_vm_address_t) page_start, GC_PAGE_SIZE, OS_VM_PROT_ALL);
 	    page_table[page].flags &= ~PAGE_WRITE_PROTECTED_MASK;
 
-	    os_invalidate((os_vm_address_t) page_start, GC_PAGE_SIZE);
-	    addr =
-		(char *) os_validate((os_vm_address_t) page_start, GC_PAGE_SIZE);
-	    if (addr == NULL || addr != page_start)
-		fprintf(stderr, "gc_zero: page moved, 0x%08lx ==> 0x%08lx!\n",
-			(unsigned long) page_start, (unsigned long) addr);
-	} else if (DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP && page < 16384) {
+            switch (gencgc_unmap_zero) {
+              case MODE_MAP:
+                  os_invalidate((os_vm_address_t) page_start, GC_PAGE_SIZE);
+                  addr =
+                      (char *) os_validate((os_vm_address_t) page_start, GC_PAGE_SIZE);
+                  if (addr == NULL || addr != page_start)
+                      fprintf(stderr, "gc_zero: page moved, 0x%08lx ==> 0x%08lx!\n",
+                              (unsigned long) page_start, (unsigned long) addr);
+                  break;
+              case MODE_MEMSET:
+              case MODE_MADVISE:
+              case MODE_LAZY:
+                  /*
+                   * XXX: Do we really need to zero the page here?
+                   */
+                  
+                  memset(page_start, 0, GC_PAGE_SIZE);
+                  break;
+            }
+	} else if (DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP) {
 	    int *page_start;
 	    unsigned i;
 
-	    /* Double check that the page is zero filled. */
+	    /*
+             * Double check that the page is zero filled.
+             */
 	    gc_assert(!PAGE_ALLOCATED(page));
 	    gc_assert(page_table[page].bytes_used == 0);
 
-	    page_start = (int *) page_address(page);
+            page_start = (int *) page_address(page);
 
-	    for (i = 0; i < 1024; i++)
-		if (page_start[i] != 0)
-		    fprintf(stderr, "** Free region not zero @ %lx\n",
-			    (unsigned long) (page_start + i));
+            for (i = 0; i < GC_PAGE_SIZE/sizeof(*page_start); i++) {
+                if (page_start[i] != 0) {
+                    fprintf(stderr, "** Free region not zero @ page %d, %lx\n",
+                            page,
+                            (unsigned long) (page_start + i));
+                }
+            }
 	}
+    }
 
     bytes_allocated = 0;
 
