@@ -7076,12 +7076,9 @@ verify_space(lispobj * start, size_t words)
 	if (Pointerp(thing)) {
 	    int page_index = find_page_index((void *) thing);
 	    int to_readonly_space = (READ_ONLY_SPACE_START <= thing &&
-				     thing <
-
-				     SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
+				     thing < SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
 	    unsigned long to_static_space =
 		((unsigned long) static_space <= thing
-
 		 && thing < SymbolValue(STATIC_SPACE_FREE_POINTER));
 
 	    /* Does it point to the dynamic space? */
