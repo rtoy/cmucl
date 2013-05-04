@@ -45,10 +45,6 @@ ifdef FEATURE_UNICODE
 CPP_DEFINE_OPTIONS += -DUNICODE
 endif
 
-# Default to using gcc.  But clang also works.
-CC = gcc
-
-
 LD = ld
 
 ifeq ($(filter 2% 3%, $(shell $(CC) -dumpversion)),)
