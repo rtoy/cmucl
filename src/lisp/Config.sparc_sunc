@@ -1,5 +1,9 @@
 # -*- Mode: makefile -*-
 
+# Build cmucl using Sun C compiler.  We assume cc is Sun's C compiler.
+# If you don't have it, why are you using this Config anyway?  You're
+# on your own if you use this Config without Sun C compiler available.
+
 include Config.sparc_common
 
 # For v8plus support (allows 64-bit integer support on V9
@@ -20,8 +24,6 @@ CC_V8PLUS = -m32 -xarch=sparc
 AS_V8PLUS = -m32 -xarch=sparc
 endif
 
-CC = cc
-CPP = cc
 CFLAGS += -xlibmieee -O
-DEPEND_FLAGS = -E -xM
+DEPEND_FLAGS = -xM
 ASFLAGS = $(AS_V8PLUS)
