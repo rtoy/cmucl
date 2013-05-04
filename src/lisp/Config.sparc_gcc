@@ -24,7 +24,8 @@ endif
 # and SIGSEGV) to lisp properly.
 #
 
-CC = gcc -O -Wall
-CPP = gcc -E
+CC = gcc
+CPP = gcc
+CFLAGS += -O -Wall
 DEPEND_FLAGS = -MM
 ASFLAGS = -g -traditional-cpp $(AS_V8PLUS)

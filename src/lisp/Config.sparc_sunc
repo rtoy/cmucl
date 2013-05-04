@@ -20,7 +20,8 @@ CC_V8PLUS = -m32 -xarch=sparc
 AS_V8PLUS = -m32 -xarch=sparc
 endif
 
-CC = cc -xlibmieee -O
-CPP = cc -E
-DEPEND_FLAGS = -xM
+CC = cc
+CPP = cc
+CFLAGS += -xlibmieee -O
+DEPEND_FLAGS = -E -xM
 ASFLAGS = $(AS_V8PLUS)
