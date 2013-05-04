@@ -6999,7 +6999,7 @@ free_oldspace(void)
 
               page_start = (int *) page_address(first_page);
 
-              madvise(page_start, GC_PAGE_SIZE * (last_page - first_page), GENCGC_MADVISE);
+              madvise((void*) page_start, GC_PAGE_SIZE * (last_page - first_page), GENCGC_MADVISE);
               for (page = first_page; page < last_page; ++page) {
                   page_start = (int *) page_address(page);
                   *page_start = PAGE_NEEDS_ZEROING_MARKER;
