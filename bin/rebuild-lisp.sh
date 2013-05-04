@@ -1,9 +1,8 @@
 #!/bin/sh
 
-while getopts "M:h?" arg
+while getopts "h?" arg
 do
     case $arg in
-      M) MFLAGS="$OPTARG" ;;
       h) usage ;;
       \?) usage ;;
     esac
@@ -11,11 +10,11 @@ done
 
 usage() 
 {
-    echo "rebuild.-lisp.sh [-h?] [-M opts] target-directory"
+    echo "rebuild.-lisp.sh [-h?] target-directory"
     echo "    -h        this help"
     echo "    -?        this help"
-    echo "    -M opts   Options to pass to make"
-
+    echo ""
+    echo "Force recompiling all the C code in the specified directory".
 }
 
 shift `expr $OPTIND - 1`
@@ -43,4 +42,4 @@ fi
 
 export MAKE
 
-${MAKE} -C $TARGET/lisp $MFLAGS clean && ${MAKE} -C $TARGET/lisp $MFLAGS
+${MAKE} -C $TARGET/lisp clean && ${MAKE} -C $TARGET/lisp
