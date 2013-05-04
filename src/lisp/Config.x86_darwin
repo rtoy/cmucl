@@ -2,9 +2,6 @@
 
 include Config.x86_common
 
-# Use clang on darwin.
-CC = clang
-
 # Compile code that will run on OSX 10.5 (Tiger)
 MIN_VER = -mmacosx-version-min=10.5
 
@@ -20,5 +17,3 @@ OS_LINK_FLAGS = -m32 $(MIN_VER)
 OS_LIBS =
 
 EXEC_FINAL_OBJ = exec-final.o
-
-
