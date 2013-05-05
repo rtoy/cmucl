@@ -27,3 +27,4 @@ endif
 CFLAGS += -xlibmieee -O
 DEPEND_FLAGS = -xM
 ASFLAGS = $(AS_V8PLUS)
+OS_LINK_FLAGS = -M /usr/lib/ld/map.noexstk

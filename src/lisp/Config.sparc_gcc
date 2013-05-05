@@ -29,3 +29,4 @@ CPP = gcc
 CFLAGS += -O -Wall
 DEPEND_FLAGS = -MM
 ASFLAGS = -g -traditional-cpp $(AS_V8PLUS)
+OS_LINK_FLAGS += -Wl,-M,/usr/lib/ld/map.noexstk
