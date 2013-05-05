@@ -1,4 +1,3 @@
-CC = gcc
 LIBS = -lXm -lXt -lX11
 CFLAGS = -O
 LDFLAGS =
