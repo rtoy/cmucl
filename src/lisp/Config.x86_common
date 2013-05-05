@@ -62,8 +62,7 @@ ARCH_SRC = x86-arch.c
 OS_SRC = os-common.c e_rem_pio2.c k_rem_pio2.c 
 
 NM = nm -gp
-DEPEND = $(CC) -MM -E
-DEPEND_FLAGS = 
+DEPEND_FLAGS = -MM
 
 # This no longer has aliasing problems, so no need to use
 # -ffloat-store and -fno-strict-aliasing anymore.
