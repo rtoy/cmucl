@@ -19,8 +19,10 @@
 (in-package "PPC")
 
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(make-callback-trampoline callback-accessor-form
 	  compatible-function-types-p))
+)
 
 (defun callback-accessor-form (type sp offset)
   (let ((parsed-type (alien::parse-alien-type type)))
