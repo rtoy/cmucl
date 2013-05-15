@@ -61,6 +61,7 @@
 
 ;;;; Machine Architecture parameters:
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(word-bits byte-bits char-bits word-shift word-bytes char-bytes
 	  fixnum-tag-bits fixnum-tag-mask positive-fixnum-bits
 
@@ -86,6 +87,7 @@
 	  float-underflow-trap-bit float-overflow-trap-bit
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit))
+)
 
 #+double-double
 (export '(double-double-float-digits))
@@ -208,11 +210,13 @@
 
 ;;;; Description of the target address space.
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(target-read-only-space-start
 	  target-static-space-start
 	  target-dynamic-space-start
 	  target-foreign-linkage-space-start
 	  target-foreign-linkage-entry-size))
+)
 
 ;;; Where to put the different spaces.  Must match the C code!
 ;;; 
@@ -228,6 +232,7 @@
 
 ;;;; Other random constants.
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(halt-trap pending-interrupt-trap error-trap cerror-trap
 	  breakpoint-trap function-end-breakpoint-trap
 	  after-breakpoint-trap allocation-trap
@@ -239,6 +244,7 @@
 #+heap-overflow-check
 (export '(dynamic-space-overflow-error-trap
 	  dynamic-space-overflow-warning-trap))
+)
 	  
 (defenum (:suffix -trap :start 8)
   halt
@@ -268,7 +274,9 @@
 
 ;;;; Static symbols.
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(static-symbols static-functions))
+)
 
 ;;; These symbols are loaded into static space directly after NIL so
 ;;; that the system can compute their address by adding a constant

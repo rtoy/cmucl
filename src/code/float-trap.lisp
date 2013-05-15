@@ -18,7 +18,9 @@
 (in-package "VM")
 (intl:textdomain "cmucl")
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(current-float-trap floating-point-modes sigfpe-handler))
+)
 (in-package "EXTENSIONS")
 (export '(set-floating-point-modes get-floating-point-modes
 	  with-float-traps-masked))

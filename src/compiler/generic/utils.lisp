@@ -17,8 +17,10 @@
 (in-package "VM")
 (intl:textdomain "cmucl")
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(fixnumize static-symbol-p static-symbol-offset offset-static-symbol
 	  static-function-offset))
+)
 
 
 
