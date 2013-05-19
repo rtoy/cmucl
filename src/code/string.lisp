@@ -1172,13 +1172,24 @@
 	   (type string sequence))
   (with-string sequence
     (let* ((length (- end start))
-	   (string (make-string length))
-	   (j length))
-      (declare (type kernel:index length j))
-      (loop for i = start then n as n = (%glyph-f sequence i) do
-	    (replace string sequence :start1 (decf j (- n i)) :start2 i :end2 n)
-	    while (< n end))
-      string)))
+	   (r (make-string length)))
+      (do ((dst-index (1- length) (1- dst-index))
+	   (src-index start (1+ src-index)))
+	  ((minusp dst-index))
+	(declare (fixnum src-index dst-index))
+	(let ((current-char (schar sequence src-index)))
+	  (cond ((and (lisp::surrogatep current-char :leading)
+		      (plusp dst-index))
+		 ;; Reverse surrogate pairs correctly, which means the
+		 ;; pair isn't reversed at all.
+		 (incf src-index)
+		 (setf (schar r dst-index) (schar sequence src-index))
+		 (decf dst-index)
+		 (setf (schar r dst-index) current-char))
+		(t
+		 ;; Easy case
+		 (setf (schar r dst-index) current-char)))))
+      r)))
 
 #+unicode
 (defun string-nreverse* (sequence)
