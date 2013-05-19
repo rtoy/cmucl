@@ -59,6 +59,7 @@ New in this release:
     * FILE-POSITION no longer returns incorrect values.  See ticket
       #79.
     * Fix error in (format t "~ve" 21 5d-324).  (See ticket #80).
+    * String reverse is much faster (upto 20 times)
 
 
   * Trac Tickets:
@@ -77,6 +78,8 @@ New in this release:
     * Ticket #79 fixed.
     * Ticket #77 fixed.
     * Ticket #80 fixed.
+    * Ticket #81 fixed.
+    * Ticket #83 fixed.
 
   * Other changes:
     * -8 option for build-all.sh is deprecated since we don't
