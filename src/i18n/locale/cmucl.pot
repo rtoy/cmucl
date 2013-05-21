@@ -18343,7 +18343,9 @@ msgid "Redefining ~(~A~) ~S to be a constant."
 msgstr ""
 
 #: src/compiler/ir1util.lisp
-msgid "Return the TLF-NUMBER and FORM-NUMBER encoded as fixnum."
+msgid ""
+"Return the TLF-NUMBER and FORM-NUMBER encoded as fixnum, if\n"
+"  possible.  Otherwise, return Nil."
 msgstr ""
 
 #: src/compiler/ir1util.lisp
