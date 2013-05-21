@@ -1177,18 +1177,7 @@
 	   (src-index start (1+ src-index)))
 	  ((minusp dst-index))
 	(declare (fixnum src-index dst-index))
-	(let ((current-char (schar sequence src-index)))
-	  (cond ((and (lisp::surrogatep current-char :leading)
-		      (plusp dst-index))
-		 ;; Reverse surrogate pairs correctly, which means the
-		 ;; pair isn't reversed at all.
-		 (incf src-index)
-		 (setf (schar r dst-index) (schar sequence src-index))
-		 (decf dst-index)
-		 (setf (schar r dst-index) current-char))
-		(t
-		 ;; Easy case
-		 (setf (schar r dst-index) current-char)))))
+	(setf (schar r dst-index) (schar sequence src-index)))
       r)))
 
 #+unicode
@@ -1196,16 +1185,15 @@
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type string sequence))
   (with-string sequence
-    (flet ((rev (start end)
-	     (do ((i start (1+ i))
-		  (j (1- end) (1- j)))
-		 ((>= i j))
-	       (declare (type kernel:index i j))
-	       (rotatef (schar sequence i) (schar sequence j)))))
-      (let ((len end))
-	(loop for i = start then n as n = (%glyph-f sequence i) do
-	  (rev i n) while (< n len))
-	(rev start end))))
+    (let ((length (- end start)))
+      (declare (fixnum length))
+      (do ((left-index 0 (1+ left-index))
+	   (right-index (1- length) (1- right-index))
+	   (half-length (truncate length 2)))
+	  ((= left-index half-length) sequence)
+	(declare (fixnum left-index right-index half-length))
+	(rotatef (aref sequence left-index)
+		 (aref sequence right-index)))))
   sequence)
 
 

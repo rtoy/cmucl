@@ -60,6 +60,8 @@ New in this release:
       #79.
     * Fix error in (format t "~ve" 21 5d-324).  (See ticket #80).
     * String reverse is much faster (upto 20 times)
+    * REVERSE and NREVERSE on strings will reverse surrogate pairs.
+      (Previously, surrogate pairs weren't reversed.)
 
 
   * Trac Tickets:
