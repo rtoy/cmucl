@@ -23,7 +23,7 @@ New in this release:
   * Feature enhancements
  
   * Changes
-    * ASDF2 updated to version 2.32.
+    * ASDF2 updated to version 3.0.1..
     * DEFINE-COMPILER-MACRO now has source-location information for
       the macro definition.
     * :ALIEN-CALLBACK added to *FEATURES* for platforms that support
