@@ -18,6 +18,15 @@
 
 (export '(string-to-nfd string-to-nfkc string-to-nfkd string-to-nfc
 	  unicode-complete unicode-complete-name
+	  unicode-full-case-lower
+	  unicode-full-case-upper
+	  unicode-full-case-title
+	  unicode-category
+	  +unicode-category-lower+
+	  +unicode-category-other+
+	  +unicode-category-graphic+
+	  +unicode-category-upper+
+	  +unicode-category-title+
 	  load-all-unicode-data))
 
 (defvar *unidata-path* #p"ext-formats:unidata.bin")

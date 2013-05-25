@@ -324,6 +324,8 @@
 (comf "target:code/intl-tramp")
 (comf "target:code/intl")
 
+(when (c:backend-featurep :unicode)
+  (comf "target:code/unicode"))
 ); let *byte-compile-top-level*
 
 ); with-compiler-log-file
