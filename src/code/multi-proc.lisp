@@ -1977,6 +1977,6 @@
 		   (setf (lock-process ,lock) nil)))))))
 
 (defun process-join (process)
-  (mp:process-wait (format nil "Waiting for thread ~A to complete" thread)
-                   (lambda () (not (mp:process-alive-p thread))))
+  (mp:process-wait (format nil "Waiting for thread ~A to complete" process)
+                   (lambda () (not (mp:process-alive-p process))))
   (values-list (process-%return-values process)))
