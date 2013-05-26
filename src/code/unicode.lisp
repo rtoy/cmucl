@@ -36,14 +36,14 @@
 	      ((= index (the fixnum end)))
 	    (declare (fixnum index))
 	    (multiple-value-bind (code wide)
-		(lisp:codepoint string index)
+		(codepoint string index)
 	      (when wide (incf index))
 	      ;; Handle ASCII specially because this is called early in
 	      ;; initialization, before unidata is available.
 	      (cond ((< 96 code 123)
 		     (write-char (code-char (decf code 32)) s))
 		    ((> code 127)
-		     (write-string (lisp:unicode-full-case-upper code) s))
+		     (write-string (unicode-full-case-upper code) s))
 		    (t
 		     (multiple-value-bind (hi lo)
 			 (surrogates code)
@@ -82,14 +82,14 @@
 	      ((= index (the fixnum end)))
 	    (declare (fixnum index))
 	    (multiple-value-bind (code wide)
-		(lisp:codepoint string index)
+		(codepoint string index)
 	      (when wide (incf index))
 	      ;; Handle ASCII specially because this is called early in
 	      ;; initialization, before unidata is available.
 	      (cond ((< 64 code 91)
 		     (write-char (code-char (incf code 32)) s))
 		    ((> code 127)
-		     (write-string (lisp:unicode-full-case-lower code) s))
+		     (write-string (unicode-full-case-lower code) s))
 		    (t
 		     ;; Handle codes below 64
 		     (multiple-value-bind (hi lo)
@@ -230,7 +230,7 @@
 	((char-word-break-category (c)
 	   ;; Map our unicode word break property into what this
 	   ;; algorithm wants.
-	   (let ((cat (lisp::unicode-word-break c)))
+	   (let ((cat (unicode-word-break c)))
 	     (case cat
 	       ((:lf :cr :newline)
 		:sep)
@@ -241,7 +241,7 @@
 	   ;; Given a valid index i into s, returns the left context
 	   ;; at i.
 	   (multiple-value-bind (c widep)
-	       (lisp:codepoint s i n)
+	       (codepoint s i n)
 	     (let* ((back
 		     ;; If we're at a regular character or a leading
 		     ;; surrogate, decrementing by 1 gets us the to
@@ -279,7 +279,7 @@
 
 	   (let* ((j1 (- j 1)))
 	     (multiple-value-bind (c widep)
-		 (lisp:codepoint s j1)
+		 (codepoint s j1)
 	       (when (eql widep -1)
 		 ;; Back up one more if we're at the trailing
 		 ;; surrogate.
@@ -302,7 +302,7 @@
 		    (if (< i j) j n)))
 		 (otherwise n))
 	       (multiple-value-bind (c widep)
-		   (lisp:codepoint s j)
+		   (codepoint s j)
 		 (let* ((next-j
 			 ;; The next character is either 1 or 2 code
 			 ;; units away.  For a leading surrogate, it's
@@ -394,7 +394,7 @@
 	     n)
 	    (t
 	     (multiple-value-bind (c widep)
-		 (lisp:codepoint s i)
+		 (codepoint s i)
 	       (declare (ignore c))
 	       (lookup (+ i (if (eql widep 1) 2 1)) (left-context i))))))))
 
@@ -416,15 +416,15 @@
 			 (:simple
 			  #'(lambda (ch)
 			      (multiple-value-bind (hi lo)
-				  (lisp::surrogates (lisp::unicode-upper ch))
+				  (surrogates (unicode-upper ch))
 				(write-char hi result)
 				(when lo (write-char lo result)))))
 			 (:full
 			  #'(lambda (ch)
-			      (write-string (lisp::unicode-full-case-upper ch) result)))
+			      (write-string (unicode-full-case-upper ch) result)))
 			 (:title
 			  #'(lambda (ch)
-			      (write-string (lisp::unicode-full-case-title ch) result))))))
+			      (write-string (unicode-full-case-title ch) result))))))
 	    (do ((start start next)
 		 (next (string-next-word-break string start)
 		       (string-next-word-break string next)))
@@ -432,7 +432,7 @@
 		     (>= start end)))
 	      ;; Convert the first character of the word to upper
 	      ;; case, and then make the rest of the word lowercase.
-	      (funcall upper (lisp:codepoint string start))
+	      (funcall upper (codepoint string start))
 	      (write-string (string-downcase string :start (1+ start)
 						    :end next
 						    :casing casing)
@@ -459,29 +459,29 @@
 		   (or (< 47 m 58) (< 64 m 91) (< 96 m 123)
 		       #+(and unicode (not unicode-bootstrap))
 		       (and (> m 127)
-			    (<= lisp::+unicode-category-letter+
-				(lisp::unicode-category m)
-				(+ lisp::+unicode-category-letter+ #x0F)))))
+			    (<= +unicode-category-letter+
+				(unicode-category m)
+				(+ +unicode-category-letter+ #x0F)))))
 		 (upper (ch)
 		   (ecase casing
 		     (:simple
 		      #'(lambda (ch)
 			  (multiple-value-bind (hi lo)
-			      (lisp::surrogates (lisp::unicode-upper ch))
+			      (surrogates (unicode-upper ch))
 			    (write-char hi s)
 			    (when lo (write-char lo s)))))
 		     (:full
 		      #'(lambda (ch)
-			  (write-string (lisp::unicode-full-case-upper ch) s)))
+			  (write-string (unicode-full-case-upper ch) s)))
 		     (:title
 		      #'(lambda (ch)
-			  (write-string (lisp::unicode-full-case-title ch) s))))))
+			  (write-string (unicode-full-case-title ch) s))))))
 	    (do ((index start (1+ index))
 		 (newword t))
 		((= index (the fixnum end)))
 	      (declare (fixnum index))
 	      (multiple-value-bind (code wide)
-		  (lisp:codepoint string index)
+		  (codepoint string index)
 		(when wide (incf index))
 		(cond ((not (alphanump code))
 		       (multiple-value-bind (hi lo)
@@ -495,7 +495,7 @@
 		       (setq newword ()))
 		      (t
 		       ;; char is case-modifiable, but not first
-		       (write-string (lisp:unicode-full-case-lower code) s))))))
+		       (write-string (unicode-full-case-lower code) s))))))
 	  (write-string string s :start end :end offset-slen))))))
 
 (defun string-capitalize (string &key (start 0) end
