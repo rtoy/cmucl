@@ -231,11 +231,11 @@
   '(let* ((len (length seq))
 	  (res (make-string len)))
      (declare (optimize (safety 0)))
-     (bit-bash-copy seq
-		    vector-data-byte-offset
-		    res
-		    vector-data-byte-offset
-		    (the vm::offset (* len vm:char-bytes)))
+     (byte-bash-copy seq
+		     vector-data-byte-offset
+		     res
+		     vector-data-byte-offset
+		     (the vm::offset (* len vm:char-bytes)))
      res))
 
 (deftransform replace ((string1 string2 &key (start1 0) (start2 0)
