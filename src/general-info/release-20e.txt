@@ -43,10 +43,15 @@ New in this release:
         Pentium.)
     * Update unicode to support Unicode 6.2.
     * Add MP:PROCESS-JOIN, as given in ticket #77.
+    * Added UNICODE package to hold Unicode-related functions.
+      Currently contains Unicode extended versions of STRING-UPCASE,
+      STRING-DOWNCASE, and STRING-CAPITALIZE.
 
   * ANSI compliance fixes:
     * Attempts to modify the standard readtable or the standard pprint
       dispatch table will now signal a continuable error.
+    * Remove the Unicode extensions from string-upcase and friends.
+      This functionality is moved to the new UNICODE package.
 
   * Bugfixes:
     * REPLACE and friends on strings were limited to strings less than
