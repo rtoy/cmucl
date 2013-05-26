@@ -3867,21 +3867,7 @@ msgstr ""
 #: src/code/string.lisp
 msgid ""
 "Given a string, returns a new string that is a copy of it with all\n"
-"  lower case alphabetic characters converted to uppercase.  Casing is\n"
-"  :simple or :full for simple or full case conversion, respectively."
-msgstr ""
-
-#: src/code/string.lisp
-msgid ""
-"Given a string, returns a new string that is a copy of it with all\n"
 "  upper case alphabetic characters converted to lowercase."
-msgstr ""
-
-#: src/code/string.lisp
-msgid ""
-"Given a string, returns a new string that is a copy of it with all\n"
-"  upper case alphabetic characters converted to lowercase.  Casing is\n"
-"  :simple or :full for simple or full case conversion, respectively."
 msgstr ""
 
 #: src/code/string.lisp
@@ -3891,18 +3877,6 @@ msgid ""
 "  chars in the word converted to lower case. A ``word'' is defined\n"
 "  to be a string of case-modifiable characters delimited by\n"
 "  non-case-modifiable chars."
-msgstr ""
-
-#: src/code/string.lisp
-msgid ""
-"Given a string, returns a copy of the string with the first\n"
-"  character of each ``word'' converted to upper-case, and remaining\n"
-"  chars in the word converted to lower case. Casing is :simple or\n"
-"  :full for simple or full case conversion, respectively.  If\n"
-"  Unicode-Word-Break is non-Nil, then the Unicode word-breaking\n"
-"  algorithm is used to determine the word boundaries.  Otherwise, A\n"
-"  ``word'' is defined to be a string of case-modifiable characters\n"
-"  delimited by non-case-modifiable chars.  "
 msgstr ""
 
 #: src/code/string.lisp
@@ -14993,6 +14967,71 @@ msgstr ""
 
 #: src/code/intl.lisp
 msgid "~&Dumping ~D messages for domain ~S~%"
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with\n"
+"  all lower case alphabetic characters converted to uppercase using\n"
+"  full case conversion."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with\n"
+"  all lower case alphabetic characters converted to uppercase.  Casing\n"
+"  is :simple or :full for simple or full case conversion,\n"
+"  respectively."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with\n"
+"  all uppercase alphabetic characters converted to lowercase using\n"
+"  full case conversion.."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with all\n"
+"  uppercase alphabetic characters converted to lowercase.  Casing is\n"
+"  :simple or :full for simple or full case conversion, respectively."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, S, and a starting index, return the index of the\n"
+"  next character that is not part of the word containing the character\n"
+"  at the index, or the length of S if the word containing the\n"
+"  character extends to the end of S.  If the index is negative or\n"
+"  valid index into S, the returned value will be strictly greater than\n"
+"  the index."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Capitalize String using the Unicode word-break algorithm to find\n"
+"  the words in String.  The beginning is capitalized depending on the\n"
+"  value of Casing"
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Capitalize String using the Common Lisp word-break algorithm to find\n"
+"  the words in String.  The beginning is capitalized depending on the\n"
+"  value of Casing"
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, returns a copy of the string with the first\n"
+"  character of each ``word'' converted to upper-case, and remaining\n"
+"  chars in the word converted to lower case. Casing is :simple, :full\n"
+"  or :title for simple, full or title case conversion, respectively.  If\n"
+"  Unicode-Word-Break is non-Nil, then the Unicode word-breaking\n"
+"  algorithm is used to determine the word boundaries.  Otherwise, A\n"
+"  ``word'' is defined to be a string of case-modifiable characters\n"
+"  delimited by non-case-modifiable chars.  "
 msgstr ""
 
 #: src/compiler/macros.lisp
