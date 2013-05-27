@@ -289,9 +289,9 @@
       (let ((n-seq (gensym))
 	    (n-length (gensym)))
 	(args n-seq)
-	(lets `(,n-length (the index (* (length ,n-seq) vm:char-bits))))
+	(lets `(,n-length (the index (* (length ,n-seq) vm:char-bytes))))
 	(all-lengths n-length)
-	(forms `((bit-bash-copy ,n-seq vector-data-bit-offset
+	(forms `((byte-bash-copy ,n-seq vector-data-byte-offset
 		  res start
 		  ,n-length)
 		 (start (+ start ,n-length))))))
@@ -310,9 +310,9 @@
 	       (declare (ignore rtype))
 	       (let* (,@(lets)
 			(res (make-string (truncate (the index (+ ,@(all-lengths)))
-						    vm:char-bits))))
+						    vm:char-bytes))))
 		 (declare (type index ,@(all-lengths)))
-		 (let ((start vector-data-bit-offset))
+		 (let ((start vector-data-byte-offset))
 		   ,@(nestify (forms)))
 		 res))))
 	result))))
