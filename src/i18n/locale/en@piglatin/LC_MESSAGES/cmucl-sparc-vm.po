@@ -822,6 +822,14 @@ msgstr "Ootay anymay esultray aluesvay omfray c-allcay."
 msgid "Method ~S not defined for ~S"
 msgstr "Ethodmay ~S otnay efinedday orfay ~S"
 
+#: src/compiler/sparc/c-callback.lisp
+msgid ""
+"Cons up a piece of code which calls call-callback with INDEX and a\n"
+"pointer to the arguments."
+msgstr ""
+"Onscay upway away iecepay ofway odecay ichwhay allscay allcay-allbackcay ithway INDEX andway away\n"
+"ointerpay otay ethay argumentsway."
+
 #: src/compiler/sparc/call.lisp
 msgid "more-arg-context"
 msgstr "oremay-argway-ontextcay"
