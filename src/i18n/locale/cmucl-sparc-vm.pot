@@ -782,6 +782,12 @@ msgstr ""
 msgid "Method ~S not defined for ~S"
 msgstr ""
 
+#: src/compiler/sparc/c-callback.lisp
+msgid ""
+"Cons up a piece of code which calls call-callback with INDEX and a\n"
+"pointer to the arguments."
+msgstr ""
+
 #: src/compiler/sparc/call.lisp
 msgid "more-arg-context"
 msgstr ""
