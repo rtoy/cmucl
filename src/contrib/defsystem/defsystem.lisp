@@ -5492,4 +5492,9 @@ nil)
     (format t "done.~%")))
 
 
+#+cmu
+(setf (getf ext:*herald-items* :defsystem)
+      `(,#'(lambda (stream)
+	     (write-string (intl:gettext "    Defsystem ") stream)
+	     (write-string *defsystem-version*))))
 ;;; end of file -- defsystem.lisp --
