@@ -223,7 +223,7 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
     if (!(ex)) gc_abort ();     \
   } while (0)
 #else
-#define gc_assert(ex)  (void) 0
+#define gc_assert(ex)  (void) (ex)
 #endif
 
 
@@ -807,8 +807,10 @@ print_generation_stats(int verbose)
 	    }
 	}
 
+#ifdef GC_ASSERTIONS
 	gc_assert(generations[i].bytes_allocated ==
 		  generation_bytes_allocated(i));
+#endif
 	fprintf(stderr, " %5d: %5d %5d %5d %5d %10d %6d %10d %4d %3d %7.4f\n",
 		i, boxed_cnt, unboxed_cnt, large_boxed_cnt, large_unboxed_cnt,
 		generations[i].bytes_allocated,
@@ -3249,11 +3251,13 @@ static void
 apply_code_fixups(struct code *old_code, struct code *new_code)
 {
     int nheader_words, ncode_words, nwords;
+    char *code_start_addr;
+#ifdef DEBUG_APPLY_CODE_FIXUPS
     char *constants_start_addr, *constants_end_addr;
-    char *code_start_addr, *code_end_addr;
+    char *code_end_addr;
+#endif
     lispobj fixups = NIL;
     unsigned long displacement =
-
 	(unsigned long) new_code - (unsigned long) old_code;
     struct vector *fixups_vector;
 
@@ -3262,8 +3266,8 @@ apply_code_fixups(struct code *old_code, struct code *new_code)
      * be a fixnum if it's x86 compiled code - check.
      */
     if (new_code->trace_table_offset & 0x3) {
-#if 0
-	fprintf(stderr, "*** Byte compiled code object at %x.\n", new_code);
+#ifdef DEBUG_APPLY_CODE_FIXUPS
+	fprintf(stderr, "*** Byte compiled code object at %p.\n", new_code);
 #endif
 	return;
     }
@@ -3272,18 +3276,18 @@ apply_code_fixups(struct code *old_code, struct code *new_code)
     ncode_words = fixnum_value(new_code->code_size);
     nheader_words = HeaderValue(*(lispobj *) new_code);
     nwords = ncode_words + nheader_words;
-#if 0
+#ifdef DEBUG_APPLY_CODE_FIXUPS
     fprintf(stderr,
-	    "*** Compiled code object at %x: header_words=%d code_words=%d .\n",
+	    "*** Compiled code object at %p: header_words=%d code_words=%d .\n",
 	    new_code, nheader_words, ncode_words);
 #endif
+    code_start_addr = (char *) new_code + nheader_words * sizeof(lispobj);
+#ifdef DEBUG_APPLY_CODE_FIXUPS
     constants_start_addr = (char *) new_code + 5 * sizeof(lispobj);
     constants_end_addr = (char *) new_code + nheader_words * sizeof(lispobj);
-    code_start_addr = (char *) new_code + nheader_words * sizeof(lispobj);
     code_end_addr = (char *) new_code + nwords * sizeof(lispobj);
-#if 0
     fprintf(stderr,
-	    "*** Const. start = %x; end= %x; Code start = %x; end = %x\n",
+	    "*** Const. start = %p; end= %p; Code start = %p; end = %p\n",
 	    constants_start_addr, constants_end_addr, code_start_addr,
 	    code_end_addr);
 #endif
@@ -3303,13 +3307,13 @@ apply_code_fixups(struct code *old_code, struct code *new_code)
 	if (check_code_fixups)
 	    sniff_code_object(new_code, displacement);
 
-#if 0
+#ifdef DEBUG_APPLY_CODE_FIXUPS
 	fprintf(stderr, "Fixups for code object not found!?\n");
 	fprintf(stderr,
-		"*** Compiled code object at %x: header_words=%d code_words=%d .\n",
+		"*** Compiled code object at %p: header_words=%d code_words=%d .\n",
 		new_code, nheader_words, ncode_words);
 	fprintf(stderr,
-		"*** Const. start = %x; end= %x; Code start = %x; end = %x\n",
+		"*** Const. start = %p; end= %p; Code start = %p; end = %p\n",
 		constants_start_addr, constants_end_addr, code_start_addr,
 		code_end_addr);
 #endif
@@ -3321,13 +3325,13 @@ apply_code_fixups(struct code *old_code, struct code *new_code)
     /* Could be pointing to a forwarding pointer. */
     if (Pointerp(fixups) && find_page_index((void *) fixups_vector) != -1
 	&& fixups_vector->header == 0x01) {
-#if 0
+#ifdef DEBUG_APPLY_CODE_FIXUPS
 	fprintf(stderr, "* FF\n");
 #endif
 	/* If so then follow it. */
 	fixups_vector = (struct vector *) PTR((lispobj) fixups_vector->length);
     }
-#if 0
+#ifdef DEBUG_APPLY_CODE_FIXUPS
     fprintf(stderr, "Got the fixups\n");
 #endif
 
@@ -4386,7 +4390,9 @@ scav_hash_entries(struct hash_table *hash_table, lispobj weak, int removep)
 {
     unsigned kv_length;
     lispobj *kv_vector;
+#ifdef DEBUG_SCAV_HASH_ENTRIES
     lispobj empty_symbol;
+#endif
     unsigned *index_vector, *next_vector, *hash_vector;
     unsigned length = UINT_MAX;
     unsigned next_vector_length = UINT_MAX;
@@ -4396,7 +4402,9 @@ scav_hash_entries(struct hash_table *hash_table, lispobj weak, int removep)
     kv_length = fixnum_value(kv_vector[1]);
     kv_vector += 2;
 
+#ifdef DEBUG_SCAV_HASH_ENTRIES
     empty_symbol = kv_vector[1];
+#endif
 
     index_vector = u32_vector(hash_table->index_vector, &length);
     next_vector = u32_vector(hash_table->next_vector, &next_vector_length);
@@ -4430,7 +4438,7 @@ scav_hash_entries(struct hash_table *hash_table, lispobj weak, int removep)
         } else {
 	    /* If the key is EQ-hashed and moves, schedule it for rehashing. */
 	    scavenge(&kv_vector[2 * i], 2);
-#if 0
+#ifdef DEBUG_SCAV_HASH_ENTRIES
 	    new_key = kv_vector[2 * i];
 	    new_index = EQ_HASH(new_key) % length;
 
