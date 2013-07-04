@@ -23,7 +23,7 @@ New in this release:
   * Feature enhancements
  
   * Changes
-    * ASDF2 updated to version 3.0.1..
+    * ASDF2 updated to version 3.0.2.
     * DEFINE-COMPILER-MACRO now has source-location information for
       the macro definition.
     * :ALIEN-CALLBACK added to *FEATURES* for platforms that support
@@ -64,7 +64,7 @@ New in this release:
     * FILE-POSITION no longer returns incorrect values.  See ticket
       #79.
     * Fix error in (format t "~ve" 21 5d-324).  (See ticket #80).
-    * String reverse is much faster (upto 20 times)
+    * String reverse is much faster (upto 20 times).
     * REVERSE and NREVERSE on strings will reverse surrogate pairs.
       (Previously, surrogate pairs weren't reversed.)
 
