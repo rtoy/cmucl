@@ -3141,45 +3141,58 @@
 ;;;
 (defun not-more-contagious (x y)
   (declare (type continuation x y))
-  (let ((type1 (continuation-type x))
-	(type2 (continuation-type y)))
-    (if (and (numeric-type-p type1) (numeric-type-p type2))
-	(let ((class1 (numeric-type-class type1))
-	      (class2 (numeric-type-class type2))
-	      (format1 (numeric-type-format type1))
-	      (format2 (numeric-type-format type2))
-	      (complexp1 (numeric-type-complexp type1))
-	      (complexp2 (numeric-type-complexp type2)))
-	  (cond ((or (null complexp1) (null class1)) Nil)
-		((member class1 '(integer rational)) 'T)
-		((and (eq class1 'float) (null complexp2)) Nil)
-		((and (eq class1 'float) (null class2)) Nil)
-		((and (eq class1 'float) (eq class2 'float))
-		 (and (ecase complexp2
-			(:real (eq complexp1 :real))
-			(:complex 'T))
-		      (ecase format2
-			((nil short-float single-float)
-			 (member format1 '(short-float single-float)))
-			#-double-double
-			((double-float long-float) 'T)
-			#+double-double
-			(double-float
-			 (member format1 '(short-float single-float
-					   double-float)))
-			#+long-float
-			(long-float 'T)
-			#+double-double
-			(double-double-float 't))))
-		((and (eq class1 'float) (member class2 '(integer rational)))
-		 Nil)
-		(t
-		 (error (intl:gettext "Unexpected types: ~s ~s~%") type1 type2)))))))
+  (let ((x-type (continuation-type x))
+	(y-type (continuation-type y)))
+    (flet
+	((not-more-contagious-1 (t1 t2)
+	   (if (and (numeric-type-p t1) (numeric-type-p t2))
+	       (let ((class1 (numeric-type-class t1))
+		     (class2 (numeric-type-class t2))
+		     (format1 (numeric-type-format t1))
+		     (format2 (numeric-type-format t2))
+		     (complexp1 (numeric-type-complexp t1))
+		     (complexp2 (numeric-type-complexp t2)))
+		 (cond ((or (null complexp1) (null class1)) Nil)
+		       ((member class1 '(integer rational)) 'T)
+		       ((and (eq class1 'float) (null complexp2)) Nil)
+		       ((and (eq class1 'float) (null class2)) Nil)
+		       ((and (eq class1 'float) (eq class2 'float))
+			(and (ecase complexp2
+			       (:real (eq complexp1 :real))
+			       (:complex 'T))
+			     (ecase format2
+			       ((nil short-float single-float)
+				(member format1 '(short-float single-float)))
+			       #-double-double
+			       ((double-float long-float) 'T)
+			       #+double-double
+			       (double-float
+				(member format1 '(short-float single-float
+						  double-float)))
+			       #+long-float
+			       (long-float 'T)
+			       #+double-double
+			       (double-double-float 't))))
+		       ((and (eq class1 'float) (member class2 '(integer rational)))
+			Nil)
+		       (t
+			(error (intl:gettext "Unexpected types: ~s ~s~%") t1 t2))))))
+	 (maybe-convert-to-numeric (type)
+	   (if (member-type-p type)
+	       (convert-member-type type)
+	       type)))
+      (dolist (x (prepare-arg-for-derive-type x-type))
+	(dolist (y (prepare-arg-for-derive-type y-type))
+	  (unless (not-more-contagious-1
+		   (maybe-convert-to-numeric x)
+		   (maybe-convert-to-numeric y))
+	    (return-from not-more-contagious nil))))
+      t)))
 
 ;;; Fold (- x 0).
 ;;;
 ;;;    If y is not constant, not zerop, or is contagious, or a negative
-;;; float -0.0 then give up because (- -0.0 -0.0) is 0.0, not -0.0.
+;;; float -0.0 then give up because (- -0.0 0.0) is 0.0, not -0.0.
 ;;;
 (deftransform - ((x y) (t (constant-argument number)) * :when :both)
   "fold zero arg"
