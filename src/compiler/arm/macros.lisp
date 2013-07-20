@@ -13,7 +13,7 @@
 ;;;
 
 (in-package "ARM")
-#+nil
+#+(or)
 (intl:textdomain "cmucl-sparc-vm")
 
 
@@ -27,14 +27,16 @@
        (inst move ,n-dst ,n-src))))
 
 ;; (loadw object base &optional (offset 0) (lowtag 0) temp)
+;; (storew object base &optional (offset 0) (lowtag 0) temp)
 ;;
-;; Load a word at a given address into the register OBJECT. The
-;; address of the word is in register BASE, plus an offset given by
-;; OFFSET, which is in words.  LOWTAG is an adjustment to OFFSET to
-;; account for any tag bits used in the BASE descriptor register.
+;; Load a word at a given address into the register OBJECT, or store
+;; OBJECT at the given address.. The address of the word is in
+;; register BASE, plus an offset given by OFFSET, which is in words.
+;; LOWTAG is an adjustment to OFFSET to account for any tag bits used
+;; in the BASE descriptor register.
 ;;
 ;; In some situations, the offset may be so large that it cannot fit
-;; into the offset field of the LD instruction (a 13-bit signed
+;; into the offset field of the LDR(STR) instruction (a 16-bit signed
 ;; quantity).  In this situation, the TEMP non-descriptor register, if
 ;; supplied, is used to compute the correct offset.  If TEMP is not
 ;; given, the offset is assumed to fit.  (TEMP must be a
@@ -43,7 +45,7 @@
 ;;
 ;; Samething for storew, except we store OBJECT at the given address.
 (macrolet
-    ((frob (op inst shift)
+    ((def-load/store-word (op inst shift)
      `(defmacro ,op (object base &optional (offset 0) (lowtag 0) temp)
        (if temp
 	   (let ((offs (gensym)))
@@ -54,8 +56,8 @@
 		     (inst li ,temp ,offs)
 		     (inst ,',inst ,object (make-ea ,base :offset ,temp))))))
 	   `(inst ,',inst ,object (make-ea ,base :offset (- (ash ,offset ,',shift) ,lowtag)))))))
-  (frob loadw ldr word-shift)
-  (frob storew str word-shift))
+  (def-load/store-word loadw ldr word-shift)
+  (def-load/store-word storew str word-shift))
 
 (defmacro load-symbol (reg symbol)
   `(inst add ,reg null-tn (static-symbol-offset ,symbol)))
