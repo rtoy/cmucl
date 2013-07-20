@@ -101,7 +101,7 @@
       (:little-endian
        `(inst ldb ,n-target (make-ea ,n-source :offset ,n-offset)))
       (:big-endian
-       `(inst ldb ,n-target (make-ea ,n-source :offset (+ ,n-offset 3)))))))
+       `(inst ldb ,n-target (make-ea ,n-source :offset (+ ,n-offset (1- vm:word-bytes))))))))
 
 ;;; Macros to handle the fact that we cannot use the machine native call and
 ;;; return instructions. 
