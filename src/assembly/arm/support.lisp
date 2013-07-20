@@ -5,15 +5,16 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/assembly/sparc/support.lisp $")
+  "$Header: src/assembly/arm/support.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-(in-package "SPARC")
+(in-package "ARM")
 
 (def-vm-support-routine generate-call-sequence (name style vop)
   (ecase style
     (:raw
+     #+(or)
      (let ((temp (make-symbol "TEMP"))
 	   (lip (make-symbol "LIP")))
        (values 
@@ -22,8 +23,10 @@
 	`((:temporary (:scs (non-descriptor-reg) :from (:eval 0) :to (:eval 1))
 		      ,temp)
 	  (:temporary (:scs (interior-reg) :from (:eval 0) :to (:eval 1))
-		      ,lip)))))
+		      ,lip))))
+     `(error "generate-call-sequence :raw not implemented"))
     (:full-call
+     #+(or)
      (let ((temp (make-symbol "TEMP"))
 	   (nfp-save (make-symbol "NFP-SAVE"))
 	   (lra (make-symbol "LRA")))
@@ -52,27 +55,34 @@
 		      ,lra)
 	  (:temporary (:scs (control-stack) :offset nfp-save-offset)
 		      ,nfp-save)
-	  (:save-p :compute-only)))))
+	  (:save-p :compute-only))))
+     `(error "generate-call-sequence :full-call not implemented"))
     (:none
+     #+(or)
      (let ((temp (make-symbol "TEMP")))
        (values 
 	`((inst ji ,temp (make-fixup ',name :assembly-routine))
 	  (inst nop))
 	`((:temporary (:scs (non-descriptor-reg) :from (:eval 0) :to (:eval 1))
-		      ,temp)))))))
+		      ,temp))))
+     `(error "generate-call-sequence :none not implemented"))))
 
 (def-vm-support-routine generate-return-sequence (style)
   (ecase style
     (:raw
+     #+(or)
      `((inst j
 	     (make-random-tn :kind :normal
 			     :sc (sc-or-lose 'interior-reg *backend*)
 			     :offset lip-offset)
 	     8)
-       (inst nop)))
+       (inst nop))
+     `(error "generate-return-sequence :raw not implemented"))
     (:full-call
+     #+(or)
      `((lisp-return (make-random-tn :kind :normal
 				    :sc (sc-or-lose 'descriptor-reg *backend*)
 				    :offset lra-offset)
-		    :offset 2)))
+		    :offset 2))
+     `(error "generate-return-sequence :full-call not implemented"))
     (:none)))
