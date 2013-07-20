@@ -1203,6 +1203,27 @@
   `(handler-case (progn ,@forms)
      (error (condition) (values nil condition))))
 
+
+;;;; Reader
+
+(define-condition standard-readtable-modified-error (reference-condition error)
+  ((operation :initarg :operation
+	      :reader standard-readtable-modified-operation))
+  (:report (lambda (condition stream)
+	     (format stream "~S would modify the standard readtable."
+		     (standard-readtable-modified-operation condition))))
+  (:default-initargs :references `((:ansi-cl :section (2 1 1 2))
+				   (:ansi-cl :glossary "standard readtable"))))
+
+;;;; Pprint dispatch
+
+(define-condition standard-pprint-dispatch-table-modified-error (reference-condition error)
+  ((operation :initarg :operation
+	      :reader standard-pprint-dispatch-table-modified-operation))
+  (:report (lambda (condition stream)
+	     (format stream "~S would modify the standard pprint dispatch table."
+		     (standard-pprint-dispatch-table-modified-operation condition))))
+  (:default-initargs :references `((:ansi-cl :glossary "standard pprint dispatch table"))))
 
 
 ;;;; Restart definitions.
@@ -1249,3 +1270,4 @@
 (define-nil-returning-restart use-value (value)
   "Transfer control and value to a restart named use-value, returning nil if
    none exists.")
+

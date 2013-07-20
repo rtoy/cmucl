@@ -488,7 +488,22 @@
 				  (declare (double-float y*pi))
 				  (complex
 				   (coerce (* pow (%cos y*pi)) rtype)
-				   (coerce (* pow (%sin y*pi)) rtype)))))))))))))
+				   (coerce (* pow (%sin y*pi)) rtype))))))))))))
+	     (expt-xfrm (b p)
+	       ;; Apply the same transformation as in the deftransform
+	       ;; for expt in compiler/srctran.lisp.  Only call this
+	       ;; if B is more contagious than P.  Otherwise, the type
+	       ;; of the result will be wrong which will confuse the
+	       ;; compiler!  Return NIL if the transform can't be
+	       ;; applied.
+	       (cond
+		 ((= p 2) (* b b))
+		 ((= p -2) (/ (* b b)))
+		 ((= p 3) (* b b b))
+		 ((= p -3) (/ (* b b b)))
+		 ((= p 1/2) (sqrt b))
+		 ((= p -1/2) (/ (sqrt b)))
+		 (t nil))))
       ;; This is really messy and should be cleaned up.  The easiest
       ;; way to see if we're doing what we should is the macroexpand
       ;; the number-dispatch and check each branch.
@@ -502,29 +517,36 @@
 	 (intexp base power))
 	(((foreach single-float double-float)
 	  rational)
-	 (real-expt base power '(dispatch-type base)))
+	 (or (expt-xfrm base power)
+	     (real-expt base power '(dispatch-type base))))
 	(((foreach fixnum (or bignum ratio) single-float)
 	  (foreach ratio single-float))
-	 (real-expt base power 'single-float))
+	 (or (expt-xfrm (coerce base 'single-float) power)
+	     (real-expt base power 'single-float)))
 	(((foreach fixnum (or bignum ratio) single-float double-float)
 	  double-float)
-	 (real-expt base power 'double-float))
+	 (or (expt-xfrm (coerce base 'double-float) power)
+	     (real-expt base power 'double-float)))
 	((double-float single-float)
-	 (real-expt base power 'double-float))
+	 (or (expt-xfrm (coerce base 'double-float) power)
+	     (real-expt base power 'double-float)))
 	#+double-double
 	(((foreach fixnum (or bignum ratio) single-float double-float
 		   double-double-float)
 	  double-double-float)
-	 (dd-%pow (coerce base 'double-double-float) power))
+	 (or (expt-xfrm (coerce base 'double-double-float) power)
+	     (dd-%pow (coerce base 'double-double-float) power)))
 	#+double-double
 	((double-double-float
 	  (foreach fixnum (or bignum ratio) single-float double-float))
-	 (dd-%pow base (coerce power 'double-double-float)))
+	 (or (expt-xfrm base power)
+	     (dd-%pow base (coerce power 'double-double-float))))
 	(((foreach (complex rational) (complex single-float) (complex double-float)
 		   #+double-double (complex double-double-float))
 	  rational)
-	 (* (expt (abs base) power)
-	    (cis (* power (phase base)))))
+	 (or (expt-xfrm base power)
+	     (* (expt (abs base) power)
+		(cis (* power (phase base))))))
 	#+double-double
 	((double-double-float
 	  complex)
@@ -560,36 +582,45 @@
 	  (foreach single-float (complex single-float)))
 	 (if (and (zerop base) (plusp (realpart power)))
 	     (* base power)
-	     (exp (* power (log base)))))
+	     (or (expt-xfrm (coerce base '(complex single-float)) power)
+		 (exp (* power (log base))))))
 	(((foreach (complex rational) (complex single-float))
 	  (foreach double-float (complex double-float)))
 	 (if (and (zerop base) (plusp (realpart power)))
 	     (* base power)
-	     (exp (* power (log (coerce base '(complex double-float)))))))
+	     (or (expt-xfrm (coerce base '(complex double-float))
+			    power)
+		 (exp (* power (log (coerce base '(complex double-float))))))))
 	#+double-double
 	(((foreach (complex rational) (complex single-float))
 	  (foreach double-double-float (complex double-double-float)))
 	 (if (and (zerop base) (plusp (realpart power)))
 	     (* base power)
-	     (exp (* power (log (coerce base '(complex double-double-float)))))))
+	     (or (expt-xfrm (coerce base '(complex double-double-float))
+			    power)
+		 (exp (* power (log (coerce base '(complex double-double-float))))))))
 	(((foreach (complex double-float))
-	  (foreach single-float double-float (complex single-float)
-		   (complex double-float)))
+	  (foreach single-float double-float
+		   (complex single-float) (complex double-float)))
 	 (if (and (zerop base) (plusp (realpart power)))
 	     (* base power)
-	     (exp (* power (log base)))))
+	     (or (expt-xfrm base power)
+		 (exp (* power (log base))))))
 	#+double-double
 	(((foreach (complex double-float))
 	  (foreach double-double-float (complex double-double-float)))
 	 (if (and (zerop base) (plusp (realpart power)))
 	     (* base power)
-	     (exp (* power (log (coerce base '(complex double-double-float)))))))
+	     (or (expt-xfrm (coerce base '(complex double-double-float))
+			    power)
+		 (exp (* power (log (coerce base '(complex double-double-float))))))))
 	#+double-double
 	(((foreach (complex double-double-float))
 	  (foreach float (complex float)))
 	 (if (and (zerop base) (plusp (realpart power)))
 	     (* base power)
-	     (exp (* power (log base)))))))))
+	     (or (expt-xfrm base power)
+		 (exp (* power (log base))))))))))
 
 ;; Log base 2 of a real number.  The result is a either a double-float
 ;; or double-double-float number (real or complex, as appropriate),

@@ -17,10 +17,12 @@
 
 (intl:textdomain "cmucl-sparc-vm")
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register
 	  sigcontext-float-register sigcontext-floating-point-modes
 	  extern-alien-name sanctify-for-execution))
+)
 
 #+complex-fp-vops
 (sys:register-lisp-feature :complex-fp-vops)

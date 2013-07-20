@@ -556,7 +556,8 @@
 
 (defun prefilter-reg-r (value dstate)
   (declare (type reg value)
-           (type disassem:disassem-state dstate))
+           (type disassem:disassem-state dstate)
+	   (ignore dstate))
   value)
 
 ;;; This is a sort of bogus prefilter that just
@@ -3115,6 +3116,7 @@
   (imm :type 'imm-data))
 
 (defun emit-sse-inst (segment dst src prefix opcode &key operand-size)
+  (declare (ignore operand-size))
   (when prefix
     (emit-byte segment prefix))
   (emit-byte segment #x0f)
@@ -3223,11 +3225,13 @@
 ;; MOVHPS (respectively).  I (rtoy) don't know how to fix that;
 ;; instead. just print a note with the correct instruction name.
 (defun movlps-control (chunk inst stream dstate)
+  (declare (ignore inst))
   (when stream
     (when (>= (ldb (byte 8 16) chunk) #xc0)
       (disassem:note "MOVHLPS" dstate))))
 
 (defun movhps-control (chunk inst stream dstate)
+  (declare (ignore inst))
   (when stream
     (when (>= (ldb (byte 8 16) chunk) #xc0)
       (disassem:note "MOVLHPS" dstate))))

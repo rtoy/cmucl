@@ -4,18 +4,6 @@
 %
 % by Raymond Toy
 
-
-% define a new conditional statement which allows us to include
-% stuff conditionally when compiling to PDF. 
-\newif\ifpdf
-\ifx\pdfoutput\undefined
-   \pdffalse
-\else
-   \pdfoutput=1
-   \pdftrue
-\fi
-
-
 % use Palatino
 \renewcommand{\rmdefault}{ppl}
 \ifpdf

@@ -19,12 +19,13 @@
 
 (intl:textdomain "cmucl-ppc-vm")
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register
 	  sigcontext-float-register sigcontext-floating-point-modes
 	  extern-alien-name sanctify-for-execution
 	  sigcontext-lr))
-
+)
 
 ;;;; The sigcontext structure.
 ;;;; Note that the layout of this thing matches the word offsets PT_xxx, not

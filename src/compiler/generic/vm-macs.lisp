@@ -163,8 +163,8 @@
 	(forms `(def-alloc ,alloc-trans ,offset ,variable-length ,header
 			   ,lowtag ',(inits))))
       `(progn
-	 (export ',(exports))
 	 (eval-when (compile load eval)
+	   (export ',(exports))
 	   (%define-primitive-object
 	    ',(make-primitive-object :name name
 				     :header header

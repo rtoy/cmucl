@@ -76,12 +76,26 @@ check_personality(struct utsname *name, char *const *argv, char *const *envp)
 #if defined(__i386) || defined(__x86_64)
     int major_version, minor_version, patch_version;
     char *p;
+    
     p = name->release;
     major_version = atoi(p);
-    p = strchr(p,'.')+1;
-    minor_version = atoi(p);
-    p = strchr(p,'.')+1;
-    patch_version = atoi(p);
+
+    /*
+     * Try to extract the minor and patch version, but if we can't
+     * just set it to zero.  In particular, some Debian systems have a
+     * release like "3.7-trunk-686-pae" which is missing the patch
+     * version.
+     */
+
+    p = strchr(p,'.');
+    if (p) {
+        minor_version = atoi(p + 1);
+        p = strchr(p + 1,'.');
+        patch_version = p ? atoi(p + 1) : 0;
+    } else {
+        minor_version = 0;
+        patch_version = 0;
+    }
 
     if ((major_version == 2
          /* Some old kernels will apparently lose unsupported personality flags

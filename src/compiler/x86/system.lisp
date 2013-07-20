@@ -590,7 +590,6 @@
 
 (define-vop (read-cycle-counter)
   (:translate read-cycle-counter)
-  (:guard (backend-featurep :pentium))
   (:args )
   (:policy :fast-safe)
   (:results (lo :scs (unsigned-reg))
@@ -614,7 +613,6 @@
     (move hi edx)
     (move lo eax)))
 
-#+pentium
 (defun read-cycle-counter ()
   (read-cycle-counter))
 

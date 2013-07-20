@@ -43,7 +43,7 @@ FILES = *.tex
 .SUFFIXES: .tex .dvi .ps .ps1 .pdf .html .info
 
 
-all: cmu-user.ps
+all: cmu-user.pdf
 
 
 # Runs LaTeX once, then reruns LaTeX as many times as necessary to get
@@ -53,7 +53,7 @@ all: cmu-user.ps
 # been modified.
 %.dvi : %.tex $(FILES)
 	$(LATEX) $<
-	@while ( grep Rerun $*.log > /dev/null ); do \
+	@while ( grep -q "Rerun to get cross" $*.log > /dev/null ); do \
 	   $(LATEX) $<; \
 	done
 	if [ "$<" = "cmu-user.tex" ]; then $(MAKE) index; else $(MAKE) index-letter; fi
@@ -62,11 +62,11 @@ all: cmu-user.ps
 
 %.pdf : %.tex $(FILES)
 	$(PDFLATEX) $<
-	@while ( grep Rerun $*.log > /dev/null ); do \
-	   $(PDFLATEX) $<; \
-	done
 	if [ "$<" = "cmu-user.tex" ]; then $(MAKE) index; else $(MAKE) index-letter; fi
-	$(PDFLATEX) $<
+	@while ( grep 'Rerun to get cross' $*.log > /dev/null ); do \
+	   $(PDFLATEX) $<; \
+	   if [ "$<" = "cmu-user.tex" ]; then $(MAKE) index; else $(MAKE) index-letter; fi; \
+	done
 
 # the "-fix" option to hevea makes it run as many times as necessary
 # to resolve all cross-references and generate an index.
@@ -102,7 +102,7 @@ cmu-user-letter.tex: cmu-user.tex
 
 
 clean:
-	rm -f *.log *.bbl *.blg *.ps *.pdf *.aux *.lof *.toc *.gif *.out *.ilg
+	rm -f *.log *.bbl *.blg *.ps *.pdf *.aux *.lof *.toc *.out *.ilg
 	rm -f *.vdx *.cdx *.tdx *.fdx *.idx *.cnd *.fnd *.tnd *.vnd *.haux
 	rm -f *.html *.hcnd *.htnd *.hvnd *.hfnd *.htoc
 
