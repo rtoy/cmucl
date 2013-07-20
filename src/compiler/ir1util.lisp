@@ -447,9 +447,11 @@
   form)
 
 (defun encode-form-numbers (tlf-number form-number)
-  "Return the TLF-NUMBER and FORM-NUMBER encoded as fixnum."
-  (declare (type (unsigned-byte 14) tlf-number form-number))
-  (logior tlf-number (ash form-number 14)))
+  "Return the TLF-NUMBER and FORM-NUMBER encoded as fixnum, if
+  possible.  Otherwise, return Nil."
+  (when (and (typep tlf-number '(unsigned-byte 14))
+	     (typep form-number '(unsigned-byte 14)))
+    (logior tlf-number (ash form-number 14))))
 
 (defun decode-form-numbers (fixnum)
   "Return the tlf-number and form-number from an encoded FIXNUM."
@@ -460,7 +462,7 @@
   "Return a source-location for the call site."
   nil)
 
-(define-compiler-macro source-location ()
+(define-compiler-macro source-location (&whole whole)
   (let ((file-info (let ((rest (source-info-current-file *source-info*)))
 		     (cond (rest (car rest))
 			   ;; MAKE-LISP-SOURCE-INFO doesn't set current-file
@@ -468,18 +470,24 @@
 	(form-numbers (encode-form-numbers
 		       (source-path-tlf-number *current-path*)
 		       (source-path-form-number *current-path*))))
-    (etypecase (file-info-name file-info)
-      (pathname
-       `(quote ,(make-file-source-location 
-		 :form-numbers form-numbers
-		 :pathname (namestring-for-debug-source file-info))))
-      ((member :stream)
-       `(quote ,(make-stream-source-location :form-numbers form-numbers
-					     :user-info *user-source-info*)))
-      ((member :lisp)
-       `(quote ,(make-lisp-source-location 
-		 :form-numbers form-numbers
-		 :form (aref (file-info-forms file-info) 0)))))))
+    (cond (form-numbers
+	   (etypecase (file-info-name file-info)
+	     (pathname
+	      `(quote ,(make-file-source-location 
+			:form-numbers form-numbers
+			:pathname (namestring-for-debug-source file-info))))
+	     ((member :stream)
+	      `(quote ,(make-stream-source-location :form-numbers form-numbers
+						    :user-info *user-source-info*)))
+	     ((member :lisp)
+	      `(quote ,(make-lisp-source-location 
+			:form-numbers form-numbers
+			:form (aref (file-info-forms file-info) 0))))))
+	  (t
+	   (warn "Dropping source-location because form numbers are too large: ~S ~S"
+		 (source-path-tlf-number *current-path*)
+		 (source-path-form-number *current-path*))
+	   whole))))
 
 
 ;;; MAKE-LEXENV  --  Interface

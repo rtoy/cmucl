@@ -372,26 +372,28 @@ gc_trigger_hit(HANDLER_ARGS)
 boolean
 interrupt_maybe_gc(HANDLER_ARGS)
 {
+    ucontext_t *ucontext = (ucontext_t *) context;
+
     if (!foreign_function_call_active
 #ifndef INTERNAL_GC_TRIGGER
-	&& gc_trigger_hit(signal, code, context)
+	&& gc_trigger_hit(signal, code, ucontext)
 #endif
 	) {
 #ifndef INTERNAL_GC_TRIGGER
 	clear_auto_gc_trigger();
 #endif
 
-	if (arch_pseudo_atomic_atomic(context)) {
+	if (arch_pseudo_atomic_atomic(ucontext)) {
 	    maybe_gc_pending = TRUE;
 	    if (pending_signal == 0) {
-		copy_sigmask(&pending_mask, &context->uc_sigmask);
-		FILLBLOCKSET(&context->uc_sigmask);
+		copy_sigmask(&pending_mask, &ucontext->uc_sigmask);
+		FILLBLOCKSET(&ucontext->uc_sigmask);
 	    }
-	    arch_set_pseudo_atomic_interrupted(context);
+	    arch_set_pseudo_atomic_interrupted(ucontext);
 	} else {
-	    fake_foreign_function_call(context);
+	    fake_foreign_function_call(ucontext);
 	    funcall0(SymbolFunction(MAYBE_GC));
-	    undo_fake_foreign_function_call(context);
+	    undo_fake_foreign_function_call(ucontext);
 	}
 
 	return TRUE;

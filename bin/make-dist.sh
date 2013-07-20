@@ -12,7 +12,7 @@
 # $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/make-dist.sh,v 1.20 2011/04/11 16:34:49 rtoy Exp $
 
 usage() {
-    echo "make-dist.sh: [-hbg] [-G group] [-O owner] [-I destdir] [-M mandir] dir version [arch os]"
+    echo "make-dist.sh: [-hbg] [-G group] [-O owner] [-I destdir] [-M mandir] dir [version arch os]"
     echo "  -h           This help"
     echo "  -b           Use bzip2 compression"
     echo "  -g           Use gzip compression"
@@ -39,6 +39,9 @@ usage() {
     echo "and cmucl-<version>-<arch>-<os>.extra.tar.<c> where <version>,"
     echo "<arch>, and <os> are given values, and <c> is gz or bz2 depending"
     echo "on the selected compression method."
+    echo ""
+    echo "If version is not given, then a version is determined automatically"
+    echo "based on the result of git describe."
     echo ""
     echo "If arch and os are not given, the script will attempt to figure an"
     echo "appropriate value for arch and os from the running system."
@@ -100,12 +103,15 @@ do
 	h | \?) usage; exit 1 ;;
     esac
 done
-	
+
 shift `expr $OPTIND - 1`
 
 # Figure out the architecture and OS
 ARCH=
 OS=
+
+# Figure out the architecture and OS
+def_arch_os
 
 if [ -n "${INSTALL_DIR}" ]; then
     # Doing direct installation
@@ -115,10 +121,20 @@ if [ -n "${INSTALL_DIR}" ]; then
 	def_arch_os
     fi
 elif [ $# -lt 2 ]; then
-    usage
+    # Version not specified so choose a version based on the git hash.
+    GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
+
+    if expr "X${GIT_HASH}" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]' > /dev/null; then
+	VERSION=`expr "${GIT_HASH}" : "snapshot-\(.*\)"`
+    fi
+
+    if expr "X${GIT_HASH}" : 'X[0-9][0-9][a-f]' > /dev/null; then
+	VERSION="${GIT_HASH}"
+    fi
+
+    echo "Defaulting version to $VERSION"
 else
-    # Figure out the architecture and OS
-    def_arch_os
+    VERSION="$2"
     if [ $# -eq 3 ]; then
 	ARCH=$3
     elif [ $# -eq 4 ]; then
@@ -147,9 +163,7 @@ fi
 
 TARGET="`echo $1 | sed 's:/*$::'`"
 
-if [ -z "$INSTALL_DIR" ]; then
-    VERSION=$2
-else
+if [ -n "$INSTALL_DIR" ]; then
     VERSION="today"
 fi
 

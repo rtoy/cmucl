@@ -225,7 +225,7 @@ char *
 parse_addr(char **ptr)
 {
     char *token = parse_token(ptr);
-    long result;
+    long result = 0;
 
     if (token == NULL) {
 	printf("Expected an address.\n");
@@ -316,7 +316,7 @@ parse_lispobj(char **ptr)
 {
     char *token = parse_token(ptr);
     long pointer;
-    lispobj result;
+    lispobj result = 0;
 
     if (token == NULL) {
 	printf("Expected an object.\n");

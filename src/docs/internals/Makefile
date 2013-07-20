@@ -18,7 +18,7 @@ FILES=architecture.tex back.tex compiler-overview.tex compiler.tex debugger.tex 
 
 FIGURES=
 
-all : $(MASTERFILE).dvi
+all : $(MASTERFILE).pdf
 
 $(MASTERFILE).dvi : $(FILES) $(FIGURES)
 	$(LATEX) $(MASTERFILE).tex
@@ -41,12 +41,21 @@ firsttime: $(MASTERFILE).dvi
 
 
 %.dvi : %.tex
+	$(LATEX) $<
+	@while ( grep Rerun $*.log > /dev/null ); do \
+	   $(LATEX) $<; \
+	done
+	$(LATEX) $<
 
 %.eps :	%.fig
 	fig2dev -L ps $^ $@
 
 %.pdf : %.tex
 	$(PDFLATEX) $^
+	@while ( grep 'Rerun to get cross' $*.log > /dev/null ); do \
+	   $(PDFLATEX) $<; \
+	done
+	$(PDFLATEX) $<
 
 %.ps : %.dvi
 	$(DVIPS) $(DVIPSOPTS) -o $@ $*

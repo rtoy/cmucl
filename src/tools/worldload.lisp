@@ -168,6 +168,9 @@
 
 (maybe-byte-load "target:code/intl")
 
+#+alien-callback
+(maybe-byte-load "target:code/alien-callback")
+
 
 ;;; PCL.
 ;;;

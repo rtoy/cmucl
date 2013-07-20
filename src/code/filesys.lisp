@@ -938,8 +938,13 @@
 ;;; Rename-File  --  Public
 ;;;
 (defun rename-file (file new-name)
-  "Rename File to have the specified New-Name.  If file is a stream open to a
-  file, then the associated file is renamed."
+  "Rename File to have the specified New-Name.  If file is a stream
+  open to a file, then the associated file is renamed.
+
+  Three values are returned if successful: the defaulted new name
+  composed of New-Name with missing components filled in from File;
+  the truename of File before it was renamed; the new truename of the
+  File after it was renamed."
   (let* ((original (truename file))
 	 (original-namestring (unix-namestring original t))
 	 (new-name (merge-pathnames new-name file))

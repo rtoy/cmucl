@@ -24,7 +24,9 @@ endif
 # and SIGSEGV) to lisp properly.
 #
 
-CC = gcc -O -Wall
-CPP = gcc -E
-DEPEND_FLAGS = -MM -traditional-cpp
+CC = gcc
+CPP = gcc
+CFLAGS += -O -Wall
+DEPEND_FLAGS = -MM
 ASFLAGS = -g -traditional-cpp $(AS_V8PLUS)
+OS_LINK_FLAGS += -Wl,-M,/usr/lib/ld/map.noexstk

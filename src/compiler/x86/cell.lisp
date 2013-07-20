@@ -383,7 +383,6 @@
   (:temporary (:sc descriptor-reg :offset eax-offset
 		   :from (:argument 2) :to :result :target result)  eax)
   (:results (result :scs (descriptor-reg any-reg)))
-  (:guard (backend-featurep :i486))
   (:policy :fast-safe)
   (:generator 5
     (move eax old-value)

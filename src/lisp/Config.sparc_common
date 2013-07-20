@@ -25,6 +25,8 @@ endif
 ifdef FEATURE_GENCGC
 GENCGC = -DGENCGC
 GC_SRC = gencgc.c
+else
+GC_SRC = gc.c
 endif
 
 # Enable support for SSE2.  If FEATURE_X87 is set, we want SSE2
@@ -44,17 +46,16 @@ ifdef FEATURE_UNICODE
 UNICODE = -DUNICODE
 endif
 
-CPPFLAGS = -I. -I$(PATH1) -DSOLARIS -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC) $(UNICODE) $(SSE2)
+CPPFLAGS += -I. -I$(PATH1) -DSOLARIS -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC) $(UNICODE) $(SSE2)
 
 
-CFLAGS = -g $(CC_V8PLUS)
+CFLAGS += -g $(CC_V8PLUS)
 
 NM = $(PATH1)/solaris-nm
-#ASSEM_SRC = sparc-assem.S
-#ARCH_SRC = sparc-arch.c
+ASSEM_SRC = sparc-assem.S
+ARCH_SRC = sparc-arch.c
 
 DEPEND=$(CC) 
-#OS_SRC = solaris-os.c os-common.c undefineds.c elf.c k_rem_pio2.c
-OS_LINK_FLAGS=
-#OS_LIBS= -lsocket -lnsl -ldl
+OS_SRC = solaris-os.c os-common.c undefineds.c elf.c k_rem_pio2.c
+OS_LIBS= -lsocket -lnsl -ldl
 EXEC_FINAL_OBJ = exec-final.o

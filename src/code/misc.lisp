@@ -133,18 +133,7 @@
   string)
 
 
-#+nil
-(defvar *features* '(:common :common-lisp :ansi-cl :ieee-floating-point :cmu)
-  "Holds a list of symbols that describe features provided by the
-   implementation.")
-
 ;;; Register various Lisp features
-#+i486
-(sys:register-lisp-runtime-feature :i486)
-
-#+pentium
-(sys:register-lisp-runtime-feature :pentium)
-
 #+sparc-v7
 (sys:register-lisp-runtime-feature :sparc-v7)
 

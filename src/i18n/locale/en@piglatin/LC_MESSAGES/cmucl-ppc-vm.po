@@ -1,39 +1,56 @@
+#@ cmucl-ppc-vm
+# SOME DESCRIPTIVE TITLE
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
+#
+#, fuzzy
+msgid ""
+msgstr "Project-Id-Version: CMUCL 20D\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
+"Last-Translator: Automatic translation\n"
+"Language-Team: Pig Latin (auto-translated)\n"
+"Language: Pig Latin\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
 #: src/code/ppc-vm.lisp
 msgid "Returns a string describing the type of the local machine."
-msgstr ""
+msgstr "Eturnsray away ingstray escribingday ethay ypetay ofway ethay ocallay achinemay."
 
 #: src/code/ppc-vm.lisp
 msgid "Returns a string describing the version of the local machine."
-msgstr ""
+msgstr "Eturnsray away ingstray escribingday ethay ersionvay ofway ethay ocallay achinemay."
 
 #: src/code/ppc-vm.lisp
 msgid "Compute x*y-z with only one rounding operation"
-msgstr ""
+msgstr "Omputecay *yxay-z ithway onlyway oneway oundingray operationway"
 
 #: src/code/ppc-vm.lisp
 msgid "Compute x*y+z with only one rounding operation"
-msgstr ""
+msgstr "Omputecay *yxay+z ithway onlyway oneway oundingray operationway"
 
 #: src/code/debug-int.lisp
 msgid "no debug info: ~A:~A"
-msgstr ""
+msgstr "onay ebugday infoway: ~Away:~Away"
 
 #: src/code/debug-int.lisp
 msgid "find the PC"
-msgstr ""
+msgstr "indfay ethay PC"
 
 #: src/code/debug-int.lisp
 msgid "Local non-descriptor register access?"
-msgstr ""
+msgstr "Ocallay onnay-escriptorday egisterray accessway?"
 
 #: src/code/debug-int.lisp
 msgid "Local interior register access?"
-msgstr ""
+msgstr "Ocallay interiorway egisterray accessway?"
 
 #: src/code/debug-int.lisp
 msgid "Breakpoint that nobody wants?"
-msgstr ""
+msgstr "Eakpointbray atthay obodynay antsway?"
 
 #: src/code/debug-int.lisp
 msgid "BREAKPOINT-DO-DISPLACED-INST returned?"
-msgstr ""
+msgstr "BREAKPOINT-DO-DISPLACED-INST eturnedray?"
+

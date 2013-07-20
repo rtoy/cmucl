@@ -283,11 +283,12 @@
 		       (system:get-system-info)
     (values user sys faults (get-bytes-consed))))
 
-#+(or pentium sparc-v9)
+#+(or x86 sparc-v9)
 (defun cycle-count/float ()
   (multiple-value-bind (lo hi)
       (vm::read-cycle-counter)
     (+ (* hi (expt 2.0d0 32)) lo)))
+
 #+ppc
 (progn
 (alien:def-alien-variable cycles-per-tick c-call:int)
@@ -300,7 +301,7 @@
     (* cycles-per-tick (+ (* hi (expt 2.0d0 32)) lo))))
 )
 
-#-(or pentium sparc-v9 ppc)
+#-(or x86 sparc-v9 ppc)
 (defun cycle-count/float () 0.0)
 
 (defvar *time-consing* nil)

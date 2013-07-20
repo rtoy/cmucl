@@ -56,6 +56,8 @@
   (if (target-featurep :sse2)
       (load "vm:sse2-c-call")
       (load "vm:x87-c-call")))
+(when (target-featurep :alien-callback)
+  (load "vm:c-callback"))
 (load "vm:print")
 (load "vm:alloc")
 (load "vm:call")

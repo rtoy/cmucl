@@ -21,9 +21,6 @@
 (in-package "C")
 (intl:textdomain "cmucl")
 
-#+conservative-float-type
-(sys:register-lisp-feature :conservative-float-type)
-
 ;;; Source transform for Not, Null  --  Internal
 ;;;
 ;;;    Convert into an IF so that IF optimizations will eliminate redundant
@@ -1192,11 +1189,9 @@
 ;;; compute the result otherwise the member type is first converted to a
 ;;; numeric type and the derive-fcn is call.
 ;;;
-(defun one-arg-derive-type (arg derive-fcn member-fcn
-				&optional (convert-type t))
+(defun one-arg-derive-type (arg derive-fcn member-fcn)
   (declare (type function derive-fcn)
-	   (type (or null function) member-fcn)
-	   )
+	   (type (or null function) member-fcn))
   (let ((arg-list (prepare-arg-for-derive-type (continuation-type arg))))
     (when arg-list
       (flet ((deriver (x)
@@ -1206,18 +1201,14 @@
 		      (with-float-traps-masked
 			  (:underflow :overflow :divide-by-zero)
 			(specifier-type `(eql ,(funcall member-fcn
-					    (first (member-type-members x))))))
+							(first (member-type-members x))))))
 		      ;; Otherwise convert to a numeric type.
 		      (let ((result-type-list
 			     (funcall derive-fcn (convert-member-type x))))
-			(if convert-type
-			    (convert-back-numeric-type-list result-type-list)
-			    result-type-list))))
+			(convert-back-numeric-type-list result-type-list))))
 		 (numeric-type
-		  (if convert-type
-		      (convert-back-numeric-type-list
-		       (funcall derive-fcn (convert-numeric-type x)))
-		      (funcall derive-fcn x)))
+		  (convert-back-numeric-type-list
+		   (funcall derive-fcn (convert-numeric-type x))))
 		 (t
 		  *universal-type*))))
 	;; Run down the list of args and derive the type of each one, saving
@@ -1241,72 +1232,53 @@
 ;;; (* x x), which should always be positive.  If we didn't do this, we
 ;;; wouldn't be able to tell.
 ;;;
-;;; Without the negative-zero-is-not-zero feature, numeric types are first
-;;; converted to the negative-zero-is-not-zero conventions as expected by the
-;;; deriver function.
+;;; Numeric types are first converted to the negative-zero-is-not-zero
+;;; conventions as expected by the deriver function.  See
+;;; CONVERT-NUMERIC-TYPE for the negative-zero-is-not-zero convention.
 ;;;
-;;; For the case of two member types, the result may be derived by calling the
-;;; given function FCN but if a NaN is generated then an unbounded type is
-;;; returned. Alternatively a tighter, less conservative, type can often be
-;;; returned by converting to numeric types and calling the deriver function,
-;;; which is the default behavior without the conservative-float-type feature.
-;;;
-(defun two-arg-derive-type (arg1 arg2 derive-fcn fcn
-				 &optional (convert-type t))
-  #-conservative-float-type
-  (declare (ignore fcn))
-  (labels ((maybe-convert-numeric-type (type)
-	     (if convert-type (convert-numeric-type type) type))
-	   (maybe-convert-back-type-list (type)
-	     (if convert-type (convert-back-numeric-type-list type) type))
-	   (deriver (x y same-arg)
-	     (cond #+conservative-float-type
-		   ((and (member-type-p x) (member-type-p y))
-		    (let* ((x (first (member-type-members x)))
-			   (y (first (member-type-members y)))
-			   (result (with-float-traps-masked
-				       (:underflow :overflow :divide-by-zero
-					:invalid)
-				     (funcall fcn x y))))
-		      (cond ((null result))
-			    ((and (floatp result) (float-nan-p result))
-			     (make-numeric-type :class 'float
-						:format (type-of result)
-						:complexp :real))
-			    (t
-			     (specifier-type `(eql ,result))))))
-		   #-conservative-float-type
-		   ((and (member-type-p x) (member-type-p y))
-		    (let* ((x (convert-member-type x))
-			   (y (convert-member-type y))
-			   (result (funcall derive-fcn x y same-arg)))
-		      (maybe-convert-back-type-list result)))
-		   ((and (member-type-p x) (numeric-type-p y))
-		    (let* ((x (convert-member-type x))
-			   (y (maybe-convert-numeric-type y))
-			   (result (funcall derive-fcn x y same-arg)))
-		      (maybe-convert-back-type-list result)))
-		   ((and (numeric-type-p x) (member-type-p y))
-		    (let* ((x (maybe-convert-numeric-type x))
-			   (y (convert-member-type y))
-			   (result (funcall derive-fcn x y same-arg)))
-		      (maybe-convert-back-type-list result)))
-		   ((and (numeric-type-p x) (numeric-type-p y))
-		    (let* ((x (maybe-convert-numeric-type x))
-			   (y (maybe-convert-numeric-type y))
-			   (result (funcall derive-fcn x y same-arg)))
-		      (maybe-convert-back-type-list result)))
-		   (t
-		    *universal-type*)))
-	   (non-const-same-leaf-ref-p (x y)
-	     ;; Just like same-leaf-ref-p, but we don't care if the
-	     ;; value of the leaf is constant or not.
-	     (declare (type continuation x y))
-	     (let ((x-use (continuation-use x))
-		   (y-use (continuation-use y)))
-	       (and (ref-p x-use)
-		    (ref-p y-use)
-		    (eq (ref-leaf x-use) (ref-leaf y-use))))))
+(defun two-arg-derive-type (arg1 arg2 derive-fcn fcn)
+  (flet
+      ((deriver (x y same-arg)
+	 (cond ((and (member-type-p x) (member-type-p y))
+		(let* ((x (first (member-type-members x)))
+		       (y (first (member-type-members y)))
+		       (result (with-float-traps-masked
+				   (:underflow :overflow :divide-by-zero
+					       :invalid)
+				 (funcall fcn x y))))
+		  (cond ((null result))
+			((and (floatp result) (float-nan-p result))
+			 (make-numeric-type :class 'float
+					    :format (type-of result)
+					    :complexp :real))
+			(t
+			 (specifier-type `(eql ,result))))))
+	       ((and (member-type-p x) (numeric-type-p y))
+		(let* ((x (convert-member-type x))
+		       (y (convert-numeric-type y))
+		       (result (funcall derive-fcn x y same-arg)))
+		  (convert-back-numeric-type-list result)))
+	       ((and (numeric-type-p x) (member-type-p y))
+		(let* ((x (convert-numeric-type x))
+		       (y (convert-member-type y))
+		       (result (funcall derive-fcn x y same-arg)))
+		  (convert-back-numeric-type-list result)))
+	       ((and (numeric-type-p x) (numeric-type-p y))
+		(let* ((x (convert-numeric-type x))
+		       (y (convert-numeric-type y))
+		       (result (funcall derive-fcn x y same-arg)))
+		  (convert-back-numeric-type-list result)))
+	       (t
+		*universal-type*)))
+       (non-const-same-leaf-ref-p (x y)
+	 ;; Just like same-leaf-ref-p, but we don't care if the
+	 ;; value of the leaf is constant or not.
+	 (declare (type continuation x y))
+	 (let ((x-use (continuation-use x))
+	       (y-use (continuation-use y)))
+	   (and (ref-p x-use)
+		(ref-p y-use)
+		(eq (ref-leaf x-use) (ref-leaf y-use))))))
 
     (let ((same-arg (non-const-same-leaf-ref-p arg1 arg2))
 	  (a1 (prepare-arg-for-derive-type (continuation-type arg1)))
@@ -3189,9 +3161,9 @@
 		      (ecase format2
 			((nil short-float single-float)
 			 (member format1 '(short-float single-float)))
-			#-long-float
+			#-double-double
 			((double-float long-float) 'T)
-			#+(or long-float double-double)
+			#+double-double
 			(double-float
 			 (member format1 '(short-float single-float
 					   double-float)))

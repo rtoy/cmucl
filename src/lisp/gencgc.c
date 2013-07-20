@@ -223,7 +223,7 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
     if (!(ex)) gc_abort ();     \
   } while (0)
 #else
-#define gc_assert(ex)  (void) 0
+#define gc_assert(ex)  (void) (ex)
 #endif
 
 
@@ -287,15 +287,56 @@ boolean verify_dynamic_code_check = FALSE;
  */
 boolean check_code_fixups = FALSE;
 
+
 /*
+ * How to have a page zero-filled.  When a page is freed, we need to
+ * either zero it immediately or mark it as needing to be zero-filled
+ * when it is allocated later.
+ */
+enum gencgc_unmap_mode {
+    /*
+     * Unmap and mmap the region to get it zeroed when the page
+     * is freed..
+     */
+    MODE_MAP,
+
+    /*
+     * Memset the region to 0 when it is freed.
+     */
+    MODE_MEMSET,
+
+    /*
+     * Call madvise to allow the kernel to free the memory if needed.
+     * But when the region needs to be allocated, we will zero it if
+     * necessary.
+     */
+    MODE_MADVISE,
+
+    /*
+     * Like madvise, except we don't actually call madvize and lazily
+     * zero the region when it is allocated.
+     */
+    MODE_LAZY,
+};
+  
+    
+/*
+ * Control how freed regions should be zeroed.  Default to MODE_LAZY
+ * for all systems since tests indicate that it is much faster than
+ * unmapping and re-mapping it to zero the region.  See enum
+ * gencgc_unmap_made for other possible options.
+ *
+ * XXX: Choose the appopriate mode for each OS/arch.
+ * 
  * To enable unmapping of a page and re-mmaping it to have it zero filled.
  * Note: this can waste a lot of swap on FreeBSD and Open/NetBSD(?) so
  * don't unmap.
  */
-#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
-boolean gencgc_unmap_zero = FALSE;
+
+#if defined(DARWIN) || defined(__linux__) || defined(sparc)
+enum gencgc_unmap_mode gencgc_unmap_zero = MODE_LAZY;
 #else
-boolean gencgc_unmap_zero = TRUE;
+enum gencgc_unmap_mode gencgc_unmap_zero = MODE_MEMSET;
 #endif
 
 /*
@@ -318,6 +359,23 @@ boolean gencgc_zero_check_during_free_heap = TRUE;
 #else
 boolean gencgc_zero_check_during_free_heap = FALSE;
 #endif
+
+/*
+ * For now, enable the zero check if gencgc_zero_check is true or if
+ * gencgc_unmap_zero is MODE_LAZY or MODE_MADVISE.  XXX: Remove this
+ * additional condition when we feel that gencgc_unmap_zero is good
+ * enough.
+ */
+
+#define DO_GENCGC_ZERO_CHECK	(gencgc_zero_check || (gencgc_unmap_zero == MODE_LAZY) || (gencgc_unmap_zero == MODE_MADVISE))
+
+/*
+ * Only to the zero check during free_heap if both
+ * gencgc_zero_check_during_free_heap is true and gencgc_unmap_zero is
+ * MODE_MAP or MODE_MEMSET because in all other modes, unallocated
+ * pages are known not to contain zeroes.
+ */
+#define DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP	(gencgc_zero_check_during_free_heap && ((gencgc_unmap_zero == MODE_MAP) || (gencgc_unmap_zero == MODE_MEMSET)))
 
 /*
  * The minimum size for a large object.
@@ -749,8 +807,10 @@ print_generation_stats(int verbose)
 	    }
 	}
 
+#ifdef GC_ASSERTIONS
 	gc_assert(generations[i].bytes_allocated ==
 		  generation_bytes_allocated(i));
+#endif
 	fprintf(stderr, " %5d: %5d %5d %5d %5d %10d %6d %10d %4d %3d %7.4f\n",
 		i, boxed_cnt, unboxed_cnt, large_boxed_cnt, large_unboxed_cnt,
 		generations[i].bytes_allocated,
@@ -913,6 +973,56 @@ handle_heap_overflow(const char *msg, int size)
 }
 
 /*
+ * Enables debug messages for MODE_MADVISE and MODE_LAZY
+ */
+boolean gencgc_debug_madvise = FALSE;
+
+static inline void
+handle_madvise_first_page(int first_page)
+{
+    int flags = page_table[first_page].flags;
+        
+    if (gencgc_debug_madvise) {
+        fprintf(stderr, "first_page = %d, FLAGS = %x, orig = %d",
+                first_page, flags, page_table[first_page].bytes_used);
+    }
+    
+    if (!PAGE_ALLOCATED(first_page)) {
+        int *page_start = (int *) page_address(first_page);
+        
+        if (gencgc_debug_madvise) {
+            fprintf(stderr, ": marker = %x", *page_start);
+        }
+        if (*page_start != 0) {
+            memset(page_start, 0, GC_PAGE_SIZE);
+        }
+    }
+    if (gencgc_debug_madvise) {
+        fprintf(stderr, "\n");
+    }
+}
+
+static void
+handle_madvise_other_pages(int first_page, int last_page)
+{
+    int i;
+    
+    for (i = first_page + 1; i <= last_page; ++i) {
+        if (!PAGE_ALLOCATED(i)) {
+            int *page_start = (int *) page_address(i);
+
+            if (gencgc_debug_madvise) {
+                fprintf(stderr, "MADVISE page %d, FLAGS = %x: marker %x\n",
+                        i, page_table[i].flags, *page_start);
+            }
+            if (*page_start != 0) {
+                memset(page_start, 0, GC_PAGE_SIZE);
+            }
+        }
+    }
+}
+
+/*
  * Find a new region with room for at least the given number of bytes.
  *
  * It starts looking at the current generations alloc_start_page. So
@@ -1072,7 +1182,13 @@ gc_alloc_new_region(int nbytes, int unboxed, struct alloc_region *alloc_region)
     alloc_region->free_pointer = alloc_region->start_addr;
     alloc_region->end_addr = alloc_region->start_addr + bytes_found;
 
-    if (gencgc_zero_check) {
+    if ((gencgc_unmap_zero == MODE_MADVISE)
+        || (gencgc_unmap_zero == MODE_LAZY)) {
+        handle_madvise_first_page(first_page);
+        handle_madvise_other_pages(first_page, last_page);
+    }
+
+    if (DO_GENCGC_ZERO_CHECK) {
 	int *p;
 
 	for (p = (int *) alloc_region->start_addr;
@@ -1446,10 +1562,12 @@ gc_alloc_large(int nbytes, int unboxed, struct alloc_region *alloc_region)
     do {
 	first_page = restart_page;
 
-	if (large)
+	if (large) {
 	    while (first_page < dynamic_space_pages
-		   && PAGE_ALLOCATED(first_page)) first_page++;
-	else
+		   && PAGE_ALLOCATED(first_page)) {
+                first_page++;
+            }
+        } else {
 	    while (first_page < dynamic_space_pages) {
 		int flags = page_table[first_page].flags;
 
@@ -1459,6 +1577,7 @@ gc_alloc_large(int nbytes, int unboxed, struct alloc_region *alloc_region)
 		    break;
 		first_page++;
 	    }
+        }
 
 	/* Check for a failure */
 	if (first_page >= dynamic_space_pages - reserved_heap_pages) {
@@ -1529,6 +1648,12 @@ gc_alloc_large(int nbytes, int unboxed, struct alloc_region *alloc_region)
     /* Setup the pages. */
     orig_first_page_bytes_used = page_table[first_page].bytes_used;
 
+    if ((gencgc_unmap_zero == MODE_MADVISE)
+        || (gencgc_unmap_zero == MODE_LAZY)) {
+        handle_madvise_first_page(first_page);
+    }
+    
+    
     /*
      * If the first page was free then setup the gen, and
      * first_object_offset.
@@ -1575,6 +1700,12 @@ gc_alloc_large(int nbytes, int unboxed, struct alloc_region *alloc_region)
 
 	gc_assert(!PAGE_ALLOCATED(next_page));
 	gc_assert(page_table[next_page].bytes_used == 0);
+
+        if ((gencgc_unmap_zero == MODE_MADVISE)
+            || (gencgc_unmap_zero == MODE_LAZY)) {
+            handle_madvise_other_pages(next_page - 1, next_page);
+        }
+
 	PAGE_FLAGS_UPDATE(next_page, mmask, mflags);
 
 	page_table[next_page].first_object_offset =
@@ -1712,7 +1843,7 @@ gc_alloc_region(int nbytes, struct alloc_region *region, int unboxed, struct all
     void *new_obj;
     
 #if 0
-    fprintf(stderr, "gc_alloc %d\n", nbytes);
+    fprintf(stderr, "gc_alloc %d unboxed = %d\n", nbytes, unboxed);
 #endif
 
     /* Check if there is room in the current alloc region. */
@@ -3120,11 +3251,13 @@ static void
 apply_code_fixups(struct code *old_code, struct code *new_code)
 {
     int nheader_words, ncode_words, nwords;
+    char *code_start_addr;
+#ifdef DEBUG_APPLY_CODE_FIXUPS
     char *constants_start_addr, *constants_end_addr;
-    char *code_start_addr, *code_end_addr;
+    char *code_end_addr;
+#endif
     lispobj fixups = NIL;
     unsigned long displacement =
-
 	(unsigned long) new_code - (unsigned long) old_code;
     struct vector *fixups_vector;
 
@@ -3133,8 +3266,8 @@ apply_code_fixups(struct code *old_code, struct code *new_code)
      * be a fixnum if it's x86 compiled code - check.
      */
     if (new_code->trace_table_offset & 0x3) {
-#if 0
-	fprintf(stderr, "*** Byte compiled code object at %x.\n", new_code);
+#ifdef DEBUG_APPLY_CODE_FIXUPS
+	fprintf(stderr, "*** Byte compiled code object at %p.\n", new_code);
 #endif
 	return;
     }
@@ -3143,18 +3276,18 @@ apply_code_fixups(struct code *old_code, struct code *new_code)
     ncode_words = fixnum_value(new_code->code_size);
     nheader_words = HeaderValue(*(lispobj *) new_code);
     nwords = ncode_words + nheader_words;
-#if 0
+#ifdef DEBUG_APPLY_CODE_FIXUPS
     fprintf(stderr,
-	    "*** Compiled code object at %x: header_words=%d code_words=%d .\n",
+	    "*** Compiled code object at %p: header_words=%d code_words=%d .\n",
 	    new_code, nheader_words, ncode_words);
 #endif
+    code_start_addr = (char *) new_code + nheader_words * sizeof(lispobj);
+#ifdef DEBUG_APPLY_CODE_FIXUPS
     constants_start_addr = (char *) new_code + 5 * sizeof(lispobj);
     constants_end_addr = (char *) new_code + nheader_words * sizeof(lispobj);
-    code_start_addr = (char *) new_code + nheader_words * sizeof(lispobj);
     code_end_addr = (char *) new_code + nwords * sizeof(lispobj);
-#if 0
     fprintf(stderr,
-	    "*** Const. start = %x; end= %x; Code start = %x; end = %x\n",
+	    "*** Const. start = %p; end= %p; Code start = %p; end = %p\n",
 	    constants_start_addr, constants_end_addr, code_start_addr,
 	    code_end_addr);
 #endif
@@ -3174,13 +3307,13 @@ apply_code_fixups(struct code *old_code, struct code *new_code)
 	if (check_code_fixups)
 	    sniff_code_object(new_code, displacement);
 
-#if 0
+#ifdef DEBUG_APPLY_CODE_FIXUPS
 	fprintf(stderr, "Fixups for code object not found!?\n");
 	fprintf(stderr,
-		"*** Compiled code object at %x: header_words=%d code_words=%d .\n",
+		"*** Compiled code object at %p: header_words=%d code_words=%d .\n",
 		new_code, nheader_words, ncode_words);
 	fprintf(stderr,
-		"*** Const. start = %x; end= %x; Code start = %x; end = %x\n",
+		"*** Const. start = %p; end= %p; Code start = %p; end = %p\n",
 		constants_start_addr, constants_end_addr, code_start_addr,
 		code_end_addr);
 #endif
@@ -3192,13 +3325,13 @@ apply_code_fixups(struct code *old_code, struct code *new_code)
     /* Could be pointing to a forwarding pointer. */
     if (Pointerp(fixups) && find_page_index((void *) fixups_vector) != -1
 	&& fixups_vector->header == 0x01) {
-#if 0
+#ifdef DEBUG_APPLY_CODE_FIXUPS
 	fprintf(stderr, "* FF\n");
 #endif
 	/* If so then follow it. */
 	fixups_vector = (struct vector *) PTR((lispobj) fixups_vector->length);
     }
-#if 0
+#ifdef DEBUG_APPLY_CODE_FIXUPS
     fprintf(stderr, "Got the fixups\n");
 #endif
 
@@ -4257,7 +4390,9 @@ scav_hash_entries(struct hash_table *hash_table, lispobj weak, int removep)
 {
     unsigned kv_length;
     lispobj *kv_vector;
+#ifdef DEBUG_SCAV_HASH_ENTRIES
     lispobj empty_symbol;
+#endif
     unsigned *index_vector, *next_vector, *hash_vector;
     unsigned length = UINT_MAX;
     unsigned next_vector_length = UINT_MAX;
@@ -4267,7 +4402,9 @@ scav_hash_entries(struct hash_table *hash_table, lispobj weak, int removep)
     kv_length = fixnum_value(kv_vector[1]);
     kv_vector += 2;
 
+#ifdef DEBUG_SCAV_HASH_ENTRIES
     empty_symbol = kv_vector[1];
+#endif
 
     index_vector = u32_vector(hash_table->index_vector, &length);
     next_vector = u32_vector(hash_table->next_vector, &next_vector_length);
@@ -4301,7 +4438,7 @@ scav_hash_entries(struct hash_table *hash_table, lispobj weak, int removep)
         } else {
 	    /* If the key is EQ-hashed and moves, schedule it for rehashing. */
 	    scavenge(&kv_vector[2 * i], 2);
-#if 0
+#ifdef DEBUG_SCAV_HASH_ENTRIES
 	    new_key = kv_vector[2 * i];
 	    new_index = EQ_HASH(new_key) % length;
 
@@ -6834,25 +6971,74 @@ free_oldspace(void)
 	       && PAGE_GENERATION(last_page) == from_space);
 
 	/* Zero pages from first_page to (last_page - 1) */
-	if (gencgc_unmap_zero) {
-	    char *page_start, *addr;
+        switch (gencgc_unmap_zero) {
+          case MODE_MAP:
+          {
+              char *page_start, *addr;
 
-	    page_start = page_address(first_page);
+              page_start = page_address(first_page);
 
-	    os_invalidate((os_vm_address_t) page_start,
-			  GC_PAGE_SIZE * (last_page - first_page));
-	    addr =
-		(char *) os_validate((os_vm_address_t) page_start,
-				     GC_PAGE_SIZE * (last_page - first_page));
-	    if (addr == NULL || addr != page_start)
-		fprintf(stderr, "gc_zero: page moved, 0x%08lx ==> 0x%08lx!\n",
-			(unsigned long) page_start, (unsigned long) addr);
-	} else {
-	    int *page_start;
+              os_invalidate((os_vm_address_t) page_start,
+                            GC_PAGE_SIZE * (last_page - first_page));
+              addr =
+                  (char *) os_validate((os_vm_address_t) page_start,
+                                       GC_PAGE_SIZE * (last_page - first_page));
+              if (addr == NULL || addr != page_start)
+                  fprintf(stderr, "gc_zero: page moved, 0x%08lx ==> 0x%08lx!\n",
+                          (unsigned long) page_start, (unsigned long) addr);
+              break;
+          }
+          case MODE_MEMSET:
+          {
+              int *page_start;
 
-	    page_start = (int *) page_address(first_page);
-	    memset(page_start, 0, GC_PAGE_SIZE * (last_page - first_page));
-	}
+              page_start = (int *) page_address(first_page);
+              memset(page_start, 0, GC_PAGE_SIZE * (last_page - first_page));
+              break;
+          }
+          case MODE_MADVISE:
+          {
+              int page;
+              int *page_start;
+
+              if (gencgc_debug_madvise) {
+                  fprintf(stderr, "ADVISING pages %d-%d\n", first_page, last_page - 1);
+              }
+
+              page_start = (int *) page_address(first_page);
+
+              madvise((void*) page_start, GC_PAGE_SIZE * (last_page - first_page), GENCGC_MADVISE);
+              for (page = first_page; page < last_page; ++page) {
+                  page_start = (int *) page_address(page);
+                  *page_start = PAGE_NEEDS_ZEROING_MARKER;
+              }
+              
+              break;
+          }
+          case MODE_LAZY:
+          {
+              int page;
+              int *page_start;
+
+              if (gencgc_debug_madvise) {
+                  fprintf(stderr, "ADVISING pages %d-%d\n", first_page, last_page - 1);
+              }
+
+              for (page = first_page; page < last_page; ++page) {
+                  if (PAGE_ALLOCATED(page)) {
+                      fprintf(stderr, "Page %d is allocated!\n", page);
+
+                  }
+                  
+                  page_start = (int *) page_address(page);
+                  *page_start = PAGE_NEEDS_ZEROING_MARKER;
+              }
+              
+              break;
+          }
+          default:
+              gc_abort();
+        }
 
 	first_page = last_page;
     }
@@ -6898,12 +7084,9 @@ verify_space(lispobj * start, size_t words)
 	if (Pointerp(thing)) {
 	    int page_index = find_page_index((void *) thing);
 	    int to_readonly_space = (READ_ONLY_SPACE_START <= thing &&
-				     thing <
-
-				     SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
+				     thing < SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
 	    unsigned long to_static_space =
 		((unsigned long) static_space <= thing
-
 		 && thing < SymbolValue(STATIC_SPACE_FREE_POINTER));
 
 	    /* Does it point to the dynamic space? */
@@ -7772,7 +7955,7 @@ gc_free_heap(void)
     if (gencgc_verbose > 1)
 	fprintf(stderr, "Free heap\n");
 
-    for (page = 0; page < dynamic_space_pages; page++)
+    for (page = 0; page < dynamic_space_pages; page++) {
 	/* Skip Free pages which should already be zero filled. */
 	if (PAGE_ALLOCATED(page)) {
 	    char *page_start, *addr;
@@ -7793,27 +7976,46 @@ gc_free_heap(void)
 	    os_protect((os_vm_address_t) page_start, GC_PAGE_SIZE, OS_VM_PROT_ALL);
 	    page_table[page].flags &= ~PAGE_WRITE_PROTECTED_MASK;
 
-	    os_invalidate((os_vm_address_t) page_start, GC_PAGE_SIZE);
-	    addr =
-		(char *) os_validate((os_vm_address_t) page_start, GC_PAGE_SIZE);
-	    if (addr == NULL || addr != page_start)
-		fprintf(stderr, "gc_zero: page moved, 0x%08lx ==> 0x%08lx!\n",
-			(unsigned long) page_start, (unsigned long) addr);
-	} else if (gencgc_zero_check_during_free_heap && page < 16384) {
+            switch (gencgc_unmap_zero) {
+              case MODE_MAP:
+                  os_invalidate((os_vm_address_t) page_start, GC_PAGE_SIZE);
+                  addr =
+                      (char *) os_validate((os_vm_address_t) page_start, GC_PAGE_SIZE);
+                  if (addr == NULL || addr != page_start)
+                      fprintf(stderr, "gc_zero: page moved, 0x%08lx ==> 0x%08lx!\n",
+                              (unsigned long) page_start, (unsigned long) addr);
+                  break;
+              case MODE_MEMSET:
+              case MODE_MADVISE:
+              case MODE_LAZY:
+                  /*
+                   * XXX: Do we really need to zero the page here?
+                   */
+                  
+                  memset(page_start, 0, GC_PAGE_SIZE);
+                  break;
+            }
+	} else if (DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP) {
 	    int *page_start;
 	    unsigned i;
 
-	    /* Double check that the page is zero filled. */
+	    /*
+             * Double check that the page is zero filled.
+             */
 	    gc_assert(!PAGE_ALLOCATED(page));
 	    gc_assert(page_table[page].bytes_used == 0);
 
-	    page_start = (int *) page_address(page);
+            page_start = (int *) page_address(page);
 
-	    for (i = 0; i < 1024; i++)
-		if (page_start[i] != 0)
-		    fprintf(stderr, "** Free region not zero @ %lx\n",
-			    (unsigned long) (page_start + i));
+            for (i = 0; i < GC_PAGE_SIZE/sizeof(*page_start); i++) {
+                if (page_start[i] != 0) {
+                    fprintf(stderr, "** Free region not zero @ page %d, %lx\n",
+                            page,
+                            (unsigned long) (page_start + i));
+                }
+            }
 	}
+    }
 
     bytes_allocated = 0;
 

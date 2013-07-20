@@ -17,5 +17,3 @@ OS_LINK_FLAGS = -m32 $(MIN_VER)
 OS_LIBS =
 
 EXEC_FINAL_OBJ = exec-final.o
-
-

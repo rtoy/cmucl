@@ -54,7 +54,7 @@
 
 ;; The expected Unicode version
 (defconstant +unicode-major-version+ 6)
-(defconstant +unicode-minor-version+ 1)
+(defconstant +unicode-minor-version+ 2)
 (defconstant +unicode-update-version+ 0)
 
 ;;; These need to be synched with code/unidata.lisp
@@ -281,11 +281,14 @@
 					     (cdr x))))
 	       (mapc (lambda (x) (pass2 (cdr x))) (rest trie))))
       (format t "~&  Initializing...~%")
+      (force-output)
       (let ((trie (cons nil nil)))
 	(loop for (name . code) in entries do (add-to-trie trie name code))
 	(format t "~&  Pass 1...~%")
+	(force-output)
 	(pass1 trie 0)
 	(format t "~&  Sorting...~%")
+	(force-output)
 	(dolist (key (sort (loop for k being the hash-keys of khash
 			      collect k)
 			   #'> :key #'length))
@@ -316,8 +319,10 @@
 	      vec2 (make-array top :element-type '(unsigned-byte 32))
 	      vec3 (make-array top :element-type '(unsigned-byte 32)))
 	(format t "~&  Pass 2...~%")
+	(force-output)
 	(pass2 trie)
 	(format t "~&  Finalizing~%")
+	(force-output)
 	(dotimes (i top)
 	  (let ((xxx (aref vec2 i)))
 	    (dotimes (j (aref keyl (ash xxx -18)))
@@ -614,9 +619,10 @@
 ;; ucd-directory should be the directory where UnicodeData.txt is
 ;; located.
 (defun foreach-ucd (name ucd-directory fn)
-   (format t "~&  ~A~%" name)
+  (format t "~&  ~A~%" name)
   (with-open-file (s (make-pathname :name name :type "txt"
 				    :defaults ucd-directory))
+    (format t "file = ~s~%" s)
     (cond
       ((string= name "Unihan")
        (loop for line = (read-line s nil) while line do
@@ -811,6 +817,7 @@
 	  ucd-directory
 	(lambda (min max prop)
 	  (let ((code (intern (string-upcase prop) "KEYWORD")))
+	    (format t "~X-~X code = ~S~%" min max code)
 	    (loop for i from min to max
 		  as ent = (find-ucd i) do
 		  (when ent
@@ -941,16 +948,18 @@
   (or (position (ucdent-word-break ucdent)
 		'(:other :cr :lf :newline :extend :format
 		  :katakana :aletter :midnumlet :midletter :midnum
-		  :numeric :extendnumlet))
+		  :numeric :extendnumlet :regional_indicator))
       0))
 
 ;; ucd-directory should be the directory where UnicodeData.txt is
 ;; located.
 (defun build-unidata (&optional (ucd-directory "target:i18n/"))
   (format t "~&Reading data from ~S~%" (probe-file ucd-directory))
+  (force-output)
   (multiple-value-bind (ucd range) (read-data ucd-directory)
     (setf (unidata-range *unicode-data*) range)
     (format t "~&Building character name tables~%")
+    (force-output)
     (let* ((data (loop for ent across ucd
 		   when (char/= (char (ucdent-name ent) 0) #\<)
 		     collect (cons (ucdent-name ent) (ucdent-code ent))
@@ -965,6 +974,7 @@
 	    (make-ntrie32 :split #x54 :hvec hvec :mvec mvec :lvec lvec))))
 
     (format t "~&Building Unicode 1.0 character name tables~%")
+    (force-output)
     (let* ((data (loop for ent across ucd
 		   when (plusp (length (ucdent-name1 ent)))
 		     collect (cons (ucdent-name1 ent) (ucdent-code ent))))
@@ -976,12 +986,14 @@
 	  (make-ntrie32 :split #x54 :hvec hvec :mvec mvec :lvec lvec))))
 
     (format t "~&Building general category table~%")
+    (force-output)
     (multiple-value-bind (hvec mvec lvec)
 	(pack ucd range #'ucdent-cat 0 8 #x53)
       (setf (unidata-category *unicode-data*)
 	  (make-ntrie8 :split #x53 :hvec hvec :mvec mvec :lvec lvec)))
 
     (format t "~&Building simple case-conversion table~%")
+    (force-output)
     (let ((svec (make-array 100 :element-type '(unsigned-byte 16)
 			    :fill-pointer 0 :adjustable t)))
       (vector-push-extend 0 svec)
@@ -993,12 +1005,14 @@
 			:svec (copy-seq svec)))))
 
     (format t "~&Building numeric-values table~%")
+    (force-output)
     (multiple-value-bind (hvec mvec lvec)
 	(pack ucd range #'pack-numeric 0 32 #x63)
       (setf (unidata-numeric *unicode-data*)
 	  (make-ntrie32 :split #x63 :hvec hvec :mvec mvec :lvec lvec)))
 
     (format t "~&Building decomposition table~%")
+    (force-output)
     (let ((tabl (make-array 6000 :element-type '(unsigned-byte 16)
 			    :fill-pointer 0 :adjustable t)))
       (multiple-value-bind (hvec mvec lvec)
@@ -1009,12 +1023,14 @@
 			 :tabl (copy-seq tabl)))))
 
     (format t "~&Building combining-class table~%")
+    (force-output)
     (multiple-value-bind (hvec mvec lvec)
 	(pack ucd range #'ucdent-comb 0 8 #x64)
       (setf (unidata-combining *unicode-data*)
 	  (make-ntrie8 :split #x64 :hvec hvec :mvec mvec :lvec lvec)))
 
     (format t "~&Building bidi information table~%")
+    (force-output)
     (let ((tabl (make-array 10 :element-type '(unsigned-byte 16)
 			    :fill-pointer 0 :adjustable t)))
       (multiple-value-bind (hvec mvec lvec)
@@ -1025,6 +1041,7 @@
 		       :tabl (copy-seq tabl)))))
 
     (format t "~&Building normalization quick-check tables~%")
+    (force-output)
     (progn
       (multiple-value-bind (hvec mvec lvec)
 	  (pack ucd range (lambda (x)
@@ -1056,6 +1073,7 @@
 	      (make-ntrie2 :split #x55 :hvec hvec :mvec mvec :lvec lvec))))
 
     (format t "~&Building composition exclusion table~%")
+    (force-output)
     (let ((exclusions (make-array 1 :element-type '(unsigned-byte 32)
 				  :adjustable t
 				  :fill-pointer 0)))
@@ -1065,8 +1083,10 @@
       (setf (unidata-comp-exclusions *unicode-data*) (copy-seq exclusions)))
 
     (format t "~&Building full case mapping tables~%")
+    (force-output)
     (progn
       (format t "~&  Lower...~%")
+      (force-output)
       (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
 			      :fill-pointer 0 :adjustable t))
 	    (split #x65))
@@ -1077,6 +1097,7 @@
 		(make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
 				:tabl (copy-seq tabl)))))
       (format t "~&  Title...~%")
+      (force-output)
       (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
 			      :fill-pointer 0 :adjustable t))
 	    (split #x65))
@@ -1087,6 +1108,7 @@
 		(make-full-case :split split :hvec hvec :mvec mvec :lvec lvec
 				:tabl (copy-seq tabl)))))
       (format t "~&  Upper...~%")
+      (force-output)
       (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
 			      :fill-pointer 0 :adjustable t))
 	    (split #x65))
@@ -1098,8 +1120,10 @@
 				:tabl (copy-seq tabl))))))
 
     (format t "~&Building case-folding tables~%")
+    (force-output)
     (progn
       (format t "~&  Simple...~%")
+      (force-output)
       (let ((split #x54))
 	(multiple-value-bind (hvec mvec lvec)
 	    (pack ucd range (lambda (x) (pack-case-folding-simple x))
@@ -1107,6 +1131,7 @@
 	  (setf (unidata-case-fold-simple *unicode-data*)
 		(make-ntrie32 :split split :hvec hvec :mvec mvec :lvec lvec))))
       (format t "~&  Full...~%")
+      (force-output)
       (let ((tabl (make-array 100 :element-type '(unsigned-byte 16)
 			      :fill-pointer 0 :adjustable t))
 	    (split #x65))
@@ -1118,6 +1143,7 @@
 				   :tabl (copy-seq tabl))))))
 
     (format t "~&Building word-break table~%")
+    (force-output)
     (let ((split #x66))
       (multiple-value-bind (hvec mvec lvec)
 	  (pack ucd range (lambda (x) (pack-word-break x))

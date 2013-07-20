@@ -39,7 +39,7 @@ ENABLE2="yes"
 ENABLE3="yes"
 ENABLE4="yes"
 
-version=20c
+version=20d
 SRCDIR=src
 BINDIR=bin
 TOOLDIR=$BINDIR
@@ -75,12 +75,12 @@ usage ()
     echo '    -b d      The different build directories are named ${d}-2, ${d}-3 ${d}-4'
     echo '               If -b is not given, a suitable name based on the OS is used.' 
     echo '    -v v      Use the given string as the version.  Default is'
-    echo "               today's date"
+    echo "               based on git describe"
     echo "    -u        Don't build CLX, CLM, or Hemlock"
     echo '    -i n      Make build "n" interactive, so output is sent to *standard-output*'
     echo '               instead of the log file. "n" should be a string consisting of'
     echo '                the numbers 1, 2, or 3.'
-    echo "    -B file   Use file as a boot file.  Maybe be specified more than once"
+    echo "    -B file   Use file as a boot file.  May be be specified more than once"
     echo "               The file is relative to the bootfiles/<version> directory"
     echo '    -C [l m]  Create the build directories.  The args are what'
     echo '               you would give to create-target.sh for the lisp'
@@ -246,6 +246,20 @@ fi
 
 BUILD=3
 buildit
+
+# Asdf and friends are part of the base install, so we need to build
+# them now.
+$TARGET/lisp/lisp $FPU_MODE -noinit -nositeinit -batch "$@" << EOF || exit 3
+(in-package :cl-user)
+(setf (ext:search-list "target:")
+      '("$TARGET/" "src/"))
+(setf (ext:search-list "modules:")
+      '("target:contrib/"))
+
+(compile-file "modules:asdf/asdf")
+(compile-file "modules:defsystem/defsystem")
+EOF
+
 
 if [ "$SKIPUTILS" = "no" ];
 then

@@ -192,9 +192,9 @@
 ;;;
 (defmacro define-symbol-macro (name expansion)
   `(eval-when (:compile-toplevel :load-toplevel :execute)
-     (%define-symbol-macro ',name ',expansion)))
+     (%define-symbol-macro ',name ',expansion (c::source-location))))
 ;;;
-(defun %define-symbol-macro (name expansion)
+(defun %define-symbol-macro (name expansion source-location)
   (unless (symbolp name)
     (error 'simple-type-error :datum name :expected-type 'symbol
 	   :format-control (intl:gettext "Symbol macro name is not a symbol: ~S.")
@@ -202,7 +202,8 @@
   (ecase (info variable kind name)
     ((:macro :global nil)
      (setf (info variable kind name) :macro)
-     (setf (info variable macro-expansion name) expansion))
+     (setf (info variable macro-expansion name) expansion)
+     (set-defvar-source-location name source-location))
     (:special
      (error 'simple-program-error
 	    :format-control (intl:gettext "Symbol macro name already declared special: ~S.")

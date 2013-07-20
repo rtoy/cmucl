@@ -45,10 +45,6 @@ ifdef FEATURE_UNICODE
 CPP_DEFINE_OPTIONS += -DUNICODE
 endif
 
-# Default to using gcc.  But clang also works.
-CC = gcc
-
-
 LD = ld
 
 ifeq ($(filter 2% 3%, $(shell $(CC) -dumpversion)),)
@@ -66,8 +62,7 @@ ARCH_SRC = x86-arch.c
 OS_SRC = os-common.c e_rem_pio2.c k_rem_pio2.c 
 
 NM = nm -gp
-DEPEND = $(CC) -MM -E
-DEPEND_FLAGS = 
+DEPEND_FLAGS = -MM
 
 # This no longer has aliasing problems, so no need to use
 # -ffloat-store and -fno-strict-aliasing anymore.

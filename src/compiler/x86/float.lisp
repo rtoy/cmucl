@@ -33,9 +33,7 @@
 ;;; For the AMD Athlon, using ffreep fr0 is faster.
 ;;;
 (defun fp-pop ()
-  (if (backend-featurep :athlon)
-      (inst ffreep fr0-tn)
-      (inst fstp fr0-tn)))
+  (inst fstp fr0-tn))
 
 
 (macrolet ((ea-for-xf-desc (tn slot)
@@ -1482,7 +1480,6 @@
 		(:conditional)
 		(:info target not-p)
 		(:policy :fast-safe)
-		(:guard (not (backend-featurep :ppro)))
 		(:note _N"inline float comparison")
 		(:ignore temp fr0)
 		(:generator 3
@@ -1571,7 +1568,6 @@
 		(:conditional)
 		(:info target not-p)
 		(:policy :fast-safe)
-		(:guard (not (backend-featurep :ppro)))
 		(:note _N"inline float comparison")
 		(:ignore temp fr0)
 		(:generator 3
@@ -1659,7 +1655,6 @@
 		(:conditional)
 		(:info target not-p)
 		(:policy :fast-safe)
-		(:guard (not (backend-featurep :ppro)))
 		(:note _N"inline float comparison")
 		(:ignore temp)
 		(:generator 3
@@ -1766,99 +1761,6 @@
   (frob > #x00)
   (frob < #x01)
   (frob = #x40))
-
-
-
-;;;; Enhanced Pentium Pro floating point comparisons.
-
-;;; These comparisions use the faster sequences bases upon FCOMI and FUCOMI,
-;;; which write to the condition codes.  However, correct IEEE handling of
-;;; unordered arguments requires the comparision of multiple flags which is
-;;; only possible for the comparison (> ST0 operand) in which case the :b and
-;;; :be tests can check that both ZF and CF are zero, or either is one
-;;; respectively. For the opposite comparision (< ST0 operand), the arguments
-;;; may be swapped and the > comparision used, but for equality the slower
-;;; FNSTSW variation must be used.
-
-(define-vop (ppro-</float)
-  (:args (x) (y))
-  (:conditional)
-  (:info target not-p)
-  (:policy :fast-safe)
-  (:guard (backend-featurep :ppro))
-  (:note _N"inline float comparison")
-  (:generator 3
-    ;; Handle a few special cases
-    (cond
-      ;; x is in ST0; y is in any reg.
-      ((zerop (tn-offset x))
-       (inst fxch y)
-       (inst fcomi y)
-       (inst fxch y))
-      ;; y is in ST0; x is in another reg.
-      ((zerop (tn-offset y))
-       (inst fcomi x))
-      ;; x and y are the same register, not ST0.
-      ((location= x y)
-       (inst fxch x)
-       (inst fcomi fr0-tn)
-       (inst fxch x))
-      ;; x and y are different registers, neither ST0.
-      (t
-       (inst fxch y)
-       (inst fcomi x)
-       (inst fxch y)))
-    (inst jmp (if not-p :be :nbe) target)))
-
-(macrolet ((frob (type sc)
-	     `(define-vop (,(symbolicate "PPRO-</" type) ppro-</float)
-	        (:translate <)
-		(:args (x :scs (,sc))
-		       (y :scs (,sc)))
-	        (:arg-types ,type ,type))))
-  (frob single-float single-reg)
-  (frob double-float double-reg)
-  #+long-float (frob long-float long-reg))
-
-(define-vop (ppro->/float)
-  (:args (x) (y))
-  (:conditional)
-  (:info target not-p)
-  (:policy :fast-safe)
-  (:guard (backend-featurep :ppro))
-  (:note _N"inline float comparison")
-  (:generator 3
-    ;; Handle a few special cases
-    (cond
-      ;; x is in ST0; y is in any reg.
-      ((zerop (tn-offset x))
-       (inst fcomi y))
-      ;; y is in ST0; x is in another reg.
-      ((zerop (tn-offset y))
-       (inst fxch x)
-       (inst fcomi x)
-       (inst fxch x))
-      ;; x and y are the same register, not ST0.
-      ((location= x y)
-       (inst fxch x)
-       (inst fcomi fr0-tn)
-       (inst fxch x))
-      ;; x and y are different registers, neither ST0.
-      (t
-       (inst fxch x)
-       (inst fcomi y)
-       (inst fxch x)))
-    (inst jmp (if not-p :be :nbe) target)))
-
-(macrolet ((frob (type sc)
-	     `(define-vop (,(symbolicate "PPRO->/" type) ppro->/float)
-	        (:translate >)
-		(:args (x :scs (,sc))
-		       (y :scs (,sc)))
-	        (:arg-types ,type ,type))))
-  (frob single-float single-reg)
-  (frob double-float double-reg)
-  #+long-float (frob long-float long-reg))
 
 
 ;;;; Conversion:
@@ -3290,60 +3192,6 @@
      (unless (zerop (tn-offset r))
 	     (inst fstd r))))
 
-(define-vop (flog1p)
-  (:translate %log1p)
-  (:args (x :scs (double-reg) :to :result))
-  (:temporary (:sc double-reg :offset fr0-offset
-		   :from :argument :to :result) fr0)
-  (:temporary (:sc double-reg :offset fr1-offset
-		   :from :argument :to :result) fr1)
-  (:temporary (:sc word-reg :offset eax-offset :from :eval) temp)
-  (:results (y :scs (double-reg)))
-  (:arg-types double-float)
-  (:result-types double-float)
-  (:policy :fast-safe)
-  (:guard (or (not (backend-featurep :pentium))
-	      (not (backend-featurep :sse2))))
-  (:note _N"inline log1p function")
-  (:ignore temp)
-  (:generator 5
-     ;; x is in a FP reg, not fr0, fr1.
-     (fp-pop)
-     (fp-pop)
-     (inst fldd (make-random-tn :kind :normal
-				:sc (sc-or-lose 'double-reg *backend*)
-				:offset (- (tn-offset x) 2)))
-     ;; Check the range
-     (inst push #x3e947ae1)	; Constant 0.29
-     (inst fabs)
-     (inst fld (make-ea :dword :base esp-tn))
-     (inst fcompp)
-     (inst add esp-tn 4)
-     (inst fnstsw)			; status word to ax
-     (inst and ah-tn #x45)
-     (inst jmp :z WITHIN-RANGE)
-     ;; Out of range for fyl2xp1.
-     (inst fld1)
-     (inst faddd (make-random-tn :kind :normal
-				 :sc (sc-or-lose 'double-reg *backend*)
-				 :offset (- (tn-offset x) 1)))
-     (inst fldln2)
-     (inst fxch fr1)
-     (inst fyl2x)
-     (inst jmp DONE)
-
-     WITHIN-RANGE
-     (inst fldln2)
-     (inst fldd (make-random-tn :kind :normal
-				:sc (sc-or-lose 'double-reg *backend*)
-				:offset (- (tn-offset x) 1)))
-     (inst fyl2xp1)
-     DONE
-     (inst fld fr0)
-     (case (tn-offset y)
-       ((0 1))
-       (t (inst fstd y)))))
-
 ;;; The Pentium has a less restricted implementation of the fyl2xp1
 ;;; instruction and a range check can be avoided.
 (define-vop (flog1p-pentium)
@@ -3357,8 +3205,7 @@
   (:arg-types double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:guard (and (backend-featurep :pentium)
-	       (not (backend-featurep :sse2))))
+  (:guard (and (not (backend-featurep :sse2))))
   (:note _N"inline log1p with limited x range function")
   (:vop-var vop)
   (:save-p :compute-only)

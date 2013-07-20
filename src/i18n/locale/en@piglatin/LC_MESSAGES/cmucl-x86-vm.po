@@ -1,12 +1,10 @@
-# @ cmucl-x86-vm
+#@ cmucl-x86-vm
 # SOME DESCRIPTIVE TITLE
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
 #
 #, fuzzy
 msgid ""
-msgstr ""
-"Project-Id-Version: CMUCL 20B\n"
-"Report-Msgid-Bugs-To: \n"
+msgstr "Project-Id-Version: CMUCL 20D\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: Automatic translation\n"
 "Language-Team: Pig Latin (auto-translated)\n"
@@ -18,15 +16,11 @@ msgstr ""
 
 #: src/code/x86-vm.lisp
 msgid "Returns a string describing the type of the local machine."
-msgstr ""
-"Eturnsray away ingstray escribingday ethay ypetay ofway ethay ocallay "
-"achinemay."
+msgstr "Eturnsray away ingstray escribingday ethay ypetay ofway ethay ocallay achinemay."
 
 #: src/code/x86-vm.lisp
 msgid "Returns a string describing the version of the local machine."
-msgstr ""
-"Eturnsray away ingstray escribingday ethay ersionvay ofway ethay ocallay "
-"achinemay."
+msgstr "Eturnsray away ingstray escribingday ethay ersionvay ofway ethay ocallay achinemay."
 
 #: src/code/x86-vm.lisp
 msgid "Unknown code-object-fixup kind ~s."
@@ -37,28 +31,23 @@ msgid ""
 "Atomically compare object's slot value to test-value and if EQ store\n"
 "   new-value in the slot. The original value of the slot is returned."
 msgstr ""
-"Atomicallyway omparecay objectway's otslay aluevay otay esttay-aluevay "
-"andway ifway EQ toresay\n"
-"   ewnay-aluevay inway ethay otslay. Ethay originalway aluevay ofway ethay "
-"otslay isway eturnedray."
+"Atomicallyway omparecay objectway's otslay aluevay otay esttay-aluevay andway ifway EQ toresay\n"
+"   ewnay-aluevay inway ethay otslay. Ethay originalway aluevay ofway ethay otslay isway eturnedray."
 
 #: src/code/x86-vm.lisp
 msgid ""
 "Atomically compare symbol's value to test-value and if EQ store\n"
 "  new-value in symbol's value slot and return the original value."
 msgstr ""
-"Atomicallyway omparecay ymbolsay's aluevay otay esttay-aluevay andway ifway "
-"EQ toresay\n"
-"  ewnay-aluevay inway ymbolsay's aluevay otslay andway eturnray ethay "
-"originalway aluevay."
+"Atomicallyway omparecay ymbolsay's aluevay otay esttay-aluevay andway ifway EQ toresay\n"
+"  ewnay-aluevay inway ymbolsay's aluevay otslay andway eturnray ethay originalway aluevay."
 
 #: src/code/x86-vm.lisp
 msgid ""
 "Atomically compare the car of CONS to test-value and if EQ store\n"
 "  new-value its car and return the original value."
 msgstr ""
-"Atomicallyway omparecay ethay arcay ofway CONS otay esttay-aluevay andway "
-"ifway EQ toresay\n"
+"Atomicallyway omparecay ethay arcay ofway CONS otay esttay-aluevay andway ifway EQ toresay\n"
 "  ewnay-aluevay itsway arcay andway eturnray ethay originalway aluevay."
 
 #: src/code/x86-vm.lisp
@@ -66,8 +55,7 @@ msgid ""
 "Atomically compare the cdr of CONS to test-value and if EQ store\n"
 "  new-value its cdr and return the original value."
 msgstr ""
-"Atomicallyway omparecay ethay drcay ofway CONS otay esttay-aluevay andway "
-"ifway EQ toresay\n"
+"Atomicallyway omparecay ethay drcay ofway CONS otay esttay-aluevay andway ifway EQ toresay\n"
 "  ewnay-aluevay itsway drcay andway eturnray ethay originalway aluevay."
 
 #: src/code/x86-vm.lisp
@@ -75,39 +63,28 @@ msgid ""
 "Atomically compare an element of vector to test-value and if EQ store\n"
 "  new-value the element and return the original value."
 msgstr ""
-"Atomicallyway omparecay anway elementway ofway ectorvay otay esttay-aluevay "
-"andway ifway EQ toresay\n"
+"Atomicallyway omparecay anway elementway ofway ectorvay otay esttay-aluevay andway ifway EQ toresay\n"
 "  ewnay-aluevay ethay elementway andway eturnray ethay originalway aluevay."
 
 #: src/code/x86-vm.lisp
 msgid "Thread safe push of val onto the list in the symbol global value."
-msgstr ""
-"Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay ymbolsay "
-"obalglay aluevay."
+msgstr "Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay ymbolsay obalglay aluevay."
 
 #: src/code/x86-vm.lisp
 msgid "Thread safe pop from the list in the symbol global value."
-msgstr ""
-"Readthay afesay oppay omfray ethay istlay inway ethay ymbolsay obalglay "
-"aluevay."
+msgstr "Readthay afesay oppay omfray ethay istlay inway ethay ymbolsay obalglay aluevay."
 
 #: src/code/x86-vm.lisp
 msgid "Thread safe push of val onto the list in the car of cons."
-msgstr ""
-"Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay arcay "
-"ofway onscay."
+msgstr "Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay arcay ofway onscay."
 
 #: src/code/x86-vm.lisp
 msgid "Thread safe push of val onto the list in the cdr of cons."
-msgstr ""
-"Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay drcay "
-"ofway onscay."
+msgstr "Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay drcay ofway onscay."
 
 #: src/code/x86-vm.lisp
 msgid "Thread safe push of val onto the list in the vector element."
-msgstr ""
-"Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay ectorvay "
-"elementway."
+msgstr "Readthay afesay ushpay ofway alvay ontoway ethay istlay inway ethay ectorvay elementway."
 
 #: src/code/commandline.lisp
 msgid ""
@@ -118,18 +95,12 @@ msgid ""
 "  so, then SSE2 is used.  If the SSE2 core file cannot be found,Lisp\n"
 "  will fallback to the x87 core, which can run on any machine."
 msgstr ""
-"Ecifiesspay atwhay indkay ofway oatingflay-ointpay upportsay ouldshay ebay "
-"usedway onway x86\n"
-"  ystemssay.  Ifway 'x87', Isplay illway useway ethay x87 oatingflay-ointpay "
-"unitway; ifway\n"
-"  'sesay2', Isplay usesway SSE2 oatingflay-ointpay unitway. Ethay efaultday "
-"isway\n"
-"  'autoway',ichwhay ausescay Isplay otay eckchay otay eesay ifway SSE2 isway "
-"availableway.  Ifway\n"
-"  osay, enthay SSE2 isway usedway.  Ifway ethay SSE2 orecay ilefay annotcay "
-"ebay oundfay,Isplay\n"
-"  illway allbackfay otay ethay x87 orecay, ichwhay ancay unray onway anyway "
-"achinemay."
+"Ecifiesspay atwhay indkay ofway oatingflay-ointpay upportsay ouldshay ebay usedway onway x86\n"
+"  ystemssay.  Ifway 'x87', Isplay illway useway ethay x87 oatingflay-ointpay unitway; ifway\n"
+"  'sesay2', Isplay usesway SSE2 oatingflay-ointpay unitway. Ethay efaultday isway\n"
+"  'autoway',ichwhay ausescay Isplay otay eckchay otay eesay ifway SSE2 isway availableway.  Ifway\n"
+"  osay, enthay SSE2 isway usedway.  Ifway ethay SSE2 orecay ilefay annotcay ebay oundfay,Isplay\n"
+"  illway allbackfay otay ethay x87 orecay, ichwhay ancay unray onway anyway achinemay."
 
 #: src/code/commandline.lisp
 msgid "mode"
@@ -149,16 +120,13 @@ msgstr "Eakpointbray atthay obodynay antsway?"
 
 #: src/compiler/x86/parms.lisp
 msgid "Number of bits per word where a word holds one lisp descriptor."
-msgstr ""
-"Umbernay ofway itsbay erpay ordway erewhay away ordway oldshay oneway isplay "
-"escriptorday."
+msgstr "Umbernay ofway itsbay erpay ordway erewhay away ordway oldshay oneway isplay escriptorday."
 
 #: src/compiler/x86/parms.lisp
 msgid ""
 "Number of bits per byte where a byte is the smallest addressable object."
 msgstr ""
-"Umbernay ofway itsbay erpay ytebay erewhay away ytebay isway ethay "
-"mallestsay addressableway objectway."
+"Umbernay ofway itsbay erpay ytebay erewhay away ytebay isway ethay mallestsay addressableway objectway."
 
 #: src/compiler/x86/parms.lisp
 msgid "Number of bits needed to represent a character"
@@ -170,13 +138,39 @@ msgstr "Umbernay ofway ytesbay eedednay otay epresentray away aracterchay"
 
 #: src/compiler/x86/parms.lisp
 msgid "Number of bits to shift between word addresses and byte addresses."
-msgstr ""
-"Umbernay ofway itsbay otay iftshay etweenbay ordway addressesway andway "
-"ytebay addressesway."
+msgstr "Umbernay ofway itsbay otay iftshay etweenbay ordway addressesway andway ytebay addressesway."
 
 #: src/compiler/x86/parms.lisp
 msgid "Number of bytes in a word."
 msgstr "Umbernay ofway ytesbay inway away ordway."
+
+#: src/compiler/x86/parms.lisp
+msgid "Number of bits at the low end of a pointer used for type information."
+msgstr "Umbernay ofway itsbay atway ethay owlay endway ofway away ointerpay usedway orfay ypetay informationway."
+
+#: src/compiler/x86/parms.lisp
+msgid "Mask to extract the low tag bits from a pointer."
+msgstr "Askmay otay extractway ethay owlay agtay itsbay omfray away ointerpay."
+
+#: src/compiler/x86/parms.lisp
+msgid ""
+"Exclusive upper bound on the value of the low tag bits from a\n"
+"  pointer."
+msgstr ""
+"Exclusiveway upperway oundbay onway ethay aluevay ofway ethay owlay agtay itsbay omfray away\n"
+"  ointerpay."
+
+#: src/compiler/x86/parms.lisp
+msgid "Number of tag bits used for a fixnum"
+msgstr "Umbernay ofway agtay itsbay usedway orfay away ixnumfay"
+
+#: src/compiler/x86/parms.lisp
+msgid "Mask to get the fixnum tag"
+msgstr "Askmay otay etgay ethay ixnumfay agtay"
+
+#: src/compiler/x86/parms.lisp
+msgid "Maximum number of bits in a positive fixnum"
+msgstr "Aximummay umbernay ofway itsbay inway away ositivepay ixnumfay"
 
 #: src/compiler/x86/vm.lisp
 msgid "Redefining SC number ~D from ~S to ~S."
@@ -195,8 +189,7 @@ msgid ""
 "Loads the type bits of a pointer into target independent of\n"
 "   byte-ordering issues."
 msgstr ""
-"Oadslay ethay ypetay itsbay ofway away ointerpay intoway argettay "
-"independentway ofway\n"
+"Oadslay ethay ypetay itsbay ofway away ointerpay intoway argettay independentway ofway\n"
 "   ytebay-orderingway issuesway."
 
 #: src/compiler/x86/macros.lisp
@@ -207,13 +200,10 @@ msgid ""
 "   speed vs size decision.  If Dynamic-Extent is true, and otherwise\n"
 "   appropriate, allocate from the stack."
 msgstr ""
-"Allocateway anway objectway ithway away izesay inway ytesbay ivengay ybay "
-"Izesay.\n"
+"Allocateway anway objectway ithway away izesay inway ytesbay ivengay ybay Izesay.\n"
 "   Ethay izesay aymay ebay anway integerway orway away TN.\n"
-"   Ifway Inlineway isway away VOP odenay-arvay enthay itway isway usedway "
-"otay akemay anway appropriateway\n"
-"   eedspay svay izesay ecisionday.  Ifway Ynamicday-Extentway isway uetray, "
-"andway otherwiseway\n"
+"   Ifway Inlineway isway away VOP odenay-arvay enthay itway isway usedway otay akemay anway appropriateway\n"
+"   eedspay svay izesay ecisionday.  Ifway Ynamicday-Extentway isway uetray, andway otherwiseway\n"
 "   appropriateway, allocateway omfray ethay tacksay."
 
 #: src/compiler/x86/macros.lisp
@@ -222,10 +212,8 @@ msgid ""
 "   word header having the specified Type-Code.  The result is placed in\n"
 "   Result-TN."
 msgstr ""
-"Allocateway anway otherway-ointerpay objectway ofway ixedfay Izesay ithway "
-"away inglesay\n"
-"   ordway eaderhay avinghay ethay ecifiedspay Ypetay-Odecay.  Ethay esultray "
-"isway acedplay inway\n"
+"Allocateway anway otherway-ointerpay objectway ofway ixedfay Izesay ithway away inglesay\n"
+"   ordway eaderhay avinghay ethay ecifiedspay Ypetay-Odecay.  Ethay esultray isway acedplay inway\n"
 "   Esultray-TN."
 
 #: src/compiler/x86/macros.lisp
@@ -237,8 +225,7 @@ msgid ""
 "Cause a continuable error.  If the error is continued, execution resumes at\n"
 "  LABEL."
 msgstr ""
-"Ausecay away ontinuablecay errorway.  Ifway ethay errorway isway "
-"ontinuedcay, executionway esumesray atway\n"
+"Ausecay away ontinuablecay errorway.  Ifway ethay errorway isway ontinuedcay, executionway esumesray atway\n"
 "  LABEL."
 
 #: src/compiler/x86/macros.lisp
@@ -247,8 +234,7 @@ msgid ""
 "  Emit code for an error with the specified Error-Code and context Values."
 msgstr ""
 "Enerategay-Errorway-Odecay Errorway-odecay Alue*Vay\n"
-"  Emitway odecay orfay anway errorway ithway ethay ecifiedspay Errorway-"
-"Odecay andway ontextcay Aluesvay."
+"  Emitway odecay orfay anway errorway ithway ethay ecifiedspay Errorway-Odecay andway ontextcay Aluesvay."
 
 #: src/compiler/x86/macros.lisp
 msgid ""
@@ -258,10 +244,8 @@ msgid ""
 "  the GENERATE-CERROR-CODE form."
 msgstr ""
 "Enerategay-Errorcay-Odecay Errorway-odecay Alue*Vay\n"
-"  Emitway odecay orfay away ontinuablecay errorway ithway ethay ecifiedspay "
-"Errorway-Odecay andway\n"
-"  ontextcay Aluesvay.  Ifway ethay errorway isway ontinuedcay, executionway "
-"esumesray afterway\n"
+"  Emitway odecay orfay away ontinuablecay errorway ithway ethay ecifiedspay Errorway-Odecay andway\n"
+"  ontextcay Aluesvay.  Ifway ethay errorway isway ontinuedcay, executionway esumesray afterway\n"
 "  ethay GENERATE-CERROR-CODE ormfay."
 
 #: src/compiler/x86/type-vops.lisp src/compiler/x86/pred.lisp
@@ -289,11 +273,10 @@ msgstr "onstantcay oadlay"
 #: src/compiler/x86/move.lisp
 msgid ""
 "Load TN allocated, but no move function?~@\n"
-"\t           VM definition inconsistent, recompile and try again."
+"	           VM definition inconsistent, recompile and try again."
 msgstr ""
 "Oadlay TN allocatedway, utbay onay ovemay unctionfay?~@\n"
-"\t           VM efinitionday inconsistentway, ecompileray andway ytray "
-"againway."
+"	           VM efinitionday inconsistentway, ecompileray andway ytray againway."
 
 #: src/compiler/x86/move.lisp
 msgid "integer to untagged word coercion"
@@ -324,6 +307,8 @@ msgid ""
 "Returns the primary value of BODY as the primary value, and the\n"
 " number of CPU cycles elapsed as secondary value."
 msgstr ""
+"Eturnsray ethay imarypray aluevay ofway BODY asway ethay imarypray aluevay, andway ethay\n"
+" umbernay ofway CPU yclescay elapsedway asway econdarysay aluevay."
 
 #: src/compiler/x86/char.lisp
 msgid "character untagging"
@@ -389,6 +374,10 @@ msgstr "SHIFT-TOWARDS-START"
 msgid "SHIFT-TOWARDS-END"
 msgstr "SHIFT-TOWARDS-END"
 
+#: src/compiler/x86/arith.lisp
+msgid "inline right ASH"
+msgstr "inlineway ightray ASH"
+
 #: src/compiler/x86/c-call.lisp
 msgid "Too many result values from c-call."
 msgstr "Ootay anymay esultray aluesvay omfray c-allcay."
@@ -397,13 +386,12 @@ msgstr "Ootay anymay esultray aluesvay omfray c-allcay."
 msgid "Method ~S not defined for ~S"
 msgstr "Ethodmay ~S otnay efinedday orfay ~S"
 
-#: src/compiler/x86/c-call.lisp
+#: src/compiler/x86/c-callback.lisp
 msgid ""
 "Cons up a piece of code which calls call-callback with INDEX and a\n"
 "pointer to the arguments."
 msgstr ""
-"Onscay upway away iecepay ofway odecay ichwhay allscay allcay-allbackcay "
-"ithway INDEX andway away\n"
+"Onscay upway away iecepay ofway odecay ichwhay allscay allcay-allbackcay ithway INDEX andway away\n"
 "ointerpay otay ethay argumentsway."
 
 #: src/compiler/x86/call.lisp
@@ -417,3 +405,4 @@ msgstr "inlineway arrayway accessway"
 #: src/compiler/x86/array.lisp
 msgid "inline array store"
 msgstr "inlineway arrayway toresay"
+
