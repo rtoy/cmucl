@@ -137,6 +137,12 @@
 ;;;
 ;;;    Move a stack TN to a register and vice-versa.
 ;;;
+;;; FIXME: On SPARC, sometimes the offset to the stack TN won't fit in
+;;; the offset field of the LD instruction.  The same is true on
+;;; ARM. For SPARC, there is a dedicated register to use as a temp.
+;;; It would be useful on ARM if Load-Stack-TN and Store-Stack-TN took
+;;; an optional arg to specify a temp non-descriptor reg that could be
+;;; used to allow access to the entire stack.
 (defmacro load-stack-tn (reg stack)
   `(let ((reg ,reg)
 	 (stack ,stack))
