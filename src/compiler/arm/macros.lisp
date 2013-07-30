@@ -13,8 +13,7 @@
 ;;;
 
 (in-package "ARM")
-#+(or)
-(intl:textdomain "cmucl-sparc-vm")
+(intl:textdomain "cmucl-arm-vm")
 
 
 ;;; Instruction-like macros.
@@ -36,12 +35,10 @@
 ;; in the BASE descriptor register.
 ;;
 ;; In some situations, the offset may be so large that it cannot fit
-;; into the offset field of the LDR(STR) instruction (a 16-bit signed
-;; quantity).  In this situation, the TEMP non-descriptor register, if
+;; into the offset field of the LDR(STR) instruction (a 13-bit signed
+;; quantity).  In this situation, the TEMP register (any-reg), if
 ;; supplied, is used to compute the correct offset.  If TEMP is not
-;; given, the offset is assumed to fit.  (TEMP must be a
-;; non-descriptor because we store random values into it.  If OBJECT
-;; were always a non-descriptor, we wouldn't need the TEMP register.)
+;; given, the offset is assumed to fit.
 ;;
 ;; Samething for storew, except we store OBJECT at the given address.
 (macrolet
@@ -50,7 +47,7 @@
        (if temp
 	   (let ((offs (gensym)))
 	     `(let ((,offs (- (ash ,offset ,',shift) ,lowtag)))
-	       (if (find-encoding ,offs)
+	       (if (typep '(signed-byte 13),offs)
 		   (inst ,',inst ,object (make-ea ,base :offset ,offs))
 		   (progn
 		     (inst li ,temp ,offs)
@@ -99,9 +96,9 @@
 	      (n-offset offset))
     (ecase (backend-byte-order *target-backend*)
       (:little-endian
-       `(inst ldb ,n-target (make-ea ,n-source :offset ,n-offset)))
+       `(inst ldrb ,n-target (make-ea ,n-source :offset ,n-offset)))
       (:big-endian
-       `(inst ldb ,n-target (make-ea ,n-source :offset (+ ,n-offset (1- vm:word-bytes))))))))
+       `(inst ldrb ,n-target (make-ea ,n-source :offset (+ ,n-offset (1- word-bytes))))))))
 
 ;;; Macros to handle the fact that we cannot use the machine native call and
 ;;; return instructions. 
