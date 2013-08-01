@@ -94,43 +94,25 @@
 ;;;
 (define-vop (%more-arg-values)
   (:args (context :scs (descriptor-reg any-reg) :target src)
-         (skip :scs (any-reg immediate))
-         (num :scs (any-reg) :target count))
+	 (skip :scs (any-reg immediate))
+	 (num :scs (any-reg) :target count))
   (:arg-types * positive-fixnum positive-fixnum)
-  (:temporary (:sc any-reg :offset esi-offset :from (:argument 0)) src)
-  (:temporary (:sc descriptor-reg :offset eax-offset) temp)
-  (:temporary (:sc unsigned-reg :offset ecx-offset) temp1)
+  (:temporary (:sc any-reg :from (:argument 0)) src)
+  (:temporary (:sc any-reg :from (:argument 1)) i)
   (:results (start :scs (any-reg))
-            (count :scs (any-reg)))
+	    (count :scs (any-reg)))
   (:generator 20
-    (sc-case skip
-      (immediate
-       (cond ((zerop (tn-value skip))
-	      (move src context)
-	      (move count num))
-	     (t
-	      (inst lea src (make-ea :dword :base context
-				     :disp (- (* (tn-value skip) word-bytes))))
-	      (move count num)
-	      (inst sub count (* (tn-value skip) word-bytes)))))
-      
-      (any-reg
-       (move src context)
-       (inst sub src skip)
-       (move count num)
-       (inst sub count skip)))
-    
-    (move temp1 count)
-    (inst mov start esp-tn)
-    (inst jecxz done)  ; check for 0 count?
-    
-    (inst shr temp1 word-shift) ; convert the fixnum to a count.
-    
+    (move src context)
+    (move count num)
+    (inst sub src count)
+    (unless (and (sc-is skip immediate) (zerop (tn-value skip)))
+      (inst sub count skip))
+    (move start esp-tn)
+    (inst test count count)
+    (inst jmp :z done)
+    (inst mov i count)
     LOOP
-    (inst mov temp (make-ea :dword :base src))
-    (inst sub src 4)
-    (inst push temp)
-    (inst loop loop)
-    
+    (inst push (make-ea :dword :base src :index i))
+    (inst sub i word-bytes)
+    (inst jmp :nz loop)
     DONE))
- 
