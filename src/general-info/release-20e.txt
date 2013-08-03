@@ -67,6 +67,11 @@ New in this release:
     * String reverse is much faster (upto 20 times).
     * REVERSE and NREVERSE on strings will reverse surrogate pairs.
       (Previously, surrogate pairs weren't reversed.)
+    * Correct some mistakes in optimizing code where variables are
+      declared as FLOAT.  Some optimizations were missed because FLOAT
+      is represented internally as a UNION type, confusing the type
+      derivation code.
+    * Clean up and optimize x86 move VOPS and length/list VOP.
 
 
   * Trac Tickets:
