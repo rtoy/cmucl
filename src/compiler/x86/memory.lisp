@@ -93,7 +93,6 @@
 		   :from (:argument 1) :to :result :target result)  eax)
   (:variant-vars offset lowtag)
   (:results (result :scs (descriptor-reg any-reg)))
-  (:guard (backend-featurep :i486))
   (:generator 4
     (move eax old-value)
     (inst cmpxchg (make-ea :dword :base object
@@ -163,7 +162,6 @@
   (:variant-vars base lowtag)
   (:results (result :scs (descriptor-reg any-reg)))
   (:info offset)
-  (:guard (backend-featurep :i486))
   (:generator 4
     (move eax old-value)
     (inst cmpxchg (make-ea :dword :base object

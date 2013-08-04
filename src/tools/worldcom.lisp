@@ -138,6 +138,8 @@
 (setf (fdefinition 'lisp::%deftype) *original-%deftype*)
 
 (comf "target:code/alieneval")
+(when (c:target-featurep :alien-callback)
+  (comf "target:code/alien-callback"))
 (comf "target:code/c-call")
 (comf "target:code/sap")
 
@@ -322,6 +324,8 @@
 (comf "target:code/intl-tramp")
 (comf "target:code/intl")
 
+(when (c:backend-featurep :unicode)
+  (comf "target:code/unicode"))
 ); let *byte-compile-top-level*
 
 ); with-compiler-log-file

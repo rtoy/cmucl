@@ -260,7 +260,7 @@
   ;; in-buffer-length, but could be less if we reached the
   ;; end-of-file.
   #+unicode
-  (in-length 0 :type index)
+  (in-length in-buffer-length :type index)
   ;;
   ;; Indicates how to handle errors when converting octets to
   ;; characters.  If NIL, then the external format should handle it
@@ -1697,6 +1697,8 @@
 	      (posn errno)
 	    (unix:unix-lseek (fd-stream-fd stream) 0 unix:l_incr)
 	  (declare (type (or (integer 0) null) posn))
+	  #+nil
+	  (format t "lseek returns ~D ~D~%" posn errno)
 	  (cond (posn
 		 ;; Adjust for buffered output:
 		 ;;  If there is any output buffered, the *real* file position
@@ -1716,6 +1718,8 @@
 		 (decf posn (- (fd-stream-ibuf-tail stream)
 			       (fd-stream-ibuf-head stream)))
 
+		 #+nil
+		 (format t "Updated posn = ~D~%" posn)
 		 #+unicode
 		 (when (fd-stream-string-buffer stream)
 		   ;; The string buffer contains Lisp characters,
@@ -1742,6 +1746,7 @@
 		       (progn
 			 (format t "new posn = ~D~%" posn)
 			 (format t "in-buffer-length = ~D~%" in-buffer-length)
+			 (format t "in-length = ~D~%" (fd-stream-in-length stream))
 			 (format t "fd-stream-in-index = ~D~%" (fd-stream-in-index stream))))))
 		 (when (fd-stream-in-buffer stream)
 		   ;; When we have an in-buffer (whether we have a
@@ -1756,8 +1761,9 @@
 		   #+nil
 		   (progn
 		     (format t "in-buffer-length = ~D~%" in-buffer-length)
+		     (format t "in-length = ~D~%" (fd-stream-in-length stream))
 		     (format t "fd-stream-in-index = ~D~%" (fd-stream-in-index stream)))
-		   (decf posn (- in-buffer-length
+		   (decf posn (- (fd-stream-in-length stream)
 				 (fd-stream-in-index stream))))
 		 #+nil
 		 (format t "fd-stream-unread = ~S~%" (fd-stream-unread stream))

@@ -10,7 +10,7 @@ usage() {
     echo ""
     # List possible values for lisp-variant and motif-variant
     echo "Possible LISP-VARIANTs:"
-    ( cd src/lisp/ && ls -1 Config.* ) | sed 's;^Config[.];;g' | pr -3at -o 8 || quit "Can't list lisp-variants"
+    ( cd src/lisp/ && ls -1 Config.* ) | sed 's;^Config[.];;g' | grep -v common | pr -3at -o 8 || quit "Can't list lisp-variants"
     echo "Possible MOTIF-VARIANTs:"
     ( cd src/motif/server/ && ls -1 Config.* ) | sed 's;^Config[.];;g' | pr -3at -o 8 || quit "Can't list lisp-variants"
     exit 2

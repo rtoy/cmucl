@@ -18,7 +18,9 @@
 (in-package "VM")
 (intl:textdomain "cmucl")
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(current-float-trap floating-point-modes sigfpe-handler))
+)
 (in-package "EXTENSIONS")
 (export '(set-floating-point-modes get-floating-point-modes
 	  with-float-traps-masked))
@@ -239,7 +241,7 @@
 ;;;    Signal the appropriate condition when we get a floating-point error.
 ;;;
 (defun sigfpe-handler (signal code scp)
-  (declare (ignore signal code)
+  (declare (ignore signal)
 	   (type system-area-pointer scp))
   (let* ((modes (sigcontext-floating-point-modes
 		 (alien:sap-alien scp (* unix:sigcontext))))
@@ -313,9 +315,26 @@
 	     ;; operands also seem to be missing.  Signal a general
 	     ;; arithmetic error.
 	     #+(and x86 solaris)
-	     (error 'arithmetic-error :operands operands)
+	     (error _"SIGFPE with no exceptions currently enabled? (si-code = ~D)"
+		    code)
+	     ;; For all other x86 ports, we should only get here if
+	     ;; the SIGFPE was caused by an integer overflow on
+	     ;; division.  For sparc and ppc, I (rtoy) don't think
+	     ;; there's any other way to get here since integer
+	     ;; overflows aren't signaled.
+	     ;;
+	     ;; In that case, FOP should be /, so we can generate a
+	     ;; nice arithmetic-error.  It's possible to use CODE,
+	     ;; which is supposed to indicate what caused the
+	     ;; exception, but each OS is different, so we don't; FOP
+	     ;; can tell us.
 	     #-(and x86 solaris)
-	     (error _"SIGFPE with no exceptions currently enabled?"))))))
+	     (if fop
+		 (error 'arithmetic-error
+			:operation fop
+			:operands operands)
+		 (error _"SIGFPE with no exceptions currently enabled? (si-code = ~D)"
+			code)))))))
 
 ;;; WITH-FLOAT-TRAPS-MASKED  --  Public
 ;;;

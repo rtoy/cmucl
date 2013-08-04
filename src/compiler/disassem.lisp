@@ -1670,7 +1670,13 @@
 	    (> (specializer-rank i1) (specializer-rank i2)))))
 
 (defun specialization-error (insts)
-  (error (intl:gettext "Instructions either aren't related or conflict in some way:~% ~s") insts))
+  (error
+   (with-output-to-string (s)
+     (let ((*standard-output* s))
+       (format s (intl:gettext "Instructions either aren't related or conflict in some way:~%"))
+       (dolist (inst insts)
+	 (print-inst-bits inst)
+	 (format s "  ~S~%" inst))))))
 
 (defun try-specializing (insts)
   "Given a list of instructions INSTS, Sees if one of these instructions is a

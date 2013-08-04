@@ -15,10 +15,12 @@
 (use-package "SYSTEM")
 (intl:textdomain "cmucl")
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(memory-usage count-no-ops descriptor-vs-non-descriptor-storage
 		       instance-usage find-holes print-allocated-objects
 		       code-breakdown uninterned-symbol-count
 		       list-allocated-objects))
+)
 (in-package "LISP")
 (import '(
 	  dynamic-0-space-start dynamic-1-space-start read-only-space-start

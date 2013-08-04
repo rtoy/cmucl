@@ -1202,40 +1202,6 @@ size_unboxed(lispobj * where)
 #define NWORDS(x,y) (CEILING((x),(y)) / (y))
 
 static int
-scav_string(lispobj * where, lispobj object)
-{
-    struct vector *vector;
-    int length, nwords;
-
-    /* NOTE: Strings contain one more byte of data than the length */
-    /* slot indicates. */
-
-    vector = (struct vector *) where;
-    length = fixnum_value(vector->length) + 1;
-    nwords = CEILING(NWORDS(length, 4) + 2, 2);
-
-    return nwords;
-}
-
-static lispobj
-trans_string(lispobj object)
-{
-    struct vector *vector;
-    int length, nwords;
-
-    gc_assert(Pointerp(object));
-
-    /* NOTE: Strings contain one more byte of data than the length */
-    /* slot indicates. */
-
-    vector = (struct vector *) PTR(object);
-    length = fixnum_value(vector->length) + 1;
-    nwords = CEILING(NWORDS(length, 4) + 2, 2);
-
-    return copy_object(object, nwords);
-}
-
-static int
 size_string(lispobj * where)
 {
     struct vector *vector;
@@ -1246,9 +1212,30 @@ size_string(lispobj * where)
 
     vector = (struct vector *) where;
     length = fixnum_value(vector->length) + 1;
+#ifndef UNICODE
     nwords = CEILING(NWORDS(length, 4) + 2, 2);
+#else
+    /*
+     * Strings are just like arrays with 16-bit elements, and contain
+     * one more element than the slot length indicates.
+     */
+    nwords = CEILING(NWORDS(length, 2) + 2, 2);
+#endif
 
     return nwords;
+}
+
+static int
+scav_string(lispobj * where, lispobj object)
+{
+    return size_string(where);
+}
+
+static lispobj
+trans_string(lispobj object)
+{
+    gc_assert(Pointerp(object));
+    return copy_object(object, size_string((lispobj *) PTR(object)));
 }
 
 static int

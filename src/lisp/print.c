@@ -11,6 +11,8 @@
 #include "print.h"
 #include "lisp.h"
 #include "internals.h"
+#include "os.h"
+#include "interr.h"
 #include "monitor.h"
 #include "vars.h"
 #include "os.h"

@@ -58,7 +58,7 @@ clean:
 depend: Depends
 
 Depends: ${SRCS}
-	$(DEPEND) ${DEPEND_FLAGS} ${CFLAGS} ${CPPFLAGS} $^ > ,depends
+	$(CC) ${DEPEND_FLAGS} ${CFLAGS} ${CPPFLAGS} $^ > ,depends
 	mv ,depends Depends
 
 -include Depends

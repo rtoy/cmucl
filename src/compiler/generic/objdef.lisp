@@ -17,6 +17,7 @@
 (in-package "VM")
 (intl:textdomain "cmucl")
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(lowtag-bits lowtag-mask lowtag-limit type-bits type-mask
 	  target-most-positive-fixnum target-most-negative-fixnum
 	  even-fixnum-type function-pointer-type other-immediate-0-type
@@ -52,6 +53,7 @@
 	  complex-double-double-float-type
 	  simple-array-double-double-float-type
 	  simple-array-complex-double-double-float-type))
+)
 
 (in-package "KERNEL")
 (export '(%make-funcallable-instance

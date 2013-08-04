@@ -34,7 +34,6 @@
 		   :from :eval :to :result) ecx)
   (:temporary (:sc unsigned-reg :offset edx-offset
 		   :from :eval :to :result) edx)
-  (:temporary (:sc double-stack) temp)
   (:node-var node)
   (:vop-var vop)
   (:save-p t)
@@ -77,7 +76,6 @@
 (define-vop (alloc-number-stack-space)
   (:info amount)
   (:results (result :scs (sap-reg any-reg)))
-  (:node-var node)
   (:generator 0
     (assert (location= result esp-tn))
 
@@ -98,7 +96,6 @@
 
 (define-vop (dealloc-number-stack-space)
   (:info amount)
-  (:node-var node)
   (:generator 0
     (unless (zerop amount)
       (let ((delta (logandc2 (+ amount 3) 3)))

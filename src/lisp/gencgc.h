@@ -19,6 +19,23 @@ int gc_write_barrier(void *);
 
 
 /*
+ * How to madvise pages, if enabled
+ */
+#if defined(__linux__)
+#define GENCGC_MADVISE	MADV_DONTNEED
+#else
+#define GENCGC_MADVISE	MADV_FREE              
+#endif
+
+/*
+ * That start of each unallocate page is set to this value to indicate
+ * that the page needs to be zeroed before being allocated.  This is
+ * used when gencgc_unmap_zero is MODE_MADVISE or MODE_LAZY.  Any
+ * non-zero value will work.
+ */
+#define PAGE_NEEDS_ZEROING_MARKER	0xdead0000
+
+/*
  * Set when the page is write protected. If it is writen into it is
  * made writable and this flag is cleared. This should always reflect
  * the actual write_protect status of a page.

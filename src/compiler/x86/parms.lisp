@@ -74,7 +74,9 @@
 
 ;;;; Machine Architecture parameters:
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(word-bits byte-bits char-bits word-shift word-bytes char-bytes
+	  fixnum-tag-bits fixnum-tag-mask positive-fixnum-bits
 	  float-sign-shift
 
 	  single-float-bias single-float-exponent-byte
@@ -95,6 +97,7 @@
 	  float-underflow-trap-bit float-overflow-trap-bit
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit))
+)
 
 #+double-double
 (export '(double-double-float-digits))
@@ -119,6 +122,25 @@
 
 (defconstant word-bytes (/ word-bits byte-bits)
   "Number of bytes in a word.")
+
+(defconstant lowtag-bits 3
+  "Number of bits at the low end of a pointer used for type information.")
+
+(defconstant lowtag-mask (1- (ash 1 lowtag-bits))
+  "Mask to extract the low tag bits from a pointer.")
+  
+(defconstant lowtag-limit (ash 1 lowtag-bits)
+  "Exclusive upper bound on the value of the low tag bits from a
+  pointer.")
+
+(defconstant fixnum-tag-bits (1- lowtag-bits)
+  "Number of tag bits used for a fixnum")
+
+(defconstant fixnum-tag-mask (1- (ash 1 fixnum-tag-bits))
+  "Mask to get the fixnum tag")
+
+(defconstant positive-fixnum-bits (- word-bits fixnum-tag-bits 1)
+  "Maximum number of bits in a positive fixnum")
 ) ; eval-when
 
 (eval-when (compile load eval)
@@ -204,11 +226,13 @@
 
 ;;;; Description of the target address space.
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(target-read-only-space-start
 	  target-static-space-start
 	  target-dynamic-space-start
 	  target-foreign-linkage-space-start
 	  target-foreign-linkage-entry-size))
+)
 
 ;;; Where to put the different spaces.
 ;;; 
@@ -233,6 +257,7 @@
 
 ;;;; Other random constants.
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(halt-trap pending-interrupt-trap error-trap cerror-trap
 	  breakpoint-trap function-end-breakpoint-trap
 	  single-step-breakpoint-trap
@@ -241,6 +266,7 @@
           object-not-list-trap object-not-instance-trap
 	  trace-table-normal trace-table-call-site
 	  trace-table-function-prologue trace-table-function-epilogue))
+)
 
 (defenum (:suffix -trap :start 8)
   halt
@@ -268,7 +294,9 @@
 
 ;;;; Static symbols.
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(static-symbols static-functions))
+)
 
 ;;; These symbols are loaded into static space directly after NIL so
 ;;; that the system can compute their address by adding a constant

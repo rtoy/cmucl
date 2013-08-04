@@ -23,22 +23,87 @@ New in this release:
   * Feature enhancements
  
   * Changes
-    * ASDF2 updated to version 2.26.
+    * ASDF2 updated to version 3.0.2.
+    * DEFINE-COMPILER-MACRO now has source-location information for
+      the macro definition.
+    * :ALIEN-CALLBACK added to *FEATURES* for platforms that support
+      alien callbacks.
+    * The sparc port can be built using gcc once again.
+    * The old Cheney stop-and-copy GC supported on sparc once again.
+      However, there are no plans on supplying sparc binaries with
+      this GC.
+    * For x86, optimize TRUNCATE when the second arg is a compile-time
+      constant and use a multiplication instead of a division.  (Sparc
+      and ppc already had this optimization)
+    * The following *FEATURES* have been removed:
+      * :COMMON (not used)
+      * :CONSERVATIVE-FLOAT-TYPE (Always default to this in type
+        derivation.)
+      * :I486 and :PENTIUM (Always assume we're running on at least a
+        Pentium.)
+    * Update unicode to support Unicode 6.2.
+    * Add MP:PROCESS-JOIN, as given in ticket #77.
+    * Added UNICODE package to hold Unicode-related functions.
+      Currently contains Unicode extended versions of STRING-UPCASE,
+      STRING-DOWNCASE, and STRING-CAPITALIZE.
 
   * ANSI compliance fixes:
+    * Attempts to modify the standard readtable or the standard pprint
+      dispatch table will now signal a continuable error.
+    * Remove the Unicode extensions from string-upcase and friends.
+      This functionality is moved to the new UNICODE package.
 
   * Bugfixes:
+    * REPLACE and friends on strings were limited to strings less than
+      the maximum possible size. This has been fixed so strings of any
+      supported length can be handled.  (See ticket #66 and #68.)
+    * A serious error in FILE-POSITION on streams using an encoding
+      other than latin1 has been fixed.  See ticket #74.
+    * Fix startup crashes on some Debian Linux versions.  This was
+      caused by the release string not having a patch version.
+    * FILE-POSITION no longer returns incorrect values.  See ticket
+      #79.
+    * Fix error in (format t "~ve" 21 5d-324).  (See ticket #80).
+    * String reverse is much faster (upto 20 times).
+    * REVERSE and NREVERSE on strings will reverse surrogate pairs.
+      (Previously, surrogate pairs weren't reversed.)
+
 
   * Trac Tickets:
     * Ticket #52 reopened.
+    * Ticket #66 fixed.
+    * Ticket #67 fixed.
+    * Ticket #68 fixed.
+    * Ticket #69 fixed.
+    * Ticket #70 fixed.
+    * Ticket #65 fixed.
+    * Ticket #71 fixed.
+    * Ticket #72 fixed.
+    * Ticket #73 fixed.
+    * Ticket #74 fixed.
+    * Ticket #76 fixed.
+    * Ticket #79 fixed.
+    * Ticket #77 fixed.
+    * Ticket #80 fixed.
+    * Ticket #81 fixed.
+    * Ticket #83 fixed.
+    * Ticket #82 fixed.
 
   * Other changes:
     * -8 option for build-all.sh is deprecated since we don't
       officially support 8-bit builds anymore.
+    * Some small updates to the User Manual and CMU Internals
+      documents to generate pdf files by default.
 
   * Improvements to the PCL implementation of CLOS:
 
   * Changes to building procedure:
+    * In make-dist.sh, the version is now optional.  If not given, a
+      version is derived from the git hash returned by "git
+      describe". 
+    * build.sh -u used to disable building of asdf and friends.  This
+      is incorrect.  Asdf is always built now (during the last stage).
+
 
 This release is not binary compatible with code compiled using CMUCL
 20d; you will need to recompile FASL files. 
