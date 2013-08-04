@@ -5,19 +5,15 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/macros.lisp $")
+  "$Header: src/compiler/arm/macros.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: src/compiler/sparc/macros.lisp $
+;;; This file contains various useful macros for generating ARM code.
 ;;;
-;;; This file contains various useful macros for generating SPARC code.
-;;;
-;;; Written by William Lott.
-;;; 
 
-(in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(in-package "ARM")
+(intl:textdomain "cmucl-arm-vm")
 
 
 ;;; Instruction-like macros.
@@ -30,53 +26,35 @@
        (inst move ,n-dst ,n-src))))
 
 ;; (loadw object base &optional (offset 0) (lowtag 0) temp)
+;; (storew object base &optional (offset 0) (lowtag 0) temp)
 ;;
-;; Load a word at a given address into the register OBJECT. The
-;; address of the word is in register BASE, plus an offset given by
-;; OFFSET, which is in words.  LOWTAG is an adjustment to OFFSET to
-;; account for any tag bits used in the BASE descriptor register.
+;; Load a word at a given address into the register OBJECT, or store
+;; OBJECT at the given address.. The address of the word is in
+;; register BASE, plus an offset given by OFFSET, which is in words.
+;; LOWTAG is an adjustment to OFFSET to account for any tag bits used
+;; in the BASE descriptor register.
 ;;
 ;; In some situations, the offset may be so large that it cannot fit
-;; into the offset field of the LD instruction (a 13-bit signed
-;; quantity).  In this situation, the TEMP non-descriptor register, if
+;; into the offset field of the LDR(STR) instruction (a 13-bit signed
+;; quantity).  In this situation, the TEMP register (any-reg), if
 ;; supplied, is used to compute the correct offset.  If TEMP is not
-;; given, the offset is assumed to fit.  (TEMP must be a
-;; non-descriptor because we store random values into it.  If OBJECT
-;; were always a non-descriptor, we wouldn't need the TEMP register.)
+;; given, the offset is assumed to fit.
 ;;
 ;; Samething for storew, except we store OBJECT at the given address.
 (macrolet
-    ((frob (op inst shift)
+    ((def-load/store-word (op inst shift)
      `(defmacro ,op (object base &optional (offset 0) (lowtag 0) temp)
        (if temp
 	   (let ((offs (gensym)))
 	     `(let ((,offs (- (ash ,offset ,',shift) ,lowtag)))
-	       (if (typep ,offs '(signed-byte 13))
-		   (inst ,',inst ,object ,base ,offs)
+	       (if (typep '(signed-byte 13),offs)
+		   (inst ,',inst ,object (make-ea ,base :offset ,offs))
 		   (progn
 		     (inst li ,temp ,offs)
-		     (inst ,',inst ,object ,base ,temp)))))
-	   `(inst ,',inst ,object ,base (- (ash ,offset ,',shift) ,lowtag))))))
-  (frob loadw ldn word-shift)
-  #+(and sparc-v9 sparc-v8plus)
-  (frob loadsw ldsw word-shift)
-  (frob storew stn word-shift))
-
-#+(and sparc-v9 sparc-v8plus)
-(macrolet
-    ((frob (op inst shift)
-     `(defmacro ,op (object base &optional (offset 0) (lowtag 0) temp)
-       (if temp
-	   (let ((offs (gensym)))
-	     `(let ((,offs (- (ash ,offset ,',shift) ,lowtag)))
-	       (if (typep ,offs '(signed-byte 13))
-		   (inst ,',inst ,object ,base ,offs)
-		   (progn
-		     (inst li ,temp ,offs)
-		     (inst ,',inst ,object ,base ,temp)))))
-	   `(inst ,',inst ,object ,base (- (ash ,offset ,',shift) ,lowtag))))))
-  (frob load64 ldx (* 2 word-shift))
-  (frob store64 stx (* 2 word-shift)))
+		     (inst ,',inst ,object (make-ea ,base :offset ,temp))))))
+	   `(inst ,',inst ,object (make-ea ,base :offset (- (ash ,offset ,',shift) ,lowtag)))))))
+  (def-load/store-word loadw ldr word-shift)
+  (def-load/store-word storew str word-shift))
 
 (defmacro load-symbol (reg symbol)
   `(inst add ,reg null-tn (static-symbol-offset ,symbol)))
@@ -96,15 +74,17 @@
 			     (find-package "VM"))))
 	 `(progn
 	    (defmacro ,loader (reg symbol)
-	      `(inst ldn ,reg null-tn
-		     (+ (static-symbol-offset ',symbol)
-			(ash ,',offset word-shift)
-			(- other-pointer-type))))
+	      `(inst ldr ,reg
+		     (make-ea null-tn
+			      :offset (+ (static-symbol-offset ',symbol)
+					 (ash ,',offset word-shift)
+					 (- other-pointer-type)))))
 	    (defmacro ,storer (reg symbol)
-	      `(inst stn ,reg null-tn
-		     (+ (static-symbol-offset ',symbol)
-			(ash ,',offset word-shift)
-			(- other-pointer-type))))))))
+	      `(inst str ,reg
+		     (make-ea null-tn
+			      :offset (+ (static-symbol-offset ',symbol)
+					 (ash ,',offset word-shift)
+					 (- other-pointer-type)))))))))
   (frob value)
   (frob function))
 
@@ -116,9 +96,9 @@
 	      (n-offset offset))
     (ecase (backend-byte-order *target-backend*)
       (:little-endian
-       `(inst ldub ,n-target ,n-source ,n-offset))
+       `(inst ldrb ,n-target (make-ea ,n-source :offset ,n-offset)))
       (:big-endian
-       `(inst ldub ,n-target ,n-source (+ ,n-offset 3))))))
+       `(inst ldrb ,n-target (make-ea ,n-source :offset (+ ,n-offset (1- word-bytes))))))))
 
 ;;; Macros to handle the fact that we cannot use the machine native call and
 ;;; return instructions. 
@@ -126,18 +106,18 @@
 (defmacro lisp-jump (function)
   "Jump to the lisp function FUNCTION.  LIP is an interior-reg temporary."
   `(progn
-     (inst j ,function
+     (move code-tn ,function)
+     (inst add lip-tn ,function
 	   (- (ash function-code-offset word-shift) vm:function-pointer-type))
-     (move code-tn ,function)))
+     (inst bx lip-tn)))
 
 (defmacro lisp-return (return-pc &key (offset 0) (frob-code t))
   "Return to RETURN-PC."
   `(progn
-     (inst j ,return-pc
-	   (- (* (1+ ,offset) word-bytes) other-pointer-type))
-     ,(if frob-code
-	  `(move code-tn ,return-pc)
-	  '(inst nop))))
+     ,(when frob-code
+	`(move code-tn ,return-pc))
+     (inst add lip-tn ,return-pc (- (* (1+ ,offset) word-bytes) other-pointer-type))
+     (inst bx lip-tn)))
 
 (defmacro emit-return-pc (label)
   "Emit a return-pc header word.  LABEL is the label to use for this return-pc."
@@ -154,13 +134,19 @@
 ;;;
 ;;;    Move a stack TN to a register and vice-versa.
 ;;;
+;;; FIXME: On SPARC, sometimes the offset to the stack TN won't fit in
+;;; the offset field of the LD instruction.  The same is true on
+;;; ARM. For SPARC, there is a dedicated register to use as a temp.
+;;; It would be useful on ARM if Load-Stack-TN and Store-Stack-TN took
+;;; an optional arg to specify a temp non-descriptor reg that could be
+;;; used to allow access to the entire stack.
 (defmacro load-stack-tn (reg stack)
   `(let ((reg ,reg)
 	 (stack ,stack))
      (let ((offset (tn-offset stack)))
        (sc-case stack
 	 ((control-stack)
-	  (loadw reg cfp-tn offset 0 gtemp-tn))))))
+	  (loadw reg cfp-tn offset 0))))))
 
 (defmacro store-stack-tn (stack reg)
   `(let ((stack ,stack)
@@ -168,7 +154,7 @@
      (let ((offset (tn-offset stack)))
        (sc-case stack
 	 ((control-stack)
-	  (storew reg cfp-tn offset 0 gtemp-tn))))))
+	  (storew reg cfp-tn offset 0))))))
 
 
 ;;; MAYBE-LOAD-STACK-TN  --  Interface
@@ -210,86 +196,26 @@
   ;; We assume we're in a pseudo-atomic so the pseudo-atomic bit is
   ;; set.
   `(cond (,stack-p
-	  ;; Stack allocation
-	  ;;
-	  ;; The control stack grows up, so round up CSP to a
-	  ;; multiple of 8 (lispobj size).  Use that as the
-	  ;; allocation pointer.  Then add SIZE bytes to the
-	  ;; allocation and set CSP to that, so we have the desired
-	  ;; space.
-
-	  ;; Make sure the temp-tn is a non-descriptor register!
-	  (assert (and ,temp-tn (sc-is ,temp-tn non-descriptor-reg)))
-
-	  ;; temp-tn is csp-tn rounded up to a multiple of 8 (lispobj size)
-	  (inst add ,temp-tn csp-tn vm:lowtag-mask)
-	  (inst andn ,temp-tn vm:lowtag-mask)
-	  ;; Set the result to temp-tn, with appropriate lowtag
-	  (inst or ,result-tn ,temp-tn ,lowtag)
-
-	  ;; Allocate the desired space on the stack.
-	  ;;
-	  ;; FIXME: Can't allocate on stack if SIZE is too large.
-	  ;; Need to rearrange this code.
-	  (inst add csp-tn ,temp-tn ,size)
-	  )
+	  ;; Stack allocation, not supported
+	  (error "Stack allocation not supported"))
 	 #-gencgc
 	 (t
 	  ;; Normal allocation to the heap.
 	  (if (logbitp (1- lowtag-bits) ,lowtag)
 	      (progn
-		(inst or ,result-tn alloc-tn ,lowtag)
-		(inst add alloc-tn ,size))
+		(load-symbol-value ,temp-tn lisp::*allocation-pointer*)
+		(inst orr ,result-tn ,temp-tn ,lowtag)
+		(inst add ,temp-tn ,size)
+		(store-symbol-value ,temp-tn lisp::*allocation-pointer*))
 	      (progn
-		(inst andn ,result-tn alloc-tn lowtag-mask)
-		(inst or ,result-tn ,lowtag)
-		(inst add alloc-tn ,size))))
+		(load-symbol-value ,temp-tn lisp::*allocation-pointer*)
+		(inst bic ,result-tn ,temp-tn lowtag-mask)
+		(inst orr ,result-tn ,lowtag)
+		(inst add ,temp-tn ,size)
+		(store-symbol-value ,temp-tn lisp::*allocation-pointer*))))
 	 #+gencgc
 	 (t
-	  ;; See if we can do an inline allocation.  The updated
-	  ;; free pointer should not point past the end of the
-	  ;; current region.  If it does, a full alloc needs to be
-	  ;; done.
-	  (load-symbol-value ,result-tn *current-region-end-addr*)
-
-	  ;; Sometimes the size is an known constant, but won't fit in
-	  ;; the immediate field of an instruction.  Hence we have to
-	  ;; do this to get it.
-	  (cond ((and (tn-p ,temp-tn)
-		      (numberp ,size)
-		      (not (typep ,size '(signed-byte 13))))
-		 (inst li ,temp-tn ,size)
-		 (inst add alloc-tn ,temp-tn))
-		(t
-		 (inst add alloc-tn ,size)))
-
-	  (inst andn ,temp-tn alloc-tn lowtag-mask) ; Zap PA bits
-	      
-	  ;; temp-tn points to the new end of region.  Did we go
-	  ;; past the actual end of the region?  If so, we need a
-	  ;; full alloc.
-	  (inst cmp ,temp-tn ,result-tn)
-	  (without-scheduling ()
-	    ;; NOTE: alloc-tn has been updated to point to the new
-	    ;; end.  But the allocation routines expect alloc-tn
-	    ;; points to original free region.  Thus, the allocation
-	    ;; trap handler MUST subtract SIZE from alloc-tn before
-	    ;; calling the alloc routine.  This allows for
-	    ;; (slightly) faster code for inline allocation.
-
-	    ;; As above, SIZE might not fit in the immediate field of
-	    ;; an instruction.  Need to do this complicated thing.
-			      
-            (cond ((and (tn-p ,temp-tn)
-			(numberp ,size)
-			(not (typep ,size '(signed-byte 13))))
-		   (inst li ,result-tn ,size)
-		   (inst sub ,result-tn ,temp-tn ,result-tn))
-		  (t
-		   (inst sub ,result-tn ,temp-tn ,size)))
-	    (inst t :gt allocation-trap))
-	  ;; Set lowtag appropriately
-	  (inst or ,result-tn ,lowtag))))
+	  (error "Gencgc not supported"))))
 
 (defmacro with-fixed-allocation ((result-tn temp-tn type-code size
 					    &key (lowtag other-pointer-type)
@@ -361,8 +287,8 @@
 		(progn
 		  (inst cmp reg test)
 		  (if last
-		      (inst b equal target)
-		      (inst b :eq label)))
+		      (inst b target equal)
+		      (inst b label :eq)))
 		(let ((start (car test))
 		      (end (cdr test)))
 		  (cond ((and (= start min) (= end max))
@@ -373,20 +299,20 @@
 			((= start min)
 			 (inst cmp reg end)
 			 (if last
-			     (inst b less-or-equal target)
-			     (inst b :le label)))
+			     (inst b target less-or-equal)
+			     (inst b label :le)))
 			((= end max)
 			 (inst cmp reg start)
 			 (if last
-			     (inst b greater-or-equal target)
-			     (inst b :ge label)))
+			     (inst b target greater-or-equal)
+			     (inst b label :ge)))
 			(t
 			 (inst cmp reg start)
-			 (inst b :lt (if not-p target not-target))
+			 (inst b (if not-p target not-target) :lt)
 			 (inst cmp reg end)
 			 (if last
-			     (inst b less-or-equal target)
-			     (inst b :le label))))))))))
+			     (inst b target less-or-equal)
+			     (inst b label :le))))))))))
     (nreverse insts)))
 
 (defun gen-other-immediate-test (reg target not-target not-p values)
@@ -425,12 +351,10 @@
 		     (emit-label ,fall-through))))
 	       (gen-other-immediate-test temp target not-target not-p immed))))
      (when fixnump
-       `((inst andcc zero-tn ,reg fixnum-tag-mask)
+       `((inst tst ,reg fixnum-tag-mask)
 	 ,(if (or lowtags hdrs)
-	      `(inst b :eq ,(if not-p not-target target)
-		     #+sparc-v9 ,(if not-p :pn :pt))
-	      `(inst b ,(if not-p :ne :eq) ,target
-		       #+sparc-v9 ,(if not-p :pn :pt)))))
+	      `(inst b ,(if not-p not-target target) :eq)
+	      `(inst b ,target  ,(if not-p :ne :eq)))))
      (when (or lowtags hdrs)
        `((inst and ,temp ,reg lowtag-mask)))
      (when lowtags
@@ -445,9 +369,7 @@
 			   (1- lowtag-limit) lowtags)))
      (when hdrs
        `((inst cmp ,temp ,lowtag)
-	 (inst b :ne ,(if not-p target not-target)
-	         #+sparc-v9 ,(if not-p :pn :pt))
-	 (inst nop)
+	 (inst b ,(if not-p target not-target) :ne)
 	 (load-type ,temp ,reg (- ,lowtag))
 	 ,@(gen-other-immediate-test temp target not-target not-p hdrs))))))
 
@@ -530,7 +452,7 @@
       `((let ((vop ,vop))
 	  (when vop
 	    (note-this-location vop :internal-error)))
-	(inst unimp ,kind)
+	(inst udf ,kind)
 	(with-adjustable-vector (,vector)
 	  (write-var-integer (error-number-or-lose ',code) ,vector)
 	  ,@(mapcar #'(lambda (tn)
@@ -555,8 +477,8 @@
   "Cause a continuable error.  If the error is continued, execution resumes at
   LABEL."
   `(progn
-     (inst b ,label)
-     ,@(emit-error-break vop cerror-trap error-code values)))
+     ,@(emit-error-break vop cerror-trap error-code values)
+     (inst b ,label)))
 
 (defmacro generate-error-code (vop error-code &rest values)
   "Generate-Error-Code Error-code Value*
@@ -586,21 +508,24 @@
 
 ;;; PSEUDO-ATOMIC -- Handy macro for making sequences look atomic.
 ;;;
-(defmacro pseudo-atomic ((&key (extra 0)) &rest forms)
+(defmacro pseudo-atomic ((&key temp-tn (extra 0)) &rest forms)
   (declare (ignore extra))
-  `(progn
-     ;; Set the pseudo-atomic flag
-     (without-scheduling ()
-       (inst or alloc-tn pseudo-atomic-value))
-     ,@forms
-     ;; Reset the pseudo-atomic flag
-     (without-scheduling ()
-       ;; Remove the pseudo-atomic flag.  (Could do subtraction here,
-       ;; but the disassembler prints some notes based on the add
-       ;; instruction.)
-       (inst andn alloc-tn pseudo-atomic-value)
-       ;; Check to see if pseudo-atomic interrupted flag is set (bit 0 = 1)
-       (inst andcc zero-tn alloc-tn pseudo-atomic-interrupted-value)
-       ;; The C code needs to process this correctly and fixup alloc-tn.
-       (inst t :ne pseudo-atomic-trap)
-       )))
+  (let ((label (gensym "LABEL-")))
+    `(let ((,label (gen-label)))
+       ;; Set the pseudo-atomic flag, in *pseudo-atomic-atomic*
+       (without-scheduling ()
+	 (load-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*)
+	 (inst or ,temp-tn pseudo-atomic-value)
+	 (store-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*))
+       ,@forms
+       ;; Reset the pseudo-atomic flag
+       (without-scheduling ()
+	 ;; Remove the pseudo-atomic flag.
+	 (load-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*)
+	 (inst bic ,temp-tn pseudo-atomic-value)
+	 ;; Check to see if pseudo-atomic interrupted flag is set
+	 (inst tst ,temp-tn pseudo-atomic-interrupted-value)
+	 (inst b ,label :ne)
+	 ;; The C code needs to process this correctly and fixup alloc-tn.
+	 (inst bkpt pseudo-atomic-trap)
+	 (emit-label ,label)))))

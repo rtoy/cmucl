@@ -300,8 +300,17 @@
 
     *binding-stack-pointer*
 
+    ;; Gc
+    #-gencgc
     *allocation-pointer*
+    #-gencgc
+    *pseudo-atomic-atomic*
+    
+    ;; Gencgc
+    ;;
+    #+gencgc
     *current-region-free-pointer*
+    #+gencgc
     *current-region-end-addr*
 
     #+gencgc
@@ -349,3 +358,34 @@
 ;;; The number of bits per element in the assemblers code vector.
 ;;;
 (defparameter *assembly-unit-length* 8)
+
+
+(export '(pseudo-atomic-trap allocation-trap
+	  pseudo-atomic-value pseudo-atomic-interrupted-value))
+;;;; Pseudo-atomic trap number.
+;;;;
+;;;; This is the trap number to use when a pseudo-atomic section has
+;;;; been interrupted.
+;;;;
+;;;; FIXME: Choose an appropriate value once the C code has
+;;;; implemented.
+(defconstant pseudo-atomic-trap 16)
+
+;;;; Pseudo-atomic flag
+;;;;
+;;;; This value is added to *pseudo-atomic-atomic* to indicate a
+;;;; pseudo-atomic section.
+(defconstant pseudo-atomic-value (ash 1 (1- vm::lowtag-bits)))
+
+;;;; Pseudo-atomic-interrupted-mask
+;;;;
+;;;; This is a mask used to check if a pseudo-atomic section was
+;;;; interrupted.  This is indicated by least-significant bit of
+;;;; *pseudo-atomic-atomic* being 1.
+;;;;
+;;;; FIXME: This is based on the sparc port where the pseudo-atomic
+;;;; stuff is implemented as bits on the alloc-tn.  We don't have an
+;;;; alloc-tn on ARM.  So should we emulate that using
+;;;; *pseudo-atomic-atomic* or use *pseudo-atomic-interrupted* as on
+;;;; x86?
+(defconstant pseudo-atomic-interrupted-value 1)
