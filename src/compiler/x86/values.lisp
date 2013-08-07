@@ -58,23 +58,21 @@
   (:results (start :scs (any-reg))
 	    (count :scs (any-reg)))
   (:temporary (:sc descriptor-reg :from (:argument 0) :to (:result 1)) list)
-  (:temporary (:sc descriptor-reg :to (:result 1)) nil-temp)
-  (:temporary (:sc unsigned-reg :offset eax-offset :to (:result 1)) eax)
+  (:temporary (:sc unsigned-reg :to (:result 1)) temp)
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 0
     (move list arg)
     (move start esp-tn)			; WARN pointing 1 below
-    (inst mov nil-temp nil-value)
 
     LOOP
-    (inst cmp list nil-temp)
+    (inst cmp list nil-value)
     (inst jmp :e done)
     (pushw list cons-car-slot list-pointer-type)
     (loadw list list cons-cdr-slot list-pointer-type)
-    (inst mov eax list)
-    (inst and al-tn lowtag-mask)
-    (inst cmp al-tn list-pointer-type)
+    (inst mov temp list)
+    (inst and temp lowtag-mask)
+    (inst cmp temp list-pointer-type)
     (inst jmp :e loop)
     (error-call vop bogus-argument-to-values-list-error list)
 
