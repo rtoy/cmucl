@@ -9,13 +9,9 @@
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: src/compiler/sparc/move.lisp $
-;;;
-;;;    This file contains the SPARC VM definition of operand loading/saving and
+;;;    This file contains the ARM VM definition of operand loading/saving and
 ;;; the Move VOP.
 ;;;
-;;; Written by Rob MacLachlan.
-;;; SPARC conversion by William Lott.
 ;;;
 (in-package "ARM")
 (intl:textdomain "cmucl-arm-vm")
@@ -192,7 +188,7 @@
       (loadw y x bignum-digits-offset other-pointer-type)
       
       (emit-label done))
-    (error "VOP not implemented: move-to-word/integer")))
+    (not-implemented)))
 
 ;;;
 (define-move-vop move-to-word/integer :move
@@ -245,7 +241,7 @@
 	(y temp bignum-type (1+ bignum-digits-offset))
 	(storew x y bignum-digits-offset other-pointer-type))
       (emit-label done))
-    (error "VOP not implemented: move-from-signed")))
+    (not-implemented)))
 ;;;
 (define-move-vop move-from-signed :move
   (signed-reg) (descriptor-reg))
@@ -288,7 +284,7 @@
 	(storew temp y 0 other-pointer-type)
 	(storew x y bignum-digits-offset other-pointer-type))
       (emit-label done))
-    (error "Uvop not implemented: move-from-unsigned")))
+    (not-implemented)))
 
 ;;;
 (define-move-vop move-from-unsigned :move
