@@ -126,6 +126,8 @@
      (emit-label ,label)
      (inst lra-header-word)))
 
+(defmacro not-implemented ()
+  `(inst udf halt-trap))
 
 
 ;;;; Stack TN's
