@@ -1,104 +1,45 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/float.lisp $")
+  "$Header: src/compiler/arm/float.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; This file contains floating point support for the MIPS.
+;;; This file contains floating point support for the ARM.
 ;;;
-;;; Written by Rob MacLachlan
-;;; Sparc conversion by William Lott.
-;;; Complex-float and long-float support by Douglas Crosher 1998.
 ;;;
-(in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(in-package "ARM")
+(intl:textdomain "cmucl-arm-vm")
 
 
 ;;;; Move functions:
 
 (define-move-function (load-single 1) (vop x y)
   ((single-stack) (single-reg))
-  (inst ldf y (current-nfp-tn vop) (* (tn-offset x) vm:word-bytes)))
+  (inst vldr y (make-ea (current-nfp-tn vop)
+			:offset (* (tn-offset x) vm:word-bytes))))
 
 (define-move-function (store-single 1) (vop x y)
   ((single-reg) (single-stack))
-  (inst stf x (current-nfp-tn vop) (* (tn-offset y) vm:word-bytes)))
+  (inst vstr x (make-ea (current-nfp-tn vop)
+			:offset (* (tn-offset y) vm:word-bytes))))
 
 
 (define-move-function (load-double 2) (vop x y)
   ((double-stack) (double-reg))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
-    (inst lddf y nfp offset)))
+    (inst vldr y (make-ea nfp :offset offset))))
 
 (define-move-function (store-double 2) (vop x y)
   ((double-reg) (double-stack))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
-    (inst stdf x nfp offset)))
-
-;;; The offset may be an integer or a TN in which case it will be
-;;; temporarily modified but is restored if restore-offset is true.
-;;;
-(defun load-long-reg (reg base offset &optional (restore-offset t))
-  (if (backend-featurep :sparc-v9)
-      (inst ldqf reg base offset)
-      (let ((reg0 (make-random-tn :kind :normal
-				  :sc (sc-or-lose 'double-reg *backend*)
-				  :offset (tn-offset reg)))
-	    (reg2 (make-random-tn :kind :normal
-				  :sc (sc-or-lose 'double-reg *backend*)
-				  :offset (+ 2 (tn-offset reg)))))
-	(cond ((integerp offset)
-	       (inst lddf reg0 base offset)
-	       (inst lddf reg2 base (+ offset (* 2 vm:word-bytes))))
-	      (t
-	       (inst lddf reg0 base offset)
-	       (inst add offset (* 2 vm:word-bytes))
-	       (inst lddf reg2 base offset)
-	       (when restore-offset
-		 (inst sub offset (* 2 vm:word-bytes))))))))
-
-#+long-float
-(define-move-function (load-long 2) (vop x y)
-  ((long-stack) (long-reg))
-  (let ((nfp (current-nfp-tn vop))
-	(offset (* (tn-offset x) vm:word-bytes)))
-    (load-long-reg y nfp offset)))
-
-;;; The offset may be an integer or a TN in which case it will be
-;;; temporarily modified but is restored if restore-offset is true.
-;;;
-(defun store-long-reg (reg base offset &optional (restore-offset t))
-  (if (backend-featurep :sparc-v9)
-      (inst stqf reg base offset)
-      (let ((reg0 (make-random-tn :kind :normal
-				  :sc (sc-or-lose 'double-reg *backend*)
-				  :offset (tn-offset reg)))
-	    (reg2 (make-random-tn :kind :normal
-				  :sc (sc-or-lose 'double-reg *backend*)
-				  :offset (+ 2 (tn-offset reg)))))
-	(cond ((integerp offset)
-	       (inst stdf reg0 base offset)
-	       (inst stdf reg2 base (+ offset (* 2 vm:word-bytes))))
-	      (t
-	       (inst stdf reg0 base offset)
-	       (inst add offset (* 2 vm:word-bytes))
-	       (inst stdf reg2 base offset)
-	       (when restore-offset
-		 (inst sub offset (* 2 vm:word-bytes))))))))
-
-#+long-float
-(define-move-function (store-long 2) (vop x y)
-  ((long-reg) (long-stack))
-  (let ((nfp (current-nfp-tn vop))
-	(offset (* (tn-offset y) vm:word-bytes)))
-    (store-long-reg x nfp offset)))
+    (inst vstr x (make-ea nfp :offset offset))))
 
 
 ;;;; Move VOPs:
@@ -106,33 +47,8 @@
 ;;; Exploit the V9 double-float move instruction. This is conditional
 ;;; on the :sparc-v9 feature.
 (defun move-double-reg (dst src)
-  (cond ((backend-featurep :sparc-v9)
-	 (unless (location= dst src)
-	   (inst fmovd dst src)))
-	(t
-	 (dotimes (i 2)
-	   (let ((dst (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'single-reg *backend*)
-				      :offset (+ i (tn-offset dst))))
-		 (src (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'single-reg *backend*)
-				      :offset (+ i (tn-offset src)))))
-	     (inst fmovs dst src))))))
-
-;;; Exploit the V9 long-float move instruction. This is conditional
-;;; on the :sparc-v9 feature.
-(defun move-long-reg (dst src)
-  (cond ((backend-featurep :sparc-v9)
-	 (inst fmovq dst src))
-	(t
-	 (dotimes (i 4)
-	   (let ((dst (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'single-reg *backend*)
-				      :offset (+ i (tn-offset dst))))
-		 (src (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'single-reg *backend*)
-				      :offset (+ i (tn-offset src)))))
-	     (inst fmovs dst src))))))
+  (unless (location= dst src)
+    (inst vmov dst src)))
 
 (macrolet ((frob (vop sc format)
 	     `(progn
@@ -146,14 +62,11 @@
 		  (:generator 0
 		    (unless (location= y x)
 		      ,@(ecase format
-			  (:single `((inst fmovs y x)))
-			  (:double `((move-double-reg y x)))
-			  (:long `((move-long-reg y x)))))))
+			  (:single `((inst vmov y x)))
+			  (:double `((inst vmov y x)))))))
 		(define-move-vop ,vop :move (,sc) (,sc)))))
   (frob single-move single-reg :single)
-  (frob double-move double-reg :double)
-  #+long-float
-  (frob long-move long-reg :long))
+  (frob double-move double-reg :double))
 
 
 (define-vop (move-from-float)
@@ -164,14 +77,7 @@
   (:variant-vars format size type data)
   (:generator 13
     (with-fixed-allocation (y ndescr type size))
-    (ecase format
-      (:single
-       (inst stf x y (- (* data vm:word-bytes) vm:other-pointer-type)))
-      (:double
-       (inst stdf x y (- (* data vm:word-bytes) vm:other-pointer-type)))
-      (:long
-       (store-long-reg x y (- (* data vm:word-bytes)
-			      vm:other-pointer-type))))))
+    (inst vstr x (make-ea y :offset (- (* data vm:word-bytes) vm:other-pointer-type)))))
 
 (macrolet ((frob (name sc &rest args)
 	     `(progn
@@ -183,10 +89,7 @@
   (frob move-from-single single-reg :single
     vm:single-float-size vm:single-float-type vm:single-float-value-slot)
   (frob move-from-double double-reg :double
-    vm:double-float-size vm:double-float-type vm:double-float-value-slot)
-  #+long-float
-  (frob move-from-long long-reg	:long
-     vm:long-float-size vm:long-float-type vm:long-float-value-slot))
+    vm:double-float-size vm:double-float-type vm:double-float-value-slot))
 
 (macrolet ((frob (name sc format value)
 	     `(progn
@@ -195,25 +98,11 @@
 		  (:results (y :scs (,sc)))
 		  (:note _N"pointer to float coercion")
 		  (:generator 2
-		    (inst ,(ecase format
-			     (:single 'ldf)
-			     (:double 'lddf))
-			  y x
-			  (- (* ,value vm:word-bytes) vm:other-pointer-type))))
+		    (inst vldr y (make-ea x :offset (- (* ,value vm:word-bytes)
+						       vm:other-pointer-type)))))
 		(define-move-vop ,name :move (descriptor-reg) (,sc)))))
   (frob move-to-single single-reg :single vm:single-float-value-slot)
   (frob move-to-double double-reg :double vm:double-float-value-slot))
-
-#+long-float
-(define-vop (move-to-long)
-  (:args (x :scs (descriptor-reg)))
-  (:results (y :scs (long-reg)))
-  (:note _N"pointer to float coercion")
-  (:generator 2
-    (load-long-reg y x (- (* vm:long-float-value-slot vm:word-bytes)
-			  vm:other-pointer-type))))
-#+long-float
-(define-move-vop move-to-long :move (descriptor-reg) (long-reg))
 
 (macrolet ((frob (name sc stack-sc format)
 	     `(progn
@@ -227,38 +116,14 @@
 		    (sc-case y
 		      (,sc
 		       (unless (location= x y)
-			 ,@(ecase format
-			     (:single '((inst fmovs y x)))
-			     (:double '((move-double-reg y x))))))
+			 (inst vmov y x)))
 		      (,stack-sc
 		       (let ((offset (* (tn-offset y) vm:word-bytes)))
-			 (inst ,(ecase format
-				  (:single 'stf)
-				  (:double 'stdf))
-			       x nfp offset))))))
+			 (inst vstr x (make-ea nfp :offset offset)))))))
 		(define-move-vop ,name :move-argument
 		  (,sc descriptor-reg) (,sc)))))
   (frob move-single-float-argument single-reg single-stack :single)
   (frob move-double-float-argument double-reg double-stack :double))
-
-#+long-float
-(define-vop (move-long-float-argument)
-  (:args (x :scs (long-reg) :target y)
-	 (nfp :scs (any-reg) :load-if (not (sc-is y long-reg))))
-  (:results (y))
-  (:note _N"float argument move")
-  (:generator 3
-    (sc-case y
-      (long-reg
-       (unless (location= x y)
-	 (move-long-reg y x)))
-      (long-stack
-       (let ((offset (* (tn-offset y) vm:word-bytes)))
-	 (store-long-reg x nfp offset))))))
-;;;
-#+long-float
-(define-move-vop move-long-float-argument :move-argument
-  (long-reg descriptor-reg) (long-reg))
 
 
 ;;;; Complex float move functions
@@ -276,15 +141,6 @@
 (defun complex-double-reg-imag-tn (x)
   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
 		  :offset (+ (tn-offset x) 2)))
-
-#+long-float
-(defun complex-long-reg-real-tn (x)
-  (make-random-tn :kind :normal :sc (sc-or-lose 'long-reg *backend*)
-		  :offset (tn-offset x)))
-#+long-float
-(defun complex-long-reg-imag-tn (x)
-  (make-random-tn :kind :normal :sc (sc-or-lose 'long-reg *backend*)
-		  :offset (+ (tn-offset x) 4)))
 
 #+double-double
 (progn
@@ -307,18 +163,18 @@
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
     (let ((real-tn (complex-single-reg-real-tn y)))
-      (inst ldf real-tn nfp offset))
+      (inst vldr real-tn (make-ea nfp :offset offset)))
     (let ((imag-tn (complex-single-reg-imag-tn y)))
-      (inst ldf imag-tn nfp (+ offset vm:word-bytes)))))
+      (inst vldr imag-tn (make-ea nfp :offset (+ offset vm:word-bytes))))))
 
 (define-move-function (store-complex-single 2) (vop x y)
   ((complex-single-reg) (complex-single-stack))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
     (let ((real-tn (complex-single-reg-real-tn x)))
-      (inst stf real-tn nfp offset))
+      (inst vstr real-tn (make-ea nfp :offset offset)))
     (let ((imag-tn (complex-single-reg-imag-tn x)))
-      (inst stf imag-tn nfp (+ offset vm:word-bytes)))))
+      (inst vstr imag-tn (make-ea nfp :offset (+ offset vm:word-bytes))))))
 
 
 (define-move-function (load-complex-double 4) (vop x y)
@@ -326,39 +182,18 @@
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
     (let ((real-tn (complex-double-reg-real-tn y)))
-      (inst lddf real-tn nfp offset))
+      (inst vldr real-tn (make-ea nfp :offset offset)))
     (let ((imag-tn (complex-double-reg-imag-tn y)))
-      (inst lddf imag-tn nfp (+ offset (* 2 vm:word-bytes))))))
+      (inst vldr imag-tn (make-ea nfp :offset (+ offset (* 2 vm:word-bytes)))))))
 
 (define-move-function (store-complex-double 4) (vop x y)
   ((complex-double-reg) (complex-double-stack))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
     (let ((real-tn (complex-double-reg-real-tn x)))
-      (inst stdf real-tn nfp offset))
+      (inst vstr real-tn (make-ea nfp :offset offset)))
     (let ((imag-tn (complex-double-reg-imag-tn x)))
-      (inst stdf imag-tn nfp (+ offset (* 2 vm:word-bytes))))))
-
-
-#+long-float
-(define-move-function (load-complex-long 5) (vop x y)
-  ((complex-long-stack) (complex-long-reg))
-  (let ((nfp (current-nfp-tn vop))
-	(offset (* (tn-offset x) vm:word-bytes)))
-    (let ((real-tn (complex-long-reg-real-tn y)))
-      (load-long-reg real-tn nfp offset))
-    (let ((imag-tn (complex-long-reg-imag-tn y)))
-      (load-long-reg imag-tn nfp (+ offset (* 4 vm:word-bytes))))))
-
-#+long-float
-(define-move-function (store-complex-long 5) (vop x y)
-  ((complex-long-reg) (complex-long-stack))
-  (let ((nfp (current-nfp-tn vop))
-	(offset (* (tn-offset y) vm:word-bytes)))
-    (let ((real-tn (complex-long-reg-real-tn x)))
-      (store-long-reg real-tn nfp offset))
-    (let ((imag-tn (complex-long-reg-imag-tn x)))
-      (store-long-reg imag-tn nfp (+ offset (* 4 vm:word-bytes))))))
+      (inst vstr imag-tn (make-ea nfp :offset (+ offset (* 2 vm:word-bytes)))))))
 
 #+double-double
 (progn
@@ -404,10 +239,10 @@
        ;; float register so there is not need to worry about overlap.
        (let ((x-real (complex-single-reg-real-tn x))
 	     (y-real (complex-single-reg-real-tn y)))
-	 (inst fmovs y-real x-real))
+	 (inst vmov y-real x-real))
        (let ((x-imag (complex-single-reg-imag-tn x))
 	     (y-imag (complex-single-reg-imag-tn y)))
-	 (inst fmovs y-imag x-imag)))))
+	 (inst vmov y-imag x-imag)))))
 ;;;
 (define-move-vop complex-single-move :move
   (complex-single-reg) (complex-single-reg))
@@ -430,27 +265,6 @@
 ;;;
 (define-move-vop complex-double-move :move
   (complex-double-reg) (complex-double-reg))
-
-#+long-float
-(define-vop (complex-long-move)
-  (:args (x :scs (complex-long-reg)
-	    :target y :load-if (not (location= x y))))
-  (:results (y :scs (complex-long-reg) :load-if (not (location= x y))))
-  (:note _N"complex long float move")
-  (:generator 0
-     (unless (location= x y)
-       ;; Note the complex-float-regs are aligned to every second
-       ;; float register so there is not need to worry about overlap.
-       (let ((x-real (complex-long-reg-real-tn x))
-	     (y-real (complex-long-reg-real-tn y)))
-	 (move-long-reg y-real x-real))
-       (let ((x-imag (complex-long-reg-imag-tn x))
-	     (y-imag (complex-long-reg-imag-tn y)))
-	 (move-long-reg y-imag x-imag)))))
-;;;
-#+long-float
-(define-move-vop complex-long-move :move
-  (complex-long-reg) (complex-long-reg))
 
 #+double-double
 (define-vop (complex-double-double-move)
@@ -492,13 +306,13 @@
      (with-fixed-allocation (y ndescr vm:complex-single-float-type
 			       vm:complex-single-float-size))
      (let ((real-tn (complex-single-reg-real-tn x)))
-       (inst stf real-tn y (- (* vm:complex-single-float-real-slot
-				 vm:word-bytes)
-			      vm:other-pointer-type)))
+       (inst vstr real-tn (make-ea y :offset (- (* vm:complex-single-float-real-slot
+						   vm:word-bytes)
+						vm:other-pointer-type))))
      (let ((imag-tn (complex-single-reg-imag-tn x)))
-       (inst stf imag-tn y (- (* vm:complex-single-float-imag-slot
-				 vm:word-bytes)
-			      vm:other-pointer-type)))))
+       (inst vstr imag-tn (make-ea y :offset (- (* vm:complex-single-float-imag-slot
+						   vm:word-bytes)
+						vm:other-pointer-type))))))
 ;;;
 (define-move-vop move-from-complex-single :move
   (complex-single-reg) (descriptor-reg))
@@ -512,38 +326,16 @@
      (with-fixed-allocation (y ndescr vm:complex-double-float-type
 			       vm:complex-double-float-size))
      (let ((real-tn (complex-double-reg-real-tn x)))
-       (inst stdf real-tn y (- (* vm:complex-double-float-real-slot
-				  vm:word-bytes)
-			       vm:other-pointer-type)))
+       (inst vstr real-tn (make-ea y :offset (- (* vm:complex-double-float-real-slot
+						   vm:word-bytes)
+						vm:other-pointer-type))))
      (let ((imag-tn (complex-double-reg-imag-tn x)))
-       (inst stdf imag-tn y (- (* vm:complex-double-float-imag-slot
-				  vm:word-bytes)
-			       vm:other-pointer-type)))))
+       (inst vstr imag-tn (make-ea y :offset (- (* vm:complex-double-float-imag-slot
+						   vm:word-bytes)
+						vm:other-pointer-type))))))
 ;;;
 (define-move-vop move-from-complex-double :move
   (complex-double-reg) (descriptor-reg))
-
-#+long-float
-(define-vop (move-from-complex-long)
-  (:args (x :scs (complex-long-reg) :to :save))
-  (:results (y :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg)) ndescr)
-  (:note _N"complex long float to pointer coercion")
-  (:generator 13
-     (with-fixed-allocation (y ndescr vm:complex-long-float-type
-			       vm:complex-long-float-size))
-     (let ((real-tn (complex-long-reg-real-tn x)))
-       (store-long-reg real-tn y (- (* vm:complex-long-float-real-slot
-				       vm:word-bytes)
-				    vm:other-pointer-type)))
-     (let ((imag-tn (complex-long-reg-imag-tn x)))
-       (store-long-reg imag-tn y (- (* vm:complex-long-float-imag-slot
-				       vm:word-bytes)
-				    vm:other-pointer-type)))))
-;;;
-#+long-float
-(define-move-vop move-from-complex-long :move
-  (complex-long-reg) (descriptor-reg))
 
 #+double-double
 (define-vop (move-from-complex-double-double)
@@ -584,11 +376,14 @@
   (:note _N"pointer to complex float coercion")
   (:generator 2
     (let ((real-tn (complex-single-reg-real-tn y)))
-      (inst ldf real-tn x (- (* complex-single-float-real-slot word-bytes)
-			     other-pointer-type)))
+      (inst vldr real-tn
+	    (make-ea x :offset (- (* complex-single-float-real-slot word-bytes)
+				  other-pointer-type))))
     (let ((imag-tn (complex-single-reg-imag-tn y)))
-      (inst ldf imag-tn x (- (* complex-single-float-imag-slot word-bytes)
-			     other-pointer-type)))))
+      (inst vldr imag-tn
+	    (make-ea x :offset (- (* complex-single-float-imag-slot word-bytes)
+				  other-pointer-type))))))
+
 (define-move-vop move-to-complex-single :move
   (descriptor-reg) (complex-single-reg))
 
@@ -598,29 +393,14 @@
   (:note _N"pointer to complex float coercion")
   (:generator 2
     (let ((real-tn (complex-double-reg-real-tn y)))
-      (inst lddf real-tn x (- (* complex-double-float-real-slot word-bytes)
-			      other-pointer-type)))
+      (inst vldr real-tn (make x :offset (- (* complex-double-float-real-slot word-bytes)
+					    other-pointer-type))))
     (let ((imag-tn (complex-double-reg-imag-tn y)))
-      (inst lddf imag-tn x (- (* complex-double-float-imag-slot word-bytes)
-			      other-pointer-type)))))
+      (inst vldr imag-tn (make-ea x :offset (- (* complex-double-float-imag-slot word-bytes)
+					       other-pointer-type))))))
+
 (define-move-vop move-to-complex-double :move
   (descriptor-reg) (complex-double-reg))
-
-#+long-float
-(define-vop (move-to-complex-long)
-  (:args (x :scs (descriptor-reg)))
-  (:results (y :scs (complex-long-reg)))
-  (:note _N"pointer to complex float coercion")
-  (:generator 2
-    (let ((real-tn (complex-long-reg-real-tn y)))
-      (load-long-reg real-tn x (- (* complex-long-float-real-slot word-bytes)
-				  other-pointer-type)))
-    (let ((imag-tn (complex-long-reg-imag-tn y)))
-      (load-long-reg imag-tn x (- (* complex-long-float-imag-slot word-bytes)
-				  other-pointer-type)))))
-#+long-float
-(define-move-vop move-to-complex-long :move
-  (descriptor-reg) (complex-long-reg))
 
 #+double-double
 (define-vop (move-to-complex-double-double)
@@ -658,16 +438,16 @@
        (unless (location= x y)
 	 (let ((x-real (complex-single-reg-real-tn x))
 	       (y-real (complex-single-reg-real-tn y)))
-	   (inst fmovs y-real x-real))
+	   (inst vmov y-real x-real))
 	 (let ((x-imag (complex-single-reg-imag-tn x))
 	       (y-imag (complex-single-reg-imag-tn y)))
-	   (inst fmovs y-imag x-imag))))
+	   (inst vmov y-imag x-imag))))
       (complex-single-stack
        (let ((offset (* (tn-offset y) word-bytes)))
 	 (let ((real-tn (complex-single-reg-real-tn x)))
-	   (inst stf real-tn nfp offset))
+	   (inst vstr real-tn (make-ea nfp :offset offset)))
 	 (let ((imag-tn (complex-single-reg-imag-tn x)))
-	   (inst stf imag-tn nfp (+ offset word-bytes))))))))
+	   (inst vstr imag-tn (make-ea nfp :offset (+ offset word-bytes)))))))))
 (define-move-vop move-complex-single-float-argument :move-argument
   (complex-single-reg descriptor-reg) (complex-single-reg))
 
@@ -689,38 +469,11 @@
       (complex-double-stack
        (let ((offset (* (tn-offset y) word-bytes)))
 	 (let ((real-tn (complex-double-reg-real-tn x)))
-	   (inst stdf real-tn nfp offset))
+	   (inst vstr real-tn (make-ea nfp :offset offset)))
 	 (let ((imag-tn (complex-double-reg-imag-tn x)))
-	   (inst stdf imag-tn nfp (+ offset (* 2 word-bytes)))))))))
+	   (inst vstr imag-tn (make-ea nfp :offset (+ offset (* 2 word-bytes))))))))))
 (define-move-vop move-complex-double-float-argument :move-argument
   (complex-double-reg descriptor-reg) (complex-double-reg))
-
-#+long-float
-(define-vop (move-complex-long-float-argument)
-  (:args (x :scs (complex-long-reg) :target y)
-	 (nfp :scs (any-reg) :load-if (not (sc-is y complex-long-reg))))
-  (:results (y))
-  (:note _N"complex long-float argument move")
-  (:generator 2
-    (sc-case y
-      (complex-long-reg
-       (unless (location= x y)
-	 (let ((x-real (complex-long-reg-real-tn x))
-	       (y-real (complex-long-reg-real-tn y)))
-	   (move-long-reg y-real x-real))
-	 (let ((x-imag (complex-long-reg-imag-tn x))
-	       (y-imag (complex-long-reg-imag-tn y)))
-	   (move-long-reg y-imag x-imag))))
-      (complex-long-stack
-       (let ((offset (* (tn-offset y) word-bytes)))
-	 (let ((real-tn (complex-long-reg-real-tn x)))
-	   (store-long-reg real-tn nfp offset))
-	 (let ((imag-tn (complex-long-reg-imag-tn x)))
-	   (store-long-reg imag-tn nfp (+ offset (* 4 word-bytes)))))))))
-
-#+long-float
-(define-move-vop move-complex-long-float-argument :move-argument
-  (complex-long-reg descriptor-reg) (complex-long-reg))
 
 #+double-double
 (define-vop (move-complex-double-double-float-argument)
@@ -760,8 +513,8 @@
   (complex-double-double-reg descriptor-reg) (complex-double-double-reg))
 
 (define-move-vop move-argument :move-argument
-  (single-reg double-reg #+long-float long-reg #+double-double double-double-reg
-   complex-single-reg complex-double-reg #+long-float complex-long-reg
+  (single-reg double-reg #+double-double double-double-reg
+   complex-single-reg complex-double-reg
    #+double-double complex-double-double-reg)
   (descriptor-reg))
 
@@ -784,9 +537,7 @@
 		(:arg-types ,ptype ,ptype)
 		(:result-types ,ptype))))
   (frob single-float-op single-reg single-float)
-  (frob double-float-op double-reg double-float)
-  #+long-float
-  (frob long-float-op long-reg long-float))
+  (frob double-float-op double-reg double-float))
 
 (macrolet ((frob (op sinst sname scost dinst dname dcost)
 	     `(progn
@@ -798,21 +549,10 @@
 		  (:translate ,op)
 		  (:generator ,dcost
 		    (inst ,dinst r x y))))))
-  (frob + fadds +/single-float 2 faddd +/double-float 2)
-  (frob - fsubs -/single-float 2 fsubd -/double-float 2)
-  (frob * fmuls */single-float 4 fmuld */double-float 5)
-  (frob / fdivs //single-float 12 fdivd //double-float 19))
-
-#+long-float
-(macrolet ((frob (op linst lname lcost)
-	     `(define-vop (,lname long-float-op)
-		  (:translate ,op)
-		  (:generator ,lcost
-		    (inst ,linst r x y)))))
-  (frob + faddq +/long-float 2)
-  (frob - fsubq -/long-float 2)
-  (frob * fmulq */long-float 6)
-  (frob / fdivq //long-float 20))
+  (frob + vadd +/single-float 2 vadd +/double-float 2)
+  (frob - vsub -/single-float 2 vsub -/double-float 2)
+  (frob * vmul */single-float 4 vmul */double-float 5)
+  (frob / vdiv //single-float 12 vdiv //double-float 19))
 
 
 (macrolet ((frob (name inst translate sc type)
@@ -829,38 +569,14 @@
 		(:generator 1
 		  (note-this-location vop :internal-error)
 		  (inst ,inst y x)))))
-  (frob abs/single-float fabss abs single-reg single-float)
-  (frob %negate/single-float fnegs %negate single-reg single-float))
+  (frob abs/single-float vabs abs single-reg single-float)
+  (frob %negate/single-float vneg %negate single-reg single-float))
 
 (defun negate-double-reg (dst src)
-  (cond ((backend-featurep :sparc-v9)
-	 (inst fnegd dst src))
-	(t
-	 ;; Negate the MS part of the numbers, then copy over the rest
-	 ;; of the bits.
-	 (inst fnegs dst src)
-	 (let ((dst-odd (make-random-tn :kind :normal
-					:sc (sc-or-lose 'single-reg *backend*)
-					:offset (+ 1 (tn-offset dst))))
-	       (src-odd (make-random-tn :kind :normal
-					:sc (sc-or-lose 'single-reg *backend*)
-					:offset (+ 1 (tn-offset src)))))
-	   (inst fmovs dst-odd src-odd)))))
+  (inst vneg dst src))
 
 (defun abs-double-reg (dst src)
-  (cond ((backend-featurep :sparc-v9)
-	 (inst fabsd dst src))
-	(t
-	 ;; Abs the MS part of the numbers, then copy over the rest
-	 ;; of the bits.
-	 (inst fabss dst src)
-	 (let ((dst-2 (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'single-reg *backend*)
-				      :offset (+ 1 (tn-offset dst))))
-	       (src-2 (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'single-reg *backend*)
-				      :offset (+ 1 (tn-offset src)))))
-	   (inst fmovs dst-2 src-2)))))
+  (inst vabs dst src))
 
 (define-vop (abs/double-float)
   (:args (x :scs (double-reg)))
@@ -889,63 +605,6 @@
   (:generator 1
     (note-this-location vop :internal-error)
     (negate-double-reg y x)))
-
-#+long-float
-(define-vop (abs/long-float)
-  (:args (x :scs (long-reg)))
-  (:results (y :scs (long-reg)))
-  (:translate abs)
-  (:policy :fast-safe)
-  (:arg-types long-float)
-  (:result-types long-float)
-  (:note _N"inline float arithmetic")
-  (:vop-var vop)
-  (:save-p :compute-only)
-  (:generator 1
-    (note-this-location vop :internal-error)
-    (cond ((backend-featurep :sparc-v9)
-	   (inst fabsq y x))
-	  (t
-	   (inst fabss y x)
-	   (dotimes (i 3)
-	     (let ((y-odd (make-random-tn
-			   :kind :normal
-			   :sc (sc-or-lose 'single-reg *backend*)
-			   :offset (+ i 1 (tn-offset y))))
-		   (x-odd (make-random-tn
-			   :kind :normal
-			   :sc (sc-or-lose 'single-reg *backend*)
-			   :offset (+ i 1 (tn-offset x)))))
-	       (inst fmovs y-odd x-odd)))))))
-
-#+long-float
-(define-vop (%negate/long-float)
-  (:args (x :scs (long-reg)))
-  (:results (y :scs (long-reg)))
-  (:translate %negate)
-  (:policy :fast-safe)
-  (:arg-types long-float)
-  (:result-types long-float)
-  (:note _N"inline float arithmetic")
-  (:vop-var vop)
-  (:save-p :compute-only)
-  (:generator 1
-    (note-this-location vop :internal-error)
-    (cond ((backend-featurep :sparc-v9)
-	   (inst fnegq y x))
-	  (t
-	   (inst fnegs y x)
-	   (dotimes (i 3)
-	     (let ((y-odd (make-random-tn
-			   :kind :normal
-			   :sc (sc-or-lose 'single-reg *backend*)
-			   :offset (+ i 1 (tn-offset y))))
-		   (x-odd (make-random-tn
-			   :kind :normal
-			   :sc (sc-or-lose 'single-reg *backend*)
-			   :offset (+ i 1 (tn-offset x)))))
-	       (inst fmovs y-odd x-odd)))))))
-
 
 ;;;; Comparison:
 
