@@ -43,16 +43,16 @@
 ;; Samething for storew, except we store OBJECT at the given address.
 (macrolet
     ((def-load/store-word (op inst shift)
-     `(defmacro ,op (object base &optional (offset 0) (lowtag 0) temp)
-       (if temp
-	   (let ((offs (gensym)))
-	     `(let ((,offs (- (ash ,offset ,',shift) ,lowtag)))
-	       (if (typep '(signed-byte 13),offs)
-		   (inst ,',inst ,object (make-ea ,base :offset ,offs))
-		   (progn
-		     (inst li ,temp ,offs)
-		     (inst ,',inst ,object (make-ea ,base :offset ,temp))))))
-	   `(inst ,',inst ,object (make-ea ,base :offset (- (ash ,offset ,',shift) ,lowtag)))))))
+      `(defmacro ,op (object base &optional (offset 0) (lowtag 0) temp)
+	 (if temp
+	     (let ((offs (gensym)))
+	       `(let ((,offs (- (ash ,offset ,',shift) ,lowtag)))
+		  (if (typep '(signed-byte 13),offs)
+		      (inst ,',inst ,object (make-ea ,base :offset ,offs))
+		      (progn
+			(inst li ,temp ,offs)
+			(inst ,',inst ,object (make-ea ,base :offset ,temp))))))
+	     `(inst ,',inst ,object (make-ea ,base :offset (- (ash ,offset ,',shift) ,lowtag)))))))
   (def-load/store-word loadw ldr word-shift)
   (def-load/store-word storew str word-shift))
 
@@ -207,20 +207,20 @@
 	      (progn
 		(load-symbol-value ,temp-tn lisp::*allocation-pointer*)
 		(inst orr ,result-tn ,temp-tn ,lowtag)
-		(inst add ,temp-tn ,size)
+		(inst add ,temp-tn ,temp-tn ,size)
 		(store-symbol-value ,temp-tn lisp::*allocation-pointer*))
 	      (progn
 		(load-symbol-value ,temp-tn lisp::*allocation-pointer*)
 		(inst bic ,result-tn ,temp-tn lowtag-mask)
-		(inst orr ,result-tn ,lowtag)
-		(inst add ,temp-tn ,size)
+		(inst orr ,result-tn ,result-tn ,lowtag)
+		(inst add ,temp-tn ,temp-tn ,size)
 		(store-symbol-value ,temp-tn lisp::*allocation-pointer*))))
 	 #+gencgc
 	 (t
 	  (error "Gencgc not supported"))))
 
 (defmacro with-fixed-allocation ((result-tn temp-tn type-code size
-					    &key (lowtag other-pointer-type)
+					    &key (lowtag vm::other-pointer-type)
 					    stack-p)
 				 &body body)
   "Do stuff to allocate an other-pointer object of fixed Size with a single
@@ -231,13 +231,13 @@
   (once-only ((result-tn result-tn) (temp-tn temp-tn)
 	      (type-code type-code) (size size)
 	      (lowtag lowtag))
-    `(pseudo-atomic ()
+    `(pseudo-atomic (:temp-tn ,temp-tn)
        (allocation ,result-tn (pad-data-block ,size) ,lowtag
 	           :temp-tn ,temp-tn
 	           :stack-p ,stack-p)
-      (when ,type-code
-	(inst li ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
-	(storew ,temp-tn ,result-tn 0 ,lowtag))
+       (when ,type-code
+	 (inst li ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
+	 (storew ,temp-tn ,result-tn 0 ,lowtag))
        ,@body)))
 
 
@@ -512,19 +512,20 @@
 ;;;
 (defmacro pseudo-atomic ((&key temp-tn (extra 0)) &rest forms)
   (declare (ignore extra))
+  (assert temp-tn)
   (let ((label (gensym "LABEL-")))
     `(let ((,label (gen-label)))
        ;; Set the pseudo-atomic flag, in *pseudo-atomic-atomic*
        (without-scheduling ()
 	 (load-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*)
-	 (inst or ,temp-tn pseudo-atomic-value)
+	 (inst orr ,temp-tn ,temp-tn pseudo-atomic-value)
 	 (store-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*))
        ,@forms
        ;; Reset the pseudo-atomic flag
        (without-scheduling ()
 	 ;; Remove the pseudo-atomic flag.
 	 (load-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*)
-	 (inst bic ,temp-tn pseudo-atomic-value)
+	 (inst bic ,temp-tn ,temp-tn pseudo-atomic-value)
 	 ;; Check to see if pseudo-atomic interrupted flag is set
 	 (inst tst ,temp-tn pseudo-atomic-interrupted-value)
 	 (inst b ,label :ne)
