@@ -524,9 +524,8 @@
 ;; Compare type instructions need to be handled separately from the
 ;; above data processing instructions because the src1 isn't used.
 (defmacro define-compare-inst (name opcode)
-  `(define-instruction ,name (segment dst src1 src2 &optional (cond :al))
-     (:declare (type tn dst)
-	       (type tn src1)
+  `(define-instruction ,name (segment src1 src2 &optional (cond :al))
+     (:declare (type tn src1)
 	       (type (or (signed-byte 32)
 			 (unsigned-byte 32)
 			 reg
@@ -2448,7 +2447,7 @@
 (defmacro define-fp-load/store-inst (name op0)
   `(define-instruction ,name (segment dst src &optional (cond :al))
      (:declare (type tn dst)
-	       (type (or tn load-store-index) dst)
+	       (type (or tn load-store-index) src)
 	       (type condition-code cond))
      (:printer format-6-vfp-load/store
 	       ((opb0 #b110)
