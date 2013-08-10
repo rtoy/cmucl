@@ -1967,7 +1967,7 @@
 					(:real vm::complex-double-double-float-real-lo-slot)
 					(:imag vm::complex-double-double-float-imag-lo-slot))
 				      vm:word-bytes)
-				   vm:other-pointer-type)))))))))
+				   vm:other-pointer-type))))))))
 
 (define-vop (realpart/complex-double-double-float complex-double-double-float-value)
   (:translate realpart)
