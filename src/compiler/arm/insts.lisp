@@ -1202,7 +1202,7 @@
   (op2    :field (byte 2 4)))
 
 (defstruct load-store-index
-  (type (required-argument) :type '(member :reg :immediate))
+  (type (required-argument) :type (member :reg :immediate))
   base-reg
   offset
   shift-type
