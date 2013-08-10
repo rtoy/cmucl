@@ -179,15 +179,6 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:vop-var vop)
   (:generator 4
-    #+(or)
-    (let ((done (gen-label)))
-      (inst andcc temp x fixnum-tag-mask)
-      (inst b :eq done)
-      (inst sran y x fixnum-tag-bits)
-      
-      (loadw y x bignum-digits-offset other-pointer-type)
-      
-      (emit-label done))
     (not-implemented)))
 
 ;;;
@@ -222,25 +213,6 @@
   (:vop-var vop)
   (:generator 20
     (move x arg)
-    #+(or)
-    (let ((done (gen-label)))
-      ;; Need to figure out if we have a fixnum or not, so look at the
-      ;; top 3 bits of the 32-bit int.  If these 3 bits are 0 or 7,
-      ;; then we have a fixnum.  Otherwise we need to allocate a
-      ;; bignum.
-      ;;
-      ;; A simple way to tell if those 3 bits are 0 or 7 was given by
-      ;; Frode Vatvedt Fjeld: (zerop (logand #b110 (1+ temp)))
-      (inst srln temp x positive-fixnum-bits)
-      (inst add temp 1)
-      (inst andcc temp #b110)
-      (inst b :eq done)
-      (inst slln y x fixnum-tag-bits)
-      
-      (with-fixed-allocation
-	(y temp bignum-type (1+ bignum-digits-offset))
-	(storew x y bignum-digits-offset other-pointer-type))
-      (emit-label done))
     (not-implemented)))
 ;;;
 (define-move-vop move-from-signed :move
@@ -261,29 +233,6 @@
   (:vop-var vop)
   (:generator 20
     (move x arg)
-    #+(or)
-    (let ((done (gen-label))
-	  (one-word (gen-label)))
-      (inst sran temp x positive-fixnum-bits)
-      (inst cmp temp)
-      (inst b :eq done)
-      (inst slln y x fixnum-tag-bits)
-
-      ;; We always allocate 2 words even if we don't need it.  (The
-      ;; copying GC will take care of freeing the unused extra word.)
-      (with-fixed-allocation
-	  (y temp bignum-type (+ 2 bignum-digits-offset))
-	(inst cmp x)
-	(inst b :ge one-word)
-	(inst li temp (logior (ash 1 type-bits) bignum-type))
-	(inst li temp (logior (ash 2 type-bits) bignum-type))
-	(emit-label one-word)
-	;; Set the header word, then the actual digit.  The extra
-	;; digit, if any, is automatically set to zero, so we don't
-	;; have to.
-	(storew temp y 0 other-pointer-type)
-	(storew x y bignum-digits-offset other-pointer-type))
-      (emit-label done))
     (not-implemented)))
 
 ;;;
