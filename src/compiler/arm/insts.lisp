@@ -2646,4 +2646,4 @@
   :pinned
   (:delay 0)
   (:emitter
-   (emit-header-data segment return-pc-header-type))
+   (emit-header-data segment return-pc-header-type)))
