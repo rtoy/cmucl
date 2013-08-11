@@ -185,11 +185,6 @@ in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
 
 boolean valid_addr(os_vm_address_t addr)
 {
-    /* Stolen from Linux-os.c */
-    os_vm_address_t newaddr;
-
-    newaddr = os_trunc_to_page(addr);
-
     /* Just assume address is valid if it lies within one of the known
        spaces.  (Unlike sunos-os which keeps track of every valid page.) */
     return (in_range_p(addr, READ_ONLY_SPACE_START, read_only_space_size)

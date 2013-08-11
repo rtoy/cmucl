@@ -14,12 +14,11 @@
 boolean
 search_for_type(int type, lispobj ** start, int *count)
 {
-    lispobj obj, *addr;
+    lispobj obj;
 
     while ((*count == -1 || (*count > 0)) &&
 	   valid_addr((os_vm_address_t) * start)) {
 	obj = **start;
-	addr = *start;
 	if (*count != -1)
 	    *count -= 2;
 
