@@ -1202,7 +1202,7 @@
   (op2    :field (byte 2 4)))
 
 (defstruct load-store-index
-  (type (required-argument) :type '(member :reg :immediate))
+  (type (required-argument) :type (member :reg :immediate))
   base-reg
   offset
   shift-type
@@ -2609,3 +2609,41 @@
 			  #b00
 			  #b1
 			  #b0000)))
+
+;;;; Instructions for dumping data and header objects.
+
+(define-instruction word (segment word)
+  (:declare (type (or (unsigned-byte 32) (signed-byte 32)) word))
+  :pinned
+  (:delay 0)
+  (:emitter
+   (emit-word segment word)))
+
+(define-instruction short (segment short)
+  (:declare (type (or (unsigned-byte 16) (signed-byte 16)) short))
+  :pinned
+  (:delay 0)
+  (:emitter
+   (emit-short segment short)))
+
+(define-instruction byte (segment byte)
+  (:declare (type (or (unsigned-byte 8) (signed-byte 8)) byte))
+  :pinned
+  (:delay 0)
+  (:emitter
+   (emit-byte segment byte)))
+
+(define-emitter emit-header-object 32
+  (byte 24 8) (byte 8 0))
+  
+(define-instruction function-header-word (segment)
+  :pinned
+  (:delay 0)
+  (:emitter
+   (emit-header-data segment function-header-type)))
+
+(define-instruction lra-header-word (segment)
+  :pinned
+  (:delay 0)
+  (:emitter
+   (emit-header-data segment return-pc-header-type)))
