@@ -23,7 +23,7 @@
   (once-only ((n-dst dst)
 	      (n-src src))
     `(unless (location= ,n-dst ,n-src)
-       (inst move ,n-dst ,n-src))))
+       (inst mov ,n-dst ,n-src))))
 
 ;; (loadw object base &optional (offset 0) (lowtag 0) temp)
 ;; (storew object base &optional (offset 0) (lowtag 0) temp)
@@ -126,6 +126,8 @@
      (emit-label ,label)
      (inst lra-header-word)))
 
+(defmacro not-implemented ()
+  `(inst udf halt-trap))
 
 
 ;;;; Stack TN's
