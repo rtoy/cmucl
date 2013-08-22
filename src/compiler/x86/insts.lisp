@@ -422,52 +422,39 @@
     (princ (disassem:dstate-get-prop dstate 'width) stream)
     (princ '| PTR | stream))
   (write-char #\[ stream)
-  (let ((firstp t))
-    (macrolet ((pel ((var val) &body body)
-		 ;; Print an element of the address, maybe with
-		 ;; a leading separator.
-		 `(let ((,var ,val))
-		    (when ,var
-		      (unless firstp
-			(write-char #\+ stream))
-		      ,@body
-		      (setq firstp nil)))))
-      (pel (base-reg (first value))
-	(print-addr-reg base-reg stream dstate))
-      (pel (index-reg (third value))
-	(print-addr-reg index-reg stream dstate)
-	(let ((index-scale (fourth value)))
-	  (when (and index-scale (not (= index-scale 1)))
-	    (write-char #\* stream)
-	    (princ index-scale stream))))
-      (let ((offset (second value)))
-	(when (and offset (or firstp (not (zerop offset))))
-	  (unless (or firstp (minusp offset))
-	    (write-char #\+ stream))
-	  (if firstp
-	      (let ((unsigned-offset (if (minusp offset)
-					 (+ #x100000000 offset)
-					 offset)))
-		(disassem:princ16 unsigned-offset stream)
-		(or (nth-value 1
-			       (disassem::note-code-constant-absolute unsigned-offset
-								      dstate))
-		    (disassem:maybe-note-assembler-routine unsigned-offset
-							   stream
-							   dstate)
-		    (let ((offs (- offset disassem::nil-addr)))
-		      (when (typep offs 'disassem::offset)
-			(or (disassem::maybe-note-nil-indexed-symbol-slot-ref offs
-									      dstate)
-			    (disassem::maybe-note-static-function offs dstate))))))
-	      (princ offset stream))))))
+  (destructuring-bind (&optional base disp index scale) value
+    (when base
+      (print-addr-reg base stream dstate)
+      (when index
+	(write-char #\+ stream)))
+    (when index
+      (print-addr-reg index stream dstate))
+    (when (and scale (> scale 1))
+      (write-char #\* stream)
+      (princ scale stream))
+    (when (and disp (not (zerop disp)))
+      (when (and (or base index))
+	(write-char (if (minusp disp) #\- #\+) stream))
+      (let ((unsigned-offset (if (minusp disp)
+				 (+ #x100000000 disp)
+				 disp)))
+	(or (nth-value 1
+		       (disassem::note-code-constant-absolute unsigned-offset
+							      dstate))
+	    (disassem:maybe-note-assembler-routine unsigned-offset
+						   stream
+						   dstate)
+	    (let ((offs (- disp disassem::nil-addr)))
+	      (when (typep offs 'disassem::offset)
+		(or (disassem::maybe-note-nil-indexed-symbol-slot-ref offs
+								      dstate)
+		    (disassem::maybe-note-static-function offs dstate))))))
+      (princ (abs disp) stream)))
   (write-char #\] stream))
 
 (defun print-imm-data (value stream dstate)
   (let ((offset (- value disassem::nil-addr)))
-    (if (zerop offset)
-	(format stream "#x~X" value)
-	(format stream "~A" value))
+    (princ value stream)
     (when (typep offset 'disassem::offset)
       (or (disassem::maybe-note-nil-indexed-object offset dstate)
 	  (let ((unsigned-offset (if (and (numberp value) (minusp value))
@@ -603,7 +590,7 @@
   (declare (type xmmreg value)
            (type stream stream)
            (ignore dstate))
-  (format stream "XMM~d" value))
+  (format stream "~A~D" 'xmm value))
 
 (defun print-xmmreg/mem (value stream dstate)
   (declare (type (or list xmmreg) value)

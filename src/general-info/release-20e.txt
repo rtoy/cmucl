@@ -21,6 +21,8 @@ New in this release:
   * Known issues:
 
   * Feature enhancements
+    * The disassembler (on x86) prints correctly for any value of
+      *print-base*.
  
   * Changes
     * ASDF2 updated to version 3.0.2.

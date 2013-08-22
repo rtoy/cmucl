@@ -2964,10 +2964,11 @@
 				(when stream
 				  (unless at-block-begin
 				    (terpri stream))
-				  (pprint-logical-block (stream nil :per-line-prefix ";;; ")
-				    (format stream "[~D] "
-					    (di:code-location-form-number loc))
-				    (prin1-short form stream))
+				  (let ((*print-base* 10))
+				    (pprint-logical-block (stream nil :per-line-prefix ";;; ")
+				      (format stream "[~D] "
+					      (di:code-location-form-number loc))
+				      (prin1-short form stream)))
 				  (terpri stream)
 				  (terpri stream)))
 			    t)))))
