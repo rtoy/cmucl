@@ -197,8 +197,7 @@
 	   (:results (result :scs (,sc)))
 	   (:result-types ,type)
 	   (:generator 5
-	     (inst ,(load-inst size)
-		   result (make-ea sap :offset offset))))
+	     (inst ,(load-inst size) result sap offset)))
 	 (define-vop (,ref-name-c)
 	   (:translate ,ref-name)
 	   (:policy :fast-safe)
@@ -208,8 +207,7 @@
 	   (:results (result :scs (,sc)))
 	   (:result-types ,type)
 	   (:generator 4
-	     (inst ,(load-inst size)
-		   result (make-ea sap :offset offset))))
+	     (inst ,(load-inst size) result sap offset)))
 	   (define-vop (,set-name)
 	     (:translate ,set-name)
 	     (:policy :fast-safe)
@@ -220,8 +218,7 @@
 	     (:results (result :scs (,sc)))
 	     (:result-types ,type)
 	     (:generator 5
-	       (inst ,(store-inst size)
-		     value (make-ea sap :offset offset))
+	       (inst ,(store-inst size) value sap offset)
 	       (unless (location= result value)
 		 ,(move-reg size))))
 	   (define-vop (,set-name-c)
@@ -234,8 +231,7 @@
 	     (:results (result :scs (,sc)))
 	     (:result-types ,type)
 	     (:generator 4
-	       (inst ,(store-inst size)
-		     value (make-ea sap :offset offset))
+	       (inst ,(store-inst size) value sap offset)
 	       (unless (location= result value)
 		 ,(move-reg size))))))))
 

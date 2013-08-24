@@ -1201,83 +1201,90 @@
   (signed :field (byte 1 6))
   (op2    :field (byte 2 4)))
 
+(defstruct indexing-mode
+  reg
+  post-index)
+
+(defun pre-index (reg)
+  (make-indexing-mode :reg reg :post-index nil))
+
+(defun post-index (reg)
+  (make-indexing-mode :reg reg :post-index t))
+
 (defstruct load-store-index
-  (type (required-argument) :type (member :reg :immediate))
-  base-reg
   offset
   shift-type
   shift-amount
-  add
-  update
-  indexed)
+  add)
 
-(defun make-ea (base-reg &key (offset 0) update
-			   (add t addp) 
-			   (shift-type :lsl shift-type-p)
-			   (amount 0 amountp)
-			   indexed)
-  "Create effective address for load/store instructions.
-  Base-reg specifies the base register with the following options:
+(defun make-op2 (reg &key
+		       (add t)
+		       (shift-type :lsl)
+		       (count 0))
+  (declare (type tn reg)
+	   (type boolean add)
+	   (type (unsigned-byte 5) count)
+	   (type shift-types shift-type))
+  (make-load-store-index :offset reg
+			 :add add
+			 :shift-type shift-type
+			 :shift-amount count))
 
-  :Offset
-     The offset from the base register.  This can be either a integer
-     or a register
-  :Update
-     Non-nil means the base register is updated from the offset
-  :Add
-     Non-nil means the offset is added.  Default is to add.
-  :Indexed
-     Non-nil means the base register plus the offset is the address.
-     Otherwise, the base-register is the address.
-  :Shift-type
-     The shift type to be applied to the offset register
-  :Amount
-     Amount of the shift
-
-  Note that if the offset is an integer, the :shift-type, :add and
-  :amount options are not allowed.
-
-  If the offset is a register, all options are allowed.
-"
-  (assert (typep amount '(unsigned-byte 5)))
-  (assert (typep shift-type shift-types))
-  (etypecase offset
-    (reg
-     (make-load-store-index :type :reg
-			    :base-reg base-reg
-			    :offset offset
-			    :add add
-			    :shift-type shift-type
-			    :shift-amount amount
-			    :update update
-			    :indexed indexed))
-    ((or (unsigned-byte 12) (signed-byte 12))
-     (let ((mag (abs imm))
-	   (add (not (minusp imm))))
-       ;; The :add :shift-type and :amount keywords aren't allowed in
-       ;; this case.
-       (assert (not addp))
-       (assert (not shift-type-p))
-       (assert (not amountp))
-       (make-load-store-index :type :immediate
-			      :base-reg base-reg
-			      :offset mag
-			      :add add
-			      :update update
-			      :indexed indexed)))))
-
-(defun decode-load-store-index (index)
+(defun decode-indexing-and-options (src1 op2)
   "Determine the P, U, and W bits from the load-store-index"
-  (values (if (load-store-index-post-indexed index) 0 1)
-	  (if (load-store-index-add index) 1 0)
-	  (if (load-store-index-update index) 1 0)))
+  (values (if (and (indexing-mode-p src1)
+		   (indexing-mode-post-indexed src1))
+	      0 1)
+	  (if (load-store-index-add op2) 1 0)
+	  (if (typep1 src1 'indexing-op2) 1 0)))
 
 ;; A5.3 and table A5-15
 ;; Load/store for words and unsigned bytes
+;;
+;; Here is the basic syntax for the load/store instructions:
+;;
+;; (inst ldr dst src1 src2 &optional cond)
+;;
+;; src1 is either a tn or an index-type which is used to indicate
+;; whether we are using pre- or post-indexing address modes, indicated
+;; by (pre-index tn) or (post-index tn), respectively.
+;;
+;; src2 can be a tn, an immediate, or an op2.  An op2 is a structure
+;; that encodes the hairy options like whether src2 is added or
+;; subtracted, and whether shift is applied.
+;;
+;; Some examples:
+;;
+;; ldr rd, [r1, 100] ->
+;;   (inst ldr rd r1 100)
+;; ldr rd, [r1, -100] ->
+;;   (inst ldr rd r1 -100)
+;; ldr rd, [r1, r2] ->
+;;   (inst ldr rd r1 r2)
+;; ldr rd, [r1, r2, lsr 2] ->
+;;   (inst ldr rd r1 (make-op2 r2 :shift :lsr :count 2))
+;; ldr rd, [r1, -r2] ->
+;;   (inst ldr rd r1 (make-op2 r2 :subtract t))
+;; ldr rd, [r1, -r2, lsl 3] ->
+;;   (inst ldr rd r1 (make-op2 r2 :subtract t :shift :lsl :count 3))
+;; ldr rd, [r1, 100]! ->
+;;   (inst ldr rd (pre-index r1) 100)
+;; ldr rd, [r1, -r2, lsl 3]! ->
+;;   (inst ldr rd (pre-index r1) (make-op2 r2 :subtract t :shift :lsl :count 3))
+;; ldr rd, [r1], -100 ->
+;;   (inst ldr rd (post-index r1) -100)
+;; ldr rd, [r1], r2 ->
+;;   (inst ldr rd (post-index r1) r2)
+;; ldr rd, [r1], -r2, lsl 2 ->
+;;   (inst ldr rd (post-index r1) (make-op2 r2 :subtract t :shift :lsl :count 2))
+;;
+;; ldrge rd, [r1], -r2 ->
+;;   (inst ldr rd (post-index r1) (make-op2 r2 :subtract t) :ge)
 (defmacro define-load/store-inst (name loadp &optional bytep)
-  `(define-instruction ,name (segment reg address &optional (cond :al))
+  `(define-instruction ,name (segment reg src1 src2 &optional (cond :al))
      (:declare (type tn reg)
-	       (type load-store-index address)
+	       (type (or tn indexing-mode) src1)
+	       (type (or tn (integer -4095 4095) load-store-index) src2)
 	       (type condition-code cond))
      (:printer format-2-immed
 	       ((opb0 #b010)
@@ -1288,38 +1295,24 @@
 		(byte ,(if bytep 1 0))
 		(ld ,(if loadp 1 0))))
      (:emitter
-      (ecase (load-store-index-type address)
-	(:reg
-	 (multiple-value-bind (p u w)
-	     (decode-load-store-index address)
-	   (emit-format-3-reg segment
-			      (condition-code-encoding cond)
-			      #b011
-			      p
-			      u
-			      ,(if bytep 1 0)
-			      w
-			      ,(if loadp 1 0)
-			      (reg-tn-encoding (load-store-index-base-reg address))
-			      (reg-tn-encoding reg)
-			      (load-store-index-shift-amount address)
-			      (load-store-index-shift-type address)
-			      0
-			      (reg-tn-encoding (load-store-index-offset address)))))
-	(:immediate
-	 (multiple-value-bind (p u w)
-	     (decode-load-store-index address)
-	   (emit-format-2-immed segment
-				(condition-code-encoding cond)
-				#b010
-				p
-				u
-				,(if bytep 1 0)
-				w
-				,(if loadp 1 0)
-				(reg-tn-encoding (load-store-index-base-reg address))
-				(reg-tn-encoding reg)
-				(load-store-index-offset address))))))))
+      (multiple-value-bind (p u w)
+	  (decode-indexing-and-options src1 src2)
+	(emit-format-3-reg segment
+			   (condition-code-encoding cond)
+			   #b011
+			   p
+			   u
+			   ,(if bytep 1 0)
+			   w
+			   ,(if loadp 1 0)
+			   (reg-tn-encoding (if (indexing-mode-p src1)
+						(indexing-mode-reg src1)
+						src1))
+			   (reg-tn-encoding reg)
+			   (load-store-index-shift-amount src2)
+			   (load-store-index-shift-type src2)
+			   0
+			   (reg-tn-encoding (load-store-index-offset src2)))))))
 
 (define-load/store-inst ldr t)
 (define-load/store-inst ldrb t t)
@@ -2445,10 +2438,13 @@
   (sz    :field (byte 1 8))
   (imm8  :field (byte 8 0)))
 
+;; vldr rd, [rn] -> (inst vldr rd rn 0)
+;; vldrge rd, [rn, -5] -> (inst vldr rd rn -5 :ge)
 (defmacro define-fp-load/store-inst (name op0)
-  `(define-instruction ,name (segment dst src &optional (cond :al))
+  `(define-instruction ,name (segment dst src offset &optional (cond :al))
      (:declare (type tn dst)
-	       (type (or tn load-store-index) dst)
+	       (type tn src)
+	       (type (integer -1020 1020) offset)
 	       (type condition-code cond))
      (:printer format-6-vfp-load/store
 	       ((opb0 #b110)
@@ -2469,43 +2465,20 @@
       (let ((doublep (sc-is dst double-reg)))
 	(multiple-value-bind (d vd)
 	    (fp-reg-tn-encoding dst doublep)
-	  (etypecase src
-	    (tn
-	     (emit-format-6-vfp-load/store segment
-					   (condition-code-encoding cond)
-					   #b110
-					   #b1
-					   1
-					   d
-					   ,op0
-					   (reg-tn-encoding base)
-					   vd
-					   #b101
-					   (if doublep 1 0)
-					   0))
-	    (load-store-index
-	     ;; Only certain forms of indexing are allowed here!  Verify
-	     ;; them.
-	     (assert (eq :immediate (load-store-index-type src)))
-	     (assert (and (null shift-type)
-			  (null shift-amount)
-			  (null update)
-			  (null post-indexed)))
-	     (let ((offset (load-store-index-offset src))
-		   (add (load-store-index-add src)))
-	       (assert (zerop (ldb (byte 2 0) offset)))
-	       (emit-format-6-vfp-load/store segment
-					     (condition-code-encoding cond)
-					     #b110
-					     #b1
-					     (if add 1 0)
-					     d
-					     ,op0
-					     (reg-tn-encoding base)
-					     vd
-					     #b101
-					     (if doublep 1 0)
-					     offset)))))))))
+	  ;; The offset must be divisible by 4!
+	  (assert (zerop (ldb (byte 2 0) (abs offset))))
+	  (emit-format-6-vfp-load/store segment
+					(condition-code-encoding cond)
+					#b110
+					#b1
+					(if (minusp offset) 0 1)
+					d
+					,op0
+					(reg-tn-encoding base)
+					vd
+					#b101
+					(if doublep 1 0)
+					(ash (abs offset) -2)))))))
 
 (define-fp-load/store-inst vldr #b01)
 (define-fp-load/store-inst vstr #b00)
