@@ -433,11 +433,7 @@
       (write-char #\* stream)
       (princ scale stream))
     (when (and disp (not (zerop disp)))
-      (when (and (or base index))
-	(write-char (if (minusp disp) #\- #\+) stream))
-      (let ((unsigned-offset (if (minusp disp)
-				 (+ #x100000000 disp)
-				 disp)))
+      (let ((unsigned-offset (ldb (byte vm:word-bits 0) disp)))
 	(or (nth-value 1
 		       (disassem::note-code-constant-absolute unsigned-offset
 							      dstate))
@@ -448,8 +444,12 @@
 	      (when (typep offs 'disassem::offset)
 		(or (disassem::maybe-note-nil-indexed-symbol-slot-ref offs
 								      dstate)
-		    (disassem::maybe-note-static-function offs dstate))))))
-      (princ (abs disp) stream)))
+		    (disassem::maybe-note-static-function offs dstate)))))
+	(cond ((or base index)
+	       (write-char (if (minusp disp) #\- #\+) stream)
+	       (princ (abs disp) stream))
+	      (t
+	       (princ unsigned-offset stream))))))
   (write-char #\] stream))
 
 (defun print-imm-data (value stream dstate)
@@ -457,9 +457,7 @@
     (princ value stream)
     (when (typep offset 'disassem::offset)
       (or (disassem::maybe-note-nil-indexed-object offset dstate)
-	  (let ((unsigned-offset (if (and (numberp value) (minusp value))
-				     (+ value #x100000000)
-				     value)))
+	  (let ((unsigned-offset (ldb (byte vm:word-bits 0) value)))
 	    (disassem::maybe-note-assembler-routine unsigned-offset stream dstate))
 	  (nth-value 1
 		     (disassem::note-code-constant-absolute offset
@@ -493,7 +491,10 @@
 
 (defun print-label (value stream dstate)
   (declare (ignore dstate))
-  (disassem:princ16 value stream))
+  (princ (if (and (numberp value) (minusp value))
+	     (ldb (byte vm:word-bits 0) value)
+	     value)
+	 stream))
 
 ;;; Returns either an integer, meaning a register, or a list of
 ;;; (BASE-REG OFFSET INDEX-REG INDEX-SCALE), where any component

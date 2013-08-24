@@ -1156,9 +1156,7 @@
    (:xref t))
   (values (or pathname null) boolean boolean))
 
-(defknown disassemble ((or callable cons)
-		       &key (:stream stream) (:backend backend)
-		       (:use-labels t))
+(defknown disassemble ((or callable cons))
   (values))
 
 (defknown documentation (t symbol)
