@@ -409,7 +409,7 @@
   (declare (type (or tn (member 0)) dst src1)
 	   (type (or (signed-byte 32)
 		     (unsigned-byte 32)
-		     reg
+		     tn
 		     flex-operand)
 		 src2)
 	   (type (or null (unsigned-byte 4)) opcode)
@@ -432,7 +432,7 @@
 			      (reg-encoding src1)
 			      (reg-encoding dst)
 			      (logior (ash rot 8) val))))
-      (reg
+      (tn
        (emit-format-0-reg segment
 			  (condition-code-encoding cc)
 			  #b000
@@ -735,7 +735,7 @@
 			    (reg-tn-encoding src2)))
 	(reg
 	 (emit-format-0-reg-shifted segment
-				    (condition-code-encoding opts)
+				    (condition-code-encoding cond)
 				    #b000
 				    #b1101
 				    ,set-flags-bit
@@ -1550,11 +1550,11 @@
 	    ((opb0 #b111)
 	     (op #b1)))
   (:emitter
-   (emit-branch segment
-		(condition-code-encoding cond)
-		#b111
-		#b1
-		imm24)))
+   (emit-branch-imm segment
+		    (condition-code-encoding cond)
+		    #b111
+		    #b1
+		    imm24)))
 
 ;; A8.8.119.  Note this was introduced in ARMv6K and ARMv6T2. If you
 ;; want one that works eveyrwhere, use MOV R0, R0 (ARM) or MOV R8, R8
@@ -2616,6 +2616,15 @@
 (define-emitter emit-header-object 32
   (byte 24 8) (byte 8 0))
   
+(defun emit-header-data (segment type)
+  (emit-back-patch
+   segment 4
+   #'(lambda (segment posn)
+       (emit-word segment
+		  (logior type
+			  (ash (+ posn (component-header-length))
+			       (- type-bits word-shift)))))))
+
 (define-instruction function-header-word (segment)
   :pinned
   (:delay 0)
