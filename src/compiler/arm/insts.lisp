@@ -231,6 +231,14 @@
 		 (encode-immediate new)
 	       (when rot
 		 (values (mod (+ 4 rot) 16) val))))))))
+
+;;;; Primitive emitters.
+
+(define-emitter emit-word 32
+  (byte 32 0))
+
+(define-emitter emit-short 16
+  (byte 16 0))
 
 
 ;;; Define instruction formats. See DDI0406C_b, section A5 for details.
@@ -451,18 +459,18 @@
 			     #b0
 			     (reg-tn-encoding (flex-operand-reg src2))))
 	 (:reg-shift-reg
-	  (emit-format-0-reg-shift segment
-				   (condition-code-encoding cc)
-				   #b000
-				   opcode
-				   set-flags-bit
-				   (reg-encoding src1)
-				   (reg-encoding dst)
-				   (reg-tn-encoding (flex-operand-shift-reg-or-imm src2))
-				   #b0
-				   (shift-type-encoding (flex-operand-shift-type src2))
-				   #b1
-				   (reg-tn-encoding (flex-operand-reg src2)))))))))
+	  (emit-format-0-reg-shifted segment
+				     (condition-code-encoding cc)
+				     #b000
+				     opcode
+				     set-flags-bit
+				     (reg-encoding src1)
+				     (reg-encoding dst)
+				     (reg-tn-encoding (flex-operand-shift-reg-or-imm src2))
+				     #b0
+				     (shift-type-encoding (flex-operand-shift-type src2))
+				     #b1
+				     (reg-tn-encoding (flex-operand-reg src2)))))))))
 
 ;; Define two instructions: one that does not set the condition codes
 ;; and one that does.  INST-DEF is the instruction definer to use and
@@ -726,18 +734,18 @@
 			    #b0
 			    (reg-tn-encoding src2)))
 	(reg
-	 (emit-format-0-reg-shift segment
-				  (condition-code-encoding opts)
-				  #b000
-				  #b1101
-				  ,set-flags-bit
-				  #b0000
-				  (reg-tn-encoding dst)
-				  (reg-tn-encoding shift)
-				  #b0
-				  (shift-type-encoding ,shift-type)
-				  #b1
-				  (reg-tn-encoding src2)))))))
+	 (emit-format-0-reg-shifted segment
+				    (condition-code-encoding opts)
+				    #b000
+				    #b1101
+				    ,set-flags-bit
+				    #b0000
+				    (reg-tn-encoding dst)
+				    (reg-tn-encoding shift)
+				    #b0
+				    (shift-type-encoding ,shift-type)
+				    #b1
+				    (reg-tn-encoding src2)))))))
 
 ;; Shift instructions
 (macrolet
@@ -843,9 +851,9 @@
 			 (condition-code-encoding cond)
 			 #b001
 			 #b10000
-			 (ldb (byte 4 12) imm16)
+			 (ldb (byte 4 12) src)
 			 (reg-tn-encoding dst)
-			 (ldb (byte 12 0) imm16)))
+			 (ldb (byte 12 0) src)))
      (fixup
       (note-fixup segment :mov3 src)
       (emit-format-mov16 segment
@@ -858,7 +866,7 @@
 
 ;; A5.2.5 Multiply and Accumulate
 
-(define-emitter emit-format-mul 32
+(define-emitter emit-format-0-mul 32
   (byte 4 28) (byte 3 25) (byte 4 21) (byte 1 20) (byte 4 16) (byte 4 12)
   (byte 4 8) (byte 4 4) (byte 4 0))
   
@@ -1324,7 +1332,7 @@
   `(define-instruction ,name (segment reg src1 src2 &optional (cond :al))
      (:declare (type tn reg)
 	       (type (or tn indexing-mode) src1)
-	       (type (or tn (integer -4095 4095) load-store-index) src2)
+	       (type (or tn (integer -255 255) load-store-index) src2)
 	       (type condition-code cond))
      (:printer format-0-halfword-imm
 	       ((opb0  #b000)
@@ -1343,16 +1351,17 @@
 		(imm 0)))
      (:emitter
       (multiple-value-bind (sign op2)
-		 ;; bytep implies signed.  The unsigned byte
-		 ;; instruction is handled elsewhere.
+	  ;; bytep implies signed.  The unsigned byte
+	  ;; instruction is handled elsewhere.
 	  (values (if ,bytep #b1 #b0)
 		  (if (or ,signedp ,bytep)
 		      #b01
 		      #b11))
-	(etypecase src2
-	  ((tn load-store-index)
-	   (multiple-value-bind (p u w)
-	       (decode-indexing-and-options src1 src2)
+	(multiple-value-bind (p u w)
+	    (decode-indexing-and-options src1 src2)
+	  (etypecase src2
+	    ((or tn indexing-mode)
+	     (assert (eq (load-store-index-shift-type src2) :lsl))
 	     (emit-format-0-halfword-reg segment
 					 (condition-code-encoding cond)
 					 #b000
@@ -1361,7 +1370,7 @@
 					 0
 					 w
 					 ,(if loadp 1 0)
-					 (reg-tn-encoding (if (indexing-mode src1)
+					 (reg-tn-encoding (if (indexing-mode-p src1)
 							      (indexing-mode-reg src1)
 							      src1))
 					 (reg-tn-encoding reg)
@@ -1369,10 +1378,8 @@
 					 0
 					 sign
 					 op2
-					 (reg-tn-encoding (load-store-index-offset address)))))
-	  (integer
-	   (multiple-value-bind (p u w)
-	       (decode-indexing-and-options src1 src2)
+					 (reg-tn-encoding (load-store-index-offset src2))))
+	    (integer
 	     (emit-format-0-halfword-imm segment
 					 (condition-code-encoding cond)
 					 #b000
@@ -1381,7 +1388,7 @@
 					 1
 					 w
 					 ,(if loadp 1 0)
-					 (reg-tn-encoding (if (indexing-mode src1)
+					 (reg-tn-encoding (if (indexing-mode-p src1)
 							      (indexing-mode-reg src1)
 							      src1))
 					 (reg-tn-encoding reg)
@@ -1527,7 +1534,7 @@
 	     (op0 #b11111)
 	     (op1 #b1111)))
   (:emitter
-   (emit-format-udf eegment
+   (emit-format-udf segment
 		    #b1110
 		    #b011
 		    #b11111
@@ -1639,7 +1646,7 @@
 		      (reg-tn-encoding dst)
 		      0)))
 
-(define-emitter emit-formt-0-msr 32
+(define-emitter emit-format-0-msr 32
   (byte 4 28) (byte 3 25) (byte 5 20) (byte 2 18) (byte 14 4) (byte 4 0))
 
 (disassem:define-instruction-format
@@ -1702,7 +1709,7 @@
 ;; Floating-point instructions
 ;; A7.5
 
-(define-emitter format-vfp-3-arg 32
+(define-emitter emit-format-vfp-3-arg 32
   (byte 4 28) (byte 3 25) (byte 2 23) (byte 1 22) (byte 2 20) (byte 4 16) (byte 4 12)
   (byte 3 9) (byte 1 8) (byte 1 7) (byte 1 6) (byte 1 5) (byte 1 4) (byte 4 0))
 
@@ -1926,9 +1933,9 @@
 	       :print-name ',name)
      (:emitter
       (multiple-value-bind (d vd)
-	  (fp-reg-tn-encoding dst (eq dst-type 'fp-double-reg))
+	  (fp-reg-tn-encoding dst (eq ',dst-type 'fp-double-reg))
 	(multiple-value-bind (m vm)
-	    (fp-reg-tn-encoding src (eq src-type 'fp-double-reg))
+	    (fp-reg-tn-encoding src (eq ',src-type 'fp-double-reg))
 	  (emit-format-vfp-2-arg segment
 				 (condition-code-encoding cond)
 				 #b111
@@ -1996,7 +2003,7 @@
 
 (defmacro define-vfp-cmp-inst (name ops)
   `(define-instruction ,name (segment dst src &optional (cond :al))
-     (:declare (type dst tn)
+     (:declare (type tn dst)
 	       (type (or tn (member 0f0 0d0)) src)
 	       (type condition-code cond))
      ;; Compare two single-regs
@@ -2326,7 +2333,7 @@
 		    (sc-is dst-or-src single-reg))
 	       ;; Move to ARM reg from single float reg
 	       (multiple-value-bind (n vn)
-		   (fp-reg-tn-encoding dst-or-src-or-cond nil)
+		   (fp-reg-tn-encoding dst-or-src nil)
 		 (emit-format-7-vfp-vmov-core segment
 					      (condition-code-encoding cc)
 					      #b111
