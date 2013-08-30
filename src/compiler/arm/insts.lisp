@@ -524,9 +524,8 @@
 ;; Compare type instructions need to be handled separately from the
 ;; above data processing instructions because the src1 isn't used.
 (defmacro define-compare-inst (name opcode)
-  `(define-instruction ,name (segment dst src1 src2 &optional (cond :al))
-     (:declare (type tn dst)
-	       (type tn src1)
+  `(define-instruction ,name (segment src1 src2 &optional (cond :al))
+     (:declare (type tn src1)
 	       (type (or (signed-byte 32)
 			 (unsigned-byte 32)
 			 reg
@@ -1236,7 +1235,7 @@
 		   (indexing-mode-post-indexed src1))
 	      0 1)
 	  (if (load-store-index-add op2) 1 0)
-	  (if (typep1 src1 'indexing-op2) 1 0)))
+	  (if (indexing-mode-p src1) 1 0)))
 
 ;; A5.3 and table A5-15
 ;; Load/store for words and unsigned bytes
@@ -1322,9 +1321,10 @@
 ;; A5.2.8; extra load/store instructions for halfwords (16-bit signed
 ;; and unsigned) and signed bytes.
 (defmacro define-load/store-extra-inst (name &optional loadp bytep signedp)
-  `(define-instruction ,name (segment reg address &optional (cond :al))
+  `(define-instruction ,name (segment reg src1 src2 &optional (cond :al))
      (:declare (type tn reg)
-	       (type load-store-index address)
+	       (type (or tn indexing-mode) src1)
+	       (type (or tn (integer -4095 4095) load-store-index) src2)
 	       (type condition-code cond))
      (:printer format-0-halfword-imm
 	       ((opb0  #b000)
@@ -1349,10 +1349,10 @@
 		  (if (or ,signedp ,bytep)
 		      #b01
 		      #b11))
-	(ecase (load-store-index-type address)
-	  (:reg
+	(etypecase src2
+	  ((tn load-store-index)
 	   (multiple-value-bind (p u w)
-	       (decode-load-store-index address)
+	       (decode-indexing-and-options src1 src2)
 	     (emit-format-0-halfword-reg segment
 					 (condition-code-encoding cond)
 					 #b000
@@ -1361,17 +1361,18 @@
 					 0
 					 w
 					 ,(if loadp 1 0)
-					 (reg-tn-encoding
-					  (load-store-index-base-reg address))
+					 (reg-tn-encoding (if (indexing-mode src1)
+							      (indexing-mode-reg src1)
+							      src1))
 					 (reg-tn-encoding reg)
 					 1
 					 0
 					 sign
 					 op2
 					 (reg-tn-encoding (load-store-index-offset address)))))
-	  (:immediate
+	  (integer
 	   (multiple-value-bind (p u w)
-	       (decode-load-store-index src2)
+	       (decode-indexing-and-options src1 src2)
 	     (emit-format-0-halfword-imm segment
 					 (condition-code-encoding cond)
 					 #b000
@@ -1380,16 +1381,15 @@
 					 1
 					 w
 					 ,(if loadp 1 0)
-					 (reg-tn-encoding
-					  (load-store-index-base-reg address))
+					 (reg-tn-encoding (if (indexing-mode src1)
+							      (indexing-mode-reg src1)
+							      src1))
 					 (reg-tn-encoding reg)
-					 (ldb (byte 4 4)
-					      (load-store-index-offset address))
+					 (ldb (byte 4 4) src2)
 					 1
 					 sign
 					 op2
-					 (ldb (byte 4 0)
-					      (load-store-index-offset address))))))))))
+					 (ldb (byte 4 0) src2)))))))))
 
 (define-load/store-extra-inst ldrh t)
 (define-load/store-extra-inst strh nil)
@@ -2474,7 +2474,7 @@
 					(if (minusp offset) 0 1)
 					d
 					,op0
-					(reg-tn-encoding base)
+					(reg-tn-encoding src)
 					vd
 					#b101
 					(if doublep 1 0)
