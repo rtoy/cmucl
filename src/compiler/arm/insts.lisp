@@ -1240,7 +1240,7 @@
 (defun decode-indexing-and-options (src1 op2)
   "Determine the P, U, and W bits from the load-store-index"
   (values (if (and (indexing-mode-p src1)
-		   (indexing-mode-post-indexed src1))
+		   (indexing-mode-post-index src1))
 	      0 1)
 	  (if (load-store-index-add op2) 1 0)
 	  (if (indexing-mode-p src1) 1 0)))
@@ -1502,7 +1502,7 @@
 		       #b10010
 		       #b111111111111
 		       #b0011
-		       (reg-tn-encooding target))))))
+		       (reg-tn-encoding target))))))
 
 
 ;; Miscellaneous instructions
