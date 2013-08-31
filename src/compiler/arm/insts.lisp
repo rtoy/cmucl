@@ -659,7 +659,7 @@
 				0
 				(reg-tn-encoding dst)
 				(logior (ash rot 8) val))))
-	(reg
+	(tn
 	 (emit-format-0-reg segment
 			    (condition-code-encoding cond)
 			    #b000
@@ -696,7 +696,7 @@
      (:declare (type tn dst src2)
 	       (type (or (signed-byte 32)
 			 (unsigned-byte 32)
-			 reg)
+			 tn)
 		     shift)
 	       (type condition-code cond))
      (:printer format-0-reg
@@ -733,7 +733,7 @@
 			    (shift-type-encoding ,shift-type)
 			    #b0
 			    (reg-tn-encoding src2)))
-	(reg
+	(tn
 	 (emit-format-0-reg-shifted segment
 				    (condition-code-encoding cond)
 				    #b000
@@ -1474,7 +1474,7 @@
    (emit-relative-branch segment #b101 #b1 cond target)))
 
 (define-instruction blx (segment target)
-  (:declare (type (or label reg) target))
+  (:declare (type (or label tn) target))
   (:printer branch-imm
 	    ((cond #b1111)
 	     (opb0 #b101)
@@ -1491,7 +1491,7 @@
    (etypecase target
      (label
       (emit-relative-branch segment #b101 #b0 :al target))
-     (reg
+     (tn
       (emit-branch-reg segment
 		       (condition-code-encoding :al)
 		       #b000
