@@ -488,7 +488,7 @@
 	       (type tn src1)
 	       (type (or (signed-byte 32)
 			 (unsigned-byte 32)
-			 reg
+			 tn
 			 flex-operand)
 		     src2)
 	       (type condition-code cond))
@@ -536,7 +536,7 @@
      (:declare (type tn src1)
 	       (type (or (signed-byte 32)
 			 (unsigned-byte 32)
-			 reg
+			 tn
 			 flex-operand)
 		     src2)
 	       (type condition-code cond))
@@ -1231,7 +1231,7 @@
   (declare (type tn reg)
 	   (type boolean add)
 	   (type (unsigned-byte 5) count)
-	   (type shift-types shift-type))
+	   (type shift-type shift-type))
   (make-load-store-index :offset reg
 			 :add add
 			 :shift-type shift-type
