@@ -428,7 +428,7 @@
 			      (condition-code-encoding cc)
 			      #b001
 			      opcode
-			      set-flags-p
+			      set-flags-bit
 			      (reg-encoding src1)
 			      (reg-encoding dst)
 			      (logior (ash rot 8) val))))
@@ -578,7 +578,7 @@
      (:declare (type tn dst)
 	       (type (or (signed-byte 32)
 			 (unsigned-byte 32)
-			 reg
+			 tn
 			 flex-operand)
 		     src2)
 	       (type condition-code cond))
@@ -632,7 +632,7 @@
      (:declare (type tn dst)
 	       (type (or (signed-byte 32)
 			 (unsigned-byte 32)
-			 reg
+			 tn
 			 flex-operand)
 		     src2)
 	       (type condition-code cond))
@@ -665,7 +665,7 @@
 			    #b000
 			    #b1101
 			    ,set-flags-bit
-			    (reg-tn-encoding src1)
+			    (reg-tn-encoding src2)
 			    (reg-tn-encoding dst)
 			    0
 			    (shift-type-encoding :lsl)
@@ -760,10 +760,6 @@
 (defmacro define-rrx-inst (name set-flags-bit)
   `(define-instruction ,name (segment dst src2 &optional (cond :al))
      (:declare (type tn dst src2)
-	       (type (or (signed-byte 32)
-			 (unsigned-byte 32)
-			 reg)
-		     shift)
 	       (type condition-code cond))
      (:printer format-0-reg
 	       ((opb0 #b000)
