@@ -2050,7 +2050,7 @@
 	       (fp-reg-tn-encoding dst doublep)
 	     (multiple-value-bind (m vm)
 		 (fp-reg-tn-encoding src doublep)
-	       (emit-format-vfp-2-reg segment
+	       (emit-format-vfp-2-arg segment
 				      (condition-code-encoding cond)
 				      #b111
 				      #b01
