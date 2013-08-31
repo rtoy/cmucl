@@ -195,6 +195,7 @@
 (defmacro allocation (result-tn size lowtag &key stack-p temp-tn)
   ;; We assume we're in a pseudo-atomic so the pseudo-atomic bit is
   ;; set.
+  (assert temp-tn)
   `(cond (,stack-p
 	  ;; Stack allocation, not supported
 	  (error "Stack allocation not supported"))
@@ -229,7 +230,7 @@
   (once-only ((result-tn result-tn) (temp-tn temp-tn)
 	      (type-code type-code) (size size)
 	      (lowtag lowtag))
-    `(pseudo-atomic ()
+    `(pseudo-atomic (:temp-tn ,temp-tn)
        (allocation ,result-tn (pad-data-block ,size) ,lowtag
 	           :temp-tn ,temp-tn
 	           :stack-p ,stack-p)
@@ -510,6 +511,7 @@
 ;;;
 (defmacro pseudo-atomic ((&key temp-tn (extra 0)) &rest forms)
   (declare (ignore extra))
+  (assert temp-tn)
   (let ((label (gensym "LABEL-")))
     `(let ((,label (gen-label)))
        ;; Set the pseudo-atomic flag, in *pseudo-atomic-atomic*
