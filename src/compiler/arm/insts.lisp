@@ -2391,22 +2391,19 @@
 	       (let ((doublep (sc-is dst double-reg)))
 		 (multiple-value-bind (d vd)
 		     (fp-reg-tn-encoding dst doublep)
-		   (multiple-value-bind (m vm)
-		       (fp-reg-tn-encoding dst-or-src doublep)
-		     (emit-format-vfp-vmov-reg segment
-					       (condition-code-encoding cond)
-					       #b111
-					       #b01
-					       d
-					       #b11
-					       #b0000
-					       vd
-					       #b101
-					       (if doublep 1 0)
-					       #b01
-					       m
-					       0
-					       vm)))))
+		   (let ((f (fp-immed-or-lose dst-or-src)))
+		     (emit-format-vfp-vmov-immed segment
+						 (condition-code-encoding cond)
+						 #b111
+						 #b01
+						 d
+						 #b11
+						 (ldb (byte 4 4) f)
+						 vd
+						 #b101
+						 (if doublep 1 0)
+						 0
+						 (ldb (byte 4 0) f))))))
 	      (t
 	       (error "Unknown or unsupported argument types for VMOV"))))))))
 
