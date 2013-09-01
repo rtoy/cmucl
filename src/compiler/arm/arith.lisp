@@ -1,24 +1,19 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/arith.lisp $")
+  "$Header: src/compiler/arm/arith.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; This file contains the VM definition arithmetic VOPs for the SPARC.
+;;; This file contains the VM definition arithmetic VOPs for ARM.
 ;;;
-;;; Written by Rob MacLachlan
-;;;
-;;; Converted by William Lott.
-;;;
-;;; Enhancements/debugging by Raymond Toy 1999, 2000
 
-(in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(in-package "ARM")
+(intl:textdomain "cmucl-arm-vm")
 
 
 ;;;; Unary operations.
