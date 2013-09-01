@@ -1,22 +1,19 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/char.lisp $")
+  "$Header: src/compiler/arm/char.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
-;;; This file contains the SPARC VM definition of character operations.
+;;; This file contains the ARM VM definition of character operations.
 ;;;
-;;; Written by Rob MacLachlan
-;;; Converted for the MIPS R2000 by Christopher Hoover.
-;;; And then to the SPARC by William Lott.
 ;;;
-(in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(in-package "ARM")
+(intl:textdomain "cmucl-arm-vm")
 
 
 
@@ -29,7 +26,7 @@
   (:results (y :scs (base-char-reg)))
   (:note _N"character untagging")
   (:generator 1
-    (inst srln y x vm:type-bits)))
+    (not-implemented)))
 ;;;
 (define-move-vop move-to-base-char :move
   (any-reg descriptor-reg) (base-char-reg))
@@ -42,8 +39,7 @@
   (:results (y :scs (any-reg descriptor-reg)))
   (:note _N"character tagging")
   (:generator 1
-    (inst slln y x vm:type-bits)
-    (inst or y vm:base-char-type)))
+    (not-implemented)))
 ;;;
 (define-move-vop move-from-base-char :move
   (base-char-reg) (any-reg descriptor-reg))
@@ -77,11 +73,7 @@
   (:temporary (:sc non-descriptor-reg) temp)
   (:note _N"character arg move")
   (:generator 0
-    (sc-case y
-      (base-char-reg
-       (move y x))
-      (base-char-stack
-       (storew x fp (tn-offset y) 0 temp)))))
+    (not-implemented)))
 ;;;
 (define-move-vop move-base-char-argument :move-argument
   (any-reg base-char-reg) (base-char-reg))
@@ -105,7 +97,7 @@
   (:results (res :scs (any-reg)))
   (:result-types positive-fixnum)
   (:generator 1
-    (inst slln res ch fixnum-tag-bits)))
+    (not-implemented)))
 
 (define-vop (code-char)
   (:translate code-char)
@@ -115,7 +107,7 @@
   (:results (res :scs (base-char-reg)))
   (:result-types base-char)
   (:generator 1
-    (inst srln res code fixnum-tag-bits)))
+    (not-implemented)))
 
 
 ;;; Comparison of base-chars.
@@ -130,9 +122,7 @@
   (:note _N"inline comparison")
   (:variant-vars condition not-condition)
   (:generator 3
-    (inst cmp x y)
-    (inst b (if not-p not-condition condition) target)
-    (inst nop)))
+    (not-implemented)))
 
 (define-vop (fast-char=/base-char base-char-compare)
   (:translate char=)
@@ -155,9 +145,7 @@
   (:note _N"inline comparison")
   (:variant-vars condition not-condition)
   (:generator 2
-    (inst cmp x (char-code y))
-    (inst b (if not-p not-condition condition) target)
-    (inst nop)))
+    (not-implemented)))
 
 (define-vop (fast-char=-c/base-char base-char-compare-c)
   (:translate char=)
