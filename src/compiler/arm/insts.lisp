@@ -1715,6 +1715,9 @@
 (define-instruction-macro li (reg value)
   `(%li ,reg, value))
 
+(define-instruction-macro neg (dst src)
+  `(inst rsb ,dst ,src 0))
+
   
 
 ;; Floating-point instructions
