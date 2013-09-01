@@ -1,23 +1,20 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/static-fn.lisp $")
+  "$Header: src/compiler/arm/static-fn.lisp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: src/compiler/sparc/static-fn.lisp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
 ;;;
-;;; Written by William Lott.
 ;;;
-(in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(in-package "ARM")
+(intl:textdomain "cmucl-arm-vm")
 
 
 
@@ -86,39 +83,7 @@
 	 ,@(temps)
 	 (:results ,@(results))
 	 (:generator ,(+ 50 num-args num-results)
-	   (let ((lra-label (gen-label))
-		 (cur-nfp (current-nfp-tn vop)))
-	     ,@(moves (temp-names) (arg-names))
-	     (inst ldn func null-tn (static-function-offset symbol))
-	     (inst li nargs (fixnumize ,num-args))
-	     (when cur-nfp
-	       (store-stack-tn nfp-save cur-nfp))
-	     (inst move old-fp cfp-tn)
-	     (inst move cfp-tn csp-tn)
-	     (inst compute-lra-from-code lra code-tn lra-label temp)
-	     (note-this-location vop :call-site)
-	     (inst j func (- (ash function-code-offset word-shift)
-			     function-pointer-type))
-	     (inst move code-tn func)
-	     (emit-return-pc lra-label)
-	     ,(collect ((bindings) (links))
-		(do ((temp (temp-names) (cdr temp))
-		     (name 'values (gensym))
-		     (prev nil name)
-		     (i 0 (1+ i)))
-		    ((= i num-results))
-		  (bindings `(,name
-			      (make-tn-ref ,(car temp) nil)))
-		  (when prev
-		    (links `(setf (tn-ref-across ,prev) ,name))))
-		`(let ,(bindings)
-		   ,@(links)
-		   (default-unknown-values vop
-		       ,(if (zerop num-results) nil 'values)
-		       ,num-results move-temp temp lra-label)))
-	     (when cur-nfp
-	       (load-stack-tn cur-nfp nfp-save))
-	     ,@(moves (result-names) (temp-names))))))))
+	   (not-implemented))))))
 
 
 ) ; eval-when (compile load eval)
@@ -129,9 +94,7 @@
   (frob 0 1)
   (frob 1 1)
   (frob 2 1)
-  (frob 3 1)
-  (frob 4 1)
-  (frob 5 1))
+  (frob 3 1))
 
 
 (defmacro define-static-function (name args &key (results '(x)) translate
