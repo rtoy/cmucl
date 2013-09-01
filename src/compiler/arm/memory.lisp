@@ -1,23 +1,19 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/memory.lisp $")
+  "$Header: src/compiler/arm/memory.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;;    This file contains the SPARC definitions of some general purpose memory
+;;;    This file contains the ARM definitions of some general purpose memory
 ;;; reference VOPs inherited by basic memory reference operations.
 ;;;
-;;; Written by Rob MacLachlan
-;;;
-;;; Converted by William Lott.
-;;; 
 
-(in-package "SPARC")
+(in-package "ARM")
 
 ;;; Cell-Ref and Cell-Set are used to define VOPs like CAR, where the offset to
 ;;; be read or written is a property of the VOP used.
@@ -69,7 +65,7 @@
 (defmacro define-indexer (name write-p op shift)
   `(define-vop (,name)
      (:args (object :scs (descriptor-reg))
-	    (index :scs (any-reg zero immediate))
+	    (index :scs (any-reg immediate))
 	    ,@(when write-p
 		'((value :scs (any-reg descriptor-reg) :target result))))
      (:arg-types * tagged-num ,@(when write-p '(*)))
@@ -80,33 +76,8 @@
      (:variant-vars offset lowtag)
      (:policy :fast-safe)
      (:generator 5
-       (sc-case index
-	 ((immediate zero)
-	  (let ((offset (- (+ (if (sc-is index zero)
-				  0
-				  (ash (tn-value index)
-				       (- vm:word-shift ,shift)))
-			      (ash offset vm:word-shift))
-			   lowtag)))
-	    (etypecase offset
-	      ((signed-byte 13)
-	       (inst ,op value object offset))
-	      ((or (unsigned-byte 32) (signed-byte 32))
-	       (inst li temp offset)
-	       (inst ,op value object temp)))))
-	 (t
-	  ,@(unless (zerop shift)
-	      `((inst srln temp index ,shift)))
-	  (inst add temp ,(if (zerop shift) 'index 'temp)
-		(- (ash offset vm:word-shift) lowtag))
-	  (inst ,op value object temp)))
-       ,@(when write-p
-	   '((move result value))))))
+       (not-implemented))))
 
-#+sparc-v9
-(define-indexer signed-word-index-ref nil ldsw 0)
-#+sparc-v9
-(define-indexer signed-word-index-set nil st 0)
 (define-indexer word-index-ref nil ld 0)
 (define-indexer word-index-set t st 0)
 (define-indexer halfword-index-ref nil lduh 1)
