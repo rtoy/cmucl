@@ -1067,11 +1067,8 @@
 (define-modular-backend + t)
 (define-modular-backend - t)
 (define-modular-backend logxor t)
-(define-modular-backend logeqv t)
 (define-modular-backend logandc1)
 (define-modular-backend logandc2 t)
-(define-modular-backend logorc1)
-(define-modular-backend logorc2 t)
 (define-modular-backend * t *)
 
 (def-source-transform lognand (x y)
