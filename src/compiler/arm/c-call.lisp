@@ -1,21 +1,20 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/c-call.lisp $")
+  "$Header: src/compiler/arm/c-call.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
 ;;;
-;;; Written by William Lott.
 ;;;
-(in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(in-package "ARM")
+(intl:textdomain "cmucl-arm-vm")
 (use-package "ALIEN")
 (use-package "ALIEN-INTERNALS")
 
