@@ -1,11 +1,11 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/nlx.lisp $")
+  "$Header: src/compiler/arm/nlx.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,9 +13,7 @@
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
 ;;;
-;;; Written by Rob MacLachlan
-;;;
-(in-package "SPARC")
+(in-package "ARM")
 
 ;;; MAKE-NLX-SP-TN  --  Interface
 ;;;
