@@ -125,11 +125,7 @@
        ,@(when restore-fixnum-mask
 	       `((:temporary (:sc non-descriptor-reg) temp)))
        (:generator 2
-	 ,(if arg-swap
-	      `(inst ,op ,(if restore-fixnum-mask 'temp 'r) y x)
-	      `(inst ,op ,(if restore-fixnum-mask 'temp 'r) x y))
-	 ,@(when restore-fixnum-mask
-		 ``(inst andn r temp fixnum-tag-mask))))
+	 (not-implemented)))
      ,@(unless arg-swap
 	       `((define-vop (,(symbolicate "FAST-" translate "-C/FIXNUM=>FIXNUM")
 			       fast-fixnum-binop-c)
@@ -168,13 +164,14 @@
 (define-binop + 4 add)
 (define-binop - 4 sub)
 (define-binop logand 2 and)
-(define-binop logandc1 2 andn t)
-(define-binop logandc2 2 andn)
-(define-binop logior 2 or)
-(define-binop logorc1 2 orn t t)
-(define-binop logorc2 2 orn nil t)
-(define-binop logxor 2 xor)
-(define-binop logeqv 2 xnor nil t)
+(define-binop logandc1 2 bic t)
+(define-binop logandc2 2 bic)
+(define-binop logior 2 orr)
+;; Define these when the ORN instruction is implemented
+;;(define-binop logorc1 2 orn t t)
+;;(define-binop logorc2 2 orn nil t)
+(define-binop logxor 2 eor)
+;;(define-binop logeqv 2 xnor nil t)
 
 ;;; Special logand cases: (logand signed unsigned) => unsigned
 
@@ -573,7 +570,7 @@
 
 (define-vop (fast-eql/fixnum fast-conditional)
   (:args (x :scs (any-reg descriptor-reg))
-	 (y :scs (any-reg zero)))
+	 (y :scs (any-reg)))
   (:arg-types tagged-num tagged-num)
   (:note _N"inline fixnum comparison")
   (:translate eql)
@@ -662,7 +659,7 @@
 (define-vop (32bit-logical-orc2 32bit-logical)
   (:translate 32bit-logical-orc2)
   (:generator 1
-    (inst orn r x y)))
+    (not-implemented)))
 
 (deftransform 32bit-logical-orc1 ((x y) (* *))
   '(32bit-logical-orc2 y x))
@@ -853,8 +850,6 @@
   (:results (quo :scs (unsigned-reg) :from (:argument 1))
 	    (rem :scs (unsigned-reg) :from (:argument 0)))
   (:result-types unsigned-num unsigned-num)
-  (:guard (not (or (backend-featurep :sparc-v8)
-		   (backend-featurep :sparc-v9))))
   (:generator 300
     (not-implemented)))
 
@@ -929,9 +924,6 @@
             (rem :scs (signed-reg)))
   (:result-types signed-num signed-num)
   (:note _N"inline (signed-byte 32) arithmetic")
-  (:guard (or (backend-featurep :sparc-v8)
-              (and (backend-featurep :sparc-v9)
-                   (not (backend-featurep :sparc-64)))))
   (:temporary (:scs (signed-reg)) q)
   (:temporary (:scs (signed-reg)) r)
   (:temporary (:scs (signed-reg)) temp)
@@ -947,9 +939,6 @@
             (rem :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
   (:note _N"inline (unsigned-byte 32) arithmetic")
-  (:guard (or (backend-featurep :sparc-v8)
-              (and (backend-featurep :sparc-v9)
-                   (not (backend-featurep :sparc-64)))))
   (:temporary (:scs (unsigned-reg)) q)
   (:temporary (:scs (unsigned-reg)) r)
   (:temporary (:scs (unsigned-reg)) temp)
@@ -1100,7 +1089,7 @@
 (define-modular-backend logandc2 t)
 (define-modular-backend logorc1)
 (define-modular-backend logorc2 t)
-(define-modular-backend * t v8-*)
+(define-modular-backend * t *)
 
 (def-source-transform lognand (x y)
   `(lognot (logand ,x ,y)))
@@ -1167,15 +1156,11 @@
   (let ((y (continuation-value y)))
     (multiple-value-bind (result adds shifts)
 	(strength-reduce-constant-multiply 'x y)
-      (cond
-        ((c::backend-featurep '(or :sparc-v9 :sparc-v8))
-	 ;; This is an approximate break-even point.  It's pretty
-	 ;; rough.
-	 (when (> (+ adds shifts) 9)
-	   (give-up)))
-	(t
-	 (give-up)))
-      (or result 0))))  
+      ;; This is an approximate break-even point.  It's pretty
+      ;; rough.
+      (when (> (+ adds shifts) 9)
+	(give-up))
+      (or result 0))))
 
 #+modular-arith
 (deftransform * ((x y)
