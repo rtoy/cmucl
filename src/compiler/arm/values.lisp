@@ -1,11 +1,11 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/values.lisp $")
+  "$Header: src/compiler/arm/values.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,10 +13,9 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-;;; Converted for SPARC by William Lott.
 ;;; 
 
-(in-package "SPARC")
+(in-package "ARM")
 
 (define-vop (reset-stack-pointer)
   (:args (ptr :scs (any-reg)))
