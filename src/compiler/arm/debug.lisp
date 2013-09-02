@@ -1,20 +1,19 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/debug.lisp $")
+  "$Header: src/compiler/arm/debug.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Compiler support for the new whizzy debugger.
 ;;;
-;;; Written by William Lott.
 ;;; 
-(in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(in-package "ARM")
+(intl:textdomain "cmucl-arm-vm")
 
 (defknown di::current-sp () system-area-pointer (movable flushable))
 (defknown di::current-fp () system-area-pointer (movable flushable))
@@ -51,7 +50,7 @@
   (:results (result :scs (descriptor-reg)))
   (:result-types *)
   (:generator 5
-    (inst ldn result sap offset)))
+    (inst ldr result sap offset)))
 
 (define-vop (write-control-stack)
   (:translate kernel:%set-stack-ref)
@@ -63,7 +62,7 @@
   (:results (result :scs (descriptor-reg)))
   (:result-types *)
   (:generator 5
-    (inst stn value sap offset)
+    (inst str value sap offset)
     (move result value)))
 
 (define-vop (code-from-mumble)
@@ -73,21 +72,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:variant-vars lowtag)
   (:generator 5
-    (let ((bogus (gen-label))
-	  (done (gen-label)))
-      (loadw temp thing 0 lowtag)
-      (inst srln temp vm:type-bits)
-      (inst cmp temp)
-      (inst b :eq bogus)
-      (inst slln temp (1- (integer-length vm:word-bytes)))
-      (unless (= lowtag vm:other-pointer-type)
-	(inst add temp (- lowtag vm:other-pointer-type)))
-      (inst sub code thing temp)
-      (emit-label done)
-      (assemble (*elsewhere*)
-	(emit-label bogus)
-	(inst b done)
-	(move code null-tn)))))
+    (not-implemented)))
 
 (define-vop (code-from-lra code-from-mumble)
   (:translate di::lra-code-header)
@@ -124,4 +109,4 @@
   (:result-types positive-fixnum)
   (:generator 5
     (loadw res fun 0 function-pointer-type)
-    (inst srln res vm:type-bits)))
+    (inst lsr res res vm:type-bits)))
