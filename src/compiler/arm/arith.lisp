@@ -167,11 +167,7 @@
 (define-binop logandc1 2 bic t)
 (define-binop logandc2 2 bic)
 (define-binop logior 2 orr)
-;; Define these when the ORN instruction is implemented
-;;(define-binop logorc1 2 orn t t)
-;;(define-binop logorc2 2 orn nil t)
 (define-binop logxor 2 eor)
-;;(define-binop logeqv 2 xnor nil t)
 
 ;;; Special logand cases: (logand signed unsigned) => unsigned
 
@@ -728,17 +724,6 @@
   (:args (digit :scs (unsigned-reg)))
   (:arg-types unsigned-num)
   (:results (result :scs (descriptor-reg)))
-  (:guard (not (backend-featurep :sparc-v9)))
-  (:generator 3
-    (not-implemented)))
-
-(define-vop (v9-digit-0-or-plus-cmove)
-  (:translate bignum::%digit-0-or-plusp)
-  (:policy :fast-safe)
-  (:args (digit :scs (unsigned-reg)))
-  (:arg-types unsigned-num)
-  (:results (result :scs (descriptor-reg)))
-  (:guard (backend-featurep :sparc-v9))
   (:generator 3
     (not-implemented)))
 
@@ -992,6 +977,7 @@
 
 
 ;;; Arm implementation of modular arithmetic.
+(in-package "ARM")
 #+modular-arith
 (progn
 (c::define-modular-fun lognot-mod32 (x) lognot 32)
@@ -1118,12 +1104,6 @@
 
 #+modular-arith
 (define-modular-fun-optimizer ash ((integer count) :width width)
-  ;; The count needs to be (mod 32) because the Sparc shift
-  ;; instruction takes the count modulo 32.  (NOTE: Should we make
-  ;; this work on Ultrasparcs?  We could then use the sllx instruction
-  ;; which takes the count mod 64.  Then a left shift of 32 or more
-  ;; will produce 0 in the lower 32 bits of the register, which is
-  ;; what we want.)
   (when (<= width 32)
     ;; We can do a modular shift.  If the shift is known to be a left
     ;; shift, we can use the left shift vop to get a left shift
