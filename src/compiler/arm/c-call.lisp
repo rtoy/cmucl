@@ -25,9 +25,7 @@
 
 (defstruct arg-state
   (register-args 0)
-  ;; No matter what we have to allocate at least 7 stack frame slots.  One
-  ;; because the C call convention requries it, and 6 because whoever we call
-  ;; is going to expect to be able to save his 6 register arguments there.
+  ;; TODO: What is the stack frame size for ARM?
   (stack-frame-size 7))
 
 (defun int-arg (state prim-type reg-sc stack-sc)
@@ -81,11 +79,6 @@
   (declare (ignore type state))
   (my-make-wired-tn 'single-float 'single-reg 0))
 
-#+long-float
-(def-alien-type-method (long-float :result-tn) (type)
-  (declare (ignore type))
-  (my-make-wired-tn 'long-float 'long-reg 0))
-
 (def-alien-type-method (values :result-tn) (type state)
   (let ((values (alien-values-type-values type)))
     (when (> (length values) 2)
@@ -123,7 +116,6 @@
 		      (and (alien-integer-type-p type)
 			   (> (alien::alien-integer-type-bits type) 32)))
 		  arg-types)
-	    #+long-float (some #'alien-long-float-type-p arg-types)
 	    (and (alien-integer-type-p result-type)
 		 (> (alien::alien-integer-type-bits result-type) 32)))
 	(collect ((new-args) (lambda-vars) (new-arg-types) (mv-vars) (mv-form))
@@ -160,16 +152,6 @@
 		       (new-args mvarg2)
 		       (new-arg-types (parse-alien-type '(signed 32)))
 		       (new-arg-types (parse-alien-type '(unsigned 32)))))
-		    #+long-float
-		    ((alien-long-float-type-p type)
-		     (new-args `(long-float-exp-bits ,arg))
-		     (new-args `(long-float-high-bits ,arg))
-		     (new-args `(long-float-mid-bits ,arg))
-		     (new-args `(long-float-low-bits ,arg))
-		     (new-arg-types (parse-alien-type '(signed 32)))
-		     (new-arg-types (parse-alien-type '(unsigned 32)))
-		     (new-arg-types (parse-alien-type '(unsigned 32)))
-		     (new-arg-types (parse-alien-type '(unsigned 32))))
 		    (t
 		     (new-args arg)
 		     (new-arg-types type)))))
