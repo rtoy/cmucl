@@ -222,8 +222,7 @@
   (:results (res :scs (sap-reg)))
   (:result-types system-area-pointer)
   (:generator 2
-    (inst li res (make-fixup (extern-alien-name foreign-symbol)
-			     :foreign))))
+    (not-implemented)))
 
 (define-vop (foreign-symbol-data-address)
   (:translate foreign-symbol-data-address)
@@ -235,9 +234,7 @@
   (:result-types system-area-pointer)
   (:temporary (:scs (non-descriptor-reg)) addr)
   (:generator 2
-    (inst li addr (make-fixup (extern-alien-name foreign-symbol)
-			      :foreign-data))
-    (loadw res addr)))
+    (not-implemented)))
 
 (define-vop (call-out)
   (:args (function :scs (sap-reg) :target cfunc)
@@ -252,15 +249,7 @@
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:vop-var vop)
   (:generator 0
-    (let ((cur-nfp (current-nfp-tn vop)))
-      (when cur-nfp
-	(store-stack-tn nfp-save cur-nfp))
-      (move cfunc function)
-      (inst li temp (make-fixup (extern-alien-name "call_into_c") :foreign))
-      (inst jal lip temp)
-      (inst nop)
-      (when cur-nfp
-	(load-stack-tn cur-nfp nfp-save)))))
+    (not-implemented)))
 
 
 (define-vop (alloc-number-stack-space)
@@ -268,28 +257,11 @@
   (:results (result :scs (sap-reg any-reg)))
   (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
   (:generator 0
-    (unless (zerop amount)
-      (let ((delta (logandc2 (+ amount 7) 7)))
-	(cond ((< delta (ash 1 12))
-	       (inst sub nsp-tn delta))
-	      (t
-	       (inst li temp delta)
-	       (inst sub nsp-tn temp)))))
-    (unless (location= result nsp-tn)
-      ;; They are only location= when the result tn was allocated by
-      ;; make-call-out-tns above, which takes the number-stack-displacement
-      ;; into account itself.
-      (inst add result nsp-tn number-stack-displacement))))
+    (not-implemented)))
 
 (define-vop (dealloc-number-stack-space)
   (:info amount)
   (:policy :fast-safe)
   (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
   (:generator 0
-    (unless (zerop amount)
-      (let ((delta (logandc2 (+ amount 7) 7)))
-	(cond ((< delta (ash 1 12))
-	       (inst add nsp-tn delta))
-	      (t
-	       (inst li temp delta)
-	       (inst add nsp-tn temp)))))))
+    (not-implemented)))
