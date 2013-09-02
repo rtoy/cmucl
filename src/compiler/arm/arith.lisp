@@ -1042,11 +1042,8 @@
   (frob +)
   (frob -)
   (frob logxor)
-  (frob logeqv)
   (frob logandc1)
   (frob logandc2)
-  (frob logorc1)
-  (frob logorc2)
   (frob *))
 
 (defmacro define-modular-backend (fun &optional constantp derived)
