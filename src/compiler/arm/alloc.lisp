@@ -1,11 +1,11 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/alloc.lisp $")
+  "$Header: src/compiler/arm/alloc.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,8 +14,8 @@
 ;;; Written by William Lott.
 ;;; 
 
-(in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(in-package "ARM")
+(intl:textdomain "cmucl-arm-vm")
 
 ;;;; Dynamic-Extent.
 
