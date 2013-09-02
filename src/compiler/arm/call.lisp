@@ -1,20 +1,19 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/call.lisp $")
+  "$Header: src/compiler/arm/call.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; This file contains the VM definition of function call for the SPARC.
+;;; This file contains the VM definition of function call for the ARM.
 ;;;
-;;; Written by William Lott.
 ;;;
-(in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(in-package "ARM")
+(intl:textdomain "cmucl-arm-vm")
 
 
 ;;;; Interfaces to IR2 conversion:
