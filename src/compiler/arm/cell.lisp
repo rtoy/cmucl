@@ -1,24 +1,20 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/cell.lisp $")
+  "$Header: src/compiler/arm/cell.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
-;;; VOPs for the SPARC.
+;;; VOPs for the ARM.
 ;;;
-;;; Written by Rob MacLachlan
-;;;
-;;; Converted by William Lott.
-;;; 
 
-(in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(in-package "ARM")
+(intl:textdomain "cmucl-arm-vm")
 
 
 ;;;; Data object ref/set stuff.
@@ -65,12 +61,7 @@
 (define-vop (symbol-value checked-cell-ref)
   (:translate symbol-value)
   (:generator 9
-    (move obj-temp object)
-    (loadw value obj-temp vm:symbol-value-slot vm:other-pointer-type)
-    (let ((err-lab (generate-error-code vop unbound-symbol-error obj-temp)))
-      (inst cmp value vm:unbound-marker-type)
-      (inst b :eq err-lab)
-      (inst nop))))
+    (not-implemented)))
 
 ;;; Like CHECKED-CELL-REF, only we are a predicate to see if the cell is bound.
 (define-vop (boundp-frob)
@@ -83,10 +74,7 @@
 (define-vop (boundp boundp-frob)
   (:translate boundp)
   (:generator 9
-    (loadw value object vm:symbol-value-slot vm:other-pointer-type)
-    (inst cmp value vm:unbound-marker-type)
-    (inst b (if not-p :eq :ne) target)
-    (inst nop)))
+    (not-implemented)))
 
 (define-vop (fast-symbol-value cell-ref)
   (:variant vm:symbol-value-slot vm:other-pointer-type)
@@ -103,8 +91,7 @@
     ;; the symbol-hash slot of NIL holds NIL because it is also the cdr
     ;; slot, so we have to strip off the two low bits to make sure it is
     ;; a fixnum.
-    (loadw res symbol symbol-hash-slot other-pointer-type)
-    (inst andn res vm:fixnum-tag-mask)))
+    (not-implemented)))
 
 (define-vop (%set-symbol-hash cell-set)
   (:translate %set-symbol-hash)
@@ -123,12 +110,7 @@
   (:save-p :compute-only)
   (:temporary (:scs (descriptor-reg) :from (:argument 0)) obj-temp)
   (:generator 10
-    (move obj-temp object)
-    (loadw value obj-temp fdefn-function-slot other-pointer-type)
-    (inst cmp value null-tn)
-    (let ((err-lab (generate-error-code vop undefined-symbol-error obj-temp)))
-      (inst b :eq err-lab))
-    (inst nop)))
+    (not-implemented)))
 
 (define-vop (set-fdefn-function)
   (:policy :fast-safe)
@@ -139,17 +121,7 @@
   (:temporary (:scs (non-descriptor-reg)) type)
   (:results (result :scs (descriptor-reg)))
   (:generator 38
-    (let ((normal-fn (gen-label)))
-      (load-type type function (- function-pointer-type))
-      (inst cmp type function-header-type)
-      (inst b :eq normal-fn)
-      (inst move temp function)
-      (inst li temp (make-fixup 'closure-tramp
-			       :assembly-routine))
-      (emit-label normal-fn)
-      (storew function fdefn fdefn-function-slot other-pointer-type)
-      (storew temp fdefn fdefn-raw-addr-slot other-pointer-type)
-      (move result function))))
+    (not-implemented)))
 
 (define-vop (fdefn-makunbound)
   (:policy :fast-safe)
@@ -158,11 +130,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (result :scs (descriptor-reg)))
   (:generator 38
-    (storew null-tn fdefn fdefn-function-slot other-pointer-type)
-    (inst li temp (make-fixup 'undefined-tramp
-			      :assembly-routine))
-    (storew temp fdefn fdefn-raw-addr-slot other-pointer-type)
-    (move result fdefn)))
+    (not-implemented)))
 
 
 
@@ -177,21 +145,13 @@
 	 (symbol :scs (descriptor-reg)))
   (:temporary (:scs (descriptor-reg)) temp)
   (:generator 5
-    (loadw temp symbol vm:symbol-value-slot vm:other-pointer-type)
-    (inst add bsp-tn bsp-tn (* 2 vm:word-bytes))
-    (storew temp bsp-tn (- vm:binding-value-slot vm:binding-size))
-    (storew symbol bsp-tn (- vm:binding-symbol-slot vm:binding-size))
-    (storew val symbol vm:symbol-value-slot vm:other-pointer-type)))
+    (not-implemented)))
 
 
 (define-vop (unbind)
   (:temporary (:scs (descriptor-reg)) symbol value)
   (:generator 0
-    (loadw symbol bsp-tn (- vm:binding-symbol-slot vm:binding-size))
-    (loadw value bsp-tn (- vm:binding-value-slot vm:binding-size))
-    (storew value symbol vm:symbol-value-slot vm:other-pointer-type)
-    (storew zero-tn bsp-tn (- vm:binding-symbol-slot vm:binding-size))
-    (inst sub bsp-tn bsp-tn (* 2 vm:word-bytes))))
+    (not-implemented)))
 
 
 (define-vop (unbind-to-here)
@@ -199,29 +159,7 @@
   (:temporary (:scs (any-reg) :from (:argument 0)) where)
   (:temporary (:scs (descriptor-reg)) symbol value)
   (:generator 0
-    (let ((loop (gen-label))
-	  (skip (gen-label))
-	  (done (gen-label)))
-      (move where arg)
-      (inst cmp where bsp-tn)
-      (inst b :eq done)
-      (inst nop)
-
-      (emit-label loop)
-      (loadw symbol bsp-tn (- vm:binding-symbol-slot vm:binding-size))
-      (inst cmp symbol)
-      (inst b :eq skip)
-      (loadw value bsp-tn (- vm:binding-value-slot vm:binding-size))
-      (storew value symbol vm:symbol-value-slot vm:other-pointer-type)
-      (storew zero-tn bsp-tn (- vm:binding-symbol-slot vm:binding-size))
-
-      (emit-label skip)
-      (inst sub bsp-tn bsp-tn (* 2 vm:word-bytes))
-      (inst cmp where bsp-tn)
-      (inst b :ne loop)
-      (inst nop)
-
-      (emit-label done))))
+    (not-implemented)))
 
 
 
@@ -270,8 +208,7 @@
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 4
-    (loadw temp struct 0 instance-pointer-type)
-    (inst srln res temp vm:type-bits)))
+    (not-implemented)))
 
 (define-vop (instance-ref slot-ref)
   (:variant instance-slots-offset instance-pointer-type)
