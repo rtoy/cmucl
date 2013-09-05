@@ -530,7 +530,8 @@
   (frob bic #b1110))
 
 ;; Compare type instructions need to be handled separately from the
-;; above data processing instructions because the src1 isn't used.
+;; above data processing instructions because there is no dst
+;; register.
 (defmacro define-compare-inst (name opcode)
   `(define-instruction ,name (segment src1 src2 &optional (cond :al))
      (:declare (type tn src1)
@@ -1204,8 +1205,12 @@
   (signed :field (byte 1 6))
   (op2    :field (byte 2 4)))
 
+;; Indexing mode for load/store instructions.  See the comments for
+;; load/store-inst for usage.
 (defstruct indexing-mode
+  ;; The base register
   reg
+  ;; Indicates pre or post indexing if Nil or non-Nil, respectively.
   post-index)
 
 (defun pre-index (reg)
@@ -1214,12 +1219,22 @@
 (defun post-index (reg)
   (make-indexing-mode :reg reg :post-index t))
 
+;; Structure to hold the hairy indexing information for load/store-inst.  
 (defstruct load-store-index
+  ;; The register that is to be shifted.
   offset
+  ;; The shift type (:lsr, :lsl, etc.)
   shift-type
+  ;; The shift amount
   shift-amount
+  ;; Boolean to indicate whether to add or subtract the register.
+  ;; Default is non-Nil meaning to add
   add)
 
+;; Encode the information for the hairy modes of the load/store-inst.
+;; This is used to handle the case where an register is applied to the
+;; base register.  The register can be either subtracted or added and
+;; can optionally be shifted by some amount.
 (defun make-op2 (reg &key
 		       (add t)
 		       (shift-type :lsl)
@@ -1700,6 +1715,8 @@
 (define-instruction-macro li (reg value)
   `(%li ,reg, value))
 
+(define-instruction-macro neg (dst src)
+  `(inst rsb ,dst ,src 0))
   
 
 ;; Floating-point instructions
