@@ -58,12 +58,7 @@
 	    (eval :scs (descriptor-reg)))
   (:vop-var vop)
   (:generator 13
-    (load-symbol-value catch lisp::*current-catch-block*)
-    (let ((cur-nfp (current-nfp-tn vop)))
-      (when cur-nfp
-	(move nfp cur-nfp)))
-    (move nsp nsp-tn)
-    (load-symbol-value eval lisp::*eval-stack-top*)))
+    (not-implemented)))
 
 (define-vop (restore-dynamic-state)
   (:args (catch :scs (descriptor-reg))
@@ -72,22 +67,17 @@
 	 (eval :scs (descriptor-reg)))
   (:vop-var vop)
   (:generator 10
-    (store-symbol-value catch lisp::*current-catch-block*)
-    (store-symbol-value eval lisp::*eval-stack-top*)
-    (let ((cur-nfp (current-nfp-tn vop)))
-      (when cur-nfp
-	(move cur-nfp nfp)))
-    (move nsp-tn nsp)))
+    (not-implemented)))
 
 (define-vop (current-stack-pointer)
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 1
-    (move res csp-tn)))
+    (not-implemented)))
 
 (define-vop (current-binding-pointer)
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 1
-    (move res bsp-tn)))
+    (not-implemented)))
 
 
 
@@ -103,18 +93,7 @@
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 22
-    (let ((byte-offset (* (tn-offset tn) vm:word-bytes)))
-      (if (typep byte-offset '(signed-byte 13))
-	  (inst add block cfp-tn byte-offset)
-	  (progn
-	    (inst li ndescr byte-offset)
-	    (inst add block cfp-tn ndescr))))
-    (load-symbol-value temp lisp::*current-unwind-protect-block*)
-    (storew temp block vm:unwind-block-current-uwp-slot)
-    (storew cfp-tn block vm:unwind-block-current-cont-slot)
-    (storew code-tn block vm:unwind-block-current-code-slot)
-    (inst compute-lra-from-code temp code-tn entry-label ndescr)
-    (storew temp block vm:catch-block-entry-pc-slot)))
+    (not-implemented)))
 
 
 ;;; Like Make-Unwind-Block, except that we also store in the specified tag, and
@@ -129,25 +108,7 @@
   (:temporary (:scs (descriptor-reg) :target block :to (:result 0)) result)
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 44
-    (let ((byte-offset (* (tn-offset tn) vm:word-bytes)))
-      (if (typep byte-offset '(signed-byte 13))
-	  (inst add result cfp-tn byte-offset)
-	  (progn
-	    (inst li ndescr byte-offset)
-	    (inst add result cfp-tn ndescr))))
-    (load-symbol-value temp lisp::*current-unwind-protect-block*)
-    (storew temp result vm:catch-block-current-uwp-slot)
-    (storew cfp-tn result vm:catch-block-current-cont-slot)
-    (storew code-tn result vm:catch-block-current-code-slot)
-    (inst compute-lra-from-code temp code-tn entry-label ndescr)
-    (storew temp result vm:catch-block-entry-pc-slot)
-
-    (storew tag result vm:catch-block-tag-slot)
-    (load-symbol-value temp lisp::*current-catch-block*)
-    (storew temp result vm:catch-block-previous-catch-slot)
-    (store-symbol-value result lisp::*current-catch-block*)
-
-    (move block result)))
+    (not-implemented)))
 
 
 ;;; Just set the current unwind-protect to TN's address.  This instantiates an
@@ -158,13 +119,7 @@
   (:temporary (:scs (descriptor-reg)) new-uwp)
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 7
-    (let ((byte-offset (* (tn-offset tn) vm:word-bytes)))
-      (if (typep byte-offset '(signed-byte 13))
-	  (inst add new-uwp cfp-tn (* (tn-offset tn) vm:word-bytes))
-	  (progn
-	    (inst li ndescr byte-offset)
-	    (inst add new-uwp cfp-tn ndescr))))
-    (store-symbol-value new-uwp lisp::*current-unwind-protect-block*)))
+    (not-implemented)))
 
 
 (define-vop (unlink-catch-block)
@@ -172,18 +127,14 @@
   (:policy :fast-safe)
   (:translate %catch-breakup)
   (:generator 17
-    (load-symbol-value block lisp::*current-catch-block*)
-    (loadw block block vm:catch-block-previous-catch-slot)
-    (store-symbol-value block lisp::*current-catch-block*)))
+    (not-implemented)))
 
 (define-vop (unlink-unwind-protect)
   (:temporary (:scs (any-reg)) block)
   (:policy :fast-safe)
   (:translate %unwind-protect-breakup)
   (:generator 17
-    (load-symbol-value block lisp::*current-unwind-protect-block*)
-    (loadw block block vm:unwind-block-current-uwp-slot)
-    (store-symbol-value block lisp::*current-unwind-protect-block*)))
+    (not-implemented)))
 
 
 ;;;; NLX entry VOPs:
@@ -200,51 +151,7 @@
   (:save-p :force-to-stack)
   (:vop-var vop)
   (:generator 30
-    (emit-return-pc label)
-    (note-this-location vop :non-local-entry)
-    (cond ((zerop nvals))
-	  ((= nvals 1)
-	   (let ((no-values (gen-label)))
-	     (inst cmp count)
-	     (inst b :eq no-values)
-	     (move (tn-ref-tn values) null-tn)
-	     (loadw (tn-ref-tn values) start)
-	     (emit-label no-values)))
-	  (t
-	   (collect ((defaults))
-	     (inst subcc count (fixnumize 1))
-	     (do ((i 0 (1+ i))
-		  (tn-ref values (tn-ref-across tn-ref)))
-		 ((null tn-ref))
-	       (let ((default-lab (gen-label))
-		     (tn (tn-ref-tn tn-ref)))
-		 (defaults (cons default-lab tn))
-		 
-		 (inst b :lt default-lab)
-		 (inst subcc count (fixnumize 1))
-		 (sc-case tn
-			  ((descriptor-reg any-reg)
-			   (loadw tn start i))
-			  (control-stack
-			   (loadw move-temp start i)
-			   (store-stack-tn tn move-temp)))))
-	     
-	     (let ((defaulting-done (gen-label)))
-	       
-	       (emit-label defaulting-done)
-	       
-	       (assemble (*elsewhere*)
-		 (dolist (def (defaults))
-		   (emit-label (car def))
-		   (let ((tn (cdr def)))
-		     (sc-case tn
-			      ((descriptor-reg any-reg)
-			       (move tn null-tn))
-			      (control-stack
-			       (store-stack-tn tn null-tn)))))
-		 (inst b defaulting-done)
-		 (inst nop))))))
-    (load-stack-tn csp-tn sp)))
+    (not-implemented)))
 
 
 (define-vop (nlx-entry-multiple)
@@ -259,32 +166,7 @@
   (:save-p :force-to-stack)
   (:vop-var vop)
   (:generator 30
-    (emit-return-pc label)
-    (note-this-location vop :non-local-entry)
-    (let ((loop (gen-label))
-	  (done (gen-label)))
-
-      ;; Setup results, and test for the zero value case.
-      (load-stack-tn result top)
-      (inst cmp count)
-      (inst b :eq done)
-      (inst li num 0)
-
-      ;; Compute dst as one slot down from result, because we inc the index
-      ;; before we use it.
-      (inst sub dst result 4)
-
-      ;; Copy stuff down the stack.
-      (emit-label loop)
-      (inst ldn temp src num)
-      (inst add num (fixnumize 1))
-      (inst cmp num count)
-      (inst b :ne loop)
-      (inst stn temp dst num)
-
-      ;; Reset the CSP.
-      (emit-label done)
-      (inst add csp-tn result num))))
+    (not-implemented)))
 
 
 ;;; This VOP is just to force the TNs used in the cleanup onto the stack.
