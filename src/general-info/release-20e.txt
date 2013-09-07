@@ -48,12 +48,17 @@ New in this release:
     * Added UNICODE package to hold Unicode-related functions.
       Currently contains Unicode extended versions of STRING-UPCASE,
       STRING-DOWNCASE, and STRING-CAPITALIZE.
+    * Optimizations in the x86 backend to speed up some operations and
+      reduce register restrictions.
 
   * ANSI compliance fixes:
     * Attempts to modify the standard readtable or the standard pprint
       dispatch table will now signal a continuable error.
     * Remove the Unicode extensions from string-upcase and friends.
       This functionality is moved to the new UNICODE package.
+    * DISASSEMBLE is conforming now; there are no options to
+      DISASSEMBLE.  However, you can use DISASSEM:DISASSEMBLE if more
+      options are needed.
 
   * Bugfixes:
     * REPLACE and friends on strings were limited to strings less than
@@ -74,6 +79,11 @@ New in this release:
       is represented internally as a UNION type, confusing the type
       derivation code.
     * Clean up and optimize x86 move VOPS and length/list VOP.
+    * DISASSEM:DISASSEMBLE takes new keyword args, base, case, radix
+      to specify values for *print-base*, *print-case*, and
+      *print-radix* for disassembly.  The defaults are 16, :downcase,
+      and *print-radix*, respectively.  This is a change from previous
+      versions which used a base of 10 and a case of :upcase.
 
 
   * Trac Tickets:
