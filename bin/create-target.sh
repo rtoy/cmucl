@@ -50,7 +50,7 @@ uname_m=`uname -m 2>/dev/null`
 case $lisp_variant in
     *linux*) lvshort=linux;;
     *freebsd*) lvshort=freebsd;;
-    *solaris*) lvshort=solaris;;
+    *solaris*|sparc*) lvshort=solaris;;
     *) lvshort=unknown;;
 esac
 
