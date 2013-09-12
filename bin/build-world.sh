@@ -26,6 +26,12 @@ if [ -n "$MAKE_POT" ]; then
     SAVEPOT='(intl::dump-pot-files :output-directory "default:src/i18n/locale/")'
 fi
 
+if [ "$GIT_FILE_COMMENT" = "no" ]; then
+    GIT_FILE_COMMENT="(setf c::*file-comment-from-git* nil)"
+else
+    GIT_FILE_COMMENT=
+fi
+    
 $LISP "$@" -noinit -nositeinit <<EOF
 (in-package :cl-user)
 
@@ -56,6 +62,8 @@ $LISP "$@" -noinit -nositeinit <<EOF
 (setq debug:*debug-print-level* nil)
 (setq debug:*debug-print-length* nil)
 
+$GIT_FILE_COMMENT
+
 (load "target:tools/worldcom")
 #-(or no-compiler runtime) (load "target:tools/comcom")
 ;; Compile at least new-genesis, so that genesis doesn't take ages
@@ -64,7 +72,6 @@ $LISP "$@" -noinit -nositeinit <<EOF
 
 $GETFMT
 $SAVEPOT
-
 (setq *gc-verbose* t *interactive* t)
 
 (load "target:tools/worldbuild")
