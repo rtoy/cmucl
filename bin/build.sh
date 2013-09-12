@@ -191,7 +191,7 @@ if [ -z "$BASE" ]; then
           esac ;;
       SunOS)
 	  case `uname -m` in
-	    sun4u) BASE=sparc ;;
+	    sun4*) BASE=sparc ;;
 	    i86pc) BASE=sol-x86 ;;
 	  esac ;;
       Linux) BASE=linux ;;
