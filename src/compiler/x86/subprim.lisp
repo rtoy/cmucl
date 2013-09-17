@@ -28,66 +28,74 @@
   (:translate length)
   (:args (object :scs (descriptor-reg control-stack) :target ptr))
   (:arg-types list)
-  (:temporary (:sc unsigned-reg :offset eax-offset) eax)
   (:temporary (:sc descriptor-reg :from (:argument 0)) ptr)
+  (:temporary (:scs (unsigned-reg)) temp)
   (:results (count :scs (any-reg)))
   (:result-types positive-fixnum)
   (:policy :fast-safe)
   (:vop-var vop)
   (:save-p :compute-only)
-  (:generator 40
-    ;; Move OBJECT into a temp we can bash on, and initialize the count.
-    (move ptr object)
-    (inst xor count count)
-    ;; If we are starting with NIL, then it's real easy.
-    (inst cmp ptr nil-value)
-    (inst jmp :e done)
-    ;; Note: we don't have to test to see if the original argument is a
-    ;; list, because this is a :fast-safe vop.
-    LOOP
-    ;; Get the CDR and boost the count.
-    (loadw ptr ptr cons-cdr-slot list-pointer-type)
-    (inst add count (fixnumize 1))
-    ;; If we hit NIL, then we are done.
-    (inst cmp ptr nil-value)
-    (inst jmp :e done)
-    ;; Otherwise, check to see if we hit the end of a dotted list.  If
-    ;; not, loop back for more.
-    (move eax ptr)
-    (inst and al-tn lowtag-mask)
-    (inst cmp al-tn list-pointer-type)
-    (inst jmp :e loop)
-    ;; It's dotted all right.  Flame out.
-    (error-call vop object-not-list-error ptr)
-    ;; We be done.
-    DONE))
+  (:generator 50
+    (let ((done (gen-label))
+	  (loop (gen-label))
+	  (not-list (generate-error-code vop object-not-list-error object)))
+      (move ptr object)
+      (inst xor count count)
 
-(define-vop (fast-length/list)
+      (inst cmp ptr nil-value)
+      (inst jmp :e done)
+
+      (emit-label loop)
+
+      (loadw ptr ptr cons-cdr-slot list-pointer-type)
+      (inst add count (fixnumize 1))
+
+      (move temp ptr)
+      (inst and temp lowtag-mask)
+      (inst cmp temp list-pointer-type)
+      (inst jmp :ne not-list)
+
+      (inst cmp ptr nil-value)
+      (inst jmp :ne loop)
+
+      (emit-label done))))
+
+#+ignore
+(define-vop (length/list)
   (:translate length)
   (:args (object :scs (descriptor-reg control-stack) :target ptr))
   (:arg-types list)
   (:temporary (:sc descriptor-reg :from (:argument 0)) ptr)
+  (:temporary (:scs (unsigned-reg)) temp)
   (:results (count :scs (any-reg)))
   (:result-types positive-fixnum)
-  (:policy :fast)
+  (:policy :fast-safe)
   (:vop-var vop)
   (:save-p :compute-only)
-  (:generator 30
-    ;; Get a copy of OBJECT in a register we can bash on, and
-    ;; initialize COUNT.
-    (move ptr object)
-    (inst xor count count)
-    ;; If we are starting with NIL, we be done.
-    (inst cmp ptr nil-value)
-    (inst jmp :e done)
-    ;; Indirect the next cons cell, and boost the count.
-    LOOP
-    (loadw ptr ptr cons-cdr-slot list-pointer-type)
-    (inst add count (fixnumize 1))
-    ;; If we arn't done, go back for more.
-    (inst cmp ptr nil-value)
-    (inst jmp :ne loop)
-    DONE))
+  (:generator 50
+    (let ((done (gen-label))
+	  (loop (gen-label))
+	  (not-list (generate-error-code vop object-not-list-error object)))
+      (move ptr object)
+      (inst xor count count)
+
+      (inst cmp ptr nil-value)
+      (inst jmp :e done)
+
+      (emit-label loop)
+
+      (loadw ptr ptr cons-cdr-slot list-pointer-type)
+      (inst add count (fixnumize 1))
+
+      (move temp ptr)
+      (inst and temp lowtag-mask)
+      (inst cmp temp list-pointer-type)
+      (inst jmp :ne not-list)
+
+      (inst cmp ptr nil-value)
+      (inst jmp :ne loop)
+
+      (emit-label done))))
 
 
 (define-static-function length (object) :translate length)

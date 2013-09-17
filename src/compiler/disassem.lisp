@@ -2964,10 +2964,11 @@
 				(when stream
 				  (unless at-block-begin
 				    (terpri stream))
-				  (pprint-logical-block (stream nil :per-line-prefix ";;; ")
-				    (format stream "[~D] "
-					    (di:code-location-form-number loc))
-				    (prin1-short form stream))
+				  (with-standard-io-syntax
+				    (pprint-logical-block (stream nil :per-line-prefix ";;; ")
+				      (format stream "[~D] "
+					      (di:code-location-form-number loc))
+				      (prin1-short form stream)))
 				  (terpri stream)
 				  (terpri stream)))
 			    t)))))
@@ -3303,17 +3304,36 @@
 		:format-arguments (list name)))))
 
 (defun disassemble (object &key (stream *standard-output*)
-			   (use-labels t)
-			   (backend c:*native-backend*))
+			     (use-labels t)
+			     (backend c:*native-backend*)
+			     (base 16)
+			     (case :downcase)
+			     (radix *print-radix*))
   "Disassemble the machine code associated with OBJECT, which can be a
   function, a lambda expression, or a symbol with a function definition.  If
   it is not already compiled, the compiler is called to produce something to
-  disassemble."
+  disassemble.
+
+  :Stream stream
+      The dissassembly is written to this stream.
+  :Use-labels
+      Labels are generated instead of using instruction addresses.
+  :Base
+  :Case
+  :Radix
+      The disassembler uses the specified base, case, and radix when
+      printing the disassembled code.  The default values are 16,
+      :downcase, and *print-radix*, respectively."
   (declare (type (or function symbol cons) object)
 	   (type (or (member t) stream) stream)
 	   (type (member t nil) use-labels)
-	   (type c::backend backend))
-  (let ((fun (compiled-function-or-lose object)))
+	   (type c::backend backend)
+	   (type (integer 2 36) base)
+	   (type (member :upcase :downcase :capitalize) case))
+  (let ((*print-base* base)
+	(*print-case* case)
+	(*print-radix* radix)
+	(fun (compiled-function-or-lose object)))
     (if (typep fun 'kernel:byte-function)
 	(c:disassem-byte-fun fun)
 	;; we can't detect closures, so be careful
@@ -3747,8 +3767,12 @@ symbol object that we know about.")
 	       (find-assembler-routine address))))
     (unless (null name)
       (note #'(lambda (stream)
-		(if NOTE-ADDRESS-P
-		    (format stream "#x~8,'0x: ~a" address name)
+		(if note-address-p
+		    ;; No need to print out the address in hex if the
+		    ;; print-base is already 16.
+		    (if (= *print-base* 16)
+			(format stream " ~A" name)
+			(format stream "#x~8,'0x: ~a" address name))
 		    (princ name stream)))
 	    dstate))
     name))

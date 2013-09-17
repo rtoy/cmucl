@@ -247,8 +247,7 @@ write_string_section(int fd)
     int ret;
 
     if(buffer == NULL) {
-
-	write(0, "Out of memory in write_string_section()\n", 40);
+	perror("Out of memory in write_string_section()");
 	ret = -1;
 
     } else {
