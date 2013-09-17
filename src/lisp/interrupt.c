@@ -244,7 +244,9 @@ interrupt_handle_now_handler(HANDLER_ARGS)
 void
 interrupt_handle_now(HANDLER_ARGS)
 {
+#if !(defined(i386) || defined(__x86_64))
     int were_in_lisp;
+#endif
     ucontext_t *ucontext = (ucontext_t *) context;
     union interrupt_handler handler;
 
@@ -256,8 +258,8 @@ interrupt_handle_now(HANDLER_ARGS)
 	return;
 
     SAVE_CONTEXT();
-    /**/ were_in_lisp = !foreign_function_call_active;
 #if ! (defined(i386) || defined(_x86_64))
+    were_in_lisp = !foreign_function_call_active;
     if (were_in_lisp)
 #endif
 	fake_foreign_function_call(context);

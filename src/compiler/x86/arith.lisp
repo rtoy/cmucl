@@ -426,24 +426,16 @@
 
 (define-vop (fast-*/unsigned=>unsigned fast-safe-arith-op)
   (:translate *)
-  (:args (x :scs (unsigned-reg) :target eax)
+  (:args (x :scs (unsigned-reg) :target r)
 	 (y :scs (unsigned-reg unsigned-stack)))
   (:arg-types unsigned-num unsigned-num)
-  (:temporary (:sc unsigned-reg :offset eax-offset :target result
-		   :from (:argument 0) :to :result) eax)
-  (:temporary (:sc unsigned-reg :offset edx-offset
-		   :from :eval :to :result) edx)
-  (:ignore edx)
-  (:results (result :scs (unsigned-reg)))
+  (:results (r :scs (unsigned-reg) :from (:argument 0)))
   (:result-types unsigned-num)
   (:note _N"inline (unsigned-byte 32) arithmetic")
-  (:vop-var vop)
   (:save-p :compute-only)
-  (:generator 6
-    (move eax x)
-    (inst mul eax y)
-    (move result eax)))
-
+  (:generator 5
+    (move r x)
+    (inst imul r y)))
 
 (define-vop (fast-truncate/fixnum=>fixnum fast-safe-arith-op)
   (:translate truncate)
