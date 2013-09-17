@@ -198,7 +198,7 @@
   (:args (function :scs (descriptor-reg) :target result)
 	 (fdefn :scs (descriptor-reg)))
   (:temporary (:sc unsigned-reg) raw)
-  (:temporary (:sc byte-reg) type)
+  (:temporary (:sc unsigned-reg) type)
   (:results (result :scs (descriptor-reg)))
   (:generator 38
     (load-type type function (- function-pointer-type))

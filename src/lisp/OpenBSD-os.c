@@ -143,11 +143,6 @@ in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
 boolean
 valid_addr(os_vm_address_t addr)
 {
-    int ret;
-    os_vm_address_t newaddr;
-
-    newaddr = os_trunc_to_page(addr);
-
     if (in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
 	|| in_range_p(addr, STATIC_SPACE_START, STATIC_SPACE_SIZE)
 	|| in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)
