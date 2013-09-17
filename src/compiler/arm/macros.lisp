@@ -192,10 +192,9 @@
 ;; because a temp register is needed to do inline allocation.
 ;; TEMP-TN, in this case, can be any register, since it holds a
 ;; double-word aligned address (essentially a fixnum).
-(defmacro allocation (result-tn size lowtag &key stack-p temp-tn)
+(defmacro allocation (result-tn size lowtag temp-tn &key stack-p)
   ;; We assume we're in a pseudo-atomic so the pseudo-atomic bit is
   ;; set.
-  (assert temp-tn)
   `(cond (,stack-p
 	  ;; Stack allocation, not supported
 	  (error "Stack allocation not supported"))
@@ -230,9 +229,8 @@
   (once-only ((result-tn result-tn) (temp-tn temp-tn)
 	      (type-code type-code) (size size)
 	      (lowtag lowtag))
-    `(pseudo-atomic (:temp-tn ,temp-tn)
-       (allocation ,result-tn (pad-data-block ,size) ,lowtag
-	           :temp-tn ,temp-tn
+    `(pseudo-atomic (,temp-tn)
+       (allocation ,result-tn (pad-data-block ,size) ,lowtag ,temp-tn
 	           :stack-p ,stack-p)
       (when ,type-code
 	(inst li ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
@@ -509,25 +507,25 @@
 
 ;;; PSEUDO-ATOMIC -- Handy macro for making sequences look atomic.
 ;;;
-(defmacro pseudo-atomic ((&key temp-tn (extra 0)) &rest forms)
+(defmacro pseudo-atomic ((temp-tn &key (extra 0)) &rest forms)
   (declare (ignore extra))
-  (assert temp-tn)
-  (let ((label (gensym "LABEL-")))
-    `(let ((,label (gen-label)))
-       ;; Set the pseudo-atomic flag, in *pseudo-atomic-atomic*
-       (without-scheduling ()
-	 (load-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*)
-	 (inst orr ,temp-tn ,temp-tn pseudo-atomic-value)
-	 (store-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*))
-       ,@forms
-       ;; Reset the pseudo-atomic flag
-       (without-scheduling ()
-	 ;; Remove the pseudo-atomic flag.
-	 (load-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*)
-	 (inst bic ,temp-tn ,temp-tn pseudo-atomic-value)
-	 ;; Check to see if pseudo-atomic interrupted flag is set
-	 (inst tst ,temp-tn pseudo-atomic-interrupted-value)
-	 (inst b ,label :ne)
-	 ;; The C code needs to process this correctly and fixup alloc-tn.
-	 (inst bkpt pseudo-atomic-trap)
-	 (emit-label ,label)))))
+  (once-only ((temp-tn temp-tn))
+    (let ((label (gensym "LABEL-")))
+      `(let ((,label (gen-label)))
+	 ;; Set the pseudo-atomic flag, in *pseudo-atomic-atomic*
+	 (without-scheduling ()
+	   (load-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*)
+	   (inst orr ,temp-tn ,temp-tn pseudo-atomic-value)
+	   (store-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*))
+	 ,@forms
+	 ;; Reset the pseudo-atomic flag
+	 (without-scheduling ()
+	   ;; Remove the pseudo-atomic flag.
+	   (load-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*)
+	   (inst bic ,temp-tn ,temp-tn pseudo-atomic-value)
+	   ;; Check to see if pseudo-atomic interrupted flag is set
+	   (inst tst ,temp-tn pseudo-atomic-interrupted-value)
+	   (inst b ,label :ne)
+	   ;; The C code needs to process this correctly and fixup alloc-tn.
+	   (inst bkpt pseudo-atomic-trap)
+	   (emit-label ,label))))))

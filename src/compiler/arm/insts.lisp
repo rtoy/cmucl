@@ -1235,10 +1235,7 @@
 ;; This is used to handle the case where an register is applied to the
 ;; base register.  The register can be either subtracted or added and
 ;; can optionally be shifted by some amount.
-(defun make-op2 (reg &key
-		       (add t)
-		       (shift-type :lsl)
-		       (count 0))
+(defun make-op2 (reg &key (add t) (shift-type :lsl) (count 0))
   (declare (type tn reg)
 	   (type boolean add)
 	   (type (unsigned-byte 5) count)
@@ -1282,22 +1279,22 @@
 ;; ldr rd, [r1, r2, lsr 2] ->
 ;;   (inst ldr rd r1 (make-op2 r2 :shift :lsr :count 2))
 ;; ldr rd, [r1, -r2] ->
-;;   (inst ldr rd r1 (make-op2 r2 :subtract t))
+;;   (inst ldr rd r1 (make-op2 r2 :add nil))
 ;; ldr rd, [r1, -r2, lsl 3] ->
-;;   (inst ldr rd r1 (make-op2 r2 :subtract t :shift :lsl :count 3))
+;;   (inst ldr rd r1 (make-op2 r2 :add nil :shift :lsl :count 3))
 ;; ldr rd, [r1, 100]! ->
 ;;   (inst ldr rd (pre-index r1) 100)
 ;; ldr rd, [r1, -r2, lsl 3]! ->
-;;   (inst ldr rd (pre-index r1) (make-op2 r2 :subtract t :shift :lsl :count 3))
+;;   (inst ldr rd (pre-index r1) (make-op2 r2 :add nil :shift :lsl :count 3))
 ;; ldr rd, [r1], -100 ->
 ;;   (inst ldr rd (post-index r1) -100)
 ;; ldr rd, [r1], r2 ->
 ;;   (inst ldr rd (post-index r1) r2)
 ;; ldr rd, [r1], -r2, lsl 2 ->
-;;   (inst ldr rd (post-index r1) (make-op2 r2 :subtract t :shift :lsl :count 2))
+;;   (inst ldr rd (post-index r1) (make-op2 r2 :add nil :shift :lsl :count 2))
 ;;
 ;; ldrge rd, [r1], -r2 ->
-;;   (inst ldr rd (post-index r1) (make-op2 r2 :subtract t) :ge)
+;;   (inst ldr rd (post-index r1) (make-op2 r2 :add nil) :ge)
 (defmacro define-load/store-inst (name loadp &optional bytep)
   `(define-instruction ,name (segment reg src1 src2 &optional (cond :al))
      (:declare (type tn reg)
