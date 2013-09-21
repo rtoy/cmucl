@@ -48,11 +48,11 @@
 	   (let ((offs (gensym)))
 	     `(let ((,offs (- (ash ,offset ,',shift) ,lowtag)))
 	       (if (typep '(signed-byte 13),offs)
-		   (inst ,',inst ,object (make-ea ,base :offset ,offs))
+		   (inst ,',inst ,object ,base ,offs)
 		   (progn
 		     (inst li ,temp ,offs)
-		     (inst ,',inst ,object (make-ea ,base :offset ,temp))))))
-	   `(inst ,',inst ,object (make-ea ,base :offset (- (ash ,offset ,',shift) ,lowtag)))))))
+		     (inst ,',inst ,object ,base ,temp)))))
+	   `(inst ,',inst ,object ,base (- (ash ,offset ,',shift) ,lowtag))))))
   (def-load/store-word loadw ldr word-shift)
   (def-load/store-word storew str word-shift))
 
@@ -74,17 +74,15 @@
 			     (find-package "VM"))))
 	 `(progn
 	    (defmacro ,loader (reg symbol)
-	      `(inst ldr ,reg
-		     (make-ea null-tn
-			      :offset (+ (static-symbol-offset ',symbol)
-					 (ash ,',offset word-shift)
-					 (- other-pointer-type)))))
+	      `(inst ldr ,reg null-tn
+			      (+ (static-symbol-offset ',symbol)
+				 (ash ,',offset word-shift)
+				 (- other-pointer-type))))
 	    (defmacro ,storer (reg symbol)
-	      `(inst str ,reg
-		     (make-ea null-tn
-			      :offset (+ (static-symbol-offset ',symbol)
-					 (ash ,',offset word-shift)
-					 (- other-pointer-type)))))))))
+	      `(inst str ,reg null-tn
+			      (+ (static-symbol-offset ',symbol)
+				 (ash ,',offset word-shift)
+				 (- other-pointer-type))))))))
   (frob value)
   (frob function))
 
@@ -96,9 +94,9 @@
 	      (n-offset offset))
     (ecase (backend-byte-order *target-backend*)
       (:little-endian
-       `(inst ldrb ,n-target (make-ea ,n-source :offset ,n-offset)))
+       `(inst ldrb ,n-target ,n-source ,n-offset))
       (:big-endian
-       `(inst ldrb ,n-target (make-ea ,n-source :offset (+ ,n-offset (1- word-bytes))))))))
+       `(inst ldrb ,n-target ,n-source (+ ,n-offset (1- word-bytes)))))))
 
 ;;; Macros to handle the fact that we cannot use the machine native call and
 ;;; return instructions. 
@@ -194,7 +192,7 @@
 ;; because a temp register is needed to do inline allocation.
 ;; TEMP-TN, in this case, can be any register, since it holds a
 ;; double-word aligned address (essentially a fixnum).
-(defmacro allocation (result-tn size lowtag &key stack-p temp-tn)
+(defmacro allocation (result-tn size lowtag temp-tn &key stack-p)
   ;; We assume we're in a pseudo-atomic so the pseudo-atomic bit is
   ;; set.
   `(cond (,stack-p
@@ -207,13 +205,13 @@
 	      (progn
 		(load-symbol-value ,temp-tn lisp::*allocation-pointer*)
 		(inst orr ,result-tn ,temp-tn ,lowtag)
-		(inst add ,temp-tn ,size)
+		(inst add ,temp-tn ,temp-tn ,size)
 		(store-symbol-value ,temp-tn lisp::*allocation-pointer*))
 	      (progn
 		(load-symbol-value ,temp-tn lisp::*allocation-pointer*)
 		(inst bic ,result-tn ,temp-tn lowtag-mask)
-		(inst orr ,result-tn ,lowtag)
-		(inst add ,temp-tn ,size)
+		(inst orr ,result-tn ,result-tn ,lowtag)
+		(inst add ,temp-tn ,temp-tn ,size)
 		(store-symbol-value ,temp-tn lisp::*allocation-pointer*))))
 	 #+gencgc
 	 (t
@@ -231,9 +229,8 @@
   (once-only ((result-tn result-tn) (temp-tn temp-tn)
 	      (type-code type-code) (size size)
 	      (lowtag lowtag))
-    `(pseudo-atomic ()
-       (allocation ,result-tn (pad-data-block ,size) ,lowtag
-	           :temp-tn ,temp-tn
+    `(pseudo-atomic (,temp-tn)
+       (allocation ,result-tn (pad-data-block ,size) ,lowtag ,temp-tn
 	           :stack-p ,stack-p)
       (when ,type-code
 	(inst li ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
@@ -510,24 +507,25 @@
 
 ;;; PSEUDO-ATOMIC -- Handy macro for making sequences look atomic.
 ;;;
-(defmacro pseudo-atomic ((&key temp-tn (extra 0)) &rest forms)
+(defmacro pseudo-atomic ((temp-tn &key (extra 0)) &rest forms)
   (declare (ignore extra))
-  (let ((label (gensym "LABEL-")))
-    `(let ((,label (gen-label)))
-       ;; Set the pseudo-atomic flag, in *pseudo-atomic-atomic*
-       (without-scheduling ()
-	 (load-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*)
-	 (inst or ,temp-tn pseudo-atomic-value)
-	 (store-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*))
-       ,@forms
-       ;; Reset the pseudo-atomic flag
-       (without-scheduling ()
-	 ;; Remove the pseudo-atomic flag.
-	 (load-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*)
-	 (inst bic ,temp-tn pseudo-atomic-value)
-	 ;; Check to see if pseudo-atomic interrupted flag is set
-	 (inst tst ,temp-tn pseudo-atomic-interrupted-value)
-	 (inst b ,label :ne)
-	 ;; The C code needs to process this correctly and fixup alloc-tn.
-	 (inst bkpt pseudo-atomic-trap)
-	 (emit-label ,label)))))
+  (once-only ((temp-tn temp-tn))
+    (let ((label (gensym "LABEL-")))
+      `(let ((,label (gen-label)))
+	 ;; Set the pseudo-atomic flag, in *pseudo-atomic-atomic*
+	 (without-scheduling ()
+	   (load-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*)
+	   (inst orr ,temp-tn ,temp-tn pseudo-atomic-value)
+	   (store-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*))
+	 ,@forms
+	 ;; Reset the pseudo-atomic flag
+	 (without-scheduling ()
+	   ;; Remove the pseudo-atomic flag.
+	   (load-symbol-value ,temp-tn lisp::*pseudo-atomic-atomic*)
+	   (inst bic ,temp-tn ,temp-tn pseudo-atomic-value)
+	   ;; Check to see if pseudo-atomic interrupted flag is set
+	   (inst tst ,temp-tn pseudo-atomic-interrupted-value)
+	   (inst b ,label :ne)
+	   ;; The C code needs to process this correctly and fixup alloc-tn.
+	   (inst bkpt pseudo-atomic-trap)
+	   (emit-label ,label))))))
