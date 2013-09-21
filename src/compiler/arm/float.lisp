@@ -20,26 +20,24 @@
 
 (define-move-function (load-single 1) (vop x y)
   ((single-stack) (single-reg))
-  (inst vldr y (make-ea (current-nfp-tn vop)
-			:offset (* (tn-offset x) vm:word-bytes))))
+  (inst vldr y (current-nfp-tn vop) (* (tn-offset x) vm:word-bytes)))
 
 (define-move-function (store-single 1) (vop x y)
   ((single-reg) (single-stack))
-  (inst vstr x (make-ea (current-nfp-tn vop)
-			:offset (* (tn-offset y) vm:word-bytes))))
+  (inst vstr x (current-nfp-tn vop) (* (tn-offset y) vm:word-bytes)))
 
 
 (define-move-function (load-double 2) (vop x y)
   ((double-stack) (double-reg))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
-    (inst vldr y (make-ea nfp :offset offset))))
+    (inst vldr y nfp offset)))
 
 (define-move-function (store-double 2) (vop x y)
   ((double-reg) (double-stack))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
-    (inst vstr x (make-ea nfp :offset offset))))
+    (inst vstr x nfp offset)))
 
 
 ;;;; Move VOPs:
@@ -74,8 +72,8 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:variant-vars format size type data)
   (:generator 13
-    (with-fixed-allocation (y ndescr type size))
-    (inst vstr x (make-ea y :offset (- (* data vm:word-bytes) vm:other-pointer-type)))))
+    (with-fixed-allocation (y ndescr type size)
+      (not-implemented))))
 
 (macrolet ((frob (name sc &rest args)
 	     `(progn
@@ -96,8 +94,7 @@
 		  (:results (y :scs (,sc)))
 		  (:note _N"pointer to float coercion")
 		  (:generator 2
-		    (inst vldr y (make-ea x :offset (- (* ,value vm:word-bytes)
-						       vm:other-pointer-type)))))
+		    (not-implemented)))
 		(define-move-vop ,name :move (descriptor-reg) (,sc)))))
   (frob move-to-single single-reg :single vm:single-float-value-slot)
   (frob move-to-double double-reg :double vm:double-float-value-slot))
@@ -117,7 +114,7 @@
 			 (inst vmov y x)))
 		      (,stack-sc
 		       (let ((offset (* (tn-offset y) vm:word-bytes)))
-			 (inst vstr x (make-ea nfp :offset offset)))))))
+			 (inst vstr x nfp offset))))))
 		(define-move-vop ,name :move-argument
 		  (,sc descriptor-reg) (,sc)))))
   (frob move-single-float-argument single-reg single-stack :single)
@@ -161,18 +158,18 @@
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
     (let ((real-tn (complex-single-reg-real-tn y)))
-      (inst vldr real-tn (make-ea nfp :offset offset)))
+      (inst vldr real-tn nfp offset))
     (let ((imag-tn (complex-single-reg-imag-tn y)))
-      (inst vldr imag-tn (make-ea nfp :offset (+ offset vm:word-bytes))))))
+      (inst vldr imag-tn nfp  (+ offset vm:word-bytes)))))
 
 (define-move-function (store-complex-single 2) (vop x y)
   ((complex-single-reg) (complex-single-stack))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
     (let ((real-tn (complex-single-reg-real-tn x)))
-      (inst vstr real-tn (make-ea nfp :offset offset)))
+      (inst vstr real-tn nfp offset))
     (let ((imag-tn (complex-single-reg-imag-tn x)))
-      (inst vstr imag-tn (make-ea nfp :offset (+ offset vm:word-bytes))))))
+      (inst vstr imag-tn nfp (+ offset vm:word-bytes)))))
 
 
 (define-move-function (load-complex-double 4) (vop x y)
@@ -180,18 +177,18 @@
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
     (let ((real-tn (complex-double-reg-real-tn y)))
-      (inst vldr real-tn (make-ea nfp :offset offset)))
+      (inst vldr real-tn nfp offset))
     (let ((imag-tn (complex-double-reg-imag-tn y)))
-      (inst vldr imag-tn (make-ea nfp :offset (+ offset (* 2 vm:word-bytes)))))))
+      (inst vldr imag-tn nfp (+ offset (* 2 vm:word-bytes))))))
 
 (define-move-function (store-complex-double 4) (vop x y)
   ((complex-double-reg) (complex-double-stack))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
     (let ((real-tn (complex-double-reg-real-tn x)))
-      (inst vstr real-tn (make-ea nfp :offset offset)))
+      (inst vstr real-tn nfp offset))
     (let ((imag-tn (complex-double-reg-imag-tn x)))
-      (inst vstr imag-tn (make-ea nfp :offset (+ offset (* 2 vm:word-bytes)))))))
+      (inst vstr imag-tn nfp (+ offset (* 2 vm:word-bytes))))))
 
 #+double-double
 (progn
@@ -200,26 +197,26 @@
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
     (let ((value-tn (complex-double-double-reg-real-hi-tn y)))
-      (inst vldr value-tn (make-ea nfp :offset offset)))
+      (inst vldr value-tn nfp offset))
     (let ((value-tn (complex-double-double-reg-real-lo-tn y)))
-      (inst vldr value-tn (make-ea nfp :offset (+ offset (* 2 vm:word-bytes)))))
+      (inst vldr value-tn nfp (+ offset (* 2 vm:word-bytes))))
     (let ((value-tn (complex-double-double-reg-imag-hi-tn y)))
-      (inst vldr value-tn (make-ea nfp :offset (+ offset (* 4 vm:word-bytes)))))
+      (inst vldr value-tn nfp (+ offset (* 4 vm:word-bytes))))
     (let ((value-tn (complex-double-double-reg-imag-lo-tn y)))
-      (inst vldr value-tn (make-ea nfp :offset (+ offset (* 6 vm:word-bytes)))))))
+      (inst vldr value-tn nfp (+ offset (* 6 vm:word-bytes))))))
 
 (define-move-function (store-complex-double-double 4) (vop x y)
   ((complex-double-double-reg) (complex-double-double-stack))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
     (let ((value-tn (complex-double-double-reg-real-hi-tn x)))
-      (inst vstr value-tn (make-ea nfp :offset offset)))
+      (inst vstr value-tn nfp offset))
     (let ((value-tn (complex-double-double-reg-real-lo-tn x)))
-      (inst vstr value-tn (make-ea nfp :offset (+ offset (* 2 vm:word-bytes)))))
+      (inst vstr value-tn nfp (+ offset (* 2 vm:word-bytes))))
     (let ((value-tn (complex-double-double-reg-imag-hi-tn x)))
-      (inst vstr value-tn (make-ea nfp :offset (+ offset (* 4 vm:word-bytes)))))
+      (inst vstr value-tn nfp (+ offset (* 4 vm:word-bytes))))
     (let ((value-tn (complex-double-double-reg-imag-lo-tn x)))
-      (inst vstr value-tn (make-ea nfp :offset (+ offset (* 6 vm:word-bytes)))))))
+      (inst vstr value-tn nfp (+ offset (* 6 vm:word-bytes))))))
 
 )
 
@@ -302,15 +299,8 @@
   (:note _N"complex single float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y ndescr vm:complex-single-float-type
-			       vm:complex-single-float-size))
-     (let ((real-tn (complex-single-reg-real-tn x)))
-       (inst vstr real-tn (make-ea y :offset (- (* vm:complex-single-float-real-slot
-						   vm:word-bytes)
-						vm:other-pointer-type))))
-     (let ((imag-tn (complex-single-reg-imag-tn x)))
-       (inst vstr imag-tn (make-ea y :offset (- (* vm:complex-single-float-imag-slot
-						   vm:word-bytes)
-						vm:other-pointer-type))))))
+			       vm:complex-single-float-size)
+       (not-implemented))))
 ;;;
 (define-move-vop move-from-complex-single :move
   (complex-single-reg) (descriptor-reg))
@@ -322,15 +312,8 @@
   (:note _N"complex double float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y ndescr vm:complex-double-float-type
-			       vm:complex-double-float-size))
-     (let ((real-tn (complex-double-reg-real-tn x)))
-       (inst vstr real-tn (make-ea y :offset (- (* vm:complex-double-float-real-slot
-						   vm:word-bytes)
-						vm:other-pointer-type))))
-     (let ((imag-tn (complex-double-reg-imag-tn x)))
-       (inst vstr imag-tn (make-ea y :offset (- (* vm:complex-double-float-imag-slot
-						   vm:word-bytes)
-						vm:other-pointer-type))))))
+			       vm:complex-double-float-size)
+       (not-implemented))))
 ;;;
 (define-move-vop move-from-complex-double :move
   (complex-double-reg) (descriptor-reg))
@@ -343,27 +326,8 @@
   (:note _N"complex double-double float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y ndescr vm::complex-double-double-float-type
-			       vm::complex-double-double-float-size))
-     (let ((real-tn (complex-double-double-reg-real-hi-tn x)))
-       (inst vstr real-tn
-	     (make-ea y :offset (- (* vm::complex-double-double-float-real-hi-slot
-				      vm:word-bytes)
-				   vm:other-pointer-type))))
-     (let ((real-tn (complex-double-double-reg-real-lo-tn x)))
-       (inst vstr real-tn
-	     (make-ea y :offset (- (* vm::complex-double-double-float-real-lo-slot
-				      vm:word-bytes)
-				   vm:other-pointer-type))))
-     (let ((imag-tn (complex-double-double-reg-imag-hi-tn x)))
-       (inst vstr imag-tn
-	     (make-ea y :offset (- (* vm::complex-double-double-float-imag-hi-slot
-				      vm:word-bytes)
-				   vm:other-pointer-type))))
-     (let ((imag-tn (complex-double-double-reg-imag-lo-tn x)))
-       (inst vstr imag-tn
-	     (make-ea y :offset (- (* vm::complex-double-double-float-imag-lo-slot
-				      vm:word-bytes)
-				   vm:other-pointer-type))))))
+			       vm::complex-double-double-float-size)
+       (not-implemented))))
 ;;;
 #+double-double
 (define-move-vop move-from-complex-double-double :move
@@ -377,14 +341,7 @@
   (:results (y :scs (complex-single-reg)))
   (:note _N"pointer to complex float coercion")
   (:generator 2
-    (let ((real-tn (complex-single-reg-real-tn y)))
-      (inst vldr real-tn
-	    (make-ea x :offset (- (* complex-single-float-real-slot word-bytes)
-				  other-pointer-type))))
-    (let ((imag-tn (complex-single-reg-imag-tn y)))
-      (inst vldr imag-tn
-	    (make-ea x :offset (- (* complex-single-float-imag-slot word-bytes)
-				  other-pointer-type))))))
+    (not-implemented)))
 
 (define-move-vop move-to-complex-single :move
   (descriptor-reg) (complex-single-reg))
@@ -394,12 +351,7 @@
   (:results (y :scs (complex-double-reg)))
   (:note _N"pointer to complex float coercion")
   (:generator 2
-    (let ((real-tn (complex-double-reg-real-tn y)))
-      (inst vldr real-tn (make x :offset (- (* complex-double-float-real-slot word-bytes)
-					    other-pointer-type))))
-    (let ((imag-tn (complex-double-reg-imag-tn y)))
-      (inst vldr imag-tn (make-ea x :offset (- (* complex-double-float-imag-slot word-bytes)
-					       other-pointer-type))))))
+    (not-implemented)))
 
 (define-move-vop move-to-complex-double :move
   (descriptor-reg) (complex-double-reg))
@@ -410,22 +362,8 @@
   (:results (y :scs (complex-double-double-reg)))
   (:note _N"pointer to complex double-double float coercion")
   (:generator 2
-    (let ((real-tn (complex-double-double-reg-real-hi-tn y)))
-      (inst vldr real-tn
-	    (make-ea x :offset (- (* complex-double-double-float-real-hi-slot word-bytes)
-				  other-pointer-type))))
-    (let ((real-tn (complex-double-double-reg-real-lo-tn y)))
-      (inst vldr real-tn
-	    (make-ea x :offset (- (* complex-double-double-float-real-lo-slot word-bytes)
-				  other-pointer-type))))
-    (let ((imag-tn (complex-double-double-reg-imag-hi-tn y)))
-      (inst vldr imag-tn
-	    (make-ea x :offset (- (* complex-double-double-float-imag-hi-slot word-bytes)
-				  other-pointer-type))))
-    (let ((imag-tn (complex-double-double-reg-imag-lo-tn y)))
-      (inst vldr imag-tn
-	    (make-ea x :offset (- (* complex-double-double-float-imag-lo-slot word-bytes)
-				  other-pointer-type))))))
+    (not-implemented)))
+
 #+double-double
 (define-move-vop move-to-complex-double-double :move
   (descriptor-reg) (complex-double-double-reg))
@@ -451,9 +389,9 @@
       (complex-single-stack
        (let ((offset (* (tn-offset y) word-bytes)))
 	 (let ((real-tn (complex-single-reg-real-tn x)))
-	   (inst vstr real-tn (make-ea nfp :offset offset)))
+	   (inst vstr real-tn nfp offset))
 	 (let ((imag-tn (complex-single-reg-imag-tn x)))
-	   (inst vstr imag-tn (make-ea nfp :offset (+ offset word-bytes)))))))))
+	   (inst vstr imag-tn nfp (+ offset word-bytes))))))))
 (define-move-vop move-complex-single-float-argument :move-argument
   (complex-single-reg descriptor-reg) (complex-single-reg))
 
@@ -475,9 +413,9 @@
       (complex-double-stack
        (let ((offset (* (tn-offset y) word-bytes)))
 	 (let ((real-tn (complex-double-reg-real-tn x)))
-	   (inst vstr real-tn (make-ea nfp :offset offset)))
+	   (inst vstr real-tn nfp offset))
 	 (let ((imag-tn (complex-double-reg-imag-tn x)))
-	   (inst vstr imag-tn (make-ea nfp :offset (+ offset (* 2 word-bytes))))))))))
+	   (inst vstr imag-tn nfp (+ offset (* 2 word-bytes)))))))))
 (define-move-vop move-complex-double-float-argument :move-argument
   (complex-double-reg descriptor-reg) (complex-double-reg))
 
@@ -506,13 +444,13 @@
       (complex-double-double-stack
        (let ((offset (* (tn-offset y) word-bytes)))
 	 (let ((real-tn (complex-double-double-reg-real-hi-tn x)))
-	   (inst vstr real-tn (make-ea nfp :offset offset)))
+	   (inst vstr real-tn nfp offset))
 	 (let ((real-tn (complex-double-double-reg-real-lo-tn x)))
-	   (inst vstr real-tn (make-ea nfp :offset (+ offset (* 2 word-bytes)))))
+	   (inst vstr real-tn nfp (+ offset (* 2 word-bytes))))
 	 (let ((imag-tn (complex-double-double-reg-imag-hi-tn x)))
-	   (inst vstr imag-tn (make-ea nfp :offset (+ offset (* 4 word-bytes)))))
+	   (inst vstr imag-tn nfp (+ offset (* 4 word-bytes))))
 	 (let ((imag-tn (complex-double-double-reg-imag-lo-tn x)))
-	   (inst vstr imag-tn (make-ea nfp :offset (+ offset (* 6 word-bytes))))))))))
+	   (inst vstr imag-tn nfp (+ offset (* 6 word-bytes)))))))))
 
 #+double-double
 (define-move-vop move-complex-double-double-float-argument :move-argument
@@ -980,18 +918,18 @@
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
     (let ((hi-tn (double-double-reg-hi-tn y)))
-      (inst vldr hi-tn (make-ea nfp :offset offset)))
+      (inst vldr hi-tn nfp offset))
     (let ((lo-tn (double-double-reg-lo-tn y)))
-      (inst vldr lo-tn (make-ea nfp :offset (+ offset (* 2 vm:word-bytes)))))))
+      (inst vldr lo-tn nfp (+ offset (* 2 vm:word-bytes))))))
 
 (define-move-function (store-double-double 4) (vop x y)
   ((double-double-reg) (double-double-stack))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
     (let ((hi-tn (double-double-reg-hi-tn x)))
-      (inst vstr hi-tn (make-ea nfp :offset offset)))
+      (inst vstr hi-tn nfp offset))
     (let ((lo-tn (double-double-reg-lo-tn x)))
-      (inst vstr lo-tn (make-ea nfp :offset (+ offset (* 2 vm:word-bytes)))))))
+      (inst vstr lo-tn nfp (+ offset (* 2 vm:word-bytes))))))
 
 ;;; Double-double float register to register moves
 
@@ -1024,17 +962,8 @@
   (:note _N"double-double float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y ndescr vm::double-double-float-type
-			       vm::double-double-float-size))
-     (let ((hi-tn (double-double-reg-hi-tn x)))
-       (inst vstr hi-tn
-	     (make-ea y :offset (- (* vm::double-double-float-hi-slot
-				      vm:word-bytes)
-				   vm:other-pointer-type))))
-     (let ((lo-tn (double-double-reg-lo-tn x)))
-       (inst vstr lo-tn
-	     (make-ea y :offset (- (* vm::double-double-float-lo-slot
-				      vm:word-bytes)
-				   vm:other-pointer-type))))))
+			       vm::double-double-float-size)
+       (not-implemented))))
 ;;;
 (define-move-vop move-from-double-double :move
   (double-double-reg) (descriptor-reg))
@@ -1046,14 +975,7 @@
   (:results (y :scs (double-double-reg)))
   (:note _N"pointer to double-double float coercion")
   (:generator 2
-    (let ((hi-tn (double-double-reg-hi-tn y)))
-      (inst vldr hi-tn
-	    (make-ea x :offset (- (* double-double-float-hi-slot word-bytes)
-				  other-pointer-type))))
-    (let ((lo-tn (double-double-reg-lo-tn y)))
-      (inst vldr lo-tn
-	    (make-ea x :offset (- (* double-double-float-lo-slot word-bytes)
-				  other-pointer-type))))))
+    (not-implemented)))
 
 (define-move-vop move-to-double-double :move
   (descriptor-reg) (double-double-reg))
@@ -1078,9 +1000,9 @@
       (double-double-stack
        (let ((offset (* (tn-offset y) word-bytes)))
 	 (let ((hi-tn (double-double-reg-hi-tn x)))
-	   (inst vstr hi-tn (make-ea nfp :offset offset)))
+	   (inst vstr hi-tn nfp offset))
 	 (let ((lo-tn (double-double-reg-lo-tn x)))
-	   (inst vstr lo-tn (make-ea nfp :offset (+ offset (* 2 word-bytes))))))))))
+	   (inst vstr lo-tn nfp (+ offset (* 2 word-bytes)))))))))
 
 (define-move-vop move-double-double-float-argument :move-argument
   (double-double-reg descriptor-reg) (double-double-reg))
@@ -1111,8 +1033,8 @@
        (let ((nfp (current-nfp-tn vop))
 	     (offset (* (tn-offset res) vm:word-bytes)))
 	 (unless (location= hi res)
-	   (inst vstr hi (make-ea nfp :offset offset)))
-	 (inst vstr lo (make-ea nfp :offset (+ offset (* 2 vm:word-bytes)))))))))
+	   (inst vstr hi nfp offset))
+	 (inst vstr lo nfp (+ offset (* 2 vm:word-bytes))))))))
 
 (define-vop (double-double-float-value)
   (:args (x :scs (double-double-reg descriptor-reg) :target r
@@ -1133,16 +1055,11 @@
 	   (move-double-reg r value-tn))))
       (double-double-stack
        (inst vldr r
-	     (make-ea (current-nfp-tn vop) :offset (* (+ (ecase slot (:hi 0) (:lo 2))
-							 (tn-offset x))
-						      vm:word-bytes))))
+	     (current-nfp-tn vop) (* (+ (ecase slot (:hi 0) (:lo 2))
+					(tn-offset x))
+				     vm:word-bytes)))
       (descriptor-reg
-       (inst vldr r
-	     (make-ea x :offste (- (* vm:word-bytes
-				      (ecase slot
-					(:hi vm:double-double-float-hi-slot)
-					(:lo vm:double-double-float-lo-slot)))
-				   vm:other-pointer-type)))))))
+       (not-implemented)))))
 
 (define-vop (hi/double-double-value double-double-float-value)
   (:translate kernel::double-double-hi)
@@ -1186,13 +1103,13 @@
        (let ((nfp (current-nfp-tn vop))
 	     (offset (* (tn-offset r) vm:word-bytes)))
 	 (let ((r-real (double-double-reg-hi-tn real)))
-	   (inst vstr r-real (make-ea nfp :offset offset)))
+	   (inst vstr r-real nfp offset))
 	 (let ((r-real (double-double-reg-lo-tn real)))
-	   (inst vstr r-real (make-ea nfp :offset  (+ offset (* 2 vm:word-bytes)))))
+	   (inst vstr r-real nfp  (+ offset (* 2 vm:word-bytes))))
 	 (let ((r-imag (double-double-reg-hi-tn imag)))
-	   (inst vstr r-imag (make-ea nfp :offset (+ offset (* 4 vm:word-bytes)))))
+	   (inst vstr r-imag nfp (+ offset (* 4 vm:word-bytes))))
 	 (let ((r-imag (double-double-reg-lo-tn imag)))
-	   (inst vstr r-imag (make-ea nfp :offset (+ offset (* 6 vm:word-bytes))))))))))
+	   (inst vstr r-imag nfp (+ offset (* 6 vm:word-bytes)))))))))
 
 (define-vop (complex-double-double-float-value)
   (:args (x :scs (complex-double-double-reg descriptor-reg)
@@ -1221,33 +1138,16 @@
       (complex-double-double-stack
        (let ((r-hi (double-double-reg-hi-tn r)))
 	 (inst vldr r-hi
-	       (make-ea (current-nfp-tn vop)
-			:offset  (* (+ (ecase slot (:real 0) (:imag 4))
-				       (tn-offset x))
-				    vm:word-bytes))))
+	       (current-nfp-tn vop)  (* (+ (ecase slot (:real 0) (:imag 4))
+					   (tn-offset x))
+					vm:word-bytes)))
        (let ((r-lo (double-double-reg-lo-tn r)))
 	 (inst vldr r-lo
-	       (make-ea (current-nfp-tn vop)
-			:offset (* (+ (ecase slot (:real 2) (:imag 6))
-				      (tn-offset x))
-				   vm:word-bytes)))))
+	       (current-nfp-tn vop) (* (+ (ecase slot (:real 2) (:imag 6))
+					  (tn-offset x))
+				       vm:word-bytes))))
       (descriptor-reg
-       (let ((r-hi (double-double-reg-hi-tn r)))
-	 (inst vldr r-hi
-	       (make-ea x
-			:offset (- (* (ecase slot
-					(:real vm::complex-double-double-float-real-hi-slot)
-					(:imag vm::complex-double-double-float-imag-hi-slot))
-				      vm:word-bytes)
-				   vm:other-pointer-type))))
-       (let ((r-lo (double-double-reg-lo-tn r)))
-	 (inst vldr r-lo
-	       (make-ea x
-			:offset (- (* (ecase slot
-					(:real vm::complex-double-double-float-real-lo-slot)
-					(:imag vm::complex-double-double-float-imag-lo-slot))
-				      vm:word-bytes)
-				   vm:other-pointer-type))))))))
+       (not-implemented)))))
 
 (define-vop (realpart/complex-double-double-float complex-double-double-float-value)
   (:translate realpart)
