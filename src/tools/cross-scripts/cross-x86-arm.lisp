@@ -45,7 +45,11 @@
      :mp
      :gencgc
      :heap-overflow-check
-     :stack-checking))
+     :stack-checking
+
+     ;; Not implemented yet
+     :complex-fp-vops
+     ))
 
 ;;; Changes needed to bootstrap cross-compiling from x86 to arm
 
