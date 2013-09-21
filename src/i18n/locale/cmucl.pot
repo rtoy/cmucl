@@ -17623,6 +17623,13 @@ msgid "(during macroexpansion)~%~A"
 msgstr ""
 
 #: src/compiler/main.lisp
+msgid ""
+"If non-Nil, use git to derive the file-comment.  This info includes\n"
+"  the sha1 hash, the time and the author of the change.  Otherwise,\n"
+"  just use the supplied file-comment."
+msgstr ""
+
+#: src/compiler/main.lisp
 msgid "Bad FILE-COMMENT form: ~S."
 msgstr ""
 
