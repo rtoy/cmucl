@@ -7355,9 +7355,7 @@ msgid "overflow in digit-to-char"
 msgstr ""
 
 #: src/code/print.lisp
-msgid ""
-"Convert digit into a character representation.  We use 0..9, a..z for\n"
-"10..35, and A..Z for 36..52."
+msgid "Convert digit into a character representation."
 msgstr ""
 
 #: src/code/print.lisp
