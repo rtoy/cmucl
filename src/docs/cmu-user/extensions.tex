@@ -445,8 +445,8 @@ arbitrary equality (equivalence) predicate.
       
       To create a hash-table using this new ``test'' (really, a
       test/hash-function pair), use
-      \code{(\index[funs]{make-hash-table}make-hash-table :test
-        \var{hash-table-test-name} \ldots)}.
+%      \code{(\index[funs]{make-hash-table}make-hash-table :test
+%        \var{hash-table-test-name} \ldots)}.
 
       Note that it is the \var{hash-table-test-name} that will be
       returned by the function \findexed{hash-table-test}, when applied to
@@ -1883,12 +1883,12 @@ T. Nishimura.  We refer the reader to their paper\footnote{``Mersenne
   Number Generator,'' ACM Trans. on Modeling and Computer Simulation,
   Vol. 8, No. 1, January 1998, pp.3--30} or to
 their
-\ifpdf
-\href{http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html}{website}.
-\else
+%\ifpdf
+%\href{http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html}{website}.
+%\else
 website at
 \href{http://www.math.keio.ac.jp/~matumoto/emt.html}{\texttt{http://www.math.keio.ac.jp/~matsumoto/emt.html}}.
-\fi
+%\fi
 
 When \cmucl{} starts up, \code{*random-state*} is initialized by
 reading 627 words from \code{/dev/urandom}, when available.  If
@@ -1979,18 +1979,18 @@ function is called and
   standardized method combinations like \code{progn}, \code{and}, etc.
 \end{itemize}
 
-\begin{defgeneric}[-generic]{pcl:}{no-primary-method}{gf \&rest args}
-  In \cmucl, this generic function is called in the above erroneous
-  cases.  The parameter \code{gf} is the generic function being
-  called, and \code{args} is a list of actual arguments in the generic
-  function call.
-\end{defgeneric}
+%\begin{defgeneric}[-generic]{pcl:}{no-primary-method}{gf \&rest args}
+%  In \cmucl, this generic function is called in the above erroneous
+%  cases.  The parameter \code{gf} is the generic function being
+%  called, and \code{args} is a list of actual arguments in the generic
+%  function call.
+%\end{defgeneric}
 
-\begin{defmethod}[-standard]{pcl:}{no-primary-method}{%
-    (gf standard-generic-function) \&rest args}
-  This method signals a continuable error of type
-  \code{pcl:no-primary-method-error}.
-\end{defmethod}
+%\begin{defmethod}[-standard]{pcl:}{no-primary-method}{%
+%    (gf standard-generic-function) \&rest args}
+%  This method signals a continuable error of type
+%  \code{pcl:no-primary-method-error}.
+%\end{defmethod}
 
 
 \subsection{Slot Type Checking}
@@ -3001,12 +3001,12 @@ this correctly.  Once this is all done, the output from the function
 source file.
 
 For further information, we refer the reader to documentation on
-\ifpdf
-\href{http://www.gnu.org/software/gettext/manual/gettext.html}{gettext}.
-\else
+%\ifpdf
+%\href{http://www.gnu.org/software/gettext/manual/gettext.html}{gettext}.
+%\else
 gettext at
 \href{http://www.gnu.org/software/gettext/manual/gettext.html}{\texttt{http://www.gnu.org/software/gettext/manual/gettext.html}}.
-\fi
+%\fi
 
 \section{Static Arrays}
 \label{sec:static-arrays}

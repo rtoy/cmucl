@@ -32,7 +32,7 @@
 \usepackage{xspace}
 \usepackage{alltt}
 \usepackage{index}
-\usepackage{ifpdf}
+%\usepackage{ifpdf}
 \usepackage{ifthen}
 \usepackage{calc}
 \usepackage{sectsty}
@@ -42,6 +42,8 @@
 \usepackage{typehtml}
 
 \input{macros}
+
+\input{latex2html}
 
 \title{CMUCL User's Manual}
 \author{Robert A. MacLachlan, \textit{Editor}}
@@ -92,17 +94,17 @@ language implementation, programming environment}
   \makeatother
 \end{titlepage}
 
-\ifpdf
-\pdfinfo{
-/Author (Robert A. MacLachlan, ed)
-/Title (CMUCL User's Manual)
-/Keywords (\keywords)
-}
-% Add section numbers to the bookmarks, and open 2 levels by default.
-\hypersetup{bookmarksnumbered=true,
-            bookmarksopen=true,
-            bookmarksopenlevel=2}
-\fi
+%\ifpdf
+%\pdfinfo{
+%/Author (Robert A. MacLachlan, ed)
+%/Title (CMUCL User's Manual)
+%/Keywords (\keywords)
+%}
+%% Add section numbers to the bookmarks, and open 2 levels by default.
+%\hypersetup{bookmarksnumbered=true,
+%            bookmarksopen=true,
+%            bookmarksopenlevel=2}
+%\fi
 
 % \maketitle
 
