@@ -952,13 +952,14 @@
 	((eq (car source) :plus-integer)
 	 ;; prints the given field proceed with a + or a -
 	 (let ((form
-		(arg-value-form (arg-or-lose (cadr source) funstate)
-				funstate
-				:numeric)))
+		 (arg-value-form (arg-or-lose (cadr source) funstate)
+				 funstate
+				 :numeric)))
 	   `(progn
-	      (when (>= ,form 0)
-		(local-write-char #\+))
-	      (local-princ ,form))))
+	      (if (>= ,form 0)
+		  (local-write-char #\+)
+		  (local-write-char #\-))
+	      (local-princ (abs ,form)))))
 	((eq (car source) 'quote)
 	 `(local-princ ,source))
 	((eq (car source) 'function)
