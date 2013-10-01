@@ -1,7 +1,5 @@
 ========================== C M U C L  20 e =============================
 
-[In Progress]
-
 The CMUCL project is pleased to announce the release of CMUCL 20e.
 This is a major release which contains numerous enhancements and
 bug fixes from the 20c release.
@@ -19,10 +17,10 @@ over the Internet, and is mostly in the public domain.
 New in this release:
 
   * Known issues:
+    * For the current issues, see Trac tickets.
 
   * Feature enhancements
-    * The disassembler (on x86) prints correctly for any value of
-      *print-base*.
+    * The disassembler prints correctly for any value of *print-base*.
  
   * Changes
     * ASDF2 updated to version 3.0.2.
