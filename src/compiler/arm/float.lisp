@@ -72,8 +72,7 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:variant-vars format size type data)
   (:generator 13
-    (with-fixed-allocation (y ndescr type size)
-      (not-implemented))))
+    (not-implemented)))
 
 (macrolet ((frob (name sc &rest args)
 	     `(progn
@@ -298,9 +297,7 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:note _N"complex single float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y ndescr vm:complex-single-float-type
-			       vm:complex-single-float-size)
-       (not-implemented))))
+    (not-implemented)))
 ;;;
 (define-move-vop move-from-complex-single :move
   (complex-single-reg) (descriptor-reg))
@@ -311,9 +308,7 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:note _N"complex double float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y ndescr vm:complex-double-float-type
-			       vm:complex-double-float-size)
-       (not-implemented))))
+    (not-implemented)))
 ;;;
 (define-move-vop move-from-complex-double :move
   (complex-double-reg) (descriptor-reg))
@@ -325,9 +320,7 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:note _N"complex double-double float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y ndescr vm::complex-double-double-float-type
-			       vm::complex-double-double-float-size)
-       (not-implemented))))
+    (not-implemented)))
 ;;;
 #+double-double
 (define-move-vop move-from-complex-double-double :move
@@ -818,7 +811,6 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 1
-    (note-this-location vop :internal-error)
     (inst vsqrt y x)))
 
 
@@ -961,9 +953,7 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:note _N"double-double float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y ndescr vm::double-double-float-type
-			       vm::double-double-float-size)
-       (not-implemented))))
+    (not-implemented)))
 ;;;
 (define-move-vop move-from-double-double :move
   (double-double-reg) (descriptor-reg))
