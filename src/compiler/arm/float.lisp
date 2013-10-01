@@ -430,10 +430,10 @@
 	   (move-double-reg y-real x-real))
 	 (let ((x-imag (complex-double-double-reg-imag-hi-tn x))
 	       (y-imag (complex-double-double-reg-imag-hi-tn y)))
-	   (move-long-reg y-imag x-imag))
+	   (move-double-reg y-imag x-imag))
 	 (let ((x-imag (complex-double-double-reg-imag-lo-tn x))
 	       (y-imag (complex-double-double-reg-imag-lo-tn y)))
-	   (move-long-reg y-imag x-imag))))
+	   (move-double-reg y-imag x-imag))))
       (complex-double-double-stack
        (let ((offset (* (tn-offset y) word-bytes)))
 	 (let ((real-tn (complex-double-double-reg-real-hi-tn x)))
