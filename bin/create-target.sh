@@ -31,7 +31,7 @@ uname_m=`uname -m 2>/dev/null`
 	SunOS)
 	    case $uname_m in
 		i86pc) lisp_variant=x86_solaris_sunc ;;
-		sun*) lisp_variant=sparc_gcc ;;
+		sun*) lisp_variant=sparc_sunc ;;
 	    esac 
 	    ;;
 	Darwin)
@@ -50,7 +50,7 @@ uname_m=`uname -m 2>/dev/null`
 case $lisp_variant in
     *linux*) lvshort=linux;;
     *freebsd*) lvshort=freebsd;;
-    *solaris*) lvshort=solaris;;
+    *solaris*|sparc*) lvshort=solaris;;
     *) lvshort=unknown;;
 esac
 

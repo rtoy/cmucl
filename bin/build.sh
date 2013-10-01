@@ -45,6 +45,8 @@ BINDIR=bin
 TOOLDIR=$BINDIR
 OLDLISPFLAGS="-noinit -nositeinit"
 OLDLISP="cmulisp"
+GIT_FILE_COMMENT="yes"
+export GIT_FILE_COMMENT
 
 SKIPUTILS=no
 
@@ -66,7 +68,7 @@ fi
 
 usage ()
 {
-    echo "build.sh [-123obvuBCU?]"
+    echo "build.sh [-123obvuBCUG?]"
     echo "    -1        Skip build 1"
     echo "    -2        Skip build 2"
     echo "    -3        Skip build 3"
@@ -96,6 +98,7 @@ usage ()
     echo "               The flags always include -noinit -nositeinit"
     echo "    -R        Force recompiling the C runtime.  Normally, just runs make to "
     echo "               recompile anything that has changed."
+    echo "    -G        Don't use git to fill file-comment information"
     exit 1
 }
 
@@ -152,7 +155,7 @@ BUILDWORLD="$TOOLDIR/build-world.sh"
 BUILD_POT="yes"
 UPDATE_TRANS=
 
-while getopts "123PRo:b:v:uB:C:Ui:f:w:O:?" arg
+while getopts "123PRGo:b:v:uB:C:Ui:f:w:O:?" arg
 do
     case $arg in
 	1) ENABLE2="no" ;;
@@ -172,6 +175,7 @@ do
         U) UPDATE_TRANS="yes";;
 	O) OLDLISPFLAGS="$OLDLISPFLAGS $OPTARG" ;;
         R) REBUILD_LISP="yes";;
+	G) GIT_FILE_COMMENT="no";;
 	\?) usage
 	    ;;
     esac
@@ -187,7 +191,7 @@ if [ -z "$BASE" ]; then
           esac ;;
       SunOS)
 	  case `uname -m` in
-	    sun4u) BASE=sparc ;;
+	    sun4*) BASE=sparc ;;
 	    i86pc) BASE=sol-x86 ;;
 	  esac ;;
       Linux) BASE=linux ;;
