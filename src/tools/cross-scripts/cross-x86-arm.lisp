@@ -49,6 +49,7 @@
 
      ;; Not implemented yet
      :complex-fp-vops
+     :alien-callback
      ))
 
 ;;; Changes needed to bootstrap cross-compiling from x86 to arm
