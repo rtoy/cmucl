@@ -2656,15 +2656,12 @@
 	   (emit-back-patch segment 4
 			    #'(lambda (segment posn)
 				(assemble (segment vop)
-					  (inst add dst src
-						(funcall calc label posn 0)))))
+				  (not-implemented))))
 	   t)))
    #'(lambda (segment posn)
        (let ((delta (funcall calc label posn 0)))
 	 (assemble (segment vop)
-		   (inst sethi temp (ldb (byte 22 10) delta))
-		   (inst or temp (ldb (byte 10 0) delta))
-		   (inst add dst src temp))))))
+	   (not-implemented))))))
 
 ;; code = lra - other-pointer-tag - header - label-offset + other-pointer-tag
 (define-instruction compute-code-from-lra (segment dst src label temp)
@@ -2674,8 +2671,5 @@
   (:delay 0)
   (:vop-var vop)
   (:emitter
-   (emit-compute-inst segment vop dst src label temp
-		      #'(lambda (label posn delta-if-after)
-			  (- (+ (label-position label posn delta-if-after)
-				(component-header-length)))))))
+   (not-implemented)))
 
