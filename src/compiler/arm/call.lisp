@@ -90,6 +90,10 @@
 ;;;    Make a TN to hold the number-stack frame pointer.  This is allocated
 ;;; once per component, and is component-live.
 ;;;
+
+
+;; FIXME: What are we using for nfp? It's not defined.
+#+nil
 (def-vm-support-routine make-nfp-tn ()
   (component-live-tn
    (make-wired-tn *fixnum-primitive-type* immediate-arg-scn nfp-offset)))
@@ -583,7 +587,9 @@ default-value-8
 		 return-pc-pass)
 
      ,(if named
-	  `(:temporary (:sc descriptor-reg :offset cname-offset
+	  ;; FIXME: this offset was cname-offset, which doesn't exist
+	  ;; on ARM.  Use lexenv for now until we implement this.
+	  `(:temporary (:sc descriptor-reg :offset lexenv-offset
 			    :from (:argument ,(if (eq return :tail) 0 1))
 			    :to :eval)
 		       name-pass)
@@ -695,9 +701,6 @@ default-value-8
   (:temporary (:sc descriptor-reg :offset a0-offset :from (:eval 0)) a0)
   (:temporary (:sc descriptor-reg :offset a1-offset :from (:eval 0)) a1)
   (:temporary (:sc descriptor-reg :offset a2-offset :from (:eval 0)) a2)
-  (:temporary (:sc descriptor-reg :offset a3-offset :from (:eval 0)) a3)
-  (:temporary (:sc descriptor-reg :offset a4-offset :from (:eval 0)) a4)
-  (:temporary (:sc descriptor-reg :offset a5-offset :from (:eval 0)) a5)
   (:temporary (:sc any-reg :offset nargs-offset) nargs)
   (:temporary (:sc any-reg :offset ocfp-offset) val-ptr)
   (:vop-var vop)
@@ -718,7 +721,7 @@ default-value-8
    (vals-arg :scs (any-reg) :target vals)
    (nvals-arg :scs (any-reg) :target nvals))
 
-  (:temporary (:sc any-reg :offset nl1-offset :from (:argument 0)) old-fp)
+  (:temporary (:sc any-reg :from (:argument 0)) old-fp)
   (:temporary (:sc descriptor-reg :offset lra-offset :from (:argument 1)) lra)
   (:temporary (:sc any-reg :offset nl0-offset :from (:argument 2)) vals)
   (:temporary (:sc any-reg :offset nargs-offset :from (:argument 3)) nvals)
@@ -765,10 +768,7 @@ default-value-8
 ;;;
 (define-vop (copy-more-arg)
   (:temporary (:sc any-reg :offset nl0-offset) result)
-  (:temporary (:sc any-reg :offset nl1-offset) count)
-  (:temporary (:sc any-reg :offset nl2-offset) src)
-  (:temporary (:sc any-reg :offset nl3-offset) dst)
-  (:temporary (:sc descriptor-reg :offset cname-offset) temp)
+  (:temporary (:sc descriptor-reg :offset lexenv-offset) temp)
   (:info fixed)
   (:generator 20
     (not-implemented)))
