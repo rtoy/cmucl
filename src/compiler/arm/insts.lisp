@@ -2643,3 +2643,33 @@
   (:delay 0)
   (:emitter
    (emit-header-data segment return-pc-header-type)))
+
+
+;;;; Instructions for converting between code objects, functions, and lras.
+(defun emit-compute-inst (segment vop dst src label temp calc)
+  (emit-chooser
+   ;; We emit either 12 or 4 bytes, so we maintain 8 byte alignments.
+   segment 12 3
+   #'(lambda (segment posn delta-if-after)
+       (let ((delta (funcall calc label posn delta-if-after)))
+	 (when (<= (- (ash 1 12)) delta (1- (ash 1 12)))
+	   (emit-back-patch segment 4
+			    #'(lambda (segment posn)
+				(assemble (segment vop)
+				  (not-implemented))))
+	   t)))
+   #'(lambda (segment posn)
+       (let ((delta (funcall calc label posn 0)))
+	 (assemble (segment vop)
+	   (not-implemented))))))
+
+;; code = lra - other-pointer-tag - header - label-offset + other-pointer-tag
+(define-instruction compute-code-from-lra (segment dst src label temp)
+  (:declare (type tn dst src temp) (type label label))
+  (:attributes variable-length)
+  (:dependencies (reads src) (writes dst) (writes temp))
+  (:delay 0)
+  (:vop-var vop)
+  (:emitter
+   (not-implemented)))
+
