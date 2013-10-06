@@ -1,4 +1,4 @@
-;;; -*- Mode: LISP; Syntax: Common-Lisp; Base: 10; Package: x86 -*-
+4;;; -*- Mode: LISP; Syntax: Common-Lisp; Base: 10; Package: x86 -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -39,50 +39,48 @@
 (define-vop (get-type)
   (:translate get-type)
   (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg)))
-  (:temporary (:sc unsigned-reg :offset eax-offset :to (:result 0)) eax)
-  (:results (result :scs (unsigned-reg)))
+  (:args (object :scs (descriptor-reg) :to (:eval 1)))
+  (:results (result :scs (unsigned-reg) :from (:eval 0)))
   (:result-types positive-fixnum)
   (:generator 6
-    (inst mov eax object)
-    (inst and al-tn lowtag-mask)
-    (inst cmp al-tn other-pointer-type)
+    ;; Pick off objects with headers.
+    (inst mov result object)
+    (inst and result lowtag-mask)
+    (inst cmp result other-pointer-type)
     (inst jmp :e other-ptr)
-    (inst cmp al-tn function-pointer-type)
+    (inst cmp result function-pointer-type)
     (inst jmp :e function-ptr)
 
-    ;; pick off structures and list pointers
-    (inst test al-tn 1)
-    (inst jmp :ne done)
+    ;; Pick off structure and list pointers.
+    (inst test result 1)
+    (inst jmp :nz done)
 
-    ;; pick off fixnums
-    (inst and al-tn 3)
-    (inst jmp :e done)
+    ;; Pick off fixnums.
+    (inst and result 3)
+    (inst jmp :z done)
 
-    ;; must be an other immediate
-    (inst mov eax object)
+    ;; Must be an other immediate.
+    (inst mov result object)
+    (inst and result type-mask)
     (inst jmp done)
-    
+
     FUNCTION-PTR
-    (load-type al-tn object (- vm:function-pointer-type))
+    (load-type result object (- vm:function-pointer-type))
     (inst jmp done)
-    
+
     OTHER-PTR
-    (load-type al-tn object (- vm:other-pointer-type))
-    
-    DONE
-    (inst movzx result al-tn)))
+    (load-type result object (- vm:other-pointer-type))
+
+    DONE))
 
 (define-vop (function-subtype)
   (:translate function-subtype)
   (:policy :fast-safe)
   (:args (function :scs (descriptor-reg)))
-  (:temporary (:sc byte-reg :from (:eval 0) :to (:eval 1)) temp)
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
-    (load-type temp function (- vm:function-pointer-type))
-    (inst movzx result temp)))
+    (load-type result function (- vm:function-pointer-type))))
 
 (define-vop (set-function-subtype)
   (:translate (setf function-subtype))
@@ -562,7 +560,7 @@
     (inst ret)))
 
 
-;; the RDTSC instruction (present on Pentium processors and
+;; The RDTSC instruction (present on Pentium processors and
 ;; successors) allows you to access the time-stamp counter, a 64-bit
 ;; model-specific register that counts executed cycles. The
 ;; instruction returns the low cycle count in EAX and high cycle count
@@ -590,7 +588,6 @@
 
 (define-vop (read-cycle-counter)
   (:translate read-cycle-counter)
-  (:guard (backend-featurep :pentium))
   (:args )
   (:policy :fast-safe)
   (:results (lo :scs (unsigned-reg))
@@ -598,13 +595,22 @@
   (:result-types unsigned-num unsigned-num)
   (:temporary (:sc unsigned-reg :offset eax-offset :target lo) eax)
   (:temporary (:sc unsigned-reg :offset edx-offset :target hi) edx)
+  ;; CPUID writes to eax, ebx, ecx, and edx.  We need temporaries for
+  ;; ebx and ecx so we don't destroy any live uses of ebx and ecx.
+  (:temporary (:sc unsigned-reg :offset ebx-offset
+		   :from (:eval 0) :to (:result 1))
+	      ebx)
+  (:temporary (:sc unsigned-reg :offset ecx-offset
+		   :from (:eval 0) :to (:result 2))
+	      ecx)
+  (:ignore ebx ecx)
   (:generator 1
-     (inst cpuid)
-     (inst rdtsc)
-     (move hi edx)
-     (move lo eax)))
+    (inst mov eax 0)
+    (inst cpuid)
+    (inst rdtsc)
+    (move hi edx)
+    (move lo eax)))
 
-#+pentium
 (defun read-cycle-counter ()
   (read-cycle-counter))
 
@@ -666,3 +672,21 @@
 (defun cpuid (level)
   (declare (type (unsigned-byte 32) level))
   (cpuid level))
+
+(defmacro with-cycle-counter (&body body)
+  "Returns the primary value of BODY as the primary value, and the
+ number of CPU cycles elapsed as secondary value."
+  (let ((hi0 (gensym))
+	(hi1 (gensym))
+	(lo0 (gensym))
+	(lo1 (gensym)))
+    `(multiple-value-bind (,lo0 ,hi0)
+	 (read-cycle-counter)
+       (values (locally ,@body)
+               (multiple-value-bind (,lo1 ,hi1)
+		   (read-cycle-counter)
+		 ;; Can't do anything about the notes about generic
+		 ;; arithmetic, so silence the notes..
+		 (declare (optimize (inhibit-warnings 3)))
+                 (+ (ash (- ,hi1 ,hi0) 32)
+                    (- ,lo1 ,lo0)))))))

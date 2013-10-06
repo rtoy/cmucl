@@ -1,4 +1,9 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.13 2009/11/02 15:05:07 rtoy Rel $ */
+/*
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
 
 #ifndef _GLOBALS_H_
 #define _GLOBALS_H_

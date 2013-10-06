@@ -1,5 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.21 2010/02/01 19:27:07 rtoy Rel $
- *
+/* 
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
 

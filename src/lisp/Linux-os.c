@@ -15,8 +15,6 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.52 2011/09/01 05:18:26 rtoy Exp $
- *
  */
 
 #include <stdio.h>
@@ -78,12 +76,26 @@ check_personality(struct utsname *name, char *const *argv, char *const *envp)
 #if defined(__i386) || defined(__x86_64)
     int major_version, minor_version, patch_version;
     char *p;
+    
     p = name->release;
     major_version = atoi(p);
-    p = strchr(p,'.')+1;
-    minor_version = atoi(p);
-    p = strchr(p,'.')+1;
-    patch_version = atoi(p);
+
+    /*
+     * Try to extract the minor and patch version, but if we can't
+     * just set it to zero.  In particular, some Debian systems have a
+     * release like "3.7-trunk-686-pae" which is missing the patch
+     * version.
+     */
+
+    p = strchr(p,'.');
+    if (p) {
+        minor_version = atoi(p + 1);
+        p = strchr(p + 1,'.');
+        patch_version = p ? atoi(p + 1) : 0;
+    } else {
+        minor_version = 0;
+        patch_version = 0;
+    }
 
     if ((major_version == 2
          /* Some old kernels will apparently lose unsupported personality flags
@@ -369,10 +381,6 @@ in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
 boolean
 valid_addr(os_vm_address_t addr)
 {
-    os_vm_address_t newaddr;
-
-    newaddr = os_trunc_to_page(addr);
-
     if (in_range_p(addr, READ_ONLY_SPACE_START, read_only_space_size)
 	|| in_range_p(addr, STATIC_SPACE_START, static_space_size)
 	|| in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)

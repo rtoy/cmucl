@@ -172,7 +172,11 @@ FUNCDEF(call_into_lisp)
 	cmp	$2, %eax	# SSE2 mode?
 	jne	x87_save
 	movl	%esp, %eax	# Remember the current stack pointer
-	subl	$512,%esp	# Make room for the SSE state
+	/*
+	 * The SSE state is 512 bytes, but we need 16 more because we
+	 * need 16-byte alignment.
+	 */
+	subl	$512+16,%esp
 	andl	$-16, %esp	# fxsave needs 16-byte alignment
 	fxsave	(%esp)		
 	pushl	%eax		# Save the old stack pointer
@@ -194,7 +198,7 @@ x87_save:
 	fldcw	(%esp)		# Recover modes
 	popl	%eax
 npx_save_done:			
-
+	/* Is this still necessary with sse2? */
 	fldz			# insure no FP regs are empty
 	fldz
 	fldz
@@ -459,220 +463,47 @@ ENDFUNC(fastcopy16)
 
 
 /*
-   Allocate bytes and return the start of the allocated space
-   in the specified destination register.
+ * alloc_overflow_x87 and alloc_overflow_sse2 must not be called from
+ * C because it doesn't follow C conventions.
+ *
+ * On entry:
+ * %eax = bytes to allocate
+ * On exit:
+ * %eax = address
+ */
+FUNCDEF(alloc_overflow_x87)
+	STACK_PROLOGUE(12)
+	movl	%ecx, 8(%esp)	# Save ecx and edx registers
+	movl	%edx, 4(%esp)
+	movl	%eax, (%esp)	# Put size on stack for first arg to alloc()
+	call	GNAME(alloc)
+	movl	4(%esp), %edx	# Restore edx and ecx registers.  eax has the return value.
+	movl	8(%esp), %ecx
+	STACK_EPILOGUE
+	ret
+ENDFUNC(alloc_overflow_x87)	
 
-   In the general case the size will be in the destination register.
+FUNCDEF(alloc_overflow_sse2)
+	STACK_PROLOGUE(20)
+	movl	%ecx, 8(%esp)	# Save ecx and edx registers
+	movl	%edx, 4(%esp)
+	stmxcsr 12(%esp)	# Save MXCSR
+	/* Clear the exceptions that might have occurred */
+	movl	12(%esp), %edx
+	and	$-64, %edx	# Clear the exceptions
+	movl	%edx, 16(%esp)
+	ldmxcsr 16(%esp)	# Get new mxcsr value
+	movl	%eax, (%esp)	# Put size on stack for first arg to alloc()
 
-   All registers must be preserved except the destination.
-   The C conventions will preserve ebx, esi, edi, and ebp.
-   So only eax, ecx, and edx need special care here. */
+	call	GNAME(alloc)
+
+	movl	4(%esp), %edx	# Restore edx and ecx registers.  eax has the return value.
+	movl	8(%esp), %ecx
+	ldmxcsr	12(%esp)
+	STACK_EPILOGUE
+	ret
+ENDFUNC(alloc_overflow_sse2)	
 		
-FUNCDEF(alloc_to_eax)
-	STACK_PROLOGUE(12)
-	movl	%ecx, 8(%esp)	# Save ecx and edx as C could destroy them.
-	movl	%edx, 4(%esp)
-	movl	%eax, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	4(%esp), %edx	# Restore ecx and edx.
-	movl	8(%esp), %ecx
-	STACK_EPILOGUE
-	ret
-ENDFUNC(alloc_to_eax)
-
-FUNCDEF(alloc_to_ecx)
-	STACK_PROLOGUE(12)
-	movl	%eax, 8(%esp)	# Save eax and edx as C could destroy them.
-	movl	%edx, 4(%esp)
-	movl	%ecx, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	%eax,%ecx	# setup the destination.
-	movl	4(%esp), %edx	# Restore eax and edx.
-	movl	8(%esp), %eax
-	STACK_EPILOGUE
-	ret
-ENDFUNC(alloc_to_ecx)
-
-FUNCDEF(alloc_to_edx)
-	STACK_PROLOGUE(12)
-	movl	%eax, 8(%esp)	# Save eax and ecx as C could destroy them.
-	movl	%ecx, 4(%esp)
-	movl	%edx, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	%eax,%edx	# setup the destination.
-	movl	4(%esp), %ecx	# Restore eax and ecx.
-	movl	8(%esp), %eax
-	STACK_EPILOGUE
-	ret
-ENDFUNC(alloc_to_edx)
-
-FUNCDEF(alloc_to_ebx)
-	STACK_PROLOGUE(16)
-	movl	%eax, 12(%esp)	# Save eax, ecx, and edx as C could destroy them.
-	movl	%ecx, 8(%esp)
-	movl	%edx, 4(%esp)
-	movl	%ebx, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	%eax,%ebx	# setup the destination.
-	movl	4(%esp), %edx	# Restore eax, ecx and edx.
-	movl	8(%esp), %ecx
-	movl	12(%esp), %eax
-	STACK_EPILOGUE
-	ret
-ENDFUNC(alloc_to_ebx)
-
-FUNCDEF(alloc_to_esi)
-	STACK_PROLOGUE(16)
-	movl	%eax, 12(%esp)	# Save eax, ecx, and edx as C could destroy them.
-	movl	%ecx, 8(%esp)
-	movl	%edx, 4(%esp)
-	movl	%esi, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	%eax,%esi	# setup the destination.
-	movl	4(%esp), %edx	# Restore eax, ecx and edx.
-	movl	8(%esp), %ecx
-	movl	12(%esp), %eax
-	STACK_EPILOGUE
-	ret
-ENDFUNC(alloc_to_esi)
-
-FUNCDEF(alloc_to_edi)
-	STACK_PROLOGUE(16)
-	movl	%eax, 12(%esp)	# Save eax, ecx, and edx as C could destroy them.
-	movl	%ecx, 8(%esp)
-	movl	%edx, 4(%esp)
-	movl	%edi, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	%eax,%edi	# setup the destination.
-	movl	4(%esp), %edx	# Restore eax, ecx and edx.
-	movl	8(%esp), %ecx
-	movl	12(%esp), %eax
-	STACK_EPILOGUE
-	ret
-ENDFUNC(alloc_to_edi)
-
-#ifdef GENCGC
-
-/* Called from lisp when an inline allocation overflows.
-   Every register except the result needs to be preserved.
-   We depend on C to preserve ebx, esi, edi, and ebp.
-   But where necessary must save eax, ecx, edx. */
-
-/* This routine handles an overflow with eax=crfp+size. So the
-   size=eax-crfp. */
-FUNCDEF(alloc_overflow_eax)
-	STACK_PROLOGUE(12)
-	movl	%ecx, 8(%esp)	# Save ecx
-	movl	%edx, 4(%esp)	# Save edx
-	/* Calculate the size for the allocation. */
-	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%eax
-	movl	%eax, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	4(%esp), %edx	# Restore edx.
-	movl	8(%esp), %ecx	# Restore ecx.
-	STACK_EPILOGUE
-	addl	$6,(%esp) # Adjust the return address to skip the next inst.
-	ret
-ENDFUNC(alloc_overflow_eax)
-
-/* This routine handles an overflow with ecx=crfp+size. So the
-   size=ecx-crfp. */
-FUNCDEF(alloc_overflow_ecx)
-	STACK_PROLOGUE(12)
-	movl	%eax, 8(%esp)	# Save eax
-	movl	%edx, 4(%esp)	# Save edx
-	/* Calculate the size for the allocation. */
-	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%ecx
-	movl	%ecx, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	%eax,%ecx	# setup the destination.
-	movl	4(%esp), %edx	# Restore edx.
-	movl	8(%esp), %eax	# Restore eax.
-	STACK_EPILOGUE
-	addl	$6,(%esp) # Adjust the return address to skip the next inst.
-	ret
-ENDFUNC(alloc_overflow_ecx)
-
-/* This routine handles an overflow with edx=crfp+size. So the
-   size=edx-crfp. */
-FUNCDEF(alloc_overflow_edx)
-	STACK_PROLOGUE(12)
-	movl	%eax, 8(%esp)	# Save eax
-	movl	%ecx, 4(%esp)	# Save ecx
-	/* Calculate the size for the allocation. */
-	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%edx
-	movl	%edx, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	%eax,%edx	# setup the destination.
-	movl	4(%esp), %ecx	# Restore ecx.
-	movl	8(%esp), %eax	# Restore eax.
-	STACK_EPILOGUE
-	addl	$6,(%esp) # Adjust the return address to skip the next inst.
-	ret
-ENDFUNC(alloc_overflow_edx)
-
-/* This routine handles an overflow with ebx=crfp+size. So the
-   size=ebx-crfp. */
-FUNCDEF(alloc_overflow_ebx)
-	STACK_PROLOGUE(16)
-	movl	%eax, 12(%esp)	# Save eax
-	movl	%ecx, 8(%esp)	# Save ecx
-	movl	%edx, 4(%esp)	# Save edx
-	/* Calculate the size for the allocation. */
-	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%ebx
-	movl	%ebx, (%esp)		# Push the size
-	call	GNAME(alloc)
-	movl	%eax,%ebx	# setup the destination.
-	movl	4(%esp), %edx	# Restore edx.
-	movl	8(%esp), %ecx	# Restore ecx.
-	movl	12(%esp), %eax	# Restore eax.
-	STACK_EPILOGUE
-	addl	$6,(%esp) # Adjust the return address to skip the next inst.
-	ret
-ENDFUNC(alloc_overflow_ebx)
-
-/* This routine handles an overflow with esi=crfp+size. So the
-   size=esi-crfp. */
-FUNCDEF(alloc_overflow_esi)
-	STACK_PROLOGUE(16)
-	movl	%eax, 12(%esp)	# Save eax
-	movl	%ecx, 8(%esp)	# Save ecx
-	movl	%edx, 4(%esp)	# Save edx
-	/* Calculate the size for the allocation. */
-	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%esi
-	movl	%esi, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	%eax,%esi	# setup the destination.
-	movl	4(%esp), %edx	# Restore edx.
-	movl	8(%esp), %ecx	# Restore ecx.
-	movl	12(%esp), %eax	# Restore eax.
-	STACK_EPILOGUE
-	addl	$6,(%esp) # Adjust the return address to skip the next inst.
-	ret
-ENDFUNC(alloc_overflow_esi)
-
-/* This routine handles an overflow with edi=crfp+size. So the
-   size=edi-crfp. */
-FUNCDEF(alloc_overflow_edi)
-	STACK_PROLOGUE(16)
-	movl	%eax, 12(%esp)	# Save eax
-	movl	%ecx, 8(%esp)	# Save ecx
-	movl	%edx, 4(%esp)	# Save edx
-	/* Calculate the size for the allocation. */
-	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%edi
-	movl	%edi, (%esp)	# Push the size
-	call	GNAME(alloc)
-	movl	%eax,%edi	# setup the destination.
-	movl	4(%esp), %edx	# Restore edx.
-	movl	8(%esp), %ecx	# Restore ecx.
-	movl	12(%esp), %eax	# Restore eax.
-	STACK_EPILOGUE
-	addl	$6,(%esp) # Adjust the return address to skip the next inst.
-	ret
-ENDFUNC(alloc_overflow_edi)
-
-#endif
-
 #ifdef LINKAGE_TABLE
 
 /* Call into C code to resolve a linkage entry.  The initial code in the 

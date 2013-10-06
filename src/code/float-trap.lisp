@@ -18,7 +18,9 @@
 (in-package "VM")
 (intl:textdomain "cmucl")
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(current-float-trap floating-point-modes sigfpe-handler))
+)
 (in-package "EXTENSIONS")
 (export '(set-floating-point-modes get-floating-point-modes
 	  with-float-traps-masked))
@@ -155,7 +157,19 @@
    currently in effect."
   (let ((modes (floating-point-modes)))
     (when traps-p
-      (setf (ldb float-traps-byte modes) (float-trap-mask traps)))
+      (let ((trap-mask-bits (float-trap-mask traps)))
+	(setf (ldb float-traps-byte modes) trap-mask-bits)
+	#+(and x86 sse2)
+	(progn
+	  ;; Clear out any current or accrued exceptions that match
+	  ;; the traps that we are enabling.  If we don't then
+	  ;; enabling the traps causes the exceptions to be signaled
+	  ;; immediately.  This is a bit annoying.  If the user really
+	  ;; wants to resignal the exceptions, he can do that himself.
+	  (setf (ldb float-sticky-bits modes)
+		(logandc2 (ldb float-sticky-bits modes) trap-mask-bits))
+	  (setf (ldb float-exceptions-byte modes)
+		(logandc2 (ldb float-exceptions-byte modes) trap-mask-bits)))))
     (when round-p
       (setf (ldb float-rounding-mode modes)
 	    (or (cdr (assoc rounding-mode rounding-mode-alist))
@@ -175,6 +189,7 @@
       (when (member :invalid current-exceptions)
  	;; Clear out the bits for the detected invalid operation
  	(setf (ldb vm:float-invalid-op-1-byte modes) 0)))
+
     (when fast-mode-p
       (if fast-mode
 	  (setq modes (logior float-fast-bit modes))
@@ -226,7 +241,7 @@
 ;;;    Signal the appropriate condition when we get a floating-point error.
 ;;;
 (defun sigfpe-handler (signal code scp)
-  (declare (ignore signal code)
+  (declare (ignore signal)
 	   (type system-area-pointer scp))
   (let* ((modes (sigcontext-floating-point-modes
 		 (alien:sap-alien scp (* unix:sigcontext))))
@@ -300,9 +315,26 @@
 	     ;; operands also seem to be missing.  Signal a general
 	     ;; arithmetic error.
 	     #+(and x86 solaris)
-	     (error 'arithmetic-error :operands operands)
+	     (error _"SIGFPE with no exceptions currently enabled? (si-code = ~D)"
+		    code)
+	     ;; For all other x86 ports, we should only get here if
+	     ;; the SIGFPE was caused by an integer overflow on
+	     ;; division.  For sparc and ppc, I (rtoy) don't think
+	     ;; there's any other way to get here since integer
+	     ;; overflows aren't signaled.
+	     ;;
+	     ;; In that case, FOP should be /, so we can generate a
+	     ;; nice arithmetic-error.  It's possible to use CODE,
+	     ;; which is supposed to indicate what caused the
+	     ;; exception, but each OS is different, so we don't; FOP
+	     ;; can tell us.
 	     #-(and x86 solaris)
-	     (error _"SIGFPE with no exceptions currently enabled?"))))))
+	     (if fop
+		 (error 'arithmetic-error
+			:operation fop
+			:operands operands)
+		 (error _"SIGFPE with no exceptions currently enabled? (si-code = ~D)"
+			code)))))))
 
 ;;; WITH-FLOAT-TRAPS-MASKED  --  Public
 ;;;

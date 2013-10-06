@@ -46,6 +46,9 @@
 (export 'vm::fixup-code-object "VM")
 (export 'vm::sanctify-for-execution "VM")
 
+(do-external-symbols (sym "OLD-VM")
+  (export (intern (symbol-name sym) "VM") "VM"))
+
 (load "target:tools/comcom")
 
 ;;; Load the new backend.
@@ -138,6 +141,7 @@
 			       syms))))
   (frob OLD-VM:BYTE-BITS OLD-VM:WORD-BITS
 	OLD-VM:CHAR-BITS
+	OLD-VM:CHAR-BYTES
 	#+long-float OLD-VM:SIMPLE-ARRAY-LONG-FLOAT-TYPE 
 	OLD-VM:SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE 
 	OLD-VM:SIMPLE-ARRAY-SINGLE-FLOAT-TYPE

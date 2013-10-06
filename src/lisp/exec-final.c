@@ -1,8 +1,6 @@
 /*
  * Variables for executable support.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/exec-final.c,v 1.1 2010/07/29 01:51:12 rtoy Rel $
- *
  */
 
 /*

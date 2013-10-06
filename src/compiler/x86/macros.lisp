@@ -110,10 +110,10 @@
 	      (n-offset offset))
     (ecase (backend-byte-order *target-backend*)
       (:little-endian
-       `(inst mov ,n-target
+       `(inst movzx ,n-target
 	      (make-ea :byte :base ,n-source :disp ,n-offset)))
       (:big-endian
-       `(inst mov ,n-target
+       `(inst movzx ,n-target
 	      (make-ea :byte :base ,n-source :disp (+ ,n-offset 3)))))))
 
 (defmacro load-foreign-data-symbol (reg name )
@@ -138,72 +138,67 @@
     (inst mov dst-tn size)))
 
 (defun inline-allocation (alloc-tn size)
-  (let ((ok (gen-label)))
-    ;;
+  (let ((ok (gen-label))
+	(done (gen-label)))
+
     ;; Load the size first so that the size can be in the same
     ;; register as alloc-tn.
     (load-size alloc-tn alloc-tn size)
-    ;;
+
+    ;; Try inline allocation, incrementing the
+    ;; current-region-free-pointer by the size.  If we didn't pass the
+    ;; end of the region, then inline allocation succeeded, and we're
+    ;; done.
     (inst add alloc-tn
 	  (make-symbol-value-ea '*current-region-free-pointer*))
     (inst cmp alloc-tn
 	  (make-symbol-value-ea '*current-region-end-addr*))
     (inst jmp :be OK)
-    ;;
-    ;; Dispatch to the appropriate overflow routine. There is a
-    ;; routine for each destination.
-    (ecase (tn-offset alloc-tn)
+
+    ;; Inline allocation didn't work so we need to call alloc,
+    ;; carefully.  Need to recompute the size because we can't just
+    ;; reload size because it might have already been destroyed if
+    ;; size = alloc-tn (which does happen).
+    (inst sub alloc-tn (make-symbol-value-ea '*current-region-free-pointer*))
+    (case (tn-offset alloc-tn)
       (#.eax-offset
-       (inst call (make-fixup (extern-alien-name "alloc_overflow_eax")
-			      :foreign)))
-      (#.ecx-offset
-       (inst call (make-fixup (extern-alien-name "alloc_overflow_ecx")
-			      :foreign)))
-      (#.edx-offset
-       (inst call (make-fixup (extern-alien-name "alloc_overflow_edx")
-			      :foreign)))
-      (#.ebx-offset
-       (inst call (make-fixup (extern-alien-name "alloc_overflow_ebx")
-			      :foreign)))
-      (#.esi-offset
-       (inst call (make-fixup (extern-alien-name "alloc_overflow_esi")
-			      :foreign)))
-      (#.edi-offset
-       (inst call (make-fixup (extern-alien-name "alloc_overflow_edi")
-			      :foreign))))
+       (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
+						 #+sse2 "alloc_overflow_sse2")
+			      :foreign))
+       (inst jmp done))
+      (t
+       (inst push eax-tn)		; Save any value in eax
+       (inst mov eax-tn alloc-tn)
+       (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
+						 #+sse2 "alloc_overflow_sse2")
+			      :foreign))
+       (inst mov alloc-tn eax-tn)  	; Put allocated address in alloc-tn
+       (inst pop eax-tn)		; Restore old value of eax
+       (inst jmp done)))
+			       
     (emit-label ok)
     (inst xchg (make-symbol-value-ea '*current-region-free-pointer*)
-	  alloc-tn))
+	  alloc-tn)
+    (emit-label done))
+  
   (values))
 
 (defun not-inline-allocation (alloc-tn size)
-  ;; C call to allocate via dispatch routines. Each destination has a
-  ;; special entry point. The size may be a register or a constant.
-  (ecase (tn-offset alloc-tn)
+  ;; C call to allocate. The size may be a register or a constant.
+  (load-size alloc-tn alloc-tn size)
+  (case (tn-offset alloc-tn)
     (#.eax-offset
-     (load-size alloc-tn eax-tn size)
-     (inst call (make-fixup (extern-alien-name "alloc_to_eax")
+     (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
+					       #+sse2 "alloc_overflow_sse2")
 			    :foreign)))
-    (#.ecx-offset
-     (load-size alloc-tn ecx-tn size)
-     (inst call (make-fixup (extern-alien-name "alloc_to_ecx")
-			    :foreign)))
-    (#.edx-offset
-     (load-size alloc-tn edx-tn size)
-     (inst call (make-fixup (extern-alien-name "alloc_to_edx")
-			    :foreign)))
-    (#.ebx-offset
-     (load-size alloc-tn ebx-tn size)
-     (inst call (make-fixup (extern-alien-name "alloc_to_ebx") 
-			    :foreign)))
-    (#.esi-offset
-     (load-size alloc-tn esi-tn size)
-     (inst call (make-fixup (extern-alien-name "alloc_to_esi")
-			    :foreign)))
-    (#.edi-offset
-     (load-size alloc-tn edi-tn size)
-     (inst call (make-fixup (extern-alien-name "alloc_to_edi")
-			    :foreign))))
+    (t
+     (inst push eax-tn)			; Save any value in eax
+     (inst mov eax-tn alloc-tn)
+     (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
+					       #+sse2 "alloc_overflow_sse2")
+			    :foreign))
+     (inst mov alloc-tn eax-tn)	  ; Save allocated address in alloc-tn
+     (inst pop eax-tn)))
   (values))
 
 ;;;
@@ -240,7 +235,7 @@
    Result-TN."
   `(pseudo-atomic
     (allocation ,result-tn (pad-data-block ,size) ,inline)
-    (storew (logior (ash (1- ,size) vm:type-bits) ,type-code) ,result-tn)
+    (storew (logior (ash (1- ,size) vm::type-bits) ,type-code) ,result-tn)
     (inst lea ,result-tn
      (make-ea :byte :base ,result-tn :disp other-pointer-type))
     ,@forms))
@@ -522,7 +517,6 @@
 		    :from (:argument 2) :to :result :target result) eax)
        (:results (result :scs ,scs))
        (:result-types ,el-type)
-       (:guard (backend-featurep :i486))
        (:generator 5
 	 (move eax old-value)
 	 (inst cmpxchg (make-ea :dword :base object :index index :scale 1
@@ -542,7 +536,6 @@
 		    :from (:argument 1) :to :result :target result)  eax)
        (:results (result :scs ,scs))
        (:result-types ,el-type)
-       (:guard (backend-featurep :i486))
        (:generator 4
 	 (move eax old-value)
 	 (inst cmpxchg (make-ea :dword :base object

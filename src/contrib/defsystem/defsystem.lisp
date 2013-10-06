@@ -1035,7 +1035,10 @@
 ;;; Here I add the proper defpackage for CMU
 #+:CMU
 (defpackage "MAKE" (:use "COMMON-LISP" "CONDITIONS")
-  (:nicknames "MK"))
+  (:nicknames "MK")
+  (:export "DEFSYSTEM" "COMPILE-SYSTEM" "LOAD-SYSTEM"
+	   "DEFINE-LANGUAGE" "*MULTIPLE-LISP-SUPPORT*"
+	   "FIND-SYSTEM"))
 
 #+:sbcl
 (defpackage "MAKE" (:use "COMMON-LISP")
@@ -1049,7 +1052,7 @@
 (eval-when (compile load eval)
   (in-package "MAKE"))
 
-#+ecl
+#+(or ecl cmu)
 (in-package "MAKE")
 
 ;;; *** Marco Antoniotti <marcoxa@icsi.berkeley.edu> 19970105
@@ -5489,4 +5492,9 @@ nil)
     (format t "done.~%")))
 
 
+#+cmu
+(setf (getf ext:*herald-items* :defsystem)
+      `(,#'(lambda (stream)
+	     (write-string (intl:gettext "    Defsystem ") stream)
+	     (write-string *defsystem-version*))))
 ;;; end of file -- defsystem.lisp --

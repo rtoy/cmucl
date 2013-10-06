@@ -10,7 +10,7 @@ usage() {
     echo ""
     # List possible values for lisp-variant and motif-variant
     echo "Possible LISP-VARIANTs:"
-    ( cd src/lisp/ && ls -1 Config.* ) | sed 's;^Config[.];;g' | pr -3at -o 8 || quit "Can't list lisp-variants"
+    ( cd src/lisp/ && ls -1 Config.* ) | sed 's;^Config[.];;g' | grep -v common | pr -3at -o 8 || quit "Can't list lisp-variants"
     echo "Possible MOTIF-VARIANTs:"
     ( cd src/motif/server/ && ls -1 Config.* ) | sed 's;^Config[.];;g' | pr -3at -o 8 || quit "Can't list lisp-variants"
     exit 2
@@ -31,13 +31,13 @@ uname_m=`uname -m 2>/dev/null`
 	SunOS)
 	    case $uname_m in
 		i86pc) lisp_variant=x86_solaris_sunc ;;
-		sun*) lisp_variant=sparc_gcc ;;
+		sun*) lisp_variant=sparc_sunc ;;
 	    esac 
 	    ;;
 	Darwin)
 	    case $uname_m in
 		ppc) lisp_variant=ppc_darwin ;;
-		i386) lisp_variant=x86_darwin ;;
+		i386|x86_64) lisp_variant=x86_darwin ;;
 	    esac
 	    ;;
         NetBSD) lisp_variant=x86_netbsd ;;
@@ -50,7 +50,7 @@ uname_m=`uname -m 2>/dev/null`
 case $lisp_variant in
     *linux*) lvshort=linux;;
     *freebsd*) lvshort=freebsd;;
-    *solaris*) lvshort=solaris;;
+    *solaris*|sparc*) lvshort=solaris;;
     *) lvshort=unknown;;
 esac
 

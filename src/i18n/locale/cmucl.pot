@@ -2004,26 +2004,26 @@ msgstr ""
 msgid "Can't use :out or :in-out on pointer-like type:~%  ~S"
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid "Vector of all callbacks."
 msgstr ""
 
 #: src/compiler/tn.lisp src/compiler/main.lisp src/code/describe.lisp
 #: src/code/debug-int.lisp src/code/debug-info.lisp
 #: src/code/foreign-linkage.lisp src/code/reader.lisp src/code/stream.lisp
-#: src/code/hash-new.lisp src/code/array.lisp src/code/alieneval.lisp
+#: src/code/hash-new.lisp src/code/array.lisp src/code/alien-callback.lisp
 msgid "~S is not an array with a fill-pointer."
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid "Unable to mprotect ~S bytes (~S) at ~S (~S).  Callbacks may not work."
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid "Return the trampoline pointer for the callback NAME."
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid ""
 "~\n"
 "Attempt to redefine callback with incompatible return type.\n"
@@ -2031,20 +2031,20 @@ msgid ""
 "    New type is: ~A"
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid "~\n"
 "Create new trampoline (old trampoline calls old lisp function)."
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid "Unsupported argument type: ~A"
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid "Unsupported return type: ~A"
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid ""
 "(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*)\n"
 "     {doc-string} {decls}* {FORM}*)\n"
@@ -2150,6 +2150,10 @@ msgstr ""
 
 #: src/code/bit-bash.lisp
 msgid "The number of bits to process at a time."
+msgstr ""
+
+#: src/code/bit-bash.lisp
+msgid "The number of bytes to process at a time."
 msgstr ""
 
 #: src/code/bit-bash.lisp
@@ -3863,21 +3867,7 @@ msgstr ""
 #: src/code/string.lisp
 msgid ""
 "Given a string, returns a new string that is a copy of it with all\n"
-"  lower case alphabetic characters converted to uppercase.  Casing is\n"
-"  :simple or :full for simple or full case conversion, respectively."
-msgstr ""
-
-#: src/code/string.lisp
-msgid ""
-"Given a string, returns a new string that is a copy of it with all\n"
 "  upper case alphabetic characters converted to lowercase."
-msgstr ""
-
-#: src/code/string.lisp
-msgid ""
-"Given a string, returns a new string that is a copy of it with all\n"
-"  upper case alphabetic characters converted to lowercase.  Casing is\n"
-"  :simple or :full for simple or full case conversion, respectively."
 msgstr ""
 
 #: src/code/string.lisp
@@ -3887,18 +3877,6 @@ msgid ""
 "  chars in the word converted to lower case. A ``word'' is defined\n"
 "  to be a string of case-modifiable characters delimited by\n"
 "  non-case-modifiable chars."
-msgstr ""
-
-#: src/code/string.lisp
-msgid ""
-"Given a string, returns a copy of the string with the first\n"
-"  character of each ``word'' converted to upper-case, and remaining\n"
-"  chars in the word converted to lower case. Casing is :simple or\n"
-"  :full for simple or full case conversion, respectively.  If\n"
-"  Unicode-Word-Break is non-Nil, then the Unicode word-breaking\n"
-"  algorithm is used to determine the word boundaries.  Otherwise, A\n"
-"  ``word'' is defined to be a string of case-modifiable characters\n"
-"  delimited by non-case-modifiable chars.  "
 msgstr ""
 
 #: src/code/string.lisp
@@ -4783,7 +4761,7 @@ msgid ""
 msgstr ""
 
 #: src/code/float-trap.lisp
-msgid "SIGFPE with no exceptions currently enabled?"
+msgid "SIGFPE with no exceptions currently enabled? (si-code = ~D)"
 msgstr ""
 
 #: src/code/float-trap.lisp
@@ -5627,6 +5605,16 @@ msgstr ""
 msgid ""
 "Default implementation of ed.  This does nothing.  If hemlock is\n"
 "  loaded, ed can be used to edit a file"
+msgstr ""
+
+#: src/code/misc.lisp
+msgid ""
+"Disassemble the machine code associated with OBJECT, which can be a\n"
+"  function, a lambda expression, or a symbol with a function definition.  "
+"If\n"
+"  it is not already compiled, the compiler is called to produce something "
+"to\n"
+"  disassemble."
 msgstr ""
 
 #: src/code/extensions.lisp
@@ -6698,7 +6686,7 @@ msgid " on "
 msgstr ""
 
 #: src/code/save.lisp
-msgid "See <http://www.cons.org/cmucl/> for support information."
+msgid "See <http://www.cmucl.org/> for support information."
 msgstr ""
 
 #: src/code/save.lisp
@@ -7367,9 +7355,7 @@ msgid "overflow in digit-to-char"
 msgstr ""
 
 #: src/code/print.lisp
-msgid ""
-"Convert digit into a character representation.  We use 0..9, a..z for\n"
-"10..35, and A..Z for 36..52."
+msgid "Convert digit into a character representation."
 msgstr ""
 
 #: src/code/print.lisp
@@ -9903,8 +9889,13 @@ msgstr ""
 
 #: src/code/filesys.lisp
 msgid ""
-"Rename File to have the specified New-Name.  If file is a stream open to a\n"
-"  file, then the associated file is renamed."
+"Rename File to have the specified New-Name.  If file is a stream\n"
+"  open to a file, then the associated file is renamed.\n"
+"\n"
+"  Three values are returned if successful: the defaulted new name\n"
+"  composed of New-Name with missing components filled in from File;\n"
+"  the truename of File before it was renamed; the new truename of the\n"
+"  File after it was renamed."
 msgstr ""
 
 #: src/code/filesys.lisp
@@ -10132,6 +10123,10 @@ msgid ""
 "       of guessing based on the file type.  This also inhibits file type\n"
 "       defaulting.  Probably only necessary if you have source files with a\n"
 "       \"fasl\" type. \n"
+"\n"
+"   :EXTERNAL-FORMAT\n"
+"       The external-format to use when opening the FILENAME. The default is\n"
+"       :default which uses the EXT:*DEFAULT-EXTERNAL-FORMAT*.\n"
 "\n"
 "   The variables *LOAD-VERBOSE*, *LOAD-PRINT* and EXT:*LOAD-IF-SOURCE-NEWER"
 "*\n"
@@ -14982,6 +14977,71 @@ msgstr ""
 msgid "~&Dumping ~D messages for domain ~S~%"
 msgstr ""
 
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with\n"
+"  all lower case alphabetic characters converted to uppercase using\n"
+"  full case conversion."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with\n"
+"  all lower case alphabetic characters converted to uppercase.  Casing\n"
+"  is :simple or :full for simple or full case conversion,\n"
+"  respectively."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with\n"
+"  all uppercase alphabetic characters converted to lowercase using\n"
+"  full case conversion.."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with all\n"
+"  uppercase alphabetic characters converted to lowercase.  Casing is\n"
+"  :simple or :full for simple or full case conversion, respectively."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, S, and a starting index, return the index of the\n"
+"  next character that is not part of the word containing the character\n"
+"  at the index, or the length of S if the word containing the\n"
+"  character extends to the end of S.  If the index is negative or\n"
+"  valid index into S, the returned value will be strictly greater than\n"
+"  the index."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Capitalize String using the Unicode word-break algorithm to find\n"
+"  the words in String.  The beginning is capitalized depending on the\n"
+"  value of Casing"
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Capitalize String using the Common Lisp word-break algorithm to find\n"
+"  the words in String.  The beginning is capitalized depending on the\n"
+"  value of Casing"
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, returns a copy of the string with the first\n"
+"  character of each ``word'' converted to upper-case, and remaining\n"
+"  chars in the word converted to lower case. Casing is :simple, :full\n"
+"  or :title for simple, full or title case conversion, respectively.  If\n"
+"  Unicode-Word-Break is non-Nil, then the Unicode word-breaking\n"
+"  algorithm is used to determine the word boundaries.  Otherwise, A\n"
+"  ``word'' is defined to be a string of case-modifiable characters\n"
+"  delimited by non-case-modifiable chars.  "
+msgstr ""
+
 #: src/compiler/macros.lisp
 msgid ""
 "Policy Node Condition*\n"
@@ -16782,7 +16842,7 @@ msgid ""
 msgstr ""
 
 #: src/compiler/disassem.lisp
-msgid "Instructions either aren't related or conflict in some way:~% ~s"
+msgid "Instructions either aren't related or conflict in some way:~%"
 msgstr ""
 
 #: src/compiler/disassem.lisp
@@ -17081,7 +17141,18 @@ msgid ""
 "If\n"
 "  it is not already compiled, the compiler is called to produce something "
 "to\n"
-"  disassemble."
+"  disassemble.\n"
+"\n"
+"  :Stream stream\n"
+"      The dissassembly is written to this stream.\n"
+"  :Use-labels\n"
+"      Labels are generated instead of using instruction addresses.\n"
+"  :Base\n"
+"  :Case\n"
+"  :Radix\n"
+"      The disassembler uses the specified base, case, and radix when\n"
+"      printing the disassembled code.  The default values are 16,\n"
+"      :downcase, and *print-radix*, respectively."
 msgstr ""
 
 #: src/compiler/disassem.lisp
@@ -17385,15 +17456,15 @@ msgstr ""
 #: src/compiler/new-assem.lisp
 msgid ""
 "Byte spec ~S either overlaps another byte spec, or ~\n"
-"		    extends past the end."
+"		    extends past the end in emitter ~S."
 msgstr ""
 
 #: src/compiler/new-assem.lisp
-msgid "There are holes."
+msgid "There are holes in emitter ~S."
 msgstr ""
 
 #: src/compiler/new-assem.lisp
-msgid "~D isn't an even multiple of ~D"
+msgid "~D isn't an even multiple of ~D in emitter ~S"
 msgstr ""
 
 #: src/compiler/new-assem.lisp
@@ -17547,6 +17618,13 @@ msgstr ""
 
 #: src/compiler/ir1tran.lisp src/compiler/main.lisp
 msgid "(during macroexpansion)~%~A"
+msgstr ""
+
+#: src/compiler/main.lisp
+msgid ""
+"If non-Nil, use git to derive the file-comment.  This info includes\n"
+"  the sha1 hash, the time and the author of the change.  Otherwise,\n"
+"  just use the supplied file-comment."
 msgstr ""
 
 #: src/compiler/main.lisp
@@ -18330,7 +18408,9 @@ msgid "Redefining ~(~A~) ~S to be a constant."
 msgstr ""
 
 #: src/compiler/ir1util.lisp
-msgid "Return the TLF-NUMBER and FORM-NUMBER encoded as fixnum."
+msgid ""
+"Return the TLF-NUMBER and FORM-NUMBER encoded as fixnum, if\n"
+"  possible.  Otherwise, return Nil."
 msgstr ""
 
 #: src/compiler/ir1util.lisp
@@ -21041,6 +21121,14 @@ msgstr ""
 
 msgid ""
 "CP1258 is a Windows code page for Vietnamese.\n"
+"\n"
+"By default, illegal inputs are replaced by the Unicode replacement\n"
+"character and illegal outputs are replaced by a question mark."
+msgstr ""
+
+msgid ""
+"EUC-KR is an variable-length character encoding generally intended for\n"
+"Korean Hangul.\n"
 "\n"
 "By default, illegal inputs are replaced by the Unicode replacement\n"
 "character and illegal outputs are replaced by a question mark."

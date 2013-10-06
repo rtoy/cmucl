@@ -144,7 +144,7 @@
   ;; vectors of CHAR-CODE-LIMIT functions, for use in defining dispatching
   ;; macros (like #-macro).
   (dispatch-tables () :type list)
-  (readtable-case :upcase :type (member :upcase :downcase :preserve :invert))
+  (%readtable-case :upcase :type (member :upcase :downcase :preserve :invert))
   ;;
   ;; The CHARACTER-ATTRIBUTE-HASH-TABLE handles the case of char codes
   ;; above ATTRIBUTE-TABLE-LIMIT, since we expect these to be
@@ -461,8 +461,21 @@
 
 ;;;; Readtable operations.
 
+(defun assert-not-standard-readtable (readtable operation)
+  (when (eq readtable std-lisp-readtable)
+    (cerror "Modify it anyway." 'kernel:standard-readtable-modified-error
+	    :operation operation)))
+
+(defun readtable-case (table)
+  (%readtable-case table))
+
+(defun (setf readtable-case) (new-case table)
+  (assert-not-standard-readtable table '(setf readtable-case))
+  (setf (%readtable-case table) new-case))
+
 (defun copy-readtable (&optional (from-readtable *readtable*) to-readtable)
   "A copy is made of from-readtable and place into to-readtable."
+  (assert-not-standard-readtable to-readtable 'copy-readtable)
   (let ((from-readtable (or from-readtable std-lisp-readtable))
 	(to-readtable (or to-readtable (make-readtable))))
     (flet ((copy-hash-table (to from)
@@ -495,6 +508,7 @@
   "Causes the syntax of to-char to be the same as from-char in the 
   optional readtable (defaults to the current readtable).  The
   from-table defaults the standard lisp readtable by being nil."
+  (assert-not-standard-readtable to-readtable 'set-syntax-from-char)
   (let ((from-readtable (or from-readtable std-lisp-readtable)))
     ;;copy from-char entries to to-char entries, but make sure that if
     ;;from char is a constituent you don't copy non-movable secondary
@@ -538,10 +552,12 @@
    make the macro character non-terminating.  The optional readtable
    argument defaults to the current readtable.  Set-macro-character
    returns T."
-  (if non-terminatingp
-      (set-cat-entry char (get-secondary-attribute char) rt)
-      (set-cat-entry char #.terminating-macro rt))
-  (set-cmt-entry char function rt)
+  (let ((designated-readtable (or rt std-lisp-readtable)))
+    (assert-not-standard-readtable designated-readtable 'set-macro-character)
+    (if non-terminatingp
+	(set-cat-entry char (get-secondary-attribute char) designated-readtable)
+	(set-cat-entry char #.terminating-macro designated-readtable))
+    (set-cmt-entry char function designated-readtable))
   T)
 
 (defun get-macro-character (char &optional (rt *readtable*))
@@ -595,46 +611,54 @@
   (setq std-lisp-readtable (make-readtable))
   ;;all characters default to "constituent" in make-readtable
   ;;*** un-constituent-ize some of these ***
-  (let ((*readtable* std-lisp-readtable))
-    (set-cat-entry #\tab #.whitespace)
-    (set-cat-entry #\linefeed #.whitespace)  
-    (set-cat-entry #\space #.whitespace)
-    (set-cat-entry #\page #.whitespace)
-    (set-cat-entry #\return #.whitespace)
-    (set-cat-entry #\\ #.escape)
-    (set-cat-entry #\| #.multiple-escape)
-    (set-cmt-entry #\\ #'read-token)
-    (set-cmt-entry #\: #'read-token)
-    (set-cmt-entry #\| #'read-token)
-    ;;macro definitions
-    (set-macro-character #\" #'read-string)
-    ;;* # macro
-    (set-macro-character #\' #'read-quote)
-    (set-macro-character #\( #'read-list)
-    (set-macro-character #\) #'read-right-paren)
-    (set-macro-character #\; #'read-comment)
-    ;;* backquote
-    ;;all constituents
-    (do ((ichar 0 (1+ ichar))
-	 (len #+unicode-bootstrap #o200
-	      #-unicode-bootstrap char-code-limit))
-	((= ichar len))
-      (let ((char (code-char ichar)))
-	#-unicode
-	(when (constituentp char std-lisp-readtable)
-	  (set-cat-entry char (get-secondary-attribute char))
-	  (set-cmt-entry char #'read-token))
-	#+unicode
-	(cond ((constituentp char std-lisp-readtable)
-	       (set-cat-entry char (get-secondary-attribute char))
-	       (when (< ichar attribute-table-limit)
-		 ;; The hashtable default in get-cmt-entry returns
-		 ;; #'read-token, so don't need to set it here.
-		 (set-cmt-entry char #'read-token)))
-	      ((>= ichar attribute-table-limit)
-	       ;; A non-constituent character that would be stored in
-	       ;; the hash table gets #'undefined-macro-char.
-	       (set-cmt-entry char #'undefined-macro-char)))))))
+  (handler-bind
+      ((standard-readtable-modified-error
+	(lambda (c)
+	  (declare (ignore c))
+	  ;; Of course, we want to be able to modify the standard
+	  ;; readtable here!
+	  (invoke-restart 'kernel::continue))))
+    (let ((*readtable* std-lisp-readtable)
+	  (*assert-not-standard-readtable* nil))
+      (set-cat-entry #\tab #.whitespace)
+      (set-cat-entry #\linefeed #.whitespace)  
+      (set-cat-entry #\space #.whitespace)
+      (set-cat-entry #\page #.whitespace)
+      (set-cat-entry #\return #.whitespace)
+      (set-cat-entry #\\ #.escape)
+      (set-cat-entry #\| #.multiple-escape)
+      (set-cmt-entry #\\ #'read-token)
+      (set-cmt-entry #\: #'read-token)
+      (set-cmt-entry #\| #'read-token)
+      ;;macro definitions
+      (set-macro-character #\" #'read-string)
+      ;;* # macro
+      (set-macro-character #\' #'read-quote)
+      (set-macro-character #\( #'read-list)
+      (set-macro-character #\) #'read-right-paren)
+      (set-macro-character #\; #'read-comment)
+      ;;* backquote
+      ;;all constituents
+      (do ((ichar 0 (1+ ichar))
+	   (len #+unicode-bootstrap #o200
+		#-unicode-bootstrap char-code-limit))
+	  ((= ichar len))
+	(let ((char (code-char ichar)))
+	  #-unicode
+	  (when (constituentp char std-lisp-readtable)
+	    (set-cat-entry char (get-secondary-attribute char))
+	    (set-cmt-entry char #'read-token))
+	  #+unicode
+	  (cond ((constituentp char std-lisp-readtable)
+		 (set-cat-entry char (get-secondary-attribute char))
+		 (when (< ichar attribute-table-limit)
+		   ;; The hashtable default in get-cmt-entry returns
+		   ;; #'read-token, so don't need to set it here.
+		   (set-cmt-entry char #'read-token)))
+		((>= ichar attribute-table-limit)
+		 ;; A non-constituent character that would be stored in
+		 ;; the hash table gets #'undefined-macro-char.
+		 (set-cmt-entry char #'undefined-macro-char))))))))
 
 
 

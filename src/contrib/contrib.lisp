@@ -40,4 +40,8 @@
 (defmodule "contrib-sprof"
     "modules:sprof/compile-sprof")
 
+;; packed sse2 needs to be compiled to work.
+(defmodule "contrib-packed-sse2"
+    "modules:packed-sse2/compile-packed-sse2")
+
 (provide "cmu-contribs")

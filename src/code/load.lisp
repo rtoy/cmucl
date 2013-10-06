@@ -19,7 +19,7 @@
 
 (in-package "EXTENSIONS")
 (export '(*load-if-source-newer* *load-source-types* *load-object-types*
-	  invalid-fasl))
+	  invalid-fasl *default-source-external-format*))
 
 (in-package "SYSTEM")
 (export '(foreign-symbol-address alternate-get-global-address))
@@ -94,6 +94,7 @@
 	     (invalid-fasl-pathname condition)
 	     (invalid-fasl-version condition)
 	     (invalid-fasl-expected-version condition)))))
+
 
 ;;; LOAD-FRESH-LINE -- internal.
 ;;;
@@ -522,6 +523,10 @@
        of guessing based on the file type.  This also inhibits file type
        defaulting.  Probably only necessary if you have source files with a
        \"fasl\" type. 
+
+   :EXTERNAL-FORMAT
+       The external-format to use when opening the FILENAME. The default is
+       :default which uses the EXT:*DEFAULT-EXTERNAL-FORMAT*.
 
    The variables *LOAD-VERBOSE*, *LOAD-PRINT* and EXT:*LOAD-IF-SOURCE-NEWER*
    determine the defaults for the corresponding keyword arguments.  These

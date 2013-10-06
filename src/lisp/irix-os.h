@@ -1,7 +1,5 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/irix-os.h,v 1.4 2005/01/13 19:55:00 fgilham Rel $
-
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 

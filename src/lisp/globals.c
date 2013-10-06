@@ -1,5 +1,9 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.c,v 1.5 2005/09/15 18:26:51 rtoy Rel $ */
+/*
 
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
 /* Variables everybody needs to look at or frob on. */
 
 #include <stdio.h>

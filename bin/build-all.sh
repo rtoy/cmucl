@@ -29,27 +29,32 @@ usage ()
     echo '    -v v      Use the given string as the version.'
     echo "    -o x      Use specified Lisp to build unicode version."
     echo "               (only applicable for build 1)"
-    echo "    -8 x      Use specified Lisp to build 8-bit version."
+    echo "    -8 x      DEPRECATED: Use specified Lisp to build 8-bit version."
     echo "               (only applicable for build 1)"
     echo "    -U        Update and overwite the translations files."
     echo "    -P        On the last build, (re)generate cmucl.pot and the"
     echo "               translations"
+    echo "    -R        Force recompilation of C runtime"
+    echo "    -G        Don't use git to fill file-comment information"
 }
 
 CREATE_OPT=""
 UPDATE_POT="-P"
 
-while getopts "PUB:b:v:C:o:8:?" arg
+while getopts "PRUGB:b:v:C:o:8:?" arg
 do
     case $arg in
       b) BASE="$OPTARG" ;;
       B) bootfiles="$bootfiles -B $OPTARG" ;;
       C) CREATE_OPT="$OPTARG" ;;
       o) OLDLISP="$OPTARG" ;;
-      8) OLD8="$OPTARG" ;;
+      8) OLD8="$OPTARG" 
+	  echo "WARNING: -8 is deprecated";;
       v) VERSION="$OPTARG"; VERSION_SET=true ;;
       U) UPDATE_TRANS="-U" ;;
       P) UPDATE_POT="" ;;
+      R) RECOMPILEC="-R" ;;
+      G) GIT_FILE_COMMENT="-G" ;;
       \?) usage; exit 1 ;;
     esac
 done
@@ -57,8 +62,11 @@ done
 # If -b not given, try to derive one instead of just using "build".
 if [ -z "$BASE" ]; then
     case `uname -s` in
-      Darwin) # We only support darwin-x86 now.  No ppc available anymore.
-	  BASE=darwin ;;
+      Darwin)
+          case `uname -p` in
+            powerpc) BASE=ppc ;;
+            i386) BASE=darwin ;;
+          esac ;;
       SunOS)
 	  case `uname -m` in
 	    sun4u) BASE=sparc ;;
@@ -81,15 +89,15 @@ buildx86 ()
     if [ -n "$OLD8" ]; then
 	# Build non-unicode versions
 	set -x
-	$BINDIR/build.sh -f x87 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
-	$BINDIR/build.sh -f sse2 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
+	$BINDIR/build.sh -f x87 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} ${GIT_FILE_COMMENT} -o "$OLD8"
+	$BINDIR/build.sh -f sse2 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} ${GIT_FILE_COMMENT} -o "$OLD8"
 	set +x
     fi
     # Build the unicode versions
     if [ -n "$OLDLISP" ]; then
 	set -x
-	$BINDIR/build.sh -f x87 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
-	$BINDIR/build.sh -f sse2 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
+	$BINDIR/build.sh -f x87 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} ${GIT_FILE_COMMENT} -o "$OLDLISP"
+	$BINDIR/build.sh -f sse2 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} ${GIT_FILE_COMMENT} -o "$OLDLISP"
 	set +x
     fi
 }
@@ -102,19 +110,21 @@ buildsun4 ()
     # Build non-unicode versions
     if [ -n "$OLD8" ]; then
 	set -x
-	$BINDIR/build.sh -b ${BASE}-8bit $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLD8"
+	$BINDIR/build.sh -b ${BASE}-8bit $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} ${GIT_FILE_COMMENT} -o "$OLD8"
 	set +x
     fi
     # Build the unicode version.
     if [ -n "$OLDLISP" ]; then
 	set -x
-	$BINDIR/build.sh -b ${BASE} $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} -o "$OLDLISP"
+	$BINDIR/build.sh -b ${BASE} $bootfiles ${VERS} -C "$CREATE_OPT" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} ${GIT_FILE_COMMENT} -o "$OLDLISP"
 	set +x
     fi
 }
 
 case `uname -m` in
   i386*|x86*|i86pc) buildx86 ;;
-  sun*) buildsun4 ;;
+  sun*|"Power Mac*")
+    # buildsun4 works for sparc and ppc.
+    buildsun4 ;;
   *) echo "Unsupported architecture:  `uname -m`" ;;
 esac

@@ -128,6 +128,32 @@ msgstr ""
 msgid "Number of bytes in a word."
 msgstr ""
 
+#: src/compiler/x86/parms.lisp
+msgid "Number of bits at the low end of a pointer used for type information."
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "Mask to extract the low tag bits from a pointer."
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid ""
+"Exclusive upper bound on the value of the low tag bits from a\n"
+"  pointer."
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "Number of tag bits used for a fixnum"
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "Mask to get the fixnum tag"
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "Maximum number of bits in a positive fixnum"
+msgstr ""
+
 #: src/compiler/x86/vm.lisp
 msgid "Redefining SC number ~D from ~S to ~S."
 msgstr ""
@@ -238,6 +264,12 @@ msgstr ""
 msgid "word integer argument move"
 msgstr ""
 
+#: src/compiler/x86/system.lisp
+msgid ""
+"Returns the primary value of BODY as the primary value, and the\n"
+" number of CPU cycles elapsed as secondary value."
+msgstr ""
+
 #: src/compiler/x86/char.lisp
 msgid "character untagging"
 msgstr ""
@@ -302,6 +334,10 @@ msgstr ""
 msgid "SHIFT-TOWARDS-END"
 msgstr ""
 
+#: src/compiler/x86/arith.lisp
+msgid "inline right ASH"
+msgstr ""
+
 #: src/compiler/x86/c-call.lisp
 msgid "Too many result values from c-call."
 msgstr ""
@@ -310,7 +346,7 @@ msgstr ""
 msgid "Method ~S not defined for ~S"
 msgstr ""
 
-#: src/compiler/x86/c-call.lisp
+#: src/compiler/x86/c-callback.lisp
 msgid ""
 "Cons up a piece of code which calls call-callback with INDEX and a\n"
 "pointer to the arguments."

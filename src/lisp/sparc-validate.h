@@ -1,7 +1,5 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.21 2005/09/15 18:26:52 rtoy Rel $
-
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 

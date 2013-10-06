@@ -1,4 +1,9 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.h,v 1.11 2007/01/01 11:53:03 cshapiro Rel $ */
+/*
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
 
 #ifndef _INTERRUPT_H_
 #define _INTERRUPT_H_

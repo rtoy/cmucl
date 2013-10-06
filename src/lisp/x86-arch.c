@@ -1,8 +1,9 @@
-/* x86-arch.c -*- Mode: C; comment-column: 40 -*-
- *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.43 2010/12/26 16:04:43 rswindells Exp $ 
- *
- */
+/*
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -340,17 +341,14 @@ sigtrap_handler(HANDLER_ARGS)
 
       case trap_Halt:
 	  {
-#ifndef __linux__
-	      int fpu_state[27];
+              FPU_STATE(fpu_state);
+              save_fpu_state(fpu_state);
 
-	      fpu_save(fpu_state);
-#endif
 	      fake_foreign_function_call(os_context);
 	      lose("%%primitive halt called; the party is over.\n");
 	      undo_fake_foreign_function_call(os_context);
-#ifndef __linux__
-	      fpu_restore(fpu_state);
-#endif
+
+              restore_fpu_state(fpu_state);
 	      arch_skip_instruction(os_context);
 	      break;
 	  }

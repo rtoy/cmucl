@@ -1477,7 +1477,16 @@ See the CMU Common Lisp User's Manual for more information.
 	  (aref (or (di:debug-source-start-positions d-source)
 		    (error (intl:gettext "No start positions map.")))
 		local-tlf-offset))
-	 (name (di:debug-source-name d-source)))
+	 (name (di:debug-source-name d-source))
+	 ;; See ticket:70.  Bind *d-p-d* to a unix host so we can
+	 ;; parse logical pathnames and search-lists that might be
+	 ;; stored in the source name.  There is an issue if the name
+	 ;; is a logical pathname and the host isn't defined.  This
+	 ;; will be interpreted as a search-list (undefined), but we
+	 ;; won't error out.  This will be a problem if we try to
+	 ;; define the logical host with the same name later.
+	 (*default-pathname-defaults*
+	   (make-pathname :host lisp::*unix-host*)))
     (unless (eq d-source *cached-debug-source*)
       (unless (and *cached-source-stream*
 		   (equal (pathname *cached-source-stream*)
@@ -1486,7 +1495,7 @@ See the CMU Common Lisp User's Manual for more information.
 	(when *cached-source-stream* (close *cached-source-stream*))
 	(setq *cached-source-stream*
 	      (open name :if-does-not-exist nil
-		    :external-format (or (c::debug-source-info d-source) :default)))
+		    :external-format (c::debug-source-info d-source)))
 	(unless *cached-source-stream*
 	  (error (intl:gettext "Source file no longer exists:~%  ~A.") (namestring name)))
 	(format t (intl:gettext "~%; File: ~A~%") (namestring name)))

@@ -1,6 +1,9 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.h,v 1.4 2008/12/10 16:16:11 rtoy Rel $
- */
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
 
 #ifndef _SAVE_H_
 #define _SAVE_H_

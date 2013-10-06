@@ -564,6 +564,20 @@
 
 (defvar *.table-inverse.* (make-hash-table :test 'eq :size 7))
 
+;; Create a trie that is the inverse of the given table.  The table
+;; can be an array of rank 1 or 2.  Each dimension is limited to a
+;; maximum of 254.
+;;
+;; Let table have rank 1 and let (aref table k) = uuuu.  Then
+;; INVERT-TABLE creates a trie such that (get-inverse (invert-table
+;; table) uuuu) = #xbb and (aref table (1- #xbb)) = uuuu.  If,
+;; however, the table has no entry that matches uuuu, get-inverse
+;; returns NIL.
+;;
+;; For a table of rank 2, we have (aref table m n) = uuuu, Then
+;; INVERT-TABLE creates a trie such that (get-inverse (invert-table
+;; table) uuuu) = #xaabb, where (aref table (1- #xbb) (1- #xaa)) =
+;; uuuu.
 (defun invert-table (table)
   (declare (type (or (simple-array (unsigned-byte 31) *)
 		     (simple-array (unsigned-byte 16) *))
@@ -584,7 +598,7 @@
 	     (power (1- (array-rank table)))
 	     (base (if (= width 94) 1 0))
 	     hx mx lx)
-	(assert (and (< power 2) (<= width 256)))
+	(assert (and (< power 2) (<= width 16384)))
 	(dotimes (i (array-total-size table))
 	  (declare (type (integer 0 (#.array-dimension-limit)) i))
 	  (let ((tmp i) (val (row-major-aref table i)) (z 0))
@@ -1157,7 +1171,8 @@ character and illegal outputs are replaced by a question mark.")
 	(#.+ef-os+ (%ef-octets-to-string ef))
 	(#.+ef-so+ (%ef-string-to-octets ef))
 	(#.+ef-en+ (%ef-encode ef))
-	(#.+ef-de+ (%ef-decode ef))))
+	(#.+ef-de+ (%ef-decode ef))
+	(#.+ef-osc+ (%ef-octets-to-string-counted ef))))
     `(setf (aref (ef-cache (find-external-format ,(ef-name ef))) ,slot)
 	 ,(subst (ef-name ef) ef
 		 (function-lambda-expression (aref (ef-cache ef) slot))))))

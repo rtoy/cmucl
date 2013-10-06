@@ -2570,7 +2570,7 @@
       (when (vm:primitive-object-header obj)
 	(format t "    lispobj header;~%"))
       (dolist (slot (vm:primitive-object-slots obj))
-	(format t "    ~A ~A~@[[1]~];~%"
+	(format t "    ~A ~A~@[[]~];~%"
 		(getf (vm:slot-options slot) :c-type "lispobj")
 		(nsubstitute #\_ #\-
 			     (string-downcase (string (vm:slot-name slot))))
@@ -2928,9 +2928,8 @@
 
       ;; For x86, identify the core as using either x87 or sse2
       ;; instructions.
-      (cond ((and (eql (c:backend-fasl-file-implementation c:*backend*)
-		       c:x86-fasl-file-implementation)
-		  (c:backend-featurep :sse2))
+      (cond ((eql (c:backend-fasl-file-implementation c:*backend*)
+		  c:x86-fasl-file-implementation)
 	     (write-long 4)
 	     (write-long version)
 	     ;; See the definition of fpu_mode_t in lisp.h for correct

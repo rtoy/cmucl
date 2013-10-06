@@ -1,4 +1,10 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.14 2009/01/20 03:58:11 agoncharov Rel $ */
+/*
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/file.h>

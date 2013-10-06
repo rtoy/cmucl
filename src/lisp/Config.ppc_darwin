@@ -17,7 +17,7 @@ CC = gcc
 LD = ld
 NM = $(PATH1)/darwin-nm
 CPP = cpp -no-cpp-precomp
-DEPEND = $(CC) -MM
+DEPEND_FLAGS = -MM
 
 ifdef FEATURE_LINKAGE_TABLE
 LINKAGE = -DLINKAGE_TABLE

@@ -738,12 +738,10 @@
 				     :write-date (file-write-date x)
 				     :language :lisp))
 		 files)))
-
     (make-source-info :files file-info
 		      :current-file file-info
 		      #+unicode :external-format
-		      #+unicode (stream::ef-name
-				 (stream::find-external-format external-format))
+		      #+unicode external-format
 		      #+unicode :decoding-error
 		      #+unicode decoding-error)))
 
@@ -1096,34 +1094,41 @@
 ;;;
 ;;;    Stash file comment in the file-info structure.
 ;;;
+
+(defvar *file-comment-from-git* t
+  "If non-Nil, use git to derive the file-comment.  This info includes
+  the sha1 hash, the time and the author of the change.  Otherwise,
+  just use the supplied file-comment.")
+  
 (defun process-file-comment (form)
   (unless (and (= (length form) 2) (stringp (second form)))
     (compiler-error _N"Bad FILE-COMMENT form: ~S." form))
   (let ((file (first (source-info-current-file *source-info*))))
     (labels
 	((run-git (path)
-	   (let ((cwd (default-directory))
-		 (new (make-pathname :directory (pathname-directory path))))
-	     (unwind-protect
-		  (progn
-		    ;; Cd to the directory containing the file so that
-		    ;; git can find the git repo, if available.
-		    (setf (default-directory) new)
-		    ;; Run git to get the info.  Don't signal any
-		    ;; errors if we can't find git and discard any
-		    ;; error messages from git.  We only use the
-		    ;; result if git returns a zero exit code, anyway.
-		    (handler-case
-			(run-program "git"
-				     (list "log"
-					   "-1"
-					   "--pretty=format:%h %ai %an"
-					   (namestring path))
-				     :output :stream
-				     :error nil)
-		      (error ()
-			nil)))
-	       (setf (default-directory) cwd))))
+	   (when *file-comment-from-git*
+	     (let ((cwd (default-directory))
+		   (new (make-pathname :directory (pathname-directory path))))
+	       (unwind-protect
+		    (progn
+		      ;; Cd to the directory containing the file so that
+		      ;; git can find the git repo, if available.
+		      (setf (default-directory) new)
+		      ;; Run git to get the info.  Don't signal any
+		      ;; errors if we can't find git and discard any
+		      ;; error messages from git.  We only use the
+		      ;; result if git returns a zero exit code, anyway.
+		      (handler-case
+			  (run-program "git"
+				       (list "log"
+					     "-1"
+					     "--pretty=format:%h %ai %an"
+					     (namestring path))
+				       :output :stream
+				       :error nil)
+			(error ()
+			  nil)))
+		 (setf (default-directory) cwd)))))
 	 (generate-comment (file-info)
 	   (let* ((name (pathname (source-info-stream file-info)))
 		  (proc (run-git name))
@@ -1210,11 +1215,10 @@
       (if (atom form)
 	  (convert-and-maybe-compile form path)
 	  (case (car form)
-	    ((make-package shadow shadowing-import export
-	      unexport use-package unuse-package import
-	      old-in-package %in-package %defpackage)
+	    ((%in-package %defpackage)
 	     (process-cold-load-form form path t))
-	    ((error cerror break signal)
+	    ((error cerror break signal make-package use-package unuse-package shadow
+	      shadowing-import export unexport import)
 	     (process-cold-load-form form path nil))
 	    (kernel:%compiler-defstruct
 	     (convert-and-maybe-compile form path)

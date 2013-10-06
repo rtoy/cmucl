@@ -115,7 +115,7 @@
 	(*print-level* nil)
 	(*print-lines* nil)
 	(*print-miser-width* nil)
-	(*print-pprint-dispatch* (copy-pprint-dispatch nil))
+	(*print-pprint-dispatch* pp::*initial-pprint-dispatch*)
 	(*print-pretty* nil)
 	(*print-radix* nil)
 	(*print-readably* t)
@@ -1297,17 +1297,22 @@
       (write-char #\. stream)))
 
 (defun sub-output-integer (integer stream)
-  (let ((quotient ())
-	(remainder ()))
+  (declare (type (and fixnum unsigned-byte) integer))
+  (let ((quotient 0)
+	(remainder 0))
+    (declare (fixnum quotient remainder))
     ;; Recurse until you have all the digits pushed on the stack.
-    (if (not (zerop (multiple-value-setq (quotient remainder)
-		      (truncate integer *print-base*))))
-	(sub-output-integer quotient stream))
+    (when (not (zerop (multiple-value-setq (quotient remainder)
+			(truncate integer (the (integer 2 35) *print-base*)))))
+      (sub-output-integer quotient stream))
     ;; Then as each recursive call unwinds, turn the digit (in remainder) 
     ;; into a character and output the character.
     (write-char (code-char (if (and (> remainder 9.)
 				    (> *print-base* 10.))
-			       (+ (char-code #\A) (- remainder 10.))
+			       (+ (if (eq *print-case* :downcase)
+				      (char-code #\a)
+				      (char-code #\A))
+				  (- remainder 10.))
 			       (+ (char-code #\0) remainder)))
 		stream)))
 
@@ -1343,12 +1348,12 @@ greater than n."
 
 (declaim (inline digit-to-char))
 (defun digit-to-char (d)
-  "Convert digit into a character representation.  We use 0..9, a..z for
-10..35, and A..Z for 36..52."
+  "Convert digit into a character representation."
   (declare (fixnum d))
   (labels ((offset (d b) (code-char (+ d (char-code b)))))
     (cond ((< d 10) (offset d #\0))
-	  ((< d 36) (offset (- d 10) #\A))
+	  ((< d 36) (offset (- d 10) (if (eq *print-case* :downcase)
+					 #\a #\A)))
 	  (t (error _"overflow in digit-to-char")))))
 
 (defun print-fixnum-sub (n r z s)
@@ -1837,12 +1842,12 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 ;; Exact powers of ten.  Must be large enough to cover the range from
 ;; least-positive-double-float to most-positive-double-float
-(declaim (type (simple-array integer (326)) *powers-of-ten*))
+(declaim (type (simple-array integer (400)) *powers-of-ten*))
 (defparameter *powers-of-ten*
-  (make-array 326
+  (make-array 400
 	      :initial-contents
 	      (let (p)
-		(dotimes (k 326 (nreverse p))
+		(dotimes (k 400 (nreverse p))
 		  (push (expt 10 k) p)))))
 
 ;;; Implementation of Figure 1 from "Printing Floating-Point Numbers
@@ -1957,9 +1962,11 @@ radix-R.  If you have a power-list then pass it in as PL."
 			  m- 1)))
 	    (when position
 	      (flet ((expt-ten (e)
-		       (if (minusp e)
-			   (/ (aref *powers-of-ten* (- e)))
-			   (aref *powers-of-ten* e))))
+		       (if (> (abs e) (length *powers-of-ten*))
+			   (expt 10 e)
+			   (if (minusp e)
+			       (/ (aref *powers-of-ten* (- e)))
+			       (aref *powers-of-ten* e)))))
 		(when relativep
 		  (let ((r+m (+ r m+)))
 		    ;;(format t "r, s = ~A, ~A~%" r s)

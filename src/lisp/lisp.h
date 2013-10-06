@@ -1,4 +1,9 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.12 2010/10/10 14:54:52 rtoy Exp $ */
+/*
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
 
 #ifndef _LISP_H_
 #define _LISP_H_

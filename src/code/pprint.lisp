@@ -1223,11 +1223,17 @@ When annotations are present, invoke them at the right positions."
 		    (output-ugly-object object stream))
 		nil))))
 
+(defun assert-not-standard-pprint-dispatch-table (pprint-dispatch operation)
+  (when (eq pprint-dispatch *initial-pprint-dispatch*)
+    (cerror "Modify it anyway." 'standard-pprint-dispatch-table-modified-error
+	    :operation operation)))
+
 (defun set-pprint-dispatch (type function &optional
 			    (priority 0) (table *print-pprint-dispatch*))
   (declare (type (or null symbol function) function)
 	   (type real priority)
 	   (type pprint-dispatch-table table))
+  (assert-not-standard-pprint-dispatch-table table 'set-pprint-dispatch)
   (if function
       (if (cons-type-specifier-p type)
 	  (setf (gethash (second (second type))
@@ -1952,18 +1958,25 @@ When annotations are present, invoke them at the right positions."
   (setf *initial-pprint-dispatch* (make-pprint-dispatch-table))
   (let ((*print-pprint-dispatch* *initial-pprint-dispatch*)
 	(*building-initial-table* t))
-    ;; Printers for regular types.
-    (set-pprint-dispatch 'array #'pprint-array)
-    (set-pprint-dispatch '(cons (and symbol (satisfies fboundp)))
-			 #'pprint-function-call -1)
-    (set-pprint-dispatch 'cons #'pprint-fill -2)
-    ;; Cons cells with interesting things for the car.
-    (dolist (magic-form *magic-forms*)
-      (set-pprint-dispatch `(cons (eql ,(first magic-form)))
-			   (symbol-function (second magic-form))))
-    ;; Other pretty-print init forms.
-    (lisp::backq-pp-init)
-    (loop-pp-init))
+    (handler-bind
+	((standard-pprint-dispatch-table-modified-error
+	  (lambda (c)
+	    (declare (ignore c))
+	    ;; Of course, we want to be able to modify the standard
+	    ;; pprint dispatch table here!
+	    (invoke-restart 'kernel::continue))))
+      ;; Printers for regular types.
+      (set-pprint-dispatch 'array #'pprint-array)
+      (set-pprint-dispatch '(cons (and symbol (satisfies fboundp)))
+			   #'pprint-function-call -1)
+      (set-pprint-dispatch 'cons #'pprint-fill -2)
+      ;; Cons cells with interesting things for the car.
+      (dolist (magic-form *magic-forms*)
+	(set-pprint-dispatch `(cons (eql ,(first magic-form)))
+			     (symbol-function (second magic-form))))
+      ;; Other pretty-print init forms.
+      (lisp::backq-pp-init)
+      (loop-pp-init)))
 
   (setf *print-pprint-dispatch* (copy-pprint-dispatch nil))
   (setf *pretty-printer* #'output-pretty-object)

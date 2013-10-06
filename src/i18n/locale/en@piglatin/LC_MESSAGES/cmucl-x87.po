@@ -1,12 +1,10 @@
-# @ cmucl-x87
+#@ cmucl-x87
 # SOME DESCRIPTIVE TITLE
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
 #
 #, fuzzy
 msgid ""
-msgstr ""
-"Project-Id-Version: CMUCL 20B\n"
-"Report-Msgid-Bugs-To: \n"
+msgstr "Project-Id-Version: CMUCL 20D\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: Automatic translation\n"
 "Language-Team: Pig Latin (auto-translated)\n"
@@ -40,11 +38,10 @@ msgstr "oatflay otay ointerpay oercioncay"
 #: src/compiler/x86/float.lisp
 msgid ""
 "Load TN allocated, but no move function?~@\n"
-"\t           VM definition inconsistent, recompile and try again."
+"	           VM definition inconsistent, recompile and try again."
 msgstr ""
 "Oadlay TN allocatedway, utbay onay ovemay unctionfay?~@\n"
-"\t           VM efinitionday inconsistentway, ecompileray andway ytray "
-"againway."
+"	           VM efinitionday inconsistentway, ecompileray andway ytray againway."
 
 #: src/compiler/x86/float.lisp
 msgid "pointer to float coercion"
@@ -205,3 +202,4 @@ msgstr "oubleday-oubleday owlay artpay"
 #: src/compiler/x86/float.lisp
 msgid "inline complex double-double-float creation"
 msgstr "inlineway omplexcay oubleday-oubleday-oatflay eationcray"
+

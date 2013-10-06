@@ -1,6 +1,9 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.h,v 1.4 2005/09/15 18:26:51 rtoy Rel $
- */
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
 
 #ifndef _INTERR_H_
 #define _INTERR_H_
@@ -11,6 +14,7 @@ extern void lose(char *fmt, ...);
 extern void set_lossage_handler(void fun(void));
 extern void internal_error(os_context_t * context);
 
+extern void utf16_output(unsigned short int* utf16, int len);
 extern lispobj debug_print(lispobj string);
 
 #endif /* _INTERR_H_ */

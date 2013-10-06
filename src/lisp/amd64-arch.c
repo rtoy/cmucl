@@ -1,6 +1,5 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-arch.c,v 1.11 2009/11/02 15:05:07 rtoy Rel $ 
  *
  */
 

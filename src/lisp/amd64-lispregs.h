@@ -1,5 +1,5 @@
 /* x86-lispregs.h -*- Mode: C; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-lispregs.h,v 1.6 2009/11/02 15:05:07 rtoy Rel $
+
  */
 
 /* These register names and offsets correspond to definitions

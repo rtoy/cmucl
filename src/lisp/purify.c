@@ -10,8 +10,6 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.43 2009/06/11 16:04:01 rtoy Rel $ 
-
    */
 #include <stdio.h>
 #include <sys/types.h>

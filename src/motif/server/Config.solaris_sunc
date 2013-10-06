@@ -6,8 +6,6 @@ CFLAGS = -O -DSVR4 -I. -I/usr/dt/include -I/usr/openwin/include
 LDFLAGS = -L/usr/dt/lib -R/usr/dt/lib -L/usr/openwin/lib -R/usr/openwin/lib
 LIBS = -lXm -lXt -lX11 -lsocket -lnsl -lgen
 
-CC = cc
-
 # This def assumes you are building in the same or parallel
 # tree to the CVS souce layout. Sites may need to customize
 # this path.

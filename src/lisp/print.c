@@ -1,4 +1,9 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.30 2010/10/22 04:07:33 rtoy Exp $ */
+/*
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
 
 #include <stdio.h>
 #include <string.h>
@@ -6,6 +11,8 @@
 #include "print.h"
 #include "lisp.h"
 #include "internals.h"
+#include "os.h"
+#include "interr.h"
 #include "monitor.h"
 #include "vars.h"
 #include "os.h"
@@ -371,14 +378,7 @@ print_string(struct vector* vector)
     uint16_t *charptr = (uint16_t *) vector->data;
     int len = fixnum_value(vector->length);
               
-    while (len-- > 0) {
-        if (*charptr == '"') {
-            putchar('\\');
-        }
-        /* Just dump out the UTF-16 data */
-        fwrite(charptr, sizeof(*charptr), 1,  stdout);
-        charptr++;
-    }
+    utf16_output(charptr, len);
 #endif
 }
 

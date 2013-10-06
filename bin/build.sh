@@ -39,12 +39,14 @@ ENABLE2="yes"
 ENABLE3="yes"
 ENABLE4="yes"
 
-version=20c
+version=20d
 SRCDIR=src
 BINDIR=bin
 TOOLDIR=$BINDIR
 OLDLISPFLAGS="-noinit -nositeinit"
 OLDLISP="cmulisp"
+GIT_FILE_COMMENT="yes"
+export GIT_FILE_COMMENT
 
 SKIPUTILS=no
 
@@ -66,7 +68,7 @@ fi
 
 usage ()
 {
-    echo "build.sh [-123obvuBCU?]"
+    echo "build.sh [-123obvuBCUG?]"
     echo "    -1        Skip build 1"
     echo "    -2        Skip build 2"
     echo "    -3        Skip build 3"
@@ -75,12 +77,12 @@ usage ()
     echo '    -b d      The different build directories are named ${d}-2, ${d}-3 ${d}-4'
     echo '               If -b is not given, a suitable name based on the OS is used.' 
     echo '    -v v      Use the given string as the version.  Default is'
-    echo "               today's date"
+    echo "               based on git describe"
     echo "    -u        Don't build CLX, CLM, or Hemlock"
     echo '    -i n      Make build "n" interactive, so output is sent to *standard-output*'
     echo '               instead of the log file. "n" should be a string consisting of'
     echo '                the numbers 1, 2, or 3.'
-    echo "    -B file   Use file as a boot file.  Maybe be specified more than once"
+    echo "    -B file   Use file as a boot file.  May be be specified more than once"
     echo "               The file is relative to the bootfiles/<version> directory"
     echo '    -C [l m]  Create the build directories.  The args are what'
     echo '               you would give to create-target.sh for the lisp'
@@ -96,6 +98,7 @@ usage ()
     echo "               The flags always include -noinit -nositeinit"
     echo "    -R        Force recompiling the C runtime.  Normally, just runs make to "
     echo "               recompile anything that has changed."
+    echo "    -G        Don't use git to fill file-comment information"
     exit 1
 }
 
@@ -152,7 +155,7 @@ BUILDWORLD="$TOOLDIR/build-world.sh"
 BUILD_POT="yes"
 UPDATE_TRANS=
 
-while getopts "123PRo:b:v:uB:C:Ui:f:w:O:?" arg
+while getopts "123PRGo:b:v:uB:C:Ui:f:w:O:?" arg
 do
     case $arg in
 	1) ENABLE2="no" ;;
@@ -172,6 +175,7 @@ do
         U) UPDATE_TRANS="yes";;
 	O) OLDLISPFLAGS="$OLDLISPFLAGS $OPTARG" ;;
         R) REBUILD_LISP="yes";;
+	G) GIT_FILE_COMMENT="no";;
 	\?) usage
 	    ;;
     esac
@@ -187,7 +191,7 @@ if [ -z "$BASE" ]; then
           esac ;;
       SunOS)
 	  case `uname -m` in
-	    sun4u) BASE=sparc ;;
+	    sun4*) BASE=sparc ;;
 	    i86pc) BASE=sol-x86 ;;
 	  esac ;;
       Linux) BASE=linux ;;
@@ -246,6 +250,20 @@ fi
 
 BUILD=3
 buildit
+
+# Asdf and friends are part of the base install, so we need to build
+# them now.
+$TARGET/lisp/lisp $FPU_MODE -noinit -nositeinit -batch "$@" << EOF || exit 3
+(in-package :cl-user)
+(setf (ext:search-list "target:")
+      '("$TARGET/" "src/"))
+(setf (ext:search-list "modules:")
+      '("target:contrib/"))
+
+(compile-file "modules:asdf/asdf")
+(compile-file "modules:defsystem/defsystem")
+EOF
+
 
 if [ "$SKIPUTILS" = "no" ];
 then

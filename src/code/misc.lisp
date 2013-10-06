@@ -133,18 +133,7 @@
   string)
 
 
-#+nil
-(defvar *features* '(:common :common-lisp :ansi-cl :ieee-floating-point :cmu)
-  "Holds a list of symbols that describe features provided by the
-   implementation.")
-
 ;;; Register various Lisp features
-#+i486
-(sys:register-lisp-runtime-feature :i486)
-
-#+pentium
-(sys:register-lisp-runtime-feature :pentium)
-
 #+sparc-v7
 (sys:register-lisp-runtime-feature :sparc-v7)
 
@@ -270,3 +259,10 @@
   loaded, ed can be used to edit a file"
   (declare (ignorable x))
   (values))
+
+(defun disassemble (object)
+  "Disassemble the machine code associated with OBJECT, which can be a
+  function, a lambda expression, or a symbol with a function definition.  If
+  it is not already compiled, the compiler is called to produce something to
+  disassemble."
+  (disassem:disassemble object))

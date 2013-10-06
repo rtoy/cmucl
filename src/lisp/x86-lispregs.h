@@ -1,6 +1,9 @@
-/* x86-lispregs.h -*- Mode: C; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.16 2010/12/24 06:01:34 rtoy Exp $
- */
+/*
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
 
 #ifndef _X86_LISPREGS_H_
 #define _X86_LISPREGS_H_

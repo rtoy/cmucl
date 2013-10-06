@@ -198,7 +198,7 @@
   (:args (function :scs (descriptor-reg) :target result)
 	 (fdefn :scs (descriptor-reg)))
   (:temporary (:sc unsigned-reg) raw)
-  (:temporary (:sc byte-reg) type)
+  (:temporary (:sc unsigned-reg) type)
   (:results (result :scs (descriptor-reg)))
   (:generator 38
     (load-type type function (- function-pointer-type))
@@ -383,7 +383,6 @@
   (:temporary (:sc descriptor-reg :offset eax-offset
 		   :from (:argument 2) :to :result :target result)  eax)
   (:results (result :scs (descriptor-reg any-reg)))
-  (:guard (backend-featurep :i486))
   (:policy :fast-safe)
   (:generator 5
     (move eax old-value)

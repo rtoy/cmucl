@@ -553,7 +553,7 @@
 ;;;
 (defoptimizer (scale-float derive-type) ((f ex))
   (two-arg-derive-type f ex #'scale-float-derive-type-aux
-		       #'scale-float t))
+		       #'scale-float))
 	     
 ;;; toy@rtp.ericsson.se:
 ;;;
@@ -634,6 +634,26 @@
   (frob >)
   (frob =))
 
+;; Convert (/ x n) to (* x (/ n)) when x is a float and n is a power
+;; of two, because (/ n) can be reprsented exactly.
+(deftransform / ((x y) (float float) * :when :both)
+  (unless (constant-continuation-p y)
+    (give-up))
+  (let ((val (continuation-value y)))
+    (unless (= (decode-float val) 0.5)
+      (give-up))
+    `(* x (float (/ ,val) x))))
+
+;; Convert 2*x to x+x.
+(deftransform * ((x y) (float real) * :when :both)
+  (unless (constant-continuation-p y)
+    (give-up))
+  (let ((val (continuation-value y)))
+    (unless (= val 2)
+      (give-up))
+    '(+ x x)))
+
+	      
 
 ;;;; Irrational transforms:
 

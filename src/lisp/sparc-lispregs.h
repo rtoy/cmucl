@@ -1,4 +1,9 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.10 2005/09/15 18:26:52 rtoy Rel $ */
+/*
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
 
 #ifndef _SPARC_LISPREGS_H_
 #define _SPARC_LISPREGS_H_

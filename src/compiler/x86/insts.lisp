@@ -422,57 +422,42 @@
     (princ (disassem:dstate-get-prop dstate 'width) stream)
     (princ '| PTR | stream))
   (write-char #\[ stream)
-  (let ((firstp t))
-    (macrolet ((pel ((var val) &body body)
-		 ;; Print an element of the address, maybe with
-		 ;; a leading separator.
-		 `(let ((,var ,val))
-		    (when ,var
-		      (unless firstp
-			(write-char #\+ stream))
-		      ,@body
-		      (setq firstp nil)))))
-      (pel (base-reg (first value))
-	(print-addr-reg base-reg stream dstate))
-      (pel (index-reg (third value))
-	(print-addr-reg index-reg stream dstate)
-	(let ((index-scale (fourth value)))
-	  (when (and index-scale (not (= index-scale 1)))
-	    (write-char #\* stream)
-	    (princ index-scale stream))))
-      (let ((offset (second value)))
-	(when (and offset (or firstp (not (zerop offset))))
-	  (unless (or firstp (minusp offset))
-	    (write-char #\+ stream))
-	  (if firstp
-	      (let ((unsigned-offset (if (minusp offset)
-					 (+ #x100000000 offset)
-					 offset)))
-		(disassem:princ16 unsigned-offset stream)
-		(or (nth-value 1
-			       (disassem::note-code-constant-absolute unsigned-offset
-								      dstate))
-		    (disassem:maybe-note-assembler-routine unsigned-offset
-							   stream
-							   dstate)
-		    (let ((offs (- offset disassem::nil-addr)))
-		      (when (typep offs 'disassem::offset)
-			(or (disassem::maybe-note-nil-indexed-symbol-slot-ref offs
-									      dstate)
-			    (disassem::maybe-note-static-function offs dstate))))))
-	      (princ offset stream))))))
+  (destructuring-bind (&optional base disp index scale) value
+    (when base
+      (print-addr-reg base stream dstate)
+      (when index
+	(write-char #\+ stream)))
+    (when index
+      (print-addr-reg index stream dstate))
+    (when (and scale (> scale 1))
+      (write-char #\* stream)
+      (princ scale stream))
+    (when (and disp (not (zerop disp)))
+      (let ((unsigned-offset (ldb (byte vm:word-bits 0) disp)))
+	(or (nth-value 1
+		       (disassem::note-code-constant-absolute unsigned-offset
+							      dstate))
+	    (disassem:maybe-note-assembler-routine unsigned-offset
+						   stream
+						   dstate)
+	    (let ((offs (- disp disassem::nil-addr)))
+	      (when (typep offs 'disassem::offset)
+		(or (disassem::maybe-note-nil-indexed-symbol-slot-ref offs
+								      dstate)
+		    (disassem::maybe-note-static-function offs dstate)))))
+	(cond ((or base index)
+	       (write-char (if (minusp disp) #\- #\+) stream)
+	       (princ (abs disp) stream))
+	      (t
+	       (princ unsigned-offset stream))))))
   (write-char #\] stream))
 
 (defun print-imm-data (value stream dstate)
   (let ((offset (- value disassem::nil-addr)))
-    (if (zerop offset)
-	(format stream "#x~X" value)
-	(format stream "~A" value))
+    (princ value stream)
     (when (typep offset 'disassem::offset)
       (or (disassem::maybe-note-nil-indexed-object offset dstate)
-	  (let ((unsigned-offset (if (and (numberp value) (minusp value))
-				     (+ value #x100000000)
-				     value)))
+	  (let ((unsigned-offset (ldb (byte vm:word-bits 0) value)))
 	    (disassem::maybe-note-assembler-routine unsigned-offset stream dstate))
 	  (nth-value 1
 		     (disassem::note-code-constant-absolute offset
@@ -506,7 +491,10 @@
 
 (defun print-label (value stream dstate)
   (declare (ignore dstate))
-  (disassem:princ16 value stream))
+  (princ (if (and (numberp value) (minusp value))
+	     (ldb (byte vm:word-bits 0) value)
+	     value)
+	 stream))
 
 ;;; Returns either an integer, meaning a register, or a list of
 ;;; (BASE-REG OFFSET INDEX-REG INDEX-SCALE), where any component
@@ -556,7 +544,8 @@
 
 (defun prefilter-reg-r (value dstate)
   (declare (type reg value)
-           (type disassem:disassem-state dstate))
+           (type disassem:disassem-state dstate)
+	   (ignore dstate))
   value)
 
 ;;; This is a sort of bogus prefilter that just
@@ -602,7 +591,7 @@
   (declare (type xmmreg value)
            (type stream stream)
            (ignore dstate))
-  (format stream "XMM~d" value))
+  (format stream "~A~D" 'xmm value))
 
 (defun print-xmmreg/mem (value stream dstate)
   (declare (type (or list xmmreg) value)
@@ -3091,6 +3080,17 @@
                                 :type 'sized-xmmreg/mem)
   (reg     :field (byte 3 27)   :type 'reg))
 
+;;; Like ext-reg-xmm/mem, but both are registers
+(disassem:define-instruction-format (ext-reg-reg/mem 32
+                                     :default-printer
+                                     '(:name :tab reg ", " reg/mem))
+  (prefix  :field (byte 8 0))
+  (x0f     :field (byte 8 8)    :value #x0f)
+  (op      :field (byte 8 16))
+  (reg/mem :fields (list (byte 2 30) (byte 3 24))
+                                :type 'reg/mem)
+  (reg     :field (byte 3 27)   :type 'reg))
+
 (disassem:define-instruction-format
     (ext-xmm-xmm/mem-imm 32
 			 :include 'ext-xmm-xmm/mem
@@ -3104,6 +3104,7 @@
   (imm :type 'imm-data))
 
 (defun emit-sse-inst (segment dst src prefix opcode &key operand-size)
+  (declare (ignore operand-size))
   (when prefix
     (emit-byte segment prefix))
   (emit-byte segment #x0f)
@@ -3182,9 +3183,12 @@
   ;; dst[63:0] = dst[63:0]
   ;; dst[127:64] = src[63:0]
   (define-regular-sse-inst unpcklpd #x66 #x14 t)
-  (define-regular-sse-inst unpcklps nil  #x14 t)
+  (define-regular-sse-inst unpcklps nil  #x14 t))
 
-  )
+(define-instruction popcnt (segment dst src)
+  (:printer ext-reg-reg/mem
+	    ((prefix #xf3) (op #xb8)))
+  (:emitter (emit-sse-inst segment dst src #xf3 #xb8)))
 
 ;;; MOVSD, MOVSS
 (macrolet ((define-movsd/ss-sse-inst (name prefix op)
@@ -3209,11 +3213,13 @@
 ;; MOVHPS (respectively).  I (rtoy) don't know how to fix that;
 ;; instead. just print a note with the correct instruction name.
 (defun movlps-control (chunk inst stream dstate)
+  (declare (ignore inst))
   (when stream
     (when (>= (ldb (byte 8 16) chunk) #xc0)
       (disassem:note "MOVHLPS" dstate))))
 
 (defun movhps-control (chunk inst stream dstate)
+  (declare (ignore inst))
   (when stream
     (when (>= (ldb (byte 8 16) chunk) #xc0)
       (disassem:note "MOVLHPS" dstate))))

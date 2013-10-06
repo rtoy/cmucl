@@ -1,7 +1,5 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/search.c,v 1.4 2005/09/15 18:26:52 rtoy Rel $
-
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
@@ -16,12 +14,11 @@
 boolean
 search_for_type(int type, lispobj ** start, int *count)
 {
-    lispobj obj, *addr;
+    lispobj obj;
 
     while ((*count == -1 || (*count > 0)) &&
 	   valid_addr((os_vm_address_t) * start)) {
 	obj = **start;
-	addr = *start;
 	if (*count != -1)
 	    *count -= 2;
 

@@ -14,8 +14,6 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /project/cmucl/cvsroot/src/lisp/Darwin-os.c,v 1.16.4.3 2009-03-18 15:37:29 rtoy Exp $
- *
  */
 
 #include <stdio.h>
@@ -486,10 +484,6 @@ in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
 boolean
 valid_addr(os_vm_address_t addr)
 {
-    os_vm_address_t newaddr;
-
-    newaddr = os_trunc_to_page(addr);
-
     if (in_range_p(addr, READ_ONLY_SPACE_START, read_only_space_size)
 	|| in_range_p(addr, STATIC_SPACE_START, static_space_size)
 	|| in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)

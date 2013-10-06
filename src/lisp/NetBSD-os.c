@@ -15,7 +15,6 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.20 2011/09/01 05:18:26 rtoy Exp $
  *
  */
 
@@ -272,10 +271,6 @@ in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
 boolean
 valid_addr(os_vm_address_t addr)
 {
-    os_vm_address_t newaddr;
-
-    newaddr = os_trunc_to_page(addr);
-
     if (in_range_p(addr, READ_ONLY_SPACE_START, read_only_space_size)
 	|| in_range_p(addr, STATIC_SPACE_START, static_space_size)
 	|| in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)

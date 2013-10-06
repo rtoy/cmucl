@@ -1,7 +1,5 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/OpenBSD-os.h,v 1.6 2007/06/12 03:21:46 cshapiro Rel $
-
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 

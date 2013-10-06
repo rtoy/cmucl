@@ -1,6 +1,4 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/runprog.c,v 1.7 2005/09/15 18:26:52 rtoy Rel $
- *
  * Support for run-program.
  *
  */

@@ -357,7 +357,7 @@
 
 (setf (getf *herald-items* :bugs)
       `(,#'(lambda (stream)
-	     (write-string (intl:gettext "See <http://www.cons.org/cmucl/> for support information.") stream))
+	     (write-string (intl:gettext "See <http://www.cmucl.org/> for support information.") stream))
 	terpri
 	,#'(lambda (stream)
 	     (write-string (intl:gettext "Loaded subsystems:") stream))))

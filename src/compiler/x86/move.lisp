@@ -232,20 +232,17 @@
 
 ;;; Arg is a fixnum or bignum, figure out which and load if necessary.
 (define-vop (move-to-word/integer)
-  (:args (x :scs (descriptor-reg) :target eax))
+  (:args (x :scs (descriptor-reg) :target y))
   (:results (y :scs (signed-reg unsigned-reg)))
   (:note _N"integer to untagged word coercion")
-  (:temporary (:sc unsigned-reg :offset eax-offset
-		   :from (:argument 0) :to (:result 0) :target y) eax)
   (:generator 4
-    (move eax x)
-    (inst test al-tn 3)
-    (inst jmp :z fixnum)
-    (loadw y eax bignum-digits-offset other-pointer-type)
+    (inst test x 3)
+    (inst jmp :nz BIGNUM)
+    (move y x)
+    (inst sar y 2)
     (inst jmp done)
-    FIXNUM
-    (inst sar eax 2)
-    (move y eax)
+    BIGNUM
+    (loadw y x bignum-digits-offset other-pointer-type)
     DONE))
 ;;;
 (define-move-vop move-to-word/integer :move
@@ -278,45 +275,30 @@
 ;;; Result may be a bignum, so we have to check.  Use a worst-case cost to make
 ;;; sure people know they may be number consing.
 ;;;
-#+nil
 (define-vop (move-from-signed)
-  (:args (x :scs (signed-reg unsigned-reg) :target eax))
-  (:temporary (:sc unsigned-reg :offset eax-offset :from (:argument 0)) eax)
-  (:temporary (:sc unsigned-reg :offset ebx-offset :to (:result 0) :target y)
-	      ebx)
-  (:temporary (:sc unsigned-reg :offset ecx-offset
-		   :from (:argument 0) :to (:result 0)) ecx)
-  (:ignore ecx)
+  (:args (x :scs (signed-reg unsigned-reg) :to :save))
+  (:temporary (:sc unsigned-reg) temp)
   (:results (y :scs (any-reg descriptor-reg)))
-  (:note _N"signed word to integer coercion")
-  (:generator 20
-    (move eax x)
-    (inst call (make-fixup 'move-from-signed :assembly-routine))
-    (move y ebx)))
-;;;
-;;; Faster inline version,
-(define-vop (move-from-signed)
-  (:args (x :scs (signed-reg unsigned-reg) :to :result))
-  (:results (y :scs (any-reg descriptor-reg) :from :argument))
   (:note _N"signed word to integer coercion")
   (:node-var node)
   (:generator 20
-     (assert (not (location= x y)))
-     (let ((bignum (gen-label))
-	   (done (gen-label)))
-       (inst mov y x)
-       (inst shl y 1)
-       (inst jmp :o bignum)
-       (inst shl y 1)
-       (inst jmp :o bignum)
-       (emit-label done)
+    (assert (not (location= x y)))
+    (assert (not (location= x temp)))
+    (assert (not (location= y temp)))
+    (let ((bignum (gen-label))
+	  (done (gen-label)))
+      (inst lea temp (make-ea :dword :base x :disp #x20000000))
+      (inst cmp temp #x40000000)
+      (inst jmp :nb bignum)
+      (inst lea y (make-ea :dword :index x :scale 4))
+      (emit-label done)
 
-       (assemble (*elsewhere*)
-          (emit-label bignum)
-	  (with-fixed-allocation
-	      (y bignum-type (+ bignum-digits-offset 1) node)
-	    (storew x y bignum-digits-offset other-pointer-type))
-	  (inst jmp done)))))
+      (assemble (*elsewhere*)
+	(emit-label bignum)
+	(with-fixed-allocation (y bignum-type
+				  (+ bignum-digits-offset 1) node)
+	  (storew x y bignum-digits-offset other-pointer-type))
+	(inst jmp done)))))
 ;;;
 (define-move-vop move-from-signed :move
   (signed-reg) (descriptor-reg))
@@ -325,23 +307,6 @@
 ;;; Check for fixnum, and possibly allocate one or two word bignum result.  Use
 ;;; a worst-case cost to make sure people know they may be number consing.
 ;;;
-#+nil
-(define-vop (move-from-unsigned)
-  (:args (x :scs (signed-reg unsigned-reg) :target eax))
-  (:temporary (:sc unsigned-reg :offset eax-offset :from (:argument 0)) eax)
-  (:temporary (:sc unsigned-reg :offset ebx-offset :to (:result 0) :target y)
-	      ebx)
-  (:temporary (:sc unsigned-reg :offset ecx-offset
-		   :from (:argument 0) :to (:result 0)) ecx)
-  (:ignore ecx)
-  (:results (y :scs (any-reg descriptor-reg)))
-  (:note _N"unsigned word to integer coercion")
-  (:generator 20
-    (move eax x)
-    (inst call (make-fixup 'move-from-unsigned :assembly-routine))
-    (move y ebx)))
-;;;
-;;; Faster inline version.
 (define-vop (move-from-unsigned)
   (:args (x :scs (signed-reg unsigned-reg) :to :save))
   (:temporary (:sc unsigned-reg) alloc)
