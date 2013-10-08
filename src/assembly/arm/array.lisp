@@ -1,21 +1,19 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/assembly/sparc/array.lisp $")
+  "$Header: src/assembly/arm/array.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: src/assembly/sparc/array.lisp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
-;;; Written by William Lott.
 ;;; 
-(in-package "SPARC")
+(in-package "ARM")
 
 
 (define-assembly-routine (allocate-vector
@@ -32,30 +30,7 @@
 			  (:temp ndescr non-descriptor-reg nl0-offset)
 			  (:temp gc-temp non-descriptor-reg nl1-offset)
 			  (:temp vector descriptor-reg a3-offset))
-  (pseudo-atomic ()
-    (inst add ndescr words (* (1+ vm:vector-data-offset) vm:word-bytes))
-    (inst andn ndescr vm:lowtag-mask)
-    (allocation vector ndescr other-pointer-type :temp-tn gc-temp)
-    #+gencgc
-    (progn
-      ;; ndescr points to one word past the end of the allocated
-      ;; space.  Fill the last word with a zero.
-      (inst add ndescr vector)
-      (storew zero-tn ndescr -1 vm:other-pointer-type))
-    (inst srl ndescr type vm:word-shift)
-    (storew ndescr vector 0 vm:other-pointer-type)
-    (storew length vector vm:vector-length-slot vm:other-pointer-type))
-  ;; This makes sure the zero byte at the end of a string is paged in so
-  ;; the kernel doesn't bitch if we pass it the string.
-  ;;
-  ;; This used to write to the word after the last allocated word.  I
-  ;; (RLT) made it write to the last allocated word, which is where
-  ;; the zero-byte of the string is.  Look at the deftransform for
-  ;; make-array in array-tran.lisp.  For strings we always allocate
-  ;; enough space to hold the zero-byte.
-  #-gencgc
-  (storew zero-tn alloc-tn -1)
-  (move result vector))
+  (not-implemented))
 
 
 
@@ -77,10 +52,7 @@
 			  (:temp temp non-descriptor-reg nl2-offset)
 			  (:temp offset non-descriptor-reg nl3-offset))
 
-  (declare (ignore result accum data temp offset))
-
-  (inst b sxhash-simple-substring-entry)
-  (loadw length string vm:vector-length-slot vm:other-pointer-type))
+  (not-implemented))
 
 
 ;; Implement the one-at-a-time algorithm designed by Bob Jenkins
@@ -122,48 +94,4 @@ ub4 one_at_a_time(char *key, ub4 len)
 			  (:temp data non-descriptor-reg nl1-offset)
 			  (:temp temp non-descriptor-reg nl2-offset)
 			  (:temp offset non-descriptor-reg nl3-offset))
-  (emit-label sxhash-simple-substring-entry)
-
-  #+unicode
-  (inst sll length 1)		  ; Number of bytes = twice the length
-  
-  (inst li offset (- (* vector-data-offset word-bytes) other-pointer-type))
-  (inst b test)
-  (move accum zero-tn)
-
-  LOOP
-
-  ;; hash += key[i]
-  (inst add accum data)
-  ;; hash += (hash << 10)
-  (inst slln temp accum 10)
-  (inst add accum temp)
-  ;; hash ^= (hash >> 6)
-  (inst srln temp accum 6)
-  (inst xor accum temp)
-  (inst add offset 1)
-  
-  TEST
-
-  (inst subcc length (fixnumize 1))
-  (inst b :ge loop)
-  (inst ldub data string offset)
-
-  ;; hash += (hash << 3)
-  (inst slln temp accum 3)
-  (inst add accum temp)
-  ;; hash ^= (hash >> 11)
-  (inst srln temp accum 11)
-  (inst xor accum temp)
-  ;; hash += (hash << 15)
-  (inst slln temp accum 15)
-  (inst add accum temp)
-  
-  ;;(inst li temp most-positive-fixnum)
-  ;;(inst and accum temp)
-  ;; Make it a fixnum result
-
-  ;; Make the result a positive fixnum.  Shifting it left, then right
-  ;; does what we want, and extracts the bits we need.
-  (inst slln accum (1+ vm:fixnum-tag-bits))
-  (inst srln result accum 1))
+  (not-implemented))
