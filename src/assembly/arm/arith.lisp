@@ -31,7 +31,6 @@
 			  (:res res (descriptor-reg any-reg) a0-offset)
 
 			  (:temp temp non-descriptor-reg nl0-offset)
-			  (:temp temp2 non-descriptor-reg nl1-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
@@ -50,7 +49,6 @@
 			  (:res res (descriptor-reg any-reg) a0-offset)
 
 			  (:temp temp non-descriptor-reg nl0-offset)
-			  (:temp temp2 non-descriptor-reg nl1-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
@@ -73,13 +71,17 @@
 			  (:res res (descriptor-reg any-reg) a0-offset)
 
 			  (:temp temp non-descriptor-reg nl0-offset)
-			  (:temp lo non-descriptor-reg nl1-offset)
-			  (:temp hi non-descriptor-reg nl2-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (not-implemented))
 
+;; I (rtoy) am ripping this out right now because it doesn't
+;; compile. The routine wants 2 non-descriptors and we currently only
+;; have 1.  Plus, do we really need these assembly routines?  Is there
+;; any reason why this would get called instead of the inline
+;; multiplication vops that we already have?
+#+nil
 (macrolet
     ((frob (name note cost type sc)
        `(define-assembly-routine (,name
@@ -89,13 +91,12 @@
 				  (:policy :fast-safe)
 				  (:arg-types ,type ,type)
 				  (:result-types ,type))
-				 ((:arg x ,sc nl0-offset)
-				  (:arg y ,sc nl1-offset)
-				  (:res res ,sc nl0-offset)
-				  (:temp temp ,sc nl2-offset))
+				 ((:arg x ,sc a0-offset)
+				  (:arg y ,sc a1-offset)
+				  (:res res ,sc a0-offset))
 	  (not-implemented))))
-  (frob unsigned-* "unsigned *" 40 unsigned-num unsigned-reg)
-  (frob signed-* "unsigned *" 41 signed-num signed-reg)
+  (frob unsigned-* "unsigned *" 40 unsigned-num descriptor-reg)
+  (frob signed-* "unsigned *" 41 signed-num descriptor-reg)
   (frob fixnum-* "fixnum *" 30 tagged-num any-reg))
 
 
@@ -109,11 +110,11 @@
 			  (:policy :fast-safe)
 			  (:arg-types positive-fixnum positive-fixnum)
 			  (:result-types positive-fixnum positive-fixnum))
-			 ((:arg dividend any-reg nl0-offset)
-			  (:arg divisor any-reg nl1-offset)
+			 ((:arg dividend any-reg a0-offset)
+			  (:arg divisor any-reg a1-offset)
 
-			  (:res quo any-reg nl2-offset)
-			  (:res rem any-reg nl0-offset))
+			  (:res quo any-reg a0-offset)
+			  (:res rem any-reg a1-offset))
   (not-implemented))
 
 
@@ -124,17 +125,17 @@
 			  (:translate truncate)
 			  (:arg-types tagged-num tagged-num)
 			  (:result-types tagged-num tagged-num))
-			 ((:arg dividend any-reg nl0-offset)
-			  (:arg divisor any-reg nl1-offset)
+			 ((:arg dividend any-reg a0-offset)
+			  (:arg divisor any-reg a1-offset)
 
-			  (:res quo any-reg nl2-offset)
-			  (:res rem any-reg nl0-offset)
+			  (:res quo any-reg a0-offset)
+			  (:res rem any-reg a1-offset)
 
-			  (:temp quo-sign any-reg nl5-offset)
 			  (:temp rem-sign any-reg nargs-offset))
   (not-implemented))
 
 
+#+nil
 (define-assembly-routine (signed-truncate
 			  (:note "(signed-byte 32) truncate")
 			  (:cost 60)
@@ -144,12 +145,8 @@
 			  (:result-types signed-num signed-num))
 
 			 ((:arg dividend signed-reg nl0-offset)
-			  (:arg divisor signed-reg nl1-offset)
-
-			  (:res quo signed-reg nl2-offset)
 			  (:res rem signed-reg nl0-offset)
 
-			  (:temp quo-sign signed-reg nl5-offset)
 			  (:temp rem-sign signed-reg nargs-offset))
   
   (not-implemented))
