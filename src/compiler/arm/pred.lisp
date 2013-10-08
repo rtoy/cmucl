@@ -1,24 +1,18 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/pred.lisp $")
+  "$Header: src/compiler/arm/pred.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: src/compiler/sparc/pred.lisp $
+;;;    This file contains the VM definition of predicate VOPs for the ARM.
 ;;;
-;;;    This file contains the VM definition of predicate VOPs for the SPARC.
-;;;
-;;; Written by Rob MacLachlan
-;;;
-;;; Converted by William Lott.
-;;; 
 
-(in-package "SPARC")
+(in-package "ARM")
 
 
 ;;;; The Branch VOP.
@@ -29,8 +23,7 @@
 (define-vop (branch)
   (:info dest)
   (:generator 5
-    (inst b dest)
-    (inst nop)))
+    (not-implemented)))
 
 
 ;;;; Conditional VOPs:
@@ -43,6 +36,4 @@
   (:policy :fast-safe)
   (:translate eq)
   (:generator 3
-    (inst cmp x y)
-    (inst b (if not-p :ne :eq) target)
-    (inst nop)))
+    (not-implemented)))
