@@ -28,7 +28,6 @@
 			  (:res result descriptor-reg a0-offset)
 
 			  (:temp ndescr non-descriptor-reg nl0-offset)
-			  (:temp gc-temp non-descriptor-reg nl1-offset)
 			  (:temp vector descriptor-reg a3-offset))
   (not-implemented))
 
@@ -47,10 +46,7 @@
 			  (:res result any-reg a0-offset)
 
 			  (:temp length any-reg a1-offset)
-			  (:temp accum non-descriptor-reg nl0-offset)
-			  (:temp data non-descriptor-reg nl1-offset)
-			  (:temp temp non-descriptor-reg nl2-offset)
-			  (:temp offset non-descriptor-reg nl3-offset))
+			  (:temp accum non-descriptor-reg nl0-offset))
 
   (not-implemented))
 
@@ -90,8 +86,5 @@ ub4 one_at_a_time(char *key, ub4 len)
 			  (:arg length any-reg a1-offset)
 			  (:res result any-reg a0-offset)
 
-			  (:temp accum non-descriptor-reg nl0-offset)
-			  (:temp data non-descriptor-reg nl1-offset)
-			  (:temp temp non-descriptor-reg nl2-offset)
-			  (:temp offset non-descriptor-reg nl3-offset))
+			  (:temp accum non-descriptor-reg nl0-offset))
   (not-implemented))
