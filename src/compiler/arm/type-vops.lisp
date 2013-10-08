@@ -1,22 +1,19 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/type-vops.lisp $")
+  "$Header: src/compiler/arm/type-vops.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
-;;; for the SPARC.
+;;; for the ARM.
 ;;;
-;;; Written by William Lott.
-;;; Signed-array support by Douglas Crosher 1997.
-;;; Complex-float and long-float support by Douglas Crosher 1998.
 ;;;
-(in-package "SPARC")
+(in-package "ARM")
 
 
 ;;;; Simple type checking and testing:
@@ -354,35 +351,11 @@
 (define-vop (signed-byte-32-p type-predicate)
   (:translate signed-byte-32-p)
   (:generator 45
-    (let ((not-target (gen-label)))
-      (multiple-value-bind
-	  (yep nope)
-	  (if not-p
-	      (values not-target target)
-	      (values target not-target))
-	(inst andcc zero-tn value fixnum-tag-mask)
-	(inst b :eq yep)
-	(test-type value temp nope t vm:other-pointer-type)
-	(loadw temp value 0 vm:other-pointer-type)
-	(inst cmp temp (+ (ash 1 vm:type-bits)
-			  vm:bignum-type))
-	(inst b (if not-p :ne :eq) target)
-	(inst nop)
-	(emit-label not-target)))))
+    (not-implemented)))
 
 (define-vop (check-signed-byte-32 check-type)
   (:generator 45
-    (let ((nope (generate-error-code vop object-not-signed-byte-32-error value))
-	  (yep (gen-label)))
-      (inst andcc temp value fixnum-tag-mask)
-      (inst b :eq yep)
-      (test-type value temp nope t vm:other-pointer-type)
-      (loadw temp value 0 vm:other-pointer-type)
-      (inst cmp temp (+ (ash 1 vm:type-bits) vm:bignum-type))
-      (inst b :ne nope)
-      (inst nop)
-      (emit-label yep)
-      (move result value))))
+    (not-implemented)))
 
 
 ;;; An (unsigned-byte 32) can be represented with either a positive fixnum, a
@@ -392,94 +365,11 @@
 (define-vop (unsigned-byte-32-p type-predicate)
   (:translate unsigned-byte-32-p)
   (:generator 45
-    (let ((not-target (gen-label))
-	  (single-word (gen-label))
-	  (fixnum (gen-label)))
-      (multiple-value-bind
-	  (yep nope)
-	  (if not-p
-	      (values not-target target)
-	      (values target not-target))
-	;; Is it a fixnum?
-	(inst andcc temp value fixnum-tag-mask)
-	(inst b :eq fixnum)
-	(inst cmp value)
-
-	;; If not, is it an other pointer?
-	(test-type value temp nope t vm:other-pointer-type)
-	;; Get the header.
-	(loadw temp value 0 vm:other-pointer-type)
-	;; Is it one?
-	(inst cmp temp (+ (ash 1 vm:type-bits) vm:bignum-type))
-	(inst b :eq single-word)
-	;; If it's other than two, we can't be an (unsigned-byte 32)
-	(inst cmp temp (+ (ash 2 vm:type-bits) vm:bignum-type))
-	(inst b :ne nope)
-	;; Get the second digit.
-	(loadw temp value (1+ vm:bignum-digits-offset) vm:other-pointer-type)
-	;; All zeros, its an (unsigned-byte 32).
-	(inst cmp temp)
-	(inst b :eq yep)
-	(inst nop)
-	;; Otherwise, it isn't.
-	(inst b nope)
-	(inst nop)
-	
-	(emit-label single-word)
-	;; Get the single digit.
-	(loadw temp value vm:bignum-digits-offset vm:other-pointer-type)
-	(inst cmp temp)
-
-	;; positive implies (unsigned-byte 32).
-	(emit-label fixnum)
-	(inst b (if not-p :lt :ge) target)
-	(inst nop)
-
-	(emit-label not-target)))))	  
+    (not-implemented)))	  
 
 (define-vop (check-unsigned-byte-32 check-type)
   (:generator 45
-    (let ((nope
-	   (generate-error-code vop object-not-unsigned-byte-32-error value))
-	  (yep (gen-label))
-	  (fixnum (gen-label))
-	  (single-word (gen-label)))
-      ;; Is it a fixnum?
-      (inst andcc temp value fixnum-tag-mask)
-      (inst b :eq fixnum)
-      (inst cmp value)
-
-      ;; If not, is it an other pointer?
-      (test-type value temp nope t vm:other-pointer-type)
-      ;; Get the number of digits.
-      (loadw temp value 0 vm:other-pointer-type)
-      ;; Is it one?
-      (inst cmp temp (+ (ash 1 vm:type-bits) vm:bignum-type))
-      (inst b :eq single-word)
-      ;; If it's other than two, we can't be an (unsigned-byte 32)
-      (inst cmp temp (+ (ash 2 vm:type-bits) vm:bignum-type))
-      (inst b :ne nope)
-      ;; Get the second digit.
-      (loadw temp value (1+ vm:bignum-digits-offset) vm:other-pointer-type)
-      ;; All zeros, its an (unsigned-byte 32).
-      (inst cmp temp)
-      (inst b :eq yep)
-      ;; Otherwise, it isn't.
-      (inst b :ne nope)
-      (inst nop)
-      
-      (emit-label single-word)
-      ;; Get the single digit.
-      (loadw temp value vm:bignum-digits-offset vm:other-pointer-type)
-      ;; positive implies (unsigned-byte 32).
-      (inst cmp temp)
-      
-      (emit-label fixnum)
-      (inst b :lt nope)
-      (inst nop)
-      
-      (emit-label yep)
-      (move result value))))
+    (not-implemented)))
 
 
 
@@ -492,38 +382,17 @@
 (define-vop (symbolp type-predicate)
   (:translate symbolp)
   (:generator 12
-    (let* ((drop-thru (gen-label))
-	   (is-symbol-label (if not-p drop-thru target)))
-      (inst cmp value null-tn)
-      (inst b :eq is-symbol-label)
-      (test-type value temp target not-p vm:symbol-header-type)
-      (emit-label drop-thru))))
+    (not-implemented)))
 
 (define-vop (check-symbol check-type)
   (:generator 12
-    (let ((drop-thru (gen-label))
-	  (error (generate-error-code vop object-not-symbol-error value)))
-      (inst cmp value null-tn)
-      (inst b :eq drop-thru)
-      (test-type value temp error t vm:symbol-header-type)
-      (emit-label drop-thru)
-      (move result value))))
+    (not-implemented)))
   
 (define-vop (consp type-predicate)
   (:translate consp)
   (:generator 8
-    (let* ((drop-thru (gen-label))
-	   (is-not-cons-label (if not-p target drop-thru)))
-      (inst cmp value null-tn)
-      (inst b :eq is-not-cons-label)
-      (test-type value temp target not-p vm:list-pointer-type)
-      (emit-label drop-thru))))
+    (not-implemented)))
 
 (define-vop (check-cons check-type)
   (:generator 8
-    (let ((error (generate-error-code vop object-not-cons-error value)))
-      (inst cmp value null-tn)
-      (inst b :eq error)
-      (test-type value temp error t vm:list-pointer-type)
-      (move result value))))
-
+    (not-implemented)))
