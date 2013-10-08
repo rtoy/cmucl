@@ -1,22 +1,20 @@
-;;; -*- Package: SPARC -*-
+;;; -*- Package: ARM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/compiler/sparc/print.lisp $")
+  "$Header: src/compiler/arm/print.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: src/compiler/sparc/print.lisp $
 ;;;
 ;;; This file contains VOPs for things like printing during %initial-function
 ;;; before the world is initialized.
 ;;;
-;;; Written by William Lott.
 
-(in-package "SPARC")
+(in-package "ARM")
 
 
 (define-vop (print)
@@ -30,14 +28,4 @@
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:vop-var vop)
   (:generator 100
-    (let ((cur-nfp (current-nfp-tn vop)))
-      (when cur-nfp
-	(store-stack-tn nfp-save cur-nfp))
-      (move nl0 object)
-      (inst li cfunc (make-fixup (extern-alien-name "debug_print") :foreign))
-      (inst li temp (make-fixup (extern-alien-name "call_into_c") :foreign))
-      (inst jal lip temp)
-      (inst nop)
-      (when cur-nfp
-	(load-stack-tn cur-nfp nfp-save))
-      (move result nl0))))
+    (not-implemented)))
