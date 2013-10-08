@@ -65,9 +65,7 @@
 			  (:arg start (any-reg descriptor-reg) ocfp-offset)
 			  (:arg count (any-reg descriptor-reg) nargs-offset)
 			  (:temp lra descriptor-reg lra-offset)
-			  (:temp cur-uwp any-reg nl0-offset)
-			  (:temp next-uwp any-reg nl1-offset)
-			  (:temp target-uwp any-reg nl2-offset))
+			  (:temp cur-uwp any-reg nl0-offset))
   (not-implemented))
 
 
