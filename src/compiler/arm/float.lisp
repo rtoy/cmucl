@@ -657,6 +657,7 @@
   (frob %unary-truncate single-reg single-float fstoi)
   (frob %unary-truncate double-reg double-float fdtoi))
 
+#+nil
 (define-vop (fast-unary-ftruncate/single-float)
   (:args (x :scs (single-reg)))
   (:arg-types single-float)
@@ -669,6 +670,7 @@
     (inst vcvt.s32.f32 r x)
     (inst vcvt.f32.s32 r r)))
 
+#+nil
 (define-vop (fast-unary-ftruncate/double-float)
   (:args (x :scs (double-reg) :target r))
   (:arg-types double-float)
@@ -752,6 +754,7 @@
   (:generator 5
     (not-implemented)))
 
+#+nil
 (define-vop (double-float-bits)
   (:args (float :scs (double-reg descriptor-reg)
 		:load-if (not (sc-is float double-stack))))
