@@ -116,9 +116,6 @@
        (:results (result :scs ,scs))
        (:result-types ,element-type))))
 
-#-unicode
-(def-data-vector-frobs simple-string byte-index
-  base-char base-char-reg)
 #+unicode
 (def-data-vector-frobs simple-string halfword-index
   base-char base-char-reg)
