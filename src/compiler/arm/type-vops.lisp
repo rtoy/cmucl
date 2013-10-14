@@ -81,7 +81,7 @@
 
 (def-type-vops complexp check-complex complex object-not-complex-error
   vm:complex-type vm:complex-single-float-type
-  vm:complex-double-float-type #+long-float vm:complex-long-float-type
+  vm:complex-double-float-type
   #+double-double vm::complex-double-double-float-type)
 
 (def-type-vops complex-rational-p check-complex-rational nil
@@ -90,7 +90,6 @@
 (def-type-vops complex-float-p check-complex-float nil
   object-not-complex-float-error
   vm:complex-single-float-type vm:complex-double-float-type
-  #+long-float vm:complex-long-float-type
   #+double-double vm::complex-double-double-float-type)
 
 (def-type-vops complex-single-float-p check-complex-single-float
@@ -100,11 +99,6 @@
 (def-type-vops complex-double-float-p check-complex-double-float
   complex-double-float object-not-complex-double-float-error
   vm:complex-double-float-type)
-
-#+long-float
-(def-type-vops complex-long-float-p check-complex-long-float
-  complex-long-float object-not-complex-long-float-error
-  vm:complex-long-float-type)
 
 #+double-double
 (def-type-vops complex-double-double-float-p check-complex-double-double-float
@@ -116,10 +110,6 @@
 
 (def-type-vops double-float-p check-double-float double-float
   object-not-double-float-error vm:double-float-type)
-
-#+long-float
-(def-type-vops long-float-p check-long-float long-float
-  object-not-long-float-error vm:long-float-type)
 
 #+double-double
 (def-type-vops double-double-float-p check-double-double-float
@@ -197,11 +187,6 @@
   simple-array-double-float object-not-simple-array-double-float-error
   vm:simple-array-double-float-type)
 
-#+long-float
-(def-type-vops simple-array-long-float-p check-simple-array-long-float
-  simple-array-long-float object-not-simple-array-long-float-error
-  vm:simple-array-long-float-type)
-
 #+double-double
 (def-type-vops simple-array-double-double-float-p check-simple-array-double-double-float
   simple-array-double-double-float object-not-simple-array-double-double-float-error
@@ -218,13 +203,6 @@
   simple-array-complex-double-float
   object-not-simple-array-complex-double-float-error
   vm:simple-array-complex-double-float-type)
-
-#+long-float
-(def-type-vops simple-array-complex-long-float-p
-  check-simple-array-complex-long-float
-  simple-array-complex-long-float
-  object-not-simple-array-complex-long-float-error
-  vm:simple-array-complex-long-float-type)
 
 #+double-double
 (def-type-vops simple-array-complex-double-double-float-p
@@ -278,11 +256,9 @@
   simple-array-signed-byte-8-type simple-array-signed-byte-16-type
   simple-array-signed-byte-30-type simple-array-signed-byte-32-type
   vm:simple-array-single-float-type vm:simple-array-double-float-type
-  #+long-float vm:simple-array-long-float-type
   #+double-double vm::simple-array-double-double-float-type
   vm:simple-array-complex-single-float-type
   vm:simple-array-complex-double-float-type
-  #+long-float vm:simple-array-complex-long-float-type
   #+double-double vm::simple-array-complex-double-double-float-type
   vm:complex-string-type vm:complex-bit-vector-type vm:complex-vector-type)
 
@@ -294,11 +270,9 @@
   simple-array-signed-byte-8-type simple-array-signed-byte-16-type
   simple-array-signed-byte-30-type simple-array-signed-byte-32-type
   vm:simple-array-single-float-type vm:simple-array-double-float-type
-  #+long-float vm:simple-array-long-float-type
   #+double-double vm::simple-array-double-double-float-type
   vm:simple-array-complex-single-float-type
   vm:simple-array-complex-double-float-type
-  #+long-float vm:simple-array-complex-long-float-type
   #+double-double vm::simple-array-complex-double-double-float-type
   )
 
@@ -310,21 +284,18 @@
   simple-array-signed-byte-8-type simple-array-signed-byte-16-type
   simple-array-signed-byte-30-type simple-array-signed-byte-32-type
   vm:simple-array-single-float-type vm:simple-array-double-float-type
-  #+long-float vm:simple-array-long-float-type
   #+double-double vm::simple-array-double-double-float-type
   vm:simple-array-complex-single-float-type
   vm:simple-array-complex-double-float-type
-  #+long-float vm:simple-array-complex-long-float-type
   #+double-double vm::simple-array-complex-double-double-float-type
   vm:complex-string-type vm:complex-bit-vector-type vm:complex-vector-type
   vm:complex-array-type)
 
 (def-type-vops numberp check-number nil object-not-number-error
   vm:even-fixnum-type vm:odd-fixnum-type vm:bignum-type vm:ratio-type
-  vm:single-float-type vm:double-float-type #+long-float vm:long-float-type
+  vm:single-float-type vm:double-float-type
   #+double-double vm:double-double-float-type
   vm:complex-type vm:complex-single-float-type vm:complex-double-float-type
-  #+long-float vm:complex-long-float-type
   #+double-double vm::complex-double-double-float-type)
 
 (def-type-vops rationalp check-rational nil object-not-rational-error
@@ -334,12 +305,12 @@
   vm:even-fixnum-type vm:odd-fixnum-type vm:bignum-type)
 
 (def-type-vops floatp check-float nil object-not-float-error
-  vm:single-float-type vm:double-float-type #+long-float vm:long-float-type
+  vm:single-float-type vm:double-float-type
   #+double-double vm:double-double-float-type)
 
 (def-type-vops realp check-real nil object-not-real-error
   vm:even-fixnum-type vm:odd-fixnum-type vm:ratio-type vm:bignum-type
-  vm:single-float-type vm:double-float-type #+long-float vm:long-float-type
+  vm:single-float-type vm:double-float-type
   #+double-double vm:double-double-float-type)
 
 
