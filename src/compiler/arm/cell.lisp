@@ -81,6 +81,7 @@
   (:policy :fast)
   (:translate symbol-value))
 
+#+nil
 (define-vop (symbol-hash)
   (:policy :fast-safe)
   (:translate symbol-hash)
@@ -93,6 +94,7 @@
     ;; a fixnum.
     (not-implemented)))
 
+#+nil
 (define-vop (%set-symbol-hash cell-set)
   (:translate %set-symbol-hash)
   (:variant symbol-hash-slot other-pointer-type))
