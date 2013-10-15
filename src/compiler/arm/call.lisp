@@ -166,7 +166,7 @@
 
 
 (define-vop (xep-allocate-frame)
-  (:info start-lab copy-more-arg-follows clear-memory-p)
+  (:info start-lab copy-more-arg-follows #+nil clear-memory-p)
   (:ignore copy-more-arg-follows)
   (:vop-var vop)
   (:temporary (:scs (non-descriptor-reg)) temp)
@@ -178,7 +178,7 @@
 (define-vop (allocate-frame)
   (:results (res :scs (any-reg))
 	    (nfp :scs (any-reg)))
-  (:info callee clear-memory-p)
+  (:info callee #+nil clear-memory-p)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 2
     (trace-table-entry trace-table-function-prologue)
