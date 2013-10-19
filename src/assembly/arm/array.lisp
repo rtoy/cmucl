@@ -28,7 +28,7 @@
 			  (:res result descriptor-reg a0-offset)
 
 			  (:temp ndescr non-descriptor-reg nl0-offset)
-			  (:temp vector descriptor-reg a3-offset))
+			  (:temp vector descriptor-reg a2-offset))
   (not-implemented))
 
 

@@ -5,7 +5,10 @@
 
 (in-package :cl-user)
 
-(setf (c:backend-name c:*native-backend*) "X86")
+;;; Rename the X86 package and backend so that new-backend does the
+;;; right thing.
+(rename-package "X86" "OLD-X86" '("OLD-VM"))
+(setf (c:backend-name c:*native-backend*) "OLD-X86")
 
 (c::new-backend "ARM"
    ;; Features to add here
@@ -94,7 +97,7 @@
 ;; Export all external X86 symbols.  This wasn't required before, but I
 ;; (rtoy) think this happened when the compiler magic for EXPORT was
 ;; removed to make EXPORT a regular function without compiler magic.
-(do-external-symbols (s "X86")
+(do-external-symbols (s "OLD-X86")
   (export (intern (symbol-name s) "VM") "VM"))
 
 ;;; Compile the new backend.
