@@ -572,7 +572,6 @@ default-value-8
      (:ignore
       ,@(unless (or variable (eq return :tail)) '(arg-locs))
       ,@(unless variable '(args)))
-
      (:temporary (:sc descriptor-reg
 		  :offset ocfp-offset
 		  :from (:argument 1)
@@ -597,7 +596,7 @@ default-value-8
 			    :from (:argument ,(if (eq return :tail) 0 1))
 			    :to :eval)
 		       lexenv))
-
+#||
      (:temporary (:scs (descriptor-reg) :from (:argument 0) :to :eval)
 		 function)
      (:temporary (:sc any-reg :offset nargs-offset :to :eval)
@@ -616,7 +615,7 @@ default-value-8
 
      ,@(unless (eq return :tail)
 	 '((:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)))
-
+||#
      (:generator ,(+ (if named 5 0)
 		     (if variable 19 1)
 		     (if (eq return :tail) 0 10)
