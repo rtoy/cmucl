@@ -1245,6 +1245,14 @@
 			 :shift-type shift-type
 			 :shift-amount count))
 
+(defun decode-indexing-mode (src1 src2)
+  (values (if (and (indexing-mode-p src1)
+		   (indexing-mode-post-index src1))
+	      0 1)
+	  (if (minusp src2) 0 1)
+	  (if (indexing-mode-p src1)
+	      1 0)))
+
 (defun decode-indexing-and-options (src1 op2)
   "Determine the P, U, and W bits from the load-store-index"
   (values (if (and (indexing-mode-p src1)
@@ -1310,24 +1318,55 @@
 		(byte ,(if bytep 1 0))
 		(ld ,(if loadp 1 0))))
      (:emitter
-      (multiple-value-bind (p u w)
-	  (decode-indexing-and-options src1 src2)
-	(emit-format-3-reg segment
-			   (condition-code-encoding cond)
-			   #b011
-			   p
-			   u
-			   ,(if bytep 1 0)
-			   w
-			   ,(if loadp 1 0)
-			   (reg-tn-encoding (if (indexing-mode-p src1)
-						(indexing-mode-reg src1)
-						src1))
-			   (reg-tn-encoding reg)
-			   (load-store-index-shift-amount src2)
-			   (load-store-index-shift-type src2)
-			   0
-			   (reg-tn-encoding (load-store-index-offset src2)))))))
+      (etypecase src2
+	(integer
+	 ;; The simple load/store immediate case:
+	 ;; (inst ldr rd r1 100) ->
+	 ;;   ldr rd, [r1, #100]
+	 ;; (inst ldr rd (pre-index r1) 100) ->
+	 ;;   ldr rd, [r1, 100]!
+	 ;; (inst ldr rd (post-index r1) -100) ->
+	 ;;   ldr rd, [r1], -100
+	 ;;
+	 ;; If r1 is an indexed, then we always write back (W=1). P =
+	 ;; 1 only if r1 is TN or if r1 is indexed and not
+	 ;; post-indexed.
+	 (multiple-value-bind (p u w)
+	     (decode-indexing-mode src1 src2)
+	   (emit-format-2-immed segment
+				(condition-code-encoding cond)
+				#b010
+				p
+				u
+				0
+				w
+				0
+				(if (indexing-mode-p src1)
+				    (indexing-mode-reg src1)
+				    (reg-tn-encoding src1))
+				(reg-tn-encoding reg)
+				src2)))
+	(load-store-index
+	 ;; Handle the complicated cases with an offset register, with
+	 ;; a possible hairy shift operation.
+	 (multiple-value-bind (p u w)
+	     (decode-indexing-and-options src1 src2)
+	   (emit-format-3-reg segment
+			      (condition-code-encoding cond)
+			      #b011
+			      p
+			      u
+			      ,(if bytep 1 0)
+			      w
+			      ,(if loadp 1 0)
+			      (reg-tn-encoding (if (indexing-mode-p src1)
+						   (indexing-mode-reg src1)
+						   src1))
+			      (reg-tn-encoding reg)
+			      (load-store-index-shift-amount src2)
+			      (load-store-index-shift-type src2)
+			      0
+			      (reg-tn-encoding (load-store-index-offset src2)))))))))
 
 (define-load/store-inst ldr t)
 (define-load/store-inst ldrb t t)
