@@ -100,7 +100,6 @@
 		    (subseq line (+ 1 4 pattern-begin) (1- (length line))))))))))
 
 (in-package "VM")
-;; Not yet working. 
 (defun test-assem ()
   (let ((segment (make-segment))
 	(n (c:make-random-tn :kind :normal
@@ -116,9 +115,9 @@
 				:sc (c:sc-or-lose 'vm::double-reg)
 				:offset 2)))
     (assemble (segment)
-      ;;(inst mov n na)
+      (inst mov n na)
       (inst add n na (make-shift na :lsl 2))
-      (inst vadd.f64 fd-0 fd-0 fd-1))))
+      (inst vadd fd-0 fd-0 fd-1))))
 
 (in-package "CL-USER")
 #||
