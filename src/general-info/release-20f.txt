@@ -25,6 +25,8 @@ New in this release:
   * Changes
     * When *PRINT-CASE* is :DOWNCASE, integers are printed with
       lowercase letters when needed.
+    * Micro-optimize KERNEL:DOUBLE-FLOAT-BITS for x86/sse2.
+    * Add micro-optimization for unary FTRUNCATE for x86/sse2.
 
   * ANSI compliance fixes:
 
