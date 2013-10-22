@@ -192,12 +192,12 @@
   '(let ((res (%unary-ftruncate (/ x y))))
      (values res (- x (* y res)))))
 
-#+sparc
+#+(or sparc (and x86 sse2))
 (defknown fast-unary-ftruncate ((or single-float double-float))
   (or single-float double-float)
   (movable foldable flushable))
 
-#+sparc
+#+(or sparc (and x86 sse2))
 (defoptimizer (fast-unary-ftruncate derive-type) ((f))
   (one-arg-derive-type f
 		       #'(lambda (n)
@@ -224,14 +224,16 @@
 		 (if (and (numberp lo) (numberp hi)
 			  (< limit-lo lo)
 			  (< hi limit-hi))
-		     #-sparc '(let ((result (coerce (%unary-truncate x) ',ftype)))
-			        (if (zerop result)
-				    (* result x)
-				    result))
-		     #+sparc '(let ((result (fast-unary-ftruncate x)))
-			        (if (zerop result)
-				    (* result x)
-				    result))
+		     #-(or sparc (and x86 sse2))
+		     '(let ((result (coerce (%unary-truncate x) ',ftype)))
+		       (if (zerop result)
+			   (* result x)
+			   result))
+		     #+(or sparc (and x86 sse2))
+		     '(let ((result (fast-unary-ftruncate x)))
+		       (if (zerop result)
+			   (* result x)
+			   result))
 		     '(,func x))))))
   (frob single-float %unary-ftruncate/single-float)
   (frob double-float %unary-ftruncate/double-float))
@@ -355,7 +357,7 @@
 (defknown double-float-low-bits (double-float) (unsigned-byte 32)
   (movable foldable flushable))
 
-#+(or sparc ppc)
+#+(or sparc ppc (and x86 sse2))
 (defknown double-float-bits (double-float)
   (values (signed-byte 32) (unsigned-byte 32))
   (movable foldable flushable))
