@@ -23,6 +23,7 @@ New in this release:
   * Feature enhancements
  
   * Changes
+    * Update to ASDF 3.0.3.
     * When *PRINT-CASE* is :DOWNCASE, integers are printed with
       lowercase letters when needed.
     * Micro-optimize KERNEL:DOUBLE-FLOAT-BITS for x86/sse2.
