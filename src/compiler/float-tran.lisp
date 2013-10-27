@@ -210,10 +210,9 @@
 ;; if x is known to be of the right type.  Also, if the result is
 ;; known to fit in the same range as a (signed-byte 32), convert this
 ;; to %unary-truncate, which might be a single instruction, and float
-;; the result.  However, for sparc, we have a vop to do this so call
-;; that, and for Sparc V9, we can actually handle a 64-bit integer
-;; range.
-
+;; the result.  However, for sparc and x86, we have a vop to do this
+;; so call that, and for Sparc V9, we can actually handle a 64-bit
+;; integer range.
 (macrolet ((frob (ftype func)
 	     `(deftransform %unary-ftruncate ((x) (,ftype))
 	       (let* ((x-type (continuation-type x))
@@ -226,6 +225,9 @@
 			  (< hi limit-hi))
 		     #-(or sparc (and x86 sse2))
 		     '(let ((result (coerce (%unary-truncate x) ',ftype)))
+		       ;; Multiply by x when result is 0 so that we
+		       ;; get the correct signed zero to match what
+		       ;; ftruncate in float.lisp would return.
 		       (if (zerop result)
 			   (* result x)
 			   result))
