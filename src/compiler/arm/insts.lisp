@@ -2636,6 +2636,9 @@
 			  #b1
 			  #b0000)))
 
+(defmacro not-implemented ()
+  `(inst udf halt-trap))
+
 ;;;; Instructions for dumping data and header objects.
 
 (define-instruction word (segment word)
@@ -2710,5 +2713,8 @@
   (:delay 0)
   (:vop-var vop)
   (:emitter
-   (not-implemented)))
+   (emit-compute-inst segment vop dst src label temp
+		      #'(lambda (label posn delta-if-after)
+			  (- (+ (label-position label posn delta-if-after)
+				(component-header-length)))))))
 
