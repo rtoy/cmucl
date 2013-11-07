@@ -1297,17 +1297,22 @@
       (write-char #\. stream)))
 
 (defun sub-output-integer (integer stream)
-  (let ((quotient ())
-	(remainder ()))
+  (declare (type (and fixnum unsigned-byte) integer))
+  (let ((quotient 0)
+	(remainder 0))
+    (declare (fixnum quotient remainder))
     ;; Recurse until you have all the digits pushed on the stack.
-    (if (not (zerop (multiple-value-setq (quotient remainder)
-		      (truncate integer *print-base*))))
-	(sub-output-integer quotient stream))
+    (when (not (zerop (multiple-value-setq (quotient remainder)
+			(truncate integer (the (integer 2 35) *print-base*)))))
+      (sub-output-integer quotient stream))
     ;; Then as each recursive call unwinds, turn the digit (in remainder) 
     ;; into a character and output the character.
     (write-char (code-char (if (and (> remainder 9.)
 				    (> *print-base* 10.))
-			       (+ (char-code #\A) (- remainder 10.))
+			       (+ (if (eq *print-case* :downcase)
+				      (char-code #\a)
+				      (char-code #\A))
+				  (- remainder 10.))
 			       (+ (char-code #\0) remainder)))
 		stream)))
 
@@ -1343,12 +1348,12 @@ greater than n."
 
 (declaim (inline digit-to-char))
 (defun digit-to-char (d)
-  "Convert digit into a character representation.  We use 0..9, a..z for
-10..35, and A..Z for 36..52."
+  "Convert digit into a character representation."
   (declare (fixnum d))
   (labels ((offset (d b) (code-char (+ d (char-code b)))))
     (cond ((< d 10) (offset d #\0))
-	  ((< d 36) (offset (- d 10) #\A))
+	  ((< d 36) (offset (- d 10) (if (eq *print-case* :downcase)
+					 #\a #\A)))
 	  (t (error _"overflow in digit-to-char")))))
 
 (defun print-fixnum-sub (n r z s)

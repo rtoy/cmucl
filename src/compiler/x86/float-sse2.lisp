@@ -1038,6 +1038,32 @@
   (frob %unary-round cvtss2si single-reg single-float t)
   (frob %unary-round cvtsd2si double-reg double-float t))
 
+(define-vop (fast-unary-ftruncate/single-float)
+  (:args (x :scs (single-reg)))
+  (:arg-types single-float)
+  (:results (r :scs (single-reg)))
+  (:result-types single-float)
+  (:policy :fast-safe)
+  (:translate c::fast-unary-ftruncate)
+  (:temporary (:sc signed-reg) temp)
+  (:note _N"inline ftruncate")
+  (:generator 2
+    (inst cvttss2si temp x)
+    (inst cvtsi2ss r temp)))
+
+(define-vop (fast-unary-ftruncate/double-float)
+  (:args (x :scs (double-reg) :target r))
+  (:arg-types double-float)
+  (:results (r :scs (double-reg)))
+  (:result-types double-float)
+  (:policy :fast-safe)
+  (:translate c::fast-unary-ftruncate)
+  (:temporary (:sc signed-reg) temp)
+  (:note _N"inline ftruncate")
+  (:generator 2
+    (inst cvttsd2si temp x)
+    (inst cvtsi2sd r temp)))
+
 (define-vop (make-single-float)
   (:args (bits :scs (signed-reg) :target res
                :load-if (not (or (and (sc-is bits signed-stack)
@@ -1159,6 +1185,34 @@
         (loadw lo-bits float vm:double-float-value-slot
 	       vm:other-pointer-type)))))
 
+(define-vop (double-float-bits)
+  (:args (float :scs (double-reg descriptor-reg)
+		:load-if (not (sc-is float double-stack))))
+  (:results (hi-bits :scs (signed-reg))
+	    (lo-bits :scs (unsigned-reg)))
+  (:arg-types double-float)
+  (:result-types signed-num unsigned-num)
+  (:temporary (:sc double-stack) temp)
+  (:translate kernel::double-float-bits)
+  (:policy :fast-safe)
+  (:vop-var vop)
+  (:generator 5
+    (sc-case float
+      (double-reg
+	(let ((where (make-ea :dword :base ebp-tn
+			      :disp (- (* (+ 2 (tn-offset temp))
+					  word-bytes)))))
+	  (inst movsd where float))
+	(loadw hi-bits ebp-tn (- (+ 1 (tn-offset temp))))
+	(loadw lo-bits ebp-tn (- (+ 2 (tn-offset temp)))))
+      (double-stack
+       (loadw hi-bits ebp-tn (- (+ 1 (tn-offset float))))
+       (loadw lo-bits ebp-tn (- (+ 2 (tn-offset float)))))
+      (descriptor-reg
+       (loadw hi-bits float (1+ double-float-value-slot)
+	   vm:other-pointer-type)
+       (loadw lo-bits float vm:double-float-value-slot
+	       vm:other-pointer-type)))))
 
 ;;;; Float mode hackery:
 
