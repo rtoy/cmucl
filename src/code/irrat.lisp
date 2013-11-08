@@ -318,11 +318,13 @@
 ;;; of power are calculated as positive integers, and inverted if negative.
 ;;;
 (defun intexp (base power)
-  ;; Handle the special case of 1^power.  Maxima sometimes does this,
-  ;; and there's no need to cause a continuable error in this case.
-  ;; Should we also handle (-1)^power?
+  ;; Handle the special case of 1^power and (-1)^power.  Maxima
+  ;; sometimes does this, and there's no need to cause a continuable
+  ;; error in this case.
   (when (eql base 1)
     (return-from intexp base))
+  (when (eql base -1)
+    (return-from intexp (if (oddp power) -1 1)))
   
   (when (> (abs power) *intexp-maximum-exponent*)
     ;; Allow user the option to continue with calculation, possibly
