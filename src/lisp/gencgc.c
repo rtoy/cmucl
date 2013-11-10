@@ -1194,8 +1194,8 @@ gc_alloc_new_region(int nbytes, int unboxed, struct alloc_region *alloc_region)
 	for (p = (int *) alloc_region->start_addr;
 	     p < (int *) alloc_region->end_addr; p++)
 	    if (*p != 0)
-		fprintf(stderr, "** new region not zero @ %lx\n",
-			(unsigned long) p);
+		fprintf(stderr, "** new region not zero @ %lx: %lx\n",
+			(unsigned long) p, *p);
     }
 
     /* Setup the pages. */
