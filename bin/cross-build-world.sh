@@ -3,7 +3,7 @@
 usage() {
     echo "cross-build-world.sh [-crl] [-B file] [-G Gnumake] target-dir cross-dir cross-compiler-script [build-binary [flags]]"
     echo "  -c      Clean target and cross directories before compiling"
-    choe "  -i      Enable interactive mode (output to screen instead of log file)."
+    echo "  -i      Enable interactive mode (output to screen instead of log file)."
     echo "  -r      Recompile lisp runtime"
     echo "  -l      Load cross-compiled kernel to make a new lisp kernel"
     echo "  -B file Use this as the cross bootstrap file." 
