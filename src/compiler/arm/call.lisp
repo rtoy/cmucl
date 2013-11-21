@@ -96,7 +96,7 @@
 (def-vm-support-routine make-nfp-tn ()
   ;; FIXME: Is this right? We currently don't have an NFP register on
   ;; ARM.
-  (make-restricted-tn *fixnum-primitive-type* ignore-me-sc-number))
+  (make-restricted-tn *fixnum-primitive-type* immediate-arg-scn))
 
 ;;; MAKE-STACK-POINTER-TN ()
 ;;; 
