@@ -187,14 +187,17 @@
     (%sqrt x))
   )
 
-;;; The standard libm routines for sin, cos, and tan on x86 (Linux)
-;;; and ppc are not very accurate for large arguments when compared to
-;;; sparc (and maxima).  This is basically caused by the fact that
-;;; those libraries do not do an accurate argument reduction.  The
-;;; following functions use some routines Sun's free fdlibm library to
-;;; do accurate reduction.  Then we call the standard C functions (or
-;;; vops for x86) on the reduced argument.  This produces much more
-;;; accurate values.
+;;; The standard libm routines for sin, cos, and tan on x86 (Linux,
+;;; 32-bit.  64-bit is apparently ok) and ppc are not very accurate
+;;; for large arguments when compared to sparc (and maxima).  This is
+;;; basically caused by the fact that those libraries do not do an
+;;; accurate argument reduction.  The following functions use some
+;;; routines Sun's free fdlibm library to do accurate reduction.  Then
+;;; we call the standard C functions (or vops for x86) on the reduced
+;;; argument.  This produces much more accurate values.
+;;;
+;;; You can test this by computing (cos (scale-float 1d0 120)).  The
+;;; true answer is -0.9258790228548379d0.
 
 #+(or ppc x86)
 (progn
@@ -220,7 +223,22 @@
 
 )
 
-#+(or ppc sse2)
+;; If the C library is accurate, use %trig as the Lisp name.
+#-(or ppc (and sse2 (not darwin)))
+(progn
+(declaim (inline %sin %cos %tan))
+(macrolet ((frob (alien-name lisp-name)
+	     `(alien:def-alien-routine (,alien-name ,lisp-name) double-float
+		(x double-float))))
+  (frob "sin" %sin)
+  (frob "cos" %cos)
+  (frob "tan" %tan))
+)
+
+;; Make %%trig be the C library routines that don't do accurate
+;; reduction.  This is for PPC and for any SSE2 build except on
+;; Darwin. Darwin has accurate C library routines.
+#+(or ppc (and sse2 (not darwin)))
 (progn
 (declaim (inline %%sin %%cos %%tan))
 (macrolet ((frob (alien-name lisp-name)
@@ -231,7 +249,10 @@
   (frob "tan" %%tan))
 )
 
-#+(or ppc x86)
+;; When the C library is not accurate, define %trig to do accurate
+;; argument reduction and call the appropriate C function on the
+;; reduced arg.  For x87, we can use the x87 FPU trig instructions.
+#+(or ppc (and x86 (not darwin)))
 (macrolet
     ((frob (sin cos tan)
        `(progn
