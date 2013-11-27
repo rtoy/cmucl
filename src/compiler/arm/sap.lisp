@@ -162,7 +162,7 @@
 	  (ref-name set-name sc type size &optional signed)
   (let ((ref-name-c (symbolicate ref-name "-C"))
 	(set-name-c (symbolicate set-name "-C"))
-	(const-type '(integer -4095 4095)))
+	(const-type '(arm-signed-offset 4095)))
     (macrolet ((load-inst (size)
 		 `(ecase ,size
 		    (:byte (if signed 'ldrsb 'ldrb))
@@ -225,7 +225,7 @@
 	  (ref-name set-name sc type size)
   (let ((ref-name-c (symbolicate ref-name "-C"))
 	(set-name-c (symbolicate set-name "-C"))
-	(const-type '(integer -255 255)))
+	(const-type '(arm-signed-offset 255)))
     (macrolet ((move-reg (size)
 		 `(case ,size
 		    (:single
