@@ -302,9 +302,7 @@
 
     ;; Gc
     #-gencgc
-    *allocation-pointer*
-    #-gencgc
-    *pseudo-atomic-atomic*
+    lisp::*allocation-pointer*
     
     ;; Gencgc
     ;;

@@ -163,6 +163,12 @@
 	       (unless (= value condition-always)
 		 (princ (aref condition-code-name-vec value) stream))))
 
+;; ARM signed offsets in instructions. Offsets in instructions usually
+;; have a magnitude value with an additional sign bit.  Basically,
+;; signed magnitude.
+(deftype arm-signed-offset (magnitude)
+  `(integer ,(- magnitude) ,magnitude))
+
 (deftype shift-type ()
   `(member ,@shift-types))
 
@@ -1245,13 +1251,24 @@
 			 :shift-type shift-type
 			 :shift-amount count))
 
+(defun decode-indexing-mode (src1 src2)
+  (values (if (and (indexing-mode-p src1)
+		   (indexing-mode-post-index src1))
+	      0 1)
+	  (if (minusp src2)
+	      0 1)
+	  (if (indexing-mode-p src1)
+	      1 0)))
+
 (defun decode-indexing-and-options (src1 op2)
   "Determine the P, U, and W bits from the load-store-index"
   (values (if (and (indexing-mode-p src1)
 		   (indexing-mode-post-index src1))
 	      0 1)
-	  (if (load-store-index-add op2) 1 0)
-	  (if (indexing-mode-p src1) 1 0)))
+	  (if (load-store-index-add op2)
+	      1 0)
+	  (if (indexing-mode-p src1)
+	      1 0)))
 
 ;; A5.3 and table A5-15
 ;; Load/store for words and unsigned bytes
@@ -1299,7 +1316,7 @@
   `(define-instruction ,name (segment reg src1 src2 &optional (cond :al))
      (:declare (type tn reg)
 	       (type (or tn indexing-mode) src1)
-	       (type (or tn (integer -4095 4095) load-store-index) src2)
+	       (type (or tn (arm-signed-offset 4095) load-store-index) src2)
 	       (type condition-code cond))
      (:printer format-2-immed
 	       ((opb0 #b010)
@@ -1310,24 +1327,55 @@
 		(byte ,(if bytep 1 0))
 		(ld ,(if loadp 1 0))))
      (:emitter
-      (multiple-value-bind (p u w)
-	  (decode-indexing-and-options src1 src2)
-	(emit-format-3-reg segment
-			   (condition-code-encoding cond)
-			   #b011
-			   p
-			   u
-			   ,(if bytep 1 0)
-			   w
-			   ,(if loadp 1 0)
-			   (reg-tn-encoding (if (indexing-mode-p src1)
-						(indexing-mode-reg src1)
-						src1))
-			   (reg-tn-encoding reg)
-			   (load-store-index-shift-amount src2)
-			   (load-store-index-shift-type src2)
-			   0
-			   (reg-tn-encoding (load-store-index-offset src2)))))))
+      (etypecase src2
+	(integer
+	 ;; The simple load/store immediate case:
+	 ;; (inst ldr rd r1 100) ->
+	 ;;   ldr rd, [r1, #100]
+	 ;; (inst ldr rd (pre-index r1) 100) ->
+	 ;;   ldr rd, [r1, 100]!
+	 ;; (inst ldr rd (post-index r1) -100) ->
+	 ;;   ldr rd, [r1], -100
+	 ;;
+	 ;; If r1 is an indexed, then we always write back (W=1). P =
+	 ;; 1 only if r1 is TN or if r1 is indexed and not
+	 ;; post-indexed.
+	 (multiple-value-bind (p u w)
+	     (decode-indexing-mode src1 src2)
+	   (emit-format-2-immed segment
+				(condition-code-encoding cond)
+				#b010
+				p
+				u
+				0
+				w
+				0
+				(if (indexing-mode-p src1)
+				    (indexing-mode-reg src1)
+				    (reg-tn-encoding src1))
+				(reg-tn-encoding reg)
+				src2)))
+	(load-store-index
+	 ;; Handle the complicated cases with an offset register, with
+	 ;; a possible hairy shift operation.
+	 (multiple-value-bind (p u w)
+	     (decode-indexing-and-options src1 src2)
+	   (emit-format-3-reg segment
+			      (condition-code-encoding cond)
+			      #b011
+			      p
+			      u
+			      ,(if bytep 1 0)
+			      w
+			      ,(if loadp 1 0)
+			      (reg-tn-encoding (if (indexing-mode-p src1)
+						   (indexing-mode-reg src1)
+						   src1))
+			      (reg-tn-encoding reg)
+			      (load-store-index-shift-amount src2)
+			      (load-store-index-shift-type src2)
+			      0
+			      (reg-tn-encoding (load-store-index-offset src2)))))))))
 
 (define-load/store-inst ldr t)
 (define-load/store-inst ldrb t t)
@@ -1340,7 +1388,7 @@
   `(define-instruction ,name (segment reg src1 src2 &optional (cond :al))
      (:declare (type tn reg)
 	       (type (or tn indexing-mode) src1)
-	       (type (or tn (integer -255 255) load-store-index) src2)
+	       (type (or tn (arm-signed-offset 255) load-store-index) src2)
 	       (type condition-code cond))
      (:printer format-0-halfword-imm
 	       ((opb0  #b000)
@@ -2453,12 +2501,14 @@
   (imm8  :field (byte 8 0)))
 
 ;; vldr rd, [rn] -> (inst vldr rd rn 0)
-;; vldrge rd, [rn, -5] -> (inst vldr rd rn -5 :ge)
+;; vldrge rd, [rn, -8] -> (inst vldr rd rn -8 :ge)
 (defmacro define-fp-load/store-inst (name op0)
   `(define-instruction ,name (segment dst src offset &optional (cond :al))
      (:declare (type tn dst)
 	       (type tn src)
-	       (type (integer -1020 1020) offset)
+	       ;; This is small lie.  The range is correct, but the
+	       ;; offset must be a multiple of 4.
+	       (type (arm-signed-offset 1020) offset)
 	       (type condition-code cond))
      (:printer format-6-vfp-load/store
 	       ((opb0 #b110)
@@ -2597,6 +2647,9 @@
 			  #b1
 			  #b0000)))
 
+(defmacro not-implemented ()
+  `(inst udf halt-trap))
+
 ;;;; Instructions for dumping data and header objects.
 
 (define-instruction word (segment word)
@@ -2671,5 +2724,8 @@
   (:delay 0)
   (:vop-var vop)
   (:emitter
-   (not-implemented)))
+   (emit-compute-inst segment vop dst src label temp
+		      #'(lambda (label posn delta-if-after)
+			  (- (+ (label-position label posn delta-if-after)
+				(component-header-length)))))))
 

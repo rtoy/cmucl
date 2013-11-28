@@ -93,10 +93,10 @@
 
 
 ;; FIXME: What are we using for nfp? It's not defined.
-#+nil
 (def-vm-support-routine make-nfp-tn ()
-  (component-live-tn
-   (make-wired-tn *fixnum-primitive-type* immediate-arg-scn nfp-offset)))
+  ;; FIXME: Is this right? We currently don't have an NFP register on
+  ;; ARM.
+  (make-restricted-tn *fixnum-primitive-type* immediate-arg-scn))
 
 ;;; MAKE-STACK-POINTER-TN ()
 ;;; 
@@ -572,7 +572,6 @@ default-value-8
      (:ignore
       ,@(unless (or variable (eq return :tail)) '(arg-locs))
       ,@(unless variable '(args)))
-
      (:temporary (:sc descriptor-reg
 		  :offset ocfp-offset
 		  :from (:argument 1)
@@ -597,26 +596,6 @@ default-value-8
 			    :from (:argument ,(if (eq return :tail) 0 1))
 			    :to :eval)
 		       lexenv))
-
-     (:temporary (:scs (descriptor-reg) :from (:argument 0) :to :eval)
-		 function)
-     (:temporary (:sc any-reg :offset nargs-offset :to :eval)
-		 nargs-pass)
-     (:temporary (:scs (non-descriptor-reg)) temp)
-	   
-     ,@(when variable
-	 (mapcar #'(lambda (name offset)
-		     `(:temporary (:sc descriptor-reg
-				   :offset ,offset
-				   :to :eval)
-			 ,name))
-		 register-arg-names register-arg-offsets))
-     ,@(when (eq return :fixed)
-	 '((:temporary (:scs (descriptor-reg) :from :eval) move-temp)))
-
-     ,@(unless (eq return :tail)
-	 '((:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)))
-
      (:generator ,(+ (if named 5 0)
 		     (if variable 19 1)
 		     (if (eq return :tail) 0 10)
