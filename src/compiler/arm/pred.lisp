@@ -36,4 +36,6 @@
   (:policy :fast-safe)
   (:translate eq)
   (:generator 3
-    (not-implemented)))
+    (not-implemented)
+    (inst cmp x y)
+    (inst b target (if not-p :ne :eq))))
