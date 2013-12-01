@@ -117,6 +117,9 @@ $LISP "$@" -noinit -nositeinit <<EOF
 (pushnew :no-clm *features*)
 (pushnew :no-hemlock *features*)
 
+;; At this point we can stop and play around with the compiler to various bits.
+;; EOF
+
 (load "target:tools/worldcom")
 #-(or no-compiler runtime) (load "target:tools/comcom")
 ;; Compile at least new-genesis, so that genesis doesn't take ages
