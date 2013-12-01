@@ -2716,6 +2716,21 @@
 	 (assemble (segment vop)
 	   (not-implemented))))))
 
+;; code = fn - fn-ptr-type - header - label-offset + other-pointer-tag
+(define-instruction compute-code-from-fn (segment dst src label temp)
+  (:declare (type tn dst src temp) (type label label))
+  (:attributes variable-length)
+  (:dependencies (reads src) (writes dst) (writes temp))
+  (:delay 0)
+  (:vop-var vop)
+  (:emitter
+   (emit-compute-inst segment vop dst src label temp
+		      #'(lambda (label posn delta-if-after)
+			  (- other-pointer-type
+			     function-pointer-type
+			     (label-position label posn delta-if-after)
+			     (component-header-length))))))
+
 ;; code = lra - other-pointer-tag - header - label-offset + other-pointer-tag
 (define-instruction compute-code-from-lra (segment dst src label temp)
   (:declare (type tn dst src temp) (type label label))
