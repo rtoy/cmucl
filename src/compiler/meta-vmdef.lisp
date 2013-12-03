@@ -936,10 +936,12 @@
 		      `((,(vop-parse-node-var parse) (vop-node ,n-vop))))
 		  ,@(binds))
 	     (declare (ignore ,@(vop-parse-ignores parse)))
-	     ,@(loads)
-	     (new-assem:assemble (*code-segment* ,n-vop)
-	       ,@(vop-parse-body parse))
-	     ,@(saves))))))
+	     (macrolet ((vm::vop-not-implemented ()
+			  `(vm::not-implemented ',',(vop-parse-name parse))))
+	       ,@(loads)
+	       (new-assem:assemble (*code-segment* ,n-vop)
+		 ,@(vop-parse-body parse))
+	       ,@(saves)))))))
 
 
 ;;; Parse-Operands  --  Internal
