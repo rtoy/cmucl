@@ -11,7 +11,7 @@
 ;; instructions, if we haven't loaded insts.lisp yet.  This might
 ;; cause an error about a structure being redefined.  Select the
 ;; clobber-it restart.
-(load "target:compiler/arm/insts")
+;;(load "target:compiler/arm/insts")
 
 (defvar *mem* (make-array 1 :element-type '(unsigned-byte 32)))
 
