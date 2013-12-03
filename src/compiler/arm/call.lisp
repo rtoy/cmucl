@@ -180,7 +180,8 @@
     (dotimes (i (1- vm:function-code-offset))
       (inst word 0))
 
-    (not-implemented)
+    ;;(not-implemented 'xep-allocate-frame)
+    (vop-not-implemented)
     ;; The start of the actual code.
     ;; Fix CODE, cause the function object was passed in.
     (inst compute-code-from-fn code-tn code-tn start-lab temp)
@@ -836,7 +837,12 @@ default-value-8
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 3
-    (not-implemented)))
+    (not-implemented)
+    (let ((err-lab
+	    (generate-error-code vop invalid-argument-count-error nargs)))
+      (inst cmp nargs (fixnumize count))
+      ;; Assume we don't take the branch
+      (inst b err-lab :ne))))
 
 ;;; Signal various errors.
 ;;;
