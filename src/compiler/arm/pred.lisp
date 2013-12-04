@@ -23,7 +23,7 @@
 (define-vop (branch)
   (:info dest)
   (:generator 5
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 ;;;; Conditional VOPs:
@@ -36,6 +36,6 @@
   (:policy :fast-safe)
   (:translate eq)
   (:generator 3
-    (not-implemented)
+    (vop-not-implemented)
     (inst cmp x y)
     (inst b target (if not-p :ne :eq))))

@@ -322,11 +322,11 @@
 (define-vop (signed-byte-32-p type-predicate)
   (:translate signed-byte-32-p)
   (:generator 45
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (check-signed-byte-32 check-type)
   (:generator 45
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 ;;; An (unsigned-byte 32) can be represented with either a positive fixnum, a
@@ -336,11 +336,11 @@
 (define-vop (unsigned-byte-32-p type-predicate)
   (:translate unsigned-byte-32-p)
   (:generator 45
-    (not-implemented)))	  
+    (vop-not-implemented)))	  
 
 (define-vop (check-unsigned-byte-32 check-type)
   (:generator 45
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 
@@ -353,17 +353,17 @@
 (define-vop (symbolp type-predicate)
   (:translate symbolp)
   (:generator 12
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (check-symbol check-type)
   (:generator 12
-    (not-implemented)))
+    (vop-not-implemented)))
   
 (define-vop (consp type-predicate)
   (:translate consp)
   (:generator 8
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (check-cons check-type)
   (:generator 8
-    (not-implemented)))
+    (vop-not-implemented)))

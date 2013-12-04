@@ -179,7 +179,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:vop-var vop)
   (:generator 4
-    (not-implemented)))
+    (vop-not-implemented)))
 
 ;;;
 (define-move-vop move-to-word/integer :move
@@ -213,7 +213,7 @@
   (:vop-var vop)
   (:generator 20
     (move x arg)
-    (not-implemented)))
+    (vop-not-implemented)))
 ;;;
 (define-move-vop move-from-signed :move
   (signed-reg) (descriptor-reg))
@@ -233,7 +233,7 @@
   (:vop-var vop)
   (:generator 20
     (move x arg)
-    (not-implemented)))
+    (vop-not-implemented)))
 
 ;;;
 (define-move-vop move-from-unsigned :move

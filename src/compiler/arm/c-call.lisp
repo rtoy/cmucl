@@ -221,7 +221,7 @@
   (:results (res :scs (sap-reg)))
   (:result-types system-area-pointer)
   (:generator 2
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (foreign-symbol-data-address)
   (:translate foreign-symbol-data-address)
@@ -233,7 +233,7 @@
   (:result-types system-area-pointer)
   (:temporary (:scs (non-descriptor-reg)) addr)
   (:generator 2
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (call-out)
   (:args (function :scs (sap-reg) :target cfunc)
@@ -248,7 +248,7 @@
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:vop-var vop)
   (:generator 0
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 (define-vop (alloc-number-stack-space)
@@ -256,11 +256,11 @@
   (:results (result :scs (sap-reg any-reg)))
   (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
   (:generator 0
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (dealloc-number-stack-space)
   (:info amount)
   (:policy :fast-safe)
   (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
   (:generator 0
-    (not-implemented)))
+    (vop-not-implemented)))

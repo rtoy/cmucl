@@ -26,7 +26,7 @@
   (:results (y :scs (base-char-reg)))
   (:note _N"character untagging")
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 ;;;
 (define-move-vop move-to-base-char :move
   (any-reg descriptor-reg) (base-char-reg))
@@ -39,7 +39,7 @@
   (:results (y :scs (any-reg descriptor-reg)))
   (:note _N"character tagging")
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 ;;;
 (define-move-vop move-from-base-char :move
   (base-char-reg) (any-reg descriptor-reg))
@@ -73,7 +73,7 @@
   (:temporary (:sc non-descriptor-reg) temp)
   (:note _N"character arg move")
   (:generator 0
-    (not-implemented)))
+    (vop-not-implemented)))
 ;;;
 (define-move-vop move-base-char-argument :move-argument
   (any-reg base-char-reg) (base-char-reg))
@@ -97,7 +97,7 @@
   (:results (res :scs (any-reg)))
   (:result-types positive-fixnum)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (code-char)
   (:translate code-char)
@@ -107,7 +107,7 @@
   (:results (res :scs (base-char-reg)))
   (:result-types base-char)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 ;;; Comparison of base-chars.
@@ -122,7 +122,7 @@
   (:note _N"inline comparison")
   (:variant-vars condition not-condition)
   (:generator 3
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (fast-char=/base-char base-char-compare)
   (:translate char=)
@@ -145,7 +145,7 @@
   (:note _N"inline comparison")
   (:variant-vars condition not-condition)
   (:generator 2
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (fast-char=-c/base-char base-char-compare-c)
   (:translate char=)

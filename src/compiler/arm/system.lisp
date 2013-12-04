@@ -25,7 +25,7 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (get-type)
   (:translate get-type)
@@ -34,7 +34,7 @@
   (:results (result :scs (unsigned-reg) :from (:eval 0)))
   (:result-types positive-fixnum)
   (:generator 6
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 (define-vop (function-subtype)
@@ -44,7 +44,7 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (set-function-subtype)
   (:translate (setf function-subtype))
@@ -55,7 +55,7 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (get-header-data)
   (:translate get-header-data)
@@ -64,7 +64,7 @@
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (get-closure-length)
   (:translate get-closure-length)
@@ -73,7 +73,7 @@
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (set-header-data)
   (:translate set-header-data)
@@ -84,14 +84,14 @@
   (:results (res :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) t1 t2)
   (:generator 6
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 (define-vop (make-fixnum)
   (:args (ptr :scs (any-reg descriptor-reg)))
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (make-other-immediate-type)
   (:args (val :scs (any-reg descriptor-reg))
@@ -100,7 +100,7 @@
   (:results (res :scs (any-reg descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 2
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 ;;;; Allocation
@@ -111,7 +111,7 @@
   (:translate dynamic-space-free-pointer)
   (:policy :fast-safe)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (binding-stack-pointer-sap)
   (:results (int :scs (sap-reg)))
@@ -119,7 +119,7 @@
   (:translate binding-stack-pointer-sap)
   (:policy :fast-safe)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (control-stack-pointer-sap)
   (:results (int :scs (sap-reg)))
@@ -127,7 +127,7 @@
   (:translate control-stack-pointer-sap)
   (:policy :fast-safe)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 ;;;; Code object frobbing.
@@ -140,7 +140,7 @@
   (:results (sap :scs (sap-reg)))
   (:result-types system-area-pointer)
   (:generator 10
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (compute-function)
   (:args (code :scs (descriptor-reg))
@@ -149,7 +149,7 @@
   (:results (func :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 10
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 
@@ -177,5 +177,5 @@
   (:info index)
   (:temporary (:scs (non-descriptor-reg)) count)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 

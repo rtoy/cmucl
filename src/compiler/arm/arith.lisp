@@ -125,7 +125,7 @@
        ,@(when restore-fixnum-mask
 	       `((:temporary (:sc non-descriptor-reg) temp)))
        (:generator 2
-	 (not-implemented)))
+	 (vop-not-implemented)))
      ,@(unless arg-swap
 	       `((define-vop (,(symbolicate "FAST-" translate "-C/FIXNUM=>FIXNUM")
 			       fast-fixnum-binop-c)
@@ -133,7 +133,7 @@
 		   ,@(when restore-fixnum-mask
 			   `((:temporary (:sc non-descriptor-reg) temp)))
 		   (:generator 1
-		     (not-implemented)))))
+		     (vop-not-implemented)))))
      (define-vop (,(symbolicate "FAST-" translate "/SIGNED=>SIGNED")
 		  fast-signed-binop)
        (:translate ,translate)
@@ -146,18 +146,18 @@
 			       fast-signed-binop-c)
 		   (:translate ,translate)
 		   (:generator ,untagged-penalty
-		     (not-implemented)))))
+		     (vop-not-implemented)))))
      (define-vop (,(symbolicate "FAST-" translate "/UNSIGNED=>UNSIGNED")
 		  fast-unsigned-binop)
        (:translate ,translate)
        (:generator ,(1+ untagged-penalty)
-	 (not-implemented)))
+	 (vop-not-implemented)))
      ,@(unless arg-swap
 	       `((define-vop (,(symbolicate "FAST-" translate "-C/UNSIGNED=>UNSIGNED")
 			       fast-unsigned-binop-c)
 		   (:translate ,translate)
 		   (:generator ,untagged-penalty
-		     (not-implemented)))))))
+		     (vop-not-implemented)))))))
 
 ); eval-when
 
@@ -195,7 +195,7 @@
 	      (:constant (or (and (unsigned-byte 12) (not (integer 0 0)))
 			     (integer #xfffff000 #xffffffff))))
   (:generator 2				; Needs to be low to give this vop a chance.
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (fast-abs/signed fast-safe-arith-op)
   (:args (x :scs (signed-reg)))
@@ -206,7 +206,7 @@
   (:note _N"inline 32-bit abs")
   (:temporary (:scs (signed-reg)) y)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 ;;; Truncate
 
@@ -224,7 +224,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 12
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (fast-truncate/unsigned=>unsigned fast-safe-arith-op)
   (:translate truncate)
@@ -240,7 +240,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 8
-    (not-implemented)))
+    (vop-not-implemented)))
 
 ;;; Shifting
 
@@ -255,7 +255,7 @@
   (:policy :fast-safe)
   (:temporary (:sc non-descriptor-reg) ndesc)
   (:generator 5
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (fast-ash/unsigned=>unsigned)
   (:note _N"inline (unsigned-byte 32) ASH")
@@ -268,7 +268,7 @@
   (:policy :fast-safe)
   (:temporary (:sc non-descriptor-reg) ndesc)
   (:generator 5
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (fast-ash-c/unsigned=>unsigned)
   (:note _N"inline constant ASH")
@@ -280,7 +280,7 @@
   (:translate ash)
   (:policy :fast-safe)
   (:generator 4
-    (not-implemented)))
+    (vop-not-implemented)))
 
 ;; Some special cases where we know we want a left shift.  Just do the
 ;; shift, instead of checking for the sign of the shift.
@@ -296,7 +296,7 @@
 	 (:result-types ,type)
 	 (:policy :fast-safe)
 	 (:generator ,cost
-	   (not-implemented)))))
+	   (vop-not-implemented)))))
   (frob fast-ash-left/signed=>signed signed-reg signed-num signed-reg 3)
   (frob fast-ash-left/fixnum=>fixnum any-reg tagged-num any-reg 2)
   (frob fast-ash-left/unsigned=>unsigned unsigned-reg unsigned-num unsigned-reg 3))
@@ -318,7 +318,7 @@
 	    ;; The result-type assures us that this shift will not
 	    ;; overflow. And for fixnum's, the zero bits that get
 	    ;; shifted in are just fine for the fixnum tag.
-	    (not-implemented)))))
+	    (vop-not-implemented)))))
   (frob fast-ash-left-c/signed=>signed signed-reg signed-num signed-reg 3)
   (frob fast-ash-left-c/fixnum=>fixnum any-reg tagged-num any-reg 2)
   (frob fast-ash-left-c/unsigned=>unsigned unsigned-reg unsigned-num unsigned-reg 3))
@@ -349,7 +349,7 @@
 	 (:result-types ,type)
 	 (:policy :fast-safe)
 	 (:generator ,cost
-	   (not-implemented)))))
+	   (vop-not-implemented)))))
   (frob ash-right-signed fast-ash-right/signed=>signed
 	signed-reg signed-num sra 3)
   (frob ash-right-unsigned fast-ash-right/unsigned=>unsigned
@@ -370,7 +370,7 @@
 	 (:result-types ,type)
 	 (:policy :fast-safe)
 	 (:generator ,cost
-	   (not-implemented)))))
+	   (vop-not-implemented)))))
   (frob ash-right-signed fast-ash-right-c/signed=>signed
 	signed-reg signed-num sra 1 31)
   (frob ash-right-unsigned fast-ash-right-c/unsigned=>unsigned
@@ -390,7 +390,7 @@
   (:generator 2
     ;; Shift the fixnum right by the desired amount.  Then zap out the
     ;; 2 LSBs to make it a fixnum again.  (Those bits are junk.)
-    (not-implemented)))
+    (vop-not-implemented)))
     
 
 
@@ -405,7 +405,7 @@
   (:result-types positive-fixnum)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) shift)
   (:generator 30
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (unsigned-byte-32-len)
   (:translate integer-length)
@@ -417,7 +417,7 @@
   (:result-types positive-fixnum)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) shift)
   (:generator 30
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 (define-vop (unsigned-byte-32-count)
@@ -430,7 +430,7 @@
   (:result-types positive-fixnum)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) mask temp)
   (:generator 35
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 ;;; Multiply and Divide.
@@ -443,18 +443,18 @@
     ;; */signed=>signed.  Why?  A fixnum product using signed=>signed
     ;; has to convert both args to signed-nums.  But using this, we
     ;; don't have to and that saves an instruction.
-    (not-implemented)))
+    (vop-not-implemented)))
 
 ;; Multiplication by a constant.
 (define-vop (fast-*-c/unsigned=>unsigned fast-unsigned-binop-c)
   (:translate *)
   (:generator 2
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (fast-*-c/signed=>signed fast-signed-binop-c)
   (:translate *)
   (:generator 2
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (fast-*-c/fixnum=>fixnum fast-safe-arith-op)
   (:args (x :target r :scs (any-reg)))
@@ -466,18 +466,18 @@
   (:note _N"inline fixnum arithmetic")
   (:translate *)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 (define-vop (fast-*/signed=>signed fast-signed-binop)
   (:translate *)
   (:generator 3
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (fast-*/unsigned=>unsigned fast-unsigned-binop)
   (:translate *)
   (:generator 3
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 ;;;; Binary conditional VOPs:
@@ -543,7 +543,7 @@
 					     suffix)))
 			(:translate ,tran)
 			(:generator ,cost
-			  (not-implemented)))))
+			  (vop-not-implemented)))))
 	       '(/fixnum -c/fixnum /signed -c/signed /unsigned -c/unsigned)
 	       '(4 3 6 5 6 5)
 	       '(t t t t nil nil))))
@@ -571,7 +571,7 @@
   (:note _N"inline fixnum comparison")
   (:translate eql)
   (:generator 4
-    (not-implemented)))
+    (vop-not-implemented)))
 ;;;
 (define-vop (generic-eql/fixnum fast-eql/fixnum)
   (:arg-types * tagged-num)
@@ -585,7 +585,7 @@
   (:info target not-p y)
   (:translate eql)
   (:generator 2
-    (not-implemented)))
+    (vop-not-implemented)))
 ;;;
 (define-vop (generic-eql-c/fixnum fast-eql-c/fixnum)
   ;; This is a signed-byte 11 because after fixnum shifting, we get a
@@ -608,7 +608,7 @@
   (:result-types unsigned-num)
   (:policy :fast-safe)
   (:generator 4
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 (define-vop (32bit-logical)
@@ -650,12 +650,12 @@
 (define-vop (32bit-logical-eqv 32bit-logical)
   (:translate 32bit-logical-eqv)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (32bit-logical-orc2 32bit-logical)
   (:translate 32bit-logical-orc2)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (deftransform 32bit-logical-orc1 ((x y) (* *))
   '(32bit-logical-orc2 y x))
@@ -663,7 +663,7 @@
 (define-vop (32bit-logical-andc2 32bit-logical)
   (:translate 32bit-logical-andc2)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (deftransform 32bit-logical-andc1 ((x y) (* *))
   '(32bit-logical-andc2 y x))
@@ -725,7 +725,7 @@
   (:arg-types unsigned-num)
   (:results (result :scs (descriptor-reg)))
   (:generator 3
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (add-w/carry)
   (:translate bignum::%add-with-carry)
@@ -738,7 +738,7 @@
 	    (carry :scs (unsigned-reg)))
   (:result-types unsigned-num positive-fixnum)
   (:generator 3
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (sub-w/borrow)
   (:translate bignum::%subtract-with-borrow)
@@ -751,7 +751,7 @@
 	    (borrow :scs (unsigned-reg)))
   (:result-types unsigned-num positive-fixnum)
   (:generator 4
-    (not-implemented)))
+    (vop-not-implemented)))
 
 ;;; EMIT-MULTIPLY -- This is used both for bignum stuff and in assembly
 ;;; routines.
@@ -764,7 +764,7 @@
 	   (type (or tn (signed-byte 13)) multiplicand))
   ;; It seems that emit-multiply is only used to do an unsigned
   ;; multiply, so the code only does an unsigned multiply.
-  (not-implemented))
+  (vop-not-implemented))
 
 (define-vop (bignum-mult-and-add-3-arg)
   (:translate bignum::%multiply-and-add)
@@ -777,7 +777,7 @@
 	    (lo :scs (unsigned-reg) :from (:eval 1)))
   (:result-types unsigned-num unsigned-num)
   (:generator 40
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (bignum-mult-and-add-4-arg)
   (:translate bignum::%multiply-and-add)
@@ -791,7 +791,7 @@
 	    (lo :scs (unsigned-reg) :from (:eval 1)))
   (:result-types unsigned-num unsigned-num)
   (:generator 40
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (bignum-mult)
   (:translate bignum::%multiply)
@@ -803,7 +803,7 @@
 	    (lo :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
   (:generator 40
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (bignum-lognot)
   (:translate bignum::%lognot)
@@ -836,7 +836,7 @@
 	    (rem :scs (unsigned-reg) :from (:argument 0)))
   (:result-types unsigned-num unsigned-num)
   (:generator 300
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (signify-digit)
   (:translate bignum::%fixnum-digit-with-correct-sign)
@@ -846,7 +846,7 @@
   (:results (res :scs (any-reg signed-reg)))
   (:result-types signed-num)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 (define-vop (digit-ashr)
@@ -858,17 +858,17 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (digit-lshr digit-ashr)
   (:translate bignum::%digit-logical-shift-right)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (digit-ashl digit-ashr)
   (:translate bignum::%ashl)
   (:generator 1
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 ;;;; Static functions.
@@ -913,7 +913,7 @@
   (:temporary (:scs (signed-reg)) r)
   (:temporary (:scs (signed-reg)) temp)
   (:generator 6
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (unsigned-truncate-by-mult fast-signed-binop)
   (:translate truncate)
@@ -928,7 +928,7 @@
   (:temporary (:scs (unsigned-reg)) r)
   (:temporary (:scs (unsigned-reg)) temp)
   (:generator 6
-    (not-implemented)))
+    (vop-not-implemented)))
 
 ;; Need these so constant folding works with the deftransform.
 

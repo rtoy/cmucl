@@ -61,7 +61,7 @@
 (define-vop (symbol-value checked-cell-ref)
   (:translate symbol-value)
   (:generator 9
-    (not-implemented)))
+    (vop-not-implemented)))
 
 ;;; Like CHECKED-CELL-REF, only we are a predicate to see if the cell is bound.
 (define-vop (boundp-frob)
@@ -74,7 +74,7 @@
 (define-vop (boundp boundp-frob)
   (:translate boundp)
   (:generator 9
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (fast-symbol-value cell-ref)
   (:variant vm:symbol-value-slot vm:other-pointer-type)
@@ -92,7 +92,7 @@
     ;; the symbol-hash slot of NIL holds NIL because it is also the cdr
     ;; slot, so we have to strip off the two low bits to make sure it is
     ;; a fixnum.
-    (not-implemented)))
+    (vop-not-implemented)))
 
 #+nil
 (define-vop (%set-symbol-hash cell-set)
@@ -112,7 +112,7 @@
   (:save-p :compute-only)
   (:temporary (:scs (descriptor-reg) :from (:argument 0)) obj-temp)
   (:generator 10
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (set-fdefn-function)
   (:policy :fast-safe)
@@ -123,7 +123,7 @@
   (:temporary (:scs (non-descriptor-reg)) type)
   (:results (result :scs (descriptor-reg)))
   (:generator 38
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (fdefn-makunbound)
   (:policy :fast-safe)
@@ -132,7 +132,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (result :scs (descriptor-reg)))
   (:generator 38
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 
@@ -147,13 +147,13 @@
 	 (symbol :scs (descriptor-reg)))
   (:temporary (:scs (descriptor-reg)) temp)
   (:generator 5
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 (define-vop (unbind)
   (:temporary (:scs (descriptor-reg)) symbol value)
   (:generator 0
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 (define-vop (unbind-to-here)
@@ -161,7 +161,7 @@
   (:temporary (:scs (any-reg) :from (:argument 0)) where)
   (:temporary (:scs (descriptor-reg)) symbol value)
   (:generator 0
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 
@@ -210,7 +210,7 @@
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 4
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (instance-ref slot-ref)
   (:variant instance-slots-offset instance-pointer-type)

@@ -76,7 +76,7 @@
      (:variant-vars offset lowtag)
      (:policy :fast-safe)
      (:generator 5
-       (not-implemented))))
+       (vop-not-implemented))))
 
 (define-indexer word-index-ref nil ld 0)
 (define-indexer word-index-set t st 0)

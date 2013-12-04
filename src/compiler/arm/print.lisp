@@ -28,4 +28,4 @@
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:vop-var vop)
   (:generator 100
-    (not-implemented)))
+    (vop-not-implemented)))

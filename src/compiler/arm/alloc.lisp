@@ -28,14 +28,14 @@
   (:results)
   (:policy :safe)
   (:generator 0
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (%dynamic-extent-end)
   (:args (saved-stack-pointer :scs (any-reg control-stack)))
   (:results)
   (:policy :safe)
   (:generator 0
-    (not-implemented)))
+    (vop-not-implemented)))
 
 ;;;; LIST and LIST*
 
@@ -51,7 +51,7 @@
   (:variant-vars star)
   (:policy :safe)
   (:generator 0
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (list list-or-list*)
   (:variant nil))
@@ -71,7 +71,7 @@
   (:temporary (:scs (any-reg) :from (:argument 0)) boxed)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) unboxed)
   (:generator 100
-    (not-implemented)))
+    (vop-not-implemented)))
 
 (define-vop (make-fdefn)
   (:args (name :scs (descriptor-reg) :to :eval))
@@ -80,7 +80,7 @@
   (:policy :fast-safe)
   (:translate make-fdefn)
   (:generator 37
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 (define-vop (make-closure)
@@ -89,7 +89,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (result :scs (descriptor-reg)))
   (:generator 10
-    (not-implemented)))
+    (vop-not-implemented)))
 
 ;;; The compiler likes to be able to directly make value cells.
 ;;; 
@@ -98,7 +98,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (result :scs (descriptor-reg)))
   (:generator 10
-    (not-implemented)))
+    (vop-not-implemented)))
 
 
 
@@ -130,4 +130,4 @@
   (:temporary (:scs (non-descriptor-reg)) header)
   (:temporary (:scs (any-reg)) temp)
   (:generator 6
-    (not-implemented)))
+    (vop-not-implemented)))
