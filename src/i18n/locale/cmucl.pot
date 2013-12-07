@@ -14480,7 +14480,7 @@ msgid ""
 msgstr ""
 
 #: src/code/macros.lisp
-msgid "Cond clause is not a list: ~S."
+msgid "Cond clause should be a non-empty list: ~S."
 msgstr ""
 
 #: src/code/macros.lisp
