@@ -2014,6 +2014,89 @@
 	 (specifier-type `(complex ,(or (numeric-type-format arg) 'float))))
      #'cis))
 
+;;; Derive the result types of DECODE-FLOAT
+
+(defun decode-float-frac-derive-type-aux (arg)
+  ;; The fraction part of DECODE-FLOAT is always a subset of the
+  ;; interval [0.5, 1), even for subnormals.  While possible to derive
+  ;; a tighter bound in some cases, we don't.  Just return that
+  ;; interval of the approriate type when possible.  If not, just use
+  ;; float.
+  (if (numeric-type-format arg)
+      (specifier-type `(,(numeric-type-format arg)
+			 ,(coerce 1/2 (numeric-type-format arg))
+			 (,(coerce 1 (numeric-type-format arg)))))
+      (specifier-type '(float 0.5 (1.0)))))
+
+(defun decode-float-exp-derive-type-aux (arg)
+  ;; Derive the exponent part of the float.  It's always an integer
+  ;; type.
+  (flet ((calc-exp (x)
+	   (when x
+	     (nth-value 1 (decode-float x))))
+	 (min-exp ()
+	   ;; Use decode-float on 0 of the appropriate type to find
+	   ;; the min exponent.  If we don't know the actual number
+	   ;; format, use double, which has the widest range
+	   ;; (including double-double-float).
+	   (if (numeric-type-format arg)
+	       (nth-value 1 (decode-float (coerce 0 (numeric-type-format arg))))
+	       (nth-value 1 (decode-float (coerce 0 'double-float)))))
+	 (max-exp ()
+	   ;; Use decode-float on the most postive number of the
+	   ;; appropriate type to find the max exponent.  If we don't
+	   ;; know the actual number format, use double, which has the
+	   ;; widest range (including double-double-float).
+	   (if (eq (numeric-type-format arg) 'single-float)
+	       (nth-value 1 (decode-float most-positive-single-float))
+	       (nth-value 1 (decode-float most-positive-double-float)))))
+    (let* ((lo (or (bound-func #'calc-exp
+			       (numeric-type-low arg))
+		   (min-exp)))
+	   (hi (or (bound-func #'calc-exp
+			       (numeric-type-high arg))
+		   (max-exp))))
+      (specifier-type `(integer ,(or lo '*) ,(or hi '*))))))
+
+(defun decode-float-sign-derive-type-aux (arg)
+  ;; Derive the sign of the float.
+  (flet ((calc-sign (x)
+	   (when x
+	     (nth-value 2 (decode-float x)))))
+    (let* ((lo (bound-func #'calc-sign
+			       (numeric-type-low arg)))
+	   (hi (bound-func #'calc-sign
+			       (numeric-type-high arg))))
+      (if (numeric-type-format arg)
+	  (specifier-type `(,(numeric-type-format arg)
+			     ;; If lo or high bounds are NIL, use -1
+			     ;; or 1 of the appropriate type instead.
+			     ,(or lo (coerce -1 (numeric-type-format arg)))
+			     ,(or hi (coerce 1  (numeric-type-format arg)))))
+	  (specifier-type '(or (member 1f0 -1f0
+				1d0 -1d0
+				#+double-double 1w0
+				#+double-double -1w0)))))))
+
+(defoptimizer (decode-float derive-type) ((num))
+  (let ((f (one-arg-derive-type num
+				#'(lambda (arg)
+				    (decode-float-frac-derive-type-aux arg))
+				#'(lambda (arg)
+				    (nth-value 0 (decode-float arg)))))
+	(e (one-arg-derive-type num
+				#'(lambda (arg)
+				    (decode-float-exp-derive-type-aux arg))
+				#'(lambda (arg)
+				    (nth-value 1 (decode-float arg)))))
+	(s (one-arg-derive-type num
+				#'(lambda (arg)
+				    (decode-float-sign-derive-type-aux arg))
+				#'(lambda (arg)
+				    (nth-value 2 (decode-float arg))))))
+    (make-values-type :required (list f
+				      e
+				      s))))
 
 ;;; Support for double-double floats
 ;;;

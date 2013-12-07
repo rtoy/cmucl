@@ -28,6 +28,7 @@ New in this release:
       lowercase letters when needed.
     * Micro-optimize KERNEL:DOUBLE-FLOAT-BITS for x86/sse2.
     * Add micro-optimization for unary FTRUNCATE for x86/sse2.
+    * Compiler can derive the types of the results of DECODE-FLOAT.
 
   * ANSI compliance fixes:
 
