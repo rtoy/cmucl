@@ -309,7 +309,49 @@
   #+(or ppc sse2)
   (frob %%sin %%cos %%tan))
 
+;; Linux has a sincos function in the C library. Use it.  But we need
+;; to do pi reduction ourselves because the C library doesn't do
+;; accurate reduction.
+#+(or (and linux x86))
+(progn
+(declaim (inline %%sincos))
+(export '%%sincos)
+(alien:def-alien-routine ("sincos" %%sincos) c-call:void
+  (x double-float)
+  (sin double-float :out)
+  (cos double-float :out))
 
+(defun %sincos (theta)
+  (declare (double-float theta))
+  ;; Accurately reduce theta.
+  (multiple-value-bind (n y0 y1)
+      (%ieee754-rem-pi/2 theta)
+    (multiple-value-bind (ignore s c)
+	(%%sincos y0)
+      (declare (ignore ignore))
+      ;; Figure out which quadrant to use, and finish out the
+      ;; computation using y1. This is done by using a 1st-order
+      ;; Taylor expansion about y0.
+      (flet ((sin2 (s c y)
+	       ;; sin(x+y) = sin(x) + cos(x)*y
+	       (+ s (* c y)))
+	     (cos2 (s c y)
+	       ;; cos(x+y) = cos(x) - sin(x)*y
+	       (- c (* s y))))
+	(case (logand n 3)
+	  (0
+	   (values (cos2 s c y1)
+		   (sin2 s c y1)))
+	  (1
+	   (values (- (sin2 s c y1))
+		   (cos2 s c y1)))
+	  (2
+	   (values (- (cos2 s c y1))
+		   (- (sin2 s c y1))))
+	  (3
+	   (values (sin2 s c y1)
+		   (- (cos2 s c y1)))))))))
+)
 
 ;;;; Power functions.
 
@@ -964,7 +1006,24 @@
   "Return cos(Theta) + i sin(Theta), AKA exp(i Theta)."
   (if (complexp theta)
       (error (intl:gettext "Argument to CIS is complex: ~S") theta)
-      (complex (cos theta) (sin theta))))
+      #-(or (and linux x86))
+      (complex (cos theta) (sin theta))
+      #+(or (and linux x86))
+      (number-dispatch ((theta real))
+	((rational)
+	 (let ((arg (coerce theta 'double-float)))
+	   (multiple-value-bind (s c)
+	       (%sincos arg)
+	     (complex (coerce s 'single-float)
+		      (coerce c 'single-float)))))
+	(((foreach single-float double-float))
+	 (multiple-value-bind (s c)
+	     (%sincos (coerce theta 'double-float))
+	   (complex (coerce s '(dispatch-type theta))
+		    (coerce c '(dispatch-type theta)))))
+	#+double-double
+	((double-double-float)
+	 (complex (cos theta) (sin theta))))))
 
 (defun asin (number)
   "Return the arc sine of NUMBER."

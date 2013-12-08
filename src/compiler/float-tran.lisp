@@ -731,6 +731,30 @@
     (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
       `(,prim x))))
 
+#+(or (and linux x86))
+(progn
+(defknown (kernel::%sincos)
+    (double-float) (values double-float double-float)
+    (movable foldable flushable))
+
+(deftransform cis ((x) (single-float) * :when :both)
+  `(multiple-value-bind (s c)
+       (kernel::%sincos (coerce x 'double-float))
+     (complex (coerce s 'single-float)
+	      (coerce c 'single-float))))
+
+(deftransform cis ((x) (double-float) * :when :both)
+  `(multiple-value-bind (ignore s c)
+       (kernel::%%sincos x)
+     (declare (ignore ignore))
+     (complex s c)))
+
+#+double-double
+(deftransform cis ((z) (double-double-float) *)
+  ;; Cis.
+  '(complex (cos z) (sin z)))
+)
+
 ;;; The argument range is limited on the x86 FP trig. functions. A
 ;;; post-test can detect a failure (and load a suitable result), but
 ;;; this test is avoided if possible.
@@ -1777,6 +1801,7 @@
 	 (deftransform * ((z w) (,real-type (complex ,type)) *)
 	   ;; Real * complex
 	   '(complex (* z (realpart w)) (* z (imagpart w))))
+	 #-(or (and linux x86))
 	 (deftransform cis ((z) ((,type)) *)
 	   ;; Cis.
 	   '(complex (cos z) (sin z)))
