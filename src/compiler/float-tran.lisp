@@ -731,7 +731,7 @@
     (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
       `(,prim x))))
 
-#+(or (and linux x86))
+#+(or (and linux x86) sparc)
 (progn
 (defknown (kernel::%sincos)
     (double-float) (values double-float double-float)

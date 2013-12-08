@@ -309,10 +309,11 @@
   #+(or ppc sse2)
   (frob %%sin %%cos %%tan))
 
-;; Linux has a sincos function in the C library. Use it.  But we need
-;; to do pi reduction ourselves because the C library doesn't do
-;; accurate reduction.
-#+(or (and linux x86))
+;; Linux and sparc have a sincos function in the C library. Use it.
+;; But on linux we need to do pi reduction ourselves because the C
+;; library doesn't do accurate reduction.  Sparc does accurate pi
+;; reduction, so we don't need to do it ourselves.
+#+(or (and linux x86) sparc)
 (progn
 (declaim (inline %%sincos))
 (export '%%sincos)
@@ -321,6 +322,7 @@
   (sin double-float :out)
   (cos double-float :out))
 
+#+(and linux x86)
 (defun %sincos (theta)
   (declare (double-float theta))
   ;; Accurately reduce theta.
@@ -351,7 +353,16 @@
 	  (3
 	   (values (sin2 s c y1)
 		   (- (cos2 s c y1)))))))))
+#+sparc
+(declaim (inline %sinccos))
+#+sparc
+(defun %sincos (theta)
+  (multiple-value-bind (ignore s c)
+      (%%sincos theta)
+    (values c s)))
 )
+
+
 
 ;;;; Power functions.
 
@@ -1006,9 +1017,9 @@
   "Return cos(Theta) + i sin(Theta), AKA exp(i Theta)."
   (if (complexp theta)
       (error (intl:gettext "Argument to CIS is complex: ~S") theta)
-      #-(or (and linux x86))
+      #-(or (and linux x86) sparc)
       (complex (cos theta) (sin theta))
-      #+(or (and linux x86))
+      #+(or (and linux x86) sparc)
       (number-dispatch ((theta real))
 	((rational)
 	 (let ((arg (coerce theta 'double-float)))
