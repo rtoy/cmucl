@@ -740,14 +740,13 @@
 (deftransform cis ((x) (single-float) * :when :both)
   `(multiple-value-bind (s c)
        (kernel::%sincos (coerce x 'double-float))
-     (complex (coerce s 'single-float)
-	      (coerce c 'single-float))))
+     (complex (coerce c 'single-float)
+	      (coerce s 'single-float))))
 
 (deftransform cis ((x) (double-float) * :when :both)
-  `(multiple-value-bind (ignore s c)
-       (kernel::%%sincos x)
-     (declare (ignore ignore))
-     (complex s c)))
+  `(multiple-value-bind (s c)
+       (kernel::%sincos x)
+     (complex c s)))
 
 #+double-double
 (deftransform cis ((z) (double-double-float) *)

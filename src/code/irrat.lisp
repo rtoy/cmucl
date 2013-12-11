@@ -342,24 +342,25 @@
 	       (- c (* s y))))
 	(case (logand n 3)
 	  (0
-	   (values (cos2 s c y1)
-		   (sin2 s c y1)))
-	  (1
-	   (values (- (sin2 s c y1))
-		   (cos2 s c y1)))
-	  (2
-	   (values (- (cos2 s c y1))
-		   (- (sin2 s c y1))))
-	  (3
 	   (values (sin2 s c y1)
-		   (- (cos2 s c y1)))))))))
+		   (cos2 s c y1)))
+	  (1
+	   (values (cos2 s c y1)
+		   (- (sin2 s c y1))))
+	  (2
+	   (values (- (sin2 s c y1))
+		   (- (cos2 s c y1))))
+	  (3
+	   (values (- (cos2 s c y1))
+		   (sin2 s c y1))))))))
 #+sparc
 (declaim (inline %sinccos))
 #+sparc
 (defun %sincos (theta)
   (multiple-value-bind (ignore s c)
       (%%sincos theta)
-    (values c s)))
+    (declare (ignore ignore))
+    (values s c)))
 )
 
 
@@ -1025,13 +1026,13 @@
 	 (let ((arg (coerce theta 'double-float)))
 	   (multiple-value-bind (s c)
 	       (%sincos arg)
-	     (complex (coerce s 'single-float)
-		      (coerce c 'single-float)))))
+	     (complex (coerce c 'single-float)
+		      (coerce s 'single-float)))))
 	(((foreach single-float double-float))
 	 (multiple-value-bind (s c)
 	     (%sincos (coerce theta 'double-float))
-	   (complex (coerce s '(dispatch-type theta))
-		    (coerce c '(dispatch-type theta)))))
+	   (complex (coerce c '(dispatch-type theta))
+		    (coerce s '(dispatch-type theta)))))
 	#+double-double
 	((double-double-float)
 	 (complex (cos theta) (sin theta))))))
