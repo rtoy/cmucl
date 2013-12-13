@@ -756,32 +756,58 @@
   (frob single-float-op single-reg single-float)
   (frob double-float-op double-reg double-float))
 
-(macrolet ((generate (movinst opinst commutative)
+(macrolet ((generate (movinst opinst commutative rtype ea)
              `(progn
                 (cond
                   ((location= x r)
-                   (inst ,opinst x y))
+		   ;; x and r are the same.  We can just operate on x,
+		   ;; and we're done.
+		   (sc-case y
+		     (,rtype
+		      (inst ,opinst x y))
+		     (descriptor-reg
+		      (inst ,opinst x (,ea y)))))
                   ((and ,commutative (location= y r))
+		   ;; y = r and the operation is commutative, so just
+		   ;; do the operation with r and x.
                    (inst ,opinst y x))
                   ((not (location= r y))
+		   ;; x, y, and r are three different regs.  So just
+		   ;; move r to x and do the operation on r.
                    (inst ,movinst r x)
-                   (inst ,opinst r y))
+		   (sc-case y
+		     (,rtype
+		      (inst ,opinst r y))
+		     (descriptor-reg
+		      (inst ,opinst r (,ea y)))))
                   (t
+		   ;; The hard case where the operation is not
+		   ;; commutative, but y might be r.  Don't want to
+		   ;; destroy y in this case, so use a temp so we
+		   ;; don't accidentally overwrite y.
                    (inst ,movinst tmp x)
-                   (inst ,opinst tmp y)
+		   (sc-case y
+		     (,rtype
+		      (inst ,opinst tmp y))
+		     (descriptor-reg
+		      (inst ,opinst tmp (,ea y))))
                    (inst ,movinst r tmp)))))
            (frob (op sinst sname scost dinst dname dcost commutative)
              `(progn
                 (define-vop (,sname single-float-op)
-                    (:translate ,op)
+		  (:args (x :scs (single-reg) :target r)
+			 (y :scs (single-reg descriptor-reg)))
+		  (:translate ,op)
                   (:temporary (:sc single-reg) tmp)
                   (:generator ,scost
-                    (generate movss ,sinst ,commutative)))
+                    (generate movss ,sinst ,commutative single-reg ea-for-sf-desc)))
                 (define-vop (,dname double-float-op)
+		  (:args (x :scs (double-reg) :target r)
+			 (y :scs (double-reg descriptor-reg)))
                   (:translate ,op)
                   (:temporary (:sc single-reg) tmp)
                   (:generator ,dcost
-                    (generate movsd ,dinst ,commutative))))))
+                    (generate movsd ,dinst ,commutative double-reg ea-for-df-desc))))))
   (frob + addss +/single-float 2 addsd +/double-float 2 t)
   (frob - subss -/single-float 2 subsd -/double-float 2 nil)
   (frob * mulss */single-float 4 mulsd */double-float 5 t)
@@ -865,11 +891,11 @@
 ;;; and stack args
 
 (define-vop (single-float-compare float-compare)
-  (:args (x :scs (single-reg)) (y :scs (single-reg)))
+  (:args (x :scs (single-reg)) (y :scs (single-reg descriptor-reg)))
   (:conditional)
   (:arg-types single-float single-float))
 (define-vop (double-float-compare float-compare)
-  (:args (x :scs (double-reg)) (y :scs (double-reg)))
+  (:args (x :scs (double-reg)) (y :scs (double-reg descriptor-reg)))
   (:conditional)
   (:arg-types double-float double-float))
 
@@ -879,7 +905,11 @@
   (:vop-var vop)
   (:generator 3
     (note-this-location vop :internal-error)
-    (inst ucomiss x y)
+    (sc-case y
+      (single-reg
+       (inst ucomiss x y))
+      (descriptor-reg
+       (inst ucomiss x (ea-for-sf-desc y))))
     ;; if PF&CF, there was a NaN involved => not equal
     ;; otherwise, ZF => equal
     (cond (not-p
@@ -897,7 +927,11 @@
   (:vop-var vop)
   (:generator 3
     (note-this-location vop :internal-error)
-    (inst ucomisd x y)
+    (sc-case y
+      (double-reg
+       (inst ucomisd x y))
+      (descriptor-reg
+       (inst ucomisd x (ea-for-df-desc y))))
     (cond (not-p
            (inst jmp :p target)
            (inst jmp :ne target))
@@ -911,7 +945,11 @@
   (:translate <)
   (:info target not-p)
   (:generator 3
-    (inst comisd x y)
+    (sc-case y
+      (double-reg
+       (inst comisd x y))
+      (descriptor-reg
+       (inst comisd x (ea-for-df-desc y))))
     (cond (not-p
            (inst jmp :p target)
            (inst jmp :nc target))
@@ -925,7 +963,11 @@
   (:translate <)
   (:info target not-p)
   (:generator 3
-    (inst comiss x y)
+    (sc-case y
+      (single-reg
+       (inst comiss x y))
+      (descriptor-reg
+       (inst comiss x (ea-for-sf-desc y))))
     (cond (not-p
            (inst jmp :p target)
            (inst jmp :nc target))
@@ -939,7 +981,11 @@
   (:translate >)
   (:info target not-p)
   (:generator 3
-    (inst comisd x y)
+    (sc-case y
+      (double-reg
+       (inst comisd x y))
+      (descriptor-reg
+       (inst comisd x (ea-for-df-desc y))))
     (cond (not-p
            (inst jmp :p target)
            (inst jmp :na target))
@@ -953,7 +999,11 @@
   (:translate >)
   (:info target not-p)
   (:generator 3
-    (inst comiss x y)
+    (sc-case y
+      (single-reg
+       (inst comiss x y))
+      (descriptor-reg
+       (inst comiss x (ea-for-sf-desc y))))
     (cond (not-p
            (inst jmp :p target)
            (inst jmp :na target))
@@ -969,8 +1019,7 @@
 
 (macrolet ((frob (name translate inst to-sc to-type)
              `(define-vop (,name)
-                (:args (x :scs (signed-stack signed-reg) :target temp))
-                (:temporary (:sc signed-stack) temp)
+                (:args (x :scs (signed-stack signed-reg)))
                 (:results (y :scs (,to-sc)))
                 (:arg-types signed-num)
                 (:result-types ,to-type)
@@ -982,9 +1031,8 @@
                 (:generator 5
                   (sc-case x
                     (signed-reg
-                     (inst mov temp x)
                      (note-this-location vop :internal-error)
-                     (inst ,inst y temp))
+                     (inst ,inst y x))
                     (signed-stack
                      (note-this-location vop :internal-error)
                      (inst ,inst y x)))))))
@@ -992,46 +1040,63 @@
   (frob %double-float/signed %double-float cvtsi2sd double-reg double-float))
 
 (macrolet ((frob (name translate inst from-sc from-type to-sc to-type)
-             `(define-vop (,name)
-               (:args (x :scs (,from-sc) :target y))
-               (:results (y :scs (,to-sc)))
-               (:arg-types ,from-type)
-               (:result-types ,to-type)
-               (:policy :fast-safe)
-               (:note _N"inline float coercion")
-               (:translate ,translate)
-               (:vop-var vop)
-               (:save-p :compute-only)
-               (:generator 2
-                (note-this-location vop :internal-error)
-                (inst ,inst y x)))))
+	     (let ((ea (if (eq from-sc 'single-reg)
+			   'ea-for-sf-desc
+			   'ea-for-df-desc)))
+	       `(define-vop (,name)
+		  (:args (x :scs (,from-sc descriptor-reg) :target y))
+		  (:results (y :scs (,to-sc)))
+		  (:arg-types ,from-type)
+		  (:result-types ,to-type)
+		  (:policy :fast-safe)
+		  (:note _N"inline float coercion")
+		  (:translate ,translate)
+		  (:vop-var vop)
+		  (:save-p :compute-only)
+		  (:generator 2
+		    (note-this-location vop :internal-error)
+		    (sc-case x
+		      (,from-sc
+		       (inst ,inst y x))
+		      (descriptor-reg
+		       (inst ,inst y (,ea x)))))))))
   (frob %single-float/double-float %single-float cvtsd2ss double-reg
-        double-float single-reg single-float)
+	double-float single-reg single-float)
 
   (frob %double-float/single-float %double-float cvtss2sd
-        single-reg single-float double-reg double-float))
+	single-reg single-float double-reg double-float))
 
 (macrolet ((frob (trans inst from-sc from-type round-p)
              (declare (ignore round-p))
-             `(define-vop (,(symbolicate trans "/" from-type))
-               (:args (x :scs (,from-sc)))
-               (:temporary (:sc any-reg) temp-reg)
-               (:results (y :scs (signed-reg)))
-               (:arg-types ,from-type)
-               (:result-types signed-num)
-               (:translate ,trans)
-               (:policy :fast-safe)
-               (:note _N"inline float truncate")
-               (:vop-var vop)
-               (:save-p :compute-only)
-               (:generator 5
-                 (sc-case y
-                          (signed-stack
-                           (inst ,inst temp-reg x)
-                           (move y temp-reg))
-                          (signed-reg
-                           (inst ,inst y x)
-                           ))))))
+	     (let ((ea (if (eq from-sc 'single-reg)
+			   'ea-for-sf-desc
+			   'ea-for-df-desc)))
+	       `(define-vop (,(symbolicate trans "/" from-type))
+		  (:args (x :scs (,from-sc descriptor-reg)))
+		  (:temporary (:sc any-reg) temp-reg)
+		  (:results (y :scs (signed-reg)))
+		  (:arg-types ,from-type)
+		  (:result-types signed-num)
+		  (:translate ,trans)
+		  (:policy :fast-safe)
+		  (:note _N"inline float truncate")
+		  (:vop-var vop)
+		  (:save-p :compute-only)
+		  (:generator 5
+		    (sc-case y
+		      (signed-stack
+		       (sc-case x
+			 (,from-sc
+			  (inst ,inst temp-reg x))
+			 (descriptor-reg
+			  (inst ,inst temp-reg (,ea x))))
+		       (move y temp-reg))
+		      (signed-reg
+		       (sc-case x
+			 (,from-sc
+			  (inst ,inst y x))
+			 (descriptor-reg
+			  (inst ,inst y (,ea x)))))))))))
   (frob %unary-truncate cvttss2si single-reg single-float nil)
   (frob %unary-truncate cvttsd2si double-reg double-float nil)
 
@@ -1039,7 +1104,7 @@
   (frob %unary-round cvtsd2si double-reg double-float t))
 
 (define-vop (fast-unary-ftruncate/single-float)
-  (:args (x :scs (single-reg)))
+  (:args (x :scs (single-reg descriptor-reg)))
   (:arg-types single-float)
   (:results (r :scs (single-reg)))
   (:result-types single-float)
@@ -1048,11 +1113,15 @@
   (:temporary (:sc signed-reg) temp)
   (:note _N"inline ftruncate")
   (:generator 2
-    (inst cvttss2si temp x)
+    (sc-case x
+      (single-reg
+       (inst cvttss2si temp x))
+      (descriptor-reg
+       (inst cvttss2si temp (ea-for-sf-desc x))))
     (inst cvtsi2ss r temp)))
 
 (define-vop (fast-unary-ftruncate/double-float)
-  (:args (x :scs (double-reg) :target r))
+  (:args (x :scs (double-reg descriptor-reg) :target r))
   (:arg-types double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
@@ -1061,7 +1130,11 @@
   (:temporary (:sc signed-reg) temp)
   (:note _N"inline ftruncate")
   (:generator 2
-    (inst cvttsd2si temp x)
+    (sc-case x
+      (double-reg
+       (inst cvttsd2si temp x))
+      (descriptor-reg
+       (inst cvttsd2si temp (ea-for-df-desc x))))
     (inst cvtsi2sd r temp)))
 
 (define-vop (make-single-float)
