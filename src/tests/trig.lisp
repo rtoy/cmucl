@@ -142,6 +142,10 @@
   -4.08066388841804238545143494525595117765084022768d-1)
 
 
+(rt:deftest sincos.0
+    (multiple-value-list (kernel::%sincos -0d0))
+  (-0d0 1d0))
+
 (rt:deftest sincos.1
     (let (results)
       (dotimes (k 1000)
