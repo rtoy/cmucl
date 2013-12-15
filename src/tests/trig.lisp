@@ -140,4 +140,89 @@
 (rt:deftest tan.misc.1
     (tan (scale-float 1d0 120))
   -4.08066388841804238545143494525595117765084022768d-1)
-  
+
+
+(rt:deftest sincos.1
+    (let (results)
+      (dotimes (k 1000)
+	(let* ((x (random (/ pi 4)))
+	       (s-exp (sin x))
+	       (c-exp (cos x)))
+	  (multiple-value-bind (s c)
+	      (kernel::%sincos x)
+	    (unless (and (= s s-exp)
+			 (= c c-exp))
+	      (push (list x
+			  (list s s-exp)
+			  (list c c-exp))
+		    results)))))
+      results)
+  nil)
+
+(rt:deftest sincos.2
+    (let (results)
+      (dotimes (k 1000)
+	(let* ((x (random 16d0))
+	       (s-exp (sin x))
+	       (c-exp (cos x)))
+	  (multiple-value-bind (s c)
+	      (kernel::%sincos x)
+	    (unless (and (= s s-exp)
+			 (= c c-exp))
+	      (push (list x
+			  (list s s-exp)
+			  (list c c-exp))
+		    results)))))
+      results)
+  nil)
+
+(rt:deftest sincos.3
+    (let (results)
+      (dotimes (k 1000)
+	(let* ((x (random (scale-float 1d0 120)))
+	       (s-exp (sin x))
+	       (c-exp (cos x)))
+	  (multiple-value-bind (s c)
+	      (kernel::%sincos x)
+	    (unless (and (= s s-exp)
+			 (= c c-exp))
+	      (push (list x
+			  (list s s-exp)
+			  (list c c-exp))
+		    results)))))
+      results)
+  nil)
+
+(rt:deftest sincos.3a
+    (let (results)
+      (dotimes (k 1000)
+	(let* ((x (- (random (scale-float 1d0 120))))
+	       (s-exp (sin x))
+	       (c-exp (cos x)))
+	  (multiple-value-bind (s c)
+	      (kernel::%sincos x)
+	    (unless (and (= s s-exp)
+			 (= c c-exp))
+	      (push (list x
+			  (list s s-exp)
+			  (list c c-exp))
+		    results)))))
+      results)
+  nil)
+
+(rt:deftest sincos.4
+    (let (results)
+      (dotimes (k 1000)
+	(let* ((x (random (scale-float 1d0 1023)))
+	       (s-exp (sin x))
+	       (c-exp (cos x)))
+	  (multiple-value-bind (s c)
+	      (kernel::%sincos x)
+	    (unless (and (= s s-exp)
+			 (= c c-exp))
+	      (push (list x
+			  (list s s-exp)
+			  (list c c-exp))
+		    results)))))
+      results)
+  nil)

@@ -202,7 +202,9 @@
 
 ;; Block compile so the trig routines don't cons their args when
 ;; calling the kernel trig routines.
-(declaim (ext:start-block kernel-sin kernel-cos kernel-tan %sin %cos %tan))
+(declaim (ext:start-block kernel-sin kernel-cos kernel-tan
+			  %sin %cos %tan
+			  %sincos))
 
 ;; kernel sin function on [-pi/4, pi/4], pi/4 ~ 0.7854
 ;; Input x is assumed to be bounded by ~pi/4 in magnitude.
@@ -592,62 +594,31 @@
 	       ;; flag = 1 if n even, -1 if n odd
 	       (kernel-tan y0 y1 flag)))))))
 
+(defun %sincos (x)
+  (declare (double-float x)
+	   (optimize (speed 3)))
+  (cond ((<= (abs x) (/ pi 4))
+	 (values (kernel-sin x 0d0 0)
+		 (kernel-cos x 0d0)))
+	(t
+	 ;; Argument reduction needed
+	 (multiple-value-bind (n y0 y1)
+	     (%ieee754-rem-pi/2 x)
+	   (case (logand n 3)
+	     (0
+	      (values (kernel-sin y0 y1 1)
+		      (kernel-cos y0 y1)))
+	     (1
+	      (values (kernel-cos y0 y1)
+		      (- (kernel-sin y0 y1 1))))
+	     (2
+	      (values (- (kernel-sin y0 y1 1))
+		      (- (kernel-cos y0 y1))))
+	     (3
+	      (values (- (kernel-cos y0 y1))
+		      (kernel-sin y0 y1 1))))))))
+      
 (declaim (ext:end-block))
-
-;; Linux and sparc have a sincos function in the C library. Use it.
-;; But on linux we need to do pi reduction ourselves because the C
-;; library doesn't do accurate reduction.  Sparc does accurate pi
-;; reduction, so we don't need to do it ourselves.
-#+(or (and linux x86) sparc)
-(progn
-(declaim (inline %%sincos))
-(export '%%sincos)
-(alien:def-alien-routine ("sincos" %%sincos) c-call:void
-  (x double-float)
-  (sin double-float :out)
-  (cos double-float :out))
-
-#+(and linux x86)
-(defun %sincos (theta)
-  (declare (double-float theta))
-  ;; Accurately reduce theta.
-  (multiple-value-bind (n y0 y1)
-      (%ieee754-rem-pi/2 theta)
-    (multiple-value-bind (ignore s c)
-	(%%sincos y0)
-      (declare (ignore ignore))
-      ;; Figure out which quadrant to use, and finish out the
-      ;; computation using y1. This is done by using a 1st-order
-      ;; Taylor expansion about y0.
-      (flet ((sin2 (s c y)
-	       ;; sin(x+y) = sin(x) + cos(x)*y
-	       (+ s (* c y)))
-	     (cos2 (s c y)
-	       ;; cos(x+y) = cos(x) - sin(x)*y
-	       (- c (* s y))))
-	(case (logand n 3)
-	  (0
-	   (values (sin2 s c y1)
-		   (cos2 s c y1)))
-	  (1
-	   (values (cos2 s c y1)
-		   (- (sin2 s c y1))))
-	  (2
-	   (values (- (sin2 s c y1))
-		   (- (cos2 s c y1))))
-	  (3
-	   (values (- (cos2 s c y1))
-		   (sin2 s c y1))))))))
-#+sparc
-(declaim (inline %sinccos))
-#+sparc
-(defun %sincos (theta)
-  (multiple-value-bind (ignore s c)
-      (%%sincos theta)
-    (declare (ignore ignore))
-    (values s c)))
-)
-
 
 
 ;;;; Power functions.
@@ -1303,9 +1274,6 @@
   "Return cos(Theta) + i sin(Theta), AKA exp(i Theta)."
   (if (complexp theta)
       (error (intl:gettext "Argument to CIS is complex: ~S") theta)
-      #-(or (and linux x86) sparc)
-      (complex (cos theta) (sin theta))
-      #+(or (and linux x86) sparc)
       (number-dispatch ((theta real))
 	((rational)
 	 (let ((arg (coerce theta 'double-float)))
