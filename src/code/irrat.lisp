@@ -489,11 +489,11 @@
 			   r))))))))
     (when (= iy 1)
       (return-from kernel-tan w))
-    ;;
+    ;; Compute 1/w=1/(x+r) carefully
     (let ((a 0d0)
 	  (tt 0d0))
       (setf z (kernel:make-double-float (kernel:double-float-high-bits w) 0))
-      (setf v (- r (- r x)))		; z + v = r + x
+      (setf v (- r (- z x)))		; z + v = r + x
       (setf a (/ -1 w))
       (setf tt (kernel:make-double-float (kernel:double-float-high-bits a) 0))
       (setf s (+ 1 (* tt z)))

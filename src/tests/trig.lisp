@@ -127,6 +127,12 @@
     (tan (float 11/16 1d0))
   8.21141801589894121911423965374711700875371645309d-1)
 
+(rt:deftest tan.6
+    ;; This was found by maxima's testsuite.  A bug in kernel-tan when
+    ;; returning cot(x).
+    (tan 1.107148717794091d0)
+  2.0000000000000028604455051971538975562294147582d0)
+
 (rt:deftest tan.red.0
     ;; Test for argument reduction with n even
     (tan (* 7/4 pi))
