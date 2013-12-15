@@ -543,7 +543,7 @@
       (t
        ;; Argument reduction needed
        (multiple-value-bind (n y0 y1)
-	   (kernel::%ieee754-rem-pi/2 x)
+	   (%ieee754-rem-pi/2 x)
 	 (case (logand n 3)
 	   (0
 	    (kernel-sin y0 y1 1))
@@ -568,7 +568,7 @@
       (t
        ;; Argument reduction needed
        (multiple-value-bind (n y0 y1)
-	   (kernel::%ieee754-rem-pi/2 x)
+	   (%ieee754-rem-pi/2 x)
 	 (ecase (logand n 3)
 	   (0
 	    (kernel-cos y0 y1))
@@ -584,16 +584,19 @@
 	   (optimize (speed 3)))
   (let ((ix (logand #x7fffffff (kernel:double-float-high-bits x))))
     (cond ((<= ix #x3fe921fb)
+	   ;; |x| < pi/4
 	   (kernel-tan x 0d0 1))
 	  ((>= ix #x7ff00000)
+	   ;; tan(Inf or Nan) is NaN
 	   (- x x))
 	  (t
 	   (multiple-value-bind (n y0 y1)
-	       (kernel::%ieee754-rem-pi/2 x)
+	       (%ieee754-rem-pi/2 x)
 	     (let ((flag (- 1 (ash (logand n 1) 1))))
 	       ;; flag = 1 if n even, -1 if n odd
 	       (kernel-tan y0 y1 flag)))))))
 
+;; Compute sin and cos of x, simultaneously.
 (defun %sincos (x)
   (declare (double-float x)
 	   (optimize (speed 3)))
@@ -617,7 +620,6 @@
 	     (3
 	      (values (- (kernel-cos y0 y1))
 		      (kernel-sin y0 y1 1))))))))
-      
 (declaim (ext:end-block))
 
 
