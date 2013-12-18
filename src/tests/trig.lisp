@@ -1,3 +1,5 @@
+;;; Tests for the basic trig functions, now implemented in Lisp.
+
 (defpackage :trig-tests
   (:use :cl :lisp-unit))
 
@@ -52,8 +54,10 @@
   "Test sin for exceptional values"
   (:tag :sin :exceptions)
   (kernel::with-float-traps-masked ()
-    (assert-error 'floating-point-invalid-operation (sin ext:double-float-positive-infinity))
-    (assert-error 'floating-point-invalid-operation (sin ext:double-float-negative-infinity))))
+    (assert-error 'floating-point-invalid-operation
+		  (sin ext:double-float-positive-infinity))
+    (assert-error 'floating-point-invalid-operation
+		  (sin ext:double-float-negative-infinity))))
 
 (define-test cos.signed-zeroes
   "Test cos for 0d0 and -0d0"
@@ -104,6 +108,15 @@
   (assert-eql -0.9258790228548379d0
 	      (cos (scale-float 1d0 120))))
 
+(define-test cos.exceptions
+  "Test cos for exceptional values"
+  (:tag :sin :exceptions)
+  (kernel::with-float-traps-masked ()
+    (assert-error 'floating-point-invalid-operation
+		  (cos ext:double-float-positive-infinity))
+    (assert-error 'floating-point-invalid-operation
+		  (cos ext:double-float-negative-infinity))))
+
 (define-test tan.signed-zeroes
   "Test tan for 0d0 and -0d0"
   (:tag :tan :signed-zeroes)
@@ -150,6 +163,14 @@
   (assert-eql -4.08066388841804238545143494525595117765084022768d-1
 	      (tan (scale-float 1d0 120))))
 
+(define-test tan.exceptions
+  "Test tan for exceptional values"
+  (:tag :sin :exceptions)
+  (kernel::with-float-traps-masked ()
+    (assert-error 'floating-point-invalid-operation
+		  (tan ext:double-float-positive-infinity))
+    (assert-error 'floating-point-invalid-operation
+		  (tan ext:double-float-negative-infinity))))
 
 (define-test sincos.signed-zeroes
   "Test sincos at 0d0, -0d0"
@@ -159,6 +180,9 @@
   (assert-equal '(-0d0 1d0)
 		(multiple-value-list (kernel::%sincos -0d0))))
 
+;; Test sincos at a bunch of random points and compare the result from
+;; sin and cos.  If they differ, save the result in a list to be
+;; returned.
 (defun sincos-test (limit n)
   (let (results)
     (dotimes (k n)
