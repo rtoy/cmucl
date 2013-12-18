@@ -242,15 +242,17 @@
 	   (optimize (speed 3) (safety 0)))
   (let ((ix (ldb (byte 31 0) (kernel:double-float-high-bits x))))
     (when (< ix #x3e400000)
+      ;; |x| < 2^-27
+      ;; Signal inexact if x /= 0
       (if (zerop (truncate x))
 	  (return-from kernel-sin x)
 	  (return-from kernel-sin x)))
-    (let* ((s1 -1.66666666666666324348d-01)
-	   (s2  8.33333333332248946124d-03)
-	   (s3 -1.98412698298579493134d-04)
-	   (s4  2.75573137070700676789d-06)
-	   (s5 -2.50507602534068634195d-08)
-	   (s6  1.58969099521155010221d-10)
+    (let* ((s1 -1.66666666666666324348d-01) ; #xBFC55555 #x55555549
+	   (s2  8.33333333332248946124d-03) ; #x3F811111 #x1110F8A6
+	   (s3 -1.98412698298579493134d-04) ; #xBF2A01A0 #x19C161D5
+	   (s4  2.75573137070700676789d-06) ; #x3EC71DE3 #x57B1FE7D
+	   (s5 -2.50507602534068634195d-08) ; #xBE5AE5E6 #x8A2B9CEB
+	   (s6  1.58969099521155010221d-10) ; #x3DE5D93A #x5ACFD57C
 	   (z (* x x))
 	   (v (* z x))
 	   (r (+ s2
@@ -338,13 +340,15 @@
 		     (- (* z r)
 			(* x y)))))
 	    (t
+	     ;; qx = 0.28125 if |x| > 0.78125, else x/4 dropping the
+	     ;; least significant 32 bits.
 	     (let* ((qx (if (> ix #x3fe90000)
 			    0.28125d0
 			    ;; x/4, exactly, and also dropping the
 			    ;; least significant 32 bits of the
-			    ;; fraction. (Why?)
-			    (kernel:make-double-float (- ix #x00200000)
-						      0)))
+			    ;; fraction.
+			    (make-double-float (- ix #x00200000)
+					       0)))
 		    (hz (- (* 0.5 z) qx))
 		    (a (- 1 qx)))
 	       (- a (- hz (- (* z r)
@@ -419,7 +423,8 @@
       (when (zerop (truncate x))
 	(cond ((zerop (logior (logior ix (kernel:double-float-low-bits x))
 			      (+ iy 1)))
-	       ;; x = 0 and iy = -1 (cot)
+	       ;; x = 0 (because hi and low bits are 0) and iy = -1
+	       ;; (cot)
 	       (return-from kernel-tan (/ (abs x))))
 	      ((= iy 1)
 	       (return-from kernel-tan x))
@@ -429,10 +434,10 @@
 	       (let ((a 0d0)
 		     (tt 0d0))
 		 (setf w (+ x y))
-		 (setf z (kernel:make-double-float (kernel:double-float-high-bits w) 0))
+		 (setf z (make-double-float (double-float-high-bits w) 0))
 		 (setf v (- y (- z x)))
 		 (setf a (/ -1 w))
-		 (setf tt (kernel:make-double-float (kernel:double-float-high-bits a) 0))
+		 (setf tt (make-double-float (double-float-high-bits a) 0))
 		 (setf s (+ 1 (* tt z)))
 		 (return-from kernel-tan (+ tt
 					    (* a (+ s (* tt v))))))))))
@@ -441,10 +446,13 @@
       (when (minusp hx)
 	(setf x (- x))
 	(setf y (- y)))
+      ;; The two constants below are such that pi/4 + pi/4_lo is pi/4
+      ;; to twice the accuracy of a double float.
+      ;;
       ;; z = pi/4-x
-      (setf z (- (kernel:make-double-float #x3FE921FB #x54442D18) x))
-      ;; w = pi/4_lo - y
-      (setf w (- (kernel:make-double-float #x3C81A626 #x33145C07) y))
+      (setf z (- (make-double-float #x3FE921FB #x54442D18) x))
+      ;; w = pi/4_lo - y.
+      (setf w (- (make-double-float #x3C81A626 #x33145C07) y))
       (setf x (+ z w))
       (setf y 0d0))
     (setf z (* x x))
