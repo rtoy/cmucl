@@ -731,8 +731,6 @@
     (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
       `(,prim x))))
 
-#+(or (and linux x86) sparc)
-(progn
 (defknown (kernel::%sincos)
     (double-float) (values double-float double-float)
     (movable foldable flushable))
@@ -752,7 +750,7 @@
 (deftransform cis ((z) (double-double-float) *)
   ;; Cis.
   '(complex (cos z) (sin z)))
-)
+
 
 ;;; The argument range is limited on the x86 FP trig. functions. A
 ;;; post-test can detect a failure (and load a suitable result), but
