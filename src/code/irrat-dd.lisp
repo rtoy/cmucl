@@ -56,6 +56,12 @@
   0.7853981633974483096156608458198757210492923w0
   _N"Pi/4")
 
+;; dd-pi/4-lo is such that dd-pi/4-lo + dd-pi/4 is equal to pi/4 to
+;; twice the precision of a double-double-float.
+(defconstant dd-pi/4-lo
+  -7.486924524295848886603985669688687133352026408988280860093283232w-34
+  )
+
 ;; log2-c1 and log-c2 are log(2) arranged in such a way that log2-c1 +
 ;; log2-c2 is log(2) to an accuracy greater than double-double-float.
 (defconstant log2-c1
@@ -1072,9 +1078,24 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 	  (/ y)
 	  y))))
 
-(defun dd-%%tan (x)
-  (declare (type double-double-float x))
-  (dd-tancot x nil))
+(defun dd-%%tan (x extra)
+  (declare (type double-double-float x)
+	   (double-float extra))
+  (cond ((>= (abs x) 0.6744)
+	 ;; For 0.6744 <= |x| <= pi/4, we want to use the relationship
+	 ;;
+	 ;;   tan(x) = tan(pi/4-y) = (1 - tan(y))/(1 + tan(y))
+	 ;;          = 1 - 2*(tan(y) - tan(y)^2)/(1+tan(y))
+	 (if (minusp x)
+	     (- (dd-%%tan (- x) (- extra)))
+	     (let* ((z (- dd-pi/4 x))
+		    (w (- dd-pi/4-lo extra))
+		    (tan (dd-tancot (+ z w) nil)))
+	       (- 1
+		  (/ (* 2 (- tan (* tan tan)))
+		     (+ 1 tan))))))
+	(t
+	 (dd-tancot x nil))))
 
 (declaim (inline %kernel-rem-pi/2))
 (alien:def-alien-routine ("__kernel_rem_pio2" %kernel-rem-pi/2) c-call:int
@@ -1139,10 +1160,9 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 				 (length parts)
 				 3
 				 (vector-sap two-over-pi))))
-	   (sum (+ (coerce (aref y 2) 'double-double-float)
-		   (coerce (aref y 1) 'double-double-float)
+	   (sum (+ (coerce (aref y 1) 'double-double-float)
 		   (coerce (aref y 0) 'double-double-float))))
-      (values n sum))))
+      (values n sum (aref y 2)))))
 			       
 
 (declaim (ftype (function (double-double-float) double-double-float)
@@ -1181,15 +1201,15 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 		dd-%tan))
 (defun dd-%tan (x)
   (declare (double-double-float x))
-  (cond ((< (abs x) (/ pi 4))
-	 (dd-%%tan x))
+  (cond ((<= (abs x) (/ pi 4))
+	 (dd-%%tan x 0d0))
 	(t
 	 ;; Argument reduction needed
-	 (multiple-value-bind (n reduced)
+	 (multiple-value-bind (n reduced extra)
 	     (reduce-arg x)
 	   (if (evenp n)
-	       (dd-%%tan reduced)
-	       (- (/ (dd-%%tan reduced))))))))
+	       (dd-%%tan reduced extra)
+	       (- (/ (dd-%%tan reduced extra))))))))
 
 (defun dd-%sincos (x)
   (declare (double-double-float x))

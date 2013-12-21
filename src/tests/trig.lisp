@@ -376,12 +376,12 @@
   (assert-eq t (rel-or-abs-error
 		(tan (* 7/4 kernel:dd-pi))
 		-1.000000000000000000000000000000001844257310064121018312678894979w0
-		6.467w-33))
+		3.422w-49))
   ;; Test for argument reduction with n odd
   (assert-eq t (rel-or-abs-error
 		(tan (* 9/4 kernel:dd-pi))
 		1.000000000000000000000000000000025802415787810837455445433037983w0
-		5.773w-33))
+		0w0))
   ;; Test for argument reduction, big value
   (assert-eq t (rel-or-abs-error
 		(tan (scale-float 1w0 120))
