@@ -482,14 +482,16 @@
       (complex 0 z)))
 
 ;; asin(x) = -i*log(i*x + sqrt(1-x^2))
-(defun asin-def (z)
-  (- (i*z (log (+ (i*z z)
-		  (sqrt (1-z (* z z))))))))
-  
-;; asin branch cut is the real axis |x| > 1.  For x < -1, it is
+;;
+;; The branch cut is the real axis |x| > 1.  For x < -1, it is
 ;; continuous with quadrant II; for x > 1, continuous with quadrant
 ;; IV.
 ;;
+(defun asin-def (z)
+  (- (i*z (log (+ (i*z z)
+		  (sqrt (1-z (* z z))))))))
+
+
 (define-test branch-cut.asin
   (:tag :asin :branch-cuts)
   ;; Test for x < -1, which is continuous with Quadrant II.  Compute
@@ -565,6 +567,33 @@
 
 ;; atan(z) = (log(1+i*z) - log(1-i*z))/(2*i)
 ;;         = -i/2*(log(1+i*z) - log(1-i*z))
+;;
+;; WARNING: The CLHS is a bit confused here. Two definitions of atan
+;; are given in the CLHS
+;; http://www.lispworks.com/documentation/HyperSpec/Body/f_asin_.htm
+;; and they are not consistent.  Plus, there is a typo in the second
+;; definition. (Missing parens.)
+;;
+;; For clarification, we turn to
+;; http://www.lispworks.com/documentation/HyperSpec/Issues/iss069_w.htm,
+;; which recommends using the second formula and also puts in the
+;; parentheses in the correct places.
+;;
+;; BUT, this is further confused by the example that atan(0+2*i) is
+;; 1.57-0.549*i for the proposed formula but -1.57+0.549*i under the
+;; current formula.
+;;
+;;
+;; I think the inconsistency is that the results are derived without
+;; signed zeroes.  But we have signed zeroes, so let us derive the
+;; actual value of atan(0+2*i) using the (second) formula.
+;;
+;;   atan(0+2*i) = (log(1+i*(0+2*i)) - log(1-i*(0+2*i)))/(2*i)
+;;      = (log(1+(-2+0*i)) - log(1-(-2+0*i)))/(2*i)
+;;      = (log(-1-0*i) - log(3-0*i))/(2*i)
+;;      = ((log(1) - pi*i) - (log(3) - 0*i))/(2*i)
+;;      = (-log(3) - pi*i)/(2*i)
+;;      = -pi/2 + log(3)/2*i
 ;;
 ;; The branch cut is the imaginary axis, |y| > 1.  For y < -1, atan is
 ;; continuous with Quadrant IV; for y > 1, Quadrant II.
