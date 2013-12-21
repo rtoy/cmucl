@@ -1298,7 +1298,9 @@
 		    (coerce s '(dispatch-type theta)))))
 	#+double-double
 	((double-double-float)
-	 (complex (cos theta) (sin theta))))))
+	 (multiple-value-bind (s c)
+	     (dd-%sincos theta)
+	   (complex c s))))))
 
 (defun asin (number)
   "Return the arc sine of NUMBER."

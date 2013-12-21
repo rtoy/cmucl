@@ -748,8 +748,9 @@
 
 #+double-double
 (deftransform cis ((z) (double-double-float) *)
-  ;; Cis.
-  '(complex (cos z) (sin z)))
+  `(multiple-value-bind (s c)
+       (kernel::dd-%sincos x)
+     (complex c s)))
 
 
 ;;; The argument range is limited on the x86 FP trig. functions. A

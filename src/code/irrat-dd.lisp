@@ -1191,6 +1191,29 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 	       (dd-%%tan reduced)
 	       (- (/ (dd-%%tan reduced))))))))
 
+(defun dd-%sincos (x)
+  (declare (double-double-float x))
+  (cond ((< (abs x) (/ pi 4))
+	 (values (dd-%%sin x)
+		 (dd-%%cos x)))
+	(t
+	 ;; Argument reduction needed
+	 (multiple-value-bind (n reduced)
+	     (reduce-arg x)
+	   (case (logand n 3)
+	     (0
+	      (values (dd-%%sin reduced)
+		      (dd-%%cos reduced)))
+	     (1
+	      (values (dd-%%cos reduced)
+		      (- (dd-%%sin reduced))))
+	     (2
+	      (values (- (dd-%%sin reduced))
+		      (- (dd-%%cos reduced))))
+	     (3
+	      (values (- (dd-%%cos reduced))
+		      (dd-%%sin reduced))))))))
+
 ;;; dd-%log2
 ;;; Base 2 logarithm.
 
