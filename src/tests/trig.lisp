@@ -388,3 +388,46 @@
 		-4.080663888418042385451434945255951177650840227682488471558860153w-1
 		1.888w-33)))
 
+(define-test dd-sincos.signed-zeroes
+  "Test sincos at 0d0, -0d0"
+  (:tag :sincos :signed-zeroes :double-double)
+  (assert-equal '(0w0 1w0)
+		(multiple-value-list (kernel::dd-%sincos 0w0)))
+  (assert-equal '(-0w0 1w0)
+		(multiple-value-list (kernel::dd-%sincos -0w0))))
+
+;; Test sincos at a bunch of random points and compare the result from
+;; sin and cos.  If they differ, save the result in a list to be
+;; returned.
+(defun dd-sincos-test (limit n)
+  (let (results)
+    (dotimes (k n)
+      (let* ((x (random limit))
+	     (s-exp (sin x))
+	     (c-exp (cos x)))
+	(multiple-value-bind (s c)
+	    (kernel::dd-%sincos x)
+	  (unless (and (eql s s-exp)
+		       (eql c c-exp))
+	    (push (list x
+			(list s s-exp)
+			(list c c-exp))
+		  results)))))
+    results))
+
+(define-test dd-sincos.consistent
+  "Test sincos is consistent with sin and cos"
+  (:tag :sincos :double-double)
+  ;; Small values
+  (assert-eql nil
+	      (dd-sincos-test (/ kernel:dd-pi 4) 1000))
+  ;; Medium
+  (assert-eql nil
+	      (dd-sincos-test 16w0 1000))
+  ;; Large
+  (assert-eql nil
+	      (dd-sincos-test (scale-float 1w0 120) 1000))
+  ;; Very large
+  (assert-eql nil
+	      (dd-sincos-test (scale-float 1w0 1023) 1000)))
+
