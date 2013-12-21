@@ -1000,8 +1000,11 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
   (declare (type (double-double-float -1w0 1w0) x)
 	   (optimize (speed 2) (space 0)
 		     (inhibit-warnings 3)))
-  (let ((x2 (* x x)))
-    (+ x (* x (* x2 (poly-eval x2 sincof))))))
+  (if (< (abs (double-double-hi x))
+	      (scale-float 1d0 -52))
+      x
+      (let ((x2 (* x x)))
+	(+ x (* x (* x2 (poly-eval x2 sincof)))))))
 
 ;; cos(x) = 1 - .5 x^2 + x^2 (x^2 P(x^2))
 ;; Theoretical peak relative error = 2.1e-37,
