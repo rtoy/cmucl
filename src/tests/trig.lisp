@@ -228,6 +228,8 @@
 	t
 	err)))
 
+
+;;; Tests for double-double-floats
 (define-test dd-sin.signed-zeroes
   "Test sin for 0w0 and -0w0"
   (:tag :sin :double-double :signed-zeroes)
@@ -431,3 +433,169 @@
   (assert-eql nil
 	      (dd-sincos-test (scale-float 1w0 1023) 1000)))
 
+
+;;; Tests for branch cuts.
+
+
+;; Compute fun(arg) and check that the signs of the real and imaginary
+;; parts match the value of real-sign and imag-sign, respectively.
+;; Return T if the signs match.
+(defun check-signs (fun arg real-sign imag-sign)
+  (let* ((z (funcall fun arg))
+	 (x (realpart z))
+	 (y (imagpart z)))
+    (cond ((and (= (float-sign x) real-sign)
+		(= (float-sign y) imag-sign))
+	   t)
+	  (t
+	   (format t "Sign of result doesn't match expected signs~%~
+                 ~& fun = ~A~
+                 ~& arg = ~A~
+                 ~& res = ~A~
+                 ~& expected = ~A ~A~%"
+		   fun arg z real-sign imag-sign)
+	   nil))))
+
+;; Return the signs of the real and imaginary parts of z.
+(defun get-signs (z)
+  (values (float-sign (realpart z))
+	  (float-sign (imagpart z))))
+
+;; Carefully compute 1-z. For z = x + i*y, we want 1-x - i*y, which
+;; only really matters when y is a signed zero.
+(defun 1-z (z)
+  (if (complexp z)
+      (complex (- 1 (realpart z)) (- (imagpart z)))
+      (- 1 z)))
+
+;; Carefully compute 1+z. For z = x + i*y, we want 1+x + i*y, which
+;; only really matters when y is a signed zero.
+(defun 1+z (z)
+  (if (complexp z)
+      (complex (+ 1 (realpart z)) (imagpart z))
+      (+ 1 z)))
+
+;; Carefully compute i*z = i*(x+i*y) = -y + i*x.
+(defun i*z (z)
+  (if (complexp z)
+      (complex (- (imagpart z)) (realpart z))
+      (complex 0 z)))
+
+;; asin(x) = -i*log(i*x + sqrt(1-x^2))
+(defun asin-def (z)
+  (- (i*z (log (+ (i*z z)
+		  (sqrt (1-z (* z z))))))))
+  
+;; asin branch cut is the real axis |x| > 1.  For x < -1, it is
+;; continuous with quadrant II; for x > 1, continuous with quadrant
+;; IV.
+;;
+(define-test branch-cut.asin
+  (:tag :asin :branch-cuts)
+  ;; Test for x < -1, which is continuous with Quadrant II.  Compute
+  ;; the value at #c(-2d0 1d-10) and check that components of
+  ;; asin(-2+0.0*i) have the same signs as the reference value.
+  (multiple-value-bind (tr ti)
+      (get-signs (asin-def #c(-2d0 1d-20)))
+    (assert-true (check-signs #'asin -2d0 tr ti))
+    (assert-true (check-signs #'asin -2w0 tr ti))
+    (assert-true (check-signs #'asin #c(-2d0 0) tr ti))
+    (assert-true (check-signs #'asin #c(-2w0 0) tr ti)))
+  ;; Test the other side of the branch cut for x < -1.
+  (multiple-value-bind (tr ti)
+      (get-signs (asin-def #c(-2d0 -1d-20)))
+    (assert-true (check-signs #'asin #c(-2d0 -0d0) tr ti))
+    (assert-true (check-signs #'asin #c(-2w0 -0w0) tr ti)))
+
+  ;; Test for x > 1, which is continuous with Quadrant IV, using the
+  ;; value at #c(+2d0 1d-10) as the reference
+  (multiple-value-bind (tr ti)
+      (get-signs (asin-def #c(2d0 1d-20)))
+    (assert-true (check-signs #'asin #c(2d0 0) tr ti))
+    (assert-true (check-signs #'asin #c(2w0 0) tr ti)))
+  ;; Test the other side of the branch cut for x > 1.
+  (multiple-value-bind (tr ti)
+      (get-signs (asin-def #c(2d0 -1d-20)))
+    (assert-true (check-signs #'asin 2d0 tr ti))
+    (assert-true (check-signs #'asin 2w0 tr ti))
+    (assert-true (check-signs #'asin #c(2d0 -0d0) tr ti))
+    (assert-true (check-signs #'asin #c(2w0 -0w0) tr ti))))
+
+;; acos(z) = pi/2 - asin(z).
+;;
+;; The branch cut is the real axis for |x| > 1.  For x < -1, it is
+;; continous with Quadrant II; for x > 1, Quadrant IV.
+(defun acos-def (z)
+  (if (typep z 'kernel:double-double-float)
+      (- (/ kernel:dd-pi 2)
+	 (asin-def z))
+      (- (/ pi 2)
+	 (asin-def z))))
+
+(define-test branch-cut.acos
+  (:tag :acos :branch-cuts)
+  ;; Test for x < -1, which is continuous with Quadrant II.  Compute
+  ;; the value at #c(-2d0 1d-10) and check that components of
+  ;; acos(-2+0.0*i) have the same signs as the reference value.
+  (multiple-value-bind (tr ti)
+      (get-signs (acos-def #c(-2d0 1d-20)))
+    (assert-true (check-signs #'acos -2d0 tr ti))
+    (assert-true (check-signs #'acos -2w0 tr ti))
+    (assert-true (check-signs #'acos #c(-2d0 0) tr ti))
+    (assert-true (check-signs #'acos #c(-2w0 0) tr ti)))
+  ;; Test the other side of the branch cut for x < -1.
+  (multiple-value-bind (tr ti)
+      (get-signs (acos-def #c(-2d0 -1d-20)))
+    (assert-true (check-signs #'acos #c(-2d0 -0d0) tr ti))
+    (assert-true (check-signs #'acos #c(-2w0 -0w0) tr ti)))
+
+  ;; Test for x > 1, which is continuous with Quadrant IV, using the
+  ;; value at #c(+2d0 1d-10) as the reference
+  (multiple-value-bind (tr ti)
+      (get-signs (acos-def #c(2d0 1d-20)))
+    (assert-true (check-signs #'acos #c(2d0 0) tr ti))
+    (assert-true (check-signs #'acos #c(2w0 0) tr ti)))
+  ;; Test the other side of the branch cut for x > 1.
+  (multiple-value-bind (tr ti)
+      (get-signs (acos-def #c(2d0 -1d-20)))
+    (assert-true (check-signs #'acos 2d0 tr ti))
+    (assert-true (check-signs #'acos 2w0 tr ti))
+    (assert-true (check-signs #'acos #c(2d0 -0d0) tr ti))
+    (assert-true (check-signs #'acos #c(2w0 -0w0) tr ti))))
+
+;; atan(z) = (log(1+i*z) - log(1-i*z))/(2*i)
+;;         = -i/2*(log(1+i*z) - log(1-i*z))
+;;
+;; The branch cut is the imaginary axis, |y| > 1.  For y < -1, atan is
+;; continuous with Quadrant IV; for y > 1, Quadrant II.
+(defun atan-def (z)
+  (let* ((iz (i*z z))
+	 (w (- (log (1+z iz))
+	       (log (1-z iz)))))
+    (* -1/2 (i*z w))))
+
+(define-test branch-cut.atan
+  (:tag :atan :branch-cuts)
+  ;; Test for y < -1, which is continuous with Quadrant IV.  Use the
+  ;; value at #c(1d-20 -2d0) as the reference.
+  (multiple-value-bind (tr ti)
+      (get-signs (atan-def #c(1d-20 -2d0)))
+    (assert-true (check-signs #'atan #c(0d0 -2d0) tr ti))
+    (assert-true (check-signs #'atan #c(0w0 -2w0) tr ti)))
+  ;; Test the other side of the branch cut for x < -1.
+  (multiple-value-bind (tr ti)
+      (get-signs (atan-def #c(-1d-20 -2d0)))
+    (assert-true (check-signs #'atan #c(-0d0 -2d0) tr ti))
+    (assert-true (check-signs #'atan #c(-0w0 -2w0) tr ti)))
+
+  ;; Test for y > 1, which is continuous with Quadrant II, using the
+  ;; value at #c(-1d-20 +2d0) as the reference
+  (multiple-value-bind (tr ti)
+      (get-signs (atan-def #c(-1d-20 2d0)))
+    (assert-true (check-signs #'atan #c(-0d0 2d0) tr ti))
+    (assert-true (check-signs #'atan #c(-0w0 2w0) tr ti)))
+  ;; Test the other side of the branch cut for x > 1.
+  (multiple-value-bind (tr ti)
+      (get-signs (atan-def #c(1d-20 2d0)))
+    (assert-true (check-signs #'atan #c(0d0 2d0) tr ti))
+    (assert-true (check-signs #'atan #c(0d0 2w0) tr ti))))
