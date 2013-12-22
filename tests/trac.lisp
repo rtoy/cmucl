@@ -56,10 +56,164 @@
   (assert-equal "  0.100E+01"
 		(format nil "~11,3,2,0,'*,,'EE" .9999)))
 
+(define-test trac.15
+  (:tag :trac)
+  (assert-true
+   (funcall (compile nil
+		     (lambda (z tt betain beta)
+		       (declare (double-float z tt betain beta)
+				(optimize (speed 3) (safety 0)))
+		       (= (* (* (* z tt) betain) beta) z)))
+	    5.562684646268004d-309 (1+ double-float-epsilon) .5d0 2d0)))
+
+(define-test trac.24
+  (:tag :trac)
+  (assert-true
+   (let ((y (expt 2 #c(-0.5d0 0))))
+     (and (zerop (imagpart y))
+	  (<= (abs (- (realpart y)
+		      (sqrt 0.5d0)))
+	      (* 2 double-float-epsilon))))))
+
+(define-test trac.25
+  (:tag :trac)
+  (assert-true
+   (compile nil (lambda ()
+		  (declare (optimize (speed 0) (safety 3) (debug 3)))
+		  (loop
+		    (pop *random-stack*)
+		    (return)))))
+  (assert-true
+   (compile nil (lambda ()
+		  (declare (optimize (safety 3)))
+		  (catch (make-symbol "CMUCL-DEBUG-CATCH-TAG")
+		    (make-string 49))))))
+
+(define-test trac.29
+  (:tag :trac)
+  (assert-true
+   (make-condition (find-class 'error))))
+
+(define-test trac.31
+  (:tag :trac)
+  (assert-equal '(:absolute "TMP" "Foo"  "bar")
+		(pathname-directory "/tmp/Foo/BAR/" :case :common)))
+  
+(define-test trac.36
+  (:tag :trac)
+  (let ((path "/tmp/trac.36.bom.txt"))
+    (flet ((bug (&optional (format :utf16))
+	     (with-open-file (s path
+				:direction :output
+				:if-exists :supersede
+				:external-format format)
+	       (format s "Hello~%"))
+	     (with-open-file (s path 
+				:direction :input
+				:external-format format)
+	       (let ((ch (read-char s)))
+		 (values ch (file-position s))))))
+      (assert-equal (values #\H 4)
+		    (bug :utf16))
+      (assert-equal (values #\H 8)
+		    (bug :utf32)))))
+
+(define-test trac.43
+  (:tag :trac)
+  (assert-true
+   (let ((path "/tmp/trac.43.txt"))
+     (unwind-protect
+	  (progn
+	    (with-open-file (ostream path :direction :output
+					  :external-format :utf-8)
+	      (dotimes (i 1000)
+		(write-char (code-char #x1234) ostream)))
+
+	    (with-open-file (stream path :direction :input
+					 :external-format :utf-8)
+	      (let ((p0 (file-position stream))
+		    (ch (read-char stream)))
+		(unread-char ch stream)
+		(let ((p0* (file-position stream)))
+		  (eql p0* p0)))))))))
+
 (define-test trac.50
   (:tag :trac)
   (assert-equal "#P(:DIRECTORY (:ABSOLUTE \"tmp\" \"\" \"a\" \"\" \"b\"))"
 		(princ-to-string (make-pathname :directory '(:absolute "tmp" "" "a" "" "b")))))
+
+(define-test trac.58
+  (:tag :trac)
+  (assert-false
+   (let ((path "/tmp/trac.58.txt")
+	 failures)
+     (unwind-protect
+	  (progn
+	    (with-open-file (s path :direction :output :external-format :utf-16)
+	      (dotimes (i 300)
+		(write-char (code-char i) s)))
+
+	    (with-open-file (s path :direction :input :external-format :utf-16)
+	      (dotimes (i 300)
+		(let ((ch (read-char s nil nil)))
+		  (unless (= i (char-code ch))
+		    (push (list i ch (char-code ch)) faillures)))))
+	    failures)
+       (delete-file path)))))
+
+(define-test trac.63
+  (:tag :trac)
+  (assert-eql
+   4.999995d11
+   (funcall (compile nil
+		     (lambda (x)
+		       (declare (type (and fixnum unsigned-byte) x) 
+				(optimize speed (safety 0)))
+		       (vm::with-cycle-counter
+			 (let ((sum 0d0))
+			   (declare (double-float sum))
+			   (dotimes (k x)
+			     (declare (type (and fixnum unsigned-byte) k))
+			     (incf sum k))
+			   sum))))
+	    1000000)))
+		     
+(define-test trac.65
+  (:tag :trac)
+  (assert-false
+   (let (failures)
+     (dolist (base '(2 2f0 2d0 2w0 #c(0 1) #c(0f0 1) #c(0d0 1) #c(0w0 1)))
+       (dolist (power '(2 3 1/2 -2 -3 -1/2 5))
+	 (dolist (power-type '(rational single-float double-float ext:double-double-float
+			       (complex single-float) (complex double-float)
+			       (complex ext:double-double-float)))
+	   (let* ((pp (coerce power power-type))
+		  (interp (expt base pp))
+		  (*compile-print* nil)
+		  (compiled (funcall (compile nil `(lambda (b)
+						     (declare (type ,(type-of base) b))
+						     (expt b ,pp)))
+				     base)))
+	     (unless (= interp compiled)
+	       (push (list base pp interp compiled) failures))))))
+     failures)))
+
+(define-test trac.67
+  (:tag :trac)
+  (assert-error 'simple-error
+		(funcall (compile nil
+				  (lambda (s)
+				    (declare (simple-string s))
+				    (replace s s :start2 100 :end2 105)))
+			 (copy-seq "1234567890"))))
+
+(define-test trac.69
+  (:tag :trac)
+  (setf (logical-pathname-translations "trac69")
+	'(("**;*.*.*" "/tmp/**/*.*")))
+  (assert-error 'lisp::namestring-parse-error
+		(let ((*default-pathname-defaults* #p"trac69:"))
+		  (pathname "/tmp/bar.lisp"))))
 
 (defparameter *trac.70* (make-string 40 :initial-element #\A))
 
@@ -68,17 +222,53 @@
 	   (declare (simple-string workspace s))
 	   (replace workspace s :start1 1 :end1 5 :start2 1 :end2 5)))
 
+(define-test trac.71
+  (:tag :trac)
+  (assert-true
+   (funcall (compile nil
+		     (lambda (x)
+		       (declare (double-float x))
+		       (expt x 2w0)))
+	    2d0)))
+
+(defpackage :cl-haml
+  (:use :cl))
+
+(defparameter *path* cl:*load-pathname*)
+
+(define-test trac.74
+  (:tag :trac)
+  (assert-true
+   (let ((path (merge-pathnames "resources/read-insert.lisp"
+				*path*)))
+     (compile-file path :external-format :utf8))))
+
 (define-test trac.76
   (:tag :trac)
   (assert-equal "A1234AAAA"
 		(subseq (trac.70-test *trac.70* "a12345") 0 9)))
+
+(define-test trac.79
+  (:tag :trac)
+  ;; Create a temp file full of latin1 characters.
+  (assert-equal
+   '(0 1)
+   (let ((path "/tmp/trac.70.txt"))
+     (unwind-protect
+	  (progn
+	    (with-open-file (s path :direction :output :if-exists :supersede
+				    :external-format :latin1)
+	      (dotimes (k 255)
+		(write-char (code-char k) s)))
+	    (with-open-file (s path :direction :input :external-format :latin1)
+	      (list (file-position s)
+		    (progn
+		      (read-char s)
+		      (file-position s)))))
+       (delete-file path)))))
 
 (define-test trac.80
   (:tag :trac)
   ;; The following formats should not signal an error.
   (assert-true (ignore-errors (format nil "~ve" 21 5d-234)))
   (assert-true (ignore-errors (format nil "~ve" 100 5d-234))))
-
-
-
-  
