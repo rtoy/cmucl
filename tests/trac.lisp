@@ -59,7 +59,7 @@
 (define-test trac.50
   (:tag :trac)
   (assert-equal "#P(:DIRECTORY (:ABSOLUTE \"tmp\" \"\" \"a\" \"\" \"b\"))"
-		(princ (make-pathname :directory '(:absolute "tmp" "" "a" "" "b")))))
+		(princ-to-string (make-pathname :directory '(:absolute "tmp" "" "a" "" "b")))))
 
 (defparameter *trac.70* (make-string 40 :initial-element #\A))
 
