@@ -207,10 +207,11 @@
 				    (replace s s :start2 100 :end2 105)))
 			 (copy-seq "1234567890"))))
 
+(setf (logical-pathname-translations "trac69")
+      '(("**;*.*.*" "/tmp/**/*.*")))
+
 (define-test trac.69
   (:tag :trac)
-  (setf (logical-pathname-translations "trac69")
-	'(("**;*.*.*" "/tmp/**/*.*")))
   (assert-error 'lisp::namestring-parse-error
 		(let ((*default-pathname-defaults* #p"trac69:"))
 		  (pathname "/tmp/bar.lisp"))))
