@@ -1854,7 +1854,7 @@ Z may be any number, but the result is always a complex."
 
 
 (defun dd-complex-asin (z)
-  _N"Compute asin z = asinh(i*z)/i
+  _N"Compute asin z = -i*log(i*z + sqrt(1-z^2))
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1894,7 +1894,7 @@ Z may be any number, but the result is always a complex."
 	     (- (realpart result)))))
 	 
 (defun dd-complex-atan (z)
-  _N"Compute atan z = atanh (i*z) / i
+  _N"Compute atan z = (log(1+i*z) - log(1-i*z))/(2*i)
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
