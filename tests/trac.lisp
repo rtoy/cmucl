@@ -157,7 +157,7 @@
 	      (dotimes (i 300)
 		(let ((ch (read-char s nil nil)))
 		  (unless (= i (char-code ch))
-		    (push (list i ch (char-code ch)) faillures)))))
+		    (push (list i ch (char-code ch)) failures)))))
 	    failures)
        (delete-file path)))))
 
