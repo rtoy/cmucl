@@ -30,7 +30,7 @@
   ;; Note, because of the way the return-multiple vop is written, we can
   ;; assume that we are never called with nvals == 1 and that a0 has already
   ;; been loaded.
-  (not-implemented))
+  (emit-not-implemented))
 
 
 
@@ -51,7 +51,7 @@
      ;; These are needed by the blitting code.
      (:temp temp descriptor-reg cname-offset))
 
-  (not-implemented))
+  (emit-not-implemented))
 
 
 
@@ -66,7 +66,7 @@
 			  (:arg count (any-reg descriptor-reg) nargs-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp cur-uwp any-reg nl0-offset))
-  (not-implemented))
+  (emit-not-implemented))
 
 
 (define-assembly-routine (throw
@@ -78,7 +78,7 @@
 			  (:temp tag descriptor-reg a2-offset)
 			  (:temp temp non-descriptor-reg nl0-offset))
 
-  (not-implemented))
+  (emit-not-implemented))
 
 
 
@@ -109,7 +109,7 @@
   (inst word (kernel:get-lisp-obj-address nil))
   (inst word (kernel:get-lisp-obj-address nil))
 
-  (not-implemented)
+  (emit-not-implemented)
   ;; Make sure following routine is dual-word aligned
   (align vm:lowtag-bits))
 
@@ -137,4 +137,4 @@
   (inst word (kernel:get-lisp-obj-address nil))
   (inst word (kernel:get-lisp-obj-address nil))
 
-  (not-implemented))
+  (emit-not-implemented))

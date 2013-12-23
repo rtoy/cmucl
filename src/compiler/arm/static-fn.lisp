@@ -83,7 +83,7 @@
 	 ,@(temps)
 	 (:results ,@(results))
 	 (:generator ,(+ 50 num-args num-results)
-	   (not-implemented))))))
+	   (emit-not-implemented))))))
 
 
 ) ; eval-when (compile load eval)

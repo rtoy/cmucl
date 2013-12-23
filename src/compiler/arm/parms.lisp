@@ -180,6 +180,13 @@
 
 ); eval-when
 
+;;; NUMBER-STACK-DISPLACEMENT
+;;;
+;;; The number of bytes reserved above the number stack pointer.
+;;;
+;;; FIXME: Use the right value!
+(defconstant number-stack-displacement
+  0)
 
 ;;;; Description of the target address space.
 

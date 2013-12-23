@@ -28,7 +28,7 @@
   (:temporary (:scs (non-descriptor-reg)) gc-temp)	; gencgc
   (:results (result :scs (descriptor-reg)))
   (:generator 0
-    (not-implemented)))
+    (emit-not-implemented)))
 
 
 ;;;; Additional accessors and setters for the array header.
@@ -59,7 +59,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 6
-    (not-implemented)))
+    (emit-not-implemented)))
 
 
 
@@ -76,7 +76,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 5
-    (not-implemented)))
+    (emit-not-implemented)))
 
 
 
@@ -159,7 +159,7 @@
 	 (:result-types positive-fixnum)
 	 (:temporary (:scs (non-descriptor-reg) :to (:result 0)) temp result)
 	 (:generator 20
-	   (not-implemented)))
+	   (emit-not-implemented)))
        (define-vop (,(symbolicate 'data-vector-ref-c/ type))
 	 (:translate data-vector-ref)
 	 (:policy :fast-safe)
@@ -170,7 +170,7 @@
 	 (:result-types positive-fixnum)
 	 (:temporary (:scs (non-descriptor-reg)) temp)
 	 (:generator 15
-	   (not-implemented)))
+	   (emit-not-implemented)))
        (define-vop (,(symbolicate 'data-vector-set/ type))
 	 (:note _N"inline array store")
 	 (:translate data-vector-set)
@@ -184,7 +184,7 @@
 	 (:temporary (:scs (non-descriptor-reg)) temp old offset)
 	 (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) shift)
 	 (:generator 25
-	   (not-implemented)))
+	   (emit-not-implemented)))
        (define-vop (,(symbolicate 'data-vector-set-c/ type))
 	 (:translate data-vector-set)
 	 (:policy :fast-safe)
@@ -198,7 +198,7 @@
 	 (:result-types positive-fixnum)
 	 (:temporary (:scs (non-descriptor-reg)) offset-reg temp old)
 	 (:generator 20
-	   (not-implemented))))))
+	   (emit-not-implemented))))))
 
 ); eval-when (compile eval)
 
@@ -221,7 +221,7 @@
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:result-types single-float)
   (:generator 5
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-ref-c/simple-array-single-float)
   (:note _N"inline array access")
@@ -234,7 +234,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:result-types single-float)
   (:generator 3
-    (not-implemented)))
+    (emit-not-implemented)))
 
 
 (define-vop (data-vector-set/simple-array-single-float)
@@ -249,7 +249,7 @@
   (:result-types single-float)
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:generator 5
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-set-c/simple-array-single-float)
   (:note _N"inline array store")
@@ -265,7 +265,7 @@
   (:result-types single-float)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 2
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-ref/simple-array-double-float)
   (:note _N"inline array access")
@@ -278,7 +278,7 @@
   (:result-types double-float)
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:generator 7
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-ref-c/simple-array-double-float)
   (:note _N"inline array access")
@@ -291,7 +291,7 @@
   (:result-types double-float)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 3
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-set/simple-array-double-float)
   (:note _N"inline array store")
@@ -305,7 +305,7 @@
   (:result-types double-float)
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:generator 20
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-set-c/simple-array-double-float)
   (:note _N"inline array store")
@@ -321,7 +321,7 @@
   (:result-types double-float)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 10
-    (not-implemented)))
+    (emit-not-implemented)))
 
 
 ;;;; Misc. Array VOPs.
@@ -386,7 +386,7 @@
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:result-types complex-single-float)
   (:generator 5
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-ref-c/simple-array-complex-single-float)
   (:note _N"inline array access")
@@ -400,7 +400,7 @@
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:result-types complex-single-float)
   (:generator 3
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-set/simple-array-complex-single-float)
   (:note _N"inline array store")
@@ -415,7 +415,7 @@
   (:result-types complex-single-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 5
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-set-c/simple-array-complex-single-float)
   (:note _N"inline array store")
@@ -431,7 +431,7 @@
   (:result-types complex-single-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 3
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-ref/simple-array-complex-double-float)
   (:note _N"inline array access")
@@ -444,7 +444,7 @@
   (:result-types complex-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 7
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-ref-c/simple-array-complex-double-float)
   (:note _N"inline array access")
@@ -457,7 +457,7 @@
   (:result-types complex-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 5
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-set/simple-array-complex-double-float)
   (:note _N"inline array store")
@@ -472,7 +472,7 @@
   (:result-types complex-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 20
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-set-c/simple-array-complex-double-float)
   (:note _N"inline array store")
@@ -488,7 +488,7 @@
   (:result-types complex-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 15
-    (not-implemented)))
+    (emit-not-implemented)))
 
 
 ;;; These VOPs are used for implementing float slots in structures (whose raw
@@ -607,7 +607,7 @@
   (:result-types double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 7
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-ref-c/simple-array-double-double-float)
   (:note _N"inline array access")
@@ -620,7 +620,7 @@
   (:result-types double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 5
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-set/simple-array-double-double-float)
   (:note _N"inline array store")
@@ -635,7 +635,7 @@
   (:result-types double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 20
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-set-c/simple-array-double-double-float)
   (:note _N"inline array store")
@@ -651,7 +651,7 @@
   (:result-types double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 15
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-ref/simple-array-complex-double-double-float)
   (:note _N"inline array access")
@@ -664,7 +664,7 @@
   (:result-types complex-double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 7
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-ref-c/simple-array-complex-double-double-float)
   (:note _N"inline array access")
@@ -677,7 +677,7 @@
   (:result-types complex-double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 5
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-set/simple-array-complex-double-double-float)
   (:note _N"inline array store")
@@ -692,7 +692,7 @@
   (:result-types complex-double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 20
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (data-vector-set-c/simple-array-complex-double-double-float)
   (:note _N"inline array store")
@@ -708,7 +708,7 @@
   (:result-types complex-double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 15
-    (not-implemented)))
+    (emit-not-implemented)))
 
 ) ; double-double
 

@@ -72,7 +72,7 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:variant-vars format size type data)
   (:generator 13
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (macrolet ((frob (name sc &rest args)
 	     `(progn
@@ -93,7 +93,7 @@
 		  (:results (y :scs (,sc)))
 		  (:note _N"pointer to float coercion")
 		  (:generator 2
-		    (not-implemented)))
+		    (emit-not-implemented)))
 		(define-move-vop ,name :move (descriptor-reg) (,sc)))))
   (frob move-to-single single-reg :single vm:single-float-value-slot)
   (frob move-to-double double-reg :double vm:double-float-value-slot))
@@ -297,7 +297,7 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:note _N"complex single float to pointer coercion")
   (:generator 13
-    (not-implemented)))
+    (emit-not-implemented)))
 ;;;
 (define-move-vop move-from-complex-single :move
   (complex-single-reg) (descriptor-reg))
@@ -308,7 +308,7 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:note _N"complex double float to pointer coercion")
   (:generator 13
-    (not-implemented)))
+    (emit-not-implemented)))
 ;;;
 (define-move-vop move-from-complex-double :move
   (complex-double-reg) (descriptor-reg))
@@ -320,7 +320,7 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:note _N"complex double-double float to pointer coercion")
   (:generator 13
-    (not-implemented)))
+    (emit-not-implemented)))
 ;;;
 #+double-double
 (define-move-vop move-from-complex-double-double :move
@@ -334,7 +334,7 @@
   (:results (y :scs (complex-single-reg)))
   (:note _N"pointer to complex float coercion")
   (:generator 2
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-move-vop move-to-complex-single :move
   (descriptor-reg) (complex-single-reg))
@@ -344,7 +344,7 @@
   (:results (y :scs (complex-double-reg)))
   (:note _N"pointer to complex float coercion")
   (:generator 2
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-move-vop move-to-complex-double :move
   (descriptor-reg) (complex-double-reg))
@@ -355,7 +355,7 @@
   (:results (y :scs (complex-double-double-reg)))
   (:note _N"pointer to complex double-double float coercion")
   (:generator 2
-    (not-implemented)))
+    (emit-not-implemented)))
 
 #+double-double
 (define-move-vop move-to-complex-double-double :move
@@ -556,7 +556,7 @@
   (:save-p :compute-only)
   (:generator 3
     (note-this-location vop :internal-error)
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (macrolet ((frob (name sc ptype)
 	     `(define-vop (,name float-compare)
@@ -614,7 +614,7 @@
 		(:vop-var vop)
 		(:save-p :compute-only)
 		(:generator 5
-		  (not-implemented)))))
+		  (emit-not-implemented)))))
   (frob %single-float/signed %%single-float fitos single-reg single-float)
   (frob %double-float/signed %%double-float fitod double-reg double-float))
 
@@ -653,7 +653,7 @@
 		(:save-p :compute-only)
 		(:generator 5
 		  (note-this-location vop :internal-error)
-		  (not-implemented)))))
+		  (emit-not-implemented)))))
   (frob %unary-truncate single-reg single-float fstoi)
   (frob %unary-truncate double-reg double-float fdtoi))
 
@@ -696,7 +696,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 4
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (make-double-float)
   (:args (hi-bits :scs (signed-reg))
@@ -710,7 +710,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 2
-    (not-implemented)))
+    (emit-not-implemented)))
 
 
 (define-vop (single-float-bits)
@@ -726,7 +726,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 4
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (double-float-high-bits)
   (:args (float :scs (double-reg descriptor-reg)
@@ -739,7 +739,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 5
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (double-float-low-bits)
   (:args (float :scs (double-reg descriptor-reg)
@@ -752,7 +752,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 5
-    (not-implemented)))
+    (emit-not-implemented)))
 
 #+nil
 (define-vop (double-float-bits)
@@ -767,7 +767,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 5
-    (not-implemented)))
+    (emit-not-implemented)))
 
 
 ;;;; Float mode hackery:
@@ -785,7 +785,7 @@
   (:vop-var vop)
   (:temporary (:sc unsigned-stack) temp)
   (:generator 3
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (set-floating-point-modes)
   (:args (new :scs (unsigned-reg) :target res))
@@ -797,7 +797,7 @@
   (:temporary (:sc unsigned-stack) temp)
   (:vop-var vop)
   (:generator 3
-    (not-implemented)))
+    (emit-not-implemented)))
 
 
 
@@ -832,7 +832,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 5
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (make-complex-double-float)
   (:translate complex)
@@ -847,7 +847,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 5
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (complex-single-float-value)
   (:args (x :scs (complex-single-reg descriptor-reg) :target r
@@ -859,7 +859,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 3
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (realpart/complex-single-float complex-single-float-value)
   (:translate realpart)
@@ -881,7 +881,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 3
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (realpart/complex-double-float complex-double-float-value)
   (:translate realpart)
@@ -956,7 +956,7 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:note _N"double-double float to pointer coercion")
   (:generator 13
-    (not-implemented)))
+    (emit-not-implemented)))
 ;;;
 (define-move-vop move-from-double-double :move
   (double-double-reg) (descriptor-reg))
@@ -968,7 +968,7 @@
   (:results (y :scs (double-double-reg)))
   (:note _N"pointer to double-double float coercion")
   (:generator 2
-    (not-implemented)))
+    (emit-not-implemented)))
 
 (define-move-vop move-to-double-double :move
   (descriptor-reg) (double-double-reg))
@@ -1052,7 +1052,7 @@
 					(tn-offset x))
 				     vm:word-bytes)))
       (descriptor-reg
-       (not-implemented)))))
+       (emit-not-implemented)))))
 
 (define-vop (hi/double-double-value double-double-float-value)
   (:translate kernel::double-double-hi)
@@ -1140,7 +1140,7 @@
 					  (tn-offset x))
 				       vm:word-bytes))))
       (descriptor-reg
-       (not-implemented)))))
+       (emit-not-implemented)))))
 
 (define-vop (realpart/complex-double-double-float complex-double-double-float-value)
   (:translate realpart)

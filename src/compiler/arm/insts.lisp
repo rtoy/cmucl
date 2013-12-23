@@ -651,6 +651,14 @@
 		(dst nil :type 'reg))
 	       '(:name cond :tab
 		 dst ", " immed))
+     (:printer format-0-reg
+	       ((opb0 #b000)
+		(op #b1101)
+		(s ,set-flags-bit)
+		(src1 0)
+		(dst nil :type 'reg))
+	       `(:name cond :tab
+		       dst ", " src2))
      (:emitter
       (etypecase src2
 	(integer
@@ -672,12 +680,13 @@
 			    #b000
 			    #b1101
 			    ,set-flags-bit
-			    (reg-tn-encoding src2)
+			    0
 			    (reg-tn-encoding dst)
 			    0
 			    (shift-type-encoding :lsl)
 			    #b0
 			    (reg-tn-encoding src2)))
+	#+nil
 	(flex-operand
 	 (ecase (flex-operand-type src2)
 	   (:reg-shift-imm
@@ -798,7 +807,8 @@
 (defun split-imm16-printer (value stream dstate)
   (declare (list value) (stream stream)
 	   (ignore dstate))
-  (format stream "#~D" (logior (ash (first value) 8)
+  ;; FIXME: Honor base and radix!
+  (format stream "#~D" (logior (ash (first value) 12)
 			       (second value)))))
 
 (define-emitter emit-format-mov16 32
@@ -1051,18 +1061,19 @@
 ;; ldr<c> dst, [src1, #+/-<imm>]!
 ;; ldr<c> dst, [src1], #+/-<imm>
 (defconstant format-2-immed-printer
-  `(:name cond
-          :tab
+  `(:name cond :tab
 	  dst ", [" src1
 	  (:cond ((p :constant 1)
+		  ;; P = 1 => pre-indexed
 		  ", #"
-		  (:unless (u :constant 0) "-")
+		  (:unless (u :constant 1) "-")	;; U = 1 means add
 		  immed
 		  "]"
-		  (:unless (w :constant 1) "!"))
+		  (:unless (w :constant 0) "!")) ;; W = 1 means write-back
 		 (t
+		  ;; P = 0 => post-indexed
 		  "], #"
-		  (:unless (u :constant 0) "-")
+		  (:unless (u :constant 1) "-")
 		  immed))))
 		  
 
@@ -1098,7 +1109,7 @@
 		  (:cond ((u :constant 0) "-")
 			 (t "+"))
 		  rs ", " type " #" imm5 "]"
-		  (:unless (w :constant 1) "!"))
+		  (:unless (w :constant 0) "!"))
 		 (t
 		  "], "
 		  (:cond ((u :constant 0) "-")
@@ -1251,17 +1262,56 @@
 			 :shift-type shift-type
 			 :shift-amount count))
 
-(defun decode-indexing-mode (src1 src2)
+;; Determine the P, U, and W bits from an immediate load/store
+;; instruction. src2 must be an integer type.
+(defun decode-immediate-indexing-mode (src1 src2)
+  ;; The simple load/store immediate case:
+  ;; (inst ldr rd r1 100) ->
+  ;;   ldr rd, [r1, #100]
+  ;; (inst ldr rd (pre-index r1) 100) ->
+  ;;   ldr rd, [r1, 100]!
+  ;; (inst ldr rd (post-index r1) -100) ->
+  ;;   ldr rd, [r1], -100
+  ;;
+  ;; If src1 is an indexed obect, then we always write back (W=1).
+  ;; The P bit is set for pre-indexing, which is always true except
+  ;; for the post-indexing mode. U is set if src2 is non-negative. W
+  ;; (write-back) is set if src1 is an index, that is src1 is not a
+  ;; TN.
+  (declare (integer src2))
   (values (if (and (indexing-mode-p src1)
 		   (indexing-mode-post-index src1))
 	      0 1)
 	  (if (minusp src2)
 	      0 1)
-	  (if (indexing-mode-p src1)
-	      1 0)))
+	  (if (tn-p src1)
+	      0 1)))
 
 (defun decode-indexing-and-options (src1 op2)
   "Determine the P, U, and W bits from the load-store-index"
+  ;; This handles the hairy register load/store indexing where op2
+  ;; indicates index register and whether it is added or subtracted
+  ;; with an optional shift amount and whether the base register is
+  ;; subsequently updated.
+  ;;
+  ;; Examples:
+  ;; ldr rd, [r1, r2, lsr 2] ->
+  ;;   (inst ldr rd r1 (make-op2 r2 :shift :lsr :count 2))
+  ;; ldr rd, [r1, -r2] ->
+  ;;   (inst ldr rd r1 (make-op2 r2 :add nil))
+  ;; ldr rd, [r1, -r2, lsl 3] ->
+  ;;   (inst ldr rd r1 (make-op2 r2 :add nil :shift :lsl :count 3))
+  ;; ldr rd, [r1, 100]! ->
+  ;;   (inst ldr rd (pre-index r1) 100)
+  ;; ldr rd, [r1, -r2, lsl 3]! ->
+  ;;   (inst ldr rd (pre-index r1) (make-op2 r2 :add nil :shift :lsl :count 3))
+  ;; ldr rd, [r1], -100 ->
+  ;;   (inst ldr rd (post-index r1) -100)
+  ;; ldr rd, [r1], r2 ->
+  ;;   (inst ldr rd (post-index r1) r2)
+  ;; ldr rd, [r1], -r2, lsl 2 ->
+  ;;   (inst ldr rd (post-index r1) (make-op2 r2 :add nil :shift :lsl :count 2))
+
   (values (if (and (indexing-mode-p src1)
 		   (indexing-mode-post-index src1))
 	      0 1)
@@ -1329,19 +1379,9 @@
      (:emitter
       (etypecase src2
 	(integer
-	 ;; The simple load/store immediate case:
-	 ;; (inst ldr rd r1 100) ->
-	 ;;   ldr rd, [r1, #100]
-	 ;; (inst ldr rd (pre-index r1) 100) ->
-	 ;;   ldr rd, [r1, 100]!
-	 ;; (inst ldr rd (post-index r1) -100) ->
-	 ;;   ldr rd, [r1], -100
-	 ;;
-	 ;; If r1 is an indexed, then we always write back (W=1). P =
-	 ;; 1 only if r1 is TN or if r1 is indexed and not
-	 ;; post-indexed.
 	 (multiple-value-bind (p u w)
-	     (decode-indexing-mode src1 src2)
+	     (decode-immediate-indexing-mode src1 src2)
+	   (assert (typep src2 '(arm-signed-offset 4095)))
 	   (emit-format-2-immed segment
 				(condition-code-encoding cond)
 				#b010
@@ -1349,12 +1389,12 @@
 				u
 				0
 				w
-				0
-				(if (indexing-mode-p src1)
-				    (indexing-mode-reg src1)
-				    (reg-tn-encoding src1))
+				,(if loadp 1 0)
+				(reg-tn-encoding (if (indexing-mode-p src1)
+						     (indexing-mode-reg src1)
+						     src1))
 				(reg-tn-encoding reg)
-				src2)))
+				(abs src2))))
 	(load-store-index
 	 ;; Handle the complicated cases with an offset register, with
 	 ;; a possible hairy shift operation.
@@ -2647,8 +2687,17 @@
 			  #b1
 			  #b0000)))
 
-(defmacro not-implemented ()
-  `(inst udf halt-trap))
+(defmacro not-implemented (&optional name)
+  `(progn
+     ;; Save a0 (aka ARM r0) to the stack, and then load it with the
+     ;; address of name object so the halt trap handler can see the
+     ;; name.  If the trap returns, restore a0 with it's original
+     ;; value and continue as if nothing happened.
+     (inst str a0-tn (pre-index nsp-tn) -4)
+     ;; a0 is a descriptor-reg, but so the the lisp object address.
+     (inst li a0-tn (kernel:get-lisp-obj-address ,name))
+     (inst udf halt-trap)
+     (inst ldr a0-tn (post-index nsp-tn) 4)))
 
 ;;;; Instructions for dumping data and header objects.
 
@@ -2701,20 +2750,33 @@
 ;;;; Instructions for converting between code objects, functions, and lras.
 (defun emit-compute-inst (segment vop dst src label temp calc)
   (emit-chooser
-   ;; We emit either 12 or 4 bytes, so we maintain 8 byte alignments.
+   ;; We (currently) emit 20 bytes, so we maintain 8 byte alignments.
    segment 12 3
    #'(lambda (segment posn delta-if-after)
-       (let ((delta (funcall calc label posn delta-if-after)))
-	 (when (<= (- (ash 1 12)) delta (1- (ash 1 12)))
-	   (emit-back-patch segment 4
-			    #'(lambda (segment posn)
-				(assemble (segment vop)
-				  (not-implemented))))
-	   t)))
+       (declare (ignore segment posn delta-if-after))
+       ;; Just use the worse case for now.
+       nil)
    #'(lambda (segment posn)
        (let ((delta (funcall calc label posn 0)))
 	 (assemble (segment vop)
-	   (not-implemented))))))
+	   (inst movw temp (ldb (byte 16 0) delta))
+	   (inst movt temp (ldb (byte 16 16) delta))
+	   (inst add dst src temp))))))
+
+;; code = fn - fn-ptr-type - header - label-offset + other-pointer-tag
+(define-instruction compute-code-from-fn (segment dst src label temp)
+  (:declare (type tn dst src temp) (type label label))
+  (:attributes variable-length)
+  (:dependencies (reads src) (writes dst) (writes temp))
+  (:delay 0)
+  (:vop-var vop)
+  (:emitter
+   (emit-compute-inst segment vop dst src label temp
+		      #'(lambda (label posn delta-if-after)
+			  (- other-pointer-type
+			     function-pointer-type
+			     (label-position label posn delta-if-after)
+			     (component-header-length))))))
 
 ;; code = lra - other-pointer-tag - header - label-offset + other-pointer-tag
 (define-instruction compute-code-from-lra (segment dst src label temp)
