@@ -5040,9 +5040,9 @@ msgid ""
 "Z may be any number, but the result is always a complex."
 msgstr ""
 
-#: src/code/irrat-dd.lisp src/code/irrat.lisp
+#: src/code/irrat.lisp
 msgid ""
-"Compute asin z = asinh(i*z)/i\n"
+"Compute asin z = -i*log(i*z + sqrt(1-z^2))\n"
 "\n"
 "Z may be any number, but the result is always a complex."
 msgstr ""
@@ -5054,9 +5054,9 @@ msgid ""
 "Z may be any number, but the result is always a complex."
 msgstr ""
 
-#: src/code/irrat-dd.lisp src/code/irrat.lisp
+#: src/code/irrat.lisp
 msgid ""
-"Compute atan z = atanh (i*z) / i\n"
+"Compute atan z = (log(1+i*z) - log(1-i*z))/(2*i)\n"
 "\n"
 "Z may be any number, but the result is always a complex."
 msgstr ""
@@ -5114,6 +5114,20 @@ msgstr ""
 
 #: src/code/irrat-dd.lisp
 msgid "Overflow"
+msgstr ""
+
+#: src/code/irrat-dd.lisp
+msgid ""
+"Compute asin z = asinh(i*z)/i\n"
+"\n"
+"Z may be any number, but the result is always a complex."
+msgstr ""
+
+#: src/code/irrat-dd.lisp
+msgid ""
+"Compute atan z = atanh (i*z) / i\n"
+"\n"
+"Z may be any number, but the result is always a complex."
 msgstr ""
 
 #: src/compiler/proclaim.lisp
