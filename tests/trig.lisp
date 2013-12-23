@@ -725,3 +725,66 @@
       (get-signs (acosh-def #c(0.25d0 -1d-20)))
     (assert-true (check-signs #'acosh #c(0.25d0 -0d0) tr ti))
     (assert-true (check-signs #'acosh #c(0.25w0 -0w0) tr ti))))
+
+;; atanh(z) = 1/2*(log(1+z) - log(1-z))
+;;
+;; The branch cut is on the real axis for |x| > 1.  For x < -1, it is
+;; continuous with Quadrant III.  For x > 1, it is continuous with
+;; quadrant I.
+;;
+;; NOTE: The rules above are what is given by the CLHS. However,
+;; consider the value of atanh(-2) and atanh(-2-0.0*i)
+;;
+;;  atanh(-2) = 1/2*(log(1-2) - log(1+2))
+;;            = 1/2*(log(-1) - log(3))
+;;            = 1/2*(i*pi - log(3))
+;;            = -1/2*log(3) + i*pi/2
+;;
+;;  atanh(-2-0*i) = 1/2*(log(1+(-2-0*i)) - log(1-(-2-0*i)))
+;;                = 1/2*(log(-1-0*i) - log(3-0*i))
+;;                = 1/2*(-i*pi - log(3))
+;;                = -1/2*log(3) - i*pi/2
+;;
+;;  atanh(-2+0*i) = 1/2*(log(1+(-2+0*i)) - log(1-(-2+0*i)))
+;;                = 1/2*(log(-1+0*i) - log(3-0*i))
+;;                = 1/2*(i*pi - log(3))
+;;                = -1/2*log(3) + i*pi/2
+;;
+;; Thus, atanh(-2) is continuous with Quadrant II, NOT continuous with
+;; Quadrant III!
+;;
+;; What do we do?
+(defun atanh-def (z)
+  (r*z 1/2
+       (- (log (1+z z))
+	  (log (1-z z)))))
+
+(define-test branch-cut.atanh
+  (:tag :atanh :branch-cuts)
+  ;; Test for x < -1, which is continuous with Quadrant III.  Use the
+  ;; the value at #c(-2d0 -1d-20) as the reference.
+  (multiple-value-bind (tr ti)
+      (get-signs (atanh-def #c(-2d0 -1d-20)))
+    (assert-true (check-signs #'atanh -2d0 tr ti))
+    (assert-true (check-signs #'atanh -2w0 tr ti))
+    (assert-true (check-signs #'atanh #c(-2d0 -0d0) tr ti))
+    (assert-true (check-signs #'atanh #c(-2w0 -0w0) tr ti)))
+  ;; Test the other side of the branch cut for x < -1.
+  (multiple-value-bind (tr ti)
+      (get-signs (atanh-def #c(-2d0 +1d-20)))
+    (assert-true (check-signs #'atanh #c(-2d0 0d0) tr ti))
+    (assert-true (check-signs #'atanh #c(-2w0 0w0) tr ti)))
+
+  ;; Test for x > 1, which is continuous with Quadrant I, using the
+  ;; value at #c(+2d0 1d-10) as the reference
+  (multiple-value-bind (tr ti)
+      (get-signs (atanh-def #c(2d0 1d-20)))
+    (assert-true (check-signs #'atanh 2d0 tr ti))
+    (assert-true (check-signs #'atanh 2w0 tr ti))
+    (assert-true (check-signs #'atanh #c(2d0 0) tr ti))
+    (assert-true (check-signs #'atanh #c(2w0 0) tr ti)))
+  ;; Test the other side of the branch cut for x > 1.
+  (multiple-value-bind (tr ti)
+      (get-signs (atanh-def #c(2d0 -1d-20)))
+    (assert-true (check-signs #'atanh #c(2d0 -0d0) tr ti))
+    (assert-true (check-signs #'atanh #c(2w0 -0w0) tr ti))))
