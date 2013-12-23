@@ -180,7 +180,7 @@
     (dotimes (i (1- vm:function-code-offset))
       (inst word 0))
 
-    (vop-not-implemented)
+    (emit-not-implemented)
     ;; The start of the actual code.
     ;; Fix CODE, cause the function object was passed in.
     (inst compute-code-from-fn code-tn code-tn start-lab temp)
@@ -204,7 +204,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 2
     (trace-table-entry trace-table-function-prologue)
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 ;;; Allocate a partial frame for passing stack arguments in a full call.  Nargs
 ;;; is the number of arguments passed.  If no stack arguments are passed, then
@@ -214,7 +214,7 @@
   (:info nargs)
   (:results (res :scs (any-reg)))
   (:generator 2
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 
 
@@ -293,7 +293,7 @@ default-value-8
       (progn
 	(new-assem:without-scheduling ()
 	  (note-this-location vop :single-value-return)
-	  (vop-not-implemented))
+	  (emit-not-implemented))
 	(inst compute-code-from-lra code-tn code-tn lra-label temp))
       (let ((regs-defaulted (gen-label))
 	    (defaulting-done (gen-label))
@@ -301,7 +301,7 @@ default-value-8
 	;; Branch off to the MV case.
 	(new-assem:without-scheduling ()
 	  (note-this-location vop :unknown-return)
-	  (vop-not-implemented))
+	  (emit-not-implemented))
 	
 	;; Do the single value calse.
 	(do ((i 1 (1+ i))
@@ -309,7 +309,7 @@ default-value-8
 	    ((= i (min nvals register-arg-count)))
 	  (move (tn-ref-tn val) null-tn))
 	(when (> nvals register-arg-count)
-	  (vop-not-implemented))
+	  (emit-not-implemented))
 	
 	(emit-label regs-defaulted)
 	(when (> nvals register-arg-count)
@@ -325,7 +325,7 @@ default-value-8
 		    (tn (tn-ref-tn val)))
 		(defaults (cons default-lab tn))
 
-		(vop-not-implemented)))
+		(emit-not-implemented)))
 	    
 	    (emit-label defaulting-done)
 	    (move csp-tn ocfp-tn)
@@ -374,14 +374,14 @@ default-value-8
   (let ((variable-values (gen-label))
 	(done (gen-label)))
     (new-assem:without-scheduling ()
-      (vop-not-implemented))
+      (emit-not-implemented))
 
-    (vop-not-implemented)
+    (emit-not-implemented)
     
     (assemble (*elsewhere*)
       (trace-table-entry trace-table-function-prologue)
       (emit-label variable-values)
-      (vop-not-implemented)
+      (emit-not-implemented)
       (trace-table-entry trace-table-normal)))
   (undefined-value))
 
@@ -439,7 +439,7 @@ default-value-8
   (:ignore arg-locs args ocfp)
   (:generator 5
     (trace-table-entry trace-table-call-site)
-    (vop-not-implemented)
+    (emit-not-implemented)
     (trace-table-entry trace-table-normal)))
 
 
@@ -463,7 +463,7 @@ default-value-8
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:generator 20
     (trace-table-entry trace-table-call-site)
-    (vop-not-implemented)
+    (emit-not-implemented)
     (trace-table-entry trace-table-normal)))
 
 
@@ -490,7 +490,7 @@ default-value-8
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 5
     (trace-table-entry trace-table-call-site)
-    (vop-not-implemented)
+    (emit-not-implemented)
     (trace-table-entry trace-table-normal)))
 
 ;;; Return from known values call.  We receive the return locations as
@@ -513,7 +513,7 @@ default-value-8
   (:vop-var vop)
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
-    (vop-not-implemented)
+    (emit-not-implemented)
     (trace-table-entry trace-table-normal)))
 
 
@@ -624,7 +624,7 @@ default-value-8
 		     15
 		     (if (eq return :unknown) 25 0))
        (trace-table-entry trace-table-call-site)
-       (vop-not-implemented)
+       (emit-not-implemented)
        (trace-table-entry trace-table-normal))))
 
 
@@ -660,7 +660,7 @@ default-value-8
 
   (:generator 75
 
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 
 ;;;; Unknown values return:
@@ -676,7 +676,7 @@ default-value-8
   (:vop-var vop)
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
-    (vop-not-implemented)
+    (emit-not-implemented)
     (trace-table-entry trace-table-normal)))
 
 ;;; Do unknown-values return of a fixed number of values.  The Values are
@@ -707,7 +707,7 @@ default-value-8
   (:vop-var vop)
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
-    (vop-not-implemented)
+    (emit-not-implemented)
     (trace-table-entry trace-table-normal)))
 
 ;;; Do unknown-values return of an arbitrary number of values (passed on the
@@ -734,7 +734,7 @@ default-value-8
 
   (:generator 13
     (trace-table-entry trace-table-function-epilogue)
-    (vop-not-implemented)
+    (emit-not-implemented)
     (trace-table-entry trace-table-normal)))
 
 
@@ -772,7 +772,7 @@ default-value-8
   (:temporary (:sc descriptor-reg :offset lexenv-offset) temp)
   (:info fixed)
   (:generator 20
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 
 ;;; More args are stored consequtively on the stack, starting immediately at
@@ -798,7 +798,7 @@ default-value-8
   (:translate %listify-rest-args)
   (:policy :safe)
   (:generator 20
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 
 ;;; Return the location and size of the more arg glob created by Copy-More-Arg.
@@ -822,7 +822,7 @@ default-value-8
   (:result-types t tagged-num)
   (:note _N"more-arg-context")
   (:generator 5
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 
 ;;; Signal wrong argument count error if Nargs isn't = to Count.
@@ -836,7 +836,7 @@ default-value-8
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 3
-    (vop-not-implemented)
+    (emit-not-implemented)
     (let ((err-lab
 	    (generate-error-code vop invalid-argument-count-error nargs)))
       (inst cmp nargs (fixnumize count))

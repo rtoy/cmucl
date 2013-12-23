@@ -72,7 +72,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:variant-vars lowtag)
   (:generator 5
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (code-from-lra code-from-mumble)
   (:translate di::lra-code-header)

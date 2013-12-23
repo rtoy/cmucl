@@ -38,7 +38,7 @@
   (:info nvals)
   (:temporary (:scs (descriptor-reg)) temp)
   (:generator 20
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 ;;; Push a list of values on the stack, returning Start and Count as used in
 ;;; unknown values continuations.
@@ -55,7 +55,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 0
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 
 
@@ -74,4 +74,4 @@
   (:results (start :scs (any-reg))
 	    (count :scs (any-reg)))
   (:generator 20
-    (vop-not-implemented)))
+    (emit-not-implemented)))

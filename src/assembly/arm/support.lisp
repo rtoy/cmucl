@@ -24,7 +24,7 @@
 		      ,temp)
 	  (:temporary (:scs (interior-reg) :from (:eval 0) :to (:eval 1))
 		      ,lip))))
-     `(not-implemented))
+     `(emit-not-implemented))
     (:full-call
      #+(or)
      (let ((temp (make-symbol "TEMP"))
@@ -56,7 +56,7 @@
 	  (:temporary (:scs (control-stack) :offset nfp-save-offset)
 		      ,nfp-save)
 	  (:save-p :compute-only))))
-     `(not-implemented))
+     `(emit-not-implemented))
     (:none
      #+(or)
      (let ((temp (make-symbol "TEMP")))
@@ -65,7 +65,7 @@
 	  (inst nop))
 	`((:temporary (:scs (non-descriptor-reg) :from (:eval 0) :to (:eval 1))
 		      ,temp))))
-     `(not-implemented))))
+     `(emit-not-implemented))))
 
 (def-vm-support-routine generate-return-sequence (style)
   (ecase style
@@ -77,12 +77,12 @@
 			     :offset lip-offset)
 	     8)
        (inst nop))
-     `(not-implemented))
+     `(emit-not-implemented))
     (:full-call
      #+(or)
      `((lisp-return (make-random-tn :kind :normal
 				    :sc (sc-or-lose 'descriptor-reg *backend*)
 				    :offset lra-offset)
 		    :offset 2))
-     `(not-implemented))
+     `(emit-not-implemented))
     (:none)))

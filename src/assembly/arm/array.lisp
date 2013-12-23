@@ -29,7 +29,7 @@
 
 			  (:temp ndescr non-descriptor-reg nl0-offset)
 			  (:temp vector descriptor-reg a2-offset))
-  (not-implemented))
+  (emit-not-implemented))
 
 
 
@@ -48,7 +48,7 @@
 			  (:temp length any-reg a1-offset)
 			  (:temp accum non-descriptor-reg nl0-offset))
 
-  (not-implemented))
+  (emit-not-implemented))
 
 
 ;; Implement the one-at-a-time algorithm designed by Bob Jenkins
@@ -87,4 +87,4 @@ ub4 one_at_a_time(char *key, ub4 len)
 			  (:res result any-reg a0-offset)
 
 			  (:temp accum non-descriptor-reg nl0-offset))
-  (not-implemented))
+  (emit-not-implemented))

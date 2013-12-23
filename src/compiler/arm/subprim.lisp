@@ -30,7 +30,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 50
-    (vop-not-implemented)))
+    (emit-not-implemented)))
        
 
 (define-static-function length (object) :translate length)

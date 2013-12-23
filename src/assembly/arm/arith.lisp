@@ -34,7 +34,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
-  (not-implemented))
+  (emit-not-implemented))
 
 
 (define-assembly-routine (generic--
@@ -52,7 +52,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
-  (not-implemented))
+  (emit-not-implemented))
 
 
 
@@ -74,7 +74,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
-  (not-implemented))
+  (emit-not-implemented))
 
 ;; I (rtoy) am ripping this out right now because it doesn't
 ;; compile. The routine wants 2 non-descriptors and we currently only
@@ -94,7 +94,7 @@
 				 ((:arg x ,sc a0-offset)
 				  (:arg y ,sc a1-offset)
 				  (:res res ,sc a0-offset))
-	  (not-implemented))))
+	  (emit-not-implemented))))
   (frob unsigned-* "unsigned *" 40 unsigned-num descriptor-reg)
   (frob signed-* "unsigned *" 41 signed-num descriptor-reg)
   (frob fixnum-* "fixnum *" 30 tagged-num any-reg))
@@ -115,7 +115,7 @@
 
 			  (:res quo any-reg a0-offset)
 			  (:res rem any-reg a1-offset))
-  (not-implemented))
+  (emit-not-implemented))
 
 
 (define-assembly-routine (fixnum-truncate
@@ -132,7 +132,7 @@
 			  (:res rem any-reg a1-offset)
 
 			  (:temp rem-sign any-reg nargs-offset))
-  (not-implemented))
+  (emit-not-implemented))
 
 
 #+nil
@@ -149,7 +149,7 @@
 
 			  (:temp rem-sign signed-reg nargs-offset))
   
-  (not-implemented))
+  (emit-not-implemented))
 
 
 ;;;; Comparison
@@ -169,7 +169,7 @@
 				  
 				  (:temp nargs any-reg nargs-offset)
 				  (:temp ocfp any-reg ocfp-offset))
-	  (not-implemented))))
+	  (emit-not-implemented))))
 
   (define-cond-assem-rtn generic-< < two-arg-< :lt)
   (define-cond-assem-rtn generic-<= <= two-arg-<= :le)
@@ -191,7 +191,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
-  (not-implemented))
+  (emit-not-implemented))
 
 (define-assembly-routine (generic-=
 			  (:cost 10)
@@ -207,7 +207,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
-  (not-implemented))
+  (emit-not-implemented))
 
 (define-assembly-routine (generic-/=
 			  (:cost 10)
@@ -223,4 +223,4 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
-  (not-implemented))
+  (emit-not-implemented))

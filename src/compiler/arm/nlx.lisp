@@ -58,7 +58,7 @@
 	    (eval :scs (descriptor-reg)))
   (:vop-var vop)
   (:generator 13
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (restore-dynamic-state)
   (:args (catch :scs (descriptor-reg))
@@ -67,17 +67,17 @@
 	 (eval :scs (descriptor-reg)))
   (:vop-var vop)
   (:generator 10
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (current-stack-pointer)
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 1
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (current-binding-pointer)
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 1
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 
 
@@ -93,7 +93,7 @@
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 22
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 
 ;;; Like Make-Unwind-Block, except that we also store in the specified tag, and
@@ -108,7 +108,7 @@
   (:temporary (:scs (descriptor-reg) :target block :to (:result 0)) result)
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 44
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 
 ;;; Just set the current unwind-protect to TN's address.  This instantiates an
@@ -119,7 +119,7 @@
   (:temporary (:scs (descriptor-reg)) new-uwp)
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 7
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 
 (define-vop (unlink-catch-block)
@@ -127,14 +127,14 @@
   (:policy :fast-safe)
   (:translate %catch-breakup)
   (:generator 17
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 (define-vop (unlink-unwind-protect)
   (:temporary (:scs (any-reg)) block)
   (:policy :fast-safe)
   (:translate %unwind-protect-breakup)
   (:generator 17
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 
 ;;;; NLX entry VOPs:
@@ -151,7 +151,7 @@
   (:save-p :force-to-stack)
   (:vop-var vop)
   (:generator 30
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 
 (define-vop (nlx-entry-multiple)
@@ -166,7 +166,7 @@
   (:save-p :force-to-stack)
   (:vop-var vop)
   (:generator 30
-    (vop-not-implemented)))
+    (emit-not-implemented)))
 
 
 ;;; This VOP is just to force the TNs used in the cleanup onto the stack.
