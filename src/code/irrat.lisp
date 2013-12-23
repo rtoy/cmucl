@@ -1916,8 +1916,43 @@ Z may be any number, but the result is always a complex."
 			     (realpart sqrt-z+1))))))))
 
 
+;; What is the value of asin(2)?  Here is a derivation.
+;;
+;; asin(2) = -i*log(i*2+sqrt(-3))
+;;         = -i*log(2*i+sqrt(3)*i)
+;;         = -i*(log(2+sqrt(3)) + i*pi/2)
+;;         = pi/2 - i*log(2+sqrt(3))
+;;
+;; Note that this differs from asin(2+0.0*i) because we support signed
+;; zeroes.
+;;
+;; asin(2+0*i) = -i*log(i*(2+0*i) + sqrt(1-(4+0*i)))
+;;             = -i*log((2*i - 0) + sqrt(-3-0*i))
+;;             = -i*log(-0 + 2*i - sqrt(3)*i)
+;;             = -i*log(-0 + i*(2-sqrt(3)))
+;;             = -i*(log(2-sqrt(3)) + i*pi/2)
+;;             = pi/2 - i*log(2-sqrt(3))
+;;             = pi/2 + i*log(2+sqrt(3))
+;;
+;; The last equation follows because (2-sqrt(3)) = 1/(2+sqrt(3)).
+;; Hence asin(2) /= asin(2+0*i).
+;;
+;; Also
+;;
+;; asin(2-0*i) = -i*log(i*(2-0*i) + sqrt(1-(4-0*i)))
+;;             = -i*log((2*i + 0) + sqrt(-3+0*i))
+;;             = -i*log(0 + 2*i + sqrt(3)*i)
+;;             = -i*log(0 + i*(2+sqrt(3)))
+;;             = -i*(log(2+sqrt(3)) + i*pi/2)
+;;             = pi/2 + i*log(2+sqrt(3))
+;;
+;; Hence asin(2) = asin(2-0.0*i).
+;;
+;; Similar derivations will show that asin(-2) = asin(-2 + 0.0*i) and
+;; asin(-2+0.0*i) is different from asin(-2-0.0*i) because of the
+;; branch cut, of course.
 (defun complex-asin (z)
-  "Compute asin z = asinh(i*z)/i
+  "Compute asin z = -i*log(i*z + sqrt(1-z^2))
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1950,7 +1985,7 @@ Z may be any number, but the result is always a complex."
 	     (- (realpart result)))))
 	 
 (defun complex-atan (z)
-  "Compute atan z = atanh (i*z) / i
+  "Compute atan z = (log(1+i*z) - log(1-i*z))/(2*i)
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
