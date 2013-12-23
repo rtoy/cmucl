@@ -940,8 +940,8 @@
 	     (new-assem:assemble (*code-segment* ,n-vop)
 	       (macrolet ((vm::emit-not-implemented ()
 			    `(vm::not-implemented ',',(vop-parse-name parse))))
-		 ,@(vop-parse-body parse))
-	       ,@(saves)))))))
+		 ,@(vop-parse-body parse)))
+	     ,@(saves))))))
 
 
 ;;; Parse-Operands  --  Internal
