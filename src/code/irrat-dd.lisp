@@ -1663,63 +1663,59 @@ Z may be any number, but the result is always a complex."
 (defun dd-complex-atanh (z)
   _N"Compute atanh z = (log(1+z) - log(1-z))/2"
   (declare (number z))
-  (cond ((and (realp z) (< z -1))
-	 ;; ATANH is continuous with quadrant III in this case.
-	 (dd-complex-atanh (complex z -0d0)))
-	(t
-	 (let* ( ;; Constants
-		(theta (/ (sqrt most-positive-double-float) 4.0w0))
-		(rho (/ 4.0w0 (sqrt most-positive-double-float)))
-		(half-pi dd-pi/2)
-		(rp (float (realpart z) 1.0w0))
-		(beta (float-sign rp 1.0w0))
-		(x (* beta rp))
-		(y (* beta (- (float (imagpart z) 1.0w0))))
-		(eta 0.0w0)
-		(nu 0.0w0))
-	   ;; Shouldn't need this declare.
-	   (declare (double-double-float x y))
-	   (locally
-	       (declare (optimize (speed 3)
-				  (inhibit-warnings 3)))
-	     (cond ((or (> x theta)
-			(> (abs y) theta))
-		    ;; To avoid overflow...
-		    (setf nu (float-sign y half-pi))
-		    ;; eta is real part of 1/(x + iy).  This is x/(x^2+y^2),
-		    ;; which can cause overflow.  Arrange this computation so
-		    ;; that it won't overflow.
-		    (setf eta (let* ((x-bigger (> x (abs y)))
-				     (r (if x-bigger (/ y x) (/ x y)))
-				     (d (+ 1.0d0 (* r r))))
-				(if x-bigger
-				    (/ (/ x) d)
-				    (/ (/ r y) d)))))
-		   ((= x 1.0w0)
-		    ;; Should this be changed so that if y is zero, eta is set
-		    ;; to +infinity instead of approx 176?  In any case
-		    ;; tanh(176) is 1.0d0 within working precision.
-		    (let ((t1 (+ 4w0 (square y)))
-			  (t2 (+ (abs y) rho)))
-		      (setf eta (dd-%log (/ (sqrt (sqrt t1))
-					    (sqrt t2))))
-		      (setf nu (* 0.5d0
-				  (float-sign y
-					      (+ half-pi (dd-%atan (* 0.5d0 t2))))))))
-		   (t
-		    (let ((t1 (+ (abs y) rho)))
-		      ;; Normal case using log1p(x) = log(1 + x)
-		      (setf eta (* 0.25d0
-				   (dd-%log1p (/ (* 4.0d0 x)
-						 (+ (square (- 1.0d0 x))
-						    (square t1))))))
-		      (setf nu (* 0.5d0
-				  (dd-%atan2 (* 2.0d0 y)
-					     (- (* (- 1.0d0 x)
-						   (+ 1.0d0 x))
-						(square t1))))))))
-	     (complex (* beta eta)
-		      (- (* beta nu))))))))
+  (let* ( ;; Constants
+	 (theta (/ (sqrt most-positive-double-float) 4.0w0))
+	 (rho (/ 4.0w0 (sqrt most-positive-double-float)))
+	 (half-pi dd-pi/2)
+	 (rp (float (realpart z) 1.0w0))
+	 (beta (float-sign rp 1.0w0))
+	 (x (* beta rp))
+	 (y (* beta (- (float (imagpart z) 1.0w0))))
+	 (eta 0.0w0)
+	 (nu 0.0w0))
+    ;; Shouldn't need this declare.
+    (declare (double-double-float x y))
+    (locally
+	(declare (optimize (speed 3)
+			   (inhibit-warnings 3)))
+      (cond ((or (> x theta)
+		 (> (abs y) theta))
+	     ;; To avoid overflow...
+	     (setf nu (float-sign y half-pi))
+	     ;; eta is real part of 1/(x + iy).  This is x/(x^2+y^2),
+	     ;; which can cause overflow.  Arrange this computation so
+	     ;; that it won't overflow.
+	     (setf eta (let* ((x-bigger (> x (abs y)))
+			      (r (if x-bigger (/ y x) (/ x y)))
+			      (d (+ 1.0d0 (* r r))))
+			 (if x-bigger
+			     (/ (/ x) d)
+			     (/ (/ r y) d)))))
+	    ((= x 1.0w0)
+	     ;; Should this be changed so that if y is zero, eta is set
+	     ;; to +infinity instead of approx 176?  In any case
+	     ;; tanh(176) is 1.0d0 within working precision.
+	     (let ((t1 (+ 4w0 (square y)))
+		   (t2 (+ (abs y) rho)))
+	       (setf eta (dd-%log (/ (sqrt (sqrt t1))
+				     (sqrt t2))))
+	       (setf nu (* 0.5d0
+			   (float-sign y
+				       (+ half-pi (dd-%atan (* 0.5d0 t2))))))))
+	    (t
+	     (let ((t1 (+ (abs y) rho)))
+	       ;; Normal case using log1p(x) = log(1 + x)
+	       (setf eta (* 0.25d0
+			    (dd-%log1p (/ (* 4.0d0 x)
+					  (+ (square (- 1.0d0 x))
+					     (square t1))))))
+	       (setf nu (* 0.5d0
+			   (dd-%atan2 (* 2.0d0 y)
+				      (- (* (- 1.0d0 x)
+					    (+ 1.0d0 x))
+					 (square t1))))))))
+      (complex (* beta eta)
+	       (- (* beta nu))))))
 
 (defun dd-complex-tanh (z)
   _N"Compute tanh z = sinh z / cosh z"

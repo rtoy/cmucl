@@ -215,18 +215,20 @@
   (assert-eql nil
 	      (sincos-test (scale-float 1d0 1023) 1000)))
 
-;; Compute the relative error between actual and expected if expected
-;; is not zero. Otherwise, return absolute error between actual and
-;; expected.  If the error is less than the threshold, return T.
-;; Otherwise return the actual (relative or absolute) error.
-(defun rel-or-abs-error (actual expected &optional (threshold double-float-epsilon))
+(defun close-to (actual expected &optional (threshold double-float-epsilon))
+  "Determine if Actual is close to Expected.  If Expected is not zero,
+  then close-to returns t if |Actual - Expected|/|Expected| <=
+  Threshold.  If Expected is 0, then close-to returns T if |Actual -
+  Expected| <= threshold.  In either of these conditions does not
+  hold, then a list of the actual error (relative or absolute), the
+  actual value and the expected value is returned."
   (let ((err (if (zerop expected)
 		 (abs (- actual expected))
 		 (/ (abs (- actual expected))
 		    (abs expected)))))
     (if (<= err threshold)
 	t
-	err)))
+	(list err actual expected))))
 
 
 ;;; Tests for double-double-floats
@@ -239,11 +241,11 @@
 (define-test dd-sin.no-reduction
   "Test sin for small args without reduction"
   (:tag :sin :double-double)
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(sin .5w0)
 		4.794255386042030002732879352155713880818033679406006751886166131w-1
 		1w-32))
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(sin -0.5w0)
 		-4.794255386042030002732879352155713880818033679406006751886166131w-1
 		1w-32)))
@@ -251,7 +253,7 @@
 (define-test dd-sin.pi/2
   "Test for arg near pi/2"
   (:tag :sin :double-double)
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(sin (/ kernel:dd-pi 2))
 		1w0
 		1w-50)))
@@ -265,27 +267,27 @@
   "Test for sin with arg reduction"
   (:tag :sin :double-double)
   ;; Test for argument reduction with n mod 4 = 0
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(sin (* 7/4 kernel:dd-pi))
 		-7.07106781186547524400844362104849691328261037289050238659653433w-1
 		0w0))
     ;; Test for argument reduction with n mod 4 = 1
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(sin (* 9/4 kernel:dd-pi))
 		7.07106781186547524400844362104858161816423215627023442400880643w-1
 		0w0))
   ;; Test for argument reduction with n mod 4 = 2
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(sin (* 11/4 kernel:dd-pi))
 		7.071067811865475244008443621048998682901731241858306822215522497w-1
 		8.716w-33))
   ;; Test for argument reduction with n mod 4 = 3
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(sin (* 13/4 kernel:dd-pi))
 		-7.071067811865475244008443621048777109664479707052746581685893187w-1
 		8.716w-33))
   ;; Test for argument reduction, big value
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(sin (scale-float 1w0 120))
 		3.778201093607520226555484700569229919605866976512306642257987199w-1
 		8.156w-33)))
@@ -299,11 +301,11 @@
 (define-test dd-cos.no-reduction
   "Test cos for small args without reduction"
   (:tag :cos :double-double)
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(cos .5w0)
 		8.775825618903727161162815826038296519916451971097440529976108683w-1
 		0w0))
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(cos -0.5w0)
 		8.775825618903727161162815826038296519916451971097440529976108683w-1
 		0w0)))
@@ -311,7 +313,7 @@
 (define-test dd-cos.pi/2
   "Test for arg near pi/2"
   (:tag :cos :double-double)
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(cos (/ kernel:dd-pi 2))
 		-1.497384904859169777320797133937725094986669701841027904483071358w-33
 		0w0)))
@@ -320,27 +322,27 @@
   "Test for cos with arg reduction"
   (:tag :cos :double-double)
   ;; Test for argument reduction with n mod 4 = 0
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(cos (* 7/4 kernel:dd-pi))
 		7.07106781186547524400844362104849691328261037289050238659653433w-1
 		0w0))
     ;; Test for argument reduction with n mod 4 = 1
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(cos (* 9/4 kernel:dd-pi))
 		7.07106781186547524400844362104858161816423215627023442400880643w-1
 		3.487w-32))
   ;; Test for argument reduction with n mod 4 = 2
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(cos (* 11/4 kernel:dd-pi))
 		-7.071067811865475244008443621048998682901731241858306822215522497w-1
 		1.482w-31))
   ;; Test for argument reduction with n mod 4 = 3
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(cos (* 13/4 kernel:dd-pi))
 		-7.071067811865475244008443621048777109664479707052746581685893187w-1
 		7.845w-32))
   ;; Test for argument reduction, big value
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(cos (scale-float 1w0 120))
 		-9.258790228548378673038617641074149467308332099286564602360493726w-1
 		0w0)))
@@ -354,11 +356,11 @@
 (define-test dd-tan.no-reduction
   "Test tan for small args without reduction"
   (:tag :tan :double-double)
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(tan .5w0)
 		5.463024898437905132551794657802853832975517201797912461640913859w-1
 		0w0))
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(tan -0.5w0)
 		-5.463024898437905132551794657802853832975517201797912461640913859w-1
 		0w0)))
@@ -366,7 +368,7 @@
 (define-test dd-tan.pi/2
   "Test for arg near pi/2"
   (:tag :tan :double-double)
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(tan (/ kernel:dd-pi 2))
 		-6.67830961000672557834948096545679895621313886078988606234681001w32
 		0w0)))
@@ -375,17 +377,17 @@
   "Test for tan with arg reduction"
   (:tag :tan :double-double)
   ;; Test for argument reduction with n even
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(tan (* 7/4 kernel:dd-pi))
 		-1.000000000000000000000000000000001844257310064121018312678894979w0
 		3.422w-49))
   ;; Test for argument reduction with n odd
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(tan (* 9/4 kernel:dd-pi))
 		1.000000000000000000000000000000025802415787810837455445433037983w0
 		0w0))
   ;; Test for argument reduction, big value
-  (assert-eq t (rel-or-abs-error
+  (assert-eq t (close-to
 		(tan (scale-float 1w0 120))
 		-4.080663888418042385451434945255951177650840227682488471558860153w-1
 		1.888w-33)))
@@ -753,7 +755,8 @@
 ;; Thus, atanh(-2) is continuous with Quadrant II, NOT continuous with
 ;; Quadrant III!
 ;;
-;; What do we do?
+;; The formula, however, is clear.  We will use the formula and ignore
+;; the text in the CLHS.
 (defun atanh-def (z)
   (r*z 1/2
        (- (log (1+z z))
@@ -761,19 +764,19 @@
 
 (define-test branch-cut.atanh
   (:tag :atanh :branch-cuts)
-  ;; Test for x < -1, which is continuous with Quadrant III.  Use the
-  ;; the value at #c(-2d0 -1d-20) as the reference.
+  ;; Test for x < -1, which is continuous with Quadrant II.  Use the
+  ;; the value at #c(-2d0 +1d-20) as the reference.
   (multiple-value-bind (tr ti)
-      (get-signs (atanh-def #c(-2d0 -1d-20)))
+      (get-signs (atanh-def #c(-2d0 1d-20)))
     (assert-true (check-signs #'atanh -2d0 tr ti))
     (assert-true (check-signs #'atanh -2w0 tr ti))
-    (assert-true (check-signs #'atanh #c(-2d0 -0d0) tr ti))
-    (assert-true (check-signs #'atanh #c(-2w0 -0w0) tr ti)))
+    (assert-true (check-signs #'atanh #c(-2d0 +0d0) tr ti))
+    (assert-true (check-signs #'atanh #c(-2w0 +0w0) tr ti)))
   ;; Test the other side of the branch cut for x < -1.
   (multiple-value-bind (tr ti)
-      (get-signs (atanh-def #c(-2d0 +1d-20)))
-    (assert-true (check-signs #'atanh #c(-2d0 0d0) tr ti))
-    (assert-true (check-signs #'atanh #c(-2w0 0w0) tr ti)))
+      (get-signs (atanh-def #c(-2d0 -1d-20)))
+    (assert-true (check-signs #'atanh #c(-2d0 -0d0) tr ti))
+    (assert-true (check-signs #'atanh #c(-2w0 -0w0) tr ti)))
 
   ;; Test for x > 1, which is continuous with Quadrant I, using the
   ;; value at #c(+2d0 1d-10) as the reference
