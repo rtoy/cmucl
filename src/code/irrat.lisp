@@ -1740,60 +1740,78 @@ Z may be any number, but the result is always a complex."
   #+double-double
   (when (typep z '(or double-double-float (complex double-double-float)))
     (return-from complex-atanh (dd-complex-atanh z)))
-  
-  (let* ( ;; Constants
-	 (theta (/ (sqrt most-positive-double-float) 4.0d0))
-	 (rho (/ 4.0d0 (sqrt most-positive-double-float)))
-	 (half-pi (/ pi 2.0d0))
-	 (rp (float (realpart z) 1.0d0))
-	 (beta (float-sign rp 1.0d0))
-	 (x (* beta rp))
-	 (y (* beta (- (float (imagpart z) 1.0d0))))
-	 (eta 0.0d0)
-	 (nu 0.0d0))
-    ;; Shouldn't need this declare.
-    (declare (double-float x y))
-    (locally
-	(declare (optimize (speed 3)))
-      (cond ((or (> x theta)
-		 (> (abs y) theta))
-	     ;; To avoid overflow...
-	     (setf nu (float-sign y half-pi))
-	     ;; eta is real part of 1/(x + iy).  This is x/(x^2+y^2),
-	     ;; which can cause overflow.  Arrange this computation so
-	     ;; that it won't overflow.
-	     (setf eta (let* ((x-bigger (> x (abs y)))
-			      (r (if x-bigger (/ y x) (/ x y)))
-			      (d (+ 1.0d0 (* r r))))
-			 (if x-bigger
-			     (/ (/ x) d)
-			     (/ (/ r y) d)))))
-	    ((= x 1.0d0)
-	     ;; Should this be changed so that if y is zero, eta is set
-	     ;; to +infinity instead of approx 176?  In any case
-	     ;; tanh(176) is 1.0d0 within working precision.
-	     (let ((t1 (+ 4d0 (square y)))
-		   (t2 (+ (abs y) rho)))
-	       (setf eta (log (/ (sqrt (sqrt t1))
-				 (sqrt t2))))
-	       (setf nu (* 0.5d0
-			   (float-sign y
-				       (+ half-pi (atan (* 0.5d0 t2))))))))
-	    (t
-	     (let ((t1 (+ (abs y) rho)))
-	       ;; Normal case using log1p(x) = log(1 + x)
-	       (setf eta (* 0.25d0
-			    (%log1p (/ (* 4.0d0 x)
-				       (+ (square (- 1.0d0 x))
-					  (square t1))))))
-	       (setf nu (* 0.5d0
-			   (atan (* 2.0d0 y)
-				 (- (* (- 1.0d0 x)
-				       (+ 1.0d0 x))
-				    (square t1))))))))
-      (coerce-to-complex-type (* beta eta)
-			      (- (* beta nu))
-			      z))))
+
+  ;; When z is purely real and x > 1, we have
+  ;;
+  ;; atanh(z) = 1/2*(log(1+z) - log(1-z))
+  ;;          = 1/2*(log(1+x) - (log(x-1)+i*pi))
+  ;;          = 1/2*(log(1+x) - log(x-1) - i*pi)
+  ;;          = 1/2(log(1+x)-log(x-1)) - i*pi/2
+  ;;
+  ;; Thus, the imaginary part is negative. Thus, for z > 1, atanh is
+  ;; continuous with quadrant IV.  To preserve the identity atanh(-z)
+  ;; = -atanh(z), we must have atanh be continuous with Quadrant II
+  ;; for z < -1.  (The identity is obviously true from the
+  ;; definition.)
+  ;;
+  ;; NOTE: this differs from what the CLHS says for the continuity.
+  ;; Instead of the text in the CLHS, we choose to use the definition
+  ;; to derive the correct values.
+  (if (realp z)
+      (complex-atanh (complex (float z) (- (* 0 (float z)))))
+      (let* ( ;; Constants
+	     (theta (/ (sqrt most-positive-double-float) 4.0d0))
+	     (rho (/ 4.0d0 (sqrt most-positive-double-float)))
+	     (half-pi (/ pi 2.0d0))
+	     (rp (float (realpart z) 1.0d0))
+	     (beta (float-sign rp 1.0d0))
+	     (x (* beta rp))
+	     (y (* beta (- (float (imagpart z) 1.0d0))))
+	     (eta 0.0d0)
+	     (nu 0.0d0))
+	;; Shouldn't need this declare.
+	(declare (double-float x y))
+	(locally
+	    (declare (optimize (speed 3)))
+	  (cond ((or (> x theta)
+		     (> (abs y) theta))
+		 ;; To avoid overflow...
+		 (setf nu (float-sign y half-pi))
+		 ;; eta is real part of 1/(x + iy).  This is x/(x^2+y^2),
+		 ;; which can cause overflow.  Arrange this computation so
+		 ;; that it won't overflow.
+		 (setf eta (let* ((x-bigger (> x (abs y)))
+				  (r (if x-bigger (/ y x) (/ x y)))
+				  (d (+ 1.0d0 (* r r))))
+			     (if x-bigger
+				 (/ (/ x) d)
+				 (/ (/ r y) d)))))
+		((= x 1.0d0)
+		 ;; Should this be changed so that if y is zero, eta is set
+		 ;; to +infinity instead of approx 176?  In any case
+		 ;; tanh(176) is 1.0d0 within working precision.
+		 (let ((t1 (+ 4d0 (square y)))
+		       (t2 (+ (abs y) rho)))
+		   (setf eta (log (/ (sqrt (sqrt t1))
+				     (sqrt t2))))
+		   (setf nu (* 0.5d0
+			       (float-sign y
+					   (+ half-pi (atan (* 0.5d0 t2))))))))
+		(t
+		 (let ((t1 (+ (abs y) rho)))
+		   ;; Normal case using log1p(x) = log(1 + x)
+		   (setf eta (* 0.25d0
+				(%log1p (/ (* 4.0d0 x)
+					   (+ (square (- 1.0d0 x))
+					      (square t1))))))
+		   (setf nu (* 0.5d0
+			       (atan (* 2.0d0 y)
+				     (- (* (- 1.0d0 x)
+					   (+ 1.0d0 x))
+					(square t1))))))))
+	  (coerce-to-complex-type (* beta eta)
+				  (- (* beta nu))
+				  z)))))
 
 (defun complex-tanh (z)
   "Compute tanh z = sinh z / cosh z"

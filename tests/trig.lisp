@@ -770,24 +770,24 @@
       (get-signs (atanh-def #c(-2d0 1d-20)))
     (assert-true (check-signs #'atanh -2d0 tr ti))
     (assert-true (check-signs #'atanh -2w0 tr ti))
-    (assert-true (check-signs #'atanh #c(-2d0 +0d0) tr ti))
-    (assert-true (check-signs #'atanh #c(-2w0 +0w0) tr ti)))
+    (assert-true (check-signs #'atanh #c(-2d0 0d0) tr ti))
+    (assert-true (check-signs #'atanh #c(-2w0 0w0) tr ti)))
   ;; Test the other side of the branch cut for x < -1.
   (multiple-value-bind (tr ti)
       (get-signs (atanh-def #c(-2d0 -1d-20)))
     (assert-true (check-signs #'atanh #c(-2d0 -0d0) tr ti))
     (assert-true (check-signs #'atanh #c(-2w0 -0w0) tr ti)))
 
-  ;; Test for x > 1, which is continuous with Quadrant I, using the
-  ;; value at #c(+2d0 1d-10) as the reference
+  ;; Test for x > 1, which is continuous with Quadrant IV, using the
+  ;; value at #c(+2d0 -1d-10) as the reference
   (multiple-value-bind (tr ti)
-      (get-signs (atanh-def #c(2d0 1d-20)))
+      (get-signs (atanh-def #c(2d0 -1d-10)))
     (assert-true (check-signs #'atanh 2d0 tr ti))
     (assert-true (check-signs #'atanh 2w0 tr ti))
-    (assert-true (check-signs #'atanh #c(2d0 0) tr ti))
-    (assert-true (check-signs #'atanh #c(2w0 0) tr ti)))
+    (assert-true (check-signs #'atanh #c(2d0 -0d0) tr ti))
+    (assert-true (check-signs #'atanh #c(2w0 -0w0) tr ti)))
   ;; Test the other side of the branch cut for x > 1.
   (multiple-value-bind (tr ti)
-      (get-signs (atanh-def #c(2d0 -1d-20)))
-    (assert-true (check-signs #'atanh #c(2d0 -0d0) tr ti))
-    (assert-true (check-signs #'atanh #c(2w0 -0w0) tr ti))))
+      (get-signs (atanh-def #c(2d0 +1d-20)))
+    (assert-true (check-signs #'atanh #c(2d0 0d0) tr ti))
+    (assert-true (check-signs #'atanh #c(2w0 0w0) tr ti))))
