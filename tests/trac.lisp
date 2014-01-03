@@ -56,6 +56,10 @@
   (assert-equal "  0.100E+01"
 		(format nil "~11,3,2,0,'*,,'EE" .9999)))
 
+;; See http://trac.common-lisp.net/cmucl/ticket/15.  We don't intend
+;; to fix this with x87 due to the x87 extended double float (80-bit)
+;; format.
+#-x87
 (define-test trac.15
   (:tag :trac)
   (assert-true
