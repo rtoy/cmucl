@@ -13,8 +13,11 @@
 
 (defpackage :cmucl-test-runner
   (:use :cl)
-  (:export #:run-all-tests
-	   #:load-and-run-all-tests
+  (:export #:*test-files*
+	   #:*test-names*
+	   #:load-test-files
+	   #:run-loaded-tests
+	   #:run-all-tests
 	   #:print-test-results))
 
 (in-package :cmucl-test-runner)
@@ -28,23 +31,30 @@
 
 (defvar *load-path* *load-pathname*)
 
+(defvar *test-files*
+  nil)
+
+(defvar *test-names*
+  nil)
+
+(defun load-test-files (&optional (test-directory #p"tests/"))
+  (dolist (file (directory (merge-pathnames "*.lisp" test-directory)))
+    (unless (equal file *load-path*)
+      (let ((basename (pathname-name file)))
+	(push (concatenate 'string (string-upcase basename) "-TESTS")
+	      *test-names*)
+	(push file *test-files*)
+	(load file))))
+  (setf *test-files* (nreverse *test-files*))
+  (setf *test-names* (nreverse *test-names*)))
+
 ;; Look through all the files in the tests directory and load them.
 ;; Then run all of the tests.  For each file, it ia assumed that a
 ;; package is created that is named with "-TESTS" appended to he
 ;; pathname-name of the file.
-(defun load-and-run-all-tests ()
-  (let (test-names
-	test-results)
-    (dolist (file (directory "tests/*.lisp"))
-      (unless (equal file *load-path*)
-	(let ((basename (pathname-name file)))
-	  ;; Create the package name from the pathname name so we know
-	  ;; how to run the test.
-	  (push (concatenate 'string (string-upcase basename) "-TESTS")
-		test-names)
-	  (load file))))
-    (setf test-names (nreverse test-names))
-    (dolist (test test-names)
+(defun run-loaded-tests ()
+  (let (test-results)
+    (dolist (test *test-names*)
       (push (lisp-unit:run-tests :all test)
 	    test-results))
     (nreverse test-results)))
@@ -89,8 +99,9 @@
 	  (t
 	   (unix:unix-exit 0)))))
 
-(defun run-all-tests ()
-  (print-test-results (load-and-run-all-tests)))
+(defun run-all-tests (&optional (test-directory #P"tests/"))
+  (load-test-files test-directory)
+  (print-test-results (run-loaded-tests)))
 
 ;;(run-all-tests)
 ;;(quit)
