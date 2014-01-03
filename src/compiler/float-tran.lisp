@@ -747,7 +747,7 @@
      (complex c s)))
 
 #+double-double
-(deftransform cis ((z) (double-double-float) *)
+(deftransform cis ((x) (double-double-float) *)
   `(multiple-value-bind (s c)
        (kernel::dd-%sincos x)
      (complex c s)))
