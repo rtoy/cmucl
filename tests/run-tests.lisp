@@ -29,7 +29,7 @@
 (setf lisp-unit:*print-failures* t)
 (setf lisp-unit:*print-errors* t)
 
-(defvar *load-path* *load-pathname*)
+(defvar *load-path* (truename *load-pathname*))
 
 (defvar *test-files*
   nil)
