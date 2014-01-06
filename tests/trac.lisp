@@ -184,23 +184,19 @@
 		     
 (define-test trac.65
   (:tag :trac)
-  (assert-false
-   (let (failures)
-     (dolist (base '(2 2f0 2d0 2w0 #c(0 1) #c(0f0 1) #c(0d0 1) #c(0w0 1)))
-       (dolist (power '(2 3 1/2 -2 -3 -1/2 5))
-	 (dolist (power-type '(rational single-float double-float ext:double-double-float
-			       (complex single-float) (complex double-float)
-			       (complex ext:double-double-float)))
-	   (let* ((pp (coerce power power-type))
-		  (interp (expt base pp))
-		  (*compile-print* nil)
-		  (compiled (funcall (compile nil `(lambda (b)
-						     (declare (type ,(type-of base) b))
-						     (expt b ,pp)))
-				     base)))
-	     (unless (= interp compiled)
-	       (push (list base pp interp compiled) failures))))))
-     failures)))
+  (dolist (base '(2 2f0 2d0 2w0 #c(0 1) #c(0f0 1) #c(0d0 1) #c(0w0 1)))
+    (dolist (power '(2 3 1/2 -2 -3 -1/2 5))
+      (dolist (power-type '(rational single-float double-float ext:double-double-float
+			    (complex single-float) (complex double-float)
+			    (complex ext:double-double-float)))
+	(let* ((pp (coerce power power-type))
+	       (interp (expt base pp))
+	       (*compile-print* nil)
+	       (compiled (funcall (compile nil `(lambda (b)
+						  (declare (type ,(type-of base) b))
+						  (expt b ,pp)))
+				  base)))
+	  (assert-eql interp compiled base pp))))))
 
 (define-test trac.67
   (:tag :trac)
