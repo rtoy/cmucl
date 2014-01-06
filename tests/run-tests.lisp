@@ -59,7 +59,7 @@
 	    test-results))
     (nreverse test-results)))
 
-(defun print-test-results (results)
+(defun print-test-results (results &key verbose)
   (let ((passed 0)
 	(failed 0)
 	(execute-errors 0)
@@ -92,16 +92,20 @@
     ;; determine if there were any test failures.
     (cond ((plusp (+ failed execute-errors))
 	   (when failed-tests
-	     (format t "~2&Failed tests: ~S~%" failed-tests))
+	     (format t "~2&Failed tests: ~S~%" failed-tests)
+	     (dolist (result results)
+	       (lisp-unit:print-failures result)))
 	   (when execute-error-tests
-	     (format t "~2&Execute failures: ~S~%" execute-error-tests))
+	     (format t "~2&Execute failures: ~S~%" execute-error-tests)
+	     (dolist (result results)
+	       (lisp-unit:print-errors result)))
 	   (unix:unix-exit 1))
 	  (t
 	   (unix:unix-exit 0)))))
 
-(defun run-all-tests (&optional (test-directory #P"tests/"))
+(defun run-all-tests (&key (test-directory #P"tests/") (verbose t))
   (load-test-files test-directory)
-  (print-test-results (run-loaded-tests)))
+  (print-test-results (run-loaded-tests) :verbose t))
 
 ;;(run-all-tests)
 ;;(quit)
