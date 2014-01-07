@@ -55,6 +55,10 @@ New in this release:
     * Fix error in pi reduction on x87.  It was not noticed previously
       because the returned values were not used optimally.
     * Better error message for empty cond clauses.
+    * Fix serious error in the complex multiply vop for sparc.
+      Incorrect results were returned under some conditions when the
+      result TN was packed in the same location as one of the argument
+      TNs.
 
   * Trac Tickets:
     * Ticket #90 fixed.
