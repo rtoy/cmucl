@@ -2134,7 +2134,7 @@
 
 ;; Multiply two complex numbers
 (macrolet
-    ((frob (size fmul fadd fsub cost)
+    ((frob (size fmul fadd fsub mov cost)
        (let ((vop-name (symbolicate "*/COMPLEX-" size "-FLOAT"))
 	     (complex-reg (symbolicate "COMPLEX-" size "-REG"))
 	     (real-reg (symbolicate size "-REG"))
@@ -2158,30 +2158,20 @@
 		    (yi (,imag-part y))
 		    (rr (,real-part r))
 		    (ri (,imag-part r)))
-		(cond ((location= r x)
-		       (inst ,fmul p1 xr yr)
-		       (inst ,fmul p2 xr yi)
-		       (inst ,fmul rr xi yi)
-		       (inst ,fsub rr p1 xr)
-		       (inst ,fmul p1 xi yr)
-		       (inst ,fadd ri p2 p1))
-		      ((location= r y)
-		       (inst ,fmul p1 yr xr)
-		       (inst ,fmul p2 yr xi)
-		       (inst ,fmul rr yi xi)
-		       (inst ,fsub rr p1 rr)
-		       (inst ,fmul p1 yi xr)
-		       (inst ,fadd ri p2 p1))
-		      (t
-		       (inst ,fmul rr yr xr)
-		       (inst ,fmul ri xi yi)
-		       (inst ,fsub rr rr ri)
-		       (inst ,fmul p1 xr yi)
-		       (inst ,fmul ri xi yr)
-		       (inst ,fadd ri ri p1)))))))))
+		;; Be careful because r might be packed into the same
+		;; location as either x or y.  We have to be careful
+		;; not to modify either x or y until all uses of x or
+		;; y.
+		(inst ,fmul p1 yr xr)	; p1 = xr*yr
+		(inst ,fmul p2 xi yi)	; p2 = xi*yi
+		(inst ,fsub p2 p1 p2)	; p2 = xr*yr - xi*yi
+		(inst ,fmul p1 xr yi)	; p1 = xr*yi
+		(inst ,fmul ri xi yr)	; ri = xi*yr
+		(inst ,fadd ri ri p1)	; ri = xi*yr + xr*yi
+		(,@mov rr p2)))))))
 
-  (frob single fmuls fadds fsubs 6)
-  (frob double fmuld faddd fsubd 6))
+  (frob single fmuls fadds fsubs (inst fmovs) 6)
+  (frob double fmuld faddd fsubd (move-double-reg) 6))
 
 ;; Multiply a complex by a float.  The case of float * complex is
 ;; handled by a deftransform to convert it to the complex*float case.
