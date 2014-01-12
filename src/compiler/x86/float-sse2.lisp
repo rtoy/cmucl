@@ -756,10 +756,11 @@
   (frob single-float-op single-reg single-float)
   (frob double-float-op double-reg double-float))
 
-(macrolet ((generate (movinst opinst commutative rtype ea ea-stack)
-	     (let ((stack-sc (if (eq rtype 'single-reg)
-				 'single-stack
-				 'double-stack)))
+(macrolet ((generate (movinst opinst commutative arg-type)
+	     (multiple-value-bind (rtype stack-sc ea ea-stack)
+		 (if (eq arg-type 'single)
+		     (values 'single-reg 'single-stack 'ea-for-sf-desc 'ea-for-sf-stack)
+		     (values 'double-reg 'double-stack 'ea-for-df-desc 'ea-for-df-stack))
 	       `(progn
 		  (cond
 		    ((location= x r)
@@ -810,7 +811,7 @@
 		  (:translate ,op)
                   (:temporary (:sc single-reg) tmp)
                   (:generator ,scost
-                    (generate movss ,sinst ,commutative single-reg ea-for-sf-desc ea-for-sf-stack)))
+                    (generate movss ,sinst ,commutative single)))
                 (define-vop (,dname double-float-op)
 		  (:args (x :scs (double-reg) :target r)
 			 (y :scs (double-reg descriptor-reg)
@@ -818,7 +819,7 @@
                   (:translate ,op)
                   (:temporary (:sc double-reg) tmp)
                   (:generator ,dcost
-                    (generate movsd ,dinst ,commutative double-reg ea-for-df-desc ea-for-df-stack))))))
+                    (generate movsd ,dinst ,commutative double))))))
   (frob + addss +/single-float 2 addsd +/double-float 2 t)
   (frob - subss -/single-float 2 subsd -/double-float 2 nil)
   (frob * mulss */single-float 4 mulsd */double-float 5 t)
