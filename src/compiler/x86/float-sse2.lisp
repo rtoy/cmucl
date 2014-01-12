@@ -756,58 +756,69 @@
   (frob single-float-op single-reg single-float)
   (frob double-float-op double-reg double-float))
 
-(macrolet ((generate (movinst opinst commutative rtype ea)
-             `(progn
-                (cond
-                  ((location= x r)
-		   ;; x and r are the same.  We can just operate on x,
-		   ;; and we're done.
-		   (sc-case y
-		     (,rtype
-		      (inst ,opinst x y))
-		     (descriptor-reg
-		      (inst ,opinst x (,ea y)))))
-                  ((and ,commutative (location= y r))
-		   ;; y = r and the operation is commutative, so just
-		   ;; do the operation with r and x.
-                   (inst ,opinst y x))
-                  ((not (location= r y))
-		   ;; x, y, and r are three different regs.  So just
-		   ;; move r to x and do the operation on r.
-                   (inst ,movinst r x)
-		   (sc-case y
-		     (,rtype
-		      (inst ,opinst r y))
-		     (descriptor-reg
-		      (inst ,opinst r (,ea y)))))
-                  (t
-		   ;; The hard case where the operation is not
-		   ;; commutative, but y might be r.  Don't want to
-		   ;; destroy y in this case, so use a temp so we
-		   ;; don't accidentally overwrite y.
-                   (inst ,movinst tmp x)
-		   (sc-case y
-		     (,rtype
-		      (inst ,opinst tmp y))
-		     (descriptor-reg
-		      (inst ,opinst tmp (,ea y))))
-                   (inst ,movinst r tmp)))))
+(macrolet ((generate (movinst opinst commutative rtype ea ea-stack)
+	     (let ((stack-sc (if (eq rtype 'single-reg)
+				 'single-stack
+				 'double-stack)))
+	       `(progn
+		  (cond
+		    ((location= x r)
+		     ;; x and r are the same.  We can just operate on x,
+		     ;; and we're done.
+		     (sc-case y
+		       (,rtype
+			(inst ,opinst x y))
+		       (descriptor-reg
+			(inst ,opinst x (,ea y)))
+		       (,stack-sc
+			(inst ,opinst x (,ea-stack y)))))
+		    ((and ,commutative (location= y r))
+		     ;; y = r and the operation is commutative, so just
+		     ;; do the operation with r and x.
+		     (inst ,opinst y x))
+		    ((not (location= r y))
+		     ;; x, y, and r are three different regs.  So just
+		     ;; move r to x and do the operation on r.
+		     (inst ,movinst r x)
+		     (sc-case y
+		       (,rtype
+			(inst ,opinst r y))
+		       (descriptor-reg
+			(inst ,opinst r (,ea y)))
+		       (,stack-sc
+			(inst, opinst r (,ea-stack y)))))
+		    (t
+		     ;; The hard case where the operation is not
+		     ;; commutative, but y might be r.  Don't want to
+		     ;; destroy y in this case, so use a temp so we
+		     ;; don't accidentally overwrite y.
+		     (inst ,movinst tmp x)
+		     (sc-case y
+		       (,rtype
+			(inst ,opinst tmp y))
+		       (descriptor-reg
+			(inst ,opinst tmp (,ea y)))
+		       (,stack-sc
+			(inst, opinst tmp (,ea-stack y))))
+		     (inst ,movinst r tmp))))))
            (frob (op sinst sname scost dinst dname dcost commutative)
              `(progn
                 (define-vop (,sname single-float-op)
 		  (:args (x :scs (single-reg) :target r)
-			 (y :scs (single-reg descriptor-reg)))
+			 (y :scs (single-reg descriptor-reg)
+			    :load-if (not (sc-is y single-stack))))
 		  (:translate ,op)
                   (:temporary (:sc single-reg) tmp)
                   (:generator ,scost
-                    (generate movss ,sinst ,commutative single-reg ea-for-sf-desc)))
+                    (generate movss ,sinst ,commutative single-reg ea-for-sf-desc ea-for-sf-stack)))
                 (define-vop (,dname double-float-op)
 		  (:args (x :scs (double-reg) :target r)
-			 (y :scs (double-reg descriptor-reg)))
+			 (y :scs (double-reg descriptor-reg)
+			    :load-if (not (sc-is y double-stack))))
                   (:translate ,op)
-                  (:temporary (:sc single-reg) tmp)
+                  (:temporary (:sc double-reg) tmp)
                   (:generator ,dcost
-                    (generate movsd ,dinst ,commutative double-reg ea-for-df-desc))))))
+                    (generate movsd ,dinst ,commutative double-reg ea-for-df-desc ea-for-df-stack))))))
   (frob + addss +/single-float 2 addsd +/double-float 2 t)
   (frob - subss -/single-float 2 subsd -/double-float 2 nil)
   (frob * mulss */single-float 4 mulsd */double-float 5 t)
