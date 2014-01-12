@@ -367,7 +367,7 @@ boolean gencgc_zero_check_during_free_heap = FALSE;
  * enough.
  */
 
-#define DO_GENCGC_ZERO_CHECK	(gencgc_zero_check || (gencgc_unmap_zero == MODE_LAZY) || (gencgc_unmap_zero == MODE_MADVISE))
+#define DO_GENCGC_ZERO_CHECK	(gencgc_zero_check)
 
 /*
  * Only to the zero check during free_heap if both
@@ -375,7 +375,7 @@ boolean gencgc_zero_check_during_free_heap = FALSE;
  * MODE_MAP or MODE_MEMSET because in all other modes, unallocated
  * pages are known not to contain zeroes.
  */
-#define DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP	(gencgc_zero_check_during_free_heap && ((gencgc_unmap_zero == MODE_MAP) || (gencgc_unmap_zero == MODE_MEMSET)))
+#define DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP	(gencgc_zero_check_during_free_heap)
 
 /*
  * The minimum size for a large object.
