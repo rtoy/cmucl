@@ -35,12 +35,16 @@ New in this release:
     * Main disassembly routines in the DISASSEMBLE package accept 
       :BASE, :CASE, and :RADIX keyword arguments, like
       DISASSEMBLE:DISASSEMBLE.
-    * Micro optimizations for sse2 to allow descriptor regs for many
-      operations so that the operands can be in memory instead of a
-      register, thereby removing a register load instruction.
+    * Micro optimizations for sse2 to allow descriptor regs and stack
+      tns for many operations so that the operands can be in memory
+      instead of a register, thereby removing a register load
+      instruction.
     * Support for darwin/ppc 10.5 and gcc 4.8.
     * Micro-optimization:  (expt -1 power) just returns -1 or 1
       without actually computing the power.
+    * Run-time checks for zero pages on newly allocated pages has been
+      disabled now that the lazy zeroing of the heap pages has been
+      the default for several months now.
 
   * ANSI compliance fixes:
     * The values on the branch cuts for the inverse trig and
