@@ -45,6 +45,8 @@ New in this release:
     * Run-time checks for zero pages on newly allocated pages has been
       disabled now that the lazy zeroing of the heap pages has been
       the default for several months now.
+    * Add lisp-unit as a contrib.  Use (require :lisp-unit) to load
+      it.  Precompiled fasls are not included.
 
   * ANSI compliance fixes:
     * The values on the branch cuts for the inverse trig and
