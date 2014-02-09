@@ -273,3 +273,13 @@
   ;; The following formats should not signal an error.
   (assert-true (ignore-errors (format nil "~ve" 21 5d-234)))
   (assert-true (ignore-errors (format nil "~ve" 100 5d-234))))
+
+(define-test trac.92
+  (:tag :trac)
+  (let ((f (compile nil
+		    #'(lambda (x)
+			(declare (type (double-float 0d0) x))
+			(log x)))))
+    (assert-equal
+     'double-float
+     (third (kernel:%function-type f)))))
