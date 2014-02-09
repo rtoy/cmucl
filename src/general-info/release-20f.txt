@@ -68,6 +68,7 @@ New in this release:
 
   * Trac Tickets:
     * Ticket #90 fixed.
+    * Ticket #92 fixed.
 
   * Other changes:
 
