@@ -24,6 +24,9 @@ New in this release:
     * Trig functions are signficantly faster.
     * Accuracy of trig functions improved. (Previously, they could be
       off by one or two ulp.)
+    * RUN-PROGRAM accepts :ELEMENT-TYPE to allow specifying the
+      element type for streams that are created for RUN-PROGRAM.  (See
+      ticket:92)
 
   * Changes
     * Update to ASDF 3.0.3.
@@ -69,6 +72,7 @@ New in this release:
   * Trac Tickets:
     * Ticket #90 fixed.
     * Ticket #92 fixed.
+    * Ticket #87 fixed.
 
   * Other changes:
 
