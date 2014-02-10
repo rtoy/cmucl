@@ -274,6 +274,50 @@
   (assert-true (ignore-errors (format nil "~ve" 21 5d-234)))
   (assert-true (ignore-errors (format nil "~ve" 100 5d-234))))
 
+(define-test trac.87.output
+  (:tag :trac)
+  (let ((path "/tmp/trac.87")
+	(string "Hello"))
+    (unwind-protect
+	 (progn
+	   (with-open-file (s path :direction :output :if-exists :supersede
+			      :external-format :latin1)
+	     (write-string string s))
+	   (let* ((expected (stream:string-to-octets string :external-format :latin1))
+		  (octets (make-array (length expected)
+				      :element-type '(unsigned-byte 8)))
+		  (proc (ext:run-program "/bin/cat" (list path)
+					 :output :stream
+					 :element-type '(unsigned-byte 8))))
+	     (read-sequence octets (ext:process-output proc))
+	     (assert-equalp
+	      expected
+	      octets)))
+      (delete-file path))))
+
+(define-test trac.87.input
+  (:tag :trac)
+  (let ((path "/tmp/trac.87")
+	(string "Hello"))
+    (unwind-protect
+	 (progn
+	   (with-open-file (s path :direction :output :if-exists :supersede
+			      :external-format :latin1)
+	     (write-string string s))
+	   (let ((octets (stream:string-to-octets string :external-format :latin1))
+		 (output (make-array (length string)
+				     :element-type '(unsigned-byte 8)))
+		 (proc (ext:run-program "/bin/cat" (list path)
+					:input :stream
+					:output :stream
+					:element-type '(unsigned-byte 8))))
+	     (write-sequence octets (ext:process-input proc))
+	     (read-sequence output (ext:process-output proc))
+	     (assert-equalp
+	      octets
+	      output)))
+      (delete-file path))))
+      
 (define-test trac.92
   (:tag :trac)
   (let ((f (compile nil
@@ -283,3 +327,4 @@
     (assert-equal
      'double-float
      (third (kernel:%function-type f)))))
+
