@@ -150,7 +150,7 @@
 
 ;; Lisp-unit
 (defmodule :lisp-unit
-    "modules:lisp-unit/load-lisp-unit")
+    "modules:load-lisp-unit")
 
 (defmodule "lisp-unit"
     "modules:load-lisp-unit")
