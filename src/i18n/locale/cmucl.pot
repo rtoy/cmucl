@@ -13084,7 +13084,11 @@ msgid ""
 "        process changes.  The function takes the process as an argument.\n"
 "     :external-format -\n"
 "        This is the external-format used for communication with the subproce"
-"ss."
+"ss.\n"
+"     :element-type -\n"
+"        When a stream is created for :input or :output, the stream\n"
+"        uses this element-type instead of the default 'BASE-CHAR type.\n"
+""
 msgstr ""
 
 #: src/code/run-program.lisp
