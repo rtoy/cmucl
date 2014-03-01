@@ -10,10 +10,10 @@ msgstr ""
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: \n"
 
 #: src/code/sparc-svr4-vm.lisp
 msgid "Returns a string describing the type of the local machine."
@@ -783,7 +783,7 @@ msgstr ""
 msgid "Method ~S not defined for ~S"
 msgstr ""
 
-#: src/compiler/sparc/c-call.lisp
+#: src/compiler/sparc/c-callback.lisp
 msgid ""
 "Cons up a piece of code which calls call-callback with INDEX and a\n"
 "pointer to the arguments."

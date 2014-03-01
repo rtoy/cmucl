@@ -85,6 +85,11 @@ msgid "inline float truncate"
 msgstr "인라인 플로트 트렁케이트"
 
 #: src/compiler/x86/float-sse2.lisp
+#, fuzzy
+msgid "inline ftruncate"
+msgstr "인라인 플로트 트렁케이트"
+
+#: src/compiler/x86/float-sse2.lisp
 msgid "inline complex single-float creation"
 msgstr "복잡한 단일 플로트를 인라인에 만들 것"
 

@@ -1,10 +1,12 @@
-#@ cmucl-linux-os
+# @ cmucl-linux-os
 # SOME DESCRIPTIVE TITLE
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
 #
 #, fuzzy
 msgid ""
-msgstr "Project-Id-Version: CMUCL 20D\n"
+msgstr ""
+"Project-Id-Version: CMUCL 20D\n"
+"Report-Msgid-Bugs-To: \n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: Automatic translation\n"
 "Language-Team: Pig Latin (auto-translated)\n"
@@ -16,7 +18,9 @@ msgstr "Project-Id-Version: CMUCL 20D\n"
 
 #: src/code/linux-os.lisp
 msgid "Returns a string describing version of the supporting software."
-msgstr "Eturnsray away ingstray escribingday ersionvay ofway ethay upportingsay oftwaresay."
+msgstr ""
+"Eturnsray away ingstray escribingday ersionvay ofway ethay upportingsay "
+"oftwaresay."
 
 #: src/code/linux-os.lisp
 msgid "Unix system call getrusage failed: ~A."
@@ -29,4 +33,3 @@ msgstr "Etpagesizegay ailedfay: ~Away"
 #: src/code/signal.lisp
 msgid "Stack fault on coprocessor"
 msgstr "Tacksay aultfay onway oprocessorcay"
-

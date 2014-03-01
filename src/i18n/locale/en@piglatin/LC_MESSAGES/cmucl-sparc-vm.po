@@ -1,10 +1,12 @@
-#@ cmucl-sparc-vm
+# @ cmucl-sparc-vm
 # SOME DESCRIPTIVE TITLE
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
 #
 #, fuzzy
 msgid ""
-msgstr "Project-Id-Version: CMUCL 20D\n"
+msgstr ""
+"Project-Id-Version: CMUCL 20D\n"
+"Report-Msgid-Bugs-To: \n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: Automatic translation\n"
 "Language-Team: Pig Latin (auto-translated)\n"
@@ -16,11 +18,15 @@ msgstr "Project-Id-Version: CMUCL 20D\n"
 
 #: src/code/sparc-svr4-vm.lisp
 msgid "Returns a string describing the type of the local machine."
-msgstr "Eturnsray away ingstray escribingday ethay ypetay ofway ethay ocallay achinemay."
+msgstr ""
+"Eturnsray away ingstray escribingday ethay ypetay ofway ethay ocallay "
+"achinemay."
 
 #: src/code/sparc-svr4-vm.lisp
 msgid "Returns a string describing the version of the local machine."
-msgstr "Eturnsray away ingstray escribingday ethay ersionvay ofway ethay ocallay achinemay."
+msgstr ""
+"Eturnsray away ingstray escribingday ethay ersionvay ofway ethay ocallay "
+"achinemay."
 
 #: src/code/sparc-svr4-vm.lisp
 msgid "Unaligned instruction?  offset=#x~X."
@@ -32,7 +38,9 @@ msgstr "Ancay't ealday ithway CALL ixupsfay, etyay."
 
 #: src/code/sparc-svr4-vm.lisp
 msgid "XRS ID invalid but attempting to access double-float register ~d!"
-msgstr "XRS ID invalidway utbay attemptingway otay accessway oubleday-oatflay egisterray ~d!"
+msgstr ""
+"XRS ID invalidway utbay attemptingway otay accessway oubleday-oatflay "
+"egisterray ~d!"
 
 #: src/code/signal.lisp
 msgid "Emt instruction"
@@ -72,13 +80,16 @@ msgstr "BREAKPOINT-DO-DISPLACED-INST eturnedray?"
 
 #: src/compiler/sparc/parms.lisp
 msgid "Number of bits per word where a word holds one lisp descriptor."
-msgstr "Umbernay ofway itsbay erpay ordway erewhay away ordway oldshay oneway isplay escriptorday."
+msgstr ""
+"Umbernay ofway itsbay erpay ordway erewhay away ordway oldshay oneway isplay "
+"escriptorday."
 
 #: src/compiler/sparc/parms.lisp
 msgid ""
 "Number of bits per byte where a byte is the smallest addressable object."
 msgstr ""
-"Umbernay ofway itsbay erpay ytebay erewhay away ytebay isway ethay mallestsay addressableway objectway."
+"Umbernay ofway itsbay erpay ytebay erewhay away ytebay isway ethay "
+"mallestsay addressableway objectway."
 
 #: src/compiler/sparc/parms.lisp
 msgid "Number of bits needed to represent a character"
@@ -90,7 +101,9 @@ msgstr "Umbernay ofway ytesbay eedednay otay epresentray away aracterchay"
 
 #: src/compiler/sparc/parms.lisp
 msgid "Number of bits to shift between word addresses and byte addresses."
-msgstr "Umbernay ofway itsbay otay iftshay etweenbay ordway addressesway andway ytebay addressesway."
+msgstr ""
+"Umbernay ofway itsbay otay iftshay etweenbay ordway addressesway andway "
+"ytebay addressesway."
 
 #: src/compiler/sparc/parms.lisp
 msgid "Number of bytes in a word."
@@ -98,7 +111,9 @@ msgstr "Umbernay ofway ytesbay inway away ordway."
 
 #: src/compiler/sparc/parms.lisp
 msgid "Number of bits at the low end of a pointer used for type information."
-msgstr "Umbernay ofway itsbay atway ethay owlay endway ofway away ointerpay usedway orfay ypetay informationway."
+msgstr ""
+"Umbernay ofway itsbay atway ethay owlay endway ofway away ointerpay usedway "
+"orfay ypetay informationway."
 
 #: src/compiler/sparc/parms.lisp
 msgid "Mask to extract the low tag bits from a pointer."
@@ -109,7 +124,8 @@ msgid ""
 "Exclusive upper bound on the value of the low tag bits from a\n"
 "  pointer."
 msgstr ""
-"Exclusiveway upperway oundbay onway ethay aluevay ofway ethay owlay agtay itsbay omfray away\n"
+"Exclusiveway upperway oundbay onway ethay aluevay ofway ethay owlay agtay "
+"itsbay omfray away\n"
 "  ointerpay."
 
 #: src/compiler/sparc/parms.lisp
@@ -137,7 +153,8 @@ msgid ""
 "If non-NIL, print registers using the Lisp register names.\n"
 "Otherwise, use the Sparc register names"
 msgstr ""
-"Ifway onnay-NIL, intpray egistersray usingway ethay Isplay egisterray amesnay.\n"
+"Ifway onnay-NIL, intpray egistersray usingway ethay Isplay egisterray "
+"amesnay.\n"
 "Otherwiseway, useway ethay Arcspay egisterray amesnay"
 
 #: src/compiler/sparc/array.lisp src/compiler/sparc/call.lisp
@@ -164,8 +181,10 @@ msgid ""
 "value used in a SETHI instruction.  This is used to make annotations\n"
 "about function addresses and register values."
 msgstr ""
-"Anway alistway orfay ethay isassemblerday indicatingway ethay argettay egisterray andway\n"
-"aluevay usedway inway away SETHI instructionway.  Isthay isway usedway otay akemay annotationsway\n"
+"Anway alistway orfay ethay isassemblerday indicatingway ethay argettay "
+"egisterray andway\n"
+"aluevay usedway inway away SETHI instructionway.  Isthay isway usedway otay "
+"akemay annotationsway\n"
 "aboutway unctionfay addressesway andway egisterray aluesvay."
 
 #: src/compiler/sparc/insts.lisp
@@ -241,7 +260,8 @@ msgid ""
 "Immediate trap number ~A specified, but only trap numbers\n"
 "   16 to 31 are available to the application"
 msgstr ""
-"Immediateway aptray umbernay ~Away ecifiedspay, utbay onlyway aptray umbersnay\n"
+"Immediateway aptray umbernay ~Away ecifiedspay, utbay onlyway aptray "
+"umbersnay\n"
 "   16 otay 31 areway availableway otay ethay applicationway"
 
 #: src/compiler/sparc/macros.lisp
@@ -253,12 +273,15 @@ msgid ""
 "Loads the type bits of a pointer into target independent of\n"
 "  byte-ordering issues."
 msgstr ""
-"Oadslay ethay ypetay itsbay ofway away ointerpay intoway argettay independentway ofway\n"
+"Oadslay ethay ypetay itsbay ofway away ointerpay intoway argettay "
+"independentway ofway\n"
 "  ytebay-orderingway issuesway."
 
 #: src/compiler/sparc/macros.lisp
 msgid "Jump to the lisp function FUNCTION.  LIP is an interior-reg temporary."
-msgstr "Umpjay otay ethay isplay unctionfay FUNCTION.  LIP isway anway interiorway-egray emporarytay."
+msgstr ""
+"Umpjay otay ethay isplay unctionfay FUNCTION.  LIP isway anway interiorway-"
+"egray emporarytay."
 
 #: src/compiler/sparc/macros.lisp
 msgid "Return to RETURN-PC."
@@ -266,15 +289,16 @@ msgstr "Eturnray otay RETURN-PC."
 
 #: src/compiler/sparc/macros.lisp
 msgid ""
-"Emit a return-pc header word.  LABEL is the label to use for this "
-"return-pc."
+"Emit a return-pc header word.  LABEL is the label to use for this return-pc."
 msgstr ""
-"Emitway away eturnray-cpay eaderhay ordway.  LABEL isway ethay abellay otay useway orfay isthay "
-"eturnray-cpay."
+"Emitway away eturnray-cpay eaderhay ordway.  LABEL isway ethay abellay otay "
+"useway orfay isthay eturnray-cpay."
 
 #: src/compiler/sparc/macros.lisp
 msgid "Move the TN Reg-Or-Stack into Reg if it isn't already there."
-msgstr "Ovemay ethay TN Egray-Orway-Tacksay intoway Egray ifway itway isnway't alreadyway erethay."
+msgstr ""
+"Ovemay ethay TN Egray-Orway-Tacksay intoway Egray ifway itway isnway't "
+"alreadyway erethay."
 
 #: src/compiler/sparc/macros.lisp
 msgid ""
@@ -282,16 +306,18 @@ msgid ""
 "  word header having the specified Type-Code.  The result is placed in\n"
 "  Result-TN, and Temp-TN is a non-descriptor temp (which may be randomly "
 "used\n"
-"  by the body.)  The body is placed inside the PSEUDO-ATOMIC, and presumably"
-"\n"
+"  by the body.)  The body is placed inside the PSEUDO-ATOMIC, and "
+"presumably\n"
 "  initializes the object."
 msgstr ""
-"Oday tuffsay otay allocateway anway otherway-ointerpay objectway ofway ixedfay Izesay ithway away inglesay\n"
-"  ordway eaderhay avinghay ethay ecifiedspay Ypetay-Odecay.  Ethay esultray isway acedplay inway\n"
-"  Esultray-TN, andway Emptay-TN isway away onnay-escriptorday emptay (ichwhay aymay ebay andomlyray "
-"usedway\n"
-"  ybay ethay odybay.)  Ethay odybay isway acedplay insideway ethay PSEUDO-ATOMIC, andway esumablypray"
-"\n"
+"Oday tuffsay otay allocateway anway otherway-ointerpay objectway ofway "
+"ixedfay Izesay ithway away inglesay\n"
+"  ordway eaderhay avinghay ethay ecifiedspay Ypetay-Odecay.  Ethay esultray "
+"isway acedplay inway\n"
+"  Esultray-TN, andway Emptay-TN isway away onnay-escriptorday emptay "
+"(ichwhay aymay ebay andomlyray usedway\n"
+"  ybay ethay odybay.)  Ethay odybay isway acedplay insideway ethay PSEUDO-"
+"ATOMIC, andway esumablypray\n"
 "  initializesway ethay objectway."
 
 #: src/compiler/sparc/macros.lisp
@@ -307,10 +333,12 @@ msgid "~S isn't an even multiple of ~S from ~S"
 msgstr "~S isnway't anway evenway ultiplemay ofway ~S omfray ~S"
 
 #: src/compiler/sparc/macros.lisp
-msgid "The values ~S cover the entire range from ~\n"
-"			 ~S to ~S [step ~S]."
-msgstr "Ethay aluesvay ~S overcay ethay entireway angeray omfray ~\n"
-"			 ~S otay ~S [tepsay ~S]."
+msgid ""
+"The values ~S cover the entire range from ~\n"
+"\t\t\t ~S to ~S [step ~S]."
+msgstr ""
+"Ethay aluesvay ~S overcay ethay entireway angeray omfray ~\n"
+"\t\t\t ~S otay ~S [tepsay ~S]."
 
 #: src/compiler/sparc/macros.lisp
 msgid "Must supply at least on type for test-type."
@@ -325,10 +353,12 @@ msgid "OTHER-IMMEDIATE-n-TYPE supersedes the use of ~S"
 msgstr "OTHER-IMMEDIATE-n-TYPE upersedessay ethay useway ofway ~S"
 
 #: src/compiler/sparc/macros.lisp
-msgid "Can't test for mix of function subtypes and normal ~\n"
-"		header types."
-msgstr "Ancay't esttay orfay ixmay ofway unctionfay ubtypessay andway ormalnay ~\n"
-"		eaderhay ypestay."
+msgid ""
+"Can't test for mix of function subtypes and normal ~\n"
+"\t\theader types."
+msgstr ""
+"Ancay't esttay orfay ixmay ofway unctionfay ubtypessay andway ormalnay ~\n"
+"\t\teaderhay ypestay."
 
 #: src/compiler/sparc/macros.lisp
 msgid "Cause an error.  ERROR-CODE is the error to cause."
@@ -339,7 +369,8 @@ msgid ""
 "Cause a continuable error.  If the error is continued, execution resumes at\n"
 "  LABEL."
 msgstr ""
-"Ausecay away ontinuablecay errorway.  Ifway ethay errorway isway ontinuedcay, executionway esumesray atway\n"
+"Ausecay away ontinuablecay errorway.  Ifway ethay errorway isway "
+"ontinuedcay, executionway esumesray atway\n"
 "  LABEL."
 
 #: src/compiler/sparc/macros.lisp
@@ -348,7 +379,8 @@ msgid ""
 "  Emit code for an error with the specified Error-Code and context Values."
 msgstr ""
 "Enerategay-Errorway-Odecay Errorway-odecay Alue*Vay\n"
-"  Emitway odecay orfay anway errorway ithway ethay ecifiedspay Errorway-Odecay andway ontextcay Aluesvay."
+"  Emitway odecay orfay anway errorway ithway ethay ecifiedspay Errorway-"
+"Odecay andway ontextcay Aluesvay."
 
 #: src/compiler/sparc/macros.lisp
 msgid ""
@@ -358,8 +390,10 @@ msgid ""
 "  the GENERATE-CERROR-CODE form."
 msgstr ""
 "Enerategay-Errorcay-Odecay Errorway-odecay Alue*Vay\n"
-"  Emitway odecay orfay away ontinuablecay errorway ithway ethay ecifiedspay Errorway-Odecay andway\n"
-"  ontextcay Aluesvay.  Ifway ethay errorway isway ontinuedcay, executionway esumesray afterway\n"
+"  Emitway odecay orfay away ontinuablecay errorway ithway ethay ecifiedspay "
+"Errorway-Odecay andway\n"
+"  ontextcay Aluesvay.  Ifway ethay errorway isway ontinuedcay, executionway "
+"esumesray afterway\n"
 "  ethay GENERATE-CERROR-CODE ormfay."
 
 #: src/compiler/sparc/move.lisp
@@ -373,10 +407,11 @@ msgstr "onstantcay oadlay"
 #: src/compiler/sparc/move.lisp
 msgid ""
 "Load TN allocated, but no move function?~@\n"
-"	           VM definition inconsistent, recompile and try again."
+"\t           VM definition inconsistent, recompile and try again."
 msgstr ""
 "Oadlay TN allocatedway, utbay onay ovemay unctionfay?~@\n"
-"	           VM efinitionday inconsistentway, ecompileray andway ytray againway."
+"\t           VM efinitionday inconsistentway, ecompileray andway ytray "
+"againway."
 
 #: src/compiler/sparc/move.lisp
 msgid "integer to untagged word coercion"
@@ -664,8 +699,10 @@ msgid ""
 "64-bit counter is returned as two 32-bit unsigned integers.  The low 32-bit\n"
 "result is the first value."
 msgstr ""
-"Eadray ethay instructionway yclecay ountercay availableway onway Ultrasparcsway.  Ethay\n"
-"64-itbay ountercay isway eturnedray asway wotay 32-itbay unsignedway integersway.  Ethay owlay 32-itbay\n"
+"Eadray ethay instructionway yclecay ountercay availableway onway "
+"Ultrasparcsway.  Ethay\n"
+"64-itbay ountercay isway eturnedray asway wotay 32-itbay unsignedway "
+"integersway.  Ethay owlay 32-itbay\n"
 "esultray isway ethay irstfay aluevay."
 
 #: src/compiler/sparc/system.lisp
@@ -673,7 +710,8 @@ msgid ""
 "Returns the primary value of BODY as the primary value, and the\n"
 " number of CPU cycles elapsed as secondary value."
 msgstr ""
-"Eturnsray ethay imarypray aluevay ofway BODY asway ethay imarypray aluevay, andway ethay\n"
+"Eturnsray ethay imarypray aluevay ofway BODY asway ethay imarypray aluevay, "
+"andway ethay\n"
 " umbernay ofway CPU yclescay elapsedway asway econdarysay aluevay."
 
 #: src/compiler/sparc/char.lisp
@@ -698,7 +736,9 @@ msgstr "inlineway omparisoncay"
 
 #: src/compiler/sparc/static-fn.lisp
 msgid "Either too many args (~D) or too many results (~D).  Max = ~D"
-msgstr "Eitherway ootay anymay argsway (~D) orway ootay anymay esultsray (~D).  Axmay = ~D"
+msgstr ""
+"Eitherway ootay anymay argsway (~D) orway ootay anymay esultsray (~D).  "
+"Axmay = ~D"
 
 #: src/compiler/sparc/arith.lisp
 msgid "inline fixnum arithmetic"
@@ -786,8 +826,10 @@ msgid ""
 "  in RESULT-HIGH and RESULT-LOW.  KIND is either :signed or :unsigned.\n"
 "  Note: the lifetimes of MULTIPLICAND and RESULT-HIGH overlap."
 msgstr ""
-"Emitway odecay otay ultiplymay MULTIPLIER ithway MULTIPLICAND, uttingpay ethay esultray\n"
-"  inway RESULT-HIGH andway RESULT-LOW.  KIND isway eitherway :ignedsay orway :unsignedway.\n"
+"Emitway odecay otay ultiplymay MULTIPLIER ithway MULTIPLICAND, uttingpay "
+"ethay esultray\n"
+"  inway RESULT-HIGH andway RESULT-LOW.  KIND isway eitherway :ignedsay "
+"orway :unsignedway.\n"
 "  Otenay: ethay ifetimeslay ofway MULTIPLICAND andway RESULT-HIGH overlapway."
 
 #: src/compiler/sparc/arith.lisp
@@ -827,7 +869,8 @@ msgid ""
 "Cons up a piece of code which calls call-callback with INDEX and a\n"
 "pointer to the arguments."
 msgstr ""
-"Onscay upway away iecepay ofway odecay ichwhay allscay allcay-allbackcay ithway INDEX andway away\n"
+"Onscay upway away iecepay ofway odecay ichwhay allscay allcay-allbackcay "
+"ithway INDEX andway away\n"
 "ointerpay otay ethay argumentsway."
 
 #: src/compiler/sparc/call.lisp
@@ -849,4 +892,3 @@ msgstr "awray-itsbay VOP"
 #: src/compiler/sparc/array.lisp
 msgid "setf raw-bits VOP"
 msgstr "etfsay awray-itsbay VOP"
-
