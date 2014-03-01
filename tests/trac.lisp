@@ -276,7 +276,9 @@
 
 (define-test trac.87.output
   (:tag :trac)
-  (let ((path "/tmp/trac.87")
+  ;; Test that run-program accepts :element-type and produces the
+  ;; correct output.
+  (let ((path "/tmp/trac.87.output")
 	(string "Hello"))
     (unwind-protect
 	 (progn
@@ -297,7 +299,9 @@
 
 (define-test trac.87.input
   (:tag :trac)
-  (let ((path "/tmp/trac.87")
+  ;; Test that run-program accepts :element-type and produces the
+  ;; correct input (and output).
+  (let ((path "/tmp/trac.87.input")
 	(string "Hello"))
     (unwind-protect
 	 (progn
@@ -328,3 +332,23 @@
      'double-float
      (third (kernel:%function-type f)))))
 
+(define-test trac.93
+  (:tag :trac)
+  ;; These small values should read to least-positive-foo-float
+  ;; because that's the closest non-zero float.
+  (assert-eql least-positive-short-float
+	      (values (read-from-string ".8s-45")))
+  (assert-eql least-positive-single-float
+	      (values (read-from-string ".8e-45")))
+  (assert-eql least-positive-double-float
+	      (values (read-from-string "4d-324")))
+  (assert-eql (kernel:make-double-double-float least-positive-double-float 0d0)
+	      (values (read-from-string "4w-324")))
+  ;; These should signal reader errors because the numbers are not
+  ;; zero, but are too small to be represented by the corresponding
+  ;; float type.
+  (assert-error 'reader-error (read-from-string ".1s-45"))
+  (assert-error 'reader-error (read-from-string ".1e-45"))
+  (assert-error 'reader-error (read-from-string "1d-324"))
+  (assert-error 'reader-error (read-from-string "1w-324")))
+  

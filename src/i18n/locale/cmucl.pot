@@ -182,9 +182,9 @@ msgid ""
 "  setf."
 msgstr ""
 
-#: src/code/format.lisp src/code/print.lisp src/code/irrat-dd.lisp
-#: src/code/irrat.lisp src/code/float.lisp src/code/numbers.lisp
-#: src/code/kernel.lisp
+#: src/code/reader.lisp src/code/format.lisp src/code/print.lisp
+#: src/code/irrat-dd.lisp src/code/irrat.lisp src/code/float.lisp
+#: src/code/numbers.lisp src/code/kernel.lisp
 msgid "Argument ~A is not a ~S: ~S."
 msgstr ""
 
@@ -8553,7 +8553,7 @@ msgid "Underflow"
 msgstr ""
 
 #: src/code/reader.lisp
-msgid "Floating-point number not representable"
+msgid "Number not representable as ~S: ~S"
 msgstr ""
 
 #: src/code/reader.lisp
@@ -13084,7 +13084,11 @@ msgid ""
 "        process changes.  The function takes the process as an argument.\n"
 "     :external-format -\n"
 "        This is the external-format used for communication with the subproce"
-"ss."
+"ss.\n"
+"     :element-type -\n"
+"        When a stream is created for :input or :output, the stream\n"
+"        uses this element-type instead of the default 'BASE-CHAR type.\n"
+""
 msgstr ""
 
 #: src/code/run-program.lisp
