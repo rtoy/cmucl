@@ -1,12 +1,10 @@
-# @ cmucl-ppc-vm
+#@ cmucl-ppc-vm
 # SOME DESCRIPTIVE TITLE
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
 #
 #, fuzzy
 msgid ""
-msgstr ""
-"Project-Id-Version: CMUCL 20D\n"
-"Report-Msgid-Bugs-To: \n"
+msgstr "Project-Id-Version: CMUCL 20E\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: Automatic translation\n"
 "Language-Team: Pig Latin (auto-translated)\n"
@@ -18,15 +16,11 @@ msgstr ""
 
 #: src/code/ppc-vm.lisp
 msgid "Returns a string describing the type of the local machine."
-msgstr ""
-"Eturnsray away ingstray escribingday ethay ypetay ofway ethay ocallay "
-"achinemay."
+msgstr "Eturnsray away ingstray escribingday ethay ypetay ofway ethay ocallay achinemay."
 
 #: src/code/ppc-vm.lisp
 msgid "Returns a string describing the version of the local machine."
-msgstr ""
-"Eturnsray away ingstray escribingday ethay ersionvay ofway ethay ocallay "
-"achinemay."
+msgstr "Eturnsray away ingstray escribingday ethay ersionvay ofway ethay ocallay achinemay."
 
 #: src/code/ppc-vm.lisp
 msgid "Compute x*y-z with only one rounding operation"
@@ -59,3 +53,4 @@ msgstr "Eakpointbray atthay obodynay antsway?"
 #: src/code/debug-int.lisp
 msgid "BREAKPOINT-DO-DISPLACED-INST returned?"
 msgstr "BREAKPOINT-DO-DISPLACED-INST eturnedray?"
+
