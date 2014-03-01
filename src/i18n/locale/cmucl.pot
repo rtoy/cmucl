@@ -182,9 +182,9 @@ msgid ""
 "  setf."
 msgstr ""
 
-#: src/code/reader.lisp src/code/format.lisp src/code/print.lisp
-#: src/code/irrat-dd.lisp src/code/irrat.lisp src/code/float.lisp
-#: src/code/numbers.lisp src/code/kernel.lisp
+#: src/code/format.lisp src/code/print.lisp src/code/irrat-dd.lisp
+#: src/code/irrat.lisp src/code/float.lisp src/code/numbers.lisp
+#: src/code/kernel.lisp
 msgid "Argument ~A is not a ~S: ~S."
 msgstr ""
 
@@ -8553,7 +8553,7 @@ msgid "Underflow"
 msgstr ""
 
 #: src/code/reader.lisp
-msgid "Number not representable as ~S: ~S"
+msgid "Number not representable as a ~S: ~S"
 msgstr ""
 
 #: src/code/reader.lisp
