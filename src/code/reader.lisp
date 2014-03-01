@@ -1839,15 +1839,15 @@ the end of the stream."
 				  least-positive-single-float)
 				 (double-float
 				  least-positive-double-float)
+				 #+double-double
 				 (double-double-float
-				  (kernel:make-double-double-float least-positive-double-float
-								   0d0)))))
+				  ext:least-positive-double-double-float))))
 	      (if (>= (* 2 ratio) float-limit)
 		  (setf result float-limit)
 		  (error _"Underflow"))))
 	  result))
     (error ()
-	   (%reader-error stream _"Number not representable as ~S: ~S"
+	   (%reader-error stream _"Number not representable as a ~S: ~S"
 			  float-format (/ number divisor)))))
 
 
