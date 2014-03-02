@@ -68,11 +68,20 @@ New in this release:
       Incorrect results were returned under some conditions when the
       result TN was packed in the same location as one of the argument
       TNs.
+    * Type derivation for log now matches the actual returned
+      values. (Ticket #92).
+    * The float constants for various limits are defined for
+      double-double floats such as
+      least-positive-double-double-float. 
+    * When reading very small float values, round to
+      least-positive-foo-float if possible.
 
   * Trac Tickets:
     * Ticket #90 fixed.
     * Ticket #92 fixed.
     * Ticket #87 fixed.
+    * Ticket #94 fixed.
+    * Ticket #93 fixed.
 
   * Other changes:
 
