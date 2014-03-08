@@ -52,7 +52,7 @@
 	(count 0)
 	(string (coerce string 'simple-string)))
     (loop
-	(let ((end (lisp::string-next-word-break string posn)))
+	(let ((end (unicode::string-next-word-break string posn)))
 	  (when (= end posn)
 	    (return))
 	  (unless (= end (aref breaks count))
@@ -90,5 +90,5 @@
     ;; break there.  The result should be "A?b Cd4".
     (let ((s (map 'string #'code-char
 		  '(97 #xd800 #xdc0b 66 32 99 100 52))))
-      (assert (string= (string-capitalize s :unicode-word-break t)
+      (assert (string= (unicode:string-capitalize s :unicode-word-break t)
 		       (map 'string #'code-char '(65 55296 56331 98 32 67 100 52)))))))
