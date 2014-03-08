@@ -342,7 +342,10 @@
      (ext:with-float-traps-masked (:divide-by-zero) (log -0d0)))
     (assert-equal
      (complex ext:single-float-negative-infinity (float pi 1f0))
-     (ext:with-float-traps-masked (:divide-by-zero) (log -0f0)))))
+     (ext:with-float-traps-masked (:divide-by-zero) (log -0f0)))
+    (assert-equal
+     (complex ext:double-double-float-negative-infinity kernel:dd-pi)
+     (ext:with-float-traps-masked (:divide-by-zero) (log -0w0)))))
 
 (define-test trac.93
   (:tag :trac)
