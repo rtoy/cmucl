@@ -137,8 +137,8 @@
     "<vertical>" "<wide>" "<narrow>" "<small>" "<square>" "<circle>"))
 
 (defconstant +bidi-class+
-  '("L" "LRE" "LRO" "R" "AL" "RLE" "RLO" "PDF" "EN" "ES" "ET" "AN" "CS"
-    "NSM" "BN" "B" "S" "WS" "ON"))
+  '("L" "LRE" "LRI" "LRO" "R" "AL" "RLE" "RLO" "RLI" "PDF" "EN" "ES" "ET" "AN" "CS"
+    "NSM" "BN" "B" "S" "WS" "ON" "FSI" "PDI"))
 
 
 ;; Codebooks for encoding names.  These are fairly arbitrary.  Order isn't
