@@ -65,7 +65,8 @@
 	  least-positive-double-double-float
 	  least-negative-double-double-float
 	  most-positive-double-double-float
-	  most-negative-double-double-float))
+	  most-negative-double-double-float
+	  double-double-float-negative-infinity))
 
 (in-package "KERNEL")
 
@@ -159,6 +160,15 @@
   ;; What is the right value?
   (kernel:make-double-double-float most-negative-double-float
 				   0d0))
+(defconstant double-double-float-positive-infinity
+  ;; What is the right value?
+  (kernel:make-double-double-float double-float-positive-infinity
+				   0d0))
+(defconstant double-double-float-negative-infinity
+  ;; What is the right value?
+  (kernel:make-double-double-float double-float-negative-infinity
+				   0d0))
+
 ); double-double
 
 (defconstant least-positive-normalized-single-float
