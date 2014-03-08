@@ -1494,15 +1494,11 @@
   (two-arg-derive-type x y #'expt-derive-type-aux #'expt))
 
 
+;;; Note must assume that a type including 0.0 may also include -0.0
+;;; and thus the result may be complex -infinity + i*pi.
+;;;
 (defun log-derive-type-aux-1 (x)
-  (elfun-derive-type-simple x
-			    #'(lambda (z)
-				;; log(0) and log(-0) is -infinity.
-				;; Return NIL to indicate that.
-				(if (zerop z)
-				    nil
-				    (log z)))
-			    -0d0 nil nil nil))
+  (elfun-derive-type-simple x #'log 0d0 nil nil nil))
 
 (defun log-derive-type-aux-2 (x y same-arg)
   (let ((log-x (log-derive-type-aux-1 x))
