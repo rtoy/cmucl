@@ -587,7 +587,7 @@
 	;; 18. Word-break
 	(let ((data (unidata-word-break *unicode-data*)))
 	  (update-index (file-position stm) index)
-	  (write-ntrie4 data stm))
+	  (write-ntrie8 data stm))
 	;; All components saved. Patch up index table now.
 	(file-position stm 8)
 	(dotimes (i (length index))
@@ -817,7 +817,6 @@
 	  ucd-directory
 	(lambda (min max prop)
 	  (let ((code (intern (string-upcase prop) "KEYWORD")))
-	    (format t "~X-~X code = ~S~%" min max code)
 	    (loop for i from min to max
 		  as ent = (find-ucd i) do
 		  (when ent
@@ -907,20 +906,23 @@
 	(logior n (ash l 16)))))
 
 (defun pack-bidi (ucdent tabl)
-  (logior (position (ucdent-bidi ucdent) +bidi-class+ :test #'string=)
-	  (if (ucdent-mirror ucdent) #x20 #x00)
-	  (if (ucdent-mcode ucdent)
-	      (let* ((n (- (ucdent-mcode ucdent) (ucdent-code ucdent)))
-		     (x (abs n)))
-		(logior
-		 (ash (if (< x #x10)
-			  x
-			  (let ((k (position x tabl)))
-			    (if k k (prog1 (fill-pointer tabl) (vector-push-extend x tabl)))))
-		      6)
-		 (if (< x #x10) #x000 #x800)
-		 (if (minusp n) #x400 #x000)))
-	      0)))
+  (let ((bidi-code (position (ucdent-bidi ucdent) +bidi-class+ :test #'string=)))
+    (unless bidi-code
+      (error "Unknown bidi class: ~S~%" (ucdent-bidi ucdent)))
+    (logior bidi-code
+	    (if (ucdent-mirror ucdent) #x20 #x00)
+	    (if (ucdent-mcode ucdent)
+		(let* ((n (- (ucdent-mcode ucdent) (ucdent-code ucdent)))
+		       (x (abs n)))
+		  (logior
+		   (ash (if (< x #x10)
+			    x
+			    (let ((k (position x tabl)))
+			      (if k k (prog1 (fill-pointer tabl) (vector-push-extend x tabl)))))
+			6)
+		   (if (< x #x10) #x000 #x800)
+		   (if (minusp n) #x400 #x000)))
+		0))))
 
 (defun pack-case-folding-simple (ucdent)
   (or (ucdent-case-fold-simple ucdent)
@@ -945,11 +947,18 @@
 (defun pack-word-break (ucdent)
   ;; The code is the index in the list.  :OTHER is a dummy value and
   ;; used to represent the default case.
-  (or (position (ucdent-word-break ucdent)
-		'(:other :cr :lf :newline :extend :format
-		  :katakana :aletter :midnumlet :midletter :midnum
-		  :numeric :extendnumlet :regional_indicator))
-      0))
+  (cond ((ucdent-word-break ucdent)
+	 (let ((word-break-code
+		 (position (ucdent-word-break ucdent)
+			   '(:other :cr :lf :newline :extend :format
+			     :katakana :aletter :midnumlet :midletter :midnum
+			     :numeric :extendnumlet :regional_indicator
+			     :hebrew_letter :single_quote :double_quote))))
+	   (if word-break-code
+	       word-break-code
+	       (error "Unknown word-break type: ~S~%" (ucdent-word-break ucdent)))))
+	(t
+	 0)))
 
 ;; ucd-directory should be the directory where UnicodeData.txt is
 ;; located.
@@ -1147,7 +1156,7 @@
     (let ((split #x66))
       (multiple-value-bind (hvec mvec lvec)
 	  (pack ucd range (lambda (x) (pack-word-break x))
-		0 4 split)
+		0 5 split)
 	(setf (unidata-word-break *unicode-data*)
-	      (make-ntrie4 :split split :hvec hvec :mvec mvec :lvec lvec))))
+	      (make-ntrie8 :split split :hvec hvec :mvec mvec :lvec lvec))))
     nil))
