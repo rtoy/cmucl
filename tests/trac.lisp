@@ -329,8 +329,23 @@
 			(declare (type (double-float 0d0) x))
 			(log x)))))
     (assert-equal
-     'double-float
-     (third (kernel:%function-type f)))))
+     '(or double-float (complex double-float))
+     (third (kernel:%function-type f)))
+    ;; It is important that log(-0) = -inf + i*pi. This is needed to
+    ;; ensure that all of the special functions have the right values
+    ;; on the branch cuts. (Although the implementation of the special
+    ;; function may not use log internally, the definition might and
+    ;; this property is needed to derive the correct value from the
+    ;; definition.)
+    (assert-equal
+     (complex ext:double-float-negative-infinity pi)
+     (ext:with-float-traps-masked (:divide-by-zero) (log -0d0)))
+    (assert-equal
+     (complex ext:single-float-negative-infinity (float pi 1f0))
+     (ext:with-float-traps-masked (:divide-by-zero) (log -0f0)))
+    (assert-equal
+     (complex ext:double-double-float-negative-infinity kernel:dd-pi)
+     (ext:with-float-traps-masked (:divide-by-zero) (log -0w0)))))
 
 (define-test trac.93
   (:tag :trac)
