@@ -191,4 +191,5 @@
 				  (setf posn end)))
 			      computed-breaks)))
 		     (assert-equalp b
-				    (do-test s)))))))))
+				    (do-test s)
+				    b s))))))))
