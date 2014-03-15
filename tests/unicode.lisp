@@ -179,17 +179,18 @@
 	       (multiple-value-bind (s b)
 		   (parse-word-break-line line)
 		 (when s
-		   (flet ((do-test (string)
-			    (let ((posn -1)
-				  (string (coerce string 'simple-string))
-				  (computed-breaks (make-array 10 :fill-pointer 0)))
-			      (loop
-				(let ((end (unicode:string-next-word-break string posn)))
-				  (when (= end posn)
-				    (return))
-				  (vector-push-extend end computed-breaks)
-				  (setf posn end)))
-			      computed-breaks)))
-		     (assert-equalp b
-				    (do-test s)
-				    b s))))))))
+		   (let ((s-expanded (map 'list #'char-name s)))
+		     (flet ((do-test (string)
+			      (let ((posn -1)
+				    (string (coerce string 'simple-string))
+				    (computed-breaks (make-array 10 :fill-pointer 0)))
+				(loop
+				  (let ((end (unicode:string-next-word-break string posn)))
+				    (when (= end posn)
+				      (return))
+				    (vector-push-extend end computed-breaks)
+				    (setf posn end)))
+				computed-breaks)))
+		       (assert-equalp b
+				      (do-test s)
+				      b s-expanded)))))))))
