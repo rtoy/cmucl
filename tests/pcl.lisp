@@ -1007,7 +1007,7 @@
 ;;; macro won't be used in them.  Also, we want tests using
 ;;; both the optimized constructor functions, and the default.
 
-(eval-when (:top-level :compile :execute)
+(eval-when (:load-toplevel :compile-toplevel :execute)
 (defmacro define-mi-test (name form &key values opt-values)
   (let ((optimized-name
 	 (let ((*print-case* :upcase)
