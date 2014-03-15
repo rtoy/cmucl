@@ -1,3 +1,7 @@
+;;; Tests for PCL, taken from src/pcl/rt.
+;;;
+;;; It's clear that the tests used mk defsystem to load the tests, but
+;;; it's not clear if the tests were compiled or not before running.
 
 (defpackage "PCL-TESTS"
   (:use "COMMON-LISP" "PCL" "LISP-UNIT"))
