@@ -31,6 +31,10 @@
 
 (require :lisp-unit)
 
+;; For the unicode tests, set the terminal to utf8 so there's some
+;; hope of getting things printed out correctly.
+(stream:set-system-external-format :utf-8)
+
 ;; Be rather verbose in printing the tests
 (setf lisp-unit:*print-summary* t)
 (setf lisp-unit:*print-failures* t)
