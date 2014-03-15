@@ -3,13 +3,20 @@
 ;;;; Main script to run all of the tests in the tests directory.
 ;;;; It is intended to be run using something like
 ;;;;
-;;;;   lisp -load tests/run-tests.lisp -eval '(cmucl-test-runner:run-all-tests)'
+;;;;   lisp -noinit -load tests/run-tests.lisp -eval '(cmucl-test-runner:run-all-tests)'
+;;;;
+;;;; Note that you cannot run these tests from a binary created during
+;;;; a build process. You must run
+;;;;
+;;;;   bin/make-dist.sh -I inst-dir build-dir
+;;;;
+;;;; to install everything in some temporary directory. This is needed
+;;;; because the simple-streams test needs to load simple-streams, and
+;;;; the build directory isn't set up for that.
 ;;;;
 ;;;; The exit code indicates whether there were any test failures.  A
 ;;;; non-zero code indicates a failure of some sort.
 ;;;;
-;;;; It is assumed that either asdf or quicklisp is set up
-;;;; appropriately so that lisp-unit can be automatically loaded
 
 (defpackage :cmucl-test-runner
   (:use :cl)
