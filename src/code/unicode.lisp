@@ -116,8 +116,8 @@
 ;;; used with permission.
 ;;;
 ;;; This version is modified from the original at
-;;; http://www.ccs.neu.edu/home/will/R6RS/ to conform to CMUCL's
-;;; implementation of the word break properties.
+;;; http://www.cesura17.net/~will/Professional/Standards/Scheme/R6RS/r6rs-unicode.tar.gz
+;;; to conform to CMUCL's implementation of the word break properties.
 ;;;
 ;;;
 ;;; Copyright statement and original comments:
