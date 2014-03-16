@@ -123,7 +123,7 @@ buildsun4 ()
 
 case `uname -m` in
   i386*|x86*|i86pc) buildx86 ;;
-  sun*|"Power Mac*")
+  sun*|Power\ Mac*)
     # buildsun4 works for sparc and ppc.
     buildsun4 ;;
   *) echo "Unsupported architecture:  `uname -m`" ;;

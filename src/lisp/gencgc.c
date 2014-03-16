@@ -367,7 +367,7 @@ boolean gencgc_zero_check_during_free_heap = FALSE;
  * enough.
  */
 
-#define DO_GENCGC_ZERO_CHECK	(gencgc_zero_check || (gencgc_unmap_zero == MODE_LAZY) || (gencgc_unmap_zero == MODE_MADVISE))
+#define DO_GENCGC_ZERO_CHECK	(gencgc_zero_check)
 
 /*
  * Only to the zero check during free_heap if both
@@ -375,7 +375,7 @@ boolean gencgc_zero_check_during_free_heap = FALSE;
  * MODE_MAP or MODE_MEMSET because in all other modes, unallocated
  * pages are known not to contain zeroes.
  */
-#define DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP	(gencgc_zero_check_during_free_heap && ((gencgc_unmap_zero == MODE_MAP) || (gencgc_unmap_zero == MODE_MEMSET)))
+#define DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP	(gencgc_zero_check_during_free_heap)
 
 /*
  * The minimum size for a large object.
@@ -1194,8 +1194,8 @@ gc_alloc_new_region(int nbytes, int unboxed, struct alloc_region *alloc_region)
 	for (p = (int *) alloc_region->start_addr;
 	     p < (int *) alloc_region->end_addr; p++)
 	    if (*p != 0)
-		fprintf(stderr, "** new region not zero @ %lx\n",
-			(unsigned long) p);
+		fprintf(stderr, "** new region not zero @ %lx: %x\n",
+			(unsigned long) p, *p);
     }
 
     /* Setup the pages. */

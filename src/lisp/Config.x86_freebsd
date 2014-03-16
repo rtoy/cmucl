@@ -1,6 +1,10 @@
 # -*- Mode: makefile -*-
 include Config.x86_common
 
+# Need -ffloat-store for e_rem_pio2 and k_rem_pio2 to get properly
+# rounded double-floats while using x87 extended precision.
+CC_REM_PIO2 = -ffloat-store
+
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 OS_SRC += FreeBSD-os.c elf.c
 OS_LINK_FLAGS = -dynamic -export-dynamic

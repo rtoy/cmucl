@@ -21,20 +21,67 @@ New in this release:
   * Known issues:
 
   * Feature enhancements
- 
+    * Trig functions are signficantly faster.
+    * Accuracy of trig functions improved. (Previously, they could be
+      off by one or two ulp.)
+    * RUN-PROGRAM accepts :ELEMENT-TYPE to allow specifying the
+      element type for streams that are created for RUN-PROGRAM.  (See
+      ticket:92)
+
   * Changes
     * Update to ASDF 3.0.3.
     * When *PRINT-CASE* is :DOWNCASE, integers are printed with
       lowercase letters when needed.
     * Micro-optimize KERNEL:DOUBLE-FLOAT-BITS for x86/sse2.
     * Add micro-optimization for unary FTRUNCATE for x86/sse2.
+    * Compiler can derive the types of the results of DECODE-FLOAT.
+    * Main disassembly routines in the DISASSEMBLE package accept 
+      :BASE, :CASE, and :RADIX keyword arguments, like
+      DISASSEMBLE:DISASSEMBLE.
+    * Micro optimizations for sse2 to allow descriptor regs and stack
+      tns for many operations so that the operands can be in memory
+      instead of a register, thereby removing a register load
+      instruction.
+    * Support for darwin/ppc 10.5 and gcc 4.8.
+    * Micro-optimization:  (expt -1 power) just returns -1 or 1
+      without actually computing the power.
+    * Run-time checks for zero pages on newly allocated pages has been
+      disabled now that the lazy zeroing of the heap pages has been
+      the default for several months now.
+    * Add lisp-unit as a contrib.  Use (require :lisp-unit) to load
+      it.  Precompiled fasls are not included.
 
   * ANSI compliance fixes:
+    * The values on the branch cuts for the inverse trig and
+      hyperbolic functions have been updated.  Instead of following
+      the text in the CLHS, the values are defined according to the
+      definitions in the formulas.  In particular (atanh x) for x real
+      and on the branch cut is now continuous with different
+      quadrants.  This differs from the description of the branch cut
+      for atanh in the CLHS.
 
   * Bugfixes:
-
+    * Fix error in pi reduction on x87.  It was not noticed previously
+      because the returned values were not used optimally.
+    * Better error message for empty cond clauses.
+    * Fix serious error in the complex multiply vop for sparc.
+      Incorrect results were returned under some conditions when the
+      result TN was packed in the same location as one of the argument
+      TNs.
+    * Type derivation for log now matches the actual returned
+      values. (Ticket #92).
+    * The float constants for various limits are defined for
+      double-double floats such as
+      least-positive-double-double-float. 
+    * When reading very small float values, round to
+      least-positive-foo-float if possible.
 
   * Trac Tickets:
+    * Ticket #90 fixed.
+    * Ticket #92 fixed.
+    * Ticket #87 fixed.
+    * Ticket #94 fixed.
+    * Ticket #93 fixed.
 
   * Other changes:
 

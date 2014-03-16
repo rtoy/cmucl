@@ -456,7 +456,8 @@
 		    &key (env *environment-list*) (wait t) pty input
 		    if-input-does-not-exist output (if-output-exists :error)
 		    (error :output) (if-error-exists :error) status-hook
-		    (external-format :default))
+		    (external-format :default)
+		    (element-type 'base-char))
   "RUN-PROGRAM creates a new process and runs the unix program in the
    file specified by the simple-string PROGRAM.  ARGS are the standard
    arguments that can be passed to a Unix program, for no arguments
@@ -510,7 +511,11 @@
         This is a function the system calls whenever the status of the
         process changes.  The function takes the process as an argument.
      :external-format -
-        This is the external-format used for communication with the subprocess."
+        This is the external-format used for communication with the subprocess.
+     :element-type -
+        When a stream is created for :input or :output, the stream
+        uses this element-type instead of the default 'BASE-CHAR type.
+"
 
   ;; Make sure the interrupt handler is installed.
   (system:enable-interrupt unix:sigchld #'sigchld-handler)
@@ -531,13 +536,15 @@
 	      (stdin input-stream)
 	      (get-descriptor-for input cookie :direction :input
 				  :if-does-not-exist if-input-does-not-exist
-				  :external-format external-format)
+				  :external-format external-format
+				  :element-type element-type)
 	    (multiple-value-bind
 		(stdout output-stream)
 		(get-descriptor-for output cookie :direction :output
                                     :if-does-not-exist :create
 				    :if-exists if-output-exists
-				    :external-format external-format)
+				    :external-format external-format
+				    :element-type element-type)
 	      (multiple-value-bind
 		  (stderr error-stream)
 		  (if (eq error :output)
@@ -545,7 +552,8 @@
 		      (get-descriptor-for error cookie :direction :output
                                           :if-does-not-exist :create
 					  :if-exists if-error-exists
-					  :external-format external-format))
+					  :external-format external-format
+					  :element-type element-type))
 		(multiple-value-bind (pty-name pty-stream)
 				     (open-pty pty cookie external-format)
 		  ;; Make sure we are not notified about the child death before
@@ -652,6 +660,7 @@
 ;;; 
 (defun get-descriptor-for (object cookie &rest keys &key direction
 							 external-format
+						         (element-type 'base-char)
 				  &allow-other-keys)
   (cond ((eq object t)
 	 ;; No new descriptor is needed.
@@ -684,14 +693,18 @@
 	      (push write-fd *close-on-error*)
 	      (let ((stream (system:make-fd-stream write-fd :output t
 						   :external-format
-						   external-format)))
+						   external-format
+						   :element-type
+						   element-type)))
 		(values read-fd stream)))
 	     (:output
 	      (push read-fd *close-on-error*)
 	      (push write-fd *close-in-parent*)
 	      (let ((stream (system:make-fd-stream read-fd :input t
 						   :external-format
-						   external-format)))
+						   external-format
+						   :element-type
+						   element-type)))
 		(values write-fd stream)))
 	     (t
 	      (unix:unix-close read-fd)

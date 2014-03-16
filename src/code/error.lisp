@@ -960,14 +960,14 @@
   ()
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
-	     (format stream (intl:gettext "Control stack overflow")))))
+	     (format stream _"Control stack overflow"))))
 
 #+heap-overflow-check
 (define-condition heap-overflow (storage-condition)
   ()
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
-	     (format stream (intl:gettext "Heap (dynamic space) overflow")))))
+	     (format stream _"Heap (dynamic space) overflow"))))
 
 (define-condition type-error (error)
   ((datum :reader type-error-datum :initarg :datum)
