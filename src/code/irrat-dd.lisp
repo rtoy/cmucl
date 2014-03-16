@@ -56,6 +56,12 @@
   0.7853981633974483096156608458198757210492923w0
   _N"Pi/4")
 
+;; dd-pi/4-lo is such that dd-pi/4-lo + dd-pi/4 is equal to pi/4 to
+;; twice the precision of a double-double-float.
+(defconstant dd-pi/4-lo
+  -7.486924524295848886603985669688687133352026408988280860093283232w-34
+  )
+
 ;; log2-c1 and log-c2 are log(2) arranged in such a way that log2-c1 +
 ;; log2-c2 is log(2) to an accuracy greater than double-double-float.
 (defconstant log2-c1
@@ -995,6 +1001,17 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 		-1.666666666666666666666666666666666647199w-1
 		)))
 
+;; Compute sin(x) for |x| < pi/4 (approx).
+(defun dd-%%sin (x)
+  (declare (type (double-double-float -1w0 1w0) x)
+	   (optimize (speed 2) (space 0)
+		     (inhibit-warnings 3)))
+  (if (< (abs (double-double-hi x))
+	      (scale-float 1d0 -52))
+      x
+      (let ((x2 (* x x)))
+	(+ x (* x (* x2 (poly-eval x2 sincof)))))))
+
 ;; cos(x) = 1 - .5 x^2 + x^2 (x^2 P(x^2))
 ;; Theoretical peak relative error = 2.1e-37,
 ;; relative peak error spread = 1.4e-8
@@ -1016,101 +1033,17 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 		4.166666666666666666666666666666459301466w-2
 		)))
 
-(defconstant dp1
-  (scale-float (float #b1100100100001111110110101010001000100001011010001100001000110100110001001100011001100010100010111000000011 1w0) -106))
-
-(defconstant dp2
-  (scale-float (float #b0111000001110011010001001010010000001001001110000010001000101001100111110011000111010000000010000010111011 1w0) (* 2 -106)))
-
-(defconstant dp3
-  (scale-float (float #b1110101001100011101100010011100110110010001001010001010010100000100001111001100011100011010000000100110111 1w0) (* 3 -106)))
-
-(defconstant dp4
-  (scale-float (float #b0111101111100101010001100110110011110011010011101001000011000110110011000000101011000010100110110111110010 1w0) (* 4 -106)))
-
-(defun dd-%%sin (x)
-  (declare (type double-double-float x)
-	   (optimize (speed 2) (space 0)
-		     (inhibit-warnings 3)))
-  (when (minusp x)
-    (return-from dd-%%sin (- (the double-double-float (dd-%%sin (- x))))))
-  ;; y = integer part of x/(pi/4).  
-  (let* ((y (float (floor (/ x dd-pi/4)) 1w0))
-	 (z (scale-float y -4)))
-    (declare (type double-double-float y z))
-    (setf z (float (floor z) 1w0))	; integer part of y/8
-    (setf z (- y (scale-float z 4)))	; y - 16*(y/16)
-
-    (let ((j (truncate z))
-	  (sign 1))
-      (declare (type (integer -1 1) sign))
-      (unless (zerop (logand j 1))
-	(incf j)
-	(incf y))
-      (setf j (logand j 7))
-
-      (when (> j 3)
-	(setf sign (- sign))
-	(decf j 4))
-
-      ;; Extended precision modular arithmetic
-      (setf z (- (- (- x (* y dp1))
-		    (* y dp2))
-		 (* y dp3)))
-      (let ((zz (* z z)))
-	(if (or (= j 1)
-		(= j 2))
-	    (setf y (+ (- 1 (scale-float zz -1))
-		       (* zz zz (poly-eval zz coscof))))
-	    (setf y (+ z (* z (* zz (poly-eval zz sincof))))))
-	(if (< sign 0)
-	    (- y)
-	    y)))))
-
+;; Compue cos(x) for |x| < pi/4 (approx)
 (defun dd-%%cos (x)
-  (declare (type double-double-float x)
+  (declare (type (double-double-float -1w0 1w0) x)
 	   (optimize (speed 2) (space 0)
 		     (inhibit-warnings 3)))
-  (when (minusp x)
-    (return-from dd-%%cos (dd-%%cos (- x))))
-  ;; y = integer part of x/(pi/4).  
-  (let* ((y (float (floor (/ x dd-pi/4)) 1w0))
-	 (z (scale-float y -4)))
-    (declare (type double-double-float y z))
-    (setf z (float (floor z) 1w0))	; integer part of y/8
-    (setf z (- y (scale-float z 4)))	; y - 16*(y/16)
+  (let ((x2 (* x x)))
+    (+ (- 1 (scale-float x2 -1))
+       (* x2 (poly-eval x2 coscof) x2))))
 
-    (let ((i (truncate z))
-	  (j 0)
-	  (sign 1))
-      (declare (type (integer 0 7) j)
-	       (type (integer -1 1) sign))
-      (unless (zerop (logand i 1))
-	(incf i)
-	(incf y))
-      (setf j (logand i 7))
-
-      (when (> j 3)
-	(setf sign (- sign))
-	(decf j 4))
-      (when (> j 1)
-	(setf sign (- sign)))
-
-      ;; Extended precision modular arithmetic.  This is basically
-      ;; computing x - y*(pi/4) accurately so that |z| < pi/4.
-      (setf z (- (- (- x (* y dp1))
-		    (* y dp2))
-		 (* y dp3)))
-      (let ((zz (* z z)))
-	(if (or (= j 1)
-		(= j 2))
-	    (setf y (+ z (* z (* zz (poly-eval zz sincof)))))
-	    (setf y (+ (- 1 (scale-float zz -1))
-		       (* zz (poly-eval zz coscof) zz))))
-	(if (< sign 0)
-	    (- y)
-	    y)))))
-
+;; Compute tan(x) or cot(x) for |x| < pi/4 (approx). If cotflag is
+;; non-nil, cot(x) is returned.  Otherwise, return tan(x).
 (let ((P (make-array 6 :element-type 'double-double-float
 		     :initial-contents
 		     '(
@@ -1132,54 +1065,37 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 		       -4.152206921457208101480801635640958361612w10
 		       8.650244186622719093893836740197250197602w10
 		       ))))
-  (defun dd-tancot (xx cotflag)
-    (declare (type double-double-float xx)
-	     (optimize (speed 2) (space 0)))
-    (let ((x 0w0)
-	  (sign 1))
-      (declare (type double-double-float x)
-	       (type (integer -1 1) sign))
-      (cond ((minusp xx)
-	     (setf x (- xx))
-	     (setf sign -1))
-	    (t
-	     (setf x xx)))
-      (let* ((y (float (floor (/ x dd-pi/4)) 1w0))
-	     (z (scale-float y -4))
-	     (j 0))
-	(declare (type double-double-float y z)
-		 (type fixnum j))
-	(setf z (float (floor z) 1w0))
-	(setf z (- y (scale-float z 4)))
+  (defun dd-tancot (x cotflag)
+    (declare (type (double-double-float -1w0 1w0) x)
+	     (optimize (speed 2) (space 0) (inhibit-warnings 3)))
+    (let* ((xx (* x x))
+	   (y (if (> xx 1w-40)
+		  (+ x
+		     (* x (* xx (/ (poly-eval xx p)
+				   (poly-eval-1 xx q)))))
+		  x)))
+      (if cotflag
+	  (/ y)
+	  y))))
 
-	(setf j (truncate z))
-
-	(unless (zerop (logand j 1))
-	  (incf j)
-	  (incf y))
-
-	(setf z (- (- (- x (* y dp1))
-		      (* y dp2))
-		   (* y dp3)))
-	(let ((zz (* z z)))
-	  (if (> zz 1w-40)
-	      (setf y (+ z
-			 (* z (* zz (/ (poly-eval zz p)
-				       (poly-eval-1 zz q))))))
-	      (setf y z))
-	  (if (not (zerop (logand j 2)))
-	      (if cotflag
-		  (setf y (- y))
-		  (setf y (/ -1 y)))
-	      (if cotflag
-		  (setf y (/ y))))
-	  (if (< sign 0)
-	      (- y)
-	      y))))))
-
-(defun dd-%%tan (x)
-  (declare (type double-double-float x))
-  (dd-tancot x nil))
+(defun dd-%%tan (x extra)
+  (declare (type double-double-float x)
+	   (double-float extra))
+  (cond ((>= (abs x) 0.6744)
+	 ;; For 0.6744 <= |x| <= pi/4, we want to use the relationship
+	 ;;
+	 ;;   tan(x) = tan(pi/4-y) = (1 - tan(y))/(1 + tan(y))
+	 ;;          = 1 - 2*(tan(y) - tan(y)^2)/(1+tan(y))
+	 (if (minusp x)
+	     (- (dd-%%tan (- x) (- extra)))
+	     (let* ((z (- dd-pi/4 x))
+		    (w (- dd-pi/4-lo extra))
+		    (tan (dd-tancot (+ z w) nil)))
+	       (- 1
+		  (/ (* 2 (- tan (* tan tan)))
+		     (+ 1 tan))))))
+	(t
+	 (dd-tancot x nil))))
 
 (declaim (inline %kernel-rem-pi/2))
 (alien:def-alien-routine ("__kernel_rem_pio2" %kernel-rem-pi/2) c-call:int
@@ -1244,19 +1160,16 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 				 (length parts)
 				 3
 				 (vector-sap two-over-pi))))
-	   (sum (+ (coerce (aref y 2) 'double-double-float)
-		   (coerce (aref y 1) 'double-double-float)
+	   (sum (+ (coerce (aref y 1) 'double-double-float)
 		   (coerce (aref y 0) 'double-double-float))))
-      (values n sum))))
+      (values n sum (aref y 2)))))
 			       
 
 (declaim (ftype (function (double-double-float) double-double-float)
 		dd-%sin))
 (defun dd-%sin (x)
   (declare (double-double-float x))
-  (cond ((minusp (float-sign x))
-	 (- (dd-%sin (- x))))
-	((< (abs x) (/ pi 4))
+  (cond ((< (abs x) (/ pi 4))
 	 (dd-%%sin x))
 	(t
 	 ;; Argument reduction needed
@@ -1272,9 +1185,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 		dd-%cos))
 (defun dd-%cos (x)
   (declare (double-double-float x))
-  (cond ((minusp x)
-	 (dd-%cos (- x)))
-	((< (abs x) (/ pi 4))
+  (cond ((< (abs x) (/ pi 4))
 	 (dd-%%cos x))
 	(t
 	 ;; Argument reduction needed
@@ -1290,17 +1201,38 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 		dd-%tan))
 (defun dd-%tan (x)
   (declare (double-double-float x))
-  (cond ((minusp (float-sign x))
-	 (- (dd-%tan (- x))))
-	((< (abs x) (/ pi 4))
-	 (dd-%%tan x))
+  (cond ((<= (abs x) (/ pi 4))
+	 (dd-%%tan x 0d0))
+	(t
+	 ;; Argument reduction needed
+	 (multiple-value-bind (n reduced extra)
+	     (reduce-arg x)
+	   (if (evenp n)
+	       (dd-%%tan reduced extra)
+	       (- (/ (dd-%%tan reduced extra))))))))
+
+(defun dd-%sincos (x)
+  (declare (double-double-float x))
+  (cond ((< (abs x) (/ pi 4))
+	 (values (dd-%%sin x)
+		 (dd-%%cos x)))
 	(t
 	 ;; Argument reduction needed
 	 (multiple-value-bind (n reduced)
 	     (reduce-arg x)
-	   (if (evenp n)
-	       (dd-%%tan reduced)
-	       (- (/ (dd-%%tan reduced))))))))
+	   (case (logand n 3)
+	     (0
+	      (values (dd-%%sin reduced)
+		      (dd-%%cos reduced)))
+	     (1
+	      (values (dd-%%cos reduced)
+		      (- (dd-%%sin reduced))))
+	     (2
+	      (values (- (dd-%%sin reduced))
+		      (- (dd-%%cos reduced))))
+	     (3
+	      (values (- (dd-%%cos reduced))
+		      (dd-%%sin reduced))))))))
 
 ;;; dd-%log2
 ;;; Base 2 logarithm.
@@ -1731,63 +1663,62 @@ Z may be any number, but the result is always a complex."
 (defun dd-complex-atanh (z)
   _N"Compute atanh z = (log(1+z) - log(1-z))/2"
   (declare (number z))
-  (cond ((and (realp z) (< z -1))
-	 ;; ATANH is continuous with quadrant III in this case.
-	 (dd-complex-atanh (complex z -0d0)))
-	(t
-	 (let* ( ;; Constants
-		(theta (/ (sqrt most-positive-double-float) 4.0w0))
-		(rho (/ 4.0w0 (sqrt most-positive-double-float)))
-		(half-pi dd-pi/2)
-		(rp (float (realpart z) 1.0w0))
-		(beta (float-sign rp 1.0w0))
-		(x (* beta rp))
-		(y (* beta (- (float (imagpart z) 1.0w0))))
-		(eta 0.0w0)
-		(nu 0.0w0))
-	   ;; Shouldn't need this declare.
-	   (declare (double-double-float x y))
-	   (locally
-	       (declare (optimize (speed 3)
-				  (inhibit-warnings 3)))
-	     (cond ((or (> x theta)
-			(> (abs y) theta))
-		    ;; To avoid overflow...
-		    (setf nu (float-sign y half-pi))
-		    ;; eta is real part of 1/(x + iy).  This is x/(x^2+y^2),
-		    ;; which can cause overflow.  Arrange this computation so
-		    ;; that it won't overflow.
-		    (setf eta (let* ((x-bigger (> x (abs y)))
-				     (r (if x-bigger (/ y x) (/ x y)))
-				     (d (+ 1.0d0 (* r r))))
-				(if x-bigger
-				    (/ (/ x) d)
-				    (/ (/ r y) d)))))
-		   ((= x 1.0w0)
-		    ;; Should this be changed so that if y is zero, eta is set
-		    ;; to +infinity instead of approx 176?  In any case
-		    ;; tanh(176) is 1.0d0 within working precision.
-		    (let ((t1 (+ 4w0 (square y)))
-			  (t2 (+ (abs y) rho)))
-		      (setf eta (dd-%log (/ (sqrt (sqrt t1))
-					    (sqrt t2))))
-		      (setf nu (* 0.5d0
-				  (float-sign y
-					      (+ half-pi (dd-%atan (* 0.5d0 t2))))))))
-		   (t
-		    (let ((t1 (+ (abs y) rho)))
-		      ;; Normal case using log1p(x) = log(1 + x)
-		      (setf eta (* 0.25d0
-				   (dd-%log1p (/ (* 4.0d0 x)
-						 (+ (square (- 1.0d0 x))
-						    (square t1))))))
-		      (setf nu (* 0.5d0
-				  (dd-%atan2 (* 2.0d0 y)
-					     (- (* (- 1.0d0 x)
-						   (+ 1.0d0 x))
-						(square t1))))))))
-	     (complex (* beta eta)
-		      (- (* beta nu))))))))
+  (if (realp z)
+      ;; See complex-atanh for why we do this.
+      (dd-complex-atanh (complex z (- (* 0.0 z))))
+      (let* ( ;; Constants
+	     (theta (/ (sqrt most-positive-double-float) 4.0w0))
+	     (rho (/ 4.0w0 (sqrt most-positive-double-float)))
+	     (half-pi dd-pi/2)
+	     (rp (float (realpart z) 1.0w0))
+	     (beta (float-sign rp 1.0w0))
+	     (x (* beta rp))
+	     (y (* beta (- (float (imagpart z) 1.0w0))))
+	     (eta 0.0w0)
+	     (nu 0.0w0))
+	;; Shouldn't need this declare.
+	(declare (double-double-float x y))
+	(locally
+	    (declare (optimize (speed 3)
+			       (inhibit-warnings 3)))
+	  (cond ((or (> x theta)
+		     (> (abs y) theta))
+		 ;; To avoid overflow...
+		 (setf nu (float-sign y half-pi))
+		 ;; eta is real part of 1/(x + iy).  This is x/(x^2+y^2),
+		 ;; which can cause overflow.  Arrange this computation so
+		 ;; that it won't overflow.
+		 (setf eta (let* ((x-bigger (> x (abs y)))
+				  (r (if x-bigger (/ y x) (/ x y)))
+				  (d (+ 1.0d0 (* r r))))
+			     (if x-bigger
+				 (/ (/ x) d)
+				 (/ (/ r y) d)))))
+		((= x 1.0w0)
+		 ;; Should this be changed so that if y is zero, eta is set
+		 ;; to +infinity instead of approx 176?  In any case
+		 ;; tanh(176) is 1.0d0 within working precision.
+		 (let ((t1 (+ 4w0 (square y)))
+		       (t2 (+ (abs y) rho)))
+		   (setf eta (dd-%log (/ (sqrt (sqrt t1))
+					 (sqrt t2))))
+		   (setf nu (* 0.5d0
+			       (float-sign y
+					   (+ half-pi (dd-%atan (* 0.5d0 t2))))))))
+		(t
+		 (let ((t1 (+ (abs y) rho)))
+		   ;; Normal case using log1p(x) = log(1 + x)
+		   (setf eta (* 0.25d0
+				(dd-%log1p (/ (* 4.0d0 x)
+					      (+ (square (- 1.0d0 x))
+						 (square t1))))))
+		   (setf nu (* 0.5d0
+			       (dd-%atan2 (* 2.0d0 y)
+					  (- (* (- 1.0d0 x)
+						(+ 1.0d0 x))
+					     (square t1))))))))
+	  (complex (* beta eta)
+		   (- (* beta nu)))))))
 
 (defun dd-complex-tanh (z)
   _N"Compute tanh z = sinh z / cosh z"
@@ -1922,7 +1853,7 @@ Z may be any number, but the result is always a complex."
 
 
 (defun dd-complex-asin (z)
-  _N"Compute asin z = asinh(i*z)/i
+  _N"Compute asin z = -i*log(i*z + sqrt(1-z^2))
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1962,7 +1893,7 @@ Z may be any number, but the result is always a complex."
 	     (- (realpart result)))))
 	 
 (defun dd-complex-atan (z)
-  _N"Compute atan z = atanh (i*z) / i
+  _N"Compute atan z = (log(1+i*z) - log(1-i*z))/(2*i)
 
 Z may be any number, but the result is always a complex."
   (declare (number z))

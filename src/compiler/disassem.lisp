@@ -3232,12 +3232,17 @@
      dstate
      stream)))
 
-(defun disassemble-segments (segments stream dstate)
+(defun disassemble-segments (segments stream dstate &key
+						      (base 16)
+						      (case :downcase)
+						      (radix *print-radix*))
   "Disassemble the machine code instructions in each memory segment in
   SEGMENTS in turn to STREAM."
   (declare (type list segments)
 	   (type stream stream)
-	   (type disassem-state dstate))
+	   (type disassem-state dstate)
+	   (type (integer 2 36) base)
+	   (type (member :upcase :downcase :capitalize) case))
   (unless (null segments)
     (let ((first (car segments))
 	  (last (car (last segments))))
@@ -3257,15 +3262,21 @@
 	;; Initialize these to a sane value, just in case.
 	(setf vm::*note-addis-inst* nil)
 	(setf vm::*pseudo-atomic-set* nil))
-      (dolist (seg segments)
-	(disassemble-segment seg stream dstate)))))
+      (let ((*print-base* base)
+	    (*print-case* case)
+	    (*print-radix* radix))
+	(dolist (seg segments)
+	  (disassemble-segment seg stream dstate))))))
 
 ;;; ----------------------------------------------------------------
 ;;; top-level functions
 
 (defun disassemble-function (function &key (stream *standard-output*)
-				      (use-labels t)
-				      (backend c:*native-backend*))
+					(use-labels t)
+					(backend c:*native-backend*)
+					(base 16)
+					(case :downcase)
+					(radix *print-radix*))
   "Disassemble the machine code instructions for FUNCTION."
   (declare (type compiled-function function)
 	   (type stream stream)
@@ -3275,7 +3286,8 @@
 	 (segments (get-function-segments function)))
     (when use-labels
       (label-segments segments dstate))
-    (disassemble-segments segments stream dstate)))
+    (disassemble-segments segments stream dstate
+			  :base base :case case :radix radix)))
 
 (defun compile-function-lambda-expr (function)
   (declare (type function function))
@@ -3328,33 +3340,49 @@
   (declare (type (or function symbol cons) object)
 	   (type (or (member t) stream) stream)
 	   (type (member t nil) use-labels)
-	   (type c::backend backend)
-	   (type (integer 2 36) base)
-	   (type (member :upcase :downcase :capitalize) case))
-  (let ((*print-base* base)
-	(*print-case* case)
-	(*print-radix* radix)
-	(fun (compiled-function-or-lose object)))
+	   (type c::backend backend))
+  (let ((fun (compiled-function-or-lose object)))
     (if (typep fun 'kernel:byte-function)
 	(c:disassem-byte-fun fun)
 	;; we can't detect closures, so be careful
 	(disassemble-function (fun-self fun)
 			      :stream stream
 			      :use-labels use-labels
-			      :backend backend)))
+			      :backend backend
+			      :base base
+			      :case case
+			      :radix radix)))
   (values))
 
 (defun disassemble-memory (address
 			   length
 			   &key
-			   (stream *standard-output*)
-			   code-component
-			   (use-labels t)
-			   (backend c:*backend*))
-  "Disassembles the given area of memory starting at ADDRESS and LENGTH long.
-  Note that if CODE-COMPONENT is NIL and this memory could move during a GC,
-  you'd better disable it around the call to this function."
-  (declare (type (or address system:system-area-pointer) address)
+			     (stream *standard-output*)
+			     code-component
+			     (use-labels t)
+			     (backend c:*backend*)
+			     (base 16)
+			     (case :downcase)
+			     (radix *print-radix*))
+  "Disassembles the given area of memory starting at ADDRESS and
+  LENGTH (octets) long.  Note that if CODE-COMPONENT is NIL and this
+  memory could move during a GC, you'd better disable it around the
+  call to this function.  ADDRESS can be either an integer or a
+  system-area-pointer.
+
+  :Stream stream
+      The dissassembly is written to this stream.
+  :Use-labels
+      Labels are generated instead of using instruction addresses.
+  :Base
+  :Case
+  :Radix
+      The disassembler uses the specified base, case, and radix when
+      printing the disassembled code.  The default values are 16,
+      :downcase, and *print-radix*, respectively. "
+
+  (declare (type (or address
+		     system:system-area-pointer) address)
 	   (type length length)
 	   (type stream stream)
 	   (type (or null kernel:code-component) code-component)
@@ -3379,12 +3407,16 @@
 	      (list (make-memory-segment address length)))))
     (when use-labels
       (label-segments segments dstate))
-    (disassemble-segments segments stream dstate)))
+    (disassemble-segments segments stream dstate
+			  :base base :case case :radix radix)))
 
 (defun disassemble-code-component (code-component &key
-						  (stream *standard-output*)
-						  (use-labels t)
-						  (backend c:*native-backend*))
+						    (stream *standard-output*)
+						    (use-labels t)
+						    (backend c:*native-backend*)
+						    (base 16)
+						    (case :downcase)
+						    (radix *print-radix*))
   "Disassemble the machine code instructions associated with
   CODE-COMPONENT (this may include multiple entry points)."
   (declare (type (or null kernel:code-component compiled-function)
@@ -3400,7 +3432,8 @@
 	 (segments (get-code-segments code-component)))
     (when use-labels
       (label-segments segments dstate))
-    (disassemble-segments segments stream dstate)))
+    (disassemble-segments segments stream dstate
+			  :base base :case case :radix radix)))
 
 ;;; ----------------------------------------------------------------
 ;;; Code for making useful segments from arbitrary lists of code-blocks

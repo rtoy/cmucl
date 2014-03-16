@@ -4,7 +4,7 @@
 #
 #, fuzzy
 msgid ""
-msgstr "Project-Id-Version: CMUCL 20D\n"
+msgstr "Project-Id-Version: CMUCL 20E\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: Automatic translation\n"
 "Language-Team: Pig Latin (auto-translated)\n"

@@ -731,6 +731,28 @@
     (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
       `(,prim x))))
 
+(defknown (kernel::%sincos)
+    (double-float) (values double-float double-float)
+    (movable foldable flushable))
+
+(deftransform cis ((x) (single-float) * :when :both)
+  `(multiple-value-bind (s c)
+       (kernel::%sincos (coerce x 'double-float))
+     (complex (coerce c 'single-float)
+	      (coerce s 'single-float))))
+
+(deftransform cis ((x) (double-float) * :when :both)
+  `(multiple-value-bind (s c)
+       (kernel::%sincos x)
+     (complex c s)))
+
+#+double-double
+(deftransform cis ((x) (double-double-float) *)
+  `(multiple-value-bind (s c)
+       (kernel::dd-%sincos x)
+     (complex c s)))
+
+
 ;;; The argument range is limited on the x86 FP trig. functions. A
 ;;; post-test can detect a failure (and load a suitable result), but
 ;;; this test is avoided if possible.
@@ -1472,11 +1494,15 @@
   (two-arg-derive-type x y #'expt-derive-type-aux #'expt))
 
 
-;;; Note must assume that a type including 0.0 may also include -0.0
-;;; and thus the result may be complex -infinity + i*pi.
-;;;
 (defun log-derive-type-aux-1 (x)
-  (elfun-derive-type-simple x #'log 0d0 nil nil nil))
+  (elfun-derive-type-simple x
+			    #'(lambda (z)
+				;; log(0) and log(-0) is -infinity.
+				;; Return NIL to indicate that.
+				(if (zerop z)
+				    nil
+				    (log z)))
+			    -0d0 nil nil nil))
 
 (defun log-derive-type-aux-2 (x y same-arg)
   (let ((log-x (log-derive-type-aux-1 x))
@@ -1777,6 +1803,7 @@
 	 (deftransform * ((z w) (,real-type (complex ,type)) *)
 	   ;; Real * complex
 	   '(complex (* z (realpart w)) (* z (imagpart w))))
+	 #-(or (and linux x86))
 	 (deftransform cis ((z) ((,type)) *)
 	   ;; Cis.
 	   '(complex (cos z) (sin z)))
@@ -2014,6 +2041,89 @@
 	 (specifier-type `(complex ,(or (numeric-type-format arg) 'float))))
      #'cis))
 
+;;; Derive the result types of DECODE-FLOAT
+
+(defun decode-float-frac-derive-type-aux (arg)
+  ;; The fraction part of DECODE-FLOAT is always a subset of the
+  ;; interval [0.5, 1), even for subnormals.  While possible to derive
+  ;; a tighter bound in some cases, we don't.  Just return that
+  ;; interval of the approriate type when possible.  If not, just use
+  ;; float.
+  (if (numeric-type-format arg)
+      (specifier-type `(,(numeric-type-format arg)
+			 ,(coerce 1/2 (numeric-type-format arg))
+			 (,(coerce 1 (numeric-type-format arg)))))
+      (specifier-type '(float 0.5 (1.0)))))
+
+(defun decode-float-exp-derive-type-aux (arg)
+  ;; Derive the exponent part of the float.  It's always an integer
+  ;; type.
+  (flet ((calc-exp (x)
+	   (when x
+	     (nth-value 1 (decode-float x))))
+	 (min-exp ()
+	   ;; Use decode-float on 0 of the appropriate type to find
+	   ;; the min exponent.  If we don't know the actual number
+	   ;; format, use double, which has the widest range
+	   ;; (including double-double-float).
+	   (if (numeric-type-format arg)
+	       (nth-value 1 (decode-float (coerce 0 (numeric-type-format arg))))
+	       (nth-value 1 (decode-float (coerce 0 'double-float)))))
+	 (max-exp ()
+	   ;; Use decode-float on the most postive number of the
+	   ;; appropriate type to find the max exponent.  If we don't
+	   ;; know the actual number format, use double, which has the
+	   ;; widest range (including double-double-float).
+	   (if (eq (numeric-type-format arg) 'single-float)
+	       (nth-value 1 (decode-float most-positive-single-float))
+	       (nth-value 1 (decode-float most-positive-double-float)))))
+    (let* ((lo (or (bound-func #'calc-exp
+			       (numeric-type-low arg))
+		   (min-exp)))
+	   (hi (or (bound-func #'calc-exp
+			       (numeric-type-high arg))
+		   (max-exp))))
+      (specifier-type `(integer ,(or lo '*) ,(or hi '*))))))
+
+(defun decode-float-sign-derive-type-aux (arg)
+  ;; Derive the sign of the float.
+  (flet ((calc-sign (x)
+	   (when x
+	     (nth-value 2 (decode-float x)))))
+    (let* ((lo (bound-func #'calc-sign
+			       (numeric-type-low arg)))
+	   (hi (bound-func #'calc-sign
+			       (numeric-type-high arg))))
+      (if (numeric-type-format arg)
+	  (specifier-type `(,(numeric-type-format arg)
+			     ;; If lo or high bounds are NIL, use -1
+			     ;; or 1 of the appropriate type instead.
+			     ,(or lo (coerce -1 (numeric-type-format arg)))
+			     ,(or hi (coerce 1  (numeric-type-format arg)))))
+	  (specifier-type '(or (member 1f0 -1f0
+				1d0 -1d0
+				#+double-double 1w0
+				#+double-double -1w0)))))))
+
+(defoptimizer (decode-float derive-type) ((num))
+  (let ((f (one-arg-derive-type num
+				#'(lambda (arg)
+				    (decode-float-frac-derive-type-aux arg))
+				#'(lambda (arg)
+				    (nth-value 0 (decode-float arg)))))
+	(e (one-arg-derive-type num
+				#'(lambda (arg)
+				    (decode-float-exp-derive-type-aux arg))
+				#'(lambda (arg)
+				    (nth-value 1 (decode-float arg)))))
+	(s (one-arg-derive-type num
+				#'(lambda (arg)
+				    (decode-float-sign-derive-type-aux arg))
+				#'(lambda (arg)
+				    (nth-value 2 (decode-float arg))))))
+    (make-values-type :required (list f
+				      e
+				      s))))
 
 ;;; Support for double-double floats
 ;;;

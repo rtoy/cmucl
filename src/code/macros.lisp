@@ -559,7 +559,7 @@
       nil
       (let ((clause (first clauses)))
 	(when (atom clause)
-	  (error (intl:gettext "Cond clause is not a list: ~S.") clause))
+	  (error (intl:gettext "Cond clause should be a non-empty list: ~S.") clause))
 	(let ((test (first clause))
 	      (forms (rest clause)))
 	  (if (endp forms)

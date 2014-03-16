@@ -521,19 +521,3 @@ arch_linkage_entry(unsigned long retaddr)
     return ((retaddr - 5) - FOREIGN_LINKAGE_SPACE_START) / LinkageEntrySize;
 }
 #endif /* LINKAGE_TABLE */
-
-int ieee754_rem_pio2(double x, double *y0, double *y1)
-{
-  extern int __ieee754_rem_pio2(double x, double *y);
-
-  double y[2];
-  int n;
-
-  n = __ieee754_rem_pio2(x, y);
-  *y0 = y[0];
-  *y1 = y[1];
-
-  return n;
-}
-
-  

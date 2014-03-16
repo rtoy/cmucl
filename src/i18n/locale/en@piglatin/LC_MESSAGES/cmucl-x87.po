@@ -4,7 +4,7 @@
 #
 #, fuzzy
 msgid ""
-msgstr "Project-Id-Version: CMUCL 20D\n"
+msgstr "Project-Id-Version: CMUCL 20E\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: Automatic translation\n"
 "Language-Team: Pig Latin (auto-translated)\n"
@@ -128,10 +128,6 @@ msgid "inline scalb function"
 msgstr "inlineway albscay unctionfay"
 
 #: src/compiler/x86/float.lisp
-msgid "inline log1p function"
-msgstr "inlineway oglay1p unctionfay"
-
-#: src/compiler/x86/float.lisp
 msgid "inline log1p with limited x range function"
 msgstr "inlineway oglay1p ithway imitedlay x angeray unctionfay"
 
@@ -146,6 +142,10 @@ msgstr "inlineway atanway unctionfay"
 #: src/compiler/x86/float.lisp
 msgid "inline atan2 function"
 msgstr "inlineway atanway2 unctionfay"
+
+#: src/compiler/x86/float.lisp
+msgid "inline log1p function"
+msgstr "inlineway oglay1p unctionfay"
 
 #: src/compiler/x86/float.lisp
 msgid "inline complex single-float creation"

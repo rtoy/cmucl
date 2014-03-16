@@ -666,10 +666,10 @@
 (defun yellow-zone-hit ()
   (let ((debug:*stack-top-hint* nil))
     (format *error-output*
-	    (intl:gettext "~2&~@<A control stack overflow has occurred:~%~
+	    _"~2&~@<A control stack overflow has occurred:~%~
             the program has entered the yellow control stack guard zone.~%~
             Please note that you will be returned to the Top-Level if you~%~
-            enter the red control stack guard zone while debugging.~@:>~2%"))
+            enter the red control stack guard zone while debugging.~@:>~2%")
     (infinite-error-protect (error 'stack-overflow))))
 
 ;;;
@@ -684,9 +684,9 @@
 #+stack-checking
 (defun red-zone-hit ()
   (format *error-output*
-	  (intl:gettext "~2&~@<Fatal control stack overflow.  You have entered~%~
+	  _"~2&~@<Fatal control stack overflow.  You have entered~%~
            the red control stack guard zone while debugging.~%~
-           Returning to Top-Level.~@:>~2%"))
+           Returning to Top-Level.~@:>~2%")
   (throw 'lisp::top-level-catcher nil))
 
 #+heap-overflow-check
@@ -695,10 +695,10 @@
     ;; Don't reserve any more pages
     (setf lisp::reserved-heap-pages 0)
     (format *error-output*
-	    (intl:gettext "~2&~@<Imminent dynamic space overflow has occurred:~%~
+	    _"~2&~@<Imminent dynamic space overflow has occurred:~%~
             Only a small amount of dynamic space is available now.~%~
             Please note that you will be returned to the Top-Level without~%~
-            warning if you run out of space while debugging.~@:>~%"))
+            warning if you run out of space while debugging.~@:>~%")
     (infinite-error-protect (error 'heap-overflow))))
 
 #+heap-overflow-check
