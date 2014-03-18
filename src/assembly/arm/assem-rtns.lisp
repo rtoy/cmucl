@@ -25,7 +25,7 @@
      (:temp vals any-reg nl0-offset)
      (:temp lra descriptor-reg lra-offset)
 
-     (:temp temp descriptor-reg cname-offset))
+     (:temp temp descriptor-reg lexenv-offset))
 
   ;; Note, because of the way the return-multiple vop is written, we can
   ;; assume that we are never called with nvals == 1 and that a0 has already
@@ -49,7 +49,7 @@
      (:temp nargs any-reg nargs-offset)
 
      ;; These are needed by the blitting code.
-     (:temp temp descriptor-reg cname-offset))
+     (:temp temp descriptor-reg lexenv-offset))
 
   (emit-not-implemented))
 
