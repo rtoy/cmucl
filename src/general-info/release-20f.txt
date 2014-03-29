@@ -19,6 +19,9 @@ over the Internet, and is mostly in the public domain.
 New in this release:
 
   * Known issues:
+    * Support for x87 will be dropped after the 2014-04 snapshot. All
+      further snapshots will require an x86 chip that supports sse2.
+      SSE2 was introduced with the Pentium 4 in 2001.
 
   * Feature enhancements
     * Trig functions are signficantly faster.
