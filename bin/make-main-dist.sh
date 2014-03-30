@@ -36,11 +36,11 @@ VERSION=$2
 ARCH=$3
 OS=$4
 
-# Core file to look for.  For x86, we have two core files to include.
+# Core file to look for.
 CORE=lisp.core
 case $ARCH in
-	x86*)		FASL=x86f
-                        CORE="lisp-*.core" ;;
+	x86*)		FASL=sse2f
+                        CORE="lisp-sse2.core" ;;
 	sparc*)		FASL=sparcf ;;
 	alpha*)		FASL=axpf ;;
 	ppc*)		FASL=ppcf ;;
@@ -119,10 +119,6 @@ install ${GROUP} ${OWNER} -m 0755 src/tools/sample-wrapper $DESTDIR/lib/cmucl/
 for f in gray-streams gray-compat simple-streams iodefs
 do
     install ${GROUP} ${OWNER} -m 0644 $TARGET/pcl/$f-library.$FASL $DESTDIR/lib/cmucl/lib/subsystems/
-    if [ "$FASL" = "x86f" ]; then
-	# For x87, we want both x86f and sse2f
-	install ${GROUP} ${OWNER} -m 0644 $TARGET/pcl/$f-library.sse2f $DESTDIR/lib/cmucl/lib/subsystems/
-    fi
 done
 
 for f in src/pcl/simple-streams/external-formats/*.lisp src/pcl/simple-streams/external-formats/aliases src/i18n/unidata.bin
@@ -135,10 +131,6 @@ for f in asdf defsystem
 do
     install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/contrib/$f
     install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/$f/$f.$FASL $DESTDIR/lib/cmucl/lib/contrib/$f
-    if [ "$FASL" = "x86f" ]; then
-	# For x87, we want both x86f and sse2f
-	install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/$f/$f.sse2f $DESTDIR/lib/cmucl/lib/contrib/$f
-    fi
 done
 
 # Copy the source files for asdf and defsystem

@@ -87,7 +87,6 @@ usage ()
     echo '    -C [l m]  Create the build directories.  The args are what'
     echo '               you would give to create-target.sh for the lisp'
     echo '               and motif variant.'
-    echo '    -f mode   FPU mode:  x87, sse2, or auto.  Default is auto'
     echo '    -P        On the last build, do NOT generate cmucl.pot and do NOT update'
     echo '               the translations.'
     echo "    -?        This help message"
@@ -155,7 +154,7 @@ BUILDWORLD="$TOOLDIR/build-world.sh"
 BUILD_POT="yes"
 UPDATE_TRANS=
 
-while getopts "123PRGo:b:v:uB:C:Ui:f:w:O:?" arg
+while getopts "123PRGo:b:v:uB:C:Ui:w:O:?" arg
 do
     case $arg in
 	1) ENABLE2="no" ;;
@@ -169,7 +168,6 @@ do
 	   CREATE_DIRS=yes ;;
 	B) bootfiles="$bootfiles $OPTARG" ;;
         i) INTERACTIVE_BUILD="$OPTARG" ;;
-	f) FPU_MODE="-fpu $OPTARG" ;;
         P) BUILD_POT=no ;;
         w) BUILDWORLD="$OPTARG" ;;
         U) UPDATE_TRANS="yes";;
@@ -218,13 +216,13 @@ MAKE_TARGET=all
 export INTERACTIVE
 
 BUILD=1
-OLDLISP="$OLDLISP $OLDLISPFLAGS $FPU_MODE"
+OLDLISP="$OLDLISP $OLDLISPFLAGS"
 buildit
 
 bootfiles=
 
 TARGET=$BASE-3
-OLDLISP="${BASE}-2/lisp/lisp $OLDLISPFLAGS $FPU_MODE"
+OLDLISP="${BASE}-2/lisp/lisp $OLDLISPFLAGS"
 ENABLE=$ENABLE3
 
 BUILD=2
@@ -235,7 +233,7 @@ buildit
 
 TARGET=$BASE-4
 CLEAN_FLAGS="-K all"
-OLDLISP="${BASE}-3/lisp/lisp $OLDLISPFLAGS $FPU_MODE"
+OLDLISP="${BASE}-3/lisp/lisp $OLDLISPFLAGS"
 ENABLE=$ENABLE4
 
 if [ "${BUILD_POT}" = "yes" ]; then
@@ -253,7 +251,7 @@ buildit
 
 # Asdf and friends are part of the base install, so we need to build
 # them now.
-$TARGET/lisp/lisp $FPU_MODE -noinit -nositeinit -batch "$@" << EOF || exit 3
+$TARGET/lisp/lisp -noinit -nositeinit -batch "$@" << EOF || exit 3
 (in-package :cl-user)
 (setf (ext:search-list "target:")
       '("$TARGET/" "src/"))
@@ -267,8 +265,8 @@ EOF
 
 if [ "$SKIPUTILS" = "no" ];
 then
-    OLDLISP="${BASE}-4/lisp/lisp $OLDLISPFLAGS $FPU_MODE"
-    time $TOOLDIR/build-utils.sh $TARGET $FPU_MODE
+    OLDLISP="${BASE}-4/lisp/lisp $OLDLISPFLAGS"
+    time $TOOLDIR/build-utils.sh $TARGET
 fi
 
 build_finished=`date`
