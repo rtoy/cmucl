@@ -333,17 +333,6 @@
   "Specify the unidata.bin file to be used."
   "filename")
 
-#+x86
-(intl:with-textdomain ("cmucl" "cmucl-x86-vm")
-(defswitch "fpu" nil
-  "Specifies what kind of floating-point support should be used on x86
-  systems.  If 'x87', Lisp will use the x87 floating-point unit; if
-  'sse2', Lisp uses SSE2 floating-point unit. The default is
-  'auto',which causes Lisp to check to see if SSE2 is available.  If
-  so, then SSE2 is used.  If the SSE2 core file cannot be found,Lisp
-  will fallback to the x87 core, which can run on any machine."
-  "mode"))
-
 (defun help-switch-demon (switch)
   (declare (ignore switch))
   (format t (intl:gettext "~&Usage: ~A <options>~2%") *command-line-utility-name*)
