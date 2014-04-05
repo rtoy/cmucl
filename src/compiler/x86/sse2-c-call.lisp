@@ -34,6 +34,8 @@
 		   :from :eval :to :result) ecx)
   (:temporary (:sc unsigned-reg :offset edx-offset
 		   :from :eval :to :result) edx)
+  (:temporary (:sc single-stack) temp-single)
+  (:temporary (:sc double-stack) temp-double)
   (:node-var node)
   (:vop-var vop)
   (:save-p t)
@@ -45,10 +47,19 @@
 	   ;; call_into_c has arranged for the result to be in ST(0)
 	   ;; (aka fr0), so there's nothing we need to do now.  The
 	   ;; compiler will move fr0 to the appropriate XMM register.
-	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign)))
+	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign))
+	   (when (and results (location= (tn-ref-tn results) xmm0-tn))
+	     (sc-case (tn-ref-tn results)
+	       (single-reg
+		(inst cvtsd2ss xmm0-tn xmm0-tn))
+	       (double-reg
+		;; Nothing needed for double because call_into_c saved
+		;; the result as a double.
+		))))
 	  (t
 	   ;; Setup the NPX for C; all the FP registers need to be
 	   ;; empty; pop them all.
+	   #+nil
 	   (dotimes (i 8)
 	     (fp-pop))
 
@@ -58,19 +69,29 @@
 
 	   ;; Restore the NPX for lisp; insure no regs are empty.  But
 	   ;; we only do 7 registers here.
+	   #+nil
 	   (dotimes (i 7)
 	     (inst fldz))
 	   
 	   (cond ((and results
-		       (location= (tn-ref-tn results) fr0-tn))
+		       (location= (tn-ref-tn results) xmm0-tn))
 		  ;; If there's a float result, it would have been
 		  ;; returned in fr0, which is now in fr7, thanks to
 		  ;; the fldz's above.  Swap fr7 with fr0.  The
 		  ;; compiler will arrange to move fr0 to the
 		  ;; appropriate XMM register.
-		  (inst fxch fr7-tn))
+		  #+nil
+		  (inst fxch fr7-tn)
+		  (sc-case (tn-ref-tn results)
+		    (single-reg
+		     (inst fstp (ea-for-sf-stack temp-single))
+		     (inst movss xmm0-tn (ea-for-sf-stack temp-single)))
+		    (double-reg
+		     (inst fstpd (ea-for-df-stack temp-double))
+		     (inst movsd xmm0-tn (ea-for-df-stack temp-double)))))
 		 (t
 		  ;; Fill up the last x87 register
+		  #+nil
 		  (inst fldz)))))))
 
 (define-vop (alloc-number-stack-space)

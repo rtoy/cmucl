@@ -98,6 +98,7 @@ FUNCDEF(call_into_c)
 /* Save the return lisp address in ebx */	
 	popl	%ebx
 
+#if 0
 /* Setup the NPX for C */
 	fstp	%st(0)
 	fstp	%st(0)
@@ -107,6 +108,7 @@ FUNCDEF(call_into_c)
 	fstp	%st(0)
 	fstp	%st(0)
 	fstp	%st(0)
+#endif	
 	call	*%eax		# normal callout using Lisp stack
 
 	movl	%eax,%ecx	# remember integer return value
@@ -119,6 +121,7 @@ FUNCDEF(call_into_c)
 	jne	Lfp_rtn_value
 
 /* The return value is in eax, or eax,edx? */
+#if 0	
 /* Setup the NPX stack for lisp */
 	fldz			# insure no regs are empty
 	fldz
@@ -128,6 +131,7 @@ FUNCDEF(call_into_c)
 	fldz
 	fldz
 	fldz
+#endif	
 no_fldz:	
 /* Restore the return value */
 	movl	%ecx,%eax	# maybe return value
@@ -137,6 +141,7 @@ no_fldz:
 	jmp	*%ebx
 
 Lfp_rtn_value:
+#if 0	
 /* The return result is in st(0) */
 /* Setup the NPX stack for lisp, placing the result in st(0) */
 	fldz			# insure no regs are empty
@@ -147,6 +152,11 @@ Lfp_rtn_value:
 	fldz
 	fldz
 	fxch	%st(7)		# move the result back to st(0)
+#endif	
+	subl	$8, %esp	# Space for a double float
+	fstpl	0(%esp)
+	movsd	0(%esp), %xmm0
+	addl	$8, %esp
 
 /* Don't need to restore eax as the result is in st(0) */
 
@@ -198,6 +208,7 @@ x87_save:
 	fldcw	(%esp)		# Recover modes
 	popl	%eax
 npx_save_done:			
+#if 0	
 	/* Is this still necessary with sse2? */
 	fldz			# insure no FP regs are empty
 	fldz
@@ -207,7 +218,7 @@ npx_save_done:
 	fldz
 	fldz
 	fldz
-			
+#endif			
 /* Save C regs: ebx esi edi */
 	pushl	%ebx
 	pushl	%esi
