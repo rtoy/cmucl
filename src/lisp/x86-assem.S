@@ -98,17 +98,6 @@ FUNCDEF(call_into_c)
 /* Save the return lisp address in ebx */	
 	popl	%ebx
 
-#if 0
-/* Setup the NPX for C */
-	fstp	%st(0)
-	fstp	%st(0)
-	fstp	%st(0)
-	fstp	%st(0)
-	fstp	%st(0)
-	fstp	%st(0)
-	fstp	%st(0)
-	fstp	%st(0)
-#endif	
 	call	*%eax		# normal callout using Lisp stack
 
 	movl	%eax,%ecx	# remember integer return value
@@ -121,17 +110,6 @@ FUNCDEF(call_into_c)
 	jne	Lfp_rtn_value
 
 /* The return value is in eax, or eax,edx? */
-#if 0	
-/* Setup the NPX stack for lisp */
-	fldz			# insure no regs are empty
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-#endif	
 no_fldz:	
 /* Restore the return value */
 	movl	%ecx,%eax	# maybe return value
@@ -141,18 +119,13 @@ no_fldz:
 	jmp	*%ebx
 
 Lfp_rtn_value:
-#if 0	
-/* The return result is in st(0) */
-/* Setup the NPX stack for lisp, placing the result in st(0) */
-	fldz			# insure no regs are empty
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-	fxch	%st(7)		# move the result back to st(0)
-#endif	
+
+/* 
+ * The float result is in st(0).  We want it in xmm0.  For
+ * consistency, save st(0) out as a double and load it into xmm0 as a
+ * double.  The call-out vop will arrange to convert it to a single-float
+ * if necessary.
+ */
 	subl	$8, %esp	# Space for a double float
 	fstpl	0(%esp)
 	movsd	0(%esp), %xmm0
@@ -208,17 +181,6 @@ x87_save:
 	fldcw	(%esp)		# Recover modes
 	popl	%eax
 npx_save_done:			
-#if 0	
-	/* Is this still necessary with sse2? */
-	fldz			# insure no FP regs are empty
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-#endif			
 /* Save C regs: ebx esi edi */
 	pushl	%ebx
 	pushl	%esi
