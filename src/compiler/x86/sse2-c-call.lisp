@@ -44,35 +44,26 @@
   (:generator 0 
     (cond ((policy node (> space speed))
 	   (move eax function)
-	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign))
-	   (when (and results (location= (tn-ref-tn results) xmm0-tn))
-	     ;; If there is a float result from the foreign call,
-	     ;; call_into_c has arranged for the result to be in XMM0,
-	     ;; as a double. If we wanted a single float, do the
-	     ;; conversion here.
-	     (sc-case (tn-ref-tn results)
-	       (single-reg
-		(inst cvtsd2ss xmm0-tn xmm0-tn))
-	       (double-reg
-		;; Nothing needed for double because call_into_c saved
-		;; the result as a double.
-		))))
+	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign)))
 	  (t
 	   (inst call function)
 	   ;; To give the debugger a clue. XX not really internal-error?
-	   (note-this-location vop :internal-error)
-
-	   (when (and results
-		      (location= (tn-ref-tn results) xmm0-tn))
-	     ;; If there's a float result, it would have been returned
-	     ;; in fr0 according to the ABI. We want it in xmm0.
-	     (sc-case (tn-ref-tn results)
-	       (single-reg
-		(inst fstp (ea-for-sf-stack temp-single))
-		(inst movss xmm0-tn (ea-for-sf-stack temp-single)))
-	       (double-reg
-		(inst fstpd (ea-for-df-stack temp-double))
-		(inst movsd xmm0-tn (ea-for-df-stack temp-double)))))))))
+	   (note-this-location vop :internal-error)))
+    ;; FIXME: check that a float result is returned when expected. If
+    ;; we don't, we'll either get a NaN when doing the fstp or we'll
+    ;; leave an entry on the FPU and we'll eventually overflow the FPU
+    ;; stack.
+    (when (and results
+	       (location= (tn-ref-tn results) xmm0-tn))
+      ;; If there's a float result, it would have been returned
+      ;; in ST(0) according to the ABI. We want it in xmm0.
+      (sc-case (tn-ref-tn results)
+	(single-reg
+	 (inst fstp (ea-for-sf-stack temp-single))
+	 (inst movss xmm0-tn (ea-for-sf-stack temp-single)))
+	(double-reg
+	 (inst fstpd (ea-for-df-stack temp-double))
+	 (inst movsd xmm0-tn (ea-for-df-stack temp-double)))))))
 
 (define-vop (alloc-number-stack-space)
   (:info amount)

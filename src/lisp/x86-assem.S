@@ -100,42 +100,10 @@ FUNCDEF(call_into_c)
 
 	call	*%eax		# normal callout using Lisp stack
 
-	movl	%eax,%ecx	# remember integer return value
-
-/* Check for a return FP value */
-	fxam
-	fnstsw	%ax
-	andl	$0x4500,%eax
-	cmpl	$0x4100,%eax
-	jne	Lfp_rtn_value
-
-/* The return value is in eax, or eax,edx? */
-no_fldz:	
-/* Restore the return value */
-	movl	%ecx,%eax	# maybe return value
-
 	movl	$0,GNAME(foreign_function_call_active)
 /* Return */	
 	jmp	*%ebx
 
-Lfp_rtn_value:
-
-/* 
- * The float result is in st(0).  We want it in xmm0.  For
- * consistency, save st(0) out as a double and load it into xmm0 as a
- * double.  The call-out vop will arrange to convert it to a single-float
- * if necessary.
- */
-	subl	$8, %esp	# Space for a double float
-	fstpl	0(%esp)
-	movsd	0(%esp), %xmm0
-	addl	$8, %esp
-
-/* Don't need to restore eax as the result is in st(0) */
-
-	movl	$0,GNAME(foreign_function_call_active)
-/* Return */	
-	jmp	*%ebx
 ENDFUNC(call_into_c)
 
 
