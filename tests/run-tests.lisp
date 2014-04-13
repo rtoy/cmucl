@@ -90,7 +90,7 @@
     (format t " ~5D tests total~%" (+ passed failed execute-errors))
     (format t " ~5D tests failed~%" failed)
     (format t " ~5D tests with execution errors~%" execute-errors)
-    (format t "~5,2f% of the tests passed~%"
+    (format t "~5,3f% of the tests passed~%"
 	    (float (* 100
 		      (- 1 (/ (+ failed execute-errors)
 			      (+ passed failed execute-errors))))))
