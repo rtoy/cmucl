@@ -71,19 +71,11 @@
   (:generator 0
     (assert (location= result esp-tn))
 
-    #+(or linux)
-    (progn
-      ;; Is this needed with sse2?
-      (inst sub esp-tn 4)
-      (inst fnstcw (make-ea :word :base esp-tn))
-      (inst and (make-ea :word :base esp-tn) #xcff)
-      (inst or (make-ea :word :base esp-tn) #x300)
-      (inst fldcw (make-ea :word :base esp-tn))
-      (inst add esp-tn 4))
     (unless (zerop amount)
       (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst sub esp-tn delta)))
-    #+darwin (inst and esp-tn #xfffffff0)
+    ;; Align the stack to a 16-byte boundary.
+    (inst and esp-tn #xfffffff0)
     (move result esp-tn)))
 
 (define-vop (dealloc-number-stack-space)
@@ -91,15 +83,5 @@
   (:generator 0
     (unless (zerop amount)
       (let ((delta (logandc2 (+ amount 3) 3)))
-	(inst add esp-tn delta)))
-    #+(or linux)
-    (progn
-      ;; Is this needed with sse2?
-      (inst sub esp-tn 4)
-      (inst fnstcw (make-ea :word :base esp-tn))
-      (inst and (make-ea :word :base esp-tn) #xcff)
-      (inst or (make-ea :word :base esp-tn) #x200)
-      (inst fldcw (make-ea :word :base esp-tn))
-      (inst wait)
-      (inst add esp-tn 4))))
+	(inst add esp-tn delta)))))
 
