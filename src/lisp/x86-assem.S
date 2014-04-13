@@ -117,11 +117,13 @@ FUNCDEF(call_into_lisp)
 	movl	%esp,%ebp	# establish new frame
 
 /* Save the NPX state */
+#if 0
 	fwait			# Catch any pending NPX exceptions.
 	/* Save the SSE2 for X87 state */
 	mov	GNAME(fpu_mode), %eax
 	cmp	$2, %eax	# SSE2 mode?
 	jne	x87_save
+#endif
 	movl	%esp, %eax	# Remember the current stack pointer
 	/*
 	 * The SSE state is 512 bytes, but we need 16 more because we
@@ -133,7 +135,7 @@ FUNCDEF(call_into_lisp)
 	pushl	%eax		# Save the old stack pointer
 	fninit			# Reset fpu, just in case
 	jmp	npx_save_done
-
+#if 0
 x87_save:
 	subl	$108,%esp	# Make room for the NPX state.
 	fnsave	(%esp)		# Resets NPX
@@ -148,6 +150,7 @@ x87_save:
 	pushl	%eax
 	fldcw	(%esp)		# Recover modes
 	popl	%eax
+#endif
 npx_save_done:			
 /* Save C regs: ebx esi edi */
 	pushl	%ebx
@@ -216,17 +219,21 @@ Ldone:
 	popl	%ebx
 
 /* Restore the NPX state */
+#if 0
 	/* Restore SSE2 state? */
 	mov	GNAME(fpu_mode), %eax
 	cmp	$2, %eax	# SSE2 mode?
 	jne	x87_restore
+#endif
 	popl	%eax		# Get the old stack pointer
 	fxrstor	(%esp)		# Restore the SSE state
 	movl	%eax, %esp	# Now really restore the old stack pointer
 	jmp	npx_restore_done
+#if 0
 x87_restore:
 	frstor  (%esp)
 	addl	$108, %esp
+#endif
 npx_restore_done:	
 			
 	popl	%ebp		# c-sp
