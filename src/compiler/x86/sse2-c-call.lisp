@@ -74,7 +74,8 @@
     (unless (zerop amount)
       (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst sub esp-tn delta)))
-    ;; Align the stack to a 16-byte boundary.
+    ;; Align the stack to a 16-byte boundary.  This is required an
+    ;; Darwin and should be harmless everywhere else.
     (inst and esp-tn #xfffffff0)
     (move result esp-tn)))
 
