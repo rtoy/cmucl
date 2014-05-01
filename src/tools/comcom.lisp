@@ -173,9 +173,10 @@
 (when *load-stuff*
   (load (vmdir "target:assembly/support")))
 (comf (vmdir "target:compiler/move"))
-(when (c:target-featurep :x86)
-  (comf (vmdir "target:compiler/float-sse2")
-	:byte-compile *byte-compile*))
+(comf (if (c:target-featurep :sse2)
+	  (vmdir "target:compiler/float-sse2")
+	  (vmdir "target:compiler/float"))
+      :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/sap") :byte-compile *byte-compile*)
 (when (c:target-featurep :x86)
   (comf (vmdir "target:compiler/sse2-sap")
