@@ -140,34 +140,34 @@
 (progn
 (defconstant least-positive-normalized-double-double-float
   ;; What is the right value?
-  (kernel:make-double-double-float least-positive-normalized-double-float
-				   0d0))
+  (kernel:%make-double-double-float least-positive-normalized-double-float
+				    0d0))
 (defconstant least-negative-normalized-double-double-float
   ;; What is the right value?
-  (kernel:make-double-double-float least-negative-normalized-double-float
-				   0d0))
+  (kernel:%make-double-double-float least-negative-normalized-double-float
+				    0d0))
 (defconstant least-positive-double-double-float
-  (kernel:make-double-double-float least-positive-double-float
-				   0d0))
+  (kernel:%make-double-double-float least-positive-double-float
+				    0d0))
 (defconstant least-negative-double-double-float
-  (kernel:make-double-double-float least-negative-double-float
-				   0d0))
+  (kernel:%make-double-double-float least-negative-double-float
+				    0d0))
 (defconstant most-positive-double-double-float
   ;; What is the right value?
-  (kernel:make-double-double-float most-positive-double-float
-				   0d0))
+  (kernel:%make-double-double-float most-positive-double-float
+				    0d0))
 (defconstant most-negative-double-double-float
   ;; What is the right value?
-  (kernel:make-double-double-float most-negative-double-float
-				   0d0))
+  (kernel:%make-double-double-float most-negative-double-float
+				    0d0))
 (defconstant double-double-float-positive-infinity
   ;; What is the right value?
-  (kernel:make-double-double-float double-float-positive-infinity
-				   0d0))
+  (kernel:%make-double-double-float double-float-positive-infinity
+				    0d0))
 (defconstant double-double-float-negative-infinity
   ;; What is the right value?
-  (kernel:make-double-double-float double-float-negative-infinity
-				   0d0))
+  (kernel:%make-double-double-float double-float-negative-infinity
+				    0d0))
 
 ); double-double
 
