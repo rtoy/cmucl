@@ -44,6 +44,7 @@
 (defvar *test-names*
   nil)
 
+;; Look through all the files in the TEST-DIRECTORY and load them.
 (defun load-test-files (&optional (test-directory #p"tests/"))
   (dolist (file (directory (merge-pathnames "*.lisp" test-directory)))
     (unless (equal file *load-path*)
@@ -55,10 +56,8 @@
   (setf *test-files* (nreverse *test-files*))
   (setf *test-names* (nreverse *test-names*)))
 
-;; Look through all the files in the tests directory and load them.
-;; Then run all of the tests.  For each file, it ia assumed that a
-;; package is created that is named with "-TESTS" appended to he
-;; pathname-name of the file.
+;; Run all of the tests in *TEST-NAMES*.  Return a list of all of the
+;; lisp-unit results for each of the test sets.
 (defun run-loaded-tests ()
   (let (test-results)
     (dolist (test *test-names*)
@@ -66,6 +65,7 @@
 	    test-results))
     (nreverse test-results)))
 
+;; Print out a summary of test results produced from RUN-LOADED-TESTS.
 (defun print-test-results (results &key verbose)
   (let ((passed 0)
 	(failed 0)
@@ -110,6 +110,10 @@
 	  (t
 	   (unix:unix-exit 0)))))
 
+;; Look through all the files in the TEST-DIRECTORY and load them.
+;; Then run all of the tests.  For each file, it ia assumed that a
+;; package is created that is named with "-TESTS" appended to he
+;; pathname-name of the file.
 (defun run-all-tests (&key (test-directory #P"tests/") (verbose t))
   (load-test-files test-directory)
   (print-test-results (run-loaded-tests) :verbose t))
