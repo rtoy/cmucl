@@ -1297,7 +1297,7 @@
       (write-char #\. stream)))
 
 (defun sub-output-integer (integer stream)
-  (declare (type (and fixnum unsigned-byte) integer))
+  (declare (type (integer 0 #.(- most-negative-fixnum)) integer))
   (let ((quotient 0)
 	(remainder 0))
     (declare (fixnum quotient remainder))
