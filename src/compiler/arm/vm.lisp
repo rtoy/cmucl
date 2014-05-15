@@ -41,25 +41,29 @@
 ); eval-when (compile load eval)
 
 
-(defreg a0 0)
-(defreg a1 1)
-(defreg a2 2)
-(defreg nargs 3)
-(defreg nl0 4)
-(defreg cfunc 5)
-(defreg code 6)
-(defreg lexenv 7)			; aka cname/fdefn
+(defreg nl0 0)				; ABI arg reg 1
+(defreg nl1 1)				; ABI arg reg 2
+(defreg nl2 2)				; ABI arg reg 3
+(defreg nargs 3)			; ABI arg reg 4
+(defreg code 4)
+(defreg a0 5)
+(defreg a1 6)
+(defreg a2 7)
 (defreg lra 8)
 (defreg null 9)				; C thread register
-(defreg csp 10)				; Lisp control stack pointer
-(defreg cfp 11)				; Lisp control stack frame pointer
-(defreg ocfp 12)			; Lisp old cfp
-(defreg nsp 13)				; ARM SP register
+(defreg lexenv 10)			; lexenv and fdefn
+(defreg ocfp 11)			; ARM interprocedure temp
+(defreg cfp 12)				; ARM fp
+;; This is the ARM SP. We are going to use this as a2 because all
+;; signals will be delivered to the sigaltstack.  call_into_lisp needs
+;; to save the real C SP and call_into_c must restore the C SP (saved
+;; by call_into_lisp) before calling the C function.
+(defreg csp 13)				; ARM SP register
 (defreg lip 14)				; ARM LR register
-(defreg pc 15)
+(defreg pc 15)				; ARM PC register.
 
 (defregset non-descriptor-regs
-  nl0 cfunc nargs)
+  nl0 nl1 nl2 nargs)
 
 (defregset descriptor-regs
   a0 a1 a2 ocfp lra)
@@ -270,15 +274,14 @@
 
 ); eval-when (compile eval)
 
-(defregtn a0 descriptor-reg)
+(defregtn a0 descriptor-reg)		; Used by emit-not-implemented
 (defregtn null descriptor-reg)
 (defregtn code descriptor-reg)
 
-(defregtn nargs any-reg)
+(defregtn nargs non-descriptor-reg)
 (defregtn csp any-reg)
 (defregtn cfp any-reg)
 (defregtn ocfp any-reg)
-(defregtn nsp any-reg)
 
 (defregtn lexenv descriptor-reg)
 
