@@ -308,7 +308,7 @@
     *binding-stack-pointer*
 
     ;; The real C stack pointer
-    *c-stack-pointer*
+    *number-stack-pointer*
 
     ;; Gc
     #-gencgc

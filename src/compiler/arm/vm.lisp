@@ -54,10 +54,11 @@
 (defreg lexenv 10)			; lexenv and fdefn
 (defreg ocfp 11)			; ARM interprocedure temp
 (defreg cfp 12)				; ARM fp
-;; This is the ARM SP. We are going to use this as a2 because all
-;; signals will be delivered to the sigaltstack.  call_into_lisp needs
-;; to save the real C SP and call_into_c must restore the C SP (saved
-;; by call_into_lisp) before calling the C function.
+;; This is the ARM SP. We are going to use this as the Lisp stack
+;; pointer (csp) because all signals will be delivered to the
+;; sigaltstack.  call_into_lisp needs to save the real C SP and
+;; call_into_c must restore the C SP (saved by call_into_lisp) before
+;; calling the C function.
 (defreg csp 13)				; ARM SP register
 (defreg lip 14)				; ARM LR register
 (defreg pc 15)				; ARM PC register.
