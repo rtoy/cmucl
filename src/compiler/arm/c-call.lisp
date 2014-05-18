@@ -92,8 +92,7 @@
     (collect ((arg-tns))
       (dolist (arg-type (alien-function-type-arg-types type))
 	(arg-tns (invoke-alien-type-method :arg-tn arg-type arg-state)))
-      ;; FIXME: What register to use for here?
-      (values (my-make-wired-tn 'positive-fixnum 'any-reg a2-offset)
+      (values (make-normal-tn *fixnum-primitive-type*)
 	      (* (arg-state-stack-frame-size arg-state) word-bytes)
 	      (arg-tns)
 	      (invoke-alien-type-method
