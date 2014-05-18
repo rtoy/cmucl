@@ -184,17 +184,7 @@
     ;; The start of the actual code.
     ;; Fix CODE, cause the function object was passed in.
     (inst compute-code-from-fn code-tn code-tn start-lab temp)
-    ;; Build our stack frames.
-    (let ((size (* vm:word-bytes (sb-allocated-size 'control-stack))))
-      (cond ((typep size '(signed-byte 13))
-	     (inst add csp-tn cfp-tn size))
-	    (t
-	     (inst li temp size)
-	     (inst add csp-tn cfp-tn temp))))
-    (let ((nfp-tn (current-nfp-tn vop)))
-      (when nfp-tn
-	(inst sub nsp-tn nsp-tn (bytes-needed-for-non-descriptor-stack-frame))
-	(inst add nfp-tn nsp-tn number-stack-displacement)))
+
     (trace-table-entry trace-table-normal)))
 
 (define-vop (allocate-frame)
