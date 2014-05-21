@@ -307,6 +307,9 @@
 
     *binding-stack-pointer*
 
+    ;; The real C stack pointer
+    *number-stack-pointer*
+
     ;; Gc
     #-gencgc
     lisp::*allocation-pointer*
@@ -326,10 +329,6 @@
     :value
     :key-and-value
     :key-or-value
-
-    ;; FP constants
-    *fp-constant-0d0*
-    *fp-constant-0f0*
 
     lisp::*unidata-path*
     

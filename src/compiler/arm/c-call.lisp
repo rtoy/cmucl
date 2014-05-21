@@ -92,7 +92,7 @@
     (collect ((arg-tns))
       (dolist (arg-type (alien-function-type-arg-types type))
 	(arg-tns (invoke-alien-type-method :arg-tn arg-type arg-state)))
-      (values (my-make-wired-tn 'positive-fixnum 'any-reg nsp-offset)
+      (values (make-normal-tn *fixnum-primitive-type*)
 	      (* (arg-state-stack-frame-size arg-state) word-bytes)
 	      (arg-tns)
 	      (invoke-alien-type-method
@@ -236,13 +236,11 @@
     (emit-not-implemented)))
 
 (define-vop (call-out)
-  (:args (function :scs (sap-reg) :target cfunc)
+  (:args (function :scs (sap-reg))
 	 (args :more t))
   (:results (results :more t))
   (:ignore args results)
   (:save-p t)
-  (:temporary (:sc any-reg :offset cfunc-offset
-		   :from (:argument 0) :to (:result 0)) cfunc)
   (:temporary (:sc interior-reg :offset lip-offset) lip)
   (:temporary (:scs (any-reg) :to (:result 0)) temp)
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)

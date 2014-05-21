@@ -2693,11 +2693,11 @@
      ;; address of name object so the halt trap handler can see the
      ;; name.  If the trap returns, restore a0 with it's original
      ;; value and continue as if nothing happened.
-     (inst str a0-tn (pre-index nsp-tn) -4)
+     (inst str a0-tn (pre-index csp-tn) 4)
      ;; a0 is a descriptor-reg, but so the the lisp object address.
      (inst li a0-tn (kernel:get-lisp-obj-address ,name))
      (inst udf halt-trap)
-     (inst ldr a0-tn (post-index nsp-tn) 4)))
+     (inst ldr a0-tn (post-index csp-tn) -4)))
 
 ;;;; Instructions for dumping data and header objects.
 
