@@ -20810,8 +20810,9 @@ msgstr ""
 "~Away"
 
 #: src/code/macros.lisp
-msgid "Bad style to use T or OTHERWISE in ECASE or CCASE"
-msgstr "Adbay tylesay otay useway T orway OTHERWISE inway ECASE orway CCASE"
+#, fuzzy
+msgid "Bad style to use ~S in ~S"
+msgstr "Onay otslay amednay ~S inway ~S"
 
 #: src/code/macros.lisp
 msgid "Supply a new value for ~S."
@@ -30707,3 +30708,6 @@ msgstr ""
 "Ybay efaultday, illegalway inputsway andway illegalway outputsway areway "
 "eplacedray ybay ethay\n"
 "Unicodeway eplacementray aracterchay."
+
+#~ msgid "Bad style to use T or OTHERWISE in ECASE or CCASE"
+#~ msgstr "Adbay tylesay otay useway T orway OTHERWISE inway ECASE orway CCASE"

@@ -14662,7 +14662,7 @@ msgid "T and OTHERWISE may not be used as key designators for ~A"
 msgstr ""
 
 #: src/code/macros.lisp
-msgid "Bad style to use T or OTHERWISE in ECASE or CCASE"
+msgid "Bad style to use ~S in ~S"
 msgstr ""
 
 #: src/code/macros.lisp
