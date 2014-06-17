@@ -78,6 +78,7 @@ New in this release:
       least-positive-foo-float if possible.
     * (log -0w0) and (log 0w0) returns values analogous to the
       double-float versions.
+    * Fix bug in printint MOST-NEGATIVE-FIXNUM
 
   * Trac Tickets:
     * Ticket #90 fixed.
@@ -85,6 +86,7 @@ New in this release:
     * Ticket #87 fixed.
     * Ticket #94 fixed.
     * Ticket #93 fixed.
+    * Ticket #98 fixed.
 
   * Other changes:
 
