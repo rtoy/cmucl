@@ -612,4 +612,7 @@
 			 (gen c-call:int) (trigger-age c-call:int))
 (alien:def-alien-routine set-min-mem-age c-call:void
 			 (gen c-call:int) (min-mem-age c-call:double))
+(alien:def-alien-routine set-max-gen-to-gc c-call:unsigned-int
+  (gen c-call:int))
+
 )
