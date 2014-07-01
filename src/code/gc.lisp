@@ -581,7 +581,7 @@
     (num-gc c-call:int)
     (trigger-age c-call:int)
     (cum-sum-bytes-allocated c-call:int)
-    (min-av-mem-age c-call:double)))
+    (min-av-mem-age c-call:int)))
 
 (defun gencgc-stats (generation)
   "Return some GC statistics for the specified GENERATION.  The
