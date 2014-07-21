@@ -15,3 +15,19 @@ OS_LINK_FLAGS = -m32 -rdynamic -Xlinker --export-dynamic -Xlinker -Map -Xlinker 
 OS_LINK_FLAGS += -Wl,-z,noexecstack
 
 EXEC_FINAL_OBJ = exec-final.o
+
+OS_SRC += k_sin.c k_cos.c k_tan.c s_sin.c s_cos.c s_tan.c
+
+k_sin.o : k_sin.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+k_cos.o : k_cos.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+k_tan.o : k_tan.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+
+s_sin.o : s_sin.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+s_cos.o : s_cos.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+s_tan.o : s_tan.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
