@@ -53,9 +53,11 @@
 {
 	double y[2],z=0.0;
 	int n, ix;
-
+	union { int i[2]; double d; } ux;
+        
     /* High word of x. */
-	ix = __HI(x);
+        ux.d = x;
+	ix = ux.i[HIWORD];
 
     /* |x| ~< pi/4 */
 	ix &= 0x7fffffff;

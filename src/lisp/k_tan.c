@@ -1,5 +1,3 @@
-#pragma ident "@(#)k_tan.c 1.5 04/04/22 SMI"
-
 /*
  * ====================================================
  * Copyright 2004 Sun Microsystems, Inc.  All Rights Reserved.
@@ -74,12 +72,14 @@ double
 __kernel_tan(double x, double y, int iy) {
 	double z, r, v, w, s;
 	int ix, hx;
+	union { int i[2]; double d; } ux,uz;
 
-	hx = __HI(x);		/* high word of x */
+        ux.d = x;
+	hx = ux.i[HIWORD];		/* high word of x */
 	ix = hx & 0x7fffffff;			/* high word of |x| */
 	if (ix < 0x3e300000) {			/* x < 2**-28 */
 		if ((int) x == 0) {		/* generate inexact */
-			if (((ix | __LO(x)) | (iy + 1)) == 0)
+			if (((ix | ux.i[LOWORD]) | (iy + 1)) == 0)
 				return one / fabs(x);
 			else {
 				if (iy == 1)
@@ -88,10 +88,16 @@ __kernel_tan(double x, double y, int iy) {
 					double a, t;
 
 					z = w = x + y;
-					__LO(z) = 0;
+                                        uz.d = z;
+					uz.i[LOWORD] = 0;
+                                        z = ux.d;
+                                        
 					v = y - (z - x);
 					t = a = -one / w;
-					__LO(t) = 0;
+                                        uz.d = t;
+                                        uz.i[LOWORD] = 0;
+                                        t = uz.d;
+                                        
 					s = one + t * z;
 					return t + a * (s + t * v);
 				}
@@ -138,10 +144,14 @@ __kernel_tan(double x, double y, int iy) {
 		/* compute -1.0 / (x+r) accurately */
 		double a, t;
 		z = w;
-		__LO(z) = 0;
+                uz.d = z;
+                uz.i[LOWORD] = 0;
+                z = uz.d;
 		v = r - (z - x);	/* z+v = r+x */
 		t = a = -1.0 / w;	/* a = -1.0/w */
-		__LO(t) = 0;
+                uz.d = t;
+                uz.i[LOWORD] = 0;
+                t = uz.d;
 		s = 1.0 + t * z;
 		return t + a * (s + t * v);
 	}
