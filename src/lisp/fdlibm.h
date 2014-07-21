@@ -41,3 +41,10 @@ extern double scalbn(double, int);
 
 /* fdlibm kernel function */
 extern int    __kernel_rem_pio2(double*,double*,int,int,int,const int*);
+
+extern double __kernel_sin(double x, double y, int iy);
+extern double __kernel_cos(double x, double y);
+extern double __kernel_tan(double x, double y, int iy);
+extern double sin(double x);
+extern double cos(double x);
+extern double tan(double x);
