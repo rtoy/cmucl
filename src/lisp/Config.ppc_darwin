@@ -74,6 +74,12 @@ OS_LIBS = -lSystem -lc -lm
 e_rem_pio2.o : e_rem_pio2.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
 
-OS_SRC += sincos.c
+OS_SRC += k_sin.c k_cos.c sincos.c
+
+k_sin.o : k_sin.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+k_cos.o : k_cos.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+
 sincos.o : sincos.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
