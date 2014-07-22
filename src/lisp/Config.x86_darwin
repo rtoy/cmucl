@@ -17,3 +17,14 @@ OS_LINK_FLAGS = -m32 $(MIN_VER)
 OS_LIBS =
 
 EXEC_FINAL_OBJ = exec-final.o
+
+OS_SRC += sincos.c k_sin.o k_cos.o
+
+sincos.o : sincos.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+
+k_sin.o : k_sin.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+
+k_cos.o : k_cos.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
