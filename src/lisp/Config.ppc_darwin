@@ -72,4 +72,8 @@ OS_LIBS = -lSystem -lc -lm
 # According to Config.x86_common, this no longer has aliasing
 # problems, so we don't need any additional compilation options.
 e_rem_pio2.o : e_rem_pio2.c
-	$(CC) -c $(CFLAGS)  $<
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+
+OS_SRC += sincos.c
+sincos.o : sincos.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
