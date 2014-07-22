@@ -197,6 +197,20 @@
   (y0 double-float :out)
   (y1 double-float :out))
 
+(declaim (inline %%sincos))
+(alien:def-alien-routine ("sincos" %%sincos) c-call:void
+  (x double-float)
+  (s double-float :out)
+  (c double-float :out))
+
+(declaim (inline %sincos))
+(defun %sincos (x)
+  (declare (double-float x))
+  (multiple-value-bind (ign s c)
+      (%%sincos x)
+    (values s c)))
+
+#||
 ;; Implement sin/cos/tan in Lisp.  These are based on the routines
 ;; from fdlibm.
 
@@ -603,7 +617,7 @@
 	     (let ((flag (- 1 (ash (logand n 1) 1))))
 	       ;; flag = 1 if n even, -1 if n odd
 	       (kernel-tan y0 y1 flag)))))))
-
+||#
 ;; Compute sin and cos of x, simultaneously.
 (defun %sincos (x)
   (declare (double-float x)
@@ -628,7 +642,7 @@
 	     (3
 	      (values (- (kernel-cos y0 y1))
 		      (kernel-sin y0 y1 1))))))))
-(declaim (ext:end-block))
+;;(declaim (ext:end-block))
 
 
 ;;;; Power functions.
