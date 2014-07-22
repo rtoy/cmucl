@@ -617,7 +617,6 @@
 	     (let ((flag (- 1 (ash (logand n 1) 1))))
 	       ;; flag = 1 if n even, -1 if n odd
 	       (kernel-tan y0 y1 flag)))))))
-||#
 ;; Compute sin and cos of x, simultaneously.
 (defun %sincos (x)
   (declare (double-float x)
@@ -643,6 +642,7 @@
 	      (values (- (kernel-cos y0 y1))
 		      (kernel-sin y0 y1 1))))))))
 ;;(declaim (ext:end-block))
+||#
 
 
 ;;;; Power functions.
