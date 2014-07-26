@@ -208,6 +208,7 @@
   (declare (double-float x))
   (multiple-value-bind (ign s c)
       (%%sincos x)
+    (declare (ignore ign))
     (values s c)))
 
 #||
