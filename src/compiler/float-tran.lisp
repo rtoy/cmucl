@@ -1802,10 +1802,6 @@
 	 (deftransform * ((z w) (,real-type (complex ,type)) *)
 	   ;; Real * complex
 	   '(complex (* z (realpart w)) (* z (imagpart w))))
-	 #-(or (and linux x86))
-	 (deftransform cis ((z) ((,type)) *)
-	   ;; Cis.
-	   '(complex (cos z) (sin z)))
 	 (deftransform / ((rx y) (,real-type (complex ,type)) *)
 	   ;; Real/complex
 	   '(let* ((ry (realpart y))
