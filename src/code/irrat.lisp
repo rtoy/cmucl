@@ -64,19 +64,11 @@
 ;;; Please refer to the Unix man pages for details about these routines.
 
 ;;; Trigonometric.
-#-(and x86 (not sse2))
-(progn
-  ;; For x86 (without sse2), we can use x87 instructions to implement
-  ;; these.  With sse2, we don't currently support that, so these
-  ;; should be disabled.
-;;  (def-math-rtn "sin" 1)
-;;  (def-math-rtn "cos" 1)
-  ;;  (def-math-rtn "tan" 1)
-  (def-math-rtn ("fdlibm_sin" %sin) 1)
-  (def-math-rtn ("fdlibm_cos" %cos) 1)
-  (def-math-rtn ("fdlibm_tan" %tan) 1)
-  (def-math-rtn "atan" 1)
-  (def-math-rtn "atan2" 2))
+(def-math-rtn ("fdlibm_sin" %sin) 1)
+(def-math-rtn ("fdlibm_cos" %cos) 1)
+(def-math-rtn ("fdlibm_tan" %tan) 1)
+(def-math-rtn "atan" 1)
+(def-math-rtn "atan2" 2)
 (def-math-rtn "asin" 1)
 (def-math-rtn "acos" 1)
 (def-math-rtn "sinh" 1)
@@ -87,19 +79,15 @@
 (def-math-rtn "atanh" 1)
 
 ;;; Exponential and Logarithmic.
-#-(and x86 (not sse2))
-(progn
-  (def-math-rtn "exp" 1)
-  (def-math-rtn "log" 1)
-  (def-math-rtn "log10" 1))
+(def-math-rtn "exp" 1)
+(def-math-rtn "log" 1)
+(def-math-rtn "log10" 1)
 
 (def-math-rtn "pow" 2)
 #-(or x86 sparc-v7 sparc-v8 sparc-v9)
 (def-math-rtn "sqrt" 1)
 (def-math-rtn "hypot" 2)
 
-;; Don't want log1p to use the x87 instruction.
-#-(or hpux (and x86 (not sse2)))
 (def-math-rtn "log1p" 1)
 
 ;; These are needed for use by byte-compiled files.  But don't use
@@ -199,6 +187,7 @@
 ;; easier for the user, and we don't have to wrap calls with
 ;; without-gcing.
 (declaim (inline %ieee754-rem-pi/2))
+(export '%ieee754-rem-pi/2)
 (alien:def-alien-routine ("ieee754_rem_pio2" %ieee754-rem-pi/2) c-call:int
   (x double-float)
   (y0 double-float :out)
@@ -211,6 +200,7 @@
   (c double-float :out))
 
 (declaim (inline %sincos))
+(export '%sincos)
 (defun %sincos (x)
   (declare (double-float x))
   (multiple-value-bind (ign s c)

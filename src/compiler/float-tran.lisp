@@ -734,19 +734,19 @@
     (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
       `(,prim x))))
 
-(defknown (kernel::%sincos)
+(defknown (%sincos)
     (double-float) (values double-float double-float)
     (movable foldable flushable))
 
 (deftransform cis ((x) (single-float) * :when :both)
   `(multiple-value-bind (s c)
-       (kernel::%sincos (coerce x 'double-float))
+       (%sincos (coerce x 'double-float))
      (complex (coerce c 'single-float)
 	      (coerce s 'single-float))))
 
 (deftransform cis ((x) (double-float) * :when :both)
   `(multiple-value-bind (s c)
-       (kernel::%sincos x)
+       (%sincos x)
      (complex c s)))
 
 #+double-double
