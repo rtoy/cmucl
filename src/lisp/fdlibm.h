@@ -10,6 +10,8 @@
  * ====================================================
  */
 
+#ifndef FDLIBM_H_
+#define FDLIBM_H_
 /* Sometimes it's necessary to define __LITTLE_ENDIAN explicitly
    but these catch some common cases. */
 
@@ -48,3 +50,5 @@ extern double __kernel_tan(double x, double y, int iy);
 extern double sin(double x);
 extern double cos(double x);
 extern double tan(double x);
+
+#endif
