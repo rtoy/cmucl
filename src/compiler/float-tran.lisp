@@ -716,7 +716,7 @@
 (dolist (stuff '((exp %exp *)
 		 (log %log float)
 		 (sqrt %sqrt float)
-		 (sin %asin float)
+		 (sin %sin float)
 		 (cos %cos float)
 		 (tan %tan float)
 		 (asin %asin float)
