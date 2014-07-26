@@ -45,9 +45,9 @@
 #include "fdlibm.h"
 
 #ifdef __STDC__
-	double sin(double x)
+	double fdlibm_sin(double x)
 #else
-	double sin(x)
+	double fdlibm_sin(x)
 	double x;
 #endif
 {

@@ -45,9 +45,9 @@
 #include "fdlibm.h"
 
 #ifdef __STDC__
-	double cos(double x)
+	double fdlibm_cos(double x)
 #else
-	double cos(x)
+	double fdlibm_cos(x)
 	double x;
 #endif
 {

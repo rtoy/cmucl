@@ -28,13 +28,17 @@
 ;;; call, and saves number consing to boot.
 ;;;
 (defmacro def-math-rtn (name num-args)
-  (let ((function (intern (concatenate 'simple-string
+  (multiple-value-bind (c-name lisp-name)
+      (if (listp name)
+	  (values (first name) (second name))
+	  (values name
+		  (intern (concatenate 'simple-string
 				       "%"
 				       (string-upcase name)))))
     `(progn
-       (declaim (inline ,function))
-       (export ',function)
-       (alien:def-alien-routine (,name ,function) double-float
+       (declaim (inline ,lisp-name))
+       (export ',lisp-name)
+       (alien:def-alien-routine (,c-name ,lisp-name) double-float
 	 ,@(let ((results nil))
 	     (dotimes (i num-args (nreverse results))
 	       (push (list (intern (format nil "ARG-~D" i))
@@ -65,9 +69,12 @@
   ;; For x86 (without sse2), we can use x87 instructions to implement
   ;; these.  With sse2, we don't currently support that, so these
   ;; should be disabled.
-  (def-math-rtn "sin" 1)
-  (def-math-rtn "cos" 1)
-  (def-math-rtn "tan" 1)
+;;  (def-math-rtn "sin" 1)
+;;  (def-math-rtn "cos" 1)
+  ;;  (def-math-rtn "tan" 1)
+  (def-math-rtn ("fdlibm_sin" %sin) 1)
+  (def-math-rtn ("fdlibm_cos" %cos) 1)
+  (def-math-rtn ("fdlibm_tan" %tan) 1)
   (def-math-rtn "atan" 1)
   (def-math-rtn "atan2" 2))
 (def-math-rtn "asin" 1)
@@ -198,7 +205,7 @@
   (y1 double-float :out))
 
 (declaim (inline %%sincos))
-(alien:def-alien-routine ("sincos" %%sincos) c-call:void
+(alien:def-alien-routine ("lisp_sincos" %%sincos) c-call:void
   (x double-float)
   (s double-float :out)
   (c double-float :out))

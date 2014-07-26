@@ -1,6 +1,6 @@
 #include "fdlibm.h"
 
-void sincos (double x, double *s, double *c)
+void lisp_sincos (double x, double *s, double *c)
 {
     int ix;
     union { int i[2]; double d; } ux;

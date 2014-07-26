@@ -44,9 +44,9 @@
 #include "fdlibm.h"
 
 #ifdef __STDC__
-	double tan(double x)
+	double fdlibm_tan(double x)
 #else
-	double tan(x)
+	double fdlibm_tan(x)
 	double x;
 #endif
 {
