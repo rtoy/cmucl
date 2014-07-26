@@ -1,6 +1,19 @@
+/*
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
+
 #include "fdlibm.h"
 
-void lisp_sincos (double x, double *s, double *c)
+/*
+ * sincos function. Compute sin(x) and cos(x) faster than computing
+ * each individually.  Speedup comes from doing the pi argument
+ * reduction just once.
+ */
+void
+lisp_sincos (double x, double *s, double *c)
 {
     int ix;
     union { int i[2]; double d; } ux;
