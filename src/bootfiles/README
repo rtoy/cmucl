@@ -1,0 +1,14 @@
+The nameing of the bootfiles have been historically inconsistent. To
+fix that here is the convention to be used for all bootfiles after
+2014-07.
+
+1. The bootfile must reside in the directory whose name is the current
+   CMUCL version for which this bootfile applies.  For example, as of
+   this writing, the current version is 20e, so boot files must be in
+   the 20e directory.
+2. The name of the boot file shall be boot-yyyy-mm-n.lisp where
+   yyyy-mm represents the year (yyyy) and month (mm) of the snapshot
+   that is used to build from.  The boot files are numbered
+   sequentially from 1 (n).  Thus, the boot-2014-06-1.lisp is intended
+   to be built from the 2014-06 snapshot, and is the first boot file
+   to be applied.
