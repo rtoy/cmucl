@@ -89,6 +89,7 @@
 (def-math-rtn "hypot" 2)
 
 (def-math-rtn "log1p" 1)
+(def-math-rtn "expm1" 1)
 
 ;; These are needed for use by byte-compiled files.  But don't use
 ;; these with sse2 since we don't support using the x87 instructions
