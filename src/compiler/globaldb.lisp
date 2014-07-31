@@ -1174,6 +1174,10 @@
 ;;; location for defstruct and deftype.
 (define-info-class source-location)
 (define-info-type source-location defvar (or form-numbers null) nil)
+;; This is used for define-condition.  It could also be used for
+;; defclass but PCL classes already have a "definition-source" slot and we
+;; store it there.
+(define-info-type source-location class (or form-numbers null) nil)
 
 ;; The textdomain for the documentation
 (define-info-type function textdomain (or string null) nil)
