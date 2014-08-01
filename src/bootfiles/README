@@ -12,3 +12,23 @@ fix that here is the convention to be used for all bootfiles after
    sequentially from 1 (n).  Thus, the boot-2014-06-1.lisp is intended
    to be built from the 2014-06 snapshot, and is the first boot file
    to be applied.
+3. The boot file should describe what it is for.
+
+If a cross-compile script is needed, we also have similar rules.
+
+1. The script must be in the version directory, as for boot files.
+2. The names of the script file must have to format
+   boot-yyyy-mm-n-cross-aaa.lisp where yyyy, mm, and n have the same
+   meaning as for boot files above.  
+
+   A. The aaa field is flexible. 
+      1. If it is not included, then the script is intended to be
+         applicable to all architectures.  If aaa is given, then it is
+         meant to be applied only for the architecture aaa.
+      2. If the scrit is applicable to more than one architecture, the
+         aaa field is dropped and the script must take care to include
+         conditionals so that the script can be applied to all
+         architectures.
+   B. Additional information can be included if desired.
+
+3. The script should describe what it is for.
