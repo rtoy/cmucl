@@ -63,11 +63,15 @@ pi_lo   = 1.2246467991473531772E-16; /* 0x3CA1A626, 0x33145C07 */
 	double z;
 	int k,m,hx,hy,ix,iy;
 	unsigned lx,ly;
+	union { int i[2]; double d; } ux;
+	union { int i[2]; double d; } uy;
 
-	hx = __HI(x); ix = hx&0x7fffffff;
-	lx = __LO(x);
-	hy = __HI(y); iy = hy&0x7fffffff;
-	ly = __LO(y);
+        ux.d = x;
+	hx = ux.i[HIWORD]; ix = hx&0x7fffffff;
+	lx = ux.i[LOWORD];
+        uy.d = y;
+	hy = uy.i[HIWORD]; iy = hy&0x7fffffff;
+	ly = uy.i[LOWORD];
 	if(((ix|((lx|-lx)>>31))>0x7ff00000)||
 	   ((iy|((ly|-ly)>>31))>0x7ff00000))	/* x or y is NaN */
 	   return x+y;
@@ -114,7 +118,10 @@ pi_lo   = 1.2246467991473531772E-16; /* 0x3CA1A626, 0x33145C07 */
 	else z=atan(fabs(y/x));		/* safe to do y/x */
 	switch (m) {
 	    case 0: return       z  ;	/* atan(+,+) */
-	    case 1: __HI(z) ^= 0x80000000;
+	    case 1: 
+                    ux.d = z;
+                    ux.i[HIWORD] ^= 0x80000000;
+                    z = ux.d;
 		    return       z  ;	/* atan(-,+) */
 	    case 2: return  pi-(z-pi_lo);/* atan(+,-) */
 	    default: /* case 3 */
