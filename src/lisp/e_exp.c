@@ -108,15 +108,17 @@ P5   =  4.13813679705723846039e-08; /* 0x3E663769, 0x72BEA4D0 */
 	double y,hi,lo,c,t;
 	int k,xsb;
 	unsigned hx;
+	union { int i[2]; double d; } ux;
 
-	hx  = __HI(x);	/* high word of x */
+	ux.d = x;
+	hx  = ux.i[HIWORD];	/* high word of x */
 	xsb = (hx>>31)&1;		/* sign bit of x */
 	hx &= 0x7fffffff;		/* high word of |x| */
 
     /* filter out non-finite argument */
 	if(hx >= 0x40862E42) {			/* if |x|>=709.78... */
             if(hx>=0x7ff00000) {
-		if(((hx&0xfffff)|__LO(x))!=0) 
+		if(((hx&0xfffff)|ux.i[LOWORD])!=0) 
 		     return x+x; 		/* NaN */
 		else return (xsb==0)? x:0.0;	/* exp(+-inf)={inf,0} */
 	    }
@@ -147,10 +149,14 @@ P5   =  4.13813679705723846039e-08; /* 0x3E663769, 0x72BEA4D0 */
 	if(k==0) 	return one-((x*c)/(c-2.0)-x); 
 	else 		y = one-((lo-(x*c)/(2.0-c))-hi);
 	if(k >= -1021) {
-	    __HI(y) += (k<<20);	/* add k to y's exponent */
+	    ux.d = y;
+	    ux.i[HIWORD] += (k<<20);	/* add k to y's exponent */
+	    y = ux.d;
 	    return y;
 	} else {
-	    __HI(y) += ((k+1000)<<20);/* add k to y's exponent */
+	    ux.d = y;
+	    ux.i[HIWORD] += ((k+1000)<<20);/* add k to y's exponent */
+	    y = ux.d;
 	    return y*twom1000;
 	}
 }
