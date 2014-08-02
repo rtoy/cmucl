@@ -34,15 +34,18 @@ ln2 =  6.93147180559945286227e-01, /* 0x3FE62E42, 0xFEFA39EF */
 huge=  1.00000000000000000000e+300; 
 
 #ifdef __STDC__
-	double asinh(double x)
+	double fdlibm_asinh(double x)
 #else
-	double asinh(x)
+	double fdlibm_asinh(x)
 	double x;
 #endif
 {	
 	double t,w;
 	int hx,ix;
-	hx = __HI(x);
+	union { int i[2]; double d; } ux;
+
+        ux.d = x;
+	hx = ux.i[HIWORD];
 	ix = hx&0x7fffffff;
 	if(ix>=0x7ff00000) return x+x;	/* x is inf or NaN */
 	if(ix< 0x3e300000) {	/* |x|<2**-28 */
@@ -55,7 +58,7 @@ huge=  1.00000000000000000000e+300;
 	    w = __ieee754_log(2.0*t+one/(sqrt(x*x+one)+t));
 	} else {		/* 2.0 > |x| > 2**-28 */
 	    t = x*x;
-	    w =log1p(fabs(x)+t/(one+sqrt(one+t)));
+	    w =fdlibm_log1p(fabs(x)+t/(one+sqrt(one+t)));
 	}
 	if(hx>0) return w; else return -w;
 }

@@ -52,7 +52,9 @@ extern double fdlibm_sin(double x);
 extern double fdlibm_cos(double x);
 extern double fdlibm_tan(double x);
 extern double fdlibm_expm1(double x);
+extern double fdlibm_log1p(double x);
 extern double __ieee754_exp(double x);
+extern double __ieee754_log(double x);
 
 
 #endif

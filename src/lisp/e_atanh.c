@@ -50,19 +50,24 @@ static double zero = 0.0;
 	double t;
 	int hx,ix;
 	unsigned lx;
-	hx = __HI(x);		/* high word */
-	lx = __LO(x);		/* low word */
+	union { int i[2]; double d; } ux;
+
+        ux.d = x;
+	hx = ux.i[HIWORD];		/* high word */
+	lx = ux.i[LOWORD];		/* low word */
 	ix = hx&0x7fffffff;
 	if ((ix|((lx|(-lx))>>31))>0x3ff00000) /* |x|>1 */
 	    return (x-x)/(x-x);
 	if(ix==0x3ff00000) 
 	    return x/zero;
 	if(ix<0x3e300000&&(huge+x)>zero) return x;	/* x<2**-28 */
-	__HI(x) = ix;		/* x <- |x| */
+        ux.d = x;
+	ux.i[HIWORD] = ix;		/* x <- |x| */
+        x = ux.d;
 	if(ix<0x3fe00000) {		/* x < 0.5 */
 	    t = x+x;
-	    t = 0.5*log1p(t+t*x/(one-x));
+	    t = 0.5*fdlibm_log1p(t+t*x/(one-x));
 	} else 
-	    t = 0.5*log1p((x+x)/(one-x));
+	    t = 0.5*fdlibm_log1p((x+x)/(one-x));
 	if(hx>=0) return t; else return -t;
 }
