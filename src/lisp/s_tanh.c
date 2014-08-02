@@ -44,17 +44,19 @@ static double one=1.0, two=2.0, tiny = 1.0e-300;
 #endif
 
 #ifdef __STDC__
-	double tanh(double x)
+	double fdlibm_tanh(double x)
 #else
-	double tanh(x)
+	double fdlibm_tanh(x)
 	double x;
 #endif
 {
 	double t,z;
 	int jx,ix;
+	union { int i[2]; double d; } ux;
 
     /* High word of |x|. */
-	jx = __HI(x);
+        ux.d = x;
+	jx = ux.i[HIWORD];
 	ix = jx&0x7fffffff;
 
     /* x is INF or NaN */
@@ -68,10 +70,10 @@ static double one=1.0, two=2.0, tiny = 1.0e-300;
 	    if (ix<0x3c800000) 		/* |x|<2**-55 */
 		return x*(one+x);    	/* tanh(small) = small */
 	    if (ix>=0x3ff00000) {	/* |x|>=1  */
-		t = expm1(two*fabs(x));
+		t = fdlibm_expm1(two*fabs(x));
 		z = one - two/(t+two);
 	    } else {
-	        t = expm1(-two*fabs(x));
+	        t = fdlibm_expm1(-two*fabs(x));
 	        z= -t/(t+two);
 	    }
     /* |x| > 22, return +-1 */

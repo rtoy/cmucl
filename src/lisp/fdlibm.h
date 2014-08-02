@@ -48,8 +48,11 @@ extern int    __kernel_rem_pio2(double*,double*,int,int,int,const int*);
 extern double __kernel_sin(double x, double y, int iy);
 extern double __kernel_cos(double x, double y);
 extern double __kernel_tan(double x, double y, int iy);
-extern double sin(double x);
-extern double cos(double x);
-extern double tan(double x);
+extern double fdlibm_sin(double x);
+extern double fdlibm_cos(double x);
+extern double fdlibm_tan(double x);
+extern double fdlibm_expm1(double x);
+extern double __ieee754_exp(double x);
+
 
 #endif

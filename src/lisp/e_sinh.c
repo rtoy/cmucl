@@ -47,9 +47,11 @@ static double one = 1.0, shuge = 1.0e307;
 	double t,w,h;
 	int ix,jx;
 	unsigned lx;
+	union { int i[2]; double d; } ux;
 
     /* High word of |x|. */
-	jx = __HI(x);
+        ux.d = x;
+	jx = ux.i[HIWORD];
 	ix = jx&0x7fffffff;
 
     /* x is INF or NaN */
@@ -61,7 +63,7 @@ static double one = 1.0, shuge = 1.0e307;
 	if (ix < 0x40360000) {		/* |x|<22 */
 	    if (ix<0x3e300000) 		/* |x|<2**-28 */
 		if(shuge+x>one) return x;/* sinh(tiny) = tiny with inexact */
-	    t = expm1(fabs(x));
+	    t = fdlibm_expm1(fabs(x));
 	    if(ix<0x3ff00000) return h*(2.0*t-t*t/(t+one));
 	    return h*(t+t/(t+one));
 	}

@@ -50,9 +50,11 @@ static double one = 1.0, half=0.5, huge = 1.0e300;
 	double t,w;
 	int ix;
 	unsigned lx;
+	union { int i[2]; double d; } ux;
 
     /* High word of |x|. */
-	ix = __HI(x);
+        ux.d = x;
+	ix = ux.i[HIWORD];
 	ix &= 0x7fffffff;
 
     /* x is INF or NaN */
@@ -60,7 +62,7 @@ static double one = 1.0, half=0.5, huge = 1.0e300;
 
     /* |x| in [0,0.5*ln2], return 1+expm1(|x|)^2/(2*exp(|x|)) */
 	if(ix<0x3fd62e43) {
-	    t = expm1(fabs(x));
+	    t = fdlibm_expm1(fabs(x));
 	    w = one+t;
 	    if (ix<0x3c800000) return w;	/* cosh(tiny) = 1 */
 	    return one+(t*t)/(w+w);
