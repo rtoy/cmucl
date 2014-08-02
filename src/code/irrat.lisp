@@ -79,8 +79,8 @@
 (def-math-rtn "atanh" 1)
 
 ;;; Exponential and Logarithmic.
-(def-math-rtn "exp" 1)
-(def-math-rtn "log" 1)
+(def-math-rtn ("__ieee754_exp" %exp) 1)
+(def-math-rtn ("__ieee754_log" %log) 1)
 (def-math-rtn "log10" 1)
 
 (def-math-rtn ("__ieee754_pow" %pow) 2)
