@@ -73,7 +73,8 @@ qS4 =  7.70381505559019352791e-02; /* 0x3FB3B8C5, 0xB12E9282 */
 	double x;
 #endif
 {
-	double t,w,p,q,c,r,s;
+	double t = 0;
+        double w,p,q,c,r,s;
 	int hx,ix;
 	union { int i[2]; double d; } ux;
 
