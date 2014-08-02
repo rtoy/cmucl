@@ -75,10 +75,13 @@ qS4 =  7.70381505559019352791e-02; /* 0x3FB3B8C5, 0xB12E9282 */
 {
 	double t,w,p,q,c,r,s;
 	int hx,ix;
-	hx = __HI(x);
+	union { int i[2]; double d; } ux;
+
+        ux.d = x;
+	hx = ux.i[HIWORD];
 	ix = hx&0x7fffffff;
 	if(ix>= 0x3ff00000) {		/* |x|>= 1 */
-	    if(((ix-0x3ff00000)|__LO(x))==0)
+	    if(((ix-0x3ff00000)|ux.i[LOWORD])==0)
 		    /* asin(1)=+-pi/2 with inexact */
 		return x*pio2_hi+x*pio2_lo;	
 	    return (x-x)/(x-x);		/* asin(|x|>1) is NaN */   
@@ -103,7 +106,9 @@ qS4 =  7.70381505559019352791e-02; /* 0x3FB3B8C5, 0xB12E9282 */
 	    t = pio2_hi-(2.0*(s+s*w)-pio2_lo);
 	} else {
 	    w  = s;
-	    __LO(w) = 0;
+            ux.d = w;
+	    ux.i[LOWORD] = 0;
+            w = ux.d;
 	    c  = (t-w*w)/(s+w);
 	    r  = p/q;
 	    p  = 2.0*s*r-(pio2_lo-2.0*c);

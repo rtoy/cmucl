@@ -83,20 +83,22 @@ one   = 1.0,
 huge   = 1.0e300;
 
 #ifdef __STDC__
-	double atan(double x)
+	double fdlibm_atan(double x)
 #else
-	double atan(x)
+	double fdlibm_atan(x)
 	double x;
 #endif
 {
 	double w,s1,s2,z;
 	int ix,hx,id;
+	union { int i[2]; double d; } ux;
 
-	hx = __HI(x);
+        ux.d = x;
+	hx = ux.i[HIWORD];
 	ix = hx&0x7fffffff;
 	if(ix>=0x44100000) {	/* if |x| >= 2^66 */
 	    if(ix>0x7ff00000||
-		(ix==0x7ff00000&&(__LO(x)!=0)))
+		(ix==0x7ff00000&&(ux.i[LOWORD]!=0)))
 		return x+x;		/* NaN */
 	    if(hx>0) return  atanhi[3]+atanlo[3];
 	    else     return -atanhi[3]-atanlo[3];
