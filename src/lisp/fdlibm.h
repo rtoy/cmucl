@@ -32,6 +32,7 @@ enum { HIWORD = 0, LOWORD = 1 };
  */
 extern double fabs(double);
 extern double floor(double);
+extern double sqrt(double);
 
 /* ieee style elementary functions */
 extern int    __ieee754_rem_pio2(double,double*);
