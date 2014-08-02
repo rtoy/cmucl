@@ -74,9 +74,9 @@
 (def-math-rtn ("__ieee754_sinh" %sinh) 1)
 (def-math-rtn ("__ieee754_cosh" %cosh) 1)
 (def-math-rtn ("fdlibm_tanh" %tanh) 1)
-(def-math-rtn "asinh" 1)
-(def-math-rtn "acosh" 1)
-(def-math-rtn "atanh" 1)
+(def-math-rtn ("fdlibm_asinh" %asinh) 1)
+(def-math-rtn ("__ieee754_acosh" %acosh) 1)
+(def-math-rtn ("__ieee754_atanh" %atanh) 1)
 
 ;;; Exponential and Logarithmic.
 (def-math-rtn ("__ieee754_exp" %exp) 1)
