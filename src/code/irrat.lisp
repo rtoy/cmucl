@@ -83,7 +83,7 @@
 (def-math-rtn "log" 1)
 (def-math-rtn "log10" 1)
 
-(def-math-rtn "pow" 2)
+(def-math-rtn ("__ieee754_pow" %pow) 2)
 #-(or x86 sparc-v7 sparc-v8 sparc-v9)
 (def-math-rtn "sqrt" 1)
 (def-math-rtn "hypot" 2)
