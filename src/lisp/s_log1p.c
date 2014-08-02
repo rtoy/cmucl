@@ -97,16 +97,18 @@ Lp7 = 1.479819860511658591e-01;  /* 3FC2F112 DF3E5244 */
 static double zero = 0.0;
 
 #ifdef __STDC__
-	double log1p(double x)
+	double fdlibm_log1p(double x)
 #else
-	double log1p(x)
+	double fdlibm_log1p(x)
 	double x;
 #endif
 {
 	double hfsq,f,c,s,z,R,u;
 	int k,hx,hu,ax;
+	union { int i[2]; double d; } ux;
 
-	hx = __HI(x);		/* high word of x */
+	ux.d = x;
+	hx = ux.i[HIWORD];		/* high word of x */
 	ax = hx&0x7fffffff;
 
 	k = 1;
@@ -128,23 +130,29 @@ static double zero = 0.0;
 	if (hx >= 0x7ff00000) return x+x;
 	if(k!=0) {
 	    if(hx<0x43400000) {
-		u  = 1.0+x; 
-	        hu = __HI(u);		/* high word of u */
+		u  = 1.0+x;
+		ux.d = u;
+	        hu = ux.i[HIWORD];		/* high word of u */
 	        k  = (hu>>20)-1023;
 	        c  = (k>0)? 1.0-(u-x):x-(u-1.0);/* correction term */
 		c /= u;
 	    } else {
 		u  = x;
-	        hu = __HI(u);		/* high word of u */
+		ux.d = u;
+	        hu = ux.i[HIWORD];		/* high word of u */
 	        k  = (hu>>20)-1023;
 		c  = 0;
 	    }
 	    hu &= 0x000fffff;
 	    if(hu<0x6a09e) {
-	        __HI(u) = hu|0x3ff00000;	/* normalize u */
+		ux.d = u;
+	        ux.i[HIWORD] = hu|0x3ff00000;	/* normalize u */
+		u = ux.d;
 	    } else {
-	        k += 1; 
-	        __HI(u) = hu|0x3fe00000;	/* normalize u/2 */
+	        k += 1;
+		ux.d = u;
+	        ux.i[HIWORD] = hu|0x3fe00000;	/* normalize u/2 */
+		u = ux.d;
 	        hu = (0x00100000-hu)>>2;
 	    }
 	    f = u-1.0;
