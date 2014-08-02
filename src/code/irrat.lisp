@@ -68,7 +68,7 @@
 (def-math-rtn ("fdlibm_cos" %cos) 1)
 (def-math-rtn ("fdlibm_tan" %tan) 1)
 (def-math-rtn ("fdlibm_atan" %atan) 1)
-(def-math-rtn "atan2" 2)
+(def-math-rtn ("__ieee754_atan2" %atan2) 2)
 (def-math-rtn ("__ieee754_asin" %asin) 1)
 (def-math-rtn ("__ieee754_acos" %acos) 1)
 (def-math-rtn ("__ieee754_sinh" %sinh) 1)
