@@ -106,7 +106,8 @@ P5   =  4.13813679705723846039e-08; /* 0x3E663769, 0x72BEA4D0 */
 #endif
 {
 	double y,hi,lo,c,t;
-	int k,xsb;
+	int k = 0;
+        int xsb;
 	unsigned hx;
 	union { int i[2]; double d; } ux;
 
