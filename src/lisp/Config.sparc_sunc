@@ -29,7 +29,7 @@ DEPEND_FLAGS = -xM
 ASFLAGS = $(AS_V8PLUS)
 OS_LINK_FLAGS = -M /usr/lib/ld/map.noexstk
 
-OS_SRC += k_sin.c k_cos.c k_tan.c s_sin.c s_cos.c s_tan.c sincos.c
+OS_SRC += k_sin.c k_cos.c k_tan.c s_sin.c s_cos.c s_tan.c sincos.c s_log1p.c s_expm1.c e_pow.c
 
 k_sin.o : k_sin.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
@@ -47,3 +47,12 @@ s_tan.o : s_tan.c
 
 sincos.o : sincos.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+
+s_log1p.o : s_log1p.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+s_exmp1.o : s_expm1.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+
+e_pow.o : e_pow.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+
