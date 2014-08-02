@@ -21,7 +21,8 @@ EXEC_FINAL_OBJ = exec-final.o
 OS_SRC += k_sin.c k_cos.c k_tan.c s_sin.c s_cos.c s_tan.c sincos.c \
 	s_log1p.c s_expm1.c e_pow.c e_exp.c e_log.c \
 	e_acos.c e_asin.c s_atan.c \
-	e_cosh.c e_sinh.c s_tanh.c
+	e_cosh.c e_sinh.c s_tanh.c \
+	e_acosh.c s_asinh.c e_atanh.c
 
 k_sin.o : k_sin.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
@@ -64,4 +65,10 @@ e_cosh.o : e_cosh.c
 e_sinh.o : e_sinh.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
 s_tanh.o : s_tanh.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+e_acosh.o : e_acosh.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+e_asinh.o : s_asinh.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+e_atanh.o : e_atanh.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
