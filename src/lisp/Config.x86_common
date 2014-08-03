@@ -59,19 +59,7 @@ ASFLAGS = -g
 
 ASSEM_SRC = x86-assem.S
 ARCH_SRC = x86-arch.c
-OS_SRC = os-common.c e_rem_pio2.c k_rem_pio2.c 
+OS_SRC = os-common.c
 
 NM = nm -gp
 DEPEND_FLAGS = -MM
-
-# This no longer has aliasing problems, so no need to use
-# -fno-strict-aliasing anymore.  However, if we're building with x87,
-# we MUST use -ffloat-store to get proper double-float rounding.
-e_rem_pio2.o : e_rem_pio2.c
-	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
-
-k_rem_pio2.o : k_rem_pio2.c
-	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
-
-
-
