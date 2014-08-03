@@ -32,7 +32,7 @@ New in this release:
       ticket:92)
 
   * Changes
-    * Update to ASDF 3.1.2.
+    * Update to ASDF 3.1.3.
     * When *PRINT-CASE* is :DOWNCASE, integers are printed with
       lowercase letters when needed.
     * Micro-optimize KERNEL:DOUBLE-FLOAT-BITS for x86/sse2.
@@ -53,6 +53,15 @@ New in this release:
       the default for several months now.
     * Add lisp-unit as a contrib.  Use (require :lisp-unit) to load
       it.  Precompiled fasls are not included.
+    * CMUCL now uses fdlibm C functions to implement the special
+      functions. All platforms use this so they should produce
+      identical results everywhere.
+    * Consing for the trig functions is removed now since we call out
+      to fdlibm instead of implementing them in Lisp.
+    * Source location information has been added for
+      DEFINE-CONDITION. (From Helmut Eller.)
+    * The lisp executable is now compiled to use SSE2 on x86 machines;
+      CMUCL will not run on chips without SSE2 anymore.
 
   * ANSI compliance fixes:
     * The values on the branch cuts for the inverse trig and
@@ -62,6 +71,9 @@ New in this release:
       and on the branch cut is now continuous with different
       quadrants.  This differs from the description of the branch cut
       for atanh in the CLHS.
+    * CLEAR-OUTPUT was not actually doing anything. Now, CLEAR-OUTPUT
+      will discard any buffered data that has not been written out
+      yet. 
 
   * Bugfixes:
     * Fix error in pi reduction on x87.  It was not noticed previously
@@ -78,7 +90,11 @@ New in this release:
       least-positive-foo-float if possible.
     * (log -0w0) and (log 0w0) returns values analogous to the
       double-float versions.
-    * Fix bug in printint MOST-NEGATIVE-FIXNUM
+    * Fix bug in printing MOST-NEGATIVE-FIXNUM.
+    * For Gray streams, CLEAR-OUTPUT was calling STREAM-FORCE-OUTPUT
+      instead of STREAM-CLEAR-OUTPUT, so the output wasn't actually
+      cleared.
+
 
   * Trac Tickets:
     * Ticket #90 fixed.
@@ -87,6 +103,8 @@ New in this release:
     * Ticket #94 fixed.
     * Ticket #93 fixed.
     * Ticket #98 fixed.
+    * Ticket #104 fixed.
+    * Ticket #101, item 1 fixed.
 
   * Other changes:
 
