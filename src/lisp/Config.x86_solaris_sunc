@@ -9,6 +9,6 @@ DEPEND_FLAGS = -xM1
 ASSEM_SRC = x86-assem.S
 ARCH_SRC = x86-arch.c
 
-OS_SRC = solaris-os.c os-common.c undefineds.c elf.c e_rem_pio2.c k_rem_pio2.c 
+OS_SRC = solaris-os.c os-common.c undefineds.c elf.c
 OS_LINK_FLAGS=
 OS_LIBS= -lsocket -lnsl -ldl
