@@ -40,7 +40,7 @@ ASFLAGS = $(OSX_VERSION) -traditional -g -O3 -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = ppc-assem.S linux-stubs.S
 ARCH_SRC = ppc-arch.c
-OS_SRC = ppc-darwin-dlshim.c os-common.c Darwin-os.c e_rem_pio2.c k_rem_pio2.c
+OS_SRC = ppc-darwin-dlshim.c os-common.c Darwin-os.c
 
 
 ifdef FEATURE_EXECUTABLE
