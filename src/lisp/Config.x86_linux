@@ -1,11 +1,7 @@
 # -*- Mode: makefile -*-
 include Config.x86_common
 
-CPPFLAGS += -m32 -rdynamic -D__NO_CTYPE -D_GNU_SOURCE
-
-# Need -ffloat-store for e_rem_pio2 and k_rem_pio2 to get properly
-# rounded double-floats while using x87 extended precision.
-CC_REM_PIO2 = -ffloat-store
+CPPFLAGS += -m32 -rdynamic -D__NO_CTYPE -D_GNU_SOURCE -march=pentium4 -mfpmath=sse -msse2
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC +=  linux-stubs.S
@@ -16,7 +12,12 @@ OS_LINK_FLAGS += -Wl,-z,noexecstack
 
 EXEC_FINAL_OBJ = exec-final.o
 
-OS_SRC += k_sin.c k_cos.c k_tan.c s_sin.c s_cos.c s_tan.c sincos.c s_log1p.c s_expm1.c e_pow.c
+OS_SRC += k_sin.c k_cos.c k_tan.c s_sin.c s_cos.c s_tan.c sincos.c \
+	s_log1p.c s_expm1.c e_pow.c e_exp.c e_log.c \
+	e_acos.c e_asin.c s_atan.c \
+	e_cosh.c e_sinh.c s_tanh.c \
+	e_acosh.c s_asinh.c e_atanh.c \
+	e_atan2.c
 
 k_sin.o : k_sin.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
@@ -42,4 +43,30 @@ s_exmp1.o : s_expm1.c
 
 e_pow.o : e_pow.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+e_exp.o : e_exp.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+e_log.o : e_log.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
 
+e_acos.o : e_acos.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+e_asin.o : e_asin.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+s_atan.o : s_atan.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+
+e_cosh.o : e_cosh.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+e_sinh.o : e_sinh.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+s_tanh.o : s_tanh.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+e_acosh.o : e_acosh.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+e_asinh.o : s_asinh.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+e_atanh.o : e_atanh.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
+
+e_atan2.o : e_atan2.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CC_REM_PIO2) $<
