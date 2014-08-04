@@ -133,7 +133,7 @@ Q5  =  -2.01099218183624371326e-07; /* BE8AFDB7 6E09C32D */
 	double x;
 #endif
 {
-	double y,hi,lo,c,t,e,hxs,hfx,r1;
+	double y,hi,lo,c = 0,t,e,hxs,hfx,r1;
 	int k,xsb;
 	unsigned hx;
 	union { int i[2]; double d; } ux;

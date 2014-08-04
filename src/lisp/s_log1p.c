@@ -103,7 +103,7 @@ static double zero = 0.0;
 	double x;
 #endif
 {
-	double hfsq,f,c,s,z,R,u;
+	double hfsq,f,c = 0,s,z,R,u;
 	int k,hx,hu,ax;
 	union { int i[2]; double d; } ux;
 
