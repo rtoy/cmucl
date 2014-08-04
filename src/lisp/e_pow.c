@@ -101,14 +101,13 @@ ivln2_l  =  1.92596299112661746887e-08; /* 0x3E54AE0B, 0xF85DDF44 =1/ln2 tail*/
 {
 	double z,ax,z_h,z_l,p_h,p_l;
 	double y1,t1,t2,r,s,t,u,v,w;
-	int i0,i1,i,j,k,yisint,n;
+        int ,i,j,k,yisint,n;
 	int hx,hy,ix,iy;
 	unsigned lx,ly;
 	union { int i[2]; double d; } ux;
 	union { int i[2]; double d; } uy;
 	union { int i[2]; double d; } utmp;
 
-	i0 = ((*(int*)&one)>>29)^1; i1=1-i0;
 	ux.d = x;
 	hx = ux.i[HIWORD]; lx = ux.i[LOWORD];
 	uy.d = y;
