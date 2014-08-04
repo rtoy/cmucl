@@ -72,7 +72,11 @@ static double one = 1.0, shuge = 1.0e307;
 	if (ix < 0x40862E42)  return h*__ieee754_exp(fabs(x));
 
     /* |x| in [log(maxdouble), overflowthresold] */
+#if 0
 	lx = *( (((*(unsigned*)&one)>>29)) + (unsigned*)&x);
+#else
+        lx = ux.i[LOWORD];
+#endif
 	if (ix<0x408633CE || ((ix==0x408633ce)&&(lx<=(unsigned)0x8fb9f87d))) {
 	    w = __ieee754_exp(0.5*fabs(x));
 	    t = h*w;
