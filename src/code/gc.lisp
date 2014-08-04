@@ -581,7 +581,7 @@
     (num-gc c-call:int)
     (trigger-age c-call:int)
     (cum-sum-bytes-allocated c-call:int)
-    (min-av-mem-age c-call:double)))
+    (min-av-mem-age c-call:int)))
 
 (defun gencgc-stats (generation)
   "Return some GC statistics for the specified GENERATION.  The
@@ -612,4 +612,7 @@
 			 (gen c-call:int) (trigger-age c-call:int))
 (alien:def-alien-routine set-min-mem-age c-call:void
 			 (gen c-call:int) (min-mem-age c-call:double))
+(alien:def-alien-routine set-max-gen-to-gc c-call:unsigned-int
+  (gen c-call:int))
+
 )

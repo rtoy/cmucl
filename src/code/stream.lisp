@@ -1103,7 +1103,7 @@
       ;; lisp-stream
       (funcall (lisp-stream-misc stream) stream :clear-output)
       ;; fundamental-stream
-      (stream-force-output stream)))
+      (stream-clear-output stream)))
   nil)
 
 (defun write-byte (integer stream)

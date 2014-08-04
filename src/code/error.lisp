@@ -597,7 +597,7 @@
 ;;;; DEFINE-CONDITION
 
 (eval-when (compile load eval)
-(defun %compiler-define-condition (name direct-supers layout)
+(defun %compiler-define-condition (name direct-supers layout source-location)
   (multiple-value-bind (class old-layout)
 		       (insured-find-class name #'condition-class-p
 					   #'make-condition-class)
@@ -625,7 +625,9 @@
     ;; Initialize CPL slot.
     (setf (condition-class-cpl class)
 	  (remove-if-not #'condition-class-p 
-			 (std-compute-class-precedence-list class))))
+			 (std-compute-class-precedence-list class)))
+
+    (setf (info :source-location :class name) source-location))
   (undefined-value))
 
 ); eval-when (compile load eval)
@@ -872,7 +874,8 @@
 
       `(progn
 	 (eval-when (compile load eval)
-	   (%compiler-define-condition ',name ',parent-types ',layout))
+	   (%compiler-define-condition ',name ',parent-types ',layout
+				       (c::source-location)))
 
 	 (declaim (ftype (function (t) t) ,@(all-readers)))
 	 (declaim (ftype (function (t t) t) ,@(all-writers)))
@@ -960,14 +963,14 @@
   ()
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
-	     (format stream (intl:gettext "Control stack overflow")))))
+	     (format stream _"Control stack overflow"))))
 
 #+heap-overflow-check
 (define-condition heap-overflow (storage-condition)
   ()
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
-	     (format stream (intl:gettext "Heap (dynamic space) overflow")))))
+	     (format stream _"Heap (dynamic space) overflow"))))
 
 (define-condition type-error (error)
   ((datum :reader type-error-datum :initarg :datum)

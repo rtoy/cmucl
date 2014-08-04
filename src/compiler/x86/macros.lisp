@@ -162,15 +162,13 @@
     (inst sub alloc-tn (make-symbol-value-ea '*current-region-free-pointer*))
     (case (tn-offset alloc-tn)
       (#.eax-offset
-       (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
-						 #+sse2 "alloc_overflow_sse2")
+       (inst call (make-fixup (extern-alien-name "alloc_overflow_sse2")
 			      :foreign))
        (inst jmp done))
       (t
        (inst push eax-tn)		; Save any value in eax
        (inst mov eax-tn alloc-tn)
-       (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
-						 #+sse2 "alloc_overflow_sse2")
+       (inst call (make-fixup (extern-alien-name "alloc_overflow_sse2")
 			      :foreign))
        (inst mov alloc-tn eax-tn)  	; Put allocated address in alloc-tn
        (inst pop eax-tn)		; Restore old value of eax
@@ -188,14 +186,12 @@
   (load-size alloc-tn alloc-tn size)
   (case (tn-offset alloc-tn)
     (#.eax-offset
-     (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
-					       #+sse2 "alloc_overflow_sse2")
+     (inst call (make-fixup (extern-alien-name "alloc_overflow_sse2")
 			    :foreign)))
     (t
      (inst push eax-tn)			; Save any value in eax
      (inst mov eax-tn alloc-tn)
-     (inst call (make-fixup (extern-alien-name #-sse2 "alloc_overflow_x87"
-					       #+sse2 "alloc_overflow_sse2")
+     (inst call (make-fixup (extern-alien-name "alloc_overflow_sse2")
 			    :foreign))
      (inst mov alloc-tn eax-tn)	  ; Save allocated address in alloc-tn
      (inst pop eax-tn)))

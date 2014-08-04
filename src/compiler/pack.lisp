@@ -340,6 +340,8 @@
 	           VM definition inconsistent, try recompiling.")))))
 
 
+(defvar *debug-pack* nil)
+
 ;;; FAILED-TO-PACK-ERROR  --  Internal
 ;;;
 ;;;    Called when we failed to pack TN.  If Restricted is true, then we we
@@ -351,8 +353,12 @@
 	 (scs (cons sc (sc-alternate-scs sc))))
     (cond
      (restricted
-      (error "Failed to pack restricted TN ~S in its SC ~S."
-	     tn (sc-name sc)))
+      (when *debug-pack*
+	;; Useful for possibly figuring out which vop might be the
+	;; source of the conflict.
+	(describe tn))
+      (error "Failed to pack restricted TN ~S in its SC ~S: ~S"
+	     tn (sc-name sc) (tn-sc tn)))
      (t
       (assert (not (find :unbounded scs
 			 :key #'(lambda (x) (sb-kind (sc-sb x))))))
@@ -1511,7 +1517,8 @@
 	  (when (and save
 		     (eq (tn-kind save) :specified-save))
 	    (tn-sc save))))
-
+    (when *debug-pack*
+      (format t "pack-tn alternates: ~S~%" alternates))
     (do ((sc fsc (pop alternates)))
 	((null sc)
 	 (failed-to-pack-error tn restricted))

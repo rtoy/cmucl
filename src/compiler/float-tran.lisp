@@ -192,12 +192,12 @@
   '(let ((res (%unary-ftruncate (/ x y))))
      (values res (- x (* y res)))))
 
-#+sparc
+#+(or sparc (and x86 sse2))
 (defknown fast-unary-ftruncate ((or single-float double-float))
   (or single-float double-float)
   (movable foldable flushable))
 
-#+sparc
+#+(or sparc (and x86 sse2))
 (defoptimizer (fast-unary-ftruncate derive-type) ((f))
   (one-arg-derive-type f
 		       #'(lambda (n)
@@ -210,10 +210,9 @@
 ;; if x is known to be of the right type.  Also, if the result is
 ;; known to fit in the same range as a (signed-byte 32), convert this
 ;; to %unary-truncate, which might be a single instruction, and float
-;; the result.  However, for sparc, we have a vop to do this so call
-;; that, and for Sparc V9, we can actually handle a 64-bit integer
-;; range.
-
+;; the result.  However, for sparc and x86, we have a vop to do this
+;; so call that, and for Sparc V9, we can actually handle a 64-bit
+;; integer range.
 (macrolet ((frob (ftype func)
 	     `(deftransform %unary-ftruncate ((x) (,ftype))
 	       (let* ((x-type (continuation-type x))
@@ -224,14 +223,19 @@
 		 (if (and (numberp lo) (numberp hi)
 			  (< limit-lo lo)
 			  (< hi limit-hi))
-		     #-sparc '(let ((result (coerce (%unary-truncate x) ',ftype)))
-			        (if (zerop result)
-				    (* result x)
-				    result))
-		     #+sparc '(let ((result (fast-unary-ftruncate x)))
-			        (if (zerop result)
-				    (* result x)
-				    result))
+		     #-(or sparc (and x86 sse2))
+		     '(let ((result (coerce (%unary-truncate x) ',ftype)))
+		       ;; Multiply by x when result is 0 so that we
+		       ;; get the correct signed zero to match what
+		       ;; ftruncate in float.lisp would return.
+		       (if (zerop result)
+			   (* result x)
+			   result))
+		     #+(or sparc (and x86 sse2))
+		     '(let ((result (fast-unary-ftruncate x)))
+		       (if (zerop result)
+			   (* result x)
+			   result))
 		     '(,func x))))))
   (frob single-float %unary-ftruncate/single-float)
   (frob double-float %unary-ftruncate/double-float))
@@ -355,7 +359,7 @@
 (defknown double-float-low-bits (double-float) (unsigned-byte 32)
   (movable foldable flushable))
 
-#+(or sparc ppc)
+#+(or sparc ppc (and x86 sse2))
 (defknown double-float-bits (double-float)
   (values (signed-byte 32) (unsigned-byte 32))
   (movable foldable flushable))
@@ -712,6 +716,9 @@
 (dolist (stuff '((exp %exp *)
 		 (log %log float)
 		 (sqrt %sqrt float)
+		 (sin %sin float)
+		 (cos %cos float)
+		 (tan %tan float)
 		 (asin %asin float)
 		 (acos %acos float)
 		 (atan %atan *)
@@ -726,6 +733,28 @@
       `(coerce (,prim (coerce x 'double-float)) 'single-float))
     (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
       `(,prim x))))
+
+(defknown (%sincos)
+    (double-float) (values double-float double-float)
+    (movable foldable flushable))
+
+(deftransform cis ((x) (single-float) * :when :both)
+  `(multiple-value-bind (s c)
+       (%sincos (coerce x 'double-float))
+     (complex (coerce c 'single-float)
+	      (coerce s 'single-float))))
+
+(deftransform cis ((x) (double-float) * :when :both)
+  `(multiple-value-bind (s c)
+       (%sincos x)
+     (complex c s)))
+
+#+double-double
+(deftransform cis ((x) (double-double-float) *)
+  `(multiple-value-bind (s c)
+       (kernel::dd-%sincos x)
+     (complex c s)))
+
 
 ;;; The argument range is limited on the x86 FP trig. functions. A
 ;;; post-test can detect a failure (and load a suitable result), but
@@ -1773,9 +1802,6 @@
 	 (deftransform * ((z w) (,real-type (complex ,type)) *)
 	   ;; Real * complex
 	   '(complex (* z (realpart w)) (* z (imagpart w))))
-	 (deftransform cis ((z) ((,type)) *)
-	   ;; Cis.
-	   '(complex (cos z) (sin z)))
 	 (deftransform / ((rx y) (,real-type (complex ,type)) *)
 	   ;; Real/complex
 	   '(let* ((ry (realpart y))
@@ -2010,6 +2036,89 @@
 	 (specifier-type `(complex ,(or (numeric-type-format arg) 'float))))
      #'cis))
 
+;;; Derive the result types of DECODE-FLOAT
+
+(defun decode-float-frac-derive-type-aux (arg)
+  ;; The fraction part of DECODE-FLOAT is always a subset of the
+  ;; interval [0.5, 1), even for subnormals.  While possible to derive
+  ;; a tighter bound in some cases, we don't.  Just return that
+  ;; interval of the approriate type when possible.  If not, just use
+  ;; float.
+  (if (numeric-type-format arg)
+      (specifier-type `(,(numeric-type-format arg)
+			 ,(coerce 1/2 (numeric-type-format arg))
+			 (,(coerce 1 (numeric-type-format arg)))))
+      (specifier-type '(float 0.5 (1.0)))))
+
+(defun decode-float-exp-derive-type-aux (arg)
+  ;; Derive the exponent part of the float.  It's always an integer
+  ;; type.
+  (flet ((calc-exp (x)
+	   (when x
+	     (nth-value 1 (decode-float x))))
+	 (min-exp ()
+	   ;; Use decode-float on 0 of the appropriate type to find
+	   ;; the min exponent.  If we don't know the actual number
+	   ;; format, use double, which has the widest range
+	   ;; (including double-double-float).
+	   (if (numeric-type-format arg)
+	       (nth-value 1 (decode-float (coerce 0 (numeric-type-format arg))))
+	       (nth-value 1 (decode-float (coerce 0 'double-float)))))
+	 (max-exp ()
+	   ;; Use decode-float on the most postive number of the
+	   ;; appropriate type to find the max exponent.  If we don't
+	   ;; know the actual number format, use double, which has the
+	   ;; widest range (including double-double-float).
+	   (if (eq (numeric-type-format arg) 'single-float)
+	       (nth-value 1 (decode-float most-positive-single-float))
+	       (nth-value 1 (decode-float most-positive-double-float)))))
+    (let* ((lo (or (bound-func #'calc-exp
+			       (numeric-type-low arg))
+		   (min-exp)))
+	   (hi (or (bound-func #'calc-exp
+			       (numeric-type-high arg))
+		   (max-exp))))
+      (specifier-type `(integer ,(or lo '*) ,(or hi '*))))))
+
+(defun decode-float-sign-derive-type-aux (arg)
+  ;; Derive the sign of the float.
+  (flet ((calc-sign (x)
+	   (when x
+	     (nth-value 2 (decode-float x)))))
+    (let* ((lo (bound-func #'calc-sign
+			       (numeric-type-low arg)))
+	   (hi (bound-func #'calc-sign
+			       (numeric-type-high arg))))
+      (if (numeric-type-format arg)
+	  (specifier-type `(,(numeric-type-format arg)
+			     ;; If lo or high bounds are NIL, use -1
+			     ;; or 1 of the appropriate type instead.
+			     ,(or lo (coerce -1 (numeric-type-format arg)))
+			     ,(or hi (coerce 1  (numeric-type-format arg)))))
+	  (specifier-type '(or (member 1f0 -1f0
+				1d0 -1d0
+				#+double-double 1w0
+				#+double-double -1w0)))))))
+
+(defoptimizer (decode-float derive-type) ((num))
+  (let ((f (one-arg-derive-type num
+				#'(lambda (arg)
+				    (decode-float-frac-derive-type-aux arg))
+				#'(lambda (arg)
+				    (nth-value 0 (decode-float arg)))))
+	(e (one-arg-derive-type num
+				#'(lambda (arg)
+				    (decode-float-exp-derive-type-aux arg))
+				#'(lambda (arg)
+				    (nth-value 1 (decode-float arg)))))
+	(s (one-arg-derive-type num
+				#'(lambda (arg)
+				    (decode-float-sign-derive-type-aux arg))
+				#'(lambda (arg)
+				    (nth-value 2 (decode-float arg))))))
+    (make-values-type :required (list f
+				      e
+				      s))))
 
 ;;; Support for double-double floats
 ;;;

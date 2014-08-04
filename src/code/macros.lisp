@@ -559,7 +559,7 @@
       nil
       (let ((clause (first clauses)))
 	(when (atom clause)
-	  (error (intl:gettext "Cond clause is not a list: ~S.") clause))
+	  (error (intl:gettext "Cond clause should be a non-empty list: ~S.") clause))
 	(let ((test (first clause))
 	      (forms (rest clause)))
 	  (if (endp forms)
@@ -1383,7 +1383,9 @@
 	    (t
 	     (when (and allow-otherwise
 			(memq (car case) '(t otherwise)))
-	       (warn (intl:gettext "Bad style to use T or OTHERWISE in ECASE or CCASE")))
+	       (warn 'kernel:simple-style-warning
+		     :format-control (intl:gettext "Bad style to use ~S in ~S")
+		     :format-arguments (list (car case) name)))
 	     (push (first case) keys)
 	     (push `((,test ,keyform-value
 			    ',(first case)) nil ,@(rest case)) clauses))))

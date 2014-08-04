@@ -5042,7 +5042,7 @@ msgstr ""
 
 #: src/code/irrat-dd.lisp src/code/irrat.lisp
 msgid ""
-"Compute asin z = asinh(i*z)/i\n"
+"Compute asin z = -i*log(i*z + sqrt(1-z^2))\n"
 "\n"
 "Z may be any number, but the result is always a complex."
 msgstr ""
@@ -5056,7 +5056,7 @@ msgstr ""
 
 #: src/code/irrat-dd.lisp src/code/irrat.lisp
 msgid ""
-"Compute atan z = atanh (i*z) / i\n"
+"Compute atan z = (log(1+i*z) - log(1-i*z))/(2*i)\n"
 "\n"
 "Z may be any number, but the result is always a complex."
 msgstr ""
@@ -8553,7 +8553,7 @@ msgid "Underflow"
 msgstr ""
 
 #: src/code/reader.lisp
-msgid "Floating-point number not representable"
+msgid "Number not representable as a ~S: ~S"
 msgstr ""
 
 #: src/code/reader.lisp
@@ -13084,7 +13084,11 @@ msgid ""
 "        process changes.  The function takes the process as an argument.\n"
 "     :external-format -\n"
 "        This is the external-format used for communication with the subproce"
-"ss."
+"ss.\n"
+"     :element-type -\n"
+"        When a stream is created for :input or :output, the stream\n"
+"        uses this element-type instead of the default 'BASE-CHAR type.\n"
+""
 msgstr ""
 
 #: src/code/run-program.lisp
@@ -14480,7 +14484,7 @@ msgid ""
 msgstr ""
 
 #: src/code/macros.lisp
-msgid "Cond clause is not a list: ~S."
+msgid "Cond clause should be a non-empty list: ~S."
 msgstr ""
 
 #: src/code/macros.lisp
@@ -14658,7 +14662,7 @@ msgid "T and OTHERWISE may not be used as key designators for ~A"
 msgstr ""
 
 #: src/code/macros.lisp
-msgid "Bad style to use T or OTHERWISE in ECASE or CCASE"
+msgid "Bad style to use ~S in ~S"
 msgstr ""
 
 #: src/code/macros.lisp
@@ -17157,10 +17161,22 @@ msgstr ""
 
 #: src/compiler/disassem.lisp
 msgid ""
-"Disassembles the given area of memory starting at ADDRESS and LENGTH long.\n"
-"  Note that if CODE-COMPONENT is NIL and this memory could move during a GC,"
+"Disassembles the given area of memory starting at ADDRESS and\n"
+"  LENGTH (octets) long.  Note that if CODE-COMPONENT is NIL and this\n"
+"  memory could move during a GC, you'd better disable it around the\n"
+"  call to this function.  ADDRESS can be either an integer or a\n"
+"  system-area-pointer.\n"
 "\n"
-"  you'd better disable it around the call to this function."
+"  :Stream stream\n"
+"      The dissassembly is written to this stream.\n"
+"  :Use-labels\n"
+"      Labels are generated instead of using instruction addresses.\n"
+"  :Base\n"
+"  :Case\n"
+"  :Radix\n"
+"      The disassembler uses the specified base, case, and radix when\n"
+"      printing the disassembled code.  The default values are 16,\n"
+"      :downcase, and *print-radix*, respectively. "
 msgstr ""
 
 #: src/compiler/disassem.lisp

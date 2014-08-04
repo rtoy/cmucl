@@ -108,17 +108,16 @@ arch_init(fpu_mode_t mode)
 
     have_sse2 = arch_support_sse2() && os_support_sse2();
     
+    if (!have_sse2) {
+        fprintf(stderr, "CMUCL requires a SSE2 support; exiting\n");
+        abort();
+    }
+        
     switch (mode) {
       case AUTO:
-          if (have_sse2) {
-              return "lisp-sse2.core";
-          } else {
-              return "lisp-x87.core";
-          }
-          break;
       case X87:
-          return "lisp-x87.core";
-          break;
+          fprintf(stderr, "fpu mode AUTO or X87 is not longer supported.\n");
+          /* Fall through and return the sse2 core */
       case SSE2:
           return "lisp-sse2.core";
           break;
@@ -521,19 +520,3 @@ arch_linkage_entry(unsigned long retaddr)
     return ((retaddr - 5) - FOREIGN_LINKAGE_SPACE_START) / LinkageEntrySize;
 }
 #endif /* LINKAGE_TABLE */
-
-int ieee754_rem_pio2(double x, double *y0, double *y1)
-{
-  extern int __ieee754_rem_pio2(double x, double *y);
-
-  double y[2];
-  int n;
-
-  n = __ieee754_rem_pio2(x, y);
-  *y0 = y[0];
-  *y1 = y[1];
-
-  return n;
-}
-
-  

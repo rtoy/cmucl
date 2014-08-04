@@ -96,7 +96,14 @@
 
 ;;; added by jrd
 (eval-when (compile load eval)
-  (defparameter *float-register-names* (make-array #-sse2 8 #+sse2 16 :initial-element nil)))
+  (defparameter *float-register-names* (make-array 16 :initial-element nil)))
+
+;; Note: The first 8 values are for the x87 FPU registers and the next
+;; 8 values are for the SSE2 registers.  Even though we only support
+;; SSE2, we need to define the FPU registers so we can access them.
+;; Why? The x86 ABI says floats are returned in fr0 (aka ST(0)) and we
+;; need to be able to reference this register in the compiler.
+;; However, for all other uses, we can only use the xmm registers.
 (defreg fr0 0 :float)
 (defreg fr1 1 :float)
 (defreg fr2 2 :float)
@@ -105,8 +112,6 @@
 (defreg fr5 5 :float)
 (defreg fr6 6 :float)
 (defreg fr7 7 :float)
-#+sse2
-(progn
 (defreg xmm0 8 :float)
 (defreg xmm1 9 :float)
 (defreg xmm2 10 :float)
@@ -115,12 +120,7 @@
 (defreg xmm5 13 :float)
 (defreg xmm6 14 :float)
 (defreg xmm7 15 :float)
-)
 
-#-sse2
-(defregset float-regs fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7)
-
-#+sse2
 (defregset float-regs
     fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7
     xmm0 xmm1 xmm2 xmm3 xmm4 xmm5 xmm6 xmm7)
@@ -142,7 +142,7 @@
 ;;; sense to use the 387's idea of a stack.  8 separate registers is easier
 ;;; to deal with.
 ;;; (define-storage-base float-registers :finite :size 1)
-(define-storage-base float-registers :finite :size #-sse2 8 #+sse2 16)
+(define-storage-base float-registers :finite :size 16)
 
 (define-storage-base stack :unbounded :size 8)
 (define-storage-base constant :non-packed)
@@ -276,14 +276,14 @@
 
   ;; Non-Descriptor single-floats.
   (single-reg float-registers
-	      :locations #-sse2 (0 1 2 3 4 5 6 7) #+sse2 (8 9 10 11 12 13 14 15)
+	      :locations (8 9 10 11 12 13 14 15)
 	      :constant-scs (fp-constant)
 	      :save-p t
 	      :alternate-scs (single-stack))
 
   ;; Non-Descriptor double-floats.
   (double-reg float-registers
-	      :locations #-sse2 (0 1 2 3 4 5 6 7) #+sse2 (8 9 10 11 12 13 14 15)
+	      :locations (8 9 10 11 12 13 14 15)
 	      :constant-scs (fp-constant)
 	      :save-p t
 	      :alternate-scs (double-stack))
@@ -298,22 +298,32 @@
 
   #+double-double
   (double-double-reg float-registers
-		     :locations #-sse2 (0 2 4 6) #+sse2 (8 10 12 14)
+		     ;; For SSE2, we currently don't store two
+		     ;; double-floats (1 double-double-float) in each
+		     ;; register.  Hence, use every other xmm register
+		     ;; here.
+		     :locations (8 10 12 14)
 		     :element-size 2
 		     :constant-scs ()
 		     :save-p t
 		     :alternate-scs (double-double-stack))
   
   (complex-single-reg float-registers
-		      :locations #-sse2 (0 2 4 6) #+sse2 (8 9 10 11 12 13 14 15)
-		      :element-size #-sse2 2 #+sse2 1
+		      ;; The SSE2 float registers can store two
+		      ;; single-float values (1 complex single-float)
+		      ;; in each register.
+		      :locations (8 9 10 11 12 13 14 15)
+		      :element-size 1
 		      :constant-scs ()
 		      :save-p t
 		      :alternate-scs (complex-single-stack))
 
   (complex-double-reg float-registers
-		      :locations #-sse2 (0 2 4 6) #+sse2 (8 9 10 11 12 13 14 15)
-		      :element-size #-sse2 2 #+sse2 1
+		      ;; The SSE2 float registers can store two
+		      ;; double-float values (1 complex double-float)
+		      ;; in each register.
+		      :locations (8 9 10 11 12 13 14 15)
+		      :element-size 1
 		      :constant-scs ()
 		      :save-p t
 		      :alternate-scs (complex-double-stack))
@@ -327,7 +337,11 @@
 		    :alternate-scs (complex-long-stack))
   #+double-double
   (complex-double-double-reg float-registers
-		      :locations #-sse2 (0 4) #+sse2 (8 12)
+		      ;; For SSE2, we don't pack the
+		      ;; complex-double-double value into registers
+		      ;; but use four separate registers to hold the
+		      ;; value.
+		      :locations (8 12)
 		      :element-size 4
 		      :constant-scs ()
 		      :save-p t
@@ -376,11 +390,6 @@
 (def-random-reg-tns word-reg ax bx cx dx bp sp di si)
 (def-random-reg-tns byte-reg al ah bl bh cl ch dl dh)
 
-;; added by jrd
-#-sse2
-(def-random-reg-tns single-reg fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7)
-
-#+sse2
 (def-random-reg-tns single-reg
     fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7
     xmm0 xmm1 xmm2 xmm3 xmm4 xmm5 xmm6 xmm7)
@@ -406,12 +415,10 @@
      (when (static-symbol-p value)
        (sc-number-or-lose 'immediate *backend*)))
     (single-float
-     (when (or (eql value 0f0)
-	       #-sse2 (eql value 1f0))
+     (when (eql value 0f0)
        (sc-number-or-lose 'fp-constant *backend*)))
     (double-float
-     (when (or (eql value 0d0)
-	       #-sse2 (eql value 1d0))
+     (when (eql value 0d0)
        (sc-number-or-lose 'fp-constant *backend*)))
     #+long-float
     (long-float
@@ -479,9 +486,6 @@
 		  (svref name-vec offset))
 	     (format nil "<Unknown Reg: off=~D, sc=~A>" offset sc-name))))
       (float-registers
-       #-sse2
-       (format nil "FR~D" offset)
-       #+sse2
        (format nil (if (< offset 8)
 		       "FR~D"
 		       "XMM~D")

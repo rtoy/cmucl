@@ -77,24 +77,6 @@ msgstr ""
 msgid "Thread safe push of val onto the list in the vector element."
 msgstr ""
 
-#: src/code/commandline.lisp
-msgid ""
-"Specifies what kind of floating-point support should be used on x86\n"
-"  systems.  If 'x87', Lisp will use the x87 floating-point unit; if\n"
-"  'sse2', Lisp uses SSE2 floating-point unit. The default is\n"
-"  'auto',which causes Lisp to check to see if SSE2 is available.  If\n"
-"  so, then SSE2 is used.  If the SSE2 core file cannot be found,Lisp\n"
-"  will fallback to the x87 core, which can run on any machine."
-msgstr ""
-
-#: src/code/commandline.lisp
-msgid "mode"
-msgstr ""
-
-#: src/code/commandline.lisp
-msgid "a symbol or function"
-msgstr ""
-
 #: src/code/load.lisp
 msgid "Top-Level Form"
 msgstr ""
@@ -126,6 +108,32 @@ msgstr ""
 
 #: src/compiler/x86/parms.lisp
 msgid "Number of bytes in a word."
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "Number of bits at the low end of a pointer used for type information."
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "Mask to extract the low tag bits from a pointer."
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid ""
+"Exclusive upper bound on the value of the low tag bits from a\n"
+"  pointer."
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "Number of tag bits used for a fixnum"
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "Mask to get the fixnum tag"
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "Maximum number of bits in a positive fixnum"
 msgstr ""
 
 #: src/compiler/x86/vm.lisp
@@ -308,6 +316,10 @@ msgstr ""
 msgid "SHIFT-TOWARDS-END"
 msgstr ""
 
+#: src/compiler/x86/arith.lisp
+msgid "inline right ASH"
+msgstr ""
+
 #: src/compiler/x86/c-call.lisp
 msgid "Too many result values from c-call."
 msgstr ""
@@ -316,7 +328,7 @@ msgstr ""
 msgid "Method ~S not defined for ~S"
 msgstr ""
 
-#: src/compiler/x86/c-call.lisp
+#: src/compiler/x86/c-callback.lisp
 msgid ""
 "Cons up a piece of code which calls call-callback with INDEX and a\n"
 "pointer to the arguments."

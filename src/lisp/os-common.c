@@ -542,3 +542,19 @@ os_guard_control_stack(int zone, int guard)
 }
 
 #endif /* not RED_ZONE_HIT */
+
+
+/* Simple interface to __ieee754_rem_pio2 */
+int ieee754_rem_pio2(double x, double *y0, double *y1)
+{
+  extern int __ieee754_rem_pio2(double x, double *y);
+
+  double y[2];
+  int n;
+
+  n = __ieee754_rem_pio2(x, y);
+  *y0 = y[0];
+  *y1 = y[1];
+
+  return n;
+}

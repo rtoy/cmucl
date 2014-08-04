@@ -217,16 +217,13 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int offset)
     if (fpregs) {
         if (offset < 8) {
             reg = (unsigned char *) &fpregs->_st[offset];
-        }
-#ifdef FEATURE_SSE2
-        else {
+        } else if (offset < 16) {
             struct _fpstate *fpstate;
             fpstate = (struct _fpstate*) scp->uc_mcontext.fpregs;
             if (fpstate->magic != 0xffff) {
                 reg = (unsigned char *) &fpstate->_xmm[offset - 8];
             }
         }
-#endif
     }
     return reg;
 }
@@ -234,39 +231,27 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int offset)
 unsigned int
 os_sigcontext_fpu_modes(ucontext_t *scp)
 {
-    unsigned int modes;
-    unsigned short cw, sw;
+    unsigned int modes = 0;
 
-    if (scp->uc_mcontext.fpregs == NULL) {
-	cw = 0;
-	sw = 0x3f;
-    } else {
-	cw = scp->uc_mcontext.fpregs->cw & 0xffff;
-	sw = scp->uc_mcontext.fpregs->sw & 0xffff;
-    }
-
-    modes = ((cw & 0x3f) << 7) | (sw & 0x3f);
-
-#ifdef FEATURE_SSE2
     /*
-     * Add in the SSE2 part, if we're running the sse2 core.
+     * Get the SSE2 modes.  FIXME: What should we do if the magic
+     * value indicates that the mxcsr value is not in the context?
      */
-    if (fpu_mode == SSE2) {
-        struct _fpstate *fpstate;
-	unsigned long mxcsr;
+    struct _fpstate *fpstate;
+    unsigned long mxcsr;
 
-        fpstate = (struct _fpstate*) scp->uc_mcontext.fpregs;
-        if (fpstate->magic == 0xffff) {
-            mxcsr = 0;
-        } else {
-            mxcsr = fpstate->mxcsr;
-            DPRINTF(0, (stderr, "SSE2 modes = %08lx\n", mxcsr));
-        }
-
-	modes |= mxcsr;
+    fpstate = (struct _fpstate*) scp->uc_mcontext.fpregs;
+    if (fpstate->magic == 0xffff) {
+        mxcsr = 0;
+    } else {
+        mxcsr = fpstate->mxcsr;
+        DPRINTF(0, (stderr, "SSE2 modes = %08lx\n", mxcsr));
     }
-#endif
 
+    modes |= mxcsr;
+
+
+    /* Convert exception mask to exception enable */
     modes ^= (0x3f << 7);
     return modes;
 }
@@ -543,24 +528,18 @@ void
 restore_fpu(ucontext_t *context)
 {
     if (context->uc_mcontext.fpregs) {
-	short cw = context->uc_mcontext.fpregs->cw;
-        DPRINTF(0, (stderr, "restore_fpu:  cw = %08x\n", cw));
-	__asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
-#ifdef FEATURE_SSE2
-        if (fpu_mode == SSE2) {
-            struct _fpstate *fpstate;
-            unsigned int mxcsr;
+        struct _fpstate *fpstate;
+        unsigned int mxcsr;
             
-            fpstate = (struct _fpstate*) context->uc_mcontext.fpregs;
-            if (fpstate->magic != 0xffff) {
-                mxcsr = fpstate->mxcsr;
-                DPRINTF(0, (stderr, "restore_fpu:  mxcsr (raw) = %04x\n", mxcsr));
-                __asm__ __volatile__ ("ldmxcsr %0" :: "m" (*&mxcsr));
-            }
+        fpstate = (struct _fpstate*) context->uc_mcontext.fpregs;
+        if (fpstate->magic != 0xffff) {
+            mxcsr = fpstate->mxcsr;
+            DPRINTF(0, (stderr, "restore_fpu:  mxcsr (raw) = %04x\n", mxcsr));
+            __asm__ __volatile__ ("ldmxcsr %0" :: "m" (*&mxcsr));
         }
-#endif        
     }
 }
+
 
 #ifdef i386
 boolean

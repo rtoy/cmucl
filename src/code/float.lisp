@@ -59,6 +59,15 @@
 	  set-floating-point-modes float-denormalized-p float-nan-p
 	  float-trapping-nan-p float-infinity-p))
 
+#+double-double
+(export '(least-positive-normalized-double-double-float
+	  least-negative-normalized-double-double-float
+	  least-positive-double-double-float
+	  least-negative-double-double-float
+	  most-positive-double-double-float
+	  most-negative-double-double-float
+	  double-double-float-negative-infinity))
+
 (in-package "KERNEL")
 
 
@@ -126,6 +135,41 @@
 (defconstant least-negative-long-float least-negative-double-float)
 #+(and long-float x86)
 (defconstant least-negative-long-float (long-from-bits 1 0 1))
+
+#+double-double
+(progn
+(defconstant least-positive-normalized-double-double-float
+  ;; What is the right value?
+  (kernel:%make-double-double-float least-positive-normalized-double-float
+				    0d0))
+(defconstant least-negative-normalized-double-double-float
+  ;; What is the right value?
+  (kernel:%make-double-double-float least-negative-normalized-double-float
+				    0d0))
+(defconstant least-positive-double-double-float
+  (kernel:%make-double-double-float least-positive-double-float
+				    0d0))
+(defconstant least-negative-double-double-float
+  (kernel:%make-double-double-float least-negative-double-float
+				    0d0))
+(defconstant most-positive-double-double-float
+  ;; What is the right value?
+  (kernel:%make-double-double-float most-positive-double-float
+				    0d0))
+(defconstant most-negative-double-double-float
+  ;; What is the right value?
+  (kernel:%make-double-double-float most-negative-double-float
+				    0d0))
+(defconstant double-double-float-positive-infinity
+  ;; What is the right value?
+  (kernel:%make-double-double-float double-float-positive-infinity
+				    0d0))
+(defconstant double-double-float-negative-infinity
+  ;; What is the right value?
+  (kernel:%make-double-double-float double-float-negative-infinity
+				    0d0))
+
+); double-double
 
 (defconstant least-positive-normalized-single-float
   (single-from-bits 0 vm:single-float-normal-exponent-min 0))

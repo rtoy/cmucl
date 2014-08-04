@@ -1,6 +1,8 @@
 # -*- Mode: makefile -*-
 include Config.x86_common
 
+CPPFLAGS += -march=pentium4 -mfpmath=sse
+
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 OS_SRC += FreeBSD-os.c elf.c
 OS_LINK_FLAGS = -dynamic -export-dynamic

@@ -54,18 +54,12 @@ CPP_INCLUDE_OPTIONS := -I. -I$(PATH1) -I-
 endif
 
 CPPFLAGS := $(CPP_DEFINE_OPTIONS) $(CPP_INCLUDE_OPTIONS) 
-CFLAGS += -Wstrict-prototypes -Wall -O2 -g
+CFLAGS += -Wstrict-prototypes -Wall -O2 -g -mtune=generic
 ASFLAGS = -g 
 
 ASSEM_SRC = x86-assem.S
 ARCH_SRC = x86-arch.c
-OS_SRC = os-common.c e_rem_pio2.c k_rem_pio2.c 
+OS_SRC = os-common.c
 
 NM = nm -gp
 DEPEND_FLAGS = -MM
-
-# This no longer has aliasing problems, so no need to use
-# -ffloat-store and -fno-strict-aliasing anymore.
-e_rem_pio2.o : e_rem_pio2.c
-	$(CC) -c $(CFLAGS) $(CPPFLAGS) $<
-

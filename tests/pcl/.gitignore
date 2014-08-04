@@ -1,0 +1,5 @@
+*.sse2f
+*.ppcf
+*.sparcf
+*.fasl
+
