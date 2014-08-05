@@ -1331,17 +1331,15 @@
 ;; Returns exactly the mxcsr register, except the masks are flipped
 ;; because we want exception enable flags, not masks.
 (define-vop (sse2-floating-point-modes)
-  (:results (res :scs (unsigned-reg)))
+  (:results (result :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:translate sse2-floating-point-modes)
   (:policy :fast-safe)
-  (:temporary (:sc unsigned-stack) cw-stack)
-  (:temporary (:sc unsigned-reg) temp)
-  (:generator 8
-    (inst stmxcsr cw-stack)
-    (inst mov temp cw-stack)
-    (inst xor temp (ash #x3f 7))
-    (inst mov res temp)))
+  (:temporary (:sc unsigned-stack) temp)
+  (:generator 3
+    (inst stmxcsr temp)
+    (inst mov result temp)
+    (inst xor result (ash #x3f 7))))
 
 ;; Set mxcsr exactly to whatever is given, except we invert the
 ;; exception enable flags to make them match the exception mask flags.
@@ -1362,7 +1360,7 @@
     (inst xor temp (ash #x3f 7))	; Convert enables to masks
     (inst mov cw-stack temp)
     (inst ldmxcsr cw-stack)
-    (inst mov res new)))
+    (move res new)))
 
 ;; For the record here is the format of the x87 control and status
 ;; words:
