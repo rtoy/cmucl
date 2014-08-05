@@ -1272,7 +1272,8 @@
 
 (define-vop (double-float-bits)
   (:args (float :scs (double-reg descriptor-reg)
-		:load-if (not (sc-is float double-stack))))
+		:load-if (not (sc-is float double-stack))
+		:to (:result 1)))
   (:results (hi-bits :scs (signed-reg))
 	    (lo-bits :scs (unsigned-reg)))
   (:arg-types double-float)
