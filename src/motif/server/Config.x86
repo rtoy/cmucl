@@ -1,5 +1,4 @@
 CFLAGS += -m32 -O2 -I/usr/X11R6/include -I. -I$(VPATH)
-# LDFLAGS += -L/usr/X11R6/lib
 # On OpenSuSE 11.3,the 32-bit X libraries are in /usr/lib.
 LDFLAGS += -m32 -L/usr/lib
 LIBS = -lXm -lXt -lXext -lX11 -lSM -lICE -lXp -ldl -lpthread
