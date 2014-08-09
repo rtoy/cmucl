@@ -62,8 +62,11 @@
                          (reader-error-format-arguments condition))
                   nil error-stream
                   (file-position error-stream)))
+       (format t "open-stream-p ~A~%" (open-stream-p error-stream))
        (format stream (intl:gettext "Reader error ~@[at ~D ~]on ~S:~%~?")
-	       (file-position error-stream) error-stream
+	       (and (open-stream-p error-stream)
+		    (file-position error-stream))
+	       error-stream
 	       (reader-error-format-control condition)
 	       (reader-error-format-arguments condition))))))
 

@@ -366,4 +366,33 @@
   (assert-error 'reader-error (read-from-string ".1e-45"))
   (assert-error 'reader-error (read-from-string "1d-324"))
   (assert-error 'reader-error (read-from-string "1w-324")))
+
+(defun read-string-fn (str)
+     (handler-case
+       (let ((acc nil))
+         (with-input-from-string
+           (stream str)
+           (loop do
+                 (let* ((eof-marker (cons nil nil))
+                        (elem (read stream nil eof-marker)))
+                   (if (eq elem eof-marker)
+                       (loop-finish)
+                     (push elem acc)))))
+         (setq acc (nreverse acc))
+         (values :OK acc))
+       (error (condition)
+              (return-from read-string-fn
+                (values :ERROR (format nil "~A" condition))))
+       (storage-condition (condition)
+                          (return-from read-string-fn
+                            (values :STORAGE (format nil "~A" condition))))))
+
+(define-test trac.105
+  (:tag :trac)
+  (assert-equal (values :ERROR
+			"Reader error on #<String-Input Stream>:
+No dispatch function defined for #\\W.")
+		(read-string-fn "#\wtf")))
+			   
+
   

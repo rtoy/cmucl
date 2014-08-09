@@ -109,6 +109,7 @@ New in this release:
     * Ticket #101, item 1 fixed.
     * Ticket #105, fixed.
     * Ticket #84 fixed on x86.
+    * Ticket #105 fixed.
 
   * Other changes:
 
