@@ -347,6 +347,32 @@
   (:documentation
    _N"Implements WRITE-SEQUENCE for the stream."))
 
+(defgeneric stream-file-position (stream)
+  (:documentation
+   _N"Implements FILE-POSITION for the stream."))
+
+(defmethod stream-file-position ((stream fundamental-stream))
+  nil)
+
+(defmethod stream-file-position ((stream character-input-stream))
+  (file-position (character-input-stream-lisp-stream stream)))
+
+(defmethod stream-file-position ((stream character-output-stream))
+  (file-position (character-output-stream-lisp-stream stream)))
+
+(defgeneric (setf stream-file-position) (position stream)
+  (:documentation
+   _N"Implements FILE-POSITION for the stream for setting the position."))
+
+(defmethod (setf stream-file-position) (position (stream fundamental-stream))
+  nil)
+
+(defmethod (setf stream-file-position) (position (stream character-input-stream))
+  (file-position (character-input-stream-lisp-stream stream) position))
+
+(defmethod (setf stream-file-position) (position (stream character-output-stream))
+  (file-position (character-output-stream-lisp-stream stream) position))
+
 
 ;;; Binary streams.
 ;;;
