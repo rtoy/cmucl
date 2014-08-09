@@ -73,7 +73,7 @@ New in this release:
       for atanh in the CLHS.
     * CLEAR-OUTPUT was not actually doing anything. Now, CLEAR-OUTPUT
       will discard any buffered data that has not been written out
-      yet. 
+      yet.
 
   * Bugfixes:
     * Fix error in pi reduction on x87.  It was not noticed previously
@@ -94,7 +94,9 @@ New in this release:
     * For Gray streams, CLEAR-OUTPUT was calling STREAM-FORCE-OUTPUT
       instead of STREAM-CLEAR-OUTPUT, so the output wasn't actually
       cleared.
-
+    * In some situations KERNEL:DOUBLE-FLOAT-BITS on x86 would cause a
+      segfault. This has been fixed.
+    * For linux, motifd is no longer a 64-bit app.
 
   * Trac Tickets:
     * Ticket #90 fixed.
@@ -105,6 +107,8 @@ New in this release:
     * Ticket #98 fixed.
     * Ticket #104 fixed.
     * Ticket #101, item 1 fixed.
+    * Ticket #105, fixed.
+    * Ticket #84 fixed on x86.
 
   * Other changes:
 
