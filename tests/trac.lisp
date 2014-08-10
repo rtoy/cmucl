@@ -367,6 +367,36 @@
   (assert-error 'reader-error (read-from-string "1d-324"))
   (assert-error 'reader-error (read-from-string "1w-324")))
 
+(defparameter *test-path*
+  (merge-pathnames (make-pathname :name :unspecific :type :unspecific
+                                  :version :unspecific)
+                   *load-truename*)
+  "Directory for temporary test files.")
+
+(defparameter *test-file*
+  (merge-pathnames #p"test-data.tmp" *test-path*))
+
+
+;; Not quite what ticket 101 is about, but it came up in investigating
+;; CLEAR-OUTPUT on a Gray stream.  Verify CLEAR-OUTPUT actually
+;; does. Previously, it did nothing.
+(define-test trac.101
+  (:tag :trac)
+  (assert-eql
+   0
+   (let ((s (open *test-file*
+		  :direction :output
+		  :if-exists :supersede)))
+     (unwind-protect
+	  (progn
+	    (write-char #\a s)
+	    (clear-output s)
+	    (close s)
+	    (setf s (open *test-file*))
+	    (file-length s))
+       (close s)
+       (delete-file *test-file*)))))
+
 (defun read-string-fn (str)
      (handler-case
        (let ((acc nil))
