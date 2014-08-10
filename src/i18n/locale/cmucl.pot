@@ -21046,6 +21046,14 @@ msgid "Implements WRITE-SEQUENCE for the stream."
 msgstr ""
 
 #: src/pcl/gray-streams.lisp
+msgid "Implements FILE-POSITION for the stream."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid "Implements FILE-POSITION for the stream for setting the position."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
 msgid ""
 "Used by READ-BYTE; returns either an integer, or the symbol :EOF\n"
 "  if the stream is at end-of-file."
