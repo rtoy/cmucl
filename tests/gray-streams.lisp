@@ -24,16 +24,16 @@
   ;; Create a Gray stream and make sure that clear-output works.
   (assert-eql
    0
-   (unwind-protect
-	(let ((s (open *test-file*
-		       :direction :output
-		       :if-exists :supersede
-		       :class 'lisp::character-output-stream)))
-	  (write-char #\a s)
-	  (clear-output s)
-	  (close s)
-	  (setf s (open *test-file*))
-	  (file-length s))
-     (delete-file *test-file*))))
-		      
-    
+   (let ((s (open *test-file*
+		  :direction :output
+		  :if-exists :supersede
+		  :class 'lisp::character-output-stream)))
+     (unwind-protect
+	  (progn
+	    (write-char #\a s)
+	    (clear-output s)
+	    (close s)
+	    (setf s (open *test-file*))
+	    (file-length s))
+       (close s)
+       (delete-file *test-file*)))))
