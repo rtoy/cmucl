@@ -111,6 +111,17 @@ P5   =  4.13813679705723846039e-08; /* 0x3E663769, 0x72BEA4D0 */
 	unsigned hx;
 	union { int i[2]; double d; } ux;
 
+        /*
+         * CMUCL addition: Return correctly rounded value for
+         * exp(1). There are tests to verify that exp(x) is still
+         * monotonic around exp(1), so this change doens't break
+         * anything.
+         */
+        if (x == 1) {
+            /* Return the correctly rounded value for x = 1 */
+            return 2.718281828459045;
+        }
+
 	ux.d = x;
 	hx  = ux.i[HIWORD];	/* high word of x */
 	xsb = (hx>>31)&1;		/* sign bit of x */

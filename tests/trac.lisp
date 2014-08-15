@@ -425,4 +425,14 @@ No dispatch function defined for #\\W.")
 		(read-string-fn "#\wtf")))
 			   
 
-  
+(define-test trac.106
+  (:tag :trac)
+  ;; Verify the value is correct
+  (assert-equal 2.718281828459045d0
+		(exp 1d0))
+  ;; Verify that exp is still monotonic around 1
+  (assert-true (<= (exp (1- double-float-negative-epsilon))
+		   (exp 1d0)
+		   (exp (1+ double-float-epsilon)))))
+
+

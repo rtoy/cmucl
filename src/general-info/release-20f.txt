@@ -97,6 +97,8 @@ New in this release:
     * In some situations KERNEL:DOUBLE-FLOAT-BITS on x86 would cause a
       segfault. This has been fixed.
     * For linux, motifd is no longer a 64-bit app.
+    * (exp 1d0) now returns the correctly rounded value of
+      e. Previously, it was off by one bit.
 
   * Trac Tickets:
     * Ticket #90 fixed.
@@ -111,6 +113,7 @@ New in this release:
     * Ticket #84 fixed on x86.
     * Ticket #105 fixed.
     * Ticket #101 fixed.
+    * Ticket #106 fixed.
 
   * Other changes:
 
