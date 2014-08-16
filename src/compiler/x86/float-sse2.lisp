@@ -1199,7 +1199,6 @@
   (:args (float :scs (single-reg descriptor-reg)
                 :load-if (not (sc-is float single-stack))))
   (:results (bits :scs (signed-reg)))
-  (:temporary (:sc signed-stack :from :argument :to :result) stack-temp)
   (:arg-types single-float)
   (:result-types signed-num)
   (:translate single-float-bits)
@@ -1210,8 +1209,7 @@
       (signed-reg
        (sc-case float
          (single-reg
-	  (inst movss stack-temp float)
-	  (inst mov bits stack-temp))
+	  (inst movd bits float))
          (single-stack
           (move bits float))
          (descriptor-reg
@@ -1226,7 +1224,7 @@
   (:args (float :scs (double-reg descriptor-reg)
                 :load-if (not (sc-is float double-stack))))
   (:results (hi-bits :scs (signed-reg)))
-  (:temporary (:sc double-stack) temp)
+  (:temporary (:sc double-reg) temp)
   (:arg-types double-float)
   (:result-types signed-num)
   (:translate double-float-high-bits)
@@ -1235,11 +1233,9 @@
   (:generator 5
      (sc-case float
        (double-reg
-	(let ((where (make-ea :dword :base ebp-tn
-			      :disp (- (* (+ 2 (tn-offset temp))
-					  word-bytes)))))
-	  (inst movsd where float))
-        (loadw hi-bits ebp-tn (- (1+ (tn-offset temp)))))
+	(inst movq temp float)
+	(inst psrlq temp 32)
+	(inst movd hi-bits temp))
        (double-stack
         (loadw hi-bits ebp-tn (- (1+ (tn-offset float)))))
        (descriptor-reg
@@ -1250,7 +1246,6 @@
   (:args (float :scs (double-reg descriptor-reg)
                 :load-if (not (sc-is float double-stack))))
   (:results (lo-bits :scs (unsigned-reg)))
-  (:temporary (:sc double-stack) temp)
   (:arg-types double-float)
   (:result-types unsigned-num)
   (:translate double-float-low-bits)
@@ -1259,11 +1254,7 @@
   (:generator 5
      (sc-case float
        (double-reg
-	(let ((where (make-ea :dword :base ebp-tn
-			      :disp (- (* (+ 2 (tn-offset temp))
-					  word-bytes)))))
-	  (inst movsd where float))
-	(loadw lo-bits ebp-tn (- (+ 2 (tn-offset temp)))))
+	(inst movd lo-bits float))
        (double-stack
         (loadw lo-bits ebp-tn (- (+ 2 (tn-offset float)))))
        (descriptor-reg
@@ -1278,19 +1269,17 @@
 	    (lo-bits :scs (unsigned-reg)))
   (:arg-types double-float)
   (:result-types signed-num unsigned-num)
-  (:temporary (:sc double-stack) temp)
+  (:temporary (:sc double-reg) temp)
   (:translate kernel::double-float-bits)
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 5
     (sc-case float
       (double-reg
-	(let ((where (make-ea :dword :base ebp-tn
-			      :disp (- (* (+ 2 (tn-offset temp))
-					  word-bytes)))))
-	  (inst movsd where float))
-	(loadw hi-bits ebp-tn (- (+ 1 (tn-offset temp))))
-	(loadw lo-bits ebp-tn (- (+ 2 (tn-offset temp)))))
+        (inst movq temp float)
+	(inst movd lo-bits temp)
+	(inst psrlq temp 32)
+	(inst movd hi-bits temp))
       (double-stack
        (loadw hi-bits ebp-tn (- (+ 1 (tn-offset float))))
        (loadw lo-bits ebp-tn (- (+ 2 (tn-offset float)))))
@@ -1299,6 +1288,7 @@
 	   vm:other-pointer-type)
        (loadw lo-bits float vm:double-float-value-slot
 	       vm:other-pointer-type)))))
+
 
 ;;;; Float mode hackery:
 
