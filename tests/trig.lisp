@@ -791,3 +791,13 @@
       (get-signs (atanh-def #c(2d0 +1d-20)))
     (assert-true (check-signs #'atanh #c(2d0 0d0) tr ti))
     (assert-true (check-signs #'atanh #c(2w0 0w0) tr ti))))
+
+(define-test cosh.overflow
+  (:tag :cosh)
+  (assert-error 'floating-point-overflow
+		(cosh 1000d0)))
+
+(define-test sinh.overflow
+  (:tag :sinh)
+  (assert-error 'floating-point-overflow
+		(sinh 1000d0)))

@@ -35,9 +35,9 @@
 #include "fdlibm.h"
 
 #ifdef __STDC__
-static const double one = 1.0, half=0.5, huge = 1.0e300;
+static const double one = 1.0, half=0.5, huge = 1.0e307;
 #else
-static double one = 1.0, half=0.5, huge = 1.0e300;
+static double one = 1.0, half=0.5, huge = 1.0e307;
 #endif
 
 #ifdef __STDC__
@@ -91,5 +91,5 @@ static double one = 1.0, half=0.5, huge = 1.0e300;
 	}
 
     /* |x| > overflowthresold, cosh(x) overflow */
-	return huge*huge;
+	return fabs(x)*huge;
 }

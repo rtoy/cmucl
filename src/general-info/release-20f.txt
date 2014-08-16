@@ -62,6 +62,8 @@ New in this release:
       DEFINE-CONDITION. (From Helmut Eller.)
     * The lisp executable is now compiled to use SSE2 on x86 machines;
       CMUCL will not run on chips without SSE2 anymore.
+    * (cosh 1000d0) signals an overflow error as it
+      should. Previously, it just incorrectly returned infinity.
 
   * ANSI compliance fixes:
     * The values on the branch cuts for the inverse trig and
