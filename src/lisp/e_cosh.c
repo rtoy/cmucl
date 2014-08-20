@@ -58,8 +58,14 @@ static double one = 1.0, half=0.5, huge = 1.0e307;
 	ix &= 0x7fffffff;
 
     /* x is INF or NaN */
-	if(ix>=0x7ff00000) return x*x;	
-
+	if(ix>=0x7ff00000) {
+            if (ix == 0x7ff00000 && (ux.i[LOWORD] == 0)) {
+                return fdlibm_setexception(fabs(x), FDLIBM_OVERFLOW);
+            } else {
+                return fdlibm_setexception(x, FDLIBM_INVALID);
+            }
+        }	
+        
     /* |x| in [0,0.5*ln2], return 1+expm1(|x|)^2/(2*exp(|x|)) */
 	if(ix<0x3fd62e43) {
 	    t = fdlibm_expm1(fabs(x));
@@ -91,5 +97,5 @@ static double one = 1.0, half=0.5, huge = 1.0e307;
 	}
 
     /* |x| > overflowthresold, cosh(x) overflow */
-	return fabs(x)*huge;
+	return fdlibm_setexception(fabs(x), FDLIBM_OVERFLOW);;
 }

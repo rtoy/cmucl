@@ -55,7 +55,13 @@ static double one = 1.0, shuge = 1.0e307;
 	ix = jx&0x7fffffff;
 
     /* x is INF or NaN */
-	if(ix>=0x7ff00000) return x+x;	
+	if(ix>=0x7ff00000) {
+            if (ix == 0x7ff00000 && (ux.i[LOWORD] == 0)) {
+                return fdlibm_setexception(x, FDLIBM_OVERFLOW);
+            } else {
+                return fdlibm_setexception(x, FDLIBM_INVALID);
+            }
+        };	
 
 	h = 0.5;
 	if (jx<0) h = -h;
@@ -84,5 +90,5 @@ static double one = 1.0, shuge = 1.0e307;
 	}
 
     /* |x| > overflowthresold, sinh(x) overflow */
-	return x*shuge;
+	return fdlibm_setexception(x, FDLIBM_OVERFLOW);;
 }

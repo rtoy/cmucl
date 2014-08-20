@@ -792,12 +792,56 @@
     (assert-true (check-signs #'atanh #c(2d0 0d0) tr ti))
     (assert-true (check-signs #'atanh #c(2w0 0w0) tr ti))))
 
-(define-test cosh.overflow
-  (:tag :cosh)
+;; Test that fdlibm routines signals exceptions as expected.
+
+(defparameter *nan*
+  (kernel::with-float-traps-masked (:invalid)
+    (* 0 ext:double-float-positive-infinity))
+  "Some randon MaN value")
+
+(define-test cosh.exceptions
+  (:tag :fdlibm)
   (assert-error 'floating-point-overflow
-		(cosh 1000d0)))
+		(cosh 1000d0))
+  (assert-error 'floating-point-overflow
+		(cosh -1000d0))
+  (assert-error 'floating-point-invalid-operation
+		(cosh *nan*))
+  ;; Same, but with overflow's masked
+  (kernel::with-float-traps-masked (:overflow)
+    (assert-equal ext:double-float-positive-infinity
+		  (cosh 1000d0))
+    (assert-equal ext:double-float-positive-infinity
+		  (cosh -1000d0))
+    (assert-equal ext:double-float-positive-infinity
+		  (cosh ext:double-float-positive-infinity))
+    (assert-equal ext:double-float-positive-infinity
+		  (cosh ext:double-float-negative-infinity)))
+  ;; Test NaN
+  (kernel::with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (cosh *nan*)))))
 
 (define-test sinh.overflow
-  (:tag :sinh)
+  (:tag :fdlibm)
   (assert-error 'floating-point-overflow
-		(sinh 1000d0)))
+		(sinh 1000d0))
+  (assert-error 'floating-point-overflow
+		(sinh -1000d0))
+  (assert-error 'floating-point-invalid-operation
+		(sinh *nan*))
+  ;; Same, but with overflow's masked
+  (kernel::with-float-traps-masked (:overflow)
+    (assert-equal ext:double-float-positive-infinity
+		  (sinh 1000d0))
+    (assert-equal ext:double-float-negative-infinity
+		  (sinh -1000d0))
+    (assert-equal ext:double-float-positive-infinity
+		  (sinh ext:double-float-positive-infinity))
+    (assert-equal ext:double-float-negative-infinity
+		  (sinh ext:double-float-negative-infinity)))
+  ;; Test NaN
+  (kernel::with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (sinh *nan*)))))
+
+
+

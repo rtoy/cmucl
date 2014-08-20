@@ -57,5 +57,13 @@ extern double fdlibm_atan(double x);
 extern double __ieee754_exp(double x);
 extern double __ieee754_log(double x);
 
+enum FDLIBM_EXCEPTION {
+  FDLIBM_DIVIDE_BY_ZERO,
+  FDLIBM_UNDERFLOW,
+  FDLIBM_OVERFLOW,
+  FDLIBM_INVALID
+};
+
+extern double fdlibm_setexception(double x, enum FDLIBM_EXCEPTION);
 
 #endif
