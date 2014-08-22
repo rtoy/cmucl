@@ -64,17 +64,62 @@
 (defun (setf floating-point-modes) (new) (setf (floating-point-modes) new))
 )
 
+#+(and x86 (not sse2))
+(progn
+  (defun floating-point-modes ()
+    (let ((x87-modes (vm::x87-floating-point-modes)))
+      ;; Massage the bits from x87-floating-point-modes into the order
+      ;; that the rest of the system wants them to be.  (Must match
+      ;; format in the SSE2 mxcsr register.)
+      (logior (ash (logand #x3f x87-modes) 7) ; control
+	      (logand #x3f (ash x87-modes -16)))))
+  (defun (setf floating-point-modes) (new)
+    (let* ((rc (ldb float-rounding-mode new))
+	   (x87-modes
+	    (logior (ash (logand #x3f new) 16)
+		    (ash rc 10)
+		    (logand #x3f (ash new -7))
+		    ;; Set precision control to be 53-bit, always.
+		    ;; (The compiler takes care of handling
+		    ;; single-float precision, and we don't support
+		    ;; long-floats.)
+		    (ash 2 8))))
+    (setf (x87-floating-point-modes) x87-modes)))
+  )
+
 #+sse2
 (progn
   (defun floating-point-modes ()
-    ;; Get just the SSE2 mode bits.
-    (vm::sse2-floating-point-modes))
+    ;; Combine the modes from the FPU and SSE2 units.  Since the sse
+    ;; mode contains all of the common information we want, we massage
+    ;; the x87-modes to match, and then OR the x87 and sse2 modes
+    ;; together.  Note: We ignore the rounding control bits from the
+    ;; FPU and only use the SSE2 rounding control bits.
+    (let* ((x87-modes (vm::x87-floating-point-modes))
+	   (sse-modes (vm::sse2-floating-point-modes))
+	   (final-mode (logior sse-modes
+			       (ash (logand #x3f x87-modes) 7) ; control
+			       (logand #x3f (ash x87-modes -16)))))
+
+      final-mode))
   (defun (setf floating-point-modes) (new-mode)
     (declare (type (unsigned-byte 24) new-mode))
-    ;; Set the floating point modes for SSE2.
-    (setf (vm::sse2-floating-point-modes) new-mode)
+    ;; Set the floating point modes for both X87 and SSE2.  This
+    ;; include the rounding control bits.
+    (let* ((rc (ldb float-rounding-mode new-mode))
+	   (x87-modes
+	    (logior (ash (logand #x3f new-mode) 16)
+		    (ash rc 10)
+		    (logand #x3f (ash new-mode -7))
+		    ;; Set precision control to be 64-bit, always.  We
+		    ;; don't use the x87 registers with sse2, so this
+		    ;; is ok and would be the correct setting if we
+		    ;; ever support long-floats.
+		    (ash 3 8))))
+      (setf (vm::sse2-floating-point-modes) new-mode)
+      (setf (vm::x87-floating-point-modes) x87-modes))
     new-mode)
-  )
+)
 
 ;;; SET-FLOATING-POINT-MODES  --  Public
 ;;;
