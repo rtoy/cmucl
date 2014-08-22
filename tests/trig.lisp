@@ -899,3 +899,16 @@
 		  (kernel:%log1p -1d0)))
   (kernel::with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%log1p *snan*)))))
+
+(define-test exp.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-overflow
+		(kernel:%exp 710d0))
+  (assert-true (ext:float-nan-p (kernel:%exp *qnan*)))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%exp *snan*))
+  (assert-equal ext:double-float-positive-infinity
+		(kernel:%exp ext:double-float-positive-infinity))
+  (kernel::with-float-traps-masked (:overflow)
+    (assert-equal ext:double-float-positive-infinity
+		  (kernel:%exp 710d0))))
