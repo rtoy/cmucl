@@ -875,16 +875,15 @@
   (:tag :fdlibm)
   (assert-error 'floating-point-overflow
 		(kernel:%expm1 709.8d0))
-  (assert-equal 'ext:double-float-positive-infinity
+  (assert-equal ext:double-float-positive-infinity
 		(kernel:%expm1 ext:double-float-positive-infinity))
   (assert-error 'floating-point-invalid-operation
 		(kernel:%expm1 *snan*))
   (assert-true (ext:float-nan-p (kernel:%expm1 *qnan*)))
   (kernel::with-float-traps-masked (:overflow)
-    (assert-true ext:double-float-positive-infinity
+    (assert-equal ext:double-float-positive-infinity
 		 (kernel:%expm1 709.8d0))
-    (assert-true ext:double-float-positive-infinity
-		 (kernel:%expm1 ext:double-float-positive-infinity)))
+    )
   (kernel::with-float-traps-masked (:invalid)
     (assert-true (ext::float-nan-p (kernel:%expm1 *snan*)))))
 
