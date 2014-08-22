@@ -794,10 +794,14 @@
 
 ;; Test that fdlibm routines signals exceptions as expected.
 
-(defparameter *nan*
+(defparameter *qnan*
   (kernel::with-float-traps-masked (:invalid)
     (* 0 ext:double-float-positive-infinity))
-  "Some randon MaN value")
+  "Some randon quiet MaN value")
+
+(defparameter *snan*
+  (kernel:make-double-float #x7ff00000 1)
+  "A randon signaling MaN value")
 
 (define-test cosh.exceptions
   (:tag :fdlibm)
@@ -806,7 +810,9 @@
   (assert-error 'floating-point-overflow
 		(kernel:%cosh -1000d0))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%cosh *nan*))
+		(kernel:%cosh *snan*))
+  (assert-true (ext:float-nan-p (kernel:%cosh *qnan*)))
+  
   ;; Same, but with overflow's masked
   (kernel::with-float-traps-masked (:overflow)
     (assert-equal ext:double-float-positive-infinity
@@ -819,7 +825,7 @@
 		  (kernel:%cosh ext:double-float-negative-infinity)))
   ;; Test NaN
   (kernel::with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%cosh *nan*)))))
+    (assert-true (ext:float-nan-p (kernel:%cosh *snan*)))))
 
 (define-test sinh.exceptions
   (:tag :fdlibm)
@@ -828,7 +834,8 @@
   (assert-error 'floating-point-overflow
 		(kernel:%sinh -1000d0))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%sinh *nan*))
+		(kernel:%sinh *snan*))
+  (assert-true (ext:float-nan-p (kernel:%sinh *qnan*)))
   ;; Same, but with overflow's masked
   (kernel::with-float-traps-masked (:overflow)
     (assert-equal ext:double-float-positive-infinity
@@ -841,12 +848,16 @@
 		  (kernel:%sinh ext:double-float-negative-infinity)))
   ;; Test NaN
   (kernel::with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%sinh *nan*)))))
+    (assert-true (ext:float-nan-p (kernel:%sinh *qnan*)))))
 
 
 (define-test tanh.exceptions
   (:tag :fdlibm)
-  (assert-true (ext:float-nan-p (kernel:%tanh *nan*))))
+  (assert-true (ext:float-nan-p (kernel:%tanh *qnan*)))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%tanh *snan*))
+  (kernel::with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%tanh *snan*)))))
 
 (define-test acosh.exceptions
   (:tag :fdlibm)
@@ -860,3 +871,19 @@
   (kernel::with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%acosh 0d0)))))
   
+(define-test expm1.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-overflow
+		(kernel:%expm1 709.8d0))
+  (assert-equal 'ext:double-float-positive-infinity
+		(kernel:%expm1 ext:double-float-positive-infinity))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%expm1 *snan*))
+  (assert-true (ext:float-nan-p (kernel:%expm1 *qnan*)))
+  (kernel::with-float-traps-masked (:overflow)
+    (assert-true ext:double-float-positive-infinity
+		 (kernel:%expm1 709.8d0))
+    (assert-true ext:double-float-positive-infinity
+		 (kernel:%expm1 ext:double-float-positive-infinity)))
+  (kernel::with-float-traps-masked (:invalid)
+    (assert-true (ext::float-nan-p (kernel:%expm1 *snan*)))))
