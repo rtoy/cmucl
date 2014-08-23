@@ -912,3 +912,23 @@
   (kernel::with-float-traps-masked (:overflow)
     (assert-equal ext:double-float-positive-infinity
 		  (kernel:%exp 710d0))))
+
+(define-test log.exception
+  (:tag :fdlibm)
+  (assert-error 'division-by-zero
+		(kernel:%log 0d0))
+  (assert-error 'division-by-zero
+		(kernel:%log -0d0))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%log -1d0))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%log *snan*))
+  (assert-true (ext:float-nan-p (kernel:%log *qnan*)))
+  (kernel::with-float-traps-masked (:divide-by-zero)
+    (assert-equal ext:double-float-negative-infinity
+		  (kernel:%log 0d0))
+    (assert-equal ext:double-float-negative-infinity
+		  (kernel:%log -0d0)))
+  (kernel::with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%log -1d0)))
+    (assert-true (ext:float-nan-p (kernel:%log *snan*)))))
