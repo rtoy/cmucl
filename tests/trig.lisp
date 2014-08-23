@@ -888,6 +888,26 @@
   (kernel::with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%asinh *snan*)))))
 
+(define-test atanh.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%atanh 2d0))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%atanh -2d0))
+  (assert-error 'division-by-zero
+		(kernel:%atanh 1d0))
+  (assert-error 'division-by-zero
+		(kernel:%atanh -1d0))
+  (kernel::with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%atanh 2d0)))
+    (assert-true (ext:float-nan-p (kernel:%atanh -2d0))))
+  (kernel::with-float-traps-masked (:divide-by-zero)
+    (assert-equal ext:double-float-positive-infinity
+		  (kernel:%atanh 1d0))
+    (assert-equal ext:double-float-negative-infinity
+		  (kernel:%atanh -1d0))))
+    
+
 (define-test expm1.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-overflow
