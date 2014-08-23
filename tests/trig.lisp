@@ -803,7 +803,7 @@
   (kernel:make-double-float #x7ff00000 1)
   "A randon signaling MaN value")
 
-(define-test cosh.exceptions
+(define-test %cosh.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-overflow
 		(kernel:%cosh 1000d0))
@@ -827,7 +827,7 @@
   (kernel::with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%cosh *snan*)))))
 
-(define-test sinh.exceptions
+(define-test %sinh.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-overflow
 		(kernel:%sinh 1000d0))
@@ -851,7 +851,7 @@
     (assert-true (ext:float-nan-p (kernel:%sinh *qnan*)))))
 
 
-(define-test tanh.exceptions
+(define-test %tanh.exceptions
   (:tag :fdlibm)
   (assert-true (ext:float-nan-p (kernel:%tanh *qnan*)))
   (assert-error 'floating-point-invalid-operation
@@ -859,7 +859,7 @@
   (kernel::with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%tanh *snan*)))))
 
-(define-test acosh.exceptions
+(define-test %acosh.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-overflow
 		(kernel:%acosh ext:double-float-positive-infinity))
@@ -871,7 +871,7 @@
   (kernel::with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%acosh 0d0)))))
 
-(define-test asinh.exceptions
+(define-test %asinh.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
 		(kernel:%asinh *snan*))
@@ -888,7 +888,7 @@
   (kernel::with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%asinh *snan*)))))
 
-(define-test atanh.exceptions
+(define-test %atanh.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
 		(kernel:%atanh 2d0))
@@ -907,7 +907,7 @@
     (assert-equal ext:double-float-negative-infinity
 		  (kernel:%atanh -1d0))))
 
-(define-test expm1.exceptions
+(define-test %expm1.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-overflow
 		(kernel:%expm1 709.8d0))
@@ -923,7 +923,7 @@
   (kernel::with-float-traps-masked (:invalid)
     (assert-true (ext::float-nan-p (kernel:%expm1 *snan*)))))
 
-(define-test log1p.exceptions
+(define-test %log1p.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
 		(kernel:%log1p -2d0))
@@ -936,7 +936,7 @@
   (kernel::with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%log1p *snan*)))))
 
-(define-test exp.exceptions
+(define-test %exp.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-overflow
 		(kernel:%exp 710d0))
@@ -949,7 +949,7 @@
     (assert-equal ext:double-float-positive-infinity
 		  (kernel:%exp 710d0))))
 
-(define-test log.exception
+(define-test %log.exception
   (:tag :fdlibm)
   (assert-error 'division-by-zero
 		(kernel:%log 0d0))
@@ -969,7 +969,7 @@
     (assert-true (ext:float-nan-p (kernel:%log -1d0)))
     (assert-true (ext:float-nan-p (kernel:%log *snan*)))))
 
-(define-test acos.exceptions
+(define-test %acos.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
 		(kernel:%acos 2d0))
@@ -979,7 +979,7 @@
     (assert-true (ext:float-nan-p (kernel:%acos 2d0)))
     (assert-true (ext:float-nan-p (kernel:%acos -2d0)))))
 
-(define-test asin.exceptions
+(define-test %asin.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
 		(kernel:%asin 2d0))
@@ -989,7 +989,7 @@
     (assert-true (ext:float-nan-p (kernel:%asin 2d0)))
     (assert-true (ext:float-nan-p (kernel:%asin -2d0)))))
 
-(define-test atan.exceptions
+(define-test %atan.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
 		(kernel:%atan *snan*))
