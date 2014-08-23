@@ -1445,6 +1445,9 @@
   ;; operands, if we can.
   (multiple-value-bind (fop format rd rs1 rs2)
       (get-fp-operation scp)
+    (unless fop
+      ;; Give up if we don't know the operation
+      (return-from get-fp-operands (values nil (list nil nil))))
     (let ((traps (logand (ldb float-exceptions-byte modes)
 			 (ldb float-traps-byte modes)))
 	  (fs1 (and fop rs1 (sigcontext-float-register scp rs1 format)))
