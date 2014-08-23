@@ -870,7 +870,24 @@
 		  (kernel:%acosh ext:double-float-positive-infinity)))
   (kernel::with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%acosh 0d0)))))
-  
+
+(define-test asinh.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%asinh *snan*))
+  (assert-error 'floating-point-overflow
+		(kernel:%asinh ext:double-float-positive-infinity))
+  (assert-error 'floating-point-overflow
+		(kernel:%asinh ext:double-float-negative-infinity))
+  (assert-true (ext:float-nan-p (kernel:%asinh *qnan*)))
+  (kernel::with-float-traps-masked (:overflow)
+    (assert-equal ext:double-float-positive-infinity
+		  (kernel:%asinh ext:double-float-positive-infinity))
+    (assert-error ext:double-float-negative-infinity
+		  (kernel:%asinh ext:double-float-negative-infinity)))
+  (kernel::with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%asinh *snan*)))))
+
 (define-test expm1.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-overflow
