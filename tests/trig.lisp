@@ -906,7 +906,6 @@
 		  (kernel:%atanh 1d0))
     (assert-equal ext:double-float-negative-infinity
 		  (kernel:%atanh -1d0))))
-    
 
 (define-test expm1.exceptions
   (:tag :fdlibm)
@@ -969,3 +968,31 @@
   (kernel::with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%log -1d0)))
     (assert-true (ext:float-nan-p (kernel:%log *snan*)))))
+
+(define-test acos.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%acos 2d0))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%acos -2d0))
+  (kernel::with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%acos 2d0)))
+    (assert-true (ext:float-nan-p (kernel:%acos -2d0)))))
+
+(define-test asin.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%asin 2d0))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%asin -2d0))
+  (kernel::with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%asin 2d0)))
+    (assert-true (ext:float-nan-p (kernel:%asin -2d0)))))
+
+(define-test atan.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%atan *snan*))
+  (assert-true (ext:float-nan-p (kernel:%atan *qnan*)))
+  (kernel::with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%atan *snan*)))))
