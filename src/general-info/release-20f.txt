@@ -64,6 +64,10 @@ New in this release:
       CMUCL will not run on chips without SSE2 anymore.
     * (cosh 1000d0) signals an overflow error as it
       should. Previously, it just incorrectly returned infinity.
+    * Deprecating FLOAT-TRAPPING-NAN-P in favor of
+      FLOAT-SIGNALING-NAN-P.
+    * Changed the printer to print "Signaling" instead of "Trapping"
+      when printing a signaling NaN.
 
   * ANSI compliance fixes:
     * The values on the branch cuts for the inverse trig and

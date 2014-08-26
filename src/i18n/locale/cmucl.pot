@@ -4783,11 +4783,15 @@ msgid "Return true if the float X is an infinity (+ or -)."
 msgstr ""
 
 #: src/code/float.lisp
-msgid "Return true if the float X is a NaN (Not a Number)."
+msgid "Return true if the float X is a quiet or signaling NaN (Not a Number)."
 msgstr ""
 
 #: src/code/float.lisp
-msgid "Return true if the float X is a trapping NaN (Not a Number)."
+msgid "Return true if the float X is a signaling NaN (Not a Number)."
+msgstr ""
+
+#: src/code/float.lisp
+msgid "Deprecated.  Use FLOAT-SIGNALING-NAN-P instead."
 msgstr ""
 
 #: src/code/float.lisp
