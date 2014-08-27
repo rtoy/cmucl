@@ -142,7 +142,10 @@ P5   =  4.13813679705723846039e-08; /* 0x3E663769, 0x72BEA4D0 */
                 return fdlibm_setexception(x, FDLIBM_OVERFLOW);
             }
             
-	    if(x < u_threshold) return x; /* underflow */
+	    if(x < u_threshold) {
+		/* underflow */
+		return fdlibm_setexception(0.0, FDLIBM_UNDERFLOW);
+	    }
 	}
 
     /* argument reduction */

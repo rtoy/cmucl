@@ -945,9 +945,18 @@
 		(kernel:%exp *snan*))
   (assert-equal ext:double-float-positive-infinity
 		(kernel:%exp ext:double-float-positive-infinity))
+  (assert-equal 0d0
+		(kernel:%exp -1000d0))
   (kernel::with-float-traps-masked (:overflow)
     (assert-equal ext:double-float-positive-infinity
-		  (kernel:%exp 710d0))))
+		  (kernel:%exp 710d0)))
+  (let ((modes (ext:get-floating-point-modes)))
+    (unwind-protect
+	 (progn
+	   (ext:set-floating-point-modes :traps '(:underflow))
+	   (assert-error 'floating-point-underflow
+			 (kernel:%exp -1000d0)))
+      (apply #'ext:set-floating-point-modes modes))))
 
 (define-test %log.exception
   (:tag :fdlibm)
