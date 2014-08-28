@@ -80,3 +80,25 @@
 		 (c::ceiling-rem-bound (c::make-interval :low '(-1.3) :high 10.3)))
   (assert-equalp (c::make-interval :low '(-20.3) :high '(20.3))
 		 (c::ceiling-rem-bound (c::make-interval :low '(-20.3) :high 10.3))))
+
+(define-test round-quotient-bound
+  "Test the first value of ROUND returns the correct interval"
+  (assert-equalp (c::make-interval :low 0 :high 10)
+		 (c::round-quotient-bound (c::make-interval :low 0.3 :high 10.5)))
+  (assert-equalp (c::make-interval :low 0 :high 12)
+		 (c::round-quotient-bound (c::make-interval :low 0.3 :high 11.5)))
+  (assert-equalp (c::make-interval :low 0 :high 10)
+		 (c::round-quotient-bound (c::make-interval :low 0.3 :high '(10.5))))
+  ;; Known failure: returns high limit of 12 instead of 11
+  (assert-equalp (c::make-interval :low 0 :high 11)
+		 (c::round-quotient-bound (c::make-interval :low 0.3 :high '(11.5))))
+  (assert-equalp (c::make-interval :low 2 :high 10)
+		 (c::round-quotient-bound (c::make-interval :low 1.5 :high 10.5)))
+  (assert-equalp (c::make-interval :low 2 :high 10)
+		 (c::round-quotient-bound (c::make-interval :low '(1.5) :high 10.5)))
+  ;; Known failure: returns high limit of 0 instead of 1
+  (assert-equalp (c::make-interval :low 1 :high 10)
+		 (c::round-quotient-bound (c::make-interval :low '(0.5) :high 10.5)))
+  )
+  
+  
