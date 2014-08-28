@@ -1,4 +1,5 @@
-;;; Tests for the basic trig functions, now implemented in Lisp.
+;;; Tests for the basic trig, hyperbolic, exponential and log
+;;; functions.
 
 (defpackage :trig-tests
   (:use :cl :lisp-unit))
