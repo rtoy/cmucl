@@ -2033,41 +2033,6 @@
 			       (list (- limit))
 			       limit)
 		      :high (list limit))))))
-#| Test cases
-(floor-quotient-bound (make-interval :low 0.3 :high 10.3))
-=> #S(INTERVAL :LOW 0 :HIGH 10)
-(floor-quotient-bound (make-interval :low 0.3 :high '(10.3)))
-=> #S(INTERVAL :LOW 0 :HIGH 10)
-(floor-quotient-bound (make-interval :low 0.3 :high 10))
-=> #S(INTERVAL :LOW 0 :HIGH 10)
-(floor-quotient-bound (make-interval :low 0.3 :high '(10)))
-=> #S(INTERVAL :LOW 0 :HIGH 9)
-(floor-quotient-bound (make-interval :low '(0.3) :high 10.3))
-=> #S(INTERVAL :LOW 0 :HIGH 10)
-(floor-quotient-bound (make-interval :low '(0.0) :high 10.3))
-=> #S(INTERVAL :LOW 0 :HIGH 10)
-(floor-quotient-bound (make-interval :low '(-1.3) :high 10.3))
-=> #S(INTERVAL :LOW -2 :HIGH 10)
-(floor-quotient-bound (make-interval :low '(-1.0) :high 10.3))
-=> #S(INTERVAL :LOW -1 :HIGH 10)
-(floor-quotient-bound (make-interval :low -1.0 :high 10.3))
-=> #S(INTERVAL :LOW -1 :HIGH 10)
-
-
-(floor-rem-bound (make-interval :low 0.3 :high 10.3))
-=> #S(INTERVAL :LOW 0 :HIGH '(10.3))
-(floor-rem-bound (make-interval :low 0.3 :high '(10.3)))
-=> #S(INTERVAL :LOW 0 :HIGH '(10.3))
-(floor-rem-bound (make-interval :low -10 :high -2.3))
-#S(INTERVAL :LOW (-10) :HIGH 0)
-(floor-rem-bound (make-interval :low 0.3 :high 10))
-=> #S(INTERVAL :LOW 0 :HIGH '(10))
-(floor-rem-bound (make-interval :low '(-1.3) :high 10.3))
-=> #S(INTERVAL :LOW '(-10.3) :HIGH '(10.3))
-(floor-rem-bound (make-interval :low '(-20.3) :high 10.3))
-=> #S(INTERVAL :LOW (-20.3) :HIGH (20.3))
-|#
-
 
 ;;; Same functions for CEILING
 (defun ceiling-quotient-bound (quot)
@@ -2133,45 +2098,7 @@
 			       limit)
 		      :high (list limit))))))
 
-#| Test cases
-(ceiling-quotient-bound (make-interval :low 0.3 :high 10.3))
-=> #S(INTERVAL :LOW 1 :HIGH 11)
-(ceiling-quotient-bound (make-interval :low 0.3 :high '(10.3)))
-=> #S(INTERVAL :LOW 1 :HIGH 11)
-(ceiling-quotient-bound (make-interval :low 0.3 :high 10))
-=> #S(INTERVAL :LOW 1 :HIGH 10)
-(ceiling-quotient-bound (make-interval :low 0.3 :high '(10)))
-=> #S(INTERVAL :LOW 1 :HIGH 10)
-(ceiling-quotient-bound (make-interval :low '(0.3) :high 10.3))
-=> #S(INTERVAL :LOW 1 :HIGH 11)
-(ceiling-quotient-bound (make-interval :low '(0.0) :high 10.3))
-=> #S(INTERVAL :LOW 1 :HIGH 11)
-(ceiling-quotient-bound (make-interval :low '(-1.3) :high 10.3))
-=> #S(INTERVAL :LOW -1 :HIGH 11)
-(ceiling-quotient-bound (make-interval :low '(-1.0) :high 10.3))
-=> #S(INTERVAL :LOW 0 :HIGH 11)
-(ceiling-quotient-bound (make-interval :low -1.0 :high 10.3))
-=> #S(INTERVAL :LOW -1 :HIGH 11)
-
-
-(ceiling-rem-bound (make-interval :low 0.3 :high 10.3))
-=> #S(INTERVAL :LOW (-10.3) :HIGH 0)
-(ceiling-rem-bound (make-interval :low 0.3 :high '(10.3)))
-=> #S(INTERVAL :LOW 0 :HIGH '(10.3))
-(ceiling-rem-bound (make-interval :low -10 :high -2.3))
-=> #S(INTERVAL :LOW 0 :HIGH (10))
-(ceiling-rem-bound (make-interval :low 0.3 :high 10))
-=> #S(INTERVAL :LOW (-10) :HIGH 0)
-(ceiling-rem-bound (make-interval :low '(-1.3) :high 10.3))
-=> #S(INTERVAL :LOW (-10.3) :HIGH (10.3))
-(ceiling-rem-bound (make-interval :low '(-20.3) :high 10.3))
-=> #S(INTERVAL :LOW (-20.3) :HIGH (20.3))
-|#
-
-
 
-
-
 (defun truncate-quotient-bound (quot)
   ;; For positive quotients, truncate is exactly like floor.  For
   ;; negative quotients, truncate is exactly like ceiling.  Otherwise,
