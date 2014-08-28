@@ -1764,6 +1764,104 @@
 			     (ftruncate-derive-type-quot-aux n divisor nil))
 			 #'%unary-ftruncate)))
 
+(defun round-quotient-bound (quot)
+  (flet ((round-it (quot)
+	   (let ((lo (interval-low quot))
+		 (hi (interval-high quot)))
+	     (setf lo (if lo
+			  (round (bound-value lo))
+			  nil))
+	     ;; For the upper bound, we need to be careful
+	     (setf hi (if hi
+			  (round (bound-value hi))
+			  nil))
+	     (make-interval :low lo :high hi))))
+    (case (interval-range-info quot)
+      (+
+       (round-it quot))
+      (-
+       (round-it quot))
+      (otherwise
+       ;; Split the interval into positive and negative pieces, compute
+       ;; the result for each piece and put them back together.
+       (destructuring-bind (neg pos)
+	   (interval-split 0 quot t t)
+	 (interval-merge-pair (round-it neg)
+			      (round-it pos)))))))
+
+(defun round-derive-type-quot (number-type divisor-type)
+  (let* ((rem-type (rem-result-type number-type divisor-type))
+	 (number-interval (numeric-type->interval number-type))
+	 (divisor-interval (numeric-type->interval divisor-type)))
+    (let ((quot (round-quotient-bound
+		 (interval-div number-interval
+			       divisor-interval))))
+      (specifier-type `(integer ,(or (interval-low quot) '*)
+				,(or (interval-high quot) '*))))))
+
+(defun round-derive-type-rem (number-type divisor-type)
+  (let* ((rem-type (rem-result-type number-type divisor-type))
+	 (number-interval (numeric-type->interval number-type))
+	 (divisor-interval (numeric-type->interval divisor-type)))
+    (multiple-value-bind (class format)
+	(ecase rem-type
+	  (integer
+	   (values 'integer nil))
+	  (rational
+	   (values 'rational nil))
+	  ((or single-float double-float #+long-float long-float
+	       #+double-double double-double-float)
+	   (values 'float rem-type))
+	  (float
+	   (values 'float nil))
+	  (real
+	   (values nil nil)))
+      #+nil
+      (when (member rem-type '(float single-float double-float
+			       #+long-float long-float
+			       #+double-double double-double-float))
+	(setf rem (interval-func #'(lambda (x)
+				     (coerce x rem-type))
+				 rem)))
+      (make-numeric-type :class class
+			 :format format
+			 :low nil
+			 :high nil))))
+
+(defun %unary-round-derive-type-aux (num)
+  (if (numeric-type-real-p num)
+      (round-derive-type-quot num (specifier-type '(integer 1 1)))
+      *empty-type*))
+
+(defoptimizer (%unary-round derive-type) ((number))
+  (one-arg-derive-type number
+		       #'%unary-round-derive-type-aux
+		       #'%unary-round))
+
+(defun round-derive-type-quot-aux (num div same-arg)
+  (declare (ignore same-arg))
+  (if (and (numeric-type-real-p num)
+	   (numeric-type-real-p div))
+      (round-derive-type-quot num div)
+      *empty-type*))
+
+(defun round-derive-type-rem-aux (num div same-arg)
+  (declare (ignore same-arg))
+  (if (and (numeric-type-real-p num)
+	   (numeric-type-real-p div))
+      (round-derive-type-rem num div)
+      *empty-type*))
+
+(defoptimizer (round derive-type) ((number divisor))
+  (let ((quot (two-arg-derive-type number divisor
+				   #'round-derive-type-quot-aux #'round))
+	(rem (two-arg-derive-type number divisor
+				  #'round-derive-type-rem-aux
+				  #'(lambda (x)
+				      (nth-value 1 (round x))))))
+    (when (and quot rem)
+      (make-values-type :required (list quot rem)))))
+
 ;;; Define optimizers for floor and ceiling
 (macrolet
     ((frob-opt (name q-name r-name)
