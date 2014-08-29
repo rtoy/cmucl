@@ -1768,13 +1768,32 @@
   (flet ((round-it (quot)
 	   (let ((lo (interval-low quot))
 		 (hi (interval-high quot)))
-	     (setf lo (if lo
-			  (round (bound-value lo))
-			  nil))
-	     ;; For the upper bound, we need to be careful
-	     (setf hi (if hi
-			  (round (bound-value hi))
-			  nil))
+	     (when lo
+		 ;; Need to handle carefully the case where the lower
+		 ;; bound is exclusive.  This is only a problem when
+		 ;; the remainder is exactly +1/2 where the quotient
+		 ;; has been rounded down. In this case, quotient
+		 ;; should be one higher.  For example (round 2.5) ->
+		 ;; 2, 0.5, but (round 2.500001) -> 3, -0.49999.
+	       (multiple-value-bind (q r)
+		   (round (bound-value lo))
+		 (setf lo
+		       (if (and (consp lo) (= r 1/2))
+			   (1+ q)
+			   q))))
+	     (when hi
+	       (multiple-value-bind (q r)
+		   (round (bound-value hi))
+		 ;; Need to handle carefully the case where the upper
+		 ;; bound is exclusive.  This is only a problem when
+		 ;; the remainder is exactly -1/2 where the quotient
+		 ;; has been rounded up. In this case, quotient should
+		 ;; be one less. For example but (round 1.5) -> 2,
+		 ;; -0.5 but (round 1.49999) -> 1, .49999.
+		 (setf hi
+		       (if (and (= r -1/2) (consp hi))
+			   (1- q)
+			   q))))
 	     (make-interval :low lo :high hi))))
     (case (interval-range-info quot)
       (+
