@@ -68,6 +68,26 @@ New in this release:
       FLOAT-SIGNALING-NAN-P.
     * Changed the printer to print "Signaling" instead of "Trapping"
       when printing a signaling NaN.
+    * Various issues with the switch to using fdlibm have been
+      fixed. The issues were mostly not signaling floating-point
+      exceptions in places where they were expected.
+    * Restore the x87 FPU support on Linux; these are required because
+      foreign functions and libraries can still use x87 even if cmucl
+      itself does not. This is not required on Darwin because x87 is
+      not used there.
+    * On the ppc port, handle FP exceptions a bit better by not
+      failing if cmucl is unable to interpret the instruction that
+      caused the exception.
+    * FLOAT-TRAPPING-NAN-P is deprecated and is replaced by
+      FLOAT-SIGNALING-NAN-P. These kinds of numbers are called
+      signaling NaNs, not trapping NaNs.
+    * Microoptimization for sparc in converting a double-float to a
+      32-bit signed integer.
+    * The compiler can now derive the type of ROUND. (But more work is
+      needed.)
+    * Fix an issue with multi-processing destroy-process doesn't take
+      effect for a schedulable processbecause it has no run-reason
+      and/or arrest-reason.
 
   * ANSI compliance fixes:
     * The values on the branch cuts for the inverse trig and
@@ -120,6 +140,7 @@ New in this release:
     * Ticket #105 fixed.
     * Ticket #101 fixed.
     * Ticket #106 fixed.
+    * Ticket #100 fixed.
 
   * Other changes:
 
