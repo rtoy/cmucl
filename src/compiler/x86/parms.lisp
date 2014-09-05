@@ -40,9 +40,9 @@
 
 (setf (backend-name *target-backend*) "X86")
 (setf (backend-version *target-backend*)
-      (if (backend-featurep :sse2) "Intel x86/sse2" "Intel x86/x87"))
+      "Intel x86/sse2")
 (setf (backend-fasl-file-type *target-backend*)
-      (if (backend-featurep :sse2) "sse2f" "x86f"))
+      "sse2f")
 (setf (backend-fasl-file-implementation *target-backend*)
       x86-fasl-file-implementation)
 (setf (backend-fasl-file-version *target-backend*) byte-fasl-file-version)
@@ -97,10 +97,10 @@
 	  float-underflow-trap-bit float-overflow-trap-bit
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit))
-)
 
 #+double-double
 (export '(double-double-float-digits))
+) ; eval-when
 	  
 
 (eval-when (compile load eval)
@@ -209,12 +209,6 @@
 (defconstant float-traps-byte        (byte 6  7))
 (defconstant float-exceptions-byte   (byte 6  0))
 
-#-sse2
-(progn
-(defconstant float-fast-bit 0) ; No fast mode on x86
-)
-
-#+sse2
 (progn
 ;; SSE2 has a flush-to-zero flag, which we use as the fast bit.  Some
 ;; versions of sse2 also have a denormals-are-zeros flag.  We don't

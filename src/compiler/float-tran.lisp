@@ -716,6 +716,9 @@
 (dolist (stuff '((exp %exp *)
 		 (log %log float)
 		 (sqrt %sqrt float)
+		 (sin %sin float)
+		 (cos %cos float)
+		 (tan %tan float)
 		 (asin %asin float)
 		 (acos %acos float)
 		 (atan %atan *)
@@ -731,19 +734,19 @@
     (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
       `(,prim x))))
 
-(defknown (kernel::%sincos)
+(defknown (%sincos)
     (double-float) (values double-float double-float)
     (movable foldable flushable))
 
 (deftransform cis ((x) (single-float) * :when :both)
   `(multiple-value-bind (s c)
-       (kernel::%sincos (coerce x 'double-float))
+       (%sincos (coerce x 'double-float))
      (complex (coerce c 'single-float)
 	      (coerce s 'single-float))))
 
 (deftransform cis ((x) (double-float) * :when :both)
   `(multiple-value-bind (s c)
-       (kernel::%sincos x)
+       (%sincos x)
      (complex c s)))
 
 #+double-double
@@ -1494,15 +1497,11 @@
   (two-arg-derive-type x y #'expt-derive-type-aux #'expt))
 
 
+;;; Note must assume that a type including 0.0 may also include -0.0
+;;; and thus the result may be complex -infinity + i*pi.
+;;;
 (defun log-derive-type-aux-1 (x)
-  (elfun-derive-type-simple x
-			    #'(lambda (z)
-				;; log(0) and log(-0) is -infinity.
-				;; Return NIL to indicate that.
-				(if (zerop z)
-				    nil
-				    (log z)))
-			    -0d0 nil nil nil))
+  (elfun-derive-type-simple x #'log 0d0 nil nil nil))
 
 (defun log-derive-type-aux-2 (x y same-arg)
   (let ((log-x (log-derive-type-aux-1 x))
@@ -1803,10 +1802,6 @@
 	 (deftransform * ((z w) (,real-type (complex ,type)) *)
 	   ;; Real * complex
 	   '(complex (* z (realpart w)) (* z (imagpart w))))
-	 #-(or (and linux x86))
-	 (deftransform cis ((z) ((,type)) *)
-	   ;; Cis.
-	   '(complex (cos z) (sin z)))
 	 (deftransform / ((rx y) (,real-type (complex ,type)) *)
 	   ;; Real/complex
 	   '(let* ((ry (realpart y))
@@ -2294,22 +2289,9 @@
 		(kernel:%make-double-double-float hi lo))))
 
 (declaim (maybe-inline split))
-;; This algorithm is the version given by Yozo Hida.  It has problems
-;; with overflow because we multiply by 1+2^27.
-;;
-;; But be very careful about replacing this with a new algorithm.  The
-;; values computed here are very important to get the rounding right.
-;; If you change this, the rounding may be different, which will
-;; affect other parts of the algorithm.
-;;
-;; I (rtoy) tried a different algorithm that split the number in two
-;; as described, but without overflow.  However, that caused
-;; -9.4294948327242751340284975915175w0/1w14 to return a value that
-;; wasn't really close to -9.4294948327242751340284975915175w-14.
-;;
-;; This also means we can't print numbers like 1w308 with the current
-;; printing algorithm, or even divide 1w308 by 10.
-#+nil
+;; See Listing 2.6: Mul12 in "CR-LIBM: A library of correctly rounded
+;; elementary functions in double-precision".  Also known as Dekker's
+;; algorithm.
 (defun split (a)
   "Split the double-float number a into a-hi and a-lo such that a =
   a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
@@ -2320,68 +2302,61 @@
 	 (a-lo (- a a-hi)))
     (values a-hi a-lo)))
 
-;; +split-limit+ is the largest number for which Yozo's algorithm
-;; still works.  Basically we want a*(1+2^27) <=
-;; most-positive-double-float < 2^1024. Therefore, a < 2^1024/(1+2^27)
-;; If we calculate that, we get a = 1.3393857490036326d300.  A quick
-;; test shows that this would cause overflow, but previous float would
-;; not.  This is the value we want.
-(defconstant +split-limit+
-  (scale-float (/ (float (1+ (expt 2 27)) 1d0)) 1024))
+;; Values used for scaling in two-prod.  These are used to determine
+;; if SPLIT might overflow so the value (and result) can be scaled to
+;; prevent overflow.
+(defconstant +two970+
+  (scale-float 1d0 970))
 
-(defun split (a)
-  "Split the double-float number a into a-hi and a-lo such that a =
-  a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
-  a-lo contains the lower 26 bits."
-  (declare (double-float a)
-	   (optimize (speed 3)
-		     (inhibit-warnings 3)))
-  ;; This splits the number a into 2 parts of 27 and 26 bits each, but
-  ;; the parts are, I think, supposed to be properly rounded in an
-  ;; IEEE fashion.
-  ;;
-  ;; For numbers that are very large, we use a different algorithm.
-  ;; For smaller numbers, we can use the original algorithm of Yozo
-  ;; Hida.
-  (if (>= (abs a) +split-limit+)
-      ;; I've tested this algorithm against Yozo's method for 1
-      ;; billion randomly generated double-floats between 2^(-995) and
-      ;; 2^996, and identical results are obtained.  For numbers that
-      ;; are very small, this algorithm produces different numbers
-      ;; because of underflow.  For very large numbers, we, of course
-      ;; produce different results because Yozo's method causes
-      ;; overflow.
-      (let* ((tmp (* a (+ 1 (scale-float 1d0 -27))))
-	     (as (* a (scale-float 1d0 -27)))
-	     (a-hi (* (- tmp (- tmp as)) (expt 2 27)))
-	     (a-lo (- a a-hi)))
-	(values a-hi a-lo))
-      ;; Yozo's algorithm.
-      (let* ((tmp (* a (+ 1 (expt 2 27))))
-	     (a-hi (- tmp (- tmp a)))
-	     (a-lo (- a a-hi)))
-	(values a-hi a-lo))))
+(defconstant +two53+
+  (scale-float 1d0 53))
 
+(defconstant +two-53+
+  (scale-float 1d0 -53))
 
 (declaim (inline two-prod))
+
+;; This is essentially the algorithm given by Listing 2.7 Mul12Cond
+;; given in "CR-LIBM: A library of correctly rounded elementary
+;; functions in double-precision".
 #-ppc
 (defun two-prod (a b)
   _N"Compute fl(a*b) and err(a*b)"
-  (declare (double-float a b))
-  (let ((p (* a b)))
-    (multiple-value-bind (a-hi a-lo)
-	(split a)
-      ;;(format t "a-hi, a-lo = ~S ~S~%" a-hi a-lo)
-      (multiple-value-bind (b-hi b-lo)
-	  (split b)
-	;;(format t "b-hi, b-lo = ~S ~S~%" b-hi b-lo)
-	(let ((e (+ (+ (- (* a-hi b-hi) p)
-		       (* a-hi b-lo)
-		       (* a-lo b-hi))
-		    (* a-lo b-lo))))
-	  (locally 
-	      (declare (optimize (inhibit-warnings 3)))
-	    (values p e)))))))
+  (declare (double-float a b)
+	   (optimize (speed 3)))
+  ;; If the numbers are too big, scale them done so SPLIT doesn't overflow.
+  (multiple-value-bind (aa bb)
+      (values (if (> a +two970+)
+		  (* a +two-53+)
+		  a)
+	      (if (> b +two970+)
+		  (* b +two-53+)
+		  b))
+    (let ((p (* aa bb)))
+      (declare (double-float p)
+	       (inline split))
+      (multiple-value-bind (aa-hi aa-lo)
+	  (split aa)
+	;;(format t "aa-hi, aa-lo = ~S ~S~%" aa-hi aa-lo)
+	(multiple-value-bind (bb-hi bb-lo)
+	    (split bb)
+	  ;;(format t "bb-hi, bb-lo = ~S ~S~%" bb-hi bb-lo)
+	  (let ((e (+ (+ (- (* aa-hi bb-hi) p)
+			 (* aa-hi bb-lo)
+			 (* aa-lo bb-hi))
+		      (* aa-lo bb-lo))))
+	    (declare (double-float e))
+	    (locally 
+		(declare (optimize (inhibit-warnings 3)))
+	      ;; If the numbers was scaled down, we need to scale the
+	      ;; result back up.
+	      (when (> a +two970+)
+		(setf p (* p +two53+)
+		      e (* e +two53+)))
+	      (when (> b +two970+)
+		(setf p (* p +two53+)
+		      e (* e +two53+)))
+	      (values p e))))))))
 
 #+ppc
 (defun two-prod (a b)
@@ -2407,6 +2382,27 @@
 	(values q (+ (+ (- (* a-hi a-hi) q)
 			(* 2 a-hi a-lo))
 		     (* a-lo a-lo)))))))
+(defun two-sqr (a)
+  _N"Compute fl(a*a) and err(a*b).  This is a more efficient
+  implementation of two-prod"
+  (declare (double-float a))
+  (let ((aa (if (> a +two970+)
+		(* a +two-53+)
+		a)))
+    (let ((q (* aa aa)))
+      (declare (double-float q)
+	       (inline split))
+      (multiple-value-bind (a-hi a-lo)
+	  (split aa)
+	(locally
+	    (declare (optimize (inhibit-warnings 3)))
+	  (let ((e (+ (+ (- (* a-hi a-hi) q)
+			 (* 2 a-hi a-lo))
+		      (* a-lo a-lo))))
+	    (if (> a +two970+)
+	      (values (* q +two53+)
+		      (* e +two53+))
+	      (values q e))))))))
 
 #+ppc
 (defun two-sqr (a)

@@ -1383,7 +1383,9 @@
 	    (t
 	     (when (and allow-otherwise
 			(memq (car case) '(t otherwise)))
-	       (warn (intl:gettext "Bad style to use T or OTHERWISE in ECASE or CCASE")))
+	       (warn 'kernel:simple-style-warning
+		     :format-control (intl:gettext "Bad style to use ~S in ~S")
+		     :format-arguments (list (car case) name)))
 	     (push (first case) keys)
 	     (push `((,test ,keyform-value
 			    ',(first case)) nil ,@(rest case)) clauses))))

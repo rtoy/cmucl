@@ -1,9 +1,12 @@
 # -*- Mode: makefile -*-
 include Config.x86_common
 
+CPPFLAGS += -march=pentium4 -mfpmath=sse
+
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 OS_SRC += NetBSD-os.c elf.c
 OS_LINK_FLAGS = -dynamic -export-dynamic
 OS_LIBS =
 
 EXEC_FINAL_OBJ = exec-final.o
+

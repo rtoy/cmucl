@@ -62,12 +62,14 @@ values.
 \end{defun}
 
 \begin{defun}{extensions:}{float-nan-p}{\args{\var{x}}}
+  \defunx[extensions:]{float-signaling-nan-p}{\args{\var{x}}}
   \defunx[extensions:]{float-trapping-nan-p}{\args{\var{x}}}
   
   \code{float-nan-p} returns true if \var{x} is an IEEE NaN (Not A
-  Number) object.  \code{float-trapping-nan-p} returns true only if
+  Number) object.  \code{float-signaling-nan-p} returns true only if
   \var{x} is a trapping NaN.  With either function, \var{x} must be a
-  float.
+  float. \code{float-trapping-nan-p} is the former name of
+  \code{float-signaling-nan-p} and is deprecated.
 \end{defun}
 
 \subsubsection{Negative Zero}

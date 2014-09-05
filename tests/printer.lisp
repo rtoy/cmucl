@@ -111,3 +111,5 @@
     (assert-equal "Scale factor  6: | 314159.0e-05|" (test-scale 11))
     (assert-equal "Scale factor  7: | 3141590.e-06|" (test-scale 12))))
 
+(define-test sub-output-integer.1
+    (assert-prints "-536870912" (princ most-negative-fixnum)))

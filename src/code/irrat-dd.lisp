@@ -368,10 +368,17 @@
 	     (optimize (speed 3) (space 0)
 		       (inhibit-warnings 3)))
     ;; Separate mantissa from exponent
-    (multiple-value-bind (x e)
+    (multiple-value-bind (x e sign)
 	(decode-float x)
       (declare (type double-double-float x)
 	       (type double-float-exponent e))
+      (when (zerop x)
+	;; Handle log(+/-0).  Return -inf or -inf + i*pi, but signal a
+	;; division by zero.
+	(return-from dd-%log
+	  (if (minusp sign)
+	      (complex (/ (- x)) dd-pi)
+	      (/ (- x)))))
       (let ((z 0w0)
 	    (y 0w0))
 	(declare (type double-double-float z y))

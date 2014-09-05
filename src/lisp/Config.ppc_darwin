@@ -34,13 +34,13 @@ ifdef FEATURE_UNICODE
 UNICODE = -DUNICODE
 endif
 
-CFLAGS = $(OSX_VERSION) -g -O3 -DDARWIN -Dppc $(LINKAGE) $(GENCGC) $(UNICODE)
+CFLAGS = $(OSX_VERSION) -g -O3 -ffp-contract=off -fno-omit-frame-pointer -DDARWIN -Dppc $(LINKAGE) $(GENCGC) $(UNICODE)
 ASFLAGS = $(OSX_VERSION) -traditional -g -O3 -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = ppc-assem.S linux-stubs.S
 ARCH_SRC = ppc-arch.c
-OS_SRC = ppc-darwin-dlshim.c os-common.c Darwin-os.c e_rem_pio2.c k_rem_pio2.c
+OS_SRC = ppc-darwin-dlshim.c os-common.c Darwin-os.c
 
 
 ifdef FEATURE_EXECUTABLE
@@ -69,7 +69,3 @@ OS_LIBS = -lSystem -lc -lm
 
 #darwin-lispadjuster: darwin-lispadjuster.c
 
-# According to Config.x86_common, this no longer has aliasing
-# problems, so we don't need any additional compilation options.
-e_rem_pio2.o : e_rem_pio2.c
-	$(CC) -c $(CFLAGS)  $<

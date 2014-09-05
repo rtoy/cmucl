@@ -67,10 +67,10 @@
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit
 	  float-invalid-op-1-byte))
-)
 
 #+double-double
 (export '(double-double-float-digits))
+) ; eval-when
 
 
 	  

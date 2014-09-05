@@ -594,7 +594,8 @@ struct generation_stats {
  * The oldest generation that will currently be GCed by default.
  * Valid values are: 0, 1, ... (NUM_GENERATIONS - 1)
  *
- * The default of (NUM_GENERATIONS - 1) enables GC on all generations.
+ * A value of NUM_GENERATIONS - 1 enables GC on all generations; the
+ * default is less.
  *
  * Setting this to 0 effectively disables the generational nature of
  * the GC. In some applications generational GC may not be useful
@@ -604,7 +605,9 @@ struct generation_stats {
  * into an older generation so an unnecessary GC of this long-lived
  * data can be avoided.
  */
-unsigned int gencgc_oldest_gen_to_gc = NUM_GENERATIONS - 1;
+#define DEFAULT_OLDEST_GEN_TO_GC	3
+
+unsigned int gencgc_oldest_gen_to_gc = DEFAULT_OLDEST_GEN_TO_GC;
 
 
 /*
@@ -8432,4 +8435,24 @@ get_page_table_info(int page, int* flags, int* bytes)
 {
     *flags = page_table[page].flags;
     *bytes = page_table[page].bytes_used;
+}
+
+/*
+ * Set the oldest generation to gc to the given value.  If the value
+ * is illegal, the appropriate limit is used instead.  The old value
+ * is returned.
+ */
+unsigned int set_max_gen_to_gc(int gen)
+{
+    unsigned int previous = gencgc_oldest_gen_to_gc;
+
+    if (gen < 0) {
+	gencgc_oldest_gen_to_gc = 0;
+    } else if (gen >= NUM_GENERATIONS - 1) {
+	gencgc_oldest_gen_to_gc = NUM_GENERATIONS - 1;
+    } else {
+	gencgc_oldest_gen_to_gc = gen;
+    }
+
+    return previous;
 }

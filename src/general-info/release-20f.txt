@@ -19,6 +19,9 @@ over the Internet, and is mostly in the public domain.
 New in this release:
 
   * Known issues:
+    * Support for x87 will be dropped after the 2014-04 snapshot. All
+      further snapshots will require an x86 chip that supports sse2.
+      SSE2 was introduced with the Pentium 4 in 2001.
 
   * Feature enhancements
     * Trig functions are signficantly faster.
@@ -29,7 +32,7 @@ New in this release:
       ticket:92)
 
   * Changes
-    * Update to ASDF 3.0.3.
+    * Update to ASDF 3.1.3.
     * When *PRINT-CASE* is :DOWNCASE, integers are printed with
       lowercase letters when needed.
     * Micro-optimize KERNEL:DOUBLE-FLOAT-BITS for x86/sse2.
@@ -50,6 +53,39 @@ New in this release:
       the default for several months now.
     * Add lisp-unit as a contrib.  Use (require :lisp-unit) to load
       it.  Precompiled fasls are not included.
+    * CMUCL now uses fdlibm C functions to implement the special
+      functions. All platforms use this so they should produce
+      identical results everywhere.
+    * Consing for the trig functions is removed now since we call out
+      to fdlibm instead of implementing them in Lisp.
+    * Source location information has been added for
+      DEFINE-CONDITION. (From Helmut Eller.)
+    * The lisp executable is now compiled to use SSE2 on x86 machines;
+      CMUCL will not run on chips without SSE2 anymore.
+    * (cosh 1000d0) signals an overflow error as it
+      should. Previously, it just incorrectly returned infinity.
+    * Deprecating FLOAT-TRAPPING-NAN-P in favor of
+      FLOAT-SIGNALING-NAN-P.  These kinds of numbers are called
+      signaling NaNs, not trapping NaNs.
+    * Changed the printer to print "Signaling" instead of "Trapping"
+      when printing a signaling NaN.
+    * Various issues with the switch to using fdlibm have been
+      fixed. The issues were mostly not signaling floating-point
+      exceptions in places where they were expected.
+    * Restore the x87 FPU support on Linux; these are required because
+      foreign functions and libraries can still use x87 even if cmucl
+      itself does not. This is not required on Darwin because x87 is
+      not used there.
+    * On the ppc port, handle FP exceptions a bit better by not
+      failing if cmucl is unable to interpret the instruction that
+      caused the exception.
+    * Microoptimization for sparc in rounding a double-float to a
+      32-bit signed integer.
+    * The compiler can now derive the type of ROUND. (But more work is
+      needed.)
+    * Fix an issue with multi-processing destroy-process doesn't take
+      effect for a schedulable processbecause it has no run-reason
+      and/or arrest-reason.
 
   * ANSI compliance fixes:
     * The values on the branch cuts for the inverse trig and
@@ -59,6 +95,9 @@ New in this release:
       and on the branch cut is now continuous with different
       quadrants.  This differs from the description of the branch cut
       for atanh in the CLHS.
+    * CLEAR-OUTPUT was not actually doing anything. Now, CLEAR-OUTPUT
+      will discard any buffered data that has not been written out
+      yet.
 
   * Bugfixes:
     * Fix error in pi reduction on x87.  It was not noticed previously
@@ -68,20 +107,38 @@ New in this release:
       Incorrect results were returned under some conditions when the
       result TN was packed in the same location as one of the argument
       TNs.
-    * Type derivation for log now matches the actual returned
-      values. (Ticket #92).
     * The float constants for various limits are defined for
       double-double floats such as
       least-positive-double-double-float. 
     * When reading very small float values, round to
       least-positive-foo-float if possible.
+    * (log -0w0) and (log 0w0) returns values analogous to the
+      double-float versions.
+    * Fix bug in printing MOST-NEGATIVE-FIXNUM.
+    * For Gray streams, CLEAR-OUTPUT was calling STREAM-FORCE-OUTPUT
+      instead of STREAM-CLEAR-OUTPUT, so the output wasn't actually
+      cleared.
+    * In some situations KERNEL:DOUBLE-FLOAT-BITS on x86 would cause a
+      segfault. This has been fixed.
+    * For linux, motifd is no longer a 64-bit app.
+    * (exp 1d0) now returns the correctly rounded value of
+      e. Previously, it was off by one bit.
 
   * Trac Tickets:
     * Ticket #90 fixed.
-    * Ticket #92 fixed.
+    * Ticket #92 marked invalid..
     * Ticket #87 fixed.
     * Ticket #94 fixed.
     * Ticket #93 fixed.
+    * Ticket #98 fixed.
+    * Ticket #104 fixed.
+    * Ticket #101, item 1 fixed.
+    * Ticket #105, fixed.
+    * Ticket #84 fixed on x86.
+    * Ticket #105 fixed.
+    * Ticket #101 fixed.
+    * Ticket #106 fixed.
+    * Ticket #100 fixed.
 
   * Other changes:
 

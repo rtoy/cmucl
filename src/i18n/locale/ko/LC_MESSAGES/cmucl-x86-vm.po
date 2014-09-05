@@ -77,24 +77,6 @@ msgstr ""
 msgid "Thread safe push of val onto the list in the vector element."
 msgstr ""
 
-#: src/code/commandline.lisp
-msgid ""
-"Specifies what kind of floating-point support should be used on x86\n"
-"  systems.  If 'x87', Lisp will use the x87 floating-point unit; if\n"
-"  'sse2', Lisp uses SSE2 floating-point unit. The default is\n"
-"  'auto',which causes Lisp to check to see if SSE2 is available.  If\n"
-"  so, then SSE2 is used.  If the SSE2 core file cannot be found,Lisp\n"
-"  will fallback to the x87 core, which can run on any machine."
-msgstr ""
-
-#: src/code/commandline.lisp
-msgid "mode"
-msgstr ""
-
-#: src/code/commandline.lisp
-msgid "a symbol or function"
-msgstr ""
-
 #: src/code/load.lisp
 msgid "Top-Level Form"
 msgstr ""
