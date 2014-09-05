@@ -370,7 +370,13 @@
 	 (when res
 	   (- res (- in-buffer-length (lisp-stream-in-index stream))))
 	 #+unicode
-	 res)))))
+	 res)))
+    ;; fundamental stream
+    (cond
+      (position
+       (setf (stream-file-position stream) position))
+      (t
+       (stream-file-position stream)))))
 
 
 ;;; File-Length  --  Public
@@ -1103,7 +1109,7 @@
       ;; lisp-stream
       (funcall (lisp-stream-misc stream) stream :clear-output)
       ;; fundamental-stream
-      (stream-force-output stream)))
+      (stream-clear-output stream)))
   nil)
 
 (defun write-byte (integer stream)

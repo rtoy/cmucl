@@ -1297,7 +1297,7 @@
       (write-char #\. stream)))
 
 (defun sub-output-integer (integer stream)
-  (declare (type (and fixnum unsigned-byte) integer))
+  (declare (type (integer 0 #.(- most-negative-fixnum)) integer))
   (let ((quotient 0)
 	(remainder 0))
     (declare (fixnum quotient remainder))
@@ -1732,7 +1732,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 (defun output-float-nan (x stream)
   (print-unreadable-object (x stream)
     (write-string (float-format-name x) stream)
-    (write-string (if (float-trapping-nan-p x) " Trapping" " Quiet") stream)
+    (write-string (if (float-signaling-nan-p x) " Signaling" " Quiet") stream)
     (write-string " NaN" stream)))
 
 

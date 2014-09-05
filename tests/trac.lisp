@@ -329,8 +329,23 @@
 			(declare (type (double-float 0d0) x))
 			(log x)))))
     (assert-equal
-     'double-float
-     (third (kernel:%function-type f)))))
+     '(or double-float (complex double-float))
+     (third (kernel:%function-type f)))
+    ;; It is important that log(-0) = -inf + i*pi. This is needed to
+    ;; ensure that all of the special functions have the right values
+    ;; on the branch cuts. (Although the implementation of the special
+    ;; function may not use log internally, the definition might and
+    ;; this property is needed to derive the correct value from the
+    ;; definition.)
+    (assert-equal
+     (complex ext:double-float-negative-infinity pi)
+     (ext:with-float-traps-masked (:divide-by-zero) (log -0d0)))
+    (assert-equal
+     (complex ext:single-float-negative-infinity (float pi 1f0))
+     (ext:with-float-traps-masked (:divide-by-zero) (log -0f0)))
+    (assert-equal
+     (complex ext:double-double-float-negative-infinity kernel:dd-pi)
+     (ext:with-float-traps-masked (:divide-by-zero) (log -0w0)))))
 
 (define-test trac.93
   (:tag :trac)
@@ -351,4 +366,73 @@
   (assert-error 'reader-error (read-from-string ".1e-45"))
   (assert-error 'reader-error (read-from-string "1d-324"))
   (assert-error 'reader-error (read-from-string "1w-324")))
-  
+
+(defparameter *test-path*
+  (merge-pathnames (make-pathname :name :unspecific :type :unspecific
+                                  :version :unspecific)
+                   *load-truename*)
+  "Directory for temporary test files.")
+
+(defparameter *test-file*
+  (merge-pathnames #p"test-data.tmp" *test-path*))
+
+
+;; Not quite what ticket 101 is about, but it came up in investigating
+;; CLEAR-OUTPUT on a Gray stream.  Verify CLEAR-OUTPUT actually
+;; does. Previously, it did nothing.
+(define-test trac.101
+  (:tag :trac)
+  (assert-eql
+   0
+   (let ((s (open *test-file*
+		  :direction :output
+		  :if-exists :supersede)))
+     (unwind-protect
+	  (progn
+	    (write-char #\a s)
+	    (clear-output s)
+	    (close s)
+	    (setf s (open *test-file*))
+	    (file-length s))
+       (close s)
+       (delete-file *test-file*)))))
+
+(defun read-string-fn (str)
+     (handler-case
+       (let ((acc nil))
+         (with-input-from-string
+           (stream str)
+           (loop do
+                 (let* ((eof-marker (cons nil nil))
+                        (elem (read stream nil eof-marker)))
+                   (if (eq elem eof-marker)
+                       (loop-finish)
+                     (push elem acc)))))
+         (setq acc (nreverse acc))
+         (values :OK acc))
+       (error (condition)
+              (return-from read-string-fn
+                (values :ERROR (format nil "~A" condition))))
+       (storage-condition (condition)
+                          (return-from read-string-fn
+                            (values :STORAGE (format nil "~A" condition))))))
+
+(define-test trac.105
+  (:tag :trac)
+  (assert-equal (values :ERROR
+			"Reader error on #<String-Input Stream>:
+No dispatch function defined for #\\W.")
+		(read-string-fn "#\wtf")))
+			   
+
+(define-test trac.106
+  (:tag :trac)
+  ;; Verify the value is correct
+  (assert-equal 2.718281828459045d0
+		(exp 1d0))
+  ;; Verify that exp is still monotonic around 1
+  (assert-true (<= (exp (1- double-float-negative-epsilon))
+		   (exp 1d0)
+		   (exp (1+ double-float-epsilon)))))
+
+

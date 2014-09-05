@@ -1,11 +1,8 @@
 # -*- Mode: makefile -*-
 include Config.x86_common
 
-CPPFLAGS += -m32 -rdynamic -D__NO_CTYPE -D_GNU_SOURCE
-
-# Need -ffloat-store for e_rem_pio2 and k_rem_pio2 to get properly
-# rounded double-floats while using x87 extended precision.
-CC_REM_PIO2 = -ffloat-store
+CPPFLAGS += -m32 -D__NO_CTYPE -D_GNU_SOURCE
+CFLAGS += -rdynamic  -march=pentium4 -mfpmath=sse -mtune=generic
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC +=  linux-stubs.S

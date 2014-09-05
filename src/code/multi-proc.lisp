@@ -1044,7 +1044,9 @@
 	   (process-interrupts process))
      ;; Ensure that the process is active so that it can accept this
      ;; interrupt.
-     (setf (process-state process) :active)))
+     (setf (process-state process) :active
+          (process-%arrest-reasons process) nil)
+     (push :destroyed (process-%run-reasons process))))
   ;; Should we wait until it's dead?
   (process-yield))
 

@@ -1671,9 +1671,9 @@
       :To Time-Spec
 	  Specify the beginning or end of the operand's lifetime.  :From can
 	  only be used with results, and :To only with arguments.  The default
-	  for the N'th argument/result is (:ARGUMENT N)/(:RESULT N).  These
-	  options are necessary primarily when operands are read or written out
-	  of order.
+	  for the N'th argument/result is (:ARGUMENT N)/(:RESULT N).  (The
+          first argument/result is number 0.) These options are necessary
+          primarily when operands are read or written out of order.
    
   :Conditional
       This is used in place of :RESULTS with conditional branch VOPs.  There

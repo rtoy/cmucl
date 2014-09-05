@@ -2122,27 +2122,73 @@
       (decf n (length spaces)))
     (write-string spaces stream :end n)))
 
+;; CLHS 22.3.6.1 for relative tabulations says:
+;;
+;;   ... outputs COLREL spaces and then outputs the smallest
+;;   non-negative number of additional spaces necessary to move the
+;;   cursor to a column that is a multiple of COLINC.... If the
+;;   current output column cannot be determined, however, then colinc
+;;   is ignored, and exactly colrel spaces are output.
 (defun format-relative-tab (stream colrel colinc)
   (if (pp:pretty-stream-p stream)
       (pprint-tab :line-relative colrel colinc stream)
-      (let* ((cur (lisp::charpos stream))
-	     (spaces (if (and cur (plusp colinc))
-			 (- (* (ceiling (+ cur colrel) colinc) colinc) cur)
-			 colrel)))
-	(output-spaces stream spaces))))
+      (flet ((advance-to-column ()
+	       (let* ((cur (lisp::charpos stream))
+		      (spaces (if (and cur (plusp colinc))
+				  (- (* (ceiling (+ cur colrel) colinc) colinc) cur)
+				  colrel)))
+		 (output-spaces stream spaces))))
+	(lisp::stream-dispatch stream
+	  ;; simple-stream
+	  (advance-to-column)
+	  ;; lisp-stream
+	  (advance-to-column)
+	  ;; fundamental-stream
+	  (let ((cur (stream-line-column stream)))
+	    (cond ((and cur (plusp colinc))
+		   (stream-advance-to-column stream
+					     (+ cur
+						(* (floor (+ cur colrel) colinc)
+						   colinc))))
+		  (t
+		   (stream-advance-to-column stream (+ cur colrel)))))))))
 
+;; CLHS 22.3.6.1 says:
+;;
+;;   If the cursor is already at or beyond the column COLNUM, it will
+;;   output spaces to move it to COLNUM + k*COLINC for the smallest
+;;   positive integer k possible, unless COLINC is zero, in which case
+;;   no spaces are output.
 (defun format-absolute-tab (stream colnum colinc)
   (if (pp:pretty-stream-p stream)
       (pprint-tab :line colnum colinc stream)
-      (let ((cur (lisp::charpos stream)))
-	(cond ((null cur)
-	       (write-string "  " stream))
-	      ((< cur colnum)
-	       (output-spaces stream (- colnum cur)))
-	      (t
-	       (unless (zerop colinc)
-		 (output-spaces stream
-				(- colinc (rem (- cur colnum) colinc)))))))))
+      (flet ((advance-to-column ()
+	       (let ((cur (lisp::charpos stream)))
+		 (cond ((null cur)
+			(write-string "  " stream))
+		       ((< cur colnum)
+			(output-spaces stream (- colnum cur)))
+		       (t
+			(unless (zerop colinc)
+			  (output-spaces stream
+					 (- colinc (rem (- cur colnum) colinc)))))))))
+	(lisp::stream-dispatch stream
+	  ;; simple-stream. NOTE: Do we need to do soemthing better for
+	  ;; simple streams?
+	  (advance-to-column)
+	  ;; lisp-stream
+	  (advance-to-column)
+	  ;; fundamental-stream
+	  (let ((cur (stream-line-column stream)))
+	    (cond ((null cur)
+		   (write-string "  " stream))
+		  ((< cur colnum)
+		   (stream-advance-to-column stream colnum))
+		  (t
+		   (unless (zerop colinc)
+		     (let ((k (ceiling (- cur colnum) colinc)))
+		       (stream-advance-to-column stream
+						 (+ colnum (* k colinc))))))))))))
 
 (def-format-directive #\_ (colonp atsignp params)
   (expand-bind-defaults () params

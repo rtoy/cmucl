@@ -21,7 +21,6 @@
 (use-package "SYSTEM")
 (use-package "ALIEN")
 (use-package "C-CALL")
-(use-package "UNIX")
 (use-package "KERNEL")
 
 (intl:textdomain "cmucl")
@@ -58,7 +57,7 @@
         (status unsigned-long)))
 
 #+freebsd
-(def-alien-type sigcontext
+(def-alien-type unix:sigcontext
     (struct nil
 	(sc-mask    (array unsigned-int 4))
 	(sc-onstack unsigned-int)
@@ -84,7 +83,7 @@
 
 ;;; OpenBSD/NetBSD also have sigcontext structs that look more like Linux.
 #+openbsd
-(def-alien-type sigcontext
+(def-alien-type unix:sigcontext
     (struct nil
 	(sc-gs      unsigned-int)
 	(sc-fs      unsigned-int)
@@ -109,7 +108,7 @@
 	))
 
 #+netbsd
-(def-alien-type sigcontext
+(def-alien-type unix:sigcontext
     (struct nil
 	(sc-gs      unsigned-int)
 	(sc-fs      unsigned-int)
@@ -138,7 +137,7 @@
 
 ;; For Linux...
 #+linux
-(def-alien-type sigcontext
+(def-alien-type unix:sigcontext
     (struct nil
 	    (sc-r8 unsigned-long)
 	    (sc-r9 unsigned-long)
@@ -306,8 +305,8 @@
 ;;; instruction stream.
 ;;; 
 (defun internal-error-arguments (scp)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (let ((pc (int-sap (slot scp 'sc-pc))))
       (declare (type system-area-pointer pc))
       ;; using INT3 the pc is .. INT3 <here> code length bytes...
@@ -334,8 +333,8 @@
 ;;; SIGCONTEXT-PROGRAM-COUNTER -- Interface.
 ;;;
 (defun sigcontext-program-counter (scp)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (int-sap (slot scp 'sc-pc))))
 
 ;;; SIGCONTEXT-REGISTER -- Interface.
@@ -345,8 +344,8 @@
 ;;;
 
 (defun sigcontext-register (scp index)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (case index				; ugly -- I know.
       (#.eax-offset (slot scp 'sc-eax))
       (#.ecx-offset (slot scp 'sc-ecx))
@@ -359,8 +358,8 @@
 
 
 (defun %set-sigcontext-register (scp index new)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (case index
       (#.eax-offset (setf (slot scp 'sc-eax) new))
       (#.ecx-offset (setf (slot scp 'sc-ecx) new))
@@ -382,8 +381,8 @@
 ;;;
 #+linux
 (defun sigcontext-float-register (scp index format)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (let ((reg-sap (alien-sap (deref (slot (deref (slot scp 'fpstate) 0)
 					   'fpreg)
 				     index))))
@@ -398,8 +397,8 @@
 
 #+linux
 (defun %set-sigcontext-float-register (scp index format new-value)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (let ((reg-sap (alien-sap (deref (slot (deref (slot scp 'fpstate) 0)
 					    'fpreg)
 				     index))))
@@ -425,14 +424,14 @@
 
 #+BSD
 (defun sigcontext-floating-point-modes (scp)
-  (declare (type (alien (* sigcontext)) scp)
+  (declare (type (alien (* unix:sigcontext)) scp)
 	   (ignore scp))
   ;; This is broken until some future release of FreeBSD/OpenBSD!!!
   (floating-point-modes))
   
 #+linux
 (defun sigcontext-floating-point-modes (scp)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   (let ((cw (slot (deref (slot scp 'fpstate) 0) 'cw))
 	(sw (slot (deref (slot scp 'fpstate) 0) 'sw)))
     ;;(format t "cw = ~4x~%sw = ~4x~%" cw sw)

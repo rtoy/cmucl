@@ -422,7 +422,7 @@ prepend_core_path(const char *lib, const char *corefile)
 extern int builtin_image_flag;
 extern long initial_function_addr;
 
-fpu_mode_t fpu_mode = AUTO;
+fpu_mode_t fpu_mode = SSE2;
 
 static const char*
 locate_core(const char* cmucllib, const char* core, const char* default_core)
@@ -662,32 +662,6 @@ main(int argc, const char *argv[], const char *envp[])
         } else if (strcmp(arg, "-unidata") == 0) {
           unidata = *++argptr;
         }
-#ifdef i386
-	else if (strcmp(arg, "-fpu") == 0) {
-	    const char *str;
-
-	    str = *++argptr;
-            if (str == NULL) {
-                fprintf(stderr, "-fpu must be followed by the FPU type:  auto, x87, sse2\n");
-                exit(1);
-            }
-
-            if (builtin_image_flag != 0) {
-                fprintf(stderr,
-                        "Warning:  -fpu cannot change the fpu mode of an executable image\n");
-            } else {
-                if (strcmp(str, "auto") == 0) {
-                    fpu_mode = AUTO;
-                } else if (strcmp(str, "x87") == 0) {
-                    fpu_mode = X87;
-                } else if (strcmp(str, "sse2") == 0) {
-                    fpu_mode = SSE2;
-                } else {
-                    fprintf(stderr, "Unknown fpu type: `%s'.  Using auto\n", str);
-                }
-            }
-        }
-#endif
     }
 
     default_core = arch_init(fpu_mode);

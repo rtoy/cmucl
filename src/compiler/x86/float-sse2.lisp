@@ -1199,7 +1199,6 @@
   (:args (float :scs (single-reg descriptor-reg)
                 :load-if (not (sc-is float single-stack))))
   (:results (bits :scs (signed-reg)))
-  (:temporary (:sc signed-stack :from :argument :to :result) stack-temp)
   (:arg-types single-float)
   (:result-types signed-num)
   (:translate single-float-bits)
@@ -1210,8 +1209,7 @@
       (signed-reg
        (sc-case float
          (single-reg
-	  (inst movss stack-temp float)
-	  (inst mov bits stack-temp))
+	  (inst movd bits float))
          (single-stack
           (move bits float))
          (descriptor-reg
@@ -1226,7 +1224,7 @@
   (:args (float :scs (double-reg descriptor-reg)
                 :load-if (not (sc-is float double-stack))))
   (:results (hi-bits :scs (signed-reg)))
-  (:temporary (:sc double-stack) temp)
+  (:temporary (:sc double-reg) temp)
   (:arg-types double-float)
   (:result-types signed-num)
   (:translate double-float-high-bits)
@@ -1235,11 +1233,9 @@
   (:generator 5
      (sc-case float
        (double-reg
-	(let ((where (make-ea :dword :base ebp-tn
-			      :disp (- (* (+ 2 (tn-offset temp))
-					  word-bytes)))))
-	  (inst movsd where float))
-        (loadw hi-bits ebp-tn (- (1+ (tn-offset temp)))))
+	(inst movq temp float)
+	(inst psrlq temp 32)
+	(inst movd hi-bits temp))
        (double-stack
         (loadw hi-bits ebp-tn (- (1+ (tn-offset float)))))
        (descriptor-reg
@@ -1250,7 +1246,6 @@
   (:args (float :scs (double-reg descriptor-reg)
                 :load-if (not (sc-is float double-stack))))
   (:results (lo-bits :scs (unsigned-reg)))
-  (:temporary (:sc double-stack) temp)
   (:arg-types double-float)
   (:result-types unsigned-num)
   (:translate double-float-low-bits)
@@ -1259,11 +1254,7 @@
   (:generator 5
      (sc-case float
        (double-reg
-	(let ((where (make-ea :dword :base ebp-tn
-			      :disp (- (* (+ 2 (tn-offset temp))
-					  word-bytes)))))
-	  (inst movsd where float))
-	(loadw lo-bits ebp-tn (- (+ 2 (tn-offset temp)))))
+	(inst movd lo-bits float))
        (double-stack
         (loadw lo-bits ebp-tn (- (+ 2 (tn-offset float)))))
        (descriptor-reg
@@ -1272,24 +1263,23 @@
 
 (define-vop (double-float-bits)
   (:args (float :scs (double-reg descriptor-reg)
-		:load-if (not (sc-is float double-stack))))
+		:load-if (not (sc-is float double-stack))
+		:to (:result 1)))
   (:results (hi-bits :scs (signed-reg))
 	    (lo-bits :scs (unsigned-reg)))
   (:arg-types double-float)
   (:result-types signed-num unsigned-num)
-  (:temporary (:sc double-stack) temp)
+  (:temporary (:sc double-reg) temp)
   (:translate kernel::double-float-bits)
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 5
     (sc-case float
       (double-reg
-	(let ((where (make-ea :dword :base ebp-tn
-			      :disp (- (* (+ 2 (tn-offset temp))
-					  word-bytes)))))
-	  (inst movsd where float))
-	(loadw hi-bits ebp-tn (- (+ 1 (tn-offset temp))))
-	(loadw lo-bits ebp-tn (- (+ 2 (tn-offset temp)))))
+        (inst movq temp float)
+	(inst movd lo-bits temp)
+	(inst psrlq temp 32)
+	(inst movd hi-bits temp))
       (double-stack
        (loadw hi-bits ebp-tn (- (+ 1 (tn-offset float))))
        (loadw lo-bits ebp-tn (- (+ 2 (tn-offset float)))))
@@ -1298,6 +1288,7 @@
 	   vm:other-pointer-type)
        (loadw lo-bits float vm:double-float-value-slot
 	       vm:other-pointer-type)))))
+
 
 ;;;; Float mode hackery:
 
@@ -1330,17 +1321,15 @@
 ;; Returns exactly the mxcsr register, except the masks are flipped
 ;; because we want exception enable flags, not masks.
 (define-vop (sse2-floating-point-modes)
-  (:results (res :scs (unsigned-reg)))
+  (:results (result :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:translate sse2-floating-point-modes)
   (:policy :fast-safe)
-  (:temporary (:sc unsigned-stack) cw-stack)
-  (:temporary (:sc unsigned-reg) temp)
-  (:generator 8
-    (inst stmxcsr cw-stack)
-    (inst mov temp cw-stack)
-    (inst xor temp (ash #x3f 7))
-    (inst mov res temp)))
+  (:temporary (:sc unsigned-stack) temp)
+  (:generator 3
+    (inst stmxcsr temp)
+    (inst mov result temp)
+    (inst xor result (ash #x3f 7))))
 
 ;; Set mxcsr exactly to whatever is given, except we invert the
 ;; exception enable flags to make them match the exception mask flags.
@@ -1361,7 +1350,7 @@
     (inst xor temp (ash #x3f 7))	; Convert enables to masks
     (inst mov cw-stack temp)
     (inst ldmxcsr cw-stack)
-    (inst mov res new)))
+    (move res new)))
 
 ;; For the record here is the format of the x87 control and status
 ;; words:

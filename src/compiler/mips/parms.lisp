@@ -50,6 +50,7 @@
 
 ;;;; Machine Architecture parameters:
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(word-bits byte-bits word-shift word-bytes float-sign-shift
 
 	  single-float-bias single-float-exponent-byte
@@ -65,7 +66,7 @@
 	  float-underflow-trap-bit float-overflow-trap-bit
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit))
-
+) ; eval-when
 
 (eval-when (compile load eval)
 
@@ -129,11 +130,13 @@
 
 ;;;; Description of the target address space.
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(target-read-only-space-start
 	  target-static-space-start
 	  target-dynamic-space-start
 	  target-foreign-linkage-space-start
 	  target-foreign-linkage-entry-size))
+)
 
 ;;; Where to put the different spaces.
 ;;; 
@@ -147,7 +150,8 @@
 ;;; large object space instead.  Must be less then a page.
 ;;;
 #+gengc
-(export 'large-object-cutoff)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (export 'large-object-cutoff))
 #+gengc
 (defparameter large-object-cutoff 1024)
 
@@ -155,10 +159,12 @@
 
 ;;;; Other non-type constants.
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(atomic-flag interrupted-flag halt-trap pending-interrupt-trap
 	  error-trap cerror-trap breakpoint-trap function-end-breakpoint-trap
 	  after-breakpoint-trap trace-table-normal trace-table-call-site
 	  trace-table-function-prologue trace-table-function-epilogue))
+)
 
 (defenum (:suffix -flag)
   atomic
@@ -183,7 +189,9 @@
 
 ;;;; Static symbols.
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(static-symbols static-functions))
+)
 
 ;;; Static symbols are loaded into static space directly after NIL so
 ;;; that the system can compute their address by adding a constant

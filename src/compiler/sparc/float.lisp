@@ -1252,17 +1252,13 @@
     (inst fdtox r x)
     (inst fxtod r r)))
 
+;; See Listing 2.2: Conversion from FP to int in in "CR-LIBM: A
+;; library of correctly rounded elementary functions in
+;; double-precision".
 #+sun4
 (deftransform %unary-round ((x) (float) (signed-byte 32))
-  '(let* ((trunc (truly-the (signed-byte 32) (%unary-truncate x)))
-	  (extra (- x trunc))
-	  (absx (abs extra))
-	  (one-half (float 1/2 x)))
-     (if (if (oddp trunc)
-	     (>= absx one-half)
-	     (> absx one-half))
-	 (truly-the (signed-byte 32) (%unary-truncate (+ x extra)))
-	 trunc)))
+   '(kernel:double-float-low-bits (+ x (+ (scale-float 1d0 52)
+					  (scale-float 1d0 51)))))
 
 (define-vop (make-single-float)
   (:args (bits :scs (signed-reg) :target res

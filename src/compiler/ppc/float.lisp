@@ -1402,7 +1402,7 @@
 (export 'get-fp-operands)
 
 (defun get-fp-operation (scp)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   ;; Get the offending FP instruction from the context.  We return the
   ;; operation associated with the FP instruction, the precision of
   ;; the operation, and the operands of the instruction.
@@ -1440,11 +1440,14 @@
 	(values fop format rd ra rb)))))
 
 (defun get-fp-operands (scp modes)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   ;; From the offending FP instruction, get the operation and
   ;; operands, if we can.
   (multiple-value-bind (fop format rd rs1 rs2)
       (get-fp-operation scp)
+    (unless fop
+      ;; Give up if we don't know the operation
+      (return-from get-fp-operands (values nil (list nil nil))))
     (let ((traps (logand (ldb float-exceptions-byte modes)
 			 (ldb float-traps-byte modes)))
 	  (fs1 (and fop rs1 (sigcontext-float-register scp rs1 format)))

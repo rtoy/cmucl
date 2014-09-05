@@ -111,13 +111,15 @@
   (declare (ignore type))
   (let ((num-results (result-state-num-results state)))
     (setf (result-state-num-results state) (1+ num-results))
-    (my-make-wired-tn 'double-float 'double-reg (* num-results 2))))
+    ;; The XMM registers start at 8.
+    (my-make-wired-tn 'double-float 'double-reg (+ num-results 8))))
 
 (def-alien-type-method (single-float :result-tn) (type state)
   (declare (ignore type))
   (let ((num-results (result-state-num-results state)))
     (setf (result-state-num-results state) (1+ num-results))
-    (my-make-wired-tn 'single-float 'single-reg (* num-results 2))))
+    ;; The XMM registers start at 8.
+    (my-make-wired-tn 'single-float 'single-reg (+ num-results 8))))
 
 (def-alien-type-method (values :result-tn) (type state)
   (let ((values (alien-values-type-values type)))

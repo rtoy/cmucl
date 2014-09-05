@@ -13,7 +13,6 @@
 ;;;
 (in-package "SPARC")
 (use-package "SYSTEM")
-(use-package "UNIX")
 
 (intl:textdomain "cmucl-sparc-vm")
 
@@ -32,7 +31,7 @@
     (y unsigned-long)
     (fsr unsigned-long)))
 
-(def-alien-type sigcontext
+(def-alien-type unix:sigcontext
   (struct nil
     (sc-onstack unsigned-long)
     (sc-mask unsigned-long)
@@ -93,8 +92,8 @@
 ;;; instruction stream.
 ;;; 
 (defun internal-error-arguments (scp)
-  (declare (type (alien (* sigcontext)) scp))
-  (let* ((pc (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (let* ((pc (with-alien ((scp (* unix:sigcontext) scp))
 	       (slot scp 'sc-pc)))
 	 (bad-inst (sap-ref-32 pc 0))
 	 (op (ldb (byte 2 30) bad-inst))
@@ -111,8 +110,8 @@
 	   (values #.(error-number-or-lose 'unknown-error) nil)))))
 
 (defun args-for-unimp-inst (scp)
-  (declare (type (alien (* sigcontext)) scp))
-  (let* ((pc (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (let* ((pc (with-alien ((scp (* unix:sigcontext) scp))
 	       (slot scp 'sc-pc)))
 	 (length (sap-ref-8 pc 4))
 	 (vector (make-array length :element-type '(unsigned-byte 8))))
@@ -133,7 +132,7 @@
 	       (values error-number (sc-offsets))))))
 
 (defun args-for-tagged-add-inst (scp bad-inst)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   (let* ((rs1 (ldb (byte 5 14) bad-inst))
 	 (op1 (di::make-lisp-obj (sigcontext-register scp rs1))))
     (if (fixnump op1)
@@ -169,8 +168,8 @@
 ;;; SIGCONTEXT-PROGRAM-COUNTER -- Interface.
 ;;;
 (defun sigcontext-program-counter (scp)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (slot scp 'sc-pc)))
 
 ;;; SIGCONTEXT-REGISTER -- Interface.
@@ -179,13 +178,13 @@
 ;;; interrupts.  
 ;;;
 (defun sigcontext-register (scp index)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (deref (slot (slot scp 'sc-g1) 'regs) index)))
 
 (defun %set-sigcontext-register (scp index new)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (setf (deref (slot (slot scp 'sc-g1) 'regs) index) new)
     new))
 
@@ -198,8 +197,8 @@
 ;;; Format is the type of float to return.
 ;;;
 (defun sigcontext-float-register (scp index format)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (let ((sap (alien-sap (slot (slot scp 'sc-g1) 'fpregs))))
       (ecase format
 	(single-float (system:sap-ref-single sap (* index vm:word-bytes)))
@@ -208,8 +207,8 @@
 	(long-float (system:sap-ref-long sap (* index vm:word-bytes)))))))
 ;;;
 (defun %set-sigcontext-float-register (scp index format new-value)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (let ((sap (alien-sap (slot (slot scp 'sc-g1) 'fpregs))))
       (ecase format
 	(single-float
@@ -229,8 +228,8 @@
 ;;; same format as returned by FLOATING-POINT-MODES.
 ;;;
 (defun sigcontext-floating-point-modes (scp)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (slot (slot scp 'sc-g1) 'fsr)))
 
 
