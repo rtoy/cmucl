@@ -65,7 +65,8 @@ New in this release:
     * (cosh 1000d0) signals an overflow error as it
       should. Previously, it just incorrectly returned infinity.
     * Deprecating FLOAT-TRAPPING-NAN-P in favor of
-      FLOAT-SIGNALING-NAN-P.
+      FLOAT-SIGNALING-NAN-P.  These kinds of numbers are called
+      signaling NaNs, not trapping NaNs.
     * Changed the printer to print "Signaling" instead of "Trapping"
       when printing a signaling NaN.
     * Various issues with the switch to using fdlibm have been
@@ -78,10 +79,7 @@ New in this release:
     * On the ppc port, handle FP exceptions a bit better by not
       failing if cmucl is unable to interpret the instruction that
       caused the exception.
-    * FLOAT-TRAPPING-NAN-P is deprecated and is replaced by
-      FLOAT-SIGNALING-NAN-P. These kinds of numbers are called
-      signaling NaNs, not trapping NaNs.
-    * Microoptimization for sparc in converting a double-float to a
+    * Microoptimization for sparc in rounding a double-float to a
       32-bit signed integer.
     * The compiler can now derive the type of ROUND. (But more work is
       needed.)
