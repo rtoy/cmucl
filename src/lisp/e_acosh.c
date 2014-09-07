@@ -50,10 +50,16 @@ ln2	= 6.93147180559945286227e-01;  /* 0x3FE62E42, 0xFEFA39EF */
         ux.d = x;
 	hx = ux.i[HIWORD];
 	if(hx<0x3ff00000) {		/* x < 1 */
-	    return (x-x)/(x-x);
+            return fdlibm_setexception(x, FDLIBM_INVALID);
 	} else if(hx >=0x41b00000) {	/* x > 2**28 */
 	    if(hx >=0x7ff00000) {	/* x is inf of NaN */
-	        return x+x;
+                if ((hx == 0x7ff00000) && (ux.i[LOWORD] == 0)) {
+                    /* Overflow if x is +inf. */
+                    return fdlibm_setexception(x, FDLIBM_OVERFLOW);
+                } else {
+                    /* Invalid if x is NaN */
+                    return fdlibm_setexception(x, FDLIBM_INVALID);
+                }
 	    } else 
 		return __ieee754_log(x)+ln2;	/* acosh(huge)=log(2x) */
 	} else if(((hx-0x3ff00000)|ux.i[LOWORD])==0) {

@@ -34,7 +34,7 @@ ifdef FEATURE_UNICODE
 UNICODE = -DUNICODE
 endif
 
-CFLAGS = $(OSX_VERSION) -g -O3 -DDARWIN -Dppc $(LINKAGE) $(GENCGC) $(UNICODE)
+CFLAGS = $(OSX_VERSION) -g -O3 -ffp-contract=off -fno-omit-frame-pointer -DDARWIN -Dppc $(LINKAGE) $(GENCGC) $(UNICODE)
 ASFLAGS = $(OSX_VERSION) -traditional -g -O3 -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &

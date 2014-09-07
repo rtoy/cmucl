@@ -22,6 +22,8 @@
  *		 := sign(x)*log1p(|x| + x^2/(1 + sqrt(1+x^2)))  
  */
 
+#include <math.h>
+
 #include "fdlibm.h"
 
 #ifdef __STDC__
@@ -47,7 +49,15 @@ huge=  1.00000000000000000000e+300;
         ux.d = x;
 	hx = ux.i[HIWORD];
 	ix = hx&0x7fffffff;
-	if(ix>=0x7ff00000) return x+x;	/* x is inf or NaN */
+	if(ix>=0x7ff00000) {
+            /* x is inf or NaN */
+            if (isnan(x)) {
+                return fdlibm_setexception(x, FDLIBM_INVALID);
+            } else {
+                return fdlibm_setexception(x, FDLIBM_OVERFLOW);
+            }
+        }
+        
 	if(ix< 0x3e300000) {	/* |x|<2**-28 */
 	    if(huge+x>one) return x;	/* return x inexact except 0 */
 	} 

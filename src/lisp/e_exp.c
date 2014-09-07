@@ -111,6 +111,17 @@ P5   =  4.13813679705723846039e-08; /* 0x3E663769, 0x72BEA4D0 */
 	unsigned hx;
 	union { int i[2]; double d; } ux;
 
+        /*
+         * CMUCL addition: Return correctly rounded value for
+         * exp(1). There are tests to verify that exp(x) is still
+         * monotonic around exp(1), so this change doens't break
+         * anything.
+         */
+        if (x == 1) {
+            /* Return the correctly rounded value for x = 1 */
+            return 2.718281828459045;
+        }
+
 	ux.d = x;
 	hx  = ux.i[HIWORD];	/* high word of x */
 	xsb = (hx>>31)&1;		/* sign bit of x */
@@ -119,12 +130,22 @@ P5   =  4.13813679705723846039e-08; /* 0x3E663769, 0x72BEA4D0 */
     /* filter out non-finite argument */
 	if(hx >= 0x40862E42) {			/* if |x|>=709.78... */
             if(hx>=0x7ff00000) {
-		if(((hx&0xfffff)|ux.i[LOWORD])!=0) 
-		     return x+x; 		/* NaN */
-		else return (xsb==0)? x:0.0;	/* exp(+-inf)={inf,0} */
+		if(((hx&0xfffff)|ux.i[LOWORD])!=0) {
+                    /* NaN */
+                    return fdlibm_setexception(x, FDLIBM_INVALID);
+                } else {
+                    return (xsb==0)? x:0.0;	/* exp(+-inf)={inf,0} */
+                }
 	    }
-	    if(x > o_threshold) return huge*huge; /* overflow */
-	    if(x < u_threshold) return twom1000*twom1000; /* underflow */
+	    if(x > o_threshold) {
+                 /* overflow */
+                return fdlibm_setexception(x, FDLIBM_OVERFLOW);
+            }
+            
+	    if(x < u_threshold) {
+		/* underflow */
+		return fdlibm_setexception(0.0, FDLIBM_UNDERFLOW);
+	    }
 	}
 
     /* argument reduction */

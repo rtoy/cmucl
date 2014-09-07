@@ -99,7 +99,7 @@ huge   = 1.0e300;
 	if(ix>=0x44100000) {	/* if |x| >= 2^66 */
 	    if(ix>0x7ff00000||
 		(ix==0x7ff00000&&(ux.i[LOWORD]!=0)))
-		return x+x;		/* NaN */
+                return fdlibm_setexception(x, FDLIBM_INVALID);  /* NaN */
 	    if(hx>0) return  atanhi[3]+atanlo[3];
 	    else     return -atanhi[3]-atanlo[3];
 	} if (ix < 0x3fdc0000) {	/* |x| < 0.4375 */

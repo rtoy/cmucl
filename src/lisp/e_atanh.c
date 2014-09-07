@@ -57,10 +57,11 @@ static double zero = 0.0;
 	lx = ux.i[LOWORD];		/* low word */
 	ix = hx&0x7fffffff;
 	if ((ix|((lx|(-lx))>>31))>0x3ff00000) /* |x|>1 */
-	    return (x-x)/(x-x);
-	if(ix==0x3ff00000) 
-	    return x/zero;
-	if(ix<0x3e300000&&(huge+x)>zero) return x;	/* x<2**-28 */
+          return fdlibm_setexception(x, FDLIBM_INVALID);
+        if(ix==0x3ff00000) 
+          return fdlibm_setexception(x, FDLIBM_DIVIDE_BY_ZERO);
+        
+        if(ix<0x3e300000&&(huge+x)>zero) return x;	/* x<2**-28 */
         ux.d = x;
 	ux.i[HIWORD] = ix;		/* x <- |x| */
         x = ux.d;

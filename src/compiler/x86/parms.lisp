@@ -97,10 +97,10 @@
 	  float-underflow-trap-bit float-overflow-trap-bit
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit))
-)
 
 #+double-double
 (export '(double-double-float-digits))
+) ; eval-when
 	  
 
 (eval-when (compile load eval)

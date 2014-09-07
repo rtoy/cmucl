@@ -62,6 +62,30 @@ New in this release:
       DEFINE-CONDITION. (From Helmut Eller.)
     * The lisp executable is now compiled to use SSE2 on x86 machines;
       CMUCL will not run on chips without SSE2 anymore.
+    * (cosh 1000d0) signals an overflow error as it
+      should. Previously, it just incorrectly returned infinity.
+    * Deprecating FLOAT-TRAPPING-NAN-P in favor of
+      FLOAT-SIGNALING-NAN-P.  These kinds of numbers are called
+      signaling NaNs, not trapping NaNs.
+    * Changed the printer to print "Signaling" instead of "Trapping"
+      when printing a signaling NaN.
+    * Various issues with the switch to using fdlibm have been
+      fixed. The issues were mostly not signaling floating-point
+      exceptions in places where they were expected.
+    * Restore the x87 FPU support on Linux; these are required because
+      foreign functions and libraries can still use x87 even if cmucl
+      itself does not. This is not required on Darwin because x87 is
+      not used there.
+    * On the ppc port, handle FP exceptions a bit better by not
+      failing if cmucl is unable to interpret the instruction that
+      caused the exception.
+    * Microoptimization for sparc in rounding a double-float to a
+      32-bit signed integer.
+    * The compiler can now derive the type of ROUND. (But more work is
+      needed.)
+    * Fix an issue with multi-processing destroy-process doesn't take
+      effect for a schedulable processbecause it has no run-reason
+      and/or arrest-reason.
 
   * ANSI compliance fixes:
     * The values on the branch cuts for the inverse trig and
@@ -73,7 +97,7 @@ New in this release:
       for atanh in the CLHS.
     * CLEAR-OUTPUT was not actually doing anything. Now, CLEAR-OUTPUT
       will discard any buffered data that has not been written out
-      yet. 
+      yet.
 
   * Bugfixes:
     * Fix error in pi reduction on x87.  It was not noticed previously
@@ -94,7 +118,11 @@ New in this release:
     * For Gray streams, CLEAR-OUTPUT was calling STREAM-FORCE-OUTPUT
       instead of STREAM-CLEAR-OUTPUT, so the output wasn't actually
       cleared.
-
+    * In some situations KERNEL:DOUBLE-FLOAT-BITS on x86 would cause a
+      segfault. This has been fixed.
+    * For linux, motifd is no longer a 64-bit app.
+    * (exp 1d0) now returns the correctly rounded value of
+      e. Previously, it was off by one bit.
 
   * Trac Tickets:
     * Ticket #90 fixed.
@@ -105,6 +133,12 @@ New in this release:
     * Ticket #98 fixed.
     * Ticket #104 fixed.
     * Ticket #101, item 1 fixed.
+    * Ticket #105, fixed.
+    * Ticket #84 fixed on x86.
+    * Ticket #105 fixed.
+    * Ticket #101 fixed.
+    * Ticket #106 fixed.
+    * Ticket #100 fixed.
 
   * Other changes:
 

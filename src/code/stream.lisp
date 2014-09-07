@@ -370,7 +370,13 @@
 	 (when res
 	   (- res (- in-buffer-length (lisp-stream-in-index stream))))
 	 #+unicode
-	 res)))))
+	 res)))
+    ;; fundamental stream
+    (cond
+      (position
+       (setf (stream-file-position stream) position))
+      (t
+       (stream-file-position stream)))))
 
 
 ;;; File-Length  --  Public

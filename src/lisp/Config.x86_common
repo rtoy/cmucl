@@ -54,7 +54,7 @@ CPP_INCLUDE_OPTIONS := -I. -I$(PATH1) -I-
 endif
 
 CPPFLAGS := $(CPP_DEFINE_OPTIONS) $(CPP_INCLUDE_OPTIONS) 
-CFLAGS += -Wstrict-prototypes -Wall -O2 -g -mtune=generic
+CFLAGS += -Wstrict-prototypes -Wall -O2 -g -fno-omit-frame-pointer
 ASFLAGS = -g 
 
 ASSEM_SRC = x86-assem.S

@@ -87,10 +87,10 @@
 	  float-underflow-trap-bit float-overflow-trap-bit
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit))
-)
 
 #+double-double
 (export '(double-double-float-digits))
+) ; eval-when
 	  
 
 (eval-when (compile load eval)
@@ -388,8 +388,10 @@
 (defparameter *assembly-unit-length* 8)
 
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(pseudo-atomic-trap allocation-trap
 	  pseudo-atomic-value pseudo-atomic-interrupted-value))
+)
 ;;;; Pseudo-atomic trap number.
 ;;;;
 ;;;; This is the trap number to use when a pseudo-atomic section has

@@ -5,6 +5,11 @@
 ;;;;
 ;;;;   lisp -noinit -load tests/run-tests.lisp -eval '(cmucl-test-runner:run-all-tests)'
 ;;;;
+;;;;
+;;;; To run selected tests:
+;;;;
+;;;;   lisp -noinit -load tests/run-tests.lisp -eval '(progn (cmucl-test-runner:load-test-files) (cmucl-test-runner:run-test <list>))'
+;;;;
 ;;;; Note that you cannot run these tests from a binary created during
 ;;;; a build process. You must run
 ;;;;
@@ -25,6 +30,7 @@
 	   #:load-test-files
 	   #:run-loaded-tests
 	   #:run-all-tests
+	   #:run-test
 	   #:print-test-results))
 
 (in-package :cmucl-test-runner)
@@ -65,8 +71,16 @@
 	    test-results))
     (nreverse test-results)))
 
+;; Run selected tests
+(defun run-test (&rest tests)
+  (let (test-results)
+    (dolist (test tests)
+      (push (lisp-unit:run-tests :all test)
+	    test-results))
+    (print-test-results (nreverse test-results) :verbose t)))
+
 ;; Print out a summary of test results produced from RUN-LOADED-TESTS.
-(defun print-test-results (results &key verbose)
+(defun print-test-results (results &key verbose exitp)
   (let ((passed 0)
 	(failed 0)
 	(execute-errors 0)
@@ -106,9 +120,11 @@
 	     (format t "~2&Execute failures: ~S~%" execute-error-tests)
 	     (dolist (result results)
 	       (lisp-unit:print-errors result)))
-	   (unix:unix-exit 1))
+	   (when exitp
+	     (unix:unix-exit 1)))
 	  (t
-	   (unix:unix-exit 0)))))
+	   (when exitp
+	     (unix:unix-exit 0))))))
 
 ;; Look through all the files in the TEST-DIRECTORY and load them.
 ;; Then run all of the tests.  For each file, it ia assumed that a
@@ -116,7 +132,7 @@
 ;; pathname-name of the file.
 (defun run-all-tests (&key (test-directory #P"tests/") (verbose t))
   (load-test-files test-directory)
-  (print-test-results (run-loaded-tests) :verbose t))
+  (print-test-results (run-loaded-tests) :verbose t :exitp t))
 
 ;;(run-all-tests)
 ;;(quit)

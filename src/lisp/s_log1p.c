@@ -114,8 +114,13 @@ static double zero = 0.0;
 	k = 1;
 	if (hx < 0x3FDA827A) {			/* x < 0.41422  */
 	    if(ax>=0x3ff00000) {		/* x <= -1.0 */
-		if(x==-1.0) return -two54/zero; /* log1p(-1)=+inf */
-		else return (x-x)/(x-x);	/* log1p(x<-1)=NaN */
+		if(x==-1.0) {
+                    /* log1p(-1)=-inf */
+                    return fdlibm_setexception(x, FDLIBM_OVERFLOW); 
+		} else {
+                    /* log1p(x<-1)=NaN */
+                    return fdlibm_setexception(x, FDLIBM_INVALID);
+                }
 	    }
 	    if(ax<0x3e200000) {			/* |x| < 2**-29 */
 		if(two54+x>zero			/* raise inexact */
