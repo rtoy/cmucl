@@ -20,6 +20,7 @@
 #include "global.h"
 #include "datatrans.h"
 #include "tables.h"
+#include "oblist.h"
 
 extern WidgetClass overrideShellWidgetClass,transientShellWidgetClass,
   topLevelShellWidgetClass,applicationShellWidgetClass;
@@ -190,7 +191,9 @@ void record_class_resources(WidgetClass class,class_resources *r)
   r->resource_count = resource_count;
   r->constraint_count = constraint_count;
 
+  maybe_unintern_object(resource_list);
   XtFree( (char *)resource_list );
+  maybe_unintern_object(resource_list);
   XtFree( (char *)constraint_list );
 }
 

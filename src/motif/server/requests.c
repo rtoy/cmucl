@@ -21,6 +21,7 @@
 #include "types.h"
 #include "functions.h"
 #include "tables.h"
+#include "oblist.h"
 
 typedef void (*request_f)(message_t);
 Boolean must_confirm = False;
@@ -60,11 +61,13 @@ void cleanup_garbage()
   
   garbage_list = NULL;
   while( current ) {
-    if( current->kind == GarbageXmString )
+    if( current->kind == GarbageXmString ) {
+      maybe_unintern_object(current->junk);
       XmStringFree( (XmString)current->junk );
-    else
+    } else {
+      maybe_unintern_object(current->junk);
       XtFree( current->junk );
-
+    }
     doomed = current;
     current = current->next;
     XtFree( (char *)doomed );

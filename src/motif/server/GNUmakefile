@@ -5,7 +5,7 @@ LDFLAGS =
 TARGET = motifd
 OBJS = main.o server.o translations.o packet.o message.o datatrans.o \
        requests.o callbacks.o widgets.o resources.o tables.o motif.o \
-       text.o xmstring.o list.o events.o
+       text.o xmstring.o list.o events.o oblist.o
 
 include Config
 
