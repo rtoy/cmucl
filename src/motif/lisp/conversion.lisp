@@ -66,10 +66,16 @@
 	 (message-write-string message value)))
     (xlib:font (message-write-xid message (xlib:font-id value) :font))
     (xlib:cursor (message-write-xid message (xlib:cursor-id value) :cursor))
+    ;; Wart: events are written back to motifd through here as integers.
     ((unsigned-byte 24)
-     (message-put-dblword message (combine-type-and-data :short value)))
+     (if (eql type :event)
+         (progn
+           (message-put-dblword message (combine-type-and-data :event 0))
+           (message-put-dblword message value))
+         (message-put-dblword message (combine-type-and-data :short value))))
     ((or (signed-byte 32) (unsigned-byte 32))
-     (message-put-dblword message (combine-type-and-data :int 0))
+     (message-put-dblword
+      message (combine-type-and-data (if (eql type :event) :event :int) 0))
      (message-put-dblword message value))
     ((member t nil)
      (if (eq type t)

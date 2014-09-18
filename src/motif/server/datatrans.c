@@ -253,6 +253,11 @@ void message_write_xm_string_table(message_t m,StringTable *items,int tag)
     message_write_xm_string(m,(XmString)items->data[i],xm_string_tag);
 }
 
+void message_write_event(message_t m,XEvent *event,int tag)
+{
+  message_write_oid(m,event,tag);
+}
+
 void message_write_color(message_t m,XColor *color,int tag)
 {
   message_put_dblword(m,combine_type_and_data(tag,color->red));
@@ -503,6 +508,12 @@ void message_read_xm_string_table(message_t m,StringTable *items,
   for(i=0;i<len;i++)
     toolkit_read_value(m,&(items->data[i]),XmRXmString);
 }
+
+void message_read_event(message_t message,XEvent *event,int tag,int data)
+{
+  message_read_oid(message,(void*)event,tag,data);
+}
+
 
 void message_read_color(message_t m,XColor *color,int tag, int red)
 {

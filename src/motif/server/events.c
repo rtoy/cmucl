@@ -23,8 +23,7 @@ extern int end_callback_loop;
 
 void write_any_event(message_t reply,XEvent *event)
 {
-  message_put_dblword(reply,combine_type_and_data(event_tag,0));
-  message_put_dblword(reply,(unsigned long)event);
+  message_write_event(reply,event,event_tag);
   message_put_dblword(reply,event->xany.type);
   message_put_dblword(reply,event->xany.serial);
   message_put_dblword(reply,event->xany.send_event);
