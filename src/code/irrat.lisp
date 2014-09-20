@@ -598,7 +598,17 @@
 					(float 2 float-type)))))))))
     (etypecase x
       (float
-       (/ (log (float x float-type)) (log-of-2 float-type)))
+       (multiple-value-bind (f e s)
+	   (decode-float x)
+	 ;; If x = 2^e*f then log2(x) = e + log2(f) = e +
+	 ;; log(f)/log(2). Accuracy could be improved some since this
+	 ;; has 2 rounding operations instead of just 1 for
+	 ;; log(x)/log(2).
+	 (let ((log2 (+ e (/ (log (float f float-type))
+			     (log-of-2 float-type)))))
+	   (if (minusp s)
+	       (complex log2 (log-2-pi float-type))
+	       log2))))
       (ratio
        (let ((top (numerator x))
 	     (bot (denominator x)))
