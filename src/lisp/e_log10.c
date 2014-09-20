@@ -77,8 +77,8 @@ static double zero   =  0.0;
         k=0;
         if (hx < 0x00100000) {                  /* x < 2**-1022  */
             if (((hx&0x7fffffff)|lx)==0)
-                return -two54/zero;             /* log(+-0)=-inf */
-            if (hx<0) return (x-x)/zero;        /* log(-#) = NaN */
+              return fdlibm_setexception(-1.0, FDLIBM_DIVIDE_BY_ZERO); /* log(+-0)=-inf */
+            if (hx<0) return fdlibm_setexception(x-x, FDLIBM_INVALID); /* log(-#) = NaN */
             k -= 54; x *= two54; /* subnormal number, scale up x */
             ux.d = x;
             hx = ux.i[HIWORD];
