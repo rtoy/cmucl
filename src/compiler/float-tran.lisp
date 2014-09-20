@@ -2082,24 +2082,19 @@
 
 (defun decode-float-sign-derive-type-aux (arg)
   ;; Derive the sign of the float.
-  (flet ((calc-sign (x)
-	   (when x
-	     (nth-value 2 (decode-float x)))))
-    (let* ((lo (bound-func #'calc-sign
-			       (numeric-type-low arg)))
-	   (hi (bound-func #'calc-sign
-			       (numeric-type-high arg))))
-      (if (numeric-type-format arg)
-	  (specifier-type `(,(numeric-type-format arg)
-			     ;; If lo or high bounds are NIL, use -1
-			     ;; or 1 of the appropriate type instead.
-			     ,(or lo (coerce -1 (numeric-type-format arg)))
-			     ,(or hi (coerce 1  (numeric-type-format arg)))))
-	  (specifier-type '(or (member 1f0 -1f0
-				1d0 -1d0
-				#+double-double 1w0
-				#+double-double -1w0)))))))
-
+  (if (numeric-type-format arg)
+      (let ((arg-range (interval-range-info (numeric-type->interval arg))))
+	(case arg-range
+	  (+ (make-member-type :members (list (coerce 1 (numeric-type-format arg)))))
+	  (- (make-member-type :members (list (coerce -1 (numeric-type-format arg)))))
+	  (otherwise
+	   (make-member-type :members (list (coerce 1 (numeric-type-format arg))
+					    (coerce -1 (numeric-type-format arg)))))))
+      (specifier-type '(or (member 1f0 -1f0
+			    1d0 -1d0
+			    #+double-double 1w0
+			    #+double-double -1w0)))))
+    
 (defoptimizer (decode-float derive-type) ((num))
   (let ((f (one-arg-derive-type num
 				#'(lambda (arg)
