@@ -68,9 +68,11 @@ static double zero   =  0.0;
 	double y,z;
 	int i,k,hx;
 	unsigned lx;
+	union { int i[2]; double d; } ux;
 
-	hx = __HI(x);	/* high word of x */
-	lx = __LO(x);	/* low word of x */
+        ux.d = x;
+        hx = ux.i[HIWORD];
+        lx = ux.i[LOWORD];
 
         k=0;
         if (hx < 0x00100000) {                  /* x < 2**-1022  */
@@ -78,14 +80,16 @@ static double zero   =  0.0;
                 return -two54/zero;             /* log(+-0)=-inf */
             if (hx<0) return (x-x)/zero;        /* log(-#) = NaN */
             k -= 54; x *= two54; /* subnormal number, scale up x */
-            hx = __HI(x);                /* high word of x */
+            ux.d = x;
+            hx = ux.i[HIWORD];
         }
 	if (hx >= 0x7ff00000) return x+x;
 	k += (hx>>20)-1023;
 	i  = ((unsigned)k&0x80000000)>>31;
         hx = (hx&0x000fffff)|((0x3ff-i)<<20);
         y  = (double)(k+i);
-        __HI(x) = hx;
+        ux.i[HIWORD] = hx;
+        x = ux.d;
 	z  = y*log10_2lo + ivln10*__ieee754_log(x);
 	return  z+y*log10_2hi;
 }
