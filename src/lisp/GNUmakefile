@@ -12,6 +12,7 @@ FDLIBM = k_sin.c k_cos.c k_tan.c s_sin.c s_cos.c s_tan.c sincos.c \
 	e_acosh.c s_asinh.c e_atanh.c \
 	e_atan2.c \
 	e_rem_pio2.c k_rem_pio2.c \
+	e_log10.c \
 	setexception.c
 
 SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \

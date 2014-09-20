@@ -81,7 +81,7 @@
 ;;; Exponential and Logarithmic.
 (def-math-rtn ("__ieee754_exp" %exp) 1)
 (def-math-rtn ("__ieee754_log" %log) 1)
-(def-math-rtn "log10" 1)
+(def-math-rtn ("__ieee754_log10" %log10) 1)
 
 (def-math-rtn ("__ieee754_pow" %pow) 2)
 #-(or x86 sparc-v7 sparc-v8 sparc-v9)

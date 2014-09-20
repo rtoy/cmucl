@@ -1006,3 +1006,24 @@
   (assert-true (ext:float-nan-p (kernel:%atan *qnan*)))
   (kernel::with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%atan *snan*)))))
+
+(define-test %log10.exceptions
+  (:tag :fdlibm)
+  ;; %log10(2^k) = k
+  (dotimes (k 23)
+    (assert-equalp k
+		  (kernel:%log10 (float (expt 10 k) 1d0))))
+  (assert-error 'division-by-zero
+		(kernel:%log10 0d0))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%log10 -1d0))
+  (assert-true (ext:float-nan-p (kernel:%log10 *qnan*)))
+  (assert-equal ext:double-float-positive-infinity
+		(kernel:%log10 ext:double-float-positive-infinity))
+  (kernel::with-float-traps-masked (:divide-by-zero)
+    (assert-equal ext:double-float-negative-infinity
+		  (kernel:%log10 0d0))
+    (assert-equal ext:double-float-negative-infinity
+		  (kernel:%log10 -0d0)))
+  (kernel::with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%log10 -1d0)))))
