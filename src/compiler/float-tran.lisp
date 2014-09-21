@@ -824,6 +824,33 @@
 (deftransform log ((x y) (float float) float)
   '(if (zerop y) y (/ (log x) (log y))))
 
+(deftransform log ((x y) ((or (member 0f0) (single-float (0f0)))
+			  (constant-argument number))
+		   single-float)
+  ;; Transform (log x 2) and (log x 10) to something simpler.
+  (let ((y-val (continuation-value y)))
+    (unless (and (not-more-contagious y x)
+		 (or (= y-val 2)
+		     (= y-val 10)))
+      (give-up))
+    (cond ((= y-val 10)
+	   `(coerce (kernel:%log10 (float x 1d0)) 'single-float))
+	  ((= y-val 2)
+	   `(coerce (kernel::log2 (float x 1d0)) 'single-float)))))
+
+(deftransform log ((x y) ((or (member 0d0) (double-float 0d0))
+			  (constant-argument number))
+		   double-float)
+  ;; Transform (log x 2) and (log x 10) to something simpler.
+  (let ((y-val (continuation-value y)))
+    (unless (and (not-more-contagious y x)
+		 (or (= y-val 2)
+		     (= y-val 10)))
+      (give-up))
+    (cond ((= y-val 10)
+	   `(kernel:%log10 (float x 1d0)))
+	  ((= y-val 2)
+	   `(kernel::log2 (float x 1d0))))))
 
 ;;; Handle some simple transformations
   
