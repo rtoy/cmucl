@@ -11,7 +11,13 @@
 					 (decode-float x)))
 			1d0)))
 
-(define-test log2
+(define-test log2.interp
   (loop for k from -1074 to 1023 do
     (let ((x (scale-float 1d0 k)))
-      (assert-equal k (log x 2)))))
+      (assert-equalp k (log x 2)))))
+
+(define-test log10.interp
+  (loop for k from 0 to 22 do
+    (let ((x (float (expt 10 k) 1d0)))
+      (assert-equalp k (log x 10)))))
+
