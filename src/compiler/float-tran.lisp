@@ -2084,13 +2084,13 @@
 	   (when x
 	     (nth-value 1 (decode-float x))))
 	 (min-exp ()
-	   ;; Use decode-float on 0 of the appropriate type to find
-	   ;; the min exponent.  If we don't know the actual number
-	   ;; format, use double, which has the widest range
-	   ;; (including double-double-float).
-	   (if (numeric-type-format arg)
-	       (nth-value 1 (decode-float (coerce 0 (numeric-type-format arg))))
-	       (nth-value 1 (decode-float (coerce 0 'double-float)))))
+	   ;; Use decode-float on the least positive float of the
+	   ;; appropriate type to find the min exponent.  If we don't
+	   ;; know the actual number format, use double, which has the
+	   ;; widest range (including double-double-float).
+	   (nth-value 1 (decode-float (if (eq 'single-float (numeric-type-format arg))
+					  least-positive-single-float
+					  least-positive-double-float))))
 	 (max-exp ()
 	   ;; Use decode-float on the most postive number of the
 	   ;; appropriate type to find the max exponent.  If we don't
