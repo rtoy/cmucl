@@ -4780,11 +4780,15 @@ msgid "Return true if the float X is an infinity (+ or -)."
 msgstr ""
 
 #: src/code/float.lisp
-msgid "Return true if the float X is a NaN (Not a Number)."
+msgid "Return true if the float X is a quiet or signaling NaN (Not a Number)."
 msgstr ""
 
 #: src/code/float.lisp
-msgid "Return true if the float X is a trapping NaN (Not a Number)."
+msgid "Return true if the float X is a signaling NaN (Not a Number)."
+msgstr ""
+
+#: src/code/float.lisp
+msgid "Deprecated.  Use FLOAT-SIGNALING-NAN-P instead."
 msgstr ""
 
 #: src/code/float.lisp
@@ -16359,9 +16363,9 @@ msgid ""
 "      :To Time-Spec\n"
 "\t  Specify the beginning or end of the operand's lifetime.  :From can\n"
 "\t  only be used with results, and :To only with arguments.  The default\n"
-"\t  for the N'th argument/result is (:ARGUMENT N)/(:RESULT N).  These\n"
-"\t  options are necessary primarily when operands are read or written out\n"
-"\t  of order.\n"
+"\t  for the N'th argument/result is (:ARGUMENT N)/(:RESULT N).  (The\n"
+"          first argument/result is number 0.) These options are necessary\n"
+"          primarily when operands are read or written out of order.\n"
 "   \n"
 "  :Conditional\n"
 "      This is used in place of :RESULTS with conditional branch VOPs.  "
@@ -21084,6 +21088,14 @@ msgstr ""
 
 #: src/pcl/gray-streams.lisp
 msgid "Implements WRITE-SEQUENCE for the stream."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid "Implements FILE-POSITION for the stream."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid "Implements FILE-POSITION for the stream for setting the position."
 msgstr ""
 
 #: src/pcl/gray-streams.lisp
