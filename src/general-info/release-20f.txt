@@ -123,6 +123,10 @@ New in this release:
     * For linux, motifd is no longer a 64-bit app.
     * (exp 1d0) now returns the correctly rounded value of
       e. Previously, it was off by one bit.
+    * INTEGER-DECODE-FLOAT returns the correct values for denormal
+      doubles. As a side-effect of this fix, DECODE-FLOAT returns the
+      correct values for denormals, and SCALE-FLOAT scales denormals
+      correctly.
 
   * Trac Tickets:
     * Ticket #90 fixed.
