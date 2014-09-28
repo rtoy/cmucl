@@ -31,33 +31,37 @@ huge   = 1.0e+300,
 tiny   = 1.0e-300;
 
 #ifdef __STDC__
-	double scalbn (double x, int n)
+	double fdlibm_scalbn (double x, int n)
 #else
-	double scalbn (x,n)
+	double fdlibm_scalbn (x,n)
 	double x; int n;
 #endif
 {
 	int  k,hx,lx;
-	hx = __HI(x);
-	lx = __LO(x);
+	union { int i[2]; double d; } ux;
+
+        ux.d = x;
+	hx = ux.i[HIWORD];
+	lx = ux.i[LOWORD];
         k = (hx&0x7ff00000)>>20;		/* extract exponent */
         if (k==0) {				/* 0 or subnormal x */
             if ((lx|(hx&0x7fffffff))==0) return x; /* +-0 */
-	    x *= two54; 
-	    hx = __HI(x);
+	    x *= two54;
+            ux.d = x;
+	    hx = ux.i[HIWORD];
 	    k = ((hx&0x7ff00000)>>20) - 54; 
-            if (n< -50000) return tiny*x; 	/*underflow*/
+            if (n< -50000) return fdlibm_setexception(x, FDLIBM_UNDERFLOW);; 	/*underflow*/
 	    }
         if (k==0x7ff) return x+x;		/* NaN or Inf */
         k = k+n; 
-        if (k >  0x7fe) return huge*copysign(huge,x); /* overflow  */
+        if (k >  0x7fe) return fdlibm_setexception(x, FDLIBM_OVERFLOW); /* overflow  */
         if (k > 0) 				/* normal result */
-	    {__HI(x) = (hx&0x800fffff)|(k<<20); return x;}
+	    {ux.i[HIWORD] = (hx&0x800fffff)|(k<<20); return x;}
         if (k <= -54)
             if (n > 50000) 	/* in case integer overflow in n+k */
-		return huge*copysign(huge,x);	/*overflow*/
-	    else return tiny*copysign(tiny,x); 	/*underflow*/
+              return fdlibm_setexception(x, FDLIBM_OVERFLOW);	/*overflow*/
+            else return fdlibm_setexception(x, FDLIBM_UNDERFLOW); 	/*underflow*/
         k += 54;				/* subnormal result */
-        __HI(x) = (hx&0x800fffff)|(k<<20);
+        ux.i[HIWORD] = (hx&0x800fffff)|(k<<20);
         return x*twom54;
 }
