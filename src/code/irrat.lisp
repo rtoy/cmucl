@@ -183,10 +183,10 @@
     (%sqrt x))
   )
 
-;; Same as above, but instead of needing to pass an array in, the
-;; output array is broken up into two output values instead.  This is
-;; easier for the user, and we don't have to wrap calls with
-;; without-gcing.
+;; Slightly simplified interface to __ieee754_rem_pio2, but instead of
+;; needing to pass an array in, the output array is broken up into two
+;; output values instead.  This is easier for the user, and we don't
+;; have to wrap calls with without-gcing.
 (declaim (inline %ieee754-rem-pi/2))
 (export '%ieee754-rem-pi/2)
 (alien:def-alien-routine ("ieee754_rem_pio2" %ieee754-rem-pi/2) c-call:int
