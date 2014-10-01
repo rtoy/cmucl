@@ -1027,3 +1027,32 @@
 		  (kernel:%log10 -0d0)))
   (kernel::with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%log10 -1d0)))))
+
+(define-test %scalbn.exceptions
+  (:tag :fdlibm)
+  (let ((modes (ext:get-floating-point-modes)))
+    (unwind-protect
+	 (progn
+	   (ext:set-floating-point-modes :traps '(:underflow))
+	   (assert-error 'floating-point-underflow
+			 (kernel:%scalbn 1d0 -51000)))
+      (apply #'ext:set-floating-point-modes modes)))
+  (assert-true 0d0
+	       (kernel:%scalbn 1d0 -51000))
+  (assert-true -0d0
+	       (kernel:%scalbn -1d0 -51000))
+  (assert-error 'floating-point-overflow
+		(kernel:%scalbn ext:double-float-positive-infinity 1))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%scalbn *snan* 1))
+  (assert-error 'floating-point-overflow
+		(kernel:%scalbn most-positive-double-float 2))
+  (assert-error 'floating-point-overflow
+		(kernel:%scalbn most-negative-double-float 2))
+  (kernel::with-float-traps-masked (:overflow)
+    (assert-equal ext:double-float-positive-infinity
+		  (kernel:%scalbn ext:double-float-positive-infinity 1))
+    (assert-equal ext:double-float-positive-infinity
+		  (kernel:%scalbn most-positive-double-float 2))
+    (assert-equal ext:double-float-negative-infinity
+		  (kernel:%scalbn most-negative-double-float 2))))
