@@ -52,15 +52,24 @@ tiny   = 1.0e-300;
 	    k = ((hx&0x7ff00000)>>20) - 54; 
             if (n< -50000) return fdlibm_setexception(x, FDLIBM_UNDERFLOW);; 	/*underflow*/
 	    }
-        if (k==0x7ff) return x+x;		/* NaN or Inf */
+        if (k==0x7ff) {
+            /* NaN or Inf */
+            if(((hx&0xfffff)|lx)!=0) {
+                return fdlibm_setexception(x, FDLIBM_INVALID);
+            } else {
+                return fdlibm_setexception(x, FDLIBM_OVERFLOW);
+            }
+        }
+        
         k = k+n; 
         if (k >  0x7fe) return fdlibm_setexception(x, FDLIBM_OVERFLOW); /* overflow  */
         if (k > 0) 				/* normal result */
 	    {ux.i[HIWORD] = (hx&0x800fffff)|(k<<20); return x;}
-        if (k <= -54)
+        if (k <= -54) {
             if (n > 50000) 	/* in case integer overflow in n+k */
               return fdlibm_setexception(x, FDLIBM_OVERFLOW);	/*overflow*/
             else return fdlibm_setexception(x, FDLIBM_UNDERFLOW); 	/*underflow*/
+        }
         k += 54;				/* subnormal result */
         ux.i[HIWORD] = (hx&0x800fffff)|(k<<20);
         return x*twom54;
