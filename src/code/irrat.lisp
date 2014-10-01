@@ -91,6 +91,12 @@
 (def-math-rtn ("fdlibm_log1p" %log1p) 1)
 (def-math-rtn ("fdlibm_expm1" %expm1) 1)
 
+(declaim (inline %scalbn))
+(export '%scalbn)
+(alien:def-alien-routine ("fdlibm_scalbn" %scalbn) c-call:double
+  (x double-float)
+  (n c-call:int))
+
 ;; These are needed for use by byte-compiled files.  But don't use
 ;; these with sse2 since we don't support using the x87 instructions
 ;; here.
