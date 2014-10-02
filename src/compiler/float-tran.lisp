@@ -488,21 +488,50 @@
   '(integer-decode-double-float x))
 
 (deftransform scale-float ((f ex) (single-float *) * :when :both)
-  (if (and (backend-featurep :x86)
-	   (not (backend-featurep :sse2))
-	   (csubtypep (continuation-type ex)
-		      (specifier-type '(signed-byte 32)))
-	   (not (byte-compiling)))
-      '(coerce (%scalbn (coerce f 'double-float) ex) 'single-float)
-      '(scale-single-float f ex)))
+  (cond ((and (backend-featurep :x86)
+	      (not (backend-featurep :sse2))
+	      (csubtypep (continuation-type ex)
+			 (specifier-type '(signed-byte 32)))
+	      (not (byte-compiling)))
+	 '(coerce (%scalbn (coerce f 'double-float) ex) 'single-float))
+	((csubtypep (continuation-type ex)
+		    (specifier-type `(integer #.(- vm:single-float-normal-exponent-min
+						   vm:single-float-bias
+						   vm:single-float-digits)
+					      #.(- vm:single-float-normal-exponent-max
+						   vm:single-float-bias
+						   1))))
+	 ;; The exponent is such that 2^ex will fit in a single-float.
+	 ;; Thus, scale-float can be done multiplying by a suitable
+	 ;; constant.
+	 `(* f (kernel:make-single-float (dpb (+ ex (1+ vm:single-float-bias))
+					      vm:single-float-exponent-byte
+					      (kernel:single-float-bits 1f0)))))
+	(t
+	 '(scale-single-float f ex))))
 
 (deftransform scale-float ((f ex) (double-float *) * :when :both)
-  (if (and (backend-featurep :x86)
-	   (not (backend-featurep :sse2))
-	   (csubtypep (continuation-type ex)
-		      (specifier-type '(signed-byte 32))))
-      '(%scalbn f ex)
-      '(scale-double-float f ex)))
+  (cond ((and (backend-featurep :x86)
+	      (not (backend-featurep :sse2))
+	      (csubtypep (continuation-type ex)
+			 (specifier-type '(signed-byte 32))))
+	 '(%scalbn f ex))
+	((csubtypep (continuation-type ex)
+		    (specifier-type `(integer #.(- vm:double-float-normal-exponent-min
+						   vm:double-float-bias
+						   vm:double-float-digits)
+					      #.(- vm:double-float-normal-exponent-max
+						   vm:double-float-bias
+						   1))))
+	 ;; The exponent is such that 2^ex will fit in a double-float.
+	 ;; Thus, scale-float can be done multiplying by a suitable
+	 ;; constant.
+	 `(* f (kernel:make-double-float (dpb (+ ex (1+ vm:double-float-bias))
+					      vm:double-float-exponent-byte
+					      (kernel::double-float-bits 1d0))
+					 0)))
+	(t
+	 '(scale-double-float f ex))))
 
 ;;; toy@rtp.ericsson.se:
 ;;;

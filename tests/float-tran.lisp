@@ -152,3 +152,61 @@
     ;; test-fun should have transformed (log x 10) to kernel:%log10
     (assert-true (search "log10" (with-output-to-string (*standard-output*)
 				   (disassemble test-fun-good-2))))))
+
+(define-test scale-float-transform.single
+  (let ((xfrm-scale
+	  (compile nil
+		   (lambda (x n)
+		     (declare (single-float x)
+			      (type (integer -149 127) n))
+		     (scale-float x n))))
+	(scale
+	  (compile nil
+		   (lambda (x n)
+		     (declare (single-float x)
+			      (type (signed-byte 32) n))
+		     (scale-float x n)))))
+    ;; If the deftransform for scale-float was applied, (scale-float
+    ;; most-positive-single-float 2) is done as a multiplication which
+    ;; will overflow.  The operation will be '*.  If the deftransform
+    ;; was not applied, the overflow will still be signaled, but the
+    ;; operation will be 'scale-float.
+    (assert-eql '*
+		(handler-case 
+		    (funcall xfrm-scale most-positive-single-float 2)
+		  (arithmetic-error (c)
+	            (arithmetic-error-operation c))))
+    (assert-eql 'scale-float
+		(handler-case
+		    (funcall scale most-positive-single-float 2)
+		  (arithmetic-error (c)
+		    (arithmetic-error-operation c))))))
+
+(define-test scale-float-transform.double
+  (let ((xfrm-scale
+	  (compile nil
+		   (lambda (x n)
+		     (declare (double-float x)
+			      (type (integer -1074 1023) n))
+		     (scale-float x n))))
+	(scale
+	  (compile nil
+		   (lambda (x n)
+		     (declare (double-float x)
+			      (type (signed-byte 32) n))
+		     (scale-float x n)))))
+    ;; If the deftransform for scale-float was applied, (scale-float
+    ;; most-positive-double-float 2) is done as a multiplication which
+    ;; will overflow.  The operation will be '*.  If the deftransform
+    ;; was not applied, the overflow will still be signaled, but the
+    ;; operation will be 'scale-float.
+    (assert-eql '*
+		(handler-case 
+		    (funcall xfrm-scale most-positive-double-float 2)
+		  (arithmetic-error (c)
+	            (arithmetic-error-operation c))))
+    (assert-eql 'scale-float
+		(handler-case
+		    (funcall scale most-positive-double-float 2)
+		  (arithmetic-error (c)
+		    (arithmetic-error-operation c))))))
