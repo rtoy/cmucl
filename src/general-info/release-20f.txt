@@ -127,6 +127,8 @@ New in this release:
       doubles. As a side-effect of this fix, DECODE-FLOAT returns the
       correct values for denormals, and SCALE-FLOAT scales denormals
       correctly.
+    * EXT:UNIX-NAMESTRING no longer returns NIL if a directory does
+      not exist. This was a regression from at least 18a.
 
   * Trac Tickets:
     * Ticket #90 fixed.

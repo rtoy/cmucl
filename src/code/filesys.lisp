@@ -710,9 +710,13 @@
 	     (with-directory-node-noted ((head) &body body)
 	       `(multiple-value-bind (res dev ino mode)
 		    (unix-xstat ,head)
-		  (when (and res (eql (logand mode unix:s-ifmt) unix:s-ifdir))
-		    (let ((nodes (cons (cons dev ino) nodes)))
-		      ,@body))))
+		  ;; Even if the directory does not exist, we want to
+		  ;; continue recursing.
+		  (let ((nodes (if (and res (eql (logand mode unix:s-ifmt)
+						 unix:s-ifdir))
+				   (cons (cons dev ino) nodes)
+				   nodes)))
+		    ,@body)))
 	     (do-directory-entries ((name directory) &body body)
 	       `(let ((dir (unix:open-dir ,directory)))
 		  (when dir
