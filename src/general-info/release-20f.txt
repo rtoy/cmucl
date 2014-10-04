@@ -1,10 +1,8 @@
 ========================== C M U C L  20 f =============================
 
-[In Progress]
-
 The CMUCL project is pleased to announce the release of CMUCL 20f.
 This is a major release which contains numerous enhancements and
-bug fixes from the 20c release.
+bug fixes from the 20e release.
 
 CMUCL is a free, high performance implementation of the Common Lisp
 programming language which runs on most major Unix platforms. It
@@ -19,12 +17,12 @@ over the Internet, and is mostly in the public domain.
 New in this release:
 
   * Known issues:
-    * Support for x87 will be dropped after the 2014-04 snapshot. All
-      further snapshots will require an x86 chip that supports sse2.
-      SSE2 was introduced with the Pentium 4 in 2001.
+    * Support for x87 has been dropped (effective with the 2014-05
+      snapshot). All further releases will require an x86 chip that
+      supports sse2.  SSE2 was introduced with the Pentium 4 in 2001.
 
   * Feature enhancements
-    * Trig functions are signficantly faster.
+    * Trig functions are significantly faster.
     * Accuracy of trig functions improved. (Previously, they could be
       off by one or two ulp.)
     * RUN-PROGRAM accepts :ELEMENT-TYPE to allow specifying the
@@ -49,14 +47,14 @@ New in this release:
     * Micro-optimization:  (expt -1 power) just returns -1 or 1
       without actually computing the power.
     * Run-time checks for zero pages on newly allocated pages has been
-      disabled now that the lazy zeroing of the heap pages has been
-      the default for several months now.
+      disabled.  Lazy zeroing of the heap pages is the default
+      now. which can speed up GC and allocation.
     * Add lisp-unit as a contrib.  Use (require :lisp-unit) to load
       it.  Precompiled fasls are not included.
     * CMUCL now uses fdlibm C functions to implement the special
       functions. All platforms use this so they should produce
       identical results everywhere.
-    * Consing for the trig functions is removed now since we call out
+    * Consing for the trig functions is reduced now since we call out
       to fdlibm instead of implementing them in Lisp.
     * Source location information has been added for
       DEFINE-CONDITION. (From Helmut Eller.)
@@ -79,12 +77,12 @@ New in this release:
     * On the ppc port, handle FP exceptions a bit better by not
       failing if cmucl is unable to interpret the instruction that
       caused the exception.
-    * Microoptimization for sparc in rounding a double-float to a
+    * Micro-optimization for sparc in rounding a double-float to a
       32-bit signed integer.
     * The compiler can now derive the type of ROUND. (But more work is
       needed.)
     * Fix an issue with multi-processing destroy-process doesn't take
-      effect for a schedulable processbecause it has no run-reason
+      effect for a schedulable process because it has no run-reason
       and/or arrest-reason.
 
   * ANSI compliance fixes:
@@ -120,7 +118,7 @@ New in this release:
       cleared.
     * In some situations KERNEL:DOUBLE-FLOAT-BITS on x86 would cause a
       segfault. This has been fixed.
-    * For linux, motifd is no longer a 64-bit app.
+    * For Linux, motifd is no longer a 64-bit app.
     * (exp 1d0) now returns the correctly rounded value of
       e. Previously, it was off by one bit.
     * INTEGER-DECODE-FLOAT returns the correct values for denormal
