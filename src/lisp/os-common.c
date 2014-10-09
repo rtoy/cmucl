@@ -219,7 +219,7 @@ os_foreign_linkage_init(void)
 	    }
 	    arch_make_linkage_entry(i, (void*) call_into_c, 1);
 #elif (defined(DARWIN) && defined(__ppc__))
-	    if (type != 1 || strcmp(c_symbol_name, "_call_into_c")) {
+	    if (type != 1 || strcmp(c_symbol_name, "call_into_c")) {
 		fprintf(stderr, "linkage_data is %s but expected call_into_c\n",
 			(char *) c_symbol_name);
 		lose("First element of linkage_data is bogus.\n");
@@ -241,7 +241,7 @@ os_foreign_linkage_init(void)
 	    void *target_addr = os_dlsym(c_symbol_name, NIL);
 
 	    if (!target_addr) {
-#if 0
+#if 1
                 int k;
                 unsigned short int* wide_string;
                 

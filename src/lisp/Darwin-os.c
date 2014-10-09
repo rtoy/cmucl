@@ -543,12 +543,21 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 	    struct cons *lib_cons = CONS(CONS(lib_list_head)->car);
 	    struct sap *dlhandle = (struct sap *) PTR(lib_cons->car);
 
+#if 0 && defined(__ppc__)
+            sym_addr = dlsym((void *) dlhandle->pointer, (sym_name[0] == '_' ? sym_name + 1 : sym_name));
+#else
 	    sym_addr = dlsym((void *) dlhandle->pointer, sym_name);
+#endif
 	    if (sym_addr)
 		return sym_addr;
 	}
     }
+
+#if 0 && defined(__ppc__)
+    sym_addr = dlsym(program_handle, (sym_name[0] == '_' ? sym_name + 1 : sym_name));
+#else
     sym_addr = dlsym(program_handle, sym_name);
+#endif
 
     return sym_addr;
 }

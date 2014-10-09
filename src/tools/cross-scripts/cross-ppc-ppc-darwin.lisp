@@ -31,7 +31,7 @@
 (in-package :vm)
 (defun extern-alien-name (name)
   (declare (type simple-string name))
-  (concatenate 'string "_" name))
+  name)
 ;; When compiling the compiler, vm:fixup-code-object and
 ;; vm:sanctify-for-execution are undefined.  Import these to get rid
 ;; of that error.
@@ -199,7 +199,7 @@
 (in-package :vm)
 (defun extern-alien-name (name)
   (declare (type simple-string name))
-  (concatenate 'string "_" name))
+  name)
 (export 'extern-alien-name)
 (export 'fixup-code-object)
 (export 'sanctify-for-execution)

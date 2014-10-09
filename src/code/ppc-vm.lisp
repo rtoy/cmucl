@@ -297,10 +297,7 @@
 ;;; 
 (defun extern-alien-name (name)
   (declare (type simple-base-string name))
-  #+darwin
-  (concatenate 'string "_" name)
-  #-darwin
-  (concatenate 'string "" name))
+  name)
 
 #-linkage-table
 (defun lisp::foreign-symbol-address-aux (name flavor)
