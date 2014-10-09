@@ -66,8 +66,8 @@ void
 timebase_init(void)
 {
     int mib[2];
-    int tbfrequency;
-    int cpufrequency;
+    unsigned tbfrequency;
+    unsigned cpufrequency;
     unsigned int miblen;
     size_t len;
 
@@ -95,7 +95,7 @@ timebase_init(void)
 	perror("Error getting HW_CPU_FREQ from sysctl: ");
     }
 
-    cycles_per_tick = cpufrequency / tbfrequency;
+    cycles_per_tick = 0.5 + (cpufrequency / (double) tbfrequency);
 }
 #endif
 
