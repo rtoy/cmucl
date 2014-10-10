@@ -167,6 +167,16 @@ convert_lisp_string(char* c_string, void* lisp_string, int len)
     return c_string;
 }
 
+/*
+ * C version of lisp's EXTERN-ALIEN-NAME.  For systems that use elf,
+ * do nothing.  Otherwise, we prepend an underscore.
+ */
+#if defined(FEATURE_ELF)
+#define EXTERN_ALIEN_NAME(x) x
+#else
+#define EXTERN_ALIEN_NAME(x) "_" x
+#endif
+
 void
 os_foreign_linkage_init(void)
 {
@@ -212,25 +222,27 @@ os_foreign_linkage_init(void)
 #endif        
 	if (i == 0) {
 #if defined(sparc)
-	    if (type != LINKAGE_CODE_TYPE || strcmp(c_symbol_name, "call_into_c")) {
+            if (type != LINKAGE_CODE_TYPE || strcmp(c_symbol_name, EXTERN_ALIEN_NAME("call_into_c"))) {
 		fprintf(stderr, "linkage_data is %s but expected call_into_c\n",
-			(char *) symbol_name->data);
+			c_symbol_name);
 		lose("First element of linkage_data is bogus.\n");
 	    }
 	    arch_make_linkage_entry(i, (void*) call_into_c, 1);
 #elif (defined(DARWIN) && defined(__ppc__))
-	    if (type != 1 || strcmp(c_symbol_name, "call_into_c")) {
-		fprintf(stderr, "linkage_data is %s but expected call_into_c\n",
-			(char *) c_symbol_name);
+	    if (type != 1 || strcmp(c_symbol_name, EXTERN_ALIEN_NAME("call_into_c"))) {
+		fprintf(stderr, "linkage_data is %s but expected %s\n",
+			c_symbol_name,
+                        EXTERN_ALIEN_NAME("call_into_c"));
 		lose("First element of linkage_data is bogus.\n");
 	    }
 	    arch_make_linkage_entry(i, &call_into_c, 1);
 #else
 	    if (type != LINKAGE_CODE_TYPE || strcmp(c_symbol_name,
-                                                    "resolve_linkage_tramp")) {
+                                                    EXTERN_ALIEN_NAME("resolve_linkage_tramp"))) {
 		fprintf(stderr,
-			"linkage_data is %s but expected resolve_linkage_tramp\n",
-			(char *) c_symbol_name);
+			"linkage_data is %s but expected %s\n",
+			c_symbol_name,
+                        EXTERN_ALIEN_NAME("resolve_linkage_tramp"));
 		lose("First element of linkage_data is bogus.\n");
 	    }
 	    arch_make_linkage_entry(i, (void *) &resolve_linkage_tramp, 1);
@@ -241,7 +253,7 @@ os_foreign_linkage_init(void)
 	    void *target_addr = os_dlsym(c_symbol_name, NIL);
 
 	    if (!target_addr) {
-#if 1
+#if 0
                 int k;
                 unsigned short int* wide_string;
                 
@@ -262,7 +274,6 @@ os_foreign_linkage_init(void)
 	} else {
 	    arch_make_lazy_linkage(i / LINKAGE_DATA_ENTRY_SIZE);
 	}
-
     }
 #endif /* LINKAGE_TABLE */
 }

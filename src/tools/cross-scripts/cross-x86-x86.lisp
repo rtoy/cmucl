@@ -205,6 +205,9 @@
 (in-package :vm)
 (defun extern-alien-name (name)
   (declare (type simple-string name))
+  #-elf
+  (concatenate 'simple-string "_" name)
+  #+elf
   name)
 (export 'extern-alien-name)
 (in-package :cl-user)

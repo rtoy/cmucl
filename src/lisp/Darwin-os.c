@@ -532,7 +532,13 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 {
     static void *program_handle;
     void *sym_addr = 0;
+    int offset = sym_name[0] == '_' ? 1 : 0;
 
+#if 1
+    if (offset == 0) {
+        fprintf(stderr, "sym-name = %s\n", sym_name);
+    }
+#endif    
     if (!program_handle)
 	program_handle = dlopen((void *) 0, RTLD_LAZY | RTLD_GLOBAL);
     if (lib_list != NIL) {
@@ -543,21 +549,17 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 	    struct cons *lib_cons = CONS(CONS(lib_list_head)->car);
 	    struct sap *dlhandle = (struct sap *) PTR(lib_cons->car);
 
-#if 0 && defined(__ppc__)
-            sym_addr = dlsym((void *) dlhandle->pointer, (sym_name[0] == '_' ? sym_name + 1 : sym_name));
-#else
-	    sym_addr = dlsym((void *) dlhandle->pointer, sym_name);
-#endif
+            /*
+             * On Darwin, dlsym assumes the C name, so skip the underscore that
+             * is prepended by EXTERN-ALIEN-NAME.
+             */
+            sym_addr = dlsym((void *) dlhandle->pointer, sym_name + offset);
 	    if (sym_addr)
-		return sym_addr;
+                return sym_addr;
 	}
     }
 
-#if 0 && defined(__ppc__)
-    sym_addr = dlsym(program_handle, (sym_name[0] == '_' ? sym_name + 1 : sym_name));
-#else
-    sym_addr = dlsym(program_handle, sym_name);
-#endif
+    sym_addr = dlsym(program_handle, sym_name + offset);
 
     return sym_addr;
 }
