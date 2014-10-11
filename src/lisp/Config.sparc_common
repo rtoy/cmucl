@@ -15,15 +15,16 @@ vpath %.pot $(CMULOCALE)
 vpath %.po  $(CMULOCALE)
 vpath %.mo  $(CMULOCALE)
 
+CPP_DEFINE_OPTIONS := -DSOLARIS -DSVR4
 # Enable support for :linkage-table feature.
 
 ifdef FEATURE_LINKAGE_TABLE
-LINKAGE = -DLINKAGE_TABLE
+CPP_DEFINE_OPTIONS += -DLINKAGE_TABLE
 endif
 
 # Enable support for generational GC
 ifdef FEATURE_GENCGC
-GENCGC = -DGENCGC
+CPP_DEFINE_OPTIONS += -DGENCGC
 GC_SRC = gencgc.c
 else
 GC_SRC = gc.c
@@ -34,19 +35,22 @@ endif
 # cases.  If neither is set, then we don't want any SSE2 support at
 # all.
 ifdef FEATURE_X87
-SSE2 = -DFEATURE_SSE2
+CPP_DEFINE_OPTIONS += -DFEATURE_SSE2
 else
 ifdef FEATURE_SSE2
-SSE2 = -DFEATURE_SSE2
+CPP_DEFINE_OPTIONS += -DFEATURE_SSE2
 endif
 endif
 
 # Enable support for Unicode
 ifdef FEATURE_UNICODE
-UNICODE = -DUNICODE
+CPP_DEFINE_OPTIONS += -DUNICODE
 endif
 
-CPPFLAGS += -I. -I$(PATH1) -DSOLARIS -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC) $(UNICODE) $(SSE2)
+# Sparc is always elf.
+CPP_DEFINE_OPTIONS += -DFEATURE_ELF
+
+CPPFLAGS += -I. -I$(PATH1) $(CC_V8PLUS) $(CPP_DEFINE_OPTIONS)
 
 
 CFLAGS += -g $(CC_V8PLUS)
