@@ -81,7 +81,7 @@
 ;;; Exponential and Logarithmic.
 (def-math-rtn ("__ieee754_exp" %exp) 1)
 (def-math-rtn ("__ieee754_log" %log) 1)
-(def-math-rtn "log10" 1)
+(def-math-rtn ("__ieee754_log10" %log10) 1)
 
 (def-math-rtn ("__ieee754_pow" %pow) 2)
 #-(or x86 sparc-v7 sparc-v8 sparc-v9)
@@ -90,6 +90,12 @@
 
 (def-math-rtn ("fdlibm_log1p" %log1p) 1)
 (def-math-rtn ("fdlibm_expm1" %expm1) 1)
+
+(declaim (inline %scalbn))
+(export '%scalbn)
+(alien:def-alien-routine ("fdlibm_scalbn" %scalbn) c-call:double
+  (x double-float)
+  (n c-call:int))
 
 ;; These are needed for use by byte-compiled files.  But don't use
 ;; these with sse2 since we don't support using the x87 instructions
@@ -183,10 +189,10 @@
     (%sqrt x))
   )
 
-;; Same as above, but instead of needing to pass an array in, the
-;; output array is broken up into two output values instead.  This is
-;; easier for the user, and we don't have to wrap calls with
-;; without-gcing.
+;; Slightly simplified interface to __ieee754_rem_pio2, but instead of
+;; needing to pass an array in, the output array is broken up into two
+;; output values instead.  This is easier for the user, and we don't
+;; have to wrap calls with without-gcing.
 (declaim (inline %ieee754-rem-pi/2))
 (export '%ieee754-rem-pi/2)
 (alien:def-alien-routine ("ieee754_rem_pio2" %ieee754-rem-pi/2) c-call:int
@@ -598,7 +604,17 @@
 					(float 2 float-type)))))))))
     (etypecase x
       (float
-       (/ (log (float x float-type)) (log-of-2 float-type)))
+       (multiple-value-bind (f e s)
+	   (decode-float x)
+	 ;; If x = 2^e*f then log2(x) = e + log2(f) = e +
+	 ;; log(f)/log(2). Accuracy could be improved some since this
+	 ;; has 2 rounding operations instead of just 1 for
+	 ;; log(x)/log(2).
+	 (let ((log2 (+ e (/ (log (float f float-type))
+			     (log-of-2 float-type)))))
+	   (if (minusp s)
+	       (complex log2 (log-2-pi float-type))
+	       log2))))
       (ratio
        (let ((top (numerator x))
 	     (bot (denominator x)))
@@ -635,74 +651,112 @@
 	     ;; ANSI spec
 	     base)
 	    ((and (realp number) (realp base))
-	     ;; CLHS 12.1.4.1 says
-	     ;;
-	     ;;   When rationals and floats are combined by a
-	     ;;   numerical function, the rational is first converted
-	     ;;   to a float of the same format.
-	     ;;
-	     ;; So assume this applies to floats as well convert all
-	     ;; numbers to the largest float format before computing
-	     ;; the log.
-	     ;;
-	     ;; This makes (log 17 10.0) = (log 17.0 10) and so on.
-	     (number-dispatch ((number real) (base real))
-	       ((double-float
-		 (foreach double-float single-float))
-		(/ (log2 number) (log2 base)))
-	       (((foreach fixnum bignum ratio)
-		 (foreach fixnum bignum ratio single-float))
-		(let* ((result (/ (log2 number) (log2 base))))
-		  ;; Figure out the right result type
-		  (if (realp result)
-		      (coerce result 'single-float)
-		      (coerce result '(complex single-float)))))
-	       (((foreach fixnum bignum ratio)
-		 double-float)
-		(/ (log2 number) (log2 base)))
-	       ((single-float
-		 (foreach fixnum bignum ratio))
-		(let* ((result (/ (log2 number) (log2 base))))
-		  ;; Figure out the right result type
-		  (if (realp result)
-		      (coerce result 'single-float)
-		      (coerce result '(complex single-float)))))
-	       ((double-float
-		 (foreach fixnum bignum ratio))
-		(/ (log2 number) (log2 base)))
-	       ((single-float double-float)
-		(/ (log (coerce number 'double-float)) (log base)))
-	       #+double-double
-	       ((double-double-float
-		 (foreach fixnum bignum ratio))
-		(/ (log2 number 1w0) (log2 base 1w0)))
-	       #+double-double
-	       ((double-double-float
-		 (foreach double-double-float double-float single-float))
-		(/ (log number) (log (coerce base 'double-double-float))))
-	       #+double-double
-	       (((foreach fixnum bignum ratio)
-		 double-double-float)
-		(/ (log2 number 1w0) (log2 base 1w0)))
-	       #+double-double
-	       (((foreach double-float single-float)
-		 double-double-float)
-		(/ (log (coerce number 'double-double-float)) (log base)))
-	       (((foreach single-float)
-		 (foreach single-float))
-		;; Converting everything to double-float helps the
-		;; cases like (log 17 10) = (/ (log 17) (log 10)).
-		;; This is usually handled above, but if we compute (/
-		;; (log 17) (log 10)), we get a slightly different
-		;; answer due to roundoff.  This makes it a bit more
-		;; consistent.
+	     (cond
+	       ((and (= base 2)
+		     (floatp number)
+		     #+double-double
+		     (not (typep number 'ext:double-double-float))
+		     (or (plusp number)
+			 (eql number 0.0)
+			 (eql number 0d0)))
+		;; Do the same thing as the deftranform does for
+		;; log base 2 and 10 for non-negative arguments.
+		(number-dispatch ((number real) (base real))
+		  ((double-float
+		    (foreach integer single-float double-float))
+		   (log2 number))
+		  ((single-float
+		    (foreach integer single-float))
+		   (float (log2 (float number 1d0)) 1f0))
+		  ((single-float double-float)
+		   (log2 (float number 1d0)))))
+	       ((and (= base 10)
+		     (floatp number)
+		     #+double-double
+		     (not (typep number 'double-double-float))
+		     (or (plusp number)
+			 (eql number 0.0)
+			 (eql number 0d0)))
+		;; Do the same thing as the deftranform does for
+		;; log base 2 and 10 for non-negative arguments.
+		(number-dispatch ((number real) (base real))
+		  ((double-float
+		    (foreach double-float single-float integer))
+		   (%log10 number))
+		  ((single-float
+		    (foreach single-float integer))
+		   (float (%log10 (float number 1d0)) 1f0))
+		  ((single-float double-float)
+		   (%log10 (float number 1d0)))))
+	       (t
+		;; CLHS 12.1.4.1 says
 		;;
-		;; FIXME: This probably needs more work.
-		(let ((result (/ (log (float number 1d0))
-				 (log (float base 1d0)))))
-		  (if (realp result)
-		      (coerce result 'single-float)
-		      (coerce result '(complex single-float)))))))
+		;;   When rationals and floats are combined by a
+		;;   numerical function, the rational is first converted
+		;;   to a float of the same format.
+		;;
+		;; So assume this applies to floats as well convert all
+		;; numbers to the largest float format before computing
+		;; the log.
+		;;
+		;; This makes (log 17 10.0) = (log 17.0 10) and so on.
+		(number-dispatch ((number real) (base real))
+		  ((double-float
+		    (foreach double-float single-float))
+		   (/ (log2 number) (log2 base)))
+		  (((foreach fixnum bignum ratio)
+		    (foreach fixnum bignum ratio single-float))
+		   (let* ((result (/ (log2 number) (log2 base))))
+		     ;; Figure out the right result type
+		     (if (realp result)
+			 (coerce result 'single-float)
+			 (coerce result '(complex single-float)))))
+		  (((foreach fixnum bignum ratio)
+		    double-float)
+		   (/ (log2 number) (log2 base)))
+		  ((single-float
+		    (foreach fixnum bignum ratio))
+		   (let* ((result (/ (log2 number) (log2 base))))
+		     ;; Figure out the right result type
+		     (if (realp result)
+			 (coerce result 'single-float)
+			 (coerce result '(complex single-float)))))
+		  ((double-float
+		    (foreach fixnum bignum ratio))
+		   (/ (log2 number) (log2 base)))
+		  ((single-float double-float)
+		   (/ (log (coerce number 'double-float)) (log base)))
+		  #+double-double
+		  ((double-double-float
+		    (foreach fixnum bignum ratio))
+		   (/ (log2 number 1w0) (log2 base 1w0)))
+		  #+double-double
+		  ((double-double-float
+		    (foreach double-double-float double-float single-float))
+		   (/ (log number) (log (coerce base 'double-double-float))))
+		  #+double-double
+		  (((foreach fixnum bignum ratio)
+		    double-double-float)
+		   (/ (log2 number 1w0) (log2 base 1w0)))
+		  #+double-double
+		  (((foreach double-float single-float)
+		    double-double-float)
+		   (/ (log (coerce number 'double-double-float)) (log base)))
+		  (((foreach single-float)
+		    (foreach single-float))
+		   ;; Converting everything to double-float helps the
+		   ;; cases like (log 17 10) = (/ (log 17) (log 10)).
+		   ;; This is usually handled above, but if we compute (/
+		   ;; (log 17) (log 10)), we get a slightly different
+		   ;; answer due to roundoff.  This makes it a bit more
+		   ;; consistent.
+		   ;;
+		   ;; FIXME: This probably needs more work.
+		   (let ((result (/ (log (float number 1d0))
+				    (log (float base 1d0)))))
+		     (if (realp result)
+			 (coerce result 'single-float)
+			 (coerce result '(complex single-float)))))))))
 	    (t
 	     ;; FIXME:  This probably needs some work as well.
 	     (/ (log number) (log base))))

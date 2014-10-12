@@ -2183,7 +2183,7 @@
   ;; This has gotta be the first entry.  This has to match what
   ;; os_foreign_linkage_init does!
   #+(or x86 amd64)
-  (cold-register-foreign-linkage "resolve_linkage_tramp" :code)
+  (cold-register-foreign-linkage (vm::extern-alien-name "resolve_linkage_tramp") :code)
   #+(or sparc ppc)
   (progn
     (cold-register-foreign-linkage (vm::extern-alien-name "call_into_c") :code)

@@ -581,7 +581,7 @@
 	      (return))
 	    (setq sig (ash sig 1))
 	    (incf extra-bias))
-	  (values (logior (ash sig 32) (ash low-bits (1- extra-bias)))
+	  (values (logior (ash sig 32) (ash low-bits (1+ extra-bias)))
 		  (truly-the fixnum (- biased extra-bias))
 		  sign)))))
 

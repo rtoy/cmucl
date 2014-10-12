@@ -1,0 +1,52 @@
+========================== C M U C L  21 a =============================
+
+[In Progress]
+
+The CMUCL project is pleased to announce the release of CMUCL 21a.
+This is a major release which contains numerous enhancements and
+bug fixes from the 20f release.
+
+CMUCL is a free, high performance implementation of the Common Lisp
+programming language which runs on most major Unix platforms. It
+mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
+sophisticated native code compiler; a powerful foreign function
+interface; an implementation of CLOS, the Common Lisp Object System,
+which includes multi-methods and a meta-object protocol; a source-level
+debugger and code profiler; and an Emacs-like editor implemented in
+Common Lisp. CMUCL is maintained by a team of volunteers collaborating
+over the Internet, and is mostly in the public domain.
+
+New in this release:
+  * Known issues:
+
+  * Feature enhancements
+
+  * Changes
+    * Micro-optimize SCALE-FLOAT to do multiplication when possible.
+    * Update to ASDF 3.1.4.
+
+  * ANSI compliance fixes:
+
+  * Bugfixes:
+    * On ppc machines with clock speeds over 2 GHz or so,
+      LISP::CYCLES-PER-TICK is no longer negative. This caused the
+      cycle count from TIME to be negative.
+
+  * Trac Tickets:
+
+  * Other changes:
+
+  * Improvements to the PCL implementation of CLOS:
+
+  * Changes to building procedure:
+
+
+This release is not binary compatible with code compiled using CMUCL
+20f; you will need to recompile FASL files. 
+
+See <URL:http://www.cmucl.org> or
+<URL:http://trac.common-lisp.net/cmucl> for download information,
+guidelines on reporting bugs, and mailing list details.
+
+
+We hope you enjoy using this release of CMUCL!

@@ -45,6 +45,10 @@ ifdef FEATURE_UNICODE
 CPP_DEFINE_OPTIONS += -DUNICODE
 endif
 
+ifdef FEATURE_ELF
+CPP_DEFINE_OPTIONS += -DFEATURE_ELF
+endif
+
 LD = ld
 
 ifeq ($(filter 2% 3%, $(shell $(CC) -dumpversion)),)

@@ -750,6 +750,41 @@
 		  ;; at the low five bits of the result.
 		  (inst sar result (min 31 (- amount)))))))))
 
+(define-vop (fast-ash-c/fixnum=>signed)
+  (:translate ash)
+  (:policy :fast-safe)
+  (:args (number :scs (any-reg) :target result
+		 :load-if (not (and (sc-is number signed-stack)
+				    (sc-is result signed-stack)
+				    (location= number result)))))
+  (:info amount)
+  (:arg-types fixnum (:constant integer))
+  (:results (result :scs (signed-reg)
+		    :load-if (not (and (sc-is number signed-stack)
+				       (sc-is result signed-stack)
+				       (location= number result)))))
+  (:result-types signed-num)
+  (:note "inline ASH")
+  (:generator 1
+    (let ((shift (- amount vm:fixnum-tag-bits)))
+      (cond ((and (= shift 1) (not (location= number result)))
+	     (inst lea result (make-ea :dword :index number :scale 2)))
+	    ((and (= shift 2) (not (location= number result)))
+	     (inst lea result (make-ea :dword :index number :scale 4)))
+	    ((and (= shift 3) (not (location= number result)))
+	     (inst lea result (make-ea :dword :index number :scale 8)))
+	    (t
+	     (move result number)
+	     (cond ((plusp shift)
+		    ;; We don't have to worry about overflow because of the
+		    ;; result type restriction.
+		    (inst shl result shift))
+		   (t
+		    ;; If the shift is greater than 31, only shift by 31.  We
+		    ;; have to do this because the shift instructions only look
+		    ;; at the low five bits of the result.
+		    (inst sar result (min 31 (- shift))))))))))
+
 (define-vop (fast-ash-left/unsigned=>unsigned)
   (:translate ash)
   (:args (number :scs (unsigned-reg) :target result

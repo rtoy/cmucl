@@ -128,6 +128,7 @@
 (pushnew :sparc *features*)
 (pushnew :sun4 *features*)
 (pushnew :svr4 *features*)
+(sys:register-lisp-feature :elf)
 ;; There's SVR4 by Sun called Solaris 2, there's the SVR4 reference port by
 ;; ICL that runs on ICL's own DRS 6000s.
 #+sunos

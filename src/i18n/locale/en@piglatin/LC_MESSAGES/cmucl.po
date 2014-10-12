@@ -6834,15 +6834,22 @@ msgstr ""
 "Eturnray uetray ifway ethay oatflay X isway anway infinityway (+ orway -)."
 
 #: src/code/float.lisp
-msgid "Return true if the float X is a NaN (Not a Number)."
-msgstr ""
-"Eturnray uetray ifway ethay oatflay X isway away Annay (Otnay away Umbernay)."
-
-#: src/code/float.lisp
-msgid "Return true if the float X is a trapping NaN (Not a Number)."
+#, fuzzy
+msgid "Return true if the float X is a quiet or signaling NaN (Not a Number)."
 msgstr ""
 "Eturnray uetray ifway ethay oatflay X isway away appingtray Annay (Otnay "
 "away Umbernay)."
+
+#: src/code/float.lisp
+#, fuzzy
+msgid "Return true if the float X is a signaling NaN (Not a Number)."
+msgstr ""
+"Eturnray uetray ifway ethay oatflay X isway away appingtray Annay (Otnay "
+"away Umbernay)."
+
+#: src/code/float.lisp
+msgid "Deprecated.  Use FLOAT-SIGNALING-NAN-P instead."
+msgstr ""
 
 #: src/code/float.lisp
 msgid ""
@@ -23332,6 +23339,7 @@ msgid "Expected ~D variant values: ~S."
 msgstr "Expectedway ~D ariantvay aluesvay: ~S."
 
 #: src/compiler/meta-vmdef.lisp
+#, fuzzy
 msgid ""
 "Define-VOP (Name [Inherits]) Spec*\n"
 "  Define the symbol Name to be a Virtual OPeration in the compiler.  If\n"
@@ -23382,9 +23390,9 @@ msgid ""
 "      :To Time-Spec\n"
 "\t  Specify the beginning or end of the operand's lifetime.  :From can\n"
 "\t  only be used with results, and :To only with arguments.  The default\n"
-"\t  for the N'th argument/result is (:ARGUMENT N)/(:RESULT N).  These\n"
-"\t  options are necessary primarily when operands are read or written out\n"
-"\t  of order.\n"
+"\t  for the N'th argument/result is (:ARGUMENT N)/(:RESULT N).  (The\n"
+"          first argument/result is number 0.) These options are necessary\n"
+"          primarily when operands are read or written out of order.\n"
 "   \n"
 "  :Conditional\n"
 "      This is used in place of :RESULTS with conditional branch VOPs.  "
@@ -30074,6 +30082,19 @@ msgid "Implements WRITE-SEQUENCE for the stream."
 msgstr "Implementsway WRITE-SEQUENCE orfay ethay eamstray."
 
 #: src/pcl/gray-streams.lisp
+#, fuzzy
+msgid "Implements FILE-POSITION for the stream."
+msgstr "Implementsway WRITE-SEQUENCE orfay ethay eamstray."
+
+#: src/pcl/gray-streams.lisp
+#, fuzzy
+msgid "Implements FILE-POSITION for the stream for setting the position."
+msgstr ""
+"Implementsway CLEAR-INPUT orfay ethay eamstray, eturningray NIL.  Ethay "
+"efaultday\n"
+"  ethodmay oesday othingnay."
+
+#: src/pcl/gray-streams.lisp
 msgid ""
 "Used by READ-BYTE; returns either an integer, or the symbol :EOF\n"
 "  if the stream is at end-of-file."
@@ -30708,6 +30729,11 @@ msgstr ""
 "Ybay efaultday, illegalway inputsway andway illegalway outputsway areway "
 "eplacedray ybay ethay\n"
 "Unicodeway eplacementray aracterchay."
+
+#~ msgid "Return true if the float X is a NaN (Not a Number)."
+#~ msgstr ""
+#~ "Eturnray uetray ifway ethay oatflay X isway away Annay (Otnay away "
+#~ "Umbernay)."
 
 #~ msgid "Bad style to use T or OTHERWISE in ECASE or CCASE"
 #~ msgstr "Adbay tylesay otay useway T orway OTHERWISE inway ECASE orway CCASE"
