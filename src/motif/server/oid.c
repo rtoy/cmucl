@@ -2,7 +2,7 @@
 #include <X11/Intrinsic.h>
 
 #include "global.h"
-#include "oblist.h"
+#include "oid.h"
 
 /* OID generation. */
 static unsigned int current_oid;

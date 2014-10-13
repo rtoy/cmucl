@@ -18,7 +18,7 @@
 #include "types.h"
 #include "tables.h"
 #include "requests.h"
-#include "oblist.h"
+#include "oid.h"
 
 /* Functions for building XmFontLists */
 

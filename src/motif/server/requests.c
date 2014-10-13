@@ -21,7 +21,7 @@
 #include "types.h"
 #include "functions.h"
 #include "tables.h"
-#include "oblist.h"
+#include "oid.h"
 
 typedef void (*request_f)(message_t);
 Boolean must_confirm = False;

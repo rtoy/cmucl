@@ -21,7 +21,7 @@
 #include "types.h"
 #include "datatrans.h"
 #include "tables.h"
-#include "oblist.h"
+#include "oid.h"
 
 void message_write_oid(message_t,void *,int);
 void message_read_oid(message_t,caddr_t*,int,int);

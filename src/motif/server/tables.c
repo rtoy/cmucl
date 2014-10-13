@@ -20,7 +20,7 @@
 #include "global.h"
 #include "datatrans.h"
 #include "tables.h"
-#include "oblist.h"
+#include "oid.h"
 
 extern WidgetClass overrideShellWidgetClass,transientShellWidgetClass,
   topLevelShellWidgetClass,applicationShellWidgetClass;
