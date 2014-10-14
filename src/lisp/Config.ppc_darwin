@@ -14,7 +14,6 @@ CPPFLAGS = -I. -I$(PATH1)
 # Build for OSX 10.4 or later.  (Is this what we want?)
 OSX_VERSION=-mmacosx-version-min=10.4
 CC = gcc
-LD = ld
 NM = $(PATH1)/darwin-nm
 CPP = cpp
 DEPEND_FLAGS = -MM
