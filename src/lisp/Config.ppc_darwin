@@ -47,13 +47,6 @@ OS_SRC += mach-o.c
 EXEC_FINAL_OBJ = exec-final.o
 endif
 
-# I (rtoy) am not exactly sure what these values are, but it seems
-# that the segaddr for CMUCLRO should be the READ_ONLY_SPACE_START.
-# The seg1addr should be somewhere above our spaces.  This is where
-# the C runtime code goes, I think.
-#
-# OS_LINK_FLAGS = -g -dynamic -Wl,-sectcreate,CMUCLRO,core,/dev/null -Wl,-segaddr,CMUCLRO,0x01000000 -Wl,-seg1addr,0x1a000000
-
 # gcc 4.8, (used on zombie) needs -static-libgcc so that the gcc
 # library is staticly linked into lisp so that the user doesn't need a
 # matching version of libgcc.
