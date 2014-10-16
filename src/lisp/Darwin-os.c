@@ -238,9 +238,9 @@ sc_reg(os_context_t * context, int offset)
       case 35:
 	  return &state->__ctr;
       case 41:
-	  return &context->uc_mcontext->__es.__dar;
+	  return (unsigned int *) &context->uc_mcontext->__es.__dar;
       case 42:
-	  return &context->uc_mcontext->__es.__dsisr;
+	  return (unsigned int *) &context->uc_mcontext->__es.__dsisr;
     }
 
     return (unsigned int *) 0;
