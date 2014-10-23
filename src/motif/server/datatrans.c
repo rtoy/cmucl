@@ -21,6 +21,10 @@
 #include "types.h"
 #include "datatrans.h"
 #include "tables.h"
+#include "oid.h"
+
+void message_write_oid(message_t,void *,int);
+void message_read_oid(message_t,caddr_t*,int,int);
 
 void packet_write_string(packet_t packet,String string,int count)
 {
@@ -93,8 +97,7 @@ void message_write_function(message_t message, int value,int type_tag)
 
 void message_write_widget(message_t message,Widget widget,int type_tag)
 {
-  message_put_dblword(message,combine_type_and_data(type_tag,0));
-  message_put_dblword(message,(long)widget);
+  message_write_oid(message,widget,type_tag);
 }
 
 void message_write_widget_class(message_t message,WidgetClass class,int tag)
@@ -117,10 +120,16 @@ void message_write_xid(message_t message,XID value,int tag)
   message_put_dblword(message,value);
 }
 
+void message_write_oid(message_t message,void *value,int tag)
+{
+  int oid = intern_object(value);
+  message_put_dblword(message,combine_type_and_data(tag,0));
+  message_put_dblword(message,oid);
+}
+
 void message_write_atom(message_t message,Atom value,int tag)
 {
-  message_put_dblword(message,combine_type_and_data(tag,0));
-  message_put_dblword(message,value);
+  message_write_oid(message,(void*)value,tag);
 }
 
 void message_write_enum(message_t message,int enumval,int tag)
@@ -208,26 +217,22 @@ void message_write_resource_names(message_t message,ResourceList *list,int tag)
 
 void message_write_xm_string(message_t message,XmString xs,int tag)
 {
-  message_put_dblword(message,combine_type_and_data(tag,0));
-  message_put_dblword(message,(long)xs);
+  message_write_oid(message,xs,tag);
 }
 
 void message_write_translation_table(message_t m,XtTranslations t,int tag)
 {
-  message_put_dblword(m,combine_type_and_data(tag,0));
-  message_put_dblword(m,(unsigned long)t);
+  message_write_oid(m,t,tag);
 }
 
 void message_write_accelerator_table(message_t m,XtAccelerators a,int tag)
 {
-  message_put_dblword(m,combine_type_and_data(tag,0));
-  message_put_dblword(m,(unsigned long)a);
+  message_write_oid(m,a,tag);
 }
 
 void message_write_font_list(message_t m,XmFontList flist,int tag)
 {
-  message_put_dblword(m,combine_type_and_data(tag,0));
-  message_put_dblword(m,(unsigned long)flist);
+  message_write_oid(m,flist,tag);
 }
 
 void message_write_string_table(message_t m,StringTable *items,int tag)
@@ -248,6 +253,11 @@ void message_write_xm_string_table(message_t m,StringTable *items,int tag)
     message_write_xm_string(m,(XmString)items->data[i],xm_string_tag);
 }
 
+void message_write_event(message_t m,XEvent *event,int tag)
+{
+  message_write_oid(m,event,tag);
+}
+
 void message_write_color(message_t m,XColor *color,int tag)
 {
   message_put_dblword(m,combine_type_and_data(tag,color->red));
@@ -265,7 +275,7 @@ void message_write_float(message_t m,float f,int tag)
 
 void message_read_widget(message_t message,Widget *w,int tag,int data)
 {
-  *w = (Widget)message_get_dblword(message);
+  message_read_oid(message,(void*)w,tag,data);
 }
 
 void message_read_widget_class(message_t message,WidgetClass *c,
@@ -340,7 +350,7 @@ void message_read_xm_string(message_t message,XmString *xs,int tag,int data)
     register_garbage(xmstring,GarbageXmString);
   }
   else
-    *xs = (XmString)message_get_dblword(message);
+    message_read_oid(message,(void*)xs,tag,data);
 }
 
 /* used to be int *val here, but many places pass address of Boolean into
@@ -371,9 +381,15 @@ void message_read_xid(message_t message,XID *id,int tag,int data)
   *id = message_get_dblword(message);
 }
 
+void message_read_oid(message_t message,caddr_t *obj,int tag,int data)
+{
+  int oid = message_get_dblword(message);
+  *obj = find_object(oid);
+}
+
 void message_read_atom(message_t message,Atom *a,int tag,int data)
 {
-  *a = message_get_dblword(message);
+  message_read_oid(message,(void*)a,tag,data);
 }
 
 void message_read_enum(message_t message,int *enumval,int tag,int data)
@@ -456,18 +472,18 @@ void message_read_int_list(message_t message,IntList *list,int tag,int length)
 void message_read_translation_table(message_t m,XtTranslations *t,
 				    int tag,int data)
 {
-  *t = (XtTranslations)message_get_dblword(m);
+  message_read_oid(m,(void*)t,tag,data);
 }
 
 void message_read_accelerator_table(message_t m,XtAccelerators *a,
 				    int tag,int data)
 {
-  *a = (XtAccelerators)message_get_dblword(m);
+  message_read_oid(m,(void*)a,tag,data);
 }
 
 void message_read_font_list(message_t m,XmFontList *flist,int tag,int data)
 {
-  *flist = (XmFontList)message_get_dblword(m);
+  message_read_oid(m,(void*)flist,tag,data);
 }
 
 void message_read_string_table(message_t m,StringTable *items,int tag,int len)
@@ -492,6 +508,12 @@ void message_read_xm_string_table(message_t m,StringTable *items,
   for(i=0;i<len;i++)
     toolkit_read_value(m,&(items->data[i]),XmRXmString);
 }
+
+void message_read_event(message_t message,XEvent *event,int tag,int data)
+{
+  message_read_oid(message,(void*)event,tag,data);
+}
+
 
 void message_read_color(message_t m,XColor *color,int tag, int red)
 {

@@ -51,6 +51,7 @@
 #include "datatrans.h"
 #include "types.h"
 #include "tables.h"
+#include "oid.h"
 
 int end_callback_loop = 0;
 extern message_t prepare_reply(message_t m);
@@ -273,7 +274,7 @@ void CallbackHandler(Widget *w, int name_token, XmAnyCallbackStruct *info)
   
   /* Now, we write the Reason structure into the message */
   message_write_enum(reply,info?info->reason:0,callback_reason_tag);
-  message_write_int(reply,info?info->event:0,int_tag);
+  message_write_int(reply,info?intern_object(info->event):0,int_tag);
 
   if( class==xmArrowButtonWidgetClass || class==xmArrowButtonGadgetClass ||
      class==xmPushButtonWidgetClass || class==xmPushButtonGadgetClass )

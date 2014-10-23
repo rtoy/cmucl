@@ -18,7 +18,7 @@
 #include "types.h"
 #include "tables.h"
 #include "requests.h"
-
+#include "oid.h"
 
 /* Functions for building XmFontLists */
 
@@ -61,6 +61,7 @@ void RXmFontListFree(message_t message)
   XmFontList flist;
 
   toolkit_read_value(message,&flist,XmRFontList);
+  unintern_object(flist);
   XmFontListFree(flist);
 }
 
@@ -189,6 +190,7 @@ void RXmStringFree(message_t message)
   XmString s;
 
   toolkit_read_value(message,&s,XmRXmString);
+  unintern_object(s);
   XmStringFree(s);
 }
 
