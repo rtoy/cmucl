@@ -210,12 +210,12 @@ void write_text_callback(message_t reply,XmTextVerifyCallbackStruct *info)
      else if( info->reason == XmCR_MODIFYING_TEXT_VALUE ) {
         message_write_int(reply,info->startPos,int_tag);
         message_write_int(reply,info->endPos,int_tag);
-        really_write_string(reply,info->text->ptr,info->text->length+1);
+	if (info->text->ptr==NULL)
+	  really_write_string(reply,"",1);
+	else
+	  really_write_string(reply,info->text->ptr,info->text->length+1);
         /* ***** Perhaps this should be an enumerated type ***** */
         message_write_int(reply,info->text->format,int_tag);
-        printf("modifying_text_value: %s ; length=%d\n",info->text->ptr,
-               info->text->length);
-        fflush(stdout);
         }
      }
 }
