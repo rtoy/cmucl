@@ -215,9 +215,9 @@
 (def-alien-type caddr-t (* char))
 
 (def-alien-type ino-t
-    #+(or linux (and bsd (not netbsd))) unsigned-long
     #+netbsd u-int64-t
-    #+alpha unsigned-int)
+    #+alpha unsigned-int
+    #-(or alpha netbsd) unsigned-long)
 
 (def-alien-type swblk-t long)
 
@@ -2363,7 +2363,9 @@
    returns NIL and the errno."
   (with-alien ((tv (struct timeval))
 	       #-(or svr4 netbsd) (tz (struct timezone)))
-    (syscall* (#+netbsd #-netbsd "gettimeofday" "__gettimeofday50" (* (struct timeval)) #-svr4 (* (struct timezone)))
+    (syscall* (#-netbsd "gettimeofday"
+	       #+netbsd  "__gettimeofday50"
+	       (* (struct timeval)) #-svr4 (* (struct timezone)))
 	      (values T
 		      (slot tv 'tv-sec)
 		      (slot tv 'tv-usec)
