@@ -145,7 +145,7 @@ void RXmStringGetLtoR(message_t message)
   result = XmStringGetLtoR(xs,charset,&text);
 
   message_write_string(reply,text,string_tag);
-  message_write_boolean(reply,text,boolean_tag);
+  message_write_boolean(reply,(result==True)?1:0,boolean_tag);
   message_send(client_socket,reply);
   message_free(reply);
 
