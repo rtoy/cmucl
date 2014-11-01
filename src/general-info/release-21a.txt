@@ -24,6 +24,7 @@ New in this release:
   * Changes
     * Micro-optimize SCALE-FLOAT to do multiplication when possible.
     * Update to ASDF 3.1.4.
+    * The external-format :UTF is no longer an alias for :UTF-8.
 
   * ANSI compliance fixes:
 
