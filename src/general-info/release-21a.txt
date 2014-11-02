@@ -41,6 +41,7 @@ New in this release:
       * Motifd text callback fixed.
     * Support for 64-bit time_t on NetBSD added. This allows cmucl to
       run on more recent versions of NetBSD.
+    * The empty package LOOP has been removed.
 
   * Trac Tickets:
     * Ticket #54 fixed.
