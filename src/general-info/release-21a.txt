@@ -25,6 +25,7 @@ New in this release:
     * Micro-optimize SCALE-FLOAT to do multiplication when possible.
     * Update to ASDF 3.1.4.
     * The external-format :UTF is no longer an alias for :UTF-8.
+    * :ELF feature added for solaris.
 
   * ANSI compliance fixes:
 
@@ -32,10 +33,21 @@ New in this release:
     * On ppc machines with clock speeds over 2 GHz or so,
       LISP::CYCLES-PER-TICK is no longer negative. This caused the
       cycle count from TIME to be negative.
+    * EXTERN-ALIEN-NAME unified not to prepend an underscore if :ELF
+      is a *FEATURE*.
+    * Motifd will work as either a 32-bit or 64-bit app.
+    * Various bugs in clm fixed:
+      * Occasional RXmStringGetLtoR crash fixed.
+      * Motifd text callback fixed.
+    * Support for 64-bit time_t on NetBSD added. This allows cmucl to
+      run on more recent versions of NetBSD.
 
   * Trac Tickets:
+    * Ticket #54 fixed.
 
   * Other changes:
+    * Cross compile scripts from x86 to sparc and ppc updated to work
+      again to cross-compile from the current snapshot.
 
   * Improvements to the PCL implementation of CLOS:
 
