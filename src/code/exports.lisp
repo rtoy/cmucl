@@ -94,9 +94,6 @@
 (if (find-package "EXTENSIONS")
     (rename-package "EXTENSIONS" "EXTENSIONS" '("EXT"))
     (make-package "EXTENSIONS" :nicknames '("EXT") :use nil))
-(if (find-package "LOOP")
-    (rename-package "LOOP" "LOOP" 'nil)
-    (make-package "LOOP" :nicknames 'nil :use nil))
 (if (find-package "DEBUG-INTERNALS")
     (rename-package "DEBUG-INTERNALS" "DEBUG-INTERNALS" '("DI"))
     (make-package "DEBUG-INTERNALS" :nicknames '("DI") :use nil))
@@ -151,7 +148,6 @@
 (use-package '("LISP") "DISASSEM")
 (use-package '("EXTENSIONS" "LISP" "SYSTEM") "DEBUG")
 (use-package '("C-CALL" "ALIEN" "COMMON-LISP" "SYSTEM") "EXTENSIONS")
-(use-package '("LISP") "LOOP")
 (use-package '("LISP" "SYSTEM" "EXTENSIONS" "KERNEL") "DEBUG-INTERNALS")
 (use-package
  '("ALIEN-INTERNALS" "ALIEN" "COMMON-LISP" "EXTENSIONS" "KERNEL"
@@ -1608,7 +1604,6 @@
 	   "LIST-ALL-EXTERNAL-FORMATS"
 	   "DESCRIBE-EXTERNAL-FORMAT"))
 
-(defpackage "LOOP")
 (dolist
     (name
      '("DEBUG-SOURCE" "DEBUG-SOURCE-COMPILED" "DEBUG-SOURCE-CREATED"
