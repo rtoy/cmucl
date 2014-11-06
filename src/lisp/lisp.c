@@ -465,7 +465,7 @@ main(int argc, const char *argv[], const char *envp[])
     const char *cmucllib = NULL;
     const char *unidata = NULL;
     
-    fpu_mode_t fpu_type = AUTO;
+    fpu_mode_t fpu_type = SSE2;
     boolean monitor;
     lispobj initial_function = 0;
 
