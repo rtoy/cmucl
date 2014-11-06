@@ -45,6 +45,9 @@
 ;;;>      United States of America
 ;;;>      +1-617-221-1000
 
+;;;> See page 391 of http://bitsavers.trailing-edge.com/pdf/symbolics/software/genera_8/Symbolics_Common_Lisp_Language_Concepts.pdf
+;;;> for more information on how to extend loop.
+
 ;; $aclHeader: loop.cl,v 1.5 91/12/04 01:13:48 cox acl4_1 $
 
 #+cmu
@@ -2153,6 +2156,77 @@ collected result will be returned as the value of the LOOP."
 				 ,variable)
 	     (,next-fn)))
       ())))
+
+
+;; Supports
+;;
+;;  (loop for cp being the codepoint of string ...)
+;;
+;; where cp is the codepoint of charactor (or surrogate pair) in the
+;; string.
+(defun loop-string-codepoint-iteration-path (variable data-type prep-phrases)
+  (cond ((or (cdr prep-phrases) (not (member (caar prep-phrases) '(:in :of))))
+	 (loop-error _N"Too many prepositions!"))
+	((null prep-phrases) (loop-error _N"Missing OF or IN in ~S iteration path.")))
+  (let ((string-var (loop-gentemp 'loop-codepoint-string-))
+	(next-fn (loop-gentemp 'loop-codepoint-next-))
+	(post-steps nil))
+    (let* ((val-var nil)
+	   (temp-val-var (loop-gentemp 'loop-codepoint-val-temp-))
+	   (temp-predicate-var (loop-gentemp 'loop-codepoint-predicate-var-))
+	   (variable (or variable (loop-gentemp)))
+	   (bindings `((,variable nil ,data-type)
+		       (,string-var ,(cadar prep-phrases)))))
+      (push `(lisp::with-string-codepoint-iterator (,next-fn ,string-var)) *loop-wrappers*)
+      (setq val-var variable)
+      `(,bindings			;bindings
+	()				;prologue
+	()				;pre-test
+	()				;parallel steps
+	(not
+	 (multiple-value-bind (,temp-predicate-var ,temp-val-var)
+	     (,next-fn)
+	   (when ,temp-predicate-var
+	     (setq ,val-var ,temp-val-var))
+	   ,temp-predicate-var
+	   ))				;post-test
+	,post-steps))))
+
+;; Supports
+;;  (loop for g-string being the glyph of string ...)
+;;
+;; where g-string is a string consisting of a character and all
+;; trailing combining characters.
+(defun loop-string-glyph-string-iteration-path (variable data-type prep-phrases)
+  (cond ((or (cdr prep-phrases) (not (member (caar prep-phrases) '(:in :of))))
+	 (loop-error _N"Too many prepositions!"))
+	((null prep-phrases) (loop-error _N"Missing OF or IN in ~S iteration path.")))
+  (let ((string-var (loop-gentemp 'loop-glyph-string-))
+	(next-fn (loop-gentemp 'loop-glyph-next-))
+	(post-steps nil))
+    (let* ((val-var nil)
+	   (temp-index-var (loop-gentemp 'loop-glyph-index-temp-))
+	   (temp-len-var (loop-gentemp 'loop-glyph-len-temp-))
+	   (temp-predicate-var (loop-gentemp 'loop-glyph-predicate-var-))
+	   (variable (or variable (loop-gentemp)))
+	   (bindings `((,variable nil ,data-type)
+		       (,string-var ,(cadar prep-phrases)))))
+      (push `(lisp::with-string-glyph-iterator (,next-fn ,string-var)) *loop-wrappers*)
+      (setq val-var variable)
+      `(,bindings			;bindings
+	()				;prologue
+	()				;pre-test
+	()				;parallel steps
+	(not
+	 (multiple-value-bind (,temp-predicate-var ,temp-index-var ,temp-len-var)
+	     (,next-fn)
+	   (when ,temp-predicate-var
+	     (setq ,val-var (subseq ,string-var ,temp-index-var ,temp-len-var)))
+	   ,temp-predicate-var
+	   ))				;post-test
+	,post-steps))))
+
+  
 
 ;;;; ANSI Loop
 
@@ -2235,12 +2309,22 @@ collected result will be returned as the value of the LOOP."
 		   :preposition-groups '((:of :in))
 		   :inclusive-permitted nil
 		   :user-data '(:symbol-types (:internal :external)))
+    (when extended-p
+      (add-loop-path '(code-point code-points codepoint codepoints)
+		     'loop-string-codepoint-iteration-path
+		     w
+		     :preposition-groups '((:of :in))
+		     :inclusive-permitted nil)
+      (add-loop-path '(glyph glyphs)
+		     'loop-string-glyph-string-iteration-path
+		     w
+		     :preposition-groups '((:of :in))
+		     :inclusive-permitted nil))
     w))
 
 
 (defparameter *loop-ansi-universe*
-	      (make-ansi-loop-universe nil))
-
+  (make-ansi-loop-universe t))
 
 (defun loop-standard-expansion (keywords-and-forms environment universe)
   (if (and keywords-and-forms (symbolp (car keywords-and-forms)))
