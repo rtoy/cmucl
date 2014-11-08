@@ -20,3 +20,11 @@ requests.o : requests.c Interface.h
 
 clean:
 	-rm -f core $(OBJS) $(TARGET)
+
+depend: Depends
+
+Depends: $(patsubst %.o,%.c,$(OBJS))
+	$(CC) $(DEPEND_FLAGS) $(CFLAGS) $(CPPFLAGS) $^ > ,depends
+	mv ,depends Depends
+
+-include Depends
