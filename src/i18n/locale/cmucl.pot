@@ -13412,6 +13412,14 @@ msgstr ""
 msgid "Destructuring is not valid for package symbol iteration."
 msgstr ""
 
+#: src/code/loop.lisp
+msgid "Destructuring is not valid for string codepoint iteration."
+msgstr ""
+
+#: src/code/loop.lisp
+msgid "Destructuring is not valid for string glyph iteration."
+msgstr ""
+
 #: src/code/stream-vector-io.lisp
 msgid "endian-swap ~a is illegal for element-type of vector ~a"
 msgstr ""
