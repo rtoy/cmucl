@@ -735,11 +735,10 @@
 	  (etypecase piece
 	    (simple-string
 	     (let ((head (concatenate 'string head piece)))
-	       (with-directory-node-noted (head)
-		 (%enumerate-directories (concatenate 'string head "/")
-					 (cdr tail) pathname
-					 verify-existence follow-links
-					 nodes function))))
+	       (%enumerate-directories (concatenate 'string head "/")
+				       (cdr tail) pathname
+				       verify-existence follow-links
+				       nodes function)))
 	    ((member :wild-inferiors)
 	     (%enumerate-directories head (rest tail) pathname
 				     verify-existence follow-links
