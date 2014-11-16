@@ -224,6 +224,7 @@
 	   "UNIX-GETTIMEOFDAY"
 	   "UNIX-ISATTY"
 	   "UNIX-MKDIR"
+	   "UNIX-RMDIR"
 	   "UNIX-UNLINK"
 	   "UNIX-SETITIMER"
 	   "TIMEZONE"
@@ -269,15 +270,19 @@
 	   "SGTTYB"
 	   "TCHARS"
 	   "UNIX-TTYNAME"
+	   "WINSIZE"
+	   "LTCHARS"
+	   "TIMEVAL"
+	   "CLOSE-DIR"
+	   "OPEN-DIR"
+	   "READ-DIR"
+	   "D-NAMLEN"
 	   ;; Simple streams
 	   "PROT_READ"
 	   "UNIX-MMAP"
 	   "UNIX-MUNMAP"
 	   "UNIX-MSYNC"
 
-	   "CLOSE-DIR"
-	   "OPEN-DIR"
-	   "READ-DIR"
 	   ))
   
 (defpackage "FORMAT")

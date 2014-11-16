@@ -108,6 +108,11 @@
     `(multiple-value-bind (,word ,bit) (floor ,offset 32)
        (logbitp ,bit (deref (slot ,fd-set 'fds-bits) ,word)))))
 
+(def-alien-type nlink-t
+    #-(or svr4 netbsd) unsigned-short
+    #+netbsd unsigned-long
+    #+svr4 unsigned-long)
+
 (defconstant fd-setsize
   #-(or hpux alpha linux FreeBSD) 256
   #+hpux 2048 #+alpha 4096 #+(or linux FreeBSD) 1024)
@@ -116,6 +121,17 @@
 (def-alien-type nil
   (struct fd-set
     (fds-bits (array #-alpha unsigned-long #+alpha int #.(/ fd-setsize 32)))))
+
+(def-alien-type nil
+  (struct timeval
+    (tv-sec #-linux time-t #+linux int)		; seconds
+    (tv-usec int)))				; and microseconds
+
+#+(or linux BSD)
+(def-alien-type nil
+  (struct timespec-t
+    (ts-sec time-t)
+    (ts-nsec long)))
 
 ;;; From ioctl.h
 (def-alien-type nil
@@ -128,6 +144,17 @@
     #-linux (t-eofc char)			; end-of-file
     (t-brkc char)))			; input delimiter (like nl)
 
+;; not found (semi) linux
+(def-alien-type nil
+  (struct ltchars
+    #+linux (t-werasc char)			; word erase 	  
+    (t-suspc char)			; stop process signal
+    (t-dsuspc char)			; delayed stop process signal
+    (t-rprntc char)			; reprint line
+    (t-flushc char)			; flush output (toggles)
+    #-linux (t-werasc char)			; word erase
+    (t-lnextc char)))			; literal next character
+
 (def-alien-type nil
   (struct sgttyb
     #+linux (sg-flags #+mach short #-mach int) ; mode flags 	  
@@ -139,6 +166,13 @@
     #+linux (sg-kill char)
     #+linux (t (struct termios))
     #+linux (check int)))
+
+(def-alien-type nil
+  (struct winsize
+    (ws-row unsigned-short)		; rows, in characters
+    (ws-col unsigned-short)		; columns, in characters
+    (ws-xpixel unsigned-short)		; horizontal size, pixels
+    (ws-ypixel unsigned-short)))	; veritical size, pixels
 
 
 ;;;; System calls.
@@ -672,6 +706,14 @@
   (void-syscall ("rename" c-string c-string)
 		(%name->file name1) (%name->file name2)))
 
+;;; Unix-rmdir accepts a name and removes the associated directory.
+
+(defun unix-rmdir (name)
+  _N"Unix-rmdir attempts to remove the directory name.  NIL and
+   an error number is returned if an error occured."
+  (declare (type unix-pathname name))
+  (void-syscall ("rmdir" c-string) (%name->file name)))
+
 ;;; Unix-write accepts a file descriptor, a buffer, an offset, and the
 ;;; length to write.  It attempts to write len bytes to the device
 ;;; associated with fd from the buffer starting at offset.  It returns
@@ -929,6 +971,48 @@
   (declare (type (signed-byte 32) code))
   (void-syscall ("exit" int) code))
 
+;;; From sys/dir.h
+;;;
+;;; (For Solaris, this is not struct direct, but struct dirent!)
+#-bsd
+(def-alien-type nil
+  (struct direct
+    #+(and sunos (not svr4)) (d-off long) ; offset of next disk directory entry
+    (d-ino ino-t); inode number of entry
+    #+(or linux svr4) (d-off long)
+    (d-reclen unsigned-short)		; length of this record
+    #-(or linux svr4)
+    (d-namlen unsigned-short)		; length of string in d-name
+    (d-name (array char 256))))		; name must be no longer than this
+
+#+(and bsd (not netbsd))
+(def-alien-type nil
+  (struct direct
+    (d-fileno unsigned-long)
+    (d-reclen unsigned-short)
+    (d-type unsigned-char)
+    (d-namlen unsigned-char)		; length of string in d-name
+    (d-name (array char 256))))		; name must be no longer than this
+
+#+netbsd
+(def-alien-type nil
+  (struct direct
+    (d-fileno ino-t)
+    (d-reclen unsigned-short)
+    (d-namlen unsigned-short)
+    (d-type unsigned-char)
+    (d-name (array char 512))))
+
+;;; The 64-bit version of struct dirent.
+#+solaris
+(def-alien-type nil
+  (struct dirent64
+    (d-ino ino64-t); inode number of entry
+    (d-off off64-t) ; offset of next disk directory entry
+    (d-reclen unsigned-short)		; length of this record
+    (d-name (array char 256))))		; name must be no longer than this
+
+
 #+(and bsd (not netbsd))
 (def-alien-type nil
   (struct stat
@@ -949,6 +1033,29 @@
     (st-gen     unsigned-long)
     (st-lspare  long)
     (st-qspare (array long 4))))
+
+(defmacro extract-stat-results (buf)
+  `(values T
+	   (slot ,buf 'st-dev)
+	   (slot ,buf 'st-ino)
+	   (slot ,buf 'st-mode)
+	   (slot ,buf 'st-nlink)
+	   (slot ,buf 'st-uid)
+	   (slot ,buf 'st-gid)
+	   (slot ,buf 'st-rdev)
+	   (slot ,buf 'st-size)
+	   #-(or svr4 BSD) (slot ,buf 'st-atime)
+	   #+svr4    (slot (slot ,buf 'st-atime) 'tv-sec)
+           #+BSD (slot (slot ,buf 'st-atime) 'ts-sec)
+	   #-(or svr4 BSD)(slot ,buf 'st-mtime)
+	   #+svr4   (slot (slot ,buf 'st-mtime) 'tv-sec)
+           #+BSD(slot (slot ,buf 'st-mtime) 'ts-sec)
+	   #-(or svr4 BSD) (slot ,buf 'st-ctime)
+	   #+svr4   (slot (slot ,buf 'st-ctime) 'tv-sec)
+           #+BSD(slot (slot ,buf 'st-ctime) 'ts-sec)
+	   #+netbsd (slot (slot ,buf 'st-birthtime) 'ts-sec)
+	   (slot ,buf 'st-blksize)
+	   (slot ,buf 'st-blocks)))
 
 (defun unix-stat (name)
   _N"Unix-stat retrieves information about the specified
@@ -1899,6 +2006,35 @@
   (dir "" :type string)
   (shell "" :type string))
 
+;; see <pwd.h>
+#+solaris
+(def-alien-type nil
+    (struct passwd
+	    (pw-name (* char))          ; user's login name
+	    (pw-passwd (* char))        ; no longer used
+	    (pw-uid uid-t)              ; user id
+	    (pw-gid gid-t)              ; group id
+	    (pw-age (* char))           ; password age (not used)
+	    (pw-comment (* char))       ; not used
+	    (pw-gecos (* char))         ; typically user's full name
+	    (pw-dir (* char))           ; user's home directory
+	    (pw-shell (* char))))       ; user's login shell
+
+#+bsd
+(def-alien-type nil
+    (struct passwd
+	    (pw-name (* char))          ; user's login name
+	    (pw-passwd (* char))        ; no longer used
+	    (pw-uid uid-t)              ; user id
+	    (pw-gid gid-t)              ; group id
+            (pw-change int)             ; password change time
+            (pw-class (* char))         ; user access class
+	    (pw-gecos (* char))         ; typically user's full name
+	    (pw-dir (* char))           ; user's home directory
+	    (pw-shell (* char))         ; user's login shell
+            (pw-expire int)             ; account expiration
+            #+(or freebsd darwin)
+	    (pw-fields int)))           ; internal
 
 ;;;; Other random routines.
 (def-alien-routine ("isatty" unix-isatty) boolean
@@ -1920,6 +2056,10 @@
   (struct itimerval
     (it-interval (struct timeval))	; timer interval
     (it-value (struct timeval))))	; current value
+
+(defconstant ITIMER-REAL 0)
+(defconstant ITIMER-VIRTUAL 1)
+(defconstant ITIMER-PROF 2)
 
 (defun unix-setitimer (which int-secs int-usec val-secs val-usec)
   _N" Unix-setitimer sets the INTERVAL and VALUE slots of one of
