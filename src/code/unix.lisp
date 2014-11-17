@@ -946,9 +946,9 @@
   (int-syscall ("ioctl" int unsigned-int (* char)) fd cmd arg))
 
 (defun unix-tcgetattr (fd termios)
-    _N"Get terminal attributes."
-    (declare (type unix-fd fd))
-    (void-syscall ("tcgetattr" int (* (struct termios))) fd termios))
+  _N"Get terminal attributes."
+  (declare (type unix-fd fd))
+  (void-syscall ("tcgetattr" int (* (struct termios))) fd termios))
 
 (defun unix-tcsetattr (fd opt termios)
   _N"Set terminal attributes."
