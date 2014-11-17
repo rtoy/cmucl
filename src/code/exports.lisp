@@ -290,6 +290,10 @@
 	   "TERMIOS"
 	   "UNIX-TCGETATTR"
 	   "UNIX-TCSETATTR"
+	   "UNIX-CFGETOSPEED"
+	   "UNIX-FCHMOD"
+	   "UNIX-CREAT"
+	   "UNIX-UTIMES"
 	   ))
   
 (defpackage "FORMAT")

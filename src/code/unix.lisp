@@ -437,6 +437,19 @@
 	   (type unix-file-mode mode))
   (void-syscall ("chmod" c-string int) (%name->file path) mode))
 
+;;; Unix-fchmod accepts a file descriptor ("fd") and a file protection mode
+;;; ("mode") and changes the protection of the file described by "fd" to 
+;;; "mode".
+
+(defun unix-fchmod (fd mode)
+  _N"Given an integer file descriptor and a mode (the same as those
+   used for unix-chmod), unix-fchmod changes the permission mode
+   for that file to the one specified. T is returned if the call
+   was successful."
+  (declare (type unix-fd fd)
+	   (type unix-file-mode mode))
+  (void-syscall ("fchmod" int int) fd mode))
+
 ;;; Unix-lseek accepts a file descriptor, an offset, and whence value.
 
 (defconstant l_set 0 _N"set the file pointer")
@@ -537,6 +550,22 @@
    completion, otherwise NIL and an error number."
   (declare (type unix-fd fd))
   (void-syscall ("close" int) fd))
+
+;;; Unix-creat accepts a file name and a mode.  It creates a new file
+;;; with name and sets it mode to mode (as for chmod).
+
+(defun unix-creat (name mode)
+  _N"Unix-creat accepts a file name and a mode (same as those for
+   unix-chmod) and creates a file by that name with the specified
+   permission mode.  It returns a file descriptor on success,
+   or NIL and an error  number otherwise.
+
+   This interface is made obsolete by UNIX-OPEN."
+  
+  (declare (type unix-pathname name)
+	   (type unix-file-mode mode))
+  (int-syscall (#+solaris "creat64" #-solaris "creat" c-string int)
+	       (%name->file name) mode))
 
 ;;; Unix-read accepts a file descriptor, a buffer, and the length to read.
 ;;; It attempts to read len bytes from the device associated with fd
@@ -954,6 +983,22 @@
   _N"Set terminal attributes."
   (declare (type unix-fd fd))
   (void-syscall ("tcsetattr" int int (* (struct termios))) fd opt termios))
+
+;; XXX rest of functions in this progn probably are present in linux, but
+;; not verified.
+#-bsd
+(defun unix-cfgetospeed (termios)
+  _N"Get terminal output speed."
+  (multiple-value-bind (speed errno)
+      (int-syscall ("cfgetospeed" (* (struct termios))) termios)
+    (if speed
+        (values (svref terminal-speeds speed) 0)
+        (values speed errno))))
+
+#+bsd
+(defun unix-cfgetospeed (termios)
+  _N"Get terminal output speed."
+  (int-syscall ("cfgetospeed" (* (struct termios))) termios))
 
 (def-alien-routine ("getuid" unix-getuid) int
   _N"Unix-getuid returns the real user-id associated with the
@@ -1872,6 +1917,29 @@
 		      )
 	      (addr tv)
 	      #-(or svr4 netbsd) (addr tz) #+netbsd nil)))
+
+;;; Unix-utimes changes the accessed and updated times on UNIX
+;;; files.  The first argument is the filename (a string) and
+;;; the second argument is a list of the 4 times- accessed and
+;;; updated seconds and microseconds.
+
+#-hpux
+(defun unix-utimes (file atime-sec atime-usec mtime-sec mtime-usec)
+  _N"Unix-utimes sets the 'last-accessed' and 'last-updated'
+   times on a specified file.  NIL and an error number is
+   returned if the call is unsuccessful."
+  (declare (type unix-pathname file)
+	   (type (alien unsigned-long)
+		 atime-sec atime-usec
+		 mtime-sec mtime-usec))
+  (with-alien ((tvp (array (struct timeval) 2)))
+    (setf (slot (deref tvp 0) 'tv-sec) atime-sec)
+    (setf (slot (deref tvp 0) 'tv-usec) atime-usec)
+    (setf (slot (deref tvp 1) 'tv-sec) mtime-sec)
+    (setf (slot (deref tvp 1) 'tv-usec) mtime-usec)
+    (void-syscall (#-netbsd "utimes" #+netbsd "__utimes50" c-string (* (struct timeval)))
+		  file
+		  (cast tvp (* (struct timeval))))))
 
 (def-alien-routine ("getpid" unix-getpid) int
   _N"Unix-getpid returns the process-id of the current process.")
