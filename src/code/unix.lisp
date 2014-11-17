@@ -945,6 +945,20 @@
 	   (type (unsigned-byte 32) cmd))
   (int-syscall ("ioctl" int unsigned-int (* char)) fd cmd arg))
 
+(defun unix-tcgetattr (fd termios)
+    _N"Get terminal attributes."
+    (declare (type unix-fd fd))
+    (void-syscall ("tcgetattr" int (* (struct termios))) fd termios))
+
+(defun unix-tcsetattr (fd opt termios)
+  _N"Set terminal attributes."
+  (declare (type unix-fd fd))
+  (void-syscall ("tcsetattr" int int (* (struct termios))) fd opt termios))
+
+(def-alien-routine ("getuid" unix-getuid) int
+  _N"Unix-getuid returns the real user-id associated with the
+   current process.")
+
 ;;; Unix-getpagesize returns the number of bytes in the system page.
 
 (defun unix-getpagesize ()
@@ -970,6 +984,53 @@
    unsuccessful, the call returns NIL and an error number."
   (declare (type (signed-byte 32) code))
   (void-syscall ("exit" int) code))
+
+;;; From sys/termios.h
+
+;;; NOTE: There is both a  termio (SYSV) and termios (POSIX)
+;;; structure with similar but incompatible definitions. It may be that
+;;; the non-BSD variant of termios below is really a termio but I (pw)
+;;; can't verify. The BSD variant uses the Posix termios def. Some systems
+;;; (Ultrix and OSF1) seem to support both if used independently.
+;;; The 17f version of this seems a bit confused wrt the conditionals.
+;;; Please check these defs for your system.
+
+;;; TSM: from what I can tell looking at the 17f definition, my guess is that it
+;;; was originally a termio for sunos (nonsolaris) (because it had the c-line
+;;; member for sunos only), and then was mutated into the termios definition for
+;;; later systems. The definition here is definitely not an IRIX termio because
+;;; it doesn't have c-line. In any case, the functions tcgetattr, etc.,
+;;; definitely take a termios, and termios seems to be the more standard
+;;; standard now, so my suggestion is to just go with termios and forget about
+;;; termio. Note the SVID says NCCS not NCC for the constant here, so I've
+;;; changed it (which means you need to bootstrap it to avoid a reader error).
+
+;;; On top of all that, SGI decided to change the termios structure on irix
+;;; 6.[34] (but NOT 6.2), left the old routines named the same in the library,
+;;; but introduced static functions in termios.h to redirect new calls to the
+;;; new library--which means it's important not to #include termios.h before
+;;; undefineds.h when building lisp.
+
+(defconstant +NCCS+
+  #+hpux 16
+  #+irix 23
+  #+(or linux solaris) 19
+  #+(or bsd osf1) 20
+  #+(and sunos (not svr4)) 17
+  _N"Size of control character vector.")
+
+(def-alien-type nil
+  (struct termios
+    (c-iflag unsigned-int)
+    (c-oflag unsigned-int)
+    (c-cflag unsigned-int)
+    (c-lflag unsigned-int)
+    #+(or linux hpux (and sunos (not svr4)))
+    (c-reserved #-(or linux (and sunos (not svr4))) unsigned-int
+		#+(or linux (and sunos (not svr4))) unsigned-char)
+    (c-cc (array unsigned-char #.+NCCS+))
+    #+(or bsd osf1) (c-ispeed unsigned-int)
+    #+(or bsd osf1) (c-ospeed unsigned-int)))
 
 ;;; From sys/dir.h
 ;;;

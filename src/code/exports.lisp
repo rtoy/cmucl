@@ -283,6 +283,13 @@
 	   "UNIX-MUNMAP"
 	   "UNIX-MSYNC"
 
+	   ;; Motif
+	   "UNIX-GETUIO"
+
+	   ;; Hemlock
+	   "TERMIOS"
+	   "UNIX-TCGETATTR"
+	   "UNIX-TCSETATTR"
 	   ))
   
 (defpackage "FORMAT")
