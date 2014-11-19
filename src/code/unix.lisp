@@ -1884,6 +1884,14 @@
 	       nfds (frob rdfds rdf) (frob wrfds wrf) (frob xpfds xpf)
 	       (if to-secs (alien-sap (addr tv)) (int-sap 0))))))
 
+(defun unix-symlink (name1 name2)
+  _N"Unix-symlink creates a symbolic link named name2 to the file
+   named name1.  NIL and an error number is returned if the call
+   is unsuccessful."
+  (declare (type unix-pathname name1 name2))
+  (void-syscall ("symlink" c-string c-string)
+		(%name->file name1) (%name->file name2)))
+
 (def-alien-type nil
   (struct timeval
     (tv-sec #-linux time-t #+linux int)		; seconds

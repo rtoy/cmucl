@@ -294,6 +294,9 @@
 	   "UNIX-FCHMOD"
 	   "UNIX-CREAT"
 	   "UNIX-UTIMES"
+
+	   ;; Tests
+	   "UNIX-SYMLINK"
 	   ))
   
 (defpackage "FORMAT")
