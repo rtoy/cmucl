@@ -669,7 +669,11 @@
 		    (foreach integer single-float))
 		   (float (log2 (float number 1d0)) 1f0))
 		  ((single-float double-float)
-		   (log2 (float number 1d0)))))
+		   (log2 (float number 1d0)))
+		  #+double-double
+		  (((foreach integer single-float double-float)
+		    ext:double-double-float)
+		   (log2 (float number 1w0) base))))
 	       ((and (= base 10)
 		     (floatp number)
 		     #+double-double
@@ -687,7 +691,13 @@
 		    (foreach single-float integer))
 		   (float (%log10 (float number 1d0)) 1f0))
 		  ((single-float double-float)
-		   (%log10 (float number 1d0)))))
+		   (%log10 (float number 1d0)))
+		  #+double-double
+		  (((foreach integer single-float double-float)
+		    ext:double-double-float)
+		   ;; This could be more accurate!
+		   (/ (log (float number 1w0))
+		      (log 10w0)))))
 	       (t
 		;; CLHS 12.1.4.1 says
 		;;
@@ -729,11 +739,14 @@
 		  #+double-double
 		  ((double-double-float
 		    (foreach fixnum bignum ratio))
+		   ;; Use log2 in case the base is so large that it
+		   ;; won't fit in a float.
 		   (/ (log2 number 1w0) (log2 base 1w0)))
 		  #+double-double
 		  ((double-double-float
 		    (foreach double-double-float double-float single-float))
-		   (/ (log number) (log (coerce base 'double-double-float))))
+		   (/ (log number)
+		      (log (coerce base 'double-double-float))))
 		  #+double-double
 		  (((foreach fixnum bignum ratio)
 		    double-double-float)
