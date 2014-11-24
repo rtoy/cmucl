@@ -1243,7 +1243,17 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 
 ;;; dd-%log2
 ;;; Base 2 logarithm.
-
+;;;
+;;; The argument is separated into its exponent and fractional
+;;; parts.  If the exponent is between -1 and +1, the (natural)
+;;; logarithm of the fraction is approximated by
+;;;
+;;;     log(1+x) = x - 0.5 x**2 + x**3 P(x)/Q(x).
+;;;
+;;; Otherwise, setting  z = 2(x-1)/x+1),
+;;; 
+;;;     log(x) = z + z**3 R(z)/S(z).
+;;;
 (let ((P (make-array 13 :element-type 'double-double-float
 		     :initial-contents
 		     '(
@@ -1326,7 +1336,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 		      ;; 2*(x-1)/(x+1)
 		      (setf z (- x 0.5w0))
 		      (decf z 0.5w0)
-		      (setf y (+ (* 0.5w0 z) 0.5w0))))
+		      (setf y (+ (* 0.5w0 x) 0.5w0))))
 	       (setf x (/ z y))
 	       (setf z (* x x))
 	       (setf y (* x (/ (* z (poly-eval z r))
