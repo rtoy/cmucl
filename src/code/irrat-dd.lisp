@@ -44,6 +44,20 @@
   4.4269504088896340735992468100189213742664595w-1
   _N"log2(e)-1")
 
+;; l102a+log102b = log10(2) to extra precision
+(defconstant l102a
+  0.3125w0)
+
+(defconstant l102b
+  -1.14700043360188047862611052755069732318101185w-2)
+
+;; l10ea + l10eb = log10(2) to extra precsion
+(defconstant l10ea
+  0.5w0)
+
+(defconstant l10eb
+  -6.570551809674817234887108108339491770560299w-2)
+
 (defconstant dd-pi
   3.141592653589793238462643383279502884197169w0
   _N"Pi")
@@ -1241,8 +1255,8 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 	      (values (- (dd-%%cos reduced))
 		      (dd-%%sin reduced))))))))
 
-;;; dd-%log2
-;;; Base 2 logarithm.
+;;; dd-%log2 and dd-%log10
+;;; Base 2 and base 10 logarithm.
 ;;;
 ;;; The argument is separated into its exponent and fractional
 ;;; parts.  If the exponent is between -1 and +1, the (natural)
@@ -1254,6 +1268,9 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 ;;; 
 ;;;     log(x) = z + z**3 R(z)/S(z).
 ;;;
+;;; This gives the natural log. To get the base 2 and base 10 log,
+;;; carefully multiply the natural log by log2(e) or log10(e) as
+;;; appropriate.
 (let ((P (make-array 13 :element-type 'double-double-float
 		     :initial-contents
 		     '(
@@ -1314,52 +1331,82 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 		       -1.332535117259762928288745111081235577029w6
 		       1.701761051846631278975701529965589676574w6
 		       ))))
+  (flet
+      ((compute-log (x)
+	 ;; Common routine to extract the exponent and fraction from x
+	 ;; and compute the log(f). Return the exponent, the fraction,
+	 ;; and the parts of the polynomial computation that is needed
+	 ;; to finish off the final logarithm.
+	 (declare (type double-double-float x)
+		  (optimize (speed 3) (space 0)
+			    (inhibit-warnings 3)))
+	 (multiple-value-bind (x e)
+	     (decode-float x)
+	   (declare (type double-double-float x)
+		    (type double-float-exponent e))
+	   (let ((z 0w0)
+		 (y 0w0))
+	     (declare (type double-double-float z y))
+	     (cond ((or (> e 2)
+			(< e -2))
+		    (cond ((< x sqrt-1/2)
+			   ;; 2*(2*x-1)/(2*x+1)
+			   (decf e)
+			   (setf z (- x 0.5w0))
+			   (setf y (+ (* 0.5w0 z) 0.5w0)))
+			  (t
+			   ;; 2*(x-1)/(x+1)
+			   (setf z (- x 0.5w0))
+			   (decf z 0.5w0)
+			   (setf y (+ (* 0.5w0 x) 0.5w0))))
+		    (setf x (/ z y))
+		    (setf z (* x x))
+		    (setf y (* x (/ (* z (poly-eval z r))
+				    (poly-eval-1 z s)))))
+		   (t
+		    (cond ((< x sqrt-1/2)
+			   (decf e)
+			   (setf x (- (scale-float x 1) 1)))
+			  (t
+			   (decf x)))
+		    (setf z (* x x))
+		    (setf y (* x (/ (* z (poly-eval x p))
+				    (poly-eval-1 x q))))
+		    (decf y (scale-float z -1))))
+	     (values e x y z)))))
+
   (defun dd-%log2 (x)
     (declare (type double-double-float x)
 	     (optimize (speed 3) (space 0)
 		       (inhibit-warnings 3)))
-    (multiple-value-bind (x e)
-	(decode-float x)
-      (declare (type double-double-float x)
-	       (type double-float-exponent e))
-      (let ((z 0w0)
-	    (y 0w0))
-	(declare (type double-double-float z y))
-	(cond ((or (> e 2)
-		   (< e -2))
-	       (cond ((< x sqrt-1/2)
-		      ;; 2*(2*x-1)/(2*x+1)
-		      (decf e)
-		      (setf z (- x 0.5w0))
-		      (setf y (+ (* 0.5w0 z) 0.5w0)))
-		     (t
-		      ;; 2*(x-1)/(x+1)
-		      (setf z (- x 0.5w0))
-		      (decf z 0.5w0)
-		      (setf y (+ (* 0.5w0 x) 0.5w0))))
-	       (setf x (/ z y))
-	       (setf z (* x x))
-	       (setf y (* x (/ (* z (poly-eval z r))
-			       (poly-eval-1 z s)))))
-	      (t
-	       (cond ((< x sqrt-1/2)
-		      (decf e)
-		      (setf x (- (scale-float x 1) 1)))
-		     (t
-		      (decf x)))
-	       (setf z (* x x))
-	       (setf y (* x (/ (* z (poly-eval x p))
-			       (poly-eval-1 x q))))
-	       (decf y (scale-float z -1))))
-	;; Multiply log of fraction by log2(e) and base 2 exponent by 1
-	;;
-	;; This sequence of operations is critical
-	(setf z (* y log2ea))
-	(setf z (+ z (* x log2ea)))
-	(setf z (+ z y))
-	(setf z (+ z x))
-	(setf z (+ z e))
-	z))))
+    (multiple-value-bind (e x y z)
+	(compute-log x)
+      ;; Multiply log of fraction by log2(e) and base 2 exponent by 1
+      ;;
+      ;; This sequence of operations is critical
+      (setf z (* y log2ea))
+      (incf z (* x log2ea))
+      (incf z y)
+      (incf z x)
+      (incf z e)
+      z))
+
+  (defun dd-%log10 (x)
+    (declare (type double-double-float x)
+	     (optimize (speed 3) (space 0)
+		       (inhibit-warnings 3)))
+    (multiple-value-bind (e x y z)
+	(compute-log x)
+      ;; Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
+      ;;
+      ;; This sequence of operations is critical.
+      (setf z (* y l10eb))
+      (incf z (* x l10eb))
+      (incf z (* e l102b))
+      (incf z (* y l10ea))
+      (incf z (* x l10ea))
+      (incf z (* e l102a))
+      z))))
 
 ;;; dd-%exp2
 ;;; 2^x
