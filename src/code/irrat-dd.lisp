@@ -1379,6 +1379,9 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
     (declare (type double-double-float x)
 	     (optimize (speed 3) (space 0)
 		       (inhibit-warnings 3)))
+    (when (eql x 0w0)
+      ;; log2(+0) = -infinity
+      (return-from dd-%log2 (/ -1 x)))
     (multiple-value-bind (e x y z)
 	(compute-log x)
       ;; Multiply log of fraction by log2(e) and base 2 exponent by 1
@@ -1395,6 +1398,9 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
     (declare (type double-double-float x)
 	     (optimize (speed 3) (space 0)
 		       (inhibit-warnings 3)))
+    (when (eql x 0w0)
+      ;; log2(+0) = -infinity
+      (return-from dd-%log10 (/ -1 x)))
     (multiple-value-bind (e x y z)
 	(compute-log x)
       ;; Multiply log of fraction by log10(e) and base 2 exponent by log10(2).
