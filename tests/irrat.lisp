@@ -5,9 +5,13 @@
 
 (in-package "IRRAT-TESTS")
 
+(defun relerr (actual expected)
+  (/ (abs (- actual expected))
+     expected))
+
 ;; This tests that log base 2 returns the correct value and the
 ;; correct type.
-(define-test log2
+(define-test log2.result-types
   (dolist (number '(4 4f0 4d0 #+double-double 4w0))
     (dolist (base '(2 2f0 2d0 #+double-double 2w0))
       ;; This tests that log returns the correct value and the correct type.
@@ -35,54 +39,84 @@
 
 ;; This tests that log base 10 returns the correct value and the
 ;; correct type.
-(define-test log10
+(define-test log10.result-types
   (dolist (number '(100 100f0 100d0 #+double-double 100w0))
     (dolist (base '(10 10f0 10d0 #+double-double 10w0))
       ;; This tests that log returns the correct value and the correct type.
       (let* ((result (log number base))
-	     (relerr (/ (abs (- result 2)) 2)))
-	;; Figure out the expected type of the result and the maximum
-	;; allowed relative error.  It turns out that for these test
-	;; cases, the result is exactly 2 except when the result type
-	;; is a double-double-float.  In that case, there is a slight
-	;; error for (log 100w0 10).
-	(multiple-value-bind (true-type allowed-error)
-	    (etypecase number
-	      ((or integer single-float)
-	       (etypecase base
+	     (true-type
+	       (etypecase number
 		 ((or integer single-float)
-		  (values 'single-float 0))
+		  (etypecase base
+		    ((or integer single-float)
+		     'single-float)
+		    (double-float
+		     'double-float)
+		    #+double-double
+		    (ext:double-double-float
+		     'ext:double-double-float)))
 		 (double-float
-		  (values 'double-float 0))
+		  (etypecase base
+		    ((or integer single-float double-float)
+		     'double-float)
+		    #+double-double
+		    (ext:double-double-float
+		     'ext:double-double-float)))
 		 #+double-double
 		 (ext:double-double-float
-		  (values 'ext:double-double-float
-			  7.5d-33))))
-	      (double-float
-	       (etypecase base
-		 ((or integer single-float double-float)
-		  (values 'double-float 0))
-		 #+double-double
-		 (ext:double-double-float
-		  (values 'ext:double-double-float
-			  7.5d-33))))
-	      #+double-double
-	      (ext:double-double-float
-	       (values 'ext:double-double-float
-		       7.5d-33)))
-	  (assert-true (<= relerr allowed-error)
-		       number base result relerr allowed-error)
-	  (assert-true (typep result true-type)
-		       number baes result true-type))))))
+		  'ext:double-double-float))))
+	(assert-equalp 2 result
+		       number base result)
+	(assert-true (typep result true-type)
+		     number base result true-type)))))
 
-(define-test dd-log2
+(define-test dd-log2.special-cases
   ;; Verify that for x = 10^k for k = 1 to 300 that (kernel::dd-%log2
   ;; x) is close to the expected value. Previously, a bug caused
   ;; (kernel::dd-%log2 100w0) to give 6.1699... instead of 6.64385.
   (loop for k from 1 below 300
-	and x = (expt 10 k)
-	and y = (kernel::dd-%log2 (float x 1w0))
-	and z = (/ (log (float x 1d0)) (log 2d0))
-	and e = (/ (abs (- y z)) z)
+	for x = (expt 10 k)
+	for y = (kernel::dd-%log2 (float x 1w0))
+	for z = (/ (log (float x 1d0)) (log 2d0))
+	for e = (/ (abs (- y z)) z)
 	do (assert-true (<= e 2d-16)
-			k y z e)))
+			k y z e))
+  (let ((y (kernel::dd-%log2 (sqrt 2w0))))
+    (assert-true (<= (relerr y 1/2)
+		     (* 2.7 (scale-float 1d0 (- (float-digits 1w0)))))
+		 y))
+  (let ((y (kernel::dd-%log2 (sqrt 0.5w0))))
+    (assert-true (<= (relerr y -1/2)
+		     (* 2.7 (scale-float 1d0 (- (float-digits 1w0)))))
+		 y)))
+
+(define-test dd-log2.powers-of-2
+  (loop for k from -1074 below 1024
+	for x = (scale-float 1w0 k)
+	for y = (kernel::dd-%log2 x)
+	do (assert-equalp k y
+			  k x y)))
+
+(define-test dd-log10.special-cases
+  (let ((y (kernel::dd-%log10 (sqrt 10w0))))
+    (assert-true (<= (relerr y 1/2)
+		     (* 0.25 (scale-float 1d0 (- (float-digits 1w0))))))))
+
+(define-test dd-log10.powers-of-ten
+  ;; It would be nice if dd-%log10 produce the exact result for powers
+  ;; of ten, but we currently don't. But note that the maximum
+  ;; relative error is less than a double-double epsilon.
+  (let ((threshold (* 0.109 (scale-float 1d0 (- (float-digits 1w0))))))
+    (loop for k from -323 below 0
+	  for x = (expt 10 k)
+	  for y = (kernel::dd-%log10 (float x 1w0))
+	  for e = (relerr y k)
+	  do (assert-true (<= e threshold)
+			  k e x y))
+    (loop for k from 1 to 308
+	  for x = (expt 10 k)
+	  for y = (kernel::dd-%log10 (float x 1w0))
+	  for e = (relerr y k)
+	  do (assert-true (<= e threshold)
+			  k e x y))))
+
