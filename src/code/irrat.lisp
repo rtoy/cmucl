@@ -653,31 +653,35 @@
 	    ((and (realp number) (realp base))
 	     (cond
 	       ((and (= base 2)
-		     (floatp number)
-		     #+double-double
-		     (not (typep number 'ext:double-double-float))
+		     ;;(floatp number)
 		     (or (plusp number)
 			 (eql number 0.0)
-			 (eql number 0d0)))
-		;; Do the same thing as the deftranform does for
-		;; log base 2 and 10 for non-negative arguments.
+			 (eql number 0d0)
+			 #+double-double
+			 (eql number 0w0)))
+		;; Do the same thing as the deftranform does for log
+		;; base 2 and 10 for non-negative arguments: handle
+		;; the case where number > 0 or equal to +0.
 		(number-dispatch ((number real) (base real))
 		  ((double-float
-		    (foreach integer single-float double-float))
+		    (foreach integer ratio single-float double-float))
 		   (log2 number))
-		  ((single-float
-		    (foreach integer single-float))
+		  (((foreach integer ratio single-float)
+		    (foreach integer ratio single-float))
 		   (float (log2 (float number 1d0)) 1f0))
-		  ((single-float double-float)
+		  (((foreach integer ratio single-float)
+		    double-float)
 		   (log2 (float number 1d0)))
 		  #+double-double
-		  (((foreach integer single-float double-float)
-		    ext:double-double-float)
-		   (log2 (float number 1w0) base))))
+		  (((foreach integer ratio single-float double-float)
+		    double-double-float)
+		   (dd-%log2 (float number 1w0)))
+		  #+double-double
+		  ((double-double-float
+		    (foreach integer ratio single-float double-float double-double-float))
+		   (dd-%log2 number))))
 	       ((and (= base 10)
-		     (floatp number)
-		     #+double-double
-		     (not (typep number 'double-double-float))
+		     ;;(floatp number)
 		     (or (plusp number)
 			 (eql number 0.0)
 			 (eql number 0d0)))
@@ -685,19 +689,22 @@
 		;; log base 2 and 10 for non-negative arguments.
 		(number-dispatch ((number real) (base real))
 		  ((double-float
-		    (foreach double-float single-float integer))
+		    (foreach rational single-float double-float))
 		   (%log10 number))
-		  ((single-float
-		    (foreach single-float integer))
+		  (((foreach integer ratio single-float)
+		    (foreach integer ratio single-float))
 		   (float (%log10 (float number 1d0)) 1f0))
-		  ((single-float double-float)
+		  (((foreach integer ratio single-float)
+		    double-float)
 		   (%log10 (float number 1d0)))
 		  #+double-double
-		  (((foreach integer single-float double-float)
+		  (((foreach integer ratio single-float double-float)
 		    ext:double-double-float)
-		   ;; This could be more accurate!
-		   (/ (log (float number 1w0))
-		      (log 10w0)))))
+		   (dd-%log10 (float number 1w0)))
+		  #+double-double
+		  ((double-double-float
+		    (foreach integer ratio single-float double-float double-double-float))
+		   (dd-%log10 number))))
 	       (t
 		;; CLHS 12.1.4.1 says
 		;;
