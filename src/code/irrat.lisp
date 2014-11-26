@@ -645,6 +645,19 @@
 	   (log2-bignum x)
 	 (+ n frac))))))
 
+;; Handle the case where number could be so large that it doesn't fit
+;; in a double-float.
+(defun log10 (number &optional (float-type 1d0))
+  (let ((d (ignore-errors (float number 1d0))))
+    (cond (d
+	   ;; Number fits in a double, so it's easy
+	   (float (%log10 d) float-type))
+	  (t
+	   ;; Number doesn't fit in a double. Do it the hard way.
+	   ;; This should be done more accurately.
+	   (/ (log2 number float-type)
+	      (log2 (float 10 float-type)))))))
+  
 (defun log (number &optional (base nil base-p))
   "Return the logarithm of NUMBER in the base BASE, which defaults to e."
   (if base-p
@@ -667,12 +680,17 @@
 		  ((double-float
 		    (foreach integer ratio single-float double-float))
 		   (%log2 number))
-		  (((foreach integer ratio single-float)
+		  ((single-float double-float)
+		   (%log2 (float number 1d0)))
+		  ((single-float
 		    (foreach integer ratio single-float))
 		   (float (%log2 (float number 1d0)) 1f0))
-		  (((foreach integer ratio single-float)
+		  (((foreach integer ratio)
+		    (foreach integer ratio single-float))
+		   (log2 number 1f0))
+		  (((foreach integer ratio)
 		    double-float)
-		   (%log2 (float number 1d0)))
+		   (log2 number 1d0))
 		  #+double-double
 		  (((foreach integer ratio single-float double-float)
 		    double-double-float)
@@ -690,14 +708,19 @@
 		;; log base 2 and 10 for non-negative arguments.
 		(number-dispatch ((number real) (base real))
 		  ((double-float
-		    (foreach rational single-float double-float))
+		    (foreach integer ratio single-float double-float))
 		   (%log10 number))
-		  (((foreach integer ratio single-float)
+		  ((single-float double-float)
+		   (%log10 (float number 1d0)))
+		  ((single-float
 		    (foreach integer ratio single-float))
 		   (float (%log10 (float number 1d0)) 1f0))
-		  (((foreach integer ratio single-float)
+		  (((foreach integer ratio)
+		    (foreach integer ratio single-float))
+		   (log10 number 1f0))
+		  (((foreach integer ratio)
 		    double-float)
-		   (%log10 (float number 1d0)))
+		   (log10 number 1d0))
 		  #+double-double
 		  (((foreach integer ratio single-float double-float)
 		    ext:double-double-float)

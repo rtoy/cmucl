@@ -22,7 +22,7 @@
   (:tag :trac)
   (assert-false
    (let (failures)
-     (dolist (base (list nil 2 2.0 2d0
+     (dolist (base (list nil 2 2.0 2d0 10 10.0 10d0
 			 (ash 1 99) (ash 1 3000)
 			 8/7 (/ (ash 1 3000) 7)))
        (dolist (number (list 100 100.0 100d0
