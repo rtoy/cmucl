@@ -82,6 +82,7 @@
 (def-math-rtn ("__ieee754_exp" %exp) 1)
 (def-math-rtn ("__ieee754_log" %log) 1)
 (def-math-rtn ("__ieee754_log10" %log10) 1)
+(def-math-rtn ("cmucl_log2" %log2) 1)
 
 (def-math-rtn ("__ieee754_pow" %pow) 2)
 #-(or x86 sparc-v7 sparc-v8 sparc-v9)
@@ -665,13 +666,13 @@
 		(number-dispatch ((number real) (base real))
 		  ((double-float
 		    (foreach integer ratio single-float double-float))
-		   (log2 number))
+		   (%log2 number))
 		  (((foreach integer ratio single-float)
 		    (foreach integer ratio single-float))
-		   (float (log2 (float number 1d0)) 1f0))
+		   (float (%log2 (float number 1d0)) 1f0))
 		  (((foreach integer ratio single-float)
 		    double-float)
-		   (log2 (float number 1d0)))
+		   (%log2 (float number 1d0)))
 		  #+double-double
 		  (((foreach integer ratio single-float double-float)
 		    double-double-float)
