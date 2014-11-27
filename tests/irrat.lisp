@@ -88,7 +88,12 @@
   (let ((y (kernel::dd-%log2 (sqrt 0.5w0))))
     (assert-true (<= (relerr y -1/2)
 		     (* 2.7 (scale-float 1d0 (- (float-digits 1w0)))))
-		 y)))
+		 y))
+  (assert-true (typep (log (ash 1 3000) 2) 'single-float))
+  (assert-true (typep (log (ash 1 3000) 2f0) 'single-float))
+  (assert-true (typep (log (ash 1 3000) 2d0) 'double-float))
+  (assert-true (typep (log (ash 1 3000) 2w0) 'ext:double-double-float)))
+
 
 (define-test dd-log2.powers-of-2
   (loop for k from -1074 below 1024
@@ -100,7 +105,11 @@
 (define-test dd-log10.special-cases
   (let ((y (kernel::dd-%log10 (sqrt 10w0))))
     (assert-true (<= (relerr y 1/2)
-		     (* 0.25 (scale-float 1d0 (- (float-digits 1w0))))))))
+		     (* 0.25 (scale-float 1d0 (- (float-digits 1w0)))))))
+  (assert-true (typep (log (ash 1 3000) 10) 'single-float))
+  (assert-true (typep (log (ash 1 3000) 10f0) 'single-float))
+  (assert-true (typep (log (ash 1 3000) 10d0) 'double-float))
+  (assert-true (typep (log (ash 1 3000) 10w0) 'ext:double-double-float)))
 
 (define-test dd-log10.powers-of-ten
   ;; It would be nice if dd-%log10 produce the exact result for powers

@@ -653,10 +653,10 @@
 	   ;; Number fits in a double, so it's easy
 	   (float (%log10 d) float-type))
 	  (t
-	   ;; Number doesn't fit in a double. Do it the hard way.
-	   ;; This should be done more accurately.
-	   (/ (log2 number float-type)
-	      (log2 (float 10 float-type)))))))
+	   ;; Number doesn't fit in a double. Do it the hard way using
+	   ;; log2.  This should be done more accurately.
+	   (float (/ (log2 number)
+		     (log2 10)) float-type)))))
   
 (defun log (number &optional (base nil base-p))
   "Return the logarithm of NUMBER in the base BASE, which defaults to e."
@@ -692,9 +692,13 @@
 		    double-float)
 		   (log2 number 1d0))
 		  #+double-double
-		  (((foreach integer ratio single-float double-float)
+		  (((foreach single-float double-float)
 		    double-double-float)
 		   (dd-%log2 (float number 1w0)))
+		  #+double-double
+		  (((foreach integer ratio)
+		    double-double-float)
+		   (log2 number 1w0))
 		  #+double-double
 		  ((double-double-float
 		    (foreach integer ratio single-float double-float double-double-float))
@@ -722,7 +726,11 @@
 		    double-float)
 		   (log10 number 1d0))
 		  #+double-double
-		  (((foreach integer ratio single-float double-float)
+		  (((foreach integer ratio)
+		    ext:double-double-float)
+		   (log10 number 1w0))
+		  #+double-double
+		  (((foreach single-float double-float)
 		    ext:double-double-float)
 		   (dd-%log10 (float number 1w0)))
 		  #+double-double
