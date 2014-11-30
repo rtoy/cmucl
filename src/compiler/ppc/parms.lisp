@@ -67,7 +67,8 @@
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit
 	  float-invalid-op-1-byte
-	  float-invalid-op-2-byte))
+	  float-invalid-op-2-byte
+	  float-exceptions-summary-byte))
 
 #+double-double
 (export '(double-double-float-digits))
