@@ -37,6 +37,22 @@
 	(assert-true (typep result true-type)
 		     result true-type)))))
 
+(define-test log2.special-cases
+  (let* ((y (log 3/2 2))
+	 (e (relerr y 0.5849625007211562d0)))
+    (assert-true (<= e
+		     2.308d-8)
+		 e y))
+  (let* ((y (log -3/2 2))
+	 (ry (realpart y))
+	 (iy (imagpart y))
+	 (er (relerr ry 0.5849625007211562d0))
+	 (ei (relerr iy (/ pi (log 2d0)))))
+    (assert-true (<= er 2.308d-8)
+		 er ry)
+    (assert-true (<= ei 1.433d-8)
+		 ei iy)))
+
 ;; This tests that log base 10 returns the correct value and the
 ;; correct type.
 (define-test log10.result-types
@@ -129,3 +145,10 @@
 	  do (assert-true (<= e threshold)
 			  k e x y))))
 
+
+(define-test log2.relationships
+  (loop for k from 1 below 1000
+	for x = (expt 1.1w0 k)
+	for logx = (kernel::dd-%log2 x)
+	for log1/x = (kernel::dd-%log2 (/ x))
+	do (assert-true (<= (abs (+ logx log1/x)) (* 1 double-float-epsilon)))))
