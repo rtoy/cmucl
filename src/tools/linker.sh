@@ -94,7 +94,11 @@ case $uname_s in
 	    # up, so we move it to another address.  This seems to be
 	    # free, at least on 10.5.
 
-	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -rdynamic"
+	    # Also specify the min version. (See Config.x86_darwin for
+	    # the desired version.)  This gets rid of a PIE warning
+	    # when creating the executable on 10.8.  (See ticket:112.)
+
+	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -rdynamic -mmacosx-version-min=10.5"
 	    ;;
 	powerpc)
 	    # Nothing needed for ppc?
