@@ -36,6 +36,7 @@ $TARGET/lisp/lisp \
 (setq *gc-verbose* nil *interactive* nil)
 (load "target:tools/clxcom")
 (load "target:clx/clx-library")
+#-ppc
 (load "target:tools/clmcom")
 (load "target:tools/hemcom")
 
@@ -61,4 +62,17 @@ fi
 
 export MAKE
 
-${MAKE} -C $TARGET/motif/server clean && ${MAKE} -C $TARGET/motif/server
+# Don't bother building motifd on ppc; we'll probably never support that again.
+
+SKIPMOTIF=no
+case `uname -s` in
+  Darwin)
+      case `uname -p` in
+	powerpc) SKIPMOTIF=yes ;;
+      esac ;;
+esac
+
+if [ "$SKIPMOTIF" = "no" ]; then
+    ${MAKE} -C $TARGET/motif/server clean && ${MAKE} -C $TARGET/motif/server
+fi
+

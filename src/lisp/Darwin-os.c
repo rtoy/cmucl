@@ -534,7 +534,7 @@ os_dlsym(const char *sym_name, lispobj lib_list)
     void *sym_addr = 0;
     int offset = sym_name[0] == '_' ? 1 : 0;
 
-#if 1
+#if 0
     if (offset == 0) {
         fprintf(stderr, "sym-name = %s\n", sym_name);
     }

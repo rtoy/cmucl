@@ -435,7 +435,12 @@
 	       slot-name)
 	    else do
 	      (loop for (option value . more) on slot by #'cddr
-		    if (and (member option '(:allocation :type :initform
+		    if (and (eq option :allocation)
+			    (not (member value '(:class :instance)))) do
+		      (simple-program-error
+		       "~@<Slot ~S: :allocation value must be :class or :instance, not ~S~@:>"
+		       slot-name value)
+		    else if (and (member option '(:type :initform
 					     :documentation))
 			    (not (eq unsupplied
 				     (getf more option unsupplied)))) do

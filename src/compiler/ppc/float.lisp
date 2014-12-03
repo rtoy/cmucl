@@ -938,6 +938,63 @@
 (defknown ((setf floating-point-modes)) (float-modes)
   float-modes)
 
+(defun describe-floating-point-modes (&optional (modes (floating-point-modes)))
+  "Print a description of each bit of the floating point modes in MODES."
+  (format t "31 FX     = ~B FP exception summary~%"
+	  (ldb (byte 1 31) modes))
+  (format t "30 FEX    = ~B FP enabled exception summary~%"
+	  (ldb (byte 1 30) modes))
+  (format t "29 VX     = ~B FP invalid operation exception summary~%"
+	  (ldb (byte 1 29) modes))
+  (format t "28 OX     = ~B FP overflow exception (sticky)~%"
+	  (ldb (byte 1 28) modes))
+  (format t "27 UX     = ~B FP underflow exception (sticky)~%"
+	  (ldb (byte 1 27) modes))
+  (format t "26 ZX     = ~B FP zero divide exception (sticky)~%"
+	  (ldb (byte 1 26) modes))
+  (format t "25 XX     = ~B FP inexact exception (sticky)~%"
+	  (ldb (byte 1 25) modes))
+  (format t "24 VXSNAN = ~B FP invalid operation with SNaN (sticky)~%"
+	  (ldb (byte 1 24) modes))
+  (format t "23 VXISI  = ~B FP invalid operation for inf - inf (sticky)~%"
+	  (ldb (byte 1 23) modes))
+  (format t "22 VXIDI  = ~B FP invalid operation for inf + inf (sticky)~%"
+	  (ldb (byte 1 22) modes))
+  (format t "21 VXZDZ  = ~B FP invalid operation for 0/0 (sticky)~%"
+	  (ldb (byte 1 21) modes))
+  (format t "20 VXIMZ  = ~B FP invalid operation for inf * 0 (sticky)~%"
+	  (ldb (byte 1 20) modes))
+  (format t "19 VXVC   = ~B FP invalid  operation for invalid compare (sticky)~%"
+	  (ldb (byte 1 19) modes))
+  (format t "18 FR     = ~B FP fraction rounded~%"
+	  (ldb (byte 1 18) modes))
+  (format t "17 FI     = ~B FP fraction inexact~%"
+	  (ldb (byte 1 17) modes))
+  (format t "12 FPRF   = ~5,'0B FP result flags~%"
+	  (ldb (byte 5 12) modes))
+  (format t "11 Reserved~%")
+  (format t "10 VXSOFT = ~B FP invalid operation for software request (sticky)~%"
+	  (ldb (byte 1 10) modes))
+  (format t " 9 VXSQRT = ~B FP invalid operation for sqrt (sticky)~%"
+	  (ldb (byte 1  9) modes))
+  (format t " 8 VXCVI  = ~B FP invalid operation for integer convert (sticky)~%"
+	  (ldb (byte 1  8) modes))
+  (format t " 7 VE     = ~B FP invalid operation exception enable~%"
+	  (ldb (byte 1  7) modes))
+  (format t " 6 OE     = ~B FP overflow exception enable~%"
+	  (ldb (byte 1  6) modes))
+  (format t " 5 UE     = ~B FP underflow exception enable~%"
+	  (ldb (byte 1  5) modes))
+  (format t " 4 ZE     = ~B FP zero divide exception enable~%"
+	  (ldb (byte 1  4) modes))
+  (format t " 3 XE     = ~B FP inexact operation enable~%"
+	  (ldb (byte 1  3) modes))
+  (format t " 2 NI     = ~B FP non-IEEE mode enable~%"
+	  (ldb (byte 1  2) modes))
+  (format t " 0 RN     = ~2,'0B FP rounding control
+              (00 = nearest, 01 = zero, 10 = +inf, 11 = -inf~%"
+	  (ldb (byte 2 0) modes)))
+
 (define-vop (floating-point-modes)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)

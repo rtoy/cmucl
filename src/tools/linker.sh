@@ -94,15 +94,22 @@ case $uname_s in
 	    # up, so we move it to another address.  This seems to be
 	    # free, at least on 10.5.
 
-	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -rdynamic"
+	    # Also specify the min version. (See Config.x86_darwin for
+	    # the desired version.)  This gets rid of a PIE warning
+	    # when creating the executable on 10.8.  (See ticket:112.)
+
+	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -rdynamic -mmacosx-version-min=10.5"
+	    OS_LIBS=
 	    ;;
 	powerpc)
-	    # Nothing needed for ppc?
+	    # See Config.ppc_darwin Like i386, __LINKEDIT is linked
+	    # just after the dynamic space which messes things up, so
+	    # we move it to a diffferent address. The address below
+	    # appears to be free.
+	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -mmacosx-version-min=10.4 -static-libgcc"
+	    OS_LIBS="-lSystem -lc -lm"
 	    ;;
       esac
-
-      # See Config.x86_darwin
-      OS_LIBS=
       ;;
   SunOS)
       # A quick test indicates that gcc will accept the following
