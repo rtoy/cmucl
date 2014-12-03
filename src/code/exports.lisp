@@ -226,7 +226,6 @@
 	   "UNIX-MKDIR"
 	   "UNIX-RMDIR"
 	   "UNIX-UNLINK"
-	   "UNIX-SETITIMER"
 	   "TIMEZONE"
 	   "TIMEVAL"
 	   "SIZE-T"
@@ -234,18 +233,42 @@
 	   "INO-T"
 	   "DEV-T"
 	   "TIME-T"
-	   "FD-SETSIZE"
-	   "FD-ISSET"
-	   "FD-CLR"
 	   "TIME-T"
 	   "USER-INFO-NAME"
 	   "INT64-T"
 	   "MODE-T"
 	   "UNIX-FAST-SELECT"
-	   "UNIX-IOCTL"
-	   "UNIX-OPENPTY"
 	   "UNIX-PIPE"
 	   "UNIX-GETPID"
+	   "UNIX-GETHOSTID"
+	   "UNIX-UID"
+	   "UNIX-GID"
+	   "GET-UNIX-ERROR-MSG"
+	   "TCHARS"
+	   "WINSIZE"
+	   "LTCHARS"
+	   "TIMEVAL"
+	   "CLOSE-DIR"
+	   "OPEN-DIR"
+	   "READ-DIR"
+	   "D-NAMLEN"
+
+	   ;; filesys.lisp
+	   "UNIX-GETPWUID"
+	   
+	   ;; multi-proc.lisp
+	   "UNIX-SETITIMER"
+
+	   ;; run-program.lisp
+	   "SGTTYB"
+	   "UNIX-TTYNAME"
+	   "UNIX-IOCTL"
+	   "UNIX-OPENPTY"
+
+	   ;; alien-callback.lisp
+	   "UNIX-MPROTECT"
+
+	   ;; internet.lisp
 	   "UNIX-SOCKET"
 	   "UNIX-CONNECT"
 	   "UNIX-BIND"
@@ -260,23 +283,13 @@
 	   "UNIX-RECVFROM"
 	   "UNIX-SENDTO"
 	   "UNIX-SHUTDOWN"
-	   "UNIX-GETHOSTID"
 	   "UNIX-FCNTL"
-	   "UNIX-UID"
-	   "UNIX-GID"
-	   "UNIX-GETPWUID"
-	   "UNIX-MPROTECT"
-	   "GET-UNIX-ERROR-MSG"
-	   "SGTTYB"
-	   "TCHARS"
-	   "UNIX-TTYNAME"
-	   "WINSIZE"
-	   "LTCHARS"
-	   "TIMEVAL"
-	   "CLOSE-DIR"
-	   "OPEN-DIR"
-	   "READ-DIR"
-	   "D-NAMLEN"
+	   
+	   ;; serve-event.lisp
+	   "FD-SETSIZE"
+	   "FD-ISSET"
+	   "FD-CLR"
+
 	   ;; Simple streams
 	   "PROT_READ"
 	   "UNIX-MMAP"
