@@ -157,6 +157,7 @@
 	 (:arg-types ,type positive-fixnum)
 	 (:results (value :scs (any-reg)))
 	 (:result-types positive-fixnum)
+	 #+nil
 	 (:temporary (:scs (non-descriptor-reg) :to (:result 0)) temp result)
 	 (:generator 20
 	   (emit-not-implemented)))
@@ -168,6 +169,7 @@
 	 (:info index)
 	 (:results (result :scs (unsigned-reg)))
 	 (:result-types positive-fixnum)
+	 #+nil
 	 (:temporary (:scs (non-descriptor-reg)) temp)
 	 (:generator 15
 	   (emit-not-implemented)))
@@ -176,12 +178,14 @@
 	 (:translate data-vector-set)
 	 (:policy :fast-safe)
 	 (:args (object :scs (descriptor-reg))
-		(index :scs (unsigned-reg) :target shift)
-		(value :scs (unsigned-reg immediate) :target result))
+		(index :scs (unsigned-reg))
+		(value :scs (unsigned-reg immediate)))
 	 (:arg-types ,type positive-fixnum positive-fixnum)
 	 (:results (result :scs (unsigned-reg)))
 	 (:result-types positive-fixnum)
+	 #+nil
 	 (:temporary (:scs (non-descriptor-reg)) temp old offset)
+	 #+nil
 	 (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) shift)
 	 (:generator 25
 	   (emit-not-implemented)))
@@ -196,6 +200,7 @@
 	 (:info index)
 	 (:results (result :scs (unsigned-reg)))
 	 (:result-types positive-fixnum)
+	 #+nil
 	 (:temporary (:scs (non-descriptor-reg)) offset-reg temp old)
 	 (:generator 20
 	   (emit-not-implemented))))))

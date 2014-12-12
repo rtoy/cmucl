@@ -93,8 +93,7 @@
 	     (static-function-template-vop (eval num-args) (eval num-res))))
   (frob 0 1)
   (frob 1 1)
-  (frob 2 1)
-  (frob 3 1))
+  (frob 2 1))
 
 
 (defmacro define-static-function (name args &key (results '(x)) translate

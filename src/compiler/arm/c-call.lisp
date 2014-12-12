@@ -30,7 +30,7 @@
 
 (defun int-arg (state prim-type reg-sc stack-sc)
   (let ((reg-args (arg-state-register-args state)))
-    (cond ((< reg-args 6)
+    (cond ((< reg-args 4)
 	   (setf (arg-state-register-args state) (1+ reg-args))
 	   (my-make-wired-tn prim-type reg-sc (+ reg-args nl0-offset)))
 	  (t
@@ -231,18 +231,23 @@
   (:info foreign-symbol)
   (:results (res :scs (sap-reg)))
   (:result-types system-area-pointer)
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) addr)
   (:generator 2
     (emit-not-implemented)))
 
 (define-vop (call-out)
+  #+nil
   (:args (function :scs (sap-reg))
 	 (args :more t))
   (:results (results :more t))
   (:ignore args results)
   (:save-p t)
+  #+nil
   (:temporary (:sc interior-reg :offset lip-offset) lip)
+  #+nil
   (:temporary (:scs (any-reg) :to (:result 0)) temp)
+  #+nil
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:vop-var vop)
   (:generator 0
@@ -252,6 +257,7 @@
 (define-vop (alloc-number-stack-space)
   (:info amount)
   (:results (result :scs (sap-reg any-reg)))
+  #+nil
   (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
   (:generator 0
     (emit-not-implemented)))
@@ -259,6 +265,7 @@
 (define-vop (dealloc-number-stack-space)
   (:info amount)
   (:policy :fast-safe)
+  #+nil
   (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
   (:generator 0
     (emit-not-implemented)))
