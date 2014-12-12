@@ -60,6 +60,8 @@
 ;; call_into_c must restore the C SP (saved by call_into_lisp) before
 ;; calling the C function.
 (defreg csp 13)				; ARM SP register
+;; LIP (lisp interior register) and NFP (number frame pointer) as
+;; needed.
 (defreg lip 14)				; ARM LR register
 (defreg pc 15)				; ARM PC register.
 

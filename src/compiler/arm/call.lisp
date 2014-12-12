@@ -94,9 +94,9 @@
 
 ;; FIXME: What are we using for nfp? It's not defined.
 (def-vm-support-routine make-nfp-tn ()
-  ;; FIXME: Is this right? We currently don't have an NFP register on
-  ;; ARM.
-  (make-restricted-tn *fixnum-primitive-type* immediate-arg-scn))
+  ;; FIXME: Is this right?
+  (component-live-tn
+   (make-wired-tn *fixnum-primitive-type* immediate-arg-scn lip-offset)))
 
 ;;; MAKE-STACK-POINTER-TN ()
 ;;; 
