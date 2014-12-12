@@ -340,7 +340,7 @@
 	           VM definition inconsistent, try recompiling.")))))
 
 
-(defvar *debug-pack* nil)
+(defvar *debug-pack* t)
 
 ;;; FAILED-TO-PACK-ERROR  --  Internal
 ;;;
@@ -356,7 +356,8 @@
       (when *debug-pack*
 	;; Useful for possibly figuring out which vop might be the
 	;; source of the conflict.
-	(describe tn))
+	(describe tn)
+	(list-conflicts tn))
       (error "Failed to pack restricted TN ~S in its SC ~S: ~S"
 	     tn (sc-name sc) (tn-sc tn)))
      (t
