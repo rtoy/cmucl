@@ -23,12 +23,19 @@
   (:policy :safe)
   (:variant-vars symbol)
   (:vop-var vop)
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) temp)
+  #+nil
   (:temporary (:scs (descriptor-reg)) move-temp)
+  #+nil
   (:temporary (:sc descriptor-reg :offset lra-offset) lra)
+  #+nil
   (:temporary (:scs (descriptor-reg)) func)
+  #+nil
   (:temporary (:sc any-reg :offset nargs-offset) nargs)
+  #+nil
   (:temporary (:sc any-reg :offset ocfp-offset) old-fp)
+  #+nil
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save))
 
 
@@ -76,10 +83,11 @@
 	  (arg-names arg-name)
 	  (args `(,arg-name
 		  :scs (any-reg descriptor-reg)
-		  :target ,(nth i (temp-names))))))
+		  #+nil :target #+nil ,(nth i (temp-names))))))
       `(define-vop (,(static-function-template-name num-args num-results)
 		    static-function-template)
 	 (:args ,@(args))
+	 #+nil
 	 ,@(temps)
 	 (:results ,@(results))
 	 (:generator ,(+ 50 num-args num-results)

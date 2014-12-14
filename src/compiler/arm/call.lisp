@@ -779,6 +779,7 @@ default-value-8
 ;;; Get the lexical environment from it's passing location.
 ;;;
 (define-vop (setup-closure-environment)
+  #+nil
   (:temporary (:sc descriptor-reg :offset lexenv-offset :target closure
 	       :to (:result 0))
 	      lexenv)
@@ -787,7 +788,7 @@ default-value-8
   (:ignore label)
   (:generator 6
     ;; Get result.
-    (move closure lexenv)))
+    (emit-not-implemented)))
 
 ;;; Copy a more arg from the argument area to the end of the current frame.
 ;;; Fixed is the number of non-more arguments. 

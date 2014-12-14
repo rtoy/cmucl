@@ -69,6 +69,7 @@
   (:args (x :to :save))
   (:results (y))
   (:note _N"float to pointer coercion")
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:variant-vars format size type data)
   (:generator 13
@@ -294,6 +295,7 @@
 (define-vop (move-from-complex-single)
   (:args (x :scs (complex-single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:note _N"complex single float to pointer coercion")
   (:generator 13
@@ -305,6 +307,7 @@
 (define-vop (move-from-complex-double)
   (:args (x :scs (complex-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:note _N"complex double float to pointer coercion")
   (:generator 13
@@ -317,6 +320,7 @@
 (define-vop (move-from-complex-double-double)
   (:args (x :scs (complex-double-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:note _N"complex double-double float to pointer coercion")
   (:generator 13
@@ -604,6 +608,7 @@
 		(:args (x :scs (signed-reg) :target stack-temp
 			  :load-if (not (sc-is x signed-stack))))
 		(:temporary (:scs (single-stack) :from :argument) stack-temp)
+		#+nil
 		(:temporary (:scs (single-reg) :to :result :target y) temp)
 		(:results (y :scs (,to-sc)))
 		(:arg-types signed-num)
@@ -639,8 +644,10 @@
 
 (macrolet ((frob (trans from-sc from-type inst)
 	     `(define-vop (,(symbolicate trans "/" from-type))
-		(:args (x :scs (,from-sc) :target temp))
+		(:args (x :scs (,from-sc)))
+		#+nil
 		(:temporary (:from (:argument 0) :sc single-reg) temp)
+		#+nil
 		(:temporary (:scs (signed-stack)) stack-temp)
 		(:results (y :scs (signed-reg)
 			     :load-if (not (sc-is y signed-stack))))
@@ -688,6 +695,7 @@
 	       :load-if (not (sc-is bits signed-stack))))
   (:results (res :scs (single-reg)
 		 :load-if (not (sc-is res single-stack))))
+  #+nil
   (:temporary (:scs (signed-reg) :from (:argument 0) :to (:result 0)) temp)
   #+nil
   (:temporary (:scs (signed-stack)) stack-temp)
@@ -705,7 +713,7 @@
   (:results (res :scs (double-reg)
 		 :load-if (not (sc-is res double-stack))))
   #+nil
-(:temporary (:scs (double-stack)) temp)
+  (:temporary (:scs (double-stack)) temp)
   (:arg-types signed-num unsigned-num)
   (:result-types double-float)
   (:translate make-double-float)

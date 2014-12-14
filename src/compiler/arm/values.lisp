@@ -36,6 +36,7 @@
   (:results (start :scs (any-reg) :from :load)
 	    (count :scs (any-reg)))
   (:info nvals)
+  #+nil
   (:temporary (:scs (descriptor-reg)) temp)
   (:generator 20
     (emit-not-implemented)))
@@ -44,13 +45,16 @@
 ;;; unknown values continuations.
 ;;;
 (define-vop (values-list)
-  (:args (arg :scs (descriptor-reg) :target list))
+  (:args (arg :scs (descriptor-reg)))
   (:arg-types list)
   (:policy :fast-safe)
   (:results (start :scs (any-reg))
 	    (count :scs (any-reg)))
+  #+nil
   (:temporary (:scs (descriptor-reg) :type list :from (:argument 0)) list)
+  #+nil
   (:temporary (:scs (descriptor-reg)) temp)
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:vop-var vop)
   (:save-p :compute-only)
@@ -63,13 +67,17 @@
 ;;; as function arguments.
 ;;;
 (define-vop (%more-arg-values)
-  (:args (context :scs (descriptor-reg any-reg) :target src)
+  (:args (context :scs (descriptor-reg any-reg))
 	 (skip :scs (any-reg immediate))
-	 (num :scs (any-reg) :target count))
+	 (num :scs (any-reg)))
   (:arg-types * positive-fixnum positive-fixnum)
+  #+nil
   (:temporary (:sc any-reg :from (:argument 0)) src)
+  #+nil
   (:temporary (:sc any-reg :from (:argument 2)) dst)
+  #+nil
   (:temporary (:sc descriptor-reg :from (:argument 1)) temp)
+  #+nil
   (:temporary (:sc any-reg) i)
   (:results (start :scs (any-reg))
 	    (count :scs (any-reg)))

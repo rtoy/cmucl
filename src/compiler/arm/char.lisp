@@ -70,6 +70,7 @@
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y base-char-reg))))
   (:results (y))
+  #+nil
   (:temporary (:sc non-descriptor-reg) temp)
   (:note _N"character arg move")
   (:generator 0

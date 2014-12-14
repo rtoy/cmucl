@@ -23,8 +23,11 @@
   (:args (type :scs (any-reg))
 	 (rank :scs (any-reg)))
   (:arg-types tagged-num tagged-num)
+  #+nil
   (:temporary (:scs (descriptor-reg) :to (:result 0) :target result) header)
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) ndescr)
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) gc-temp)	; gencgc
   (:results (result :scs (descriptor-reg)))
   (:generator 0
@@ -56,6 +59,7 @@
   (:translate lisp::%array-rank)
   (:policy :fast-safe)
   (:args (x :scs (descriptor-reg)))
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 6
@@ -223,6 +227,7 @@
 	 (index :scs (any-reg)))
   (:arg-types simple-array-single-float positive-fixnum)
   (:results (value :scs (single-reg)))
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:result-types single-float)
   (:generator 5
@@ -236,6 +241,7 @@
   (:arg-types simple-array-single-float (:constant index))
   (:info index)
   (:results (value :scs (single-reg)))
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:result-types single-float)
   (:generator 3
@@ -252,6 +258,7 @@
   (:arg-types simple-array-single-float positive-fixnum single-float)
   (:results (result :scs (single-reg)))
   (:result-types single-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:generator 5
     (emit-not-implemented)))
@@ -268,6 +275,7 @@
   (:info index)
   (:results (result :scs (single-reg)))
   (:result-types single-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 2
     (emit-not-implemented)))
@@ -281,6 +289,7 @@
   (:arg-types simple-array-double-float positive-fixnum)
   (:results (value :scs (double-reg)))
   (:result-types double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:generator 7
     (emit-not-implemented)))
@@ -294,6 +303,7 @@
   (:info index)
   (:results (value :scs (double-reg)))
   (:result-types double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 3
     (emit-not-implemented)))
@@ -308,6 +318,7 @@
   (:arg-types simple-array-double-float positive-fixnum double-float)
   (:results (result :scs (double-reg)))
   (:result-types double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:generator 20
     (emit-not-implemented)))
@@ -324,6 +335,7 @@
   (:info index)
   (:results (result :scs (double-reg)))
   (:result-types double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 10
     (emit-not-implemented)))
@@ -388,6 +400,7 @@
 	 (index :scs (any-reg)))
   (:arg-types simple-array-complex-single-float positive-fixnum)
   (:results (value :scs (complex-single-reg)))
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:result-types complex-single-float)
   (:generator 5
@@ -402,6 +415,7 @@
 	      (:constant index))
   (:info index)
   (:results (value :scs (complex-single-reg)))
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:result-types complex-single-float)
   (:generator 3
@@ -418,6 +432,7 @@
 	      complex-single-float)
   (:results (result :scs (complex-single-reg)))
   (:result-types complex-single-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 5
     (emit-not-implemented)))
@@ -434,6 +449,7 @@
   (:info index)
   (:results (result :scs (complex-single-reg)))
   (:result-types complex-single-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 3
     (emit-not-implemented)))
@@ -447,6 +463,7 @@
   (:arg-types simple-array-complex-double-float positive-fixnum)
   (:results (value :scs (complex-double-reg)))
   (:result-types complex-double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 7
     (emit-not-implemented)))
@@ -460,6 +477,7 @@
   (:info index)
   (:results (value :scs (complex-double-reg)))
   (:result-types complex-double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 5
     (emit-not-implemented)))
@@ -475,6 +493,7 @@
 	      complex-double-float)
   (:results (result :scs (complex-double-reg)))
   (:result-types complex-double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 20
     (emit-not-implemented)))
@@ -491,6 +510,7 @@
   (:info index)
   (:results (result :scs (complex-double-reg)))
   (:result-types complex-double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 15
     (emit-not-implemented)))
@@ -610,6 +630,7 @@
   (:arg-types simple-array-double-double-float positive-fixnum)
   (:results (value :scs (double-double-reg)))
   (:result-types double-double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 7
     (emit-not-implemented)))
@@ -623,6 +644,7 @@
   (:info index)
   (:results (value :scs (double-double-reg)))
   (:result-types double-double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 5
     (emit-not-implemented)))
@@ -638,6 +660,7 @@
 	      double-double-float)
   (:results (result :scs (double-double-reg)))
   (:result-types double-double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 20
     (emit-not-implemented)))
@@ -654,6 +677,7 @@
   (:info index)
   (:results (result :scs (double-double-reg)))
   (:result-types double-double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 15
     (emit-not-implemented)))
@@ -667,6 +691,7 @@
   (:arg-types simple-array-complex-double-double-float positive-fixnum)
   (:results (value :scs (complex-double-double-reg)))
   (:result-types complex-double-double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 7
     (emit-not-implemented)))
@@ -680,6 +705,7 @@
   (:info index)
   (:results (value :scs (complex-double-double-reg)))
   (:result-types complex-double-double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 5
     (emit-not-implemented)))
@@ -695,6 +721,7 @@
 	      complex-double-double-float)
   (:results (result :scs (complex-double-double-reg)))
   (:result-types complex-double-double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 20
     (emit-not-implemented)))
@@ -711,6 +738,7 @@
   (:info index)
   (:results (result :scs (complex-double-double-reg)))
   (:result-types complex-double-double-float)
+  #+nil
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 15
     (emit-not-implemented)))

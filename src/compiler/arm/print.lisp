@@ -18,13 +18,18 @@
 
 
 (define-vop (print)
-  (:args (object :scs (descriptor-reg any-reg) :target nl0))
+  (:args (object :scs (descriptor-reg any-reg)))
   (:results (result :scs (descriptor-reg)))
   (:save-p t)
+  #+nil
   (:temporary (:sc any-reg :offset nl0-offset :from (:argument 0)) nl0)
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) cfunc)
+  #+nil
   (:temporary (:sc interior-reg :offset lip-offset) lip)
+  #+nil
   (:temporary (:scs (non-descriptor-reg)) temp)
+  #+nil
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:vop-var vop)
   (:generator 100
