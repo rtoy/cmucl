@@ -53,8 +53,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:save-p :compute-only)
-  #+nil
-  (:temporary (:scs (descriptor-reg) :from (:argument 0)) obj-temp))
+  )
 
 ;;; With Symbol-Value, we check that the value isn't the trap object.  So
 ;;; Symbol-Value of NIL is NIL.
@@ -70,8 +69,7 @@
   (:conditional)
   (:info target not-p)
   (:policy :fast-safe)
-  #+nil
-  (:temporary (:scs (descriptor-reg)) value))
+  )
 
 (define-vop (boundp boundp-frob)
   (:translate boundp)
@@ -112,8 +110,7 @@
   (:results (value :scs (descriptor-reg any-reg)))
   (:vop-var vop)
   (:save-p :compute-only)
-  #+nil
-  (:temporary (:scs (descriptor-reg) :from (:argument 0)) obj-temp)
+
   (:generator 10
     (emit-not-implemented)))
 
@@ -122,10 +119,7 @@
   (:translate (setf fdefn-function))
   (:args (function :scs (descriptor-reg) :target result)
 	 (fdefn :scs (descriptor-reg)))
-  #+nil
-  (:temporary (:scs (descriptor-reg)) temp)
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) type)
+
   (:results (result :scs (descriptor-reg)))
   (:generator 38
     (emit-not-implemented)))
@@ -134,8 +128,7 @@
   (:policy :fast-safe)
   (:translate fdefn-makunbound)
   (:args (fdefn :scs (descriptor-reg) :target result))
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) temp)
+
   (:results (result :scs (descriptor-reg)))
   (:generator 38
     (emit-not-implemented)))
@@ -151,25 +144,18 @@
 (define-vop (bind)
   (:args (val :scs (any-reg descriptor-reg))
 	 (symbol :scs (descriptor-reg)))
-  #+nil
-  (:temporary (:scs (descriptor-reg)) temp)
+
   (:generator 5
     (emit-not-implemented)))
 
 
 (define-vop (unbind)
-  #+nil
-  (:temporary (:scs (descriptor-reg)) symbol value)
   (:generator 0
     (emit-not-implemented)))
 
 
 (define-vop (unbind-to-here)
   (:args (arg :scs (descriptor-reg any-reg)))
-  #+nil
-  (:temporary (:scs (any-reg) :from (:argument 0)) where)
-  #+nil
-  (:temporary (:scs (descriptor-reg)) symbol value)
   (:generator 0
     (emit-not-implemented)))
 
@@ -216,8 +202,6 @@
   (:policy :fast-safe)
   (:translate %instance-length)
   (:args (struct :scs (descriptor-reg)))
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 4

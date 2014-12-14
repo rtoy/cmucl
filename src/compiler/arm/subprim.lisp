@@ -21,13 +21,7 @@
   (:translate length)
   (:args (object :scs (descriptor-reg)))
   (:arg-types list)
-  #+nil
-  (:temporary (:scs (descriptor-reg) :from (:argument 0)) ptr)
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) temp)
-  #+nil
-  (:temporary (:scs (any-reg) :type fixnum :to (:result 0) :target result)
-	      count)
+
   (:results (result :scs (any-reg descriptor-reg)))
   (:policy :fast-safe)
   (:vop-var vop)

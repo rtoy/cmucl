@@ -176,8 +176,7 @@
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (signed-reg unsigned-reg)))
   (:note _N"integer to untagged word coercion")
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) temp)
+
   (:vop-var vop)
   (:generator 4
     (emit-not-implemented)))
@@ -209,8 +208,7 @@
 (define-vop (move-from-signed)
   (:args (arg :scs (signed-reg unsigned-reg)))
   (:results (y :scs (any-reg descriptor-reg)))
-  #+nil
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
+
   (:note _N"signed word to integer coercion")
   (:vop-var vop)
   (:generator 20
@@ -230,8 +228,7 @@
 (define-vop (move-from-unsigned)
   (:args (arg :scs (signed-reg unsigned-reg)))
   (:results (y :scs (any-reg descriptor-reg)))
-  #+nil
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
+
   (:note _N"unsigned word to integer coercion")
   (:vop-var vop)
   (:generator 20

@@ -82,8 +82,7 @@
 	 (data :scs (any-reg immediate)))
   (:arg-types * positive-fixnum)
   (:results (res :scs (descriptor-reg)))
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) t1 t2)
+
   (:generator 6
     (emit-not-implemented)))
 
@@ -98,8 +97,7 @@
   (:args (val :scs (any-reg descriptor-reg))
 	 (type :scs (any-reg descriptor-reg immediate)))
   (:results (res :scs (any-reg descriptor-reg)))
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) temp)
+
   (:generator 2
     (emit-not-implemented)))
 
@@ -137,8 +135,7 @@
   (:translate code-instructions)
   (:policy :fast-safe)
   (:args (code :scs (descriptor-reg)))
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) ndescr)
+
   (:results (sap :scs (sap-reg)))
   (:result-types system-area-pointer)
   (:generator 10
@@ -149,8 +146,7 @@
 	 (offset :scs (signed-reg unsigned-reg)))
   (:arg-types * positive-fixnum)
   (:results (func :scs (descriptor-reg)))
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) ndescr)
+
   (:generator 10
     (emit-not-implemented)))
 
@@ -178,8 +174,7 @@
 (define-vop (count-me)
   (:args (count-vector :scs (descriptor-reg)))
   (:info index)
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) count)
+
   (:generator 1
     (emit-not-implemented)))
 

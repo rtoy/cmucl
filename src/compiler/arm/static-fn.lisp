@@ -23,20 +23,7 @@
   (:policy :safe)
   (:variant-vars symbol)
   (:vop-var vop)
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) temp)
-  #+nil
-  (:temporary (:scs (descriptor-reg)) move-temp)
-  #+nil
-  (:temporary (:sc descriptor-reg :offset lra-offset) lra)
-  #+nil
-  (:temporary (:scs (descriptor-reg)) func)
-  #+nil
-  (:temporary (:sc any-reg :offset nargs-offset) nargs)
-  #+nil
-  (:temporary (:sc any-reg :offset ocfp-offset) old-fp)
-  #+nil
-  (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save))
+  )
 
 
 (eval-when (compile load eval)
