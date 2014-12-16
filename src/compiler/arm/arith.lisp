@@ -204,8 +204,6 @@
   (:result-types unsigned-num)
   (:translate abs)
   (:note _N"inline 32-bit abs")
-  #+nil
-  (:temporary (:scs (signed-reg)) y)
   (:generator 1
     (emit-not-implemented)))
 
@@ -220,10 +218,6 @@
 	    (rem :scs (signed-reg)))
   (:result-types signed-num signed-num)
   (:note _N"inline (signed-byte 32) arithmetic")
-  #+nil
-  (:temporary (:scs (signed-reg) :target quo) q)
-  #+nil
-  (:temporary (:scs (signed-reg)) r)
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 12
@@ -238,10 +232,6 @@
 	    (rem :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
   (:note _N"inline (unsigned-byte 32) arithmetic")
-  #+nil
-  (:temporary (:scs (unsigned-reg) :target quo) q)
-  #+nil
-  (:temporary (:scs (unsigned-reg)) r)
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 8
@@ -258,8 +248,6 @@
   (:result-types signed-num)
   (:translate ash)
   (:policy :fast-safe)
-  #+nil
-  (:temporary (:sc non-descriptor-reg) ndesc)
   (:generator 5
     (emit-not-implemented)))
 
@@ -272,8 +260,6 @@
   (:result-types unsigned-num)
   (:translate ash)
   (:policy :fast-safe)
-  #+nil
-  (:temporary (:sc non-descriptor-reg) ndesc)
   (:generator 5
     (emit-not-implemented)))
 
@@ -392,8 +378,6 @@
   (:arg-types tagged-num positive-fixnum)
   (:results (result :scs (any-reg)))
   (:result-types tagged-num)
-  #+nil
-  (:temporary (:sc non-descriptor-reg :target result) temp)
   (:policy :fast-safe)
   (:generator 2
     ;; Shift the fixnum right by the desired amount.  Then zap out the
@@ -411,8 +395,6 @@
   (:arg-types signed-num)
   (:results (res :scs (any-reg)))
   (:result-types positive-fixnum)
-  #+nil
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) shift)
   (:generator 30
     (emit-not-implemented)))
 
@@ -424,8 +406,6 @@
   (:arg-types unsigned-num)
   (:results (res :scs (any-reg)))
   (:result-types positive-fixnum)
-  #+nil
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) shift)
   (:generator 30
     (emit-not-implemented)))
 
@@ -438,8 +418,6 @@
   (:arg-types unsigned-num)
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
-  #+nil
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) mask temp)
   (:generator 35
     (emit-not-implemented)))
 
@@ -447,8 +425,6 @@
 ;;; Multiply and Divide.
 
 (define-vop (fast-*/fixnum=>fixnum fast-fixnum-binop)
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) temp)
   (:translate *)
   (:generator 2
     ;; The cost here should be less than the cost for
@@ -614,10 +590,6 @@
 	 (prev :scs (unsigned-reg))
 	 (next :scs (unsigned-reg)))
   (:arg-types tagged-num unsigned-num unsigned-num)
-  #+nil
-  (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
-  #+nil
-  (:temporary (:scs (unsigned-reg) :to (:result 0) :target result) res)
   (:results (result :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:policy :fast-safe)
@@ -923,12 +895,6 @@
             (rem :scs (signed-reg)))
   (:result-types signed-num signed-num)
   (:note _N"inline (signed-byte 32) arithmetic")
-  #+nil
-  (:temporary (:scs (signed-reg)) q)
-  #+nil
-  (:temporary (:scs (signed-reg)) r)
-  #+nil
-  (:temporary (:scs (signed-reg)) temp)
   (:generator 6
     (emit-not-implemented)))
 
@@ -941,12 +907,6 @@
             (rem :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
   (:note _N"inline (unsigned-byte 32) arithmetic")
-  #+nil
-  (:temporary (:scs (unsigned-reg)) q)
-  #+nil
-  (:temporary (:scs (unsigned-reg)) r)
-  #+nil
-  (:temporary (:scs (unsigned-reg)) temp)
   (:generator 6
     (emit-not-implemented)))
 

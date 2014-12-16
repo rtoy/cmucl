@@ -41,15 +41,6 @@
 
 (define-vop (list-or-list*)
   (:args (things :more t))
-  #+nil
-  (:temporary (:scs (descriptor-reg) :type list) ptr)
-  #+nil
-  (:temporary (:scs (descriptor-reg)) temp)
-  #+nil
-  (:temporary (:scs (descriptor-reg) :type list :to (:result 0) :target result)
-	      res)
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) alloc-temp)
   (:info num dynamic-extent)
   (:results (result :scs (descriptor-reg)))
   (:variant-vars star)
@@ -70,21 +61,11 @@
   (:args (boxed-arg :scs (any-reg))
 	 (unboxed-arg :scs (any-reg)))
   (:results (result :scs (descriptor-reg)))
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) ndescr)
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) size)
-  #+nil
-  (:temporary (:scs (any-reg) :from (:argument 0)) boxed)
-  #+nil
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) unboxed)
   (:generator 100
     (emit-not-implemented)))
 
 (define-vop (make-fdefn)
   (:args (name :scs (descriptor-reg) :to :eval))
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (result :scs (descriptor-reg) :from :argument))
   (:policy :fast-safe)
   (:translate make-fdefn)
@@ -95,8 +76,6 @@
 (define-vop (make-closure)
   (:args (function :to :save :scs (descriptor-reg)))
   (:info length dynamic-extent)
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (result :scs (descriptor-reg)))
   (:generator 10
     (emit-not-implemented)))
@@ -105,8 +84,6 @@
 ;;; 
 (define-vop (make-value-cell)
   (:args (value :to :save :scs (descriptor-reg any-reg)))
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (result :scs (descriptor-reg)))
   (:generator 10
     (emit-not-implemented)))
@@ -126,8 +103,6 @@
   (:info name words type lowtag dynamic-extent)
   (:ignore name)
   (:results (result :scs (descriptor-reg)))
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
     (emit-not-implemented)))
 
@@ -137,11 +112,5 @@
   (:info name words type lowtag)
   (:ignore name)
   (:results (result :scs (descriptor-reg)))
-  #+nil
-  (:temporary (:scs (any-reg)) bytes)
-  #+nil
-  (:temporary (:scs (non-descriptor-reg)) header)
-  #+nil
-  (:temporary (:scs (any-reg)) temp)
   (:generator 6
     (emit-not-implemented)))
