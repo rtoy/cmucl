@@ -69,8 +69,6 @@
 	    ,@(when write-p
 		'((value :scs (any-reg descriptor-reg) :target result))))
      (:arg-types * tagged-num ,@(when write-p '(*)))
-     #+nil
-     (:temporary (:scs (non-descriptor-reg)) temp)
      (:results (,(if write-p 'result 'value)
 		:scs (any-reg descriptor-reg)))
      (:result-types *)

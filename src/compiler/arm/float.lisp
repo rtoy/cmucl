@@ -69,7 +69,6 @@
   (:args (x :to :save))
   (:results (y))
   (:note _N"float to pointer coercion")
-
   (:variant-vars format size type data)
   (:generator 13
     (emit-not-implemented)))
@@ -294,7 +293,6 @@
 (define-vop (move-from-complex-single)
   (:args (x :scs (complex-single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
-
   (:note _N"complex single float to pointer coercion")
   (:generator 13
     (emit-not-implemented)))
@@ -305,7 +303,6 @@
 (define-vop (move-from-complex-double)
   (:args (x :scs (complex-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
-
   (:note _N"complex double float to pointer coercion")
   (:generator 13
     (emit-not-implemented)))
@@ -317,7 +314,6 @@
 (define-vop (move-from-complex-double-double)
   (:args (x :scs (complex-double-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
-
   (:note _N"complex double-double float to pointer coercion")
   (:generator 13
     (emit-not-implemented)))
@@ -604,8 +600,6 @@
 		(:args (x :scs (signed-reg) :target stack-temp
 			  :load-if (not (sc-is x signed-stack))))
 		(:temporary (:scs (single-stack) :from :argument) stack-temp)
-		#+nil
-		(:temporary (:scs (single-reg) :to :result :target y) temp)
 		(:results (y :scs (,to-sc)))
 		(:arg-types signed-num)
 		(:result-types ,to-type)
@@ -641,10 +635,6 @@
 (macrolet ((frob (trans from-sc from-type inst)
 	     `(define-vop (,(symbolicate trans "/" from-type))
 		(:args (x :scs (,from-sc)))
-		#+nil
-		(:temporary (:from (:argument 0) :sc single-reg) temp)
-		#+nil
-		(:temporary (:scs (signed-stack)) stack-temp)
 		(:results (y :scs (signed-reg)
 			     :load-if (not (sc-is y signed-stack))))
 		(:arg-types ,from-type)

@@ -383,8 +383,7 @@ default-value-8
 (define-vop (unknown-values-receiver)
   (:results
    (start :scs (any-reg))
-   (count :scs (any-reg)))
-  )
+   (count :scs (any-reg))))
 
 
 
@@ -480,8 +479,8 @@ default-value-8
 ;;; MAYBE-LOAD-STACK-TN.
 ;;;
 (define-vop (known-return)
-  (:args (old-fp #+nil :target #+nil old-fp-temp)
-	 (return-pc #+nil :target #+nil return-pc-temp)
+  (:args (old-fp)
+	 (return-pc)
 	 (vals :more t))
   (:move-args :known-return)
   (:info val-locs)
@@ -545,12 +544,12 @@ default-value-8
 	  '((new-fp :scs (any-reg) :to :eval)))
 
       ,(if named
-	   '(name #+nil :target #+nil name-pass)
-	   '(arg-fun #+nil :target #+nil lexenv))
+	   '(name)
+	   '(arg-fun))
       
       ,@(when (eq return :tail)
-	  '((old-fp #+nil :target #+nil old-fp-pass)
-	    (return-pc #+nil :target #+nil return-pc-pass)))
+	  '((old-fp)
+	    (return-pc)))
       
       ,@(unless variable '((args :more t :scs (descriptor-reg)))))
 
@@ -711,11 +710,10 @@ default-value-8
 ;;; Turn more arg (context, count) into a list.
 ;;;
 (define-vop (listify-rest-args)
-  (:args (context-arg #+nil :target #+nil context :scs (descriptor-reg))
-	 (count-arg #+nil :target #+nil count :scs (any-reg)))
+  (:args (context-arg :scs (descriptor-reg))
+	 (count-arg :scs (any-reg)))
   (:arg-types * tagged-num (:constant t))
   (:info dynamic-extent)
-
   (:results (result :scs (descriptor-reg)))
   (:translate %listify-rest-args)
   (:policy :safe)
