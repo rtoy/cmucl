@@ -94,10 +94,13 @@
 
 ;; FIXME: What are we using for nfp? It's not defined.
 (def-vm-support-routine make-nfp-tn ()
-  ;; FIXME: Is this right?
+  ;; FIXME: Is this right?  We're going to use the LIP register as the
+  ;; NFP because it seems the NFP and LIP registers are never needed
+  ;; by any VOP at the same time. Also some MOVE VOPs use the NFP (via
+  ;; current-nfp-tn) and MOVE VOPs have no temporaries so we're
+  ;; currently forced to make NFP a real register.
   (component-live-tn
    (make-wired-tn *fixnum-primitive-type* immediate-arg-scn lip-offset)))
-
 
 ;;; MAKE-STACK-POINTER-TN ()
 ;;; 
