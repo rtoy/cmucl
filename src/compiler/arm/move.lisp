@@ -208,11 +208,9 @@
 (define-vop (move-from-signed)
   (:args (arg :scs (signed-reg unsigned-reg)))
   (:results (y :scs (any-reg descriptor-reg)))
-
   (:note _N"signed word to integer coercion")
   (:vop-var vop)
   (:generator 20
-    (move x arg)
     (emit-not-implemented)))
 ;;;
 (define-move-vop move-from-signed :move
