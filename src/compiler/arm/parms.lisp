@@ -310,6 +310,9 @@
     ;; The real C stack pointer
     *number-stack-pointer*
 
+    ;; The number frame pointer (aka NFP)
+    *number-frame-pointer*
+
     ;; Gc
     #-gencgc
     lisp::*allocation-pointer*

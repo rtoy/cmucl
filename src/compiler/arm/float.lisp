@@ -20,24 +20,28 @@
 
 (define-move-function (load-single 1) (vop x y)
   ((single-stack) (single-reg))
-  (inst vldr y (current-nfp-tn vop) (* (tn-offset x) vm:word-bytes)))
+  (load-symbol-value lip-tn lisp::*number-frame-pointer*)
+  (inst vldr y lip-tn (* (tn-offset x) vm:word-bytes)))
 
 (define-move-function (store-single 1) (vop x y)
   ((single-reg) (single-stack))
-  (inst vstr x (current-nfp-tn vop) (* (tn-offset y) vm:word-bytes)))
+  (load-symbol-value lip-tn lisp::*number-frame-pointer*)
+  (inst vstr x lip-tn (* (tn-offset y) vm:word-bytes)))
 
 
 (define-move-function (load-double 2) (vop x y)
   ((double-stack) (double-reg))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
-    (inst vldr y nfp offset)))
+    (load-symbol-value lip-tn lisp::*number-frame-pointer*)
+    (inst vldr y lip-tn offset)))
 
 (define-move-function (store-double 2) (vop x y)
   ((double-reg) (double-stack))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
-    (inst vstr x nfp offset)))
+    (load-symbol-value lip-tn lisp::*number-frame-pointer*)
+    (inst vstr x lip-tn offset)))
 
 
 ;;;; Move VOPs:
@@ -155,38 +159,42 @@
   ((complex-single-stack) (complex-single-reg))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
+    (load-symbol-value lip-tn lisp::*number-frame-pointer*)
     (let ((real-tn (complex-single-reg-real-tn y)))
-      (inst vldr real-tn nfp offset))
+      (inst vldr real-tn lip-tn offset))
     (let ((imag-tn (complex-single-reg-imag-tn y)))
-      (inst vldr imag-tn nfp  (+ offset vm:word-bytes)))))
+      (inst vldr imag-tn lip-tn  (+ offset vm:word-bytes)))))
 
 (define-move-function (store-complex-single 2) (vop x y)
   ((complex-single-reg) (complex-single-stack))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
+    (load-symbol-value lip-tn lisp::*number-frame-pointer*)
     (let ((real-tn (complex-single-reg-real-tn x)))
-      (inst vstr real-tn nfp offset))
+      (inst vstr real-tn lip-tn offset))
     (let ((imag-tn (complex-single-reg-imag-tn x)))
-      (inst vstr imag-tn nfp (+ offset vm:word-bytes)))))
+      (inst vstr imag-tn lip-tn (+ offset vm:word-bytes)))))
 
 
 (define-move-function (load-complex-double 4) (vop x y)
   ((complex-double-stack) (complex-double-reg))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
+    (load-symbol-value lip-tn lisp::*number-frame-pointer*)
     (let ((real-tn (complex-double-reg-real-tn y)))
-      (inst vldr real-tn nfp offset))
+      (inst vldr real-tn lip-tn offset))
     (let ((imag-tn (complex-double-reg-imag-tn y)))
-      (inst vldr imag-tn nfp (+ offset (* 2 vm:word-bytes))))))
+      (inst vldr imag-tn lip-tn (+ offset (* 2 vm:word-bytes))))))
 
 (define-move-function (store-complex-double 4) (vop x y)
   ((complex-double-reg) (complex-double-stack))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
+    (load-symbol-value lip-tn lisp::*number-frame-pointer*)
     (let ((real-tn (complex-double-reg-real-tn x)))
-      (inst vstr real-tn nfp offset))
+      (inst vstr real-tn lip-tn offset))
     (let ((imag-tn (complex-double-reg-imag-tn x)))
-      (inst vstr imag-tn nfp (+ offset (* 2 vm:word-bytes))))))
+      (inst vstr imag-tn lip-tn (+ offset (* 2 vm:word-bytes))))))
 
 #+double-double
 (progn
@@ -195,26 +203,28 @@
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
     (let ((value-tn (complex-double-double-reg-real-hi-tn y)))
-      (inst vldr value-tn nfp offset))
+    (load-symbol-value lip-tn lisp::*number-frame-pointer*)
+      (inst vldr value-tn lip-tn offset))
     (let ((value-tn (complex-double-double-reg-real-lo-tn y)))
-      (inst vldr value-tn nfp (+ offset (* 2 vm:word-bytes))))
+      (inst vldr value-tn lip-tn (+ offset (* 2 vm:word-bytes))))
     (let ((value-tn (complex-double-double-reg-imag-hi-tn y)))
-      (inst vldr value-tn nfp (+ offset (* 4 vm:word-bytes))))
+      (inst vldr value-tn lip-tn (+ offset (* 4 vm:word-bytes))))
     (let ((value-tn (complex-double-double-reg-imag-lo-tn y)))
-      (inst vldr value-tn nfp (+ offset (* 6 vm:word-bytes))))))
+      (inst vldr value-tn lip-tn (+ offset (* 6 vm:word-bytes))))))
 
 (define-move-function (store-complex-double-double 4) (vop x y)
   ((complex-double-double-reg) (complex-double-double-stack))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
+    (load-symbol-value lip-tn lisp::*number-frame-pointer*)
     (let ((value-tn (complex-double-double-reg-real-hi-tn x)))
-      (inst vstr value-tn nfp offset))
+      (inst vstr value-tn lip-tn offset))
     (let ((value-tn (complex-double-double-reg-real-lo-tn x)))
-      (inst vstr value-tn nfp (+ offset (* 2 vm:word-bytes))))
+      (inst vstr value-tn lip-tn (+ offset (* 2 vm:word-bytes))))
     (let ((value-tn (complex-double-double-reg-imag-hi-tn x)))
-      (inst vstr value-tn nfp (+ offset (* 4 vm:word-bytes))))
+      (inst vstr value-tn lip-tn (+ offset (* 4 vm:word-bytes))))
     (let ((value-tn (complex-double-double-reg-imag-lo-tn x)))
-      (inst vstr value-tn nfp (+ offset (* 6 vm:word-bytes))))))
+      (inst vstr value-tn lip-tn (+ offset (* 6 vm:word-bytes))))))
 
 )
 
@@ -904,19 +914,21 @@
   ((double-double-stack) (double-double-reg))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
+    (load-symbol-value lip-tn lisp::*number-frame-pointer*)
     (let ((hi-tn (double-double-reg-hi-tn y)))
-      (inst vldr hi-tn nfp offset))
+      (inst vldr hi-tn lip-tn offset))
     (let ((lo-tn (double-double-reg-lo-tn y)))
-      (inst vldr lo-tn nfp (+ offset (* 2 vm:word-bytes))))))
+      (inst vldr lo-tn lip-tn (+ offset (* 2 vm:word-bytes))))))
 
 (define-move-function (store-double-double 4) (vop x y)
   ((double-double-reg) (double-double-stack))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
+    (load-symbol-value lip-tn lisp::*number-frame-pointer*)
     (let ((hi-tn (double-double-reg-hi-tn x)))
-      (inst vstr hi-tn nfp offset))
+      (inst vstr hi-tn lip-tn offset))
     (let ((lo-tn (double-double-reg-lo-tn x)))
-      (inst vstr lo-tn nfp (+ offset (* 2 vm:word-bytes))))))
+      (inst vstr lo-tn lip-tn (+ offset (* 2 vm:word-bytes))))))
 
 ;;; Double-double float register to register moves
 
@@ -1017,9 +1029,10 @@
       (double-double-stack
        (let ((nfp (current-nfp-tn vop))
 	     (offset (* (tn-offset res) vm:word-bytes)))
+	 (load-symbol-value lip-tn lisp::*number-frame-pointer*)
 	 (unless (location= hi res)
-	   (inst vstr hi nfp offset))
-	 (inst vstr lo nfp (+ offset (* 2 vm:word-bytes))))))))
+	   (inst vstr hi lip-tn offset))
+	 (inst vstr lo lip-tn (+ offset (* 2 vm:word-bytes))))))))
 
 (define-vop (double-double-float-value)
   (:args (x :scs (double-double-reg descriptor-reg) :target r
@@ -1039,10 +1052,11 @@
 	 (unless (location= value-tn r)
 	   (move-double-reg r value-tn))))
       (double-double-stack
+       (load-symbol-value lip-tn lisp::*number-frame-pointer*)
        (inst vldr r
-	     (current-nfp-tn vop) (* (+ (ecase slot (:hi 0) (:lo 2))
-					(tn-offset x))
-				     vm:word-bytes)))
+	     lip-tn (* (+ (ecase slot (:hi 0) (:lo 2))
+			  (tn-offset x))
+		       vm:word-bytes)))
       (descriptor-reg
        (emit-not-implemented)))))
 
@@ -1087,14 +1101,15 @@
       (complex-double-double-stack
        (let ((nfp (current-nfp-tn vop))
 	     (offset (* (tn-offset r) vm:word-bytes)))
+	 (load-symbol-value lip-tn lisp::*number-frame-pointer*)
 	 (let ((r-real (double-double-reg-hi-tn real)))
-	   (inst vstr r-real nfp offset))
+	   (inst vstr r-real lip-tn offset))
 	 (let ((r-real (double-double-reg-lo-tn real)))
-	   (inst vstr r-real nfp  (+ offset (* 2 vm:word-bytes))))
+	   (inst vstr r-real lip-tn  (+ offset (* 2 vm:word-bytes))))
 	 (let ((r-imag (double-double-reg-hi-tn imag)))
-	   (inst vstr r-imag nfp (+ offset (* 4 vm:word-bytes))))
+	   (inst vstr r-imag lip-tn (+ offset (* 4 vm:word-bytes))))
 	 (let ((r-imag (double-double-reg-lo-tn imag)))
-	   (inst vstr r-imag nfp (+ offset (* 6 vm:word-bytes)))))))))
+	   (inst vstr r-imag lip-tn (+ offset (* 6 vm:word-bytes)))))))))
 
 (define-vop (complex-double-double-float-value)
   (:args (x :scs (complex-double-double-reg descriptor-reg)
@@ -1122,15 +1137,16 @@
 	   (move-double-reg r-lo value-tn))))
       (complex-double-double-stack
        (let ((r-hi (double-double-reg-hi-tn r)))
+	 (load-symbol-value lip-tn lisp::*number-frame-pointer*)
 	 (inst vldr r-hi
-	       (current-nfp-tn vop)  (* (+ (ecase slot (:real 0) (:imag 4))
-					   (tn-offset x))
-					vm:word-bytes)))
+	       lip-tn  (* (+ (ecase slot (:real 0) (:imag 4))
+			     (tn-offset x))
+			  vm:word-bytes)))
        (let ((r-lo (double-double-reg-lo-tn r)))
 	 (inst vldr r-lo
-	       (current-nfp-tn vop) (* (+ (ecase slot (:real 2) (:imag 6))
-					  (tn-offset x))
-				       vm:word-bytes))))
+	       lip-tn (* (+ (ecase slot (:real 2) (:imag 6))
+			    (tn-offset x))
+			 vm:word-bytes))))
       (descriptor-reg
        (emit-not-implemented)))))
 
