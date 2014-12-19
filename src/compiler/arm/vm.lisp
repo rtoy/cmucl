@@ -287,6 +287,7 @@
 (defregtn ocfp any-reg)
 
 (defregtn lexenv descriptor-reg)
+(defregtn lip any-reg)
 
 
 ;;; Immediate-Constant-SC  --  Interface
