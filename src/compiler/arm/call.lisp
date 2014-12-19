@@ -94,13 +94,9 @@
 
 ;; FIXME: What are we using for nfp? It's not defined.
 (def-vm-support-routine make-nfp-tn ()
-  ;; FIXME: Is this right?  We're going to use the LIP register as the
-  ;; NFP because it seems the NFP and LIP registers are never needed
-  ;; by any VOP at the same time. Also some MOVE VOPs use the NFP (via
-  ;; current-nfp-tn) and MOVE VOPs have no temporaries so we're
-  ;; currently forced to make NFP a real register.
-  (component-live-tn
-   (make-wired-tn *fixnum-primitive-type* immediate-arg-scn lip-offset)))
+  ;; FIXME: Is this right? We currently don't have an NFP register on
+  ;; ARM. This just returns a general TN that can be used.
+  (make-restricted-tn *fixnum-primitive-type* immediate-arg-scn))
 
 ;;; MAKE-STACK-POINTER-TN ()
 ;;; 
@@ -162,11 +158,13 @@
 ;;;
 (define-vop (compute-old-nfp)
   (:results (val :scs (any-reg)))
+  (:temporary (:scs (descriptor-reg) :offset lip-offset) temp)
   (:vop-var vop)
   (:generator 1
     (let ((nfp (current-nfp-tn vop)))
       (when nfp
-	(inst add val nfp (bytes-needed-for-non-descriptor-stack-frame))))))
+	(load-symbol-value temp lisp::*number-frame-pointer*)
+	(inst add val temp (bytes-needed-for-non-descriptor-stack-frame))))))
 
 
 (define-vop (xep-allocate-frame)
