@@ -163,7 +163,7 @@
   (:generator 1
     (let ((nfp (current-nfp-tn vop)))
       (when nfp
-	(load-symbol-value temp lisp::*number-frame-pointer*)
+	(load-symbol-value temp *number-frame-pointer*)
 	(inst add val temp (bytes-needed-for-non-descriptor-stack-frame))))))
 
 
