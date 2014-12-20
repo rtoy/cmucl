@@ -1013,6 +1013,7 @@
 		 :load-if (not (sc-is res double-double-stack))))
   (:arg-types double-float double-float)
   (:result-types double-double-float)
+  (:temporary (:scs (interior-reg)) lip)
   (:translate kernel::%make-double-double-float)
   (:note _N"inline double-double float creation")
   (:policy :fast-safe)
@@ -1029,10 +1030,10 @@
       (double-double-stack
        (let ((nfp (current-nfp-tn vop))
 	     (offset (* (tn-offset res) vm:word-bytes)))
-	 (load-symbol-value lip-tn *number-frame-pointer*)
+	 (load-symbol-value lip *number-frame-pointer*)
 	 (unless (location= hi res)
-	   (inst vstr hi lip-tn offset))
-	 (inst vstr lo lip-tn (+ offset (* 2 vm:word-bytes))))))))
+	   (inst vstr hi lip offset))
+	 (inst vstr lo lip (+ offset (* 2 vm:word-bytes))))))))
 
 (define-vop (double-double-float-value)
   (:args (x :scs (double-double-reg descriptor-reg) :target r
@@ -1040,6 +1041,7 @@
   (:arg-types double-double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
+  (:temporary (:scs (interior-reg)) lip)
   (:variant-vars slot)
   (:policy :fast-safe)
   (:vop-var vop)
@@ -1052,9 +1054,9 @@
 	 (unless (location= value-tn r)
 	   (move-double-reg r value-tn))))
       (double-double-stack
-       (load-symbol-value lip-tn *number-frame-pointer*)
+       (load-symbol-value lip *number-frame-pointer*)
        (inst vldr r
-	     lip-tn (* (+ (ecase slot (:hi 0) (:lo 2))
+	     lip (* (+ (ecase slot (:hi 0) (:lo 2))
 			  (tn-offset x))
 		       vm:word-bytes)))
       (descriptor-reg
@@ -1080,6 +1082,7 @@
   (:results (r :scs (complex-double-double-reg) :from (:argument 0)
 	       :load-if (not (sc-is r complex-double-double-stack))))
   (:result-types complex-double-double-float)
+  (:temporary (:scs (interior-reg)) lip)
   (:note _N"inline complex double-double float creation")
   (:policy :fast-safe)
   (:vop-var vop)
@@ -1101,15 +1104,15 @@
       (complex-double-double-stack
        (let ((nfp (current-nfp-tn vop))
 	     (offset (* (tn-offset r) vm:word-bytes)))
-	 (load-symbol-value lip-tn *number-frame-pointer*)
+	 (load-symbol-value lip *number-frame-pointer*)
 	 (let ((r-real (double-double-reg-hi-tn real)))
-	   (inst vstr r-real lip-tn offset))
+	   (inst vstr r-real lip offset))
 	 (let ((r-real (double-double-reg-lo-tn real)))
-	   (inst vstr r-real lip-tn  (+ offset (* 2 vm:word-bytes))))
+	   (inst vstr r-real lip  (+ offset (* 2 vm:word-bytes))))
 	 (let ((r-imag (double-double-reg-hi-tn imag)))
-	   (inst vstr r-imag lip-tn (+ offset (* 4 vm:word-bytes))))
+	   (inst vstr r-imag lip (+ offset (* 4 vm:word-bytes))))
 	 (let ((r-imag (double-double-reg-lo-tn imag)))
-	   (inst vstr r-imag lip-tn (+ offset (* 6 vm:word-bytes)))))))))
+	   (inst vstr r-imag lip (+ offset (* 6 vm:word-bytes)))))))))
 
 (define-vop (complex-double-double-float-value)
   (:args (x :scs (complex-double-double-reg descriptor-reg)
@@ -1117,6 +1120,7 @@
   (:arg-types complex-double-double-float)
   (:results (r :scs (double-double-reg)))
   (:result-types double-double-float)
+  (:temporary (:scs (interior-reg)) lip)
   (:variant-vars slot)
   (:policy :fast-safe)
   (:vop-var vop)
@@ -1137,14 +1141,14 @@
 	   (move-double-reg r-lo value-tn))))
       (complex-double-double-stack
        (let ((r-hi (double-double-reg-hi-tn r)))
-	 (load-symbol-value lip-tn *number-frame-pointer*)
+	 (load-symbol-value lip *number-frame-pointer*)
 	 (inst vldr r-hi
-	       lip-tn  (* (+ (ecase slot (:real 0) (:imag 4))
+	       lip  (* (+ (ecase slot (:real 0) (:imag 4))
 			     (tn-offset x))
 			  vm:word-bytes)))
        (let ((r-lo (double-double-reg-lo-tn r)))
 	 (inst vldr r-lo
-	       lip-tn (* (+ (ecase slot (:real 2) (:imag 6))
+	       lip (* (+ (ecase slot (:real 2) (:imag 6))
 			    (tn-offset x))
 			 vm:word-bytes))))
       (descriptor-reg
