@@ -59,7 +59,7 @@
    (signed-stack) (signed-reg)
    (unsigned-stack) (unsigned-reg))
   (let ((nfp (current-nfp-tn vop)))
-    (load-symbol-value lip-tn lisp::*number-frame-pointer*)
+    (load-symbol-value lip-tn *number-frame-pointer*)
     (loadw y lip-tn (tn-offset x))))
 
 (define-move-function (store-stack 5) (vop x y)
@@ -72,7 +72,7 @@
    (signed-reg) (signed-stack)
    (unsigned-reg) (unsigned-stack))
   (let ((nfp (current-nfp-tn vop)))
-    (load-symbol-value lip-tn lisp::*number-frame-pointer*)
+    (load-symbol-value lip-tn *number-frame-pointer*)
     (storew x lip-tn (tn-offset y))))
 
 
