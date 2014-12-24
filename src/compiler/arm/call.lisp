@@ -94,8 +94,11 @@
 
 ;; FIXME: What are we using for nfp? It's not defined.
 (def-vm-support-routine make-nfp-tn ()
-  ;; FIXME: Is this right? We currently don't have an NFP register on
-  ;; ARM. This just returns a general TN that can be used.
+  ;; FIXME: Is this right?  We currently don't have an NFP register on
+  ;; ARM.  Instead, a static symbol is used to hold the value of the
+  ;; number frame pointer.  This is just a general TN that can be used
+  ;; as a marker to note that the VOP might have a NFP value.  (Some
+  ;; vops check the value of (CURRENT-NFP-TN).)
   (make-restricted-tn *fixnum-primitive-type* immediate-arg-scn))
 
 ;;; MAKE-STACK-POINTER-TN ()
