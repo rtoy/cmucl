@@ -59,7 +59,8 @@
    (signed-stack) (signed-reg)
    (unsigned-stack) (unsigned-reg))
   (let ((nfp (current-nfp-tn vop)))
-    (loadw y nfp (tn-offset x))))
+    (load-symbol-value lip-tn *number-frame-pointer*)
+    (loadw y lip-tn (tn-offset x))))
 
 (define-move-function (store-stack 5) (vop x y)
   ((any-reg descriptor-reg) (control-stack))
@@ -71,7 +72,8 @@
    (signed-reg) (signed-stack)
    (unsigned-reg) (unsigned-stack))
   (let ((nfp (current-nfp-tn vop)))
-    (storew x nfp (tn-offset y))))
+    (load-symbol-value lip-tn *number-frame-pointer*)
+    (storew x lip-tn (tn-offset y))))
 
 
 
