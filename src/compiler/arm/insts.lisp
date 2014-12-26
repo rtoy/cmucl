@@ -1100,21 +1100,37 @@
 ;;
 ;; ldr<c> dst, [src1, +/-src2, shift]<!>
 ;; ldr<c> dst, [src1], +/-src2, shift
+
+;; have to do this because defconstant is evalutated in the null lex
+;; env.
+(defmacro with-shift-format (printer)
+  `(let ((add/sub-reg
+	   ;; Don't print "+" if we are adding.
+	   '(:unless (u :constant 1) "-"))
+	 (shift-reg-amount
+	   '(:unless (:and (type :constant 0) (imm5 :constant 0))
+	     ;; Shift type LSL with 0 shift, so don't print anything.
+	     (:unless (imm5 :constant 0)
+	       ", " type " #" imm5))))
+     ,printer))
+
 (defconstant format-3-reg-printer
-  `(:name cond
-          :tab
-	  dst ", [" src1
-	  (:cond ((p :constant 1)
-		  ", "
-		  (:cond ((u :constant 0) "-")
-			 (t "+"))
-		  rs ", " type " #" imm5 "]"
-		  (:unless (w :constant 0) "!"))
-		 (t
-		  "], "
-		  (:cond ((u :constant 0) "-")
-			 (t "+"))
-		  rs ", " type " #" imm5))))
+  (with-shift-format
+      `(:name cond
+	:tab
+	dst ", [" src1
+	(:cond ((p :constant 1)
+		", "
+		,add/sub-reg
+		rs
+		,shift-reg-amount
+		"]"
+		(:unless (w :constant 0) "!"))
+	       (t
+		"], "
+		,add/sub-reg
+		rs
+		,shift-reg-amount)))))
   
 (define-emitter emit-format-3-reg 32
   (byte 4 28) (byte 3 25) (byte 1 24) (byte 1 23) (byte 1 22) (byte 1 21)
