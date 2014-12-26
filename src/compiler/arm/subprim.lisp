@@ -21,7 +21,6 @@
   (:translate length)
   (:args (object :scs (descriptor-reg)))
   (:arg-types list)
-
   (:results (result :scs (any-reg descriptor-reg)))
   (:policy :fast-safe)
   (:vop-var vop)

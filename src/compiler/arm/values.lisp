@@ -36,7 +36,6 @@
   (:results (start :scs (any-reg) :from :load)
 	    (count :scs (any-reg)))
   (:info nvals)
-
   (:generator 20
     (emit-not-implemented)))
 
@@ -49,7 +48,6 @@
   (:policy :fast-safe)
   (:results (start :scs (any-reg))
 	    (count :scs (any-reg)))
-
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 0
@@ -65,7 +63,6 @@
 	 (skip :scs (any-reg immediate))
 	 (num :scs (any-reg)))
   (:arg-types * positive-fixnum positive-fixnum)
-
   (:results (start :scs (any-reg))
 	    (count :scs (any-reg)))
   (:generator 20

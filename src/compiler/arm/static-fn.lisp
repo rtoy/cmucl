@@ -22,8 +22,7 @@
   (:save-p t)
   (:policy :safe)
   (:variant-vars symbol)
-  (:vop-var vop)
-  )
+  (:vop-var vop))
 
 
 (eval-when (compile load eval)
@@ -69,13 +68,10 @@
 	(let ((arg-name (intern (format nil "ARG-~D" i))))
 	  (arg-names arg-name)
 	  (args `(,arg-name
-		  :scs (any-reg descriptor-reg)
-		  #+nil :target #+nil ,(nth i (temp-names))))))
+		  :scs (any-reg descriptor-reg)))))
       `(define-vop (,(static-function-template-name num-args num-results)
 		    static-function-template)
 	 (:args ,@(args))
-	 #+nil
-	 ,@(temps)
 	 (:results ,@(results))
 	 (:generator ,(+ 50 num-args num-results)
 	   (emit-not-implemented))))))
