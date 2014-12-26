@@ -90,7 +90,6 @@
   (:args (tn))
   (:info entry-label)
   (:results (block :scs (any-reg)))
-
   (:generator 22
     (emit-not-implemented)))
 
@@ -103,7 +102,6 @@
 	 (tag :scs (descriptor-reg any-reg)))
   (:info entry-label)
   (:results (block :scs (any-reg)))
-
   (:generator 44
     (emit-not-implemented)))
 
@@ -113,7 +111,6 @@
 ;;;
 (define-vop (set-unwind-protect)
   (:args (tn))
-
   (:generator 7
     (emit-not-implemented)))
 
@@ -140,7 +137,6 @@
 	 (start)
 	 (count))
   (:results (values :more t))
-
   (:info label nvals)
   (:save-p :force-to-stack)
   (:vop-var vop)
@@ -153,7 +149,6 @@
   ;; Again, no SC restrictions for the args, 'cause the loading would
   ;; happen before the entry label.
   (:info label)
-
   (:results (result :scs (any-reg) :from (:argument 0))
 	    (num :scs (any-reg) :from (:argument 0)))
   (:save-p :force-to-stack)

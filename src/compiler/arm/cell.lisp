@@ -52,8 +52,7 @@
   (:results (value :scs (descriptor-reg any-reg)))
   (:policy :fast-safe)
   (:vop-var vop)
-  (:save-p :compute-only)
-  )
+  (:save-p :compute-only))
 
 ;;; With Symbol-Value, we check that the value isn't the trap object.  So
 ;;; Symbol-Value of NIL is NIL.
@@ -68,8 +67,7 @@
   (:args (object :scs (descriptor-reg)))
   (:conditional)
   (:info target not-p)
-  (:policy :fast-safe)
-  )
+  (:policy :fast-safe))
 
 (define-vop (boundp boundp-frob)
   (:translate boundp)
@@ -110,7 +108,6 @@
   (:results (value :scs (descriptor-reg any-reg)))
   (:vop-var vop)
   (:save-p :compute-only)
-
   (:generator 10
     (emit-not-implemented)))
 
@@ -119,7 +116,6 @@
   (:translate (setf fdefn-function))
   (:args (function :scs (descriptor-reg) :target result)
 	 (fdefn :scs (descriptor-reg)))
-
   (:results (result :scs (descriptor-reg)))
   (:generator 38
     (emit-not-implemented)))
@@ -128,11 +124,9 @@
   (:policy :fast-safe)
   (:translate fdefn-makunbound)
   (:args (fdefn :scs (descriptor-reg) :target result))
-
   (:results (result :scs (descriptor-reg)))
   (:generator 38
     (emit-not-implemented)))
-
 
 
 ;;;; Binding and Unbinding.
@@ -144,21 +138,17 @@
 (define-vop (bind)
   (:args (val :scs (any-reg descriptor-reg))
 	 (symbol :scs (descriptor-reg)))
-
   (:generator 5
     (emit-not-implemented)))
-
 
 (define-vop (unbind)
   (:generator 0
     (emit-not-implemented)))
 
-
 (define-vop (unbind-to-here)
   (:args (arg :scs (descriptor-reg any-reg)))
   (:generator 0
     (emit-not-implemented)))
-
 
 
 ;;;; Closure indexing.
