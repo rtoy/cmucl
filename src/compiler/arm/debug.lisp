@@ -69,7 +69,7 @@
   (:policy :fast-safe)
   (:args (thing :scs (descriptor-reg)))
   (:results (code :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg)) temp)
+
   (:variant-vars lowtag)
   (:generator 5
     (emit-not-implemented)))

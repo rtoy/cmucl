@@ -23,13 +23,7 @@
   (:policy :safe)
   (:variant-vars symbol)
   (:vop-var vop)
-  (:temporary (:scs (non-descriptor-reg)) temp)
-  (:temporary (:scs (descriptor-reg)) move-temp)
-  (:temporary (:sc descriptor-reg :offset lra-offset) lra)
-  (:temporary (:scs (descriptor-reg)) func)
-  (:temporary (:sc any-reg :offset nargs-offset) nargs)
-  (:temporary (:sc any-reg :offset ocfp-offset) old-fp)
-  (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save))
+  )
 
 
 (eval-when (compile load eval)
@@ -76,10 +70,11 @@
 	  (arg-names arg-name)
 	  (args `(,arg-name
 		  :scs (any-reg descriptor-reg)
-		  :target ,(nth i (temp-names))))))
+		  #+nil :target #+nil ,(nth i (temp-names))))))
       `(define-vop (,(static-function-template-name num-args num-results)
 		    static-function-template)
 	 (:args ,@(args))
+	 #+nil
 	 ,@(temps)
 	 (:results ,@(results))
 	 (:generator ,(+ 50 num-args num-results)
@@ -93,8 +88,7 @@
 	     (static-function-template-vop (eval num-args) (eval num-res))))
   (frob 0 1)
   (frob 1 1)
-  (frob 2 1)
-  (frob 3 1))
+  (frob 2 1))
 
 
 (defmacro define-static-function (name args &key (results '(x)) translate

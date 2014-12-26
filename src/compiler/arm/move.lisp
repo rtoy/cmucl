@@ -178,7 +178,7 @@
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (signed-reg unsigned-reg)))
   (:note _N"integer to untagged word coercion")
-  (:temporary (:scs (non-descriptor-reg)) temp)
+
   (:vop-var vop)
   (:generator 4
     (emit-not-implemented)))
@@ -208,13 +208,11 @@
 ;;; sure people know they may be number consing.
 ;;;
 (define-vop (move-from-signed)
-  (:args (arg :scs (signed-reg unsigned-reg) :target x))
+  (:args (arg :scs (signed-reg unsigned-reg)))
   (:results (y :scs (any-reg descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
   (:note _N"signed word to integer coercion")
   (:vop-var vop)
   (:generator 20
-    (move x arg)
     (emit-not-implemented)))
 ;;;
 (define-move-vop move-from-signed :move
@@ -228,13 +226,12 @@
 ;;; a worst-case cost to make sure people know they may be number consing.
 ;;;
 (define-vop (move-from-unsigned)
-  (:args (arg :scs (signed-reg unsigned-reg) :target x))
+  (:args (arg :scs (signed-reg unsigned-reg)))
   (:results (y :scs (any-reg descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
+
   (:note _N"unsigned word to integer coercion")
   (:vop-var vop)
   (:generator 20
-    (move x arg)
     (emit-not-implemented)))
 
 ;;;

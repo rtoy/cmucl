@@ -90,8 +90,7 @@
   (:args (tn))
   (:info entry-label)
   (:results (block :scs (any-reg)))
-  (:temporary (:scs (descriptor-reg)) temp)
-  (:temporary (:scs (non-descriptor-reg)) ndescr)
+
   (:generator 22
     (emit-not-implemented)))
 
@@ -104,9 +103,7 @@
 	 (tag :scs (descriptor-reg any-reg)))
   (:info entry-label)
   (:results (block :scs (any-reg)))
-  (:temporary (:scs (descriptor-reg)) temp)
-  (:temporary (:scs (descriptor-reg) :target block :to (:result 0)) result)
-  (:temporary (:scs (non-descriptor-reg)) ndescr)
+
   (:generator 44
     (emit-not-implemented)))
 
@@ -116,21 +113,18 @@
 ;;;
 (define-vop (set-unwind-protect)
   (:args (tn))
-  (:temporary (:scs (descriptor-reg)) new-uwp)
-  (:temporary (:scs (non-descriptor-reg)) ndescr)
+
   (:generator 7
     (emit-not-implemented)))
 
 
 (define-vop (unlink-catch-block)
-  (:temporary (:scs (any-reg)) block)
   (:policy :fast-safe)
   (:translate %catch-breakup)
   (:generator 17
     (emit-not-implemented)))
 
 (define-vop (unlink-unwind-protect)
-  (:temporary (:scs (any-reg)) block)
   (:policy :fast-safe)
   (:translate %unwind-protect-breakup)
   (:generator 17
@@ -146,7 +140,7 @@
 	 (start)
 	 (count))
   (:results (values :more t))
-  (:temporary (:scs (descriptor-reg)) move-temp)
+
   (:info label nvals)
   (:save-p :force-to-stack)
   (:vop-var vop)
@@ -159,8 +153,7 @@
   ;; Again, no SC restrictions for the args, 'cause the loading would
   ;; happen before the entry label.
   (:info label)
-  (:temporary (:scs (any-reg)) dst)
-  (:temporary (:scs (descriptor-reg)) temp)
+
   (:results (result :scs (any-reg) :from (:argument 0))
 	    (num :scs (any-reg) :from (:argument 0)))
   (:save-p :force-to-stack)

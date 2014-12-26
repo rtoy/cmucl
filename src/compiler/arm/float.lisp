@@ -73,7 +73,6 @@
   (:args (x :to :save))
   (:results (y))
   (:note _N"float to pointer coercion")
-  (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:variant-vars format size type data)
   (:generator 13
     (emit-not-implemented)))
@@ -304,7 +303,6 @@
 (define-vop (move-from-complex-single)
   (:args (x :scs (complex-single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:note _N"complex single float to pointer coercion")
   (:generator 13
     (emit-not-implemented)))
@@ -315,7 +313,6 @@
 (define-vop (move-from-complex-double)
   (:args (x :scs (complex-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:note _N"complex double float to pointer coercion")
   (:generator 13
     (emit-not-implemented)))
@@ -327,7 +324,6 @@
 (define-vop (move-from-complex-double-double)
   (:args (x :scs (complex-double-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:note _N"complex double-double float to pointer coercion")
   (:generator 13
     (emit-not-implemented)))
@@ -614,7 +610,6 @@
 		(:args (x :scs (signed-reg) :target stack-temp
 			  :load-if (not (sc-is x signed-stack))))
 		(:temporary (:scs (single-stack) :from :argument) stack-temp)
-		(:temporary (:scs (single-reg) :to :result :target y) temp)
 		(:results (y :scs (,to-sc)))
 		(:arg-types signed-num)
 		(:result-types ,to-type)
@@ -649,9 +644,7 @@
 
 (macrolet ((frob (trans from-sc from-type inst)
 	     `(define-vop (,(symbolicate trans "/" from-type))
-		(:args (x :scs (,from-sc) :target temp))
-		(:temporary (:from (:argument 0) :sc single-reg) temp)
-		(:temporary (:scs (signed-stack)) stack-temp)
+		(:args (x :scs (,from-sc)))
 		(:results (y :scs (signed-reg)
 			     :load-if (not (sc-is y signed-stack))))
 		(:arg-types ,from-type)
@@ -698,8 +691,7 @@
 	       :load-if (not (sc-is bits signed-stack))))
   (:results (res :scs (single-reg)
 		 :load-if (not (sc-is res single-stack))))
-  (:temporary (:scs (signed-reg) :from (:argument 0) :to (:result 0)) temp)
-  (:temporary (:scs (signed-stack)) stack-temp)
+
   (:arg-types signed-num)
   (:result-types single-float)
   (:translate make-single-float)
@@ -713,7 +705,7 @@
 	 (lo-bits :scs (unsigned-reg)))
   (:results (res :scs (double-reg)
 		 :load-if (not (sc-is res double-stack))))
-  (:temporary (:scs (double-stack)) temp)
+
   (:arg-types signed-num unsigned-num)
   (:result-types double-float)
   (:translate make-double-float)
@@ -729,7 +721,7 @@
   (:results (bits :scs (signed-reg)
 		  :load-if (or (sc-is float descriptor-reg single-stack)
 			       (not (sc-is bits signed-stack)))))
-  (:temporary (:scs (signed-stack)) stack-temp)
+
   (:arg-types single-float)
   (:result-types signed-num)
   (:translate single-float-bits)
@@ -742,7 +734,7 @@
   (:args (float :scs (double-reg descriptor-reg)
 		:load-if (not (sc-is float double-stack))))
   (:results (hi-bits :scs (signed-reg)))
-  (:temporary (:scs (double-stack)) stack-temp)
+
   (:arg-types double-float)
   (:result-types signed-num)
   (:translate double-float-high-bits)
@@ -755,7 +747,7 @@
   (:args (float :scs (double-reg descriptor-reg)
 		:load-if (not (sc-is float double-stack))))
   (:results (lo-bits :scs (unsigned-reg)))
-  (:temporary (:scs (double-stack)) stack-temp)
+
   (:arg-types double-float)
   (:result-types unsigned-num)
   (:translate double-float-low-bits)
@@ -793,7 +785,7 @@
   (:translate floating-point-modes)
   (:policy :fast-safe)
   (:vop-var vop)
-  (:temporary (:sc unsigned-stack) temp)
+
   (:generator 3
     (emit-not-implemented)))
 
@@ -804,7 +796,7 @@
   (:result-types unsigned-num)
   (:translate (setf floating-point-modes))
   (:policy :fast-safe)
-  (:temporary (:sc unsigned-stack) temp)
+
   (:vop-var vop)
   (:generator 3
     (emit-not-implemented)))
@@ -965,7 +957,7 @@
 (define-vop (move-from-double-double)
   (:args (x :scs (double-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg)) ndescr)
+
   (:note _N"double-double float to pointer coercion")
   (:generator 13
     (emit-not-implemented)))

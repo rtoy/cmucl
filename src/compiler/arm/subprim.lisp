@@ -19,12 +19,9 @@
 
 (define-vop (length/list)
   (:translate length)
-  (:args (object :scs (descriptor-reg) :target ptr))
+  (:args (object :scs (descriptor-reg)))
   (:arg-types list)
-  (:temporary (:scs (descriptor-reg) :from (:argument 0)) ptr)
-  (:temporary (:scs (non-descriptor-reg)) temp)
-  (:temporary (:scs (any-reg) :type fixnum :to (:result 0) :target result)
-	      count)
+
   (:results (result :scs (any-reg descriptor-reg)))
   (:policy :fast-safe)
   (:vop-var vop)

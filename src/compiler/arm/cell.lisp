@@ -48,12 +48,12 @@
 ;;; Do a cell ref with an error check for being unbound.
 ;;;
 (define-vop (checked-cell-ref)
-  (:args (object :scs (descriptor-reg) :target obj-temp))
+  (:args (object :scs (descriptor-reg)))
   (:results (value :scs (descriptor-reg any-reg)))
   (:policy :fast-safe)
   (:vop-var vop)
   (:save-p :compute-only)
-  (:temporary (:scs (descriptor-reg) :from (:argument 0)) obj-temp))
+  )
 
 ;;; With Symbol-Value, we check that the value isn't the trap object.  So
 ;;; Symbol-Value of NIL is NIL.
@@ -69,7 +69,7 @@
   (:conditional)
   (:info target not-p)
   (:policy :fast-safe)
-  (:temporary (:scs (descriptor-reg)) value))
+  )
 
 (define-vop (boundp boundp-frob)
   (:translate boundp)
@@ -106,11 +106,11 @@
   (:variant fdefn-function-slot other-pointer-type))
 
 (define-vop (safe-fdefn-function)
-  (:args (object :scs (descriptor-reg) :target obj-temp))
+  (:args (object :scs (descriptor-reg)))
   (:results (value :scs (descriptor-reg any-reg)))
   (:vop-var vop)
   (:save-p :compute-only)
-  (:temporary (:scs (descriptor-reg) :from (:argument 0)) obj-temp)
+
   (:generator 10
     (emit-not-implemented)))
 
@@ -119,8 +119,7 @@
   (:translate (setf fdefn-function))
   (:args (function :scs (descriptor-reg) :target result)
 	 (fdefn :scs (descriptor-reg)))
-  (:temporary (:scs (descriptor-reg)) temp)
-  (:temporary (:scs (non-descriptor-reg)) type)
+
   (:results (result :scs (descriptor-reg)))
   (:generator 38
     (emit-not-implemented)))
@@ -129,7 +128,7 @@
   (:policy :fast-safe)
   (:translate fdefn-makunbound)
   (:args (fdefn :scs (descriptor-reg) :target result))
-  (:temporary (:scs (non-descriptor-reg)) temp)
+
   (:results (result :scs (descriptor-reg)))
   (:generator 38
     (emit-not-implemented)))
@@ -145,21 +144,18 @@
 (define-vop (bind)
   (:args (val :scs (any-reg descriptor-reg))
 	 (symbol :scs (descriptor-reg)))
-  (:temporary (:scs (descriptor-reg)) temp)
+
   (:generator 5
     (emit-not-implemented)))
 
 
 (define-vop (unbind)
-  (:temporary (:scs (descriptor-reg)) symbol value)
   (:generator 0
     (emit-not-implemented)))
 
 
 (define-vop (unbind-to-here)
-  (:args (arg :scs (descriptor-reg any-reg) :target where))
-  (:temporary (:scs (any-reg) :from (:argument 0)) where)
-  (:temporary (:scs (descriptor-reg)) symbol value)
+  (:args (arg :scs (descriptor-reg any-reg)))
   (:generator 0
     (emit-not-implemented)))
 
@@ -206,7 +202,6 @@
   (:policy :fast-safe)
   (:translate %instance-length)
   (:args (struct :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 4

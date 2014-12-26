@@ -174,7 +174,6 @@
   (:info start-lab copy-more-arg-follows #+nil clear-memory-p)
   (:ignore copy-more-arg-follows)
   (:vop-var vop)
-  (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 1
     ;; Make sure the function is aligned, and drop a label pointing to this
     ;; function header.
@@ -188,7 +187,6 @@
     (emit-not-implemented)
     ;; The start of the actual code.
     ;; Fix CODE, cause the function object was passed in.
-    (inst compute-code-from-fn code-tn code-tn start-lab temp)
 
     (trace-table-entry trace-table-normal)))
 
@@ -196,7 +194,6 @@
   (:results (res :scs (any-reg))
 	    (nfp :scs (any-reg)))
   (:info callee #+nil clear-memory-p)
-  (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 2
     (trace-table-entry trace-table-function-prologue)
     (emit-not-implemented)))
@@ -387,14 +384,7 @@ default-value-8
 (define-vop (unknown-values-receiver)
   (:results
    (start :scs (any-reg))
-   (count :scs (any-reg)))
-  (:temporary (:sc descriptor-reg :offset ocfp-offset
-		   :from :eval :to (:result 0))
-	      values-start)
-  (:temporary (:sc any-reg :offset nargs-offset
-	       :from :eval :to (:result 1))
-	      nvals)
-  (:temporary (:scs (non-descriptor-reg)) temp))
+   (count :scs (any-reg))))
 
 
 
@@ -427,10 +417,6 @@ default-value-8
   (:move-args :local-call)
   (:info arg-locs callee target nvals)
   (:vop-var vop)
-  (:temporary (:scs (descriptor-reg) :from (:eval 0)) move-temp)
-  (:temporary (:scs (non-descriptor-reg)) temp)
-  (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
-  (:temporary (:sc any-reg :offset ocfp-offset :from (:eval 0)) ocfp)
   (:ignore arg-locs args ocfp)
   (:generator 5
     (trace-table-entry trace-table-call-site)
@@ -455,7 +441,6 @@ default-value-8
   (:info save callee target)
   (:ignore args save)
   (:vop-var vop)
-  (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:generator 20
     (trace-table-entry trace-table-call-site)
     (emit-not-implemented)
@@ -481,8 +466,6 @@ default-value-8
   (:info save callee target)
   (:ignore args res save)
   (:vop-var vop)
-  (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
-  (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 5
     (trace-table-entry trace-table-call-site)
     (emit-not-implemented)
@@ -497,11 +480,9 @@ default-value-8
 ;;; MAYBE-LOAD-STACK-TN.
 ;;;
 (define-vop (known-return)
-  (:args (old-fp :target old-fp-temp)
-	 (return-pc :target return-pc-temp)
+  (:args (old-fp)
+	 (return-pc)
 	 (vals :more t))
-  (:temporary (:sc any-reg :from (:argument 0)) old-fp-temp)
-  (:temporary (:sc descriptor-reg :from (:argument 1)) return-pc-temp)
   (:move-args :known-return)
   (:info val-locs)
   (:ignore val-locs vals)
@@ -564,12 +545,12 @@ default-value-8
 	  '((new-fp :scs (any-reg) :to :eval)))
 
       ,(if named
-	   '(name :target name-pass)
-	   '(arg-fun :target lexenv))
+	   '(name)
+	   '(arg-fun))
       
       ,@(when (eq return :tail)
-	  '((old-fp :target old-fp-pass)
-	    (return-pc :target return-pc-pass)))
+	  '((old-fp)
+	    (return-pc)))
       
       ,@(unless variable '((args :more t :scs (descriptor-reg)))))
 
@@ -589,30 +570,6 @@ default-value-8
      (:ignore
       ,@(unless (or variable (eq return :tail)) '(arg-locs))
       ,@(unless variable '(args)))
-     (:temporary (:sc descriptor-reg
-		  :offset ocfp-offset
-		  :from (:argument 1)
-		  ,@(unless (eq return :fixed)
-		      '(:to :eval)))
-		 old-fp-pass)
-
-     (:temporary (:sc descriptor-reg
-		  :offset lra-offset
-		  :from (:argument ,(if (eq return :tail) 2 1))
-		  :to :eval)
-		 return-pc-pass)
-
-     ,(if named
-	  ;; FIXME: this offset was cname-offset, which doesn't exist
-	  ;; on ARM.  Use lexenv for now until we implement this.
-	  `(:temporary (:sc descriptor-reg :offset lexenv-offset
-			    :from (:argument ,(if (eq return :tail) 0 1))
-			    :to :eval)
-		       name-pass)
-	  `(:temporary (:sc descriptor-reg :offset lexenv-offset
-			    :from (:argument ,(if (eq return :tail) 0 1))
-			    :to :eval)
-		       lexenv))
      (:generator ,(+ (if named 5 0)
 		     (if variable 19 1)
 		     (if (eq return :tail) 0 10)
@@ -639,18 +596,10 @@ default-value-8
 ;;;
 (define-vop (tail-call-variable)
   (:args
-   (args-arg :scs (any-reg) :target args)
-   (function-arg :scs (descriptor-reg) :target lexenv)
-   (old-fp-arg :scs (any-reg) :target old-fp)
-   (lra-arg :scs (descriptor-reg) :target lra))
-
-  (:temporary (:sc any-reg :offset nl0-offset :from (:argument 0)) args)
-  (:temporary (:sc any-reg :offset lexenv-offset :from (:argument 1)) lexenv)
-  (:temporary (:sc any-reg :offset ocfp-offset :from (:argument 2)) old-fp)
-  (:temporary (:sc any-reg :offset lra-offset :from (:argument 3)) lra)
-
-  (:temporary (:scs (any-reg) :from :eval) temp)
-
+   (args-arg :scs (any-reg) #+nil :target #+nil args)
+   (function-arg :scs (descriptor-reg) #+nil :target #+nil lexenv)
+   (old-fp-arg :scs (any-reg) #+nil :target #+nil old-fp)
+   (lra-arg :scs (descriptor-reg) #+nil :target #+nil lra))
   (:vop-var vop)
 
   (:generator 75
@@ -694,11 +643,6 @@ default-value-8
    (values :more t))
   (:ignore values)
   (:info nvals)
-  (:temporary (:sc descriptor-reg :offset a0-offset :from (:eval 0)) a0)
-  (:temporary (:sc descriptor-reg :offset a1-offset :from (:eval 0)) a1)
-  (:temporary (:sc descriptor-reg :offset a2-offset :from (:eval 0)) a2)
-  (:temporary (:sc any-reg :offset nargs-offset) nargs)
-  (:temporary (:sc any-reg :offset ocfp-offset) val-ptr)
   (:vop-var vop)
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
@@ -714,17 +658,8 @@ default-value-8
   (:args
    (old-fp-arg :scs (any-reg) :to (:eval 1))
    (lra-arg :scs (descriptor-reg) :to (:eval 1))
-   (vals-arg :scs (any-reg) :target vals)
-   (nvals-arg :scs (any-reg) :target nvals))
-
-  (:temporary (:sc any-reg :from (:argument 0)) old-fp)
-  (:temporary (:sc descriptor-reg :offset lra-offset :from (:argument 1)) lra)
-  (:temporary (:sc any-reg :offset nl0-offset :from (:argument 2)) vals)
-  (:temporary (:sc any-reg :offset nargs-offset :from (:argument 3)) nvals)
-  (:temporary (:sc descriptor-reg :offset a0-offset) a0)
-
-  (:temporary (:scs (any-reg) :from (:eval 1)) temp)
-
+   (vals-arg :scs (any-reg) #+nil :target #+nil vals)
+   (nvals-arg :scs (any-reg) #+nil :target #+nil nvals))
   (:vop-var vop)
 
   (:generator 13
@@ -749,22 +684,17 @@ default-value-8
 ;;; Get the lexical environment from it's passing location.
 ;;;
 (define-vop (setup-closure-environment)
-  (:temporary (:sc descriptor-reg :offset lexenv-offset :target closure
-	       :to (:result 0))
-	      lexenv)
   (:results (closure :scs (descriptor-reg)))
   (:info label)
   (:ignore label)
   (:generator 6
     ;; Get result.
-    (move closure lexenv)))
+    (emit-not-implemented)))
 
 ;;; Copy a more arg from the argument area to the end of the current frame.
 ;;; Fixed is the number of non-more arguments. 
 ;;;
 (define-vop (copy-more-arg)
-  (:temporary (:sc any-reg :offset nl0-offset) result)
-  (:temporary (:sc descriptor-reg :offset lexenv-offset) temp)
   (:info fixed)
   (:generator 20
     (emit-not-implemented)))
@@ -781,14 +711,10 @@ default-value-8
 ;;; Turn more arg (context, count) into a list.
 ;;;
 (define-vop (listify-rest-args)
-  (:args (context-arg :target context :scs (descriptor-reg))
-	 (count-arg :target count :scs (any-reg)))
+  (:args (context-arg :scs (descriptor-reg))
+	 (count-arg :scs (any-reg)))
   (:arg-types * tagged-num (:constant t))
   (:info dynamic-extent)
-  (:temporary (:scs (any-reg) :from (:argument 0)) context)
-  (:temporary (:scs (any-reg) :from (:argument 1)) count)
-  (:temporary (:scs (descriptor-reg) :from :eval) temp)
-  (:temporary (:scs (non-descriptor-reg) :from :eval) dst)
   (:results (result :scs (descriptor-reg)))
   (:translate %listify-rest-args)
   (:policy :safe)
