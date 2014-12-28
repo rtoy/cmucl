@@ -55,6 +55,19 @@
      :alien-callback
      ))
 
+;; Use large values so that error messages in the logs contain more
+;; information so we don't have to run the cross-compile interactively
+;; to get all of the info out.
+(setf *print-length* 64
+      *print-level* 64
+      debug:*debug-print-length* 64
+      debug:*debug-print-level* 64
+      ext:*describe-print-length* 64
+      ext:*describe-print-level* 64
+      ext:*error-print-length* 64
+      ext:*error-print-level* 64)
+
+
 ;;; Changes needed to bootstrap cross-compiling from x86 to arm
 
 ;; Set up the linkage space stuff appropriately for arm.

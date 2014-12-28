@@ -117,15 +117,6 @@ $LISP "$@" -noinit -nositeinit <<EOF
 (pushnew :no-clm *features*)
 (pushnew :no-hemlock *features*)
 
-(setf *print-length* 64
-      *print-level* 64
-      debug:*debug-print-length* 64
-      debug:*debug-print-level* 64
-      ext:*describe-print-length* 64
-      ext:*describe-print-level* 64
-      ext:*error-print-length* 64
-      ext:*error-print-level* 64)
-
 ;; At this point we can stop and play around with the compiler to various bits.
 ;; EOF
 
