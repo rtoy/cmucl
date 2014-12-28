@@ -1440,6 +1440,13 @@
 
 ;; A5.2.8; extra load/store instructions for halfwords (16-bit signed
 ;; and unsigned) and signed bytes.
+;;
+;; ldrh rt, [rn, 0] ->
+;;   (inst ldrh rt rn 0)
+;; ldrh rt, [rn, #off]! ->
+;;   (inst ldrh rt (pre-index rn) #off
+;; ldrh rt, [rn], #off! ->
+;;   (inst ldrh rt (post-index rn) #off
 (defmacro define-load/store-extra-inst (name &optional loadp bytep signedp)
   `(define-instruction ,name (segment reg src1 src2 &optional (cond :al))
      (:declare (type tn reg)
@@ -1469,46 +1476,48 @@
 		  (if (or ,signedp ,bytep)
 		      #b01
 		      #b11))
-	(multiple-value-bind (p u w)
-	    (decode-indexing-and-options src1 src2)
 	  (etypecase src2
 	    ((or tn indexing-mode)
-	     (assert (eq (load-store-index-shift-type src2) :lsl))
-	     (emit-format-0-halfword-reg segment
-					 (condition-code-encoding cond)
-					 #b000
-					 p
-					 u
-					 0
-					 w
-					 ,(if loadp 1 0)
-					 (reg-tn-encoding (if (indexing-mode-p src1)
-							      (indexing-mode-reg src1)
-							      src1))
-					 (reg-tn-encoding reg)
-					 1
-					 0
-					 sign
-					 op2
-					 (reg-tn-encoding (load-store-index-offset src2))))
+	     (multiple-value-bind (p u w)
+		 (decode-indexing-and-options src1 src2)
+	       (assert (eq (load-store-index-shift-type src2) :lsl))
+	       (emit-format-0-halfword-reg segment
+					   (condition-code-encoding cond)
+					   #b000
+					   p
+					   u
+					   0
+					   w
+					   ,(if loadp 1 0)
+					   (reg-tn-encoding (if (indexing-mode-p src1)
+								(indexing-mode-reg src1)
+								src1))
+					   (reg-tn-encoding reg)
+					   1
+					   0
+					   sign
+					   op2
+					   (reg-tn-encoding (load-store-index-offset src2)))))
 	    (integer
-	     (emit-format-0-halfword-imm segment
-					 (condition-code-encoding cond)
-					 #b000
-					 p
-					 u
-					 1
-					 w
-					 ,(if loadp 1 0)
-					 (reg-tn-encoding (if (indexing-mode-p src1)
-							      (indexing-mode-reg src1)
-							      src1))
-					 (reg-tn-encoding reg)
-					 (ldb (byte 4 4) src2)
-					 1
-					 sign
-					 op2
-					 (ldb (byte 4 0) src2)))))))))
+	     (multiple-value-bind (p u w)
+		 (decode-immediate-indexing-mode src1 src2)
+	       (emit-format-0-halfword-imm segment
+					   (condition-code-encoding cond)
+					   #b000
+					   p
+					   u
+					   1
+					   w
+					   ,(if loadp 1 0)
+					   (reg-tn-encoding (if (indexing-mode-p src1)
+								(indexing-mode-reg src1)
+								src1))
+					   (reg-tn-encoding reg)
+					   (ldb (byte 4 4) src2)
+					   1
+					   sign
+					   op2
+					   (ldb (byte 4 0) src2)))))))))
 
 (define-load/store-extra-inst ldrh t)
 (define-load/store-extra-inst strh nil)
