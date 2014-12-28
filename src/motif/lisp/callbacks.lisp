@@ -326,7 +326,7 @@
 	   (setf (list-callback-selection-type info)
 		 (toolkit-read-value reply)))
 	 info))
-      (:text
+      (:text-field
        (let ((info (make-text-callback reason event)))
 	 (when (member reason '(:cr-losing-focus :cr-modifying-text-value
 						 :cr-moving-insert-cursor))

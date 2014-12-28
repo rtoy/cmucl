@@ -5177,6 +5177,29 @@ msgstr ""
 "  urrogatesay aluevay, espectivelyray."
 
 #: src/code/string.lisp
+#, fuzzy
+msgid ""
+"WITH-STRING-CODEPOINT-ITERATOR ((next string) &body body)\n"
+"  provides a method of looping through a string from the beginning to\n"
+"  the end of the string prodcucing successive codepoints from the\n"
+"  string.  NEXT is bound to a generator macro that, within the scope\n"
+"  of the invocation, returns one or two values. The first value tells\n"
+"  whether any objects remain in the string. When the first value is\n"
+"  non-NIL, the second value is the codepoint of the next object."
+msgstr ""
+"WITH-HASH-TABLE-ITERATOR ((unctionfay ashhay-abletay) &odybay odybay)\n"
+"   ovidespray away ethodmay ofway anuallymay oopinglay overway ethay "
+"elementsway ofway away ashhay-abletay.\n"
+"   FUNCTION isway oundbay otay away eneratorgay-acromay atthay, ithinway "
+"ethay opescay ofway ethay\n"
+"   invocationway, eturnsray oneway orway reethay aluesvay. Ethay irstfay "
+"aluevay ellstay etherwhay\n"
+"   anyway objectsway emainray inway ethay ashhay abletay. Enwhay ethay "
+"irstfay aluevay isway onnay-NIL, \n"
+"   ethay econdsay andway irdthay aluesvay areway ethay eykay andway ethay "
+"aluevay ofway ethay extnay objectway."
+
+#: src/code/string.lisp
 msgid ""
 "Return the high and low surrogate characters for Codepoint.  If\n"
 "  Codepoint is in the BMP, the first return value is the corresponding\n"
@@ -5618,6 +5641,30 @@ msgstr ""
 "SGLYPH eturnsray ethay yphglay atway ethay indexedway ositionpay, ethay "
 "amesay asway GLYPH,\n"
 "  exceptway atthay ethay ingstray ustmay ebay away implesay-ingstray"
+
+#: src/code/string.lisp
+#, fuzzy
+msgid ""
+"WITH-STRING-GLYPH-ITERATOR ((next string) &body body)\n"
+"  provides a method of looping through a string from the beginning to\n"
+"  the end of the string prodcucing successive glyphs from the string.\n"
+"  NEXT is bound to a generator macro that, within the scope of the\n"
+"  invocation, returns one or three values. The first value tells\n"
+"  whether any objects remain in the string. When the first value is\n"
+"  non-NIL, the second value is the index into the string of the glyph\n"
+"  and the third value is index of the next glyph."
+msgstr ""
+"WITH-HASH-TABLE-ITERATOR ((unctionfay ashhay-abletay) &odybay odybay)\n"
+"   ovidespray away ethodmay ofway anuallymay oopinglay overway ethay "
+"elementsway ofway away ashhay-abletay.\n"
+"   FUNCTION isway oundbay otay away eneratorgay-acromay atthay, ithinway "
+"ethay opescay ofway ethay\n"
+"   invocationway, eturnsray oneway orway reethay aluesvay. Ethay irstfay "
+"aluevay ellstay etherwhay\n"
+"   anyway objectsway emainray inway ethay ashhay abletay. Enwhay ethay "
+"irstfay aluevay isway onnay-NIL, \n"
+"   ethay econdsay andway irdthay aluesvay areway ethay eykay andway ethay "
+"aluevay ofway ethay extnay objectway."
 
 #: src/code/string.lisp
 msgid ""
@@ -19089,6 +19136,18 @@ msgstr "Unknownway epositionpray ~S"
 
 #: src/code/loop.lisp
 msgid "Destructuring is not valid for package symbol iteration."
+msgstr ""
+"Estructuringday isway otnay alidvay orfay ackagepay ymbolsay iterationway."
+
+#: src/code/loop.lisp
+#, fuzzy
+msgid "Destructuring is not valid for string codepoint iteration."
+msgstr ""
+"Estructuringday isway otnay alidvay orfay ackagepay ymbolsay iterationway."
+
+#: src/code/loop.lisp
+#, fuzzy
+msgid "Destructuring is not valid for string glyph iteration."
 msgstr ""
 "Estructuringday isway otnay alidvay orfay ackagepay ymbolsay iterationway."
 

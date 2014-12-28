@@ -259,7 +259,7 @@ write_space_object(const char *dir, int id, os_vm_address_t start, os_vm_address
 				   ((end - start) % os_vm_page_size));
     static char *names[] = { "Dynamic", "Static", "Read-Only" };
 
-    if(id < 1 || id > 3) {
+    if (!(1 <= id) && (id <= 3)) {
 	fprintf(stderr, "Invalid space id in %s: %d\n", __func__, id);
 	fprintf(stderr, "Executable not built.\n");
 	ret = -1;
@@ -425,6 +425,14 @@ map_core_sections(const char *exec_name)
             fprintf(stderr, "Reading next %ld bytes for SEGMENT\n", sizeof(sc) - sizeof(lc));
 #endif
 
+            /*
+             * This will read in the rest of the slots of a
+             * segment_command, starting from segname.  The initial
+             * slots of the segment_command were read above for the
+             * load_command. Alternatively, we could read in each slot
+             * individually, but that's error prone, especially if a
+             * new slot is ever added.
+             */
             eread(exec_fd, &sc.segname, sizeof(sc) - sizeof(lc), __func__);
 
 #ifdef DEBUG_MACH_O
@@ -445,7 +453,7 @@ map_core_sections(const char *exec_name)
 #endif
                     /*
                      * We don't care what address the segment has.  We
-                     * will map it where want it to go.
+                     * will map it where it wants to go.
                      */
                     
 		    addr = section_addr[j];

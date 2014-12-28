@@ -3703,6 +3703,17 @@ msgstr ""
 
 #: src/code/string.lisp
 msgid ""
+"WITH-STRING-CODEPOINT-ITERATOR ((next string) &body body)\n"
+"  provides a method of looping through a string from the beginning to\n"
+"  the end of the string prodcucing successive codepoints from the\n"
+"  string.  NEXT is bound to a generator macro that, within the scope\n"
+"  of the invocation, returns one or two values. The first value tells\n"
+"  whether any objects remain in the string. When the first value is\n"
+"  non-NIL, the second value is the codepoint of the next object."
+msgstr ""
+
+#: src/code/string.lisp
+msgid ""
 "Return the high and low surrogate characters for Codepoint.  If\n"
 "  Codepoint is in the BMP, the first return value is the corresponding\n"
 "  character and the second is NIL."
@@ -3957,6 +3968,18 @@ msgstr ""
 msgid ""
 "SGLYPH returns the glyph at the indexed position, the same as GLYPH,\n"
 "  except that the string must be a simple-string"
+msgstr ""
+
+#: src/code/string.lisp
+msgid ""
+"WITH-STRING-GLYPH-ITERATOR ((next string) &body body)\n"
+"  provides a method of looping through a string from the beginning to\n"
+"  the end of the string prodcucing successive glyphs from the string.\n"
+"  NEXT is bound to a generator macro that, within the scope of the\n"
+"  invocation, returns one or three values. The first value tells\n"
+"  whether any objects remain in the string. When the first value is\n"
+"  non-NIL, the second value is the index into the string of the glyph\n"
+"  and the third value is index of the next glyph."
 msgstr ""
 
 #: src/code/string.lisp
@@ -13387,6 +13410,14 @@ msgstr ""
 
 #: src/code/loop.lisp
 msgid "Destructuring is not valid for package symbol iteration."
+msgstr ""
+
+#: src/code/loop.lisp
+msgid "Destructuring is not valid for string codepoint iteration."
+msgstr ""
+
+#: src/code/loop.lisp
+msgid "Destructuring is not valid for string glyph iteration."
 msgstr ""
 
 #: src/code/stream-vector-io.lisp

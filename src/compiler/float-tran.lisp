@@ -865,7 +865,7 @@
     (cond ((= y-val 10)
 	   `(coerce (kernel:%log10 (float x 1d0)) 'single-float))
 	  ((= y-val 2)
-	   `(coerce (kernel::log2 (float x 1d0)) 'single-float)))))
+	   `(coerce (kernel:%log2 (float x 1d0)) 'single-float)))))
 
 (deftransform log ((x y) ((or (member 0d0) (double-float 0d0))
 			  (constant-argument number))
@@ -879,7 +879,7 @@
     (cond ((= y-val 10)
 	   `(kernel:%log10 (float x 1d0)))
 	  ((= y-val 2)
-	   `(kernel::log2 (float x 1d0))))))
+	   `(kernel:%log2 (float x 1d0))))))
 
 ;;; Handle some simple transformations
   

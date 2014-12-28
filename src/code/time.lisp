@@ -105,7 +105,7 @@
 ;;;  - T if daylight savings is in effect, NIL if not.
 ;;;
 (alien:def-alien-routine get-timezone c-call:void
-  (when c-call:long :in)
+  (when unix:time-t :in)
   (minutes-west c-call:int :out)
   (daylight-savings-p alien:boolean :out))
 

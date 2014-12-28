@@ -30,7 +30,7 @@
      :double-double			; double-double float support
      :linkage-table
 
-     :solaris :svr4 :sunos
+     :solaris :svr4 :sunos :elf
      ;; The :sse2 and :x87 features will get set by the compiling
      ;; lisp, so don't set it here!
      #+x87 :x87
@@ -159,6 +159,8 @@
 			       syms))))
   (frob OLD-VM:BYTE-BITS OLD-VM:WORD-BITS
 	OLD-VM:CHAR-BITS
+	OLD-VM:CHAR-BYTES
+	OLD-VM:LOWTAG-BITS
 	#+long-float OLD-VM:SIMPLE-ARRAY-LONG-FLOAT-TYPE 
 	OLD-VM:SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE 
 	OLD-VM:SIMPLE-ARRAY-SINGLE-FLOAT-TYPE

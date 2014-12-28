@@ -82,6 +82,7 @@
 (def-math-rtn ("__ieee754_exp" %exp) 1)
 (def-math-rtn ("__ieee754_log" %log) 1)
 (def-math-rtn ("__ieee754_log10" %log10) 1)
+(def-math-rtn ("cmucl_log2" %log2) 1)
 
 (def-math-rtn ("__ieee754_pow" %pow) 2)
 #-(or x86 sparc-v7 sparc-v8 sparc-v9)
@@ -631,8 +632,11 @@
 	 ;; it, and converting it to double-float is accurate.
 	 (if (= (integer-length top)
 		(integer-length bot))
-	     (/ (log1p (float (- x 1) float-type))
-		(log-of-2 float-type))
+	     (let ((log-abs (/ (log1p (float (- (abs x) 1) float-type))
+			       (log-of-2 float-type))))
+	       (if (minusp x)
+		   (complex log-abs (log-2-pi float-type))
+		   log-abs))
 	     (multiple-value-bind (top-n top-frac)
 		 (log2-bignum top)
 	       (multiple-value-bind (bot-n bot-frac)
@@ -644,6 +648,19 @@
 	   (log2-bignum x)
 	 (+ n frac))))))
 
+;; Handle the case where number could be so large that it doesn't fit
+;; in a double-float.
+(defun log10 (number &optional (float-type 1d0))
+  (let ((d (ignore-errors (float number 1d0))))
+    (cond (d
+	   ;; Number fits in a double, so it's easy
+	   (float (%log10 d) float-type))
+	  (t
+	   ;; Number doesn't fit in a double. Do it the hard way using
+	   ;; log2.  This should be done more accurately.
+	   (float (/ (log2 number)
+		     (log2 10)) float-type)))))
+  
 (defun log (number &optional (base nil base-p))
   "Return the logarithm of NUMBER in the base BASE, which defaults to e."
   (if base-p
@@ -653,27 +670,44 @@
 	    ((and (realp number) (realp base))
 	     (cond
 	       ((and (= base 2)
-		     (floatp number)
-		     #+double-double
-		     (not (typep number 'ext:double-double-float))
+		     ;;(floatp number)
 		     (or (plusp number)
 			 (eql number 0.0)
-			 (eql number 0d0)))
-		;; Do the same thing as the deftranform does for
-		;; log base 2 and 10 for non-negative arguments.
+			 (eql number 0d0)
+			 #+double-double
+			 (eql number 0w0)))
+		;; Do the same thing as the deftranform does for log
+		;; base 2 and 10 for non-negative arguments: handle
+		;; the case where number > 0 or equal to +0.
 		(number-dispatch ((number real) (base real))
 		  ((double-float
-		    (foreach integer single-float double-float))
+		    (foreach integer ratio single-float double-float))
+		   (%log2 number))
+		  ((single-float double-float)
+		   (%log2 (float number 1d0)))
+		  ((single-float
+		    (foreach integer ratio single-float))
+		   (float (%log2 (float number 1d0)) 1f0))
+		  (((foreach integer ratio)
+		    (foreach integer ratio single-float))
+		   (float (log2 number) 1f0))
+		  (((foreach integer ratio)
+		    double-float)
 		   (log2 number))
-		  ((single-float
-		    (foreach integer single-float))
-		   (float (log2 (float number 1d0)) 1f0))
-		  ((single-float double-float)
-		   (log2 (float number 1d0)))))
+		  #+double-double
+		  (((foreach single-float double-float)
+		    double-double-float)
+		   (dd-%log2 (float number 1w0)))
+		  #+double-double
+		  (((foreach integer ratio)
+		    double-double-float)
+		   (log2 number 1w0))
+		  #+double-double
+		  ((double-double-float
+		    (foreach integer ratio single-float double-float double-double-float))
+		   (dd-%log2 number))))
 	       ((and (= base 10)
-		     (floatp number)
-		     #+double-double
-		     (not (typep number 'double-double-float))
+		     ;;(floatp number)
 		     (or (plusp number)
 			 (eql number 0.0)
 			 (eql number 0d0)))
@@ -681,13 +715,31 @@
 		;; log base 2 and 10 for non-negative arguments.
 		(number-dispatch ((number real) (base real))
 		  ((double-float
-		    (foreach double-float single-float integer))
+		    (foreach integer ratio single-float double-float))
 		   (%log10 number))
-		  ((single-float
-		    (foreach single-float integer))
-		   (float (%log10 (float number 1d0)) 1f0))
 		  ((single-float double-float)
-		   (%log10 (float number 1d0)))))
+		   (%log10 (float number 1d0)))
+		  ((single-float
+		    (foreach integer ratio single-float))
+		   (float (%log10 (float number 1d0)) 1f0))
+		  (((foreach integer ratio)
+		    (foreach integer ratio single-float))
+		   (log10 number 1f0))
+		  (((foreach integer ratio)
+		    double-float)
+		   (log10 number 1d0))
+		  #+double-double
+		  (((foreach integer ratio)
+		    ext:double-double-float)
+		   (log10 number 1w0))
+		  #+double-double
+		  (((foreach single-float double-float)
+		    ext:double-double-float)
+		   (dd-%log10 (float number 1w0)))
+		  #+double-double
+		  ((double-double-float
+		    (foreach integer ratio single-float double-float double-double-float))
+		   (dd-%log10 number))))
 	       (t
 		;; CLHS 12.1.4.1 says
 		;;
@@ -729,11 +781,14 @@
 		  #+double-double
 		  ((double-double-float
 		    (foreach fixnum bignum ratio))
+		   ;; Use log2 in case the base is so large that it
+		   ;; won't fit in a float.
 		   (/ (log2 number 1w0) (log2 base 1w0)))
 		  #+double-double
 		  ((double-double-float
 		    (foreach double-double-float double-float single-float))
-		   (/ (log number) (log (coerce base 'double-double-float))))
+		   (/ (log number)
+		      (log (coerce base 'double-double-float))))
 		  #+double-double
 		  (((foreach fixnum bignum ratio)
 		    double-double-float)

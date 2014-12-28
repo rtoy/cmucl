@@ -1,7 +1,9 @@
 CFLAGS = -O2 -I/usr/pkg/include -I/usr/X11R7/include -I. -I$(VPATH)
 LDFLAGS = -R/usr/X11R7/lib -L/usr/X11R7/lib -R/usr/pkg/lib -L/usr/pkg/lib
-LIBS = -lXm -lXt -lXext -lX11 -lSM -lICE -lXp
+LIBS = -lXm -lXt -lXext -lX11 -lSM -lICE
 # This def assumes you are building in the same or parallel
 # tree to the CVS souce layout. Sites may need to customize
 # this path.
 VPATH = ../../../src/motif/server/
+
+DEPEND_FLAGS = -MM
