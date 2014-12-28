@@ -32,13 +32,12 @@
 
 (in-package "PCL-TESTS")
 
+;; These errors are signaled during macroexpansion of the defgeneric
+;; form so catch the errors during macroexpansion.
 (defmacro define-gf-lambda-list-test (name lambda-list)
-  `(deftest ,name
-       (multiple-value-bind (r c)
-	   (ignore-errors
-	     (defgeneric g ,lambda-list))
-	 (values (null r) (typep c 'error)))
-     t t))
+  `(define-test ,name
+     (assert-error 'program-error
+		   (macroexpand '(defgeneric g ,lambda-list)))))
 
 (define-gf-lambda-list-test defgeneric-lambda-list.0 (a &optional (b 1)))
 (define-gf-lambda-list-test defgeneric-lambda-list.1 (a &key (b 1)))

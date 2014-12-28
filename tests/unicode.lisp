@@ -171,7 +171,7 @@
 (define-test unicode.word-break
   "Test Unicode word break algorithm"
   (:tag :unicode)
-  (with-open-file (s *word-break-test* :direction :input :external-format :utf)
+  (with-open-file (s *word-break-test* :direction :input :external-format :utf-8)
     (loop for line = (read-line s nil nil)
 	  while line
 	  do

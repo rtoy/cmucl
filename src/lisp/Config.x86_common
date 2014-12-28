@@ -49,8 +49,6 @@ ifdef FEATURE_ELF
 CPP_DEFINE_OPTIONS += -DFEATURE_ELF
 endif
 
-LD = ld
-
 ifeq ($(filter 2% 3%, $(shell $(CC) -dumpversion)),)
 CPP_INCLUDE_OPTIONS := -iquote . -iquote $(PATH1)
 else

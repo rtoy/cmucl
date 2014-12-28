@@ -215,8 +215,9 @@
 (def-alien-type caddr-t (* char))
 
 (def-alien-type ino-t
-    #-alpha unsigned-long
-    #+alpha unsigned-int)
+    #+netbsd u-int64-t
+    #+alpha unsigned-int
+    #-(or alpha netbsd) unsigned-long)
 
 (def-alien-type swblk-t long)
 
@@ -228,14 +229,16 @@
 (def-alien-type time-t
     #-(or bsd linux alpha) unsigned-long
     #+linux long
-    #+bsd long
+    #+(and bsd (not netbsd)) long
+    #+(and bsd netbsd) int64-t
     #+alpha unsigned-int)
 
 (def-alien-type dev-t
     #-(or alpha svr4 bsd linux) short
     #+linux unsigned-short
+    #+netbsd u-int64-t
     #+alpha int
-    #+(and (not linux) (or bsd svr4)) unsigned-long)
+    #+(and (not linux) (not netbsd) (or bsd svr4)) unsigned-long)
 
 #-BSD
 (progn
@@ -286,7 +289,8 @@
     #+svr4 unsigned-long)
 
 (def-alien-type nlink-t
-    #-svr4 unsigned-short
+    #-(or svr4 netbsd) unsigned-short
+    #+netbsd unsigned-long
     #+svr4 unsigned-long)
 
 (defconstant FD-SETSIZE
@@ -335,7 +339,7 @@
 (def-alien-type nil
   (struct timeval
     (tv-sec #-linux time-t #+linux int)		; seconds
-    (tv-usec #-linux time-t #+linux int)))		; and microseconds
+    (tv-usec int)))				; and microseconds
 
 (def-alien-type nil
   (struct timezone
@@ -359,7 +363,7 @@
 #+(or linux BSD)
 (def-alien-type nil
   (struct timespec-t
-    (ts-sec long)
+    (ts-sec time-t)
     (ts-nsec long)))
 
 ;;; From ioctl.h
@@ -466,7 +470,7 @@
     (d-namlen unsigned-short)		; length of string in d-name
     (d-name (array char 256))))		; name must be no longer than this
 
-#+bsd
+#+(and bsd (not netbsd))
 (def-alien-type nil
   (struct direct
     (d-fileno unsigned-long)
@@ -474,6 +478,15 @@
     (d-type unsigned-char)
     (d-namlen unsigned-char)		; length of string in d-name
     (d-name (array char 256))))		; name must be no longer than this
+
+#+netbsd
+(def-alien-type nil
+  (struct direct
+    (d-fileno ino-t)
+    (d-reclen unsigned-short)
+    (d-namlen unsigned-short)
+    (d-type unsigned-char)
+    (d-name (array char 512))))
 
 ;;; The 64-bit version of struct dirent.
 #+solaris
@@ -509,7 +522,7 @@
     (st-blocks #-alpha long #+alpha int)
     (st-spare4 (array long 2))))
 
-#+bsd
+#+(and bsd (not netbsd))
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
@@ -529,6 +542,27 @@
     (st-gen     unsigned-long)
     (st-lspare  long)
     (st-qspare (array long 4))))
+
+#+netbsd
+(def-alien-type nil
+  (struct stat
+    (st-dev dev-t)
+    (st-mode mode-t)
+    (st-ino ino-t)
+    (st-nlink nlink-t)
+    (st-uid uid-t)
+    (st-gid gid-t)
+    (st-rdev dev-t)
+    (st-atime (struct timespec-t))
+    (st-mtime (struct timespec-t))
+    (st-ctime (struct timespec-t))
+    (st-birthtime (struct timespec-t))
+    (st-size off-t)
+    (st-blocks off-t)
+    (st-blksize long)
+    (st-flags   unsigned-long)
+    (st-gen     unsigned-long)
+    (st-spare (array unsigned-long 2))))
 
 #+(or linux svr4)
 (def-alien-type nil
@@ -1597,7 +1631,7 @@
        (when timeout-secs
 	 (setf (slot tv 'tv-sec) timeout-secs)
 	 (setf (slot tv 'tv-usec) ,timeout-usecs))
-       (int-syscall ("select" int (* (struct fd-set)) (* (struct fd-set))
+       (int-syscall (#-netbsd "select" #+netbsd "__select50" int (* (struct fd-set)) (* (struct fd-set))
 		     (* (struct fd-set)) (* (struct timeval)))
 		    ,num-descriptors ,read-fds ,write-fds ,exception-fds
 		    (if timeout-secs (alien-sap (addr tv)) (int-sap 0))))))
@@ -1647,7 +1681,7 @@
 		 `(if (zerop ,lispvar)
 		      (int-sap 0)
 		      (alien-sap (addr ,alienvar)))))
-      (syscall ("select" int (* (struct fd-set)) (* (struct fd-set))
+      (syscall (#-netbsd "select" #+netbsd "__select50" int (* (struct fd-set)) (* (struct fd-set))
 		(* (struct fd-set)) (* (struct timeval)))
 	       (values result
 		       (fd-set-to-num nfds rdf)
@@ -2137,6 +2171,7 @@
 	   #-(or svr4 BSD) (slot ,buf 'st-ctime)
 	   #+svr4   (slot (slot ,buf 'st-ctime) 'tv-sec)
            #+BSD(slot (slot ,buf 'st-ctime) 'ts-sec)
+	   #+netbsd (slot (slot ,buf 'st-birthtime) 'ts-sec)
 	   (slot ,buf 'st-blksize)
 	   (slot ,buf 'st-blocks)))
 
@@ -2152,7 +2187,7 @@
   (when (string= name "")
     (setf name "."))
   (with-alien ((buf (struct stat)))
-    (syscall ("stat" c-string (* (struct stat)))
+    (syscall (#-netbsd "stat" #+netbsd "__stat50" c-string (* (struct stat)))
 	     (extract-stat-results buf)
 	     (%name->file name) (addr buf))))
 
@@ -2161,7 +2196,7 @@
    file must be a symbolic link."
   (declare (type unix-pathname name))
   (with-alien ((buf (struct stat)))
-    (syscall ("lstat" c-string (* (struct stat)))
+    (syscall (#-netbsd "lstat" #+netbsd "__lstat50" c-string (* (struct stat)))
 	     (extract-stat-results buf)
 	     (%name->file name) (addr buf))))
 
@@ -2170,7 +2205,7 @@
    by the file descriptor fd."
   (declare (type unix-fd fd))
   (with-alien ((buf (struct stat)))
-    (syscall ("fstat" int (* (struct stat)))
+    (syscall (#-netbsd "fstat" #+netbsd "__fstat50" int (* (struct stat)))
 	     (extract-stat-results buf)
 	     fd (addr buf))))
 )
@@ -2223,7 +2258,7 @@
 		   (unsigned-byte 31) (mod 1000000)
 		   (unsigned-byte 31) (mod 1000000)))
   (with-alien ((usage (struct rusage)))
-    (syscall* ("getrusage" int (* (struct rusage)))
+    (syscall* (#-netbsd "getrusage" #+netbsd "__getrusage50" int (* (struct rusage)))
 	      (values t
 		      (slot (slot usage 'ru-utime) 'tv-sec)
 		      (slot (slot usage 'ru-utime) 'tv-usec)
@@ -2238,7 +2273,7 @@
    child processes (rusage_children).  NIL and an error number
    is returned if the call fails."
   (with-alien ((usage (struct rusage)))
-    (syscall ("getrusage" int (* (struct rusage)))
+    (syscall (#-netbsd "getrusage" #+netbsd "__getrusage50" int (* (struct rusage)))
 	      (values t
 		      (+ (* (slot (slot usage 'ru-utime) 'tv-sec) 1000000)
 			 (slot (slot usage 'ru-utime) 'tv-usec))
@@ -2327,18 +2362,20 @@
    of Greenwich), and a daylight-savings flag.  If it doesn't work, it
    returns NIL and the errno."
   (with-alien ((tv (struct timeval))
-	       #-svr4 (tz (struct timezone)))
-    (syscall* ("gettimeofday" (* (struct timeval)) #-svr4 (* (struct timezone)))
+	       #-(or svr4 netbsd) (tz (struct timezone)))
+    (syscall* (#-netbsd "gettimeofday"
+	       #+netbsd  "__gettimeofday50"
+	       (* (struct timeval)) #-svr4 (* (struct timezone)))
 	      (values T
 		      (slot tv 'tv-sec)
 		      (slot tv 'tv-usec)
-		      #-svr4 (slot tz 'tz-minuteswest)
+		      #-(or svr4 netbsd) (slot tz 'tz-minuteswest)
 		      #+svr4 (unix-get-minutes-west (slot tv 'tv-sec))
-		      #-svr4 (slot tz 'tz-dsttime)
+		      #-(or svr4 netbsd) (slot tz 'tz-dsttime)
 		      #+svr4 (unix-get-timezone (slot tv 'tv-sec))
 		      )
 	      (addr tv)
-	      #-svr4 (addr tz))))
+	      #-(or svr4 netbsd) (addr tz) #+netbsd nil)))
 
 ;;; Unix-utimes changes the accessed and updated times on UNIX
 ;;; files.  The first argument is the filename (a string) and
@@ -2359,7 +2396,7 @@
     (setf (slot (deref tvp 0) 'tv-usec) atime-usec)
     (setf (slot (deref tvp 1) 'tv-sec) mtime-sec)
     (setf (slot (deref tvp 1) 'tv-usec) mtime-usec)
-    (void-syscall ("utimes" c-string (* (struct timeval)))
+    (void-syscall (#-netbsd "utimes" #+netbsd "__utimes50" c-string (* (struct timeval)))
 		  file
 		  (cast tvp (* (struct timeval))))))
 
@@ -2592,8 +2629,8 @@
 	(with-alien ((direct (* (struct direct)) daddr))
 	  (let ((nlen (slot direct 'd-namlen))
 		(fino (slot direct 'd-fileno)))
-	    (declare (type (unsigned-byte 8) nlen)
-		     (type (unsigned-byte 32) fino))
+	    (declare (type (unsigned-byte #+netbsd 16 #-netbsd 8) nlen)
+		     (type (unsigned-byte #+netbsd 64 #-netbsd 32) fino))
 	    (let ((string (make-string nlen)))
 	      #-unicode
 	      (kernel:copy-from-system-area
@@ -3089,14 +3126,16 @@
    T, it-interval-secs, it-interval-usec, it-value-secs, it-value-usec."
   (declare (type (member :real :virtual :profile) which)
 	   (values t
-		   (unsigned-byte 29)(mod 1000000)
-		   (unsigned-byte 29)(mod 1000000)))
+		   #+netbsd (unsigned-byte 63) #-netbsd (unsigned-byte 29)
+		   (mod 1000000)
+		   #+netbsd (unsigned-byte 63) #-netbsd (unsigned-byte 29)
+		   (mod 1000000)))
   (let ((which (ecase which
 		 (:real ITIMER-REAL)
 		 (:virtual ITIMER-VIRTUAL)
 		 (:profile ITIMER-PROF))))
     (with-alien ((itv (struct itimerval)))
-      (syscall* ("getitimer" int (* (struct itimerval)))
+      (syscall* (#-netbsd "getitimer" #+netbsd "__getitimer50" int (* (struct itimerval)))
 		(values T
 			(slot (slot itv 'it-interval) 'tv-sec)
 			(slot (slot itv 'it-interval) 'tv-usec)
@@ -3117,8 +3156,10 @@
 	   (type (unsigned-byte 29) int-secs val-secs)
 	   (type (integer 0 (1000000)) int-usec val-usec)
 	   (values t
-		   (unsigned-byte 29)(mod 1000000)
-		   (unsigned-byte 29)(mod 1000000)))
+		   (unsigned-byte 29)
+		   (mod 1000000)
+		   (unsigned-byte 29)
+		   (mod 1000000)))
   (let ((which (ecase which
 		 (:real ITIMER-REAL)
 		 (:virtual ITIMER-VIRTUAL)
@@ -3129,7 +3170,7 @@
 	    (slot (slot itvn 'it-interval) 'tv-usec) int-usec
 	    (slot (slot itvn 'it-value   ) 'tv-sec ) val-secs
 	    (slot (slot itvn 'it-value   ) 'tv-usec) val-usec)
-      (syscall* ("setitimer" int (* (struct timeval))(* (struct timeval)))
+      (syscall* (#-netbsd "setitimer" #+netbsd "__setitimer50" int (* (struct timeval))(* (struct timeval)))
 		(values T
 			(slot (slot itvo 'it-interval) 'tv-sec)
 			(slot (slot itvo 'it-interval) 'tv-usec)

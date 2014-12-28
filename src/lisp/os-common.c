@@ -221,7 +221,7 @@ os_foreign_linkage_init(void)
         }
 #endif        
 	if (i == 0) {
-#if defined(sparc)
+#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
             if (type != LINKAGE_CODE_TYPE || strcmp(c_symbol_name, EXTERN_ALIEN_NAME("call_into_c"))) {
 		fprintf(stderr, "linkage_data is %s but expected %s\n",
 			c_symbol_name,
@@ -229,14 +229,6 @@ os_foreign_linkage_init(void)
 		lose("First element of linkage_data is bogus.\n");
 	    }
 	    arch_make_linkage_entry(i, (void*) call_into_c, 1);
-#elif (defined(DARWIN) && defined(__ppc__))
-	    if (type != 1 || strcmp(c_symbol_name, EXTERN_ALIEN_NAME("call_into_c"))) {
-		fprintf(stderr, "linkage_data is %s but expected %s\n",
-			c_symbol_name,
-                        EXTERN_ALIEN_NAME("call_into_c"));
-		lose("First element of linkage_data is bogus.\n");
-	    }
-	    arch_make_linkage_entry(i, &call_into_c, 1);
 #else
 	    if (type != LINKAGE_CODE_TYPE || strcmp(c_symbol_name,
                                                     EXTERN_ALIEN_NAME("resolve_linkage_tramp"))) {

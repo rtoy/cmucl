@@ -12,3 +12,5 @@ LIBS = -lXm -lXt -lX11 -lsocket -lnsl -lgen
 # tree to the CVS souce layout. Sites may need to customize
 # this path.
 VPATH = ../../../src/motif/server/
+
+DEPEND_FLAGS = -MM

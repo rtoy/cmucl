@@ -13,7 +13,8 @@ FDLIBM = k_sin.c k_cos.c k_tan.c s_sin.c s_cos.c s_tan.c sincos.c \
 	e_atan2.c \
 	e_rem_pio2.c k_rem_pio2.c \
 	e_log10.c s_scalbn.c \
-	setexception.c
+	setexception.c \
+	log2.c
 
 SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	vars.c parse.c interrupt.c search.c validate.c globals.c \
@@ -48,10 +49,10 @@ lisp: ${OBJS} version.o
 # builtin_image_flag to 1 so that the runtime knows the runtime
 # contains the core sections.
 lisp.a:	version.o ${OBJS} ${EXEC_FINAL_OBJ}
-	ar crs lisp.a ${OBJS} version.o
+	$(AR) crs lisp.a ${OBJS} version.o
 ifneq (${EXEC_FINAL_OBJ},)
-	ar d lisp.a exec-init.o
-	ar r lisp.a ${EXEC_FINAL_OBJ}
+	$(AR) d lisp.a exec-init.o
+	$(AR) r lisp.a ${EXEC_FINAL_OBJ}
 endif
 
 version:
@@ -62,7 +63,7 @@ internals.h internals.inc:
 	@false
 
 clean:
-	rm -f Depends *.o lisp lisp.nm core
+	$(RM) Depends *.o lisp lisp.nm core lisp.a
 	echo 'Map file for lisp version 0' > lisp.nm
 
 depend: Depends
