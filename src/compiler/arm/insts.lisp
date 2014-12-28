@@ -1100,15 +1100,20 @@
 ;;
 ;; ldr<c> dst, [src1, +/-src2, shift]<!>
 ;; ldr<c> dst, [src1], +/-src2, shift
-
 (defconstant format-3-reg-printer
   (macrolet ((frob (printer)
 	       `(let ((add/sub-reg
-			;; Don't print "+" if we are adding.
+			;; Print "-" only if the register is to be
+			;; subtracted.  If adding, nothing is needed,
+			;; and we choose not to print the optional "+".
 			'(:unless (u :constant 1) "-"))
 		      (shift-reg-amount
 			'(:unless (:and (type :constant 0) (imm5 :constant 0))
-			  ;; Shift type LSL with 0 shift, so don't print anything.
+			  ;; Shift type LSL with 0 shift is the
+			  ;; default identity operation so don't print
+			  ;; anything. All other shift types and
+			  ;; amounts are displayed, even if they would
+			  ;; be an identity like ROR #0.
 			  ", " type " #" imm5)))
 		  ,printer)))
     (frob `(:name cond
