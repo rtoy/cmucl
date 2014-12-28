@@ -190,7 +190,6 @@ mac-uk		mac-cyrillic
 macukrainian	mac-cyrillic
 maccyrillic	mac-cyrillic
 
-utf		utf-8
 utf8		utf-8
 
 ;; UTF-16 will recognize a BOM at the beginning of the file and will

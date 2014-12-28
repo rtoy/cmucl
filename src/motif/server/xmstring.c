@@ -18,7 +18,7 @@
 #include "types.h"
 #include "tables.h"
 #include "requests.h"
-
+#include "oid.h"
 
 /* Functions for building XmFontLists */
 
@@ -61,6 +61,7 @@ void RXmFontListFree(message_t message)
   XmFontList flist;
 
   toolkit_read_value(message,&flist,XmRFontList);
+  unintern_object(flist);
   XmFontListFree(flist);
 }
 
@@ -144,7 +145,7 @@ void RXmStringGetLtoR(message_t message)
   result = XmStringGetLtoR(xs,charset,&text);
 
   message_write_string(reply,text,string_tag);
-  message_write_boolean(reply,text,boolean_tag);
+  message_write_boolean(reply,(result==True)?1:0,boolean_tag);
   message_send(client_socket,reply);
   message_free(reply);
 
@@ -189,6 +190,7 @@ void RXmStringFree(message_t message)
   XmString s;
 
   toolkit_read_value(message,&s,XmRXmString);
+  unintern_object(s);
   XmStringFree(s);
 }
 

@@ -238,9 +238,9 @@ sc_reg(os_context_t * context, int offset)
       case 35:
 	  return &state->__ctr;
       case 41:
-	  return &context->uc_mcontext->__es.__dar;
+	  return (unsigned int *) &context->uc_mcontext->__es.__dar;
       case 42:
-	  return &context->uc_mcontext->__es.__dsisr;
+	  return (unsigned int *) &context->uc_mcontext->__es.__dsisr;
     }
 
     return (unsigned int *) 0;
@@ -534,7 +534,7 @@ os_dlsym(const char *sym_name, lispobj lib_list)
     void *sym_addr = 0;
     int offset = sym_name[0] == '_' ? 1 : 0;
 
-#if 1
+#if 0
     if (offset == 0) {
         fprintf(stderr, "sym-name = %s\n", sym_name);
     }

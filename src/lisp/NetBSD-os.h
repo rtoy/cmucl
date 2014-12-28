@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/signal.h>
+#include <sys/stat.h>
 #include <ucontext.h>
 #include <string.h>
 #include <unistd.h>
