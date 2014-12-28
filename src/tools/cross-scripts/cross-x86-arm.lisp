@@ -55,9 +55,9 @@
      :alien-callback
      ))
 
-;; Use large values so that error messages in the logs contain more
-;; information so we don't have to run the cross-compile interactively
-;; to get all of the info out.
+;; Temporarily use large values so that error messages in the logs
+;; contain more information so we don't have to run the cross-compile
+;; interactively to get all of the info out.
 (setf *print-length* 64
       *print-level* 64
       debug:*debug-print-length* 64
