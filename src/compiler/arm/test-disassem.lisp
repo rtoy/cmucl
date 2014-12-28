@@ -117,7 +117,20 @@
     (assemble (segment)
       (inst mov n na)
       (inst add n na (make-shift na :lsl 2))
-      (inst vadd fd-0 fd-0 fd-1))))
+      (inst vadd fd-0 fd-0 fd-1)
+      (inst ldrh na n 0)
+      (inst strh na n 4))
+    segment))
+
+(defun disassem-test-assem ()
+  ;; Hack. Don't know why disassem:;disassemble-assem-segment won't
+  ;; disassemble the result of test-assem.  Hence we do it here
+  ;; ourselves.
+  (let* ((seg (test-assem))
+	 (start (new-assem::segment-output-blocks seg)))
+    (disassem::disassemble-memory (aref start 0)
+				  (new-assem::segment-current-index seg)
+				  :backend c::*target-backend*)))
 
 (in-package "CL-USER")
 #||
