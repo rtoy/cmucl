@@ -68,7 +68,7 @@
   nl0 nl1 nl2 nargs)
 
 (defregset descriptor-regs
-  a0 a1 a2 ocfp lra)
+  a0 a1 a2 ocfp lra lexenv)
 
 (defregset register-arg-offsets
   a0 a1 a2)

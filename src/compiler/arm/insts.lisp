@@ -1411,6 +1411,22 @@
 						     src1))
 				(reg-tn-encoding reg)
 				(abs src2))))
+	(tn
+	 ;; Simple case where we have just an offset register
+	 (emit-format-3-reg segment
+			    (condition-code-encoding cond)
+			    #b011
+			    1		; P: indexed
+			    1		; U: add
+			    ,(if bytep 1 0)
+			    0		; W: no writeback (update)
+			    ,(if loadp 1 0)
+			    (reg-tn-encoding src1)
+			    (reg-tn-encoding reg)
+			    0
+			    0
+			    0
+			    (reg-tn-encoding src2)))
 	(load-store-index
 	 ;; Handle the complicated cases with an offset register, with
 	 ;; a possible hairy shift operation.
