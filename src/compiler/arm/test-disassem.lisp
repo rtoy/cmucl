@@ -118,8 +118,10 @@
       (inst mov n na)
       (inst add n na (make-shift na :lsl 2))
       (inst vadd fd-0 fd-0 fd-1)
+      ;; Tests for issue #21
       (inst ldrh na n 0)
-      (inst strh na n 4))
+      (inst strh na n 4)
+      (inst strh na n -8))
     segment))
 
 (defun disassem-test-assem ()

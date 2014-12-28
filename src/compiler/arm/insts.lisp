@@ -1501,23 +1501,24 @@
 	    (integer
 	     (multiple-value-bind (p u w)
 		 (decode-immediate-indexing-mode src1 src2)
-	       (emit-format-0-halfword-imm segment
-					   (condition-code-encoding cond)
-					   #b000
-					   p
-					   u
-					   1
-					   w
-					   ,(if loadp 1 0)
-					   (reg-tn-encoding (if (indexing-mode-p src1)
-								(indexing-mode-reg src1)
-								src1))
-					   (reg-tn-encoding reg)
-					   (ldb (byte 4 4) src2)
-					   1
-					   sign
-					   op2
-					   (ldb (byte 4 0) src2)))))))))
+	       (let ((imm8 (abs src2)))
+		 (emit-format-0-halfword-imm segment
+					     (condition-code-encoding cond)
+					     #b000
+					     p
+					     u
+					     1
+					     w
+					     ,(if loadp 1 0)
+					     (reg-tn-encoding (if (indexing-mode-p src1)
+								  (indexing-mode-reg src1)
+								  src1))
+					     (reg-tn-encoding reg)
+					     (ldb (byte 4 4) imm8)
+					     1
+					     sign
+					     op2
+					     (ldb (byte 4 0) imm8))))))))))
 
 (define-load/store-extra-inst ldrh t)
 (define-load/store-extra-inst strh nil)
