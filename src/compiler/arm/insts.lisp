@@ -1458,12 +1458,12 @@
 ;; A5.2.8; extra load/store instructions for halfwords (16-bit signed
 ;; and unsigned) and signed bytes.
 ;;
-;; ldrh rt, [rn, 0] ->
-;;   (inst ldrh rt rn 0)
-;; ldrh rt, [rn, #off]! ->
-;;   (inst ldrh rt (pre-index rn) #off
-;; ldrh rt, [rn], #off! ->
-;;   (inst ldrh rt (post-index rn) #off
+;; ldrh rt, [rn, 0]
+;;   -> (inst ldrh rt rn 0)
+;; ldrh rt, [rn, #off]!
+;;   -> (inst ldrh rt (pre-index rn) off)
+;; ldrh rt, [rn], #off!
+;;   -> (inst ldrh rt (post-index rn) off)
 (defmacro define-load/store-extra-inst (name &optional loadp bytep signedp)
   `(define-instruction ,name (segment reg src1 src2 &optional (cond :al))
      (:declare (type tn reg)

@@ -100,6 +100,9 @@
 		    (subseq line (+ 1 4 pattern-begin) (1- (length line))))))))))
 
 (in-package "VM")
+
+;; A set of random insts to test that the assembler can assembly the
+;; given instructions.
 (defun test-assem ()
   (let ((segment (make-segment))
 	(n (c:make-random-tn :kind :normal
@@ -124,10 +127,16 @@
       (inst strh na n -8))
     segment))
 
+;; Disassemble the result of TEST-ASSEM.  Intended to verify that we
+;; can disassemble the instructions in TEST-ASSEM and that the
+;; disassemnbly has the expected from.
 (defun disassem-test-assem ()
-  ;; Hack. Don't know why disassem:;disassemble-assem-segment won't
+  ;; Hack. Don't know why disassem::disassemble-assem-segment won't
   ;; disassemble the result of test-assem.  Hence we do it here
-  ;; ourselves.
+  ;; ourselves by looking at the block of memory into which the
+  ;; instructions were assembled.  This is fragile, but good enough
+  ;; for simple testing for now.  Currently assumes everything is in
+  ;; the first element of returned by NEW-ASSEM::SEGMENT-OUTPUT-BLOCKS.
   (let* ((seg (test-assem))
 	 (start (new-assem::segment-output-blocks seg)))
     (disassem::disassemble-memory (aref start 0)
