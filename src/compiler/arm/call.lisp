@@ -366,14 +366,14 @@ default-value-8
   (let ((variable-values (gen-label))
 	(done (gen-label)))
     (new-assem:without-scheduling ()
-      (emit-not-implemented))
+      (vm::not-implemented 'receive-unknown-values-pre))
 
-    (emit-not-implemented)
+    (vm::not-implemented 'receive-unknown-values-body)
     
     (assemble (*elsewhere*)
       (trace-table-entry trace-table-function-prologue)
       (emit-label variable-values)
-      (emit-not-implemented)
+      (vm::not-implemented 'receive-unknown-values-post)
       (trace-table-entry trace-table-normal)))
   (undefined-value))
 
