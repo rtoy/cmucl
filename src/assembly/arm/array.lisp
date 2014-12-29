@@ -25,10 +25,7 @@
 			 ((:arg type any-reg a0-offset)
 			  (:arg length any-reg a1-offset)
 			  (:arg words any-reg a2-offset)
-			  (:res result descriptor-reg a0-offset)
-
-			  (:temp ndescr non-descriptor-reg nl0-offset)
-			  (:temp vector descriptor-reg a2-offset))
+			  (:res result descriptor-reg a0-offset))
   (emit-not-implemented))
 
 
