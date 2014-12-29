@@ -65,7 +65,8 @@ find $TARGET -name "*.bytef" -o -name "*.lbytef" -o -name "*.assem" -o \
 	-name "*.ppcf" -o \
 	-name "*.sparcf" -o \
 	-name "*.x86f" -o \
-	-name "*.sse2f" $CORE | $GREP $PATTERN | xargs rm 2> /dev/null
+	-name "*.sse2f" -o \
+        -name "*.armf" $CORE | $GREP $PATTERN | xargs rm 2> /dev/null
 
 for d in $TARGET
 do
