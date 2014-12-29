@@ -750,7 +750,7 @@
 	   (type (or tn (signed-byte 13)) multiplicand))
   ;; It seems that emit-multiply is only used to do an unsigned
   ;; multiply, so the code only does an unsigned multiply.
-  (emit-not-implemented))
+  (vm::not-implemented 'emit-multiply))
 
 (define-vop (bignum-mult-and-add-3-arg)
   (:translate bignum::%multiply-and-add)
