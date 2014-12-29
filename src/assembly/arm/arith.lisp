@@ -28,12 +28,7 @@
 			 ((:arg x (descriptor-reg any-reg) a0-offset)
 			  (:arg y (descriptor-reg any-reg) a1-offset)
 
-			  (:res res (descriptor-reg any-reg) a0-offset)
-
-			  (:temp temp non-descriptor-reg nl0-offset)
-			  (:temp lra descriptor-reg lra-offset)
-			  (:temp nargs any-reg nargs-offset)
-			  (:temp ocfp any-reg ocfp-offset))
+			  (:res res (descriptor-reg any-reg) a0-offset))
   (emit-not-implemented))
 
 
@@ -46,12 +41,7 @@
 			 ((:arg x (descriptor-reg any-reg) a0-offset)
 			  (:arg y (descriptor-reg any-reg) a1-offset)
 
-			  (:res res (descriptor-reg any-reg) a0-offset)
-
-			  (:temp temp non-descriptor-reg nl0-offset)
-			  (:temp lra descriptor-reg lra-offset)
-			  (:temp nargs any-reg nargs-offset)
-			  (:temp ocfp any-reg ocfp-offset))
+			  (:res res (descriptor-reg any-reg) a0-offset))
   (emit-not-implemented))
 
 
@@ -68,12 +58,7 @@
 			 ((:arg x (descriptor-reg any-reg) a0-offset)
 			  (:arg y (descriptor-reg any-reg) a1-offset)
 
-			  (:res res (descriptor-reg any-reg) a0-offset)
-
-			  (:temp temp non-descriptor-reg nl0-offset)
-			  (:temp lra descriptor-reg lra-offset)
-			  (:temp nargs any-reg nargs-offset)
-			  (:temp ocfp any-reg ocfp-offset))
+			  (:res res (descriptor-reg any-reg) a0-offset))
   (emit-not-implemented))
 
 ;; I (rtoy) am ripping this out right now because it doesn't
@@ -129,9 +114,7 @@
 			  (:arg divisor any-reg a1-offset)
 
 			  (:res quo any-reg a0-offset)
-			  (:res rem any-reg a1-offset)
-
-			  (:temp rem-sign any-reg nargs-offset))
+			  (:res rem any-reg a1-offset))
   (emit-not-implemented))
 
 
@@ -145,9 +128,7 @@
 			  (:result-types signed-num signed-num))
 
 			 ((:arg dividend signed-reg nl0-offset)
-			  (:res rem signed-reg nl0-offset)
-
-			  (:temp rem-sign signed-reg nargs-offset))
+			  (:res rem signed-reg nl0-offset))
   
   (emit-not-implemented))
 
@@ -165,10 +146,7 @@
 				 ((:arg x (descriptor-reg any-reg) a0-offset)
 				  (:arg y (descriptor-reg any-reg) a1-offset)
 				  
-				  (:res res descriptor-reg a0-offset)
-				  
-				  (:temp nargs any-reg nargs-offset)
-				  (:temp ocfp any-reg ocfp-offset))
+				  (:res res descriptor-reg a0-offset))
 	  (emit-not-implemented))))
 
   (define-cond-assem-rtn generic-< < two-arg-< :lt)
@@ -186,11 +164,7 @@
 			 ((:arg x (descriptor-reg any-reg) a0-offset)
 			  (:arg y (descriptor-reg any-reg) a1-offset)
 			  
-			  (:res res descriptor-reg a0-offset)
-
-			  (:temp lra descriptor-reg lra-offset)
-			  (:temp nargs any-reg nargs-offset)
-			  (:temp ocfp any-reg ocfp-offset))
+			  (:res res descriptor-reg a0-offset))
   (emit-not-implemented))
 
 (define-assembly-routine (generic-=
@@ -202,11 +176,7 @@
 			 ((:arg x (descriptor-reg any-reg) a0-offset)
 			  (:arg y (descriptor-reg any-reg) a1-offset)
 
-			  (:res res descriptor-reg a0-offset)
-
-			  (:temp lra descriptor-reg lra-offset)
-			  (:temp nargs any-reg nargs-offset)
-			  (:temp ocfp any-reg ocfp-offset))
+			  (:res res descriptor-reg a0-offset))
   (emit-not-implemented))
 
 (define-assembly-routine (generic-/=
@@ -218,9 +188,5 @@
 			 ((:arg x (descriptor-reg any-reg) a0-offset)
 			  (:arg y (descriptor-reg any-reg) a1-offset)
 
-			  (:res res descriptor-reg a0-offset)
-
-			  (:temp lra descriptor-reg lra-offset)
-			  (:temp nargs any-reg nargs-offset)
-			  (:temp ocfp any-reg ocfp-offset))
+			  (:res res descriptor-reg a0-offset))
   (emit-not-implemented))

@@ -63,9 +63,7 @@
 			  (:policy :fast-safe))
 			 ((:arg block (any-reg descriptor-reg) a0-offset)
 			  (:arg start (any-reg descriptor-reg) ocfp-offset)
-			  (:arg count (any-reg descriptor-reg) nargs-offset)
-			  (:temp lra descriptor-reg lra-offset)
-			  (:temp cur-uwp any-reg nl0-offset))
+			  (:arg count (any-reg descriptor-reg) nargs-offset))
   (emit-not-implemented))
 
 
@@ -73,10 +71,7 @@
 			  (:return-style :none))
 			 ((:arg target descriptor-reg a0-offset)
 			  (:arg start any-reg ocfp-offset)
-			  (:arg count any-reg nargs-offset)
-			  (:temp catch any-reg a1-offset)
-			  (:temp tag descriptor-reg a2-offset)
-			  (:temp temp non-descriptor-reg nl0-offset))
+			  (:arg count any-reg nargs-offset))
 
   (emit-not-implemented))
 
