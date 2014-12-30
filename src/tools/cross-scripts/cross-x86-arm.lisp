@@ -193,9 +193,11 @@
 				       (find-symbol ,(symbol-name sym)
 						    :vm))))
 			       syms))))
-  (frob OLD-VM:BYTE-BITS OLD-VM:WORD-BITS
+  (frob OLD-VM:BYTE-BITS
+	OLD-VM:WORD-BITS
 	OLD-VM::WORD-BYTES
 	OLD-VM:CHAR-BITS
+	OLD-VM:CHAR-BYTES
 	OLD-VM:LOWTAG-BITS
 	#+long-float OLD-VM:SIMPLE-ARRAY-LONG-FLOAT-TYPE 
 	OLD-VM:SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE 
