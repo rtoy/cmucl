@@ -100,14 +100,17 @@
 		    (subseq line (+ 1 4 pattern-begin) (1- (length line))))))))))
 
 (in-package "VM")
+
+;; A set of random insts to test that the assembler can assembly the
+;; given instructions.
 (defun test-assem ()
   (let ((segment (make-segment))
 	(n (c:make-random-tn :kind :normal
-				:sc (c:sc-or-lose 'vm::descriptor-reg)
-				:offset vm::null-offset))
+			     :sc (c:sc-or-lose 'vm::descriptor-reg)
+			     :offset vm::null-offset))
 	(na (c:make-random-tn :kind :normal
-				:sc (c:sc-or-lose 'vm::descriptor-reg)
-				:offset vm::nargs-offset))
+			      :sc (c:sc-or-lose 'vm::descriptor-reg)
+			      :offset vm::nargs-offset))
 	(fd-0 (c:make-random-tn :kind :normal
 				:sc (c:sc-or-lose 'vm::double-reg)
 				:offset 0))
@@ -117,7 +120,39 @@
     (assemble (segment)
       (inst mov n na)
       (inst add n na (make-shift na :lsl 2))
-      (inst vadd fd-0 fd-0 fd-1))))
+      (inst vadd fd-0 fd-0 fd-1)
+      ;; Tests for issue #21
+      (inst ldrh na n 4)		; ldrh na, [n, #4]
+      (inst ldrh na n -8)		; ldrh na, [n, #-8]
+      (inst ldrh na (pre-index n) 7)	; ldrh na, [n, #7]!
+      (inst ldrh na (pre-index n) -7)	; ldrh na, [n, #-7]!
+      (inst ldrh na (post-index n) 7)	; ldrh na, [n], #7
+      (inst ldrh na (post-index n) -7)	; ldrh na, [n], #7
+      (inst ldrh na n n)		; ldrh na, [n, n]
+      (inst ldrh na n (make-op2 n))	; ldrh na, [n, n]
+      (inst ldrh na (pre-index n) n)	; ldrh na, [n, n]!
+      (inst ldrh na (pre-index n) (make-op2 n :add nil))   ; ldrh na, [n, -n]!
+      (inst ldrh na n (make-op2 n :add nil))               ; ldrh na, [n, n]
+      (inst ldrh na (post-index n) (make-op2 n))           ; ldrh na, [n], n
+      (inst ldrh na (post-index n) (make-op2 n :add nil))  ; ldrh na, [n], -n
+      )
+    segment))
+
+;; Disassemble the result of TEST-ASSEM.  Intended to verify that we
+;; can disassemble the instructions in TEST-ASSEM and that the
+;; disassemnbly has the expected from.
+(defun disassem-test-assem ()
+  ;; Hack. Don't know why disassem::disassemble-assem-segment won't
+  ;; disassemble the result of test-assem.  Hence we do it here
+  ;; ourselves by looking at the block of memory into which the
+  ;; instructions were assembled.  This is fragile, but good enough
+  ;; for simple testing for now.  Currently assumes everything is in
+  ;; the first element returned by NEW-ASSEM::SEGMENT-OUTPUT-BLOCKS.
+  (let* ((seg (test-assem))
+	 (start (new-assem::segment-output-blocks seg)))
+    (disassem::disassemble-memory (aref start 0)
+				  (new-assem::segment-current-index seg)
+				  :backend c::*target-backend*)))
 
 (in-package "CL-USER")
 #||
