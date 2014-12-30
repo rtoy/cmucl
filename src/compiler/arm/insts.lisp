@@ -1458,18 +1458,14 @@
 ;; A5.2.8; extra load/store instructions for halfwords (16-bit signed
 ;; and unsigned) and signed bytes.
 ;;
-;; ldrh rt, [rn, 0]
-;;   -> (inst ldrh rt rn 0)
-;; ldrh rt, [rn, #off]!
-;;   -> (inst ldrh rt (pre-index rn) off)
-;; ldrh rt, [rn, rm]
-;;   -> (inst ldrh rt rn rm)
-;; ldrh rt, [rn, -rm]
-;;   -> (inst ldrh rt rn (make-op2 rm :add nil))
-;; ldrh rt, [rn], +rm
-;;   -> (inst ldrh rt (post-index rn) (make-op2 rm :add t))
-;; ldrh rt, [rn], -rm
-;;   -> (inst ldrh rt (post-index rn) (make-op2 rm :add nil))
+;; ldrh rt, [rn, 0]      -> (inst ldrh rt rn 0)
+;; ldrh rt, [rn, #off]!  -> (inst ldrh rt (pre-index rn) off)
+;; ldrh rt, [rn, rm]     -> (inst ldrh rt rn rm)
+;; ldrh rt, [rn, -rm]    -> (inst ldrh rt rn (make-op2 rm :add nil))
+;; ldrh rt, [rn, rm]!    -> (inst ldrh rt (pre-index rn) rm)
+;; ldrh rt, [rn, -rm]!   -> (inst ldrh rt (pre-index rn) (make-op2 rm :add nil))
+;; ldrh rt, [rn], +rm    -> (inst ldrh rt (post-index rn) (make-op2 rm :add t))
+;; ldrh rt, [rn], -rm    -> (inst ldrh rt (post-index rn) (make-op2 rm :add nil))
 ;;
 ;; There are other possible forms for ldrh, but we only support ARM A1
 ;; encoding, so the ones listed above are all that are supported.
@@ -1510,7 +1506,7 @@
 	       ;; shift type (LSL) and amount (0) are given.  Anything
 	       ;; else is invalid. (And strictly speaking so is LSL,
 	       ;; but make-op2 defaults to LSL and does not support
-	       ;; specifying NIL.  Fix this?
+	       ;; specifying NIL for :shift.  Fix this?
 	       (when (load-store-index-shift-type src2)
 		 (assert (eq (load-store-index-shift-type src2) :lsl))
 		 (assert (zerop (load-store-index-shift-amount src2))))
