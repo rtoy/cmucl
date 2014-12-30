@@ -131,9 +131,9 @@
       (inst ldrh na n n)		; ldrh na, [n, n]
       (inst ldrh na n (make-op2 n))	; ldrh na, [n, n]
       (inst ldrh na (pre-index n) n)	; ldrh na, [n, n]!
-      (inst ldrh na (pre-index n) (make-op2 n :add nil))  ; ldrh na, [n, -n]!
-      (inst ldrh na n (make-op2 n :add nil))  ; ldrh na, [n, n]
-      (inst ldrh na (post-index n) (make-op2 n))  ; ldrh na, [n], n
+      (inst ldrh na (pre-index n) (make-op2 n :add nil))   ; ldrh na, [n, -n]!
+      (inst ldrh na n (make-op2 n :add nil))               ; ldrh na, [n, n]
+      (inst ldrh na (post-index n) (make-op2 n))           ; ldrh na, [n], n
       (inst ldrh na (post-index n) (make-op2 n :add nil))  ; ldrh na, [n], -n
       )
     segment))
@@ -147,7 +147,7 @@
   ;; ourselves by looking at the block of memory into which the
   ;; instructions were assembled.  This is fragile, but good enough
   ;; for simple testing for now.  Currently assumes everything is in
-  ;; the first element of returned by NEW-ASSEM::SEGMENT-OUTPUT-BLOCKS.
+  ;; the first element returned by NEW-ASSEM::SEGMENT-OUTPUT-BLOCKS.
   (let* ((seg (test-assem))
 	 (start (new-assem::segment-output-blocks seg)))
     (disassem::disassemble-memory (aref start 0)
