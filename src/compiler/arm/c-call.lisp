@@ -30,7 +30,15 @@
 
 (defun int-arg (state prim-type reg-sc stack-sc)
   (let ((reg-args (arg-state-register-args state)))
-    (cond ((< reg-args 4)
+    ;; C expectes 4 register args and the 5th arg at the top of the
+    ;; stack.  We don't have enough non-descriptors to do this, so all
+    ;; integer args are placed on the stack, and we depend on
+    ;; call_into_c to do the right thing.
+    ;;
+    ;; FIXME: Remove the reg-args case below when we have finalized
+    ;; the implementation to put args on the stack instead of some
+    ;; registers.
+    (cond ((< reg-args 0)
 	   (setf (arg-state-register-args state) (1+ reg-args))
 	   (my-make-wired-tn prim-type reg-sc (+ reg-args nl0-offset)))
 	  (t
@@ -52,7 +60,8 @@
 
 (defun result-reg-offset (slot)
   (ecase slot
-    (0 nl0-offset)))
+    (0 nl0-offset)
+    (1 nl1-offset)))
 
 (def-alien-type-method (integer :result-tn) (type state)
   (let ((num-results (result-state-num-results state)))
