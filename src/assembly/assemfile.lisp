@@ -129,8 +129,10 @@
 		      `(vm::not-implemented ',',name)))
 
 	   ,@code)
-	 ,@(generate-return-sequence
-	    (or (cadr (assoc :return-style options)) :raw)))
+	 (macrolet ((vm::emit-not-implemented ()
+		      `(vm::not-implemented 'generate-return-sequence-raw)))
+	   ,@(generate-return-sequence
+	      (or (cadr (assoc :return-style options)) :raw))))
        (when *compile-print*
 	 (format *error-output* "; ~S assembled~%" ',name)))))
 
