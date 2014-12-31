@@ -18,7 +18,7 @@
 (use-package "ALIEN")
 (use-package "ALIEN-INTERNALS")
 
-(defun my-make-wired-tn (prim-type-name sc-name offset)
+(defun c-call-wired-tn (prim-type-name sc-name offset)
   (make-wired-tn (primitive-type-or-lose prim-type-name *backend*)
 		 (sc-number-or-lose sc-name *backend*)
 		 offset))
@@ -34,7 +34,7 @@
   ;; call_into_c to do the right thing.
   (let ((frame-size (arg-state-stack-frame-size state)))
     (setf (arg-state-stack-frame-size state) (1+ frame-size))
-    (my-make-wired-tn prim-type stack-sc frame-size)))
+    (c-call-wired-tn prim-type stack-sc frame-size)))
 
 (def-alien-type-method (integer :arg-tn) (type state)
   (if (alien-integer-type-signed type)
@@ -60,22 +60,22 @@
 	(if (alien-integer-type-signed type)
 	    (values 'signed-byte-32 'signed-reg)
 	    (values 'unsigned-byte-32 'unsigned-reg))
-      (my-make-wired-tn ptype reg-sc (result-reg-offset num-results)))))
+      (c-call-wired-tn ptype reg-sc (result-reg-offset num-results)))))
   
 (def-alien-type-method (system-area-pointer :result-tn) (type state)
   (declare (ignore type))
   (let ((num-results (result-state-num-results state)))
     (setf (result-state-num-results state) (1+ num-results))
-    (my-make-wired-tn 'system-area-pointer 'sap-reg
+    (c-call-wired-tn 'system-area-pointer 'sap-reg
 		      (result-reg-offset num-results))))
 
 (def-alien-type-method (double-float :result-tn) (type state)
   (declare (ignore type state))
-  (my-make-wired-tn 'double-float 'double-reg 0))
+  (c-call-wired-tn 'double-float 'double-reg 0))
 
 (def-alien-type-method (single-float :result-tn) (type state)
   (declare (ignore type state))
-  (my-make-wired-tn 'single-float 'single-reg 0))
+  (c-call-wired-tn 'single-float 'single-reg 0))
 
 (def-alien-type-method (values :result-tn) (type state)
   (let ((values (alien-values-type-values type)))
