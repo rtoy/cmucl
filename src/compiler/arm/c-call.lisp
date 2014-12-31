@@ -24,27 +24,17 @@
 		 offset))
 
 (defstruct arg-state
-  (register-args 0)
   ;; TODO: What is the stack frame size for ARM?
-  (stack-frame-size 7))
+  (stack-frame-size 0))
 
 (defun int-arg (state prim-type reg-sc stack-sc)
-  (let ((reg-args (arg-state-register-args state)))
-    ;; C expectes 4 register args and the 5th arg at the top of the
-    ;; stack.  We don't have enough non-descriptors to do this, so all
-    ;; integer args are placed on the stack, and we depend on
-    ;; call_into_c to do the right thing.
-    ;;
-    ;; FIXME: Remove the reg-args case below when we have finalized
-    ;; the implementation to put args on the stack instead of some
-    ;; registers.
-    (cond ((< reg-args 0)
-	   (setf (arg-state-register-args state) (1+ reg-args))
-	   (my-make-wired-tn prim-type reg-sc (+ reg-args nl0-offset)))
-	  (t
-	   (let ((frame-size (arg-state-stack-frame-size state)))
-	     (setf (arg-state-stack-frame-size state) (1+ frame-size))
-	     (my-make-wired-tn prim-type stack-sc (+ frame-size 16)))))))
+  ;; C expectes 4 register args and the 5th arg at the top of the
+  ;; stack.  We don't have enough non-descriptors to do this, so all
+  ;; integer args are placed on the stack, and we depend on
+  ;; call_into_c to do the right thing.
+  (let ((frame-size (arg-state-stack-frame-size state)))
+    (setf (arg-state-stack-frame-size state) (1+ frame-size))
+    (my-make-wired-tn prim-type stack-sc frame-size)))
 
 (def-alien-type-method (integer :arg-tn) (type state)
   (if (alien-integer-type-signed type)
