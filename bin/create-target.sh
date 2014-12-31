@@ -84,6 +84,10 @@ case $uname_s in
 		pmax_mach) motif_variant=pmax_mach ;;
 		sgi*) motif_variant=irix ;;
 		x86_linux|linux*) motif_variant=x86 ;;
+	        arm_linux) 
+		    # FIXME: Use x86 for now.  Update it when we get
+		    # around to compiling motif for arm/linux.
+		    motif_variant=x86 ;;
 	    esac
 	}
 	[ -f src/motif/server/Config.$motif_variant ] || quit "No such motif-variant could be found: Config.$motif_variant"
