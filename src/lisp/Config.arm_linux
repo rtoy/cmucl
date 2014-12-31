@@ -2,7 +2,6 @@
 
 include Config.arm_common
 
-CPPFLAGS += -marm -D__NO_CTYPE -D_GNU_SOURCE
 # FIXME: What is the appropriate -march and -mfpu?
 CFLAGS += -rdynamic -march=armv7-a -mfpu=vfpv3-d16
 

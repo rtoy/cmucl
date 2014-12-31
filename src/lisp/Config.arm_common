@@ -34,14 +34,10 @@ ifdef FEATURE_ELF
 CPP_DEFINE_OPTIONS += -DFEATURE_ELF
 endif
 
-ifeq ($(filter 2% 3%, $(shell $(CC) -dumpversion)),)
 CPP_INCLUDE_OPTIONS := -iquote . -iquote $(PATH1)
-else
-CPP_INCLUDE_OPTIONS := -I. -I$(PATH1) -I-
-endif
 
 CPPFLAGS := $(CPP_DEFINE_OPTIONS) $(CPP_INCLUDE_OPTIONS) 
-CFLAGS += -Wstrict-prototypes -Wall -O2 -g -fno-omit-frame-pointer
+CFLAGS += -Wstrict-prototypes -Wall -O2 -g -fno-omit-frame-pointer -marm
 ASFLAGS = -g 
 
 ASSEM_SRC = arm-assem.S
