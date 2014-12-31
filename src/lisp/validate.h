@@ -36,6 +36,10 @@
 #include "ppc-validate.h"
 #endif
 
+#ifdef __arm__
+#include "arm-validate.h"
+#endif
+
 extern void validate(void);
 
 #endif /* _VALIDATE_H_ */

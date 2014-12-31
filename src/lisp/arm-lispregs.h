@@ -1,0 +1,48 @@
+/*
+ * This code was written as part of the CMUCL project and has been
+ * placed in the public domain.
+ */
+
+#ifndef _ARM_LISPREGS_H_
+#define _ARM_LISPREGS_H_
+
+#ifdef LANGUAGE_ASSEMBLY
+#define CAT(a, b) a ## b
+#else
+#endif
+
+#define NREGS (16)
+
+/*
+ * Define all the Lisp registers appropriately for assembly and C.
+ */
+
+#define reg_NL0 REG(0)
+#define reg_NL1 REG(1)
+#define reg_NL2 REG(2)
+#define reg_NARGS REG(3)
+#define reg_CODE REG(4)
+#define reg_A0 REG(5)
+#define reg_A1 REG(6)
+#define reg_A2 REG(7)
+#define reg_LRA REG(8)
+#define reg_NULL REG(9)
+#define reg_LEXENV REG(10)
+#define reg_OCFP REG(11)
+#define reg_CFP REG(12)
+#define reg_CSP REG(13)
+#define reg_LIP REG(14)
+
+#define REGNAMES                                \
+  "NL0", "NL1", "NL2", "NARGS", "CODE", "A0", "A1", "A2",       \
+  "LRA", "LEXENV", "OCFP", "CFP", "CSP", "LIP"  
+
+#define BOXED_REGISTERS { \
+  reg_A0, reg_A1, reg_A2, reg_OCFP, reg_LRA, reg_LEXENV \
+}
+
+#define SC_REG(sc, reg) (*os_sigcontext_reg(scp, offset))
+#define SC_PC(scp) (*os_sigcontext_pc(scp))
+#define SC_SP(scp) SC_REG(scp, reg_SP)
+
+#endif
