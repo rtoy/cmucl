@@ -23,8 +23,7 @@ ifdef FEATURE_GENCGC
 CPP_DEFINE_OPTIONS += -DGENCGC
 GC_SRC := gencgc.c
 else
-GC_SRC := cgc.c
-CPP_DEFINE_OPTIONS += -DWANT_CGC
+GC_SRC := gc.c
 endif
 
 ifdef FEATURE_UNICODE
