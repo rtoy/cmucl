@@ -122,19 +122,19 @@
 		     :offset ,(reg-spec-offset reg))))
 	      regs))
        ,@(decls)
-       (new-assem:assemble (*code-segment* ',name)
-	 ,name
-	 (push (cons ',name ,name) *assembler-routines*)
-	 (macrolet ((vm::emit-not-implemented ()
-		      `(vm::not-implemented ',',name)))
+       (macrolet ((vm::emit-not-implemented ()
+		    `(vm::not-implemented ',',name)))
+	 (new-assem:assemble (*code-segment* ',name)
+	   ,name
+	   (push (cons ',name ,name) *assembler-routines*)
 
-	   ,@code)
-	 (macrolet ((vm::emit-not-implemented ()
-		      `(vm::not-implemented 'generate-return-sequence-raw)))
-	   ,@(generate-return-sequence
-	      (or (cadr (assoc :return-style options)) :raw))))
-       (when *compile-print*
-	 (format *error-output* "; ~S assembled~%" ',name)))))
+	   ,@code
+	   (macrolet ((vm::emit-not-implemented ()
+			`(vm::not-implemented 'generate-return-sequence-raw)))
+	     ,@(generate-return-sequence
+		(or (cadr (assoc :return-style options)) :raw)))))
+	 (when *compile-print*
+	   (format *error-output* "; ~S assembled~%" ',name)))))
 
 (defun arg-or-res-spec (reg)
   `(,(reg-spec-name reg)
