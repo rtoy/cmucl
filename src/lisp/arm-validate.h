@@ -19,14 +19,13 @@
  *
  */
 
+/* TODO: put this in a common location like validate.h */
 #define MB	(1024*1024)
 
 #ifdef LINKAGE_TABLE
 /*
  * This space start better match the value of
- * target-foreign-linkage-space-start defined in sparc/parms.lisp!
- *
- * See the notes there!
+ * target-foreign-linkage-space-start defined in arm/parms.lisp!
  */
 
 #define FOREIGN_LINKAGE_SPACE_START (LinkageSpaceStart)
@@ -53,7 +52,7 @@
 #define CONTROL_STACK_END       (CONTROL_STACK_START + control_stack_size)
 
 /* The default dynamic space to allocate */
-#define DEFAULT_DYNAMIC_SPACE_SIZE  	(0x10000000)	/* 256 MB */
+#define DEFAULT_DYNAMIC_SPACE_SIZE  	(256*MB)
 
 /* The maximum dynamic space that we can allocate */
 #define DYNAMIC_SPACE_SIZE      (512*MB)
