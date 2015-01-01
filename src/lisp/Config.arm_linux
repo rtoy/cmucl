@@ -1,0 +1,14 @@
+# -*- Mode: makefile -*-
+
+include Config.arm_common
+
+CFLAGS += -rdynamic
+
+UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
+ASSEM_SRC +=  linux-stubs.S
+OS_SRC += Linux-os.c Linux-os-arm.c elf.c
+OS_LIBS = -ldl
+OS_LINK_FLAGS = -marm -rdynamic -Xlinker --export-dynamic -Xlinker -Map -Xlinker foo
+OS_LINK_FLAGS += -Wl,-z,noexecstack
+
+EXEC_FINAL_OBJ = exec-final.o
