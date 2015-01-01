@@ -3,12 +3,14 @@
  * placed in the public domain.
  */
 
-#ifndef _ARM_LISPREGS_H_
-#define _ARM_LISPREGS_H_
+#ifndef ARM_LISPREGS_H
+#define ARM_LISPREGS_H
 
 #ifdef LANGUAGE_ASSEMBLY
 #define CAT(a, b) a ## b
+#define REG(num) CAT(r,num)
 #else
+#define REG(num) (num)
 #endif
 
 #define NREGS (16)
@@ -33,8 +35,8 @@
 #define reg_CSP REG(13)
 #define reg_LIP REG(14)
 
-#define REGNAMES                                \
-  "NL0", "NL1", "NL2", "NARGS", "CODE", "A0", "A1", "A2",       \
+#define REGNAMES \
+  "NL0", "NL1", "NL2", "NARGS", "CODE", "A0", "A1", "A2", \
   "LRA", "LEXENV", "OCFP", "CFP", "CSP", "LIP"  
 
 #define BOXED_REGISTERS { \
