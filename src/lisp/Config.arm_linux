@@ -2,8 +2,7 @@
 
 include Config.arm_common
 
-# FIXME: What is the appropriate -march and -mfpu?
-CFLAGS += -rdynamic -march=armv7-a -ffp-contract=off
+CFLAGS += -rdynamic
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC +=  linux-stubs.S
