@@ -20,7 +20,7 @@
  */
 
 /* TODO: put this in a common location like validate.h */
-#define MB	(1024*1024)
+#define MB      (1024*1024)
 
 #ifdef LINKAGE_TABLE
 /*
@@ -38,21 +38,21 @@
 #define FOREIGN_LINKAGE_SPACE_SIZE  (8*MB)
 #endif
 
-#define READ_ONLY_SPACE_START	(SpaceStart_TargetReadOnly)
-#define READ_ONLY_SPACE_SIZE	(64*MB)
+#define READ_ONLY_SPACE_START   (SpaceStart_TargetReadOnly)
+#define READ_ONLY_SPACE_SIZE    (64*MB)
 
-#define BINDING_STACK_START 	(0x20000000)
-#define BINDING_STACK_SIZE  	(32*MB)
+#define BINDING_STACK_START     (0x20000000)
+#define BINDING_STACK_SIZE      (32*MB)
 
-#define STATIC_SPACE_START  	(SpaceStart_TargetStatic)
-#define STATIC_SPACE_SIZE   	(64*MB)
+#define STATIC_SPACE_START      (SpaceStart_TargetStatic)
+#define STATIC_SPACE_SIZE       (64*MB)
 
-#define CONTROL_STACK_START 	(0x28000000)
-#define CONTROL_STACK_SIZE  	(32*MB)
+#define CONTROL_STACK_START     (0x28000000)
+#define CONTROL_STACK_SIZE      (32*MB)
 #define CONTROL_STACK_END       (CONTROL_STACK_START + control_stack_size)
 
 /* The default dynamic space to allocate */
-#define DEFAULT_DYNAMIC_SPACE_SIZE  	(256*MB)
+#define DEFAULT_DYNAMIC_SPACE_SIZE  (128*MB)
 
 /* The maximum dynamic space that we can allocate */
 #define DYNAMIC_SPACE_SIZE      (512*MB)
@@ -60,8 +60,8 @@
 #ifdef GENCGC
 #error gencgc not supported
 #else
-#define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)
-#define DYNAMIC_1_SPACE_START	(DYNAMIC_1_SPACE_START + DYNAMIC_SPACE_SIZE)
+#define DYNAMIC_0_SPACE_START   (SpaceStart_TargetDynamic)
+#define DYNAMIC_1_SPACE_START   (DYNAMIC_1_SPACE_START + DYNAMIC_SPACE_SIZE)
 #endif
 
 #endif
