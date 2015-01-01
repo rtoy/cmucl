@@ -43,7 +43,7 @@
   reg_A0, reg_A1, reg_A2, reg_OCFP, reg_LRA, reg_LEXENV \
 }
 
-#define SC_REG(scp, reg) (*os_sigcontext_reg(scp, offset))
+#define SC_REG(scp, reg) (*os_sigcontext_reg(scp, reg))
 #define SC_PC(scp) (*os_sigcontext_pc(scp))
 #define SC_SP(scp) SC_REG(scp, reg_SP)
 
