@@ -529,7 +529,7 @@ print_garbage(lispobj * from_space, lispobj * from_space_free_pointer)
     while (start < from_space_free_pointer) {
 	lispobj object;
 	int forwardp, type;
-        int nwords = 1;
+        int nwords = 0;
 	lispobj header;
 
 	object = *start;
@@ -557,6 +557,9 @@ print_garbage(lispobj * from_space, lispobj * from_space_free_pointer)
 		  header = *pointer;
 		  type = TypeOf(header);
 		  nwords = (sizetab[type]) (pointer);
+              default:
+                  gc_abort();
+                  break;
 	    }
 	} else {
 	    type = TypeOf(object);
@@ -566,6 +569,7 @@ print_garbage(lispobj * from_space, lispobj * from_space_free_pointer)
 		   nwords, start);
 	    printf("Header word is %p\n", (void*) object);
 	}
+        gc_assert(nwords > 0);
 	start += nwords;
     }
     printf("%d total words not copied.\n", total_words_not_copied);
