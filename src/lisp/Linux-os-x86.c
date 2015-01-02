@@ -3,6 +3,7 @@
  */
 
 #include <stdio.h>
+#include <assert.h>
 
 #include "os.h"
 #include "arch.h"
@@ -356,7 +357,6 @@ os_install_interrupt_handlers(void)
     interrupt_install_low_level_handler(SIGBUS, sigbus_handler);
 }
 
-#if 0
 void
 restore_fpu(ucontext_t *context)
 {
@@ -387,4 +387,4 @@ os_support_sse2()
     return TRUE;
 }
 #endif
-#endif
+
