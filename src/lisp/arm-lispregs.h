@@ -34,6 +34,7 @@
 #define reg_CFP REG(12)
 #define reg_CSP REG(13)
 #define reg_LIP REG(14)
+#define reg_PC REG(15)
 
 #define REGNAMES \
   "NL0", "NL1", "NL2", "NARGS", "CODE", "A0", "A1", "A2", \
