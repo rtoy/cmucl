@@ -2,6 +2,17 @@
  * The x86-specific bits for Linux-os.c
  */
 
+#include <stdio.h>
+
+#include "os.h"
+#include "arch.h"
+#include "globals.h"
+#include "interrupt.h"
+#include "lispregs.h"
+#include "internals.h"
+#include <sys/socket.h>
+#include <sys/utsname.h>
+
 #if defined(__i386) || defined(__x86_64)
 /* Prototype for personality(2). Done inline here since the header file
  * for this isn't available on old versions of glibc. */
