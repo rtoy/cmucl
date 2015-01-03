@@ -7,13 +7,12 @@
 #define ARM_LISPREGS_H
 
 #ifdef LANGUAGE_ASSEMBLY
-#define CAT(a, b) a ## b
-#define REG(num) CAT(r,num)
+#define REG(num) r ## num
 #else
 #define REG(num) (num)
 #endif
 
-#define NREGS (16)
+#define NREGS 16
 
 /*
  * Define all the Lisp registers appropriately for assembly and C.
