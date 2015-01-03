@@ -9,7 +9,7 @@
 /*
  * Address map:
  *
- *      0x0f000000->0x10000000   16M for linkage table area
+ *      0x0f000000->0xf8000000    8M for linkage table area
  *      0x10000000->0x14000000   64M Read-Only Space.
  *      0x20000000->0x22000000   32M Binding stack growing up.
  *      0x28000000->0x2a000000   32M Control stack growing up.
@@ -21,6 +21,13 @@
 
 /* TODO: put this in a common location like validate.h */
 #define MB      (1024*1024)
+;
+/*
+ * Leave a page (or more) at the end of each space so we can detect
+ * when the space grows too big instead of just blindly writing into
+ * the following pages that could be allocate to other spaces.
+ */
+#define RESERVED_SPACE (4*1024)
 
 #ifdef LINKAGE_TABLE
 /*
@@ -39,29 +46,31 @@
 #endif
 
 #define READ_ONLY_SPACE_START   (SpaceStart_TargetReadOnly)
-#define READ_ONLY_SPACE_SIZE    (64*MB)
+#define READ_ONLY_SPACE_SIZE    (64*MB - RESERVED_SPACE)
 
 #define BINDING_STACK_START     (0x20000000)
-#define BINDING_STACK_SIZE      (32*MB)
+#define BINDING_STACK_SIZE      (32*MB - RESERVED_SPACE)
 
 #define STATIC_SPACE_START      (SpaceStart_TargetStatic)
-#define STATIC_SPACE_SIZE       (64*MB)
+#define STATIC_SPACE_SIZE       (64*MB - RESERVED_SPACE)
 
 #define CONTROL_STACK_START     (0x28000000)
-#define CONTROL_STACK_SIZE      (32*MB)
+#define CONTROL_STACK_SIZE      (32*MB - RESERVED_SPACE)
 #define CONTROL_STACK_END       (CONTROL_STACK_START + control_stack_size)
 
 /* The default dynamic space to allocate */
-#define DEFAULT_DYNAMIC_SPACE_SIZE  (128*MB)
+#define DEFAULT_DYNAMIC_SPACE_SIZE  (128*MB - RESERVED_SPACE)
 
 /* The maximum dynamic space that we can allocate */
-#define DYNAMIC_SPACE_SIZE      (512*MB)
+#define DYNAMIC_SPACE_SIZE      (512*MB - RESERVED_SPACE)
 
 #ifdef GENCGC
 #error gencgc not supported
 #else
 #define DYNAMIC_0_SPACE_START   (SpaceStart_TargetDynamic)
-#define DYNAMIC_1_SPACE_START   (DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE)
+#define DYNAMIC_1_SPACE_START   (DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE + RESERVED_SPACE)
 #endif
 
+#undef MB
+#undef RESERVED_SPACE
 #endif
