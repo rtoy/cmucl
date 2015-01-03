@@ -5,6 +5,7 @@
  */
 
 #include <stdio.h>
+#include <inttypes.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <signal.h>
@@ -567,7 +568,7 @@ print_garbage(lispobj * from_space, lispobj * from_space_free_pointer)
 	    total_words_not_copied += nwords;
 	    printf("%4d words not copied at %p; ",
 		   nwords, start);
-	    printf("Header word is %p\n", (void*) object);
+	    printf("Header word is " LISPPTR "\n", (uintptr_t) object);
 	}
         gc_assert(nwords > 0);
 	start += nwords;
@@ -822,8 +823,8 @@ scav_return_pc_header(lispobj * where, lispobj object)
 {
     fprintf(stderr, "GC lossage.  Should not be scavenging a ");
     fprintf(stderr, "Return PC Header.\n");
-    fprintf(stderr, "where = %p, object = %p",
-	    where, (void*) object);
+    fprintf(stderr, "where = " LISPPTR ", object = " LISPPTR "\n",
+	    (uintptr_t) where, (uintptr_t) object);
     lose(NULL);
     return 0;
 }
@@ -871,8 +872,8 @@ scav_function_header(lispobj * where, lispobj object)
 {
     fprintf(stderr, "GC lossage.  Should not be scavenging a ");
     fprintf(stderr, "Function Header.\n");
-    fprintf(stderr, "where = %p, object = %p",
-	    where, (void*) object);
+    fprintf(stderr, "where = " LISPPTR ", object = " LISPPTR "\n",
+	    (uintptr_t) where, (uintptr_t) object);
     lose(NULL);
     return 0;
 }
@@ -1959,8 +1960,8 @@ scan_weak_pointers(void)
 static int
 scav_lose(lispobj * where, lispobj object)
 {
-    fprintf(stderr, "GC lossage.  No scavenge function for object %p\n",
-	    (void*) object);
+    fprintf(stderr, "GC lossage.  No scavenge function for object " LISPPTR "\n",
+	    (uintptr_t) object);
     lose(NULL);
     return 0;
 }
@@ -1968,8 +1969,8 @@ scav_lose(lispobj * where, lispobj object)
 static lispobj
 trans_lose(lispobj object)
 {
-    fprintf(stderr, "GC lossage.  No transport function for object %p\n",
-	    (void*) object);
+    fprintf(stderr, "GC lossage.  No transport function for object " LISPPTR "\n",
+	    (uintptr_t) object);
     lose(NULL);
     return NIL;
 }
@@ -1977,9 +1978,9 @@ trans_lose(lispobj object)
 static int
 size_lose(lispobj * where)
 {
-    fprintf(stderr, "Size lossage.  No size function for object at %p\n",
-	    where);
-    fprintf(stderr, "First word of object: %p\n", (void*) *where);
+    fprintf(stderr, "Size lossage.  No size function for object at " LISPPTR "\n",
+	    (uintptr_t) where);
+    fprintf(stderr, "First word of object: " LISPPTR " \n", (uintptr_t) *where);
     return 1;
 }
 
