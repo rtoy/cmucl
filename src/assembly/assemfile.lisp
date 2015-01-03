@@ -127,7 +127,6 @@
 	 (new-assem:assemble (*code-segment* ',name)
 	   ,name
 	   (push (cons ',name ,name) *assembler-routines*)
-
 	   ,@code
 	   (macrolet ((vm::emit-not-implemented ()
 			`(vm::not-implemented 'generate-return-sequence-raw)))
