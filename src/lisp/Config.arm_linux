@@ -1,7 +1,5 @@
 # -*- Mode: makefile -*-
 
-# -*- Mode: makefile -*-
-
 # TODO: Move this out to arm_common someday if we need to.
 # These tell gmake where to look for .h, .c and .S files.  Mostly for
 # building the binary outside of the src tree.
