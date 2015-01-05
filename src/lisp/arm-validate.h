@@ -72,7 +72,4 @@
 #define DYNAMIC_1_SPACE_START   (DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE + RESERVED_SPACE)
 #endif
 
-#undef KB
-#undef MB
-#undef RESERVED_SPACE
 #endif
