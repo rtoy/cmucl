@@ -55,6 +55,4 @@ typedef u32 lispobj;
 
 typedef enum {AUTO, X87, SSE2} fpu_mode_t;
 
-#define LISPPTR "0x08%" PRIxPTR
-
 #endif /* _LISP_H_ */
