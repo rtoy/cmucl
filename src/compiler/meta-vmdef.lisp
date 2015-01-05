@@ -937,9 +937,9 @@
 		  ,@(binds))
 	     (declare (ignore ,@(vop-parse-ignores parse)))
 	     ,@(loads)
-	     (new-assem:assemble (*code-segment* ,n-vop)
-	       (macrolet ((vm::emit-not-implemented ()
-			    `(vm::not-implemented ',',(vop-parse-name parse))))
+	     (macrolet ((vm::emit-not-implemented ()
+			  `(vm::not-implemented ',',(vop-parse-name parse))))
+	       (new-assem:assemble (*code-segment* ,n-vop)
 		 ,@(vop-parse-body parse)))
 	     ,@(saves))))))
 
@@ -2095,5 +2095,3 @@
 		  (not (eq (ir2-block-environment ,block-var) ,n-env)))
 	      ,result)
 	   ,@body)))))
-
-
