@@ -20,6 +20,7 @@
  */
 
 /* TODO: put this in a common location like validate.h */
+#define KB	1024
 #define MB      (1024*1024)
 ;
 /*
@@ -27,7 +28,7 @@
  * when the space grows too big instead of just blindly writing into
  * the following pages that could be allocate to other spaces.
  */
-#define RESERVED_SPACE (4*1024)
+#define RESERVED_SPACE (4*KB)
 
 #ifdef LINKAGE_TABLE
 /*
@@ -71,6 +72,7 @@
 #define DYNAMIC_1_SPACE_START   (DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE + RESERVED_SPACE)
 #endif
 
+#undef KB
 #undef MB
 #undef RESERVED_SPACE
 #endif
