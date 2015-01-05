@@ -25,7 +25,6 @@ ARCH_SRC = arm-arch.c
 NM = nm -gp
 DEPEND_FLAGS = -MM
 
-UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC +=  arm-assem.S linux-stubs.S
 OS_SRC += Linux-os.c os-common.c elf.c
 OS_LIBS = -ldl
