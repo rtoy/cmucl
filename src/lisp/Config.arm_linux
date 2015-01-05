@@ -1,9 +1,5 @@
 # -*- Mode: makefile -*-
 
-# TODO: Move this out to arm_common someday if we need to.
-# These tell gmake where to look for .h, .c and .S files.  Mostly for
-# building the binary outside of the src tree.
-
 PATH1 = ../../src/lisp
 vpath %.h $(PATH1)
 vpath %.c $(PATH1)
@@ -14,49 +10,26 @@ vpath %.pot $(CMULOCALE)
 vpath %.po  $(CMULOCALE)
 vpath %.mo  $(CMULOCALE)
 
-# Enable support for :linkage-table feature.
-ifdef FEATURE_LINKAGE_TABLE
-CPP_DEFINE_OPTIONS += -DLINKAGE_TABLE
-endif
-
-# Enable support for generational GC
-ifdef FEATURE_GENCGC
-CPP_DEFINE_OPTIONS += -DGENCGC
-GC_SRC := gencgc.c
-else
 GC_SRC := gc.c
-endif
 
-ifdef FEATURE_UNICODE
 CPP_DEFINE_OPTIONS += -DUNICODE
-endif
-
-ifdef FEATURE_ELF
-CPP_DEFINE_OPTIONS += -DFEATURE_ELF
-endif
 
 CPP_INCLUDE_OPTIONS := -iquote . -iquote $(PATH1)
 
 CPPFLAGS := $(CPP_DEFINE_OPTIONS) $(CPP_INCLUDE_OPTIONS) 
-CFLAGS += -Wstrict-prototypes -Wall -O2 -g -fno-omit-frame-pointer -marm
-ASFLAGS = -g 
+CFLAGS += -marm -Wstrict-prototypes -Wall -O2 -ggdb3 -fno-omit-frame-pointer -ffp-contract=off
+ASFLAGS = -g
 
-ASSEM_SRC = arm-assem.S
 ARCH_SRC = arm-arch.c
-OS_SRC = os-common.c
 
 NM = nm -gp
 DEPEND_FLAGS = -MM
 
-# End of common stuff.
-
-CFLAGS += -rdynamic
-
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
-ASSEM_SRC +=  linux-stubs.S
-OS_SRC += Linux-os.c elf.c
+ASSEM_SRC +=  arm-assem.S linux-stubs.S
+OS_SRC += Linux-os.c os-common.c elf.c
 OS_LIBS = -ldl
 OS_LINK_FLAGS = -marm -rdynamic -Xlinker --export-dynamic -Xlinker -Map -Xlinker foo
-OS_LINK_FLAGS += -Wl,-z,noexecstack
+OS_LINK_FLAGS += -rdynamic -Wl,-z,noexecstack
 
 EXEC_FINAL_OBJ = exec-final.o
