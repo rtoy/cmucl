@@ -198,37 +198,37 @@ os_sigcontext_reg(ucontext_t *scp, int offset)
 #elif defined(__x86_64)
     switch (offset) {
       case 0:
-	  return &c->uc_mcontext.gregs[REG_RAX];
+	  return &scp->uc_mcontext.gregs[REG_RAX];
       case 2:
-	  return &c->uc_mcontext.gregs[REG_RCX];
+	  return &scp->uc_mcontext.gregs[REG_RCX];
       case 4:
-	  return &c->uc_mcontext.gregs[REG_RDX];
+	  return &scp->uc_mcontext.gregs[REG_RDX];
       case 6:
-	  return &c->uc_mcontext.gregs[REG_RBX];
+	  return &scp->uc_mcontext.gregs[REG_RBX];
       case 8:
-	  return &c->uc_mcontext.gregs[REG_RSP];
+	  return &scp->uc_mcontext.gregs[REG_RSP];
       case 10:
-	  return &c->uc_mcontext.gregs[REG_RBP];
+	  return &scp->uc_mcontext.gregs[REG_RBP];
       case 12:
-	  return &c->uc_mcontext.gregs[REG_RSI];
+	  return &scp->uc_mcontext.gregs[REG_RSI];
       case 14:
-	  return &c->uc_mcontext.gregs[REG_RDI];
+	  return &scp->uc_mcontext.gregs[REG_RDI];
       case 16:
-	  return &c->uc_mcontext.gregs[REG_R8];
+	  return &scp->uc_mcontext.gregs[REG_R8];
       case 18:
-	  return &c->uc_mcontext.gregs[REG_R9];
+	  return &scp->uc_mcontext.gregs[REG_R9];
       case 20:
-	  return &c->uc_mcontext.gregs[REG_R10];
+	  return &scp->uc_mcontext.gregs[REG_R10];
       case 22:
-	  return &c->uc_mcontext.gregs[REG_R11];
+	  return &scp->uc_mcontext.gregs[REG_R11];
       case 24:
-	  return &c->uc_mcontext.gregs[REG_R12];
+	  return &scp->uc_mcontext.gregs[REG_R12];
       case 26:
-	  return &c->uc_mcontext.gregs[REG_R13];
+	  return &scp->uc_mcontext.gregs[REG_R13];
       case 28:
-	  return &c->uc_mcontext.gregs[REG_R14];
+	  return &scp->uc_mcontext.gregs[REG_R14];
       case 30:
-	  return &c->uc_mcontext.gregs[REG_R15];
+	  return &scp->uc_mcontext.gregs[REG_R15];
     }
 #elif defined(__arm__)
     switch (offset) {
