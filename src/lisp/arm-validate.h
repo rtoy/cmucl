@@ -20,16 +20,8 @@
  */
 
 /* TODO: put this in a common location like validate.h */
-#define KB	1024
 #define MB      (1024*1024)
 ;
-/*
- * Leave a page (or more) at the end of each space so we can detect
- * when the space grows too big instead of just blindly writing into
- * the following pages that could be allocate to other spaces.
- */
-#define RESERVED_SPACE (4*KB)
-
 #ifdef LINKAGE_TABLE
 /*
  * This space start better match the value of
@@ -47,23 +39,23 @@
 #endif
 
 #define READ_ONLY_SPACE_START   (SpaceStart_TargetReadOnly)
-#define READ_ONLY_SPACE_SIZE    (64*MB - RESERVED_SPACE)
+#define READ_ONLY_SPACE_SIZE    (64*MB)
 
 #define BINDING_STACK_START     (0x20000000)
-#define BINDING_STACK_SIZE      (32*MB - RESERVED_SPACE)
+#define BINDING_STACK_SIZE      (32*MB)
 
 #define STATIC_SPACE_START      (SpaceStart_TargetStatic)
-#define STATIC_SPACE_SIZE       (64*MB - RESERVED_SPACE)
+#define STATIC_SPACE_SIZE       (64*MB)
 
 #define CONTROL_STACK_START     (0x28000000)
-#define CONTROL_STACK_SIZE      (32*MB - RESERVED_SPACE)
+#define CONTROL_STACK_SIZE      (32*MB)
 #define CONTROL_STACK_END       (CONTROL_STACK_START + control_stack_size)
 
 /* The default dynamic space to allocate */
-#define DEFAULT_DYNAMIC_SPACE_SIZE  (128*MB - RESERVED_SPACE)
+#define DEFAULT_DYNAMIC_SPACE_SIZE  (128*MB)
 
 /* The maximum dynamic space that we can allocate */
-#define DYNAMIC_SPACE_SIZE      (512*MB - RESERVED_SPACE)
+#define DYNAMIC_SPACE_SIZE      (512*MB)
 
 #ifdef GENCGC
 #error gencgc not supported
