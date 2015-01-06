@@ -2867,3 +2867,116 @@
 			  (- (+ (label-position label posn delta-if-after)
 				(component-header-length)))))))
 
+
+;; reg-list is the register list immediate value in the LDM/STM
+;; instructions.  The disassembler will disassemble them as a list of
+;; registers.  We don't don't support coalescing a consecutive
+;; sequence to the form r<first>-r<lst>. Instead each register is
+;; printed.
+(disassem:define-argument-type reg-list
+  :printer #'(lambda (value stream dstate)
+	       (declare (ignore dstate))
+	       (princ '{ stream)
+	       (dotimes (k 16)
+		 (unless (zerop (ldb (byte 1 k) value))
+		   (reg-arg-printer k stream dstate)
+		   (setf (ldb (byte 1 k) value) 0)
+		   (unless (zerop value)
+		     (princ ", " stream))))
+	       (princ '} stream)))
+
+(defconstant format-4-printer
+  `(:name cond
+	  :tab
+	  dst
+	  (:unless (w :constant 0)
+		    '!)
+	  ", "
+	  rlist))
+	  
+(define-emitter emit-format-4 32
+  (byte 4 28) (byte 3 25)
+  (byte 3 22) (byte 1 21) (byte 1 20) (byte 4 16) (byte 16 0))
+
+(disassem:define-instruction-format
+    (format-4 32 :include 'format-base
+		 :default-printer format-4-printer)
+  (op4 :field (byte 3 22))
+  (w :field (byte 1 21))
+  (ld :field (byte 1 20))
+  (dst :field (byte 4 16) :type 'reg)
+  (rlist :field (byte 16 0) :type 'reg-list))
+
+;; LDM/STM
+;;
+;; ldm sp, {r0, r1} -> (inst ldm sp (list r0 r1))
+;; ldmeq sp, {r1, r7} -> (inst ldm sp (list r1 r7) :eq)
+;; ldm sp!, {r0, r1} -> (inst ldm (pre-index sp) (list r0 r1))
+;; ldmeq sp, {r1, r7} -> (inst ldm (pre-index sp) (list r1 r7) :eq)
+;;
+;; Same for STM.  For indexing, you can specify either pre-index or
+;; post-index to have the register updated. Some combinations of the
+;; dst register and the register list are invalid, but no check is
+;; made for that here.
+(macrolet
+    ((frob (name code)
+       `(define-instruction ,name (segment dst reg-list &optional (cond :al))
+	  (:declare (type (or tn indexing-mode) dst)
+		    (type list reg-list)
+		    (type condition-code cond))
+	  (:printer format-4
+		    ((opb0 #b100)
+		     (op4 ,code)
+		     (ld 1)))
+	  (:emitter
+	   (let ((regbits 0))
+	     (dolist (r reg-list)
+	       (setf (logbitp (reg-tn-encoding r) regbits) 1))
+	     (multiple-value-bind (d write-back)
+		 (if (tn-p dst)
+		     (values dst 0)
+		     (values (indexing-mode-reg dst) 1))
+	       (emit-format-4 segment
+			      (condition-code-encoding cond)
+			      #b100
+			      ,code
+			      write-back
+			      1
+			      (reg-tn-encoding d)
+			      regbits)))))))
+  (frob ldm #b010)
+  (frob ldmda #b000)
+  (frob ldmdb #b100)
+  (frob ldmib #b110))
+
+(macrolet
+    ((frob (name code)
+       `(define-instruction stmdb (segment dst reg-list &optional (cond :al))
+	  (:declare (type (or tn indexing-mode) dst)
+		    (type list reg-list)
+		    (type condition-code cond))
+	  (:printer format-4
+		    ((opb0 #b100)
+		     (op4 #b100)
+		     (ld 0)))
+	  (:emitter
+	   (let ((regbits 0))
+	     (dolist (r reg-list)
+	       (setf (logbitp (reg-tn-encoding r) regbits) 1))
+     
+	     (multiple-value-bind (d write-back)
+		 (if (tn-p dst)
+		     (values dst 0)
+		     (values (indexing-mode-reg dst) 1))
+	       (emit-format-4 segment
+			      (condition-code-encoding cond)
+			      #b100
+			      #b100
+			      write-back
+			      0
+			      (reg-tn-encoding d)
+			      regbits)))))))
+  (frob stmdb #b100)
+  (frob stm #b010)
+  (frob stmda #b000)
+  (frob stmib #b110))

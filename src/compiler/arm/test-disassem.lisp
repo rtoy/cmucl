@@ -111,6 +111,9 @@
 	(na (c:make-random-tn :kind :normal
 			      :sc (c:sc-or-lose 'vm::descriptor-reg)
 			      :offset vm::nargs-offset))
+	(sp (c:make-random-tn :kind :normal
+			      :sc (c:sc-or-lose 'vm::any-reg)
+			      :offset csp-offset))
 	(fd-0 (c:make-random-tn :kind :normal
 				:sc (c:sc-or-lose 'vm::double-reg)
 				:offset 0))
@@ -135,6 +138,11 @@
       (inst ldrh na n (make-op2 n :add nil))               ; ldrh na, [n, n]
       (inst ldrh na (post-index n) (make-op2 n))           ; ldrh na, [n], n
       (inst ldrh na (post-index n) (make-op2 n :add nil))  ; ldrh na, [n], -n
+      (inst ldm sp (list na n))		; ldm sp, {na, n}
+      (inst ldm sp (list na n) :eq)		; ldmeq sp, {na, n}
+      (inst ldm (pre-index sp) (list na n))	; ldm sp!, {na, n}
+      (inst stmdb sp (list na n))		; stmfd sp, {na, n}
+      (inst stmdb (pre-index sp) (list na n) :eq)  ; stmfdeq sp!, {na, n}
       )
     segment))
 
