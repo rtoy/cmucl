@@ -2869,7 +2869,7 @@
 
 
 ;; reg-list is the register list immediate value in the LDM/STM
-;; instructions.  The disassembler will disassembly them as a list of
+;; instructions.  The disassembler will disassemble them as a list of
 ;; registers.  We don't don't support coalescing a consecutive
 ;; sequence to the form r<first>-r<lst>. Instead each register is
 ;; printed.
@@ -2880,7 +2880,7 @@
 	       (dotimes (k 16)
 		 (unless (zerop (ldb (byte 1 k) value))
 		   (reg-arg-printer k stream dstate)
-		   (setf (ldb (byte 1 k) value)  0)
+		   (setf (ldb (byte 1 k) value) 0)
 		   (unless (zerop value)
 		     (princ ", " stream))))
 	       (princ '} stream)))
