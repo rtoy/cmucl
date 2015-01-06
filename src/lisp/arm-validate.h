@@ -12,7 +12,7 @@
  *      0x0f000000->0xf8000000    8M for linkage table area
  *      0x10000000->0x14000000   64M Read-Only Space.
  *      0x20000000->0x22000000   32M Binding stack growing up.
- *      0x28000000->0x2a000000   32M Control stack growing up.
+ *      0x28000000->0x2a000000   32M Control stack growing down.
  *      0x30000000->0x34000000   64M Static Space.
  *      0x40000000->0x60000000  512M Dynamic space 1
  *      0x60000000->0x80000000  512M Dynamic space 2

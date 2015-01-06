@@ -44,7 +44,7 @@
 }
 
 #define SC_REG(scp, reg) (*os_sigcontext_reg(scp, reg))
-#define SC_PC(scp) (*os_sigcontext_pc(scp))
+#define SC_PC(scp) (*os_sigcontext_reg(scp, reg_PC))
 #define SC_SP(scp) SC_REG(scp, reg_SP)
 
 #endif
