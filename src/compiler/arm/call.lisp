@@ -285,7 +285,7 @@ default-value-8
       (progn
 	(new-assem:without-scheduling ()
 	  (note-this-location vop :single-value-return)
-	  (not-implemented 'default-unknown-values-1))
+	  (not-implemented default-unknown-values-1))
 	(inst compute-code-from-lra code-tn code-tn lra-label temp))
       (let ((regs-defaulted (gen-label))
 	    (defaulting-done (gen-label))
@@ -293,7 +293,7 @@ default-value-8
 	;; Branch off to the MV case.
 	(new-assem:without-scheduling ()
 	  (note-this-location vop :unknown-return)
-	  (not-implemented 'default-unknown-values-multi-branch))
+	  (not-implemented default-unknown-values-multi-branch))
 	
 	;; Do the single value calse.
 	(do ((i 1 (1+ i))
@@ -301,7 +301,7 @@ default-value-8
 	    ((= i (min nvals register-arg-count)))
 	  (move (tn-ref-tn val) null-tn))
 	(when (> nvals register-arg-count)
-	  (not-implemented 'default-unknown-values-single-value))
+	  (not-implemented default-unknown-values-single-value))
 	
 	(emit-label regs-defaulted)
 	(when (> nvals register-arg-count)
@@ -317,7 +317,7 @@ default-value-8
 		    (tn (tn-ref-tn val)))
 		(defaults (cons default-lab tn))
 
-		(not-implemented 'default-unknown-values-multi)))
+		(not-implemented default-unknown-values-multi)))
 	    
 	    (emit-label defaulting-done)
 	    (move csp-tn ocfp-tn)
@@ -366,14 +366,14 @@ default-value-8
   (let ((variable-values (gen-label))
 	(done (gen-label)))
     (new-assem:without-scheduling ()
-      (not-implemented 'receive-unknown-values-pre))
+      (not-implemented receive-unknown-values-pre))
 
-    (not-implemented 'receive-unknown-values-body)
+    (not-implemented receive-unknown-values-body)
     
     (assemble (*elsewhere*)
       (trace-table-entry trace-table-function-prologue)
       (emit-label variable-values)
-      (not-implemented 'receive-unknown-values-post)
+      (not-implemented receive-unknown-values-post)
       (trace-table-entry trace-table-normal)))
   (undefined-value))
 

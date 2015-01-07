@@ -2764,16 +2764,33 @@
 			  #b0000)))
 
 (defmacro not-implemented (&optional name)
+  (let* ((len (if name (length (symbol-name name))))
+	 (rounded-len (* 4 (ceiling len 4)))
+	 ;; Buffer to hold the bytes (octets) of the name. The length
+	 ;; is rounded up to a whole number of words (4-byte
+	 ;; boundary).
+	 (buffer (make-array rounded-len :element-type '(unsigned-byte 8)
+					 :initial-element 0))
+	 ;; ARM B relative branch instruction with the length of the
+	 ;; buffer as the offset.  The offset is in words, so shift
+	 ;; the (octet) length down accordingly. And add one so if the
+	 ;; branch is actually executed, we skip over all of the
+	 ;; octets.
+	 (binst (logior (ash #b11101010 24)
+			(+ 1 (ash rounded-len -2)))))
+    ;; Convert the symbol name into octets.
+    (string-to-octets (symbol-name name)
+		      :external-format :iso-8859-1
+		      :buffer buffer)
   `(progn
-     ;; Save a0 (aka ARM r0) to the stack, and then load it with the
-     ;; address of name object so the halt trap handler can see the
-     ;; name.  If the trap returns, restore a0 with it's original
-     ;; value and continue as if nothing happened.
-     (inst str a0-tn (pre-index csp-tn) 4)
-     ;; a0 is a descriptor-reg, but so the the lisp object address.
-     (inst li a0-tn (kernel:get-lisp-obj-address ,name))
      (inst udf halt-trap)
-     (inst ldr a0-tn (post-index csp-tn) -4)))
+     ;; Manually generate a branch instruction with the offset equal
+     ;; to the symbol length (rounded up).
+     (emit-word c:*code-segment* ,binst)
+     ;; Emit each byte of the buffer
+     ,@(map 'list #'(lambda (x)
+		      `(emit-byte c:*code-segment* ,x))
+	    buffer))))
 
 ;;;; Instructions for dumping data and header objects.
 
