@@ -41,6 +41,7 @@
 #include <link.h>
 #include <dlfcn.h>
 #include <assert.h>
+#include <sys/personality.h>
 
 #include "validate.h"
 size_t os_vm_page_size;
@@ -50,13 +51,6 @@ size_t os_vm_page_size;
 #endif
 
 
-/* Prototype for personality(2). Done inline here since the header file
- * for this isn't available on old versions of glibc. */
-int personality (unsigned long);
-
-#if !defined(ADDR_NO_RANDOMIZE)
-#define ADDR_NO_RANDOMIZE 0x40000
-#endif
 /* From personality(2) */
 #define CURRENT_PERSONALITY 0xffffffffUL
 
@@ -67,9 +61,6 @@ check_personality(struct utsname *name, char *const *argv, char *const *envp)
      * by setting a personality flag and re-executing. (We need
      * to re-execute, since the memory maps that can conflict with
      * the CMUCL spaces have already been done at this point).
-     *
-     * Since randomization is currently implemented only on x86 kernels,
-     * don't do this trick on other platforms.
      */
     int major_version, minor_version, patch_version;
     char *p;
@@ -511,7 +502,7 @@ sigsegv_handler(HANDLER_ARGS)
 #ifdef i386
     interrupt_handle_now(signal, contextstruct);
 #elif defined(__arm__)
-    /* TODO: Implement for arm */
+    abort();
 #else
 #define CONTROL_STACK_TOP (((char*) CONTROL_STACK_START) + control_stack_size)
 
