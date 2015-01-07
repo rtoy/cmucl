@@ -18,6 +18,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/param.h>
 #include <sys/file.h>
 #include <errno.h>
@@ -296,7 +297,7 @@ os_sigcontext_reg(ucontext_t *scp, int offset)
       case 30:
           return &scp->uc_mcontext.gregs[REG_R15];
     }
-    return NULL;
+    abort();
 }
 
 unsigned long *
@@ -343,7 +344,7 @@ os_sigcontext_reg(ucontext_t *scp, int offset)
       case 15:
           return (unsigned long *) &scp->uc_mcontext.arm_pc;
       default:
-          return NULL;
+          abort();
     }
 }
 
