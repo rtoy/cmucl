@@ -47,4 +47,4 @@
 #define SC_PC(scp) (*os_sigcontext_reg(scp, reg_PC))
 #define SC_SP(scp) SC_REG(scp, reg_SP)
 
-#endif
+#endif /* ARM_LISPREGS_H */

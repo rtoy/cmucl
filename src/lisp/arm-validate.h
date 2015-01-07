@@ -61,7 +61,7 @@
 #error gencgc not supported
 #else
 #define DYNAMIC_0_SPACE_START   (SpaceStart_TargetDynamic)
-#define DYNAMIC_1_SPACE_START   (DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE + RESERVED_SPACE)
+#define DYNAMIC_1_SPACE_START   (DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE)
 #endif
 
-#endif
+#endif /* ARM_VALIDATE_H */
