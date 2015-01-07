@@ -173,64 +173,151 @@ os_init(const char *argv[], const char *envp[])
     os_vm_page_size = getpagesize();
 }
 
+#ifdef __i386
 unsigned long *
 os_sigcontext_reg(ucontext_t *scp, int offset)
 {
-#ifdef __i386
-    switch (offset) {
-    case 0:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EAX];
-    case 2:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_ECX];
-    case 4:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EDX];
-    case 6:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EBX];
-    case 8:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_ESP];
-    case 10:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EBP];
-    case 12:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_ESI];
-    case 14:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EDI];
-    }
-#elif defined(__x86_64)
     switch (offset) {
       case 0:
-	  return &scp->uc_mcontext.gregs[REG_RAX];
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_EAX];
       case 2:
-	  return &scp->uc_mcontext.gregs[REG_RCX];
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_ECX];
       case 4:
-	  return &scp->uc_mcontext.gregs[REG_RDX];
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_EDX];
       case 6:
-	  return &scp->uc_mcontext.gregs[REG_RBX];
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_EBX];
       case 8:
-	  return &scp->uc_mcontext.gregs[REG_RSP];
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_ESP];
       case 10:
-	  return &scp->uc_mcontext.gregs[REG_RBP];
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_EBP];
       case 12:
-	  return &scp->uc_mcontext.gregs[REG_RSI];
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_ESI];
       case 14:
-	  return &scp->uc_mcontext.gregs[REG_RDI];
-      case 16:
-	  return &scp->uc_mcontext.gregs[REG_R8];
-      case 18:
-	  return &scp->uc_mcontext.gregs[REG_R9];
-      case 20:
-	  return &scp->uc_mcontext.gregs[REG_R10];
-      case 22:
-	  return &scp->uc_mcontext.gregs[REG_R11];
-      case 24:
-	  return &scp->uc_mcontext.gregs[REG_R12];
-      case 26:
-	  return &scp->uc_mcontext.gregs[REG_R13];
-      case 28:
-	  return &scp->uc_mcontext.gregs[REG_R14];
-      case 30:
-	  return &scp->uc_mcontext.gregs[REG_R15];
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_EDI];
     }
+    return NULL;
+}
+
+unsigned long *
+os_sigcontext_pc(ucontext_t *scp)
+{
+    return (unsigned long *) &scp->uc_mcontext.gregs[REG_EIP];
+}
+
+unsigned char *
+os_sigcontext_fpu_reg(ucontext_t *scp, int offset)
+{
+    fpregset_t fpregs = scp->uc_mcontext.fpregs;
+    unsigned char *reg = NULL;
+    
+    if (fpregs) {
+        if (offset < 8) {
+            reg = (unsigned char *) &fpregs->_st[offset];
+        }
+#ifdef FEATURE_SSE2
+        else {
+            struct _fpstate *fpstate;
+            fpstate = (struct _fpstate*) scp->uc_mcontext.fpregs;
+            if (fpstate->magic != 0xffff) {
+                reg = (unsigned char *) &fpstate->_xmm[offset - 8];
+            }
+        }
+#endif
+    }
+    return reg;
+}
+
+unsigned int
+os_sigcontext_fpu_modes(ucontext_t *scp)
+{
+    unsigned int modes;
+    unsigned short cw, sw;
+
+    if (scp->uc_mcontext.fpregs == NULL) {
+	cw = 0;
+	sw = 0x3f;
+    } else {
+	cw = scp->uc_mcontext.fpregs->cw & 0xffff;
+	sw = scp->uc_mcontext.fpregs->sw & 0xffff;
+    }
+
+    modes = ((cw & 0x3f) << 7) | (sw & 0x3f);
+
+#ifdef FEATURE_SSE2
+    /*
+     * Add in the SSE2 part, if we're running the sse2 core.
+     */
+    if (fpu_mode == SSE2) {
+        struct _fpstate *fpstate;
+	unsigned long mxcsr;
+
+        fpstate = (struct _fpstate*) scp->uc_mcontext.fpregs;
+        if (fpstate->magic == 0xffff) {
+            mxcsr = 0;
+        } else {
+            mxcsr = fpstate->mxcsr;
+            DPRINTF(0, (stderr, "SSE2 modes = %08lx\n", mxcsr));
+        }
+
+	modes |= mxcsr;
+    }
+#endif
+
+    modes ^= (0x3f << 7);
+    return modes;
+}
+
+#elif defined(__x86_64)
+unsigned long *
+os_sigcontext_reg(ucontext_t *scp, int offset)
+{
+    switch (offset) {
+      case 0:
+          return &scp->uc_mcontext.gregs[REG_RAX];
+      case 2:
+          return &scp->uc_mcontext.gregs[REG_RCX];
+      case 4:
+          return &scp->uc_mcontext.gregs[REG_RDX];
+      case 6:
+          return &scp->uc_mcontext.gregs[REG_RBX];
+      case 8:
+          return &scp->uc_mcontext.gregs[REG_RSP];
+      case 10:
+          return &scp->uc_mcontext.gregs[REG_RBP];
+      case 12:
+          return &scp->uc_mcontext.gregs[REG_RSI];
+      case 14:
+          return &scp->uc_mcontext.gregs[REG_RDI];
+      case 16:
+          return &scp->uc_mcontext.gregs[REG_R8];
+      case 18:
+          return &scp->uc_mcontext.gregs[REG_R9];
+      case 20:
+          return &scp->uc_mcontext.gregs[REG_R10];
+      case 22:
+          return &scp->uc_mcontext.gregs[REG_R11];
+      case 24:
+          return &scp->uc_mcontext.gregs[REG_R12];
+      case 26:
+          return &scp->uc_mcontext.gregs[REG_R13];
+      case 28:
+          return &scp->uc_mcontext.gregs[REG_R14];
+      case 30:
+          return &scp->uc_mcontext.gregs[REG_R15];
+    }
+    return NULL;
+}
+
+unsigned long *
+os_sigcontext_pc(ucontext_t *scp)
+{
+    return (unsigned long *) &scp->uc_mcontext.gregs[REG_EIP];
+}
+
 #elif defined(__arm__)
+unsigned long *
+os_sigcontext_reg(ucontext_t *scp, int offset)
+{
     switch (offset) {
       case 0:
           return (unsigned long *) &scp->uc_mcontext.arm_r0;
@@ -267,92 +354,22 @@ os_sigcontext_reg(ucontext_t *scp, int offset)
       default:
           return NULL;
     }
-#endif
-    return NULL;
-}
-
-unsigned long *
-os_sigcontext_pc(ucontext_t *scp)
-{
-#if defined(i386)
-    return (unsigned long *) &scp->uc_mcontext.gregs[REG_EIP];
-#elif defined(__arm__)
-    return os_sigcontext_reg(scp, reg_PC);
-#endif
 }
 
 unsigned char *
 os_sigcontext_fpu_reg(ucontext_t *scp, int offset)
 {
-#if defined(i386)
-    fpregset_t fpregs = scp->uc_mcontext.fpregs;
-    unsigned char *reg = NULL;
-    
-    if (fpregs) {
-        if (offset < 8) {
-            reg = (unsigned char *) &fpregs->_st[offset];
-        }
-#ifdef FEATURE_SSE2
-        else {
-            struct _fpstate *fpstate;
-            fpstate = (struct _fpstate*) scp->uc_mcontext.fpregs;
-            if (fpstate->magic != 0xffff) {
-                reg = (unsigned char *) &fpstate->_xmm[offset - 8];
-            }
-        }
-#endif
-    }
-    return reg;
-#elif defined(__arm__)
-    /* TODO: Implement this for arm */
-    return NULL;
-#endif
+    abort();
 }
 
 unsigned int
 os_sigcontext_fpu_modes(ucontext_t *scp)
 {
-#if defined(i386)
-    unsigned int modes;
-    unsigned short cw, sw;
-
-    if (scp->uc_mcontext.fpregs == NULL) {
-	cw = 0;
-	sw = 0x3f;
-    } else {
-	cw = scp->uc_mcontext.fpregs->cw & 0xffff;
-	sw = scp->uc_mcontext.fpregs->sw & 0xffff;
-    }
-
-    modes = ((cw & 0x3f) << 7) | (sw & 0x3f);
-
-#ifdef FEATURE_SSE2
-    /*
-     * Add in the SSE2 part, if we're running the sse2 core.
-     */
-    if (fpu_mode == SSE2) {
-        struct _fpstate *fpstate;
-	unsigned long mxcsr;
-
-        fpstate = (struct _fpstate*) scp->uc_mcontext.fpregs;
-        if (fpstate->magic == 0xffff) {
-            mxcsr = 0;
-        } else {
-            mxcsr = fpstate->mxcsr;
-            DPRINTF(0, (stderr, "SSE2 modes = %08lx\n", mxcsr));
-        }
-
-	modes |= mxcsr;
-    }
-#endif
-
-    modes ^= (0x3f << 7);
-    return modes;
-#elif defined(__arm__)
-    /* TODO: Implement this for arm */
-    return 0;
-#endif
+    abort();
 }
+#else
+#error "unknown architecture"
+#endif
 
 os_vm_address_t
 os_validate(os_vm_address_t addr, os_vm_size_t len)
