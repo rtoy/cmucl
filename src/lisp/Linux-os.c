@@ -471,11 +471,7 @@ sigsegv_handler(HANDLER_ARGS)
 #endif
     if (gc_write_barrier(code->si_addr))
 	return;
-#if defined(__x86_64)
-    DPRINTF(0, (stderr, "sigsegv: rip: %p\n", os_context->uc_mcontext.gregs[REG_RIP]));
-#else
-    DPRINTF(0, (stderr, "sigsegv: eip: %x\n", os_context->uc_mcontext.gregs[REG_EIP]));
-#endif
+    DPRINTF(0, (stderr, "sigsegv: PC: %p\n", SC_PC(os_context));
 
 #ifdef RED_ZONE_HIT
     {
