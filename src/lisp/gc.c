@@ -5,7 +5,6 @@
  */
 
 #include <stdio.h>
-#include <inttypes.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <signal.h>
@@ -36,13 +35,17 @@ static void scavenge_newspace(void);
 static void scavenge_interrupt_contexts(void);
 static void scan_weak_pointers(void);
 
-#define gc_abort() lose("GC invariant lost!  File \"%s\", line %d\n", \
-			__FILE__, __LINE__)
-
+#define gc_abort() \
+  do { \
+      lose("GC invariant lost!  File \"%s\", line %d\n", __FILE__, __LINE__); \
+      abort(); \
+  } while (0)
+  
 #if DEBUG
-#define gc_assert(ex) do { \
-	if (!(ex)) gc_abort(); \
-} while (0)
+#define gc_assert(ex) \
+  do { \
+      if (!(ex)) gc_abort(); \
+  } while (0)
 #else
 #define gc_assert(ex)
 #endif
