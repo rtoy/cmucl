@@ -572,7 +572,6 @@ print_garbage(lispobj * from_space, lispobj * from_space_free_pointer)
 		   nwords, (unsigned long) start);
 	    printf("Header word is 0x%08lx\n", (unsigned long) object);
 	}
-        gc_assert(nwords > 0);
 	start += nwords;
     }
     printf("%d total words not copied.\n", total_words_not_copied);
