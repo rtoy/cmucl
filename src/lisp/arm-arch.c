@@ -20,7 +20,7 @@
 
 #define NOT_IMPLEMENTED() \
     do { \
-        fprintf(stderr, "%s: NOT IMPLEMENTED\n", __FUNCTION__); \ 
+        fprintf(stderr, "%s: NOT IMPLEMENTED\n", __FUNCTION__); \
         abort(); \
     } while (0)
 
