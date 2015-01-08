@@ -265,37 +265,37 @@ os_sigcontext_reg(ucontext_t *scp, int offset)
 {
     switch (offset) {
       case 0:
-          return &scp->uc_mcontext.gregs[REG_RAX];
+	  return &scp->uc_mcontext.gregs[REG_RAX];
       case 2:
-          return &scp->uc_mcontext.gregs[REG_RCX];
+	  return &scp->uc_mcontext.gregs[REG_RCX];
       case 4:
-          return &scp->uc_mcontext.gregs[REG_RDX];
+	  return &scp->uc_mcontext.gregs[REG_RDX];
       case 6:
-          return &scp->uc_mcontext.gregs[REG_RBX];
+	  return &scp->uc_mcontext.gregs[REG_RBX];
       case 8:
-          return &scp->uc_mcontext.gregs[REG_RSP];
+	  return &scp->uc_mcontext.gregs[REG_RSP];
       case 10:
-          return &scp->uc_mcontext.gregs[REG_RBP];
+	  return &scp->uc_mcontext.gregs[REG_RBP];
       case 12:
-          return &scp->uc_mcontext.gregs[REG_RSI];
+	  return &scp->uc_mcontext.gregs[REG_RSI];
       case 14:
-          return &scp->uc_mcontext.gregs[REG_RDI];
+	  return &scp->uc_mcontext.gregs[REG_RDI];
       case 16:
-          return &scp->uc_mcontext.gregs[REG_R8];
+	  return &scp->uc_mcontext.gregs[REG_R8];
       case 18:
-          return &scp->uc_mcontext.gregs[REG_R9];
+	  return &scp->uc_mcontext.gregs[REG_R9];
       case 20:
-          return &scp->uc_mcontext.gregs[REG_R10];
+	  return &scp->uc_mcontext.gregs[REG_R10];
       case 22:
-          return &scp->uc_mcontext.gregs[REG_R11];
+	  return &scp->uc_mcontext.gregs[REG_R11];
       case 24:
-          return &scp->uc_mcontext.gregs[REG_R12];
+	  return &scp->uc_mcontext.gregs[REG_R12];
       case 26:
-          return &scp->uc_mcontext.gregs[REG_R13];
+	  return &scp->uc_mcontext.gregs[REG_R13];
       case 28:
-          return &scp->uc_mcontext.gregs[REG_R14];
+	  return &scp->uc_mcontext.gregs[REG_R14];
       case 30:
-          return &scp->uc_mcontext.gregs[REG_R15];
+	  return &scp->uc_mcontext.gregs[REG_R15];
     }
     abort();
 }
@@ -312,39 +312,39 @@ os_sigcontext_reg(ucontext_t *scp, int offset)
 {
     switch (offset) {
       case 0:
-          return (unsigned long *) &scp->uc_mcontext.arm_r0;
+	  return (unsigned long *) &scp->uc_mcontext.arm_r0;
       case 1:
-          return (unsigned long *) &scp->uc_mcontext.arm_r1;
+	  return (unsigned long *) &scp->uc_mcontext.arm_r1;
       case 2:
-          return (unsigned long *) &scp->uc_mcontext.arm_r2;
+	  return (unsigned long *) &scp->uc_mcontext.arm_r2;
       case 3:
-          return (unsigned long *) &scp->uc_mcontext.arm_r3;
+	  return (unsigned long *) &scp->uc_mcontext.arm_r3;
       case 4:
-          return (unsigned long *) &scp->uc_mcontext.arm_r4;
+	  return (unsigned long *) &scp->uc_mcontext.arm_r4;
       case 5:
-          return (unsigned long *) &scp->uc_mcontext.arm_r5;
+	  return (unsigned long *) &scp->uc_mcontext.arm_r5;
       case 6:
-          return (unsigned long *) &scp->uc_mcontext.arm_r6;
+	  return (unsigned long *) &scp->uc_mcontext.arm_r6;
       case 7:
-          return (unsigned long *) &scp->uc_mcontext.arm_r7;
+	  return (unsigned long *) &scp->uc_mcontext.arm_r7;
       case 8:
-          return (unsigned long *) &scp->uc_mcontext.arm_r8;
+	  return (unsigned long *) &scp->uc_mcontext.arm_r8;
       case 9:
-          return (unsigned long *) &scp->uc_mcontext.arm_r9;
+	  return (unsigned long *) &scp->uc_mcontext.arm_r9;
       case 10:
-          return (unsigned long *) &scp->uc_mcontext.arm_r10;
+	  return (unsigned long *) &scp->uc_mcontext.arm_r10;
       case 11:
-          return (unsigned long *) &scp->uc_mcontext.arm_fp;
+	  return (unsigned long *) &scp->uc_mcontext.arm_fp;
       case 12:
-          return (unsigned long *) &scp->uc_mcontext.arm_ip;
+	  return (unsigned long *) &scp->uc_mcontext.arm_ip;
       case 13:
-          return (unsigned long *) &scp->uc_mcontext.arm_sp;
+	  return (unsigned long *) &scp->uc_mcontext.arm_sp;
       case 14:
-          return (unsigned long *) &scp->uc_mcontext.arm_lr;
+	  return (unsigned long *) &scp->uc_mcontext.arm_lr;
       case 15:
-          return (unsigned long *) &scp->uc_mcontext.arm_pc;
+	  return (unsigned long *) &scp->uc_mcontext.arm_pc;
       default:
-          abort();
+	  abort();
     }
 }
 
