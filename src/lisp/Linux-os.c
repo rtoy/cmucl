@@ -18,6 +18,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/param.h>
 #include <sys/file.h>
 #include <errno.h>
@@ -41,6 +42,7 @@
 #include <link.h>
 #include <dlfcn.h>
 #include <assert.h>
+#include <sys/personality.h>
 
 #include "validate.h"
 size_t os_vm_page_size;
@@ -50,17 +52,8 @@ size_t os_vm_page_size;
 #endif
 
 
-#if defined(__i386) || defined(__x86_64)
-/* Prototype for personality(2). Done inline here since the header file
- * for this isn't available on old versions of glibc. */
-int personality (unsigned long);
-
-#if !defined(ADDR_NO_RANDOMIZE)
-#define ADDR_NO_RANDOMIZE 0x40000
-#endif
 /* From personality(2) */
 #define CURRENT_PERSONALITY 0xffffffffUL
-#endif
 
 void
 check_personality(struct utsname *name, char *const *argv, char *const *envp)
@@ -69,11 +62,7 @@ check_personality(struct utsname *name, char *const *argv, char *const *envp)
      * by setting a personality flag and re-executing. (We need
      * to re-execute, since the memory maps that can conflict with
      * the CMUCL spaces have already been done at this point).
-     *
-     * Since randomization is currently implemented only on x86 kernels,
-     * don't do this trick on other platforms.
      */
-#if defined(__i386) || defined(__x86_64)
     int major_version, minor_version, patch_version;
     char *p;
     
@@ -140,7 +129,6 @@ check_personality(struct utsname *name, char *const *argv, char *const *envp)
                         "(maybe /proc isn't mounted?). Trying to continue anyway.\n");
             }
         }
-#endif
 }
 
 /*
@@ -182,22 +170,22 @@ unsigned long *
 os_sigcontext_reg(ucontext_t *scp, int offset)
 {
     switch (offset) {
-    case 0:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EAX];
-    case 2:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_ECX];
-    case 4:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EDX];
-    case 6:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EBX];
-    case 8:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_ESP];
-    case 10:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EBP];
-    case 12:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_ESI];
-    case 14:
-	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EDI];
+      case 0:
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_EAX];
+      case 2:
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_ECX];
+      case 4:
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_EDX];
+      case 6:
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_EBX];
+      case 8:
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_ESP];
+      case 10:
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_EBP];
+      case 12:
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_ESI];
+      case 14:
+          return (unsigned long *) &scp->uc_mcontext.gregs[REG_EDI];
     }
     return NULL;
 }
@@ -270,48 +258,109 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
     modes ^= (0x3f << 7);
     return modes;
 }
-#endif
 
-#ifdef __x86_64
-int *
-sc_reg(ucontext_t *c, int offset)
+#elif defined(__x86_64)
+unsigned long *
+os_sigcontext_reg(ucontext_t *scp, int offset)
 {
     switch (offset) {
       case 0:
-	  return &c->uc_mcontext.gregs[REG_RAX];
+	  return &scp->uc_mcontext.gregs[REG_RAX];
       case 2:
-	  return &c->uc_mcontext.gregs[REG_RCX];
+	  return &scp->uc_mcontext.gregs[REG_RCX];
       case 4:
-	  return &c->uc_mcontext.gregs[REG_RDX];
+	  return &scp->uc_mcontext.gregs[REG_RDX];
       case 6:
-	  return &c->uc_mcontext.gregs[REG_RBX];
+	  return &scp->uc_mcontext.gregs[REG_RBX];
       case 8:
-	  return &c->uc_mcontext.gregs[REG_RSP];
+	  return &scp->uc_mcontext.gregs[REG_RSP];
       case 10:
-	  return &c->uc_mcontext.gregs[REG_RBP];
+	  return &scp->uc_mcontext.gregs[REG_RBP];
       case 12:
-	  return &c->uc_mcontext.gregs[REG_RSI];
+	  return &scp->uc_mcontext.gregs[REG_RSI];
       case 14:
-	  return &c->uc_mcontext.gregs[REG_RDI];
+	  return &scp->uc_mcontext.gregs[REG_RDI];
       case 16:
-	  return &c->uc_mcontext.gregs[REG_R8];
+	  return &scp->uc_mcontext.gregs[REG_R8];
       case 18:
-	  return &c->uc_mcontext.gregs[REG_R9];
+	  return &scp->uc_mcontext.gregs[REG_R9];
       case 20:
-	  return &c->uc_mcontext.gregs[REG_R10];
+	  return &scp->uc_mcontext.gregs[REG_R10];
       case 22:
-	  return &c->uc_mcontext.gregs[REG_R11];
+	  return &scp->uc_mcontext.gregs[REG_R11];
       case 24:
-	  return &c->uc_mcontext.gregs[REG_R12];
+	  return &scp->uc_mcontext.gregs[REG_R12];
       case 26:
-	  return &c->uc_mcontext.gregs[REG_R13];
+	  return &scp->uc_mcontext.gregs[REG_R13];
       case 28:
-	  return &c->uc_mcontext.gregs[REG_R14];
+	  return &scp->uc_mcontext.gregs[REG_R14];
       case 30:
-	  return &c->uc_mcontext.gregs[REG_R15];
+	  return &scp->uc_mcontext.gregs[REG_R15];
     }
-    return (int *) 0;
+    abort();
 }
+
+unsigned long *
+os_sigcontext_pc(ucontext_t *scp)
+{
+    return (unsigned long *) &scp->uc_mcontext.gregs[REG_EIP];
+}
+
+#elif defined(__arm__)
+unsigned long *
+os_sigcontext_reg(ucontext_t *scp, int offset)
+{
+    switch (offset) {
+      case 0:
+	  return (unsigned long *) &scp->uc_mcontext.arm_r0;
+      case 1:
+	  return (unsigned long *) &scp->uc_mcontext.arm_r1;
+      case 2:
+	  return (unsigned long *) &scp->uc_mcontext.arm_r2;
+      case 3:
+	  return (unsigned long *) &scp->uc_mcontext.arm_r3;
+      case 4:
+	  return (unsigned long *) &scp->uc_mcontext.arm_r4;
+      case 5:
+	  return (unsigned long *) &scp->uc_mcontext.arm_r5;
+      case 6:
+	  return (unsigned long *) &scp->uc_mcontext.arm_r6;
+      case 7:
+	  return (unsigned long *) &scp->uc_mcontext.arm_r7;
+      case 8:
+	  return (unsigned long *) &scp->uc_mcontext.arm_r8;
+      case 9:
+	  return (unsigned long *) &scp->uc_mcontext.arm_r9;
+      case 10:
+	  return (unsigned long *) &scp->uc_mcontext.arm_r10;
+      case 11:
+	  return (unsigned long *) &scp->uc_mcontext.arm_fp;
+      case 12:
+	  return (unsigned long *) &scp->uc_mcontext.arm_ip;
+      case 13:
+	  return (unsigned long *) &scp->uc_mcontext.arm_sp;
+      case 14:
+	  return (unsigned long *) &scp->uc_mcontext.arm_lr;
+      case 15:
+	  return (unsigned long *) &scp->uc_mcontext.arm_pc;
+      default:
+	  abort();
+    }
+}
+
+unsigned char *
+os_sigcontext_fpu_reg(ucontext_t *scp, int offset)
+{
+    abort();
+}
+
+unsigned int
+os_sigcontext_fpu_modes(ucontext_t *scp)
+{
+    abort();
+}
+#else
+#error "unknown architecture"
 #endif
 
 os_vm_address_t
@@ -423,11 +472,7 @@ sigsegv_handler(HANDLER_ARGS)
 #endif
     if (gc_write_barrier(code->si_addr))
 	return;
-#if defined(__x86_64)
-    DPRINTF(0, (stderr, "sigsegv: rip: %p\n", os_context->uc_mcontext.gregs[REG_RIP]));
-#else
-    DPRINTF(0, (stderr, "sigsegv: eip: %x\n", os_context->uc_mcontext.gregs[REG_EIP]));
-#endif
+    DPRINTF(0, (stderr, "sigsegv: PC: %p\n", SC_PC(os_context));
 
 #ifdef RED_ZONE_HIT
     {
@@ -453,6 +498,8 @@ sigsegv_handler(HANDLER_ARGS)
     DPRINTF(0, (stderr, "sigsegv\n"));
 #ifdef i386
     interrupt_handle_now(signal, contextstruct);
+#elif defined(__arm__)
+    abort();
 #else
 #define CONTROL_STACK_TOP (((char*) CONTROL_STACK_START) + control_stack_size)
 
@@ -539,6 +586,7 @@ os_dlsym(const char *sym_name, lispobj lib_list)
     }
 }
 
+#if defined(i386) || defined(__x86_64)
 void
 restore_fpu(ucontext_t *context)
 {
@@ -561,6 +609,7 @@ restore_fpu(ucontext_t *context)
 #endif        
     }
 }
+#endif
 
 #ifdef i386
 boolean

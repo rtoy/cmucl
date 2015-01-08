@@ -35,13 +35,17 @@ static void scavenge_newspace(void);
 static void scavenge_interrupt_contexts(void);
 static void scan_weak_pointers(void);
 
-#define gc_abort() lose("GC invariant lost!  File \"%s\", line %d\n", \
-			__FILE__, __LINE__)
-
+#define gc_abort() \
+  do { \
+      lose("GC invariant lost!  File \"%s\", line %d\n", __FILE__, __LINE__); \
+      abort(); \
+  } while (0)
+  
 #if DEBUG
-#define gc_assert(ex) do { \
-	if (!(ex)) gc_abort(); \
-} while (0)
+#define gc_assert(ex) \
+  do { \
+      if (!(ex)) gc_abort(); \
+  } while (0)
 #else
 #define gc_assert(ex)
 #endif
@@ -556,14 +560,17 @@ print_garbage(lispobj * from_space, lispobj * from_space_free_pointer)
 		  header = *pointer;
 		  type = TypeOf(header);
 		  nwords = (sizetab[type]) (pointer);
+              default:
+                  gc_abort();
+                  break;
 	    }
 	} else {
 	    type = TypeOf(object);
 	    nwords = (sizetab[type]) (start);
 	    total_words_not_copied += nwords;
-	    printf("%4d words not copied at 0x%08x; ",
+	    printf("%4d words not copied at 0x%08lx; ",
 		   nwords, (unsigned long) start);
-	    printf("Header word is 0x%08x\n", (unsigned long) object);
+	    printf("Header word is 0x%08lx\n", (unsigned long) object);
 	}
 	start += nwords;
     }
@@ -817,7 +824,7 @@ scav_return_pc_header(lispobj * where, lispobj object)
 {
     fprintf(stderr, "GC lossage.  Should not be scavenging a ");
     fprintf(stderr, "Return PC Header.\n");
-    fprintf(stderr, "where = 0x%08x, object = 0x%08x",
+    fprintf(stderr, "where = 0x%08lx, object = 0x%08lx\n",
 	    (unsigned long) where, (unsigned long) object);
     lose(NULL);
     return 0;
@@ -866,7 +873,7 @@ scav_function_header(lispobj * where, lispobj object)
 {
     fprintf(stderr, "GC lossage.  Should not be scavenging a ");
     fprintf(stderr, "Function Header.\n");
-    fprintf(stderr, "where = 0x%08x, object = 0x%08x",
+    fprintf(stderr, "where = 0x%08lx, object = 0x%08lx\n",
 	    (unsigned long) where, (unsigned long) object);
     lose(NULL);
     return 0;
@@ -1954,7 +1961,7 @@ scan_weak_pointers(void)
 static int
 scav_lose(lispobj * where, lispobj object)
 {
-    fprintf(stderr, "GC lossage.  No scavenge function for object 0x%08x\n",
+    fprintf(stderr, "GC lossage.  No scavenge function for object 0x%08lx\n",
 	    (unsigned long) object);
     lose(NULL);
     return 0;
@@ -1963,7 +1970,7 @@ scav_lose(lispobj * where, lispobj object)
 static lispobj
 trans_lose(lispobj object)
 {
-    fprintf(stderr, "GC lossage.  No transport function for object 0x%08x\n",
+    fprintf(stderr, "GC lossage.  No transport function for object 0x%08lx\n",
 	    (unsigned long) object);
     lose(NULL);
     return NIL;
@@ -1972,9 +1979,9 @@ trans_lose(lispobj object)
 static int
 size_lose(lispobj * where)
 {
-    fprintf(stderr, "Size lossage.  No size function for object at 0x%08x\n",
+    fprintf(stderr, "Size lossage.  No size function for object at 0x%08lx\n",
 	    (unsigned long) where);
-    fprintf(stderr, "First word of object: 0x%08x\n", (unsigned long) *where);
+    fprintf(stderr, "First word of object: 0x%08lx\n", (unsigned long) *where);
     return 1;
 }
 

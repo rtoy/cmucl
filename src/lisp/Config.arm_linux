@@ -1,0 +1,29 @@
+# -*- Mode: makefile -*-
+
+PATH1 = ../../src/lisp
+vpath %.h $(PATH1)
+vpath %.c $(PATH1)
+vpath %.S $(PATH1)
+
+CMULOCALE = ../../src/i18n/locale
+vpath %.pot $(CMULOCALE)
+vpath %.po  $(CMULOCALE)
+vpath %.mo  $(CMULOCALE)
+
+GC_SRC := gc.c
+
+CPPFLAGS := -DUNICODE -iquote . -iquote $(PATH1)
+CFLAGS += -marm -Wstrict-prototypes -Wall -O2 -ggdb3 -fno-omit-frame-pointer -ffp-contract=off
+ASFLAGS = -g
+
+ARCH_SRC = arm-arch.c
+
+NM = nm -gp
+DEPEND_FLAGS = -MM
+
+ASSEM_SRC = arm-assem.S linux-stubs.S
+OS_SRC += Linux-os.c os-common.c elf.c
+OS_LIBS = -ldl
+OS_LINK_FLAGS = -marm -rdynamic -Wl,-Map,foo -Wl,-z,noexecstack
+
+EXEC_FINAL_OBJ = exec-final.o
