@@ -99,7 +99,7 @@ arch_install_interrupt_handlers(void)
 }
 
 
-extern lispobj call_into_lisp(lispobj fun, lispobj * args, int nargs);
+extern lispobj call_into_lisp(lispobj fun, lispobj *args, int nargs);
 
 lispobj
 funcall0(lispobj function)
