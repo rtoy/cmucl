@@ -2770,27 +2770,25 @@
 	 ;; is rounded up to a whole number of words (4-byte
 	 ;; boundary).
 	 (buffer (make-array rounded-len :element-type '(unsigned-byte 8)
-					 :initial-element 0))
-	 ;; ARM B relative branch instruction with the length of the
-	 ;; buffer as the offset.  The offset is in words, so shift
-	 ;; the (octet) length down accordingly. And add one so if the
-	 ;; branch is actually executed, we skip over all of the
-	 ;; octets.
-	 (binst (logior (ash #b11101010 24)
-			(+ 1 (ash rounded-len -2)))))
+					 :initial-element 0)))
     ;; Convert the symbol name into octets.
     (string-to-octets (symbol-name name)
 		      :external-format :iso-8859-1
 		      :buffer buffer)
   `(progn
-     (inst udf halt-trap)
-     ;; Manually generate a branch instruction with the offset equal
-     ;; to the symbol length (rounded up).
-     (emit-word c:*code-segment* ,binst)
-     ;; Emit each byte of the buffer
-     ,@(map 'list #'(lambda (x)
-		      `(emit-byte c:*code-segment* ,x))
-	    buffer))))
+     (let ((nyi-done (gen-label)))
+       (inst udf halt-trap)
+       ;; NOTE: The length of the buffer is indirectly encoded into
+       ;; the offset of the branch instruction since the instruction
+       ;; is a PC-relative brnach.  Useful for the udf handler to know
+       ;; where the string ends.  The string may or may not be
+       ;; 0-terminated.
+       (inst b nyi-done)
+       ;; Emit each byte of the buffer
+       ,@(map 'list #'(lambda (x)
+			`(emit-byte c:*code-segment* ,x))
+	      buffer)
+       (emit-label nyi-done)))))
 
 ;;;; Instructions for dumping data and header objects.
 

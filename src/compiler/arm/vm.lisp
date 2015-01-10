@@ -276,7 +276,6 @@
 
 ); eval-when (compile eval)
 
-(defregtn a0 descriptor-reg)
 (defregtn null descriptor-reg)
 (defregtn code descriptor-reg)
 
