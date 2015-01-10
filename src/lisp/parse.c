@@ -268,7 +268,7 @@ lookup_symbol(char *name, lispobj * result)
 
     /* Search dynamic space */
     headerptr = current_dynamic_space;
-#if !defined(ibmrt) && !defined(i386) && !defined(__x86_64)
+#if !defined(ALLOCATION_POINTER)
     count = current_dynamic_space_free_pointer - current_dynamic_space;
 #else
     count = (lispobj *) SymbolValue(ALLOCATION_POINTER) - current_dynamic_space;
