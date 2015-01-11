@@ -1579,11 +1579,10 @@
 
 ;;; Branch instructions
 
-;; On ARM, the offset in an immediate branch instruction is offset
-;; from the expected target location.  That is, if the instruction is
-;; at address n and the offset is x, the address of the target is n +
-;; x + 8.  This needs to be accounted for when generating relative
-;; branches.
+;; On ARM, if the branch instruction is at address n and the offset is
+;; x, the address of the target is n + x + 8.  This needs to be
+;; accounted for when generating relative branches.  See section A2.3
+;; in the ARMv7-A architecture manual.
 (defconstant relative-branch-offset
   8)
 
