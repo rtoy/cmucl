@@ -2767,10 +2767,10 @@
   (let ((string (string name)))
     `(let ((length-label (gen-label)))
        (inst udf halt-trap)
-       ;; NOTE: The length of the buffer is indirectly encoded into
-       ;; the offset of the branch instruction since the instruction
-       ;; is a PC-relative brnach.  Useful for the udf handler to know
-       ;; where the string ends.  The string may or may not be
+       ;; NOTE: The branch offset helps estimate the length of the
+       ;; string.  The actual length of the string may be equal to the
+       ;; displacement or it may be up to three bytes shorter at the
+       ;; first trailing NUL byte.  The string may or may not be
        ;; 0-terminated.
        (inst b length-label)
        ,@(map 'list #'(lambda (c)
