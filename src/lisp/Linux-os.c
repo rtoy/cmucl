@@ -609,6 +609,12 @@ restore_fpu(ucontext_t *context)
 #endif        
     }
 }
+#elif defined(__arm__)
+void
+restore_fpu(ucontext_t *context)
+{
+    abort();
+}
 #endif
 
 #ifdef i386
