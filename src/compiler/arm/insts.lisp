@@ -1578,12 +1578,22 @@
 
 
 ;;; Branch instructions
+
+;; On ARM, the offset in an immediate branch instruction is offset
+;; from the expected target location.  That is, if the instruction is
+;; at address n and the offset is x, the address of t he target is n +
+;; x + 8.  This needs to be accounted for when generating relative
+;; branches.
+(defconstant relative-branch-offset
+  8)
+
 (disassem:define-argument-type relative-label
   :sign-extend t
   :use-label #'(lambda (value dstate)
 		 (declare (type (signed-byte 24) value)
 			  (type disassem:disassem-state dstate))
-		 (+ (ash value 2) (disassem:dstate-cur-addr dstate))))
+		 (+ (ash value 2) (disassem:dstate-cur-addr dstate)
+		    relative-branch-offset)))
 
 (defconstant branch-imm-printer
   `(:name cond :tab imm24))
@@ -1620,7 +1630,8 @@
 			  op
 			  ;; The offset in the instruction is a word
 			  ;; offset, not byte.
-			  (ash (- (label-position target) posn) -2)))))
+			  (ash (- (label-position target) posn relative-branch-offset)
+			       -2)))))
 
 ;; For these branch instructions, should we still keep the condition
 ;; at the end, like for other instructions?  Or can we have it
