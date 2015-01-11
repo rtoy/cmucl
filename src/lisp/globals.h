@@ -85,13 +85,13 @@ extern void globals_init(void);
 #endif
 
 #if defined(__arm__) && defined(__linux__)
-#define EXTERN(name, bytes)	.extern name
+#define EXTERN(name, bytes)
 #endif
 
 EXTERN(foreign_function_call_active, 4)
 
-EXTERN(current_control_stack_pointer, 4)
-EXTERN(current_control_frame_pointer, 4)
+    EXTERN(current_control_stack_pointer, 4)
+    EXTERN(current_control_frame_pointer, 4)
 
 #if !defined(ibmrt) && !defined(i386)
     EXTERN(current_binding_stack_pointer, 4)
