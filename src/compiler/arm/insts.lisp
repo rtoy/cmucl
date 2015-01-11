@@ -2777,7 +2777,7 @@
 		      :buffer buffer)
   `(progn
      (let ((nyi-done (gen-label)))
-       (inst udf halt-trap)
+       (inst udf not-implemented-trap)
        ;; NOTE: The length of the buffer is indirectly encoded into
        ;; the offset of the branch instruction since the instruction
        ;; is a PC-relative brnach.  Useful for the udf handler to know

@@ -234,6 +234,7 @@
   dynamic-space-overflow-warning
   #+heap-overflow-check
   dynamic-space-overflow-error
+  not-implemented
   )
 
 ;; Make sure this starts AFTER the last element of the above enum!
