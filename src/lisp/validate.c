@@ -94,7 +94,7 @@ validate(void)
 
     /* Control Stack */
     control_stack = (lispobj *) CONTROL_STACK_START;
-#if (defined(i386) || defined(__x86_64))
+#if (defined(i386) || defined(__x86_64) || defined(__arm__))
     control_stack_end = (lispobj *) (CONTROL_STACK_START + control_stack_size);
 #endif
     ensure_space(control_stack, control_stack_size);
