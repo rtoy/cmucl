@@ -212,6 +212,7 @@
 
 (export '(halt-trap pending-interrupt-trap error-trap cerror-trap
 	  breakpoint-trap function-end-breakpoint-trap
+	  not-implemented-trap
 	  after-breakpoint-trap allocation-trap
 	  pseudo-atomic-trap
 	  object-not-list-trap object-not-instance-trap
@@ -238,7 +239,7 @@
   )
 
 ;; Make sure this starts AFTER the last element of the above enum!
-(defenum (:prefix object-not- :suffix -trap :start 16)
+(defenum (:prefix object-not- :suffix -trap :start 20)
   list
   instance)
 
