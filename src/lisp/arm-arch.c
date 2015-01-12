@@ -83,13 +83,73 @@ arch_do_displaced_inst(os_context_t *scp, unsigned long orig_inst)
 }
 
 /*
- * How to identify an illegal instruction trap and a trap instruction
- * trap.
+ * How to identify an illegal instruction trap
  */
 static void
 sigill_handler(HANDLER_ARGS)
 {
-    NOT_IMPLEMENTED();
+    os_context_t *os_context = (os_context_t *) context;
+
+    if (CODE(code) == ILL_ILLOPC) {
+        int udf_code;
+        unsigned int inst;
+        unsigned int *pc = (unsigned int *) (SC_PC(os_context));
+
+        inst = *pc;
+        udf_code = (inst & 0xf) | ((inst >> 8) & 0xfff);
+
+        switch (udf_code) {
+          case trap_NotImplemented:
+              {
+                  /*
+                   * Print out the name.  The next instruction MUST be
+                   * a branch immediate.
+                   */
+                  int offset;
+                  unsigned char *string;
+                  unsigned char *string_end;
+                  unsigned int binst = pc[1];
+                  if (((binst >> 24) & 0xf) != 0xa) {
+                      fprintf(stderr, "ERROR: NOT-IMPLEMENTED trap not followed relative branch: 0x%08x\n",
+                              binst);
+                      abort();
+                  }
+                  string = (unsigned char *) &pc[2];
+                  offset = binst & 0xffffff;
+                  /*
+                   * Find the possible end of the string based on the
+                   * offset of the branch instruction.
+                   */
+                  string_end = (string + ((offset << 2) + 4));
+
+                  /*
+                   * Print out the characters, being careful not to go
+                   * too far.
+                   */
+
+                  printf("NOT-IMPLEMENTED: \"");
+                  while (*string != '\0' && (string < string_end)) {
+                      putchar(*string);
+                      ++string;
+                  }
+                  printf("\"\n");
+                  /*
+                   * FIXME: What should we do after printing this message?
+                   */
+                  /*
+                   * Skip over the UDF instruction so if we continue,
+                   * we'll execute the branch, skipping over the
+                   * string.
+                   */
+                  SC_PC(context) = pc + 1;
+              }
+              break;
+          default:
+              NOT_IMPLEMENTED();
+        }
+    } else {
+        NOT_IMPLEMENTED();
+    }
 }
 
 void
