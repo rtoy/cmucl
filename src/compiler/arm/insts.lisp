@@ -2764,31 +2764,22 @@
 			  #b0000)))
 
 (defmacro not-implemented (&optional name)
-  (let* ((len (if name (length (symbol-name name))))
-	 (rounded-len (* 4 (ceiling len 4)))
-	 ;; Buffer to hold the bytes (octets) of the name. The length
-	 ;; is rounded up to a whole number of words (4-byte
-	 ;; boundary).
-	 (buffer (make-array rounded-len :element-type '(unsigned-byte 8)
-					 :initial-element 0)))
-    ;; Convert the symbol name into octets.
-    (string-to-octets (symbol-name name)
-		      :external-format :iso-8859-1
-		      :buffer buffer)
-  `(progn
-     (let ((nyi-done (gen-label)))
+  (let ((string (string name)))
+    `(let ((length-label (gen-label)))
        (inst udf not-implemented-trap)
-       ;; NOTE: The length of the buffer is indirectly encoded into
-       ;; the offset of the branch instruction since the instruction
-       ;; is a PC-relative brnach.  Useful for the udf handler to know
-       ;; where the string ends.  The string may or may not be
+       ;; NOTE: The branch offset helps estimate the length of the
+       ;; string.  The actual length of the string may be equal to the
+       ;; displacement or it may be up to three bytes shorter at the
+       ;; first trailing NUL byte.  The string may or may not be
        ;; 0-terminated.
-       (inst b nyi-done)
-       ;; Emit each byte of the buffer
-       ,@(map 'list #'(lambda (x)
-			`(emit-byte c:*code-segment* ,x))
-	      buffer)
-       (emit-label nyi-done)))))
+       (inst b length-label)
+       ,@(map 'list #'(lambda (c)
+			`(emit-byte *code-segment* ,(char-code c)))
+	      string)
+       ;; Append enough zeros to end on a word boundary.
+       ,@(make-list (mod (- (length string)) 4)
+		    :initial-element '(emit-byte *code-segment* 0))
+       (emit-label length-label))))
 
 ;;;; Instructions for dumping data and header objects.
 
