@@ -88,6 +88,7 @@
   (:effects)
   (:affected)
   (:generator 0
+    (emit-not-implemented)
     (move y x)))
 
 (define-move-vop move :move
@@ -110,6 +111,7 @@
 	     :load-if (not (sc-is y any-reg descriptor-reg))))
   (:results (y))
   (:generator 0
+    (emit-not-implemented)
     (sc-case y
       ((any-reg descriptor-reg)
        (move y x))
@@ -155,6 +157,7 @@
   (:arg-types tagged-num)
   (:note _N"fixnum untagging")
   (:generator 1
+    (emit-not-implemented)
     (inst asr y x fixnum-tag-bits)))
 
 ;;;
@@ -167,6 +170,7 @@
   (:results (y :scs (signed-reg unsigned-reg)))
   (:note _N"constant load")
   (:generator 1
+    (emit-not-implemented)
     (inst li y (tn-value x))))
 
 ;;;
@@ -197,6 +201,7 @@
   (:result-types tagged-num)
   (:note _N"fixnum tagging")
   (:generator 1
+    (emit-not-implemented)
     (inst lsl y x fixnum-tag-bits)))
 ;;;
 (define-move-vop move-from-word/fixnum :move
@@ -249,6 +254,7 @@
   (:affected)
   (:note _N"word integer move")
   (:generator 0
+    (emit-not-implemented)
     (move y x)))
 ;;;
 (define-move-vop word-move :move
@@ -264,6 +270,7 @@
   (:results (y))
   (:note _N"word integer argument move")
   (:generator 0
+    (emit-not-implemented)
     (sc-case y
       ((signed-reg unsigned-reg)
        (move y x))
