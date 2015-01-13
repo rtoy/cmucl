@@ -29,7 +29,7 @@ unsigned dynamic_space_size;
 lispobj *control_stack;
 
 
-#if (defined(i386) || defined(__x86_64))
+#if (defined(i386) || defined(__x86_64) || defined(__arm__))
 lispobj *control_stack_end;
 #endif
 lispobj *binding_stack;
@@ -64,7 +64,7 @@ globals_init(void)
     foreign_function_call_active = 1;
 
     /* Initialize the current lisp state. */
-#if !(defined(i386) || defined(__x86_64))
+#if !(defined(i386) || defined(__x86_64) || defined(__arm__))
     current_control_stack_pointer = control_stack;
 #else
     current_control_stack_pointer = control_stack_end;

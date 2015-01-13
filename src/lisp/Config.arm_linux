@@ -13,7 +13,7 @@ vpath %.mo  $(CMULOCALE)
 GC_SRC := gc.c
 
 CPPFLAGS := -DUNICODE -iquote . -iquote $(PATH1)
-CFLAGS += -marm -Wstrict-prototypes -Wall -O2 -ggdb3 -fno-omit-frame-pointer -ffp-contract=off
+CFLAGS += -marm -Wstrict-prototypes -Wall -O0 -ggdb3 -fno-omit-frame-pointer -ffp-contract=off
 ASFLAGS = -g
 
 ARCH_SRC = arm-arch.c
