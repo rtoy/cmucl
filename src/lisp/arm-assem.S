@@ -115,10 +115,9 @@ x:
 	load(reg_CSP, current_control_stack_pointer, reg_NARGS)
 
 	/*
-	 * This is the ppc version, not the sparc version. Should we
-	 * use reg_LIP instead of reg_NL0?
+	 * Should we use reg_LIP instead of reg_NL0?
 	 */
-	add	reg_NL0, reg_CODE, # FUNCTION_CODE_OFFSET*4 - type_FunctionPointer
+	add	reg_NL0, reg_CODE, # FUNCTION_CODE_OFFSET
 	bx	reg_NL0
 lra:
 	.long	type_ReturnPcHeader
