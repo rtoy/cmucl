@@ -82,9 +82,6 @@ extern void globals_init(void);
 #endif
 #endif
 
-#if defined(__arm__) && defined(__linux__)
-#define EXTERN(name, bytes)	.globl name
-#endif
 EXTERN(foreign_function_call_active, 4)
 
     EXTERN(current_control_stack_pointer, 4)
