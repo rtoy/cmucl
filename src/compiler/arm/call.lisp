@@ -140,9 +140,10 @@
 
 ;;; BYTES-NEEDED-FOR-NON-DESCRIPTOR-STACK-FRAME -- internal
 ;;;
-;;; Return the number of bytes needed for the current non-descriptor stack
-;;; frame.  Non-descriptor stack frames must be multiples of 8 bytes on
-;;; the PMAX.
+;;; Return the number of bytes needed for the current non-descriptor
+;;; stack frame.  Non-descriptor stack frames must be multiples of 8
+;;; bytes on the ARM (at a public interface). See section 5.2.1.1-2 in
+;;; IHI0042D AAPCS manual.
 ;;; 
 (defun bytes-needed-for-non-descriptor-stack-frame ()
   (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack)) 1)
@@ -174,6 +175,7 @@
   (:info start-lab copy-more-arg-follows #+nil clear-memory-p)
   (:ignore copy-more-arg-follows)
   (:vop-var vop)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 1
     ;; Make sure the function is aligned, and drop a label pointing to this
     ;; function header.
@@ -185,8 +187,24 @@
       (inst word 0))
 
     (emit-not-implemented)
+
     ;; The start of the actual code.
     ;; Fix CODE, cause the function object was passed in.
+    (inst compute-code-from-fn code-tn code-tn start-lab temp)
+
+    ;; Build our stack frames.
+    (let ((size (* vm:word-bytes (sb-allocated-size 'control-stack))))
+      ;; Micro-optimize: If size is small enough, this can be
+      ;; optimized to a single sub instruction.
+      (inst li temp size)
+      (inst sub csp-tn cfp-tn temp))
+    (let ((nfp-tn (current-nfp-tn vop)))
+      (when nfp-tn
+	(not-implemented xep-allocate-frame-with-nfp)
+	(load-symbol-value temp *number-frame-pointer*)
+	(inst sub temp temp (bytes-needed-for-non-descriptor-stack-frame))
+	(inst add temp temp number-stack-displacement)
+	(store-symbol-value temp *number-frame-pointer*)))
 
     (trace-table-entry trace-table-normal)))
 
