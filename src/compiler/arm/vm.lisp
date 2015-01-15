@@ -276,7 +276,6 @@
 
 ); eval-when (compile eval)
 
-(defregtn a0 descriptor-reg)		; Used by emit-not-implemented
 (defregtn null descriptor-reg)
 (defregtn code descriptor-reg)
 

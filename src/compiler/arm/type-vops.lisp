@@ -49,12 +49,14 @@
 	   `((define-vop (,pred-name type-predicate)
 	       (:translate ,pred-name)
 	       (:generator ,cost
+		 (emit-not-implemented)
 		 (test-type value temp target not-p ,@type-codes)))))
        ,@(when check-name
 	   `((define-vop (,check-name check-type)
 	       (:generator ,cost
 		 (let ((err-lab
-			(generate-error-code vop ,error-code value)))
+			 (generate-error-code vop ,error-code value)))
+		   (emit-not-implemented)
 		   (test-type value temp err-lab t ,@type-codes)
 		   (move result value))))))
        ,@(when ptype

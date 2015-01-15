@@ -31,6 +31,7 @@
   (:results (res :scs (sap-reg)))
   (:result-types system-area-pointer)
   (:generator 1
+    (emit-not-implemented)
     (move res csp-tn)))
 
 (define-vop (debug-cur-fp)
@@ -39,6 +40,7 @@
   (:results (res :scs (sap-reg)))
   (:result-types system-area-pointer)
   (:generator 1
+    (emit-not-implemented)
     (move res cfp-tn)))
 
 (define-vop (read-control-stack)
@@ -50,6 +52,7 @@
   (:results (result :scs (descriptor-reg)))
   (:result-types *)
   (:generator 5
+    (emit-not-implemented)
     (inst ldr result sap offset)))
 
 (define-vop (write-control-stack)
@@ -62,6 +65,7 @@
   (:results (result :scs (descriptor-reg)))
   (:result-types *)
   (:generator 5
+    (emit-not-implemented)
     (inst str value sap offset)
     (move result value)))
 
@@ -88,6 +92,7 @@
   (:arg-types unsigned-num)
   (:results (result :scs (descriptor-reg)))
   (:generator 1
+    (emit-not-implemented)
     (move result value)))
 
 (define-vop (get-lisp-obj-address)
@@ -97,6 +102,7 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:generator 1
+    (emit-not-implemented)
     (move result thing)))
 
 
@@ -107,5 +113,6 @@
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 5
+    (emit-not-implemented)
     (loadw res fun 0 function-pointer-type)
     (inst lsr res res vm:type-bits)))
