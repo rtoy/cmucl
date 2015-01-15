@@ -109,7 +109,7 @@
        (defun ,local-name
 	 ,ll
 	 (macrolet ((vm::emit-not-implemented ()
-		      `(vm::not-implemented ',',local-name)))
+		      `(vm::not-implemented ,',local-name)))
 	   ,@body))
        (setf (,(intern (concatenate 'simple-string
 				    "VM-SUPPORT-ROUTINES-"

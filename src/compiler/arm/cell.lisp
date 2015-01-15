@@ -25,6 +25,7 @@
   (:ignore name)
   (:results (result :scs (descriptor-reg any-reg)))
   (:generator 1
+    (emit-not-implemented)
     (loadw result object offset lowtag)))
 
 (define-vop (set-slot)
@@ -34,6 +35,7 @@
   (:ignore name)
   (:results)
   (:generator 1
+    (emit-not-implemented)
     (storew value object offset lowtag)))
 
 

@@ -60,6 +60,7 @@
 			       :load-if (not (location= x y))))
 		  (:note _N"float move")
 		  (:generator 0
+		    (emit-not-implemented)
 		    (unless (location= y x)
 		      ,@(ecase format
 			  (:single `((inst vmov y x)))
@@ -110,6 +111,7 @@
 		  (:results (y))
 		  (:note _N"float argument move")
 		  (:generator ,(ecase format (:single 1) (:double 2))
+		    (emit-not-implemented)
 		    (sc-case y
 		      (,sc
 		       (unless (location= x y)
@@ -237,6 +239,7 @@
   (:results (y :scs (complex-single-reg) :load-if (not (location= x y))))
   (:note _N"complex single float move")
   (:generator 0
+     (emit-not-implemented)
      (unless (location= x y)
        ;; Note the complex-float-regs are aligned to every second
        ;; float register so there is not need to worry about overlap.
@@ -256,6 +259,7 @@
   (:results (y :scs (complex-double-reg) :load-if (not (location= x y))))
   (:note _N"complex double float move")
   (:generator 0
+     (emit-not-implemented)
      (unless (location= x y)
        ;; Note the complex-float-regs are aligned to every second
        ;; float register so there is not need to worry about overlap.
@@ -276,6 +280,7 @@
   (:results (y :scs (complex-double-double-reg) :load-if (not (location= x y))))
   (:note _N"complex double-double float move")
   (:generator 0
+     (emit-not-implemented)
      (unless (location= x y)
        ;; Note the complex-float-regs are aligned to every second
        ;; float register so there is not need to worry about overlap.
@@ -376,6 +381,7 @@
   (:results (y))
   (:note _N"complex single-float argument move")
   (:generator 1
+    (emit-not-implemented)
     (sc-case y
       (complex-single-reg
        (unless (location= x y)
@@ -400,6 +406,7 @@
   (:results (y))
   (:note _N"complex double-float argument move")
   (:generator 2
+    (emit-not-implemented)
     (sc-case y
       (complex-double-reg
        (unless (location= x y)
@@ -425,6 +432,7 @@
   (:results (y))
   (:note _N"complex double-double float argument move")
   (:generator 2
+    (emit-not-implemented)
     (sc-case y
       (complex-double-double-reg
        (unless (location= x y)
@@ -487,10 +495,12 @@
 		(define-vop (,sname single-float-op)
 		  (:translate ,op)
 		  (:generator ,scost
+		    (emit-not-implemented)
 		    (inst ,sinst r x y)))
 		(define-vop (,dname double-float-op)
 		  (:translate ,op)
 		  (:generator ,dcost
+		    (emit-not-implemented)
 		    (inst ,dinst r x y))))))
   (frob + vadd +/single-float 2 vadd +/double-float 2)
   (frob - vsub -/single-float 2 vsub -/double-float 2)
@@ -511,6 +521,7 @@
 		(:save-p :compute-only)
 		(:generator 1
 		  (note-this-location vop :internal-error)
+		  (emit-not-implemented)
 		  (inst ,inst y x)))))
   (frob abs/single-float vabs abs single-reg single-float)
   (frob %negate/single-float vneg %negate single-reg single-float))
@@ -533,6 +544,7 @@
   (:save-p :compute-only)
   (:generator 1
     (note-this-location vop :internal-error)
+    (emit-not-implemented)
     (abs-double-reg y x)))
 
 (define-vop (%negate/double-float)
@@ -547,6 +559,7 @@
   (:save-p :compute-only)
   (:generator 1
     (note-this-location vop :internal-error)
+    (emit-not-implemented)
     (negate-double-reg y x)))
 
 ;;;; Comparison:
@@ -636,6 +649,7 @@
 		(:save-p :compute-only)
 		(:generator 2
 		  (note-this-location vop :internal-error)
+		  (emit-not-implemented)
 		  (inst ,inst y x)))))
   (frob %single-float/double-float %single-float vcvt.f32.f64
     double-reg double-float single-reg single-float)
@@ -810,6 +824,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 1
+    (emit-not-implemented)
     (inst vsqrt y x)))
 
 
@@ -932,6 +947,7 @@
   (:results (y :scs (double-double-reg) :load-if (not (location= x y))))
   (:note _N"double-double float move")
   (:generator 0
+     (emit-not-implemented)
      (unless (location= x y)
        ;; Note the double-float-regs are aligned to every second
        ;; float register so there is not need to worry about overlap.
@@ -978,6 +994,7 @@
   (:results (y))
   (:note _N"double-double float argument move")
   (:generator 2
+    (emit-not-implemented)
     (sc-case y
       (double-double-reg
        (unless (location= x y)
@@ -1012,6 +1029,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 5
+    (emit-not-implemented)
     (sc-case res
       (double-double-reg
        (let ((res-hi (double-double-reg-hi-tn res)))
@@ -1039,6 +1057,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 3
+    (emit-not-implemented)
     (sc-case x
       (double-double-reg
        (let ((value-tn (ecase slot
@@ -1080,6 +1099,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 5
+    (emit-not-implemented)
     (sc-case r
       (complex-double-double-reg
        (let ((r-real (complex-double-double-reg-real-hi-tn r))
@@ -1118,6 +1138,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 3
+    (emit-not-implemented)
     (sc-case x
       (complex-double-double-reg
        (let ((value-tn (ecase slot

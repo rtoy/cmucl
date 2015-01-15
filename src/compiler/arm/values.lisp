@@ -20,6 +20,7 @@
 (define-vop (reset-stack-pointer)
   (:args (ptr :scs (any-reg)))
   (:generator 1
+    (emit-not-implemented)
     (move csp-tn ptr)))
 
 

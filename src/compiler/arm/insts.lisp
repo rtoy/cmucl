@@ -2764,16 +2764,22 @@
 			  #b0000)))
 
 (defmacro not-implemented (&optional name)
-  `(progn
-     ;; Save a0 (aka ARM r0) to the stack, and then load it with the
-     ;; address of name object so the halt trap handler can see the
-     ;; name.  If the trap returns, restore a0 with it's original
-     ;; value and continue as if nothing happened.
-     (inst str a0-tn (pre-index csp-tn) 4)
-     ;; a0 is a descriptor-reg, but so the the lisp object address.
-     (inst li a0-tn (kernel:get-lisp-obj-address ,name))
-     (inst udf halt-trap)
-     (inst ldr a0-tn (post-index csp-tn) -4)))
+  (let ((string (string name)))
+    `(let ((length-label (gen-label)))
+       (inst udf not-implemented-trap)
+       ;; NOTE: The branch offset helps estimate the length of the
+       ;; string.  The actual length of the string may be equal to the
+       ;; displacement or it may be up to three bytes shorter at the
+       ;; first trailing NUL byte.  The string may or may not be
+       ;; 0-terminated.
+       (inst b length-label)
+       ,@(map 'list #'(lambda (c)
+			`(emit-byte *code-segment* ,(char-code c)))
+	      string)
+       ;; Append enough zeros to end on a word boundary.
+       ,@(make-list (mod (- (length string)) 4)
+		    :initial-element '(emit-byte *code-segment* 0))
+       (emit-label length-label))))
 
 ;;;; Instructions for dumping data and header objects.
 
