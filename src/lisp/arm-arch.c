@@ -102,13 +102,12 @@ sigill_handler(HANDLER_ARGS)
                    * Print out the name.  The next instruction MUST be
                    * a branch immediate.
                    */
-                  int offset;
                   unsigned char *string;
                   int length;
 
                   if (((pc[1] >> 24) & 0xf) != 0xa) {
                       fprintf(stderr, "ERROR: NOT-IMPLEMENTED trap not followed relative branch: 0x%08x\n",
-                              binst);
+                              pc[1]);
                       abort();
                   }
 
@@ -119,7 +118,7 @@ sigill_handler(HANDLER_ARGS)
                    * string.
                    */
                   string = (unsigned char *) &pc[2];
-                  length = (pc[1] & 0xffffff) << 2 + 4;
+                  length = ((pc[1] & 0xffffff) << 2) + 4;
 
                   while (string[length - 1] == '\0') {
                       --length;
@@ -137,7 +136,7 @@ sigill_handler(HANDLER_ARGS)
                    * we'll execute the branch, skipping over the
                    * string.
                    */
-                  SC_PC(context) = pc + 1;
+                  SC_PC(context) = (unsigned long) (pc + 1);
               }
               break;
           default:
