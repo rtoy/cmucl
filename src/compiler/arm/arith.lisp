@@ -41,21 +41,25 @@
 (define-vop (fast-negate/fixnum fixnum-unop)
   (:translate %negate)
   (:generator 1
+    (emit-not-implemented)
     (inst neg res x)))
 
 (define-vop (fast-negate/signed signed-unop)
   (:translate %negate)
   (:generator 2
+    (emit-not-implemented)
     (inst neg res x)))
 
 (define-vop (fast-lognot/fixnum fixnum-unop)
   (:translate lognot)
   (:generator 2
+    (emit-not-implemented)
     (inst eor res x (fixnumize -1))))
 
 (define-vop (fast-lognot/signed signed-unop)
   (:translate lognot)
   (:generator 1
+    (emit-not-implemented)
     (inst mvn res x)))
 
 
@@ -138,6 +142,7 @@
 		  fast-signed-binop)
        (:translate ,translate)
        (:generator ,(1+ untagged-penalty)
+	 (emit-not-implemented)
 	 ,(if arg-swap
 	      `(inst ,op r y x)
 	      `(inst ,op r x y))))
@@ -610,11 +615,13 @@
   (:args (x :scs (unsigned-reg)))
   (:arg-types unsigned-num)
   (:generator 1
+    (emit-not-implemented)
     (inst mvn r x)))
 
 (define-vop (32bit-logical-and 32bit-logical)
   (:translate 32bit-logical-and)
   (:generator 1
+    (emit-not-implemented)
     (inst and r x y)))
 
 (deftransform 32bit-logical-nand ((x y) (* *))
@@ -623,6 +630,7 @@
 (define-vop (32bit-logical-or 32bit-logical)
   (:translate 32bit-logical-or)
   (:generator 1
+    (emit-not-implemented)
     (inst orr r x y)))
 
 (deftransform 32bit-logical-nor ((x y) (* *))
@@ -631,6 +639,7 @@
 (define-vop (32bit-logical-xor 32bit-logical)
   (:translate 32bit-logical-xor)
   (:generator 1
+    (emit-not-implemented)
     (inst eor r x y)))
 
 (define-vop (32bit-logical-eqv 32bit-logical)
@@ -667,12 +676,14 @@
   (:translate shift-towards-start)
   (:note _N"shift-towards-start")
   (:generator 1
+    (emit-not-implemented)
     (inst lsl r num amount)))
 
 (define-vop (shift-towards-end shift-towards-someplace)
   (:translate shift-towards-end)
   (:note _N"shift-towards-end")
   (:generator 1
+    (emit-not-implemented)
     (inst lsr r num amount)))
 
 
@@ -799,6 +810,7 @@
   (:results (r :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:generator 1
+    (emit-not-implemented)
     (inst mvn r x)))
 
 (define-vop (fixnum-to-digit)
@@ -809,6 +821,7 @@
   (:results (digit :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:generator 1
+    (emit-not-implemented)
     (inst asr digit fixnum fixnum-tag-bits)))
 
 (define-vop (bignum-floor)
@@ -970,6 +983,7 @@
   (:result-types unsigned-num)
   (:policy :fast-safe)
   (:generator 1
+    (emit-not-implemented)
     (inst mvn res x)))
 
 (define-vop (lognot-mod32/signed=>unsigned)
@@ -980,6 +994,7 @@
   (:result-types unsigned-num)
   (:policy :fast-safe)
   (:generator 1
+    (emit-not-implemented)
     (inst mvn res x)))
 
 ;; Handle (ldb (byte 32 0) (- x)).  The (- x) gets converted to
@@ -994,6 +1009,7 @@
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:generator 1
+    (emit-not-implemented)
     (inst neg res x)))
 
 (define-vop (%negate-mod32/signed=>unsigned fast-safe-arith-op)
@@ -1003,6 +1019,7 @@
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:generator 1
+    (emit-not-implemented)
     (inst neg res x)))
 
 ;; Define a bunch of vops for converting signed to unsigned.

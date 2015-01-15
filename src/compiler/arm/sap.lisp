@@ -25,6 +25,7 @@
   (:results (y :scs (sap-reg)))
   (:note _N"pointer to SAP coercion")
   (:generator 1
+    (emit-not-implemented)
     (loadw y x sap-pointer-slot other-pointer-type)))
 
 ;;;
@@ -40,6 +41,7 @@
   (:results (res :scs (descriptor-reg)))
   (:note _N"SAP to pointer coercion") 
   (:generator 20
+    (emit-not-implemented)
     (with-fixed-allocation (res ndescr sap-type sap-size)
       (storew sap res sap-pointer-slot other-pointer-type))))
 ;;;
@@ -59,6 +61,7 @@
   (:effects)
   (:affected)
   (:generator 0
+    (emit-not-implemented)
     (move y x)))
 ;;;
 (define-move-vop sap-move :move
@@ -75,6 +78,7 @@
   (:results (y))
   (:note _N"SAP argument move")
   (:generator 0
+    (emit-not-implemented)
     (sc-case y
       (sap-reg
        (move y x))
@@ -103,6 +107,7 @@
   (:translate sap-int)
   (:policy :fast-safe)
   (:generator 1
+    (emit-not-implemented)
     (move int sap)))
 
 (define-vop (int-sap)
@@ -113,6 +118,7 @@
   (:translate int-sap)
   (:policy :fast-safe)
   (:generator 1
+    (emit-not-implemented)
     (move sap int)))
 
 
@@ -128,6 +134,7 @@
   (:result-types system-area-pointer)
   (:policy :fast-safe)
   (:generator 2
+    (emit-not-implemented)
     (inst add res ptr offset)))
 
 (define-vop (pointer+-c)
@@ -139,6 +146,7 @@
   (:result-types system-area-pointer)
   (:policy :fast-safe)
   (:generator 1
+    (emit-not-implemented)
     (inst add res ptr offset)))
 
 (define-vop (pointer-)
@@ -150,6 +158,7 @@
   (:results (res :scs (signed-reg)))
   (:result-types signed-num)
   (:generator 1
+    (emit-not-implemented)
     (inst sub res ptr1 ptr2)))
 
 
@@ -183,6 +192,7 @@
 	   (:results (result :scs (,sc)))
 	   (:result-types ,type)
 	   (:generator 5
+	     (emit-not-implemented)
 	     (inst ,(load-inst size) result sap offset)))
 	 (define-vop (,ref-name-c)
 	   (:translate ,ref-name)
@@ -193,6 +203,7 @@
 	   (:results (result :scs (,sc)))
 	   (:result-types ,type)
 	   (:generator 4
+	     (emit-not-implemented)
 	     (inst ,(load-inst size) result sap offset)))
 	 (define-vop (,set-name)
 	   (:translate ,set-name)
@@ -204,6 +215,7 @@
 	   (:results (result :scs (,sc)))
 	   (:result-types ,type)
 	   (:generator 5
+	     (emit-not-implemented)
 	     (inst ,(store-inst size) value sap offset)
 	     (unless (location= result value)
 	       (inst mov result value))))
@@ -217,6 +229,7 @@
 	   (:results (result :scs (,sc)))
 	   (:result-types ,type)
 	   (:generator 4
+	     (emit-not-implemented)
 	     (inst ,(store-inst size) value sap offset)
 	     (unless (location= result value)
 	       (inst mov result value))))))))
@@ -243,6 +256,7 @@
 	   (:result-types ,type)
 	   (:temporary (:scs (non-descriptor-reg)) addr)
 	   (:generator 5
+	     (emit-not-implemented)
 	     (inst add addr sap offset)
 	     (inst vldr result addr 0)))
 	 (define-vop (,ref-name-c)
@@ -254,6 +268,7 @@
 	   (:results (result :scs (,sc)))
 	   (:result-types ,type)
 	   (:generator 4
+	     (emit-not-implemented)
 	     (inst vldr result sap offset)))
 	 (define-vop (,set-name)
 	   (:translate ,set-name)
@@ -266,6 +281,7 @@
 	   (:result-types ,type)
 	   (:temporary (:scs (non-descriptor-reg)) addr)
 	   (:generator 5
+	     (emit-not-implemented)
 	     (inst add addr sap offset)
 	     (inst vstr value addr 0)
 	     (unless (location= result value)
@@ -280,6 +296,7 @@
 	   (:results (result :scs (,sc)))
 	   (:result-types ,type)
 	   (:generator 4
+	     (emit-not-implemented)
 	     (inst vstr value sap offset)
 	     (unless (location= result value)
 	       (inst vmov result value))))))))
@@ -317,6 +334,7 @@
   (:results (sap :scs (sap-reg)))
   (:result-types system-area-pointer)
   (:generator 2
+    (emit-not-implemented)
     (inst add sap vector
 	  (- (* vector-data-offset word-bytes) other-pointer-type))))
 

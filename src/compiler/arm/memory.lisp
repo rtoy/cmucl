@@ -24,6 +24,7 @@
   (:variant-vars offset lowtag)
   (:policy :fast-safe)
   (:generator 4
+    (emit-not-implemented)
     (loadw value object offset lowtag)))
 ;;;
 (define-vop (cell-set)
@@ -32,6 +33,7 @@
   (:variant-vars offset lowtag)
   (:policy :fast-safe)
   (:generator 4
+    (emit-not-implemented)
     (storew value object offset lowtag)))
 
 ;;; Slot-Ref and Slot-Set are used to define VOPs like Closure-Ref, where the
@@ -44,6 +46,7 @@
   (:variant-vars base lowtag)
   (:info offset)
   (:generator 4
+    (emit-not-implemented)
     (loadw value object (+ base offset) lowtag)))
 ;;;
 (define-vop (slot-set)
@@ -52,6 +55,7 @@
   (:variant-vars base lowtag)
   (:info offset)
   (:generator 4
+    (emit-not-implemented)
     (storew value object (+ base offset) lowtag)))
 
 

@@ -154,6 +154,7 @@
 (define-vop (current-fp)
   (:results (val :scs (any-reg)))
   (:generator 1
+    (emit-not-implemented)
     (move val cfp-tn)))
 
 ;;; Used for computing the caller's NFP for use in known-values return.  Only
@@ -166,6 +167,7 @@
   (:generator 1
     (let ((nfp (current-nfp-tn vop)))
       (when nfp
+	(emit-not-implemented)
 	(load-symbol-value temp *number-frame-pointer*)
 	(inst add val temp (bytes-needed-for-non-descriptor-stack-frame))))))
 
