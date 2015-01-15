@@ -2333,6 +2333,7 @@ set_auto_gc_trigger(os_vm_size_t dynamic_usage)
 		(os_vm_address_t) current_dynamic_space_free_pointer
 		- (os_vm_address_t) current_dynamic_space);
 	return;
+#undef current_dynamic_space_free_pointer
     } else if (length < 0) {
 	fprintf(stderr,
 		"set_auto_gc_trigger: tried to set gc trigger too high! (%d)\n",
@@ -2355,8 +2356,6 @@ set_auto_gc_trigger(os_vm_size_t dynamic_usage)
     fprintf(stderr, "current_auto_gc_trigger set to %p\n",
 	    current_auto_gc_trigger);
 #endif
-
-#undef current_dynamic_space_free_pointer
 }
 
 void
