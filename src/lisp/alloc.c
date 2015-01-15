@@ -21,6 +21,13 @@
 #define GET_GC_TRIGGER() ((lispobj *)SymbolValue(INTERNAL_GC_TRIGGER))
 #define SET_GC_TRIGGER(new_value) \
     (SetSymbolValue(INTERNAL_GC_TRIGGER,(lispobj)(new_value)))
+#elif defined(__arm__)
+#define GET_FREE_POINTER() ((lispobj *)SymbolValue(ALLOCATION_POINTER))
+#define SET_FREE_POINTER(new_value) \
+    (SetSymbolValue(ALLOCATION_POINTER,(lispobj)(new_value)))
+#define GET_GC_TRIGGER() current_auto_gc_trigger
+#define SET_GC_TRIGGER(new_value) \
+    clear_auto_gc_trigger(); set_auto_gc_trigger(new_value);
 #else
 #define GET_FREE_POINTER() current_dynamic_space_free_pointer
 #define SET_FREE_POINTER(new_value) \

@@ -60,7 +60,7 @@ process_directory(int fd, long *ptr, int count)
 		  && addr != (os_vm_address_t) dynamic_1_space)
 		  printf("Strange ... dynamic space lossage.\n");
 	      current_dynamic_space = (lispobj *) addr;
-#if defined(ibmrt) || defined(i386) || defined(__x86_64)
+#if defined(ALLOCATION_POINTER)
 	      SetSymbolValue(ALLOCATION_POINTER, (lispobj) free_pointer);
 #else
 	      current_dynamic_space_free_pointer = free_pointer;
