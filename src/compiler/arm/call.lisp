@@ -172,7 +172,7 @@
 
 
 (define-vop (xep-allocate-frame)
-  (:info start-lab copy-more-arg-follows #+nil clear-memory-p)
+  (:info start-lab copy-more-arg-follows)
   (:ignore copy-more-arg-follows)
   (:vop-var vop)
   (:temporary (:scs (non-descriptor-reg)) temp)
@@ -200,7 +200,7 @@
       (inst sub csp-tn cfp-tn temp))
     (let ((nfp-tn (current-nfp-tn vop)))
       (when nfp-tn
-	(not-implemented xep-allocate-frame-with-nfp)
+	(not-implemented "XEP-ALLOCATE-FRAME-WITH-NFP")
 	(load-symbol-value temp *number-frame-pointer*)
 	(inst sub temp temp (bytes-needed-for-non-descriptor-stack-frame))
 	(inst add temp temp number-stack-displacement)
