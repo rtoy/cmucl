@@ -56,6 +56,7 @@
   (:effects)
   (:affected)
   (:generator 0
+    (emit-not-implemented)
     (move y x)))
 ;;;
 (define-move-vop base-char-move :move

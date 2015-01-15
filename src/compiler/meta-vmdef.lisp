@@ -938,7 +938,7 @@
 	     (declare (ignore ,@(vop-parse-ignores parse)))
 	     ,@(loads)
 	     (macrolet ((vm::emit-not-implemented ()
-			  `(vm::not-implemented ',',(vop-parse-name parse))))
+			  `(vm::not-implemented ,',(vop-parse-name parse))))
 	       (new-assem:assemble (*code-segment* ,n-vop)
 		 ,@(vop-parse-body parse)))
 	     ,@(saves))))))

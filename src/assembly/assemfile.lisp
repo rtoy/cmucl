@@ -123,13 +123,13 @@
 	      regs))
        ,@(decls)
        (macrolet ((vm::emit-not-implemented ()
-		    `(vm::not-implemented ',',name)))
+		    `(vm::not-implemented ,',name)))
 	 (new-assem:assemble (*code-segment* ',name)
 	   ,name
 	   (push (cons ',name ,name) *assembler-routines*)
 	   ,@code
 	   (macrolet ((vm::emit-not-implemented ()
-			`(vm::not-implemented 'generate-return-sequence-raw)))
+			`(vm::not-implemented generate-return-sequence-raw)))
 	     ,@(generate-return-sequence
 		(or (cadr (assoc :return-style options)) :raw)))))
 	 (when *compile-print*
