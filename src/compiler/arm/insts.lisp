@@ -2766,7 +2766,7 @@
 (defmacro not-implemented (&optional name)
   (let ((string (string name)))
     `(let ((length-label (gen-label)))
-       (inst udf halt-trap)
+       (inst udf not-implemented-trap)
        ;; NOTE: The branch offset helps estimate the length of the
        ;; string.  The actual length of the string may be equal to the
        ;; displacement or it may be up to three bytes shorter at the
