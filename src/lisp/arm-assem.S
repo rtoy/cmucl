@@ -21,11 +21,10 @@ x:
 /*
  * Load register from C global using temp as a work register
  */
-#define load(reg, global, temp) \
-	movw	temp, #:lower16:global ; \
-	movt	temp, #:upper16:global ; \
-	ldr	reg, [temp]
-
+#define load(reg, global) \
+	movw	reg, #:lower16:global ; \
+	movt	reg, #:upper16:global ; \
+	ldr	reg, [reg]
 /*
  * Like load, but the stores reg into global.
  */
@@ -36,7 +35,7 @@ x:
 
 #define SET_SIZE(x) \
 	.size	x, .-x
-
+	
 /*
  * Generate not-implemented trap with name "name"
  */	
@@ -52,9 +51,9 @@ x:
 
 /*
  * call_into_lisp(function, args, count)
- * Per ARM ABI, r0-r2 contains the three args
+ * Per AAPCS, r0-r2 contain the three args
  */		
-	GFUNCDEF(call_into_lisp)
+GFUNCDEF(call_into_lisp)
 
 	/* Save the callee-saved registers */
 	push	{r4-r12,lr}
@@ -71,9 +70,8 @@ x:
 	eor	reg_CFP, reg_CFP
 	eor	reg_LIP, reg_LIP
 	/* Establish NIL */
-	movw	reg_NULL, #(NIL & 0xffff)
-	movt	reg_NULL, #(NIL >> 16)
-	
+	ldr	reg_NULL, =NIL
+
 	/* Save C stack pointer */
 	str	sp, [reg_NULL, #(NUMBER_STACK_POINTER - NIL)]
 
@@ -81,7 +79,7 @@ x:
 	mov	reg_NARGS, #1
 	str	reg_NARGS, [reg_NULL, #(PSEUDO_ATOMIC_ATOMIC - NIL)]
 
-	load(reg_OCFP, current_control_frame_pointer, reg_NARGS)
+	load(reg_OCFP, current_control_frame_pointer)
 
 	/* No longer atomic */
 	mov	reg_NARGS, #0
@@ -99,7 +97,7 @@ x:
 	ldrge	reg_A2, [reg_CFP, #8]
 
 	/* Function is an indirect closure */
-	ldr reg_CODE, [reg_LEXENV, #CLOSURE_FUNCTION_OFFSET]
+	ldr	reg_CODE, [reg_LEXENV, #CLOSURE_FUNCTION_OFFSET]
 
 	/* Calculate LRA */
 	adr	reg_LRA, lra
@@ -110,14 +108,19 @@ x:
 	
 	/*
 	 * Get the Lisp stack pointer into the sp since on ARM sp is both
-	 * the C and Lisp stack pointer.
+	 * the C and Lisp stack pointer.  (Don't use load() here
+	 * because we set sp temporarily to the address of
+	 * current_control_stack_pointer, which would not make a good
+	 * stack pointer.)
 	 */
-	load(reg_CSP, current_control_stack_pointer, reg_NARGS)
+	movw	reg_NL0, #:lower16:current_control_stack_pointer	
+	movt	reg_NL0, #:lower16:current_control_stack_pointer	
+	ldr	reg_CSP, [reg_NL2]
 
 	/*
 	 * Should we use reg_LIP instead of reg_NL0?
 	 */
-	add	reg_NL0, reg_CODE, # FUNCTION_CODE_OFFSET
+	add	reg_NL0, reg_CODE, #FUNCTION_CODE_OFFSET
 	bx	reg_NL0
 lra:
 	.long	type_ReturnPcHeader
@@ -128,11 +131,11 @@ lra:
 	pop	{r4-r12,pc}
 	SET_SIZE(call_into_lisp)
 
-	GFUNCDEF(call_into_c)
+GFUNCDEF(call_into_c)
 	NOT_IMPLEMENTED("call_into_c")
 	SET_SIZE(call_into_c)
 
-	.globl	undefined_tramp
+	.global	undefined_tramp
 undefined_tramp:	
 	.byte 0, 0, type_FunctionHeader
 	.long undefined_tramp	/* self slot */
@@ -141,12 +144,12 @@ undefined_tramp:
 	.long NIL		/* arglist slot */
 	.long NIL		/* type slot */
 
-	.align
+	.align	2,
 	NOT_IMPLEMENTED("undefined_trap")
 
-	.globl	closure_tramp
+	.global	closure_tramp
 closure_tramp:	
-	.byte 0,0,type_FunctionHeader	/* Header */
+	.byte 0, 0, type_FunctionHeader	/* Header */
 	.long closure_tramp
 	.long NIL 
 	.long NIL
@@ -162,14 +165,14 @@ closure_tramp:
  */			
 	.text
 	.align
-	.globl function_end_breakpoint_guts
+	.global function_end_breakpoint_guts
 function_end_breakpoint_guts:	
 	.long	type_ReturnPcHeader
 	NOT_IMPLEMENTED("function_end_breakpoint_guts")
 	
-	.globl function_end_breakpoint_trap
+	.global function_end_breakpoint_trap
 function_end_breakpoint_trap:
 	NOT_IMPLEMENTED("function_end_breakpoint_trap")
 	
-	.globl function_end_breakpoint_end
+	.global function_end_breakpoint_end
 function_end_breakpoint_end:
