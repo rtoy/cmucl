@@ -1582,9 +1582,11 @@
 ;; On ARM, if the branch instruction is at address n and the offset is
 ;; x, the address of the target is n + x + 8.  This needs to be
 ;; accounted for when generating relative branches.  See section A2.3
-;; in the ARMv7-A architecture manual.
-(defconstant relative-branch-offset
-  8)
+;; in the ARMv7-A architecture manual which says
+;;
+;;   When executing an ARM instruction, PC reads as the address of the
+;;   current instruction ;; plus 8.
+(defconstant pc-read-offset 8)
 
 (disassem:define-argument-type relative-label
   :sign-extend t
@@ -1592,7 +1594,7 @@
 		 (declare (type (signed-byte 24) value)
 			  (type disassem:disassem-state dstate))
 		 (+ (ash value 2) (disassem:dstate-cur-addr dstate)
-		    relative-branch-offset)))
+		    pc-read-offset)))
 
 (defconstant branch-imm-printer
   `(:name cond :tab imm24))
@@ -1629,7 +1631,7 @@
 			  op
 			  ;; The offset in the instruction is a word
 			  ;; offset, not byte.
-			  (ash (- (label-position target) posn relative-branch-offset)
+			  (ash (- (label-position target) posn pc-read-offset)
 			       -2)))))
 
 ;; For these branch instructions, should we still keep the condition
