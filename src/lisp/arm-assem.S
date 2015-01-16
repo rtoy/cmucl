@@ -113,7 +113,7 @@ GFUNCDEF(call_into_lisp)
 	 * stack pointer.)
 	 */
 	movw	reg_NL0, #:lower16:current_control_stack_pointer	
-	movt	reg_NL0, #:lower16:current_control_stack_pointer	
+	movt	reg_NL0, #:upper16:current_control_stack_pointer	
 	ldr	reg_CSP, [reg_NL2]
 
 	/*
