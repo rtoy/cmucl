@@ -114,7 +114,7 @@ GFUNCDEF(call_into_lisp)
 	 */
 	movw	reg_NL0, #:lower16:current_control_stack_pointer	
 	movt	reg_NL0, #:upper16:current_control_stack_pointer	
-	ldr	reg_CSP, [reg_NL2]
+	ldr	reg_CSP, [reg_NL0]
 
 	/*
 	 * Should we use reg_LIP instead of reg_NL0?
