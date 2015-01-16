@@ -9,7 +9,6 @@
 #include "globals.h"
 
 #define	FUNCDEF(x) \
-	.text ; \
 	.align 2 ; \
 	.type	x, %function ; \
 x:
@@ -19,14 +18,14 @@ x:
 	FUNCDEF(x)
 
 /*
- * Load register from C global using temp as a work register
+ * Load register from C global.
  */
 #define load(reg, global) \
 	movw	reg, #:lower16:global ; \
 	movt	reg, #:upper16:global ; \
 	ldr	reg, [reg]
 /*
- * Like load, but the stores reg into global.
+ * Like load, but the stores reg into global using temp as a temporary.
  */
 #define store(reg, global, temp) \
 	movw	temp, #:lower16:global ; \
@@ -136,27 +135,27 @@ GFUNCDEF(call_into_c)
 	SET_SIZE(call_into_c)
 
 	.global	undefined_tramp
+	.byte	type_FunctionHeader
 undefined_tramp:	
-	.byte 0, 0, type_FunctionHeader
-	.long undefined_tramp	/* self slot */
-	.long NIL		/* next slot */
-	.long NIL		/* name slot */
-	.long NIL		/* arglist slot */
-	.long NIL		/* type slot */
+	.byte	0, 0, 0
+	.long	undefined_tramp	/* self slot */
+	.long	NIL		/* next slot */
+	.long	NIL		/* name slot */
+	.long	NIL		/* arglist slot */
+	.long	NIL		/* type slot */
 
-	.align	2,
 	NOT_IMPLEMENTED("undefined_trap")
 
 	.global	closure_tramp
+	.byte	type_FunctionHeader
 closure_tramp:	
-	.byte 0, 0, type_FunctionHeader	/* Header */
-	.long closure_tramp
-	.long NIL 
-	.long NIL
-	.long NIL
-	.long NIL
+	.byte	0, 0, 0	/* Header */
+	.long	closure_tramp
+	.long	NIL 
+	.long	NIL
+	.long	NIL
+	.long	NIL
 
-	.align
 	NOT_IMPLEMENTED("closure_tramp")
 
 /*
@@ -164,7 +163,7 @@ closure_tramp:
  * code/debug-int.lisp.
  */			
 	.text
-	.align
+	.align	3
 	.global function_end_breakpoint_guts
 function_end_breakpoint_guts:	
 	.long	type_ReturnPcHeader
