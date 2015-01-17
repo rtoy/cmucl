@@ -143,6 +143,7 @@
       (inst ldm (pre-index sp) (list na n))	; ldm sp!, {na, n}
       (inst stmdb sp (list na n))		; stmfd sp, {na, n}
       (inst stmdb (pre-index sp) (list na n) :eq)  ; stmfdeq sp!, {na, n}
+      (inst word #x4152462d) 		; cmp nl2, sp lsr #12
       )
     segment))
 
