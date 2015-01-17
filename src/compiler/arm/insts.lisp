@@ -1683,8 +1683,10 @@
 (defun udf-imm-printer (value stream dstate)
   (declare (list value) (stream stream)
 	   (ignore dstate))
-  (format stream "#~D" (logior (ash (first value) 4)
-			       (second value)))))
+  (destructuring-bind (hi lo)
+      value
+    (princ #\# stream)
+    (princ (logior (ash hi 4) lo) stream))))
 
 (define-emitter emit-format-udf 32
   (byte 4 28) (byte 3 25) (byte 5 20) (byte 12 8) (byte 4 4) (byte 4 0))
@@ -1696,6 +1698,50 @@
   (imm :fields (list (byte 12 8) (byte 4 0)) :printer #'udf-imm-printer)
   (op1 :field (byte 4 4) :value #b1111))
 
+;; Try to extract the name from the bytes following the UDF
+;; instruction which contain the name of the unimplemented item.
+;;
+;; It would be really nice if we could print out those bytes as just
+;; words instead of having the disassembler try to disassemble random
+;; words.
+(defun snarf-not-implemented-name (stream dstate)
+  (let* ((sap (disassem:dstate-segment-sap dstate))
+	 (offset (disassem:dstate-next-offs dstate))
+	 (branch-inst (sys:sap-ref-32 sap offset)))
+    ;; sap + offset should point to the branch instruction after the
+    ;; udf instruction.  Make sure it's an unconditional branch
+    ;; instrution.
+    (unless (= (ldb (byte 8 24) branch-inst) #xea)
+      (return-from snarf-not-implemented-name ""))
+    ;; From the offset in the branch instruction, compute the max
+    ;; length of the string that was encoded.
+    (let ((max-length (+ (ash (ldb (byte 24 0) branch-inst) 2) 4)))
+      ;; Skip the branch instruction
+      (incf offset 4)
+      ;; Print each following byte until max-length is reached or we
+      ;; get a 0 byte.
+      (with-output-to-string (s)
+	(do* ((k 0 (+ k 1))
+	      (octet (sys:sap-ref-8 sap (+ offset k))
+		     (sys:sap-ref-8 sap (+ offset k))))
+	     ((or (>= k max-length)
+		  (zerop octet)))
+	  (write-char (code-char octet) s))))))
+
+(defun udf-control (chunk inst stream dstate)
+  (declare (ignore inst))
+  (flet ((nt (x)
+	   (when stream
+	     (disassem:note x dstate))))
+    (destructuring-bind (hi lo)
+	(format-udf-imm chunk dstate)
+      (let ((udf-value (logior (ash hi 4) lo)))
+	(case udf-value
+	  (#.vm::not-implemented-trap
+	   (nt (concatenate 'string
+			    "Not-implemented trap: "
+			    (snarf-not-implemented-name dstate)))))))))
+
 ;; A8.8.247
 ;; Undefined instruction
 (define-instruction udf (segment imm)
@@ -1704,7 +1750,9 @@
 	    ((cond #b1110)
 	     (opb0 #b011)
 	     (op0 #b11111)
-	     (op1 #b1111)))
+	     (op1 #b1111))
+	    :default
+	    :control #'udf-control)
   (:emitter
    (emit-format-udf segment
 		    #b1110
