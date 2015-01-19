@@ -32,6 +32,22 @@ x:
 	movt	temp, #:upper16:global ; \
 	str	reg, [temp]
 
+/*
+ * Load the value of a static symbol into the given register
+ */
+#define STATIC_SYMBOL_OFFSET(sym)	(sym - NIL)
+/*
+ * Load the value of a static symbol into the given register
+ */
+#define load_symbol_value(reg, sym) \
+	ldr	reg, [reg_NULL, #(STATIC_SYMBOL_OFFSET(sym) + SYMBOL_VALUE_OFFSET)]
+
+/*
+ * Store a register as the value of a static symbol.
+ */
+#define store_symbol_value(reg, sym) \
+	str	reg, [reg_NULL, #(STATIC_SYMBOL_OFFSET(sym) + SYMBOL_VALUE_OFFSET)]
+	
 #define SET_SIZE(x) \
 	.size	x, .-x
 	
@@ -58,6 +74,13 @@ GFUNCDEF(call_into_lisp)
 	push	{r4-r12,lr}
 	vpush	{d8-d15}
 
+	/* Establish NIL */
+	ldr	reg_NULL, =NIL
+
+	/* Save C stack pointer and the C frame pointer */
+	store_symbol_value(sp, NUMBER_STACK_POINTER)
+	store_symbol_value(reg_OCFP, NUMBER_FRAME_POINTER)
+
 	/* Initialize tagged registers to 0 */
 	eor	reg_CODE, reg_CODE
 	eor	reg_A0, reg_A0
@@ -68,21 +91,16 @@ GFUNCDEF(call_into_lisp)
 	eor	reg_OCFP, reg_OCFP
 	eor	reg_CFP, reg_CFP
 	eor	reg_LIP, reg_LIP
-	/* Establish NIL */
-	ldr	reg_NULL, =NIL
-
-	/* Save C stack pointer */
-	str	sp, [reg_NULL, #(NUMBER_STACK_POINTER - NIL)]
 
 	/* Set pseudo-atomic flag */
 	mov	reg_NARGS, #1
-	str	reg_NARGS, [reg_NULL, #(PSEUDO_ATOMIC_ATOMIC - NIL)]
+	store_symbol_value(reg_NARGS, PSEUDO_ATOMIC_ATOMIC)
 
 	load(reg_OCFP, current_control_frame_pointer)
 
 	/* No longer atomic */
 	mov	reg_NARGS, #0
-	str	reg_NARGS, [reg_NULL, #(PSEUDO_ATOMIC_ATOMIC - NIL)]
+	store_symbol_value(reg_NARGS, PSEUDO_ATOMIC_ATOMIC)
 	/* Check if we were interrupted. (Not implemented yet.)
 
 	/* Pass in the arguments */	
