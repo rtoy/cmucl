@@ -52,8 +52,8 @@
 (defreg lra 8)
 (defreg null 9)				; C thread register
 (defreg lexenv 10)			; lexenv and fdefn
-(defreg ocfp 11)			; ARM interprocedure temp
-(defreg cfp 12)				; ARM fp
+(defreg cfp 11)				; ARM fp
+(defreg ocfp 12)			; ARM interprocedure temp
 ;; This is the ARM SP. We are going to use this as the Lisp stack
 ;; pointer (csp) because all signals will be delivered to the
 ;; sigaltstack.  call_into_lisp needs to save the real C SP and
