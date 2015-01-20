@@ -725,6 +725,20 @@
 		(type ,(shift-type-encoding shift-type)))
 	       '(:name cond :tab
 		 dst ", " src2 ", #" shift))
+     (:printer format-0-reg
+	       ;; This is really lsl rd, rs, #0, but we want to print
+	       ;; it as mov rd, rs, which is much easier to
+	       ;; understand.
+	       ((opb0 #b000)
+		(op #b1101)
+		(rs 0)
+		(src1 0)
+		(dst nil :type 'reg)
+		(s ,set-flags-bit)
+		(shift 0)
+		(type 0))
+	       '(:name cond :tab dst ", " src2)
+	       :print-name 'mov)
      (:printer format-0-reg-shifted
 	       ((opb0 #b000)
 		(op #b1101)
