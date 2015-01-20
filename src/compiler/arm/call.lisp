@@ -184,7 +184,7 @@
     ;; Allocate function header.
     (inst function-header-word)
     (dotimes (i (1- vm:function-code-offset))
-      (inst word 0))
+      (inst udf function-header-trap))
 
     (emit-not-implemented)
 
