@@ -737,8 +737,7 @@
 		(s ,set-flags-bit)
 		(shift 0)
 		(type 0))
-	       '(:name cond :tab
-		 dst ", " src2)
+	       '(:name cond :tab dst ", " src2)
 	       :print-name 'mov)
      (:printer format-0-reg-shifted
 	       ((opb0 #b000)
