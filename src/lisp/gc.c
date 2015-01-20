@@ -210,7 +210,7 @@ collect_garbage(void)
     /* Set up from space and new space pointers. */
 
     from_space = current_dynamic_space;
-#ifndef ibmrt
+#ifndef ALLOCATION_POINTER
     from_space_free_pointer = current_dynamic_space_free_pointer;
 #else
     from_space_free_pointer = (lispobj *) SymbolValue(ALLOCATION_POINTER);
@@ -250,7 +250,7 @@ collect_garbage(void)
 #endif
     scavenge(control_stack, control_stack_size);
 
-#ifndef ibmrt
+#if !defined(BINDING_STACK_POINTER)
     binding_stack_size = current_binding_stack_pointer - binding_stack;
 #else
     binding_stack_size =
@@ -298,7 +298,7 @@ collect_garbage(void)
 	    (os_vm_size_t) dynamic_space_size);
 
     current_dynamic_space = new_space;
-#ifndef ibmrt
+#ifndef ALLOCATION_POINTER
     current_dynamic_space_free_pointer = new_space_free_pointer;
 #else
     SetSymbolValue(ALLOCATION_POINTER, (lispobj) new_space_free_pointer);
@@ -2316,11 +2316,14 @@ gc_init(void)
 void
 set_auto_gc_trigger(os_vm_size_t dynamic_usage)
 {
+#ifdef ALLOCATION_POINTER
+#define current_dynamic_space_free_pointer SymbolValue(ALLOCATION_POINTER)
+#endif
+
     os_vm_address_t addr = (os_vm_address_t) current_dynamic_space +
-
 	dynamic_usage;
-    long length =
 
+    long length =
 	dynamic_space_size + (os_vm_address_t) current_dynamic_space - addr;
 
     if (addr < (os_vm_address_t) current_dynamic_space_free_pointer) {
@@ -2330,6 +2333,7 @@ set_auto_gc_trigger(os_vm_size_t dynamic_usage)
 		(os_vm_address_t) current_dynamic_space_free_pointer
 		- (os_vm_address_t) current_dynamic_space);
 	return;
+#undef current_dynamic_space_free_pointer
     } else if (length < 0) {
 	fprintf(stderr,
 		"set_auto_gc_trigger: tried to set gc trigger too high! (%d)\n",
@@ -2352,7 +2356,6 @@ set_auto_gc_trigger(os_vm_size_t dynamic_usage)
     fprintf(stderr, "current_auto_gc_trigger set to %p\n",
 	    current_auto_gc_trigger);
 #endif
-
 }
 
 void
