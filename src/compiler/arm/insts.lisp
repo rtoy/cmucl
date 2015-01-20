@@ -2774,11 +2774,11 @@
        ;; 0-terminated.
        (inst b length-label)
        ,@(map 'list #'(lambda (c)
-			`(emit-byte *code-segment* ,(char-code c)))
+			`(inst byte ,(char-code c)))
 	      string)
        ;; Append enough zeros to end on a word boundary.
        ,@(make-list (mod (- (length string)) 4)
-		    :initial-element '(emit-byte *code-segment* 0))
+		    :initial-element '(inst byte 0))
        (emit-label length-label))))
 
 ;;;; Instructions for dumping data and header objects.
