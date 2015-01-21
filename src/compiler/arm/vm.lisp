@@ -77,9 +77,9 @@
 
 ;;;; SB and SC definition:
 
-;; How many double-float registers are available?
-(defconstant double-float-registers
-  #+vfpv3-d16 16 #-vfpv3-d16 32)
+;; How many double-float registers are available?  Currently we
+;; support VFPv3-D16, so 16.
+(defconstant double-float-registers 16)
 
 (define-storage-base registers :finite :size 16)
 (define-storage-base float-registers :finite :size #.(* 2 double-float-registers))
