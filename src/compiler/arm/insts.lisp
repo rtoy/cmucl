@@ -551,20 +551,20 @@
 	       ((opb0 #b001) (op ,opcode)
 		(s 1)
 		(src1 nil :type 'reg)
-		(dst 0))
+		(dst nil))
 	       format-1-immed-set-printer)
      (:printer format-0-reg
 	       ((opb0 #b000) (op ,opcode) (rs 0)
 		(s 1)
 		(src1 nil :type 'reg)
-		(dst 0))
+		(dst nil))
 	       format-0-reg-set-printer)
      (:printer format-0-reg-shifted
 	       ((opb0 #b000) (op ,opcode) (rs 1)
 		(z 0)
 		(s 1)
 		(src1 nil :type 'reg)
-		(dst 0))
+		(dst nil))
 	       format-0-reg-shifted-set-printer)
      (:emitter
       (emit-data-proc-format segment 0 src1 src2 cond
