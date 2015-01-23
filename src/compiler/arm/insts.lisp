@@ -1690,6 +1690,23 @@
 		       #b0011
 		       (reg-tn-encoding target))))))
 
+(define-instruction bx (segment target)
+  (:declare (type tn target))
+  (:printer branch-reg
+	    ((opb0 #b000)
+	     (op #b10010)
+	     (op0 nil)
+	     (op1 #b0001)))
+  (:attributes branch)
+  (:emitter
+   (emit-branch-reg segment
+		    (condition-code-encoding :al)
+		    #b000
+		    #b10010
+		    #b111111111111
+		    #b0001
+		    (reg-tn-encoding target))))
+
 
 ;; Miscellaneous instructions
 
@@ -1879,10 +1896,9 @@
 	   (t
 	    (let ((hi (ldb (byte 16 16) value))
 		  (lo (ldb (byte 16 0) value)))
+	      (inst movw reg lo)
 	      (unless (zerop hi)
-		(inst movt reg hi))
-	      (unless (zerop lo)
-		(inst movw reg lo))))))
+		(inst movt reg hi))))))
     (fixup
      (inst movt reg value)
      (inst movw reg value))))
