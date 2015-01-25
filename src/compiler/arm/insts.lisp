@@ -551,20 +551,20 @@
 	       ((opb0 #b001) (op ,opcode)
 		(s 1)
 		(src1 nil :type 'reg)
-		(dst 0))
+		(dst nil))
 	       format-1-immed-set-printer)
      (:printer format-0-reg
 	       ((opb0 #b000) (op ,opcode) (rs 0)
 		(s 1)
 		(src1 nil :type 'reg)
-		(dst 0))
+		(dst nil))
 	       format-0-reg-set-printer)
      (:printer format-0-reg-shifted
 	       ((opb0 #b000) (op ,opcode) (rs 1)
 		(z 0)
 		(s 1)
 		(src1 nil :type 'reg)
-		(dst 0))
+		(dst nil))
 	       format-0-reg-shifted-set-printer)
      (:emitter
       (emit-data-proc-format segment 0 src1 src2 cond
@@ -725,6 +725,20 @@
 		(type ,(shift-type-encoding shift-type)))
 	       '(:name cond :tab
 		 dst ", " src2 ", #" shift))
+     (:printer format-0-reg
+	       ;; This is really lsl rd, rs, #0, but we want to print
+	       ;; it as mov rd, rs, which is much easier to
+	       ;; understand.
+	       ((opb0 #b000)
+		(op #b1101)
+		(rs 0)
+		(src1 0)
+		(dst nil :type 'reg)
+		(s ,set-flags-bit)
+		(shift 0)
+		(type 0))
+	       '(:name cond :tab dst ", " src2)
+	       :print-name 'mov)
      (:printer format-0-reg-shifted
 	       ((opb0 #b000)
 		(op #b1101)
@@ -1676,6 +1690,23 @@
 		       #b0011
 		       (reg-tn-encoding target))))))
 
+(define-instruction bx (segment target)
+  (:declare (type tn target))
+  (:printer branch-reg
+	    ((opb0 #b000)
+	     (op #b10010)
+	     (op0 nil)
+	     (op1 #b0001)))
+  (:attributes branch)
+  (:emitter
+   (emit-branch-reg segment
+		    (condition-code-encoding :al)
+		    #b000
+		    #b10010
+		    #b111111111111
+		    #b0001
+		    (reg-tn-encoding target))))
+
 
 ;; Miscellaneous instructions
 
@@ -1865,10 +1896,9 @@
 	   (t
 	    (let ((hi (ldb (byte 16 16) value))
 		  (lo (ldb (byte 16 0) value)))
+	      (inst movw reg lo)
 	      (unless (zerop hi)
-		(inst movt reg hi))
-	      (unless (zerop lo)
-		(inst movw reg lo))))))
+		(inst movt reg hi))))))
     (fixup
      (inst movt reg value)
      (inst movw reg value))))
@@ -2774,11 +2804,11 @@
        ;; 0-terminated.
        (inst b length-label)
        ,@(map 'list #'(lambda (c)
-			`(emit-byte *code-segment* ,(char-code c)))
+			`(inst byte ,(char-code c)))
 	      string)
        ;; Append enough zeros to end on a word boundary.
        ,@(make-list (mod (- (length string)) 4)
-		    :initial-element '(emit-byte *code-segment* 0))
+		    :initial-element '(inst byte 0))
        (emit-label length-label))))
 
 ;;;; Instructions for dumping data and header objects.
