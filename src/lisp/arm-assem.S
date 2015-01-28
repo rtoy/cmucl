@@ -8,48 +8,43 @@
 #include "lispregs.h"
 #include "globals.h"
 
-#define	FUNCDEF(x) \
+#define GFUNCDEF(x) \
+	.globl x ; \
 	.align 2 ; \
 	.type	x, %function ; \
 x:
-						
-#define	GFUNCDEF(x) \
-	.global x ; \
-	FUNCDEF(x)
 
 /*
  * Load register from C global.
  */
-#define load(reg, global) \
-	movw	reg, #:lower16:global ; \
-	movt	reg, #:upper16:global ; \
+#define LOAD(reg, global) \
+	ldr	reg, =global ; \
 	ldr	reg, [reg]
 /*
  * Like load, but the stores reg into global using temp as a temporary.
  */
-#define store(reg, global, temp) \
-	movw	temp, #:lower16:global ; \
-	movt	temp, #:upper16:global ; \
+#define STORE(reg, global, temp) \
+	ldr	temp, =global ; \
 	str	reg, [temp]
 
 /*
  * Load the value of a static symbol into the given register
  */
 #define STATIC_SYMBOL_OFFSET(sym)	(sym - NIL)
+
 /*
  * Load the value of a static symbol into the given register
  */
-#define load_symbol_value(reg, sym) \
+#define LOAD_SYMBOL_VALUE(reg, sym) \
 	ldr	reg, [reg_NULL, #(STATIC_SYMBOL_OFFSET(sym) + SYMBOL_VALUE_OFFSET)]
 
 /*
  * Store a register as the value of a static symbol.
  */
-#define store_symbol_value(reg, sym) \
+#define STORE_SYMBOL_VALUE(reg, sym) \
 	str	reg, [reg_NULL, #(STATIC_SYMBOL_OFFSET(sym) + SYMBOL_VALUE_OFFSET)]
 	
-#define SET_SIZE(x) \
-	.size	x, .-x
+#define ENDFUNC(x) .size x, .-x
 	
 /*
  * Generate not-implemented trap with name "name"
@@ -71,15 +66,15 @@ x:
 GFUNCDEF(call_into_lisp)
 
 	/* Save the callee-saved registers */
-	push	{r4-r12,lr}
+	push	{r4-r12, lr}
 	vpush	{d8-d15}
 
 	/* Establish NIL */
 	ldr	reg_NULL, =NIL
 
 	/* Save C stack pointer and the C frame pointer */
-	store_symbol_value(sp, NUMBER_STACK_POINTER)
-	store_symbol_value(reg_OCFP, NUMBER_FRAME_POINTER)
+	STORE_SYMBOL_VALUE(sp, NUMBER_STACK_POINTER)
+	STORE_SYMBOL_VALUE(reg_OCFP, NUMBER_FRAME_POINTER)
 
 	/* Initialize tagged registers to 0 */
 	eor	reg_CODE, reg_CODE
@@ -94,13 +89,13 @@ GFUNCDEF(call_into_lisp)
 
 	/* Set pseudo-atomic flag */
 	mov	reg_NARGS, #1
-	store_symbol_value(reg_NARGS, PSEUDO_ATOMIC_ATOMIC)
+	STORE_SYMBOL_VALUE(reg_NARGS, PSEUDO_ATOMIC_ATOMIC)
 
-	load(reg_OCFP, current_control_frame_pointer)
+	LOAD(reg_OCFP, current_control_frame_pointer)
 
 	/* No longer atomic */
 	mov	reg_NARGS, #0
-	store_symbol_value(reg_NARGS, PSEUDO_ATOMIC_ATOMIC)
+	STORE_SYMBOL_VALUE(reg_NARGS, PSEUDO_ATOMIC_ATOMIC)
 	/* Check if we were interrupted. (Not implemented yet.)
 
 	/* Pass in the arguments */	
@@ -125,13 +120,12 @@ GFUNCDEF(call_into_lisp)
 	
 	/*
 	 * Get the Lisp stack pointer into the sp since on ARM sp is both
-	 * the C and Lisp stack pointer.  (Don't use load() here
+	 * the C and Lisp stack pointer.  (Don't use LOAD() here
 	 * because we set sp temporarily to the address of
 	 * current_control_stack_pointer, which would not make a good
 	 * stack pointer.)
 	 */
-	movw	reg_NL0, #:lower16:current_control_stack_pointer	
-	movt	reg_NL0, #:upper16:current_control_stack_pointer	
+	ldr	reg_NL0, =current_control_stack_pointer	
 	ldr	reg_CSP, [reg_NL0]
 
 	/*
@@ -146,13 +140,13 @@ lra:
 
 	vpop	{d8-d15}
 	pop	{r4-r12,pc}
-	SET_SIZE(call_into_lisp)
+	ENDFUNC(call_into_lisp)
 
 GFUNCDEF(call_into_c)
 	NOT_IMPLEMENTED("call_into_c")
-	SET_SIZE(call_into_c)
+	ENDFUNC(call_into_c)
 
-	.global	undefined_tramp
+	.globl	undefined_tramp
 	.byte	type_FunctionHeader
 undefined_tramp:	
 	.byte	0, 0, 0
@@ -164,7 +158,7 @@ undefined_tramp:
 
 	NOT_IMPLEMENTED("undefined_trap")
 
-	.global	closure_tramp
+	.globl	closure_tramp
 	.byte	type_FunctionHeader
 closure_tramp:	
 	.byte	0, 0, 0	/* Header */
@@ -180,16 +174,14 @@ closure_tramp:
  * Function-end breakpoint magic.  See MAKE-BOGUS-LRA in
  * code/debug-int.lisp.
  */			
-	.text
-	.align	3
-	.global function_end_breakpoint_guts
+	.globl function_end_breakpoint_guts
 function_end_breakpoint_guts:	
 	.long	type_ReturnPcHeader
 	NOT_IMPLEMENTED("function_end_breakpoint_guts")
 	
-	.global function_end_breakpoint_trap
+	.globl function_end_breakpoint_trap
 function_end_breakpoint_trap:
 	NOT_IMPLEMENTED("function_end_breakpoint_trap")
 	
-	.global function_end_breakpoint_end
+	.globl function_end_breakpoint_end
 function_end_breakpoint_end:
