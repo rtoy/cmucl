@@ -129,12 +129,9 @@ sigill_handler(HANDLER_ARGS)
                   printf("\"\n");
 
                   /*
-                   * FIXME: What should we do after printing this message?
-                   */
-                  /*
-                   * Skip over the UDF instruction so if we continue,
-                   * we'll execute the branch, skipping over the
-                   * string.
+                   * Skip over the UDF instruction so if we can
+                   * continue.  This will execute the branch, skipping
+                   * over the string too.
                    */
                   SC_PC(context) = (unsigned long) (pc + 1);
               }
