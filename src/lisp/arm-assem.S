@@ -15,19 +15,6 @@
 x:
 
 /*
- * Load register from C global.
- */
-#define LOAD(reg, global) \
-	ldr	reg, =global ; \
-	ldr	reg, [reg]
-/*
- * Like load, but the stores reg into global using temp as a temporary.
- */
-#define STORE(reg, global, temp) \
-	ldr	temp, =global ; \
-	str	reg, [temp]
-
-/*
  * Load the value of a static symbol into the given register
  */
 #define STATIC_SYMBOL_OFFSET(sym)	(sym - NIL)
@@ -44,7 +31,9 @@ x:
 #define STORE_SYMBOL_VALUE(reg, sym) \
 	str	reg, [reg_NULL, #(STATIC_SYMBOL_OFFSET(sym) + SYMBOL_VALUE_OFFSET)]
 	
-#define ENDFUNC(x) .size x, .-x
+#define ENDFUNC(x) \
+	.size x, .-x ; \
+	.pool
 	
 /*
  * Generate not-implemented trap with name "name"
@@ -91,7 +80,8 @@ GFUNCDEF(call_into_lisp)
 	mov	reg_NARGS, #1
 	STORE_SYMBOL_VALUE(reg_NARGS, PSEUDO_ATOMIC_ATOMIC)
 
-	LOAD(reg_OCFP, current_control_frame_pointer)
+	ldr	reg_OCFP, =current_control_frame_pointer
+	ldr	reg_OCFP, [reg_OCFP]
 
 	/* No longer atomic */
 	mov	reg_NARGS, #0
@@ -120,10 +110,7 @@ GFUNCDEF(call_into_lisp)
 	
 	/*
 	 * Get the Lisp stack pointer into the sp since on ARM sp is both
-	 * the C and Lisp stack pointer.  (Don't use LOAD() here
-	 * because we set sp temporarily to the address of
-	 * current_control_stack_pointer, which would not make a good
-	 * stack pointer.)
+	 * the C and Lisp stack pointer.
 	 */
 	ldr	reg_NL0, =current_control_stack_pointer	
 	ldr	reg_CSP, [reg_NL0]
