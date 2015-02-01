@@ -224,6 +224,7 @@
 	  dynamic-space-overflow-warning-trap))
 	  
 (defenum (:suffix -trap :start 8)
+  function-header			; This value must be a multiple of 4!
   halt
   pending-interrupt
   error
