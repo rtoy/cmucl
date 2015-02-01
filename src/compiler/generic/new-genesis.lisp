@@ -1023,7 +1023,8 @@
 		   (ecase type
 		     (#.vm:function-header-type
 		      (if (or (c:backend-featurep :sparc)
-			      (c:backend-featurep :ppc))
+			      (c:backend-featurep :ppc)
+			      (c:backend-featurep :arm))
 			  defn
 			  (make-random-descriptor
 			   (+ (logandc2 (descriptor-bits defn) vm:lowtag-mask)
