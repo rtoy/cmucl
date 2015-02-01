@@ -224,10 +224,10 @@
 	  dynamic-space-overflow-warning-trap))
 
 ;; These values are used as the immediate value in a UDF instruction.
-;; Note that it Linux on arm appears to use udf 16 as its trace/breakpoint
+;; Note that Linux on arm appears to use udf 16 as its trace/breakpoint
 ;; trap, so we shouldn't use this for Lisp.
 (defenum (:suffix -trap :start 4)
-  function-header			; This value must be a multiple of 4!
+  function-header			; This value must be a multiple of 4 (fixnum)!
   halt
   pending-interrupt
   error
