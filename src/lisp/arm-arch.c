@@ -96,46 +96,45 @@ sigill_handler(HANDLER_ARGS)
         udf_code = (inst & 0xf) | ((inst >> 8) & 0xfff);
 
         switch (udf_code) {
-          case trap_NotImplemented:
-              {
-                  /*
-                   * Print out the name.  The next instruction MUST be
-                   * a branch immediate.
-                   */
-                  unsigned char *string;
-                  int length;
+          case trap_NotImplemented: {
+              /*
+               * Print out the name.  The next instruction MUST be
+               * a branch immediate.
+               */
+              unsigned char *string;
+              int length;
 
-                  if (((pc[1] >> 24) & 0xf) != 0xa) {
-                      fprintf(stderr, "ERROR: NOT-IMPLEMENTED trap not followed relative branch: 0x%08x\n",
-                              pc[1]);
-                      abort();
-                  }
-
-                  /*
-                   * Compute the maximum length of the string from the
-                   * offset in the branch instruction.  Then try to
-                   * find the last nul character for end of the
-                   * string.
-                   */
-                  string = (unsigned char *) &pc[2];
-                  length = ((pc[1] & 0xffffff) << 2) + 4;
-
-                  while (string[length - 1] == '\0') {
-                      --length;
-                  }
-
-                  printf("NOT-IMPLEMENTED: \"");
-                  fwrite(pc + 2, 1, length, stdout);
-                  printf("\"\n");
-
-                  /*
-                   * Skip over the UDF instruction so if we can
-                   * continue.  This will execute the branch, skipping
-                   * over the string too.
-                   */
-                  SC_PC(context) = (unsigned long) (pc + 1);
+              if (((pc[1] >> 24) & 0xf) != 0xa) {
+                  fprintf(stderr, "ERROR: NOT-IMPLEMENTED trap not followed relative branch: 0x%08x\n",
+                          pc[1]);
+                  abort();
               }
+
+              /*
+               * Compute the maximum length of the string from the
+               * offset in the branch instruction.  Then try to
+               * find the last nul character for end of the
+               * string.
+               */
+              string = (unsigned char *) &pc[2];
+              length = ((pc[1] & 0xffffff) << 2) + 4;
+
+              while (string[length - 1] == '\0') {
+                  --length;
+              }
+
+              printf("NOT-IMPLEMENTED: \"");
+              fwrite(pc + 2, 1, length, stdout);
+              printf("\"\n");
+
+              /*
+               * Skip over the UDF instruction so if we can
+               * continue.  This will execute the branch, skipping
+               * over the string too.
+               */
+              SC_PC(context) = (unsigned long) (pc + 1);
               break;
+          }
           default:
               NOT_IMPLEMENTED();
         }
