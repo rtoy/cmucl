@@ -227,7 +227,7 @@
 ;; Note that Linux on arm appears to use udf 16 as its trace/breakpoint
 ;; trap, so we shouldn't use this for Lisp.
 (defenum (:suffix -trap :start 4)
-  function-header			; This value must be a multiple of 4 (fixnum)!
+  function-header			; This value must be a multiple of 4!
   halt
   pending-interrupt
   error
