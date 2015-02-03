@@ -222,8 +222,11 @@
 #+heap-overflow-check
 (export '(dynamic-space-overflow-error-trap
 	  dynamic-space-overflow-warning-trap))
-	  
-(defenum (:suffix -trap :start 8)
+
+;; These values are used as the immediate value in a UDF instruction.
+;; Note that Linux on arm appears to use udf 16 as its trace/breakpoint
+;; trap, so we shouldn't use this for Lisp.
+(defenum (:suffix -trap :start 4)
   function-header			; This value must be a multiple of 4!
   halt
   pending-interrupt
@@ -237,6 +240,9 @@
   #+heap-overflow-check
   dynamic-space-overflow-error
   not-implemented
+  ;; This is the trap number to use when a pseudo-atomic section has
+  ;; been interrupted.
+  pseudo-atomic
   )
 
 ;; Make sure this starts AFTER the last element of the above enum!
@@ -370,17 +376,8 @@
 (defparameter *assembly-unit-length* 8)
 
 
-(export '(pseudo-atomic-trap allocation-trap
+(export '(pseudo-atomic-trap
 	  pseudo-atomic-value pseudo-atomic-interrupted-value))
-;;;; Pseudo-atomic trap number.
-;;;;
-;;;; This is the trap number to use when a pseudo-atomic section has
-;;;; been interrupted.
-;;;;
-;;;; FIXME: Choose an appropriate value once the C code has
-;;;; implemented.
-(defconstant pseudo-atomic-trap 16)
-
 ;;;; Pseudo-atomic flag
 ;;;;
 ;;;; This value is added to *pseudo-atomic-atomic* to indicate a
