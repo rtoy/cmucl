@@ -18,9 +18,10 @@
 #include "breakpoint.h"
 #include "interr.h"
 
-#define NOT_IMPLEMENTED() \
+#define NOT_IMPLEMENTED(message, value) \
     do { \
-        fprintf(stderr, "%s: NOT IMPLEMENTED\n", __FUNCTION__); \
+        fprintf(stderr, "%s: NOT IMPLEMENTED: " message "\n", \
+                __FUNCTION__, value);                                     \
         abort(); \
     } while (0)
 
@@ -33,43 +34,43 @@ arch_init(fpu_mode_t mode)
 os_vm_address_t
 arch_get_bad_addr(HANDLER_ARGS)
 {
-    NOT_IMPLEMENTED();
+    NOT_IMPLEMENTED("", 0);
 }
 
 void
 arch_skip_instruction(os_context_t *context)
 {
-    NOT_IMPLEMENTED();
+    NOT_IMPLEMENTED("", 0);
 }
 
 unsigned char *
 arch_internal_error_arguments(os_context_t *scp)
 {
-    NOT_IMPLEMENTED();
+    NOT_IMPLEMENTED("", 0);
 }
 
 boolean
 arch_pseudo_atomic_atomic(os_context_t *scp)
 {
-    NOT_IMPLEMENTED();
+    NOT_IMPLEMENTED("", 0);
 }
 
 void
 arch_set_pseudo_atomic_interrupted(os_context_t *scp)
 {
-    NOT_IMPLEMENTED();
+    NOT_IMPLEMENTED("", 0);
 }
 
 unsigned long
 arch_install_breakpoint(void *pc)
 {
-    NOT_IMPLEMENTED();
+    NOT_IMPLEMENTED("addr: %p", pc);
 }
 
 void
 arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 {
-    NOT_IMPLEMENTED();
+    NOT_IMPLEMENTED("addr %p", pc);
 }
 
 static unsigned int *skipped_break_addr, displaced_after_inst;
@@ -79,7 +80,7 @@ static sigset_t orig_sigmask;
 void
 arch_do_displaced_inst(os_context_t *scp, unsigned long orig_inst)
 {
-    NOT_IMPLEMENTED();
+    NOT_IMPLEMENTED("orig: %08lx", orig_inst);
 }
 
 static void
@@ -123,7 +124,7 @@ sigill_handler(HANDLER_ARGS)
                   --length;
               }
 
-              printf("NOT-IMPLEMENTED: \"");
+              printf("NOT-IMPLEMENTED: %p: \"", pc);
               fwrite(pc + 2, 1, length, stdout);
               printf("\"\n");
 
@@ -136,10 +137,10 @@ sigill_handler(HANDLER_ARGS)
               break;
           }
           default:
-              NOT_IMPLEMENTED();
+              NOT_IMPLEMENTED("udf code: %d", udf_code);
         }
     } else {
-        NOT_IMPLEMENTED();
+        NOT_IMPLEMENTED("unknown CODE: %d", CODE(code));
     }
 }
 
