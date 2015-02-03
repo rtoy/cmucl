@@ -14,9 +14,6 @@
 	.type	x, %function ; \
 x:
 
-/*
- * Load the value of a static symbol into the given register
- */
 #define STATIC_SYMBOL_OFFSET(sym)	(sym - NIL)
 
 /*
