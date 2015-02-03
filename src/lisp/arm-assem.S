@@ -127,7 +127,89 @@ lra:
 	ENDFUNC(call_into_lisp)
 
 GFUNCDEF(call_into_c)
-	NOT_IMPLEMENTED("call_into_c")
+	/* Build a lisp stack frame */
+	mov	reg_OCFP, reg_CFP
+	mov	reg_CFP, reg_CSP
+	sub	reg_CSP, reg_CSP, #32
+	str	reg_OCFP, [reg_CFP]
+	str	reg_CODE, [reg_CFP, #8]
+
+	/*
+	 * The unboxed regs should be free for use to use as we which.
+	 * All of the args to the C function that would go in
+	 * registers should be on the C stack.
+	 */
+	
+	/* Turn on pseudo-atomic */
+	mov	reg_NARGS, #1
+	STORE_SYMBOL_VALUE(reg_NARGS, PSEUDO_ATOMIC_ATOMIC)
+
+	/* Convert the return addres to an offset and save it on the stack */
+	sub	reg_NL0, reg_LIP, reg_CODE
+	add	reg_NL0, reg_NL0, #type_OtherPointer
+	str	reg_NL0, [reg_CFP, #4]
+
+        /* Store lisp state */
+	ldr	reg_NARGS, =current_control_stack_pointer
+	str	reg_CSP, [reg_NARGS]
+	ldr	reg_NARGS, =current_control_frame_pointer
+	str	reg_CFP, [reg_NARGS]
+
+	/* No longer in Lisp */
+	ldr	reg_NARGS, =foreign_function_call_active
+	str	reg_CSP, [reg_NARGS]
+
+	/* Were we interrupted? Not implemented */
+
+	/*
+	 * Get the C stack pointer so we can grab the C args. (The
+	 * Lisp stack pointer was saved above.)
+	 */
+	LOAD_SYMBOL_VALUE(sp, NUMBER_STACK_POINTER)
+
+	/* Pop the function address first */
+	pop	{reg_LIP}
+	/* Now pop off r0-r3 */
+	pop	{reg_NL0, reg_NL1, reg_NL2, reg_NARGS}
+	/* Into C we go */
+	blx	reg_LIP
+
+	/*
+	 * Any integer results are stored in r0 and r1, so don't touch
+	 * them!
+	 */
+	
+	/* Re-establish NIL */
+	ldr	reg_NULL, =NIL
+
+	/* Save the C stack pointer, and get the Lisp stack pointer back */
+	STORE_SYMBOL_VALUE(reg_CSP, NUMBER_STACK_POINTER)
+	ldr	reg_NARGS, =current_control_stack_pointer
+	ldr	reg_CSP, [reg_NARGS]
+
+	/* Atomic */
+	mov	reg_NARGS, #1
+	STORE_SYMBOL_VALUE(reg_NARGS, PSEUDO_ATOMIC_ATOMIC)
+
+	/* No longer in foreign function call */
+	
+	/* Load the rest of the lisp state */
+	/* Get the return address back */
+	ldr	reg_LIP, [reg_CFP, #4]
+	ldr	reg_CODE, [reg_CFP, #8]
+	add	reg_LIP, reg_LIP, reg_CODE
+	sub	reg_LIP, reg_LIP, #type_OtherPointer
+
+	/* No longer atomic */
+	mov	reg_NARGS, #0
+	STORE_SYMBOL_VALUE(reg_NARGS, PSEUDO_ATOMIC_ATOMIC)
+	
+	/* Reset the lisp stack */
+	mov	reg_CFP, reg_CSP
+	mov	reg_OCFP, reg_CFP
+
+	/* Return to Lisp */
+	bx	reg_LIP
 	ENDFUNC(call_into_c)
 
 	.globl	undefined_tramp
