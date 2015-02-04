@@ -2435,9 +2435,6 @@
   		 (ldb (byte 16 0) value))))))
       (#.c:arm-fasl-file-implementation
        (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
-	 #+(or)
-	 (format *debug-io* "FIXUP: ~S: value = #x~X inst #x~8x, new "
-		 kind value inst)
 	 ;; Grab either the low (:movw) or high (:movt) 16 bits of the
 	 ;; value. Then smash that value into the inst at the right
 	 ;; place.
@@ -2451,9 +2448,7 @@
 		(imm12 (ldb (byte 12 0) adjusted-value)))
 	   (setf inst (logior inst
 			      (ash imm4 16)
-			      imm12))
-	   #+(or)
-	   (format *debug-io* "#x~8x~%" inst))
+			      imm12)))
 	 (setf (sap-ref-32 sap 0)
 	       (maybe-byte-swap inst))))))
   (undefined-value))
