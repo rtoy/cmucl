@@ -2446,9 +2446,7 @@
 		     (ldb (byte 16 16) value))))
 		(imm4 (ldb (byte 4 12) adjusted-value))
 		(imm12 (ldb (byte 12 0) adjusted-value)))
-	   (setf inst (logior inst
-			      (ash imm4 16)
-			      imm12)))
+	   (setf inst (logior inst (ash imm4 16) imm12)))
 	 (setf (sap-ref-32 sap 0)
 	       (maybe-byte-swap inst))))))
   (undefined-value))
