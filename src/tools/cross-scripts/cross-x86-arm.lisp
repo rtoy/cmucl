@@ -13,7 +13,6 @@
 (c::new-backend "ARM"
    ;; Features to add here
    '(:arm
-     :linkage-table
      :relative-package-names		; Relative package names from Allegro
      :conservative-float-type
      :hash-new
@@ -52,6 +51,7 @@
      ;; Not implemented yet
      :complex-fp-vops
      :alien-callback
+     :linkage-table
      ))
 
 ;; Temporarily use large values so that error messages in the logs
