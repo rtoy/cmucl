@@ -1778,7 +1778,7 @@
 	  (#.vm::not-implemented-trap
 	   (nt (concatenate 'string
 			    "Not-implemented trap: "
-			    (snarf-not-implemented-name dstate)))))))))
+			    (snarf-not-implemented-name stream dstate)))))))))
 
 ;; A8.8.247
 ;; Undefined instruction
