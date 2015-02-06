@@ -26,6 +26,13 @@
 
 ;;;; Constants, types, conversion functions, some disassembler stuff.
 
+
+;; See section A2.3 in the ARMv7-A architecture manual which says
+;;
+;;   When executing an ARM instruction, PC reads as the address of the
+;;   current instruction plus 8.
+(defconstant pc-read-offset 8)
+
 (defun reg-tn-encoding (tn)
   (declare (type tn tn))
   (sc-case tn
@@ -551,20 +558,20 @@
 	       ((opb0 #b001) (op ,opcode)
 		(s 1)
 		(src1 nil :type 'reg)
-		(dst 0))
+		(dst nil))
 	       format-1-immed-set-printer)
      (:printer format-0-reg
 	       ((opb0 #b000) (op ,opcode) (rs 0)
 		(s 1)
 		(src1 nil :type 'reg)
-		(dst 0))
+		(dst nil))
 	       format-0-reg-set-printer)
      (:printer format-0-reg-shifted
 	       ((opb0 #b000) (op ,opcode) (rs 1)
 		(z 0)
 		(s 1)
 		(src1 nil :type 'reg)
-		(dst 0))
+		(dst nil))
 	       format-0-reg-shifted-set-printer)
      (:emitter
       (emit-data-proc-format segment 0 src1 src2 cond
@@ -725,6 +732,20 @@
 		(type ,(shift-type-encoding shift-type)))
 	       '(:name cond :tab
 		 dst ", " src2 ", #" shift))
+     (:printer format-0-reg
+	       ;; This is really lsl rd, rs, #0, but we want to print
+	       ;; it as mov rd, rs, which is much easier to
+	       ;; understand.
+	       ((opb0 #b000)
+		(op #b1101)
+		(rs 0)
+		(src1 0)
+		(dst nil :type 'reg)
+		(s ,set-flags-bit)
+		(shift 0)
+		(type 0))
+	       '(:name cond :tab dst ", " src2)
+	       :print-name 'mov)
      (:printer format-0-reg-shifted
 	       ((opb0 #b000)
 		(op #b1101)
@@ -844,7 +865,7 @@
       (emit-format-mov16 segment
 			 (condition-code-encoding cond)
 			 #b001
-			 #b10110
+			 #b10100
 			 0
 			 (reg-tn-encoding dst)
 			 0)))))
@@ -868,7 +889,7 @@
 			 (reg-tn-encoding dst)
 			 (ldb (byte 12 0) src)))
      (fixup
-      (note-fixup segment :mov3 src)
+      (note-fixup segment :movw src)
       (emit-format-mov16 segment
 			 (condition-code-encoding cond)
 			 #b001
@@ -1583,7 +1604,7 @@
   :use-label #'(lambda (value dstate)
 		 (declare (type (signed-byte 24) value)
 			  (type disassem:disassem-state dstate))
-		 (+ (ash value 2) (disassem:dstate-cur-addr dstate))))
+		 (+ (ash value 2) (disassem:dstate-cur-addr dstate) pc-read-offset)))
 
 (defconstant branch-imm-printer
   `(:name cond :tab imm24))
@@ -1620,7 +1641,7 @@
 			  op
 			  ;; The offset in the instruction is a word
 			  ;; offset, not byte.
-			  (ash (- (label-position target) posn) -2)))))
+			  (ash (- (label-position target) posn pc-read-offset) -2)))))
 
 ;; For these branch instructions, should we still keep the condition
 ;; at the end, like for other instructions?  Or can we have it
@@ -1675,6 +1696,23 @@
 		       #b111111111111
 		       #b0011
 		       (reg-tn-encoding target))))))
+
+(define-instruction bx (segment target)
+  (:declare (type tn target))
+  (:printer branch-reg
+	    ((opb0 #b000)
+	     (op #b10010)
+	     (op0 nil)
+	     (op1 #b0001)))
+  (:attributes branch)
+  (:emitter
+   (emit-branch-reg segment
+		    (condition-code-encoding :al)
+		    #b000
+		    #b10010
+		    #b111111111111
+		    #b0001
+		    (reg-tn-encoding target))))
 
 
 ;; Miscellaneous instructions
@@ -1913,13 +1951,12 @@
 	   (t
 	    (let ((hi (ldb (byte 16 16) value))
 		  (lo (ldb (byte 16 0) value)))
+	      (inst movw reg lo)
 	      (unless (zerop hi)
-		(inst movt reg hi))
-	      (unless (zerop lo)
-		(inst movw reg lo))))))
+		(inst movt reg hi))))))
     (fixup
-     (inst movt reg value)
-     (inst movw reg value))))
+     (inst movw reg value)
+     (inst movt reg value))))
 
 (define-instruction-macro li (reg value)
   `(%li ,reg, value))
@@ -2822,11 +2859,11 @@
        ;; 0-terminated.
        (inst b length-label)
        ,@(map 'list #'(lambda (c)
-			`(emit-byte *code-segment* ,(char-code c)))
+			`(inst byte ,(char-code c)))
 	      string)
        ;; Append enough zeros to end on a word boundary.
        ,@(make-list (mod (- (length string)) 4)
-		    :initial-element '(emit-byte *code-segment* 0))
+		    :initial-element '(inst byte 0))
        (emit-label length-label))))
 
 ;;;; Instructions for dumping data and header objects.

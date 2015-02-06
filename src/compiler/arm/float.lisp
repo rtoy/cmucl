@@ -20,17 +20,20 @@
 
 (define-move-function (load-single 1) (vop x y)
   ((single-stack) (single-reg))
+  (not-implemented "DEFINE-MOVE LOAD-SINGLE")
   (load-symbol-value lip-tn *number-frame-pointer*)
   (inst vldr y lip-tn (* (tn-offset x) vm:word-bytes)))
 
 (define-move-function (store-single 1) (vop x y)
   ((single-reg) (single-stack))
+  (not-implemented "DEFINE-MOVE STORE-SINGLE")
   (load-symbol-value lip-tn *number-frame-pointer*)
   (inst vstr x lip-tn (* (tn-offset y) vm:word-bytes)))
 
 
 (define-move-function (load-double 2) (vop x y)
   ((double-stack) (double-reg))
+  (not-implemented "DEFINE-MOVE LOAD-DOUBLE")
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
     (load-symbol-value lip-tn *number-frame-pointer*)
@@ -38,6 +41,7 @@
 
 (define-move-function (store-double 2) (vop x y)
   ((double-reg) (double-stack))
+  (not-implemented "DEFINE-MOVE STORE-DOUBLE")
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
     (load-symbol-value lip-tn *number-frame-pointer*)
@@ -159,6 +163,7 @@
 
 (define-move-function (load-complex-single 2) (vop x y)
   ((complex-single-stack) (complex-single-reg))
+  (not-implemented "DEFINE-MOVE LOAD-COMPLEX-SINGLE")
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
     (load-symbol-value lip-tn *number-frame-pointer*)
@@ -169,6 +174,7 @@
 
 (define-move-function (store-complex-single 2) (vop x y)
   ((complex-single-reg) (complex-single-stack))
+  (not-implemented "DEFINE-MOVE STORE-COMPLEX-SINGLE")
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
     (load-symbol-value lip-tn *number-frame-pointer*)
@@ -180,6 +186,7 @@
 
 (define-move-function (load-complex-double 4) (vop x y)
   ((complex-double-stack) (complex-double-reg))
+  (not-implemented "DEFINE-MOVE LOAD-COMPLEX-DOUBLE")
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
     (load-symbol-value lip-tn *number-frame-pointer*)
@@ -190,6 +197,7 @@
 
 (define-move-function (store-complex-double 4) (vop x y)
   ((complex-double-reg) (complex-double-stack))
+  (not-implemented "DEFINE-MOVE STORE-COMPLEX-DOUBLE")
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
     (load-symbol-value lip-tn *number-frame-pointer*)
@@ -202,6 +210,7 @@
 (progn
 (define-move-function (load-complex-double-double 4) (vop x y)
   ((complex-double-double-stack) (complex-double-double-reg))
+  (not-implemented "DEFINE-MOVE LOAD-COMPLEX-DOUBLE-DOUBLE")
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
     (let ((value-tn (complex-double-double-reg-real-hi-tn y)))
@@ -216,6 +225,7 @@
 
 (define-move-function (store-complex-double-double 4) (vop x y)
   ((complex-double-double-reg) (complex-double-double-stack))
+  (not-implemented "DEFINE-MOVE STORE-COMPLEX-DOUBLE-DOUBLE")
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
     (load-symbol-value lip-tn *number-frame-pointer*)
@@ -921,6 +931,7 @@
 
 (define-move-function (load-double-double 4) (vop x y)
   ((double-double-stack) (double-double-reg))
+  (not-implemented "DEFINE-MOVE LOAD-DOUBLE-DOUBLE")
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) vm:word-bytes)))
     (load-symbol-value lip-tn *number-frame-pointer*)
@@ -931,6 +942,7 @@
 
 (define-move-function (store-double-double 4) (vop x y)
   ((double-double-reg) (double-double-stack))
+  (not-implemented "DEFINE-MOVE STORE-DOUBLE-DOUBLE")
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) vm:word-bytes)))
     (load-symbol-value lip-tn *number-frame-pointer*)

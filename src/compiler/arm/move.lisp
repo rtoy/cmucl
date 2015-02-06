@@ -21,6 +21,7 @@
   ((null immediate)
    (any-reg descriptor-reg))
   (let ((val (tn-value x)))
+    (not-implemented "DEFINE-MOVE LOAD-IMMEDIATE")
     (etypecase val
       (integer
        (inst li y (fixnumize val)))
@@ -35,22 +36,27 @@
 (define-move-function (load-number 1) (vop x y)
   ((immediate)
    (signed-reg unsigned-reg))
+  (not-implemented "DEFINE-MOVE LOAD-NUMBER")
   (inst li y (tn-value x)))
 
 (define-move-function (load-base-char 1) (vop x y)
   ((immediate) (base-char-reg))
+  (not-implemented "DEFINE-MOVE LOAD-BASE-CHAR")
   (inst li y (char-code (tn-value x))))
 
 (define-move-function (load-system-area-pointer 1) (vop x y)
   ((immediate) (sap-reg))
+  (not-implemented "DEFINE-MOVE LOAD-SYSTEM-AREA-POINTER")
   (inst li y (sap-int (tn-value x))))
 
 (define-move-function (load-constant 5) (vop x y)
   ((constant) (descriptor-reg))
+  (not-implemented "DEFINE-MOVE LOAD-CONSTANT")
   (loadw y code-tn (tn-offset x) other-pointer-type))
 
 (define-move-function (load-stack 5) (vop x y)
   ((control-stack) (any-reg descriptor-reg))
+  (not-implemented "DEFINE-MOVE LOAD-STACK")
   (load-stack-tn y x))
 
 (define-move-function (load-number-stack 5) (vop x y)
@@ -58,12 +64,14 @@
    (sap-stack) (sap-reg)
    (signed-stack) (signed-reg)
    (unsigned-stack) (unsigned-reg))
+  (not-implemented "DEFINE-MOVE LOAD-NUMBER-STACK")
   (let ((nfp (current-nfp-tn vop)))
     (load-symbol-value lip-tn *number-frame-pointer*)
     (loadw y lip-tn (tn-offset x))))
 
 (define-move-function (store-stack 5) (vop x y)
   ((any-reg descriptor-reg) (control-stack))
+  (not-implemented "DEFINE-MOVE STORE-STACK")
   (store-stack-tn y x))
 
 (define-move-function (store-number-stack 5) (vop x y)
@@ -71,6 +79,7 @@
    (sap-reg) (sap-stack)
    (signed-reg) (signed-stack)
    (unsigned-reg) (unsigned-stack))
+  (not-implemented "DEFINE-MOVE STORE-NUMBER-STACK")
   (let ((nfp (current-nfp-tn vop)))
     (load-symbol-value lip-tn *number-frame-pointer*)
     (storew x lip-tn (tn-offset y))))
