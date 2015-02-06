@@ -244,11 +244,6 @@
 		 (encode-immediate new)
 	       (when rot
 		 (values (mod (+ 4 rot) 16) val))))))))
-
-(defun print-immed (value stream)
-  ;; Print immediate values in ARM syntax, honoring the output radix.
-  (princ #\# stream)
-  (disassem:prin1-short value stream))
 
 ;;;; Primitive emitters.
 
@@ -291,7 +286,7 @@
 	   (ignore dstate))
   (let ((rot (ldb (byte 4 8) value))
 	(v (ldb (byte 8 0) value)))
-    (print-immed (rotate-right2 v rot) stream)))
+    (format stream "#~D" (rotate-right2 v rot))))
 )
 
 (define-emitter emit-format-1-immed 32
@@ -833,8 +828,9 @@
 (defun split-imm16-printer (value stream dstate)
   (declare (list value) (stream stream)
 	   (ignore dstate))
-  (print-immed (logior (ash (first value) 12) (second value))
-	       stream)))
+  ;; FIXME: Honor base and radix!
+  (format stream "#~D" (logior (ash (first value) 12)
+			       (second value)))))
 
 (define-emitter emit-format-mov16 32
   (byte 4 28) (byte 3 25) (byte 5 20) (byte 4 16) (byte 4 12) (byte 12 0))
@@ -1241,7 +1237,7 @@
 (defun split-imm8-printer (value stream dstate)
   (declare (list value) (stream stream)
 	   (ignore dstate))
-  (print-immed (logior (ash (first value) 4) (second value)) stream)))
+  (format stream "~D" (logior (ash (first value) 4) (second value)))))
 
 (define-emitter emit-format-0-halfword-imm 32
   (byte 4 28) (byte 3 25) (byte 1 24) (byte 1 23) (byte 1 22) (byte 1 21)
@@ -1725,8 +1721,8 @@
 (defun udf-imm-printer (value stream dstate)
   (declare (list value) (stream stream)
 	   (ignore dstate))
-  (print-immed (logior (ash (first value) 4) (second value))
-	       stream)))
+  (format stream "#~D" (logior (ash (first value) 4)
+			       (second value)))))
 
 (define-emitter emit-format-udf 32
   (byte 4 28) (byte 3 25) (byte 5 20) (byte 12 8) (byte 4 4) (byte 4 0))
@@ -2626,7 +2622,7 @@
   (defun imm8-offset-printer (value stream dstate)
     (declare (type (unsigned-byte 8) value) (stream stream)
 	     (ignore dstate))
-    (print-immed (ash value 2) stream)))
+    (format stream "~D" (ash value 2))))
 
 (defconstant format-6-vfp-load/store-printer
   `(:name cond
