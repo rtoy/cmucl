@@ -8,12 +8,14 @@ usage() {
     echo "  -l      Load cross-compiled kernel to make a new lisp kernel"
     echo "  -B file Use this as the cross bootstrap file." 
     echo "  -G make Specifies the name of GNU make"
+    echo "  -X      Execute (break) before quitting the cross-build"
 }
 
 MAKE=make
 INTERACTIVE=nil
+BREAK=""
 
-while getopts "cirlB:G:" arg
+while getopts "cirlXB:G:" arg
 do
     case $arg in
       c) CLEAN_DIR=yes ;;
@@ -22,6 +24,7 @@ do
       l) LOAD_KERNEL=yes ;;
       B) BOOTSTRAP=$OPTARG ;;
       G) MAKE=$OPTARG ;;
+      X) BREAK="(break)" ;;
       h | \?) usage; exit 1 ;;
     esac
 done
@@ -129,6 +132,7 @@ $LISP "$@" -noinit -nositeinit <<EOF
 (setq *gc-verbose* t *interactive* t)
 
 (load "target:tools/worldbuild")
+$BREAK
 (ext:quit)
 EOF
 
