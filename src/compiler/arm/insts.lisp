@@ -247,8 +247,8 @@
 
 (defun print-immed (value stream)
   ;; Print immediate values in ARM syntax, honoring the output radix.
-  (princ #\# stream)
-  (disassem:prin1-short value stream))
+  (format stream "#~S" value))
+
 
 ;;;; Primitive emitters.
 
@@ -833,8 +833,9 @@
 (defun split-imm16-printer (value stream dstate)
   (declare (list value) (stream stream)
 	   (ignore dstate))
-  (print-immed (logior (ash (first value) 12) (second value))
-	       stream)))
+  (destructuring-bind (hi lo)
+      value
+    (print-immed (logior (ash hi 12) lo) stream))))
 
 (define-emitter emit-format-mov16 32
   (byte 4 28) (byte 3 25) (byte 5 20) (byte 4 16) (byte 4 12) (byte 12 0))
