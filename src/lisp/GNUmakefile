@@ -1,6 +1,20 @@
 # $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.39 2010/10/14 17:47:12 rtoy Exp $
 
+# These tell gmake where to look for .h, .c and .S files.  Mostly for
+# building the binary outside of the src tree.
+
+PATH1 = ../../src/lisp
+vpath %.h $(PATH1)
+vpath %.c $(PATH1)
+vpath %.S $(PATH1)
+
+CMULOCALE = ../../src/i18n/locale
+vpath %.pot $(CMULOCALE)
+vpath %.po  $(CMULOCALE)
+vpath %.mo  $(CMULOCALE)
+
 all: lisp.nm
+
 
 -include internals.inc
 include Config
@@ -129,4 +143,5 @@ translations-update:
 	    msgmerge -v ../../src/$$po/$$f.po $$pot -o ../../src/$$po/$$f.po; \
 	    msgfmt -v  ../../src/$$po/$$f.po -o ../$$po/$$f.mo; \
 	  done; done
+
 
