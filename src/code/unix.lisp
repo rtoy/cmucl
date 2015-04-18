@@ -2194,6 +2194,9 @@
     (it-interval (struct timeval))	; timer interval
     (it-value (struct timeval))))	; current value
 
+;;;
+;;; Support for the Interval Timer (experimental)
+;;;
 (defconstant ITIMER-REAL 0)
 (defconstant ITIMER-VIRTUAL 1)
 (defconstant ITIMER-PROF 2)
