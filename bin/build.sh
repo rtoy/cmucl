@@ -260,6 +260,9 @@ $TARGET/lisp/lisp -noinit -nositeinit -batch "$@" << EOF || exit 3
 
 (compile-file "modules:asdf/asdf")
 (compile-file "modules:defsystem/defsystem")
+(intl::install)
+(ext:without-package-locks
+  (compile-file "modules:unix/unix"))
 EOF
 
 
