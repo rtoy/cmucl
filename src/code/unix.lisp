@@ -25,7 +25,7 @@
 ;; Must be set to NIL initially to enable building Lisp!
 (defvar *filename-encoding* nil)
 
-(eval-when (:compile-toplevel)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   (defmacro %name->file (string)
     `(if *filename-encoding*
 	 (string-encode ,string *filename-encoding*)
