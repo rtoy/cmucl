@@ -127,7 +127,7 @@ do
 done
 
 # Create the directories and install the fasl files for asdf and defsystem
-for f in asdf defsystem
+for f in asdf defsystem unix
 do
     install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/contrib/$f
     install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/$f/$f.$FASL $DESTDIR/lib/cmucl/lib/contrib/$f
