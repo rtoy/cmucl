@@ -126,7 +126,7 @@ do
     install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/ext-formats/
 done
 
-set -x
+# set -x
 # Create the directories for asdf and defsystem
 for f in asdf defsystem asdf/doc
 do
