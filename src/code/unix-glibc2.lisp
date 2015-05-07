@@ -1001,6 +1001,10 @@
   (declare (type (signed-byte 32) code))
   (void-syscall ("exit" int) code))
 
+(def-alien-routine ("getuid" unix-getuid) int
+  _N"Unix-getuid returns the real user-id associated with the
+   current process.")
+
 ;;; Unix-chdir accepts a directory name and makes that the
 ;;; current working directory.
 
@@ -1109,6 +1113,43 @@
 (defconstant prot_exec 4)
 (defconstant prot_none 0)
 
+(defconstant map_shared 1)
+(defconstant map_private 2)
+(defconstant map_fixed 16)
+(defconstant map_anonymous 32)
+
+(defconstant ms_async 1)
+(defconstant ms_sync 4)
+(defconstant ms_invalidate 2)
+
+;; The return value from mmap that means mmap failed.
+(defconstant map_failed (int-sap (1- (ash 1 vm:word-bits))))
+
+(defun unix-mmap (addr length prot flags fd offset)
+  (declare (type (or null system-area-pointer) addr)
+	   (type (unsigned-byte 32) length)
+           (type (integer 1 7) prot)
+	   (type (unsigned-byte 32) flags)
+	   (type (or null unix-fd) fd)
+	   (type (signed-byte 32) offset))
+  ;; Can't use syscall, because the address that is returned could be
+  ;; "negative".  Hence we explicitly check for mmap returning
+  ;; MAP_FAILED.
+  (let ((result
+	 (alien-funcall (extern-alien "mmap" (function system-area-pointer
+						       system-area-pointer
+						       size-t int int int off-t))
+			(or addr +null+) length prot flags (or fd -1) offset)))
+    (if (sap= result map_failed)
+	(values nil (unix-errno))
+	(values result 0))))
+
+(defun unix-msync (addr length flags)
+  (declare (type system-area-pointer addr)
+	   (type (unsigned-byte 32) length)
+	   (type (signed-byte 32) flags))
+  (syscall ("msync" system-area-pointer size-t int) t addr length flags))
+
 ;;; Unix-rename accepts two files names and renames the first to the second.
 
 (defun unix-rename (name1 name2)
@@ -1195,6 +1236,15 @@
 (define-ioctl-command TIOCNOTTY  #\T #x22)
 (define-ioctl-command TIOCSPGRP  #\T #x10)
 (define-ioctl-command TIOCGPGRP  #\T #x0F)
+
+;;; ioctl-types.h
+
+(def-alien-type nil
+  (struct winsize
+    (ws-row unsigned-short)		; rows, in characters
+    (ws-col unsigned-short)		; columns, in characters
+    (ws-xpixel unsigned-short)		; horizontal size, pixels
+    (ws-ypixel unsigned-short)))	; veritical size, pixels
 
 (defconstant f-getfl    3  _N"Get file flags")
 (defconstant f-setfl    4  _N"Set file flags")
@@ -1736,3 +1786,68 @@
 			(slot (slot itvo 'it-value) 'tv-usec))
 		which (alien-sap (addr itvn))(alien-sap (addr itvo))))))
 
+
+(def-alien-type cc-t unsigned-char)
+(def-alien-type speed-t  unsigned-int)
+(def-alien-type tcflag-t unsigned-int)
+
+(defconstant +NCCS+ 32
+  _N"Size of control character vector.")
+
+(def-alien-type nil
+  (struct termios
+    (c-iflag tcflag-t)
+    (c-oflag tcflag-t)
+    (c-cflag tcflag-t)
+    (c-lflag tcflag-t)
+    (c-line cc-t)
+    (c-cc (array cc-t #.+NCCS+))
+    (c-ispeed speed-t)
+    (c-ospeed speed-t)))
+
+;; c_cc characters
+
+(defmacro def-enum (inc cur &rest names)
+  (flet ((defform (name)
+	     (prog1 (when name `(defconstant ,name ,cur))
+	       (setf cur (funcall inc cur 1)))))
+    `(progn ,@(mapcar #'defform names))))
+
+(def-enum + 0 vintr vquit verase
+	  vkill veof vtime
+	  vmin vswtc vstart
+	  vstop vsusp veol
+	  vreprint vdiscard vwerase
+	  vlnext veol2)
+(defvar vdsusp vsusp)
+
+(def-enum + 0 tcsanow tcsadrain tcsaflush)
+
+;; c_iflag bits
+(def-enum ash 1 tty-ignbrk tty-brkint tty-ignpar tty-parmrk tty-inpck
+	  tty-istrip tty-inlcr tty-igncr tty-icrnl tty-iuclc
+	  tty-ixon tty-ixany tty-ixoff 
+	  tty-imaxbel)
+
+;; c_oflag bits
+(def-enum ash 1 tty-opost tty-olcuc tty-onlcr tty-ocrnl tty-onocr
+	  tty-onlret tty-ofill tty-ofdel tty-nldly)
+
+;; c_lflag bits
+(def-enum ash 1 tty-isig tty-icanon tty-xcase tty-echo tty-echoe
+	  tty-echok tty-echonl tty-noflsh
+	  tty-tostop tty-echoctl tty-echoprt
+	  tty-echoke tty-flusho
+	  tty-pendin tty-iexten)
+
+(defun unix-tcgetattr (fd termios)
+  _N"Get terminal attributes."
+  (declare (type unix-fd fd))
+  (void-syscall ("tcgetattr" int (* (struct termios))) fd termios))
+
+(defun unix-tcsetattr (fd opt termios)
+  _N"Set terminal attributes."
+  (declare (type unix-fd fd))
+  (void-syscall ("tcsetattr" int int (* (struct termios))) fd opt termios))
+
+(defconstant writeown #o200 _N"Write by owner")
