@@ -251,7 +251,7 @@ buildit
 
 # Asdf and friends are part of the base install, so we need to build
 # them now.
-$TARGET/lisp/lisp -noinit -nositeinit -batch "$@" << EOF || exit 3
+$TARGET/lisp/lisp -noinit -nositeinit -batch << EOF || exit 3
 (in-package :cl-user)
 (setf (ext:search-list "target:")
       '("$TARGET/" "src/"))
