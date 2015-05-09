@@ -126,11 +126,11 @@ do
     install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/ext-formats/
 done
 
-# Create the directories and install the fasl files for asdf and defsystem
-for f in asdf defsystem
+# set -x
+# Create the directories for asdf and defsystem
+for f in asdf defsystem asdf/doc
 do
     install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/contrib/$f
-    install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/$f/$f.$FASL $DESTDIR/lib/cmucl/lib/contrib/$f
 done
 
 set -x
@@ -146,6 +146,19 @@ install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/unix/$UCONTRIB.$FASL $DESTDIR/
 for f in `(cd src; find contrib/asdf contrib/defsystem -type f -print | grep -v CVS)`
 do
     install ${GROUP} ${OWNER} -m 0644 src/$f $DESTDIR/lib/cmucl/lib/$f
+done
+
+# Install the fasl files for asdf and defsystem
+for f in asdf defsystem
+do
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/$f/$f.$FASL $DESTDIR/lib/cmucl/lib/contrib/$f
+done
+
+# Install the docs for asdf
+for f in src/contrib/asdf/doc/*
+do
+    base=`basename $f`
+    install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/contrib/asdf/doc/$base
 done
 
 install ${GROUP} ${OWNER} -m 0644 src/general-info/cmucl.1 \
