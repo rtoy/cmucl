@@ -196,7 +196,6 @@
 	   "NEGATE-BIGNUM" "SUBTRACT-BIGNUM"))
 
 (defpackage "UNIX"
-  #-linux
   (:export "UNIX-CURRENT-DIRECTORY"
 	   "UNIX-OPEN"
 	   "UNIX-READ"
@@ -225,7 +224,6 @@
 	   "UNIX-GETTIMEOFDAY"
 	   "UNIX-ISATTY"
 	   "UNIX-MKDIR"
-	   "UNIX-RMDIR"
 	   "UNIX-UNLINK"
 	   "TIMEZONE"
 	   "TIMEVAL"
@@ -233,7 +231,6 @@
 	   "OFF-T"
 	   "INO-T"
 	   "DEV-T"
-	   "TIME-T"
 	   "TIME-T"
 	   "USER-INFO-NAME"
 	   "INT64-T"
@@ -245,23 +242,18 @@
 	   "UNIX-UID"
 	   "UNIX-GID"
 	   "GET-UNIX-ERROR-MSG"
-	   "TCHARS"
 	   "WINSIZE"
-	   "LTCHARS"
 	   "TIMEVAL"
 	   "CLOSE-DIR"
 	   "OPEN-DIR"
 	   "READ-DIR"
-	   "D-NAMLEN"
-
 	   ;; filesys.lisp
 	   "UNIX-GETPWUID"
-	   
+
 	   ;; multi-proc.lisp
 	   "UNIX-SETITIMER"
 
 	   ;; run-program.lisp
-	   "SGTTYB"
 	   "UNIX-TTYNAME"
 	   "UNIX-IOCTL"
 	   "UNIX-OPENPTY"
@@ -285,16 +277,14 @@
 	   "UNIX-SENDTO"
 	   "UNIX-SHUTDOWN"
 	   "UNIX-FCNTL"
-	   
+
 	   ;; serve-event.lisp
 	   "FD-SETSIZE"
 	   "FD-ISSET"
 	   "FD-CLR"
 
 	   ;; Simple streams
-	   "PROT_READ"
 	   "UNIX-MMAP"
-	   "UNIX-MUNMAP"
 	   "UNIX-MSYNC"
 
 	   ;; Motif
@@ -304,6 +294,22 @@
 	   "TERMIOS"
 	   "UNIX-TCGETATTR"
 	   "UNIX-TCSETATTR"
+	   )
+  #-linux
+  (:export "UNIX-RMDIR"
+	   "TCHARS"
+	   "LTCHARS"
+	   "D-NAMLEN"
+
+	   
+	   ;; run-program.lisp
+	   "SGTTYB"
+
+	   ;; Simple streams
+	   "PROT_READ"
+	   "UNIX-MUNMAP"
+
+	   ;; Hemlock
 	   "UNIX-CFGETOSPEED"
 	   "UNIX-FCHMOD"
 	   "UNIX-CREAT"
@@ -659,113 +665,19 @@
 	   "X_OK"
 	   )
   #+linux
-  (:export "UNIX-CURRENT-DIRECTORY"
-	   "UNIX-OPEN"
-	   "UNIX-READ"
-	   "UNIX-WRITE"
-	   "UNIX-GETPAGESIZE"
-	   "UNIX-ERRNO"
-	   "UNIX-MAYBE-PREPEND-CURRENT-DIRECTORY"
-	   "UNIX-RESOLVE-LINKS"
-	   "UNIX-SIMPLIFY-PATHNAME"
-	   "UNIX-CLOSE"
-	   "UNIX-STAT"
-	   "UNIX-LSTAT"
-	   "UNIX-FSTAT"
-	   "UNIX-GETHOSTNAME"
-	   "UNIX-LSEEK"
-	   "UNIX-EXIT"
-	   "UNIX-CHDIR"
-	   "UNIX-ACCESS"
-	   "UNIX-DUP"
-	   "UNIX-CHMOD"
-	   "UNIX-READLINK"
-	   "UNIX-RENAME"
-	   "UNIX-SELECT"
-	   "UNIX-FAST-GETRUSAGE"
-	   "UNIX-GETRUSAGE"
-	   "UNIX-GETTIMEOFDAY"
-	   "UNIX-ISATTY"
-	   "UNIX-MKDIR"
-	   "UNIX-RMDIR"
-	   "UNIX-UNLINK"
-	   "TIMEZONE"
-	   "TIMEVAL"
-	   "SIZE-T"
-	   "OFF-T"
-	   "INO-T"
-	   "DEV-T"
-	   "TIME-T"
-	   "TIME-T"
-	   "USER-INFO-NAME"
-	   "INT64-T"
-	   "MODE-T"
-	   "UNIX-FAST-SELECT"
-	   "UNIX-PIPE"
-	   "UNIX-GETPID"
-	   "UNIX-GETHOSTID"
-	   "UNIX-UID"
-	   "UNIX-GID"
-	   "GET-UNIX-ERROR-MSG"
+  (:export "UNIX-RMDIR"
 	   "TCHARS"
-	   "WINSIZE"
 	   "LTCHARS"
-	   "TIMEVAL"
-	   "CLOSE-DIR"
-	   "OPEN-DIR"
-	   "READ-DIR"
 	   "D-NAMLEN"
-
-	   ;; filesys.lisp
-	   "UNIX-GETPWUID"
-	   
-	   ;; multi-proc.lisp
-	   "UNIX-SETITIMER"
 
 	   ;; run-program.lisp
 	   "SGTTYB"
-	   "UNIX-TTYNAME"
-	   "UNIX-IOCTL"
-	   "UNIX-OPENPTY"
-
-	   ;; alien-callback.lisp
-	   "UNIX-MPROTECT"
-
-	   ;; internet.lisp
-	   "UNIX-SOCKET"
-	   "UNIX-CONNECT"
-	   "UNIX-BIND"
-	   "UNIX-LISTEN"
-	   "UNIX-ACCEPT"
-	   "UNIX-GETSOCKOPT"
-	   "UNIX-SETSOCKOPT"
-	   "UNIX-GETPEERNAME"
-	   "UNIX-GETSOCKNAME"
-	   "UNIX-RECV"
-	   "UNIX-SEND"
-	   "UNIX-RECVFROM"
-	   "UNIX-SENDTO"
-	   "UNIX-SHUTDOWN"
-	   "UNIX-FCNTL"
-	   
-	   ;; serve-event.lisp
-	   "FD-SETSIZE"
-	   "FD-ISSET"
-	   "FD-CLR"
 
 	   ;; Simple streams
 	   "PROT_READ"
-	   "UNIX-MMAP"
 	   "UNIX-MUNMAP"
-	   "UNIX-MSYNC"
-
-	   ;; Motif
-	   "UNIX-GETUIO"
 
 	   ;; Hemlock
-	   "TERMIOS"
-	   "UNIX-TCGETATTR"
-	   "UNIX-TCSETATTR"
 	   "UNIX-CFGETOSPEED"
 	   "UNIX-FCHMOD"
 	   "UNIX-CREAT"
