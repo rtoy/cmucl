@@ -658,7 +658,7 @@
 	   "W_OK"
 	   "X_OK"
 	   )
-  #-linux
+  #+linux
   (:export "UNIX-CURRENT-DIRECTORY"
 	   "UNIX-OPEN"
 	   "UNIX-READ"
