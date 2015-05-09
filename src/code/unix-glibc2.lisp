@@ -667,6 +667,21 @@
   (declare (type unix-fd fd))
   (void-syscall ("close" int) fd))
 
+;;; Unix-creat accepts a file name and a mode.  It creates a new file
+;;; with name and sets it mode to mode (as for chmod).
+
+(defun unix-creat (name mode)
+  _N"Unix-creat accepts a file name and a mode (same as those for
+   unix-chmod) and creates a file by that name with the specified
+   permission mode.  It returns a file descriptor on success,
+   or NIL and an error  number otherwise.
+
+   This interface is made obsolete by UNIX-OPEN."
+  
+  (declare (type unix-pathname name)
+	   (type unix-file-mode mode))
+  (int-syscall ("creat64" c-string int) (%name->file name) mode))
+
 (defun unix-resolve-links (pathname)
   _N"Returns the pathname with all symbolic links resolved."
   (declare (simple-string pathname))
@@ -907,6 +922,19 @@
 	   (type unix-file-mode mode))
   (void-syscall ("chmod" c-string int) (%name->file path) mode))
 
+;;; Unix-fchmod accepts a file descriptor ("fd") and a file protection mode
+;;; ("mode") and changes the protection of the file described by "fd" to 
+;;; "mode".
+
+(defun unix-fchmod (fd mode)
+  _N"Given an integer file descriptor and a mode (the same as those
+   used for unix-chmod), unix-fchmod changes the permission mode
+   for that file to the one specified. T is returned if the call
+   was successful."
+  (declare (type unix-fd fd)
+	   (type unix-file-mode mode))
+  (void-syscall ("fchmod" int int) fd mode))
+
 (defun unix-readlink (path)
   _N"Unix-readlink invokes the readlink system call on the file name
   specified by the simple string path.  It returns up to two values:
@@ -1023,6 +1051,14 @@
   (void-syscall ("rename" c-string c-string)
 		(%name->file name1) (%name->file name2)))
 
+;;; Unix-rmdir accepts a name and removes the associated directory.
+
+(defun unix-rmdir (name)
+  _N"Unix-rmdir attempts to remove the directory name.  NIL and
+   an error number is returned if an error occured."
+  (declare (type unix-pathname name))
+  (void-syscall ("rmdir" c-string) (%name->file name)))
+
 (def-alien-type fd-mask #-alpha unsigned-long #+alpha unsigned-int)
 
 (defconstant fd-setsize 1024)
@@ -1100,6 +1136,9 @@
 (define-ioctl-command TIOCNOTTY  #\T #x22)
 (define-ioctl-command TIOCSPGRP  #\T #x10)
 (define-ioctl-command TIOCGPGRP  #\T #x0F)
+
+;;; File ioctl commands.
+(define-ioctl-command FIONREAD #\T #x1B)
 
 ;;; ioctl-types.h
 
@@ -1502,6 +1541,28 @@
 		      (slot tz 'tz-dsttime))
 	      (addr tv)
 	      (addr tz))))
+
+;;; Unix-utimes changes the accessed and updated times on UNIX
+;;; files.  The first argument is the filename (a string) and
+;;; the second argument is a list of the 4 times- accessed and
+;;; updated seconds and microseconds.
+
+(defun unix-utimes (file atime-sec atime-usec mtime-sec mtime-usec)
+  _N"Unix-utimes sets the 'last-accessed' and 'last-updated'
+   times on a specified file.  NIL and an error number is
+   returned if the call is unsuccessful."
+  (declare (type unix-pathname file)
+	   (type (alien unsigned-long)
+		 atime-sec atime-usec
+		 mtime-sec mtime-usec))
+  (with-alien ((tvp (array (struct timeval) 2)))
+    (setf (slot (deref tvp 0) 'tv-sec) atime-sec)
+    (setf (slot (deref tvp 0) 'tv-usec) atime-usec)
+    (setf (slot (deref tvp 1) 'tv-sec) mtime-sec)
+    (setf (slot (deref tvp 1) 'tv-usec) mtime-usec)
+    (void-syscall ("utimes" c-string (* (struct timeval)))
+		  file
+		  (cast tvp (* (struct timeval))))))
 
 (def-alien-routine ("ttyname" unix-ttyname) c-string
   (fd int))
