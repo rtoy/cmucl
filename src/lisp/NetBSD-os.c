@@ -21,8 +21,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/param.h>
+#include <sys/types.h>
 #include <sys/file.h>
+#include <sys/proc.h>
+#include <sys/sysctl.h>
 #include <errno.h>
+
 #include "os.h"
 #include "arch.h"
 #include "globals.h"
@@ -30,12 +34,8 @@
 #include "lispregs.h"
 #include "internals.h"
 
-#include <sys/types.h>
 #include <signal.h>
-/* #include <sys/sysinfo.h> */
-#include <sys/proc.h>
 #include <dlfcn.h>
-#include <sys/sysctl.h>
 #include "validate.h"
 size_t os_vm_page_size;
 
@@ -94,7 +94,7 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
     unsigned char *reg = NULL;
 
     DPRINTF(0, (stderr, "fpu reg index = %d\n", index));
-    
+
     if (scp->uc_flags & _UC_FPU) {
 	if (scp->uc_flags & _UC_FXSAVE) {
             /*

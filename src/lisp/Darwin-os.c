@@ -66,8 +66,8 @@ void
 timebase_init(void)
 {
     int mib[2];
-    int tbfrequency;
-    int cpufrequency;
+    unsigned tbfrequency;
+    unsigned cpufrequency;
     unsigned int miblen;
     size_t len;
 
@@ -95,7 +95,7 @@ timebase_init(void)
 	perror("Error getting HW_CPU_FREQ from sysctl: ");
     }
 
-    cycles_per_tick = cpufrequency / tbfrequency;
+    cycles_per_tick = 0.5 + (cpufrequency / (double) tbfrequency);
 }
 #endif
 
@@ -238,9 +238,9 @@ sc_reg(os_context_t * context, int offset)
       case 35:
 	  return &state->__ctr;
       case 41:
-	  return &context->uc_mcontext->__es.__dar;
+	  return (unsigned int *) &context->uc_mcontext->__es.__dar;
       case 42:
-	  return &context->uc_mcontext->__es.__dsisr;
+	  return (unsigned int *) &context->uc_mcontext->__es.__dsisr;
     }
 
     return (unsigned int *) 0;
@@ -532,7 +532,13 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 {
     static void *program_handle;
     void *sym_addr = 0;
+    int offset = sym_name[0] == '_' ? 1 : 0;
 
+#if 0
+    if (offset == 0) {
+        fprintf(stderr, "sym-name = %s\n", sym_name);
+    }
+#endif    
     if (!program_handle)
 	program_handle = dlopen((void *) 0, RTLD_LAZY | RTLD_GLOBAL);
     if (lib_list != NIL) {
@@ -543,12 +549,17 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 	    struct cons *lib_cons = CONS(CONS(lib_list_head)->car);
 	    struct sap *dlhandle = (struct sap *) PTR(lib_cons->car);
 
-	    sym_addr = dlsym((void *) dlhandle->pointer, sym_name);
+            /*
+             * On Darwin, dlsym assumes the C name, so skip the underscore that
+             * is prepended by EXTERN-ALIEN-NAME.
+             */
+            sym_addr = dlsym((void *) dlhandle->pointer, sym_name + offset);
 	    if (sym_addr)
-		return sym_addr;
+                return sym_addr;
 	}
     }
-    sym_addr = dlsym(program_handle, sym_name);
+
+    sym_addr = dlsym(program_handle, sym_name + offset);
 
     return sym_addr;
 }

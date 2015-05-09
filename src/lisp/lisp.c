@@ -465,12 +465,12 @@ main(int argc, const char *argv[], const char *envp[])
     const char *cmucllib = NULL;
     const char *unidata = NULL;
     
-    fpu_mode_t fpu_type = AUTO;
+    fpu_mode_t fpu_type = SSE2;
     boolean monitor;
     lispobj initial_function = 0;
 
     if (builtin_image_flag != 0) {
-#if defined(SOLARIS) || (defined(i386) && (defined(__linux__) || defined(DARWIN) || defined(__FreeBSD__) || defined(__NetBSD__)))
+#if defined(SOLARIS) || defined(DARWIN) || (defined(i386) && (defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)))
         initial_function = (lispobj) initial_function_addr;
 #else
         initial_function = (lispobj) & initial_function_addr;

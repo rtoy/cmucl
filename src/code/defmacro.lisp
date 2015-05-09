@@ -151,7 +151,12 @@
 			    (not (and (listp ,arg-list-name)
 				  (eq 'funcall (car ,arg-list-name)))))
 			  `(progn
-			    (setf ,arg-list-name (cdr ,arg-list-name)))))
+			    (setf ,arg-list-name 
+				  ;; Handle the case (funcall #'foo args)
+				  (if (consp (second ,arg-list-name))
+				      (list* (second (second ,arg-list-name))
+					     (cddr ,arg-list-name))
+				      (cdr ,arg-list-name))))))
 		      (push-let-binding (car rest-of-args) arg-list-name nil))
 		     ((and (cdr rest-of-args) (consp (cadr rest-of-args)))
 		      (pop rest-of-args)

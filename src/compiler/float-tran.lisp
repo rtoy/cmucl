@@ -488,21 +488,50 @@
   '(integer-decode-double-float x))
 
 (deftransform scale-float ((f ex) (single-float *) * :when :both)
-  (if (and (backend-featurep :x86)
-	   (not (backend-featurep :sse2))
-	   (csubtypep (continuation-type ex)
-		      (specifier-type '(signed-byte 32)))
-	   (not (byte-compiling)))
-      '(coerce (%scalbn (coerce f 'double-float) ex) 'single-float)
-      '(scale-single-float f ex)))
+  (cond ((and (backend-featurep :x86)
+	      (not (backend-featurep :sse2))
+	      (csubtypep (continuation-type ex)
+			 (specifier-type '(signed-byte 32)))
+	      (not (byte-compiling)))
+	 '(coerce (%scalbn (coerce f 'double-float) ex) 'single-float))
+	((csubtypep (continuation-type ex)
+		    (specifier-type `(integer #.(- vm:single-float-normal-exponent-min
+						   vm:single-float-bias
+						   vm:single-float-digits)
+					      #.(- vm:single-float-normal-exponent-max
+						   vm:single-float-bias
+						   1))))
+	 ;; The exponent is such that 2^ex will fit in a single-float.
+	 ;; Thus, scale-float can be done multiplying by a suitable
+	 ;; constant.
+	 `(* f (kernel:make-single-float (dpb (+ ex (1+ vm:single-float-bias))
+					      vm:single-float-exponent-byte
+					      (kernel:single-float-bits 1f0)))))
+	(t
+	 '(scale-single-float f ex))))
 
 (deftransform scale-float ((f ex) (double-float *) * :when :both)
-  (if (and (backend-featurep :x86)
-	   (not (backend-featurep :sse2))
-	   (csubtypep (continuation-type ex)
-		      (specifier-type '(signed-byte 32))))
-      '(%scalbn f ex)
-      '(scale-double-float f ex)))
+  (cond ((and (backend-featurep :x86)
+	      (not (backend-featurep :sse2))
+	      (csubtypep (continuation-type ex)
+			 (specifier-type '(signed-byte 32))))
+	 '(%scalbn f ex))
+	((csubtypep (continuation-type ex)
+		    (specifier-type `(integer #.(- vm:double-float-normal-exponent-min
+						   vm:double-float-bias
+						   vm:double-float-digits)
+					      #.(- vm:double-float-normal-exponent-max
+						   vm:double-float-bias
+						   1))))
+	 ;; The exponent is such that 2^ex will fit in a double-float.
+	 ;; Thus, scale-float can be done multiplying by a suitable
+	 ;; constant.
+	 `(* f (kernel:make-double-float (dpb (+ ex (1+ vm:double-float-bias))
+					      vm:double-float-exponent-byte
+					      (kernel::double-float-bits 1d0))
+					 0)))
+	(t
+	 '(scale-double-float f ex))))
 
 ;;; toy@rtp.ericsson.se:
 ;;;
@@ -824,6 +853,33 @@
 (deftransform log ((x y) (float float) float)
   '(if (zerop y) y (/ (log x) (log y))))
 
+(deftransform log ((x y) ((or (member 0f0) (single-float (0f0)))
+			  (constant-argument number))
+		   single-float)
+  ;; Transform (log x 2) and (log x 10) to something simpler.
+  (let ((y-val (continuation-value y)))
+    (unless (and (not-more-contagious y x)
+		 (or (= y-val 2)
+		     (= y-val 10)))
+      (give-up))
+    (cond ((= y-val 10)
+	   `(coerce (kernel:%log10 (float x 1d0)) 'single-float))
+	  ((= y-val 2)
+	   `(coerce (kernel:%log2 (float x 1d0)) 'single-float)))))
+
+(deftransform log ((x y) ((or (member 0d0) (double-float 0d0))
+			  (constant-argument number))
+		   double-float)
+  ;; Transform (log x 2) and (log x 10) to something simpler.
+  (let ((y-val (continuation-value y)))
+    (unless (and (not-more-contagious y x)
+		 (or (= y-val 2)
+		     (= y-val 10)))
+      (give-up))
+    (cond ((= y-val 10)
+	   `(kernel:%log10 (float x 1d0)))
+	  ((= y-val 2)
+	   `(kernel:%log2 (float x 1d0))))))
 
 ;;; Handle some simple transformations
   
@@ -2057,13 +2113,13 @@
 	   (when x
 	     (nth-value 1 (decode-float x))))
 	 (min-exp ()
-	   ;; Use decode-float on 0 of the appropriate type to find
-	   ;; the min exponent.  If we don't know the actual number
-	   ;; format, use double, which has the widest range
-	   ;; (including double-double-float).
-	   (if (numeric-type-format arg)
-	       (nth-value 1 (decode-float (coerce 0 (numeric-type-format arg))))
-	       (nth-value 1 (decode-float (coerce 0 'double-float)))))
+	   ;; Use decode-float on the least positive float of the
+	   ;; appropriate type to find the min exponent.  If we don't
+	   ;; know the actual number format, use double, which has the
+	   ;; widest range (including double-double-float).
+	   (nth-value 1 (decode-float (if (eq 'single-float (numeric-type-format arg))
+					  least-positive-single-float
+					  least-positive-double-float))))
 	 (max-exp ()
 	   ;; Use decode-float on the most postive number of the
 	   ;; appropriate type to find the max exponent.  If we don't
@@ -2082,24 +2138,19 @@
 
 (defun decode-float-sign-derive-type-aux (arg)
   ;; Derive the sign of the float.
-  (flet ((calc-sign (x)
-	   (when x
-	     (nth-value 2 (decode-float x)))))
-    (let* ((lo (bound-func #'calc-sign
-			       (numeric-type-low arg)))
-	   (hi (bound-func #'calc-sign
-			       (numeric-type-high arg))))
-      (if (numeric-type-format arg)
-	  (specifier-type `(,(numeric-type-format arg)
-			     ;; If lo or high bounds are NIL, use -1
-			     ;; or 1 of the appropriate type instead.
-			     ,(or lo (coerce -1 (numeric-type-format arg)))
-			     ,(or hi (coerce 1  (numeric-type-format arg)))))
-	  (specifier-type '(or (member 1f0 -1f0
-				1d0 -1d0
-				#+double-double 1w0
-				#+double-double -1w0)))))))
-
+  (if (numeric-type-format arg)
+      (let ((arg-range (interval-range-info (numeric-type->interval arg))))
+	(case arg-range
+	  (+ (make-member-type :members (list (coerce 1 (numeric-type-format arg)))))
+	  (- (make-member-type :members (list (coerce -1 (numeric-type-format arg)))))
+	  (otherwise
+	   (make-member-type :members (list (coerce 1 (numeric-type-format arg))
+					    (coerce -1 (numeric-type-format arg)))))))
+      (specifier-type '(or (member 1f0 -1f0
+			    1d0 -1d0
+			    #+double-double 1w0
+			    #+double-double -1w0)))))
+    
 (defoptimizer (decode-float derive-type) ((num))
   (let ((f (one-arg-derive-type num
 				#'(lambda (arg)

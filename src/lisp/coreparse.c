@@ -178,5 +178,7 @@ load_core_file(const char *file, fpu_mode_t* fpu_type)
 	ptr += len - 2;
     }
 
+    close(fd);
+
     return initial_function;
 }

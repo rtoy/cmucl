@@ -35,7 +35,7 @@ extern void message_write_font_list();
 extern void message_write_string_table();
 extern void message_write_xm_string_table();
 extern void message_write_int_list();
-#define message_write_event message_write_int
+extern void message_write_event();
 extern void message_write_color();
 /* GCC complains without the full prototype */
 extern void message_write_float(message_t,float,int);
@@ -63,7 +63,7 @@ extern void message_read_font_list();
 extern void message_read_string_table();
 extern void message_read_xm_string_table();
 extern void message_read_int_list();
-#define message_read_event message_read_int
+extern void message_read_event();
 extern void message_read_color();
 extern void message_read_float();
 

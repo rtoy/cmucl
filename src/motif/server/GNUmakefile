@@ -5,7 +5,7 @@ LDFLAGS =
 TARGET = motifd
 OBJS = main.o server.o translations.o packet.o message.o datatrans.o \
        requests.o callbacks.o widgets.o resources.o tables.o motif.o \
-       text.o xmstring.o list.o events.o
+       text.o xmstring.o list.o events.o oid.o
 
 include Config
 
@@ -20,3 +20,11 @@ requests.o : requests.c Interface.h
 
 clean:
 	-rm -f core $(OBJS) $(TARGET)
+
+depend: Depends
+
+Depends: $(patsubst %.o,%.c,$(OBJS))
+	$(CC) $(DEPEND_FLAGS) $(CFLAGS) $(CPPFLAGS) $^ > ,depends
+	mv ,depends Depends
+
+-include Depends

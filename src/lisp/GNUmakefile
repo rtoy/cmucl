@@ -1,6 +1,20 @@
 # $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.39 2010/10/14 17:47:12 rtoy Exp $
 
+# These tell gmake where to look for .h, .c and .S files.  Mostly for
+# building the binary outside of the src tree.
+
+PATH1 = ../../src/lisp
+vpath %.h $(PATH1)
+vpath %.c $(PATH1)
+vpath %.S $(PATH1)
+
+CMULOCALE = ../../src/i18n/locale
+vpath %.pot $(CMULOCALE)
+vpath %.po  $(CMULOCALE)
+vpath %.mo  $(CMULOCALE)
+
 all: lisp.nm
+
 
 -include internals.inc
 include Config
@@ -12,7 +26,9 @@ FDLIBM = k_sin.c k_cos.c k_tan.c s_sin.c s_cos.c s_tan.c sincos.c \
 	e_acosh.c s_asinh.c e_atanh.c \
 	e_atan2.c \
 	e_rem_pio2.c k_rem_pio2.c \
-	setexception.c
+	e_log10.c s_scalbn.c \
+	setexception.c \
+	log2.c
 
 SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	vars.c parse.c interrupt.c search.c validate.c globals.c \
@@ -47,10 +63,10 @@ lisp: ${OBJS} version.o
 # builtin_image_flag to 1 so that the runtime knows the runtime
 # contains the core sections.
 lisp.a:	version.o ${OBJS} ${EXEC_FINAL_OBJ}
-	ar crs lisp.a ${OBJS} version.o
+	$(AR) crs lisp.a ${OBJS} version.o
 ifneq (${EXEC_FINAL_OBJ},)
-	ar d lisp.a exec-init.o
-	ar r lisp.a ${EXEC_FINAL_OBJ}
+	$(AR) d lisp.a exec-init.o
+	$(AR) r lisp.a ${EXEC_FINAL_OBJ}
 endif
 
 version:
@@ -61,7 +77,7 @@ internals.h internals.inc:
 	@false
 
 clean:
-	rm -f Depends *.o lisp lisp.nm core
+	$(RM) Depends *.o lisp lisp.nm core lisp.a
 	echo 'Map file for lisp version 0' > lisp.nm
 
 depend: Depends
@@ -127,4 +143,5 @@ translations-update:
 	    msgmerge -v ../../src/$$po/$$f.po $$pot -o ../../src/$$po/$$f.po; \
 	    msgfmt -v  ../../src/$$po/$$f.po -o ../$$po/$$f.mo; \
 	  done; done
+
 

@@ -3704,6 +3704,17 @@ msgstr ""
 
 #: src/code/string.lisp
 msgid ""
+"WITH-STRING-CODEPOINT-ITERATOR ((next string) &body body)\n"
+"  provides a method of looping through a string from the beginning to\n"
+"  the end of the string prodcucing successive codepoints from the\n"
+"  string.  NEXT is bound to a generator macro that, within the scope\n"
+"  of the invocation, returns one or two values. The first value tells\n"
+"  whether any objects remain in the string. When the first value is\n"
+"  non-NIL, the second value is the codepoint of the next object."
+msgstr ""
+
+#: src/code/string.lisp
+msgid ""
 "Return the high and low surrogate characters for Codepoint.  If\n"
 "  Codepoint is in the BMP, the first return value is the corresponding\n"
 "  character and the second is NIL."
@@ -3958,6 +3969,18 @@ msgstr ""
 msgid ""
 "SGLYPH returns the glyph at the indexed position, the same as GLYPH,\n"
 "  except that the string must be a simple-string"
+msgstr ""
+
+#: src/code/string.lisp
+msgid ""
+"WITH-STRING-GLYPH-ITERATOR ((next string) &body body)\n"
+"  provides a method of looping through a string from the beginning to\n"
+"  the end of the string prodcucing successive glyphs from the string.\n"
+"  NEXT is bound to a generator macro that, within the scope of the\n"
+"  invocation, returns one or three values. The first value tells\n"
+"  whether any objects remain in the string. When the first value is\n"
+"  non-NIL, the second value is the index into the string of the glyph\n"
+"  and the third value is index of the next glyph."
 msgstr ""
 
 #: src/code/string.lisp
@@ -4780,11 +4803,15 @@ msgid "Return true if the float X is an infinity (+ or -)."
 msgstr ""
 
 #: src/code/float.lisp
-msgid "Return true if the float X is a NaN (Not a Number)."
+msgid "Return true if the float X is a quiet or signaling NaN (Not a Number)."
 msgstr ""
 
 #: src/code/float.lisp
-msgid "Return true if the float X is a trapping NaN (Not a Number)."
+msgid "Return true if the float X is a signaling NaN (Not a Number)."
+msgstr ""
+
+#: src/code/float.lisp
+msgid "Deprecated.  Use FLOAT-SIGNALING-NAN-P instead."
 msgstr ""
 
 #: src/code/float.lisp
@@ -13410,6 +13437,14 @@ msgstr ""
 msgid "Destructuring is not valid for package symbol iteration."
 msgstr ""
 
+#: src/code/loop.lisp
+msgid "Destructuring is not valid for string codepoint iteration."
+msgstr ""
+
+#: src/code/loop.lisp
+msgid "Destructuring is not valid for string glyph iteration."
+msgstr ""
+
 #: src/code/stream-vector-io.lisp
 msgid "endian-swap ~a is illegal for element-type of vector ~a"
 msgstr ""
@@ -16359,9 +16394,9 @@ msgid ""
 "      :To Time-Spec\n"
 "\t  Specify the beginning or end of the operand's lifetime.  :From can\n"
 "\t  only be used with results, and :To only with arguments.  The default\n"
-"\t  for the N'th argument/result is (:ARGUMENT N)/(:RESULT N).  These\n"
-"\t  options are necessary primarily when operands are read or written out\n"
-"\t  of order.\n"
+"\t  for the N'th argument/result is (:ARGUMENT N)/(:RESULT N).  (The\n"
+"          first argument/result is number 0.) These options are necessary\n"
+"          primarily when operands are read or written out of order.\n"
 "   \n"
 "  :Conditional\n"
 "      This is used in place of :RESULTS with conditional branch VOPs.  "
@@ -21084,6 +21119,14 @@ msgstr ""
 
 #: src/pcl/gray-streams.lisp
 msgid "Implements WRITE-SEQUENCE for the stream."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid "Implements FILE-POSITION for the stream."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid "Implements FILE-POSITION for the stream for setting the position."
 msgstr ""
 
 #: src/pcl/gray-streams.lisp

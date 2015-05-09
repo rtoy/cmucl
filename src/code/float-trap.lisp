@@ -193,7 +193,8 @@
       #+(and darwin ppc)
       (when (member :invalid current-exceptions)
  	;; Clear out the bits for the detected invalid operation
- 	(setf (ldb vm:float-invalid-op-1-byte modes) 0)))
+ 	(setf (ldb vm:float-invalid-op-1-byte modes) 0)
+	(setf (ldb vm:float-invalid-op-2-byte modes) 0)))
 
     (when accrued-x-p
       (setf (ldb float-sticky-bits modes)
@@ -201,12 +202,18 @@
       #+(and darwin ppc)
       (when (member :invalid current-exceptions)
  	;; Clear out the bits for the detected invalid operation
- 	(setf (ldb vm:float-invalid-op-1-byte modes) 0)))
+ 	(setf (ldb vm:float-invalid-op-1-byte modes) 0)
+	(setf (ldb vm:float-invalid-op-2-byte modes) 0)))
+
+    #+(and darwin ppc)
+    (when (or accrued-x-p current-x-p)
+      (setf (ldb vm:float-exceptions-summary-byte modes) 0))
 
     (when fast-mode-p
       (if fast-mode
 	  (setq modes (logior float-fast-bit modes))
 	  (setq modes (logand (lognot float-fast-bit) modes))))
+
     (setf (floating-point-modes) modes))
     
   (values))
@@ -261,7 +268,12 @@
 	 (traps (logand (ldb float-exceptions-byte modes)
 			(ldb float-traps-byte modes))))
     #+(and darwin ppc)
-    (let ((new-modes modes))
+    (let* ((new-modes modes)
+	   (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
+				     traps)))
+      ;; (format t "sigfpe: modes   = #B~32,'0b~%" modes)
+      ;; (format t "sigfpe: new-exc = #B~32,'0b~%" new-exceptions)
+      (setf (ldb float-exceptions-byte new-modes) new-exceptions)
       ;; Clear out all exceptions and save them to the context.
       ;;
       ;; XXX: Should we just clear out the bits for the traps that are
@@ -273,6 +285,9 @@
       ;; XXX: Should we only do that if the invalid trap is enabled?
       (setf (ldb float-invalid-op-1-byte new-modes) 0)
       (setf (ldb float-invalid-op-2-byte new-modes) 0)
+      ;; Clear the FP exception summary bit too.
+      (setf (ldb float-exceptions-summary-byte new-modes) 0)
+      ;; (format t "sigfpe: new modes   = #B~32,'0b~%" new-modes)
       (setf (floating-point-modes) new-modes)
       (setf (sigcontext-floating-point-modes
 	     (alien:sap-alien scp (* unix:sigcontext)))
@@ -371,7 +386,10 @@
 	;; an exception.
 	#+ppc
 	(invalid-mask (if (member :invalid traps)
-			  (dpb 0 vm:float-invalid-op-1-byte #xffffffff)
+			  (dpb 0
+			       (byte 1 31)
+			       (dpb 0 vm::float-invalid-op-2-byte
+				    (dpb 0 vm:float-invalid-op-1-byte #xffffffff)))
 			  #xffffffff))
 	(orig-modes (gensym)))
     `(let ((,orig-modes (floating-point-modes)))
@@ -387,4 +405,4 @@
 			      ,(logand trap-mask exception-mask)
 			      #+ppc
 			      ,invalid-mask
-		       #+mips ,(dpb 0 float-exceptions-byte #xffffffff))))))))
+			      #+mips ,(dpb 0 float-exceptions-byte #xffffffff))))))))

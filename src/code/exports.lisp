@@ -94,9 +94,6 @@
 (if (find-package "EXTENSIONS")
     (rename-package "EXTENSIONS" "EXTENSIONS" '("EXT"))
     (make-package "EXTENSIONS" :nicknames '("EXT") :use nil))
-(if (find-package "LOOP")
-    (rename-package "LOOP" "LOOP" 'nil)
-    (make-package "LOOP" :nicknames 'nil :use nil))
 (if (find-package "DEBUG-INTERNALS")
     (rename-package "DEBUG-INTERNALS" "DEBUG-INTERNALS" '("DI"))
     (make-package "DEBUG-INTERNALS" :nicknames '("DI") :use nil))
@@ -151,7 +148,6 @@
 (use-package '("LISP") "DISASSEM")
 (use-package '("EXTENSIONS" "LISP" "SYSTEM") "DEBUG")
 (use-package '("C-CALL" "ALIEN" "COMMON-LISP" "SYSTEM") "EXTENSIONS")
-(use-package '("LISP") "LOOP")
 (use-package '("LISP" "SYSTEM" "EXTENSIONS" "KERNEL") "DEBUG-INTERNALS")
 (use-package
  '("ALIEN-INTERNALS" "ALIEN" "COMMON-LISP" "EXTENSIONS" "KERNEL"
@@ -923,7 +919,9 @@
 	   "+UNICODE-CATEGORY-UPPER+"
 	   "+UNICODE-CATEGORY-TITLE+"
 	   "LOAD-ALL-UNICODE-DATA"
-	   "SURROGATES"))
+	   "SURROGATES"
+	   "WITH-STRING-CODEPOINT-ITERATOR"
+	   "WITH-STRING-GLYPH-ITERATOR"))
 
 (defpackage "EVAL"
   (:export "*EVAL-STACK-TRACE*" "*INTERNAL-APPLY-NODE-TRACE*"
@@ -1166,6 +1164,8 @@
   (:export "SIGCONTEXT-LR"
 	   "COMPATIBLE-FUNCTION-TYPES-P"
 	   "FLOAT-INVALID-OP-1-BYTE"
+	   "FLOAT-INVALID-OP-2-BYTE"
+	   "FLOAT-EXCEPTIONS-SUMMARY-BYTE"
 	   "GET-FP-OPERANDS"
 	   "FUSED-MULTIPLY-ADD"
 	   "FUSED-MULTIPLY-SUBTRACT")
@@ -1608,7 +1608,6 @@
 	   "LIST-ALL-EXTERNAL-FORMATS"
 	   "DESCRIBE-EXTERNAL-FORMAT"))
 
-(defpackage "LOOP")
 (dolist
     (name
      '("DEBUG-SOURCE" "DEBUG-SOURCE-COMPILED" "DEBUG-SOURCE-CREATED"
@@ -2098,7 +2097,7 @@
 	   "%CALLER-FRAME-AND-PC" "%CHECK-BOUND" "%CLOSURE-FUNCTION"
 	   "%CLOSURE-INDEX-REF" "%COS" "%COSH" "%DEPOSIT-FIELD"
 	   "%DOUBLE-FLOAT" "%DPB" "%EXP" "%EXPM1" "%HYPOT" "%LDB"
-	   "%LOG" "%LOGB" "%LOG10" "%LOG1P" "%LONG-FLOAT"
+	   "%LOG" "%LOGB" "%LOG10" "%LOG1P" "%LOG2" "%LONG-FLOAT"
 	   "%MAKE-COMPLEX" "%MAKE-FUNCALLABLE-INSTANCE" "%MAKE-RATIO"
 	   "%MASK-FIELD" "%NEGATE" "%POW"
 	   "%RAW-BITS" "%RAW-REF-COMPLEX-DOUBLE" "%RAW-REF-COMPLEX-LONG"

@@ -336,6 +336,9 @@
 ;;;
 (defun extern-alien-name (name)
   (declare (type simple-string name))
+  #-elf
+  (concatenate 'string "_"  name)
+  #+elf
   name)
 
 #+(and (or linux (and freebsd elf)) (not linkage-table))

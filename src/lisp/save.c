@@ -249,7 +249,8 @@ boolean
 save_executable(char *filename, lispobj init_function)
 {
     char *dir_name;
-
+    char *dir_copy;
+    
 #if defined WANT_CGC
     volatile lispobj *func_ptr = &init_function;
     char sbuf[128];
@@ -271,7 +272,8 @@ save_executable(char *filename, lispobj init_function)
     if(SymbolValue(X86_CGC_ACTIVE_P) != NIL)
         SetSymbolValue(ALLOCATION_POINTER, DYNAMIC_0_SPACE_START);
 #endif
-    dir_name = dirname(strdup(filename));
+    dir_copy = strdup(filename);
+    dir_name = dirname(dir_copy);
 
     printf("[Undoing binding stack... ");
     fflush(stdout);
@@ -357,6 +359,7 @@ save_executable(char *filename, lispobj init_function)
     fflush(stdout);
     obj_run_linker(init_function, filename);
     printf("done.\n");
+    free(dir_copy);
     exit(0);
 }
 #endif
