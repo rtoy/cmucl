@@ -133,7 +133,6 @@ do
     install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/contrib/$f
 done
 
-set -x
 case `uname -s` in
   Linux*) UCONTRIB="unix-glibc2" ;;
   *) UCONTRIB="unix" ;;
