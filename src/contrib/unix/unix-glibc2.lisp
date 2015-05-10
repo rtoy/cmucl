@@ -204,57 +204,6 @@
 	       (setf cur (funcall inc cur 1)))))
     `(progn ,@(mapcar #'defform names))))
 
-;;;; Memory-mapped files
-
-(defconstant +null+ (sys:int-sap 0))
-
-(defconstant prot_read 1)
-(defconstant prot_write 2)
-(defconstant prot_exec 4)
-(defconstant prot_none 0)
-
-(defconstant map_shared 1)
-(defconstant map_private 2)
-(defconstant map_fixed 16)
-(defconstant map_anonymous 32)
-
-(defconstant ms_async 1)
-(defconstant ms_sync 4)
-(defconstant ms_invalidate 2)
-
-;; The return value from mmap that means mmap failed.
-(defconstant map_failed (int-sap (1- (ash 1 vm:word-bits))))
-
-(defun unix-mmap (addr length prot flags fd offset)
-  (declare (type (or null system-area-pointer) addr)
-	   (type (unsigned-byte 32) length)
-           (type (integer 1 7) prot)
-	   (type (unsigned-byte 32) flags)
-	   (type (or null unix-fd) fd)
-	   (type (signed-byte 32) offset))
-  ;; Can't use syscall, because the address that is returned could be
-  ;; "negative".  Hence we explicitly check for mmap returning
-  ;; MAP_FAILED.
-  (let ((result
-	 (alien-funcall (extern-alien "mmap" (function system-area-pointer
-						       system-area-pointer
-						       size-t int int int off-t))
-			(or addr +null+) length prot flags (or fd -1) offset)))
-    (if (sap= result map_failed)
-	(values nil (unix-errno))
-	(values result 0))))
-
-(defun unix-munmap (addr length)
-  (declare (type system-area-pointer addr)
-	   (type (unsigned-byte 32) length))
-  (syscall ("munmap" system-area-pointer size-t) t addr length))
-
-(defun unix-msync (addr length flags)
-  (declare (type system-area-pointer addr)
-	   (type (unsigned-byte 32) length)
-	   (type (signed-byte 32) flags))
-  (syscall ("msync" system-area-pointer size-t int) t addr length flags))
-
 ;;;; User and group database structures: <pwd.h> and <grp.h>
 
 (defstruct group-info
