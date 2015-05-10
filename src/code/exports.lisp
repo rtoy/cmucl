@@ -224,6 +224,7 @@
 	   "UNIX-GETTIMEOFDAY"
 	   "UNIX-ISATTY"
 	   "UNIX-MKDIR"
+	   "UNIX-RMDIR"
 	   "UNIX-UNLINK"
 	   "TIMEZONE"
 	   "TIMEVAL"
@@ -303,11 +304,9 @@
 
 	   ;; Tests
 	   "UNIX-SYMLINK"
-
 	   )
   #-linux
-  (:export "UNIX-RMDIR"
-	   "TCHARS"
+  (:export "TCHARS"
 	   "LTCHARS"
 	   "D-NAMLEN"
 
@@ -662,8 +661,7 @@
 	   "X_OK"
 	   )
   #+linux
-  (:export "UNIX-RMDIR"
-	   "TCHARS"
+  (:export "TCHARS"
 	   "LTCHARS"
 	   "D-NAMLEN"
 
