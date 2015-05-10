@@ -122,6 +122,7 @@
       (values (not (zerop (sap-int (alien-sap result))))
 	      (%file->name (cast buf c-call:c-string))))))
 
+;;; fcntlbits.h
 (defconstant o_read    o_rdonly _N"Open for reading")
 (defconstant o_write   o_wronly _N"Open for writing")
 
@@ -873,6 +874,8 @@
   (declare (type unix-fd fd1 fd2))
   (void-syscall ("dup2" int int) fd1 fd2))
 
+;;; Unix-exit terminates a program.
+
 (defun unix-exit (&optional (code 0))
   _N"Unix-exit terminates the current process with an optional
    error code.  If successful, the call doesn't return.  If
@@ -964,6 +967,10 @@
    NIL and an error code is returned if the call fails."
   (declare (type unix-pathname name))
   (void-syscall ("unlink" c-string) (%name->file name)))
+
+;;; fcntl.h
+;;;
+;;; POSIX Standard: 6.5 File Control Operations	<fcntl.h>
 
 (defconstant r_ok 4 _N"Test for read permission")
 (defconstant w_ok 2 _N"Test for write permission")
@@ -1107,6 +1114,8 @@
 
 ;;; TTY ioctl commands.
 
+(eval-when (compile load eval)
+
 (defconstant iocparm-mask #x3fff)
 (defconstant ioc_void #x00000000)
 (defconstant ioc_out #x40000000)
@@ -1135,6 +1144,9 @@
 	(setf code `(logior ,dir ,code))))
     `(eval-when (eval load compile)
        (defconstant ,name ,code))))
+)
+
+;;; TTY ioctl commands.
 
 (define-ioctl-command TIOCGWINSZ #\T #x13)
 (define-ioctl-command TIOCSWINSZ #\T #x14)
@@ -1498,6 +1510,7 @@
 (def-alien-routine ("getpid" unix-getpid) int
   _N"Unix-getpid returns the process-id of the current process.")
 
+;;;; User and group database structures: <pwd.h> and <grp.h>
 (defstruct user-info
   (name "" :type string)
   (password "" :type string)
@@ -1622,6 +1635,8 @@
 		     (cast (slot utsname 'domainname) c-string))
 	      (addr utsname))))
 
+;;; sys/ioctl.h
+
 (defun unix-ioctl (fd cmd arg)
   _N"Unix-ioctl performs a variety of operations on open i/o
    descriptors.  See the UNIX Programmer's Manual for more
@@ -1641,6 +1656,8 @@
   (declare (type unix-pathname name)
 	   (type unix-file-mode mode))
   (void-syscall ("mkdir" c-string int) (%name->file name) mode))
+
+;;; timebits.h
 
 ;; A time value that is accurate to the nearest
 ;; microsecond but also has a range of years.  
@@ -1725,6 +1742,8 @@
 		which (alien-sap (addr itvn))(alien-sap (addr itvo))))))
 
 
+;;; termbits.h
+
 (def-alien-type cc-t unsigned-char)
 (def-alien-type speed-t  unsigned-int)
 (def-alien-type tcflag-t unsigned-int)
