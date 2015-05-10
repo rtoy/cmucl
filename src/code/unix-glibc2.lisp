@@ -1036,6 +1036,11 @@
 	(values nil (unix-errno))
 	(values result 0))))
 
+(defun unix-munmap (addr length)
+  (declare (type system-area-pointer addr)
+	   (type (unsigned-byte 32) length))
+  (syscall ("munmap" system-area-pointer size-t) t addr length))
+
 (defun unix-msync (addr length flags)
   (declare (type system-area-pointer addr)
 	   (type (unsigned-byte 32) length)

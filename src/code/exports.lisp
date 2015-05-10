@@ -284,7 +284,9 @@
 	   "FD-CLR"
 
 	   ;; Simple streams
+	   "PROT_READ"
 	   "UNIX-MMAP"
+	   "UNIX-MUNMAP"
 	   "UNIX-MSYNC"
 
 	   ;; Motif
@@ -312,10 +314,6 @@
 	   
 	   ;; run-program.lisp
 	   "SGTTYB"
-
-	   ;; Simple streams
-	   "PROT_READ"
-	   "UNIX-MUNMAP"
 
 	   ;; Other symbols from structures, etc.
 	   "C-CC"
@@ -671,10 +669,6 @@
 
 	   ;; run-program.lisp
 	   "SGTTYB"
-
-	   ;; Simple streams
-	   "PROT_READ"
-	   "UNIX-MUNMAP"
 
 	   ;; Other symbols
 	   "BLKCNT-T"
