@@ -379,9 +379,6 @@
 	   "LTCHARS"
 	   "D-NAMLEN"
 
-	   ;; run-program.lisp
-	   "SGTTYB"
-
 	   ;; Other symbols
 	   "BLKCNT-T" "D-INO" "D-OFF" "EADV" "EBADE" "EBADFD" "EBADMSG" "EBADR"
 	   "EBADRQC" "EBADSLT" "EBFONT" "ECHRNG" "ECOMM" "EDEADLOCK" "EDOTDOT"
