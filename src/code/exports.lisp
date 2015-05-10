@@ -291,12 +291,17 @@
 	   "UNIX-GETUIO"
 
 	   ;; Hemlock
+	   "UNIX-CFGETOSPEED"
 	   "TERMIOS"
 	   "UNIX-TCGETATTR"
 	   "UNIX-TCSETATTR"
 	   "UNIX-FCHMOD"
 	   "UNIX-CREAT"
 	   "UNIX-UTIMES"
+
+	   ;; Tests
+	   "UNIX-SYMLINK"
+
 	   )
   #-linux
   (:export "UNIX-RMDIR"
@@ -311,12 +316,6 @@
 	   ;; Simple streams
 	   "PROT_READ"
 	   "UNIX-MUNMAP"
-
-	   ;; Hemlock
-	   "UNIX-CFGETOSPEED"
-
-	   ;; Tests
-	   "UNIX-SYMLINK"
 
 	   ;; Other symbols from structures, etc.
 	   "C-CC"
@@ -676,12 +675,6 @@
 	   ;; Simple streams
 	   "PROT_READ"
 	   "UNIX-MUNMAP"
-
-	   ;; Hemlock
-	   "UNIX-CFGETOSPEED"
-
-	   ;; Tests
-	   "UNIX-SYMLINK"
 
 	   ;; Other symbols
 	   "BLKCNT-T"

@@ -1478,6 +1478,14 @@
 	       nfds (frob rdfds rdf) (frob wrfds wrf) (frob xpfds xpf)
 	       (if to-secs (alien-sap (addr tv)) (int-sap 0))))))
 
+(defun unix-symlink (name1 name2)
+  _N"Unix-symlink creates a symbolic link named name2 to the file
+   named name1.  NIL and an error number is returned if the call
+   is unsuccessful."
+  (declare (type unix-pathname name1 name2))
+  (void-syscall ("symlink" c-string c-string)
+		(%name->file name1) (%name->file name2)))
+
 (def-alien-routine ("gethostid" unix-gethostid) unsigned-long
   _N"Unix-gethostid returns a 32-bit integer which provides unique
    identification for the host machine.")
@@ -1776,3 +1784,13 @@
   (void-syscall ("tcsetattr" int int (* (struct termios))) fd opt termios))
 
 (defconstant writeown #o200 _N"Write by owner")
+
+;;; termios.h
+
+(defun unix-cfgetospeed (termios)
+  _N"Get terminal output speed."
+  (multiple-value-bind (speed errno)
+      (int-syscall ("cfgetospeed" (* (struct termios))) termios)
+    (if speed
+	(values (svref terminal-speeds speed) 0)
+      (values speed errno))))
