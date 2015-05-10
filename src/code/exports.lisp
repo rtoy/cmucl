@@ -294,6 +294,9 @@
 	   "TERMIOS"
 	   "UNIX-TCGETATTR"
 	   "UNIX-TCSETATTR"
+	   "UNIX-FCHMOD"
+	   "UNIX-CREAT"
+	   "UNIX-UTIMES"
 	   )
   #-linux
   (:export "UNIX-RMDIR"
@@ -311,9 +314,6 @@
 
 	   ;; Hemlock
 	   "UNIX-CFGETOSPEED"
-	   "UNIX-FCHMOD"
-	   "UNIX-CREAT"
-	   "UNIX-UTIMES"
 
 	   ;; Tests
 	   "UNIX-SYMLINK"
@@ -679,9 +679,6 @@
 
 	   ;; Hemlock
 	   "UNIX-CFGETOSPEED"
-	   "UNIX-FCHMOD"
-	   "UNIX-CREAT"
-	   "UNIX-UTIMES"
 
 	   ;; Tests
 	   "UNIX-SYMLINK"
