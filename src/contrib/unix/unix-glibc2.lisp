@@ -1883,10 +1883,6 @@ in at a time in poll.")
 (defconstant writeoth #o2 _N"Write by others")
 (defconstant execoth #o1 _N"Execute (search directory) by others")
 
-(defconstant terminal-speeds
-  '#(0 50 75 110 134 150 200 300 600 1200 1800 2400
-     4800 9600 19200 38400 57600 115200 230400))
-
 ;;;; Support routines for dealing with unix pathnames.
 
 (export '(unix-file-kind unix-maybe-prepend-current-directory
