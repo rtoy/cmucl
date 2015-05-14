@@ -2423,6 +2423,14 @@
 	    ) )
 )
 
+(def-alien-type nil
+  (struct utsname
+    (sysname (array char #+svr4 257 #+bsd 256))
+    (nodename (array char #+svr4 257 #+bsd 256))
+    (release (array char #+svr4 257 #+bsd 256))
+    (version (array char #+svr4 257 #+bsd 256))
+    (machine (array char #+svr4 257 #+bsd 256))))
+
 (defun unix-uname ()
   (with-alien ((names (struct utsname)))
     (syscall* (#-(or freebsd (and x86 solaris)) "uname"
