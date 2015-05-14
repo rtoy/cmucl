@@ -1109,6 +1109,27 @@
     (d-type unsigned-char)
     (d-name (array char 512))))
 
+;;; Large file support for Solaris.  Define some of the 64-bit types
+;;; we need.  Unlike unix-glibc's large file support, Solaris's
+;;; version is a little simpler because all of the 64-bit versions of
+;;; the functions actually exist as functions.  So instead of calling
+;;; the 32-bit versions of the functions, we call the 64-bit versions.
+;;;
+;;; These functions are: creat64, open64, truncate64, ftruncate64,
+;;; stat64, lstat64, fstat64, readdir64.
+;;;
+;;; There are also some new structures for large file support:
+;;; dirent64, stat64.
+;;;
+;;; FIXME: We should abstract this better, but I (rtoy) don't have any
+;;; other system to test this out on, so it's a Solaris hack for now.
+#+solaris
+(progn
+  (deftype file-offset64 () '(signed-byte 64))
+  (def-alien-type off64-t int64-t)
+  (def-alien-type ino64-t u-int64-t)
+  (def-alien-type blkcnt64-t u-int64-t))
+
 ;;; The 64-bit version of struct dirent.
 #+solaris
 (def-alien-type nil
@@ -1139,6 +1160,61 @@
     (st-gen     unsigned-long)
     (st-lspare  long)
     (st-qspare (array long 4))))
+
+#+(or linux svr4)
+(def-alien-type nil
+  (struct stat
+    (st-dev dev-t)
+    (st-pad1 #-linux (array long 3) #+linux unsigned-short)
+    (st-ino ino-t)
+    (st-mode #-linux unsigned-long #+linux unsigned-short)
+    (st-nlink #-linux short #+linux unsigned-short)
+    (st-uid #-linux uid-t #+linux unsigned-short)
+    (st-gid #-linux gid-t #+linux unsigned-short)
+    (st-rdev dev-t)
+    (st-pad2 #-linux (array long 2) #+linux unsigned-short)
+    (st-size off-t)
+    #-linux (st-pad3 long)
+    #+linux (st-blksize unsigned-long)
+    #+linux (st-blocks unsigned-long)
+    #-linux (st-atime (struct timestruc-t))
+    #+linux (st-atime unsigned-long)
+    #+linux (unused-1 unsigned-long)
+    #-linux (st-mtime (struct timestruc-t))
+    #+linux (st-mtime unsigned-long)
+    #+linux (unused-2 unsigned-long)
+    #-linux (st-ctime (struct timestruc-t))
+    #+linux (st-ctime unsigned-long)
+    #+linux (unused-3 unsigned-long)
+    #+linux (unused-4 unsigned-long)
+    #+linux (unused-5 unsigned-long)
+    #-linux(st-blksize long)
+    #-linux (st-blocks long)
+    #-linux (st-fstype (array char 16))
+    #-linux (st-pad4 (array long 8))))
+
+;;; 64-bit stat for Solaris
+#+solaris
+(def-alien-type nil
+  (struct stat64
+    (st-dev dev-t)
+    (st-pad1 (array long 3))		; Pad so ino is 64-bit aligned
+    (st-ino ino64-t)
+    (st-mode unsigned-long)
+    (st-nlink short)
+    (st-uid uid-t)
+    (st-gid gid-t)
+    (st-rdev dev-t)
+    (st-pad2 (array long 3))		; Pad so size is 64-bit aligned
+    (st-size off64-t)
+    (st-atime (struct timestruc-t))
+    (st-mtime (struct timestruc-t))
+    (st-ctime (struct timestruc-t))
+    (st-blksize long)
+    (st-pad3 (array long 1))		; Pad so blocks is 64-bit aligned
+    (st-blocks blkcnt64-t)
+    (st-fstype (array char 16))
+    (st-pad4 (array long 8))))
 
 (defmacro extract-stat-results (buf)
   `(values T
@@ -2288,4 +2364,74 @@
        :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
        :dir (string (cast (slot result 'pw-dir) c-call:c-string))
        :shell (string (cast (slot result 'pw-shell) c-call:c-string))))))
+
+#+(and sparc svr4)
+(progn
+(def-alien-type nil
+  (struct tms
+    (tms-utime #-alpha long #+alpha int)	; user time used
+    (tms-stime #-alpha long #+alpha int)	; system time used.
+    (tms-cutime #-alpha long #+alpha int)	; user time, children
+    (tms-cstime #-alpha long #+alpha int)))	; system time, children
+
+(declaim (inline unix-times))
+(defun unix-times ()
+  _N"Unix-times returns information about the cpu time usage of the process
+   and its children."
+  (with-alien ((usage (struct tms)))
+    (alien-funcall (extern-alien "times" (function int (* (struct tms))))
+		   (addr usage))
+    (values t
+	    (slot usage 'tms-utime)
+	    (slot usage 'tms-stime)
+	    (slot usage 'tms-cutime)
+	    (slot usage 'tms-cstime))))
+) ; end progn
+
+#+(or linux svr4)
+(progn
+    (def-alien-variable ("daylight" unix-daylight) int)
+    (def-alien-variable ("timezone" unix-timezone) time-t)
+    (def-alien-variable ("altzone" unix-altzone) time-t)
+    #-irix (def-alien-variable ("tzname" unix-tzname) (array c-string 2))
+    #+irix (defvar unix-tzname-addr nil)
+    #+irix (pushnew #'(lambda () (setq unix-tzname-addr nil))
+                    ext:*after-save-initializations*)
+    #+irix (declaim (notinline fakeout-compiler))
+    #+irix (defun fakeout-compiler (name dst)
+             (unless unix-tzname-addr
+               (setf unix-tzname-addr (system:foreign-symbol-address
+				       name
+				       :flavor :data)))
+              (deref (sap-alien unix-tzname-addr (array c-string 2)) dst))
+    (def-alien-routine get-timezone c-call:void
+		       (when c-call:long :in)
+		       (minutes-west c-call:int :out)
+		       (daylight-savings-p alien:boolean :out))
+    (defun unix-get-minutes-west (secs)
+	   (multiple-value-bind (ignore minutes dst) (get-timezone secs)
+				(declare (ignore ignore) (ignore dst))
+				(values minutes))
+	    )
+    (defun unix-get-timezone (secs)
+	   (multiple-value-bind (ignore minutes dst) (get-timezone secs)
+				(declare (ignore ignore) (ignore minutes))
+                                (values #-irix (deref unix-tzname (if dst 1 0))
+                                        #+irix (fakeout-compiler "tzname" (if dst 1 0)))
+	    ) )
+)
+
+(defun unix-uname ()
+  (with-alien ((names (struct utsname)))
+    (syscall* (#-(or freebsd (and x86 solaris)) "uname"
+	       #+(and x86 solaris) "nuname"	; See /usr/include/sys/utsname.h
+	       #+freebsd "__xuname" #+freebsd int
+	       (* (struct utsname)))
+	      (values (cast (slot names 'sysname) c-string)
+		      (cast (slot names 'nodename) c-string)
+		      (cast (slot names 'release) c-string)
+		      (cast (slot names 'version) c-string)
+		      (cast (slot names 'machine) c-string))
+	      #+freebsd 256
+	      (addr names))))
 
