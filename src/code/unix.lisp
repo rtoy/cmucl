@@ -40,6 +40,8 @@
 
 (def-alien-type int64-t (signed 64))
 
+(def-alien-type u-int64-t (unsigned 64))
+
 (def-alien-type ino-t
     #+netbsd u-int64-t
     #+alpha unsigned-int
