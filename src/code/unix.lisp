@@ -1241,6 +1241,8 @@
 	   (slot ,buf 'st-blksize)
 	   (slot ,buf 'st-blocks)))
 
+#-solaris
+(progn
 (defun unix-stat (name)
   _N"Unix-stat retrieves information about the specified
    file returning them in the form of multiple values.
@@ -1272,6 +1274,43 @@
     (syscall (#-netbsd "fstat" #+netbsd "__fstat50" int (* (struct stat)))
 	     (extract-stat-results buf)
 	     fd (addr buf))))
+)
+
+;;; 64-bit versions of stat and friends
+#+solaris
+(progn
+(defun unix-stat (name)
+  _N"Unix-stat retrieves information about the specified
+   file returning them in the form of multiple values.
+   See the UNIX Programmer's Manual for a description
+   of the values returned.  If the call fails, then NIL
+   and an error number is returned instead."
+  (declare (type unix-pathname name))
+  (when (string= name "")
+    (setf name "."))
+  (with-alien ((buf (struct stat64)))
+    (syscall ("stat64" c-string (* (struct stat64)))
+	     (extract-stat-results buf)
+	     (%name->file name) (addr buf))))
+
+(defun unix-lstat (name)
+  _N"Unix-lstat is similar to unix-stat except the specified
+   file must be a symbolic link."
+  (declare (type unix-pathname name))
+  (with-alien ((buf (struct stat64)))
+    (syscall ("lstat64" c-string (* (struct stat64)))
+	     (extract-stat-results buf)
+	     (%name->file name) (addr buf))))
+
+(defun unix-fstat (fd)
+  _N"Unix-fstat is similar to unix-stat except the file is specified
+   by the file descriptor fd."
+  (declare (type unix-fd fd))
+  (with-alien ((buf (struct stat64)))
+    (syscall ("fstat64" int (* (struct stat64)))
+	     (extract-stat-results buf)
+	     fd (addr buf))))
+)
 
 (def-alien-type nil
   (struct rusage
