@@ -1181,28 +1181,6 @@
 	 :dir (string (cast (slot result 'pw-dir) c-call:c-string))
 	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
 
-(def-alien-type nil
-  (struct utsname
-    (sysname (array char #+svr4 257 #+bsd 256))
-    (nodename (array char #+svr4 257 #+bsd 256))
-    (release (array char #+svr4 257 #+bsd 256))
-    (version (array char #+svr4 257 #+bsd 256))
-    (machine (array char #+svr4 257 #+bsd 256))))
-
-(defun unix-uname ()
-  (with-alien ((names (struct utsname)))
-    (syscall* (#-(or freebsd (and x86 solaris)) "uname"
-	       #+(and x86 solaris) "nuname"	; See /usr/include/sys/utsname.h
-	       #+freebsd "__xuname" #+freebsd int
-	       (* (struct utsname)))
-	      (values (cast (slot names 'sysname) c-string)
-		      (cast (slot names 'nodename) c-string)
-		      (cast (slot names 'release) c-string)
-		      (cast (slot names 'version) c-string)
-		      (cast (slot names 'machine) c-string))
-	      #+freebsd 256
-	      (addr names))))
-
 #+(and solaris svr4)
 (export '(unix-sysinfo
 	  si-sysname si-hostname si-release si-version si-machine
