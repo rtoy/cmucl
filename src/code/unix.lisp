@@ -2435,6 +2435,9 @@
        :dir (string (cast (slot result 'pw-dir) c-call:c-string))
        :shell (string (cast (slot result 'pw-shell) c-call:c-string))))))
 
+;;; Getrusage is not provided in the C library on Solaris 2.4, and is
+;;; rather slow on later versions so the "times" system call is
+;;; provided.
 #+(and sparc svr4)
 (progn
 (def-alien-type nil
@@ -2458,6 +2461,8 @@
 	    (slot usage 'tms-cstime))))
 ) ; end progn
 
+;; Requires call to tzset() in main.
+;; Don't use this now: we 
 #+(or linux svr4)
 (progn
     (def-alien-variable ("daylight" unix-daylight) int)
@@ -2512,4 +2517,3 @@
 		      (cast (slot names 'machine) c-string))
 	      #+freebsd 256
 	      (addr names))))
-
