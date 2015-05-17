@@ -248,6 +248,10 @@
 	   "CLOSE-DIR"
 	   "OPEN-DIR"
 	   "READ-DIR"
+
+	   ;; linux-os, sunos-os.
+	   "UNIX-UNAME"
+
 	   ;; filesys.lisp
 	   "UNIX-GETPWUID"
 
