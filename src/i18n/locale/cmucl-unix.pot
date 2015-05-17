@@ -1230,3 +1230,9 @@ msgid ""
 "found."
 msgstr ""
 
+#: src/code/unix.lisp
+msgid ""
+"Unix-times returns information about the cpu time usage of the process\n"
+"   and its children."
+msgstr ""
+
