@@ -1226,6 +1226,27 @@
     (st-fstype (array char 16))
     (st-pad4 (array long 8))))
 
+#+netbsd
+(def-alien-type nil
+  (struct stat
+    (st-dev dev-t)
+    (st-mode mode-t)
+    (st-ino ino-t)
+    (st-nlink nlink-t)
+    (st-uid uid-t)
+    (st-gid gid-t)
+    (st-rdev dev-t)
+    (st-atime (struct timespec-t))
+    (st-mtime (struct timespec-t))
+    (st-ctime (struct timespec-t))
+    (st-birthtime (struct timespec-t))
+    (st-size off-t)
+    (st-blocks off-t)
+    (st-blksize long)
+    (st-flags   unsigned-long)
+    (st-gen     unsigned-long)
+    (st-spare (array unsigned-long 2))))
+
 (defmacro extract-stat-results (buf)
   `(values T
 	   (slot ,buf 'st-dev)
