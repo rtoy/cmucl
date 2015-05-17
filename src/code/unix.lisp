@@ -1111,6 +1111,14 @@
     (d-type unsigned-char)
     (d-name (array char 512))))
 
+#+(or linux svr4)
+; High-res time.  Actually posix definition under svr4 name.
+(def-alien-type nil
+  (struct timestruc-t
+    (tv-sec time-t)
+    (tv-nsec long)))
+
+
 ;;; Large file support for Solaris.  Define some of the 64-bit types
 ;;; we need.  Unlike unix-glibc's large file support, Solaris's
 ;;; version is a little simpler because all of the 64-bit versions of
