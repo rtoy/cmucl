@@ -262,8 +262,10 @@ $TARGET/lisp/lisp -noinit -nositeinit -batch << EOF || exit 3
 (compile-file "modules:defsystem/defsystem")
 (intl::install)
 (ext:without-package-locks
-  (compile-file #-linux "modules:unix/unix"
-                #+linux "modules:unix/unix-glibc2"))
+  (let ((path #-linux "modules:unix/unix"
+              #+linux "modules:unix/unix-glibc2"))
+    (ensure-directories-exist (compile-file-pathname path))
+    (compile-file path)))
 EOF
 
 
