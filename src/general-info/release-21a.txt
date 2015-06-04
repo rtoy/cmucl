@@ -39,6 +39,13 @@ New in this release:
           codepoint. 
       * (loop for g-string being the glpyh of string ...)
         * glyphs is an alias for glpyh.
+    * The UNIX package has been split into two parts. By default the
+      UNIX package contains just enough to build CMUCL.  If you want
+      the rest of the functionality, use (require :unix).
+    * Added clx-inspector module.
+    * ASDF documentation included in html, info, and pdf formats in
+      contrib/asdf/doc/.
+
 
   * ANSI compliance fixes:
 
@@ -67,14 +74,17 @@ New in this release:
     * All unit tests pass successfully on darwin/x86, linux/x86, and
       solaris/sparc.  Darwin/ppc fails most of the tests dealing with
       exceptions for the special functions.
- 
-
+    * Fix compiler warnings in motif about destructive functions
+      discarding their results.
 
   * Trac Tickets:
     * Ticket #54 fixed.
     * Ticket #95 fixed.
     * Ticket #110 fixed.
     * Ticket #112 fixed.
+
+  * Gitlab tickets:
+    * Issue #1 fixed: Handle funcall in compiler macro functions.
 
   * Other changes:
     * Cross compile scripts from x86 to sparc and ppc updated to work
