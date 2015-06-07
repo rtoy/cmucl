@@ -18777,6 +18777,16 @@ msgid "Float zero bound ~s not correctly canonicalised?"
 msgstr ""
 
 #: src/compiler/float-tran-dd.lisp
+msgid "Compute fl(a*b) and err(a*b)"
+msgstr ""
+
+#: src/compiler/float-tran-dd.lisp
+msgid ""
+"Compute fl(a*a) and err(a*b).  This is a more efficient\n"
+"  implementation of two-prod"
+msgstr ""
+
+#: src/compiler/float-tran-dd.lisp
 msgid "Computes fl(a+b) and err(a+b), assuming |a| >= |b|"
 msgstr ""
 
@@ -18813,16 +18823,6 @@ msgid ""
 "Split the double-float number a into a-hi and a-lo such that a =\n"
 "  a-hi + a-lo and a-hi contains the upper 26 significant bits of a and\n"
 "  a-lo contains the lower 26 bits."
-msgstr ""
-
-#: src/compiler/float-tran-dd.lisp
-msgid "Compute fl(a*b) and err(a*b)"
-msgstr ""
-
-#: src/compiler/float-tran-dd.lisp
-msgid ""
-"Compute fl(a*a) and err(a*b).  This is a more efficient\n"
-"  implementation of two-prod"
 msgstr ""
 
 #: src/compiler/float-tran-dd.lisp
