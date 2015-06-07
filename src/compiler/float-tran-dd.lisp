@@ -19,6 +19,8 @@
 (in-package "C")
 (intl:textdomain "cmucl")
 
+#+double-double
+(progn
 (defknown %double-double-float (real)
   double-double-float
   (movable foldable flushable))
@@ -685,3 +687,4 @@
 	(kernel:double-double-lo a)
 	(kernel:double-double-hi b)
 	(kernel:double-double-lo b)))
+) ; end progn
