@@ -38,47 +38,6 @@
 (deftransform %double-float ((n) (double-float) * :when :both)
   'n)
 
-#+(and nil double-double)
-(progn
-(defknown %double-double-float (real)
-  double-double-float
-  (movable foldable flushable))
-
-(deftransform float ((n prototype) (* double-double-float) * :when :both)
-  '(%double-double-float n))
-
-(deftransform %double-float ((n) (double-double-float) * :when :both)
-  '(double-double-hi n))
-
-(deftransform %single-float ((n) (double-double-float) * :when :both)
-  '(float (double-double-hi n) 1f0))
-
-(deftransform %double-double-float ((n) (double-double-float) * :when :both)
-  'n)
-
-#+nil
-(defun %double-double-float (n)
-  (make-double-double-float (float n 1d0) 0d0))
-
-;; Moved to code/float.lisp, because we need this relatively early in
-;; the build process to handle float and real types.
-#+nil
-(defun %double-double-float (n)
-  (typecase n
-    (fixnum
-     (%make-double-double-float (float n 1d0) 0d0))
-    (single-float
-     (%make-double-double-float (float n 1d0) 0d0))
-    (double-float
-     (%make-double-double-float (float n 1d0) 0d0))
-    (double-double-float
-     n)
-    (bignum
-     (bignum:bignum-to-float n 'double-double-float))
-    (ratio
-     (kernel::float-ratio n 'double-double-float))))
-); progn
-
 (defknown %complex-single-float (number) (complex single-float)
   (movable foldable flushable))
 (defknown %complex-double-float (number) (complex double-float)
@@ -364,27 +323,6 @@
   (values (signed-byte 32) (unsigned-byte 32))
   (movable foldable flushable))
 
-#+(and nil double-double)
-(progn
-(defknown double-double-float-p (t)
-  boolean
-  (movable foldable flushable))
-
-(defknown %make-double-double-float (double-float double-float)
-  double-double-float
-  (movable foldable flushable))
-
-
-(defknown double-double-hi (double-double-float)
-  double-float
-  (movable foldable flushable))
-
-(defknown double-double-lo (double-double-float)
-  double-float
-  (movable foldable flushable))
-
-) ; progn
-
 (deftransform float-sign ((float &optional float2)
 			  (single-float &optional single-float) *)
   (if float2
@@ -401,18 +339,6 @@
 	  (if (minusp (double-float-high-bits float)) (- ,temp) ,temp)))
       '(if (minusp (double-float-high-bits float)) -1d0 1d0)))
 
-#+(and nil double-double)
-(deftransform float-sign ((float &optional float2)
-			  (double-double-float &optional double-double-float) *)
-  (if float2
-      (let ((temp (gensym)))
-	`(let ((,temp (abs float2)))
-	   (if (minusp (float-sign (double-double-hi float)))
-	       (- ,temp)
-	       ,temp)))
-      '(if (minusp (float-sign (double-double-hi float))) -1w0 1w0)))
-
-  
 
 ;;;; DECODE-FLOAT, INTEGER-DECODE-FLOAT, SCALE-FLOAT:
 ;;;
@@ -777,13 +703,6 @@
   `(multiple-value-bind (s c)
        (%sincos x)
      (complex c s)))
-
-#+(and nil double-double)
-(deftransform cis ((x) (double-double-float) *)
-  `(multiple-value-bind (s c)
-       (kernel::dd-%sincos x)
-     (complex c s)))
-
 
 ;;; The argument range is limited on the x86 FP trig. functions. A
 ;;; post-test can detect a failure (and load a suitable result), but
