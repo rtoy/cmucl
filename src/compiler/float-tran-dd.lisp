@@ -19,6 +19,84 @@
 (in-package "C")
 (intl:textdomain "cmucl")
 
+(defknown %double-double-float (real)
+  double-double-float
+  (movable foldable flushable))
+
+(deftransform float ((n prototype) (* double-double-float) * :when :both)
+  '(%double-double-float n))
+
+(deftransform %double-float ((n) (double-double-float) * :when :both)
+  '(double-double-hi n))
+
+(deftransform %single-float ((n) (double-double-float) * :when :both)
+  '(float (double-double-hi n) 1f0))
+
+(deftransform %double-double-float ((n) (double-double-float) * :when :both)
+  'n)
+
+#+nil
+(defun %double-double-float (n)
+  (make-double-double-float (float n 1d0) 0d0))
+
+;; Moved to code/float.lisp, because we need this relatively early in
+;; the build process to handle float and real types.
+#+nil
+(defun %double-double-float (n)
+  (typecase n
+    (fixnum
+     (%make-double-double-float (float n 1d0) 0d0))
+    (single-float
+     (%make-double-double-float (float n 1d0) 0d0))
+    (double-float
+     (%make-double-double-float (float n 1d0) 0d0))
+    (double-double-float
+     n)
+    (bignum
+     (bignum:bignum-to-float n 'double-double-float))
+    (ratio
+     (kernel::float-ratio n 'double-double-float))))
+
+#+double-double
+(progn
+(defknown double-double-float-p (t)
+  boolean
+  (movable foldable flushable))
+
+(defknown %make-double-double-float (double-float double-float)
+  double-double-float
+  (movable foldable flushable))
+
+
+(defknown double-double-hi (double-double-float)
+  double-float
+  (movable foldable flushable))
+
+(defknown double-double-lo (double-double-float)
+  double-float
+  (movable foldable flushable))
+
+) ; progn
+
+#+double-double
+(deftransform float-sign ((float &optional float2)
+			  (double-double-float &optional double-double-float) *)
+  (if float2
+      (let ((temp (gensym)))
+	`(let ((,temp (abs float2)))
+	   (if (minusp (float-sign (double-double-hi float)))
+	       (- ,temp)
+	       ,temp)))
+      '(if (minusp (float-sign (double-double-hi float))) -1w0 1w0)))
+
+#+double-double
+(deftransform cis ((x) (double-double-float) *)
+  `(multiple-value-bind (s c)
+       (kernel::dd-%sincos x)
+     (complex c s)))
+
+
+
 (declaim (inline quick-two-sum))
 (defun quick-two-sum (a b)
   "Computes fl(a+b) and err(a+b), assuming |a| >= |b|"

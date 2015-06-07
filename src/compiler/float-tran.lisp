@@ -38,7 +38,7 @@
 (deftransform %double-float ((n) (double-float) * :when :both)
   'n)
 
-#+double-double
+#+(and nil double-double)
 (progn
 (defknown %double-double-float (real)
   double-double-float
@@ -364,7 +364,7 @@
   (values (signed-byte 32) (unsigned-byte 32))
   (movable foldable flushable))
 
-#+double-double
+#+(and nil double-double)
 (progn
 (defknown double-double-float-p (t)
   boolean
@@ -401,7 +401,7 @@
 	  (if (minusp (double-float-high-bits float)) (- ,temp) ,temp)))
       '(if (minusp (double-float-high-bits float)) -1d0 1d0)))
 
-#+double-double
+#+(and nil double-double)
 (deftransform float-sign ((float &optional float2)
 			  (double-double-float &optional double-double-float) *)
   (if float2
@@ -778,7 +778,7 @@
        (%sincos x)
      (complex c s)))
 
-#+double-double
+#+(and nil double-double)
 (deftransform cis ((x) (double-double-float) *)
   `(multiple-value-bind (s c)
        (kernel::dd-%sincos x)
