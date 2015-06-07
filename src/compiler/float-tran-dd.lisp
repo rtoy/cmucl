@@ -57,8 +57,6 @@
     (ratio
      (kernel::float-ratio n 'double-double-float))))
 
-#+double-double
-(progn
 (defknown double-double-float-p (t)
   boolean
   (movable foldable flushable))
@@ -76,9 +74,6 @@
   double-float
   (movable foldable flushable))
 
-) ; progn
-
-#+double-double
 (deftransform float-sign ((float &optional float2)
 			  (double-double-float &optional double-double-float) *)
   (if float2
@@ -89,7 +84,6 @@
 	       ,temp)))
       '(if (minusp (float-sign (double-double-hi float))) -1w0 1w0)))
 
-#+double-double
 (deftransform cis ((x) (double-double-float) *)
   `(multiple-value-bind (s c)
        (kernel::dd-%sincos x)
