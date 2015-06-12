@@ -1129,61 +1129,6 @@ length LEN and type TYPE."
 
 ;;; unistd.h
 
-(defun sub-unix-execve (program arg-list env-list)
-  (let ((argv nil)
-	(argv-bytes 0)
-	(envp nil)
-	(envp-bytes 0)
-	result error-code)
-    (unwind-protect
-	(progn
-	  ;; Blast the stuff into the proper format
-	  (multiple-value-setq
-	      (argv argv-bytes)
-	    (string-list-to-c-strvec arg-list))
-	  (multiple-value-setq
-	      (envp envp-bytes)
-	    (string-list-to-c-strvec env-list))
-	  ;;
-	  ;; Now do the system call
-	  (multiple-value-setq
-	      (result error-code)
-	    (int-syscall ("execve"
-			  c-string system-area-pointer system-area-pointer)
-			 program argv envp)))
-      ;; 
-      ;; Deallocate memory
-      (when argv
-	(system:deallocate-system-memory argv argv-bytes))
-      (when envp
-	(system:deallocate-system-memory envp envp-bytes)))
-    (values result error-code)))
-
-;;;; UNIX-EXECVE
-
-(defun unix-execve (program &optional arg-list
-			    (environment *environment-list*))
-  _N"Executes the Unix execve system call.  If the system call suceeds, lisp
-   will no longer be running in this process.  If the system call fails this
-   function returns two values: NIL and an error code.  Arg-list should be a
-   list of simple-strings which are passed as arguments to the exec'ed program.
-   Environment should be an a-list mapping symbols to simple-strings which this
-   function bashes together to form the environment for the exec'ed program."
-  (check-type program simple-string)
-  (let ((env-list (let ((envlist nil))
-		    (dolist (cons environment)
-		      (push (if (cdr cons)
-				(concatenate 'simple-string
-					     (string (car cons)) "="
-					     (cdr cons))
-				(car cons))
-			    envlist))
-		    envlist)))
-    (sub-unix-execve (%name->file program) arg-list env-list)))
-
-
-(defmacro round-bytes-to-words (n)
-  `(logand (the fixnum (+ (the fixnum ,n) 3)) (lognot 3)))
 
 (defun unix-chown (path uid gid)
   _N"Given a file path, an integer user-id, and an integer group-id,
@@ -1327,37 +1272,6 @@ length LEN and type TYPE."
    process process to the specified ones.  NIL and an error number is
    returned if the call fails."
   (void-syscall ("setregid" int int) rgid egid))
-
-(defun unix-fork ()
-  _N"Executes the unix fork system call.  Returns 0 in the child and the pid
-   of the child in the parent if it works, or NIL and an error number if it
-   doesn't work."
-  (int-syscall ("fork")))
-
-;; Environment maninpulation; man getenv(3)
-(def-alien-routine ("getenv" unix-getenv) c-call:c-string
-  (name c-call:c-string) 
-  _N"Get the value of the environment variable named Name.  If no such
-  variable exists, Nil is returned.")
-
-(def-alien-routine ("setenv" unix-setenv) c-call:int
-  (name c-call:c-string)
-  (value c-call:c-string)
-  (overwrite c-call:int)
-  _N"Adds the environment variable named Name to the environment with
-  the given Value if Name does not already exist. If Name does exist,
-  the value is changed to Value if Overwrite is non-zero.  Otherwise,
-  the value is not changed.")
-
-(def-alien-routine ("putenv" unix-putenv) c-call:int
-  (name c-call:c-string)
-  _N"Adds or changes the environment.  Name-value must be a string of
-  the form \"name=value\".  If the name does not exist, it is added.
-  If name does exist, the value is updated to the given value.")
-
-(def-alien-routine ("unsetenv" unix-unsetenv) c-call:int
-  (name c-call:c-string)
-  _N"Removes the variable Name from the environment")
 
 ;;; Unix-link creates a hard link from name2 to name1.
 
@@ -1887,61 +1801,6 @@ in at a time in poll.")
 
 (export '(unix-file-kind unix-maybe-prepend-current-directory
 	  unix-resolve-links unix-simplify-pathname))
-
-;;;
-;;; STRING-LIST-TO-C-STRVEC	-- Internal
-;;; 
-;;; STRING-LIST-TO-C-STRVEC is a function which takes a list of
-;;; simple-strings and constructs a C-style string vector (strvec) --
-;;; a null-terminated array of pointers to null-terminated strings.
-;;; This function returns two values: a sap and a byte count.  When the
-;;; memory is no longer needed it should be deallocated with
-;;; vm_deallocate.
-;;; 
-(defun string-list-to-c-strvec (string-list)
-  ;;
-  ;; Make a pass over string-list to calculate the amount of memory
-  ;; needed to hold the strvec.
-  (let ((string-bytes 0)
-	(vec-bytes (* 4 (1+ (length string-list)))))
-    (declare (fixnum string-bytes vec-bytes))
-    (dolist (s string-list)
-      (check-type s simple-string)
-      (incf string-bytes (round-bytes-to-words (1+ (length s)))))
-    ;;
-    ;; Now allocate the memory and fill it in.
-    (let* ((total-bytes (+ string-bytes vec-bytes))
-	   (vec-sap (system:allocate-system-memory total-bytes))
-	   (string-sap (sap+ vec-sap vec-bytes))
-	   (i 0))
-      (declare (type (and unsigned-byte fixnum) total-bytes i)
-	       (type system:system-area-pointer vec-sap string-sap))
-      (dolist (s string-list)
-	(declare (simple-string s))
-	(let ((n (length s)))
-	  ;; 
-	  ;; Blast the string into place
-	  #-unicode
-	  (kernel:copy-to-system-area (the simple-string s)
-				      (* vm:vector-data-offset vm:word-bits)
-				      string-sap 0
-				      (* (1+ n) vm:byte-bits))
-	  #+unicode
-	  (progn
-	    ;; FIXME: Do we need to apply some kind of transformation
-	    ;; to convert Lisp unicode strings to C strings?  Utf-8?
-	    (dotimes (k n)
-	      (setf (sap-ref-8 string-sap k)
-		    (logand #xff (char-code (aref s k)))))
-	    (setf (sap-ref-8 string-sap n) 0))
-	  ;; 
-	  ;; Blast the pointer to the string into place
-	  (setf (sap-ref-sap vec-sap i) string-sap)
-	  (setf string-sap (sap+ string-sap (round-bytes-to-words (1+ n))))
-	  (incf i 4)))
-      ;; Blast in last null pointer
-      (setf (sap-ref-sap vec-sap i) (int-sap 0))
-      (values vec-sap total-bytes))))
 
 ;;; Stuff not yet found in the header files...
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

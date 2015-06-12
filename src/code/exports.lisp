@@ -357,6 +357,15 @@
 	   "FIONREAD"
 	   "TERMINAL-SPEEDS"
 	   )
+  (:export
+   ;; For asdf
+   "UNIX-GETENV"
+   "UNIX-SETENV"
+   "UNIX-PUTENV"
+   "UNIX-UNSETENV"
+   ;; For slime
+   "UNIX-EXECVE"
+   "UNIX-FORK")
   #-(or linux solaris)
   (:export "TCHARS"
 	   "LTCHARS"
