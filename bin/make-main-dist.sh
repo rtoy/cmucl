@@ -140,6 +140,8 @@ esac
 
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/contrib/unix
 install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/unix/$UCONTRIB.$FASL $DESTDIR/lib/cmucl/lib/contrib/unix
+install ${GROUP} ${OWNER} -m 0644 src/contrib/load-unix.lisp $DESTDIR/lib/cmucl/lib/contrib
+install ${GROUP} ${OWNER} -m 0644 src/contrib/unix/${UCONTRIB}.lisp $DESTDIR/lib/cmucl/lib/contrib/unix
 
 # Copy the source files for asdf and defsystem
 for f in `(cd src; find contrib/asdf contrib/defsystem -type f -print | grep -v CVS)`
