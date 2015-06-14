@@ -1366,7 +1366,16 @@
 			(error (intl:gettext "No default clause allowed in ~S: ~S") name case)
 			(push `(t nil ,@(rest case)) clauses)))
 		   ((and (eq name 'case))
-		    (error (intl:gettext "T and OTHERWISE may not be used as key designators for ~A") name))
+		    (let ((key (first case)))
+		      (error 'kernel:invalid-case
+			     :name name
+			     :format-control (intl:gettext
+					      "~<~A is a key designator only in the final otherwise-clause. ~
+                                              Use (~A) to use it as a normal-clause or move the clause to the ~
+                                              correct position.~:@>")
+			     :format-arguments (list (list key key))
+			     :references (list '(:ansi-cl :section (5 3))
+					       (list :ansi-cl :macro name)))))
 		   ((eq (first case) t)
 		    ;; The key T is normal clause, because it's not
 		    ;; the last clause.
