@@ -14693,7 +14693,11 @@ msgid "No default clause allowed in ~S: ~S"
 msgstr ""
 
 #: src/code/macros.lisp
-msgid "T and OTHERWISE may not be used as key designators for ~A"
+msgid ""
+"~<~A is a key designator only in the final otherwise-clause. ~\n"
+"                                              Use (~A) to use it as a "
+"normal-clause or move the clause to the ~\n"
+"                                              correct position.~:@>"
 msgstr ""
 
 #: src/code/macros.lisp
