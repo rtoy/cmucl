@@ -38,3 +38,39 @@
        t)
      (t ()
        nil))))
+
+;; Functions for testing issue-3
+(defun sqr (x)
+  (expt x 2))
+
+(define-compiler-macro sqr (x)
+  `(expt ,x 2))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+(defmacro with-square-check (&body body &environment env)
+  (let ((text (if (compiler-macro-function 'sqr env)
+                  "Yes"
+                  "No")))
+    `(progn
+       (format t "SQUARE compiler macro present: ~A.~%" ,text)
+       ,@body))))
+
+
+(defun test/absent ()
+  (with-square-check
+    (sqr 2)))
+
+(defun test/present ()
+  (flet ((sqr (x)
+           (print (expt x 3))))
+    (with-square-check
+      (sqr 2))))
+
+(define-test issue.3
+    (:tag :issues)
+  (assert-prints "SQUARE compiler macro present: Yes."
+		 (test/absent))
+  (assert-prints "SQUARE compiler macro present: No.
+
+8"
+		 (test/present)))
