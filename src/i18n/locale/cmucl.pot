@@ -14689,10 +14689,6 @@ msgid "~S -- Bad clause in ~S."
 msgstr ""
 
 #: src/code/macros.lisp
-msgid "No default clause allowed in ~S: ~S"
-msgstr ""
-
-#: src/code/macros.lisp
 msgid ""
 "~<~A is a key designator only in the final otherwise-clause. ~\n"
 "                                              Use (~A) to use it as a "
