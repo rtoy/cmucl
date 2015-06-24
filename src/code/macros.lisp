@@ -667,7 +667,7 @@
 	  ((and environment
 		(let ((name (car form)))
 		  (dolist (x (c::lexenv-functions environment) nil)
-		    (when (and (eq (car x) name)
+		    (when (and (eq (nth-value 1 (valid-function-name-p (car x))) name)
 			       (not (c::defined-function-p (cdr x))))
 		      (return t)))))
 	   (expand-or-get-setf-inverse form environment))

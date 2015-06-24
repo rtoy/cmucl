@@ -74,3 +74,22 @@
 
 8"
 		 (test/present)))
+
+(defmacro xpop (place &environment env)
+  (multiple-value-bind (dummies vals new setter getter)
+      (get-setf-expansion place env)
+    `(let* (,@(mapcar #'list dummies vals) (,(car new) ,getter))
+      (if ,(cdr new) (error "Can't expand this."))
+      (prog1 (car ,(car new))
+    (setq ,(car new) (cdr ,(car new)))
+    ,setter))))
+
+(defsetf frob (x) (value) 
+     `(setf (car ,x) ,value))
+
+(define-test issue.7
+    (:tag :issues)
+  (assert-error 'error
+		(let ((z (list 1 2)))
+		  (flet ((frob (x) (cdr x)))
+		    (xpop (frob z))))))
