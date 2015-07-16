@@ -48,6 +48,7 @@ New in this release:
 
 
   * ANSI compliance fixes:
+    * See Issue #3, #4, #5, #7.
 
   * Bugfixes:
     * On ppc machines with clock speeds over 2 GHz or so,
@@ -76,6 +77,10 @@ New in this release:
       exceptions for the special functions.
     * Fix compiler warnings in motif about destructive functions
       discarding their results.
+    * Move back some UNIX functionality back into the core.  asdf
+      wants unxi-getenv and slime wants unix-execve and unix-fork.
+    * Increase *ERROR-PRINT-LINES* to 10.
+    * Updated FreeBSD 9.3 support for building motifd.
 
   * Trac Tickets:
     * Ticket #54 fixed.
@@ -84,7 +89,12 @@ New in this release:
     * Ticket #112 fixed.
 
   * Gitlab tickets:
-    * Issue #1 fixed: Handle funcall in compiler macro functions.
+    * Issue #1: Handle funcall in compiler macro functions.
+    * Issue #5: Give better error message when using T in CASE.
+    * Issue #4: ELT on lists does not signal an error when given
+      invalid index.
+    * Issue #3: Shadowing compiler macro functions.
+    * Issue #7: Local functions and get-setf-expansions
 
   * Other changes:
     * Cross compile scripts from x86 to sparc and ppc updated to work
