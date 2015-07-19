@@ -1,0 +1,39 @@
+Name:
+	CLX Inspector.
+
+Package Name:
+	INSPECT
+
+Description:
+	Adds another inspector style as an alternative to the console
+	inspector. Inspecting objects pops up windows with the
+	contents of the object. The values of the object are updated
+	in the background. Multiple windows can be displayed at the
+	same time.
+	
+
+Author:
+	Original by Skef Wholey. Ported to CLX by Christopher Hoover
+	with "minor tweaks" by Bill Chiles. Updated and enhanced by
+	Fred Gilham.
+
+Net Address:
+        fred@sunbot.homedns.org    
+
+Copyright Status:
+ 	CMUCL public domain code. No Warranty.
+
+Files:
+	clx-inspector.lisp
+	
+
+How to Get:
+        Comes with CMUCL contrib library.
+
+Portability:
+	Depends on CMUCL-specific features.
+
+Instructions:
+	(require :clx-inspector)
+	(inspect <object>) Once the window pops up, you can type "h"
+	to pop up a window of instructions.

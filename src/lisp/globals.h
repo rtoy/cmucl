@@ -66,7 +66,7 @@ extern void globals_init(void);
 #define EXTERN(name,bytes) .extern name bytes
 #endif
 #ifdef sparc
-#ifdef SVR4
+#if defined(SVR4) || defined(FEATURE_ELF)
 #define EXTERN(name,bytes) .global name
 #else
 #define EXTERN(name,bytes) .global _ ## name

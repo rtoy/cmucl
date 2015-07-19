@@ -1,8 +1,4 @@
 # -*- Mode: makefile -*-
-PATH1 = ../../src/lisp
-vpath %.h $(PATH1)
-vpath %.c $(PATH1)
-vpath %.S $(PATH1)
 CPPFLAGS = -I. -I$(PATH1)
 
 # For Mac OS X 10.2, gcc3 is appropriate.  For 10.4, gcc (gcc 4.0) is ok.  But

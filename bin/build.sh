@@ -251,7 +251,7 @@ buildit
 
 # Asdf and friends are part of the base install, so we need to build
 # them now.
-$TARGET/lisp/lisp -noinit -nositeinit -batch "$@" << EOF || exit 3
+$TARGET/lisp/lisp -noinit -nositeinit -batch << EOF || exit 3
 (in-package :cl-user)
 (setf (ext:search-list "target:")
       '("$TARGET/" "src/"))
@@ -260,6 +260,12 @@ $TARGET/lisp/lisp -noinit -nositeinit -batch "$@" << EOF || exit 3
 
 (compile-file "modules:asdf/asdf")
 (compile-file "modules:defsystem/defsystem")
+(intl::install)
+(ext:without-package-locks
+  (let ((path #-linux "modules:unix/unix"
+              #+linux "modules:unix/unix-glibc2"))
+    (ensure-directories-exist (compile-file-pathname path))
+    (compile-file path)))
 EOF
 
 

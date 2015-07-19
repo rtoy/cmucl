@@ -10,6 +10,10 @@
 ;;;;
 ;;;;   lisp -noinit -load tests/run-tests.lisp -eval '(progn (cmucl-test-runner:load-test-files) (cmucl-test-runner:run-test <list>))'
 ;;;;
+;;;; where <list> is a list of the test names such as "ISSUES-TESTS",
+;;;; "IRRAT-TESTS", etc.  The test names are basically the file name
+;;;; with a suffix of "-TESTS".
+;;;;
 ;;;; Note that you cannot run these tests from a binary created during
 ;;;; a build process. You must run
 ;;;;

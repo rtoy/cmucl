@@ -161,3 +161,6 @@
 
 (defmodule :cmu-contribs
     "modules:contrib")
+
+(defmodule :unix
+  "modules:load-unix")
