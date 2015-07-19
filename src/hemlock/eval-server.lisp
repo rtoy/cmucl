@@ -223,7 +223,7 @@
 		  (find-if-not #'null array
 			       :from-end t
 			       :end current)))))
-    (delete nil array)
+    (setf array (delete nil array))
     (setf (server-info-error-index server)
 	  (position current array))))
 

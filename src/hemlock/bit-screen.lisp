@@ -1581,10 +1581,11 @@
     ;; Probably shoulds insertion sort them, but I'm lame.
     ;;
     (xlib:with-state (xparent)
-      (sort affected-windows #'<
-	    :key #'(lambda (window)
-		     (xlib:drawable-y
-		      (bitmap-hunk-xwindow (window-hunk window))))))
+      (setf affected-windows
+	    (sort affected-windows #'<
+		  :key #'(lambda (window)
+			   (xlib:drawable-y
+			    (bitmap-hunk-xwindow (window-hunk window)))))))
     (let ((start 0))
       (declare (fixnum start))
       (do ((windows affected-windows (cdr windows)))

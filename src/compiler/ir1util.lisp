@@ -1665,7 +1665,7 @@
   "The value for *Print-Level* when printing compiler error messages.")
 (defvar *error-print-length* 5
   "The value for *Print-Length* when printing compiler error messages.")
-(defvar *error-print-lines* 5
+(defvar *error-print-lines* 10
   "The value for *Print-Lines* when printing compiler error messages.")
 
 (defvar *enclosing-source-cutoff* 1

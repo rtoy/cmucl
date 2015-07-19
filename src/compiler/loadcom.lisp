@@ -32,6 +32,7 @@
 (load "vm:vm-typetran")
 (load "vm:vm-tran")
 (load "c:float-tran")
+(load "c:float-tran-dd")
 (load "c:saptran")
 (load "c:srctran")
 (load "c:locall")
