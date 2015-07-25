@@ -667,7 +667,7 @@
 	  ((and environment
 		(let ((name (car form)))
 		  (dolist (x (c::lexenv-functions environment) nil)
-		    (when (and (eq (car x) name)
+		    (when (and (eq (nth-value 1 (valid-function-name-p (car x))) name)
 			       (not (c::defined-function-p (cdr x))))
 		      (return t)))))
 	   (expand-or-get-setf-inverse form environment))
@@ -1347,7 +1347,7 @@
 ;;; generate an ERROR form.  (This is for CCASE and ECASE which allow
 ;;; using T and OTHERWISE as regular keys.)
 ;;;
-(defun case-body (name keyform cases multi-p test errorp proceedp &optional allow-otherwise)
+(defun case-body (name keyform cases multi-p test proceedp &optional allow-otherwise)
   (let ((keyform-value (gensym))
 	(clauses ())
 	(keys ()))
@@ -1362,11 +1362,18 @@
 		    ;; The CLHS says OTHERWISE clause is an OTHERWISE clause
 		    ;; only if it's the last case.  Otherwise, it's just a
 		    ;; normal clause.
-		    (if errorp
-			(error (intl:gettext "No default clause allowed in ~S: ~S") name case)
-			(push `(t nil ,@(rest case)) clauses)))
+		    (push `(t nil ,@(rest case)) clauses))
 		   ((and (eq name 'case))
-		    (error (intl:gettext "T and OTHERWISE may not be used as key designators for ~A") name))
+		    (let ((key (first case)))
+		      (error 'kernel:invalid-case
+			     :name name
+			     :format-control (intl:gettext
+					      "~<~A is a key designator only in the final otherwise-clause. ~
+                                              Use (~A) to use it as a normal-clause or move the clause to the ~
+                                              correct position.~:@>")
+			     :format-arguments (list (list key key))
+			     :references (list '(:ansi-cl :section (5 3))
+					       (list :ansi-cl :macro name)))))
 		   ((eq (first case) t)
 		    ;; The key T is normal clause, because it's not
 		    ;; the last clause.
@@ -1389,7 +1396,7 @@
 	     (push (first case) keys)
 	     (push `((,test ,keyform-value
 			    ',(first case)) nil ,@(rest case)) clauses))))
-    (case-body-aux name keyform keyform-value clauses keys errorp proceedp
+    (case-body-aux name keyform keyform-value clauses keys proceedp
 		   allow-otherwise
 		   `(,(if multi-p 'member 'or) ,@keys))))
 
@@ -1401,7 +1408,7 @@
 ;;; any function using the case macros, regardless of whether they are needed.
 ;;;
 (defun case-body-aux (name keyform keyform-value clauses keys
-		      errorp proceedp allow-otherwise expected-type)
+		      proceedp allow-otherwise expected-type)
   (if proceedp
       (let ((block (gensym))
 	    (again (gensym)))
@@ -1423,7 +1430,7 @@
 	 ,keyform-value ; prevent warnings when key not used eg (case key (t))
 	 (cond
 	  ,@(nreverse clauses)
-	  ,@(if (or errorp allow-otherwise)
+	  ,@(if allow-otherwise
 		`((t (error 'conditions::case-failure
 			    :name ',name
 			    :datum ,keyform-value
@@ -1451,39 +1458,39 @@
   Evaluates the Forms in the first clause with a Key EQL to the value
   of Keyform.  If a singleton key is T or Otherwise then the clause is
   a default clause."
-  (case-body 'case keyform cases t 'eql nil nil))
+  (case-body 'case keyform cases t 'eql nil))
 
 (defmacro ccase (keyform &body cases)
   "CCASE Keyform {({(Key*) | Key} Form*)}*
   Evaluates the Forms in the first clause with a Key EQL to the value of
   Keyform.  If none of the keys matches then a correctable error is
   signalled."
-  (case-body 'ccase keyform cases t 'eql nil t t))
+  (case-body 'ccase keyform cases t 'eql t t))
 
 (defmacro ecase (keyform &body cases)
   "ECASE Keyform {({(Key*) | Key} Form*)}*
   Evaluates the Forms in the first clause with a Key EQL to the value of
   Keyform.  If none of the keys matches then an error is signalled."
-  (case-body 'ecase keyform cases t 'eql nil nil t))
+  (case-body 'ecase keyform cases t 'eql nil t))
 
 (defmacro typecase (keyform &body cases)
   "TYPECASE Keyform {(Type Form*)}*
   Evaluates the Forms in the first clause for which TYPEP of Keyform
   and Type is true.  If a singleton key is T or Otherwise then the
   clause is a default clause."
-  (case-body 'typecase keyform cases nil 'typep nil nil))
+  (case-body 'typecase keyform cases nil 'typep nil))
 
 (defmacro ctypecase (keyform &body cases)
   "CTYPECASE Keyform {(Type Form*)}*
   Evaluates the Forms in the first clause for which TYPEP of Keyform and Type
   is true.  If no form is satisfied then a correctable error is signalled."
-  (case-body 'ctypecase keyform cases nil 'typep nil t t))
+  (case-body 'ctypecase keyform cases nil 'typep t t))
 
 (defmacro etypecase (keyform &body cases)
   "ETYPECASE Keyform {(Type Form*)}*
   Evaluates the Forms in the first clause for which TYPEP of Keyform and Type
   is true.  If no form is satisfied then an error is signalled."
-  (case-body 'etypecase keyform cases nil 'typep nil nil t))
+  (case-body 'etypecase keyform cases nil 'typep nil t))
 
 
 ;;;; ASSERT and CHECK-TYPE.

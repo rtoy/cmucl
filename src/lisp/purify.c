@@ -1664,7 +1664,7 @@ purify(lispobj static_roots, lispobj read_only_roots)
     printf(" bindings");
     fflush(stdout);
 #endif
-#if !defined(ibmrt) && !defined(i386) && !defined(__x86_64)
+#if !defined(BINDING_STACK_POINTER)
     pscav(binding_stack, current_binding_stack_pointer - binding_stack, FALSE);
 #else
     pscav(binding_stack,
@@ -1788,7 +1788,7 @@ purify(lispobj static_roots, lispobj read_only_roots)
     verify_space((lispobj *) static_space, static_free - static_space);
 #endif
     
-#if !defined(ibmrt) && !defined(i386) && !defined(__x86_64) && !((defined(sparc) || (defined(DARWIN) && defined(__ppc__))) && defined(GENCGC))
+#if !defined(ALLOCATION_POINTER)
     current_dynamic_space_free_pointer = current_dynamic_space;
 #else
 #if defined(WANT_CGC) && defined(X86_CGC_ACTIVE_P)

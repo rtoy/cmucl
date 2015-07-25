@@ -67,7 +67,11 @@
 	  "target:assembly/ppc/array.assem"
 	  "target:assembly/ppc/arith.assem"
 	  "target:assembly/ppc/alloc.assem"))
-    
+    ,@(when (c:backend-featurep :arm)
+	'("target:assembly/arm/assem-rtns.assem"
+	  "target:assembly/arm/array.assem"
+	  "target:assembly/arm/arith.assem"
+	  "target:assembly/arm/alloc.assem"))    
     
 
     "target:code/type-boot"

@@ -448,7 +448,8 @@
    set with SETF."
   (let ((found (and env
 		    (cdr (assoc name (c::lexenv-functions env)
-				:test #'equal)))))
+				:key #'(lambda (e)
+					 (nth-value 1 (valid-function-name-p e))))))))
     (unless (eq (cond ((c::defined-function-p found)
 		       (c::defined-function-inlinep found))
 		      (found :notinline)
