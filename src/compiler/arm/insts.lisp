@@ -865,7 +865,7 @@
       (emit-format-mov16 segment
 			 (condition-code-encoding cond)
 			 #b001
-			 #b10110
+			 #b10100
 			 0
 			 (reg-tn-encoding dst)
 			 0)))))
@@ -889,7 +889,7 @@
 			 (reg-tn-encoding dst)
 			 (ldb (byte 12 0) src)))
      (fixup
-      (note-fixup segment :mov3 src)
+      (note-fixup segment :movw src)
       (emit-format-mov16 segment
 			 (condition-code-encoding cond)
 			 #b001
@@ -1907,8 +1907,8 @@
 	      (unless (zerop hi)
 		(inst movt reg hi))))))
     (fixup
-     (inst movt reg value)
-     (inst movw reg value))))
+     (inst movw reg value)
+     (inst movt reg value))))
 
 (define-instruction-macro li (reg value)
   `(%li ,reg, value))

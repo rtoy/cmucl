@@ -18,12 +18,12 @@ ASFLAGS = -g
 
 ARCH_SRC = arm-arch.c
 
-NM = nm -gp
+NM = $(PATH1)/linux-nm
 DEPEND_FLAGS = -MM
 
 ASSEM_SRC = arm-assem.S undefineds-assem.S
 OS_SRC += Linux-os.c os-common.c elf.c
-OS_LIBS = -ldl
+OS_LIBS = -ldl -lutil
 OS_LINK_FLAGS = -marm -rdynamic -Wl,-Map,foo -Wl,-z,noexecstack
 
 EXEC_FINAL_OBJ = exec-final.o
