@@ -139,7 +139,8 @@
      (make-sequence-of-type (result-type-or-lose type) length))))
   
 (defun list-elt* (sequence index)
-  (declare (type list sequence))
+  (declare (type list sequence)
+	   (type kernel:index index))
   (do ((count index (1- count))
        (list sequence (cdr list)))
       ((= count 0)
@@ -152,13 +153,7 @@
   "Returns the element of SEQUENCE specified by INDEX."
   (etypecase sequence
     (list
-     (do ((count index (1- count))
-	  (list sequence (cdr list)))
-	 ((= count 0)
-	  (if (endp list)
-	      (signal-index-too-large-error sequence index)
-	      (car list)))
-       (declare (type (integer 0) count))))
+     (list-elt* sequence index))
     (vector
      (when (>= index (length sequence))
        (signal-index-too-large-error sequence index))
