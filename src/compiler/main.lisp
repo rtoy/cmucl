@@ -1229,7 +1229,8 @@
 	     (do-eval-when-stuff
 	      (cadr form) (cddr form)
 	      #'(lambda (forms)
-		  (process-progn forms path))
+		  (process-progn forms path)
+		  (compile-top-level-lambdas '() t))
 	      t))
 	    ((macrolet)
 	     (unless (>= (length form) 2)
