@@ -46,7 +46,7 @@ fdlibm_setexception(double x, enum FDLIBM_EXCEPTION type)
     double ret;
     
     switch (type) {
-      case 0:
+      case FDLIBM_DIVIDE_BY_ZERO:
           /* Division by zero. Use the sign of x to get the correct
            *  signed infinity
            */
@@ -54,17 +54,17 @@ fdlibm_setexception(double x, enum FDLIBM_EXCEPTION type)
           
           ret = copysign(INFINITY, x);
           break;
-      case 1:
+      case FDLIBM_UNDERFLOW:
           /* Underflow. Use the sign of x to get a signed zero. */
           feraiseexcept(FE_UNDERFLOW);
           ret = copysign(0.0, x);
           break;
-      case 2:
+      case FDLIBM_OVERFLOW:
           /* overflow */
           feraiseexcept(FE_OVERFLOW);
           ret = copysign(INFINITY, x);
           break;
-      case 3:
+      case FDLIBM_INVALID:
       {
           /* invalid */
 
@@ -88,6 +88,10 @@ fdlibm_setexception(double x, enum FDLIBM_EXCEPTION type)
           
           break;
       }
+    default:
+      /* Shouldn't happen! */
+      ret = 0.0;
+      break;
     }
 
     return ret;
