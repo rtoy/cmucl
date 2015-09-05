@@ -37,7 +37,7 @@
 
 #define REGNAMES \
   "NL0", "NL1", "NL2", "NARGS", "CODE", "A0", "A1", "A2", \
-  "LRA", "LEXENV", "OCFP", "CFP", "CSP", "LIP"  
+    "LRA", "NULL", "LEXENV", "OCFP", "CFP", "CSP", "LIP", "PC"
 
 #define BOXED_REGISTERS { \
   reg_A0, reg_A1, reg_A2, reg_OCFP, reg_LRA, reg_LEXENV \
@@ -45,6 +45,6 @@
 
 #define SC_REG(scp, reg) (*os_sigcontext_reg(scp, reg))
 #define SC_PC(scp) (*os_sigcontext_reg(scp, reg_PC))
-#define SC_SP(scp) SC_REG(scp, reg_SP)
+#define SC_SP(scp) SC_REG(scp, reg_CSP)
 
 #endif /* ARM_LISPREGS_H */
