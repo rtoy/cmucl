@@ -88,7 +88,7 @@ GFUNCDEF(call_into_lisp)
 	/* setup up the current frame */
 	mov	reg_CFP, reg_CSP
 
-	/* Pass in the arguments */	
+	/* Pass in the arguments */
 	mov	reg_LEXENV, reg_NL0
 	cmp	reg_NL2, #1
 	ldrge	reg_A0, [reg_NL1, #0]
@@ -108,7 +108,7 @@ GFUNCDEF(call_into_lisp)
 	lsl	reg_NARGS, reg_NL2, #2
 	
 	/*
-	 * Get the Lisp stack pointer into the sp since on ARM sp is both 
+	 * Get the Lisp stack pointer into the sp since on ARM sp is both
 	 * the C and Lisp stack pointer.
 	 */
 	ldr	reg_NL0, =current_control_stack_pointer

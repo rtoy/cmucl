@@ -37,7 +37,7 @@
 
 #define REGNAMES \
   "NL0", "NL1", "NL2", "NARGS", "CODE", "A0", "A1", "A2", \
-    "LRA", "NULL", "LEXENV", "OCFP", "CFP", "CSP", "LIP", "PC"
+  "LRA", "NULL", "LEXENV", "OCFP", "CFP", "CSP", "LIP", "PC"
 
 #define BOXED_REGISTERS { \
   reg_A0, reg_A1, reg_A2, reg_OCFP, reg_LRA, reg_LEXENV \
