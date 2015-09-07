@@ -107,8 +107,8 @@
 (deftransform elt ((s i) ((simple-array * (*)) *) * :when :both)
   '(aref s i))
 
-(deftransform elt ((s i) (list *) * :when :both :policy (< safety 3))
-  '(nth i s))
+(deftransform elt ((s i) (list *) * :when :both)
+  '(lisp::list-elt* s i))
 
 (deftransform %setelt ((s i v) ((simple-array * (*)) * *) * :when :both)
   '(%aset s i v))

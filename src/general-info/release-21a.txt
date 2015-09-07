@@ -39,8 +39,16 @@ New in this release:
           codepoint. 
       * (loop for g-string being the glpyh of string ...)
         * glyphs is an alias for glpyh.
+    * The UNIX package has been split into two parts. By default the
+      UNIX package contains just enough to build CMUCL.  If you want
+      the rest of the functionality, use (require :unix).
+    * Added clx-inspector module.
+    * ASDF documentation included in html, info, and pdf formats in
+      contrib/asdf/doc/.
+
 
   * ANSI compliance fixes:
+    * See Issue #3, #4, #5, #7.
 
   * Bugfixes:
     * On ppc machines with clock speeds over 2 GHz or so,
@@ -67,14 +75,26 @@ New in this release:
     * All unit tests pass successfully on darwin/x86, linux/x86, and
       solaris/sparc.  Darwin/ppc fails most of the tests dealing with
       exceptions for the special functions.
- 
-
+    * Fix compiler warnings in motif about destructive functions
+      discarding their results.
+    * Move back some UNIX functionality back into the core.  asdf
+      wants unxi-getenv and slime wants unix-execve and unix-fork.
+    * Increase *ERROR-PRINT-LINES* to 10.
+    * Updated FreeBSD 9.3 support for building motifd.
 
   * Trac Tickets:
     * Ticket #54 fixed.
     * Ticket #95 fixed.
     * Ticket #110 fixed.
     * Ticket #112 fixed.
+
+  * Gitlab tickets:
+    * Issue #1: Handle funcall in compiler macro functions.
+    * Issue #5: Give better error message when using T in CASE.
+    * Issue #4: ELT on lists does not signal an error when given
+      invalid index.
+    * Issue #3: Shadowing compiler macro functions.
+    * Issue #7: Local functions and get-setf-expansions
 
   * Other changes:
     * Cross compile scripts from x86 to sparc and ppc updated to work
