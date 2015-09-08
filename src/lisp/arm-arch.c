@@ -18,12 +18,20 @@
 #include "breakpoint.h"
 #include "interr.h"
 
-#define NOT_IMPLEMENTED(message, value) \
-    do { \
-        fprintf(stderr, "%s: NOT IMPLEMENTED: " message "\n", \
-                __FUNCTION__, value);                                     \
-        abort(); \
+/* 
+ * Print out a not-implemented message where "x" is the desired
+ * message.  "x" must of of the form "(stderr, <printf-string>, args,
+ * ...)".
+ */
+#define NOT_IMPLEMENTED_MESSAGE(x) \
+    do {                                                        \
+        fprintf(stderr, "%s is not implemented", __FUNCTION__); \
+        fprintf x;;                                             \
+        fprintf(stderr, "\n");                                  \
+        abort();                                                \
     } while (0)
+
+#define NOT_IMPLEMENTED() NOT_IMPLEMENTED_MESSAGE((stderr, "."))
 
 char *
 arch_init(fpu_mode_t mode)
@@ -34,43 +42,43 @@ arch_init(fpu_mode_t mode)
 os_vm_address_t
 arch_get_bad_addr(HANDLER_ARGS)
 {
-    NOT_IMPLEMENTED("", 0);
+    NOT_IMPLEMENTED();
 }
 
 void
 arch_skip_instruction(os_context_t *context)
 {
-    NOT_IMPLEMENTED("", 0);
+    NOT_IMPLEMENTED();
 }
 
 unsigned char *
 arch_internal_error_arguments(os_context_t *scp)
 {
-    NOT_IMPLEMENTED("", 0);
+    NOT_IMPLEMENTED();
 }
 
 boolean
 arch_pseudo_atomic_atomic(os_context_t *scp)
 {
-    NOT_IMPLEMENTED("", 0);
+    NOT_IMPLEMENTED();
 }
 
 void
 arch_set_pseudo_atomic_interrupted(os_context_t *scp)
 {
-    NOT_IMPLEMENTED("", 0);
+    NOT_IMPLEMENTED();
 }
 
 unsigned long
 arch_install_breakpoint(void *pc)
 {
-    NOT_IMPLEMENTED("addr: %p", pc);
+    NOT_IMPLEMENTED_MESSAGE((stderr, ": addr: %p", pc));
 }
 
 void
 arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 {
-    NOT_IMPLEMENTED("addr %p", pc);
+    NOT_IMPLEMENTED_MESSAGE((stderr, ":addr %p", pc));
 }
 
 static unsigned int *skipped_break_addr, displaced_after_inst;
@@ -80,7 +88,7 @@ static sigset_t orig_sigmask;
 void
 arch_do_displaced_inst(os_context_t *scp, unsigned long orig_inst)
 {
-    NOT_IMPLEMENTED("orig: %08lx", orig_inst);
+    NOT_IMPLEMENTED_MESSAGE((stderr, ": orig: %08lx", orig_inst));
 }
 
 static void
@@ -137,10 +145,10 @@ sigill_handler(HANDLER_ARGS)
               break;
           }
           default:
-              NOT_IMPLEMENTED("udf code: %d", udf_code);
+              NOT_IMPLEMENTED_MESSAGE((stderr, ": udf code: %d", udf_code));
         }
     } else {
-        NOT_IMPLEMENTED("unknown CODE: %d", CODE(code));
+        NOT_IMPLEMENTED_MESSAGE((stderr, ": unknown CODE: %d", CODE(code)));
     }
 }
 
