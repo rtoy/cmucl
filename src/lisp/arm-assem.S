@@ -86,7 +86,7 @@ GFUNCDEF(call_into_lisp)
 	/* Check if we were interrupted. (Not implemented yet.) */
 
 	/* setup up the current frame */
-	mov	reg_CFP, reg_CSP
+	mov	reg_CFP, reg_NL0
 
 	/* Pass in the arguments */
 	mov	reg_LEXENV, reg_NL0
