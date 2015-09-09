@@ -26,7 +26,7 @@
 #define NOT_IMPLEMENTED(x) \
     do {                                                        \
         fprintf(stderr, "%s is not implemented", __FUNCTION__); \
-        fprintf x;;                                             \
+        fprintf x;                                             \
         fprintf(stderr, "\n");                                  \
         abort();                                                \
     } while (0)
