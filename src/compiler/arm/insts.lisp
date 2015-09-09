@@ -1729,7 +1729,7 @@
   (destructuring-bind (hi lo)
       value
     (print-immed (logior (ash hi 4) lo)
-		 stream)))
+		 stream))))
 
 (define-emitter emit-format-udf 32
   (byte 4 28) (byte 3 25) (byte 5 20) (byte 12 8) (byte 4 4) (byte 4 0))
