@@ -23,15 +23,13 @@
  * message.  "x" must of of the form "(stderr, <printf-string>, args,
  * ...)".
  */
-#define NOT_IMPLEMENTED_MESSAGE(x) \
+#define NOT_IMPLEMENTED(x) \
     do {                                                        \
         fprintf(stderr, "%s is not implemented", __FUNCTION__); \
         fprintf x;;                                             \
         fprintf(stderr, "\n");                                  \
         abort();                                                \
     } while (0)
-
-#define NOT_IMPLEMENTED() NOT_IMPLEMENTED_MESSAGE((stderr, "."))
 
 char *
 arch_init(fpu_mode_t mode)
@@ -42,43 +40,43 @@ arch_init(fpu_mode_t mode)
 os_vm_address_t
 arch_get_bad_addr(HANDLER_ARGS)
 {
-    NOT_IMPLEMENTED();
+    NOT_IMPLEMENTED((stderr, "."));
 }
 
 void
 arch_skip_instruction(os_context_t *context)
 {
-    NOT_IMPLEMENTED();
+    NOT_IMPLEMENTED((stderr, "."));
 }
 
 unsigned char *
 arch_internal_error_arguments(os_context_t *scp)
 {
-    NOT_IMPLEMENTED();
+    NOT_IMPLEMENTED((stderr, "."));
 }
 
 boolean
 arch_pseudo_atomic_atomic(os_context_t *scp)
 {
-    NOT_IMPLEMENTED();
+    NOT_IMPLEMENTED((stderr, "."));
 }
 
 void
 arch_set_pseudo_atomic_interrupted(os_context_t *scp)
 {
-    NOT_IMPLEMENTED();
+    NOT_IMPLEMENTED((stderr, "."));
 }
 
 unsigned long
 arch_install_breakpoint(void *pc)
 {
-    NOT_IMPLEMENTED_MESSAGE((stderr, ": addr: %p", pc));
+    NOT_IMPLEMENTED((stderr, ": addr: %p", pc));
 }
 
 void
 arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 {
-    NOT_IMPLEMENTED_MESSAGE((stderr, ":addr %p", pc));
+    NOT_IMPLEMENTED((stderr, ":addr %p", pc));
 }
 
 static unsigned int *skipped_break_addr, displaced_after_inst;
@@ -88,7 +86,7 @@ static sigset_t orig_sigmask;
 void
 arch_do_displaced_inst(os_context_t *scp, unsigned long orig_inst)
 {
-    NOT_IMPLEMENTED_MESSAGE((stderr, ": orig: %08lx", orig_inst));
+    NOT_IMPLEMENTED((stderr, ": orig: %08lx", orig_inst));
 }
 
 static void
@@ -132,9 +130,12 @@ sigill_handler(HANDLER_ARGS)
                   --length;
               }
 
-              printf("NOT-IMPLEMENTED: %p: \"", pc);
-              fwrite(pc + 2, 1, length, stdout);
-              printf("\"\n");
+              /*
+               * Don't want to use NOT_IMPLEMENTED here because we
+               * don't actually want to abort.  We want to continue,
+               * but print out a useful message.
+               */
+              printf("NOT-IMPLEMENTED: %p: \"%.*s\"\n", pc, length, (char*)(pc + 2));
 
               /*
                * Skip over the UDF instruction so if we can
@@ -145,10 +146,10 @@ sigill_handler(HANDLER_ARGS)
               break;
           }
           default:
-              NOT_IMPLEMENTED_MESSAGE((stderr, ": udf code: %d", udf_code));
+              NOT_IMPLEMENTED((stderr, ": udf code: %d", udf_code));
         }
     } else {
-        NOT_IMPLEMENTED_MESSAGE((stderr, ": unknown CODE: %d", CODE(code)));
+        NOT_IMPLEMENTED((stderr, ": unknown CODE: %d", CODE(code)));
     }
 }
 
