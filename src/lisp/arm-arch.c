@@ -18,19 +18,6 @@
 #include "breakpoint.h"
 #include "interr.h"
 
-/* 
- * Print out a not-implemented message where "x" is the desired
- * message.  "x" must of of the form "(stderr, <printf-string>, args,
- * ...)".
- */
-#define NOT_IMPLEMENTED(x) \
-    do {                                                        \
-        fprintf(stderr, "%s is not implemented", __FUNCTION__); \
-        fprintf x;                                             \
-        fprintf(stderr, "\n");                                  \
-        abort();                                                \
-    } while (0)
-
 char *
 arch_init(fpu_mode_t mode)
 {
@@ -40,43 +27,47 @@ arch_init(fpu_mode_t mode)
 os_vm_address_t
 arch_get_bad_addr(HANDLER_ARGS)
 {
-    NOT_IMPLEMENTED((stderr, "."));
+    lose("NOT IMPLEMENTED: %s\n", __FUNCTION__);
+    return NULL;
 }
 
 void
 arch_skip_instruction(os_context_t *context)
 {
-    NOT_IMPLEMENTED((stderr, "."));
+    lose("NOT IMPLEMENTED: %s\n", __FUNCTION__);
 }
 
 unsigned char *
 arch_internal_error_arguments(os_context_t *scp)
 {
-    NOT_IMPLEMENTED((stderr, "."));
+    lose("NOT IMPLEMENTED: %s\n", __FUNCTION__);
+    return NULL;
 }
 
 boolean
 arch_pseudo_atomic_atomic(os_context_t *scp)
 {
-    NOT_IMPLEMENTED((stderr, "."));
+    lose("NOT IMPLEMENTED: %s\n", __FUNCTION__);
+    return 0;
 }
 
 void
 arch_set_pseudo_atomic_interrupted(os_context_t *scp)
 {
-    NOT_IMPLEMENTED((stderr, "."));
+    lose("NOT IMPLEMENTED: %s\n", __FUNCTION__);
 }
 
 unsigned long
 arch_install_breakpoint(void *pc)
 {
-    NOT_IMPLEMENTED((stderr, ": addr: %p", pc));
+    lose("NOT IMPLEMEMTED: %s: addr: %p\n", __FUNCTION__, pc);
+    return 0;
 }
 
 void
 arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 {
-    NOT_IMPLEMENTED((stderr, ":addr %p", pc));
+    lose("NOT IMPLEMENTED: %s: addr %p\n", __FUNCTION__, pc);
 }
 
 static unsigned int *skipped_break_addr, displaced_after_inst;
@@ -86,7 +77,7 @@ static sigset_t orig_sigmask;
 void
 arch_do_displaced_inst(os_context_t *scp, unsigned long orig_inst)
 {
-    NOT_IMPLEMENTED((stderr, ": orig: %08lx", orig_inst));
+    lose("NOT IMPLEMENTED: %s: orig: %08x\n", __FUNCTION__, orig_inst);
 }
 
 static void
@@ -112,9 +103,8 @@ sigill_handler(HANDLER_ARGS)
               int length;
 
               if (((pc[1] >> 24) & 0xf) != 0xa) {
-                  fprintf(stderr, "ERROR: NOT-IMPLEMENTED trap not followed relative branch: 0x%08x\n",
-                          pc[1]);
-                  abort();
+                  lose("ERROR: NOT-IMPLEMENTED trap not followed relative branch: 0x%08x\n",
+                       pc[1]);
               }
 
               /*
@@ -146,10 +136,10 @@ sigill_handler(HANDLER_ARGS)
               break;
           }
           default:
-              NOT_IMPLEMENTED((stderr, ": udf code: %d", udf_code));
+              lose("Unknown udf code: %d\n", udf_code);
         }
     } else {
-        NOT_IMPLEMENTED((stderr, ": unknown CODE: %d", CODE(code)));
+        lose("Unknown CODE: %d\n", CODE(code));
     }
 }
 
