@@ -186,6 +186,8 @@ GFUNCDEF(call_into_c)
 	STORE_SYMBOL_VALUE(reg_CSP, NUMBER_STACK_POINTER)
 	ldr	reg_NARGS, =current_control_stack_pointer
 	ldr	reg_CSP, [reg_NARGS]
+	ldr	reg_NARGS, =current_control_frame_pointer
+	ldr	reg_CFP, [reg_NARGS]
 
 	/* Atomic */
 	mov	reg_NARGS, #1
