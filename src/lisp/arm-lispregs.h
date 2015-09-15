@@ -29,15 +29,15 @@
 #define reg_LRA REG(8)
 #define reg_NULL REG(9)
 #define reg_LEXENV REG(10)
-#define reg_CFP REG(11)
-#define reg_OCFP REG(12)
+#define reg_OCFP REG(11)
+#define reg_CFP REG(12)
 #define reg_CSP REG(13)
 #define reg_LIP REG(14)
 #define reg_PC REG(15)
 
 #define REGNAMES \
   "NL0", "NL1", "NL2", "NARGS", "CODE", "A0", "A1", "A2", \
-  "LRA", "LEXENV", "CFP", "OCFP", "CSP", "LIP"  
+  "LRA", "LEXENV", "OCFP", "CFP", "CSP", "LIP"  
 
 #define BOXED_REGISTERS { \
   reg_A0, reg_A1, reg_A2, reg_OCFP, reg_LRA, reg_LEXENV \
