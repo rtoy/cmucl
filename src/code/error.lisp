@@ -25,6 +25,7 @@
 	  simple-file-error simple-program-error simple-parse-error
           simple-style-warning simple-undefined-function
 	  constant-modified
+	  invalid-case
           #+stack-checking stack-overflow
           #+heap-overflow-check heap-overflow))
 
@@ -1115,7 +1116,20 @@
                      (constant-modified-function-name c))
 	     (print-references (reference-condition-references c) s)))
   (:default-initargs :references (list '(:ansi-cl :section (3 2 2 3)))))
-  
+
+;; For errors in CASE and friends.
+(define-condition invalid-case (reference-condition error)
+  ((name :initarg :name
+	 :reader invalid-case-name)
+   (format :initarg :format-control
+	   :reader invalid-case-format)
+   (args :initarg :format-arguments
+	 :reader invalid-case-format-args))
+  (:report (lambda (condition stream)
+	     (format stream "~A: " (invalid-case-name condition))
+	     (apply #'format stream (invalid-case-format condition) (invalid-case-format-args condition))
+	     (print-references (reference-condition-references condition) stream))))
+
 (define-condition arithmetic-error (error)
   ((operation :reader arithmetic-error-operation :initarg :operation
 	      :initform nil)

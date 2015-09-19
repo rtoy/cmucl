@@ -99,7 +99,7 @@ do
     install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/$d
 done
 
-for f in `(cd src/contrib; find . -type f -print | egrep -v "CVS|asdf|defsystem")`
+for f in `(cd src/contrib; find . -type f -print | egrep -v "CVS|asdf|defsystem|unix")`
 do
     FILE=`basename $f`
     DIR=`dirname $f`

@@ -16,7 +16,490 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: src/code/unix.lisp
+msgid "Syscall ~A failed: ~A"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Test for read permission"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Class not yet defined: ~S"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Test for write permission"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Test for execute permission"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Test for presence of file"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Given a file path (a string) and one of four constant modes,\n"
+"   unix-access returns T if the file is accessible with that\n"
+"   mode and NIL if not.  It also returns an errno value with\n"
+"   NIL which determines why the file was not accessible.\n"
+"\n"
+"   The access modes are:\n"
+"	r_ok     Read permission.\n"
+"	w_ok     Write permission.\n"
+"	x_ok     Execute permission.\n"
+"	f_ok     Presence of file."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Given a file path string, unix-chdir changes the current working \n"
+"   directory to the one specified."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Set user ID on execution"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Set group ID on execution"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Save text image after execution"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Read by owner"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Write by owner"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Execute (search directory) by owner"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Read by group"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Write by group"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Execute (search directory) by group"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Read by others"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Write by others"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Execute (search directory) by others"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Given a file path string and a constant mode, unix-chmod changes the\n"
+"   permission mode for that file to the one specified. The new mode\n"
+"   can be created by logically OR'ing the following:\n"
+"\n"
+"      setuidexec        Set user ID on execution.\n"
+"      setgidexec        Set group ID on execution.\n"
+"      savetext          Save text image after execution.\n"
+"      readown           Read by owner.\n"
+"      writeown          Write by owner.\n"
+"      execown           Execute (search directory) by owner.\n"
+"      readgrp           Read by group.\n"
+"      writegrp          Write by group.\n"
+"      execgrp           Execute (search directory) by group.\n"
+"      readoth           Read by others.\n"
+"      writeoth          Write by others.\n"
+"      execoth           Execute (search directory) by others.\n"
+"  \n"
+"  Thus #o444 and (logior unix:readown unix:readgrp unix:readoth)\n"
+"  are equivalent for 'mode.  The octal-base is familar to Unix users.\n"
+"\n"
+"  It returns T on successfully completion; NIL and an error number\n"
+"  otherwise."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Given an integer file descriptor and a mode (the same as those\n"
+"   used for unix-chmod), unix-fchmod changes the permission mode\n"
+"   for that file to the one specified. T is returned if the call\n"
+"   was successful."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "set the file pointer"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "increment the file pointer"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "extend the file size"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-lseek accepts a file descriptor and moves the file pointer ahead\n"
+"   a certain offset for that file.  Whence can be any of the following:\n"
+"\n"
+"   l_set        Set the file pointer.\n"
+"   l_incr       Increment the file pointer.\n"
+"   l_xtnd       Extend the file size.\n"
+"  _N"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-mkdir creates a new directory with the specified name and mode.\n"
+"   (Same as those for unix-chmod.)  It returns T upon success, otherwise\n"
+"   NIL and an error number."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-unlink removes the directory entry for the named file.\n"
+"   NIL and an error code is returned if the call fails."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Read-only flag."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Write-only flag."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Read-write flag."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Non-blocking I/O"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Append flag."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Create if nonexistant flag."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Truncate flag."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Error if already exists."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Don't assign controlling tty"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Non-blocking mode"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Synchronous writes (on ext2)"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-open opens the file whose pathname is specified by path\n"
+"   for reading and/or writing as specified by the flags argument.\n"
+"   The flags argument can be:\n"
+"\n"
+"     o_rdonly        Read-only flag.\n"
+"     o_wronly        Write-only flag.\n"
+"     o_rdwr          Read-and-write flag.\n"
+"     o_append        Append flag.\n"
+"     o_creat         Create-if-nonexistant flag.\n"
+"     o_trunc         Truncate-to-size-0 flag.\n"
+"\n"
+"   If the o_creat flag is specified, then the file is created with\n"
+"   a permission of argument mode if the file doesn't exist.  An\n"
+"   integer file descriptor is returned by unix-open."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-close takes an integer file descriptor as an argument and\n"
+"   closes the file associated with it.  T is returned upon successful\n"
+"   completion, otherwise NIL and an error number."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-creat accepts a file name and a mode (same as those for\n"
+"   unix-chmod) and creates a file by that name with the specified\n"
+"   permission mode.  It returns a file descriptor on success,\n"
+"   or NIL and an error  number otherwise.\n"
+"\n"
+"   This interface is made obsolete by UNIX-OPEN."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-dup duplicates an existing file descriptor (given as the\n"
+"   argument) and return it.  If FD is not a valid file descriptor, NIL\n"
+"   and an error number are returned."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Duplicate a file descriptor"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Get file desc. flags"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Set file desc. flags"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Get file flags"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Set file flags"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Get owner"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Get lock"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Set owner"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Set lock"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Set lock, wait for release"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Non-blocking reads"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Append on each write"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Signal pgrp when data ready"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Create if nonexistant"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Truncate to zero length"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Error if already created"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-fcntl manipulates file descriptors according to the\n"
+"   argument CMD which can be one of the following:\n"
+"\n"
+"   F-DUPFD         Duplicate a file descriptor.\n"
+"   F-GETFD         Get file descriptor flags.\n"
+"   F-SETFD         Set file descriptor flags.\n"
+"   F-GETFL         Get file flags.\n"
+"   F-SETFL         Set file flags.\n"
+"   F-GETOWN        Get owner.\n"
+"   F-SETOWN        Set owner.\n"
+"\n"
+"   The flags that can be specified for F-SETFL are:\n"
+"\n"
+"   FNDELAY         Non-blocking reads.\n"
+"   FAPPEND         Append on each write.\n"
+"   FASYNC          Signal pgrp when data ready.\n"
+"   FCREAT          Create if nonexistant.\n"
+"   FTRUNC          Truncate to zero length.\n"
+"   FEXCL           Error if already created.\n"
+"   "
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-pipe sets up a unix-piping mechanism consisting of\n"
+"  an input pipe and an output pipe.  Unix-Pipe returns two\n"
+"  values: if no error occurred the first value is the pipe\n"
+"  to be read from and the second is can be written to.  If\n"
+"  an error occurred the first value is NIL and the second\n"
+"  the unix error code."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-read attempts to read from the file described by fd into\n"
+"   the buffer buf until it is full.  Len is the length of the buffer.\n"
+"   The number of bytes actually read is returned or NIL and an error\n"
+"   number if an error occured."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-readlink invokes the readlink system call on the file name\n"
+"  specified by the simple string path.  It returns up to two values:\n"
+"  the contents of the symbolic link if the call is successful, or\n"
+"  NIL and the Unix error number."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-rename renames the file with string name1 to the string\n"
+"   name2.  NIL and an error code is returned if an error occured."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-rmdir attempts to remove the directory name.  NIL and\n"
+"   an error number is returned if an error occured."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-write attempts to write a character buffer (buf) of length\n"
+"   len to the file described by the file descriptor fd.  NIL and an\n"
+"   error is returned if the call is unsuccessful."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-ioctl performs a variety of operations on open i/o\n"
+"   descriptors.  See the UNIX Programmer's Manual for more\n"
+"   information."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Get terminal attributes."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Set terminal attributes."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Get terminal output speed."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-getuid returns the real user-id associated with the\n"
+"   current process."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Unix-getpagesize returns the number of bytes in a system page."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Unix-gethostname returns the name of the host machine as a string."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-gethostid returns a 32-bit integer which provides unique\n"
+"   identification for the host machine."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-exit terminates the current process with an optional\n"
+"   error code.  If successful, the call doesn't return.  If\n"
+"   unsuccessful, the call returns NIL and an error number."
+msgstr ""
+
+#: src/code/unix.lisp
 msgid "Size of control character vector."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-stat retrieves information about the specified\n"
+"   file returning them in the form of multiple values.\n"
+"   See the UNIX Programmer's Manual for a description\n"
+"   of the values returned.  If the call fails, then NIL\n"
+"   and an error number is returned instead."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-lstat is similar to unix-stat except the specified\n"
+"   file must be a symbolic link."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-fstat is similar to unix-stat except the file is specified\n"
+"   by the file descriptor fd."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "The calling process."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Terminated child processes."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Like call getrusage, but return only the system and user time, and returns\n"
+"   the seconds and microseconds as separate values."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-getrusage returns information about the resource usage\n"
+"   of the process specified by who.  Who can be either the\n"
+"   current process (rusage_self) or all of the terminated\n"
+"   child processes (rusage_children).  NIL and an error number\n"
+"   is returned if the call fails."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Returns either :file, :directory, :link, :special, or NIL."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Returns the pathname with all symbolic links resolved."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Error reading link ~S: ~S"
 msgstr ""
 
 #: src/code/unix.lisp
@@ -680,427 +1163,6 @@ msgid "Unknown error [~d]"
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Class not yet defined: ~S"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Syscall ~A failed: ~A"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Set the user ID of the calling process to UID.\n"
-"   If the calling process is the super-user, set the real\n"
-"   and effective user IDs, and the saved set-user-ID to UID;\n"
-"   if not, the effective user ID is set to UID."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Set the group ID of the calling process to GID.\n"
-"   If the calling process is the super-user, set the real\n"
-"   and effective group IDs, and the saved set-group-ID to GID;\n"
-"   if not, the effective group ID is set to GID."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Test for read permission"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Test for write permission"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Test for execute permission"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Test for presence of file"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Given a file path (a string) and one of four constant modes,\n"
-"   unix-access returns T if the file is accessible with that\n"
-"   mode and NIL if not.  It also returns an errno value with\n"
-"   NIL which determines why the file was not accessible.\n"
-"\n"
-"   The access modes are:\n"
-"	r_ok     Read permission.\n"
-"	w_ok     Write permission.\n"
-"	x_ok     Execute permission.\n"
-"	f_ok     Presence of file."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Given a file path string, unix-chdir changes the current working \n"
-"   directory to the one specified."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Set user ID on execution"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Set group ID on execution"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Save text image after execution"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Read by owner"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Write by owner"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Execute (search directory) by owner"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Read by group"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Write by group"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Execute (search directory) by group"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Read by others"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Write by others"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Execute (search directory) by others"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Given a file path string and a constant mode, unix-chmod changes the\n"
-"   permission mode for that file to the one specified. The new mode\n"
-"   can be created by logically OR'ing the following:\n"
-"\n"
-"      setuidexec        Set user ID on execution.\n"
-"      setgidexec        Set group ID on execution.\n"
-"      savetext          Save text image after execution.\n"
-"      readown           Read by owner.\n"
-"      writeown          Write by owner.\n"
-"      execown           Execute (search directory) by owner.\n"
-"      readgrp           Read by group.\n"
-"      writegrp          Write by group.\n"
-"      execgrp           Execute (search directory) by group.\n"
-"      readoth           Read by others.\n"
-"      writeoth          Write by others.\n"
-"      execoth           Execute (search directory) by others.\n"
-"  \n"
-"  Thus #o444 and (logior unix:readown unix:readgrp unix:readoth)\n"
-"  are equivalent for 'mode.  The octal-base is familar to Unix users.\n"
-"\n"
-"  It returns T on successfully completion; NIL and an error number\n"
-"  otherwise."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Given an integer file descriptor and a mode (the same as those\n"
-"   used for unix-chmod), unix-fchmod changes the permission mode\n"
-"   for that file to the one specified. T is returned if the call\n"
-"   was successful."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Given a file path, an integer user-id, and an integer group-id,\n"
-"   unix-chown changes the owner of the file and the group of the\n"
-"   file to those specified.  Either the owner or the group may be\n"
-"   left unchanged by specifying them as -1.  Note: Permission will\n"
-"   fail if the caller is not the superuser."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-fchown is like unix-chown, except that it accepts an integer\n"
-"   file descriptor instead of a file path name."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-getdtablesize returns the maximum size of the file descriptor\n"
-"   table. (i.e. the maximum number of descriptors that can exist at\n"
-"   one time.)"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-close takes an integer file descriptor as an argument and\n"
-"   closes the file associated with it.  T is returned upon successful\n"
-"   completion, otherwise NIL and an error number."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-creat accepts a file name and a mode (same as those for\n"
-"   unix-chmod) and creates a file by that name with the specified\n"
-"   permission mode.  It returns a file descriptor on success,\n"
-"   or NIL and an error  number otherwise.\n"
-"\n"
-"   This interface is made obsolete by UNIX-OPEN."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-dup duplicates an existing file descriptor (given as the\n"
-"   argument) and return it.  If FD is not a valid file descriptor, NIL\n"
-"   and an error number are returned."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-dup2 duplicates an existing file descriptor just as unix-dup\n"
-"   does only the new value of the duplicate descriptor may be requested\n"
-"   through the second argument.  If a file already exists with the\n"
-"   requested descriptor number, it will be closed and the number\n"
-"   assigned to the duplicate."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Duplicate a file descriptor"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Get file desc. flags"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Set file desc. flags"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Get file flags"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Set file flags"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Get owner"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Get lock"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Set owner"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Set lock"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Set lock, wait for release"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Non-blocking reads"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Append on each write"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Signal pgrp when data ready"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Create if nonexistant"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Truncate to zero length"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Error if already created"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-fcntl manipulates file descriptors according to the\n"
-"   argument CMD which can be one of the following:\n"
-"\n"
-"   F-DUPFD         Duplicate a file descriptor.\n"
-"   F-GETFD         Get file descriptor flags.\n"
-"   F-SETFD         Set file descriptor flags.\n"
-"   F-GETFL         Get file flags.\n"
-"   F-SETFL         Set file flags.\n"
-"   F-GETOWN        Get owner.\n"
-"   F-SETOWN        Set owner.\n"
-"\n"
-"   The flags that can be specified for F-SETFL are:\n"
-"\n"
-"   FNDELAY         Non-blocking reads.\n"
-"   FAPPEND         Append on each write.\n"
-"   FASYNC          Signal pgrp when data ready.\n"
-"   FCREAT          Create if nonexistant.\n"
-"   FTRUNC          Truncate to zero length.\n"
-"   FEXCL           Error if already created.\n"
-"   "
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-link creates a hard link from the file with name1 to the\n"
-"   file with name2."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "set the file pointer"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "increment the file pointer"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "extend the file size"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-lseek accepts a file descriptor and moves the file pointer ahead\n"
-"   a certain offset for that file.  Whence can be any of the following:\n"
-"\n"
-"   l_set        Set the file pointer.\n"
-"   l_incr       Increment the file pointer.\n"
-"   l_xtnd       Extend the file size.\n"
-"  _N"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-mkdir creates a new directory with the specified name and mode.\n"
-"   (Same as those for unix-chmod.)  It returns T upon success, otherwise\n"
-"   NIL and an error number."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Read-only flag."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Write-only flag."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Read-write flag."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Non-blocking I/O"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Append flag."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Create if nonexistant flag."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Truncate flag."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Error if already exists."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Don't assign controlling tty"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Non-blocking mode"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Synchronous writes (on ext2)"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-open opens the file whose pathname is specified by path\n"
-"   for reading and/or writing as specified by the flags argument.\n"
-"   The flags argument can be:\n"
-"\n"
-"     o_rdonly        Read-only flag.\n"
-"     o_wronly        Write-only flag.\n"
-"     o_rdwr          Read-and-write flag.\n"
-"     o_append        Append flag.\n"
-"     o_creat         Create-if-nonexistant flag.\n"
-"     o_trunc         Truncate-to-size-0 flag.\n"
-"\n"
-"   If the o_creat flag is specified, then the file is created with\n"
-"   a permission of argument mode if the file doesn't exist.  An\n"
-"   integer file descriptor is returned by unix-open."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-pipe sets up a unix-piping mechanism consisting of\n"
-"  an input pipe and an output pipe.  Unix-Pipe returns two\n"
-"  values: if no error occurred the first value is the pipe\n"
-"  to be read from and the second is can be written to.  If\n"
-"  an error occurred the first value is NIL and the second\n"
-"  the unix error code."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-read attempts to read from the file described by fd into\n"
-"   the buffer buf until it is full.  Len is the length of the buffer.\n"
-"   The number of bytes actually read is returned or NIL and an error\n"
-"   number if an error occured."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-readlink invokes the readlink system call on the file name\n"
-"  specified by the simple string path.  It returns up to two values:\n"
-"  the contents of the symbolic link if the call is successful, or\n"
-"  NIL and the Unix error number."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-rename renames the file with string name1 to the string\n"
-"   name2.  NIL and an error code is returned if an error occured."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-rmdir attempts to remove the directory name.  NIL and\n"
-"   an error number is returned if an error occured."
-msgstr ""
-
-#: src/code/unix.lisp
 msgid ""
 "Perform the UNIX select(2) system call.\n"
 "  (declare (type (integer 0 #.FD-SETSIZE) num-descriptors)\n"
@@ -1120,181 +1182,9 @@ msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
-"Unix-sync writes all information in core memory which has been\n"
-"   modified to disk.  It returns NIL and an error code if an error\n"
-"   occured."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-fsync writes the core image of the file described by\n"
-"   fd to disk."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-truncate truncates the named file to the length (in\n"
-"   bytes) specified by len.  NIL and an error number is returned\n"
-"   if the call is unsuccessful."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-ftruncate is similar to unix-truncate except that the first\n"
-"   argument is a file descriptor rather than a file name."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
 "Unix-symlink creates a symbolic link named name2 to the file\n"
 "   named name1.  NIL and an error number is returned if the call\n"
 "   is unsuccessful."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-unlink removes the directory entry for the named file.\n"
-"   NIL and an error code is returned if the call fails."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-write attempts to write a character buffer (buf) of length\n"
-"   len to the file described by the file descriptor fd.  NIL and an\n"
-"   error is returned if the call is unsuccessful."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-ioctl performs a variety of operations on open i/o\n"
-"   descriptors.  See the UNIX Programmer's Manual for more\n"
-"   information."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Get terminal attributes."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Set terminal attributes."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Get terminal output speed."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Set terminal output speed."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Bogus baud rate ~S"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Get terminal input speed."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Set terminal input speed."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Send break"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Wait for output for finish"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "See tcflush(3)"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Flow control"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Set the tty-process-group for the unix file-descriptor FD to PGRP."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Get the tty-process-group for the unix file-descriptor FD."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Get the tty-process-group for the unix file-descriptor FD.  If not supplied,"
-"\n"
-"  FD defaults to /dev/tty."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Set the tty-process-group for the unix file-descriptor FD to PGRP.  If not\n"
-"  supplied, FD defaults to /dev/tty."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Set the socket process-group for the unix file-descriptor FD to PGRP."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-exit terminates the current process with an optional\n"
-"   error code.  If successful, the call doesn't return.  If\n"
-"   unsuccessful, the call returns NIL and an error number."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-stat retrieves information about the specified\n"
-"   file returning them in the form of multiple values.\n"
-"   See the UNIX Programmer's Manual for a description\n"
-"   of the values returned.  If the call fails, then NIL\n"
-"   and an error number is returned instead."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-lstat is similar to unix-stat except the specified\n"
-"   file must be a symbolic link."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-fstat is similar to unix-stat except the file is specified\n"
-"   by the file descriptor fd."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "The calling process."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Terminated child processes."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Like call getrusage, but return only the system and user time, and returns\n"
-"   the seconds and microseconds as separate values."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-getrusage returns information about the resource usage\n"
-"   of the process specified by who.  Who can be either the\n"
-"   current process (rusage_self) or all of the terminated\n"
-"   child processes (rusage_children).  NIL and an error number\n"
-"   is returned if the call fails."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-times returns information about the cpu time usage of the process\n"
-"   and its children."
 msgstr ""
 
 #: src/code/unix.lisp
@@ -1313,78 +1203,37 @@ msgid ""
 msgstr ""
 
 #: src/code/unix.lisp
-msgid ""
-"Unix-setreuid sets the real and effective user-id's of the current\n"
-"   process to the specified ones.  NIL and an error number is returned\n"
-"   if the call fails."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-setregid sets the real and effective group-id's of the current\n"
-"   process process to the specified ones.  NIL and an error number is\n"
-"   returned if the call fails."
-msgstr ""
-
-#: src/code/unix.lisp
 msgid "Unix-getpid returns the process-id of the current process."
 msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
-"Unix-getppid returns the process-id of the parent of the current process."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Unix-getgid returns the real group-id of the current process."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Unix-getegid returns the effective group-id of the current process."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Unix-getpgrp returns the group-id of the calling process."
+"Accepts a Unix file descriptor and returns T if the device\n"
+"  associated with it is a terminal."
 msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
-"Unix-setpgrp sets the process group on the process pid to\n"
-"   pgrp.  NIL and an error number are returned upon failure."
+" Unix-setitimer sets the INTERVAL and VALUE slots of one of\n"
+"   three system timers (:real :virtual or :profile). A SIGALRM signal\n"
+"   will be delivered VALUE <seconds+microseconds> from now. INTERVAL,\n"
+"   when non-zero, is <seconds+microseconds> to be loaded each time\n"
+"   the timer expires. Setting INTERVAL and VALUE to zero disables\n"
+"   the timer. See the Unix man page for more details. On success,\n"
+"   unix-setitimer returns the old contents of the INTERVAL and VALUE\n"
+"   slots as in unix-getitimer."
 msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
-"Unix-setpgid sets the process group of the process pid to\n"
-"   pgrp. If pgid is equal to pid, the process becomes a process\n"
-"   group leader. NIL and an error number are returned upon failure."
+"Return a USER-INFO structure for the user identified by UID, or NIL if not "
+"found."
 msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
-"Unix-getuid returns the real user-id associated with the\n"
-"   current process."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Unix-getpagesize returns the number of bytes in a system page."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Unix-gethostname returns the name of the host machine as a string."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-gethostid returns a 32-bit integer which provides unique\n"
-"   identification for the host machine."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Executes the unix fork system call.  Returns 0 in the child and the pid\n"
-"   of the child in the parent if it works, or NIL and an error number if it\n"
-"   doesn't work."
+"Unix-times returns information about the cpu time usage of the process\n"
+"   and its children."
 msgstr ""
 
 #: src/code/unix.lisp
@@ -1413,24 +1262,6 @@ msgid "Removes the variable Name from the environment"
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Returns either :file, :directory, :link, :special, or NIL."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Returns the pathname with all symbolic links resolved."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Error reading link ~S: ~S"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Accepts a Unix file descriptor and returns T if the device\n"
-"  associated with it is a terminal."
-msgstr ""
-
-#: src/code/unix.lisp
 msgid ""
 "Executes the Unix execve system call.  If the system call suceeds, lisp\n"
 "   will no longer be running in this process.  If the system call fails "
@@ -1447,104 +1278,8 @@ msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
-"Unix-getitimer returns the INTERVAL and VALUE slots of one of\n"
-"   three system timers (:real :virtual or :profile). On success,\n"
-"   unix-getitimer returns 5 values,\n"
-"   T, it-interval-secs, it-interval-usec, it-value-secs, it-value-usec."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-" Unix-setitimer sets the INTERVAL and VALUE slots of one of\n"
-"   three system timers (:real :virtual or :profile). A SIGALRM signal\n"
-"   will be delivered VALUE <seconds+microseconds> from now. INTERVAL,\n"
-"   when non-zero, is <seconds+microseconds> to be loaded each time\n"
-"   the timer expires. Setting INTERVAL and VALUE to zero disables\n"
-"   the timer. See the Unix man page for more details. On success,\n"
-"   unix-setitimer returns the old contents of the INTERVAL and VALUE\n"
-"   slots as in unix-getitimer."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Return a USER-INFO structure for the user identified by LOGIN, or NIL if "
-"not found."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Return a USER-INFO structure for the user identified by UID, or NIL if not "
-"found."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "The maximum size of the group entry buffer"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Return a GROUP-INFO structure for the group identified by NAME, or NIL if "
-"not found."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Return a GROUP-INFO structure for the group identified by GID, or NIL if "
-"not found."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "CPU time per process (in milliseconds)"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Maximum file size"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Data segment size"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Stack size"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Core file size"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Number of open files"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Maximum mapped memory"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "CPU time per process"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "File size"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Addess space (resident set size)"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Locked-in-memory address space"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Number of processes"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Get the limits on the consumption of system resouce specified by\n"
-"  Resource.  If successful, return three values: T, the current (soft)\n"
-"  limit, and the maximum (hard) limit."
+"Executes the unix fork system call.  Returns 0 in the child and the pid\n"
+"   of the child in the parent if it works, or NIL and an error number if it\n"
+"   doesn't work."
 msgstr ""
 

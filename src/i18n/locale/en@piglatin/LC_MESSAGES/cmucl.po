@@ -20866,14 +20866,12 @@ msgid "~S -- Bad clause in ~S."
 msgstr "~S -- Adbay auseclay inway ~S."
 
 #: src/code/macros.lisp
-msgid "No default clause allowed in ~S: ~S"
-msgstr "Onay efaultday auseclay allowedway inway ~S: ~S"
-
-#: src/code/macros.lisp
-msgid "T and OTHERWISE may not be used as key designators for ~A"
+msgid ""
+"~<~A is a key designator only in the final otherwise-clause. ~\n"
+"                                              Use (~A) to use it as a normal-"
+"clause or move the clause to the ~\n"
+"                                              correct position.~:@>"
 msgstr ""
-"T andway OTHERWISE aymay otnay ebay usedway asway eykay esignatorsday orfay "
-"~Away"
 
 #: src/code/macros.lisp
 #, fuzzy
@@ -27191,11 +27189,11 @@ msgstr ""
 msgid "Float zero bound ~s not correctly canonicalised?"
 msgstr "Oatflay erozay oundbay ~s otnay orrectlycay anonicalisedcay?"
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Compute fl(a*b) and err(a*b)"
 msgstr "Omputecay flay(a*bway) andway errway(a*bway)"
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid ""
 "Compute fl(a*a) and err(a*b).  This is a more efficient\n"
 "  implementation of two-prod"
@@ -27204,42 +27202,42 @@ msgstr ""
 "efficientway\n"
 "  implementationway ofway wotay-odpray"
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Computes fl(a+b) and err(a+b), assuming |a| >= |b|"
 msgstr ""
 "Omputescay flay(away+b) andway errway(away+b), assumingway |away| >= |b|"
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Computes fl(a+b) and err(a+b)"
 msgstr "Omputescay flay(away+b) andway errway(away+b)"
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Add the double-double A0,A1 to the double-double B0,B1"
 msgstr ""
 "Addway ethay oubleday-oubleday Away0,Away1 otay ethay oubleday-oubleday B0,B1"
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Compute fl(a-b) and err(a-b), assuming |a| >= |b|"
 msgstr ""
 "Omputecay flay(away-b) andway errway(away-b), assumingway |away| >= |b|"
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Compute fl(a-b) and err(a-b)"
 msgstr "Omputecay flay(away-b) andway errway(away-b)"
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Subtract the double-double B0,B1 from A0,A1"
 msgstr "Ubtractsay ethay oubleday-oubleday B0,B1 omfray Away0,Away1"
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Compute double-double = double - double-double"
 msgstr "Omputecay oubleday-oubleday = oubleday - oubleday-oubleday"
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Subtract the double B from the double-double A0,A1"
 msgstr "Ubtractsay ethay oubleday B omfray ethay oubleday-oubleday Away0,Away1"
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid ""
 "Split the double-float number a into a-hi and a-lo such that a =\n"
 "  a-hi + a-lo and a-hi contains the upper 26 significant bits of a and\n"
@@ -27251,19 +27249,19 @@ msgstr ""
 "ignificantsay itsbay ofway away andway\n"
 "  away-olay ontainscay ethay owerlay 26 itsbay."
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Multiply the double-double A0,A1 with B0,B1"
 msgstr "Ultiplymay ethay oubleday-oubleday Away0,Away1 ithway B0,B1"
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Add the double-double A0,A1 to the double B"
 msgstr "Addway ethay oubleday-oubleday Away0,Away1 otay ethay oubleday B"
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Divide the double-double A0,A1 by B0,B1"
 msgstr "Ivideday ethay oubleday-oubleday Away0,Away1 ybay B0,B1"
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Square"
 msgstr "Quaresay"
 
@@ -30788,6 +30786,14 @@ msgstr ""
 "Ybay efaultday, illegalway inputsway andway illegalway outputsway areway "
 "eplacedray ybay ethay\n"
 "Unicodeway eplacementray aracterchay."
+
+#~ msgid "No default clause allowed in ~S: ~S"
+#~ msgstr "Onay efaultday auseclay allowedway inway ~S: ~S"
+
+#~ msgid "T and OTHERWISE may not be used as key designators for ~A"
+#~ msgstr ""
+#~ "T andway OTHERWISE aymay otnay ebay usedway asway eykay esignatorsday "
+#~ "orfay ~Away"
 
 #~ msgid "Return true if the float X is a NaN (Not a Number)."
 #~ msgstr ""
