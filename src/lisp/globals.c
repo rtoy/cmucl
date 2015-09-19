@@ -71,11 +71,10 @@ globals_init(void)
      * On ARM, we want the Lisp control stack to grow down.
      * control_stack_end points at the top of the control stack on
      * ARM, which is just past the end of the control stack space, and
-     * this isn't writable.  Back up a few (how many?) words so that
-     * the control stack pointer points inside the control stack
-     * space.
+     * this isn't writable.  Back up a word so that the control stack
+     * pointer points inside the control stack space.
      */
-    current_control_stack_pointer = control_stack_end - 4;
+    current_control_stack_pointer = control_stack_end - 1;
 #else
     current_control_stack_pointer = control_stack_end;
 #endif
