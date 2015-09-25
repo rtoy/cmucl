@@ -135,7 +135,7 @@ GFUNCDEF(call_into_c)
 	str	reg_CODE, [reg_CFP, #8]
 
 	/*
-	 * The unboxed regs should be free for use to use as we which.
+	 * The unboxed regs should be free for use to use as we wish.
 	 * All of the args to the C function that would go in
 	 * registers should be on the C stack.
 	 */
@@ -184,9 +184,9 @@ GFUNCDEF(call_into_c)
 
 	/* Save the C stack pointer, and get the Lisp stack pointer back */
 	STORE_SYMBOL_VALUE(reg_CSP, NUMBER_STACK_POINTER)
-	ldr	reg_NARGS, =current_control_stack_pointer
+	ldr	reg_LIP, =current_control_stack_pointer
 	ldr	reg_CSP, [reg_NARGS]
-	ldr	reg_NARGS, =current_control_frame_pointer
+	ldr	reg_LIP, =current_control_frame_pointer
 	ldr	reg_CFP, [reg_NARGS]
 
 	/* Atomic */
