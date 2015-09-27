@@ -140,20 +140,18 @@
 (defmacro load-stack-tn (reg stack)
   `(let ((reg ,reg)
 	 (stack ,stack))
-     ;; Stack grows down, so take the negative of the tn-offset!
-     (let ((offset (- (tn-offset stack))))
-       (sc-case stack
-	 ((control-stack)
-	  (loadw reg cfp-tn offset 0))))))
+     (sc-case stack
+       ((control-stack)
+	;; Stack grows down, so take the negative of the tn-offset!
+	(loadw reg cfp-tn (- (tn-offset stack)) 0)))))
 
 (defmacro store-stack-tn (stack reg)
   `(let ((stack ,stack)
 	 (reg ,reg))
-     ;; Stack grows down, so take the negative of the tn-offset!
-     (let ((offset (- (tn-offset stack))))
-       (sc-case stack
-	 ((control-stack)
-	  (storew reg cfp-tn offset 0))))))
+     (sc-case stack
+       ((control-stack)
+	;; Stack grows down, so take the negative of the tn-offset!
+	(storew reg cfp-tn (- (tn-offset stack)) 0)))))
 
 
 ;;; MAYBE-LOAD-STACK-TN  --  Interface
