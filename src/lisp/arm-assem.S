@@ -91,9 +91,9 @@ GFUNCDEF(call_into_lisp)
 	cmp	reg_NL2, #1
 	ldrge	reg_A0, [reg_CFP, #0]
 	cmp	reg_NL2, #2
-	ldrge	reg_A1, [reg_CFP, #4]
+	ldrge	reg_A1, [reg_CFP, #-4]
 	cmp	reg_NL2, #3
-	ldrge	reg_A2, [reg_CFP, #8]
+	ldrge	reg_A2, [reg_CFP, #-8]
 
 	/* Function is an indirect closure */
 	ldr	reg_CODE, [reg_LEXENV, #CLOSURE_FUNCTION_OFFSET]
