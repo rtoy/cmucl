@@ -29,6 +29,7 @@ unsigned dynamic_space_size;
 lispobj *control_stack;
 
 
+lispobj *control_stack_start;
 #if (defined(i386) || defined(__x86_64))
 lispobj *control_stack_end;
 #endif

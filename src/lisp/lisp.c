@@ -676,6 +676,7 @@ main(int argc, const char *argv[], const char *envp[])
 #endif
     validate();
     gc_init();
+    validate_stacks();
 
     /* This is the first use of malloc() and must come after the
      * static memory layout is mmapped to avoid conflicts with possible

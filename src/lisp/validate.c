@@ -92,20 +92,10 @@ validate(void)
     */
 #endif
 
-    /* Control Stack */
-    control_stack = (lispobj *) CONTROL_STACK_START;
-#if (defined(i386) || defined(__x86_64))
-    control_stack_end = (lispobj *) (CONTROL_STACK_START + control_stack_size);
-#endif
-    ensure_space(control_stack, control_stack_size);
-
 #ifdef SIGNAL_STACK_START
     ensure_space((lispobj *) SIGNAL_STACK_START, SIGNAL_STACK_SIZE);
 #endif
 
-    /* Binding Stack */
-    binding_stack = (lispobj *) BINDING_STACK_START;
-    ensure_space(binding_stack, binding_stack_size);
 #ifdef LINKAGE_TABLE
     ensure_space((lispobj *) FOREIGN_LINKAGE_SPACE_START,
 		 FOREIGN_LINKAGE_SPACE_SIZE);
@@ -117,6 +107,22 @@ validate(void)
 #ifdef PRINTNOISE
     printf(" done.\n");
 #endif
+
+}
+
+void
+validate_stacks()
+{
+    /* Control Stack */
+    /* Map the conrol stack wherever we have space */
+    control_stack = os_validate(NULL, control_stack_size);
+
+#if (defined(i386) || defined(__x86_64))
+    control_stack_end = (void*)control_stack + control_stack_size;
+#endif
+
+    /* Binding Stack */
+    binding_stack = os_validate(NULL, binding_stack_size);
 
 #ifdef RED_ZONE_HIT
     os_guard_control_stack(0, 1);
