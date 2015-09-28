@@ -185,9 +185,9 @@ GFUNCDEF(call_into_c)
 	/* Save the C stack pointer, and get the Lisp stack pointer back */
 	STORE_SYMBOL_VALUE(reg_CSP, NUMBER_STACK_POINTER)
 	ldr	reg_LIP, =current_control_stack_pointer
-	ldr	reg_CSP, [reg_NARGS]
+	ldr	reg_CSP, [reg_LIP]
 	ldr	reg_LIP, =current_control_frame_pointer
-	ldr	reg_CFP, [reg_NARGS]
+	ldr	reg_CFP, [reg_LIP]
 
 	/* Atomic */
 	mov	reg_NARGS, #1
