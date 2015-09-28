@@ -132,7 +132,7 @@ GFUNCDEF(call_into_c)
 	mov	reg_CFP, reg_CSP
 	sub	reg_CSP, reg_CSP, #32
 	str	reg_OCFP, [reg_CFP]
-	str	reg_CODE, [reg_CFP, #8]
+	str	reg_CODE, [reg_CFP, #-8]
 
 	/*
 	 * The unboxed regs should be free for use to use as we wish.
@@ -147,7 +147,7 @@ GFUNCDEF(call_into_c)
 	/* Convert the return addres to an offset and save it on the stack */
 	sub	reg_NL0, reg_LIP, reg_CODE
 	add	reg_NL0, reg_NL0, #type_OtherPointer
-	str	reg_NL0, [reg_CFP, #4]
+	str	reg_NL0, [reg_CFP, #-4]
 
         /* Store lisp state */
 	ldr	reg_NARGS, =current_control_stack_pointer
@@ -185,9 +185,9 @@ GFUNCDEF(call_into_c)
 	/* Save the C stack pointer, and get the Lisp stack pointer back */
 	STORE_SYMBOL_VALUE(reg_CSP, NUMBER_STACK_POINTER)
 	ldr	reg_LIP, =current_control_stack_pointer
-	ldr	reg_CSP, [reg_NARGS]
+	ldr	reg_CSP, [reg_LIP]
 	ldr	reg_LIP, =current_control_frame_pointer
-	ldr	reg_CFP, [reg_NARGS]
+	ldr	reg_CFP, [reg_LIP]
 
 	/* Atomic */
 	mov	reg_NARGS, #1
@@ -197,8 +197,8 @@ GFUNCDEF(call_into_c)
 	
 	/* Load the rest of the lisp state */
 	/* Get the return address back */
-	ldr	reg_LIP, [reg_CFP, #4]
-	ldr	reg_CODE, [reg_CFP, #8]
+	ldr	reg_LIP, [reg_CFP, #-4]
+	ldr	reg_CODE, [reg_CFP, #-8]
 	add	reg_LIP, reg_LIP, reg_CODE
 	sub	reg_LIP, reg_LIP, #type_OtherPointer
 
