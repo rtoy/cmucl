@@ -36,14 +36,18 @@
 	(store-stack-tn nfp-save temp))
       ;; Allocate space on the C stack.  call_into_c expects at least
       ;; 5 arguments on the stack: the C function to be called, and 4
-      ;; more words to be copied to r0-r3.  These 5 words will get
-      ;; popped off the stack by call_into_c, and at that point, the
-      ;; stack pointer should be aligned on a double-word boundary as
-      ;; required by the AAPCS.
+      ;; more words to be copied to r0-r3.
       (load-symbol-value c-stack-pointer *number-stack-pointer*)
       (inst sub c-stack-pointer c-stack-pointer (* 5 vm:word-bytes))
       (store-symbol-value c-stack-pointer *number-stack-pointer*)
-      
+
+      ;; Instead of leaving random garbage, initialize the other stack
+      ;; slots with 0.
+      (inst mov temp 0)
+      (inst str temp c-stack-pointer (* 4 vm:word-bytes))
+      (inst str temp c-stack-pointer (* 3 vm:word-bytes))
+      (inst str temp c-stack-pointer (* 2 vm:word-bytes))
+
       ;; Save the object to the C stack.  This is the first (and only)
       ;; arg to debug_print.
       (inst str object c-stack-pointer vm:word-bytes)
