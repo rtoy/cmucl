@@ -128,6 +128,30 @@ lra:
 	pop	{r4-r12,pc}
 	ENDFUNC(call_into_lisp)
 
+/*
+ * Calls the specified C routine.  On entry, the C stack must be laid
+ * out in this way:
+ *
+ *      <top of stack>	
+ *	arg[N]
+ *	arg[N-1]
+ *	...
+ *	arg[4]
+ *	arg[3]
+ *	arg[2]
+ *	arg[1]
+ *	arg[0]
+ *	<addr of C routine>
+ *      <bottom of stack>
+ *
+ * arg[0] to arg[3], along with the address of the C routine, will be
+ * popped off the stack before calling the C routine.  arg[0]-arg[3]
+ * will be stored in r0-r3 as required by the AAPCS.  This also means
+ * that arg[4] should be on a double-word boundary as required by the
+ * AAPCS
+ *
+ * TODO: describe how floats are stored.
+ */	
 GFUNCDEF(call_into_c)
 	/* Build a lisp stack frame */
 	mov	reg_OCFP, reg_CFP
