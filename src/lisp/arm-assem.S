@@ -83,11 +83,13 @@ GFUNCDEF(call_into_lisp)
 	/* No longer atomic */
 	mov	reg_NARGS, #0
 	STORE_SYMBOL_VALUE(reg_NARGS, PSEUDO_ATOMIC_ATOMIC)
-	/* Check if we were interrupted. (Not implemented yet.)
+	/* Check if we were interrupted. (Not implemented yet.) */
 
-	/* Pass in the arguments */	
-	mov	reg_LEXENV, reg_NL0			
+	/* setup up the current frame */
 	mov	reg_CFP, reg_NL1
+
+	/* Pass in the arguments */
+	mov	reg_LEXENV, reg_NL0
 	cmp	reg_NL2, #1
 	ldrge	reg_A0, [reg_CFP, #0]
 	cmp	reg_NL2, #2
@@ -109,7 +111,7 @@ GFUNCDEF(call_into_lisp)
 	 * Get the Lisp stack pointer into the sp since on ARM sp is both
 	 * the C and Lisp stack pointer.
 	 */
-	ldr	reg_NL0, =current_control_stack_pointer	
+	ldr	reg_NL0, =current_control_stack_pointer
 	ldr	reg_CSP, [reg_NL0]
 
 	/*
