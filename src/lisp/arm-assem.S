@@ -132,7 +132,7 @@ lra:
  * Calls the specified C routine.  On entry, the C stack must be laid
  * out in this way:
  *
- *      <top of stack>	
+ *   <top of stack>	
  *	arg[N]
  *	arg[N-1]
  *	...
@@ -142,13 +142,15 @@ lra:
  *	arg[1]
  *	arg[0]
  *	<addr of C routine>
- *      <bottom of stack>
+ *   <bottom of stack>
  *
  * arg[0] to arg[3], along with the address of the C routine, will be
- * popped off the stack before calling the C routine.  arg[0]-arg[3]
- * will be stored in r0-r3 as required by the AAPCS.  This also means
- * that arg[4] should be on a double-word boundary as required by the
- * AAPCS
+ * popped off the stack before calling the C routine.  Thus,
+ * arg[0]-arg[3] are required to be allocated on the stack. The args
+ * do not need to be allocated if the function does not need them.
+ * arg[0]-arg[3] will be stored in r0-r3 as required by the AAPCS.
+ * This also means that arg[4] should be on a double-word boundary as
+ * required by the AAPCS.
  *
  * TODO: describe how floats are stored.
  */	
