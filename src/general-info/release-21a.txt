@@ -1,7 +1,5 @@
 ========================== C M U C L  21 a =============================
 
-[In Progress]
-
 The CMUCL project is pleased to announce the release of CMUCL 21a.
 This is a major release which contains numerous enhancements and
 bug fixes from the 20f release.
