@@ -128,13 +128,39 @@ lra:
 	pop	{r4-r12,pc}
 	ENDFUNC(call_into_lisp)
 
+/*
+ * Calls the specified C routine.  On entry, the C stack must be laid
+ * out in this way:
+ *
+ *   <top of stack>	
+ *	arg[N]
+ *	arg[N-1]
+ *	...
+ *	arg[4]
+ *	arg[3]
+ *	arg[2]
+ *	arg[1]
+ *	arg[0]
+ *	<addr of C routine>
+ *   <bottom of stack>
+ *
+ * arg[0] to arg[3], along with the address of the C routine, will be
+ * popped off the stack before calling the C routine.  Thus,
+ * arg[0]-arg[3] are required to be allocated on the stack. The args
+ * do not need to be allocated if the function does not need them.
+ * arg[0]-arg[3] will be stored in r0-r3 as required by the AAPCS.
+ * This also means that arg[4] should be on a double-word boundary as
+ * required by the AAPCS.
+ *
+ * TODO: describe how floats are stored.
+ */	
 GFUNCDEF(call_into_c)
 	/* Build a lisp stack frame */
 	mov	reg_OCFP, reg_CFP
 	mov	reg_CFP, reg_CSP
 	sub	reg_CSP, reg_CSP, #32
 	str	reg_OCFP, [reg_CFP]
-	str	reg_CODE, [reg_CFP, #8]
+	str	reg_CODE, [reg_CFP, #-8]
 
 	/*
 	 * The unboxed regs should be free for use to use as we wish.
@@ -149,7 +175,7 @@ GFUNCDEF(call_into_c)
 	/* Convert the return addres to an offset and save it on the stack */
 	sub	reg_NL0, reg_LIP, reg_CODE
 	add	reg_NL0, reg_NL0, #type_OtherPointer
-	str	reg_NL0, [reg_CFP, #4]
+	str	reg_NL0, [reg_CFP, #-4]
 
         /* Store lisp state */
 	ldr	reg_NARGS, =current_control_stack_pointer
@@ -199,8 +225,8 @@ GFUNCDEF(call_into_c)
 	
 	/* Load the rest of the lisp state */
 	/* Get the return address back */
-	ldr	reg_LIP, [reg_CFP, #4]
-	ldr	reg_CODE, [reg_CFP, #8]
+	ldr	reg_LIP, [reg_CFP, #-4]
+	ldr	reg_CODE, [reg_CFP, #-8]
 	add	reg_LIP, reg_LIP, reg_CODE
 	sub	reg_LIP, reg_LIP, #type_OtherPointer
 
