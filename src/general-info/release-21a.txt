@@ -43,6 +43,10 @@ New in this release:
     * Added clx-inspector module.
     * ASDF documentation included in html, info, and pdf formats in
       contrib/asdf/doc/.
+    * If -quiet is given, don't print out the herald, even if the user
+      init files add things to the herald. (Previously, these would
+      get printed out.)  Also, -quiet no longer removes the herald
+      items; you can sill print out the entire herald using 
 
 
   * ANSI compliance fixes:
