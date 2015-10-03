@@ -37,5 +37,6 @@
 #endif
 
 extern void validate(void);
+extern void validate_stacks(void);
 
 #endif /* _VALIDATE_H_ */
