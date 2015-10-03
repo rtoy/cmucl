@@ -169,8 +169,14 @@ os_flush_icache(os_vm_address_t address, os_vm_size_t length)
 void
 os_protect(os_vm_address_t address, os_vm_size_t length, os_vm_prot_t prot)
 {
-    if (mprotect((void *) address, length, prot) == -1)
-	perror("mprotect");
+    if (mprotect((void *) address, length, prot) == -1) {
+        char msg[1000];
+
+        snprintf(msg, sizeof(msg), "mprotect: os_protect(0x%p, %u, 0x%x): ",
+                 address, length, prot);
+        
+	perror(msg);
+    }
 }
 
 static boolean
@@ -430,27 +436,37 @@ static unsigned long *space_size[] = {
 #define HOLE_SIZE 0x2000
 
 void
-make_holes(void)
+make_hole(int index)
 {
-    int k;
     os_vm_address_t hole;
 
     /* Make holes of the appropriate size for desired spaces */
 
-    for (k = 0; k < sizeof(spaces) / sizeof(spaces[0]); ++k) {
+    hole = spaces[k] + *space_size[k];
 
-	hole = spaces[k] + *space_size[k];
-
-	if (os_validate(hole, HOLE_SIZE) == NULL) {
-	    fprintf(stderr,
-		    "ensure_space: Failed to validate hole of %d bytes at 0x%08lX\n",
-		    HOLE_SIZE, (unsigned long) hole);
-	    exit(1);
-	}
-	/* Make it inaccessible */
-	os_protect(hole, HOLE_SIZE, 0);
+    if (os_validate(hole, HOLE_SIZE) == NULL) {
+        fprintf(stderr,
+                "ensure_space: Failed to validate hole of %d bytes at 0x%08lX\n",
+                HOLE_SIZE, (unsigned long) hole);
+        exit(1);
     }
+    /* Make it inaccessible */
+    os_protect(hole, HOLE_SIZE, 0);
+}
 
+void
+make_holes(void)
+{
+    os_vm_address_t hole;
+
+    /*
+     * Make holes of the appropriate size for desired spaces.  The
+     * stacks are handled in make_stack_holes.
+     */
+
+    make_hole(0);               /* Read-only space */
+    make_hole(1);               /* Static space */
+    
     /* Round up the dynamic_space_size to the nearest SPARSE_BLOCK_SIZE */
     dynamic_space_size = round_up_sparse_size(dynamic_space_size);
 
@@ -477,6 +493,13 @@ make_holes(void)
 #endif
 }
 
+void
+make_stack_holes(void)
+{
+    make_hole(2);
+    make_hole(3);
+}
+    
 void *
 os_dlsym(const char *sym_name, lispobj lib_list)
 {
