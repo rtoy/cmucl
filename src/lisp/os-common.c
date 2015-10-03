@@ -424,7 +424,7 @@ guard_zones(char **yellow_start, char **red_start)
      * control stack area.
      */
 
-    char *end = (char *) control_stack_start + control_stack_size;
+    char *end = (char *) control_stack + control_stack_size;
 
     *red_start = end - RED_ZONE_SIZE;
     *yellow_start = *red_start - YELLOW_ZONE_SIZE;
