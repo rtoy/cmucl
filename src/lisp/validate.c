@@ -18,6 +18,7 @@
 
 #ifdef sparc
 extern void make_holes(void);
+extern void make_stack_holes(void);
 #endif
 
 static void
@@ -123,6 +124,10 @@ validate_stacks()
 
     /* Binding Stack */
     binding_stack = os_validate(NULL, binding_stack_size);
+
+#ifdef sparc
+    make_stack_holes();
+#endif
 
 #ifdef RED_ZONE_HIT
     os_guard_control_stack(0, 1);
