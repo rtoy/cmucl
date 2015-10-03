@@ -199,8 +199,8 @@ boolean valid_addr(os_vm_address_t addr)
 #ifndef GENCGC
 	    || in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
 #endif
-	    || in_range_p(addr, CONTROL_STACK_START, control_stack_size)
-	    || in_range_p(addr, BINDING_STACK_START, binding_stack_size));
+	    || in_range_p(addr, control_stack, control_stack_size)
+	    || in_range_p(addr, binding_stack, binding_stack_size));
 }
 
 /* ---------------------------------------------------------------- */
@@ -412,8 +412,7 @@ os_vm_address_t round_up_sparse_size(os_vm_address_t addr)
  * of the dynamic space can be controlled from the command line.
  */
 static os_vm_address_t spaces[] = {
-    READ_ONLY_SPACE_START, STATIC_SPACE_START,
-    BINDING_STACK_START, CONTROL_STACK_START
+    READ_ONLY_SPACE_START, STATIC_SPACE_START
 };
 
 /*
