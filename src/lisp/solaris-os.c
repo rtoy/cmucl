@@ -436,7 +436,7 @@ static unsigned long *space_size[] = {
 #define HOLE_SIZE 0x2000
 
 void
-make_hole(int index)
+make_hole(int k)
 {
     os_vm_address_t hole;
 
