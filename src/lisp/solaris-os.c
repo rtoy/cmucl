@@ -435,13 +435,13 @@ static unsigned long *space_size[] = {
 #define HOLE_SIZE 0x2000
 
 void
-make_hole(int k)
+make_hole(void *start_start, size_t space_size)
 {
     os_vm_address_t hole;
 
     /* Make holes of the appropriate size for desired spaces */
 
-    hole = spaces[k] + *space_size[k];
+    hole = space_start + space_size;
 
     if (os_validate(hole, HOLE_SIZE) == NULL) {
         fprintf(stderr,
@@ -463,8 +463,8 @@ make_holes(void)
      * stacks are handled in make_stack_holes.
      */
 
-    make_hole(0);               /* Read-only space */
-    make_hole(1);               /* Static space */
+    make_hole(spaces[0], sapce_sizes[0]); /* Read-only space */
+    make_hole(spaces[1], space_sizes[1]); /* Static space */
     
     /* Round up the dynamic_space_size to the nearest SPARSE_BLOCK_SIZE */
     dynamic_space_size = round_up_sparse_size(dynamic_space_size);
@@ -495,8 +495,8 @@ make_holes(void)
 void
 make_stack_holes(void)
 {
-    make_hole(2);
-    make_hole(3);
+    make_hole(control_stack, control_stack_size);
+    make_hole(binding_stack, binding_stack_size);
 }
     
 void *
