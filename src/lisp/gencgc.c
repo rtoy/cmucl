@@ -7329,11 +7329,11 @@ verify_gc(void)
     int static_space_size = (lispobj *) SymbolValue(STATIC_SPACE_FREE_POINTER)
 	- (lispobj *) static_space;
     int binding_stack_size = (lispobj *) get_binding_stack_pointer()
-	- (lispobj *) BINDING_STACK_START;
+	- (lispobj *) binding_stack;
 
     verify_space((lispobj *) READ_ONLY_SPACE_START, read_only_space_size);
     verify_space((lispobj *) static_space, static_space_size);
-    verify_space((lispobj *) BINDING_STACK_START, binding_stack_size);
+    verify_space((lispobj *) binding_stack, binding_stack_size);
     verify_space((lispobj *) (void *) &scavenger_hooks, 1);
 }
 
