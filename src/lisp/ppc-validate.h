@@ -49,6 +49,8 @@
 #define CONTROL_STACK_END       (CONTROL_STACK_START + control_stack_size)
 #endif
 
+#define SIGNAL_STACK_SIZE	SIGSTKSZ
+
 #if 0
 #define BINDING_STACK_START 	(0x38000000)
 #endif

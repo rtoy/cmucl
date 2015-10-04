@@ -109,6 +109,8 @@
 #define CONTROL_STACK_END       (CONTROL_STACK_START + control_stack_size)
 #endif
 
+#define SIGNAL_STACK_SIZE	SIGSTKSZ
+
 #define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)
 
 /* This isn't used with GENCGC */
