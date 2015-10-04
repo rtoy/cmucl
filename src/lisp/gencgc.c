@@ -7501,16 +7501,16 @@ scavenge_interrupt_handlers(void)
 static void
 scavenge_control_stack(void)
 {
-    unsigned long control_stack_size;
+    unsigned long current_stack_size;
 
-    control_stack_size = current_control_stack_pointer - control_stack;
+    current_stack_size = current_control_stack_pointer - control_stack;
 
 #ifdef PRINTNOISE
     printf("Scavenging the control stack (%d bytes) ...\n",
-	   control_stack_size * sizeof(lispobj));
+	   current_stack_size * sizeof(lispobj));
 #endif
 
-    scavenge(control_stack, control_stack_size);
+    scavenge(control_stack, current_stack_size);
 
 #ifdef PRINTNOISE
     printf("Done scavenging the control stack.\n");
