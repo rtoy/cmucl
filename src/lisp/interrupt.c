@@ -408,10 +408,10 @@ interrupt_maybe_gc(HANDLER_ARGS)
 * Noise to install handlers.                                     *
 \****************************************************************/
 
-#if !(defined(i386) || defined(__x86_64))
-#define SIGNAL_STACK_SIZE SIGSTKSZ
-static char altstack[SIGNAL_STACK_SIZE];
-#endif
+//#if !(defined(i386) || defined(__x86_64))
+//#define SIGNAL_STACK_SIZE SIGSTKSZ
+char altstack[SIGNAL_STACK_SIZE];
+//#endif
 
 void
 interrupt_install_low_level_handler(int signal, void handler(HANDLER_ARGS))
@@ -434,7 +434,7 @@ interrupt_install_low_level_handler(int signal, void handler(HANDLER_ARGS))
     if (signal == PROTECTION_VIOLATION_SIGNAL) {
 	stack_t sigstack;
 
-#if (defined( i386 ) || defined(__x86_64))
+#if defined(SIGNAL_STACK_START)
 	sigstack.ss_sp = (void *) SIGNAL_STACK_START;
 #else
 	sigstack.ss_sp = (void *) altstack;
