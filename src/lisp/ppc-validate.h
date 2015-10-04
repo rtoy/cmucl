@@ -41,11 +41,17 @@
 #define STATIC_SPACE_START  	(0x10000000)
 #define STATIC_SPACE_SIZE   	(0x07ff8000)	/* 128 MB, almost */
 
+#if 0
 #define CONTROL_STACK_START 	(0x30000000)
+#endif
 #define CONTROL_STACK_SIZE  	(0x07ff8000)	/* 128 MB, almost */
+#if 0
 #define CONTROL_STACK_END       (CONTROL_STACK_START + control_stack_size)
+#endif
 
+#if 0
 #define BINDING_STACK_START 	(0x38000000)
+#endif
 #define BINDING_STACK_SIZE  	(0x07ff8000)	/* 128 MB, almost */
 
 #if 0
