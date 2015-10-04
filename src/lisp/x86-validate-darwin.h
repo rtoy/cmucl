@@ -29,7 +29,9 @@
  */
 #define CONTROL_STACK_SIZE	(0x07fdf000)	/* 128MB - SIGSTKSZ - 1 page */
 
+#if 0
 #define SIGNAL_STACK_START	(0x47fe0000)    /* One page past the end of the control stack */
+#endif
 #define SIGNAL_STACK_SIZE	SIGSTKSZ
 
 #define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)
