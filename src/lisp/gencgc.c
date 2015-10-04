@@ -166,7 +166,7 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
 
     if (Pointerp(obj)
 	&& (p = (void *) PTR(obj),
-	    (p >= (void *) CONTROL_STACK_START
+	    (p >= (void *) control_stack
 	     && p < (void *) control_stack_end))) {
 	char *space;
 
@@ -195,7 +195,7 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
 	    lose("Escaped stack-allocated object 0x%08lx at %p in %s\n",
 		 (unsigned long) obj, where, space);
 #ifndef i386
-	else if ((where >= (lispobj *) CONTROL_STACK_START
+	else if ((where >= (lispobj *) control_stack
 		  && where < (lispobj *) (control_stack_end))
 		 || (space == NULL)) {
 	    /* Do nothing if it the reference is from the control stack,
@@ -2136,17 +2136,19 @@ read_only_space_p(lispobj obj)
 static inline boolean
 control_stack_space_p(lispobj obj)
 {
-    lispobj end = CONTROL_STACK_START + control_stack_size;
+    char *object = (char *) obj;
+    char *end = (char *)control_stack + control_stack_size;
 
-    return (obj >= CONTROL_STACK_START) && (obj < end);
+    return (object >= (char *) control_stack) && (object < end);
 }
 
 static inline boolean
 binding_stack_space_p(lispobj obj)
 {
-    lispobj end = BINDING_STACK_START + binding_stack_size;
+    char *object = (char *) obj;
+    char *end = (char *)binding_stack + binding_stack_size;
 
-    return (obj >= BINDING_STACK_START) && (obj < end);
+    return (object >= (char *) binding_stack) && (object < end);
 }
     
 static inline boolean
@@ -2157,7 +2159,12 @@ signal_space_p(lispobj obj)
 
     return (obj >= SIGNAL_STACK_START) && (obj < end);
 #else
-    return FALSE;
+    extern char altstack[];
+    
+    char* object = (char*) obj;
+    char* end = altstack + SIGNAL_STACK_SIZE;
+    
+    return (object >= altstack && object < end);
 #endif    
 }
 
@@ -7523,7 +7530,7 @@ garbage_collect_generation(int generation, int raise)
 
 #ifdef GC_ASSERTIONS
 #if defined(i386) || defined(__x86_64)
-    invalid_stack_start = (void *) CONTROL_STACK_START;
+    invalid_stack_start = (void *) control_stack;
     invalid_stack_end = (void *) &raise;
 #else /* not i386 */
     invalid_stack_start = (void *) &raise;
