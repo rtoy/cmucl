@@ -96,7 +96,9 @@ install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/${MANDIR}
 install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp $DESTDIR/bin/
 if [ "$EXECUTABLE" = "true" ]
 then
-    install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp.a $DESTDIR/lib/cmucl/lib/
+    install ${GROUP} ${OWNER} -m 0555 $TARGET/lisp/lisp.a $DESTDIR/lib/cmucl/lib/
+    install ${GROUP} ${OWNER} -m 0555 $TARGET/lisp/exec-init.o $DESTDIR/lib/cmucl/lib/
+    install ${GROUP} ${OWNER} -m 0555 $TARGET/lisp/exec-final.o $DESTDIR/lib/cmucl/lib/
     install ${GROUP} ${OWNER} -m 0755 src/tools/linker.sh $DESTDIR/lib/cmucl/lib/
     if [ -f src/tools/$SCRIPT-cmucl-linker-script ]; then
 	install ${GROUP} ${OWNER} -m 0755 src/tools/$SCRIPT-cmucl-linker-script $DESTDIR/lib/cmucl/lib/
