@@ -254,6 +254,7 @@ save_executable(char *filename, lispobj init_function)
 {
     char *dir_name;
     char *dir_copy;
+    int rc;
     
 #if defined WANT_CGC
     volatile lispobj *func_ptr = &init_function;
@@ -365,9 +366,9 @@ save_executable(char *filename, lispobj init_function)
     
     printf("Linking executable...\n");
     fflush(stdout);
-    obj_run_linker(init_function, filename);
+    rc = obj_run_linker(init_function, filename);
     printf("done.\n");
     free(dir_copy);
-    exit(0);
+    exit(rc);
 }
 #endif
