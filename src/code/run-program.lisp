@@ -90,15 +90,16 @@
   output		    ; Stream from child's output or nil.
   error			    ; Stream from child's error output or nil.
   status-hook		    ; Closure to call when PROC changes status.
-  plist			    ; Place for clients to stash tings.
+  plist			    ; Place for clients to stash things.
   cookie		    ; List of the number of pipes from the subproc.
   )
 
 (defun %print-process (proc stream depth)
   (declare (ignore depth))
-  (format stream "#<process ~D ~S>"
+  (format stream "#<process ~D ~S code: ~S>"
 	  (process-pid proc)
-	  (process-status proc)))
+	  (process-status proc)
+	  (process-exit-code proc)))
 
 ;;; PROCESS-STATUS -- Public.
 ;;;
