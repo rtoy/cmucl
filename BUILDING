@@ -55,7 +55,7 @@ Setting up a build environment
 
     or, if you want to use the git sources directly:
 
-    git clone git://common-lisp.net/projects/cmucl/cmucl.git
+    git clone https://gitlab.common-lisp.net/cmucl/cmucl.git
 
     Whatever you do, the sources must be in a directory named src
     inside the base directory.  Since the build tools keep all
