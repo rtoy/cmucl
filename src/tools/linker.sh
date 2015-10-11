@@ -98,7 +98,7 @@ case $uname_s in
 	    # the desired version.)  This gets rid of a PIE warning
 	    # when creating the executable on 10.8.  (See ticket:112.)
 
-	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -rdynamic -mmacosx-version-min=10.5"
+	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -rdynamic -Wl,-no_pie"
 	    OS_LIBS=
 	    ;;
 	powerpc)
