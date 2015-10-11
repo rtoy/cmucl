@@ -2,7 +2,8 @@
 
 include Config.x86_common
 
-# Compile code that will run on OSX 10.5 (Tiger)
+# Compile code that will run on OSX 10.5 (Tiger).  This only works if
+# you have the 10.5 SDK available.
 MIN_VER = -mmacosx-version-min=10.5
 
 CPPFLAGS += -DDARWIN $(MIN_VER) -m32
@@ -13,7 +14,10 @@ ASFLAGS += -g3 $(MIN_VER)
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 
 OS_SRC += Darwin-os.c mach-o.c
-OS_LINK_FLAGS = -m32 $(MIN_VER)
+
+# Turn off the PIE warning; we know the x86-assem.S is not
+# relocatable, and we're not going to fix that anytime soon.
+OS_LINK_FLAGS = -m32 $(MIN_VER) -Wl,-no_pie
 OS_LIBS =
 
 EXEC_FINAL_OBJ = exec-final.o
