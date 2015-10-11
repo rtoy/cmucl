@@ -96,10 +96,11 @@
 
 (defun %print-process (proc stream depth)
   (declare (ignore depth))
-  (format stream "#<process ~D ~S code: ~S>"
-	  (process-pid proc)
-	  (process-status proc)
-	  (process-exit-code proc)))
+  (print-unreadable-object (proc stream :type t :identity t)
+    (format stream "~D ~S ~D"
+	    (process-pid proc)
+	    (process-status proc)
+	    (process-exit-code proc))))
 
 ;;; PROCESS-STATUS -- Public.
 ;;;
