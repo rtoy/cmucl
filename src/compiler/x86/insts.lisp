@@ -2105,6 +2105,7 @@
 (define-instruction break (segment code)
   (:declare (type (unsigned-byte 8) code))
   (:printer byte-imm ((op #b11001100)) '(:name :tab code)
+	    :print-name 'int3
 	    :control #'break-control)
   (:emitter
    (emit-byte segment #b11001100)
