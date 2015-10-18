@@ -17,6 +17,8 @@
 (intl:textdomain "cmucl-unix")
 
 (pushnew :unix *features*)
+#+linux
+(pushnew :glibc2 *features*)
 
 ;; Check the G_BROKEN_FILENAMES environment variable; if set the encoding
 ;; is locale-dependent...else use :utf-8 on Unicode Lisps.  On 8 bit Lisps
@@ -1039,27 +1041,55 @@
      (defconstant ,name ,(logior (ash (char-code #\t) 8) cmd))))
 
 #+linux
-(defmacro define-ioctl-command (name dev cmd arg &optional (parm-type :void))
-  (declare (ignore arg parm-type))
-  `(eval-when (eval load compile)
-     (defconstant ,name ,(logior (ash (- (char-code dev) #x20) 8) cmd))))
+(progn
+  (defconstant iocparm-mask #x3fff)
+  (defconstant ioc_void #x00000000)
+  (defconstant ioc_out #x40000000)
+  (defconstant ioc_in #x80000000)
+  (defconstant ioc_inout (logior ioc_in ioc_out)))
+
+#+linux
+(defmacro define-ioctl-command (name dev cmd &optional arg parm-type)
+  _N"Define an ioctl command. If the optional ARG and PARM-TYPE are given
+  then ioctl argument size and direction are included as for ioctls defined
+  by _IO, _IOR, _IOW, or _IOWR. If DEV is a character then the ioctl type
+  is the characters code, else DEV may be an integer giving the type."
+  (let* ((type (if (characterp dev)
+		   (char-code dev)
+		   dev))
+	 (code (logior (ash type 8) cmd)))
+    (when arg
+      (setf code `(logior (ash (logand (alien-size ,arg :bytes) ,iocparm-mask)
+			       16)
+			  ,code)))
+    (when parm-type
+      (let ((dir (ecase parm-type
+		   (:void ioc_void)
+		   (:in ioc_in)
+		   (:out ioc_out)
+		   (:inout ioc_inout))))
+	(setf code `(logior ,dir ,code))))
+    `(eval-when (eval load compile)
+       (defconstant ,name ,code))))
 
 )
 
 ;;; TTY ioctl commands.
 
-(define-ioctl-command TIOCGETP #\t #-linux 8 #+linux #x81 (struct sgttyb) :out)
-(define-ioctl-command TIOCSETP #\t #-linux 9 #+linux #x82 (struct sgttyb) :in)
-(define-ioctl-command TIOCFLUSH #\t #-linux 16 #+linux #x89 int :in)
-(define-ioctl-command TIOCSETC #\t #-linux 17 #+linux #x84 (struct tchars) :in)
-(define-ioctl-command TIOCGETC #\t #-linux 18 #+linux #x83 (struct tchars) :out)
-(define-ioctl-command TIOCGWINSZ #\t #-hpux 104 #+hpux 107 (struct winsize)
-  :out)
-(define-ioctl-command TIOCSWINSZ #\t #-hpux 103 #+hpux 106 (struct winsize)
-  :in)
+#-linux
+(progn
+  (define-ioctl-command TIOCGETP #\t #-linux 8 #+linux #x81 (struct sgttyb) :out)
+  (define-ioctl-command TIOCSETP #\t #-linux 9 #+linux #x82 (struct sgttyb) :in)
+  (define-ioctl-command TIOCFLUSH #\t #-linux 16 #+linux #x89 int :in)
+  (define-ioctl-command TIOCSETC #\t #-linux 17 #+linux #x84 (struct tchars) :in)
+  (define-ioctl-command TIOCGETC #\t #-linux 18 #+linux #x83 (struct tchars) :out)
+  (define-ioctl-command TIOCGWINSZ #\t #-hpux 104 #+hpux 107 (struct winsize)
+    :out)
+  (define-ioctl-command TIOCSWINSZ #\t #-hpux 103 #+hpux 106 (struct winsize)
+    :in)
 
-(define-ioctl-command TIOCNOTTY #\t #-linux 113 #+linux #x22 nil :void)
-#-hpux
+  (define-ioctl-command TIOCNOTTY #\t #-linux 113 #+linux #x22 nil :void))
+#-(or hpux linux)
 (progn
   (define-ioctl-command TIOCSLTC #\t #-linux 117 #+linux #x84 (struct ltchars) :in)
   (define-ioctl-command TIOCGLTC #\t #-linux 116 #+linux #x85 (struct ltchars) :out)
@@ -1072,9 +1102,19 @@
   (define-ioctl-command TIOCSPGRP #\T 29 int :in)
   (define-ioctl-command TIOCGPGRP #\T 30 int :out)
   (define-ioctl-command TIOCSIGSEND #\t 93 nil))
+#+linux
+(progn
+  (define-ioctl-command TIOCGWINSZ #\T #x13)
+  (define-ioctl-command TIOCSWINSZ #\T #x14)
+  (define-ioctl-command TIOCNOTTY  #\T #x22)
+  (define-ioctl-command TIOCSPGRP  #\T #x10)
+  (define-ioctl-command TIOCGPGRP  #\T #x0F))
 
 ;;; File ioctl commands.
+#-linux
 (define-ioctl-command FIONREAD #\f #-linux 127 #+linux #x1B int :out)
+#+linux
+(define-ioctl-command FIONREAD #\T #x1B)
 
 
 (defun unix-ioctl (fd cmd arg)
