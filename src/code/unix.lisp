@@ -42,6 +42,12 @@
 
 (def-alien-type u-int64-t (unsigned 64))
 
+(def-alien-type uquad-t
+    #+alpha unsigned-long
+    #-alpha (array unsigned-long 2))
+
+(def-alien-type u-int32-t unsigned-int)
+
 (def-alien-type ino-t
     #+netbsd u-int64-t
     #+alpha unsigned-int
@@ -61,7 +67,8 @@
 
 (def-alien-type dev-t
     #-(or alpha svr4 bsd linux) short
-    #+linux unsigned-short
+    #+(and linux (not amd64)) uquad-t
+    #+(and linux amd64) u-int64-t
     #+netbsd u-int64-t
     #+alpha int
     #+(and (not linux) (not netbsd) (or bsd svr4)) unsigned-long)
@@ -70,16 +77,22 @@
 (progn
   (deftype file-offset () '(signed-byte 32))
   (def-alien-type off-t
-      #-alpha long
-      #+alpha unsigned-long)		;??? very dubious
+      #-(or alpha linux) long
+      #+linux int64-t
+      #+alpha unsigned-long)
   (def-alien-type uid-t
-      #-(or alpha svr4) unsigned-short
+      #-(or alpha svr4 linux) unsigned-short
       #+alpha unsigned-int
+      #+linux unsigned-int
       #+svr4 long)
   (def-alien-type gid-t
-      #-(or alpha svr4) unsigned-short
+      #-(or alpha svr4 linux) unsigned-short
       #+alpha unsigned-int
-      #+svr4 long))
+      #+linux unsigned-int
+      #+svr4 long)
+  #+linux
+  (def-alien-type blkcnt-t u-int64-t)
+)
 
 #+BSD
 (progn
@@ -89,8 +102,9 @@
   (def-alien-type gid-t unsigned-long))
 
 (def-alien-type mode-t
-    #-(or alpha svr4) unsigned-short
+    #-(or alpha svr4 linux) unsigned-short
     #+alpha unsigned-int
+    #+linux u-int32-t
     #+svr4 unsigned-long)
 
 ;; not checked for linux...
@@ -111,9 +125,11 @@
        (logbitp ,bit (deref (slot ,fd-set 'fds-bits) ,word)))))
 
 (def-alien-type nlink-t
-    #-(or svr4 netbsd) unsigned-short
+    #-(or svr4 netbsd linux) unsigned-short
     #+netbsd unsigned-long
-    #+svr4 unsigned-long)
+    #+svr4 unsigned-long
+    #+(and linux (not amd64)) unsigned-int
+    #+(and linux amd64) u-int64-t)
 
 (defconstant fd-setsize
   #-(or hpux alpha linux FreeBSD) 256
@@ -246,7 +262,7 @@
       (t
        (values nil enotdir)))))
 
-#-(and bsd (not solaris))
+#-(or solaris (and bsd (not solaris)) linux)
 (defun read-dir (dir)
   (declare (type %directory dir))
   (let ((daddr (alien-funcall (extern-alien "readdir"
@@ -336,6 +352,20 @@
 		  (setf (aref string k)
 			(code-char (sap-ref-8 sap k)))))
 	      (values (%file->name string) fino)))))))
+
+#+linux
+(defun read-dir (dir)
+  (declare (type %directory dir))
+  (let ((daddr (alien-funcall (extern-alien "readdir64"
+					    (function system-area-pointer
+						      system-area-pointer))
+			      (directory-dir-struct dir))))
+    (declare (type system-area-pointer daddr))
+    (if (zerop (sap-int daddr))
+	nil
+	(with-alien ((dirent (* (struct dirent)) daddr))
+	  (values (%file->name (cast (slot dirent 'd-name) c-string))
+		  (slot dirent 'd-ino))))))
 
 
 (defun close-dir (dir)
@@ -498,7 +528,10 @@
 (defconstant o_wronly 1 _N"Write-only flag.")
 (defconstant o_rdwr 2   _N"Read-write flag.")
 #+(or hpux linux svr4)
-(defconstant o_ndelay #-linux 4 #+linux #o4000 _N"Non-blocking I/O")
+(defconstant o_ndelay
+  #+linux o_nonblock
+  #-linux 4
+  _N"Non-blocking I/O")
 (defconstant o_append #-linux #o10 #+linux #o2000   _N"Append flag.")
 #+(or hpux svr4 linux)
 (progn
@@ -507,14 +540,20 @@
   (defconstant o_excl #-linux #o2000 #+linux #o200 _N"Error if already exists.")
   (defconstant o_noctty #+linux #o400 #+hpux #o400000 #+(or irix solaris) #x800
                _N"Don't assign controlling tty"))
-#+(or hpux svr4 BSD)
-(defconstant o_nonblock #+hpux #o200000 #+(or irix solaris) #x80 #+BSD #x04
+#+(or hpux linux svr4 BSD)
+(defconstant o_nonblock
+  #+hpux #o200000
+  #+(or irix solaris) #x80
+  #+BSD #x04
+  #+linux #o4000
   _N"Non-blocking mode")
 #+BSD
 (defconstant o_ndelay o_nonblock) ; compatibility
 #+linux
 (progn
-   (defconstant o_sync #o10000 _N"Synchronous writes (on ext2)"))
+  (defconstant o_sync #o10000 _N"Synchronous writes (on ext2)")
+  (defconstant o_fsync    o_sync)
+  (defconstant o_async   #o20000 _N"Asynchronous I/O"))
 
 #-(or hpux svr4 linux)
 (progn
@@ -540,7 +579,8 @@
   (declare (type unix-pathname path)
 	   (type fixnum flags)
 	   (type unix-file-mode mode))
-  (int-syscall (#+solaris "open64" #-solaris "open" c-string int int)
+  (int-syscall (#+(or linux solaris) "open64" #-(or linux solaris) "open"
+		  c-string int int)
 	       (%name->file path) flags mode))
 
 ;;; Unix-close accepts a file descriptor and attempts to close the file
@@ -615,7 +655,11 @@
 
 ;;; File flags for F-GETFL and F-SETFL:
 
-(defconstant FNDELAY  #-osf1 #o0004 #+osf1 #o100000 _N"Non-blocking reads")
+(defconstant FNDELAY
+  #+linux o_ndelay
+  #+osf1 #o100000
+  #-(or linux osf1) #o0004
+  _N"Non-blocking reads")
 (defconstant FAPPEND  #-linux #o0010 #+linux #o2000  _N"Append on each write") 
 (defconstant FASYNC   #-(or linux svr4) #o0100 #+svr4 #o10000 #+linux #o20000
   _N"Signal pgrp when data ready")
@@ -665,6 +709,7 @@
 	     (values (deref fds 0) (deref fds 1))
 	     (cast fds (* int)))))
 
+#-linux
 (defun unix-read (fd buf len)
   _N"Unix-read attempts to read from the file described by fd into
    the buffer buf until it is full.  Len is the length of the buffer.
@@ -687,6 +732,40 @@
   ;; write-protected and the kernel doesn't like writing to
   ;; write-protected pages.  So go through and touch each page to give
   ;; the segv handler a chance to unprotect the pages.
+  (without-gcing
+   (let* ((page-size (get-page-size))
+	  (1-page-size (1- page-size))
+	  (sap (etypecase buf
+		 (system-area-pointer buf)
+		 (vector (vector-sap buf))))
+	  (end (sap+ sap len)))
+     (declare (type (and fixnum unsigned-byte) page-size 1-page-size)
+	      (type system-area-pointer sap end)
+	      (optimize (speed 3) (safety 0)))
+     ;; Touch the beginning of every page
+     (do ((sap (int-sap (logand (sap-int sap)
+				(logxor 1-page-size (ldb (byte 32 0) -1))))
+	       (sap+ sap page-size)))
+	 ((sap>= sap end))
+       (declare (type system-area-pointer sap))
+       (setf (sap-ref-8 sap 0) (sap-ref-8 sap 0)))))
+  (int-syscall ("read" int (* char) int) fd buf len))
+
+#+linux
+(defun unix-read (fd buf len)
+  _N"UNIX-READ attempts to read from the file described by fd into
+   the buffer buf until it is full.  Len is the length of the buffer.
+   The number of bytes actually read is returned or NIL and an error
+   number if an error occured."
+  (declare (type unix-fd fd)
+	   (type (unsigned-byte 32) len))
+  #+gencgc
+  ;; With gencgc, the collector tries to keep raw objects like strings
+  ;; in separate pages that are not write-protected.  However, this
+  ;; isn't always true.  Thus, BUF will sometimes be write-protected
+  ;; and the kernel doesn't like writing to write-protected pages.  So
+  ;; go through and touch each page to give the segv handler a chance
+  ;; to unprotect the pages.  (This is taken from unix.lisp.)
   (without-gcing
    (let* ((page-size (get-page-size))
 	  (1-page-size (1- page-size))
@@ -806,12 +885,18 @@
   #+bsd (def-enum ash 1 tty-opost tty-onlcr)
 
   ;; local modes
-  #-bsd (def-enum ash 1 tty-isig tty-icanon tty-xcase tty-echo tty-echoe
+  #-(or bsd linux) (def-enum ash 1 tty-isig tty-icanon tty-xcase tty-echo tty-echoe
                       tty-echok tty-echonl tty-noflsh #+irix tty-iexten
                       #+(or sunos linux) tty-tostop tty-echoctl tty-echoprt
                       tty-echoke #+(or sunos svr4) tty-defecho tty-flusho
                       #+linux nil tty-pendin #+irix tty-tostop
-                      #+(or sunos linux) tty-iexten)
+					     #+(or sunos linux) tty-iexten)
+  #+linux
+  (def-enum ash 1 tty-isig tty-icanon tty-xcase tty-echo tty-echoe
+	  tty-echok tty-echonl tty-noflsh
+	  tty-tostop tty-echoctl tty-echoprt
+	  tty-echoke tty-flusho
+	  tty-pendin tty-iexten)
   #+bsd (def-enum ash 1 tty-echoke tty-echoe tty-echok tty-echo tty-echonl
                       tty-echoprt tty-echoctl tty-isig tty-icanon nil
                       tty-iexten)
@@ -1061,11 +1146,13 @@
 (defconstant +NCCS+
   #+hpux 16
   #+irix 23
-  #+(or linux solaris) 19
+  #+solaris 19
   #+(or bsd osf1) 20
+  #+linux 32
   #+(and sunos (not svr4)) 17
   _N"Size of control character vector.")
 
+#-linux
 (def-alien-type nil
   (struct termios
     (c-iflag unsigned-int)
@@ -1079,10 +1166,29 @@
     #+(or bsd osf1) (c-ispeed unsigned-int)
     #+(or bsd osf1) (c-ospeed unsigned-int)))
 
+#+linux
+(progn
+  (def-alien-type cc-t unsigned-char)
+  (def-alien-type speed-t  unsigned-int)
+  (def-alien-type tcflag-t unsigned-int))
+
+#+linux
+(def-alien-type nil
+  (struct termios
+    (c-iflag tcflag-t)
+    (c-oflag tcflag-t)
+    (c-cflag tcflag-t)
+    (c-lflag tcflag-t)
+    (c-line cc-t)
+    (c-cc (array cc-t #.+NCCS+))
+    (c-ispeed speed-t)
+    (c-ospeed speed-t)))
+
+
 ;;; From sys/dir.h
 ;;;
 ;;; (For Solaris, this is not struct direct, but struct dirent!)
-#-bsd
+#-(or bsd linux netbsd)
 (def-alien-type nil
   (struct direct
     #+(and sunos (not svr4)) (d-off long) ; offset of next disk directory entry
@@ -1110,6 +1216,19 @@
     (d-namlen unsigned-short)
     (d-type unsigned-char)
     (d-name (array char 512))))
+
+#+linux
+(def-alien-type nil
+  (struct dirent
+    #+glibc2.1
+    (d-ino ino-t)                       ; inode number of entry
+    #-glibc2.1
+    (d-ino ino64-t)                     ; inode number of entry
+    (d-off off-t)                       ; offset of next disk directory entry
+    (d-reclen unsigned-short)		; length of this record
+    (d_type unsigned-char)
+    (d-name (array char 256))))		; name must be no longer than this
+
 
 #+(or linux svr4)
 ; High-res time.  Actually posix definition under svr4 name.
@@ -1171,7 +1290,7 @@
     (st-lspare  long)
     (st-qspare (array long 4))))
 
-#+(or linux svr4)
+#+svr4
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
@@ -1202,6 +1321,40 @@
     #-linux (st-blocks long)
     #-linux (st-fstype (array char 16))
     #-linux (st-pad4 (array long 8))))
+
+#+linux
+(def-alien-type nil
+  (struct stat
+    (st-dev dev-t)
+    #-(or alpha amd64) (st-pad1 unsigned-short)
+    (st-ino ino-t)
+    #+alpha (st-pad1 unsigned-int)
+    #-amd64 (st-mode mode-t)
+    (st-nlink  nlink-t)
+    #+amd64 (st-mode mode-t)
+    (st-uid  uid-t)
+    (st-gid  gid-t)
+    (st-rdev dev-t)
+    #-alpha (st-pad2  unsigned-short)
+    (st-size off-t)
+    #-alpha (st-blksize unsigned-long)
+    #-alpha (st-blocks blkcnt-t)
+    (st-atime time-t)
+    #-alpha (unused-1 unsigned-long)
+    (st-mtime time-t)
+    #-alpha (unused-2 unsigned-long)
+    (st-ctime time-t)
+    #+alpha (st-blocks int)
+    #+alpha (st-pad2 unsigned-int)
+    #+alpha (st-blksize unsigned-int)
+    #+alpha (st-flags unsigned-int)
+    #+alpha (st-gen unsigned-int)
+    #+alpha (st-pad3 unsigned-int)
+    #+alpha (unused-1 unsigned-long)
+    #+alpha (unused-2 unsigned-long)
+    (unused-3 unsigned-long)
+    (unused-4 unsigned-long)
+    #-alpha (unused-5 unsigned-long)))
 
 ;;; 64-bit stat for Solaris
 #+solaris
@@ -1247,6 +1400,7 @@
     (st-gen     unsigned-long)
     (st-spare (array unsigned-long 2))))
 
+#-linux
 (defmacro extract-stat-results (buf)
   `(values T
 	   (slot ,buf 'st-dev)
@@ -1267,6 +1421,33 @@
 	   #+svr4   (slot (slot ,buf 'st-ctime) 'tv-sec)
            #+BSD(slot (slot ,buf 'st-ctime) 'ts-sec)
 	   #+netbsd (slot (slot ,buf 'st-birthtime) 'ts-sec)
+	   (slot ,buf 'st-blksize)
+	   (slot ,buf 'st-blocks)))
+
+#+linux
+(defmacro extract-stat-results (buf)
+  `(values T
+           #+(or alpha amd64)
+	   (slot ,buf 'st-dev)
+           #-(or alpha amd64)
+           (+ (deref (slot ,buf 'st-dev) 0)
+	      (* (+ +max-u-long+  1)
+	         (deref (slot ,buf 'st-dev) 1)))   ;;; let's hope this works..
+	   (slot ,buf 'st-ino)
+	   (slot ,buf 'st-mode)
+	   (slot ,buf 'st-nlink)
+	   (slot ,buf 'st-uid)
+	   (slot ,buf 'st-gid)
+           #+(or alpha amd64)
+	   (slot ,buf 'st-rdev)
+           #-(or alpha amd64)
+           (+ (deref (slot ,buf 'st-rdev) 0)
+	      (* (+ +max-u-long+  1)
+	         (deref (slot ,buf 'st-rdev) 1)))   ;;; let's hope this works..
+	   (slot ,buf 'st-size)
+	   (slot ,buf 'st-atime)
+	   (slot ,buf 'st-mtime)
+	   (slot ,buf 'st-ctime)
 	   (slot ,buf 'st-blksize)
 	   (slot ,buf 'st-blocks)))
 
@@ -1413,7 +1594,8 @@
 (defconstant s-ifmt   #o0170000)
 (defconstant s-ifdir  #o0040000)
 (defconstant s-ifchr  #o0020000)
-#+linux (defconstant s-ififo #x0010000)
+#+linux
+(defconstant s-ififo  #o0010000 _N"FIFO")
 (defconstant s-ifblk  #o0060000)
 (defconstant s-ifreg  #o0100000)
 (defconstant s-iflnk  #o0120000)
@@ -1918,6 +2100,8 @@
 (def-alien-routine ("os_get_errno" unix-get-errno) int)
 (def-alien-routine ("os_set_errno" unix-set-errno) int (newvalue int))
 (defun unix-errno () (unix-get-errno))
+#+linux
+(defun (setf unix-errno) (newvalue) (unix-set-errno newvalue))
 
 ;;; GET-UNIX-ERROR-MSG -- public.
 ;;; 
@@ -2318,6 +2502,17 @@
             (pw-expire int)             ; account expiration
             #+(or freebsd darwin)
 	    (pw-fields int)))           ; internal
+#+linux
+(def-alien-type nil
+    (struct passwd
+	    (pw-name (* char))          ; user's login name
+	    (pw-passwd (* char))        ; no longer used
+	    (pw-uid uid-t)              ; user id
+	    (pw-gid gid-t)              ; group id
+	    (pw-gecos (* char))         ; typically user's full name
+	    (pw-dir (* char))           ; user's home directory
+	    (pw-shell (* char))))       ; user's login shell
+
 
 ;;;; Other random routines.
 (def-alien-routine ("isatty" unix-isatty) boolean
@@ -2496,6 +2691,7 @@
 	    ) )
 )
 
+#-linux
 (def-alien-type nil
   (struct utsname
     (sysname (array char #+svr4 257 #+bsd 256))
@@ -2503,6 +2699,16 @@
     (release (array char #+svr4 257 #+bsd 256))
     (version (array char #+svr4 257 #+bsd 256))
     (machine (array char #+svr4 257 #+bsd 256))))
+
+#+linux
+(def-alien-type nil
+  (struct utsname
+    (sysname (array char 65))
+    (nodename (array char 65))
+    (release (array char 65))
+    (version (array char 65))
+    (machine (array char 65))
+    (domainname (array char 65))))
 
 (defun unix-uname ()
   (with-alien ((names (struct utsname)))

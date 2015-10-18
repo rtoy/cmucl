@@ -156,9 +156,7 @@
 (comf "target:code/string")
 (comf "target:code/mipsstrops")
 
-(if (c:backend-featurep :glibc2)
-    (comf "target:code/unix-glibc2" :proceed t)
-    (comf "target:code/unix" :proceed t))
+(comf "target:code/unix" :proceed t)
 
 (when (c:backend-featurep :mach)
   (comf "target:code/mach")
