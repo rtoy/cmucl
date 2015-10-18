@@ -37,6 +37,8 @@
 
 
 ;;;; Common machine independent structures.
+#+linux
+(defconstant +max-u-long+ 4294967295)
 
 (def-alien-type int64-t (signed 64))
 
@@ -52,6 +54,9 @@
     #+netbsd u-int64-t
     #+alpha unsigned-int
     #-(or alpha netbsd) unsigned-long)
+
+#+linux
+(def-alien-type ino64-t u-int64-t)
 
 (def-alien-type size-t
     #-(or linux alpha) long
@@ -488,6 +493,7 @@
 (defconstant l_incr 1 _N"increment the file pointer")
 (defconstant l_xtnd 2 _N"extend the file size")
 
+#-linux
 (defun unix-lseek (fd offset whence)
   _N"Unix-lseek accepts a file descriptor and moves the file pointer ahead
    a certain offset for that file.  Whence can be any of the following:
@@ -501,6 +507,24 @@
 	   (type (integer 0 2) whence))
   (off-t-syscall ("lseek" (int off-t int)) fd offset whence))
 
+#+linux
+(defun unix-lseek (fd offset whence)
+  _N"UNIX-LSEEK accepts a file descriptor and moves the file pointer ahead
+   a certain OFFSET for that file.  WHENCE can be any of the following:
+
+   l_set        Set the file pointer.
+   l_incr       Increment the file pointer.
+   l_xtnd       Extend the file size.
+  "
+  (declare (type unix-fd fd)
+	   (type (signed-byte 64) offset)
+	   (type (integer 0 2) whence))
+  (let ((result (alien-funcall
+                 (extern-alien "lseek64" (function off-t int off-t int))
+                 fd offset whence)))
+    (if (minusp result)
+        (values nil (unix-errno))
+        (values result 0))))
 ;;; Unix-mkdir accepts a name and a mode and attempts to create the
 ;;; corresponding directory with mode mode.
 
@@ -606,7 +630,7 @@
   
   (declare (type unix-pathname name)
 	   (type unix-file-mode mode))
-  (int-syscall (#+solaris "creat64" #-solaris "creat" c-string int)
+  (int-syscall (#+(or linux solaris) "creat64" #-(or linux solaris) "creat" c-string int)
 	       (%name->file name) mode))
 
 ;;; Unix-read accepts a file descriptor, a buffer, and the length to read.
@@ -1463,7 +1487,8 @@
   (when (string= name "")
     (setf name "."))
   (with-alien ((buf (struct stat)))
-    (syscall (#-netbsd "stat" #+netbsd "__stat50" c-string (* (struct stat)))
+    (syscall (#+linux "stat64" #+netbsd "__stat50" #-(or linux netbsd) "stat"
+	      c-string (* (struct stat)))
 	     (extract-stat-results buf)
 	     (%name->file name) (addr buf))))
 
@@ -1472,7 +1497,8 @@
    file must be a symbolic link."
   (declare (type unix-pathname name))
   (with-alien ((buf (struct stat)))
-    (syscall (#-netbsd "lstat" #+netbsd "__lstat50" c-string (* (struct stat)))
+    (syscall (#+linux "lstat64" #+netbsd "__lstat50" #-(or linux netbsd) "lstat"
+              c-string (* (struct stat)))
 	     (extract-stat-results buf)
 	     (%name->file name) (addr buf))))
 
@@ -1481,7 +1507,8 @@
    by the file descriptor fd."
   (declare (type unix-fd fd))
   (with-alien ((buf (struct stat)))
-    (syscall (#-netbsd "fstat" #+netbsd "__fstat50" int (* (struct stat)))
+    (syscall (#+linux "fstat64" #+netbsd "__fstat50" #-(or linux netbsd) "fstat" 
+              int (* (struct stat)))
 	     (extract-stat-results buf)
 	     fd (addr buf))))
 )
@@ -2629,6 +2656,37 @@
        :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
        :dir (string (cast (slot result 'pw-dir) c-call:c-string))
        :shell (string (cast (slot result 'pw-shell) c-call:c-string))))))
+
+#+linux
+(defun unix-getpwuid (uid)
+  _N"Return a USER-INFO structure for the user identified by UID, or NIL if not found."
+  (declare (type unix-uid uid))
+  (with-alien ((buf (array c-call:char 1024))
+	       (user-info (struct passwd))
+               (result (* (struct passwd))))
+    (let ((returned
+	   (alien-funcall
+	    (extern-alien "getpwuid_r"
+			  (function c-call:int
+                                    c-call:unsigned-int
+                                    (* (struct passwd))
+                                    (* c-call:char)
+                                    c-call:unsigned-int
+                                    (* (* (struct passwd)))))
+	    uid
+	    (addr user-info)
+	    (cast buf (* c-call:char))
+	    1024
+            (addr result))))
+      (when (zerop returned)
+        (make-user-info
+         :name (string (cast (slot result 'pw-name) c-call:c-string))
+         :password (string (cast (slot result 'pw-passwd) c-call:c-string))
+         :uid (slot result 'pw-uid)
+         :gid (slot result 'pw-gid)
+         :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
+         :dir (string (cast (slot result 'pw-dir) c-call:c-string))
+         :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
 
 ;;; Getrusage is not provided in the C library on Solaris 2.4, and is
 ;;; rather slow on later versions so the "times" system call is
