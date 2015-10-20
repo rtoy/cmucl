@@ -650,6 +650,20 @@
   (declare (type unix-fd fd))
   (int-syscall ("dup" int) fd))
 
+;;; Unix-dup2 makes the second file-descriptor describe the same file
+;;; as the first. If the second file-descriptor points to an open
+;;; file, it is first closed. In any case, the second should have a 
+;;; value which is a valid file-descriptor.
+
+(defun unix-dup2 (fd1 fd2)
+  _N"Unix-dup2 duplicates an existing file descriptor just as unix-dup
+   does only the new value of the duplicate descriptor may be requested
+   through the second argument.  If a file already exists with the
+   requested descriptor number, it will be closed and the number
+   assigned to the duplicate."
+  (declare (type unix-fd fd1 fd2))
+  (void-syscall ("dup2" int int) fd1 fd2))
+
 ;;; Unix-fcntl takes a file descriptor, an integer command
 ;;; number, and optional command arguments.  It performs
 ;;; operations on the associated file and/or returns inform-
@@ -686,8 +700,8 @@
   #+osf1 #o100000
   #-(or linux osf1) #o0004
   _N"Non-blocking reads")
-(defconstant FAPPEND  #-linux #o0010 #+linux #o2000  _N"Append on each write") 
-(defconstant FASYNC   #-(or linux svr4) #o0100 #+svr4 #o10000 #+linux #o20000
+(defconstant FAPPEND  #-linux #o0010 #+linux o_append  _N"Append on each write") 
+(defconstant FASYNC   #-(or linux svr4) #o0100 #+svr4 #o10000 #+linux o_asyn
   _N"Signal pgrp when data ready")
 ;; doesn't exist in Linux ;-(
 #-linux (defconstant FCREAT   #-(or hpux svr4) #o1000 #+(or hpux svr4) #o0400
@@ -907,7 +921,7 @@
 
   ;; output modes
   #-bsd (def-enum ash 1 tty-opost tty-olcuc tty-onlcr tty-ocrnl tty-onocr
-                      tty-onlret tty-ofill tty-ofdel)
+                      tty-onlret tty-ofill tty-ofdel #+linux tty-nldly)
   #+bsd (def-enum ash 1 tty-opost tty-onlcr)
 
   ;; local modes
@@ -1658,15 +1672,15 @@
 
 ;;;; Support routines for dealing with unix pathnames.
 
-(defconstant s-ifmt   #o0170000)
-(defconstant s-ifdir  #o0040000)
-(defconstant s-ifchr  #o0020000)
+(defconstant s-ifmt   #o0170000 _N"These bits determine file type.")
+(defconstant s-ifdir  #o0040000 _N"Directory")
+(defconstant s-ifchr  #o0020000 _N"Character device")
 #+linux
 (defconstant s-ififo  #o0010000 _N"FIFO")
-(defconstant s-ifblk  #o0060000)
-(defconstant s-ifreg  #o0100000)
-(defconstant s-iflnk  #o0120000)
-(defconstant s-ifsock #o0140000)
+(defconstant s-ifblk  #o0060000 _N"Block device")
+(defconstant s-ifreg  #o0100000 _N"Regular file")
+(defconstant s-iflnk  #o0120000 _N"Symbolic link.")
+(defconstant s-ifsock #o0140000 _N"Socket.")
 (defconstant s-isuid #o0004000)
 (defconstant s-isgid #o0002000)
 (defconstant s-isvtx #o0001000)
@@ -2291,8 +2305,9 @@
 
 (def-alien-type nil
   (struct timeval
-    (tv-sec #-linux time-t #+linux int)		; seconds
-    (tv-usec int)))				; and microseconds
+    (tv-sec time-t)			; seconds
+    (tv-usec #-linux int 
+             #+linux time-t))) ; and microseconds
 
 (def-alien-type nil
   (struct timezone
@@ -2609,6 +2624,7 @@
 (defconstant ITIMER-VIRTUAL 1)
 (defconstant ITIMER-PROF 2)
 
+#-linux
 (defun unix-setitimer (which int-secs int-usec val-secs val-usec)
   _N" Unix-setitimer sets the INTERVAL and VALUE slots of one of
    three system timers (:real :virtual or :profile). A SIGALRM signal
@@ -2644,6 +2660,28 @@
 			(slot (slot itvo 'it-value) 'tv-usec))
 		which (alien-sap (addr itvn))(alien-sap (addr itvo))))))
 
+#+linux
+(defun unix-getitimer (which)
+  _N"Unix-getitimer returns the INTERVAL and VALUE slots of one of
+   three system timers (:real :virtual or :profile). On success,
+   unix-getitimer returns 5 values,
+   T, it-interval-secs, it-interval-usec, it-value-secs, it-value-usec."
+  (declare (type (member :real :virtual :profile) which)
+	   (values t
+		   (unsigned-byte 29)(mod 1000000)
+		   (unsigned-byte 29)(mod 1000000)))
+  (let ((which (ecase which
+		 (:real ITIMER-REAL)
+		 (:virtual ITIMER-VIRTUAL)
+		 (:profile ITIMER-PROF))))
+    (with-alien ((itv (struct itimerval)))
+      (syscall* ("getitimer" int (* (struct itimerval)))
+		(values T
+			(slot (slot itv 'it-interval) 'tv-sec)
+			(slot (slot itv 'it-interval) 'tv-usec)
+			(slot (slot itv 'it-value) 'tv-sec)
+			(slot (slot itv 'it-value) 'tv-usec))
+		which (alien-sap (addr itv))))))
 
 ;;;; User and group database access, POSIX Standard 9.2.2
 
