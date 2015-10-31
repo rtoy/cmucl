@@ -166,6 +166,17 @@ msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
+"UNIX-LSEEK accepts a file descriptor and moves the file pointer ahead\n"
+"   a certain OFFSET for that file.  WHENCE can be any of the following:\n"
+"\n"
+"   l_set        Set the file pointer.\n"
+"   l_incr       Increment the file pointer.\n"
+"   l_xtnd       Extend the file size.\n"
+"  "
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
 "Unix-mkdir creates a new directory with the specified name and mode.\n"
 "   (Same as those for unix-chmod.)  It returns T upon success, otherwise\n"
 "   NIL and an error number."
@@ -222,6 +233,10 @@ msgid "Synchronous writes (on ext2)"
 msgstr ""
 
 #: src/code/unix.lisp
+msgid "Asynchronous I/O"
+msgstr ""
+
+#: src/code/unix.lisp
 msgid ""
 "Unix-open opens the file whose pathname is specified by path\n"
 "   for reading and/or writing as specified by the flags argument.\n"
@@ -261,6 +276,15 @@ msgid ""
 "Unix-dup duplicates an existing file descriptor (given as the\n"
 "   argument) and return it.  If FD is not a valid file descriptor, NIL\n"
 "   and an error number are returned."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-dup2 duplicates an existing file descriptor just as unix-dup\n"
+"   does only the new value of the duplicate descriptor may be requested\n"
+"   through the second argument.  If a file already exists with the\n"
+"   requested descriptor number, it will be closed and the number\n"
+"   assigned to the duplicate."
 msgstr ""
 
 #: src/code/unix.lisp
@@ -371,6 +395,14 @@ msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
+"UNIX-READ attempts to read from the file described by fd into\n"
+"   the buffer buf until it is full.  Len is the length of the buffer.\n"
+"   The number of bytes actually read is returned or NIL and an error\n"
+"   number if an error occured."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
 "Unix-readlink invokes the readlink system call on the file name\n"
 "  specified by the simple string path.  It returns up to two values:\n"
 "  the contents of the symbolic link if the call is successful, or\n"
@@ -394,6 +426,14 @@ msgid ""
 "Unix-write attempts to write a character buffer (buf) of length\n"
 "   len to the file described by the file descriptor fd.  NIL and an\n"
 "   error is returned if the call is unsuccessful."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Define an ioctl command. If the optional ARG and PARM-TYPE are given\n"
+"  then ioctl argument size and direction are included as for ioctls defined\n"
+"  by _IO, _IOR, _IOW, or _IOWR. If DEV is a character then the ioctl type\n"
+"  is the characters code, else DEV may be an integer giving the type."
 msgstr ""
 
 #: src/code/unix.lisp
@@ -488,6 +528,38 @@ msgid ""
 "   current process (rusage_self) or all of the terminated\n"
 "   child processes (rusage_children).  NIL and an error number\n"
 "   is returned if the call fails."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "These bits determine file type."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Directory"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Character device"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "FIFO"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Block device"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Regular file"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Symbolic link."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Socket."
 msgstr ""
 
 #: src/code/unix.lisp
@@ -1222,6 +1294,14 @@ msgid ""
 "   the timer. See the Unix man page for more details. On success,\n"
 "   unix-setitimer returns the old contents of the INTERVAL and VALUE\n"
 "   slots as in unix-getitimer."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-getitimer returns the INTERVAL and VALUE slots of one of\n"
+"   three system timers (:real :virtual or :profile). On success,\n"
+"   unix-getitimer returns 5 values,\n"
+"   T, it-interval-secs, it-interval-usec, it-value-secs, it-value-usec."
 msgstr ""
 
 #: src/code/unix.lisp
