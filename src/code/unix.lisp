@@ -701,7 +701,7 @@
   #-(or linux osf1) #o0004
   _N"Non-blocking reads")
 (defconstant FAPPEND  #-linux #o0010 #+linux o_append  _N"Append on each write") 
-(defconstant FASYNC   #-(or linux svr4) #o0100 #+svr4 #o10000 #+linux o_asyn
+(defconstant FASYNC   #-(or linux svr4) #o0100 #+svr4 #o10000 #+linux o_async
   _N"Signal pgrp when data ready")
 ;; doesn't exist in Linux ;-(
 #-linux (defconstant FCREAT   #-(or hpux svr4) #o1000 #+(or hpux svr4) #o0400
