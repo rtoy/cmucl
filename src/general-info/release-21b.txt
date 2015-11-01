@@ -22,6 +22,26 @@ New in this release:
   * Feature enhancements
 
   * Changes
+    * Update to ASDF 3.1.6
+    * Add support for asdf's static-image-op
+      * This mostly entails internal changes in how executables are
+        handled.  lisp.a is not complete; it must be linked with
+        either exec-init.o or exec-final.o.
+      * If the linker fails to link an image, the exit code is
+        returned to indicate failure.
+    * When printing the process structure (from run-program), include
+      the exit code to make it easier to see if the the process exited
+      cleanly or not.  The printed representation is also changed
+      slightly to use pprint-unreadable-object.
+    * Executable images on OSX no longer support running on other
+      versions of the OS.  Previously, -mmacosx-version-min=10.5 was
+      used to specify the executable would run on OSX versions >=
+      10.5.  This, however, requires the 10.5DK be available.  Thus,
+      no longer require that.
+    * Disassembly of bytes and words now use .BYTE and .WORD instead
+      of BYTE and WORD.
+    * Unix support on Linux has been unified with all other OSes.
+      Thus, src/code/unix-glibc2.lisp is no longer used.
 
   * ANSI compliance fixes:
 
@@ -30,6 +50,9 @@ New in this release:
   * Trac Tickets:
 
   * Gitlab tickets:
+    * Ticket #10 fixed: setting an element of a 1, 2, or 4-bit array
+      with a constant index did not always set the element
+      appropriately. 
 
   * Other changes:
 
