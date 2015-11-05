@@ -408,10 +408,7 @@ interrupt_maybe_gc(HANDLER_ARGS)
 * Noise to install handlers.                                     *
 \****************************************************************/
 
-//#if !(defined(i386) || defined(__x86_64))
-//#define SIGNAL_STACK_SIZE SIGSTKSZ
 char altstack[SIGNAL_STACK_SIZE];
-//#endif
 
 void
 interrupt_install_low_level_handler(int signal, void handler(HANDLER_ARGS))
