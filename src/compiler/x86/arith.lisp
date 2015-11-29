@@ -1445,31 +1445,43 @@
   (:translate bignum::%ashr)
   (:policy :fast-safe)
   (:args (digit :scs (unsigned-reg unsigned-stack) :target result)
-	 (count :scs (unsigned-reg) :target ecx))
+	 (count :scs (unsigned-reg immediate)))
   (:arg-types unsigned-num positive-fixnum)
   (:temporary (:sc unsigned-reg :offset ecx-offset :from (:argument 1)) ecx)
   (:results (result :scs (unsigned-reg) :from (:argument 0)
 		    :load-if (not (and (sc-is result unsigned-stack)
 				       (location= digit result)))))
   (:result-types unsigned-num)
-  (:generator 1
+  (:generator 2
     (move result digit)
-    (move ecx count)
-    (inst sar result :cl)))
+    (sc-case count
+      (unsigned-reg
+       (move ecx count)
+       (inst sar result :cl))
+      (immediate
+       (inst sar result (tn-value count))))))
 
 (define-vop (digit-lshr digit-ashr)
   (:translate bignum::%digit-logical-shift-right)
-  (:generator 1
+  (:generator 2
     (move result digit)
-    (move ecx count)
-    (inst shr result :cl)))
+    (sc-case count
+      (unsigned-reg
+       (move ecx count)
+       (inst shr result :cl))
+      (immediate
+       (inst shr result (tn-value count))))))
 
 (define-vop (digit-ashl digit-ashr)
   (:translate bignum::%ashl)
-  (:generator 1
+  (:generator 2
     (move result digit)
-    (move ecx count)
-    (inst shl result :cl)))
+    (sc-case count
+      (unsigned-reg
+       (move ecx count)
+       (inst shl result :cl))
+      (immediate
+       (inst shl result (tn-value count))))))
 
 
 ;;;; Static functions.
