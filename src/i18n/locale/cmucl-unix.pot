@@ -1298,14 +1298,6 @@ msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
-"Unix-getitimer returns the INTERVAL and VALUE slots of one of\n"
-"   three system timers (:real :virtual or :profile). On success,\n"
-"   unix-getitimer returns 5 values,\n"
-"   T, it-interval-secs, it-interval-usec, it-value-secs, it-value-usec."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
 "Return a USER-INFO structure for the user identified by UID, or NIL if not "
 "found."
 msgstr ""
