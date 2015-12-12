@@ -1445,7 +1445,7 @@
   (:translate bignum::%ashr)
   (:policy :fast-safe)
   (:args (digit :scs (unsigned-reg unsigned-stack) :target result)
-	 (count :scs (unsigned-reg immediate)))
+	 (count :scs (unsigned-reg)))
   (:arg-types unsigned-num positive-fixnum)
   (:temporary (:sc unsigned-reg :offset ecx-offset :from (:argument 1)) ecx)
   (:results (result :scs (unsigned-reg) :from (:argument 0)
@@ -1454,53 +1454,52 @@
   (:result-types unsigned-num)
   (:generator 2
     (move result digit)
-    (sc-case count
-      (unsigned-reg
-       (move ecx count)
-       (inst sar result :cl))
-      (immediate
-       (let ((amount (tn-value count)))
-	 ;; If the amount is greater than 31, it's the same as
-	 ;; shifting by 31, leaving just the sign bit.
-	 (inst sar result (if (>= amount vm:word-bits)
-			      (1- vm:word-bits)
-			      amount)))))))
+    (move ecx count)
+    (inst sar result :cl)))
+
+(define-vop (digit-ashr-c)
+  (:translate bignum::%ashr)
+  (:policy :fast-safe)
+  (:args (digit :scs (unsigned-reg unsigned-stack) :target result))
+  (:info count)
+  (:arg-types unsigned-num (:constant (unsigned-byte #.(1- (integer-length vm:word-bits)))))
+  (:results (result :scs (unsigned-reg) :from (:argument 0)
+		    :load-if (not (and (sc-is result unsigned-stack)
+				       (location= digit result)))))
+  (:result-types unsigned-num)
+  (:generator 1
+    (move result digit)
+    ;; If the count is greater than 31, it's the same as
+    ;; shifting by 31, leaving just the sign bit.
+    (inst sar result count)))
 
 (define-vop (digit-lshr digit-ashr)
   (:translate bignum::%digit-logical-shift-right)
   (:generator 2
-    (sc-case count
-      (unsigned-reg
-       (move result digit)
-       (move ecx count)
-       (inst shr result :cl))
-      (immediate
-       (let ((amount (tn-value count)))
-	 ;; If the amount is greater than 31, the result is 0 because
-	 ;; all the bits get shifted right and out.
-	 (cond ((>= amount vm:word-bits)
-		(inst mov result 0))
-	       (t
-		(move result digit)
-		(inst shr result count))))))))
+    (move result digit)
+    (move ecx count)
+    (inst shr result :cl)))
+
+(define-vop (digit-lshr-c digit-ashr-c)
+  (:translate bignum::%digit-logical-shift-right)
+  (:generator 1
+    (move result digit)
+    (inst shr result count)))
 
 (define-vop (digit-ashl digit-ashr)
   (:translate bignum::%ashl)
   (:generator 2
-    (sc-case count
-      (unsigned-reg
-       (move result digit)
-       (move ecx count)
-       (inst shl result :cl))
-      (immediate
-       (let ((amount (tn-value count)))
-	 ;; If the amount is greater than 31, the result is 0 because
-	 ;; all the bits get shifted left and out.
-	 (cond ((>= amount vm:word-bits)
-		(inst mov result 0))
-	       (t
-		(move result digit)
-		(inst shl result amount))))))))
+    (move result digit)
+    (move ecx count)
+    (inst shl result :cl)))
+
+(define-vop (digit-ashl-c digit-ashr-c)
+  (:translate bignum::%ashl)
+  (:generator 1
+    (move result digit)
+    (inst shl result count)))
+
+
 
 
 ;;;; Static functions.
