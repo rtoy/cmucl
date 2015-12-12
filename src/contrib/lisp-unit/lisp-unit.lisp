@@ -126,8 +126,9 @@ functions or even macros does not require reloading any tests.
   "If not NIL, enter the debugger when an error is encountered in an
 assertion.")
 
-(defparameter *signal-results* nil
-  "Signal the result if non NIL.")
+(defun use-debugger (&optional (flag t))
+  "Use the debugger when testing, or not."
+  (setq *use-debugger* flag))
 
 (defun use-debugger-p (condition)
   "Debug or ignore errors."
@@ -136,9 +137,8 @@ assertion.")
     (y-or-n-p "~A -- debug?" condition))
    (*use-debugger*)))
 
-(defun use-debugger (&optional (flag t))
-  "Use the debugger when testing, or not."
-  (setq *use-debugger* flag))
+(defparameter *signal-results* nil
+  "Signal the result if non NIL.")
 
 (defun signal-results (&optional (flag t))
   "Signal the results for extensibility."
@@ -238,7 +238,7 @@ assertion.")
      ((and (stringp item) (not doc) (rest body))
       (if tag
           (values doc tag (rest body))
-          (parse-body (rest body) doc tag)))
+          (parse-body (rest body) item tag)))
      (t (values doc tag body)))))
 
 (defun test-name-error-report (test-name-error stream)
@@ -260,20 +260,31 @@ assertion.")
       name
       (error 'test-name-error :datum name)))
 
+(defun test-package (name)
+  "Return the package for storing the test."
+  (multiple-value-bind (symbol status)
+      (find-symbol (symbol-name name))
+    (declare (ignore symbol))
+    (ecase status
+      ((:internal :external nil)
+       (symbol-package name))
+      (:inherited *package*))))
+
 (defmacro define-test (name &body body)
   "Store the test in the test database."
   (let ((qname (gensym "NAME-")))
     (multiple-value-bind (doc tag code) (parse-body body)
       `(let* ((,qname (valid-test-name ',name))
-              (doc (or ,doc (string ,qname))))
+              (doc (or ,doc (symbol-name ,qname)))
+              (package (test-package ,qname)))
          (setf
           ;; Unit test
-          (gethash ,qname (package-table *package* t))
+          (gethash ,qname (package-table package t))
           (make-instance 'unit-test :doc doc :code ',code))
          ;; Tags
-         (loop for tag in ',tag do
-               (pushnew
-                ,qname (gethash tag (package-tags *package* t))))
+         (loop
+          for tag in ',tag do
+          (pushnew ,qname (gethash tag (package-tags package t))))
          ;; Return the name of the test
          ,qname))))
 
