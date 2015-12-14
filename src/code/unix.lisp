@@ -2661,12 +2661,18 @@
 		which (alien-sap (addr itvn))(alien-sap (addr itvo))))))
 
 #+linux
-(defun unix-getitimer (which)
-  _N"Unix-getitimer returns the INTERVAL and VALUE slots of one of
-   three system timers (:real :virtual or :profile). On success,
-   unix-getitimer returns 5 values,
-   T, it-interval-secs, it-interval-usec, it-value-secs, it-value-usec."
+(defun unix-setitimer (which int-secs int-usec val-secs val-usec)
+  _N" Unix-setitimer sets the INTERVAL and VALUE slots of one of
+   three system timers (:real :virtual or :profile). A SIGALRM signal
+   will be delivered VALUE <seconds+microseconds> from now. INTERVAL,
+   when non-zero, is <seconds+microseconds> to be loaded each time
+   the timer expires. Setting INTERVAL and VALUE to zero disables
+   the timer. See the Unix man page for more details. On success,
+   unix-setitimer returns the old contents of the INTERVAL and VALUE
+   slots as in unix-getitimer."
   (declare (type (member :real :virtual :profile) which)
+	   (type (unsigned-byte 29) int-secs val-secs)
+	   (type (integer 0 (1000000)) int-usec val-usec)
 	   (values t
 		   (unsigned-byte 29)(mod 1000000)
 		   (unsigned-byte 29)(mod 1000000)))
@@ -2674,14 +2680,19 @@
 		 (:real ITIMER-REAL)
 		 (:virtual ITIMER-VIRTUAL)
 		 (:profile ITIMER-PROF))))
-    (with-alien ((itv (struct itimerval)))
-      (syscall* ("getitimer" int (* (struct itimerval)))
+    (with-alien ((itvn (struct itimerval))
+		 (itvo (struct itimerval)))
+      (setf (slot (slot itvn 'it-interval) 'tv-sec ) int-secs
+	    (slot (slot itvn 'it-interval) 'tv-usec) int-usec
+	    (slot (slot itvn 'it-value   ) 'tv-sec ) val-secs
+	    (slot (slot itvn 'it-value   ) 'tv-usec) val-usec)
+      (syscall* ("setitimer" int (* (struct timeval))(* (struct timeval)))
 		(values T
-			(slot (slot itv 'it-interval) 'tv-sec)
-			(slot (slot itv 'it-interval) 'tv-usec)
-			(slot (slot itv 'it-value) 'tv-sec)
-			(slot (slot itv 'it-value) 'tv-usec))
-		which (alien-sap (addr itv))))))
+			(slot (slot itvo 'it-interval) 'tv-sec)
+			(slot (slot itvo 'it-interval) 'tv-usec)
+			(slot (slot itvo 'it-value) 'tv-sec)
+			(slot (slot itvo 'it-value) 'tv-usec))
+		which (alien-sap (addr itvn))(alien-sap (addr itvo))))))
 
 ;;;; User and group database access, POSIX Standard 9.2.2
 

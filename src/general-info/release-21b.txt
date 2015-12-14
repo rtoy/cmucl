@@ -42,10 +42,13 @@ New in this release:
       of BYTE and WORD.
     * Unix support on Linux has been unified with all other OSes.
       Thus, src/code/unix-glibc2.lisp is no longer used.
+    * Micro-optimize modular shifts on x86.
+    * Update lisp-unit to commit e6c259f.
 
   * ANSI compliance fixes:
 
   * Bugfixes:
+    * Linux was missing unix-setitimer which prevented saving cores.
 
   * Trac Tickets:
 
