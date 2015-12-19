@@ -332,4 +332,33 @@
     ;; There's no guarantee that atanh(3/4) = log(7)2 in floating
     ;; point, but it's true in this case with fdlibm
     (assert-eql (/ (log 7d0) 2) (atanh x))))
-    
+
+(define-test cosh-basic-tests
+    (:tag :fdlibm)
+  ;; cosh(2^-55) = 1, tiny x case
+  (let ((x (scale-float 1d0 -55)))
+    (assert-eql 1d0 (cosh x))
+    (assert-eql 1d0 (cosh (- x))))
+  ;; cosh(2^-55) = 1, tiny x case
+  (let ((x (scale-float 1d0 -56)))
+    (assert-eql 1d0 (cosh x))
+    (assert-eql 1d0 (cosh (- x))))
+  ;; cosh(log(2)/4) = (sqrt(2) + 1)/2^(5/4), case |x| < log(2)/2
+  (let ((x (/ (log 2d0) 4)))
+    ;; This depends on (/ (log 2d0) 4) producing the value we really
+    ;; want as the arg.
+    (assert-eql 1.0150517651282178d0 (cosh x))
+    (assert-eql 1.0150517651282178d0 (cosh (- x))))
+  ;; cosh(10*log(2)) = 1048577/2048, case log(2)/2 < |x| < 22
+  (let ((x (* 10 (log 2d0)))
+	(y (float 1048577/2048 1d0)))
+    (assert-eql y (cosh x))
+    (assert-eql y (cosh (- x))))
+  ;; cosh(32*log(2)), case 22 <= |x| < log(maxdouble)
+  (let ((x (* 32 (log 2d0))))
+    (assert-eql 2.1474836479999983d9 (cosh x))
+    (assert-eql 2.1474836479999983d9 (cosh (- x))))
+  ;; cosh(710.4758600739439), case log(maxdouble) <= |x| <= overflowthreshold
+  (let ((x 710.4758600739439d0))
+    (assert-eql 1.7976931348621744d308 (cosh x))
+    (assert-eql 1.7976931348621744d308 (cosh (- x)))))
