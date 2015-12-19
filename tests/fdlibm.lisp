@@ -268,6 +268,19 @@
 		  (kernel:%scalbn most-negative-double-float 2))))
 
 ;;; These tests taken from github.com/rtoy/fdlibm-js
+(define-test acosh-basic-tests
+    (:tag :fdlibm)
+  ;; acosh(1) = 0
+  (assert-eql 0d0 (acosh 1d0))
+  ;; acosh(1.5) = log((sqrt(5)+3)/2, case 1 < x < 2
+  (assert-eql 0.9624236501192069d0 (acosh 1.5d0))
+  ;; acosh(4) = log(sqrt(15)+4), case 2 < x < 2^28
+  (assert-eql 2.0634370688955608d0 (acosh 4d0))
+  ;; acosh(2^50), case 2^28 < x
+  (assert-eql 35.35050620855721d0 (acosh (scale-float 1d0 50)))
+  ;; No overflow for most positive
+  (assert-eql 710.4758600739439d0 (acosh most-positive-double-float)))
+
 (define-test asinh-basic-tests
     (:tag :fdlibm)
   (assert-eql -0d0 (asinh -0d0))
