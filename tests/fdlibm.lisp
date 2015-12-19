@@ -310,6 +310,26 @@
     (assert-eql 710.4758600739439d0 (asinh x))
     (assert-eql -710.4758600739439d0 (asinh (- x)))))
   
+(define-test atanh-basic-tests
+    (:tag :fdlibm)
+  (assert-eql +0d0 (atanh +0d0))
+  (assert-eql -0d0 (atanh -0d0))
+  ;; atanh(x) = x, |x| < 2^-28
+  (let ((x (scale-float 1d0 -29)))
+    (assert-eql x (atanh x))
+    (assert-eql (- x) (atanh (- x))))
+  ;; atanh(0.25) = log(5/3)/2, |x| < 0.5
+  (let ((x 0.25d0))
+    (assert-eql 0.25541281188299536d0 (atanh x))
+    (assert-eql -0.25541281188299536d0 (atanh (- x)))
+    ;; There's no guarantee that atanh(1/4) = log(5/3)2 in floating
+    ;; point, but it's true in this case with fdlibm
+    (assert-eql (/ (log (float 5/3 1d0)) 2) (atanh x)))
+  ;; atanh(0.75) = log(7)/2, 0.5 < |x| < 1
+  (let ((x 0.75d0))
+    (assert-eql 0.9729550745276566d0 (atanh x))
+    (assert-eql -0.9729550745276566d0 (atanh (- x)))
+    ;; There's no guarantee that atanh(3/4) = log(7)2 in floating
+    ;; point, but it's true in this case with fdlibm
+    (assert-eql (/ (log 7d0) 2) (atanh x))))
     
-  
-  
