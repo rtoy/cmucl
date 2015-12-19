@@ -362,3 +362,44 @@
   (let ((x 710.4758600739439d0))
     (assert-eql 1.7976931348621744d308 (cosh x))
     (assert-eql 1.7976931348621744d308 (cosh (- x)))))
+
+(define-test exp-basic-tests
+    (:tag :fdlibm)
+  ;; No overflow and no underflow
+  (let ((x 709.7822265625d0))
+    (assert-eql 1.7968190737295725d308 (exp x))
+    (assert-eql 5.565390609552841d-309 (exp (- x))))
+  ;; exp(7.09782712893383973096e+02), no overflow
+  (assert-eql 1.7976931348622732d308 (exp 7.09782712893383973096d+02))
+  ;; exp(-7.45133219101941108420e+02), no underflow
+  (assert-eql 4.9406564584124654d-324 (exp -7.45133219101941108420d+02))
+  ;; Overflow
+  (assert-error 'floating-point-overflow (exp 709.7827128933841d0))
+  ;; Case |x| < 2^-28
+  (let ((x (scale-float 1d0 -29)))
+    (assert-eql (+ 1 x) (exp x))
+    (assert-eql (- 1 x) (exp (- x))))
+  ;; exp(0.5), case log(2)/2 < |x| < 3/2*log(2)
+  (let ((x 0.5d0))
+    (assert-eql 1.6487212707001282d0 (exp x))
+    (assert-eql 0.6065306597126334d0 (exp (- x))))
+  ;; exp(2), case |x| > 3/2*log(2)
+  (let ((x 2d0))
+    (assert-eql 7.38905609893065d0 (exp x))
+    (assert-eql 0.1353352832366127d0 (exp (- x))))
+  ;; exp(2^-1022), case k < -1021
+  (assert-eql 1d0 (exp (scale-float 1d0 -1022)))
+  ;; exp(2^-1021), case k >= -1021
+  (assert-eql 1d0 (exp (scale-float 1d0 -1021)))
+  ;; exp(7.09782712893383973096e+02), no overflow
+  (assert-eql 1.7976931348622732d308 (exp 7.09782712893383973096d+02))
+  ;; overflow
+  (assert-error 'floating-point-overflow (exp 709.7827128933841d0))
+  ;; exp(-7.45133219101941108420e+02), no underflow
+  (assert-eql 4.9406564584124654d-324 (exp -745.1332191019411d0))
+  ;; exp(-745.1332191019412), underflows
+  (assert-eql 0d0 (exp -745.1332191019412d0))
+  ;; exp(1000) overflow
+  (assert-error 'floating-point-overflow (exp 1000d0))
+  ;; exp(-1000) underflow
+  (assert-eql 0d0 (exp -1000d0)))
