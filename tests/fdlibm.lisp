@@ -266,3 +266,37 @@
 		  (kernel:%scalbn most-positive-double-float 2))
     (assert-equal ext:double-float-negative-infinity
 		  (kernel:%scalbn most-negative-double-float 2))))
+
+;;; These tests taken from github.com/rtoy/fdlibm-js
+(define-test asinh-basic-tests
+    (:tag :fdlibm)
+  (assert-eql -0d0 (asinh -0d0))
+  (assert-eql 0d0 (asinh 0d0))
+  (let ((x (scale-float 1d0 -29)))
+    ;; asinh(x) = x for x < 2^-28
+    (assert-eql x (asinh x))
+    (assert-eql (- x) (asinh (- x))))
+  (let ((x (scale-float 1d0 -28)))
+    ;; Case 2 > |x| >= 2^-28
+    (assert-eql 3.725290298461914d-9 (asinh x))
+    (assert-eql -3.725290298461914d-9 (asinh (- x))))
+  (let ((x 1d0))
+    ;; Case 2 > |x| >= 2^-28
+    (assert-eql 0.881373587019543d0 (asinh x))
+    (assert-eql -0.881373587019543d0 (asinh (- x))))
+  (let ((x 5d0))
+    ;; Case 2^28 > |x| > 2
+    (assert-eql 2.3124383412727525d0 (asinh x))
+    (assert-eql -2.3124383412727525d0 (asinh (- x))))
+  (let ((x (scale-float 1d0 28)))
+    ;; Case 2^28 > |x|
+    (assert-eql 20.101268236238415d0 (asinh x))
+    (assert-eql -20.101268236238415d0 (asinh (- x))))
+  (let ((x most-positive-double-float))
+    ;; No overflow for most-positive-double-float
+    (assert-eql 710.4758600739439d0 (asinh x))
+    (assert-eql -710.4758600739439d0 (asinh (- x)))))
+  
+    
+  
+  
