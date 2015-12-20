@@ -515,3 +515,26 @@
     (assert-error 'floating-point-overflow (sinh (- x))))
   (assert-error 'floating-point-overflow (sinh 1000d0))
   (assert-error 'floating-point-overflow (sinh -1000d0)))
+
+(define-test tanh-basic-tests
+    (:tag :fdlibm)
+  ;; case |x| < 2^-55
+  (let ((x (scale-float 1d0 -56)))
+    (assert-eql x (tanh x))
+    (assert-eql (- x) (tanh (- x))))
+  ;; tanh(log(2)) = 3/5, case |x| < 1
+  (let ((x (log 2d0))
+	(y (float 3/5 1d0)))
+    (assert-eql y (tanh x))
+    (assert-eql (- y) (tanh (- x))))
+  ;; tanh(2*log(2)) = 15/17, case |x| < 22
+  (let ((x (* 2 (log 2d0)))
+	(y (float 15/17 1d0)))
+    (assert-eql y (tanh x))
+    (assert-eql (- y) (tanh (- x))))
+  ;; tanh(100) = 1, case |x| > 22
+  (assert-eql 1d0 (tanh 100d0))
+  (assert-eql -1d0 (tanh -100d0))
+  ;; tanh(1d300), no overflow
+  (assert-eql 1d0 (tanh most-positive-double-float))
+  (assert-eql -1d0 (tanh (- most-positive-double-float))))
