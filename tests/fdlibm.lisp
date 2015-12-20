@@ -474,3 +474,44 @@
 	(setf max-error (max max-error y))
 	(setf x (/ x 1.4d0))))
     (assert-true (< max-error 5.68410245d-14))))
+
+(define-test sinh-basic-tests
+    (:tag :fdlibm)
+  (assert-eql +0d0 (sinh 0d0))
+  (assert-eql -0d0 (sinh -0d0))
+  ;; sinh(x) = x, |x| < 2^-28
+  (let ((x (scale-float 1d0 -29)))
+    (assert-eql x (sinh x))
+    (assert-eql (- x) (sinh (- x))))
+  ;; case |x| < 1
+  (assert-eql 0.5210953054937474d0 (sinh 0.5d0))
+  (assert-eql -0.5210953054937474d0 (sinh -0.5d0))
+  ;; sinh(10*log(2)) = 1048575/2048, case |x| < 22
+  (let ((x (* 10 (log 2d0)))
+	(y (float 1048575/2048 1d0)))
+    (assert-eql y (sinh x))
+    (assert-eql (- y) (sinh (- x))))
+  ;; sinh(10), case |x| < 22
+  (let ((y 11013.232874703393d0))
+    (assert-eql y (sinh 10d0))
+    (assert-eql (- y) (sinh -10d0)))
+  ;; sinh(32*log(2)), case |x| in [22, log(maxdouble)]
+  (let ((x (* 32 (log 2d0)))
+	(y 2.1474836479999983d9))
+    (assert-eql y (sinh x))
+    (assert-eql (- y) (sinh (- x))))
+  ;; sinh(100), case |x| in [22, log(maxdouble)]
+  (let ((y 1.3440585709080678d43))
+    (assert-eql y (sinh 100d0))
+    (assert-eql (- y) (sinh -100d0)))
+  ;; sinh(710....), no overflow, case |x| in [log(maxdouble), overflowthreshold]
+  (let ((x 710.4758600739439d0)
+	(y 1.7976931348621744d308))
+    (assert-eql y (sinh x))
+    (assert-eql (- y) (sinh (- x))))
+  ;; sinh(710.475860073944), overflow, case |x| > ovfthreshold]
+  (let ((x 710.475860073944d0))
+    (assert-error 'floating-point-overflow (sinh x))
+    (assert-error 'floating-point-overflow (sinh (- x))))
+  (assert-error 'floating-point-overflow (sinh 1000d0))
+  (assert-error 'floating-point-overflow (sinh -1000d0)))
