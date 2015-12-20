@@ -403,3 +403,74 @@
   (assert-error 'floating-point-overflow (exp 1000d0))
   ;; exp(-1000) underflow
   (assert-eql 0d0 (exp -1000d0)))
+
+(define-test log-basic-tests
+    (:tag :fdlibm)
+  (assert-eql 0d0 (log 1d0))
+  (assert-eql 1d0 (log (exp 1d0)))
+  (assert-eql -1d0 (log (exp -1d0)))
+  (assert-eql 0.5d0 (log (sqrt (exp 1d0))))
+  (assert-eql -0.5d0 (log (sqrt (exp -1d0))))
+  ;; Test a denormal arg
+  (assert-eql -709.08956571282410d0 (log (scale-float 1d0 -1023)))
+  ;; Largest double value
+  (assert-eql 709.7827128933840d0 (log most-positive-double-float))
+  ;; Tests case 0 < f < 2^-20, k = 0
+  ;; log(1+2^-21)
+  (assert-eql 4.7683704451632344d-7 (log (+ 1 (scale-float 1d0 -21))))
+  ;; Tests case 0 < f < 2^-20, k = 1
+  ;; log(2 + 2^-20)
+  (assert-eql 0.6931476573969898d0 (log (+ 2(scale-float 1d0 -20))))
+  (assert-eql 1.3862943611198906d0 (log 4d0))
+  ;; Tests main path, i > 0, k = 0
+  (assert-eql 0.3220828910287846d0
+	      (log (kernel:make-double-float (+ #x3ff00000 #x6147a) 0)))
+  ;; Tests main path, i > 0, k = 1
+  (assert-eql 0.35065625373947773d0
+	      (log (kernel:make-double-float (+ #x3ff00000 #x6b851) 0)))
+  ;; Tests main path, i > 0, k = -1
+  (assert-eql -0.3710642895311607d0
+	      (log (kernel:make-double-float (+ #x3fe00000 #x6147a) 0)))
+  ;; Tests main path, i < 0, k = 0
+  (assert-eql 0.3220821999597803d0
+	      (log (kernel:make-double-float (+ #x3ff00000 #x61479) 0)))
+  ;; Tests main path, i < 0, k = 1
+  (assert-eql 1.0152293805197257d0
+	      (log (kernel:make-double-float (+ #x40000000 #x61479) 0)))
+  ;; Tests main path, i < 0, k = -1
+  (assert-eql -0.37106498060016496d0
+	      (log (kernel:make-double-float (+ #x3fe00000 #x61479) 0))))
+
+(define-test log-consistency
+    (:tag :fdlibm)
+  ;; |log(x) + log(1/x)| < 1.77635684e-15, x = 1.2^k, 0 <= k < 2000
+  ;; The threshold is experimentally determined
+  (let ((x 1d0)
+	(max-value -1d0))
+    (declare (double-float max-value)
+	     (type (double-float 1d0) x))
+    (dotimes (k 2000)
+      (let ((y (abs (+ (log x) (log (/ x))))))
+	(setf max-value (max max-value y))
+	(setf x (* x 1.4d0))))
+    (assert-true (< max-value 1.77635684d-15)))
+  ;; |exp(log(x)) - x|/x < 5.6766649d-14, x = 1.4^k, 0 <= k < 2000
+  (let ((x 1d0)
+	(max-error 0d0))
+    (declare (double-float max-error)
+	     (type (double-float 1d0) x))
+    (dotimes (k 2000)
+      (let ((y (abs (/ (- (exp (log x)) x) x))))
+	(setf max-error (max max-error y))
+	(setf x (* x 1.4d0))))
+    (assert-true (< max-error 5.6766649d-14)))
+  ;; |exp(log(x)) - x|/x < 5.68410245d-14, x = 1.4^(-k), 0 <= k < 2000
+  (let ((x 1d0)
+	(max-error 0d0))
+    (declare (double-float max-error)
+	     (type (double-float (0d0)) x))
+    (dotimes (k 2000)
+      (let ((y (abs (/ (- (exp (log x)) x) x))))
+	(setf max-error (max max-error y))
+	(setf x (/ x 1.4d0))))
+    (assert-true (< max-error 5.68410245d-14))))
