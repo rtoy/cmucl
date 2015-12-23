@@ -161,7 +161,12 @@ P5   =  4.13813679705723846039e-08; /* 0x3E663769, 0x72BEA4D0 */
 	    x  = hi - lo;
 	} 
 	else if(hx < 0x3e300000)  {	/* when |x|<2**-28 */
-	    if(huge+x>one) return one+x;/* trigger inexact */
+            /* return x inexact except 0 */
+            if (x != 0) {
+                fdlibm_setexception(x, FDLIBM_INEXACT);
+            }
+
+            return one + x;
 	}
 	else k = 0;
 

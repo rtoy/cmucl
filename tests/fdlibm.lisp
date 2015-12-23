@@ -187,7 +187,19 @@
 	   (ext:set-floating-point-modes :traps '(:underflow))
 	   (assert-error 'floating-point-underflow
 			 (kernel:%exp -1000d0)))
-      (apply #'ext:set-floating-point-modes modes))))
+      (apply #'ext:set-floating-point-modes modes)))
+  (let ((x (scale-float 1d0 -29))
+	(x0 0d0))
+    ;; exp(x) = x, |x| < 2^-28, with inexact exception unlees x = 0
+    (with-inexact-exception-enabled
+	;; This must not throw an inexact exception because the result
+	;; is exact when the arg is 0.
+	(assert-eql 1d0 (kernel:%exp x0)))
+    (with-inexact-exception-enabled
+	;; This must throw an inexact exception for non-zero x even
+	;; though the result is exactly x.
+	(assert-error 'floating-point-inexact
+		      (kernel:%exp x)))))
 
 (define-test %log.exception
   (:tag :fdlibm)
