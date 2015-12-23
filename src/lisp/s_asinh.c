@@ -59,7 +59,12 @@ huge=  1.00000000000000000000e+300;
         }
         
 	if(ix< 0x3e300000) {	/* |x|<2**-28 */
-	    if(huge+x>one) return x;	/* return x inexact except 0 */
+            /* return x inexact except 0 */
+            if (x != 0) {
+                fdlibm_setexception(x, FDLIBM_INEXACT);
+            }
+
+            return x;
 	} 
 	if(ix>0x41b00000) {	/* |x| > 2**28 */
 	    w = __ieee754_log(fabs(x))+ln2;
