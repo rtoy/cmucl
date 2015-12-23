@@ -106,7 +106,18 @@
     (assert-error ext:double-float-negative-infinity
 		  (kernel:%asinh ext:double-float-negative-infinity)))
   (kernel::with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%asinh *snan*)))))
+    (assert-true (ext:float-nan-p (kernel:%asinh *snan*))))
+  (let ((x (scale-float 1d0 -29))
+	(x0 0d0))
+    (with-inexact-exception-enabled
+	;; This must not throw an inexact exception because the result
+	;; is exact when the arg is 0.
+	(assert-eql 0d0 (asinh x0)))
+    (with-inexact-exception-enabled
+	;; This must throw an inexact exception for non-zero x even
+	;; though the result is exactly x.
+	(assert-error 'floating-point-inexact
+		      (asinh x)))))
 
 (define-test %atanh.exceptions
   (:tag :fdlibm)
@@ -298,16 +309,7 @@
 	(x0 0d0))
     ;; asinh(x) = x for x < 2^-28
     (assert-eql x (asinh x))
-    (assert-eql (- x) (asinh (- x)))
-    (with-inexact-exception-enabled
-	;; This must not throw an inexact exception because the result
-	;; is exact when the arg is 0.
-	(assert-eql 0d0 (asinh x0)))
-    (with-inexact-exception-enabled
-	;; This must throw an inexact exception for non-zero x even
-	;; though the result is exactly x.
-	(assert-error 'floating-point-inexact
-		      (asinh x))))
+    (assert-eql (- x) (asinh (- x))))
   (let ((x (scale-float 1d0 -28)))
     ;; Case 2 > |x| >= 2^-28
     (assert-eql 3.725290298461914d-9 (asinh x))
@@ -558,19 +560,28 @@
   (assert-eql 1d0 (tanh most-positive-double-float))
   (assert-eql -1d0 (tanh (- most-positive-double-float))))
 
-(define-test asin-basic-tests
+(define-test %asin-basic-tests
     (:tag :fdlibm)
   (let ((x (scale-float 1d0 -28))
 	(x0 0d0))
     ;; asin(x) = x for |x| < 2^-27, with inexact exception if x is not 0.
-    (assert-eql x (asin x))
-    (assert-eql (- x) (asin (- x)))
+    (assert-eql x (kernel:%asin x))
+    (assert-eql (- x) (kernel:%asin (- x)))))
+
+(define-test %asin-exception
+    (:tag :fdlibm)
+  (let ((x (scale-float 1d0 -28))
+	(x0 0d0))
+    ;; asin(x) = x for |x| < 2^-27, with inexact exception if x is not 0.
+    (assert-eql x (kernel:%asin x))
+    (assert-eql (- x) (kernel:%asin (- x)))
     (with-inexact-exception-enabled
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
-	(assert-eql 0d0 (asin x0)))
+	(assert-eql 0d0 (kernel:%asin x0)))
     (with-inexact-exception-enabled
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
-		      (asin x)))))
+		      (kernel:%asin x)))))
+
