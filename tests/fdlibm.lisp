@@ -14,6 +14,15 @@
   (kernel:make-double-float #x7ff00000 1)
   "A randon signaling MaN value")
 
+(defmacro with-inexact-exception-enabled (&body body)
+  (let ((old-modes (gensym "OLD-MODES-")))
+    `(let ((,old-modes (ext:get-floating-point-modes)))
+       (unwind-protect
+	    (progn
+	      (ext:set-floating-point-modes :traps '(:inexact))
+	      ,@body)
+	 (apply 'ext:set-floating-point-modes ,old-modes)))))
+
 (define-test %cosh.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-overflow
@@ -285,10 +294,20 @@
     (:tag :fdlibm)
   (assert-eql -0d0 (asinh -0d0))
   (assert-eql 0d0 (asinh 0d0))
-  (let ((x (scale-float 1d0 -29)))
+  (let ((x (scale-float 1d0 -29))
+	(x0 0d0))
     ;; asinh(x) = x for x < 2^-28
     (assert-eql x (asinh x))
-    (assert-eql (- x) (asinh (- x))))
+    (assert-eql (- x) (asinh (- x)))
+    (with-inexact-exception-enabled
+	;; This must not throw an inexact exception because the result
+	;; is exact when the arg is 0.
+	(assert-eql 0d0 (asinh x0)))
+    (with-inexact-exception-enabled
+	;; This must throw an inexact exception for non-zero x even
+	;; though the result is exactly x.
+	(assert-error 'floating-point-inexact
+		      (asinh x))))
   (let ((x (scale-float 1d0 -28)))
     ;; Case 2 > |x| >= 2^-28
     (assert-eql 3.725290298461914d-9 (asinh x))
