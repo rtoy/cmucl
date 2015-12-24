@@ -366,85 +366,52 @@
 			code)))))))
 
 ;;; WITH-FLOAT-TRAPS-MASKED  --  Public
-;;;
-(defmacro with-float-traps-masked (traps &body body)
-  "Execute BODY with the floating point exceptions listed in TRAPS
-  masked (disabled).  TRAPS should be a list of possible exceptions
-  which includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and
-  :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective
-  accrued exceptions are cleared at the start of the body to support
-  their testing within, and restored on exit."
-  (let ((traps (dpb (float-trap-mask traps) float-traps-byte 0))
-	(exceptions (dpb (float-trap-mask traps) float-sticky-bits 0))
-	(trap-mask (dpb (lognot (float-trap-mask traps))
-			float-traps-byte #xffffffff))
-	(exception-mask (dpb (lognot (vm::float-trap-mask traps))
-			     float-sticky-bits #xffffffff))
-	;; On ppc if we are masking the invalid trap, we need to make
-	;; sure we wipe out the various individual sticky bits
-	;; representing the invalid operation.  Otherwise, if we
-	;; enable the invalid trap later, these sticky bits will cause
-	;; an exception.
-	#+ppc
-	(invalid-mask (if (member :invalid traps)
-			  (dpb 0
-			       (byte 1 31)
-			       (dpb 0 vm::float-invalid-op-2-byte
-				    (dpb 0 vm:float-invalid-op-1-byte #xffffffff)))
-			  #xffffffff))
-	(orig-modes (gensym)))
-    `(let ((,orig-modes (floating-point-modes)))
-      (unwind-protect
-	   (progn
-	     (setf (floating-point-modes)
-		   (logand ,orig-modes ,(logand trap-mask exception-mask)))
-	     ,@body)
-	;; Restore the original traps and exceptions.
-	(setf (floating-point-modes)
-	      (logior (logand ,orig-modes ,(logior traps exceptions))
-		      (logand (floating-point-modes)
-			      ,(logand trap-mask exception-mask)
-			      #+ppc
-			      ,invalid-mask
-			      #+mips ,(dpb 0 float-exceptions-byte #xffffffff))))))))
+;;; WITH-FLOAT-TRAPS-ENABLED --  Public
 
-(defmacro with-float-traps-enabled (traps &body body)
-  "Execute BODY with the floating point exceptions listed in TRAPS
+
+(macrolet
+    ((with-float-traps (name logical-op)
+       `(defmacro ,(symbolicate "WITH-FLOAT-TRAPS-" name) (traps &body body)
+	  "Execute BODY with the floating point exceptions listed in TRAPS
   enabled.  TRAPS should be a list of possible exceptions which
   includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and
   :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective
   accrued exceptions are cleared at the start of the body to support
   their testing within, and restored on exit."
-  (let ((traps (dpb (float-trap-mask traps) float-traps-byte 0))
-	(exceptions (dpb (float-trap-mask traps) float-sticky-bits 0))
-	(trap-mask (dpb (lognot (float-trap-mask traps))
-			float-traps-byte #xffffffff))
-	(exception-mask (dpb (lognot (vm::float-trap-mask traps))
-			     float-sticky-bits #xffffffff))
-	;; On ppc if we are masking the invalid trap, we need to make
-	;; sure we wipe out the various individual sticky bits
-	;; representing the invalid operation.  Otherwise, if we
-	;; enable the invalid trap later, these sticky bits will cause
-	;; an exception.
-	#+ppc
-	(invalid-mask (if (member :invalid traps)
-			  (dpb 0
-			       (byte 1 31)
-			       (dpb 0 vm::float-invalid-op-2-byte
-				    (dpb 0 vm:float-invalid-op-1-byte #xffffffff)))
-			  #xffffffff))
-	(orig-modes (gensym)))
-    `(let ((,orig-modes (floating-point-modes)))
-      (unwind-protect
-	   (progn
-	     (setf (floating-point-modes)
-		   (logorc2 ,orig-modes ,(logand trap-mask exception-mask)))
-	     ,@body)
-	;; Restore the original traps and exceptions.
-	(setf (floating-point-modes)
-	      (logior (logand ,orig-modes ,(logior traps exceptions))
-		      (logand (floating-point-modes)
-			      ,(logand trap-mask exception-mask)
-			      #+ppc
-			      ,invalid-mask
-			      #+mips ,(dpb 0 float-exceptions-byte #xffffffff))))))))
+	  (let ((traps (dpb (float-trap-mask traps) float-traps-byte 0))
+		(exceptions (dpb (float-trap-mask traps) float-sticky-bits 0))
+		(trap-mask (dpb (lognot (float-trap-mask traps))
+				float-traps-byte #xffffffff))
+		(exception-mask (dpb (lognot (vm::float-trap-mask traps))
+				     float-sticky-bits #xffffffff))
+		;; On ppc if we are masking the invalid trap, we need to make
+		;; sure we wipe out the various individual sticky bits
+		;; representing the invalid operation.  Otherwise, if we
+		;; enable the invalid trap later, these sticky bits will cause
+		;; an exception.
+		#+ppc
+		(invalid-mask (if (member :invalid traps)
+				  (dpb 0
+				       (byte 1 31)
+				       (dpb 0 vm::float-invalid-op-2-byte
+					    (dpb 0 vm:float-invalid-op-1-byte #xffffffff)))
+				  #xffffffff))
+		(orig-modes (gensym)))
+	    `(let ((,orig-modes (floating-point-modes)))
+	       (unwind-protect
+		    (progn
+		      (setf (floating-point-modes)
+			    (,',logical-op ,orig-modes ,(logand trap-mask exception-mask)))
+		      ,@body)
+		 ;; Restore the original traps and exceptions.
+		 (setf (floating-point-modes)
+		       (logior (logand ,orig-modes ,(logior traps exceptions))
+			       (logand (floating-point-modes)
+				       ,(logand trap-mask exception-mask)
+				       #+ppc
+				       ,invalid-mask
+				       #+mips ,(dpb 0 float-exceptions-byte #xffffffff))))))))))
+  ;; Masked and Enabled only differ whether we AND in the bits or OR
+  ;; them.
+  (with-float-traps masked logand)
+  (with-float-traps enabled logorc2))
