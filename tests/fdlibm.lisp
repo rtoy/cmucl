@@ -163,7 +163,12 @@
 		 (kernel:%expm1 709.8d0))
     )
   (kernel::with-float-traps-masked (:invalid)
-    (assert-true (ext::float-nan-p (kernel:%expm1 *snan*)))))
+    (assert-true (ext::float-nan-p (kernel:%expm1 *snan*))))
+  ;; expm1(x) = -1 for x < -56*log(2), signaling inexact
+  (let ((x (* -57 (log 2d0))))
+    (with-inexact-exception-enabled
+	(assert-error 'floating-point-inexact
+		      (kernel:%expm1 x)))))
 
 (define-test %log1p.exceptions
   (:tag :fdlibm)
