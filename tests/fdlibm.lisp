@@ -88,7 +88,14 @@
   (assert-error 'floating-point-invalid-operation
 		(kernel:%tanh *snan*))
   (kernel::with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%tanh *snan*)))))
+    (assert-true (ext:float-nan-p (kernel:%tanh *snan*))))
+  ;; tanh(x) = +/- 1 for |x| > 22, raising inexact, always.
+  (let ((x 22.1d0))
+    (with-inexact-exception-enabled
+	;; This must throw an inexact exception for non-zero x even
+	;; though the result is exactly x.
+	(assert-error 'floating-point-inexact
+		      (kernel:%tanh x)))))
 
 (define-test %acosh.exceptions
   (:tag :fdlibm)
