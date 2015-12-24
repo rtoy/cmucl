@@ -258,7 +258,19 @@
 		(kernel:%atan *snan*))
   (assert-true (ext:float-nan-p (kernel:%atan *qnan*)))
   (kernel::with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%atan *snan*)))))
+    (assert-true (ext:float-nan-p (kernel:%atan *snan*))))
+  ;; atan(x) = x for |x| < 2^-29, signaling inexact.
+  (let ((x (scale-float 1d0 -30))
+	(x0 0d0))
+    (with-inexact-exception-enabled
+	;; This must not throw an inexact exception because the result
+	;; is exact when the arg is 0.
+	(assert-eql 0d0 (kernel:%atan x0)))
+    (with-inexact-exception-enabled
+	;; This must throw an inexact exception for non-zero x even
+	;; though the result is exactly x.
+	(assert-error 'floating-point-inexact
+		      (kernel:%atan x)))))
 
 (define-test %log10.exceptions
   (:tag :fdlibm)
