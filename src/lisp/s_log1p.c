@@ -123,9 +123,14 @@ static double zero = 0.0;
                 }
 	    }
 	    if(ax<0x3e200000) {			/* |x| < 2**-29 */
-		if(two54+x>zero			/* raise inexact */
-	            &&ax<0x3c900000) 		/* |x| < 2**-54 */
+		if (ax < 0x3c900000) {  /* |x| < 2**-54 */
+		    /* return x inexact except 0 */
+		    if (x != 0) {
+			fdlibm_setexception(x, FDLIBM_INEXACT);
+		    }
+
 		    return x;
+		}
 		else
 		    return x - x*x*0.5;
 	    }

@@ -181,7 +181,19 @@
     (assert-equal ext:double-float-negative-infinity
 		  (kernel:%log1p -1d0)))
   (kernel::with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%log1p *snan*)))))
+    (assert-true (ext:float-nan-p (kernel:%log1p *snan*))))
+  ;; log1p(x) = x for |x| < 2^-54, signaling inexact except for x = 0.
+  (let ((x (scale-float 1d0 -55))
+	(x0 0d0))
+    (with-inexact-exception-enabled
+	;; This must not throw an inexact exception because the result
+	;; is exact when the arg is 0.
+	(assert-eql 0d0 (kernel:%log1p x0)))
+    (with-inexact-exception-enabled
+	;; This must throw an inexact exception for non-zero x even
+	;; though the result is exactly x.
+	(assert-error 'floating-point-inexact
+		      (kernel:%log1p x)))))
 
 (define-test %exp.exceptions
   (:tag :fdlibm)
