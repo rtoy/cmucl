@@ -622,3 +622,19 @@
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
 		      (kernel:%cos x)))))
+
+(define-test %sin.exceptions
+    (:tag :fdlibm)
+  ;; sin(x) = x for |x| < 2^-27.  Signal inexact unless x = 0
+  (let ((x (scale-float 1d0 -28))
+	(x0 0d0))
+    (with-inexact-exception-enabled
+	;; This must not throw an inexact exception because the result
+	;; is exact when the arg is 0.
+	(assert-eql 0d0 (kernel:%sin x0)))
+    (with-inexact-exception-enabled
+	;; This must throw an inexact exception for non-zero x even
+	;; though the result is exactly x.
+	(assert-error 'floating-point-inexact
+		      (kernel:%sin x)))))
+
