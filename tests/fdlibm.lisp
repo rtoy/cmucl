@@ -68,8 +68,19 @@
 		  (kernel:%sinh ext:double-float-negative-infinity)))
   ;; Test NaN
   (kernel::with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%sinh *qnan*)))))
-
+    (assert-true (ext:float-nan-p (kernel:%sinh *qnan*))))
+  ;; sinh(x) = x for |x| < 2^-28.  Should signal inexact unless x = 0.
+  (let ((x (scale-float 1d0 -29))
+	(x0 0d0))
+    (with-inexact-exception-enabled
+	;; This must not throw an inexact exception because the result
+	;; is exact when the arg is 0.
+	(assert-eql 0d0 (kernel:%sinh x0)))
+    (with-inexact-exception-enabled
+	;; This must throw an inexact exception for non-zero x even
+	;; though the result is exactly x.
+	(assert-error 'floating-point-inexact
+		      (kernel:%sinh x)))))
 
 (define-test %tanh.exceptions
   (:tag :fdlibm)
