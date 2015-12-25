@@ -397,7 +397,8 @@
 		   (unwind-protect
 			(progn
 			  (setf (floating-point-modes)
-				(,',logical-op ,orig-modes ,(logand trap-mask exception-mask)))
+				(ldb (byte 24 0)
+				     (,',logical-op ,orig-modes ,(logand trap-mask exception-mask))))
 			  ,@body)
 		     ;; Restore the original traps and exceptions.
 		     (setf (floating-point-modes)
