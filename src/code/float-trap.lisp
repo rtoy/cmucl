@@ -374,6 +374,7 @@
        (let ((macro-name (symbolicate "WITH-FLOAT-TRAPS-" name)))
 	 `(progn
 	    (defmacro ,macro-name (traps &body body)
+	      ,docstring
 	      (let ((traps (dpb (float-trap-mask traps) float-traps-byte 0))
 		    (exceptions (dpb (float-trap-mask traps) float-sticky-bits 0))
 		    (trap-mask (dpb (lognot (float-trap-mask traps))
@@ -397,7 +398,9 @@
 		   (unwind-protect
 			(progn
 			  (setf (floating-point-modes)
-				(ldb (byte 24 0)
+				(ldb (byte #+x86 24
+					   #-x86 32
+					   0)
 				     (,',logical-op ,orig-modes ,(logand trap-mask exception-mask))))
 			  ,@body)
 		     ;; Restore the original traps and exceptions.
@@ -407,25 +410,22 @@
 					   ,(logand trap-mask exception-mask)
 					   #+ppc
 					   ,invalid-mask
-					   #+mips ,(dpb 0 float-exceptions-byte #xffffffff))))))))
-	    ;; Set the docstring appropriately 
-	    (setf (c::info function documentation ',macro-name)
-		  ,docstring)))))
+					   #+mips ,(dpb 0 float-exceptions-byte #xffffffff))))))))))))
   ;; Masked and Enabled only differ whether we AND in the bits or OR
   ;; them.
   (with-float-traps masked logand
-	      "Execute BODY with the floating point exceptions listed in TRAPS
-  disabled.  TRAPS should be a list of possible exceptions which
-  includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and
+    _N"Execute BODY with the floating point exceptions listed in TRAPS
+  masked (disabled).  TRAPS should be a list of possible exceptions
+  which includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and
   :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective
   accrued exceptions are cleared at the start of the body to support
   their testing within, and restored on exit.")
+
   (with-float-traps enabled logorc2
-	      "Execute BODY with the floating point exceptions listed in TRAPS
+    _N"Execute BODY with the floating point exceptions listed in TRAPS
   enabled.  TRAPS should be a list of possible exceptions which
   includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and
   :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective
   accrued exceptions are cleared at the start of the body to support
   their testing within, and restored on exit."))
-;; Set up the appropriate documentation for these macros
 
