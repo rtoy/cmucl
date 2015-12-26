@@ -4797,6 +4797,16 @@ msgid ""
 "  their testing within, and restored on exit."
 msgstr ""
 
+#: src/code/float-trap.lisp
+msgid ""
+"Execute BODY with the floating point exceptions listed in TRAPS\n"
+"  enabled.  TRAPS should be a list of possible exceptions which\n"
+"  includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and\n"
+"  :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective\n"
+"  accrued exceptions are cleared at the start of the body to support\n"
+"  their testing within, and restored on exit."
+msgstr ""
+
 #: src/code/float.lisp
 msgid "Return true if the float X is denormalized."
 msgstr ""
