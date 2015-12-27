@@ -1204,23 +1204,25 @@
 ;;;    Change the name if we can, blast any old nicknames and then
 ;;; add in any new ones.
 ;;;
-(defun rename-package (package name &optional (nicknames ()))
-  "Changes the name and nicknames for a package."
+(defun rename-package (package new-name &optional (new-nicknames ()))
+  "Replaces the name and nicknames of Package. The old name and all of
+  the old nicknames of Package are eliminated and are replaced by
+  New-Name and New-Nicknames."
   (let* ((package (package-or-lose package))
-	 (name (string name))
-	 (found (find-package name)))
+	 (new-name (string new-name))
+	 (found (find-package new-name)))
     (unless (or (not found) (eq found package))
       (error 'simple-package-error
-             :package name
+             :package new-name
              :format-control (intl:gettext "A package named ~S already exists.")
-             :format-arguments (list name)))
+             :format-arguments (list new-name)))
     (remhash (package-%name package) *package-names*)
     (dolist (n (package-%nicknames package))
       (remhash n *package-names*))
-     (setf (package-%name package) name)
-    (setf (gethash name *package-names*) package)
+     (setf (package-%name package) new-name)
+    (setf (gethash new-name *package-names*) package)
     (setf (package-%nicknames package) ())
-    (enter-new-nicknames package nicknames)
+    (enter-new-nicknames package new-nicknames)
     package))
 
 ;;; Delete-Package -- Public

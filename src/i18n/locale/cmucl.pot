@@ -8120,7 +8120,10 @@ msgid "The package named ~S doesn't exist."
 msgstr ""
 
 #: src/code/package.lisp
-msgid "Changes the name and nicknames for a package."
+msgid ""
+"Replaces the name and nicknames of Package. The old name and all of\n"
+"  the old nicknames of Package are eliminated and are replaced by\n"
+"  New-Name and New-Nicknames."
 msgstr ""
 
 #: src/code/package.lisp

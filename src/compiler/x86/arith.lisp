@@ -1445,31 +1445,61 @@
   (:translate bignum::%ashr)
   (:policy :fast-safe)
   (:args (digit :scs (unsigned-reg unsigned-stack) :target result)
-	 (count :scs (unsigned-reg) :target ecx))
+	 (count :scs (unsigned-reg)))
   (:arg-types unsigned-num positive-fixnum)
   (:temporary (:sc unsigned-reg :offset ecx-offset :from (:argument 1)) ecx)
   (:results (result :scs (unsigned-reg) :from (:argument 0)
 		    :load-if (not (and (sc-is result unsigned-stack)
 				       (location= digit result)))))
   (:result-types unsigned-num)
-  (:generator 1
+  (:generator 2
     (move result digit)
     (move ecx count)
     (inst sar result :cl)))
 
+(define-vop (digit-ashr-c)
+  (:translate bignum::%ashr)
+  (:policy :fast-safe)
+  (:args (digit :scs (unsigned-reg unsigned-stack) :target result))
+  (:info count)
+  (:arg-types unsigned-num (:constant (unsigned-byte #.(1- (integer-length vm:word-bits)))))
+  (:results (result :scs (unsigned-reg) :from (:argument 0)
+		    :load-if (not (and (sc-is result unsigned-stack)
+				       (location= digit result)))))
+  (:result-types unsigned-num)
+  (:generator 1
+    (move result digit)
+    ;; If the count is greater than 31, it's the same as
+    ;; shifting by 31, leaving just the sign bit.
+    (inst sar result count)))
+
 (define-vop (digit-lshr digit-ashr)
   (:translate bignum::%digit-logical-shift-right)
-  (:generator 1
+  (:generator 2
     (move result digit)
     (move ecx count)
     (inst shr result :cl)))
 
+(define-vop (digit-lshr-c digit-ashr-c)
+  (:translate bignum::%digit-logical-shift-right)
+  (:generator 1
+    (move result digit)
+    (inst shr result count)))
+
 (define-vop (digit-ashl digit-ashr)
   (:translate bignum::%ashl)
-  (:generator 1
+  (:generator 2
     (move result digit)
     (move ecx count)
     (inst shl result :cl)))
+
+(define-vop (digit-ashl-c digit-ashr-c)
+  (:translate bignum::%ashl)
+  (:generator 1
+    (move result digit)
+    (inst shl result count)))
+
+
 
 
 ;;;; Static functions.
