@@ -1138,9 +1138,14 @@
 	     (format stream (intl:gettext "Arithmetic error ~S signalled.")
 		     (type-of condition))
 	     (when (arithmetic-error-operation condition)
-	       (format stream (intl:gettext "~%Operation was ~S, operands ~S.")
-		       (arithmetic-error-operation condition)
-		       (arithmetic-error-operands condition))))))
+	       ;; Printing the operands can signal these FP traps, so
+	       ;; disable them while we're printing out the error
+	       ;; message.
+	       (with-float-traps-masked (:overflow :underflow :inexact
+					 #+x86 :denormalized-operand)
+		 (format stream (intl:gettext "~%Operation was ~S, operands ~S.")
+			 (arithmetic-error-operation condition)
+			 (arithmetic-error-operands condition)))))))
 
 (define-condition division-by-zero         (arithmetic-error) ())
 (define-condition floating-point-overflow  (arithmetic-error) ())
