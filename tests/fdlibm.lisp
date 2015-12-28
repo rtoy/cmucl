@@ -684,4 +684,3 @@
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
 		      (kernel:%tan x)))))
-
