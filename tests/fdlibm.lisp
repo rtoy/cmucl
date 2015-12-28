@@ -14,11 +14,6 @@
   (kernel:make-double-float #x7ff00000 1)
   "A randon signaling MaN value")
 
-(defmacro with-inexact-exception-enabled (&body body)
-  `(ext:with-float-traps-enabled (:inexact)
-     ,@body))
-
-
 (define-test %cosh.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-overflow
@@ -68,11 +63,11 @@
   ;; sinh(x) = x for |x| < 2^-28.  Should signal inexact unless x = 0.
   (let ((x (scale-float 1d0 -29))
 	(x0 0d0))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
 	(assert-eql 0d0 (kernel:%sinh x0)))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
@@ -87,7 +82,7 @@
     (assert-true (ext:float-nan-p (kernel:%tanh *snan*))))
   ;; tanh(x) = +/- 1 for |x| > 22, raising inexact, always.
   (let ((x 22.1d0))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
@@ -123,11 +118,11 @@
     (assert-true (ext:float-nan-p (kernel:%asinh *snan*))))
   (let ((x (scale-float 1d0 -29))
 	(x0 0d0))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
 	(assert-eql 0d0 (asinh x0)))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
@@ -169,7 +164,7 @@
     (assert-true (ext::float-nan-p (kernel:%expm1 *snan*))))
   ;; expm1(x) = -1 for x < -56*log(2), signaling inexact
   (let ((x (* -57 (log 2d0))))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	(assert-error 'floating-point-inexact
 		      (kernel:%expm1 x)))))
 
@@ -188,11 +183,11 @@
   ;; log1p(x) = x for |x| < 2^-54, signaling inexact except for x = 0.
   (let ((x (scale-float 1d0 -55))
 	(x0 0d0))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
 	(assert-eql 0d0 (kernel:%log1p x0)))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
@@ -222,11 +217,11 @@
   (let ((x (scale-float 1d0 -29))
 	(x0 0d0))
     ;; exp(x) = x, |x| < 2^-28, with inexact exception unlees x = 0
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
 	(assert-eql 1d0 (kernel:%exp x0)))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
@@ -282,11 +277,11 @@
   ;; atan(x) = x for |x| < 2^-29, signaling inexact.
   (let ((x (scale-float 1d0 -30))
 	(x0 0d0))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
 	(assert-eql 0d0 (kernel:%atan x0)))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
@@ -630,11 +625,11 @@
     ;; asin(x) = x for |x| < 2^-27, with inexact exception if x is not 0.
     (assert-eql x (kernel:%asin x))
     (assert-eql (- x) (kernel:%asin (- x)))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
 	(assert-eql 0d0 (kernel:%asin x0)))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
@@ -645,11 +640,11 @@
   ;; cos(x) = 1 for |x| < 2^-27.  Signal inexact unless x = 0
   (let ((x (scale-float 1d0 -28))
 	(x0 0d0))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
 	(assert-eql 1d0 (kernel:%cos x0)))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
@@ -660,11 +655,11 @@
   ;; sin(x) = x for |x| < 2^-27.  Signal inexact unless x = 0
   (let ((x (scale-float 1d0 -28))
 	(x0 0d0))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
 	(assert-eql 0d0 (kernel:%sin x0)))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
@@ -675,11 +670,11 @@
   ;; tan(x) = x for |x| < 2^-28.  Signal inexact unless x = 0
   (let ((x (scale-float 1d0 -29))
 	(x0 0d0))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
 	(assert-eql 0d0 (kernel:%tan x0)))
-    (with-inexact-exception-enabled
+    (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
