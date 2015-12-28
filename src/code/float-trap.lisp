@@ -104,7 +104,7 @@
 
       final-mode))
   (defun (setf floating-point-modes) (new-mode)
-    (declare (type (unsigned-byte 24) new-mode))
+    (declare (type (unsigned-byte 32) new-mode))
     ;; Set the floating point modes for both X87 and SSE2.  This
     ;; include the rounding control bits.
     (let* ((rc (ldb float-rounding-mode new-mode))
@@ -117,8 +117,8 @@
 		    ;; is ok and would be the correct setting if we
 		    ;; ever support long-floats.
 		    (ash 3 8))))
-      (setf (vm::sse2-floating-point-modes) new-mode)
-      (setf (vm::x87-floating-point-modes) x87-modes))
+      (setf (vm::sse2-floating-point-modes) (ldb (byte 24 0) new-mode))
+      (setf (vm::x87-floating-point-modes) (ldb (byte 24 0) x87-modes)))
     new-mode)
   )
 
@@ -365,12 +365,12 @@
 		 (error _"SIGFPE with no exceptions currently enabled? (si-code = ~D)"
 			code)))))))
 
-;;; WITH-FLOAT-TRAPS-MASKED  --  Public
-;;; WITH-FLOAT-TRAPS-ENABLED --  Public
-
-
 (macrolet
     ((with-float-traps (name logical-op docstring)
+       ;; Define macros to enable or disable floating-point
+       ;; exceptions.  Masked exceptions and enabled exceptions only
+       ;; differ whether we AND in the bits or OR them, respectively.
+       ;; Logical-op is the operation to use.
        (let ((macro-name (symbolicate "WITH-FLOAT-TRAPS-" name)))
 	 `(progn
 	    (defmacro ,macro-name (traps &body body)
@@ -398,9 +398,7 @@
 		   (unwind-protect
 			(progn
 			  (setf (floating-point-modes)
-				(ldb (byte #+x86 24
-					   #-x86 32
-					   0)
+				(ldb (byte 32 0)
 				     (,',logical-op ,orig-modes ,(logand trap-mask exception-mask))))
 			  ,@body)
 		     ;; Restore the original traps and exceptions.
@@ -411,8 +409,8 @@
 					   #+ppc
 					   ,invalid-mask
 					   #+mips ,(dpb 0 float-exceptions-byte #xffffffff))))))))))))
-  ;; Masked and Enabled only differ whether we AND in the bits or OR
-  ;; them.
+
+  ;; WITH-FLOAT-TRAPS-MASKED  --  Public
   (with-float-traps masked logand
     _N"Execute BODY with the floating point exceptions listed in TRAPS
   masked (disabled).  TRAPS should be a list of possible exceptions
@@ -421,6 +419,7 @@
   accrued exceptions are cleared at the start of the body to support
   their testing within, and restored on exit.")
 
+  ;; WITH-FLOAT-TRAPS-ENABLED --  Public
   (with-float-traps enabled logorc2
     _N"Execute BODY with the floating point exceptions listed in TRAPS
   enabled.  TRAPS should be a list of possible exceptions which
