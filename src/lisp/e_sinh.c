@@ -32,7 +32,7 @@
 #include "fdlibm.h"
 
 #ifdef __STDC__
-static const double one = 1.0, shuge = 1.0e307;
+static const double one = 1.0;
 #else
 static double one = 1.0, shuge = 1.0e307;
 #endif

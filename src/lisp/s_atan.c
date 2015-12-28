@@ -79,8 +79,7 @@ static double aT[] = {
 #else
 	static double 
 #endif
-one   = 1.0,
-huge   = 1.0e300;
+one   = 1.0;
 
 #ifdef __STDC__
 	double fdlibm_atan(double x)
