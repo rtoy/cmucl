@@ -78,31 +78,34 @@ __kernel_tan(double x, double y, int iy) {
 	hx = ux.i[HIWORD];		/* high word of x */
 	ix = hx & 0x7fffffff;			/* high word of |x| */
 	if (ix < 0x3e300000) {			/* x < 2**-28 */
-		if ((int) x == 0) {		/* generate inexact */
-			if (((ix | ux.i[LOWORD]) | (iy + 1)) == 0)
-				return one / fabs(x);
-			else {
-				if (iy == 1)
-					return x;
-				else {	/* compute -1 / (x+y) carefully */
-					double a, t;
+            /* return x inexact except 0 */
+            if (x != 0) {
+                fdlibm_setexception(x, FDLIBM_INEXACT);
+            }
 
-					z = w = x + y;
-                                        uz.d = z;
-					uz.i[LOWORD] = 0;
-                                        z = ux.d;
+	    if (((ix | ux.i[LOWORD]) | (iy + 1)) == 0)
+		return one / fabs(x);
+	    else {
+		if (iy == 1)
+		    return x;
+		else {	/* compute -1 / (x+y) carefully */
+		    double a, t;
+
+		    z = w = x + y;
+		    uz.d = z;
+		    uz.i[LOWORD] = 0;
+		    z = ux.d;
                                         
-					v = y - (z - x);
-					t = a = -one / w;
-                                        uz.d = t;
-                                        uz.i[LOWORD] = 0;
-                                        t = uz.d;
+		    v = y - (z - x);
+		    t = a = -one / w;
+		    uz.d = t;
+		    uz.i[LOWORD] = 0;
+		    t = uz.d;
                                         
-					s = one + t * z;
-					return t + a * (s + t * v);
-				}
-			}
+		    s = one + t * z;
+		    return t + a * (s + t * v);
 		}
+	    }
 	}
 	if (ix >= 0x3FE59428) {	/* |x| >= 0.6744 */
 		if (hx < 0) {
