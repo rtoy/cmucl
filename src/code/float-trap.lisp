@@ -22,7 +22,10 @@
 (export '(current-float-trap floating-point-modes sigfpe-handler))
 )
 (in-package "EXTENSIONS")
-(export '(set-floating-point-modes get-floating-point-modes
+(export '(set-floating-point-modes
+	  %set-floating-point-modes
+	  get-floating-point-modes
+	  %get-floating-point-modes
 	  with-float-traps-masked
 	  with-float-traps-enabled))
 (in-package "VM")
@@ -135,16 +138,18 @@
     new-mode)
   )
 
-;;; SET-FLOATING-POINT-MODES  --  Public
+;;; %SET-FLOATING-POINT-MODES -- Public
 ;;;
-(defun set-floating-point-modes (&key (traps nil traps-p)
-				      (rounding-mode nil round-p)
-				      (current-exceptions nil current-x-p)
-				      (accrued-exceptions nil accrued-x-p)
-				      (fast-mode nil fast-mode-p))
-  "This function sets options controlling the floating-point hardware.  If a
-  keyword is not supplied, then the current value is preserved.  Possible
-  keywords:
+(defun %set-floating-point-modes (&key (floating-point-modes (floating-point-modes))
+				       (traps nil traps-p)
+				       (rounding-mode nil round-p)
+				       (current-exceptions nil current-x-p)
+				       (accrued-exceptions nil accrued-x-p)
+				       (fast-mode nil fast-mode-p))
+  "Sets floating-point modes according to the give options and the
+  specified mode, Floating-Point-Modes.  The resulting new mode is
+  returned.  If a keyword is not supplied, then the current value is
+  preserved.  Possible keywords:
 
    :TRAPS
        A list of the exception conditions that should cause traps.  Possible
@@ -169,7 +174,7 @@
 
    GET-FLOATING-POINT-MODES may be used to find the floating point modes
    currently in effect."
-  (let ((modes (floating-point-modes)))
+  (let ((modes floating-point-modes))
     (when traps-p
       (let ((trap-mask-bits (float-trap-mask traps)))
 	(setf (ldb float-traps-byte modes) trap-mask-bits)
@@ -215,10 +220,71 @@
 	  (setq modes (logior float-fast-bit modes))
 	  (setq modes (logand (lognot float-fast-bit) modes))))
 
-    (setf (floating-point-modes) modes))
-    
+    modes))
+
+;;; SET-FLOATING-POINT-MODES  --  Public
+;;;
+(defun set-floating-point-modes (&rest args
+				 &key traps
+				      rounding-mode
+				      current-exceptions
+				      accrued-exceptions
+				      fast-mode)
+  "This function sets options controlling the floating-point hardware.  If a
+  keyword is not supplied, then the current value is preserved.  Possible
+  keywords:
+
+   :TRAPS
+       A list of the exception conditions that should cause traps.  Possible
+       exceptions are :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID,
+       :DIVIDE-BY-ZERO, and on the X86 :DENORMALIZED-OPERAND. Initially
+       all traps except :INEXACT are enabled.
+
+   :ROUNDING-MODE
+       The rounding mode to use when the result is not exact.  Possible values
+       are :NEAREST, :POSITIVE-INFINITY, :NEGATIVE-INFINITY and :ZERO.
+       Initially, the rounding mode is :NEAREST.
+
+   :CURRENT-EXCEPTIONS
+   :ACCRUED-EXCEPTIONS
+       These arguments allow setting of the exception flags.  The main use is
+       setting the accrued exceptions to NIL to clear them.
+
+   :FAST-MODE
+       Set the hardware's \"fast mode\" flag, if any.  When set, IEEE
+       conformance or debuggability may be impaired.  Some machines may not
+       have this feature, in which case the value is always NIL.
+
+   GET-FLOATING-POINT-MODES may be used to find the floating point modes
+   currently in effect."
+  (declare (ignorable traps rounding-mode current-exceptions accrued-exceptions fast-mode))
+
+  (setf (floating-point-modes)
+	(apply #'%set-floating-point-modes args))
   (values))
 
+
+;;; %GET-FLOATING-POINT-MODES  --  Public
+;;;
+(defun %get-floating-point-modes (modes)
+  "This function returns a list representing the state of the floating point
+  modes given in Modes.  The list is in the same format as the keyword arguments to
+  SET-FLOATING-POINT-MODES."
+  (flet ((exc-keys (bits)
+	   (macrolet ((frob ()
+			`(collect ((res))
+			   ,@(mapcar #'(lambda (x)
+					 `(when (logtest bits ,(cdr x))
+					    (res ',(car x))))
+				     float-trap-alist)
+			   (res))))
+	     (frob))))
+    `(:traps ,(exc-keys (ldb float-traps-byte modes))
+      :rounding-mode ,(car (rassoc (ldb float-rounding-mode modes)
+				   rounding-mode-alist))
+      :current-exceptions ,(exc-keys (ldb float-exceptions-byte modes))
+      :accrued-exceptions ,(exc-keys (ldb float-sticky-bits modes))
+      :fast-mode ,(logtest float-fast-bit modes))))
 
 ;;; GET-FLOATING-POINT-MODES  --  Public
 ;;;
@@ -229,22 +295,7 @@
       (apply #'set-floating-point-modes (get-floating-point-modes))
 
   sets the floating point modes to their current values (and thus is a no-op)."
-  (flet ((exc-keys (bits)
-	   (macrolet ((frob ()
-			`(collect ((res))
-			   ,@(mapcar #'(lambda (x)
-					 `(when (logtest bits ,(cdr x))
-					    (res ',(car x))))
-				     float-trap-alist)
-			   (res))))
-	     (frob))))
-    (let ((modes (floating-point-modes))) 
-      `(:traps ,(exc-keys (ldb float-traps-byte modes))
-	:rounding-mode ,(car (rassoc (ldb float-rounding-mode modes)
-				     rounding-mode-alist))
-	:current-exceptions ,(exc-keys (ldb float-exceptions-byte modes))
-	:accrued-exceptions ,(exc-keys (ldb float-sticky-bits modes))
-	:fast-mode ,(logtest float-fast-bit modes)))))
+  (%get-floating-point-modes (floating-point-modes)))
 
   
 ;;; CURRENT-FLOAT-TRAP  --  Interface
