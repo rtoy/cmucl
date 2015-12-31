@@ -1227,18 +1227,21 @@ a host-structure or string."
 	   ;; Not path-designator because a file-stream can't have a
 	   ;; wild pathname.
 	   (type (or string pathname) in-wildname))
-  (with-pathname (pathname in-pathname)
-    (with-pathname (wildname in-wildname)
-      (macrolet ((frob (field &optional (op 'components-match ))
-		   `(or (null (,field wildname))
-			(,op (,field pathname) (,field wildname)))))
-	(and (or (null (%pathname-host wildname))
-		 (eq (%pathname-host wildname) (%pathname-host pathname)))
-	     (frob %pathname-device)
-	     (frob %pathname-directory directory-components-match)
-	     (frob %pathname-name)
-	     (frob %pathname-type)
-	     (frob %pathname-version))))))
+  (with-pathname (in-path in-pathname)
+    (enumerate-search-list (pathname in-path)
+      (with-pathname (in-wild in-wildname)
+	(enumerate-search-list (wildname in-wild)
+	  (macrolet ((frob (field &optional (op 'components-match ))
+		       `(or (null (,field wildname))
+			    (,op (,field pathname) (,field wildname)))))
+	    (when (and (or (null (%pathname-host wildname))
+			   (eq (%pathname-host wildname) (%pathname-host pathname)))
+		       (frob %pathname-device)
+		       (frob %pathname-directory directory-components-match)
+		       (frob %pathname-name)
+		       (frob %pathname-type)
+		       (frob %pathname-version))
+	      (return-from pathname-match-p pathname))))))))
 
 
 ;;; SUBSTITUTE-INTO -- Internal
