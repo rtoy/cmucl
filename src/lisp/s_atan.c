@@ -79,8 +79,7 @@ static double aT[] = {
 #else
 	static double 
 #endif
-one   = 1.0,
-huge   = 1.0e300;
+one   = 1.0;
 
 #ifdef __STDC__
 	double fdlibm_atan(double x)
@@ -104,7 +103,12 @@ huge   = 1.0e300;
 	    else     return -atanhi[3]-atanlo[3];
 	} if (ix < 0x3fdc0000) {	/* |x| < 0.4375 */
 	    if (ix < 0x3e200000) {	/* |x| < 2^-29 */
-		if(huge+x>one) return x;	/* raise inexact */
+		/* return x inexact except 0 */
+		if (x != 0) {
+		    fdlibm_setexception(x, FDLIBM_INEXACT);
+		}
+
+		return x;
 	    }
 	    id = -1;
 	} else {

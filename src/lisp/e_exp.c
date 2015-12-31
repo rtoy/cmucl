@@ -82,7 +82,6 @@ static double
 #endif
 one	= 1.0,
 halF[2]	= {0.5,-0.5,},
-huge	= 1.0e+300,
 twom1000= 9.33263618503218878990e-302,     /* 2**-1000=0x01700000,0*/
 o_threshold=  7.09782712893383973096e+02,  /* 0x40862E42, 0xFEFA39EF */
 u_threshold= -7.45133219101941108420e+02,  /* 0xc0874910, 0xD52D3051 */
@@ -161,7 +160,12 @@ P5   =  4.13813679705723846039e-08; /* 0x3E663769, 0x72BEA4D0 */
 	    x  = hi - lo;
 	} 
 	else if(hx < 0x3e300000)  {	/* when |x|<2**-28 */
-	    if(huge+x>one) return one+x;/* trigger inexact */
+            /* return x inexact except 0 */
+            if (x != 0) {
+                fdlibm_setexception(x, FDLIBM_INEXACT);
+            }
+
+            return one + x;
 	}
 	else k = 0;
 

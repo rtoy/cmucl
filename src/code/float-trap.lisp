@@ -22,8 +22,12 @@
 (export '(current-float-trap floating-point-modes sigfpe-handler))
 )
 (in-package "EXTENSIONS")
-(export '(set-floating-point-modes get-floating-point-modes
-	  with-float-traps-masked))
+(export '(set-floating-point-modes
+	  %set-floating-point-modes
+	  get-floating-point-modes
+	  %get-floating-point-modes
+	  with-float-traps-masked
+	  with-float-traps-enabled))
 (in-package "VM")
 
 (eval-when (compile load eval)
@@ -103,7 +107,7 @@
 
       final-mode))
   (defun (setf floating-point-modes) (new-mode)
-    (declare (type (unsigned-byte 24) new-mode))
+    (declare (type (unsigned-byte 32) new-mode))
     ;; Set the floating point modes for both X87 and SSE2.  This
     ;; include the rounding control bits.
     (let* ((rc (ldb float-rounding-mode new-mode))
@@ -116,8 +120,8 @@
 		    ;; is ok and would be the correct setting if we
 		    ;; ever support long-floats.
 		    (ash 3 8))))
-      (setf (vm::sse2-floating-point-modes) new-mode)
-      (setf (vm::x87-floating-point-modes) x87-modes))
+      (setf (vm::sse2-floating-point-modes) (ldb (byte 24 0) new-mode))
+      (setf (vm::x87-floating-point-modes) (ldb (byte 24 0) x87-modes)))
     new-mode)
   )
 
@@ -134,16 +138,18 @@
     new-mode)
   )
 
-;;; SET-FLOATING-POINT-MODES  --  Public
+;;; %SET-FLOATING-POINT-MODES -- Public
 ;;;
-(defun set-floating-point-modes (&key (traps nil traps-p)
-				      (rounding-mode nil round-p)
-				      (current-exceptions nil current-x-p)
-				      (accrued-exceptions nil accrued-x-p)
-				      (fast-mode nil fast-mode-p))
-  "This function sets options controlling the floating-point hardware.  If a
-  keyword is not supplied, then the current value is preserved.  Possible
-  keywords:
+(defun %set-floating-point-modes (&key (floating-point-modes (floating-point-modes))
+				       (traps nil traps-p)
+				       (rounding-mode nil round-p)
+				       (current-exceptions nil current-x-p)
+				       (accrued-exceptions nil accrued-x-p)
+				       (fast-mode nil fast-mode-p))
+  "Sets floating-point modes according to the give options and the
+  specified mode, Floating-Point-Modes.  The resulting new mode is
+  returned.  If a keyword is not supplied, then the current value is
+  preserved.  Possible keywords:
 
    :TRAPS
        A list of the exception conditions that should cause traps.  Possible
@@ -168,7 +174,7 @@
 
    GET-FLOATING-POINT-MODES may be used to find the floating point modes
    currently in effect."
-  (let ((modes (floating-point-modes)))
+  (let ((modes floating-point-modes))
     (when traps-p
       (let ((trap-mask-bits (float-trap-mask traps)))
 	(setf (ldb float-traps-byte modes) trap-mask-bits)
@@ -214,10 +220,71 @@
 	  (setq modes (logior float-fast-bit modes))
 	  (setq modes (logand (lognot float-fast-bit) modes))))
 
-    (setf (floating-point-modes) modes))
-    
+    modes))
+
+;;; SET-FLOATING-POINT-MODES  --  Public
+;;;
+(defun set-floating-point-modes (&rest args
+				 &key traps
+				      rounding-mode
+				      current-exceptions
+				      accrued-exceptions
+				      fast-mode)
+  "This function sets options controlling the floating-point hardware.  If a
+  keyword is not supplied, then the current value is preserved.  Possible
+  keywords:
+
+   :TRAPS
+       A list of the exception conditions that should cause traps.  Possible
+       exceptions are :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID,
+       :DIVIDE-BY-ZERO, and on the X86 :DENORMALIZED-OPERAND. Initially
+       all traps except :INEXACT are enabled.
+
+   :ROUNDING-MODE
+       The rounding mode to use when the result is not exact.  Possible values
+       are :NEAREST, :POSITIVE-INFINITY, :NEGATIVE-INFINITY and :ZERO.
+       Initially, the rounding mode is :NEAREST.
+
+   :CURRENT-EXCEPTIONS
+   :ACCRUED-EXCEPTIONS
+       These arguments allow setting of the exception flags.  The main use is
+       setting the accrued exceptions to NIL to clear them.
+
+   :FAST-MODE
+       Set the hardware's \"fast mode\" flag, if any.  When set, IEEE
+       conformance or debuggability may be impaired.  Some machines may not
+       have this feature, in which case the value is always NIL.
+
+   GET-FLOATING-POINT-MODES may be used to find the floating point modes
+   currently in effect."
+  (declare (ignorable traps rounding-mode current-exceptions accrued-exceptions fast-mode))
+
+  (setf (floating-point-modes)
+	(apply #'%set-floating-point-modes args))
   (values))
 
+
+;;; %GET-FLOATING-POINT-MODES  --  Public
+;;;
+(defun %get-floating-point-modes (modes)
+  "This function returns a list representing the state of the floating point
+  modes given in Modes.  The list is in the same format as the keyword arguments to
+  SET-FLOATING-POINT-MODES."
+  (flet ((exc-keys (bits)
+	   (macrolet ((frob ()
+			`(collect ((res))
+			   ,@(mapcar #'(lambda (x)
+					 `(when (logtest bits ,(cdr x))
+					    (res ',(car x))))
+				     float-trap-alist)
+			   (res))))
+	     (frob))))
+    `(:traps ,(exc-keys (ldb float-traps-byte modes))
+      :rounding-mode ,(car (rassoc (ldb float-rounding-mode modes)
+				   rounding-mode-alist))
+      :current-exceptions ,(exc-keys (ldb float-exceptions-byte modes))
+      :accrued-exceptions ,(exc-keys (ldb float-sticky-bits modes))
+      :fast-mode ,(logtest float-fast-bit modes))))
 
 ;;; GET-FLOATING-POINT-MODES  --  Public
 ;;;
@@ -228,22 +295,7 @@
       (apply #'set-floating-point-modes (get-floating-point-modes))
 
   sets the floating point modes to their current values (and thus is a no-op)."
-  (flet ((exc-keys (bits)
-	   (macrolet ((frob ()
-			`(collect ((res))
-			   ,@(mapcar #'(lambda (x)
-					 `(when (logtest bits ,(cdr x))
-					    (res ',(car x))))
-				     float-trap-alist)
-			   (res))))
-	     (frob))))
-    (let ((modes (floating-point-modes))) 
-      `(:traps ,(exc-keys (ldb float-traps-byte modes))
-	:rounding-mode ,(car (rassoc (ldb float-rounding-mode modes)
-				     rounding-mode-alist))
-	:current-exceptions ,(exc-keys (ldb float-exceptions-byte modes))
-	:accrued-exceptions ,(exc-keys (ldb float-sticky-bits modes))
-	:fast-mode ,(logtest float-fast-bit modes)))))
+  (%get-floating-point-modes (floating-point-modes)))
 
   
 ;;; CURRENT-FLOAT-TRAP  --  Interface
@@ -364,45 +416,70 @@
 		 (error _"SIGFPE with no exceptions currently enabled? (si-code = ~D)"
 			code)))))))
 
-;;; WITH-FLOAT-TRAPS-MASKED  --  Public
-;;;
-(defmacro with-float-traps-masked (traps &body body)
-  "Execute BODY with the floating point exceptions listed in TRAPS
+(macrolet
+    ((with-float-traps (name merge-traps docstring)
+       ;; Define macros to enable or disable floating-point
+       ;; exceptions.  Masked exceptions and enabled exceptions only
+       ;; differ whether we AND in the bits or OR them, respectively.
+       ;; MERGE-TRAPS is the logical operation to merge the traps with
+       ;; the current floating-point mode.  Thus, use  and MERGE-EXCEPTIONS is the
+       ;; logical operation to merge the exceptions (sticky bits) with
+       ;; the current mode.
+       (let ((macro-name (symbolicate "WITH-FLOAT-TRAPS-" name)))
+	 `(progn
+	    (defmacro ,macro-name (traps &body body)
+	      ,docstring
+	      (let ((traps (dpb (float-trap-mask traps) float-traps-byte 0))
+		    (exceptions (dpb (float-trap-mask traps) float-sticky-bits 0))
+		    (trap-mask (dpb (lognot (float-trap-mask traps))
+				    float-traps-byte #xffffffff))
+		    (exception-mask (dpb (lognot (vm::float-trap-mask traps))
+					 float-sticky-bits #xffffffff))
+		    ;; On ppc if we are masking the invalid trap, we need to make
+		    ;; sure we wipe out the various individual sticky bits
+		    ;; representing the invalid operation.  Otherwise, if we
+		    ;; enable the invalid trap later, these sticky bits will cause
+		    ;; an exception.
+		    #+ppc
+		    (invalid-mask (if (member :invalid traps)
+				      (dpb 0
+					   (byte 1 31)
+					   (dpb 0 vm::float-invalid-op-2-byte
+						(dpb 0 vm:float-invalid-op-1-byte #xffffffff)))
+				      #xffffffff))
+		    (orig-modes (gensym)))
+		`(let ((,orig-modes (floating-point-modes)))
+		   (unwind-protect
+			(progn
+			  (setf (floating-point-modes)
+				(ldb (byte 32 0)
+				     (logand (,',merge-traps ,orig-modes ,trap-mask)
+					     ,exception-mask)))
+			  ,@body)
+		     ;; Restore the original traps and exceptions.
+		     (setf (floating-point-modes)
+			   (logior (logand ,orig-modes ,(logior traps exceptions))
+				   (logand (floating-point-modes)
+					   ,(logand trap-mask exception-mask)
+					   #+ppc
+					   ,invalid-mask
+					   #+mips ,(dpb 0 float-exceptions-byte #xffffffff))))))))))))
+
+  ;; WITH-FLOAT-TRAPS-MASKED  --  Public
+  (with-float-traps masked logand
+    _N"Execute BODY with the floating point exceptions listed in TRAPS
   masked (disabled).  TRAPS should be a list of possible exceptions
   which includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and
   :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective
   accrued exceptions are cleared at the start of the body to support
-  their testing within, and restored on exit."
-  (let ((traps (dpb (float-trap-mask traps) float-traps-byte 0))
-	(exceptions (dpb (float-trap-mask traps) float-sticky-bits 0))
-	(trap-mask (dpb (lognot (float-trap-mask traps))
-			float-traps-byte #xffffffff))
-	(exception-mask (dpb (lognot (vm::float-trap-mask traps))
-			     float-sticky-bits #xffffffff))
-	;; On ppc if we are masking the invalid trap, we need to make
-	;; sure we wipe out the various individual sticky bits
-	;; representing the invalid operation.  Otherwise, if we
-	;; enable the invalid trap later, these sticky bits will cause
-	;; an exception.
-	#+ppc
-	(invalid-mask (if (member :invalid traps)
-			  (dpb 0
-			       (byte 1 31)
-			       (dpb 0 vm::float-invalid-op-2-byte
-				    (dpb 0 vm:float-invalid-op-1-byte #xffffffff)))
-			  #xffffffff))
-	(orig-modes (gensym)))
-    `(let ((,orig-modes (floating-point-modes)))
-      (unwind-protect
-	   (progn
-	     (setf (floating-point-modes)
-		   (logand ,orig-modes ,(logand trap-mask exception-mask)))
-	     ,@body)
-	;; Restore the original traps and exceptions.
-	(setf (floating-point-modes)
-	      (logior (logand ,orig-modes ,(logior traps exceptions))
-		      (logand (floating-point-modes)
-			      ,(logand trap-mask exception-mask)
-			      #+ppc
-			      ,invalid-mask
-			      #+mips ,(dpb 0 float-exceptions-byte #xffffffff))))))))
+  their testing within, and restored on exit.")
+
+  ;; WITH-FLOAT-TRAPS-ENABLED --  Public
+  (with-float-traps enabled logorc2
+    _N"Execute BODY with the floating point exceptions listed in TRAPS
+  enabled.  TRAPS should be a list of possible exceptions which
+  includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and
+  :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective
+  accrued exceptions are cleared at the start of the body to support
+  their testing within, and restored on exit."))
+
