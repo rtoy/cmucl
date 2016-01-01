@@ -252,6 +252,13 @@
     (return-from intexp base))
   (when (eql base -1)
     (return-from intexp (if (oddp power) -1 1)))
+
+  ;; Handle 0 raised to a power.  Return 0 if the power is
+  ;; non-negative or signal a divide-by-zero if the power is negative.
+  (when (zerop base)
+    (if (minusp power)
+	(error 'division-by-zero)
+	(return-from intexp base)))
   
   (when (> (abs power) *intexp-maximum-exponent*)
     ;; Allow user the option to continue with calculation, possibly
