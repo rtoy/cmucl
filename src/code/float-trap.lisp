@@ -23,9 +23,9 @@
 )
 (in-package "EXTENSIONS")
 (export '(set-floating-point-modes
-	  %set-floating-point-modes
 	  get-floating-point-modes
-	  %get-floating-point-modes
+	  decode-floating-point-modes
+	  encode-floating-point-modes
 	  with-float-traps-masked
 	  with-float-traps-enabled))
 (in-package "VM")
@@ -140,13 +140,13 @@
 
 ;;; %SET-FLOATING-POINT-MODES -- Public
 ;;;
-(defun %set-floating-point-modes (&key (floating-point-modes (floating-point-modes))
+(defun encode-floating-point-modes (&key (floating-point-modes (floating-point-modes))
 				       (traps nil traps-p)
 				       (rounding-mode nil round-p)
 				       (current-exceptions nil current-x-p)
 				       (accrued-exceptions nil accrued-x-p)
 				       (fast-mode nil fast-mode-p))
-  "Sets floating-point modes according to the give options and the
+  "Encode the floating-point modes according to the give options and the
   specified mode, Floating-Point-Modes.  The resulting new mode is
   returned.  If a keyword is not supplied, then the current value is
   preserved.  Possible keywords:
@@ -260,13 +260,13 @@
   (declare (ignorable traps rounding-mode current-exceptions accrued-exceptions fast-mode))
 
   (setf (floating-point-modes)
-	(apply #'%set-floating-point-modes args))
+	(apply #'encode-floating-point-modes args))
   (values))
 
 
 ;;; %GET-FLOATING-POINT-MODES  --  Public
 ;;;
-(defun %get-floating-point-modes (modes)
+(defun decode-floating-point-modes (modes)
   "This function returns a list representing the state of the floating point
   modes given in Modes.  The list is in the same format as the keyword arguments to
   SET-FLOATING-POINT-MODES."
@@ -295,7 +295,7 @@
       (apply #'set-floating-point-modes (get-floating-point-modes))
 
   sets the floating point modes to their current values (and thus is a no-op)."
-  (%get-floating-point-modes (floating-point-modes)))
+  (decode-floating-point-modes (floating-point-modes)))
 
   
 ;;; CURRENT-FLOAT-TRAP  --  Interface

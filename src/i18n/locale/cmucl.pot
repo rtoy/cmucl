@@ -4729,7 +4729,7 @@ msgstr ""
 
 #: src/code/float-trap.lisp
 msgid ""
-"Sets floating-point modes according to the give options and the\n"
+"Encode the floating-point modes according to the give options and the\n"
 "  specified mode, Floating-Point-Modes.  The resulting new mode is\n"
 "  returned.  If a keyword is not supplied, then the current value is\n"
 "  preserved.  Possible keywords:\n"
