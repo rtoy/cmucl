@@ -283,8 +283,9 @@
 
 (defswitch "dynamic-space-size" nil
   "Specifies the number of megabytes that should be allocated to the
-  heap.  If not specified, a platform-specific default is used.  The
-  actual maximum allowed heap size is platform-specific."
+  heap.  If not specified, a platform-specific default is used.  If 0,
+  the platform-specific maximum heap size is used.  The actual maximum
+  allowed heap size is platform-specific."
   "megabytes")
 
 (defswitch "read-only-space-size" nil
