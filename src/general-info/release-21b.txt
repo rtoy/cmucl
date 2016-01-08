@@ -44,18 +44,32 @@ New in this release:
       Thus, src/code/unix-glibc2.lisp is no longer used.
     * Micro-optimize modular shifts on x86.
     * Update lisp-unit to commit e6c259f.
+    * Added EXT:WITH-FLOAT-TRAPS-ENABLED to complement
+      WITH-FLOAT-TRAPS-MASKED.
+    * (EXPT 0 power) doesn't throw INTEXP-LIMIT-ERROR anymore for any
+      integer value of power.
+    * Starting cmucl with "-dyanmic-space-size 0" means using the
+      maximum possible heap size for the platform.
 
   * ANSI compliance fixes:
+    * PATHNAME-MATCH-P did not accept search-lists.
 
   * Bugfixes:
     * Linux was missing unix-setitimer which prevented saving cores.
+    * Generate inxact exceptions more carefully.
+    * Fix FP issue when building with Xcode 7.2 (and newer versions of
+      clang).  (See ticket #12.)
 
   * Trac Tickets:
 
   * Gitlab tickets:
     * Ticket #10 fixed: setting an element of a 1, 2, or 4-bit array
       with a constant index did not always set the element
-      appropriately. 
+      appropriately.
+    * Ticket #12 fixed.  It looks like a possible compiler bug, but
+      worked around by explicitly setting inexact instead of using FP
+      instructions to generate inexact.
+    * Ticket #16 fixed: search-lists are handled correctly.
 
   * Other changes:
 
