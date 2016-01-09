@@ -22,7 +22,7 @@ New in this release:
   * Feature enhancements
 
   * Changes
-    * Update to ASDF 3.1.6
+    * Update to ASDF 3.1.6.9
     * Add support for asdf's static-image-op
       * This mostly entails internal changes in how executables are
         handled.  lisp.a is not complete; it must be linked with
