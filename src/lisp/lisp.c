@@ -657,8 +657,9 @@ main(int argc, const char *argv[], const char *envp[])
 		}
 		if (dynamic_space_size == 0) {
 		    dynamic_space_size = DYNAMIC_SPACE_SIZE;
-		}
-		dynamic_space_size *= 1024 * 1024;
+		} else {
+                    dynamic_space_size *= 1024 * 1024;
+                }
 	    }
 #endif
 	    if (dynamic_space_size > DYNAMIC_SPACE_SIZE) {
