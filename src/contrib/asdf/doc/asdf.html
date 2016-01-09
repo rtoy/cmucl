@@ -84,7 +84,6 @@ ul.no-bullet {list-style: none}
 
 
 
-
 <a name="SEC_Contents"></a>
 <h2 class="contents-heading">Table of Contents</h2>
 
@@ -275,7 +274,7 @@ ul.no-bullet {list-style: none}
 <a name="Top"></a>
 <a name="ASDF_003a-Another-System-Definition-Facility"></a>
 <h1 class="top">ASDF: Another System Definition Facility</h1>
-<p>Manual for Version 3.1.6
+<p>Manual for Version 3.1.6.9
 </p>
 
 <p>This manual describes ASDF, a system definition facility
@@ -1263,7 +1262,7 @@ simple-component-name := string
 pathname-specifier := pathname | string | symbol
 
 method-form := (operation-name qual lambda-list &amp;rest body)
-qual := method qualifier
+qual := method qualifier?
 
 component-dep-fail-option := :fail | :try-next | :ignore
 
@@ -1787,6 +1786,7 @@ whereas earlier versions ignore this option and use the <code>system-source-dire
 where the <samp>.asd</samp> file resides.
 </p>
 
+
 <hr>
 <a name="The-object-model-of-ASDF"></a>
 <a name="The-Object-model-of-ASDF"></a>
@@ -1799,7 +1799,7 @@ Both a system&rsquo;s structure and the operations that can be performed on syst
 follow a extensible protocol, allowing programmers to add new behaviours to ASDF.
 For example, <code>cffi</code> adds support for special FFI description files
 that interface with C libraries and for wrapper files that embed C code in Lisp.
-<code>abcl-jar</code> supports creating Java JAR archives in ABCL.
+<code>asdf-jar</code> supports creating Java JAR archives in ABCL.
 <code>poiu</code> supports compiling code in parallel using background processes.
 </p>
 <p>The key classes in ASDF are <code>component</code> and <code>operation</code>.
