@@ -357,6 +357,14 @@
       ;; XXX: This seems not right.  Shouldn't we be setting the modes
       ;; in the sigcontext instead?  This however seems to do what we
       ;; want.
+
+      (format *debug-io* "sigcontext modes: #x~4x (~A)~%"
+	      modes (decode-floating-point-modes modes))
+      (format *debug-io* "current modes:    #x~4x (~A)~%"
+	      (vm:floating-point-modes) (get-floating-point-modes))
+      (format *debug-io* "new  modes: #x~x (~A)~%"
+	      new-modes (decode-floating-point-modes new-modes))
+      #+nil
       (setf (vm:floating-point-modes) new-modes))
     
     (multiple-value-bind (fop operands)
