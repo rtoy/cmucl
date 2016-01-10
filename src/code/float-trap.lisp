@@ -451,6 +451,10 @@
 		    ;; representing the invalid operation.  Otherwise, if we
 		    ;; enable the invalid trap later, these sticky bits will cause
 		    ;; an exception.
+		    ;;
+		    ;; FIXME: Consider removing these for ppc.  Since
+		    ;; we now restore the original modes exactly, I
+		    ;; don't think these are needed anymore.
 		    #+ppc
 		    (invalid-mask (if (member :invalid traps)
 				      (dpb 0
@@ -467,21 +471,8 @@
 				     (logand (,',merge-traps ,orig-modes ,trap-mask)
 					     ,exception-mask)))
 			  ,@body)
-		     ;; Restore the original traps and exceptions.
-		     (format *debug-io* "Saved fpu mode:   #x~4,'0x: ~S~%"
-			     ,orig-modes (decode-floating-point-modes ,orig-modes))
-		     (format *debug-io* "Current fpu mode: #x~4,'0x: ~S~%"
-			     (floating-point-modes) (get-floating-point-modes))
-		     #+nil
-		     (setf (floating-point-modes)
-			   (logior (logand ,orig-modes ,(logior traps exceptions))
-				   (logand ,orig-modes
-					   ,(logand trap-mask exception-mask)
-					   #+ppc
-					   ,invalid-mask
-					   #+mips ,(dpb 0 float-exceptions-byte #xffffffff))))
-		     (setf (floating-point-modes) ,orig-modes)
-		     ))))))))
+		     ;; Restore the modes exactly as they were.
+		     (setf (floating-point-modes) ,orig-modes)))))))))
 
   ;; WITH-FLOAT-TRAPS-MASKED  --  Public
   (with-float-traps masked logand
