@@ -312,6 +312,8 @@
 ;;;
 ;;;    Signal the appropriate condition when we get a floating-point error.
 ;;;
+#+nil
+(defvar *debug-sigfpe-handler* nil)
 (defun sigfpe-handler (signal code scp)
   (declare (ignore signal)
 	   (type system-area-pointer scp))
@@ -345,7 +347,7 @@
 	     (alien:sap-alien scp (* unix:sigcontext)))
 	    new-modes))
 
-    #+sse2
+    #+nil
     (let* ((new-modes modes)
 	   (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
 				     traps)))
@@ -358,12 +360,13 @@
       ;; in the sigcontext instead?  This however seems to do what we
       ;; want.
 
-      (format *debug-io* "sigcontext modes: #x~4x (~A)~%"
-	      modes (decode-floating-point-modes modes))
-      (format *debug-io* "current modes:    #x~4x (~A)~%"
-	      (vm:floating-point-modes) (get-floating-point-modes))
-      (format *debug-io* "new  modes: #x~x (~A)~%"
-	      new-modes (decode-floating-point-modes new-modes))
+      (when *debug-sigfpe-handler*
+	(format *debug-io* "sigcontext modes: #x~4x (~A)~%"
+		modes (decode-floating-point-modes modes))
+	(format *debug-io* "current modes:    #x~4x (~A)~%"
+		(vm:floating-point-modes) (get-floating-point-modes))
+	(format *debug-io* "new  modes: #x~x (~A)~%"
+		new-modes (decode-floating-point-modes new-modes)))
       #+nil
       (setf (vm:floating-point-modes) new-modes))
     
@@ -465,13 +468,20 @@
 					     ,exception-mask)))
 			  ,@body)
 		     ;; Restore the original traps and exceptions.
+		     (format *debug-io* "Saved fpu mode:   #x~4,'0x: ~S~%"
+			     ,orig-modes (decode-floating-point-modes ,orig-modes))
+		     (format *debug-io* "Current fpu mode: #x~4,'0x: ~S~%"
+			     (floating-point-modes) (get-floating-point-modes))
+		     #+nil
 		     (setf (floating-point-modes)
 			   (logior (logand ,orig-modes ,(logior traps exceptions))
-				   (logand (floating-point-modes)
+				   (logand ,orig-modes
 					   ,(logand trap-mask exception-mask)
 					   #+ppc
 					   ,invalid-mask
-					   #+mips ,(dpb 0 float-exceptions-byte #xffffffff))))))))))))
+					   #+mips ,(dpb 0 float-exceptions-byte #xffffffff))))
+		     (setf (floating-point-modes) ,orig-modes)
+		     ))))))))
 
   ;; WITH-FLOAT-TRAPS-MASKED  --  Public
   (with-float-traps masked logand
