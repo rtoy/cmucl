@@ -312,7 +312,6 @@
 ;;;
 ;;;    Signal the appropriate condition when we get a floating-point error.
 ;;;
-#+nil
 (defvar *debug-sigfpe-handler* nil)
 (defun sigfpe-handler (signal code scp)
   (declare (ignore signal)
@@ -321,111 +320,119 @@
 		 (alien:sap-alien scp (* unix:sigcontext))))
 	 (traps (logand (ldb float-exceptions-byte modes)
 			(ldb float-traps-byte modes))))
-    #+(and darwin ppc)
-    (let* ((new-modes modes)
-	   (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
-				     traps)))
-      ;; (format t "sigfpe: modes   = #B~32,'0b~%" modes)
-      ;; (format t "sigfpe: new-exc = #B~32,'0b~%" new-exceptions)
-      (setf (ldb float-exceptions-byte new-modes) new-exceptions)
-      ;; Clear out all exceptions and save them to the context.
-      ;;
-      ;; XXX: Should we just clear out the bits for the traps that are
-      ;; enabled?  If we did that then the accrued exceptions would be
-      ;; correct.
-      (setf (ldb float-sticky-bits new-modes) 0)
-      ;; Clear out the various sticky invalid operation bits too.
-      ;;
-      ;; XXX: Should we only do that if the invalid trap is enabled?
-      (setf (ldb float-invalid-op-1-byte new-modes) 0)
-      (setf (ldb float-invalid-op-2-byte new-modes) 0)
-      ;; Clear the FP exception summary bit too.
-      (setf (ldb float-exceptions-summary-byte new-modes) 0)
-      ;; (format t "sigfpe: new modes   = #B~32,'0b~%" new-modes)
-      (setf (floating-point-modes) new-modes)
-      (setf (sigcontext-floating-point-modes
-	     (alien:sap-alien scp (* unix:sigcontext)))
-	    new-modes))
 
-    #+nil
-    (let* ((new-modes modes)
-	   (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
-				     traps)))
-      ;; Clear out the status for any enabled traps.  With SSE2, if
-      ;; the current exception is enabled, the next FP instruction
-      ;; will cause the exception to be signaled again.  Hence, we
-      ;; need to clear out the exceptions that we are handling here.
-      (setf (ldb float-exceptions-byte new-modes) new-exceptions)
-      ;; XXX: This seems not right.  Shouldn't we be setting the modes
-      ;; in the sigcontext instead?  This however seems to do what we
-      ;; want.
-
-      (when *debug-sigfpe-handler*
-	(format *debug-io* "sigcontext modes: #x~4x (~A)~%"
-		modes (decode-floating-point-modes modes))
-	(format *debug-io* "current modes:    #x~4x (~A)~%"
-		(vm:floating-point-modes) (get-floating-point-modes))
-	(format *debug-io* "new  modes: #x~x (~A)~%"
-		new-modes (decode-floating-point-modes new-modes)))
-      #+nil
-      (setf (vm:floating-point-modes) new-modes))
     
     (multiple-value-bind (fop operands)
 	(let ((sym (find-symbol "GET-FP-OPERANDS" "VM")))
 	  (if (fboundp sym)
 	      (funcall sym (alien:sap-alien scp (* unix:sigcontext)) modes)
 	      (values nil nil)))
-      (cond ((not (zerop (logand float-divide-by-zero-trap-bit traps)))
-	     (error 'division-by-zero
-		    :operation fop
-		    :operands operands))
-	    ((not (zerop (logand float-invalid-trap-bit traps)))
-	     (error 'floating-point-invalid-operation
-		    :operation fop
-		    :operands operands))
-	    ((not (zerop (logand float-overflow-trap-bit traps)))
-	     (error 'floating-point-overflow
-		    :operation fop
-		    :operands operands))
-	    ((not (zerop (logand float-underflow-trap-bit traps)))
-	     (error 'floating-point-underflow
-		    :operation fop
-		    :operands operands))
-	    ((not (zerop (logand float-inexact-trap-bit traps)))
-	     (error 'floating-point-inexact
-		    :operation fop
-		    :operands operands))
-	    #+x86
-	    ((not (zerop (logand float-denormal-trap-bit traps)))
-	     (error 'floating-point-denormal-operand
-		    :operation fop
-		    :operands operands))
-	    (t
-	     ;; It looks like the sigcontext on Solaris/x86 doesn't
-	     ;; actually save the status word of the FPU.  The
-	     ;; operands also seem to be missing.  Signal a general
-	     ;; arithmetic error.
-	     #+(and x86 solaris)
-	     (error _"SIGFPE with no exceptions currently enabled? (si-code = ~D)"
-		    code)
-	     ;; For all other x86 ports, we should only get here if
-	     ;; the SIGFPE was caused by an integer overflow on
-	     ;; division.  For sparc and ppc, I (rtoy) don't think
-	     ;; there's any other way to get here since integer
-	     ;; overflows aren't signaled.
-	     ;;
-	     ;; In that case, FOP should be /, so we can generate a
-	     ;; nice arithmetic-error.  It's possible to use CODE,
-	     ;; which is supposed to indicate what caused the
-	     ;; exception, but each OS is different, so we don't; FOP
-	     ;; can tell us.
-	     #-(and x86 solaris)
-	     (if fop
-		 (error 'arithmetic-error
-			:operation fop
-			:operands operands)
-		 (error _"SIGFPE with no exceptions currently enabled? (si-code = ~D)"
-			code)))))))
+      ;; Don't let throws get away without resetting the
+      ;; floating-point modes back to the original values which we get
+      ;; from the sigcontext.  Because we can throw, we never return
+      ;; from the signal handler so the sigcontext is never restored.
+      ;; This means we need to restore the fpu state ourselves.
+      (unwind-protect
+	   (cond ((not (zerop (logand float-divide-by-zero-trap-bit traps)))
+		  (error 'division-by-zero
+			 :operation fop
+			 :operands operands))
+		 ((not (zerop (logand float-invalid-trap-bit traps)))
+		  (error 'floating-point-invalid-operation
+			 :operation fop
+			 :operands operands))
+		 ((not (zerop (logand float-overflow-trap-bit traps)))
+		  (error 'floating-point-overflow
+			 :operation fop
+			 :operands operands))
+		 ((not (zerop (logand float-underflow-trap-bit traps)))
+		  (error 'floating-point-underflow
+			 :operation fop
+			 :operands operands))
+		 ((not (zerop (logand float-inexact-trap-bit traps)))
+		  (error 'floating-point-inexact
+			 :operation fop
+			 :operands operands))
+		 #+x86
+		 ((not (zerop (logand float-denormal-trap-bit traps)))
+		  (error 'floating-point-denormal-operand
+			 :operation fop
+			 :operands operands))
+		 (t
+		  ;; It looks like the sigcontext on Solaris/x86 doesn't
+		  ;; actually save the status word of the FPU.  The
+		  ;; operands also seem to be missing.  Signal a general
+		  ;; arithmetic error.
+		  #+(and x86 solaris)
+		  (error _"SIGFPE with no exceptions currently enabled? (si-code = ~D)"
+			 code)
+		  ;; For all other x86 ports, we should only get here if
+		  ;; the SIGFPE was caused by an integer overflow on
+		  ;; division.  For sparc and ppc, I (rtoy) don't think
+		  ;; there's any other way to get here since integer
+		  ;; overflows aren't signaled.
+		  ;;
+		  ;; In that case, FOP should be /, so we can generate a
+		  ;; nice arithmetic-error.  It's possible to use CODE,
+		  ;; which is supposed to indicate what caused the
+		  ;; exception, but each OS is different, so we don't; FOP
+		  ;; can tell us.
+		  #-(and x86 solaris)
+		  (if fop
+		      (error 'arithmetic-error
+			     :operation fop
+			     :operands operands)
+		      (error _"SIGFPE with no exceptions currently enabled? (si-code = ~D)"
+			     code))))
+	;; Cleanup
+	#+(and darwin ppc)
+	(let* ((new-modes modes)
+	       (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
+					 traps)))
+	  ;; (format t "sigfpe: modes   = #B~32,'0b~%" modes)
+	  ;; (format t "sigfpe: new-exc = #B~32,'0b~%" new-exceptions)
+	  (setf (ldb float-exceptions-byte new-modes) new-exceptions)
+	  ;; Clear out all exceptions and save them to the context.
+	  ;;
+	  ;; XXX: Should we just clear out the bits for the traps that are
+	  ;; enabled?  If we did that then the accrued exceptions would be
+	  ;; correct.
+	  (setf (ldb float-sticky-bits new-modes) 0)
+	  ;; Clear out the various sticky invalid operation bits too.
+	  ;;
+	  ;; XXX: Should we only do that if the invalid trap is enabled?
+	  (setf (ldb float-invalid-op-1-byte new-modes) 0)
+	  (setf (ldb float-invalid-op-2-byte new-modes) 0)
+	  ;; Clear the FP exception summary bit too.
+	  (setf (ldb float-exceptions-summary-byte new-modes) 0)
+	  ;; (format t "sigfpe: new modes   = #B~32,'0b~%" new-modes)
+	  (setf (floating-point-modes) new-modes)
+	  #+nil
+	  (setf (sigcontext-floating-point-modes
+		 (alien:sap-alien scp (* unix:sigcontext)))
+		new-modes))
+
+	#+sse2
+	(let* ((new-modes modes)
+	       (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
+					 traps)))
+	  ;; Clear out the status for any enabled traps.  With SSE2, if
+	  ;; the current exception is enabled, the next FP instruction
+	  ;; will cause the exception to be signaled again.  Hence, we
+	  ;; need to clear out the exceptions that we are handling here.
+	  (setf (ldb float-exceptions-byte new-modes) new-exceptions)
+	  ;; XXX: This seems not right.  Shouldn't we be setting the modes
+	  ;; in the sigcontext instead?  This however seems to do what we
+	  ;; want.
+
+	  (when *debug-sigfpe-handler*
+	    (format *debug-io* "sigcontext modes: #x~4x (~A)~%"
+		    modes (decode-floating-point-modes modes))
+	    (format *debug-io* "current modes:    #x~4x (~A)~%"
+		    (vm:floating-point-modes) (get-floating-point-modes))
+	    (format *debug-io* "new  modes: #x~x (~A)~%"
+		    new-modes (decode-floating-point-modes new-modes)))
+	  (setf (vm:floating-point-modes) new-modes))))))
 
 (macrolet
     ((with-float-traps (name merge-traps docstring)
