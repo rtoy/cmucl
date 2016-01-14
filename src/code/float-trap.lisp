@@ -312,7 +312,6 @@
 ;;;
 ;;;    Signal the appropriate condition when we get a floating-point error.
 ;;;
-(defvar *debug-sigfpe-handler* nil)
 (defun sigfpe-handler (signal code scp)
   (declare (ignore signal)
 	   (type system-area-pointer scp))
@@ -385,54 +384,53 @@
 		      (error _"SIGFPE with no exceptions currently enabled? (si-code = ~D)"
 			     code))))
 	;; Cleanup
-	#+(and darwin ppc)
 	(let* ((new-modes modes)
 	       (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
 					 traps)))
-	  ;; (format t "sigfpe: modes   = #B~32,'0b~%" modes)
-	  ;; (format t "sigfpe: new-exc = #B~32,'0b~%" new-exceptions)
-	  (setf (ldb float-exceptions-byte new-modes) new-exceptions)
-	  ;; Clear out all exceptions and save them to the context.
-	  ;;
-	  ;; XXX: Should we just clear out the bits for the traps that are
-	  ;; enabled?  If we did that then the accrued exceptions would be
-	  ;; correct.
-	  (setf (ldb float-sticky-bits new-modes) 0)
-	  ;; Clear out the various sticky invalid operation bits too.
-	  ;;
-	  ;; XXX: Should we only do that if the invalid trap is enabled?
-	  (setf (ldb float-invalid-op-1-byte new-modes) 0)
-	  (setf (ldb float-invalid-op-2-byte new-modes) 0)
-	  ;; Clear the FP exception summary bit too.
-	  (setf (ldb float-exceptions-summary-byte new-modes) 0)
-	  ;; (format t "sigfpe: new modes   = #B~32,'0b~%" new-modes)
-	  (setf (floating-point-modes) new-modes)
-	  #+nil
-	  (setf (sigcontext-floating-point-modes
-		 (alien:sap-alien scp (* unix:sigcontext)))
-		new-modes))
+	  #+(and darwin ppc)
+	  (progn
+	    ;; (format t "sigfpe: modes   = #B~32,'0b~%" modes)
+	    ;; (format t "sigfpe: new-exc = #B~32,'0b~%" new-exceptions)
+	    (setf (ldb float-exceptions-byte new-modes) new-exceptions)
+	    ;; Clear out all exceptions.
+	    ;;
+	    ;; XXX: Should we just clear out the bits for the traps that are
+	    ;; enabled?  If we did that then the accrued exceptions would be
+	    ;; correct.
+	    (setf (ldb float-sticky-bits new-modes) 0)
+	    ;; Clear out the various sticky invalid operation bits too.
+	    ;;
+	    ;; XXX: Should we only do that if the invalid trap is enabled?
+	    (setf (ldb float-invalid-op-1-byte new-modes) 0)
+	    (setf (ldb float-invalid-op-2-byte new-modes) 0)
+	    ;; Clear the FP exception summary bit too.
+	    (setf (ldb float-exceptions-summary-byte new-modes) 0)
+	    ;; (format t "sigfpe: new modes   = #B~32,'0b~%" new-modes)
+	    (setf (floating-point-modes) new-modes))
 
-	#+sse2
-	(let* ((new-modes modes)
-	       (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
-					 traps)))
-	  ;; Clear out the status for any enabled traps.  With SSE2, if
-	  ;; the current exception is enabled, the next FP instruction
-	  ;; will cause the exception to be signaled again.  Hence, we
-	  ;; need to clear out the exceptions that we are handling here.
-	  (setf (ldb float-exceptions-byte new-modes) new-exceptions)
-	  ;; XXX: This seems not right.  Shouldn't we be setting the modes
-	  ;; in the sigcontext instead?  This however seems to do what we
-	  ;; want.
+	  #+sse2
+	  (progn
+	    ;; Clear out the status for any enabled traps.  With SSE2, if
+	    ;; the current exception is enabled, the next FP instruction
+	    ;; will cause the exception to be signaled again.  Hence, we
+	    ;; need to clear out the exceptions that we are handling here.
+	    (setf (ldb float-exceptions-byte new-modes) new-exceptions)
+	    #+nil
+	    (progn
+	      (format *debug-io* "sigcontext modes: #x~4x (~A)~%"
+		      modes (decode-floating-point-modes modes))
+	      (format *debug-io* "current modes:    #x~4x (~A)~%"
+		      (vm:floating-point-modes) (get-floating-point-modes))
+	      (format *debug-io* "new  modes: #x~x (~A)~%"
+		      new-modes (decode-floating-point-modes new-modes)))
+	    (setf (vm:floating-point-modes) new-modes))
 
-	  (when *debug-sigfpe-handler*
-	    (format *debug-io* "sigcontext modes: #x~4x (~A)~%"
-		    modes (decode-floating-point-modes modes))
-	    (format *debug-io* "current modes:    #x~4x (~A)~%"
-		    (vm:floating-point-modes) (get-floating-point-modes))
-	    (format *debug-io* "new  modes: #x~x (~A)~%"
-		    new-modes (decode-floating-point-modes new-modes)))
-	  (setf (vm:floating-point-modes) new-modes))))))
+	  #-(or sse2 (and darwin ppc))
+	  (progn
+	    ;; Apparently nothing needed for sparc it seems The FPU
+	    ;; state in the signal handler is unchanged and it seems we
+	    ;; don't need to reset it any way when we throw out.
+	    ))))))
 
 (macrolet
     ((with-float-traps (name merge-traps docstring)
