@@ -6654,7 +6654,9 @@ msgid ""
 msgstr ""
 
 #: src/code/save.lisp
-msgid "An alist mapping environment variables (as keywords) to either values"
+msgid ""
+"An alist mapping each environment variable (as a keyword) to its\n"
+"  value."
 msgstr ""
 
 #: src/code/save.lisp
@@ -13122,8 +13124,9 @@ msgid ""
 "\n"
 "   The keyword arguments have the following meanings:\n"
 "     :env -\n"
-"        An A-LIST mapping keyword environment variables to simple-string\n"
-"	values.\n"
+"        An A-LIST mapping keyword environment variables to\n"
+"	simple-string values.  This is the shell environment for\n"
+"	Program.  Defaults to *environment-list*.\n"
 "     :wait -\n"
 "        If non-NIL (default), wait until the created process finishes.  If\n"
 "        NIL, continue running Lisp until the program finishes.\n"
