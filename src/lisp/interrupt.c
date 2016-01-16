@@ -252,10 +252,6 @@ interrupt_handle_now(HANDLER_ARGS)
 
     handler = interrupt_handlers[signal];
 
-#if 0
-    RESTORE_FPU(context);
-#endif
-    
     if (handler.c == (void (*)(HANDLER_ARGS)) SIG_IGN)
 	return;
 
@@ -335,9 +331,6 @@ maybe_now_maybe_later(HANDLER_ARGS)
         setup_pending_signal(signal, code, context);
 	arch_set_pseudo_atomic_interrupted(context);
     } else {
-#if 0
-	RESTORE_FPU(context);
-#endif
 	interrupt_handle_now(signal, code, context);
     }
 
