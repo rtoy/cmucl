@@ -288,6 +288,13 @@
 	  (bignum-element-type (mod #+amd64 64 #-amd64 32)) bignum-element-type
   (foldable flushable movable))
 
+
+#+x86
+(defknown (bignum::%shld bignum::%shrd)
+    (bignum-element-type bignum-element-type (unsigned-byte 5))
+    bignum-element-type
+    (foldable flushable movable))
+    
 
 ;;;; Bit-bashing routines.
 

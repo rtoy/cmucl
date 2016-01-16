@@ -1579,6 +1579,86 @@
     (inst mov tmp y)
     (inst shr tmp 18)
     (inst xor y tmp)))
+
+(define-vop (bignum-shld)
+  (:policy :fast-safe)
+  (:translate bignum::%shld)
+  (:args (x :scs (unsigned-reg) :target r)
+	 (shift-in :scs (unsigned-reg))
+	 (amount :scs (unsigned-reg) :target cl))
+  (:arg-types unsigned-num unsigned-num unsigned-num)
+  (:results (r :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:temporary (:sc unsigned-reg :from (:argument 0) :to (:result 0)) temp)
+  (:temporary (:sc unsigned-reg :offset ecx-offset
+		   :from (:argument 2) :to (:result 0)) cl)
+  (:generator 4
+    (move cl amount)
+    (cond ((location= x r)
+	   (inst shld x shift-in :cl))
+	  (t
+	   (move temp x)
+	   (inst shld temp shift-in :cl)
+	   (move r temp)))))
+  
+(define-vop (bignum-shld-c)
+  (:policy :fast-safe)
+  (:translate bignum::%shld)
+  (:args (x :scs (unsigned-reg) :target r)
+	 (shift-in :scs (unsigned-reg)))
+  (:info shift)
+  (:arg-types unsigned-num unsigned-num (:constant (unsigned-byte 5)))
+  (:results (r :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:temporary (:sc unsigned-reg :from (:argument 0) :to (:result 0)) temp)
+  (:generator 3
+    (cond ((location= x r)
+	   (inst shld x shift-in shift))
+	  (t
+	   (move temp x)
+	   (inst shld temp shift-in shift)
+	   (move r temp)))))
+
+(define-vop (bignum-shrd)
+  (:policy :fast-safe)
+  (:translate bignum::%shrd)
+  (:args (x :scs (unsigned-reg) :target r)
+	 (shift-in :scs (unsigned-reg))
+	 (amount :scs (unsigned-reg) :target cl))
+  (:arg-types unsigned-num unsigned-num unsigned-num)
+  (:results (r :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:temporary (:sc unsigned-reg :from (:argument 0) :to (:result 0)) temp)
+  (:temporary (:sc unsigned-reg :offset ecx-offset
+		   :from (:argument 2) :to (:result 0)) cl)
+  (:generator 4
+    (move cl amount)
+    (cond ((location= x r)
+	   (inst shrd x shift-in :cl))
+	  (t
+	   (move temp x)
+	   (inst shrd temp shift-in :cl)
+	   (move r temp)))))
+
+(define-vop (bignum-shrd-c)
+  (:policy :fast-safe)
+  (:translate bignum::%shrd)
+  (:args (x :scs (unsigned-reg))
+	 (shift-in :scs (unsigned-reg)))
+  (:info shift)
+  (:arg-types unsigned-num unsigned-num (:constant (unsigned-byte 5)))
+  (:results (r :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:temporary (:sc unsigned-reg :from (:argument 0) :to (:result 0)) temp)
+  (:generator 3
+    (cond ((location= x r)
+	   (inst shrd x shift-in shift))
+	  (t
+	   (move temp x)
+	   (inst shrd temp shift-in shift)
+	   (move r temp)))))
+
+
 
 ;;; Modular arithmetic
 ;;; logical operations
