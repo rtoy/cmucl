@@ -3721,5 +3721,5 @@ friends is working.
   (%shrd x carry-in shift)
   #-x86
   (ldb (byte vm:word-bits 0)
-		(logior (ash x (- shift))
-			(ash carry-in (- vm:word-bits shift)))))
+       (logior (ash x (- shift))
+	       (ash carry-in (- vm:word-bits shift)))))
