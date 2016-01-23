@@ -3146,6 +3146,8 @@
   ;; logical
   (define-regular-sse-inst andpd    #x66 #x54 t)
   (define-regular-sse-inst andps    nil  #x54)
+  (define-regular-sse-inst orpd     #x66 #x56 t)
+  (define-regular-sse-inst orps     nil  #x56)
   (define-regular-sse-inst xorpd    #x66 #x57 t)
   (define-regular-sse-inst xorps    nil  #x57)
   ;; comparison
