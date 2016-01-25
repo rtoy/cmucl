@@ -1178,10 +1178,8 @@
            (inst movd res bits)))))))
 
 (define-vop (make-double-float)
-  (:args (hi-bits :scs (signed-reg)
-		  :load-if (not (sc-is hi-bits signed-stack)))
-	 (lo-bits :scs (unsigned-reg)
-		  :load-if (not (sc-is lo-bits signed-stack))))
+  (:args (hi-bits :scs (signed-reg))
+	 (lo-bits :scs (unsigned-reg)))
   (:results (res :scs (double-reg)))
   (:arg-types signed-num unsigned-num)
   (:result-types double-float)
@@ -1194,7 +1192,6 @@
     (inst psllq temp 32)
     (inst movd res lo-bits)
     (inst orpd res temp)))
-
 
 (define-vop (single-float-bits)
   (:args (float :scs (single-reg descriptor-reg)
