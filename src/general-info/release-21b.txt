@@ -50,6 +50,9 @@ New in this release:
       integer value of power.
     * Starting cmucl with "-dyanmic-space-size 0" means using the
       maximum possible heap size for the platform.
+    * More descriptive docstring for
+      * *environment-list*
+      * :env option for run-program
 
   * ANSI compliance fixes:
     * PATHNAME-MATCH-P did not accept search-lists.
@@ -59,6 +62,8 @@ New in this release:
     * Generate inxact exceptions more carefully.
     * Fix FP issue when building with Xcode 7.2 (and newer versions of
       clang).  (See ticket #12.)
+    * Cleanups in handling floating-point exceptions.  See Tickets #15
+      and #16.
 
   * Trac Tickets:
 
@@ -70,6 +75,13 @@ New in this release:
       worked around by explicitly setting inexact instead of using FP
       instructions to generate inexact.
     * Ticket #16 fixed: search-lists are handled correctly.
+    * Ticket #14 fixed: WITH-FLOAT-TRAPS-ENABLED doesn't incorrectly
+      set accrued exceptions anymore.
+    * Ticket #15 fixed: FLOATING-POINT-INEXACT exception prints out
+      values correctly now.
+    * Ticket #17 fixed: better docstring for *ENVIRONMENT-LIST*
+    * Ticket #18 fixed: better description of :ENV option for
+      RUN-PROGRAM.
 
   * Other changes:
 
