@@ -22,12 +22,21 @@
  *	0x38000000->0x40000000  128M Control stack growing down.
  *	0x40000000->0x48000000  128M Reserved for shared libraries.
  *      0x58000000->0x58100000   16M Foreign Linkage Table
- *	0x58100000->0xBE000000 1631M Dynamic Space.
- *      0xBFFF0000->0xC0000000       Unknown Linux mapping
+ *	0x58100000->0xB7B00000 1530M Dynamic Space.
+ *      0xB7B82000->0xC0000000       Unknown Linux mapping, including stack
  *
+ *     
  *      (Note: 0x58000000 allows us to run on a Linux system on an AMD
  *      x86-64.  Hence we have a gap of unused memory starting at
  *      0x48000000.)
+ *
+ * It appears as if the actual upper limit depends on the particular
+ * Linux distribution.  Ubuntu 11.10 (32-bit) appears to have
+ * something mapped at 0xb78b2000, so we can't allocate the dynamic
+ * space past that.  That results in a max heap size of 1530 MB.
+ * However, Fedora 22 ther appears to be nothing mapped there.  In
+ * fact it appears to be free all the way to 0xf7c1b000.  That would
+ * allow a heap of size 2555 MB.
  */
 
 #define READ_ONLY_SPACE_START   (SpaceStart_TargetReadOnly)
@@ -48,7 +57,7 @@
 #define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)
 
 #ifdef GENCGC
-#define DYNAMIC_SPACE_SIZE	(0x66000000)	/* 1.632GB */
+#define DYNAMIC_SPACE_SIZE	(0x5FA00000)	/* 1.530GB */
 #else
 #define DYNAMIC_SPACE_SIZE	(0x04000000)	/* 64MB */
 #endif
