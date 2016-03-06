@@ -1580,53 +1580,6 @@
     (inst shr tmp 18)
     (inst xor y tmp)))
 
-(define-vop (bignum-shld)
-  (:policy :fast-safe)
-  (:translate bignum::%shld)
-  (:args (x :scs (unsigned-reg unsigned-stack) :target r)
-	 (shift-in :scs (unsigned-reg) :to :result)
-	 (amount :scs (unsigned-reg) :target cl))
-  (:arg-types unsigned-num unsigned-num unsigned-num)
-  (:results (r :scs (unsigned-reg)
-	       :load-if (not (and (sc-is r unsigned-stack)
-				  (location= x r)))))
-  (:result-types unsigned-num)
-  (:temporary (:sc unsigned-reg :offset ecx-offset
-		   :from (:argument 2)) cl)
-  (:generator 3
-    (move cl amount)
-    (move r x)
-    (inst shld r shift-in :cl)))
-  
-(define-vop (bignum-shld-c)
-  (:policy :fast-safe)
-  (:translate bignum::%shld)
-  (:args (x :scs (unsigned-reg unsigned-stack) :target r)
-	 (shift-in :scs (unsigned-reg) :to :save))
-  (:info shift)
-  (:arg-types unsigned-num unsigned-num (:constant (unsigned-byte 5)))
-  (:results (r :scs (unsigned-reg)
-	       :load-if (not (and (sc-is r unsigned-stack)
-				  (location= x r)))))
-  (:result-types unsigned-num)
-  (:generator 2
-    (move r x)
-    (inst shld r shift-in shift)))
-
-(define-vop (bignum-shrd bignum-shld)
-  (:translate bignum::%shrd)
-  (:generator 3
-    (move cl amount)
-    (move r x)
-    (inst shrd r shift-in :cl)))
-
-(define-vop (bignum-shrd-c bignum-shld-c)
-  (:translate bignum::%shrd)
-  (:generator 2
-    (move r x)
-    (inst shrd r shift-in shift)))
-
-
 
 ;;; Modular arithmetic
 ;;; logical operations

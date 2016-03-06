@@ -3697,29 +3697,3 @@ friends is working.
     (unless (= newlen len)
       (%bignum-set-length result newlen))
     result))
-
-;; Shift X left by Shift bits, shifting in bits from Carry-in.
-;; Basically treat x:carry-in as a 64-bit value and shift it left,
-;; returning the top bignum-type bits.
-(defun %shld (x carry-in shift)
-  (declare (type bignum-element-type x carry-in)
-	   (type (unsigned-byte 5) shift))
-  #+x86
-  (%shld x carry-in shift)
-  #-x86
-  (ldb (byte vm:word-bits 0)
-       (logior (ash x shift)
-	       (ash carry-in (- shift vm:word-bits)))))
-
-;; Shift X right by Shift bits, shifting in bits from Carry-in.
-;; Basically treat carry-in:x as a 64-bit value and shift it right,
-;; returning the low bignum-type bits.
-(defun %shrd (x carry-in shift)
-  (declare (type bignum-element-type x carry-in)
-	   (type (unsigned-byte 5) shift))
-  #+x86
-  (%shrd x carry-in shift)
-  #-x86
-  (ldb (byte vm:word-bits 0)
-       (logior (ash x (- shift))
-	       (ash carry-in (- vm:word-bits shift)))))
