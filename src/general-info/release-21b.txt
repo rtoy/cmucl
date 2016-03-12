@@ -53,6 +53,8 @@ New in this release:
     * More descriptive docstring for
       * *environment-list*
       * :env option for run-program
+    * Maximum dynamic-space-size on Linux reduced to 1530 MB because
+      that's the largest available space on 32-bit Ubuntu 11.10.
 
   * ANSI compliance fixes:
     * PATHNAME-MATCH-P did not accept search-lists.
