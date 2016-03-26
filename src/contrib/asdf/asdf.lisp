@@ -1,5 +1,5 @@
 ;;; -*- mode: Lisp; Base: 10 ; Syntax: ANSI-Common-Lisp ; buffer-read-only: t; -*-
-;;; This is ASDF 3.1.6.9: Another System Definition Facility.
+;;; This is ASDF 3.1.7: Another System Definition Facility.
 ;;;
 ;;; Feedback, bug reports, and patches are all welcome:
 ;;; please mail to <asdf-devel@common-lisp.net>.
@@ -3762,7 +3762,7 @@ Otherwise, using WRITE-SEQUENCE using a buffer of size BUFFER-SIZE."
                  (when eof (return)))
           (loop
             :with buffer-size = (or buffer-size 8192)
-            :for buffer = (make-array (list buffer-size) :element-type (or element-type 'character))
+            :with buffer = (make-array (list buffer-size) :element-type (or element-type 'character))
             :for end = (read-sequence buffer input)
             :until (zerop end)
             :do (write-sequence buffer output :end end)
@@ -6138,25 +6138,26 @@ possibly in a different process. Otherwise just call THUNK."
     "This function provides a portable wrapper around COMPILE-FILE.
 It ensures that the OUTPUT-FILE value is only returned and
 the file only actually created if the compilation was successful,
-even though your implementation may not do that, and including
-an optional call to an user-provided consistency check function COMPILE-CHECK;
+even though your implementation may not do that. It also checks an optional
+user-provided consistency function COMPILE-CHECK to determine success;
 it will call this function if not NIL at the end of the compilation
 with the arguments sent to COMPILE-FILE*, except with :OUTPUT-FILE TMP-FILE
 where TMP-FILE is the name of a temporary output-file.
 It also checks two flags (with legacy british spelling from ASDF1),
 *COMPILE-FILE-FAILURE-BEHAVIOUR* and *COMPILE-FILE-WARNINGS-BEHAVIOUR*
 with appropriate implementation-dependent defaults,
-and if a failure (respectively warnings) are reported by COMPILE-FILE
-with consider it an error unless the respective behaviour flag
+and if a failure (respectively warnings) are reported by COMPILE-FILE,
+it will consider that an error unless the respective behaviour flag
 is one of :SUCCESS :WARN :IGNORE.
 If WARNINGS-FILE is defined, deferred warnings are saved to that file.
 On ECL or MKCL, it creates both the linkable object and loadable fasl files.
 On implementations that erroneously do not recognize standard keyword arguments,
 it will filter them appropriately."
-    #+(or clasp ecl) (when (and object-file (equal (compile-file-type) (pathname object-file)))
-            (format t "Whoa, some funky ASDF upgrade switched ~S calling convention for ~S and ~S~%"
-                    'compile-file* output-file object-file)
-            (rotatef output-file object-file))
+    #+(or clasp ecl)
+    (when (and object-file (equal (compile-file-type) (pathname object-file)))
+      (format t "Whoa, some funky ASDF upgrade switched ~S calling convention for ~S and ~S~%"
+              'compile-file* output-file object-file)
+      (rotatef output-file object-file))
     (let* ((keywords (remove-plist-keys
                       `(:output-file :compile-check :warnings-file
                                      #+clisp :lib-file #+(or clasp ecl mkcl) :object-file) keys))
@@ -6167,7 +6168,7 @@ it will filter them appropriately."
            (object-file
              (unless (use-ecl-byte-compiler-p)
                (or object-file
-                   #+ecl(compile-file-pathname output-file :type :object)
+                   #+ecl (compile-file-pathname output-file :type :object)
                    #+clasp (compile-file-pathname output-file :output-type :object))))
            #+mkcl
            (object-file
@@ -6845,7 +6846,7 @@ previously-loaded version of ASDF."
          ;; "3.4.5.67" would be a development version in the official branch, on top of 3.4.5.
          ;; "3.4.5.0.8" would be your eighth local modification of official release 3.4.5
          ;; "3.4.5.67.8" would be your eighth local modification of development version 3.4.5.67
-         (asdf-version "3.1.6.9")
+         (asdf-version "3.1.7")
          (existing-version (asdf-version)))
     (setf *asdf-version* asdf-version)
     (when (and existing-version (not (equal asdf-version existing-version)))
@@ -8363,6 +8364,7 @@ The class needs to be updated for ASDF 3.1 and specify appropriate propagation m
 ;;;; Done performing
 (with-upgradability ()
   (defgeneric component-operation-time (operation component)) ;; ASDF4: hide it behind plan-action-stamp
+  (defgeneric (setf component-operation-time) (time operation component))
   (define-convenience-action-methods component-operation-time (operation component))
 
   (defgeneric mark-operation-done (operation component)) ;; ASDF4: hide it behind (setf plan-action-stamp)
@@ -9798,15 +9800,22 @@ after having found a .asd file? True by default.")
   (defun collect-sub*directories-asd-files
       (directory &key (exclude *default-source-registry-exclusions*) collect
                    (recurse-beyond-asds *recurse-beyond-asds*) ignore-cache)
-    (collect-sub*directories
-     directory
-     #'(lambda (dir)
-         (unless (and (not ignore-cache) (process-source-registry-cache directory collect))
-           (let ((asds (collect-asds-in-directory dir collect)))
-             (or recurse-beyond-asds (not asds)))))
-     #'(lambda (x)
-         (not (member (car (last (pathname-directory x))) exclude :test #'equal)))
-     (constantly nil)))
+    (let ((visited (make-hash-table :test 'equalp)))
+      (collect-sub*directories
+       directory
+       #'(lambda (dir)
+           (unless (and (not ignore-cache) (process-source-registry-cache directory collect))
+             (let ((asds (collect-asds-in-directory dir collect)))
+               (or recurse-beyond-asds (not asds)))))
+       #'(lambda (x)                    ; x will be a directory pathname
+           (and
+            (not (member (car (last (pathname-directory x))) exclude :test #'equal))
+            (flet ((pathname-key (x)
+                     (namestring (truename* x))))
+              (let ((visitedp (gethash (pathname-key x) visited)))
+                (if visitedp nil
+                    (setf (gethash (pathname-key x) visited) t))))))
+       (constantly nil))))
 
   (defun validate-source-registry-directive (directive)
     (or (member directive '(:default-registry))
@@ -10592,10 +10601,10 @@ for all the linkable object files associated with the system or its dependencies
                         (format nil "~A~@[~A~]" (component-name c) (slot-value o 'name-suffix))))
               (type (bundle-pathname-type bundle-type)))
           (values (list (subpathname (component-pathname c) name :type type))
-                  (eq (type-of o) (coerce-class (component-build-operation c)
-                                                :package :asdf/interface
-                                                :super 'operation
-                                                :error nil)))))))
+                  (eq (class-of o) (coerce-class (component-build-operation c)
+                                                 :package :asdf/interface
+                                                 :super 'operation
+                                                 :error nil)))))))
 
   (defmethod output-files ((o bundle-op) (c system))
     (bundle-output-files o c))
