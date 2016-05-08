@@ -1579,6 +1579,7 @@
     (inst mov tmp y)
     (inst shr tmp 18)
     (inst xor y tmp)))
+
 
 ;;; Modular arithmetic
 ;;; logical operations

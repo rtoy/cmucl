@@ -471,8 +471,9 @@
 
    The keyword arguments have the following meanings:
      :env -
-        An A-LIST mapping keyword environment variables to simple-string
-	values.
+        An A-LIST mapping keyword environment variables to
+	simple-string values.  This is the shell environment for
+	Program.  Defaults to *environment-list*.
      :wait -
         If non-NIL (default), wait until the created process finishes.  If
         NIL, continue running Lisp until the program finishes.

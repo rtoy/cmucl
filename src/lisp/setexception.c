@@ -88,6 +88,10 @@ fdlibm_setexception(double x, enum FDLIBM_EXCEPTION type)
           
           break;
       }
+    case FDLIBM_INEXACT:
+        feraiseexcept(FE_INEXACT);
+        ret = x;
+        break;
     default:
       /* Shouldn't happen! */
       ret = 0.0;

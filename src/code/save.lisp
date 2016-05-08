@@ -36,7 +36,8 @@
   might not be.")
 
 (defvar *environment-list* nil
-  "An alist mapping environment variables (as keywords) to either values")
+  "An alist mapping each environment variable (as a keyword) to its
+  value.")
 
 (defvar *environment-list-initialized* nil
   "Non-NIL if environment-init has been called")

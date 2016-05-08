@@ -160,8 +160,8 @@ Q5  =  -2.01099218183624371326e-07; /* BE8AFDB7 6E09C32D */
                 
 	    }
 	    if(xsb!=0) { /* x < -56*ln2, return -1.0 with inexact */
-		if(x+tiny<0.0)		/* raise inexact */
-		return tiny-one;	/* return -1 */
+                fdlibm_setexception(x, FDLIBM_INEXACT);
+		return tiny - one;
 	    }
 	}
 

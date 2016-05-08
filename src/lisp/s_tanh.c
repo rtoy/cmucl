@@ -78,7 +78,9 @@ static double one=1.0, two=2.0, tiny = 1.0e-300;
 	    }
     /* |x| > 22, return +-1 */
 	} else {
-	    z = one - tiny;		/* raised inexact flag */
+	    /* Always raise inexact flag */
+	    fdlibm_setexception(x, FDLIBM_INEXACT);
+	    z = one - tiny;
 	}
 	return (jx>=0)? z: -z;
 }
