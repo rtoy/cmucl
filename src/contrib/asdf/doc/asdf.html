@@ -31,7 +31,7 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  -->
-<!-- Created by GNU Texinfo 5.2, http://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 6.1, http://www.gnu.org/software/texinfo/ -->
 <head>
 <title>ASDF Manual</title>
 
@@ -48,16 +48,16 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <style type="text/css">
 <!--
 a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+blockquote.smallindentedblock {margin-right: 0em; font-size: smaller}
 blockquote.smallquotation {font-size: smaller}
 div.display {margin-left: 3.2em}
 div.example {margin-left: 3.2em}
-div.indentedblock {margin-left: 3.2em}
 div.lisp {margin-left: 3.2em}
 div.smalldisplay {margin-left: 3.2em}
 div.smallexample {margin-left: 3.2em}
-div.smallindentedblock {margin-left: 3.2em; font-size: smaller}
 div.smalllisp {margin-left: 3.2em}
-kbd {font-style:oblique}
+kbd {font-style: oblique}
 pre.display {font-family: inherit}
 pre.format {font-family: inherit}
 pre.menu-comment {font-family: serif}
@@ -66,10 +66,9 @@ pre.smalldisplay {font-family: inherit; font-size: smaller}
 pre.smallexample {font-size: smaller}
 pre.smallformat {font-family: inherit; font-size: smaller}
 pre.smalllisp {font-size: smaller}
-span.nocodebreak {white-space:nowrap}
-span.nolinebreak {white-space:nowrap}
-span.roman {font-family:serif; font-weight:normal}
-span.sansserif {font-family:sans-serif; font-weight:normal}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: initial; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
 ul.no-bullet {list-style: none}
 -->
 </style>
@@ -77,9 +76,8 @@ ul.no-bullet {list-style: none}
 
 </head>
 
-<body lang="en" bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
+<body lang="en">
 <h1 class="settitle" align="center">ASDF Manual</h1>
-
 
 
 
@@ -124,16 +122,17 @@ ul.no-bullet {list-style: none}
       <li><a name="toc-Component-types" href="#Component-types">6.3.2 Component types</a></li>
       <li><a name="toc-System-class-names" href="#System-class-names">6.3.3 System class names</a></li>
       <li><a name="toc-Defsystem-depends-on" href="#Defsystem-depends-on">6.3.4 Defsystem depends on</a></li>
-      <li><a name="toc-Weakly-depends-on" href="#Weakly-depends-on">6.3.5 Weakly depends on</a></li>
-      <li><a name="toc-Pathname-specifiers" href="#Pathname-specifiers">6.3.6 Pathname specifiers</a></li>
-      <li><a name="toc-Version-specifiers" href="#Version-specifiers">6.3.7 Version specifiers</a></li>
-      <li><a name="toc-Require" href="#Require">6.3.8 Require</a></li>
-      <li><a name="toc-Using-logical-pathnames" href="#Using-logical-pathnames">6.3.9 Using logical pathnames</a></li>
-      <li><a name="toc-Serial-dependencies" href="#Serial-dependencies">6.3.10 Serial dependencies</a></li>
-      <li><a name="toc-Source-location-_0028_003apathname_0029" href="#Source-location-_0028_003apathname_0029">6.3.11 Source location (<code>:pathname</code>)</a></li>
-      <li><a name="toc-if_002dfeature-option" href="#if_002dfeature-option">6.3.12 if-feature option</a></li>
-      <li><a name="toc-if_002dcomponent_002ddep_002dfails-option" href="#if_002dcomponent_002ddep_002dfails-option">6.3.13 if-component-dep-fails option</a></li>
-      <li><a name="toc-feature-requirement" href="#feature-requirement">6.3.14 feature requirement</a></li>
+      <li><a name="toc-Build_002doperation" href="#Build_002doperation">6.3.5 Build-operation</a></li>
+      <li><a name="toc-Weakly-depends-on" href="#Weakly-depends-on">6.3.6 Weakly depends on</a></li>
+      <li><a name="toc-Pathname-specifiers" href="#Pathname-specifiers">6.3.7 Pathname specifiers</a></li>
+      <li><a name="toc-Version-specifiers" href="#Version-specifiers">6.3.8 Version specifiers</a></li>
+      <li><a name="toc-Require" href="#Require">6.3.9 Require</a></li>
+      <li><a name="toc-Using-logical-pathnames" href="#Using-logical-pathnames">6.3.10 Using logical pathnames</a></li>
+      <li><a name="toc-Serial-dependencies" href="#Serial-dependencies">6.3.11 Serial dependencies</a></li>
+      <li><a name="toc-Source-location-_0028_003apathname_0029" href="#Source-location-_0028_003apathname_0029">6.3.12 Source location (<code>:pathname</code>)</a></li>
+      <li><a name="toc-if_002dfeature-option" href="#if_002dfeature-option">6.3.13 if-feature option</a></li>
+      <li><a name="toc-if_002dcomponent_002ddep_002dfails-option" href="#if_002dcomponent_002ddep_002dfails-option">6.3.14 if-component-dep-fails option</a></li>
+      <li><a name="toc-feature-requirement" href="#feature-requirement">6.3.15 feature requirement</a></li>
     </ul></li>
     <li><a name="toc-Other-code-in-_002easd-files-1" href="#Other-code-in-_002easd-files">6.4 Other code in .asd files</a></li>
     <li><a name="toc-The-package_002dinferred_002dsystem-extension-1" href="#The-package_002dinferred_002dsystem-extension">6.5 The package-inferred-system extension</a></li>
@@ -255,6 +254,7 @@ ul.no-bullet {list-style: none}
         <li><a name="toc-How-should-my-system-use-a-readtable-exported-by-another-system_003f" href="#How-should-my-system-use-a-readtable-exported-by-another-system_003f">13.6.7.1 How should my system use a readtable exported by another system?</a></li>
         <li><a name="toc-How-should-my-library-make-a-readtable-available-to-other-systems_003f" href="#How-should-my-library-make-a-readtable-available-to-other-systems_003f">13.6.7.2 How should my library make a readtable available to other systems?</a></li>
       </ul></li>
+      <li><a name="toc-How-can-I-capture-ASDF_0027s-output_003f-1" href="#How-can-I-capture-ASDF_0027s-output_003f">13.6.8 How can I capture ASDF&rsquo;s output?</a></li>
     </ul></li>
     <li><a name="toc-ASDF-development-FAQs-1" href="#ASDF-development-FAQs">13.7 ASDF development FAQs</a>
     <ul class="no-bullet">
@@ -275,7 +275,7 @@ ul.no-bullet {list-style: none}
 <a name="Top"></a>
 <a name="ASDF_003a-Another-System-Definition-Facility"></a>
 <h1 class="top">ASDF: Another System Definition Facility</h1>
-<p>Manual for Version 3.1.6
+<p>Manual for Version 3.1.6.14
 </p>
 
 <p>This manual describes ASDF, a system definition facility
@@ -851,20 +851,23 @@ or silently convert lowercase to uppercase (lpns).
 <a name="Convenience-Functions-1"></a>
 <h3 class="section">5.2 Convenience Functions</h3>
 
-<a name="index-load_002dsystem"></a>
-<a name="index-compile_002dsystem"></a>
-<a name="index-test_002dsystem"></a>
-<a name="index-require_002dsystem"></a>
-<a name="index-make"></a>
 
 <p>ASDF provides three commands for the most common system operations:
 <code>load-system</code>, <code>compile-system</code>, and <code>test-system</code>.
-It also provides <code>require-system</code>, a version of <code>load-system</code>
-that skips trying to update systems that are already loaded.
-And it provides <code>make</code>, a function that uses whichever operation
-was specified by the author of the target system,
-which by default behaves like <code>load-system</code>.
 </p>
+<p>ASDF also provides <code>require-system</code>, a variant of <code>load-system</code>
+that skips loading systems that are already loaded.  This is sometimes
+useful, for example, in order to avoid re-loading libraries that come
+pre-loaded into your  lisp implementation.
+</p>
+<p>ASDF also provides <code>make</code>, a way of allowing system developers to
+choose a default operation for their systems.  For example, a developer
+who has created a system intended to format a specific document, might
+make document-formatting the default operation invoked by <code>make</code>,
+instead of loading.  If the system developer doesn&rsquo;t specify in the
+system definition, the default operation will be loading.
+</p>
+
 
 <a name="index-operate"></a>
 <a name="index-oos"></a>
@@ -878,49 +881,89 @@ which stands for operate-on-system, a name inherited from <code>mk-defsystem</co
 You&rsquo;ll use <code>operate</code> whenever you want to do something beyond
 compiling, loading and testing.
 </p>
-<p>Note that output from ASDF and ASDF extensions are sent
-to the CL stream <code>*standard-output*</code>,
-so rebinding that stream around calls to <code>asdf:operate</code>
-should redirect all output from ASDF operations.
-</p>
 
 
-<a name="index-load_002dsystem-1"></a>
 <a name="index-_002aload_002dsystem_002doperation_002a"></a>
 <a name="index-already_002dloaded_002dsystems"></a>
-<a name="index-require_002dsystem-1"></a>
-<p><code>load-system</code> applies <code>operate</code> with the operation from
+
+<dl>
+<dt><a name="index-load_002dsystem"></a>Function: <strong>load-system</strong> <em>system &amp;rest keys &amp;key force force-not verbose version &amp;allow-other-keys</em></dt>
+<dd><p>Apply <code>operate</code> with the operation from
 <code>*load-system-operation*</code>
-the system, and any provided keyword arguments.
+the <var>system</var>, and any provided keyword arguments.
 <code>*load-system-operation*</code> by default is <code>load-op</code>;
-it would be <code>load-bundle-op</code> by default on ECL, if only an implementation bug were fixed.
-</p>
-<p><code>require-system</code> skips any update to systems that have already been loaded,
+it would be <code>load-bundle-op</code> by default on ECL,
+if only an implementation bug were fixed.
+Calling <code>load-system</code> is the regular, recommended way
+to load a system into the current image.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-compile_002dsystem"></a>Function: <strong>compile-system</strong> <em>system &amp;rest keys &amp;key force force-not verbose version &amp;allow-other-keys</em></dt>
+<dd><p>Apply <code>operate</code> with the operation <code>compile-op</code>,
+the <var>system</var>, and any provided keyword arguments.
+This will make sure all the files in the system are compiled,
+but not necessarily load any of them in the current image;
+on most systems, it will <em>not</em> load all compiled files in the current image.
+This function exists for symmetry with <code>load-system</code> but is not recommended
+unless you are writing build scripts and know what you&rsquo;re doing.
+But then, you might be interested in <code>program-op</code> rather than <code>compile-op</code>.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-test_002dsystem"></a>Function: <strong>test-system</strong> <em>system &amp;rest keys &amp;key force force-not verbose version &amp;allow-other-keys</em></dt>
+<dd><p>Apply <code>operate</code> with the operation <code>test-op</code>,
+the <var>system</var>, and any provided keyword arguments.
+See <a href="#test_002dop">test-op</a>.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-make"></a>Function: <strong>make</strong> <em>system &amp;rest keys &amp;key &amp;allow-other-keys</em></dt>
+<dd><p>Do &ldquo;The Right Thing&rdquo; with your system.
+Starting with ASDF 3.1, this function <code>make</code> is also available.
+The default behaviour is to load the system as if by <code>load-system</code>;
+but system authors can override this default in their system definition
+they may specify an alternate operation as the intended use of their system,
+with a <code>:build-operation</code> option in the <code>defsystem</code> form
+(see <a href="#The-defsystem-grammar">build-operation</a>),
+and an intended output pathname for that operation with
+<code>:build-pathname</code>.
+This function is experimental and largely untested.  Use at your own risk.
+</p></dd></dl>
+<a name="index-build_002doperation"></a>
+
+<dl>
+<dt><a name="index-require_002dsystem"></a>Function: <strong>require-system</strong> <em>system &amp;rest keys &amp;key &amp;allow-other-keys</em></dt>
+<dd><p><code>require-system</code> skips any update to systems that have already been loaded,
 in the spirit of <code>cl:require</code>.
-It does it by calling <code>load-system</code> with a keyword option excluding already loaded systems.<a name="DOCF8" href="#FOOT8"><sup>8</sup></a>.
+It does it by calling <code>load-system</code> with a keyword option
+excluding already loaded systems.<a name="DOCF8" href="#FOOT8"><sup>8</sup></a>.
 On actively maintained free software implementations
 (namely recent versions of ABCL, Clozure CL, CMUCL, ECL, GNU CLISP, MKCL and SBCL),
 once ASDF itself is loaded, <code>cl:require</code> too can load ASDF systems,
 by falling back on <code>require-system</code>
 for module names not recognized by the implementation.
+(Note however that <code>require-system</code> does <em>not</em> fall back on <code>cl:require</code>;
+that would introduce an &ldquo;interesting&rdquo; potential infinite loop to break somehow.)
 </p>
-<p>Note that <code>cl:require</code> and <code>require-system</code> are appropriate to load code
+<p><code>cl:require</code> and <code>require-system</code> are appropriate to load code
 that is not being modified during the current programming session.
-This notably includes the implementation-provided extension modules that <code>cl:require</code> can load.
-This also includes any number of ASDF systems that the user isn&rsquo;t either developing or debugging,
-for which a previously installed version is deemed to be satisfactory.
-<code>require-system</code> and through it <code>cl:require</code> can load these systems without any problem.
+<code>cl:require</code> will notably load the implementation-provided extension modules;
+<code>require-system</code> won&rsquo;t, unless they are also defined as systems somehow,
+which SBCL and MKCL do.
+<code>require-system</code> may also be used to load any number of ASDF systems
+that the user isn&rsquo;t either developing or debugging,
+for which a previously installed version is deemed to be satisfactory;
+<code>cl:require</code> on the above-mentioned implementations will delegate to <code>require-system</code>
+and may load them as well.
 But for code that you are actively developing, debugging, or otherwise modifying,
 you should use <code>load-system</code>, so ASDF will pick on your modifications
-and transitively re-build the modified files and everything that depends on them.
-</p>
-<p>Finally, starting with ASDF 3.1, a function <code>make</code> is also available,
-that does &ldquo;The Right Thing&rdquo; with your system.
-The default behaviour is to load the system as if by <code>load-system</code>;
-but instead of this default, system authors can specify
-the intended use of their system by specifying their desired operation
-with a <code>:build-operation</code> argument in the system definition.
-</p>
+and transitively re-build the modified files and everything that depends on them
+(that the requested <var>system</var> itself depends on &mdash;
+ASDF itself never builds anything unless
+it&rsquo;s an explicitly requested system or the dependencies thereof).
+</p></dd></dl>
+
 
 <hr>
 <a name="Moving-on"></a>
@@ -1203,6 +1246,7 @@ Presumably, the 4th form looks like <code>(defparameter *foo-version* &quot;5.6.
 system-option := :defsystem-depends-on system-list
                  | :weakly-depends-on <var>system-list</var>
                  | :class class-name (see discussion below)
+                 | :build-operation <var>operation-name</var>
                  | system-option
                  | module-option
                  | option
@@ -1263,7 +1307,7 @@ simple-component-name := string
 pathname-specifier := pathname | string | symbol
 
 method-form := (operation-name qual lambda-list &amp;rest body)
-qual := method qualifier
+qual := method qualifier?
 
 component-dep-fail-option := :fail | :try-next | :ignore
 
@@ -1324,8 +1368,21 @@ must be loaded <em>before</em> the system definition is processed.
 Typically this is used to load an ASDF extension that is used in the
 system definition.
 </p>
+<a name="Build_002doperation"></a>
+<h4 class="subsection">6.3.5 Build-operation</h4>
+<a name="index-_003abuild_002doperation"></a>
+
+<p>The <code>:build-operation</code> option to <code>defsystem</code> allows the
+programmer to specify an operation that will be applied, in place of
+<code>load-op</code> when <code>make</code> (see <a href="#Convenience-Functions">make</a>)
+is run on the system.    The option
+value should be the name of an operation.  E.g., <code>:build-operation doc-op</code>
+</p>
+<p>This feature is
+experimental and largely untested.  Use at your own risk.
+</p>
 <a name="Weakly-depends-on"></a>
-<h4 class="subsection">6.3.5 Weakly depends on</h4>
+<h4 class="subsection">6.3.6 Weakly depends on</h4>
 <a name="index-_003aweakly_002ddepends_002don"></a>
 
 <p>We do <em>NOT</em> recommend you use this feature.
@@ -1355,7 +1412,7 @@ this anomalous behaviour may be removed without warning.
 
 
 <a name="Pathname-specifiers"></a>
-<h4 class="subsection">6.3.6 Pathname specifiers</h4>
+<h4 class="subsection">6.3.7 Pathname specifiers</h4>
 <a name="index-pathname-specifiers"></a>
 
 <p>A pathname specifier (<code>pathname-specifier</code>)
@@ -1435,7 +1492,7 @@ on the other hand, you can circumvent the file type that would otherwise
 be forced upon you if you were specifying a string.
 </p>
 <a name="Version-specifiers"></a>
-<h4 class="subsection">6.3.7 Version specifiers</h4>
+<h4 class="subsection">6.3.8 Version specifiers</h4>
 <a name="index-version-specifiers"></a>
 <a name="index-_003aversion-1"></a>
 
@@ -1470,7 +1527,7 @@ where significant API incompatibilities are signaled by an increased major numbe
 <p>See <a href="#Common-attributes-of-components">Common attributes of components</a>.
 </p>
 <a name="Require"></a>
-<h4 class="subsection">6.3.8 Require</h4>
+<h4 class="subsection">6.3.9 Require</h4>
 <a name="index-_003arequire-dependencies"></a>
 
 <p>Use the implementation&rsquo;s own <code>require</code> to load the <var>module-name</var>.
@@ -1482,7 +1539,7 @@ See <a href="#if_002dfeature_002doption">if-feature-option</a>.
 </p>
 
 <a name="Using-logical-pathnames"></a>
-<h4 class="subsection">6.3.9 Using logical pathnames</h4>
+<h4 class="subsection">6.3.10 Using logical pathnames</h4>
 <a name="index-logical-pathnames"></a>
 
 <p>We do not generally recommend the use of logical pathnames,
@@ -1538,7 +1595,7 @@ underscores, dots or CamelCase in pathnames.
 </p>
 
 <a name="Serial-dependencies"></a>
-<h4 class="subsection">6.3.10 Serial dependencies</h4>
+<h4 class="subsection">6.3.11 Serial dependencies</h4>
 <a name="index-serial-dependencies"></a>
 
 <p>If the <code>:serial t</code> option is specified for a module,
@@ -1561,7 +1618,7 @@ This is done as if by <code>:depends-on</code>.
 
 
 <a name="Source-location-_0028_003apathname_0029"></a>
-<h4 class="subsection">6.3.11 Source location (<code>:pathname</code>)</h4>
+<h4 class="subsection">6.3.12 Source location (<code>:pathname</code>)</h4>
 
 <p>The <code>:pathname</code> option is optional in all cases for systems
 defined via <code>defsystem</code>, and generally is unnecessary.  In the
@@ -1607,7 +1664,7 @@ from within an editor without clobbering its source location)
 </li></ul>
 
 <a name="if_002dfeature-option"></a>
-<h4 class="subsection">6.3.12 if-feature option</h4>
+<h4 class="subsection">6.3.13 if-feature option</h4>
 <a name="index-_003aif_002dfeature-component-option"></a>
 <a name="if_002dfeature_002doption"></a>
 <p>This option allows you to specify a feature expression to be evaluated
@@ -1633,7 +1690,7 @@ been performed.
 See <a href="#required_002dfeatures">Required features</a>.
 </p>
 <a name="if_002dcomponent_002ddep_002dfails-option"></a>
-<h4 class="subsection">6.3.13 if-component-dep-fails option</h4>
+<h4 class="subsection">6.3.14 if-component-dep-fails option</h4>
 <a name="index-_003aif_002dcomponent_002ddep_002dfails-component-option"></a>
 <p>This option was removed in ASDF 3.
 Its semantics was limited in purpose and dubious to explain,
@@ -1641,7 +1698,7 @@ and its implementation was breaking a hole into the ASDF object model.
 Please use the <code>if-feature</code> option instead.
 </p>
 <a name="feature-requirement"></a>
-<h4 class="subsection">6.3.14 feature requirement</h4>
+<h4 class="subsection">6.3.15 feature requirement</h4>
 <p>This requirement was removed in ASDF 3.1.  Please do not use it.  In
 most cases, <code>:if-feature</code> (see <a href="#if_002dfeature_002doption">if-feature-option</a>) will provide
 an adequate substitute.
@@ -1787,6 +1844,7 @@ whereas earlier versions ignore this option and use the <code>system-source-dire
 where the <samp>.asd</samp> file resides.
 </p>
 
+
 <hr>
 <a name="The-object-model-of-ASDF"></a>
 <a name="The-Object-model-of-ASDF"></a>
@@ -1799,7 +1857,7 @@ Both a system&rsquo;s structure and the operations that can be performed on syst
 follow a extensible protocol, allowing programmers to add new behaviours to ASDF.
 For example, <code>cffi</code> adds support for special FFI description files
 that interface with C libraries and for wrapper files that embed C code in Lisp.
-<code>abcl-jar</code> supports creating Java JAR archives in ABCL.
+<code>asdf-jar</code> supports creating Java JAR archives in ABCL.
 <code>poiu</code> supports compiling code in parallel using background processes.
 </p>
 <p>The key classes in ASDF are <code>component</code> and <code>operation</code>.
@@ -1971,7 +2029,7 @@ may be performed on a given component.
 </p></dd></dl>
 
 <dl>
-<dt><a name="index-load_002dsource_002dop"></a>Operation: <strong><code>load-source-op</code></strong> <em>, <code>prepare-source-op</code></em></dt>
+<dt><a name="index-load_002dsource_002dop_002c"></a>Operation: <strong><code>load-source-op</code>,</strong> <em><code>prepare-source-op</code></em></dt>
 <dd>
 <p><code>load-source-op</code> will load the source for the files in a module
 rather than the compiled fasl output.
@@ -1987,7 +2045,7 @@ that ensures the dependencies are themselves loaded via <code>load-source-op</co
 The default method will do nothing.
 The default dependency is to require
 <code>load-op</code> to be performed on the module first.
-Its <code>operation-done-p</code> method returns <code>nil</code>,
+Its default <code>operation-done-p</code> method returns <code>nil</code>,
 which means that the operation is <em>never</em> done
 &ndash;
 we assume that if you invoke the <code>test-op</code>,
@@ -2034,7 +2092,7 @@ on a library.  For example, one might have
 
 
 <dl>
-<dt><a name="index-compile_002dbundle_002dop"></a>Operation: <strong><code>compile-bundle-op</code></strong> <em>, <code>monolithic-compile-bundle-op</code>, <code>load-bundle-op</code>, <code>monolithic-load-bundle-op</code>, <code>deliver-asd-op</code>, <code>monolithic-deliver-asd-op</code>, <code>lib-op</code>, <code>monolithic-lib-op</code>, <code>dll-op</code>, <code>monolithic-dll-op</code>, <code>image-op</code>, <code>program-op</code></em></dt>
+<dt><a name="index-compile_002dbundle_002dop_002c"></a>Operation: <strong><code>compile-bundle-op</code>,</strong> <em><code>monolithic-compile-bundle-op</code>, <code>load-bundle-op</code>, <code>monolithic-load-bundle-op</code>, <code>deliver-asd-op</code>, <code>monolithic-deliver-asd-op</code>, <code>lib-op</code>, <code>monolithic-lib-op</code>, <code>dll-op</code>, <code>monolithic-dll-op</code>, <code>image-op</code>, <code>program-op</code></em></dt>
 <dd>
 <p>These are &ldquo;bundle&rdquo; operations, that can create a single-file &ldquo;bundle&rdquo;
 for all the contents of each system in an application,
@@ -2126,7 +2184,7 @@ Maybe you have suggestions on how to better configure it?
 </p></dd></dl>
 
 <dl>
-<dt><a name="index-concatenate_002dsource_002dop"></a>Operation: <strong><code>concatenate-source-op</code></strong> <em>, <code>monolithic-concatenate-source-op</code>, <code>load-concatenated-source-op</code>, <code>compile-concatenated-source-op</code>, <code>load-compiled-concatenated-source-op</code>, <code>monolithic-load-concatenated-source-op</code>, <code>monolithic-compile-concatenated-source-op</code>, <code>monolithic-load-compiled-concatenated-source-op</code></em></dt>
+<dt><a name="index-concatenate_002dsource_002dop_002c"></a>Operation: <strong><code>concatenate-source-op</code>,</strong> <em><code>monolithic-concatenate-source-op</code>, <code>load-concatenated-source-op</code>, <code>compile-concatenated-source-op</code>, <code>load-compiled-concatenated-source-op</code>, <code>monolithic-load-concatenated-source-op</code>, <code>monolithic-compile-concatenated-source-op</code>, <code>monolithic-load-compiled-concatenated-source-op</code></em></dt>
 <dd>
 <p>These operations, as their respective names indicate,
 will concatenate all the <code>cl-source-file</code> source files in a system
@@ -5241,7 +5299,7 @@ and lose configuration as they do.
 <a name="index-monolithic_002dfasl_002dop-_0028obsolete_0029"></a>
 <a name="index-monolithic_002dload_002dfasl_002dop-_0028obsolete_0029"></a>
 <a name="index-monolithic_002dbinary_002dop-_0028obsolete_0029"></a>
-<a name="index-compile_002dbundle_002dop-1"></a>
+<a name="index-compile_002dbundle_002dop"></a>
 <a name="index-load_002dbundle_002dop"></a>
 <a name="index-deliver_002dasd_002dop"></a>
 <a name="index-monolithic_002dcompile_002dbundle_002dop"></a>
@@ -5699,6 +5757,21 @@ to eschew using such an important library anymore.
 <p>Use from the <code>named-readtables</code> system the macro <code>named-readtables:defreadtable</code>.
 </p>
 <hr>
+<a name="How-can-I-capture-ASDF_0027s-output_003f"></a>
+<a name="How-can-I-capture-ASDF_0027s-output_003f-1"></a>
+<h4 class="subsection">13.6.8 How can I capture ASDF&rsquo;s output?</h4>
+
+<a name="index-ASDF-output"></a>
+<a name="index-Capturing-ASDF-output"></a>
+<a name="index-_002astandard_002doutput_002a"></a>
+
+<p>Output from ASDF and ASDF extensions are sent to the CL stream
+<code>*standard-output*</code>, so rebinding that stream around calls to
+<code>asdf:operate</code> should redirect all output from ASDF operations.
+</p>
+
+
+<hr>
 <a name="ASDF-development-FAQs"></a>
 <a name="ASDF-development-FAQs-1"></a>
 <h3 class="section">13.7 ASDF development FAQs</h3>
@@ -5878,6 +5951,7 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td></td><td valign="top"><a href="#index-_003aasdf">:asdf</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Introduction">Introduction</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_003aasdf2">:asdf2</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Introduction">Introduction</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_003aasdf3">:asdf3</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Introduction">Introduction</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-_003abuild_002doperation">:build-operation</a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-defsystem-grammar">The defsystem grammar</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_003acompile_002dcheck">:compile-check</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Controlling-file-compilation">Controlling file compilation</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_003adefault_002dregistry-source-config-directive">:default-registry source config directive</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Configuration-DSL">Configuration DSL</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_003adefsystem_002ddepends_002don">:defsystem-depends-on</a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-defsystem-grammar">The defsystem grammar</a></td></tr>
@@ -5898,6 +5972,7 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><th><a name="Concept-Index_cp_letter-A">A</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-also_002dexclude-source-config-directive">also-exclude source config directive</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Configuration-DSL">Configuration DSL</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-around_002dcompile-keyword">around-compile keyword</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Controlling-file-compilation">Controlling file compilation</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-ASDF-output">ASDF output</a>:</td><td>&nbsp;</td><td valign="top"><a href="#How-can-I-capture-ASDF_0027s-output_003f">How can I capture ASDF's output?</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-ASDF-versions">ASDF versions</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Introduction">Introduction</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-ASDF_002dBINARY_002dLOCATIONS-compatibility">ASDF-BINARY-LOCATIONS compatibility</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Output-Backward-Compatibility">Output Backward Compatibility</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-asdf_002doutput_002dtranslations">asdf-output-translations</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Controlling-where-ASDF-saves-compiled-files">Controlling where ASDF saves compiled files</a></td></tr>
@@ -5907,8 +5982,10 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td colspan="4"> <hr></td></tr>
 <tr><th><a name="Concept-Index_cp_letter-B">B</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-bug-tracker">bug tracker</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Where-do-I-report-a-bug_003f">Where do I report a bug?</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-build_002doperation">build-operation</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
 <tr><th><a name="Concept-Index_cp_letter-C">C</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-Capturing-ASDF-output">Capturing ASDF output</a>:</td><td>&nbsp;</td><td valign="top"><a href="#How-can-I-capture-ASDF_0027s-output_003f">How can I capture ASDF's output?</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-compile_002dcheck-keyword">compile-check keyword</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Controlling-file-compilation">Controlling file compilation</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-component">component</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Components">Components</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-component-designator">component designator</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Components">Components</a></td></tr>
@@ -6050,15 +6127,15 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td></td><td valign="top"><a href="#index-coerce_002dname"><code>coerce-name</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Creating-new-operations">Creating new operations</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-coerce_002dname-1"><code>coerce-name</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Components">Components</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-coerce_002dname-2"><code>coerce-name</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Common-attributes-of-components">Common attributes of components</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-compile_002dbundle_002dop-1"><code>compile-bundle-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-compile_002dbundle_002dop"><code><code>compile-bundle-op</code></code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-compile_002dbundle_002dop"><code>compile-bundle-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-compile_002dbundle_002dop_002c"><code><code>compile-bundle-op</code>,</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-compile_002dfile_002a"><code>compile-file*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Controlling-file-compilation">Controlling file compilation</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-compile_002dop"><code><code>compile-op</code></code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-compile_002dsystem"><code>compile-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-component-1"><code>component</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-object-model-of-ASDF">The object model of ASDF</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-component_002ddepends_002don"><code>component-depends-on</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Creating-new-operations">Creating new operations</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-component_002dpathname"><code>component-pathname</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Common-attributes-of-components">Common attributes of components</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-concatenate_002dsource_002dop"><code><code>concatenate-source-op</code></code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-concatenate_002dsource_002dop_002c"><code><code>concatenate-source-op</code>,</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
 <tr><th><a name="Function-and-Class-Index_fn_letter-D">D</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-defsystem"><code>defsystem</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-defsystem-form">The defsystem form</a></td></tr>
@@ -6090,9 +6167,8 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td></td><td valign="top"><a href="#index-load_002dbundle_002dop"><code>load-bundle-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-load_002dfasl_002dop-_0028obsolete_0029"><code>load-fasl-op (obsolete)</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-load_002dop"><code><code>load-op</code></code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-load_002dsource_002dop"><code><code>load-source-op</code></code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-load_002dsource_002dop_002c"><code><code>load-source-op</code>,</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-load_002dsystem"><code>load-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-load_002dsystem-1"><code>load-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-locate_002dsystem"><code>locate-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Components">Components</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
 <tr><th><a name="Function-and-Class-Index_fn_letter-M">M</a></th><td></td><td></td></tr>
@@ -6128,7 +6204,6 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td></td><td valign="top"><a href="#index-register_002dimmutable_002dsystem-1"><code>register-immutable-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-Functions">Miscellaneous Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-register_002dpreloaded_002dsystem"><code>register-preloaded-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-Functions">Miscellaneous Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-require_002dsystem"><code>require-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-require_002dsystem-1"><code>require-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-run_002dprogram"><code>run-program</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Some-Utility-Functions">Some Utility Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-run_002dshell_002dcommand"><code>run-shell-command</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-Functions">Miscellaneous Functions</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
@@ -6212,6 +6287,7 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td></td><td valign="top"><a href="#index-_002anil_002dpathname_002a"><code>*nil-pathname*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Some-Utility-Functions">Some Utility Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_002aoldest_002dforward_002dcompatible_002dasdf_002dversion_002a"><code>*oldest-forward-compatible-asdf-version*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Pitfalls-of-the-upgrade-to-ASDF-3">Pitfalls of the upgrade to ASDF 3</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_002asource_002dregistry_002dparameter_002a"><code>*source-registry-parameter*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#g_t_002asource_002dregistry_002dparameter_002a-variable">*source-registry-parameter* variable</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-_002astandard_002doutput_002a"><code>*standard-output*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#How-can-I-capture-ASDF_0027s-output_003f">How can I capture ASDF's output?</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_002asystem_002ddefinition_002dsearch_002dfunctions_002a"><code>*system-definition-search-functions*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Components">Components</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
 <tr><th><a name="Variable-Index_vr_letter-A">A</a></th><td></td><td></td></tr>

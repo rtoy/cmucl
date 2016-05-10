@@ -334,6 +334,18 @@ including CLX, CMUCL/Motif, the Motif debugger, inspector, and control
 panel, and the Hemlock editor.  It will use the lisp executable and
 core of the given target.
 
+Note: To build with Motif (clm), you need to have the Motif libraries
+available and headers available to build motifd, the clm Motif server.
+OpenMotif is known to work.
+
+You may need to adjust the include paths and library paths in
+src/motif/server/Config.* to match where Motif is installed if the
+paths therein are incorrect.
+
+Unless you intend to use clm and motifd, you can safely ignore the
+build failure.  Everything else will have been compiled correctly; you
+just can't use clm.
+
 * bin/make-dist.sh [-bg] [-G group] [-O owner] target-directory version arch os
 
 This script creates both main and extra distribution tarballs from the

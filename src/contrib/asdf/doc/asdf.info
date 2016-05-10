@@ -1,4 +1,4 @@
-This is asdf.info, produced by makeinfo version 5.2 from asdf.texinfo.
+This is asdf.info, produced by makeinfo version 6.1 from asdf.texinfo.
 
 This manual describes ASDF, a system definition facility for Common Lisp
 programs and libraries.
@@ -43,7 +43,7 @@ File: asdf.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
 ASDF: Another System Definition Facility
 ****************************************
 
-Manual for Version 3.1.6
+Manual for Version 3.1.6.14
 
    This manual describes ASDF, a system definition facility for Common
 Lisp programs and libraries.
@@ -243,6 +243,7 @@ Issues with using and extending ASDF to define systems
 * How do I create a system definition where all the source files have a .cl extension?::
 * How do I mark a source file to be loaded only and not compiled?::
 * How do I work with readtables?::
+* How can I capture ASDF's output?::
 
 ASDF development FAQs
 
@@ -780,11 +781,19 @@ File: asdf.info,  Node: Convenience Functions,  Next: Moving on,  Prev: Loading 
 =========================
 
 ASDF provides three commands for the most common system operations:
-'load-system', 'compile-system', and 'test-system'.  It also provides
-'require-system', a version of 'load-system' that skips trying to update
-systems that are already loaded.  And it provides 'make', a function
-that uses whichever operation was specified by the author of the target
-system, which by default behaves like 'load-system'.
+'load-system', 'compile-system', and 'test-system'.
+
+   ASDF also provides 'require-system', a variant of 'load-system' that
+skips loading systems that are already loaded.  This is sometimes
+useful, for example, in order to avoid re-loading libraries that come
+pre-loaded into your lisp implementation.
+
+   ASDF also provides 'make', a way of allowing system developers to
+choose a default operation for their systems.  For example, a developer
+who has created a system intended to format a specific document, might
+make document-formatting the default operation invoked by 'make',
+instead of loading.  If the system developer doesn't specify in the
+system definition, the default operation will be loading.
 
    Because ASDF is an extensible system for defining _operations_ on
 _components_, it also provides a generic function 'operate', so you may
@@ -794,43 +803,71 @@ stands for operate-on-system, a name inherited from 'mk-defsystem'.)
 You'll use 'operate' whenever you want to do something beyond compiling,
 loading and testing.
 
-   Note that output from ASDF and ASDF extensions are sent to the CL
-stream '*standard-output*', so rebinding that stream around calls to
-'asdf:operate' should redirect all output from ASDF operations.
+ -- Function: load-system system &rest keys &key force force-not verbose
+          version &allow-other-keys
+     Apply 'operate' with the operation from '*load-system-operation*'
+     the SYSTEM, and any provided keyword arguments.
+     '*load-system-operation*' by default is 'load-op'; it would be
+     'load-bundle-op' by default on ECL, if only an implementation bug
+     were fixed.  Calling 'load-system' is the regular, recommended way
+     to load a system into the current image.
 
-   'load-system' applies 'operate' with the operation from
-'*load-system-operation*' the system, and any provided keyword
-arguments.  '*load-system-operation*' by default is 'load-op'; it would
-be 'load-bundle-op' by default on ECL, if only an implementation bug
-were fixed.
+ -- Function: compile-system system &rest keys &key force force-not
+          verbose version &allow-other-keys
+     Apply 'operate' with the operation 'compile-op', the SYSTEM, and
+     any provided keyword arguments.  This will make sure all the files
+     in the system are compiled, but not necessarily load any of them in
+     the current image; on most systems, it will _not_ load all compiled
+     files in the current image.  This function exists for symmetry with
+     'load-system' but is not recommended unless you are writing build
+     scripts and know what you're doing.  But then, you might be
+     interested in 'program-op' rather than 'compile-op'.
 
-   'require-system' skips any update to systems that have already been
-loaded, in the spirit of 'cl:require'.  It does it by calling
-'load-system' with a keyword option excluding already loaded
-systems.(1).  On actively maintained free software implementations
-(namely recent versions of ABCL, Clozure CL, CMUCL, ECL, GNU CLISP, MKCL
-and SBCL), once ASDF itself is loaded, 'cl:require' too can load ASDF
-systems, by falling back on 'require-system' for module names not
-recognized by the implementation.
+ -- Function: test-system system &rest keys &key force force-not verbose
+          version &allow-other-keys
+     Apply 'operate' with the operation 'test-op', the SYSTEM, and any
+     provided keyword arguments.  *Note test-op::.
 
-   Note that 'cl:require' and 'require-system' are appropriate to load
-code that is not being modified during the current programming session.
-This notably includes the implementation-provided extension modules that
-'cl:require' can load.  This also includes any number of ASDF systems
-that the user isn't either developing or debugging, for which a
-previously installed version is deemed to be satisfactory.
-'require-system' and through it 'cl:require' can load these systems
-without any problem.  But for code that you are actively developing,
-debugging, or otherwise modifying, you should use 'load-system', so ASDF
-will pick on your modifications and transitively re-build the modified
-files and everything that depends on them.
+ -- Function: make system &rest keys &key &allow-other-keys
+     Do "The Right Thing" with your system.  Starting with ASDF 3.1,
+     this function 'make' is also available.  The default behaviour is
+     to load the system as if by 'load-system'; but system authors can
+     override this default in their system definition they may specify
+     an alternate operation as the intended use of their system, with a
+     ':build-operation' option in the 'defsystem' form (*note
+     build-operation: The defsystem grammar.), and an intended output
+     pathname for that operation with ':build-pathname'.  This function
+     is experimental and largely untested.  Use at your own risk.
 
-   Finally, starting with ASDF 3.1, a function 'make' is also available,
-that does "The Right Thing" with your system.  The default behaviour is
-to load the system as if by 'load-system'; but instead of this default,
-system authors can specify the intended use of their system by
-specifying their desired operation with a ':build-operation' argument in
-the system definition.
+ -- Function: require-system system &rest keys &key &allow-other-keys
+     'require-system' skips any update to systems that have already been
+     loaded, in the spirit of 'cl:require'.  It does it by calling
+     'load-system' with a keyword option excluding already loaded
+     systems.(1).  On actively maintained free software implementations
+     (namely recent versions of ABCL, Clozure CL, CMUCL, ECL, GNU CLISP,
+     MKCL and SBCL), once ASDF itself is loaded, 'cl:require' too can
+     load ASDF systems, by falling back on 'require-system' for module
+     names not recognized by the implementation.  (Note however that
+     'require-system' does _not_ fall back on 'cl:require'; that would
+     introduce an "interesting" potential infinite loop to break
+     somehow.)
+
+     'cl:require' and 'require-system' are appropriate to load code that
+     is not being modified during the current programming session.
+     'cl:require' will notably load the implementation-provided
+     extension modules; 'require-system' won't, unless they are also
+     defined as systems somehow, which SBCL and MKCL do.
+     'require-system' may also be used to load any number of ASDF
+     systems that the user isn't either developing or debugging, for
+     which a previously installed version is deemed to be satisfactory;
+     'cl:require' on the above-mentioned implementations will delegate
+     to 'require-system' and may load them as well.  But for code that
+     you are actively developing, debugging, or otherwise modifying, you
+     should use 'load-system', so ASDF will pick on your modifications
+     and transitively re-build the modified files and everything that
+     depends on them (that the requested SYSTEM itself depends on --
+     ASDF itself never builds anything unless it's an explicitly
+     requested system or the dependencies thereof).
 
    ---------- Footnotes ----------
 
@@ -1113,6 +1150,7 @@ File: asdf.info,  Node: The defsystem grammar,  Next: Other code in .asd files, 
      system-option := :defsystem-depends-on system-list
                       | :weakly-depends-on SYSTEM-LIST
                       | :class class-name (see discussion below)
+                      | :build-operation OPERATION-NAME
                       | system-option
                       | module-option
                       | option
@@ -1173,7 +1211,7 @@ File: asdf.info,  Node: The defsystem grammar,  Next: Other code in .asd files, 
      pathname-specifier := pathname | string | symbol
 
      method-form := (operation-name qual lambda-list &rest body)
-     qual := method qualifier
+     qual := method qualifier?
 
      component-dep-fail-option := :fail | :try-next | :ignore
 
@@ -1227,7 +1265,19 @@ to specify another ASDF-defined system or set of systems that must be
 loaded _before_ the system definition is processed.  Typically this is
 used to load an ASDF extension that is used in the system definition.
 
-6.3.5 Weakly depends on
+6.3.5 Build-operation
+---------------------
+
+The ':build-operation' option to 'defsystem' allows the programmer to
+specify an operation that will be applied, in place of 'load-op' when
+'make' (*note make: Convenience Functions.) is run on the system.  The
+option value should be the name of an operation.  E.g.,
+':build-operation doc-op'
+
+   This feature is experimental and largely untested.  Use at your own
+risk.
+
+6.3.6 Weakly depends on
 -----------------------
 
 We do _NOT_ recommend you use this feature.  If you are tempted to write
@@ -1249,7 +1299,7 @@ only makes sense at the 'defsystem' level.  Programmers are cautioned
 not to use this component option except at the 'defsystem' level, as
 this anomalous behaviour may be removed without warning.
 
-6.3.6 Pathname specifiers
+6.3.7 Pathname specifiers
 -------------------------
 
 A pathname specifier ('pathname-specifier') may be a pathname, a string
@@ -1316,7 +1366,7 @@ a directory or a file with appropriate type); on the other hand, you can
 circumvent the file type that would otherwise be forced upon you if you
 were specifying a string.
 
-6.3.7 Version specifiers
+6.3.8 Version specifiers
 ------------------------
 
 Version specifiers are strings to be parsed as period-separated lists of
@@ -1347,7 +1397,7 @@ number.
 
    *Note Common attributes of components::.
 
-6.3.8 Require
+6.3.9 Require
 -------------
 
 Use the implementation's own 'require' to load the MODULE-NAME.
@@ -1357,8 +1407,8 @@ than '#+_implementation-name_' to only depend on the specified module on
 the specific implementation that provides it.  *Note
 if-feature-option::.
 
-6.3.9 Using logical pathnames
------------------------------
+6.3.10 Using logical pathnames
+------------------------------
 
 We do not generally recommend the use of logical pathnames, especially
 not so to newcomers to Common Lisp.  However, we do support the use of
@@ -1403,7 +1453,7 @@ are shared with software written in different programming languages
 where conventions include the use of underscores, dots or CamelCase in
 pathnames.
 
-6.3.10 Serial dependencies
+6.3.11 Serial dependencies
 --------------------------
 
 If the ':serial t' option is specified for a module, ASDF will add
@@ -1419,7 +1469,7 @@ preceding it.  This is done as if by ':depends-on'.
                   (:file "b" :depends-on ("a"))
                   (:file "c" :depends-on ("a" "b")))
 
-6.3.11 Source location (':pathname')
+6.3.12 Source location (':pathname')
 ------------------------------------
 
 The ':pathname' option is optional in all cases for systems defined via
@@ -1458,7 +1508,7 @@ pathname will be set to:
      that a developer can evaluate a 'defsystem' form from within an
      editor without clobbering its source location)
 
-6.3.12 if-feature option
+6.3.13 if-feature option
 ------------------------
 
 This option allows you to specify a feature expression to be evaluated
@@ -1481,14 +1531,14 @@ before any build operations have been performed.
    This option was added in ASDF 3.  For more information, *Note
 Required features: required-features.
 
-6.3.13 if-component-dep-fails option
+6.3.14 if-component-dep-fails option
 ------------------------------------
 
 This option was removed in ASDF 3.  Its semantics was limited in purpose
 and dubious to explain, and its implementation was breaking a hole into
 the ASDF object model.  Please use the 'if-feature' option instead.
 
-6.3.14 feature requirement
+6.3.15 feature requirement
 --------------------------
 
 This requirement was removed in ASDF 3.1.  Please do not use it.  In
@@ -1630,7 +1680,7 @@ system's structure and the operations that can be performed on systems
 follow a extensible protocol, allowing programmers to add new behaviours
 to ASDF. For example, 'cffi' adds support for special FFI description
 files that interface with C libraries and for wrapper files that embed C
-code in Lisp.  'abcl-jar' supports creating Java JAR archives in ABCL.
+code in Lisp.  'asdf-jar' supports creating Java JAR archives in ABCL.
 'poiu' supports compiling code in parallel using background processes.
 
    The key classes in ASDF are 'component' and 'operation'.  A
@@ -1802,7 +1852,7 @@ They are invoked via the 'operate' generic function.
      before 'compile-op' and 'load-op' operations may be performed on a
      given component.
 
- -- Operation: 'load-source-op' , 'prepare-source-op'
+ -- Operation: 'load-source-op', 'prepare-source-op'
 
      'load-source-op' will load the source for the files in a module
      rather than the compiled fasl output.  It has a 'prepare-source-op'
@@ -1813,7 +1863,7 @@ They are invoked via the 'operate' generic function.
 
      This operation will perform some tests on the module.  The default
      method will do nothing.  The default dependency is to require
-     'load-op' to be performed on the module first.  Its
+     'load-op' to be performed on the module first.  Its default
      'operation-done-p' method returns 'nil', which means that the
      operation is _never_ done - we assume that if you invoke the
      'test-op', you want to test the system, even if you have already
@@ -1850,7 +1900,7 @@ They are invoked via the 'operate' generic function.
                                                       :foo-tests)))
             ...)
 
- -- Operation: 'compile-bundle-op' , 'monolithic-compile-bundle-op',
+ -- Operation: 'compile-bundle-op', 'monolithic-compile-bundle-op',
           'load-bundle-op', 'monolithic-load-bundle-op',
           'deliver-asd-op', 'monolithic-deliver-asd-op', 'lib-op',
           'monolithic-lib-op', 'dll-op', 'monolithic-dll-op',
@@ -1935,7 +1985,7 @@ They are invoked via the 'operate' generic function.
      very satisfactory and may change in the future.  Maybe you have
      suggestions on how to better configure it?
 
- -- Operation: 'concatenate-source-op' ,
+ -- Operation: 'concatenate-source-op',
           'monolithic-concatenate-source-op',
           'load-concatenated-source-op',
           'compile-concatenated-source-op',
@@ -4993,6 +5043,7 @@ File: asdf.info,  Node: Issues with using and extending ASDF to define systems, 
 * How do I create a system definition where all the source files have a .cl extension?::
 * How do I mark a source file to be loaded only and not compiled?::
 * How do I work with readtables?::
+* How can I capture ASDF's output?::
 
 
 File: asdf.info,  Node: How can I cater for unit-testing in my system?,  Next: How can I cater for documentation generation in my system?,  Prev: Issues with using and extending ASDF to define systems,  Up: Issues with using and extending ASDF to define systems
@@ -5001,7 +5052,7 @@ File: asdf.info,  Node: How can I cater for unit-testing in my system?,  Next: H
 -------------------------------------------------------
 
 ASDF provides a predefined test operation, 'test-op'.  *Note test-op:
-Predefined operations of ASDF.  The test operation, however, is largely
+Predefined operations of ASDF. The test operation, however, is largely
 left to the system definer to specify.  'test-op' has been a topic of
 considerable discussion on the asdf-devel mailing list
 (http://common-lisp.net/cgi-bin/mailman/listinfo/asdf-devel) (*note
@@ -5152,7 +5203,7 @@ or with various bundle operations.  In addition, the dependency model of
 ASDF would have to be modified incompatibly to allow for such a trick.
 
 
-File: asdf.info,  Node: How do I work with readtables?,  Prev: How do I mark a source file to be loaded only and not compiled?,  Up: Issues with using and extending ASDF to define systems
+File: asdf.info,  Node: How do I work with readtables?,  Next: How can I capture ASDF's output?,  Prev: How do I mark a source file to be loaded only and not compiled?,  Up: Issues with using and extending ASDF to define systems
 
 13.6.7 How do I work with readtables?
 -------------------------------------
@@ -5224,6 +5275,16 @@ little reason to eschew using such an important library anymore.
 
 Use from the 'named-readtables' system the macro
 'named-readtables:defreadtable'.
+
+
+File: asdf.info,  Node: How can I capture ASDF's output?,  Prev: How do I work with readtables?,  Up: Issues with using and extending ASDF to define systems
+
+13.6.8 How can I capture ASDF's output?
+---------------------------------------
+
+Output from ASDF and ASDF extensions are sent to the CL stream
+'*standard-output*', so rebinding that stream around calls to
+'asdf:operate' should redirect all output from ASDF operations.
 
 
 File: asdf.info,  Node: ASDF development FAQs,  Prev: Issues with using and extending ASDF to define systems,  Up: FAQ
@@ -5364,35 +5425,39 @@ Concept Index
 * :asdf:                                 Introduction.        (line   6)
 * :asdf2:                                Introduction.        (line   6)
 * :asdf3:                                Introduction.        (line   6)
+* :build-operation:                      The defsystem grammar.
+                                                              (line 129)
 * :compile-check:                        Controlling file compilation.
                                                               (line   6)
 * :default-registry source config directive: Configuration DSL.
                                                               (line   6)
 * :defsystem-depends-on:                 The defsystem grammar.
-                                                              (line 120)
+                                                              (line 121)
 * :directory source config directive:    Configuration DSL.   (line   6)
 * :exclude source config directive:      Configuration DSL.   (line   6)
 * :if-component-dep-fails component option: The defsystem grammar.
-                                                              (line 382)
+                                                              (line 395)
 * :if-feature component option:          The defsystem grammar.
-                                                              (line 359)
+                                                              (line 372)
 * :ignore-invalid-entries source config directive: Configuration DSL.
                                                               (line   6)
 * :include source config directive:      Configuration DSL.   (line   6)
 * :inherit-configuration source config directive: Configuration DSL.
                                                               (line   6)
 * :require dependencies:                 The defsystem grammar.
-                                                              (line 248)
+                                                              (line 261)
 * :tree source config directive:         Configuration DSL.   (line   6)
 * :version:                              The defsystem form.  (line  68)
 * :version <1>:                          The defsystem grammar.
-                                                              (line 217)
+                                                              (line 230)
 * :version <2>:                          Common attributes of components.
                                                               (line  23)
 * :weakly-depends-on:                    The defsystem grammar.
-                                                              (line 128)
+                                                              (line 141)
 * also-exclude source config directive:  Configuration DSL.   (line   6)
 * around-compile keyword:                Controlling file compilation.
+                                                              (line   6)
+* ASDF output:                           How can I capture ASDF's output?.
                                                               (line   6)
 * ASDF versions:                         Introduction.        (line   6)
 * ASDF-BINARY-LOCATIONS compatibility:   Output Backward Compatibility.
@@ -5403,6 +5468,10 @@ Concept Index
 * asdf-user:                             The defsystem form.  (line   6)
 * ASDF-USER package:                     Components.          (line  41)
 * bug tracker:                           Where do I report a bug?.
+                                                              (line   6)
+* build-operation:                       Convenience Functions.
+                                                              (line  64)
+* Capturing ASDF output:                 How can I capture ASDF's output?.
                                                               (line   6)
 * compile-check keyword:                 Controlling file compilation.
                                                               (line   6)
@@ -5425,23 +5494,23 @@ Concept Index
 * launchpad:                             Where do I report a bug?.
                                                               (line   6)
 * logical pathnames:                     The defsystem grammar.
-                                                              (line 258)
+                                                              (line 271)
 * mailing list:                          Mailing list.        (line   6)
 * operation:                             Operations.          (line   6)
 * pathname specifiers:                   The defsystem grammar.
-                                                              (line 150)
+                                                              (line 163)
 * Primary system name:                   Components.          (line  70)
 * readtables:                            How do I work with readtables?.
                                                               (line   6)
 * serial dependencies:                   The defsystem grammar.
-                                                              (line 304)
+                                                              (line 317)
 * system:                                Components.          (line   6)
 * system designator:                     Components.          (line   6)
 * System names:                          Components.          (line  70)
 * Testing for ASDF:                      Introduction.        (line   6)
 * tree source config directive:          Configuration DSL.   (line   6)
 * version specifiers:                    The defsystem grammar.
-                                                              (line 217)
+                                                              (line 230)
 
 
 File: asdf.info,  Node: Function and Class Index,  Next: Variable Index,  Prev: Concept Index,  Up: Top
@@ -5453,7 +5522,7 @@ Function and Class Index
 * Menu:
 
 * already-loaded-systems:                Convenience Functions.
-                                                              (line  25)
+                                                              (line  29)
 * apply-output-translations:             Output location API. (line  36)
 * asdf-version:                          How do I detect the ASDF version?.
                                                               (line   6)
@@ -5474,21 +5543,21 @@ Function and Class Index
                                                               (line  12)
 * compile-bundle-op:                     What happened to the bundle operations.
                                                               (line   6)
-* 'compile-bundle-op':                   Predefined operations of ASDF.
+* compile-bundle-op,:                    Predefined operations of ASDF.
                                                               (line  93)
 * compile-file*:                         Controlling file compilation.
                                                               (line   6)
-* 'compile-op':                          Predefined operations of ASDF.
+* compile-op:                            Predefined operations of ASDF.
                                                               (line  11)
 * compile-system:                        Convenience Functions.
-                                                              (line   6)
+                                                              (line  38)
 * component:                             The object model of ASDF.
                                                               (line   6)
 * component-depends-on:                  Creating new operations.
                                                               (line  45)
 * component-pathname:                    Common attributes of components.
                                                               (line 155)
-* 'concatenate-source-op':               Predefined operations of ASDF.
+* concatenate-source-op,:                Predefined operations of ASDF.
                                                               (line 178)
 * defsystem:                             The defsystem form.  (line   6)
 * defsystem <1>:                         A more involved example.
@@ -5521,17 +5590,15 @@ Function and Class Index
                                                               (line   6)
 * load-fasl-op (obsolete):               What happened to the bundle operations.
                                                               (line   6)
-* 'load-op':                             Predefined operations of ASDF.
+* load-op:                               Predefined operations of ASDF.
                                                               (line  25)
-* 'load-source-op':                      Predefined operations of ASDF.
+* load-source-op,:                       Predefined operations of ASDF.
                                                               (line  45)
 * load-system:                           Convenience Functions.
-                                                              (line   6)
-* load-system <1>:                       Convenience Functions.
-                                                              (line  25)
+                                                              (line  29)
 * locate-system:                         Components.          (line  97)
 * make:                                  Convenience Functions.
-                                                              (line   6)
+                                                              (line  54)
 * merge-pathnames*:                      Some Utility Functions.
                                                               (line  62)
 * module:                                Pre-defined subclasses of component.
@@ -5549,11 +5616,11 @@ Function and Class Index
 * monolithic-load-fasl-op (obsolete):    What happened to the bundle operations.
                                                               (line   6)
 * oos:                                   Convenience Functions.
-                                                              (line  13)
-* 'oos':                                 Operations.          (line  33)
+                                                              (line  21)
+* oos <1>:                               Operations.          (line  33)
 * operate:                               Convenience Functions.
-                                                              (line  13)
-* 'operate':                             Operations.          (line  31)
+                                                              (line  21)
+* operate <1>:                           Operations.          (line  31)
 * operation:                             The object model of ASDF.
                                                               (line   6)
 * operation-done-p:                      Creating new operations.
@@ -5565,7 +5632,7 @@ Function and Class Index
                                                               (line  12)
 * perform:                               Creating new operations.
                                                               (line  19)
-* 'prepare-op':                          Predefined operations of ASDF.
+* prepare-op:                            Predefined operations of ASDF.
                                                               (line  38)
 * primary-system-name:                   Components.          (line  70)
 * primary-system-name <1>:               Components.          (line  91)
@@ -5575,9 +5642,7 @@ Function and Class Index
 * register-preloaded-system:             Miscellaneous Functions.
                                                               (line  61)
 * require-system:                        Convenience Functions.
-                                                              (line   6)
-* require-system <1>:                    Convenience Functions.
-                                                              (line  25)
+                                                              (line  65)
 * run-program:                           Some Utility Functions.
                                                               (line  89)
 * run-shell-command:                     Miscellaneous Functions.
@@ -5605,10 +5670,10 @@ Function and Class Index
                                                               (line  25)
 * system-weakly-depends-on:              Information about system dependencies.
                                                               (line  14)
-* 'test-op':                             Predefined operations of ASDF.
+* test-op:                               Predefined operations of ASDF.
                                                               (line  52)
 * test-system:                           Convenience Functions.
-                                                              (line   6)
+                                                              (line  49)
 * traverse:                              Operations.          (line  73)
 * version-satisfies:                     Common attributes of components.
                                                               (line  23)
@@ -5630,15 +5695,17 @@ Variable Index
 * *image-dump-hook*:                     Resetting the ASDF configuration.
                                                               (line  14)
 * *load-system-operation*:               Convenience Functions.
-                                                              (line  25)
+                                                              (line  29)
 * *nil-pathname*:                        Some Utility Functions.
                                                               (line  43)
 * *oldest-forward-compatible-asdf-version*: Pitfalls of the upgrade to ASDF 3.
                                                               (line  83)
 * *source-registry-parameter*:           *source-registry-parameter* variable.
                                                               (line   6)
+* *standard-output*:                     How can I capture ASDF's output?.
+                                                              (line   6)
 * *system-definition-search-functions*:  Components.          (line   6)
-* 'asdf::*user-cache*':                  Output Configuration DSL.
+* asdf::*user-cache*:                    Output Configuration DSL.
                                                               (line 118)
 * ASDF_OUTPUT_TRANSLATIONS:              Controlling where ASDF saves compiled files.
                                                               (line   6)
@@ -5647,136 +5714,137 @@ Variable Index
 
 Tag Table:
 Node: Top1684
-Node: Introduction7633
-Node: Quick start summary9936
-Node: Loading ASDF11643
-Node: Loading a pre-installed ASDF11945
-Ref: Loading a pre-installed ASDF-Footnote-113758
-Node: Checking whether ASDF is loaded13940
-Node: Upgrading ASDF14854
-Node: Replacing your implementation's ASDF15842
-Node: Loading ASDF from source17265
-Node: Configuring ASDF18366
-Node: Configuring ASDF to find your systems19139
-Ref: Configuring ASDF to find your systems-Footnote-122444
-Ref: Configuring ASDF to find your systems-Footnote-222691
-Ref: Configuring ASDF to find your systems-Footnote-322973
-Node: Configuring ASDF to find your systems --- old style23434
-Ref: Configuring ASDF to find your systems --- old style-Footnote-125861
-Ref: Configuring ASDF to find your systems --- old style-Footnote-226093
-Ref: Configuring ASDF to find your systems --- old style-Footnote-326860
-Node: Configuring where ASDF stores object files27016
-Node: Resetting the ASDF configuration28419
-Node: Using ASDF29476
-Node: Loading a system29687
-Node: Convenience Functions30704
-Ref: Convenience Functions-Footnote-133849
-Node: Moving on33927
-Node: Defining systems with defsystem34298
-Node: The defsystem form34726
-Node: A more involved example38132
-Ref: A more involved example-Footnote-145114
-Node: The defsystem grammar45796
-Ref: if-feature-option61935
-Node: Other code in .asd files63767
-Node: The package-inferred-system extension64903
-Node: The object model of ASDF69170
-Ref: The object model of ASDF-Footnote-171500
-Ref: The object model of ASDF-Footnote-271852
-Node: Operations72179
-Ref: operate73284
-Node: Predefined operations of ASDF75767
-Ref: test-op77882
-Node: Creating new operations85765
-Node: Components90978
-Ref: System names94462
-Ref: Components-Footnote-199134
-Ref: Components-Footnote-299430
-Node: Common attributes of components99752
-Ref: required-features101314
-Node: Pre-defined subclasses of component107161
-Node: Creating new component types109595
-Node: Dependencies110885
-Node: Functions112756
-Node: Controlling where ASDF searches for systems114590
-Node: Configurations115212
-Node: Truenames and other dangers118687
-Node: XDG base directory119973
-Node: Backward Compatibility121387
-Node: Configuration DSL122103
-Node: Configuration Directories127658
-Node: The here directive129485
-Node: Shell-friendly syntax for configuration131378
-Node: Search Algorithm132395
-Node: Caching Results133896
-Node: Configuration API137140
-Node: Introspection139179
-Node: *source-registry-parameter* variable139443
-Node: Information about system dependencies140012
-Node: Status140928
-Node: Rejected ideas141383
-Node: TODO143764
-Node: Credits for the source-registry143949
-Node: Controlling where ASDF saves compiled files144484
-Ref: Controlling where ASDF saves compiled files-Footnote-1145896
-Node: Output Configurations145940
-Ref: Output Configurations-Footnote-1148801
-Node: Output Backward Compatibility148867
-Node: Output Configuration DSL151593
-Node: Output Configuration Directories157048
-Node: Output Shell-friendly syntax for configuration158605
-Node: Semantics of Output Translations159914
-Node: Output Caching Results161483
-Node: Output location API161963
-Node: Credits for output translations164385
-Node: Error handling164905
-Node: Miscellaneous additional functionality165746
-Node: Controlling file compilation166218
-Node: Controlling source file character encoding169484
-Node: Miscellaneous Functions176299
-Ref: system-relative-pathname176596
-Ref: Miscellaneous Functions-Footnote-1182220
-Node: Some Utility Functions182331
-Node: Getting the latest version193059
-Node: FAQ194004
-Node: Where do I report a bug?194399
-Node: Mailing list194764
-Node: What has changed between ASDF 1 ASDF 2 and ASDF 3?195099
-Node: What are ASDF 1 2 3?197273
-Node: How do I detect the ASDF version?198314
-Node: ASDF can portably name files in subdirectories200621
-Node: Output translations202171
-Node: Source Registry Configuration203198
-Node: Usual operations are made easier to the user204825
-Node: Many bugs have been fixed205411
-Node: ASDF itself is versioned207243
-Node: ASDF can be upgraded208118
-Node: Decoupled release cycle209270
-Node: Pitfalls of the transition to ASDF 2210199
-Node: Pitfalls of the upgrade to ASDF 3214469
-Ref: Pitfalls of the upgrade to ASDF 3-Footnote-1218836
-Node: What happened to the bundle operations219006
-Node: Issues with installing the proper version of ASDF220108
-Node: My Common Lisp implementation comes with an outdated version of ASDF. What to do?220579
-Node: I'm a Common Lisp implementation vendor. When and how should I upgrade ASDF?221512
-Node: Issues with configuring ASDF225395
-Node: How can I customize where fasl files are stored?225770
-Node: How can I wholly disable the compiler output cache?226863
-Node: Issues with using and extending ASDF to define systems228242
-Node: How can I cater for unit-testing in my system?228966
-Node: How can I cater for documentation generation in my system?229855
-Node: How can I maintain non-Lisp (e.g. C) source files?230376
-Ref: report-bugs230808
-Node: I want to put my module's files at the top level. How do I do this?230808
-Node: How do I create a system definition where all the source files have a .cl extension?233958
-Node: How do I mark a source file to be loaded only and not compiled?235931
-Node: How do I work with readtables?236927
-Node: ASDF development FAQs240613
-Node: How do I run the tests interactively in a REPL?240852
-Node: Ongoing Work242718
-Node: Bibliography242997
-Node: Concept Index246433
-Node: Function and Class Index252725
-Node: Variable Index264553
+Node: Introduction7673
+Node: Quick start summary9976
+Node: Loading ASDF11683
+Node: Loading a pre-installed ASDF11985
+Ref: Loading a pre-installed ASDF-Footnote-113798
+Node: Checking whether ASDF is loaded13980
+Node: Upgrading ASDF14894
+Node: Replacing your implementation's ASDF15882
+Node: Loading ASDF from source17305
+Node: Configuring ASDF18406
+Node: Configuring ASDF to find your systems19179
+Ref: Configuring ASDF to find your systems-Footnote-122484
+Ref: Configuring ASDF to find your systems-Footnote-222731
+Ref: Configuring ASDF to find your systems-Footnote-323013
+Node: Configuring ASDF to find your systems --- old style23474
+Ref: Configuring ASDF to find your systems --- old style-Footnote-125901
+Ref: Configuring ASDF to find your systems --- old style-Footnote-226133
+Ref: Configuring ASDF to find your systems --- old style-Footnote-326900
+Node: Configuring where ASDF stores object files27056
+Node: Resetting the ASDF configuration28459
+Node: Using ASDF29516
+Node: Loading a system29727
+Node: Convenience Functions30744
+Ref: Convenience Functions-Footnote-136104
+Node: Moving on36182
+Node: Defining systems with defsystem36553
+Node: The defsystem form36981
+Node: A more involved example40387
+Ref: A more involved example-Footnote-147369
+Node: The defsystem grammar48051
+Ref: if-feature-option64666
+Node: Other code in .asd files66498
+Node: The package-inferred-system extension67634
+Node: The object model of ASDF71901
+Ref: The object model of ASDF-Footnote-174231
+Ref: The object model of ASDF-Footnote-274583
+Node: Operations74910
+Ref: operate76015
+Node: Predefined operations of ASDF78498
+Ref: test-op80612
+Node: Creating new operations88501
+Node: Components93714
+Ref: System names97198
+Ref: Components-Footnote-1101870
+Ref: Components-Footnote-2102166
+Node: Common attributes of components102488
+Ref: required-features104050
+Node: Pre-defined subclasses of component109897
+Node: Creating new component types112331
+Node: Dependencies113621
+Node: Functions115492
+Node: Controlling where ASDF searches for systems117326
+Node: Configurations117948
+Node: Truenames and other dangers121423
+Node: XDG base directory122709
+Node: Backward Compatibility124123
+Node: Configuration DSL124839
+Node: Configuration Directories130394
+Node: The here directive132221
+Node: Shell-friendly syntax for configuration134114
+Node: Search Algorithm135131
+Node: Caching Results136632
+Node: Configuration API139876
+Node: Introspection141915
+Node: *source-registry-parameter* variable142179
+Node: Information about system dependencies142748
+Node: Status143664
+Node: Rejected ideas144119
+Node: TODO146500
+Node: Credits for the source-registry146685
+Node: Controlling where ASDF saves compiled files147220
+Ref: Controlling where ASDF saves compiled files-Footnote-1148632
+Node: Output Configurations148676
+Ref: Output Configurations-Footnote-1151537
+Node: Output Backward Compatibility151603
+Node: Output Configuration DSL154329
+Node: Output Configuration Directories159784
+Node: Output Shell-friendly syntax for configuration161341
+Node: Semantics of Output Translations162650
+Node: Output Caching Results164219
+Node: Output location API164699
+Node: Credits for output translations167121
+Node: Error handling167641
+Node: Miscellaneous additional functionality168482
+Node: Controlling file compilation168954
+Node: Controlling source file character encoding172220
+Node: Miscellaneous Functions179035
+Ref: system-relative-pathname179332
+Ref: Miscellaneous Functions-Footnote-1184956
+Node: Some Utility Functions185067
+Node: Getting the latest version195795
+Node: FAQ196740
+Node: Where do I report a bug?197135
+Node: Mailing list197500
+Node: What has changed between ASDF 1 ASDF 2 and ASDF 3?197835
+Node: What are ASDF 1 2 3?200009
+Node: How do I detect the ASDF version?201050
+Node: ASDF can portably name files in subdirectories203357
+Node: Output translations204907
+Node: Source Registry Configuration205934
+Node: Usual operations are made easier to the user207561
+Node: Many bugs have been fixed208147
+Node: ASDF itself is versioned209979
+Node: ASDF can be upgraded210854
+Node: Decoupled release cycle212006
+Node: Pitfalls of the transition to ASDF 2212935
+Node: Pitfalls of the upgrade to ASDF 3217205
+Ref: Pitfalls of the upgrade to ASDF 3-Footnote-1221572
+Node: What happened to the bundle operations221742
+Node: Issues with installing the proper version of ASDF222844
+Node: My Common Lisp implementation comes with an outdated version of ASDF. What to do?223315
+Node: I'm a Common Lisp implementation vendor. When and how should I upgrade ASDF?224248
+Node: Issues with configuring ASDF228131
+Node: How can I customize where fasl files are stored?228506
+Node: How can I wholly disable the compiler output cache?229599
+Node: Issues with using and extending ASDF to define systems230978
+Node: How can I cater for unit-testing in my system?231739
+Node: How can I cater for documentation generation in my system?232627
+Node: How can I maintain non-Lisp (e.g. C) source files?233148
+Ref: report-bugs233580
+Node: I want to put my module's files at the top level. How do I do this?233580
+Node: How do I create a system definition where all the source files have a .cl extension?236730
+Node: How do I mark a source file to be loaded only and not compiled?238703
+Node: How do I work with readtables?239699
+Node: How can I capture ASDF's output?243426
+Node: ASDF development FAQs243857
+Node: How do I run the tests interactively in a REPL?244096
+Node: Ongoing Work245962
+Node: Bibliography246241
+Node: Concept Index249677
+Node: Function and Class Index256539
+Node: Variable Index268093
 
 End Tag Table

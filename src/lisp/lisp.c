@@ -622,7 +622,16 @@ main(int argc, const char *argv[], const char *envp[])
 		exit(1);
 	    }
 #ifndef sparc
-	    dynamic_space_size = atoi(str) * 1024 * 1024;
+	    dynamic_space_size = atoi(str);
+
+	    /*
+	     * A size of 0 means using the largest possible space
+	     */
+	    if (dynamic_space_size == 0) {
+		dynamic_space_size = DYNAMIC_SPACE_SIZE;
+	    } else {
+		dynamic_space_size *= 1024 * 1024;
+	    }
 #else
 	    {
 		int val;
@@ -646,7 +655,11 @@ main(int argc, const char *argv[], const char *envp[])
 			    "Note:  Rounding dynamic-space-size from %d MB to %d MB\n",
 			    val, dynamic_space_size);
 		}
-		dynamic_space_size *= 1024 * 1024;
+		if (dynamic_space_size == 0) {
+		    dynamic_space_size = DYNAMIC_SPACE_SIZE;
+		} else {
+                    dynamic_space_size *= 1024 * 1024;
+                }
 	    }
 #endif
 	    if (dynamic_space_size > DYNAMIC_SPACE_SIZE) {

@@ -320,6 +320,12 @@ sigtrap_handler(HANDLER_ARGS)
     /* This is just for info in case monitor wants to print an approx */
     current_control_stack_pointer = (unsigned long *) SC_SP(os_context);
 
+
+    /*
+     * In many places in the switch below, we eventually throw instead
+     * of returning from the signal handler.  So, just in case, set
+     * the current FPU modes from the saved context.
+     */
     RESTORE_FPU(os_context);
 
     /*
