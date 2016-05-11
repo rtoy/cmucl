@@ -136,11 +136,9 @@ save(char *filename, lispobj init_function, int sse2_mode)
     }
     printf("[Undoing binding stack... ");
     fflush(stdout);
-#if 0
-    unbind_to_here((lispobj *) BINDING_STACK_START);
-#else
+
     unbind_to_here((lispobj *) binding_stack);
-#endif
+
     SetSymbolValue(CURRENT_CATCH_BLOCK, 0);
     SetSymbolValue(CURRENT_UNWIND_PROTECT_BLOCK, 0);
     SetSymbolValue(EVAL_STACK_TOP, 0);
@@ -282,11 +280,9 @@ save_executable(char *filename, lispobj init_function)
 
     printf("[Undoing binding stack... ");
     fflush(stdout);
-#if 0
-    unbind_to_here((lispobj *)BINDING_STACK_START);
-#else
+
     unbind_to_here((lispobj *)binding_stack);
-#endif
+
     SetSymbolValue(CURRENT_CATCH_BLOCK, 0);
     SetSymbolValue(CURRENT_UNWIND_PROTECT_BLOCK, 0);
     SetSymbolValue(EVAL_STACK_TOP, 0);
