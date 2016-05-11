@@ -409,7 +409,9 @@ os_vm_address_t round_up_sparse_size(os_vm_address_t addr)
 /*
  * An array of the start of the spaces which should have holes placed
  * after them.  Must not include the dynamic spaces because the size
- * of the dynamic space can be controlled from the command line.
+ * of the dynamic space can be controlled from the command line.  Also
+ * must not include the binding and control stacks.  They're handled
+ * below.
  */
 static os_vm_address_t spaces[] = {
     READ_ONLY_SPACE_START, STATIC_SPACE_START
