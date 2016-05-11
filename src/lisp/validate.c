@@ -124,7 +124,7 @@ validate_stacks()
     ensure_space(control_stack, control_stack_size);
 #else
     /* Map the conrol stack wherever we have space */
-  control_stack = (lispobj*) os_validate(NULL, control_stack_size);
+    control_stack = (lispobj*) os_validate(NULL, control_stack_size);
 
 #if (defined(i386) || defined(__x86_64))
     control_stack_end = (void*)control_stack + control_stack_size;
@@ -136,6 +136,7 @@ validate_stacks()
     binding_stack = (lispobj *) BINDING_STACK_START;
     ensure_space(binding_stack, binding_stack_size);
 #else
+    /* Map the binding stack wherever we have space */
     binding_stack = (lispobj*) os_validate(NULL, binding_stack_size);
 #endif
 #ifdef sparc
