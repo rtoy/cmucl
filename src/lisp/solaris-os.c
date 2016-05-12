@@ -506,8 +506,8 @@ void
 make_stack_holes(void)
 {
 #ifdef RELOCATABLE_STACK_START
-    make_hole(control_stack, control_stack_size);
-    make_hole(binding_stack, binding_stack_size);
+    make_hole((os_vm_address_t)control_stack, control_stack_size);
+    make_hole((os_vm_address_t)binding_stack, binding_stack_size);
 #endif
 }
     
