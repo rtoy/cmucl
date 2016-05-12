@@ -687,6 +687,13 @@ main(int argc, const char *argv[], const char *envp[])
     if (builtin_image_flag != 0)
 	map_core_sections(argv[0]);
 #endif
+
+    /*
+     * Validate the basic lisp spaces first like the heap and static
+     * and read-only spaces.  Do this so that the stacks (if thy're
+     * relocatable) don't get randomly allocated on top of our desired
+     * lisp spaces.
+     */
     validate();
     gc_init();
     validate_stacks();
