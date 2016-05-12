@@ -415,6 +415,10 @@ os_vm_address_t round_up_sparse_size(os_vm_address_t addr)
  */
 static os_vm_address_t spaces[] = {
     READ_ONLY_SPACE_START, STATIC_SPACE_START
+#ifndef RELOCATABLE_STACK_START
+    BINDING_STACK_START,
+    CONTROL_STACK_START
+#endif    
 };
 
 /*
@@ -458,15 +462,19 @@ make_hole(char *space_start, size_t space_size)
 void
 make_holes(void)
 {
+    int k;
     os_vm_address_t hole;
 
     /*
      * Make holes of the appropriate size for desired spaces.  The
-     * stacks are handled in make_stack_holes.
+     * stacks are handled in make_stack_holes, if they are
+     * relocatable.
      */
 
-    make_hole(spaces[0], *space_size[0]); /* Read-only space */
-    make_hole(spaces[1], *space_size[1]); /* Static space */
+    for (k = 0; k < sizeof(spaces) / sizeof(spaces[0]); ++k) {
+        make_hole(spaces[k], *space_size[k]);
+    }
+    
     
     /* Round up the dynamic_space_size to the nearest SPARSE_BLOCK_SIZE */
     dynamic_space_size = round_up_sparse_size(dynamic_space_size);
@@ -497,8 +505,10 @@ make_holes(void)
 void
 make_stack_holes(void)
 {
+#ifdef RELOCATABLE_STACK_START
     make_hole(control_stack, control_stack_size);
     make_hole(binding_stack, binding_stack_size);
+#endif
 }
     
 void *
