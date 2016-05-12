@@ -199,8 +199,8 @@ boolean valid_addr(os_vm_address_t addr)
 #ifndef GENCGC
 	    || in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
 #endif
-	    || in_range_p(addr, control_stack, control_stack_size)
-	    || in_range_p(addr, binding_stack, binding_stack_size));
+	    || in_range_p(addr, (lispobj)control_stack, control_stack_size)
+	    || in_range_p(addr, (lispobj)binding_stack, binding_stack_size));
 }
 
 /* ---------------------------------------------------------------- */
@@ -414,7 +414,7 @@ os_vm_address_t round_up_sparse_size(os_vm_address_t addr)
  * below.
  */
 static os_vm_address_t spaces[] = {
-    READ_ONLY_SPACE_START, STATIC_SPACE_START
+    READ_ONLY_SPACE_START, STATIC_SPACE_START,
 #ifndef RELOCATABLE_STACK_START
     BINDING_STACK_START,
     CONTROL_STACK_START
@@ -441,7 +441,7 @@ static unsigned long *space_size[] = {
 #define HOLE_SIZE 0x2000
 
 void
-make_hole(char *space_start, size_t space_size)
+make_hole(os_vm_address_t space_start, size_t space_size)
 {
     os_vm_address_t hole;
 
