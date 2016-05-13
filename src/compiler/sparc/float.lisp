@@ -1061,7 +1061,7 @@
   ;; constraint is that the pieces must be small enough to fit in the
   ;; desired float format without rounding.
   (frob %single-float %%single-float 12 1f0)
-  (frob %double-float %%double-float 12 1f0))
+  (frob %double-float %%double-float 12 1d0))
 
 
 (macrolet ((frob (name translate inst to-sc to-type)
