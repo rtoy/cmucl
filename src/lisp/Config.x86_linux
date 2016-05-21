@@ -1,7 +1,7 @@
 # -*- Mode: makefile -*-
 include Config.x86_common
 
-CPPFLAGS += -m32 -D__NO_CTYPE -D_GNU_SOURCE -DRELOCATABLE_STACK_START
+CPPFLAGS += -m32 -D__NO_CTYPE -D_GNU_SOURCE
 CFLAGS += -rdynamic  -march=pentium4 -mfpmath=sse -mtune=generic
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
