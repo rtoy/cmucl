@@ -23,7 +23,7 @@
 #endif
 #define BINDING_STACK_SIZE	(0x07fff000)	/* 128MB - 1 page */
 
-#ifdef RELOCATABLE_STACK_START
+#ifndef RELOCATABLE_STACK_START
 #define CONTROL_STACK_START	(0x40000000)
 #endif
 
