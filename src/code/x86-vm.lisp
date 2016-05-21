@@ -42,6 +42,9 @@
   (setf *features* (delete :x87 *features*))
   (sys:register-lisp-feature :sse2))
 
+#+(or darwin linux)
+(sys:register-lisp-runtime-feature :relocatable-stacks)
+
 
 ;;;; The sigcontext structure.
 
