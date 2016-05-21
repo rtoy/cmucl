@@ -55,6 +55,9 @@ New in this release:
       * :env option for run-program
     * Maximum dynamic-space-size on Linux reduced to 1530 MB because
       that's the largest available space on 32-bit Ubuntu 11.10.
+    * For linux, darwin, and solaris/sparc, the binding stack and
+      control stack are now mapped into memory whereever the OS wishes
+      to place them instead of being mapped into a fixed location.
 
   * ANSI compliance fixes:
     * PATHNAME-MATCH-P did not accept search-lists.
@@ -84,6 +87,7 @@ New in this release:
     * Ticket #17 fixed: better docstring for *ENVIRONMENT-LIST*
     * Ticket #18 fixed: better description of :ENV option for
       RUN-PROGRAM.
+    * Ticket #22 fixed: Incorrect coercion to float.
 
   * Other changes:
 
