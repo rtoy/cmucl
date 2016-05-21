@@ -24,7 +24,7 @@ CC_V8PLUS = -m32 -xarch=sparc
 AS_V8PLUS = -m32 -xarch=sparc
 endif
 
-CFLAGS += -xlibmieee -O
+CFLAGS += -xlibmieee -O -DRELOCATABLE_STACK_START
 DEPEND_FLAGS = -xM
 ASFLAGS = $(AS_V8PLUS)
 OS_LINK_FLAGS = -M /usr/lib/ld/map.noexstk
