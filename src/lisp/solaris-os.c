@@ -415,7 +415,7 @@ os_vm_address_t round_up_sparse_size(os_vm_address_t addr)
  */
 static os_vm_address_t spaces[] = {
     READ_ONLY_SPACE_START, STATIC_SPACE_START,
-#ifndef RELOCATABLE_STACK_START
+#ifndef FEATURE_RELOCATABLE_STACKS
     BINDING_STACK_START,
     CONTROL_STACK_START
 #endif    
@@ -505,7 +505,7 @@ make_holes(void)
 void
 make_stack_holes(void)
 {
-#ifdef RELOCATABLE_STACK_START
+#ifdef FEATURE_RELOCATABLE_STACKS
     make_hole((os_vm_address_t)control_stack, control_stack_size);
     make_hole((os_vm_address_t)binding_stack, binding_stack_size);
 #endif
