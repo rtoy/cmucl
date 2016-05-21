@@ -20,12 +20,14 @@
 	  register-lisp-feature register-lisp-runtime-feature))
 
 (defmacro register-lisp-feature (feature)
-  "Register the feature as having influenced the CMUCL build process."
+  "Register the feature as having influenced the CMUCL build
+  process. Feature is added to *feature*"
   `(pushnew ,feature *features*))
 
 (defmacro register-lisp-runtime-feature (feature)
   "Register the feature as having influenced the CMUCL build process,
-and also the CMUCL C runtime."
+and also the CMUCL C runtime. Feature is added to*features* and
+sys::*runtime-features*."
   (let ((f (gensym)))
     `(progn
       (let ((,f ,feature))
