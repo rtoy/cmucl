@@ -2,9 +2,9 @@
 
 include Config.x86_common
 
-# Compile code that will run on OSX 10.5 (Tiger).  This only works if
-# you have the 10.5 SDK available.
-MIN_VER = -mmacosx-version-min=10.5
+# Compile code that will run on OSX 10.6.  This only works if
+# you have the SDK available.
+MIN_VER = -mmacosx-version-min=10.6
 
 CPPFLAGS += -DDARWIN $(MIN_VER) -m32
 CFLAGS += -g3 -mtune=generic
