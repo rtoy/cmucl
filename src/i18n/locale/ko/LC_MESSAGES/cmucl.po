@@ -49,13 +49,18 @@ msgid "Class not yet defined: ~S"
 msgstr "분류명 정의되지 않음 : ~S"
 
 #: src/code/sysmacs.lisp
-msgid "Register the feature as having influenced the CMUCL build process."
+#, fuzzy
+msgid ""
+"Register the feature as having influenced the CMUCL build\n"
+"  process. Feature is added to *feature*"
 msgstr "CMUCL 구축 과정에 영향을 주는 속성으로 입력."
 
 #: src/code/sysmacs.lisp
+#, fuzzy
 msgid ""
 "Register the feature as having influenced the CMUCL build process,\n"
-"and also the CMUCL C runtime."
+"and also the CMUCL C runtime. Feature is added to*features* and\n"
+"sys::*runtime-features*."
 msgstr "CMUCL 구축 과정과 CMUCL C 런타임에 영향을 주는 속성으로 입력."
 
 #: src/code/sysmacs.lisp
@@ -196,7 +201,7 @@ msgid ""
 msgstr ""
 
 #: src/code/lispinit.lisp
-msgid "Features affecting the runtime"
+msgid "Features affecting the runtime.  These are written to internals.h."
 msgstr ""
 
 #: src/code/lispinit.lisp

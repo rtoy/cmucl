@@ -49,15 +49,20 @@ msgid "Class not yet defined: ~S"
 msgstr "Assclay otnay etyay efinedday: ~S"
 
 #: src/code/sysmacs.lisp
-msgid "Register the feature as having influenced the CMUCL build process."
+#, fuzzy
+msgid ""
+"Register the feature as having influenced the CMUCL build\n"
+"  process. Feature is added to *feature*"
 msgstr ""
 "Egisterray ethay eaturefay asway avinghay influencedway ethay CMUCL uildbay "
 "ocesspray."
 
 #: src/code/sysmacs.lisp
+#, fuzzy
 msgid ""
 "Register the feature as having influenced the CMUCL build process,\n"
-"and also the CMUCL C runtime."
+"and also the CMUCL C runtime. Feature is added to*features* and\n"
+"sys::*runtime-features*."
 msgstr ""
 "Egisterray ethay eaturefay asway avinghay influencedway ethay CMUCL uildbay "
 "ocesspray,\n"
@@ -256,7 +261,8 @@ msgstr ""
 "   implementationway."
 
 #: src/code/lispinit.lisp
-msgid "Features affecting the runtime"
+#, fuzzy
+msgid "Features affecting the runtime.  These are written to internals.h."
 msgstr "Eaturesfay affectingway ethay untimeray"
 
 #: src/code/lispinit.lisp
