@@ -58,6 +58,7 @@ New in this release:
     * For linux, darwin, and solaris/sparc, the binding stack and
       control stack are now mapped into memory whereever the OS wishes
       to place them instead of being mapped into a fixed location.
+      This is indicated by new feature :relocatable-stacks.
 
   * ANSI compliance fixes:
     * PATHNAME-MATCH-P did not accept search-lists.
