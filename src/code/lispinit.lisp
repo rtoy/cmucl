@@ -29,7 +29,7 @@
 (export '(compiler-version scrub-control-stack *runtime-features*))
 
 (defvar *runtime-features* nil
-  "Features affecting the runtime")
+  "Features affecting the runtime.  These are written to internals.h.")
 
 (in-package :extensions)
 (export '(quit *prompt*))

@@ -1,16 +1,19 @@
 #!/bin/sh
 
 usage() {
-    echo "cross-build-world.sh [-crl] [-B file] [-G Gnumake] target-dir cross-dir cross-compiler-script [build-binary [flags]]"
+    echo "cross-build-world.sh [-crlX] [-B file] [-G Gnumake] target-dir cross-dir cross-compiler-script [build-binary [flags]]"
     echo "  -c      Clean target and cross directories before compiling"
     echo "  -r      Recompile lisp runtime"
     echo "  -l      Load cross-compiled kernel to make a new lisp kernel"
     echo "  -B file Use this as the cross bootstrap file." 
     echo "  -G make Specifies the name of GNU make"
+    echo "  -X      (break) before quitting the cross compilation (for debugging)"
 }
 
 MAKE=make
-while getopts "crlB:G:" arg
+BREAK=""
+
+while getopts "crlXB:G:" arg
 do
     case $arg in
       c) CLEAN_DIR=yes ;;
@@ -18,6 +21,7 @@ do
       l) LOAD_KERNEL=yes ;;
       B) BOOTSTRAP=$OPTARG ;;
       G) MAKE=$OPTARG ;;
+      X) BREAK="(break)" ;;
       h | \?) usage; exit 1 ;;
     esac
 done
@@ -122,6 +126,7 @@ $LISP "$@" -noinit -nositeinit <<EOF
 (setq *gc-verbose* t *interactive* t)
 
 (load "target:tools/worldbuild")
+$BREAK
 (ext:quit)
 EOF
 

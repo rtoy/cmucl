@@ -200,3 +200,13 @@
 	      tests))
 	   `(progn ,@(nreverse tests)))))
     (make-tests)))
+
+(define-test issue.22
+    (:tag :issues)
+  (let ((tester (compile nil '(lambda (x)
+			       (coerce x 'float)))))
+    (assert-eql 1.0 (funcall tester 1))
+    (assert-eql 2f0 (funcall tester 2f0))
+    (assert-eql 3d0 (funcall tester 3d0))
+    (assert-eql 4w0 (funcall tester 4w0))))
+    
