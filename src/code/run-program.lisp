@@ -749,7 +749,13 @@
 			  (read-line object nil nil)
 			(unless line
 			  (return))
-			(unix:unix-write fd line 0 (length line))
+			;; Take just the low 8 bits of each char
+			;; (code) of the string and write that out to
+			;; the descriptor.
+			(let ((output (make-array (length line) :element-type '(unsigned-byte 8))))
+			  (dotimes (k (length output))
+			    (setf (aref output k) (ldb (byte 8 0) (char-code (aref line k)))))
+			  (unix:unix-write fd output 0 (length output)))
 			(if no-cr
 			  (return)
 			  (unix:unix-write fd newline 0 1)))))
