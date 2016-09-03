@@ -1051,6 +1051,8 @@
 		   (coerce x ',type))
 		  #+double-double
 		  ((double-double-float)
+		   ;; Convert the double-double to a double before
+		   ;; coercing to the appropriate type.
 		   (coerce (+ (double-double-hi x)
 			      (double-double-lo x))
 			   ',type))
