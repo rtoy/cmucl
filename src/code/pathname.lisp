@@ -1219,6 +1219,26 @@ a host-structure or string."
 	(:version (frob (%pathname-version pathname)))))))
 
 
+;; Like PATHNAME-MATCH-P but the pathnames should not be search-lists.
+(defun %pathname-match-p (in-pathname in-wildname)
+  "Pathname matches the wildname template?"
+  (declare (type path-designator in-pathname)
+	   ;; Not path-designator because a file-stream can't have a
+	   ;; wild pathname.
+	   (type (or string pathname) in-wildname))
+  (with-pathname (pathname in-pathname)
+    (with-pathname (wildname in-wildname)
+      (macrolet ((frob (field &optional (op 'components-match ))
+		   `(or (null (,field wildname))
+			(,op (,field pathname) (,field wildname)))))
+	(and (or (null (%pathname-host wildname))
+		 (eq (%pathname-host wildname) (%pathname-host pathname)))
+	     (frob %pathname-device)
+	     (frob %pathname-directory directory-components-match)
+	     (frob %pathname-name)
+	     (frob %pathname-type)
+	     (frob %pathname-version))))))
+
 ;;; PATHNAME-MATCH-P -- Interface
 ;;;
 (defun pathname-match-p (in-pathname in-wildname)
@@ -1476,7 +1496,7 @@ a host-structure or string."
   (with-pathname (source source)
     (with-pathname (from from-wildname)
       (with-pathname (to to-wildname)
-	  (unless (pathname-match-p source from)
+	  (unless (%pathname-match-p source from)
 	    (didnt-match-error source from))
 	  (let* ((source-host (%pathname-host source))
 		 (to-host (%pathname-host to))
@@ -2171,7 +2191,7 @@ a host-structure or string."
 		       :format-control (intl:gettext "No translation for ~S")
 		       :format-arguments (list pathname)))
        (destructuring-bind (from to) x
-	 (when (pathname-match-p pathname from)
+	 (when (%pathname-match-p pathname from)
 	   (return (translate-logical-pathname
 		    (translate-pathname pathname from to)))))))
     (pathname pathname)
