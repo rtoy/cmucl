@@ -110,10 +110,6 @@ New in this release:
     * Issue #19: Make min version for OSX be 10.6
     * Issue #22: Incorrect coercion to float
     * Issue #12: unable to build master/$HEAD with 2015-12 darwin snapshot
-    * Issue #25: Issue with ext:run-program and string streams
-      (related to character sizes?)
-    * Issue #27: Regression: ASDF test failures
-    * Issue #28: Recursive function definition during cross-compile
 
   * Other changes:
     * Cross compile scripts from x86 to sparc and ppc updated to work
