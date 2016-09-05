@@ -8,3 +8,45 @@ debugger and code profiler; and an Emacs-like editor implemented in
 Common Lisp. CMUCL is maintained by a team of volunteers collaborating
 over the Internet, and is mostly in the public domain.
 
+Here is a summary of its main features:
+
+* support for **static arrays** that are never moved by GC but are
+  properly removed when no longer referenced.
+* **Unicode** support, including many of the most common external
+  formats such as UTF-8 and support for handling Unix, DOS, and
+  Mac end-of-line schemes.
+* native **double-double floats** including complex double-double
+  floats and specialized arrays for double-double floats and and
+  complex double-double floats that give approximately 106 bits
+  (32 digits) of precision.
+* a **sophisticated native-code compiler** which is capable of
+  powerful type inferences, and generates code competitive in
+  speed with C compilers.
+* **generational garbage collection** on all supported
+  architectures.  
+* **multiprocessing capability** on the x86 ports.
+* a foreign function interface which allows interfacing with C code
+  and system libraries, including shared libraries on most platforms,
+  and direct access to Unix system calls.
+* support for interprocess communication and remote procedure calls.
+* an implementation of CLOS, the [Common Lisp Object
+  System](http://en.wikipedia.org/wiki/Common_Lisp_Object_System),
+  which includes multimethods and a metaobject protocol.
+* a graphical source-level debugger using a Motif interface, and a
+  code profiler.
+* an interface to the X11 Window System (CLX), and a sophisticated
+  graphical widget library ([Garnet](https://www.cs.cmu.edu/~garnet/),
+  available separately).
+* programmer-extensible input and output streams ([Gray
+  Streams](http://www.nhplace.com/kent/CL/Issues/stream-definition-by-user.html)
+  and
+  [simple-streams](http://www.franz.com/support/documentation/current/doc/streams.htm)).
+* an Emacs-like editor,
+  [Hemlock](http://cmucl.org/hemlock/index.html), implemented in
+  Common Lisp.
+* **freely redistributable**: free, with full source code (most of
+  which is in the public domain) and no strings attached (and no
+  warranty). Like the GNU/Linux and *BSD operating systems, CMUCL is
+  maintained and improved by a team of volunteers collaborating over
+  the Internet.
+

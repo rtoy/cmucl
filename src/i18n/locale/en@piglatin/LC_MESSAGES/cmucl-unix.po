@@ -226,6 +226,27 @@ msgstr ""
 "  _N"
 
 #: src/code/unix.lisp
+#, fuzzy
+msgid ""
+"UNIX-LSEEK accepts a file descriptor and moves the file pointer ahead\n"
+"   a certain OFFSET for that file.  WHENCE can be any of the following:\n"
+"\n"
+"   l_set        Set the file pointer.\n"
+"   l_incr       Increment the file pointer.\n"
+"   l_xtnd       Extend the file size.\n"
+"  "
+msgstr ""
+"Unixway-seeklay acceptsway away ilefay escriptorday andway ovesmay ethay "
+"ilefay ointerpay aheadway\n"
+"   away ertaincay offsetway orfay atthay ilefay.  Encewhay ancay ebay anyway "
+"ofway ethay ollowingfay:\n"
+"\n"
+"   l_etsay        Etsay ethay ilefay ointerpay.\n"
+"   l_incrway       Incrementway ethay ilefay ointerpay.\n"
+"   l_tndxay       Extendway ethay ilefay izesay.\n"
+"  _N"
+
+#: src/code/unix.lisp
 msgid ""
 "Unix-mkdir creates a new directory with the specified name and mode.\n"
 "   (Same as those for unix-chmod.)  It returns T upon success, otherwise\n"
@@ -290,6 +311,10 @@ msgstr "Onnay-ockingblay odemay"
 #: src/code/unix.lisp
 msgid "Synchronous writes (on ext2)"
 msgstr "Ynchronoussay iteswray (onway extway2)"
+
+#: src/code/unix.lisp
+msgid "Asynchronous I/O"
+msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
@@ -369,6 +394,24 @@ msgstr ""
 "   argumentway) andway eturnray itway.  Ifway FD isway otnay away alidvay "
 "ilefay escriptorday, NIL\n"
 "   andway anway errorway umbernay areway eturnedray."
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-dup2 duplicates an existing file descriptor just as unix-dup\n"
+"   does only the new value of the duplicate descriptor may be requested\n"
+"   through the second argument.  If a file already exists with the\n"
+"   requested descriptor number, it will be closed and the number\n"
+"   assigned to the duplicate."
+msgstr ""
+"Unixway-upday2 uplicatesday anway existingway ilefay escriptorday ustjay "
+"asway unixway-upday\n"
+"   oesday onlyway ethay ewnay aluevay ofway ethay uplicateday escriptorday "
+"aymay ebay equestedray\n"
+"   roughthay ethay econdsay argumentway.  Ifway away ilefay alreadyway "
+"existsway ithway ethay\n"
+"   equestedray escriptorday umbernay, itway illway ebay osedclay andway "
+"ethay umbernay\n"
+"   assignedway otay ethay uplicateday."
 
 #: src/code/unix.lisp
 msgid "Duplicate a file descriptor"
@@ -515,6 +558,22 @@ msgstr ""
 "   umbernay ifway anway errorway occuredway."
 
 #: src/code/unix.lisp
+#, fuzzy
+msgid ""
+"UNIX-READ attempts to read from the file described by fd into\n"
+"   the buffer buf until it is full.  Len is the length of the buffer.\n"
+"   The number of bytes actually read is returned or NIL and an error\n"
+"   number if an error occured."
+msgstr ""
+"Unixway-eadray attemptsway otay eadray omfray ethay ilefay escribedday ybay "
+"dfay intoway\n"
+"   ethay ufferbay ufbay untilway itway isway ullfay.  Enlay isway ethay "
+"engthlay ofway ethay ufferbay.\n"
+"   Ethay umbernay ofway ytesbay actuallyway eadray isway eturnedray orway "
+"NIL andway anway errorway\n"
+"   umbernay ifway anway errorway occuredway."
+
+#: src/code/unix.lisp
 msgid ""
 "Unix-readlink invokes the readlink system call on the file name\n"
 "  specified by the simple string path.  It returns up to two values:\n"
@@ -559,6 +618,14 @@ msgstr ""
 "   enlay otay ethay ilefay escribedday ybay ethay ilefay escriptorday dfay.  "
 "NIL andway anway\n"
 "   errorway isway eturnedray ifway ethay allcay isway unsuccessfulway."
+
+#: src/code/unix.lisp
+msgid ""
+"Define an ioctl command. If the optional ARG and PARM-TYPE are given\n"
+"  then ioctl argument size and direction are included as for ioctls defined\n"
+"  by _IO, _IOR, _IOW, or _IOWR. If DEV is a character then the ioctl type\n"
+"  is the characters code, else DEV may be an integer giving the type."
+msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
@@ -696,6 +763,40 @@ msgstr ""
 "   ildchay ocessespray (usageray_ildrenchay).  NIL andway anway errorway "
 "umbernay\n"
 "   isway eturnedray ifway ethay allcay ailsfay."
+
+#: src/code/unix.lisp
+msgid "These bits determine file type."
+msgstr ""
+
+#: src/code/unix.lisp
+#, fuzzy
+msgid "Directory"
+msgstr "Isway away irectoryday"
+
+#: src/code/unix.lisp
+msgid "Character device"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "FIFO"
+msgstr ""
+
+#: src/code/unix.lisp
+#, fuzzy
+msgid "Block device"
+msgstr "Ockblay eviceday equiredray"
+
+#: src/code/unix.lisp
+msgid "Regular file"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Symbolic link."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Socket."
+msgstr ""
 
 #: src/code/unix.lisp
 msgid "Returns either :file, :directory, :link, :special, or NIL."
@@ -1646,23 +1747,6 @@ msgstr ""
 #~ "   abletay. (i.e. ethay aximummay umbernay ofway escriptorsday atthay "
 #~ "ancay existway atway\n"
 #~ "   oneway imetay.)"
-
-#~ msgid ""
-#~ "Unix-dup2 duplicates an existing file descriptor just as unix-dup\n"
-#~ "   does only the new value of the duplicate descriptor may be requested\n"
-#~ "   through the second argument.  If a file already exists with the\n"
-#~ "   requested descriptor number, it will be closed and the number\n"
-#~ "   assigned to the duplicate."
-#~ msgstr ""
-#~ "Unixway-upday2 uplicatesday anway existingway ilefay escriptorday ustjay "
-#~ "asway unixway-upday\n"
-#~ "   oesday onlyway ethay ewnay aluevay ofway ethay uplicateday "
-#~ "escriptorday aymay ebay equestedray\n"
-#~ "   roughthay ethay econdsay argumentway.  Ifway away ilefay alreadyway "
-#~ "existsway ithway ethay\n"
-#~ "   equestedray escriptorday umbernay, itway illway ebay osedclay andway "
-#~ "ethay umbernay\n"
-#~ "   assignedway otay ethay uplicateday."
 
 #~ msgid ""
 #~ "Unix-link creates a hard link from the file with name1 to the\n"

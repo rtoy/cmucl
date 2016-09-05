@@ -8,6 +8,8 @@
 #ifndef _VALIDATE_H_
 #define _VALIDATE_H_
 
+#include "internals.h"
+
 #ifdef parisc
 #include "hppa-validate.h"
 #endif
@@ -41,5 +43,6 @@
 #endif
 
 extern void validate(void);
+extern void validate_stacks(void);
 
 #endif /* _VALIDATE_H_ */

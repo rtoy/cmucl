@@ -45,6 +45,8 @@
 #define CONTROL_STACK_SIZE  	(0x07ff8000)	/* 128 MB, almost */
 #define CONTROL_STACK_END       (CONTROL_STACK_START + control_stack_size)
 
+#define SIGNAL_STACK_SIZE	SIGSTKSZ
+
 #define BINDING_STACK_START 	(0x38000000)
 #define BINDING_STACK_SIZE  	(0x07ff8000)	/* 128 MB, almost */
 

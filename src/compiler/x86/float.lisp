@@ -2340,6 +2340,13 @@
 ;;
 ;; When one of the mask bits (0-5) is set, then that exception is
 ;; masked so that no exception is generated.
+;;
+;; Returns the control and status words merged into one.  The low 16
+;; bits contains the control word with the exception mask bits
+;; inverted to indicate exception enable bits.  The high 16 bits
+;; contains the status word, but the top 8 bits of the status word are
+;; cleared, effectively removing the condition code, top-of-stack
+;; bits, and the FPU busy bit.
 (define-vop (x87-floating-point-modes)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)

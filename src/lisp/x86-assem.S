@@ -143,7 +143,8 @@ FUNCDEF(call_into_lisp)
 	movl	%eax, GNAME(foreign_function_call_active)
 
 	movl	%esp,%ebx	# remember current stack
-	cmpl	$CONTROL_STACK_START,%esp
+	cmpl	GNAME(control_stack), %esp
+
 	jbe	ChangeToLispStack
 	cmpl	GNAME(control_stack_end), %esp
 	jbe	OnLispStack

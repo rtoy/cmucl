@@ -252,8 +252,6 @@ interrupt_handle_now(HANDLER_ARGS)
 
     handler = interrupt_handlers[signal];
 
-    RESTORE_FPU(context);
-    
     if (handler.c == (void (*)(HANDLER_ARGS)) SIG_IGN)
 	return;
 
@@ -333,7 +331,6 @@ maybe_now_maybe_later(HANDLER_ARGS)
         setup_pending_signal(signal, code, context);
 	arch_set_pseudo_atomic_interrupted(context);
     } else {
-	RESTORE_FPU(context);
 	interrupt_handle_now(signal, code, context);
     }
 
@@ -408,10 +405,7 @@ interrupt_maybe_gc(HANDLER_ARGS)
 * Noise to install handlers.                                     *
 \****************************************************************/
 
-#if !(defined(i386) || defined(__x86_64))
-#define SIGNAL_STACK_SIZE SIGSTKSZ
-static char altstack[SIGNAL_STACK_SIZE];
-#endif
+char altstack[SIGNAL_STACK_SIZE];
 
 void
 interrupt_install_low_level_handler(int signal, void handler(HANDLER_ARGS))
@@ -434,7 +428,7 @@ interrupt_install_low_level_handler(int signal, void handler(HANDLER_ARGS))
     if (signal == PROTECTION_VIOLATION_SIGNAL) {
 	stack_t sigstack;
 
-#if (defined( i386 ) || defined(__x86_64))
+#if defined(SIGNAL_STACK_START)
 	sigstack.ss_sp = (void *) SIGNAL_STACK_START;
 #else
 	sigstack.ss_sp = (void *) altstack;

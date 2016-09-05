@@ -1087,3 +1087,49 @@ msgstr ""
 #: src/code/unix-glibc2.lisp
 msgid "Get terminal output speed."
 msgstr ""
+
+#: src/code/unix-glibc2.lisp
+msgid ""
+"Get the value of the environment variable named Name.  If no such\n"
+"  variable exists, Nil is returned."
+msgstr ""
+
+#: src/code/unix-glibc2.lisp
+msgid ""
+"Adds the environment variable named Name to the environment with\n"
+"  the given Value if Name does not already exist. If Name does exist,\n"
+"  the value is changed to Value if Overwrite is non-zero.  Otherwise,\n"
+"  the value is not changed."
+msgstr ""
+
+#: src/code/unix-glibc2.lisp
+msgid ""
+"Adds or changes the environment.  Name-value must be a string of\n"
+"  the form \"name=value\".  If the name does not exist, it is added.\n"
+"  If name does exist, the value is updated to the given value."
+msgstr ""
+
+#: src/code/unix-glibc2.lisp
+msgid "Removes the variable Name from the environment"
+msgstr ""
+
+#: src/code/unix-glibc2.lisp
+msgid ""
+"Executes the Unix execve system call.  If the system call suceeds, lisp\n"
+"   will no longer be running in this process.  If the system call fails "
+"this\n"
+"   function returns two values: NIL and an error code.  Arg-list should be "
+"a\n"
+"   list of simple-strings which are passed as arguments to the exec'ed "
+"program.\n"
+"   Environment should be an a-list mapping symbols to simple-strings which "
+"this\n"
+"   function bashes together to form the environment for the exec'ed program."
+msgstr ""
+
+#: src/code/unix-glibc2.lisp
+msgid ""
+"Executes the unix fork system call.  Returns 0 in the child and the pid\n"
+"   of the child in the parent if it works, or NIL and an error number if it\n"
+"   doesn't work."
+msgstr ""

@@ -75,7 +75,12 @@ C6  = -1.13596475577881948265e-11; /* 0xBDA8FAE9, 0xBE8838D4 */
         ux.d = x;
 	ix = ux.i[HIWORD]&0x7fffffff;	/* ix = |x|'s high word*/
 	if(ix<0x3e400000) {			/* if x < 2**27 */
-	    if(((int)x)==0) return one;		/* generate inexact */
+            /* return 1 with inexact unless x == 0 */
+            if (x != 0) {
+                fdlibm_setexception(x, FDLIBM_INEXACT);
+            }
+
+            return one;
 	}
 	z  = x*x;
 	r  = z*(C1+z*(C2+z*(C3+z*(C4+z*(C5+z*C6)))));

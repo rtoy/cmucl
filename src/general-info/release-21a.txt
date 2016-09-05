@@ -1,7 +1,5 @@
 ========================== C M U C L  21 a =============================
 
-[In Progress]
-
 The CMUCL project is pleased to announce the release of CMUCL 21a.
 This is a major release which contains numerous enhancements and
 bug fixes from the 20f release.
@@ -45,6 +43,10 @@ New in this release:
     * Added clx-inspector module.
     * ASDF documentation included in html, info, and pdf formats in
       contrib/asdf/doc/.
+    * If -quiet is given, don't print out the herald, even if the user
+      init files add things to the herald. (Previously, these would
+      get printed out.)  Also, -quiet no longer removes the herald
+      items; you can sill print out the entire herald using 
 
 
   * ANSI compliance fixes:
