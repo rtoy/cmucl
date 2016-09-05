@@ -1133,9 +1133,12 @@ character and illegal outputs are replaced by a question mark.")
   The standard streams are sys::*stdin*, sys::*stdout*, and
   sys::*stderr*, which are normally the input and/or output streams
   for *standard-input* and *standard-output*.  Also sets sys::*tty*
-  (normally *terminal-io* to the given external format.  If the
-  optional argument Filenames is gvien, then the filename encoding is
-  set to the specified format."
+  (normally *terminal-io* to the given external format.  The value of
+  *default-external-format* is not changed.
+
+  If the optional argument Filenames is given, then the filename
+  encoding is set to the specified format, if it has not already been
+  specified previously."
   (unless (find-external-format terminal)
     (error (intl:gettext "Can't find external-format ~S.") terminal))
   (setf (stream-external-format sys:*stdin*) terminal

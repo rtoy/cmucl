@@ -26,9 +26,7 @@ static const double
 static double
 #endif
 two54   =  1.80143985094819840000e+16, /* 0x43500000, 0x00000000 */
-twom54  =  5.55111512312578270212e-17, /* 0x3C900000, 0x00000000 */
-huge   = 1.0e+300,
-tiny   = 1.0e-300;
+twom54  =  5.55111512312578270212e-17; /* 0x3C900000, 0x00000000 */
 
 #ifdef __STDC__
 	double fdlibm_scalbn (double x, int n)

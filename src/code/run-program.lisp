@@ -90,15 +90,18 @@
   output		    ; Stream from child's output or nil.
   error			    ; Stream from child's error output or nil.
   status-hook		    ; Closure to call when PROC changes status.
-  plist			    ; Place for clients to stash tings.
+  plist			    ; Place for clients to stash things.
   cookie		    ; List of the number of pipes from the subproc.
   )
 
 (defun %print-process (proc stream depth)
   (declare (ignore depth))
-  (format stream "#<process ~D ~S>"
-	  (process-pid proc)
-	  (process-status proc)))
+  (print-unreadable-object (proc stream :type t :identity t)
+    (format stream "~D ~S ~S ~D"
+	    (process-pid proc)
+	    (process-status proc)
+	    :exit-code
+	    (process-exit-code proc))))
 
 ;;; PROCESS-STATUS -- Public.
 ;;;
@@ -468,8 +471,9 @@
 
    The keyword arguments have the following meanings:
      :env -
-        An A-LIST mapping keyword environment variables to simple-string
-	values.
+        An A-LIST mapping keyword environment variables to
+	simple-string values.  This is the shell environment for
+	Program.  Defaults to *environment-list*.
      :wait -
         If non-NIL (default), wait until the created process finishes.  If
         NIL, continue running Lisp until the program finishes.

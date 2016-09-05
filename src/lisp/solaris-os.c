@@ -169,8 +169,14 @@ os_flush_icache(os_vm_address_t address, os_vm_size_t length)
 void
 os_protect(os_vm_address_t address, os_vm_size_t length, os_vm_prot_t prot)
 {
-    if (mprotect((void *) address, length, prot) == -1)
-	perror("mprotect");
+    if (mprotect((void *) address, length, prot) == -1) {
+        char msg[1000];
+
+        snprintf(msg, sizeof(msg), "mprotect: os_protect(0x%p, %u, 0x%x): ",
+                 address, length, prot);
+        
+	perror(msg);
+    }
 }
 
 static boolean
@@ -193,8 +199,8 @@ boolean valid_addr(os_vm_address_t addr)
 #ifndef GENCGC
 	    || in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
 #endif
-	    || in_range_p(addr, CONTROL_STACK_START, control_stack_size)
-	    || in_range_p(addr, BINDING_STACK_START, binding_stack_size));
+	    || in_range_p(addr, (lispobj)control_stack, control_stack_size)
+	    || in_range_p(addr, (lispobj)binding_stack, binding_stack_size));
 }
 
 /* ---------------------------------------------------------------- */
@@ -403,11 +409,16 @@ os_vm_address_t round_up_sparse_size(os_vm_address_t addr)
 /*
  * An array of the start of the spaces which should have holes placed
  * after them.  Must not include the dynamic spaces because the size
- * of the dynamic space can be controlled from the command line.
+ * of the dynamic space can be controlled from the command line.  Also
+ * must not include the binding and control stacks.  They're handled
+ * below.
  */
 static os_vm_address_t spaces[] = {
     READ_ONLY_SPACE_START, STATIC_SPACE_START,
-    BINDING_STACK_START, CONTROL_STACK_START
+#ifndef FEATURE_RELOCATABLE_STACKS
+    BINDING_STACK_START,
+    CONTROL_STACK_START
+#endif    
 };
 
 /*
@@ -430,27 +441,41 @@ static unsigned long *space_size[] = {
 #define HOLE_SIZE 0x2000
 
 void
+make_hole(os_vm_address_t space_start, size_t space_size)
+{
+    os_vm_address_t hole;
+
+    /* Make holes of the appropriate size for desired spaces */
+
+    hole = space_start + space_size;
+
+    if (os_validate(hole, HOLE_SIZE) == NULL) {
+        fprintf(stderr,
+                "ensure_space: Failed to validate hole of %d bytes at 0x%08lX\n",
+                HOLE_SIZE, (unsigned long) hole);
+        exit(1);
+    }
+    /* Make it inaccessible */
+    os_protect(hole, HOLE_SIZE, 0);
+}
+
+void
 make_holes(void)
 {
     int k;
     os_vm_address_t hole;
 
-    /* Make holes of the appropriate size for desired spaces */
+    /*
+     * Make holes of the appropriate size for desired spaces.  The
+     * stacks are handled in make_stack_holes, if they are
+     * relocatable.
+     */
 
     for (k = 0; k < sizeof(spaces) / sizeof(spaces[0]); ++k) {
-
-	hole = spaces[k] + *space_size[k];
-
-	if (os_validate(hole, HOLE_SIZE) == NULL) {
-	    fprintf(stderr,
-		    "ensure_space: Failed to validate hole of %d bytes at 0x%08lX\n",
-		    HOLE_SIZE, (unsigned long) hole);
-	    exit(1);
-	}
-	/* Make it inaccessible */
-	os_protect(hole, HOLE_SIZE, 0);
+        make_hole(spaces[k], *space_size[k]);
     }
-
+    
+    
     /* Round up the dynamic_space_size to the nearest SPARSE_BLOCK_SIZE */
     dynamic_space_size = round_up_sparse_size(dynamic_space_size);
 
@@ -477,6 +502,15 @@ make_holes(void)
 #endif
 }
 
+void
+make_stack_holes(void)
+{
+#ifdef FEATURE_RELOCATABLE_STACKS
+    make_hole((os_vm_address_t)control_stack, control_stack_size);
+    make_hole((os_vm_address_t)binding_stack, binding_stack_size);
+#endif
+}
+    
 void *
 os_dlsym(const char *sym_name, lispobj lib_list)
 {

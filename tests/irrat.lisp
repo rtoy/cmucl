@@ -152,3 +152,23 @@
 	for logx = (kernel::dd-%log2 x)
 	for log1/x = (kernel::dd-%log2 (/ x))
 	do (assert-true (<= (abs (+ logx log1/x)) (* 1 double-float-epsilon)))))
+
+(define-test expt-integer
+  (let ((power (1+ kernel::*intexp-maximum-exponent*)))
+    ;; Make sure we error out in the usual case with the power too
+    ;; large.
+    (assert-error 'kernel::intexp-limit-error
+		  (expt 2 power))
+    (assert-error 'kernel::intexp-limit-error
+		  (expt 2 (- power)))
+    ;; But raising 0 or 1 to a power shouldn't signal anything, except
+    ;; the obvious division-by-zero.
+    (assert-eql 1 (expt 1 power))
+    (cond ((evenp power)
+	   (assert-eql 1 (expt -1 power))
+	   (assert-eql -1 (expt -1 (1+ power))))
+	  (t
+	   (assert-eql -1 (expt -1 power))
+	   (assert-eql 1 (expt -1 (1+ power)))))
+    (assert-eql 0 (expt 0 power))
+    (assert-error 'division-by-zero (expt 0 (- power)))))

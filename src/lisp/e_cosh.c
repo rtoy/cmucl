@@ -35,7 +35,7 @@
 #include "fdlibm.h"
 
 #ifdef __STDC__
-static const double one = 1.0, half=0.5, huge = 1.0e307;
+static const double one = 1.0, half=0.5;
 #else
 static double one = 1.0, half=0.5, huge = 1.0e307;
 #endif

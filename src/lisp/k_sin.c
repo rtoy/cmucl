@@ -67,8 +67,14 @@ S6  =  1.58969099521155010221e-10; /* 0x3DE5D93A, 0x5ACFD57C */
 
         ux.d = x;
 	ix = ux.i[HIWORD]&0x7fffffff;	/* high word of x */
-	if(ix<0x3e400000)			/* |x| < 2**-27 */
-	   {if((int)x==0) return x;}		/* generate inexact */
+	if(ix<0x3e400000) {			/* |x| < 2**-27 */
+            /* return x inexact except 0 */
+            if (x != 0) {
+                fdlibm_setexception(x, FDLIBM_INEXACT);
+            }
+
+            return x;
+        }
 	z	=  x*x;
 	v	=  z*x;
 	r	=  S2+z*(S3+z*(S4+z*(S5+z*S6)));

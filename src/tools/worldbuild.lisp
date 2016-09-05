@@ -131,9 +131,7 @@
     "target:code/alieneval"
     "target:code/c-call"
     "target:code/sap"
-    ,@(if (c:backend-featurep :glibc2)
-	  '("target:code/unix-glibc2")
-	  '("target:code/unix"))
+    "target:code/unix"
     ,@(when (c:backend-featurep :mach)
 	'("target:code/mach"
 	  "target:code/mach-os"))

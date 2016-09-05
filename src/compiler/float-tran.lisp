@@ -76,7 +76,7 @@
 		  '(%double-double-float n))
 		 ((csubtypep tspec (specifier-type 'double-float))	
 		  '(%double-float n))	
-		 ((csubtypep tspec (specifier-type 'float))
+		 ((csubtypep tspec (specifier-type 'single-float))
 		  '(%single-float n))
 		 #+double-double
 		 ((csubtypep tspec (specifier-type '(complex double-double-float)))

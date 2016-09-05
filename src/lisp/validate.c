@@ -18,6 +18,7 @@
 
 #ifdef sparc
 extern void make_holes(void);
+extern void make_stack_holes(void);
 #endif
 
 static void
@@ -92,20 +93,10 @@ validate(void)
     */
 #endif
 
-    /* Control Stack */
-    control_stack = (lispobj *) CONTROL_STACK_START;
-#if (defined(i386) || defined(__x86_64) || defined(__arm__))
-    control_stack_end = (lispobj *) (CONTROL_STACK_START + control_stack_size);
-#endif
-    ensure_space(control_stack, control_stack_size);
-
 #ifdef SIGNAL_STACK_START
     ensure_space((lispobj *) SIGNAL_STACK_START, SIGNAL_STACK_SIZE);
 #endif
 
-    /* Binding Stack */
-    binding_stack = (lispobj *) BINDING_STACK_START;
-    ensure_space(binding_stack, binding_stack_size);
 #ifdef LINKAGE_TABLE
     ensure_space((lispobj *) FOREIGN_LINKAGE_SPACE_START,
 		 FOREIGN_LINKAGE_SPACE_SIZE);
@@ -116,6 +107,40 @@ validate(void)
 
 #ifdef PRINTNOISE
     printf(" done.\n");
+#endif
+
+}
+
+void
+validate_stacks()
+{
+    /* Control Stack */
+#ifdef CONTROL_STACK_START
+    /* Map the control stack at a fixed location */
+    control_stack = (lispobj *) CONTROL_STACK_START;
+#if (defined(i386) || defined(__x86_64))
+    control_stack_end = (lispobj *) (CONTROL_STACK_START + control_stack_size);
+#endif
+    ensure_space(control_stack, control_stack_size);
+#else
+    /* Map the conrol stack wherever we have space */
+    control_stack = (lispobj*) os_validate(NULL, control_stack_size);
+
+#if (defined(i386) || defined(__x86_64))
+    control_stack_end = (void*)control_stack + control_stack_size;
+#endif
+#endif
+
+    /* Binding Stack */
+#ifdef BINDING_STACK_START
+    binding_stack = (lispobj *) BINDING_STACK_START;
+    ensure_space(binding_stack, binding_stack_size);
+#else
+    /* Map the binding stack wherever we have space */
+    binding_stack = (lispobj*) os_validate(NULL, binding_stack_size);
+#endif
+#ifdef sparc
+    make_stack_holes();
 #endif
 
 #ifdef RED_ZONE_HIT

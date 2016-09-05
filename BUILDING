@@ -55,7 +55,7 @@ Setting up a build environment
 
     or, if you want to use the git sources directly:
 
-    git clone git://common-lisp.net/projects/cmucl/cmucl.git
+    git clone https://gitlab.common-lisp.net/cmucl/cmucl.git
 
     Whatever you do, the sources must be in a directory named src
     inside the base directory.  Since the build tools keep all
@@ -333,6 +333,18 @@ This script will build auxiliary libraries packaged with CMU CL,
 including CLX, CMUCL/Motif, the Motif debugger, inspector, and control
 panel, and the Hemlock editor.  It will use the lisp executable and
 core of the given target.
+
+Note: To build with Motif (clm), you need to have the Motif libraries
+available and headers available to build motifd, the clm Motif server.
+OpenMotif is known to work.
+
+You may need to adjust the include paths and library paths in
+src/motif/server/Config.* to match where Motif is installed if the
+paths therein are incorrect.
+
+Unless you intend to use clm and motifd, you can safely ignore the
+build failure.  Everything else will have been compiled correctly; you
+just can't use clm.
 
 * bin/make-dist.sh [-bg] [-G group] [-O owner] target-directory version arch os
 

@@ -92,13 +92,9 @@ case $uname_s in
 	    # Extra stuff.  For some reason one __LINKEDIT segment is
 	    # mapped just past the dynamic space.  This messes things
 	    # up, so we move it to another address.  This seems to be
-	    # free, at least on 10.5.
-
-	    # Also specify the min version. (See Config.x86_darwin for
-	    # the desired version.)  This gets rid of a PIE warning
-	    # when creating the executable on 10.8.  (See ticket:112.)
-
-	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -rdynamic -mmacosx-version-min=10.5"
+	    # free, at least on 10.5.  -no_pie is to get rid of the
+	    # linker warning about PIE.
+	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -rdynamic -Wl,-no_pie"
 	    OS_LIBS=
 	    ;;
 	powerpc)
@@ -106,7 +102,7 @@ case $uname_s in
 	    # just after the dynamic space which messes things up, so
 	    # we move it to a diffferent address. The address below
 	    # appears to be free.
-	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -mmacosx-version-min=10.4 -static-libgcc"
+	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -static-libgcc"
 	    OS_LIBS="-lSystem -lc -lm"
 	    ;;
       esac
@@ -139,5 +135,5 @@ trap 'rm -f $OUTDIR/$OPT_IFADDR $OUTDIR/CORRO.o $OUTDIR/CORSTA.o $OUTDIR/CORDYN.
 
 (cd $OUTDIR
 echo "long initial_function_addr = $IFADDR;" > $OPT_IFADDR
-$CCOMPILER -m32 -o $OUTNAME $OPT_IFADDR $OPT_ARCHIVE $OPT_CORE $RO_ADDR $STATIC_ADDR $DYN_ADDR $OPT_EXTRA $OS_LIBS -lm)
+$CCOMPILER -m32 -o $OUTNAME $OPT_IFADDR $OPT_ARCHIVE $CMUCLLIB/exec-final.o $OPT_CORE $RO_ADDR $STATIC_ADDR $DYN_ADDR $OPT_EXTRA $OS_LIBS -lm)
 

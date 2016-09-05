@@ -36,7 +36,8 @@
   might not be.")
 
 (defvar *environment-list* nil
-  "An alist mapping environment variables (as keywords) to either values")
+  "An alist mapping each environment variable (as a keyword) to its
+  value.")
 
 (defvar *environment-list-initialized* nil
   "Non-NIL if environment-init has been called")
@@ -254,8 +255,7 @@
                        *compile-print* nil
                        *compile-progress* nil
                        *require-verbose* nil
-                       *gc-verbose* nil
-                       *herald-items* nil))
+                       *gc-verbose* nil))
 	       (when (and process-command-line
 			  (or (find-switch "help")
 			      (find-switch "-help")))
@@ -280,12 +280,15 @@
 			     :if-does-not-exist nil)
 		       (or (load "home:init" :if-does-not-exist nil)
 			   (load "home:.cmucl-init"
-				 :if-does-not-exist nil))))))
-	     (when process-command-line
-	       (ext::invoke-switch-demons *command-line-switches*
-					  *command-switch-demons*))
-	     (when print-herald
-	       (print-herald))))
+				 :if-does-not-exist nil)))))
+	       (when process-command-line
+		 (ext::invoke-switch-demons *command-line-switches*
+					    *command-switch-demons*))
+	       (when (and print-herald
+			  (not (and process-command-line
+				    (find-switch "quiet"))))
+		 ;; Don't print the herald if -quiet is given.
+		 (print-herald)))))
 	 (funcall init-function))
        (restart-lisp ()
 	 (unix:unix-exit

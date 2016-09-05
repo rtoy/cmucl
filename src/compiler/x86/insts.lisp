@@ -859,6 +859,18 @@
   ;; optional fields
   (imm))
 
+;; Double shift instructions. Like ext-reg-reg/mem but there's no
+;; width field.
+(disassem:define-instruction-format (ext-reg-reg/mem-shift 24)
+  (prefix  :field (byte 8 0)  :value #b00001111)
+  (op      :field (byte 8 8))
+  (reg/mem :fields (list (byte 2 22) (byte 3 16))
+	                      :type 'reg/mem)
+  (reg     :field (byte 3 19) :type 'reg)
+  ;; optional fields
+  (imm))
+							   
+
 ;;; ----------------------------------------------------------------
 ;;; this section added by jrd, for fp instructions.  
 
@@ -1535,24 +1547,22 @@
 (defun emit-double-shift (segment opcode dst src amt)
   (let ((size (matching-operand-size dst src)))
     (when (eq size :byte)
-      (error "Double shifts can only be used with words."))
+      (error "Double shifts cannot be used with byte registers."))
     (maybe-emit-operand-size-prefix segment size)
     (emit-byte segment #b00001111)
     (emit-byte segment (dpb opcode (byte 1 3)
 			    (if (eq amt :cl) #b10100101 #b10100100)))
-    #+nil
-    (emit-ea segment dst src)
-    (emit-ea segment dst (reg-tn-encoding src))	; pw tries this
+    (emit-ea segment dst (reg-tn-encoding src))
     (unless (eq amt :cl)
       (emit-byte segment amt))))
 
 (eval-when (compile eval)
   (defun double-shift-inst-printer-list (op)
-    `(#+nil
-      (ext-reg-reg/mem-imm ((op ,(logior op #b100))
-			    (imm nil :type signed-imm-byte)))
-      (ext-reg-reg/mem ((op ,(logior op #b101)))
-	 (:name :tab reg/mem ", " 'cl)))))
+    `((ext-reg-reg/mem-shift ((op ,(logior op #b100))
+			      (imm nil :type signed-imm-byte))
+         (:name :tab reg/mem ", " reg ", " imm))
+      (ext-reg-reg/mem-shift ((op ,(logior op #b101)))
+	 (:name :tab reg/mem ", " reg ", " 'cl)))))
 
 (define-instruction shld (segment dst src amt)
   (:declare (type (or (member :cl) (mod 32)) amt))
@@ -3136,6 +3146,8 @@
   ;; logical
   (define-regular-sse-inst andpd    #x66 #x54 t)
   (define-regular-sse-inst andps    nil  #x54)
+  (define-regular-sse-inst orpd     #x66 #x56 t)
+  (define-regular-sse-inst orps     nil  #x56)
   (define-regular-sse-inst xorpd    #x66 #x57 t)
   (define-regular-sse-inst xorps    nil  #x57)
   ;; comparison

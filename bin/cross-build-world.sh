@@ -1,7 +1,7 @@
 #!/bin/sh
 
 usage() {
-    echo "cross-build-world.sh [-crl] [-B file] [-G Gnumake] target-dir cross-dir cross-compiler-script [build-binary [flags]]"
+    echo "cross-build-world.sh [-crlX] [-B file] [-G Gnumake] target-dir cross-dir cross-compiler-script [build-binary [flags]]"
     echo "  -c      Clean target and cross directories before compiling"
     echo "  -i      Enable interactive mode (output to screen instead of log file)."
     echo "  -r      Recompile lisp runtime"
