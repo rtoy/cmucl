@@ -51,6 +51,8 @@
 #define CONTROL_STACK_SIZE      (32*MB)
 #define CONTROL_STACK_END       (CONTROL_STACK_START + control_stack_size)
 
+#define SIGNAL_STACK_SIZE	SIGSTKSZ
+
 /* The default dynamic space to allocate */
 #define DEFAULT_DYNAMIC_SPACE_SIZE  (128*MB)
 
