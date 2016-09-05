@@ -100,6 +100,20 @@ New in this release:
     * Issue #3: Shadowing compiler macro functions.
     * Issue #7: Local functions and get-setf-expansions
     * Issue #8: Constants and top-level code
+    * Issue #10: (setf aref) on (simple-array (unsigned-byte 4) (*))
+      with constant index is incorrect.
+    * Issue #11: Merge unix-glibc2.lisp into unix.lisp
+    * Issue #14: (asinh 0d0) signals inexact on linux
+    * Issue #16: pathname-match-p doesn't handle search lists
+    * Issue #18: Fix docstring for *environment-list*
+    * Issue #18: Add better description to :env option for run-program
+    * Issue #19: Make min version for OSX be 10.6
+    * Issue #22: Incorrect coercion to float
+    * Issue #12: unable to build master/$HEAD with 2015-12 darwin snapshot
+    * Issue #25: Issue with ext:run-program and string streams
+      (related to character sizes?)
+    * Issue #27: Regression: ASDF test failures
+    * Issue #28: Recursive function definition during cross-compile
 
   * Other changes:
     * Cross compile scripts from x86 to sparc and ppc updated to work
