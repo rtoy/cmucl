@@ -89,6 +89,11 @@ New in this release:
     * Ticket #18 fixed: better description of :ENV option for
       RUN-PROGRAM.
     * Ticket #22 fixed: Incorrect coercion to float.
+    * Ticket #25 fixed: Issue with ext:run-program and string streams
+      (related to character sizes?)
+    * Ticket #27 fixed: Regression: ASDF test failures
+    * Ticket #28 fixed: Recursive function definition during
+      cross-compile
 
   * Other changes:
 
