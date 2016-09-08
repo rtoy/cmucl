@@ -302,9 +302,11 @@
 
 (define-test issue.30
     (:tag :issues)
-  (let* ((test-file #p"resources/issue-30.lisp")
+  (let* ((test-file #.(merge-pathnames #p"resources/issue-30.lisp" cl:*load-pathname*))
 	 (fasl-file (compile-file-pathname test-file)))
     ;; Compiling and loading the test file should succeed without
     ;; errors.
-    (assert-equal (list fasl-file nil nil)
-		  (compile-file test-file :load t))))
+    (assert-true (pathnamep test-file))
+    (assert-true (pathnamep fasl-file))
+    (assert-equalp (list fasl-file nil nil)
+		  (multiple-value-list (compile-file test-file :load t)))))
