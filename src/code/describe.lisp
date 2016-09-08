@@ -313,11 +313,12 @@
   (let ((info (kernel:%code-debug-info code-obj)))
     (when info
       (let ((sources (c::debug-info-source info)))
-	(format t (intl:gettext "~&On ~A it was compiled from:")
-		(format-universal-time nil
-				       (c::debug-source-compiled
-					(first sources))
-				       :style :iso8601))
+	(when sources
+	  (format t (intl:gettext "~&On ~A it was compiled from:")
+		  (format-universal-time nil
+					 (c::debug-source-compiled
+					  (first sources))
+					 :style :iso8601)))
 	(dolist (source sources)
 	  (let ((name (c::debug-source-name source)))
 	    (ecase (c::debug-source-from source)
