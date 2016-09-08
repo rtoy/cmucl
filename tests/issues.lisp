@@ -298,3 +298,13 @@
 	(assert-eql (length in-string) (length out-string))
 	(assert-equal in-string out-string)))))
 
+
+
+(define-test issue.30
+    (:tag :issues)
+  (let* ((test-file #p"resources/issue-30.lisp")
+	 (fasl-file (compile-file-pathname test-file)))
+    ;; Compiling and loading the test file should succeed without
+    ;; errors.
+    (assert-equal (list fasl-file nil nil)
+		  (compile-file test-file :load t))))
