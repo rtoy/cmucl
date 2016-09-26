@@ -310,3 +310,8 @@
     (assert-true (pathnamep fasl-file))
     (assert-equalp (list fasl-file nil nil)
 		  (multiple-value-list (compile-file test-file :load t)))))
+
+(define-test issue.24
+    (:tag :issues)
+  (let* ((test-file #.(merge-pathnames #p"resources/issue-24.lisp" cl:*load-pathname*)))
+    (assert-true (compile-file test-file :load t))))
