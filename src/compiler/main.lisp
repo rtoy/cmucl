@@ -2041,11 +2041,7 @@
 		     ((or cons eval:interpreted-function)
 		      `#',(get-lambda-to-compile definition))
 		     (function
-		      (multiple-value-bind (exp lexenv)
-			  (function-lambda-expression definition)
-			(if (and exp (not lexenv))
-			    `#',exp
-			    definition)))))
+		      definition)))
 	     (*source-info* (make-lisp-source-info form))
 	     (*top-level-lambdas* ())
 	     (*converting-for-interpreter* nil)
