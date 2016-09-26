@@ -315,3 +315,9 @@
     (:tag :issues)
   (let* ((test-file #.(merge-pathnames #p"resources/issue-24.lisp" cl:*load-pathname*)))
     (assert-true (compile-file test-file :load t))))
+
+(define-test issue.32
+    (:tag :issues)
+  (assert-error 'kernel:simple-program-error
+		(ext:run-program "cat" nil
+				 :before-execve t)))
