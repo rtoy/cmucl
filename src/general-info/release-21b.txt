@@ -48,7 +48,7 @@ New in this release:
       WITH-FLOAT-TRAPS-MASKED.
     * (EXPT 0 power) doesn't throw INTEXP-LIMIT-ERROR anymore for any
       integer value of power.
-    * Starting cmucl with "-dyanmic-space-size 0" means using the
+    * Starting cmucl with "-dynamic-space-size 0" means using the
       maximum possible heap size for the platform.
     * More descriptive docstring for
       * *environment-list*
@@ -56,16 +56,21 @@ New in this release:
     * Maximum dynamic-space-size on Linux reduced to 1530 MB because
       that's the largest available space on 32-bit Ubuntu 11.10.
     * For linux, darwin, and solaris/sparc, the binding stack and
-      control stack are now mapped into memory whereever the OS wishes
+      control stack are now mapped into memory wherever the OS wishes
       to place them instead of being mapped into a fixed location.
       This is indicated by new feature :relocatable-stacks.
 
   * ANSI compliance fixes:
     * PATHNAME-MATCH-P did not accept search-lists.
+    * (compile 'foo) returns the compiled function if foo is already
+      compiled. (See Ticket #24).  This is a change in behavior for
+      developers where foo would be recompiled if the source was
+      available.  Developers might want to investigate uncompile
+      combined with compile to get the old behavior back.
 
-  * Bugfixes:
+  * Bug fixes:
     * Linux was missing unix-setitimer which prevented saving cores.
-    * Generate inxact exceptions more carefully.
+    * Generate inexact exceptions more carefully.
     * Fix FP issue when building with Xcode 7.2 (and newer versions of
       clang).  (See ticket #12.)
     * Cleanups in handling floating-point exceptions.  See Tickets #15
@@ -94,8 +99,13 @@ New in this release:
     * Ticket #27 fixed: Regression: ASDF test failures
     * Ticket #28 fixed: Recursive function definition during
       cross-compile
+    * Ticket #30 fixed: Compilation of (describe 'foo)
+    * Ticket #31 fixed: (compile #'foo) fails
+    * Ticket #24 fixed: Compilation of (compile 'foo)
+    * Ticket #32 fixed: doc fix: ext:run-program has no before-execve option
 
   * Other changes:
+    * Update user manual.
 
   * Improvements to the PCL implementation of CLOS:
 
