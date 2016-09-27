@@ -1099,7 +1099,8 @@ It is possible to run programs from Lisp by using the following function.
       \morekeys{\kwd{if-input-does-not-exist}}
       \yetmorekeys{\kwd{output} \kwd{if-output-exists}}
       \yetmorekeys{\kwd{error} \kwd{if-error-exists}}
-      \yetmorekeys{\kwd{status-hook}}}}
+      \yetmorekeys{\kwd{status-hook} \kwd{external-format}}
+      \yetmorekeys{\kwd{element-type}}}}
      
   \code{run-program} runs \var{program} in a child process.
   \var{Program} should be a pathname or string naming the program.
@@ -1154,6 +1155,11 @@ It is possible to run programs from Lisp by using the following function.
     already contains all the input for the process.  In this case
     \code{run-program} reads all the input from this stream before
     returning, so this cannot be used to interact with the process.
+    If \kwd{input} is a string stream, it is up to the caller to call
+    \code{string-encode} or other function to convert the string to
+    the appropriate encoding.  In either case, the least significant 8
+    bits of the \code{char-code} of each \code{character} is
+    sent to the program.
     
   \item[\kwd{if-input-does-not-exist}] This specifies what to do if
     the input file does not exist.  The following values are valid:
@@ -1172,7 +1178,10 @@ It is possible to run programs from Lisp by using the following function.
     \code{process-output} slot contains an input stream from which you
     can read the program's output.  \kwd{output} can also be a stream
     in which case all output from the process is written to this
-    stream. 
+    stream.  If \kwd{output} is a string-stream, each octet read from
+    the program is converted to a character using \code{code-char}.
+    It is up to the caller to convert this using the appropriate
+    external format to create the desired encoded string.
     
   \item[\kwd{if-output-exists}] This specifies what to do if the
     output file already exists.  The following values are valid:
@@ -1197,6 +1206,15 @@ It is possible to run programs from Lisp by using the following function.
     the process changes status.  This is especially useful when
     specifying \kwd{wait} as \nil.  The function takes the process as
     a required argument.
+
+  \item[\kwd{external-format}] This specifies the external format to
+    use for streams created for \code{run-program}.  This does not
+    apply to string streams passed in as \kwd{input} or \kwd{output}
+    parameters.
+
+  \item[\kwd{element-type}] If streams are created \code{run-program},
+    use this as the \kwd{element-type} for the stream.  Defaults to
+    \code{BASE-CHAR}. 
     
 %   \item[\kwd{before-execve}] This specifies a function to run in the
 %     child process before it becomes the program to run.  This is
