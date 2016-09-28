@@ -1125,7 +1125,7 @@ optionally keeping some of the most recent old versions."
       (let ((*ignore-wildcards* t))
 	(mapcar #'(lambda (name)
 		    (let ((name (if (and check-for-subdirs
-					 (eq (unix:unix-file-kind name)
+					 (eq (unix:unix-file-kind name (not follow-links))
 					     :directory))
 				    (concatenate 'string name "/")
 				    name)))
