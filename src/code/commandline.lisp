@@ -72,7 +72,7 @@
 
 ;;;; Processing the command strings.
 
-(defun process-command-strings ()
+(defun process-command-strings (init-command-switches-p)
   (setq *command-line-words* nil)
   (setq *command-line-switches* nil)
   (let ((cmd-strings lisp::lisp-command-line-list)
@@ -103,7 +103,7 @@
       (return-from process-command-strings nil))
     
     ;; Set command line switches.
-    ;; 
+    ;;
     (loop
       (unless str
 	(return (setf *command-line-switches*
@@ -119,14 +119,16 @@
 	(let (word-list)
 	  (loop
 	    (unless str
-	      (push (make-cmd-switch switch value (nreverse word-list))
-		    *command-line-switches*)
+	      (when init-command-switches-p
+		(push (make-cmd-switch switch value (nreverse word-list))
+		      *command-line-switches*))
 	      (return nil))
 	    
 	    (unless (zerop (length (the simple-string str)))
 	      (when (char= #\- (schar str 0))
-		(push (make-cmd-switch switch value (nreverse word-list))
-		      *command-line-switches*)
+		(when init-command-switches-p
+		  (push (make-cmd-switch switch value (nreverse word-list))
+			*command-line-switches*))
 		(when (and (= (length str) 2)
 			   (char= #\- (schar str 1)))
 		  ;; Gather up everything after --, and exit.
@@ -134,7 +136,7 @@
 		  (setf str nil))
 		(return nil))
 	      (push str word-list))
-	    (setq str (pop cmd-strings))))))))
+	    (setq str (pop cmd-strings)))))))))
 
 (defun get-command-line-switch (sname)
   "Accepts the name of a switch as a string and returns the value of
