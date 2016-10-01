@@ -417,7 +417,6 @@ os_support_sse2()
     int support_sse2;
     size_t len;
 
-    len = sizeof(size_t);
     if (sysctlbyname("machdep.sse2", &support_sse2, &len,
 		     NULL, 0) == 0 && support_sse2 != 0)
 	return TRUE;
