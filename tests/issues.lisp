@@ -12,6 +12,12 @@
   (declare (ignore arg))
   form)
 
+(defparameter *test-path*
+  (merge-pathnames (make-pathname :name :unspecific :type :unspecific
+                                  :version :unspecific)
+                   *load-truename*)
+  "Directory for temporary test files.")
+
 (define-test issue.1.a
     (:tag :issues)
   (assert-equal
@@ -321,3 +327,23 @@
   (assert-error 'kernel:simple-program-error
 		(ext:run-program "cat" nil
 				 :before-execve t)))
+
+(define-test mr.15
+    (:tag :issues)
+  (let (directories files)
+    (dolist (entry (directory (merge-pathnames "resources/mr.15/*.*" *test-path*)
+                              :check-for-subdirs t
+                              :follow-links nil
+                              :truenamep nil))
+      (let ((filename (pathname-name entry))
+            (directory (first (last (pathname-directory entry)))))
+        (if filename
+            (push filename files)
+            (push directory directories))))
+    (assert (null (set-difference files
+                                  '("file" "link-to-dir"
+                                    "link-to-dir-in-dir" "link-to-file")
+                                  :test #'string-equal)))
+    (assert (null (set-difference directories
+                                  '(".dir" "dir")
+                                  :test #'string-equal)))))
