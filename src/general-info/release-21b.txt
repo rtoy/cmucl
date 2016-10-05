@@ -1,4 +1,4 @@
-========================== C M U C L  21 a =============================
+========================== C M U C L  21 b =============================
 
 The CMUCL project is pleased to announce the release of CMUCL 21b.
 This is a major release which contains numerous enhancements and
