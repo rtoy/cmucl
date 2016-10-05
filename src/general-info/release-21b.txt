@@ -75,6 +75,9 @@ New in this release:
       clang).  (See ticket #12.)
     * Cleanups in handling floating-point exceptions.  See Tickets #15
       and #16.
+    * DIRECTORY with :FOLLOW-LINKS T (and :TRUENAME NIL) will follow
+      directory links.  Previously, the directories that were links
+      weren't followed.
 
   * Trac Tickets:
 
