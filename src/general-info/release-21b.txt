@@ -59,6 +59,7 @@ New in this release:
       control stack are now mapped into memory wherever the OS wishes
       to place them instead of being mapped into a fixed location.
       This is indicated by new feature :relocatable-stacks.
+    * Building on NetBSD now requires version 7.0 or later.
 
   * ANSI compliance fixes:
     * PATHNAME-MATCH-P did not accept search-lists.
