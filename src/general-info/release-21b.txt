@@ -1,18 +1,19 @@
 ========================== C M U C L  21 b =============================
 
 The CMUCL project is pleased to announce the release of CMUCL 21b.
-This is a major release which contains numerous enhancements and
-bug fixes from the 21a release.
+This is a major release which contains numerous enhancements and bug
+fixes from the 21a release.
 
 CMUCL is a free, high performance implementation of the Common Lisp
 programming language which runs on most major Unix platforms. It
 mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
 sophisticated native code compiler; a powerful foreign function
 interface; an implementation of CLOS, the Common Lisp Object System,
-which includes multi-methods and a meta-object protocol; a source-level
-debugger and code profiler; and an Emacs-like editor implemented in
-Common Lisp. CMUCL is maintained by a team of volunteers collaborating
-over the Internet, and is mostly in the public domain.
+which includes multi-methods and a meta-object protocol; a
+source-level debugger and code profiler; and an Emacs-like editor
+implemented in Common Lisp. CMUCL is maintained by a team of
+volunteers collaborating over the Internet, and is mostly in the
+public domain.
 
 New in this release:
   * Known issues:
@@ -27,14 +28,14 @@ New in this release:
         either exec-init.o or exec-final.o.
       * If the linker fails to link an image, the exit code is
         returned to indicate failure.
-    * When printing the process structure (from run-program), include
+    * When printing the process structure (from RUN-PROGRAM), include
       the exit code to make it easier to see if the the process exited
       cleanly or not.  The printed representation is also changed
-      slightly to use pprint-unreadable-object.
+      slightly to use PPRINT-UNREADABLE-OBJECT.
     * Executable images on OSX no longer support running on other
       versions of the OS.  Previously, -mmacosx-version-min=10.5 was
       used to specify the executable would run on OSX versions >=
-      10.5.  This, however, requires the 10.5DK be available.  Thus,
+      10.5.  This, however, requires the 10.5 SDK be available.  Thus,
       no longer require that.
     * Disassembly of bytes and words now use .BYTE and .WORD instead
       of BYTE and WORD.
@@ -46,29 +47,29 @@ New in this release:
       WITH-FLOAT-TRAPS-MASKED.
     * (EXPT 0 power) doesn't throw INTEXP-LIMIT-ERROR anymore for any
       integer value of power.
-    * Starting cmucl with "-dynamic-space-size 0" means using the
+    * Starting CMUCL with "-dynamic-space-size 0" means using the
       maximum possible heap size for the platform.
     * More descriptive docstring for
-      * *environment-list*
-      * :env option for run-program
+      * *ENVIRONMENT-LIST*
+      * :ENV option for RUN-PROGRAM
     * Maximum dynamic-space-size on Linux reduced to 1530 MB because
       that's the largest available space on 32-bit Ubuntu 11.10.
     * For linux, darwin, and solaris/sparc, the binding stack and
       control stack are now mapped into memory wherever the OS wishes
       to place them instead of being mapped into a fixed location.
-      This is indicated by new feature :relocatable-stacks.
+      This is indicated by new feature :RELOCATABLE-STACKS.
     * Building on NetBSD now requires version 7.0 or later.
 
   * ANSI compliance fixes:
     * PATHNAME-MATCH-P did not accept search-lists.
-    * (compile 'foo) returns the compiled function if foo is already
+    * (COMPILE 'FOO) returns the compiled function if FOO is already
       compiled. (See Ticket #24).  This is a change in behavior for
       developers where foo would be recompiled if the source was
-      available.  Developers might want to investigate uncompile
-      combined with compile to get the old behavior back.
+      available.  Developers might want to investigate UNCOMPILE
+      combined with COMPILE to get the old behavior back.
 
   * Bug fixes:
-    * Linux was missing unix-setitimer which prevented saving cores.
+    * Linux was missing UNIX-SETITIMER which prevented saving cores.
     * Generate inexact exceptions more carefully.
     * Fix FP issue when building with Xcode 7.2 (and newer versions of
       clang).  (See ticket #12.)
@@ -96,15 +97,15 @@ New in this release:
     * Ticket #18 fixed: better description of :ENV option for
       RUN-PROGRAM.
     * Ticket #22 fixed: Incorrect coercion to float.
-    * Ticket #25 fixed: Issue with ext:run-program and string streams
+    * Ticket #25 fixed: Issue with EXT:RUN-PROGRAM and string streams
       (related to character sizes?)
     * Ticket #27 fixed: Regression: ASDF test failures
     * Ticket #28 fixed: Recursive function definition during
       cross-compile
-    * Ticket #30 fixed: Compilation of (describe 'foo)
-    * Ticket #31 fixed: (compile #'foo) fails
-    * Ticket #24 fixed: Compilation of (compile 'foo)
-    * Ticket #32 fixed: doc fix: ext:run-program has no before-execve option
+    * Ticket #30 fixed: Compilation of (DESCRIBE 'FOO)
+    * Ticket #31 fixed: (COMPILE #'FOO) fails
+    * Ticket #24 fixed: Compilation of (COMPILE 'FOO)
+    * Ticket #32 fixed: doc fix: EXT:RUN-PROGRAM has no before-execve option
 
   * Other changes:
     * Update user manual.
@@ -115,7 +116,7 @@ New in this release:
 
 
 This release is not binary compatible with code compiled using CMUCL
-21a; you will need to recompile FASL files. 
+21a; you will need to recompile FASL files.
 
 See <URL:http://www.cmucl.org> or
 <URL:http://trac.common-lisp.net/cmucl> for download information,
