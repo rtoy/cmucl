@@ -119,8 +119,10 @@ This release is not binary compatible with code compiled using CMUCL
 21a; you will need to recompile FASL files.
 
 See <URL:http://www.cmucl.org> or
-<URL:http://trac.common-lisp.net/cmucl> for download information,
-guidelines on reporting bugs, and mailing list details.
+<URL:https://gitlab.common-lisp.net/cmucl/cmucl> for more information,
+See
+<URL:https://gitlab.common-lisp.net/cmucl/cmucl/wikis/GettingCmucl>
+for obtaining CMUCL, including sources and binaries..
 
 
 We hope you enjoy using this release of CMUCL!
