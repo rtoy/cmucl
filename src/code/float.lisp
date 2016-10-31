@@ -1047,9 +1047,15 @@
 		(number-dispatch ((x real))
 		  (((foreach single-float double-float
 			     #+long-float long-float
-			     #+double-double double-double-float
 			     fixnum))
 		   (coerce x ',type))
+		  #+double-double
+		  ((double-double-float)
+		   ;; Convert the double-double to a double before
+		   ;; coercing to the appropriate type.
+		   (coerce (+ (double-double-hi x)
+			      (double-double-lo x))
+			   ',type))
 		  ((bignum)
 		   (bignum-to-float x ',type))
 		  ((ratio)

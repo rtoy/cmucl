@@ -41,3 +41,35 @@
   
   ;; Tests where both args are search-lists.
   (assert-true "foo:foo.lisp" "bar:*"))
+
+;; Verify PATHNAME-MATCH-P works with logical pathnames.  (Issue 27)
+;; This test modeled after a test from asdf
+(defun setup-logical-host ()
+  (let ((root *default-pathname-defaults*)
+	(bin-type (pathname-type (compile-file-pathname "foo.lisp"))))
+    (setf (logical-pathname-translations "ASDFTEST")
+	  `((,(format nil "**;*.~a" bin-type)
+	      ,(merge-pathnames (make-pathname :directory '(:relative :wild-inferiors)
+					       :name :wild :type bin-type :version nil)))
+	    (,(format nil "**;*.~a.*" bin-type)
+	      ,(merge-pathnames (make-pathname :directory '(:relative "asdf-bin" :wild-inferiors)
+					       :name :wild :type bin-type
+					       :defaults root)))
+	    ("**;*.*.*"
+	     ,(merge-pathnames (make-pathname :directory '(:relative "asdf-src" :wild-inferiors)
+					      :name :wild :type :wild :version :wild)))
+	    ("**;*.*"
+	     ,(merge-pathnames (make-pathname :directory '(:relative "asdf-src" :wild-inferiors)
+					      :name :wild :type :wild :version nil)))
+	    ("**;*"
+	     ,(merge-pathnames (make-pathname :directory '(:relative "asdf-src" :wild-inferiors)
+					      :name :wild :type nil :version nil)))))))
+(setup-logical-host)
+
+(define-test pathname-match-p.logical-pathname
+  (assert-true (pathname-match-p
+		(make-pathname :host "ASDFTEST"
+			       :directory '(:absolute "system2" "module4")
+			       :name nil :type nil)
+		(parse-namestring "ASDFTEST:system2;module4;"))))
+  
