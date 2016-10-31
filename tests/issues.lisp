@@ -12,6 +12,12 @@
   (declare (ignore arg))
   form)
 
+(defparameter *test-path*
+  (merge-pathnames (make-pathname :name :unspecific :type :unspecific
+                                  :version :unspecific)
+                   *load-truename*)
+  "Directory for temporary test files.")
+
 (define-test issue.1.a
     (:tag :issues)
   (assert-equal
@@ -210,3 +216,134 @@
     (assert-eql 3d0 (funcall tester 3d0))
     (assert-eql 4w0 (funcall tester 4w0))))
     
+(define-test issue.25a
+    (:tag :issues)
+  ;; The original test from issue 25, modified slightly for lisp-unit
+  ;; testing.
+  (let* ((in-string (format nil "A line.~%And another.~%")))
+    (with-output-to-string (out-stream nil)
+      (with-input-from-string (in-stream in-string)
+	(ext:run-program "cat" nil
+			 :wait t
+			 :input in-stream
+			 :output out-stream))
+      (let ((out-string (get-output-stream-string out-stream)))
+	(assert-eql (length in-string) (length out-string))
+	(assert-equal in-string out-string)))))
+
+(define-test issue.25b
+    (:tag :issues)
+  ;; Modified test to verify that we only write the low 8-bits of each
+  ;; string character to run-program.
+  (let* ((in-string (concatenate 'string '(#\greek_small_letter_alpha
+					   #\greek_small_letter_beta)))
+	 (expected (map 'string #'(lambda (c)
+				    (code-char (ldb (byte 8 0) (char-code c))))
+			in-string)))
+    (with-output-to-string (out-stream nil)
+      (with-input-from-string (in-stream in-string)
+	(ext:run-program "cat" nil
+			 :wait t
+			 :input in-stream
+			 :output out-stream))
+      (let ((out-string (get-output-stream-string out-stream)))
+	(assert-eql (length out-string) (length out-string))
+	;; For comparison, convert the strings to codes so failures are easier to read
+	(assert-equal (map 'list #'char-code out-string)
+		      (map 'list #'char-code expected))))))
+
+(define-test issue.25c
+    (:tag :issues)
+  ;; Modified test to verify that each octet read from run-program is
+  ;; read into the low 8-bits of each character of the resulting
+  ;; string.
+  (let* ((in-string (concatenate 'string '(#\greek_small_letter_alpha
+					   #\greek_small_letter_beta)))
+	 (expected (stream:string-encode in-string :utf16-be))
+	 (path #p"issue25c.txt"))
+    (with-open-file (s path :direction :output :if-exists :supersede :external-format :utf16-be)
+      (write-string in-string s)
+      (force-output s)
+      (file-position s 0)
+      (with-open-file (s1 path :direction :input :element-type '(unsigned-byte 8))
+	(with-output-to-string (out-stream)
+	  (ext:run-program "cat" nil
+			   :wait t
+			   :input s1
+			   :output out-stream)
+	  (let ((out-string (get-output-stream-string out-stream)))
+	    (assert-equal (length out-string) (length expected))
+	    (assert-equal (map 'list #'char-code out-string)
+			  (map 'list #'char-code expected))))))))
+
+
+(define-test issue.25d
+    (:tag :issues)
+  ;; The original test from issue 25, but using non-ascii characters
+  ;; and using string-encode/decode to verify that the output and the
+  ;; input match.
+  (let* ((in-string (concatenate 'string '(#\greek_small_letter_alpha
+					   #\greek_small_letter_beta
+					   #\greek_small_letter_gamma
+					   #\greek_small_letter_delta
+					   #\greek_small_letter_epsilon
+					   #\greek_small_letter_zeta
+					   #\greek_small_letter_eta
+					   #\greek_small_letter_theta
+					   #\greek_small_letter_iota
+					   #\greek_small_letter_kappa
+					   #\greek_small_letter_lamda))))
+    (with-output-to-string (out-stream nil)
+      (with-input-from-string (in-stream (stream:string-encode in-string :utf8))
+	(ext:run-program "cat" nil
+			 :wait t
+			 :input in-stream
+			 :output out-stream))
+      (let ((out-string (stream:string-decode (get-output-stream-string out-stream)
+					      :utf8)))
+	(assert-eql (length in-string) (length out-string))
+	(assert-equal in-string out-string)))))
+
+
+
+(define-test issue.30
+    (:tag :issues)
+  (let* ((test-file #.(merge-pathnames #p"resources/issue-30.lisp" cl:*load-pathname*))
+	 (fasl-file (compile-file-pathname test-file)))
+    ;; Compiling and loading the test file should succeed without
+    ;; errors.
+    (assert-true (pathnamep test-file))
+    (assert-true (pathnamep fasl-file))
+    (assert-equalp (list fasl-file nil nil)
+		  (multiple-value-list (compile-file test-file :load t)))))
+
+(define-test issue.24
+    (:tag :issues)
+  (let* ((test-file #.(merge-pathnames #p"resources/issue-24.lisp" cl:*load-pathname*)))
+    (assert-true (compile-file test-file :load t))))
+
+(define-test issue.32
+    (:tag :issues)
+  (assert-error 'kernel:simple-program-error
+		(ext:run-program "cat" nil
+				 :before-execve t)))
+
+(define-test mr.15
+    (:tag :issues)
+  (let (directories files)
+    (dolist (entry (directory (merge-pathnames "resources/mr.15/*.*" *test-path*)
+                              :check-for-subdirs t
+                              :follow-links nil
+                              :truenamep nil))
+      (let ((filename (pathname-name entry))
+            (directory (first (last (pathname-directory entry)))))
+        (if filename
+            (push filename files)
+            (push directory directories))))
+    (assert (null (set-difference files
+                                  '("file" "link-to-dir"
+                                    "link-to-dir-in-dir" "link-to-file")
+                                  :test #'string-equal)))
+    (assert (null (set-difference directories
+                                  '(".dir" "dir")
+                                  :test #'string-equal)))))
