@@ -83,6 +83,9 @@ arch_do_displaced_inst(os_context_t *scp, unsigned long orig_inst)
 static void
 sigill_handler(HANDLER_ARGS)
 {
+    fprintf(stderr, "sigill: signal = %d, code = %p, context = %p\n",
+            signal, code, context);
+    
     os_context_t *os_context = context;
 
     if (CODE(code) == ILL_ILLOPC) {
