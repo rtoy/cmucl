@@ -66,11 +66,13 @@
 	  float-underflow-trap-bit float-overflow-trap-bit
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit
-	  float-invalid-op-1-byte))
-)
+	  float-invalid-op-1-byte
+	  float-invalid-op-2-byte
+	  float-exceptions-summary-byte))
 
 #+double-double
 (export '(double-double-float-digits))
+) ; eval-when
 
 
 	  
@@ -152,6 +154,10 @@
 ;; operation such as some software request, invalid square root, or
 ;; invalid integer convert.
 (defconstant float-invalid-op-2-byte (byte 3 8))
+;; FP exception summary bit. This is set if an FP instruction causes
+;; any of the FP exception bits to transition from 0 to 1 (meaning
+;; that exception occurred.)
+(defconstant float-exceptions-summary-byte (byte 1 31))
 (defconstant float-fast-bit (ash 1 2))	; Non-IEEE mode
 
 ); eval-when

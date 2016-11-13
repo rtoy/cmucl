@@ -10,7 +10,6 @@ usage ()
     echo ""
     echo "Build all variants of cmucl for a specific architecture."
     echo "This means build the unicode and non-unicode variants."
-    echo "For x86 architectures, the x87 and sse2 cores are also built."
     echo "This script basically automates calling build.sh for all the"
     echo "variants, using the most common options.  If there are special"
     echo "requirements, then you must use build.sh itself instead of this"
@@ -89,15 +88,13 @@ buildx86 ()
     if [ -n "$OLD8" ]; then
 	# Build non-unicode versions
 	set -x
-	$BINDIR/build.sh -f x87 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} ${GIT_FILE_COMMENT} -o "$OLD8"
-	$BINDIR/build.sh -f sse2 -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} ${GIT_FILE_COMMENT} -o "$OLD8"
+	$BINDIR/build.sh -b ${BASE}-8bit $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} ${GIT_FILE_COMMENT} -o "$OLD8"
 	set +x
     fi
     # Build the unicode versions
     if [ -n "$OLDLISP" ]; then
 	set -x
-	$BINDIR/build.sh -f x87 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} ${GIT_FILE_COMMENT} -o "$OLDLISP"
-	$BINDIR/build.sh -f sse2 -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} ${GIT_FILE_COMMENT} -o "$OLDLISP"
+	$BINDIR/build.sh -b ${BASE} $bootfiles ${VERSION:+-v "$VERSION"} -C "${CREATE_OPT}" ${UPDATE_TRANS} ${UPDATE_POT} ${RECOMPILEC} ${GIT_FILE_COMMENT} -o "$OLDLISP"
 	set +x
     fi
 }
@@ -123,7 +120,7 @@ buildsun4 ()
 
 case `uname -m` in
   i386*|x86*|i86pc) buildx86 ;;
-  sun*|"Power Mac*")
+  sun*|Power\ Mac*)
     # buildsun4 works for sparc and ppc.
     buildsun4 ;;
   *) echo "Unsupported architecture:  `uname -m`" ;;

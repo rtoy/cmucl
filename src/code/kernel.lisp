@@ -180,10 +180,10 @@
 #+long-float
 (defun long-float-low-bits (x) (long-float-low-bits x))
 
-#+(or sparc ppc)
+#+(or sparc ppc (and x86 sse2))
 (defun double-float-bits (x) (double-float-bits x))
 
-#-(or sparc ppc)
+#-(or sparc ppc (and x86 sse2))
 (defun double-float-bits (x)
   (values (double-float-high-bits x) (double-float-low-bits x)))
 

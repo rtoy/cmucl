@@ -1,10 +1,8 @@
 ========================== C M U C L  20 f =============================
 
-[In Progress]
-
 The CMUCL project is pleased to announce the release of CMUCL 20f.
 This is a major release which contains numerous enhancements and
-bug fixes from the 20c release.
+bug fixes from the 20e release.
 
 CMUCL is a free, high performance implementation of the Common Lisp
 programming language which runs on most major Unix platforms. It
@@ -19,19 +17,132 @@ over the Internet, and is mostly in the public domain.
 New in this release:
 
   * Known issues:
+    * Support for x87 has been dropped (effective with the 2014-05
+      snapshot). All further releases will require an x86 chip that
+      supports sse2.  SSE2 was introduced with the Pentium 4 in 2001.
 
   * Feature enhancements
- 
+    * Trig functions are significantly faster.
+    * Accuracy of trig functions improved. (Previously, they could be
+      off by one or two ulp.)
+    * RUN-PROGRAM accepts :ELEMENT-TYPE to allow specifying the
+      element type for streams that are created for RUN-PROGRAM.  (See
+      ticket:92)
+
   * Changes
+    * Update to ASDF 3.1.3.
     * When *PRINT-CASE* is :DOWNCASE, integers are printed with
       lowercase letters when needed.
+    * Micro-optimize KERNEL:DOUBLE-FLOAT-BITS for x86/sse2.
+    * Add micro-optimization for unary FTRUNCATE for x86/sse2.
+    * Compiler can derive the types of the results of DECODE-FLOAT.
+    * Main disassembly routines in the DISASSEMBLE package accept 
+      :BASE, :CASE, and :RADIX keyword arguments, like
+      DISASSEMBLE:DISASSEMBLE.
+    * Micro optimizations for sse2 to allow descriptor regs and stack
+      tns for many operations so that the operands can be in memory
+      instead of a register, thereby removing a register load
+      instruction.
+    * Support for darwin/ppc 10.5 and gcc 4.8.
+    * Micro-optimization:  (expt -1 power) just returns -1 or 1
+      without actually computing the power.
+    * Run-time checks for zero pages on newly allocated pages has been
+      disabled.  Lazy zeroing of the heap pages is the default
+      now. which can speed up GC and allocation.
+    * Add lisp-unit as a contrib.  Use (require :lisp-unit) to load
+      it.  Precompiled fasls are not included.
+    * CMUCL now uses fdlibm C functions to implement the special
+      functions. All platforms use this so they should produce
+      identical results everywhere.
+    * Consing for the trig functions is reduced now since we call out
+      to fdlibm instead of implementing them in Lisp.
+    * Source location information has been added for
+      DEFINE-CONDITION. (From Helmut Eller.)
+    * The lisp executable is now compiled to use SSE2 on x86 machines;
+      CMUCL will not run on chips without SSE2 anymore.
+    * (cosh 1000d0) signals an overflow error as it
+      should. Previously, it just incorrectly returned infinity.
+    * Deprecating FLOAT-TRAPPING-NAN-P in favor of
+      FLOAT-SIGNALING-NAN-P.  These kinds of numbers are called
+      signaling NaNs, not trapping NaNs.
+    * Changed the printer to print "Signaling" instead of "Trapping"
+      when printing a signaling NaN.
+    * Various issues with the switch to using fdlibm have been
+      fixed. The issues were mostly not signaling floating-point
+      exceptions in places where they were expected.
+    * Restore the x87 FPU support on Linux; these are required because
+      foreign functions and libraries can still use x87 even if cmucl
+      itself does not. This is not required on Darwin because x87 is
+      not used there.
+    * On the ppc port, handle FP exceptions a bit better by not
+      failing if cmucl is unable to interpret the instruction that
+      caused the exception.
+    * Micro-optimization for sparc in rounding a double-float to a
+      32-bit signed integer.
+    * The compiler can now derive the type of ROUND. (But more work is
+      needed.)
+    * Fix an issue with multi-processing destroy-process doesn't take
+      effect for a schedulable process because it has no run-reason
+      and/or arrest-reason.
 
   * ANSI compliance fixes:
+    * The values on the branch cuts for the inverse trig and
+      hyperbolic functions have been updated.  Instead of following
+      the text in the CLHS, the values are defined according to the
+      definitions in the formulas.  In particular (atanh x) for x real
+      and on the branch cut is now continuous with different
+      quadrants.  This differs from the description of the branch cut
+      for atanh in the CLHS.
+    * CLEAR-OUTPUT was not actually doing anything. Now, CLEAR-OUTPUT
+      will discard any buffered data that has not been written out
+      yet.
 
   * Bugfixes:
-
+    * Fix error in pi reduction on x87.  It was not noticed previously
+      because the returned values were not used optimally.
+    * Better error message for empty cond clauses.
+    * Fix serious error in the complex multiply vop for sparc.
+      Incorrect results were returned under some conditions when the
+      result TN was packed in the same location as one of the argument
+      TNs.
+    * The float constants for various limits are defined for
+      double-double floats such as
+      least-positive-double-double-float. 
+    * When reading very small float values, round to
+      least-positive-foo-float if possible.
+    * (log -0w0) and (log 0w0) returns values analogous to the
+      double-float versions.
+    * Fix bug in printing MOST-NEGATIVE-FIXNUM.
+    * For Gray streams, CLEAR-OUTPUT was calling STREAM-FORCE-OUTPUT
+      instead of STREAM-CLEAR-OUTPUT, so the output wasn't actually
+      cleared.
+    * In some situations KERNEL:DOUBLE-FLOAT-BITS on x86 would cause a
+      segfault. This has been fixed.
+    * For Linux, motifd is no longer a 64-bit app.
+    * (exp 1d0) now returns the correctly rounded value of
+      e. Previously, it was off by one bit.
+    * INTEGER-DECODE-FLOAT returns the correct values for denormal
+      doubles. As a side-effect of this fix, DECODE-FLOAT returns the
+      correct values for denormals, and SCALE-FLOAT scales denormals
+      correctly.
+    * EXT:UNIX-NAMESTRING no longer returns NIL if a directory does
+      not exist. This was a regression from at least 18a.
 
   * Trac Tickets:
+    * Ticket #90 fixed.
+    * Ticket #92 marked invalid..
+    * Ticket #87 fixed.
+    * Ticket #94 fixed.
+    * Ticket #93 fixed.
+    * Ticket #98 fixed.
+    * Ticket #104 fixed.
+    * Ticket #101, item 1 fixed.
+    * Ticket #105, fixed.
+    * Ticket #84 fixed on x86.
+    * Ticket #105 fixed.
+    * Ticket #101 fixed.
+    * Ticket #106 fixed.
+    * Ticket #100 fixed.
 
   * Other changes:
 

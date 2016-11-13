@@ -422,7 +422,7 @@ prepend_core_path(const char *lib, const char *corefile)
 extern int builtin_image_flag;
 extern long initial_function_addr;
 
-fpu_mode_t fpu_mode = AUTO;
+fpu_mode_t fpu_mode = SSE2;
 
 static const char*
 locate_core(const char* cmucllib, const char* core, const char* default_core)
@@ -465,12 +465,12 @@ main(int argc, const char *argv[], const char *envp[])
     const char *cmucllib = NULL;
     const char *unidata = NULL;
     
-    fpu_mode_t fpu_type = AUTO;
+    fpu_mode_t fpu_type = SSE2;
     boolean monitor;
     lispobj initial_function = 0;
 
     if (builtin_image_flag != 0) {
-#if defined(SOLARIS) || (defined(i386) && (defined(__linux__) || defined(DARWIN) || defined(__FreeBSD__) || defined(__NetBSD__)))
+#if defined(SOLARIS) || defined(DARWIN) || (defined(i386) && (defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)))
         initial_function = (lispobj) initial_function_addr;
 #else
         initial_function = (lispobj) & initial_function_addr;
@@ -622,7 +622,16 @@ main(int argc, const char *argv[], const char *envp[])
 		exit(1);
 	    }
 #ifndef sparc
-	    dynamic_space_size = atoi(str) * 1024 * 1024;
+	    dynamic_space_size = atoi(str);
+
+	    /*
+	     * A size of 0 means using the largest possible space
+	     */
+	    if (dynamic_space_size == 0) {
+		dynamic_space_size = DYNAMIC_SPACE_SIZE;
+	    } else {
+		dynamic_space_size *= 1024 * 1024;
+	    }
 #else
 	    {
 		int val;
@@ -646,7 +655,11 @@ main(int argc, const char *argv[], const char *envp[])
 			    "Note:  Rounding dynamic-space-size from %d MB to %d MB\n",
 			    val, dynamic_space_size);
 		}
-		dynamic_space_size *= 1024 * 1024;
+		if (dynamic_space_size == 0) {
+		    dynamic_space_size = DYNAMIC_SPACE_SIZE;
+		} else {
+                    dynamic_space_size *= 1024 * 1024;
+                }
 	    }
 #endif
 	    if (dynamic_space_size > DYNAMIC_SPACE_SIZE) {
@@ -662,32 +675,6 @@ main(int argc, const char *argv[], const char *envp[])
         } else if (strcmp(arg, "-unidata") == 0) {
           unidata = *++argptr;
         }
-#ifdef i386
-	else if (strcmp(arg, "-fpu") == 0) {
-	    const char *str;
-
-	    str = *++argptr;
-            if (str == NULL) {
-                fprintf(stderr, "-fpu must be followed by the FPU type:  auto, x87, sse2\n");
-                exit(1);
-            }
-
-            if (builtin_image_flag != 0) {
-                fprintf(stderr,
-                        "Warning:  -fpu cannot change the fpu mode of an executable image\n");
-            } else {
-                if (strcmp(str, "auto") == 0) {
-                    fpu_mode = AUTO;
-                } else if (strcmp(str, "x87") == 0) {
-                    fpu_mode = X87;
-                } else if (strcmp(str, "sse2") == 0) {
-                    fpu_mode = SSE2;
-                } else {
-                    fprintf(stderr, "Unknown fpu type: `%s'.  Using auto\n", str);
-                }
-            }
-        }
-#endif
     }
 
     default_core = arch_init(fpu_mode);
@@ -700,8 +687,16 @@ main(int argc, const char *argv[], const char *envp[])
     if (builtin_image_flag != 0)
 	map_core_sections(argv[0]);
 #endif
+
+    /*
+     * Validate the basic lisp spaces first like the heap and static
+     * and read-only spaces.  Do this so that the stacks (if thy're
+     * relocatable) don't get randomly allocated on top of our desired
+     * lisp spaces.
+     */
     validate();
     gc_init();
+    validate_stacks();
 
     /* This is the first use of malloc() and must come after the
      * static memory layout is mmapped to avoid conflicts with possible

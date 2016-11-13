@@ -136,7 +136,9 @@ save(char *filename, lispobj init_function, int sse2_mode)
     }
     printf("[Undoing binding stack... ");
     fflush(stdout);
-    unbind_to_here((lispobj *) BINDING_STACK_START);
+
+    unbind_to_here((lispobj *) binding_stack);
+
     SetSymbolValue(CURRENT_CATCH_BLOCK, 0);
     SetSymbolValue(CURRENT_UNWIND_PROTECT_BLOCK, 0);
     SetSymbolValue(EVAL_STACK_TOP, 0);
@@ -249,7 +251,9 @@ boolean
 save_executable(char *filename, lispobj init_function)
 {
     char *dir_name;
-
+    char *dir_copy;
+    int rc;
+    
 #if defined WANT_CGC
     volatile lispobj *func_ptr = &init_function;
     char sbuf[128];
@@ -271,11 +275,14 @@ save_executable(char *filename, lispobj init_function)
     if(SymbolValue(X86_CGC_ACTIVE_P) != NIL)
         SetSymbolValue(ALLOCATION_POINTER, DYNAMIC_0_SPACE_START);
 #endif
-    dir_name = dirname(strdup(filename));
+    dir_copy = strdup(filename);
+    dir_name = dirname(dir_copy);
 
     printf("[Undoing binding stack... ");
     fflush(stdout);
-    unbind_to_here((lispobj *)BINDING_STACK_START);
+
+    unbind_to_here((lispobj *)binding_stack);
+
     SetSymbolValue(CURRENT_CATCH_BLOCK, 0);
     SetSymbolValue(CURRENT_UNWIND_PROTECT_BLOCK, 0);
     SetSymbolValue(EVAL_STACK_TOP, 0);
@@ -355,8 +362,9 @@ save_executable(char *filename, lispobj init_function)
     
     printf("Linking executable...\n");
     fflush(stdout);
-    obj_run_linker(init_function, filename);
+    rc = obj_run_linker(init_function, filename);
     printf("done.\n");
-    exit(0);
+    free(dir_copy);
+    exit(rc);
 }
 #endif

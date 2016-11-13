@@ -63,7 +63,9 @@
                   nil error-stream
                   (file-position error-stream)))
        (format stream (intl:gettext "Reader error ~@[at ~D ~]on ~S:~%~?")
-	       (file-position error-stream) error-stream
+	       (and (open-stream-p error-stream)
+		    (file-position error-stream))
+	       error-stream
 	       (reader-error-format-control condition)
 	       (reader-error-format-arguments condition))))))
 
@@ -1824,17 +1826,31 @@ the end of the stream."
 (defun make-float-aux (number divisor float-format stream)
   (handler-case
       (with-float-traps-masked (:underflow)
-	(let ((result (coerce (/ number divisor) float-format)))
+	(let* ((ratio (/ number divisor))
+	       (result (coerce ratio float-format)))
 	  (when (and (zerop result) (not (zerop number)))
-	    ;; With underflow traps disabled, reading any number
-	    ;; smaller than least-positive-foo-float will return zero.
-	    ;; But we really want to indicate that we can't read it.
-	    ;; So if we converted the number to zero, but the number
-	    ;; wasn't actually zero, throw an error.
-	    (error _"Underflow"))
+	    ;; The number we've read is so small that it gets
+	    ;; converted to 0.0, but is not actually zero.  In this
+	    ;; case, we want to round such small numbers to
+	    ;; least-positive-foo-float.  If it's still too small, we
+	    ;; want to signal an error saying that we can't really
+	    ;; convert it because the exponent is too small.
+	    ;; See CLHS 2.3.1.1.
+	    (let ((float-limit (ecase float-format
+				 ((short-float single-float)
+				  least-positive-single-float)
+				 (double-float
+				  least-positive-double-float)
+				 #+double-double
+				 (double-double-float
+				  ext:least-positive-double-double-float))))
+	      (if (>= (* 2 ratio) float-limit)
+		  (setf result float-limit)
+		  (error _"Underflow"))))
 	  result))
     (error ()
-	   (%reader-error stream _"Floating-point number not representable"))))
+	   (%reader-error stream _"Number not representable as a ~S: ~S"
+			  float-format (/ number divisor)))))
 
 
 (defun make-ratio (stream)

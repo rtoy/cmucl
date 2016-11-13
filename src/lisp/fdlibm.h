@@ -10,6 +10,8 @@
  * ====================================================
  */
 
+#ifndef FDLIBM_H_
+#define FDLIBM_H_
 /* Sometimes it's necessary to define __LITTLE_ENDIAN explicitly
    but these catch some common cases. */
 
@@ -30,6 +32,7 @@ enum { HIWORD = 0, LOWORD = 1 };
  */
 extern double fabs(double);
 extern double floor(double);
+extern double sqrt(double);
 
 /* ieee style elementary functions */
 extern int    __ieee754_rem_pio2(double,double*);
@@ -41,3 +44,27 @@ extern double scalbn(double, int);
 
 /* fdlibm kernel function */
 extern int    __kernel_rem_pio2(double*,double*,int,int,int,const int*);
+
+extern double __kernel_sin(double x, double y, int iy);
+extern double __kernel_cos(double x, double y);
+extern double __kernel_tan(double x, double y, int iy);
+extern double fdlibm_sin(double x);
+extern double fdlibm_cos(double x);
+extern double fdlibm_tan(double x);
+extern double fdlibm_expm1(double x);
+extern double fdlibm_log1p(double x);
+extern double fdlibm_atan(double x);
+extern double __ieee754_exp(double x);
+extern double __ieee754_log(double x);
+
+enum FDLIBM_EXCEPTION {
+  FDLIBM_DIVIDE_BY_ZERO,
+  FDLIBM_UNDERFLOW,
+  FDLIBM_OVERFLOW,
+  FDLIBM_INVALID,
+  FDLIBM_INEXACT
+};
+
+extern double fdlibm_setexception(double x, enum FDLIBM_EXCEPTION);
+
+#endif

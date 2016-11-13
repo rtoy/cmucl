@@ -31,10 +31,17 @@
 (in-package :vm)
 (defun extern-alien-name (name)
   (declare (type simple-string name))
-  (concatenate 'string "_" name))
+  (concatenate 'simple-string "_" name))
+;; When compiling the compiler, vm:fixup-code-object and
+;; vm:sanctify-for-execution are undefined.  Import these to get rid
+;; of that error.
+(import 'old-vm::fixup-code-object)
+(import 'old-vm::sanctify-for-execution)
 (export 'extern-alien-name)
 (export 'fixup-code-object)
 (export 'sanctify-for-execution)
+
+(in-package :cl-user)
 
 ;;; Compile the new backend.
 (pushnew :bootstrap *features*)
@@ -118,6 +125,8 @@
 			       syms))))
   (frob OLD-VM:BYTE-BITS OLD-VM:WORD-BITS
 	OLD-VM:CHAR-BITS
+	OLD-VM:CHAR-BYTES
+	OLD-VM:LOWTAG-BITS
 	#+long-float OLD-VM:SIMPLE-ARRAY-LONG-FLOAT-TYPE 
 	OLD-VM:SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE 
 	OLD-VM:SIMPLE-ARRAY-SINGLE-FLOAT-TYPE
@@ -136,17 +145,25 @@
 	OLD-VM:SIMPLE-BIT-VECTOR-TYPE
 	OLD-VM:SIMPLE-STRING-TYPE OLD-VM:SIMPLE-VECTOR-TYPE 
 	OLD-VM:SIMPLE-ARRAY-TYPE OLD-VM:VECTOR-DATA-OFFSET
+	OLD-VM:DOUBLE-FLOAT-DIGITS
 	OLD-VM:DOUBLE-FLOAT-EXPONENT-BYTE
 	OLD-VM:DOUBLE-FLOAT-NORMAL-EXPONENT-MAX 
 	OLD-VM:DOUBLE-FLOAT-SIGNIFICAND-BYTE
 	OLD-VM:SINGLE-FLOAT-EXPONENT-BYTE
 	OLD-VM:SINGLE-FLOAT-NORMAL-EXPONENT-MAX
 	OLD-VM:SINGLE-FLOAT-SIGNIFICAND-BYTE
-	))
+	)
+  #+double-double
+  (frob OLD-VM:SIMPLE-ARRAY-COMPLEX-DOUBLE-DOUBLE-FLOAT-TYPE
+	OLD-VM:SIMPLE-ARRAY-DOUBLE-DOUBLE-FLOAT-TYPE)
+  )
 
-;; Modular arith hacks
+;; Modular arith hacks.  When cross-compiling, the compiler wants to
+;; constant-fold some stuff, and it needs the following functions to
+;; do so.  This just gets rid of the hundreds of errors that happen.
 (setf (fdefinition 'vm::ash-left-mod32) #'old-ppc::ash-left-mod32)
 (setf (fdefinition 'vm::lognot-mod32) #'old-ppc::lognot-mod32)
+;; End modular arith hacks
 
 ;; Fused multiply hack.  Don't know why this is needed for a cross-compile
 (setf (fdefinition 'vm::fused-multiply-add) #'old-ppc::fused-multiply-add)
@@ -182,7 +199,7 @@
 (in-package :vm)
 (defun extern-alien-name (name)
   (declare (type simple-string name))
-  (concatenate 'string "_" name))
+  (concatenate 'simple-string "_" name))
 (export 'extern-alien-name)
 (export 'fixup-code-object)
 (export 'sanctify-for-execution)

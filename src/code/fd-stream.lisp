@@ -1682,7 +1682,9 @@
 	   nil
 	   (values (truncate size (fd-stream-element-size stream))))))
     (:file-position
-     (fd-stream-file-position stream arg1))))
+     (fd-stream-file-position stream arg1))
+    (:clear-output
+     (setf (fd-stream-obuf-tail stream) 0))))
 
 
 ;;; FD-STREAM-FILE-POSITION -- internal.

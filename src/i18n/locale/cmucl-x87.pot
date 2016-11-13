@@ -127,10 +127,6 @@ msgid "inline scalb function"
 msgstr ""
 
 #: src/compiler/x86/float.lisp
-msgid "inline log1p function"
-msgstr ""
-
-#: src/compiler/x86/float.lisp
 msgid "inline log1p with limited x range function"
 msgstr ""
 
@@ -144,6 +140,10 @@ msgstr ""
 
 #: src/compiler/x86/float.lisp
 msgid "inline atan2 function"
+msgstr ""
+
+#: src/compiler/x86/float.lisp
+msgid "inline log1p function"
 msgstr ""
 
 #: src/compiler/x86/float.lisp

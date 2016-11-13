@@ -25,6 +25,7 @@
 	  simple-file-error simple-program-error simple-parse-error
           simple-style-warning simple-undefined-function
 	  constant-modified
+	  invalid-case
           #+stack-checking stack-overflow
           #+heap-overflow-check heap-overflow))
 
@@ -597,7 +598,7 @@
 ;;;; DEFINE-CONDITION
 
 (eval-when (compile load eval)
-(defun %compiler-define-condition (name direct-supers layout)
+(defun %compiler-define-condition (name direct-supers layout source-location)
   (multiple-value-bind (class old-layout)
 		       (insured-find-class name #'condition-class-p
 					   #'make-condition-class)
@@ -625,7 +626,9 @@
     ;; Initialize CPL slot.
     (setf (condition-class-cpl class)
 	  (remove-if-not #'condition-class-p 
-			 (std-compute-class-precedence-list class))))
+			 (std-compute-class-precedence-list class)))
+
+    (setf (info :source-location :class name) source-location))
   (undefined-value))
 
 ); eval-when (compile load eval)
@@ -872,7 +875,8 @@
 
       `(progn
 	 (eval-when (compile load eval)
-	   (%compiler-define-condition ',name ',parent-types ',layout))
+	   (%compiler-define-condition ',name ',parent-types ',layout
+				       (c::source-location)))
 
 	 (declaim (ftype (function (t) t) ,@(all-readers)))
 	 (declaim (ftype (function (t t) t) ,@(all-writers)))
@@ -960,14 +964,14 @@
   ()
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
-	     (format stream (intl:gettext "Control stack overflow")))))
+	     (format stream _"Control stack overflow"))))
 
 #+heap-overflow-check
 (define-condition heap-overflow (storage-condition)
   ()
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
-	     (format stream (intl:gettext "Heap (dynamic space) overflow")))))
+	     (format stream _"Heap (dynamic space) overflow"))))
 
 (define-condition type-error (error)
   ((datum :reader type-error-datum :initarg :datum)
@@ -1112,7 +1116,20 @@
                      (constant-modified-function-name c))
 	     (print-references (reference-condition-references c) s)))
   (:default-initargs :references (list '(:ansi-cl :section (3 2 2 3)))))
-  
+
+;; For errors in CASE and friends.
+(define-condition invalid-case (reference-condition error)
+  ((name :initarg :name
+	 :reader invalid-case-name)
+   (format :initarg :format-control
+	   :reader invalid-case-format)
+   (args :initarg :format-arguments
+	 :reader invalid-case-format-args))
+  (:report (lambda (condition stream)
+	     (format stream "~A: " (invalid-case-name condition))
+	     (apply #'format stream (invalid-case-format condition) (invalid-case-format-args condition))
+	     (print-references (reference-condition-references condition) stream))))
+
 (define-condition arithmetic-error (error)
   ((operation :reader arithmetic-error-operation :initarg :operation
 	      :initform nil)
@@ -1121,9 +1138,14 @@
 	     (format stream (intl:gettext "Arithmetic error ~S signalled.")
 		     (type-of condition))
 	     (when (arithmetic-error-operation condition)
-	       (format stream (intl:gettext "~%Operation was ~S, operands ~S.")
-		       (arithmetic-error-operation condition)
-		       (arithmetic-error-operands condition))))))
+	       ;; Printing the operands can signal these FP traps, so
+	       ;; disable them while we're printing out the error
+	       ;; message.
+	       (with-float-traps-masked (:overflow :underflow :inexact
+					 #+x86 :denormalized-operand)
+		 (format stream (intl:gettext "~%Operation was ~S, operands ~S.")
+			 (arithmetic-error-operation condition)
+			 (arithmetic-error-operands condition)))))))
 
 (define-condition division-by-zero         (arithmetic-error) ())
 (define-condition floating-point-overflow  (arithmetic-error) ())

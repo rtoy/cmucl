@@ -36,11 +36,11 @@ VERSION=$2
 ARCH=$3
 OS=$4
 
-# Core file to look for.  For x86, we have two core files to include.
+# Core file to look for.
 CORE=lisp.core
 case $ARCH in
-	x86*)		FASL=x86f
-                        CORE="lisp-*.core" ;;
+	x86*)		FASL=sse2f
+                        CORE="lisp-sse2.core" ;;
 	sparc*)		FASL=sparcf ;;
 	alpha*)		FASL=axpf ;;
 	ppc*)		FASL=ppcf ;;
@@ -96,7 +96,9 @@ install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/${MANDIR}
 install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp $DESTDIR/bin/
 if [ "$EXECUTABLE" = "true" ]
 then
-    install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp.a $DESTDIR/lib/cmucl/lib/
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/lisp.a $DESTDIR/lib/cmucl/lib/
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/exec-init.o $DESTDIR/lib/cmucl/lib/
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/exec-final.o $DESTDIR/lib/cmucl/lib/
     install ${GROUP} ${OWNER} -m 0755 src/tools/linker.sh $DESTDIR/lib/cmucl/lib/
     if [ -f src/tools/$SCRIPT-cmucl-linker-script ]; then
 	install ${GROUP} ${OWNER} -m 0755 src/tools/$SCRIPT-cmucl-linker-script $DESTDIR/lib/cmucl/lib/
@@ -119,10 +121,6 @@ install ${GROUP} ${OWNER} -m 0755 src/tools/sample-wrapper $DESTDIR/lib/cmucl/
 for f in gray-streams gray-compat simple-streams iodefs
 do
     install ${GROUP} ${OWNER} -m 0644 $TARGET/pcl/$f-library.$FASL $DESTDIR/lib/cmucl/lib/subsystems/
-    if [ "$FASL" = "x86f" ]; then
-	# For x87, we want both x86f and sse2f
-	install ${GROUP} ${OWNER} -m 0644 $TARGET/pcl/$f-library.sse2f $DESTDIR/lib/cmucl/lib/subsystems/
-    fi
 done
 
 for f in src/pcl/simple-streams/external-formats/*.lisp src/pcl/simple-streams/external-formats/aliases src/i18n/unidata.bin
@@ -130,21 +128,40 @@ do
     install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/ext-formats/
 done
 
-# Create the directories and install the fasl files for asdf and defsystem
-for f in asdf defsystem
+# set -x
+# Create the directories for asdf and defsystem
+for f in asdf defsystem asdf/doc
 do
     install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/contrib/$f
-    install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/$f/$f.$FASL $DESTDIR/lib/cmucl/lib/contrib/$f
-    if [ "$FASL" = "x86f" ]; then
-	# For x87, we want both x86f and sse2f
-	install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/$f/$f.sse2f $DESTDIR/lib/cmucl/lib/contrib/$f
-    fi
 done
+
+case `uname -s` in
+  Linux*) UCONTRIB="unix-glibc2" ;;
+  *) UCONTRIB="unix" ;;
+esac
+
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/contrib/unix
+install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/unix/$UCONTRIB.$FASL $DESTDIR/lib/cmucl/lib/contrib/unix
+install ${GROUP} ${OWNER} -m 0644 src/contrib/load-unix.lisp $DESTDIR/lib/cmucl/lib/contrib
+install ${GROUP} ${OWNER} -m 0644 src/contrib/unix/${UCONTRIB}.lisp $DESTDIR/lib/cmucl/lib/contrib/unix
 
 # Copy the source files for asdf and defsystem
 for f in `(cd src; find contrib/asdf contrib/defsystem -type f -print | grep -v CVS)`
 do
     install ${GROUP} ${OWNER} -m 0644 src/$f $DESTDIR/lib/cmucl/lib/$f
+done
+
+# Install the fasl files for asdf and defsystem
+for f in asdf defsystem
+do
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/$f/$f.$FASL $DESTDIR/lib/cmucl/lib/contrib/$f
+done
+
+# Install the docs for asdf
+for f in src/contrib/asdf/doc/*
+do
+    base=`basename $f`
+    install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/contrib/asdf/doc/$base
 done
 
 install ${GROUP} ${OWNER} -m 0644 src/general-info/cmucl.1 \

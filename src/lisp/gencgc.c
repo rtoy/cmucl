@@ -166,7 +166,7 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
 
     if (Pointerp(obj)
 	&& (p = (void *) PTR(obj),
-	    (p >= (void *) CONTROL_STACK_START
+	    (p >= (void *) control_stack
 	     && p < (void *) control_stack_end))) {
 	char *space;
 
@@ -195,7 +195,7 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
 	    lose("Escaped stack-allocated object 0x%08lx at %p in %s\n",
 		 (unsigned long) obj, where, space);
 #ifndef i386
-	else if ((where >= (lispobj *) CONTROL_STACK_START
+	else if ((where >= (lispobj *) control_stack
 		  && where < (lispobj *) (control_stack_end))
 		 || (space == NULL)) {
 	    /* Do nothing if it the reference is from the control stack,
@@ -367,7 +367,7 @@ boolean gencgc_zero_check_during_free_heap = FALSE;
  * enough.
  */
 
-#define DO_GENCGC_ZERO_CHECK	(gencgc_zero_check || (gencgc_unmap_zero == MODE_LAZY) || (gencgc_unmap_zero == MODE_MADVISE))
+#define DO_GENCGC_ZERO_CHECK	(gencgc_zero_check)
 
 /*
  * Only to the zero check during free_heap if both
@@ -375,7 +375,7 @@ boolean gencgc_zero_check_during_free_heap = FALSE;
  * MODE_MAP or MODE_MEMSET because in all other modes, unallocated
  * pages are known not to contain zeroes.
  */
-#define DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP	(gencgc_zero_check_during_free_heap && ((gencgc_unmap_zero == MODE_MAP) || (gencgc_unmap_zero == MODE_MEMSET)))
+#define DO_GENCGC_ZERO_CHECK_DURING_FREE_HEAP	(gencgc_zero_check_during_free_heap)
 
 /*
  * The minimum size for a large object.
@@ -594,7 +594,8 @@ struct generation_stats {
  * The oldest generation that will currently be GCed by default.
  * Valid values are: 0, 1, ... (NUM_GENERATIONS - 1)
  *
- * The default of (NUM_GENERATIONS - 1) enables GC on all generations.
+ * A value of NUM_GENERATIONS - 1 enables GC on all generations; the
+ * default is less.
  *
  * Setting this to 0 effectively disables the generational nature of
  * the GC. In some applications generational GC may not be useful
@@ -604,7 +605,9 @@ struct generation_stats {
  * into an older generation so an unnecessary GC of this long-lived
  * data can be avoided.
  */
-unsigned int gencgc_oldest_gen_to_gc = NUM_GENERATIONS - 1;
+#define DEFAULT_OLDEST_GEN_TO_GC	3
+
+unsigned int gencgc_oldest_gen_to_gc = DEFAULT_OLDEST_GEN_TO_GC;
 
 
 /*
@@ -1194,8 +1197,8 @@ gc_alloc_new_region(int nbytes, int unboxed, struct alloc_region *alloc_region)
 	for (p = (int *) alloc_region->start_addr;
 	     p < (int *) alloc_region->end_addr; p++)
 	    if (*p != 0)
-		fprintf(stderr, "** new region not zero @ %lx\n",
-			(unsigned long) p);
+		fprintf(stderr, "** new region not zero @ %lx: %x\n",
+			(unsigned long) p, *p);
     }
 
     /* Setup the pages. */
@@ -2133,17 +2136,19 @@ read_only_space_p(lispobj obj)
 static inline boolean
 control_stack_space_p(lispobj obj)
 {
-    lispobj end = CONTROL_STACK_START + control_stack_size;
+    char *object = (char *) obj;
+    char *end = (char *)control_stack + control_stack_size;
 
-    return (obj >= CONTROL_STACK_START) && (obj < end);
+    return (object >= (char *) control_stack) && (object < end);
 }
 
 static inline boolean
 binding_stack_space_p(lispobj obj)
 {
-    lispobj end = BINDING_STACK_START + binding_stack_size;
+    char *object = (char *) obj;
+    char *end = (char *)binding_stack + binding_stack_size;
 
-    return (obj >= BINDING_STACK_START) && (obj < end);
+    return (object >= (char *) binding_stack) && (object < end);
 }
     
 static inline boolean
@@ -2154,7 +2159,12 @@ signal_space_p(lispobj obj)
 
     return (obj >= SIGNAL_STACK_START) && (obj < end);
 #else
-    return FALSE;
+    extern char altstack[];
+    
+    char* object = (char*) obj;
+    char* end = altstack + SIGNAL_STACK_SIZE;
+    
+    return (object >= altstack && object < end);
 #endif    
 }
 
@@ -7319,11 +7329,11 @@ verify_gc(void)
     int static_space_size = (lispobj *) SymbolValue(STATIC_SPACE_FREE_POINTER)
 	- (lispobj *) static_space;
     int binding_stack_size = (lispobj *) get_binding_stack_pointer()
-	- (lispobj *) BINDING_STACK_START;
+	- (lispobj *) binding_stack;
 
     verify_space((lispobj *) READ_ONLY_SPACE_START, read_only_space_size);
     verify_space((lispobj *) static_space, static_space_size);
-    verify_space((lispobj *) BINDING_STACK_START, binding_stack_size);
+    verify_space((lispobj *) binding_stack, binding_stack_size);
     verify_space((lispobj *) (void *) &scavenger_hooks, 1);
 }
 
@@ -7491,16 +7501,16 @@ scavenge_interrupt_handlers(void)
 static void
 scavenge_control_stack(void)
 {
-    unsigned long control_stack_size;
+    unsigned long current_stack_size;
 
-    control_stack_size = current_control_stack_pointer - control_stack;
+    current_stack_size = current_control_stack_pointer - control_stack;
 
 #ifdef PRINTNOISE
     printf("Scavenging the control stack (%d bytes) ...\n",
-	   control_stack_size * sizeof(lispobj));
+	   current_stack_size * sizeof(lispobj));
 #endif
 
-    scavenge(control_stack, control_stack_size);
+    scavenge(control_stack, current_stack_size);
 
 #ifdef PRINTNOISE
     printf("Done scavenging the control stack.\n");
@@ -7520,7 +7530,7 @@ garbage_collect_generation(int generation, int raise)
 
 #ifdef GC_ASSERTIONS
 #if defined(i386) || defined(__x86_64)
-    invalid_stack_start = (void *) CONTROL_STACK_START;
+    invalid_stack_start = (void *) control_stack;
     invalid_stack_end = (void *) &raise;
 #else /* not i386 */
     invalid_stack_start = (void *) &raise;
@@ -8432,4 +8442,24 @@ get_page_table_info(int page, int* flags, int* bytes)
 {
     *flags = page_table[page].flags;
     *bytes = page_table[page].bytes_used;
+}
+
+/*
+ * Set the oldest generation to gc to the given value.  If the value
+ * is illegal, the appropriate limit is used instead.  The old value
+ * is returned.
+ */
+unsigned int set_max_gen_to_gc(int gen)
+{
+    unsigned int previous = gencgc_oldest_gen_to_gc;
+
+    if (gen < 0) {
+	gencgc_oldest_gen_to_gc = 0;
+    } else if (gen >= NUM_GENERATIONS - 1) {
+	gencgc_oldest_gen_to_gc = NUM_GENERATIONS - 1;
+    } else {
+	gencgc_oldest_gen_to_gc = gen;
+    }
+
+    return previous;
 }

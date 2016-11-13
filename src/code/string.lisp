@@ -87,6 +87,30 @@
 		 (values (truly-the codepoint code) nil))))
 	  (t (values (truly-the codepoint code) nil)))))
 
+(defmacro with-string-codepoint-iterator ((next string) &body body)
+  _N"WITH-STRING-CODEPOINT-ITERATOR ((next string) &body body)
+  provides a method of looping through a string from the beginning to
+  the end of the string prodcucing successive codepoints from the
+  string.  NEXT is bound to a generator macro that, within the scope
+  of the invocation, returns one or two values. The first value tells
+  whether any objects remain in the string. When the first value is
+  non-NIL, the second value is the codepoint of the next object."
+  (let ((n-next (gensym "WITH-STRING-CODEPOINT-ITERATOR-")))
+    `(let ((,n-next
+	     (let* ((s ,string)
+		    (len (length s))
+		    (index 0))
+	       (labels
+		   ((,next ()
+		      (when (< index len)
+			(multiple-value-bind (cp surrogatep)
+			    (codepoint s index)
+			  (incf index (if surrogatep 2 1))
+			  (values t cp)))))
+		 #',next))))
+       (macrolet ((,next () '(funcall ,n-next)))
+	 ,@body))))
+
 (defun surrogates (codepoint)
   "Return the high and low surrogate characters for Codepoint.  If
   Codepoint is in the BMP, the first return value is the corresponding
@@ -1012,6 +1036,31 @@
     (if from-end
 	(values (subseq string n index) (and (> n 0) n))
 	(values (subseq string index n) (and (< n (length string)) n)))))
+
+(defmacro with-string-glyph-iterator ((next string) &body body)
+  _N"WITH-STRING-GLYPH-ITERATOR ((next string) &body body)
+  provides a method of looping through a string from the beginning to
+  the end of the string prodcucing successive glyphs from the string.
+  NEXT is bound to a generator macro that, within the scope of the
+  invocation, returns one or three values. The first value tells
+  whether any objects remain in the string. When the first value is
+  non-NIL, the second value is the index into the string of the glyph
+  and the third value is index of the next glyph."
+  (let ((n-next (gensym "WITH-STRING-GLYPH-ITERATOR-")))
+    `(let ((,n-next
+	     (let* ((s ,string)
+		    (len (length s))
+		    (index 0))
+	       (labels
+		   ((,next ()
+		      (when (< index len)
+			(let ((glyph-end (%glyph-f s index)))
+			  (multiple-value-prog1
+			      (values t index glyph-end)
+			    (setf index glyph-end))))))
+		 #',next))))
+       (macrolet ((,next () '(funcall ,n-next)))
+	 ,@body))))
 
 #+unicode
 (defun string-reverse* (sequence)

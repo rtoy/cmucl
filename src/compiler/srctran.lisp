@@ -1764,6 +1764,123 @@
 			     (ftruncate-derive-type-quot-aux n divisor nil))
 			 #'%unary-ftruncate)))
 
+(defun round-quotient-bound (quot)
+  (flet ((round-it (quot)
+	   (let ((lo (interval-low quot))
+		 (hi (interval-high quot)))
+	     (when lo
+		 ;; Need to handle carefully the case where the lower
+		 ;; bound is exclusive.  This is only a problem when
+		 ;; the remainder is exactly +1/2 where the quotient
+		 ;; has been rounded down. In this case, quotient
+		 ;; should be one higher.  For example (round 2.5) ->
+		 ;; 2, 0.5, but (round 2.500001) -> 3, -0.49999.
+	       (multiple-value-bind (q r)
+		   (round (bound-value lo))
+		 (setf lo
+		       (if (and (consp lo) (= r 1/2))
+			   (1+ q)
+			   q))))
+	     (when hi
+	       (multiple-value-bind (q r)
+		   (round (bound-value hi))
+		 ;; Need to handle carefully the case where the upper
+		 ;; bound is exclusive.  This is only a problem when
+		 ;; the remainder is exactly -1/2 where the quotient
+		 ;; has been rounded up. In this case, quotient should
+		 ;; be one less. For example but (round 1.5) -> 2,
+		 ;; -0.5 but (round 1.49999) -> 1, .49999.
+		 (setf hi
+		       (if (and (= r -1/2) (consp hi))
+			   (1- q)
+			   q))))
+	     (make-interval :low lo :high hi))))
+    (case (interval-range-info quot)
+      (+
+       (round-it quot))
+      (-
+       (round-it quot))
+      (otherwise
+       ;; Split the interval into positive and negative pieces, compute
+       ;; the result for each piece and put them back together.
+       (destructuring-bind (neg pos)
+	   (interval-split 0 quot t t)
+	 (interval-merge-pair (round-it neg)
+			      (round-it pos)))))))
+
+(defun round-derive-type-quot (number-type divisor-type)
+  (let* ((rem-type (rem-result-type number-type divisor-type))
+	 (number-interval (numeric-type->interval number-type))
+	 (divisor-interval (numeric-type->interval divisor-type)))
+    (let ((quot (round-quotient-bound
+		 (interval-div number-interval
+			       divisor-interval))))
+      (specifier-type `(integer ,(or (interval-low quot) '*)
+				,(or (interval-high quot) '*))))))
+
+(defun round-derive-type-rem (number-type divisor-type)
+  (let* ((rem-type (rem-result-type number-type divisor-type))
+	 (number-interval (numeric-type->interval number-type))
+	 (divisor-interval (numeric-type->interval divisor-type)))
+    (multiple-value-bind (class format)
+	(ecase rem-type
+	  (integer
+	   (values 'integer nil))
+	  (rational
+	   (values 'rational nil))
+	  ((or single-float double-float #+long-float long-float
+	       #+double-double double-double-float)
+	   (values 'float rem-type))
+	  (float
+	   (values 'float nil))
+	  (real
+	   (values nil nil)))
+      #+nil
+      (when (member rem-type '(float single-float double-float
+			       #+long-float long-float
+			       #+double-double double-double-float))
+	(setf rem (interval-func #'(lambda (x)
+				     (coerce x rem-type))
+				 rem)))
+      (make-numeric-type :class class
+			 :format format
+			 :low nil
+			 :high nil))))
+
+(defun %unary-round-derive-type-aux (num)
+  (if (numeric-type-real-p num)
+      (round-derive-type-quot num (specifier-type '(integer 1 1)))
+      *empty-type*))
+
+(defoptimizer (%unary-round derive-type) ((number))
+  (one-arg-derive-type number
+		       #'%unary-round-derive-type-aux
+		       #'%unary-round))
+
+(defun round-derive-type-quot-aux (num div same-arg)
+  (declare (ignore same-arg))
+  (if (and (numeric-type-real-p num)
+	   (numeric-type-real-p div))
+      (round-derive-type-quot num div)
+      *empty-type*))
+
+(defun round-derive-type-rem-aux (num div same-arg)
+  (declare (ignore same-arg))
+  (if (and (numeric-type-real-p num)
+	   (numeric-type-real-p div))
+      (round-derive-type-rem num div)
+      *empty-type*))
+
+(defoptimizer (round derive-type) ((number divisor))
+  (let ((quot (two-arg-derive-type number divisor
+				   #'round-derive-type-quot-aux #'round))
+	(rem (two-arg-derive-type number divisor
+				  #'round-derive-type-rem-aux
+				  #'(lambda (x)
+				      (nth-value 1 (round x))))))
+    (when (and quot rem)
+      (make-values-type :required (list quot rem)))))
+
 ;;; Define optimizers for floor and ceiling
 (macrolet
     ((frob-opt (name q-name r-name)
@@ -1935,41 +2052,6 @@
 			       (list (- limit))
 			       limit)
 		      :high (list limit))))))
-#| Test cases
-(floor-quotient-bound (make-interval :low 0.3 :high 10.3))
-=> #S(INTERVAL :LOW 0 :HIGH 10)
-(floor-quotient-bound (make-interval :low 0.3 :high '(10.3)))
-=> #S(INTERVAL :LOW 0 :HIGH 10)
-(floor-quotient-bound (make-interval :low 0.3 :high 10))
-=> #S(INTERVAL :LOW 0 :HIGH 10)
-(floor-quotient-bound (make-interval :low 0.3 :high '(10)))
-=> #S(INTERVAL :LOW 0 :HIGH 9)
-(floor-quotient-bound (make-interval :low '(0.3) :high 10.3))
-=> #S(INTERVAL :LOW 0 :HIGH 10)
-(floor-quotient-bound (make-interval :low '(0.0) :high 10.3))
-=> #S(INTERVAL :LOW 0 :HIGH 10)
-(floor-quotient-bound (make-interval :low '(-1.3) :high 10.3))
-=> #S(INTERVAL :LOW -2 :HIGH 10)
-(floor-quotient-bound (make-interval :low '(-1.0) :high 10.3))
-=> #S(INTERVAL :LOW -1 :HIGH 10)
-(floor-quotient-bound (make-interval :low -1.0 :high 10.3))
-=> #S(INTERVAL :LOW -1 :HIGH 10)
-
-
-(floor-rem-bound (make-interval :low 0.3 :high 10.3))
-=> #S(INTERVAL :LOW 0 :HIGH '(10.3))
-(floor-rem-bound (make-interval :low 0.3 :high '(10.3)))
-=> #S(INTERVAL :LOW 0 :HIGH '(10.3))
-(floor-rem-bound (make-interval :low -10 :high -2.3))
-#S(INTERVAL :LOW (-10) :HIGH 0)
-(floor-rem-bound (make-interval :low 0.3 :high 10))
-=> #S(INTERVAL :LOW 0 :HIGH '(10))
-(floor-rem-bound (make-interval :low '(-1.3) :high 10.3))
-=> #S(INTERVAL :LOW '(-10.3) :HIGH '(10.3))
-(floor-rem-bound (make-interval :low '(-20.3) :high 10.3))
-=> #S(INTERVAL :LOW (-20.3) :HIGH (20.3))
-|#
-
 
 ;;; Same functions for CEILING
 (defun ceiling-quotient-bound (quot)
@@ -2035,45 +2117,7 @@
 			       limit)
 		      :high (list limit))))))
 
-#| Test cases
-(ceiling-quotient-bound (make-interval :low 0.3 :high 10.3))
-=> #S(INTERVAL :LOW 1 :HIGH 11)
-(ceiling-quotient-bound (make-interval :low 0.3 :high '(10.3)))
-=> #S(INTERVAL :LOW 1 :HIGH 11)
-(ceiling-quotient-bound (make-interval :low 0.3 :high 10))
-=> #S(INTERVAL :LOW 1 :HIGH 10)
-(ceiling-quotient-bound (make-interval :low 0.3 :high '(10)))
-=> #S(INTERVAL :LOW 1 :HIGH 10)
-(ceiling-quotient-bound (make-interval :low '(0.3) :high 10.3))
-=> #S(INTERVAL :LOW 1 :HIGH 11)
-(ceiling-quotient-bound (make-interval :low '(0.0) :high 10.3))
-=> #S(INTERVAL :LOW 1 :HIGH 11)
-(ceiling-quotient-bound (make-interval :low '(-1.3) :high 10.3))
-=> #S(INTERVAL :LOW -1 :HIGH 11)
-(ceiling-quotient-bound (make-interval :low '(-1.0) :high 10.3))
-=> #S(INTERVAL :LOW 0 :HIGH 11)
-(ceiling-quotient-bound (make-interval :low -1.0 :high 10.3))
-=> #S(INTERVAL :LOW -1 :HIGH 11)
-
-
-(ceiling-rem-bound (make-interval :low 0.3 :high 10.3))
-=> #S(INTERVAL :LOW (-10.3) :HIGH 0)
-(ceiling-rem-bound (make-interval :low 0.3 :high '(10.3)))
-=> #S(INTERVAL :LOW 0 :HIGH '(10.3))
-(ceiling-rem-bound (make-interval :low -10 :high -2.3))
-=> #S(INTERVAL :LOW 0 :HIGH (10))
-(ceiling-rem-bound (make-interval :low 0.3 :high 10))
-=> #S(INTERVAL :LOW (-10) :HIGH 0)
-(ceiling-rem-bound (make-interval :low '(-1.3) :high 10.3))
-=> #S(INTERVAL :LOW (-10.3) :HIGH (10.3))
-(ceiling-rem-bound (make-interval :low '(-20.3) :high 10.3))
-=> #S(INTERVAL :LOW (-20.3) :HIGH (20.3))
-|#
-
-
 
-
-
 (defun truncate-quotient-bound (quot)
   ;; For positive quotients, truncate is exactly like floor.  For
   ;; negative quotients, truncate is exactly like ceiling.  Otherwise,

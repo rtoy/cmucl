@@ -1182,7 +1182,7 @@
 
 #+(or sparc (and x86 (or darwin solaris netbsd)) (and (or x86 amd64) linux))
 (defun find-foreign-function-name (address)
-  "Return a string describing the foreign function near ADDRESS"
+  _"Return a string describing the foreign function near ADDRESS"
   (let ((addr (sys:sap-int address)))
     (alien:with-alien ((info (alien:struct dl-info
 					   (filename c-call:c-string)
@@ -1194,7 +1194,7 @@
 			       :extern "dladdr"))
       (let ((err (alien:alien-funcall dladdr addr (alien:addr info))))
 	(cond ((zerop err)
-	       (intl:gettext "Foreign function call land"))
+	       _"Foreign function call land")
 	      (t
 	       (format nil "~A+#x~x [#x~X] ~A"
 		       (alien:slot info 'symbol)
@@ -1206,7 +1206,7 @@
 #-(or sparc (and x86 (or darwin solaris netbsd)) (and (or x86 amd64) linux))
 (defun find-foreign-function-name (ra)
   (declare (ignore ra))
-  "Foreign function call land")
+  _"Foreign function call land")
 
 (defun assembly-routines-p (component)
   "Return t if COMPONENT contains code from assembly routines."

@@ -117,7 +117,7 @@ arch_remove_breakpoint(void *pc, unsigned long orig_inst)
     os_flush_icache((os_vm_address_t) pc, sizeof(unsigned long));
 }
 
-static unsigned long *skipped_break_addr, displaced_after_inst;
+static unsigned int *skipped_break_addr, displaced_after_inst;
 static sigset_t orig_sigmask;
 
 void
@@ -133,7 +133,7 @@ arch_do_displaced_inst(os_context_t * scp, unsigned long orig_inst)
     *pc = orig_inst;
     os_flush_icache((os_vm_address_t) pc, sizeof(unsigned int));
 
-    skipped_break_addr = (unsigned long) pc;
+    skipped_break_addr = pc;
 
     /*
      * Replace the next instruction with a 
@@ -723,17 +723,3 @@ arch_linkage_entry(unsigned long retaddr)
 	/ LinkageEntrySize;
 }
 #endif
-
-int ieee754_rem_pio2(double x, double *y0, double *y1)
-{
-  extern int __ieee754_rem_pio2(double x, double *y);
-
-  double y[2];
-  int n;
-
-  n = __ieee754_rem_pio2(x, y);
-  *y0 = y[0];
-  *y1 = y[1];
-
-  return n;
-}

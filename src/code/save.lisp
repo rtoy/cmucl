@@ -36,7 +36,8 @@
   might not be.")
 
 (defvar *environment-list* nil
-  "An alist mapping environment variables (as keywords) to either values")
+  "An alist mapping each environment variable (as a keyword) to its
+  value.")
 
 (defvar *environment-list-initialized* nil
   "Non-NIL if environment-init has been called")
@@ -152,7 +153,8 @@
 				 (process-command-line t)
 		                  #+:executable
 		                 (executable nil)
-				 (batch-mode nil))
+				 (batch-mode nil)
+				 (quiet nil))
   "Saves a CMU Common Lisp core image in the file of the specified name.  The
   following keywords are defined:
   
@@ -190,8 +192,10 @@
 
   :process-command-line
       If true (the default), process command-line switches via the normal
-  mechanisms, otherwise ignore all switches (except those processed by the
-  C startup code).
+  mechanisms, otherwise ignore all switches (except those processed by
+  the C startup code).  In either case, the command line switches are
+  saved in *COMMAND-LINE-STRINGS* and
+  *COMMAND-LINE-APPLICATION-ARGUMENTS*.
 
   :executable
       If nil (the default), save-lisp will save using the traditional
@@ -202,7 +206,14 @@
   :batch-mode
       If nil (the default), then the presence of the -batch command-line
   switch will invoke batch-mode processing.  If true, the produced core
-  will always be in batch-mode, regardless of any command-line switches."
+  will always be in batch-mode, regardless of any command-line switches.
+
+  :quiet
+     If non-NIL, loading, compiling, and GC messages are suppressed.
+     This is equivalent to setting *load-verbose*, *compile-verbose*,
+     *compile-print*, *compile-progress*, *require-verbose*, and
+     *gc-verbose* all to NIL.  If NIL (the default), the default
+     values of these variables are used."
 
   (unless (probe-file (directory-namestring core-file-name))
     (error 'simple-file-error
@@ -239,8 +250,7 @@
 	     (environment-init)
 	     (dolist (f *after-save-initializations*) (funcall f))
 	     (intl::setlocale)
-	     (when process-command-line
-	       (ext::process-command-strings))
+	     (ext::process-command-strings process-command-line)
 	     (setf *editor-lisp-p* nil)
 	     (macrolet ((find-switch (name)
 			  `(find ,name *command-line-switches*
@@ -248,14 +258,14 @@
 				 :test #'(lambda (x y)
 					   (declare (simple-string x y))
 					   (string-equal x y)))))
-               (when (and process-command-line (find-switch "quiet"))
+               (when (or quiet
+			 (and process-command-line (find-switch "quiet")))
                  (setq *load-verbose* nil
                        *compile-verbose* nil
                        *compile-print* nil
                        *compile-progress* nil
                        *require-verbose* nil
-                       *gc-verbose* nil
-                       *herald-items* nil))
+                       *gc-verbose* nil))
 	       (when (and process-command-line
 			  (or (find-switch "help")
 			      (find-switch "-help")))
@@ -280,12 +290,16 @@
 			     :if-does-not-exist nil)
 		       (or (load "home:init" :if-does-not-exist nil)
 			   (load "home:.cmucl-init"
-				 :if-does-not-exist nil))))))
-	     (when process-command-line
-	       (ext::invoke-switch-demons *command-line-switches*
-					  *command-switch-demons*))
-	     (when print-herald
-	       (print-herald))))
+				 :if-does-not-exist nil)))))
+	       (when process-command-line
+		 (ext::invoke-switch-demons *command-line-switches*
+					    *command-switch-demons*))
+	       (when (and print-herald
+			  (not (or quiet
+				   (and process-command-line
+					(find-switch "quiet")))))
+		 ;; Don't print the herald if -quiet is given.
+		 (print-herald)))))
 	 (funcall init-function))
        (restart-lisp ()
 	 (unix:unix-exit

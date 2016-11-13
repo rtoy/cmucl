@@ -1,8 +1,4 @@
 # -*- Mode: makefile -*-
-PATH1 = ../../src/lisp
-vpath %.h $(PATH1)
-vpath %.c $(PATH1)
-vpath %.S $(PATH1)
 CPPFLAGS = -I. -I$(PATH1)
 
 # For Mac OS X 10.2, gcc3 is appropriate.  For 10.4, gcc (gcc 4.0) is ok.  But
@@ -11,12 +7,11 @@ CPPFLAGS = -I. -I$(PATH1)
 # think gcc 4 is wrong.  However, to work around this, we use /**/ to 
 # concatenate tokens which reguires the -traditional flag.
 
-# Build for OSX 10.2.8 or later.  (Is this what we want?)
+# Build for OSX 10.4 or later.  (Is this what we want?)
 OSX_VERSION=-mmacosx-version-min=10.4
 CC = gcc
-LD = ld
 NM = $(PATH1)/darwin-nm
-CPP = cpp -no-cpp-precomp
+CPP = cpp
 DEPEND_FLAGS = -MM
 
 ifdef FEATURE_LINKAGE_TABLE
@@ -34,13 +29,13 @@ ifdef FEATURE_UNICODE
 UNICODE = -DUNICODE
 endif
 
-CFLAGS = $(OSX_VERSION) -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC) $(UNICODE)
-ASFLAGS = $(OSX_VERSION) -traditional -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
+CFLAGS = $(OSX_VERSION) -g -O3 -ffp-contract=off -fno-omit-frame-pointer -DDARWIN -Dppc $(LINKAGE) $(GENCGC) $(UNICODE)
+ASFLAGS = $(OSX_VERSION) -traditional -g -O3 -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = ppc-assem.S linux-stubs.S
 ARCH_SRC = ppc-arch.c
-OS_SRC = ppc-darwin-dlshim.c os-common.c Darwin-os.c e_rem_pio2.c k_rem_pio2.c
+OS_SRC = os-common.c Darwin-os.c
 
 
 ifdef FEATURE_EXECUTABLE
@@ -48,22 +43,9 @@ OS_SRC += mach-o.c
 EXEC_FINAL_OBJ = exec-final.o
 endif
 
-# I (rtoy) am not exactly sure what these values are, but it seems
-# that the segaddr for CMUCLRO should be the READ_ONLY_SPACE_START.
-# The seg1addr should be somewhere above our spaces.  This is where
-# the C runtime code goes, I think.
-
-# OS_LINK_FLAGS = -g -dynamic -Wl,-sectcreate,CMUCLRO,core,/dev/null -Wl,-segaddr,CMUCLRO,0x01000000 -Wl,-seg1addr,0x1a000000
-OS_LINK_FLAGS = $(OSX_VERSION)
+# gcc 4.8, (used on zombie) needs -static-libgcc so that the gcc
+# library is staticly linked into lisp so that the user doesn't need a
+# matching version of libgcc.
+OS_LINK_FLAGS = $(OSX_VERSION) -static-libgcc
 OS_LIBS = -lSystem -lc -lm
-#all: adjustlisp
-#adjustlisp: lisp darwin-lispadjuster
-#	./darwin-lispadjuster lisp
-#adjustlisp: lisp darwin-lispadjuster
-#	true
 
-#darwin-lispadjuster: darwin-lispadjuster.c
-
-# This has aliasing problems, so turn off aliasing.
-e_rem_pio2.o : e_rem_pio2.c
-	$(CC) -c -fno-strict-aliasing -ffloat-store $(CFLAGS)  $<

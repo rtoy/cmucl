@@ -92,17 +92,20 @@ case $uname_s in
 	    # Extra stuff.  For some reason one __LINKEDIT segment is
 	    # mapped just past the dynamic space.  This messes things
 	    # up, so we move it to another address.  This seems to be
-	    # free, at least on 10.5.
-
-	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -rdynamic"
+	    # free, at least on 10.5.  -no_pie is to get rid of the
+	    # linker warning about PIE.
+	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -rdynamic -Wl,-no_pie"
+	    OS_LIBS=
 	    ;;
 	powerpc)
-	    # Nothing needed for ppc?
+	    # See Config.ppc_darwin Like i386, __LINKEDIT is linked
+	    # just after the dynamic space which messes things up, so
+	    # we move it to a diffferent address. The address below
+	    # appears to be free.
+	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -static-libgcc"
+	    OS_LIBS="-lSystem -lc -lm"
 	    ;;
       esac
-
-      # See Config.x86_darwin
-      OS_LIBS=
       ;;
   SunOS)
       # A quick test indicates that gcc will accept the following
@@ -132,5 +135,5 @@ trap 'rm -f $OUTDIR/$OPT_IFADDR $OUTDIR/CORRO.o $OUTDIR/CORSTA.o $OUTDIR/CORDYN.
 
 (cd $OUTDIR
 echo "long initial_function_addr = $IFADDR;" > $OPT_IFADDR
-$CCOMPILER -m32 -o $OUTNAME $OPT_IFADDR $OPT_ARCHIVE $OPT_CORE $RO_ADDR $STATIC_ADDR $DYN_ADDR $OPT_EXTRA $OS_LIBS -lm)
+$CCOMPILER -m32 -o $OUTNAME $OPT_IFADDR $OPT_ARCHIVE $CMUCLLIB/exec-final.o $OPT_CORE $RO_ADDR $STATIC_ADDR $DYN_ADDR $OPT_EXTRA $OS_LIBS -lm)
 

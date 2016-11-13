@@ -13,7 +13,6 @@
 ;;;
 (in-package "SPARC")
 (use-package "SYSTEM")
-(use-package "UNIX")
 
 (intl:textdomain "cmucl-sparc-vm")
 
@@ -26,6 +25,10 @@
 
 #+complex-fp-vops
 (sys:register-lisp-feature :complex-fp-vops)
+
+#+(and sparc solaris)
+(sys:register-lisp-runtime-feature :relocatable-stacks)
+
 
 ;;;; The sigcontext structure.
 
@@ -80,7 +83,7 @@
 ; includes; struct fpu. Because the fpu structure contains doubles, it
 ; must be aligned on 8 byte bounderies, consequently so must struct
 ; mcontext and struct ucontext.
-(def-alien-type sigcontext
+(def-alien-type unix:sigcontext
   (struct nil
     (uc-flags unsigned-long)
     (uc-link system-area-pointer)
@@ -129,6 +132,7 @@
 (pushnew :sparc *features*)
 (pushnew :sun4 *features*)
 (pushnew :svr4 *features*)
+(sys:register-lisp-feature :elf)
 ;; There's SVR4 by Sun called Solaris 2, there's the SVR4 reference port by
 ;; ICL that runs on ICL's own DRS 6000s.
 #+sunos
@@ -185,10 +189,10 @@
 ;;; instruction stream.
 ;;; 
 (defun internal-error-arguments (scp)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   ;(write "SCP = ") (write scp)
   ;(write "slot = ") (write (slot scp 'uc-pc))
-  (let* ((pc (with-alien ((scp (* sigcontext) scp))
+  (let* ((pc (with-alien ((scp (* unix:sigcontext) scp))
 	       (slot scp 'uc-pc)))
 	 (bad-inst (sap-ref-32 pc 0))
 	 (op (ldb (byte 2 30) bad-inst))
@@ -206,8 +210,8 @@
 	   (values #.(error-number-or-lose 'unknown-error) nil)))))
 
 (defun args-for-unimp-inst (scp)
-  (declare (type (alien (* sigcontext)) scp))
-  (let* ((pc (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (let* ((pc (with-alien ((scp (* unix:sigcontext) scp))
 	       (slot scp 'uc-pc)))
 	 (length (sap-ref-8 pc 4))
 	 (vector (make-array length :element-type '(unsigned-byte 8))))
@@ -228,7 +232,7 @@
 	       (values error-number (sc-offsets))))))
 
 (defun args-for-tagged-add-inst (scp bad-inst)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   (let* ((rs1 (ldb (byte 5 14) bad-inst))
 	 (op1 (di::make-lisp-obj (sigcontext-register scp rs1))))
     (if (fixnump op1)
@@ -264,8 +268,8 @@
 ;;; sigcontext-PROGRAM-COUNTER -- Interface.
 ;;;
 (defun sigcontext-program-counter (scp)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (slot scp 'uc-pc)
     ))
 
@@ -275,8 +279,8 @@
 ;;; interrupts.  
 ;;;
 (defun sigcontext-register (scp index)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (if (zerop index)
 	0
 	(if (< index 16)
@@ -289,8 +293,8 @@
 	    (deref (slot (slot (slot scp 'uc-regs) 'regs2) 'uc-sp) (- index 16))))))
 
 (defun %set-sigcontext-register (scp index new)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (if (zerop index)
 	0
 	(if (< index 16)
@@ -316,8 +320,8 @@
 ;;;
 
 (defun sigcontext-float-register (scp index format)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (let ((sap (alien-sap (slot scp 'fpregs))))
       (ecase format
 	(single-float
@@ -342,8 +346,8 @@
 		  (system:sap-ref-double fp-sap (* (- index 32) vm:word-bytes))))))))))
 ;;;
 (defun %set-sigcontext-float-register (scp index format new-value)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (let ((sap (alien-sap (slot scp 'fpregs))))
       (ecase format
 	(single-float
@@ -367,8 +371,8 @@
 ;;; same format as returned by FLOATING-POINT-MODES.
 ;;;
 (defun sigcontext-floating-point-modes (scp)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (slot scp 'fsr)))
 
 
@@ -425,11 +429,11 @@
 (defvar *scavenge-read-only-space* nil)
 
 (defun get-fp-fault-info (scp)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   ;; The FPQ structure in the context has the faulting FP address and
   ;; the faulting FP instruction.  Return both.
   (let ((fpq (alien:sap-alien
-	      (with-alien ((scp (* sigcontext) scp))
+	      (with-alien ((scp (* unix:sigcontext) scp))
 		(slot scp 'fpq))
 	      (* fpq))))
     (with-alien ((fpq (* fpq) fpq))
@@ -437,7 +441,7 @@
 	      (slot fpq 'fpq-inst)))))
     
 (defun get-fp-operation (scp)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   ;; Get the offending FP instruction from the context.  We return the
   ;; operation associated with the FP instruction, the precision of
   ;; the operation, and the operands of the instruction.
@@ -480,7 +484,7 @@
 	  (values fop format (fix-up-reg-index rs1) (fix-up-reg-index rs2)))))))
 
 (defun get-fp-operands (scp modes)
-  (declare (type (alien (* sigcontext)) scp)
+  (declare (type (alien (* unix:sigcontext)) scp)
 	   (ignore modes))
   ;; From the offending FP instruction, get the operation and
   ;; operands, if we can.

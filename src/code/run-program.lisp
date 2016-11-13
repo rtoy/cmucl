@@ -90,15 +90,18 @@
   output		    ; Stream from child's output or nil.
   error			    ; Stream from child's error output or nil.
   status-hook		    ; Closure to call when PROC changes status.
-  plist			    ; Place for clients to stash tings.
+  plist			    ; Place for clients to stash things.
   cookie		    ; List of the number of pipes from the subproc.
   )
 
 (defun %print-process (proc stream depth)
   (declare (ignore depth))
-  (format stream "#<process ~D ~S>"
-	  (process-pid proc)
-	  (process-status proc)))
+  (print-unreadable-object (proc stream :type t :identity t)
+    (format stream "~D ~S ~S ~D"
+	    (process-pid proc)
+	    (process-status proc)
+	    :exit-code
+	    (process-exit-code proc))))
 
 ;;; PROCESS-STATUS -- Public.
 ;;;
@@ -456,7 +459,8 @@
 		    &key (env *environment-list*) (wait t) pty input
 		    if-input-does-not-exist output (if-output-exists :error)
 		    (error :output) (if-error-exists :error) status-hook
-		    (external-format :default))
+		    (external-format :default)
+		    (element-type 'base-char))
   "RUN-PROGRAM creates a new process and runs the unix program in the
    file specified by the simple-string PROGRAM.  ARGS are the standard
    arguments that can be passed to a Unix program, for no arguments
@@ -467,8 +471,9 @@
 
    The keyword arguments have the following meanings:
      :env -
-        An A-LIST mapping keyword environment variables to simple-string
-	values.
+        An A-LIST mapping keyword environment variables to
+	simple-string values.  This is the shell environment for
+	Program.  Defaults to *environment-list*.
      :wait -
         If non-NIL (default), wait until the created process finishes.  If
         NIL, continue running Lisp until the program finishes.
@@ -510,7 +515,11 @@
         This is a function the system calls whenever the status of the
         process changes.  The function takes the process as an argument.
      :external-format -
-        This is the external-format used for communication with the subprocess."
+        This is the external-format used for communication with the subprocess.
+     :element-type -
+        When a stream is created for :input or :output, the stream
+        uses this element-type instead of the default 'BASE-CHAR type.
+"
 
   ;; Make sure the interrupt handler is installed.
   (system:enable-interrupt unix:sigchld #'sigchld-handler)
@@ -531,13 +540,15 @@
 	      (stdin input-stream)
 	      (get-descriptor-for input cookie :direction :input
 				  :if-does-not-exist if-input-does-not-exist
-				  :external-format external-format)
+				  :external-format external-format
+				  :element-type element-type)
 	    (multiple-value-bind
 		(stdout output-stream)
 		(get-descriptor-for output cookie :direction :output
                                     :if-does-not-exist :create
 				    :if-exists if-output-exists
-				    :external-format external-format)
+				    :external-format external-format
+				    :element-type element-type)
 	      (multiple-value-bind
 		  (stderr error-stream)
 		  (if (eq error :output)
@@ -545,7 +556,8 @@
 		      (get-descriptor-for error cookie :direction :output
                                           :if-does-not-exist :create
 					  :if-exists if-error-exists
-					  :external-format external-format))
+					  :external-format external-format
+					  :element-type element-type))
 		(multiple-value-bind (pty-name pty-stream)
 				     (open-pty pty cookie external-format)
 		  ;; Make sure we are not notified about the child death before
@@ -652,6 +664,7 @@
 ;;; 
 (defun get-descriptor-for (object cookie &rest keys &key direction
 							 external-format
+						         (element-type 'base-char)
 				  &allow-other-keys)
   (cond ((eq object t)
 	 ;; No new descriptor is needed.
@@ -684,14 +697,18 @@
 	      (push write-fd *close-on-error*)
 	      (let ((stream (system:make-fd-stream write-fd :output t
 						   :external-format
-						   external-format)))
+						   external-format
+						   :element-type
+						   element-type)))
 		(values read-fd stream)))
 	     (:output
 	      (push read-fd *close-on-error*)
 	      (push write-fd *close-in-parent*)
 	      (let ((stream (system:make-fd-stream read-fd :input t
 						   :external-format
-						   external-format)))
+						   external-format
+						   :element-type
+						   element-type)))
 		(values write-fd stream)))
 	     (t
 	      (unix:unix-close read-fd)
@@ -732,7 +749,13 @@
 			  (read-line object nil nil)
 			(unless line
 			  (return))
-			(unix:unix-write fd line 0 (length line))
+			;; Take just the low 8 bits of each char
+			;; (code) of the string and write that out to
+			;; the descriptor.
+			(let ((output (make-array (length line) :element-type '(unsigned-byte 8))))
+			  (dotimes (k (length output))
+			    (setf (aref output k) (ldb (byte 8 0) (char-code (aref line k)))))
+			  (unix:unix-write fd output 0 (length output)))
 			(if no-cr
 			  (return)
 			  (unix:unix-write fd newline 0 1)))))

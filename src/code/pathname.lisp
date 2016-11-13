@@ -1219,17 +1219,8 @@ a host-structure or string."
 	(:version (frob (%pathname-version pathname)))))))
 
 
-;;; PATHNAME-MATCH-P -- Interface
-;;;
-(defun pathname-match-p (in-pathname in-wildname)
-  "Pathname matches the wildname template?"
-  (declare (type path-designator in-pathname)
-	   ;; Not path-designator because a file-stream can't have a
-	   ;; wild pathname.
-	   (type (or string pathname) in-wildname))
-  (with-pathname (pathname in-pathname)
-    (with-pathname (wildname in-wildname)
-      (macrolet ((frob (field &optional (op 'components-match ))
+(defun %%pathname-match-p (pathname wildname)
+  (macrolet ((frob (field &optional (op 'components-match ))
 		   `(or (null (,field wildname))
 			(,op (,field pathname) (,field wildname)))))
 	(and (or (null (%pathname-host wildname))
@@ -1238,7 +1229,36 @@ a host-structure or string."
 	     (frob %pathname-directory directory-components-match)
 	     (frob %pathname-name)
 	     (frob %pathname-type)
-	     (frob %pathname-version))))))
+	     (frob %pathname-version))))
+
+;; Like PATHNAME-MATCH-P but the pathnames should not be search-lists.
+;; Primarily intended for TRANSLATE-LOGICAL-PATHNAME and friends,
+;; because PATHNAME-MATCH-P calls TRANSLATE-LOGICAL-PATHNAME, causing
+;; infinite recursion.
+(defun %pathname-match-p (in-pathname in-wildname)
+  "Pathname matches the wildname template?"
+  (declare (type path-designator in-pathname)
+	   ;; Not path-designator because a file-stream can't have a
+	   ;; wild pathname.
+	   (type (or string pathname) in-wildname))
+  (with-pathname (pathname in-pathname)
+    (with-pathname (wildname in-wildname)
+      (%%pathname-match-p pathname wildname))))
+
+;;; PATHNAME-MATCH-P -- Interface
+;;;
+(defun pathname-match-p (in-pathname in-wildname)
+  "Pathname matches the wildname template?"
+  (declare (type path-designator in-pathname)
+	   ;; Not path-designator because a file-stream can't have a
+	   ;; wild pathname.
+	   (type (or string pathname) in-wildname))
+  (with-pathname (in-path in-pathname)
+    (enumerate-search-list (pathname in-path)
+      (with-pathname (in-wild in-wildname)
+	(enumerate-search-list (wildname in-wild)
+	  (when (%%pathname-match-p pathname wildname)
+	    (return-from pathname-match-p pathname)))))))
 
 
 ;;; SUBSTITUTE-INTO -- Internal
@@ -1473,7 +1493,7 @@ a host-structure or string."
   (with-pathname (source source)
     (with-pathname (from from-wildname)
       (with-pathname (to to-wildname)
-	  (unless (pathname-match-p source from)
+	  (unless (%pathname-match-p source from)
 	    (didnt-match-error source from))
 	  (let* ((source-host (%pathname-host source))
 		 (to-host (%pathname-host to))
@@ -2168,7 +2188,7 @@ a host-structure or string."
 		       :format-control (intl:gettext "No translation for ~S")
 		       :format-arguments (list pathname)))
        (destructuring-bind (from to) x
-	 (when (pathname-match-p pathname from)
+	 (when (%pathname-match-p pathname from)
 	   (return (translate-logical-pathname
 		    (translate-pathname pathname from to)))))))
     (pathname pathname)

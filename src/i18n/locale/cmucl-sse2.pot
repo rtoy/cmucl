@@ -83,6 +83,10 @@ msgid "inline float truncate"
 msgstr ""
 
 #: src/compiler/x86/float-sse2.lisp
+msgid "inline ftruncate"
+msgstr ""
+
+#: src/compiler/x86/float-sse2.lisp
 msgid "inline complex single-float creation"
 msgstr ""
 

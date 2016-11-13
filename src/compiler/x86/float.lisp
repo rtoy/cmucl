@@ -2303,6 +2303,50 @@
 (defknown ((setf x87-floating-point-modes)) (float-modes)
   float-modes)
 
+;; For the record, here is the format of the x86 FPU status word
+;;
+;; Bit
+;; 15       FPU Busy
+;; 14       C3 (condition code)
+;; 13-11    Top of stack
+;; 10       C2 (condition code)
+;;  9       C1 (condition code)
+;;  8       C0 (condition code)
+;;  7       Error summary status
+;;  6       Stack fault
+;;  5       precision flag (inexact)
+;;  4       underflow flag
+;;  3       overflow flag
+;;  2       divide-by-zero flag
+;;  1       denormalized operand flag
+;;  0       invalid operation flag
+;;
+;; When one of the flag bits (0-5) is set, then that exception has
+;; been detected since the bits were last cleared.
+;;
+;; The control word:
+;;
+;; 15-13    reserved
+;; 12       infinity control
+;; 11-10    rounding control
+;; 9-8      precision control
+;; 7-6      reserved
+;;  5       precision masked
+;;  4       underflow masked
+;;  3       overflow masked
+;;  2       divide-by-zero masked
+;;  1       denormal operand masked
+;;  0       invalid operation masked
+;;
+;; When one of the mask bits (0-5) is set, then that exception is
+;; masked so that no exception is generated.
+;;
+;; Returns the control and status words merged into one.  The low 16
+;; bits contains the control word with the exception mask bits
+;; inverted to indicate exception enable bits.  The high 16 bits
+;; contains the status word, but the top 8 bits of the status word are
+;; cleared, effectively removing the condition code, top-of-stack
+;; bits, and the FPU busy bit.
 (define-vop (x87-floating-point-modes)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)

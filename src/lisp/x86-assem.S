@@ -98,61 +98,12 @@ FUNCDEF(call_into_c)
 /* Save the return lisp address in ebx */	
 	popl	%ebx
 
-/* Setup the NPX for C */
-	fstp	%st(0)
-	fstp	%st(0)
-	fstp	%st(0)
-	fstp	%st(0)
-	fstp	%st(0)
-	fstp	%st(0)
-	fstp	%st(0)
-	fstp	%st(0)
 	call	*%eax		# normal callout using Lisp stack
 
-	movl	%eax,%ecx	# remember integer return value
-
-/* Check for a return FP value */
-	fxam
-	fnstsw	%ax
-	andl	$0x4500,%eax
-	cmpl	$0x4100,%eax
-	jne	Lfp_rtn_value
-
-/* The return value is in eax, or eax,edx? */
-/* Setup the NPX stack for lisp */
-	fldz			# insure no regs are empty
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-no_fldz:	
-/* Restore the return value */
-	movl	%ecx,%eax	# maybe return value
-
 	movl	$0,GNAME(foreign_function_call_active)
 /* Return */	
 	jmp	*%ebx
 
-Lfp_rtn_value:
-/* The return result is in st(0) */
-/* Setup the NPX stack for lisp, placing the result in st(0) */
-	fldz			# insure no regs are empty
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-	fxch	%st(7)		# move the result back to st(0)
-
-/* Don't need to restore eax as the result is in st(0) */
-
-	movl	$0,GNAME(foreign_function_call_active)
-/* Return */	
-	jmp	*%ebx
 ENDFUNC(call_into_c)
 
 
@@ -166,11 +117,6 @@ FUNCDEF(call_into_lisp)
 	movl	%esp,%ebp	# establish new frame
 
 /* Save the NPX state */
-	fwait			# Catch any pending NPX exceptions.
-	/* Save the SSE2 for X87 state */
-	mov	GNAME(fpu_mode), %eax
-	cmp	$2, %eax	# SSE2 mode?
-	jne	x87_save
 	movl	%esp, %eax	# Remember the current stack pointer
 	/*
 	 * The SSE state is 512 bytes, but we need 16 more because we
@@ -180,34 +126,6 @@ FUNCDEF(call_into_lisp)
 	andl	$-16, %esp	# fxsave needs 16-byte alignment
 	fxsave	(%esp)		
 	pushl	%eax		# Save the old stack pointer
-	fninit			# Reset fpu, just in case
-	jmp	npx_save_done
-
-x87_save:
-	subl	$108,%esp	# Make room for the NPX state.
-	fnsave	(%esp)		# Resets NPX
-		
-	movl	(%esp),%eax	# Load NPX control word
-	andl	$0xfffff3ff,%eax	# Set rounding mode to nearest
-#ifdef type_LongFloat
-	orl	$0x00000300,%eax	# Set precision to 64 bits
-#else
-	orl	$0x00000200,%eax	# Set precision to 53 bits
-#endif	
-	pushl	%eax
-	fldcw	(%esp)		# Recover modes
-	popl	%eax
-npx_save_done:			
-	/* Is this still necessary with sse2? */
-	fldz			# insure no FP regs are empty
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-			
 /* Save C regs: ebx esi edi */
 	pushl	%ebx
 	pushl	%esi
@@ -225,7 +143,8 @@ npx_save_done:
 	movl	%eax, GNAME(foreign_function_call_active)
 
 	movl	%esp,%ebx	# remember current stack
-	cmpl	$CONTROL_STACK_START,%esp
+	cmpl	GNAME(control_stack), %esp
+
 	jbe	ChangeToLispStack
 	cmpl	GNAME(control_stack_end), %esp
 	jbe	OnLispStack
@@ -275,18 +194,9 @@ Ldone:
 	popl	%ebx
 
 /* Restore the NPX state */
-	/* Restore SSE2 state? */
-	mov	GNAME(fpu_mode), %eax
-	cmp	$2, %eax	# SSE2 mode?
-	jne	x87_restore
 	popl	%eax		# Get the old stack pointer
 	fxrstor	(%esp)		# Restore the SSE state
 	movl	%eax, %esp	# Now really restore the old stack pointer
-	jmp	npx_restore_done
-x87_restore:
-	frstor  (%esp)
-	addl	$108, %esp
-npx_restore_done:	
 			
 	popl	%ebp		# c-sp
 	movl	%edx,%eax	# c-val
@@ -463,7 +373,7 @@ ENDFUNC(fastcopy16)
 
 
 /*
- * alloc_overflow_x87 and alloc_overflow_sse2 must not be called from
+ * alloc_overflow_sse2 must not be called from
  * C because it doesn't follow C conventions.
  *
  * On entry:
@@ -471,18 +381,6 @@ ENDFUNC(fastcopy16)
  * On exit:
  * %eax = address
  */
-FUNCDEF(alloc_overflow_x87)
-	STACK_PROLOGUE(12)
-	movl	%ecx, 8(%esp)	# Save ecx and edx registers
-	movl	%edx, 4(%esp)
-	movl	%eax, (%esp)	# Put size on stack for first arg to alloc()
-	call	GNAME(alloc)
-	movl	4(%esp), %edx	# Restore edx and ecx registers.  eax has the return value.
-	movl	8(%esp), %ecx
-	STACK_EPILOGUE
-	ret
-ENDFUNC(alloc_overflow_x87)	
-
 FUNCDEF(alloc_overflow_sse2)
 	STACK_PROLOGUE(20)
 	movl	%ecx, 8(%esp)	# Save ecx and edx registers

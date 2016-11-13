@@ -38,47 +38,6 @@
 (deftransform %double-float ((n) (double-float) * :when :both)
   'n)
 
-#+double-double
-(progn
-(defknown %double-double-float (real)
-  double-double-float
-  (movable foldable flushable))
-
-(deftransform float ((n prototype) (* double-double-float) * :when :both)
-  '(%double-double-float n))
-
-(deftransform %double-float ((n) (double-double-float) * :when :both)
-  '(double-double-hi n))
-
-(deftransform %single-float ((n) (double-double-float) * :when :both)
-  '(float (double-double-hi n) 1f0))
-
-(deftransform %double-double-float ((n) (double-double-float) * :when :both)
-  'n)
-
-#+nil
-(defun %double-double-float (n)
-  (make-double-double-float (float n 1d0) 0d0))
-
-;; Moved to code/float.lisp, because we need this relatively early in
-;; the build process to handle float and real types.
-#+nil
-(defun %double-double-float (n)
-  (typecase n
-    (fixnum
-     (%make-double-double-float (float n 1d0) 0d0))
-    (single-float
-     (%make-double-double-float (float n 1d0) 0d0))
-    (double-float
-     (%make-double-double-float (float n 1d0) 0d0))
-    (double-double-float
-     n)
-    (bignum
-     (bignum:bignum-to-float n 'double-double-float))
-    (ratio
-     (kernel::float-ratio n 'double-double-float))))
-); progn
-
 (defknown %complex-single-float (number) (complex single-float)
   (movable foldable flushable))
 (defknown %complex-double-float (number) (complex double-float)
@@ -117,7 +76,7 @@
 		  '(%double-double-float n))
 		 ((csubtypep tspec (specifier-type 'double-float))	
 		  '(%double-float n))	
-		 ((csubtypep tspec (specifier-type 'float))
+		 ((csubtypep tspec (specifier-type 'single-float))
 		  '(%single-float n))
 		 #+double-double
 		 ((csubtypep tspec (specifier-type '(complex double-double-float)))
@@ -192,12 +151,12 @@
   '(let ((res (%unary-ftruncate (/ x y))))
      (values res (- x (* y res)))))
 
-#+sparc
+#+(or sparc (and x86 sse2))
 (defknown fast-unary-ftruncate ((or single-float double-float))
   (or single-float double-float)
   (movable foldable flushable))
 
-#+sparc
+#+(or sparc (and x86 sse2))
 (defoptimizer (fast-unary-ftruncate derive-type) ((f))
   (one-arg-derive-type f
 		       #'(lambda (n)
@@ -210,10 +169,9 @@
 ;; if x is known to be of the right type.  Also, if the result is
 ;; known to fit in the same range as a (signed-byte 32), convert this
 ;; to %unary-truncate, which might be a single instruction, and float
-;; the result.  However, for sparc, we have a vop to do this so call
-;; that, and for Sparc V9, we can actually handle a 64-bit integer
-;; range.
-
+;; the result.  However, for sparc and x86, we have a vop to do this
+;; so call that, and for Sparc V9, we can actually handle a 64-bit
+;; integer range.
 (macrolet ((frob (ftype func)
 	     `(deftransform %unary-ftruncate ((x) (,ftype))
 	       (let* ((x-type (continuation-type x))
@@ -224,14 +182,19 @@
 		 (if (and (numberp lo) (numberp hi)
 			  (< limit-lo lo)
 			  (< hi limit-hi))
-		     #-sparc '(let ((result (coerce (%unary-truncate x) ',ftype)))
-			        (if (zerop result)
-				    (* result x)
-				    result))
-		     #+sparc '(let ((result (fast-unary-ftruncate x)))
-			        (if (zerop result)
-				    (* result x)
-				    result))
+		     #-(or sparc (and x86 sse2))
+		     '(let ((result (coerce (%unary-truncate x) ',ftype)))
+		       ;; Multiply by x when result is 0 so that we
+		       ;; get the correct signed zero to match what
+		       ;; ftruncate in float.lisp would return.
+		       (if (zerop result)
+			   (* result x)
+			   result))
+		     #+(or sparc (and x86 sse2))
+		     '(let ((result (fast-unary-ftruncate x)))
+		       (if (zerop result)
+			   (* result x)
+			   result))
 		     '(,func x))))))
   (frob single-float %unary-ftruncate/single-float)
   (frob double-float %unary-ftruncate/double-float))
@@ -355,31 +318,10 @@
 (defknown double-float-low-bits (double-float) (unsigned-byte 32)
   (movable foldable flushable))
 
-#+(or sparc ppc)
+#+(or sparc ppc (and x86 sse2))
 (defknown double-float-bits (double-float)
   (values (signed-byte 32) (unsigned-byte 32))
   (movable foldable flushable))
-
-#+double-double
-(progn
-(defknown double-double-float-p (t)
-  boolean
-  (movable foldable flushable))
-
-(defknown %make-double-double-float (double-float double-float)
-  double-double-float
-  (movable foldable flushable))
-
-
-(defknown double-double-hi (double-double-float)
-  double-float
-  (movable foldable flushable))
-
-(defknown double-double-lo (double-double-float)
-  double-float
-  (movable foldable flushable))
-
-) ; progn
 
 (deftransform float-sign ((float &optional float2)
 			  (single-float &optional single-float) *)
@@ -397,18 +339,6 @@
 	  (if (minusp (double-float-high-bits float)) (- ,temp) ,temp)))
       '(if (minusp (double-float-high-bits float)) -1d0 1d0)))
 
-#+double-double
-(deftransform float-sign ((float &optional float2)
-			  (double-double-float &optional double-double-float) *)
-  (if float2
-      (let ((temp (gensym)))
-	`(let ((,temp (abs float2)))
-	   (if (minusp (float-sign (double-double-hi float)))
-	       (- ,temp)
-	       ,temp)))
-      '(if (minusp (float-sign (double-double-hi float))) -1w0 1w0)))
-
-  
 
 ;;;; DECODE-FLOAT, INTEGER-DECODE-FLOAT, SCALE-FLOAT:
 ;;;
@@ -484,21 +414,50 @@
   '(integer-decode-double-float x))
 
 (deftransform scale-float ((f ex) (single-float *) * :when :both)
-  (if (and (backend-featurep :x86)
-	   (not (backend-featurep :sse2))
-	   (csubtypep (continuation-type ex)
-		      (specifier-type '(signed-byte 32)))
-	   (not (byte-compiling)))
-      '(coerce (%scalbn (coerce f 'double-float) ex) 'single-float)
-      '(scale-single-float f ex)))
+  (cond ((and (backend-featurep :x86)
+	      (not (backend-featurep :sse2))
+	      (csubtypep (continuation-type ex)
+			 (specifier-type '(signed-byte 32)))
+	      (not (byte-compiling)))
+	 '(coerce (%scalbn (coerce f 'double-float) ex) 'single-float))
+	((csubtypep (continuation-type ex)
+		    (specifier-type `(integer #.(- vm:single-float-normal-exponent-min
+						   vm:single-float-bias
+						   vm:single-float-digits)
+					      #.(- vm:single-float-normal-exponent-max
+						   vm:single-float-bias
+						   1))))
+	 ;; The exponent is such that 2^ex will fit in a single-float.
+	 ;; Thus, scale-float can be done multiplying by a suitable
+	 ;; constant.
+	 `(* f (kernel:make-single-float (dpb (+ ex (1+ vm:single-float-bias))
+					      vm:single-float-exponent-byte
+					      (kernel:single-float-bits 1f0)))))
+	(t
+	 '(scale-single-float f ex))))
 
 (deftransform scale-float ((f ex) (double-float *) * :when :both)
-  (if (and (backend-featurep :x86)
-	   (not (backend-featurep :sse2))
-	   (csubtypep (continuation-type ex)
-		      (specifier-type '(signed-byte 32))))
-      '(%scalbn f ex)
-      '(scale-double-float f ex)))
+  (cond ((and (backend-featurep :x86)
+	      (not (backend-featurep :sse2))
+	      (csubtypep (continuation-type ex)
+			 (specifier-type '(signed-byte 32))))
+	 '(%scalbn f ex))
+	((csubtypep (continuation-type ex)
+		    (specifier-type `(integer #.(- vm:double-float-normal-exponent-min
+						   vm:double-float-bias
+						   vm:double-float-digits)
+					      #.(- vm:double-float-normal-exponent-max
+						   vm:double-float-bias
+						   1))))
+	 ;; The exponent is such that 2^ex will fit in a double-float.
+	 ;; Thus, scale-float can be done multiplying by a suitable
+	 ;; constant.
+	 `(* f (kernel:make-double-float (dpb (+ ex (1+ vm:double-float-bias))
+					      vm:double-float-exponent-byte
+					      (kernel::double-float-bits 1d0))
+					 0)))
+	(t
+	 '(scale-double-float f ex))))
 
 ;;; toy@rtp.ericsson.se:
 ;;;
@@ -712,6 +671,9 @@
 (dolist (stuff '((exp %exp *)
 		 (log %log float)
 		 (sqrt %sqrt float)
+		 (sin %sin float)
+		 (cos %cos float)
+		 (tan %tan float)
 		 (asin %asin float)
 		 (acos %acos float)
 		 (atan %atan *)
@@ -726,6 +688,21 @@
       `(coerce (,prim (coerce x 'double-float)) 'single-float))
     (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
       `(,prim x))))
+
+(defknown (%sincos)
+    (double-float) (values double-float double-float)
+    (movable foldable flushable))
+
+(deftransform cis ((x) (single-float) * :when :both)
+  `(multiple-value-bind (s c)
+       (%sincos (coerce x 'double-float))
+     (complex (coerce c 'single-float)
+	      (coerce s 'single-float))))
+
+(deftransform cis ((x) (double-float) * :when :both)
+  `(multiple-value-bind (s c)
+       (%sincos x)
+     (complex c s)))
 
 ;;; The argument range is limited on the x86 FP trig. functions. A
 ;;; post-test can detect a failure (and load a suitable result), but
@@ -795,6 +772,33 @@
 (deftransform log ((x y) (float float) float)
   '(if (zerop y) y (/ (log x) (log y))))
 
+(deftransform log ((x y) ((or (member 0f0) (single-float (0f0)))
+			  (constant-argument number))
+		   single-float)
+  ;; Transform (log x 2) and (log x 10) to something simpler.
+  (let ((y-val (continuation-value y)))
+    (unless (and (not-more-contagious y x)
+		 (or (= y-val 2)
+		     (= y-val 10)))
+      (give-up))
+    (cond ((= y-val 10)
+	   `(coerce (kernel:%log10 (float x 1d0)) 'single-float))
+	  ((= y-val 2)
+	   `(coerce (kernel:%log2 (float x 1d0)) 'single-float)))))
+
+(deftransform log ((x y) ((or (member 0d0) (double-float 0d0))
+			  (constant-argument number))
+		   double-float)
+  ;; Transform (log x 2) and (log x 10) to something simpler.
+  (let ((y-val (continuation-value y)))
+    (unless (and (not-more-contagious y x)
+		 (or (= y-val 2)
+		     (= y-val 10)))
+      (give-up))
+    (cond ((= y-val 10)
+	   `(kernel:%log10 (float x 1d0)))
+	  ((= y-val 2)
+	   `(kernel:%log2 (float x 1d0))))))
 
 ;;; Handle some simple transformations
   
@@ -1773,9 +1777,6 @@
 	 (deftransform * ((z w) (,real-type (complex ,type)) *)
 	   ;; Real * complex
 	   '(complex (* z (realpart w)) (* z (imagpart w))))
-	 (deftransform cis ((z) ((,type)) *)
-	   ;; Cis.
-	   '(complex (cos z) (sin z)))
 	 (deftransform / ((rx y) (,real-type (complex ,type)) *)
 	   ;; Real/complex
 	   '(let* ((ry (realpart y))
@@ -2010,608 +2011,81 @@
 	 (specifier-type `(complex ,(or (numeric-type-format arg) 'float))))
      #'cis))
 
-
-;;; Support for double-double floats
-;;;
-;;; The algorithms contained herein are based on the code written by
-;;; Yozo Hida.  See http://www.cs.berkeley.edu/~yozo/ for more
-;;; information.
+;;; Derive the result types of DECODE-FLOAT
 
-#+double-double
-(progn
-  
-(declaim (inline quick-two-sum))
-(defun quick-two-sum (a b)
-  "Computes fl(a+b) and err(a+b), assuming |a| >= |b|"
-  (declare (double-float a b))
-  (let* ((s (+ a b))
-	 (e (- b (- s a))))
-    (values s e)))
+(defun decode-float-frac-derive-type-aux (arg)
+  ;; The fraction part of DECODE-FLOAT is always a subset of the
+  ;; interval [0.5, 1), even for subnormals.  While possible to derive
+  ;; a tighter bound in some cases, we don't.  Just return that
+  ;; interval of the approriate type when possible.  If not, just use
+  ;; float.
+  (if (numeric-type-format arg)
+      (specifier-type `(,(numeric-type-format arg)
+			 ,(coerce 1/2 (numeric-type-format arg))
+			 (,(coerce 1 (numeric-type-format arg)))))
+      (specifier-type '(float 0.5 (1.0)))))
 
-(declaim (inline two-sum))
-(defun two-sum (a b)
-  "Computes fl(a+b) and err(a+b)"
-  (declare (double-float a b))
-  (let* ((s (+ a b))
-	 (v (- s a))
-	 (e (+ (- a (- s v))
-	       (- b v))))
-    (locally
-	(declare (optimize (inhibit-warnings 3)))
-      (values s e))))
+(defun decode-float-exp-derive-type-aux (arg)
+  ;; Derive the exponent part of the float.  It's always an integer
+  ;; type.
+  (flet ((calc-exp (x)
+	   (when x
+	     (nth-value 1 (decode-float x))))
+	 (min-exp ()
+	   ;; Use decode-float on the least positive float of the
+	   ;; appropriate type to find the min exponent.  If we don't
+	   ;; know the actual number format, use double, which has the
+	   ;; widest range (including double-double-float).
+	   (nth-value 1 (decode-float (if (eq 'single-float (numeric-type-format arg))
+					  least-positive-single-float
+					  least-positive-double-float))))
+	 (max-exp ()
+	   ;; Use decode-float on the most postive number of the
+	   ;; appropriate type to find the max exponent.  If we don't
+	   ;; know the actual number format, use double, which has the
+	   ;; widest range (including double-double-float).
+	   (if (eq (numeric-type-format arg) 'single-float)
+	       (nth-value 1 (decode-float most-positive-single-float))
+	       (nth-value 1 (decode-float most-positive-double-float)))))
+    (let* ((lo (or (bound-func #'calc-exp
+			       (numeric-type-low arg))
+		   (min-exp)))
+	   (hi (or (bound-func #'calc-exp
+			       (numeric-type-high arg))
+		   (max-exp))))
+      (specifier-type `(integer ,(or lo '*) ,(or hi '*))))))
 
-(declaim (maybe-inline add-dd))
-(defun add-dd (a0 a1 b0 b1)
-  "Add the double-double A0,A1 to the double-double B0,B1"
-  (declare (double-float a0 a1 b0 b1)
-	   (optimize (speed 3)
-		     (inhibit-warnings 3)))
-  (multiple-value-bind (s1 s2)
-      (two-sum a0 b0)
-    (declare (double-float s1 s2))
-    (when (float-infinity-p s1)
-      (return-from add-dd (values s1 0d0)))
-    (multiple-value-bind (t1 t2)
-	(two-sum a1 b1)
-      (declare (double-float t1 t2))
-      (incf s2 t1)
-      (multiple-value-bind (s1 s2)
-	  (quick-two-sum s1 s2)
-	(declare (double-float s1 s2))
-	(incf s2 t2)
-	(multiple-value-bind (r1 r2)
-	    (quick-two-sum s1 s2)
-	  (if (and (zerop a0) (zerop b0))
-	      ;; Handle sum of signed zeroes here.
-	      (values (float-sign (+ a0 b0) 0d0)
-		      0d0)
-	      (values r1 r2)))))))
-
-(deftransform + ((a b) (vm::double-double-float vm::double-double-float)
-		 * :node node)
-  `(multiple-value-bind (hi lo)
-       (add-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
-	       (kernel:double-double-hi b) (kernel:double-double-lo b))
-     (truly-the ,(type-specifier (node-derived-type node))
-		(kernel:%make-double-double-float hi lo))))
-
-(declaim (inline quick-two-diff))
-(defun quick-two-diff (a b)
-  "Compute fl(a-b) and err(a-b), assuming |a| >= |b|"
-  (declare (double-float a b))
-  (let ((s (- a b)))
-    (values s (- (- a s) b))))
-
-(declaim (inline two-diff))
-(defun two-diff (a b)
-  "Compute fl(a-b) and err(a-b)"
-  (declare (double-float a b))
-  (let* ((s (- a b))
-	 (v (- s a))
-	 (e (- (- a (- s v))
-	       (+ b v))))
-    (locally
-	(declare (optimize (inhibit-warnings 3)))
-      (values s e))))
-
-(declaim (maybe-inline sub-dd))
-(defun sub-dd (a0 a1 b0 b1)
-  "Subtract the double-double B0,B1 from A0,A1"
-  (declare (double-float a0 a1 b0 b1)
-	   (optimize (speed 3)
-		     (inhibit-warnings 3)))
-  (multiple-value-bind (s1 s2)
-      (two-diff a0 b0)
-    (declare (double-float s2))
-    (when (float-infinity-p s1)
-      (return-from sub-dd (values s1 0d0)))
-    (multiple-value-bind (t1 t2)
-	(two-diff a1 b1)
-      (incf s2 t1)
-      (multiple-value-bind (s1 s2)
-	  (quick-two-sum s1 s2)
-	(declare (double-float s2))
-	(incf s2 t2)
-	(multiple-value-bind (r1 r2)
-	    (quick-two-sum s1 s2)
-	  (if (and (zerop a0) (zerop b0))
-	      (values (float-sign (- a0 b0) 0d0)
-		      0d0)
-	      (values r1 r2)))))))
-
-(declaim (maybe-inline sub-d-dd))
-(defun sub-d-dd (a b0 b1)
-  "Compute double-double = double - double-double"
-  (declare (double-float a b0 b1)
-	   (optimize (speed 3) (safety 0)
-		     (inhibit-warnings 3)))
-  (multiple-value-bind (s1 s2)
-      (two-diff a b0)
-    (declare (double-float s2))
-    (when (float-infinity-p s1)
-      (return-from sub-d-dd (values s1 0d0)))
-    (decf s2 b1)
-    (multiple-value-bind (r1 r2)
-	(quick-two-sum s1 s2)
-      (if (and (zerop a) (zerop b0))
-	(values (float-sign (- a b0) 0d0) 0d0)
-	(values r1 r2)))))
-
-(declaim (maybe-inline sub-dd-d))
-(defun sub-dd-d (a0 a1 b)
-  "Subtract the double B from the double-double A0,A1"
-  (declare (double-float a0 a1 b)
-	   (optimize (speed 3) (safety 0)
-		     (inhibit-warnings 3)))
-  (multiple-value-bind (s1 s2)
-      (two-diff a0 b)
-    (declare (double-float s2))
-    (when (float-infinity-p s1)
-      (return-from sub-dd-d (values s1 0d0)))
-    (incf s2 a1)
-    (multiple-value-bind (r1 r2)
-	(quick-two-sum s1 s2)
-      (if (and (zerop a0) (zerop b))
-	(values (float-sign (- a0 b) 0d0) 0d0)
-	(values r1 r2)))))
-
-(deftransform - ((a b) (vm::double-double-float vm::double-double-float)
-		 * :node node)
-  `(multiple-value-bind (hi lo)
-      (sub-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
-	      (kernel:double-double-hi b) (kernel:double-double-lo b))
-     (truly-the ,(type-specifier (node-derived-type node))
-		(kernel:%make-double-double-float hi lo))))
-
-(deftransform - ((a b) (double-float vm::double-double-float)
-		 * :node node)
-  `(multiple-value-bind (hi lo)
-       (sub-d-dd a
-		 (kernel:double-double-hi b) (kernel:double-double-lo b))
-     (truly-the ,(type-specifier (node-derived-type node))
-		(kernel:%make-double-double-float hi lo))))
-
-(deftransform - ((a b) (vm::double-double-float double-float)
-		 * :node node)
-  `(multiple-value-bind (hi lo)
-       (sub-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
-		 b)
-     (truly-the ,(type-specifier (node-derived-type node))
-		(kernel:%make-double-double-float hi lo))))
-
-(declaim (maybe-inline split))
-;; This algorithm is the version given by Yozo Hida.  It has problems
-;; with overflow because we multiply by 1+2^27.
-;;
-;; But be very careful about replacing this with a new algorithm.  The
-;; values computed here are very important to get the rounding right.
-;; If you change this, the rounding may be different, which will
-;; affect other parts of the algorithm.
-;;
-;; I (rtoy) tried a different algorithm that split the number in two
-;; as described, but without overflow.  However, that caused
-;; -9.4294948327242751340284975915175w0/1w14 to return a value that
-;; wasn't really close to -9.4294948327242751340284975915175w-14.
-;;
-;; This also means we can't print numbers like 1w308 with the current
-;; printing algorithm, or even divide 1w308 by 10.
-#+nil
-(defun split (a)
-  "Split the double-float number a into a-hi and a-lo such that a =
-  a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
-  a-lo contains the lower 26 bits."
-  (declare (double-float a))
-  (let* ((tmp (* a (+ 1 (expt 2 27))))
-	 (a-hi (- tmp (- tmp a)))
-	 (a-lo (- a a-hi)))
-    (values a-hi a-lo)))
-
-;; +split-limit+ is the largest number for which Yozo's algorithm
-;; still works.  Basically we want a*(1+2^27) <=
-;; most-positive-double-float < 2^1024. Therefore, a < 2^1024/(1+2^27)
-;; If we calculate that, we get a = 1.3393857490036326d300.  A quick
-;; test shows that this would cause overflow, but previous float would
-;; not.  This is the value we want.
-(defconstant +split-limit+
-  (scale-float (/ (float (1+ (expt 2 27)) 1d0)) 1024))
-
-(defun split (a)
-  "Split the double-float number a into a-hi and a-lo such that a =
-  a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
-  a-lo contains the lower 26 bits."
-  (declare (double-float a)
-	   (optimize (speed 3)
-		     (inhibit-warnings 3)))
-  ;; This splits the number a into 2 parts of 27 and 26 bits each, but
-  ;; the parts are, I think, supposed to be properly rounded in an
-  ;; IEEE fashion.
-  ;;
-  ;; For numbers that are very large, we use a different algorithm.
-  ;; For smaller numbers, we can use the original algorithm of Yozo
-  ;; Hida.
-  (if (>= (abs a) +split-limit+)
-      ;; I've tested this algorithm against Yozo's method for 1
-      ;; billion randomly generated double-floats between 2^(-995) and
-      ;; 2^996, and identical results are obtained.  For numbers that
-      ;; are very small, this algorithm produces different numbers
-      ;; because of underflow.  For very large numbers, we, of course
-      ;; produce different results because Yozo's method causes
-      ;; overflow.
-      (let* ((tmp (* a (+ 1 (scale-float 1d0 -27))))
-	     (as (* a (scale-float 1d0 -27)))
-	     (a-hi (* (- tmp (- tmp as)) (expt 2 27)))
-	     (a-lo (- a a-hi)))
-	(values a-hi a-lo))
-      ;; Yozo's algorithm.
-      (let* ((tmp (* a (+ 1 (expt 2 27))))
-	     (a-hi (- tmp (- tmp a)))
-	     (a-lo (- a a-hi)))
-	(values a-hi a-lo))))
-
-
-(declaim (inline two-prod))
-#-ppc
-(defun two-prod (a b)
-  _N"Compute fl(a*b) and err(a*b)"
-  (declare (double-float a b))
-  (let ((p (* a b)))
-    (multiple-value-bind (a-hi a-lo)
-	(split a)
-      ;;(format t "a-hi, a-lo = ~S ~S~%" a-hi a-lo)
-      (multiple-value-bind (b-hi b-lo)
-	  (split b)
-	;;(format t "b-hi, b-lo = ~S ~S~%" b-hi b-lo)
-	(let ((e (+ (+ (- (* a-hi b-hi) p)
-		       (* a-hi b-lo)
-		       (* a-lo b-hi))
-		    (* a-lo b-lo))))
-	  (locally 
-	      (declare (optimize (inhibit-warnings 3)))
-	    (values p e)))))))
-
-#+ppc
-(defun two-prod (a b)
-  _N"Compute fl(a*b) and err(a*b)"
-  (declare (double-float a b))
-  ;; PPC has a fused multiply-subtract instruction that can be used
-  ;; here, so use it.
-  (let* ((p (* a b))
-	 (err (vm::fused-multiply-subtract a b p)))
-    (values p err)))
-
-(declaim (inline two-sqr))
-#-ppc
-(defun two-sqr (a)
-  _N"Compute fl(a*a) and err(a*b).  This is a more efficient
-  implementation of two-prod"
-  (declare (double-float a))
-  (let ((q (* a a)))
-    (multiple-value-bind (a-hi a-lo)
-	(split a)
-      (locally
-	  (declare (optimize (inhibit-warnings 3)))
-	(values q (+ (+ (- (* a-hi a-hi) q)
-			(* 2 a-hi a-lo))
-		     (* a-lo a-lo)))))))
-
-#+ppc
-(defun two-sqr (a)
-  _N"Compute fl(a*a) and err(a*b).  This is a more efficient
-  implementation of two-prod"
-  (declare (double-float a))
-  (let ((q (* a a)))
-    (values q (vm::fused-multiply-subtract a a q))))
-
-(declaim (maybe-inline mul-dd-d))
-(defun mul-dd-d (a0 a1 b)
-  (declare (double-float a0 a1 b)
-	   (optimize (speed 3)
-		     (inhibit-warnings 3)))
-  (multiple-value-bind (p1 p2)
-      (two-prod a0 b)
-    (declare (double-float p2))
-    (when (float-infinity-p p1)
-      (return-from mul-dd-d (values p1 0d0)))
-    ;;(format t "mul-dd-d p1,p2 = ~A ~A~%" p1 p2)
-    (incf p2 (* a1 b))
-    ;;(format t "mul-dd-d p2 = ~A~%" p2)
-    (multiple-value-bind (r1 r2)
-	(quick-two-sum p1 p2)
-      (when (zerop r1)
-	(setf r1 (float-sign p1 0d0))
-	(setf r2 p1))
-      (values r1 r2))))
-
-(declaim (maybe-inline mul-dd))
-(defun mul-dd (a0 a1 b0 b1)
-  "Multiply the double-double A0,A1 with B0,B1"
-  (declare (double-float a0 a1 b0 b1)
-	   (optimize (speed 3)
-		     (inhibit-warnings 3)))
-  (multiple-value-bind (p1 p2)
-      (two-prod a0 b0)
-    (declare (double-float p1 p2))
-    (when (float-infinity-p p1)
-      (return-from mul-dd (values p1 0d0)))
-    (incf p2 (* a0 b1))
-    (incf p2 (* a1 b0))
-    (multiple-value-bind (r1 r2)
-	(quick-two-sum p1 p2)
-      (if (zerop r1)
-	(values (float-sign p1 0d0) 0d0)
-	(values r1 r2)))))
-
-(declaim (maybe-inline add-dd-d))
-(defun add-dd-d (a0 a1 b)
-  "Add the double-double A0,A1 to the double B"
-  (declare (double-float a0 a1 b)
-	   (optimize (speed 3)
-		     (inhibit-warnings 3)))
-  (multiple-value-bind (s1 s2)
-      (two-sum a0 b)
-    (declare (double-float s1 s2))
-    (when (float-infinity-p s1)
-      (return-from add-dd-d (values s1 0d0)))
-    (incf s2 a1)
-    (multiple-value-bind (r1 r2)
-	(quick-two-sum s1 s2)
-      (if (and (zerop a0) (zerop b))
-	(values (float-sign (+ a0 b) 0d0) 0d0)
-	(values r1 r2)))))
-
-(declaim (maybe-inline sqr-dd))
-(defun sqr-dd (a0 a1)
-  (declare (double-float a0 a1)
-	   (optimize (speed 3)
-		     (inhibit-warnings 3)))
-  (multiple-value-bind (p1 p2)
-      (two-sqr a0)
-    (declare (double-float p1 p2))
-    (incf p2 (* 2 a0 a1))
-    ;; Hida's version of sqr (qd-2.1.210) has the following line for
-    ;; the sqr function.  But if you compare this with mul-dd, this
-    ;; doesn't exist there, and if you leave it in, it produces
-    ;; results that are different from using mul-dd to square a value.
-    #+nil
-    (incf p2 (* a1 a1))
-    (quick-two-sum p1 p2)))
-
-(deftransform + ((a b) (vm::double-double-float (or integer single-float double-float))
-		 * :node node)
-  `(multiple-value-bind (hi lo)
-       (add-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
-		 (float b 1d0))
-     (truly-the ,(type-specifier (node-derived-type node))
-		(kernel:%make-double-double-float hi lo))))
-
-(deftransform + ((a b) ((or integer single-float double-float) vm::double-double-float)
-		 * :node node)
-  `(multiple-value-bind (hi lo)
-      (add-dd-d (kernel:double-double-hi b) (kernel:double-double-lo b)
-		(float a 1d0))
-     (truly-the ,(type-specifier (node-derived-type node))
-		(kernel:%make-double-double-float hi lo))))
-
-(deftransform * ((a b) (vm::double-double-float vm::double-double-float)
-		 * :node node)
-  ;; non-const-same-leaf-ref-p is stolen from two-arg-derive-type.
-  (flet ((non-const-same-leaf-ref-p (x y)
-	   ;; Just like same-leaf-ref-p, but we don't care if the
-	   ;; value of the leaf is constant or not.
-	   (declare (type continuation x y))
-	   (let ((x-use (continuation-use x))
-		 (y-use (continuation-use y)))
-	     (and (ref-p x-use)
-		  (ref-p y-use)
-		  (eq (ref-leaf x-use) (ref-leaf y-use))))))
-    (destructuring-bind (arg1 arg2)
-	(combination-args node)
-      ;; If the two args to * are the same, we square the number
-      ;; instead of multiply.  Squaring is simpler than a full
-      ;; multiply.
-      (if (non-const-same-leaf-ref-p arg1 arg2)
-	  `(multiple-value-bind (hi lo)
-	       (sqr-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
-	     (truly-the ,(type-specifier (node-derived-type node))
-			(kernel:%make-double-double-float hi lo)))
-	  `(multiple-value-bind (hi lo)
-	       (mul-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
-		       (kernel:double-double-hi b) (kernel:double-double-lo b))
-	     (truly-the ,(type-specifier (node-derived-type node))
-			(kernel:%make-double-double-float hi lo)))))))
-
-(deftransform * ((a b) (vm::double-double-float (or integer single-float double-float))
-		 * :node node)
-  `(multiple-value-bind (hi lo)
-       (mul-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
-		 (float b 1d0))
-     (truly-the ,(type-specifier (node-derived-type node))
-		(kernel:%make-double-double-float hi lo))))
-
-(deftransform * ((a b) ((or integer single-float double-float) vm::double-double-float)
-		 * :node node)
-  `(multiple-value-bind (hi lo)
-       (mul-dd-d (kernel:double-double-hi b) (kernel:double-double-lo b)
-		 (float a 1d0))
-     (truly-the ,(type-specifier (node-derived-type node))
-		(kernel:%make-double-double-float hi lo))))
-
-(declaim (maybe-inline div-dd))
-(defun div-dd (a0 a1 b0 b1)
-  "Divide the double-double A0,A1 by B0,B1"
-  (declare (double-float a0 a1 b0 b1)
-	   (optimize (speed 3)
-		     (inhibit-warnings 3))
-	   (inline sub-dd))
-  (let ((q1 (/ a0 b0)))
-    (when (float-infinity-p q1)
-      (return-from div-dd (values q1 0d0)))
-    ;; (q1b0, q1b1) = q1*(b0,b1)
-    ;;(format t "q1 = ~A~%" q1)
-    (multiple-value-bind (q1b0 q1b1)
-	(mul-dd-d b0 b1 q1)
-      ;;(format t "q1*b = ~A ~A~%" q1b0 q1b1)
-      (multiple-value-bind (r0 r1)
-	  ;; r = a - q1 * b
-	  (sub-dd a0 a1 q1b0 q1b1)
-	;;(format t "r = ~A ~A~%" r0 r1)
-	(let ((q2 (/ r0 b0)))
-	  (multiple-value-bind (q2b0 q2b1)
-	      (mul-dd-d b0 b1 q2)
-	    (multiple-value-bind (r0 r1)
-		;; r = r - (q2*b)
-		(sub-dd r0 r1 q2b0 q2b1)
-	      (declare (ignore r1))
-	      (let ((q3 (/ r0 b0)))
-		(multiple-value-bind (q1 q2)
-		    (quick-two-sum q1 q2)
-		  (add-dd-d q1 q2 q3))))))))))
-
-(declaim (maybe-inline div-dd-d))
-(defun div-dd-d (a0 a1 b)
-  (declare (double-float a0 a1 b)
-	   (optimize (speed 3)
-		     (inhibit-warnings 3)))
-  (let ((q1 (/ a0 b)))
-    ;; q1 = approx quotient
-    ;; Now compute a - q1 * b
-    (multiple-value-bind (p1 p2)
-	(two-prod q1 b)
-      (multiple-value-bind (s e)
-	  (two-diff a0 p1)
-	(declare (double-float e))
-	(incf e a1)
-	(decf e p2)
-	;; Next approx
-	(let ((q2 (/ (+ s e) b)))
-	  (quick-two-sum q1 q2))))))
-
-(deftransform / ((a b) (vm::double-double-float vm::double-double-float)
-		 * :node node)
-  `(multiple-value-bind (hi lo)
-      (div-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
-	      (kernel:double-double-hi b) (kernel:double-double-lo b))
-     (truly-the ,(type-specifier (node-derived-type node))
-		(kernel:%make-double-double-float hi lo))))
-
-(deftransform / ((a b) (vm::double-double-float (or integer single-float double-float))
-		 * :node node)
-  `(multiple-value-bind (hi lo)
-       (div-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
-		 (float b 1d0))
-     (truly-the ,(type-specifier (node-derived-type node))
-		(kernel:%make-double-double-float hi lo))))
-
-(declaim (inline sqr-d))
-(defun sqr-d (a)
-  "Square"
-  (declare (double-float a)
-	   (optimize (speed 3)
-		     (inhibit-warnings 3)))
-  (two-sqr a))
-
-(declaim (inline mul-d-d))
-(defun mul-d-d (a b)
-  (two-prod a b))
-
-(declaim (maybe-inline sqrt-dd))
-(defun sqrt-dd (a0 a1)
-  (declare (type (double-float 0d0) a0)
-	   (double-float a1)
-	   (optimize (speed 3)
-		     (inhibit-warnings 3)))
-  ;; Strategy: Use Karp's trick: if x is an approximation to sqrt(a),
-  ;; then
-  ;;
-  ;; y = a*x + (a-(a*x)^2)*x/2
-  ;;
-  ;; is an approximation that is accurate to twice the accuracy of x.
-  ;; Also, the multiplication (a*x) and [-]*x can be done with only
-  ;; half the precision.
-  (if (and (zerop a0) (zerop a1))
-      (values a0 a1)
-      (let* ((x (/ (sqrt a0)))
-	     (ax (* a0 x)))
-	(multiple-value-bind (s0 s1)
-	    (sqr-d ax)
-	  (multiple-value-bind (s2)
-	      (sub-dd a0 a1 s0 s1)
-	    (multiple-value-bind (p0 p1)
-		(mul-d-d s2 (* x 0.5d0))
-	      (add-dd-d p0 p1 ax)))))))
-
-(deftransform sqrt ((a) ((vm::double-double-float 0w0))
-		    * :node node)
-  `(multiple-value-bind (hi lo)
-       (sqrt-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
-     (truly-the ,(type-specifier (node-derived-type node))
-		(kernel:%make-double-double-float hi lo))))
-
-(declaim (inline neg-dd))
-(defun neg-dd (a0 a1)
-  (declare (double-float a0 a1)
-	   (optimize (speed 3)
-		     (inhibit-warnings 3)))
-  (values (- a0) (- a1)))
-
-(declaim (inline abs-dd))
-(defun abs-dd (a0 a1)
-  (declare (double-float a0 a1)
-	   (optimize (speed 3)
-		     (inhibit-warnings 3)))
-  (if (minusp a0)
-      (neg-dd a0 a1)
-      (values a0 a1)))
-
-(deftransform abs ((a) (vm::double-double-float)
-		   * :node node)
-  `(multiple-value-bind (hi lo)
-       (abs-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
-     (truly-the ,(type-specifier (node-derived-type node))
-		(kernel:%make-double-double-float hi lo))))
-
-(deftransform %negate ((a) (vm::double-double-float)
-		       * :node node)
-  `(multiple-value-bind (hi lo)
-       (neg-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
-     (truly-the ,(type-specifier (node-derived-type node))
-		(kernel:%make-double-double-float hi lo))))
-
-(declaim (inline dd=))
-(defun dd= (a0 a1 b0 b1)
-  (and (= a0 b0)
-       (= a1 b1)))
-  
-(declaim (inline dd<))
-(defun dd< (a0 a1 b0 b1)
-  (or (< a0 b0)
-       (and (= a0 b0)
-	    (< a1 b1))))
-
-(declaim (inline dd>))
-(defun dd> (a0 a1 b0 b1)
-  (or (> a0 b0)
-       (and (= a0 b0)
-	    (> a1 b1))))
-  
-(deftransform = ((a b) (vm::double-double-float vm::double-double-float) *)
-  `(dd= (kernel:double-double-hi a)
-	(kernel:double-double-lo a)
-	(kernel:double-double-hi b)
-	(kernel:double-double-lo b)))
-
-
-(deftransform < ((a b) (vm::double-double-float vm::double-double-float) *)
-  `(dd< (kernel:double-double-hi a)
-	(kernel:double-double-lo a)
-	(kernel:double-double-hi b)
-	(kernel:double-double-lo b)))
-
-
-(deftransform > ((a b) (vm::double-double-float vm::double-double-float) *)
-  `(dd> (kernel:double-double-hi a)
-	(kernel:double-double-lo a)
-	(kernel:double-double-hi b)
-	(kernel:double-double-lo b)))
-
-) ; progn double-double
+(defun decode-float-sign-derive-type-aux (arg)
+  ;; Derive the sign of the float.
+  (if (numeric-type-format arg)
+      (let ((arg-range (interval-range-info (numeric-type->interval arg))))
+	(case arg-range
+	  (+ (make-member-type :members (list (coerce 1 (numeric-type-format arg)))))
+	  (- (make-member-type :members (list (coerce -1 (numeric-type-format arg)))))
+	  (otherwise
+	   (make-member-type :members (list (coerce 1 (numeric-type-format arg))
+					    (coerce -1 (numeric-type-format arg)))))))
+      (specifier-type '(or (member 1f0 -1f0
+			    1d0 -1d0
+			    #+double-double 1w0
+			    #+double-double -1w0)))))
+    
+(defoptimizer (decode-float derive-type) ((num))
+  (let ((f (one-arg-derive-type num
+				#'(lambda (arg)
+				    (decode-float-frac-derive-type-aux arg))
+				#'(lambda (arg)
+				    (nth-value 0 (decode-float arg)))))
+	(e (one-arg-derive-type num
+				#'(lambda (arg)
+				    (decode-float-exp-derive-type-aux arg))
+				#'(lambda (arg)
+				    (nth-value 1 (decode-float arg)))))
+	(s (one-arg-derive-type num
+				#'(lambda (arg)
+				    (decode-float-sign-derive-type-aux arg))
+				#'(lambda (arg)
+				    (nth-value 2 (decode-float arg))))))
+    (make-values-type :required (list f
+				      e
+				      s))))

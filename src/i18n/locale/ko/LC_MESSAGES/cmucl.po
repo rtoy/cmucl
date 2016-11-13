@@ -49,13 +49,18 @@ msgid "Class not yet defined: ~S"
 msgstr "분류명 정의되지 않음 : ~S"
 
 #: src/code/sysmacs.lisp
-msgid "Register the feature as having influenced the CMUCL build process."
+#, fuzzy
+msgid ""
+"Register the feature as having influenced the CMUCL build\n"
+"  process. Feature is added to *feature*"
 msgstr "CMUCL 구축 과정에 영향을 주는 속성으로 입력."
 
 #: src/code/sysmacs.lisp
+#, fuzzy
 msgid ""
 "Register the feature as having influenced the CMUCL build process,\n"
-"and also the CMUCL C runtime."
+"and also the CMUCL C runtime. Feature is added to*features* and\n"
+"sys::*runtime-features*."
 msgstr "CMUCL 구축 과정과 CMUCL C 런타임에 영향을 주는 속성으로 입력."
 
 #: src/code/sysmacs.lisp
@@ -196,7 +201,7 @@ msgid ""
 msgstr ""
 
 #: src/code/lispinit.lisp
-msgid "Features affecting the runtime"
+msgid "Features affecting the runtime.  These are written to internals.h."
 msgstr ""
 
 #: src/code/lispinit.lisp
@@ -1748,10 +1753,9 @@ msgstr ""
 #: src/pcl/env.lisp src/pcl/fixup.lisp src/pcl/methods.lisp src/pcl/cpl.lisp
 #: src/pcl/seal.lisp src/pcl/dfun.lisp
 #: src/pcl/method-slot-access-optimization.lisp src/pcl/boot.lisp
-#: src/pcl/dlisp.lisp src/pcl/cache.lisp src/pcl/defclass.lisp
-#: src/pcl/low.lisp src/compiler/disassem.lisp src/code/pathname.lisp
-#: src/code/pprint-loop.lisp src/code/pprint.lisp src/code/bignum.lisp
-#: src/code/alieneval.lisp
+#: src/pcl/dlisp.lisp src/pcl/cache.lisp src/pcl/defclass.lisp src/pcl/low.lisp
+#: src/compiler/disassem.lisp src/code/pathname.lisp src/code/pprint-loop.lisp
+#: src/code/pprint.lisp src/code/bignum.lisp src/code/alieneval.lisp
 msgid "Required argument missing"
 msgstr ""
 
@@ -2003,26 +2007,26 @@ msgstr ""
 msgid "Can't use :out or :in-out on pointer-like type:~%  ~S"
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid "Vector of all callbacks."
 msgstr ""
 
 #: src/compiler/tn.lisp src/compiler/main.lisp src/code/describe.lisp
 #: src/code/debug-int.lisp src/code/debug-info.lisp
 #: src/code/foreign-linkage.lisp src/code/reader.lisp src/code/stream.lisp
-#: src/code/hash-new.lisp src/code/array.lisp src/code/alieneval.lisp
+#: src/code/hash-new.lisp src/code/array.lisp src/code/alien-callback.lisp
 msgid "~S is not an array with a fill-pointer."
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid "Unable to mprotect ~S bytes (~S) at ~S (~S).  Callbacks may not work."
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid "Return the trampoline pointer for the callback NAME."
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid ""
 "~\n"
 "Attempt to redefine callback with incompatible return type.\n"
@@ -2030,21 +2034,21 @@ msgid ""
 "    New type is: ~A"
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid ""
 "~\n"
 "Create new trampoline (old trampoline calls old lisp function)."
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid "Unsupported argument type: ~A"
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid "Unsupported return type: ~A"
 msgstr ""
 
-#: src/code/alieneval.lisp
+#: src/code/alien-callback.lisp
 msgid ""
 "(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*)\n"
 "     {doc-string} {decls}* {FORM}*)\n"
@@ -2150,6 +2154,10 @@ msgstr ""
 
 #: src/code/bit-bash.lisp
 msgid "The number of bits to process at a time."
+msgstr ""
+
+#: src/code/bit-bash.lisp
+msgid "The number of bytes to process at a time."
 msgstr ""
 
 #: src/code/bit-bash.lisp
@@ -3700,6 +3708,17 @@ msgstr ""
 
 #: src/code/string.lisp
 msgid ""
+"WITH-STRING-CODEPOINT-ITERATOR ((next string) &body body)\n"
+"  provides a method of looping through a string from the beginning to\n"
+"  the end of the string prodcucing successive codepoints from the\n"
+"  string.  NEXT is bound to a generator macro that, within the scope\n"
+"  of the invocation, returns one or two values. The first value tells\n"
+"  whether any objects remain in the string. When the first value is\n"
+"  non-NIL, the second value is the codepoint of the next object."
+msgstr ""
+
+#: src/code/string.lisp
+msgid ""
 "Return the high and low surrogate characters for Codepoint.  If\n"
 "  Codepoint is in the BMP, the first return value is the corresponding\n"
 "  character and the second is NIL."
@@ -3864,21 +3883,7 @@ msgstr ""
 #: src/code/string.lisp
 msgid ""
 "Given a string, returns a new string that is a copy of it with all\n"
-"  lower case alphabetic characters converted to uppercase.  Casing is\n"
-"  :simple or :full for simple or full case conversion, respectively."
-msgstr ""
-
-#: src/code/string.lisp
-msgid ""
-"Given a string, returns a new string that is a copy of it with all\n"
 "  upper case alphabetic characters converted to lowercase."
-msgstr ""
-
-#: src/code/string.lisp
-msgid ""
-"Given a string, returns a new string that is a copy of it with all\n"
-"  upper case alphabetic characters converted to lowercase.  Casing is\n"
-"  :simple or :full for simple or full case conversion, respectively."
 msgstr ""
 
 #: src/code/string.lisp
@@ -3888,18 +3893,6 @@ msgid ""
 "  chars in the word converted to lower case. A ``word'' is defined\n"
 "  to be a string of case-modifiable characters delimited by\n"
 "  non-case-modifiable chars."
-msgstr ""
-
-#: src/code/string.lisp
-msgid ""
-"Given a string, returns a copy of the string with the first\n"
-"  character of each ``word'' converted to upper-case, and remaining\n"
-"  chars in the word converted to lower case. Casing is :simple or\n"
-"  :full for simple or full case conversion, respectively.  If\n"
-"  Unicode-Word-Break is non-Nil, then the Unicode word-breaking\n"
-"  algorithm is used to determine the word boundaries.  Otherwise, A\n"
-"  ``word'' is defined to be a string of case-modifiable characters\n"
-"  delimited by non-case-modifiable chars.  "
 msgstr ""
 
 #: src/code/string.lisp
@@ -3980,6 +3973,18 @@ msgstr ""
 msgid ""
 "SGLYPH returns the glyph at the indexed position, the same as GLYPH,\n"
 "  except that the string must be a simple-string"
+msgstr ""
+
+#: src/code/string.lisp
+msgid ""
+"WITH-STRING-GLYPH-ITERATOR ((next string) &body body)\n"
+"  provides a method of looping through a string from the beginning to\n"
+"  the end of the string prodcucing successive glyphs from the string.\n"
+"  NEXT is bound to a generator macro that, within the scope of the\n"
+"  invocation, returns one or three values. The first value tells\n"
+"  whether any objects remain in the string. When the first value is\n"
+"  non-NIL, the second value is the index into the string of the glyph\n"
+"  and the third value is index of the next glyph."
 msgstr ""
 
 #: src/code/string.lisp
@@ -4725,9 +4730,10 @@ msgstr ""
 
 #: src/code/float-trap.lisp
 msgid ""
-"This function sets options controlling the floating-point hardware.  If a\n"
-"  keyword is not supplied, then the current value is preserved.  Possible\n"
-"  keywords:\n"
+"Encode the floating-point modes according to the give options and the\n"
+"  specified mode, Floating-Point-Modes.  The resulting new mode is\n"
+"  returned.  If a keyword is not supplied, then the current value is\n"
+"  preserved.  Possible keywords:\n"
 "\n"
 "   :TRAPS\n"
 "       A list of the exception conditions that should cause traps.  "
@@ -4763,6 +4769,48 @@ msgstr ""
 
 #: src/code/float-trap.lisp
 msgid ""
+"This function sets options controlling the floating-point hardware.  If a\n"
+"  keyword is not supplied, then the current value is preserved.  Possible\n"
+"  keywords:\n"
+"\n"
+"   :TRAPS\n"
+"       A list of the exception conditions that should cause traps.  "
+"Possible\n"
+"       exceptions are :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID,\n"
+"       :DIVIDE-BY-ZERO, and on the X86 :DENORMALIZED-OPERAND. Initially\n"
+"       all traps except :INEXACT are enabled.\n"
+"\n"
+"   :ROUNDING-MODE\n"
+"       The rounding mode to use when the result is not exact.  Possible "
+"values\n"
+"       are :NEAREST, :POSITIVE-INFINITY, :NEGATIVE-INFINITY and :ZERO.\n"
+"       Initially, the rounding mode is :NEAREST.\n"
+"\n"
+"   :CURRENT-EXCEPTIONS\n"
+"   :ACCRUED-EXCEPTIONS\n"
+"       These arguments allow setting of the exception flags.  The main use "
+"is\n"
+"       setting the accrued exceptions to NIL to clear them.\n"
+"\n"
+"   :FAST-MODE\n"
+"       Set the hardware's \"fast mode\" flag, if any.  When set, IEEE\n"
+"       conformance or debuggability may be impaired.  Some machines may not\n"
+"       have this feature, in which case the value is always NIL.\n"
+"\n"
+"   GET-FLOATING-POINT-MODES may be used to find the floating point modes\n"
+"   currently in effect."
+msgstr ""
+
+#: src/code/float-trap.lisp
+msgid ""
+"This function returns a list representing the state of the floating point\n"
+"  modes given in Modes.  The list is in the same format as the keyword "
+"arguments to\n"
+"  SET-FLOATING-POINT-MODES."
+msgstr ""
+
+#: src/code/float-trap.lisp
+msgid ""
 "This function returns a list representing the state of the floating point\n"
 "  modes.  The list is in the same format as the keyword arguments to\n"
 "  SET-FLOATING-POINT-MODES, i.e. \n"
@@ -4780,7 +4828,7 @@ msgid ""
 msgstr ""
 
 #: src/code/float-trap.lisp
-msgid "SIGFPE with no exceptions currently enabled?"
+msgid "SIGFPE with no exceptions currently enabled? (si-code = ~D)"
 msgstr ""
 
 #: src/code/float-trap.lisp
@@ -4788,6 +4836,16 @@ msgid ""
 "Execute BODY with the floating point exceptions listed in TRAPS\n"
 "  masked (disabled).  TRAPS should be a list of possible exceptions\n"
 "  which includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and\n"
+"  :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective\n"
+"  accrued exceptions are cleared at the start of the body to support\n"
+"  their testing within, and restored on exit."
+msgstr ""
+
+#: src/code/float-trap.lisp
+msgid ""
+"Execute BODY with the floating point exceptions listed in TRAPS\n"
+"  enabled.  TRAPS should be a list of possible exceptions which\n"
+"  includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and\n"
 "  :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective\n"
 "  accrued exceptions are cleared at the start of the body to support\n"
 "  their testing within, and restored on exit."
@@ -4802,11 +4860,15 @@ msgid "Return true if the float X is an infinity (+ or -)."
 msgstr ""
 
 #: src/code/float.lisp
-msgid "Return true if the float X is a NaN (Not a Number)."
+msgid "Return true if the float X is a quiet or signaling NaN (Not a Number)."
 msgstr ""
 
 #: src/code/float.lisp
-msgid "Return true if the float X is a trapping NaN (Not a Number)."
+msgid "Return true if the float X is a signaling NaN (Not a Number)."
+msgstr ""
+
+#: src/code/float.lisp
+msgid "Deprecated.  Use FLOAT-SIGNALING-NAN-P instead."
 msgstr ""
 
 #: src/code/float.lisp
@@ -5061,7 +5123,7 @@ msgstr ""
 
 #: src/code/irrat-dd.lisp src/code/irrat.lisp
 msgid ""
-"Compute asin z = asinh(i*z)/i\n"
+"Compute asin z = -i*log(i*z + sqrt(1-z^2))\n"
 "\n"
 "Z may be any number, but the result is always a complex."
 msgstr ""
@@ -5075,7 +5137,7 @@ msgstr ""
 
 #: src/code/irrat-dd.lisp src/code/irrat.lisp
 msgid ""
-"Compute atan z = atanh (i*z) / i\n"
+"Compute atan z = (log(1+i*z) - log(1-i*z))/(2*i)\n"
 "\n"
 "Z may be any number, but the result is always a complex."
 msgstr ""
@@ -5625,6 +5687,16 @@ msgid ""
 "  loaded, ed can be used to edit a file"
 msgstr ""
 
+#: src/code/misc.lisp
+msgid ""
+"Disassemble the machine code associated with OBJECT, which can be a\n"
+"  function, a lambda expression, or a symbol with a function definition.  "
+"If\n"
+"  it is not already compiled, the compiler is called to produce something "
+"to\n"
+"  disassemble."
+msgstr ""
+
 #: src/code/extensions.lisp
 msgid ""
 "This function can be used as the default value for keyword arguments that\n"
@@ -5993,8 +6065,9 @@ msgstr ""
 #: src/code/commandline.lisp
 msgid ""
 "Specifies the number of megabytes that should be allocated to the\n"
-"  heap.  If not specified, a platform-specific default is used.  The\n"
-"  actual maximum allowed heap size is platform-specific."
+"  heap.  If not specified, a platform-specific default is used.  If 0,\n"
+"  the platform-specific maximum heap size is used.  The actual maximum\n"
+"  allowed heap size is platform-specific."
 msgstr ""
 
 #: src/code/commandline.lisp
@@ -6604,7 +6677,9 @@ msgid ""
 msgstr ""
 
 #: src/code/save.lisp
-msgid "An alist mapping environment variables (as keywords) to either values"
+msgid ""
+"An alist mapping each environment variable (as a keyword) to its\n"
+"  value."
 msgstr ""
 
 #: src/code/save.lisp
@@ -6657,8 +6732,10 @@ msgid ""
 "\n"
 "  :process-command-line\n"
 "      If true (the default), process command-line switches via the normal\n"
-"  mechanisms, otherwise ignore all switches (except those processed by the\n"
-"  C startup code).\n"
+"  mechanisms, otherwise ignore all switches (except those processed by\n"
+"  the C startup code).  In either case, the command line switches are\n"
+"  saved in *COMMAND-LINE-STRINGS* and\n"
+"  *COMMAND-LINE-APPLICATION-ARGUMENTS*.\n"
 "\n"
 "  :executable\n"
 "      If nil (the default), save-lisp will save using the traditional\n"
@@ -6669,7 +6746,14 @@ msgid ""
 "  :batch-mode\n"
 "      If nil (the default), then the presence of the -batch command-line\n"
 "  switch will invoke batch-mode processing.  If true, the produced core\n"
-"  will always be in batch-mode, regardless of any command-line switches."
+"  will always be in batch-mode, regardless of any command-line switches.\n"
+"\n"
+"  :quiet\n"
+"     If non-NIL, loading, compiling, and GC messages are suppressed.\n"
+"     This is equivalent to setting *load-verbose*, *compile-verbose*,\n"
+"     *compile-print*, *compile-progress*, *require-verbose*, and\n"
+"     *gc-verbose* all to NIL.  If NIL (the default), the default\n"
+"     values of these variables are used."
 msgstr ""
 
 #: src/code/save.lisp
@@ -7381,9 +7465,7 @@ msgid "overflow in digit-to-char"
 msgstr ""
 
 #: src/code/print.lisp
-msgid ""
-"Convert digit into a character representation.  We use 0..9, a..z for\n"
-"10..35, and A..Z for 36..52."
+msgid "Convert digit into a character representation."
 msgstr ""
 
 #: src/code/print.lisp
@@ -8125,7 +8207,10 @@ msgid "The package named ~S doesn't exist."
 msgstr ""
 
 #: src/code/package.lisp
-msgid "Changes the name and nicknames for a package."
+msgid ""
+"Replaces the name and nicknames of Package. The old name and all of\n"
+"  the old nicknames of Package are eliminated and are replaced by\n"
+"  New-Name and New-Nicknames."
 msgstr ""
 
 #: src/code/package.lisp
@@ -8585,7 +8670,7 @@ msgid "Underflow"
 msgstr ""
 
 #: src/code/reader.lisp
-msgid "Floating-point number not representable"
+msgid "Number not representable as a ~S: ~S"
 msgstr ""
 
 #: src/code/reader.lisp
@@ -9122,9 +9207,12 @@ msgid ""
 "  The standard streams are sys::*stdin*, sys::*stdout*, and\n"
 "  sys::*stderr*, which are normally the input and/or output streams\n"
 "  for *standard-input* and *standard-output*.  Also sets sys::*tty*\n"
-"  (normally *terminal-io* to the given external format.  If the\n"
-"  optional argument Filenames is gvien, then the filename encoding is\n"
-"  set to the specified format."
+"  (normally *terminal-io* to the given external format.  The value of\n"
+"  *default-external-format* is not changed.\n"
+"\n"
+"  If the optional argument Filenames is given, then the filename\n"
+"  encoding is set to the specified format, if it has not already been\n"
+"  specified previously."
 msgstr ""
 
 #: src/code/extfmts.lisp
@@ -9926,8 +10014,13 @@ msgstr ""
 
 #: src/code/filesys.lisp
 msgid ""
-"Rename File to have the specified New-Name.  If file is a stream open to a\n"
-"  file, then the associated file is renamed."
+"Rename File to have the specified New-Name.  If file is a stream\n"
+"  open to a file, then the associated file is renamed.\n"
+"\n"
+"  Three values are returned if successful: the defaulted new name\n"
+"  composed of New-Name with missing components filled in from File;\n"
+"  the truename of File before it was renamed; the new truename of the\n"
+"  File after it was renamed."
 msgstr ""
 
 #: src/code/filesys.lisp
@@ -13070,8 +13163,9 @@ msgid ""
 "\n"
 "   The keyword arguments have the following meanings:\n"
 "     :env -\n"
-"        An A-LIST mapping keyword environment variables to simple-string\n"
-"\tvalues.\n"
+"        An A-LIST mapping keyword environment variables to\n"
+"\tsimple-string values.  This is the shell environment for\n"
+"\tProgram.  Defaults to *environment-list*.\n"
 "     :wait -\n"
 "        If non-NIL (default), wait until the created process finishes.  If\n"
 "        NIL, continue running Lisp until the program finishes.\n"
@@ -13119,7 +13213,10 @@ msgid ""
 "        process changes.  The function takes the process as an argument.\n"
 "     :external-format -\n"
 "        This is the external-format used for communication with the "
-"subprocess."
+"subprocess.\n"
+"     :element-type -\n"
+"        When a stream is created for :input or :output, the stream\n"
+"        uses this element-type instead of the default 'BASE-CHAR type.\n"
 msgstr ""
 
 #: src/code/run-program.lisp
@@ -13414,6 +13511,14 @@ msgstr ""
 
 #: src/code/loop.lisp
 msgid "Destructuring is not valid for package symbol iteration."
+msgstr ""
+
+#: src/code/loop.lisp
+msgid "Destructuring is not valid for string codepoint iteration."
+msgstr ""
+
+#: src/code/loop.lisp
+msgid "Destructuring is not valid for string glyph iteration."
 msgstr ""
 
 #: src/code/stream-vector-io.lisp
@@ -14518,7 +14623,7 @@ msgid ""
 msgstr ""
 
 #: src/code/macros.lisp
-msgid "Cond clause is not a list: ~S."
+msgid "Cond clause should be a non-empty list: ~S."
 msgstr ""
 
 #: src/code/macros.lisp
@@ -14688,15 +14793,15 @@ msgid "~S -- Bad clause in ~S."
 msgstr ""
 
 #: src/code/macros.lisp
-msgid "No default clause allowed in ~S: ~S"
+msgid ""
+"~<~A is a key designator only in the final otherwise-clause. ~\n"
+"                                              Use (~A) to use it as a normal-"
+"clause or move the clause to the ~\n"
+"                                              correct position.~:@>"
 msgstr ""
 
 #: src/code/macros.lisp
-msgid "T and OTHERWISE may not be used as key designators for ~A"
-msgstr ""
-
-#: src/code/macros.lisp
-msgid "Bad style to use T or OTHERWISE in ECASE or CCASE"
+msgid "Bad style to use ~S in ~S"
 msgstr ""
 
 #: src/code/macros.lisp
@@ -15013,6 +15118,71 @@ msgstr ""
 
 #: src/code/intl.lisp
 msgid "~&Dumping ~D messages for domain ~S~%"
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with\n"
+"  all lower case alphabetic characters converted to uppercase using\n"
+"  full case conversion."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with\n"
+"  all lower case alphabetic characters converted to uppercase.  Casing\n"
+"  is :simple or :full for simple or full case conversion,\n"
+"  respectively."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with\n"
+"  all uppercase alphabetic characters converted to lowercase using\n"
+"  full case conversion.."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, returns a new string that is a copy of it with all\n"
+"  uppercase alphabetic characters converted to lowercase.  Casing is\n"
+"  :simple or :full for simple or full case conversion, respectively."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, S, and a starting index, return the index of the\n"
+"  next character that is not part of the word containing the character\n"
+"  at the index, or the length of S if the word containing the\n"
+"  character extends to the end of S.  If the index is negative or\n"
+"  valid index into S, the returned value will be strictly greater than\n"
+"  the index."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Capitalize String using the Unicode word-break algorithm to find\n"
+"  the words in String.  The beginning is capitalized depending on the\n"
+"  value of Casing"
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Capitalize String using the Common Lisp word-break algorithm to find\n"
+"  the words in String.  The beginning is capitalized depending on the\n"
+"  value of Casing"
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Given a string, returns a copy of the string with the first\n"
+"  character of each ``word'' converted to upper-case, and remaining\n"
+"  chars in the word converted to lower case. Casing is :simple, :full\n"
+"  or :title for simple, full or title case conversion, respectively.  If\n"
+"  Unicode-Word-Break is non-Nil, then the Unicode word-breaking\n"
+"  algorithm is used to determine the word boundaries.  Otherwise, A\n"
+"  ``word'' is defined to be a string of case-modifiable characters\n"
+"  delimited by non-case-modifiable chars.  "
 msgstr ""
 
 #: src/compiler/macros.lisp
@@ -16300,9 +16470,9 @@ msgid ""
 "      :To Time-Spec\n"
 "\t  Specify the beginning or end of the operand's lifetime.  :From can\n"
 "\t  only be used with results, and :To only with arguments.  The default\n"
-"\t  for the N'th argument/result is (:ARGUMENT N)/(:RESULT N).  These\n"
-"\t  options are necessary primarily when operands are read or written out\n"
-"\t  of order.\n"
+"\t  for the N'th argument/result is (:ARGUMENT N)/(:RESULT N).  (The\n"
+"          first argument/result is number 0.) These options are necessary\n"
+"          primarily when operands are read or written out of order.\n"
 "   \n"
 "  :Conditional\n"
 "      This is used in place of :RESULTS with conditional branch VOPs.  "
@@ -16821,7 +16991,7 @@ msgid ""
 msgstr ""
 
 #: src/compiler/disassem.lisp
-msgid "Instructions either aren't related or conflict in some way:~% ~s"
+msgid "Instructions either aren't related or conflict in some way:~%"
 msgstr ""
 
 #: src/compiler/disassem.lisp
@@ -17120,15 +17290,38 @@ msgid ""
 "If\n"
 "  it is not already compiled, the compiler is called to produce something "
 "to\n"
-"  disassemble."
+"  disassemble.\n"
+"\n"
+"  :Stream stream\n"
+"      The dissassembly is written to this stream.\n"
+"  :Use-labels\n"
+"      Labels are generated instead of using instruction addresses.\n"
+"  :Base\n"
+"  :Case\n"
+"  :Radix\n"
+"      The disassembler uses the specified base, case, and radix when\n"
+"      printing the disassembled code.  The default values are 16,\n"
+"      :downcase, and *print-radix*, respectively."
 msgstr ""
 
 #: src/compiler/disassem.lisp
 msgid ""
-"Disassembles the given area of memory starting at ADDRESS and LENGTH long.\n"
-"  Note that if CODE-COMPONENT is NIL and this memory could move during a "
-"GC,\n"
-"  you'd better disable it around the call to this function."
+"Disassembles the given area of memory starting at ADDRESS and\n"
+"  LENGTH (octets) long.  Note that if CODE-COMPONENT is NIL and this\n"
+"  memory could move during a GC, you'd better disable it around the\n"
+"  call to this function.  ADDRESS can be either an integer or a\n"
+"  system-area-pointer.\n"
+"\n"
+"  :Stream stream\n"
+"      The dissassembly is written to this stream.\n"
+"  :Use-labels\n"
+"      Labels are generated instead of using instruction addresses.\n"
+"  :Base\n"
+"  :Case\n"
+"  :Radix\n"
+"      The disassembler uses the specified base, case, and radix when\n"
+"      printing the disassembled code.  The default values are 16,\n"
+"      :downcase, and *print-radix*, respectively. "
 msgstr ""
 
 #: src/compiler/disassem.lisp
@@ -17425,15 +17618,15 @@ msgstr ""
 #: src/compiler/new-assem.lisp
 msgid ""
 "Byte spec ~S either overlaps another byte spec, or ~\n"
-"\t\t    extends past the end."
+"\t\t    extends past the end in emitter ~S."
 msgstr ""
 
 #: src/compiler/new-assem.lisp
-msgid "There are holes."
+msgid "There are holes in emitter ~S."
 msgstr ""
 
 #: src/compiler/new-assem.lisp
-msgid "~D isn't an even multiple of ~D"
+msgid "~D isn't an even multiple of ~D in emitter ~S"
 msgstr ""
 
 #: src/compiler/new-assem.lisp
@@ -17587,6 +17780,13 @@ msgstr ""
 
 #: src/compiler/ir1tran.lisp src/compiler/main.lisp
 msgid "(during macroexpansion)~%~A"
+msgstr ""
+
+#: src/compiler/main.lisp
+msgid ""
+"If non-Nil, use git to derive the file-comment.  This info includes\n"
+"  the sha1 hash, the time and the author of the change.  Otherwise,\n"
+"  just use the supplied file-comment."
 msgstr ""
 
 #: src/compiler/main.lisp
@@ -18373,7 +18573,9 @@ msgid "Redefining ~(~A~) ~S to be a constant."
 msgstr ""
 
 #: src/compiler/ir1util.lisp
-msgid "Return the TLF-NUMBER and FORM-NUMBER encoded as fixnum."
+msgid ""
+"Return the TLF-NUMBER and FORM-NUMBER encoded as fixnum, if\n"
+"  possible.  Otherwise, return Nil."
 msgstr ""
 
 #: src/compiler/ir1util.lisp
@@ -18690,68 +18892,68 @@ msgstr ""
 msgid "Float zero bound ~s not correctly canonicalised?"
 msgstr ""
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Compute fl(a*b) and err(a*b)"
 msgstr ""
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid ""
 "Compute fl(a*a) and err(a*b).  This is a more efficient\n"
 "  implementation of two-prod"
 msgstr ""
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Computes fl(a+b) and err(a+b), assuming |a| >= |b|"
 msgstr ""
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Computes fl(a+b) and err(a+b)"
 msgstr ""
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Add the double-double A0,A1 to the double-double B0,B1"
 msgstr ""
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Compute fl(a-b) and err(a-b), assuming |a| >= |b|"
 msgstr ""
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Compute fl(a-b) and err(a-b)"
 msgstr ""
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Subtract the double-double B0,B1 from A0,A1"
 msgstr ""
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Compute double-double = double - double-double"
 msgstr ""
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Subtract the double B from the double-double A0,A1"
 msgstr ""
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid ""
 "Split the double-float number a into a-hi and a-lo such that a =\n"
 "  a-hi + a-lo and a-hi contains the upper 26 significant bits of a and\n"
 "  a-lo contains the lower 26 bits."
 msgstr ""
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Multiply the double-double A0,A1 with B0,B1"
 msgstr ""
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Add the double-double A0,A1 to the double B"
 msgstr ""
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Divide the double-double A0,A1 by B0,B1"
 msgstr ""
 
-#: src/compiler/float-tran.lisp
+#: src/compiler/float-tran-dd.lisp
 msgid "Square"
 msgstr ""
 
@@ -20993,6 +21195,14 @@ msgstr ""
 
 #: src/pcl/gray-streams.lisp
 msgid "Implements WRITE-SEQUENCE for the stream."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid "Implements FILE-POSITION for the stream."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid "Implements FILE-POSITION for the stream for setting the position."
 msgstr ""
 
 #: src/pcl/gray-streams.lisp

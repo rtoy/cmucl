@@ -1229,7 +1229,8 @@
 	     (do-eval-when-stuff
 	      (cadr form) (cddr form)
 	      #'(lambda (forms)
-		  (process-progn forms path))
+		  (process-progn forms path)
+		  (compile-top-level-lambdas '() t))
 	      t))
 	    ((macrolet)
 	     (unless (>= (length form) 2)
@@ -2040,11 +2041,7 @@
 		     ((or cons eval:interpreted-function)
 		      `#',(get-lambda-to-compile definition))
 		     (function
-		      (multiple-value-bind (exp lexenv)
-			  (function-lambda-expression definition)
-			(if (and exp (not lexenv))
-			    `#',exp
-			    `',definition)))))
+		      definition)))
 	     (*source-info* (make-lisp-source-info form))
 	     (*top-level-lambdas* ())
 	     (*converting-for-interpreter* nil)
@@ -2068,6 +2065,14 @@
 	     (*gensym-counter* 0)
 	     (*current-function-names* (list name))
 	     (intl::*default-domain* intl::*default-domain*))
+	;; As mentioned above, we can return the same function if the
+	;; function was already compiled.  We do this when FORM is EQ
+	;; to DEFINITION (which happens above if we have a compiled
+	;; function that we don't have the source for or was defined
+	;; in a non-null environment.
+	(when (and name (eq form definition))
+	  (return-from compile
+	    (values name nil nil)))
 	(with-debug-counters
 	  (clear-stuff)
 	  (find-source-paths form 0)

@@ -105,7 +105,7 @@
 ;;;  - T if daylight savings is in effect, NIL if not.
 ;;;
 (alien:def-alien-routine get-timezone c-call:void
-  (when c-call:long :in)
+  (when unix:time-t :in)
   (minutes-west c-call:int :out)
   (daylight-savings-p alien:boolean :out))
 
@@ -223,8 +223,11 @@
 	   (type (mod 24) hour)
 	   (type (integer 1 31) date)
 	   (type (integer 1 12) month)
-	   (type (or (integer 0 99) (integer 1900)) year)
-	   (type (or null rational) time-zone))
+	   ;; 1899 to account for time zones that are equivalent to 1900.
+	   (type (or (integer 0 99) (integer 1899)) year)
+	   (type (or null rational) time-zone)
+	   ;; Result must be non-negative integer!
+	   (values (integer 0)))
   (let* ((year (if (< year 100)
 		   (pick-obvious-year year)
 		   year))

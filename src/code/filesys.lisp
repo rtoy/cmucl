@@ -710,9 +710,13 @@
 	     (with-directory-node-noted ((head) &body body)
 	       `(multiple-value-bind (res dev ino mode)
 		    (unix-xstat ,head)
-		  (when (and res (eql (logand mode unix:s-ifmt) unix:s-ifdir))
-		    (let ((nodes (cons (cons dev ino) nodes)))
-		      ,@body))))
+		  ;; Even if the directory does not exist, we want to
+		  ;; continue recursing.
+		  (let ((nodes (if (and res (eql (logand mode unix:s-ifmt)
+						 unix:s-ifdir))
+				   (cons (cons dev ino) nodes)
+				   nodes)))
+		    ,@body)))
 	     (do-directory-entries ((name directory) &body body)
 	       `(let ((dir (unix:open-dir ,directory)))
 		  (when dir
@@ -731,11 +735,10 @@
 	  (etypecase piece
 	    (simple-string
 	     (let ((head (concatenate 'string head piece)))
-	       (with-directory-node-noted (head)
-		 (%enumerate-directories (concatenate 'string head "/")
-					 (cdr tail) pathname
-					 verify-existence follow-links
-					 nodes function))))
+	       (%enumerate-directories (concatenate 'string head "/")
+				       (cdr tail) pathname
+				       verify-existence follow-links
+				       nodes function)))
 	    ((member :wild-inferiors)
 	     (%enumerate-directories head (rest tail) pathname
 				     verify-existence follow-links
@@ -1122,7 +1125,7 @@ optionally keeping some of the most recent old versions."
       (let ((*ignore-wildcards* t))
 	(mapcar #'(lambda (name)
 		    (let ((name (if (and check-for-subdirs
-					 (eq (unix:unix-file-kind name)
+					 (eq (unix:unix-file-kind name (not follow-links))
 					     :directory))
 				    (concatenate 'string name "/")
 				    name)))

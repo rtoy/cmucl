@@ -756,32 +756,70 @@
   (frob single-float-op single-reg single-float)
   (frob double-float-op double-reg double-float))
 
-(macrolet ((generate (movinst opinst commutative)
-             `(progn
-                (cond
-                  ((location= x r)
-                   (inst ,opinst x y))
-                  ((and ,commutative (location= y r))
-                   (inst ,opinst y x))
-                  ((not (location= r y))
-                   (inst ,movinst r x)
-                   (inst ,opinst r y))
-                  (t
-                   (inst ,movinst tmp x)
-                   (inst ,opinst tmp y)
-                   (inst ,movinst r tmp)))))
+(macrolet ((generate (movinst opinst commutative arg-type)
+	     (multiple-value-bind (rtype stack-sc ea ea-stack)
+		 (if (eq arg-type 'single)
+		     (values 'single-reg 'single-stack 'ea-for-sf-desc 'ea-for-sf-stack)
+		     (values 'double-reg 'double-stack 'ea-for-df-desc 'ea-for-df-stack))
+	       `(progn
+		  (cond
+		    ((location= x r)
+		     ;; x and r are the same.  We can just operate on x,
+		     ;; and we're done.
+		     (sc-case y
+		       (,rtype
+			(inst ,opinst x y))
+		       (descriptor-reg
+			(inst ,opinst x (,ea y)))
+		       (,stack-sc
+			(inst ,opinst x (,ea-stack y)))))
+		    ((and ,commutative (location= y r))
+		     ;; y = r and the operation is commutative, so just
+		     ;; do the operation with r and x.
+		     (inst ,opinst y x))
+		    ((not (location= r y))
+		     ;; x, y, and r are three different regs.  So just
+		     ;; move r to x and do the operation on r.
+		     (inst ,movinst r x)
+		     (sc-case y
+		       (,rtype
+			(inst ,opinst r y))
+		       (descriptor-reg
+			(inst ,opinst r (,ea y)))
+		       (,stack-sc
+			(inst, opinst r (,ea-stack y)))))
+		    (t
+		     ;; The hard case where the operation is not
+		     ;; commutative, but y might be r.  Don't want to
+		     ;; destroy y in this case, so use a temp so we
+		     ;; don't accidentally overwrite y.
+		     (inst ,movinst tmp x)
+		     (sc-case y
+		       (,rtype
+			(inst ,opinst tmp y))
+		       (descriptor-reg
+			(inst ,opinst tmp (,ea y)))
+		       (,stack-sc
+			(inst, opinst tmp (,ea-stack y))))
+		     (inst ,movinst r tmp))))))
            (frob (op sinst sname scost dinst dname dcost commutative)
              `(progn
                 (define-vop (,sname single-float-op)
-                    (:translate ,op)
+		  (:args (x :scs (single-reg) :target r)
+			 (y :scs (single-reg descriptor-reg)
+			    :load-if (not (sc-is y single-stack))))
+		  (:translate ,op)
                   (:temporary (:sc single-reg) tmp)
                   (:generator ,scost
-                    (generate movss ,sinst ,commutative)))
+                    (generate movss ,sinst ,commutative single)))
                 (define-vop (,dname double-float-op)
+		  (:args (x :scs (double-reg) :target r)
+			 (y :scs (double-reg descriptor-reg)
+			    :load-if (not (sc-is y double-stack))))
                   (:translate ,op)
-                  (:temporary (:sc single-reg) tmp)
+                  (:temporary (:sc double-reg) tmp)
                   (:generator ,dcost
-                    (generate movsd ,dinst ,commutative))))))
+                    (generate movsd ,dinst ,commutative double))))))
   (frob + addss +/single-float 2 addsd +/double-float 2 t)
   (frob - subss -/single-float 2 subsd -/double-float 2 nil)
   (frob * mulss */single-float 4 mulsd */double-float 5 t)
@@ -865,11 +903,11 @@
 ;;; and stack args
 
 (define-vop (single-float-compare float-compare)
-  (:args (x :scs (single-reg)) (y :scs (single-reg)))
+  (:args (x :scs (single-reg)) (y :scs (single-reg descriptor-reg)))
   (:conditional)
   (:arg-types single-float single-float))
 (define-vop (double-float-compare float-compare)
-  (:args (x :scs (double-reg)) (y :scs (double-reg)))
+  (:args (x :scs (double-reg)) (y :scs (double-reg descriptor-reg)))
   (:conditional)
   (:arg-types double-float double-float))
 
@@ -879,7 +917,11 @@
   (:vop-var vop)
   (:generator 3
     (note-this-location vop :internal-error)
-    (inst ucomiss x y)
+    (sc-case y
+      (single-reg
+       (inst ucomiss x y))
+      (descriptor-reg
+       (inst ucomiss x (ea-for-sf-desc y))))
     ;; if PF&CF, there was a NaN involved => not equal
     ;; otherwise, ZF => equal
     (cond (not-p
@@ -897,7 +939,11 @@
   (:vop-var vop)
   (:generator 3
     (note-this-location vop :internal-error)
-    (inst ucomisd x y)
+    (sc-case y
+      (double-reg
+       (inst ucomisd x y))
+      (descriptor-reg
+       (inst ucomisd x (ea-for-df-desc y))))
     (cond (not-p
            (inst jmp :p target)
            (inst jmp :ne target))
@@ -911,7 +957,11 @@
   (:translate <)
   (:info target not-p)
   (:generator 3
-    (inst comisd x y)
+    (sc-case y
+      (double-reg
+       (inst comisd x y))
+      (descriptor-reg
+       (inst comisd x (ea-for-df-desc y))))
     (cond (not-p
            (inst jmp :p target)
            (inst jmp :nc target))
@@ -925,7 +975,11 @@
   (:translate <)
   (:info target not-p)
   (:generator 3
-    (inst comiss x y)
+    (sc-case y
+      (single-reg
+       (inst comiss x y))
+      (descriptor-reg
+       (inst comiss x (ea-for-sf-desc y))))
     (cond (not-p
            (inst jmp :p target)
            (inst jmp :nc target))
@@ -939,7 +993,11 @@
   (:translate >)
   (:info target not-p)
   (:generator 3
-    (inst comisd x y)
+    (sc-case y
+      (double-reg
+       (inst comisd x y))
+      (descriptor-reg
+       (inst comisd x (ea-for-df-desc y))))
     (cond (not-p
            (inst jmp :p target)
            (inst jmp :na target))
@@ -953,7 +1011,11 @@
   (:translate >)
   (:info target not-p)
   (:generator 3
-    (inst comiss x y)
+    (sc-case y
+      (single-reg
+       (inst comiss x y))
+      (descriptor-reg
+       (inst comiss x (ea-for-sf-desc y))))
     (cond (not-p
            (inst jmp :p target)
            (inst jmp :na target))
@@ -969,8 +1031,7 @@
 
 (macrolet ((frob (name translate inst to-sc to-type)
              `(define-vop (,name)
-                (:args (x :scs (signed-stack signed-reg) :target temp))
-                (:temporary (:sc signed-stack) temp)
+                (:args (x :scs (signed-stack signed-reg)))
                 (:results (y :scs (,to-sc)))
                 (:arg-types signed-num)
                 (:result-types ,to-type)
@@ -982,9 +1043,8 @@
                 (:generator 5
                   (sc-case x
                     (signed-reg
-                     (inst mov temp x)
                      (note-this-location vop :internal-error)
-                     (inst ,inst y temp))
+                     (inst ,inst y x))
                     (signed-stack
                      (note-this-location vop :internal-error)
                      (inst ,inst y x)))))))
@@ -992,51 +1052,102 @@
   (frob %double-float/signed %double-float cvtsi2sd double-reg double-float))
 
 (macrolet ((frob (name translate inst from-sc from-type to-sc to-type)
-             `(define-vop (,name)
-               (:args (x :scs (,from-sc) :target y))
-               (:results (y :scs (,to-sc)))
-               (:arg-types ,from-type)
-               (:result-types ,to-type)
-               (:policy :fast-safe)
-               (:note _N"inline float coercion")
-               (:translate ,translate)
-               (:vop-var vop)
-               (:save-p :compute-only)
-               (:generator 2
-                (note-this-location vop :internal-error)
-                (inst ,inst y x)))))
+	     (let ((ea (if (eq from-sc 'single-reg)
+			   'ea-for-sf-desc
+			   'ea-for-df-desc)))
+	       `(define-vop (,name)
+		  (:args (x :scs (,from-sc descriptor-reg) :target y))
+		  (:results (y :scs (,to-sc)))
+		  (:arg-types ,from-type)
+		  (:result-types ,to-type)
+		  (:policy :fast-safe)
+		  (:note _N"inline float coercion")
+		  (:translate ,translate)
+		  (:vop-var vop)
+		  (:save-p :compute-only)
+		  (:generator 2
+		    (note-this-location vop :internal-error)
+		    (sc-case x
+		      (,from-sc
+		       (inst ,inst y x))
+		      (descriptor-reg
+		       (inst ,inst y (,ea x)))))))))
   (frob %single-float/double-float %single-float cvtsd2ss double-reg
-        double-float single-reg single-float)
+	double-float single-reg single-float)
 
   (frob %double-float/single-float %double-float cvtss2sd
-        single-reg single-float double-reg double-float))
+	single-reg single-float double-reg double-float))
 
 (macrolet ((frob (trans inst from-sc from-type round-p)
              (declare (ignore round-p))
-             `(define-vop (,(symbolicate trans "/" from-type))
-               (:args (x :scs (,from-sc)))
-               (:temporary (:sc any-reg) temp-reg)
-               (:results (y :scs (signed-reg)))
-               (:arg-types ,from-type)
-               (:result-types signed-num)
-               (:translate ,trans)
-               (:policy :fast-safe)
-               (:note _N"inline float truncate")
-               (:vop-var vop)
-               (:save-p :compute-only)
-               (:generator 5
-                 (sc-case y
-                          (signed-stack
-                           (inst ,inst temp-reg x)
-                           (move y temp-reg))
-                          (signed-reg
-                           (inst ,inst y x)
-                           ))))))
+	     (let ((ea (if (eq from-sc 'single-reg)
+			   'ea-for-sf-desc
+			   'ea-for-df-desc)))
+	       `(define-vop (,(symbolicate trans "/" from-type))
+		  (:args (x :scs (,from-sc descriptor-reg)))
+		  (:temporary (:sc any-reg) temp-reg)
+		  (:results (y :scs (signed-reg)))
+		  (:arg-types ,from-type)
+		  (:result-types signed-num)
+		  (:translate ,trans)
+		  (:policy :fast-safe)
+		  (:note _N"inline float truncate")
+		  (:vop-var vop)
+		  (:save-p :compute-only)
+		  (:generator 5
+		    (sc-case y
+		      (signed-stack
+		       (sc-case x
+			 (,from-sc
+			  (inst ,inst temp-reg x))
+			 (descriptor-reg
+			  (inst ,inst temp-reg (,ea x))))
+		       (move y temp-reg))
+		      (signed-reg
+		       (sc-case x
+			 (,from-sc
+			  (inst ,inst y x))
+			 (descriptor-reg
+			  (inst ,inst y (,ea x)))))))))))
   (frob %unary-truncate cvttss2si single-reg single-float nil)
   (frob %unary-truncate cvttsd2si double-reg double-float nil)
 
   (frob %unary-round cvtss2si single-reg single-float t)
   (frob %unary-round cvtsd2si double-reg double-float t))
+
+(define-vop (fast-unary-ftruncate/single-float)
+  (:args (x :scs (single-reg descriptor-reg)))
+  (:arg-types single-float)
+  (:results (r :scs (single-reg)))
+  (:result-types single-float)
+  (:policy :fast-safe)
+  (:translate c::fast-unary-ftruncate)
+  (:temporary (:sc signed-reg) temp)
+  (:note _N"inline ftruncate")
+  (:generator 2
+    (sc-case x
+      (single-reg
+       (inst cvttss2si temp x))
+      (descriptor-reg
+       (inst cvttss2si temp (ea-for-sf-desc x))))
+    (inst cvtsi2ss r temp)))
+
+(define-vop (fast-unary-ftruncate/double-float)
+  (:args (x :scs (double-reg descriptor-reg) :target r))
+  (:arg-types double-float)
+  (:results (r :scs (double-reg)))
+  (:result-types double-float)
+  (:policy :fast-safe)
+  (:translate c::fast-unary-ftruncate)
+  (:temporary (:sc signed-reg) temp)
+  (:note _N"inline ftruncate")
+  (:generator 2
+    (sc-case x
+      (double-reg
+       (inst cvttsd2si temp x))
+      (descriptor-reg
+       (inst cvttsd2si temp (ea-for-df-desc x))))
+    (inst cvtsi2sd r temp)))
 
 (define-vop (make-single-float)
   (:args (bits :scs (signed-reg) :target res
@@ -1070,25 +1181,22 @@
   (:args (hi-bits :scs (signed-reg))
 	 (lo-bits :scs (unsigned-reg)))
   (:results (res :scs (double-reg)))
-  (:temporary (:sc double-stack) temp)
   (:arg-types signed-num unsigned-num)
   (:result-types double-float)
   (:translate make-double-float)
+  (:temporary (:sc double-reg) temp)
   (:policy :fast-safe)
   (:vop-var vop)
-  (:generator 2
-    (let ((offset (1+ (tn-offset temp))))
-      (storew hi-bits ebp-tn (- offset))
-      (storew lo-bits ebp-tn (- (1+ offset)))
-      (inst movsd res (make-ea :dword :base ebp-tn
-			    :disp (- (* (1+ offset) word-bytes)))))))
-
+  (:generator 4
+    (inst movd temp hi-bits)
+    (inst psllq temp 32)
+    (inst movd res lo-bits)
+    (inst orpd res temp)))
 
 (define-vop (single-float-bits)
   (:args (float :scs (single-reg descriptor-reg)
                 :load-if (not (sc-is float single-stack))))
   (:results (bits :scs (signed-reg)))
-  (:temporary (:sc signed-stack :from :argument :to :result) stack-temp)
   (:arg-types single-float)
   (:result-types signed-num)
   (:translate single-float-bits)
@@ -1099,8 +1207,7 @@
       (signed-reg
        (sc-case float
          (single-reg
-	  (inst movss stack-temp float)
-	  (inst mov bits stack-temp))
+	  (inst movd bits float))
          (single-stack
           (move bits float))
          (descriptor-reg
@@ -1115,7 +1222,7 @@
   (:args (float :scs (double-reg descriptor-reg)
                 :load-if (not (sc-is float double-stack))))
   (:results (hi-bits :scs (signed-reg)))
-  (:temporary (:sc double-stack) temp)
+  (:temporary (:sc double-reg) temp)
   (:arg-types double-float)
   (:result-types signed-num)
   (:translate double-float-high-bits)
@@ -1124,11 +1231,9 @@
   (:generator 5
      (sc-case float
        (double-reg
-	(let ((where (make-ea :dword :base ebp-tn
-			      :disp (- (* (+ 2 (tn-offset temp))
-					  word-bytes)))))
-	  (inst movsd where float))
-        (loadw hi-bits ebp-tn (- (1+ (tn-offset temp)))))
+	(inst movq temp float)
+	(inst psrlq temp 32)
+	(inst movd hi-bits temp))
        (double-stack
         (loadw hi-bits ebp-tn (- (1+ (tn-offset float)))))
        (descriptor-reg
@@ -1139,7 +1244,6 @@
   (:args (float :scs (double-reg descriptor-reg)
                 :load-if (not (sc-is float double-stack))))
   (:results (lo-bits :scs (unsigned-reg)))
-  (:temporary (:sc double-stack) temp)
   (:arg-types double-float)
   (:result-types unsigned-num)
   (:translate double-float-low-bits)
@@ -1148,15 +1252,39 @@
   (:generator 5
      (sc-case float
        (double-reg
-	(let ((where (make-ea :dword :base ebp-tn
-			      :disp (- (* (+ 2 (tn-offset temp))
-					  word-bytes)))))
-	  (inst movsd where float))
-	(loadw lo-bits ebp-tn (- (+ 2 (tn-offset temp)))))
+	(inst movd lo-bits float))
        (double-stack
         (loadw lo-bits ebp-tn (- (+ 2 (tn-offset float)))))
        (descriptor-reg
         (loadw lo-bits float vm:double-float-value-slot
+	       vm:other-pointer-type)))))
+
+(define-vop (double-float-bits)
+  (:args (float :scs (double-reg descriptor-reg)
+		:load-if (not (sc-is float double-stack))
+		:to (:result 1)))
+  (:results (hi-bits :scs (signed-reg))
+	    (lo-bits :scs (unsigned-reg)))
+  (:arg-types double-float)
+  (:result-types signed-num unsigned-num)
+  (:temporary (:sc double-reg) temp)
+  (:translate kernel::double-float-bits)
+  (:policy :fast-safe)
+  (:vop-var vop)
+  (:generator 5
+    (sc-case float
+      (double-reg
+        (inst movq temp float)
+	(inst movd lo-bits temp)
+	(inst psrlq temp 32)
+	(inst movd hi-bits temp))
+      (double-stack
+       (loadw hi-bits ebp-tn (- (+ 1 (tn-offset float))))
+       (loadw lo-bits ebp-tn (- (+ 2 (tn-offset float)))))
+      (descriptor-reg
+       (loadw hi-bits float (1+ double-float-value-slot)
+	   vm:other-pointer-type)
+       (loadw lo-bits float vm:double-float-value-slot
 	       vm:other-pointer-type)))))
 
 
@@ -1191,17 +1319,15 @@
 ;; Returns exactly the mxcsr register, except the masks are flipped
 ;; because we want exception enable flags, not masks.
 (define-vop (sse2-floating-point-modes)
-  (:results (res :scs (unsigned-reg)))
+  (:results (result :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:translate sse2-floating-point-modes)
   (:policy :fast-safe)
-  (:temporary (:sc unsigned-stack) cw-stack)
-  (:temporary (:sc unsigned-reg) temp)
-  (:generator 8
-    (inst stmxcsr cw-stack)
-    (inst mov temp cw-stack)
-    (inst xor temp (ash #x3f 7))
-    (inst mov res temp)))
+  (:temporary (:sc unsigned-stack) temp)
+  (:generator 3
+    (inst stmxcsr temp)
+    (inst mov result temp)
+    (inst xor result (ash #x3f 7))))
 
 ;; Set mxcsr exactly to whatever is given, except we invert the
 ;; exception enable flags to make them match the exception mask flags.
@@ -1222,7 +1348,7 @@
     (inst xor temp (ash #x3f 7))	; Convert enables to masks
     (inst mov cw-stack temp)
     (inst ldmxcsr cw-stack)
-    (inst mov res new)))
+    (move res new)))
 
 ;; For the record here is the format of the x87 control and status
 ;; words:

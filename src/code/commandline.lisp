@@ -72,7 +72,7 @@
 
 ;;;; Processing the command strings.
 
-(defun process-command-strings ()
+(defun process-command-strings (init-command-switches-p)
   (setq *command-line-words* nil)
   (setq *command-line-switches* nil)
   (let ((cmd-strings lisp::lisp-command-line-list)
@@ -103,7 +103,7 @@
       (return-from process-command-strings nil))
     
     ;; Set command line switches.
-    ;; 
+    ;;
     (loop
       (unless str
 	(return (setf *command-line-switches*
@@ -119,14 +119,16 @@
 	(let (word-list)
 	  (loop
 	    (unless str
-	      (push (make-cmd-switch switch value (nreverse word-list))
-		    *command-line-switches*)
+	      (when init-command-switches-p
+		(push (make-cmd-switch switch value (nreverse word-list))
+		      *command-line-switches*))
 	      (return nil))
 	    
 	    (unless (zerop (length (the simple-string str)))
 	      (when (char= #\- (schar str 0))
-		(push (make-cmd-switch switch value (nreverse word-list))
-		      *command-line-switches*)
+		(when init-command-switches-p
+		  (push (make-cmd-switch switch value (nreverse word-list))
+			*command-line-switches*))
 		(when (and (= (length str) 2)
 			   (char= #\- (schar str 1)))
 		  ;; Gather up everything after --, and exit.
@@ -134,7 +136,7 @@
 		  (setf str nil))
 		(return nil))
 	      (push str word-list))
-	    (setq str (pop cmd-strings))))))))
+	    (setq str (pop cmd-strings)))))))))
 
 (defun get-command-line-switch (sname)
   "Accepts the name of a switch as a string and returns the value of
@@ -283,8 +285,9 @@
 
 (defswitch "dynamic-space-size" nil
   "Specifies the number of megabytes that should be allocated to the
-  heap.  If not specified, a platform-specific default is used.  The
-  actual maximum allowed heap size is platform-specific."
+  heap.  If not specified, a platform-specific default is used.  If 0,
+  the platform-specific maximum heap size is used.  The actual maximum
+  allowed heap size is platform-specific."
   "megabytes")
 
 (defswitch "read-only-space-size" nil
@@ -332,17 +335,6 @@
 (defswitch "unidata" nil
   "Specify the unidata.bin file to be used."
   "filename")
-
-#+x86
-(intl:with-textdomain ("cmucl" "cmucl-x86-vm")
-(defswitch "fpu" nil
-  "Specifies what kind of floating-point support should be used on x86
-  systems.  If 'x87', Lisp will use the x87 floating-point unit; if
-  'sse2', Lisp uses SSE2 floating-point unit. The default is
-  'auto',which causes Lisp to check to see if SSE2 is available.  If
-  so, then SSE2 is used.  If the SSE2 core file cannot be found,Lisp
-  will fallback to the x87 core, which can run on any machine."
-  "mode"))
 
 (defun help-switch-demon (switch)
   (declare (ignore switch))

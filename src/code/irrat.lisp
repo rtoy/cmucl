@@ -28,13 +28,17 @@
 ;;; call, and saves number consing to boot.
 ;;;
 (defmacro def-math-rtn (name num-args)
-  (let ((function (intern (concatenate 'simple-string
+  (multiple-value-bind (c-name lisp-name)
+      (if (listp name)
+	  (values (first name) (second name))
+	  (values name
+		  (intern (concatenate 'simple-string
 				       "%"
 				       (string-upcase name)))))
     `(progn
-       (declaim (inline ,function))
-       (export ',function)
-       (alien:def-alien-routine (,name ,function) double-float
+       (declaim (inline ,lisp-name))
+       (export ',lisp-name)
+       (alien:def-alien-routine (,c-name ,lisp-name) double-float
 	 ,@(let ((results nil))
 	     (dotimes (i num-args (nreverse results))
 	       (push (list (intern (format nil "ARG-~D" i))
@@ -60,40 +64,39 @@
 ;;; Please refer to the Unix man pages for details about these routines.
 
 ;;; Trigonometric.
-#-(and x86 (not sse2))
-(progn
-  ;; For x86 (without sse2), we can use x87 instructions to implement
-  ;; these.  With sse2, we don't currently support that, so these
-  ;; should be disabled.
-  (def-math-rtn "sin" 1)
-  (def-math-rtn "cos" 1)
-  (def-math-rtn "tan" 1)
-  (def-math-rtn "atan" 1)
-  (def-math-rtn "atan2" 2))
-(def-math-rtn "asin" 1)
-(def-math-rtn "acos" 1)
-(def-math-rtn "sinh" 1)
-(def-math-rtn "cosh" 1)
-(def-math-rtn "tanh" 1)
-(def-math-rtn "asinh" 1)
-(def-math-rtn "acosh" 1)
-(def-math-rtn "atanh" 1)
+(def-math-rtn ("fdlibm_sin" %sin) 1)
+(def-math-rtn ("fdlibm_cos" %cos) 1)
+(def-math-rtn ("fdlibm_tan" %tan) 1)
+(def-math-rtn ("fdlibm_atan" %atan) 1)
+(def-math-rtn ("__ieee754_atan2" %atan2) 2)
+(def-math-rtn ("__ieee754_asin" %asin) 1)
+(def-math-rtn ("__ieee754_acos" %acos) 1)
+(def-math-rtn ("__ieee754_sinh" %sinh) 1)
+(def-math-rtn ("__ieee754_cosh" %cosh) 1)
+(def-math-rtn ("fdlibm_tanh" %tanh) 1)
+(def-math-rtn ("fdlibm_asinh" %asinh) 1)
+(def-math-rtn ("__ieee754_acosh" %acosh) 1)
+(def-math-rtn ("__ieee754_atanh" %atanh) 1)
 
 ;;; Exponential and Logarithmic.
-#-(and x86 (not sse2))
-(progn
-  (def-math-rtn "exp" 1)
-  (def-math-rtn "log" 1)
-  (def-math-rtn "log10" 1))
+(def-math-rtn ("__ieee754_exp" %exp) 1)
+(def-math-rtn ("__ieee754_log" %log) 1)
+(def-math-rtn ("__ieee754_log10" %log10) 1)
+(def-math-rtn ("cmucl_log2" %log2) 1)
 
-(def-math-rtn "pow" 2)
+(def-math-rtn ("__ieee754_pow" %pow) 2)
 #-(or x86 sparc-v7 sparc-v8 sparc-v9)
 (def-math-rtn "sqrt" 1)
 (def-math-rtn "hypot" 2)
 
-;; Don't want log1p to use the x87 instruction.
-#-(or hpux (and x86 (not sse2)))
-(def-math-rtn "log1p" 1)
+(def-math-rtn ("fdlibm_log1p" %log1p) 1)
+(def-math-rtn ("fdlibm_expm1" %expm1) 1)
+
+(declaim (inline %scalbn))
+(export '%scalbn)
+(alien:def-alien-routine ("fdlibm_scalbn" %scalbn) c-call:double
+  (x double-float)
+  (n c-call:int))
 
 ;; These are needed for use by byte-compiled files.  But don't use
 ;; these with sse2 since we don't support using the x87 instructions
@@ -187,107 +190,31 @@
     (%sqrt x))
   )
 
-;;; The standard libm routines for sin, cos, and tan on x86 (Linux)
-;;; and ppc are not very accurate for large arguments when compared to
-;;; sparc (and maxima).  This is basically caused by the fact that
-;;; those libraries do not do an accurate argument reduction.  The
-;;; following functions use some routines Sun's free fdlibm library to
-;;; do accurate reduction.  Then we call the standard C functions (or
-;;; vops for x86) on the reduced argument.  This produces much more
-;;; accurate values.
-
-#+(or ppc x86)
-(progn
-(declaim (inline %%ieee754-rem-pi/2))
-;; Basic argument reduction routine.  It returns two values: n and y
-;; such that (n + 8*k)*pi/2+y = x where |y|<pi/4 and n indicates in
-;; which octant the arg lies.  Y is actually computed in two parts,
-;; y[0] and y[1] such that the sum is y, for accuracy.
-
-(alien:def-alien-routine ("__ieee754_rem_pio2" %%ieee754-rem-pi/2) c-call:int
-  (x double-float)
-  (y (* double-float)))
-
-;; Same as above, but instead of needing to pass an array in, the
-;; output array is broken up into two output values instead.  This is
-;; easier for the user, and we don't have to wrap calls with
-;; without-gcing.
+;; Slightly simplified interface to __ieee754_rem_pio2, but instead of
+;; needing to pass an array in, the output array is broken up into two
+;; output values instead.  This is easier for the user, and we don't
+;; have to wrap calls with without-gcing.
 (declaim (inline %ieee754-rem-pi/2))
+(export '%ieee754-rem-pi/2)
 (alien:def-alien-routine ("ieee754_rem_pio2" %ieee754-rem-pi/2) c-call:int
   (x double-float)
   (y0 double-float :out)
   (y1 double-float :out))
 
-)
+(declaim (inline %%sincos))
+(alien:def-alien-routine ("lisp_sincos" %%sincos) c-call:void
+  (x double-float)
+  (s double-float :out)
+  (c double-float :out))
 
-#+(or ppc sse2)
-(progn
-(declaim (inline %%sin %%cos %%tan))
-(macrolet ((frob (alien-name lisp-name)
-	     `(alien:def-alien-routine (,alien-name ,lisp-name) double-float
-		(x double-float))))
-  (frob "sin" %%sin)
-  (frob "cos" %%cos)
-  (frob "tan" %%tan))
-)
-
-#+(or ppc x86)
-(macrolet
-    ((frob (sin cos tan)
-       `(progn
-	  ;; In all of the routines below, we just compute the sum of
-	  ;; y0 and y1 and use that as the (reduced) argument for the
-	  ;; trig functions.  This is slightly less accurate than what
-	  ;; fdlibm does, which calls special functions using y0 and
-	  ;; y1 separately, for greater accuracy.  This isn't
-	  ;; implemented, and some spot checks indicate that what we
-	  ;; have here is accurate.
-	  ;;
-	  ;; For x86 with an fsin/fcos/fptan instruction, the pi/4 is
-	  ;; probably too restrictive.
-	  (defun %sin (x)
-	    (declare (double-float x))
-	    (if (< (abs x) (/ pi 4))
-		(,sin x)
-		;; Argument reduction needed
-		(multiple-value-bind (n y0 y1)
-		    (%ieee754-rem-pi/2 x)
-		  (let ((reduced (+ y0 y1)))
-		    (case (logand n 3)
-		      (0 (,sin reduced))
-		      (1 (,cos reduced))
-		      (2 (- (,sin reduced)))
-		      (3 (- (,cos reduced))))))))
-	  (defun %cos (x)
-	    (declare (double-float x))
-	    (if (< (abs x) (/ pi 4))
-		(,cos x)
-		;; Argument reduction needed
-		(multiple-value-bind (n y0 y1)
-		    (%ieee754-rem-pi/2 x)
-		  (let ((reduced (+ y0 y1)))
-		    (case (logand n 3)
-		      (0 (,cos reduced))
-		      (1 (- (,sin reduced)))
-		      (2 (- (,cos reduced)))
-		      (3 (,sin reduced)))))))
-	  (defun %tan (x)
-	    (declare (double-float x))
-	    (if (< (abs x) (/ pi 4))
-		(,tan x)
-		;; Argument reduction needed
-		(multiple-value-bind (n y0 y1)
-		    (%ieee754-rem-pi/2 x)
-		  (let ((reduced (+ y0 y1)))
-		    (if (evenp n)
-			(,tan reduced)
-			(- (/ (,tan reduced)))))))))))
-  ;; Don't want %sin-quick and friends with sse2.
-  #+(and x86 (not sse2))
-  (frob %sin-quick %cos-quick %tan-quick)
-  #+(or ppc sse2)
-  (frob %%sin %%cos %%tan))
-
+(declaim (inline %sincos))
+(export '%sincos)
+(defun %sincos (x)
+  (declare (double-float x))
+  (multiple-value-bind (ign s c)
+      (%%sincos x)
+    (declare (ignore ign))
+    (values s c)))
 
 
 ;;;; Power functions.
@@ -318,11 +245,20 @@
 ;;; of power are calculated as positive integers, and inverted if negative.
 ;;;
 (defun intexp (base power)
-  ;; Handle the special case of 1^power.  Maxima sometimes does this,
-  ;; and there's no need to cause a continuable error in this case.
-  ;; Should we also handle (-1)^power?
+  ;; Handle the special case of 1^power and (-1)^power.  Maxima
+  ;; sometimes does this, and there's no need to cause a continuable
+  ;; error in this case.
   (when (eql base 1)
     (return-from intexp base))
+  (when (eql base -1)
+    (return-from intexp (if (oddp power) -1 1)))
+
+  ;; Handle 0 raised to a power.  Return 0 if the power is
+  ;; non-negative or signal a divide-by-zero if the power is negative.
+  (when (zerop base)
+    (if (minusp power)
+	(error 'division-by-zero)
+	(return-from intexp base)))
   
   (when (> (abs power) *intexp-maximum-exponent*)
     ;; Allow user the option to continue with calculation, possibly
@@ -676,7 +612,17 @@
 					(float 2 float-type)))))))))
     (etypecase x
       (float
-       (/ (log (float x float-type)) (log-of-2 float-type)))
+       (multiple-value-bind (f e s)
+	   (decode-float x)
+	 ;; If x = 2^e*f then log2(x) = e + log2(f) = e +
+	 ;; log(f)/log(2). Accuracy could be improved some since this
+	 ;; has 2 rounding operations instead of just 1 for
+	 ;; log(x)/log(2).
+	 (let ((log2 (+ e (/ (log (float f float-type))
+			     (log-of-2 float-type)))))
+	   (if (minusp s)
+	       (complex log2 (log-2-pi float-type))
+	       log2))))
       (ratio
        (let ((top (numerator x))
 	     (bot (denominator x)))
@@ -693,8 +639,11 @@
 	 ;; it, and converting it to double-float is accurate.
 	 (if (= (integer-length top)
 		(integer-length bot))
-	     (/ (log1p (float (- x 1) float-type))
-		(log-of-2 float-type))
+	     (let ((log-abs (/ (log1p (float (- (abs x) 1) float-type))
+			       (log-of-2 float-type))))
+	       (if (minusp x)
+		   (complex log-abs (log-2-pi float-type))
+		   log-abs))
 	     (multiple-value-bind (top-n top-frac)
 		 (log2-bignum top)
 	       (multiple-value-bind (bot-n bot-frac)
@@ -706,6 +655,19 @@
 	   (log2-bignum x)
 	 (+ n frac))))))
 
+;; Handle the case where number could be so large that it doesn't fit
+;; in a double-float.
+(defun log10 (number &optional (float-type 1d0))
+  (let ((d (ignore-errors (float number 1d0))))
+    (cond (d
+	   ;; Number fits in a double, so it's easy
+	   (float (%log10 d) float-type))
+	  (t
+	   ;; Number doesn't fit in a double. Do it the hard way using
+	   ;; log2.  This should be done more accurately.
+	   (float (/ (log2 number)
+		     (log2 10)) float-type)))))
+  
 (defun log (number &optional (base nil base-p))
   "Return the logarithm of NUMBER in the base BASE, which defaults to e."
   (if base-p
@@ -713,74 +675,150 @@
 	     ;; ANSI spec
 	     base)
 	    ((and (realp number) (realp base))
-	     ;; CLHS 12.1.4.1 says
-	     ;;
-	     ;;   When rationals and floats are combined by a
-	     ;;   numerical function, the rational is first converted
-	     ;;   to a float of the same format.
-	     ;;
-	     ;; So assume this applies to floats as well convert all
-	     ;; numbers to the largest float format before computing
-	     ;; the log.
-	     ;;
-	     ;; This makes (log 17 10.0) = (log 17.0 10) and so on.
-	     (number-dispatch ((number real) (base real))
-	       ((double-float
-		 (foreach double-float single-float))
-		(/ (log2 number) (log2 base)))
-	       (((foreach fixnum bignum ratio)
-		 (foreach fixnum bignum ratio single-float))
-		(let* ((result (/ (log2 number) (log2 base))))
-		  ;; Figure out the right result type
-		  (if (realp result)
-		      (coerce result 'single-float)
-		      (coerce result '(complex single-float)))))
-	       (((foreach fixnum bignum ratio)
-		 double-float)
-		(/ (log2 number) (log2 base)))
-	       ((single-float
-		 (foreach fixnum bignum ratio))
-		(let* ((result (/ (log2 number) (log2 base))))
-		  ;; Figure out the right result type
-		  (if (realp result)
-		      (coerce result 'single-float)
-		      (coerce result '(complex single-float)))))
-	       ((double-float
-		 (foreach fixnum bignum ratio))
-		(/ (log2 number) (log2 base)))
-	       ((single-float double-float)
-		(/ (log (coerce number 'double-float)) (log base)))
-	       #+double-double
-	       ((double-double-float
-		 (foreach fixnum bignum ratio))
-		(/ (log2 number 1w0) (log2 base 1w0)))
-	       #+double-double
-	       ((double-double-float
-		 (foreach double-double-float double-float single-float))
-		(/ (log number) (log (coerce base 'double-double-float))))
-	       #+double-double
-	       (((foreach fixnum bignum ratio)
-		 double-double-float)
-		(/ (log2 number 1w0) (log2 base 1w0)))
-	       #+double-double
-	       (((foreach double-float single-float)
-		 double-double-float)
-		(/ (log (coerce number 'double-double-float)) (log base)))
-	       (((foreach single-float)
-		 (foreach single-float))
-		;; Converting everything to double-float helps the
-		;; cases like (log 17 10) = (/ (log 17) (log 10)).
-		;; This is usually handled above, but if we compute (/
-		;; (log 17) (log 10)), we get a slightly different
-		;; answer due to roundoff.  This makes it a bit more
-		;; consistent.
+	     (cond
+	       ((and (= base 2)
+		     ;;(floatp number)
+		     (or (plusp number)
+			 (eql number 0.0)
+			 (eql number 0d0)
+			 #+double-double
+			 (eql number 0w0)))
+		;; Do the same thing as the deftranform does for log
+		;; base 2 and 10 for non-negative arguments: handle
+		;; the case where number > 0 or equal to +0.
+		(number-dispatch ((number real) (base real))
+		  ((double-float
+		    (foreach integer ratio single-float double-float))
+		   (%log2 number))
+		  ((single-float double-float)
+		   (%log2 (float number 1d0)))
+		  ((single-float
+		    (foreach integer ratio single-float))
+		   (float (%log2 (float number 1d0)) 1f0))
+		  (((foreach integer ratio)
+		    (foreach integer ratio single-float))
+		   (float (log2 number) 1f0))
+		  (((foreach integer ratio)
+		    double-float)
+		   (log2 number))
+		  #+double-double
+		  (((foreach single-float double-float)
+		    double-double-float)
+		   (dd-%log2 (float number 1w0)))
+		  #+double-double
+		  (((foreach integer ratio)
+		    double-double-float)
+		   (log2 number 1w0))
+		  #+double-double
+		  ((double-double-float
+		    (foreach integer ratio single-float double-float double-double-float))
+		   (dd-%log2 number))))
+	       ((and (= base 10)
+		     ;;(floatp number)
+		     (or (plusp number)
+			 (eql number 0.0)
+			 (eql number 0d0)))
+		;; Do the same thing as the deftranform does for
+		;; log base 2 and 10 for non-negative arguments.
+		(number-dispatch ((number real) (base real))
+		  ((double-float
+		    (foreach integer ratio single-float double-float))
+		   (%log10 number))
+		  ((single-float double-float)
+		   (%log10 (float number 1d0)))
+		  ((single-float
+		    (foreach integer ratio single-float))
+		   (float (%log10 (float number 1d0)) 1f0))
+		  (((foreach integer ratio)
+		    (foreach integer ratio single-float))
+		   (log10 number 1f0))
+		  (((foreach integer ratio)
+		    double-float)
+		   (log10 number 1d0))
+		  #+double-double
+		  (((foreach integer ratio)
+		    ext:double-double-float)
+		   (log10 number 1w0))
+		  #+double-double
+		  (((foreach single-float double-float)
+		    ext:double-double-float)
+		   (dd-%log10 (float number 1w0)))
+		  #+double-double
+		  ((double-double-float
+		    (foreach integer ratio single-float double-float double-double-float))
+		   (dd-%log10 number))))
+	       (t
+		;; CLHS 12.1.4.1 says
 		;;
-		;; FIXME: This probably needs more work.
-		(let ((result (/ (log (float number 1d0))
-				 (log (float base 1d0)))))
-		  (if (realp result)
-		      (coerce result 'single-float)
-		      (coerce result '(complex single-float)))))))
+		;;   When rationals and floats are combined by a
+		;;   numerical function, the rational is first converted
+		;;   to a float of the same format.
+		;;
+		;; So assume this applies to floats as well convert all
+		;; numbers to the largest float format before computing
+		;; the log.
+		;;
+		;; This makes (log 17 10.0) = (log 17.0 10) and so on.
+		(number-dispatch ((number real) (base real))
+		  ((double-float
+		    (foreach double-float single-float))
+		   (/ (log2 number) (log2 base)))
+		  (((foreach fixnum bignum ratio)
+		    (foreach fixnum bignum ratio single-float))
+		   (let* ((result (/ (log2 number) (log2 base))))
+		     ;; Figure out the right result type
+		     (if (realp result)
+			 (coerce result 'single-float)
+			 (coerce result '(complex single-float)))))
+		  (((foreach fixnum bignum ratio)
+		    double-float)
+		   (/ (log2 number) (log2 base)))
+		  ((single-float
+		    (foreach fixnum bignum ratio))
+		   (let* ((result (/ (log2 number) (log2 base))))
+		     ;; Figure out the right result type
+		     (if (realp result)
+			 (coerce result 'single-float)
+			 (coerce result '(complex single-float)))))
+		  ((double-float
+		    (foreach fixnum bignum ratio))
+		   (/ (log2 number) (log2 base)))
+		  ((single-float double-float)
+		   (/ (log (coerce number 'double-float)) (log base)))
+		  #+double-double
+		  ((double-double-float
+		    (foreach fixnum bignum ratio))
+		   ;; Use log2 in case the base is so large that it
+		   ;; won't fit in a float.
+		   (/ (log2 number 1w0) (log2 base 1w0)))
+		  #+double-double
+		  ((double-double-float
+		    (foreach double-double-float double-float single-float))
+		   (/ (log number)
+		      (log (coerce base 'double-double-float))))
+		  #+double-double
+		  (((foreach fixnum bignum ratio)
+		    double-double-float)
+		   (/ (log2 number 1w0) (log2 base 1w0)))
+		  #+double-double
+		  (((foreach double-float single-float)
+		    double-double-float)
+		   (/ (log (coerce number 'double-double-float)) (log base)))
+		  (((foreach single-float)
+		    (foreach single-float))
+		   ;; Converting everything to double-float helps the
+		   ;; cases like (log 17 10) = (/ (log 17) (log 10)).
+		   ;; This is usually handled above, but if we compute (/
+		   ;; (log 17) (log 10)), we get a slightly different
+		   ;; answer due to roundoff.  This makes it a bit more
+		   ;; consistent.
+		   ;;
+		   ;; FIXME: This probably needs more work.
+		   (let ((result (/ (log (float number 1d0))
+				    (log (float base 1d0)))))
+		     (if (realp result)
+			 (coerce result 'single-float)
+			 (coerce result '(complex single-float)))))))))
 	    (t
 	     ;; FIXME:  This probably needs some work as well.
 	     (/ (log number) (log base))))
@@ -941,7 +979,23 @@
   "Return cos(Theta) + i sin(Theta), AKA exp(i Theta)."
   (if (complexp theta)
       (error (intl:gettext "Argument to CIS is complex: ~S") theta)
-      (complex (cos theta) (sin theta))))
+      (number-dispatch ((theta real))
+	((rational)
+	 (let ((arg (coerce theta 'double-float)))
+	   (multiple-value-bind (s c)
+	       (%sincos arg)
+	     (complex (coerce c 'single-float)
+		      (coerce s 'single-float)))))
+	(((foreach single-float double-float))
+	 (multiple-value-bind (s c)
+	     (%sincos (coerce theta 'double-float))
+	   (complex (coerce c '(dispatch-type theta))
+		    (coerce s '(dispatch-type theta)))))
+	#+double-double
+	((double-double-float)
+	 (multiple-value-bind (s c)
+	     (dd-%sincos theta)
+	   (complex c s))))))
 
 (defun asin (number)
   "Return the arc sine of NUMBER."
@@ -1381,10 +1435,25 @@ Z may be any number, but the result is always a complex."
   #+double-double
   (when (typep z '(or double-double-float (complex double-double-float)))
     (return-from complex-atanh (dd-complex-atanh z)))
-  
-  (if (and (realp z) (< z -1))
-      ;; atanh is continuous in quadrant III in this case.
-      (complex-atanh (complex z -0f0))
+
+  ;; When z is purely real and x > 1, we have
+  ;;
+  ;; atanh(z) = 1/2*(log(1+z) - log(1-z))
+  ;;          = 1/2*(log(1+x) - (log(x-1)+i*pi))
+  ;;          = 1/2*(log(1+x) - log(x-1) - i*pi)
+  ;;          = 1/2(log(1+x)-log(x-1)) - i*pi/2
+  ;;
+  ;; Thus, the imaginary part is negative. Thus, for z > 1, atanh is
+  ;; continuous with quadrant IV.  To preserve the identity atanh(-z)
+  ;; = -atanh(z), we must have atanh be continuous with Quadrant II
+  ;; for z < -1.  (The identity is obviously true from the
+  ;; definition.)
+  ;;
+  ;; NOTE: this differs from what the CLHS says for the continuity.
+  ;; Instead of the text in the CLHS, we choose to use the definition
+  ;; to derive the correct values.
+  (if (realp z)
+      (complex-atanh (complex (float z) (- (* 0 (float z)))))
       (let* ( ;; Constants
 	     (theta (/ (sqrt most-positive-double-float) 4.0d0))
 	     (rho (/ 4.0d0 (sqrt most-positive-double-float)))
@@ -1557,8 +1626,43 @@ Z may be any number, but the result is always a complex."
 			     (realpart sqrt-z+1))))))))
 
 
+;; What is the value of asin(2)?  Here is a derivation.
+;;
+;; asin(2) = -i*log(i*2+sqrt(-3))
+;;         = -i*log(2*i+sqrt(3)*i)
+;;         = -i*(log(2+sqrt(3)) + i*pi/2)
+;;         = pi/2 - i*log(2+sqrt(3))
+;;
+;; Note that this differs from asin(2+0.0*i) because we support signed
+;; zeroes.
+;;
+;; asin(2+0*i) = -i*log(i*(2+0*i) + sqrt(1-(4+0*i)))
+;;             = -i*log((2*i - 0) + sqrt(-3-0*i))
+;;             = -i*log(-0 + 2*i - sqrt(3)*i)
+;;             = -i*log(-0 + i*(2-sqrt(3)))
+;;             = -i*(log(2-sqrt(3)) + i*pi/2)
+;;             = pi/2 - i*log(2-sqrt(3))
+;;             = pi/2 + i*log(2+sqrt(3))
+;;
+;; The last equation follows because (2-sqrt(3)) = 1/(2+sqrt(3)).
+;; Hence asin(2) /= asin(2+0*i).
+;;
+;; Also
+;;
+;; asin(2-0*i) = -i*log(i*(2-0*i) + sqrt(1-(4-0*i)))
+;;             = -i*log((2*i + 0) + sqrt(-3+0*i))
+;;             = -i*log(0 + 2*i + sqrt(3)*i)
+;;             = -i*log(0 + i*(2+sqrt(3)))
+;;             = -i*(log(2+sqrt(3)) + i*pi/2)
+;;             = pi/2 + i*log(2+sqrt(3))
+;;
+;; Hence asin(2) = asin(2-0.0*i).
+;;
+;; Similar derivations will show that asin(-2) = asin(-2 + 0.0*i) and
+;; asin(-2+0.0*i) is different from asin(-2-0.0*i) because of the
+;; branch cut, of course.
 (defun complex-asin (z)
-  "Compute asin z = asinh(i*z)/i
+  "Compute asin z = -i*log(i*z + sqrt(1-z^2))
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
@@ -1591,7 +1695,7 @@ Z may be any number, but the result is always a complex."
 	     (- (realpart result)))))
 	 
 (defun complex-atan (z)
-  "Compute atan z = atanh (i*z) / i
+  "Compute atan z = (log(1+i*z) - log(1-i*z))/(2*i)
 
 Z may be any number, but the result is always a complex."
   (declare (number z))

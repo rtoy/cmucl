@@ -284,7 +284,7 @@ write_space_object(const char *dir, int id, os_vm_address_t start, os_vm_address
 				   ((end - start) % os_vm_page_size));
     static char *names[] = { "Dynamic", "Static", "Read-Only" };
 
-    if(id < 1 || id > 3) {
+    if (!(1 <= id) && (id <= 3)) {
 	fprintf(stderr, "Invalid space id in %s: %d\n", __func__, id);
 	fprintf(stderr, "Executable not built.\n");
 	ret = -1;

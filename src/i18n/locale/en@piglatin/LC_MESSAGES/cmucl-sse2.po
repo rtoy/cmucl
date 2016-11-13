@@ -1,10 +1,12 @@
-#@ cmucl-sse2
+# @ cmucl-sse2
 # SOME DESCRIPTIVE TITLE
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
 #
 #, fuzzy
 msgid ""
-msgstr "Project-Id-Version: CMUCL 20D\n"
+msgstr ""
+"Project-Id-Version: CMUCL 20E\n"
+"Report-Msgid-Bugs-To: \n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
 "Last-Translator: Automatic translation\n"
 "Language-Team: Pig Latin (auto-translated)\n"
@@ -34,10 +36,11 @@ msgstr "oatflay otay ointerpay oercioncay"
 #: src/compiler/x86/float-sse2.lisp
 msgid ""
 "Load TN allocated, but no move function?~@\n"
-"	           VM definition inconsistent, recompile and try again."
+"\t           VM definition inconsistent, recompile and try again."
 msgstr ""
 "Oadlay TN allocatedway, utbay onay ovemay unctionfay?~@\n"
-"	           VM efinitionday inconsistentway, ecompileray andway ytray againway."
+"\t           VM efinitionday inconsistentway, ecompileray andway ytray "
+"againway."
 
 #: src/compiler/x86/float-sse2.lisp
 msgid "pointer to float coercion"
@@ -82,6 +85,10 @@ msgstr "inlineway oatflay oercioncay"
 #: src/compiler/x86/float-sse2.lisp
 msgid "inline float truncate"
 msgstr "inlineway oatflay uncatetray"
+
+#: src/compiler/x86/float-sse2.lisp
+msgid "inline ftruncate"
+msgstr "inlineway truncatefay"
 
 #: src/compiler/x86/float-sse2.lisp
 msgid "inline complex single-float creation"
@@ -142,4 +149,3 @@ msgstr "inlineway omplexcay oatflay arithmeticway"
 #: src/compiler/x86/float-sse2.lisp
 msgid "inline complex float/float arithmetic"
 msgstr "inlineway omplexcay oatflay/oatflay arithmeticway"
-

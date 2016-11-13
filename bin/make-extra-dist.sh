@@ -33,7 +33,7 @@ ARCH=$3
 OS=$4
 
 case $ARCH in
-	x86*)		FASL="x86f sse2f" ;;
+	x86*)		FASL="sse2f" ;;
 	sparc*)		FASL=sparcf ;;
 	alpha*)		FASL=axpf ;;
 	ppc*)		FASL=ppcf ;;
@@ -99,7 +99,7 @@ do
     install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/$d
 done
 
-for f in `(cd src/contrib; find . -type f -print | egrep -v "CVS|asdf|defsystem")`
+for f in `(cd src/contrib; find . -type f -print | egrep -v "CVS|asdf|defsystem|unix")`
 do
     FILE=`basename $f`
     DIR=`dirname $f`

@@ -18,6 +18,19 @@ usage() {
 
 ##--
 prgm_name=`basename $0` bld_dir=$1 lisp_variant=$2 motif_variant=$3
+
+while getopts "h?" arg
+do
+    case $arg in
+      h) usage ;;
+      \?) usage ;;
+    esac
+done
+
+bld_dir=$1
+lisp_variant=$2
+motif_variant=$3
+
 exec 2>&1
 
 [ -n "$bld_dir" ] || usage

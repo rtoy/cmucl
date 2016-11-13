@@ -167,6 +167,16 @@ convert_lisp_string(char* c_string, void* lisp_string, int len)
     return c_string;
 }
 
+/*
+ * C version of lisp's EXTERN-ALIEN-NAME.  For systems that use elf,
+ * do nothing.  Otherwise, we prepend an underscore.
+ */
+#if defined(FEATURE_ELF)
+#define EXTERN_ALIEN_NAME(x) x
+#else
+#define EXTERN_ALIEN_NAME(x) "_" x
+#endif
+
 void
 os_foreign_linkage_init(void)
 {
@@ -211,26 +221,21 @@ os_foreign_linkage_init(void)
         }
 #endif        
 	if (i == 0) {
-#if defined(sparc)
-	    if (type != LINKAGE_CODE_TYPE || strcmp(c_symbol_name, "call_into_c")) {
-		fprintf(stderr, "linkage_data is %s but expected call_into_c\n",
-			(char *) symbol_name->data);
+#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
+            if (type != LINKAGE_CODE_TYPE || strcmp(c_symbol_name, EXTERN_ALIEN_NAME("call_into_c"))) {
+		fprintf(stderr, "linkage_data is %s but expected %s\n",
+			c_symbol_name,
+                        EXTERN_ALIEN_NAME("call_into_c"));
 		lose("First element of linkage_data is bogus.\n");
 	    }
 	    arch_make_linkage_entry(i, (void*) call_into_c, 1);
-#elif (defined(DARWIN) && defined(__ppc__))
-	    if (type != 1 || strcmp(c_symbol_name, "_call_into_c")) {
-		fprintf(stderr, "linkage_data is %s but expected call_into_c\n",
-			(char *) c_symbol_name);
-		lose("First element of linkage_data is bogus.\n");
-	    }
-	    arch_make_linkage_entry(i, &call_into_c, 1);
 #else
 	    if (type != LINKAGE_CODE_TYPE || strcmp(c_symbol_name,
-                                                    "resolve_linkage_tramp")) {
+                                                    EXTERN_ALIEN_NAME("resolve_linkage_tramp"))) {
 		fprintf(stderr,
-			"linkage_data is %s but expected resolve_linkage_tramp\n",
-			(char *) c_symbol_name);
+			"linkage_data is %s but expected %s\n",
+			c_symbol_name,
+                        EXTERN_ALIEN_NAME("resolve_linkage_tramp"));
 		lose("First element of linkage_data is bogus.\n");
 	    }
 	    arch_make_linkage_entry(i, (void *) &resolve_linkage_tramp, 1);
@@ -262,7 +267,6 @@ os_foreign_linkage_init(void)
 	} else {
 	    arch_make_lazy_linkage(i / LINKAGE_DATA_ENTRY_SIZE);
 	}
-
     }
 #endif /* LINKAGE_TABLE */
 }
@@ -409,7 +413,7 @@ guard_zones(char **yellow_start, char **red_start)
     /*
      * All x86's have a control stack (aka C stack) that grows down.
      */
-    char *end = (char *) CONTROL_STACK_START;
+    char *end = (char *) control_stack;
 
     *red_start = end;
     *yellow_start = *red_start + RED_ZONE_SIZE;
@@ -420,7 +424,7 @@ guard_zones(char **yellow_start, char **red_start)
      * control stack area.
      */
 
-    char *end = (char *) CONTROL_STACK_START + control_stack_size;
+    char *end = (char *) control_stack + control_stack_size;
 
     *red_start = end - RED_ZONE_SIZE;
     *yellow_start = *red_start - YELLOW_ZONE_SIZE;
@@ -542,3 +546,19 @@ os_guard_control_stack(int zone, int guard)
 }
 
 #endif /* not RED_ZONE_HIT */
+
+
+/* Simple interface to __ieee754_rem_pio2 */
+int ieee754_rem_pio2(double x, double *y0, double *y1)
+{
+  extern int __ieee754_rem_pio2(double x, double *y);
+
+  double y[2];
+  int n;
+
+  n = __ieee754_rem_pio2(x, y);
+  *y0 = y[0];
+  *y1 = y[1];
+
+  return n;
+}

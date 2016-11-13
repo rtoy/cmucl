@@ -750,6 +750,41 @@
 		  ;; at the low five bits of the result.
 		  (inst sar result (min 31 (- amount)))))))))
 
+(define-vop (fast-ash-c/fixnum=>signed)
+  (:translate ash)
+  (:policy :fast-safe)
+  (:args (number :scs (any-reg) :target result
+		 :load-if (not (and (sc-is number signed-stack)
+				    (sc-is result signed-stack)
+				    (location= number result)))))
+  (:info amount)
+  (:arg-types fixnum (:constant integer))
+  (:results (result :scs (signed-reg)
+		    :load-if (not (and (sc-is number signed-stack)
+				       (sc-is result signed-stack)
+				       (location= number result)))))
+  (:result-types signed-num)
+  (:note "inline ASH")
+  (:generator 1
+    (let ((shift (- amount vm:fixnum-tag-bits)))
+      (cond ((and (= shift 1) (not (location= number result)))
+	     (inst lea result (make-ea :dword :index number :scale 2)))
+	    ((and (= shift 2) (not (location= number result)))
+	     (inst lea result (make-ea :dword :index number :scale 4)))
+	    ((and (= shift 3) (not (location= number result)))
+	     (inst lea result (make-ea :dword :index number :scale 8)))
+	    (t
+	     (move result number)
+	     (cond ((plusp shift)
+		    ;; We don't have to worry about overflow because of the
+		    ;; result type restriction.
+		    (inst shl result shift))
+		   (t
+		    ;; If the shift is greater than 31, only shift by 31.  We
+		    ;; have to do this because the shift instructions only look
+		    ;; at the low five bits of the result.
+		    (inst sar result (min 31 (- shift))))))))))
+
 (define-vop (fast-ash-left/unsigned=>unsigned)
   (:translate ash)
   (:args (number :scs (unsigned-reg) :target result
@@ -1410,31 +1445,61 @@
   (:translate bignum::%ashr)
   (:policy :fast-safe)
   (:args (digit :scs (unsigned-reg unsigned-stack) :target result)
-	 (count :scs (unsigned-reg) :target ecx))
+	 (count :scs (unsigned-reg)))
   (:arg-types unsigned-num positive-fixnum)
   (:temporary (:sc unsigned-reg :offset ecx-offset :from (:argument 1)) ecx)
   (:results (result :scs (unsigned-reg) :from (:argument 0)
 		    :load-if (not (and (sc-is result unsigned-stack)
 				       (location= digit result)))))
   (:result-types unsigned-num)
-  (:generator 1
+  (:generator 2
     (move result digit)
     (move ecx count)
     (inst sar result :cl)))
 
+(define-vop (digit-ashr-c)
+  (:translate bignum::%ashr)
+  (:policy :fast-safe)
+  (:args (digit :scs (unsigned-reg unsigned-stack) :target result))
+  (:info count)
+  (:arg-types unsigned-num (:constant (unsigned-byte #.(1- (integer-length vm:word-bits)))))
+  (:results (result :scs (unsigned-reg) :from (:argument 0)
+		    :load-if (not (and (sc-is result unsigned-stack)
+				       (location= digit result)))))
+  (:result-types unsigned-num)
+  (:generator 1
+    (move result digit)
+    ;; If the count is greater than 31, it's the same as
+    ;; shifting by 31, leaving just the sign bit.
+    (inst sar result count)))
+
 (define-vop (digit-lshr digit-ashr)
   (:translate bignum::%digit-logical-shift-right)
-  (:generator 1
+  (:generator 2
     (move result digit)
     (move ecx count)
     (inst shr result :cl)))
 
+(define-vop (digit-lshr-c digit-ashr-c)
+  (:translate bignum::%digit-logical-shift-right)
+  (:generator 1
+    (move result digit)
+    (inst shr result count)))
+
 (define-vop (digit-ashl digit-ashr)
   (:translate bignum::%ashl)
-  (:generator 1
+  (:generator 2
     (move result digit)
     (move ecx count)
     (inst shl result :cl)))
+
+(define-vop (digit-ashl-c digit-ashr-c)
+  (:translate bignum::%ashl)
+  (:generator 1
+    (move result digit)
+    (inst shl result count)))
+
+
 
 
 ;;;; Static functions.
@@ -1514,6 +1579,7 @@
     (inst mov tmp y)
     (inst shr tmp 18)
     (inst xor y tmp)))
+
 
 ;;; Modular arithmetic
 ;;; logical operations

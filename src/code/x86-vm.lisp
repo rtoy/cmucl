@@ -21,7 +21,6 @@
 (use-package "SYSTEM")
 (use-package "ALIEN")
 (use-package "C-CALL")
-(use-package "UNIX")
 (use-package "KERNEL")
 
 (intl:textdomain "cmucl-x86-vm")
@@ -43,10 +42,13 @@
   (setf *features* (delete :x87 *features*))
   (sys:register-lisp-feature :sse2))
 
+#+(or darwin linux)
+(sys:register-lisp-runtime-feature :relocatable-stacks)
+
 
 ;;;; The sigcontext structure.
 
-(def-alien-type sigcontext system-area-pointer)
+(def-alien-type unix:sigcontext system-area-pointer)
 
 ;;;; Add machine specific features to *features*
 
@@ -189,8 +191,8 @@
 ;;; instruction stream.
 ;;; 
 (defun internal-error-arguments (scp)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (with-alien ((scp (* unix:sigcontext) scp))
     (let ((pc (sigcontext-program-counter scp)))
       (declare (type system-area-pointer pc))
       ;; using INT3 the pc is .. INT3 <here> code length bytes...
@@ -217,10 +219,10 @@
 ;;; SIGCONTEXT-PROGRAM-COUNTER -- Interface.
 ;;;
 (defun sigcontext-program-counter (scp)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   (let ((fn (extern-alien "os_sigcontext_pc"
 			  (function system-area-pointer
-				    (* sigcontext)))))
+				    (* unix:sigcontext)))))
     (sap-ref-sap (alien-funcall fn scp) 0)))
 
 ;;; SIGCONTEXT-REGISTER -- Interface.
@@ -229,18 +231,18 @@
 ;;; interrupts.  
 ;;;
 (defun sigcontext-register (scp index)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   (let ((fn (extern-alien "os_sigcontext_reg"
 			  (function system-area-pointer
-				    (* sigcontext)
+				    (* unix:sigcontext)
 				    (integer 32)))))
     (sap-ref-32 (alien-funcall fn scp index) 0)))
 
 (defun %set-sigcontext-register (scp index new)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   (let ((fn (extern-alien "os_sigcontext_reg"
 			  (function system-area-pointer
-				    (* sigcontext)
+				    (* unix:sigcontext)
 				    (integer 32)))))
     (setf (sap-ref-32 (alien-funcall fn scp index) 0) new)))
 
@@ -255,10 +257,10 @@
 ;;; complex-single-float and complex-double-float.
 ;;;
 (defun sigcontext-float-register (scp index format)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   (let ((fn (extern-alien "os_sigcontext_fpu_reg"
 			  (function system-area-pointer
-				    (* sigcontext)
+				    (* unix:sigcontext)
 				    (integer 32)))))
     #+x87
     (coerce (sap-ref-long (alien-funcall fn scp index) 0) format)
@@ -282,10 +284,10 @@
 
 ;;;
 (defun %set-sigcontext-float-register (scp index format new)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   (let ((fn (extern-alien "os_sigcontext_fpu_reg"
 			  (function system-area-pointer
-				    (* sigcontext)
+				    (* unix:sigcontext)
 				    (integer 32)))))
     (let* ((sap (alien-funcall fn scp index)))
       (if (< index 8)
@@ -312,17 +314,17 @@
 ;;; same format as returned by FLOATING-POINT-MODES.
 ;;;
 (defun sigcontext-floating-point-modes (scp)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   (let ((fn (extern-alien "os_sigcontext_fpu_modes"
 			  (function (integer 32)
-				    (* sigcontext)))))
+				    (* unix:sigcontext)))))
     (alien-funcall fn scp)))
 
 (defun %set-sigcontext-floating-point-modes (scp new-mode)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   (let ((fn (extern-alien "os_set_sigcontext_fpu_modes"
 			  (function (integer 32)
-				    (* sigcontext)
+				    (* unix:sigcontext)
 				    c-call:unsigned-int))))
     (alien-funcall fn scp new-mode)
     new-mode))
@@ -337,6 +339,9 @@
 ;;;
 (defun extern-alien-name (name)
   (declare (type simple-string name))
+  #-elf
+  (concatenate 'string "_"  name)
+  #+elf
   name)
 
 #+(and (or linux (and freebsd elf)) (not linkage-table))
@@ -540,7 +545,7 @@
 (in-package "X86")
 
 (defun get-fp-operation (scp)
-  (declare (type (alien (* sigcontext)) scp))
+  (declare (type (alien (* unix:sigcontext)) scp))
   ;; Get the instruction that caused the SIGFPE from the context.  The
   ;; SIGFPE can be caused by either a floating-point operation or an
   ;; integer division (overflow).  We return the operation associated
@@ -683,7 +688,7 @@
 	     (values nil nil nil))))))
 
 (defun get-fp-operands (scp modes)
-  (declare (type (alien (* sigcontext)) scp)
+  (declare (type (alien (* unix:sigcontext)) scp)
 	   (ignore modes))
   ;; From the offending FP instruction, get the operation and
   ;; operands, if we can.

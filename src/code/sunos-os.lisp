@@ -22,7 +22,9 @@
 (pushnew :sunos *features*)
 
 #+solaris
-(register-lisp-feature :solaris)
+(progn
+  (register-lisp-feature :solaris)
+  (register-lisp-feature :elf))
 #+svr4
 (register-lisp-feature :svr4)
 

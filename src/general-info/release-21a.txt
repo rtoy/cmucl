@@ -1,0 +1,127 @@
+========================== C M U C L  21 a =============================
+
+The CMUCL project is pleased to announce the release of CMUCL 21a.
+This is a major release which contains numerous enhancements and
+bug fixes from the 20f release.
+
+CMUCL is a free, high performance implementation of the Common Lisp
+programming language which runs on most major Unix platforms. It
+mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
+sophisticated native code compiler; a powerful foreign function
+interface; an implementation of CLOS, the Common Lisp Object System,
+which includes multi-methods and a meta-object protocol; a source-level
+debugger and code profiler; and an Emacs-like editor implemented in
+Common Lisp. CMUCL is maintained by a team of volunteers collaborating
+over the Internet, and is mostly in the public domain.
+
+New in this release:
+  * Known issues:
+
+  * Feature enhancements
+    * The darwin/ppc port can create executables now.  Current
+      implementation is rather buggy, though.
+
+  * Changes
+    * Micro-optimize SCALE-FLOAT to do multiplication when possible.
+    * Update to ASDF 3.1.5.
+    * The external-format :UTF is no longer an alias for :UTF-8.
+    * :ELF feature added for solaris.
+    * LISP:WITH-STRING-CODEPOINT-ITERATOR added to iterate over the
+      codepoints in a string. This works the same as
+      WITH-HASH-TABLE-ITERATOR.
+    * LISP:WITH-STRING-GLYPH-ITERATOR added to iterate over the glyphs
+      in a string. Works like WITH-HASH-TABLE-ITERATOR.
+    * LOOP supports new extended keywords
+      * (loop for cp being the codepoint of string ...)
+        * codepoints, code-point, and code-points are aliases for
+          codepoint. 
+      * (loop for g-string being the glpyh of string ...)
+        * glyphs is an alias for glpyh.
+    * The UNIX package has been split into two parts. By default the
+      UNIX package contains just enough to build CMUCL.  If you want
+      the rest of the functionality, use (require :unix).
+    * Added clx-inspector module.
+    * ASDF documentation included in html, info, and pdf formats in
+      contrib/asdf/doc/.
+    * If -quiet is given, don't print out the herald, even if the user
+      init files add things to the herald. (Previously, these would
+      get printed out.)  Also, -quiet no longer removes the herald
+      items; you can sill print out the entire herald using 
+
+
+  * ANSI compliance fixes:
+    * See Issue #3, #4, #5, #7.
+
+  * Bugfixes:
+    * On ppc machines with clock speeds over 2 GHz or so,
+      LISP::CYCLES-PER-TICK is no longer negative. This caused the
+      cycle count from TIME to be negative.
+    * EXTERN-ALIEN-NAME unified not to prepend an underscore if :ELF
+      is a *FEATURE*.
+    * Motifd will work as either a 32-bit or 64-bit app.
+    * Various bugs in clm fixed:
+      * Occasional RXmStringGetLtoR crash fixed.
+      * Motifd text callback fixed.
+    * Support for 64-bit time_t on NetBSD added. This allows cmucl to
+      run on more recent versions of NetBSD.
+    * The empty package LOOP has been removed.
+    * Executables on x86 can be created once again.  This ability was
+      inadvertently broken when x86 support was removed.
+    * (log number base) no longer generates an error when one of the
+      args is a double-double.
+    * Fix bug in kernel::dd-%log2 which returned the wrong value.
+    * More accurate values for (log x 2) and (log x 10):
+      * Add log10 implementation for double-doubles so that log10(10^n)
+	= n for integer n.
+      * An accurate log2 function added so that log2(2^n) = n.
+    * All unit tests pass successfully on darwin/x86, linux/x86, and
+      solaris/sparc.  Darwin/ppc fails most of the tests dealing with
+      exceptions for the special functions.
+    * Fix compiler warnings in motif about destructive functions
+      discarding their results.
+    * Move back some UNIX functionality back into the core.  asdf
+      wants unxi-getenv and slime wants unix-execve and unix-fork.
+    * Increase *ERROR-PRINT-LINES* to 10.
+    * Updated FreeBSD 9.3 support for building motifd.
+    * Issue #4 updated:
+      * ELT did not terminate when the index was negative.
+
+  * Trac Tickets:
+    * Ticket #54 fixed.
+    * Ticket #95 fixed.
+    * Ticket #110 fixed.
+    * Ticket #112 fixed.
+
+  * Gitlab tickets:
+    * Issue #1: Handle funcall in compiler macro functions.
+    * Issue #5: Give better error message when using T in CASE.
+    * Issue #4: ELT on lists does not signal an error when given
+      invalid index.
+    * Issue #3: Shadowing compiler macro functions.
+    * Issue #7: Local functions and get-setf-expansions
+    * Issue #8: Constants and top-level code
+
+  * Other changes:
+    * Cross compile scripts from x86 to sparc and ppc updated to work
+      again to cross-compile from the current snapshot.
+    * motifd is a 64-bit binary on linux again, instead of 32-bit.
+
+
+  * Improvements to the PCL implementation of CLOS:
+
+  * Changes to building procedure:
+    * Dependencies for motifd are autogenerated.
+    * Cross compile from darwin/x86 to solaris/x86 fixed to work
+      correctly.
+
+
+
+This release is not binary compatible with code compiled using CMUCL
+20f; you will need to recompile FASL files. 
+
+See <URL:http://www.cmucl.org> or
+<URL:http://trac.common-lisp.net/cmucl> for download information,
+guidelines on reporting bugs, and mailing list details.
+
+
+We hope you enjoy using this release of CMUCL!

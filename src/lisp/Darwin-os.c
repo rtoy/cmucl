@@ -22,6 +22,8 @@
 #include <errno.h>
 #include <dlfcn.h>
 #include <string.h>
+#include <assert.h>
+
 #include "os.h"
 #include "arch.h"
 #include "globals.h"
@@ -64,8 +66,8 @@ void
 timebase_init(void)
 {
     int mib[2];
-    int tbfrequency;
-    int cpufrequency;
+    unsigned tbfrequency;
+    unsigned cpufrequency;
     unsigned int miblen;
     size_t len;
 
@@ -93,7 +95,7 @@ timebase_init(void)
 	perror("Error getting HW_CPU_FREQ from sysctl: ");
     }
 
-    cycles_per_tick = cpufrequency / tbfrequency;
+    cycles_per_tick = 0.5 + (cpufrequency / (double) tbfrequency);
 }
 #endif
 
@@ -236,9 +238,9 @@ sc_reg(os_context_t * context, int offset)
       case 35:
 	  return &state->__ctr;
       case 41:
-	  return &context->uc_mcontext->__es.__dar;
+	  return (unsigned int *) &context->uc_mcontext->__es.__dar;
       case 42:
-	  return &context->uc_mcontext->__es.__dsisr;
+	  return (unsigned int *) &context->uc_mcontext->__es.__dsisr;
     }
 
     return (unsigned int *) 0;
@@ -332,7 +334,6 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
 	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm6;
     case 7:
 	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm7;
-#ifdef FEATURE_SSE2
     case 8:
        return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm0;
     case 9:
@@ -348,43 +349,21 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
     case 14:
        return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_xmm6;
     case 15:
-       return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm7;
-#endif
+      return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm7;
+    default:
+      return NULL;
     }
-    return NULL;
 }
 
 unsigned int
 os_sigcontext_fpu_modes(ucontext_t *scp)
 {
     unsigned int modes;
-    unsigned int mxcsr;
-    unsigned short cw, sw;
 
-    /*
-     * Get the status word and the control word.  
-     */
-    memcpy(&cw, &scp->uc_mcontext->__fs.__fpu_fcw, sizeof(cw));
-    memcpy(&sw, &scp->uc_mcontext->__fs.__fpu_fsw, sizeof(sw));
-
-    /*
-     * Put the cw in the upper bits and the status word in the lower 6
-     * bits, ignoring everything except the exception masks and the
-     * exception flags.
-     */
-    modes = ((cw & 0x3f) << 7) | (sw & 0x3f);
+    assert(fpu_mode == SSE2);
     
-    DPRINTF(0, (stderr, "FPU modes = %08x (sw =  %4x, cw = %4x)\n",
-		modes, (unsigned int) sw, (unsigned int) cw));
-
-    if (fpu_mode == SSE2) {
-      mxcsr = scp->uc_mcontext->__fs.__fpu_mxcsr;
-      DPRINTF(0, (stderr, "SSE2 modes = %08x\n", mxcsr));
-
-      modes |= mxcsr;
-    }
-    
-    DPRINTF(0, (stderr, "modes pre mask = %08x\n", modes));
+    modes = scp->uc_mcontext->__fs.__fpu_mxcsr;
+    DPRINTF(0, (stderr, "SSE2 modes = %08x\n", modes));
 
     /* Convert exception mask to exception enable */
     modes ^= (0x3f << 7);
@@ -395,16 +374,11 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
 void
 restore_fpu(ucontext_t *scp)
 {
-    unsigned short cw;
     unsigned int mxcsr;
 
-    memcpy(&cw, &scp->uc_mcontext->__fs.__fpu_fcw, sizeof(cw));
-    DPRINTF(0, (stderr, "restore_fpu: FPU cw = 0x%x\n", cw));
-    __asm__ __volatile__ ("fclex");
-    __asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
-            
     mxcsr = scp->uc_mcontext->__fs.__fpu_mxcsr;
     DPRINTF(0, (stderr, "restore_fpu:  mxcsr (raw) = %04x\n", mxcsr));
+
     __asm__ __volatile__ ("ldmxcsr %0" :: "m" (*&mxcsr));
 }
 #endif
@@ -490,8 +464,8 @@ valid_addr(os_vm_address_t addr)
 #ifndef GENCGC
 	|| in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
 #endif
-	|| in_range_p(addr, CONTROL_STACK_START, control_stack_size)
-	|| in_range_p(addr, BINDING_STACK_START, binding_stack_size))
+	|| in_range_p(addr, (lispobj)control_stack, control_stack_size)
+	|| in_range_p(addr, (lispobj)binding_stack, binding_stack_size))
 	return TRUE;
     return FALSE;
 }
@@ -558,7 +532,13 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 {
     static void *program_handle;
     void *sym_addr = 0;
+    int offset = sym_name[0] == '_' ? 1 : 0;
 
+#if 0
+    if (offset == 0) {
+        fprintf(stderr, "sym-name = %s\n", sym_name);
+    }
+#endif    
     if (!program_handle)
 	program_handle = dlopen((void *) 0, RTLD_LAZY | RTLD_GLOBAL);
     if (lib_list != NIL) {
@@ -569,12 +549,17 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 	    struct cons *lib_cons = CONS(CONS(lib_list_head)->car);
 	    struct sap *dlhandle = (struct sap *) PTR(lib_cons->car);
 
-	    sym_addr = dlsym((void *) dlhandle->pointer, sym_name);
+            /*
+             * On Darwin, dlsym assumes the C name, so skip the underscore that
+             * is prepended by EXTERN-ALIEN-NAME.
+             */
+            sym_addr = dlsym((void *) dlhandle->pointer, sym_name + offset);
 	    if (sym_addr)
-		return sym_addr;
+                return sym_addr;
 	}
     }
-    sym_addr = dlsym(program_handle, sym_name);
+
+    sym_addr = dlsym(program_handle, sym_name + offset);
 
     return sym_addr;
 }

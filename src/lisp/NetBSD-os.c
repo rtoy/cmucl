@@ -21,8 +21,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/param.h>
+#include <sys/types.h>
 #include <sys/file.h>
+#include <sys/proc.h>
+#include <sys/sysctl.h>
 #include <errno.h>
+
+#include <x86/fpu.h>
+
 #include "os.h"
 #include "arch.h"
 #include "globals.h"
@@ -30,12 +36,8 @@
 #include "lispregs.h"
 #include "internals.h"
 
-#include <sys/types.h>
 #include <signal.h>
-/* #include <sys/sysinfo.h> */
-#include <sys/proc.h>
 #include <dlfcn.h>
-#include <sys/sysctl.h>
 #include "validate.h"
 size_t os_vm_page_size;
 
@@ -94,7 +96,7 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
     unsigned char *reg = NULL;
 
     DPRINTF(0, (stderr, "fpu reg index = %d\n", index));
-    
+
     if (scp->uc_flags & _UC_FPU) {
 	if (scp->uc_flags & _UC_FXSAVE) {
             /*
@@ -133,19 +135,19 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
 {
     unsigned int modes;
 
-    union savefpu *sv = (union savefpu *) &scp->uc_mcontext.__fpregs.__fp_reg_set;
-    struct env87 *env_87 = (struct env87 *) &sv->sv_87.sv_env;
-    struct envxmm *env_xmm = (struct envxmm *) &sv->sv_xmm.sv_env;
+    union savefpu *sv = &scp->uc_mcontext.__fpregs.__fp_reg_set;
+    struct save87 *env_87 = (struct save87 *) &sv->sv_87;
+    struct fxsave *env_xmm = (struct fxsave *) &sv->sv_xmm;
     u_int16_t cw;
     u_int16_t sw;
 
     if (scp->uc_flags & _UC_FPU) {
 	if (scp->uc_flags & _UC_FXSAVE) {
-	    cw = env_xmm->en_cw;
-	    sw = env_xmm->en_sw;
+	    cw = env_xmm->fx_cw;
+	    sw = env_xmm->fx_sw;
 	} else {
-	    cw = env_87->en_cw & 0xffff;
-	    sw = env_87->en_sw & 0xffff;
+	    cw = env_87->s87_cw & 0xffff;
+	    sw = env_87->s87_sw & 0xffff;
 	}
     } else {
 	cw = 0;
@@ -156,7 +158,7 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
 
 #ifdef FEATURE_SSE2
     if (fpu_mode == SSE2) {
-	u_int32_t mxcsr = env_xmm->en_mxcsr;
+	u_int32_t mxcsr = env_xmm->fx_mxcsr;
 
 	DPRINTF(0, (stderr, "SSE2 modes = %08x\n", (int)mxcsr));
 	modes |= mxcsr;
@@ -277,8 +279,8 @@ valid_addr(os_vm_address_t addr)
 #ifndef GENCGC
 	|| in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
 #endif
-	|| in_range_p(addr, CONTROL_STACK_START, control_stack_size)
-	|| in_range_p(addr, BINDING_STACK_START, binding_stack_size))
+	|| in_range_p(addr, control_stack, control_stack_size)
+	|| in_range_p(addr, binding_stack, binding_stack_size))
 	return TRUE;
     return FALSE;
 }
@@ -347,9 +349,9 @@ sigfpe_handler(HANDLER_ARGS)
     }
 
     if (ucontext->uc_flags & _UC_FXSAVE) {
-	sv->sv_xmm.sv_env.en_sw |= trap;
+	sv->sv_xmm.fx_sw |= trap;
     } else {
-	sv->sv_87.sv_env.en_sw |= trap;
+	sv->sv_87.s87_sw |= trap;
     }
     interrupt_handle_now(signal, code, context);
 }
@@ -385,16 +387,16 @@ os_dlsym(const char *sym_name, lispobj lib_list)
 void
 restore_fpu(ucontext_t *scp)
 {
-    union savefpu *sv = (union savefpu *) &scp->uc_mcontext.__fpregs.__fp_reg_set;
-    struct env87 *env_87 = &sv->sv_87.sv_env;
-    struct envxmm *env_xmm = &sv->sv_xmm.sv_env;
+    union savefpu *sv = &scp->uc_mcontext.__fpregs.__fp_reg_set;
+    struct save87 *env_87 = (struct save87 *) &sv->sv_87;
+    struct fxsave *env_xmm = (struct fxsave *) &sv->sv_xmm;
     u_int16_t cw;
 
     if (scp->uc_flags & _UC_FPU) {
 	if (scp->uc_flags & _UC_FXSAVE) {
-	    cw = env_xmm->en_cw;
+	    cw = env_xmm->fx_cw;
 	} else {
-	    cw = env_87->en_cw & 0xffff;
+	    cw = env_87->s87_cw & 0xffff;
 	}
     } else {
 	return;
@@ -403,7 +405,7 @@ restore_fpu(ucontext_t *scp)
     __asm__ __volatile__ ("fldcw %0"::"m"(*&cw));
 
     if (fpu_mode == SSE2) {
-	u_int32_t mxcsr = env_xmm->en_mxcsr;
+	u_int32_t mxcsr = env_xmm->fx_mxcsr;
 
 	DPRINTF(0, (stderr, "restore_fpu:  mxcsr (raw) = %04x\n", mxcsr));
 	__asm__ __volatile__ ("ldmxcsr %0"::"m"(*&mxcsr));
@@ -417,6 +419,7 @@ os_support_sse2()
     int support_sse2;
     size_t len;
 
+    len = sizeof(size_t);
     if (sysctlbyname("machdep.sse2", &support_sse2, &len,
 		     NULL, 0) == 0 && support_sse2 != 0)
 	return TRUE;

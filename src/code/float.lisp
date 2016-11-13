@@ -57,7 +57,17 @@
 	  single-float-negative-infinity short-float-negative-infinity
 	  double-float-negative-infinity long-float-negative-infinity
 	  set-floating-point-modes float-denormalized-p float-nan-p
-	  float-trapping-nan-p float-infinity-p))
+	  float-trapping-nan-p float-infinity-p
+	  float-signaling-nan-p))
+
+#+double-double
+(export '(least-positive-normalized-double-double-float
+	  least-negative-normalized-double-double-float
+	  least-positive-double-double-float
+	  least-negative-double-double-float
+	  most-positive-double-double-float
+	  most-negative-double-double-float
+	  double-double-float-negative-infinity))
 
 (in-package "KERNEL")
 
@@ -126,6 +136,41 @@
 (defconstant least-negative-long-float least-negative-double-float)
 #+(and long-float x86)
 (defconstant least-negative-long-float (long-from-bits 1 0 1))
+
+#+double-double
+(progn
+(defconstant least-positive-normalized-double-double-float
+  ;; What is the right value?
+  (kernel:%make-double-double-float least-positive-normalized-double-float
+				    0d0))
+(defconstant least-negative-normalized-double-double-float
+  ;; What is the right value?
+  (kernel:%make-double-double-float least-negative-normalized-double-float
+				    0d0))
+(defconstant least-positive-double-double-float
+  (kernel:%make-double-double-float least-positive-double-float
+				    0d0))
+(defconstant least-negative-double-double-float
+  (kernel:%make-double-double-float least-negative-double-float
+				    0d0))
+(defconstant most-positive-double-double-float
+  ;; What is the right value?
+  (kernel:%make-double-double-float most-positive-double-float
+				    0d0))
+(defconstant most-negative-double-double-float
+  ;; What is the right value?
+  (kernel:%make-double-double-float most-negative-double-float
+				    0d0))
+(defconstant double-double-float-positive-infinity
+  ;; What is the right value?
+  (kernel:%make-double-double-float double-float-positive-infinity
+				    0d0))
+(defconstant double-double-float-negative-infinity
+  ;; What is the right value?
+  (kernel:%make-double-double-float double-float-negative-infinity
+				    0d0))
+
+); double-double
 
 (defconstant least-positive-normalized-single-float
   (single-from-bits 0 vm:single-float-normal-exponent-min 0))
@@ -241,7 +286,7 @@
 ;;;; Float predicates and environment query:
 
 (declaim (maybe-inline float-denormalized-p float-infinity-p float-nan-p
-			 float-trapping-nan-p))
+			 float-signaling-nan-p))
 
 ;;; FLOAT-DENORMALIZED-P  --  Public
 ;;;
@@ -300,7 +345,7 @@
     #+double-double
     (float-infinity-p (double-double-hi x)))
 
-  (frob float-nan-p "Return true if the float X is a NaN (Not a Number)."
+  (frob float-nan-p "Return true if the float X is a quiet or signaling NaN (Not a Number)."
     (not (zerop (ldb vm:single-float-significand-byte bits)))
     (or (not (zerop (ldb vm:double-float-significand-byte hi)))
 	(not (zerop lo)))
@@ -310,8 +355,8 @@
     #+double-double
     (float-nan-p (double-double-hi x)))
 
-  (frob float-trapping-nan-p
-    "Return true if the float X is a trapping NaN (Not a Number)."
+  (frob float-signaling-nan-p
+    "Return true if the float X is a signaling NaN (Not a Number)."
     (zerop (logand (ldb vm:single-float-significand-byte bits)
 		   vm:single-float-trapping-nan-bit))
     (zerop (logand (ldb vm:double-float-significand-byte hi)
@@ -320,8 +365,12 @@
     (zerop (logand (ldb vm:long-float-significand-byte hi)
 		   vm:long-float-trapping-nan-bit))
     #+double-double
-    (float-trapping-nan-p (double-double-hi x))))
+    (float-signaling-nan-p (double-double-hi x))))
 
+(declaim (inline float-trapping-nan-p))
+(defun float-trapping-nan-p (x)
+  "Deprecated.  Use FLOAT-SIGNALING-NAN-P instead."
+  (float-signaling-nan-p x))
 
 ;;; FLOAT-PRECISION  --  Public
 ;;;
@@ -532,7 +581,7 @@
 	      (return))
 	    (setq sig (ash sig 1))
 	    (incf extra-bias))
-	  (values (logior (ash sig 32) (ash low-bits (1- extra-bias)))
+	  (values (logior (ash sig 32) (ash low-bits (1+ extra-bias)))
 		  (truly-the fixnum (- biased extra-bias))
 		  sign)))))
 
@@ -884,7 +933,7 @@
     ;; Infinity is infinity, no matter how small...
     x)
    ((float-nan-p x)
-    (when (and (float-trapping-nan-p x)
+    (when (and (float-signaling-nan-p x)
 	       (vm:current-float-trap :invalid))
       (error 'floating-point-invalid-operation :operation 'scale-float
 	     :operands (list x exp)))
@@ -998,9 +1047,15 @@
 		(number-dispatch ((x real))
 		  (((foreach single-float double-float
 			     #+long-float long-float
-			     #+double-double double-double-float
 			     fixnum))
 		   (coerce x ',type))
+		  #+double-double
+		  ((double-double-float)
+		   ;; Convert the double-double to a double before
+		   ;; coercing to the appropriate type.
+		   (coerce (+ (double-double-hi x)
+			      (double-double-lo x))
+			   ',type))
 		  ((bignum)
 		   (bignum-to-float x ',type))
 		  ((ratio)
