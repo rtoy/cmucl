@@ -347,3 +347,14 @@
     (assert (null (set-difference directories
                                   '(".dir" "dir")
                                   :test #'string-equal)))))
+
+(define-test issue.26
+    (:tag :issues)
+  (let ((start-time (get-universal-time)))
+    (let ((p (ext:run-program "/usr/bin/env" '("sleep" "1") :wait nil)))
+      (declare (ignore p))
+      (sleep 5)
+      ;; We expect to have slept for at least 5 sec, but since
+      ;; get-universal-time only has an accuracy of 1 sec, just verify
+      ;; more than 3 sec have elapsed.
+      (assert-true (>= (- (get-universal-time) start-time) 3)))))
