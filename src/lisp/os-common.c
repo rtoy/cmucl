@@ -6,11 +6,11 @@
 */
 
 #include <errno.h>
+#include <math.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#include <math.h>
 
 #include "os.h"
 #include "internals.h"
@@ -568,7 +568,8 @@ int ieee754_rem_pio2(double x, double *y0, double *y1)
 /*
  * sleep for the given number of seconds, even if we're interrupted.
  */
-void os_sleep(double seconds)
+void
+os_sleep(double seconds)
 {
     struct timespec requested;
     struct timespec remaining;
@@ -577,7 +578,12 @@ void os_sleep(double seconds)
 
     fractional = modf(seconds, &integral);
     requested.tv_sec = (time_t) integral;
-    requested.tv_nsec = (long) trunc(fractional * 1e9);
+    /*
+     * Round up just in case; it's probably better to sleep slightly
+     * too long than to sleep for too short a time.
+     */
+    requested.tv_nsec = (long) ceil(fractional * 1e9);
+
     while (nanosleep(&requested, &remaining) == -1 && errno == EINTR) {
 	requested = remaining;
     }
