@@ -579,8 +579,8 @@ os_sleep(double seconds)
     fractional = modf(seconds, &integral);
     requested.tv_sec = (time_t) integral;
     /*
-     * Round up just in case; it's probably better to sleep slightly
-     * too long than to sleep for too short a time.
+     * Round up---better to sleep slightly too long than to sleep for
+     * too short a time.
      */
     requested.tv_nsec = (long) ceil(fractional * 1e9);
 
