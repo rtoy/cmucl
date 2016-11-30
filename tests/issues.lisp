@@ -352,8 +352,12 @@
     (:tag :issues)
   (let ((start-time (get-universal-time)))
     (let ((p (ext:run-program "/usr/bin/env" '("sleep" "1") :wait nil)))
-      (declare (ignore p))
       (sleep 5)
+      ;; For this test to be valid, the process must have finished
+      ;; with a successful exit.
+      (assert-true (eq (ext:process-status p) :exited))
+      (assert-true (zerop (ext:process-exit-code p)))
+
       ;; We expect to have slept for at least 5 sec, but since
       ;; get-universal-time only has an accuracy of 1 sec, just verify
       ;; more than 3 sec have elapsed.
