@@ -348,6 +348,11 @@
                                   '(".dir" "dir")
                                   :test #'string-equal)))))
 
+(define-test issue.36
+    (:tag :issues)
+  (loop for k from 1 to 24 do
+    (assert-equal 0 (encode-universal-time 0 0 (- 24 k) 31 12 1899 k))))
+
 (define-test issue.26
     (:tag :issues)
   (let ((start-time (get-universal-time)))
