@@ -1643,12 +1643,9 @@
 	     ;; Can't call process-wait if the scheduling is inhibited.
 	     *inhibit-scheduling*)
 	 ;; The initial-process may block.
-	 (multiple-value-bind (sec usec)
-	     (if (integerp n)
-		 (values n 0)
-		 (multiple-value-bind (sec frac)(truncate n)
-		   (values sec (truncate frac 1e-6))))
-	   (unix:unix-select 0 0 0 0 sec usec))
+	 (alien:alien-funcall
+	  (alien:extern-alien "os_sleep" (function c-call:void double-float))
+	  (float n 1d0))
 	 nil)
 	(t
 	 (process-wait-with-timeout "Sleep" n (constantly nil)))))

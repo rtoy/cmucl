@@ -515,12 +515,9 @@
            :format-arguments (list n)
            :datum n
            :expected-type '(real 0)))
-  (multiple-value-bind (sec usec)
-    (if (integerp n)
-	(values n 0)
-	(multiple-value-bind (sec frac) (truncate n)
-	  (values sec (truncate frac 1e-6))))
-    (unix:unix-select 0 0 0 0 sec usec))
+  (alien:alien-funcall
+   (alien:extern-alien "os_sleep" (function c-call:void double-float))
+   (float n 1d0))
   nil)
 
 ;;;; SCRUB-CONTROL-STACK

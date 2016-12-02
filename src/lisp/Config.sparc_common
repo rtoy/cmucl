@@ -48,5 +48,5 @@ ARCH_SRC = sparc-arch.c
 
 DEPEND=$(CC) 
 OS_SRC = solaris-os.c os-common.c elf.c
-OS_LIBS= -lsocket -lnsl -ldl
+OS_LIBS= -lsocket -lnsl -ldl -lrt
 EXEC_FINAL_OBJ = exec-final.o
