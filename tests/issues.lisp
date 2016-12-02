@@ -340,13 +340,13 @@
         (if filename
             (push filename files)
             (push directory directories))))
-    (assert (null (set-difference files
-                                  '("file" "link-to-dir"
-                                    "link-to-dir-in-dir" "link-to-file")
-                                  :test #'string-equal)))
-    (assert (null (set-difference directories
-                                  '(".dir" "dir")
-                                  :test #'string-equal)))))
+    (assert-true (null (set-difference files
+				       '("file" "link-to-dir"
+					 "link-to-dir-in-dir" "link-to-file")
+				       :test #'string-equal)))
+    (assert-true (null (set-difference directories
+				       '(".dir" "dir")
+				       :test #'string-equal)))))
 
 (define-test issue.36
     (:tag :issues)
