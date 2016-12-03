@@ -26,10 +26,16 @@ New in this release:
   * ANSI compliance fixes:
 
   * Bug fixes:
+    * ENCODE-UNIVERSAL-TIME accepts dates from 1899 if the final date
+      after accounting for time zones results in a positive
+      value. (See ticket #36.)
+    * CL:SLEEP no longer gets interrupted (See ticket #26.)
 
   * Trac Tickets:
 
   * Gitlab tickets:
+    * Ticket #36: encode-universal-time signals error
+    * Ticket #26: The cmucl that never sleeps
 
   * Other changes:
 
