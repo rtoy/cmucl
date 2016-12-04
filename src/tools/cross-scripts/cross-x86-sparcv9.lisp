@@ -10,7 +10,8 @@
 
 (c::new-backend "SPARC"
    ;; Features to add here
-   '(:sparc
+   '(:sparc				; Any sparc processor
+     :sparc64				; For 64-bit sparc
      :sparc-v9				; For Ultrasparc processors
      :complex-fp-vops			; Some slightly faster FP vops on complex numbers
      :linkage-table
@@ -23,7 +24,7 @@
      :hash-new
      :random-mt19937			; MT-19937 generator
      :cmu				; Announce this is CMUCL
-     :cmu20 :cmu20b			; Current version identifier
+     :cmu21 :cmu21b			; Current version identifier
      :modular-arith			; Modular arithmetic
      :double-double			; Double-double float support
      :executable
@@ -115,9 +116,9 @@
 (setf (search-list "c:")
       '("target:compiler/"))
 (setf (search-list "vm:")
-      '("c:sparc/" "c:generic/"))
+      '("c:sparcv9/" "c:generic/"))
 (setf (search-list "assem:")
-      '("target:assembly/" "target:assembly/sparc/"))
+      '("target:assembly/" "target:assembly/sparcv9/"))
 
 ;; Load the backend of the compiler.
 
