@@ -767,7 +767,7 @@
 	    (multiple-value-bind (read-fd write-fd)
 				 (unix:unix-pipe)
 	      (unless read-fd
-		(error (intl:gettext "Cound not create pipe: ~A")
+		(error (intl:gettext "Could not create pipe: ~A")
 		       (unix:get-unix-error-msg write-fd)))
 	      (copy-descriptor-to-stream read-fd object cookie)
 	      (push read-fd *close-on-error*)
