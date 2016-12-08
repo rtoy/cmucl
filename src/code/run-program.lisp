@@ -742,7 +742,8 @@
 					 #o666)))
 		(unix:unix-unlink name)
 		(when fd
-		  (let ((newline (string #\Newline)))
+		  (let ((newline (make-array 1 :element-type '(unsigned-byte 8)
+					     :initial-element (char-code #\Newline))))
 		    (loop
 		      (multiple-value-bind
 			  (line no-cr)
