@@ -116,9 +116,9 @@
 (setf (search-list "c:")
       '("target:compiler/"))
 (setf (search-list "vm:")
-      '("c:sparcv9/" "c:generic/"))
+      '("c:sparc64/" "c:generic/"))
 (setf (search-list "assem:")
-      '("target:assembly/" "target:assembly/sparcv9/"))
+      '("target:assembly/" "target:assembly/sparc64/"))
 
 ;; Load the backend of the compiler.
 
