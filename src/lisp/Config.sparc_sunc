@@ -24,6 +24,7 @@ CC_V8PLUS = -m32 -xarch=sparc
 AS_V8PLUS = -m32 -xarch=sparc
 endif
 
+ASSEM_SRC = sparc-assem.S
 CFLAGS += -xlibmieee -O
 DEPEND_FLAGS = -xM
 ASFLAGS = $(AS_V8PLUS)
