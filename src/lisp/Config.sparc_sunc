@@ -20,11 +20,10 @@ include Config.sparc_common
 ifdef FEATURE_SPARC_V9
 # For SunStudio 11, use -xarch=v8plus.  For SunStudio 12, that is
 # deprecated; use -m32 -xarch=sparc.
-CC_V8PLUS = -xarch=sparc
-AS_V8PLUS = -xarch=sparc
+CC_V8PLUS = -m32 -xarch=sparc
+AS_V8PLUS = -m32 -xarch=sparc
 endif
 
-ASSEM_SRC = sparcv9-assem.S
 CFLAGS += -xlibmieee -O
 DEPEND_FLAGS = -xM
 ASFLAGS = $(AS_V8PLUS)
