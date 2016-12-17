@@ -10,7 +10,8 @@
 
 (c::new-backend "SPARC"
    ;; Features to add here
-   '(:sparc
+   '(:sparc64
+     :sparc
      :sparc-v9				; For Ultrasparc processors
      :complex-fp-vops			; Some slightly faster FP vops on complex numbers
      :linkage-table
@@ -115,9 +116,9 @@
 (setf (search-list "c:")
       '("target:compiler/"))
 (setf (search-list "vm:")
-      '("c:sparc/" "c:generic/"))
+      '("c:sparc64/" "c:generic/"))
 (setf (search-list "assem:")
-      '("target:assembly/" "target:assembly/sparc/"))
+      '("target:assembly/" "target:assembly/sparc64/"))
 
 ;; Load the backend of the compiler.
 
