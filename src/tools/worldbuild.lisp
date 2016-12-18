@@ -27,11 +27,17 @@
 	  "target:assembly/mips/array.assem"
 	  "target:assembly/mips/arith.assem"
 	  "target:assembly/mips/alloc.assem"))
-    ,@(when (c:backend-featurep :sparc)
+    ,@(when (and (c:backend-featurep :sparc)
+		 (not (c:backend-featurep :sparc64)))
 	'("target:assembly/sparc/assem-rtns.assem"
 	  "target:assembly/sparc/array.assem"
 	  "target:assembly/sparc/arith.assem"
 	  "target:assembly/sparc/alloc.assem"))
+    ,@(when (c:backend-featurep :sparc64)
+	'("target:assembly/sparc64/assem-rtns.assem"
+	  "target:assembly/sparc64/array.assem"
+	  "target:assembly/sparc64/arith.assem"
+	  "target:assembly/sparc64/alloc.assem"))
     ,@(when (c:backend-featurep :rt)
 	'("target:assembly/rt/assem-rtns.assem"
 	  "target:assembly/rt/array.assem"

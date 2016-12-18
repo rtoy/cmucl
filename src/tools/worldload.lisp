@@ -59,7 +59,8 @@
 (setf (ext:search-list "c:") '("target:compiler/"))
 (setf (ext:search-list "vm:")
       '(#+(or pmax sgi) "c:mips/"
-        #+sparc "c:sparc/"
+        #+(and sparc (not sparc64)) "c/sparc/"
+	#+sparc64 "c/sparc64/"
 	#+rt "c:rt/"
 	#+hppa "c:hppa/"
 	#+x86 "c:x86/"
@@ -69,7 +70,8 @@
 	"c:generic/"))
 (setf (ext:search-list "assem:")
       '(#+(or pmax sgi) "target:assembly/mips/"
-	#+sparc "target:assembly/sparc/"
+	#+sparc64 "target:assembly/sparc64/"
+	#+(and sparc (not sparc64)) "target:assembly/sparc/"
 	#+rt "target:assembly/rt/"
 	#+hppa "target:assembly/hppa/"
 	#+x86 "target:assembly/x86/"

@@ -58,11 +58,18 @@
   (comf "target:assembly/mips/arith" :assem t)
   (comf "target:assembly/mips/alloc" :assem t))
 
-(when (c:backend-featurep :sparc)
+(when (and (c:backend-featurep :sparc)
+	   (not (c:backend-featurep :sparc64)))
   (comf "target:assembly/sparc/assem-rtns" :assem t)
   (comf "target:assembly/sparc/array" :assem t)
   (comf "target:assembly/sparc/arith" :assem t)
   (comf "target:assembly/sparc/alloc" :assem t))
+
+(when (c:backend-featurep :sparc64)
+  (comf "target:assembly/sparc64/assem-rtns" :assem t)
+  (comf "target:assembly/sparc64/array" :assem t)
+  (comf "target:assembly/sparc64/arith" :assem t)
+  (comf "target:assembly/sparc64/alloc" :assem t))
 
 (when (c:backend-featurep :rt)
   (comf "target:assembly/rt/assem-rtns" :assem t)
