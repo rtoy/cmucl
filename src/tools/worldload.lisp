@@ -59,8 +59,8 @@
 (setf (ext:search-list "c:") '("target:compiler/"))
 (setf (ext:search-list "vm:")
       '(#+(or pmax sgi) "c:mips/"
-        #+(and sparc (not sparc64)) "c/sparc/"
-	#+sparc64 "c/sparc64/"
+        #+(and sparc (not sparc64)) "c:sparc/"
+	#+sparc64 "c:sparc64/"
 	#+rt "c:rt/"
 	#+hppa "c:hppa/"
 	#+x86 "c:x86/"
