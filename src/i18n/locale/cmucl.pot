@@ -13234,10 +13234,6 @@ msgid "Could not open a temporary file in /tmp"
 msgstr ""
 
 #: src/code/run-program.lisp
-msgid "Cound not create pipe: ~A"
-msgstr ""
-
-#: src/code/run-program.lisp
 msgid "Invalid option to run-program: ~S"
 msgstr ""
 
