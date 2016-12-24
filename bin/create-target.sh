@@ -63,6 +63,7 @@ uname_m=`uname -m 2>/dev/null`
 case $lisp_variant in
     *linux*) lvshort=linux;;
     *freebsd*) lvshort=freebsd;;
+    *sparc64*) lvshort=solaris64;;
     *solaris*|sparc*) lvshort=solaris;;
     *) lvshort=unknown;;
 esac
@@ -118,7 +119,8 @@ echo '#error You need to run genesis (via build-world.sh) before compiling the s
     cat $setenv_dir/base-features.lisp 
     case $lvshort in
 	linux|freebsd) gcname=":gencgc"; sed "s;@@gcname@@;$gcname;" $setenv_dir/$lvshort-features.lisp >> setenv.lisp;;
+        solaris64) cat $setenv_dir/solaris64-features.lisp;;
 	solaris) cat $setenv_dir/solaris-features.lisp;;
 	*) sed "s;@@LISP@@;$lisp_variant;" $setenv_dir/unknown.lisp;;
-    esac
+    esac2
 ) > ../setenv.lisp || quit "Can't create setenv.lisp"
