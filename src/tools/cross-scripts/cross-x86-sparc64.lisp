@@ -36,7 +36,10 @@
      :unix
      )
    ;; Features to remove from current *features* here
-   '(:sparc-v8 :sparc-v7		; Choose only one of :sparc-v7, :sparc-v8, :sparc-v9
+   '(
+     ;; Currently don't support alien callbacks on sparc64.
+     :alien-callback
+     :sparc-v8 :sparc-v7		; Choose only one of :sparc-v7, :sparc-v8, :sparc-v9
      ;; Other architectures we aren't using.  Particularly important
      ;; to get rid of sse2 and x87 so we don't accidentally try to
      ;; compile the x87/sse2 float support on sparc, which won't work.
