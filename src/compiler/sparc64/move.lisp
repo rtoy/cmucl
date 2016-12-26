@@ -18,7 +18,7 @@
 ;;; SPARC conversion by William Lott.
 ;;;
 (in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(intl:textdomain "cmucl-sparc64-vm")
 
 
 (define-move-function (load-immediate 1) (vop x y)

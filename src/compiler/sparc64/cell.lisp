@@ -18,7 +18,7 @@
 ;;; 
 
 (in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(intl:textdomain "cmucl-sparc64-vm")
 
 
 ;;;; Data object ref/set stuff.

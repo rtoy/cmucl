@@ -17,7 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 (in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(intl:textdomain "cmucl-sparc64-vm")
 
 
 

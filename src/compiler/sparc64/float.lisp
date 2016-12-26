@@ -16,7 +16,7 @@
 ;;; Complex-float and long-float support by Douglas Crosher 1998.
 ;;;
 (in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(intl:textdomain "cmucl-sparc64-vm")
 
 
 ;;;; Move functions:

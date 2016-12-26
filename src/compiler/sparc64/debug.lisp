@@ -14,7 +14,7 @@
 ;;; Written by William Lott.
 ;;; 
 (in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(intl:textdomain "cmucl-sparc64-vm")
 
 (defknown di::current-sp () system-area-pointer (movable flushable))
 (defknown di::current-fp () system-area-pointer (movable flushable))

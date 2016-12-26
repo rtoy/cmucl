@@ -19,7 +19,7 @@
 ;;;
 
 (in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(intl:textdomain "cmucl-sparc64-vm")
 (use-package "C")
 
 

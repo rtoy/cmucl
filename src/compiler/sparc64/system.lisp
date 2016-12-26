@@ -16,7 +16,7 @@
 ;;; Mips conversion by William Lott and Christopher Hoover.
 ;;;
 (in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(intl:textdomain "cmucl-sparc64-vm")
 
 
 

@@ -18,7 +18,7 @@
 ;;; Enhancements/debugging by Raymond Toy 1999, 2000
 
 (in-package "SPARC")
-(intl:textdomain "cmucl-sparc-vm")
+(intl:textdomain "cmucl-sparc64-vm")
 
 
 ;;;; Unary operations.
