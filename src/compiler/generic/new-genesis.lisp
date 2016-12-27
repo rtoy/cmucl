@@ -2273,7 +2273,8 @@
 	  (setf (sap-ref-16 sap 0)
 		(maybe-byte-swap-short
 		 (ldb (byte 16 0) value))))))
-      (#.c:sparc-fasl-file-implementation
+      ((#.c:sparc-fasl-file-implementation
+	#.c:sparc64-fasl-file-implementation)
        (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
 	 (ecase kind
 	   (:call

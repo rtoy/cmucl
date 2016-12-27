@@ -238,14 +238,15 @@
 	  alpha-fasl-file-implementation
 	  sgi-fasl-file-implementation
 	  ppc-fasl-file-implementation
-	  amd64-fasl-file-implementation))
+	  amd64-fasl-file-implementation
+	  sparc64-fasl-file-implementation))
 
 ;;; Constants for the different implementations.  These are all defined in
 ;;; one place to make sure they are all unique.
 
 (defparameter fasl-file-implementations
   '(nil "Pmax" "Sparc" "RT" "RT/AFPA" "x86" "HPPA"
-	"Big-endian byte-code" "Little-endian byte-code" "Alpha" "SGI" "PPC" "AMD64"))
+	"Big-endian byte-code" "Little-endian byte-code" "Alpha" "SGI" "PPC" "AMD64" "SPARC64"))
 (defconstant pmax-fasl-file-implementation 1)
 (defconstant sparc-fasl-file-implementation 2)
 (defconstant rt-fasl-file-implementation 3)
@@ -258,6 +259,7 @@
 (defconstant sgi-fasl-file-implementation 10)
 (defconstant ppc-fasl-file-implementation 11)
 (defconstant amd64-fasl-file-implementation 12)
+(defconstant sparc64-fasl-file-implementation 13)
 
 ;;; The maximum number of SCs in any implementation.
 (defconstant sc-number-limit 32)
