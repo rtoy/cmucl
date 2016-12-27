@@ -34,6 +34,7 @@ OS=$4
 
 case $ARCH in
 	x86*)		FASL="sse2f" ;;
+        sparc64)        FASL=sparc64f ;;
 	sparc*)		FASL=sparcf ;;
 	alpha*)		FASL=axpf ;;
 	ppc*)		FASL=ppcf ;;

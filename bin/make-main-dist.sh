@@ -41,6 +41,7 @@ CORE=lisp.core
 case $ARCH in
 	x86*)		FASL=sse2f
                         CORE="lisp-sse2.core" ;;
+        sparc64)       FASL=sparc64f ;;
 	sparc*)		FASL=sparcf ;;
 	alpha*)		FASL=axpf ;;
 	ppc*)		FASL=ppcf ;;
