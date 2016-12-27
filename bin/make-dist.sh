@@ -130,10 +130,15 @@ if [ $# -lt 1 ]; then
     usage
 fi
 
-# Either VERSION or DEFAULT_VERSION must be non-empty
-if [ -z "$VERSION" -a -z "${DEFAULT_VERSION}" ]; then
-    echo "Version (-V) must be specified because default version cannot be determined."
-    usage
+if [ -z "$VERSION" ]; then
+    # If a default version exists, use it. Otherwise this is an
+    # error---at least one of these must not be empty.
+    if [ -z "${DEFAULT_VERSION}" ]; then
+	echo "Version (-V) must be specified because default version cannot be determined."
+	usage
+    else
+	VERSION=${DEFAULT_VERSION}
+    fi
 fi
 
 if [ ! -d "$1" ]
