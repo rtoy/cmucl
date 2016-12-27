@@ -93,15 +93,17 @@ def_arch_os () {
 # Figure out the architecture and OS in case options aren't given
 def_arch_os
 
-# Choose a version based on the git hash as the default version.
+# Choose a version based on the git hash as the default version.  We
+# only compute a default if the git hash looks like a snapshot
+# ("snapshot-yyyy-mm") or a release number..
 GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
 
 if expr "X${GIT_HASH}" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]' > /dev/null; then
-    VERSION=`expr "${GIT_HASH}" : "snapshot-\(.*\)"`
+    DEFAULT_VERSION=`expr "${GIT_HASH}" : "snapshot-\(.*\)"`
 fi
 
 if expr "X${GIT_HASH}" : 'X[0-9][0-9][a-f]' > /dev/null; then
-    VERSION="${GIT_HASH}"
+    DEFAULT_VERSION="${GIT_HASH}"
 fi
 
 while getopts "G:O:I:M:bghSA:o:V:?" arg
@@ -125,6 +127,12 @@ shift `expr $OPTIND - 1`
 
 # Directory is required; exit if not given
 if [ $# -lt 1 ]; then
+    usage
+fi
+
+# Either VERSION or DEFAULT_VERSION must be non-empty
+if [ -z "$VERSION" -a -z "${DEFAULT_VERSION}" ]; then
+    echo "Version (-V) must be specified because default version cannot be determined."
     usage
 fi
 
@@ -152,6 +160,7 @@ if [ -n "$INSTALL_DIR" ]; then
     VERSION="today"
 fi
 
+echo cmucl-$VERSION-$ARCH-$OS
 ROOT=`dirname $0`
 
 # If no compression options given, default to bzip
