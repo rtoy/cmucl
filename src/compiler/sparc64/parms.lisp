@@ -92,7 +92,7 @@
 
 (eval-when (compile load eval)
 
-(defconstant word-bits 32
+(defconstant word-bits 64
   "Number of bits per word where a word holds one lisp descriptor.")
 
 (defconstant byte-bits 8
@@ -163,7 +163,7 @@
   (+ (byte-size single-float-significand-byte) 1))
 
 (defconstant double-float-digits
-  (+ (byte-size double-float-significand-byte) word-bits 1))
+  53)
 
 (defconstant long-float-digits
   (+ (byte-size long-float-significand-byte) word-bits 1))
