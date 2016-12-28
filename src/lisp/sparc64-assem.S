@@ -36,6 +36,14 @@
 #else	
 #define FRAMESIZE (SA(MINFRAME))
 #endif
+
+/*
+ * Tell assembler we're using %g2 and %g3 here.
+ */
+	.register	%g2, #scratch
+	.register	%g3, #scratch
+
+
         .seg    "text"
         .global call_into_lisp
 	FUNCDEF(call_into_lisp)
