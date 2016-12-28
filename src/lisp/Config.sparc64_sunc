@@ -25,7 +25,7 @@ AS_V8PLUS = -m64
 endif
 
 ASSEM_SRC = sparc64-assem.S
-CFLAGS += -xlibmieee -O
+CFLAGS += -xcode=abs32 -xlibmieee -O
 DEPEND_FLAGS = -xM
 ASFLAGS = $(AS_V8PLUS)
 OS_LINK_FLAGS = -m64 -M /usr/lib/ld/map.noexstk
