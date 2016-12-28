@@ -290,17 +290,36 @@
 
 ;; TODO: make this work for 64-bit
 (defun maybe-byte-swap (word)
+  (ecase vm:word-bits
+    (32 (maybe-byte-swap-32 word))
+    (64 (maybe-byte-swap-64 word))))
+
+(defun maybe-byte-swap-32 (word)
   (if (eq (c:backend-byte-order c:*native-backend*)
 	  (c:backend-byte-order c:*backend*))
       word
       (locally (declare (type (unsigned-byte 32) word))
-	(assert (= vm:word-bits 32))
 	(assert (= vm:byte-bits 8))
 	(logior (ash (ldb (byte 8 0) word) 24)
 		(ash (ldb (byte 8 8) word) 16)
 		(ash (ldb (byte 8 16) word) 8)
 		(ldb (byte 8 24) word)))))
 
+(defun maybe-byte-swap-64 (word)
+  (if (eq (c:backend-byte-order c:*native-backend*)
+	  (c:backend-byte-order c:*backend*))
+      word
+      (locally (declare (type (unsigned-byte 64) word))
+	(assert (= vm:byte-bits 8))
+	(logior (ash (ldb (byte 8 0) word) 56)
+		(ash (ldb (byte 8 8) word) 48)
+		(ash (ldb (byte 8 16) word) 40)
+		(ash (ldb (byte 8 24) word) 32)
+		(ash (ldb (byte 8 32) word) 24)
+		(ash (ldb (byte 8 40) word) 16)
+		(ash (ldb (byte 8 48) word) 8)
+		(ldb (byte 8 56) word)))))
+  
 (defun maybe-byte-swap-short (short)
   (if (eq (c:backend-byte-order c:*native-backend*)
 	  (c:backend-byte-order c:*backend*))
@@ -2275,7 +2294,7 @@
 		 (ldb (byte 16 0) value))))))
       ((#.c:sparc-fasl-file-implementation
 	#.c:sparc64-fasl-file-implementation)
-       (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
+       (let ((inst (maybe-byte-swap-32 (sap-ref-32 sap 0))))
 	 (ecase kind
 	   (:call
 	    (error "Can't deal with call fixups yet."))
@@ -2290,7 +2309,7 @@
 		       (byte 10 0)
 		       inst))))
 	 (setf (sap-ref-32 sap 0)
-	       (maybe-byte-swap inst))))
+	       (maybe-byte-swap-32 inst))))
       ((#.c:rt-fasl-file-implementation 
 	#.c:rt-afpa-fasl-file-implementation)
        (ecase kind
