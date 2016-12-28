@@ -2501,7 +2501,10 @@
 (defconstant ms_invalidate 2)
 
 ;; The return value from mmap that means mmap failed.
-(defconstant map_failed (int-sap (1- (ash 1 vm:word-bits))))
+(defconstant map_failed
+  #-sparc64 (int-sap (1- (ash 1 vm:word-bits)))
+  #+sparc64 (ldb (byte 32 0) -1)
+  )
 
 (defun unix-mmap (addr length prot flags fd offset)
   (declare (type (or null system-area-pointer) addr)
@@ -2522,11 +2525,13 @@
 	(values nil (unix-errno))
 	(values result 0))))
 
+#-sparc64
 (defun unix-munmap (addr length)
   (declare (type system-area-pointer addr)
 	   (type (unsigned-byte 32) length))
   (syscall ("munmap" system-area-pointer size-t) t addr length))
 
+#-sparc64
 (defun unix-mprotect (addr length prot)
   (declare (type system-area-pointer addr)
 	   (type (unsigned-byte 32) length)
@@ -2534,6 +2539,7 @@
   (syscall ("mprotect" system-area-pointer size-t int)
 	   t addr length prot))
   
+#-sparc64
 (defun unix-msync (addr length flags)
   (declare (type system-area-pointer addr)
 	   (type (unsigned-byte 32) length)
