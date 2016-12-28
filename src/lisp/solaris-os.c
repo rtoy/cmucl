@@ -311,7 +311,7 @@ os_install_interrupt_handlers(void)
 /* function definitions for register lvalues */
 
 #ifndef i386
-int *
+long *
 solaris_register_address(struct ucontext *context, int reg)
 {
     if (reg == 0) {
