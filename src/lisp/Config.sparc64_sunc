@@ -18,14 +18,15 @@ include Config.sparc_common
 # instructions, even if we don't use the 64-bit registers.
 
 ifdef FEATURE_SPARC_V9
+MEM_MODEL=-xcode=abs32
 # For SunStudio 11, use -xarch=v8plus.  For SunStudio 12, that is
 # deprecated; use -m32 -xarch=sparc.
 CC_V8PLUS = -m64
-AS_V8PLUS = -m64
+AS_V8PLUS = -m64 $(MEM_MODEL)
 endif
 
 ASSEM_SRC = sparc64-assem.S
-CFLAGS += -xcode=abs32 -xlibmieee -O
+CFLAGS += $(MEM_MODEL) -xlibmieee -O
 DEPEND_FLAGS = -xM
 ASFLAGS = $(AS_V8PLUS)
-OS_LINK_FLAGS = -m64 -M /usr/lib/ld/map.noexstk
+OS_LINK_FLAGS = -m64 $(MEM_MODEL) -M /usr/lib/ld/map.noexstk
