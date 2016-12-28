@@ -1,19 +1,21 @@
 #!/bin/sh
 
 usage() {
-    echo "cross-build-world.sh [-crlX] [-B file] [-G Gnumake] target-dir cross-dir cross-compiler-script [build-binary [flags]]"
+    echo "cross-build-world.sh [-crlXi] [-B file] [-G Gnumake] target-dir cross-dir cross-compiler-script [build-binary [flags]]"
     echo "  -c      Clean target and cross directories before compiling"
     echo "  -r      Recompile lisp runtime"
     echo "  -l      Load cross-compiled kernel to make a new lisp kernel"
     echo "  -B file Use this as the cross bootstrap file." 
     echo "  -G make Specifies the name of GNU make"
     echo "  -X      (break) before quitting the cross compilation (for debugging)"
+    echo "  -i      Interactive compile when compiling cross-compiler"
 }
 
 MAKE=make
 BREAK=""
+INTERACTIVE=nil
 
-while getopts "crlXB:G:" arg
+while getopts "crlXiB:G:" arg
 do
     case $arg in
       c) CLEAN_DIR=yes ;;
@@ -22,6 +24,7 @@ do
       B) BOOTSTRAP=$OPTARG ;;
       G) MAKE=$OPTARG ;;
       X) BREAK="(break)" ;;
+      i) INTERACTIVE=t ;;
       h | \?) usage; exit 1 ;;
     esac
 done
@@ -98,7 +101,7 @@ $LISP "$@" -noinit -nositeinit <<EOF
 (load "target:tools/setup" :if-source-newer :load-source)
 (comf "target:tools/setup" :load t)
 
-(setq *gc-verbose* nil *interactive* nil)
+(setq *gc-verbose* nil *interactive* ${INTERACTIVE})
 
 (load "$SCRIPT")
 
