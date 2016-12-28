@@ -1,6 +1,19 @@
 ;;; Cross-compile script to build a sparc core using x86 as the
 ;;; compiling system.  This needs work!
 
+(in-package "LISP")
+(defun c::%%defconstant (name value doc source-location)
+  (when doc
+    (setf (documentation name 'variable) doc))
+  (when (boundp name)
+    (unless (equalp (symbol-value name) value)
+      (warn "Constant ~S being redefined." name)))
+  (setf (symbol-value name) value)
+  (setf (info variable kind name) :constant)
+  (clear-info variable constant-value name)
+  (set-defvar-source-location name source-location)
+  name)
+
 (in-package :cl-user)
 
 ;;; Rename the X86 package and backend so that new-backend does the
@@ -191,7 +204,7 @@
 						    :vm))))
 			       syms))))
   (frob OLD-VM:BYTE-BITS
-	OLD-VM:WORD-BITS
+	;;OLD-VM:WORD-BITS
 	OLD-VM:CHAR-BITS
 	OLD-VM:CHAR-BYTES
 	OLD-VM:LOWTAG-BITS
