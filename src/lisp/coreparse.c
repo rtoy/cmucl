@@ -95,10 +95,10 @@ load_core_file(const char *file, fpu_mode_t* fpu_type)
 {
     int fd = open(file, O_RDONLY), count;
 
-#if !(defined(alpha) || defined(__x86_64))
+#if !(defined(alpha) || defined(__x86_64) || defined(__sparcv9))
     long header[CORE_PAGESIZE / sizeof(long)], val, len, *ptr;
 #else
-    u32 header[CORE_PAGESIZE / sizeof(u32)], val, len, *ptr;
+    uint32_t header[CORE_PAGESIZE / sizeof(uint32_t)], val, len, *ptr;
 #endif
     lispobj initial_function = NIL;
 
@@ -154,10 +154,10 @@ load_core_file(const char *file, fpu_mode_t* fpu_type)
 
 	  case CORE_NDIRECTORY:
 	      process_directory(fd, ptr,
-#if !(defined(alpha) || defined(__x86_64))
+#if !(defined(alpha) || defined(__x86_64) || defined(__sparcv9))
 				(len - 2) / (sizeof(struct ndir_entry) / sizeof(long)));
 #else
-				(len - 2) / (sizeof(struct ndir_entry) / sizeof(u32)));
+				(len - 2) / (sizeof(struct ndir_entry) / sizeof(uint32_t)));
 #endif
 	      break;
 
