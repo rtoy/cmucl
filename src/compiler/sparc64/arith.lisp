@@ -1567,6 +1567,7 @@
 ;;
 ;; See generic/vm-tran.lisp for the algorithm.
 
+#+nil
 (define-vop (signed-truncate-by-mult fast-signed-binop)
   (:translate truncate)
   (:args (x :scs (signed-reg)))
@@ -1612,6 +1613,7 @@
       (unless (location= quo q)
         (move quo q)))))
 
+#+nil
 (define-vop (unsigned-truncate-by-mult fast-signed-binop)
   (:translate truncate)
   (:args (x :scs (unsigned-reg)))
