@@ -12,15 +12,18 @@
 #else
 #endif
 
+/* Sparcv9 ABI has a bias on the stack (including sp and fp!) */
+#define WORD_BYTES	8
+
 #define LANGUAGE_ASSEMBLY
 #include "lispregs.h"
 #include "internals.h"
 #include "globals.h"
 
 #define load(sym, reg) \
-        sethi %hi(sym), reg; ld [reg+%lo(sym)], reg
+        sethi %hi(sym), reg; ldn [reg+%lo(sym)], reg
 #define store(reg, sym) \
-        sethi %hi(sym), reg_L0; st reg, [reg_L0+%lo(sym)]
+        sethi %hi(sym), reg_L0; stn reg, [reg_L0+%lo(sym)]
 
 /*
  * Our frame size needs to be large enough to hold our window, 
@@ -31,11 +34,7 @@
  * Since %o0 and %o1 contain the return results, we do not have to save 
  * these.
  */
-#ifdef v8plus	
-#define FRAMESIZE (SA(WINDOWSIZE+4 + 6*8))
-#else	
-#define FRAMESIZE (SA(MINFRAME))
-#endif
+#define FRAMESIZE (SA64(MINFRAME64))
 
 /*
  * Tell assembler we're using %g2 and %g3 here.
@@ -53,7 +52,7 @@ call_into_lisp:
 	ta	ST_FLUSH_WINDOWS
 
         /* Save the return address. */
-        st      %i7, [%fp-4]
+        stn     %i7, [%fp + STACK_BIAS - WORD_BYTES]
 
         /* Clear the descriptor regs. (See sparc/vm.lisp) */
         mov     reg_ZERO, reg_A0
@@ -92,18 +91,18 @@ call_into_lisp:
         sll     %i2, 2, reg_NARGS
         mov     %i1, reg_CFP
 	mov	%i0, reg_LEXENV
-        ld      [reg_CFP+0], reg_A0
-        ld      [reg_CFP+4], reg_A1
-        ld      [reg_CFP+8], reg_A2
-        ld      [reg_CFP+12], reg_A3
-        ld      [reg_CFP+16], reg_A4
-        ld      [reg_CFP+20], reg_A5
+        ldn     [reg_CFP + 0*WORD_BYTES], reg_A0
+        ldn     [reg_CFP + 1*WORD_BYTES], reg_A1
+        ldn     [reg_CFP + 2*WORD_BYTES], reg_A2
+        ldn     [reg_CFP + 3*WORD_BYTES], reg_A3
+        ldn     [reg_CFP + 4*WORD_BYTES], reg_A4
+        ldn     [reg_CFP + 5*WORD_BYTES], reg_A5
 
         /* Calculate LRA */
         set     lra + type_OtherPointer, reg_LRA
 
         /* Indirect closure */
-        ld      [reg_LEXENV+CLOSURE_FUNCTION_OFFSET], reg_CODE
+        ldn     [reg_LEXENV+CLOSURE_FUNCTION_OFFSET], reg_CODE
 
         jmp     reg_CODE+FUNCTION_CODE_OFFSET
         nop
@@ -138,7 +137,7 @@ lra:
 	tne	trap_PseudoAtomic
 
         /* Back to C we go. */
-	ld	[%sp+FRAMESIZE-4], %i7
+	ld	[%sp + STACK_BIAS +FRAMESIZE-WORD_BYTES], %i7
         ret
         restore	%sp, FRAMESIZE, %sp
 	SET_SIZE(call_into_lisp)
@@ -149,12 +148,12 @@ lra:
 	FUNCDEF(call_into_c)
 call_into_c:
 #ifdef v8plus
-	stx	%o2, [%fp - 8 - 1*8]
-	stx	%o3, [%fp - 8 - 2*8]
-	stx	%o4, [%fp - 8 - 3*8]
-	stx	%o5, [%fp - 8 - 4*8]
-	stx	%o6, [%fp - 8 - 5*8]
-	stx	%o7, [%fp - 8 - 6*8]
+	stx	%o2, [%fp + STACK_BIAS - 8 - 1*8]
+	stx	%o3, [%fp + STACK_BIAS - 8 - 2*8]
+	stx	%o4, [%fp + STACK_BIAS - 8 - 3*8]
+	stx	%o5, [%fp + STACK_BIAS - 8 - 4*8]
+	stx	%o6, [%fp + STACK_BIAS - 8 - 5*8]
+	stx	%o7, [%fp + STACK_BIAS - 8 - 6*8]
 #endif		
         /* Build a lisp stack frame */
         mov     reg_CFP, reg_OCFP
@@ -233,12 +232,12 @@ call_into_c:
         mov     reg_OCFP, reg_CFP
 
 #ifdef v8plus
-	ldx	[%fp - 8 - 1*8], %o2
-	ldx	[%fp - 8 - 2*8], %o3
-	ldx	[%fp - 8 - 3*8], %o4
-	ldx	[%fp - 8 - 4*8], %o5
-	ldx	[%fp - 8 - 5*8], %o6
-	ldx	[%fp - 8 - 6*8], %o7
+	ldx	[%fp + STACK_BIAS - 8 - 1*8], %o2
+	ldx	[%fp + STACK_BIAS - 8 - 2*8], %o3
+	ldx	[%fp + STACK_BIAS - 8 - 3*8], %o4
+	ldx	[%fp + STACK_BIAS - 8 - 4*8], %o5
+	ldx	[%fp + STACK_BIAS - 8 - 5*8], %o6
+	ldx	[%fp + STACK_BIAS - 8 - 6*8], %o7
 #endif		
         /* And back into lisp. */
         ret
