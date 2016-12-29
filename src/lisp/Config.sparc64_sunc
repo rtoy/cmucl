@@ -26,7 +26,7 @@ AS_V8PLUS = -m64 $(MEM_MODEL)
 endif
 
 ASSEM_SRC = sparc64-assem.S
-CFLAGS += $(MEM_MODEL) -xlibmieee -O
+CFLAGS += $(MEM_MODEL) -xlibmieee -g3 -DPRINTNOISE
 DEPEND_FLAGS = -xM
 ASFLAGS = $(AS_V8PLUS)
 OS_LINK_FLAGS = -m64 $(MEM_MODEL) -M /usr/lib/ld/map.noexstk
