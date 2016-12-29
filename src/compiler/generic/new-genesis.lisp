@@ -2871,6 +2871,7 @@
 (defparameter initial-function-entry-type-code 3863)
 (defparameter end-entry-type-code 3840)
 
+#+nil
 (defun write-long (num)
   (ecase (c:backend-byte-order c:*backend*)
     (:little-endian
@@ -2879,6 +2880,15 @@
     (:big-endian
      (dotimes (i 4)
        (write-byte (ldb (byte 8 (* (- 3 i) 8)) num) *core-file*)))))
+
+(defun write-long (num)
+  (ecase (c:backend-byte-order c:*backend*)
+    (:little-endian
+     (dotimes (i vm:word-bytes)
+       (write-byte (ldb (byte 8 (* i 8)) num) *core-file*)))
+    (:big-endian
+     (dotimes (i vm:word-bytes)
+       (write-byte (ldb (byte 8 (* (- vm:word-bytes 1 i) 8)) num) *core-file*)))))
 
 
 (defun advance-to-page ()
