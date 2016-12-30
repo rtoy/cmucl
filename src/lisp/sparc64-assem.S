@@ -85,10 +85,10 @@ call_into_lisp:
         /* No longer atomic, and check for interrupt. */
 	andn	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
 	andcc	reg_ALLOC, pseudo_atomic_InterruptedValue, reg_ZERO
-	tne	trap_PseudoAtomic
+	tne	%xcc, trap_PseudoAtomic
 
         /* Pass in the args. */
-        sll     %i2, 2, reg_NARGS
+        slln    %i2, 2, reg_NARGS
         mov     %i1, reg_CFP
 	mov	%i0, reg_LEXENV
         ldn     [reg_CFP + 0*WORD_BYTES], reg_A0
@@ -129,12 +129,17 @@ lra:
         store(reg_CFP,current_control_frame_pointer)
 
         /* No longer in Lisp. */
+#if 0	
         store(reg_NL1,foreign_function_call_active)
+#else
+	sethi	%hi(foreign_function_call_active), reg_L0
+	st	reg_NL1, [reg_L0 + %lo(foreign_function_call_active)]
+#endif		
 
         /* Were we interrupted? */
 	andn	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
 	andcc	reg_ALLOC, pseudo_atomic_InterruptedValue, reg_ZERO
-	tne	trap_PseudoAtomic
+	tne	%xcc, trap_PseudoAtomic
 
         /* Back to C we go. */
 	ld	[%sp + STACK_BIAS +FRAMESIZE-WORD_BYTES], %i7
@@ -181,12 +186,17 @@ call_into_c:
 	load(current_control_frame_pointer, reg_CFP)
 
         /* No longer in Lisp. */
+#if 0
         store(reg_CSP,foreign_function_call_active)
+#else
+	sethi	%hi(foreign_function_call_active), reg_L0
+	st	reg_CSP, [reg_L0 + %lo(foreign_function_call_active)]
+#endif	
 
         /* Were we interrupted? */
 	andn	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
 	andcc	reg_ALLOC, pseudo_atomic_InterruptedValue, reg_ZERO
-	tne	trap_PseudoAtomic
+	tne	%xcc, trap_PseudoAtomic
 
         /* Into C we go. */
         call    reg_CFUNC
@@ -224,7 +234,7 @@ call_into_c:
         /* No longer atomic. */
 	andn	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
 	andcc	reg_ALLOC, pseudo_atomic_InterruptedValue, reg_ZERO
-	tne	trap_PseudoAtomic
+	tne	%xcc, trap_PseudoAtomic
 
         /* Reset the lisp stack. */
         /* Note: OCFP is in one of the locals, it gets preserved across C. */
