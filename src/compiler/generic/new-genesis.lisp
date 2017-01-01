@@ -2835,8 +2835,17 @@
       (let ((offset (- (* vm:word-bytes vm:function-code-offset)
 		       vm:function-pointer-type)))
 	(dolist (info (sort funs #'< :key #'cdr))
+	  ;; Note: The cdr is the raw-addr slot of an fdefn.  For
+	  ;; sparc and ppc, this isn't a raw address---it's a function
+	  ;; pointer object.  For other architectures, it is the
+	  ;; raw-addr slot where the code actually starts.  For
+	  ;; consistency, we'll print out the raw-addr slot on all
+	  ;; platforms.  However, the last item will be the function
+	  ;; object pointer for x86 and other archs, but the code
+	  ;; start for sparc and ppc.
 	  (format t "0x~12,'0X: ~S   #x~12,'0X~%" (cdr info) (car info)
-		  (- (cdr info) offset))))
+		  #-(or sparc ppc) (- (cdr info) offset)
+		  #+(or sparc ppc) (+ (cdr info) offset))))
       (format t "~%~|~%Undefined function references:~2%")
       (labels ((key (name)
 		 (etypecase name
