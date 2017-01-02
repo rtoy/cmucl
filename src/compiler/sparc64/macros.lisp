@@ -144,6 +144,7 @@
   `(progn
      (align lowtag-bits)
      (emit-label ,label)
+     (inst word 0)
      (inst lra-header-word)))
 
 
