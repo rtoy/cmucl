@@ -1662,7 +1662,7 @@ about function addresses and register values.")
   (:dependencies (reads :psr))
   (:delay 1)
   (:emitter
-   (emit-relative-branch-integer segment 0 #b001 cond-or-target target (or cc :icc) (or pred :pt))))
+   (emit-relative-branch-integer segment 0 #b001 cond-or-target target (or cc :xcc) (or pred :pt))))
 
 #-sparc-v9
 (define-instruction ba (segment cond-or-target &optional target)
@@ -1690,7 +1690,7 @@ about function addresses and register values.")
   (:dependencies (reads :psr))
   (:delay 0)
   (:emitter
-   (emit-relative-branch-integer segment 1 #b001 cond-or-target target (or cc :icc) (or pred :pt))))
+   (emit-relative-branch-integer segment 1 #b001 cond-or-target target (or cc :xcc) (or pred :pt))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun trap-arg-printer (value stream dstate)
