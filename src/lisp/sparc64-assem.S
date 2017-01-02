@@ -152,20 +152,12 @@ lra:
         .global call_into_c
 	FUNCDEF(call_into_c)
 call_into_c:
-#ifdef v8plus
-	stx	%o2, [%fp + STACK_BIAS - 8 - 1*8]
-	stx	%o3, [%fp + STACK_BIAS - 8 - 2*8]
-	stx	%o4, [%fp + STACK_BIAS - 8 - 3*8]
-	stx	%o5, [%fp + STACK_BIAS - 8 - 4*8]
-	stx	%o6, [%fp + STACK_BIAS - 8 - 5*8]
-	stx	%o7, [%fp + STACK_BIAS - 8 - 6*8]
-#endif		
         /* Build a lisp stack frame */
         mov     reg_CFP, reg_OCFP
         mov     reg_CSP, reg_CFP
-        add     reg_CSP, 32, reg_CSP
-        st      reg_OCFP, [reg_CFP]
-        st      reg_CODE, [reg_CFP+8]
+        add     reg_CSP, 64, reg_CSP
+        stn     reg_OCFP, [reg_CFP]
+        stn     reg_CODE, [reg_CFP+8]
 
         /* Turn on pseudo-atomic. */
 	or	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
@@ -173,7 +165,7 @@ call_into_c:
 	/* Convert the return address to an offset and save it on the stack. */
 	sub	reg_LIP, reg_CODE, reg_L0
 	add	reg_L0, type_OtherPointer, reg_L0
-	st	reg_L0, [reg_CFP+4]
+	stn	reg_L0, [reg_CFP+2*8]
 
         /* Store LISP state */
         store(reg_BSP,current_binding_stack_pointer)
@@ -226,8 +218,8 @@ call_into_c:
         load(current_control_frame_pointer, reg_CFP)
 
 	/* Get the return address back. */
-	ld	[reg_CFP+4], reg_LIP
-	ld	[reg_CFP+8], reg_CODE
+	ldn	[reg_CFP+8], reg_LIP
+	ldn	[reg_CFP+16], reg_CODE
 	add	reg_LIP, reg_CODE, reg_LIP
 	sub	reg_LIP, type_OtherPointer, reg_LIP
 
@@ -241,14 +233,6 @@ call_into_c:
         mov     reg_CFP, reg_CSP
         mov     reg_OCFP, reg_CFP
 
-#ifdef v8plus
-	ldx	[%fp + STACK_BIAS - 8 - 1*8], %o2
-	ldx	[%fp + STACK_BIAS - 8 - 2*8], %o3
-	ldx	[%fp + STACK_BIAS - 8 - 3*8], %o4
-	ldx	[%fp + STACK_BIAS - 8 - 4*8], %o5
-	ldx	[%fp + STACK_BIAS - 8 - 5*8], %o6
-	ldx	[%fp + STACK_BIAS - 8 - 6*8], %o7
-#endif		
         /* And back into lisp. */
         ret
         nop
