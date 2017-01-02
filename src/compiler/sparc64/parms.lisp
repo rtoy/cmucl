@@ -204,6 +204,14 @@
 (defconstant number-stack-displacement
   (* 16 vm:word-bytes))
 
+;;; STACK-BIAS
+;;;
+;;; The bias on the stack pointer (%sp) to get to the real top of
+;;; stack.  64-bit applications have a bias on the stack (apparently
+;;; to let the kernel easily tell if the application is a 32-bit or
+;;; 64-bit app).
+(defconstant stack-bias 2047)
+
 
 ;;;; Description of the target address space.
 
