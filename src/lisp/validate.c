@@ -29,6 +29,11 @@ ensure_space(lispobj * start, size_t size)
 		"ensure_space: Failed to validate %ld bytes at 0x%08lx\n",
 		(unsigned long) size, (unsigned long) start);
 	exit(1);
+    } else {
+#ifdef PRINTNOISE
+      fprintf(stderr, "ensure_space at 0x%012lx for %ld bytes\n",
+              (unsigned long) start, (unsigned long) size);
+#endif
     }
 }
 
