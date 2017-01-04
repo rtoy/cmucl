@@ -130,10 +130,13 @@ validate_stacks()
 #else
     /* Map the conrol stack wherever we have space */
     control_stack = (lispobj*) os_validate(NULL, control_stack_size);
-
 #if (defined(i386) || defined(__x86_64))
     control_stack_end = (void*)control_stack + control_stack_size;
 #endif
+#endif
+#ifdef PRINTNOISE
+    fprintf(stderr, "control_stack at 0x%o12lx size %ld\n",
+            (unsigned long) control_stack, (unsigned long) control_stack_size);
 #endif
 
     /* Binding Stack */
@@ -143,6 +146,10 @@ validate_stacks()
 #else
     /* Map the binding stack wherever we have space */
     binding_stack = (lispobj*) os_validate(NULL, binding_stack_size);
+#endif
+#ifdef PRINTNOISE
+    fprintf(stderr, "binding_stack at 0x%o12lx size %ld\n",
+            (unsigned long) binding_stack, (unsigned long) binding_stack_size);
 #endif
 #ifdef sparc
     make_stack_holes();
