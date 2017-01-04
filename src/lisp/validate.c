@@ -135,7 +135,7 @@ validate_stacks()
 #endif
 #endif
 #ifdef PRINTNOISE
-    fprintf(stderr, "control_stack at 0x%o12lx size %ld\n",
+    fprintf(stderr, "control_stack at 0x%012lx size %ld\n",
             (unsigned long) control_stack, (unsigned long) control_stack_size);
 #endif
 
@@ -148,7 +148,7 @@ validate_stacks()
     binding_stack = (lispobj*) os_validate(NULL, binding_stack_size);
 #endif
 #ifdef PRINTNOISE
-    fprintf(stderr, "binding_stack at 0x%o12lx size %ld\n",
+    fprintf(stderr, "binding_stack at 0x%012lx size %ld\n",
             (unsigned long) binding_stack, (unsigned long) binding_stack_size);
 #endif
 #ifdef sparc
