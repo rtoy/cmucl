@@ -157,7 +157,7 @@ call_into_c:
         mov     reg_CSP, reg_CFP
         add     reg_CSP, 64, reg_CSP
         stn     reg_OCFP, [reg_CFP]
-        stn     reg_CODE, [reg_CFP+8]
+        stn     reg_CODE, [reg_CFP+2*8]
 
         /* Turn on pseudo-atomic. */
 	or	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
@@ -165,7 +165,7 @@ call_into_c:
 	/* Convert the return address to an offset and save it on the stack. */
 	sub	reg_LIP, reg_CODE, reg_L0
 	add	reg_L0, type_OtherPointer, reg_L0
-	stn	reg_L0, [reg_CFP+2*8]
+	stn	reg_L0, [reg_CFP+8]
 
         /* Store LISP state */
         store(reg_BSP,current_binding_stack_pointer)
