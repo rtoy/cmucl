@@ -125,7 +125,7 @@ case $uname_s in
       OPT_EXTRA="-Bdynamic"
 
       # See Config.sparc_sunc
-      OS_LIBS="-lsocket -lnsl -ldl"
+      OS_LIBS="-lsocket -lnsl -ldl -lrt"
       ;;
 
 esac

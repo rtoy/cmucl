@@ -18959,10 +18959,6 @@ msgid "Could not open a temporary file in /tmp"
 msgstr "Ouldcay otnay openway away emporarytay ilefay inway /mptay"
 
 #: src/code/run-program.lisp
-msgid "Cound not create pipe: ~A"
-msgstr "Oundcay otnay eatecray ipepay: ~Away"
-
-#: src/code/run-program.lisp
 msgid "Invalid option to run-program: ~S"
 msgstr "Invalidway optionway otay unray-ogrampray: ~S"
 
@@ -30930,6 +30926,9 @@ msgstr ""
 "Ybay efaultday, illegalway inputsway andway illegalway outputsway areway "
 "eplacedray ybay ethay\n"
 "Unicodeway eplacementray aracterchay."
+
+#~ msgid "Cound not create pipe: ~A"
+#~ msgstr "Oundcay otnay eatecray ipepay: ~Away"
 
 #~ msgid "Changes the name and nicknames for a package."
 #~ msgstr "Angeschay ethay amenay andway icknamesnay orfay away ackagepay."
