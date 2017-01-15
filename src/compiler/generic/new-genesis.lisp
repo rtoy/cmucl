@@ -148,7 +148,7 @@
   "Return a descriptor for a block of LENGTH bytes out of SPACE.  The free
   pointer is boosted as necessary.  If any additional memory is needed, we
   vm_allocate it.  The descriptor returned is a pointer of type LOWTAG."
-  (let* ((bytes (round-up length #+amd64 16 #-amd64 (ash 1 vm:lowtag-bits)))
+  (let* ((bytes (round-up length (* 2 vm:word-bytes)))
 	 (offset (space-free-pointer space))
 	 (new-free-ptr (+ offset (ash bytes (- vm:word-shift)))))
     (when (> new-free-ptr (space-words-allocated space))
@@ -462,9 +462,12 @@
     (copy-to-system-area bytes (* vm:vector-data-offset
 				   ;; the word size of the native backend which
 				   ;; may be different from the target backend
-				   (if (= (c:backend-fasl-file-implementation
-					   c::*native-backend*)
-					  #.c:amd64-fasl-file-implementation)
+				   (if (or (= (c:backend-fasl-file-implementation
+					       c::*native-backend*)
+					      #.c:amd64-fasl-file-implementation)
+					   (= (c:backend-fasl-file-implementation
+					       c::*native-backend*)
+					      #.c:sparc64-fasl-file-implementation))
 				       64
 				       32))
 			 (descriptor-sap des)

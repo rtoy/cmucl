@@ -27,8 +27,9 @@
 ;;; given a number of words.
 ;;;
 (defmacro pad-data-block (words)
-  `(logandc2 (+ (ash ,words word-shift) #+amd64 15 #-amd64 lowtag-mask)
-    #+amd64 15 #-amd64 lowtag-mask))
+  (let ((dual-word-mask (1- (ash 2 word-shift))))
+    `(logandc2 (+ (ash ,words word-shift) ,dual-word-mask)
+	       ,dual-word-mask)))
 
 ;;; DEFENUM -- Internal Interface.
 ;;;
