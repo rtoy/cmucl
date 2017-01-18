@@ -114,6 +114,24 @@
 	      (backend-support-routines *target-backend*))
 	     #',local-name))))
 
+(defmacro def-vm-support-routine (name ll &body body)
+  (unless (member (intern (string name) (find-package "C"))
+		  vm-support-routines)
+    (warn (intl:gettext "Unknown VM support routine: ~A") name))
+  (let ((local-name (symbolicate (backend-name *target-backend*) "-" name)))
+    `(progn
+       (defun ,local-name
+	 ,ll
+	 (macrolet ((vm::emit-not-implemented ()
+		      `(vm::not-implemented ,',local-name)))
+	   ,@body))
+       (setf (,(intern (concatenate 'simple-string
+				    "VM-SUPPORT-ROUTINES-"
+				    (string name))
+		       (find-package "C"))
+	      (backend-support-routines *target-backend*))
+	     #',local-name))))
+
 
 
 ;;;; The backend structure.

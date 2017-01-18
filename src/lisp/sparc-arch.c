@@ -510,6 +510,46 @@ sigill_handler(HANDLER_ARGS)
 					      os_context);
 	      break;
 #endif
+#ifdef trap_NotImplemented
+          case trap_NotImplemented:
+          {
+              /*
+               * Print out the name.  The next instruction MUST be a
+               * branch immediate.
+               */
+              unsigned char *string;
+              int length;
+
+              /*
+               * Compute the maximum length of the string from the
+               * offset in the branch instruction.  (The signed offset
+               * is in the low 22 bits of the instruction.) Then try
+               * to find the last nul character for end of the string.
+               */
+              string = (unsigned char *) &pc[2];
+              length = (pc[1] & 0x3fffff);
+
+              while (string[length - 1] == '\0') {
+                  --length;
+              }
+
+              /*
+               * Don't want to use NOT_IMPLEMENTED here because we
+               * don't actually want to abort.  We want to continue,
+               * but print out a useful message.
+               */
+              printf("NOT-IMPLEMENTED: %p: \"%.*s\"\n", pc, length, (char*)(pc + 2));
+
+              /*
+               * Skip over the UDF instruction so if we can
+               * continue.  This will execute the branch, skipping
+               * over the string too.
+               */
+              SC_PC(context) = (unsigned long) (pc + 1);
+              
+          }
+          break;
+#endif
 	  default:
 	      interrupt_handle_now(signal, code, os_context);
 	      break;

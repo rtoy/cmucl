@@ -1534,6 +1534,31 @@ about function addresses and register values.")
                        (sc-offsets)
                        (lengths))))))))
 
+(defun snarf-not-implemented-name (stream dstate)
+  (let* ((sap (disassem:dstate-segment-sap dstate))
+	 (offset (disassem:dstate-next-offs dstate))
+	 (branch-inst (sys:sap-ref-32 sap offset)))
+    ;; sap + offset should point to the branch instruction after the
+    ;; illtrap (unimp) instruction.  Make sure it's an unconditional
+    ;; branch instrution.
+    #+nil
+    (unless (= (ldb (byte 8 24) branch-inst) #xea)
+      (return-from snarf-not-implemented-name ""))
+    ;; From the offset in the branch instruction, compute the max
+    ;; length of the string that was encoded.
+    (let ((max-length (+ (ash (ldb (byte 24 0) branch-inst) 2) 4)))
+      ;; Skip the branch instruction
+      (incf offset 4)
+      ;; Print each following byte until max-length is reached or we
+      ;; get a 0 byte.
+      (with-output-to-string (s)
+	(do* ((k 0 (+ k 1))
+	      (octet (sys:sap-ref-8 sap (+ offset k))
+		     (sys:sap-ref-8 sap (+ offset k))))
+	     ((or (>= k max-length)
+		  (zerop octet)))
+	  (write-char (code-char octet) s))))))
+
 (defun unimp-control (chunk inst stream dstate)
   (declare (ignore inst))
   (flet ((nt (x) (if stream (disassem:note x dstate))))
@@ -1556,6 +1581,10 @@ about function addresses and register values.")
        (nt "Function end breakpoint trap"))
       (#.vm:object-not-instance-trap
        (nt "Object not instance trap"))
+      (#.vm::not-implemented-trap
+       (nt (concatenate 'string
+			"Not-implemented trap: "
+			(snarf-not-implemented-name stream dstate))))
     )))
 
 (eval-when (compile load eval)
@@ -2251,6 +2280,25 @@ about function addresses and register values.")
 			       0 0 0 (reg-tn-encoding src1))))
 
 
+
+(defmacro not-implemented (&optional name)
+  (let ((string (string name)))
+    `(let ((length-label (gen-label)))
+       (inst unimp not-implemented-trap)
+       ;; NOTE: The branch offset helps estimate the length of the
+       ;; string.  The actual length of the string may be equal to the
+       ;; displacement or it may be up to three bytes shorter at the
+       ;; first trailing NUL byte.  The string may or may not be
+       ;; 0-terminated.
+       (inst b length-label)
+       (inst nop)
+       ,@(map 'list #'(lambda (c)
+			`(inst byte ,(char-code c)))
+	      string)
+       ;; Append enough zeros to end on a word boundary.
+       ,@(make-list (mod (- (length string)) 4)
+		    :initial-element '(inst byte 0))
+       (emit-label length-label))))
 
 ;;;; Instructions for dumping data and header objects.
 

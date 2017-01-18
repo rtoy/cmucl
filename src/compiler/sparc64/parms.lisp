@@ -243,6 +243,7 @@
 	  after-breakpoint-trap allocation-trap
 	  pseudo-atomic-trap
 	  object-not-list-trap object-not-instance-trap
+	  not-implemented-trap
 	  trace-table-normal trace-table-call-site
 	  trace-table-function-prologue trace-table-function-epilogue))
 
@@ -263,6 +264,7 @@
   dynamic-space-overflow-warning
   #+heap-overflow-check
   dynamic-space-overflow-error
+  not-implemented
   )
 
 ;; Make sure this starts AFTER the last element of the above enum!
