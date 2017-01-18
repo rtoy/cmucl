@@ -179,6 +179,9 @@
     (dotimes (i (1- vm:function-code-offset))
       (inst word 0)
       (inst word 0))
+
+    (emit-not-implemented)
+
     ;; The start of the actual code.
     ;; Fix CODE, cause the function object was passed in.
     (inst compute-code-from-fn code-tn code-tn start-lab temp)

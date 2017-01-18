@@ -74,6 +74,7 @@
 
 (define-move-function (store-stack 5) (vop x y)
   ((any-reg descriptor-reg) (control-stack))
+  (not-implemented "DEFINE-MOVE STORE-STACK")
   (store-stack-tn y x))
 
 (define-move-function (store-number-stack 5) (vop x y)
