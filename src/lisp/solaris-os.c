@@ -315,7 +315,7 @@ long *
 solaris_register_address(struct ucontext *context, int reg)
 {
     if (reg == 0) {
-	static int zero;
+	static long zero;
 
 	zero = 0;
 
@@ -323,7 +323,7 @@ solaris_register_address(struct ucontext *context, int reg)
     } else if (reg < 16) {
 	return &context->uc_mcontext.gregs[reg + 3];
     } else if (reg < 32) {
-	int *sp = (int *) context->uc_mcontext.gregs[REG_SP];
+	long *sp = (long *) context->uc_mcontext.gregs[REG_SP];
 
 	return &sp[reg - 16];
     } else
