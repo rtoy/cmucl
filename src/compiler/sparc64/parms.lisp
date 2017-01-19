@@ -268,7 +268,7 @@
   )
 
 ;; Make sure this starts AFTER the last element of the above enum!
-(defenum (:prefix object-not- :suffix -trap :start 16)
+(defenum (:prefix object-not- :suffix -trap :start 20)
   list
   instance)
 
