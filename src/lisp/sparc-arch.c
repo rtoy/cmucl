@@ -522,12 +522,19 @@ sigill_handler(HANDLER_ARGS)
 
               /*
                * Compute the maximum length of the string from the
-               * offset in the branch instruction.  (The signed offset
-               * is in the low 22 bits of the instruction.) Then try
-               * to find the last nul character for end of the string.
+               * offset in the branch instruction.  This code assumes
+               * a ba,pt instruction which has a 19-bit word offset in
+               * the low part of the instruction.  Because branches
+               * have a delay slot, the string starts two words past
+               * the branch instruction.
                */
-              string = (unsigned char *) &pc[2];
-              length = (pc[1] & 0x3fffff);
+              string = (unsigned char *) &pc[3];
+              /*
+               * The offset is in 32-bit words, so subtract one for
+               * the instruction in the branch delay slot and scale up
+               * the offet to be in bytes.
+               */
+              length = 4 * ((pc[1] & 0x7FFFF) - 1);
 
               while (string[length - 1] == '\0') {
                   --length;
@@ -538,14 +545,14 @@ sigill_handler(HANDLER_ARGS)
                * don't actually want to abort.  We want to continue,
                * but print out a useful message.
                */
-              printf("NOT-IMPLEMENTED: %p: \"%.*s\"\n", pc, length, (char*)(pc + 2));
+              printf("NOT-IMPLEMENTED: %p: \"%.*s\"\n", pc, length, string);
 
               /*
-               * Skip over the UDF instruction so if we can
+               * Skip over the illtrap instruction so if we can
                * continue.  This will execute the branch, skipping
                * over the string too.
                */
-              SC_PC(context) = (unsigned long) (pc + 1);
+              SC_PC(os_context) = (unsigned long) (pc + 1);
               
           }
           break;
