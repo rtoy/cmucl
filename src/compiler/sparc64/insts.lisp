@@ -2284,21 +2284,22 @@ about function addresses and register values.")
 (defmacro not-implemented (&optional name)
   (let ((string (string name)))
     `(let ((length-label (gen-label)))
-       (inst unimp not-implemented-trap)
-       ;; NOTE: The branch offset helps estimate the length of the
-       ;; string.  The actual length of the string may be equal to the
-       ;; displacement or it may be up to three bytes shorter at the
-       ;; first trailing NUL byte.  The string may or may not be
-       ;; 0-terminated.
-       (inst b length-label)
-       (inst nop)
-       ,@(map 'list #'(lambda (c)
-			`(inst byte ,(char-code c)))
-	      string)
-       ;; Append enough zeros to end on a word boundary.
-       ,@(make-list (mod (- (length string)) 4)
-		    :initial-element '(inst byte 0))
-       (emit-label length-label))))
+       (new-assem:without-scheduling ()
+	 (inst unimp not-implemented-trap)
+	 ;; NOTE: The branch offset helps estimate the length of the
+	 ;; string.  The actual length of the string may be equal to the
+	 ;; displacement or it may be up to three bytes shorter at the
+	 ;; first trailing NUL byte.  The string may or may not be
+	 ;; 0-terminated.
+	 (inst b length-label)
+	 (inst nop)
+	 ,@(map 'list #'(lambda (c)
+			  `(inst byte ,(char-code c)))
+		string)
+	 ;; Append enough zeros to end on a word boundary.
+	 ,@(make-list (mod (- (length string)) 4)
+		      :initial-element '(inst byte 0))
+	 (emit-label length-label)))))
 
 ;;;; Instructions for dumping data and header objects.
 
