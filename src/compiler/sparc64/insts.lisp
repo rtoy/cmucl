@@ -2384,7 +2384,12 @@ about function addresses and register values.")
 			  (- other-pointer-type
 			     function-pointer-type
 			     (label-position label posn delta-if-after)
-			     (component-header-length))))))
+			     ;; FIXME: component-header-length (and
+			     ;; maybe label-position?) return thw
+			     ;; wrong number of bytes.  We need to
+			     ;; shift left by 1 because our words are
+			     ;; 64 bits long and not 32.
+			     (ash (component-header-length) 1))))))
 
 ;; code = lra - other-pointer-tag - header - label-offset + other-pointer-tag
 (define-instruction compute-code-from-lra (segment dst src label temp)
