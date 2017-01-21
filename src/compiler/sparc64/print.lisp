@@ -30,6 +30,7 @@
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:vop-var vop)
   (:generator 100
+    (emit-not-implemented)
     (let ((cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))

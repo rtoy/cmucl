@@ -83,6 +83,7 @@
 (define-vop (boundp boundp-frob)
   (:translate boundp)
   (:generator 9
+    (emit-not-implemented)
     (loadw value object vm:symbol-value-slot vm:other-pointer-type)
     (inst cmp value vm:unbound-marker-type)
     (inst b (if not-p :eq :ne) target)

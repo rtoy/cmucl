@@ -25,6 +25,7 @@
   ((null immediate zero)
    (any-reg descriptor-reg))
   (let ((val (tn-value x)))
+    (not-implemented "LOAD-IMMEDIATE")
     (etypecase val
       (integer
        (inst li y (fixnumize val)))
@@ -121,6 +122,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (y))
   (:generator 0
+    (emit-not-implemented)
     (sc-case y
       ((any-reg descriptor-reg)
        (move y x))

@@ -36,6 +36,7 @@
   (:variant-vars offset lowtag)
   (:policy :fast-safe)
   (:generator 4
+    (emit-not-implemented)
     (storew value object offset lowtag)))
 
 ;;; Slot-Ref and Slot-Set are used to define VOPs like Closure-Ref, where the

@@ -171,6 +171,7 @@
     ;; Make sure the function is aligned, and drop a label pointing to this
     ;; function header.
     (align vm:lowtag-bits)
+    (emit-not-implemented)
     (trace-table-entry trace-table-function-prologue)
     (emit-label start-lab)
     ;; Allocate function header.
@@ -262,6 +263,7 @@
   (:info nargs)
   (:results (res :scs (any-reg)))
   (:generator 2
+    (emit-not-implemented)
     (when (> nargs register-arg-count)
       (move res csp-tn)
       (inst add csp-tn csp-tn (* nargs vm:word-bytes)))))
@@ -774,6 +776,7 @@ default-value-8
 		     15
 		     (if (eq return :unknown) 25 0))
        (trace-table-entry trace-table-call-site)
+       (emit-not-implemented)
        (let* ((cur-nfp (current-nfp-tn vop))
 	      ,@(unless (eq return :tail)
 		  '((lra-label (gen-label))))
@@ -1271,6 +1274,7 @@ default-value-8
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 3
+    (emit-not-implemented)
     (let ((err-lab
 	   (generate-error-code vop invalid-argument-count-error nargs)))
       (inst cmp nargs (fixnumize count))
