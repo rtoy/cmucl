@@ -1515,10 +1515,18 @@ about function addresses and register values.")
     (cond (length-only
            (values 0 (1+ length) nil nil))
           (t
-           (kernel:copy-from-system-area sap (* sparc:byte-bits (1+ offset))
-                                         vector (* sparc:word-bits
-                                                   sparc:vector-data-offset)
+           #+nil
+	   (kernel:copy-from-system-area sap
+					 (* sparc:byte-bits (1+ offset))
+                                         vector
+					 (* sparc:word-bits
+					    sparc:vector-data-offset)
                                          (* length sparc:byte-bits))
+	   (dotimes (k length)
+	     (setf (aref vector k)
+		   (sys:sap-ref-8 sap (+ offset 1 k))))
+	   #+nil
+	   (format *debug-io* "vector = ~A~%" vector)
            (collect ((sc-offsets)
                      (lengths))
              (lengths 1)                ; the length byte
