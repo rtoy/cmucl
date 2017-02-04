@@ -1547,8 +1547,8 @@ about function addresses and register values.")
     ;; From the offset in the branch instruction, compute the max
     ;; length of the string that was encoded.
     (let ((max-length (+ (ash (ldb (byte 24 0) branch-inst) 2) 4)))
-      ;; Skip the branch instruction
-      (incf offset 4)
+      ;; Skip the branch instruction and the delay slot
+      (incf offset 8)
       ;; Print each following byte until max-length is reached or we
       ;; get a 0 byte.
       (with-output-to-string (s)
