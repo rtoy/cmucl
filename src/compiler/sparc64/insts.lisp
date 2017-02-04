@@ -21,7 +21,7 @@
 (use-package "C")
 
 (def-assembler-params
-    :scheduler-p t
+    :scheduler-p nil
   :max-locations 101)
 
 
@@ -395,6 +395,7 @@ about function addresses and register values.")
 						'registers
 						regname
 						dstate)
+    #+nil
     (maybe-add-notes value dstate)))
 ) ; eval-when
       
@@ -1273,6 +1274,7 @@ about function addresses and register values.")
     ;; Save the immediate value and the destination register from this
     ;; sethi instruction.  This is used later to print some possible
     ;; notes about the value loaded by sethi.
+    #+nil
     (let* ((word (disassem::sap-ref-int (disassem:dstate-segment-sap dstate)
 					(disassem:dstate-cur-offs dstate)
 					vm:word-bytes
