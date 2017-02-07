@@ -59,6 +59,7 @@
 
 (define-move-function (load-constant 5) (vop x y)
   ((constant) (descriptor-reg))
+  (not-implemented "LOAD-CONSTANT")
   (loadw y code-tn (tn-offset x) other-pointer-type gtemp-tn))
 
 (define-move-function (load-stack 5) (vop x y)
@@ -372,6 +373,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:note _N"word integer argument move")
   (:generator 0
+    (emit-not-implemented)
     (sc-case y
       ((signed-reg unsigned-reg)
        (move y x))
