@@ -171,7 +171,6 @@
     ;; Make sure the function is aligned, and drop a label pointing to this
     ;; function header.
     (align vm:lowtag-bits)
-    (emit-not-implemented)
     (trace-table-entry trace-table-function-prologue)
     (emit-label start-lab)
     ;; Allocate function header.
@@ -181,7 +180,7 @@
       (inst word 0)
       (inst word 0))
 
-    (emit-not-implemented)
+    ;;(emit-not-implemented)
 
     ;; The start of the actual code.
     ;; Fix CODE, cause the function object was passed in.
