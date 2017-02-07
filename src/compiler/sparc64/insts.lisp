@@ -2391,6 +2391,13 @@ about function addresses and register values.")
   (:emitter
    (emit-compute-inst segment vop dst src label temp
 		      #'(lambda (label posn delta-if-after)
+			  (when c::*compiler-trace-output*
+			    (format c::*compiler-trace-output* "label posn delta-if-after = ~A ~A ~A~%"
+				    label posn delta-if-after)
+			    (format c::*compiler-trace-output* "label-position = ~A~%"
+				    (label-position label posn delta-if-after))
+			    (format c::*compiler-trace-output* "header-len = ~A~%"
+				    (component-header-length)))
 			  (- other-pointer-type
 			     function-pointer-type
 			     (label-position label posn delta-if-after)
