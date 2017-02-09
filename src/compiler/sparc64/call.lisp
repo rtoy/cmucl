@@ -218,6 +218,7 @@
 	     (inst add csp-tn cfp-tn temp))))
     (let ((nfp-tn (current-nfp-tn vop)))
       (when nfp-tn
+	(not-implemented "SET NSP/NFP")
 	(inst sub nsp-tn (bytes-needed-for-non-descriptor-stack-frame))
 	(inst add nfp-tn nsp-tn number-stack-displacement)))
     (trace-table-entry trace-table-normal)))
