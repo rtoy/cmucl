@@ -28,6 +28,8 @@
 
 #include <sys/resource.h>
 
+#include <sys/stack.h>
+
 #if defined(GENCGC)
 #include "lisp.h"
 /* Need struct code defined to get rid of warning from gencgc.h */
@@ -321,9 +323,17 @@ solaris_register_address(struct ucontext *context, int reg)
 
 	return &zero;
     } else if (reg < 16) {
-	return &context->uc_mcontext.gregs[reg + 3];
+	/*
+	 * The first 16 registers are in gregs.  Reg 0 is handled
+	 * above.
+	 */
+	return &context->uc_mcontext.gregs[reg + REG_G1 - 1];
     } else if (reg < 32) {
-	long *sp = (long *) context->uc_mcontext.gregs[REG_SP];
+	/*
+	 * The remaining registers ar on the stack.  Don't forget the
+	 * stack bias for sparc64 ABI!
+	 */
+	long *sp = (long *) (context->uc_mcontext.gregs[REG_SP] + STACK_BIAS);
 
 	return &sp[reg - 16];
     } else
