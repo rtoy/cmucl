@@ -2392,12 +2392,19 @@ about function addresses and register values.")
    (emit-compute-inst segment vop dst src label temp
 		      #'(lambda (label posn delta-if-after)
 			  (when c::*compiler-trace-output*
+			    (format c::*compiler-trace-output* "COMPUTE-CODE-FROM=LRA~%")
 			    (format c::*compiler-trace-output* "label posn delta-if-after = ~A ~A ~A~%"
 				    label posn delta-if-after)
 			    (format c::*compiler-trace-output* "label-position = ~A~%"
 				    (label-position label posn delta-if-after))
 			    (format c::*compiler-trace-output* "header-len = ~A~%"
-				    (component-header-length)))
+				    (component-header-length))
+			    (format c::*compiler-trace-output*
+				    "Final offset = ~A~%"
+				    (- other-pointer-type
+				       function-pointer-type
+				       (label-position label posn delta-if-after)
+				       (ash (component-header-length) 1))))
 			  (- other-pointer-type
 			     function-pointer-type
 			     (label-position label posn delta-if-after)
@@ -2418,8 +2425,28 @@ about function addresses and register values.")
   (:emitter
    (emit-compute-inst segment vop dst src label temp
 		      #'(lambda (label posn delta-if-after)
+			  (when c::*compiler-trace-output*
+			    (format c::*compiler-trace-output*
+				    "COMPUTE-CODE-FROM-LRA~%")
+			    (format c::*compiler-trace-output*
+				    "label posn delta-if-after = ~A ~A ~A~%"
+				    label posn delta-if-after)
+			    (format c::*compiler-trace-output*
+				    "label-position = ~A~%"
+				    (label-position label posn delta-if-after))
+			    (format c::*compiler-trace-output*
+				    "header-len = ~A~%"
+				    (component-header-length))
+			    (format c::*compiler-trace-output*
+				    "Final offset = ~A~%"
+				    (- (+ (label-position label posn delta-if-after)
+					  (ash (component-header-length) 1)))))
+			  ;; FIXME: component-header-length returns
+			  ;; the wrong number of bytes.  We need to
+			  ;; shift left by 1 because our words are 64
+			  ;; bits long and not 32.
 			  (- (+ (label-position label posn delta-if-after)
-				(component-header-length)))))))
+				(ash (component-header-length) 1)))))))
 
 ;; lra = code + other-pointer-tag + header + label-offset - other-pointer-tag
 (define-instruction compute-lra-from-code (segment dst src label temp)
@@ -2431,8 +2458,24 @@ about function addresses and register values.")
   (:emitter
    (emit-compute-inst segment vop dst src label temp
 		      #'(lambda (label posn delta-if-after)
+			  (when c::*compiler-trace-output*
+			    (format c::*compiler-trace-output* "COMPUTE-LRA-FROM-CODE~%")
+			    (format c::*compiler-trace-output* "label posn delta-if-after = ~A ~A ~A~%"
+				    label posn delta-if-after)
+			    (format c::*compiler-trace-output* "label-position = ~A~%"
+				    (label-position label posn delta-if-after))
+			    (format c::*compiler-trace-output* "header-len = ~A~%"
+				    (component-header-length))
+			    (format c::*compiler-trace-output*
+				    "Final offset = ~A~%"
+				    (+ (label-position label posn delta-if-after)
+				       (ash (component-header-length) 1))))
+			  ;; FIXME: component-header-length returns
+			  ;; the wrong number of bytes.  We need to
+			  ;; shift left by 1 because our words are 64
+			  ;; bits long and not 32.
 			  (+ (label-position label posn delta-if-after)
-			     (component-header-length))))))
+			     (ash (component-header-length) 1))))))
 
 ;;; Sparc V9 additions
 
