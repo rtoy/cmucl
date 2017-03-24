@@ -26,7 +26,8 @@ b) A supported C compiler for the C runtime code.
    available under the name specified by your ports Config file.
 
    Note for FreeBSD 10 and above: The build requires gcc (Clang will
-   not work) and the lib32 compatiblity package.
+   not work) and the lib32 compatiblity package, and a hell of a lot
+   of luck.
 
 c) GNU make
 
