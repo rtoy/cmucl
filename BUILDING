@@ -25,6 +25,9 @@ b) A supported C compiler for the C runtime code.
    means the vendor-supplied C compiler.  The compiler must be
    available under the name specified by your ports Config file.
 
+   Note for FreeBSD 10 and above: The build requires gcc (Clang will
+   not work) and the lib32 compatiblity package.
+
 c) GNU make
 
    This has to be available either as gmake or make in your PATH, or

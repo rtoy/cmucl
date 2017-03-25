@@ -742,7 +742,8 @@
 					 #o666)))
 		(unix:unix-unlink name)
 		(when fd
-		  (let ((newline (string #\Newline)))
+		  (let ((newline (make-array 1 :element-type '(unsigned-byte 8)
+					     :initial-element (char-code #\Newline))))
 		    (loop
 		      (multiple-value-bind
 			  (line no-cr)
@@ -766,7 +767,7 @@
 	    (multiple-value-bind (read-fd write-fd)
 				 (unix:unix-pipe)
 	      (unless read-fd
-		(error (intl:gettext "Cound not create pipe: ~A")
+		(error (intl:gettext "Could not create pipe: ~A")
 		       (unix:get-unix-error-msg write-fd)))
 	      (copy-descriptor-to-stream read-fd object cookie)
 	      (push read-fd *close-on-error*)

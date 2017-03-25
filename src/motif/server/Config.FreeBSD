@@ -1,3 +1,4 @@
+CC=gcc 
 CFLAGS = -pthread -O2 -I/usr/local/include -I. -I$(VPATH)
 LDFLAGS = -L/usr/local/lib
 LIBS = -lXm -lXt -lX11

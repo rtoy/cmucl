@@ -24,6 +24,10 @@ msgid "Returns a string describing version of the supporting software."
 msgstr ""
 
 #: src/code/sunos-os.lisp
+msgid "Unix system call getrusage failed: ~A."
+msgstr ""
+
+#: src/code/sunos-os.lisp
 msgid "Getpagesize failed: ~A"
 msgstr ""
 
