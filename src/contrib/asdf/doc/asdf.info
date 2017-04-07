@@ -1,4 +1,4 @@
-This is asdf.info, produced by makeinfo version 6.1 from asdf.texinfo.
+This is asdf.info, produced by makeinfo version 6.3 from asdf.texinfo.
 
 This manual describes ASDF, a system definition facility for Common Lisp
 programs and libraries.
@@ -43,7 +43,7 @@ File: asdf.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
 ASDF: Another System Definition Facility
 ****************************************
 
-Manual for Version 3.2.0
+Manual for Version 3.2.1
 
    This manual describes ASDF, a system definition facility for Common
 Lisp programs and libraries.
@@ -3097,8 +3097,14 @@ succeeds, otherwise it continues.
    When looking in a tree, if one system is found, the search succeeds.
 If multiple systems are found, the consequences are unspecified: the
 search may succeed with any of the found systems, or an error may be
-raised.  ASDF currently returns the first system found, XCVB currently
-raised an error.  If none is found, the search continues.
+raised.  ASDF 3.2.1 or later returns the pathname whose normalized
+directory component has the shortest length (as a list), and breaks ties
+by choosing the system with the smallest 'unix-namestring' when compared
+with 'string<'.  Earlier versions of ASDF return ASDF return the first
+system found, which is implementation-dependent, and may or may not be
+the pathname with the smallest 'unix-namestring' when compared with
+'string<'.  XCVB raises an error.  If none is found, the search
+continues.
 
    Exclude statements specify patterns of subdirectories the systems
 from which to ignore.  Typically you don't want to use copies of files
@@ -5862,77 +5868,77 @@ Node: Configuration Directories131731
 Node: The here directive133558
 Node: Shell-friendly syntax for configuration135451
 Node: Search Algorithm136468
-Node: Caching Results137969
-Node: Configuration API141213
-Node: Introspection143252
-Node: *source-registry-parameter* variable143516
-Node: Information about system dependencies144085
-Node: Status145001
-Node: Rejected ideas145456
-Node: TODO147837
-Node: Credits for the source-registry148022
-Node: Controlling where ASDF saves compiled files148557
-Ref: Controlling where ASDF saves compiled files-Footnote-1149969
-Node: Output Configurations150013
-Ref: Output Configurations-Footnote-1152874
-Node: Output Backward Compatibility152940
-Node: Output Configuration DSL155666
-Node: Output Configuration Directories161121
-Node: Output Shell-friendly syntax for configuration162678
-Node: Semantics of Output Translations164197
-Node: Output Caching Results165766
-Node: Output location API166246
-Node: Credits for output translations168668
-Node: Error handling169188
-Node: Miscellaneous additional functionality170029
-Node: Controlling file compilation170501
-Node: Controlling source file character encoding173767
-Node: Miscellaneous Functions180584
-Ref: system-relative-pathname180881
-Ref: Miscellaneous Functions-Footnote-1187328
-Node: Some Utility Functions187439
-Node: Getting the latest version198217
-Node: FAQ199162
-Node: Where do I report a bug?199557
-Node: Mailing list199922
-Node: What has changed between ASDF 1 ASDF 2 and ASDF 3?200257
-Node: What are ASDF 1 2 3?202431
-Node: How do I detect the ASDF version?203472
-Node: ASDF can portably name files in subdirectories205779
-Node: Output translations207329
-Node: Source Registry Configuration208356
-Node: Usual operations are made easier to the user209983
-Node: Many bugs have been fixed210569
-Node: ASDF itself is versioned212401
-Node: ASDF can be upgraded213276
-Node: Decoupled release cycle214428
-Node: Pitfalls of the transition to ASDF 2215357
-Node: Pitfalls of the upgrade to ASDF 3219627
-Ref: Pitfalls of the upgrade to ASDF 3-Footnote-1223996
-Node: What happened to the bundle operations224166
-Node: Issues with installing the proper version of ASDF225331
-Node: My Common Lisp implementation comes with an outdated version of ASDF. What to do?225802
-Node: I'm a Common Lisp implementation vendor. When and how should I upgrade ASDF?226735
-Node: Issues with configuring ASDF230618
-Node: How can I customize where fasl files are stored?230993
-Node: How can I wholly disable the compiler output cache?232086
-Node: Issues with using and extending ASDF to define systems233465
-Node: How can I cater for unit-testing in my system?234262
-Node: How can I cater for documentation generation in my system?235150
-Node: How can I maintain non-Lisp (e.g. C) source files?235671
-Ref: report-bugs236103
-Node: I want to put my module's files at the top level. How do I do this?236103
-Node: How do I create a system definition where all the source files have a .cl extension?239253
-Node: How do I mark a source file to be loaded only and not compiled?241226
-Node: How do I work with readtables?242222
-Node: How can I capture ASDF's output?245949
-Node: LOAD-PATHNAME has a weird value246420
-Node: ASDF development FAQs247906
-Node: How do I run the tests interactively in a REPL?248145
-Node: Ongoing Work250011
-Node: Bibliography250290
-Node: Concept Index253761
-Node: Function and Class Index260620
-Node: Variable Index272394
+Node: Caching Results138338
+Node: Configuration API141582
+Node: Introspection143621
+Node: *source-registry-parameter* variable143885
+Node: Information about system dependencies144454
+Node: Status145370
+Node: Rejected ideas145825
+Node: TODO148206
+Node: Credits for the source-registry148391
+Node: Controlling where ASDF saves compiled files148926
+Ref: Controlling where ASDF saves compiled files-Footnote-1150338
+Node: Output Configurations150382
+Ref: Output Configurations-Footnote-1153243
+Node: Output Backward Compatibility153309
+Node: Output Configuration DSL156035
+Node: Output Configuration Directories161490
+Node: Output Shell-friendly syntax for configuration163047
+Node: Semantics of Output Translations164566
+Node: Output Caching Results166135
+Node: Output location API166615
+Node: Credits for output translations169037
+Node: Error handling169557
+Node: Miscellaneous additional functionality170398
+Node: Controlling file compilation170870
+Node: Controlling source file character encoding174136
+Node: Miscellaneous Functions180953
+Ref: system-relative-pathname181250
+Ref: Miscellaneous Functions-Footnote-1187697
+Node: Some Utility Functions187808
+Node: Getting the latest version198586
+Node: FAQ199531
+Node: Where do I report a bug?199926
+Node: Mailing list200291
+Node: What has changed between ASDF 1 ASDF 2 and ASDF 3?200626
+Node: What are ASDF 1 2 3?202800
+Node: How do I detect the ASDF version?203841
+Node: ASDF can portably name files in subdirectories206148
+Node: Output translations207698
+Node: Source Registry Configuration208725
+Node: Usual operations are made easier to the user210352
+Node: Many bugs have been fixed210938
+Node: ASDF itself is versioned212770
+Node: ASDF can be upgraded213645
+Node: Decoupled release cycle214797
+Node: Pitfalls of the transition to ASDF 2215726
+Node: Pitfalls of the upgrade to ASDF 3219996
+Ref: Pitfalls of the upgrade to ASDF 3-Footnote-1224365
+Node: What happened to the bundle operations224535
+Node: Issues with installing the proper version of ASDF225700
+Node: My Common Lisp implementation comes with an outdated version of ASDF. What to do?226171
+Node: I'm a Common Lisp implementation vendor. When and how should I upgrade ASDF?227104
+Node: Issues with configuring ASDF230987
+Node: How can I customize where fasl files are stored?231362
+Node: How can I wholly disable the compiler output cache?232455
+Node: Issues with using and extending ASDF to define systems233834
+Node: How can I cater for unit-testing in my system?234631
+Node: How can I cater for documentation generation in my system?235519
+Node: How can I maintain non-Lisp (e.g. C) source files?236040
+Ref: report-bugs236472
+Node: I want to put my module's files at the top level. How do I do this?236472
+Node: How do I create a system definition where all the source files have a .cl extension?239622
+Node: How do I mark a source file to be loaded only and not compiled?241595
+Node: How do I work with readtables?242591
+Node: How can I capture ASDF's output?246318
+Node: LOAD-PATHNAME has a weird value246789
+Node: ASDF development FAQs248275
+Node: How do I run the tests interactively in a REPL?248514
+Node: Ongoing Work250380
+Node: Bibliography250659
+Node: Concept Index254130
+Node: Function and Class Index260989
+Node: Variable Index272763
 
 End Tag Table
