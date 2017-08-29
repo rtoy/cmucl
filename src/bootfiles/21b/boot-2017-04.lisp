@@ -17,9 +17,12 @@
       #x5f000000)
 
 #+linux
-(defconstant vm::target-foreign-linkage-space-start
-  (c:backend-foreign-linkage-space-start c::*target-backend*))
+(handler-bind
+    ((error (lambda (c)
+	      (declare (ignore c))
+	      (invoke-restart 'continue))))
+  (defconstant vm::target-foreign-linkage-space-start
+    (c:backend-foreign-linkage-space-start c::*target-backend*))
 
-#+linux
-(defconstant vm::target-dynamic-space-start
-  #x60000000)
+  (defconstant vm::target-dynamic-space-start
+    #x60000000))
