@@ -37,6 +37,24 @@
  * However, Fedora 22 ther appears to be nothing mapped there.  In
  * fact it appears to be free all the way to 0xf7c1b000.  That would
  * allow a heap of size 2555 MB.
+ *
+ * On even newer OSes like Ubuntu 17.04, the map looks something like
+ *
+ *	0x00000000->0x10000000  128M ?
+ *	0x10000000->0x20000000  256M Read-Only Space.
+ *	0x20000000->0x28000000  128M Binding stack growing up.
+ *	0x28000000->0x38000000  256M Static Space.
+ *      0x38000000->                 ?
+ *      0x56555000->                 C space
+ *      0xf7dfe000->                 [anon]
+ *      0xf7e00000->0xf7fb4000       libc.so
+ *      0xf7fb5000->0xf7fd9000       [anon]
+ *      0xf7fd9000->0xf7ffd000       ld.so
+ *      0xfffdd000->                 [stack]
+ *
+ * There's a potential clash if the lisp heap is mapped near
+ * 0x58100000 as shown above.  This happens if a lisp exectuable image
+ * is created.
  */
 
 #define READ_ONLY_SPACE_START   (SpaceStart_TargetReadOnly)
