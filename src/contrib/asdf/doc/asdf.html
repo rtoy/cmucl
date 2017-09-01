@@ -6,11 +6,11 @@ for Common Lisp programs and libraries.
 You can find the latest version of this manual at
 https://common-lisp.net/project/asdf/asdf.html.
 
-ASDF Copyright (C) 2001-2015 Daniel Barlow and contributors.
+ASDF Copyright (C) 2001-2016 Daniel Barlow and contributors.
 
-This manual Copyright (C) 2001-2015 Daniel Barlow and contributors.
+This manual Copyright (C) 2001-2016 Daniel Barlow and contributors.
 
-This manual revised (C) 2009-2015 Robert P. Goldman and Francois-Rene Rideau.
+This manual revised (C) 2009-2016 Robert P. Goldman and Francois-Rene Rideau.
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -31,7 +31,7 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  -->
-<!-- Created by GNU Texinfo 6.1, http://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 6.3, http://www.gnu.org/software/texinfo/ -->
 <head>
 <title>ASDF Manual</title>
 
@@ -127,11 +127,11 @@ ul.no-bullet {list-style: none}
       <li><a name="toc-Pathname-specifiers" href="#Pathname-specifiers">6.3.7 Pathname specifiers</a></li>
       <li><a name="toc-Version-specifiers" href="#Version-specifiers">6.3.8 Version specifiers</a></li>
       <li><a name="toc-Require" href="#Require">6.3.9 Require</a></li>
-      <li><a name="toc-Using-logical-pathnames" href="#Using-logical-pathnames">6.3.10 Using logical pathnames</a></li>
-      <li><a name="toc-Serial-dependencies" href="#Serial-dependencies">6.3.11 Serial dependencies</a></li>
-      <li><a name="toc-Source-location-_0028_003apathname_0029" href="#Source-location-_0028_003apathname_0029">6.3.12 Source location (<code>:pathname</code>)</a></li>
-      <li><a name="toc-if_002dfeature-option" href="#if_002dfeature-option">6.3.13 if-feature option</a></li>
-      <li><a name="toc-if_002dcomponent_002ddep_002dfails-option" href="#if_002dcomponent_002ddep_002dfails-option">6.3.14 if-component-dep-fails option</a></li>
+      <li><a name="toc-Feature-dependencies" href="#Feature-dependencies">6.3.10 Feature dependencies</a></li>
+      <li><a name="toc-Using-logical-pathnames" href="#Using-logical-pathnames">6.3.11 Using logical pathnames</a></li>
+      <li><a name="toc-Serial-dependencies" href="#Serial-dependencies">6.3.12 Serial dependencies</a></li>
+      <li><a name="toc-Source-location-_0028_003apathname_0029" href="#Source-location-_0028_003apathname_0029">6.3.13 Source location (<code>:pathname</code>)</a></li>
+      <li><a name="toc-if_002dfeature-option" href="#if_002dfeature-option">6.3.14 if-feature option</a></li>
       <li><a name="toc-feature-requirement" href="#feature-requirement">6.3.15 feature requirement</a></li>
     </ul></li>
     <li><a name="toc-Other-code-in-_002easd-files-1" href="#Other-code-in-_002easd-files">6.4 Other code in .asd files</a></li>
@@ -255,6 +255,7 @@ ul.no-bullet {list-style: none}
         <li><a name="toc-How-should-my-library-make-a-readtable-available-to-other-systems_003f" href="#How-should-my-library-make-a-readtable-available-to-other-systems_003f">13.6.7.2 How should my library make a readtable available to other systems?</a></li>
       </ul></li>
       <li><a name="toc-How-can-I-capture-ASDF_0027s-output_003f-1" href="#How-can-I-capture-ASDF_0027s-output_003f">13.6.8 How can I capture ASDF&rsquo;s output?</a></li>
+      <li><a name="toc-_002aLOAD_002dPATHNAME_002a-and-_002aLOAD_002dTRUENAME_002a-have-weird-values_002c-help_0021" href="#LOAD_002dPATHNAME-has-a-weird-value">13.6.9 *LOAD-PATHNAME* and *LOAD-TRUENAME* have weird values, help!</a></li>
     </ul></li>
     <li><a name="toc-ASDF-development-FAQs-1" href="#ASDF-development-FAQs">13.7 ASDF development FAQs</a>
     <ul class="no-bullet">
@@ -275,7 +276,7 @@ ul.no-bullet {list-style: none}
 <a name="Top"></a>
 <a name="ASDF_003a-Another-System-Definition-Facility"></a>
 <h1 class="top">ASDF: Another System Definition Facility</h1>
-<p>Manual for Version 3.1.6.14
+<p>Manual for Version 3.2.1
 </p>
 
 <p>This manual describes ASDF, a system definition facility
@@ -284,11 +285,11 @@ for Common Lisp programs and libraries.
 <p>You can find the latest version of this manual at
 <a href="https://common-lisp.net/project/asdf/asdf.html">https://common-lisp.net/project/asdf/asdf.html</a>.
 </p>
-<p>ASDF Copyright &copy; 2001-2015 Daniel Barlow and contributors.
+<p>ASDF Copyright &copy; 2001-2016 Daniel Barlow and contributors.
 </p>
-<p>This manual Copyright &copy; 2001-2015 Daniel Barlow and contributors.
+<p>This manual Copyright &copy; 2001-2016 Daniel Barlow and contributors.
 </p>
-<p>This manual revised &copy; 2009-2015 Robert P. Goldman and Francois-Rene Rideau.
+<p>This manual revised &copy; 2009-2016 Robert P. Goldman and Francois-Rene Rideau.
 </p>
 <p>Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -679,7 +680,8 @@ may already have configured system-managed libraries for you.
 
 
 
-
+<p>Novices may skip this section.
+</p>
 <p>The old way to configure ASDF to find your systems is by
 <code>push</code>ing directory pathnames onto the variable
 <code>asdf:*central-registry*</code>.
@@ -697,7 +699,7 @@ When used, it takes precedence over the above source-registry.<a name="DOCF5" hr
 </p>
 <p>For example, let&rsquo;s say you want ASDF to find the <samp>.asd</samp> file
 <samp>/home/me/src/foo/foo.asd</samp>.
-In your lisp initialization file, you could have the following:
+In your Lisp initialization file, you could have the following:
 </p>
 <div class="lisp">
 <pre class="lisp">(require &quot;asdf&quot;)
@@ -1291,6 +1293,7 @@ other-component-type := symbol-by-name
 # which is used in :in-order-to
 dependency-def := simple-component-name
                | ( :feature <var>feature-expression</var> dependency-def )
+                 # (see <a href="#The-defsystem-grammar">Feature dependencies</a>)
                | ( :version simple-component-name version-specifier )
                | ( :require module-name )
 
@@ -1308,8 +1311,6 @@ pathname-specifier := pathname | string | symbol
 
 method-form := (operation-name qual lambda-list &amp;rest body)
 qual := method qualifier?
-
-component-dep-fail-option := :fail | :try-next | :ignore
 
 feature-expression := keyword
                       | (:and <var>feature-expression</var>*)
@@ -1537,9 +1538,29 @@ rather than <code>#+<em>implementation-name</em></code>
 to only depend on the specified module on the specific implementation that provides it.
 See <a href="#if_002dfeature_002doption">if-feature-option</a>.
 </p>
+<a name="Feature-dependencies"></a>
+<h4 class="subsection">6.3.10 Feature dependencies</h4>
+<a name="index-_003afeature-dependencies"></a>
 
+<p>A feature dependency is of the form
+<code>(:feature <var>feature-expression</var> <var>dependency</var>)</code>
+If the <var>feature-expression</var> is satisfied by the running lisp at the
+time the system definition is parsed, then the <var>dependency</var> will be
+added to the system&rsquo;s dependencies.  If the <var>feature-expression</var> is
+<em>not</em> satisfied, then the feature dependency form is ignored.
+</p>
+<p>Note that this means that <code>:feature</code> <strong>cannot</strong> be used to
+enforce a feature dependency for the system in question.  I.e., it
+cannot be used to require that a feature hold in order for the system
+definition to be loaded.  E.g., one cannot use <code>(:feature :sbcl)</code>
+to require that a system only be used on SBCL.
+</p>
+<p>Feature dependencies are not to be confused with the obsolete
+feature requirement (see <a href="#The-defsystem-grammar">feature requirement</a>), or
+with <code>if-feature</code>.
+</p>
 <a name="Using-logical-pathnames"></a>
-<h4 class="subsection">6.3.10 Using logical pathnames</h4>
+<h4 class="subsection">6.3.11 Using logical pathnames</h4>
 <a name="index-logical-pathnames"></a>
 
 <p>We do not generally recommend the use of logical pathnames,
@@ -1595,7 +1616,7 @@ underscores, dots or CamelCase in pathnames.
 </p>
 
 <a name="Serial-dependencies"></a>
-<h4 class="subsection">6.3.11 Serial dependencies</h4>
+<h4 class="subsection">6.3.12 Serial dependencies</h4>
 <a name="index-serial-dependencies"></a>
 
 <p>If the <code>:serial t</code> option is specified for a module,
@@ -1618,7 +1639,7 @@ This is done as if by <code>:depends-on</code>.
 
 
 <a name="Source-location-_0028_003apathname_0029"></a>
-<h4 class="subsection">6.3.12 Source location (<code>:pathname</code>)</h4>
+<h4 class="subsection">6.3.13 Source location (<code>:pathname</code>)</h4>
 
 <p>The <code>:pathname</code> option is optional in all cases for systems
 defined via <code>defsystem</code>, and generally is unnecessary.  In the
@@ -1664,7 +1685,7 @@ from within an editor without clobbering its source location)
 </li></ul>
 
 <a name="if_002dfeature-option"></a>
-<h4 class="subsection">6.3.13 if-feature option</h4>
+<h4 class="subsection">6.3.14 if-feature option</h4>
 <a name="index-_003aif_002dfeature-component-option"></a>
 <a name="if_002dfeature_002doption"></a>
 <p>This option allows you to specify a feature expression to be evaluated
@@ -1688,14 +1709,6 @@ been performed.
 </p>
 <p>This option was added in ASDF 3.  For more information,
 See <a href="#required_002dfeatures">Required features</a>.
-</p>
-<a name="if_002dcomponent_002ddep_002dfails-option"></a>
-<h4 class="subsection">6.3.14 if-component-dep-fails option</h4>
-<a name="index-_003aif_002dcomponent_002ddep_002dfails-component-option"></a>
-<p>This option was removed in ASDF 3.
-Its semantics was limited in purpose and dubious to explain,
-and its implementation was breaking a hole into the ASDF object model.
-Please use the <code>if-feature</code> option instead.
 </p>
 <a name="feature-requirement"></a>
 <h4 class="subsection">6.3.15 feature requirement</h4>
@@ -1854,7 +1867,7 @@ where the <samp>.asd</samp> file resides.
 
 <p>ASDF is designed in an object-oriented way from the ground up.
 Both a system&rsquo;s structure and the operations that can be performed on systems
-follow a extensible protocol, allowing programmers to add new behaviours to ASDF.
+follow an extensible protocol, allowing programmers to add new behaviours to ASDF.
 For example, <code>cffi</code> adds support for special FFI description files
 that interface with C libraries and for wrapper files that embed C code in Lisp.
 <code>asdf-jar</code> supports creating Java JAR archives in ABCL.
@@ -1926,20 +1939,21 @@ discuss these in turn below.
 <dd><p><code>operate</code> invokes <var>operation</var> on <var>system</var>.
 <code>oos</code> is a synonym for <code>operate</code> (it stands for operate-on-system).
 </p>
-<p><var>operation</var> is a symbol that is passed,
-along with the supplied <var>initargs</var>,
-to <code>make-operation</code> (which will call <code>make-instance</code>)
+<p><var>operation</var> is an operation designator:
+it can be an operation object itself, or, typically,
+a symbol that is passed to <code>make-operation</code> (which will call <code>make-instance</code>),
 to create the operation object.
-<var>component</var> is a component designator,
-usually a string or symbol that designates a system,
-sometimes a list of strings or symbols that designate a subcomponent of a system.
+<var>component</var> is a component designator:
+it can be a component object itself, or, typically,
+a string or symbol (to be <code>string-downcase</code>d) that names a system,
+more rarely a list of strings or symbols that designate a subcomponent of a system.
 </p>
-<p>The <var>initargs</var> are passed to the <code>make-instance</code> call
-when creating the operation object.
+<p>The ability to pass <var>initargs</var> to <code>make-operation</code> is now deprecated, and will be removed.
+For more details, see <a href="#make_002doperation">make-operation</a>.
 Note that dependencies may cause the operation
 to invoke other operations on the system or its components:
-the new operations will be created
-with the same <var>initargs</var> as the original one.
+the new operations may or may not be created
+with the same <var>initargs</var> as the original one (for the moment).
 </p>
 <p>If <var>force</var> is <code>:all</code>, then all systems
 are forced to be recompiled even if not modified since last compilation.
@@ -1973,6 +1987,20 @@ See <a href="#Miscellaneous-Functions">Miscellaneous Functions</a>.
 
 </dd></dl>
 
+<dl>
+<dt><a name="index-make_002doperation"></a>Function: <strong><code>make-operation</code></strong> <em><var>operation-class</var> &amp;rest <var>initargs</var></em></dt>
+<dd><a name="make_002doperation"></a>
+<p>The <var>initargs</var> are passed to <code>make-instance</code> call
+when creating the operation object.
+</p>
+<p><strong>Note:</strong><var>initargs</var> for <code>operation</code>s are now deprecated,
+and will be removed from ASDF in the near future.
+</p>
+<p><strong>Note:</strong> <code>operation</code> instances must <strong>never</strong> be created
+using <code>make-instance</code> directly: only through
+<code>make-operation</code>. Attempts to directly make <code>operation</code>
+instances will cause a run-time error.
+</p></dd></dl>
 
 
 <hr>
@@ -2490,8 +2518,8 @@ time when the <var>previous</var> system definition was loaded.
 but system <code>foo</code> was previously loaded from <samp>/previous/path/to/foo.asd</samp>
 then <var>locate-system</var> will return the following values:
 </p><ol>
-<li> <var>foundp</var> will be <code>T</code>,
-</li><li> <var>found-system</var> will be <code>NIL</code>,
+<li> <var>foundp</var> will be <code>t</code>,
+</li><li> <var>found-system</var> will be <code>nil</code>,
 </li><li> <var>pathname</var> will be <code>#p&quot;/current/path/to/foo.asd&quot;</code>,
 </li><li> <var>previous</var> will be an object of type <code>SYSTEM</code> with
 <code>system-source-file</code> slot value of
@@ -3376,8 +3404,13 @@ otherwise it continues.
 If multiple systems are found, the consequences are unspecified:
 the search may succeed with any of the found systems,
 or an error may be raised.
-ASDF currently returns the first system found,
-XCVB currently raised an error.
+ASDF 3.2.1 or later returns the pathname whose normalized directory component
+has the shortest length (as a list), and breaks ties by choosing the system
+with the smallest <code>unix-namestring</code> when compared with <code>string&lt;</code>.
+Earlier versions of ASDF return ASDF return the first system found,
+which is implementation-dependent, and may or may not be the pathname
+with the smallest <code>unix-namestring</code> when compared with <code>string&lt;</code>.
+XCVB raises an error.
 If none is found, the search continues.
 </p>
 <p>Exclude statements specify patterns of subdirectories
@@ -3972,28 +4005,37 @@ or namestring in an <code>:include</code> directive, e.g.:
 <a name="Shell_002dfriendly-syntax-for-configuration-2"></a>
 <h3 class="section">9.5 Shell-friendly syntax for configuration</h3>
 
-<p>When considering environment variable <code>ASDF_OUTPUT_TRANSLATIONS</code>
-ASDF will skip to the next configuration if it&rsquo;s an empty string.
-It will <code>READ</code> the string as an SEXP in the DSL
-if it begins with a paren <code>(</code>
-and it will be interpreted as a list of directories.
-Directories should come by pairs, indicating a mapping directive.
+<p>When processing the environment variable
+<code>ASDF_OUTPUT_TRANSLATIONS</code>:
+</p><ul>
+<li> ASDF will skip to the next configuration if it&rsquo;s an empty string.
+</li><li> ASDF will <code>READ</code> the string as an SEXP in the DSL, if it
+begins with a parenthesis <code>(</code>.
+</li><li> Otherwise ASDF will interpret the value as a list of directories
+(see below).
+</li></ul>
+
+<p>In the directory list format,
+directories should come in pairs, each pair indicating a mapping directive.
 Entries are separated
-by a <code>:</code> (colon) on Unix platforms (including cygwin),
+by a <code>:</code> (colon) on Unix platforms (including Mac and cygwin), and
 by a <code>;</code> (semicolon) on other platforms (mainly, Windows).
 </p>
 <p>The magic empty entry,
 if it comes in what would otherwise be the first entry in a pair,
-indicates the splicing of inherited configuration.
-If it comes as the second entry in a pair,
-it indicates that the directory specified first is to be left untranslated
+indicates the splicing of inherited configuration;
+the next entry (if any) then starts a new pair.
+If the second entry in a pair is empty,
+it indicates that the directory in the first entry is to be left untranslated
 (which has the same effect as if the directory had been repeated).
-Thus <code>&quot;/foo:/bar::/baz:&quot;</code> means that
-things under directory <samp>/foo/</samp>
-are translated to be under <samp>/bar/</samp>,
-then include the inherited configuration,
-then specify that things under directory <samp>/baz/</samp> are not translated.
 </p>
+<p>For example, <code>&quot;/foo:/bar::/baz:&quot;</code> means:
+specify that outputs for things under directory <samp>/foo/</samp>
+are translated to be under <samp>/bar/</samp>;
+then include the inherited configuration;
+then specify that outputs for things under directory <samp>/baz/</samp> are not translated.
+</p>
+
 <hr>
 <a name="Semantics-of-Output-Translations"></a>
 <a name="Semantics-of-Output-Translations-1"></a>
@@ -4292,7 +4334,7 @@ to protect any <code>:encoding <em>encoding</em></code> statement, as in
 <code>#+asdf-unicode :encoding #+asdf-unicode :utf-8</code>.
 We recommend that you avoid using unprotected <code>:encoding</code> specifications
 until after ASDF 2.21 or later becomes widespread.
-As of May 2015, all maintained implementations provide ASDF 3,
+As of May 2016, all maintained implementations provide ASDF 3.1,
 so you may prudently start using this and other features without such protection.
 </p>
 <p>While it offers plenty of hooks for extension,
@@ -4442,12 +4484,16 @@ from what it does in <samp>header.lisp</samp> and <samp>upgrade.lisp</samp>.
 </p></dd></dl>
 
 <dl>
-<dt><a name="index-register_002dpreloaded_002dsystem"></a>Function: <strong>register-preloaded-system</strong> <em>name &amp;rest keys</em></dt>
+<dt><a name="index-register_002dpreloaded_002dsystem"></a>Function: <strong>register-preloaded-system</strong> <em>name &amp;rest keys &amp;key version &amp;allow-other-keys</em></dt>
 <dd><p>A system with name <var>name</var>,
 created by <code>make-instance</code> with extra keys <var>keys</var>
 (e.g. <code>:version</code>),
 is registered as <em>preloaded</em>.
-That is, its code has already been loaded into the current image,
+If <var>version</var> is <code>t</code> (default), then the version is copied from the defined system
+of the same name (if registered) or else is <code>nil</code>
+(this automatic copy of version is only available starting since ASDF 3.1.8).
+</p>
+<p>A preloaded system is considered as having already been loaded into the current image,
 and if at some point some other system <code>:depends-on</code> it yet no source code is found,
 it is considered as already provided,
 and ASDF will not raise a <code>missing-component</code> error.
@@ -4456,25 +4502,35 @@ and ASDF will not raise a <code>missing-component</code> error.
 as fasls with either <code>compile-bundle-op</code> or <code>monolithic-compile-bundle-op</code>,
 and want to register systems so that dependencies will work uniformly
 whether you&rsquo;re using your software from source or from fasl.
+</p>
+<p>Note that if the system was already defined or loaded from source code,
+its build information will remain active until you call <code>clear-system</code> on it,
+at which point a system without build information will be registered in its place.
 </p></dd></dl>
 
 <dl>
 <dt><a name="index-register_002dimmutable_002dsystem-1"></a>Function: <strong>register-immutable-system</strong> <em>name &amp;rest keys</em></dt>
-<dd><p>A system with name <var>name</var>,
-created by <code>make-instance</code> with extra keys <var>keys</var>
-(e.g. <code>:version</code>),
-is registered as <em>immutable</em>.
-That is, its code has already been loaded into the current image,
-and if at some point some other system <code>:depends-on</code> it,
-it is considered as already provided, and
-no attempt will be made to search for an updated version from the source-registry
-or any other method.
-There will be no search for an <samp>.asd</samp> file, and no <code>missing-component</code> error.
+<dd><p>A system with name <var>name</var> is registered as preloaded,
+and additionally is marked as <em>immutable</em>:
+that is, attempts to compile or load it will be succeed
+without actually reading, creating or loading any file,
+as if the system was passed as a <code>force-not</code> argument
+to all calls to <code>plan</code> or <code>operate</code>.
+There will be no search for an updated <samp>.asd</samp> file
+to override the loaded version,
+whether from the source-register or any other method.
 </p>
-<p>This function (available since ASDF 3.1.5) is particularly useful if
-you distribute a large body of code as a precompiled image,
+<p>If a <var>version</var> keyword argument is specified as <code>t</code> or left unspecified,
+then the version is copied from the defined system
+of the same name (if registered) or else is <code>nil</code>.
+This automatic copy of version is available starting
+since immutable systems have been available in ASDF 3.1.5.
+</p>
+<p>This function, available since ASDF 3.1.5, is particularly useful
+if you distribute a large body of code as a precompiled image,
 and want to allow users to extend the image with further extension systems,
-but without making thousands of filesystem requests looking for inexistent (or worse, out of date) source code
+but without making thousands of filesystem requests looking for inexistent
+(or worse, out of date) source code
 for all the systems that came bundled with the image but aren&rsquo;t
 distributed as source code to regular users.
 <a name="index-immutable-systems-1"></a>
@@ -4508,15 +4564,15 @@ while others (like SBCL) will make an attempt at invoking a POSIX shell
 <h3 class="section">11.4 Some Utility Functions</h3>
 
 <p>The below functions are not exported by ASDF itself, but by UIOP, available since ASDF 3.
-Some of them have precursors in ASDF 2, but we recommend
-you rely on ASDF 3 for active developments.
+Some of them have precursors in ASDF 2, but we recommend that for active developments,
+you should rely on the package UIOP as included in ASDF 3.
 UIOP provides many, many more utility functions, and we recommend
-you read its README and sources for more information.
+you read its <samp>README.md</samp> and sources for more information.
 </p>
 
 <dl>
 <dt><a name="index-parse_002dunix_002dnamestring"></a>Function: <strong>parse-unix-namestring</strong> <em>name &amp;key type defaults dot-dot ensure-directory &amp;allow-other-keys</em></dt>
-<dd><p>Coerce NAME into a PATHNAME using standard Unix syntax.
+<dd><p>Coerce <var>name</var> into a <var>pathname</var> using standard Unix syntax.
 </p>
 <p>Unix syntax is used whether or not the underlying system is Unix;
 on non-Unix systems it is only usable for relative pathnames.
@@ -4707,7 +4763,7 @@ which defaults to <code>0</code>, extracting the first line.
 A number will extract the corresponding line.
 See the documentation for <code>uiop:access-at</code>.
 
-</li><li> If the object is <code>:forms</code>, the content is captured as a list of S-expressions,
+</li><li> If the object is <code>:forms</code>, the content is captured as a list of s-expressions,
 as read by the Lisp reader.
 If the <var>count</var> argument is provided,
 it is a maximum count of lines to be read.
@@ -5256,7 +5312,7 @@ should load, configure and upgrade ASDF among the very first things they do,
 and ensure that ASDF 3 or later is present indeed,
 before they start using ASDF to load anything else.
 
-</li><li> Now that all implementations provide ASDF 3 or later (since May 2015),
+</li><li> Now that all implementations provide ASDF 3.1 or later (since May 2016),
 the simple solution is just to use code as below in your setup,
 and when it fails, upgrade your implementation or replace its ASDF.
 (see <a href="#Replacing-your-implementation_0027s-ASDF">Replacing your implementation's ASDF</a>):
@@ -5309,14 +5365,14 @@ and lose configuration as they do.
 <p><code>asdf-ecl</code> and its short-lived successor <code>asdf-bundle</code> are no more,
 having been replaced by code now built into ASDF 3.
 Moreover, the name of the bundle operations has changed since ASDF 3.1.3.
+Starting with ASDF 3.2.0, <code>load-system</code>
+will once again use <code>load-bundle-op</code> instead of <code>load-op</code> on ECL,
+as originally intended by <code>asdf-ecl</code> authors, but disabled for a long time
+due to bugs in both ECL and ASDF.
 </p>
-<p>And yet, the feature is not enabled to be used by <code>load-system</code> by default on ECL as originally intended,
-because of a bug in ECL itself found during testing.
-</p>
-
-<p>Some of the bundle operations were renamed after ASDF 3.1.3, and the old
-names have been removed.  Old bundle operations, and their modern
-equivalents are:
+<p>Note that some of the bundle operations were renamed after ASDF 3.1.3,
+and the old names have been removed.
+Old bundle operations, and their modern equivalents are:
 </p>
 <ul>
 <li> <code>fasl-op</code> is now <code>compile-bundle-op</code>
@@ -5769,7 +5825,36 @@ to eschew using such an important library anymore.
 <code>*standard-output*</code>, so rebinding that stream around calls to
 <code>asdf:operate</code> should redirect all output from ASDF operations.
 </p>
+<hr>
+<a name="LOAD_002dPATHNAME-has-a-weird-value"></a>
+<a name="g_t_002aLOAD_002dPATHNAME_002a-and-_002aLOAD_002dTRUENAME_002a-have-weird-values_002c-help_0021"></a>
+<h4 class="subsection">13.6.9 *LOAD-PATHNAME* and *LOAD-TRUENAME* have weird values, help!</h4>
+<a name="index-_002aLOAD_002dPATHNAME_002a"></a>
+<a name="index-_002aLOAD_002dTRUENAME_002a"></a>
 
+<p>Conventional Common Lisp code may use <code>*LOAD-TRUENAME*</code> or <code>*LOAD-PATHNAME*</code> to find
+files adjacent to source files.  This will generally <em>not</em> work in
+ASDF-loaded systems.  Recall that ASDF relocates the FASL files it
+builds, typically to a special cache directory.  Thus the value of
+<code>*LOAD-PATHNAME*</code> and <code>*LOAD-TRUENAME*</code>  at load time, when ASDF is loading your system,
+will typically be a pathname in that cache directory, and useless to you
+for finding other system components.
+</p>
+<p>There are two ways to work around this problem:
+</p><ol>
+<li> <a name="index-system_002drelative_002dpathname-1"></a>
+Use the <code>system-relative-pathname</code> function.  This can readily be
+used from outside the system, but it is probably not good software
+engineering to require a source file <em>of</em> a system to know what
+system it is going to be part of.  Contained objects should not have to
+know their containers.
+</li><li> Store the pathname at compile time, so that you get the pathname of the
+source file, which is presumably what you want.  To do this, you can
+capture the value of <code>(or *compile-file-pathname* *load-truename*)</code>
+(or <code>*LOAD-PATHNAME*</code>, if you prefer)
+in a macro expansion or other compile-time evaluated context.
+
+</li></ol>
 
 <hr>
 <a name="ASDF-development-FAQs"></a>
@@ -5857,7 +5942,8 @@ see the <samp>TODO</samp> file in the source repository.
   <a href="http://xach.livejournal.com/">http://xach.livejournal.com/</a>
 </li><li> Francois-Rene Rideau and Robert Goldman:
   &ldquo;Evolving ASDF: More Cooperation, Less Coordination&rdquo;, 2010.
-  This article describes the main issues solved by ASDF 2.
+  This article describes the main issues solved by ASDF 2,
+  and exposes its design principles.
   <a href="https://common-lisp.net/project/asdf/doc/ilc2010draft.pdf">https://common-lisp.net/project/asdf/doc/ilc2010draft.pdf</a>
   <a href="https://gitlab.common-lisp.org/asdf/ilc2010">https://gitlab.common-lisp.org/asdf/ilc2010</a>
 </li><li> Francois-Rene Rideau and Spencer Brody:
@@ -5957,7 +6043,7 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td></td><td valign="top"><a href="#index-_003adefsystem_002ddepends_002don">:defsystem-depends-on</a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-defsystem-grammar">The defsystem grammar</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_003adirectory-source-config-directive">:directory source config directive</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Configuration-DSL">Configuration DSL</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_003aexclude-source-config-directive">:exclude source config directive</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Configuration-DSL">Configuration DSL</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-_003aif_002dcomponent_002ddep_002dfails-component-option">:if-component-dep-fails component option</a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-defsystem-grammar">The defsystem grammar</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-_003afeature-dependencies">:feature dependencies</a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-defsystem-grammar">The defsystem grammar</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_003aif_002dfeature-component-option">:if-feature component option</a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-defsystem-grammar">The defsystem grammar</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_003aignore_002dinvalid_002dentries-source-config-directive">:ignore-invalid-entries source config directive</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Configuration-DSL">Configuration DSL</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_003ainclude-source-config-directive">:include source config directive</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Configuration-DSL">Configuration DSL</a></td></tr>
@@ -6173,6 +6259,7 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td colspan="4"> <hr></td></tr>
 <tr><th><a name="Function-and-Class-Index_fn_letter-M">M</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-make"><code>make</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-make_002doperation"><code><code>make-operation</code></code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Operations">Operations</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-merge_002dpathnames_002a"><code>merge-pathnames*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Some-Utility-Functions">Some Utility Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-module"><code>module</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Pre_002ddefined-subclasses-of-component">Pre-defined subclasses of component</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-monolithic_002dbinary_002dop-_0028obsolete_0029"><code>monolithic-binary-op (obsolete)</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
@@ -6218,6 +6305,7 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td></td><td valign="top"><a href="#index-system_002ddefsystem_002ddepends_002don"><code>system-defsystem-depends-on</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Information-about-system-dependencies">Information about system dependencies</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-system_002ddepends_002don"><code>system-depends-on</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Information-about-system-dependencies">Information about system dependencies</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-system_002drelative_002dpathname"><code>system-relative-pathname</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-Functions">Miscellaneous Functions</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-system_002drelative_002dpathname-1"><code>system-relative-pathname</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#LOAD_002dPATHNAME-has-a-weird-value">LOAD-PATHNAME has a weird value</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-system_002dsource_002ddirectory"><code>system-source-directory</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-Functions">Miscellaneous Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-system_002dweakly_002ddepends_002don"><code>system-weakly-depends-on</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Information-about-system-dependencies">Information about system dependencies</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
@@ -6283,7 +6371,9 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td></td><td valign="top"><a href="#index-_002adefault_002dsource_002dregistry_002dexclusions_002a"><code>*default-source-registry-exclusions*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Search-Algorithm">Search Algorithm</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_002afeatures_002a-1"><code>*features*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Introduction">Introduction</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_002aimage_002ddump_002dhook_002a"><code>*image-dump-hook*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Resetting-the-ASDF-configuration">Resetting the ASDF configuration</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-_002aLOAD_002dPATHNAME_002a"><code>*LOAD-PATHNAME*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#LOAD_002dPATHNAME-has-a-weird-value">LOAD-PATHNAME has a weird value</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_002aload_002dsystem_002doperation_002a"><code>*load-system-operation*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-_002aLOAD_002dTRUENAME_002a"><code>*LOAD-TRUENAME*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#LOAD_002dPATHNAME-has-a-weird-value">LOAD-PATHNAME has a weird value</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_002anil_002dpathname_002a"><code>*nil-pathname*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Some-Utility-Functions">Some Utility Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_002aoldest_002dforward_002dcompatible_002dasdf_002dversion_002a"><code>*oldest-forward-compatible-asdf-version*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Pitfalls-of-the-upgrade-to-ASDF-3">Pitfalls of the upgrade to ASDF 3</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_002asource_002dregistry_002dparameter_002a"><code>*source-registry-parameter*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#g_t_002asource_002dregistry_002dparameter_002a-variable">*source-registry-parameter* variable</a></td></tr>
@@ -6361,7 +6451,7 @@ on the value of shell variables or the identity of the user.
 &ldquo;system directory designators&rdquo;.
 A <em>system directory designator</em> is a form
 which will be evaluated whenever a system is to be found,
-and must evaluate to a directory to look in (or <code>NIL</code>).
+and must evaluate to a directory to look in (or <code>nil</code>).
 By &ldquo;directory&rdquo;, we mean
 &ldquo;designator for a pathname with a non-empty DIRECTORY component&rdquo;.
 </p>

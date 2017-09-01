@@ -58,7 +58,6 @@
 ;;;
 ;;;    Return system time, user time and number of page faults.
 ;;;
-#-(and sparc svr4)
 (defun get-system-info ()
   (multiple-value-bind
       (err? utime stime maxrss ixrss idrss isrss minflt majflt)
@@ -69,19 +68,6 @@
 		  (unix:get-unix-error-msg utime)))
 	  (T
 	   (values utime stime majflt)))))
-
-;;; GET-SYSTEM-INFO  --  Interface
-;;;
-;;;    Return system time, user time and number of page faults.
-;;;
-#+(and sparc svr4)
-(defun get-system-info ()
-  (multiple-value-bind
-      (err? utime stime cutime cstime)
-      (unix:unix-times)
-    (declare (ignore err? cutime cstime))
-    ;; Return times in microseconds; page fault statistics not supported.
-    (values (* utime 10000) (* stime 10000) 0)))
 
 ;;; GET-PAGE-SIZE  --  Interface
 ;;;
