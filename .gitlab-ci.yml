@@ -11,6 +11,6 @@ test:
     - echo $SHELL
     - PS1='\w \$ '
     - type -all time
-    - bin/build.sh -B boot-2017-04-1 -C "" -o ../snapshot/bin/lisp
+    - bin/build.sh -B boot-2017-04-1 -C "" -o ./snapshot/bin/lisp
     - bin/make-dist.sh -I dist-linux linux-4
     - bin/run-tests.sh -l dist-linux/bin/lisp
