@@ -1,5 +1,5 @@
 before_script:
-  - apt-get update -qq && apt-get install -y wget
+  - apt-get update -qq && apt-get install -y wget bzip2
   - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2016/09/cmucl-2016-09-x86-linux.tar.bz2
   - tar xjf cmucl-2016-09-x86-linux.tar.bz2
   - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2016/09/cmucl-2016-09-x86-linux.extra.tar.bz2
