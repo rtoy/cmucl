@@ -3,7 +3,7 @@ before_script:
   - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2017/04/cmucl-2017-04-x86-linux.tar.bz2
   - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2017/04/cmucl-2017-04-x86-linux.extra.tar.bz2
   - mkdir snapshot
-  - (cd snapshot; tar xjf ../cmucl-2016-09-x86-linux.tar.bz2; tar xjf ../cmucl-2016-09-x86-linux.extra.tar.bz2)
+  - (cd snapshot; tar xjf ../cmucl-2017-04-x86-linux.tar.bz2; tar xjf ../cmucl-2017-04-x86-linux.extra.tar.bz2)
   - git clone https://gitlab.common-lisp.net/cmucl/cmucl.git
 
 test:
