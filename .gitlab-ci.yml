@@ -1,11 +1,14 @@
 before_script:
   - apt-get update -qq && apt-get install -y wget bzip2 git make gcc gcc-multilib
-  - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2016/09/cmucl-2016-09-x86-linux.tar.bz2
-  - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2016/09/cmucl-2016-09-x86-linux.extra.tar.bz2
+  - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2017/04/cmucl-2017-04-x86-linux.tar.bz2
+  - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2017/04/cmucl-2017-04-x86-linux.extra.tar.bz2
   - mkdir snapshot
   - (cd snapshot; tar xjf ../cmucl-2016-09-x86-linux.tar.bz2; tar xjf ../cmucl-2016-09-x86-linux.extra.tar.bz2)
   - git clone https://gitlab.common-lisp.net/cmucl/cmucl.git
 
 test:
   script:
-    - ls
+    - cd cmucl
+    - bin/build.sh -B boot-2017-04-1 -C "" -o ../snapshot/bin/lisp
+    - bin/make-dist.sh -I dist-linux linux-4
+    - bin/run-tests.sh -l dist-linux/bin/lisp
