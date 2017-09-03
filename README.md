@@ -1,3 +1,5 @@
+[![pipeline status](https://gitlab.common-lisp.net/cmucl/cmucl/badges/rtoy-gitlab-ci/pipeline.svg)](https://gitlab.common-lisp.net/cmucl/cmucl/commits/rtoy-gitlab-ci)
+
 CMUCL is a free, high performance implementation of the Common Lisp
 programming language which runs on most major Unix platforms. It
 mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
@@ -51,5 +53,3 @@ Here is a summary of its main features:
   the Internet.
 
 For the latest news and other information, see [the wiki](https://gitlab.common-lisp.net/cmucl/cmucl/wikis/home).
-
-[![pipeline status](https://gitlab.common-lisp.net/cmucl/cmucl/badges/master/pipeline.svg)](https://gitlab.common-lisp.net/cmucl/cmucl/commits/master)
