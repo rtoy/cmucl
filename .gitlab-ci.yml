@@ -1,5 +1,4 @@
 before_script:
-  - ls -F
   - apt-get update -qq && apt-get install -y wget bzip2 make gcc gcc-multilib time bc
   - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2017/04/cmucl-2017-04-x86-linux.tar.bz2
   - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2017/04/cmucl-2017-04-x86-linux.extra.tar.bz2
@@ -8,10 +7,6 @@ before_script:
 
 test:
   script:
-    - echo $SHELL
-    - PS1='\w \$ '
-    - type -all time
-    - exit 1
     - bin/build.sh -B boot-2017-04-1 -C "" -o ./snapshot/bin/lisp
     - bin/make-dist.sh -I dist-linux linux-4
     - bin/run-tests.sh -l dist-linux/bin/lisp
