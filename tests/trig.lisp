@@ -16,7 +16,7 @@
 (define-test sin.very-small
   "Tests sin for the case of |x| < 2^-27, but not 0."
   (:tag :sin)
-  (assert-eql (scale-float 1d0 -28)
+  (assert-eql (scale-float 1d0 -27)
 	      (sin (scale-float 1d0 -28))))
 
 (define-test sin.no-reduction
