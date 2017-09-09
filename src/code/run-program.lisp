@@ -34,6 +34,12 @@
   (options c-call:int)
   (rusage c-call:int))
 
+(alien:def-alien-routine ("prog_status" c-prog-status) c-call:void
+  (pid c-call:int :out)
+  (what c-call:int :out)
+  (code c-call:int :out)
+  (corep c-call:int :out))
+
 (eval-when (load eval compile)
   (defconstant wait-wnohang #-svr4 1 #+svr4 #o100)
   (defconstant wait-wuntraced #-svr4 2 #+svr4 4)
@@ -72,6 +78,16 @@
 		       :signaled)
 		     signal
 		     (not (zerop (ldb (byte 1 7) status)))))))))
+
+(defun prog-status ()
+  (multiple-value-bind (ret pid what code corep)
+      (c-prog-status)
+    (declare (ignore ret))
+    (when (plusp pid)
+      (values pid      
+	      (aref #(nil :signaled :stopped :continued :exited) what)
+	      code
+	      (not (zerop corep))))))
 
 
 
@@ -235,7 +251,7 @@
 (defun get-processes-status-changes ()
   (loop
     (multiple-value-bind (pid what code core)
-			 (wait3 t t)
+	(prog-status)
       (unless pid
 	(return))
       (let ((proc (find pid *active-processes* :key #'process-pid)))

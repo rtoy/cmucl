@@ -367,3 +367,41 @@
       ;; get-universal-time only has an accuracy of 1 sec, just verify
       ;; more than 3 sec have elapsed.
       (assert-true (>= (- (get-universal-time) start-time) 3)))))
+
+(defun issue-41-tester (stop-signal)
+  (let* ((p (ext:run-program "/bin/sleep" '("5") :wait nil))
+	 (pid (ext:process-pid p)))
+    (flet ((external-kill (pid signal)
+	     (ext:run-program "/usr/bin/env"
+			  (list "kill"
+				(format nil "-~D" signal)
+				(format nil "~D" pid)))))
+      (assert-eql :running (ext:process-status p))
+
+      (external-kill pid stop-signal)
+      (sleep 1)
+      (assert-eql :stopped (ext:process-status p))
+
+      (external-kill pid unix:sigcont)
+      (sleep 1)
+      (assert-eql :continued (ext:process-status p))
+
+      (external-kill pid stop-signal)
+      (sleep 1)
+      (assert-eql :stopped (ext:process-status p))
+
+      (external-kill pid unix:sigcont)
+      (sleep 1)
+      (assert-eql :continued (ext:process-status p))
+
+      (sleep 5)
+      (assert-eql :exited (ext:process-status p)))))
+
+(define-test issue.41.1
+    (:tag :issues)
+  (issue-41-tester unix:sigstop))
+
+#+nil
+(define-test issue.41.2
+    (:tag :issues)
+  (issue-41-tester unix:sigtstp))
