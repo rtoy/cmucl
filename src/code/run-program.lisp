@@ -27,57 +27,11 @@
 	  process-close process-pid process-p))
 
 
-;;;; Import WAIT3 from unix.
-
-(alien:def-alien-routine ("wait3" c-wait3) c-call:int
-  (status c-call:int :out)
-  (options c-call:int)
-  (rusage c-call:int))
-
 (alien:def-alien-routine ("prog_status" c-prog-status) c-call:void
   (pid c-call:int :out)
   (what c-call:int :out)
   (code c-call:int :out)
   (corep c-call:int :out))
-
-(eval-when (load eval compile)
-  (defconstant wait-wnohang #-svr4 1 #+svr4 #o100)
-  (defconstant wait-wuntraced #-svr4 2 #+svr4 4)
-  (defconstant wait-wstopped #-svr4 #o177 #+svr4 wait-wuntraced))
-
-(defun wait3 (&optional do-not-hang check-for-stopped)
-  "Return any available status information on child processed. "
-  (multiple-value-bind (pid status)
-		       (c-wait3 (logior (if do-not-hang
-					  wait-wnohang
-					  0)
-					(if check-for-stopped
-					  wait-wuntraced
-					  0))
-				0)
-    (cond ((or (minusp pid)
-	       (zerop pid))
-	   nil)
-	  ((eql (ldb (byte 8 0) status)
-		wait-wstopped)
-	   (values pid
-		   :stopped
-		   (ldb (byte 8 8) status)))
-	  ((zerop (ldb (byte 7 0) status))
-	   (values pid
-		   :exited
-		   (ldb (byte 8 8) status)))
-	  (t
-	   (let ((signal (ldb (byte 7 0) status)))
-	     (values pid
-		     (if (or (eql signal unix:sigstop)
-			     (eql signal unix:sigtstp)
-			     (eql signal unix:sigttin)
-			     (eql signal unix:sigttou))
-		       :stopped
-		       :signaled)
-		     signal
-		     (not (zerop (ldb (byte 1 7) status)))))))))
 
 (defun prog-status ()
   (multiple-value-bind (ret pid what code corep)
@@ -88,7 +42,6 @@
 	      (aref #(:signaled :stopped :continued :exited) what)
 	      code
 	      (not (zerop corep))))))
-
 
 
 ;;;; Process control stuff.
