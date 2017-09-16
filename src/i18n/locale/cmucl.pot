@@ -13069,21 +13069,64 @@ msgid "\"~A\" is not a recognized time/date format."
 msgstr ""
 
 #: src/code/run-program.lisp
-msgid "Return any available status information on child processed. "
-msgstr ""
-
-#: src/code/run-program.lisp
 msgid "List of process structures for all active processes."
 msgstr ""
 
 #: src/code/run-program.lisp
 msgid ""
-"Return the current status of process.  The result is one of :running,\n"
-"   :stopped, :exited, :signaled."
+"Return the current status of process.  The result is one of\n"
+"  :running,:stopped, :continued, :exited, :signaled."
 msgstr ""
 
 #: src/code/run-program.lisp
 msgid "Wait for PROC to quit running for some reason.  Returns PROC."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid "PID of child process."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid ""
+"Exit code for the process if it is :exited; the termination signal\n"
+"  if it is :signaled; 0 if it is :stopped.  It is undefined in all\n"
+"  other cases."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid "Non-NIL if the process was terminated and a core image was dumped."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid ""
+"The two-way stream connected to the child's Unix pty connection or NIL."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid "Stream to child's input or NIL."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid "Stream from child's output or NIL."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid "Stream from child's error output or NIL."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid ""
+"The function to be called whenever process's changes status. This\n"
+"  function takes the process as a required argument.  This is\n"
+"  setf'able."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid ""
+"Returns annotations supplibed by users; it is setf'able. This is\n"
+"  available for users to associcate information with the process\n"
+"  without having to build a-lists or hash tables of process\n"
+"  structures."
 msgstr ""
 
 #: src/code/run-program.lisp
