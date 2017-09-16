@@ -85,7 +85,7 @@
     (declare (ignore ret))
     (when (plusp pid)
       (values pid      
-	      (aref #(nil :signaled :stopped :continued :exited) what)
+	      (aref #(:signaled :stopped :continued :exited) what)
 	      code
 	      (not (zerop corep))))))
 
@@ -217,7 +217,8 @@
   (declare (type process proc))
   (let ((status (process-status proc)))
     (if (or (eq status :running)
-	    (eq status :stopped))
+	    (eq status :stopped)
+	    (eq status :continued))
       t
       nil)))
 

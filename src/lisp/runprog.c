@@ -3,6 +3,8 @@
  *
  */
 
+#include <stdio.h>
+
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -85,6 +87,17 @@ spawn(char *program, char *argv[], char *envp[], char *pty_name,
  * core   - true (non-zero) if a core was produced
  */
 
+/*
+ * Status codes.  Must be in the same order as in ext::prog-status in
+ * run-program.lisp
+ */
+enum status_code {
+    SIGNALED,
+    STOPPED,
+    CONTINUED,
+    EXITED
+};
+    
 void
 prog_status(pid_t* pid, int* what, int* code, int* corep)
 {
@@ -100,21 +113,23 @@ prog_status(pid_t* pid, int* what, int* code, int* corep)
     }
 
     if (WIFEXITED(status)) {
-        *what = 4;
+        *what = EXITED;
         *code = WEXITSTATUS(status);
         *corep = 0;
     } else if (WIFSIGNALED(status)) {
-        *what = 1;
+        *what = SIGNALED;
         *code = WTERMSIG(status);
         *corep = WCOREDUMP(status);
     } else if (WIFSTOPPED(status)) {
-        *what = 2;
+        *what = STOPPED;
         *code = WSTOPSIG(status);
         *corep = 0;
     } else if (WIFCONTINUED(status)) {
-        *what = 3;
+        *what = CONTINUED;
         *code = 0;
         *corep = 0;
+    } else {
+        fprintf(stderr, "pid = %d, status = 0x%x\n", *pid, status);
     }
 
     return;
