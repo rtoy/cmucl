@@ -107,8 +107,7 @@ prog_status(pid_t* pid, int* what, int* code, int* corep)
     w = waitpid(-1, &status, WNOHANG | WUNTRACED | WCONTINUED);
     *pid = w;
 
-    if (w == -1) {
-        
+    if (w <= 0) {
         return;
     }
 
@@ -129,7 +128,7 @@ prog_status(pid_t* pid, int* what, int* code, int* corep)
         *code = 0;
         *corep = 0;
     } else {
-        fprintf(stderr, "pid = %d, status = 0x%x\n", *pid, status);
+        fprintf(stderr, "Unhandled waidpid status: pid = %d, status = 0x%x\n", *pid, status);
     }
 
     return;
