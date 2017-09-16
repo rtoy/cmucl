@@ -75,8 +75,8 @@
 ;;; PROCESS-STATUS -- Public.
 ;;;
 (defun process-status (proc)
-  "Return the current status of process.  The result is one of :running,
-   :stopped, :exited, :signaled."
+  "Return the current status of process.  The result is one of
+  :running,:stopped, :continued, :exited, :signaled."
   (declare (type process proc))
   (get-processes-status-changes)
   (process-%status proc))
@@ -99,6 +99,32 @@
     (system:serve-all-events 1))
   proc)
 
+;;; Add docstrings for the other public PROCESS accessors.
+(setf (documentation 'process-pid 'function)
+  _N"PID of child process.")
+(setf (documentation 'process-exit-code 'function)
+  _N"Exit code for the process if it is :exited; the termination signal
+  if it is :signaled; 0 if it is :stopped.  It is undefined in all
+  other cases.")
+(setf (documentation 'process-core-dumped 'function)
+  _N"Non-NIL if the process was terminated and a core image was dumped.")
+(setf (documentation 'process-pty 'function)
+  _N"The two-way stream connected to the child's Unix pty connection or NIL.")
+(setf (documentation 'process-input 'function)
+  _N"Stream to child's input or NIL.")
+(setf (documentation 'process-output 'function)
+  _N"Stream from child's output or NIL.")
+(setf (documentation 'process-error 'function)
+  _N"Stream from child's error output or NIL.")
+(setf (documentation 'process-status-hook 'function)
+  _N"The function to be called whenever process's changes status. This
+  function takes the process as a required argument.  This is
+  setf'able.")
+(setf (documentation 'process-plist 'function)
+  _N"Returns annotations supplibed by users; it is setf'able. This is
+  available for users to associcate information with the process
+  without having to build a-lists or hash tables of process
+  structures.")
 
 #-hpux
 ;;; FIND-CURRENT-FOREGROUND-PROCESS -- internal
