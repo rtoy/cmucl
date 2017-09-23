@@ -31,14 +31,21 @@ New in this release:
       after accounting for time zones results in a positive
       value. (See ticket #36.)
     * CL:SLEEP no longer gets interrupted (See ticket #26.)
+    * Fix some compiler warnings and clean up funny indentation in
+      asin code.
 
   * Trac Tickets:
 
   * Gitlab tickets:
     * Ticket #36: encode-universal-time signals error
     * Ticket #26: The cmucl that never sleeps
+    * Ticket #40: Move heap space location for linux
+    * Ticket #41: Report proper process status
+    * Ticket #44: Add docstrings for process accessors
 
   * Other changes:
+    * Continuous integration added to build and test cmucl on every
+      check-in.  This does a build on a Linux system.
 
   * Improvements to the PCL implementation of CLOS:
 
