@@ -405,3 +405,33 @@
 (define-test issue.41.2
     (:tag :issues)
   (issue-41-tester unix:sigtstp))
+
+(define-test issue.45
+  (:tag :issues)
+  ;; This depends on run-tests to setup the test directory correctly!
+  (let* ((test-dir #p"test-tmp/")
+	 (test-dir-name (namestring test-dir)))
+    (flet ((do-test (program)
+	     (with-output-to-string (s)
+	       (let ((process
+		      (ext:run-program program
+				       (list test-dir-name)
+				       :wait t :output s)))
+		 ;; Verify process exited without error and that we
+		 ;; got the expected output.
+		 (assert-eql 0
+			     (ext:process-exit-code process))
+		 (assert-equal "ls-link
+"
+			       (get-output-stream-string s))))))
+      ;; Test that absolute paths work.
+      (do-test "/bin/ls")
+      ;; Test that unspecfied path works.  This depends on "ls" being
+      ;; somewhere in PATH.
+      (do-test "ls")
+      ;; Test that relative path to program works. (Issue #45).
+      (do-test (concatenate 'string
+			    "./"
+			    test-dir-name
+			    "ls-link")))))
+					       
