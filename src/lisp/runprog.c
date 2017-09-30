@@ -65,10 +65,10 @@ spawn(char *program, char *argv[], char *envp[], char *pty_name,
     /* Exec the program. */
     execve(program, argv, envp);
 
-    /* It didn't work, so try /bin/sh. */
+    /* It didn't work, so try /usr/bin/env. */
     argv[0] = program;
-    argv[-1] = "sh";
-    execve("/bin/sh", argv - 1, envp);
+    argv[-1] = "/usr/bin/env";
+    execve("/usr/bin/env", argv - 1, envp);
 
     /* The exec didn't work, flame out. */
     exit(1);

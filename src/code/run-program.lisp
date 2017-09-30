@@ -528,10 +528,7 @@
   ;; info.  Also, establish proc at this level so we can return it.
   (let (*close-on-error* *close-in-parent* *handlers-installed* proc)
     (unwind-protect
-	(let ((pfile (unix-namestring (merge-pathnames program "path:") t t))
-	      (cookie (list 0)))
-	  (unless pfile
-	    (error (intl:gettext "No such program: ~S") program))
+	(let ((cookie (list 0)))
 	  (multiple-value-bind
 	      (stdin input-stream)
 	      (get-descriptor-for input cookie :direction :input
@@ -570,7 +567,7 @@
 					env))
 			(let ((child-pid
 			       (without-gcing
-				(spawn pfile argv envp pty-name
+				(spawn program argv envp pty-name
 				       stdin stdout stderr))))
 			  (when (< child-pid 0)
 			    (error (intl:gettext "Could not fork child process: ~A")
