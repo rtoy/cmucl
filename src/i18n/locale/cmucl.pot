@@ -13251,10 +13251,6 @@ msgid "All args to program must be simple strings -- ~S."
 msgstr ""
 
 #: src/code/run-program.lisp
-msgid "No such program: ~S"
-msgstr ""
-
-#: src/code/run-program.lisp
 msgid "Could not fork child process: ~A"
 msgstr ""
 
