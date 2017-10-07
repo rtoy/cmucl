@@ -16,7 +16,7 @@
 
 pid_t
 spawn(char *program, char *argv[], char *envp[], char *pty_name,
-      int stdin, int stdout, int stderr)
+      int proc_stdin, int proc_stdout, int proc_stderr)
 {
     pid_t pid;
     sigset_t set;
@@ -51,12 +51,12 @@ spawn(char *program, char *argv[], char *envp[], char *pty_name,
     }
 
     /* Set up stdin, stdout, and stderr. */
-    if (stdin >= 0)
-	dup2(stdin, 0);
-    if (stdout >= 0)
-	dup2(stdout, 1);
-    if (stderr >= 0)
-	dup2(stderr, 2);
+    if (proc_stdin >= 0)
+	dup2(proc_stdin, 0);
+    if (proc_stdout >= 0)
+	dup2(proc_stdout, 1);
+    if (proc_stderr >= 0)
+	dup2(proc_stderr, 2);
 
     /* Close all other fds. */
     for (fd = sysconf(_SC_OPEN_MAX) - 1; fd >= 3; fd--)
