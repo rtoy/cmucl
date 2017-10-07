@@ -22,7 +22,7 @@ New in this release:
   * Feature enhancements
 
   * Changes
-    * ASDF 3.2.1
+    * ASDF 3.3.0
 
   * ANSI compliance fixes:
 
