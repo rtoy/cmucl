@@ -18979,10 +18979,6 @@ msgid "All args to program must be simple strings -- ~S."
 msgstr "Allway argsway otay ogrampray ustmay ebay implesay ingsstray -- ~S."
 
 #: src/code/run-program.lisp
-msgid "No such program: ~S"
-msgstr "Onay uchsay ogrampray: ~S"
-
-#: src/code/run-program.lisp
 msgid "Could not fork child process: ~A"
 msgstr "Ouldcay otnay orkfay ildchay ocesspray: ~Away"
 
@@ -30982,6 +30978,9 @@ msgstr ""
 "Ybay efaultday, illegalway inputsway andway illegalway outputsway areway "
 "eplacedray ybay ethay\n"
 "Unicodeway eplacementray aracterchay."
+
+#~ msgid "No such program: ~S"
+#~ msgstr "Onay uchsay ogrampray: ~S"
 
 #~ msgid "Return any available status information on child processed. "
 #~ msgstr ""
