@@ -1,4 +1,5 @@
-<span style="color:red">**Work in progress**</span>
+<span style="color:red">Work in progress</span>
+
 ========================== C M U C L  21 c =============================
 
 The CMUCL project is pleased to announce the release of CMUCL 21c.
@@ -27,10 +28,10 @@ New in this release:
   * ANSI compliance fixes:
 
   * Bug fixes:
-    * ENCODE-UNIVERSAL-TIME accepts dates from 1899 if the final date
+    * `ENCODE-UNIVERSAL-TIME` accepts dates from 1899 if the final date
       after accounting for time zones results in a positive
-      value. (See ticket #36.)
-    * CL:SLEEP no longer gets interrupted (See ticket #26.)
+      value. (See ticket ~~#36~~.)
+    * `CL:SLEEP` no longer gets interrupted (See ticket ~~#26~~.)
     * Fix some compiler warnings and clean up funny indentation in
       asin code.
 
