@@ -1,6 +1,6 @@
-<span style="color:red">Work in progress</span>
+**Work in progress**
 
-========================== C M U C L  21 c =============================
+# CMUCL 21c
 
 The CMUCL project is pleased to announce the release of CMUCL 21c.
 This is a major release which contains numerous enhancements and bug
@@ -17,16 +17,13 @@ implemented in Common Lisp. CMUCL is maintained by a team of
 volunteers collaborating over the Internet, and is mostly in the
 public domain.
 
-New in this release:
+## New in this release:
+
   * Known issues:
-
   * Feature enhancements
-
   * Changes
     * ASDF 3.3.0
-
   * ANSI compliance fixes:
-
   * Bug fixes:
     * `ENCODE-UNIVERSAL-TIME` accepts dates from 1899 if the final date
       after accounting for time zones results in a positive
@@ -34,22 +31,17 @@ New in this release:
     * `CL:SLEEP` no longer gets interrupted (See ticket ~~#26~~.)
     * Fix some compiler warnings and clean up funny indentation in
       asin code.
-
   * Trac Tickets:
-
   * Gitlab tickets:
     * Ticket ~~#36~~: encode-universal-time signals error
     * Ticket ~~#26~~: The cmucl that never sleeps
     * Ticket ~~#40~~: Move heap space location for linux
     * Ticket ~~#41~~: Report proper process status
     * Ticket ~~#44~~: Add docstrings for process accessors
-
   * Other changes:
     * Continuous integration added to build and test cmucl on every
       check-in.  This does a build on a Linux system.
-
   * Improvements to the PCL implementation of CLOS:
-
   * Changes to building procedure:
 
 
