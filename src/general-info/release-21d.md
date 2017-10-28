@@ -1,4 +1,5 @@
-========================== C M U C L  21 d =============================
+** Work in Progress **
+# CMUCL 21d
 
 The CMUCL project is pleased to announce the release of CMUCL 21c.
 This is a major release which contains numerous enhancements and bug
@@ -15,32 +16,24 @@ implemented in Common Lisp. CMUCL is maintained by a team of
 volunteers collaborating over the Internet, and is mostly in the
 public domain.
 
-New in this release:
+## New in this release:
   * Known issues:
-
   * Feature enhancements
-
   * Changes
-
   * ANSI compliance fixes:
-
   * Bug fixes:
-
   * Gitlab tickets:
-
   * Other changes:
-
   * Improvements to the PCL implementation of CLOS:
-
   * Changes to building procedure:
 
 This release is not binary compatible with code compiled using CMUCL
 21c; you will need to recompile FASL files.
 
-See <URL:http://www.cmucl.org> or
-<URL:https://gitlab.common-lisp.net/cmucl/cmucl> for more information,
+See http://www.cmucl.org or
+https://gitlab.common-lisp.net/cmucl/cmucl for more information,
 See
-<URL:https://gitlab.common-lisp.net/cmucl/cmucl/wikis/GettingCmucl>
+https://gitlab.common-lisp.net/cmucl/cmucl/wikis/GettingCmucl
 for obtaining CMUCL, including sources and binaries..
 
 
