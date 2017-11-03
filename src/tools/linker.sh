@@ -70,7 +70,7 @@ case $uname_s in
       # See Config.x86_${uname_s}
       case $uname_s in
 	Linux) OS_LIBS=-ldl;;
-	FreeBSD) OS_LIBS=-lutil;;
+	FreeBSD) OS_LIBS="-B/usr/lib32 -lutil";;
       esac
       ;;
   Darwin)
@@ -125,7 +125,7 @@ case $uname_s in
       OPT_EXTRA="-Bdynamic"
 
       # See Config.sparc_sunc
-      OS_LIBS="-lsocket -lnsl -ldl"
+      OS_LIBS="-lsocket -lnsl -ldl -lrt"
       ;;
 
 esac

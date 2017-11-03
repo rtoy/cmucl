@@ -12,7 +12,7 @@
 # $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/make-dist.sh,v 1.20 2011/04/11 16:34:49 rtoy Exp $
 
 usage() {
-    echo "make-dist.sh: [-hbg] [-G group] [-O owner] [-I destdir] [-M mandir] dir [version arch os]"
+    echo "make-dist.sh: [-hbg] [-G group] [-O owner] [-I destdir] [-M mandir] [-A arch] [-V version] [-o OS] dir"
     echo "  -h           This help"
     echo "  -b           Use bzip2 compression"
     echo "  -g           Use gzip compression"
@@ -24,10 +24,10 @@ usage() {
     echo "                 The compressed tar file is named cmucl-src-<VERSION>.tar.<ext>"
     echo "                 If -I is also given, the -S means that the sources are "
     echo "                 installed in the <destdir>/src"
+    echo "  -A arch      Architecture (x86, sparc, ppc, etc.)"
+    echo "  -o OS        OS (linux, solaris10, etc.)"
+    echo "  -V version   Version (usually date and/or other version info)"
     echo "   dir         Directory where the build is located"
-    echo "   version     Version (usually date and/or other version info)"
-    echo "   arch        Architecture (x86, sparc, etc.)"
-    echo "   os          OS (linux, solaris8, etc.)"
     echo ""
     echo "If the -I option is given, directly install all of the files to the"
     echo "specified directory.  Otherwise, Make a CMUCL distribution consisting"
@@ -57,7 +57,7 @@ def_arch_os () {
       SunOS)
 	  case `uname -m` in
 	    sun*)
-		ARCH=sparcv9 ;;
+		ARCH=sparc ;;
 	    i*)
 		ARCH=x86 ;;
 	  esac
@@ -90,7 +90,23 @@ def_arch_os () {
       esac
 }
 
-while getopts "G:O:I:M:bghS?" arg
+# Figure out the architecture and OS in case options aren't given
+def_arch_os
+
+# Choose a version based on the git hash as the default version.  We
+# only compute a default if the git hash looks like a snapshot
+# ("snapshot-yyyy-mm") or a release number..
+GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
+
+if expr "X${GIT_HASH}" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]' > /dev/null; then
+    DEFAULT_VERSION=`expr "${GIT_HASH}" : "snapshot-\(.*\)"`
+fi
+
+if expr "X${GIT_HASH}" : 'X[0-9][0-9][a-f]' > /dev/null; then
+    DEFAULT_VERSION="${GIT_HASH}"
+fi
+
+while getopts "G:O:I:M:bghSA:o:V:?" arg
 do
     case $arg in
 	G) GROUP=$OPTARG ;;
@@ -100,46 +116,28 @@ do
 	b) ENABLE_BZIP=-b ;;
 	g) ENABLE_GZIP=-g  ;;
         S) MAKE_SRC_DIST=yes ;;
+        A) ARCH=$OPTARG ;;
+        o) OS=$OPTARG ;;
+        V) VERSION=$OPTARG ;;
 	h | \?) usage; exit 1 ;;
     esac
 done
 
 shift `expr $OPTIND - 1`
 
-# Figure out the architecture and OS
-ARCH=
-OS=
+# Directory is required; exit if not given
+if [ $# -lt 1 ]; then
+    usage
+fi
 
-# Figure out the architecture and OS
-def_arch_os
-
-if [ -n "${INSTALL_DIR}" ]; then
-    # Doing direct installation
-    if [ $# -lt 1 ]; then
+if [ -z "$VERSION" ]; then
+    # If a default version exists, use it. Otherwise this is an
+    # error---at least one of these must not be empty.
+    if [ -z "${DEFAULT_VERSION}" ]; then
+	echo "Version (-V) must be specified because default version cannot be determined."
 	usage
     else
-	def_arch_os
-    fi
-elif [ $# -lt 2 ]; then
-    # Version not specified so choose a version based on the git hash.
-    GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
-
-    if expr "X${GIT_HASH}" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]' > /dev/null; then
-	VERSION=`expr "${GIT_HASH}" : "snapshot-\(.*\)"`
-    fi
-
-    if expr "X${GIT_HASH}" : 'X[0-9][0-9][a-f]' > /dev/null; then
-	VERSION="${GIT_HASH}"
-    fi
-
-    echo "Defaulting version to $VERSION"
-else
-    VERSION="$2"
-    if [ $# -eq 3 ]; then
-	ARCH=$3
-    elif [ $# -eq 4 ]; then
-	ARCH=$3
-	OS=$4
+	VERSION=${DEFAULT_VERSION}
     fi
 fi
 
@@ -167,6 +165,7 @@ if [ -n "$INSTALL_DIR" ]; then
     VERSION="today"
 fi
 
+echo cmucl-$VERSION-$ARCH-$OS
 ROOT=`dirname $0`
 
 # If no compression options given, default to bzip

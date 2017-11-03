@@ -64,7 +64,7 @@
 (setf (backend-page-size *target-backend*) 4096)
 
 (setf (c::backend-foreign-linkage-space-start *target-backend*)
-      #+linux #x58000000
+      #+linux #x5f000000
       #+solaris #x30000000
       #-(or linux solaris) #xB0000000
       (c::backend-foreign-linkage-entry-size *target-backend*)
@@ -235,7 +235,7 @@
   #+FreeBSD #x28F00000
   #-FreeBSD #x28000000)
 (defconstant target-dynamic-space-start
-  #+linux #x58100000
+  #+linux #x60000000
   #+solaris #x40000000
   #-(or linux solaris) #x48000000)
 (defconstant target-foreign-linkage-space-start

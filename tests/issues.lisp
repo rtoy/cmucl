@@ -340,10 +340,98 @@
         (if filename
             (push filename files)
             (push directory directories))))
-    (assert (null (set-difference files
-                                  '("file" "link-to-dir"
-                                    "link-to-dir-in-dir" "link-to-file")
-                                  :test #'string-equal)))
-    (assert (null (set-difference directories
-                                  '(".dir" "dir")
-                                  :test #'string-equal)))))
+    (assert-true (null (set-difference files
+				       '("file" "link-to-dir"
+					 "link-to-dir-in-dir" "link-to-file")
+				       :test #'string-equal)))
+    (assert-true (null (set-difference directories
+				       '(".dir" "dir")
+				       :test #'string-equal)))))
+
+(define-test issue.36
+    (:tag :issues)
+  (loop for k from 1 to 24 do
+    (assert-equal 0 (encode-universal-time 0 0 (- 24 k) 31 12 1899 k))))
+
+(define-test issue.26
+    (:tag :issues)
+  (let ((start-time (get-universal-time)))
+    (let ((p (ext:run-program "/usr/bin/env" '("sleep" "1") :wait nil)))
+      (sleep 5)
+      ;; For this test to be valid, the process must have finished
+      ;; with a successful exit.
+      (assert-true (eq (ext:process-status p) :exited))
+      (assert-true (zerop (ext:process-exit-code p)))
+
+      ;; We expect to have slept for at least 5 sec, but since
+      ;; get-universal-time only has an accuracy of 1 sec, just verify
+      ;; more than 3 sec have elapsed.
+      (assert-true (>= (- (get-universal-time) start-time) 3)))))
+
+(defun issue-41-tester (stop-signal)
+  (let* ((p (ext:run-program "/bin/sleep" '("5") :wait nil))
+	 (pid (ext:process-pid p)))
+    (flet ((external-kill (pid signal)
+	     (ext:run-program "/usr/bin/env"
+			  (list "kill"
+				(format nil "-~D" signal)
+				(format nil "~D" pid)))))
+      (assert-eql :running (ext:process-status p))
+
+      (external-kill pid stop-signal)
+      (sleep 1)
+      (assert-eql :stopped (ext:process-status p))
+
+      (external-kill pid unix:sigcont)
+      (sleep 1)
+      (assert-eql :continued (ext:process-status p))
+
+      (external-kill pid stop-signal)
+      (sleep 1)
+      (assert-eql :stopped (ext:process-status p))
+
+      (external-kill pid unix:sigcont)
+      (sleep 1)
+      (assert-eql :continued (ext:process-status p))
+
+      (sleep 5)
+      (assert-eql :exited (ext:process-status p)))))
+
+(define-test issue.41.1
+    (:tag :issues)
+  (issue-41-tester unix:sigstop))
+
+#+nil
+(define-test issue.41.2
+    (:tag :issues)
+  (issue-41-tester unix:sigtstp))
+
+(define-test issue.45
+  (:tag :issues)
+  ;; This depends on run-tests to setup the test directory correctly!
+  (let* ((test-dir #p"test-tmp/")
+	 (test-dir-name (namestring test-dir)))
+    (flet ((do-test (program)
+	     (with-output-to-string (s)
+	       (let ((process
+		      (ext:run-program program
+				       (list test-dir-name)
+				       :wait t :output s)))
+		 ;; Verify process exited without error and that we
+		 ;; got the expected output.
+		 (assert-eql 0
+			     (ext:process-exit-code process))
+		 (assert-equal "ls-link
+"
+			       (get-output-stream-string s))))))
+      ;; Test that absolute paths work.
+      (do-test "/bin/ls")
+      ;; Test that unspecfied path works.  This depends on "ls" being
+      ;; somewhere in PATH.
+      (do-test "ls")
+      ;; Test that relative path to program works. (Issue #45).
+      (do-test (concatenate 'string
+			    "./"
+			    test-dir-name
+			    "ls-link")))))
+					       
