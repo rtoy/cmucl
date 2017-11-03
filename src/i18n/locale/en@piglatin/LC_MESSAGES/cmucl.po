@@ -14850,6 +14850,7 @@ msgstr ""
 "  asecay-ensitivesay."
 
 #: src/code/module.lisp
+#, fuzzy
 msgid ""
 "Loads a module when it has not been already.  Pathname, if\n"
 "  supplied, is a single pathname or list of pathnames to be loaded if\n"
@@ -14872,7 +14873,17 @@ msgid ""
 "  calling PROVIDE to indicate a successful load of the module.\n"
 "\n"
 "  While loading any files, *load-verbose* is bound to *require-verbose*\n"
-"  which defaults to t."
+"  which defaults to t.\n"
+"\n"
+"  The predefined modules included are :defsystem, :asdf, :lisp-unit,\n"
+"  :unix, :clx, :clm, :hemlock, and :cmu-contribs.\n"
+"\n"
+"  The module :cmu-contribs differs from the other modules in that\n"
+"  requiring this module only defines the following modules:\n"
+"  \"contrib-demos\", \"contrib-follow-mouse\",\n"
+"  \"contrib-games-feebs\", \"contrib-hist\", \"contrib-psgraph\",\n"
+"  \"contrib-ops\", \"contrib-embedded-c\", \"contrib-sprof\", and\n"
+"  \"contrib-packed-sse2\". "
 msgstr ""
 "Oadslay away odulemay enwhay itway ashay otnay eenbay alreadyway.  "
 "Athnamepay, ifway\n"
@@ -18667,20 +18678,15 @@ msgid "\"~A\" is not a recognized time/date format."
 msgstr "\"~Away\" isway otnay away ecognizedray imetay/ateday ormatfay."
 
 #: src/code/run-program.lisp
-msgid "Return any available status information on child processed. "
-msgstr ""
-"Eturnray anyway availableway tatussay informationway onway ildchay "
-"ocessedpray. "
-
-#: src/code/run-program.lisp
 msgid "List of process structures for all active processes."
 msgstr ""
 "Istlay ofway ocesspray ucturesstray orfay allway activeway ocessespray."
 
 #: src/code/run-program.lisp
+#, fuzzy
 msgid ""
-"Return the current status of process.  The result is one of :running,\n"
-"   :stopped, :exited, :signaled."
+"Return the current status of process.  The result is one of\n"
+"  :running,:stopped, :continued, :exited, :signaled."
 msgstr ""
 "Eturnray ethay urrentcay tatussay ofway ocesspray.  Ethay esultray isway "
 "oneway ofway :unningray,\n"
@@ -18691,6 +18697,56 @@ msgid "Wait for PROC to quit running for some reason.  Returns PROC."
 msgstr ""
 "Aitway orfay PROC otay itquay unningray orfay omesay easonray.  Eturnsray "
 "PROC."
+
+#: src/code/run-program.lisp
+#, fuzzy
+msgid "PID of child process."
+msgstr "Ouldcay otnay orkfay ildchay ocesspray: ~Away"
+
+#: src/code/run-program.lisp
+msgid ""
+"Exit code for the process if it is :exited; the termination signal\n"
+"  if it is :signaled; 0 if it is :stopped.  It is undefined in all\n"
+"  other cases."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid "Non-NIL if the process was terminated and a core image was dumped."
+msgstr ""
+
+#: src/code/run-program.lisp
+#, fuzzy
+msgid "The two-way stream connected to the child's Unix pty connection or NIL."
+msgstr ""
+"Ethay eamstray onnectedcay otay ethay tandardsay inputway (ilefay "
+"escriptorday 0)."
+
+#: src/code/run-program.lisp
+msgid "Stream to child's input or NIL."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid "Stream from child's output or NIL."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid "Stream from child's error output or NIL."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid ""
+"The function to be called whenever process's changes status. This\n"
+"  function takes the process as a required argument.  This is\n"
+"  setf'able."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid ""
+"Returns annotations supplibed by users; it is setf'able. This is\n"
+"  available for users to associcate information with the process\n"
+"  without having to build a-lists or hash tables of process\n"
+"  structures."
+msgstr ""
 
 #: src/code/run-program.lisp
 msgid "TIOCPGRP ioctl failed: ~S"
@@ -18923,10 +18979,6 @@ msgid "All args to program must be simple strings -- ~S."
 msgstr "Allway argsway otay ogrampray ustmay ebay implesay ingsstray -- ~S."
 
 #: src/code/run-program.lisp
-msgid "No such program: ~S"
-msgstr "Onay uchsay ogrampray: ~S"
-
-#: src/code/run-program.lisp
 msgid "Could not fork child process: ~A"
 msgstr "Ouldcay otnay orkfay ildchay ocesspray: ~Away"
 
@@ -18957,10 +19009,6 @@ msgstr "Ouldcay otnay uplicateday ilefay escriptorday: ~Away"
 #: src/code/run-program.lisp
 msgid "Could not open a temporary file in /tmp"
 msgstr "Ouldcay otnay openway away emporarytay ilefay inway /mptay"
-
-#: src/code/run-program.lisp
-msgid "Cound not create pipe: ~A"
-msgstr "Oundcay otnay eatecray ipepay: ~Away"
 
 #: src/code/run-program.lisp
 msgid "Invalid option to run-program: ~S"
@@ -30930,6 +30978,17 @@ msgstr ""
 "Ybay efaultday, illegalway inputsway andway illegalway outputsway areway "
 "eplacedray ybay ethay\n"
 "Unicodeway eplacementray aracterchay."
+
+#~ msgid "No such program: ~S"
+#~ msgstr "Onay uchsay ogrampray: ~S"
+
+#~ msgid "Return any available status information on child processed. "
+#~ msgstr ""
+#~ "Eturnray anyway availableway tatussay informationway onway ildchay "
+#~ "ocessedpray. "
+
+#~ msgid "Cound not create pipe: ~A"
+#~ msgstr "Oundcay otnay eatecray ipepay: ~Away"
 
 #~ msgid "Changes the name and nicknames for a package."
 #~ msgstr "Angeschay ethay amenay andway icknamesnay orfay away ackagepay."

@@ -6,9 +6,11 @@
 */
 
 #include <errno.h>
+#include <math.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "os.h"
 #include "internals.h"
@@ -549,16 +551,41 @@ os_guard_control_stack(int zone, int guard)
 
 
 /* Simple interface to __ieee754_rem_pio2 */
-int ieee754_rem_pio2(double x, double *y0, double *y1)
+int
+ieee754_rem_pio2(double x, double *y0, double *y1)
 {
-  extern int __ieee754_rem_pio2(double x, double *y);
+    extern int __ieee754_rem_pio2(double x, double *y);
 
-  double y[2];
-  int n;
+    double y[2];
+    int n;
 
-  n = __ieee754_rem_pio2(x, y);
-  *y0 = y[0];
-  *y1 = y[1];
+    n = __ieee754_rem_pio2(x, y);
+    *y0 = y[0];
+    *y1 = y[1];
 
-  return n;
+    return n;
+}
+
+/*
+ * sleep for the given number of seconds, even if we're interrupted.
+ */
+void
+os_sleep(double seconds)
+{
+    struct timespec requested;
+    struct timespec remaining;
+    double integral;
+    double fractional;
+
+    fractional = modf(seconds, &integral);
+    requested.tv_sec = (time_t) integral;
+    /*
+     * Round up---better to sleep slightly too long than to sleep for
+     * too short a time.
+     */
+    requested.tv_nsec = (long) ceil(fractional * 1e9);
+
+    while (nanosleep(&requested, &remaining) == -1 && errno == EINTR) {
+	requested = remaining;
+    }
 }

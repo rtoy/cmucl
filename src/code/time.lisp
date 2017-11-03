@@ -64,7 +64,6 @@
 
 ;;; Get-Internal-Run-Time  --  Public
 ;;;
-#-(and sparc svr4)
 (defun get-internal-run-time ()
   _N"Return the run time in the internal time format.  This is useful for
   finding CPU usage."
@@ -80,20 +79,6 @@
 		 internal-time-units-per-second))
 	 (truncate (+ utime-usec stime-usec)
 		   micro-seconds-per-internal-time-unit)))))
-
-;;; Get-Internal-Run-Time  --  Public
-;;;
-#+(and sparc svr4)
-(defun get-internal-run-time ()
-  _N"Return the run time in the internal time format.  This is useful for
-  finding CPU usage."
-  (declare (values (unsigned-byte 32)))
-  (locally (declare (optimize (speed 3) (safety 0)))
-    (multiple-value-bind (ignore utime stime cutime cstime)
-	(unix:unix-times)
-      (declare (ignore ignore cutime cstime)
-	       (type (unsigned-byte 31) utime stime))
-      (the (unsigned-byte 32) (+ utime stime)))))
 
 
 ;;;; Encode and Decode universal times.
@@ -223,8 +208,11 @@
 	   (type (mod 24) hour)
 	   (type (integer 1 31) date)
 	   (type (integer 1 12) month)
-	   (type (or (integer 0 99) (integer 1900)) year)
-	   (type (or null rational) time-zone))
+	   ;; 1899 to account for time zones that are equivalent to 1900.
+	   (type (or (integer 0 99) (integer 1899)) year)
+	   (type (or null rational) time-zone)
+	   ;; Result must be non-negative integer!
+	   (values (integer 0)))
   (let* ((year (if (< year 100)
 		   (pick-obvious-year year)
 		   year))

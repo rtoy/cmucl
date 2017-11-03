@@ -91,7 +91,17 @@
   calling PROVIDE to indicate a successful load of the module.
 
   While loading any files, *load-verbose* is bound to *require-verbose*
-  which defaults to t."
+  which defaults to t.
+
+  The predefined modules included are :defsystem, :asdf, :lisp-unit,
+  :unix, :clx, :clm, :hemlock, and :cmu-contribs.
+
+  The module :cmu-contribs differs from the other modules in that
+  requiring this module only defines the following modules:
+  \"contrib-demos\", \"contrib-follow-mouse\",
+  \"contrib-games-feebs\", \"contrib-hist\", \"contrib-psgraph\",
+  \"contrib-ops\", \"contrib-embedded-c\", \"contrib-sprof\", and
+  \"contrib-packed-sse2\". "
   (let ((saved-modules (copy-list *modules*))
         (module-name (module-name-string module-name)))
     (unless (member module-name *modules* :test #'string=)

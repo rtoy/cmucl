@@ -57,8 +57,13 @@ process_directory(int fd, long *ptr, int count)
 	switch (id) {
 	  case DYNAMIC_SPACE_ID:
 	      if (addr != (os_vm_address_t) dynamic_0_space
-		  && addr != (os_vm_address_t) dynamic_1_space)
-		  printf("Strange ... dynamic space lossage.\n");
+		  && addr != (os_vm_address_t) dynamic_1_space) {
+                  printf("Strange ... dynamic space lossage: addr = %p, expected %p or %p\n",
+                         addr,
+                         (os_vm_address_t) dynamic_0_space,
+                         (os_vm_address_t) dynamic_1_space);
+              }
+              
 	      current_dynamic_space = (lispobj *) addr;
 #if defined(ALLOCATION_POINTER)
 	      SetSymbolValue(ALLOCATION_POINTER, (lispobj) free_pointer);

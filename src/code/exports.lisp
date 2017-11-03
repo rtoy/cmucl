@@ -295,7 +295,7 @@
 	   "UNIX-MSYNC"
 
 	   ;; Motif
-	   "UNIX-GETUIO"
+	   "UNIX-GETUID"
 
 	   ;; Hemlock
 	   "UNIX-CFGETOSPEED"

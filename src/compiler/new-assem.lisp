@@ -80,7 +80,7 @@
 ;;; format.  If the loader only loads objects 8-byte aligned, we can't do
 ;;; any better than that ourselves.
 ;;;
-(defconstant max-alignment 3)
+(defconstant max-alignment 4)
 
 (deftype alignment ()
   `(integer 0 ,max-alignment))

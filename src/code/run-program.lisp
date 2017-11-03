@@ -27,52 +27,21 @@
 	  process-close process-pid process-p))
 
 
-;;;; Import WAIT3 from unix.
+(alien:def-alien-routine ("prog_status" c-prog-status) c-call:void
+  (pid c-call:int :out)
+  (what c-call:int :out)
+  (code c-call:int :out)
+  (corep c-call:int :out))
 
-(alien:def-alien-routine ("wait3" c-wait3) c-call:int
-  (status c-call:int :out)
-  (options c-call:int)
-  (rusage c-call:int))
-
-(eval-when (load eval compile)
-  (defconstant wait-wnohang #-svr4 1 #+svr4 #o100)
-  (defconstant wait-wuntraced #-svr4 2 #+svr4 4)
-  (defconstant wait-wstopped #-svr4 #o177 #+svr4 wait-wuntraced))
-
-(defun wait3 (&optional do-not-hang check-for-stopped)
-  "Return any available status information on child processed. "
-  (multiple-value-bind (pid status)
-		       (c-wait3 (logior (if do-not-hang
-					  wait-wnohang
-					  0)
-					(if check-for-stopped
-					  wait-wuntraced
-					  0))
-				0)
-    (cond ((or (minusp pid)
-	       (zerop pid))
-	   nil)
-	  ((eql (ldb (byte 8 0) status)
-		wait-wstopped)
-	   (values pid
-		   :stopped
-		   (ldb (byte 8 8) status)))
-	  ((zerop (ldb (byte 7 0) status))
-	   (values pid
-		   :exited
-		   (ldb (byte 8 8) status)))
-	  (t
-	   (let ((signal (ldb (byte 7 0) status)))
-	     (values pid
-		     (if (or (eql signal unix:sigstop)
-			     (eql signal unix:sigtstp)
-			     (eql signal unix:sigttin)
-			     (eql signal unix:sigttou))
-		       :stopped
-		       :signaled)
-		     signal
-		     (not (zerop (ldb (byte 1 7) status)))))))))
-
+(defun prog-status ()
+  (multiple-value-bind (ret pid what code corep)
+      (c-prog-status)
+    (declare (ignore ret))
+    (when (plusp pid)
+      (values pid      
+	      (aref #(:signaled :stopped :continued :exited) what)
+	      code
+	      (not (zerop corep))))))
 
 
 ;;;; Process control stuff.
@@ -106,8 +75,8 @@
 ;;; PROCESS-STATUS -- Public.
 ;;;
 (defun process-status (proc)
-  "Return the current status of process.  The result is one of :running,
-   :stopped, :exited, :signaled."
+  "Return the current status of process.  The result is one of
+  :running,:stopped, :continued, :exited, :signaled."
   (declare (type process proc))
   (get-processes-status-changes)
   (process-%status proc))
@@ -130,6 +99,32 @@
     (system:serve-all-events 1))
   proc)
 
+;;; Add docstrings for the other public PROCESS accessors.
+(setf (documentation 'process-pid 'function)
+  _N"PID of child process.")
+(setf (documentation 'process-exit-code 'function)
+  _N"Exit code for the process if it is :exited; the termination signal
+  if it is :signaled; 0 if it is :stopped.  It is undefined in all
+  other cases.")
+(setf (documentation 'process-core-dumped 'function)
+  _N"Non-NIL if the process was terminated and a core image was dumped.")
+(setf (documentation 'process-pty 'function)
+  _N"The two-way stream connected to the child's Unix pty connection or NIL.")
+(setf (documentation 'process-input 'function)
+  _N"Stream to child's input or NIL.")
+(setf (documentation 'process-output 'function)
+  _N"Stream from child's output or NIL.")
+(setf (documentation 'process-error 'function)
+  _N"Stream from child's error output or NIL.")
+(setf (documentation 'process-status-hook 'function)
+  _N"The function to be called whenever process's changes status. This
+  function takes the process as a required argument.  This is
+  setf'able.")
+(setf (documentation 'process-plist 'function)
+  _N"Returns annotations supplibed by users; it is setf'able. This is
+  available for users to associcate information with the process
+  without having to build a-lists or hash tables of process
+  structures.")
 
 #-hpux
 ;;; FIND-CURRENT-FOREGROUND-PROCESS -- internal
@@ -201,7 +196,8 @@
   (declare (type process proc))
   (let ((status (process-status proc)))
     (if (or (eq status :running)
-	    (eq status :stopped))
+	    (eq status :stopped)
+	    (eq status :continued))
       t
       nil)))
 
@@ -235,7 +231,7 @@
 (defun get-processes-status-changes ()
   (loop
     (multiple-value-bind (pid what code core)
-			 (wait3 t t)
+	(prog-status)
       (unless pid
 	(return))
       (let ((proc (find pid *active-processes* :key #'process-pid)))
@@ -532,10 +528,7 @@
   ;; info.  Also, establish proc at this level so we can return it.
   (let (*close-on-error* *close-in-parent* *handlers-installed* proc)
     (unwind-protect
-	(let ((pfile (unix-namestring (merge-pathnames program "path:") t t))
-	      (cookie (list 0)))
-	  (unless pfile
-	    (error (intl:gettext "No such program: ~S") program))
+	(let ((cookie (list 0)))
 	  (multiple-value-bind
 	      (stdin input-stream)
 	      (get-descriptor-for input cookie :direction :input
@@ -574,7 +567,7 @@
 					env))
 			(let ((child-pid
 			       (without-gcing
-				(spawn pfile argv envp pty-name
+				(spawn program argv envp pty-name
 				       stdin stdout stderr))))
 			  (when (< child-pid 0)
 			    (error (intl:gettext "Could not fork child process: ~A")
@@ -742,7 +735,8 @@
 					 #o666)))
 		(unix:unix-unlink name)
 		(when fd
-		  (let ((newline (string #\Newline)))
+		  (let ((newline (make-array 1 :element-type '(unsigned-byte 8)
+					     :initial-element (char-code #\Newline))))
 		    (loop
 		      (multiple-value-bind
 			  (line no-cr)
@@ -766,7 +760,7 @@
 	    (multiple-value-bind (read-fd write-fd)
 				 (unix:unix-pipe)
 	      (unless read-fd
-		(error (intl:gettext "Cound not create pipe: ~A")
+		(error (intl:gettext "Could not create pipe: ~A")
 		       (unix:get-unix-error-msg write-fd)))
 	      (copy-descriptor-to-stream read-fd object cookie)
 	      (push read-fd *close-on-error*)

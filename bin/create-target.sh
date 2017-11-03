@@ -78,7 +78,7 @@ case $uname_s in
 		OpenBSD*) motif_variant=OpenBSD ;;
 		*_darwin) motif_variant=Darwin ;;
 		sun4_solaris_gcc|sparc_gcc) motif_variant=solaris ;;
-		sun4_solaris_sunc|sparc_sunc|x86_solaris_sunc) motif_variant=solaris_sunc ;;
+		sun4_solaris_sunc|sparc_sunc|x86_solaris_sunc|sparc64_sunc) motif_variant=solaris_sunc ;;
 		sun4c*) motif_variant=sun4c_411 ;;
 		hp700*) motif_variant=hpux_cc ;;
 		pmax_mach) motif_variant=pmax_mach ;;
