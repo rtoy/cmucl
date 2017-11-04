@@ -1,4 +1,9 @@
-linux-setup:
+stages:
+  - setup
+  - build
+  - test
+
+setup:
   tags: 
    - linux
   script:
@@ -8,10 +13,14 @@ linux-setup:
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-2017-10-x86-linux.tar.bz2; tar xjf ../cmucl-2017-10-x86-linux.extra.tar.bz2)
 
-test:
+build:
   tags: 
     - linux
   script:
     - bin/build.sh -B boot-21c -C "" -o ./snapshot/bin/lisp
-    - bin/make-dist.sh -I dist-linux linux-4
-    - bin/run-tests.sh -l dist-linux/bin/lisp 2>&1 | tee test.log
+    - bin/make-dist.sh -I dist linux-4
+
+test:
+  script:
+    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+
