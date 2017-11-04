@@ -12,3 +12,8 @@ linux-runner:
     - bin/make-dist.sh -I dist linux-4
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
+osx-runner:
+  tags:
+    - osx
+  script:
+    - echo $PWD
