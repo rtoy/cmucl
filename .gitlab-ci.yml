@@ -1,4 +1,5 @@
 before_script:
+  tags: linux
   - apt-get update -qq && apt-get install -y wget bzip2 make gcc gcc-multilib time bc git
   - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2017/10/cmucl-2017-10-x86-linux.tar.bz2
   - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2017/10/cmucl-2017-10-x86-linux.extra.tar.bz2
@@ -6,6 +7,7 @@ before_script:
   - (cd snapshot; tar xjf ../cmucl-2017-10-x86-linux.tar.bz2; tar xjf ../cmucl-2017-10-x86-linux.extra.tar.bz2)
 
 test:
+  tags: linux
   script:
     - bin/build.sh -B boot-21c -C "" -o ./snapshot/bin/lisp
     - bin/make-dist.sh -I dist-linux linux-4
