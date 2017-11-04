@@ -15,5 +15,9 @@ linux-runner:
 osx-runner:
   tags:
     - osx
+  before_script:
+    - curl -o cmucl-21c-x86-darwin.tar.bz2 https://common-lisp.net/project/cmucl/downloads/release/21c/cmucl-21c-x86-darwin.tar.bz2
+    - mkdir snapshot
+    - (cd snapshot; tar xjf ../cmucl-21c-x86-darwin.tar.bz2)
   script:
-    - echo $PWD
+    - bin/build.sh -C "" -o ./snapshot/bin/lisp
