@@ -1,26 +1,14 @@
-stages:
-  - setup
-  - build
-  - test
-
-setup:
-  tags: 
-   - linux
-  script:
+linux-runner:
+  tags:
+    - linux
+  before_script:
     - apt-get update -qq && apt-get install -y wget bzip2 make gcc gcc-multilib time bc git
     - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2017/10/cmucl-2017-10-x86-linux.tar.bz2
     - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2017/10/cmucl-2017-10-x86-linux.extra.tar.bz2
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-2017-10-x86-linux.tar.bz2; tar xjf ../cmucl-2017-10-x86-linux.extra.tar.bz2)
-
-build:
-  tags: 
-    - linux
   script:
     - bin/build.sh -B boot-21c -C "" -o ./snapshot/bin/lisp
     - bin/make-dist.sh -I dist linux-4
-
-test:
-  script:
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
