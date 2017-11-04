@@ -121,6 +121,9 @@ validate_stacks()
 #if (defined(i386) || defined(__x86_64))
     control_stack_end = (lispobj *) (CONTROL_STACK_START + control_stack_size);
 #endif
+#ifdef __arm__
+    control_stack_end = (lispobj *) (CONTROL_STACK_START + control_stack_size);
+#endif
     ensure_space(control_stack, control_stack_size);
 #else
     /* Map the conrol stack wherever we have space */
