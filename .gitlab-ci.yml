@@ -21,3 +21,5 @@ osx-runner:
     - (cd snapshot; tar xjf ../cmucl-21c-x86-darwin.tar.bz2)
   script:
     - bin/build.sh -C "" -o ./snapshot/bin/lisp
+    - bin/make-dist.sh -I dist darwin-4
+    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
