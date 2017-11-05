@@ -354,7 +354,7 @@ print_struct(lispobj obj)
 {
     struct instance *instance = (struct instance *) PTR(obj);
     int i;
-    char buffer[16];
+    char buffer[32];
 
     print_obj("type: ", ((struct instance *) PTR(obj))->slots[0]);
     for (i = 1; i < HeaderValue(instance->header); i++) {
