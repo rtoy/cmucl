@@ -43,7 +43,7 @@ File: asdf.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
 ASDF: Another System Definition Facility
 ****************************************
 
-Manual for Version 3.3.0
+Manual for Version 3.3.1
 
    This manual describes ASDF, a system definition facility for Common
 Lisp programs and libraries.
