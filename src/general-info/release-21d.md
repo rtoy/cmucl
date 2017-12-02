@@ -19,6 +19,7 @@ public domain.
 ## New in this release:
   * Known issues:
   * Feature enhancements
+    * Update to ASDF 3.3.1, fixing issues introduced in 3.3.0
   * Changes
   * ANSI compliance fixes:
   * Bug fixes:
