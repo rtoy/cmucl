@@ -271,6 +271,7 @@
 (if (c:backend-featurep :random-mt19937)
     (comf "target:code/rand-mt19937")
     (comf "target:code/rand"))
+(comf "target:code/rand-xoroshiro")
 (comf "target:code/ntrace" :byte-compile *byte-compile*)
 (comf "target:code/profile")
 (comf "target:code/sort")

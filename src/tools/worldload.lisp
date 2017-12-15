@@ -98,6 +98,7 @@
 (maybe-byte-load "code:describe")
 #+random-mt19937 (maybe-byte-load "code:rand-mt19937")
 #-random-mt19937 (maybe-byte-load "code:rand")
+(maybe-byte-load "code:rand-xoroshiro")
 (maybe-byte-load "target:pcl/walk")
 (maybe-byte-load "code:fwrappers")
 (maybe-byte-load "code:ntrace")

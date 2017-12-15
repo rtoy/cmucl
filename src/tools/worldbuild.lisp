@@ -124,6 +124,7 @@
     ,@(if (c:backend-featurep :random-mt19937)
 	  '("target:code/rand-mt19937")
 	  '("target:code/rand"))
+    "target:code/rand-xoroshiro"
     "target:code/alieneval"
     "target:code/c-call"
     "target:code/sap"
