@@ -18,7 +18,7 @@
 	  make-xoro-random-state))
 
 (in-package "KERNEL")
-(export '(%xorohiro-single-float %xorohiro-double-float xoroshiro-chunk init-random-state))
+(export '(%xorohiro-single-float %xorohiro-double-float xoroshiro-chunk init-xoro-state))
 
 (sys:register-lisp-feature :random-xoroshiro)
 
@@ -80,10 +80,19 @@
 (defstruct (xoro-random-state
 	     (:constructor make-xoroshiro-object)
 	     (:make-load-form-fun :just-dump-it-normally))
+  ;; The state of the RNG.  The actual algorithm uses 2 64-bit words
+  ;; of state.  To reduce consing, we use an array of double-float's
+  ;; since a double-float is 64 bits long.  At no point do we operate
+  ;; on these as floats; they're just convenient objects to hold the
+  ;; state we need.
   (state (init-xoro-state)
    :type (simple-array double-float (2)))
-  (rand (make-array 1 :element-type '(unsigned-byte 32) :initial-element 0)
-   :type (simple-array (unsigned-byte 32) (1)))
+  ;; The generator produces 64-bit results.  We separate the 64-bit
+  ;; result into two parts.  One is returned and the other is cached
+  ;; here for later use.
+  (rand 0 :type (unsigned-byte 32))
+  ;; Indicates if RAND holds a valid value.  If NIL, we need to
+  ;; generate a new 64-bit result.
   (cached-p nil :type (member t nil)))
 
 (defvar *xoro-random-state*)
@@ -92,13 +101,11 @@
   (flet ((copy-random-state (state)
 	   (let ((old-state (xoro-random-state-state state))
 		 (new-state
-		  (make-array 2 :element-type 'double-float))
-		 (new-rand (make-array 1 :element-type '(unsigned-byte 32))))
+		  (make-array 2 :element-type 'double-float)))
 	     (setf (aref new-state 0) (aref old-state 0))
 	     (setf (aref new-state 1) (aref old-state 1))
-	     (setf (aref new-rand 0) (aref (xoro-random-state-rand state) 0))
 	     (make-xoroshiro-object :state new-state
-				    :rand new-rand
+				    :rand (xoro-random-state-rand state)
 				    :cached-p (xoro-random-state-cached-p state)))))
     (cond ((not state)
 	   (copy-random-state *xoro-random-state*))
@@ -106,7 +113,7 @@
 	   (copy-random-state state))
 	  ((eq state t)
 	   (make-xoroshiro-object :state (init-xoro-state (generate-seed 4))
-				  :rand (make-array 1 :element-type '(unsigned-byte 32) :initial-element 0)
+				  :rand 0
 				  :cached-p nil))
 	  (t
 	   (error "Argument is not a RANDOM-STATE, T, or NIL: ~S" state)))))
@@ -130,15 +137,15 @@
   (let ((cached (xoro-random-state-cached-p rng-state)))
     (cond (cached
 	   (setf (xoro-random-state-cached-p rng-state) nil)
-	   (aref (xoro-random-state-rand rng-state) 0))
+	   (xoro-random-state-rand rng-state))
 	  (t
 	   (let ((s (xoro-random-state-state rng-state)))
 	     (declare (type (simple-array double-float (2)) s))
 	     (multiple-value-bind (r1 r0)
 		 (vm::xoroshiro-next s)
-	       (setf (aref (xoro-random-state-rand rng-state) 0) r1)
+	       (setf (xoro-random-state-rand rng-state) r0)
 	       (setf (xoro-random-state-cached-p rng-state) t)
-	       r0))))))
+	       r1))))))
 
 #-x86
 (defun xoroshiro-next (state)
@@ -267,7 +274,7 @@
 	1d0)))
 
 #+double-double
-(defun %random-double-double-float (arg state)
+(defun %xoroshiro-double-double-float (arg state)
   (declare (type (double-double-float (0w0)) arg)
 	   (type xoro-random-state state))
   ;; Generate a 31-bit integer, scale it and sum them up
