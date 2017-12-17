@@ -142,12 +142,13 @@
 	   (let ((s (xoro-random-state-state rng-state)))
 	     (declare (type (simple-array double-float (2)) s))
 	     (multiple-value-bind (r1 r0)
-		 (xoroshiro-next-portable s)
+		 (xoroshiro-next s)
 	       (setf (xoro-random-state-rand rng-state) r0)
 	       (setf (xoro-random-state-cached-p rng-state) t)
 	       r1))))))
 
-(defun xoroshiro-next-portable (state)
+#-x86
+(defun xoroshiro-next (state)
   (declare (type (simple-array double-float (2)) state))
   (flet ((rotl-55 (x1 x0)
 	   (declare (type (unsigned-byte 32) x0 x1)
