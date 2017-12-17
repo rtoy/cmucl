@@ -120,32 +120,12 @@
 
 ;;;; Random entries:
 
-;;; Size of the chunks returned by xoroshiro-chunk.
-;;;
-;;(defconstant random-chunk-length 32)
-
-;;; xoroshiro-chunk -- Internal
-;;;
-;;; This function generaters a 32bit integer between 0 and #xffffffff
-;;; inclusive.
-;;;
-(declaim (inline xoroshiro-chunk))
-
-(defun xoroshiro-chunk (rng-state)
-  (declare (type xoro-random-state rng-state)
-	   (optimize (speed 3) (safety 0)))
-  (let ((cached (xoro-random-state-cached-p rng-state)))
-    (cond (cached
-	   (setf (xoro-random-state-cached-p rng-state) nil)
-	   (xoro-random-state-rand rng-state))
-	  (t
-	   (let ((s (xoro-random-state-state rng-state)))
-	     (declare (type (simple-array double-float (2)) s))
-	     (multiple-value-bind (r1 r0)
-		 (xoroshiro-next s)
-	       (setf (xoro-random-state-rand rng-state) r0)
-	       (setf (xoro-random-state-cached-p rng-state) t)
-	       r1))))))
+#+x86
+(declaim (inline xoroshiro-next))
+#+x86
+(defun xoroshiro-next (state)
+  (declare (type (simple-array double-float (2)) state))
+  (vm::xoroshiro-next state))
 
 #-x86
 (defun xoroshiro-next (state)
@@ -225,6 +205,34 @@
 	    (rotl-36 s1-1 s1-0)
 	  (setf (aref state 0) (make-double s0-1 s0-0)
 		(aref state 1) (make-double r1 r0)))))))
+
+;;; Size of the chunks returned by xoroshiro-chunk.
+;;;
+;;(defconstant random-chunk-length 32)
+
+;;; xoroshiro-chunk -- Internal
+;;;
+;;; This function generaters a 32bit integer between 0 and #xffffffff
+;;; inclusive.
+;;;
+(declaim (inline xoroshiro-chunk))
+
+(defun xoroshiro-chunk (rng-state)
+  (declare (type xoro-random-state rng-state)
+	   (optimize (speed 3) (safety 0)))
+  (let ((cached (xoro-random-state-cached-p rng-state)))
+    (cond (cached
+	   (setf (xoro-random-state-cached-p rng-state) nil)
+	   (xoro-random-state-rand rng-state))
+	  (t
+	   (let ((s (xoro-random-state-state rng-state)))
+	     (declare (type (simple-array double-float (2)) s))
+	     (multiple-value-bind (r1 r0)
+		 (xoroshiro-next s)
+	       (setf (xoro-random-state-rand rng-state) r0)
+	       (setf (xoro-random-state-cached-p rng-state) t)
+	       r1))))))
+
 
 ;;; %RANDOM-SINGLE-FLOAT, %RANDOM-DOUBLE-FLOAT  --  Interface
 ;;;
