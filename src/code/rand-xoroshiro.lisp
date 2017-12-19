@@ -79,6 +79,7 @@
 
 (defstruct (xoro-random-state
 	     (:constructor make-xoroshiro-object)
+	     (:print-function %print-xoro-state)
 	     (:make-load-form-fun :just-dump-it-normally))
   ;; The state of the RNG.  The actual algorithm uses 2 64-bit words
   ;; of state.  To reduce consing, we use an array of double-float's
@@ -94,6 +95,46 @@
   ;; Indicates if RAND holds a valid value.  If NIL, we need to
   ;; generate a new 64-bit result.
   (cached-p nil :type (member t nil)))
+
+(defun %print-xoro-state (rng-state stream depth)
+  (declare (ignore depth))
+  ;; Basically the same as the default structure printer, but we want
+  ;; to print the state as an array of integers instead of doubles,
+  ;; because it's a bit confusing to see the state as doubles.
+  (let ((state (xoro-random-state-state rng-state)))
+    (pprint-logical-block (stream nil :prefix "#S(" :suffix ")")
+      (prin1 'xoro-random-state stream)
+      (write-char #\space stream)
+      (pprint-indent :block 2 stream)
+      (pprint-newline :linear stream)
+      (prin1 :state stream)
+      (write-char #\space stream)
+      (pprint-newline :miser stream)
+      (pprint-logical-block (stream nil :prefix "#.(" :suffix ")")
+	(prin1 'init-xoro-state stream)
+	(write-char #\space stream)
+	(prin1 (make-array 4 :element-type '(unsigned-byte 32)
+			 :initial-contents (list (ldb (byte 32 0)
+						      (double-float-high-bits (aref state 0)))
+						 (double-float-low-bits (aref state 0))
+						 (ldb (byte 32 0)
+						      (double-float-high-bits (aref state 1)))
+						 (double-float-low-bits (aref state 1))))
+	       stream))
+      (write-char #\space stream)
+      (pprint-newline :linear stream)
+
+      (prin1 :rand stream)
+      (write-char #\space stream)
+      (pprint-newline :miser stream)
+      (prin1 (xoro-random-state-rand rng-state) stream)
+      (write-char #\space stream)
+      (pprint-newline :linear stream)
+
+      (prin1 :cached-p stream)
+      (write-char #\space stream)
+      (pprint-newline :miser stream)
+      (prin1 (xoro-random-state-cached-p rng-state) stream))))
 
 (defvar *xoro-random-state*
   (make-xoroshiro-object))
@@ -396,11 +437,3 @@
       (setf (aref state 1) (convert s1-1 s1-0)))
       rng-state))
 
-(defun print-xoro-state (rng-state)
-  (let ((state (xoro-random-state-state rng-state)))
-    (flet ((v (x)
-	     (multiple-value-bind (hi lo)
-		 (kernel:double-float-bits x)
-	       (logior (ash (ldb (byte 32 0) hi) 32)
-		       lo))))
-      (format t "~16,'0x ~16,'0x" (v (aref state 0)) (v (aref state 1))))))
