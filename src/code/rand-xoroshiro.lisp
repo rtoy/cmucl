@@ -22,6 +22,28 @@
 
 (sys:register-lisp-feature :random-xoroshiro)
 
+(defun generate-seed (&optional (nwords 1))
+  ;; On some systems (as reported by Ole Rohne on cmucl-imp),
+  ;; /dev/urandom isn't what we think it is, so if it doesn't work,
+  ;; silently generate the seed from the current time.
+  (or (ignore-errors
+	(let ((words (make-array nwords :element-type '(unsigned-byte 32))))
+	  (with-open-file (rand "/dev/urandom"
+				:direction :input
+				:element-type '(unsigned-byte 32))
+	    (read-sequence words rand))
+	  (if (= nwords 1)
+	      (aref words 0)
+	      (let ((vec (make-array (floor nwords 2) :element-type '(unsigned-byte 64))))
+		(do ((k 0 (+ k 1))
+		     (j 0 (+ j 2)))
+		    ((>= k (length vec))
+		     vec)
+		  (setf (aref vec k)
+			(logior (ash (aref words j) 32)
+				(aref words (+ j 1)))))))))
+      (logand (get-universal-time) #xffffffff)))
+
 (defun int-init-xoro-state (&optional (seed 5772156649015328606) state)
   (let ((state (or state (make-array 2 :element-type 'double-float)))
 	(splitmix-state (ldb (byte 64 0) seed)))
@@ -51,16 +73,18 @@
 	   state))))
 
 (defun vec-init-xoro-state (key &optional state)
-  (declare (type (array (unsigned-byte 32) (4)) key)
+  (declare (type (array (unsigned-byte 64) (2)) key)
 	   (type (simple-array double-float (2)) state))
-  (flet ((make-double (hi lo)
-	   (kernel:make-double-float
-		(if (< hi #x80000000)
-		    hi
-		    (- hi #x100000000))
-		lo)))
-    (setf (aref state 0) (make-double (aref key 0) (aref key 1))
-	  (aref state 1) (make-double (aref key 2) (aref key 3)))
+  (flet ((make-double (x)
+	   (let ((hi (ldb (byte 32 32) x))
+		 (lo (ldb (byte 32 0) x)))
+	     (kernel:make-double-float
+	      (if (< hi #x80000000)
+		  hi
+		  (- hi #x100000000))
+	      lo))))
+    (setf (aref state 0) (make-double (aref key 0))
+	  (aref state 1) (make-double (aref key 1)))
     state))
   
   
@@ -68,13 +92,13 @@
   "Generate an random state vector from the given SEED.  The seed can be
   either an integer or a vector of (unsigned-byte 32)"
   (declare (type (or null integer
-		     (array (unsigned-byte 32) (*)))
+		     (array (unsigned-byte 64) (*)))
 		 seed))
   (let ((state (or state (make-array 2 :element-type 'double-float))))
     (etypecase seed
       (integer
        (int-init-xoro-state (ldb (byte 64 0) seed) state))
-      ((array (unsigned-byte 32) (4))
+      ((array (unsigned-byte 64) (2))
        (vec-init-xoro-state seed state)))))
 
 (defstruct (xoro-random-state
@@ -113,14 +137,15 @@
       (pprint-logical-block (stream nil :prefix "#.(" :suffix ")")
 	(prin1 'init-xoro-state stream)
 	(write-char #\space stream)
-	(prin1 (make-array 4 :element-type '(unsigned-byte 32)
-			 :initial-contents (list (ldb (byte 32 0)
-						      (double-float-high-bits (aref state 0)))
-						 (double-float-low-bits (aref state 0))
-						 (ldb (byte 32 0)
-						      (double-float-high-bits (aref state 1)))
-						 (double-float-low-bits (aref state 1))))
-	       stream))
+	(flet ((c (x)
+		 (multiple-value-bind (hi lo)
+		     (double-float-bits x)
+		   (logior (ash (ldb (byte 32 0) hi) 32)
+			   lo))))
+	  (prin1 (make-array 2 :element-type '(unsigned-byte 64)
+			     :initial-contents (list (c (aref state 0))
+						     (c (aref state 1))))
+		 stream)))
       (write-char #\space stream)
       (pprint-newline :linear stream)
 
