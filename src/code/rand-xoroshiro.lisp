@@ -18,7 +18,7 @@
 	  make-xoro-random-state))
 
 (in-package "KERNEL")
-(export '(%xorohiro-single-float %xorohiro-double-float xoroshiro-chunk init-xoro-state))
+(export '(%xoroshiro-single-float %xoroshiro-double-float xoroshiro-chunk init-xoro-state))
 
 (sys:register-lisp-feature :random-xoroshiro)
 
@@ -95,7 +95,8 @@
   ;; generate a new 64-bit result.
   (cached-p nil :type (member t nil)))
 
-(defvar *xoro-random-state*)
+(defvar *xoro-random-state*
+  (make-xoroshiro-object))
 
 (defun make-xoro-random-state (&optional state)
   (flet ((copy-random-state (state)
@@ -120,16 +121,23 @@
 
 ;;;; Random entries:
 
+(declaim (ext:start-block xoroshiro-gen xoroshiro-chunk
+			  %xoroshiro-single-float %xoroshiro-double-float
+			  %xoroshiro-integer
+			  #+double-double
+			  %xoroshiro-double-double-float))
+;;#+x86
+;;(declaim (inline xoroshiro-next))
 #+x86
-(declaim (inline xoroshiro-next))
-#+x86
-(defun xoroshiro-next (state)
-  (declare (type (simple-array double-float (2)) state))
+(defun xoroshiro-gen (state)
+  (declare (type (simple-array double-float (2)) state)
+	   (optimize (speed 3) (safety 0)))
   (vm::xoroshiro-next state))
 
 #-x86
-(defun xoroshiro-next (state)
-  (declare (type (simple-array double-float (2)) state))
+(defun xoroshiro-gen (state)
+  (declare (type (simple-array double-float (2)) state)
+	   (optimize (speed 3) (safety 0)))
   (flet ((rotl-55 (x1 x0)
 	   (declare (type (unsigned-byte 32) x0 x1)
 		    (optimize (speed 3) (safety 0)))
@@ -228,7 +236,7 @@
 	   (let ((s (xoro-random-state-state rng-state)))
 	     (declare (type (simple-array double-float (2)) s))
 	     (multiple-value-bind (r1 r0)
-		 (xoroshiro-next s)
+		 (xoroshiro-gen s)
 	       (setf (xoro-random-state-rand rng-state) r0)
 	       (setf (xoro-random-state-cached-p rng-state) t)
 	       r1))))))
@@ -240,14 +248,14 @@
 ;;; between 0.0 and 1.0 by clobbering the significand of 1.0 with random bits,
 ;;; then subtracting 1.0.  This hides the fact that we have a hidden bit.
 ;;;
-(declaim (inline %xorohiro-single-float %xorohiro-double-float))
-(declaim (ftype (function ((single-float (0f0)) random-state)
+(declaim (inline %xoroshiro-single-float %xoroshiro-double-float))
+(declaim (ftype (function ((single-float (0f0)) xoro-random-state)
 			  (single-float 0f0))
-		%xorohiro-single-float))
+		%xoroshiro-single-float))
 ;;;
-(defun %xorohiro-single-float (arg state)
+(defun %xoroshiro-single-float (arg state)
   (declare (type (single-float (0f0)) arg)
-	   (type random-state state))
+	   (type xoro-random-state state))
   (* arg
      (- (make-single-float
 	 (dpb (ash (xoroshiro-chunk state)
@@ -256,15 +264,15 @@
 	      (single-float-bits 1.0)))
 	1.0)))
 ;;;
-(declaim (ftype (function ((double-float (0d0)) random-state)
+(declaim (ftype (function ((double-float (0d0)) xoro-random-state)
 			  (double-float 0d0))
-		%xorohiro-double-float))
+		%xoroshiro-double-float))
 ;;;
 ;;; 53bit version.
 ;;;
-(defun %xorohiro-double-float (arg state)
+(defun %xoroshiro-double-float (arg state)
   (declare (type (double-float (0d0)) arg)
-	   (type random-state state))
+	   (type xoro-random-state state))
   (* arg
      (- (lisp::make-double-float
 	 (dpb (ash (xoroshiro-chunk state)
@@ -311,11 +319,12 @@
 
 ;;; %RANDOM-INTEGER  --  Internal
 ;;;
-(defun %xorohiro-integer (arg state)
-  (declare (type (integer 1) arg) (type random-state state))
+(defun %xoroshiro-integer (arg state)
+  (declare (type (integer 1) arg)
+	   (type xoro-random-state state))
   (let ((shift (- random-chunk-length random-integer-overlap)))
-    (do ((bits (random-chunk state)
-	       (logxor (ash bits shift) (random-chunk state)))
+    (do ((bits (xoroshiro-chunk state)
+	       (logxor (ash bits shift) (xoroshiro-chunk state)))
 	 (count (+ (integer-length arg)
 		   (- random-integer-extra-bits shift))
 		(- count shift)))
@@ -323,30 +332,75 @@
 	 (rem bits arg))
       (declare (fixnum count)))))
 
-(defun xoro-random (arg &optional (state *random-state*))
+(declaim (ext:end-block))
+
+(defun xoro-random (arg &optional (state *xoro-random-state*))
   "Generate a uniformly distributed pseudo-random number between zero
   and Arg.  State, if supplied, is the random state to use."
-  (declare (inline %xorohiro-single-float %xorohiro-double-float
+  (declare (inline %xoroshiro-single-float %xoroshiro-double-float
 		   #+long-float %long-float))
   (cond
     ((typep arg '(integer 1 #x100000000))
      ;; Let the compiler deftransform take care of this case.
-     (random arg state))
+     (%xoroshiro-integer arg state))
     ((and (typep arg 'single-float) (> arg 0.0F0))
-     (%xorohiro-single-float arg state))
+     (%xoroshiro-single-float arg state))
     ((and (typep arg 'double-float) (> arg 0.0D0))
-     (%xorohiro-double-float arg state))
+     (%xoroshiro-double-float arg state))
     #+long-float
     ((and (typep arg 'long-float) (> arg 0.0L0))
-     (%xorohiro-long-float arg state))
+     (%xoroshiro-long-float arg state))
     #+double-double
     ((and (typep arg 'double-double-float) (> arg 0.0w0))
-     (%xorohiro-double-double-float arg state))
+     (%xoroshiro-double-double-float arg state))
     ((and (integerp arg) (> arg 0))
-     (%xorohiro-integer arg state))
+     (%xoroshiro-integer arg state))
     (t
      (error 'simple-type-error
 	    :expected-type '(or (integer 1) (float (0.0))) :datum arg
 	    :format-control (intl:gettext "Argument is not a positive integer or a positive float: ~S")
 	    :format-arguments (list arg)))))
 
+(defun xoroshiro-jump (rng-state)
+  (declare (type xoro-random-state rng-state))
+  (let ((state (xoro-random-state-state rng-state))
+	(s0-0 0)
+	(s0-1 0)
+	(s1-0 0)
+	(s1-1 0))
+    (declare (type (unsigned-byte 32) s0-0 s0-1 s1-0 s1-1)
+	     (optimize (speed 3) (safety 0)))
+    (dolist (jump '(#xbeac0467eba5facb #xd86b048b86aa9922))
+      (declare (type (unsigned-byte 64) jump))
+      (dotimes (b 64)
+	(declare (fixnum b))
+	(when (logbitp b jump)
+	  (multiple-value-bind (x1 x0)
+	      (kernel:double-float-bits (aref state 0))
+	    (setf s0-1 (logxor s0-1 (ldb (byte 32 0) x1))
+		  s0-0 (logxor s0-0 x0)))
+	  
+	  (multiple-value-bind (x1 x0)
+	      (kernel:double-float-bits (aref state 1))
+	    (setf s1-1 (logxor s1-1 (ldb (byte 32 0) x1))
+		  s1-0 (logxor s1-0 x0))))
+	(format t "jump: ~D s0, s1 = ~X~8,'0X  ~X~8,'0X~%" b s0-1 s0-0 s1-1 s1-0)
+	(xoroshiro-next state)))
+
+    (flet ((convert (x1 x0)
+	     (declare (type (unsigned-byte 32) x1 x0))
+	     (kernel:make-double-float
+	      (if (< x1 #x80000000) x1 (- x1 #x100000000))
+	      x0)))
+      (setf (aref state 0) (convert s0-1 s0-0))
+      (setf (aref state 1) (convert s1-1 s1-0)))
+      rng-state))
+
+(defun print-xoro-state (rng-state)
+  (let ((state (xoro-random-state-state rng-state)))
+    (flet ((v (x)
+	     (multiple-value-bind (hi lo)
+		 (kernel:double-float-bits x)
+	       (logior (ash (ldb (byte 32 0) hi) 32)
+		       lo))))
+      (format t "~16,'0x ~16,'0x" (v (aref state 0)) (v (aref state 1))))))
