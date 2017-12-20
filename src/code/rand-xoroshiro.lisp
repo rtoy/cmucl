@@ -8,7 +8,8 @@
 ;;; **********************************************************************
 ;;;
 ;;; Support for the xoroshiro128+ random number generator by David
-;;; Blackman and Sebastiano Vigna (vigna@acm.org)
+;;; Blackman and Sebastiano Vigna (vigna@acm.org). See
+;;; http://xoroshiro.di.unimi.it/.
 
 (in-package "LISP")
 (intl:textdomain "cmucl")
@@ -47,6 +48,18 @@
   (let ((state (or state (make-array 2 :element-type 'double-float)))
 	(splitmix-state (ldb (byte 64 0) seed)))
     (flet ((splitmix64 ()
+	     ;; See http://xoroshiro.di.unimi.it/splitmix64.c for the
+	     ;; definitive reference.  The basic algorithm, where x is
+	     ;; the 64-bit state of the generator,:
+	     ;;
+	     ;;   uint64_t z = (x += 0x9e3779b97f4a7c15);
+	     ;;   z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9;
+	     ;;   z = (z ^ (z >> 27)) * 0x94d049bb133111eb;
+	     ;;   return z ^ (z >> 31);
+	     ;;
+	     ;; This is only used occasionally for initializing the
+	     ;; RNG, so this is a very straight-forward
+	     ;; implementation.
 	     (let ((z (setf splitmix-state
 			    (ldb (byte 64 0) (+ splitmix-state #x9e3779b97f4a7c15)))))
 	       (declare (type (unsigned-byte 64) z))
@@ -192,8 +205,8 @@
 
 ;;;; Random entries:
 
-;;#+x86
-;;(declaim (inline xoroshiro-next))
+#+x86
+(declaim (inline xoroshiro-gen))
 #+x86
 (defun xoroshiro-gen (state)
   (declare (type (simple-array double-float (2)) state)
@@ -204,7 +217,31 @@
 (defun xoroshiro-gen (state)
   (declare (type (simple-array double-float (2)) state)
 	   (optimize (speed 3) (safety 0)))
+  ;; Portable implemenation of the xoroshiro128+ generator. See
+  ;; http://xoroshiro.di.unimi.it/xoroshiro128plus.c for the
+  ;; definitive definition.
+  ;;
+  ;; uint64_t s[2];
+  ;;
+  ;; static inline uint64_t rotl(const uint64_t x, int k) {
+  ;; 	return (x << k) | (x >> (64 - k));
+  ;; }
+  ;;
+  ;; uint64_t next(void) {
+  ;; 	const uint64_t s0 = s[0];
+  ;; 	uint64_t s1 = s[1];
+  ;; 	const uint64_t result = s0 + s1;
+  ;;
+  ;; 	s1 ^= s0;
+  ;; 	s[0] = rotl(s0, 55) ^ s1 ^ (s1 << 14); // a, b
+  ;; 	s[1] = rotl(s1, 36); // c
+  ;;
+  ;; 	return result;
+  ;; }
+  ;;
   (flet ((rotl-55 (x1 x0)
+	   ;; Rotate [x1|x0] left 55 bits, returning the result as two
+	   ;; values.
 	   (declare (type (unsigned-byte 32) x0 x1)
 		    (optimize (speed 3) (safety 0)))
 	   ;; x << 55
@@ -218,6 +255,8 @@
 	       (values (logior sl55-h sr9-h)
 		       (logior sl55-l sr9-l)))))
 	 (rotl-36 (x1 x0)
+	   ;; Rotate [x1|x0] left 36 bits, returning the result as two
+	   ;; values.
 	   (declare (type (unsigned-byte 32) x0 x1)
 		    (optimize (speed 3) (safety 0)))
 	   ;; x << 36
@@ -230,6 +269,8 @@
 	       (values (logior sl36-h sr28-h)
 		       sr28-l))))
 	 (shl-14 (x1 x0)
+	   ;; Shift [x1|x0] left by 14 bits, returning the result as
+	   ;; two values.
 	   (declare (type (unsigned-byte 32) x1 x0)
 		    (optimize (speed 3) (safety 0)))
 	   (values (ldb (byte 32 0)
@@ -248,6 +289,9 @@
 	  (s1-1 0)
 	  (s1-0 0))
       (declare (type (unsigned-byte 32) s0-1 s0-0 s1-1 s1-0))
+      ;; Load the state to s0 and s1. s0-1 is the high 32-bit part and
+      ;; s0-0 is the low 32-bit part of the 64-bit value.  Similarly
+      ;; for s1.
       (multiple-value-bind (x1 x0)
 	  (kernel:double-float-bits (aref state 0))
 	(setf s0-1 (ldb (byte 32 0) x1)
@@ -257,6 +301,7 @@
 	(setf s1-1 (ldb (byte 32 0) x1)
 	      s1-0 x0))
 
+      ;; Compute the 64-bit random value: s0 + s1
       (multiple-value-prog1
 	  (multiple-value-bind (sum-0 c)
 	      (bignum::%add-with-carry s0-0 s1-0 0)
