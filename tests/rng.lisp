@@ -6,7 +6,7 @@
 (in-package "RNG-TESTS")
 
 (defun 64-bit-rng-state (rng)
-  (let ((state (kernel::xoro-random-state-state rng)))
+  (let ((state (kernel::random-state-state rng)))
     (flet ((convert (x)
 	     (multiple-value-bind (hi lo)
 		 (kernel:double-float-bits x)
@@ -15,29 +15,29 @@
       (values (convert (aref state 0)) (convert (aref state 1))))))
 
 (defun 64-bit-value (rng)
-  (logior (ash (kernel::xoroshiro-chunk rng) 32)
-	  (kernel::xoroshiro-chunk rng)))
+  (logior (ash (kernel::random-chunk rng) 32)
+	  (kernel::random-chunk rng)))
 
 (defvar *test-state*)
   
 (define-test rng.initial-state
   (setf *test-state*
-	(kernel::make-xoroshiro-object :state (kernel::init-xoro-state #x12345678)
-				       :rand 0
-				       :cached-p nil))
+	(kernel::make-random-object :state (kernel::init-random-state #x12345678)
+				    :rand 0
+				    :cached-p nil))
   (multiple-value-bind (s0 s1)
       (64-bit-rng-state *test-state*)
     (assert-equal #x38f1dc39d1906b6f s0)
     (assert-equal #xdfe4142236dd9517 s1)
-    (assert-equal 0 (kernel::xoro-random-state-rand *test-state*))
-    (assert-equal nil (kernel::xoro-random-state-cached-p *test-state*))))
+    (assert-equal 0 (kernel::random-state-rand *test-state*))
+    (assert-equal nil (kernel::random-state-cached-p *test-state*))))
 
 
 (define-test rng.values-test
   (assert-equal (list #x38f1dc39d1906b6f #xdfe4142236dd9517)
 		(multiple-value-list (64-bit-rng-state *test-state*)))
-  (assert-equal 0 (kernel::xoro-random-state-rand *test-state*))
-  (assert-equal nil (kernel::xoro-random-state-cached-p *test-state*))
+  (assert-equal 0 (kernel::random-state-rand *test-state*))
+  (assert-equal nil (kernel::random-state-cached-p *test-state*))
 
   (dolist (item '((#x18d5f05c086e0086 (#x228f4926843b364d #x74dfe78e715c81be))
 		  (#x976f30b4f597b80b (#x5b6bd4558bd96a68 #x567b7f35650aea8f))
