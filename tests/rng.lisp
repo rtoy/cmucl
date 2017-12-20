@@ -20,6 +20,7 @@
 
 (defvar *test-state*)
   
+#+random-xoroshiro
 (define-test rng.initial-state
   (setf *test-state*
 	(kernel::make-random-object :state (kernel::init-random-state #x12345678)
@@ -33,6 +34,7 @@
     (assert-equal nil (kernel::random-state-cached-p *test-state*))))
 
 
+#+random-xoroshiro
 (define-test rng.values-test
   (assert-equal (list #x38f1dc39d1906b6f #xdfe4142236dd9517)
 		(multiple-value-list (64-bit-rng-state *test-state*)))
