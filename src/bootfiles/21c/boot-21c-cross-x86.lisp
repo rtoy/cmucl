@@ -20,7 +20,7 @@
      :gencgc				; Generational GC
      :conservative-float-type
      :hash-new
-     :random-xoroshiro
+     :random-xoroshiro			; xoroshiro128+ RNG
      :cmu :cmu20 :cmu20a		; Version features
      :double-double			; double-double float support
      )
