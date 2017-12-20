@@ -1835,51 +1835,8 @@
 	   (give-up)))))
 
 (in-package "VM")
-#+nil
-(progn
-(defknown xoroshiro-next (double-float double-float)
-  (values (unsigned-byte 32) (unsigned-byte 32) double-float double-float)
-  (movable))
 
-(define-vop (xoroshiro-next)
-  (:policy :fast-safe)
-  (:translate xoroshiro-next)
-  (:args (old-s1 :scs (double-reg) :to (:result 3))
-	 (old-s0 :scs (double-reg) :to (:result 3)))
-  (:arg-types double-float double-float)
-  (:results (r1 :scs (unsigned-reg))
-	    (r0 :scs (unsigned-reg))
-	    (s1 :scs (double-reg))
-	    (s0 :scs (double-reg)))
-  (:result-types unsigned-num unsigned-num double-float double-float)
-  (:temporary (:sc double-reg) t0)
-  (:generator 10
-    (inst movapd t0 old-s0)
-    (inst paddq t0 old-s1)		; t0 = old-s0 + old-s1
-    (inst movd r0 t0)			; r0 = low 32-bits of t0
-    (inst psrlq t0 32)
-    (inst movd r1 t0)			; r1 = high 32-bits of t0
-    ;; s1 ^= s0
-    (inst movapd s1 old-s1)		; s1 = old-s1
-    (inst xorpd s1 old-s0)		; s1 = old-s0 ^ old-s1
-    ;; rotl(s0, 55) = s0 << 55 | (s0 >> 9)
-    (inst movapd s0 old-s0)		; s0 = old-s0
-    (inst movapd t0 old-s0)		; t0 = old-s0
-    (inst psllq s0 55)			; s0 = s0 << 55
-    (inst psrlq t0 9)			; t0 = s0 >> 9
-    (inst orpd s0 t0)	                ; s0 = rotl(s0,55) = s0 << 55 | s0 >> 9
-    (inst xorpd s0 s1)			; s0 = rotl(s0,55) ^ s1
-    (inst movapd t0 s1)			; t0 = s1
-    (inst psllq t0 14)			; t0 = s1 << 14
-    (inst xorpd s0 t0)		        ; s0 = rotl(s0,55) ^ s1 ^ (s1 << 14)
-    (inst movapd t0 s1)			; t0 = s1
-    (inst psllq t0 36)			; t0 = s1 << 36
-    (inst psrlq s1 28)			; s1 = s1 >> 28
-    (inst orpd s1 t0)			; s1 = rotl(new-s1, 36)
-
-    ))
-)
-
+#+random-xoroshiro
 (progn
 (defknown xoroshiro-next ((simple-array double-float (2)))
   (values (unsigned-byte 32) (unsigned-byte 32))
