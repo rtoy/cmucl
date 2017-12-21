@@ -55,3 +55,16 @@
 	item
       (assert-equal value (64-bit-value *test-state*))
       (assert-equal state (multiple-value-list (64-bit-rng-state *test-state*))))))
+
+(define-test rng.jump
+  (setf *test-state*
+	(kernel::make-random-object :state (kernel::init-random-state #x12345678)
+				    :rand 0
+				    :cached-p nil))
+  (dolist (result '((#x291ddf8e6f6a7b67 #x1f9018a12f9e031f)
+		    (#x88a7aa12158558d0 #xe264d785ab1472d9)
+		    (#x207e16f73c51e7ba #x999c8a0a9a8d87c0)
+		    (#x28f8959d3bcf5ff1 #x38091e563ab6eb98)))
+    (kernel:random-state-jump *test-state*)
+    (assert-equal result (multiple-value-list
+			  (64-bit-rng-state *test-state*)))))

@@ -18,7 +18,8 @@
 	  make-random-state))
 
 (in-package "KERNEL")
-(export '(%random-single-float %random-double-float random-chunk init-random-state))
+(export '(%random-single-float %random-double-float random-chunk init-random-state
+	  random-state-jump))
 
 (sys:register-lisp-feature :random-xoroshiro)
 
@@ -470,7 +471,12 @@
 	    :format-control (intl:gettext "Argument is not a positive integer or a positive float: ~S")
 	    :format-arguments (list arg)))))
 
-(defun xoroshiro-jump (rng-state)
+;; Jump function for the generator.  See the jump function in
+;; http://xoroshiro.di.unimi.it/xoroshiro128plus.c
+(defun random-state-jump (&optional (rng-state *random-state*))
+  "Jump the RNG-STATE.  This is equivalent to 2^64 calls to the
+  xoroshiro128+ generator.  It can be used to generate 2^64
+  non-overlapping subsequences for parallel computations."
   (declare (type random-state rng-state))
   (let ((state (random-state-state rng-state))
 	(s0-0 0)
@@ -493,7 +499,6 @@
 	      (kernel:double-float-bits (aref state 1))
 	    (setf s1-1 (logxor s1-1 (ldb (byte 32 0) x1))
 		  s1-0 (logxor s1-0 x0))))
-	(format t "jump: ~D s0, s1 = ~X~8,'0X  ~X~8,'0X~%" b s0-1 s0-0 s1-1 s1-0)
 	(xoroshiro-gen state)))
 
     (flet ((convert (x1 x0)
@@ -504,4 +509,3 @@
       (setf (aref state 0) (convert s0-1 s0-0))
       (setf (aref state 1) (convert s1-1 s1-0)))
       rng-state))
-
