@@ -136,7 +136,7 @@
 		  (setf str nil))
 		(return nil))
 	      (push str word-list))
-	    (setq str (pop cmd-strings)))))))))
+	    (setq str (pop cmd-strings))))))))
 
 (defun get-command-line-switch (sname)
   "Accepts the name of a switch as a string and returns the value of
