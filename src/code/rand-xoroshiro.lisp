@@ -485,9 +485,12 @@
 	(s1-1 0))
     (declare (type (unsigned-byte 32) s0-0 s0-1 s1-0 s1-1)
 	     (optimize (speed 3) (safety 0)))
-    (dolist (jump '(#xbeac0467eba5facb #xd86b048b86aa9922))
-      (declare (type (unsigned-byte 64) jump))
-      (dotimes (b 64)
+    ;; The constants are #xbeac0467eba5facb and #xd86b048b86aa9922,
+    ;; and we process these numbers starting from the LSB.  We want ot
+    ;; process these in 32-bit chunks, so word-reverse the constants.
+    (dolist (jump '(#xeba5facb #xbeac0467 #x86aa9922 #xd86b048b))
+      (declare (type (unsigned-byte 32) jump))
+      (dotimes (b 32)
 	(declare (fixnum b))
 	(when (logbitp b jump)
 	  (multiple-value-bind (x1 x0)
