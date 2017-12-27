@@ -85,7 +85,7 @@
 		 (aref state 1) (make-double s1))
 	   state))))
 
-(defun vec-init-xoro-state (key &optional state)
+(defun vec-init-xoro-state (key &optional (state (make-array 2 :element-type 'double-float)))
   (declare (type (array (unsigned-byte 64) (2)) key)
 	   (type (simple-array double-float (2)) state))
   (flet ((make-double (x)
