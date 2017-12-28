@@ -2611,39 +2611,37 @@
   (:temporary (:sc unsigned-reg :offset nl4-offset) s1)
   (:temporary (:sc unsigned-reg :offset nl3-offset) t0)
   (:generator 10
-    (inst ldx s0 state (+ (* 0 double-float-bytes)
-			  (- (* vm:vector-data-offset vm:word-bytes)
-			     vm:other-pointer-type)))
-    (inst ldx s1 state (+ (* 1 double-float-bytes)
-			  (- (* vm:vector-data-offset vm:word-bytes)
-			     vm:other-pointer-type)))
-    ;; result = s0 + s1, split into low 32-bits in r0 and high 32-bits
-    ;; in r1
-    (inst add r0 s0 s1)
-    (inst srlx r1 r0 32)
+    (let ((s0-offset (+ (* 0 double-float-bytes)
+			(- (* vm:vector-data-offset vm:word-bytes)
+			   vm:other-pointer-type)))
+	  (s1-offset (+ (* 1 double-float-bytes)
+			(- (* vm:vector-data-offset vm:word-bytes)
+			   vm:other-pointer-type))))
+      (inst ldx s0 state s0-offset)
+      (inst ldx s1 state s1-offset)
+      ;; result = s0 + s1, split into low 32-bits in r0 and high 32-bits
+      ;; in r1
+      (inst add r0 s0 s1)
+      (inst srlx r1 r0 32)
 
-    ;; s1 = s1 ^ s0
-    (inst xor s1 s1 s0)
+      ;; s1 = s1 ^ s0
+      (inst xor s1 s0)
 
-    ;; s0 = rotl(s0,55) = s0 << 55 | s0 >> 9
-    (inst sllx s0 s0 55)
-    (inst srlx t0 s0 9)
-    (inst or s0 t0)
+      ;; s0 = rotl(s0,55) = s0 << 55 | s0 >> 9
+      (inst sllx t0 s0 55)
+      (inst srlx s0 s0 9)
+      (inst or s0 t0)
 
-    (inst xor s0 s1)			; s0 = s0 ^ s1
-    (inst sllx t0 s1 14)		; t0 = s1 << 14
-    (inst xor s0 t0)			; s0 = s0 ^ t0
+      (inst xor s0 s1)			; s0 = s0 ^ s1
+      (inst sllx t0 s1 14)		; t0 = s1 << 14
+      (inst xor s0 t0)			; s0 = s0 ^ t0
 
-    (inst stx s0 state (+ (* 0 double-float-bytes)
-			  (- (* vm:vector-data-offset vm:word-bytes)
-			     vm:other-pointer-type)))
+      (inst stx s0 state s0-offset)
 
-    ;; s1 = rotl(s1, 36) = s1 << 36 | s1 >> 28, using t0 as temp
-    (inst sllx s1 36)
-    (inst srlx t0 s1 28)
-    (inst or s1 t0)
+      ;; s1 = rotl(s1, 36) = s1 << 36 | s1 >> 28, using t0 as temp
+      (inst sllx t0 s1 36)
+      (inst srlx s1 28)
+      (inst or s1 t0)
 
-    (inst stx s1 state (+ (* 1 double-float-bytes)
-			  (- (* vm:vector-data-offset vm:word-bytes)
-			     vm:other-pointer-type)))))
+      (inst stx s1 state s1-offset))))
 )
