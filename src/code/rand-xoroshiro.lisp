@@ -155,10 +155,12 @@
 		     (double-float-bits x)
 		   (logior (ash (ldb (byte 32 0) hi) 32)
 			   lo))))
-	  (prin1 (make-array 2 :element-type '(unsigned-byte 64)
+	  (write (make-array 2 :element-type '(unsigned-byte 64)
 			     :initial-contents (list (c (aref state 0))
 						     (c (aref state 1))))
-		 stream)))
+		 :stream stream
+		 :base 16
+		 :radix t)))
       (write-char #\space stream)
       (pprint-newline :linear stream)
 
@@ -387,6 +389,9 @@
 (defun %random-double-float (arg state)
   (declare (type (double-float (0d0)) arg)
 	   (type random-state state))
+  ;; xoroshiro-gen produces 64-bit values.  Should we use that
+  ;; directly to get the random bits instead of two calls to
+  ;; RANDOM-CHUNK?
   (* arg
      (- (lisp::make-double-float
 	 (dpb (ash (random-chunk state)
