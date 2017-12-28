@@ -206,15 +206,17 @@
 
 ;;;; Random entries:
 
-#+x86
+;; Sparc and x86 have vops to implement xoroshiro-gen that are much
+;; faster than the portable lisp version.  Use them.
+#+(or x86 sparc)
 (declaim (inline xoroshiro-gen))
-#+x86
+#+(or x86 sparc)
 (defun xoroshiro-gen (state)
   (declare (type (simple-array double-float (2)) state)
 	   (optimize (speed 3) (safety 0)))
   (vm::xoroshiro-next state))
 
-#-x86
+#+(or x86 sparc)
 (defun xoroshiro-gen (state)
   (declare (type (simple-array double-float (2)) state)
 	   (optimize (speed 3) (safety 0)))
