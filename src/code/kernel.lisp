@@ -139,7 +139,11 @@
 (defsetf %raw-bits %set-raw-bits)
 
 (defun make-single-float (x) (make-single-float x))
-(defun make-double-float (hi lo) (make-double-float hi lo))
+(defun make-double-float (hi lo)
+  (declare (type (or (signed-byte 32) (unsigned-byte 32)) hi)
+	   (type (unsigned-byte 32) lo))
+  (make-double-float (ldb (byte 32 0) hi) lo))
+
 #+long-float
 (defun make-long-float (exp hi #+sparc mid lo)
   (make-long-float exp hi #+sparc mid lo))

@@ -83,11 +83,7 @@
 	   (make-double (x)
 	     (let ((lo (ldb (byte 32 0) x))
 		   (hi (ldb (byte 32 32) x)))
-	       (kernel:make-double-float
-		(if (< hi #x80000000)
-		    hi
-		    (- hi #x100000000))
-		lo))))
+	       (kernel:make-double-float hi lo))))
       (let* ((s0 (splitmix64))
 	     (s1 (splitmix64)))
 	   (setf (aref state 0) (make-double s0)
@@ -104,11 +100,7 @@
 	   (declare (type (unsigned-byte 64) x))
 	   (let ((hi (ldb (byte 32 32) x))
 		 (lo (ldb (byte 32 0) x)))
-	     (kernel:make-double-float
-	      (if (< hi #x80000000)
-		  hi
-		  (- hi #x100000000))
-	      lo))))
+	     (kernel:make-double-float hi lo))))
     (setf (aref state 0) (make-double (aref key 0))
 	  (aref state 1) (make-double (aref key 1)))
     state))
@@ -301,11 +293,7 @@
 		   (ldb (byte 32 0)
 			(ash x0 14))))
 	 (make-double (hi lo)
-	   (kernel:make-double-float
-	    (if (< hi #x80000000)
-		hi
-		(- hi #x100000000))
-	    lo)))
+	   (kernel:make-double-float hi lo)))
     (let ((s0-1 0)
 	  (s0-0 0)
 	  (s1-1 0)
@@ -526,9 +514,7 @@
 
     (flet ((convert (x1 x0)
 	     (declare (type (unsigned-byte 32) x1 x0))
-	     (kernel:make-double-float
-	      (if (< x1 #x80000000) x1 (- x1 #x100000000))
-	      x0)))
+	     (kernel:make-double-float x1 x0)))
       (setf (aref state 0) (convert s0-1 s0-0))
       (setf (aref state 1) (convert s1-1 s1-0)))
       rng-state))

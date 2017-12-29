@@ -1178,10 +1178,10 @@
            (inst movd res bits)))))))
 
 (define-vop (make-double-float)
-  (:args (hi-bits :scs (signed-reg))
+  (:args (hi-bits :scs (unsigned-reg))
 	 (lo-bits :scs (unsigned-reg)))
   (:results (res :scs (double-reg)))
-  (:arg-types signed-num unsigned-num)
+  (:arg-types unsigned-num unsigned-num)
   (:result-types double-float)
   (:translate make-double-float)
   (:temporary (:sc double-reg) temp)

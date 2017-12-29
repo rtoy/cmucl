@@ -306,7 +306,9 @@
 (defknown make-single-float ((signed-byte 32)) single-float
   (movable foldable flushable))
 
-(defknown make-double-float ((signed-byte 32) (unsigned-byte 32)) double-float
+(defknown make-double-float ((or (signed-byte 32) (unsigned-byte 32))
+			     (unsigned-byte 32))
+  double-float
   (movable foldable flushable))
 
 (defknown single-float-bits (single-float) (signed-byte 32)
