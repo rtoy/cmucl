@@ -1,6 +1,9 @@
 ;;; -*- Mode: Lisp; Package: Kernel -*-
 ;;;
 ;;; **********************************************************************
+;;; This code was written as part of CMU Common Lisp and has been
+;;; placed in the public domain, and is provided 'as is'.
+;;;
 (ext:file-comment
   "$Header: src/code/rand-xoroshiro.lisp $")
 
@@ -23,6 +26,12 @@
 
 (sys:register-lisp-feature :random-xoroshiro)
 
+
+;;;; Random state hackery:
+
+;; Generate a random seed that can be used for seeding the generator.
+;; If /dev/urandom is available, it is used to generate random data as
+;; the seed.  Otherwise, the current time is used as the seed.
 (defun generate-seed (&optional (nwords 1))
   ;; On some systems (as reported by Ole Rohne on cmucl-imp),
   ;; /dev/urandom isn't what we think it is, so if it doesn't work,
@@ -51,7 +60,7 @@
     (flet ((splitmix64 ()
 	     ;; See http://xoroshiro.di.unimi.it/splitmix64.c for the
 	     ;; definitive reference.  The basic algorithm, where x is
-	     ;; the 64-bit state of the generator,:
+	     ;; the 64-bit state of the generator, is:
 	     ;;
 	     ;;   uint64_t z = (x += 0x9e3779b97f4a7c15);
 	     ;;   z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9;
@@ -85,10 +94,14 @@
 		 (aref state 1) (make-double s1))
 	   state))))
 
+;; Initialize from an array.  The KEY is a 2-element array of unsigned
+;; 64-bit integers.  The state is set to the given 64-bit integer
+;; values.
 (defun vec-init-xoro-state (key &optional (state (make-array 2 :element-type 'double-float)))
   (declare (type (array (unsigned-byte 64) (2)) key)
 	   (type (simple-array double-float (2)) state))
   (flet ((make-double (x)
+	   (declare (type (unsigned-byte 64) x))
 	   (let ((hi (ldb (byte 32 32) x))
 		 (lo (ldb (byte 32 0) x)))
 	     (kernel:make-double-float
@@ -99,11 +112,11 @@
     (setf (aref state 0) (make-double (aref key 0))
 	  (aref state 1) (make-double (aref key 1)))
     state))
-  
-  
+
+;; The default seed is the digits of Euler's constant, 0.5772....
 (defun init-random-state (&optional (seed 5772156649015328606) state)
-  "Generate an random state vector from the given SEED.  The seed can be
-  either an integer or a vector of (unsigned-byte 32)"
+  _N"Generate an random state vector from the given SEED.  The seed can be
+  either an integer or a vector of (unsigned-byte 64)"
   (declare (type (or null integer
 		     (array (unsigned-byte 64) (*)))
 		 seed))
@@ -180,6 +193,10 @@
   (make-random-object))
 
 (defun make-random-state (&optional state)
+  _N"Make a random state object.  If STATE is not supplied, return a copy
+  of the default random state.  If STATE is a random state, then return a
+  copy of it.  If STATE is T then return a random state generated from
+  the universal time or /dev/urandom if available."
   (flet ((copy-random-state (state)
 	   (let ((old-state (random-state-state state))
 		 (new-state
@@ -198,7 +215,7 @@
 			       :rand 0
 			       :cached-p nil))
 	  (t
-	   (error "Argument is not a RANDOM-STATE, T, or NIL: ~S" state)))))
+	   (error _"Argument is not a RANDOM-STATE, T, or NIL: ~S" state)))))
 
 (defun rand-initializer ()
   (init-random-state (generate-seed)
@@ -384,7 +401,7 @@
 			  (double-float 0d0))
 		%random-double-float))
 ;;;
-;;; 53bit version.
+;;; 53-bit version.
 ;;;
 (defun %random-double-float (arg state)
   (declare (type (double-float (0d0)) arg)
@@ -452,10 +469,9 @@
       (declare (fixnum count)))))
 
 (defun random (arg &optional (state *random-state*))
-  "Generate a uniformly distributed pseudo-random number between zero
+  _N"Generate a uniformly distributed pseudo-random number between zero
   and Arg.  State, if supplied, is the random state to use."
-  (declare (inline %random-single-float %random-double-float
-		   #+long-float %long-float))
+  (declare (inline %random-single-float %random-double-float))
   (cond
     ((typep arg '(integer 1 #x100000000))
      ;; Let the compiler deftransform take care of this case.
@@ -464,9 +480,6 @@
      (%random-single-float arg state))
     ((and (typep arg 'double-float) (> arg 0.0D0))
      (%random-double-float arg state))
-    #+long-float
-    ((and (typep arg 'long-float) (> arg 0.0L0))
-     (%random-long-float arg state))
     #+double-double
     ((and (typep arg 'double-double-float) (> arg 0.0w0))
      (%random-double-double-float arg state))
@@ -475,13 +488,13 @@
     (t
      (error 'simple-type-error
 	    :expected-type '(or (integer 1) (float (0.0))) :datum arg
-	    :format-control (intl:gettext "Argument is not a positive integer or a positive float: ~S")
+	    :format-control _"Argument is not a positive integer or a positive float: ~S")
 	    :format-arguments (list arg)))))
 
 ;; Jump function for the generator.  See the jump function in
 ;; http://xoroshiro.di.unimi.it/xoroshiro128plus.c
 (defun random-state-jump (&optional (rng-state *random-state*))
-  "Jump the RNG-STATE.  This is equivalent to 2^64 calls to the
+  _N"Jump the RNG-STATE.  This is equivalent to 2^64 calls to the
   xoroshiro128+ generator.  It can be used to generate 2^64
   non-overlapping subsequences for parallel computations."
   (declare (type random-state rng-state))
