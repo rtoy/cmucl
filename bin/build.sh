@@ -39,7 +39,7 @@ ENABLE2="yes"
 ENABLE3="yes"
 ENABLE4="yes"
 
-version=21b
+version=21c
 SRCDIR=src
 BINDIR=bin
 TOOLDIR=$BINDIR

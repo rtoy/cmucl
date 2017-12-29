@@ -268,9 +268,12 @@
 (comf "target:code/debug" :byte-compile t)
 
 (comf "target:code/query" :byte-compile *byte-compile*)
-(if (c:backend-featurep :random-mt19937)
-    (comf "target:code/rand-mt19937")
-    (comf "target:code/rand"))
+(cond ((c:backend-featurep :random-mt19937)
+       (comf "target:code/rand-mt19937"))
+      ((c:backend-featurep :random-xoroshiro)
+       (comf "target:code/rand-xoroshiro"))
+      (t
+       (comf "target:code/rand")))
 (comf "target:code/ntrace" :byte-compile *byte-compile*)
 (comf "target:code/profile")
 (comf "target:code/sort")
