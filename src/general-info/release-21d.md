@@ -21,6 +21,11 @@ public domain.
   * Feature enhancements
     * Update to ASDF 3.3.1, fixing issues introduced in 3.3.0
   * Changes
+    * x86 and sparc have replaced the MT19937 RNG with xoroshiro128+ RNG.
+      * The required state for this generator is just 4 32-bit words instead of the 600+ for MT19937.
+      * The generator is also faster than MT19937 (approximately 28% faster on x86 and 18% on sparc).
+      * The new function `KERNEL:RANDOM-STATE-JUMP` modifies the given state to jump 2^64 samples ahead, allowing 2^64 non-overlapping sequences.
+
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
