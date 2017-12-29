@@ -235,11 +235,11 @@
 	   (optimize (speed 3) (safety 0)))
   (vm::xoroshiro-next state))
 
-#+(or x86 sparc)
+#-(or x86 sparc)
 (defun xoroshiro-gen (state)
   (declare (type (simple-array double-float (2)) state)
 	   (optimize (speed 3) (safety 0)))
-  ;; Portable implemenation of the xoroshiro128+ generator. See
+  ;; Portable implementation of the xoroshiro128+ generator. See
   ;; http://xoroshiro.di.unimi.it/xoroshiro128plus.c for the
   ;; definitive definition.
   ;;
