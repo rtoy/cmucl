@@ -413,6 +413,7 @@
 ;;; transformed to a call to this routine allowing its use in byte
 ;;; compiled code.
 ;;;
+#+random-mt19937
 (defun random-mt19937 (state)
   (declare (type (simple-array (unsigned-byte 32) (627)) state))
   (random-mt19937 state))

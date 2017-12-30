@@ -3195,7 +3195,11 @@
   ;; dst[63:0] = dst[63:0]
   ;; dst[127:64] = src[63:0]
   (define-regular-sse-inst unpcklpd #x66 #x14 t)
-  (define-regular-sse-inst unpcklps nil  #x14 t))
+  (define-regular-sse-inst unpcklps nil  #x14 t)
+
+  ;; PADDQ 64-bit integer add
+  (define-regular-sse-inst paddq #x66 #xd4)
+  )
 
 (define-instruction popcnt (segment dst src)
   (:printer ext-reg-reg/mem
@@ -3539,4 +3543,3 @@
   (packed-shift psllw #x71 #xf1 6)
   (packed-shift psrad #x72 #xe2 4)
   (packed-shift psraw #x71 #xe1 4))
-

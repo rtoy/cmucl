@@ -34,6 +34,12 @@ done
 # Shift out the options
 shift $[$OPTIND - 1]
 
+# Create the test directory needed issue.45 test.
+
+rm -rf test-tmp
+mkdir test-tmp
+ln -s /bin/ls test-tmp/ls-link
+
 if [ $# -eq 0 ]; then
     # No args so run all the tests
     $LISP -noinit -load tests/run-tests.lisp -eval '(cmucl-test-runner:run-all-tests)'

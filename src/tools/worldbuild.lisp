@@ -127,9 +127,13 @@
     "target:code/scavhook"
 
     "target:code/save"
-    ,@(if (c:backend-featurep :random-mt19937)
-	  '("target:code/rand-mt19937")
-	  '("target:code/rand"))
+    ,@(cond ((c:backend-featurep :random-mt19937)
+	     '("target:code/rand-mt19937"))
+	    ((c:backend-featurep :random-xoroshiro)
+	     '("target:code/rand-xoroshiro"))
+	    (t
+	     '("target:code/rand")))
+    "target:code/rand-xoroshiro"
     "target:code/alieneval"
     "target:code/c-call"
     "target:code/sap"

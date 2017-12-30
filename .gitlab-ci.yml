@@ -1,0 +1,31 @@
+linux-runner:
+  tags:
+    - linux
+  before_script:
+    - apt-get update -qq && apt-get install -y wget bzip2 make gcc gcc-multilib time bc git
+    - wget -nv https://common-lisp.net/project/cmucl/downloads/release/21c/cmucl-21c-x86-linux.tar.bz2
+    - wget -nv https://common-lisp.net/project/cmucl/downloads/release/21c/cmucl-21c-x86-linux.extra.tar.bz2
+    - mkdir snapshot
+    - (cd snapshot; tar xjf ../cmucl-21c-x86-linux.tar.bz2; tar xjf ../cmucl-21c-x86-linux.extra.tar.bz2)
+  script:
+    - bin/create-target.sh xtarget x86_linux x86
+    - bin/create-target.sh xcross x86_linux x86
+    - bin/cross-build-world.sh -crl xtarget xcross src/bootfiles/21c/boot-21c-cross.lisp ./snapshot/bin/lisp
+    - bin/build.sh -C "" -o xtarget/lisp/lisp
+    - bin/make-dist.sh -I dist linux-4
+    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+
+osx-runner:
+  tags:
+    - osx
+  before_script:
+    - curl -o cmucl-21c-x86-darwin.tar.bz2 https://common-lisp.net/project/cmucl/downloads/release/21c/cmucl-21c-x86-darwin.tar.bz2
+    - mkdir snapshot
+    - (cd snapshot; tar xjf ../cmucl-21c-x86-darwin.tar.bz2)
+  script:
+    - bin/create-target.sh xtarget x86_darwin
+    - bin/create-target.sh xcross x86_darwin
+    - bin/cross-build-world.sh -crl xtarget xcross src/bootfiles/21c/boot-21c-cross.lisp ./snapshot/bin/lisp
+    - bin/build.sh -C "" -o xtarget/lisp/lisp
+    - bin/make-dist.sh -I dist darwin-4
+    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log

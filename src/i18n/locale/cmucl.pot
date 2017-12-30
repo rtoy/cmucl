@@ -33,7 +33,7 @@ msgstr ""
 #: src/code/intl.lisp src/compiler/globaldb.lisp src/code/defstruct.lisp
 #: src/code/remote.lisp src/code/wire.lisp src/code/internet.lisp
 #: src/code/loop.lisp src/code/run-program.lisp src/code/parse-time.lisp
-#: src/code/profile.lisp src/code/ntrace.lisp src/code/rand-mt19937.lisp
+#: src/code/profile.lisp src/code/ntrace.lisp src/code/rand-xoroshiro.lisp
 #: src/code/debug.lisp src/code/debug-int.lisp src/code/debug-info.lisp
 #: src/code/eval.lisp src/code/filesys.lisp src/code/pathname.lisp
 #: src/code/fd-stream.lisp src/code/extfmts.lisp src/code/serve-event.lisp
@@ -12105,13 +12105,13 @@ msgstr ""
 msgid "Type \"yes\" for yes or \"no\" for no. "
 msgstr ""
 
-#: src/code/rand-mt19937.lisp
+#: src/code/rand-xoroshiro.lisp
 msgid ""
 "Generate an random state vector from the given SEED.  The seed can be\n"
-"  either an integer or a vector of (unsigned-byte 32)"
+"  either an integer or a vector of (unsigned-byte 64)"
 msgstr ""
 
-#: src/code/rand-mt19937.lisp
+#: src/code/rand-xoroshiro.lisp
 msgid ""
 "Make a random state object.  If STATE is not supplied, return a copy\n"
 "  of the default random state.  If STATE is a random state, then return a\n"
@@ -12119,18 +12119,25 @@ msgid ""
 "  the universal time or /dev/urandom if available."
 msgstr ""
 
-#: src/code/rand-mt19937.lisp
-msgid "Argument is not a RANDOM-STATE, T or NIL: ~S"
+#: src/code/rand-xoroshiro.lisp
+msgid "Argument is not a RANDOM-STATE, T, or NIL: ~S"
 msgstr ""
 
-#: src/code/rand-mt19937.lisp
+#: src/code/rand-xoroshiro.lisp
 msgid ""
 "Generate a uniformly distributed pseudo-random number between zero\n"
 "  and Arg.  State, if supplied, is the random state to use."
 msgstr ""
 
-#: src/code/rand-mt19937.lisp
+#: src/code/rand-xoroshiro.lisp
 msgid "Argument is not a positive integer or a positive float: ~S"
+msgstr ""
+
+#: src/code/rand-xoroshiro.lisp
+msgid ""
+"Jump the RNG-STATE.  This is equivalent to 2^64 calls to the\n"
+"  xoroshiro128+ generator.  It can be used to generate 2^64\n"
+"  non-overlapping subsequences for parallel computations."
 msgstr ""
 
 #: src/code/ntrace.lisp
@@ -13069,21 +13076,64 @@ msgid "\"~A\" is not a recognized time/date format."
 msgstr ""
 
 #: src/code/run-program.lisp
-msgid "Return any available status information on child processed. "
-msgstr ""
-
-#: src/code/run-program.lisp
 msgid "List of process structures for all active processes."
 msgstr ""
 
 #: src/code/run-program.lisp
 msgid ""
-"Return the current status of process.  The result is one of :running,\n"
-"   :stopped, :exited, :signaled."
+"Return the current status of process.  The result is one of\n"
+"  :running,:stopped, :continued, :exited, :signaled."
 msgstr ""
 
 #: src/code/run-program.lisp
 msgid "Wait for PROC to quit running for some reason.  Returns PROC."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid "PID of child process."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid ""
+"Exit code for the process if it is :exited; the termination signal\n"
+"  if it is :signaled; 0 if it is :stopped.  It is undefined in all\n"
+"  other cases."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid "Non-NIL if the process was terminated and a core image was dumped."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid ""
+"The two-way stream connected to the child's Unix pty connection or NIL."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid "Stream to child's input or NIL."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid "Stream from child's output or NIL."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid "Stream from child's error output or NIL."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid ""
+"The function to be called whenever process's changes status. This\n"
+"  function takes the process as a required argument.  This is\n"
+"  setf'able."
+msgstr ""
+
+#: src/code/run-program.lisp
+msgid ""
+"Returns annotations supplibed by users; it is setf'able. This is\n"
+"  available for users to associcate information with the process\n"
+"  without having to build a-lists or hash tables of process\n"
+"  structures."
 msgstr ""
 
 #: src/code/run-program.lisp
@@ -13205,10 +13255,6 @@ msgstr ""
 
 #: src/code/run-program.lisp
 msgid "All args to program must be simple strings -- ~S."
-msgstr ""
-
-#: src/code/run-program.lisp
-msgid "No such program: ~S"
 msgstr ""
 
 #: src/code/run-program.lisp
@@ -18827,10 +18873,6 @@ msgstr ""
 
 #: src/compiler/float-tran.lisp
 msgid "use inline (unsigned-byte 32) operations"
-msgstr ""
-
-#: src/compiler/float-tran.lisp
-msgid "Shouldn't happen"
 msgstr ""
 
 #: src/compiler/float-tran.lisp
