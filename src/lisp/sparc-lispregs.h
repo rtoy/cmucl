@@ -134,7 +134,7 @@
 
 #include <ucontext.h>
 
-extern int *solaris_register_address(struct ucontext *, int);
+extern long *solaris_register_address(struct ucontext *, int);
 
 #define SC_REG(sc, reg) (*solaris_register_address(sc,reg))
 
