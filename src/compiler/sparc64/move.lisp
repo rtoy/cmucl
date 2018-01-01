@@ -41,6 +41,7 @@
 (define-move-function (load-number 1) (vop x y)
   ((immediate zero)
    (signed-reg unsigned-reg))
+  (not-implemented "LOAD-NUMBER")
   (inst li y (tn-value x)))
 
 #+(and sparc-v9 sparc-v8plus)
@@ -51,10 +52,12 @@
 
 (define-move-function (load-base-char 1) (vop x y)
   ((immediate) (base-char-reg))
+  (not-implemented "LOAD-BASE-CHAR")
   (inst li y (char-code (tn-value x))))
 
 (define-move-function (load-system-area-pointer 1) (vop x y)
   ((immediate) (sap-reg))
+  (not-implemented "LOAD-SYSTEM-AREA-POINTER")
   (inst li y (sap-int (tn-value x))))
 
 (define-move-function (load-constant 5) (vop x y)
@@ -64,6 +67,7 @@
 
 (define-move-function (load-stack 5) (vop x y)
   ((control-stack) (any-reg descriptor-reg))
+  (not-implemented "LOAD-STACK")
   (load-stack-tn y x))
 
 (define-move-function (load-number-stack 5) (vop x y)
@@ -72,6 +76,7 @@
    (signed-stack) (signed-reg)
    (unsigned-stack) (unsigned-reg))
   (let ((nfp (current-nfp-tn vop)))
+    (not-implemented "LOAD-NUMBER-STACK")
     (loadw y nfp (tn-offset x))))
 
 (define-move-function (store-stack 5) (vop x y)
@@ -85,6 +90,7 @@
    (signed-reg) (signed-stack)
    (unsigned-reg) (unsigned-stack))
   (let ((nfp (current-nfp-tn vop)))
+    (not-implemented "STORE-NUMBER-STACK")
     (storew x nfp (tn-offset y))))
 
 
@@ -169,6 +175,7 @@
   (:arg-types tagged-num)
   (:note _N"fixnum untagging")
   (:generator 1
+    (emit-not-implemented)
     (inst sran y x fixnum-tag-bits)))
 
 ;;;
@@ -181,6 +188,7 @@
   (:results (y :scs (signed-reg unsigned-reg)))
   (:note _N"constant load")
   (:generator 1
+    (emit-not-implemented)
     (inst li y (tn-value x))))
 
 ;;;
@@ -196,6 +204,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
     (let ((done (gen-label)))
+      (emit-not-implemented)
       (inst andcc temp x fixnum-tag-mask)
       (inst b :eq done)
       (inst sran y x fixnum-tag-bits)
@@ -238,6 +247,7 @@
   (:result-types tagged-num)
   (:note _N"fixnum tagging")
   (:generator 1
+    (emit-not-implemented)
     (inst slln y x fixnum-tag-bits)))
 ;;;
 (define-move-vop move-from-word/fixnum :move
@@ -253,6 +263,7 @@
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
   (:note _N"signed word to integer coercion")
   (:generator 20
+    (emit-not-implemented)
     (move x arg)
     (let ((done (gen-label)))
       ;; Need to figure out if we have a fixnum or not, so look at the
@@ -290,6 +301,7 @@
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
   (:note _N"unsigned word to integer coercion")
   (:generator 20
+    (emit-not-implemented)
     (move x arg)
     (let ((done (gen-label))
 	  (one-word (gen-label)))

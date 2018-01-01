@@ -28,6 +28,7 @@
   (:variant-vars offset lowtag)
   (:policy :fast-safe)
   (:generator 4
+    (emit-not-implemented)
     (loadw value object offset lowtag)))
 ;;;
 (define-vop (cell-set)
@@ -49,6 +50,7 @@
   (:variant-vars base lowtag)
   (:info offset)
   (:generator 4
+    (emit-not-implemented)
     (loadw value object (+ base offset) lowtag)))
 ;;;
 (define-vop (slot-set)
@@ -57,6 +59,7 @@
   (:variant-vars base lowtag)
   (:info offset)
   (:generator 4
+    (emit-not-implemented)
     (storew value object (+ base offset) lowtag)))
 
 
@@ -81,6 +84,7 @@
      (:variant-vars offset lowtag)
      (:policy :fast-safe)
      (:generator 5
+       (emit-not-implemented)
        (sc-case index
 	 ((immediate zero)
 	  (let ((offset (- (+ (if (sc-is index zero)
