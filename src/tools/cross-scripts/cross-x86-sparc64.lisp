@@ -35,7 +35,7 @@
      :relative-package-names		; Relative package names from Allegro
      :conservative-float-type
      :hash-new
-     :random-mt19937			; MT-19937 generator
+     :random-xoroshiro			; xoroshiro128+ generator
      :cmu				; Announce this is CMUCL
      :cmu20 :cmu20b			; Current version identifier
      :modular-arith			; Modular arithmetic
@@ -66,6 +66,7 @@
      :pentium
      :long-float
      :new-random
+     :random-mt19937			; MT-19937 generator
      :small
      :mp))
 
