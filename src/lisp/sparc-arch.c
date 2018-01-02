@@ -531,10 +531,10 @@ sigill_handler(HANDLER_ARGS)
               string = (unsigned char *) &pc[3];
               /*
                * The offset is in 32-bit words, so subtract one for
-               * the instruction in the branch delay slot and scale up
-               * the offet to be in bytes.
+               * the instruction itself and one for the branch delay
+               * slot and scale up the offet to be in bytes.
                */
-              length = 4 * ((pc[1] & 0x7FFFF) - 1);
+              length = 4 * ((pc[1] & 0x7FFFF) - 2);
 
               while (string[length - 1] == '\0') {
                   --length;
