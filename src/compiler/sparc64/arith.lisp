@@ -319,7 +319,7 @@
       (unless (location= quo q)
 	(move quo q)))))
 
-(define-vop (fast-v8-truncate/signed=>signed fast-safe-arith-op)
+(define-vop (fast-truncate/signed=>signed fast-safe-arith-op)
   (:translate truncate)
   (:args (x :scs (signed-reg))
 	 (y :scs (signed-reg)))
@@ -332,29 +332,21 @@
   (:temporary (:scs (signed-reg)) r)
   (:vop-var vop)
   (:save-p :compute-only)
-  (:guard (or (backend-featurep :sparc-v8)
-	      (and (backend-featurep :sparc-v9)
-		   (not (backend-featurep :sparc-64)))))
   (:generator 12
     (emit-not-implemented)
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst cmp y zero-tn)
-      (inst b :eq zero #+sparc-v9 :pn)
-      ;; Extend the sign of X into the Y register
-        (inst sra r x 31)
-      (inst wry r)
-      (inst nop)
-      (inst nop)
+      (inst b :eq zero :pn)
       (inst nop)
 
-      (inst sdiv q x y)
+      (inst sdivx q x y)
       ;; We have the quotient so we need to compue the remainder
-      (inst smul r q y)		; rem
+      (inst mulx r q y)		; rem
       (inst sub rem x r)
       (unless (location= quo q)
 	(move quo q)))))
 
-(define-vop (fast-v8-truncate/unsigned=>unsigned fast-safe-arith-op)
+(define-vop (fast-truncate/unsigned=>unsigned fast-safe-arith-op)
   (:translate truncate)
   (:args (x :scs (unsigned-reg))
 	 (y :scs (unsigned-reg)))
@@ -367,54 +359,20 @@
   (:temporary (:scs (unsigned-reg)) r)
   (:vop-var vop)
   (:save-p :compute-only)
-  (:guard (or (backend-featurep :sparc-v8)
-	      (and (backend-featurep :sparc-v9)
-		   (not (backend-featurep :sparc-64)))))
-  (:generator 8
-    (emit-not-implemented)
-    (let ((zero (generate-error-code vop division-by-zero-error x y)))
-      (inst cmp y zero-tn)
-      (inst b :eq zero #+sparc-v9 :pn)
-        (inst wry zero-tn)		; Clear out high part
-      (inst nop)
-      (inst nop)
-      (inst nop)
-      
-      (inst udiv q x y)
-      ;; Compute remainder
-      (inst umul r q y)
-      (inst sub rem x r)
-      (unless (location= quo q)
-	(inst move quo q)))))
-
-(define-vop (fast-v9-truncate/signed=>signed fast-safe-arith-op)
-  (:translate truncate)
-  (:args (x :scs (signed-reg))
-	 (y :scs (signed-reg)))
-  (:arg-types signed-num signed-num)
-  (:results (quo :scs (signed-reg))
-	    (rem :scs (signed-reg)))
-  (:result-types signed-num signed-num)
-  (:note _N"inline (signed-byte 32) arithmetic")
-  (:temporary (:scs (signed-reg) :target quo) q)
-  (:temporary (:scs (signed-reg)) r)
-  (:vop-var vop)
-  (:save-p :compute-only)
-  (:guard (backend-featurep :sparc-64))
   (:generator 8
     (emit-not-implemented)
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst cmp y zero-tn)
       (inst b :eq zero :pn)
-      ;; Sign extend the numbers, just in case.
-        (inst signx x)
-      (inst signx y)
-      (inst sdivx q x y)
+      (inst nop)
+      
+      (inst udivx q x y)
       ;; Compute remainder
       (inst mulx r q y)
       (inst sub rem x r)
       (unless (location= quo q)
 	(inst move quo q)))))
+
 
 #+nil
 (define-vop (fast-v9-truncate/signed64=>signed64 fast-safe-arith-op)
