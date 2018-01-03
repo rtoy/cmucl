@@ -61,6 +61,7 @@
   (:variant-vars star)
   (:policy :safe)
   (:generator 0
+    (emit-not-implemented)
     (cond ((zerop num)
 	   (move result null-tn))
 	  ((and star (= num 1))
@@ -116,6 +117,7 @@
   (:temporary (:scs (any-reg) :from (:argument 0)) boxed)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) unboxed)
   (:generator 100
+    (emit-not-implemented)
     (inst add boxed boxed-arg (fixnumize (1+ code-trace-table-offset-slot)))
     (inst and boxed (lognot lowtag-mask))
     (inst srln unboxed unboxed-arg word-shift)
@@ -139,6 +141,7 @@
   (:policy :fast-safe)
   (:translate make-fdefn)
   (:generator 37
+    (emit-not-implemented)
     (with-fixed-allocation (result temp fdefn-type fdefn-size)
       ;; For the linkage-table stuff, we need to look up the address
       ;; of undefined_tramp from the linkage table instead of using
@@ -156,6 +159,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (result :scs (descriptor-reg)))
   (:generator 10
+    (emit-not-implemented)
     (let ((size (+ length closure-info-offset)))
       (with-fixed-allocation (result temp closure-header-type size
 				     :lowtag function-pointer-type
@@ -169,6 +173,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (result :scs (descriptor-reg)))
   (:generator 10
+    (emit-not-implemented)
     (with-fixed-allocation
 	(result temp value-cell-header-type value-cell-size)
       (storew value result value-cell-value-slot other-pointer-type))))
@@ -181,6 +186,7 @@
   (:args)
   (:results (result :scs (any-reg)))
   (:generator 1
+    (emit-not-implemented)
     (inst li result unbound-marker-type)))
 
 (define-vop (fixed-alloc)
@@ -190,6 +196,7 @@
   (:results (result :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
+    (emit-not-implemented)
     (with-fixed-allocation (result temp type words :lowtag lowtag :stack-p dynamic-extent)
       )))
 
@@ -203,6 +210,7 @@
   (:temporary (:scs (non-descriptor-reg)) header)
   (:temporary (:scs (any-reg)) temp)
   (:generator 6
+    (emit-not-implemented)
     (inst add bytes extra (* (1+ words) word-bytes))
     (inst slln header bytes (- type-bits vm:fixnum-tag-bits)) ; because bytes is already a fixnum
     (inst add header header (+ (ash -2 type-bits) type))

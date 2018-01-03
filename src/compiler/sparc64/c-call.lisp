@@ -241,6 +241,7 @@
   (:results (res :scs (sap-reg)))
   (:result-types system-area-pointer)
   (:generator 2
+    (emit-not-implemented)
     (inst li res (make-fixup (extern-alien-name foreign-symbol)
 			     :foreign))))
 
@@ -254,6 +255,7 @@
   (:result-types system-area-pointer)
   (:temporary (:scs (non-descriptor-reg)) addr)
   (:generator 2
+    (emit-not-implemented)
     (inst li addr (make-fixup (extern-alien-name foreign-symbol)
 			      :foreign-data))
     (loadw res addr)))
@@ -271,6 +273,7 @@
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:vop-var vop)
   (:generator 0
+    (emit-not-implemented)
     (let ((cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
@@ -287,6 +290,7 @@
   (:results (result :scs (sap-reg any-reg)))
   (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
   (:generator 0
+    (emit-not-implemented)
     (unless (zerop amount)
       (let ((delta (logandc2 (+ amount 7) 7)))
 	(cond ((< delta (ash 1 12))
@@ -305,6 +309,7 @@
   (:policy :fast-safe)
   (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
   (:generator 0
+    (emit-not-implemented)
     (unless (zerop amount)
       (let ((delta (logandc2 (+ amount 7) 7)))
 	(cond ((< delta (ash 1 12))

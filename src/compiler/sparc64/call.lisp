@@ -244,6 +244,7 @@
 	(inst b :gt zero-out-loop)
 	(inst stn zero-tn csp-tn temp)
 	))
+    (emit-not-implemented)
     (let ((size (* vm:word-bytes (sb-allocated-size 'control-stack))))
       (cond ((typep size '(signed-byte 13))
 	     (inst add csp-tn csp-tn size))
@@ -349,7 +350,7 @@ default-value-8
 	  (inst nop))
 	(inst compute-code-from-lra code-tn code-tn lra-label temp))
       (let ((regs-defaulted (gen-label))
-	    (defaulting-done (gen-label))
+    (defaulting-done (gen-label))
 	    (default-stack-vals (gen-label)))
 	;; Branch off to the MV case.
 	(new-assem:without-scheduling ()
@@ -514,6 +515,7 @@ default-value-8
   (:ignore arg-locs args ocfp)
   (:generator 5
     (trace-table-entry trace-table-call-site)
+    (emit-not-implemented)
     (let ((label (gen-label))
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
@@ -554,6 +556,7 @@ default-value-8
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:generator 20
     (trace-table-entry trace-table-call-site)
+    (emit-not-implemented)
     (let ((label (gen-label))
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
@@ -598,6 +601,7 @@ default-value-8
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 5
     (trace-table-entry trace-table-call-site)
+    (emit-not-implemented)
     (let ((label (gen-label))
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
@@ -637,6 +641,7 @@ default-value-8
   (:vop-var vop)
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
+    (emit-not-implemented)
     (maybe-load-stack-tn old-fp-temp old-fp)
     (maybe-load-stack-tn return-pc-temp return-pc)
     (move csp-tn cfp-tn)
@@ -928,7 +933,7 @@ default-value-8
   (:vop-var vop)
 
   (:generator 75
-
+    (emit-not-implemented)
     ;; Move these into the passing locations if they are not already there.
     (move args args-arg)
     (move lexenv function-arg)
@@ -961,6 +966,7 @@ default-value-8
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
     ;; Clear the number stack.
+    (emit-not-implemented)
     (let ((cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(inst add nsp-tn cur-nfp
@@ -1005,6 +1011,7 @@ default-value-8
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
     ;; Clear the number stack.
+    (emit-not-implemented)
     (let ((cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(inst add nsp-tn cur-nfp
@@ -1056,6 +1063,7 @@ default-value-8
 
   (:generator 13
     (trace-table-entry trace-table-function-epilogue)
+    (emit-not-implemented)
     (let ((not-single (gen-label)))
       ;; Clear the number stack.
       (let ((cur-nfp (current-nfp-tn vop)))
@@ -1109,6 +1117,7 @@ default-value-8
   (:ignore label)
   (:generator 6
     ;; Get result.
+    (emit-not-implemented)
     (move closure lexenv)))
 
 ;;; Copy a more arg from the argument area to the end of the current frame.
@@ -1122,6 +1131,7 @@ default-value-8
   (:temporary (:sc descriptor-reg :offset cname-offset) temp)
   (:info fixed)
   (:generator 20
+    (emit-not-implemented)
     (let ((loop (gen-label))
 	  (do-regs (gen-label))
 	  (done (gen-label)))
@@ -1196,6 +1206,7 @@ default-value-8
   (:translate %listify-rest-args)
   (:policy :safe)
   (:generator 20
+    (emit-not-implemented)
     (move context context-arg)
     (move count count-arg)
     ;; Check to see if there are any arguments.
@@ -1259,6 +1270,7 @@ default-value-8
   (:result-types t tagged-num)
   (:note _N"more-arg-context")
   (:generator 5
+    (emit-not-implemented)
     (inst sub count supplied (fixnumize fixed))
     (inst sub context csp-tn count)))
 
@@ -1295,6 +1307,7 @@ default-value-8
 		(:vop-var vop)
 		(:save-p :compute-only)
 		(:generator 1000
+		  (emit-not-implemented)
 		  (error-call vop ,error ,@args)))))
   (frob argument-count-error invalid-argument-count-error
     c::%argument-count-error nargs)

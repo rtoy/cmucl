@@ -336,6 +336,7 @@
 	      (and (backend-featurep :sparc-v9)
 		   (not (backend-featurep :sparc-64)))))
   (:generator 12
+    (emit-not-implemented)
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst cmp y zero-tn)
       (inst b :eq zero #+sparc-v9 :pn)
@@ -370,6 +371,7 @@
 	      (and (backend-featurep :sparc-v9)
 		   (not (backend-featurep :sparc-64)))))
   (:generator 8
+    (emit-not-implemented)
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst cmp y zero-tn)
       (inst b :eq zero #+sparc-v9 :pn)
@@ -400,6 +402,7 @@
   (:save-p :compute-only)
   (:guard (backend-featurep :sparc-64))
   (:generator 8
+    (emit-not-implemented)
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst cmp y zero-tn)
       (inst b :eq zero :pn)
@@ -456,6 +459,7 @@
   (:save-p :compute-only)
   (:guard (backend-featurep :sparc-64))
   (:generator 8
+    (emit-not-implemented)
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst cmp y zero-tn)
       (inst b :eq zero :pn)
@@ -482,6 +486,7 @@
   (:policy :fast-safe)
   (:temporary (:sc non-descriptor-reg) ndesc)
   (:generator 5
+    (emit-not-implemented)
     (sc-case amount
       (signed-reg
        (cond ((backend-featurep :sparc-v9)
@@ -539,6 +544,7 @@
   (:policy :fast-safe)
   (:temporary (:sc non-descriptor-reg) ndesc)
   (:generator 5
+    (emit-not-implemented)
     (sc-case amount
       (signed-reg
        (cond ((backend-featurep :sparc-v9)
@@ -594,6 +600,7 @@
   (:translate ash)
   (:policy :fast-safe)
   (:generator 4
+    (emit-not-implemented)
     (cond
       ((< count -31) (move result zero-tn))
       ((< count 0) (inst srl result number (min (- count) 31)))
@@ -614,6 +621,7 @@
 	 (:result-types ,type)
 	 (:policy :fast-safe)
 	 (:generator ,cost
+	   (emit-not-implemented)
 	  ;; The result-type assures us that this shift will not
 	  ;; overflow. And for fixnum's, the zero bits that get
 	  ;; shifted in are just fine for the fixnum tag.
@@ -642,6 +650,7 @@
 	  (:result-types ,type)
 	  (:policy :fast-safe)
 	  (:generator ,cost
+	    (emit-not-implemented)
 	    ;; The result-type assures us that this shift will not
 	    ;; overflow. And for fixnum's, the zero bits that get
 	    ;; shifted in are just fine for the fixnum tag.
@@ -716,6 +725,7 @@
 	 (:result-types ,type)
 	 (:policy :fast-safe)
 	 (:generator ,cost
+	   (emit-not-implemented)
 	    (sc-case amount
 	     ((signed-reg unsigned-reg)
 		(inst ,shift-inst result number amount))
@@ -748,6 +758,7 @@
 	 (:result-types ,type)
 	 (:policy :fast-safe)
 	 (:generator ,cost
+	   (emit-not-implemented)
 	   (if (zerop amount)
 	       (move result number)
 	       (inst ,shift-inst result number amount))))))
@@ -789,6 +800,7 @@
   (:temporary (:sc non-descriptor-reg :target result) temp)
   (:policy :fast-safe)
   (:generator 2
+    (emit-not-implemented)
     ;; Shift the fixnum right by the desired amount.  Then zap out the
     ;; 2 LSBs to make it a fixnum again.  (Those bits are junk.)
     (sc-case amount
@@ -811,6 +823,7 @@
   (:result-types positive-fixnum)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) shift)
   (:generator 30
+    (emit-not-implemented)
     (let ((loop (gen-label))
 	  (test (gen-label)))
       (inst addcc shift zero-tn arg)
@@ -837,6 +850,7 @@
   (:result-types positive-fixnum)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) shift)
   (:generator 30
+    (emit-not-implemented)
     (let ((loop (gen-label))
 	  (test (gen-label)))
       (move shift arg)
@@ -862,6 +876,7 @@
   (:result-types positive-fixnum)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) mask temp)
   (:generator 35
+    (emit-not-implemented)
       (move res arg)
 
       (dolist (stuff '((1 #x55555555) (2 #x33333333) (4 #x0f0f0f0f)
@@ -886,6 +901,7 @@
 	      (and (backend-featurep :sparc-v9)
 		   (not (backend-featurep :sparc-64)))))
   (:generator 2
+    (emit-not-implemented)
     ;; The cost here should be less than the cost for
     ;; */signed=>signed.  Why?  A fixnum product using signed=>signed
     ;; has to convert both args to signed-nums.  But using this, we
@@ -900,6 +916,7 @@
 	      (and (backend-featurep :sparc-v9)
 		   (not (backend-featurep :sparc-64)))))
   (:generator 2
+    (emit-not-implemented)
     (inst umul r x y)))
 
 (define-vop (fast-v8-*-c/signed=>signed fast-signed-binop-c)
@@ -908,6 +925,7 @@
 	      (and (backend-featurep :sparc-v9)
 		   (not (backend-featurep :sparc-64)))))
   (:generator 2
+    (emit-not-implemented)
     (inst smul r x y)))
 
 (define-vop (fast-v8-*-c/fixnum=>fixnum fast-safe-arith-op)
@@ -923,6 +941,7 @@
 	      (and (backend-featurep :sparc-v9)
 		   (not (backend-featurep :sparc-64)))))
   (:generator 1
+    (emit-not-implemented)
     (inst smul r x y)))
 
 
@@ -932,6 +951,7 @@
 	      (and (backend-featurep :sparc-v9)
 		   (not (backend-featurep :sparc-64)))))
   (:generator 3
+    (emit-not-implemented)
     (inst smul r x y)))
 
 (define-vop (fast-v8-*/unsigned=>unsigned fast-unsigned-binop)
@@ -940,6 +960,7 @@
 	      (and (backend-featurep :sparc-v9)
 		   (not (backend-featurep :sparc-64)))))
   (:generator 3
+    (emit-not-implemented)
     (inst umul r x y)))
 
 ;; The smul and umul instructions are deprecated on the Sparc V9.  Use
@@ -949,6 +970,7 @@
   (:translate *)
   (:guard (backend-featurep :sparc-64))
   (:generator 4
+    (emit-not-implemented)
     (inst sran temp y fixnum-tag-bits)
     (inst mulx r x temp)))
 
@@ -956,12 +978,14 @@
   (:translate *)
   (:guard (backend-featurep :sparc-64))
   (:generator 3
+    (emit-not-implemented)
     (inst mulx r x y)))
 
 (define-vop (fast-v9-*/unsigned=>unsigned fast-unsigned-binop)
   (:translate *)
   (:guard (backend-featurep :sparc-64))
   (:generator 3
+    (emit-not-implemented)
     (inst mulx r x y)))
 
 
@@ -1028,6 +1052,7 @@
 					     suffix)))
 			(:translate ,tran)
 			(:generator ,cost
+			  (emit-not-implemented)
 			  (inst cmp x
 				,(if (eq suffix '-c/fixnum) '(fixnumize y) 'y))
 			  (inst b (if not-p
@@ -1062,6 +1087,7 @@
   (:note _N"inline fixnum comparison")
   (:translate eql)
   (:generator 4
+    (emit-not-implemented)
     (inst cmp x y)
     (inst b (if not-p :ne :eq) target)
     (inst nop)))
@@ -1078,6 +1104,7 @@
   (:info target not-p y)
   (:translate eql)
   (:generator 2
+    (emit-not-implemented)
     (inst cmp x (fixnumize y))
     (inst b (if not-p :ne :eq) target)
     (inst nop)))
@@ -1103,6 +1130,7 @@
   (:result-types unsigned-num)
   (:policy :fast-safe)
   (:generator 4
+    (emit-not-implemented)
     (let ((done (gen-label)))
       (inst cmp shift)
       (inst b :eq done)
@@ -1127,11 +1155,13 @@
   (:args (x :scs (unsigned-reg zero)))
   (:arg-types unsigned-num)
   (:generator 1
+    (emit-not-implemented)
     (inst not r x)))
 
 (define-vop (32bit-logical-and 32bit-logical)
   (:translate 32bit-logical-and)
   (:generator 1
+    (emit-not-implemented)
     (inst and r x y)))
 
 (deftransform 32bit-logical-nand ((x y) (* *))
@@ -1140,6 +1170,7 @@
 (define-vop (32bit-logical-or 32bit-logical)
   (:translate 32bit-logical-or)
   (:generator 1
+    (emit-not-implemented)
     (inst or r x y)))
 
 (deftransform 32bit-logical-nor ((x y) (* *))
@@ -1148,6 +1179,7 @@
 (define-vop (32bit-logical-xor 32bit-logical)
   (:translate 32bit-logical-xor)
   (:generator 1
+    (emit-not-implemented)
     (inst xor r x y)))
 
 (define-vop (32bit-logical-eqv 32bit-logical)
@@ -1158,6 +1190,7 @@
 (define-vop (32bit-logical-orc2 32bit-logical)
   (:translate 32bit-logical-orc2)
   (:generator 1
+    (emit-not-implemented)
     (inst orn r x y)))
 
 (deftransform 32bit-logical-orc1 ((x y) (* *))
@@ -1166,6 +1199,7 @@
 (define-vop (32bit-logical-andc2 32bit-logical)
   (:translate 32bit-logical-andc2)
   (:generator 1
+    (emit-not-implemented)
     (inst andn r x y)))
 
 (deftransform 32bit-logical-andc1 ((x y) (* *))
@@ -1184,12 +1218,14 @@
   (:translate shift-towards-start)
   (:note _N"shift-towards-start")
   (:generator 1
+    (emit-not-implemented)
     (inst slln r num amount)))
 
 (define-vop (shift-towards-end shift-towards-someplace)
   (:translate shift-towards-end)
   (:note _N"shift-towards-end")
   (:generator 1
+    (emit-not-implemented)
     (inst srln r num amount)))
 
 
@@ -1229,6 +1265,7 @@
   (:results (result :scs (descriptor-reg)))
   (:guard (not (backend-featurep :sparc-v9)))
   (:generator 3
+    (emit-not-implemented)
     (let ((done (gen-label)))
       (inst cmp digit)
       (inst b :lt done)
@@ -1244,6 +1281,7 @@
   (:results (result :scs (descriptor-reg)))
   (:guard (backend-featurep :sparc-v9))
   (:generator 3
+    (emit-not-implemented)
     (inst cmp digit)
     (load-symbol result t)
     (inst cmove :lt result null-tn)))
@@ -1275,6 +1313,7 @@
 	    (carry :scs (unsigned-reg)))
   (:result-types unsigned-num positive-fixnum)
   (:generator 3
+    (emit-not-implemented)
     (inst addcc zero-tn c -1)
     (inst addxcc result a b)
     (inst addx carry zero-tn zero-tn)))
@@ -1290,6 +1329,7 @@
 	    (borrow :scs (unsigned-reg)))
   (:result-types unsigned-num positive-fixnum)
   (:generator 4
+    (emit-not-implemented)
     (inst subcc zero-tn c 1)
     (inst subxcc result a b)
     (inst addx borrow zero-tn zero-tn)
@@ -1357,6 +1397,7 @@
 	    (lo :scs (unsigned-reg) :from (:eval 1)))
   (:result-types unsigned-num unsigned-num)
   (:generator 40
+    (emit-not-implemented)
     (emit-multiply x y hi lo)
     (inst addcc lo carry-in)
     (inst addx hi zero-tn)))
@@ -1373,6 +1414,7 @@
 	    (lo :scs (unsigned-reg) :from (:eval 1)))
   (:result-types unsigned-num unsigned-num)
   (:generator 40
+    (emit-not-implemented)
     (emit-multiply x y hi lo)
     (inst addcc lo carry-in)
     (inst addx hi zero-tn)
@@ -1389,6 +1431,7 @@
 	    (lo :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
   (:generator 40
+    (emit-not-implemented)
     (emit-multiply x y hi lo)))
 
 (define-vop (bignum-lognot)
@@ -1399,6 +1442,7 @@
   (:results (r :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:generator 1
+    (emit-not-implemented)
     (inst not r x)))
 
 (define-vop (fixnum-to-digit)
@@ -1409,6 +1453,7 @@
   (:results (digit :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:generator 1
+    (emit-not-implemented)
     (inst sran digit fixnum fixnum-tag-bits)))
 
 (define-vop (bignum-floor)
@@ -1424,6 +1469,7 @@
   (:guard (not (or (backend-featurep :sparc-v8)
 		   (backend-featurep :sparc-v9))))
   (:generator 300
+    (emit-not-implemented)
     (move rem div-high)
     (move quo div-low)
     (dotimes (i 33)
@@ -1454,6 +1500,7 @@
 	      (and (backend-featurep :sparc-v9)
 		   (not (backend-featurep :sparc-64)))))
   (:generator 15
+    (emit-not-implemented)
     (inst wry div-high)
     (inst nop)
     (inst nop)
@@ -1480,6 +1527,7 @@
   (:result-types unsigned-num unsigned-num)
   (:guard (backend-featurep :sparc-64))
   (:generator 5
+    (emit-not-implemented)
     ;; Set dividend to be div-high and div-low	      
     (inst sllx dividend div-high 32)
     (inst add dividend div-low)
@@ -1497,6 +1545,7 @@
   (:results (res :scs (any-reg signed-reg)))
   (:result-types signed-num)
   (:generator 1
+    (emit-not-implemented)
     (sc-case res
       (any-reg
        (inst slln res digit fixnum-tag-bits))
@@ -1513,6 +1562,7 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:generator 1
+    (emit-not-implemented)
     (sc-case count
       ((signed-reg unsigned-reg)
        (inst sran result digit count))
@@ -1522,6 +1572,7 @@
 (define-vop (digit-lshr digit-ashr)
   (:translate bignum::%digit-logical-shift-right)
   (:generator 1
+    (emit-not-implemented)
     (sc-case count
       ((signed-reg unsigned-reg)
        (inst srln result digit count))
@@ -1531,6 +1582,7 @@
 (define-vop (digit-ashl digit-ashr)
   (:translate bignum::%ashl)
   (:generator 1
+    (emit-not-implemented)
     (sc-case count
       ((signed-reg unsigned-reg)
        (inst slln result digit count))
@@ -1758,7 +1810,7 @@
 
 ;; Unary operations
 
-#+(and sparc-v9 sparc-v8plus)
+#+(and nil sparc-v9 sparc-v8plus)
 (progn
 
 ;;; The vops for the 64-bit operations are written this way because I

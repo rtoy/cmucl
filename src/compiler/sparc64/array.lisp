@@ -32,6 +32,7 @@
   (:temporary (:scs (non-descriptor-reg)) gc-temp)	; gencgc
   (:results (result :scs (descriptor-reg)))
   (:generator 0
+    (emit-not-implemented)
     (pseudo-atomic ()
       (inst add ndescr rank (* (1+ array-dimensions-offset) vm:word-bytes))
       (inst andn ndescr 4)
@@ -74,6 +75,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 6
+    (emit-not-implemented)
     (loadw temp x 0 vm:other-pointer-type)
     (inst sra temp vm:type-bits)
     (inst sub temp (1- vm:array-dimensions-offset))
@@ -94,6 +96,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 5
+    (emit-not-implemented)
     (let ((error (generate-error-code vop invalid-array-index-error
 				      array bound index)))
       (inst cmp index bound)
@@ -185,6 +188,7 @@
 	 (:result-types positive-fixnum)
 	 (:temporary (:scs (non-descriptor-reg) :to (:result 0)) temp result)
 	 (:generator 20
+	   (emit-not-implemented)
 	   ;; temp = floor(index bit-shift), to get address of word
 	   ;; containing our bits.
 	   (inst srln temp index ,bit-shift)
@@ -352,6 +356,7 @@
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:result-types single-float)
   (:generator 5
+    (emit-not-implemented)
     (inst add offset index (- (* vm:vector-data-offset vm:word-bytes)
 			      vm:other-pointer-type))
     (inst ldf value object offset)))
@@ -367,6 +372,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:result-types single-float)
   (:generator 3
+    (emit-not-implemented)
     (let ((offset (+ (fixnumize index)
 		     (- (* vm:vector-data-offset vm:word-bytes)
 			vm:other-pointer-type))))
@@ -389,6 +395,7 @@
   (:result-types single-float)
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:generator 5
+    (emit-not-implemented)
     (inst add offset index
 	  (- (* vm:vector-data-offset vm:word-bytes)
 	     vm:other-pointer-type))
@@ -410,6 +417,7 @@
   (:result-types single-float)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 2
+    (emit-not-implemented)
     (let ((offset (+ (fixnumize index)
 		     (- (* vm:vector-data-offset vm:word-bytes)
 			vm:other-pointer-type))))
@@ -432,6 +440,7 @@
   (:result-types double-float)
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:generator 7
+    (emit-not-implemented)
     (inst slln offset index (- 3 fixnum-tag-bits))
     (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			vm:other-pointer-type))
@@ -448,6 +457,7 @@
   (:result-types double-float)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 3
+    (emit-not-implemented)
     (let ((offset (+ (* index double-float-bytes)
 		     (- (* vm:vector-data-offset vm:word-bytes)
 			vm:other-pointer-type))))
@@ -469,6 +479,7 @@
   (:result-types double-float)
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:generator 20
+    (emit-not-implemented)
     (inst slln offset index (- 3 fixnum-tag-bits))
     (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			vm:other-pointer-type))
@@ -490,6 +501,7 @@
   (:result-types double-float)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 10
+    (emit-not-implemented)
     (let ((offset (+ (* index double-float-bytes)
 		     (- (* vm:vector-data-offset vm:word-bytes)
 			vm:other-pointer-type))))
@@ -609,6 +621,7 @@
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:result-types complex-single-float)
   (:generator 5
+    (emit-not-implemented)
     (let ((real-tn (complex-single-reg-real-tn value)))
       (inst slln offset index (- 3 fixnum-tag-bits))
       (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
@@ -630,6 +643,7 @@
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:result-types complex-single-float)
   (:generator 3
+    (emit-not-implemented)
     (let ((offset (+ (* index (* 2 single-float-bytes))
 		     (- (* vm:vector-data-offset vm:word-bytes)
 			vm:other-pointer-type)))
@@ -657,6 +671,7 @@
   (:result-types complex-single-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 5
+    (emit-not-implemented)
     (let ((value-real (complex-single-reg-real-tn value))
 	  (result-real (complex-single-reg-real-tn result)))
       (inst slln offset index (- 3 fixnum-tag-bits))
@@ -686,6 +701,7 @@
   (:result-types complex-single-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 3
+    (emit-not-implemented)
     (let ((offset (+ (* index (* 2 single-float-bytes))
 		     (- (* vm:vector-data-offset vm:word-bytes)
 			vm:other-pointer-type)))
@@ -717,6 +733,7 @@
   (:result-types complex-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 7
+    (emit-not-implemented)
     (let ((real-tn (complex-double-reg-real-tn value)))
       (inst slln offset index (- 4 fixnum-tag-bits))
       (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
@@ -737,6 +754,7 @@
   (:result-types complex-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 5
+    (emit-not-implemented)
     (let ((offset (+ (* index (* 2 double-float-bytes))
 		     (- (* vm:vector-data-offset vm:word-bytes)
 			  vm:other-pointer-type)))
@@ -764,6 +782,7 @@
   (:result-types complex-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 20
+    (emit-not-implemented)
     (let ((value-real (complex-double-reg-real-tn value))
 	  (result-real (complex-double-reg-real-tn result)))
       (inst slln offset index (- 4 fixnum-tag-bits))
@@ -793,6 +812,7 @@
   (:result-types complex-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 15
+    (emit-not-implemented)
     (let ((value-real (complex-double-reg-real-tn value))
 	  (result-real (complex-double-reg-real-tn result))
 	  (value-imag (complex-double-reg-imag-tn value))
@@ -1008,6 +1028,7 @@
   (:result-types double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 7
+    (emit-not-implemented)
     (let ((hi-tn (double-double-reg-hi-tn value)))
       (inst slln offset index (- 4 fixnum-tag-bits))
       (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
@@ -1028,6 +1049,7 @@
   (:result-types double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 5
+    (emit-not-implemented)
     (let ((offset (+ (* index (* 2 double-float-bytes))
 		     (- (* vm:vector-data-offset vm:word-bytes)
 			  vm:other-pointer-type)))
@@ -1055,6 +1077,7 @@
   (:result-types double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 20
+    (emit-not-implemented)
     (let ((value-hi (double-double-reg-hi-tn value))
 	  (result-hi (double-double-reg-hi-tn result)))
       (inst slln offset index (- 4 fixnum-tag-bits))
@@ -1084,6 +1107,7 @@
   (:result-types double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 15
+    (emit-not-implemented)
     (let ((value-hi (double-double-reg-hi-tn value))
 	  (result-hi (double-double-reg-hi-tn result))
 	  (value-lo (double-double-reg-lo-tn value))
@@ -1119,6 +1143,7 @@
   (:result-types complex-double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 7
+    (emit-not-implemented)
     (let ((real-tn (complex-double-double-reg-real-hi-tn value)))
       (inst slln offset index (- 5 fixnum-tag-bits))
       (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
@@ -1145,6 +1170,7 @@
   (:result-types complex-double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 5
+    (emit-not-implemented)
     (let ((offset (+ (* index (* 2 double-float-bytes))
 		     (- (* vm:vector-data-offset vm:word-bytes)
 			  vm:other-pointer-type)))
@@ -1180,6 +1206,7 @@
   (:result-types complex-double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 20
+    (emit-not-implemented)
     (let ((value-real (complex-double-double-reg-real-hi-tn value))
 	  (result-real (complex-double-double-reg-real-hi-tn result)))
       (inst slln offset index (- 5 fixnum-tag-bits))
@@ -1221,6 +1248,7 @@
   (:result-types complex-double-double-float)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
   (:generator 15
+    (emit-not-implemented)
     (let ((value-real (complex-double-double-reg-real-hi-tn value))
 	  (result-real (complex-double-double-reg-real-hi-tn result))
 	  (value-imag (complex-double-double-reg-imag-hi-tn value))
