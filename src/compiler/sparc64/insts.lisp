@@ -2063,52 +2063,10 @@ about function addresses and register values.")
 
 ;;;; li, jali, ji, nop, cmp, not, neg, move, and more
 
-#-sparc-v9
-(defun %li (reg value)
-  (etypecase value
-    ((signed-byte 13)
-     (inst add reg zero-tn value))
-    ((or (signed-byte 32) (unsigned-byte 32))
-     (let ((hi (ldb (byte 22 10) value))
-	   (lo (ldb (byte 10 0) value)))
-       (inst sethi reg hi)
-       (unless (zerop lo)
-	 (inst add reg lo))))
-    (fixup
-     (inst sethi reg value)
-     (inst add reg value))))
-
-#+sparc-v9
-(defun %li (reg value)
-  (etypecase value
-    ((signed-byte 13)
-     (inst add reg zero-tn value))
-    ((unsigned-byte 32)
-     (let ((hi (ldb (byte 22 10) value))
-	   (lo (ldb (byte 10 0) value)))
-       ;; Sethi sets the top 32-bits to zero.
-       (inst sethi reg hi)
-       (unless (zerop lo)
-	 (inst add reg lo))))
-    ((signed-byte 32)
-     (let ((hi (ldb (byte 22 10) value))
-	   (lo (ldb (byte 10 0) value)))
-       ;; Sethi sets the top 32-bits to zero.
-       (inst sethi reg hi)
-       (unless (zerop lo)
-	 (inst add reg lo))
-       ;; Sign-extend the result
-       (inst signx reg)))
-    (fixup
-     (inst sethi reg value)
-     (inst add reg value))))
-
 (define-instruction-macro li (reg value)
   `(%li ,reg ,value))
 
-#+sparc-v9
-(progn
-(defun %li64 (reg value &optional temp)
+(defun %li (reg value &optional temp)
   (etypecase value
     ((signed-byte 13)
      (inst add reg zero-tn value))
@@ -2168,10 +2126,6 @@ about function addresses and register values.")
      (inst sethi reg value)
      (inst add reg value))))
 
-(define-instruction-macro li64 (reg value &optional temp)
-  `(%li64 ,reg ,value ,temp))
-
-)
 
 ;; Define LDN/STN synthetic instructions to do "natural" loads and
 ;; stores for 32-bit or 64-bit objects depending on whether this is a
