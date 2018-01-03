@@ -101,7 +101,9 @@
 	       (inst ,op value object temp)))))
 	 (t
 	  ,@(unless (zerop shift)
-	      `((inst srln temp index ,shift)))
+	      (if (minusp shift)
+		  `((inst slln temp index ,(- shift)))
+		  `((inst srln temp index ,shift))))
 	  (inst add temp ,(if (zerop shift) 'index 'temp)
 		(- (ash offset vm:word-shift) lowtag))
 	  (inst ,op value object temp)))
@@ -112,8 +114,8 @@
 (define-indexer signed-word-index-ref nil ldsw 0)
 #+sparc-v9
 (define-indexer signed-word-index-set nil st 0)
-(define-indexer word-index-ref nil ld 0)
-(define-indexer word-index-set t st 0)
+(define-indexer word-index-ref nil ldn -1)
+(define-indexer word-index-set t stn -1)
 (define-indexer halfword-index-ref nil lduh 1)
 (define-indexer signed-halfword-index-ref nil ldsh 1)
 (define-indexer halfword-index-set t sth 1)
