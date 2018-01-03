@@ -244,6 +244,7 @@
   (non-descriptor-reg registers
    :locations #.non-descriptor-regs)
 
+#||
   ;; 64-bit signed and unsigned integers
 
   #+(and sparc-v9 sparc-v8plus)
@@ -270,7 +271,7 @@
     :constant-scs (zero immediate)
     :save-p t
     :alternate-scs (unsigned64-stack))
-
+||#
   ;; Pointers to the interior of objects.  Used only as an temporary.
   (interior-reg registers
    :locations (#.lip-offset))
