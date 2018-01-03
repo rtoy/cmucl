@@ -142,7 +142,7 @@
 (defmacro emit-return-pc (label)
   "Emit a return-pc header word.  LABEL is the label to use for this return-pc."
   `(progn
-     (align lowtag-bits)
+     (align 4)
      (emit-label ,label)
      (inst word 0)
      (inst lra-header-word)))

@@ -107,8 +107,9 @@ call_into_lisp:
         jmp     reg_CODE+FUNCTION_CODE_OFFSET
         nop
 
-        .align  8
+        .align  16
 lra:
+        .word   0
         .word   type_ReturnPcHeader
 
         /* Blow off any extra values. */
