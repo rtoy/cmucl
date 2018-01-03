@@ -36,6 +36,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
+  (not-implemented "GENERIC-+")
   (inst andcc zero-tn x fixnum-tag-mask)
   (inst b :ne DO-STATIC-FUN)
   (inst andcc zero-tn y fixnum-tag-mask)
@@ -80,6 +81,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
+  (not-implemented "GENERIC--")
   (inst andcc zero-tn x fixnum-tag-mask)
   (inst b :ne DO-STATIC-FUN)
   (inst andcc zero-tn y fixnum-tag-mask)
@@ -129,6 +131,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
+  (not-implemented "GENERIC-*")
   ;; If either arg is not a fixnum, call the static function.
   (inst andcc zero-tn x fixnum-tag-mask)
   (inst b :ne DO-STATIC-FUN)
@@ -138,7 +141,7 @@
 
   ;; Remove the tag from one arg so that the result will have the correct
   ;; fixnum tag.
-  (inst sra temp x fixnum-tag-bits)
+  (inst sran temp x fixnum-tag-bits)
   ;; Compute the produce temp * y and return the double-word product
   ;; in hi:lo.
   (cond ((backend-featurep :sparc-64)
@@ -228,6 +231,7 @@
 				  
 				  (:temp nargs any-reg nargs-offset)
 				  (:temp ocfp any-reg ocfp-offset))
+	  (not-implemented ,name)
 	  (inst andcc zero-tn x fixnum-tag-mask)
 	  (inst b :ne DO-STATIC-FN)
 	  (inst andcc zero-tn y fixnum-tag-mask)
@@ -268,6 +272,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
+  (not-implemented "GENERIC-EQL")
   (inst cmp x y)
   (inst b :eq RETURN-T)
   (inst andcc zero-tn x fixnum-tag-mask)
@@ -305,6 +310,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
+  (not-implemented "GENERIC-=")
   (inst andcc zero-tn x fixnum-tag-mask)
   (inst b :ne DO-STATIC-FN)
   (inst andcc zero-tn y fixnum-tag-mask)
@@ -341,6 +347,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
+  (not-implemented "GENERIC-/=")
   (inst cmp x y)
   (inst b :eq RETURN-NIL)
   (inst andcc zero-tn x fixnum-tag-mask)
