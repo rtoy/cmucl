@@ -25,15 +25,18 @@
   ((null immediate zero)
    (any-reg descriptor-reg))
   (let ((val (tn-value x)))
-    (not-implemented "LOAD-IMMEDIATE")
     (etypecase val
       (integer
+       (not-implemented "LOAD-IMMEDIATE/INTEGER")
        (inst li y (fixnumize val)))
       (null
+       (not-implemented "LOAD-IMMEDIATE/NULL")
        (move y null-tn))
       (symbol
+       (not-implemented "LOAD-IMMEDIATE/SYMBOL")
        (load-symbol y val))
       (character
+       (not-implemented "LOAD-IMMEDIATE/CHAR")
        (inst li y (logior (ash (char-code val) type-bits)
 			  base-char-type))))))
 
@@ -48,6 +51,7 @@
 (define-move-function (load-number 1) (vop x y)
   ((immediate zero)
    (signed-reg unsigned-reg signed64-reg unsigned64-reg))
+  (not-implemented "LOAD-NUMBER")
   (inst li64 y (tn-value x)))
 
 (define-move-function (load-base-char 1) (vop x y)
@@ -223,6 +227,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
     (let ((done (gen-label)))
+      (emit-not-implemented)
       (inst andcc temp x fixnum-tag-mask)
       (inst signx temp x)		; sign-extend x to temp
       (inst b :eq done)
@@ -333,6 +338,7 @@
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
   (:note _N"unsigned word to integer coercion")
   (:generator 20
+    (emit-not-implemented)
     (move x arg)
     (let ((done (gen-label)))
       (inst sran temp x positive-fixnum-bits)
