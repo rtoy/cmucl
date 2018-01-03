@@ -133,8 +133,10 @@
 (defmacro lisp-return (return-pc &key (offset 0) (frob-code t))
   "Return to RETURN-PC."
   `(progn
+     ;; 8 to skip over the lra object, and 4*offset to get to the
+     ;; right instruction since each instruction is 4 bytes long.
      (inst j ,return-pc
-	   (- (* (1+ ,offset) word-bytes) other-pointer-type))
+	   (- (+ 8 (* ,offset 4)) other-pointer-type))
      ,(if frob-code
 	  `(move code-tn ,return-pc)
 	  '(inst nop))))
