@@ -2346,12 +2346,16 @@ about function addresses and register values.")
    (emit-compute-inst segment vop dst src label temp
 		      #'(lambda (label posn delta-if-after)
 			  (when c::*compiler-trace-output*
-			    (format c::*compiler-trace-output* "COMPUTE-CODE-FROM=LRA~%")
-			    (format c::*compiler-trace-output* "label posn delta-if-after = ~A ~A ~A~%"
+			    (format c::*compiler-trace-output*
+				    "COMPUTE-CODE-FROM=FN~%")
+			    (format c::*compiler-trace-output*
+				    "label posn delta-if-after = ~A ~A ~A~%"
 				    label posn delta-if-after)
-			    (format c::*compiler-trace-output* "label-position = ~A~%"
+			    (format c::*compiler-trace-output*
+				    "label-position = ~A~%"
 				    (label-position label posn delta-if-after))
-			    (format c::*compiler-trace-output* "header-len = ~A~%"
+			    (format c::*compiler-trace-output*
+				    "header-len = ~A~%"
 				    (component-header-length))
 			    (format c::*compiler-trace-output*
 				    "Final offset = ~A~%"
@@ -2413,12 +2417,16 @@ about function addresses and register values.")
    (emit-compute-inst segment vop dst src label temp
 		      #'(lambda (label posn delta-if-after)
 			  (when c::*compiler-trace-output*
-			    (format c::*compiler-trace-output* "COMPUTE-LRA-FROM-CODE~%")
-			    (format c::*compiler-trace-output* "label posn delta-if-after = ~A ~A ~A~%"
+			    (format c::*compiler-trace-output*
+				    "COMPUTE-LRA-FROM-CODE~%")
+			    (format c::*compiler-trace-output*
+				    "label posn delta-if-after = ~A ~A ~A~%"
 				    label posn delta-if-after)
-			    (format c::*compiler-trace-output* "label-position = ~A~%"
+			    (format c::*compiler-trace-output*
+				    "label-position = ~A~%"
 				    (label-position label posn delta-if-after))
-			    (format c::*compiler-trace-output* "header-len = ~A~%"
+			    (format c::*compiler-trace-output*
+				    "header-len = ~A~%"
 				    (component-header-length))
 			    (format c::*compiler-trace-output*
 				    "Final offset = ~A~%"
