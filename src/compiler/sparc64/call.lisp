@@ -180,8 +180,6 @@
       (inst word 0)
       (inst word 0))
 
-    ;;(emit-not-implemented)
-
     ;; The start of the actual code.
     ;; Fix CODE, cause the function object was passed in.
     (inst compute-code-from-fn code-tn code-tn start-lab temp)
@@ -209,6 +207,7 @@
 	(inst b :lt zero-out-mem)
 	(inst add csp-tn vm:word-bytes))
       )
+    (emit-not-implemented)
     ;; Build our stack frames.
     (let ((size (* vm:word-bytes (sb-allocated-size 'control-stack))))
       (cond ((typep size '(signed-byte 13))
