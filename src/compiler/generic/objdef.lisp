@@ -204,7 +204,11 @@
 (define-primitive-object (bignum :lowtag other-pointer-type
 				 :header bignum-type
 				 :alloc-trans bignum::%allocate-bignum)
-  (digits :rest-p t :c-type #-alpha "long" #+alpha "u32"))
+  (digits :rest-p t
+	  :c-type
+	  #-(or alpha sparc-v9) "long"
+	  #+alpha "u32"
+	  #+sparc-v9 "int"))
 
 (define-primitive-object (ratio :type ratio
 				:lowtag other-pointer-type
