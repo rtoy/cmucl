@@ -32,8 +32,12 @@
 			  (:temp ndescr non-descriptor-reg nl0-offset)
 			  (:temp gc-temp non-descriptor-reg nl1-offset)
 			  (:temp vector descriptor-reg a3-offset))
+  (not-implemented "ALLOCATE-VECTOR")
   (pseudo-atomic ()
-    (inst add ndescr words (* (1+ vm:vector-data-offset) vm:word-bytes))
+    ;; words is a fixnum.  Multiply by 2 to get the actual number of
+    ;; bytes to allocate.
+    (inst sllx ndescr words 1)
+    (inst add ndescr ndescr (* (1+ vm:vector-data-offset) vm:word-bytes))
     (inst andn ndescr vm:lowtag-mask)
     (allocation vector ndescr other-pointer-type :temp-tn gc-temp)
     #+gencgc
@@ -42,7 +46,7 @@
       ;; space.  Fill the last word with a zero.
       (inst add ndescr vector)
       (storew zero-tn ndescr -1 vm:other-pointer-type))
-    (inst srl ndescr type vm:word-shift)
+    (inst srl ndescr type vm:fixnum-tag-bits)
     (storew ndescr vector 0 vm:other-pointer-type)
     (storew length vector vm:vector-length-slot vm:other-pointer-type))
   ;; This makes sure the zero byte at the end of a string is paged in so
