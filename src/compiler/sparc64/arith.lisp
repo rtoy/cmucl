@@ -555,15 +555,9 @@
 	      (let ((amt (tn-value amount)))
 		(inst ,shift-inst result number amt))))))))
   (frob ash-right-signed fast-ash-right/signed=>signed
-	signed-reg signed-num sra 3)
+	signed-reg signed-num sran 3)
   (frob ash-right-unsigned fast-ash-right/unsigned=>unsigned
-	unsigned-reg unsigned-num srl 3)
-  #+(and sparc-v9 sparc-v8plus)
-  (frob ash-right-signed fast-ash-right/signed64=>signed64
-	signed64-reg signed64-num srax 3)
-  #+(and sparc-v9 sparc-v8plus)
-  (frob ash-right-unsigned fast-ash-right/unsigned64=>unsigned64
-	unsigned64-reg unsigned64-num srlx 3)
+	unsigned-reg unsigned-num srln 3)
   )
 
 ;; Constant right shift.
@@ -585,32 +579,11 @@
 	       (move result number)
 	       (inst ,shift-inst result number amount))))))
   (frob ash-right-signed fast-ash-right-c/signed=>signed
-	signed-reg signed-num sra 1 31)
+	signed-reg signed-num sran 1 63)
   (frob ash-right-unsigned fast-ash-right-c/unsigned=>unsigned
-	unsigned-reg unsigned-num srl 1 31)
-  #+(and sparc-v9 sparc-v8plus)
-  (frob ash-right-signed fast-ash-right-c/signed64=>signed64
-	signed64-reg signed64-num srax 1 63)
-  #+(and sparc-v9 sparc-v8plus)
-  (frob ash-right-unsigned fast-ash-right-c/unsigned64=>unsigned64
-	unsigned64-reg unsigned64-num srlx 1 63)
+	unsigned-reg unsigned-num srln 1 63)
   )
 
-#+nil
-(define-vop (fash-ash-right-c/signed=>signed fast-signed-binop-c)
-  (:args (x :target r :scs (signed-reg zero)))
-  (:arg-types signed-num
-	      (:constant (integer 0 31)))
-  (:results (r :scs (signed-reg)))
-  (:result-types signed-num)
-  (:translate ash-right-signed)
-  (:note _N"inline (signed-byte 32) arithmetic")
-  (:generator 1
-    (if (zerop y)
-	(move r x)
-	(inst srln r x y))))
-
-  
 (define-vop (fast-ash-right/fixnum=>fixnum)
     (:note _N"inline right ASH")
   (:translate ash-right-signed)
