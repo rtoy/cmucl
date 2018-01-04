@@ -93,11 +93,11 @@
 
 
 (defparameter target-most-positive-fixnum
-  (1- (ash 1 #-(or amd64 sparc64) 29 #+(or amd64 sparc64) 61))
+  (1- (ash 1 #-(or amd64 sparc-64) 29 #+(or amd64 sparc-64) 61))
   "most-positive-fixnum in the target architecture.")
 
 (defparameter target-most-negative-fixnum
-  (ash -1 #-(or amd64 sparc64) 29 #+(or amd64 sparc64) 61)
+  (ash -1 #-(or amd64 sparc-64) 29 #+(or amd64 sparc-64) 61)
   "most-negative-fixnum in the target architecture.")
 
 
