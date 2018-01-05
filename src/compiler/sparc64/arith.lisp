@@ -130,6 +130,7 @@
        ,@(when restore-fixnum-mask
 	       `((:temporary (:sc non-descriptor-reg) temp)))
        (:generator 2
+	 (emit-not-implemented)
 	 ,(if arg-swap
 	      `(inst ,op ,(if restore-fixnum-mask 'temp 'r) y x)
 	      `(inst ,op ,(if restore-fixnum-mask 'temp 'r) x y))
@@ -142,6 +143,7 @@
 		   ,@(when restore-fixnum-mask
 			   `((:temporary (:sc non-descriptor-reg) temp)))
 		   (:generator 1
+		     (emit-not-implemented)
 		     (inst ,op ,(if restore-fixnum-mask 'temp 'r) x (fixnumize y))
 		     ,@(when restore-fixnum-mask
 			     `((inst andn r temp fixnum-tag-mask)))))))
@@ -149,6 +151,7 @@
 		  fast-signed-binop)
        (:translate ,translate)
        (:generator ,(1+ untagged-penalty)
+	 (emit-not-implemented)
 	 ,(if arg-swap
 	      `(inst ,op r y x)
 	      `(inst ,op r x y))))
@@ -157,11 +160,13 @@
 			       fast-signed-binop-c)
 		   (:translate ,translate)
 		   (:generator ,untagged-penalty
+		     (emit-not-implemented)
 		     (inst ,op r x y)))))
      (define-vop (,(symbolicate "FAST-" translate "/UNSIGNED=>UNSIGNED")
 		  fast-unsigned-binop)
        (:translate ,translate)
        (:generator ,(1+ untagged-penalty)
+	 (emit-not-implemented)
 	 ,(if arg-swap
 	      `(inst ,op r y x)
 	      `(inst ,op r x y))))
@@ -170,6 +175,7 @@
 			       fast-unsigned-binop-c)
 		   (:translate ,translate)
 		   (:generator ,untagged-penalty
+		     (emit-not-implemented)
 		     (inst ,op r x y)))))))
 
 ); eval-when
@@ -211,6 +217,7 @@
 	      (:constant (or (and (unsigned-byte 12) (not (integer 0 0)))
 			     (integer #xfffff000 #xffffffff))))
   (:generator 2				; Needs to be low to give this vop a chance.
+    (emit-not-implemented)
     (cond ((= y #xffffffff)
 	   (move r x))
 	  ((typep y '(unsigned-byte 13))
@@ -231,6 +238,7 @@
   (:note _N"inline 32-bit abs")
   (:temporary (:scs (signed-reg)) y)
   (:generator 1
+    (emit-not-implemented)
     ;; From Hacker's Delight
     ;;
     ;; abs(x) = (x ^ y) - y, where y = x >> 31 (signed shift)
