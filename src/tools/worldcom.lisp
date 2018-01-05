@@ -119,7 +119,7 @@
 
 (comf "target:code/globals")
 (comf "target:code/kernel")
-(comf "target:code/lispinit")
+(comf "target:code/lispinit" :trace-file t)
 (comf "target:pcl/walk")
 (comf "target:code/fwrappers")
 (comf "target:code/fdefinition")
@@ -325,7 +325,7 @@
 (let ((c:*compile-time-define-macros* nil))
   (comf "target:code/defstruct")
   (comf "target:code/defmacro" :byte-compile *byte-compile*)
-  (comf "target:compiler/globaldb")
+  (comf "target:compiler/globaldb" :trace-file t)
   (comf "target:code/macros")
   #-no-runtime (comf "target:code/macros" :byte-compile t))
 
