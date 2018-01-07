@@ -1141,12 +1141,17 @@ default-value-8
       ;; Allocate the space on the stack.
       (cond ((zerop fixed)
 	     (inst cmp nargs-tn)
+	     ;; Add nargs-tn to csp-tn twice to get the right address
+	     ;; because fixnum values need to be multiplied by two to
+	     ;; get the right word address/offset.
+	     (inst add csp-tn csp-tn nargs-tn)
 	     (inst b :eq done)
 	     (inst add csp-tn csp-tn nargs-tn))
 	    (t
 	     (inst subcc count nargs-tn (fixnumize fixed))
 	     (inst b :le done)
 	     (inst nop)
+	     (inst add csp-tn csp-tn count)
 	     (inst add csp-tn csp-tn count)))
       (when (< fixed register-arg-count)
 	;; We must stop when we run out of stack args, not when we run out of
@@ -1157,6 +1162,7 @@ default-value-8
       ;; Initialize dst to be end of stack.
       (move dst csp-tn)
       ;; Initialize src to be end of args.
+      (inst add src cfp-tn nargs-tn)
       (inst add src cfp-tn nargs-tn)
 
       (emit-label loop)
