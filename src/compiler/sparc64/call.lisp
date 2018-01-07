@@ -1277,7 +1277,9 @@ default-value-8
   (:generator 5
     (emit-not-implemented)
     (inst sub count supplied (fixnumize fixed))
-    (inst sub context csp-tn count)))
+    ;; Subtract count twice to get the correct word offset.
+    (inst sub context csp-tn count)
+    (inst sub context context count)))
 
 
 ;;; Signal wrong argument count error if Nargs isn't = to Count.
