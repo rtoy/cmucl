@@ -1,12 +1,16 @@
+variables:
+  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2018/01"
+  version: "2018-01-x86"
+
 linux-runner:
   tags:
     - linux
   before_script:
     - apt-get update -qq && apt-get install -y wget bzip2 make gcc gcc-multilib time bc git
-    - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2018/01/cmucl-2018-01-x86-linux.tar.bz2
-    - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2018/01/cmucl-2018-01-x86-linux.extra.tar.bz2
+    - wget -nv $download_url/cmucl-$version-linux.tar.bz2
+    - wget -nv $download_url/cmucl-$version-linux.extra.tar.bz2
     - mkdir snapshot
-    - (cd snapshot; tar xjf ../cmucl-2018-01-x86-linux.tar.bz2; tar xjf ../cmucl-2018-01-x86-linux.extra.tar.bz2)
+    - (cd snapshot; tar xjf ../cmucl-$version-linux.tar.bz2; tar xjf ../cmucl-$version-linux.extra.tar.bz2)
   script:
     - bin/build.sh -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist linux-4
@@ -16,9 +20,9 @@ osx-runner:
   tags:
     - osx
   before_script:
-    - curl -s -o cmucl-2018-01-x86-darwin.tar.bz2 https://common-lisp.net/project/cmucl/downloads/snapshots/2018/01//cmucl-2018-01-x86-darwin.tar.bz2
+    - curl -s -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
     - mkdir snapshot
-    - (cd snapshot; tar xjf ../cmucl-2018-01-x86-darwin.tar.bz2)
+    - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
   script:
     - bin/build.sh -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist darwin-4
