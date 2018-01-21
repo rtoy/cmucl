@@ -16,7 +16,7 @@ osx-runner:
   tags:
     - osx
   before_script:
-    - curl -o cmucl-2018-01-x86-darwin.tar.bz2 https://common-lisp.net/project/cmucl/downloads/snapshots/2018/01//cmucl-2018-01-x86-darwin.tar.bz2
+    - curl -s -o cmucl-2018-01-x86-darwin.tar.bz2 https://common-lisp.net/project/cmucl/downloads/snapshots/2018/01//cmucl-2018-01-x86-darwin.tar.bz2
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-2018-01-x86-darwin.tar.bz2)
   script:
