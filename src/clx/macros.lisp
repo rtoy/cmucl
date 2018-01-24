@@ -85,6 +85,7 @@
   ;; If no third body form is present, then these macros assume that
   ;; (AND (TYPEP ,thing 'type) (PUT-type ,thing)) can be generated.
   ;; these predicating puts are used by the OR accessor.
+  #-cmu
   (declare (arglist name (width) get-macro put-macro &optional predicating-put-macro))
   (when (cdddr get-put-macros)
     (error "Too many parameters to define-accessor: ~s" (cdddr get-put-macros)))
