@@ -18,9 +18,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: resource.lisp,v 1.12 2009/06/17 18:22:46 rtoy Rel $")
-
 (in-package :xlib)
 
 ;; The C version of this uses a 64 entry hash table at each entry.
@@ -409,20 +406,14 @@
   ;; FUNCTION is called with arguments (name-list value . args)
   (declare (type resource-database database)
 	   (type (function (list t &rest t) t) function)
-	   #+clx-ansi-common-lisp
 	   (dynamic-extent function)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg function)
 	   (dynamic-extent args))
   (declare (clx-values nil))
   (labels ((map-resource-internal (database function args name)
 	     (declare (type resource-database database)
 		      (type (function (list t &rest t) t) function)
 		      (type list name)
-		      #+clx-ansi-common-lisp
-		      (dynamic-extent function)
-		      #+(and lispm (not clx-ansi-common-lisp))
-		      (sys:downward-funarg function))		      
+		      (dynamic-extent function))
 	     (let ((tight (resource-database-tight database))
 		   (loose (resource-database-loose database)))
 	       (declare (type list tight loose))

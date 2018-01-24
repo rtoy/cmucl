@@ -76,9 +76,6 @@
 ;;; objects, and the additional functionality to match the C Xlib is still in
 ;;; progress.  Bug reports should be addressed to bug-clx@expo.lcs.mit.edu.
 
-#+cmu
-(ext:file-comment "$Id: clx.lisp,v 1.16 2009/06/17 18:22:45 rtoy Rel $")
-
 ;; Note: all of the following is in the package XLIB.
 
 (in-package :xlib)
@@ -86,7 +83,7 @@
 (pushnew :clx *features*)
 (pushnew :xlib *features*)
 
-(defparameter *version* "Telent CLX 0.7.3 + CMUCL mods, based on MIT R5.02")
+(defparameter *version* "MIT R5.02")
 (pushnew :clx-mit-r4 *features*)
 (pushnew :clx-mit-r5 *features*)
 
@@ -161,20 +158,6 @@
 (deftype int8 () '(signed-byte 8))
 
 (deftype card4 () '(unsigned-byte 4))
-
-#-clx-ansi-common-lisp
-(deftype real (&optional (min '*) (max '*))
-  (labels ((convert (limit floatp)
-	     (typecase limit
-	       (number (if floatp (float limit 0s0) (rational limit)))
-	       (list (map 'list #'convert limit))
-	       (otherwise limit))))
-    `(or (float ,(convert min t) ,(convert max t))
-	 (rational ,(convert min nil) ,(convert max nil)))))
-
-#-clx-ansi-common-lisp
-(deftype base-char ()
-  'string-char)
 
 ; Note that we are explicitly using a different rgb representation than what
 ; is actually transmitted in the protocol.

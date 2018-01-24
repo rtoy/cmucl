@@ -18,9 +18,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: dependent.lisp,v 1.18 2009/06/17 18:28:11 rtoy Rel $")
-
 (in-package :xlib)
 
 (proclaim '(declaration array-register))
@@ -692,7 +689,8 @@
   (the short-float (* (the int16 value) #.(coerce (/ pi 180.0 64.0) 'short-float))))
 
 
-#+(or cmu sbcl clisp) (progn
+#+(or cmu sbcl clisp ecl)
+(progn
 
 ;;; This overrides the (probably incorrect) definition in clx.lisp.  Since PI
 ;;; is irrational, there can't be a precise rational representation.  In
@@ -702,13 +700,11 @@
 ;;; in the value, and see if the protocol encoding falls in the desired range
 ;;; (64'ths of a degree.)
 ;;;
-(deftype angle () '(satisfies anglep))
+  (deftype angle () '(satisfies anglep))
 
-(defun anglep (x)
-  (and (typep x 'real)
-       (<= (* -360 64) (radians->int16 x) (* 360 64))))
-
-)
+  (defun anglep (x)
+    (and (typep x 'real)
+         (<= (* -360 64) (radians->int16 x) (* 360 64)))))
 
 
 ;;-----------------------------------------------------------------------------
@@ -866,7 +862,7 @@
 
 ;;; MAKE-PROCESS-LOCK: Creating a process lock.
 
-#-(or LispM excl Minima sbcl (and cmu mp))
+#-(or LispM excl Minima sbcl (and cmu mp) (and ecl threads))
 (defun make-process-lock (name)
   (declare (ignore name))
   nil)
@@ -895,6 +891,10 @@
 (defun make-process-lock (name)
   (sb-thread:make-mutex :name name))
 
+#+(and ecl threads)
+(defun make-process-lock (name)
+  (mp:make-lock :name name :recursive t))
+
 ;;; HOLDING-LOCK: Execute a body of code with a lock held.
 
 ;;; The holding-lock macro takes a timeout keyword argument.  EVENT-LISTEN
@@ -903,7 +903,7 @@
 
 ;; If you're not sharing DISPLAY objects within a multi-processing
 ;; shared-memory environment, this is sufficient
-#-(or lispm excl lcl3.0 Minima sbcl (and CMU mp) )
+#-(or lispm excl lcl3.0 Minima sbcl (and CMU mp) (and ecl threads))
 (defmacro holding-lock ((locator display &optional whostate &key timeout) &body body)
   (declare (ignore locator display whostate timeout))
   `(progn ,@body))
@@ -945,6 +945,14 @@
   (declare (ignore lock display whostate timeout))
   `(progn
      ,@body))
+
+#+(and ecl threads)
+(defmacro holding-lock ((lock display &optional (whostate "CLX wait")
+                              &key timeout)
+                        &body body)
+  (declare (ignore display))
+  `(mp::with-lock (,lock)
+      ,@body))
 
 #+sbcl
 (defmacro holding-lock ((lock display &optional (whostate "CLX wait")
@@ -1113,7 +1121,7 @@
 ;;; Caller guarantees that PROCESS-WAKEUP will be called after the predicate's
 ;;; value changes.
 
-#-(or lispm excl lcl3.0 Minima (and sb-thread sbcl) (and cmu mp))
+#-(or lispm excl lcl3.0 Minima (and sb-thread sbcl) (and cmu mp) (and ecl threads))
 (defun process-block (whostate predicate &rest predicate-args)
   (declare (ignore whostate))
   (or (apply predicate predicate-args)
@@ -1122,19 +1130,13 @@
 #+Genera
 (defun process-block (whostate predicate &rest predicate-args)
   (declare (type function predicate)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent predicate)
-	   #-clx-ansi-common-lisp
-	   (sys:downward-funarg predicate))
+	   (dynamic-extent predicate))
   (apply #'process:block-process whostate predicate predicate-args))
 
 #+(and lispm (not Genera))
 (defun process-block (whostate predicate &rest predicate-args)
   (declare (type function predicate)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent predicate)
-	   #-clx-ansi-common-lisp 
-	   (sys:downward-funarg predicate))
+	   (dynamic-extent predicate))
   (apply #'global:process-wait whostate predicate predicate-args))
 
 #+excl
@@ -1179,6 +1181,14 @@
      (return))
    (yield)))
 
+#+(and ecl threads)
+(defun process-block (whostate predicate &rest predicate-args)
+  (declare (ignore whostate))
+  (declare (type function predicate))
+  (loop
+   (when (apply predicate predicate-args)
+     (return))
+   (mp:process-yield)))
 
 ;;; FIXME: the below implementation for threaded PROCESS-BLOCK using
 ;;; queues and condition variables might seem better, but in fact it
@@ -1215,7 +1225,7 @@
 
 (declaim (inline process-wakeup))
 
-#-(or excl Genera Minima (and sbcl sb-thread) (and cmu mp))
+#-(or excl Genera Minima (and sbcl sb-thread) (and cmu mp) (and ecl threads))
 (defun process-wakeup (process)
   (declare (ignore process))
   nil)
@@ -1249,6 +1259,12 @@
 (defun process-wakeup (process)
   (declare (ignore process))
   (yield))
+
+#+(and ecl threads)
+(defun process-wakeup (process)
+  (declare (ignore process))
+  (mp:process-yield))
+
 #+(or)
 (defun process-wakeup (process)
   (declare (ignore process))
@@ -1267,7 +1283,7 @@
 
 ;;; Default return NIL, which is acceptable even if there is a scheduler.
 
-#-(or lispm excl lcl3.0 sbcl Minima (and cmu mp))
+#-(or lispm excl lcl3.0 sbcl Minima (and cmu mp) (and ecl threads))
 (defun current-process ()
   nil)
 
@@ -1288,7 +1304,7 @@
 (defun current-process ()
   (minima:current-process))
 
-#+(and cmu mp)
+#+(or (and cmu mp) (and ecl threads))
 (defun current-process ()
   mp:*current-process*)
 
@@ -1298,7 +1314,7 @@
 
 ;;; WITHOUT-INTERRUPTS -- provide for atomic operations.
 
-#-(or lispm excl lcl3.0 Minima cmu)
+#-(or lispm excl lcl3.0 Minima cmu sbcl)
 (defmacro without-interrupts (&body body)
   `(progn ,@body))
 
@@ -1321,6 +1337,10 @@
 #+cmu
 (defmacro without-interrupts (&body body)
   `(system:without-interrupts ,@body))
+
+#+ecl
+(defmacro without-interrupts (&body body)
+  `(mp:without-interrupts ,@body))
 
 #+sbcl
 (defvar *without-interrupts-sic-lock*
@@ -1544,74 +1564,23 @@
 						  (cdr (host-address host)))
 			  :foreign-port (+ *x-tcp-port* display)))
 
-#+CMU
-(defun open-x-stream (host display protocol)
-  (let ((stream-fd
-         (ecase protocol
-           ;; establish a TCP connection to the X11 server, which is
-           ;; listening on port 6000 + display-number
-           ((:internet :tcp nil)
-            (let ((fd (ext:connect-to-inet-socket host (+ *x-tcp-port* display))))
-              (unless (plusp fd)
-                (error 'connection-failure
-                       :major-version *protocol-major-version*
-                       :minor-version *protocol-minor-version*
-                       :host host
-                       :display display
-                       :reason (format nil "Cannot connect to internet socket: ~S"
-                                       (unix:get-unix-error-msg))))
-              fd))
-           ;; establish a connection to the X11 server over a Unix
-           ;; socket.  (:|| comes from Darwin's weird DISPLAY
-           ;; environment variable)
-           ((:unix :local :||)
-            (let ((path (unix-socket-path-from-host host display)))
-              (unless (probe-file path)
-                (error 'connection-failure
-                       :major-version *protocol-major-version*
-                       :minor-version *protocol-minor-version*
-                       :host host
-                       :display display
-                       :reason (format nil "Unix socket ~s does not exist" path)))
-              (let ((fd (ext:connect-to-unix-socket (namestring path))))
-                (unless (plusp fd)
-                  (error 'connection-failure
-                         :major-version *protocol-major-version*
-                         :minor-version *protocol-minor-version*
-                         :host host
-                         :display display
-                         :reason (format nil "Can't connect to unix socket: ~S"
-                                         (unix:get-unix-error-msg))))
-                fd))))))
-    (system:make-fd-stream stream-fd :input t :output t :element-type '(unsigned-byte 8))))
-
-#+sbcl
+#+(or sbcl ecl)
 (defun open-x-stream (host display protocol)  
   (declare (ignore protocol)
            (type (integer 0) display))
-  (let ((local-socket-path (unix-socket-path-from-host host display)))
-  (socket-make-stream 
-     (if local-socket-path
-       (let ((s (make-instance 'local-socket :type :stream)))
-	   (socket-connect s local-socket-path)
-	 s)
-       (let ((host (car (host-ent-addresses (get-host-by-name host)))))
-	 (when host
-	   (let ((s (make-instance 'inet-socket :type :stream :protocol :tcp)))
-	     (socket-connect s host (+ 6000 display))
-	     s))))
+  (socket-make-stream
+   (let ((unix-domain-socket-path (unix-socket-path-from-host host display)))
+     (if unix-domain-socket-path
+         (let ((s (make-instance 'local-socket :type :stream)))
+           (socket-connect s unix-domain-socket-path)
+           s)
+         (let ((host (car (host-ent-addresses (get-host-by-name host)))))
+           (when host
+             (let ((s (make-instance 'inet-socket :type :stream :protocol :tcp)))
+               (socket-connect s host (+ 6000 display))
+               s)))))
    :element-type '(unsigned-byte 8)
-     :input t :output t :buffering :none)))
-
-#+ecl
-(defun open-x-stream (host display protocol)
-  (declare (ignore protocol)
-	   (type (integer 0) display))
-  (let (socket)
-    (if (or (string= host "") (string= host "unix")) ; AF_UNIX doamin socket
-	(sys::open-unix-socket-stream
-	 (format nil "~A~D" +X-unix-socket-path+ display))
-	(si::open-client-stream host (+ 6000 display)))))
+   :input t :output t :buffering :none))
 
 ;;; BUFFER-READ-DEFAULT - read data from the X stream
 
@@ -1844,7 +1813,7 @@
 ;;;	You are STRONGLY encouraged to write a specialized version
 ;;;	of buffer-write-default that does block transfers.
 
-#-(or Genera explorer excl lcl3.0 Minima CMU sbcl clisp)
+#-(or Genera explorer excl lcl3.0 Minima CMU sbcl clisp ecl)
 (defun buffer-write-default (vector display start end)
   ;; The default buffer write function for use with common-lisp streams
   (declare (type buffer-bytes vector)
@@ -2113,7 +2082,7 @@
   ;; therefore DISAPPEARS when WITH-STACK-LIST is exited.
   `(let ((,var (list ,@elements)))
      (declare (type cons ,var)
-	      #+clx-ansi-common-lisp (dynamic-extent ,var))
+              (dynamic-extent ,var))
      ,@body))
 
 #-lispm
@@ -2124,7 +2093,7 @@
   ;; therefore DISAPPEARS when WITH-STACK-LIST is exited.
   `(let ((,var (list* ,@elements)))
      (declare (type cons ,var)
-	      #+clx-ansi-common-lisp (dynamic-extent ,var))
+              (dynamic-extent ,var))
      ,@body))
 
 (declaim (inline buffer-replace))
@@ -2369,31 +2338,10 @@
       (apply #'x-cerror "Ignore" error-key :display display :error-key error-key key-vals)
       (apply #'x-error error-key :display display :error-key error-key key-vals)))
 
-#+(and lispm (not Genera) (not clx-ansi-common-lisp))
-(defun x-error (condition &rest keyargs)
-  (apply #'sys:signal condition keyargs))
-
-#+(and lispm (not Genera) (not clx-ansi-common-lisp))
-(defun x-cerror (proceed-format-string condition &rest keyargs)
-  (sys:signal (apply #'zl:make-condition condition keyargs)
-	      :proceed-types proceed-format-string))
-
-#+(and Genera (not clx-ansi-common-lisp))
-(defun x-error (condition &rest keyargs)
-  (declare (dbg:error-reporter))
-  (apply #'sys:signal condition keyargs))
-
-#+(and Genera (not clx-ansi-common-lisp))
-(defun x-cerror (proceed-format-string condition &rest keyargs)
-  (declare (dbg:error-reporter))
-  (apply #'sys:signal condition :continue-format-string proceed-format-string keyargs))
-
-#+(or clx-ansi-common-lisp excl lcl3.0 clisp (and CMU mp))
 (defun x-error (condition &rest keyargs)
   (declare (dynamic-extent keyargs))
   (apply #'error condition keyargs))
 
-#+(or clx-ansi-common-lisp excl lcl3.0 CMU clisp)
 (defun x-cerror (proceed-format-string condition &rest keyargs)
   (declare (dynamic-extent keyargs))
   (apply #'cerror proceed-format-string condition keyargs))
@@ -2416,174 +2364,7 @@
 	(ext::disable-clx-event-handling disp)))
     (error condx)))
 
-#-(or lispm ansi-common-lisp excl lcl3.0 CMU sbcl clisp)
-(defun x-error (condition &rest keyargs)
-  (error "X-Error: ~a"
-	 (princ-to-string (apply #'make-condition condition keyargs))))
-
-#-(or lispm clx-ansi-common-lisp excl lcl3.0 CMU sbcl clisp)
-(defun x-cerror (proceed-format-string condition &rest keyargs)
-  (cerror proceed-format-string "X-Error: ~a"
-	 (princ-to-string (apply #'make-condition condition keyargs))))
-
-;; version 15 of Pitman error handling defines the syntax for define-condition to be:
-;; DEFINE-CONDITION name (parent-type) [({slot}*) {option}*]
-;; Where option is one of: (:documentation doc-string) (:conc-name symbol-or-string)
-;; or (:report exp)
-
-#+lcl3.0 
-(defmacro define-condition (name parent-types &optional slots &rest args)
-  `(lcl:define-condition
-     ,name (,(first parent-types))
-     ,(mapcar #'(lambda (slot) (if (consp slot) (car slot) slot))
-	      slots)
-     ,@args))
-
-#+(and excl (not clx-ansi-common-lisp))
-(defmacro define-condition (name parent-types &optional slots &rest args)
-  `(excl::define-condition
-     ,name (,(first parent-types))
-     ,(mapcar #'(lambda (slot) (if (consp slot) (car slot) slot))
-	      slots)
-     ,@args))
-
-#+(and CMU (not clx-ansi-common-lisp))
-(defmacro define-condition (name parent-types &optional slots &rest args)
-  `(common-lisp:define-condition
-     ,name (,(first parent-types))
-     ,(mapcar #'(lambda (slot) (if (consp slot) (car slot) slot))
-	      slots)
-     ,@args))
-
-#+(and lispm (not clx-ansi-common-lisp))
-(defmacro define-condition (name parent-types &body options)
-  (let ((slot-names
-	  (mapcar #'(lambda (slot) (if (consp slot) (car slot) slot))
-		  (pop options)))
-	(documentation nil)
-	(conc-name (concatenate 'string (string name) "-"))	       
-	(reporter nil))
-    (dolist (item options)
-      (ecase (first item)
-	(:documentation (setq documentation (second item)))
-	(:conc-name (setq conc-name (string (second item))))
-	(:report (setq reporter (second item)))))
-    `(within-definition (,name define-condition)
-       (zl:defflavor ,name ,slot-names ,parent-types
-	 :initable-instance-variables
-	 #-Genera
-	 (:accessor-prefix ,conc-name)
-	 #+Genera
-	 (:conc-name ,conc-name)
-	 #-Genera
-	 (:outside-accessible-instance-variables ,@slot-names)
-	 #+Genera
-	 (:readable-instance-variables ,@slot-names))
-       ,(when reporter ;; when no reporter, parent's is inherited
-	  `(zl:defmethod #-Genera (,name :report)
-	                 #+Genera (dbg:report ,name) (stream)
-	      ,(if (stringp reporter)
-		   `(write-string ,reporter stream)
-		 `(,reporter global:self stream))
-	      global:self))
-       (zl:compile-flavor-methods ,name)
-       ,(when documentation
-	  `(setf (documentation name 'type) ,documentation))
-       ',name)))
-
-#+(and lispm (not Genera) (not clx-ansi-common-lisp))
-(zl:defflavor x-error () (global:error))
-
-#+(and Genera (not clx-ansi-common-lisp))
-(scl:defflavor x-error
-	((dbg:proceed-types '(:continue))	;
-	 continue-format-string)
-	(sys:error)
-  (:initable-instance-variables continue-format-string))
-
-#+(and Genera (not clx-ansi-common-lisp))
-(scl:defmethod (scl:make-instance x-error) (&rest ignore)
-  (when (not (sys:variable-boundp continue-format-string))
-    (setf dbg:proceed-types (remove :continue dbg:proceed-types))))
-
-#+(and Genera (not clx-ansi-common-lisp))
-(scl:defmethod (dbg:proceed x-error :continue) ()
-  :continue)
-
-#+(and Genera (not clx-ansi-common-lisp))
-(sys:defmethod (dbg:document-proceed-type x-error :continue) (stream)
-  (format stream continue-format-string))
-
-#+(or clx-ansi-common-lisp excl lcl3.0 CMU sbcl clisp)
 (define-condition x-error (error) ())
-
-#-(or lispm clx-ansi-common-lisp excl lcl3.0 CMU sbcl)
-(defstruct x-error
-  report-function)
-
-#-(or lispm clx-ansi-common-lisp excl lcl3.0 CMU sbcl)
-(defmacro define-condition (name parent-types &body options)
-  ;; Define a structure that when printed displays an error message
-  (flet ((reporter-for-condition (name)
-	   (xintern "." name '-reporter.)))
-    (let ((slot-names
-	    (mapcar #'(lambda (slot) (if (consp slot) (car slot) slot))
-		    (pop options)))
-	  (documentation nil)
-	  (conc-name (concatenate 'string (string name) "-"))	       
-	  (reporter nil)
-	  (condition (gensym))
-	  (stream (gensym))
-	  (report-function (reporter-for-condition name)))
-      (dolist (item options)
-	(ecase (first item)
-	  (:documentation (setq documentation (second item)))
-	  (:conc-name (setq conc-name (string (second item))))
-	  (:report (setq reporter (second item)))))
-      (unless reporter
-	(setq report-function (reporter-for-condition (first parent-types))))
-      `(within-definition (,name define-condition)
-	 (defstruct (,name (:conc-name ,(intern conc-name))
-		     (:print-function condition-print)
-		     (:include ,(first parent-types)
-		      (report-function ',report-function)))
-	   ,@slot-names)
-	 ,(when documentation
-	    `(setf (documentation name 'type) ,documentation))
-	 ,(when reporter
-	    `(defun ,report-function (,condition ,stream)
-	       ,(if (stringp reporter)
-		    `(write-string ,reporter ,stream)
-		  `(,reporter ,condition ,stream))
-	       ,condition))
-	 ',name))))
-
-#-(or lispm clx-ansi-common-lisp excl lcl3.0 CMU sbcl clisp)
-(defun condition-print (condition stream depth)
-  (declare (type x-error condition)
-	   (type stream stream)
-	   (ignore depth))
-  (if *print-escape*
-      (print-unreadable-object (condition stream :type t))
-    (funcall (x-error-report-function condition) condition stream))
-  condition)
-  
-#-(or lispm clx-ansi-common-lisp excl lcl3.0 CMU sbcl clisp)
-(defun make-condition (type &rest slot-initializations)
-  (declare (dynamic-extent slot-initializations))
-  (let ((make-function (intern (concatenate 'string (string 'make-) (string type))
-			       (symbol-package type))))
-    (apply make-function slot-initializations)))
-
-#-(or clx-ansi-common-lisp excl lcl3.0 CMU sbcl clisp)
-(define-condition type-error (x-error)
-  ((datum :reader type-error-datum :initarg :datum)
-   (expected-type :reader type-error-expected-type :initarg :expected-type))
-  (:report
-    (lambda (condition stream)
-      (format stream "~s isn't a ~a"
-	      (type-error-datum condition)
-	      (type-error-expected-type condition)))))
 
 
 ;;-----------------------------------------------------------------------------
@@ -2738,6 +2519,9 @@
 			(si:memref-int addr 3 0 :unsigned-byte))))))
 	(ff:free-cstruct hostent)))))
 
+;#+sbcl
+;(require :sockets)
+
 #+CMU
 (defun host-address (host &optional (family :internet))
   ;; Return a list whose car is the family keyword (:internet :DECnet :Chaos)
@@ -2749,24 +2533,39 @@
 	     (error "Unknown host ~S" host))
 	   (no-address-error ()
 	     (error "Host ~S has no ~S address" host family)))
-    (let ((hostent (ext:lookup-host-entry (string host))))
+    (let ((hostent #+rwi-sockets(ext:lookup-host-entry (string host))
+		   #+mna-sockets(net.sbcl.sockets:look-up-host-entry
+				 (string host)) 
+		   #+db-sockets(sockets:get-host-by-name (string host))))
       (when (not hostent)
 	(no-host-error))
       (ecase family
 	((:internet nil 0)
-	 (unless (= (ext::host-entry-addr-type hostent) 2)
+	 #+rwi-sockets(unless (= (ext::host-entry-addr-type hostent) 2)
+			(no-address-error))
+	 #+mna-sockets(unless (= (net.sbcl.sockets::host-entry-addr-type hostent) 2)
+			(no-address-error))
+	 ;; the following form is for use with SBCL and Daniel
+	 ;; Barlow's socket package
+	 #+db-sockets(unless (sockets:host-ent-address hostent)
 	   (no-address-error))
 	 (append (list :internet)
+		 #+rwi-sockets
 		 (let ((addr (first (ext::host-entry-addr-list hostent))))
 			(list (ldb (byte 8 24) addr)
 			      (ldb (byte 8 16) addr)
 			      (ldb (byte 8  8) addr)
-			      (ldb (byte 8  0) addr)))))))))
-
-;#+sbcl
-;(require :sockets)
-
-
+			      (ldb (byte 8  0) addr)))
+		 #+mna-sockets
+		 (let ((addr (first (net.sbcl.sockets::host-entry-addr-list hostent))))
+				(list (ldb (byte 8 24) addr)
+				      (ldb (byte 8 16) addr)
+				      (ldb (byte 8  8) addr)
+				      (ldb (byte 8  0) addr)))
+		 ;; the following form is for use with SBCL and Daniel
+		 ;; Barlow's socket package
+		 #+db-sockets(coerce (sockets:host-ent-address hostent)
+				     'list)))))))
 
 #+sbcl
 (defun host-address (host &optional (family :internet))
@@ -2899,10 +2698,9 @@
   "Return the same hostname as gethostname(3) would"
   ;; machine-instance probably works on a lot of lisps, but clisp is not
   ;; one of them
-  #+(or cmu sbcl) (machine-instance)
+  #+(or cmu sbcl ecl) (machine-instance)
   ;; resources-pathname was using short-site-name for this purpose
   #+excl (short-site-name)
-  #+ecl (si:getenv "HOST")
   #+clisp (let ((s (machine-instance))) (subseq s 0 (position #\Space s)))
   #-(or excl cmu sbcl ecl clisp) (error "get-host-name not implemented"))
 
@@ -3003,38 +2801,6 @@ Returns a list of (host display-number screen protocol)."
 
 
 ;;-----------------------------------------------------------------------------
-;; WITH-STANDARD-IO-SYNTAX equivalent, used in (SETF WM-COMMAND)
-;;-----------------------------------------------------------------------------
-
-#-(or clx-ansi-common-lisp Genera CMU sbcl)
-(defun with-standard-io-syntax-function (function)
-  (declare #+lispm
-	   (sys:downward-funarg function))
-  (let ((*package* (find-package :user))
-	(*print-array* t)
-	(*print-base* 10)
-	(*print-case* :upcase)
-	(*print-circle* nil)
-	(*print-escape* t)
-	(*print-gensym* t)
-	(*print-length* nil)
-	(*print-level* nil)
-	(*print-pretty* nil)
-	(*print-radix* nil)
-	(*read-base* 10)
-	(*read-default-float-format* 'single-float)
-	(*read-suppress* nil)
-	#+ticl (ticl:*print-structure* t)
-	#+lucid (lucid::*print-structure* t))
-    (funcall function)))
-
-#-(or clx-ansi-common-lisp Genera CMU sbcl)
-(defmacro with-standard-io-syntax (&body body)
-  `(flet ((.with-standard-io-syntax-body. () ,@body))
-     (with-standard-io-syntax-function #'.with-standard-io-syntax-body.)))
-
-
-;;-----------------------------------------------------------------------------
 ;; DEFAULT-KEYSYM-TRANSLATE
 ;;-----------------------------------------------------------------------------
 
@@ -3049,7 +2815,7 @@ Returns a list of (host display-number screen protocol)."
 ;;; When MASK-MODIFIERS is missing, all other modifiers are ignored.
 ;;; In ambiguous cases, the most specific translation is used.
 
-#-(or (and clx-ansi-common-lisp (not lispm) (not allegro)) CMU sbcl)
+#+lispm
 (defun default-keysym-translate (display state object)
   (declare (type display display)
 	   (type card16 state)
@@ -3072,7 +2838,7 @@ Returns a list of (host display-number screen protocol)."
       (setf (char-bit object :hyper) 1)))
   object)
 
-#+(or (and clx-ansi-common-lisp (not lispm) (not allegro)) CMU sbcl clisp)
+#-lispm
 (defun default-keysym-translate (display state object)
   (declare (type display display)
 	   (type card16 state)
@@ -3176,7 +2942,7 @@ Returns a list of (host display-number screen protocol)."
 (defmacro with-underlying-simple-vector 
     ((variable element-type pixarray) &body body)
   (declare (ignore element-type))
-  `(#+cmu lisp::with-array-data #+sbcl sb-kernel:with-array-data
+  `(#+cmu kernel::with-array-data #+sbcl sb-kernel:with-array-data
     ((,variable ,pixarray) (start) (end))
     (declare (ignore start end))
     ,@body))
@@ -3589,11 +3355,11 @@ Returns a list of (host display-number screen protocol)."
 			     height width)
   (declare (type array-index source-width sx sy dest-width dx dy height width))
   #.(declare-buffun)
-  (lisp::with-array-data ((sdata source)
+  (kernel::with-array-data ((sdata source)
 				 (sstart)
 				 (send))
     (declare (ignore send))
-    (lisp::with-array-data ((ddata dest)
+    (kernel::with-array-data ((ddata dest)
 				   (dstart)
 				   (dend))
       (declare (ignore dend))
