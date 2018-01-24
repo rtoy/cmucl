@@ -18,6 +18,8 @@
 
 (provide :clx)
 
+#-cmu
+(progn
 (defvar *clx-source-pathname*
 	(pathname "/src/local/clx/*.l"))
 
@@ -49,3 +51,4 @@
 (if *compile-clx*
     (compile-clx *clx-source-pathname* *clx-binary-pathname*)
   (load-clx *clx-binary-pathname*))
+)

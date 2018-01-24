@@ -2942,7 +2942,7 @@ Returns a list of (host display-number screen protocol)."
 (defmacro with-underlying-simple-vector 
     ((variable element-type pixarray) &body body)
   (declare (ignore element-type))
-  `(#+cmu kernel::with-array-data #+sbcl sb-kernel:with-array-data
+  `(#+cmu lisp::with-array-data #+sbcl sb-kernel:with-array-data
     ((,variable ,pixarray) (start) (end))
     (declare (ignore start end))
     ,@body))
