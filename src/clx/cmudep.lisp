@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: src/clx/cmudep.lisp $")
+  "$Header: /loaclhost/usr/local/src/cvs/clx/cmudep.lisp,v 1.1 2000/07/02 19:19:46 dan Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;

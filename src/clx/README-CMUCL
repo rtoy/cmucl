@@ -1,40 +1,9 @@
-$Id: README-CMUCL,v 1.2 2009/06/11 16:03:56 rtoy Rel $
+This is an import of Telent-CLX from the fork
+https://github.com/sharplispers/clx, version
+6e39a0df2a0a1d083166f405d4b8bbc463d54d85.
 
-This is an import of Telent-CLX as of 0.7.3.
+All (almost?) files are included.  A few changes to fix bugs related
+to CMUCL have been added, as well as the CVS id.  I've tried to make
+few changes so it will be easy to merge again when desired.
 
-All files are included.  A few changes to fix bugs related to CMUCL
-have been added, as well as the CVS id.  I've tried to make few
-changes so it will be easy to merge again when desired.
-
-The following files from this directory are compiled and loaded by
-CMUCL when it builds utilities:
-
-clx-library.lisp
-package.lisp
-depdefs.lisp
-clx.lisp
-dependent.lisp
-macros.lisp
-bufmac.lisp
-buffer.lisp
-display.lisp
-gcontext.lisp
-input.lisp
-requests.lisp
-fonts.lisp
-graphics.lisp
-text.lisp
-attributes.lisp
-translate.lisp
-keysyms.lisp
-manager.lisp
-image.lisp
-resource.lisp
-shape.lisp
-big-requests.lisp
-xvidmode.lisp
-xrender.lisp
-glx.lisp
-gl.lisp
-dpms.lisp
-provide.lisp
+See src/tools/clxcom.lisp to see what files are compiled.

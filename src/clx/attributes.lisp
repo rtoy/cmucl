@@ -40,9 +40,6 @@
 ;;;	All WITH-STATE has to do (re)bind *Window-attributes* to a list including
 ;;;	the new drawable.  The caches are initialized to NIL and allocated as needed.
 
-#+cmu
-(ext:file-comment "$Id: attributes.lisp,v 1.8 2009/06/17 18:22:45 rtoy Rel $")
-
 (in-package :xlib)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -519,12 +516,10 @@
   window
   (error "~S can only be set" 'window-cursor))
 
-(defun set-window-cursor (window cursor)
+(defun (setf window-cursor) (cursor window)
   (change-window-attribute
     window 14 (encode-type (or (member :none) cursor) cursor))
   cursor)
-
-(defsetf window-cursor set-window-cursor)
 
 (defun window-colormap-installed-p (window)
   (declare (type window window))

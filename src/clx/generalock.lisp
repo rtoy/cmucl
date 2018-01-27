@@ -10,9 +10,6 @@
 ;;; Symbolics, Inc. provides this software "as is" without
 ;;; express or implied warranty.
 
-#+cmu
-(ext:file-comment "$Id: generalock.lisp,v 1.5 2009/06/17 18:22:46 rtoy Rel $")
-
 (defflavor xlib::clx-lock () (simple-recursive-normal-lock)
   (:init-keywords :flavor))
 

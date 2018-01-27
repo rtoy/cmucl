@@ -14,24 +14,12 @@
 ;;;			(require :clx <pathname-of-this-file>)
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: provide.lisp,v 1.5 2009/06/17 18:22:46 rtoy Rel $")
+(in-package :common-lisp-user)
 
-#+cmu
-(cl:provide "CLX")
+(provide :clx)
 
 #-cmu
 (progn
-
-#-clx-ansi-common-lisp 
-(in-package :user)
-
-#+clx-ansi-common-lisp
-(in-package :common-lisp-user)
-
-#-clx-ansi-common-lisp
-(provide :clx)
-
 (defvar *clx-source-pathname*
 	(pathname "/src/local/clx/*.l"))
 

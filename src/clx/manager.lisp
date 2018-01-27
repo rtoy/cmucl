@@ -18,9 +18,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: manager.lisp,v 1.10 2009/06/17 18:22:46 rtoy Rel $")
-
 (in-package :xlib)
 
 (defun wm-name (window)
@@ -154,10 +151,11 @@
   wm-hints)
 
 (defun decode-wm-hints (vector display)
-  (declare (type (simple-vector 9) vector)
+  (declare (type (simple-vector *) vector)
 	   (type display display))
   (declare (clx-values wm-hints))
-  (let ((input-hint 0)
+  (let ((hint-mask (1- (ash 1 29)))
+	(input-hint 0)
 	(state-hint 1)
 	(icon-pixmap-hint 2)
 	(icon-window-hint 3)
@@ -182,12 +180,12 @@
       (when (logbitp icon-window-hint flags)
 	(setf (wm-hints-icon-window hints) (decode-type window (aref vector 4))))
       (when (logbitp icon-position-hint flags)
-	(setf (wm-hints-icon-x hints) (aref vector 5)
-	      (wm-hints-icon-y hints) (aref vector 6)))
+	(setf (wm-hints-icon-x hints) (logand hint-mask (aref vector 5))
+	      (wm-hints-icon-y hints) (logand hint-mask (aref vector 6))))
       (when (logbitp icon-mask-hint flags)
 	(setf (wm-hints-icon-mask hints) (decode-type pixmap (aref vector 7))))
       (when (and (logbitp window-group-hint flags) (> (length vector) 7))
-	(setf (wm-hints-window-group hints) (aref vector 8)))
+	(setf (wm-hints-window-group hints) (logand hint-mask (aref vector 8))))
       hints)))
 
 
@@ -313,8 +311,12 @@
 	(setf (wm-size-hints-width-inc hints) (aref vector 9)
 	      (wm-size-hints-height-inc hints) (aref vector 10)))
       (when (logbitp 7 flags)
-	(setf (wm-size-hints-min-aspect hints) (/ (aref vector 11) (aref vector 12))
-	      (wm-size-hints-max-aspect hints) (/ (aref vector 13) (aref vector 14))))
+        (let ((low (aref vector 12)))
+          (unless (zerop low)
+            (setf (wm-size-hints-min-aspect hints) (/ (aref vector 11) low))))
+        (let ((low (aref vector 14)))
+          (unless (zerop low)
+            (setf (wm-size-hints-max-aspect hints) (/ (aref vector 13) low)))))
       (when (> (length vector) 15)
 	;; This test is for backwards compatibility since old Xlib programs
 	;; can set a size-hints structure that is too small.  See ICCCM.
@@ -323,7 +325,13 @@
 		(wm-size-hints-base-height hints) (aref vector 16)))
 	(when (logbitp 9 flags)
 	  (setf (wm-size-hints-win-gravity hints)
-		(decode-type (member-vector +win-gravity-vector+) (aref vector 17)))))
+		;; many games don't initialize win-gravity correctly,
+		;; so we need to bring it to within the correct range
+		;; ICCCM specifies a default gravity of NorthWest
+		(let ((gravity (aref vector 17)))
+		  (if (< 0 gravity #.(length +win-gravity-vector+))
+		      (decode-type (member-vector +win-gravity-vector+) gravity)
+		      :north-west)))))
       ;; Obsolete fields
       (when (or (logbitp 0 flags) (logbitp 2 flags))
 	(setf (wm-size-hints-x hints) (card32->int32 (aref vector 1))
@@ -733,36 +741,7 @@
     (get-property root property :type type :result-type result-type
 		  :start start :end end :transform transform)))
 
-;; Implement the following:
-;; (defsetf cut-buffer (display &key (buffer 0) (type :string) (format 8)
-;;			        (transform #'char->card8) (start 0) end) (data)
-;; In order to avoid having to pass positional parameters to set-cut-buffer,
-;; We've got to do the following.  WHAT A PAIN...
-#-clx-ansi-common-lisp
-(define-setf-method cut-buffer (display &rest option-list)
-  (declare (dynamic-extent option-list))
-  (do* ((options (copy-list option-list))
-	(option options (cddr option))
-	(store (gensym))
-	(dtemp (gensym))
-	(temps (list dtemp))
-	(values (list display)))
-       ((endp option)
-	(values (nreverse temps)
-		(nreverse values)
-		(list store)
-		`(set-cut-buffer ,store ,dtemp ,@options)
-		`(cut-buffer ,@options)))
-    (unless (member (car option) '(:buffer :type :format :start :end :transform))
-      (error "Keyword arg ~s isn't recognized" (car option)))
-    (let ((x (gensym)))
-      (push x temps)
-      (push (cadr option) values)
-      (setf (cadr option) x))))
-
-(defun
-  #+clx-ansi-common-lisp (setf cut-buffer)
-  #-clx-ansi-common-lisp set-cut-buffer
+(defun (setf cut-buffer)
   (data display &key (buffer 0) (type :STRING) (format 8)
 	(start 0) end (transform #'char->card8))
   (declare (type sequence data)

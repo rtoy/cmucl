@@ -18,9 +18,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: graphics.lisp,v 1.7 2009/06/17 18:22:46 rtoy Rel $")
-
 (in-package :xlib)
 
 (defvar *inhibit-appending* nil)
