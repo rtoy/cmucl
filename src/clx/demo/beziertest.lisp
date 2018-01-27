@@ -18,9 +18,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: beziertest.lisp,v 1.3 2009/06/17 18:22:46 rtoy Rel $")
-
 (in-package :xlib)
 
 (defun bezier-test (host &optional (pathname "/usr/X.V11R1/extensions/test/datafile"))
