@@ -6,13 +6,10 @@
 ;;; This file should be portable to any valid Common Lisp with CLX -- DEC 88.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: clx-demos.lisp,v 1.2 2009/06/17 18:22:46 rtoy Rel $")
-
-(defpackage :demos (:use :common-lisp)
+(defpackage #:xlib-demo/demos (:use :common-lisp)
   (:export do-all-demos demo))
 
-(in-package :demos)
+(in-package :xlib-demo/demos)
 
 
 ;;;; Graphic demos wrapper macro.
@@ -39,11 +36,11 @@
        (unless *display*
 	 #+:cmu
 	 (multiple-value-setq (*display* *screen*) (ext:open-clx-display))
-	 #+(or sbcl allegro clisp)
+	 #+(or sbcl allegro clisp lispworks)
 	 (progn
 	   (setf *display* (xlib::open-default-display))
 	   (setf *screen* (xlib:display-default-screen *display*)))
-	 #-(or cmu sbcl allegro clisp)
+	 #-(or cmu sbcl allegro clisp lispworks)
 	 (progn
 	   ;; Portable method
 	   (setf *display* (xlib:open-display (machine-instance)))

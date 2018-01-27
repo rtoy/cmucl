@@ -1,11 +1,8 @@
-#+cmu
-(ext:file-comment "$Id: clclock.lisp,v 1.2 2009/06/17 18:22:46 rtoy Rel $")
-
-(defpackage "XCLCLOCK"
+(defpackage #:xlib-demo/clclock
   (:use "CL")
   (:export "CLOCK"))
 
-(in-package "XCLCLOCK")
+(in-package #:xlib-demo/clclock)
 
 (defvar *display* (xlib:open-default-display))
 (defvar *screen* (xlib:display-default-screen *display*))
