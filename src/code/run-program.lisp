@@ -567,7 +567,8 @@
 					env))
 			(let ((child-pid
 			       (without-gcing
-				(spawn program argv envp pty-name
+				(spawn (unix::unix-namestring program)
+				       argv envp pty-name
 				       stdin stdout stderr))))
 			  (when (< child-pid 0)
 			    (error (intl:gettext "Could not fork child process: ~A")
