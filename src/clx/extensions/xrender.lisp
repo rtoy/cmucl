@@ -3,8 +3,7 @@
 ;;;     Title: The X Render Extension
 ;;;   Created: 2002-08-03
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-#+cmu
-(ext:file-comment "$Id: xrender.lisp,v 1.2 2009/06/17 18:22:46 rtoy Rel $")
+;;;       $Id: xrender.lisp,v 1.5 2004/12/06 11:48:57 csr21 Exp $
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; (c) copyright 2002, 2003 by Gilbert Baumann
@@ -128,6 +127,8 @@
           render-query-version
           ;; render-query-picture-formats
           render-fill-rectangle
+          render-triangles
+          render-trapezoids
           render-composite
           render-create-glyph-set
           render-reference-glyph-set
@@ -195,6 +196,24 @@
 
 ;; We do away with the distinction between pict-format and
 ;; picture-format-info. That is we cache picture-format-infos.
+
+(defstruct picture-format
+  display 
+  (id   0 :type (unsigned-byte 29))
+  type
+  depth
+  red-byte
+  green-byte
+  blue-byte
+  alpha-byte
+  colormap)
+
+(def-clx-class (glyph-set (:copier nil)
+                        )
+  (id 0 :type resource-id)
+  (display nil :type (or null display))
+  (plist nil :type list)                ; Extension hook
+  (format))
 
 (defstruct render-info
   major-version
@@ -297,17 +316,6 @@ by every function, which attempts to generate RENDER requests."
     ((index thing) `(resource-id-put ,index (glyph-set-id ,thing)))))
 
 ;;; picture format
-
-(defstruct picture-format
-  display 
-  (id   0 :type (unsigned-byte 29))
-  type
-  depth
-  red-byte
-  green-byte
-  blue-byte
-  alpha-byte
-  colormap)
 
 (defmethod print-object ((object picture-format) stream)
   (let ((abbrev
@@ -517,13 +525,15 @@ by every function, which attempts to generate RENDER requests."
   (let ((display (picture-display picture)))
     (with-buffer-request (display (extension-opcode display "RENDER"))
       (data +X-RenderFreePicture+)
-      (picture  picture))))
+      (picture  picture))
+    (deallocate-resource-id display (picture-id picture) 'picture)))
 
 (defun render-free-glyph-set (glyph-set)
   (let ((display (glyph-set-display glyph-set)))
     (with-buffer-request (display (extension-opcode display "RENDER"))
       (data +X-RenderFreeGlyphSet+)
-      (glyph-set  glyph-set))))
+      (glyph-set  glyph-set))
+    (deallocate-resource-id display (glyph-set-id glyph-set) 'glyph-set)))
 
 (defun render-query-version (display)
   (with-buffer-request-and-reply (display (extension-opcode display "RENDER") nil)
@@ -570,16 +580,16 @@ by every function, which attempts to generate RENDER requests."
     (synchronise-picture-state picture)
     (with-buffer-request (display (extension-opcode display "RENDER"))
       (data +X-RenderFillRectangles+)
-      (render-op op)                         ;op
-      (card8 0)                        ;pad
-      (card16 0)                        ;pad
+      (render-op op)
+      (pad8 0)
+      (pad16 0)
       (resource-id (picture-id picture))
       (card16 (elt color 0)) (card16 (elt color 1)) (card16 (elt color 2)) (card16 (elt color 3))
       (int16 x1) (int16 y1) (card16 w) (card16 h))))
 
 ;; fill rectangles, colors.
 
-(defun render-triangles-1 (picture op source src-x src-y format coord-sequence)
+(defun render-triangles (picture op source src-x src-y format coord-sequence)
   ;; For performance reasons we do a special typecase on (simple-array
   ;; (unsigned-byte 32) (*)), so that it'll be possible to have high
   ;; performance rasters.
@@ -587,17 +597,18 @@ by every function, which attempts to generate RENDER requests."
                '(let ((display (picture-display picture)))
                  (synchronise-picture-state picture)
                  (synchronise-picture-state source)
-                 (with-buffer-request (display (extension-opcode display "RENDER"))
-                   (data +X-RenderTriangles+)
-                   (render-op op)                       ;op
-                   (card8 0)                            ;pad
-                   (card16 0)                           ;pad
-                   (resource-id (picture-id source))
-                   (resource-id (picture-id picture))
-                   (picture-format format)
-                   (int16 src-x)
-                   (int16 src-y)
-                   ((sequence :format int32) coord-sequence) ))))
+                 (labels ((funk (x) (ash x 16)))
+                   (with-buffer-request (display (extension-opcode display "RENDER"))
+                     (data +X-RenderTriangles+)
+                     (render-op op)
+                     (pad8 0)
+                     (pad16 0)
+                     (resource-id (picture-id source))
+                     (resource-id (picture-id picture))
+                     (picture-format format)
+                     (int16 src-x)
+                     (int16 src-y)
+                     ((sequence :format int32 :transform #'funk) coord-sequence))))))
     (typecase coord-sequence
       ((simple-array (unsigned-byte 32) (*))
        (locally
@@ -694,7 +705,7 @@ by every function, which attempts to generate RENDER requests."
       (data +X-RenderSetPictureFilter+)
       (resource-id (picture-id picture))
       (card16 (length filter))
-      (card16 0)                        ;pad
+      (pad16 0)
       ((sequence :format card8) (map 'vector #'char-code filter)))))
   
 
@@ -705,25 +716,26 @@ by every function, which attempts to generate RENDER requests."
   )
 ||#
 
-(defun render-trapezoids-1 (picture op source src-x src-y mask-format coord-sequence)
+(defun render-trapezoids (picture op source src-x src-y mask-format coord-sequence)
   ;; coord-sequence is  top bottom
-  ;;                    line-1-x1 line-1-y1 line-1-x2 line-1-y2
-  ;;                    line-2-x1 line-2-y1 line-2-x2 line-2-y2 ...
+  ;;                    left-x1 left-y1 left-x2 left-y2
+  ;;                    right-x1 right-y1 right-x2 right-y2 ...
   ;;
   (let ((display (picture-display picture)))
     (synchronise-picture-state picture)
     (synchronise-picture-state source)
-    (with-buffer-request (display (extension-opcode display "RENDER"))
-      (data +X-RenderTrapezoids+)
-      (render-op op)                    ;op
-      (card8 0)                         ;pad
-      (card16 0)                        ;pad
-      (resource-id (picture-id source))
-      (resource-id (picture-id picture))
-      ((or (member :none) picture-format) mask-format)
-      (int16 src-x)
-      (int16 src-y)
-      ((sequence :format int32) coord-sequence) )))
+    (labels ((funk (x) (ash x 16)))
+      (with-buffer-request (display (extension-opcode display "RENDER"))
+        (data +X-RenderTrapezoids+)
+        (render-op op)
+        (pad8 0)
+        (pad16 0)
+        (resource-id (picture-id source))
+        (resource-id (picture-id picture))
+        ((or (member :none) picture-format) mask-format)
+        (int16 src-x)
+        (int16 src-y)
+        ((sequence :format int32 :transform #'funk) coord-sequence)))))
 
 (defun render-composite (op
                          source mask dest
@@ -735,9 +747,9 @@ by every function, which attempts to generate RENDER requests."
     (synchronise-picture-state dest)
     (with-buffer-request (display (extension-opcode display "RENDER"))
       (data +X-RenderComposite+)
-      (render-op op)                         ;op
-      (card8 0)                         ;pad
-      (card16 0)                        ;pad
+      (render-op op)
+      (pad8 0)
+      (pad16 0)
       (resource-id (picture-id source))
       (resource-id (if mask (picture-id mask) 0))
       (resource-id (picture-id dest))
@@ -749,13 +761,6 @@ by every function, which attempts to generate RENDER requests."
       (int16 dst-y)
       (card16 width)
       (card16 height))))
-
-(def-clx-class (glyph-set (:copier nil)
-                        )
-  (id 0 :type resource-id)
-  (display nil :type (or null display))
-  (plist nil :type list)                ; Extension hook
-  (format))
 
 (defun render-create-glyph-set (format &key glyph-set)
   (let ((display (picture-format-display format)))
@@ -803,14 +808,16 @@ by every function, which attempts to generate RENDER requests."
     (with-buffer-request (display (extension-opcode display "RENDER"))
       (data +X-RenderCompositeGlyphs8+)
       (render-op alu)
-      (card8 0) (card16 0)              ;padding
+      (pad8 0)
+      (pad16 0)
       (picture source)
       (picture dest)
       ((or (member :none) picture-format) mask-format)
       (glyph-set glyph-set)
       (int16 src-x) (int16 src-y)
       (card8 (- end start)) ;length of glyph elt
-      (card8 0) (card16 0) ;padding
+      (pad8 0)
+      (pad16 0)
       (int16 dest-x) (int16 dest-y)             ;dx, dy
       ((sequence :format card8) sequence))))
 
@@ -832,7 +839,8 @@ by every function, which attempts to generate RENDER requests."
 	   (data ,opcode)
 	   (length request-length)
 	   (render-op ,alu)
-	   (card8 0) (card16 0)                        ;padding
+           (pad8 0)
+	   (pad16 0)
 	   (picture ,source)
 	   (picture ,dest)
 	   ((or (member :none) picture-format) ,mask-format)
@@ -931,17 +939,27 @@ by every function, which attempts to generate RENDER requests."
            (unit (bitmap-format-unit bitmap-format))
            (byte-lsb-first-p (display-image-lsb-first-p display))
            (bit-lsb-first-p  (bitmap-format-lsb-first-p bitmap-format)))
-      (let* ((byte-per-line (* 4 (ceiling 
-				  (* w (picture-format-depth (glyph-set-format glyph-set)))
-				  32)))
-             (request-length (+ 28
-				(* h byte-per-line))))
+      (let* ((padded-bytes-per-line
+              (index* (index-ceiling
+                       (index* w (picture-format-depth
+                                  (glyph-set-format glyph-set)))
+                       32)
+                      4))
+             (request-bytes
+              (index+ 28 (index* h padded-bytes-per-line)))
+             (max-bytes-per-request
+              (index* (index- (display-max-request-length display) 6) 4)))
+        ;; INV: we can do better – if at least one scanline of the
+        ;; image fits in the request, we may render glyph in a loop
+        ;; like it's done in a function `put-image' in `image.lisp'.
+        (when (> request-bytes max-bytes-per-request)
+          (error "Glyph won't fit in a single request"))
         (with-buffer-request (display (extension-opcode display "RENDER"))
           (data +X-RenderAddGlyphs+)
-          (length (ceiling request-length 4))
+          (length (ceiling request-bytes 4))
           (glyph-set glyph-set)
-          (card32 1) ;number glyphs
-          (card32 id) ;id
+          (card32 1)                    ;number glyphs
+          (card32 id)                   ;id
           (card16 w)
           (card16 h)
           (int16 x-origin)
@@ -952,7 +970,7 @@ by every function, which attempts to generate RENDER requests."
             (setf (buffer-boffset display) (advance-buffer-offset 28))
             (let ((im (create-image :width w :height h :depth 8 :data data)))
               (write-image-z display im 0 0 w h
-                             byte-per-line ;padded bytes per line
+                             padded-bytes-per-line
                              unit byte-lsb-first-p bit-lsb-first-p)) ))) )))
 
 (defun render-add-glyph-from-picture (glyph-set picture
@@ -1152,4 +1170,22 @@ by every function, which attempts to generate RENDER requests."
         (resource-id (picture-id picture))
         (card16 x)
         (card16 y))
+      cursor)))
+
+(defun render-create-anim-cursor (cursors delays)
+  "Create animated cursor. cursors length must be the same as delays length."
+  (let ((display (cursor-display (first cursors))))
+    (ensure-render-initialized display)
+    (let* ((cursor (make-cursor :display display))
+           (cid (allocate-resource-id display cursor 'cursor))
+           (cursors-length (length cursors))
+           (cursors-delays (make-list (* 2 (length cursors)))))
+      (setf (xlib:cursor-id cursor) cid)
+      (dotimes (i cursors-length)
+        (setf (elt cursors-delays (* 2 i)) (cursor-id (elt cursors i))
+              (elt cursors-delays (1+ (* 2 i))) (elt delays i)))
+      (xlib::with-buffer-request (display (extension-opcode display "RENDER"))
+        (data +X-RenderCreateAnimCursor+)
+        (resource-id cid)
+        ((sequence :format card32) cursors-delays))
       cursor)))

@@ -1,9 +1,6 @@
-#+cmu
-(ext:file-comment "$Id: gl.lisp,v 1.2 2009/06/17 18:22:46 rtoy Rel $")
-
-(defpackage :gl
+(defpackage #:xlib/gl
   (:use :common-lisp :xlib)
-  (:import-from :glx
+  (:import-from :xlib/glx
                 "*CURRENT-CONTEXT*"
                 "CONTEXT"
                 "CONTEXT-P"
@@ -1156,7 +1153,7 @@
            ))
 
 
-(in-package :gl)
+(in-package #:xlib/gl)
 
 
 
@@ -2138,6 +2135,27 @@
   value)
 
 
+#+lispworks
+(progn
+  (defun %single-float-bits (x)
+    (declare (type single-float x))
+    (fli:with-dynamic-foreign-objects ((bits :int32))
+      (fli:with-coerced-pointer (pointer :type :lisp-single-float) bits
+        (setf (fli:dereference pointer) x))
+      (fli:dereference bits)))
+
+  (declaim (notinline aset-float32))
+  (defun aset-float32 (value array index)
+    (declare (type (or short-float single-float) value)
+             (type buffer-bytes array)
+             (type array-index index))
+    #.(declare-buffun)
+    (let ((bits (%single-float-bits (coerce value 'single-float))))
+      (declare (type (unsigned-byte 32) bits))
+      (aset-card32 bits array index))
+    value))
+
+
 #+sbcl
 (defun aset-float64 (value array index)
   (declare (type double-float value)
@@ -2178,6 +2196,36 @@
     (aset-card32 low array index)
     (aset-card32 high array (the array-index (+ index 4))))
   value)
+
+
+#+lispworks
+(progn
+  (fli:define-c-struct %uint64
+    (high :uint32)
+    (low :uint32))
+
+  (defun %double-float-bits (x)
+    (declare (type double-float x))
+    (fli:with-dynamic-foreign-objects ((bits %uint64))
+      (fli:with-coerced-pointer (pointer :type :lisp-double-float) bits
+        (setf (fli:dereference pointer) x))
+
+      (values (fli:foreign-slot-value bits 'low :type :uint32 :object-type '%uint64)
+              (fli:foreign-slot-value bits 'high :type :uint32 :object-type '%uint64))))
+
+  (declaim (notinline aset-float64))
+  (defun aset-float64 (value array index)
+    (declare (type double-float value)
+             (type buffer-bytes array)
+             (type array-index index))
+    #.(declare-buffun)
+    (multiple-value-bind (low high)
+        (%double-float-bits value)
+      (declare (type (unsigned-byte 32) low high))
+
+      (aset-card32 low array index)
+      (aset-card32 high array (the array-index (+ index 4))))
+    value))
 
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -2593,7 +2641,7 @@
                                   #.+convolution-width+
                                   #.+convolution-height+
                                   #.+max-convolution-width+
-                                  #.+max-convolution-width+)
+                                  #.+max-convolution-height+)
                                  1)
                                 ((#.+convolution-filter-scale+
                                   #.+convolution-filter-bias+)
@@ -2619,7 +2667,7 @@
                                 #.+convolution-width+
                                 #.+convolution-height+
                                 #.+max-convolution-width+
-                                #.+max-convolution-width+)
+                                #.+max-convolution-height+)
                                1)
                               ((#.+convolution-filter-scale+
                                 #.+convolution-filter-bias+)

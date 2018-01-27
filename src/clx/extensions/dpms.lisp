@@ -13,10 +13,7 @@
 ;;;;  any purpose of the information in this document.  This documentation is
 ;;;;  provided ``as is'' without express or implied warranty.
 
-#+cmu
-(ext:file-comment "$Id: dpms.lisp,v 1.3 2009/06/17 18:22:46 rtoy Rel $")
-
-(defpackage :dpms
+(defpackage #:xlib/dpms
   (:use :common-lisp)
   (:import-from :xlib
                 "DEFINE-EXTENSION"
@@ -39,7 +36,7 @@
            "DPMS-FORCE-LEVEL"
            "DPMS-INFO"))
 
-(in-package :dpms)
+(in-package #:xlib/dpms)
 
 (define-extension "DPMS")
 
