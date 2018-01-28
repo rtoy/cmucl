@@ -20,6 +20,13 @@
 
 (defvar *test-state*)
   
+(define-test rng.state
+  (let ((s (kernel::random-state-state *random-state*)))
+    #+random-xoroshiro
+    (assert-true (typep s '(simple-array double-float (2))))
+    #+random-mt19937
+    (assert-true (typep s '(simple-array (unsigned-byte 32) (627))))))
+
 #+random-xoroshiro
 (define-test rng.initial-state
   (setf *test-state*
@@ -56,6 +63,7 @@
       (assert-equal value (64-bit-value *test-state*))
       (assert-equal state (multiple-value-list (64-bit-rng-state *test-state*))))))
 
+#+random-xoroshiro
 (define-test rng.jump
   (setf *test-state*
 	(kernel::make-random-object :state (kernel::init-random-state #x12345678)
@@ -68,3 +76,4 @@
     (kernel:random-state-jump *test-state*)
     (assert-equal result (multiple-value-list
 			  (64-bit-rng-state *test-state*)))))
+

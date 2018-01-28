@@ -127,7 +127,6 @@
 	     '("target:code/rand-xoroshiro"))
 	    (t
 	     '("target:code/rand")))
-    "target:code/rand-xoroshiro"
     "target:code/alieneval"
     "target:code/c-call"
     "target:code/sap"
