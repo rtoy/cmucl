@@ -434,4 +434,12 @@
 			    "./"
 			    test-dir-name
 			    "ls-link")))))
-					       
+
+(define-test issue.47
+  (:tag :issues)
+  (with-standard-io-syntax
+    (assert-equal "`(,@VARS ,@VARS)"
+		  (with-output-to-string (s)
+		    (write (read-from-string "`(,@vars ,@vars)")
+			   :pretty t
+			   :stream s)))))
