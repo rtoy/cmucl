@@ -263,7 +263,8 @@
 		   (backq-unparse (car tail) t)))
 	 (push (backq-unparse (car tail)) accum)))
       (backq-append
-       (mapcar #'(lambda (el) (backq-unparse el t))
+       (mapcar #'(lambda (el)
+		   (car (backq-unparse el t)))
 	       (cdr form)))
       (backq-nconc
        (mapcar #'(lambda (el) (backq-unparse el :nconc))
