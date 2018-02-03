@@ -2028,30 +2028,31 @@
 (defun decode-float-exp-derive-type-aux (arg)
   ;; Derive the exponent part of the float.  It's always an integer
   ;; type.
-  (flet ((calc-exp (x)
-	   (when x
-	     (nth-value 1 (decode-float x))))
-	 (min-exp ()
-	   ;; Use decode-float on the least positive float of the
-	   ;; appropriate type to find the min exponent.  If we don't
-	   ;; know the actual number format, use double, which has the
-	   ;; widest range (including double-double-float).
-	   (nth-value 1 (decode-float (if (eq 'single-float (numeric-type-format arg))
-					  least-positive-single-float
-					  least-positive-double-float))))
-	 (max-exp ()
-	   ;; Use decode-float on the most postive number of the
-	   ;; appropriate type to find the max exponent.  If we don't
-	   ;; know the actual number format, use double, which has the
-	   ;; widest range (including double-double-float).
-	   (if (eq (numeric-type-format arg) 'single-float)
-	       (nth-value 1 (decode-float most-positive-single-float))
-	       (nth-value 1 (decode-float most-positive-double-float)))))
-    (let* ((lo (or (bound-func #'calc-exp
-			       (numeric-type-low arg))
+  (labels
+      ((calc-exp (x)
+	 (when x
+	   (nth-value 1 (decode-float x))))
+       (min-exp ()
+	 ;; Use decode-float on the least positive float of the
+	 ;; appropriate type to find the min exponent.  If we don't
+	 ;; know the actual number format, use double, which has the
+	 ;; widest range (including double-double-float).
+	 (calc-exp (if (eq 'single-float (numeric-type-format arg))
+		       least-positive-single-float
+		       least-positive-double-float)))
+       (max-exp ()
+	 ;; Use decode-float on the most postive number of the
+	 ;; appropriate type to find the max exponent.  If we don't
+	 ;; know the actual number format, use double, which has the
+	 ;; widest range (including double-double-float).
+	 (calc-exp (if (eq 'single-float (numeric-type-format arg))
+		       most-positive-single-float
+		       most-positive-double-float))))
+    (let* ((interval (interval-func #'calc-exp
+				    (interval-abs (numeric-type->interval arg))))
+	   (lo (or (interval-low interval)
 		   (min-exp)))
-	   (hi (or (bound-func #'calc-exp
-			       (numeric-type-high arg))
+	   (hi (or (interval-high interval)
 		   (max-exp))))
       (specifier-type `(integer ,(or lo '*) ,(or hi '*))))))
 
