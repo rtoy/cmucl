@@ -443,3 +443,10 @@
 		    (write (read-from-string "`(,@vars ,@vars)")
 			   :pretty t
 			   :stream s)))))
+
+(define-test issue.59
+  (:tag :issues)
+  (let ((f (compile nil #'(lambda (z)
+			    (declare (type (double-float -2d0 0d0) z))
+			    (nth-value 2 (decode-float z))))))
+    (assert-equal -1d0 (funcall f -1d0))))
