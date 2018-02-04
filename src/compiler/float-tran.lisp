@@ -2028,31 +2028,36 @@
 (defun decode-float-exp-derive-type-aux (arg)
   ;; Derive the exponent part of the float.  It's always an integer
   ;; type.
-  (flet ((calc-exp (x)
-	   (when x
-	     (nth-value 1 (decode-float x))))
-	 (min-exp ()
-	   ;; Use decode-float on the least positive float of the
-	   ;; appropriate type to find the min exponent.  If we don't
-	   ;; know the actual number format, use double, which has the
-	   ;; widest range (including double-double-float).
-	   (nth-value 1 (decode-float (if (eq 'single-float (numeric-type-format arg))
-					  least-positive-single-float
-					  least-positive-double-float))))
-	 (max-exp ()
-	   ;; Use decode-float on the most postive number of the
-	   ;; appropriate type to find the max exponent.  If we don't
-	   ;; know the actual number format, use double, which has the
-	   ;; widest range (including double-double-float).
-	   (if (eq (numeric-type-format arg) 'single-float)
-	       (nth-value 1 (decode-float most-positive-single-float))
-	       (nth-value 1 (decode-float most-positive-double-float)))))
-    (let* ((lo (or (bound-func #'calc-exp
-			       (numeric-type-low arg))
-		   (min-exp)))
-	   (hi (or (bound-func #'calc-exp
-			       (numeric-type-high arg))
-		   (max-exp))))
+  (labels
+      ((calc-exp (x)
+	 (when x
+	   (bound-func #'(lambda (arg)
+			   (nth-value 1 (decode-float arg)))
+		       x)))
+       (min-exp (interval)
+	 ;; (decode-float 0d0) returns an exponent of -1022.  But
+	 ;; (decode-float least-positive-double-float returns -1073.
+	 ;; Hence, if the low value is less than this, we need to
+	 ;; return the exponent of the least positive number.
+	 (let ((least (if (eq 'single-float (numeric-type-format arg))
+			  least-positive-single-float
+			  least-positive-double-float)))
+	   (if (or (interval-contains-p 0 interval)
+		   (interval-contains-p least interval))
+	     (calc-exp least)
+	     (calc-exp (bound-value (interval-low interval))))))
+       (max-exp (interval)
+	 ;; Use decode-float on the most postive number of the
+	 ;; appropriate type to find the max exponent.  If we don't
+	 ;; know the actual number format, use double, which has the
+	 ;; widest range (including double-double-float).
+	 (or (calc-exp (bound-value (interval-high interval)))
+	     (calc-exp (if (eq 'single-float (numeric-type-format arg))
+			   most-positive-single-float
+			   most-positive-double-float)))))
+    (let* ((interval (interval-abs (numeric-type->interval arg)))
+	   (lo (min-exp interval))
+	   (hi (max-exp interval)))
       (specifier-type `(integer ,(or lo '*) ,(or hi '*))))))
 
 (defun decode-float-sign-derive-type-aux (arg)

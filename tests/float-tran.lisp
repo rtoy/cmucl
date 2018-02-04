@@ -28,7 +28,7 @@
   #+double-double
   (assert-equalp (c::specifier-type '(integer -1073 1024))
 		 (c::decode-float-exp-derive-type-aux
-		  (c::specifier-type 'double-double-float)))
+		  (c::specifier-type 'kernel:double-double-float)))
   (assert-equalp (c::specifier-type '(integer 2 8))
 		 (c::decode-float-exp-derive-type-aux
 		  (c::specifier-type '(double-float 2d0 128d0)))))
