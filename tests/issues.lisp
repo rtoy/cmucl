@@ -450,3 +450,57 @@
 			    (declare (type (double-float -2d0 0d0) z))
 			    (nth-value 2 (decode-float z))))))
     (assert-equal -1d0 (funcall f -1d0))))
+
+(define-test issue.59.1-double
+  (:tag :issues)
+  (dolist (entry '(((-2d0 2d0) (-1073 2))
+		   ((-2d0 0d0) (-1073 2))
+		   ((0d0 2d0) (-1073 2))
+		   ((1d0 4d0) (1 3))
+		   ((-4d0 -1d0) (1 3))
+		   (((0d0) (10d0)) (-1073 4))
+		   ((-2f0 2f0) (-148 2))
+		   ((-2f0 0f0) (-148 2))
+		   ((0f0 2f0) (-148 2))
+		   ((1f0 4f0) (1 3))
+		   ((-4f0 -1f0) (1 3))
+		   ((0f0) (10f0)) (-148 4)))
+    (destructuring-bind ((arg-lo arg-hi) (result-lo result-hi))
+	entry
+      (assert-equalp (c::specifier-type `(integer ,result-lo ,result-hi))
+		     (c::decode-float-exp-derive-type-aux
+		      (c::specifier-type `(double-float ,arg-lo ,arg-hi)))))))
+
+(define-test issue.59.1-double
+  (:tag :issues)
+  (dolist (entry '(((-2d0 2d0) (-1073 2))
+		   ((-2d0 0d0) (-1073 2))
+		   ((0d0 2d0) (-1073 2))
+		   ((1d0 4d0) (1 3))
+		   ((-4d0 -1d0) (1 3))
+		   (((0d0) (10d0)) (-1073 4))
+		   (((0.5d0) (4d0)) (0 3))))
+    (destructuring-bind ((arg-lo arg-hi) (result-lo result-hi))
+	entry
+      (assert-equalp (c::specifier-type `(integer ,result-lo ,result-hi))
+		     (c::decode-float-exp-derive-type-aux
+		      (c::specifier-type `(double-float ,arg-lo ,arg-hi)))
+		     arg-lo
+		     arg-hi))))
+
+(define-test issue.59.1-float
+  (:tag :issues)
+  (dolist (entry '(((-2f0 2f0) (-148 2))
+		   ((-2f0 0f0) (-148 2))
+		   ((0f0 2f0) (-148 2))
+		   ((1f0 4f0) (1 3))
+		   ((-4f0 -1f0) (1 3))
+		   (((0f0) (10f0)) (-148 4))
+		   (((0.5f0) (4f0)) (0 3))))
+    (destructuring-bind ((arg-lo arg-hi) (result-lo result-hi))
+	entry
+      (assert-equalp (c::specifier-type `(integer ,result-lo ,result-hi))
+		     (c::decode-float-exp-derive-type-aux
+		      (c::specifier-type `(single-float ,arg-lo ,arg-hi)))
+		     arg-lo
+		     arg-hi))))
