@@ -25,10 +25,14 @@ public domain.
       * The required state for this generator is just 4 32-bit words instead of the 600+ for MT19937.
       * The generator is also faster than MT19937 (approximately 28% faster on x86 and 18% on sparc).
       * The new function `KERNEL:RANDOM-STATE-JUMP` modifies the given state to jump 2^64 samples ahead, allowing 2^64 non-overlapping sequences.
-
+    * Updated CLX to telent clx version 06e39a0d.
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
+    * ~~~#50~~~ CLX (Hemlock) fails to run.
+    * ~~~#49~~~ CLM crashes
+    * ~~~#47~~~ Backquate and multiple splices
+    * ~~~#59~~~ Incorrect type-derivation for `decode-float`
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
