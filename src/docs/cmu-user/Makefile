@@ -70,7 +70,7 @@ all: cmu-user.pdf
 
 # the "-fix" option to hevea makes it run as many times as necessary
 # to resolve all cross-references and generate an index.
-%.html : %.tex $(FILES)
+%.html : %.tex $(FILES) cmu-user.hva
 	$(HEVEA) -fix cmu-user.hva $<
 	$(HACHA) -tocbis $@
 	-$(TIDY) -m *.html
@@ -105,6 +105,7 @@ clean:
 	rm -f *.log *.bbl *.blg *.ps *.pdf *.aux *.lof *.toc *.out *.ilg
 	rm -f *.vdx *.cdx *.tdx *.fdx *.idx *.cnd *.fnd *.tnd *.vnd *.haux
 	rm -f *.html *.hcnd *.htnd *.hvnd *.hfnd *.htoc
+	rm -f cmu-user.css
 
 index:
 	makeindex cmu-user.tdx -o cmu-user.tnd
