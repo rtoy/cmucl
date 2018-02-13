@@ -295,7 +295,7 @@ This section describes the basic operations on Alien values.
 
 \subsection{Alien Access Operations}
 
-\begin{defun}{alien:}{deref}{\args{\var{pointer-or-array} \amprest \var{indices}}}
+\begin{defun}{alien:}{deref}{\args{\var{pointer-or-array} \amprest{} \var{indices}}}
   
   This function returns the value pointed to by an Alien pointer or
   the value of an Alien array element.  If a pointer, an optional
@@ -766,7 +766,7 @@ and two return values (\var{a} and \var{i}).
 macro:
 
 \begin{defmac}{alien:}{def-callback}{\var{name} (\var{return-type}
-    \mstar{(arg-name arg-type)}) \ampbody\ body}
+    \mstar{(arg-name arg-type)}) \ampbody{} \var{body}}
   This macro defines a Lisp function that can be called from C and a
   Lisp variable.  The arguments to the function must be alien types,
   and the return type must also be an alien type.  This Lisp function
@@ -789,7 +789,7 @@ macro:
   \code{def-callback} macro.
 \end{defmac}
 
-\begin{defmac}{alien:}{callback-funcall}{\var{callback-name} \amprest
+\begin{defmac}{alien:}{callback-funcall}{\var{callback-name} \amprest{}
     \var{args}}
   This macro does the necessary stuff to call the callback named
   \var{callback-name} with the given arguments.
