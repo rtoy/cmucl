@@ -1903,7 +1903,7 @@
 (deftransform upgraded-complex-real-contagion-arg1 ((x y) * * :defun-only t :node node)
   ;;(format t "upgraded-complex-real-contagion-arg1~%")
   `(,(continuation-function-name (basic-combination-fun node))
-     (coerce x '(complex ,(type-specifier (continuation-type y))))
+     (coerce x '(complex ,(numeric-type-format (continuation-type y))))
      y))
 ;;;
 (deftransform upgraded-complex-real-contagion-arg2 ((x y) * * :defun-only t :node node)
@@ -1912,7 +1912,7 @@
 	  (continuation-type x) (continuation-type y))
   `(,(continuation-function-name (basic-combination-fun node))
      x
-     (coerce y '(complex ,(type-specifier (continuation-type x))))))
+     (coerce y '(complex ,(numeric-type-format (continuation-type x))))))
 
 
 (dolist (x '(= + * / -))
