@@ -29,10 +29,11 @@ public domain.
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
-    * ~~~#50~~~ CLX (Hemlock) fails to run.
-    * ~~~#49~~~ CLM crashes
-    * ~~~#47~~~ Backquate and multiple splices
-    * ~~~#59~~~ Incorrect type-derivation for `decode-float`
+    * ~~#50~~ CLX (Hemlock) fails to run.
+    * ~~#49~~ CLM crashes
+    * ~~#47~~ Backquate and multiple splices
+    * ~~#59~~ Incorrect type-derivation for `decode-float`
+    * ~~#60~~ The function `C::%UNARY-FROUND` is undefined
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

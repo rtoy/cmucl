@@ -504,3 +504,14 @@
 		      (c::specifier-type `(single-float ,arg-lo ,arg-hi)))
 		     arg-lo
 		     arg-hi))))
+
+(define-test issue.60
+  (:tag :issues)
+  (let ((c14 (compile nil #'(lambda (x)
+			      (fround (the (member 1.0 2d0) x))))))
+    (assert-equalp
+     (values 1.0 0.0)
+     (funcall c14 1.0))
+    (assert-equalp
+     (values 2d0 0d0)
+     (funcall c14 2d0))))
