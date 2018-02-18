@@ -34,6 +34,7 @@ public domain.
     * ~~#47~~ Backquate and multiple splices
     * ~~#59~~ Incorrect type-derivation for `decode-float`
     * ~~#60~~ The function `C::%UNARY-FROUND` is undefined
+    * ~~#58~~ Bogus type error in comparison of complex number with `THE` form
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

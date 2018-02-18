@@ -515,3 +515,9 @@
     (assert-equalp
      (values 2d0 0d0)
      (funcall c14 2d0))))
+
+(define-test issue.58
+  (:tag :issues)
+  (let ((c9 (compile nil #'(lambda (x)
+			     (= (the (eql 1.0d0) x) #c(1/2 1/2))))))
+    (assert-false (funcall c9 1.d0))))
