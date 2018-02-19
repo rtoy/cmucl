@@ -521,3 +521,17 @@
   (let ((c9 (compile nil #'(lambda (x)
 			     (= (the (eql 1.0d0) x) #c(1/2 1/2))))))
     (assert-false (funcall c9 1.d0))))
+
+(define-test issue.61
+  (:tag :issues)
+  ;; Verifies that the compiler doesn't segfault and that we return
+  ;; the correct value.
+  (assert-false
+   (funcall (compile nil '(lambda () (array-has-fill-pointer-p #*10))))))
+
+(define-test issue.62
+  (:tag :issues)
+  ;; Verifies that the compiler doesn't segfault and that we return
+  ;; the correct value.
+  (assert-false
+   (funcall (compile nil '(lambda () (array-displacement "aaaaaaaa"))))))
