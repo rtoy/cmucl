@@ -34,11 +34,18 @@ done
 # Shift out the options
 shift $[$OPTIND - 1]
 
-# Create the test directory needed issue.45 test.
-
+# Create the test directory needed by the issue.45 test.
 rm -rf test-tmp
 mkdir test-tmp
 ln -s /bin/ls test-tmp/ls-link
+
+# Cleanup temp files and directories that we created during testing.
+function cleanup {
+    rm -f /tmp/trac.36.bom.txt /tmp/trac.43.txt
+    rm -rf /tmp/foo
+}
+
+trap cleanup EXIT
 
 if [ $# -eq 0 ]; then
     # No args so run all the tests
