@@ -20,6 +20,9 @@
    \@close{DIV}}
 \newcommand{\keys}[1]{\code{\&key}\@print{&nbsp;}\= #1}
 
+\renewcommand{\textgreater}{\@print{&gt;}}
+\renewcommand{\textless}{\@print{&lt;}}
+
 % \newcommand{\layout}[4][]
 %   {\begin{tabular}
 %    {llp{10cm}@{\hspace{10cm}}r}\fcnname{#1} &
@@ -113,7 +116,7 @@
   {\@open{BLOCKQUOTE}{class=example}\begin{alltt}}
   {\end{alltt}\@close{BLOCKQUOTE}}
 \newenvironment{lisp}
-  {\@open{BLOCKQUOTE}{CLASS=lisp} \begin{alltt}}
+  {\@open{BLOCKQUOTE}{CLASS=lisp}\begin{alltt}}
   {\end{alltt}\@close{BLOCKQUOTE}}
 \newcommand{\cmucl}{{\scshape cmucl}}
 

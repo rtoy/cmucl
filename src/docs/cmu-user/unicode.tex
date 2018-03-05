@@ -348,10 +348,10 @@ this encoding and handle the surrogate pairs correctly.
 \begin{defun}{}{string=}{\args \var{s1} \var{s2} \keys{\kwd{start1}
       \kwd{end1} \kwd{start2} \kwd{end2}}}
   \defunx{string/=}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
-  \defunx{string$<$}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
-  \defunx{string$>$}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
-  \defunx{string$<$=}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
-  \defunx{string$>$=}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
+  \defunx{string\textless}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
+  \defunx{string\textgreater}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
+  \defunx{string\textless=}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
+  \defunx{string\textgreater=}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
   The string comparison is done in codepoint order.  (This is
   different from just comparing the order of the individual characters
   due to surrogate pairs.)  Unicode collation is not done.
