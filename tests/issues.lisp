@@ -504,3 +504,34 @@
 		      (c::specifier-type `(single-float ,arg-lo ,arg-hi)))
 		     arg-lo
 		     arg-hi))))
+
+(define-test issue.60
+  (:tag :issues)
+  (let ((c14 (compile nil #'(lambda (x)
+			      (fround (the (member 1.0 2d0) x))))))
+    (assert-equalp
+     (values 1.0 0.0)
+     (funcall c14 1.0))
+    (assert-equalp
+     (values 2d0 0d0)
+     (funcall c14 2d0))))
+
+(define-test issue.58
+  (:tag :issues)
+  (let ((c9 (compile nil #'(lambda (x)
+			     (= (the (eql 1.0d0) x) #c(1/2 1/2))))))
+    (assert-false (funcall c9 1.d0))))
+
+(define-test issue.61
+  (:tag :issues)
+  ;; Verifies that the compiler doesn't segfault and that we return
+  ;; the correct value.
+  (assert-false
+   (funcall (compile nil '(lambda () (array-has-fill-pointer-p #*10))))))
+
+(define-test issue.62
+  (:tag :issues)
+  ;; Verifies that the compiler doesn't segfault and that we return
+  ;; the correct value.
+  (assert-false
+   (funcall (compile nil '(lambda () (array-displacement "aaaaaaaa"))))))

@@ -29,10 +29,14 @@ public domain.
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
-    * ~~~#50~~~ CLX (Hemlock) fails to run.
-    * ~~~#49~~~ CLM crashes
-    * ~~~#47~~~ Backquate and multiple splices
-    * ~~~#59~~~ Incorrect type-derivation for `decode-float`
+    * ~~#50~~ CLX (Hemlock) fails to run.
+    * ~~#49~~ CLM crashes
+    * ~~#47~~ Backquate and multiple splices
+    * ~~#59~~ Incorrect type-derivation for `decode-float`
+    * ~~#60~~ The function `C::%UNARY-FROUND` is undefined
+    * ~~#58~~ Bogus type error in comparison of complex number with `THE` form
+    * ~~#61~~ Segfault when compiling call to `ARRAY-HAS-FILL-POINTER-P` on bit vector constant
+    * ~~#62~~ Segfault when compiling `ARRAY-DISPLACEMENT` on a string constant
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

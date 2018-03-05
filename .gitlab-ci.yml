@@ -1,6 +1,6 @@
 variables:
-  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2018/01"
-  version: "2018-01-x86"
+  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2018/03"
+  version: "2018-03-x86"
 
 linux-runner:
   tags:
