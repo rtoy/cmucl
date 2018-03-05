@@ -11,8 +11,8 @@
 \newcommand{\parbox}[3][]{\mbox{#3}}
 \newcommand{\lengthtest}[1]{true}
 \newenvironment{minipage}[2][]{}{}
-\newcommand{\layout}[4][]
-  {\@open{DIV}{align=left}
+\newcommand{\layout}[5][]
+  {\@open{DIV}{align=left}#5%
    [#4] \\
    \begin{tabbing}
    \fcnname{#1}\fcnname{#2} #3 \@print{&nbsp;&nbsp;&nbsp;}
@@ -42,8 +42,8 @@
 %%    some description
 %% \end{deftp}
 \newenvironment{deftp}[3]
-  {\par\bigskip\index[types]{#2|textbf}%
-   \layout{#2}{\var{#3}}{#1}
+  {\layout{#2}{\var{#3}}{#1}%
+   {\bigskip\index[types]{#2|textbf}}
    \begin{quote}}
   {\end{quote}}
 
@@ -54,13 +54,13 @@
 %%   description of function
 %% \end{defun}
 \newenvironment{defun}[4][]
-  {\par\defunvspace\fnindexbold{#3}\label{FN:#3#1}%
-  \layout[#2]{#3}{#4}{Function}
+  {\layout[#2]{#3}{#4}{Function}%
+  {\defunvspace\fnindexbold{#3}\label{FN:#3#1}}
   \begin{quote}}
   {\end{quote}}
 \newcommand{\defunx}[3][\mbox{}]{%
-  \par\fnindexbold{#2}\label{FN:#2}%
-  \layout[#1]{#2}{#3}{Function}}
+  \layout[#1]{#2}{#3}{Function}%
+  {\fnindexbold{#2}\label{FN:#2}}}
 
 %% Define a macro
 %%
@@ -69,13 +69,13 @@
 %%   description of macro
 %% \end{defmac}
 \newenvironment{defmac}[4][]{%
-  \par\defunvspace\fnindexbold{#3}\label{FN:#3#1}%
-  \layout[#2]{#3}{#4}{Macro}
+  \layout[#2]{#3}{#4}{Macro}%
+  {\defunvspace\fnindexbold{#3}\label{FN:#3#1}}
   \begin{quote}}
   {\end{quote}}
 \newcommand{\defmacx}[3][\mbox{}]{%
-  \par\fnindexbold{#2}\label{FN:#2}%
-  \layout[#1]{#2}{#3}{Function}}
+  \layout[#1]{#2}{#3}{Function}%
+  {\fnindexbold{#2}\label{FN:#2}}}
 
 %% Define a variable
 %%
@@ -84,13 +84,13 @@
 %%   description of defvar
 %% \end{defvar}
 \newenvironment{defvar}[2]{%
-  \par\defunvspace\vrindexbold{#2}\label{VR:#2}
-  \layout[#1]{*#2*}{}{Variable}
+  \layout[#1]{*#2*}{}{Variable}%
+  {\defunvspace\vrindexbold{#2}\label{VR:#2}}
   \begin{quote}}
   {\end{quote}}
 \newcommand{\defvarx}[2][\mbox{}]{%
-  \par\vrindexbold{#2}\label{VR:#2}
-  \layout[#1]{*#2*}{}{Variable}}
+  \layout[#1]{*#2*}{}{Variable}%
+  {\vrindexbold{#2}\label{VR:#2}}}
 
 %% Define a constant
 %%
@@ -99,11 +99,12 @@
 %%   description of defconst
 %% \end{defconst}
 \newenvironment{defconst}[2]{%
-  \defunvspace\defconstx[#1]{#2}
+  \layout[#1]{#2}{}{Constant}%
+  {\defunvspace}
   \begin{quote}}
   {\end{quote}}
 \newcommand{\defconstx}[2][\mbox{}]{%
-  \layout[#1]{#2}{}{Constant}}
+  \layout[#1]{#2}{}{Constant}{}}
 
 
 
