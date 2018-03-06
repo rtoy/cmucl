@@ -162,9 +162,7 @@ IEEE floating point specifies four possible rounding modes:
   \findexed{truncate} function.
 \end{Lentry}
 
-\paragraph{Warning:}
-
-Although the rounding mode can be changed with
+Warning: Although the rounding mode can be changed with
 \code{set-floating-point-modes}, use of any value other than the
 default (\kwd{nearest}) can cause unusual behavior, since it will
 affect rounding done by \llisp{} system code as well as rounding in
@@ -267,7 +265,7 @@ These functions can be used to modify or read the floating point modes:
 To make handling control of floating-point exceptions, the following
 macro is useful.
 
-\begin{defmac}{ext:}{with-float-traps-masked}{traps \ampbody\ body}
+\begin{defmac}{ext:}{with-float-traps-masked}{\var{traps} \ampbody\ \var{body}}
   \code{body} is executed with the selected floating-point exceptions
   given by \code{traps} masked out (disabled).  \code{traps} should be
   a list of possible floating-point exceptions that should be ignored.
@@ -839,7 +837,7 @@ finalization is used to close the underlying file descriptor.
 
 \section{Describe}
 
-\begin{defun}{}{describe}{ \args{\var{object} \&optional{} \var{stream}}}
+\begin{defun}{}{describe}{ \args{\var{object} \ampoptional{} \var{stream}}}
   
   The \code{describe} function prints useful information about
   \var{object} on \var{stream}, which defaults to
@@ -1947,7 +1945,8 @@ way to browse the library.
 
 \section{Generalized Function Names}
 
-\begin{defmac}{ext:}{define-function-name-syntax}{name (var) \ampbody\ body}
+\begin{defmac}{ext:}{define-function-name-syntax}{%
+    \var{name} (\var{var}) \ampbody\ \var{body}}
   Define lists starting with the symbol \code{name} as a new extended
   function name syntax.
   
@@ -1969,7 +1968,7 @@ way to browse the library.
   user-defined package.
 \end{defmac}
 
-\begin{defun}{ext:}{valid-function-name-p}{name}
+\begin{defun}{ext:}{valid-function-name-p}{\var{name}}
   Returns two values:
 
   \begin{itemize}
@@ -1999,7 +1998,7 @@ function is called and
   standardized method combinations like \code{progn}, \code{and}, etc.
 \end{itemize}
 
-\begin{defgeneric}[-generic]{pcl:}{no-primary-method}{gf \&rest args}
+\begin{defgeneric}[-generic]{pcl:}{no-primary-method}{\var{gf} \amprest{} \var{args}}
   In \cmucl, this generic function is called in the above erroneous
   cases.  The parameter \code{gf} is the generic function being
   called, and \code{args} is a list of actual arguments in the generic
@@ -2007,7 +2006,7 @@ function is called and
 \end{defgeneric}
 
 \begin{defmethod}[-standard]{pcl:}{no-primary-method}{%
-    (gf standard-generic-function) \&rest args}
+    (\var{gf} \argtype{standard-generic-function}) \amprest{} \var{args}}
   This method signals a continuable error of type
   \code{pcl:no-primary-method-error}.
 \end{defmethod}
@@ -2292,7 +2291,7 @@ methods, as it would be the case when a function is inlined somewhere
 else.  Because of this, the function \code{pcl:flush-emf-cache} is
 provided for forcing such an update of effective methods.
 
-\begin{defun}{pcl:}{flush-emf-cache}{\&optional gf}
+\begin{defun}{pcl:}{flush-emf-cache}{\ampoptional{} \var{gf}}
   Flush cached effective method functions.  If \code{gf} is supplied,
   it should be a generic function metaobject or the name of a generic
   function, and this function flushes all cached effective methods for
@@ -2341,7 +2340,7 @@ when the generic function is called depending on the value of
 Support for sealing classes and generic functions have been
 implemented.  Please note that this interface is subject to change.
 
-\begin{defmac}{pcl:}{seal}{name (var) \amprest\ specifiers}
+\begin{defmac}{pcl:}{seal}{\var{name} (\var{var}) \amprest{} \var{specifiers}}
   Seal \code{name} with respect to the given specifiers; \code{name}
   can be the name of a class or generic-function.
 
@@ -2352,7 +2351,7 @@ implemented.  Please note that this interface is subject to change.
   Sealing violations signal an error of type \code{pcl:sealed-error}.
 \end{defmac}
 
-\begin{defun}{pcl:}{unseal}{name-or-object}
+\begin{defun}{pcl:}{unseal}{\var{name-or-object}}
   Remove seals from \code{name-or-object}.
 \end{defun}
 
@@ -2438,8 +2437,8 @@ extensions.
 
 \subsection{Extensions}
 
-\begin{defun}{}{constantly}{value \&optional val1 val2 \&rest
-    more-values}
+\begin{defun}{}{constantly}{%
+    \var{value} \ampoptional{} \var{val1} \var{val2} \amprest{} \var{more-values}}
   As an extension, \cmucl{} allows \code{constantly} to accept more
   than one value which are returned as multiple values.
 \end{defun}
@@ -2502,7 +2501,7 @@ innermost fwrapper object.  Likewise, if a function is fwrapped,
 \code{(setf fdefinition)} will set the primary function in the
 innermost fwrapper.
 
-\begin{defmac}{fwrappers:}{define-fwrapper}{name lambda-list \ampbody{} body}
+\begin{defmac}{fwrappers:}{define-fwrapper}{\var{name} \var{lambda-list} \ampbody{} \var{body}}
   This macro is like \code{defun}, but defines a function named
   \var{name} that can be used as an fwrapper definition.
   
@@ -2518,8 +2517,8 @@ innermost fwrapper.
   arguments.
 \end{defmac}
 
-\begin{defun}{fwrappers:}{fwrap}{function-name fwrapper \&key type
-    user-data}
+\begin{defun}{fwrappers:}{fwrap}{\var{function-name} \var{fwrapper} %
+    \keys{\kwd{type} \kwd{user-data}}}
   This function wraps function \code{function-name} in an fwrapper
   \var{fwrapper} which was defined with \code{define-fwrapper}.
 
@@ -2534,58 +2533,58 @@ innermost fwrapper.
   Value is the fwrapper object created.
 \end{defun}
 
-\begin{defun}{fwrappers:}{funwrap}{function-name \&key type test}
+\begin{defun}{fwrappers:}{funwrap}{\var{function-name} \keys{\kwd{type} \kwd{test}}}
   Remove fwrappers from the function named \var{function-name}.  If
   \var{type} is supplied, remove fwrappers whose type is \code{equal}
   to \var{type}.  If \var{test} is supplied, remove fwrappers
   satisfying \var{test}.
 \end{defun}
 
-\begin{defun}{fwrappers:}{find-fwrapper}{function-name \&key type test}
+\begin{defun}{fwrappers:}{find-fwrapper}{\var{function-name} \keys{\kwd{type} \kwd{test}}}
   Find an fwrapper of \var{function-name}.  If \var{type} is supplied,
   find an fwrapper whose type is \code{equal} to \var{type}.  If
   \var{test} is supplied, find an fwrapper satisfying \var{test}.
 \end{defun}
 
-\begin{defun}{fwrappers:}{update-fwrapper}{fwrapper}
+\begin{defun}{fwrappers:}{update-fwrapper}{\var{fwrapper}}
   Update the funcallable instance function of the fwrapper object
   \var{fwrapper} from the definition of its function that was 
   defined with \code{define-fwrapper}.  This can be used to update
   fwrappers after changing a \code{define-fwrapper}.
 \end{defun}
 
-\begin{defun}{fwrappers:}{update-fwrappers}{function-name \&key type test}
+\begin{defun}{fwrappers:}{update-fwrappers}{\var{function-name} \keys{\kwd{type} \kwd{test}}}
   Update fwrappers of \var{function-name}; see \code{update-fwrapper}.
   If \var{type} is supplied, update fwrappers whose type is
   \code{equal} to \var{type}.  If \var{test} is supplied, update fwrappers
   satisfying \var{test}.
 \end{defun}
 
-\begin{defun}{fwrappers:}{set-fwrappers}{function-name fwrappers}
+\begin{defun}{fwrappers:}{set-fwrappers}{\var{function-name} \var{fwrappers}}
   Set \var{function-names}'s fwrappers to elements of the list
   \var{fwrappers}, which is assumed to be ordered from outermost to
   innermost.  \var{fwrappers} null means remove all fwrappers.
 \end{defun}
 
-\begin{defun}{fwrappers:}{list-fwrappers}{function-name}
+\begin{defun}{fwrappers:}{list-fwrappers}{\var{function-name}}
   Return a list of all fwrappers of \var{function-name}, ordered
   from outermost to innermost.
 \end{defun}
 
-\begin{defun}{fwrappers:}{push-fwrapper}{fwrapper function-name}
+\begin{defun}{fwrappers:}{push-fwrapper}{\var{fwrapper} \var{function-name}}
   Prepend fwrapper \var{fwrapper} to the definition of
   \var{function-name}.  Signal an error if \var{function-name} is an
   undefined function.
 \end{defun}
 
-\begin{defun}{fwrappers:}{delete-fwrapper}{fwrapper function-name}
+\begin{defun}{fwrappers:}{delete-fwrapper}{\var{fwrapper} \var{function-name}}
   Remove fwrapper \var{fwrapper} from the definition of
   \var{function-name}.  Signal an error if \var{function-name} is an
   undefined function.
 \end{defun}
 
-\begin{defmac}{fwrappers:}{do-fwrappers}{(var fdefn \ampoptional{}
-  result) \ampbody{} body}
+\begin{defmac}{fwrappers:}{do-fwrappers}{(\var{var} \var{fdefn} \ampoptional{}
+  \var{result}) \ampbody{} \var{body}}
   Evaluate \var{body} with \var{var} bound to consecutive fwrappers of
   \var{fdefn}.  Return \var{result} at the end.  Note that \var{fdefn}
   must be an \code{fdefn} object.  You can use
@@ -2772,18 +2771,18 @@ that order.
   beginning of this list.
 \end{defvar}
 
-\begin{defmac}{ext:}{defmodule}{name \amprest{} files}
+\begin{defmac}{ext:}{defmodule}{\var{name} \amprest{} \var{files}}
   Defines a module by registering the files that need to be loaded
   when the module is required.  If \var{name} is a symbol, its print
   name is used after downcasing it.
 \end{defmac}
 
-\begin{defun}{ext:}{module-provide-cmucl-defmodule}{module-name}
+\begin{defun}{ext:}{module-provide-cmucl-defmodule}{\var{module-name}}
   This function is the module-provider for modules registered by a
   \code{ext:defmodule} form.  
 \end{defun}
 
-\begin{defun}{ext:}{module-provide-cmucl-library}{module-name}
+\begin{defun}{ext:}{module-provide-cmucl-library}{\var{module-name}}
   This function is the module-provider for \cmucl's libraries,
   including Gray streams, simple streams, CLX, CLM, Hemlock,
   \emph{etc}.
@@ -2830,7 +2829,7 @@ recording of strings, call \code{intl:translation-enable}.
   Disablle recording of translatable strings.
 \end{defun}
 
-\begin{defun}{intl:}{setlocale}{\ampoptional{} locale}
+\begin{defun}{intl:}{setlocale}{\ampoptional{} \var{locale}}
   Sets the locale to the locale specified by \var{locale}.  If
   \var{locale} is not give or is \nil, the locale is determined by
   look at the environment variables \code{LANGUAGE}, \code{LC\_ALL},
@@ -2840,19 +2839,19 @@ recording of strings, call \code{intl:translation-enable}.
   The default locale is ``C''.
 \end{defun}
 
-\begin{defun}{intl:}{textdomain}{domain}
+\begin{defun}{intl:}{textdomain}{\var{domain}}
   Set the default domain to the domain specified by \var{domain}.
   Typically,  this only needs to be done at the top of each source
   file.  This is used to \code{gettext} and \code{ngettext} to set the
   domain for the message string.
 \end{defun}
 
-\begin{defmac}{intl:}{gettext}{string}
+\begin{defmac}{intl:}{gettext}{\var{string}}
   Look up the specified string, \var{string}, in the current message
   domain and return its translation.
 \end{defmac}
 
-\begin{defun}{intl:}{dgettext}{domain string}
+\begin{defun}{intl:}{dgettext}{\var{domain} \var{string}}
   Look up the specified string, \var{string}, in the message domain,
   \var{domain}.  The translation is returned.
 
@@ -2861,14 +2860,14 @@ recording of strings, call \code{intl:translation-enable}.
   \code{intl::dump-pot-files}.) 
 \end{defun}
 
-\begin{defmac}{intl:}{ngettext}{singular plural n}
+\begin{defmac}{intl:}{ngettext}{\var{singular} \var{plural} \var{n}}
   Look up the singular or plural form of a message in the default
   domain.  The singular form is \var{singular}; the plural is
   \var{plural}.  The number of items is specified by \var{n} in case
   the correct translation depends on the actual number of items.
 \end{defmac}
 
-\begin{defun}{intl:}{dngettext}{domain singular plural n}
+\begin{defun}{intl:}{dngettext}{\var{domain} \var{singular} \var{plural} \var{n}}
   Look up the singular or plural form of a message in the specified
   domain, \var{domain}.  The singular form is \var{singular}; the
   plural is \var{plural}.  The number of items is specified by \var{n}
@@ -2880,8 +2879,7 @@ recording of strings, call \code{intl:translation-enable}.
   created.  (See \code{intl::dump-pot-files}.)
 \end{defun}
 
-\begin{defun}{intl::}{dump-pot-files}{\keys copyright
-    output-directory}
+\begin{defun}{intl::}{dump-pot-files}{\keys{\kwd{copyright} \kwd{output-directory}}}
   Dumps the translatable strings recorded by \code{dgettext} and
   \code{dngettext}.  The message template file (pot file) is written
   to a file in the directory specified by \var{output-directory}, and
@@ -2895,7 +2893,7 @@ recording of strings, call \code{intl:translation-enable}.
   This is a list of directory pathnames where the translations can be found.
 \end{defvar}  
 
-\begin{defun}{intl:}{install}{\ampoptional{} (rt *readtable*)}
+\begin{defun}{intl:}{install}{\ampoptional{} (\var{rt} \var{*readtable*})}
   Installs reader macros and comment reader into the specified
   readtable as explained below.  The readtable defaults to
   \var{*readtable*}.

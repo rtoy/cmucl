@@ -348,10 +348,10 @@ this encoding and handle the surrogate pairs correctly.
 \begin{defun}{}{string=}{\args \var{s1} \var{s2} \keys{\kwd{start1}
       \kwd{end1} \kwd{start2} \kwd{end2}}}
   \defunx{string/=}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
-  \defunx{string$<$}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
-  \defunx{string$>$}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
-  \defunx{string$<$=}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
-  \defunx{string$>$=}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
+  \defunx{string\textless}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
+  \defunx{string\textgreater}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
+  \defunx{string\textless=}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
+  \defunx{string\textgreater=}{\args \var{s1} \var{s2} \keys{\kwd{start1} \kwd{end1} \kwd{start2} \kwd{end2}}}
   The string comparison is done in codepoint order.  (This is
   different from just comparing the order of the individual characters
   due to surrogate pairs.)  Unicode collation is not done.
@@ -443,7 +443,7 @@ The Unicode data base is stored in compressed form in the file
 \file{ext-formats:unidata.bin}.  If this file is not found, Unicode
 support is severely reduced; you can only use ASCII characters.
 
-\begin{defun}{}{open}{\args \var{filename} \amprest \var{options}
+\begin{defun}{}{open}{\args \var{filename} \amprest{} \var{options}
     \keys{\kwd{direction} \kwd{element-type} \kwd{if-exists}
       \kwd{if-does-not-exist} \morekeys \kwd{class} \kwd{mapped}
       \kwd{input-handle} \kwd{output-handle}
@@ -497,7 +497,7 @@ support is severely reduced; you can only use ASCII characters.
   formats and composing external formats.
 \end{defun}
 
-\begin{defun}{extensions:}{describe-external-format}{external-format}
+\begin{defun}{extensions:}{describe-external-format}{\var{external-format}}
   Print a description of the given \var{external-format}.  This may
   cause the external format to be loaded (silently) if it is not
   already loaded.
@@ -627,12 +627,12 @@ An external format basically needs two functions:
 external format is defined using the macro
 \code{stream::define-external-format}.
 
-\begin{defmac}[base]{stream:}{define-external-format}{\args \var{name}
-    (\keys{\var{base} \var{min} \var{max} \var{size}
-      \var{documentation}})
+% tricky
+\begin{defmac}[base]{stream::}{define-external-format}{\args \var{name}
+    (\keys{\kwd{base} \kwd{min} \kwd{max} \kwd{size} \kwd{documentation}})
     (\amprest{} \var{slots})
-    \morekeys{\var{octets-to-code} \var{code-to-octets}
-              \var{flush-state} \var{copy-state}}}
+    \\
+    \= \ampoptional{} \var{octets-to-code} \var{code-to-octets} \var{flush-state} \var{copy-state}}
 
 
   If \kwd{base} is not given, this defines a new external format of
@@ -726,7 +726,7 @@ external format is defined using the macro
 \subsection{Composing External Formats}
 
 \begin{defmac}{stream:}{define-composing-external-format}{\args \var{name}
-    (\keys{\var{min} \var{max} \var{size} \var{documentation}}) \var{input}
+    (\keys{\kwd{min} \kwd{max} \kwd{size} \kwd{documentation}}) \var{input}
     \var{output}}
   This is the same as \code{define-external-format}, except that a
   composing external format is created.
