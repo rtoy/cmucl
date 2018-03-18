@@ -142,7 +142,7 @@ source file), and so is identified by the XREF facility by a string.
 \end{defun}
 
 
-\begin{defun}{xref:}{xref-context-file}{context}
+\begin{defun}{xref:}{xref-context-file}{\var{context}}
   Return the truename (in the sense of the variable
    \vindexed{compile-file-truename}) of the source file from which the
    referencing forms were compiled. This slot will be \nil{} if the
@@ -150,7 +150,7 @@ source file), and so is identified by the XREF facility by a string.
    listener.
 \end{defun}
 
-\begin{defun}{xref:}{xref-context-source-path}{context}
+\begin{defun}{xref:}{xref-context-source-path}{\var{context}}
   Return a list of positive integers identifying the form that
   contains the cross-reference. The first integer in the source-path
   is the number of the top-level form containing the cross-reference

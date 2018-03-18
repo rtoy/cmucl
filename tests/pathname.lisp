@@ -72,4 +72,42 @@
 			       :directory '(:absolute "system2" "module4")
 			       :name nil :type nil)
 		(parse-namestring "ASDFTEST:system2;module4;"))))
-  
+
+
+
+(define-test directory.dirs
+  (let ((files (directory "src/assembly/**/")))
+    ;; Verify that we only returned directories
+    (loop for f in files
+	  for name = (pathname-name f)
+	  and type = (pathname-type f)
+	  do
+	     (assert-true (and (null name) (null type)) f))))
+
+
+
+;; Test that pathnames with :unspecific components are printed using
+;; our extension to make :unspecific explicit. 
+(define-test issue.171.unspecific
+  (:tag :issues)
+  (flet ((output (path)
+	   (with-output-to-string (s)
+	     (write path :stream s))))
+    (dolist (test
+	     (list
+	      (list (make-pathname :name "foo" :type :unspecific)
+		    "#P(:NAME \"foo\" :TYPE :UNSPECIFIC)"
+		    "foo")
+	      (list (make-pathname :name :unspecific :type "foo")
+		    "#P(:NAME :UNSPECIFIC :TYPE \"foo\")"
+		    ".foo")
+	      (list (make-pathname :name "foo" :type "txt" :version :unspecific)
+		    "#P(:NAME \"foo\" :TYPE \"txt\" :VERSION :UNSPECIFIC)"
+		    "foo.txt")
+	      (list (make-pathname :device :unspecific)
+		    "#P(:DEVICE :UNSPECIFIC)"
+		    "")))
+      (destructuring-bind (pathname printed-value namestring)
+	  test
+	(assert-equal printed-value (output pathname))
+	(assert-equal namestring (namestring pathname))))))

@@ -23,7 +23,7 @@
 	  %unary-ftruncate/single-float %unary-ftruncate/double-float))
 
 #-x87
-(export '(%unary-fround/single-float %unary-fround/double-float))
+(export '(%unary-fround %unary-fround/single-float %unary-fround/double-float))
 
 (in-package "LISP")
 (export '(least-positive-normalized-short-float

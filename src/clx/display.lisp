@@ -18,9 +18,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: display.lisp,v 1.16 2010/11/16 19:13:55 rtoy Exp $")
-
 (in-package :xlib)
 
 ;;; Authorizaton
@@ -64,7 +61,8 @@
       (if (null family-id)
           (list nil nil nil nil nil)
           (let* ((address-data (read-short-length-vector stream))
-                 (number (parse-integer (read-short-length-string stream)))
+                 (num-string (read-short-length-string stream))
+                 (number (when (string/= num-string "") (parse-integer num-string)))
                  (name (read-short-length-string stream))
                  (data (read-short-length-vector stream))
                  (family (car (rassoc family-id *protocol-families*))))
@@ -117,10 +115,8 @@
 		 (read-xauth-entry stream)
 	       (unless family (return))
 	       (when (and (eql family protocol)
-			  (or (equal host-address address)
-			      (and (eql family :local)
-				   (equal address "localhost")))
-			  (= number display)
+			  (equal host-address address)
+			  (or (null number) (= number display))
 			  (let ((pos1 (position name *known-authorizations*
 						:test #'string=)))
 			    (and pos1
@@ -235,11 +231,17 @@
 				   (type resource-id id))
 			  (declare (clx-values ,type))
 			  ,(if (member type +clx-cached-types+)
-			       `(let ((,type (lookup-resource-id display id)))
-				  (cond ((null ,type) ;; Not found, create and save it.
-					 (setq ,type (,(xintern 'make- type)
-						      :display display :id id))
-					 (save-id display id ,type))
+			       `(multiple-value-bind (,type foundp)
+				    (with-display (display)
+				      (let ((,type (lookup-resource-id display id)))
+					(if (null ,type) ; Not found, create and save it.
+					    (let ((,type (,(xintern 'make- type)
+							  :display display :id id)))
+					      (save-id display id ,type)
+					      (values ,type nil))
+					    (values ,type t))))
+				  (cond ((not foundp)
+					 ,type)
 					;; Found.  Check the type
 					,(cond ((null +type-check?+)
 						`(t ,type))
@@ -328,7 +330,6 @@
 		   ,@body)))
      ,(if (and (null inline) (macroexpand '(use-closures) env))
 	  `(flet ((.with-event-queue-body. () ,@body))
-	     #+clx-ansi-common-lisp
 	     (declare (dynamic-extent #'.with-event-queue-body.))
 	     (with-event-queue-function
 	       ,display ,timeout #'.with-event-queue-body.))
@@ -344,12 +345,9 @@
   (declare (type display display)
 	   (type (or null number) timeout)
 	   (type function function)
-	   #+clx-ansi-common-lisp
 	   (dynamic-extent function)
 	   ;; FIXME: see SBCL bug #243
-	   (ignorable display timeout)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg function))
+	   (ignorable display timeout))
   (with-event-queue (display :timeout timeout :inline t)
     (funcall function)))
 
@@ -390,38 +388,38 @@ gethostname(3) - is used instead."
   ;; if any, is assumed to come from the environment somehow.
   (declare (type integer display))
   (declare (clx-values display))
-  (let ((protocol
-         (if (member host '("" "unix") :test #'equal)
-             :local
-             protocol)))
-    ;; Get the authorization mechanism from the environment.  Handle the
-    ;; special case of a host name of "" and "unix" which means the
-    ;; protocol is :local
-    (when (null authorization-name)
-      (multiple-value-setq (authorization-name authorization-data)
-	(get-best-authorization host display protocol)))
-    ;; PROTOCOL is the network protocol (something like :TCP :DNA or :CHAOS). See OPEN-X-STREAM.
-    (let* ((stream (open-x-stream host display protocol))
-	   (disp (make-buffer *output-buffer-size* #'make-display-internal
-			      :host host :display display
-			      :output-stream stream :input-stream stream))
-	   (ok-p nil))
-      (unwind-protect
-	   (progn
-	     (display-connect disp
-			      :authorization-name authorization-name
-			      :authorization-data authorization-data)
-	     (setf (display-authorization-name disp) authorization-name)
-	     (setf (display-authorization-data disp) authorization-data)
-	     (initialize-resource-allocator disp)
-	     (initialize-predefined-atoms disp)
-	     (initialize-extensions disp)
-	     (when (assoc "BIG-REQUESTS" (display-extension-alist disp)
-			  :test #'string=)
-	       (enable-big-requests disp))
-	     (setq ok-p t))
-	(unless ok-p (close-display disp :abort t)))
-      disp)))
+  ;; Get the authorization mechanism from the environment.  Handle the
+  ;; special case of a host name of "" and "unix" which means the
+  ;; protocol is :local
+  (when (null authorization-name)
+    (multiple-value-setq (authorization-name authorization-data)
+      (get-best-authorization host
+			      display
+			      (if (member host '("" "unix") :test #'equal)
+				  :local
+				  protocol))))
+  ;; PROTOCOL is the network protocol (something like :TCP :DNA or :CHAOS). See OPEN-X-STREAM.
+  (let* ((stream (open-x-stream host display protocol))
+	 (disp (make-buffer *output-buffer-size* #'make-display-internal
+			    :host host :display display
+			    :output-stream stream :input-stream stream))
+	 (ok-p nil))
+    (unwind-protect
+	(progn
+	  (display-connect disp
+			   :authorization-name authorization-name
+			   :authorization-data authorization-data)
+	  (setf (display-authorization-name disp) authorization-name)
+	  (setf (display-authorization-data disp) authorization-data)
+	  (initialize-resource-allocator disp)
+	  (initialize-predefined-atoms disp)
+	  (initialize-extensions disp)
+	  (when (assoc "BIG-REQUESTS" (display-extension-alist disp)
+		       :test #'string=)
+	    (enable-big-requests disp))
+	  (setq ok-p t))
+      (unless ok-p (close-display disp :abort t)))
+    disp))
 
 (defun display-force-output (display)
   ; Output is normally buffered, this forces any buffered output to the server.

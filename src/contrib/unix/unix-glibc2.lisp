@@ -175,7 +175,7 @@
 	  TIOCSIGSEND
 
 	  KBDCGET KBDCSET KBDCRESET KBDCRST KBDCSSTD KBDSGET KBDGCLICK
-	  KBDSCLICK FIONREAD	  unix-exit unix-stat unix-lstat unix-fstat
+	  KBDSCLICK FIONREAD	  unix-exit 
 	  unix-getrusage unix-fast-getrusage rusage_self rusage_children
 	  unix-gettimeofday
 	  unix-utimes unix-sched-yield unix-setreuid
@@ -1908,5 +1908,26 @@ in at a time in poll.")
                         :until (zerop (sap-int (alien-sap member)))
                         :collect (string (cast member c-call:c-string))))))))
 
+(defun unix-uname ()
+  _N"Unix-uname returns information from the uname(2) system call.
+  The return values are
+
+    Name of the operating system
+    Name of this node within some implementation-defined network, if any
+    Release level of this operating system
+    Version level of this operating system release
+    Name of the hardware type on which the system is running"
+  (with-alien ((names (struct utsname)))
+    (syscall* (#-(or freebsd (and x86 solaris)) "uname"
+	       #+(and x86 solaris) "nuname"	; See /usr/include/sys/utsname.h
+	       #+freebsd "__xuname" #+freebsd int
+	       (* (struct utsname)))
+	      (values (cast (slot names 'sysname) c-string)
+		      (cast (slot names 'nodename) c-string)
+		      (cast (slot names 'release) c-string)
+		      (cast (slot names 'version) c-string)
+		      (cast (slot names 'machine) c-string))
+	      #+freebsd 256
+	      (addr names))))
 
 ;; EOF

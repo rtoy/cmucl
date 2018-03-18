@@ -68,16 +68,22 @@
       (comf "target:clx/manager" :load t)
       (comf "target:clx/image" :load t)
       (comf "target:clx/resource" :load t)
-      (comf "target:clx/shape" :load t)
-      (comf "target:clx/big-requests" :load t)
-      (comf "target:clx/xvidmode" :load t)
-      (comf "target:clx/xrender" :load t)
-      (comf "target:clx/glx" :load t)
-      (comf "target:clx/gl" :load t)
-      (comf "target:clx/dpms" :load t)
-      (comf "target:clx/screensaver" :load t)
-      (comf "target:clx/xinerama" :load t)
-      (comf "target:clx/xtest" :load t))
+      (comf "target:clx/extensions/shape" :load t)
+      (comf "target:clx/extensions/big-requests" :load t)
+      (comf "target:clx/extensions/xvidmode" :load t)
+      (comf "target:clx/extensions/xrender" :load t)
+      (comf "target:clx/extensions/glx" :load t)
+      (comf "target:clx/extensions/gl" :load t)
+      (comf "target:clx/extensions/dpms" :load t)
+      (comf "target:clx/extensions/xtest" :load t)
+      (comf "target:clx/extensions/screensaver" :load t)
+      (comf "target:clx/extensions/randr" :load t)
+      (comf "target:clx/extensions/xinerama" :load t)
+      (comf "target:clx/extensions/dbe" :load t)
+      (comf "target:clx/extensions/xc-misc" :load t)
+      (comf "target:clx/extensions/dri2" :load t)
+      (comf "target:clx/extensions/composite" :load t)
+      )
     (comf "target:code/clx-ext")
     (comf "target:hemlock/charmacs" :load t)
     (comf "target:hemlock/key-event" :load t)
@@ -109,16 +115,16 @@
  "target:clx/manager"
  "target:clx/image"
  "target:clx/resource"
- "target:clx/shape"
- "target:clx/big-requests"
- "target:clx/xvidmode"
- "target:clx/xrender"
- "target:clx/glx"
- "target:clx/gl"
- "target:clx/dpms"
- "target:clx/screensaver"
- "target:clx/xinerama"
- "target:clx/xtest"
+ "target:clx/extensions/shape"
+ "target:clx/extensions/big-requests"
+ "target:clx/extensions/xvidmode"
+ "target:clx/extensions/xrender"
+ "target:clx/extensions/glx"
+ "target:clx/extensions/gl"
+ "target:clx/extensions/dpms"
+ "target:clx/extensions/screensaver"
+ "target:clx/extensions/xinerama"
+ "target:clx/extensions/xtest"
  "target:code/clx-ext"
  "target:hemlock/charmacs"
  "target:hemlock/key-event"

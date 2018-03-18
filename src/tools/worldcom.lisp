@@ -179,6 +179,7 @@
   (comf "target:code/bsd-os"))
 (when (c:backend-featurep :Linux)
   (comf "target:code/linux-os"))
+(comf "target:code/os")  
 
 (when (c:backend-featurep :pmax)
   (comf "target:code/pmax-vm"))
@@ -217,6 +218,7 @@
 (comf "target:code/unidata")
 (comf "target:code/char")
 (comf "target:code/misc")
+(comf "target:code/misc-doc")
 (comf "target:code/extensions" :byte-compile t)
 (comf "target:code/commandline")
 (comf "target:code/env-access")
@@ -274,9 +276,12 @@
 (comf "target:code/debug" :byte-compile t)
 
 (comf "target:code/query" :byte-compile *byte-compile*)
-(if (c:backend-featurep :random-mt19937)
-    (comf "target:code/rand-mt19937")
-    (comf "target:code/rand"))
+(cond ((c:backend-featurep :random-mt19937)
+       (comf "target:code/rand-mt19937"))
+      ((c:backend-featurep :random-xoroshiro)
+       (comf "target:code/rand-xoroshiro"))
+      (t
+       (comf "target:code/rand")))
 (comf "target:code/ntrace" :byte-compile *byte-compile*)
 (comf "target:code/profile")
 (comf "target:code/sort")

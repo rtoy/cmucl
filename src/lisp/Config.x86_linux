@@ -1,8 +1,10 @@
 # -*- Mode: makefile -*-
 include Config.x86_common
 
-CPPFLAGS += -m32 -D__NO_CTYPE -D_GNU_SOURCE
+CFLAGS += $(COPT)
+CPPFLAGS += -m32 -D__NO_CTYPE
 CFLAGS += -rdynamic  -march=pentium4 -mfpmath=sse -mtune=generic
+CFLAGS += -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC +=  linux-stubs.S

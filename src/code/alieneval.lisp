@@ -170,6 +170,9 @@
   (alien-rep nil :type (or null function))
   (extract-gen nil :type (or null function))
   (deposit-gen nil :type (or null function))
+  ;;
+  ;; Method that accepts the alien type and the alien value.  The
+  ;; method converts the alien value into an appropriate lisp value.
   (naturalize-gen nil :type (or null function))
   (deport-gen nil :type (or null function))
   ;; Cast?
@@ -646,8 +649,26 @@
 
 #-amd64
 (def-alien-type-method (integer :naturalize-gen) (type alien)
-  (declare (ignore type))
-  alien)
+  ;; Mask out any unwanted bits.  Important if the C code returns
+  ;; values in %al, or %ax
+  (if (alien-integer-type-signed type)
+      (let ((val (gensym "VAL-")))
+	(case (alien-integer-type-bits type)
+	  ;; First, get just the low part of the alien and then
+	  ;; sign-extend it appropriately.
+	  (8 `(let ((,val (ldb (byte 8 0) ,alien)))
+		(if (> ,val #x7f)
+		    (- ,val #x100)
+		    ,val)))
+	  (16 `(let ((,val (ldb (byte 16 0) ,alien)))
+		 (if (> ,val #x7fff)
+		     (- ,val #x10000)
+		     ,val)))
+	  (t alien)))
+      (case (alien-integer-type-bits type)
+	(8 `(ldb (byte 8 0) (truly-the (unsigned-byte 32) ,alien)))
+	(16 `(ldb (byte 16 0) (truly-the (unsigned-byte 32) ,alien)))
+	(t alien))))
 
 ;; signed numbers <= 32 bits need to be sign extended.
 ;; I really should use the movsxd instruction, but I don't
@@ -694,8 +715,8 @@
 
 (def-alien-type-class (boolean :include integer :include-args (signed)))
 
-(def-alien-type-translator boolean (&optional (bits vm:word-bits))
-  (make-alien-boolean-type :bits bits :signed nil))
+(def-alien-type-translator boolean (&optional (bits 8))
+  (make-alien-boolean-type :bits bits :signed t))
 
 (def-alien-type-method (boolean :unparse) (type)
   `(boolean ,(alien-boolean-type-bits type)))
@@ -705,8 +726,10 @@
   `(member t nil))
 
 (def-alien-type-method (boolean :naturalize-gen) (type alien)
-  (declare (ignore type))
-  `(not (zerop ,alien)))
+  ;; Mask out any unwanted bits.  Important if the C code returns
+  ;; values in %al, or %ax
+  `(not (zerop (ldb (byte ,(alien-boolean-type-bits type) 0)
+		    ,alien))))
 
 (def-alien-type-method (boolean :deport-gen) (type value)
   (declare (ignore type))

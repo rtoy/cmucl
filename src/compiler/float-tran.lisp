@@ -236,7 +236,7 @@
   (frob %random-single-float single-float)
   (frob %random-double-float double-float))
 
-#-(or new-random random-mt19937)
+#-(or new-random random-mt19937 rand-xoroshiro)
 (deftransform random ((num &optional state)
 		      ((integer 1 #.random-fixnum-max) &optional *))
   _N"use inline fixnum operations"
@@ -259,7 +259,7 @@
   '(values (truncate (%random-double-float (coerce num 'double-float)
 		      (or state *random-state*)))))
 
-#+random-mt19937
+#+(or random-mt19937)
 (deftransform random ((num &optional state)
 		      ((integer 1 #.(expt 2 32)) &optional *))
   _N"use inline (unsigned-byte 32) operations"
@@ -347,25 +347,25 @@
 ;;;
 
 (deftype single-float-exponent ()
-  `(integer ,(- vm:single-float-normal-exponent-min vm:single-float-bias
-		vm:single-float-digits)
+  `(integer (,(- vm:single-float-normal-exponent-min vm:single-float-bias
+		 vm:single-float-digits))
 	    ,(- vm:single-float-normal-exponent-max vm:single-float-bias)))
 
 (deftype double-float-exponent ()
-  `(integer ,(- vm:double-float-normal-exponent-min vm:double-float-bias
-		vm:double-float-digits)
+  `(integer (,(- vm:double-float-normal-exponent-min vm:double-float-bias
+		 vm:double-float-digits))
 	    ,(- vm:double-float-normal-exponent-max vm:double-float-bias)))
 
 
 (deftype single-float-int-exponent ()
-  `(integer ,(- vm:single-float-normal-exponent-min vm:single-float-bias
-		(* vm:single-float-digits 2))
+  `(integer (,(- vm:single-float-normal-exponent-min vm:single-float-bias
+		 (* vm:single-float-digits 2)))
 	    ,(- vm:single-float-normal-exponent-max vm:single-float-bias
 		vm:single-float-digits)))
 
 (deftype double-float-int-exponent ()
-  `(integer ,(- vm:double-float-normal-exponent-min vm:double-float-bias
-		(* vm:double-float-digits 2))
+  `(integer (,(- vm:double-float-normal-exponent-min vm:double-float-bias
+		 (* vm:double-float-digits 2)))
 	    ,(- vm:double-float-normal-exponent-max vm:double-float-bias
 		vm:double-float-digits)))
 
@@ -1903,7 +1903,7 @@
 (deftransform upgraded-complex-real-contagion-arg1 ((x y) * * :defun-only t :node node)
   ;;(format t "upgraded-complex-real-contagion-arg1~%")
   `(,(continuation-function-name (basic-combination-fun node))
-     (coerce x '(complex ,(type-specifier (continuation-type y))))
+     (coerce x '(complex ,(numeric-type-format (continuation-type y))))
      y))
 ;;;
 (deftransform upgraded-complex-real-contagion-arg2 ((x y) * * :defun-only t :node node)
@@ -1912,7 +1912,7 @@
 	  (continuation-type x) (continuation-type y))
   `(,(continuation-function-name (basic-combination-fun node))
      x
-     (coerce y '(complex ,(type-specifier (continuation-type x))))))
+     (coerce y '(complex ,(numeric-type-format (continuation-type x))))))
 
 
 (dolist (x '(= + * / -))
@@ -2028,31 +2028,36 @@
 (defun decode-float-exp-derive-type-aux (arg)
   ;; Derive the exponent part of the float.  It's always an integer
   ;; type.
-  (flet ((calc-exp (x)
-	   (when x
-	     (nth-value 1 (decode-float x))))
-	 (min-exp ()
-	   ;; Use decode-float on the least positive float of the
-	   ;; appropriate type to find the min exponent.  If we don't
-	   ;; know the actual number format, use double, which has the
-	   ;; widest range (including double-double-float).
-	   (nth-value 1 (decode-float (if (eq 'single-float (numeric-type-format arg))
-					  least-positive-single-float
-					  least-positive-double-float))))
-	 (max-exp ()
-	   ;; Use decode-float on the most postive number of the
-	   ;; appropriate type to find the max exponent.  If we don't
-	   ;; know the actual number format, use double, which has the
-	   ;; widest range (including double-double-float).
-	   (if (eq (numeric-type-format arg) 'single-float)
-	       (nth-value 1 (decode-float most-positive-single-float))
-	       (nth-value 1 (decode-float most-positive-double-float)))))
-    (let* ((lo (or (bound-func #'calc-exp
-			       (numeric-type-low arg))
-		   (min-exp)))
-	   (hi (or (bound-func #'calc-exp
-			       (numeric-type-high arg))
-		   (max-exp))))
+  (labels
+      ((calc-exp (x)
+	 (when x
+	   (bound-func #'(lambda (arg)
+			   (nth-value 1 (decode-float arg)))
+		       x)))
+       (min-exp (interval)
+	 ;; (decode-float 0d0) returns an exponent of -1022.  But
+	 ;; (decode-float least-positive-double-float returns -1073.
+	 ;; Hence, if the low value is less than this, we need to
+	 ;; return the exponent of the least positive number.
+	 (let ((least (if (eq 'single-float (numeric-type-format arg))
+			  least-positive-single-float
+			  least-positive-double-float)))
+	   (if (or (interval-contains-p 0 interval)
+		   (interval-contains-p least interval))
+	     (calc-exp least)
+	     (calc-exp (bound-value (interval-low interval))))))
+       (max-exp (interval)
+	 ;; Use decode-float on the most postive number of the
+	 ;; appropriate type to find the max exponent.  If we don't
+	 ;; know the actual number format, use double, which has the
+	 ;; widest range (including double-double-float).
+	 (or (calc-exp (bound-value (interval-high interval)))
+	     (calc-exp (if (eq 'single-float (numeric-type-format arg))
+			   most-positive-single-float
+			   most-positive-double-float)))))
+    (let* ((interval (interval-abs (numeric-type->interval arg)))
+	   (lo (min-exp interval))
+	   (hi (max-exp interval)))
       (specifier-type `(integer ,(or lo '*) ,(or hi '*))))))
 
 (defun decode-float-sign-derive-type-aux (arg)

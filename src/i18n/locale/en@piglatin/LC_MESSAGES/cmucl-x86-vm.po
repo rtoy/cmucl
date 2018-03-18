@@ -187,6 +187,10 @@ msgstr "Edefiningray SC umbernay ~D omfray ~S otay ~S."
 msgid "Class not yet defined: ~S"
 msgstr "Assclay otnay etyay efinedday: ~S"
 
+#: src/compiler/x86/insts.lisp
+msgid "Sign extend the N-bit number X"
+msgstr ""
+
 #: src/compiler/x86/macros.lisp
 msgid "Move SRC into DST unless they are location=."
 msgstr "Ovemay SRC intoway DST unlessway eythay areway ocationlay=."

@@ -18,10 +18,12 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: depdefs.lisp,v 1.9 2009/06/17 18:22:46 rtoy Rel $")
-
 (in-package :xlib)
+
+;;; Enable this for debug optimization settings and to enforce type checks.
+#+ (or)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (pushnew :clx-debugging *features*))
 
 ;;;-------------------------------------------------------------------------
 ;;; Declarations
@@ -38,15 +40,41 @@
 	(lisp:rational x)))
   (deftype rational (&optional l u) `(lisp:rational ,l ,u)))
 
-;;; DECLAIM
+;;; DEFINE-CONSTANT allows to portably define constants with predicate different
+;;; than EQL. This utility is taken from Alexandria library (Public
+;;; Domain). Implementations which require that are sbcl and clasp.
 
-#-clx-ansi-common-lisp
-(defmacro declaim (&rest decl-specs)
-  (if (cdr decl-specs)
-      `(progn
-	 ,@(mapcar #'(lambda (decl-spec) `(proclaim ',decl-spec))
-		   decl-specs))
-    `(proclaim ',(car decl-specs))))
+#+ (or sbcl clasp)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun %reevaluate-constant (name value test)
+    (if (not (boundp name))
+        value
+        (let ((old (symbol-value name))
+              (new value))
+          (if (not (constantp name))
+              (prog1 new
+                (cerror "Try to redefine the variable as a constant."
+                        "~@<~S is an already bound non-constant variable ~
+                       whose value is ~S.~:@>" name old))
+              (if (funcall test old new)
+                  old
+                  (restart-case
+                      (error "~@<~S is an already defined constant whose value ~
+                              ~S is not equal to the provided initial value ~S ~
+                              under ~S.~:@>" name old new test)
+                    (ignore ()
+                      :report "Retain the current value."
+                      old)
+                    (continue ()
+                      :report "Try to redefine the constant."
+                      new)))))))
+
+  (defmacro define-constant (name initial-value &key (test ''eql) documentation)
+    `(cl:defconstant ,name (%reevaluate-constant ',name ,initial-value ,test)
+       ,@(when documentation `(,documentation))))
+
+  (defmacro defconstant (name value &optional doc)
+    `(define-constant ,name ,value :test #'equalp :documentation ,doc)))
 
 ;;; CLX-VALUES value1 value2 ... -- Documents the values returned by the function.
 
@@ -62,18 +90,6 @@
 
 #-(or lispm lcl3.0)
 (declaim (declaration arglist))
-
-;;; DYNAMIC-EXTENT var -- Tells the compiler that the rest arg var has
-;;; dynamic extent and therefore can be kept on the stack and not copied to
-;;; the heap, even though the value is passed out of the function.
-
-#-(or clx-ansi-common-lisp lcl3.0)
-(declaim (declaration dynamic-extent))
-
-;;; IGNORABLE var -- Tells the compiler that the variable might or might not be used.
-
-#-clx-ansi-common-lisp
-(declaim (declaration ignorable))
 
 ;;; INDENTATION argpos1 arginden1 argpos2 arginden2 --- Tells the lisp editor how to
 ;;; indent calls to the function or macro containing the declaration.  
@@ -120,6 +136,7 @@
 ;;; useful for much beyond xatoms and windows (since almost nothing else
 ;;; ever comes back in events).
 ;;;--------------------------------------------------------------------------
+
 (defconstant +clx-cached-types+
  '(drawable
    window
@@ -144,7 +161,7 @@
 ;;; You must define this to match the real byte order.  It is used by
 ;;; overlapping array and image code.
 
-#+(or lispm vax little-endian Minima)
+#+(or lispm vax (and (not sbcl) little-endian) Minima)
 (eval-when (eval compile load)
   (pushnew :clx-little-endian *features*))
 
@@ -170,6 +187,10 @@
   (ecase sb-c:*backend-byte-order*
     (:big-endian)
     (:little-endian (pushnew :clx-little-endian *features*))))
+
+#+openmcl
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  #+little-endian-target (pushnew :clx-little-endian *features*))
 
 ;;; Steele's Common-Lisp states:  "It is an error if the array specified
 ;;; as the :displaced-to argument  does not have the same :element-type
@@ -408,9 +429,7 @@
   ;; FIXME: maybe we should reevaluate this?
   (defvar *def-clx-class-use-defclass*
     #+(or Genera allegro) t
-    #+(and cmu pcl) '(XLIB:DRAWABLE XLIB:WINDOW XLIB:PIXMAP)
-    #+(and cmu (not pcl)) nil
-    #-(or Genera cmu allegro) nil
+    #-(or Genera allegro) nil
     "Controls whether DEF-CLX-CLASS uses DEFCLASS.
 
 If it is a list, it is interpreted by DEF-CLX-CLASS to be a list of
@@ -422,14 +441,7 @@ used, since NIL is the empty list.")
 (defmacro def-clx-class ((name &rest options) &body slots)
   (if (or (not (listp *def-clx-class-use-defclass*))
 	  (member name *def-clx-class-use-defclass*))
-      (let ((clos-package #+clx-ansi-common-lisp
-			  (find-package :common-lisp)
-			  #-clx-ansi-common-lisp
-			  (or (find-package :clos)
-			      (find-package :pcl)
-			      (let ((lisp-pkg (find-package :lisp)))
-				(and (find-symbol (string 'defclass) lisp-pkg)
-				     lisp-pkg))))
+      (let ((clos-package (find-package :common-lisp))
 	    (constructor t)
 	    (constructor-args t)
 	    (include nil)
@@ -530,9 +542,15 @@ used, since NIL is the empty list.")
 		      ,(closintern 'print-object)
 		      ((object ,name) stream)
 		      (,print-function object stream 0))))))))
-      `(within-definition (,name def-clx-class)
-	 (defstruct (,name ,@options)
-	   ,@slots))))
+      (flet ((assert-valid-option (option)
+               (unless (typep option
+                              '(cons (member :constructor :include
+                                             :print-function :copier :predicate)))
+                 (error "~s: invalid option ~s." 'def-clx-class option))))
+        (mapc #'assert-valid-option options)
+        `(within-definition (,name def-clx-class)
+	   (defstruct (,name ,@options)
+	     ,@slots)))))
 
 #+Genera
 (progn
@@ -601,40 +619,6 @@ used, since NIL is the empty list.")
 ;; Printing routines.
 ;;-----------------------------------------------------------------------------
 
-#-(or clx-ansi-common-lisp Genera)
-(defun print-unreadable-object-function (object stream type identity function)
-  (declare #+lispm
-	   (sys:downward-funarg function))
-  (princ "#<" stream)
-  (when type
-    (let ((type (type-of object))
-	  (pcl-package (find-package :pcl)))
-      ;; Handle pcl type-of lossage
-      (when (and pcl-package
-		 (symbolp type)
-		 (eq (symbol-package type) pcl-package)
-		 (string-equal (symbol-name type) "STD-INSTANCE"))
-	(setq type
-	      (funcall (intern (symbol-name 'class-name) pcl-package)
-		       (funcall (intern (symbol-name 'class-of) pcl-package)
-				object))))
-      (prin1 type stream)))
-  (when (and type function) (princ " " stream))
-  (when function (funcall function))
-  (when (and (or type function) identity) (princ " " stream))
-  (when identity (princ "???" stream))
-  (princ ">" stream)
-  nil)
-  
-#-(or clx-ansi-common-lisp Genera)
-(defmacro print-unreadable-object
-	  ((object stream &key type identity) &body body)
-  (if body
-      `(flet ((.print-unreadable-object-body. () ,@body))
-	 (print-unreadable-object-function
-	   ,object ,stream ,type ,identity #'.print-unreadable-object-body.))
-    `(print-unreadable-object-function ,object ,stream ,type ,identity nil)))
-
 
 ;;-----------------------------------------------------------------------------
 ;; Image stuff
@@ -680,7 +664,8 @@ used, since NIL is the empty list.")
 ;; Finding the server socket
 ;;-----------------------------------------------------------------------------
 
-;; These are here because dep-openmcl.lisp and dependent.lisp both need them
+;; These are here because dep-openmcl.lisp, dep-lispworks.lisp and
+;; dependent.lisp need them
 (defconstant +X-unix-socket-path+
   "/tmp/.X11-unix/X"
   "The location of the X socket")
@@ -691,6 +676,7 @@ nil if a network socket should be opened."
   (cond ((or (string= host "") (string= host "unix"))
 	 (format nil "~A~D" +X-unix-socket-path+ display))
 	#+darwin
-	((and (> (length host) 10) (string= host "tmp/launch" :end1 10))
+	((or (and (> (length host) 10) (string= host "tmp/launch" :end1 10))
+	     (and (> (length host) 29) (string= host "private/tmp/com.apple.launchd" :end1 29)))
 	 (format nil "/~A:~D" host display))	  
 	(t nil)))

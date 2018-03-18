@@ -17,6 +17,8 @@
  *
  */
 
+#define _GNU_SOURCE /* for reg_* constants in uc_mcontext.gregs  */
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/param.h>
@@ -170,22 +172,24 @@ unsigned long *
 os_sigcontext_reg(ucontext_t *scp, int offset)
 {
     switch (offset) {
-      case 0:
-          return (unsigned long *) &scp->uc_mcontext.gregs[REG_EAX];
-      case 2:
-          return (unsigned long *) &scp->uc_mcontext.gregs[REG_ECX];
-      case 4:
-          return (unsigned long *) &scp->uc_mcontext.gregs[REG_EDX];
-      case 6:
-          return (unsigned long *) &scp->uc_mcontext.gregs[REG_EBX];
-      case 8:
-          return (unsigned long *) &scp->uc_mcontext.gregs[REG_ESP];
-      case 10:
-          return (unsigned long *) &scp->uc_mcontext.gregs[REG_EBP];
-      case 12:
-          return (unsigned long *) &scp->uc_mcontext.gregs[REG_ESI];
-      case 14:
-          return (unsigned long *) &scp->uc_mcontext.gregs[REG_EDI];
+    case 0:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EAX];
+    case 2:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_ECX];
+    case 4:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EDX];
+    case 6:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EBX];
+    case 8:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_ESP];
+    case 10:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EBP];
+    case 12:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_ESI];
+    case 14:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EDI];
+    case 16:
+        return (unsigned long*) &scp->uc_mcontext.gregs[REG_EFL];
     }
     return NULL;
 }
@@ -434,8 +438,8 @@ valid_addr(os_vm_address_t addr)
 	|| in_range_p(addr, STATIC_SPACE_START, static_space_size)
 	|| in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)
 	|| in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
-	|| in_range_p(addr, control_stack, control_stack_size)
-	|| in_range_p(addr, binding_stack, binding_stack_size))
+	|| in_range_p(addr, (lispobj) control_stack, control_stack_size)
+	|| in_range_p(addr, (lispobj) binding_stack, binding_stack_size))
 	return TRUE;
     return FALSE;
 }
@@ -619,7 +623,7 @@ restore_fpu(ucontext_t *context)
 
 #ifdef i386
 boolean
-os_support_sse2()
+os_support_sse2(void)
 {
     return TRUE;
 }

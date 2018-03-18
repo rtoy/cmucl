@@ -18,9 +18,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: bezier.lisp,v 1.3 2009/06/17 18:22:46 rtoy Rel $")
-
 (in-package :xlib)
 
 (export 'draw-curves)

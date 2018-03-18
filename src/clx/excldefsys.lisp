@@ -11,9 +11,6 @@
 ;;; implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id")
-
 (in-package :xlib :use '(:foreign-functions :lisp :excl))
 
 #+allegro

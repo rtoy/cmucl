@@ -136,7 +136,7 @@
 		  (setf str nil))
 		(return nil))
 	      (push str word-list))
-	    (setq str (pop cmd-strings)))))))))
+	    (setq str (pop cmd-strings))))))))
 
 (defun get-command-line-switch (sname)
   "Accepts the name of a switch as a string and returns the value of
@@ -339,16 +339,54 @@
 (defun help-switch-demon (switch)
   (declare (ignore switch))
   (format t (intl:gettext "~&Usage: ~A <options>~2%") *command-line-utility-name*)
-  (dolist (s (sort *legal-cmd-line-switches* #'string<
-		   :key #'car))
-    (destructuring-bind (name doc arg)
-	s
-      (format t "    -~A ~@[~A~]~%" name (if arg (intl:gettext arg)))
-      ;; Poor man's formatting of the help string
-      (with-input-from-string (stream (intl:gettext doc))
-	(loop for line = (read-line stream nil nil)
-	   while line
-	   do (format t "~8T~A~%" line)))))
+  (flet
+      ((get-words (s)
+	 (declare (string s))
+	 ;; Return a list of all the words from S.  A word is defined
+	 ;; as any sequence of characters separated from others by
+	 ;; whitespace consisting of space, newline, tab, formfeed, or
+	 ;; carriage return.
+	 (let ((end (length s)))
+	   (loop for left = 0 then (+ right 1)
+		 for right = (or
+			      (position-if #'(lambda (c)
+					       (member c
+						       '(#\space #\newline #\tab #\ff #\cr)))
+					   s
+					   :start left)
+			      end)
+		 ;; Collect the word bounded by left and right in a list.
+		 unless (and (= right left))
+		   collect (subseq s left right) into subseqs
+		 ;; Keep going until we reach the end of the string.
+		 until (>= right end)
+		 finally (return subseqs)))))
+
+    (dolist (s (sort *legal-cmd-line-switches* #'string<
+		     :key #'car))
+      (destructuring-bind (name doc arg)
+	  s
+	(format t "    -~A ~@[~A~]~%" name (if arg (intl:gettext arg)))
+	;; Poor man's formatting of the help string
+	(let ((*print-right-margin* 80))
+	  ;; Extract all the words from the string and print them out
+	  ;; one by one with a space between each, wrapping the output
+	  ;; if needed.  Each line is indented by 8 spaces.
+	  ;;
+	  ;; "~@<       ~@;"
+	  ;;    per-line prefix of spaces and pass the whole arg list
+	  ;;    to this directive.
+	  ;;
+	  ;; "~{~A~^ ~}"
+	  ;;    loop over each word and print out the word followed by
+	  ;;    a space.
+	  ;;
+	  ;; "~:@>"
+	  ;;    No suffix, and insert conditional newline after each
+	  ;;    group of blanks if needed.
+	  (format t "~@<        ~@;~{~A~^ ~}~:@>"
+		  (get-words (intl:gettext doc))))
+	(terpri))))
   (ext:quit))
   
 (defswitch "help" #'help-switch-demon
@@ -356,3 +394,17 @@
 
 (defswitch "-help" #'help-switch-demon
   "Same as -help.")
+
+(defun version-switch-demon (switch)
+  (declare (ignore switch))
+  (format t "~A~%" (lisp-implementation-version))
+  (ext:quit))
+
+(defswitch "version" #'version-switch-demon
+  "Prints the cmucl version and exits")
+
+;; Make --version work for the benefit of those who are accustomed to
+;; GNU software.
+(defswitch "-version" #'version-switch-demon
+  "Prints the cmucl version and exits; same as -version")
+

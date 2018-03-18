@@ -884,7 +884,12 @@ down to individual words.")
 	  (negate-bignum-in-place result))
 	(%normalize-bignum result (1+ (* 2 n))))))))
 
-(defun classical-multiply-bignums (a b)
+;; Bignum multiply using Knuth's algorithm.  We keep this around for
+;; now so we can compare the new algorithm against this to make sure
+;; this are working.
+;;
+;; TODO: Remove this eventually?
+(defun classical-multiply-bignums-knuth (a b)
   (declare (type bignum-type a b))
   (let* ((a-plusp (%bignum-0-or-plusp a (%bignum-length a)))
 	 (b-plusp (%bignum-0-or-plusp b (%bignum-length b)))
@@ -914,6 +919,73 @@ down to individual words.")
 	    (incf k)))
 	(setf (%bignum-ref res k) carry-digit)))
     (when negate-res (negate-bignum-in-place res))
+    (%normalize-bignum res len-res)))
+
+;; Classical multiplication of bignums using Knuth's algorithm
+;; modified to handle signed bignums.  Pretend the bignums are
+;; actually unsigned, do an unsigned multiply and then correct the
+;; result.  This is based on the algorithm in Hacker's Delight.
+;;
+;; Let a[n] and b[n] represent the individual bits of each bignum with
+;; M being the number of bits in a and N being the number of bits in
+;; b.  If these are interpreted as an unsigned number, then we are
+;; multiplying numbers
+;;
+;;  (a + 2^M*a[M-1})*(b + 2^N*b[N-1])
+;;    = a*b + 2^M*u[M-1]*b + 2^N*b[N-1]*a + 2^(M+N)*a[M-1]*b[M-1]
+;;
+;; To get the desired result, we need to subtract out the term
+;; 2^M*u[M-1]*b + 2^N*b[N-1]*a from the product.  The last term
+;; doesn't need to subtracted because we know the product fits in M+N
+;; bits and this term is beyond that.
+(defun classical-multiply-bignums (a b)
+  (declare (type bignum-type a b))
+  (let* ((len-a (%bignum-length a))
+	 (len-b (%bignum-length b))
+	 (len-res (+ len-a len-b))
+	 (res (%allocate-bignum len-res)))
+    (declare (type bignum-index len-a len-b len-res))
+    ;; Unsigned multiply
+    (dotimes (i len-a)
+      (declare (type bignum-index i))
+      (let ((carry-digit 0)
+	    (x (%bignum-ref a i))
+	    (k i))
+	(declare (type bignum-index k)
+		 (type bignum-element-type carry-digit x))
+	(dotimes (j len-b)
+	  (multiple-value-bind (big-carry res-digit)
+	      (%multiply-and-add x (%bignum-ref b j)
+				 (%bignum-ref res k)
+				 carry-digit)
+	    (declare (type bignum-element-type big-carry res-digit))
+	    (setf (%bignum-ref res k) res-digit)
+	    (setf carry-digit big-carry)
+	    (incf k)))
+	(setf (%bignum-ref res k) carry-digit)))
+    (flet ((apply-correction (neg-arg neg-len pos-arg pos-len)
+	     ;; Applies the correction by basically subtracting out
+	     ;; 2^M*b where M is the length (in bits) of b and b is
+	     ;; the positive term in pos-arg.  neg-arg is the negative
+	     ;; arg.
+	     (let ((borrow 1))
+	       (dotimes (j pos-len)
+		 (declare (type bignum-index j))
+		 (let ((index (+ j neg-len)))
+		   (declare (type bignum-index index))
+		   (multiple-value-bind (d borrow-out)
+		       (%subtract-with-borrow (%bignum-ref res index)
+					      (%bignum-ref pos-arg j)
+					      borrow)
+		     (setf (%bignum-ref res index) d)
+		     (setf borrow borrow-out)))))))
+      ;; Apply corrections if either of the arguments is negative.
+      (unless (%bignum-0-or-plusp a len-a)
+	;; A is negative
+	(apply-correction a len-a b len-b))
+      (unless (%bignum-0-or-plusp b len-b)
+	;; B is negative
+	(apply-correction b len-b a len-a)))
     (%normalize-bignum res len-res)))
 
 (defparameter *min-karatsuba-bits* 512

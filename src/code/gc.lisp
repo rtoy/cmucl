@@ -22,7 +22,9 @@
 	  *bytes-consed-between-gcs* *gc-verbose* *gc-inhibit-hook*
 	  *gc-notify-before* *gc-notify-after* get-bytes-consed
 	  *gc-run-time* bytes-consed-between-gcs
-	  get-bytes-consed-dfixnum))
+	  get-bytes-consed-dfixnum
+	  get-gc-assertions
+	  set-gc-assertions))
 
 (in-package "LISP")
 (export '(room))
@@ -72,10 +74,63 @@
 (progn
   (alien:def-alien-routine get_bytes_allocated_lower c-call:int)
   (alien:def-alien-routine get_bytes_allocated_upper c-call:int)
-
   (defun dynamic-usage ()
     (dfixnum:dfixnum-pair-integer
-     (get_bytes_allocated_upper) (get_bytes_allocated_lower))))
+     (get_bytes_allocated_upper) (get_bytes_allocated_lower)))
+
+  ;; Controls GC assertions that are enabled in the runtime.  A value
+  ;; of 0 disables all assertions (the normal default).
+  (alien:def-alien-variable ("gc_assert_level" gc-assert-level) c-call:int)
+  (alien:def-alien-variable ("verify_after_free_heap" gc-verify-after-free-heap) c-call:int)
+  (alien:def-alien-variable ("pre_verify_gen_0" gc-verify-new-objects) c-call:int)
+  (alien:def-alien-variable ("verify_gens" gc-verify-generations) c-call:int)
+  (defun get-gc-assertions ()
+    "Returns a list of the current GC assertion settings. The list is
+    in the same format as the keyword arguments to SET-GC-ASSERTIONS,
+    i.e.,
+
+      (apply #'set-gc-assertions (get-gc-assertions))
+
+   See SET-GC-ASSERTIONS for more information."
+    (list :assert-level gc-assert-level
+	  :verify-after-free-heap (not (zerop gc-verify-after-free-heap))
+	  :verify-generations gc-verify-generations
+	  :verify-new-objects (not (zerop gc-verify-new-objects))))
+  (defun set-gc-assertions (&key (assert-level 0 assert-level-p)
+			      (verify-after-free-heap nil verify-after-free-heap-p)
+			      (verify-generations 6 verify-generations-p)
+			      (verify-new-objects nil verify-new-objects-p))
+    "Set GC assertion to the specified value:
+       :ASSERT-LEVEL
+           Defaults to 0, higher values indicate more assertions are enabled.
+
+       :VERIFY-AFTER-FREE-HEAP
+           If non-NIL, the heap is verified for consistency whenever
+           part of the heap is collected.
+
+       :VERIFY-GENERATIONS
+           Set to generation number.  When GC occurs, generations
+           equal to or higher than this value are checked for
+           consistency.
+
+       :VERIFY-NEW-OBJECTS
+           When GC occurs for the newest generation, the heap for this
+           generation is checked for validity.
+"
+    (declare (type (and fixnum unsigned-byte) assert-level)
+	     (type boolean verify-after-free-heap)
+	     (type (integer 0 6) verify-generations)
+	     (type boolean verify-new-objects))
+    (when assert-level-p
+      (setf gc-assert-level assert-level))
+    (when verify-after-free-heap-p
+      (setf gc-verify-after-free-heap (if verify-after-free-heap 1 0)))
+    (when verify-generations-p
+      (setf gc-verify-generations verify-generations))
+    (when verify-new-objects-p
+      (setf gc-verify-new-objects (if verify-new-objects 1 0)))
+    (values))
+  )
 
 #+cgc
 (c-var-frob dynamic-usage "bytes_allocated")

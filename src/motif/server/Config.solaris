@@ -4,7 +4,7 @@
 
 # Force gcc here, in case cc is Sun C.
 CC = gcc
-CFLAGS = -O -DSVR4 -I. -I/usr/dt/include -I/usr/openwin/include 
+CFLAGS = -g -O -DSVR4 -I. -I/usr/dt/include -I/usr/openwin/include 
 LDFLAGS = -L/usr/dt/lib -R/usr/dt/lib -L/usr/openwin/lib -R/usr/openwin/lib
 LIBS = -lXm -lXt -lX11 -lsocket -lnsl -lgen
 

@@ -116,3 +116,25 @@
 		      f
 		      e)))))
 
+(define-test float-traps-masked
+  ;; inf-inf signals invalid, which is masked so the result is NaN.
+  (assert-true
+   (ext:float-nan-p
+    (ext:with-float-traps-masked (:invalid)
+      (- ext:double-float-positive-infinity
+	 ext:double-float-positive-infinity))))
+
+  ;; Divide-by-zero is masked so dividing by zero returns infinity
+  (assert-true
+   (ext:float-infinity-p
+    (ext:with-float-traps-masked (:divide-by-zero)
+      (/ 100d0 0d0))))
+
+  ;; Overflow is masked so 100 * most-positive-double returns infinity
+  (assert-true
+   (ext:float-infinity-p
+    (ext:with-float-traps-masked (:overflow)
+      (* 100 most-negative-double-float)))))
+
+  
+   

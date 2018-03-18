@@ -36,63 +36,8 @@ int gc_write_barrier(void *);
 #define PAGE_NEEDS_ZEROING_MARKER	0xdead0000
 
 /*
- * Set when the page is write protected. If it is writen into it is
- * made writable and this flag is cleared. This should always reflect
- * the actual write_protect status of a page.
+ * The various fields packed into the struct page flags member.
  */
-
-#define PAGE_WRITE_PROTECTED_MASK	0x00000010
-#define PAGE_WRITE_PROTECTED(page) \
-	(page_table[page].flags & PAGE_WRITE_PROTECTED_MASK)
-
-/*
- * This flag is set when the above write protect flag is clear by the
- * sigbus handler. This is useful for re-scavenging pages that are
- * written during a GC.
- */
-
-#define PAGE_WRITE_PROTECT_CLEARED_MASK	0x00000020
-#define PAGE_WRITE_PROTECT_CLEARED(page) \
-	(page_table[page].flags & PAGE_WRITE_PROTECT_CLEARED_MASK)
-
-/*
- * Page allocated flag: 0 for a free page; 1 when allocated. If
- * the page is free then the following slots are invalid - well
- * the bytes_used must be 0.
- */
-
-#define PAGE_ALLOCATED_MASK	0x00000040
-#define PAGE_ALLOCATED(page)	(page_table[page].flags & PAGE_ALLOCATED_MASK)
-
-/*
- * Unboxed region flag: 1 for unboxed objects, 0 for boxed objects.
- */
-#define PAGE_UNBOXED_MASK		0x00000080
-#define PAGE_UNBOXED_SHIFT		7
-#define PAGE_UNBOXED(page)	(page_table[page].flags & PAGE_UNBOXED_MASK)
-#define PAGE_UNBOXED_VAL(page)	(PAGE_UNBOXED(page) >> PAGE_UNBOXED_SHIFT)
-
-/*
- * If this page should not be moved during a GC then this flag is
- * set. It's only valid during a GC for allocated pages.
- */
-
-#define PAGE_DONT_MOVE_MASK		0x00000100
-#define PAGE_DONT_MOVE(page) \
-	(page_table[page].flags & PAGE_DONT_MOVE_MASK)
-
-/*
- * If the page is part of a large object then this flag is set. No
- * other objects should be allocated to these pages. This is only
- * valid when the page is allocated.
- */
-
-#define PAGE_LARGE_OBJECT_MASK		0x00000200
-#define PAGE_LARGE_OBJECT_SHIFT		9
-#define PAGE_LARGE_OBJECT(page) \
-	(page_table[page].flags & PAGE_LARGE_OBJECT_MASK)
-#define PAGE_LARGE_OBJECT_VAL(page) \
-	(PAGE_LARGE_OBJECT(page) >> PAGE_LARGE_OBJECT_SHIFT)
 
 /*
  * The generation that this page belongs to. This should be valid for
@@ -108,6 +53,62 @@ int gc_write_barrier(void *);
 #define PAGE_FLAGS(page, mask) (page_table[page].flags & (mask))
 #define PAGE_FLAGS_UPDATE(page, mmask, mflags) \
      (page_table[page].flags = (page_table[page].flags & ~(mmask)) | (mflags))
+
+
+/*
+ * After the generation, we have a set of bits.  This defines the
+ * location of the first of the bit fields.
+ */
+#define PAGE_BASE_BIT_SHIFT     4
+
+/*
+ * Set when the page is write protected. If it is writen into it is
+ * made writable and this flag is cleared. This should always reflect
+ * the actual write_protect status of a page.
+ */
+
+#define PAGE_WRITE_PROTECTED_MASK	(1 << PAGE_BASE_BIT_SHIFT)
+#define PAGE_WRITE_PROTECTED(page) \
+	(page_table[page].flags & PAGE_WRITE_PROTECTED_MASK)
+
+/*
+ * Page allocated flag: 0 for a free page; 1 when allocated. If
+ * the page is free then the following slots are invalid - well
+ * the bytes_used must be 0.
+ */
+
+#define PAGE_ALLOCATED_MASK	(1 << (PAGE_BASE_BIT_SHIFT + 1))
+#define PAGE_ALLOCATED(page)	(page_table[page].flags & PAGE_ALLOCATED_MASK)
+
+/*
+ * Unboxed region flag: 1 for unboxed objects, 0 for boxed objects.
+ */
+#define PAGE_UNBOXED_SHIFT		(PAGE_BASE_BIT_SHIFT + 2)
+#define PAGE_UNBOXED_MASK		(1 << PAGE_UNBOXED_SHIFT)
+#define PAGE_UNBOXED(page)	(page_table[page].flags & PAGE_UNBOXED_MASK)
+#define PAGE_UNBOXED_VAL(page)	(PAGE_UNBOXED(page) >> PAGE_UNBOXED_SHIFT)
+
+/*
+ * If this page should not be moved during a GC then this flag is
+ * set. It's only valid during a GC for allocated pages.
+ */
+
+#define PAGE_DONT_MOVE_MASK		(1 << (PAGE_BASE_BIT_SHIFT + 3))
+#define PAGE_DONT_MOVE(page) \
+	(page_table[page].flags & PAGE_DONT_MOVE_MASK)
+
+/*
+ * If the page is part of a large object then this flag is set. No
+ * other objects should be allocated to these pages. This is only
+ * valid when the page is allocated.
+ */
+
+#define PAGE_LARGE_OBJECT_SHIFT		(PAGE_BASE_BIT_SHIFT + 4)
+#define PAGE_LARGE_OBJECT_MASK		(1 << PAGE_LARGE_OBJECT_SHIFT)
+#define PAGE_LARGE_OBJECT(page) \
+	(page_table[page].flags & PAGE_LARGE_OBJECT_MASK)
+#define PAGE_LARGE_OBJECT_VAL(page) \
+	(PAGE_LARGE_OBJECT(page) >> PAGE_LARGE_OBJECT_SHIFT)
 
 struct page {
     /*

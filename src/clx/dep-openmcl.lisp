@@ -18,9 +18,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: dep-openmcl.lisp,v 1.2 2009/06/17 18:22:45 rtoy Rel $")
-
 (in-package :xlib)
 
 (proclaim '(declaration array-register))
@@ -32,6 +29,17 @@
 ;;; Number of seconds to wait for a reply to a server request
 (defparameter *reply-timeout* nil) 
 
+#-(or clx-overlapping-arrays (not clx-little-endian))
+(progn
+  (defconstant +word-0+ 0)
+  (defconstant +word-1+ 1)
+
+  (defconstant +long-0+ 0)
+  (defconstant +long-1+ 1)
+  (defconstant +long-2+ 2)
+  (defconstant +long-3+ 3))
+
+#-(or clx-overlapping-arrays clx-little-endian)
 (progn
   (defconstant +word-0+ 1)
   (defconstant +word-1+ 0)
@@ -495,8 +503,12 @@
 ;;; value changes.
 
 (defun process-block (whostate predicate &rest predicate-args)
-  (declare (dynamic-extern predicate-args))
-  (apply #'ccl:process-wait whostate predicate predicate-args))
+  (declare (ignore whostate))
+  (declare (type function predicate))
+  (loop
+   (when (apply predicate predicate-args)
+     (return))
+   (ccl:process-allow-schedule)))
 
 ;;; PROCESS-WAKEUP: Check some other process' wait function.
 
@@ -672,7 +684,7 @@
   ;; therefore DISAPPEARS when WITH-STACK-LIST is exited.
   `(let ((,var (list ,@elements)))
      (declare (type cons ,var)
-	      #+clx-ansi-common-lisp (dynamic-extent ,var))
+              (dynamic-extent ,var))
      ,@body))
 
 (defmacro with-stack-list* ((var &rest elements) &body body)
@@ -831,7 +843,7 @@
   (declare (clx-values list))
   (ecase family
     ((:internet nil 0)
-     (let* ((addr (ccl::host-as-inet-host host)))
+     (let* ((addr (ccl:lookup-hostname host)))
        (cons :internet (list
                         (ldb (byte 8 24) addr)
                         (ldb (byte 8 16) addr)
@@ -921,7 +933,9 @@ Returns a list of (host display-number screen protocol)."
 	 (slash-i (or (position #\/ name) -1))
 	 (colon-i (position #\: name :start (1+ slash-i)))
 	 (decnet-colon-p (eql (elt name (1+ colon-i)) #\:))
-	 (host (subseq name (1+ slash-i) colon-i))
+	 (host (subseq name (1+ slash-i) (if decnet-colon-p
+                                             (1+ colon-i)
+                                             colon-i)))
 	 (dot-i (and colon-i (position #\. name :start colon-i)))
 	 (display (when colon-i
 		    (parse-integer name
@@ -1116,7 +1130,7 @@ Returns a list of (host display-number screen protocol)."
 			    unit byte-lsb-first-p bit-lsb-first-p)
   (declare (ignore bbuf boffset pixarray x y width height
                    padded-bytes-per-line bits-per-pixel unit
-                   byte-lsb-first-p bit-lsp-first-p))
+                   byte-lsb-first-p bit-lsb-first-p))
   nil)
 
 ;;; FAST-COPY-PIXARRAY - copy part of a pixarray into another

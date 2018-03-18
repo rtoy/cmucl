@@ -39,6 +39,7 @@
 
 (in-package :cmucl-test-runner)
 
+(require :asdf)
 (require :lisp-unit)
 
 ;; Be rather verbose in printing the tests
@@ -109,9 +110,10 @@
     (format t " ~5D tests failed~%" failed)
     (format t " ~5D tests with execution errors~%" execute-errors)
     (format t "~5,3f% of the tests passed~%"
-	    (float (* 100
-		      (- 1 (/ (+ failed execute-errors)
-			      (+ passed failed execute-errors))))))
+	    (let ((total (+ passed failed execute-errors)))
+	      (if (zerop total)
+		  0.0
+		  (* 100.0 (- 1.0 (/ (- total passed) total))))))
     ;; Print some info about any failed tests.  Then exit.  We want to
     ;; set the exit code so that any scripts runnning this can
     ;; determine if there were any test failures.

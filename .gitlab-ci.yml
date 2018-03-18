@@ -1,12 +1,179 @@
-before_script:
-  - apt-get update -qq && apt-get install -y wget bzip2 make gcc gcc-multilib time bc git
-  - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2017/10/cmucl-2017-10-x86-linux.tar.bz2
-  - wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2017/10/cmucl-2017-10-x86-linux.extra.tar.bz2
-  - mkdir snapshot
-  - (cd snapshot; tar xjf ../cmucl-2017-10-x86-linux.tar.bz2; tar xjf ../cmucl-2017-10-x86-linux.extra.tar.bz2)
+variables:
+  download_url: "https://common-lisp.net/project/cmucl/downloads/release/21e"
+  version: "21e-x86"
+  bootstrap: ""
 
-test:
+stages:
+  - install
+  - build
+  - test
+  - ansi-test
+  - benchmark
+
+cache:
+
+
+linux:install:
+  stage: install
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - snapshot/
   script:
-    - bin/build.sh -B boot-21c -C "" -o ./snapshot/bin/lisp
-    - bin/make-dist.sh -I dist-linux linux-4
-    - bin/run-tests.sh -l dist-linux/bin/lisp 2>&1 | tee test.log
+    - wget -nv $download_url/cmucl-$version-linux.tar.bz2
+    - wget -nv $download_url/cmucl-$version-linux.extra.tar.bz2
+    - mkdir snapshot
+    - (cd snapshot; tar xjf ../cmucl-$version-linux.tar.bz2; tar xjf ../cmucl-$version-linux.extra.tar.bz2)
+
+linux:build:
+  stage: build
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - dist/
+      - linux-2/*.log
+      - linux-3/*.log
+      - linux-4/*.log
+  needs:
+    - job: linux:install
+      artifacts: true
+  script:
+    # Do cross compile first
+    #- bin/create-target.sh xtarget x86_linux_clang
+    #- bin/create-target.sh xcross x86_linux_clang
+    #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
+    # Regular build using the cross-compiled result or snapshot
+    - bin/build.sh $bootstrap -R -C "x86_linux_clang" -o snapshot/bin/lisp
+    # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
+    - bin/make-dist.sh -I dist linux-4
+
+linux:test:
+  stage: test
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - ansi-test/test.out
+      - test.log
+  needs:
+    # Needs artifacts from build (dist/)
+    - job: linux:build
+      artifacts: true
+  script:
+    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+
+linux:ansi-test:
+  stage: ansi-test
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - ansi-test/test.out
+  needs:
+    # Needs artifacts from build (dist/)
+    - job: linux:build
+      artifacts: true
+  script:
+    - bin/run-ansi-tests.sh -l dist/bin/lisp
+    
+linux:benchmark:
+  stage: benchmark
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - benchmarks/cl-bench/results
+  needs:
+    # Needs artifacts from install (snapshot/) and build (dist/)
+    - job: linux:install
+      artifacts: true
+    - job: linux:build
+  script:
+    - cd benchmarks/cl-bench
+    - mkdir tmp
+    - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
+    - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
+    - ../../snapshot/bin/lisp -load report
+
+osx:install:
+  stage: install
+  tags:
+    - osx
+  artifacts:
+    paths:
+      - snapshot/
+  script:
+    - /opt/local/bin/curl -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
+    - mkdir snapshot
+    - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
+
+osx:build:
+  stage: build
+  tags:
+    - osx
+  artifacts:
+    paths:
+      - dist/
+      - darwin-2/*.log
+      - darwin-3/*.log
+      - darwin-4/*.log
+  needs:
+    - job: osx:install
+      artifacts: true
+  script:
+    # Do cross compile first
+    #- bin/create-target.sh xtarget x86_darwin
+    #- bin/create-target.sh xcross x86_darwin
+    #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
+    # Regular build using the cross-compiled result or snapshot
+    - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
+    - bin/make-dist.sh -I dist darwin-4
+
+osx:test:
+  stage: test
+  tags:
+    - osx
+  artifacts:
+    paths:
+      - test.log
+  needs:
+    # Needs artifacts from build (dist/)
+    - job: osx:build
+      artifacts: true
+  script:
+    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+
+osx:ansi-test:
+  stage: ansi-test
+  tags:
+    - osx
+  artifacts:
+    paths:
+      - ansi-test/test.out
+  needs:
+    # Needs artifacts from build (dist/)
+    - job: osx:build
+      artifacts: true
+  script:
+    - bin/run-ansi-tests.sh -l dist/bin/lisp
+  
+osx:benchmark:
+  stage: benchmark
+  tags:
+    - osx
+  artifacts:
+    paths:
+      - benchmarks/cl-bench/results
+  needs:
+    # Needs artifacts from install (snapshot/) and build (dist/)
+    - job: osx:install
+      artifacts: true
+    - job:  osx:build
+  script:
+    - cd benchmarks/cl-bench
+    - mkdir tmp
+    - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
+    - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
+    - ../../snapshot/bin/lisp -load report

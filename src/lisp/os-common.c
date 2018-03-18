@@ -5,11 +5,20 @@
 
 */
 
+#include <assert.h>
 #include <errno.h>
+#include <langinfo.h>
+#include <locale.h>
 #include <math.h>
 #include <netdb.h>
+#include <pwd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/utsname.h>
+#include <unistd.h>
 #include <time.h>
 
 #include "os.h"
@@ -588,4 +597,269 @@ os_sleep(double seconds)
     while (nanosleep(&requested, &remaining) == -1 && errno == EINTR) {
 	requested = remaining;
     }
+}
+
+/*
+ * Interface to stat/fstat/lstat.
+ *
+ * The arg types are chosen such that they can hold the largest
+ * possible value that any OS would use for the particular slot in the
+ * stat structure.  That way we can just use one OS-independent
+ * function that works across all OSes.
+ */
+int
+os_stat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
+        unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+        int64_t *atime, int64_t *mtime, int64_t *ctime,
+        long *blksize, int64_t *blocks)
+{
+    int rc;
+    struct stat buf;
+
+    rc = stat(path, &buf);
+
+    if (rc != 0) {
+        return rc;
+    }
+        
+#if 0
+    /*
+     * Useful prints to see the actual size of the various
+     * fields. Helpful for porting this to other OSes that we haven't
+     * tested on.
+     */
+    fprintf(stderr, "size dev %d\n", sizeof(buf.st_dev));
+    fprintf(stderr, "size ino %d\n", sizeof(buf.st_ino));
+    fprintf(stderr, "size mode %d\n", sizeof(buf.st_mode));
+    fprintf(stderr, "size nlink %d\n", sizeof(buf.st_nlink));
+    fprintf(stderr, "size uid %d\n", sizeof(buf.st_uid));
+    fprintf(stderr, "size gid %d\n", sizeof(buf.st_gid));
+    fprintf(stderr, "size rdev %d\n", sizeof(buf.st_rdev));
+    fprintf(stderr, "size size %d\n", sizeof(buf.st_size));
+    fprintf(stderr, "size atime %d\n", sizeof(buf.st_atime));
+    fprintf(stderr, "size mtime %d\n", sizeof(buf.st_mtime));
+    fprintf(stderr, "size ctime %d\n", sizeof(buf.st_ctime));
+    fprintf(stderr, "size blksize %d\n", sizeof(buf.st_blksize));
+    fprintf(stderr, "size blocks %d\n", sizeof(buf.st_blocks));
+#endif    
+    
+    *dev = buf.st_dev;
+    *ino = buf.st_ino;
+    *mode = buf.st_mode;
+    *nlink = buf.st_nlink;
+    *uid = buf.st_uid;
+    *gid = buf.st_gid;
+    *rdev = buf.st_rdev;
+    *size = buf.st_size;
+    *atime = buf.st_atime;
+    *mtime = buf.st_mtime;
+    *ctime = buf.st_ctime;
+    *blksize = buf.st_blksize;
+    *blocks = buf.st_blocks;
+
+    return rc;
+}
+
+int
+os_fstat(int fd, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
+         unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+         int64_t *atime, int64_t *mtime, int64_t *ctime,
+         long *blksize, int64_t *blocks)
+{
+    int rc;
+    struct stat buf;
+
+    rc = fstat(fd, &buf);
+
+    if (rc != 0) {
+        return rc;
+    }
+
+    *dev = buf.st_dev;
+    *ino = buf.st_ino;
+    *mode = buf.st_mode;
+    *nlink = buf.st_nlink;
+    *uid = buf.st_uid;
+    *gid = buf.st_gid;
+    *rdev = buf.st_rdev;
+    *size = buf.st_size;
+    *atime = buf.st_atime;
+    *mtime = buf.st_mtime;
+    *ctime = buf.st_ctime;
+    *blksize = buf.st_blksize;
+    *blocks = buf.st_blocks;
+
+    return rc;
+}
+
+int
+os_lstat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
+         unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+         int64_t *atime, int64_t *mtime, int64_t *ctime,
+         long *blksize, int64_t *blocks)
+{
+    int rc;
+    struct stat buf;
+
+    rc = lstat(path, &buf);
+
+    if (rc != 0) {
+        return rc;
+    }
+
+    *dev = buf.st_dev;
+    *ino = buf.st_ino;
+    *mode = buf.st_mode;
+    *nlink = buf.st_nlink;
+    *uid = buf.st_uid;
+    *gid = buf.st_gid;
+    *rdev = buf.st_rdev;
+    *size = buf.st_size;
+    *atime = buf.st_atime;
+    *mtime = buf.st_mtime;
+    *ctime = buf.st_ctime;
+    *blksize = buf.st_blksize;
+    *blocks = buf.st_blocks;
+
+    return rc;
+}
+
+/*
+ * Interface for file-author.  Given a pathname, returns a new string
+ * holding the author of the file or NULL if some error occurred.  The
+ * caller is responsible for freeing the memory used by the string.
+ */
+char *
+os_file_author(const char *path)
+{
+    struct stat sb;
+    char initial[1024];
+    char *buffer, *obuffer;
+    size_t size;
+    struct passwd pwd;
+    struct passwd *ppwd;
+    char *result;
+
+    if (stat(path, &sb) != 0) {
+        return NULL;
+    }
+
+    result = NULL;
+    buffer = initial;
+    obuffer = NULL;
+    size = sizeof(initial) / sizeof(initial[0]);
+
+    /*
+     * Keep trying with larger buffers until a maximum is reached.  We
+     * assume (1 << 20) is large enough for any OS.
+     */
+    while (size <= (1 << 20)) {
+        switch (getpwuid_r(sb.st_uid, &pwd, buffer, size, &ppwd)) {
+          case 0:
+              /* Success, though we might not have a matching entry */
+              result = (ppwd == NULL) ? NULL : strdup(pwd.pw_name);
+              goto exit;
+          case ERANGE:
+              /* Buffer is too small, double its size and try again */
+              size *= 2;
+              obuffer = (buffer == initial) ? NULL : buffer;
+              if ((buffer = realloc(obuffer, size)) == NULL) {
+                  goto exit;
+              }
+              continue;
+          default:
+              /* All other errors */
+              goto exit;
+        }
+    }
+exit:
+    free(obuffer);
+    
+    return result;
+}
+
+int
+os_setlocale(void)
+{
+    char *result = setlocale(LC_ALL, "");
+
+    /* Return 0 if setlocale suceeded; otherwise -1. */
+    return result != NULL ? 0 : -1;
+}
+
+int
+os_get_lc_messages(char *buf, int len)
+{
+    char *locale = setlocale(LC_MESSAGES, NULL);
+    if (locale) {
+        strncpy(buf, locale, len - 1);
+        buf[len - 1] = '\0';
+    }
+
+    /* Return -1 if setlocale failed. */
+    return locale ? 0 : -1;
+}
+
+char *
+os_get_locale_codeset(void)
+{
+    return nl_langinfo(CODESET);
+}
+
+long
+os_get_page_size(void)
+{
+    errno = 0;
+  
+    return sysconf(_SC_PAGESIZE);
+}
+
+/*
+ * Get system info consisting of the utime (in usec), the stime (in
+ * usec) and the number of major page faults.  The return value is the
+ * return code from getrusage.
+ */
+int
+os_get_system_info(int64_t* utime, int64_t* stime, long* major_fault)
+{
+    struct rusage usage;
+    int rc;
+
+    *utime = 0;
+    *stime = 0;
+    *major_fault = 0;
+    
+    rc = getrusage(RUSAGE_SELF, &usage);
+    if (rc == 0) {
+        *utime = usage.ru_utime.tv_sec * 1000000 + usage.ru_utime.tv_usec;
+        *stime = usage.ru_stime.tv_sec * 1000000 + usage.ru_stime.tv_usec;
+        *major_fault = usage.ru_majflt;
+    }
+
+    return rc;
+}
+
+/*
+ * Get the software version.  This is the same as "uname -r", the release.
+ * A pointer to a static string is returned. If uname fails, an empty
+ * string is returned.
+ */
+char*
+os_software_version(void)
+{
+    struct utsname uts;
+    int status;
+
+    /*
+     * Buffer large enough to hold the release.
+     */
+    static char result[sizeof(uts.release)];
+    result[0] = '\0';
+
+    status = uname(&uts);
+    if (status == 0) {
+      strcpy(result, uts.release);
+    }
+    
+    return result;
 }

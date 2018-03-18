@@ -18,7 +18,7 @@
      :relative-package-names		; Relative package names from Allegro
      :conservative-float-type
      :hash-new
-     :random-mt19937			; MT-19937 generator
+     :random-xoroshiro			; RNG generator
      :cmu				; Announce this is CMUCL
      :cmu20 :cmu20a			; Current version identifier
      :modular-arith			; Modular arithmetic
