@@ -40,8 +40,7 @@ arch_skip_instruction(os_context_t *context)
 unsigned char *
 arch_internal_error_arguments(os_context_t *scp)
 {
-    lose("NOT IMPLEMENTED: %s\n", __FUNCTION__);
-    return NULL;
+    return (unsigned char*) (SC_PC(scp) + 4);
 }
 
 boolean
