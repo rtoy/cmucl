@@ -150,6 +150,8 @@ F(accept)
 #if !defined(SVR4) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(DARWIN)
     F(sigsetmask)
     F(sigaltstack)
+#endif
+#if !defined(SVR4) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(DARWIN) && !defined(__linux__)
     F(sigvec)
 #endif
     F(socket)
