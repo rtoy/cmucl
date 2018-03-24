@@ -138,6 +138,13 @@ sigill_handler(HANDLER_ARGS)
               SC_PC(context) = (unsigned long) (pc + 1);
               break;
           }
+          case trap_Error:
+          case trap_Cerror:
+              /* Not yet really tested */
+	      interrupt_internal_error(signal, code, os_context,
+				       udf_code == trap_Cerror);
+	      break;
+
           default:
             lose("Unknown udf code: %d at %p (inst = %8x)\n", udf_code,
                  pc, inst);
