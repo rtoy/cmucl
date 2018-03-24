@@ -139,7 +139,8 @@ sigill_handler(HANDLER_ARGS)
               break;
           }
           default:
-              lose("Unknown udf code: %d\n", udf_code);
+            lose("Unknown udf code: %d at %p (inst = %8x)\n", udf_code,
+                 pc, inst);
         }
     } else {
         lose("Unknown CODE: %d\n", CODE(code));
