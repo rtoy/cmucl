@@ -422,7 +422,6 @@
 			,@(test-type-aux n-reg n-temp n-target not-target nil
 					 lowtags immediates headers
 					 function-p)))))
-	 (inst nop)
 	 (emit-label ,not-target)))))
 
 
