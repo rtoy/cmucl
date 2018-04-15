@@ -2964,6 +2964,19 @@
 				(component-header-length)))))))
 
 
+;; lra = code + other-pointer-tag + header + label-offset - other-pointer-tag
+(define-instruction compute-lra-from-code (segment dst src label temp)
+  (:declare (type tn dst src temp) (type label label))
+  (:attributes variable-length)
+  (:dependencies (reads src) (writes dst) (writes temp))
+  (:delay 0)
+  (:vop-var vop)
+  (:emitter
+   (emit-compute-inst segment vop dst src label temp
+		      #'(lambda (label posn delta-if-after)
+			  (+ (label-position label posn delta-if-after)
+			     (component-header-length))))))
+
 ;; reg-list is the register list immediate value in the LDM/STM
 ;; instructions.  The disassembler will disassemble them as a list of
 ;; registers.  We don't don't support coalescing a consecutive
