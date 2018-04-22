@@ -476,7 +476,7 @@ sigsegv_handler(HANDLER_ARGS)
 #endif
     if (gc_write_barrier(code->si_addr))
 	return;
-    DPRINTF(0, (stderr, "sigsegv: PC: %p\n", SC_PC(os_context));
+    DPRINTF(0, (stderr, "sigsegv: PC: %p\n", SC_PC(os_context)));
 
 #ifdef RED_ZONE_HIT
     {
