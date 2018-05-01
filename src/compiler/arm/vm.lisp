@@ -42,9 +42,9 @@
 
 
 (defreg nl0 0)				; ABI arg reg 1
-(defreg nl1 1)				; ABI arg reg 2
-(defreg nl2 2)				; ABI arg reg 3
-(defreg nargs 3)			; ABI arg reg 4
+(defreg nfp 1)				; ABI arg reg 2
+(defreg nargs 2)			; ABI arg reg 3
+(defreg ocfp 3)				; ABI arg reg 4
 (defreg code 4)
 (defreg a0 5)
 (defreg a1 6)
@@ -52,7 +52,7 @@
 (defreg lra 8)
 (defreg null 9)				; C thread register
 (defreg lexenv 10)			; lexenv and fdefn
-(defreg ocfp 11)			; ARM interprocedure temp
+(defreg cname 11)			; ARM interprocedure temp
 (defreg cfp 12)				; ARM fp
 ;; This is the ARM SP. We are going to use this as the Lisp stack
 ;; pointer (csp) because all signals will be delivered to the
@@ -65,10 +65,10 @@
 (defreg pc 15)				; ARM PC register.
 
 (defregset non-descriptor-regs
-  nl0 nl1 nl2 nargs)
+  nl0 nargs nfp ocfp)
 
 (defregset descriptor-regs
-  a0 a1 a2 ocfp lra lexenv)
+  a0 a1 a2 cname lra lexenv)
 
 (defregset register-arg-offsets
   a0 a1 a2)
@@ -365,4 +365,3 @@
       (non-descriptor-stack (format nil "NS~D" offset))
       (constant (format nil "Const~D" offset))
       (immediate-constant "Immed"))))
-

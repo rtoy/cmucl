@@ -51,7 +51,7 @@
 (defun result-reg-offset (slot)
   (ecase slot
     (0 nl0-offset)
-    (1 nl1-offset)))
+    (1 nfp-offset)))
 
 (def-alien-type-method (integer :result-tn) (type state)
   (let ((num-results (result-state-num-results state)))
