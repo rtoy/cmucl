@@ -118,7 +118,7 @@
 
 (comf "target:code/globals")
 (comf "target:code/kernel")
-(comf "target:code/lispinit")
+(comf "target:code/lispinit" :trace-file t)
 (comf "target:pcl/walk")
 (comf "target:code/fwrappers")
 (comf "target:code/fdefinition")

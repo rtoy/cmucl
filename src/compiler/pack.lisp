@@ -1578,7 +1578,14 @@
     (unless (or (backend-featurep :x86) (backend-featurep :amd64))
       (when (and (not (eq (tn-kind tn) :specified-save))
 		 (conflicts-in-sc original sc offset))
-	    (error "~S wired to a location that it conflicts with." tn)))
+	(format *debug-io*
+		"tn ~S kind ~S sc ~S sb ~S sb-name ~S sb-kind ~S~
+                 offset ~S end ~S original ~S~
+                 save-tn ~S~%"
+		tn (tn-kind tn) sc sb (sb-name sb) (sb-kind sb)
+		offset end original
+		(tn-save-tn tn))
+	(error "~S wired to a location that it conflicts with." tn)))
 
     ;; Use the above check, but only print a verbose warning. Helpful
     ;; for debugging the x86 port.

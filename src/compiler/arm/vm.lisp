@@ -326,7 +326,7 @@
 
 ;;; Names to use for the argument registers.
 ;;; 
-(defconstant register-arg-names '(a0 a1 a2))
+(defconstant register-arg-names '(a0 a1))
 
 ); Eval-When (Compile Load Eval)
 
