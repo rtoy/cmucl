@@ -69,32 +69,30 @@ GFUNCDEF(call_into_lisp)
 	eor	reg_A2, reg_A2
 	eor	reg_LRA, reg_LRA
 	eor	reg_LEXENV, reg_LEXENV
-	eor	reg_OCFP, reg_OCFP
 	eor	reg_CFP, reg_CFP
 	eor	reg_LIP, reg_LIP
 
 	/* Set pseudo-atomic flag */
-	mov	reg_NARGS, #1
-	STORE_SYMBOL_VALUE(reg_NARGS, PSEUDO_ATOMIC_ATOMIC)
+	mov	reg_OCFP, #1
+	STORE_SYMBOL_VALUE(reg_OCFP, PSEUDO_ATOMIC_ATOMIC)
 
 	ldr	reg_OCFP, =current_control_frame_pointer
 	ldr	reg_OCFP, [reg_OCFP]
 
-	/* No longer atomic */
-	mov	reg_NARGS, #0
-	STORE_SYMBOL_VALUE(reg_NARGS, PSEUDO_ATOMIC_ATOMIC)
+	/* No longer atomic (A0 = 0, above) */
+	STORE_SYMBOL_VALUE(reg_A0, PSEUDO_ATOMIC_ATOMIC)
 	/* Check if we were interrupted. (Not implemented yet.) */
 
 	/* setup up the current frame */
-	mov	reg_CFP, reg_NL1
+	mov	reg_CFP, reg_NFP
 
 	/* Pass in the arguments */
 	mov	reg_LEXENV, reg_NL0
-	cmp	reg_NL2, #1
+	cmp	reg_NARGS, #1
 	ldrge	reg_A0, [reg_CFP, #0]
-	cmp	reg_NL2, #2
+	cmp	reg_NARGS, #2
 	ldrge	reg_A1, [reg_CFP, #-4]
-	cmp	reg_NL2, #3
+	cmp	reg_NARGS, #3
 	ldrge	reg_A2, [reg_CFP, #-8]
 
 	/* Function is an indirect closure */
@@ -105,7 +103,7 @@ GFUNCDEF(call_into_lisp)
 	add	reg_LRA, reg_LRA, #type_OtherPointer
 
 	/* Convert arg count to fixnum */
-	lsl	reg_NARGS, reg_NL2, #2
+	lsl	reg_NARGS, reg_NARGS, #2
 	
 	/*
 	 * Get the Lisp stack pointer into the sp since on ARM sp is both
@@ -198,7 +196,7 @@ GFUNCDEF(call_into_c)
 	/* Pop the function address first */
 	pop	{reg_LIP}
 	/* Now pop off r0-r3 */
-	pop	{reg_NL0, reg_NL1, reg_NL2, reg_NARGS}
+	pop	{reg_NL0, reg_NARGS, reg_OCFP, reg_NFP}
 	/* Into C we go */
 	blx	reg_LIP
 

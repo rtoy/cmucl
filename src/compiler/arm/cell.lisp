@@ -50,11 +50,12 @@
 ;;; Do a cell ref with an error check for being unbound.
 ;;;
 (define-vop (checked-cell-ref)
-  (:args (object :scs (descriptor-reg)))
+  (:args (object :scs (descriptor-reg) :target obj-temp))
   (:results (value :scs (descriptor-reg any-reg)))
   (:policy :fast-safe)
   (:vop-var vop)
-  (:save-p :compute-only))
+  (:save-p :compute-only)
+  (:temporary (:scs (descriptor-reg) :from (:argument 0)) obj-temp))
 
 ;;; With Symbol-Value, we check that the value isn't the trap object.  So
 ;;; Symbol-Value of NIL is NIL.
@@ -62,7 +63,12 @@
 (define-vop (symbol-value checked-cell-ref)
   (:translate symbol-value)
   (:generator 9
-    (emit-not-implemented)))
+    (emit-not-implemented)
+    (move obj-temp object)
+    (loadw value obj-temp vm:symbol-value-slot vm:other-pointer-type)
+    (let ((err-lab (generate-error-code vop unbound-symbol-error obj-temp)))
+      (inst cmp value vm:unbound-marker-type)
+      (inst b err-lab :eq))))
 
 ;;; Like CHECKED-CELL-REF, only we are a predicate to see if the cell is bound.
 (define-vop (boundp-frob)

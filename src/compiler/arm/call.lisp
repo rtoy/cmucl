@@ -226,7 +226,10 @@
   (:info nargs)
   (:results (res :scs (any-reg)))
   (:generator 2
-    (emit-not-implemented)))
+    (emit-not-implemented)
+    (when (> nargs register-arg-count)
+      (move res csp-tn)
+      (inst add csp-tn csp-tn (* nargs vm:word-bytes)))))
 
 
 
