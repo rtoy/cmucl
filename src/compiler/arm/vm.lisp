@@ -42,9 +42,9 @@
 
 
 (defreg nl0 0)				; ABI arg reg 1
-(defreg nfp 1)				; ABI arg reg 2
+(defreg ocfp 1)				; ABI arg reg 4
 (defreg nargs 2)			; ABI arg reg 3
-(defreg ocfp 3)				; ABI arg reg 4
+(defreg nfp 3)				; ABI arg reg 2
 (defreg code 4)
 (defreg a0 5)
 (defreg a1 6)
