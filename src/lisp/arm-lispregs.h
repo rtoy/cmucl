@@ -19,9 +19,9 @@
  */
 
 #define reg_NL0 REG(0)
-#define reg_NFP REG(1)
+#define reg_OCFP REG(1)
 #define reg_NARGS REG(2)
-#define reg_OCFP REG(3)
+#define reg_NFP REG(3)
 #define reg_CODE REG(4)
 #define reg_A0 REG(5)
 #define reg_A1 REG(6)
@@ -36,7 +36,7 @@
 #define reg_PC REG(15)
 
 #define REGNAMES \
-  "NL0", "NFP", "NARGS", "OCFP", "CODE", "A0", "A1", "A2", \
+  "NL0", "OCFP", "NARGS", "NFP", "CODE", "A0", "A1", "A2", \
   "LRA", "NULL", "LEXENV", "CNAME", "CFP", "CSP", "LIP", "PC"
 
 #define BOXED_REGISTERS { \
