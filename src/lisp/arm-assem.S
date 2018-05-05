@@ -84,7 +84,7 @@ GFUNCDEF(call_into_lisp)
 	/* Check if we were interrupted. (Not implemented yet.) */
 
 	/* setup up the current frame */
-	mov	reg_CFP, reg_NFP
+	mov	reg_CFP, reg_OCFP
 
 	/* Pass in the arguments */
 	mov	reg_LEXENV, reg_NL0
@@ -196,7 +196,7 @@ GFUNCDEF(call_into_c)
 	/* Pop the function address first */
 	pop	{reg_LIP}
 	/* Now pop off r0-r3 */
-	pop	{reg_NL0, reg_NARGS, reg_OCFP, reg_NFP}
+	pop	{reg_NL0, reg_OCFP, reg_NARGS, reg_NFP}
 	/* Into C we go */
 	blx	reg_LIP
 

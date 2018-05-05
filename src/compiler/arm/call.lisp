@@ -99,7 +99,11 @@
   ;; number frame pointer.  This is just a general TN that can be used
   ;; as a marker to note that the VOP might have a NFP value.  (Some
   ;; vops check the value of (CURRENT-NFP-TN).)
-  (make-restricted-tn *fixnum-primitive-type* immediate-arg-scn))
+  (component-live-tn
+   (make-wired-tn *fixnum-primitive-type* immediate-arg-scn nfp-offset))
+  #+nil
+  (make-restricted-tn *fixnum-primitive-type* immediate-arg-scn)
+  )
 
 ;;; MAKE-STACK-POINTER-TN ()
 ;;; 
@@ -604,7 +608,144 @@ default-value-8
 
 
 (define-full-call call nil :fixed nil)
-(define-full-call call-named t :fixed nil)
+;;(define-full-call call-named t :fixed nil)
+
+;; Sparc version.  Leaving this here for now.  This doesn't quite work
+;; because we've run out of registers. Need an any-reg and there are
+;; none left right now.
+#+nil
+(define-vop (call-named)
+  (:args (new-fp :scs (any-reg) :to :eval)
+	 (name :scs (descriptor-reg control-stack) :target name-pass)
+	 (args :more t :scs (descriptor-reg)))
+  (:results (values :more t))
+  (:save-p t)
+  (:move-args :full-call)
+  (:vop-var vop)
+  (:info arg-locs nargs nvals)
+  (:ignore arg-locs args)
+  (:temporary (:sc descriptor-reg :offset ocfp-offset :from (:argument 1))
+	      old-fp-pass)
+  (:temporary
+   (:sc descriptor-reg :offset lra-offset :from (:argument 1) :to :eval)
+   return-pc-pass)
+  (:temporary
+   (:sc descriptor-reg :offset cname-offset :from (:argument 1) :to :eval)
+   name-pass)
+  (:temporary (:scs (descriptor-reg) :from (:argument 0) :to :eval) function)
+  (:temporary (:sc any-reg :offset nargs-offset :to :eval) nargs-pass)
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (descriptor-reg) :from :eval) move-temp)
+  (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
+  (:temporary (:scs (interior-reg) :type interior) lip)
+  (:generator 31
+    (trace-table-entry trace-table-call-site)
+    (emit-not-implemented)
+    (let* ((cur-nfp (current-nfp-tn vop))
+	   (lra-label (gen-label))
+	   (filler
+	     (remove nil
+		     (list :load-nargs :comp-lra
+			   (when cur-nfp
+			     :frob-nfp)
+			   :save-fp :load-fp))))
+
+      (flet ((do-next-filler ()
+	       (let* ((next (pop filler))
+		      (what (if (consp next) (car next) next)))
+		 (ecase what
+		   (:load-nargs (inst li nargs-pass (fixnumize nargs)))
+		   (:comp-lra
+		    (inst compute-lra-from-code return-pc-pass code-tn lra-label
+			  temp))
+		   (:frob-nfp
+		    (describe cur-nfp *debug-io*)
+		    (store-stack-tn nfp-save cur-nfp))
+		   (:save-fp (inst mov old-fp-pass cfp-tn))
+		   (:load-fp
+		    (if (> nargs register-arg-count)
+			(move cfp-tn new-fp)
+			(move cfp-tn csp-tn)))
+		   ((nil))))))
+	(sc-case name
+	  (descriptor-reg
+	   (move name-pass name))
+	  (control-stack
+	   (loadw name-pass cfp-tn (tn-offset name) 0 temp)
+	   (do-next-filler))
+	  (constant
+	   (loadw name-pass code-tn (tn-offset name) vm:other-pointer-type temp)
+	   (do-next-filler)))
+	(loadw function name-pass fdefn-raw-addr-slot other-pointer-type)
+	(do-next-filler)
+	(loop
+	  (if filler (do-next-filler) (return)))
+	(note-this-location vop :call-site)
+	(inst mov code-tn function)
+	(inst add lip function
+	      (- (ash vm:function-code-offset vm:word-shift)
+		 vm:function-pointer-type))
+	(inst bx lip))
+      (emit-return-pc lra-label)
+      (default-unknown-values vop values nvals move-temp temp lra-label)
+      (when cur-nfp
+	(load-stack-tn cur-nfp nfp-save)))
+  (trace-table-entry trace-table-normal)))
+
+;; Based on RT version.
+(define-vop (call-named)
+  (:args (new-fp :scs (any-reg) :to :eval)
+	 (name :scs (descriptor-reg) :target name-pass)
+	 (args :more t :scs (descriptor-reg)))
+  (:results (values :more t))
+  (:save-p t)
+  (:move-args :full-call)
+  (:vop-var vop)
+  (:info arg-locs nargs nvals)
+  (:ignore arg-locs args)
+  (:temporary
+   (:sc descriptor-reg :offset ocfp-offset :from (:argument 1) :to
+	:eval)
+   old-fp-pass)
+  (:temporary
+   (:sc descriptor-reg :offset lra-offset :from (:argument 1) :to
+	:eval)
+   return-pc-pass)
+  (:temporary
+   (:sc descriptor-reg :offset cname-offset :from (:argument 1) :to
+	:eval)
+   name-pass)
+  (:temporary (:sc descriptor-reg :offset nargs-offset :to :eval)
+	      nargs-pass)
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (descriptor-reg) :from :eval) move-temp)
+  (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
+  (:temporary (:scs (interior-reg) :type interior) lip)
+  (:generator 31
+    (let ((cur-nfp (current-nfp-tn vop)) (lra-label (gen-label)))
+      (emit-not-implemented)
+      (inst li nargs-pass (fixnumize nargs))
+      (move name-pass name)
+      (loadw lip
+	  name-pass
+	  fdefn-raw-addr-slot
+	  other-pointer-type)
+      (inst compute-lra-from-code return-pc-pass code-tn lra-label temp)
+      (move old-fp-pass cfp-tn)
+      (when cur-nfp
+	(store-stack-tn nfp-save cur-nfp))
+      (if (> nargs register-arg-count)
+	  (move cfp-tn new-fp)
+	  (move cfp-tn csp-tn))
+      (inst add lip lip (- (ash vm:function-code-offset vm:word-shift)
+			   vm:function-pointer-type))
+      (inst bx lip)
+      (emit-return-pc lra-label)
+      (note-this-location vop :unknown-return)
+      (default-unknown-values vop values nvals move-temp temp lra-label)
+      (when cur-nfp
+	(load-stack-tn cur-nfp nfp-save)))))
+
 (define-full-call multiple-call nil :unknown nil)
 (define-full-call multiple-call-named t :unknown nil)
 (define-full-call tail-call nil :tail nil)

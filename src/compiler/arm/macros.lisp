@@ -47,7 +47,7 @@
        (if temp
 	   (let ((offs (gensym)))
 	     `(let ((,offs (- (ash ,offset ,',shift) ,lowtag)))
-	       (if (typep '(signed-byte 13),offs)
+	       (if (typep ,offs '(signed-byte 13))
 		   (inst ,',inst ,object ,base ,offs)
 		   (progn
 		     (inst li ,temp ,offs)
