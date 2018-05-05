@@ -610,59 +610,9 @@ default-value-8
 (define-full-call call nil :fixed nil)
 ;;(define-full-call call-named t :fixed nil)
 
-;; Based on rt version.
-#+nil
-(define-vop (call-named)
-  (:args (new-fp :scs (any-reg) :to :eval)
-	 (name :scs (descriptor-reg) :target name-pass)
-	 (args :more t :scs (descriptor-reg)))
-  (:results (values :more t))
-  (:save-p t)
-  (:move-args :full-call)
-  (:vop-var vop)
-  (:info arg-locs nargs nvals) (:ignore arg-locs args)
-  (:temporary
-   (:sc descriptor-reg :offset ocfp-offset :from (:argument 1) :to :eval)
-   old-fp-pass)
-  (:temporary
-   (:sc descriptor-reg :offset lra-offset :from (:argument 1) :to :eval)
-   return-pc-pass)
-  (:temporary
-   (:sc descriptor-reg :offset cname-offset :from (:argument 1) :to :eval)
-   name-pass)
-  (:temporary (:sc descriptor-reg :offset nargs-offset :to :eval) nargs-pass)
-  (:temporary (:scs (descriptor-reg) :from :eval) move-temp)
-  (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
-  (:temporary (:scs (interior-reg) :type interior) lip)
-  (:temporary (:scs (non-descriptor-reg)) temp)
-  (:generator 31
-    (let ((cur-nfp (current-nfp-tn vop))
-	  (lra-label (gen-label)))
-      (inst li nargs-pass (fixnumize nargs))
-      (sc-case name
-	(descriptor-reg
-	 (move name-pass name))
-	(control-stack
-	 (loadw name-pass cfp-tn (tn-offset name) 0 temp))
-	(constant
-	 (loadw name-pass code-tn (tn-offset name)
-	     vm:other-pointer-type temp)))
-      (loadw lip name-pass vm:fdefn-raw-addr-slot vm:other-pointer-type)
-      (inst compute-lra-from-code return-pc-pass code-tn lra-label temp)
-      (move old-fp-pass cfp-tn)
-      (when cur-nfp
-	(store-stack-tn cur-nfp nfp-save))
-      (if (> nargs register-arg-count)
-	  (move cfp-tn new-fp)
-	  (move cfp-tn csp-tn))
-      (inst bx lip)
-      (emit-return-pc lra-label)
-      (note-this-location vop :unknown-return)
-      (default-unknown-values vop values nvals move-temp temp lra-label)
-      (when cur-nfp
-	(load-stack-tn cur-nfp nfp-save)))))
-
-;; Sparc version
+;; Sparc version.  Leaving this here for now.  This doesn't quite work
+;; because we've run out of registers. Need an any-reg and there are
+;; none left right now.
 #+nil
 (define-vop (call-named)
   (:args (new-fp :scs (any-reg) :to :eval)
@@ -742,40 +692,7 @@ default-value-8
 	(load-stack-tn cur-nfp nfp-save)))
   (trace-table-entry trace-table-normal)))
 
-;; Based on x86 version
-#+nil
-(define-vop (call-named)
-  (:args (new-fp :scs (any-reg) :to (:argument 1))
-	 (name :scs (descriptor-reg control-stack) :target name-pass :to
-              (:argument 0))
-	 (args :more t :scs (descriptor-reg)))
-  (:results (values :more t))
-  (:save-p t)
-  (:move-args :full-call)
-  (:vop-var vop)
-  (:info arg-locs nargs nvals)
-  (:ignore arg-locs args)
-  (:temporary
-   (:sc descriptor-reg :offset cname-offset :from (:argument 0) :to
-	:eval)
-   name-pass)
-  (:temporary (:sc unsigned-reg :offset ecx-offset :to :eval) ecx)
-  (:generator 31 (trace-table-entry trace-table-call-site)
-    (move eax name)
-    (if (zerop nargs)
-	(inst xor ecx ecx)
-	(inst mov ecx (fixnumize nargs)))
-    nil (storew ebp-tn new-fp (- (1+ ocfp-save-offset)))
-    (move ebp-tn new-fp) (note-this-location vop :call-site)
-    (inst call
-	  (make-ea :dword :base
-		   eax
-		   :disp (- (* fdefn-raw-addr-slot word-bytes)
-			    other-pointer-type)))
-    (default-unknown-values vop values nvals)
-    (trace-table-entry trace-table-normal)))
-
-;; RT
+;; Based on RT version.
 (define-vop (call-named)
   (:args (new-fp :scs (any-reg) :to :eval)
 	 (name :scs (descriptor-reg) :target name-pass)
