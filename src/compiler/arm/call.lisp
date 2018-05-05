@@ -690,6 +690,7 @@ default-value-8
   (:temporary (:scs (interior-reg) :type interior) lip)
   (:generator 31
     (trace-table-entry trace-table-call-site)
+    (emit-not-implemented)
     (let* ((cur-nfp (current-nfp-tn vop))
 	   (lra-label (gen-label))
 	   (filler
@@ -805,6 +806,7 @@ default-value-8
   (:temporary (:scs (interior-reg) :type interior) lip)
   (:generator 31
     (let ((cur-nfp (current-nfp-tn vop)) (lra-label (gen-label)))
+      (emit-not-implemented)
       (inst li nargs-pass (fixnumize nargs))
       (move name-pass name)
       (loadw lip
@@ -818,6 +820,8 @@ default-value-8
       (if (> nargs register-arg-count)
 	  (move cfp-tn new-fp)
 	  (move cfp-tn csp-tn))
+      (inst add lip lip (- (ash vm:function-code-offset vm:word-shift)
+			   vm:function-pointer-type))
       (inst bx lip)
       (emit-return-pc lra-label)
       (note-this-location vop :unknown-return)
