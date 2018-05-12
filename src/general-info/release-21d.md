@@ -19,7 +19,7 @@ public domain.
 ## New in this release:
   * Known issues:
   * Feature enhancements
-    * Update to ASDF 3.3.1, fixing issues introduced in 3.3.0
+    * Update to ASDF 3.3.2
   * Changes
     * x86 and sparc have replaced the MT19937 RNG with xoroshiro128+ RNG.
       * The required state for this generator is just 4 32-bit words instead of the 600+ for MT19937.

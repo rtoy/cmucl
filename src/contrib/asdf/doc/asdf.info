@@ -43,7 +43,7 @@ File: asdf.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
 ASDF: Another System Definition Facility
 ****************************************
 
-Manual for Version 3.3.1
+Manual for Version 3.3.2
 
    This manual describes ASDF, a system definition facility for Common
 Lisp programs and libraries.
@@ -5544,10 +5544,11 @@ Bibliography
    * Kent M. Pitman (kmp): "The Description of Large Systems", MIT AI
      Memo 801, 1984.  Available in updated-for-CL form on the web at
      <http://nhplace.com/kent/Papers/Large-Systems.html>
-   * Dan Weinreb and David Moon: "Lisp Machine Manual", MIT, 1981.  The
-     famous CHINE NUAL describes one of the earliest variants of
-     DEFSYSTEM.
-     <https://bitsavers.trailing-edge.com/pdf/mit/cadr/chinual_4thEd_Jul81.pdf>
+   * Dan Weinreb and David Moon: "Lisp Machine Manual", 3rd Edition MIT,
+     March 1981.  The famous CHINE NUAL describes one of the earliest
+     variants of DEFSYSTEM. (NB: Not present in the second preliminary
+     version of January 1979)
+     <http://bitsavers.org/pdf/mit/cadr/chinual_3rdEd_Mar81.pdf>
 
 
 File: asdf.info,  Node: Concept Index,  Next: Function and Class Index,  Prev: Bibliography,  Up: Top
@@ -5999,8 +6000,8 @@ Node: ASDF development FAQs252003
 Node: How do I run the tests interactively in a REPL?252242
 Node: Ongoing Work253809
 Node: Bibliography254088
-Node: Concept Index257559
-Node: Function and Class Index264554
-Node: Variable Index276328
+Node: Concept Index257635
+Node: Function and Class Index264630
+Node: Variable Index276404
 
 End Tag Table
