@@ -21,8 +21,8 @@
       (dotimes (k 100)
 	(let* ((r1 (gen-bignum range (random 2 rng)))
 	       (r2 (gen-bignum range (random 2 rng)))
-	       (prod-knuth (bignum::classical-multiply-bignums r1 r2))
-	       (prod-hd (bignum::classical-multiply-bignum-hd r1 r2)))
+	       (prod-knuth (bignum::classical-multiply-bignums-knuth r1 r2))
+	       (prod-hd (bignum::classical-multiply-bignums r1 r2)))
 	  (assert-equal prod-knuth prod-hd r1 r2))))))
 
 
@@ -45,12 +45,12 @@
 	     (r2 (gen-bignum range 1)) res)
 	(time
 	 (dotimes (k reps)
-	   (declare (fixnum k)) (setf res
-				      (bignum::classical-multiply-bignums r1 r2))))
+	   (declare (fixnum k))
+	   (setf res (bignum::classical-multiply-bignums-knuth r1 r2))))
 	(print res)
 	(time
 	 (dotimes (k reps)
-	   (declare (fixnum k)) (setf res
-				      (bignum::classical-multiply-bignum-hd r1 r2))))
+	   (declare (fixnum k))
+	   (setf res (bignum::classical-multiply-bignums r1 r2))))
 	(print res)))))
 
