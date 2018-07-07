@@ -3,6 +3,7 @@ variables:
   version: "2018-03-x86"
 
 linux-runner:
+  image: ubuntu:16.04
   tags:
     - linux
   before_script:
