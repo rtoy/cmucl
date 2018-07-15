@@ -5,8 +5,46 @@
 
 (in-package #:bignum-tests)
 
-(define-test hd-mult
+(define-test hd-mult.same-size
   "Test bignum multiplier"
+  (:tag :bignum-tests)
+  ;; x and y are randomly generated 128 integers. No particular reason
+  ;; for these values, except that they're bignums.
+  (let ((x 248090201001762284446997112921270181259)
+	(y 313102667534462314033767199170708979663)
+	(prod 77677703722812705876871716049945873590003455155145426220435549433670954735717))
+    ;; Verify the we get the right results for various signed values of x and y.
+    (assert-equal prod (* x y))
+    (assert-equal (- prod) (* (- x) y))
+    (assert-equal (- prod) (* x (- y)))
+    (assert-equal prod (* (- x) (- y)))
+    ;; Nake sure it's commutative
+    (assert-equal prod (* y x))
+    (assert-equal (- prod) (* y (- x)))
+    (assert-equal (- prod) (* (- y) x))
+    (assert-equal prod (* (- y) (- x)))))
+
+(define-test hd-mult.diff-size
+  "Test bignum multiplier"
+  (:tag :bignum-tests)
+  ;; x is a randomly generated bignum.  y is a small bignum.
+  (let ((x 248090201001762284446997112921270181259)
+	(y (1+ most-positive-fixnum))
+	(prod 133192412470079431258262755675409306410924638208))
+    ;; Verify the we get the right results for various signed values of x and y.
+    (assert-equal prod (* x y))
+    (assert-equal (- prod) (* (- x) y))
+    (assert-equal (- prod) (* x (- y)))
+    (assert-equal prod (* (- x) (- y)))
+    ;; Nake sure it's commutative
+    (assert-equal prod (* y x))
+    (assert-equal (- prod) (* y (- x)))
+    (assert-equal (- prod) (* (- y) x))
+    (assert-equal prod (* (- y) (- x)))))
+
+
+(define-test hd-mult.random
+  "Test bignum multiplier with random values"
   (:tag :bignum-tests)
   (let ((rng (kernel::make-random-object :state (kernel:init-random-state)
 					 :rand 0
