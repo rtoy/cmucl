@@ -7,7 +7,7 @@ linux-runner:
   tags:
     - linux
   before_script:
-    - apt-get update -qq && apt-get install -y wget bzip2 make gcc gcc-multilib time bc git
+    - apt-get update -qq && apt-get install -y wget bzip2 make gcc gcc-multilib time bc git hevea
     - wget -nv $download_url/cmucl-$version-linux.tar.bz2
     - wget -nv $download_url/cmucl-$version-linux.extra.tar.bz2
     - mkdir snapshot
@@ -28,3 +28,4 @@ osx-runner:
     - bin/build.sh -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist darwin-4
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+
