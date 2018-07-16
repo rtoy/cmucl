@@ -16,6 +16,7 @@ linux-runner:
     - bin/build.sh -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist linux-4
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+    - (cd src/docs/cmu-user; make cmu-user.html)
 
 osx-runner:
   tags:
