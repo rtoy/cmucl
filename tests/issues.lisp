@@ -400,7 +400,6 @@
 ;; For some reason this used to work linux CI but not doesn't.  But
 ;; this test passes on my Fedora and debian systesm.
 ;; See issue #64.
-#-linux
 (define-test issue.41.1
     (:tag :issues)
   (issue-41-tester unix:sigstop))
