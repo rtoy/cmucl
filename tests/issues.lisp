@@ -402,7 +402,10 @@
 ;; So until we figure this out, disable this test when we're running a
 ;; pipeline with linux, but otherwise enable it.  The pipeline defines
 ;; the envvar GITLAB_CI so check for that.
-#+#.(cl:if (and (ext:featurep :linux) (unix:unix-getenv "GITLAB_CI")) '(or) '(and))
+;;
+;; It would be better if lisp-unit had a way of marking tests as known
+;; failures, but it doesn't.
+#+#.(cl:if (cl:and (ext:featurep :linux) (unix:unix-getenv "GITLAB_CI")) '(or) '(and))
 (define-test issue.41.1
     (:tag :issues)
   (issue-41-tester unix:sigstop))
