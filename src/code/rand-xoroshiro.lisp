@@ -492,7 +492,7 @@
      (error 'simple-type-error
 	    :expected-type '(or (integer 1) (float (0.0))) :datum arg
 	    :format-control _"Argument is not a positive integer or a positive float: ~S")
-	    :format-arguments (list arg)))))
+	    :format-arguments (list arg))))
 
 ;; Jump function for the generator.  See the jump function in
 ;; http://xoroshiro.di.unimi.it/xoroshiro128plus.c
