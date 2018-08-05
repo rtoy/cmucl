@@ -2530,7 +2530,8 @@
            "SET-SYMBOL-VALUE-CONDITIONAL"
            "ATOMIC-POP-SYMBOL-VALUE"
            "ATOMIC-PUSHA"
-           "ATOMIC-PUSHD")
+           "ATOMIC-PUSHD"
+	   "%UNARY-FROUND")
   #+x87
   (:export "%COS-QUICK" "%SIN-QUICK" "%TAN-QUICK")
   ;;#+double-double
