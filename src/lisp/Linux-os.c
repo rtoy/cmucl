@@ -385,8 +385,8 @@ valid_addr(os_vm_address_t addr)
 	|| in_range_p(addr, STATIC_SPACE_START, static_space_size)
 	|| in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)
 	|| in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
-	|| in_range_p(addr, control_stack, control_stack_size)
-	|| in_range_p(addr, binding_stack, binding_stack_size))
+	|| in_range_p(addr, (lispobj) control_stack, control_stack_size)
+	|| in_range_p(addr, (lispobj) binding_stack, binding_stack_size))
 	return TRUE;
     return FALSE;
 }
