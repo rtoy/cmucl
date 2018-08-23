@@ -6,3 +6,5 @@ If you have a prototype, provide links to illustrate this addition.  This is the
 
 **Describe the feature in more detail**
 Provide more information to describe the feature.
+
+/label ~feature
