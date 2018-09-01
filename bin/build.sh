@@ -144,7 +144,7 @@ buildit ()
 	fi
 	$TOOLDIR/load-world.sh $TARGET "$VERSION" || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
 
-	$TARGET/lisp/lisp -batch -noinit -nositeinit < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit $FPU_MODE"; exit 1; }
+	$TARGET/lisp/lisp -batch -noinit -nositeinit < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit"; exit 1; }
 	return 0;
     fi
 }
